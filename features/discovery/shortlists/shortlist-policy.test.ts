@@ -23,8 +23,10 @@ import {
   applyAddResult,
   describeAddOutcome,
   emptyOutcome,
+  hasStandaloneShortlistCreator,
   isAddableCreator,
 } from "@/features/discovery/shortlists/add-to-shortlist-policy";
+import { existingKeysFromStandaloneShortlistItems } from "@/features/creators/picker/creator-selection-utils";
 
 // ---------------------------------------------------------------------------
 // Serial format (spec §1)
@@ -182,5 +184,58 @@ assert.equal(outcome.firstError, "Shortlist not found.");
 assert.match(describeAddOutcome(outcome), /1 added/);
 assert.match(describeAddOutcome(outcome), /already on list/);
 assert.equal(describeAddOutcome(emptyOutcome()), "No creators added");
+
+// Standalone duplicate policy: collapsed rows do not block re-add as individual.
+assert.equal(
+  hasStandaloneShortlistCreator(
+    [
+      {
+        influencer_id: "inf-1",
+        profile_id: null,
+        unified_id: "u-1",
+        collapse_group_id: "grp-1",
+      },
+    ],
+    { influencerId: "inf-1" }
+  ),
+  false,
+  "collapsed row should not block standalone add"
+);
+assert.equal(
+  hasStandaloneShortlistCreator(
+    [
+      {
+        influencer_id: "inf-1",
+        profile_id: null,
+        unified_id: "u-1",
+        collapse_group_id: null,
+      },
+    ],
+    { influencerId: "inf-1" }
+  ),
+  true,
+  "standalone row blocks duplicate standalone add"
+);
+
+const collapsedOnlyKeys = existingKeysFromStandaloneShortlistItems([
+  {
+    unified_id: "u-1",
+    profile_id: null,
+    influencer_id: "inf-1",
+    collapse_group_id: "grp-1",
+  },
+]);
+assert.equal(collapsedOnlyKeys.has("inf:inf-1"), false);
+assert.equal(
+  existingKeysFromStandaloneShortlistItems([
+    {
+      unified_id: "u-1",
+      profile_id: null,
+      influencer_id: "inf-1",
+      collapse_group_id: null,
+    },
+  ]).has("inf:inf-1"),
+  true
+);
 
 console.log("discovery shortlist policy tests passed");

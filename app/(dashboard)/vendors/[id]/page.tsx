@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
@@ -6,18 +7,54 @@ import { VendorWorkspaceView } from "@/features/vendors/components/vendor-worksp
 import { getVendorWorkspace } from "@/features/vendors/queries";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
 import { getMasterDataOptions } from "@/lib/master-data/queries";
+import { vendorDetailPath } from "@/lib/routing/entity-paths";
+import {
+  metadataTitleForEntity,
+  redirectToCanonicalEntityRoute,
+} from "@/lib/routing/entity-page";
+import {
+  fetchVendorRouteSummary,
+  resolveVendorIdByRouteKey,
+} from "@/lib/routing/entity-route-queries";
 
 type VendorProfilePageProps = {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ tab?: string }>;
 };
 
+export async function generateMetadata({
+  params,
+}: Pick<VendorProfilePageProps, "params">): Promise<Metadata> {
+  const { id: routeKey } = await params;
+  const vendorId = await resolveVendorIdByRouteKey(routeKey);
+  if (!vendorId) return { title: "Creator" };
+
+  const summary = await fetchVendorRouteSummary(vendorId);
+  if (!summary) return { title: "Creator" };
+
+  return {
+    title: metadataTitleForEntity(summary, summary.document_number),
+  };
+}
+
 export default async function VendorProfilePage({
   params,
   searchParams,
 }: VendorProfilePageProps) {
-  const { id } = await params;
+  const { id: routeKey } = await params;
   const { tab } = await searchParams;
+
+  const vendorId = await resolveVendorIdByRouteKey(routeKey);
+  if (!vendorId) notFound();
+
+  const routeSummary = await fetchVendorRouteSummary(vendorId);
+  if (routeSummary) {
+    redirectToCanonicalEntityRoute({
+      routeKey,
+      entity: routeSummary,
+      canonicalPath: vendorDetailPath(routeSummary),
+    });
+  }
 
   let workspace;
   let currencyOptions: { value: string; label: string }[] = [];
@@ -25,7 +62,7 @@ export default async function VendorProfilePage({
 
   try {
     const [workspaceResult, masterDataResult] = await Promise.allSettled([
-      getVendorWorkspace(id),
+      getVendorWorkspace(vendorId),
       getMasterDataOptions(),
     ]);
 

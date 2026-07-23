@@ -7,7 +7,6 @@ import { format } from "date-fns";
 import { MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -55,22 +54,23 @@ import {
 } from "../shortlist-list-filters";
 import type { ShortlistBrandOption, ShortlistListRow } from "../types";
 import {
-  ShortlistStatusBadge,
-  ShortlistVisibilityBadge,
+  ShortlistListStatusPill,
+  ShortlistListVisibilityPill,
 } from "./shortlist-badges";
-import { ShortlistListFilterBar } from "./shortlist-list-filter-bar";
 import {
   ShortlistSelectionFlyout,
   shortlistListFloatingBarContentClass,
 } from "./shortlist-selection-flyout";
+import { ShortlistsListMergedHeader } from "./shortlists-list-header";
+import { shortlistDetailPath } from "../constants";
 import {
   InitialsAvatar,
   ShortlistCreatorPreviewStack,
 } from "./shortlist-row-visuals";
 
-const TABLE_HEAD_CLASS =
-  "h-9 px-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground";
-const TABLE_CELL_CLASS = "px-3 py-2.5 align-middle";
+import {
+  DiscoveryFilteredEmptyState,
+} from "@/features/discovery/components/design-system";
 
 const LIST_ACTION_RUNNERS: Record<
   ShortlistListActionKey,
@@ -83,6 +83,14 @@ const LIST_ACTION_RUNNERS: Record<
   cancel: cancelShortlist,
   archive: archiveShortlist,
 };
+
+const TABLE_GUTTER_START = "pl-8";
+const TABLE_GUTTER_END = "pr-8";
+const SHORTLIST_LIST_HEAD_CLASS =
+  "h-auto bg-transparent px-4 py-[13px] text-[10px] font-bold uppercase tracking-[0.07em] text-muted-foreground";
+const SHORTLIST_LIST_CELL_CLASS =
+  "border-t border-border px-4 py-3.5 align-middle text-[13px] text-[var(--text-2)]";
+const SHORTLIST_LIST_ROW_CLASS = "group transition-colors hover:bg-muted/20";
 
 type Props = {
   shortlists: ShortlistListRow[];
@@ -208,8 +216,8 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
   const showFloatingBar = selectedCount > 0;
 
   return (
-    <div className="space-y-2">
-      <ShortlistListFilterBar
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <ShortlistsListMergedHeader
         filters={filters}
         onChange={setFilters}
         brands={brands}
@@ -219,33 +227,21 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
 
       <div
         className={cn(
-          "overflow-hidden rounded-2xl border border-border/80",
-          "bg-card/75 shadow-[0_8px_32px_rgba(15,23,42,0.06)] backdrop-blur-md",
-          "dark:bg-card/60 dark:shadow-[0_8px_32px_rgba(0,0,0,0.35)]",
+          "min-h-0 flex-1 overflow-y-auto overscroll-y-contain",
           shortlistListFloatingBarContentClass(showFloatingBar)
         )}
       >
         {filteredShortlists.length === 0 ? (
-          <div className="px-4 py-10 text-center">
-            <p className="text-sm font-medium">No shortlists match your filters</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Try adjusting search or filter criteria.
-            </p>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              className="mt-4"
-              onClick={() => setFilters(DEFAULT_SHORTLIST_LIST_FILTERS)}
-            >
-              Reset filters
-            </Button>
-          </div>
+          <DiscoveryFilteredEmptyState
+            title="No shortlists match your filters"
+            onReset={() => setFilters(DEFAULT_SHORTLIST_LIST_FILTERS)}
+            className="mx-8"
+          />
         ) : (
-          <Table>
+          <Table variant="flush">
             <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="w-10 px-2">
+              <TableRow className="border-0 hover:bg-transparent">
+                <TableHead className={cn(SHORTLIST_LIST_HEAD_CLASS, TABLE_GUTTER_START, "w-[34px]")}>
                   <Checkbox
                     checked={allSelected ? true : indeterminate ? "indeterminate" : false}
                     onCheckedChange={(value) =>
@@ -257,16 +253,14 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
                     disabled={isPending}
                   />
                 </TableHead>
-                <TableHead className={TABLE_HEAD_CLASS}>Serial</TableHead>
-                <TableHead className={TABLE_HEAD_CLASS}>Shortlist</TableHead>
-                <TableHead className={TABLE_HEAD_CLASS}>Status</TableHead>
-                <TableHead className={TABLE_HEAD_CLASS}>Visibility</TableHead>
-                <TableHead className={TABLE_HEAD_CLASS}>Owner</TableHead>
-                <TableHead className={cn(TABLE_HEAD_CLASS, "text-right")}>
-                  Creators
-                </TableHead>
-                <TableHead className={TABLE_HEAD_CLASS}>Updated</TableHead>
-                <TableHead className="w-12 px-2" />
+                <TableHead className={SHORTLIST_LIST_HEAD_CLASS}>Serial</TableHead>
+                <TableHead className={SHORTLIST_LIST_HEAD_CLASS}>Shortlist</TableHead>
+                <TableHead className={SHORTLIST_LIST_HEAD_CLASS}>Status</TableHead>
+                <TableHead className={SHORTLIST_LIST_HEAD_CLASS}>Visibility</TableHead>
+                <TableHead className={SHORTLIST_LIST_HEAD_CLASS}>Owner</TableHead>
+                <TableHead className={SHORTLIST_LIST_HEAD_CLASS}>Creators</TableHead>
+                <TableHead className={SHORTLIST_LIST_HEAD_CLASS}>Updated</TableHead>
+                <TableHead className={cn(SHORTLIST_LIST_HEAD_CLASS, TABLE_GUTTER_END, "w-12")} />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -276,8 +270,12 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
                 const isSelected = effectiveSelectedIds.has(row.id);
 
                 return (
-                  <TableRow key={row.id} data-state={isSelected ? "selected" : undefined}>
-                    <TableCell className="w-10 px-2 py-2.5 align-middle">
+                  <TableRow
+                    key={row.id}
+                    data-state={isSelected ? "selected" : undefined}
+                    className={SHORTLIST_LIST_ROW_CLASS}
+                  >
+                    <TableCell className={cn(SHORTLIST_LIST_CELL_CLASS, TABLE_GUTTER_START, "w-[34px]")}>
                       <Checkbox
                         checked={isSelected}
                         onCheckedChange={(value) =>
@@ -291,28 +289,28 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
                     </TableCell>
                     <TableCell
                       className={cn(
-                        TABLE_CELL_CLASS,
-                        "font-mono text-xs text-muted-foreground"
+                        SHORTLIST_LIST_CELL_CLASS,
+                        "tabular-nums text-[12px] font-bold text-[var(--text)]"
                       )}
                     >
                       {row.serial_number ?? "—"}
                     </TableCell>
-                    <TableCell className={TABLE_CELL_CLASS}>
-                      <div className="flex min-w-0 items-center gap-2.5">
+                    <TableCell className={SHORTLIST_LIST_CELL_CLASS}>
+                      <div className="flex min-w-0 items-center gap-[11px]">
                         <InitialsAvatar
                           name={row.name}
                           seed={row.id}
-                          sizeClass="size-9 text-[11px]"
+                          sizeClass="size-8 text-[11px]"
                         />
                         <div className="min-w-0">
                           <Link
-                            href={`/discovery/shortlists/${row.id}`}
-                            className="block truncate font-medium hover:underline"
+                            href={shortlistDetailPath(row)}
+                            className="block truncate text-[13px] font-semibold tracking-[-0.01em] text-[var(--text)] transition-colors group-hover:text-[var(--blue-text)]"
                           >
                             {row.name}
                           </Link>
                           {row.brand_name ? (
-                            <span className="block truncate text-xs text-muted-foreground">
+                            <span className="mt-0.5 block truncate text-[11.5px] text-muted-foreground">
                               {row.brand_name}
                               {row.client_name ? ` · ${row.client_name}` : ""}
                             </span>
@@ -320,50 +318,52 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className={TABLE_CELL_CLASS}>
-                      <ShortlistStatusBadge status={row.status} />
+                    <TableCell className={SHORTLIST_LIST_CELL_CLASS}>
+                      <ShortlistListStatusPill status={row.status} />
                     </TableCell>
-                    <TableCell className={TABLE_CELL_CLASS}>
-                      <ShortlistVisibilityBadge visibility={row.visibility} />
+                    <TableCell className={SHORTLIST_LIST_CELL_CLASS}>
+                      <ShortlistListVisibilityPill visibility={row.visibility} />
                     </TableCell>
-                    <TableCell className={TABLE_CELL_CLASS}>
-                      <div className="flex min-w-0 items-center gap-2">
+                    <TableCell className={SHORTLIST_LIST_CELL_CLASS}>
+                      <div className="flex min-w-0 items-center gap-[9px]">
                         <InitialsAvatar
                           name={ownerLabel}
                           seed={row.owner_id}
-                          sizeClass="size-7 text-[10px]"
+                          sizeClass="size-6 text-[9.5px]"
                         />
-                        <span className="truncate text-xs text-muted-foreground">
+                        <span className="truncate text-[12.5px] text-[var(--text-2)]">
                           {row.owner_name ?? "—"}
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className={TABLE_CELL_CLASS}>
+                    <TableCell className={SHORTLIST_LIST_CELL_CLASS}>
                       <ShortlistCreatorPreviewStack
                         previews={row.creator_previews}
                         totalCount={row.creator_count}
+                        align="start"
+                        overflowVariant="solid"
                       />
                     </TableCell>
-                    <TableCell className={cn(TABLE_CELL_CLASS, "text-muted-foreground")}>
+                    <TableCell className={cn(SHORTLIST_LIST_CELL_CLASS, "text-[12.5px] tabular-nums text-muted-foreground")}>
                       {row.updated_at
                         ? format(new Date(row.updated_at), "MMM d, yyyy")
                         : "—"}
                     </TableCell>
-                    <TableCell className="px-2 py-2.5 align-middle">
+                    <TableCell className={cn(SHORTLIST_LIST_CELL_CLASS, TABLE_GUTTER_END, "w-12")}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
+                          <button
+                            type="button"
                             disabled={isPending}
                             aria-label="Shortlist actions"
+                            className="inline-flex size-[30px] items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground active:scale-[0.94] disabled:opacity-50"
                           >
-                            <MoreHorizontalIcon className="size-4" />
-                          </Button>
+                            <MoreHorizontalIcon className="size-[18px]" />
+                          </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem asChild>
-                            <Link href={`/discovery/shortlists/${row.id}`}>Open</Link>
+                            <Link href={shortlistDetailPath(row)}>Open</Link>
                           </DropdownMenuItem>
                           {actions.length > 0 ? <DropdownMenuSeparator /> : null}
                           {actions.map((action) => (
@@ -387,6 +387,7 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
             </TableBody>
           </Table>
         )}
+        <div className="h-10 shrink-0" aria-hidden />
       </div>
 
       <ShortlistSelectionFlyout

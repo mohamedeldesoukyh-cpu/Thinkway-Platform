@@ -13,6 +13,7 @@ export type CreatorEnrichmentStatus =
   | "running"
   | "enriched"
   | "partial"
+  | "awaiting_profile_details"
   | "failed"
   | "skipped";
 

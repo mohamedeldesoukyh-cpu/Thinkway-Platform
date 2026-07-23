@@ -1,25 +1,27 @@
 import type { Metadata } from "next";
-import { Inter, DM_Mono } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "@/components/providers/app-providers";
 import { ThemeHeadScript } from "@/lib/theme/theme-head-script";
 import { cn } from "@/lib/utils";
 
-const inter = Inter({
+const geistSans = Geist({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
 });
 
-const dmMono = DM_Mono({
+const geistMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-geist-mono",
-  weight: ["400", "500"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Thinkway Platform",
+  title: {
+    default: "Thinkway Platform",
+    template: "%s · Thinkway",
+  },
   description: "Enterprise influencer marketing operations platform",
 };
 
@@ -34,8 +36,8 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn(
         "h-full antialiased font-sans",
-        inter.variable,
-        dmMono.variable
+        geistSans.variable,
+        geistMono.variable
       )}
     >
       <head>

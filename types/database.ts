@@ -87,6 +87,8 @@ export type GroupDocumentType =
 export type GroupRow = {
   id: string;
   document_number: string;
+  slug: string | null;
+  route_short_id: string | null;
   name: string;
   name_normalized: string;
   region: string | null;
@@ -185,6 +187,8 @@ export type AssignmentPricingMode = "package" | "per_deliverable";
 export type CampaignHeaderRow = {
   id: string;
   document_number: string;
+  slug: string | null;
+  route_short_id: string | null;
   name: string;
   description: string | null;
   brief: string | null;
@@ -407,6 +411,8 @@ export type InfluencerDocumentType =
 export type InfluencerRow = {
   id: string;
   document_number: string;
+  slug: string | null;
+  route_short_id: string | null;
   profile_id: string | null;
   display_name: string;
   legal_name: string | null;
@@ -414,6 +420,7 @@ export type InfluencerRow = {
   phone: string | null;
   status: InfluencerStatus;
   country_code: string | null;
+  country_codes: string[] | null;
   nationality: string | null;
   city: string | null;
   contract_status: ContractStatus | null;
@@ -462,6 +469,8 @@ export type InfluencerRow = {
   primary_avatar_url: string | null;
   primary_avatar_source: string | null;
   default_metrics_platform_account_id: string | null;
+  thinkway_score: number | null;
+  source_confidence: number | null;
 };
 
 export type CreatorEnrichmentStatus =
@@ -470,6 +479,7 @@ export type CreatorEnrichmentStatus =
   | "running"
   | "enriched"
   | "partial"
+  | "awaiting_profile_details"
   | "failed"
   | "skipped";
 
@@ -657,6 +667,8 @@ export type ClientOnboardingStatus =
 export type ClientRow = {
   id: string;
   document_number: string;
+  slug: string | null;
+  route_short_id: string | null;
   group_id: string | null;
   name: string;
   name_ar: string | null;
@@ -1891,6 +1903,7 @@ export type Database = {
           phone?: string | null;
           status?: InfluencerStatus;
           country_code?: string | null;
+          country_codes?: string[] | null;
           nationality?: string | null;
           city?: string | null;
           contract_status?: ContractStatus | null;
@@ -1933,6 +1946,8 @@ export type Database = {
   primary_avatar_url?: string | null;
   primary_avatar_source?: string | null;
   default_metrics_platform_account_id?: string | null;
+  thinkway_score?: number | null;
+  source_confidence?: number | null;
 };
         Update: Partial<Database["public"]["Tables"]["influencers"]["Insert"]>;
         Relationships: [];
@@ -2126,6 +2141,8 @@ export type Database = {
           stage: string;
           refresh_tier: string;
           authenticity_score: number | null;
+          thinkway_score: number | null;
+          source_confidence: number | null;
           influencer_id: string | null;
           search_vector: string | null;
           metadata: Record<string, unknown>;
@@ -2151,6 +2168,8 @@ export type Database = {
           stage?: string;
           refresh_tier?: string;
           authenticity_score?: number | null;
+          thinkway_score?: number | null;
+          source_confidence?: number | null;
           influencer_id?: string | null;
           metadata?: Record<string, unknown>;
           first_discovered_at?: string;
@@ -2302,6 +2321,8 @@ export type Database = {
           id: string;
           serial_number: string | null;
           name: string;
+          /** URL slug — migration `20260722100000_entity_url_slugs`. */
+          slug: string | null;
           description: string | null;
           status: ShortlistStatus;
           visibility: ShortlistVisibilityV2;
@@ -2329,6 +2350,7 @@ export type Database = {
           id?: string;
           serial_number?: string | null;
           name: string;
+          slug?: string | null;
           description?: string | null;
           status?: ShortlistStatus;
           visibility?: ShortlistVisibilityV2;
@@ -2444,6 +2466,8 @@ export type Database = {
           platform_account_ids: string[];
           option_number: number | null;
           service_description: string | null;
+          collapse_group_id: string | null;
+          collapse_label: string | null;
         };
         Insert: {
           id?: string;
@@ -2457,6 +2481,8 @@ export type Database = {
           sort_order?: number;
           added_by?: string | null;
           item_status?: ShortlistItemStatus;
+          collapse_group_id?: string | null;
+          collapse_label?: string | null;
           commercial_input_mode?: CommercialInputMode;
           cost?: number | null;
           cost_currency?: string | null;
@@ -2669,6 +2695,8 @@ export type Database = {
           service_description: string | null;
           profile_image_url: string | null;
           profile_url: string | null;
+          collapse_group_id: string | null;
+          collapse_label: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -2679,6 +2707,8 @@ export type Database = {
           profile_id?: string | null;
           unified_id?: string | null;
           source_shortlist_item_id?: string | null;
+          collapse_group_id?: string | null;
+          collapse_label?: string | null;
           creator_name?: string | null;
           platform?: string | null;
           handle?: string | null;
@@ -2885,6 +2915,31 @@ export type Database = {
         Args: Record<string, never>;
         Returns: {
           term: string;
+        }[];
+      };
+      browse_influencer_ids_by_recency: {
+        Args: {
+          p_country?: string | null;
+          p_language?: string | null;
+          p_limit?: number;
+          p_offset?: number;
+        };
+        Returns: {
+          id: string;
+          total_count: number;
+        }[];
+      };
+      browse_influencer_ids_for_categories: {
+        Args: {
+          p_categories?: string[];
+          p_country?: string | null;
+          p_language?: string | null;
+          p_limit?: number;
+          p_offset?: number;
+        };
+        Returns: {
+          id: string;
+          total_count: number;
         }[];
       };
     };

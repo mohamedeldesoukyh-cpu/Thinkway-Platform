@@ -11,7 +11,9 @@ function item(
   partial: Partial<QuotationItemRow> & Pick<QuotationItemRow, "id" | "sort_order">
 ): QuotationItemRow {
   return {
-    quotation_id: "q1",
+    source_shortlist_item_id: null,
+    profile_image_url: null,
+    profile_url: null,
     creator_name: "Creator",
     handle: null,
     platform: "instagram",

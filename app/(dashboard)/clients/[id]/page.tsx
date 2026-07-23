@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
@@ -15,15 +16,51 @@ import { getClientIoSendRecipients, getClientIosForClient } from "@/features/io/
 import { getGroupsForSelect, getMasterDataOptions } from "@/lib/master-data/queries";
 import { tryCompleteFinanceOnboarding } from "@/lib/clients/try-complete-finance-onboarding";
 import { requireRequestUser } from "@/lib/supabase/server";
+import { clientDetailPath } from "@/lib/routing/entity-paths";
+import {
+  metadataTitleForEntity,
+  redirectToCanonicalEntityRoute,
+} from "@/lib/routing/entity-page";
+import {
+  fetchClientRouteSummary,
+  resolveClientIdByRouteKey,
+} from "@/lib/routing/entity-route-queries";
 
 type ClientProfilePageProps = {
   params: Promise<{ id: string }>;
 };
 
+export async function generateMetadata({
+  params,
+}: Pick<ClientProfilePageProps, "params">): Promise<Metadata> {
+  const { id: routeKey } = await params;
+  const clientId = await resolveClientIdByRouteKey(routeKey);
+  if (!clientId) return { title: "Legal entity" };
+
+  const summary = await fetchClientRouteSummary(clientId);
+  if (!summary) return { title: "Legal entity" };
+
+  return {
+    title: metadataTitleForEntity(summary, summary.document_number),
+  };
+}
+
 export default async function ClientProfilePage({
   params,
 }: ClientProfilePageProps) {
-  const { id } = await params;
+  const { id: routeKey } = await params;
+
+  const clientId = await resolveClientIdByRouteKey(routeKey);
+  if (!clientId) notFound();
+
+  const routeSummary = await fetchClientRouteSummary(clientId);
+  if (routeSummary) {
+    redirectToCanonicalEntityRoute({
+      routeKey,
+      entity: routeSummary,
+      canonicalPath: clientDetailPath(routeSummary),
+    });
+  }
 
   let client;
   let groups: Awaited<ReturnType<typeof getGroupsForSelect>> = [];
@@ -42,7 +79,7 @@ export default async function ClientProfilePage({
   let errorMessage: string | null = null;
 
   try {
-    client = await getClientById(id);
+    client = await getClientById(clientId);
     if (
       client?.onboarding_status === "finance_pending" &&
       !(client.credit_limit_active ?? false) &&
@@ -52,11 +89,11 @@ export default async function ClientProfilePage({
         const { supabase, user } = await requireRequestUser();
         const reconciled = await tryCompleteFinanceOnboarding({
           supabase,
-          clientId: id,
+          clientId,
           userId: user.id,
         });
         if (reconciled.completed) {
-          client = await getClientById(id);
+          client = await getClientById(clientId);
         }
       } catch {
         // Unauthenticated or reconcile skipped — profile still renders with derived badge.
@@ -74,11 +111,11 @@ export default async function ClientProfilePage({
     ] = await Promise.all([
       getGroupsForSelect(),
       getMasterDataOptions(),
-      getClientIosForClient(id),
-      getClientIoSendRecipients(id),
-      getClientAccessForEntity(id),
-      getAssignableClientProfiles(id),
-      getClientOnboardingTimeline(id),
+      getClientIosForClient(clientId),
+      getClientIoSendRecipients(clientId),
+      getClientAccessForEntity(clientId),
+      getAssignableClientProfiles(clientId),
+      getClientOnboardingTimeline(clientId),
       getClientOnboardingPermissions(),
     ]);
   } catch (error) {

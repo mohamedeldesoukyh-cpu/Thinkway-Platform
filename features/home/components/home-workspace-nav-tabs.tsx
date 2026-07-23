@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { AppNavLink } from "@/components/navigation/app-nav-link";
 
 export type HomeWorkspaceNavTab = "overview" | "finance" | "campaigns" | "clients";
 
@@ -27,7 +27,7 @@ export function HomeWorkspaceNavTabs({ active }: { active: HomeWorkspaceNavTab }
             {tab.label}
           </span>
         ) : (
-          <Link
+          <AppNavLink
             key={tab.id}
             href={tab.href}
             className="platform-v6-hs-nav-tab"
@@ -35,7 +35,7 @@ export function HomeWorkspaceNavTabs({ active }: { active: HomeWorkspaceNavTab }
             aria-selected="false"
           >
             {tab.label}
-          </Link>
+          </AppNavLink>
         )
       )}
     </div>

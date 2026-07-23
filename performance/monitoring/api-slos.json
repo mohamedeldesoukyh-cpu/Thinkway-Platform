@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "description": "API / RPC latency and payload budgets. Enforce via logs + optional CI harness when secrets are present.",
+  "defaults": {
+    "p50Ms": { "soft": 200, "hard": 500 },
+    "p95Ms": { "soft": 800, "hard": 2000 },
+    "p99Ms": { "soft": 1500, "hard": 4000 },
+    "payloadKb": { "soft": 200, "hard": 500 }
+  },
+  "endpoints": [
+    {
+      "id": "discovery-browse-pool",
+      "path": "RPC browse_influencer_ids_by_recency / discovery browse",
+      "p95Ms": { "soft": 800, "hard": 2000 },
+      "requireSource": "rpc"
+    },
+    {
+      "id": "avatar-proxy",
+      "path": "/api/creators/avatar",
+      "p95Ms": { "soft": 50, "hard": 200 },
+      "warmExternalRequests": { "soft": 0, "hard": 8 }
+    },
+    {
+      "id": "publication-preview-proxy",
+      "path": "/api/creators/publication-preview",
+      "p95Ms": { "soft": 50, "hard": 200 },
+      "warmExternalRequests": { "soft": 0, "hard": 8 }
+    }
+  ],
+  "ci": {
+    "measureScripts": ["measure:discovery-browse-pool", "measure:media-proxy"],
+    "optionalSecrets": ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]
+  }
+}

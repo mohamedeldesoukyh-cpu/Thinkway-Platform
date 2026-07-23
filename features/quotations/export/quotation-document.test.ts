@@ -17,7 +17,7 @@ import {
 } from "@/features/quotations/quotation-row-math";
 import { formatCreatorCount } from "@/features/discovery/components/creator-search/creator-search-utils";
 import { quotationCreatorDuplicateKey } from "@/features/quotations/export/quotation-export-utils";
-import { computeReachForecast } from "@/lib/performance/reach-forecast-engine";
+import { forecastCreator } from "@/lib/campaign-forecast";
 import type { CreatorRecentPublication } from "@/lib/creators/types";
 function mockItem(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
   return {
@@ -119,6 +119,7 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     items: [item],
     revisions: [],
     canManage: true,
+    audience_size: 10000,
     estimated_reach: 10000,
     estimated_engagement_rate: 3,
     ...overrides,
@@ -217,62 +218,50 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
 {
   const html = buildQuotationHtml(buildQuotationDocument(mockDetail()));
   assert.ok(html.includes("Client Quotation"));
-  assert.ok(html.includes('class="thinkway-report-logo'));
-  assert.ok(html.includes('src="/tw-logo-dark.png"'));
-  assert.ok(html.includes("Terms &amp; Conditions"));
-  assert.ok(html.includes("Prepared exclusively for Acme Corp"));
+  assert.ok(html.includes('class="logo rev"'));
+  assert.ok(html.includes("THINK<b>WAY</b>"));
+  assert.ok(html.includes("Terms &amp; conditions"));
+  assert.ok(html.includes("Influencer marketing proposal prepared exclusively for Acme Corp"));
   assert.ok(html.includes("page-break"));
   assert.ok(html.includes("avoid-break"));
   assert.ok(html.includes("Client investment"));
-  assert.ok(html.includes(QUOTATION_CLIENT_LABELS.grossFees));
-  assert.ok(html.includes("Client Cost"));
+  assert.ok(html.includes("Gross fees (EGP)"));
+  assert.ok(html.includes(QUOTATION_CLIENT_LABELS.totalClientCost));
   assert.ok(html.includes(">Tier<"));
-  assert.ok(html.includes(">Type<"));
-  assert.ok(html.includes("Service description"));
-  assert.ok(html.includes(">Option<"));
-  assert.ok(html.includes("creator-quote-block"));
+  assert.ok(html.includes(">Deliverable<"));
+  assert.ok(html.includes(">Platform<"));
+  assert.ok(html.includes("fee-avatar"));
   assert.ok(html.includes("creator-name"));
   assert.ok(html.includes("Campaign mix insight"));
-  assert.ok(html.includes("Creators by Category"));
+  assert.ok(html.includes("Creators by category"));
   assert.ok(html.includes("summary-overview-page"), "Summary overview uses dedicated page-2 class");
-  assert.ok(html.includes("FULL INFLUENCER BREAKDOWN BY TIER"), "Tier breakdown title present");
+  assert.ok(html.includes("Full influencer breakdown by tier"), "Tier breakdown title present");
   assert.ok(html.includes("tier-breakdown-table"), "Tier breakdown table rendered");
   assert.ok(html.includes(">Handle<"), "Tier breakdown includes Handle column");
   assert.ok(!html.includes(">EG Audience %<"), "Tier breakdown must not include EG Audience column");
   assert.ok(html.includes("tier-breakdown-grand-total"), "Tier breakdown grand total rendered");
   const coverEnd = html.indexOf("</section>");
-  const categoryPos = html.indexOf("Creators by Category");
-  const tierPos = html.indexOf("FULL INFLUENCER BREAKDOWN BY TIER");
-  const commercialPos = html.indexOf("Commercial Summary");
-  const termsPos = html.indexOf("Terms &amp; Conditions");
-  assert.ok(
-    categoryPos > coverEnd,
-    "Category summary appears after cover page"
-  );
-  assert.ok(
-    tierPos > categoryPos,
-    "Tier breakdown appears after category summary table"
-  );
+  const categoryPos = html.indexOf("Creators by category");
+  const tierPos = html.indexOf("Full influencer breakdown by tier");
+  const commercialPos = html.indexOf("Commercial summary");
+  const termsPos = html.indexOf("Terms &amp; conditions");
+  assert.ok(categoryPos > coverEnd, "Category summary appears after cover page");
+  assert.ok(tierPos > categoryPos, "Tier breakdown appears after category summary table");
   assert.ok(
     commercialPos < 0 || tierPos < commercialPos,
     "Tier breakdown appears before commercial section"
   );
-  assert.ok(
-    categoryPos < termsPos,
-    "Category summary appears before terms"
-  );
-  assert.ok(!html.includes("<th>Creator</th>"), "Creator belongs in group header, not table columns");
-  assert.ok(html.includes("platform-cell"), "Platform icons column appears in client option table");
+  assert.ok(categoryPos < termsPos, "Category summary appears before terms");
+  assert.ok(html.includes("platform-cell"), "Platform column appears in client fee table");
   const commercialSectionStart = html.indexOf('id="section-commercial"');
   const commercialSectionHtml =
     commercialSectionStart >= 0 ? html.slice(commercialSectionStart) : html;
   assert.ok(
     !commercialSectionHtml.includes(">Followers<"),
-    "Followers column must not appear in client option table"
+    "Followers column must not appear in client fee table"
   );
   assert.ok(!html.includes("Agency fee (AF)"), "Per-line AF must not appear in client line table");
   assert.ok(!html.includes(">AF %<"), "Per-line AF % must not appear in client line table");
-  assert.ok(html.includes('class="money"'));
   assert.ok(!html.includes(">Revenue<"), "Revenue column header must not appear in HTML");
   assert.ok(!html.includes("Total Revenue"), "Total Revenue label must not appear in HTML");
   assert.ok(!html.includes("Budget (Revenue)"), "Cover hero must not use Budget (Revenue)");
@@ -282,9 +271,9 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(!html.includes("Gross Profit"), "Gross Profit must not appear in client preview");
   const summaryStart = html.indexOf('class="summary-box');
   const summaryHtml = summaryStart >= 0 ? html.slice(summaryStart) : html;
-  assert.ok(summaryHtml.includes("Client Cost"));
+  assert.ok(summaryHtml.includes(QUOTATION_CLIENT_LABELS.totalClientCost));
   assert.ok(summaryHtml.includes("Total agency fee"), "AF total remains in client summary");
-  assert.ok(summaryHtml.includes("Total cost included AF"));
+  assert.ok(summaryHtml.includes("Total cost incl. AF"));
   assert.ok(
     !summaryHtml.includes(QUOTATION_CLIENT_LABELS.totalAgencyMargin),
     "Agency margin must not appear in detailed client export"
@@ -305,9 +294,9 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.equal(doc.status, "sent");
   assert.equal(doc.statusLabel, "Sent");
   const html = buildQuotationHtml(doc);
-  assert.ok(html.includes(">Sent</span>"), "Cover page shows Sent status from quotations.status");
+  assert.ok(html.includes("SENT"), "Cover page shows Sent status from quotations.status");
   assert.ok(html.includes("v2.0 ·"), "Cover page includes document version label");
-  assert.ok(!html.includes(">Draft</span>"), "Cover page must not show Draft when status is sent");
+  assert.ok(!html.includes("DRAFT"), "Cover page must not show Draft when status is sent");
 }
 
 {
@@ -315,17 +304,17 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     buildQuotationDocument(mockDetail(), { template: "lump-sum" })
   );
   assert.ok(lumpHtml.includes("Lump Sum"));
-  assert.ok(lumpHtml.includes("Included Creators (1)"));
-  assert.ok(lumpHtml.includes("Creator A"));
-  assert.ok(lumpHtml.includes("creator-quote-block"));
+  assert.ok(lumpHtml.includes("Lump-sum engagement"));
+  assert.ok(lumpHtml.includes("creator"));
+  assert.ok(lumpHtml.includes("fee-avatar"));
   assert.ok(lumpHtml.includes(QUOTATION_CLIENT_LABELS.lumpSumCost));
   assert.ok(lumpHtml.includes(QUOTATION_CLIENT_LABELS.totalCost));
   assert.ok(!lumpHtml.includes(">AF %<"), "Lump sum must not show per-line AF % table");
   assert.ok(
-    !lumpHtml.includes(QUOTATION_CLIENT_LABELS.grossFees),
+    !lumpHtml.includes("Gross fees (EGP)"),
     "Lump sum creator roster must not show per-creator pricing"
   );
-  assert.ok(!lumpHtml.includes('class="creator-list"'), "Lump sum must use roster blocks, not bullet list");
+  assert.ok(!lumpHtml.includes('class="creator-list"'), "Lump sum must use fee table, not bullet list");
 }
 
 {
@@ -444,9 +433,9 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     showcaseHtml.includes("Showcase Quotation — Test Quotation"),
     "Showcase cover/title uses Showcase Quotation prefix"
   );
-  assert.ok(showcaseHtml.includes("showcase-avatar"));
+  assert.ok(showcaseHtml.includes("sc-avatar"));
   assert.ok(showcaseHtml.includes("showcase-creator-page"));
-  assert.ok(showcaseHtml.includes("Creator Roster (1)"));
+  assert.ok(showcaseHtml.includes("Creator roster (1)"));
   assert.ok(showcaseHtml.includes("Proposed deliverables"));
   assert.ok(showcaseHtml.includes("Creator A"));
   assert.ok(showcaseHtml.includes("Recent publications"));
@@ -454,10 +443,10 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     showcaseHtml.includes("No publication screenshots available for this creator."),
     "Showcase shows empty-state when no publication screenshots"
   );
-  assert.ok(!showcaseHtml.includes("Terms &amp; Conditions"), "Showcase deck omits terms");
+  assert.ok(!showcaseHtml.includes("Terms &amp; conditions"), "Showcase deck omits terms");
   assert.ok(!showcaseHtml.includes("Client investment"), "Showcase cover omits investment");
-  assert.ok(!showcaseHtml.includes(QUOTATION_CLIENT_LABELS.grossFees), "Showcase omits pricing");
-  assert.ok(!showcaseHtml.includes("Commercial Summary"), "Showcase omits commercial summary");
+  assert.ok(!showcaseHtml.includes("Gross fees (EGP)"), "Showcase omits pricing");
+  assert.ok(!showcaseHtml.includes('id="section-commercial"'), "Showcase omits commercial summary");
 }
 
 {
@@ -493,15 +482,13 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     !showcaseLumpHtml.includes(" · Showcase Lump Sum"),
     "Showcase lump sum kicker is · Showcase only"
   );
-  assert.ok(showcaseLumpHtml.includes("showcase-avatar"));
+  assert.ok(showcaseLumpHtml.includes("sc-avatar"));
   assert.ok(showcaseLumpHtml.includes("showcase-creator-page"));
   assert.ok(showcaseLumpHtml.includes("showcase-creator-sheet"));
-  assert.ok(showcaseLumpHtml.includes("page-break-inside: avoid"));
-  assert.ok(showcaseLumpHtml.includes('class="quotation-report quotation-showcase"'));
-  assert.ok(!showcaseLumpHtml.includes("min-height: 240mm"));
-  assert.ok(showcaseLumpHtml.includes("Creator Roster (1)"));
+  assert.ok(showcaseLumpHtml.includes('class="quotation-export-preview quotation-showcase quotation-report"'));
+  assert.ok(showcaseLumpHtml.includes("Creator roster (1)"));
   assert.ok(showcaseLumpHtml.includes("Proposed deliverables"));
-  assert.ok(showcaseLumpHtml.includes("Commercial Summary"));
+  assert.ok(showcaseLumpHtml.includes("Commercial summary"));
   assert.ok(showcaseLumpHtml.includes(QUOTATION_CLIENT_LABELS.lumpSumCost));
   assert.ok(showcaseLumpHtml.includes(QUOTATION_CLIENT_LABELS.totalCost));
   assert.ok(
@@ -509,10 +496,10 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     "Cover shows total cost investment KPI"
   );
   assert.ok(
-    !showcaseLumpHtml.includes(QUOTATION_CLIENT_LABELS.grossFees),
+    !showcaseLumpHtml.includes("Gross fees (EGP)"),
     "Showcase lump sum must not show per-creator pricing"
   );
-  assert.ok(!showcaseLumpHtml.includes("Terms &amp; Conditions"), "Showcase lump sum omits terms");
+  assert.ok(!showcaseLumpHtml.includes("Terms &amp; conditions"), "Showcase lump sum omits terms");
   assert.ok(
     !showcaseLumpHtml.includes("Client investment"),
     "Showcase lump sum cover uses total cost, not client investment"
@@ -531,7 +518,7 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     "Showcase rewrites Quotation — prefix to Showcase Quotation —"
   );
   assert.ok(
-    showcaseNamed.includes('<h1 class="cover-title">Showcase Quotation — TUNA DOLPHIN – DELTA CAMPAIGN</h1>'),
+    showcaseNamed.includes("<h1>Showcase Quotation — TUNA DOLPHIN – DELTA CAMPAIGN</h1>"),
     "Showcase cover h1 uses Showcase Quotation prefix"
   );
 
@@ -549,7 +536,7 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   );
   assert.ok(
     showcaseLumpNamed.includes(
-      '<h1 class="cover-title">Showcase Quotation — TUNA DOLPHIN – DELTA CAMPAIGN</h1>'
+      "<h1>Showcase Quotation — TUNA DOLPHIN – DELTA CAMPAIGN</h1>"
     ),
     "Showcase lump sum cover h1 matches Showcase Quotation — {name}"
   );
@@ -565,7 +552,7 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     )
   );
   assert.ok(
-    detailedNamed.includes('<h1 class="cover-title">Quotation — TUNA DOLPHIN – DELTA CAMPAIGN</h1>'),
+    detailedNamed.includes("<h1>Quotation — TUNA DOLPHIN – DELTA CAMPAIGN</h1>"),
     "Detailed template keeps original Quotation — title"
   );
   assert.ok(
@@ -692,24 +679,23 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   );
 
   const detailedHtml = buildQuotationHtml(detailedDoc);
-  assert.ok(detailedHtml.includes("creator-category-chip"));
   assert.ok(detailedHtml.includes("Beauty"));
   assert.ok(detailedHtml.includes("Lifestyle"));
   assert.ok(detailedHtml.includes("Sport"));
-  assert.ok(detailedHtml.includes("2 creators"));
+  assert.ok(detailedHtml.includes("creators"));
 
   const showcaseHtml = buildQuotationHtml(
     buildQuotationDocument(detail, { template: "showcase" })
   );
-  assert.ok(showcaseHtml.includes("<label>Categories</label>"));
+  assert.ok(showcaseHtml.includes("Categories</p>"));
   assert.ok(showcaseHtml.includes("Beauty, Lifestyle"));
   assert.ok(
-    showcaseHtml.includes('<th>Categories</th>'),
+    showcaseHtml.includes("<th>Categories</th>"),
     "Showcase creator roster includes Categories column"
   );
   assert.ok(
     showcaseHtml.includes('class="categories-cell"'),
-    "Showcase creator roster renders category chips per creator"
+    "Showcase creator roster renders categories per creator"
   );
 
   const showcaseLumpHtml = buildQuotationHtml(
@@ -825,8 +811,8 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
       ]),
     })
   );
-  assert.ok(showcaseHtml.includes('class="showcase-pub-play"'), "Video shots render play overlay");
-  const playCount = (showcaseHtml.match(/class="showcase-pub-play"/g) ?? []).length;
+  assert.ok(showcaseHtml.includes('class="pub-play showcase-pub-play"'), "Video shots render play overlay");
+  const playCount = (showcaseHtml.match(/class="pub-play showcase-pub-play"/g) ?? []).length;
   assert.equal(playCount, 1, "Only video publications get a play overlay");
 }
 
@@ -1008,19 +994,22 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
 
   const html = buildQuotationHtml(doc);
   assert.ok(html.includes("tier-breakdown-header"));
-  assert.ok(html.includes("CELEBRITY"));
-  assert.ok(html.includes("MEGA"));
-  assert.ok(html.includes("MID"));
-  assert.ok(html.includes("MICRO"));
+  assert.ok(html.includes("Celebrity"));
+  assert.ok(html.includes("Mega"));
+  assert.ok(html.includes("Mid"));
+  assert.ok(html.includes("Micro"));
   assert.ok(html.includes("dr.fitn3ss"));
-  assert.ok(html.includes("Subtotal: 1 influencer"));
-  assert.ok(html.includes("GRAND TOTAL | 4 Influencers"));
+  assert.ok(html.includes("Grand total · 4 influencers"));
+  assert.ok(html.includes("tier-breakdown-grand-total"));
 }
 
 {
   const followers = 639_850;
   const platform = "instagram";
-  const expectedReach = computeReachForecast({ followers, platform }).forecastReach;
+  const expectedReach = forecastCreator(
+    { creatorKey: "test", followers, platform },
+    null
+  )?.estimatedReach;
   const detail = mockDetail({
     items: [
       mockItem({
@@ -1175,6 +1164,95 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     "MENA handle-only creators default to Instagram in tier export"
   );
   assert.notEqual(row?.estimatedReach, "—", "Est. reach defaults platform to Instagram when followers exist");
+}
+
+{
+  const detail = mockDetail({
+    items: [
+      mockItem({
+        id: "collapse-leader",
+        collapse_group_id: "cg-1",
+        collapse_label: "Collap",
+        creator_name: "Creator A",
+        handle: "@creator_a",
+        sort_order: 1,
+        revenue: 500000,
+        revenue_egp: 500000,
+        deliverables: [
+          { platform: "instagram", type: "instagram_reel", quantity: 1 },
+        ],
+      }),
+      mockItem({
+        id: "collapse-follower",
+        collapse_group_id: "cg-1",
+        collapse_label: "Collap",
+        creator_name: "Creator B",
+        handle: "@creator_b",
+        sort_order: 2,
+        revenue: 0,
+        revenue_egp: 0,
+        deliverables: [],
+      }),
+    ],
+  });
+  const doc = buildQuotationDocument(detail);
+  assert.equal(doc.collapseContentGroups.length, 1);
+  assert.equal(doc.collapseContentGroups[0]?.packages.length, 1);
+  assert.equal(doc.collapseContentGroups[0]?.packages[0]?.creators.length, 2);
+  assert.match(doc.collapseContentGroups[0]?.packages[0]?.type ?? "", /IG Reel/i);
+  assert.equal(
+    doc.collapseContentGroups[0]?.packages[0]?.platforms,
+    "Instagram",
+    "Collap package platform follows leader deliverable, not creator union"
+  );
+
+  const feeRows = doc.creatorGroups.flatMap((group) => group.rows);
+  assert.equal(
+    feeRows.filter((row) => row.isCollapsePackageFollower).length,
+    1
+  );
+  assert.equal(
+    feeRows.filter((row) => row.isCollapsePackageLeader).length,
+    1
+  );
+}
+
+{
+  const detail = mockDetail({
+    items: [
+      mockItem({
+        id: "collapse-leader",
+        influencer_id: "inf-1",
+        collapse_group_id: "cg-1",
+        collapse_label: "Collap",
+        creator_name: "Creator A",
+        handle: "@creator_a",
+        platform: "instagram",
+        sort_order: 1,
+        revenue: 500000,
+        revenue_egp: 500000,
+        deliverables: [{ platform: "tiktok", type: "tiktok_video", quantity: 1 }],
+      }),
+      mockItem({
+        id: "collapse-follower",
+        influencer_id: "inf-2",
+        collapse_group_id: "cg-1",
+        collapse_label: "Collap",
+        creator_name: "Creator B",
+        handle: "@creator_b",
+        platform: "instagram",
+        creator_profile_source: {
+          linkedPlatforms: ["instagram", "tiktok"],
+        } as QuotationItemRow["creator_profile_source"],
+        sort_order: 2,
+        revenue: 0,
+        revenue_egp: 0,
+        deliverables: [],
+      }),
+    ],
+  });
+  const doc = buildQuotationDocument(detail);
+  assert.equal(doc.collapseContentGroups[0]?.packages[0]?.platforms, "TikTok");
 }
 
 console.log("quotation-document.test.ts passed");

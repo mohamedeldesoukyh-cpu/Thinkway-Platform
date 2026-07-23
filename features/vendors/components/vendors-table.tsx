@@ -15,6 +15,9 @@ import { DocumentNumber } from "@/components/ui/document-number";
 import { VendorListStatusCell } from "@/features/vendors/components/vendor-list-status-cell";
 import { VendorRowActions } from "@/features/vendors/components/vendor-row-actions";
 import type { VendorsListResult } from "@/features/vendors/queries";
+import { vendorDetailPath } from "@/lib/routing/entity-paths";
+import { formatCountryCodeLabel } from "@/lib/creators/creator-display-utils";
+import { mergeCountryCodes } from "@/lib/creators/country-inference";
 import {
   formatCategoriesList,
   formatFollowers,
@@ -22,6 +25,15 @@ import {
   formatPricing,
   getTotalFollowers,
 } from "../utils";
+
+function formatVendorCountryLabels(
+  countryCodes: string[] | null | undefined,
+  countryCode: string | null | undefined
+): string {
+  const codes = mergeCountryCodes(countryCodes, countryCode);
+  if (codes.length === 0) return "—";
+  return codes.map(formatCountryCodeLabel).join(" · ");
+}
 
 type VendorsTableProps = {
   vendors: VendorsListResult["vendors"];
@@ -34,7 +46,7 @@ export const VENDORS_TABLE_COLUMNS: OperationalConfigurableColumnDef<VendorRow>[
     id: "document_number",
     label: "Vendor #",
     renderCell: (vendor) => (
-      <Link href={`/vendors/${vendor.id}`} className="platform-v6-link">
+      <Link href={vendorDetailPath({ ...vendor, name: vendor.display_name })} className="platform-v6-link">
         <DocumentNumber value={vendor.document_number} />
       </Link>
     ),
@@ -112,7 +124,8 @@ export const VENDORS_TABLE_COLUMNS: OperationalConfigurableColumnDef<VendorRow>[
   {
     id: "country",
     label: "Country",
-    renderCell: (vendor) => vendor.country_code ?? "—",
+    renderCell: (vendor) =>
+      formatVendorCountryLabels(vendor.country_codes, vendor.country_code),
     cellClassName: "text-muted-foreground",
   },
   {

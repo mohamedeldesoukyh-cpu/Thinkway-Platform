@@ -10,6 +10,7 @@ import {
   getOperationalTableColumnMetas,
 } from "@/components/tables/operational-configurable-table";
 import type { ClientsListResult } from "@/features/clients/queries";
+import { clientDetailPath } from "@/lib/routing/entity-paths";
 
 import { ClientListStatusCell } from "./client-list-status-cell";
 
@@ -26,7 +27,7 @@ export const CLIENTS_TABLE_COLUMNS: OperationalConfigurableColumnDef<ClientRow>[
     colWidth: "96px",
     monoCell: true,
     renderCell: (client) => (
-      <Link href={`/clients/${client.id}`} className="platform-v6-link">
+      <Link href={clientDetailPath(client)} className="platform-v6-link">
         <DocumentNumber value={client.document_number} />
       </Link>
     ),
@@ -44,7 +45,7 @@ export const CLIENTS_TABLE_COLUMNS: OperationalConfigurableColumnDef<ClientRow>[
       return (
         <div className="min-w-0 flex flex-col gap-0.5">
           <Link
-            href={`/clients/${client.id}`}
+            href={clientDetailPath(client)}
             className="platform-v6-link font-semibold"
           >
             {client.name}

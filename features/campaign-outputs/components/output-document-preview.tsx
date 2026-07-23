@@ -1,7 +1,9 @@
 import type { CampaignOutputContent, CampaignOutputContentSection } from "../output-types";
 import type { MediaPlanCampaignContext, MediaPlanData } from "../generators/media-plan";
-import { buildMediaPlanPreviewMarkup } from "../export/media-plan-html";
+import type { CampaignObject } from "@/features/campaign-intelligence";
+import type { MediaPlanSectionKey } from "../media-plan-presentation";
 import { MEDIA_PLAN_BRAND } from "./media-plan-brand";
+import { MediaPlanDocumentPreview } from "./media-plan-document-preview";
 
 function isMediaPlanData(data: unknown): data is MediaPlanData {
   return Boolean(
@@ -68,21 +70,29 @@ function DocumentSection({ section }: { section: CampaignOutputContentSection })
 export function OutputDocumentPreview({
   content,
   mediaPlanContextOverride,
+  campaignObject,
+  onInfluencerConceptsPersist,
+  showSectionToggles,
+  onSectionVisibilityChange,
 }: {
   content: CampaignOutputContent;
   mediaPlanContextOverride?: MediaPlanCampaignContext;
+  campaignObject?: CampaignObject;
+  onInfluencerConceptsPersist?: (next: CampaignObject) => void | Promise<void>;
+  showSectionToggles?: boolean;
+  onSectionVisibilityChange?: (section: MediaPlanSectionKey, visible: boolean) => void;
 }) {
   const mediaPlan = isMediaPlanData(content.data) ? content.data : undefined;
 
   if (mediaPlan) {
-    const markup = buildMediaPlanPreviewMarkup(content, {
-      contextOverride: mediaPlanContextOverride,
-    });
-
     return (
-      <div
-        className="media-plan-html-preview mx-auto w-full max-w-[1280px] shadow-sm print:max-w-none print:shadow-none"
-        dangerouslySetInnerHTML={{ __html: markup }}
+      <MediaPlanDocumentPreview
+        content={content}
+        mediaPlanContextOverride={mediaPlanContextOverride}
+        campaignObject={campaignObject}
+        onInfluencerConceptsPersist={onInfluencerConceptsPersist}
+        showSectionToggles={showSectionToggles}
+        onSectionVisibilityChange={onSectionVisibilityChange}
       />
     );
   }

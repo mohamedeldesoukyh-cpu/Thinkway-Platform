@@ -2,6 +2,11 @@
  * KPI simulator — recalculates reach, engagement, CPM, ROAS, conversions.
  */
 
+import {
+  computeCampaignForecast,
+  defaultDeliverableForPlatform,
+} from "@/lib/campaign-forecast";
+
 import type {
   CampaignDecisionContext,
   KpiDelta,
@@ -24,18 +29,34 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+function forecastFromSimulationCreators(creators: SimulationCreator[]) {
+  return computeCampaignForecast({
+    creators: creators.map((creator) => ({
+      creatorKey: creator.id,
+      displayName: creator.displayName,
+      handle: creator.handle,
+      followers: creator.followers,
+      platform: creator.platform,
+      engagementRate: creator.engagementRate,
+      deliverables: [
+        {
+          ...defaultDeliverableForPlatform(creator.platform),
+          quantity: creator.postCount,
+        },
+      ],
+    })),
+  });
+}
+
 function computeCreatorWeightedReach(creators: SimulationCreator[]): number {
-  return creators.reduce((sum, c) => {
-    const platformMultiplier = c.platform === "tiktok" ? 0.55 : c.platform === "youtube" ? 0.4 : 0.35;
-    return sum + c.followers * c.postCount * platformMultiplier;
-  }, 0);
+  return forecastFromSimulationCreators(creators).estimatedReach;
 }
 
 function computeCreatorWeightedEngagement(creators: SimulationCreator[], reach: number): number {
-  if (creators.length === 0) return reach * 0.04;
-  const avgEr =
-    creators.reduce((sum, c) => sum + c.engagementRate, 0) / creators.length / 100;
-  return Math.round(reach * avgEr);
+  if (creators.length === 0) return Math.round(reach * 0.04);
+  const forecast = forecastFromSimulationCreators(creators);
+  if (forecast.estimatedEngagements > 0) return forecast.estimatedEngagements;
+  return Math.round(reach * 0.04);
 }
 
 function computeAvgCpm(creators: SimulationCreator[], budgetTotal: number, reach: number): number {
@@ -62,7 +83,8 @@ export function simulateKpis(
     baselineRiskScore = baseline.risk.score,
   } = input;
 
-  const creatorReach = computeCreatorWeightedReach(creators);
+  const rosterForecast = forecastFromSimulationCreators(creators);
+  const creatorReach = rosterForecast.estimatedReach;
   const budgetReach = baseline.kpis.reach * budgetMultiplier;
   const reach = Math.round(Math.max(creatorReach, budgetReach));
 
@@ -91,11 +113,16 @@ export function simulateKpis(
     10
   );
 
+  const impressions = Math.max(
+    rosterForecast.estimatedImpressions,
+    Math.round(reach * 1.1)
+  );
+
   const kpis: KpiSnapshot = {
     reach,
     engagement,
     engagementRate,
-    impressions: reach,
+    impressions,
     awareness,
     cpm,
     cpe,

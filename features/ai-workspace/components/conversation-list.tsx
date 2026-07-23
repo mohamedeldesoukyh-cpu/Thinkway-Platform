@@ -3,17 +3,19 @@
 import { useState } from "react";
 import {
   ArchiveIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
+  CircleDollarSignIcon,
+  HomeIcon,
   MessageSquareIcon,
   MoreHorizontalIcon,
   PinIcon,
   PlusIcon,
   SearchIcon,
   Trash2Icon,
+  ZapIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +23,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +32,7 @@ import {
   pinConversationAction,
   renameConversationAction,
 } from "../actions/conversation-actions";
+import { STUDIO_CHAT_CLASSES } from "../constants/studio-chat-tokens";
 import type { ConversationListItem } from "../types";
 
 type ConversationListProps = {
@@ -48,7 +50,6 @@ type ConversationListProps = {
   className?: string;
 };
 
-/** Date buckets for the sidebar — mirrors the reference Studio design. */
 function bucketLabel(updatedAt: string): string {
   const updated = new Date(updatedAt);
   const now = new Date();
@@ -64,6 +65,20 @@ function bucketLabel(updatedAt: string): string {
 
 const BUCKET_ORDER = ["Today", "Yesterday", "This week", "Earlier"] as const;
 
+function convoIcon(title: string) {
+  const lower = title.toLowerCase();
+  if (lower.includes("vendor") || lower.includes("sooh") || lower.includes("quote")) {
+    return HomeIcon;
+  }
+  if (lower.includes("egp") || lower.includes("budget") || lower.includes("$")) {
+    return CircleDollarSignIcon;
+  }
+  if (lower.includes("campaign") || lower.includes("push") || lower.includes("brief")) {
+    return ZapIcon;
+  }
+  return MessageSquareIcon;
+}
+
 export function ConversationList({
   conversations,
   loading,
@@ -78,6 +93,7 @@ export function ConversationList({
   className,
 }: ConversationListProps) {
   const [search, setSearch] = useState("");
+  const confirmDelete = useConfirmDelete();
 
   const filtered = conversations.filter((item) =>
     item.title.toLowerCase().includes(search.toLowerCase())
@@ -98,13 +114,9 @@ export function ConversationList({
   return (
     <Root
       className={cn(
-        "flex shrink-0 flex-col self-stretch overflow-hidden",
-        embedded
-          ? "min-h-0 w-full"
-          : cn(
-              "ai-sidebar ai-sidebar-glass ai-sidebar-float",
-              collapsed ? "w-12" : "w-[272px]"
-            ),
+        STUDIO_CHAT_CLASSES.sidebar,
+        collapsed && STUDIO_CHAT_CLASSES.sidebarCollapsed,
+        embedded && "w-full",
         className
       )}
     >
@@ -115,9 +127,11 @@ export function ConversationList({
             onClick={() => onCollapsedChange?.(false)}
             title="Expand conversations"
             aria-label="Expand conversations"
-            className="flex size-8 items-center justify-center rounded-lg text-foreground/55 transition-colors hover:bg-[#0057FF]/[0.08] hover:text-foreground"
+            className="sc-collapse-btn flex size-8 items-center justify-center rounded-lg"
           >
-            <ChevronRightIcon className="size-4" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden>
+              <path d="M9 6l6 6-6 6" />
+            </svg>
           </button>
 
           <button
@@ -125,54 +139,43 @@ export function ConversationList({
             onClick={onNewChat}
             title="New chat"
             aria-label="New chat"
-            className="mt-2 flex size-8 items-center justify-center rounded-lg text-foreground/55 transition-colors hover:bg-[#0057FF]/[0.08] hover:text-foreground"
+            className="mt-2 flex size-8 items-center justify-center rounded-lg text-[var(--sc-text-3)] transition-colors hover:bg-[rgba(0,87,255,0.05)]"
           >
-            <PlusIcon className="size-3.5" />
+            <PlusIcon className="size-3.5" strokeWidth={2.4} />
           </button>
-
-          <div className="mt-auto flex flex-col items-center gap-1 pb-1">
-            <MessageSquareIcon className="size-4 text-foreground/30" aria-hidden />
-          </div>
         </div>
       ) : (
         <>
-          <div className="px-3.5 pt-4 pb-2">
-            <button
-              type="button"
-              onClick={onNewChat}
-              className="ai-btn-new flex h-[42px] w-full items-center justify-center gap-2 rounded-[14px] text-sm font-semibold text-white"
-            >
-              <PlusIcon className="size-4" strokeWidth={2.4} />
-              New chat
+          <div className="sc-sidebar-top">
+            <button type="button" onClick={onNewChat} className={STUDIO_CHAT_CLASSES.newChatBtn}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden>
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              <span>New chat</span>
             </button>
 
-            <div className="relative mt-3">
-              <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-foreground/40" />
-              <Input
+            <div className="sc-search-wrap">
+              <SearchIcon strokeWidth={2} />
+              <input
+                type="text"
                 placeholder="Search conversations"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className={cn(
-                  "h-[38px] rounded-xl border-black/[0.08] bg-white/60 pr-2.5 pl-9 text-[13px] text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]",
-                  "placeholder:text-foreground/40",
-                  "focus-visible:border-[#0057FF]/45 focus-visible:ring-[#0057FF]/25"
-                )}
+                className="sc-search-input"
               />
             </div>
           </div>
 
-          {error ? (
-            <p className="px-3 py-4 text-center text-xs text-destructive">{error}</p>
-          ) : null}
+          {error ? <p className="sc-sidebar-empty text-destructive">{error}</p> : null}
 
           {loading && conversations.length === 0 ? (
             <div className="space-y-2 p-3">
               {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full rounded-lg bg-[#0057FF]/10" />
+                <Skeleton key={i} className="h-10 w-full rounded-lg" />
               ))}
             </div>
           ) : (
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2.5 pb-2">
+            <div className="sc-convo-scroll">
               {pinned.length > 0 ? (
                 <ConversationGroup
                   label="Pinned"
@@ -180,6 +183,7 @@ export function ConversationList({
                   activeId={activeId}
                   onSelect={onSelect}
                   onRefresh={onRefresh}
+                  confirmDelete={confirmDelete}
                 />
               ) : null}
               {BUCKET_ORDER.map((label) => {
@@ -193,31 +197,32 @@ export function ConversationList({
                     activeId={activeId}
                     onSelect={onSelect}
                     onRefresh={onRefresh}
+                    confirmDelete={confirmDelete}
                   />
                 );
               })}
               {conversations.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-2 px-4 py-7 text-center text-xs text-foreground/50">
-                  <MessageSquareIcon className="size-[22px] opacity-40" />
+                <div className="sc-sidebar-empty">
+                  <MessageSquareIcon className="mx-auto mb-2 size-[22px] opacity-40" />
                   No conversations yet
                 </div>
               ) : filtered.length === 0 ? (
-                <p className="px-2 py-4 text-center text-xs text-foreground/50">
-                  No matching conversations
-                </p>
+                <p className="sc-sidebar-empty">No matching conversations</p>
               ) : null}
             </div>
           )}
 
           {onCollapsedChange && !embedded ? (
-            <div className="shrink-0 border-t border-black/[0.06] p-2">
+            <div className="sc-sidebar-foot">
               <button
                 type="button"
                 onClick={() => onCollapsedChange(true)}
-                className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg text-xs font-medium text-foreground/55 transition-colors hover:bg-[#0057FF]/[0.08] hover:text-foreground"
+                className="sc-collapse-btn"
               >
-                <ChevronLeftIcon className="size-3.5" />
-                Collapse
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden>
+                  <path d="M15 6l-6 6 6 6" />
+                </svg>
+                <span>Collapse</span>
               </button>
             </div>
           ) : null}
@@ -233,31 +238,30 @@ function ConversationGroup({
   activeId,
   onSelect,
   onRefresh,
+  confirmDelete,
 }: {
   label: string;
   items: ConversationListItem[];
   activeId?: string;
   onSelect: (id: string) => void;
   onRefresh?: () => void;
+  confirmDelete: (description: string, title?: string) => Promise<boolean>;
 }) {
   if (items.length === 0) return null;
 
   return (
     <div>
-      <p className="px-2.5 pt-3.5 pb-2 text-[10.5px] font-bold tracking-[1px] text-foreground/45 uppercase">
-        {label}
-      </p>
-      <div className="flex flex-col gap-0.5">
-        {items.map((item) => (
-          <ConversationRow
-            key={item.id}
-            item={item}
-            isActive={item.id === activeId}
-            onSelect={onSelect}
-            onRefresh={onRefresh}
-          />
-        ))}
-      </div>
+      <p className="sc-convo-group-label">{label}</p>
+      {items.map((item) => (
+        <ConversationRow
+          key={item.id}
+          item={item}
+          isActive={item.id === activeId}
+          onSelect={onSelect}
+          onRefresh={onRefresh}
+          confirmDelete={confirmDelete}
+        />
+      ))}
     </div>
   );
 }
@@ -267,14 +271,17 @@ function ConversationRow({
   isActive,
   onSelect,
   onRefresh,
+  confirmDelete,
 }: {
   item: ConversationListItem;
   isActive: boolean;
   onSelect: (id: string) => void;
   onRefresh?: () => void;
+  confirmDelete: (description: string, title?: string) => Promise<boolean>;
 }) {
   const [renaming, setRenaming] = useState(false);
   const [title, setTitle] = useState(item.title);
+  const Icon = convoIcon(item.title);
 
   async function handleRename() {
     if (title.trim() && title !== item.title) {
@@ -292,12 +299,13 @@ function ConversationRow({
   return (
     <div
       className={cn(
-        "group relative flex items-center gap-0.5 rounded-[10px] pr-0.5 transition-colors",
-        isActive ? "ai-nav-item-active" : "hover:bg-[#0057FF]/[0.06]"
+        STUDIO_CHAT_CLASSES.convoItem,
+        isActive && STUDIO_CHAT_CLASSES.convoItemActive,
+        "group"
       )}
     >
       {renaming ? (
-        <Input
+        <input
           autoFocus
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -306,26 +314,26 @@ function ConversationRow({
             if (e.key === "Enter") void handleRename();
             if (e.key === "Escape") setRenaming(false);
           }}
-          className="mx-1 h-8 flex-1 border-black/[0.1] bg-white/70 text-xs text-foreground"
+          className="mx-1 h-8 min-w-0 flex-1 rounded-md border border-[var(--sc-border)] bg-white px-2 text-xs"
         />
       ) : (
         <button
           type="button"
           onClick={() => onSelect(item.id)}
-          className="min-w-0 flex-1 px-2.5 py-2 text-left"
+          className="flex min-w-0 flex-1 items-start gap-2 text-left"
         >
-          <div
-            className={cn(
-              "truncate text-[13px]",
-              isActive ? "font-semibold text-[#0057FF]" : "font-medium text-foreground/85"
-            )}
-          >
-            {item.isPinned ? (
-              <PinIcon className="mr-1 inline size-3 shrink-0 text-[#0057FF]" />
-            ) : null}
-            {item.title}
-          </div>
-          <div className="text-[11px] text-foreground/45">{formattedDate}</div>
+          <span className="sc-convo-ico">
+            <Icon strokeWidth={2} />
+          </span>
+          <span className="sc-convo-body">
+            <span className="sc-convo-title">
+              {item.isPinned ? (
+                <PinIcon className="mr-1 inline size-3 shrink-0 text-[var(--sc-blue)]" />
+              ) : null}
+              {item.title}
+            </span>
+            <span className="sc-convo-date">{formattedDate}</span>
+          </span>
         </button>
       )}
 
@@ -334,7 +342,7 @@ function ConversationRow({
           <Button
             variant="ghost"
             size="icon-sm"
-            className="text-foreground/50 opacity-0 group-hover:opacity-100 hover:bg-[#0057FF]/[0.08] hover:text-foreground"
+            className="text-[var(--sc-text-3)] opacity-0 group-hover:opacity-100"
             aria-label="Conversation options"
           >
             <MoreHorizontalIcon className="size-4" />
@@ -364,6 +372,11 @@ function ConversationRow({
           <DropdownMenuItem
             className="text-destructive"
             onClick={async () => {
+              const ok = await confirmDelete(
+                `Delete "${item.title}"? This conversation and its messages will be permanently removed.`,
+                "Delete conversation?"
+              );
+              if (!ok) return;
               await deleteConversationAction(item.id);
               onRefresh?.();
             }}

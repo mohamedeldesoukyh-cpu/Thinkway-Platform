@@ -1,14 +1,21 @@
 import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-types";
-import { computeCommercials } from "@/lib/commercial/commercial-engine";
+import { computeAgencyFee, computeCommercials } from "@/lib/commercial/commercial-engine";
 
 import {
   computeDeliverableClientPrice,
   deliverableQuantity,
+  resolveDeliverableAfPct,
 } from "@/lib/quotations/quotation-deliverable-commercial";
 
 export type DeliverableCommercialRollup = {
   cost: number;
+  /** Base client cost before agency fee. */
   revenue: number;
+  afValue: number;
+  /** Blended AF% across priced deliverables (afValue / revenue). */
+  afPct: number;
+  /** Base client cost + agency fee. */
+  totalClientCost: number;
   gpValue: number;
   gpPct: number;
 };
@@ -16,6 +23,8 @@ export type DeliverableCommercialRollup = {
 export type DeliverableRollupOptions = {
   lineCurrency: string;
   fxRateToEgp: number;
+  /** Fallback AF% when a deliverable row has no `af_pct`. */
+  lineAfPct?: number | null;
 };
 
 function fxRateForCurrency(currency: string, options: DeliverableRollupOptions): number {
@@ -41,6 +50,7 @@ export function hasPricedDeliverables(
 ): boolean {
   if (!deliverables?.length) return false;
   return deliverables.some((d) => {
+    if (d.free_for_client === true) return true;
     if (deliverableLineCost(d) > 0) return true;
     const clientPrice = Number(d.revenue ?? 0);
     return Number.isFinite(clientPrice) && clientPrice > 0;
@@ -57,21 +67,32 @@ export function rollupDeliverableCommercials(
   const targetRate = lineCurrencyRate(options);
   let costEgp = 0;
   let revenueEgp = 0;
+  let afValueEgp = 0;
 
   for (const deliverable of deliverables) {
     const currency = (deliverable.cost_currency || options.lineCurrency || "EGP").toUpperCase();
     const rate = fxRateForCurrency(currency, options);
+    const baseRevenue = computeDeliverableClientPrice(deliverable, rate);
+    const afPct = resolveDeliverableAfPct(deliverable, options.lineAfPct);
+    const afValue = computeAgencyFee({ revenue: baseRevenue, afPct }).afValue;
     costEgp += deliverableLineCost(deliverable) * rate;
-    revenueEgp += computeDeliverableClientPrice(deliverable, rate) * rate;
+    revenueEgp += baseRevenue * rate;
+    afValueEgp += afValue * rate;
   }
 
   const cost = targetRate === 1 ? costEgp : costEgp / targetRate;
   const revenue = targetRate === 1 ? revenueEgp : revenueEgp / targetRate;
+  const afValue = targetRate === 1 ? afValueEgp : afValueEgp / targetRate;
+  const totalClientCost = revenue + afValue;
+  const afPct = revenue > 0 ? Math.round(((afValue / revenue) * 100 + Number.EPSILON) * 10000) / 10000 : 0;
   const line = computeCommercials({ mode: "cost_revenue", cost, revenue });
 
   return {
     cost: line.cost,
     revenue: line.revenue,
+    afValue,
+    afPct,
+    totalClientCost,
     gpValue: line.gpValue,
     gpPct: line.gpPct,
   };

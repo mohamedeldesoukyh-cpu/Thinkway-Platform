@@ -1,10 +1,10 @@
 "use client";
 
 import {
-  GlassSelectionFlyout,
-  glassFlyoutContentClass,
-  type GlassFlyoutAction,
-} from "@/components/shared/navigation/glass-selection-flyout";
+  DiscoverySelectionFlyout,
+  discoverySelectionFlyoutContentClass,
+  type DiscoverySelectionFlyoutAction,
+} from "@/features/discovery/components/design-system";
 
 import type { QuotationListActionDef } from "../quotation-list-actions";
 
@@ -27,7 +27,7 @@ export function QuotationSelectionFlyout({
   onClearSelection,
   onAction,
 }: Props) {
-  const flyoutActions: GlassFlyoutAction[] = actions.map((action) => ({
+  const flyoutActions: DiscoverySelectionFlyoutAction[] = actions.map((action) => ({
     id: action.key,
     label: action.label,
     variant: "outline",
@@ -36,7 +36,7 @@ export function QuotationSelectionFlyout({
   }));
 
   return (
-    <GlassSelectionFlyout
+    <DiscoverySelectionFlyout
       open={selectedCount > 0}
       selectedCount={selectedCount}
       entityLabel="quotation"
@@ -53,4 +53,4 @@ export function QuotationSelectionFlyout({
   );
 }
 
-export { glassFlyoutContentClass as quotationListFloatingBarContentClass };
+export { discoverySelectionFlyoutContentClass as quotationListFloatingBarContentClass };

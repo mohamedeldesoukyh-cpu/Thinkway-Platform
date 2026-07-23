@@ -52,12 +52,31 @@ import {
 }
 
 {
+  const href = buildExportHref("q-1", "pptx", "detailed");
+  assert.ok(href.includes("format=pptx"));
+  assert.ok(!href.includes("template="), "detailed omits template param (default)");
+}
+
+{
+  const href = buildExportHref("q-1", "pptx", "showcase");
+  assert.ok(href.includes("format=pptx"));
+  assert.ok(href.includes("template=showcase"));
+}
+
+{
   assert.equal(resolveQuotationTemplate("showcase"), "showcase");
+  assert.equal(resolveQuotationTemplate("pitch"), "pitch");
   assert.equal(resolveQuotationTemplate("showcase-lump-sum"), "showcase-lump-sum");
   assert.equal(
     resolveQuotationTemplate(new URLSearchParams("template=showcase").get("template")),
     "showcase"
   );
+}
+
+{
+  const href = buildExportHref("q-1", "pptx", "pitch");
+  assert.ok(href.includes("format=pptx"));
+  assert.ok(href.includes("template=pitch"));
 }
 
 console.log("quotation-preview-downloads.test.ts: ok");

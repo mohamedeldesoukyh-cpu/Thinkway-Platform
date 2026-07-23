@@ -8,6 +8,10 @@ import {
 } from "@/lib/creators/contact-info";
 import { formatCreatorDisplayName } from "@/lib/text/decode-html-entities";
 import { getUnifiedCreatorById } from "@/lib/creators/unified-browse";
+import {
+  countryWritePayload,
+  persistCountryFromInitialProfileSignals,
+} from "@/lib/creators/country-persistence";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { refreshCreatorMetrics } from "@/lib/services/creators/creator-enrichment-service";
 import { requireCreatorBaselineDna } from "@/features/creator-dna/services/baseline-dna-populator";
@@ -105,6 +109,13 @@ export async function addCreatorByProfileUrl(
       metrics_is_manual_override: false,
     });
 
+    const profileBio = enrichment?.bio ?? null;
+    const initialCountryWrite = persistCountryFromInitialProfileSignals({
+      bio: profileBio,
+      displayName,
+      handle: parsed.normalized_username,
+    });
+
     const { data: influencer, error: influencerError } = await supabase
       .from("influencers")
       .insert({
@@ -112,6 +123,7 @@ export async function addCreatorByProfileUrl(
         status: "active",
         notes: "Added via Discovery profile link",
         created_by: input.actorId,
+        ...countryWritePayload(initialCountryWrite),
       })
       .select("id")
       .single();
@@ -126,7 +138,6 @@ export async function addCreatorByProfileUrl(
     influencerId = influencer.id;
     created = true;
 
-    const profileBio = enrichment?.bio ?? null;
     const contactEmail = extractEmailFromText(profileBio);
     const contactLinks = mergeContactLinks(
       null,
@@ -200,10 +211,11 @@ export async function addCreatorByProfileUrl(
   }
 
   const refresh = await refreshCreatorMetrics(supabase, influencerId, {
-    force: true,
+    force: false,
     trigger: "manual",
     scope: "all",
     requestedBy: input.actorId,
+    feature: "add_creator",
   });
 
   const unifiedId = `inf:${influencerId}`;

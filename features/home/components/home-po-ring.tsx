@@ -25,8 +25,8 @@ export function HomePoRing({ percent }: HomePoRingProps) {
       <svg width="80" height="80" viewBox="0 0 60 60" aria-hidden>
         <defs>
           <linearGradient id="platform-v6-hs-ring-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#818cf8" />
-            <stop offset="100%" stopColor="#f472b6" />
+            <stop offset="0%" stopColor="#0057FF" />
+            <stop offset="100%" stopColor="#1A6FFF" />
           </linearGradient>
         </defs>
         <circle className="platform-v6-hs-ring-track" cx="30" cy="30" r="25" />

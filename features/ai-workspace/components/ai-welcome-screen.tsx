@@ -1,89 +1,128 @@
 "use client";
 
-import {
-  AlertCircleIcon,
-  DollarSignIcon,
-  FileTextIcon,
-  LineChartIcon,
-  StarIcon,
-} from "lucide-react";
+import { useMemo, type ReactNode } from "react";
+import { CheckSquareIcon, PencilIcon, ZapIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 import type { AiIntent } from "@/features/ai";
-import { AiOrbIcon } from "./ai-orb-icon";
+import { STUDIO_CHAT_CLASSES } from "../constants/studio-chat-tokens";
+
+type PulseFeedItem = {
+  id: string;
+  icon: "gen" | "approve" | "edit";
+  text: ReactNode;
+  time: string;
+};
 
 type AiWelcomeScreenProps = {
   onSelect?: (prompt: string, intent?: AiIntent) => void;
   disabled?: boolean;
   className?: string;
+  userDisplayName?: string;
 };
 
-const CHIP_ACTIONS = [
-  {
-    id: "generate-brief",
-    label: "Generate brief",
-    prompt: "Generate a campaign brief for a fashion brand targeting women aged 18-35",
-    intent: "strategize" as AiIntent,
-    icon: FileTextIcon,
-    hideWhenWorkflow: ["create-campaign", "generate-brief"],
-  },
-  {
-    id: "revenue-summary",
-    label: "Revenue summary",
-    prompt: "What is our total revenue and gross profit this month?",
-    intent: "analyze" as AiIntent,
-    icon: DollarSignIcon,
-    contexts: ["general", "campaign", "client"] as const,
-  },
-  {
-    id: "pending-payments",
-    label: "Pending payments",
-    prompt: "Show me all vendors with pending payments",
-    intent: "analyze" as AiIntent,
-    icon: AlertCircleIcon,
-    contexts: ["general", "campaign", "client"] as const,
-  },
-  {
-    id: "top-er",
-    label: "Top by ER%",
-    prompt: "Who are the top performing creators by engagement rate in our database?",
-    intent: "scout" as AiIntent,
-    icon: StarIcon,
-    contexts: ["general", "discovery"] as const,
-  },
-  {
-    id: "export-report",
-    label: "Export report",
-    prompt: "Export a report for the Arab Bank campaign with all creator deliverables",
-    intent: "analyze" as AiIntent,
-    icon: LineChartIcon,
-    contexts: ["general", "campaign"] as const,
-  },
-] as const;
+const FEED_ICON_STYLES = {
+  gen: { bg: "var(--sc-blue-light)", color: "var(--sc-blue-text)", Icon: ZapIcon },
+  approve: { bg: "var(--sc-green-bg)", color: "var(--sc-green-text)", Icon: CheckSquareIcon },
+  edit: { bg: "var(--sc-purple-bg)", color: "var(--sc-purple-text)", Icon: PencilIcon },
+} as const;
 
-export function AiWelcomeScreen({ className }: AiWelcomeScreenProps) {
+const DEMO_FEED: PulseFeedItem[] = [
+  {
+    id: "demo-1",
+    icon: "gen",
+    text: (
+      <>
+        Copilot generated <b>Media Plan</b>
+      </>
+    ),
+    time: "Recently",
+  },
+  {
+    id: "demo-2",
+    icon: "approve",
+    text: (
+      <>
+        <b>Budget Allocation Plan</b> approved
+      </>
+    ),
+    time: "Today",
+  },
+  {
+    id: "demo-3",
+    icon: "edit",
+    text: (
+      <>
+        <b>Campaign brief</b> edited — target market updated
+      </>
+    ),
+    time: "Yesterday",
+  },
+];
+
+function firstName(displayName?: string): string | null {
+  if (!displayName?.trim()) return null;
+  return displayName.trim().split(/\s+/)[0] ?? null;
+}
+
+export function AiWelcomeScreen({
+  className,
+  userDisplayName,
+}: AiWelcomeScreenProps) {
+  const greetingName = useMemo(() => firstName(userDisplayName), [userDisplayName]);
+  const greeting = greetingName
+    ? `What can I help with, ${greetingName}?`
+    : "What can I help with today?";
+
   return (
-    <div
-      className={cn(
-        "ai-welcome-aurora ai-welcome-dots relative flex flex-1 flex-col items-center justify-center overflow-hidden px-6",
-        className
-      )}
-    >
-      <div className="relative z-[1] flex flex-col items-center gap-5 text-center">
-        <AiOrbIcon
-          size="lg"
-          float
-          ring
-          className="shadow-[0_20px_40px_rgba(0,87,255,0.35)]"
-        />
+    <div className={cn(STUDIO_CHAT_CLASSES.welcome, className)}>
+      <h2>{greeting}</h2>
+      <p>
+        Ask about campaigns, vendors, shortlists, or performance — Thinkway Intelligence pulls
+        live data from your workspace to answer.
+      </p>
 
-        <h2 className="whitespace-nowrap text-[clamp(22px,3.2vw,38px)] leading-none font-extrabold tracking-[-1.2px] text-foreground">
-          How can I help <span className="ai-gradient-text">your campaigns</span> today?
-        </h2>
+      <div className="sc-pulse-live">
+        <span className="sc-pulse-dot" aria-hidden />
+        Studio pulse — Live
       </div>
+
+      <div className="sc-orbit" aria-hidden>
+        <div className="sc-orbit-guide" />
+        <div className="sc-orbit-ring" />
+        <div className="sc-orbit-logo">
+          <span className="sc-dot-main" />
+          <span className="sc-dot-spark" />
+        </div>
+      </div>
+
+      <PulseFeed items={DEMO_FEED} />
     </div>
   );
 }
 
-export { CHIP_ACTIONS };
+function PulseFeed({ items }: { items: PulseFeedItem[] }) {
+  return (
+    <div className="sc-pulse-feed">
+      {items.map((item) => {
+        const style = FEED_ICON_STYLES[item.icon];
+        const Icon = style.Icon;
+        return (
+          <div key={item.id} className="sc-feed-item">
+            <span
+              className="sc-feed-ico"
+              style={{ background: style.bg, color: style.color }}
+            >
+              <Icon strokeWidth={2} />
+            </span>
+            <span className="sc-feed-text">{item.text}</span>
+            <span className="sc-feed-time">{item.time}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export { CHIP_ACTIONS } from "./ai-welcome-screen-chips";

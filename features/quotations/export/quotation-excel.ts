@@ -55,7 +55,7 @@ export async function buildQuotationExcel(
       "Totals (EGP)",
       "",
       "",
-      doc.summary.estimatedReach,
+      "",
       doc.summary.estimatedEngagement,
       "",
       `${doc.summary.creatorCount} creators`,
@@ -147,7 +147,6 @@ export async function buildQuotationExcel(
       meta: [
         { label: "Quotation", value: doc.name },
         { label: "Campaign", value: doc.campaignName },
-        { label: "Estimated reach", value: doc.summary.estimatedReach },
         { label: "Estimated engagement", value: doc.summary.estimatedEngagement },
       ],
       generatedAt: new Date(),

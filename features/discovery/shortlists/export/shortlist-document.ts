@@ -5,6 +5,8 @@ import {
   formatEngagementRate,
   normalizeCountryCode,
 } from "@/features/discovery/components/creator-search/creator-search-utils";
+import { formatCreatorCountryLabels } from "@/lib/creators/creator-display-utils";
+import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
 import { filterPlatformsForDisplay, sortPlatformsStable } from "@/lib/creators/creator-centric";
 import { creatorStoredCategoriesForDisplay } from "@/lib/creators/category-filter";
 import {
@@ -16,20 +18,23 @@ import {
   resolveCreatorProfileUrl,
   type ProfileUrlSource,
 } from "@/lib/discovery/profile-url";
-import { fetchCreatorAvatarImage } from "@/lib/creators/creator-avatar-proxy";
-import { detectImageContentType } from "@/lib/performance/screenshot-capture/storage";
-import { embedReportImageDataUri } from "@/lib/performance/report/report-embed-images";
+import { creatorAvatarBrowserDisplayUrl } from "@/lib/performance/creator-avatar";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { COLLAPSE_CONTENT_LABEL, collapseContentPreviewLabel } from "@/lib/discovery/collapse-content";
+import {
+  computeCampaignForecastFromProfiles,
+  shortlistGroupsToForecastProfiles,
+} from "@/lib/campaign-forecast";
+import { optimizeShortlistCampaign } from "@/lib/discovery/shortlists/shortlist-optimization";
+import { evaluateShortlistDecision } from "@/lib/discovery/shortlists/shortlist-decision";
 
-import { isShowcaseTemplate } from "./shortlist-template";
-
+import type { ShortlistTemplateVariant } from "./shortlist-template";
 import {
   SHORTLIST_ITEM_STATUS_LABELS,
   SHORTLIST_STATUS_LABELS,
   SHORTLIST_VISIBILITY_LABELS,
 } from "../constants";
 import type { ShortlistCreatorItem, ShortlistDetail } from "../types";
-import type { ShortlistTemplateVariant } from "./shortlist-template";
 
 export type ShortlistPlatformLink = {
   platform: string;
@@ -56,10 +61,14 @@ export type ShortlistDocCreatorGroup = {
   handle: string;
   avatarUrl: string | null;
   avatarProfileUrl: string | null;
+  avatarProxyUrl: string | null;
   profileUrl: string | null;
   platformLinks: ShortlistPlatformLink[];
+  platform: string;
   followers: string;
+  followersNumeric: number | null;
   engagementRate: string;
+  engagementRateNumeric: number | null;
   country: string;
   tier: CreatorTierLabel;
   categories: string[];
@@ -98,8 +107,15 @@ export type ShortlistSummaryBreakdownItem = {
 
 export type ShortlistDocumentSummary = {
   creatorCount: number;
+  /** Deduplicated sum of creator followers (audience size). */
   totalFollowers: number;
   totalFollowersLabel: string;
+  /** Expected unique people reached (Campaign Forecast Engine). */
+  estimatedReach: number;
+  estimatedReachLabel: string;
+  estimatedImpressions: number;
+  estimatedViews: number;
+  estimatedEngagements: number;
   avgEngagementRate: number | null;
   avgEngagementRateLabel: string;
   platformBreakdown: ShortlistSummaryBreakdownItem[];
@@ -109,6 +125,19 @@ export type ShortlistDocumentSummary = {
   avgMatchScoreLabel: string;
   brandSafetyBreakdown: ShortlistSummaryBreakdownItem[];
   statusBreakdown: ShortlistSummaryBreakdownItem[];
+  /** Campaign optimization health from Forecast Engine output. */
+  campaignHealthScore?: number;
+  campaignDecisionScore?: number;
+  launchReadiness?: string | null;
+  topDecisionRecommendation?: string | null;
+  topOptimizationRecommendation?: string | null;
+};
+
+export type ShortlistDocCollapseContentGroup = {
+  collapseGroupId: string;
+  label: string;
+  previewLabel: string;
+  creators: ShortlistDocCreatorGroup[];
 };
 
 export type ShortlistDocument = {
@@ -127,6 +156,7 @@ export type ShortlistDocument = {
   summary: ShortlistDocumentSummary;
   rows: ShortlistDocRow[];
   creatorGroups: ShortlistDocCreatorGroup[];
+  collapseContentGroups: ShortlistDocCollapseContentGroup[];
 };
 
 function resolveEngagementRate(
@@ -231,9 +261,15 @@ function computeShortlistSummary(
       incrementBreakdown(platformMap, platformLabel(account.platform));
     }
 
-    const country =
-      normalizeCountryCode(creator.country_code) ?? creator.country_code ?? null;
-    incrementBreakdown(countryMap, country);
+    const countryCodes = resolveCreatorCountryCodes({
+      country_codes: creator.country_codes,
+      country_code: creator.country_code,
+      estimated_country: creator.estimated_country,
+      platformAudienceCountries: creator.platforms.map((platform) => platform.audience_country),
+    });
+    for (const code of countryCodes) {
+      incrementBreakdown(countryMap, code);
+    }
 
     for (const category of creatorStoredCategoriesForDisplay(creator).slice(0, 3)) {
       incrementBreakdown(categoryMap, category);
@@ -252,6 +288,11 @@ function computeShortlistSummary(
     creatorCount,
     totalFollowers,
     totalFollowersLabel: formatCreatorCount(totalFollowers > 0 ? totalFollowers : null),
+    estimatedReach: 0,
+    estimatedReachLabel: "—",
+    estimatedImpressions: 0,
+    estimatedViews: 0,
+    estimatedEngagements: 0,
     avgEngagementRate,
     avgEngagementRateLabel: formatEngagementRate(avgEngagementRate),
     platformBreakdown: topBreakdownItems(platformMap),
@@ -336,6 +377,10 @@ function buildCreatorGroup(
     null;
   const categories = creatorStoredCategoriesForDisplay(creator).slice(0, 5);
   const creatorKey = shortlistCreatorKey(item);
+  const avatarProxyUrl =
+    row.avatarUrl && row.avatarProfileUrl
+      ? creatorAvatarBrowserDisplayUrl(row.avatarUrl, row.avatarProfileUrl)
+      : null;
 
   return {
     creatorKey,
@@ -344,10 +389,14 @@ function buildCreatorGroup(
     handle: row.handle,
     avatarUrl: row.avatarUrl,
     avatarProfileUrl: row.avatarProfileUrl,
+    avatarProxyUrl,
     profileUrl,
     platformLinks: row.platformLinks,
+    platform: row.platform,
     followers: row.followers,
+    followersNumeric: resolveFollowersNumeric(creator),
     engagementRate: row.engagementRate,
+    engagementRateNumeric: resolveEngagementRateNumeric(creator),
     country: row.country,
     tier: resolveShortlistTier(creator),
     categories,
@@ -379,7 +428,7 @@ function buildRow(item: ShortlistCreatorItem, rank: number): ShortlistDocRow | n
         : "—";
   const safety = brandSafetyMeta(creator.authenticity_score);
   const interests = creatorStoredCategoriesForDisplay(creator).slice(0, 3).join(", ") || "—";
-  const country = normalizeCountryCode(creator.country_code) ?? creator.country_code ?? "—";
+  const country = formatCreatorCountryLabels(creator);
   const platformLinks = resolvePlatformLinks(creator);
   const avatarProfileUrl =
     (profileSource ? resolveCreatorProfileUrl(profileSource) : null) ??
@@ -427,21 +476,66 @@ export function buildShortlistDocument(
     .map((item, index) => buildRow(item, index + 1))
     .filter((row): row is ShortlistDocRow => row != null);
 
-  const publicationShotsByCreatorKey = isShowcaseTemplate(template)
-    ? options.publicationShotsByCreatorKey
-    : undefined;
+  const publicationShotsByCreatorKey = options.publicationShotsByCreatorKey;
 
-  const creatorGroups = isShowcaseTemplate(template)
-    ? items
-        .map((item, index) =>
-          buildCreatorGroup(item, index + 1, publicationShotsByCreatorKey)
-        )
-        .filter((group): group is ShortlistDocCreatorGroup => group != null)
-    : [];
+  const creatorGroups = items
+    .map((item, index) =>
+      buildCreatorGroup(item, index + 1, publicationShotsByCreatorKey)
+    )
+    .filter((group): group is ShortlistDocCreatorGroup => group != null);
+
+  const groupByItemId = new Map<string, ShortlistDocCreatorGroup>();
+  items.forEach((item, index) => {
+    const group = buildCreatorGroup(item, index + 1, publicationShotsByCreatorKey);
+    if (group) groupByItemId.set(item.item_id, group);
+  });
+
+  const collapseContentGroups: ShortlistDocCollapseContentGroup[] = [];
+  const seenCollapse = new Set<string>();
+  for (const item of items) {
+    const collapseId = item.collapse_group_id;
+    if (!collapseId || seenCollapse.has(collapseId)) continue;
+    seenCollapse.add(collapseId);
+    const members = items.filter((row) => row.collapse_group_id === collapseId);
+    const label = members.find((row) => row.collapse_label)?.collapse_label?.trim() || COLLAPSE_CONTENT_LABEL;
+    collapseContentGroups.push({
+      collapseGroupId: collapseId,
+      label,
+      previewLabel: collapseContentPreviewLabel(label),
+      creators: members
+        .map((row) => groupByItemId.get(row.item_id))
+        .filter((group): group is ShortlistDocCreatorGroup => group != null),
+    });
+  }
 
   const generatedAt = new Date();
-  const summaryTemplate = template === "showcase" ? "summary" : template;
-  const summary = computeShortlistSummary(items, summaryTemplate);
+  const summaryTemplate =
+    template === "showcase" || template === "pitch" ? "summary" : template;
+  const baseSummary = computeShortlistSummary(items, summaryTemplate);
+  const rosterForecast = computeCampaignForecastFromProfiles(
+    shortlistGroupsToForecastProfiles(creatorGroups)
+  );
+  const optimization = optimizeShortlistCampaign(creatorGroups);
+  const decision = evaluateShortlistDecision(creatorGroups);
+  const summary: ShortlistDocumentSummary = {
+    ...baseSummary,
+    totalFollowers: rosterForecast.audienceSize,
+    totalFollowersLabel: formatCreatorCount(
+      rosterForecast.audienceSize > 0 ? rosterForecast.audienceSize : null
+    ),
+    estimatedReach: rosterForecast.estimatedReach,
+    estimatedReachLabel: formatCreatorCount(
+      rosterForecast.estimatedReach > 0 ? rosterForecast.estimatedReach : null
+    ),
+    estimatedImpressions: rosterForecast.estimatedImpressions,
+    estimatedViews: rosterForecast.estimatedViews,
+    estimatedEngagements: rosterForecast.estimatedEngagements,
+    campaignHealthScore: optimization.healthScore.overall,
+    campaignDecisionScore: decision.decisionScore.overall,
+    launchReadiness: decision.readinessLabel,
+    topDecisionRecommendation: decision.approvalSummary.recommendation,
+    topOptimizationRecommendation: optimization.recommendations[0]?.action ?? null,
+  };
 
   return {
     template,
@@ -459,6 +553,7 @@ export function buildShortlistDocument(
     summary,
     rows,
     creatorGroups,
+    collapseContentGroups,
   };
 }
 
@@ -466,57 +561,4 @@ export function shortlistDocumentBaseName(doc: ShortlistDocument): string {
   return doc.serial.replace(/[^\w-]+/g, "-");
 }
 
-async function embedShortlistAvatarDataUri(
-  src: string | null,
-  profileUrl: string | null
-): Promise<string | null> {
-  const trimmedSrc = src?.trim() || null;
-  const trimmedProfile = profileUrl?.trim() || null;
-  if (!trimmedSrc && !trimmedProfile) return null;
-  if (trimmedSrc?.startsWith("data:")) return trimmedSrc;
-
-  const result = await fetchCreatorAvatarImage({
-    src: trimmedSrc,
-    profileUrl: trimmedProfile,
-  });
-
-  if (result.ok) {
-    const buffer = Buffer.from(result.buffer);
-    const contentType =
-      result.contentType || detectImageContentType(buffer);
-    return `data:${contentType};base64,${buffer.toString("base64")}`;
-  }
-
-  if (trimmedSrc) {
-    const embedded = await embedReportImageDataUri(trimmedSrc);
-    return embedded?.startsWith("data:") ? embedded : null;
-  }
-
-  return null;
-}
-
-/** Embed avatars as data URIs so preview iframe and PDF/Word exports render profile images. */
-export async function embedShortlistDocumentAvatars(
-  doc: ShortlistDocument
-): Promise<ShortlistDocument> {
-  const rows = await Promise.all(
-    doc.rows.map(async (row) => ({
-      ...row,
-      avatarUrl: await embedShortlistAvatarDataUri(row.avatarUrl, row.avatarProfileUrl),
-    }))
-  );
-
-  const creatorGroups = doc.creatorGroups?.length
-    ? await Promise.all(
-        doc.creatorGroups.map(async (group) => ({
-          ...group,
-          avatarUrl: await embedShortlistAvatarDataUri(
-            group.avatarUrl,
-            group.avatarProfileUrl
-          ),
-        }))
-      )
-    : doc.creatorGroups;
-
-  return { ...doc, rows, creatorGroups };
-}
+export { embedShortlistDocumentAvatars } from "./shortlist-export-avatars";

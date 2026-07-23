@@ -1,57 +1,93 @@
-/* thinkway-platform_6.html — scoped platform list + client workspace design system */
+/* thinkway-platform_6.html — scoped aliases → app/thinkway-design-tokens.css */
 
 .thinkway-platform-v6,
 .thinkway-platform-v6-topbar {
-  --tw-navy: #0d1526;
-  --tw-navy-2: #152035;
-  --tw-blue: #2563eb;
-  --tw-blue-h: #1d4ed8;
-  --tw-blue-light: #eff6ff;
-  --tw-blue-text: #1d4ed8;
-  --tw-green: #10b981;
-  --tw-green-bg: #ecfdf5;
-  --tw-green-text: #065f46;
-  --tw-amber: #f59e0b;
-  --tw-amber-bg: #fffbeb;
-  --tw-amber-text: #92400e;
-  --tw-red: #ef4444;
-  --tw-red-bg: #fef2f2;
-  --tw-red-text: #991b1b;
-  --tw-purple-bg: #faf5ff;
-  --tw-purple-text: #6b21a8;
-  --tw-text: #0f172a;
-  --tw-text-2: #475569;
-  --tw-text-3: #94a3b8;
-  --tw-border: #e2e8f0;
-  --tw-surface: #f8fafc;
-  --tw-white: #fff;
-  --tw-r: 6px;
-  --tw-rl: 10px;
-  --tw-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --tw-navy: var(--navy);
+  --tw-navy-2: var(--ink);
+  --tw-blue: var(--blue);
+  --tw-blue-h: var(--blue-hover);
+  --tw-blue-light: var(--blue-light);
+  --tw-blue-text: var(--blue-text);
+  --tw-green: var(--green);
+  --tw-green-bg: var(--green-bg);
+  --tw-green-text: var(--green-text);
+  --tw-amber: var(--amber);
+  --tw-amber-bg: var(--amber-bg);
+  --tw-amber-text: var(--amber-text);
+  --tw-red: var(--red);
+  --tw-red-bg: var(--red-bg);
+  --tw-red-text: var(--red-text);
+  --tw-purple-bg: var(--purple-bg);
+  --tw-purple-text: var(--purple-text);
+  --tw-text: var(--text);
+  --tw-text-2: var(--text-2);
+  --tw-text-3: var(--text-3);
+  /* --tw-border already defined on :root in thinkway-design-tokens.css — do not redeclare */
+  --tw-surface: var(--surface);
+  --tw-white: var(--white);
+  --tw-r: var(--tw-radius);
+  --tw-rl: var(--radius-md);
+  --tw-ease: var(--ease-out);
 
   font-size: 13px;
   color: var(--tw-text);
 }
 
 .thinkway-platform-v6 .platform-v6-page {
+  position: relative;
   min-height: 100%;
 }
 
+.thinkway-platform-v6 .platform-v6-page::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 480px;
+  height: 320px;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 100% 100% at 100% 0%, rgba(0, 87, 255, 0.06) 0%, transparent 65%);
+}
+
 .thinkway-platform-v6 .platform-v6-page-header {
-  margin-bottom: 20px;
+  position: relative;
+  z-index: 1;
+  padding-bottom: 14px;
+  margin-bottom: 4px;
 }
 
 .thinkway-platform-v6 .platform-v6-page-header h1 {
+  font-family: "Geist", sans-serif;
   font-size: 20px;
-  font-weight: 700;
-  color: var(--tw-text);
-  letter-spacing: -0.3px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 10px;
   line-height: 1.2;
+}
+
+.thinkway-platform-v6 .platform-v6-page--executive .platform-v6-page-header h1::after {
+  content: "Intelligence";
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--blue-text);
+  background: var(--blue-light);
+  border: 1px solid #c7d9ff;
+  border-radius: 20px;
+  padding: 3px 10px;
 }
 
 .thinkway-platform-v6 .platform-v6-page-header p {
   font-size: 12px;
-  color: var(--tw-text-3);
+  color: var(--text-3);
   margin-top: 3px;
 }
 
@@ -86,6 +122,34 @@
 
 .thinkway-platform-v6-topbar--workspace-nav .platform-v6-hs-nav-center {
   justify-self: center;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.thinkway-platform-v6-topbar--workspace-nav .platform-v6-hs-nav-tab {
+  padding: 6px 15px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+  white-space: nowrap;
+  text-decoration: none;
+  transition: all 150ms;
+}
+
+.thinkway-platform-v6-topbar--workspace-nav .platform-v6-hs-nav-tab:hover {
+  background: rgba(0, 87, 255, 0.06);
+  color: var(--text-2);
+}
+
+.thinkway-platform-v6-topbar--workspace-nav .platform-v6-hs-nav-tab.active {
+  background: var(--white);
+  color: var(--blue-text);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
 }
 
 .thinkway-platform-v6-workspace-nav-mobile {
@@ -100,6 +164,34 @@
   width: 100%;
   max-width: 420px;
   justify-content: center;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.thinkway-platform-v6-workspace-nav-mobile .platform-v6-hs-nav-tab {
+  padding: 6px 15px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+  white-space: nowrap;
+  text-decoration: none;
+  transition: all 150ms;
+}
+
+.thinkway-platform-v6-workspace-nav-mobile .platform-v6-hs-nav-tab:hover {
+  background: rgba(0, 87, 255, 0.06);
+  color: var(--text-2);
+}
+
+.thinkway-platform-v6-workspace-nav-mobile .platform-v6-hs-nav-tab.active {
+  background: var(--white);
+  color: var(--blue-text);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
 }
 
 /* Topbar (dashboard shell) */
@@ -219,23 +311,54 @@
   border: 1px solid var(--tw-green);
 }
 
-/* KPI strip — grid must win over Tailwind utilities on parent/child wrappers */
-.thinkway-platform-v6 .platform-v6-kpi-strip {
-  display: grid !important;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  gap: 0;
-  background: var(--tw-white);
-  border: 1px solid var(--tw-border);
-  border-radius: var(--tw-rl);
-  overflow: hidden;
+/* KPI strip — redesign: card flex strip (executive + shared) */
+.thinkway-platform-v6 .platform-v6-kpi-strip,
+.thinkway-platform-v6 .platform-v6-kpi-strip--executive {
+  position: relative;
+  z-index: 1;
+  display: flex !important;
+  grid-template-columns: unset !important;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   margin-bottom: 20px;
   width: 100%;
 }
 
+.thinkway-platform-v6 .platform-v6-kpi-strip--executive::-webkit-scrollbar {
+  height: 4px;
+}
+
 .thinkway-platform-v6 .platform-v6-kpi-cell {
-  flex: 1;
-  padding: 14px 16px;
-  border-right: 1px solid var(--tw-border);
+  position: relative;
+  flex: 1 0 150px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 13px 15px;
+  overflow: hidden;
+  border-right: none;
+  transition: border-color 150ms, box-shadow 150ms, transform 150ms;
+}
+
+.thinkway-platform-v6 .platform-v6-kpi-cell::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background: var(--kpi-accent, var(--blue));
+  opacity: 0.7;
+}
+
+.thinkway-platform-v6 .platform-v6-kpi-cell:hover {
+  border-color: #c7d9ff;
+  box-shadow: 0 8px 20px rgba(0, 87, 255, 0.08);
+  transform: translateY(-2px);
 }
 
 .thinkway-platform-v6 .platform-v6-kpi-cell:last-child {
@@ -243,15 +366,23 @@
 }
 
 .thinkway-platform-v6 .platform-v6-kpi-lbl {
-  font-size: 9px;
+  font-size: 9.5px;
   font-weight: 700;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
-  color: var(--tw-text-3);
-  margin-bottom: 5px;
+  color: var(--text-3);
+  margin-bottom: 6px;
   display: flex;
   align-items: center;
   gap: 5px;
+  min-width: 0;
+}
+
+.thinkway-platform-v6 .platform-v6-kpi-lbl-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .thinkway-platform-v6 .platform-v6-kpi-lbl svg {
@@ -263,15 +394,17 @@
 }
 
 .thinkway-platform-v6 .platform-v6-kpi-val {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.4px;
-  line-height: 1;
+  font-family: "Geist Mono", monospace;
   font-variant-numeric: tabular-nums;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  line-height: 1;
+  color: var(--ink);
 }
 
 .thinkway-platform-v6 .platform-v6-c-blue {
-  color: var(--tw-blue);
+  color: var(--blue-text);
 }
 
 .thinkway-platform-v6 .platform-v6-c-green {
@@ -279,7 +412,7 @@
 }
 
 .thinkway-platform-v6 .platform-v6-c-amber {
-  color: var(--tw-amber);
+  color: var(--amber-text);
 }
 
 .thinkway-platform-v6 .platform-v6-c-red {
@@ -1116,29 +1249,35 @@
 
 /* ─── Executive dashboard ─── */
 .thinkway-platform-v6 .platform-v6-dash-filters {
-  background: var(--tw-white);
-  border: 1px solid var(--tw-border);
-  border-radius: var(--tw-rl);
-  padding: 10px 14px;
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 20px;
   flex-wrap: wrap;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+
+.thinkway-platform-v6 .platform-v6-dash-filters[data-pending="true"] {
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 .thinkway-platform-v6 .platform-v6-dash-filter {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: 6px;
 }
 
 .thinkway-platform-v6 .platform-v6-df-lbl {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: var(--tw-text-3);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-3);
+  white-space: nowrap;
 }
 
 .thinkway-platform-v6 .platform-v6-df-input,
@@ -1146,26 +1285,27 @@
 .thinkway-platform-v6 .platform-v6-dash-filters [data-slot="select-trigger"] {
   height: 30px !important;
   min-height: 30px !important;
-  border: 1px solid var(--tw-border) !important;
-  border-radius: var(--tw-r) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
   padding: 0 8px !important;
-  font-size: 11px !important;
-  color: var(--tw-text) !important;
+  font-size: 11.5px !important;
+  color: var(--text-2) !important;
   outline: none;
-  background: var(--tw-white) !important;
+  background: var(--surface) !important;
   min-width: 120px;
   box-shadow: none !important;
 }
 
 .thinkway-platform-v6 .platform-v6-dash-filters input[type="date"]:focus,
 .thinkway-platform-v6 .platform-v6-dash-filters [data-slot="select-trigger"]:focus-visible {
-  border-color: var(--tw-blue) !important;
+  border-color: var(--blue) !important;
+  outline: none;
 }
 
 .thinkway-platform-v6 .platform-v6-dash-filter-divider {
   width: 1px;
-  height: 32px;
-  background: var(--tw-border);
+  height: 20px;
+  background: var(--border);
   flex-shrink: 0;
 }
 
@@ -1173,16 +1313,12 @@
   display: flex !important;
   grid-template-columns: unset !important;
   overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.thinkway-platform-v6 .platform-v6-kpi-strip--executive::-webkit-scrollbar {
-  display: none;
+  scrollbar-width: thin;
 }
 
 .thinkway-platform-v6 .platform-v6-kpi-strip--executive .platform-v6-kpi-cell {
-  flex: 1;
-  min-width: 110px;
+  flex: 1 0 150px;
+  min-width: 150px;
 }
 
 .thinkway-platform-v6 .platform-v6-trend-grid {
@@ -1209,9 +1345,9 @@
 }
 
 .thinkway-platform-v6 .platform-v6-trend-card {
-  background: var(--tw-white);
-  border: 1px solid var(--tw-border);
-  border-radius: var(--tw-rl);
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   padding: 16px;
   overflow: hidden;
 }
@@ -1219,13 +1355,13 @@
 .thinkway-platform-v6 .platform-v6-trend-card h4 {
   font-size: 12px;
   font-weight: 700;
-  color: var(--tw-text);
+  color: var(--ink);
   margin-bottom: 2px;
 }
 
 .thinkway-platform-v6 .platform-v6-trend-card p {
   font-size: 10px;
-  color: var(--tw-text-3);
+  color: var(--text-3);
   margin-bottom: 12px;
 }
 
@@ -1247,6 +1383,43 @@
   transition: height 400ms var(--tw-ease);
 }
 
+/* Single-period trend: stat view instead of a one-bar "chart" */
+.thinkway-platform-v6 .platform-v6-trend-single {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
+  text-align: center;
+  padding: 8px 4px 4px;
+}
+
+.thinkway-platform-v6 .platform-v6-trend-single-val {
+  font-family: "Geist Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.thinkway-platform-v6 .platform-v6-trend-single-period {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+
+.thinkway-platform-v6 .platform-v6-trend-single-caption {
+  margin-top: 4px;
+  font-size: 10.5px;
+  font-style: italic;
+  color: var(--text-3);
+  line-height: 1.35;
+  max-width: 16rem;
+}
+
 .thinkway-platform-v6 .platform-v6-chart-foot {
   display: flex;
   justify-content: space-between;
@@ -1255,54 +1428,61 @@
 
 .thinkway-platform-v6 .platform-v6-chart-foot span {
   font-size: 10px;
-  color: var(--tw-text-3);
+  color: var(--text-3);
 }
 
 .thinkway-platform-v6 .platform-v6-pa-grid {
+  position: relative;
+  z-index: 1;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, 1fr);
   gap: 14px;
   margin-bottom: 16px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1100px) {
   .thinkway-platform-v6 .platform-v6-pa-grid {
     grid-template-columns: 1fr;
   }
 }
 
 .thinkway-platform-v6 .platform-v6-dash-layout {
+  position: relative;
+  z-index: 1;
   display: grid;
-  grid-template-columns: 1fr 320px;
+  grid-template-columns: 1.6fr 1fr;
   gap: 16px;
   align-items: start;
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1100px) {
   .thinkway-platform-v6 .platform-v6-dash-layout {
     grid-template-columns: 1fr;
   }
 }
 
 .thinkway-platform-v6 .platform-v6-section-head {
-  padding: 13px 18px;
-  border-bottom: 1px solid var(--tw-border);
+  position: relative;
+  z-index: 1;
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
+  margin: 18px 0 10px;
+  padding: 0;
+  border-bottom: none;
 }
 
 .thinkway-platform-v6 .platform-v6-section-head h2 {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
-  color: var(--tw-text);
+  color: var(--ink);
 }
 
 .thinkway-platform-v6 .platform-v6-section-head p {
   font-size: 11px;
-  color: var(--tw-text-3);
-  margin-top: 1px;
+  color: var(--text-3);
+  margin-top: 2px;
 }
 
 .thinkway-platform-v6 .platform-v6-section-actions {
@@ -1316,45 +1496,54 @@
 .thinkway-platform-v6 .platform-v6-section-actions [data-slot="button"] {
   height: 28px !important;
   padding: 0 10px !important;
-  border-radius: var(--tw-r) !important;
+  border-radius: var(--radius) !important;
   font-size: 11px !important;
   font-weight: 500 !important;
-  border: 1px solid var(--tw-border) !important;
-  background: var(--tw-white) !important;
-  color: var(--tw-text-2) !important;
+  border: 1px solid var(--border) !important;
+  background: var(--white) !important;
+  color: var(--text-2) !important;
   box-shadow: none !important;
 }
 
 .thinkway-platform-v6 .platform-v6-section-actions button:hover,
 .thinkway-platform-v6 .platform-v6-section-actions [data-slot="button"]:hover {
-  background: var(--tw-surface) !important;
+  background: var(--surface) !important;
+}
+
+.thinkway-platform-v6 [class*="SectionWrap"],
+.thinkway-platform-v6 .platform-v6-pa-grid > * {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
 }
 
 .thinkway-platform-v6 .platform-v6-alert-section {
-  background: var(--tw-white);
-  border: 1px solid var(--tw-border);
-  border-radius: var(--tw-rl);
-  padding: 14px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 8px;
   margin-bottom: 16px;
 }
 
 .thinkway-platform-v6 .platform-v6-alert-group-label {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  color: var(--tw-text-3);
-  padding: 6px 0;
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: 10px 8px 6px;
 }
 
 .thinkway-platform-v6 .platform-v6-alert-group-label .cnt {
-  background: var(--tw-amber-bg);
-  color: var(--tw-amber-text);
+  font-family: "Geist Mono", monospace;
+  font-weight: 700;
+  background: var(--surface);
   border-radius: 10px;
-  padding: 1px 6px;
+  padding: 1px 7px;
+  color: var(--text-2);
   font-size: 9px;
 }
 
@@ -1362,41 +1551,57 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 12px 14px;
-  border-radius: var(--tw-r);
-  border: 1px solid #fde68a;
-  background: var(--tw-amber-bg);
-  margin-bottom: 8px;
+  padding: 9px 8px;
+  border-radius: var(--radius);
+  border: none;
+  background: transparent;
+  margin-bottom: 0;
   text-decoration: none;
   color: inherit;
-  transition: background 150ms;
+  transition: background 100ms;
 }
 
 .thinkway-platform-v6 .platform-v6-alert-item:hover {
-  background: #fef3c7;
+  background: var(--surface);
 }
 
 .thinkway-platform-v6 .platform-v6-alert-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: var(--tw-amber);
+  background: var(--amber);
+  margin-top: 5px;
   flex-shrink: 0;
-  margin-top: 3px;
+  position: relative;
+}
+
+.thinkway-platform-v6 .platform-v6-alert-dot::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: var(--amber);
+  opacity: 0.35;
+  animation: platform-v6-hs-pulse 2s ease-out infinite;
 }
 
 .thinkway-platform-v6 .platform-v6-c-purple {
-  color: #a855f7;
+  color: var(--purple-text);
 }
 
 .thinkway-platform-v6 .platform-v6-c-pink {
-  color: #ec4899;
+  color: var(--purple-text);
 }
 
 .thinkway-platform-v6 .platform-v6-mixed-currency {
-  font-size: 11px;
-  color: var(--tw-text-3);
+  font-size: 10.5px;
+  color: var(--amber-text);
+  background: var(--amber-bg);
+  border: 1px solid #fde68a;
+  border-radius: var(--radius);
+  padding: 6px 10px;
   margin-bottom: 8px;
+  display: inline-block;
 }
 
 /* Topbar subtitle (v8) */
@@ -1490,6 +1695,28 @@
   }
 }
 
+/* ═══════════════════════════════════════════════════════
+   HOME PAGE (/) — REDESIGN
+   Drop-in replacement for the `.platform-v6-hs-*` block in
+   thinkway-platform-v6.css (currently ~lines 1493–2200).
+   Same class names as the existing dark hero — swap the CSS,
+   no JSX changes required for styling. A few small JSX tweaks
+   are called out separately below the CSS (icon/gradient colors
+   that are hardcoded inline in home-page.tsx / home-po-ring.tsx).
+   Requires thinkway-design-tokens.css to be loaded (it already is).
+   ═══════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════
+   HOME PAGE (/) — REDESIGN
+   Drop-in replacement for the `.platform-v6-hs-*` block in
+   thinkway-platform-v6.css (currently ~lines 1493–2200).
+   Same class names as the existing dark hero — swap the CSS,
+   no JSX changes required for styling. A few small JSX tweaks
+   are called out separately below the CSS (icon/gradient colors
+   that are hardcoded inline in home-page.tsx / home-po-ring.tsx).
+   Requires thinkway-design-tokens.css to be loaded (it already is).
+   ═══════════════════════════════════════════════════════ */
+
 .thinkway-platform-v6 .platform-v6-hs-root {
   position: relative;
   display: flex;
@@ -1498,56 +1725,29 @@
   flex: 1;
   flex-direction: column;
   overflow: hidden;
-  background: #05060f;
-  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+  background: var(--lavender);
+  font-family: "Geist", -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
 }
 
-.thinkway-platform-v6 .platform-v6-hs-canvas {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
+/* Particle canvas + secondary aurora + grid overlay — dropped for the clean brand look.
+   Kept as display:none (not deleted) so re-enabling is a one-line revert if ever wanted. */
+.thinkway-platform-v6 .platform-v6-hs-canvas,
+.thinkway-platform-v6 .platform-v6-hs-aurora-2,
+.thinkway-platform-v6 .platform-v6-hs-grid {
+  display: none;
 }
 
+/* Single soft, static brand-blue glow instead of the animated multi-color aurora */
 .thinkway-platform-v6 .platform-v6-hs-aurora {
   position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background:
-    radial-gradient(ellipse 120% 80% at 80% -10%, rgba(99, 102, 241, 0.18) 0%, transparent 60%),
-    radial-gradient(ellipse 80% 70% at -10% 90%, rgba(16, 185, 129, 0.14) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 50% at 50% 50%, rgba(236, 72, 153, 0.07) 0%, transparent 60%),
-    radial-gradient(ellipse 90% 60% at 90% 80%, rgba(245, 158, 11, 0.06) 0%, transparent 50%);
-  animation: platform-v6-hs-gradient-move 18s ease infinite;
-  background-size: 300% 300%;
+  background: radial-gradient(ellipse 70% 50% at 85% -10%, rgba(0, 87, 255, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 45% at -10% 100%, rgba(26, 111, 255, 0.06) 0%, transparent 55%);
 }
 
-.thinkway-platform-v6 .platform-v6-hs-aurora-2 {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse 70% 50% at 20% 20%, rgba(139, 92, 246, 0.1) 0%, transparent 55%),
-    radial-gradient(ellipse 50% 40% at 70% 70%, rgba(6, 182, 212, 0.08) 0%, transparent 55%);
-  animation: platform-v6-hs-gradient-move 24s ease infinite reverse;
-  background-size: 300% 300%;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-grid {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse 100% 100% at 50% 0%, black 20%, transparent 80%);
-  -webkit-mask-image: radial-gradient(ellipse 100% 100% at 50% 0%, black 20%, transparent 80%);
-}
-
+/* ---- Top nav ---- */
 .thinkway-platform-v6 .platform-v6-hs-nav {
   position: relative;
   z-index: 20;
@@ -1556,721 +1756,472 @@
   justify-content: space-between;
   gap: 12px;
   height: 56px;
-  padding: 0 36px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(5, 6, 15, 0.7);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--white);
 }
 
-.thinkway-platform-v6 .platform-v6-hs-nav-left {
+.thinkway-platform-v6 .platform-v6-hs-root .platform-v6-hs-nav-left {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
 }
 
-.thinkway-platform-v6 .platform-v6-hs-nav-left .login-v2-logo {
-  gap: 10px;
+.thinkway-platform-v6 .platform-v6-hs-root .platform-v6-hs-nav-left .login-v2-logo-text {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  color: var(--ink);
 }
 
-.thinkway-platform-v6 .platform-v6-hs-nav-left .login-v2-logo-text {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-nav-center {
+.thinkway-platform-v6 .platform-v6-hs-root .platform-v6-hs-nav-center {
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 
-.thinkway-platform-v6 .platform-v6-hs-nav-tab {
-  padding: 5px 14px;
+.thinkway-platform-v6 .platform-v6-hs-root .platform-v6-hs-nav-tab {
+  padding: 6px 15px;
   border-radius: 6px;
-  font-size: 11px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
   white-space: nowrap;
   text-decoration: none;
   transition: all 150ms;
 }
 
-.thinkway-platform-v6 .platform-v6-hs-nav-tab:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.8);
+.thinkway-platform-v6 .platform-v6-hs-root .platform-v6-hs-nav-tab:hover {
+  background: rgba(0, 87, 255, 0.06);
+  color: var(--text-2);
 }
 
-.thinkway-platform-v6 .platform-v6-hs-nav-tab.active {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+.thinkway-platform-v6 .platform-v6-hs-root .platform-v6-hs-nav-tab.active {
+  background: var(--white);
+  color: var(--blue-text);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
 }
 
-.thinkway-platform-v6 .platform-v6-hs-nav-right {
+.thinkway-platform-v6 .platform-v6-hs-root .platform-v6-hs-nav-right {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
 }
 
-.thinkway-platform-v6 .platform-v6-hs-nav-av {
+.thinkway-platform-v6 .platform-v6-hs-root .platform-v6-hs-nav-av {
   display: flex;
   width: 30px;
   height: 30px;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  box-shadow: 0 0 12px rgba(99, 102, 241, 0.5);
+  background: var(--brand-gradient);
   color: #fff;
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 700;
 }
 
-.thinkway-platform-v6 .platform-v6-hs-nav-name {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.5);
+.thinkway-platform-v6 .platform-v6-hs-root .platform-v6-hs-nav-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-2);
 }
 
-.thinkway-platform-v6 .platform-v6-hs-cta-btn {
+.thinkway-platform-v6 .platform-v6-hs-root .platform-v6-hs-cta-btn {
   display: inline-flex;
-  height: 30px;
+  height: 32px;
   align-items: center;
   padding: 0 14px;
   border: none;
-  border-radius: 7px;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  box-shadow: 0 0 16px rgba(99, 102, 241, 0.4);
+  border-radius: var(--radius);
+  background: var(--brand-gradient);
+  box-shadow: 0 6px 16px rgba(0, 87, 255, 0.22);
   color: #fff;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 12.5px;
+  font-weight: 700;
   text-decoration: none;
-  transition:
-    transform 120ms,
-    box-shadow 120ms;
+  transition: filter 150ms;
 }
 
-.thinkway-platform-v6 .platform-v6-hs-cta-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 24px rgba(99, 102, 241, 0.6);
+.thinkway-platform-v6 .platform-v6-hs-root .platform-v6-hs-cta-btn:hover {
+  filter: brightness(1.05);
 }
 
+/* ---- Ticker strip ---- */
 .thinkway-platform-v6 .platform-v6-hs-ticker {
   position: relative;
-  z-index: 20;
-  display: flex;
-  height: 32px;
-  align-items: center;
+  z-index: 10;
   overflow: hidden;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border);
+  background: var(--white);
+  padding: 9px 0;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-ticker-inner {
   display: flex;
-  white-space: nowrap;
-  animation: platform-v6-hs-ticker 30s linear infinite;
+  gap: 36px;
+  width: max-content;
+  animation: platform-v6-hs-ticker-scroll 40s linear infinite;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-tick-item {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 32px;
-  border-right: 1px solid rgba(255, 255, 255, 0.07);
-  color: rgba(255, 255, 255, 0.35);
-  font-size: 10px;
-  font-weight: 600;
+  font-size: 10.5px;
+  font-weight: 700;
   letter-spacing: 0.4px;
+  color: var(--text-3);
+  white-space: nowrap;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-tick-val {
-  color: rgba(255, 255, 255, 0.7);
+  font-family: "Geist Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  font-weight: 700;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-badge-up {
-  color: #34d399;
-  font-weight: 600;
+  color: var(--green-text);
+  font-weight: 700;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-badge-dn {
-  color: #f87171;
-  font-weight: 600;
+  color: var(--red-text);
+  font-weight: 700;
 }
 
+@keyframes platform-v6-hs-ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* ---- Main two-column layout ---- */
 .thinkway-platform-v6 .platform-v6-hs-main {
   position: relative;
-  z-index: 10;
+  z-index: 5;
   display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 20px;
   flex: 1;
-  align-items: start;
-  grid-template-columns: 1fr 380px;
-  gap: 0;
-  padding: 40px 36px 36px;
+  min-height: 0;
   overflow-y: auto;
+  padding: 24px;
 }
 
-.thinkway-platform-v6 .platform-v6-hs-left {
-  padding-right: 36px;
+.thinkway-platform-v6 .platform-v6-hs-left,
+.thinkway-platform-v6 .platform-v6-hs-right {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-greeting-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  opacity: 0;
-  animation: platform-v6-hs-reveal-up 600ms 100ms ease-out forwards;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-greeting-meta::before {
-  content: "";
-  width: 20px;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.2);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-3);
 }
 
 .thinkway-platform-v6 .platform-v6-hs-heading {
-  margin-bottom: 8px;
-  color: #fff;
-  font-size: 54px;
+  font-size: 26px;
   font-weight: 800;
-  letter-spacing: -2.5px;
-  line-height: 1.05;
-  opacity: 0;
-  animation: platform-v6-hs-reveal-up 700ms 200ms ease-out forwards;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+  color: var(--ink);
+  margin: 2px 0 4px;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-heading-accent {
-  display: inline-block;
-  background: linear-gradient(135deg, #818cf8 0%, #c084fc 40%, #f472b6 70%, #fb923c 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  background-size: 200% 200%;
-  -webkit-text-fill-color: transparent;
-  animation: platform-v6-hs-aurora-shift 5s ease infinite;
+  color: var(--blue-text);
 }
 
 .thinkway-platform-v6 .platform-v6-hs-heading-cursor {
   display: inline-block;
-  width: 3px;
-  height: 0.85em;
-  margin-left: 2px;
+  width: 2px;
+  height: 22px;
+  margin-left: 4px;
+  background: var(--blue);
   vertical-align: middle;
-  background: #818cf8;
-  animation: platform-v6-hs-cursor-blink 1s step-end infinite;
+  animation: platform-v6-hs-blink 1s step-end infinite;
+}
+
+@keyframes platform-v6-hs-blink {
+  50% { opacity: 0; }
 }
 
 .thinkway-platform-v6 .platform-v6-hs-tagline {
-  max-width: 420px;
-  margin-bottom: 36px;
-  color: rgba(255, 255, 255, 0.45);
-  font-size: 15px;
-  line-height: 1.7;
-  opacity: 0;
-  animation: platform-v6-hs-reveal-up 700ms 320ms ease-out forwards;
+  font-size: 12.5px;
+  color: var(--text-3);
+  margin-bottom: 6px;
+  max-width: 46ch;
 }
 
+/* ---- KPI cards ---- */
 .thinkway-platform-v6 .platform-v6-hs-kpis {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
-  margin-bottom: 32px;
-  opacity: 0;
-  animation: platform-v6-hs-reveal-up 700ms 420ms ease-out forwards;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-kpi {
   position: relative;
-  overflow: hidden;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   padding: 14px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  transition:
-    border-color 200ms,
-    background 200ms,
-    transform 150ms;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-kpi::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+  transition: box-shadow 150ms, border-color 150ms;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-kpi:hover {
-  transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.08);
+  border-color: #c7d9ff;
+  box-shadow: 0 6px 18px rgba(0, 87, 255, 0.08);
 }
 
 .thinkway-platform-v6 .platform-v6-hs-kpi-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
   display: flex;
-  width: 28px;
-  height: 28px;
   align-items: center;
   justify-content: center;
   margin-bottom: 10px;
-  border-radius: 7px;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-kpi-icon svg {
-  width: 13px;
-  height: 13px;
+  width: 16px;
+  height: 16px;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-kpi-lbl {
-  margin-bottom: 4px;
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 9px;
+  font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.3px;
   text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 4px;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-kpi-val {
-  color: #fff;
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  line-height: 1;
+  font-family: "Geist Mono", monospace;
   font-variant-numeric: tabular-nums;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: var(--ink);
 }
 
 .thinkway-platform-v6 .platform-v6-hs-kpi-val-warn {
-  color: #fbbf24;
+  color: var(--amber-text);
 }
 
 .thinkway-platform-v6 .platform-v6-hs-kpi-sub {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  margin-top: 3px;
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 10px;
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 4px;
 }
 
+/* ---- Action buttons ---- */
 .thinkway-platform-v6 .platform-v6-hs-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 40px;
-  opacity: 0;
-  animation: platform-v6-hs-reveal-up 700ms 520ms ease-out forwards;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-btn-primary {
-  position: relative;
-  display: inline-flex;
-  height: 42px;
-  align-items: center;
   gap: 8px;
-  overflow: hidden;
-  padding: 0 22px;
-  border: none;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  box-shadow:
-    0 0 0 1px rgba(99, 102, 241, 0.3),
-    0 8px 32px rgba(99, 102, 241, 0.35);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  text-decoration: none;
-  transition:
-    transform 120ms,
-    box-shadow 120ms,
-    filter 120ms;
+  flex-wrap: wrap;
 }
 
-.thinkway-platform-v6 .platform-v6-hs-btn-primary::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), transparent);
-}
-
-.thinkway-platform-v6 .platform-v6-hs-btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 0 0 1px rgba(99, 102, 241, 0.5),
-    0 12px 40px rgba(99, 102, 241, 0.5);
-}
-
-.thinkway-platform-v6 .platform-v6-hs-btn-primary:active {
-  transform: scale(0.97);
-}
-
-.thinkway-platform-v6 .platform-v6-hs-btn-primary svg {
-  width: 14px;
-  height: 14px;
-}
-
+.thinkway-platform-v6 .platform-v6-hs-btn-primary,
 .thinkway-platform-v6 .platform-v6-hs-btn-ghost {
   display: inline-flex;
-  height: 42px;
   align-items: center;
-  gap: 8px;
-  padding: 0 20px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(8px);
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 13px;
-  font-weight: 600;
+  gap: 7px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius);
+  font-size: 12.5px;
+  font-weight: 700;
   text-decoration: none;
-  transition:
-    background 150ms,
-    border-color 150ms,
-    transform 120ms;
+  transition: all 150ms;
 }
 
-.thinkway-platform-v6 .platform-v6-hs-btn-ghost:hover {
-  transform: translateY(-1px);
-  border-color: rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.thinkway-platform-v6 .platform-v6-hs-btn-ghost:active {
-  transform: scale(0.97);
-}
-
+.thinkway-platform-v6 .platform-v6-hs-btn-primary svg,
 .thinkway-platform-v6 .platform-v6-hs-btn-ghost svg {
   width: 14px;
   height: 14px;
 }
 
+.thinkway-platform-v6 .platform-v6-hs-btn-primary {
+  background: var(--brand-gradient);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(0, 87, 255, 0.22);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-btn-primary:hover {
+  filter: brightness(1.05);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-btn-ghost {
+  background: var(--white);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-btn-ghost:hover {
+  background: var(--surface);
+}
+
+/* ---- Quick access modules ---- */
 .thinkway-platform-v6 .platform-v6-hs-modules-label {
-  margin-bottom: 12px;
-  color: rgba(255, 255, 255, 0.25);
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
-  opacity: 0;
-  animation: platform-v6-hs-reveal-up 600ms 580ms ease-out forwards;
+  color: var(--text-3);
+  margin-top: 6px;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-modules {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
-  opacity: 0;
-  animation: platform-v6-hs-reveal-up 700ms 620ms ease-out forwards;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-mod {
-  position: relative;
   display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  overflow: hidden;
-  padding: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  color: inherit;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--white);
+  border: 1px solid var(--border) !important; /* overrides inline borderColor from MODULES config */
+  border-radius: var(--radius-lg);
   text-decoration: none;
-  transition:
-    border-color 200ms,
-    background 200ms,
-    transform 150ms,
-    box-shadow 200ms;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-mod::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 14px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, transparent 50%);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 200ms;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-mod:hover::after {
-  opacity: 1;
+  transition: border-color 150ms, box-shadow 150ms, transform 150ms;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-mod:hover {
-  transform: translateY(-3px) scale(1.01);
-}
-
-.thinkway-platform-v6 .platform-v6-hs-mod:active {
-  transform: scale(0.98);
-  transition-duration: 80ms;
+  border-color: #c7d9ff !important;
+  box-shadow: 0 8px 20px rgba(0, 87, 255, 0.08);
+  transform: translateY(-1px);
 }
 
 .thinkway-platform-v6 .platform-v6-hs-mod-icon {
-  display: flex;
   width: 36px;
   height: 36px;
-  flex-shrink: 0;
+  border-radius: 10px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 1px;
-  border-radius: 9px;
+  flex-shrink: 0;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-mod-icon svg {
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-mod-body {
+  flex: 1;
+  min-width: 0;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-mod-title {
-  margin-bottom: 3px;
-  color: #fff;
   font-size: 13px;
   font-weight: 700;
+  color: var(--ink);
 }
 
 .thinkway-platform-v6 .platform-v6-hs-mod-desc {
-  color: rgba(255, 255, 255, 0.4);
   font-size: 11px;
-  line-height: 1.5;
+  color: var(--text-3);
+  margin-top: 1px;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-mod-arrow {
-  position: absolute;
-  right: 14px;
-  bottom: 14px;
-  color: rgba(255, 255, 255, 0.2);
-  transition:
-    color 200ms,
-    transform 200ms;
+  color: var(--text-3);
+  flex-shrink: 0;
+  transition: transform 150ms, color 150ms;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-mod:hover .platform-v6-hs-mod-arrow {
-  transform: translate(2px, -2px);
-  color: rgba(255, 255, 255, 0.6);
+  transform: translateX(2px);
+  color: var(--blue);
 }
 
-.thinkway-platform-v6 .platform-v6-hs-right {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-panel {
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  opacity: 0;
-  animation: platform-v6-hs-reveal-left 600ms ease-out forwards;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-panel-delay-300 {
-  animation-delay: 300ms;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-panel-delay-400 {
-  animation-delay: 400ms;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-panel-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.thinkway-platform-v6 .platform-v6-hs-panel-title {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-panel-title svg {
-  width: 12px;
-  height: 12px;
-  color: rgba(255, 255, 255, 0.3);
-}
-
-.thinkway-platform-v6 .platform-v6-hs-panel-link {
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-  text-decoration: none;
-  text-transform: uppercase;
-  transition: color 150ms;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-panel-link:hover {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.thinkway-platform-v6 .platform-v6-hs-panel-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 11px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  color: inherit;
-  text-decoration: none;
-  transition: background 120ms;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-panel-row:last-child {
-  border-bottom: none;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-panel-row:hover {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.thinkway-platform-v6 .platform-v6-hs-panel-empty {
-  padding: 16px;
-  color: rgba(255, 255, 255, 0.35);
-  font-size: 11px;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-pr-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-pr-av {
-  display: flex;
-  width: 30px;
-  height: 30px;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  color: #fff;
-  font-size: 9px;
-  font-weight: 700;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-pr-name {
-  color: rgba(255, 255, 255, 0.75);
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-pr-meta {
-  margin-top: 1px;
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 10px;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-pr-val {
-  color: rgba(255, 255, 255, 0.75);
-  font-size: 12px;
-  font-weight: 700;
-  text-align: right;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-pr-sub {
-  margin-top: 1px;
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 10px;
-  text-align: right;
-}
-
+/* ---- Billing alert ---- */
 .thinkway-platform-v6 .platform-v6-hs-alert {
   display: flex;
-  align-items: flex-start;
   gap: 12px;
-  padding: 16px;
-  border: 1px solid rgba(245, 158, 11, 0.25);
-  border-radius: 14px;
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(251, 191, 36, 0.06));
-  opacity: 0;
-  animation: platform-v6-hs-reveal-left 600ms 100ms ease-out forwards;
+  background: var(--amber-bg);
+  border: 1px solid #fde68a;
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-alert-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--white);
+  color: var(--amber);
   display: flex;
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
-  background: rgba(245, 158, 11, 0.2);
-  color: #fbbf24;
+  flex-shrink: 0;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-alert-icon svg {
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-alert-title {
-  margin-bottom: 3px;
-  color: #fbbf24;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
+  color: var(--amber-text);
 }
 
 .thinkway-platform-v6 .platform-v6-hs-alert-desc {
-  margin-bottom: 8px;
-  color: rgba(251, 191, 36, 0.6);
-  font-size: 11px;
+  font-size: 11.5px;
+  color: #78350f;
+  margin-top: 2px;
   line-height: 1.5;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-alert-link {
-  color: #fbbf24;
+  display: inline-block;
   font-size: 11px;
   font-weight: 700;
-  text-decoration: none;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-alert-link:hover {
+  color: var(--amber-text);
+  margin-top: 6px;
   text-decoration: underline;
 }
 
+/* ---- PO ring panel ---- */
 .thinkway-platform-v6 .platform-v6-hs-ring-panel {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.04);
-  opacity: 0;
-  animation: platform-v6-hs-reveal-left 600ms 200ms ease-out forwards;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-ring {
   position: relative;
+  width: 80px;
+  height: 80px;
   flex-shrink: 0;
-}
-
-.thinkway-platform-v6 .platform-v6-hs-ring svg {
-  transform: rotate(-90deg);
 }
 
 .thinkway-platform-v6 .platform-v6-hs-ring-track {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.07);
+  stroke: var(--surface);
   stroke-width: 5;
 }
 
@@ -2280,8 +2231,9 @@
   stroke-width: 5;
   stroke-linecap: round;
   stroke-dasharray: 157;
-  stroke-dashoffset: 157;
-  transition: stroke-dashoffset 1.5s cubic-bezier(0.23, 1, 0.32, 1);
+  transform: rotate(-90deg);
+  transform-origin: center;
+  transition: stroke-dashoffset 1.2s var(--ease-out);
 }
 
 .thinkway-platform-v6 .platform-v6-hs-ring-label {
@@ -2294,92 +2246,226 @@
 }
 
 .thinkway-platform-v6 .platform-v6-hs-ring-pct {
-  color: #fff;
-  font-size: 17px;
+  font-family: "Geist Mono", monospace;
+  font-size: 15px;
   font-weight: 800;
-  letter-spacing: -0.5px;
-  line-height: 1;
+  color: var(--ink);
 }
 
 .thinkway-platform-v6 .platform-v6-hs-ring-sub {
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-3);
 }
 
 .thinkway-platform-v6 .platform-v6-hs-ring-info-title {
-  margin-bottom: 4px;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 3px;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-ring-info-desc {
-  color: rgba(255, 255, 255, 0.35);
-  font-size: 11px;
-  line-height: 1.5;
+  font-size: 11.5px;
+  color: var(--text-3);
+  line-height: 1.6;
+}
+
+/* ---- Side panels (Recent campaigns / Top vendors) ---- */
+.thinkway-platform-v6 .platform-v6-hs-panel {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-panel-title svg {
+  width: 14px;
+  height: 14px;
+  color: var(--text-3);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-panel-link {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--blue-text);
+  text-decoration: none;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-panel-link:hover {
+  text-decoration: underline;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-live {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 12px 16px 0;
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--green-text);
+  margin-bottom: 8px;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-live-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #34d399;
-  box-shadow: 0 0 8px #34d399;
-  animation: platform-v6-hs-cursor-blink 2s infinite;
+  background: var(--green);
+  position: relative;
 }
 
+.thinkway-platform-v6 .platform-v6-hs-live-dot::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: var(--green);
+  opacity: 0.45;
+  animation: platform-v6-hs-pulse 1.8s ease-out infinite;
+}
+
+@keyframes platform-v6-hs-pulse {
+  0% { transform: scale(0.6); opacity: 0.5; }
+  100% { transform: scale(2.3); opacity: 0; }
+}
+
+.thinkway-platform-v6 .platform-v6-hs-panel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 6px;
+  border-radius: var(--radius);
+  text-decoration: none;
+  transition: background 100ms;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-panel-row:hover {
+  background: var(--surface);
+}
+
+.thinkway-platform-v6 .platform-v6-hs-pr-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-pr-av {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--brand-gradient);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-pr-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-pr-meta {
+  font-size: 10.5px;
+  color: var(--text-3);
+  margin-top: 1px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-pr-val {
+  font-family: "Geist Mono", monospace;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: right;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-pr-sub {
+  font-size: 10.5px;
+  color: var(--text-3);
+  text-align: right;
+  margin-top: 1px;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-panel-empty {
+  font-size: 12px;
+  color: var(--text-3);
+  padding: 12px 0;
+  text-align: center;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-panel-delay-300,
+.thinkway-platform-v6 .platform-v6-hs-panel-delay-400 {
+  animation: none; /* legacy stagger-fade-in removed with the hero treatment */
+}
+
+/* ---- Footer strip ---- */
 .thinkway-platform-v6 .platform-v6-hs-footer-strip {
   position: relative;
-  z-index: 20;
+  z-index: 5;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 32px;
-  padding: 12px 36px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(5, 6, 15, 0.6);
-  backdrop-filter: blur(20px);
+  gap: 0;
+  padding: 10px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--white);
+  flex-shrink: 0;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-fs-item {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  padding-right: 18px;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-fs-lbl {
-  color: rgba(255, 255, 255, 0.25);
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
+  color: var(--text-3);
 }
 
 .thinkway-platform-v6 .platform-v6-hs-fs-val {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  font-family: "Geist Mono", monospace;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-fs-div {
   width: 1px;
-  height: 24px;
-  flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.07);
+  height: 22px;
+  background: var(--border);
+  margin: 0 18px 0 0;
 }
 
 .thinkway-platform-v6 .platform-v6-hs-footer-live {
@@ -2387,225 +2473,3487 @@
   align-items: center;
   gap: 6px;
   margin-left: auto;
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: var(--green-text);
 }
 
-@media (max-width: 1200px) {
+/* ---- Responsive ---- */
+@media (max-width: 1100px) {
   .thinkway-platform-v6 .platform-v6-hs-main {
     grid-template-columns: 1fr;
-    padding: 28px 24px 24px;
   }
-
-  .thinkway-platform-v6 .platform-v6-hs-left {
-    padding-right: 0;
-  }
-
-  .thinkway-platform-v6 .platform-v6-hs-heading {
-    font-size: 40px;
-    letter-spacing: -1.5px;
-  }
-}
-
-@media (max-width: 900px) {
-  .thinkway-platform-v6 .platform-v6-hs-nav {
-    padding: 0 16px;
-  }
-
-  .thinkway-platform-v6 .platform-v6-hs-nav-center,
-  .thinkway-platform-v6 .platform-v6-hs-nav-name {
-    display: none;
-  }
-
   .thinkway-platform-v6 .platform-v6-hs-kpis {
     grid-template-columns: repeat(2, 1fr);
-  }
-
-  .thinkway-platform-v6 .platform-v6-hs-modules {
-    grid-template-columns: 1fr;
-  }
-
-  .thinkway-platform-v6 .platform-v6-hs-footer-strip {
-    gap: 16px;
-    padding: 12px 16px;
   }
 }
 
 @media (max-width: 640px) {
-  .thinkway-platform-v6 .platform-v6-hs-heading {
-    font-size: 32px;
+  .thinkway-platform-v6 .platform-v6-hs-root .platform-v6-hs-nav-center {
+    display: none;
   }
+  .thinkway-platform-v6 .platform-v6-hs-kpis,
+  .thinkway-platform-v6 .platform-v6-hs-modules {
+    grid-template-columns: 1fr;
+  }
+  .thinkway-platform-v6 .platform-v6-hs-footer-strip {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+}
 
-  .thinkway-platform-v6 .platform-v6-hs-kpis {
+/* ═══════════════════════════════════════════════════════
+   HOME PAGE — MOTION PATCH (v2)
+   Append this AFTER home-redesign.css in the same location
+   (or merge in-place — every selector here already exists in
+   home-redesign.css and just adds/overrides rules for motion).
+   Goal: restore the "catchy, presentable" feel that was lost,
+   using only brand-blue tones instead of the old
+   indigo/purple/pink/dark treatment.
+   ═══════════════════════════════════════════════════════ */
+
+/* ---- Re-enable the particle canvas, brand-blue only, subtle ---- */
+.thinkway-platform-v6 .platform-v6-hs-canvas {
+  display: block !important;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* ---- Animated aurora glow — slow, soft, blue-only (was: static single glow) ---- */
+.thinkway-platform-v6 .platform-v6-hs-aurora {
+  background: radial-gradient(ellipse 70% 55% at 85% -10%, rgba(0, 87, 255, 0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at -10% 100%, rgba(26, 111, 255, 0.08) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 50% 50%, rgba(61, 139, 255, 0.05) 0%, transparent 60%);
+  background-size: 200% 200%;
+  animation: platform-v6-hs-aurora-drift 22s ease-in-out infinite;
+}
+
+@keyframes platform-v6-hs-aurora-drift {
+  0%, 100% { background-position: 0% 0%; }
+  50% { background-position: 100% 60%; }
+}
+
+/* ---- Entrance choreography — page elements arrive in sequence instead of appearing flat ---- */
+.thinkway-platform-v6 .platform-v6-hs-nav {
+  animation: platform-v6-hs-fade-down 500ms var(--ease-out) both;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-ticker {
+  animation: platform-v6-hs-fade-in 600ms var(--ease-out) 100ms both;
+}
+
+.thinkway-platform-v6 .platform-v6-hs-left > * {
+  animation: platform-v6-hs-fade-up 550ms var(--ease-out) both;
+}
+.thinkway-platform-v6 .platform-v6-hs-greeting-meta { animation-delay: 80ms; }
+.thinkway-platform-v6 .platform-v6-hs-heading { animation-delay: 140ms; }
+.thinkway-platform-v6 .platform-v6-hs-tagline { animation-delay: 200ms; }
+.thinkway-platform-v6 .platform-v6-hs-kpis { animation-delay: 260ms; }
+.thinkway-platform-v6 .platform-v6-hs-actions { animation-delay: 340ms; }
+.thinkway-platform-v6 .platform-v6-hs-modules-label { animation-delay: 400ms; }
+.thinkway-platform-v6 .platform-v6-hs-modules { animation-delay: 440ms; }
+
+.thinkway-platform-v6 .platform-v6-hs-kpi {
+  animation: platform-v6-hs-fade-up 450ms var(--ease-out) both;
+}
+.thinkway-platform-v6 .platform-v6-hs-kpi:nth-child(1) { animation-delay: 280ms; }
+.thinkway-platform-v6 .platform-v6-hs-kpi:nth-child(2) { animation-delay: 340ms; }
+.thinkway-platform-v6 .platform-v6-hs-kpi:nth-child(3) { animation-delay: 400ms; }
+.thinkway-platform-v6 .platform-v6-hs-kpi:nth-child(4) { animation-delay: 460ms; }
+
+.thinkway-platform-v6 .platform-v6-hs-right > * {
+  animation: platform-v6-hs-fade-left 550ms var(--ease-out) both;
+}
+.thinkway-platform-v6 .platform-v6-hs-alert { animation-delay: 180ms; }
+.thinkway-platform-v6 .platform-v6-hs-ring-panel { animation-delay: 240ms; }
+.thinkway-platform-v6 .platform-v6-hs-panel-delay-300 { animation-delay: 320ms; }
+.thinkway-platform-v6 .platform-v6-hs-panel-delay-400 { animation-delay: 400ms; }
+
+@keyframes platform-v6-hs-fade-down {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes platform-v6-hs-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes platform-v6-hs-fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes platform-v6-hs-fade-left {
+  from { opacity: 0; transform: translateX(14px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* ---- Micro-interactions ---- */
+
+/* KPI cards lift on hover, not just border/shadow */
+.thinkway-platform-v6 .platform-v6-hs-kpi:hover {
+  transform: translateY(-2px);
+}
+
+/* CTA button gets a slow breathing glow instead of a static shadow */
+.thinkway-platform-v6 .platform-v6-hs-root .platform-v6-hs-cta-btn {
+  animation: platform-v6-hs-cta-breathe 3s ease-in-out infinite;
+}
+@keyframes platform-v6-hs-cta-breathe {
+  0%, 100% { box-shadow: 0 6px 16px rgba(0, 87, 255, 0.22); }
+  50% { box-shadow: 0 8px 22px rgba(0, 87, 255, 0.36); }
+}
+
+/* PO ring gradient sweeps gently instead of sitting static */
+.thinkway-platform-v6 .platform-v6-hs-ring-panel {
+  position: relative;
+  overflow: hidden;
+}
+.thinkway-platform-v6 .platform-v6-hs-ring-panel::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background: conic-gradient(from 0deg, transparent, rgba(0, 87, 255, 0.05), transparent 30%);
+  animation: platform-v6-hs-ring-sweep 6s linear infinite;
+  pointer-events: none;
+}
+@keyframes platform-v6-hs-ring-sweep {
+  to { transform: rotate(360deg); }
+}
+
+/* Ticker: pause the scroll on hover so numbers are readable when someone's presenting */
+.thinkway-platform-v6 .platform-v6-hs-ticker:hover .platform-v6-hs-ticker-inner {
+  animation-play-state: paused;
+}
+
+/* Respect reduced-motion users — disable all of the above, fall back to the static v1 look */
+@media (prefers-reduced-motion: reduce) {
+  .thinkway-platform-v6 .platform-v6-hs-canvas { display: none !important; }
+  .thinkway-platform-v6 .platform-v6-hs-aurora { animation: none; }
+  .thinkway-platform-v6 .platform-v6-hs-nav,
+  .thinkway-platform-v6 .platform-v6-hs-ticker,
+  .thinkway-platform-v6 .platform-v6-hs-left > *,
+  .thinkway-platform-v6 .platform-v6-hs-right > *,
+  .thinkway-platform-v6 .platform-v6-hs-kpi {
+    animation: none;
+  }
+  .thinkway-platform-v6 .platform-v6-hs-root .platform-v6-hs-cta-btn { animation: none; }
+  .thinkway-platform-v6 .platform-v6-hs-ring-panel::before { display: none; }
+}
+
+/* ---- AI Insights banner (new — see JSX note below) ---- */
+.thinkway-platform-v6 .platform-v6-ai-insights {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--white);
+  border: 1px solid rgba(0, 87, 255, 0.25);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.thinkway-platform-v6 .platform-v6-ai-insights-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--brand-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+.thinkway-platform-v6 .platform-v6-ai-insights-icon svg {
+  width: 16px;
+  height: 16px;
+  color: #fff;
+}
+.thinkway-platform-v6 .platform-v6-ai-insights-icon::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0, 87, 255, 0.3);
+  animation: platform-v6-ai-pulse 2.4s ease-out infinite;
+}
+@keyframes platform-v6-ai-pulse {
+  0% { transform: scale(0.85); opacity: 0.8; }
+  100% { transform: scale(1.3); opacity: 0; }
+}
+.thinkway-platform-v6 .platform-v6-ai-insights-body {
+  flex: 1;
+  min-width: 0;
+}
+.thinkway-platform-v6 .platform-v6-ai-insights-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--blue-text);
+  margin-bottom: 3px;
+}
+.thinkway-platform-v6 .platform-v6-ai-insights-text {
+  font-size: 12.5px;
+  color: var(--text-2);
+  line-height: 1.6;
+}
+.thinkway-platform-v6 .platform-v6-ai-insights-text b {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* ═══════════════════════════════════════════════════════
+   EXECUTIVE DASHBOARD — CARD SYSTEM V2
+   Replaces the flat bordered-card look across KPI cards, chart
+   cards, profitability tables, and the alerts panel with a
+   consistent elevated, more considered treatment. Same class
+   names throughout — no JSX changes needed for this pass.
+   Load AFTER dashboard-redesign.css (overrides/extends it).
+   ═══════════════════════════════════════════════════════ */
+
+/* ---- Shared card shadow language (used everywhere below) ----
+   v1 values (1-8% opacity) were too subtle to read, especially in
+   screenshots. Pushed noticeably stronger here. */
+:root {
+  --card-shadow-rest: 0 1px 3px rgba(15, 23, 42, 0.08), 0 4px 16px rgba(15, 23, 42, 0.07);
+  --card-shadow-hover: 0 6px 16px rgba(15, 23, 42, 0.1), 0 16px 36px rgba(0, 87, 255, 0.14);
+}
+
+/* Give cards a visible border too, not just relying on shadow — border was
+   var(--border) = #e3e8f2, which nearly matches the lavender page background
+   and reads as "no border at all" in practice. Darken it slightly. */
+.thinkway-platform-v6 .platform-v6-section-wrap,
+.thinkway-platform-v6 .platform-v6-pa-grid > *,
+.thinkway-platform-v6 .platform-v6-alert-section,
+.thinkway-platform-v6 .platform-v6-kpi-cell {
+  border-color: #d7deed !important;
+}
+
+/* ---- KPI cards — real hierarchy, not just a colored top bar ---- */
+.thinkway-platform-v6 .platform-v6-kpi-cell {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--card-shadow-rest);
+  padding: 15px 16px 14px;
+  background: var(--white);
+}
+
+.thinkway-platform-v6 .platform-v6-kpi-cell:hover {
+  box-shadow: var(--card-shadow-hover);
+  border-color: transparent;
+}
+
+.thinkway-platform-v6 .platform-v6-kpi-cell::before {
+  height: 3px;
+  border-radius: 14px 14px 0 0;
+  opacity: 0.9;
+}
+
+.thinkway-platform-v6 .platform-v6-kpi-lbl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.thinkway-platform-v6 .platform-v6-kpi-val {
+  font-size: 20px;
+  letter-spacing: -0.5px;
+  margin-top: 3px;
+  display: block;
+}
+
+/* ---- Chart cards — give the flat bars real chart framing ---- */
+.thinkway-platform-v6 .platform-v6-chart-card,
+.thinkway-platform-v6 [class*="chart"][class*="card"] {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow-rest);
+  padding: 16px 18px 14px;
+  transition: box-shadow 150ms, border-color 150ms;
+}
+
+.thinkway-platform-v6 .platform-v6-chart-card:hover {
+  box-shadow: var(--card-shadow-hover);
+}
+
+/* If the chart renders as one flat colored rectangle (current state), at least give
+   it chart-like framing: baseline, rounded top corners on the bar, and a light
+   background grid so it reads as "chart" rather than "colored block". */
+.thinkway-platform-v6 .platform-v6-chart-bar,
+.thinkway-platform-v6 [class*="chart"] > div[style*="background"] {
+  border-radius: 8px 8px 3px 3px !important;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 40%) !important;
+  position: relative;
+}
+
+.thinkway-platform-v6 .platform-v6-chart-plot,
+.thinkway-platform-v6 [class*="chart"][class*="plot"] {
+  position: relative;
+  background-image: linear-gradient(0deg, var(--border) 1px, transparent 1px);
+  background-size: 100% 33.33%;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* ---- Section header refinement ---- */
+.thinkway-platform-v6 .platform-v6-section-head {
+  padding-bottom: 4px;
+  border-bottom: none;
+}
+
+.thinkway-platform-v6 .platform-v6-section-head h2 {
+  font-size: 15px;
+  letter-spacing: -0.2px;
+}
+
+/* ---- Profitability + brand tables — same elevated treatment as KPI cards ---- */
+.thinkway-platform-v6 .platform-v6-section-wrap,
+.thinkway-platform-v6 .platform-v6-pa-grid > * {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow-rest);
+  transition: box-shadow 150ms;
+  overflow: hidden; /* radius clipping only — column widths already fixed upstream, not re-breaking that fix */
+}
+
+.thinkway-platform-v6 .platform-v6-section-wrap:hover,
+.thinkway-platform-v6 .platform-v6-pa-grid > *:hover {
+  box-shadow: var(--card-shadow-hover);
+}
+
+.thinkway-platform-v6 .platform-v6-section-wrap table th,
+.thinkway-platform-v6 .platform-v6-pa-grid table th {
+  background: var(--surface);
+  font-size: 9.5px;
+  letter-spacing: 0.4px;
+}
+
+.thinkway-platform-v6 .platform-v6-section-wrap table tr:hover td,
+.thinkway-platform-v6 .platform-v6-pa-grid table tr:hover td {
+  background: rgba(0, 87, 255, 0.02);
+}
+
+/* ---- Finance alerts panel — match the same elevated card language ---- */
+.thinkway-platform-v6 .platform-v6-alert-section {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow-rest);
+  padding: 10px;
+}
+
+.thinkway-platform-v6 .platform-v6-alert-item {
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+
+.thinkway-platform-v6 .platform-v6-alert-item:hover {
+  background: var(--amber-bg);
+  border-color: #fde68a;
+}
+
+/* ---- AI Insights banner — reliable border, no mask trick ---- */
+.thinkway-platform-v6 .platform-v6-ai-insights {
+  border: 1.5px solid rgba(0, 87, 255, 0.22);
+  box-shadow: var(--card-shadow-rest), 0 0 0 4px rgba(0, 87, 255, 0.03);
+  border-radius: 16px;
+}
+.thinkway-platform-v6 .platform-v6-ai-insights::before {
+  display: none; /* remove the unreliable mask-based gradient border from v1 */
+}
+
+/* ---- Consistent card spacing rhythm across the whole page ---- */
+.thinkway-platform-v6 .platform-v6-kpi-strip,
+.thinkway-platform-v6 .platform-v6-kpi-strip--executive {
+  gap: 12px;
+}
+
+.thinkway-platform-v6 .platform-v6-pa-grid,
+.thinkway-platform-v6 .platform-v6-dash-layout {
+  gap: 16px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   CAMPAIGNS LIST (/campaigns) — REDESIGN
+   Most of the visual system (KPI cards, section-wrap elevation,
+   page header, topbar) is already fixed via the shared classes
+   from the Executive Dashboard round — this only covers what's
+   specific to the Campaigns list: toolbar, search, table status
+   badges, pagination, empty state.
+   Companion: campaigns-redesign-jsx-edits.md
+   ═══════════════════════════════════════════════════════ */
+
+/* ---- Toolbar (search + filter row above the table) ---- */
+.thinkway-platform-v6 .platform-v6-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Search input, rendered via OperationalTableSearch -> operationalTableChrome.searchInputBoxed
+   (already references var(--tw-radius)/var(--tw-border)/var(--blue) per the earlier
+   component-inventory read, so this should already be on-brand — just confirming the
+   focus ring reads clearly against the new elevated card background) */
+.thinkway-platform-v6 .platform-v6-toolbar input:focus-visible {
+  border-color: var(--blue) !important;
+  box-shadow: 0 0 0 3px rgba(0, 87, 255, 0.1);
+}
+
+/* ---- Section meta (title + count above the toolbar) ---- */
+.thinkway-platform-v6 .platform-v6-section-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 4px 2px 10px;
+}
+
+.thinkway-platform-v6 .platform-v6-section-meta h2,
+.thinkway-platform-v6 .platform-v6-section-meta [data-slot="title"] {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.thinkway-platform-v6 .platform-v6-section-meta [data-slot="meta"] {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+/* ---- Campaign # / document number styling ---- */
+.thinkway-platform-v6 .platform-v6-link {
+  color: var(--blue-text);
+  font-family: "Geist Mono", monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.thinkway-platform-v6 .platform-v6-link:hover {
+  text-decoration: underline;
+}
+
+/* ---- PO total alert coloring (already using platform-v6-c-red/amber, just confirm contrast) ---- */
+.thinkway-platform-v6 .platform-v6-num {
+  font-family: "Geist Mono", monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Badges (Lines count, PO status) — the generic platform-v6-badge-* variants ---- */
+.thinkway-platform-v6 .platform-v6-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+.thinkway-platform-v6 .platform-v6-badge-green { background: var(--green-bg); color: var(--green-text); }
+.thinkway-platform-v6 .platform-v6-badge-amber { background: var(--amber-bg); color: var(--amber-text); }
+.thinkway-platform-v6 .platform-v6-badge-red { background: var(--red-bg); color: var(--red-text); }
+.thinkway-platform-v6 .platform-v6-badge-blue { background: var(--blue-light); color: var(--blue-text); }
+.thinkway-platform-v6 .platform-v6-badge-purple { background: var(--purple-bg); color: var(--purple-text); }
+.thinkway-platform-v6 .platform-v6-badge-gray { background: var(--surface); color: var(--text-2); border: 1px solid var(--border); }
+.thinkway-platform-v6 .platform-v6-badge-outline-green { background: transparent; color: var(--green-text); border: 1px solid #a7f3d0; }
+.thinkway-platform-v6 .platform-v6-badge-outline-amber { background: transparent; color: var(--amber-text); border: 1px solid #fde68a; }
+
+/* ---- Empty state ---- */
+.thinkway-platform-v6 .platform-v6-section-wrap .bg-muted\/60 {
+  background: var(--blue-light) !important;
+}
+.thinkway-platform-v6 .platform-v6-section-wrap .text-muted-foreground svg {
+  color: var(--blue-text) !important;
+}
+
+/* ---- Pagination ---- */
+.thinkway-platform-v6 .platform-v6-section-wrap > div.border-t {
+  border-color: var(--border);
+  background: var(--surface);
+}
+
+/* ---- New Campaign dialog trigger button (page header action) ---- */
+.thinkway-platform-v6 .platform-v6-page-header-row .platform-v6-btn-primary,
+.thinkway-platform-v6 .platform-v6-page-header-row [data-slot="button"] {
+  background: var(--brand-gradient) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: 0 6px 16px rgba(0, 87, 255, 0.22);
+}
+.thinkway-platform-v6 .platform-v6-page-header-row [data-slot="button"]:hover {
+  filter: brightness(1.05);
+}
+
+/* ═══════════════════════════════════════════════════════
+   DISCOVERY SEARCH — exact-match creator rows (search-exact)
+   Column widths mirror search-exact.html exactly:
+   col-count 238 · col-info 190 · col-stats 220 · col-feed flex
+   ═══════════════════════════════════════════════════════ */
+
+/* Discovery shell topbar: logo + section links in one row */
+.discovery-shell-header--with-nav {
+  gap: 24px;
+}
+
+.discovery-search-exact-root {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  background: #fff;
+}
+
+.discovery-search-exact-header-bar {
+  flex-shrink: 0;
+  padding: 16px 40px 0;
+  border-bottom: 1px solid #eef0f3;
+  background: #fff;
+}
+
+.discovery-search-exact-scroll {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  overscroll-behavior-y: contain;
+  padding: 0 40px 40px;
+}
+
+.discovery-search-exact-headers {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  background: #fff;
+}
+
+.discovery-search-exact-col-count {
+  width: 238px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.discovery-search-exact-col-info {
+  width: 190px;
+  flex-shrink: 0;
+}
+
+.discovery-search-exact-col-category {
+  width: 148px;
+  flex-shrink: 0;
+}
+
+.discovery-search-exact-col-stats {
+  width: 260px;
+  flex-shrink: 0;
+}
+
+.discovery-search-exact-col-feed {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.discovery-search-exact-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.discovery-search-toolbar-btn {
+  color: #64748b;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.discovery-search-toolbar-btn:hover {
+  color: #148564;
+  opacity: 1;
+}
+
+.discovery-search-toolbar-btn:active {
+  opacity: 0.75;
+}
+
+.discovery-search-toolbar-btn--active {
+  color: #148564;
+}
+
+.discovery-search-toolbar-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #0057ff;
+  box-shadow: 0 0 0 1.5px #fff;
+}
+
+.discovery-search-exact-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 22px 0;
+  border-top: 1px solid #eef0f3;
+  cursor: pointer;
+  outline: none;
+}
+
+.discovery-search-exact-row:hover {
+  background: rgba(0, 87, 255, 0.015);
+}
+
+.discovery-search-exact-row.is-selected {
+  background: rgba(0, 87, 255, 0.04);
+}
+
+.discovery-search-exact-row--enriching {
+  background: rgba(14, 165, 233, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.2);
+}
+
+.discovery-search-exact-meta-cell {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 12px;
+  width: 220px;
+}
+
+.discovery-search-exact-col-meta {
+  flex-shrink: 0;
+  width: 220px;
+  padding: 0 12px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+.discovery-search-exact-col-actions {
+  flex-shrink: 0;
+  width: 40px;
+}
+
+/* Shortlist workspace — exact-row layout aligned with shortlists-redesign_7.html */
+.shortlist-creator-exact-root.discovery-search-exact-root {
+  flex: none;
+  min-height: auto;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-header-bar {
+  padding: 6px 32px 12px;
+  border-bottom: 1px solid #eaedf4;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-scroll {
+  flex: none;
+  min-height: auto;
+  padding: 0 32px 24px;
+  overflow: visible;
+  overscroll-behavior: auto;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-headers {
+  padding: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9aa3b5;
+  background: transparent;
+}
+
+.shortlist-creator-exact-root .shortlist-exact-table-head.discovery-search-exact-headers {
+  align-items: center;
+}
+
+/* Shared 9-column grid — photo, creator, tier, category, stats, feed (2 thumbs), status, quoted, actions */
+.shortlist-creator-exact-root .shortlist-exact-table-head.discovery-search-exact-headers,
+.shortlist-creator-exact-root .discovery-search-exact-row {
+  display: grid;
+  grid-template-columns:
+    220px
+    168px
+    84px
+    136px
+    240px
+    minmax(128px, 1fr)
+    92px
+    88px
+    40px;
+  width: 100%;
+  min-width: 1196px;
+  column-gap: 0;
+  align-items: center;
+}
+
+.shortlist-creator-exact-root .shortlist-exact-table-head.discovery-search-exact-headers > *,
+.shortlist-creator-exact-root .discovery-search-exact-row > * {
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.shortlist-creator-exact-root .shortlist-exact-table-head .discovery-search-exact-col-count-label,
+.shortlist-creator-exact-root .shortlist-exact-table-head .discovery-search-exact-col-count > span:not([role="checkbox"]) {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: #41495a;
+}
+
+.shortlist-creator-exact-root .shortlist-exact-table-head .discovery-search-exact-col-info,
+.shortlist-creator-exact-root .shortlist-exact-table-head .discovery-search-exact-col-category,
+.shortlist-creator-exact-root .shortlist-exact-table-head .discovery-search-exact-col-stats,
+.shortlist-creator-exact-root .shortlist-exact-table-head .discovery-search-exact-col-feed > span:first-child {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9aa3b5;
+}
+
+.shortlist-creator-exact-root .shortlist-exact-table-head .discovery-search-exact-col-feed > span:first-child {
+  padding-left: 20px;
+}
+
+.shortlist-creator-exact-root .shortlist-exact-table-head .discovery-search-exact-col-tier {
+  padding: 0 6px 0 10px;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: none;
+  color: inherit;
+}
+
+.shortlist-creator-exact-root .shortlist-exact-table-head .discovery-search-exact-col-status {
+  padding: 0 6px 0 8px;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: none;
+  color: inherit;
+}
+
+.shortlist-creator-exact-root .shortlist-exact-table-head .discovery-search-exact-col-quoted {
+  padding: 0 10px 0 6px;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: none;
+  color: inherit;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-col-count {
+  gap: 11px;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-col-feed {
+  display: flex;
+  min-width: 0;
+  justify-content: flex-start;
+  gap: 0;
+  overflow: hidden;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-col-tier,
+.shortlist-creator-exact-root .discovery-search-exact-tier-cell {
+  padding: 0 6px 0 10px;
+  display: flex;
+  align-items: center;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-col-status,
+.shortlist-creator-exact-root .discovery-search-exact-status-cell {
+  padding: 0 6px 0 8px;
+  display: flex;
+  align-items: center;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-col-quoted,
+.shortlist-creator-exact-root .discovery-search-exact-quoted-cell {
+  padding: 0 10px 0 6px;
+  display: flex;
+  align-items: center;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-col-tier,
+.shortlist-creator-exact-root .discovery-search-exact-col-status,
+.shortlist-creator-exact-root .discovery-search-exact-col-quoted {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9aa3b5;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-col-tier button,
+.shortlist-creator-exact-root .discovery-search-exact-col-status button,
+.shortlist-creator-exact-root .discovery-search-exact-col-quoted button {
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-col-tier button:hover,
+.shortlist-creator-exact-root .discovery-search-exact-col-tier button[aria-sort="ascending"],
+.shortlist-creator-exact-root .discovery-search-exact-col-tier button[aria-sort="descending"],
+.shortlist-creator-exact-root .discovery-search-exact-col-status button:hover,
+.shortlist-creator-exact-root .discovery-search-exact-col-status button[aria-sort="ascending"],
+.shortlist-creator-exact-root .discovery-search-exact-col-status button[aria-sort="descending"],
+.shortlist-creator-exact-root .discovery-search-exact-col-quoted button:hover,
+.shortlist-creator-exact-root .discovery-search-exact-col-quoted button[aria-sort="ascending"],
+.shortlist-creator-exact-root .discovery-search-exact-col-quoted button[aria-sort="descending"] {
+  color: #41495a;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-tier-cell,
+.shortlist-creator-exact-root .discovery-search-exact-status-cell,
+.shortlist-creator-exact-root .discovery-search-exact-quoted-cell {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.shortlist-creator-exact-root .shortlist-creator-tier-badge {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shortlist-creator-exact-root .shortlist-creator-status-pill {
+  height: 21px;
+  border-radius: 20px;
+  border-color: transparent;
+  background: #f1f4fa;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #727d92;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-col-actions,
+.shortlist-creator-exact-root .discovery-search-exact-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-meta-grid {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: center;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-meta-grid > * {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.shortlist-creator-exact-root .shortlist-collapse-content-header {
+  display: grid;
+  grid-template-columns:
+    220px
+    168px
+    84px
+    136px
+    240px
+    minmax(128px, 1fr)
+    92px
+    88px
+    40px;
+  width: 100%;
+  min-width: 1196px;
+  column-gap: 0;
+  align-items: center;
+}
+
+/* Collapse (Collap) creator bundles — framed for quick recognition */
+.shortlist-creator-exact-root .shortlist-collapse-content-block.collapse-content-frame {
+  margin: 10px 12px 14px;
+  border: 2px solid color-mix(in srgb, var(--primary) 38%, transparent);
+  border-radius: 10px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--primary) 12%, transparent),
+    0 2px 8px color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.shortlist-creator-exact-root
+  .shortlist-collapse-content-block.collapse-content-frame
+  .discovery-search-exact-row {
+  background: color-mix(in srgb, var(--primary) 3%, transparent);
+}
+
+.thinkway-campaign-data-table tbody.collapse-content-frame.quotation-collapse-content-block {
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--primary) 38%, transparent),
+    0 2px 8px color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.thinkway-campaign-data-table tbody.collapse-content-frame.quotation-collapse-content-block > tr {
+  background: color-mix(in srgb, var(--primary) 3%, transparent);
+}
+
+.thinkway-campaign-data-table
+  tbody.collapse-content-frame.quotation-collapse-content-block
+  + tbody {
+  border-top: 10px solid transparent;
+}
+
+.shortlist-creator-exact-root .shortlist-collapse-content-header.is-selected {
+  background: rgba(0, 87, 255, 0.04);
+}
+
+.shortlist-creator-exact-root .shortlist-collapse-content-header-body {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding-right: 16px;
+}
+
+.shortlist-creator-exact-root .shortlist-collapse-content-block .discovery-search-exact-row.is-selected {
+  background: rgba(0, 87, 255, 0.04);
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-photo-cell {
+  display: flex;
+  gap: 15px;
+  padding-left: 0;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-category-cell {
+  padding-right: 12px;
+  overflow: hidden;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-category-cell span[title] {
+  max-width: 100%;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-stat-box {
+  padding: 9px 11px;
+  border-radius: 12px;
+  transform: none;
+  overflow: hidden;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-stat-col-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #9aa3b5;
+  letter-spacing: 0.03em;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-stat-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0d1220;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-row--with-meta .discovery-search-exact-feed-thumbs {
+  width: 100%;
+  min-width: 0;
+  padding: 0 16px 0 12px;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-row {
+  position: relative;
+  padding: 20px 0;
+  margin: 0;
+  border-top: none;
+  border-bottom: 1px solid #eaedf4;
+  border-radius: 0;
+  isolation: isolate;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-row::before {
+  content: none;
+  display: none;
+}
+
+/* Avatar size — never size country-flag imgs inside .discovery-search-exact-flag to 84px */
+.shortlist-creator-exact-root .discovery-search-exact-photo-wrap > a img,
+.shortlist-creator-exact-root .discovery-search-exact-photo-wrap > div.overflow-hidden img,
+.shortlist-creator-exact-root .discovery-search-exact-photo-wrap .size-\[87px\] {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+}
+
+/*
+ * Sync glow on ::before — CreatorAvatarImage overflow:hidden + border-radius clips
+ * box-shadow on the avatar itself, so the ring must live outside that element.
+ */
+.shortlist-creator-exact-root .discovery-search-exact-photo-wrap::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  box-shadow: 0 4px 12px -3px rgba(16, 24, 40, 0.2);
+  transition: box-shadow 0.25s ease;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-row.shortlist-creator-row-sync--updated .discovery-search-exact-photo-wrap::before {
+  box-shadow:
+    0 4px 12px -3px rgba(16, 24, 40, 0.2),
+    0 0 0 3px rgba(15, 157, 107, 0.22),
+    0 0 16px rgba(15, 157, 107, 0.42),
+    0 0 32px rgba(15, 157, 107, 0.16);
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-row.shortlist-creator-row-sync--failed .discovery-search-exact-photo-wrap::before {
+  box-shadow:
+    0 4px 12px -3px rgba(16, 24, 40, 0.2),
+    0 0 0 3px rgba(220, 38, 38, 0.2),
+    0 0 16px rgba(220, 38, 38, 0.38),
+    0 0 32px rgba(220, 38, 38, 0.14);
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-row.shortlist-creator-row-sync--partial .discovery-search-exact-photo-wrap::before {
+  box-shadow:
+    0 4px 12px -3px rgba(16, 24, 40, 0.2),
+    0 0 0 3px rgba(234, 88, 12, 0.2),
+    0 0 16px rgba(234, 88, 12, 0.38),
+    0 0 32px rgba(234, 88, 12, 0.14);
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-row.shortlist-creator-row-sync--syncing .discovery-search-exact-photo-wrap::before {
+  animation: shortlist-avatar-sync-pulse 1.6s ease-in-out infinite;
+  box-shadow:
+    0 4px 12px -3px rgba(16, 24, 40, 0.2),
+    0 0 0 3px rgba(37, 99, 235, 0.24),
+    0 0 16px rgba(37, 99, 235, 0.45),
+    0 0 32px rgba(37, 99, 235, 0.18);
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-row.shortlist-creator-row-sync--never .discovery-search-exact-photo-wrap::before {
+  box-shadow:
+    0 4px 12px -3px rgba(16, 24, 40, 0.2),
+    0 0 0 2px rgba(148, 163, 184, 0.12),
+    0 0 12px rgba(148, 163, 184, 0.16);
+}
+
+@keyframes shortlist-avatar-sync-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 4px 12px -3px rgba(16, 24, 40, 0.2),
+      0 0 0 3px rgba(37, 99, 235, 0.2),
+      0 0 14px rgba(37, 99, 235, 0.38),
+      0 0 28px rgba(37, 99, 235, 0.14);
+  }
+  50% {
+    box-shadow:
+      0 4px 12px -3px rgba(16, 24, 40, 0.2),
+      0 0 0 4px rgba(37, 99, 235, 0.32),
+      0 0 20px rgba(37, 99, 235, 0.58),
+      0 0 36px rgba(37, 99, 235, 0.22);
+  }
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-info-cell {
+  width: 186px;
+  padding-right: 8px;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #0d1220;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-handle {
+  margin-top: 3px;
+  font-size: 11.5px;
+  color: #9aa3b5;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-feed-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 11px;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-feed-thumbs--empty {
+  min-height: 56px;
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-star {
+  font-size: 10px;
+  font-weight: 800;
+  color: #a15c07;
+  box-shadow: 0 2px 7px rgba(16, 24, 40, 0.14);
+}
+
+.shortlist-creator-exact-root .discovery-search-exact-category-cell .rounded-\[7px\] {
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #41495a;
+  background: #f6f8fc;
+  border-color: #eaedf4;
+}
+
+.discovery-search-exact-row--with-meta .discovery-search-exact-feed-thumbs {
+  flex: 0 1 auto;
+  min-width: 120px;
+  padding-right: 8px;
+}
+
+/* Matches .col-count (238px) — photo only */
+.discovery-search-exact-photo-cell {
+  width: 238px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Matches .col-info (190px) — display name + @handle only */
+.discovery-search-exact-info-cell {
+  width: 190px;
+  flex-shrink: 0;
+  min-width: 0;
+  padding-right: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.discovery-search-exact-info-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  width: 100%;
+}
+
+.discovery-search-exact-category-cell {
+  width: 148px;
+  flex-shrink: 0;
+  min-width: 0;
+  align-self: center;
+  padding-right: 12px;
+}
+
+.discovery-search-exact-photo-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.discovery-creator-avatar-hover-trigger {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.discovery-creator-avatar-hover-trigger__panel {
+  position: absolute;
+  left: calc(100% + 16px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 60;
+  pointer-events: auto;
+}
+
+.discovery-creator-details-hover-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 280px;
+  max-width: 340px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 87, 255, 0.2);
+  background: linear-gradient(
+    135deg,
+    rgba(239, 246, 255, 0.98) 0%,
+    rgba(255, 255, 255, 0.98) 100%
+  );
+  box-shadow:
+    0 10px 32px rgba(0, 87, 255, 0.1),
+    0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+/* Quotation +Cost detail panel — same surface language as creator hover card */
+.quotation-cost-detail-panel {
+  overflow: visible;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.quotation-cost-detail-panel__inner {
+  padding: 14px 16px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 87, 255, 0.2);
+  background: linear-gradient(
+    135deg,
+    rgba(239, 246, 255, 0.98) 0%,
+    rgba(255, 255, 255, 0.98) 100%
+  );
+  box-shadow:
+    0 10px 32px rgba(0, 87, 255, 0.12),
+    0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.quotation-cost-detail-panel__inner--landscape {
+  min-width: min(100vw - 2rem, 40rem);
+}
+
+.quotation-cost-detail-panel__grid {
+  align-items: start;
+}
+
+.quotation-cost-detail-panel__title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e3a8a;
+  line-height: 1.25;
+}
+
+.quotation-cost-detail-panel__hint {
+  margin: 0 0 12px;
+  font-size: 10px;
+  font-weight: 500;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+.discovery-creator-details-hover-card__avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.discovery-creator-details-hover-card__avatar {
+  border-radius: 9999px;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+.discovery-creator-details-hover-card__rating {
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
+.discovery-creator-details-hover-card__body {
+  min-width: 0;
+  flex: 1;
+}
+
+.discovery-creator-details-hover-card__title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.discovery-creator-details-hover-card__name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e3a8a;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.discovery-creator-details-hover-card__sparkle {
+  color: #0057ff;
+}
+
+.discovery-creator-details-hover-card__collabs {
+  margin: 4px 0 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+.discovery-creator-details-hover-card__status {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.35;
+}
+
+/* Search row avatar hover preview — 30% larger than base card */
+.discovery-creator-avatar-hover-trigger__panel .discovery-creator-details-hover-card {
+  gap: 18px;
+  min-width: 364px;
+  max-width: 442px;
+  padding: 16px 18px;
+  border-radius: 21px;
+  box-shadow:
+    0 13px 42px rgba(0, 87, 255, 0.1),
+    0 3px 10px rgba(15, 23, 42, 0.06);
+}
+
+.discovery-creator-avatar-hover-trigger__panel .discovery-creator-details-hover-card__avatar {
+  width: 68px;
+  height: 68px;
+}
+
+.discovery-creator-avatar-hover-trigger__panel .discovery-creator-details-hover-card__rating {
+  bottom: -8px;
+  gap: 4px;
+  padding: 3px 9px;
+  font-size: 14px;
+}
+
+.discovery-creator-avatar-hover-trigger__panel .discovery-creator-details-hover-card__rating svg {
+  width: 14px;
+  height: 14px;
+}
+
+.discovery-creator-avatar-hover-trigger__panel .discovery-creator-details-hover-card__title-row {
+  gap: 8px;
+}
+
+.discovery-creator-avatar-hover-trigger__panel .discovery-creator-details-hover-card__name {
+  font-size: 20px;
+}
+
+.discovery-creator-avatar-hover-trigger__panel .discovery-creator-details-hover-card__sparkle {
+  width: 21px;
+  height: 21px;
+}
+
+.discovery-creator-avatar-hover-trigger__panel .discovery-creator-details-hover-card__collabs {
+  margin-top: 5px;
+  font-size: 16px;
+}
+
+.discovery-creator-avatar-hover-trigger__panel .discovery-creator-details-hover-card__status {
+  margin-top: 3px;
+  font-size: 14px;
+}
+
+.creator-detail-sheet-command-bar-wrap {
+  flex-shrink: 0;
+  padding: 14px 16px 0;
+  background: #f8fafc;
+}
+
+/* Add creators picker — compact cards aligned with shortlist creator rows */
+.creator-picker-scroll {
+  background: #f8fafc;
+}
+
+.creator-picker-panel-list {
+  flex: 1;
+  min-height: 0;
+}
+
+.creator-picker-card {
+  border: 1px solid #eaedf4;
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px 10px 9px;
+}
+
+.creator-picker-card.is-selected {
+  border-color: rgba(0, 87, 255, 0.22);
+  background: rgba(0, 87, 255, 0.04);
+  box-shadow: 0 0 0 1px rgba(0, 87, 255, 0.08);
+}
+
+.creator-picker-card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.creator-picker-card__avatar-wrap {
+  position: relative;
+  width: 52px;
+}
+
+.creator-picker-card__avatar-wrap img,
+.creator-picker-card__avatar-wrap .size-\[52px\] {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.4),
+    0 4px 12px -3px rgba(16, 24, 40, 0.18);
+}
+
+.creator-picker-card__flag {
+  right: -1px;
+  bottom: 10px;
+}
+
+.creator-picker-card__star {
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  z-index: 1;
+  display: inline-flex;
+  transform: translateX(-50%);
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+  border: 1px solid #eaedf4;
+  border-radius: 999px;
+  background: #fff;
+  padding: 1px 7px;
+  font-size: 9px;
+  font-weight: 800;
+  color: #a15c07;
+  box-shadow: 0 2px 6px rgba(16, 24, 40, 0.1);
+}
+
+.creator-picker-card__categories .rounded-\[7px\] {
+  padding: 2px 7px;
+  font-size: 10px;
+}
+
+.creator-picker-card__stats {
+  margin-top: 8px;
+  padding-left: 26px;
+}
+
+.creator-picker-card__stats .discovery-search-exact-stat-box {
+  width: 100%;
+  max-width: 100%;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border-color: #e3e8f2;
+}
+
+.creator-picker-card__stats .discovery-search-exact-stat-head {
+  margin-bottom: 3px;
+}
+
+.creator-picker-card__stats .discovery-search-exact-stat-col-label {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.creator-picker-card__stats .discovery-search-exact-stat-value {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.creator-picker-card__stats .discovery-search-exact-stat-platform + .discovery-search-exact-stat-platform {
+  margin-top: 5px;
+  padding-top: 5px;
+}
+
+.creator-picker-add-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent);
+  pointer-events: none;
+}
+
+.creator-detail-sheet-command-bar {
+  overflow: hidden;
+  border: 1px solid rgba(0, 87, 255, 0.2);
+  border-radius: 16px;
+  background: linear-gradient(
+    135deg,
+    rgba(239, 246, 255, 0.98) 0%,
+    rgba(255, 255, 255, 0.98) 100%
+  );
+  box-shadow:
+    0 10px 32px rgba(0, 87, 255, 0.1),
+    0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.creator-detail-sheet-main {
+  background: #f8fafc;
+}
+
+.creator-detail-sheet-scroll {
+  background: #fff;
+}
+
+.creator-detail-sheet-section {
+  padding: 18px 20px;
+  border-bottom: 1px solid #eef0f3;
+}
+
+.creator-detail-sheet-section:last-child {
+  border-bottom: none;
+}
+
+.creator-detail-sheet-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.creator-detail-sheet-section-title__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 8px;
+  background: rgba(0, 87, 255, 0.1);
+  color: #0057ff;
+}
+
+.creator-detail-sheet-section-title__icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.creator-detail-sheet-section-title__text {
+  flex: 1;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.creator-detail-sheet-highlight-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.creator-detail-sheet-highlight-card {
+  position: relative;
+  overflow: hidden;
+  padding: 14px 16px;
+  border: 1px solid rgba(0, 87, 255, 0.14);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(239, 246, 255, 0.55) 0%, #fff 100%);
+}
+
+.creator-detail-sheet-highlight-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 2.5px;
+  background: #0057ff;
+  opacity: 0.55;
+}
+
+.creator-detail-sheet-highlight-card--score {
+  border-color: rgba(0, 87, 255, 0.24);
+  background: linear-gradient(145deg, rgba(0, 87, 255, 0.12) 0%, rgba(239, 246, 255, 0.95) 100%);
+}
+
+.creator-detail-sheet-highlight-card--score::before {
+  opacity: 0.85;
+}
+
+.creator-detail-sheet-highlight-card__label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #0057ff;
+}
+
+.creator-detail-sheet-highlight-card__value {
+  margin-top: 8px;
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: #0057ff;
+}
+
+.creator-detail-sheet-highlight-card__meta {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.creator-detail-sheet-highlight-card__bar {
+  margin-top: 10px;
+  height: 4px;
+  max-width: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #0057ff 0%, #3d8bff 100%);
+}
+
+.creator-detail-sheet-highlight-card__category {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e3a8a;
+}
+
+.creator-detail-sheet-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.creator-detail-sheet-kpi-card {
+  position: relative;
+  overflow: hidden;
+  padding: 14px 14px 12px;
+  border: 1px solid rgba(0, 87, 255, 0.14);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(239, 246, 255, 0.45) 0%, #fff 100%);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+
+.creator-detail-sheet-kpi-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 2.5px;
+  background: #0057ff;
+  opacity: 0.55;
+}
+
+.creator-detail-sheet-kpi-card:hover {
+  border-color: rgba(0, 87, 255, 0.28);
+  box-shadow: 0 8px 20px rgba(0, 87, 255, 0.08);
+  transform: translateY(-1px);
+}
+
+.creator-detail-sheet-kpi-card__label-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.creator-detail-sheet-kpi-card__confidence {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 9999px;
+}
+
+.creator-detail-sheet-kpi-card__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.creator-detail-sheet-kpi-card__value {
+  margin-top: 8px;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: #0b0f1a;
+}
+
+.creator-detail-sheet-tag {
+  display: inline-flex;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 4px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.creator-detail-sheet-tag--hashtag {
+  border: 1px solid rgba(0, 87, 255, 0.16);
+  background: rgba(239, 246, 255, 0.9);
+  color: #0057ff;
+}
+
+.creator-detail-sheet-tag--mention {
+  border: 1px solid #e3e8f2;
+  background: #f8fafc;
+  color: #64748b;
+}
+
+@media (max-width: 720px) {
+  .creator-detail-sheet-highlight-grid,
+  .creator-detail-sheet-kpi-grid {
     grid-template-columns: 1fr;
   }
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-root {
-  background: #f8faff;
+.creator-detail-sheet-command-bar__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid rgba(0, 87, 255, 0.08);
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-aurora {
-  background:
-    radial-gradient(ellipse 120% 80% at 80% -10%, rgba(99, 102, 241, 0.1) 0%, transparent 60%),
-    radial-gradient(ellipse 80% 70% at -10% 90%, rgba(16, 185, 129, 0.08) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 50% at 50% 50%, rgba(236, 72, 153, 0.04) 0%, transparent 60%);
-}
-
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-aurora-2 {
-  opacity: 0.5;
-}
-
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-grid {
-  background-image:
-    linear-gradient(rgba(99, 102, 241, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(99, 102, 241, 0.06) 1px, transparent 1px);
-}
-
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-nav {
-  border-bottom-color: rgba(99, 102, 241, 0.1);
-  background: rgba(248, 250, 255, 0.85);
-}
-
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-nav-left .login-v2-logo-text,
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-heading,
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-kpi-val,
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-mod-title,
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-pr-name,
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-pr-val,
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-ring-pct {
-  color: #0f172a;
-}
-
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-nav-name {
+.creator-detail-sheet-command-bar__context {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
   color: #64748b;
+  line-height: 1.35;
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-nav-tab {
-  color: rgba(15, 23, 42, 0.4);
+.creator-detail-sheet-command-bar__context-icon {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  color: #0057ff;
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-nav-tab.active {
-  background: rgba(15, 23, 42, 0.08);
-  color: #0f172a;
+.creator-detail-sheet-command-bar__context-handle {
+  color: #374151;
+  font-weight: 600;
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-nav-tab:hover {
-  background: rgba(15, 23, 42, 0.04);
-  color: rgba(15, 23, 42, 0.7);
+.creator-detail-sheet-command-bar__action-group {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-nav-center {
-  border-color: rgba(15, 23, 42, 0.08);
-  background: rgba(15, 23, 42, 0.04);
+.creator-detail-sheet-action-btn,
+.creator-detail-sheet-command-bar__actions [data-slot="button"] {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 12px !important;
+  border-radius: 10px !important;
+  border: 1px solid var(--border, #e3e8f2) !important;
+  background: #fff !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #374151 !important;
+  line-height: 1 !important;
+  box-shadow: none !important;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease !important;
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-ticker {
-  border-bottom-color: rgba(15, 23, 42, 0.06);
-  background: rgba(15, 23, 42, 0.03);
+.creator-detail-sheet-action-btn:hover:not(:disabled),
+.creator-detail-sheet-command-bar__actions [data-slot="button"]:hover:not(:disabled) {
+  border-color: rgba(0, 87, 255, 0.28) !important;
+  background: rgba(239, 246, 255, 0.95) !important;
+  color: #1f2937 !important;
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-tick-item {
-  border-right-color: rgba(15, 23, 42, 0.06);
-  color: rgba(15, 23, 42, 0.35);
+.creator-detail-sheet-action-btn svg,
+.creator-detail-sheet-command-bar__actions [data-slot="button"] svg {
+  width: 14px !important;
+  height: 14px !important;
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-tick-val {
-  color: rgba(15, 23, 42, 0.7);
+.creator-detail-sheet-action-btn--icon,
+.creator-detail-sheet-action-btn--icon[data-slot="button"] {
+  width: 32px !important;
+  min-width: 32px !important;
+  padding: 0 !important;
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-greeting-meta,
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-kpi-lbl,
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-kpi-sub,
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-pr-meta,
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-pr-sub,
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-ring-sub,
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-fs-lbl {
+.creator-detail-sheet-action-btn--primary {
+  border: none !important;
+  background: #0057ff !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+}
+
+.creator-detail-sheet-action-btn--primary:hover:not(:disabled) {
+  filter: brightness(1.05);
+  border: none !important;
+  background: #0057ff !important;
+  color: #fff !important;
+}
+
+.creator-detail-sheet-footer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border, #e3e8f2);
+  padding: 14px 16px;
+}
+
+.creator-detail-sheet-footer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.creator-detail-sheet-command-bar__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px 0;
+}
+
+.creator-detail-sheet-identity-card {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.creator-detail-sheet-platform-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.creator-detail-sheet-platform-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 87, 255, 0.16);
+  background: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  overflow: hidden;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.creator-detail-sheet-platform-pill__select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.creator-detail-sheet-platform-pill__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  align-self: stretch;
+  border: 0;
+  border-left: 1px solid rgba(0, 87, 255, 0.12);
+  background: transparent;
   color: #94a3b8;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-tagline,
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-mod-desc,
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-ring-info-desc {
-  color: #64748b;
+.creator-detail-sheet-platform-pill__remove:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: #dc2626;
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-heading-cursor {
-  background: #4f46e5;
+.creator-detail-sheet-platform-pill:hover {
+  border-color: rgba(0, 87, 255, 0.28);
+  background: rgba(239, 246, 255, 0.95);
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-kpi,
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-mod,
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-panel,
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-ring-panel {
-  border-color: #e2e8f0;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+.creator-detail-sheet-platform-pill:hover .creator-detail-sheet-platform-pill__select {
+  color: #475569;
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-kpi:hover,
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-mod:hover {
-  border-color: #c7d2fe;
+.creator-detail-sheet-platform-pill--active {
+  border-color: rgba(0, 87, 255, 0.38);
+  background: rgba(0, 87, 255, 0.1);
+  color: #0057ff;
+}
+
+.creator-detail-sheet-platform-pill--add {
+  border-style: dashed;
+  color: #0057ff;
+}
+
+.creator-detail-sheet-tabs {
+  margin: 0;
+  padding: 0 16px;
+  border-top: 1px solid rgba(0, 87, 255, 0.08);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.creator-detail-sheet-tabs [data-slot="tabs-trigger"] {
+  border-radius: 0 !important;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #64748b !important;
+}
+
+.creator-detail-sheet-tabs [data-slot="tabs-trigger"][data-state="active"] {
+  font-weight: 600 !important;
+  color: #0057ff !important;
+}
+
+.creator-detail-sheet-footer .creator-detail-sheet-action-btn,
+.creator-detail-sheet-footer [data-slot="button"] {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 12px !important;
+  border-radius: 10px !important;
+  border: 1px solid var(--border, #e3e8f2) !important;
+  background: #fff !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #374151 !important;
+  line-height: 1 !important;
+  box-shadow: none !important;
+}
+
+.creator-detail-sheet-footer .creator-detail-sheet-action-btn--primary,
+.creator-detail-sheet-footer .creator-detail-sheet-action-btn--primary[data-slot="button"] {
+  border: none !important;
+  background: #0057ff !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+}
+
+.creator-detail-sheet-footer .creator-detail-sheet-action-btn--primary:hover:not(:disabled),
+.creator-detail-sheet-footer .creator-detail-sheet-action-btn--primary[data-slot="button"]:hover:not(:disabled) {
+  filter: brightness(1.05);
+  border: none !important;
+  background: #0057ff !important;
+  color: #fff !important;
+}
+
+.discovery-filter-drawer-section--modified .creator-detail-sheet-section-title__icon {
+  background: rgba(0, 87, 255, 0.16);
+  color: #0057ff;
+}
+
+.discovery-filter-drawer-section__card {
+  position: relative;
+  overflow: hidden;
+  padding: 18px 20px;
+  border: 1px solid rgba(0, 87, 255, 0.16);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(239, 246, 255, 0.42) 0%, #fff 24%);
+  box-shadow: 0 2px 8px rgba(0, 87, 255, 0.06);
+}
+
+.discovery-filter-field-group + .discovery-filter-field-group {
+  margin-top: 0;
+}
+
+.discovery-filter-drawer-section__card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 2.5px;
+  background: #0057ff;
+  opacity: 0.4;
+}
+
+.discovery-filter-drawer-section--modified .discovery-filter-drawer-section__card::before {
+  opacity: 0.85;
+}
+
+.discovery-filter-drawer-section--modified .creator-detail-sheet-section-title__text {
+  color: #0057ff;
+}
+
+.discovery-filter-drawer-section__toggle .creator-detail-sheet-section-title__icon {
+  background: rgba(0, 87, 255, 0.1);
+  color: #0057ff;
+}
+
+.discovery-filter-drawer-active-summary__card .creator-detail-sheet-section-title {
+  margin-bottom: 0;
+}
+
+.discovery-selection-flyout__bar {
+  min-height: 3.25rem;
+  border: 1px solid rgba(0, 87, 255, 0.2);
+  border-radius: 18px;
+  background: linear-gradient(
+    135deg,
+    rgba(239, 246, 255, 0.98) 0%,
+    rgba(255, 255, 255, 0.98) 100%
+  );
+  box-shadow:
+    0 10px 32px rgba(0, 87, 255, 0.1),
+    0 2px 8px rgba(15, 23, 42, 0.06);
+  scrollbar-width: none;
+}
+
+.discovery-selection-flyout__bar .creator-detail-sheet-action-btn {
+  height: 36px !important;
+  min-height: 36px !important;
+}
+
+.discovery-selection-flyout__bar .creator-detail-sheet-action-btn--icon,
+.discovery-selection-flyout__bar .creator-detail-sheet-action-btn--icon[data-slot="button"] {
+  width: 36px !important;
+  min-width: 36px !important;
+}
+
+.discovery-selection-flyout__bar::-webkit-scrollbar {
+  display: none;
+}
+
+.discovery-selection-flyout-menu {
+  backdrop-filter: none;
+}
+
+.discovery-selection-flyout-menu__item {
+  min-height: 2rem;
+}
+
+.discovery-selection-flyout-menu__item[data-disabled] {
+  color: #94a3b8;
+  opacity: 1;
+}
+
+.discovery-selection-flyout-menu__item[data-disabled] svg {
+  color: #cbd5e1;
+}
+
+.discovery-creator-details-hover-card--sheet {
+  min-width: 0;
+  max-width: none;
+  padding: 14px 0;
+  gap: 16px;
+}
+
+.discovery-creator-details-hover-card--sheet .discovery-creator-details-hover-card__name {
+  font-size: 17px;
+}
+
+.discovery-creator-details-hover-card--sheet .discovery-creator-details-hover-card__collabs {
+  font-size: 12.5px;
+}
+
+.discovery-creator-details-hover-card--sheet .discovery-creator-details-hover-card__status {
+  font-size: 12px;
+}
+
+.creator-detail-sheet-similar-rail {
+  width: 210px;
+  flex-shrink: 0;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border-left: 1px solid rgba(0, 87, 255, 0.12);
   background: #fff;
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-btn-ghost {
-  border-color: #e2e8f0;
-  background: rgba(255, 255, 255, 0.8);
-  color: #334155;
+.creator-detail-sheet-similar-rail__inner {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+  padding: 14px 10px;
+  background: linear-gradient(
+    180deg,
+    rgba(239, 246, 255, 0.72) 0%,
+    rgba(255, 255, 255, 0) 48%
+  );
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-btn-ghost:hover {
-  border-color: #c7d2fe;
+.creator-detail-sheet-similar-rail__scroll {
+  min-height: 0;
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+}
+
+.creator-detail-sheet-similar-rail__maximize {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  border: 1px solid rgba(0, 87, 255, 0.18);
+  background: rgba(0, 87, 255, 0.06);
+  color: #0057ff;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.creator-detail-sheet-similar-rail__maximize:hover {
+  border-color: rgba(0, 87, 255, 0.32);
+  background: rgba(0, 87, 255, 0.12);
+}
+
+.creator-detail-sheet-similar-maximize-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (min-width: 720px) {
+  .creator-detail-sheet-similar-maximize-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.creator-detail-sheet-similar-rail .creator-detail-sheet-section-title {
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.creator-detail-sheet-similar-rail .creator-detail-sheet-section-title__icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+}
+
+.creator-detail-sheet-similar-rail .creator-detail-sheet-section-title__icon svg {
+  width: 10px;
+  height: 10px;
+}
+
+.creator-detail-sheet-similar-rail .creator-detail-sheet-section-title__text {
+  font-size: 9px;
+  letter-spacing: 0.05em;
+}
+
+.creator-detail-sheet-similar-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.creator-detail-sheet-similar-stack--compact .discovery-creator-details-hover-card,
+.discovery-creator-details-hover-card--rail {
+  min-width: 0;
+  max-width: 100%;
+  gap: 8px;
+  padding: 8px 9px;
+  border-radius: 12px;
+}
+
+.discovery-creator-details-hover-card--rail .discovery-creator-details-hover-card__name {
+  font-size: 12px;
+}
+
+.discovery-creator-details-hover-card--rail .discovery-creator-details-hover-card__collabs {
+  margin-top: 2px;
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.discovery-creator-details-hover-card--rail .discovery-creator-details-hover-card__status {
+  margin-top: 1px;
+  font-size: 9px;
+  line-height: 1.25;
+}
+
+.discovery-creator-details-hover-card--rail .discovery-creator-details-hover-card__rating {
+  bottom: -5px;
+  gap: 2px;
+  padding: 1px 5px;
+  font-size: 9px;
+}
+
+.discovery-creator-details-hover-card--rail .discovery-creator-details-hover-card__rating svg {
+  width: 9px;
+  height: 9px;
+}
+
+.creator-detail-sheet-similar-empty {
+  justify-content: center;
+  min-height: 88px;
+  padding-top: 18px;
+  padding-bottom: 18px;
+}
+
+@media (max-width: 900px) {
+  .discovery-creator-avatar-hover-trigger__panel {
+    left: 0;
+    top: calc(100% + 10px);
+    transform: none;
+  }
+}
+
+.discovery-search-exact-photo {
+  width: 87px;
+  height: 87px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  background: var(--surface, #f3f6fc);
+}
+
+.discovery-search-exact-photo--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Bottom-right rim badge — clears centered ★ star */
+.discovery-search-exact-flag {
+  position: absolute;
+  right: -2px;
+  bottom: 2px;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.discovery-search-exact-star {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--amber-text, #92400e);
+  background: #fff;
+  border: 1px solid var(--border, #e3e8f2);
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.1);
+}
+
+.discovery-search-exact-name {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.discovery-search-exact-handle {
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.2;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.discovery-search-exact-meta {
+  font-size: 12.5px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.discovery-search-exact-bio {
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #6b7280;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.discovery-search-exact-country {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.discovery-search-exact-audience,
+.discovery-search-exact-dna {
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #6b7280;
+}
+
+.discovery-search-exact-platforms {
+  margin-top: 4px;
+}
+
+.discovery-search-exact-info-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.discovery-search-exact-select {
+  flex-shrink: 0;
+}
+
+.discovery-search-exact-applied {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.discovery-search-exact-stat-box {
+  border: 1px solid var(--border, #e3e8f2);
+  border-radius: 12px;
+  padding: 8px 10px;
+  width: 260px;
+  flex-shrink: 0;
+}
+
+.discovery-search-exact-stat-head,
+.discovery-search-exact-stat-platform {
+  display: grid;
+  grid-template-columns: 22px 1fr 1fr 1fr;
+  align-items: center;
+  column-gap: 8px;
+  width: 100%;
+}
+
+.discovery-search-exact-stat-head {
+  margin-bottom: 4px;
+}
+
+.discovery-search-exact-stat-col-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #9ca3af;
+  line-height: 1.2;
+}
+
+.discovery-search-exact-stat-platforms {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+}
+
+.discovery-search-exact-stat-platform + .discovery-search-exact-stat-platform {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #eef0f3;
+}
+
+.discovery-search-exact-stat-platform-logo {
+  width: 22px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink, #0b0f1a);
+}
+
+.discovery-search-exact-stat-value {
+  display: block;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.discovery-search-exact-stat-hint {
+  grid-column: 2 / -1;
+  font-size: 11px;
+  font-weight: 500;
+  color: #9ca3af;
+  line-height: 1.25;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.discovery-search-exact-feed-thumbs {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  align-items: center;
+  padding: 0 20px;
+  min-width: 0;
+}
+
+.discovery-search-exact-feed-thumbs--empty {
+  min-height: 56px;
+}
+
+.discovery-search-exact-feed-empty {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.discovery-search-exact-feed-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  object-fit: cover;
+  background: var(--surface, #f3f6fc);
+}
+
+.discovery-search-exact-feed-thumb--empty {
+  background: #eef1f6;
+  border: 1px solid var(--border, #e3e8f2);
+}
+
+.discovery-search-exact-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.discovery-search-exact-accept {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 9px;
+  background: var(--blue, #0057ff);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background 120ms;
+  white-space: nowrap;
+}
+
+.discovery-search-exact-accept:hover {
+  filter: brightness(1.05);
+}
+
+.discovery-search-exact-accept.is-added {
+  background: #10b981;
+}
+
+.discovery-search-exact-accept.is-added:hover {
+  filter: brightness(1.05);
+}
+
+.discovery-search-exact-accept svg {
+  width: 11px;
+  height: 11px;
+}
+
+.discovery-search-exact-reject {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  border: 1.5px solid var(--border, #e3e8f2);
+  color: #1f2937;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  cursor: pointer;
+}
+
+.discovery-search-exact-reject svg {
+  width: 13px;
+  height: 13px;
+}
+
+.discovery-search-exact-row-menu {
+  border-radius: 10px;
+  border: 1px solid var(--border, #e3e8f2);
   background: #fff;
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-modules-label,
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-live,
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-footer-live {
+.discovery-search-exact-reject:hover {
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+@media (max-width: 900px) {
+  .discovery-search-exact-header-bar {
+    padding: 12px 16px 0;
+  }
+
+  .discovery-search-exact-scroll {
+    padding: 0 16px 32px;
+  }
+
+  .discovery-search-exact-headers {
+    flex-wrap: wrap;
+    gap: 10px 0;
+    padding-bottom: 12px;
+  }
+
+  .discovery-search-exact-col-info,
+  .discovery-search-exact-col-category,
+  .discovery-search-exact-col-stats {
+    display: none;
+  }
+
+  .discovery-search-exact-col-count {
+    width: auto;
+    flex: 1 1 auto;
+  }
+
+  .discovery-search-exact-col-feed {
+    flex: 1 1 100%;
+  }
+
+  .discovery-search-exact-col-feed > span {
+    display: none;
+  }
+
+  .discovery-search-exact-toolbar {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .discovery-search-exact-row {
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 16px 0;
+  }
+
+  .discovery-search-exact-photo-cell {
+    width: auto;
+  }
+
+  .discovery-search-exact-info-cell {
+    width: auto;
+    flex: 1 1 160px;
+    min-width: 0;
+  }
+
+  .discovery-search-exact-category-cell {
+    width: 100%;
+    flex: 1 1 100%;
+    padding-right: 0;
+  }
+
+  .discovery-search-exact-stat-box {
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .discovery-search-exact-feed-thumbs {
+    flex: 1 1 100%;
+    padding: 0;
+  }
+
+  .discovery-search-exact-actions {
+    margin-left: auto;
+  }
+}
+
+/* ── Discovery dialog chrome (shortlist / create list) ── */
+
+.discovery-dialog-content {
+  background: #f8fafc !important;
+}
+
+.discovery-dialog-header__bar {
+  overflow: hidden;
+  padding: 12px 44px 12px 16px;
+  border: 1px solid rgba(0, 87, 255, 0.2);
+  border-radius: 16px;
+  background: linear-gradient(
+    135deg,
+    rgba(239, 246, 255, 0.98) 0%,
+    rgba(255, 255, 255, 0.98) 100%
+  );
+  box-shadow:
+    0 10px 32px rgba(0, 87, 255, 0.1),
+    0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.discovery-dialog-body {
+  scrollbar-color: #e2e8f0 transparent;
+  scrollbar-width: thin;
+}
+
+.discovery-dialog-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.discovery-dialog-body::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: #e2e8f0;
+}
+
+.discovery-dialog-form-panel {
+  position: relative;
+  overflow: hidden;
+  padding: 14px 16px;
+  border: 1px solid rgba(0, 87, 255, 0.16);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(239, 246, 255, 0.42) 0%, #fff 24%);
+  box-shadow: 0 2px 8px rgba(0, 87, 255, 0.06);
+}
+
+.discovery-dialog-form-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 2.5px;
+  background: #0057ff;
+  opacity: 0.4;
+}
+
+.discovery-dialog-form-panel .discovery-dialog-field-label {
+  margin-bottom: 6px;
+}
+
+.discovery-dialog-form-panel > * + * {
+  margin-top: 12px;
+}
+
+.discovery-dialog-form-panel .discovery-dialog-tabs {
+  margin-top: 0;
+}
+
+.discovery-dialog-form-panel .discovery-dialog-field-label {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.discovery-dialog-panel--inset {
+  border-color: rgba(0, 87, 255, 0.1);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 1px 2px rgba(0, 87, 255, 0.05);
+}
+
+.discovery-dialog-tabs__content {
+  margin-top: 10px;
+}
+
+.discovery-dialog-panel,
+.discovery-dialog-scroll {
+  overflow-y: auto;
+  overscroll-y: contain;
+  border: 1px solid rgba(0, 87, 255, 0.14);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 8px 24px rgba(0, 87, 255, 0.06);
+  scrollbar-color: #e2e8f0 transparent;
+  scrollbar-width: thin;
+}
+
+.discovery-dialog-panel::-webkit-scrollbar,
+.discovery-dialog-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.discovery-dialog-panel::-webkit-scrollbar-thumb,
+.discovery-dialog-scroll::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: #e2e8f0;
+}
+
+.discovery-dialog-panel {
+  padding: 4px;
+}
+
+.discovery-dialog-tabs__list {
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.discovery-dialog-tabs__list[data-slot="tabs-list"] {
+  display: grid !important;
+  width: 100% !important;
+  height: 36px !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  border: 1px solid rgba(0, 87, 255, 0.14) !important;
+  border-radius: 10px !important;
+  background: #f8fafc !important;
+  padding: 2px !important;
+}
+
+.discovery-dialog-tabs__trigger {
+  height: 100%;
+}
+
+.discovery-dialog-tabs__trigger[data-slot="tabs-trigger"] {
+  height: 100% !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #64748b !important;
+  box-shadow: none !important;
+}
+
+.discovery-dialog-tabs__trigger[data-slot="tabs-trigger"]::after {
+  display: none !important;
+}
+
+.discovery-dialog-tabs__trigger[data-slot="tabs-trigger"][data-active] {
+  background: #fff !important;
+  color: #0057ff !important;
+  box-shadow: 0 1px 3px rgba(0, 87, 255, 0.12) !important;
+}
+
+.discovery-dialog-search .discovery-dialog-input[data-slot="input"] {
+  padding-left: 2.25rem !important;
+  padding-right: 0.75rem !important;
+}
+
+.discovery-dialog-creator-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.discovery-dialog-creator-item:hover {
+  border-color: rgba(0, 87, 255, 0.12);
+  background: rgba(0, 87, 255, 0.04);
+}
+
+.discovery-dialog-creator-item__remove {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(0, 87, 255, 0.14);
+  border-radius: 10px;
+  background: #fff;
+  color: #64748b;
+  transition:
+    border-color 0.12s ease,
+    background-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.discovery-dialog-creator-item__remove:hover:not(:disabled) {
+  border-color: rgba(0, 87, 255, 0.24);
+  background: rgba(239, 246, 255, 0.95);
+  color: #0057ff;
+}
+
+.discovery-dialog-list-item {
+  display: flex;
+  cursor: pointer;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.discovery-dialog-list-item:hover {
+  background: rgba(0, 87, 255, 0.04);
+}
+
+.discovery-dialog-list-item--selected {
+  border-color: rgba(0, 87, 255, 0.18);
+  background: rgba(0, 87, 255, 0.07);
+}
+
+.discovery-dialog-list-item--selected:hover {
+  background: rgba(0, 87, 255, 0.09);
+}
+
+.discovery-dialog-checkbox[data-slot="checkbox"] {
+  width: 16px;
+  height: 16px;
+  border: 1px solid rgba(0, 87, 255, 0.22) !important;
+  border-radius: 5px;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+.discovery-dialog-checkbox[data-slot="checkbox"][data-state="checked"],
+.discovery-dialog-checkbox[data-slot="checkbox"][data-state="indeterminate"] {
+  border-color: #0057ff !important;
+  background: #0057ff !important;
+  color: #fff !important;
+}
+
+.discovery-dialog-recent-button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(0, 87, 255, 0.14);
+  border-radius: 10px;
+  background: #fff;
+  text-align: left;
+  font-size: 12px;
+  color: #64748b;
+  transition:
+    border-color 0.12s ease,
+    background-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.discovery-dialog-recent-button:hover:not(:disabled) {
+  border-color: rgba(0, 87, 255, 0.24);
+  background: rgba(239, 246, 255, 0.95);
+}
+
+.discovery-dialog-recent-button--active {
+  border-color: rgba(0, 87, 255, 0.32);
+  background: rgba(0, 87, 255, 0.08);
+  color: #0057ff;
+}
+
+.discovery-dialog-empty {
+  padding: 20px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.discovery-dialog-select-content[data-slot="select-content"],
+.discovery-checkbox-popover[data-slot="popover-content"] {
+  overflow: hidden;
+  border: 1px solid rgba(0, 87, 255, 0.2) !important;
+  border-radius: 16px !important;
+  background: linear-gradient(
+    135deg,
+    rgba(239, 246, 255, 0.98) 0%,
+    rgba(255, 255, 255, 0.98) 100%
+  ) !important;
+  padding: 6px !important;
+  box-shadow:
+    0 10px 32px rgba(0, 87, 255, 0.12),
+    0 2px 8px rgba(15, 23, 42, 0.06) !important;
+}
+
+.discovery-checkbox-popover__list {
+  max-height: 16rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: #e2e8f0 transparent;
+  scrollbar-width: thin;
+}
+
+.discovery-checkbox-popover__list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.discovery-checkbox-popover__list::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: #e2e8f0;
+}
+
+.discovery-dialog-select-item[data-slot="select-item"] {
+  min-height: 2rem;
+  border-radius: 10px !important;
+  padding: 8px 10px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #334155 !important;
+}
+
+.discovery-dialog-select-item[data-slot="select-item"]:focus,
+.discovery-dialog-select-item[data-slot="select-item"][data-highlighted] {
+  background: rgba(0, 87, 255, 0.08) !important;
+  color: #0057ff !important;
+}
+
+.discovery-dialog-select-item[data-slot="select-item"] svg {
+  color: #0057ff !important;
+}
+
+.discovery-dialog-footer [data-slot="button"],
+.discovery-dialog-footer .creator-detail-sheet-action-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 12px !important;
+  border-radius: 10px !important;
+  border: 1px solid var(--border, #e3e8f2) !important;
+  background: #fff !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #374151 !important;
+  line-height: 1 !important;
+  box-shadow: none !important;
+}
+
+.discovery-dialog-footer .creator-detail-sheet-action-btn--primary,
+.discovery-dialog-footer .creator-detail-sheet-action-btn--primary[data-slot="button"] {
+  border: none !important;
+  background: #0057ff !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+}
+
+.discovery-dialog-footer .creator-detail-sheet-action-btn--primary:hover:not(:disabled),
+.discovery-dialog-footer
+  .creator-detail-sheet-action-btn--primary[data-slot="button"]:hover:not(:disabled) {
+  filter: brightness(1.05);
+  border: none !important;
+  background: #0057ff !important;
+  color: #fff !important;
+}
+
+.discovery-dialog-input[data-slot="input"],
+.discovery-dialog-textarea[data-slot="textarea"],
+.discovery-dialog-input[data-slot="select-trigger"] {
+  border: 1px solid rgba(0, 87, 255, 0.14) !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  font-size: 12px !important;
+  box-shadow: none !important;
+}
+
+.discovery-dialog-input[data-slot="input"]:focus-visible,
+.discovery-dialog-textarea[data-slot="textarea"]:focus-visible,
+.discovery-dialog-input[data-slot="select-trigger"]:focus-visible {
+  border-color: #0057ff !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 3px rgba(0, 87, 255, 0.12) !important;
+}
+
+.discovery-dialog-input[data-slot="select-trigger"] {
+  width: 100%;
+}
+
+.discovery-dialog-input[data-slot="select-trigger"] svg {
   color: #94a3b8;
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-panel-head {
-  border-bottom-color: #f1f5f9;
+/* ── Discovery dark mode ── */
+
+.dark .discovery-search-exact-root,
+.dark .discovery-search-exact-header-bar,
+.dark .discovery-search-exact-scroll,
+.dark .discovery-search-exact-headers {
+  background: var(--background);
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-panel-title,
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-ring-info-title {
-  color: #334155;
+.dark .discovery-search-exact-header-bar {
+  border-bottom-color: var(--border);
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-panel-link {
-  color: #94a3b8;
+.dark .discovery-search-exact-headers {
+  color: var(--muted-foreground);
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-panel-link:hover {
-  color: #4f46e5;
+.dark .discovery-search-exact-row {
+  border-top-color: var(--border);
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-panel-row {
-  border-bottom-color: #f8fafc;
+.dark .discovery-search-exact-row:hover {
+  background: rgba(0, 87, 255, 0.06);
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-panel-row:hover {
-  background: #f8fafc;
+.dark .discovery-search-exact-row.is-selected {
+  background: rgba(0, 87, 255, 0.1);
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-ring-track {
-  stroke: #e2e8f0;
+.dark .shortlist-creator-exact-root .shortlist-collapse-content-block.collapse-content-frame {
+  border-color: color-mix(in srgb, var(--primary) 48%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent),
+    0 2px 10px rgb(0 0 0 / 0.25);
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-footer-strip {
-  border-top-color: rgba(99, 102, 241, 0.1);
-  background: rgba(248, 250, 255, 0.85);
+.dark
+  .thinkway-campaign-data-table
+  tbody.collapse-content-frame.quotation-collapse-content-block {
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--primary) 48%, transparent),
+    0 2px 10px rgb(0 0 0 / 0.25);
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-fs-val {
-  color: rgba(15, 23, 42, 0.6);
+.dark .shortlist-creator-exact-root .shortlist-collapse-content-header.is-selected,
+.dark .shortlist-creator-exact-root .shortlist-collapse-content-block .discovery-search-exact-row.is-selected {
+  background: rgba(0, 87, 255, 0.1);
 }
 
-:root:not(.dark) .thinkway-platform-v6 .platform-v6-hs-fs-div {
-  background: rgba(15, 23, 42, 0.08);
+.dark .discovery-search-exact-row--enriching {
+  background: rgba(14, 165, 233, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.28);
+}
+
+.dark .discovery-search-exact-col-meta {
+  color: var(--muted-foreground);
+}
+
+.dark .discovery-search-exact-name {
+  color: var(--foreground);
+}
+
+.dark .discovery-search-exact-handle,
+.dark .discovery-search-exact-meta,
+.dark .discovery-search-exact-bio,
+.dark .discovery-search-exact-country {
+  color: var(--muted-foreground);
+}
+
+.dark .discovery-search-exact-star {
+  background: var(--card);
+  border-color: var(--border);
+  color: #fcd34d;
+}
+
+.dark .discovery-search-toolbar-btn {
+  color: var(--muted-foreground);
+}
+
+.dark .discovery-search-toolbar-btn:hover,
+.dark .discovery-search-toolbar-btn--active {
+  color: #34d399;
+}
+
+.dark .discovery-search-toolbar-badge {
+  box-shadow: 0 0 0 1.5px var(--background);
+}
+
+.dark .discovery-search-exact-stat-box {
+  border-color: var(--border);
+  background: var(--card);
+}
+
+.dark .discovery-search-exact-stat-head,
+.dark .discovery-search-exact-stat-col-label {
+  color: var(--muted-foreground);
+}
+
+.dark .discovery-search-exact-stat-value {
+  color: var(--foreground);
+}
+
+.dark .discovery-search-exact-stat-hint {
+  color: var(--muted-foreground);
+}
+
+.dark .discovery-search-exact-feed-empty {
+  color: var(--muted-foreground);
+}
+
+.dark .discovery-filter-drawer-section__card {
+  border-color: rgba(0, 87, 255, 0.24);
+  background: linear-gradient(180deg, rgba(0, 87, 255, 0.1) 0%, var(--card) 24%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.dark .discovery-selection-flyout__bar {
+  border-color: rgba(0, 87, 255, 0.28);
+  background: linear-gradient(
+    135deg,
+    rgba(0, 87, 255, 0.14) 0%,
+    var(--card) 100%
+  );
+  box-shadow:
+    0 10px 32px rgba(0, 0, 0, 0.35),
+    0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.dark .discovery-dialog-content {
+  background: var(--background) !important;
+}
+
+.dark .discovery-dialog-header__bar {
+  border-color: rgba(0, 87, 255, 0.28);
+  background: linear-gradient(
+    135deg,
+    rgba(0, 87, 255, 0.14) 0%,
+    var(--card) 100%
+  );
+  box-shadow:
+    0 10px 32px rgba(0, 0, 0, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.dark .discovery-dialog-body {
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.dark .discovery-dialog-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.dark .discovery-dialog-form-panel {
+  border-color: rgba(0, 87, 255, 0.24);
+  background: linear-gradient(180deg, rgba(0, 87, 255, 0.1) 0%, var(--card) 24%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.dark .discovery-dialog-panel--inset {
+  border-color: rgba(0, 87, 255, 0.18);
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.dark .discovery-dialog-panel,
+.dark .discovery-dialog-scroll {
+  border-color: rgba(0, 87, 255, 0.24);
+  background: var(--card);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 8px 24px rgba(0, 0, 0, 0.25);
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.dark .discovery-dialog-panel::-webkit-scrollbar-thumb,
+.dark .discovery-dialog-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.dark .discovery-dialog-tabs__list[data-slot="tabs-list"] {
+  border-color: rgba(0, 87, 255, 0.24) !important;
+  background: var(--muted) !important;
+}
+
+.dark .discovery-dialog-tabs__trigger[data-slot="tabs-trigger"] {
+  color: var(--muted-foreground) !important;
+}
+
+.dark .discovery-dialog-tabs__trigger[data-slot="tabs-trigger"][data-active] {
+  background: var(--card) !important;
+  color: #60a5fa !important;
+}
+
+.dark .discovery-dialog-creator-item__remove {
+  border-color: rgba(0, 87, 255, 0.24);
+  background: var(--card);
+  color: var(--muted-foreground);
+}
+
+.dark .discovery-dialog-creator-item__remove:hover:not(:disabled) {
+  background: rgba(0, 87, 255, 0.12);
+  color: #60a5fa;
+}
+
+.dark .discovery-dialog-recent-button {
+  border-color: rgba(0, 87, 255, 0.24);
+  background: var(--card);
+  color: var(--muted-foreground);
+}
+
+.dark .discovery-dialog-recent-button:hover:not(:disabled) {
+  background: rgba(0, 87, 255, 0.1);
+}
+
+.dark .discovery-dialog-recent-button--active {
+  background: rgba(0, 87, 255, 0.14);
+  color: #60a5fa;
+}
+
+.dark .discovery-dialog-checkbox[data-slot="checkbox"] {
+  background: var(--card) !important;
+}
+
+.dark .discovery-dialog-empty {
+  color: var(--muted-foreground);
+}
+
+.dark .discovery-dialog-select-content[data-slot="select-content"],
+.dark .discovery-checkbox-popover[data-slot="popover-content"] {
+  border-color: rgba(0, 87, 255, 0.28) !important;
+  background: var(--card) !important;
+  box-shadow:
+    0 10px 32px rgba(0, 0, 0, 0.35),
+    0 2px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+.dark .discovery-checkbox-popover__list {
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+
+.dark .discovery-checkbox-popover__list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.dark .discovery-dialog-select-item[data-slot="select-item"] {
+  color: var(--foreground) !important;
+}
+
+.dark .discovery-dialog-footer [data-slot="button"],
+.dark .discovery-dialog-footer .creator-detail-sheet-action-btn {
+  border-color: var(--border) !important;
+  background: var(--card) !important;
+  color: var(--foreground) !important;
+}
+
+.dark .discovery-dialog-input[data-slot="input"],
+.dark .discovery-dialog-textarea[data-slot="textarea"],
+.dark .discovery-dialog-input[data-slot="select-trigger"] {
+  border-color: rgba(0, 87, 255, 0.24) !important;
+  background: var(--card) !important;
+  color: var(--foreground) !important;
+}
+
+.dark .discovery-dialog-input[data-slot="input"]:focus-visible,
+.dark .discovery-dialog-textarea[data-slot="textarea"]:focus-visible,
+.dark .discovery-dialog-input[data-slot="select-trigger"]:focus-visible {
+  background: var(--card) !important;
+}
+
+.dark .creator-detail-sheet-footer .creator-detail-sheet-action-btn,
+.dark .creator-detail-sheet-footer [data-slot="button"] {
+  border-color: var(--border) !important;
+  background: var(--card) !important;
+  color: var(--foreground) !important;
+}
+
+.dark .creator-detail-sheet-platform-pill {
+  border-color: rgba(0, 87, 255, 0.24);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted-foreground);
+}
+
+.dark .creator-detail-sheet-platform-pill:hover {
+  background: rgba(0, 87, 255, 0.1);
+}
+
+.dark .creator-detail-sheet-platform-pill__remove {
+  border-left-color: rgba(0, 87, 255, 0.2);
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.dark .creator-detail-sheet-platform-pill__remove:hover {
+  background: rgba(239, 68, 68, 0.14);
+  color: #f87171;
+}
+
+.dark .creator-detail-sheet-platform-pill--active {
+  background: rgba(0, 87, 255, 0.16);
+  color: #60a5fa;
+}
+
+.dark .creator-detail-sheet-tabs {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.dark .creator-detail-sheet-similar-rail {
+  border-left-color: rgba(0, 87, 255, 0.18);
+  background: var(--card);
+}
+
+.dark .creator-detail-sheet-similar-rail__inner {
+  background: linear-gradient(
+    180deg,
+    rgba(0, 87, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0) 48%
+  );
+}
+
+.dark .creator-detail-sheet-kpi-card__label {
+  color: var(--muted-foreground);
+}
+
+.dark .creator-detail-sheet-kpi-card__value {
+  color: var(--foreground);
+}
+
+.dark .creator-detail-sheet-tag--mention {
+  border-color: var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted-foreground);
+}
+
+.dark .creator-detail-sheet-command-bar__context {
+  color: var(--muted-foreground);
+}
+
+.dark .creator-detail-sheet-command-bar__context-icon {
+  color: #60a5fa;
+}
+
+.dark .creator-detail-sheet-section-title__icon {
+  background: rgba(0, 87, 255, 0.16);
+  color: #60a5fa;
+}
+
+.dark .discovery-search-exact-stat-platform-logo {
+  color: var(--foreground);
+}
+
+.dark .discovery-search-exact-stat-platform-logo img {
+  border-radius: 9999px;
+  background: var(--muted);
+  padding: 1px;
+}
+
+/* -- Platform v6 dark mode (clients, campaigns lists, workspace nav) -- */
+
+.dark .thinkway-platform-v6-topbar,
+.dark .thinkway-platform-v6-workspace-nav-mobile {
+  background: var(--background);
+  border-color: var(--border);
+}
+
+.dark .thinkway-platform-v6 .platform-v6-page-header h1 {
+  color: var(--foreground);
+}
+
+.dark .thinkway-platform-v6 .platform-v6-section-wrap {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+.dark .thinkway-platform-v6 .platform-v6-search-wrap input,
+.dark .thinkway-platform-v6 .platform-v6-btn {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
+.dark .thinkway-platform-v6 .platform-v6-btn:hover {
+  background: var(--muted);
+}
+
+.dark .thinkway-platform-v6 .platform-v6-data-table th,
+.dark .thinkway-platform-v6 .platform-v6-section-wrap [data-slot="table-head"],
+.dark .thinkway-platform-v6 .platform-v6-section-wrap thead th {
+  background: var(--muted) !important;
+  color: var(--muted-foreground) !important;
+  border-bottom-color: var(--border) !important;
+}
+
+.dark .thinkway-platform-v6 .platform-v6-data-table td,
+.dark .thinkway-platform-v6 .platform-v6-section-wrap [data-slot="table-cell"],
+.dark .thinkway-platform-v6 .platform-v6-section-wrap tbody td {
+  color: var(--muted-foreground) !important;
+  border-bottom-color: var(--border) !important;
+}
+
+.dark .thinkway-platform-v6 .platform-v6-data-table tbody tr:hover td,
+.dark .thinkway-platform-v6 .platform-v6-section-wrap tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.dark .thinkway-platform-v6-topbar--workspace-nav .platform-v6-hs-nav-center,
+.dark .thinkway-platform-v6-workspace-nav-mobile .platform-v6-hs-nav-center {
+  background: var(--muted);
+  border-color: var(--border);
+}
+
+.dark .thinkway-platform-v6-topbar--workspace-nav .platform-v6-hs-nav-tab.active,
+.dark .thinkway-platform-v6-workspace-nav-mobile .platform-v6-hs-nav-tab.active {
+  background: var(--card);
+  color: var(--primary);
+  box-shadow: none;
+}
+
+.dark .thinkway-platform-v6 .platform-v6-entity-nav-bar {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+.dark .thinkway-platform-v6 .platform-v6-section-meta strong {
+  color: var(--foreground);
+}
+
+.dark .thinkway-platform-v6 .platform-v6-section-meta div,
+.dark .thinkway-platform-v6-topbar .platform-v6-tb-sub {
+  color: var(--muted-foreground);
+}
+
+.dark .thinkway-platform-v6-topbar .platform-v6-tb-title {
+  color: var(--foreground);
+}
+
+.dark .thinkway-platform-v6-topbar--workspace-nav .platform-v6-hs-nav-tab,
+.dark .thinkway-platform-v6-workspace-nav-mobile .platform-v6-hs-nav-tab {
+  color: var(--muted-foreground);
+}
+
+.dark .thinkway-platform-v6-topbar--workspace-nav .platform-v6-hs-nav-tab:hover,
+.dark .thinkway-platform-v6-workspace-nav-mobile .platform-v6-hs-nav-tab:hover {
+  color: var(--foreground);
 }

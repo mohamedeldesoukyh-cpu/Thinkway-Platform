@@ -3,19 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, useTransition } from "react";
-import { format } from "date-fns";
-import { MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -39,12 +29,8 @@ import {
 import { cn } from "@/lib/utils";
 
 import { archiveQuotation } from "../actions";
+import { quotationDetailPath } from "../constants";
 import {
-  QUOTATION_CLIENT_LABELS,
-  quotationDetailPath,
-} from "../constants";
-import {
-  actionsForQuotationRow,
   resolveBulkQuotationActions,
   type QuotationListActionDef,
   type QuotationListActionKey,
@@ -54,17 +40,15 @@ import {
   filterQuotationRows,
   type QuotationListFilterState,
 } from "../quotation-list-filters";
-import type { QuotationListRow } from "../types";
-import { QuotationListFilterBar } from "./quotation-list-filter-bar";
-import { QuotationStatusBadge } from "./quotation-status-badge";
+import type { QuotationFormOptions, QuotationListRow } from "../types";
+import { QuotationListStatusPill } from "./quotation-list-status-pill";
 import {
   QuotationSelectionFlyout,
   quotationListFloatingBarContentClass,
 } from "./quotation-selection-flyout";
+import { QuotationsListMergedHeader } from "./quotations-list-header";
 
-const TABLE_HEAD_CLASS =
-  "h-9 px-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground";
-const TABLE_CELL_CLASS = "px-3 py-2.5 align-middle";
+import { DiscoveryFilteredEmptyState } from "@/features/discovery/components/design-system";
 
 const LIST_ACTION_RUNNERS: Record<
   QuotationListActionKey,
@@ -73,22 +57,25 @@ const LIST_ACTION_RUNNERS: Record<
   archive: archiveQuotation,
 };
 
-function egp(n: number): string {
-  return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(n)} EGP`;
-}
-
-type BrandOption = {
-  id: string;
-  name: string;
-  client_name?: string | null;
-};
+const TABLE_GUTTER_START = "pl-8";
+const TABLE_GUTTER_END = "pr-8";
+const QUOTATION_LIST_HEAD_CLASS =
+  "h-auto bg-transparent px-4 py-[13px] text-[10px] font-bold uppercase tracking-[0.07em] text-muted-foreground";
+const QUOTATION_LIST_CELL_CLASS =
+  "border-t border-border px-4 py-3.5 align-middle text-[13px] text-[var(--text-2)]";
+const QUOTATION_LIST_ROW_CLASS = "group transition-colors hover:bg-muted/20";
 
 type Props = {
   quotations: QuotationListRow[];
-  brands?: BrandOption[];
+  brands?: Array<{
+    id: string;
+    name: string;
+    client_name?: string | null;
+  }>;
+  formOptions: QuotationFormOptions;
 };
 
-export function QuotationsList({ quotations, brands = [] }: Props) {
+export function QuotationsList({ quotations, brands = [], formOptions }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [filters, setFilters] = useState<QuotationListFilterState>(
@@ -123,32 +110,6 @@ export function QuotationsList({ quotations, brands = [] }: Props) {
   const bulkActions = useMemo(
     () => resolveBulkQuotationActions(selectedRows),
     [selectedRows]
-  );
-
-  const runAction = useCallback(
-    (action: () => Promise<{ ok: boolean; message?: string }>) => {
-      startTransition(async () => {
-        try {
-          const result = await action();
-          if (result.ok) {
-            toast.success(result.message ?? "Done");
-            router.refresh();
-          } else {
-            toast.error(result.message ?? "Action failed");
-          }
-        } catch (error) {
-          toast.error(error instanceof Error ? error.message : "Action failed");
-        }
-      });
-    },
-    [router]
-  );
-
-  const runRowAction = useCallback(
-    (row: QuotationListRow, def: QuotationListActionDef) => {
-      runAction(() => LIST_ACTION_RUNNERS[def.key](row.id));
-    },
-    [runAction]
   );
 
   const runBulkAction = useCallback(
@@ -204,44 +165,33 @@ export function QuotationsList({ quotations, brands = [] }: Props) {
   const showFloatingBar = selectedCount > 0;
 
   return (
-    <div className="space-y-2">
-      <QuotationListFilterBar
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <QuotationsListMergedHeader
         filters={filters}
         onChange={setFilters}
         brands={brands}
+        formOptions={formOptions}
         resultCount={filteredQuotations.length}
         totalCount={quotations.length}
       />
 
       <div
         className={cn(
-          "overflow-hidden rounded-2xl border border-border/80",
-          "bg-card/75 shadow-[0_8px_32px_rgba(15,23,42,0.06)] backdrop-blur-md",
-          "dark:bg-card/60 dark:shadow-[0_8px_32px_rgba(0,0,0,0.35)]",
+          "min-h-0 flex-1 overflow-y-auto overscroll-y-contain",
           quotationListFloatingBarContentClass(showFloatingBar)
         )}
       >
         {filteredQuotations.length === 0 ? (
-          <div className="px-4 py-10 text-center">
-            <p className="text-sm font-medium">No quotations match your filters</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Try adjusting search or filter criteria.
-            </p>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              className="mt-4"
-              onClick={() => setFilters(DEFAULT_QUOTATION_LIST_FILTERS)}
-            >
-              Reset filters
-            </Button>
-          </div>
+          <DiscoveryFilteredEmptyState
+            title="No quotations match your filters"
+            onReset={() => setFilters(DEFAULT_QUOTATION_LIST_FILTERS)}
+            className="mx-8"
+          />
         ) : (
-          <Table>
+          <Table variant="flush">
             <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="w-10 px-2">
+              <TableRow className="border-0 hover:bg-transparent">
+                <TableHead className={cn(QUOTATION_LIST_HEAD_CLASS, TABLE_GUTTER_START, "w-[34px]")}>
                   <Checkbox
                     checked={allSelected ? true : indeterminate ? "indeterminate" : false}
                     onCheckedChange={(value) =>
@@ -253,31 +203,25 @@ export function QuotationsList({ quotations, brands = [] }: Props) {
                     disabled={isPending}
                   />
                 </TableHead>
-                <TableHead className={TABLE_HEAD_CLASS}>Serial</TableHead>
-                <TableHead className={TABLE_HEAD_CLASS}>Quotation</TableHead>
-                <TableHead className={TABLE_HEAD_CLASS}>Client / Brand</TableHead>
-                <TableHead className={TABLE_HEAD_CLASS}>Status</TableHead>
-                <TableHead className={TABLE_HEAD_CLASS}>Owner</TableHead>
-                <TableHead className={cn(TABLE_HEAD_CLASS, "text-right")}>
-                  Creators
-                </TableHead>
-                <TableHead className={cn(TABLE_HEAD_CLASS, "text-right")}>
-                  {QUOTATION_CLIENT_LABELS.clientCost}
-                </TableHead>
-                <TableHead className={cn(TABLE_HEAD_CLASS, "text-right")}>GP %</TableHead>
-                <TableHead className={TABLE_HEAD_CLASS}>Updated</TableHead>
-                <TableHead className="w-12 px-2" />
+                <TableHead className={QUOTATION_LIST_HEAD_CLASS}>Serial</TableHead>
+                <TableHead className={QUOTATION_LIST_HEAD_CLASS}>Quotation</TableHead>
+                <TableHead className={QUOTATION_LIST_HEAD_CLASS}>Status</TableHead>
+                <TableHead className={QUOTATION_LIST_HEAD_CLASS}>Owner</TableHead>
+                <TableHead className={QUOTATION_LIST_HEAD_CLASS}>Creators</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredQuotations.map((row) => {
-                const actions = actionsForQuotationRow(row);
                 const ownerLabel = row.owner_name ?? "Unknown";
                 const isSelected = effectiveSelectedIds.has(row.id);
 
                 return (
-                  <TableRow key={row.id} data-state={isSelected ? "selected" : undefined}>
-                    <TableCell className="w-10 px-2 py-2.5 align-middle">
+                  <TableRow
+                    key={row.id}
+                    data-state={isSelected ? "selected" : undefined}
+                    className={QUOTATION_LIST_ROW_CLASS}
+                  >
+                    <TableCell className={cn(QUOTATION_LIST_CELL_CLASS, TABLE_GUTTER_START, "w-[34px]")}>
                       <Checkbox
                         checked={isSelected}
                         onCheckedChange={(value) =>
@@ -291,102 +235,57 @@ export function QuotationsList({ quotations, brands = [] }: Props) {
                     </TableCell>
                     <TableCell
                       className={cn(
-                        TABLE_CELL_CLASS,
-                        "font-mono text-xs text-muted-foreground"
+                        QUOTATION_LIST_CELL_CLASS,
+                        "tabular-nums text-[12px] font-bold text-[var(--text)]"
                       )}
                     >
                       {row.serial_number ?? "—"}
                     </TableCell>
-                    <TableCell className={TABLE_CELL_CLASS}>
-                      <div className="flex min-w-0 items-center gap-2.5">
+                    <TableCell className={QUOTATION_LIST_CELL_CLASS}>
+                      <div className="flex min-w-0 items-center gap-[11px]">
                         <InitialsAvatar
                           name={row.name}
                           seed={row.id}
-                          sizeClass="size-9 text-[11px]"
+                          sizeClass="size-8 text-[11px]"
                         />
                         <div className="min-w-0">
                           <Link
-                            href={quotationDetailPath(row.id)}
-                            className="block truncate font-medium hover:underline"
+                            href={quotationDetailPath(row)}
+                            className="block truncate text-[13px] font-semibold tracking-[-0.01em] text-[var(--text)] transition-colors group-hover:text-[var(--blue-text)]"
                           >
                             {row.name}
                           </Link>
-                          {row.campaign_name ? (
-                            <span className="block truncate text-xs text-muted-foreground">
-                              {row.campaign_name}
+                          {(row.brand_name || row.client_name) && (
+                            <span className="mt-0.5 block truncate text-[11.5px] text-muted-foreground">
+                              {row.brand_name}
+                              {row.client_name ? ` · ${row.client_name}` : ""}
                             </span>
-                          ) : null}
+                          )}
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className={cn(TABLE_CELL_CLASS, "text-sm text-muted-foreground")}>
-                      <span className="block truncate">
-                        {[row.client_name, row.brand_name].filter(Boolean).join(" · ") || "—"}
-                      </span>
+                    <TableCell className={QUOTATION_LIST_CELL_CLASS}>
+                      <QuotationListStatusPill status={row.status} />
                     </TableCell>
-                    <TableCell className={TABLE_CELL_CLASS}>
-                      <QuotationStatusBadge status={row.status} />
-                    </TableCell>
-                    <TableCell className={TABLE_CELL_CLASS}>
-                      <div className="flex min-w-0 items-center gap-2">
+                    <TableCell className={QUOTATION_LIST_CELL_CLASS}>
+                      <div className="flex min-w-0 items-center gap-[9px]">
                         <InitialsAvatar
                           name={ownerLabel}
                           seed={row.owner_id ?? row.id}
-                          sizeClass="size-7 text-[10px]"
+                          sizeClass="size-6 text-[9.5px]"
                         />
-                        <span className="truncate text-sm text-muted-foreground">
+                        <span className="truncate text-[12.5px] text-[var(--text-2)]">
                           {row.owner_name ?? "—"}
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className={TABLE_CELL_CLASS}>
+                    <TableCell className={cn(QUOTATION_LIST_CELL_CLASS, TABLE_GUTTER_END)}>
                       <ShortlistCreatorPreviewStack
                         previews={row.creator_previews}
                         totalCount={row.item_count}
+                        align="start"
+                        overflowVariant="solid"
                       />
-                    </TableCell>
-                    <TableCell className={cn(TABLE_CELL_CLASS, "text-right tabular-nums")}>
-                      {egp(row.total_revenue_egp)}
-                    </TableCell>
-                    <TableCell className={cn(TABLE_CELL_CLASS, "text-right tabular-nums")}>
-                      {row.total_gp_pct.toFixed(1)}%
-                    </TableCell>
-                    <TableCell className={cn(TABLE_CELL_CLASS, "text-muted-foreground")}>
-                      {row.updated_at
-                        ? format(new Date(row.updated_at), "MMM d, yyyy")
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="px-2 py-2.5 align-middle">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            disabled={isPending}
-                            aria-label="Quotation actions"
-                          >
-                            <MoreHorizontalIcon className="size-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link href={quotationDetailPath(row.id)}>Open</Link>
-                          </DropdownMenuItem>
-                          {actions.length > 0 ? <DropdownMenuSeparator /> : null}
-                          {actions.map((action) => (
-                            <DropdownMenuItem
-                              key={action.key}
-                              variant={action.destructive ? "destructive" : "default"}
-                              onSelect={(event) => {
-                                event.preventDefault();
-                                runRowAction(row, action);
-                              }}
-                            >
-                              {action.label}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 );
@@ -394,6 +293,7 @@ export function QuotationsList({ quotations, brands = [] }: Props) {
             </TableBody>
           </Table>
         )}
+        <div className="h-10 shrink-0" aria-hidden />
       </div>
 
       <QuotationSelectionFlyout

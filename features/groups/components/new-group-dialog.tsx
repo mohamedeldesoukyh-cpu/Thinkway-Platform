@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { FieldError } from "@/components/forms/field-error";
 import { useNameAvailability } from "@/components/forms/use-name-availability";
 import { Button } from "@/components/ui/button";
+import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
+import { TooltipIconButton } from "@/components/shared/tooltip-icon-button";
 import {
   Dialog,
   DialogContent,
@@ -84,6 +86,7 @@ function createEmptyClientDraft(): NewClientDraft {
 
 export function NewGroupDialog({ unlinkedClients }: NewGroupDialogProps) {
   const router = useRouter();
+  const confirmDelete = useConfirmDelete();
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<ClientStatus>("active");
   const [groupName, setGroupName] = useState("");
@@ -150,10 +153,15 @@ export function NewGroupDialog({ unlinkedClients }: NewGroupDialogProps) {
     );
   }
 
-  function removeClientDraft(id: string) {
-    setNewClientDrafts((current) =>
-      current.length <= 1 ? current : current.filter((draft) => draft.id !== id)
+  async function removeClientDraft(id: string) {
+    if (newClientDrafts.length <= 1) return;
+    const draft = newClientDrafts.find((item) => item.id === id);
+    const ok = await confirmDelete(
+      `Remove client draft${draft?.name ? ` "${draft.name}"` : ""} from this group setup?`,
+      "Remove client draft?"
     );
+    if (!ok) return;
+    setNewClientDrafts((current) => current.filter((item) => item.id !== id));
   }
 
   const linkSubmitDisabled =
@@ -320,17 +328,17 @@ export function NewGroupDialog({ unlinkedClients }: NewGroupDialogProps) {
                         <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                           Client {index + 1}
                         </span>
-                        <Button
+                        <TooltipIconButton
                           type="button"
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          onClick={() => removeClientDraft(draft.id)}
+                          onClick={() => void removeClientDraft(draft.id)}
                           disabled={isPending || newClientDrafts.length <= 1}
-                          aria-label={`Remove client ${index + 1}`}
+                          tooltip={`Remove client ${index + 1}`}
                         >
                           <Trash2Icon className="h-3.5 w-3.5" />
-                        </Button>
+                        </TooltipIconButton>
                       </div>
 
                       <div className="grid gap-2">

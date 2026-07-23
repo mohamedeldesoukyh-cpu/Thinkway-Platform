@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { Skeleton } from "@/components/ui/skeleton";
-import { IntelligenceWorkspace } from "@/features/intelligence/components/intelligence-workspace";
+import { IntelligenceWorkspace } from "@/features/intelligence/components/intelligence-workspace-lazy";
 import { getIntelligenceWorkspace } from "@/features/intelligence/queries";
 import { isIntelligenceEnabled } from "@/lib/intelligence/feature-flag";
 

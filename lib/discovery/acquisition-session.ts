@@ -9,6 +9,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import IORedis from "ioredis";
 
+import { mergeCoverageSessionIds } from "@/lib/discovery/coverage-acquisition-dedupe";
 import { DISCOVERY_QUEUE_NAMES } from "@/lib/discovery/queue";
 
 const SESSION_KEY_PREFIX = "thinkway:discovery:acquisition:session:";
@@ -167,21 +168,64 @@ async function removeEnterpriseAcquisitionBullmqJob(jobId: string): Promise<bool
 type DiscoveryJobRow = {
   id: string;
   status: string;
-  payload: { searchSessionId?: string | null } | null;
+  payload: Record<string, unknown> | null;
 };
 
 async function loadActiveJobsForSession(
   supabase: SupabaseClient,
   sessionId: string
 ): Promise<DiscoveryJobRow[]> {
-  const { data, error } = await supabase
+  const trimmed = sessionId.trim();
+  const byPrimary = await supabase
     .from("discovery_jobs")
     .select("id, status, payload")
     .in("status", [...ACTIVE_ACQUISITION_JOB_STATUSES])
-    .filter("payload->>searchSessionId", "eq", sessionId.trim());
+    .filter("payload->>searchSessionId", "eq", trimmed);
 
-  if (error) throw new Error(error.message);
-  return (data ?? []) as DiscoveryJobRow[];
+  if (byPrimary.error) throw new Error(byPrimary.error.message);
+
+  // Attached sessions live in payload.searchSessionIds (jsonb array).
+  const byAttached = await supabase
+    .from("discovery_jobs")
+    .select("id, status, payload")
+    .in("status", [...ACTIVE_ACQUISITION_JOB_STATUSES])
+    .filter("payload->searchSessionIds", "cs", JSON.stringify([trimmed]));
+
+  const rows = new Map<string, DiscoveryJobRow>();
+  for (const row of [...(byPrimary.data ?? []), ...(byAttached.error ? [] : byAttached.data ?? [])]) {
+    rows.set(String(row.id), {
+      id: String(row.id),
+      status: String(row.status ?? ""),
+      payload: (row.payload as Record<string, unknown> | null) ?? null,
+    });
+  }
+  return [...rows.values()];
+}
+
+async function detachSessionFromAcquisitionJob(
+  supabase: SupabaseClient,
+  job: DiscoveryJobRow,
+  sessionId: string
+): Promise<{ remainingSessionIds: string[]; payload: Record<string, unknown> }> {
+  const payload =
+    job.payload && typeof job.payload === "object" ? { ...job.payload } : {};
+  const remainingSessionIds = mergeCoverageSessionIds(payload).filter(
+    (id) => id !== sessionId
+  );
+
+  const nextPayload = {
+    ...payload,
+    searchSessionId: remainingSessionIds[0] ?? null,
+    searchSessionIds: remainingSessionIds,
+  };
+
+  await supabase
+    .from("discovery_jobs")
+    .update({ payload: nextPayload })
+    .eq("id", job.id)
+    .in("status", [...ACTIVE_ACQUISITION_JOB_STATUSES]);
+
+  return { remainingSessionIds, payload: nextPayload };
 }
 
 async function markDiscoveryJobCancelled(
@@ -225,6 +269,26 @@ export async function cancelAcquisitionSession(
       skippedJobIds.push(job.id);
       continue;
     }
+
+    // Shared coverage jobs: detach this session; cancel only when no sessions remain.
+    const { remainingSessionIds } = await detachSessionFromAcquisitionJob(
+      supabase,
+      job,
+      trimmed
+    );
+    if (remainingSessionIds.length > 0) {
+      skippedJobIds.push(job.id);
+      console.log(
+        "[coverage-acquisition-dedupe] detached session from shared job",
+        JSON.stringify({
+          jobId: job.id,
+          sessionId: trimmed,
+          remainingSessionIds,
+        })
+      );
+      continue;
+    }
+
     await markDiscoveryJobCancelled(supabase, job.id, reason);
     await setJobCancelFlag(job.id);
     const removed = await removeEnterpriseAcquisitionBullmqJob(job.id);
@@ -266,7 +330,7 @@ export async function checkAcquisitionJobCancelled(
 
   const { data, error } = await supabase
     .from("discovery_jobs")
-    .select("status")
+    .select("status, payload")
     .eq("id", jobId.trim())
     .maybeSingle();
 
@@ -282,10 +346,25 @@ export async function checkAcquisitionJobCancelled(
     return { cancelled: false };
   }
 
-  if (searchSessionId?.trim()) {
-    const alive = await isAcquisitionSessionAlive(searchSessionId);
-    if (!alive) {
-      return { cancelled: true, reason: "Search session heartbeat expired." };
+  const payload =
+    data?.payload && typeof data.payload === "object"
+      ? (data.payload as Record<string, unknown>)
+      : null;
+  const sessionIds = mergeCoverageSessionIds(payload);
+  if (searchSessionId?.trim() && !sessionIds.includes(searchSessionId.trim())) {
+    sessionIds.push(searchSessionId.trim());
+  }
+
+  if (sessionIds.length > 0) {
+    let anyAlive = false;
+    for (const sessionId of sessionIds) {
+      if (await isAcquisitionSessionAlive(sessionId)) {
+        anyAlive = true;
+        break;
+      }
+    }
+    if (!anyAlive) {
+      return { cancelled: true, reason: "All attached search session heartbeats expired." };
     }
   }
 

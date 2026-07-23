@@ -133,6 +133,7 @@ export function buildQuotationOptionRenumberPlan(
       | "id"
       | "sort_order"
       | "option_number"
+      | "collapse_group_id"
       | "unified_id"
       | "influencer_id"
       | "profile_id"
@@ -141,7 +142,9 @@ export function buildQuotationOptionRenumberPlan(
     >
   >
 ): Array<{ id: string; option_number: number }> {
-  const sorted = [...items].sort((a, b) => a.sort_order - b.sort_order);
+  const sorted = [...items]
+    .filter((item) => !item.collapse_group_id)
+    .sort((a, b) => a.sort_order - b.sort_order);
   const seen = new Map<string, number>();
   const updates: Array<{ id: string; option_number: number }> = [];
 

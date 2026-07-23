@@ -93,6 +93,14 @@ export type CampaignObjectMeta = {
   quotationCommercials?: import("@/features/campaign-outputs/hydration/quotation-commercials-meta").QuotationCommercialsMeta;
   /** Media plan slot distribution — week weights and per-creator overrides (not start date). */
   mediaPlanSchedule?: import("@/features/campaign-outputs/media-plan-schedule").MediaPlanScheduleMeta;
+  /** Approved influencer concepts + upload refs for Media Plan Creative Direction. */
+  influencerConcepts?: import("@/features/campaign-outputs/influencer-concepts").InfluencerConceptsMeta;
+  /** Media plan section visibility, standard/strategy mode, and export preferences. */
+  mediaPlanPresentation?: import("@/features/campaign-outputs/media-plan-presentation").MediaPlanPresentationConfig;
+  /** SSOT reference for the campaign brief asset — links across Studio, Outputs, and Media Plan. */
+  campaignBriefRef?: import("@/features/campaign-outputs/campaign-brief-ref").CampaignBriefRef;
+  /** Brief → Quotation → Campaign pipeline timestamps for conversion reporting (Phase 2 dashboard). */
+  briefPipeline?: import("@/features/campaign-outputs/campaign-brief-ref").CampaignBriefPipelineMeta;
 };
 
 /** A single applied Campaign Copilot edit, for change history and the digest. */

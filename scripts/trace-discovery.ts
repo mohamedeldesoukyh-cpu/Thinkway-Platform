@@ -971,8 +971,8 @@ async function main() {
   } else {
     console.log("  The database is empty of candidates and acquisition has not populated it.");
   }
-  console.log("  Note: automaticEnrichment/costProtection (see DISCOVERY CONTROL SETTINGS) can disable Apify");
-  console.log("  even when the worker runs — maxRequestsPerDay=0 / maxCreditsPerDay=0 blocks paid acquisition.");
+  console.log("  Note: costProtection is fail-closed — maxRequestsPerDay=0 / maxCreditsPerDay=0 (or unset)");
+  console.log("  rejects ALL Apify acquisition. Both caps must be > 0. See [apify-budget] rejected logs.");
 
   // 6) Stored campaign-object slate state -------------------------------------
   header("STORED SLATE STATE (what the real Studio run produced)");

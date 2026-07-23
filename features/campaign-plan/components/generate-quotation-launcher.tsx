@@ -13,6 +13,7 @@ import {
 } from "../actions/generate-quotation-from-plan";
 import { CampaignPlanLifecycleHint } from "./campaign-plan-lifecycle-hint";
 import { GenerateQuotationEntry } from "./generate-quotation-entry";
+import { GenerateLauncherPlaceholder } from "./generate-launcher-placeholder";
 
 export type GenerateQuotationLauncherProps = {
   campaignObject: CampaignObject;
@@ -38,7 +39,7 @@ export function GenerateQuotationLauncher({
 
   useEffect(() => {
     let cancelled = false;
-    setLoadingContext(true);
+    if (!context) setLoadingContext(true);
     void getCampaignPlanQuotationContext({
       campaignObjectId: campaignObject.id,
       conversationId,
@@ -71,8 +72,8 @@ export function GenerateQuotationLauncher({
     };
   }, [campaignObject.id, campaignObject.updatedAt, conversationId]);
 
-  if (loadingContext) {
-    return null;
+  if (loadingContext && !context) {
+    return <GenerateLauncherPlaceholder variant={variant} className={className} />;
   }
 
   if (!context) {

@@ -483,21 +483,3 @@
   z-index: auto;
 }
 
-/* Campaign Mode desktop — zoom out the full studio panel for density. */
-.studio-desktop-zoom {
-  --studio-desktop-zoom: 0.969;
-  zoom: var(--studio-desktop-zoom);
-}
-
-@supports not (zoom: 1) {
-  .studio-desktop-zoom {
-    transform: scale(var(--studio-desktop-zoom));
-    transform-origin: top left;
-    width: calc(100% / var(--studio-desktop-zoom));
-    height: calc(100% / var(--studio-desktop-zoom));
-  }
-}
-
-.studio-shell-desktop {
-  --studio-panel-zoom: 0.969;
-}

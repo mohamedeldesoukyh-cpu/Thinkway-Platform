@@ -9,9 +9,9 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except static assets.
-     * Required so auth cookies are refreshed before Server Components run.
+     * Match app routes that need session refresh / auth gates.
+     * Skip static assets, Next internals, and public health probes.
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|_next/webpack-hmr|favicon.ico|api/health|api/ready|api/version|api/build-info|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|woff2?)$).*)",
   ],
 };

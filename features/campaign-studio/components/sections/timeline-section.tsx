@@ -7,8 +7,7 @@ import {
   SectionPendingMessage,
   shouldShowPendingPlaceholder,
 } from "./shared/section-status-utils";
-import { WeekCard } from "./shared/studio-ui-primitives";
-import { STUDIO_CLASSES } from "../../constants/studio-tokens";
+import { WeekCard, WeekGrid } from "./shared/studio-ui-primitives";
 import { resolveTimelineData } from "../../services/section-data-resolver";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
@@ -47,7 +46,7 @@ export function TimelineSection({
 
   return (
     <div className="min-w-0 space-y-2.5">
-      <div className={STUDIO_CLASSES.weekGrid}>
+      <WeekGrid>
         {activationWeeks.map((week) => {
           const description =
             week.activities[0] ??
@@ -65,7 +64,7 @@ export function TimelineSection({
             />
           );
         })}
-      </div>
+      </WeekGrid>
       {reportingWeek ? (
         <WeekCard
           week={`Week ${reportingWeek.week}`}

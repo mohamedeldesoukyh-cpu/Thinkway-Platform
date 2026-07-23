@@ -10,6 +10,8 @@ type Props = {
   validDaysRemaining: number | null;
   isExpired?: boolean;
   className?: string;
+  /** Compact pill for the lifecycle band (matches redesign mock). */
+  inline?: boolean;
 };
 
 export function QuotationValidityBar({
@@ -17,6 +19,7 @@ export function QuotationValidityBar({
   validDaysRemaining,
   isExpired,
   className,
+  inline = false,
 }: Props) {
   if (!validityDate) return null;
 
@@ -31,21 +34,24 @@ export function QuotationValidityBar({
             ? "1 day remaining"
             : `${validDaysRemaining} days remaining`;
 
+  if (inline) {
+    return (
+      <span
+        className={cn("validity", isExpired && "expired", className)}
+        title={`Validity ${formatDateLabel(validityDate)}`}
+      >
+        <AlertCircleIcon aria-hidden />
+        Validity {formatDateLabel(validityDate)}
+        {daysLabel ? ` · ${daysLabel}` : null}
+      </span>
+    );
+  }
+
   return (
-    <div className={cn("thinkway-campaign-po-bar", className)}>
-      <AlertCircleIcon className="size-3 shrink-0 text-[var(--camp-amber-text)]" aria-hidden />
-      <span className="thinkway-campaign-po-bar-label">Validity:</span>
-      <span className="thinkway-campaign-po-bar-val">{formatDateLabel(validityDate)}</span>
-      {daysLabel ? (
-        <span
-          className={cn(
-            "thinkway-campaign-po-bar-pct",
-            isExpired && "text-[var(--camp-red)]"
-          )}
-        >
-          {daysLabel}
-        </span>
-      ) : null}
+    <div className={cn("validity", isExpired && "expired", className)}>
+      <AlertCircleIcon aria-hidden />
+      Validity {formatDateLabel(validityDate)}
+      {daysLabel ? ` · ${daysLabel}` : null}
     </div>
   );
 }

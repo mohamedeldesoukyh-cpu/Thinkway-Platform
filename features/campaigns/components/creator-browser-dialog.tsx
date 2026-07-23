@@ -21,7 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet";
+import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet-lazy";
+import { useCreatorDetailSheetState } from "@/features/discovery/hooks/use-creator-detail-sheet-state";
 import { CreatorUnifiedCard } from "@/features/campaigns/components/creator-unified-card";
 import {
   addCreatorToCampaignShortlistAction,
@@ -72,7 +73,12 @@ export function CreatorBrowserDialog({
   const { selectedIds, setSelectedIds, toggle: toggleSelected } = useCreatorSelection({
     mode: "multi",
   });
-  const [detailCreator, setDetailCreator] = useState<UnifiedCreatorResult | null>(null);
+  const {
+    open: detailOpen,
+    creator: detailCreator,
+    openCreator,
+    onOpenChange: onDetailOpenChange,
+  } = useCreatorDetailSheetState();
   const [compareMode, setCompareMode] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
@@ -389,7 +395,7 @@ export function CreatorBrowserDialog({
                           }
                         : undefined
                     }
-                    onOpenDetail={() => setDetailCreator(creator)}
+                    onOpenDetail={() => openCreator(creator)}
                     onPrimaryAction={() => pick(creator)}
                     primaryActionLabel={
                       isAssignableCreator(creator) ? "Assign to line" : "Shortlist only"
@@ -432,8 +438,8 @@ export function CreatorBrowserDialog({
 
       <CreatorDetailSheet
         creator={detailCreator}
-        open={Boolean(detailCreator)}
-        onOpenChange={(v) => !v && setDetailCreator(null)}
+        open={detailOpen}
+        onOpenChange={onDetailOpenChange}
         onAssign={pick}
         campaignHeaderId={campaignHeaderId}
       />

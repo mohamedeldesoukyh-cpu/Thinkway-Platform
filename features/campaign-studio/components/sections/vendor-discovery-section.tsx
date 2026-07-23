@@ -5,7 +5,9 @@ import { SearchIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import { SectionSkeleton } from "./shared/section-skeleton";
+import { STUDIO_REF_CLASSES } from "../../constants/campaign-studio-ref-tokens";
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
+import { useStudioRefMode } from "../../hooks/use-studio-ref-mode";
 import { resolveVendorDiscovery, resolveCreatorCounts } from "../../services/section-data-resolver";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
@@ -24,6 +26,7 @@ export function VendorDiscoverySection({
   campaignObject,
   status,
 }: VendorDiscoverySectionProps) {
+  const refMode = useStudioRefMode();
   const isRunning = status === "running";
   const discovery = resolveVendorDiscovery(campaignObject, isRunning);
   const { discoveryIds, recommendationCount } = resolveCreatorCounts(campaignObject);
@@ -60,22 +63,26 @@ export function VendorDiscoverySection({
 
   return (
     <div className="min-w-0 space-y-3">
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <div className={refMode ? STUDIO_REF_CLASSES.funnelRow : "flex min-w-0 flex-wrap items-center gap-2"}>
         {discovery.pipeline.map((stage, index) => (
-          <div key={stage.id} className="flex min-w-0 items-center gap-2">
-            <div className={STUDIO_CLASSES.funnelStep}>
+          <div key={stage.id} className={refMode ? "contents" : "flex min-w-0 items-center gap-2"}>
+            <div className={refMode ? STUDIO_REF_CLASSES.funnelStep : STUDIO_CLASSES.funnelStep}>
               <span>{stage.label}</span>
-              <b className="font-mono">{formatPipelineCount(stage.count)}</b>
+              <b className={refMode ? undefined : "font-mono"}>{formatPipelineCount(stage.count)}</b>
             </div>
             {index < discovery.pipeline.length - 1 ? (
-              <span className="shrink-0 text-[#B9C2D9]">→</span>
+              <span className={refMode ? STUDIO_REF_CLASSES.funnelArrow : "shrink-0 text-[#B9C2D9]"}>
+                →
+              </span>
             ) : null}
           </div>
         ))}
       </div>
 
       {summaryText ? (
-        <div className={STUDIO_CLASSES.funnelResult}>{summaryText}</div>
+        <div className={refMode ? STUDIO_REF_CLASSES.funnelResult : STUDIO_CLASSES.funnelResult}>
+          {summaryText}
+        </div>
       ) : status === "pending" ? (
         <div className="rounded-xl border border-dashed border-[#0B0F1A]/8 bg-[#F5F8FF]/50 px-4 py-5 text-center dark:border-border">
           <SearchIcon className="mx-auto mb-2 size-5 text-[#6B7280]/60" />

@@ -204,6 +204,7 @@ export const CREATOR_ENRICHMENT_STATUS_TONE = {
   running: "foreground",
   enriched: "success",
   partial: "warning",
+  awaiting_profile_details: "warning",
   failed: "destructive",
   skipped: "neutral",
 } as const satisfies Record<string, SemanticStatusTone>;

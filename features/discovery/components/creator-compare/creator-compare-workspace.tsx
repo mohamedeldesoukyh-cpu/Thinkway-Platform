@@ -13,7 +13,13 @@ import {
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet";
+import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet-lazy";
+import { useCreatorDetailSheetState } from "@/features/discovery/hooks/use-creator-detail-sheet-state";
+import {
+  DiscoveryEmptyState,
+  DiscoveryLoadingState,
+  DiscoveryWorkspaceActionBar,
+} from "@/features/discovery/components/design-system";
 import {
   addUnifiedCreatorsToShortlists,
   describeAddOutcome,
@@ -40,7 +46,12 @@ export function CreatorCompareWorkspace({ shortlists: initialShortlists }: Props
   const [shortlists, setShortlists] = useState(initialShortlists);
   const [bundle, setBundle] = useState<CreatorCompareBundle | null>(null);
   const [loading, setLoading] = useState(true);
-  const [detailCreator, setDetailCreator] = useState<UnifiedCreatorResult | null>(null);
+  const {
+    open: detailOpen,
+    creator: detailCreator,
+    openCreator,
+    onOpenChange: onDetailOpenChange,
+  } = useCreatorDetailSheetState();
   const [addToShortlistOpen, setAddToShortlistOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -99,7 +110,7 @@ export function CreatorCompareWorkspace({ shortlists: initialShortlists }: Props
 
   function handleOpenCreator(unifiedId: string) {
     const creator = creators.find((c) => c.unified_id === unifiedId) ?? null;
-    setDetailCreator(creator);
+    if (creator) openCreator(creator);
   }
 
   function handleAddToShortlistConfirm({ shortlistIds }: { shortlistIds: string[] }) {
@@ -155,71 +166,65 @@ export function CreatorCompareWorkspace({ shortlists: initialShortlists }: Props
   }
 
   if (loading) {
-    return (
-      <div className="flex flex-1 items-center justify-center gap-2 py-24 text-sm text-[#9099A8]">
-        <Loader2Icon className="size-5 animate-spin" />
-        Loading comparison…
-      </div>
-    );
+    return <DiscoveryLoadingState message="Loading comparison…" />;
   }
 
   if (!bundle || bundle.entries.length < 2) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-24 text-center">
-        <GitCompareArrowsIcon className="size-10 text-primary/40" />
-        <div>
-          <p className="text-[15px] font-semibold text-foreground">No creators to compare</p>
-          <p className="mt-1 max-w-md text-[13px] text-muted-foreground">
-            Select 2–{MAX_CREATOR_COMPARE} creators in Creator Search and click Compare.
-          </p>
-        </div>
+      <DiscoveryEmptyState
+        title="No creators to compare"
+        description={`Select 2–${MAX_CREATOR_COMPARE} creators in Creator Search and click Compare.`}
+        icon={GitCompareArrowsIcon}
+        className="flex-1 [&>div:first-child]:text-primary/40"
+      >
         <Button asChild>
           <Link href="/discovery/search">Go to Creator Search</Link>
         </Button>
-      </div>
+      </DiscoveryEmptyState>
     );
   }
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-background px-4 py-3 md:px-5">
-        <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs" asChild>
-          <Link href="/discovery/search">
-            <ArrowLeftIcon className="size-3.5" />
-            Back to search
-          </Link>
-        </Button>
-        <div className="h-4 w-px bg-[#E6EAF2]" aria-hidden />
-        <span className="text-[12px] font-semibold text-foreground">
-          {bundle.entries.length} creators compared
-        </span>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Button
-            size="sm"
-            variant="secondary"
-            className="h-8 gap-1.5 text-xs"
-            onClick={() => setAddToShortlistOpen(true)}
-            disabled={isPending}
-          >
-            <ListPlusIcon className="size-3.5" />
-            Add all to list
+      <DiscoveryWorkspaceActionBar
+        leading={
+          <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs" asChild>
+            <Link href="/discovery/search">
+              <ArrowLeftIcon className="size-3.5" />
+              Back to search
+            </Link>
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 gap-1.5 text-xs"
-            onClick={() => void exportPdf()}
-            disabled={exporting}
-          >
-            {exporting ? (
-              <Loader2Icon className="size-3.5 animate-spin" />
-            ) : (
-              <DownloadIcon className="size-3.5" />
-            )}
-            Export PDF
-          </Button>
-        </div>
-      </div>
+        }
+        meta={`${bundle.entries.length} creators compared`}
+        actions={
+          <>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => setAddToShortlistOpen(true)}
+              disabled={isPending}
+            >
+              <ListPlusIcon className="size-3.5" />
+              Add all to list
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => void exportPdf()}
+              disabled={exporting}
+            >
+              {exporting ? (
+                <Loader2Icon className="size-3.5 animate-spin" />
+              ) : (
+                <DownloadIcon className="size-3.5" />
+              )}
+              Export PDF
+            </Button>
+          </>
+        }
+      />
 
       <CreatorCompareMatrix
         bundle={bundle}
@@ -229,10 +234,8 @@ export function CreatorCompareWorkspace({ shortlists: initialShortlists }: Props
 
       <CreatorDetailSheet
         creator={detailCreator}
-        open={detailCreator != null}
-        onOpenChange={(open) => {
-          if (!open) setDetailCreator(null);
-        }}
+        open={detailOpen}
+        onOpenChange={onDetailOpenChange}
       />
 
       <AddToShortlistDialog

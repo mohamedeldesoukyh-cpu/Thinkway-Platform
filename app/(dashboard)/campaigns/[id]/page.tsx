@@ -1,4 +1,5 @@
-import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { notFound, redirect } from "next/navigation";
 
 import { PageBackButton } from "@/components/navigation/page-back-button";
 import { PageAlert } from "@/components/ui/page-alert";
@@ -23,50 +24,60 @@ import {
 } from "@/lib/billing/repair-orphaned-invoice-state";
 import { repairVendorIoAmountDrift } from "@/lib/io/repair-vendor-io-amount-drift";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isUuid } from "@/lib/validation/uuid";
 import {
   resolveCampaignWorkspaceTab,
 } from "@/features/campaigns/constants/campaign-workspace-tab-order";
-
-export {
-  loadCampaignAssignmentsBillingBundle,
-  loadCampaignBillingBundle,
-  loadCampaignFinanceAuditBundle,
-  loadCampaignFormOptionsBundle,
-} from "@/features/campaigns/actions/load-campaign-tab-data";
+import { campaignDetailPath } from "@/lib/routing/entity-paths";
+import {
+  metadataTitleForEntity,
+  redirectToCanonicalEntityRoute,
+} from "@/lib/routing/entity-page";
+import {
+  fetchCampaignRouteSummary,
+  resolveCampaignIdByRouteKey,
+} from "@/lib/routing/entity-route-queries";
 
 type CampaignWorkspacePageProps = {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ tab?: string }>;
 };
 
+export async function generateMetadata({
+  params,
+}: Pick<CampaignWorkspacePageProps, "params">): Promise<Metadata> {
+  const { id: routeKey } = await params;
+  const campaignId = await resolveCampaignIdByRouteKey(routeKey);
+  if (!campaignId) return { title: "Campaign" };
+
+  const summary = await fetchCampaignRouteSummary(campaignId);
+  if (!summary) return { title: "Campaign" };
+
+  return {
+    title: metadataTitleForEntity(summary, summary.document_number),
+  };
+}
+
 export default async function CampaignWorkspacePage({
   params,
   searchParams,
 }: CampaignWorkspacePageProps) {
-  const { id } = await params;
+  const { id: routeKey } = await params;
   const { tab } = await searchParams;
   const defaultTab = resolveCampaignWorkspaceTab(tab);
 
-  if (!isUuid(id)) {
-    return (
-      <DashboardShell
-        title="Campaign workspace"
-        description="Operational command center for lines, vendors, deliverables, billing, and workflow."
-      >
-        <div className="space-y-4 rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-6 text-sm">
-          <p className="font-medium text-destructive">Invalid campaign link</p>
-          <p className="text-muted-foreground">
-            The URL does not contain a valid campaign ID. Open a campaign from the{" "}
-            <strong>Campaigns</strong> list instead of using a bookmark or preview link.
-          </p>
-          <PageBackButton
-            fallbackHref="/campaigns"
-            label="Back to campaigns"
-            variant="text"
-          />
-        </div>
-      </DashboardShell>
+  const campaignId = await resolveCampaignIdByRouteKey(routeKey);
+  if (!campaignId) notFound();
+
+  const routeSummary = await fetchCampaignRouteSummary(campaignId);
+  if (routeSummary) {
+    redirectToCanonicalEntityRoute(
+      {
+        routeKey,
+        entity: routeSummary,
+        canonicalPath: campaignDetailPath(routeSummary),
+      },
+      undefined,
+      tab ? { tab } : undefined
     );
   }
 
@@ -74,30 +85,30 @@ export default async function CampaignWorkspacePage({
   let assignmentHierarchy;
   let errorMessage: string | null = null;
 
-  traceCampaignRoute("page:load:start", { campaignId: id, tab: defaultTab });
+  traceCampaignRoute("page:load:start", { campaignId, tab: defaultTab });
 
   try {
-    workspace = await getCampaignWorkspace(id);
+    workspace = await getCampaignWorkspace(campaignId);
     traceCampaignRoute("page:workspace:loaded", {
-      campaignId: id,
+      campaignId,
       found: Boolean(workspace),
     });
     if (workspace) {
       assignmentHierarchy = toPlainAssignmentHierarchy(
-        await getCampaignAssignmentHierarchy(id, workspace)
+        await getCampaignAssignmentHierarchy(campaignId, workspace)
       );
       traceCampaignRoute("page:assignment-hierarchy:loaded", {
-        campaignId: id,
+        campaignId,
         groupCount: assignmentHierarchy.groups?.length ?? 0,
         loadError: assignmentHierarchy.load_error ?? null,
       });
     }
   } catch (error) {
-    traceCampaignRouteError("page:load:failed", error, { campaignId: id });
+    traceCampaignRouteError("page:load:failed", error, { campaignId });
     const { logCampaignWorkspaceLoadError } = await import(
       "@/lib/billing/operational-billing-trace"
     );
-    logCampaignWorkspaceLoadError("getCampaignWorkspace", error, { campaignId: id });
+    logCampaignWorkspaceLoadError("getCampaignWorkspace", error, { campaignId });
     if (process.env.NODE_ENV === "development") {
       throw error;
     }
@@ -106,7 +117,7 @@ export default async function CampaignWorkspacePage({
   }
 
   if (!workspace && !errorMessage) {
-    traceCampaignRoute("page:not-found", { campaignId: id, reason: "workspace-null" });
+    traceCampaignRoute("page:not-found", { campaignId, reason: "workspace-null" });
     notFound();
   }
 
@@ -116,19 +127,19 @@ export default async function CampaignWorkspacePage({
       const {
         data: { user: repairUser },
       } = await supabase.auth.getUser();
-      await repairNonIoInvoiceLineItemsForCampaign(supabase, id);
-      await repairLinesBillingWithoutVendorIo(supabase, id);
-      await repairOrphanedInvoicedOperationalRows(supabase, id);
-      await repairDesyncedUngeneratedInvoiceHeaders(supabase, id);
-      await repairStalePendingRegenerationInvoices(supabase, id);
-      await repairIncorrectlyFinanceLockedDraftInvoices(supabase, id);
-      await repairActiveInvoiceOperationalRelock(supabase, id);
-      await repairAppendMissingInvoiceLineItems(supabase, id);
+      await repairNonIoInvoiceLineItemsForCampaign(supabase, campaignId);
+      await repairLinesBillingWithoutVendorIo(supabase, campaignId);
+      await repairOrphanedInvoicedOperationalRows(supabase, campaignId);
+      await repairDesyncedUngeneratedInvoiceHeaders(supabase, campaignId);
+      await repairStalePendingRegenerationInvoices(supabase, campaignId);
+      await repairIncorrectlyFinanceLockedDraftInvoices(supabase, campaignId);
+      await repairActiveInvoiceOperationalRelock(supabase, campaignId);
+      await repairAppendMissingInvoiceLineItems(supabase, campaignId);
       const { prepareCampaignCommercialForInvoice } = await import(
         "@/lib/billing/repair-invoice-create-pipeline"
       );
-      await prepareCampaignCommercialForInvoice(supabase, id);
-      await repairVendorIoAmountDrift(supabase, id, repairUser?.id ?? null);
+      await prepareCampaignCommercialForInvoice(supabase, campaignId);
+      await repairVendorIoAmountDrift(supabase, campaignId, repairUser?.id ?? null);
     } catch (error) {
       if (process.env.NODE_ENV === "development") {
         devLog("[campaign-page] orphaned invoice repair skipped", error);

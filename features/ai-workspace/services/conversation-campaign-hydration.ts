@@ -3,6 +3,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 
 import {
+  getConversationWithMessages,
+  updateConversationContextSnapshot,
+  updateMessageMetadata,
+} from "@/features/ai-workspace/services/conversation-service";
+import type { CampaignObject } from "@/features/campaign-intelligence";
+import {
   attachCampaignObjectToSnapshot,
   loadCampaignObjectForConversation,
   serializeCampaignObject,
@@ -13,16 +19,16 @@ import type { AiConversation } from "../types";
 
 function patchLatestStudioMessageCampaignObject(
   messages: AiConversation["messages"],
-  campaignObject: NonNullable<Awaited<ReturnType<typeof loadCampaignObjectForConversation>>>
-): AiConversation["messages"] {
-  if (!messages?.length) return messages;
+  campaignObject: CampaignObject
+): { messages: AiConversation["messages"]; messageId: string | null } {
+  if (!messages?.length) return { messages, messageId: null };
 
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     const message = messages[i]!;
     if (!isStudioMessage(message)) continue;
 
     const serialized = serializeCampaignObject(campaignObject);
-    return messages.map((entry, index) =>
+    const nextMessages = messages.map((entry, index) =>
       index === i
         ? {
             ...entry,
@@ -33,9 +39,46 @@ function patchLatestStudioMessageCampaignObject(
           }
         : entry
     );
+    return { messages: nextMessages, messageId: message.id };
   }
 
-  return messages;
+  return { messages, messageId: null };
+}
+
+/** Persist the canonical campaign object onto the latest studio message metadata. */
+export async function syncLatestStudioMessageCampaignObject(
+  supabase: SupabaseClient<Database>,
+  conversationId: string,
+  userId: string,
+  campaignObject: CampaignObject
+): Promise<void> {
+  const conversation = await getConversationWithMessages(supabase, conversationId, userId);
+  if (!conversation?.messages?.length) return;
+
+  const { messages, messageId } = patchLatestStudioMessageCampaignObject(
+    conversation.messages,
+    campaignObject
+  );
+  if (!messages?.length || !messageId) return;
+
+  const message = messages.find((entry) => entry.id === messageId);
+  if (!message?.metadata) return;
+
+  await updateMessageMetadata(supabase, messageId, message.metadata);
+
+  try {
+    await updateConversationContextSnapshot(
+      supabase,
+      conversationId,
+      userId,
+      attachCampaignObjectToSnapshot(
+        (conversation.contextSnapshot ?? {}) as Record<string, unknown>,
+        campaignObject
+      )
+    );
+  } catch {
+    /* studio message carries the object */
+  }
 }
 
 /**
@@ -61,10 +104,7 @@ export async function hydrateConversationCampaignObject(
   });
 
   const nextSnapshot = attachCampaignObjectToSnapshot(contextSnapshot, enriched);
-  const messages = patchLatestStudioMessageCampaignObject(
-    conversation.messages,
-    enriched
-  );
+  const { messages } = patchLatestStudioMessageCampaignObject(conversation.messages, enriched);
 
   return {
     ...conversation,

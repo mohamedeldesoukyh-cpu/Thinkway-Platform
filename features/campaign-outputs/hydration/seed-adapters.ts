@@ -19,6 +19,8 @@ import type { ShortlistDetail } from "@/features/discovery/shortlists/types";
 import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
 
 import { getInfluencerTier, type InfluencerTier } from "@/lib/creators/influencer-tier";
+import { formatCreatorCountryLabels } from "@/lib/creators/creator-display-utils";
+import { mergeCountryCodes } from "@/lib/creators/country-inference";
 
 import type { CampaignSeed, SeedCreator } from "./hydration-types";
 import { normalizeCreatorMatchKey, parseAggregatedServiceLabel } from "./quotation-service-types";
@@ -205,6 +207,7 @@ function seedCreatorFromUnified(creator: UnifiedCreatorResult): SeedCreator {
   const followers = metricValue(creator.metrics?.followers) ?? creator.platforms?.[0]?.follower_count ?? undefined;
   const engagementRate =
     metricValue(creator.metrics?.engagement_rate) ?? creator.platforms?.[0]?.engagement_rate ?? undefined;
+  const countryLabel = formatCreatorCountryLabels(creator);
   return {
     creatorId: creator.unified_id,
     displayName: creator.display_name,
@@ -213,7 +216,7 @@ function seedCreatorFromUnified(creator: UnifiedCreatorResult): SeedCreator {
     followers: followers ?? undefined,
     engagementRate: engagementRate ?? undefined,
     categories: creator.categories?.length ? creator.categories : undefined,
-    country: creator.country_code ?? creator.estimated_country ?? undefined,
+    country: countryLabel !== "—" ? countryLabel : creator.country_code ?? creator.estimated_country ?? undefined,
     brandFit: creator.brand_fit_score ?? undefined,
     aiScore: typeof creator.thinkway_score === "number" ? creator.thinkway_score : undefined,
   };
@@ -231,7 +234,11 @@ function seedFromUnifiedCreators(
     client: base?.client,
     brand: base?.brand,
     platforms: uniqueStrings(creators.flatMap((c) => (c.platforms ?? []).map((p) => p.platform))),
-    market: uniqueStrings(creators.map((c) => c.country_code ?? c.estimated_country)),
+    market: uniqueStrings(
+      creators.flatMap((c) =>
+        mergeCountryCodes(c.country_codes, c.country_code, c.estimated_country)
+      )
+    ),
     categories: uniqueStrings(creators.flatMap((c) => c.categories ?? [])),
     audience: audienceInterests.length ? `Interested in ${audienceInterests.join(", ")}` : undefined,
     creators: seedCreators,
@@ -264,4 +271,38 @@ export function seedFromManual(fields: Partial<Omit<CampaignSeed, "source" | "cr
 
 export function seedFromBrief(fields: Partial<Omit<CampaignSeed, "source" | "creators">> & { creators?: SeedCreator[] }): CampaignSeed {
   return { source: "campaign_brief", creators: fields.creators ?? [], ...fields };
+}
+
+// ---------------------------------------------------------------------------
+// CRM Campaign header → seed
+// ---------------------------------------------------------------------------
+
+type CampaignWorkspaceSeedInput = {
+  name: string;
+  brief?: string | null;
+  platform?: string | null;
+  currency_code?: string;
+  client?: { name: string } | null;
+  brand?: { name: string } | null;
+  group?: { name: string } | null;
+  financials?: { budget?: number };
+};
+
+/** Normalize an operational campaign header into a hydration seed. */
+export function seedFromCampaign(workspace: CampaignWorkspaceSeedInput): CampaignSeed {
+  const budget = workspace.financials?.budget;
+  return {
+    source: "crm_campaign",
+    campaignName: workspace.name,
+    client: workspace.client?.name,
+    brand: workspace.brand?.name,
+    group: workspace.group?.name,
+    objective: workspace.brief?.trim() || undefined,
+    platforms: workspace.platform ? [workspace.platform] : undefined,
+    budget:
+      budget != null && budget > 0
+        ? { amount: budget, currency: workspace.currency_code ?? "USD" }
+        : undefined,
+    creators: [],
+  };
 }

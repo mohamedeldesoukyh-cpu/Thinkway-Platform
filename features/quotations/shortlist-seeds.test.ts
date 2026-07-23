@@ -5,7 +5,9 @@ import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import {
   buildQuotationSeedFromCreator,
   buildQuotationSeedFromShortlistItem,
+  buildQuotationSeedsFromImportPlan,
   filterNewShortlistImportItems,
+  planShortlistItemsForQuotationImport,
 } from "@/features/quotations/shortlist-seeds";
 
 function mockCreator(overrides?: Partial<UnifiedCreatorResult>): UnifiedCreatorResult {
@@ -107,6 +109,93 @@ function mockCreator(overrides?: Partial<UnifiedCreatorResult>): UnifiedCreatorR
     pending.map((i) => i.id),
     ["b"]
   );
+}
+
+// Collap import keeps already-quoted creator as detached seat + imports full package
+{
+  let groupSeq = 0;
+  const plan = planShortlistItemsForQuotationImport(
+    [
+      {
+        id: "reem-sl",
+        influencer_id: "inf-reem",
+        profile_id: null,
+        unified_id: "u-reem",
+        collapse_group_id: "shortlist-collap-1",
+        collapse_label: "Collap",
+        cost: 130_000,
+        deliverables: [{ platform: "instagram", type: "reel", quantity: 1 }],
+      },
+      {
+        id: "seif-sl",
+        influencer_id: "inf-seif",
+        profile_id: null,
+        unified_id: "u-seif",
+        collapse_group_id: "shortlist-collap-1",
+        collapse_label: "Collap",
+      },
+    ],
+    ["reem-sl"],
+    { newCollapseGroupId: () => `qt-collap-${++groupSeq}` }
+  );
+
+  assert.equal(plan.length, 2);
+  assert.equal(plan[0]!.collapseGroupId, "qt-collap-1");
+  assert.equal(plan[1]!.collapseGroupId, "qt-collap-1");
+
+  const reem = plan.find((entry) => entry.item.id === "reem-sl")!;
+  const seif = plan.find((entry) => entry.item.id === "seif-sl")!;
+  assert.equal(reem.detachSourceLink, true);
+  assert.equal(reem.identityOnly, true);
+  assert.equal(seif.detachSourceLink, false);
+  assert.equal(seif.identityOnly, false, "new member leads package pricing");
+
+  const seeds = buildQuotationSeedsFromImportPlan(plan, new Map());
+  const reemSeed = seeds.find((seed) => seed.unified_id === "u-reem")!;
+  const seifSeed = seeds.find((seed) => seed.unified_id === "u-seif")!;
+  assert.equal(reemSeed.source_shortlist_item_id, null);
+  assert.equal(reemSeed.collapse_group_id, "qt-collap-1");
+  assert.deepEqual(reemSeed.deliverables, []);
+  assert.equal(reemSeed.cost, null);
+  assert.equal(seifSeed.source_shortlist_item_id, "seif-sl");
+  assert.equal(seifSeed.collapse_group_id, "qt-collap-1");
+}
+
+// Standalone already on quotation is still skipped; collap-only selection still imports
+{
+  const plan = planShortlistItemsForQuotationImport(
+    [
+      {
+        id: "solo",
+        influencer_id: null,
+        profile_id: null,
+        unified_id: "u-solo",
+      },
+      {
+        id: "a",
+        influencer_id: null,
+        profile_id: null,
+        unified_id: "u-a",
+        collapse_group_id: "g1",
+        collapse_label: "Collap",
+      },
+      {
+        id: "b",
+        influencer_id: null,
+        profile_id: null,
+        unified_id: "u-b",
+        collapse_group_id: "g1",
+        collapse_label: "Collap",
+      },
+    ],
+    ["solo", "a", "b"],
+    { newCollapseGroupId: () => "fresh-g1" }
+  );
+  assert.deepEqual(
+    plan.map((entry) => entry.item.id).sort(),
+    ["a", "b"]
+  );
+  assert.ok(plan.every((entry) => entry.detachSourceLink));
 }
 
 // Multi-platform creator seeds null line platform + metrics-account handle

@@ -5,16 +5,18 @@ import {
   DownloadIcon,
   FileTextIcon,
   GitCompareArrowsIcon,
+  Layers2Icon,
   RefreshCwIcon,
   SendIcon,
   Trash2Icon,
+  UnfoldVerticalIcon,
 } from "lucide-react";
 import { useMemo } from "react";
 
 import {
-  GlassSelectionFlyout,
-  type GlassFlyoutAction,
-} from "@/components/shared/navigation/glass-selection-flyout";
+  DiscoverySelectionFlyout,
+  type DiscoverySelectionFlyoutAction,
+} from "@/features/discovery/components/design-system";
 
 type Props = {
   selectedCount: number;
@@ -28,7 +30,13 @@ type Props = {
   onExportSelected: () => void;
   onRefreshMetrics?: () => void;
   onMoveSelected: () => void;
-  onGenerateQuotation: () => void;
+  onGenerateNewQuotation: () => void;
+  onAddToQuotation: () => void;
+  existingQuotationLabel?: string | null;
+  onCollapseSelected?: () => void;
+  showCollapse?: boolean;
+  onUncollapseSelected?: () => void;
+  showUncollapse?: boolean;
   onApproveSelected: () => void;
   onRejectSelected: () => void;
   onCancelSelected: () => void;
@@ -47,14 +55,20 @@ export function ShortlistBulkToolbar({
   onExportSelected,
   onRefreshMetrics,
   onMoveSelected,
-  onGenerateQuotation,
+  onGenerateNewQuotation,
+  onAddToQuotation,
+  existingQuotationLabel,
+  onCollapseSelected,
+  showCollapse,
+  onUncollapseSelected,
+  showUncollapse,
   onApproveSelected,
   onRejectSelected,
   onCancelSelected,
   onClearSelection,
 }: Props) {
   const actions = useMemo(() => {
-    const list: GlassFlyoutAction[] = [];
+    const list: DiscoverySelectionFlyoutAction[] = [];
 
     if (showSubmit) {
       list.push({
@@ -87,15 +101,54 @@ export function ShortlistBulkToolbar({
       );
     }
 
+    if (showCollapse) {
+      list.push({
+        id: "collapse",
+        label: "Collapse",
+        icon: Layers2Icon,
+        variant: "outline",
+        disabled: busy || !onCollapseSelected,
+        onClick: () => onCollapseSelected?.(),
+      });
+    }
+
+    if (showUncollapse) {
+      list.push({
+        id: "uncollapse",
+        label: "Uncollapse",
+        icon: UnfoldVerticalIcon,
+        variant: "outline",
+        disabled: busy || !onUncollapseSelected,
+        onClick: () => onUncollapseSelected?.(),
+      });
+    }
+
     list.push(
       {
-        id: "remove",
-        label: "Remove",
-        icon: Trash2Icon,
+        id: "quotation",
+        label: "Generate quotation",
+        icon: FileTextIcon,
         variant: "outline",
-        destructive: true,
         disabled: busy,
-        onClick: onRemoveSelected,
+        onClick: onGenerateNewQuotation,
+        items: [
+          {
+            id: "quotation-new",
+            label: "Generate new",
+            description: "Create a new quotation with the selected creators",
+            onClick: onGenerateNewQuotation,
+            disabled: busy,
+          },
+          {
+            id: "quotation-add",
+            label: "Add to quotation",
+            description: existingQuotationLabel
+              ? `Add selected creators to ${existingQuotationLabel}`
+              : "Add to the linked quotation, or create one if none exists",
+            onClick: onAddToQuotation,
+            disabled: busy,
+          },
+        ],
       },
       {
         id: "compare",
@@ -112,6 +165,15 @@ export function ShortlistBulkToolbar({
         variant: "outline",
         disabled: busy || !onRefreshMetrics,
         onClick: () => onRefreshMetrics?.(),
+      },
+      {
+        id: "remove",
+        label: "Remove",
+        icon: Trash2Icon,
+        variant: "outline",
+        destructive: true,
+        disabled: busy,
+        onClick: onRemoveSelected,
       },
       {
         id: "export",
@@ -133,23 +195,13 @@ export function ShortlistBulkToolbar({
       });
     }
 
-    list.push(
-      {
-        id: "quotation",
-        label: "Generate quotation",
-        icon: FileTextIcon,
-        variant: "outline",
-        disabled: busy,
-        onClick: onGenerateQuotation,
-      },
-      {
-        id: "cancel",
-        label: "Cancel selected",
-        variant: "outline",
-        disabled: busy,
-        onClick: onCancelSelected,
-      }
-    );
+    list.push({
+      id: "cancel",
+      label: "Cancel selected",
+      variant: "outline",
+      disabled: busy,
+      onClick: onCancelSelected,
+    });
 
     return list;
   }, [
@@ -163,21 +215,27 @@ export function ShortlistBulkToolbar({
     onExportSelected,
     onRefreshMetrics,
     onMoveSelected,
-    onGenerateQuotation,
+    onGenerateNewQuotation,
+    onAddToQuotation,
+    existingQuotationLabel,
+    onCollapseSelected,
+    showCollapse,
+    onUncollapseSelected,
+    showUncollapse,
     onApproveSelected,
     onRejectSelected,
     onCancelSelected,
   ]);
 
   return (
-    <GlassSelectionFlyout
+    <DiscoverySelectionFlyout
       open={selectedCount > 0}
       selectedCount={selectedCount}
       entityLabel="creator"
       actions={actions}
       onClearSelection={onClearSelection}
       busy={busy}
-      maxVisibleActions={3}
+      maxVisibleActions={5}
     />
   );
 }

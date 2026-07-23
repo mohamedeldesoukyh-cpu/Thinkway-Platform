@@ -39,7 +39,7 @@ export const STUDIO_CLASSES = {
     "flex h-[min(900px,85vh)] min-h-0 items-stretch overflow-hidden rounded-[22px] border border-[#0B0F1A]/6 bg-[#EEF2FC] shadow-[0_10px_26px_rgba(0,87,255,0.08),0_2px_6px_rgba(6,8,16,0.05)] dark:border-border dark:bg-background",
   /** Campaign Mode — full workspace width/height, no card chrome. */
   shellDesktop:
-    "studio-shell-desktop flex h-full min-h-0 w-full items-stretch overflow-hidden rounded-none border-0 bg-[#EEF2FC] shadow-none dark:bg-background",
+    "flex h-full min-h-0 w-full items-stretch overflow-hidden rounded-none border-0 bg-[#EEF2FC] shadow-none dark:bg-background",
   /** Chat embed: grows with section content; scroll is owned by the AI chat thread. */
   shellChat:
     "studio-shell-chat flex w-full min-w-0 flex-row items-start overflow-visible rounded-none border border-[#0B0F1A]/6 border-t-0 bg-[#EEF2FC] shadow-[0_10px_26px_rgba(0,87,255,0.08),0_2px_6px_rgba(6,8,16,0.05)] dark:border-border dark:bg-background",

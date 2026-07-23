@@ -16,7 +16,7 @@ test("parseAggregatedServiceLabel splits quotation plus-separated summaries", ()
   );
 });
 
-test("quotation item with four type lines expands to four media plan slots", () => {
+test("quotation item with four type lines collapses mirrors into two activations", () => {
   const quotation = {
     id: "q1",
     name: "Coach campaign",
@@ -66,15 +66,15 @@ test("quotation item with four type lines expands to four media plan slots", () 
     })
   );
 
-  assert.equal(coachSlots.length, 4);
-  assert.deepEqual(
-    coachSlots.map((slot) => slot.serviceType).sort(),
-    ["1× Mirrored FB", "1× Mirrored IG", "1× TT Video", "1× TikTok Story"].sort()
+  assert.equal(coachSlots.length, 2);
+  assert.ok(
+    coachSlots.some((slot) => /TT Video/i.test(slot.serviceType ?? "")),
+    "TT Video activation should appear on calendar"
   );
-  assert.equal(data.postingSlotCount, 4);
+  assert.equal(data.postingSlotCount, 2);
   assert.equal(
     Object.values(data.platformAllocation).reduce((sum, count) => sum + count, 0),
-    4
+    2
   );
 });
 
@@ -164,10 +164,10 @@ test("types array expands when type_lines only has the total-cell primary type",
     .filter((day) => day.creator?.includes("Coach Ghofran"));
 
   const scheduledTypes = coachDays.flatMap((day) => day.serviceTypes ?? []);
-  assert.deepEqual(
-    [...new Set(scheduledTypes)].sort(),
-    ["1× Mirrored FB", "1× Mirrored IG", "1× TT Video", "1× TikTok Story"].sort()
-  );
+  assert.ok(scheduledTypes.some((type) => /TT Video/i.test(type)));
+  assert.ok(scheduledTypes.some((type) => /TikTok Story/i.test(type)));
+  assert.ok(scheduledTypes.some((type) => /Mirror/i.test(type)));
+  assert.equal(data.postingSlotCount, 2);
 });
 
 test("multiple quotation items for one creator merge all child ad types", () => {
@@ -320,10 +320,8 @@ test("quotation commercials meta supplies slate types when reasoning lacks them"
     .filter((day) => day.handle === "@coach_ghofran" || day.creator?.includes("Coach"));
   assert.ok(coachDays.length >= 1);
   const scheduledTypes = coachDays.flatMap((day) => day.serviceTypes ?? []);
-  assert.deepEqual(
-    [...new Set(scheduledTypes)].sort(),
-    slate[0]!.serviceTypes!.slice().sort()
-  );
+  assert.ok(scheduledTypes.some((type) => /TT Video/i.test(type)));
+  assert.ok(scheduledTypes.some((type) => /Mirror/i.test(type)));
   assert.equal(coachDays[0]!.avatarUrl, "https://cdn.example/coach.jpg");
 });
 

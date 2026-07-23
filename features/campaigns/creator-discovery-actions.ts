@@ -11,6 +11,7 @@ import {
 import { matchCreatorsForCampaign } from "@/lib/creators/campaign-match";
 import { findSimilarCreators } from "@/lib/creators/similar-creators";
 import { loadCreatorHistoricalMetrics } from "@/lib/creators/historical-metrics";
+import { loadCreatorHoverDetails } from "@/lib/creators/creator-hover-details";
 import { browseUnifiedCreators, getUnifiedCreatorById, resolveCreatorFromRefLookup, resolveUnifiedCreatorsByRefs } from "@/lib/creators/unified-browse";
 import { dedupeCreatorIds } from "@/lib/creators/dedupe-creators";
 import { STUDIO_CREATOR_HYDRATION_LIMIT } from "@/features/campaign-studio/constants/hydration-limits";
@@ -212,6 +213,15 @@ export async function getUnifiedCreatorDetailAction(unifiedId: string) {
   return getUnifiedCreatorById(supabase, unifiedId.trim());
 }
 
+/** Lightweight stats for discovery avatar hover card (2s delay). */
+export async function getCreatorHoverDetailsAction(unifiedId: string) {
+  if (!unifiedId?.trim()) return null;
+  const { supabase, userId } = await requireUserId();
+  const creator = await getUnifiedCreatorById(supabase, unifiedId.trim());
+  if (!creator) return null;
+  return loadCreatorHoverDetails(supabase, userId, creator);
+}
+
 function normalizeUnifiedCreatorId(id: string): string {
   const trimmed = id.trim();
   if (trimmed.startsWith("inf:") || trimmed.startsWith("dis:")) return trimmed;
@@ -301,11 +311,11 @@ export async function matchCampaignCreatorsAction(input: {
   });
 }
 
-export async function getSimilarCreatorsAction(unifiedId: string) {
+export async function getSimilarCreatorsAction(unifiedId: string, limit = 8) {
   const { supabase } = await requireUserId();
   const creator = await getUnifiedCreatorById(supabase, unifiedId);
   if (!creator) return [];
-  return findSimilarCreators(supabase, creator);
+  return findSimilarCreators(supabase, creator, limit);
 }
 
 export async function getCreatorHistoricalMetricsAction(unifiedId: string) {

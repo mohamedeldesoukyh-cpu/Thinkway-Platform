@@ -33,6 +33,7 @@ import {
   type RiskAnalysisSectionData,
   type SuccessProbabilityData,
   type SummarySectionData,
+  type StrategySectionData,
   type TimelineSectionData,
   type TimelineWeekDetail,
   type WhyAiInsight,
@@ -62,6 +63,10 @@ import {
   resolveGoLiveWeek,
 } from "./timeline-duration";
 import { dedupeCreatorIds } from "@/lib/creators/dedupe-creators";
+import {
+  forecastToGroundedKpis,
+  forecastSnapshotToGroundedKpis,
+} from "@/lib/campaign-forecast";
 import type { DiscoveryPipelineStage } from "@/features/campaign-intelligence/types/section-schemas";
 import {
   localizeMoneyString,
@@ -847,14 +852,19 @@ export function resolveGroundedKpis(
   campaignObject: CampaignObject | undefined
 ): GroundedKpi[] {
   const performanceData = readPerformanceData(campaignObject);
-  const approvedKpis = performanceData?.kpiReasoning;
-  if (approvedKpis?.length) {
-    return kpiReasoningToGrounded(approvedKpis);
+
+  if (performanceData?.campaignForecast) {
+    return forecastSnapshotToGroundedKpis(performanceData.campaignForecast);
   }
 
   const storedGrounded = performanceData?.groundedKpis ?? [];
   if (storedGrounded.length > 0) {
     return storedGrounded;
+  }
+
+  const approvedKpis = performanceData?.kpiReasoning;
+  if (approvedKpis?.length) {
+    return kpiReasoningToGrounded(approvedKpis);
   }
 
   const facts = getCampaignFacts(campaignObject);
@@ -864,6 +874,31 @@ export function resolveGroundedKpis(
   }
 
   return [];
+}
+
+/** Read persisted campaign optimization report from performance section. */
+export function resolveCampaignOptimization(
+  campaignObject: CampaignObject | undefined
+): import("@/lib/campaign-optimization").CampaignOptimizationSnapshot | null {
+  const performanceData = readPerformanceData(campaignObject);
+  return performanceData?.campaignOptimization ?? null;
+}
+
+/** Read persisted campaign decision report from performance section. */
+export function resolveCampaignDecision(
+  campaignObject: CampaignObject | undefined
+): import("@/lib/campaign-decision").CampaignDecisionSnapshot | null {
+  const performanceData = readPerformanceData(campaignObject);
+  return performanceData?.campaignDecision ?? null;
+}
+
+/** Read persisted campaign strategy from strategy section. */
+export function resolveCampaignStrategy(
+  campaignObject: CampaignObject | undefined
+): import("@/lib/campaign-planning").CampaignStrategySnapshot | null {
+  if (!campaignObject) return null;
+  const data = campaignObject.sections.strategy.data as StrategySectionData | undefined;
+  return data?.generatedStrategy ?? null;
 }
 
 export function resolveRiskData(
@@ -966,6 +1001,107 @@ export function resolvePresentationCompletion(
   };
 }
 
+function parseCampaignTitleFromBrief(text: string): string | undefined {
+  const trimmed = text.trim();
+  if (!trimmed) return undefined;
+
+  const nameMatch = trimmed.match(
+    /Campaign Name(?:\s*\([^)]*\))?\s*[:：]\s*["']?([^"'\n.]+)/i
+  );
+  if (nameMatch?.[1]?.trim()) return nameMatch[1].trim();
+
+  const briefMatch = trimmed.match(
+    /Campaign Brief:\s*[^–-]+[–-]\s*(.+?)(?:\.|Brand:)/i
+  );
+  if (briefMatch?.[1]?.trim()) return briefMatch[1].trim();
+
+  const regionDriveMatch = trimmed.match(
+    /([A-Za-z][A-Za-z0-9\s]{2,40}\s+(?:Dominance\s+)?Drive)/i
+  );
+  if (regionDriveMatch?.[1]?.trim()) return regionDriveMatch[1].trim();
+
+  const dashMatch = trimmed.match(
+    /[–-]\s*([A-Za-z0-9][^.\n]{6,90}?(?:Drive|Campaign|Launch|Initiative|Program))/i
+  );
+  return dashMatch?.[1]?.trim();
+}
+
+function isGenericCampaignTitle(title: string, brand?: string): boolean {
+  const normalized = title.trim().toLowerCase();
+  if (!normalized) return true;
+  if (brand && normalized === brand.trim().toLowerCase()) return true;
+  if (brand && normalized === `${brand.trim().toLowerCase()} campaign`) return true;
+  return normalized === "campaign" || normalized.endsWith(" campaign");
+}
+
+function looksLikeMarketingObjective(text: string): boolean {
+  const normalized = text.trim().toLowerCase();
+  if (!normalized) return true;
+  if (/\b(drive|launch|initiative|program|dominance)\b/i.test(normalized)) return false;
+  return /awareness|engagement|consideration|conversion|reach|ugc|brand building/i.test(
+    normalized
+  );
+}
+
+function resolveCampaignNameCandidate(
+  campaignObject: CampaignObject,
+  brand?: string
+): string | undefined {
+  const facts = getCampaignFacts(campaignObject);
+  const summaryText = readSectionString(campaignObject.sections.summary.content);
+  const stored = isPresentationStatusSectionData(
+    campaignObject.sections.presentation.content
+  )
+    ? campaignObject.sections.presentation.content
+    : null;
+
+  const candidates = [
+    stored?.campaignName,
+    parseCampaignTitleFromBrief(summaryText),
+    parseCampaignTitleFromBrief(facts?.rawBriefExcerpt ?? ""),
+  ];
+
+  for (const candidate of candidates) {
+    const trimmed = candidate?.trim();
+    if (!trimmed) continue;
+    if (isGenericCampaignTitle(trimmed, brand)) continue;
+    if (looksLikeMarketingObjective(trimmed)) continue;
+    return trimmed;
+  }
+
+  return undefined;
+}
+
+/** Meta bar title — brand + campaign name (reference: "Dolphin Tuna — Delta Region Dominance Drive"). */
+export function resolveStudioCampaignDisplayTitle(
+  campaignObject?: CampaignObject | null
+): string | undefined {
+  if (!campaignObject) return undefined;
+
+  const facts = getCampaignFacts(campaignObject);
+  const presentation = resolvePresentationData(campaignObject);
+  const summary = resolveCampaignSummary(campaignObject);
+
+  const brand =
+    facts?.brandName?.trim() ||
+    presentation?.brandName?.trim() ||
+    summary?.brand?.trim() ||
+    facts?.clientName?.trim();
+
+  const title = resolveCampaignNameCandidate(campaignObject, brand);
+
+  if (brand && title && title.toLowerCase() !== brand.toLowerCase()) {
+    return `${brand} — ${title}`;
+  }
+
+  return brand || title;
+}
+
+/** Progress ring subtitle — reference uses "READY" from ~75% section completion upward. */
+export function resolveStudioReadinessLabel(percent: number): "Ready" | "Building" {
+  return percent >= 75 ? "Ready" : "Building";
+}
+
 export function resolvePresentationData(
   campaignObject: CampaignObject | undefined
 ): PresentationStatusSectionData | null {
@@ -989,7 +1125,10 @@ export function resolvePresentationData(
       parseBrandFromText(summaryText) ??
       stored?.brandName
   );
-  const campaignName = brandName ?? stored?.campaignName;
+  const campaignName =
+    stored?.campaignName?.trim() ||
+    parseCampaignTitleFromBrief(summaryText) ||
+    parseCampaignTitleFromBrief(facts?.rawBriefExcerpt ?? "");
 
   if (
     stored ||

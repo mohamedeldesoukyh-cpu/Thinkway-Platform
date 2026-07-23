@@ -1,6 +1,6 @@
 import { SOCIAL_PLATFORM_OPTIONS } from "@/lib/master-data/constants";
 import type { LineInfluencerAssignment } from "@/lib/campaigns/line-assignment";
-import { isSocialPlatform } from "@/lib/social/platforms";
+import { isSocialPlatform, resolveDiscoveryPlatform } from "@/lib/social/platforms";
 
 /** Master-data deliverable taxonomy keyed by social platform. */
 export const DELIVERABLE_TYPES_BY_PLATFORM: Record<
@@ -51,18 +51,15 @@ export const PLATFORM_DELIVERABLE_CODES: Record<string, string[]> = Object.fromE
   ])
 );
 
+/**
+ * Canonical platform key for taxonomy / filters.
+ * Delegates to {@link resolveDiscoveryPlatform} so aliases + casing stay in one place.
+ * Unrecognized values fall back to trimmed lowercase (never invent a SocialPlatform).
+ */
 export function canonicalPlatformKey(platform: string): string {
-  const normalized = platform.trim().toLowerCase();
-  const aliases: Record<string, string> = {
-    ig: "instagram",
-    tt: "tiktok",
-    sc: "snapchat",
-    yt: "youtube",
-    fb: "facebook",
-    x: "twitter",
-  };
-  const key = aliases[normalized] ?? normalized;
-  return isSocialPlatform(key) ? key : normalized;
+  const resolved = resolveDiscoveryPlatform(platform);
+  if (resolved) return resolved;
+  return platform.trim().toLowerCase();
 }
 
 export function getDeliverableTypesForPlatform(platform: string) {

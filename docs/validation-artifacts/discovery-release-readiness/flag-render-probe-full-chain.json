@@ -1,0 +1,257 @@
+{
+  "flag": {
+    "w": 22,
+    "h": 22,
+    "left": 143,
+    "top": 119,
+    "right": 165,
+    "bottom": 141,
+    "visibility": "visible",
+    "opacity": "1",
+    "display": "block",
+    "overflow": "visible/visible",
+    "zIndex": "1",
+    "position": "absolute",
+    "transform": "none",
+    "clipPath": "none"
+  },
+  "badge": {
+    "w": 22,
+    "h": 22,
+    "left": 143,
+    "top": 119,
+    "right": 165,
+    "bottom": 141,
+    "visibility": "visible",
+    "opacity": "1",
+    "display": "inline-flex",
+    "overflow": "hidden/hidden",
+    "zIndex": "auto",
+    "position": "static",
+    "transform": "none",
+    "clipPath": "none"
+  },
+  "img": {
+    "w": 22,
+    "h": 22,
+    "left": 143,
+    "top": 119,
+    "right": 165,
+    "bottom": 141,
+    "visibility": "visible",
+    "opacity": "1",
+    "display": "block",
+    "overflow": "clip/clip",
+    "zIndex": "auto",
+    "position": "static",
+    "transform": "none",
+    "clipPath": "none"
+  },
+  "star": {
+    "w": 41.3,
+    "h": 20,
+    "left": 98.8,
+    "top": 129,
+    "right": 140.2,
+    "bottom": 149,
+    "visibility": "visible",
+    "opacity": "1",
+    "display": "flex",
+    "overflow": "visible/visible",
+    "zIndex": "2",
+    "position": "absolute",
+    "transform": "matrix(1, 0, 0, 1, -20.6719, 0)",
+    "clipPath": "none"
+  },
+  "avatar": {
+    "w": 87,
+    "h": 87,
+    "left": 76,
+    "top": 56,
+    "right": 163,
+    "bottom": 143,
+    "visibility": "visible",
+    "opacity": "1",
+    "display": "block",
+    "overflow": "hidden/hidden",
+    "zIndex": "auto",
+    "position": "relative",
+    "transform": "none",
+    "clipPath": "none"
+  },
+  "starOverlapsFlag": false,
+  "overflowClippers": [
+    {
+      "className": "discovery-search-exact-scroll",
+      "overflow": "auto/auto",
+      "rect": {
+        "w": 1440,
+        "h": 867,
+        "left": 0,
+        "right": 1440,
+        "top": 33,
+        "bottom": 900
+      },
+      "flagOutsideAncestorBounds": false,
+      "clippedAxes": {
+        "right": false,
+        "left": false,
+        "bottom": false,
+        "top": false
+      }
+    },
+    {
+      "className": "relative flex min-h-0 flex-1 overflow-hidden",
+      "overflow": "hidden/hidden",
+      "rect": {
+        "w": 1440,
+        "h": 900,
+        "left": 0,
+        "right": 1440,
+        "top": 0,
+        "bottom": 900
+      },
+      "flagOutsideAncestorBounds": false,
+      "clippedAxes": {
+        "right": false,
+        "left": false,
+        "bottom": false,
+        "top": false
+      }
+    },
+    {
+      "className": "flex h-full min-h-0 flex-col overflow-hidden",
+      "overflow": "hidden/hidden",
+      "rect": {
+        "w": 1440,
+        "h": 900,
+        "left": 0,
+        "right": 1440,
+        "top": 0,
+        "bottom": 900
+      },
+      "flagOutsideAncestorBounds": false,
+      "clippedAxes": {
+        "right": false,
+        "left": false,
+        "bottom": false,
+        "top": false
+      }
+    },
+    {
+      "className": "flex min-h-0 flex-1 flex-col overflow-hidden",
+      "overflow": "hidden/hidden",
+      "rect": {
+        "w": 1440,
+        "h": 900,
+        "left": 0,
+        "right": 1440,
+        "top": 0,
+        "bottom": 900
+      },
+      "flagOutsideAncestorBounds": false,
+      "clippedAxes": {
+        "right": false,
+        "left": false,
+        "bottom": false,
+        "top": false
+      }
+    },
+    {
+      "className": "flex h-full min-h-0 flex-col overflow-hidden",
+      "overflow": "hidden/hidden",
+      "rect": {
+        "w": 1440,
+        "h": 900,
+        "left": 0,
+        "right": 1440,
+        "top": 0,
+        "bottom": 900
+      },
+      "flagOutsideAncestorBounds": false,
+      "clippedAxes": {
+        "right": false,
+        "left": false,
+        "bottom": false,
+        "top": false
+      }
+    },
+    {
+      "className": "thinkway-platform-v6 flex min-h-0 flex-1 flex-col overflow-hidden bg-background",
+      "overflow": "hidden/hidden",
+      "rect": {
+        "w": 1440,
+        "h": 900,
+        "left": 0,
+        "right": 1440,
+        "top": 0,
+        "bottom": 900
+      },
+      "flagOutsideAncestorBounds": false,
+      "clippedAxes": {
+        "right": false,
+        "left": false,
+        "bottom": false,
+        "top": false
+      }
+    },
+    {
+      "className": "thinkway-platform-shell flex",
+      "overflow": "hidden/hidden",
+      "rect": {
+        "w": 1440,
+        "h": 900,
+        "left": 0,
+        "right": 1440,
+        "top": 0,
+        "bottom": 900
+      },
+      "flagOutsideAncestorBounds": false,
+      "clippedAxes": {
+        "right": false,
+        "left": false,
+        "bottom": false,
+        "top": false
+      }
+    }
+  ],
+  "paintStackAtFlagCenter": [
+    {
+      "tag": "IMG",
+      "probe": "flag-img",
+      "className": "size-full"
+    },
+    {
+      "tag": "SPAN",
+      "probe": "flag-badge",
+      "className": "inline-flex shrink-0 overflow-hidden rounded-full size-full"
+    },
+    {
+      "tag": "SPAN",
+      "probe": "flag-slot",
+      "className": "discovery-search-exact-flag"
+    },
+    {
+      "tag": "DIV",
+      "probe": null,
+      "className": "discovery-creator-avatar-hover-trigger discovery-search-exact-photo-wrap"
+    },
+    {
+      "tag": "DIV",
+      "probe": null,
+      "className": "discovery-search-exact-photo-cell"
+    },
+    {
+      "tag": "DIV",
+      "probe": null,
+      "className": "discovery-search-exact-row"
+    }
+  ],
+  "imgNaturalWidth": 40,
+  "conclusionHints": {
+    "zeroSize": false,
+    "invisible": false,
+    "clippedByAncestor": false,
+    "starCovers": false
+  }
+}

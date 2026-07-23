@@ -1,0 +1,47 @@
+{
+  "$schema": "./budgets.schema.json",
+  "version": 1,
+  "description": "Thinkway production performance budgets. CI fails on hard violations; soft violations warn only.",
+  "bundle": {
+    "largestJsKb": { "soft": 560, "hard": 620 },
+    "largestCssKb": { "soft": 350, "hard": 400 },
+    "totalJsKb": { "soft": 13000, "hard": 15000 },
+    "totalCssKb": { "soft": 700, "hard": 850 },
+    "assetsOver100kb": { "soft": 20, "hard": 28 },
+    "jsFileCount": { "soft": 320, "hard": 400 }
+  },
+  "source": {
+    "rootGlobalCssKb": { "soft": 40, "hard": 60 },
+    "clientModuleCount": { "soft": 780, "hard": 900 },
+    "largestClientSourceKb": { "soft": 85, "hard": 120 }
+  },
+  "discoveryBrowse": {
+    "enabledWhenEnv": ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"],
+    "requireRpcSource": true,
+    "rpcWallMs": { "soft": 800, "hard": 2000 },
+    "legacyWallMs": { "soft": 4000, "hard": 8000 }
+  },
+  "mediaProxy": {
+    "harnessEnabled": true,
+    "p95Ms": { "soft": 5, "hard": 50 },
+    "maxExternalOnWarmHalfGrid": { "soft": 0, "hard": 8 }
+  },
+  "regression": {
+    "largestJsKbGrowthPct": { "soft": 5, "hard": 12 },
+    "largestCssKbGrowthPct": { "soft": 5, "hard": 12 },
+    "totalJsKbGrowthPct": { "soft": 8, "hard": 15 }
+  },
+  "routes": {
+    "tracked": [
+      "/dashboard",
+      "/discovery/search",
+      "/studio",
+      "/ai",
+      "/planning",
+      "/reports",
+      "/campaigns",
+      "/login"
+    ],
+    "notes": "Route-level JS/CSS attribution is approximate under Turbopack; enforce via largest chunk + source audits until app-build-manifest exposes stable route graphs."
+  }
+}

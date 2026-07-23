@@ -45,6 +45,10 @@ type ChatThreadProps = {
   className?: string;
   /** In two-pane mode the studio lives in the side panel — render studio messages as compact summaries. */
   studioInSidePanel?: boolean;
+  /** `reference` uses studio-chat-ref message chrome; `overlay` keeps dock/legacy styles. */
+  variant?: "reference" | "overlay";
+  /** When the parent owns scrolling (reference layout), pass that element here. */
+  externalScrollContainer?: HTMLDivElement | null;
 };
 
 export function ChatThread({
@@ -65,6 +69,8 @@ export function ChatThread({
   onScrollContainerChange,
   className,
   studioInSidePanel = false,
+  variant = "overlay",
+  externalScrollContainer = null,
 }: ChatThreadProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -97,11 +103,14 @@ export function ChatThread({
     return undefined;
   }, [visibleMessages]);
 
+  const isReference = variant === "reference";
+  const effectiveScrollContainer = isReference ? externalScrollContainer : chatScrollContainer;
+
   const checkIsAtBottom = useCallback(() => {
-    const el = scrollRef.current;
+    const el = isReference ? externalScrollContainer : scrollRef.current;
     if (!el) return true;
     return el.scrollHeight - el.scrollTop - el.clientHeight <= SCROLL_THRESHOLD_PX;
-  }, []);
+  }, [isReference, externalScrollContainer]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     bottomRef.current?.scrollIntoView({ behavior });
@@ -130,6 +139,12 @@ export function ChatThread({
     isAtBottomRef.current = atBottom;
     if (atBottom) setShowNewUpdates(false);
   }, [checkIsAtBottom]);
+
+  useEffect(() => {
+    if (!isReference || !externalScrollContainer) return;
+    externalScrollContainer.addEventListener("scroll", handleScroll, { passive: true });
+    return () => externalScrollContainer.removeEventListener("scroll", handleScroll);
+  }, [isReference, externalScrollContainer, handleScroll]);
 
   const anticipatedCampaignWorkflowId = useMemo(() => {
     if (!isStreaming || workflowProgress) return undefined;
@@ -177,13 +192,15 @@ export function ChatThread({
     isStreaming && isCampaignWorkflow(streamingStudioInput?.workflowId);
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col">
+    <div className={cn("relative flex flex-col", !isReference && "h-full min-h-0")}>
       <div
         ref={bindScrollContainer}
-        onScroll={handleScroll}
+        onScroll={isReference ? undefined : handleScroll}
         className={cn(
-        "flex h-full min-h-0 flex-col gap-0 overflow-y-auto overscroll-contain pb-[var(--ai-composer-scroll-pad,6rem)] pt-[var(--ai-topbar-scroll-pad,4.25rem)]",
-          "[scrollbar-color:#e2e8f0_transparent] [scrollbar-width:thin]",
+          "flex flex-col gap-0",
+          isReference
+            ? "py-4"
+            : "h-full min-h-0 overflow-y-auto overscroll-contain pb-[var(--ai-composer-scroll-pad,6rem)] pt-[var(--ai-topbar-scroll-pad,4.25rem)] [scrollbar-color:#e2e8f0_transparent] [scrollbar-width:thin]",
           className
         )}
         data-chat-scroll-root
@@ -193,11 +210,12 @@ export function ChatThread({
             key={message.id}
             message={message}
             conversationId={conversationId}
-            chatScrollContainer={chatScrollContainer}
+            chatScrollContainer={effectiveScrollContainer}
             isLastUserMessage={message.id === lastUserMessageId}
             isEditing={editingUserMessageId === message.id}
             isStreaming={isStreaming}
             studioInSidePanel={studioInSidePanel}
+            variant={variant}
             onCardUpdated={onCardUpdated}
             onVendorDecisionsUpdated={onVendorDecisionsUpdated}
             onSlateUpdated={onSlateUpdated}
@@ -221,16 +239,30 @@ export function ChatThread({
               />
             </div>
           ) : (
-            <div className="ai-msg-in flex gap-2.5 px-6">
-              <AiOrbIcon size="md" className="mt-0.5 shadow-[0_2px_8px_rgba(124,58,237,0.35)]" />
-              <div className="max-w-[72%] rounded-[4px_12px_12px_12px] border border-border bg-background px-4 py-3.5 text-[13px] leading-relaxed shadow-sm">
+            <div className={cn("ai-msg-in flex gap-2.5", isReference ? "sc-msg-assistant-wrap" : "px-6")}>
+              {isReference ? (
+                <span className="sc-msg-avatar" aria-hidden>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.4 1 1.2 1 2.3h6c0-1.1.4-1.9 1-2.3A7 7 0 0 0 12 2z" />
+                  </svg>
+                </span>
+              ) : (
+                <AiOrbIcon size="md" className="mt-0.5 shadow-[0_2px_8px_rgba(124,58,237,0.35)]" />
+              )}
+              <div
+                className={cn(
+                  isReference
+                    ? "sc-msg-assistant"
+                    : "max-w-[72%] rounded-[4px_12px_12px_12px] border border-border bg-background px-4 py-3.5 text-[13px] leading-relaxed shadow-sm"
+                )}
+              >
                 {workflowProgress ? (
                   <WorkflowStreamingIndicator progress={workflowProgress} />
                 ) : null}
                 {streamingContent ? (
                   <MarkdownLite content={streamingContent} />
                 ) : !workflowProgress ? (
-                  <TypingIndicator />
+                  <TypingIndicator reference={isReference} />
                 ) : null}
               </div>
             </div>
@@ -244,7 +276,11 @@ export function ChatThread({
         <button
           type="button"
           onClick={() => scrollToBottom("smooth")}
-          className="absolute bottom-[calc(var(--ai-composer-scroll-pad,6rem)+0.5rem)] left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-md transition hover:bg-muted"
+          className={cn(
+            isReference
+              ? "sc-new-updates"
+              : "absolute bottom-[calc(var(--ai-composer-scroll-pad,6rem)+0.5rem)] left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-md transition hover:bg-muted"
+          )}
         >
           <ChevronDownIcon className="size-3.5" />
           New updates
@@ -270,6 +306,7 @@ const MessageBubble = memo(function MessageBubble({
   onEditCancel,
   onRetry,
   onDelete,
+  variant = "overlay",
 }: {
   message: AiMessage;
   conversationId?: string;
@@ -278,6 +315,7 @@ const MessageBubble = memo(function MessageBubble({
   isEditing?: boolean;
   isStreaming?: boolean;
   studioInSidePanel?: boolean;
+  variant?: "reference" | "overlay";
   onCardUpdated?: (messageId: string, cardId: string, status: string) => void;
   onVendorDecisionsUpdated?: (
     messageId: string,
@@ -318,8 +356,43 @@ const MessageBubble = memo(function MessageBubble({
   );
 
   const actionsDisabled = Boolean(isStreaming);
+  const isReference = variant === "reference";
 
   if (isUser) {
+    if (isReference) {
+      return (
+        <div className="group ai-msg-in sc-msg-user-wrap">
+          <div className={cn("flex flex-col gap-1", isEditing ? "w-full max-w-[720px]" : "max-w-[72%]")}>
+            <div className={cn("sc-msg-user", isEditing && "w-full")} dir="ltr">
+              {isEditing ? (
+                <EditMessageForm
+                  key={message.id}
+                  initialContent={message.content}
+                  onSave={(content) => onEditSave?.(content)}
+                  onCancel={() => onEditCancel?.()}
+                  disabled={actionsDisabled}
+                />
+              ) : (
+                <MarkdownLite content={message.content} inverted />
+              )}
+            </div>
+            {!isEditing ? (
+              <MessageActions
+                role="user"
+                content={message.content}
+                isLastUserMessage={isLastUserMessage}
+                disabled={actionsDisabled}
+                className="self-end"
+                onEdit={isLastUserMessage ? onEdit : undefined}
+                onRetry={onRetry}
+                onDelete={onDelete}
+              />
+            ) : null}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="group ai-msg-in mb-[18px] flex justify-end px-6">
         <div
@@ -375,14 +448,24 @@ const MessageBubble = memo(function MessageBubble({
     if (studioInSidePanel) {
       const summaryText = caption || "Campaign updated in the Studio.";
       return (
-        <div className="group ai-msg-in mb-[18px] space-y-2 px-4 sm:px-6">
+        <div className={cn("group ai-msg-in mb-[18px] space-y-2", isReference ? "sc-msg-assistant-wrap" : "px-4 sm:px-6")}>
           <div className="flex gap-2.5">
-            <AiOrbIcon size="md" className="mt-0.5 shadow-[0_2px_8px_rgba(124,58,237,0.35)]" />
+            {isReference ? (
+              <span className="sc-msg-avatar" aria-hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.4 1 1.2 1 2.3h6c0-1.1.4-1.9 1-2.3A7 7 0 0 0 12 2z" />
+                </svg>
+              </span>
+            ) : (
+              <AiOrbIcon size="md" className="mt-0.5 shadow-[0_2px_8px_rgba(124,58,237,0.35)]" />
+            )}
             <div className="max-w-[80%] space-y-1.5">
-              <div className="rounded-[4px_12px_12px_12px] border border-[#1D9E75]/30 bg-[#1D9E75]/5 px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap text-foreground">
+              <div className={isReference ? "sc-msg-studio-summary" : "rounded-[4px_12px_12px_12px] border border-[#1D9E75]/30 bg-[#1D9E75]/5 px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap text-foreground"}>
                 {summaryText}
               </div>
-              <p className="text-[11px] text-muted-foreground">Updated in the Campaign Studio →</p>
+              <p className={isReference ? "sc-msg-studio-hint" : "text-[11px] text-muted-foreground"}>
+                Updated in the Campaign Studio →
+              </p>
             </div>
           </div>
           <MessageActions
@@ -460,10 +543,24 @@ const MessageBubble = memo(function MessageBubble({
     : stripConversationalFiller(message.content.trim());
 
   return (
-    <div className="group ai-msg-in mb-[18px] flex gap-2.5 px-6">
-      <AiOrbIcon size="md" className="mt-0.5 shadow-[0_2px_8px_rgba(124,58,237,0.35)]" />
+    <div className={cn("group ai-msg-in mb-[18px] flex gap-2.5", isReference ? "sc-msg-assistant-wrap" : "px-6")}>
+      {isReference ? (
+        <span className="sc-msg-avatar" aria-hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.4 1 1.2 1 2.3h6c0-1.1.4-1.9 1-2.3A7 7 0 0 0 12 2z" />
+          </svg>
+        </span>
+      ) : (
+        <AiOrbIcon size="md" className="mt-0.5 shadow-[0_2px_8px_rgba(124,58,237,0.35)]" />
+      )}
       <div className="flex max-w-[72%] flex-col gap-1">
-        <div className="rounded-[4px_12px_12px_12px] border border-border bg-background px-4 py-3.5 text-[13px] leading-relaxed shadow-sm">
+        <div
+          className={
+            isReference
+              ? "sc-msg-assistant"
+              : "rounded-[4px_12px_12px_12px] border border-border bg-background px-4 py-3.5 text-[13px] leading-relaxed shadow-sm"
+          }
+        >
           {displayContent ? <MarkdownLite content={displayContent} /> : null}
           {hasWorkflowPanel ? (
             <WorkflowDashboardPanel metadata={toWorkflowDisplayMetadata(message.metadata)} />
@@ -518,12 +615,12 @@ function collapseDuplicateCampaignStudioMessages(messages: AiMessage[]): AiMessa
   });
 }
 
-function TypingIndicator() {
+function TypingIndicator({ reference }: { reference?: boolean }) {
   return (
     <div className="flex items-center gap-1.5">
-      <span className="ai-t-dot size-[7px] rounded-full bg-violet-500/70" />
-      <span className="ai-t-dot size-[7px] rounded-full bg-violet-500/70" />
-      <span className="ai-t-dot size-[7px] rounded-full bg-violet-500/70" />
+      <span className={cn(reference ? "sc-typing-dot ai-t-dot" : "ai-t-dot size-[7px] rounded-full bg-violet-500/70")} />
+      <span className={cn(reference ? "sc-typing-dot ai-t-dot" : "ai-t-dot size-[7px] rounded-full bg-violet-500/70")} />
+      <span className={cn(reference ? "sc-typing-dot ai-t-dot" : "ai-t-dot size-[7px] rounded-full bg-violet-500/70")} />
     </div>
   );
 }

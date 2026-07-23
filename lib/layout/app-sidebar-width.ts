@@ -1,26 +1,22 @@
 /** Matches `--rail: 266px` in Thinkway_Client_Form final.html. */
 export const APP_SIDEBAR_WIDTH_EXPANDED = "16.625rem";
-export const APP_SIDEBAR_WIDTH_COLLAPSED = "3.5rem";
+export const APP_SIDEBAR_WIDTH_COLLAPSED = "4rem";
 export const APP_SIDEBAR_WIDTH_HIDDEN = "0px";
-export const APP_SIDEBAR_MARGIN = "0.875rem";
+export const APP_SIDEBAR_MARGIN = "0px";
 export const APP_SIDEBAR_WIDTH_CSS_VAR = "--app-sidebar-width";
 
-/** Hover-reveal always uses full width; collapsed mode only when pinned. */
-export function resolveAppSidebarExpanded(
-  isVisible: boolean,
-  pinned: boolean,
-  userExpanded: boolean
-): boolean {
-  if (!isVisible) return userExpanded;
-  return pinned ? userExpanded : true;
+/** Full sidebar panel vs icon rail — driven only by user collapse preference. */
+export function resolveAppSidebarExpanded(userExpanded: boolean): boolean {
+  return userExpanded;
 }
 
-/** Layout width for main content offset. Hidden = 0; visible uses expanded or collapsed rail. */
-export function getAppSidebarLayoutWidth(
-  isVisible: boolean,
-  displayExpanded: boolean
-): string {
-  if (!isVisible) return APP_SIDEBAR_WIDTH_HIDDEN;
+/** Sidebar is always visible on desktop (no auto-hide). */
+export function resolveAppSidebarVisible(): boolean {
+  return true;
+}
+
+/** Layout width for main content offset. */
+export function getAppSidebarLayoutWidth(displayExpanded: boolean): string {
   const base = displayExpanded
     ? APP_SIDEBAR_WIDTH_EXPANDED
     : APP_SIDEBAR_WIDTH_COLLAPSED;

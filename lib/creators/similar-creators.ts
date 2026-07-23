@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
+import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
 function engagementBand(rate: number | null): string {
@@ -60,11 +61,19 @@ export async function findSimilarCreators(
   limit = 8
 ): Promise<Array<UnifiedCreatorResult & { similarity_score: number }>> {
   const niche = creator.ai_niche ?? creator.ai_category ?? creator.categories[0];
+  // Keep the browse pool modest — scoring only needs a small candidate set.
+  const pageSize = Math.min(24, Math.max(12, limit * 3));
   const result = await browseUnifiedCreators(supabase, {
     platform: creator.platforms[0]?.platform,
-    country: creator.estimated_country ?? creator.country_code ?? undefined,
+    country:
+      resolveCreatorCountryCodes({
+        country_codes: creator.country_codes,
+        country_code: creator.country_code,
+        estimated_country: creator.estimated_country,
+        platformAudienceCountries: creator.platforms.map((platform) => platform.audience_country),
+      })[0] ?? undefined,
     category: niche ?? undefined,
-    pageSize: 40,
+    pageSize,
   });
 
   return result.creators

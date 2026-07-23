@@ -2,10 +2,8 @@ import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-
 import type { CampaignScoreSet } from "@/features/campaign-intelligence/types/section-schemas";
 
 import type { SearchCreatorCardItem } from "./creator-platform-utils";
+import { computeStudioCampaignForecast } from "./campaign-forecast-service";
 import { creatorTierOf, matchesTierLabel } from "./creator-slate";
-
-/** Follower-to-impression proxy for organic creator content. */
-const VIEW_RATE = 0.35;
 
 /** Platform engagement-rate benchmarks (%) for the forecast comparison. */
 const ER_BENCHMARKS: Record<string, number> = {
@@ -47,7 +45,8 @@ export type CampaignScoreInput = {
 export function computeCampaignScores(input: CampaignScoreInput): CampaignScoreSet {
   const { cards, facts } = input;
   const basis: string[] = [];
-  const totalFollowers = cards.reduce((sum, c) => sum + (c.followers ?? 0), 0);
+  const forecast = computeStudioCampaignForecast({ cards, facts });
+  const totalFollowers = forecast.audienceSize;
 
   // Brand fit — persisted CIP relevance where available; unscored creators count neutral.
   const fitEntries = new Map(
@@ -82,20 +81,17 @@ export function computeCampaignScores(input: CampaignScoreInput): CampaignScoreS
     `Audience match: ${onPlatform}/${cards.length} creators on brief platforms; tier-mix adherence ${tierAdherence}/100.`
   );
 
-  // Reach — log-scale follower coverage (10K→20, 1M→60, 100M→100).
+  // Reach — log-scale net forecast reach (Campaign Forecast Engine).
   const reach =
-    totalFollowers <= 0 ? 10 : clamp(20 * Math.log10(Math.max(totalFollowers, 10) / 1_000));
-  basis.push(`Reach: combined audience ${totalFollowers.toLocaleString()} followers.`);
+    forecast.estimatedReach <= 0
+      ? 10
+      : clamp(20 * Math.log10(Math.max(forecast.estimatedReach, 10) / 1_000));
+  basis.push(
+    `Reach: forecast net reach ${forecast.estimatedReach.toLocaleString()} (gross ${forecast.grossReach.toLocaleString()}, overlap −${forecast.overlapDeduction.toLocaleString()}).`
+  );
 
-  // Engagement forecast — follower-weighted ER vs platform benchmark.
-  let weightedEr = 0;
-  let erWeight = 0;
-  for (const card of cards) {
-    if (card.engagementRate == null || !card.followers) continue;
-    weightedEr += card.engagementRate * card.followers;
-    erWeight += card.followers;
-  }
-  const avgEr = erWeight > 0 ? weightedEr / erWeight : null;
+  // Engagement forecast — roster ER vs platform benchmark, confidence-weighted.
+  const avgEr = forecast.averageEngagementRate;
   const benchmarkPlatform = (facts?.platforms?.[0] ?? cards[0]?.platform ?? "").toLowerCase();
   const benchmark =
     Object.entries(ER_BENCHMARKS).find(([key]) => benchmarkPlatform.includes(key))?.[1] ?? 3.5;
@@ -104,12 +100,12 @@ export function computeCampaignScores(input: CampaignScoreInput): CampaignScoreS
   basis.push(
     avgEr == null
       ? "Engagement forecast: no engagement data on the slate — neutral 50."
-      : `Engagement forecast: weighted ER ${avgEr.toFixed(1)}% vs ${benchmark}% platform benchmark.`
+      : `Engagement forecast: roster ER ${avgEr.toFixed(1)}% vs ${benchmark}% platform benchmark (confidence ${forecast.confidenceScore.score}/100).`
   );
 
-  // Budget efficiency — projected impressions per budget unit (log-scaled).
+  // Budget efficiency — forecast impressions per budget unit (log-scaled).
   const budgetAmount = facts?.budget?.amount ?? 0;
-  const projectedImpressions = totalFollowers * VIEW_RATE;
+  const projectedImpressions = forecast.estimatedImpressions;
   let budgetEfficiency = 70;
   if (budgetAmount > 0 && projectedImpressions > 0) {
     const impressionsPerUnit = projectedImpressions / budgetAmount;
@@ -150,7 +146,7 @@ export function computeCampaignScores(input: CampaignScoreInput): CampaignScoreS
   if (tierMix.length > 0 && coveredTiers < 1) risk -= 10;
   risk = clamp(risk, 5, 95);
   basis.push(
-    `Risk: ${unenriched} creator${unenriched === 1 ? "" : "s"} pending intelligence refresh; top creator holds ${Math.round(concentration * 100)}% of combined reach.`
+    `Risk: ${unenriched} creator${unenriched === 1 ? "" : "s"} pending intelligence refresh; top creator holds ${Math.round(concentration * 100)}% of audience size.`
   );
 
   const overall = clamp(

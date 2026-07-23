@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { resolveNextPrimaryAvatar } from "@/lib/creator-enrichment/enrichment-avatar-policy";
 import {
   collectAvatarCandidates,
   resolveDefaultMetricsPlatformAccountId,
@@ -75,6 +76,15 @@ export async function persistCreatorPrimaryIdentity(
       source: avatarSourceFromDnaUrl(dnaAvatarUrl),
     };
   }
+
+  // Never null-out or replace a captured avatar with a worse/empty enrichment result.
+  const merged = resolveNextPrimaryAvatar({
+    existingUrl: row.primary_avatar_url,
+    existingSource: row.primary_avatar_source,
+    incomingUrl: resolved.url,
+    incomingSource: resolved.source,
+  });
+
   const defaultMetricsPlatformAccountId = resolveDefaultMetricsPlatformAccountId(
     accounts,
     row.default_metrics_platform_account_id
@@ -82,11 +92,11 @@ export async function persistCreatorPrimaryIdentity(
 
   const patch: Record<string, unknown> = {};
   if (
-    resolved.url !== row.primary_avatar_url ||
-    resolved.source !== row.primary_avatar_source
+    merged.url !== row.primary_avatar_url ||
+    merged.source !== row.primary_avatar_source
   ) {
-    patch.primary_avatar_url = resolved.url;
-    patch.primary_avatar_source = resolved.source;
+    patch.primary_avatar_url = merged.url;
+    patch.primary_avatar_source = merged.source;
   }
   if (
     defaultMetricsPlatformAccountId &&
@@ -103,7 +113,7 @@ export async function persistCreatorPrimaryIdentity(
   }
 
   return {
-    primaryAvatarUrl: resolved.url,
+    primaryAvatarUrl: merged.url,
     defaultMetricsPlatformAccountId,
   };
 }

@@ -2,6 +2,7 @@ import {
   creatorProfileSourceFromPlatformAccount,
   type CreatorProfileSource,
 } from "@/lib/creators/creator-profile-source";
+import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
 import { normalizeCountryCode } from "@/lib/creators/creator-display-utils";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
 import {
@@ -27,6 +28,21 @@ function resolveItemProfileUrl(item: QuotationItemRow): string | null {
 
 function resolveItemCountryCode(item: QuotationItemRow): string | null {
   return normalizeCountryCode(item.country_code);
+}
+
+/** Normalize countryCode + countryCodes so empty [] never hides a known ISO code. */
+function resolveProfileCountryFields(
+  source: Pick<CreatorProfileSource, "countryCode" | "countryCodes">,
+  item: QuotationItemRow
+): Pick<CreatorProfileSource, "countryCode" | "countryCodes"> {
+  const countryCodes = resolveCreatorCountryCodes({
+    country_codes: source.countryCodes,
+    country_code: source.countryCode ?? resolveItemCountryCode(item),
+  });
+  return {
+    countryCode: countryCodes[0] ?? null,
+    countryCodes: countryCodes.length > 0 ? countryCodes : null,
+  };
 }
 
 /** Keep any displayable avatar — matches shortlist / unified browse display rules. */
@@ -87,7 +103,7 @@ export function mergeQuotationItemIntoProfileSource(
     avatarUrl: resolveQuotationDisplayAvatarUrl(source, item),
     handle: source.handle?.trim() || item.handle?.trim() || null,
     profile_url: profileUrl,
-    countryCode: source.countryCode ?? resolveItemCountryCode(item) ?? null,
+    ...resolveProfileCountryFields(source, item),
     isVerified: source.isVerified,
   };
 }
@@ -107,7 +123,7 @@ export function buildQuotationCreatorProfileSource(item: QuotationItemRow) {
       handle: enriched.handle?.trim() || item.handle?.trim() || null,
       profile_url:
         enriched.profile_url?.trim() || resolveItemProfileUrl(item) || null,
-      countryCode: enriched.countryCode ?? resolveItemCountryCode(item) ?? null,
+      ...resolveProfileCountryFields(enriched, item),
     };
   }
 

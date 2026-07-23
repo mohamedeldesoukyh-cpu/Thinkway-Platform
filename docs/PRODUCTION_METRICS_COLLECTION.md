@@ -127,7 +127,7 @@ Actions:
 | `APIFY_TIKTOK_ACTOR_ID` | TikTok scraper (default: `clockworks/tiktok-scraper`) |
 | `APIFY_FACEBOOK_ACTOR_ID` | Facebook post scraper (default: `apify/facebook-posts-scraper`) |
 | `APIFY_YOUTUBE_ACTOR_ID` | YouTube scraper fallback (default: `streamers/youtube-scraper`) |
-| `APIFY_SNAPCHAT_ACTOR_ID` | Snapchat scraper (optional — no default) |
+| `APIFY_SNAPCHAT_ACTOR_ID` | Snapchat profile scraper (default: `automation-lab/snapchat-scraper`) |
 | `FACEBOOK_GRAPH_ACCESS_TOKEN` | Facebook Graph (falls back to `META_GRAPH_ACCESS_TOKEN`) |
 | `SNAPCHAT_API_KEY` | Snapchat Marketing API (partnership required) |
 | `BRIGHTDATA_API_KEY` | Bright Data |

@@ -1,0 +1,222 @@
+{
+  "capturedAt": "2026-07-21T01:46:32.543Z",
+  "metrics": {
+    "capturedAt": "2026-07-21T01:46:32.543Z",
+    "bundle": {
+      "largestJsKb": 554.9,
+      "largestCssKb": 328.8,
+      "totalJsKb": 12016.6,
+      "totalCssKb": 623.5,
+      "assetsOver100kb": 18,
+      "jsFileCount": 270,
+      "cssFileCount": 9,
+      "largestJs": [
+        {
+          "file": ".next/static/chunks/012dxhx.07ir5.js",
+          "bytes": 568212,
+          "kb": 554.9
+        },
+        {
+          "file": ".next/static/chunks/0t_~t28iv8c3g.js",
+          "bytes": 568212,
+          "kb": 554.9
+        },
+        {
+          "file": ".next/static/chunks/09o220~dgvt1u.js",
+          "bytes": 441020,
+          "kb": 430.7
+        },
+        {
+          "file": ".next/static/chunks/15brkarvbav01.js",
+          "bytes": 228644,
+          "kb": 223.3
+        },
+        {
+          "file": ".next/static/chunks/0hfw~zchjv985.js",
+          "bytes": 227651,
+          "kb": 222.3
+        },
+        {
+          "file": ".next/static/chunks/06e_tno7ux1ll.js",
+          "bytes": 179015,
+          "kb": 174.8
+        },
+        {
+          "file": ".next/static/chunks/0q6nb_rprtj2n.js",
+          "bytes": 158158,
+          "kb": 154.5
+        },
+        {
+          "file": ".next/static/chunks/0ghvb5h_y7ho8.js",
+          "bytes": 137141,
+          "kb": 133.9
+        },
+        {
+          "file": ".next/static/chunks/0pjhgnp-jydsx.js",
+          "bytes": 116533,
+          "kb": 113.8
+        },
+        {
+          "file": ".next/static/chunks/03~yq9q893hmn.js",
+          "bytes": 112594,
+          "kb": 110
+        }
+      ],
+      "largestCss": [
+        {
+          "file": ".next/static/chunks/18a5suoil_~oz.css",
+          "bytes": 336641,
+          "kb": 328.8
+        },
+        {
+          "file": ".next/static/chunks/14d1i_8d5b-_w.css",
+          "bytes": 115902,
+          "kb": 113.2
+        },
+        {
+          "file": ".next/static/chunks/15gllld6~j.s3.css",
+          "bytes": 62296,
+          "kb": 60.8
+        },
+        {
+          "file": ".next/static/chunks/0nynts6gtepov.css",
+          "bytes": 33222,
+          "kb": 32.4
+        },
+        {
+          "file": ".next/static/chunks/0eyp81qph42jr.css",
+          "bytes": 31027,
+          "kb": 30.3
+        },
+        {
+          "file": ".next/static/chunks/0wqdeg~c6nnkw.css",
+          "bytes": 28428,
+          "kb": 27.8
+        },
+        {
+          "file": ".next/static/chunks/084.mjampfc2d.css",
+          "bytes": 15352,
+          "kb": 15
+        },
+        {
+          "file": ".next/static/chunks/0._ztk-26up_q.css",
+          "bytes": 11936,
+          "kb": 11.7
+        },
+        {
+          "file": ".next/static/chunks/0-rrbyadoe8-x.css",
+          "bytes": 3705,
+          "kb": 3.6
+        }
+      ]
+    },
+    "source": {
+      "rootGlobalCssKb": 27.9,
+      "clientModuleCount": 726,
+      "largestClientSourceKb": 72.5,
+      "largestClientSourceFile": "features/discovery/components/creator-search/creator-search-workspace.tsx",
+      "clientSummary": {
+        "must_remain_client": 370,
+        "can_dynamically_import": 139,
+        "can_become_server": 217
+      }
+    }
+  },
+  "baseline": {
+    "capturedAt": "2026-07-21T01:45:00.000Z",
+    "largestJsKb": 554.9,
+    "largestCssKb": 328.8,
+    "totalJsKb": 12016.6
+  },
+  "results": {
+    "fails": [],
+    "warns": [],
+    "passes": [
+      {
+        "name": "bundle.largestJsKb",
+        "value": 554.9,
+        "soft": 560,
+        "hard": 620,
+        "status": "pass"
+      },
+      {
+        "name": "bundle.largestCssKb",
+        "value": 328.8,
+        "soft": 350,
+        "hard": 400,
+        "status": "pass"
+      },
+      {
+        "name": "bundle.totalJsKb",
+        "value": 12016.6,
+        "soft": 13000,
+        "hard": 15000,
+        "status": "pass"
+      },
+      {
+        "name": "bundle.totalCssKb",
+        "value": 623.5,
+        "soft": 700,
+        "hard": 850,
+        "status": "pass"
+      },
+      {
+        "name": "bundle.assetsOver100kb",
+        "value": 18,
+        "soft": 20,
+        "hard": 28,
+        "status": "pass"
+      },
+      {
+        "name": "bundle.jsFileCount",
+        "value": 270,
+        "soft": 320,
+        "hard": 400,
+        "status": "pass"
+      },
+      {
+        "name": "source.rootGlobalCssKb",
+        "value": 27.9,
+        "soft": 40,
+        "hard": 60,
+        "status": "pass"
+      },
+      {
+        "name": "source.clientModuleCount",
+        "value": 726,
+        "soft": 780,
+        "hard": 900,
+        "status": "pass"
+      },
+      {
+        "name": "source.largestClientSourceKb",
+        "value": 72.5,
+        "soft": 85,
+        "hard": 120,
+        "status": "pass"
+      },
+      {
+        "name": "regression.largestJsKbGrowthPct",
+        "value": 0,
+        "soft": 5,
+        "hard": 12,
+        "status": "pass"
+      },
+      {
+        "name": "regression.largestCssKbGrowthPct",
+        "value": 0,
+        "soft": 5,
+        "hard": 12,
+        "status": "pass"
+      },
+      {
+        "name": "regression.totalJsKbGrowthPct",
+        "value": 0,
+        "soft": 8,
+        "hard": 15,
+        "status": "pass"
+      }
+    ]
+  },
+  "score": 100
+}

@@ -9,6 +9,7 @@ import {
   getBatchProfileAcquisitionConfig,
 } from "@/lib/creator-enrichment/batch-profile-acquisition-policy";
 import { enqueueBatchProfileAcquisitionJob } from "@/lib/creator-enrichment/batch-profile-acquisition-queue";
+import { cancelCreatorEnrichmentJobs } from "@/lib/creator-enrichment/queue-operations";
 import type {
   BatchProfileAcquisitionJobData,
   BatchProfileAcquisitionProgress,
@@ -22,6 +23,7 @@ import {
   type EnrichmentScope,
 } from "@/lib/creator-enrichment/enabled";
 import type { EnrichmentTrigger } from "@/lib/creator-enrichment/types";
+import { assertApifyAcquisitionBudget } from "@/lib/discovery/control-center/apify-budget";
 
 type AnySupabase = SupabaseClient;
 
@@ -70,6 +72,24 @@ export async function startBatchProfileAcquisition(
     };
   }
 
+  const budget = await assertApifyAcquisitionBudget(supabase, {
+    source: "batch_profile_acquisition_enqueue",
+    meta: { trigger, scope, creatorCount: input.unifiedIds.length },
+  });
+  if (!budget.allowed) {
+    return {
+      ok: false,
+      jobId: null,
+      queued: false,
+      targetsResolved: 0,
+      targetsFailed: 0,
+      estimatedApifyRuns: 0,
+      estimatedCredits: 0,
+      batchCount: 0,
+      message: budget.reason,
+    };
+  }
+
   const { targets, failed } = await resolveBatchProfileTargets(supabase, {
     unifiedIds: input.unifiedIds,
     platformAccountId: input.platformAccountId,
@@ -91,6 +111,20 @@ export async function startBatchProfileAcquisition(
     };
   }
 
+  const influencerIds = [
+    ...new Set(
+      targets.map((target) => target.influencerId).filter((id): id is string => Boolean(id))
+    ),
+  ];
+  for (const influencerId of influencerIds) {
+    await cancelCreatorEnrichmentJobs(influencerId);
+  }
+
+  const platformsSummary = [...new Set(targets.map((target) => target.platform))];
+  console.log(
+    `[batch-profile-acquisition] resolved ${targets.length} target(s) across platforms: ${platformsSummary.join(", ")}`
+  );
+
   const platformEstimates = new Map<string, number>();
   for (const target of targets) {
     platformEstimates.set(target.platform, (platformEstimates.get(target.platform) ?? 0) + 1);
@@ -103,6 +137,7 @@ export async function startBatchProfileAcquisition(
     const usage = estimateBatchProfileAcquisitionUsage({
       profileCount: count,
       platform,
+      scope,
       config,
     });
     estimatedApifyRuns += usage.estimatedApifyRuns;

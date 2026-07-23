@@ -7,7 +7,7 @@ import {
 } from "@/lib/social/platforms";
 
 export type ProfileUrlSource = {
-  platform: string;
+  platform?: string | null;
   handle?: string | null;
   profile_url?: string | null;
 };

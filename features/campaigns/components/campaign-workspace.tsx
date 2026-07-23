@@ -50,6 +50,8 @@ import { formatMoney, formatPlatformLabel } from "@/features/campaigns/utils";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { flattenOperationalDeliverables } from "@/lib/campaigns/flatten-operational-deliverables";
 import { buildConsolidatedInvoiceQueueRows } from "@/lib/billing/consolidated-invoice-queue";
+import { OpenCampaignStudioLauncher } from "@/features/campaign-outputs/components/open-campaign-studio-launcher-lazy";
+import { seedFromCampaign } from "@/features/campaign-outputs/hydration/seed-adapters";
 
 type CampaignWorkspaceViewProps = {
   workspace: CampaignWorkspace;
@@ -248,12 +250,32 @@ export function CampaignWorkspaceView({
     return content;
   };
 
+  const campaignStudioSeed = useMemo(
+    () =>
+      seedFromCampaign({
+        name: workspace.name,
+        brief: workspace.brief,
+        platform: workspace.platform,
+        currency_code: workspace.currency_code,
+        client: workspace.client,
+        brand: workspace.brand,
+        group: workspace.group,
+        financials: { budget: workspace.financials.budget },
+      }),
+    [workspace]
+  );
+
+  const campaignStudioWorkspace = useMemo(
+    () => ({ type: "campaign" as const, id: workspace.id }),
+    [workspace.id]
+  );
+
   return (
     <CampaignOperationalRefreshProvider
       reloadOperationalBilling={reloadOperationalBilling}
       reloadPublications={reloadPublications}
     >
-    <div className="thinkway-campaign-workspace flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div className="thinkway-campaign-workspace flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <Tabs
         value={activeTab}
         onValueChange={handleTabChange}
@@ -282,6 +304,12 @@ export function CampaignWorkspaceView({
                     className="thinkway-campaign-status-chip"
                   />
                   <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+                    <OpenCampaignStudioLauncher
+                      seed={campaignStudioSeed}
+                      workspace={campaignStudioWorkspace}
+                      tab="studio"
+                      variant="primary"
+                    />
                     <ClientIoCampaignChrome io={workspace.client_io} campaignId={workspace.id} />
                     {workspace.status !== "cancelled" ? (
                       <CancelCampaignDialog

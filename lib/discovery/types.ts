@@ -3,6 +3,9 @@ export const DISCOVERY_PLATFORMS = [
   "tiktok",
   "youtube",
   "twitter",
+  "facebook",
+  "snapchat",
+  "linkedin",
 ] as const;
 
 export type DiscoveryPlatform = (typeof DISCOVERY_PLATFORMS)[number];

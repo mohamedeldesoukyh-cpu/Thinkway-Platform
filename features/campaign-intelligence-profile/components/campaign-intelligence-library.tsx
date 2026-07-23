@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { ArchiveIcon, ExternalLinkIcon, FileTextIcon, Loader2Icon, SearchIcon } from "lucide-react";
+import { ArchiveIcon, ExternalLinkIcon, FileTextIcon, SearchIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DiscoveryEmptyState,
+  DiscoveryFilterBar,
+  DiscoveryListCard,
+  DiscoveryLoadingState,
+  DiscoverySectionHeader,
+} from "@/features/discovery/components/design-system";
 import { cn } from "@/lib/utils";
 import type {
   CampaignIntelligenceLibraryFilters,
@@ -119,135 +126,123 @@ export function CampaignIntelligenceLibrary({
     void load();
   }
 
+  const countLabel = loading
+    ? "…"
+    : `${items.length} record${items.length === 1 ? "" : "s"}`;
+
+  const filterBar = (
+    <DiscoveryFilterBar embedded countLabel={countLabel}>
+      <div className="relative min-w-[180px] flex-1">
+        <SearchIcon className="pointer-events-none absolute top-2.5 left-3 size-3.5 text-[var(--text-3)]" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search intelligence…"
+          className="h-9 rounded-[var(--radius)] border-[var(--tw-border)] pl-9 text-[12.5px]"
+        />
+      </div>
+      <Select
+        value={filters.clientId ?? "all"}
+        onValueChange={(value) =>
+          updateFilter("clientId", value === "all" ? null : value)
+        }
+      >
+        <SelectTrigger className="h-9 min-w-[130px] text-[12.5px] font-semibold">
+          <SelectValue placeholder="Client" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All legal entities</SelectItem>
+          {(filterOptions?.clients ?? []).map((client) => (
+            <SelectItem key={client.id} value={client.id}>
+              {client.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={filters.brandId ?? "all"}
+        onValueChange={(value) => updateFilter("brandId", value === "all" ? null : value)}
+      >
+        <SelectTrigger className="h-9 min-w-[130px] text-[12.5px] font-semibold">
+          <SelectValue placeholder="Brand" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All brands</SelectItem>
+          {(filterOptions?.brands ?? [])
+            .filter((brand) => !filters.clientId || brand.clientId === filters.clientId)
+            .map((brand) => (
+              <SelectItem key={brand.id} value={brand.id}>
+                {brand.name}
+              </SelectItem>
+            ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={filters.campaignHeaderId ?? "all"}
+        onValueChange={(value) =>
+          updateFilter("campaignHeaderId", value === "all" ? null : value)
+        }
+      >
+        <SelectTrigger className="h-9 min-w-[130px] text-[12.5px] font-semibold">
+          <SelectValue placeholder="Campaign" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All campaigns</SelectItem>
+          {campaignsForBrand.map((campaign) => (
+            <SelectItem key={campaign.id} value={campaign.id}>
+              {campaign.documentNumber} · {campaign.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={filters.status ?? "all"}
+        onValueChange={(value) =>
+          updateFilter(
+            "status",
+            value as CampaignIntelligenceLibraryFilters["status"]
+          )
+        }
+      >
+        <SelectTrigger className="h-9 min-w-[130px] text-[12.5px] font-semibold">
+          <SelectValue placeholder="Status" />
+        </SelectTrigger>
+        <SelectContent>
+          {STATUS_OPTIONS.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </DiscoveryFilterBar>
+  );
+
   return (
-    <section
+    <DiscoveryListCard
       className={cn(
-        "overflow-hidden rounded-[10px] border border-[var(--camp-border)] bg-[var(--camp-surface)]",
+        compact && "rounded-[var(--radius-md)]",
         className
       )}
     >
-      <div className="border-b border-[var(--camp-border)] px-4 py-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3 className="text-[13px] font-bold text-[var(--camp-text)]">
-              Campaign Intelligence Library
-            </h3>
-            <p className="mt-0.5 text-[11px] text-[var(--camp-text-3)]">
-              Shared brief intelligence across Discovery, campaigns, and AI workflows.
-            </p>
-          </div>
-          {!compact ? (
-            <Button variant="outline" size="sm" className="h-8 text-xs" asChild>
-              <Link href="/discovery/search">
-                <SearchIcon className="size-3.5" />
-                Creator Search
-              </Link>
-            </Button>
-          ) : null}
-        </div>
+      {compact ? (
+        <DiscoverySectionHeader
+          title="Campaign Intelligence Library"
+          description="Shared brief intelligence across Discovery, campaigns, and AI workflows."
+        />
+      ) : null}
 
-        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-          <div className="relative sm:col-span-2 lg:col-span-1">
-            <SearchIcon className="pointer-events-none absolute top-2.5 left-2.5 size-3.5 text-[var(--camp-text-3)]" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search…"
-              className="h-9 pl-8 text-xs"
-            />
-          </div>
-          <Select
-            value={filters.clientId ?? "all"}
-            onValueChange={(value) =>
-              updateFilter("clientId", value === "all" ? null : value)
-            }
-          >
-            <SelectTrigger className="h-9 text-xs">
-              <SelectValue placeholder="Client" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All legal entities</SelectItem>
-              {(filterOptions?.clients ?? []).map((client) => (
-                <SelectItem key={client.id} value={client.id}>
-                  {client.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={filters.brandId ?? "all"}
-            onValueChange={(value) => updateFilter("brandId", value === "all" ? null : value)}
-          >
-            <SelectTrigger className="h-9 text-xs">
-              <SelectValue placeholder="Brand" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All brands</SelectItem>
-              {(filterOptions?.brands ?? [])
-                .filter((brand) => !filters.clientId || brand.clientId === filters.clientId)
-                .map((brand) => (
-                  <SelectItem key={brand.id} value={brand.id}>
-                    {brand.name}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={filters.campaignHeaderId ?? "all"}
-            onValueChange={(value) =>
-              updateFilter("campaignHeaderId", value === "all" ? null : value)
-            }
-          >
-            <SelectTrigger className="h-9 text-xs">
-              <SelectValue placeholder="Campaign" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All campaigns</SelectItem>
-              {campaignsForBrand.map((campaign) => (
-                <SelectItem key={campaign.id} value={campaign.id}>
-                  {campaign.documentNumber} · {campaign.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={filters.status ?? "all"}
-            onValueChange={(value) =>
-              updateFilter(
-                "status",
-                value as CampaignIntelligenceLibraryFilters["status"]
-              )
-            }
-          >
-            <SelectTrigger className="h-9 text-xs">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUS_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      {filterBar}
 
       {loading ? (
-        <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-[var(--camp-text-3)]">
-          <Loader2Icon className="size-4 animate-spin" />
-          Loading library…
-        </div>
+        <DiscoveryLoadingState message="Loading library…" className="py-12" />
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-2 px-6 py-12 text-center">
-          <div className="flex size-10 items-center justify-center rounded-full bg-[var(--camp-surface-2)] text-[var(--camp-text-3)]">
-            <FileTextIcon className="size-4" />
-          </div>
-          <p className="text-sm font-medium text-[var(--camp-text)]">No intelligence records</p>
-          <p className="max-w-sm text-xs text-[var(--camp-text-3)]">
-            Upload a campaign brief in Creator Search or link intelligence from a campaign workspace.
-          </p>
-        </div>
+        <DiscoveryEmptyState
+          title="No intelligence records"
+          description="Upload a campaign brief in Creator Search or link intelligence from a campaign workspace."
+          icon={FileTextIcon}
+          className="py-12"
+        />
       ) : (
         <ul
           className={cn(
@@ -258,24 +253,27 @@ export function CampaignIntelligenceLibrary({
           {items.map((item) => {
             const isActive = item.id === activeProfileId;
             return (
-              <li key={item.id} className="border-b border-[var(--camp-border)] last:border-b-0">
+              <li
+                key={item.id}
+                className="border-b border-[var(--tw-border)] last:border-b-0"
+              >
                 <div
                   className={cn(
-                    "flex items-start gap-3 px-4 py-3",
-                    isActive && "bg-[var(--camp-blue)]/8"
+                    "flex items-start gap-3 px-4 py-3 transition-colors hover:bg-[#fafbfe]",
+                    isActive && "bg-[var(--blue-light)]"
                   )}
                 >
-                  <FileTextIcon className="mt-0.5 size-4 shrink-0 text-[var(--camp-text-3)]" />
+                  <FileTextIcon className="mt-0.5 size-4 shrink-0 text-[var(--text-3)]" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-[var(--camp-text)]">
+                    <p className="truncate text-[12.5px] font-semibold text-foreground">
                       {item.title}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-[var(--camp-text-3)]">
+                    <p className="mt-0.5 text-[11px] text-[var(--text-2)]">
                       {[item.brandName, item.clientName, item.campaignName]
                         .filter(Boolean)
                         .join(" · ")}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-[var(--camp-text-3)]">
+                    <p className="mt-0.5 font-mono text-[11px] text-[var(--text-3)]">
                       {format(new Date(item.updatedAt), "MMM d, yyyy · h:mm a")}
                       {item.status !== "saved" ? ` · ${item.status}` : ""}
                     </p>
@@ -285,14 +283,21 @@ export function CampaignIntelligenceLibrary({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 px-2 text-[11px]"
+                        className="h-7 px-2 text-[11px] font-bold"
                         onClick={() => onOpenInSearch(item.id)}
                       >
                         Open
                       </Button>
                     ) : (
-                      <Button variant="ghost" size="sm" className="h-7 px-2 text-[11px]" asChild>
-                        <Link href={`/discovery/search?profileId=${encodeURIComponent(item.id)}`}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-[11px] font-bold"
+                        asChild
+                      >
+                        <Link
+                          href={`/discovery/search?profileId=${encodeURIComponent(item.id)}`}
+                        >
                           <ExternalLinkIcon className="size-3" />
                           Search
                         </Link>
@@ -302,7 +307,7 @@ export function CampaignIntelligenceLibrary({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="size-7 text-[var(--camp-text-3)]"
+                        className="size-7 text-[var(--text-3)]"
                         onClick={() => void handleArchive(item)}
                         aria-label={`Archive ${item.title}`}
                       >
@@ -316,6 +321,6 @@ export function CampaignIntelligenceLibrary({
           })}
         </ul>
       )}
-    </section>
+    </DiscoveryListCard>
   );
 }

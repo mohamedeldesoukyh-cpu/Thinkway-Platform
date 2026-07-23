@@ -2,6 +2,7 @@ import {
   DownloadIcon,
   FileSpreadsheetIcon,
   FileTextIcon,
+  PresentationIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -40,21 +41,39 @@ export function QuotationPreviewDownloads({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Button size="sm" variant="outline" asChild>
-        <a href={buildExportHref(quotationId, "word", template, { exportRevision })}>
+        <a
+          href={buildExportHref(quotationId, "word", template, { exportRevision })}
+          download
+        >
           <FileTextIcon data-icon="inline-start" className="size-3.5" />
           Word
         </a>
       </Button>
       <Button size="sm" variant="outline" asChild>
-        <a href={buildExportHref(quotationId, "pdf", template, { exportRevision })}>
+        <a
+          href={buildExportHref(quotationId, "pdf", template, { exportRevision })}
+          download
+        >
           <DownloadIcon data-icon="inline-start" className="size-3.5" />
           PDF
         </a>
       </Button>
       <Button size="sm" variant="outline" asChild>
-        <a href={buildExportHref(quotationId, "excel", template, { exportRevision })}>
+        <a
+          href={buildExportHref(quotationId, "excel", template, { exportRevision })}
+          download
+        >
           <FileSpreadsheetIcon data-icon="inline-start" className="size-3.5" />
           Excel
+        </a>
+      </Button>
+      <Button size="sm" variant="outline" asChild>
+        <a
+          href={buildExportHref(quotationId, "pptx", template, { exportRevision })}
+          download
+        >
+          <PresentationIcon data-icon="inline-start" className="size-3.5" />
+          PPTX
         </a>
       </Button>
     </div>

@@ -7,11 +7,12 @@ export function isMirrorServiceType(serviceType: string): boolean {
   return /\bmirror(?:ed)?\b/i.test(serviceType.trim());
 }
 
-/** UGC deliverable — service label or creator name signals UGC. */
-export function isUgcServiceType(serviceType: string, creator?: SlateCreator): boolean {
-  if (/\bugc\b/i.test(serviceType.trim())) return true;
-  if (creator && /\bugc\b/i.test(creator.displayName)) return true;
-  return false;
+/**
+ * UGC deliverable — only when the quotation explicitly labels it UGC.
+ * Platform names, creator handles, and tier must never infer UGC classification.
+ */
+export function isUgcServiceType(serviceType: string, _creator?: SlateCreator): boolean {
+  return /\bugc\b/i.test(serviceType.trim());
 }
 
 export function classifyDeliverableRole(
@@ -59,11 +60,11 @@ export function resolveUgcEarliestWeek(
   return finalPhaseStart;
 }
 
-function isStoryLikeServiceType(serviceType: string): boolean {
+export function isStoryLikeServiceType(serviceType: string): boolean {
   return /\bstor(?:y|ies)\b/i.test(serviceType);
 }
 
-function isVideoLikeServiceType(serviceType: string): boolean {
+export function isVideoLikeServiceType(serviceType: string): boolean {
   const lower = serviceType.toLowerCase();
   return (
     /\bvideo\b|\breel\b|\bpost\b|\bshort\b|\blive\b/i.test(lower) &&
@@ -96,7 +97,8 @@ export type ClassifiedDeliverableUnit = {
   tierRank: number;
   role: DeliverableRole;
   countsAsActivation: boolean;
-  attachedMirrors: ClassifiedDeliverableUnit[];
+  attachedMirrors?: ClassifiedDeliverableUnit[];
+  attachedCompanions?: ClassifiedDeliverableUnit[];
 };
 
 export type CollapseMirrorsResult = {
@@ -161,12 +163,111 @@ export function collapseMirrorsToActivations<
       activations.push({
         ...original,
         attachedMirrors: mirrorsByOriginal.get(original.slotId) ?? [],
+        attachedCompanions: [],
         countsAsActivation: true,
       });
     }
   }
 
   return { activations, rawDeliverableCount: rawCount };
+}
+
+function companionPairScore(primary: string, companion: string): number {
+  const primaryLower = primary.toLowerCase();
+  const companionLower = companion.toLowerCase();
+  if (/\big\b|instagram/i.test(primaryLower) && /\big\b|instagram/i.test(companionLower)) return 10;
+  if (/\btt\b|tiktok/i.test(primaryLower) && /\btt\b|tiktok/i.test(companionLower)) return 10;
+  if (isVideoLikeServiceType(primary) && isStoryLikeServiceType(companion)) return 8;
+  return 1;
+}
+
+/**
+ * Bundle story/support lines onto the same publish day as the primary reel/video.
+ * The Reel drives the calendar moment; Stories support within 24h.
+ */
+export function bundleCompanionsToActivations<
+  T extends {
+    slotId: string;
+    creator: SlateCreator;
+    serviceType: string;
+    platform: string;
+    deliverableIndex: number;
+    deliverableTotal: number;
+    creatorRound: number;
+    tierRank: number;
+    role: DeliverableRole;
+    countsAsActivation: boolean;
+    attachedMirrors?: ClassifiedDeliverableUnit[];
+    attachedCompanions?: ClassifiedDeliverableUnit[];
+  },
+>(units: T[]): T[] {
+  const byCreator = new Map<string, T[]>();
+  for (const unit of units) {
+    const key = unit.creator.creatorId.trim().toLowerCase();
+    const list = byCreator.get(key) ?? [];
+    list.push(unit);
+    byCreator.set(key, list);
+  }
+
+  const bundled: T[] = [];
+
+  for (const creatorUnits of byCreator.values()) {
+    const companions = creatorUnits.filter(
+      (unit) =>
+        unit.role !== "mirror" &&
+        unit.role !== "ugc" &&
+        isStoryLikeServiceType(unit.serviceType)
+    );
+    const hosts = creatorUnits.filter(
+      (unit) =>
+        unit.role !== "mirror" &&
+        !isStoryLikeServiceType(unit.serviceType)
+    );
+    const companionAssigned = new Set<string>();
+    const companionsByHost = new Map<string, ClassifiedDeliverableUnit[]>();
+
+    for (const companion of companions) {
+      let bestHost = hosts[0];
+      let bestScore = -1;
+      for (const host of hosts) {
+        const score = companionPairScore(host.serviceType, companion.serviceType);
+        if (score > bestScore) {
+          bestScore = score;
+          bestHost = host;
+        }
+      }
+      if (!bestHost) {
+        bundled.push({ ...companion, attachedCompanions: [], countsAsActivation: true });
+        continue;
+      }
+      companionAssigned.add(companion.slotId);
+      const attached = companionsByHost.get(bestHost.slotId) ?? [];
+      attached.push({
+        ...companion,
+        attachedMirrors: [],
+        attachedCompanions: [],
+        countsAsActivation: false,
+      });
+      companionsByHost.set(bestHost.slotId, attached);
+    }
+
+    for (const host of hosts) {
+      bundled.push({
+        ...host,
+        attachedMirrors: host.attachedMirrors ?? [],
+        attachedCompanions: companionsByHost.get(host.slotId) ?? [],
+        countsAsActivation: true,
+      });
+    }
+
+    for (const companion of companions) {
+      if (!companionAssigned.has(companion.slotId)) {
+        bundled.push({ ...companion, attachedCompanions: [], countsAsActivation: true });
+      }
+    }
+  }
+
+  return bundled;
 }
 
 /** Display label for calendar / export — marks original vs mirror. */

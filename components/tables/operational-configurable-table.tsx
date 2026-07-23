@@ -25,6 +25,8 @@ import { cn } from "@/lib/utils";
 export type OperationalConfigurableColumnDef<T> = OperationalTableColumnMeta & {
   headerClassName?: string;
   cellClassName?: string;
+  /** Optional native `title` on the cell (e.g. full label when truncated). */
+  cellTitle?: (row: T) => string | undefined;
   /** Optional `<col>` width (e.g. `"25%"`, `"120px"`). Defaults to equal share of remaining width. */
   colWidth?: string;
   amountCell?: boolean;
@@ -154,6 +156,7 @@ function OperationalConfigurableTableView<T>({
               {columns.map((column) => {
                 const content = column.renderCell(row);
                 const sharedCellClassName = column.cellClassName;
+                const cellTitle = column.cellTitle?.(row);
                 if (column.amountCell) {
                   const amountClassName = column.amountVariant
                     ? operationalAmountVariantClass(
@@ -165,6 +168,7 @@ function OperationalConfigurableTableView<T>({
                     <CampaignOperationalTableCellAmount
                       key={column.id}
                       className={cn(amountClassName, sharedCellClassName)}
+                      title={cellTitle}
                     >
                       {content}
                     </CampaignOperationalTableCellAmount>
@@ -175,6 +179,7 @@ function OperationalConfigurableTableView<T>({
                     <CampaignOperationalTableCellMono
                       key={column.id}
                       className={sharedCellClassName}
+                      title={cellTitle}
                     >
                       {content}
                     </CampaignOperationalTableCellMono>
@@ -184,6 +189,7 @@ function OperationalConfigurableTableView<T>({
                   <CampaignOperationalTableCell
                     key={column.id}
                     className={sharedCellClassName}
+                    title={cellTitle}
                   >
                     {content}
                   </CampaignOperationalTableCell>

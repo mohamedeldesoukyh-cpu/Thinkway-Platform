@@ -1,9 +1,13 @@
-# Thinkway Engineering Rules
+﻿# Thinkway Engineering Rules
 
 ## Product reference (read first)
 
 - **`docs/THINKWAY_SYSTEM_REFERENCE.md`** — Thinkway product spec (May 2026): modules, hierarchy, campaigns, billing, roles, roadmap.
 - **`docs/ARCHITECTURE_ALIGNMENT.md`** — codebase vs spec gaps; consult before new entities or modules.
+- **`docs/DISCOVERY_UI_CONTRACT.md`** — mandatory Discovery UI components; run `npm run test:discovery-ui-contract` before merge.
+- **`docs/DISCOVERY_ARCHITECTURE.md`** — Discovery data flow and extension rules.
+- **`docs/PERFORMANCE_GOVERNANCE.md`** — performance budgets, CI gates, monitoring SLOs.
+- **`docs/PERFORMANCE_ENGINEERING_STANDARDS.md`** — coding / lazy / client / bundle / CSS checklist.
 - **`.cursor/rules/thinkway-product-reference.mdc`** — persistent AI guardrails.
 
 ## Stack

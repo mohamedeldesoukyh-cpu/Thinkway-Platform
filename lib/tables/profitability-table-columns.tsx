@@ -32,7 +32,9 @@ export function buildProfitabilityTableColumns({
     {
       id: "name",
       label: "Name",
-      cellClassName: "text-foreground",
+      colWidth: "38%",
+      cellClassName: "min-w-0 truncate text-foreground",
+      cellTitle: (row) => row.label,
       renderHeader: () => (
         <SortHead
           label="Name"
@@ -46,6 +48,7 @@ export function buildProfitabilityTableColumns({
     {
       id: "revenue",
       label: "Revenue",
+      colWidth: "24%",
       headerClassName: "text-right",
       amountCell: true,
       amountVariant: "revenue",
@@ -63,6 +66,7 @@ export function buildProfitabilityTableColumns({
     {
       id: "gp",
       label: "GP",
+      colWidth: "20%",
       headerClassName: "text-right",
       amountCell: true,
       amountVariant: "gp",
@@ -81,6 +85,7 @@ export function buildProfitabilityTableColumns({
     {
       id: "margin",
       label: "Margin",
+      colWidth: "18%",
       headerClassName: "text-right",
       amountCell: true,
       amountVariant: "margin",

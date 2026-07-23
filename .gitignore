@@ -45,6 +45,9 @@ next-env.d.ts
 
 .vercel
 
+# performance governance — keep latest artifacts; ignore stamped history
+performance/reports/report-*.json
+
 # temporary debug / local artifacts
 .tmp/
 services/discovery-worker/.tmp/

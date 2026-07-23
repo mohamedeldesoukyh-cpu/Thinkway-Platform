@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { isCampaignIntelligencePipelineDebugEnabled } from "@/lib/campaign-intelligence/pipeline-debug-flag";
@@ -143,6 +144,7 @@ export function CampaignBriefSidebar({
   const [intelligenceOpen, setIntelligenceOpen] = useState(false);
   const [extractionReviewOpen, setExtractionReviewOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const confirmDelete = useConfirmDelete();
   const [isDeleting, setIsDeleting] = useState(false);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
@@ -273,15 +275,13 @@ export function CampaignBriefSidebar({
     setUploadPhase("idle");
   }, []);
 
-  const handleDeleteBrief = useCallback(() => {
+  const handleDeleteBrief = useCallback(async () => {
     if (!profileId || !hasUploadedBrief) return;
-    if (
-      !window.confirm(
-        "Remove this campaign brief? The uploaded file and extracted requirements will be deleted."
-      )
-    ) {
-      return;
-    }
+    const ok = await confirmDelete(
+      "Remove this campaign brief? The uploaded file and extracted requirements will be deleted.",
+      "Remove campaign brief?"
+    );
+    if (!ok) return;
 
     setIsDeleting(true);
     startTransition(async () => {
@@ -302,7 +302,7 @@ export function CampaignBriefSidebar({
         setIsDeleting(false);
       }
     });
-  }, [hasUploadedBrief, onBriefCleared, profileId, resetBriefForm]);
+  }, [confirmDelete, hasUploadedBrief, onBriefCleared, profileId, resetBriefForm]);
 
   const persistAndClose = useCallback(
     (afterSave?: () => void) => {

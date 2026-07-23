@@ -4,18 +4,24 @@ import {
   fetchApifyProfileRaw,
   normalizeApifyProfileData,
 } from "@/lib/creator-enrichment/apify-profile";
+import { resolveNextPrimaryAvatar } from "@/lib/creator-enrichment/enrichment-avatar-policy";
 import { syncEnrichmentAvatarToStorage } from "@/lib/creator-enrichment/enrichment-avatar-storage";
 import type { ApifyProfileData } from "@/lib/creator-enrichment/types";
 import {
   inferCategoriesFromProfileSignals,
   mergeInferredCategories,
 } from "@/lib/creator-enrichment/category-inference";
+import {
+  countryWritePayload,
+  persistCountryFromApifyProfile,
+} from "@/lib/creators/country-persistence";
 import { fetchProfileWithIpl, getProviderAdapter, persistSnapshot } from "@/lib/intelligence-persistence";
 import { bridgeSnapshotToCreatorDna } from "@/lib/intelligence-persistence/services/dna-bridge";
 import { isDnaGenerateAfterImportEnabled } from "@/lib/discovery/control-center/discovery-control-policy";
 import { getDiscoveryControlSettings } from "@/lib/discovery/control-center/discovery-control-service";
 import type { RawProviderPayload } from "@/lib/intelligence-persistence/types";
 import { dedupeByCreatorId } from "@/lib/creators/dedupe-creators";
+import { normalizeSocialPlatform } from "@/lib/social/normalize-platform";
 import { buildCanonicalProfileUrl, isSocialPlatform } from "@/lib/social/platforms";
 import { buildNormalizedPlatformAccount } from "@/lib/social/normalize-account";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
@@ -27,6 +33,11 @@ import {
   createApifyImportTransactionState,
   rollbackApifyImportTransaction,
 } from "@/lib/discovery/apify-import-transaction";
+import {
+  hasUsableFollowerCount,
+  resolveOfflineImportEnrichmentStatus,
+} from "@/lib/discovery/enrichment-staging";
+import type { CreatorEnrichmentStatus } from "@/lib/creator-enrichment/types";
 
 export type ApifyImportPipelineInput = {
   platform: string;
@@ -55,6 +66,11 @@ export type ApifyStoredPayloadImportInput = ApifyImportPipelineInput & {
   postsRunId?: string | null;
   /** Download profilePictureUrl into Supabase storage (no Apify call). */
   uploadAvatar?: boolean;
+  /**
+   * When true, may launch a live Instagram profile-details Apify run for post-only
+   * rows. Default false — dataset/batch imports must not N+1 scrape every creator.
+   */
+  allowLiveApifyBackfill?: boolean;
 };
 
 function normalizeUsername(value: string): string {
@@ -99,23 +115,77 @@ async function findExistingPlatformAccount(
   platform: string,
   username: string
 ): Promise<{ id: string; influencer_id: string } | null> {
+  const platformKey = normalizeSocialPlatform(platform);
+  if (!platformKey) return null;
+
+  // Case-insensitive platform match — DB may still have "Snapchat" until migration.
   const { data, error } = await supabase
     .from("influencer_platform_accounts")
-    .select("id, influencer_id")
-    .eq("platform", platform)
-    .eq("normalized_username", username)
-    .limit(1)
-    .maybeSingle();
+    .select("id, influencer_id, platform")
+    .eq("normalized_username", username);
 
   if (error) throw new Error(error.message);
-  return data as { id: string; influencer_id: string } | null;
+
+  const match = (data ?? []).find(
+    (row) => normalizeSocialPlatform(row.platform as string) === platformKey
+  );
+  return match
+    ? { id: match.id as string, influencer_id: match.influencer_id as string }
+    : null;
+}
+
+function resolveApifyImportCountryFields(
+  normalized: ApifyProfileData,
+  username: string,
+  existing?: { country_code?: string | null; country_codes?: string[] | null }
+) {
+  return persistCountryFromApifyProfile({
+    existingCountryCode: existing?.country_code,
+    existingCountryCodes: existing?.country_codes,
+    audienceCountry: normalized.audienceCountry,
+    bio: normalized.bio,
+    displayName: normalized.displayName,
+    handle: username,
+    hashtags: normalized.hashtags,
+    mentions: normalized.mentions,
+  });
+}
+
+function resolveImportEnrichmentStatus(input: {
+  platform: string;
+  normalized: ApifyProfileData;
+  profileRowsCount: number;
+  importCountryCode?: string | null;
+  countryFields: ReturnType<typeof resolveApifyImportCountryFields>;
+}): CreatorEnrichmentStatus {
+  const profileDetailsSatisfied =
+    input.profileRowsCount > 0 || hasUsableFollowerCount(input.normalized.followers);
+
+  return resolveOfflineImportEnrichmentStatus({
+    platform: input.platform,
+    followers: input.normalized.followers,
+    audienceCountry: input.normalized.audienceCountry,
+    countryCode: input.countryFields?.country_code ?? null,
+    countryCodes: input.countryFields?.country_codes ?? null,
+    importCountryCode: input.importCountryCode,
+    profileDetailsSatisfied,
+  });
 }
 
 async function ensureCommercialCreatorFromApifyData(
   supabase: SupabaseClient,
   platform: string,
-  normalized: ApifyProfileData
-): Promise<{ influencerId: string; platformAccountId: string; created: boolean }> {
+  normalized: ApifyProfileData,
+  options: {
+    profileRowsCount: number;
+    importCountryCode?: string | null;
+  }
+): Promise<{
+  influencerId: string;
+  platformAccountId: string;
+  created: boolean;
+  enrichmentStatus: CreatorEnrichmentStatus;
+}> {
   const username = normalizeUsername(normalized.username ?? "");
   if (!username) {
     throw new Error("Normalized profile is missing username.");
@@ -156,9 +226,31 @@ async function ensureCommercialCreatorFromApifyData(
   const nowIso = new Date().toISOString();
 
   if (existingAccount) {
+    const { data: influencer } = await supabase
+      .from("influencers")
+      .select("categories, country_code, country_codes")
+      .eq("id", existingAccount.influencer_id)
+      .maybeSingle();
+
+    const countryFields = resolveApifyImportCountryFields(
+      normalized,
+      username,
+      (influencer as { country_code?: string | null; country_codes?: string[] | null } | null) ??
+        undefined
+    );
+    const enrichmentStatus = resolveImportEnrichmentStatus({
+      platform,
+      normalized,
+      profileRowsCount: options.profileRowsCount,
+      importCountryCode: options.importCountryCode,
+      countryFields,
+    });
+
     const { error: accountError } = await supabase
       .from("influencer_platform_accounts")
       .update({
+        // Heal mixed-case platforms ("Snapchat" → "snapchat") on successful sync.
+        platform: accountFields.platform,
         handle: accountFields.handle,
         username: accountFields.username,
         profile_url: accountFields.profile_url,
@@ -183,7 +275,7 @@ async function ensureCommercialCreatorFromApifyData(
         contact_email: normalized.contactEmail,
         contact_phone: normalized.contactPhone,
         contact_links: normalized.contactLinks.length > 0 ? normalized.contactLinks : null,
-        enrichment_status: "enriched",
+        enrichment_status: enrichmentStatus,
         last_enriched_at: nowIso,
         apify_run_id: normalized.apifyRunId,
         sync_status: "synced",
@@ -197,59 +289,54 @@ async function ensureCommercialCreatorFromApifyData(
 
     if (accountError) throw new Error(accountError.message);
 
-    if (inferredCategories.length > 0) {
-      const { data: influencer } = await supabase
-        .from("influencers")
-        .select("categories")
-        .eq("id", existingAccount.influencer_id)
-        .maybeSingle();
+    const mergedCategories =
+      inferredCategories.length > 0
+        ? mergeInferredCategories(
+            (influencer?.categories as string[] | null) ?? [],
+            inferredCategories
+          )
+        : null;
 
-      const mergedCategories = mergeInferredCategories(
-        (influencer?.categories as string[] | null) ?? [],
-        inferredCategories
-      );
-
-      await supabase
-        .from("influencers")
-        .update({
-          display_name: normalized.displayName ?? undefined,
-          country_code: normalized.audienceCountry ?? undefined,
-          categories: mergedCategories.length > 0 ? mergedCategories : undefined,
-          enrichment_status: "enriched",
-          last_enriched_at: nowIso,
-          apify_run_id: normalized.apifyRunId ?? undefined,
-          updated_at: nowIso,
-        } as never)
-        .eq("id", existingAccount.influencer_id);
-    } else {
-      await supabase
-        .from("influencers")
-        .update({
-          display_name: normalized.displayName ?? undefined,
-          country_code: normalized.audienceCountry ?? undefined,
-          enrichment_status: "enriched",
-          last_enriched_at: nowIso,
-          apify_run_id: normalized.apifyRunId ?? undefined,
-          updated_at: nowIso,
-        } as never)
-        .eq("id", existingAccount.influencer_id);
-    }
+    await supabase
+      .from("influencers")
+      .update({
+        display_name: normalized.displayName ?? undefined,
+        ...countryWritePayload(countryFields),
+        ...(mergedCategories && mergedCategories.length > 0
+          ? { categories: mergedCategories }
+          : {}),
+        enrichment_status: enrichmentStatus,
+        last_enriched_at: nowIso,
+        apify_run_id: normalized.apifyRunId ?? undefined,
+        updated_at: nowIso,
+      } as never)
+      .eq("id", existingAccount.influencer_id);
 
     return {
       influencerId: existingAccount.influencer_id,
       platformAccountId: existingAccount.id,
       created: false,
+      enrichmentStatus,
     };
   }
+
+  const countryFields = resolveApifyImportCountryFields(normalized, username);
+  const enrichmentStatus = resolveImportEnrichmentStatus({
+    platform,
+    normalized,
+    profileRowsCount: options.profileRowsCount,
+    importCountryCode: options.importCountryCode,
+    countryFields,
+  });
 
   const { data: influencer, error: influencerError } = await supabase
     .from("influencers")
     .insert({
       display_name: normalized.displayName ?? username,
-      country_code: normalized.audienceCountry,
+      ...countryWritePayload(countryFields),
       categories: inferredCategories.length > 0 ? inferredCategories : [],
       status: "active",
-      enrichment_status: "enriched",
+      enrichment_status: enrichmentStatus,
       last_enriched_at: nowIso,
       apify_run_id: normalized.apifyRunId,
       notes: "Imported from Apify dataset export (offline)",
@@ -291,7 +378,7 @@ async function ensureCommercialCreatorFromApifyData(
       contact_email: normalized.contactEmail,
       contact_phone: normalized.contactPhone,
       contact_links: normalized.contactLinks.length > 0 ? normalized.contactLinks : null,
-      enrichment_status: "enriched",
+      enrichment_status: enrichmentStatus,
       last_enriched_at: nowIso,
       apify_run_id: normalized.apifyRunId,
       sync_status: "synced",
@@ -309,6 +396,7 @@ async function ensureCommercialCreatorFromApifyData(
     influencerId: influencer.id as string,
     platformAccountId: account.id as string,
     created: true,
+    enrichmentStatus,
   };
 }
 
@@ -321,6 +409,7 @@ async function finalizeImportedCreatorPresentation(
     username: string;
     normalized: ApifyProfileData;
     uploadAvatar: boolean;
+    enrichmentStatus: CreatorEnrichmentStatus;
   }
 ): Promise<{ avatarUrlOverride: string | null }> {
   let primaryAvatarUrl = input.normalized.profilePictureUrl ?? null;
@@ -342,14 +431,35 @@ async function finalizeImportedCreatorPresentation(
     }
   }
 
+  const { data: existingInfluencer } = await supabase
+    .from("influencers")
+    .select("primary_avatar_url, primary_avatar_source")
+    .eq("id", input.influencerId)
+    .maybeSingle();
+  const existingRow = existingInfluencer as {
+    primary_avatar_url?: string | null;
+    primary_avatar_source?: string | null;
+  } | null;
+
+  // Merge rule: never null-out or downgrade a captured avatar with an import
+  // that has no photo (or whose storage upload failed, leaving an expiring CDN URL).
+  const nextPrimary = resolveNextPrimaryAvatar({
+    existingUrl: existingRow?.primary_avatar_url,
+    existingSource: existingRow?.primary_avatar_source,
+    incomingUrl: primaryAvatarUrl,
+    incomingSource: primaryAvatarSource,
+  });
+
   const nowIso = new Date().toISOString();
   const { error } = await supabase
     .from("influencers")
     .update({
       default_metrics_platform_account_id: input.platformAccountId,
-      primary_avatar_url: primaryAvatarUrl,
-      primary_avatar_source: primaryAvatarSource,
-      enrichment_status: "enriched",
+      primary_avatar_url: nextPrimary.url,
+      primary_avatar_source: nextPrimary.source,
+      // Preserve staged status from ensureCommercialCreatorFromApifyData —
+      // never promote post-only imports to enriched here.
+      enrichment_status: input.enrichmentStatus,
       last_enriched_at: nowIso,
       updated_at: nowIso,
     } as never)
@@ -401,6 +511,7 @@ export async function importApifyStoredPayloadWithDnaPipeline(
   });
 
   if (
+    input.allowLiveApifyBackfill === true &&
     shouldBackfillInstagramProfileDetails(platform, profileRows, postRows, normalized)
   ) {
     const backfilled = await backfillInstagramProfileRowsForImport({
@@ -428,7 +539,10 @@ export async function importApifyStoredPayloadWithDnaPipeline(
   const tx = createApifyImportTransactionState();
 
   try {
-    const commercial = await ensureCommercialCreatorFromApifyData(supabase, platform, normalized);
+    const commercial = await ensureCommercialCreatorFromApifyData(supabase, platform, normalized, {
+      profileRowsCount: profileRows.length,
+      importCountryCode: input.countryCode,
+    });
     tx.influencerId = commercial.influencerId;
     tx.influencerCreated = commercial.created;
     tx.platformAccountId = commercial.platformAccountId;
@@ -533,6 +647,7 @@ export async function importApifyStoredPayloadWithDnaPipeline(
       username,
       normalized,
       uploadAvatar: input.uploadAvatar ?? true,
+      enrichmentStatus: commercial.enrichmentStatus,
     });
 
     if (generateDnaAfterImport) {

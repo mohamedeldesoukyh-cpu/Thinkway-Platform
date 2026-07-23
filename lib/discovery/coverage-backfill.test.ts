@@ -16,6 +16,17 @@ test("browseFiltersHaveBackfillIntent detects country/category/search", () => {
   assert.equal(browseFiltersHaveBackfillIntent({ page: 1 }), false);
 });
 
+test("browseFiltersHaveBackfillIntent skips exact handle and profile URL lookups", () => {
+  assert.equal(browseFiltersHaveBackfillIntent({ search: "@uaesupersport" }), false);
+  assert.equal(
+    browseFiltersHaveBackfillIntent({
+      search: "https://www.instagram.com/uaesupersport/",
+    }),
+    false
+  );
+  assert.equal(browseFiltersHaveBackfillIntent({ search: "adidas running egypt" }), true);
+});
+
 test("C19-style payload prefers hashtag seed over ISO country location query", () => {
   const payload = buildCoverageBackfillJobPayloadFromIntent({
     country: "EG",

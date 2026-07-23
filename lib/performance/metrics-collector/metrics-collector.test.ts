@@ -125,7 +125,7 @@ assert.deepEqual(providerChainForPlatform("snapchat"), [
     apifyFacebookActorId: "apify/facebook-posts-scraper",
     apifyFacebookProfileActorId: "apify/facebook-pages-scraper",
     apifyYouTubeActorId: "streamers/youtube-scraper",
-    apifySnapchatActorId: null,
+    apifySnapchatActorId: "automation-lab/snapchat-scraper",
   };
   assert.equal(apifyActorIdForPlatform("tiktok", env), "clockworks/tiktok-scraper");
   assert.equal(apifyActorIdForPlatform("facebook", env), "apify/facebook-posts-scraper");
@@ -133,7 +133,10 @@ assert.deepEqual(providerChainForPlatform("snapchat"), [
     apifyProfileActorIdForPlatform("facebook", env),
     "apify/facebook-pages-scraper"
   );
-  assert.equal(apifyActorIdForPlatform("snapchat", env), null);
+  assert.equal(
+    apifyActorIdForPlatform("snapchat", env),
+    "automation-lab/snapchat-scraper"
+  );
   assert.ok("postURLs" in buildApifyRunInput("tiktok", "https://tiktok.com/@x/video/1"));
   assert.ok("startUrls" in buildApifyRunInput("facebook", "https://facebook.com/p/1"));
   assert.ok(
@@ -141,6 +144,14 @@ assert.deepEqual(providerChainForPlatform("snapchat"), [
       "facebook",
       "https://www.facebook.com/nasaearth"
     )
+  );
+  assert.deepEqual(
+    buildApifyProfileDetailsInput(
+      "snapchat",
+      "https://www.snapchat.com/add/creator",
+      "@creator"
+    ),
+    { usernames: ["creator"] }
   );
 }
 

@@ -1,14 +1,16 @@
 "use client";
 
 import { SectionSkeleton } from "./shared/section-skeleton";
-import { severityColor } from "./shared/format-utils";
 import {
   SectionFallbackContent,
   SectionPendingMessage,
   shouldShowPendingPlaceholder,
 } from "./shared/section-status-utils";
+import { STUDIO_REF_CLASSES } from "../../constants/campaign-studio-ref-tokens";
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
+import { useStudioRefMode } from "../../hooks/use-studio-ref-mode";
 import { resolveRiskData } from "../../services/section-data-resolver";
+import { severityColor } from "./shared/format-utils";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
 import { cn } from "@/lib/utils";
@@ -19,11 +21,19 @@ type RiskAnalysisSectionProps = {
   status: CampaignStudioSectionStatus;
 };
 
+function normalizeSeverity(severity: string): "high" | "medium" | "low" {
+  const value = severity.toLowerCase();
+  if (value.includes("high")) return "high";
+  if (value.includes("low")) return "low";
+  return "medium";
+}
+
 export function RiskAnalysisSection({
   campaignObject,
   fallbackText,
   status,
 }: RiskAnalysisSectionProps) {
+  const refMode = useStudioRefMode();
   const isRunning = status === "running";
   const riskData = resolveRiskData(campaignObject);
 
@@ -49,6 +59,45 @@ export function RiskAnalysisSection({
           owner: "Campaign team",
         }))
       : (riskData.enrichedRisks ?? []);
+
+  if (refMode) {
+    return (
+      <div className="min-w-0">
+        {riskData.overallRiskLevel ? (
+          <span className={STUDIO_REF_CLASSES.overallRiskBadge}>
+            Overall: {riskData.overallRiskLevel}
+          </span>
+        ) : null}
+        {items.slice(0, 5).map((item, index) => {
+          const sev = normalizeSeverity(item.severity);
+          return (
+            <div key={`${item.risk}-${index}`} className={STUDIO_REF_CLASSES.riskCard}>
+              <div className={STUDIO_REF_CLASSES.riskTop}>
+                <span className={STUDIO_REF_CLASSES.riskTitle}>{item.risk}</span>
+                <span className={cn(STUDIO_REF_CLASSES.riskSev, sev)}>{item.severity}</span>
+              </div>
+              <div className={STUDIO_REF_CLASSES.riskGrid}>
+                <div>
+                  <div className="k">Probability</div>
+                  <div className="v">{item.probability}</div>
+                </div>
+                <div>
+                  <div className="k">Mitigation</div>
+                  <div className="v">{item.mitigation}</div>
+                </div>
+                <div>
+                  <div className="k">Impact</div>
+                  <div className="v">
+                    {item.impact} · Owner: {item.owner}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div className="min-w-0 space-y-3">

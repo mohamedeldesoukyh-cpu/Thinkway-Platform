@@ -3,6 +3,8 @@
 import { PlusIcon, Trash2Icon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
+import { TooltipIconButton } from "@/components/shared/tooltip-icon-button";
 import { Input } from "@/components/ui/input";
 import {
   DETAIL_FORM_INPUT_CLASS,
@@ -17,11 +19,18 @@ type Props = {
 };
 
 export function ClientIoRecipientsEditor({ recipients, onChange, disabled }: Props) {
+  const confirmDelete = useConfirmDelete();
+
   function updateRecipient(index: number, patch: Partial<ClientIoRecipientEntry>) {
     onChange(recipients.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   }
 
-  function removeRecipient(index: number) {
+  async function removeRecipient(index: number) {
+    const ok = await confirmDelete(
+      "Remove this recipient from the IO send list?",
+      "Remove recipient?"
+    );
+    if (!ok) return;
     onChange(recipients.filter((_, i) => i !== index));
   }
 
@@ -62,17 +71,17 @@ export function ClientIoRecipientsEditor({ recipients, onChange, disabled }: Pro
                 className={DETAIL_FORM_INPUT_CLASS}
                 disabled={disabled}
               />
-              <Button
+              <TooltipIconButton
                 type="button"
                 variant="ghost"
                 size="icon"
                 className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
-                onClick={() => removeRecipient(index)}
+                onClick={() => void removeRecipient(index)}
                 disabled={disabled}
-                aria-label="Remove recipient"
+                tooltip="Remove recipient"
               >
                 <Trash2Icon className="size-4" />
-              </Button>
+              </TooltipIconButton>
             </div>
           ))
         )}

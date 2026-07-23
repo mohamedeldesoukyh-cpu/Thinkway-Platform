@@ -53,86 +53,98 @@ export function GenerateCampaignEntry({
   ].filter((label): label is string => Boolean(label));
 
   const actionClass = compact
-    ? "inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold"
+    ? "oc-btn oc-btn-generate"
     : "inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-semibold";
 
   return (
     <div
       className={cn(
-        compact ? "p-2.5" : "rounded-xl border border-border bg-background p-4",
+        compact ? "flex w-full items-center justify-between gap-4" : "rounded-xl border border-border bg-background p-4",
         className
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          {!compact ? (
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Campaign Plan
-            </p>
-          ) : null}
-          <h3
-            className={cn(
-              "font-semibold text-foreground",
-              compact ? "text-xs" : "text-sm font-bold"
-            )}
-          >
-            {compact ? "Execution Campaign" : "Generate Execution Campaign"}
-          </h3>
-          <p className="truncate text-[10px] text-muted-foreground">
-            {campaignName}
-            {!compact ? ` · ${context.lifecycleStatus.replaceAll("_", " ")}` : null}
-          </p>
-        </div>
-        {context.existingCampaign ? (
-          <a
-            href={`/campaigns/${context.existingCampaign.id}`}
-            className={cn(
-              actionClass,
-              "border border-[#1D9E75]/40 bg-[#1D9E75]/5 text-[#1D9E75] transition-colors hover:bg-[#1D9E75]/10"
-            )}
-          >
-            Open {context.existingCampaign.documentNumber}
-            <ArrowRightIcon className={compact ? "size-3" : "size-3.5"} />
-          </a>
-        ) : (
-          <button
-            type="button"
-            onClick={onGenerate}
-            disabled={!onGenerate || !ready}
-            className={cn(
-              actionClass,
-              "bg-[#1D9E75] text-white transition-colors hover:bg-[#178a66] disabled:opacity-40"
-            )}
-          >
-            Generate
-            <ArrowRightIcon className={compact ? "size-3" : "size-3.5"} />
-          </button>
-        )}
-      </div>
-
       {compact ? (
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px]">
-          <span className="inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2Icon className="size-2.5 shrink-0" />
-            <span className="text-emerald-700 dark:text-emerald-300">
-              {knownLabels.length ? knownLabels.join(" · ") : "Nothing ready"}
-            </span>
-          </span>
-          {neededLabels.length ? (
-            <>
-              <span className="text-muted-foreground/40">|</span>
-              <span className="inline-flex items-center gap-0.5 text-amber-600 dark:text-amber-400">
-                <CircleDashedIcon className="size-2.5 shrink-0" />
-                <span className="text-amber-700 dark:text-amber-300">
-                  {neededLabels.join(" · ")}
+        <>
+          <div className="oc-upnext-left min-w-0 flex-1">
+            <h3>Execution Campaign</h3>
+            <p>Quality, taste, and value.</p>
+            <div className="oc-checklist">
+              {knownLabels.map((label) => (
+                <span key={label} className="oc-check-tag done">
+                  <CheckCircle2Icon aria-hidden />
+                  {label}
                 </span>
-              </span>
-            </>
-          ) : context.canGenerate && !context.existingCampaign ? (
-            <span className="text-muted-foreground">· All set</span>
-          ) : null}
-        </div>
+              ))}
+              {neededLabels.map((label) => (
+                <span key={label} className="oc-check-tag pending">
+                  <CircleDashedIcon aria-hidden />
+                  {label}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="shrink-0">
+            {context.existingCampaign ? (
+              <a
+                href={`/campaigns/${context.existingCampaign.id}`}
+                className="oc-btn"
+              >
+                Open {context.existingCampaign.documentNumber}
+                <ArrowRightIcon aria-hidden />
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={onGenerate}
+                disabled={!onGenerate || !ready}
+                className={actionClass}
+              >
+                <ArrowRightIcon aria-hidden />
+                Generate
+              </button>
+            )}
+          </div>
+        </>
       ) : (
+        <>
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Campaign Plan
+              </p>
+              <h3 className="text-sm font-bold text-foreground">Generate Execution Campaign</h3>
+              <p className="truncate text-[10px] text-muted-foreground">
+                {campaignName} · {context.lifecycleStatus.replaceAll("_", " ")}
+              </p>
+            </div>
+            <div className="shrink-0">
+              {context.existingCampaign ? (
+                <a
+                  href={`/campaigns/${context.existingCampaign.id}`}
+                  className={cn(
+                    actionClass,
+                    "border border-[#1D9E75]/40 bg-[#1D9E75]/5 text-[#1D9E75] transition-colors hover:bg-[#1D9E75]/10"
+                  )}
+                >
+                  Open {context.existingCampaign.documentNumber}
+                  <ArrowRightIcon className="size-3.5" />
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onGenerate}
+                  disabled={!onGenerate || !ready}
+                  className={cn(
+                    actionClass,
+                    "bg-[#1D9E75] text-white transition-colors hover:bg-[#178a66] disabled:opacity-40"
+                  )}
+                >
+                  Generate
+                  <ArrowRightIcon className="size-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <div>
             <p className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
@@ -178,6 +190,7 @@ export function GenerateCampaignEntry({
             </div>
           </div>
         </div>
+        </>
       )}
 
       {!compact && context.existingCampaign ? (

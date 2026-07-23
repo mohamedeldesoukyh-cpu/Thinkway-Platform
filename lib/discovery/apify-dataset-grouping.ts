@@ -47,14 +47,21 @@ export function isApifyProfileDetailRow(row: Record<string, unknown>): boolean {
       ? (row.authorMeta as Record<string, unknown>)
       : null;
 
+  // Snapchat (automation-lab/snapchat-scraper) uses subscriberCount + profileType.
   return (
     row.followersCount != null ||
     row.followerCount != null ||
+    row.subscriberCount != null ||
+    row.subscribers != null ||
     row.biography != null ||
+    row.bio != null ||
     row.fullName != null ||
+    row.displayName != null ||
+    row.profileType != null ||
     row.fans != null ||
     authorMeta?.fans != null ||
-    authorMeta?.followerCount != null
+    authorMeta?.followerCount != null ||
+    authorMeta?.subscriberCount != null
   );
 }
 

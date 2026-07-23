@@ -16,12 +16,23 @@ import {
 import { Input } from "@/components/ui/input";
 import { addPlatformToCreatorAction } from "@/features/discovery/add-platform/actions";
 import {
+  DISCOVERY_DIALOG_BODY_CLASS,
+  DISCOVERY_DIALOG_CONTENT_CLASS,
+  DISCOVERY_DIALOG_DESC_CLASS,
+  DISCOVERY_DIALOG_FOOTER_CLASS,
+  DISCOVERY_DIALOG_HEADER_BAR_CLASS,
+  DISCOVERY_DIALOG_HEADER_WRAP_CLASS,
+  DISCOVERY_DIALOG_INPUT_CLASS,
+  DISCOVERY_DIALOG_TITLE_CLASS,
+} from "@/features/discovery/components/design-system";
+import {
   pollCreatorAfterRefresh,
 } from "@/features/discovery/enrichment/poll-creator-refresh";
 import { syncStatusToEnrichmentStatus } from "@/features/discovery/enrichment/status";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { platformLabel } from "@/features/campaigns/line-assignment";
 import { parseProfileInput } from "@/lib/social/parse-profile-url";
+import { cn } from "@/lib/utils";
 
 type Props = {
   open: boolean;
@@ -135,23 +146,28 @@ export function AddCreatorPlatformDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
-        <DialogHeader className="space-y-1.5 border-b border-border px-6 py-5 text-left">
-          <DialogTitle className="text-base font-bold tracking-tight">
-            Add platform
-          </DialogTitle>
-          <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
-            Link another social profile to {creatorName}. We&apos;ll enrich the account and
-            update this creator automatically.
-            {linkedSummary ? (
-              <span className="mt-1 block text-xs">
-                Already linked: {linkedSummary}
-              </span>
-            ) : null}
-          </DialogDescription>
+      <DialogContent className={DISCOVERY_DIALOG_CONTENT_CLASS}>
+        <DialogHeader className={DISCOVERY_DIALOG_HEADER_WRAP_CLASS}>
+          <div className={DISCOVERY_DIALOG_HEADER_BAR_CLASS}>
+            <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-[#64748b] dark:text-muted-foreground">
+              Discovery
+            </p>
+            <DialogTitle className={DISCOVERY_DIALOG_TITLE_CLASS}>
+              Add platform
+            </DialogTitle>
+            <DialogDescription className={DISCOVERY_DIALOG_DESC_CLASS}>
+              Link another social profile to {creatorName}. We&apos;ll enrich the account and
+              update this creator automatically.
+              {linkedSummary ? (
+                <span className="mt-1 block text-xs">
+                  Already linked: {linkedSummary}
+                </span>
+              ) : null}
+            </DialogDescription>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-2 px-6 py-5">
+        <div className={cn("space-y-2", DISCOVERY_DIALOG_BODY_CLASS)}>
           <Input
             value={profileUrl}
             onChange={(event) => {
@@ -162,6 +178,7 @@ export function AddCreatorPlatformDialog({
             inputMode="url"
             autoComplete="off"
             placeholder="https://instagram.com/… or tiktok.com/@…"
+            className={DISCOVERY_DIALOG_INPUT_CLASS}
             disabled={isPending}
             autoFocus
             onKeyDown={(event) => {
@@ -190,7 +207,7 @@ export function AddCreatorPlatformDialog({
           ) : null}
         </div>
 
-        <DialogFooter className="gap-2 border-t border-border px-6 py-4 sm:justify-end">
+        <DialogFooter className={DISCOVERY_DIALOG_FOOTER_CLASS}>
           <Button
             type="button"
             variant="outline"

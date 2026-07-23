@@ -110,6 +110,21 @@ export async function loadCampaignObjectForConversation(
   return getOrLoadCampaignObject(conversationId, contextSnapshot);
 }
 
+/** Bypass in-memory cache — use when edits must reflect DB + snapshot, not a stale process cache. */
+export async function loadCampaignObjectFromPersistence(
+  supabase: SupabaseClient<Database>,
+  conversationId: string,
+  contextSnapshot?: Record<string, unknown>
+): Promise<CampaignObject | null> {
+  const restored = await CampaignObjectPersistenceService.restoreForConversation(
+    supabase,
+    conversationId,
+    contextSnapshot
+  );
+  if (restored) return restored;
+  return getCampaignObjectFromSnapshot(contextSnapshot);
+}
+
 export function getOrCreateCampaignObject(input: {
   conversationId: string;
   workflowId: string;

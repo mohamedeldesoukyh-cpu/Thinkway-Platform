@@ -71,9 +71,10 @@ export function createAcquisitionSessionController(
   return {
     getSessionId: () => sessionId,
     rotateSession: async () => {
-      await cancelAcquisitionSessionClient(sessionId);
+      // Mint a new client session id only. Do NOT cancel on the server here —
+      // every search was POSTing cancelAcquisitionSessionAction and making the
+      // app feel unstable. Use cancelSession() when aborting a real job.
       sessionId = createSearchSessionId();
-      touch();
       return sessionId;
     },
     startHeartbeat: () => {

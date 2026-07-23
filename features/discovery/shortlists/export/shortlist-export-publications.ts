@@ -35,7 +35,7 @@ import type {
   ShortlistDocument,
 } from "./shortlist-document";
 import { shortlistCreatorKey } from "./shortlist-document";
-import { isShowcaseTemplate } from "./shortlist-template";
+import { isCreatorDeckTemplate } from "./shortlist-template";
 
 export const SHOWCASE_PUBLICATION_SHOT_LIMIT = 6;
 
@@ -235,7 +235,7 @@ export async function loadShortlistCreatorPublicationShots(
 export async function embedShortlistDocumentPublicationShots(
   doc: ShortlistDocument
 ): Promise<ShortlistDocument> {
-  if (!isShowcaseTemplate(doc.template) || !doc.creatorGroups?.length) return doc;
+  if (!isCreatorDeckTemplate(doc.template) || !doc.creatorGroups?.length) return doc;
 
   const creatorGroups = await Promise.all(
     doc.creatorGroups.map(async (group) => {

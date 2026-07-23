@@ -76,6 +76,25 @@ test("creatorMatchesDiscoveryBrowseFilters enforces audience interest tags", () 
   assert.equal(applyDiscoveryBrowseFilters([match, miss], filters).length, 1);
 });
 
+test("creatorMatchesDiscoveryBrowseFilters matches secondary country_codes entries", () => {
+  const filters: UnifiedCreatorBrowseFilters = {
+    country: "CH",
+  };
+  const swissInList = makeCreator({
+    unified_id: "inf:1",
+    country_code: "AE",
+    country_codes: ["AE", "CH", "TH"],
+  });
+  const noMatch = makeCreator({
+    unified_id: "inf:2",
+    country_code: "EG",
+    country_codes: ["EG"],
+  });
+
+  assert.equal(creatorMatchesDiscoveryBrowseFilters(swissInList, filters), true);
+  assert.equal(creatorMatchesDiscoveryBrowseFilters(noMatch, filters), false);
+});
+
 test("creatorMatchesDiscoveryBrowseFilters accepts UAE via creator country fallback", () => {
   const filters: UnifiedCreatorBrowseFilters = {
     audienceCountries: ["AE"],
@@ -92,6 +111,45 @@ test("creatorMatchesDiscoveryBrowseFilters accepts UAE via creator country fallb
 
   assert.equal(creatorMatchesDiscoveryBrowseFilters(uaeCreator, filters), true);
   assert.equal(creatorMatchesDiscoveryBrowseFilters(egCreator, filters), false);
+});
+
+test("creatorMatchesDiscoveryBrowseFilters accepts platform via filters.platform singular", () => {
+  const filters: UnifiedCreatorBrowseFilters = {
+    platform: "instagram",
+  };
+  const match = makeCreator({
+    unified_id: "inf:1",
+    platforms: [
+      {
+        id: "pa-1",
+        platform: "instagram",
+        handle: "creator",
+        profile_url: null,
+        follower_count: 1000,
+        engagement_rate: 1,
+        audience_country: "EG",
+        is_verified: false,
+      },
+    ],
+  });
+  const miss = makeCreator({
+    unified_id: "inf:2",
+    platforms: [
+      {
+        id: "pa-2",
+        platform: "tiktok",
+        handle: "creator",
+        profile_url: null,
+        follower_count: 1000,
+        engagement_rate: 1,
+        audience_country: "EG",
+        is_verified: false,
+      },
+    ],
+  });
+
+  assert.equal(creatorMatchesDiscoveryBrowseFilters(match, filters), true);
+  assert.equal(creatorMatchesDiscoveryBrowseFilters(miss, filters), false);
 });
 
 test("creatorMatchesDiscoveryBrowseFilters uses enriched demographics for gender", () => {

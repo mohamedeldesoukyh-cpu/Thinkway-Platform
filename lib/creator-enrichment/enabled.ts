@@ -11,6 +11,11 @@
 import type { EnrichmentTrigger } from "./types";
 import { shouldAutoEnrichForTrigger } from "@/lib/discovery/control-center/discovery-control-policy";
 import { getCachedDiscoveryControlSettings } from "@/lib/discovery/control-center/discovery-control-service";
+import {
+  AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON,
+  isAutomaticEnrichmentAndAcquisitionDisabled,
+  logBlockedAutomaticAction,
+} from "@/lib/discovery/operational-safety";
 
 export type EnrichmentScope =
   | "avatar"
@@ -123,17 +128,39 @@ export function canEnqueueCreatorEnrichment(
   const scope = input.scope ?? "all";
 
   if (AUTO_TRIGGERS.has(input.trigger)) {
-    const settings = getCachedDiscoveryControlSettings();
-    if (!shouldAutoEnrichForTrigger(input.trigger, settings)) {
+    if (isAutomaticEnrichmentAndAcquisitionDisabled()) {
+      logBlockedAutomaticAction(
+        "enqueue_creator_enrichment",
+        AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON,
+        { trigger: input.trigger, scope }
+      );
       return {
         allowed: false,
-        reason: `Automatic enrichment disabled by Discovery Control Center (${settings.automaticEnrichment}).`,
+        reason: AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON,
+      };
+    }
+    const settings = getCachedDiscoveryControlSettings();
+    if (!shouldAutoEnrichForTrigger(input.trigger, settings)) {
+      const reason = `Automatic enrichment disabled by Discovery Control Center (${settings.automaticEnrichment}).`;
+      logBlockedAutomaticAction("enqueue_creator_enrichment", reason, {
+        trigger: input.trigger,
+        scope,
+      });
+      return {
+        allowed: false,
+        reason,
       };
     }
     if (!isAutoCreatorEnrichmentEnabled()) {
+      const reason =
+        "Automatic creator enrichment is disabled (AUTO_CREATOR_ENRICHMENT=false).";
+      logBlockedAutomaticAction("enqueue_creator_enrichment", reason, {
+        trigger: input.trigger,
+        scope,
+      });
       return {
         allowed: false,
-        reason: "Automatic creator enrichment is disabled (AUTO_CREATOR_ENRICHMENT=false).",
+        reason,
       };
     }
     return { allowed: true };

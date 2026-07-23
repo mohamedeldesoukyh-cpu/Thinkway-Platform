@@ -569,6 +569,8 @@ export type StrategySectionData = {
     tierCoverage: string;
     updatedAt: string;
   };
+  /** AI-generated campaign strategy from Planning Engine (Phase 6). */
+  generatedStrategy?: import("@/lib/campaign-planning").CampaignStrategySnapshot;
 };
 
 /** Slate-grounded campaign scores recalculated on Apply All Updates. */
@@ -593,6 +595,12 @@ export type PerformanceSectionData = {
   industryBenchmark?: IndustryBenchmarkData;
   campaignScores?: CampaignScoreSet;
   kpiForecastNote?: string;
+  /** Roster-derived forecast snapshot — SSOT for numeric KPIs when slate exists. */
+  campaignForecast?: import("@/lib/campaign-forecast").CampaignForecastSnapshot;
+  /** Campaign optimization report — derived from forecast, not a recalculation. */
+  campaignOptimization?: import("@/lib/campaign-optimization").CampaignOptimizationSnapshot;
+  /** Campaign decision report — launch readiness, risks, approval summary. */
+  campaignDecision?: import("@/lib/campaign-decision").CampaignDecisionSnapshot;
 };
 
 export type BudgetSectionExtras = {

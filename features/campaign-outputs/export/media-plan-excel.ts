@@ -10,7 +10,7 @@ import {
 import type { CampaignOutputContent } from "../output-types";
 import type { MediaPlanData } from "../generators/media-plan";
 import { formatMoney } from "../generators/generator-utils";
-import { MEDIA_PLAN_COST_VAT_DISCLAIMER } from "../generators/media-plan";
+import { MEDIA_PLAN_PRICING_DISCLAIMER } from "../generators/media-plan";
 import { isMediaPlanContent } from "./media-plan-export-utils";
 
 const DAY_HEADERS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -50,13 +50,22 @@ function waveRows(data: MediaPlanData): StyledDataRow[] {
   }));
 }
 
-export async function buildMediaPlanExcel(content: CampaignOutputContent): Promise<Buffer> {
+export type BuildMediaPlanExcelOptions = {
+  /** When false, omit campaign cost from sheet meta. Defaults to true. */
+  includeCampaignCost?: boolean;
+};
+
+export async function buildMediaPlanExcel(
+  content: CampaignOutputContent,
+  options?: BuildMediaPlanExcelOptions
+): Promise<Buffer> {
   if (!isMediaPlanContent(content)) {
     throw new Error("Media Plan export requires structured calendar data.");
   }
 
   const data = content.data;
   const ctx = data.campaignContext;
+  const includeCampaignCost = options?.includeCampaignCost !== false;
   const meta: Array<{ label: string; value: string }> = [
     { label: "Duration", value: `${data.durationWeeks} weeks` },
     { label: "Creators", value: String(data.creatorCount) },
@@ -70,10 +79,10 @@ export async function buildMediaPlanExcel(content: CampaignOutputContent): Promi
   if (ctx?.groupName) meta.push({ label: "Group", value: ctx.groupName });
   if (ctx?.brandName) meta.push({ label: "Brand", value: ctx.brandName });
   if (ctx?.agencyName) meta.push({ label: "Agency", value: ctx.agencyName });
-  if (ctx?.campaignCost) {
+  if (includeCampaignCost && ctx?.campaignCost) {
     meta.push({
       label: "Campaign cost",
-      value: `${formatMoney(ctx.campaignCost.amount, ctx.campaignCost.currency)} (${MEDIA_PLAN_COST_VAT_DISCLAIMER})`,
+      value: `${formatMoney(ctx.campaignCost.amount, ctx.campaignCost.currency)} (${MEDIA_PLAN_PRICING_DISCLAIMER})`,
     });
   }
 

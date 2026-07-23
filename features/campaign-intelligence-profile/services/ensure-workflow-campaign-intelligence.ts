@@ -5,12 +5,14 @@ import { detectBrandFromProfile } from "./match-brand-from-profile";
 import { normalizeCampaignIntelligenceProfile } from "./normalize-profile";
 import type { CampaignIntelligenceProfileRow } from "../types/profile";
 import {
-  createCampaignIntelligenceProfile,
   findSavedCampaignIntelligenceProfileForWorkflow,
   getCampaignIntelligenceProfileById,
   getWorkflowCampaignIntelligenceProfileForConversation,
-  updateCampaignIntelligenceProfile,
 } from "./profile-repository";
+import {
+  elevatedCreateCampaignIntelligenceProfile,
+  elevatedUpdateCampaignIntelligenceProfile,
+} from "./profile-repository-elevated";
 import { resolveBriefTextForExtraction } from "./resolve-brief-text";
 import { runCampaignIntelligencePipeline } from "./run-intelligence-pipeline";
 
@@ -60,7 +62,7 @@ export async function resolveWorkflowCampaignIntelligenceProfile(
     brandId = brandDetection.bestMatch?.brandId ?? null;
   }
 
-  await updateCampaignIntelligenceProfile(supabase, saved.id, {
+  await elevatedUpdateCampaignIntelligenceProfile(supabase, saved.id, {
     userId: input.userId,
     profile,
     conversationId: input.conversationId,
@@ -183,7 +185,7 @@ export async function ensureWorkflowCampaignIntelligenceProfile(
     return undefined;
   }
 
-  const row = await createCampaignIntelligenceProfile(supabase, {
+  const row = await elevatedCreateCampaignIntelligenceProfile(supabase, {
     userId: input.userId,
     conversationId: input.conversationId,
     brandId,
@@ -191,7 +193,7 @@ export async function ensureWorkflowCampaignIntelligenceProfile(
     profile: savedProfile,
   });
 
-  await updateCampaignIntelligenceProfile(supabase, row.id, {
+  await elevatedUpdateCampaignIntelligenceProfile(supabase, row.id, {
     userId: input.userId,
     profile: savedProfile,
     status: "saved",

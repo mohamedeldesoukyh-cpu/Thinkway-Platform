@@ -12,6 +12,8 @@ import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
+import { TooltipIconButton } from "@/components/shared/tooltip-icon-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -62,6 +64,7 @@ export function DeliverablePricingEditor({
   creatorPlatformAccounts,
 }: DeliverablePricingEditorProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const confirmDelete = useConfirmDelete();
   const platformOptions = getCreatorConnectedPlatformOptions({
     creatorPlatformAccounts,
     assignment,
@@ -76,7 +79,12 @@ export function DeliverablePricingEditor({
     onChange([...rows, createEmptyCommercialRow(defaultPlatform)]);
   }
 
-  function removeRow(id: string) {
+  async function removeRow(id: string) {
+    const ok = await confirmDelete(
+      "Remove this deliverable pricing row? This cannot be undone.",
+      "Remove pricing row?"
+    );
+    if (!ok) return;
     onChange(rows.filter((r) => r.id !== id));
   }
 
@@ -165,15 +173,16 @@ export function DeliverablePricingEditor({
                   >
                     <CopyIcon className="size-4" />
                   </Button>
-                  <Button
+                  <TooltipIconButton
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    onClick={() => removeRow(row.id)}
+                    onClick={() => void removeRow(row.id)}
                     disabled={disabled}
+                    tooltip="Remove pricing row"
                   >
                     <Trash2Icon className="size-4" />
-                  </Button>
+                  </TooltipIconButton>
                 </div>
               </div>
 

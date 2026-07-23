@@ -44,7 +44,7 @@ export function CreatorSearchPanel({
     return (
       <div
         className={cn(
-          "flex shrink-0 items-center gap-2 border-b border-border px-4 py-3.5",
+          "creator-picker-search-bar flex shrink-0 items-center gap-2 border-b border-[#e2e8f0] bg-white px-4 py-3.5",
           className
         )}
       >
@@ -55,11 +55,11 @@ export function CreatorSearchPanel({
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder={searchPlaceholder}
             autoFocus={autoFocus}
-            className="h-9 w-full rounded-lg border border-border bg-white py-0 pr-2.5 pl-[34px] text-[13px] text-foreground outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground/80 focus:border-blue-600 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.08)]"
+            className="h-9 w-full rounded-lg border border-[#e2e8f0] bg-white py-0 pr-2.5 pl-[34px] text-[13px] text-[#0f172a] outline-none transition-[border-color,box-shadow] placeholder:text-[#94a3b8] focus:border-[#2563eb] focus:shadow-[0_0_0_3px_rgba(37,99,235,0.08)]"
           />
         </div>
         <Select value={platform} onValueChange={onPlatformChange}>
-          <SelectTrigger className="h-9 min-w-[128px] rounded-lg border-border px-2.5 text-xs text-muted-foreground shadow-none focus:border-blue-600">
+          <SelectTrigger className="h-9 min-w-[128px] rounded-lg border-[#e2e8f0] px-2.5 text-xs text-[#475569] shadow-none focus:border-[#2563eb]">
             <SelectValue placeholder="Platform" />
           </SelectTrigger>
           <SelectContent>

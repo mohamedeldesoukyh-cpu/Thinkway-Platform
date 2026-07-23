@@ -1,13 +1,13 @@
 "use client";
 
-import Link from "next/link";
-import type { ComponentType } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import type { ComponentType, ReactNode } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   ActivityIcon,
   ArrowRightLeftIcon,
   BarChart3Icon,
+  GaugeIcon,
   BrainIcon,
   Building2Icon,
   CalendarClockIcon,
@@ -18,17 +18,15 @@ import {
   CoinsIcon,
   FileSignatureIcon,
   FileTextIcon,
+  HomeIcon,
   LayoutDashboardIcon,
   LineChartIcon,
   LayersIcon,
   Link2Icon,
   ListIcon,
   MegaphoneIcon,
-  RadarIcon,
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
-  PinIcon,
-  PinOffIcon,
   PercentIcon,
   ReceiptIcon,
   RefreshCwIcon,
@@ -46,10 +44,16 @@ import {
 } from "lucide-react";
 
 import { ThinkwayLogo } from "@/components/brand/thinkway-logo";
+import { AppNavLink } from "@/components/navigation/app-nav-link";
 import { UserAccount } from "@/components/layout/user-account";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { isIntelligenceEnabled } from "@/lib/intelligence/feature-flag";
 import {
-  APP_SIDEBAR_MARGIN,
   APP_SIDEBAR_WIDTH_COLLAPSED,
   APP_SIDEBAR_WIDTH_CSS_VAR,
   APP_SIDEBAR_WIDTH_EXPANDED,
@@ -81,12 +85,19 @@ type NavGroup = {
   items: NavEntry[];
 };
 
+type NavRailItem = {
+  groupLabel: string;
+  href: string;
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+};
+
 const GROUP_ICON_TONE_CLASS: Record<NavGroupIconTone, string> = {
-  blue: "thinkway-sidebar-grp-icon thinkway-sidebar-grp-icon-blue",
-  violet: "thinkway-sidebar-grp-icon thinkway-sidebar-grp-icon-violet",
-  teal: "thinkway-sidebar-grp-icon thinkway-sidebar-grp-icon-teal",
-  amber: "thinkway-sidebar-grp-icon thinkway-sidebar-grp-icon-amber",
-  navy: "thinkway-sidebar-grp-icon thinkway-sidebar-grp-icon-navy",
+  blue: "thinkway-sidebar-grp-icon",
+  violet: "thinkway-sidebar-grp-icon",
+  teal: "thinkway-sidebar-grp-icon",
+  amber: "thinkway-sidebar-grp-icon",
+  navy: "thinkway-sidebar-grp-icon",
 };
 
 /** Global nav order — overview, workspace, commercial, finance, insights, admin. */
@@ -104,11 +115,15 @@ const navGroups: NavGroup[] = [
     label: "Workspace",
     icon: MegaphoneIcon,
     iconTone: "violet",
-    items: [{ kind: "link", href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon }],
+    items: [
+      { kind: "link", href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon },
+      { kind: "link", href: "/studio", label: "Studio", icon: LayoutDashboardIcon },
+      { kind: "link", href: "/ai", label: "Campaign AI", icon: SparklesIcon },
+    ],
   },
   {
     label: "Discovery",
-    icon: RadarIcon,
+    icon: SearchIcon,
     iconTone: "teal",
     items: [
       { kind: "link", href: "/discovery/search", label: "Search", icon: SearchIcon },
@@ -210,7 +225,6 @@ const navGroups: NavGroup[] = [
       ...(isIntelligenceEnabled()
         ? [{ kind: "link" as const, href: "/intelligence", label: "Intelligence", icon: BrainIcon }]
         : []),
-      { kind: "link", href: "/ai", label: "AI Analyst", icon: SparklesIcon },
       { kind: "link", href: "/links", label: "Link Generator", icon: Link2Icon },
     ],
   },
@@ -237,6 +251,12 @@ const navGroups: NavGroup[] = [
       },
       { kind: "link", href: "/settings/email", label: "Email", icon: Settings2Icon },
       { kind: "link", href: "/system/health", label: "System Health", icon: ActivityIcon },
+      {
+        kind: "link",
+        href: "/system/performance",
+        label: "Performance",
+        icon: GaugeIcon,
+      },
     ],
   },
 ];
@@ -244,8 +264,28 @@ const navGroups: NavGroup[] = [
 const ALL_GROUP_LABELS = navGroups.map((g) => g.label);
 const STORAGE_EXPANDED = "thinkway-sidebar-expanded";
 const STORAGE_COLLAPSED_GROUPS = "thinkway-sidebar-collapsed-groups";
-const SIDEBAR_HIDE_DELAY_MS = 200;
-const HOVER_TRIGGER_WIDTH = "0.75rem";
+
+const RAIL_PRIMARY_HREF: Record<string, string> = {
+  Overview: "/",
+  Workspace: "/campaigns",
+  Discovery: "/discovery/search",
+  "Clients and vendors CRM": "/clients",
+  Commercial: "/ios/client",
+  Finance: "/finance/invoices",
+  Insights: "/reports",
+  Administration: "/settings/users",
+};
+
+const RAIL_LABEL: Record<string, string> = {
+  "Clients and vendors CRM": "Clients & vendors",
+};
+
+/** Clearer rail glyphs — aligned to section meaning. */
+const RAIL_ICON_OVERRIDE: Partial<
+  Record<string, ComponentType<{ className?: string }>>
+> = {
+  Overview: HomeIcon,
+};
 
 /** Legacy section labels from pre-reorg sidebar — map into current groups. */
 const LEGACY_COLLAPSED_LABEL_MAP: Record<string, string[]> = {
@@ -258,6 +298,17 @@ const LEGACY_COLLAPSED_LABEL_MAP: Record<string, string[]> = {
 function getNavLinks(group: NavGroup): NavLinkItem[] {
   return group.items.filter((item): item is NavLinkItem => item.kind === "link");
 }
+
+function buildNavRailItems(): NavRailItem[] {
+  return navGroups.map((group) => ({
+    groupLabel: group.label,
+    href: RAIL_PRIMARY_HREF[group.label] ?? getNavLinks(group)[0]?.href ?? "/",
+    label: RAIL_LABEL[group.label] ?? group.label,
+    icon: RAIL_ICON_OVERRIDE[group.label] ?? group.icon,
+  }));
+}
+
+const navRailItems = buildNavRailItems();
 
 function migrateCollapsedGroups(stored: Set<string>): Set<string> {
   const migrated = new Set<string>();
@@ -287,6 +338,33 @@ type CollapsibleAppSidebarProps = {
 function isItemActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function isRailItemActive(pathname: string, groupLabel: string): boolean {
+  const group = navGroups.find((entry) => entry.label === groupLabel);
+  if (!group) return false;
+  return getNavLinks(group).some((item) => isItemActive(pathname, item.href));
+}
+
+function SidebarRailTooltip({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent
+        side="right"
+        sideOffset={10}
+        className="border-[#e2e8f0] bg-[#111827] px-2.5 py-1.5 text-[12px] font-medium text-white"
+      >
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 function findActiveGroupLabel(pathname: string): string | null {
@@ -331,13 +409,10 @@ function initialCollapsedGroups(pathname: string): Set<string> {
 export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps) {
   const pathname = usePathname();
   const [expanded, setExpanded] = useState(true);
-  const [revealed, setRevealed] = useState(false);
-  const [pinned, setPinned] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState(() =>
     initialCollapsedGroups(pathname)
   );
   const [hydrated, setHydrated] = useState(false);
-  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setExpanded(readSidebarExpanded());
@@ -373,59 +448,19 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
     localStorage.setItem(STORAGE_EXPANDED, String(value));
   }, []);
 
-  const clearHideTimer = useCallback(() => {
-    if (hideTimerRef.current) {
-      clearTimeout(hideTimerRef.current);
-      hideTimerRef.current = null;
-    }
-  }, []);
-
-  const scheduleHide = useCallback(() => {
-    if (pinned) return;
-    clearHideTimer();
-    hideTimerRef.current = setTimeout(() => {
-      setRevealed(false);
-      hideTimerRef.current = null;
-    }, SIDEBAR_HIDE_DELAY_MS);
-  }, [clearHideTimer, pinned]);
-
-  const handleReveal = useCallback(() => {
-    clearHideTimer();
-    setRevealed(true);
-  }, [clearHideTimer]);
-
-  const togglePin = useCallback(() => {
-    setPinned((prev) => {
-      const next = !prev;
-      if (next) {
-        clearHideTimer();
-        setRevealed(true);
-      }
-      return next;
-    });
-  }, [clearHideTimer]);
-
-  useEffect(() => {
-    return () => clearHideTimer();
-  }, [clearHideTimer]);
-
-  const isVisible = pinned || revealed;
-  const displayExpanded = resolveAppSidebarExpanded(isVisible, pinned, expanded);
+  const displayExpanded = resolveAppSidebarExpanded(expanded);
 
   useEffect(() => {
     if (!hydrated) return;
     document.documentElement.style.setProperty(
       APP_SIDEBAR_WIDTH_CSS_VAR,
-      getAppSidebarLayoutWidth(isVisible, displayExpanded)
+      getAppSidebarLayoutWidth(displayExpanded)
     );
-  }, [displayExpanded, hydrated, isVisible]);
+  }, [displayExpanded, hydrated]);
 
   const sidebarWidth = displayExpanded
     ? APP_SIDEBAR_WIDTH_EXPANDED
     : APP_SIDEBAR_WIDTH_COLLAPSED;
-  const slotWidth = isVisible
-    ? `calc(${sidebarWidth} + ${APP_SIDEBAR_MARGIN})`
-    : "0px";
 
   const toggleGroup = useCallback((label: string) => {
     setCollapsedGroups((prev) => {
@@ -438,220 +473,201 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
   }, []);
 
   const sidebarControlButtonClass =
-    "flex size-[30px] items-center justify-center rounded-lg border-none bg-transparent text-sidebar-muted-foreground transition-colors hover:bg-[var(--sidebar-rail-hover-bg)] hover:text-sidebar-foreground active:scale-90";
+    "flex size-8 items-center justify-center rounded-lg border-none bg-transparent text-sidebar-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-primary active:scale-95";
 
   return (
-    <>
-      {!isVisible ? (
-        <div
-          aria-hidden
-          className="fixed inset-y-0 left-0 z-50 hidden md:block"
-          style={{ width: HOVER_TRIGGER_WIDTH }}
-          onMouseEnter={handleReveal}
-        />
-      ) : null}
-
+    <TooltipProvider delayDuration={300}>
       <div
-        className="relative hidden shrink-0 self-start overflow-hidden transition-all duration-300 ease-in-out md:sticky md:top-0 md:block md:h-svh md:max-h-svh"
-        style={{ width: slotWidth }}
-        onMouseEnter={handleReveal}
-        onMouseLeave={scheduleHide}
+        className="relative hidden shrink-0 self-stretch overflow-hidden transition-all duration-300 ease-in-out md:sticky md:top-0 md:block md:h-full md:max-h-full"
+        style={{ width: sidebarWidth }}
       >
         <aside
           className={cn(
-            "absolute flex flex-col overflow-hidden rounded-[20px] border border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out",
-            "shadow-[var(--sidebar-rail-float-shadow)]",
-            isVisible
-              ? "pointer-events-auto translate-x-0 opacity-100"
-              : "pointer-events-none -translate-x-2 opacity-0"
+            "thinkway-app-sidebar absolute flex flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out",
+            !displayExpanded && "thinkway-app-sidebar--rail"
           )}
           style={{
-            left: APP_SIDEBAR_MARGIN,
-            top: APP_SIDEBAR_MARGIN,
-            height: `calc(100svh - 2 * ${APP_SIDEBAR_MARGIN})`,
+            left: 0,
+            top: 0,
+            height: "100%",
             width: sidebarWidth,
           }}
         >
-      <div
-        className={cn(
-          "flex items-center",
-          displayExpanded
-            ? "justify-between px-[18px] pb-3 pt-[18px]"
-            : "justify-center px-1.5 py-3"
-        )}
-      >
-        <Link href="/" className="min-w-0" title="Thinkway">
-          <ThinkwayLogo showText={displayExpanded} compact={!displayExpanded} className="mb-0" />
-        </Link>
+          <div
+            className={cn(
+              "flex items-center",
+              displayExpanded
+                ? "gap-3 border-b border-sidebar-border px-5 pb-4 pt-5"
+                : "justify-center border-b border-sidebar-border px-2 pb-3 pt-5"
+            )}
+          >
+            <AppNavLink href="/" className="min-w-0 shrink-0" title="Thinkway">
+              <ThinkwayLogo showText={displayExpanded} compact className="mb-0" />
+            </AppNavLink>
             {displayExpanded ? (
-              <div className="flex items-center gap-0.5">
-                <button
-                  type="button"
-                  onClick={togglePin}
-                  className={sidebarControlButtonClass}
-                  title={pinned ? "Unpin sidebar" : "Pin sidebar open"}
-                  aria-label={pinned ? "Unpin sidebar" : "Pin sidebar open"}
-                  aria-pressed={pinned}
-                >
-                  {pinned ? (
-                    <PinOffIcon className="size-4" />
-                  ) : (
-                    <PinIcon className="size-4" />
-                  )}
-                </button>
-                {pinned ? (
+              <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+                <span aria-hidden className="h-6 w-px shrink-0 bg-[#e2e8f0] dark:bg-border" />
+                <SidebarRailTooltip label="Collapse to icons">
                   <button
                     type="button"
                     onClick={() => persistExpanded(false)}
                     className={sidebarControlButtonClass}
-                    title="Collapse sidebar"
-                    aria-label="Collapse sidebar"
+                    aria-label="Collapse to icons"
                   >
                     <PanelLeftCloseIcon className="size-4" />
                   </button>
-                ) : null}
+                </SidebarRailTooltip>
               </div>
             ) : null}
-      </div>
+          </div>
 
           {!displayExpanded ? (
-            <div className="flex justify-center gap-1 px-1.5 py-1">
-              <button
-                type="button"
-                onClick={togglePin}
-                className={sidebarControlButtonClass}
-                title={pinned ? "Unpin sidebar" : "Pin sidebar open"}
-                aria-label={pinned ? "Unpin sidebar" : "Pin sidebar open"}
-                aria-pressed={pinned}
-              >
-                {pinned ? (
-                  <PinOffIcon className="size-4" />
-                ) : (
-                  <PinIcon className="size-4" />
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => persistExpanded(true)}
-                className={sidebarControlButtonClass}
-                title="Expand sidebar"
-                aria-label="Expand sidebar"
-              >
-                <PanelLeftOpenIcon className="size-4" />
-              </button>
-            </div>
-          ) : null}
-
-      <nav
-        className={cn(
-          "flex flex-1 flex-col overflow-y-auto overflow-x-hidden",
-          displayExpanded ? "gap-0.5 px-3 pb-3 pt-0.5" : "gap-0.5 px-1 py-2"
-        )}
-      >
-        {navGroups.map((group) => {
-          const groupCollapsed = collapsedGroups.has(group.label);
-          const GroupIcon = group.icon;
-
-          return (
-            <div key={group.label} className="mb-0.5 flex flex-col">
-              {displayExpanded ? (
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(group.label)}
-                  className="flex w-full items-center gap-[11px] rounded-[11px] px-2.5 py-2.5 text-left text-[13px] font-semibold text-sidebar-foreground transition-colors hover:bg-[var(--sidebar-rail-hover-bg)] active:scale-[0.99]"
-                  aria-expanded={!groupCollapsed}
-                  aria-label={`${groupCollapsed ? "Expand" : "Collapse"} ${group.label}`}
-                >
-                  <span className={GROUP_ICON_TONE_CLASS[group.iconTone]}>
-                    <GroupIcon className="size-4" />
-                  </span>
-                  <span className="min-w-0 flex-1 truncate">{group.label}</span>
-                  <ChevronRightIcon
-                    className={cn(
-                      "size-[15px] shrink-0 text-sidebar-muted-foreground transition-transform duration-200",
-                      !groupCollapsed && "rotate-90"
-                    )}
-                  />
-                </button>
-              ) : null}
-
-              <div
-                className={cn(
-                  "flex flex-col",
-                  displayExpanded && groupCollapsed && "hidden",
-                  displayExpanded && "pl-1"
-                )}
-              >
-                {group.items.map((item) => {
-                  if (item.kind === "subheader") {
-                    if (!displayExpanded) return null;
-                    return (
-                      <div
-                        key={`subheader-${item.label}`}
-                        className="px-3 pt-2 pb-0.5 text-[11px] font-bold tracking-wide text-sidebar-muted-foreground uppercase first:pt-0"
-                      >
-                        {item.label}
-                      </div>
-                    );
-                  }
-
-                  const active = isItemActive(pathname, item.href);
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.href}
+            <nav
+              aria-label="Primary"
+              className="thinkway-app-sidebar-rail flex flex-1 flex-col items-center gap-2 overflow-y-auto px-2 py-4"
+            >
+              {navRailItems.map((item) => {
+                const active = isRailItemActive(pathname, item.groupLabel);
+                const Icon = item.icon;
+                return (
+                  <SidebarRailTooltip key={item.groupLabel} label={item.label}>
+                    <AppNavLink
                       href={item.href}
-                      title={item.label}
+                      aria-label={item.label}
+                      aria-current={active ? "page" : undefined}
                       className={cn(
-                        "relative flex items-center font-medium transition-[background-color,color] duration-[130ms]",
-                        displayExpanded
-                          ? "my-px gap-2.5 rounded-[10px] py-2 pr-3 pl-4 text-[13px]"
-                          : "justify-center rounded-lg px-1 py-1.5 text-sm",
+                        "thinkway-app-sidebar-rail-link flex size-10 items-center justify-center rounded-lg transition-colors duration-150",
                         active
-                          ? displayExpanded
-                            ? "thinkway-sidebar-item-active"
-                            : "text-white shadow-[var(--sidebar-rail-active-shadow)] [background:var(--sidebar-rail-grad)]"
-                          : displayExpanded
-                            ? "text-[var(--sidebar-rail-item-fg)] hover:bg-[var(--sidebar-rail-hover-bg)] hover:text-sidebar-foreground"
-                            : "text-sidebar-muted-foreground hover:bg-[var(--sidebar-rail-hover-bg)] hover:text-sidebar-foreground"
+                          ? "thinkway-app-sidebar-rail-link--active bg-[var(--sidebar-active-bg)] text-primary dark:text-blue-400"
+                          : "text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-primary dark:hover:text-blue-400"
                       )}
                     >
-                      {displayExpanded ? (
-                        <span
-                          className={cn(
-                            "thinkway-sidebar-item-dot",
-                            !active && "group-hover:bg-sidebar-muted-foreground"
-                          )}
-                        />
-                      ) : (
-                        <Icon className="size-3.5 shrink-0" />
-                      )}
-                      {displayExpanded ? (
-                        <span className="truncate font-medium">{item.label}</span>
-                      ) : null}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </nav>
+                      <Icon className="size-[18px] shrink-0 stroke-[1.85]" />
+                    </AppNavLink>
+                  </SidebarRailTooltip>
+                );
+              })}
 
-      <div
-        className={cn(
-          "border-t border-[var(--sidebar-rail-line)]",
-          displayExpanded ? "px-3.5 py-3" : "p-1.5"
-        )}
-      >
-        {displayExpanded ? (
-          <UserAccount email={userEmail} />
-        ) : (
-          <UserAccount email={userEmail} compact />
-        )}
-      </div>
+              <div className="min-h-3 flex-1" aria-hidden />
+
+              <SidebarRailTooltip label="Expand sidebar">
+                <button
+                  type="button"
+                  onClick={() => persistExpanded(true)}
+                  className={sidebarControlButtonClass}
+                  aria-label="Expand sidebar"
+                >
+                  <PanelLeftOpenIcon className="size-4" />
+                </button>
+              </SidebarRailTooltip>
+            </nav>
+          ) : (
+            <nav className="thinkway-app-sidebar-nav flex flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 py-3">
+              {navGroups.map((group, groupIndex) => {
+                const groupCollapsed = collapsedGroups.has(group.label);
+                const GroupIcon = group.icon;
+
+                return (
+                  <div
+                    key={group.label}
+                    className={cn(
+                      "thinkway-app-sidebar-section flex flex-col",
+                      groupIndex > 0 && "mt-3 border-t border-sidebar-border pt-3"
+                    )}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(group.label)}
+                      className="thinkway-app-sidebar-section-head flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent"
+                      aria-expanded={!groupCollapsed}
+                      aria-label={`${groupCollapsed ? "Expand" : "Collapse"} ${group.label}`}
+                    >
+                      <span className={GROUP_ICON_TONE_CLASS[group.iconTone]}>
+                        <GroupIcon className="size-4 stroke-[1.75] text-sidebar-muted-foreground" />
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-[11px] font-semibold tracking-[0.08em] text-sidebar-muted-foreground uppercase">
+                        {group.label}
+                      </span>
+                      <ChevronRightIcon
+                        className={cn(
+                          "size-3.5 shrink-0 text-sidebar-muted-foreground/70 transition-transform duration-200",
+                          !groupCollapsed && "rotate-90"
+                        )}
+                      />
+                    </button>
+
+                    <div
+                      className={cn(
+                        "thinkway-app-sidebar-section-items mt-1 ml-3 flex flex-col border-l border-sidebar-border pl-2",
+                        groupCollapsed && "hidden"
+                      )}
+                    >
+                      {group.items.map((item) => {
+                        if (item.kind === "subheader") {
+                          return (
+                            <div
+                              key={`subheader-${item.label}`}
+                              className="px-2 pt-2.5 pb-1 text-[10px] font-semibold tracking-[0.07em] text-sidebar-muted-foreground uppercase"
+                            >
+                              {item.label}
+                            </div>
+                          );
+                        }
+
+                        const active = isItemActive(pathname, item.href);
+                        const Icon = item.icon;
+                        return (
+                          <AppNavLink
+                            key={item.href}
+                            href={item.href}
+                            title={item.label}
+                            className={cn(
+                              "thinkway-app-sidebar-link flex items-center gap-2.5 rounded-md px-2 py-2 text-[13px] font-medium transition-colors duration-150",
+                              active
+                                ? "thinkway-app-sidebar-link--active bg-[var(--sidebar-active-bg)] text-primary dark:text-blue-400"
+                                : "text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                            )}
+                          >
+                            <Icon
+                              className={cn(
+                                "size-4 shrink-0 stroke-[1.75]",
+                                active ? "text-primary dark:text-blue-400" : "text-sidebar-muted-foreground"
+                              )}
+                            />
+                            <span
+                              className={cn(
+                                "truncate",
+                                active && "font-semibold text-primary dark:text-blue-400"
+                              )}
+                            >
+                              {item.label}
+                            </span>
+                          </AppNavLink>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </nav>
+          )}
+
+          <div
+            className={cn(
+              "bg-sidebar",
+              displayExpanded
+                ? "border-t border-sidebar-border px-4 py-3"
+                : "flex justify-center border-t border-sidebar-border px-2 pb-4 pt-1"
+            )}
+          >
+            {displayExpanded ? (
+              <UserAccount email={userEmail} />
+            ) : (
+              <UserAccount email={userEmail} compact />
+            )}
+          </div>
         </aside>
       </div>
-    </>
+    </TooltipProvider>
   );
 }

@@ -22,6 +22,7 @@ import { useAiChat } from "../hooks/use-ai-chat";
 import { useAiComposerMetrics } from "../hooks/use-ai-composer-metrics";
 import { useAiTopbarMetrics } from "../hooks/use-ai-topbar-metrics";
 import { useConversations } from "../hooks/use-conversations";
+import { STUDIO_CHAT_CLASSES } from "../constants/studio-chat-tokens";
 import type { AiMessage, WorkspaceUrlParams } from "../types";
 import { AiChatInput } from "./ai-chat-input";
 import { AiWelcomeScreen } from "./ai-welcome-screen";
@@ -31,6 +32,7 @@ import { CampaignStudioPanel, findLatestStudioMessage } from "./campaign-studio-
 import { CampaignCopilotDock } from "./campaign-copilot-dock";
 import { ConversationList } from "./conversation-list";
 import { SuggestedActionsBar } from "./suggested-actions-bar";
+import "../styles/studio-chat-ref.css";
 import "./ai-workspace.css";
 
 const SIDEBAR_COLLAPSED_KEY = "ai-workspace-sidebar-collapsed";
@@ -49,12 +51,14 @@ type IntelligenceWorkspaceProps = {
   initialConversationId?: string;
   workspaceParams?: WorkspaceUrlParams;
   workspaceLabel?: string;
+  userDisplayName?: string;
 };
 
 export function IntelligenceWorkspace({
   initialConversationId,
   workspaceParams,
   workspaceLabel,
+  userDisplayName,
 }: IntelligenceWorkspaceProps) {
   const searchParams = useSearchParams();
   // Deep-link target for the studio tabs (Studio / Outputs / Director). The panel
@@ -98,6 +102,10 @@ export function IntelligenceWorkspace({
 
   const handleChatScrollContainerChange = useCallback((node: HTMLDivElement | null) => {
     setChatScrollContainer(node);
+  }, []);
+
+  const handleReferenceChatBodyRef = useCallback((node: HTMLDivElement | null) => {
+    if (node) setChatScrollContainer(node);
   }, []);
 
   useAiTopbarMetrics({
@@ -736,9 +744,27 @@ export function IntelligenceWorkspace({
   const handleSlateUpdated = useCallback(
     (messageId: string, campaignObject: Record<string, unknown>) => {
       setMessages(
-        (prev) =>
-          prev.map((message) =>
-            message.id === messageId
+        (prev) => {
+          const hasTarget = prev.some((message) => message.id === messageId);
+          if (hasTarget) {
+            return prev.map((message) =>
+              message.id === messageId
+                ? {
+                    ...message,
+                    metadata: {
+                      ...message.metadata,
+                      campaignObject,
+                    },
+                  }
+                : message
+            );
+          }
+
+          const latestStudio = findLatestStudioMessage(prev);
+          if (!latestStudio) return prev;
+
+          return prev.map((message) =>
+            message.id === latestStudio.id
               ? {
                   ...message,
                   metadata: {
@@ -747,7 +773,8 @@ export function IntelligenceWorkspace({
                   },
                 }
               : message
-          ),
+          );
+        },
         "handleSlateUpdated"
       );
     },
@@ -884,57 +911,84 @@ export function IntelligenceWorkspace({
   // topbar scroll-pad; the floating composer still needs bottom clearance.
   const renderChatSurface = (options?: { inDock?: boolean }) => {
     const inDock = options?.inDock ?? false;
-    return (
-      <>
-        {loadingConversation && messages.length === 0 ? (
-          <div
-            className={cn(
-              "flex h-full flex-col items-center justify-center gap-2 overflow-y-auto pb-[var(--ai-composer-scroll-pad,6rem)]",
-              inDock ? "pt-4" : "pt-[var(--ai-topbar-scroll-pad,4.25rem)]"
-            )}
-          >
-            <span className="ai-spinner size-6" />
-            <p className="text-xs text-muted-foreground">Loading conversation…</p>
-          </div>
-        ) : showEmptyState ? (
-          <AiWelcomeScreen
-            className={cn(
-              "h-full overflow-y-auto pb-[var(--ai-composer-scroll-pad,6rem)]",
-              inDock ? "pt-4" : "pt-[var(--ai-topbar-scroll-pad,4.25rem)]"
-            )}
-            onSelect={(p, intent) => void handleSend(p, intent)}
-            disabled={isStreaming}
-          />
-        ) : (
-          <>
-            <ChatThread
-              messages={messages}
-              streamingContent={streamingContent}
-              isStreaming={isStreaming}
-              workflowProgress={workflowProgress}
-              conversationId={conversationId}
-              editingUserMessageId={editingUserMessageId}
-              studioInSidePanel={campaignMode}
-              onEditStart={setEditingUserMessageId}
-              onEditCancel={handleEditCancel}
-              onCardUpdated={handleCardUpdated}
-              onVendorDecisionsUpdated={handleVendorDecisionsUpdated}
-              onSlateUpdated={handleSlateUpdated}
-              onEditMessage={(id, content) => void handleEditMessage(id, content)}
-              onRetryMessage={(message) => void handleRetryMessage(message)}
-              onDeleteMessage={handleDeleteMessage}
-              onScrollContainerChange={handleChatScrollContainerChange}
-              className={inDock ? "pt-3" : undefined}
-            />
-            <SuggestedActionsBar
-              onSelect={(p, intent) => void handleSend(p, intent)}
-              disabled={isStreaming}
-              messages={messages}
-              workspace={workspace}
-            />
-          </>
-        )}
 
+    const chatBody = loadingConversation && messages.length === 0 ? (
+      <div className="sc-loading">
+        <span className="ai-spinner size-6" />
+        <p>Loading conversation…</p>
+      </div>
+    ) : showEmptyState ? (
+      <AiWelcomeScreen
+        userDisplayName={userDisplayName}
+        onSelect={(p, intent) => void handleSend(p, intent)}
+        disabled={isStreaming}
+      />
+    ) : (
+      <div className="sc-chat-thread">
+        <ChatThread
+          messages={messages}
+          streamingContent={streamingContent}
+          isStreaming={isStreaming}
+          workflowProgress={workflowProgress}
+          conversationId={conversationId}
+          editingUserMessageId={editingUserMessageId}
+          studioInSidePanel={campaignMode}
+          onEditStart={setEditingUserMessageId}
+          onEditCancel={handleEditCancel}
+          onCardUpdated={handleCardUpdated}
+          onVendorDecisionsUpdated={handleVendorDecisionsUpdated}
+          onSlateUpdated={handleSlateUpdated}
+          onEditMessage={(id, content) => void handleEditMessage(id, content)}
+          onRetryMessage={(message) => void handleRetryMessage(message)}
+          onDeleteMessage={handleDeleteMessage}
+          onScrollContainerChange={inDock ? handleChatScrollContainerChange : undefined}
+          variant={inDock ? "overlay" : "reference"}
+          externalScrollContainer={inDock ? null : chatScrollContainer}
+          className={inDock ? "pt-3" : undefined}
+        />
+        <SuggestedActionsBar
+          onSelect={(p, intent) => void handleSend(p, intent)}
+          disabled={isStreaming}
+          messages={messages}
+          workspace={workspace}
+          variant={inDock ? "default" : "reference"}
+        />
+      </div>
+    );
+
+    if (inDock) {
+      return (
+        <>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{chatBody}</div>
+          <AiChatInput
+            ref={composerRef}
+            value={prompt}
+            onChange={setPrompt}
+            onSend={() => void handleSend()}
+            onStop={() => void handleStop()}
+            onNewChat={() => void handleNewChat()}
+            disabled={loadingConversation && messages.length === 0}
+            isStreaming={isStreaming}
+            error={createError ?? error}
+            layout="overlay"
+          />
+        </>
+      );
+    }
+
+    return (
+      <div className={STUDIO_CHAT_CLASSES.chatColumn}>
+        <div
+          ref={handleReferenceChatBodyRef}
+          className={cn(
+            STUDIO_CHAT_CLASSES.chatBody,
+            showEmptyState || (loadingConversation && messages.length === 0)
+              ? "sc-chat-body-centered"
+              : undefined
+          )}
+        >
+          {chatBody}
+        </div>
         <AiChatInput
           ref={composerRef}
           value={prompt}
@@ -945,8 +999,9 @@ export function IntelligenceWorkspace({
           disabled={loadingConversation && messages.length === 0}
           isStreaming={isStreaming}
           error={createError ?? error}
+          layout="inline"
         />
-      </>
+      </div>
     );
   };
 
@@ -975,6 +1030,7 @@ export function IntelligenceWorkspace({
           isCopilotStreaming={isStreaming}
           focusedSectionId={studioFocusSection}
           onFocusSection={handleFocusSection}
+          copilotOpen={!dockCollapsed}
           variant="main"
           initialView={initialStudioView}
           conversations={conversations}
@@ -989,7 +1045,7 @@ export function IntelligenceWorkspace({
           onToggleCollapsed={() => setDockCollapsed((v) => !v)}
           height={dockHeight}
           onHeightChange={setDockHeight}
-          subtitle="Editing assistant — refine the Studio live"
+          subtitle="Editing assistant — refine any output"
         >
           {renderChatSurface({ inDock: true })}
         </CampaignCopilotDock>
@@ -997,11 +1053,14 @@ export function IntelligenceWorkspace({
     );
   }
 
-  // CONVERSATION MODE — full-screen AI workspace (unchanged): branded topbar,
-  // conversation sidebar, full-screen chat. "I'm creating a campaign."
+  // CONVERSATION MODE — full-screen AI workspace: flat reference shell with sidebar,
+  // static chat header, lavender main surface, and inline composer.
   return (
-    <div ref={workspaceRootRef} className="ai-main-surface flex min-h-0 flex-1 flex-col overflow-hidden p-3">
-      <div className="flex min-h-0 flex-1 gap-3 overflow-hidden">
+    <div
+      ref={workspaceRootRef}
+      className={cn(STUDIO_CHAT_CLASSES.root, "sc-app flex min-h-0 flex-1 flex-col overflow-hidden")}
+    >
+      <div className="sc-shell flex min-h-0 flex-1 overflow-hidden">
         <ConversationList
           className="hidden lg:flex"
           conversations={conversations}
@@ -1015,12 +1074,11 @@ export function IntelligenceWorkspace({
           onRefresh={() => void refresh({ background: true })}
         />
 
-        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <div className={cn(STUDIO_CHAT_CLASSES.main, "relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden")}>
           <AiWorkspaceTopbar
             ref={topbarRef}
             workspace={workspace}
             workspaceLabel={workspaceLabel}
-            className="absolute inset-x-0 top-0 z-30"
           />
           {renderChatSurface()}
         </div>

@@ -9,6 +9,40 @@ export type AddableCreatorRef = {
   discovered_profile_id: string | null;
 };
 
+export type ShortlistItemMembershipRef = {
+  influencer_id?: string | null;
+  profile_id?: string | null;
+  unified_id?: string | null;
+  collapse_group_id?: string | null;
+};
+
+/** True when the creator already has a standalone (non-collapsed) row on the list. */
+export function hasStandaloneShortlistCreator(
+  existingItems: ShortlistItemMembershipRef[],
+  resolved: {
+    influencerId?: string | null;
+    discoveredProfileId?: string | null;
+    unifiedId?: string | null;
+  }
+): boolean {
+  return existingItems.some((item) => {
+    if (item.collapse_group_id) return false;
+    if (
+      resolved.discoveredProfileId &&
+      item.profile_id === resolved.discoveredProfileId
+    ) {
+      return true;
+    }
+    if (resolved.influencerId && item.influencer_id === resolved.influencerId) {
+      return true;
+    }
+    if (resolved.unifiedId && item.unified_id === resolved.unifiedId) {
+      return true;
+    }
+    return false;
+  });
+}
+
 export type AddToShortlistOutcome = {
   added: number;
   alreadyOnList: number;

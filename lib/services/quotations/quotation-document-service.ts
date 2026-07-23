@@ -7,8 +7,9 @@ import {
 import { getAuthContext } from "@/lib/auth/permissions-server";
 import { hasPermission } from "@/lib/auth/permissions";
 import { buildClientSelectOptions } from "@/lib/clients/client-select-options";
-import { enrichQuotationItemsWithCreatorAvatars } from "@/lib/services/quotations/enrich-quotation-item-avatars";
+import { enrichQuotationItemsForWorkspace } from "@/lib/services/quotations/enrich-quotation-item-avatars";
 import {
+  aggregateQuotationAudienceSize,
   aggregateQuotationEngagementRate,
   aggregateQuotationReach,
 } from "@/lib/quotations/quotation-aggregate-metrics";
@@ -18,9 +19,9 @@ import {
   getMasterDataOptions,
 } from "@/lib/master-data/queries";
 import { isCommercialSyncEnabled, stripQuotationVersionSuffix } from "@/lib/commercial-sync/rules";
+import { QUOTATION_PERMISSIONS } from "@/lib/domains/commercial/quotation-constants";
 import type { CommercialInputMode, Database, QuotationStatus } from "@/types/database";
 
-import { QUOTATION_PERMISSIONS } from "@/lib/domains/commercial/quotation-constants";
 import {
   isQuotationExpired,
   validDaysRemaining,
@@ -82,6 +83,8 @@ function mapItem(raw: Record<string, unknown>): QuotationItemRow {
     af_value: Number(raw.af_value ?? 0),
     af_value_egp: Number(raw.af_value_egp ?? 0),
     sort_order: Number(raw.sort_order ?? 0),
+    collapse_group_id: (raw.collapse_group_id as string | null) ?? null,
+    collapse_label: (raw.collapse_label as string | null) ?? null,
   };
 }
 
@@ -294,15 +297,27 @@ async function loadQuotationCreatorPreviews(
   return previews;
 }
 
+/** Resolve a route key (UUID, serial, slug, or slug-shortId). */
+export async function resolveQuotationIdByRouteKey(
+  supabase: SupabaseClient<Database>,
+  routeKey: string
+): Promise<string | null> {
+  const { resolveEntityIdByRouteKey } = await import("@/lib/routing/resolve-entity-route");
+  return resolveEntityIdByRouteKey(supabase, "quotations", routeKey);
+}
+
 export async function getQuotationDetail(
   supabase: SupabaseClient<Database>,
-  id: string
+  idOrSerial: string
 ): Promise<QuotationDetail | null> {
   const ctx = await getAuthContext(supabase);
   const canManage =
     ctx.roleSlug === "admin" ||
     ctx.roleSlug === "super_admin" ||
     (await hasPermission(supabase, QUOTATION_PERMISSIONS.write));
+
+  const id = await resolveQuotationIdByRouteKey(supabase, idOrSerial);
+  if (!id) return null;
 
   const { data, error } = await supabase
     .from("quotations")
@@ -392,7 +407,7 @@ export async function getQuotationDetail(
   if (shortlistResult.error) throw new Error(shortlistResult.error.message);
   if (ownerResult.error) throw new Error(ownerResult.error.message);
 
-  const items = await enrichQuotationItemsWithCreatorAvatars(
+  const items = await enrichQuotationItemsForWorkspace(
     supabase,
     ((itemsResult.data as Record<string, unknown>[]) ?? []).map(mapItem)
   );
@@ -547,6 +562,7 @@ export async function getQuotationDetail(
     items,
     revisions,
     canManage,
+    audience_size: aggregateQuotationAudienceSize(items),
     estimated_reach: aggregateQuotationReach(items),
     estimated_engagement_rate: aggregateQuotationEngagementRate(items),
   };

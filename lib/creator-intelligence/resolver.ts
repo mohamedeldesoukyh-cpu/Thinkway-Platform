@@ -162,17 +162,22 @@ function resolveAudience(creator: UnifiedCreatorResult): CreatorIntelligence["au
   const hasDemographics = Boolean(demographics);
   const audienceCountry = resolveCountryCode(creator.estimated_country) || null;
   const creatorCountry = resolveCountryCode(creator.country_code) || null;
+  const storedCountries = (creator.country_codes ?? [])
+    .map((code) => resolveCountryCode(code))
+    .filter((code): code is string => Boolean(code));
 
-  // Audience countries: demographics top-countries when known; else creator country proxy.
+  // Audience countries: demographics top-countries when known; else stored multi-country; else creator country proxy.
   const topCountries = (demographics?.topCountries ?? [])
     .map((entry) => resolveCountryCode(entry.code ?? entry.name))
     .filter((code): code is string => Boolean(code));
   const countries =
     topCountries.length > 0
       ? attribute([...new Set(topCountries)], "platform_metrics")
-      : creatorCountry || audienceCountry
-        ? attribute([creatorCountry ?? audienceCountry!], "declared")
-        : attribute<string[]>([], "unresolved");
+      : storedCountries.length > 0
+        ? attribute([...new Set(storedCountries)], "declared")
+        : creatorCountry || audienceCountry
+          ? attribute([creatorCountry ?? audienceCountry!], "declared")
+          : attribute<string[]>([], "unresolved");
 
   // Dominant age bucket: argmax over known shares.
   let dominantAgeBucket: CreatorIntelligence["audience"]["dominantAgeBucket"] =

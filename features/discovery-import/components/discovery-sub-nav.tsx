@@ -1,75 +1,74 @@
 import Link from "next/link";
 
 import { cn } from "@/lib/utils";
-import { DiscoveryDatabaseStatsBar } from "@/features/discovery/components/discovery-database-stats-bar";
-import { getDiscoveryDatabaseStats } from "@/features/discovery/queries";
 
 import {
   DISCOVERY_SUB_NAV_PAGES,
-  DiscoveryPageIconBadge,
+  type DiscoveryPageIdentity,
 } from "@/features/discovery/components/discovery-page-identity";
 
 type DiscoverySubNavProps = {
   activeHref: string;
-  /** Hide creator database stats bar (e.g. on quotation workspace). */
-  showDatabaseStats?: boolean;
 };
 
-function resolveActiveTabClass(isActive: boolean, pageKey: string): string {
-  if (!isActive) {
-    return "text-muted-foreground hover:bg-muted/60 hover:text-foreground";
+function isDiscoveryTabActive(activeHref: string, page: DiscoveryPageIdentity): boolean {
+  if (activeHref === page.href) return true;
+  if (page.key === "intelligence" && activeHref.startsWith("/discovery/intelligence")) {
+    return true;
   }
-
-  if (pageKey === "import") {
-    return "border border-emerald-200 bg-emerald-50 font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300";
+  if (page.key === "shortlists" && activeHref.startsWith("/discovery/shortlists")) {
+    return true;
   }
-
-  return "border border-blue-200 bg-blue-50 font-semibold text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300";
+  if (page.key === "quotations" && activeHref.startsWith("/discovery/quotations")) {
+    return true;
+  }
+  if (page.key === "search" && activeHref.startsWith("/discovery/search")) {
+    return true;
+  }
+  if (page.key === "import" && activeHref.startsWith("/discovery/import")) {
+    return true;
+  }
+  if (
+    page.key === "campaign-match" &&
+    activeHref.startsWith("/discovery/campaign-match")
+  ) {
+    return true;
+  }
+  return false;
 }
 
-export async function DiscoverySubNav({
-  activeHref,
-  showDatabaseStats = true,
-}: DiscoverySubNavProps) {
-  let stats: Awaited<ReturnType<typeof getDiscoveryDatabaseStats>> | null = null;
-  let statsError: string | null = null;
-
-  if (showDatabaseStats) {
-    try {
-      stats = await getDiscoveryDatabaseStats();
-    } catch (error) {
-      statsError =
-        error instanceof Error ? error.message : "Failed to load creator database stats.";
-    }
-  }
-
+/**
+ * Discovery tab bar — matches thinkway-client-quotations.html
+ * `.d-subnav` / `.d-tabs` / `.d-tab`.
+ */
+export function DiscoverySubNav({ activeHref }: DiscoverySubNavProps) {
   return (
-    <>
+    <div className="shrink-0 border-b border-[var(--tw-border)] bg-background px-4 pt-3 dark:bg-background">
       <nav
         aria-label="Discovery"
-        className="flex shrink-0 flex-wrap items-center gap-1 border-b border-border bg-background px-5 py-2.5"
+        className="flex flex-wrap items-center gap-1 pb-3"
       >
         {DISCOVERY_SUB_NAV_PAGES.map((page) => {
-          const isActive = activeHref === page.href;
+          const isActive = isDiscoveryTabActive(activeHref, page);
+          const Icon = page.icon;
           return (
             <Link
               key={page.href}
               href={page.href}
               className={cn(
-                "inline-flex h-[30px] items-center gap-1.5 rounded-md border border-transparent px-3 text-xs font-medium transition-colors",
-                resolveActiveTabClass(isActive, page.key)
+                "inline-flex items-center gap-[7px] rounded-[20px] px-[13px] py-[7px] text-[12.5px] font-bold transition-colors",
+                isActive
+                  ? "bg-[var(--blue-light)] text-[var(--blue-text)] dark:bg-blue-950/40 dark:text-blue-300"
+                  : "text-[var(--text-2)] hover:bg-[var(--surface)] dark:text-muted-foreground dark:hover:bg-muted/60 dark:hover:text-foreground"
               )}
               aria-current={isActive ? "page" : undefined}
             >
-              <DiscoveryPageIconBadge identity={page} size="sm" />
+              <Icon className="size-3.5 shrink-0" aria-hidden />
               <span>{page.navLabel}</span>
             </Link>
           );
         })}
       </nav>
-      {showDatabaseStats ? (
-        <DiscoveryDatabaseStatsBar stats={stats} errorMessage={statsError} />
-      ) : null}
-    </>
+    </div>
   );
 }

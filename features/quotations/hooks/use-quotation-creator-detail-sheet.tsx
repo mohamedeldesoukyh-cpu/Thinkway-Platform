@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
 import { toast } from "sonner";
 
-import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet";
+import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet-lazy";
+import { useCreatorDetailSheetState } from "@/features/discovery/hooks/use-creator-detail-sheet-state";
 import {
   fetchQuotationItemCreatorDetail,
   quotationItemCreatorRefId,
@@ -32,7 +33,12 @@ export function useQuotationCreatorDetailSheet(options?: {
   onCreatorPlatformsChanged?: () => void;
 }) {
   const onCreatorPlatformsChanged = options?.onCreatorPlatformsChanged;
-  const [detailCreator, setDetailCreator] = useState<UnifiedCreatorResult | null>(null);
+  const {
+    open: detailOpen,
+    creator: detailCreator,
+    openCreator,
+    onOpenChange: onDetailOpenChange,
+  } = useCreatorDetailSheetState();
   const platformSignatureRef = useRef("");
 
   const openCreatorFromItem = useCallback(async (item: QuotationItemRow) => {
@@ -48,8 +54,8 @@ export function useQuotationCreatorDetailSheet(options?: {
     }
 
     platformSignatureRef.current = creatorPlatformSignature(creator);
-    setDetailCreator(creator);
-  }, []);
+    openCreator(creator);
+  }, [openCreator]);
 
   const handleCreatorUpdated = useCallback(
     (next: UnifiedCreatorResult) => {
@@ -63,17 +69,21 @@ export function useQuotationCreatorDetailSheet(options?: {
     [onCreatorPlatformsChanged]
   );
 
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      onDetailOpenChange(open);
+      if (!open) platformSignatureRef.current = "";
+    },
+    [onDetailOpenChange]
+  );
+
   const detailSheet = (
     <CreatorDetailSheet
       creator={detailCreator}
-      open={detailCreator != null}
-      onOpenChange={(open) => {
-        if (!open) {
-          setDetailCreator(null);
-          platformSignatureRef.current = "";
-        }
-      }}
+      open={detailOpen}
+      onOpenChange={handleOpenChange}
       onCreatorUpdated={handleCreatorUpdated}
+      preserveOpenOnCreatorRows={false}
     />
   );
 

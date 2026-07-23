@@ -52,6 +52,8 @@ import { recoverStuckCreatorEnrichments } from "@/lib/creator-enrichment/recover
 
 import { recoverStuckCreatorImportFiles } from "@/lib/discovery-import/recover-stuck-imports.js";
 
+import { isAutomaticEnrichmentAndAcquisitionDisabled } from "@/lib/discovery/operational-safety.js";
+
 import { supabase } from "./db/supabase.js";
 
 import type { Worker } from "bullmq";
@@ -67,6 +69,13 @@ const creatorEnrichmentEnabled = isCreatorEnrichmentWorkerEnabled();
 if (!creatorEnrichmentEnabled) {
   console.log(
     "[discovery-worker] creator enrichment disabled — skipping creator-enrichment worker (set ALLOW_MANUAL_ENRICHMENT=true and remove DISABLE_CREATOR_ENRICHMENT to enable manual refresh)"
+  );
+}
+
+const automaticAcquisitionDisabled = isAutomaticEnrichmentAndAcquisitionDisabled();
+if (automaticAcquisitionDisabled) {
+  console.warn(
+    "[discovery-worker] DISABLE_AUTOMATIC_ENRICHMENT_AND_ACQUISITION=true — automatic acquisition, coverage backfill, and legacy discovery-enrich scheduler are blocked; manual creator refresh remains available"
   );
 }
 

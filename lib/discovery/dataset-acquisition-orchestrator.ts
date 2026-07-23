@@ -5,9 +5,6 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { normalizeApifyProfileData } from "@/lib/creator-enrichment/apify-profile";
-import { enqueueCreatorEnrichmentBestEffort } from "@/lib/creator-enrichment/queue";
-import { priorityForTrigger } from "@/lib/creator-enrichment/policy";
 import { importApifyStoredPayloadWithDnaPipeline } from "@/lib/discovery/apify-import-pipeline";
 import { groupApifyRowsIntoCreators } from "@/lib/discovery/apify-dataset-grouping";
 import { refreshDiscoverySearchAfterImport } from "@/lib/discovery/discovery-search-refresh";
@@ -24,7 +21,8 @@ import {
   type DatasetImportFailureLog,
 } from "@/lib/discovery/dataset-import-logging";
 import { fetchApifyDatasetItems } from "@/lib/discovery/apify-dataset-search";
-import { isSocialPlatform } from "@/lib/social/platforms";
+import { assertApifyAcquisitionBudget } from "@/lib/discovery/control-center/apify-budget";
+import { normalizeSocialPlatform } from "@/lib/social/normalize-platform";
 
 export type DatasetAcquisitionInput = {
   searchId: string;
@@ -116,7 +114,7 @@ export async function runDatasetAcquisitionBackfill(
     return preAbort;
   }
 
-  if (!isSocialPlatform(platform)) {
+  if (!normalizeSocialPlatform(platform)) {
     return {
       ok: false,
       apifyRunId: null,
@@ -129,6 +127,30 @@ export async function runDatasetAcquisitionBackfill(
       enrichmentJobsQueued: 0,
       intelligenceGaps,
       reason: `Unsupported platform for dataset acquisition: ${platform}`,
+    };
+  }
+
+  const budget = await assertApifyAcquisitionBudget(supabase, {
+    source: "dataset_acquisition",
+    meta: {
+      searchId: input.searchId,
+      platform,
+      discoveryJobId: input.discoveryJobId ?? null,
+    },
+  });
+  if (!budget.allowed) {
+    return {
+      ok: false,
+      apifyRunId: null,
+      datasetId: null,
+      creatorsProcessed: 0,
+      creatorsImported: 0,
+      creatorsMerged: 0,
+      creatorsFailed: 0,
+      creatorsSkipped: 0,
+      enrichmentJobsQueued: 0,
+      intelligenceGaps,
+      reason: budget.reason,
     };
   }
 
@@ -239,6 +261,8 @@ export async function runDatasetAcquisitionBackfill(
         categoryTags: input.categoryTags,
         searchId: input.searchId,
         uploadAvatar: input.uploadAvatars ?? true,
+        // Dataset already paid for Apify — never N+1 profile scrapes per creator.
+        allowLiveApifyBackfill: false,
       });
 
       if (!result.ok) {
@@ -259,29 +283,8 @@ export async function runDatasetAcquisitionBackfill(
       if (result.merged) creatorsMerged += 1;
       else creatorsImported += 1;
 
-      const normalized = normalizeApifyProfileData({
-        platformKey: platform,
-        username: bundle.username,
-        profileUrl: bundle.profileUrl,
-        profileRows: bundle.profileRows,
-        postRows: bundle.postRows,
-        apifyRunId: search.apifyRunId,
-      });
-
       if (result.influencerId) {
         importedInfluencerIds.push(result.influencerId);
-        enqueueCreatorEnrichmentBestEffort({
-          influencerId: result.influencerId,
-          discoveredProfileId: result.discoveredProfileId ?? null,
-          trigger: "stale",
-          priority: priorityForTrigger("stale"),
-          scope: "metrics",
-          force:
-            normalized?.followers == null ||
-            normalized?.followers <= 0 ||
-            normalized?.engagementRate == null,
-        });
-        enrichmentJobsQueued += 1;
       }
     } catch (error) {
       creatorsFailed += 1;
@@ -372,7 +375,7 @@ export async function runStoredApifyDatasetImport(
   const intelligenceGaps = input.intelligence?.intelligenceGaps ?? [];
   const maxCreators = input.maxCreators ?? resolveDatasetAcquisitionMaxCreators(input.intelligence);
 
-  if (!isSocialPlatform(platform)) {
+  if (!normalizeSocialPlatform(platform)) {
     return {
       ok: false,
       apifyRunId: input.apifyRunId ?? null,
@@ -433,6 +436,7 @@ export async function runStoredApifyDatasetImport(
         categoryTags: input.categoryTags,
         searchId: input.searchId,
         uploadAvatar: input.uploadAvatars ?? true,
+        allowLiveApifyBackfill: false,
       });
 
       if (!result.ok) {
@@ -452,35 +456,6 @@ export async function runStoredApifyDatasetImport(
 
       if (result.merged) creatorsMerged += 1;
       else creatorsImported += 1;
-
-      const normalized = normalizeApifyProfileData({
-        platformKey: platform,
-        username: bundle.username,
-        profileUrl: bundle.profileUrl,
-        profileRows: bundle.profileRows,
-        postRows: bundle.postRows,
-        apifyRunId: input.apifyRunId ?? null,
-      });
-
-      const missingFollowers =
-        !normalized || normalized.followers == null || normalized.followers <= 0;
-      const sparseProfile =
-        !normalized ||
-        (missingFollowers &&
-          normalized.postsCount == null &&
-          (normalized.recentPublications?.length ?? 0) === 0);
-
-      if ((sparseProfile || (platform === "instagram" && missingFollowers)) && result.influencerId) {
-        enqueueCreatorEnrichmentBestEffort({
-          influencerId: result.influencerId,
-          discoveredProfileId: result.discoveredProfileId ?? null,
-          trigger: "stale",
-          priority: priorityForTrigger("stale"),
-          scope: "metrics",
-          force: false,
-        });
-        enrichmentJobsQueued += 1;
-      }
     } catch (error) {
       creatorsFailed += 1;
       const failure: DatasetImportFailureLog = {

@@ -23,6 +23,41 @@ import {
 } from "../constants";
 import type { ShortlistCreatorQuotationRef } from "../types";
 
+export function ShortlistListStatusPill({ status }: { status: ShortlistStatus }) {
+  return (
+    <span className="inline-flex h-[23px] items-center rounded-[7px] bg-muted/50 px-2.5 text-[11.5px] font-semibold text-[var(--text-2)] dark:bg-muted/30">
+      {SHORTLIST_STATUS_LABELS[status]}
+    </span>
+  );
+}
+
+export function ShortlistListVisibilityPill({
+  visibility,
+}: {
+  visibility: ShortlistVisibilityV2;
+}) {
+  return (
+    <span className="inline-flex h-[23px] items-center rounded-[7px] border border-border bg-transparent px-2.5 text-[11.5px] font-semibold text-[var(--text-3)]">
+      {SHORTLIST_VISIBILITY_LABELS[visibility]}
+    </span>
+  );
+}
+
+export function ShortlistWorkspaceStatusPill({ status }: { status: ShortlistStatus }) {
+  return (
+    <span className="inline-flex h-6 items-center gap-1.5 rounded-[7px] bg-muted/50 px-2.5 text-[11.5px] font-semibold text-[var(--text-2)] dark:bg-muted/30">
+      <span
+        className={cn(
+          "size-1.5 shrink-0 rounded-full bg-muted-foreground/70",
+          status === "draft" && "bg-slate-400"
+        )}
+        aria-hidden
+      />
+      {SHORTLIST_STATUS_LABELS[status]}
+    </span>
+  );
+}
+
 export function ShortlistStatusBadge({ status }: { status: ShortlistStatus }) {
   return (
     <StatusBadge
@@ -124,7 +159,7 @@ export function ShortlistCreatorQuotedBadge({
       {refs.map((ref) => (
         <Link
           key={ref.quotation_id}
-          href={quotationDetailPath(ref.quotation_id)}
+          href={quotationDetailPath(ref.quotation_id, ref.serial_number)}
           title={`${quotationBadgeLabel(ref)} · ${QUOTATION_STATUS_LABELS[ref.status]}`}
           className="inline-flex max-w-full"
           onClick={(event) => event.stopPropagation()}

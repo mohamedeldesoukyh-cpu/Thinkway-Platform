@@ -23,11 +23,35 @@ import {
   isCreatorRecentPublicationVideo,
   resolveCreatorRecentPublicationThumbnail,
 } from "@/lib/creators/recent-publication-thumb";
-import { formatCreatorBio } from "@/lib/text/decode-html-entities";
+import { computeProfileEngagementRate } from "@/lib/creators/profile-engagement-rate";
+import { resolveCountryCode } from "@/lib/creators/country-code";
+import {
+  formatCreatorBio,
+  formatCreatorDisplayName,
+} from "@/lib/text/decode-html-entities";
 import { extractEmailFromText, normalizeContactLinks } from "@/lib/creators/contact-info";
+
+import { parseProfileInput } from "@/lib/social/parse-profile-url";
+
+import { shouldIncludeApifyProfilePosts } from "./apify-fetch-policy";
+import {
+  apifyRunGateKey,
+  beginApifyRunGate,
+} from "@/lib/performance/apify-run-gate";
+
+import { assertApifyAcquisitionBudget } from "@/lib/discovery/control-center/apify-budget";
 
 import { isCreatorEnrichmentWorkerEnabled } from "./enabled";
 import type { ApifyProfileData, RecentPublication } from "./types";
+
+async function resolveBudgetSupabase() {
+  try {
+    const { createSupabaseAdminClient } = await import("@/lib/supabase/admin");
+    return createSupabaseAdminClient();
+  } catch {
+    return null;
+  }
+}
 
 export type ApifyProfileFetchResult =
   | { ok: true; data: ApifyProfileData }
@@ -64,9 +88,14 @@ function record(value: unknown): Record<string, unknown> | null {
 function normalizeHandle(username: string | null, profileUrl: string): string | null {
   const fromUsername = username?.replace(/^@/, "").trim();
   if (fromUsername) return fromUsername;
+
+  const parsed = parseProfileInput(profileUrl);
+  if (parsed?.username) return parsed.username.replace(/^@/, "").trim() || null;
+
   try {
     const path = new URL(profileUrl).pathname.replace(/^\/+|\/+$/g, "");
-    const segment = path.split("/").filter(Boolean)[0];
+    const segments = path.split("/").filter(Boolean);
+    const segment = segments[segments.length - 1] ?? segments[0];
     return segment ? segment.replace(/^@/, "") : null;
   } catch {
     return null;
@@ -176,6 +205,22 @@ function averageOf(values: Array<number | null>): number | null {
   return Number((nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(2));
 }
 
+function identitiesFromApifyBody(body: Record<string, unknown>): string[] {
+  const out: string[] = [];
+  const push = (value: unknown) => {
+    if (typeof value === "string" && value.trim()) out.push(value.trim());
+    else if (value && typeof value === "object" && "url" in value) {
+      const url = (value as { url?: unknown }).url;
+      if (typeof url === "string" && url.trim()) out.push(url.trim());
+    }
+  };
+  for (const key of ["usernames", "profiles", "directUrls", "postURLs", "startUrls"] as const) {
+    const value = body[key];
+    if (Array.isArray(value)) value.forEach(push);
+  }
+  return out;
+}
+
 async function launchApifyActor(input: {
   actorId: string;
   token: string;
@@ -184,6 +229,24 @@ async function launchApifyActor(input: {
   timeoutMs: number;
   label: string;
 }): Promise<ApifyActorRunResult> {
+  const gateKey = apifyRunGateKey({
+    actorId: input.actorId,
+    platform: input.platformKey,
+    identities: identitiesFromApifyBody(input.body),
+    label: input.label,
+  });
+  const gate = beginApifyRunGate(gateKey);
+  if (!gate.allowed) {
+    logApifyEnrichment("Apify run blocked by cooldown gate", {
+      label: input.label,
+      actorId: input.actorId,
+      platform: input.platformKey,
+      reason: gate.reason,
+      gateKey: gate.key,
+    });
+    return { runId: null, rows: [], error: gate.reason };
+  }
+
   logApifyEnrichment("Launching actor", {
     label: input.label,
     actorId: input.actorId,
@@ -310,8 +373,8 @@ function normalizeApifyCountryCode(value: string | null): string | null {
   if (!value) return null;
   const trimmed = value.trim();
   if (!trimmed) return null;
-  if (/^[A-Za-z]{2}$/.test(trimmed)) return trimmed.toUpperCase();
-  return trimmed;
+  const resolved = resolveCountryCode(trimmed);
+  return resolved || null;
 }
 
 /** TikTok: authorMeta.region; Instagram: country on profile details. */
@@ -394,9 +457,12 @@ export function normalizeApifyProfileData(input: {
     num(head.followers) ??
     num(head.followersCount) ??
     num(head.followerCount) ??
+    num(head.subscriberCount) ??
+    num(head.subscribers) ??
     num(owner.followers) ??
     num(owner.followersCount) ??
     num(owner.followerCount) ??
+    num(owner.subscriberCount) ??
     num(owner.fans) ??
     pickApifyAuthorFollowerCount(input.platformKey, head);
   const following =
@@ -417,10 +483,11 @@ export function normalizeApifyProfileData(input: {
   const avgLikes = averageOf(recent.map((p) => p.likes));
   const avgComments = averageOf(recent.map((p) => p.comments));
   const avgViews = averageOf(recent.map((p) => p.views));
-  const engagementRate =
-    followers && followers > 0 && (avgLikes != null || avgComments != null)
-      ? Number((((avgLikes ?? 0) + (avgComments ?? 0)) / followers * 100).toFixed(3))
-      : null;
+  const engagementRate = computeProfileEngagementRate({
+    avgLikes,
+    avgComments,
+    followers,
+  });
   const allAvatarRows = [...input.profileRows, ...input.postRows, ...metricRows];
 
   const bio = formatCreatorBio(
@@ -442,10 +509,12 @@ export function normalizeApifyProfileData(input: {
       str(owner.userName) ??
       str(owner.name),
     displayName:
-      str(head.title) ??
-      str(head.fullName) ??
-      str(owner.nickName) ??
-      str(owner.fullName),
+      formatCreatorDisplayName(str(head.displayName)) ||
+      formatCreatorDisplayName(str(head.fullName)) ||
+      formatCreatorDisplayName(str(owner.nickName)) ||
+      formatCreatorDisplayName(str(owner.fullName)) ||
+      formatCreatorDisplayName(str(head.title)) ||
+      null,
     bio,
     profilePictureUrl: pickApifyProfilePictureFromRows(input.platformKey, allAvatarRows),
     profileUrl: input.profileUrl,
@@ -520,6 +589,8 @@ export async function fetchApifyProfileRaw(input: {
   username: string | null;
   profileUrl: string;
   timeoutMs?: number;
+  /** When false, skip Instagram posts actor (details.latestPosts still used). */
+  includePosts?: boolean;
 }): Promise<ApifyRawFetchResult> {
   const started = Date.now();
 
@@ -528,6 +599,23 @@ export async function fetchApifyProfileRaw(input: {
       ok: false,
       available: false,
       reason: "Creator enrichment is disabled.",
+      durationMs: Date.now() - started,
+    };
+  }
+
+  const budgetClient = await resolveBudgetSupabase();
+  const budget = await assertApifyAcquisitionBudget(budgetClient, {
+    source: "creator_enrichment_apify_profile",
+    meta: {
+      platform: input.platform,
+      username: input.username,
+    },
+  });
+  if (!budget.allowed) {
+    return {
+      ok: false,
+      available: false,
+      reason: budget.reason,
       durationMs: Date.now() - started,
     };
   }
@@ -557,7 +645,9 @@ export async function fetchApifyProfileRaw(input: {
 
   const timeoutMs = input.timeoutMs ?? 120_000;
   const detailsInput = buildProfileDetailsInput(platformKey, input.username, input.profileUrl);
-  const postsInput = buildProfilePostsInput(platformKey, input.profileUrl);
+  // Default OFF — Instagram posts actor was the main credit multiplier.
+  const includePosts = input.includePosts === true;
+  const postsInput = includePosts ? buildProfilePostsInput(platformKey, input.profileUrl) : null;
 
   try {
     const detailsRun = await launchApifyActor({

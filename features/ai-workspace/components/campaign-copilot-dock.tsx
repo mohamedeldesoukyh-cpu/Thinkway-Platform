@@ -1,12 +1,20 @@
 "use client";
 
-import { useCallback, useRef, type CSSProperties, type PointerEvent, type ReactNode } from "react";
-import { ChevronDownIcon, SparklesIcon } from "lucide-react";
+import { useCallback, useRef, type PointerEvent, type ReactNode } from "react";
+import { ChevronDownIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import "../styles/copilot-ref.css";
 
 const MIN_HEIGHT = 320;
 const PANEL_WIDTH = 400;
+
+function CopilotSparkleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M12 3l1.9 4.5L18 9l-4.1 1.5L12 15l-1.9-4.5L6 9l4.1-1.5z" />
+    </svg>
+  );
+}
 
 type CampaignCopilotDockProps = {
   collapsed: boolean;
@@ -20,8 +28,7 @@ type CampaignCopilotDockProps = {
 };
 
 /**
- * Floating chatbot-style Campaign Copilot. Collapsed to a corner icon; opens a
- * resizable panel above it so the Studio keeps the full viewport.
+ * Floating Campaign Copilot — reference FAB + resizable dock panel above it.
  */
 export function CampaignCopilotDock({
   collapsed,
@@ -29,7 +36,7 @@ export function CampaignCopilotDock({
   height,
   onHeightChange,
   title = "Campaign Copilot",
-  subtitle,
+  subtitle = "Editing assistant — refine any output",
   children,
 }: CampaignCopilotDockProps) {
   const draggingRef = useRef(false);
@@ -64,75 +71,62 @@ export function CampaignCopilotDock({
 
   if (collapsed) {
     return (
-      <div className="pointer-events-none fixed bottom-5 right-5 z-50 sm:bottom-6 sm:right-6">
+      <div className="copilot-ref pointer-events-none">
         <button
           type="button"
           onClick={onToggleCollapsed}
           aria-label="Open Campaign Copilot"
-          className="pointer-events-auto flex items-center gap-2.5 rounded-full border border-border/60 bg-background py-2 pl-3 pr-2 shadow-lg shadow-black/10 ring-4 ring-background transition-transform hover:scale-[1.02] active:scale-[0.98]"
+          title={title}
+          className="copilot-fab pointer-events-auto"
         >
-          <span className="flex flex-col items-end text-right leading-tight">
-            <span className="text-xs font-semibold text-foreground">{title}</span>
-            {subtitle ? (
-              <span className="hidden max-w-[11rem] truncate text-[10px] text-muted-foreground sm:block">
-                {subtitle}
-              </span>
-            ) : null}
-          </span>
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-600/25">
-            <SparklesIcon className="size-5" aria-hidden />
-          </span>
+          <div className="copilot-avatar">
+            <CopilotSparkleIcon />
+            <span className="copilot-ping" />
+          </div>
+          <div className="cf-text">
+            <b>{title}</b>
+            {subtitle ? <span>{subtitle}</span> : null}
+          </div>
         </button>
       </div>
     );
   }
 
   return (
-    <div
-      className="pointer-events-none fixed bottom-5 right-5 z-50 flex w-[min(var(--copilot-panel-width),calc(100vw-2.5rem))] flex-col sm:bottom-6 sm:right-6"
-      style={{ "--copilot-panel-width": `${PANEL_WIDTH}px` } as CSSProperties}
-    >
-      <div
-        className={cn(
-          "pointer-events-auto relative flex flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl shadow-black/12",
-          "animate-in fade-in slide-in-from-bottom-4 duration-200"
-        )}
-        style={{ height }}
-      >
+    <div className="copilot-ref copilot-dock">
+      <div className="copilot-panel" style={{ height }}>
         <div
           role="separator"
           aria-orientation="horizontal"
           aria-label="Resize the Copilot chat"
-          className="absolute inset-x-0 -top-1.5 z-20 flex h-3 cursor-ns-resize touch-none items-center justify-center"
+          className="copilot-panel-resize"
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
         >
-          <span className="h-1 w-10 rounded-full bg-border transition-colors hover:bg-[#1D9E75]" />
+          <span />
         </div>
 
-        <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border/60 px-3">
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600">
-            <SparklesIcon className="size-3.5 text-white" aria-hidden />
+        <div className="copilot-panel-header">
+          <span className="copilot-panel-header-icon">
+            <CopilotSparkleIcon />
           </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-foreground">{title}</p>
-            {subtitle ? (
-              <p className="truncate text-[10px] text-muted-foreground">{subtitle}</p>
-            ) : null}
+          <div className="copilot-panel-header-text">
+            <p>{title}</p>
+            {subtitle ? <span>{subtitle}</span> : null}
           </div>
           <button
             type="button"
             onClick={onToggleCollapsed}
             aria-expanded
             aria-label="Minimize Campaign Copilot"
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60"
+            className="copilot-panel-minimize"
           >
-            <ChevronDownIcon className="size-4" aria-hidden />
+            <ChevronDownIcon aria-hidden />
           </button>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
+        <div className="copilot-panel-body">{children}</div>
       </div>
     </div>
   );

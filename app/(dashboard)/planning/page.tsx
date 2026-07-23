@@ -2,7 +2,7 @@ import { Suspense } from "react";
 
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { PlanningWorkspaceView } from "@/features/planning/components/planning-workspace-view";
+import { PlanningWorkspaceView } from "@/features/planning/components/planning-workspace-view-lazy";
 import { loadPlanningWorkspace } from "@/features/planning/load-planning-workspace";
 import { parsePlanningSearchParams } from "@/lib/planning/dashboard-filters";
 import { safePlanningQuery } from "@/lib/platform/safe-query";

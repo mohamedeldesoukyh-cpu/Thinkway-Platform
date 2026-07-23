@@ -1,10 +1,7 @@
-import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ArrowLeftIcon } from "lucide-react";
 
-import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
-import { DiscoverySubNav } from "@/features/discovery-import/components/discovery-sub-nav";
+import { DiscoveryPageShell } from "@/features/discovery/components/discovery-page-shell";
 import { ShortlistWorkspace } from "@/features/discovery/shortlists/components/shortlist-workspace";
 import {
   getShortlistBrandOptions,
@@ -12,17 +9,64 @@ import {
   getShortlistClientOptions,
   getShortlistDetail,
 } from "@/features/discovery/shortlists/queries";
-import { GenerateOutputsLauncher } from "@/features/campaign-outputs/components/generate-outputs-launcher";
 import { seedFromShortlist } from "@/features/campaign-outputs/hydration/seed-adapters";
+import { shortlistDetailPath } from "@/lib/routing/entity-paths";
+import {
+  metadataTitleForEntity,
+  redirectToCanonicalEntityRoute,
+} from "@/lib/routing/entity-page";
+import {
+  fetchShortlistRouteSummary,
+  resolveShortlistIdByRouteKey,
+} from "@/lib/routing/entity-route-queries";
 
-export default async function ShortlistDetailPage({
-  params,
-}: {
+type ShortlistDetailPageProps = {
   params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
+};
 
-  const detail = await getShortlistDetail(id);
+export async function generateMetadata({
+  params,
+}: Pick<ShortlistDetailPageProps, "params">): Promise<Metadata> {
+  const { id: routeKey } = await params;
+  const shortlistId = await resolveShortlistIdByRouteKey(routeKey);
+  if (!shortlistId) return { title: "Shortlist" };
+
+  const summary = await fetchShortlistRouteSummary(shortlistId);
+  if (!summary) return { title: "Shortlist" };
+
+  return {
+    title: metadataTitleForEntity(summary, summary.serial_number),
+  };
+}
+
+export default async function ShortlistDetailPage({ params }: ShortlistDetailPageProps) {
+  const { id: routeKey } = await params;
+
+  const shortlistId = await resolveShortlistIdByRouteKey(routeKey);
+  if (!shortlistId) notFound();
+
+  const routeSummary = await fetchShortlistRouteSummary(shortlistId);
+  const canonicalPath = routeSummary
+    ? shortlistDetailPath({
+        id: routeSummary.id,
+        slug: routeSummary.slug,
+        name: routeSummary.name,
+        serial_number: routeSummary.serial_number ?? null,
+      })
+    : shortlistDetailPath(shortlistId);
+
+  if (routeSummary) {
+    redirectToCanonicalEntityRoute({
+      routeKey,
+      entity: {
+        ...routeSummary,
+        serial_number: routeSummary.serial_number ?? null,
+      },
+      canonicalPath,
+    });
+  }
+
+  const detail = await getShortlistDetail(shortlistId);
   if (!detail) notFound();
 
   const [campaigns, brands, clients] = await Promise.all([
@@ -31,44 +75,24 @@ export default async function ShortlistDetailPage({
     getShortlistClientOptions(),
   ]);
 
+  const seed = seedFromShortlist(detail);
+
   return (
-    <DashboardShell
-      title={detail.name}
-      description={detail.serial_number ?? "Shortlist"}
-      hidePageHeader
-      containedMain
-      mainClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
+    <DiscoveryPageShell
+      page="shortlists"
+      activeHref={canonicalPath}
+      variant="flush"
+      showHeader={false}
     >
-      <PlatformErrorBoundary surface="generic">
-        <div className="flex h-full min-h-0 flex-col overflow-hidden">
-          <DiscoverySubNav activeHref="/discovery/shortlists" />
-          <div className="min-h-0 flex-1 overflow-y-auto bg-muted/30">
-            <div className="mx-auto w-full max-w-[1800px] px-5 py-6 sm:px-8">
-              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-                <Link
-                  href="/discovery/shortlists"
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  <ArrowLeftIcon className="size-3.5" strokeWidth={2} />
-                  Back to shortlists
-                </Link>
-                <GenerateOutputsLauncher
-                  seed={seedFromShortlist(detail)}
-                  tab="outputs"
-                  workspace={{ type: "shortlist", id: detail.id }}
-                  className="w-full max-w-md sm:w-auto"
-                />
-              </div>
-              <ShortlistWorkspace
-                detail={detail}
-                campaigns={campaigns}
-                brands={brands}
-                clients={clients}
-              />
-            </div>
-          </div>
-        </div>
-      </PlatformErrorBoundary>
-    </DashboardShell>
+      <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
+        <ShortlistWorkspace
+          detail={detail}
+          seed={seed}
+          campaigns={campaigns}
+          brands={brands}
+          clients={clients}
+        />
+      </div>
+    </DiscoveryPageShell>
   );
 }

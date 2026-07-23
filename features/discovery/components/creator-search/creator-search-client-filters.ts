@@ -58,7 +58,9 @@ export function hasClientOnlyCreatorSearchFilters(filters: CreatorSearchFilters)
     filters.lastPostWithin ||
       filters.aiNiche.trim() ||
       filters.minBrandSafety.trim() ||
-      filters.handle.trim()
+      filters.handle.trim() ||
+      filters.languages.length > 1 ||
+      filters.contentLanguages.length > 0
   );
 }
 

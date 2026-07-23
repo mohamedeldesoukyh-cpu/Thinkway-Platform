@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   getPromoteWizardOptions as loadPromoteWizardOptions,
@@ -13,14 +15,32 @@ export type {
   QuotationListRow,
 } from "./types";
 
-export async function getQuotationFormOptions() {
+const getCachedQuotationFormOptionsInner = cache(async () => {
   const supabase = await createSupabaseServerClient();
   return loadQuotationFormOptions(supabase);
+});
+
+const getCachedPromoteWizardOptionsInner = cache(async () => {
+  const supabase = await createSupabaseServerClient();
+  return loadPromoteWizardOptions(supabase);
+});
+
+export async function getQuotationFormOptions() {
+  return getCachedQuotationFormOptionsInner();
+}
+
+/** Request-scoped form options — safe with auth cookies, deduped per render. */
+export async function getCachedQuotationFormOptions() {
+  return getCachedQuotationFormOptionsInner();
 }
 
 export async function getPromoteWizardOptions() {
-  const supabase = await createSupabaseServerClient();
-  return loadPromoteWizardOptions(supabase);
+  return getCachedPromoteWizardOptionsInner();
+}
+
+/** Request-scoped promote wizard options — safe with auth cookies, deduped per render. */
+export async function getCachedPromoteWizardOptions() {
+  return getCachedPromoteWizardOptionsInner();
 }
 
 export async function getQuotationsList() {

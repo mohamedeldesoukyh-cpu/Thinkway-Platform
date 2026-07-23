@@ -1,18 +1,10 @@
-export { SectionRenderer, isFullWidthSection, getSectionLayout, STUDIO_LAYOUT } from "./section-renderer";
-export { CampaignSummarySection } from "./campaign-summary-section";
-export { ExecutiveStrategySection } from "./executive-strategy-section";
-export { VendorDiscoverySection } from "./vendor-discovery-section";
-export { VendorRecommendationsSection } from "./vendor-recommendations-section";
-export { BudgetPlannerSection } from "./budget-planner-section";
-export { TimelineSection } from "./timeline-section";
-export { KpiForecastSection } from "./kpi-forecast-section";
-export { RiskAnalysisSection } from "./risk-analysis-section";
-export { CreativeConceptsSection } from "./creative-concepts-section";
-export { ContentPlanSection } from "./content-plan-section";
-export { CreatorMixSection } from "./creator-mix-section";
-export { WhyAiSection } from "./why-ai-section";
-export { IndustryBenchmarkSection } from "./industry-benchmark-section";
-export { SuccessProbabilitySection } from "./success-probability-section";
-export { OpportunityFinderSection } from "./opportunity-finder-section";
-export { ExecutiveSummarySection } from "./executive-summary-section";
-export { PresentationStatusSection } from "./presentation-status-section";
+/**
+ * Public section surface — prefer SectionRenderer (code-split).
+ * Do not re-export individual sections here; that would undo chunking.
+ */
+export {
+  SectionRenderer,
+  isFullWidthSection,
+  getSectionLayout,
+  STUDIO_LAYOUT,
+} from "./section-renderer";

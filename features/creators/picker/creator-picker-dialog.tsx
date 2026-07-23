@@ -22,6 +22,10 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  CREATOR_PICKER_SHEET_CLASS,
+  CREATOR_PICKER_SHEET_STYLE,
+} from "@/features/discovery/components/design-system/discovery-sheet-chrome";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import {
   normalizeDiscoverySearchQuery,
@@ -29,9 +33,11 @@ import {
 } from "@/lib/discovery/creator-search-query";
 
 import { CreatorSelectionPreview } from "./creator-selection-preview";
+import { CreatorPickerPanelRow } from "./creator-picker-panel-row";
 import { CreatorSearchPanel } from "./creator-search-panel";
 import {
   buildExistingCreatorKeys,
+  existingKeysFromStandaloneShortlistItems,
   isCreatorOnExistingList,
   useCreatorBrowse,
   useCreatorSelection,
@@ -45,6 +51,7 @@ import type {
   CreatorPickerDialogProps,
   ExistingCreatorKey,
 } from "./creator-selection-types";
+import type { ShortlistExistingItemKey } from "./creator-selection-utils";
 import {
   CREATOR_PICKER_DEBOUNCE_MS,
   CREATOR_PICKER_DEFAULT_PAGE_SIZE,
@@ -292,43 +299,45 @@ export function CreatorPickerDialog({
 
       {children}
 
-      <CreatorSelectionTable
-        creators={displayCreators}
-        selectedIds={selection.selectedIds}
-        onToggle={handleToggle}
-        loading={browse.loading}
-        loadingMore={browse.loadingMore}
-        error={browse.error}
-        onRetry={browse.retry}
-        existingKeys={existingKeysProp}
-        isRowDisabled={isRowDisabled}
-        disabledBadge={(creator) =>
-          isRowDisabled?.(creator) ? "Not addable" : null
-        }
-        total={searchDisplay.total}
-        hasMore={searchDisplay.isExactCreatorSearch ? false : browse.hasMore}
-        variant="panel"
-        onSelectAllVisible={
-          selectionMode === "multi" ? handleSelectAllVisible : undefined
-        }
-        selectAllLabel={allVisibleSelected ? "Deselect all" : "Select all"}
-        className="min-h-0 flex-1"
-        showAddMissingCreator={showAddMissingCreator && search.trim().length > 0}
-        onMissingCreatorAdded={handleMissingCreatorAdded}
-        onMissingCreatorUpdated={handleMissingCreatorUpdated}
-      />
-
-      {selectionMode === "multi" && selectedCount > 0 ? (
-        <CreatorSelectionPreview
-          creators={selectedCreators}
-          onRemove={(id) => {
-            const creator = selectedCreatorMap.get(id);
-            if (!creator || !selection.selectedIds.has(id)) return;
-            selection.toggle(id);
-            rememberSelectedCreators([creator], false);
-          }}
+      <div className="creator-picker-scroll flex min-h-0 flex-1 flex-col overflow-hidden bg-[#f8fafc]">
+        <CreatorSelectionTable
+          creators={displayCreators}
+          selectedIds={selection.selectedIds}
+          onToggle={handleToggle}
+          loading={browse.loading}
+          loadingMore={browse.loadingMore}
+          error={browse.error}
+          onRetry={browse.retry}
+          existingKeys={existingKeysProp}
+          isRowDisabled={isRowDisabled}
+          disabledBadge={(creator) =>
+            isRowDisabled?.(creator) ? "Not addable" : null
+          }
+          total={searchDisplay.total}
+          hasMore={searchDisplay.isExactCreatorSearch ? false : browse.hasMore}
+          variant="panel"
+          onSelectAllVisible={
+            selectionMode === "multi" ? handleSelectAllVisible : undefined
+          }
+          selectAllLabel={allVisibleSelected ? "Deselect all" : "Select all"}
+          className="min-h-0 flex-1"
+          showAddMissingCreator={showAddMissingCreator && search.trim().length > 0}
+          onMissingCreatorAdded={handleMissingCreatorAdded}
+          onMissingCreatorUpdated={handleMissingCreatorUpdated}
         />
-      ) : null}
+
+        {selectionMode === "multi" && selectedCount > 0 ? (
+          <CreatorSelectionPreview
+            creators={selectedCreators}
+            onRemove={(id) => {
+              const creator = selectedCreatorMap.get(id);
+              if (!creator || !selection.selectedIds.has(id)) return;
+              selection.toggle(id);
+              rememberSelectedCreators([creator], false);
+            }}
+          />
+        ) : null}
+      </div>
     </>
   ) : (
     <>
@@ -390,7 +399,7 @@ export function CreatorPickerDialog({
         <Button
           onClick={handleConfirm}
           disabled={onConfirmPending || selectedCount === 0}
-          className="relative h-9 flex-1 overflow-hidden rounded-lg border-0 bg-gradient-to-br from-blue-600 to-indigo-600 text-[13px] font-bold tracking-tight text-white shadow-[0_2px_12px_rgba(37,99,235,0.3)] hover:brightness-110 hover:shadow-[0_4px_20px_rgba(37,99,235,0.45)] disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-300 disabled:shadow-none"
+          className="creator-picker-add-btn relative h-9 flex-1 overflow-hidden rounded-lg border-0 bg-gradient-to-br from-blue-600 to-indigo-600 text-[13px] font-bold tracking-tight text-white shadow-[0_2px_12px_rgba(37,99,235,0.3)] hover:brightness-110 hover:shadow-[0_4px_20px_rgba(37,99,235,0.45)] disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-300 disabled:shadow-none"
         >
           {onConfirmPending ? <Loader2Icon className="size-4 animate-spin" /> : null}
           {defaultConfirmLabel}
@@ -409,21 +418,23 @@ export function CreatorPickerDialog({
   if (container === "sheet") {
     if (panelLayout) {
       return (
-        <Sheet open={open} onOpenChange={handleOpenChange}>
+        <Sheet open={open} onOpenChange={handleOpenChange} modal={false}>
           <SheetContent
             side={sheetSide}
             showCloseButton={false}
-            className="flex w-full max-w-[420px] flex-col gap-0 border-l border-border p-0 shadow-[-12px_0_48px_rgba(15,23,42,0.14)] sm:max-w-[420px]"
+            showOverlay={false}
+            style={CREATOR_PICKER_SHEET_STYLE}
+            className={CREATOR_PICKER_SHEET_CLASS}
           >
-            <div className="shrink-0 border-b border-border px-5 pb-4 pt-5">
-              <div className="mb-2 flex items-start justify-between">
-                <SheetTitle className="text-base font-bold tracking-tight text-foreground">
+            <div className="creator-picker-head shrink-0 border-b border-[#e2e8f0] px-5 pb-4 pt-5">
+              <div className="mb-2 flex items-start justify-between gap-3">
+                <SheetTitle className="text-base font-bold tracking-[-0.3px] text-[#0f172a]">
                   {title}
                 </SheetTitle>
                 <SheetClose asChild>
                   <button
                     type="button"
-                    className="mt-px flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-transparent text-muted-foreground transition-colors hover:border-slate-300 hover:bg-muted hover:text-foreground"
+                    className="mt-px flex size-7 shrink-0 items-center justify-center rounded-md border border-[#e2e8f0] bg-transparent text-[#94a3b8] transition-colors hover:border-[#cbd5e1] hover:bg-[#f8fafc] hover:text-[#0f172a]"
                     aria-label="Close"
                   >
                     <XIcon className="size-3.5" strokeWidth={2.5} />
@@ -431,20 +442,20 @@ export function CreatorPickerDialog({
                 </SheetClose>
               </div>
               {description ? (
-                <SheetDescription className="max-w-[340px] text-xs leading-relaxed text-muted-foreground">
+                <SheetDescription className="max-w-[340px] text-xs leading-relaxed text-[#94a3b8]">
                   {description}
                 </SheetDescription>
               ) : null}
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{body}</div>
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white">{body}</div>
 
             {actionFooter ? (
-              <div className="shrink-0 border-t border-border bg-white">
+              <div className="creator-picker-footer shrink-0 border-t border-[#e2e8f0] bg-white">
                 {selectionMode === "multi" ? (
                   <div className="flex items-center justify-between px-4 pb-2 pt-2.5">
-                    <span className="text-xs text-muted-foreground">
-                      <strong className="font-semibold text-foreground">
+                    <span className="text-xs text-[#94a3b8]">
+                      <strong className="font-semibold text-[#0f172a]">
                         {selectedCount} selected
                       </strong>
                       {" · "}
@@ -454,15 +465,15 @@ export function CreatorPickerDialog({
                       type="button"
                       onClick={handleSelectAllVisible}
                       disabled={visibleIds.length === 0}
-                      className="border-0 bg-transparent p-0 text-[11px] font-semibold text-blue-600 transition-colors hover:text-blue-700 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                      className="border-0 bg-transparent p-0 text-[11px] font-semibold text-[#2563eb] transition-colors hover:text-[#1d4ed8] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {allVisibleSelected ? "Deselect all" : "Select all"}
                     </button>
                   </div>
                 ) : null}
                 <div className="flex items-center gap-2 px-4 pb-3.5">
-                  <div className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-border bg-muted px-3.5 text-xs font-medium text-muted-foreground">
-                    <UsersIcon className="size-3 text-muted-foreground/80" />
+                  <div className="creator-picker-sel-count flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3.5 text-xs font-medium text-[#475569]">
+                    <UsersIcon className="size-3 text-[#94a3b8]" aria-hidden />
                     {selectedCount} selected
                   </div>
                   {actionFooter}
@@ -516,11 +527,11 @@ export function CreatorPickerDialog({
   );
 }
 
-/** Build existing keys from shortlist items for dedup in picker rows. */
+/** Build existing keys from standalone shortlist rows for dedup in picker rows. */
 export function existingKeysFromShortlistItems(
-  items: ExistingCreatorKey[]
+  items: ShortlistExistingItemKey[]
 ): Set<string> {
-  return buildExistingCreatorKeys(items);
+  return existingKeysFromStandaloneShortlistItems(items);
 }
 
 export { CreatorSelectionProvider };

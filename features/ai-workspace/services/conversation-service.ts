@@ -48,7 +48,7 @@ export async function listConversations(
 
   let query = supabase
     .from("ai_conversations")
-    .select("id, title, is_pinned, status, updated_at, workspace_type")
+    .select("id, title, is_pinned, status, updated_at, workspace_type, workspace_id")
     .eq("created_by", userId)
     .order("is_pinned", { ascending: false })
     .order("updated_at", { ascending: false })
@@ -68,6 +68,7 @@ export async function listConversations(
     status: row.status as AiConversationStatus,
     updatedAt: row.updated_at,
     workspaceType: row.workspace_type,
+    workspaceId: row.workspace_id ?? undefined,
   }));
 }
 

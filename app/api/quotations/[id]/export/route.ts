@@ -12,8 +12,9 @@ import {
 } from "@/features/quotations/export/quotation-export-publications";
 import { buildQuotationExcel } from "@/features/quotations/export/quotation-excel";
 import { buildQuotationHtml } from "@/features/quotations/export/quotation-html";
+import { QUOTATION_PDF_OPTIONS } from "@/features/quotations/export/quotation-pdf";
 import {
-  isShowcaseTemplate,
+  isCreatorDeckTemplate,
   resolveQuotationTemplate,
 } from "@/features/quotations/export/quotation-template";
 import { resolveThinkwayReportLogoSrcsForExport } from "@/lib/reports/document/thinkway-report-logo-embed";
@@ -61,7 +62,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     const enriched = await enrichQuotationDetailForExport(supabase, detail);
     const publicationShotsByCreatorKey =
-      isShowcaseTemplate(template) && format !== "excel"
+      isCreatorDeckTemplate(template) && format !== "excel"
         ? await loadQuotationCreatorPublicationShots(supabase, enriched.items)
         : undefined;
     let doc = buildQuotationDocument(enriched, {
@@ -105,7 +106,8 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     if (format === "pdf") {
-      const pdfResult = await renderHtmlToPdf(html);
+      const pdfHtml = buildQuotationHtml(doc, { siteOrigin, logoSrcs, forPdf: true });
+      const pdfResult = await renderHtmlToPdf(pdfHtml, QUOTATION_PDF_OPTIONS);
       if (!pdfResult.ok) {
         return NextResponse.json(
           { error: pdfUnavailableMessage(pdfResult.error) },
@@ -116,6 +118,20 @@ export async function GET(request: Request, context: RouteContext) {
         headers: withExportCacheHeaders({
           "Content-Type": "application/pdf",
           "Content-Disposition": `${disposition}; filename="${baseName}${templateSuffix}.pdf"`,
+        }),
+      });
+    }
+
+    if (format === "pptx") {
+      const { buildQuotationPptxBuffer } = await import(
+        "@/features/quotations/export/quotation-pptx"
+      );
+      const buffer = await buildQuotationPptxBuffer(doc);
+      return new NextResponse(buffer as unknown as BodyInit, {
+        headers: withExportCacheHeaders({
+          "Content-Type":
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+          "Content-Disposition": `${disposition}; filename="${baseName}${templateSuffix}.pptx"`,
         }),
       });
     }

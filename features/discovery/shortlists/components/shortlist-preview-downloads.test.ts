@@ -47,8 +47,15 @@ import {
 
 {
   assert.equal(resolveShortlistTemplate("showcase"), "showcase");
+  assert.equal(resolveShortlistTemplate("pitch"), "pitch");
   assert.equal(resolveShortlistTemplate("detailed"), "detailed");
   assert.equal(resolveShortlistTemplate(null), "summary");
+}
+
+{
+  const href = buildShortlistExportHref("sl-1", "pptx", "pitch");
+  assert.ok(href.includes("format=pptx"));
+  assert.ok(href.includes("template=pitch"));
 }
 
 console.log("shortlist-preview-downloads.test.ts: ok");

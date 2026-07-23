@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { cn } from "@/lib/utils";
+
 import { serializeCampaignObject } from "@/features/campaign-intelligence";
 import {
   approveCampaignPlanAction,
@@ -32,7 +34,9 @@ import {
   shouldShowPendingPlaceholder,
 } from "./shared/section-status-utils";
 import { PsBox } from "./shared/studio-ui-primitives";
+import { STUDIO_REF_CLASSES } from "../../constants/campaign-studio-ref-tokens";
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
+import { useStudioRefMode } from "../../hooks/use-studio-ref-mode";
 import {
   resolveCreatorIds,
   resolvePresentationData,
@@ -62,6 +66,7 @@ export function PresentationStatusSection({
   fallbackText,
   status,
 }: PresentationStatusSectionProps) {
+  const refMode = useStudioRefMode();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [approvalContext, setApprovalContext] = useState<CampaignPlanApprovalContext | null>(
@@ -180,6 +185,136 @@ export function PresentationStatusSection({
     approvalContext?.lifecycleStatus === "approved" ||
     approvalContext?.lifecycleStatus === "published";
 
+  const readinessChecks = approvalContext?.readiness
+    ? ["Budget", "Creator Slate", "Strategy", "Timeline", "Media Plan"].map((label) => {
+        const item = approvalContext.readiness.mandatory.find(
+          (entry) => entry.label.toLowerCase() === label.toLowerCase()
+        );
+        return { label, satisfied: item?.satisfied ?? false };
+      })
+    : [];
+
+  const actionButtons = (
+    <>
+      {approvalContext?.canSubmitForReview ? (
+        <button
+          type="button"
+          className={refMode ? cn(STUDIO_REF_CLASSES.btn, STUDIO_REF_CLASSES.btnPrimary) : STUDIO_CLASSES.actBtn}
+          disabled={pending}
+          onClick={() => runApprovalAction("submit")}
+        >
+          <SendIcon className="size-3" aria-hidden />
+          Submit for Review
+        </button>
+      ) : null}
+      {approvalContext?.canApprove ? (
+        <button
+          type="button"
+          className={refMode ? STUDIO_REF_CLASSES.btn : STUDIO_CLASSES.actBtnApprove}
+          disabled={pending}
+          onClick={() => runApprovalAction("approve")}
+        >
+          <CheckIcon className="size-3" aria-hidden />
+          Approve
+        </button>
+      ) : null}
+      {approvalContext?.canRequestChanges ? (
+        <button
+          type="button"
+          className={refMode ? STUDIO_REF_CLASSES.btn : STUDIO_CLASSES.actBtn}
+          disabled={pending}
+          onClick={() => runApprovalAction("request_changes")}
+        >
+          <MessageSquareWarningIcon className="size-3" aria-hidden />
+          Request Changes
+        </button>
+      ) : null}
+      <button
+        type="button"
+        className={refMode ? STUDIO_REF_CLASSES.btn : STUDIO_CLASSES.actBtn}
+        onClick={handleExportPdf}
+      >
+        <FileTextIcon className="size-3" aria-hidden />
+        Export PDF
+      </button>
+      <button type="button" className={refMode ? STUDIO_REF_CLASSES.btn : STUDIO_CLASSES.actBtn} disabled>
+        <PresentationIcon className="size-3" aria-hidden />
+        Export PPT
+      </button>
+      <button type="button" className={refMode ? STUDIO_REF_CLASSES.btn : STUDIO_CLASSES.actBtn} disabled>
+        <ShareIcon className="size-3" aria-hidden />
+        Share
+      </button>
+      <button type="button" className={refMode ? STUDIO_REF_CLASSES.btn : STUDIO_CLASSES.actBtn} disabled>
+        <CopyIcon className="size-3" aria-hidden />
+        Duplicate
+      </button>
+    </>
+  );
+
+  if (refMode) {
+    return (
+      <div className="min-w-0">
+        <div className={STUDIO_REF_CLASSES.readinessHead}>
+          <div>
+            <div className={STUDIO_REF_CLASSES.readinessTitle}>Campaign Plan Readiness</div>
+            <div className={STUDIO_REF_CLASSES.readinessSub}>
+              Mandatory planning items — not a section completion percentage
+            </div>
+          </div>
+          <span className={STUDIO_REF_CLASSES.readyBadge}>
+            {approvalContext?.readiness?.statusLabel ?? "Ready for review"}
+          </span>
+        </div>
+
+        {readinessChecks.length > 0 ? (
+          <div className={STUDIO_REF_CLASSES.checkRowList}>
+            {readinessChecks.map((item) => (
+              <span key={item.label} className={STUDIO_REF_CLASSES.checkOk}>
+                <CheckIcon aria-hidden />
+                {item.label}
+              </span>
+            ))}
+          </div>
+        ) : null}
+
+        {approvalContext?.readiness?.optionalRemaining ? (
+          <div className={STUDIO_REF_CLASSES.remainingNote}>
+            {approvalContext.readiness.optionalRemaining} optional recommendation
+            {approvalContext.readiness.optionalRemaining === 1 ? "" : "s"} remaining
+          </div>
+        ) : null}
+
+        <div className={STUDIO_REF_CLASSES.statusMetaGrid}>
+          <PsBox label="Version" value={`v${approvalContext?.currentVersion ?? 0}`} />
+          <PsBox label="Lifecycle" value={lifecycleLabel} />
+          <PsBox label="Presentation" value={approvalLabel} />
+          <PsBox label="Status" value={approvalContext?.readiness.statusLabel ?? "—"} />
+          <PsBox
+            label="Client approval"
+            value={isApproved ? "Approved" : "Pending review"}
+          />
+          <PsBox
+            label="Director review"
+            value={
+              approvalContext?.lifecycleStatus === "in_review"
+                ? "Awaiting sign-off"
+                : isApproved
+                  ? "Signed off"
+                  : "Not submitted"
+            }
+          />
+        </div>
+
+        <div className={STUDIO_REF_CLASSES.signoffActions}>{actionButtons}</div>
+
+        {loadingContext ? (
+          <p className={STUDIO_REF_CLASSES.remainingNote}>Loading approval status…</p>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3.5">
       {approvalContext?.readiness ? (
@@ -225,55 +360,7 @@ export function PresentationStatusSection({
       ) : null}
 
       <div className="flex flex-wrap gap-2 pt-1">
-        {approvalContext?.canSubmitForReview ? (
-          <button
-            type="button"
-            className={STUDIO_CLASSES.actBtn}
-            disabled={pending}
-            onClick={() => runApprovalAction("submit")}
-          >
-            <SendIcon className="size-3" aria-hidden />
-            Submit for Review
-          </button>
-        ) : null}
-        {approvalContext?.canApprove ? (
-          <button
-            type="button"
-            className={STUDIO_CLASSES.actBtnApprove}
-            disabled={pending}
-            onClick={() => runApprovalAction("approve")}
-          >
-            <CheckIcon className="size-3" aria-hidden />
-            Approve
-          </button>
-        ) : null}
-        {approvalContext?.canRequestChanges ? (
-          <button
-            type="button"
-            className={STUDIO_CLASSES.actBtn}
-            disabled={pending}
-            onClick={() => runApprovalAction("request_changes")}
-          >
-            <MessageSquareWarningIcon className="size-3" aria-hidden />
-            Request Changes
-          </button>
-        ) : null}
-        <button type="button" className={STUDIO_CLASSES.actBtn} onClick={handleExportPdf}>
-          <FileTextIcon className="size-3" aria-hidden />
-          Export PDF
-        </button>
-        <button type="button" className={STUDIO_CLASSES.actBtn} disabled>
-          <PresentationIcon className="size-3" aria-hidden />
-          Export PPT
-        </button>
-        <button type="button" className={STUDIO_CLASSES.actBtn} disabled>
-          <ShareIcon className="size-3" aria-hidden />
-          Share
-        </button>
-        <button type="button" className={STUDIO_CLASSES.actBtn} disabled>
-          <CopyIcon className="size-3" aria-hidden />
-          Duplicate
-        </button>
+        {actionButtons}
       </div>
 
       {loadingContext ? (

@@ -9,8 +9,12 @@ import type { UnifiedCreatorBrowseFilters } from "@/lib/creators/types";
 import {
   gateApifyBackfill,
   isApifyLiveOnly,
-  isPlatformDatabaseOnly,
 } from "@/lib/discovery/control-center/discovery-control-policy";
+import {
+  AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON,
+  isAutomaticEnrichmentAndAcquisitionDisabled,
+  logBlockedAutomaticAction,
+} from "@/lib/discovery/operational-safety";
 import {
   getDiscoveryControlSettings,
   recordDiscoveryApifyUsage,
@@ -31,6 +35,12 @@ import {
   type EnterpriseDiscoveryGateResult,
 } from "@/lib/discovery/enterprise-discovery-gate";
 import { checkCipAcquisitionCooldown } from "@/lib/discovery/cip-acquisition-cooldown";
+import {
+  attachSearchSessionToCoverageAcquisitionJob,
+  buildCoverageAcquisitionDedupeKey,
+  findActiveCoverageAcquisitionJob,
+} from "@/lib/discovery/coverage-acquisition-dedupe";
+import { isExactCreatorLookupSearch } from "@/lib/discovery/creator-search-query";
 
 export type CoverageBackfillInput = {
   searchId: string;
@@ -65,6 +75,11 @@ export type CoverageBackfillResult = {
   acquisitionJobId?: string;
   acquisitionJobIds?: string[];
   status?: string;
+  /** True when at least one request attached to an existing in-flight job. */
+  attached?: boolean;
+  attachedJobIds?: string[];
+  /** Newly created BullMQ/DB jobs (excludes attaches) — used for Apify usage accounting. */
+  newlyEnqueuedCount?: number;
   datasetAcquisition?: {
     apifyRunId: string | null;
     datasetId: string | null;
@@ -329,12 +344,40 @@ async function enqueueCoverageBackfillJob(
   supabase: SupabaseClient,
   input: {
     searchId: string;
+    searchSessionId?: string;
     coverage: DiscoveryCoverageEvaluation;
     intelligence?: IntelligenceSufficiencyEvaluation;
     query: Record<string, unknown>;
     jobPayload: DiscoveryJobPayload;
   }
 ): Promise<CoverageBackfillResult> {
+  const coverageDedupeKey = buildCoverageAcquisitionDedupeKey(input.jobPayload);
+  const existing = await findActiveCoverageAcquisitionJob(supabase, coverageDedupeKey);
+  if (existing) {
+    const attached = await attachSearchSessionToCoverageAcquisitionJob(supabase, existing.id, {
+      searchSessionId: input.searchSessionId,
+      searchId: input.searchId,
+    });
+    if (attached.attached) {
+      return {
+        executed: true,
+        queued: true,
+        attached: true,
+        attachedJobIds: [existing.id],
+        newlyEnqueuedCount: 0,
+        jobId: existing.id,
+        jobIds: [existing.id],
+        acquisitionStarted: true,
+        acquisitionJobId: existing.id,
+        acquisitionJobIds: [existing.id],
+        status: "Acquiring creators (attached to in-flight job)...",
+        acquisitionMode: "legacy_worker",
+        reason: `Attached to existing coverage acquisition job ${existing.id} (${coverageDedupeKey}).`,
+        jobPayload: input.jobPayload,
+      };
+    }
+  }
+
   const { data: job, error } = await supabase
     .from("discovery_jobs")
     .insert({
@@ -343,7 +386,13 @@ async function enqueueCoverageBackfillJob(
       status: "pending",
       payload: {
         ...input.jobPayload,
+        coverageDedupeKey,
         searchId: input.searchId,
+        searchIds: [input.searchId],
+        searchSessionId: input.searchSessionId ?? null,
+        searchSessionIds: input.searchSessionId?.trim()
+          ? [input.searchSessionId.trim()]
+          : [],
         coverage: {
           score: input.coverage.coverageScore,
           level: input.coverage.coverageLevel,
@@ -368,6 +417,7 @@ async function enqueueCoverageBackfillJob(
     return {
       executed: true,
       queued: false,
+      newlyEnqueuedCount: 0,
       reason: `Failed to persist discovery job: ${error.message}`,
       jobPayload: input.jobPayload,
     };
@@ -379,6 +429,7 @@ async function enqueueCoverageBackfillJob(
   return {
     executed: true,
     queued: queued.queued,
+    newlyEnqueuedCount: queued.queued ? 1 : 0,
     jobId,
     acquisitionStarted: queued.queued,
     acquisitionJobId: queued.queued ? jobId : undefined,
@@ -428,14 +479,39 @@ async function enqueueEnterpriseDatasetAcquisition(
   }
 
   const jobIds: string[] = [];
+  const attachedJobIds: string[] = [];
   const failures: string[] = [];
-  let queuedCount = 0;
+  let newlyEnqueuedCount = 0;
+  let attachedCount = 0;
 
   for (const jobPayload of jobPayloads) {
     const platform = resolveBackfillPlatform(jobPayload);
     const countryCode =
       jobPayload.coverageIntent?.country ?? jobPayload.locationCountry;
     const categoryTags = jobPayload.coverageIntent?.categories ?? [];
+    const coverageDedupeKey = buildCoverageAcquisitionDedupeKey(jobPayload);
+
+    const existing = await findActiveCoverageAcquisitionJob(supabase, coverageDedupeKey);
+    if (existing) {
+      const attached = await attachSearchSessionToCoverageAcquisitionJob(
+        supabase,
+        existing.id,
+        {
+          searchSessionId: input.searchSessionId,
+          searchId: input.searchId,
+        }
+      );
+      if (attached.attached) {
+        jobIds.push(existing.id);
+        attachedJobIds.push(existing.id);
+        attachedCount += 1;
+        continue;
+      }
+    }
+
+    const sessionIds = input.searchSessionId?.trim()
+      ? [input.searchSessionId.trim()]
+      : [];
 
     const { data: job, error: jobError } = await supabase
       .from("discovery_jobs")
@@ -445,8 +521,11 @@ async function enqueueEnterpriseDatasetAcquisition(
         status: "pending",
         payload: {
           ...jobPayload,
+          coverageDedupeKey,
           searchId: input.searchId,
+          searchIds: [input.searchId],
           searchSessionId: input.searchSessionId ?? null,
+          searchSessionIds: sessionIds,
           campaignIntelligenceProfileId:
             (input.query.campaignIntelligenceProfileId as string | null | undefined) ??
             (input.query.filters as { campaignIntelligenceProfileId?: string } | undefined)
@@ -513,28 +592,41 @@ async function enqueueEnterpriseDatasetAcquisition(
     }
 
     jobIds.push(jobId);
-    queuedCount += 1;
+    newlyEnqueuedCount += 1;
   }
 
   const platformLabels = jobPayloads.map((payload) => payload.platform ?? "instagram").join(", ");
-  const queued = queuedCount > 0;
+  const handled = newlyEnqueuedCount + attachedCount;
+  const queued = handled > 0;
+  const attached = attachedCount > 0;
 
   return {
     executed: true,
     queued,
+    attached,
+    attachedJobIds: attachedJobIds.length > 0 ? attachedJobIds : undefined,
+    newlyEnqueuedCount,
     jobId: jobIds[0],
     jobIds,
     acquisitionStarted: queued,
     acquisitionJobId: jobIds[0],
     acquisitionJobIds: jobIds,
-    status: queued ? `Acquiring creators (${platformLabels})...` : undefined,
+    status: queued
+      ? attached && newlyEnqueuedCount === 0
+        ? `Acquiring creators (attached to in-flight job for ${platformLabels})...`
+        : `Acquiring creators (${platformLabels})...`
+      : undefined,
     acquisitionMode: "dataset_import",
     reason:
-      queuedCount === jobPayloads.length
-        ? `Enterprise dataset acquisition enqueued for ${platformLabels}.`
-        : failures.length > 0
-          ? `Enterprise acquisition partially enqueued (${queuedCount}/${jobPayloads.length}): ${failures.join("; ")}`
-          : "Enterprise acquisition enqueue failed.",
+      attached && newlyEnqueuedCount === 0
+        ? `Attached to existing coverage acquisition for ${platformLabels}.`
+        : newlyEnqueuedCount === jobPayloads.length
+          ? `Enterprise dataset acquisition enqueued for ${platformLabels}.`
+          : failures.length > 0
+            ? `Enterprise acquisition partially handled (${handled}/${jobPayloads.length}; ${attachedCount} attached): ${failures.join("; ")}`
+            : attached
+              ? `Enterprise acquisition: ${newlyEnqueuedCount} enqueued, ${attachedCount} attached.`
+              : "Enterprise acquisition enqueue failed.",
     jobPayload: jobPayloads[0],
     jobPayloads,
   };
@@ -566,6 +658,10 @@ function resolveEnterpriseDiscoveryGate(
 export function browseFiltersHaveBackfillIntent(
   filters: UnifiedCreatorBrowseFilters
 ): boolean {
+  // Exact @handle / profile URL lookups must never start country/hashtag
+  // dataset acquisition (that path scrapes dozens of unrelated creators).
+  if (isExactCreatorLookupSearch(filters.search)) return false;
+
   if (filters.search?.trim()) return true;
   if (filters.country?.trim()) return true;
   if (filters.category?.trim()) return true;
@@ -590,6 +686,17 @@ export async function maybeTriggerCoverageBackfill(
   supabase: SupabaseClient,
   input: CoverageBackfillInput
 ): Promise<CoverageBackfillResult> {
+  if (isAutomaticEnrichmentAndAcquisitionDisabled()) {
+    logBlockedAutomaticAction("ai_search_coverage_backfill", AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON, {
+      searchId: input.searchId,
+    });
+    return {
+      executed: false,
+      queued: false,
+      reason: AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON,
+    };
+  }
+
   const settings = await getDiscoveryControlSettings(supabase);
   const useIntelligenceGate = isDatasetAcquisitionBackfillEnabled();
   const gate = resolveEnterpriseDiscoveryGate(
@@ -599,7 +706,7 @@ export async function maybeTriggerCoverageBackfill(
     input.intelligence
   );
 
-  if (isPlatformDatabaseOnly(settings)) {
+  if (settings.discoverySource === "platform_database_only") {
     return {
       executed: false,
       queued: false,
@@ -657,12 +764,14 @@ export async function maybeTriggerCoverageBackfill(
       query: input.query,
       jobPayloads,
     });
-    if (result.executed && result.queued) {
-      await recordDiscoveryApifyUsage(supabase, { requests: jobPayloads.length });
+    const newRequests = result.newlyEnqueuedCount ?? 0;
+    if (result.executed && newRequests > 0) {
+      await recordDiscoveryApifyUsage(supabase, { requests: newRequests });
     }
     if (isDatasetAcquisitionCompareModeEnabled() && isDiscoveryQueueAvailable()) {
       void enqueueCoverageBackfillJob(supabase, {
         searchId: input.searchId,
+        searchSessionId: input.searchSessionId,
         coverage: input.coverage,
         intelligence: input.intelligence,
         query: { ...input.query, compareMode: true },
@@ -682,13 +791,15 @@ export async function maybeTriggerCoverageBackfill(
 
   const result = await enqueueCoverageBackfillJob(supabase, {
     searchId: input.searchId,
+    searchSessionId: input.searchSessionId,
     coverage: input.coverage,
     intelligence: input.intelligence,
     query: input.query,
     jobPayload: jobPayloads[0],
   });
-  if (result.executed && result.queued) {
-    await recordDiscoveryApifyUsage(supabase, { requests: 1 });
+  const newRequests = result.newlyEnqueuedCount ?? (result.queued && !result.attached ? 1 : 0);
+  if (result.executed && newRequests > 0) {
+    await recordDiscoveryApifyUsage(supabase, { requests: newRequests });
   }
   return result;
 }
@@ -700,6 +811,17 @@ export async function maybeTriggerBrowseCoverageBackfill(
   supabase: SupabaseClient,
   input: BrowseCoverageBackfillInput
 ): Promise<CoverageBackfillResult> {
+  if (isAutomaticEnrichmentAndAcquisitionDisabled()) {
+    logBlockedAutomaticAction("browse_coverage_backfill", AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON, {
+      searchId: input.searchId,
+    });
+    return {
+      executed: false,
+      queued: false,
+      reason: AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON,
+    };
+  }
+
   const settings = await getDiscoveryControlSettings(supabase);
   const useIntelligenceGate = isDatasetAcquisitionBackfillEnabled();
   const gate = resolveEnterpriseDiscoveryGate(
@@ -709,7 +831,7 @@ export async function maybeTriggerBrowseCoverageBackfill(
     input.intelligence
   );
 
-  if (isPlatformDatabaseOnly(settings)) {
+  if (settings.discoverySource === "platform_database_only") {
     return {
       executed: false,
       queued: false,
@@ -768,12 +890,14 @@ export async function maybeTriggerBrowseCoverageBackfill(
       query: input.query,
       jobPayloads,
     });
-    if (result.executed && result.queued) {
-      await recordDiscoveryApifyUsage(supabase, { requests: jobPayloads.length });
+    const newRequests = result.newlyEnqueuedCount ?? 0;
+    if (result.executed && newRequests > 0) {
+      await recordDiscoveryApifyUsage(supabase, { requests: newRequests });
     }
     if (isDatasetAcquisitionCompareModeEnabled() && isDiscoveryQueueAvailable()) {
       void enqueueCoverageBackfillJob(supabase, {
         searchId: input.searchId,
+        searchSessionId: input.searchSessionId,
         coverage: input.coverage,
         intelligence: input.intelligence,
         query: { ...input.query, compareMode: true },
@@ -794,13 +918,15 @@ export async function maybeTriggerBrowseCoverageBackfill(
 
   const result = await enqueueCoverageBackfillJob(supabase, {
     searchId: input.searchId,
+    searchSessionId: input.searchSessionId,
     coverage: input.coverage,
     intelligence: input.intelligence,
     query: input.query,
     jobPayload: jobPayloads[0],
   });
-  if (result.executed && result.queued) {
-    await recordDiscoveryApifyUsage(supabase, { requests: 1 });
+  const newRequests = result.newlyEnqueuedCount ?? (result.queued && !result.attached ? 1 : 0);
+  if (result.executed && newRequests > 0) {
+    await recordDiscoveryApifyUsage(supabase, { requests: newRequests });
   }
   return result;
 }

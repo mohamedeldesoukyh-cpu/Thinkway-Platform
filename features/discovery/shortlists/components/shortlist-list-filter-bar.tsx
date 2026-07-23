@@ -34,6 +34,10 @@ type Props = {
   resultCount: number;
   totalCount: number;
   className?: string;
+  /** Flush list table strip (border + 32px gutters). */
+  embedded?: boolean;
+  /** Inline inside merged list header — no outer chrome. */
+  inline?: boolean;
 };
 
 export function ShortlistListFilterBar({
@@ -43,23 +47,41 @@ export function ShortlistListFilterBar({
   resultCount,
   totalCount,
   className,
+  embedded = false,
+  inline = false,
 }: Props) {
   const showBrandFilter = brands.length > 0;
   const hasFilters = hasActiveShortlistListFilters(filters);
+  const countLabel =
+    resultCount === totalCount
+      ? `${totalCount} shortlist${totalCount === 1 ? "" : "s"}`
+      : `${resultCount} of ${totalCount}`;
+
+  const filterBarClass = inline
+    ? cn("flex min-w-0 flex-1 flex-wrap items-center gap-2", className)
+    : embedded
+      ? cn(
+          "flex flex-wrap items-center gap-2.5 border-b border-border px-8 pb-4",
+          className
+        )
+      : cn("flex flex-wrap items-center gap-2.5", className);
 
   return (
-    <div
-      className={cn(
-        "flex flex-wrap items-center gap-2 rounded-xl border border-border/60 bg-muted/20 px-2.5 py-2",
-        className
-      )}
-    >
-      <OperationalTableSearchField
-        value={filters.search}
-        onChange={(search) => onChange({ ...filters, search })}
-        onClear={() => onChange({ ...filters, search: "" })}
-        placeholder="Search name or serial…"
-      />
+    <div className={filterBarClass}>
+      <div className={cn((embedded || inline) && "min-w-[180px] flex-1 sm:min-w-[220px]")}>
+        <OperationalTableSearchField
+          value={filters.search}
+          onChange={(search) => onChange({ ...filters, search })}
+          onClear={() => onChange({ ...filters, search: "" })}
+          placeholder="Search name or serial…"
+          variant={embedded || inline ? "boxed" : "ghost"}
+          inputClassName={
+            embedded || inline
+              ? "h-9 rounded-[11px] border-border bg-[var(--surface)] pl-[38px] text-[13px] placeholder:text-muted-foreground focus-visible:border-primary focus-visible:bg-background focus-visible:ring-[0_0_0_3px_rgba(0,87,255,0.14)]"
+              : undefined
+          }
+        />
+      </div>
 
       <Select
         value={filters.status}
@@ -67,7 +89,12 @@ export function ShortlistListFilterBar({
           onChange({ ...filters, status: status as ShortlistStatus | "all" })
         }
       >
-        <SelectTrigger className="h-8 w-[9.5rem] rounded-lg border-border/60 bg-background/80 text-xs">
+        <SelectTrigger
+          className={cn(
+            "h-9 min-w-[118px] rounded-[11px] border-border bg-background text-[12.5px] font-medium text-[var(--text-2)]",
+            !embedded && !inline && "h-8 w-[9.5rem] rounded-[var(--tw-radius)] text-[12.5px] font-semibold"
+          )}
+        >
           <SelectValue placeholder="Status" />
         </SelectTrigger>
         <SelectContent>
@@ -89,7 +116,12 @@ export function ShortlistListFilterBar({
           })
         }
       >
-        <SelectTrigger className="h-8 w-[9.5rem] rounded-lg border-border/60 bg-background/80 text-xs">
+        <SelectTrigger
+          className={cn(
+            "h-9 min-w-[118px] rounded-[11px] border-border bg-background text-[12.5px] font-medium text-[var(--text-2)]",
+            !embedded && !inline && "h-8 w-[9.5rem] rounded-[var(--tw-radius)] text-[12.5px] font-semibold"
+          )}
+        >
           <SelectValue placeholder="Visibility" />
         </SelectTrigger>
         <SelectContent>
@@ -107,7 +139,12 @@ export function ShortlistListFilterBar({
           value={filters.brandId}
           onValueChange={(brandId) => onChange({ ...filters, brandId })}
         >
-          <SelectTrigger className="h-8 min-w-[9.5rem] max-w-[14rem] rounded-lg border-border/60 bg-background/80 text-xs">
+          <SelectTrigger
+            className={cn(
+              "h-9 min-w-[118px] max-w-[11rem] rounded-[11px] border-border bg-background text-[12.5px] font-medium text-[var(--text-2)]",
+              !embedded && !inline && "h-8 min-w-[9.5rem] rounded-[var(--tw-radius)] text-[12.5px] font-semibold"
+            )}
+          >
             <SelectValue placeholder="Brand" />
           </SelectTrigger>
           <SelectContent>
@@ -122,10 +159,12 @@ export function ShortlistListFilterBar({
         </Select>
       ) : null}
 
-      <span className="ml-auto text-[11px] text-muted-foreground">
-        {resultCount === totalCount
-          ? `${totalCount} shortlist${totalCount === 1 ? "" : "s"}`
-          : `${resultCount} of ${totalCount}`}
+        <span
+        className={cn(
+          "ml-auto text-[12px] font-semibold tracking-[0.01em] text-muted-foreground"
+        )}
+      >
+        {countLabel}
       </span>
 
       {hasFilters ? (

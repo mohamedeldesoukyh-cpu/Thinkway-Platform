@@ -16,8 +16,8 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { buildCanonicalProfileUrl, isSocialPlatform } from "@/lib/social/platforms";
-import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+import { normalizeSocialPlatform } from "@/lib/social/normalize-platform";
+import { buildCanonicalProfileUrl, ENRICHABLE_PLATFORMS } from "@/lib/social/platforms";
 
 import { mergeContactLinks } from "@/lib/creators/contact-info";
 import { persistInfluencerPlatformAvatarDetailed } from "@/lib/performance/metrics-collector/persist";
@@ -28,6 +28,19 @@ import {
   inferCategoriesFromProfileSignals,
   mergeInferredCategories,
 } from "./category-inference";
+import {
+  countryWritePayload,
+  mergeCountryCodes,
+  persistCountryFromApifyProfile,
+  persistInfluencerCountryFields,
+} from "@/lib/creators/country-persistence";
+import {
+  hasResolvedCountry,
+  hasUsableFollowerCount,
+  isProfileIdentityCommerciallyReady,
+  resolveCountryAvailabilityAfterDetails,
+  type CountryAvailability,
+} from "@/lib/discovery/enrichment-staging";
 import { fetchProfileWithIpl } from "@/lib/intelligence-persistence";
 import { bridgeSnapshotToCreatorDna } from "@/lib/intelligence-persistence/services/dna-bridge";
 import { writeEnrichmentRun } from "./audit";
@@ -38,6 +51,7 @@ import {
   type EnrichmentScope,
 } from "./enabled";
 import { decideEnrichment, computeNextRefreshAt } from "./policy";
+import { shouldIncludeApifyProfilePosts } from "./apify-fetch-policy";
 import { resolveApifyAvatarPersistOptions } from "./enrichment-avatar-policy";
 import { syncEnrichmentAvatarToStorage } from "./enrichment-avatar-storage";
 import { mergeSourcedFields, type IncomingField } from "./merge";
@@ -182,17 +196,46 @@ function accountExistingValues(account: PlatformAccountRow): Record<string, unkn
   };
 }
 
+const ENRICHABLE_PLATFORM_SET = new Set<string>(ENRICHABLE_PLATFORMS);
+
 function profileUrlFor(account: PlatformAccountRow): string | null {
   if (account.profile_url?.trim()) return account.profile_url.trim();
-  const platformKey = canonicalPlatformKey(account.platform);
+  const platformKey = normalizeSocialPlatform(account.platform);
   const username = account.username?.trim() || account.handle?.trim();
-  if (username && isSocialPlatform(platformKey)) {
+  if (username && platformKey) {
     return buildCanonicalProfileUrl(platformKey, username.replace(/^@/, ""));
   }
   return null;
 }
 
+function dedupePlatformAccountsForEnrichment(
+  accounts: PlatformAccountRow[]
+): PlatformAccountRow[] {
+  const seen = new Set<string>();
+  const deduped: PlatformAccountRow[] = [];
+
+  for (const account of accounts) {
+    const platformKey = normalizeSocialPlatform(account.platform) ?? account.platform;
+    const handle = (account.username ?? account.handle ?? "")
+      .replace(/^@+/, "")
+      .trim()
+      .toLowerCase();
+    const key = handle ? `${platformKey}:${handle}` : `id:${account.id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(account);
+  }
+
+  return deduped;
+}
+
 /** Run a single enrichment job end-to-end. Throws only on unexpected DB errors. */
+/**
+ * Enrichment merge engine — worker and inline refresh execution.
+ *
+ * Do not call from UI features or server actions.
+ * Use {@link executeCreatorMetricsRefresh} or {@link refreshCreatorMetrics} instead.
+ */
 export async function runCreatorEnrichment(
   supabase: AnySupabase,
   payload: CreatorEnrichmentJobPayload,
@@ -203,7 +246,9 @@ export async function runCreatorEnrichment(
 
   const { data: creator, error: creatorError } = await supabase
     .from("influencers")
-    .select("id, last_enriched_at, field_sources, profile_data_version, categories")
+    .select(
+      "id, last_enriched_at, field_sources, profile_data_version, categories, country_code, country_codes, city, metadata, notes"
+    )
     .eq("id", payload.influencerId)
     .maybeSingle();
 
@@ -223,6 +268,11 @@ export async function runCreatorEnrichment(
     field_sources: FieldSourceMap | null;
     profile_data_version: number | null;
     categories: string[] | null;
+    country_code: string | null;
+    country_codes?: string[] | null;
+    city: string | null;
+    metadata: Record<string, unknown> | null;
+    notes: string | null;
   };
 
   const scope = payload.scope ?? "all";
@@ -267,48 +317,52 @@ export async function runCreatorEnrichment(
     };
   }
 
+  const preferCachedSnapshot = payload.dataSource === "cached_snapshot";
+
   // ---- 30-day freshness skip (spec §2.C) -----------------------------------
-  const decision = decideEnrichment({
-    lastEnrichedAt: creatorRow.last_enriched_at,
-    force: payload.force,
-  });
-  if (decision.skip) {
-    const restoredStatus: CreatorEnrichmentResult["status"] = creatorRow.last_enriched_at
-      ? "enriched"
-      : "never";
-
-    await supabase
-      .from("influencers")
-      .update({ enrichment_status: restoredStatus } as never)
-      .eq("id", payload.influencerId);
-
-    logCreatorEnrichment("Skipped enrichment (freshness policy)", {
-      influencerId: payload.influencerId,
-      fallbackReason: decision.reason,
-      force: Boolean(payload.force),
-      restoredStatus,
+  if (!preferCachedSnapshot) {
+    const decision = decideEnrichment({
+      lastEnrichedAt: creatorRow.last_enriched_at,
+      force: payload.force,
     });
-    await writeEnrichmentRun(supabase, {
-      influencerId: payload.influencerId,
-      discoveredProfileId: payload.discoveredProfileId,
-      trigger: payload.trigger,
-      priority: payload.priority,
-      status: "skipped",
-      forced: Boolean(payload.force),
-      skippedReason: decision.reason,
-      attempt,
-      jobId: options?.jobId ?? null,
-      requestedBy: payload.requestedBy,
-      startedAt,
-      completedAt: new Date().toISOString(),
-    });
-    return {
-      ok: true,
-      status: "skipped",
-      message: decision.reason,
-      fieldsUpdated: [],
-      skippedReason: decision.reason,
-    };
+    if (decision.skip) {
+      const restoredStatus: CreatorEnrichmentResult["status"] = creatorRow.last_enriched_at
+        ? "enriched"
+        : "never";
+
+      await supabase
+        .from("influencers")
+        .update({ enrichment_status: restoredStatus } as never)
+        .eq("id", payload.influencerId);
+
+      logCreatorEnrichment("Skipped enrichment (freshness policy)", {
+        influencerId: payload.influencerId,
+        fallbackReason: decision.reason,
+        force: Boolean(payload.force),
+        restoredStatus,
+      });
+      await writeEnrichmentRun(supabase, {
+        influencerId: payload.influencerId,
+        discoveredProfileId: payload.discoveredProfileId,
+        trigger: payload.trigger,
+        priority: payload.priority,
+        status: "skipped",
+        forced: Boolean(payload.force),
+        skippedReason: decision.reason,
+        attempt,
+        jobId: options?.jobId ?? null,
+        requestedBy: payload.requestedBy,
+        startedAt,
+        completedAt: new Date().toISOString(),
+      });
+      return {
+        ok: true,
+        status: "skipped",
+        message: decision.reason,
+        fieldsUpdated: [],
+        skippedReason: decision.reason,
+      };
+    }
   }
 
   // Mark collecting (DB: running).
@@ -338,7 +392,9 @@ export async function runCreatorEnrichment(
     .eq("influencer_id", payload.influencerId);
 
   if (accountsError) throw new Error(accountsError.message);
-  const accounts = (accountsData ?? []) as PlatformAccountRow[];
+  const accounts = dedupePlatformAccountsForEnrichment(
+    (accountsData ?? []) as PlatformAccountRow[]
+  );
 
   const allFieldsUpdated: string[] = [];
   let anyApifyAvailable = false;
@@ -347,6 +403,10 @@ export async function runCreatorEnrichment(
   let lastApifyRunId: string | null = null;
   const errors: string[] = [];
   let rollupInfluencerCategories = [...(creatorRow.categories ?? [])];
+  let rollupCountryCodes = mergeCountryCodes(
+    creatorRow.country_codes,
+    creatorRow.country_code
+  );
   const { forceSync: forceAvatarSync, forceAvatarReplace } = resolveApifyAvatarPersistOptions({
     scope,
     force: payload.force,
@@ -360,6 +420,7 @@ export async function runCreatorEnrichment(
     influencerId: payload.influencerId,
     trigger: payload.trigger,
     force: Boolean(payload.force),
+    dataSource: preferCachedSnapshot ? "cached_snapshot" : "live_apify",
     forceAvatarSync,
     forceAvatarReplace,
     forceInterestReplace,
@@ -371,10 +432,10 @@ export async function runCreatorEnrichment(
     }
 
     const profileUrl = profileUrlFor(account);
-    const platformKey = canonicalPlatformKey(account.platform);
+    const platformKey = normalizeSocialPlatform(account.platform);
     const username = account.username ?? account.handle;
 
-    if (!profileUrl || !isSocialPlatform(platformKey)) {
+    if (!profileUrl || !platformKey || !ENRICHABLE_PLATFORM_SET.has(platformKey)) {
       logCreatorEnrichment("Skipped platform account", {
         influencerId: payload.influencerId,
         platform: account.platform,
@@ -401,15 +462,27 @@ export async function runCreatorEnrichment(
       platform: platformKey,
       username,
       profileUrl,
-      force: Boolean(payload.force),
+      force: preferCachedSnapshot ? false : Boolean(payload.force),
       followerCount: account.follower_count,
       deferDnaBridge: true,
+      includePosts: shouldIncludeApifyProfilePosts(scope),
       auditMetadata: {
         trigger: payload.trigger,
         jobId: options?.jobId ?? null,
         requestedBy: payload.requestedBy ?? null,
+        manualRefreshDataSource: preferCachedSnapshot ? "cached_snapshot" : "live_apify",
       },
     });
+
+    if (preferCachedSnapshot && fetched.ok && !fetched.cacheHit) {
+      logCreatorEnrichment("Cached manual refresh missed IPL snapshot", {
+        influencerId: payload.influencerId,
+        platform: platformKey,
+        username,
+      });
+      errors.push(`${platformKey}: Cached snapshot unavailable at refresh time.`);
+      continue;
+    }
 
     if (!fetched.ok) {
       logCreatorEnrichment("Apify fetch failed", {
@@ -454,7 +527,26 @@ export async function runCreatorEnrichment(
       hashtags: data.hashtags,
       mentions: data.mentions,
       extraTerms: data.categories,
+      displayName: data.displayName,
+      handle: username,
     });
+    const accountCountryWrite = persistCountryFromApifyProfile({
+      existingCountryCode: creatorRow.country_code,
+      existingCountryCodes: rollupCountryCodes,
+      audienceCountry: data.audienceCountry,
+      platformAudienceCountry: account.audience_country,
+      bio: data.bio,
+      fallbackBio: account.profile_bio,
+      displayName: data.displayName ?? account.profile_display_name,
+      city: creatorRow.city,
+      handle: username,
+      hashtags: data.hashtags,
+      mentions: data.mentions,
+    });
+    if (accountCountryWrite) {
+      rollupCountryCodes = accountCountryWrite.country_codes;
+    }
+    const resolvedAudienceCountry = accountCountryWrite?.country_code ?? null;
     const enrichedInterestCategories = mergeInferredCategories(
       data.categories,
       inferredCategories
@@ -471,7 +563,7 @@ export async function runCreatorEnrichment(
       { field: "avg_likes", value: data.avgLikes, source: APIFY },
       { field: "avg_comments", value: data.avgComments, source: APIFY },
       { field: "is_verified", value: data.isVerified, source: APIFY },
-      { field: "audience_country", value: data.audienceCountry, source: APIFY },
+      { field: "audience_country", value: resolvedAudienceCountry, source: APIFY },
       { field: "hashtags", value: data.hashtags, source: APIFY },
       { field: "mentions", value: data.mentions, source: APIFY },
       {
@@ -730,7 +822,7 @@ export async function runCreatorEnrichment(
     accounts.some((account) => (account.follower_count ?? 0) > 0);
   const effectiveSuccess = anySuccess && (hasMeaningfulMetrics || hasBaselinePreview);
 
-  const finalStatus: CreatorEnrichmentResult["status"] = effectiveSuccess
+  let finalStatus: CreatorEnrichmentResult["status"] = effectiveSuccess
     ? allFieldsUpdated.length > 0 && enrichmentUpdatedMeaningfulFields(allFieldsUpdated)
       ? "enriched"
       : "partial"
@@ -746,7 +838,57 @@ export async function runCreatorEnrichment(
     JSON.stringify(rollupInfluencerCategories) !==
     JSON.stringify(creatorRow.categories ?? []);
 
-  await supabase
+  const countryWrite = persistInfluencerCountryFields({
+    existingCountryCode: creatorRow.country_code,
+    existingCountryCodes: creatorRow.country_codes,
+    incomingCodes: [rollupCountryCodes],
+  });
+
+  const resolvedCountryCodes = mergeCountryCodes(
+    countryWrite?.country_codes,
+    countryWrite?.country_code,
+    creatorRow.country_codes,
+    creatorRow.country_code,
+    rollupCountryCodes
+  );
+  const audienceCountries = accounts
+    .map((account) => account.audience_country)
+    .filter((value): value is string => Boolean(value?.trim()));
+  const profileDetailsSatisfied =
+    hasUsableFollowerCount(topFollowers) ||
+    accounts.some((account) => hasUsableFollowerCount(account.follower_count));
+  const previousAvailability = (creatorRow.metadata?.country_availability ??
+    "unknown") as CountryAvailability;
+  const countryAvailability = resolveCountryAvailabilityAfterDetails({
+    profileDetailsSatisfied: profileDetailsSatisfied && anyApifyAvailable,
+    hasCountry: hasResolvedCountry({
+      countryCode: resolvedCountryCodes[0] ?? null,
+      countryCodes: resolvedCountryCodes,
+      audienceCountry: audienceCountries[0] ?? null,
+    }),
+    previousAvailability,
+  });
+  const identityReady = isProfileIdentityCommerciallyReady({
+    platform: "instagram",
+    followers: topFollowers,
+    audienceCountry: audienceCountries[0] ?? null,
+    countryCode: resolvedCountryCodes[0] ?? null,
+    countryCodes: resolvedCountryCodes,
+    profileDetailsSatisfied,
+    countryAvailability,
+  });
+
+  // Do not promote to final enriched while required profile identity is incomplete.
+  if (finalStatus === "enriched" && !identityReady) {
+    finalStatus = "awaiting_profile_details";
+  }
+
+  const nextMetadata = {
+    ...(creatorRow.metadata ?? {}),
+    country_availability: countryAvailability,
+  };
+
+  const { error: influencerUpdateError } = await supabase
     .from("influencers")
     .update({
       enrichment_status:
@@ -764,15 +906,24 @@ export async function runCreatorEnrichment(
       next_refresh_at: computeNextRefreshAt({ followers: topFollowers }).toISOString(),
       apify_run_id: lastApifyRunId,
       profile_data_version: (creatorRow.profile_data_version ?? 0) + 1,
+      metadata: nextMetadata,
       ...(influencerCategoriesChanged
         ? { categories: rollupInfluencerCategories }
         : {}),
+      ...(countryWrite ? countryWritePayload(countryWrite) : {}),
       updated_at: completedAt,
     } as never)
     .eq("id", payload.influencerId);
 
+  if (influencerUpdateError) {
+    errors.push(`influencer: ${influencerUpdateError.message}`);
+  }
+
   if (influencerCategoriesChanged) {
     allFieldsUpdated.push("influencer.categories");
+  }
+  if (countryWrite) {
+    allFieldsUpdated.push("influencer.country_code");
   }
 
   if (effectiveSuccess) {
@@ -785,12 +936,17 @@ export async function runCreatorEnrichment(
     trigger: payload.trigger,
     priority: payload.priority,
     status:
-      finalStatus === "enriched" || finalStatus === "partial"
-        ? finalStatus === "enriched"
-          ? "completed"
-          : "partial"
-        : "failed",
-    source: effectiveSuccess && enrichmentUpdatedMeaningfulFields(allFieldsUpdated) ? "apify" : null,
+      finalStatus === "enriched"
+        ? "completed"
+        : finalStatus === "partial" || finalStatus === "awaiting_profile_details"
+          ? "partial"
+          : "failed",
+    source:
+      effectiveSuccess && enrichmentUpdatedMeaningfulFields(allFieldsUpdated)
+        ? preferCachedSnapshot
+          ? "cache"
+          : "apify"
+        : null,
     apifyRunId: lastApifyRunId,
     forced: Boolean(payload.force),
     fieldsUpdated: allFieldsUpdated,

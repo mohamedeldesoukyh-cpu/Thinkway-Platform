@@ -23,6 +23,7 @@ import { useQuotationManualSave } from "@/features/quotations/components/quotati
 import { formatValidityLabel } from "@/features/quotations/quotation-validity";
 import type { QuotationDetail } from "@/features/quotations/types";
 import type { QuotationStatus } from "@/types/database";
+import { cn } from "@/lib/utils";
 
 function SaveIndicator({ status }: { status: AutosaveStatus }) {
   if (status === "pending")
@@ -36,11 +37,23 @@ function SaveIndicator({ status }: { status: AutosaveStatus }) {
   return null;
 }
 
-function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <div className="thinkway-campaign-field-label mb-1.5">{children}</div>;
+function FieldLabel({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={cn("thinkway-campaign-field-label mb-1.5", className)}>{children}</div>
+  );
 }
 
-export function QuotationDocumentMetaPanel({ detail }: { detail: QuotationDetail }) {
+function FlushLabel({ children }: { children: React.ReactNode }) {
+  return <span className="dlbl">{children}</span>;
+}
+
+type Props = {
+  detail: QuotationDetail;
+  layout?: "default" | "flush";
+};
+
+export function QuotationDocumentMetaPanel({ detail, layout = "default" }: Props) {
+  const flush = layout === "flush";
   const { registerMetaPending, saveStatus, hasUnsavedChanges } = useQuotationManualSave();
   const [preparedBy, setPreparedBy] = useState(detail.prepared_by_name ?? "");
   const [reviewedBy, setReviewedBy] = useState(detail.reviewed_by_name ?? "");
@@ -98,6 +111,192 @@ export function QuotationDocumentMetaPanel({ detail }: { detail: QuotationDetail
     </span>
   );
 
+  const inputClass = flush ? "inp h-10 text-[13px]" : "h-8 text-xs";
+  const selectTriggerClass = flush ? "inp h-10 text-[13px]" : "h-8 text-xs";
+  const Label = flush ? FlushLabel : FieldLabel;
+
+  const formFields = (
+    <>
+      <div className={flush ? "dgrid" : "thinkway-campaign-form-grid"}>
+        <div className={flush ? "dfield" : undefined}>
+          <Label>Issue date</Label>
+          <Input
+            type="date"
+            className={inputClass}
+            value={issueDate}
+            onChange={(e) => {
+              setIssueDate(e.target.value);
+              persist({ issue_date: e.target.value });
+            }}
+          />
+        </div>
+        <div className={flush ? "dfield" : undefined}>
+          <Label>Validity date</Label>
+          <Input
+            type="date"
+            className={inputClass}
+            value={validityDate}
+            onChange={(e) => {
+              setValidityDate(e.target.value);
+              persist({ validity_date: e.target.value || null });
+            }}
+          />
+        </div>
+        <div className={flush ? "dfield" : undefined}>
+          <Label>Status</Label>
+          <Select
+            value={status}
+            onValueChange={(v) => {
+              const next = v as QuotationStatus;
+              setStatus(next);
+              persist({ status: next });
+            }}
+          >
+            <SelectTrigger className={selectTriggerClass}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {QUOTATION_STATUSES.filter((s) => s !== "archived").map((s) => (
+                <SelectItem key={s} value={s}>
+                  {QUOTATION_STATUS_LABELS[s]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className={flush ? "dfield" : undefined}>
+          <Label>Version</Label>
+          <Select
+            value={version}
+            onValueChange={(v) => {
+              setVersion(v);
+              persist({ version: v, change_summary: changeSummary || "Version updated" });
+            }}
+          >
+            <SelectTrigger className={selectTriggerClass}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {QUOTATION_VERSION_PRESETS.map((v) => (
+                <SelectItem key={v} value={v}>
+                  {v}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className={flush ? "dfield col-span-2" : undefined}>
+          <Label>Department</Label>
+          <Select
+            value={department}
+            onValueChange={(v) => {
+              setDepartment(v);
+              persist({ department: v });
+            }}
+          >
+            <SelectTrigger className={selectTriggerClass}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {QUOTATION_DEPARTMENTS.map((d) => (
+                <SelectItem key={d} value={d}>
+                  {d}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className={flush ? "dfield" : undefined}>
+          <Label>Prepared by</Label>
+          <Input
+            className={cn(inputClass, !preparedBy && flush && "muted placeholder:text-[var(--text-4)]")}
+            value={preparedBy}
+            placeholder="Add name"
+            onChange={(e) => {
+              setPreparedBy(e.target.value);
+              persist({ prepared_by_name: e.target.value || null });
+            }}
+          />
+        </div>
+        <div className={flush ? "dfield" : undefined}>
+          <Label>Reviewed by</Label>
+          <Input
+            className={cn(inputClass, !reviewedBy && flush && "placeholder:text-[var(--text-4)]")}
+            value={reviewedBy}
+            placeholder="Add name"
+            onChange={(e) => {
+              setReviewedBy(e.target.value);
+              persist({ reviewed_by_name: e.target.value || null });
+            }}
+          />
+        </div>
+        <div className={flush ? "dfield" : undefined}>
+          <Label>Client signatory</Label>
+          <Input
+            className={cn(inputClass, !clientSignatory && flush && "placeholder:text-[var(--text-4)]")}
+            value={clientSignatory}
+            placeholder="Add name"
+            onChange={(e) => {
+              setClientSignatory(e.target.value);
+              persist({ client_signature_name: e.target.value || null });
+            }}
+          />
+        </div>
+      </div>
+
+      <div className={flush ? "dfield mb-0" : "px-4 pb-4"}>
+        <Label>Change summary</Label>
+        <Textarea
+          rows={flush ? 3 : 2}
+          className={flush ? "ta text-[13px]" : "text-xs"}
+          value={changeSummary}
+          placeholder="Brief note for revision history…"
+          onChange={(e) => {
+            setChangeSummary(e.target.value);
+            persist({ change_summary: e.target.value || null });
+          }}
+        />
+      </div>
+
+      {detail.revisions.length > 0 ? (
+        flush ? (
+          detail.revisions.slice(0, 5).map((rev) => (
+            <div key={rev.id} className="revline">
+              <b>
+                {rev.version}
+                {rev.change_summary ? ` · ${rev.change_summary}` : " · Initial quotation created"}
+              </b>
+              <span className="dt">{new Date(rev.created_at).toLocaleDateString("en-GB")}</span>
+              <br />
+              <span className="text-[11px]">{rev.updated_by_name ?? "—"}</span>
+            </div>
+          ))
+        ) : (
+          <div className="border-t border-[var(--camp-border)]">
+            {detail.revisions.slice(0, 5).map((rev) => (
+              <div key={rev.id} className="thinkway-campaign-activity-item">
+                <div>
+                  <div className="thinkway-campaign-act-name">
+                    {rev.version}
+                    {rev.change_summary ? ` · ${rev.change_summary}` : " · Initial quotation created"}
+                  </div>
+                  <div className="thinkway-campaign-act-by">{rev.updated_by_name ?? "—"}</div>
+                </div>
+                <span className="thinkway-campaign-act-date">
+                  {new Date(rev.created_at).toLocaleDateString("en-GB")}
+                </span>
+              </div>
+            ))}
+          </div>
+        )
+      ) : null}
+    </>
+  );
+
+  if (flush) {
+    return <div>{formFields}</div>;
+  }
+
   return (
     <CampaignFlatSection
       title="Document details"
@@ -110,165 +309,7 @@ export function QuotationDocumentMetaPanel({ detail }: { detail: QuotationDetail
       }
       flushBody
     >
-      <div className="thinkway-campaign-form-grid">
-        <div>
-          <FieldLabel>Issue date</FieldLabel>
-          <Input
-            type="date"
-            className="h-8 text-xs"
-            value={issueDate}
-            onChange={(e) => {
-              setIssueDate(e.target.value);
-              persist({ issue_date: e.target.value });
-            }}
-          />
-        </div>
-        <div>
-          <FieldLabel>Validity date</FieldLabel>
-          <Input
-            type="date"
-            className="h-8 text-xs"
-            value={validityDate}
-            onChange={(e) => {
-              setValidityDate(e.target.value);
-              persist({ validity_date: e.target.value || null });
-            }}
-          />
-        </div>
-        <div>
-          <FieldLabel>Status</FieldLabel>
-          <Select
-            value={status}
-            onValueChange={(v) => {
-              const next = v as QuotationStatus;
-              setStatus(next);
-              persist({ status: next });
-            }}
-          >
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {QUOTATION_STATUSES.filter((s) => s !== "archived").map((s) => (
-                <SelectItem key={s} value={s}>
-                  {QUOTATION_STATUS_LABELS[s]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <FieldLabel>Version</FieldLabel>
-          <Select
-            value={version}
-            onValueChange={(v) => {
-              setVersion(v);
-              persist({ version: v, change_summary: changeSummary || "Version updated" });
-            }}
-          >
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {QUOTATION_VERSION_PRESETS.map((v) => (
-                <SelectItem key={v} value={v}>
-                  {v}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <FieldLabel>Department</FieldLabel>
-          <Select
-            value={department}
-            onValueChange={(v) => {
-              setDepartment(v);
-              persist({ department: v });
-            }}
-          >
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {QUOTATION_DEPARTMENTS.map((d) => (
-                <SelectItem key={d} value={d}>
-                  {d}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <FieldLabel>Prepared by</FieldLabel>
-          <Input
-            className="h-8 text-xs"
-            value={preparedBy}
-            placeholder="Add name"
-            onChange={(e) => {
-              setPreparedBy(e.target.value);
-              persist({ prepared_by_name: e.target.value || null });
-            }}
-          />
-        </div>
-        <div>
-          <FieldLabel>Reviewed by</FieldLabel>
-          <Input
-            className="h-8 text-xs"
-            value={reviewedBy}
-            placeholder="Add name"
-            onChange={(e) => {
-              setReviewedBy(e.target.value);
-              persist({ reviewed_by_name: e.target.value || null });
-            }}
-          />
-        </div>
-        <div>
-          <FieldLabel>Client signatory</FieldLabel>
-          <Input
-            className="h-8 text-xs"
-            value={clientSignatory}
-            placeholder="Add name"
-            onChange={(e) => {
-              setClientSignatory(e.target.value);
-              persist({ client_signature_name: e.target.value || null });
-            }}
-          />
-        </div>
-      </div>
-
-      <div className="px-4 pb-4">
-        <FieldLabel>Change summary</FieldLabel>
-        <Textarea
-          rows={2}
-          className="text-xs"
-          value={changeSummary}
-          placeholder="Brief note for revision history…"
-          onChange={(e) => {
-            setChangeSummary(e.target.value);
-            persist({ change_summary: e.target.value || null });
-          }}
-        />
-      </div>
-
-      {detail.revisions.length > 0 ? (
-        <div className="border-t border-[var(--camp-border)]">
-          {detail.revisions.slice(0, 5).map((rev) => (
-            <div key={rev.id} className="thinkway-campaign-activity-item">
-              <div>
-                <div className="thinkway-campaign-act-name">
-                  {rev.version}
-                  {rev.change_summary ? ` · ${rev.change_summary}` : " · Initial quotation created"}
-                </div>
-                <div className="thinkway-campaign-act-by">{rev.updated_by_name ?? "—"}</div>
-              </div>
-              <span className="thinkway-campaign-act-date">
-                {new Date(rev.created_at).toLocaleDateString("en-GB")}
-              </span>
-            </div>
-          ))}
-        </div>
-      ) : null}
+      {formFields}
     </CampaignFlatSection>
   );
 }

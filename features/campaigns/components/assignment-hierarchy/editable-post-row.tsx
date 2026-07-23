@@ -14,6 +14,7 @@ import { useEffect, useMemo, useState, useTransition, type ReactNode } from "rea
 import { Badge } from "@/components/ui/badge";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { Button } from "@/components/ui/button";
+import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -166,6 +167,7 @@ export function EditablePostRow({
   const childColSpan =
     !showExpandColumn && col("expand") ? childColSpanBase - 1 : childColSpanBase;
   const router = useRouter();
+  const confirmDelete = useConfirmDelete();
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -444,9 +446,13 @@ export function EditablePostRow({
     });
   }
 
-  function deleteDeliverable() {
+  async function deleteDeliverable() {
     if (readOnly || deliverable.is_synthetic) return;
-    if (!window.confirm("Remove this deliverable and all posts?")) return;
+    const ok = await confirmDelete(
+      "Remove this deliverable and all its posts from the campaign? This cannot be undone.",
+      "Remove deliverable?"
+    );
+    if (!ok) return;
     startTransition(async () => {
       const result = await deleteAssignmentDeliverableAction({
         campaign_id: campaignId,

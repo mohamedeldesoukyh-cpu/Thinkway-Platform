@@ -4,6 +4,11 @@ import { requirePermission } from "@/lib/auth/permissions-server";
 import { CREATOR_ENRICHMENT_PERMISSION } from "@/lib/creator-enrichment/constants";
 import type { EnrichmentScope } from "@/lib/creator-enrichment/enabled";
 import { getCreatorEnrichmentQueueHealth } from "@/lib/creator-enrichment/health";
+import {
+  assessManualRefreshCache,
+  type ManualRefreshCacheAssessment,
+} from "@/lib/creator-enrichment/manual-refresh-cache-assessment";
+import type { ManualRefreshDataSource } from "@/lib/creator-enrichment/manual-refresh-policy";
 import { getUnifiedCreatorById } from "@/lib/creators/unified-browse";
 import {
   getCreatorMetricsSyncStatus,
@@ -26,7 +31,12 @@ export type EnrichmentActionResult = {
   estimatedApifyRuns?: number;
   estimatedCredits?: number;
   batchCount?: number;
+  refreshSource?: ManualRefreshDataSource;
 };
+
+export type ManualRefreshCacheAssessmentResult =
+  | { ok: true; assessment: ManualRefreshCacheAssessment }
+  | { ok: false; message: string };
 
 export type StopEnrichmentActionResult = {
   ok: boolean;
@@ -38,7 +48,12 @@ export type StopEnrichmentActionResult = {
 async function refreshCreatorWithScope(
   influencerId: string,
   scope: EnrichmentScope,
-  options?: { platformAccountId?: string; isBulk?: boolean }
+  options?: {
+    platformAccountId?: string;
+    isBulk?: boolean;
+    dataSource?: ManualRefreshDataSource;
+    feature?: import("@/lib/creator-enrichment/enrichment-feature").CreatorEnrichmentFeature;
+  }
 ): Promise<EnrichmentActionResult> {
   if (!influencerId?.trim()) {
     return { ok: false, queued: false, message: "A creator id is required." };
@@ -50,8 +65,11 @@ async function refreshCreatorWithScope(
     return { ok: false, queued: false, message: auth.error };
   }
 
+  const dataSource = options?.dataSource ?? "live_apify";
+  const preferCached = dataSource === "cached_snapshot";
+  // Manual Refresh (live Apify) may set force=true to bypass freshness.
   const refreshOptions = {
-    force: true,
+    force: !preferCached,
     trigger: "manual" as const,
     bypassMetricsManualOverride: scope === "metrics" || scope === "all",
     forceAvatarReplace: scope === "avatar" || scope === "all",
@@ -60,6 +78,9 @@ async function refreshCreatorWithScope(
     scope,
     isBulk: options?.isBulk ?? false,
     platformAccountId: options?.platformAccountId ?? null,
+    dataSource,
+    mode: preferCached ? ("inline" as const) : undefined,
+    feature: options?.feature,
   };
 
   const result = options?.platformAccountId
@@ -75,54 +96,89 @@ async function refreshCreatorWithScope(
     ok: result.ok,
     queued: result.queued,
     message: result.message,
+    refreshSource: result.refreshSource ?? dataSource,
   };
+}
+
+export async function getManualRefreshCacheAssessmentAction(input: {
+  influencerId: string;
+  scope?: EnrichmentScope;
+  platformAccountId?: string | null;
+}): Promise<ManualRefreshCacheAssessmentResult> {
+  if (!input.influencerId?.trim()) {
+    return { ok: false, message: "A creator id is required." };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await requirePermission(supabase, CREATOR_ENRICHMENT_PERMISSION);
+  if ("error" in auth) {
+    return { ok: false, message: auth.error };
+  }
+
+  const assessment = await assessManualRefreshCache(supabase, {
+    influencerId: input.influencerId.trim(),
+    platformAccountId: input.platformAccountId ?? null,
+    scope: input.scope,
+  });
+
+  return { ok: true, assessment };
 }
 
 /** Explicit full refresh — all scopes. */
 export async function refreshCreatorAllAction(
-  influencerId: string
+  influencerId: string,
+  dataSource?: ManualRefreshDataSource
 ): Promise<EnrichmentActionResult> {
-  return refreshCreatorWithScope(influencerId, "all");
+  return refreshCreatorWithScope(influencerId, "all", {
+    dataSource,
+    feature: "campaign_studio",
+  });
 }
 
 /** Refresh followers, engagement, and views only. */
 export async function refreshCreatorAction(
-  influencerId: string
+  influencerId: string,
+  dataSource?: ManualRefreshDataSource
 ): Promise<EnrichmentActionResult> {
-  return refreshCreatorWithScope(influencerId, "metrics");
+  return refreshCreatorWithScope(influencerId, "metrics", { dataSource });
 }
 
 export async function refreshCreatorAvatarAction(
-  influencerId: string
+  influencerId: string,
+  dataSource?: ManualRefreshDataSource
 ): Promise<EnrichmentActionResult> {
-  return refreshCreatorWithScope(influencerId, "avatar");
+  return refreshCreatorWithScope(influencerId, "avatar", { dataSource });
 }
 
 export async function refreshCreatorProfileAction(
-  influencerId: string
+  influencerId: string,
+  dataSource?: ManualRefreshDataSource
 ): Promise<EnrichmentActionResult> {
-  return refreshCreatorWithScope(influencerId, "profile");
+  return refreshCreatorWithScope(influencerId, "profile", { dataSource });
 }
 
 export async function refreshCreatorAudienceAction(
-  influencerId: string
+  influencerId: string,
+  dataSource?: ManualRefreshDataSource
 ): Promise<EnrichmentActionResult> {
-  return refreshCreatorWithScope(influencerId, "audience");
+  return refreshCreatorWithScope(influencerId, "audience", { dataSource });
 }
 
 export async function refreshCreatorCategoriesAction(
-  influencerId: string
+  influencerId: string,
+  dataSource?: ManualRefreshDataSource
 ): Promise<EnrichmentActionResult> {
-  return refreshCreatorWithScope(influencerId, "categories");
+  return refreshCreatorWithScope(influencerId, "categories", { dataSource });
 }
 
 /** Refresh metrics for one platform account only (Discovery context menu). */
 export async function refreshCreatorPlatformAction(
   influencerId: string,
   platformAccountId: string,
-  scope: EnrichmentScope = "metrics"
+  scope: EnrichmentScope = "metrics",
+  dataSource?: ManualRefreshDataSource
 ): Promise<EnrichmentActionResult> {
-  return refreshCreatorWithScope(influencerId, scope, { platformAccountId });
+  return refreshCreatorWithScope(influencerId, scope, { platformAccountId, dataSource });
 }
 
 /** Batch refresh for selected creators in Discovery Search. */
@@ -140,8 +196,9 @@ export async function refreshCreatorsBatchAction(
     return { ok: false, queued: false, message: auth.error };
   }
 
+  // Batch refresh must not force — Decision Engine + freshness admit each creator.
   const batch = await refreshCreatorMetricsBatchByUnifiedIds(supabase, unifiedIds, {
-    force: true,
+    force: false,
     trigger: "manual",
     bypassMetricsManualOverride: scope === "metrics" || scope === "all",
     forceAvatarReplace: scope === "avatar" || scope === "all",
@@ -149,6 +206,7 @@ export async function refreshCreatorsBatchAction(
     requestedBy: auth.userId,
     scope,
     isBulk: true,
+    feature: "batch_refresh",
   });
 
   return {

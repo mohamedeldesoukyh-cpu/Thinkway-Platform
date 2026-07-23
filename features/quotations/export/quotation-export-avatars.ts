@@ -8,6 +8,7 @@ import { isUsableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
 import { detectImageContentType } from "@/lib/performance/screenshot-capture/storage";
 import { embedReportImageDataUri } from "@/lib/performance/report/report-embed-images";
 import {
+  PITCH_AVATAR_COMPRESS,
   SHOWCASE_AVATAR_COMPRESS,
   compressExportDataUri,
   toCompressedExportDataUri,
@@ -22,7 +23,7 @@ import {
   resolveExportGroupFollowers,
   resolveExportGroupPlatform,
 } from "./quotation-export-utils";
-import { isShowcaseTemplate } from "./quotation-template";
+import { isCreatorDeckTemplate, isPitchTemplate } from "./quotation-template";
 
 function quotationItemHasUsableAvatar(item: QuotationItemRow): boolean {
   const avatar =
@@ -117,14 +118,15 @@ export async function enrichQuotationDetailForExport(
 async function embedAvatarDataUri(
   src: string | null,
   profileUrl: string | null,
-  compress: boolean
+  compress: boolean,
+  compressOptions = SHOWCASE_AVATAR_COMPRESS
 ): Promise<string | null> {
   const trimmedSrc = src?.trim() || null;
   const trimmedProfile = profileUrl?.trim() || null;
   if (!trimmedSrc && !trimmedProfile) return null;
   if (trimmedSrc?.startsWith("data:")) {
     return compress
-      ? compressExportDataUri(trimmedSrc, SHOWCASE_AVATAR_COMPRESS)
+      ? compressExportDataUri(trimmedSrc, compressOptions)
       : trimmedSrc;
   }
 
@@ -137,7 +139,7 @@ async function embedAvatarDataUri(
     const buffer = Buffer.from(result.buffer);
     const contentType = result.contentType || detectImageContentType(buffer);
     if (compress) {
-      return toCompressedExportDataUri(buffer, contentType, SHOWCASE_AVATAR_COMPRESS);
+      return toCompressedExportDataUri(buffer, contentType, compressOptions);
     }
     return `data:${contentType};base64,${buffer.toString("base64")}`;
   }
@@ -146,7 +148,7 @@ async function embedAvatarDataUri(
     const embedded = await embedReportImageDataUri(trimmedSrc);
     if (!embedded?.startsWith("data:")) return null;
     return compress
-      ? compressExportDataUri(embedded, SHOWCASE_AVATAR_COMPRESS)
+      ? compressExportDataUri(embedded, compressOptions)
       : embedded;
   }
 
@@ -161,13 +163,17 @@ async function embedAvatarDataUri(
 export async function embedQuotationDocumentAvatars(
   doc: QuotationDocument
 ): Promise<QuotationDocument> {
-  const compress = isShowcaseTemplate(doc.template);
+  const compress = isCreatorDeckTemplate(doc.template);
+  const compressOptions = isPitchTemplate(doc.template)
+    ? PITCH_AVATAR_COMPRESS
+    : SHOWCASE_AVATAR_COMPRESS;
   const creatorGroups = await Promise.all(
     doc.creatorGroups.map(async (group) => {
       const embedded = await embedAvatarDataUri(
         group.avatarUrl,
         group.profileUrl,
-        compress
+        compress,
+        compressOptions
       );
       if (embedded?.startsWith("data:")) {
         return {
@@ -192,7 +198,47 @@ export async function embedQuotationDocumentAvatars(
     })
   );
 
-  return { ...doc, creatorGroups };
+  const collapseContentGroups = await Promise.all(
+    doc.collapseContentGroups.map(async (bundle) => ({
+      ...bundle,
+      packages: await Promise.all(
+        bundle.packages.map(async (pkg) => ({
+          ...pkg,
+          creators: await Promise.all(
+            pkg.creators.map(async (creator) => {
+              const embedded = await embedAvatarDataUri(
+                creator.avatarUrl,
+                creator.profileUrl,
+                compress,
+                compressOptions
+              );
+              if (embedded?.startsWith("data:")) {
+                return {
+                  ...creator,
+                  avatarUrl: embedded,
+                  avatarProxyUrl: null,
+                };
+              }
+              if (compress) {
+                return {
+                  ...creator,
+                  avatarUrl: null,
+                  avatarProxyUrl: null,
+                };
+              }
+              return {
+                ...creator,
+                avatarUrl: embedded ?? creator.avatarUrl,
+                avatarProxyUrl: null,
+              };
+            })
+          ),
+        }))
+      ),
+    }))
+  );
+
+  return { ...doc, creatorGroups, collapseContentGroups };
 }
 
 export function resolveExportAvatarProxyUrl(

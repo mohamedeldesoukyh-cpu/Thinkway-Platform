@@ -34,4 +34,15 @@ assert.equal(
   "TikTok post rows include authorMeta.fans — no Instagram backfill"
 );
 
+assert.equal(
+  shouldBackfillInstagramProfileDetails(
+    "instagram",
+    [],
+    POST_ONLY,
+    { ...partialNormalized, followers: 100, audienceCountry: null } as ApifyProfileData
+  ),
+  true,
+  "post-only Instagram with followers stub but missing country should still backfill"
+);
+
 console.log("apify-import-profile-backfill.test.ts: all assertions passed");

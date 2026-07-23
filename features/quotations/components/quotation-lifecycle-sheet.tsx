@@ -175,7 +175,7 @@ export function QuotationLifecycleSheet({
                     </p>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {detail.version_chain.map((v) => (
-                        <Link key={v.id} href={quotationDetailPath(v.id)}>
+                        <Link key={v.id} href={quotationDetailPath(v.id, v.serial_number)}>
                           <Badge
                             variant={v.id === detail.id ? "default" : "outline"}
                             className="font-mono text-[10px]"

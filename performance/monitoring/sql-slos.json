@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "description": "Database query budgets. Track in Supabase dashboard / pg_stat_statements; CI uses browse RPC harness when secrets exist.",
+  "defaults": {
+    "queryMs": { "soft": 100, "hard": 500 },
+    "rpcMs": { "soft": 150, "hard": 800 }
+  },
+  "rules": [
+    "Prefer indexed filters on influencers/creators browse paths (recency, country, platform).",
+    "Fail review if EXPLAIN shows Seq Scan on tables > 50k rows for hot paths without justification.",
+    "Avoid large joins in request path; pre-aggregate or use RPC with limited columns.",
+    "Discovery browse must use browse_influencer_ids_by_recency (or successor) — never unbounded select *.",
+    "Log RPC wall time in measure:discovery-browse-pool; hard fail when source != rpc in CI with secrets."
+  ],
+  "trackedRpcs": [
+    {
+      "name": "browse_influencer_ids_by_recency",
+      "wallMs": { "soft": 800, "hard": 2000 }
+    }
+  ],
+  "alerts": {
+    "slowQueryMs": 500,
+    "missingIndexReview": true,
+    "sequentialScanReview": true
+  }
+}

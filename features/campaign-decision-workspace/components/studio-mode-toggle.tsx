@@ -1,7 +1,9 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { STUDIO_REF_CLASSES } from "@/features/campaign-studio/constants/campaign-studio-ref-tokens";
 import { STUDIO_CLASSES } from "@/features/campaign-studio/constants/studio-tokens";
+import { useStudioRefMode } from "@/features/campaign-studio/hooks/use-studio-ref-mode";
 
 export type StudioWorkspaceMode = "presentation" | "decision";
 
@@ -20,6 +22,40 @@ export function StudioModeToggle({
   decisionDisabled,
   className,
 }: StudioModeToggleProps) {
+  const refMode = useStudioRefMode();
+
+  if (refMode) {
+    return (
+      <div
+        className={cn(STUDIO_REF_CLASSES.modeToggle, className)}
+        role="tablist"
+        aria-label="Campaign Studio mode"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === "presentation"}
+          disabled={disabled}
+          onClick={() => onModeChange("presentation")}
+          className={mode === "presentation" ? STUDIO_REF_CLASSES.modeToggleOn : undefined}
+        >
+          Presentation
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === "decision"}
+          disabled={disabled || decisionDisabled}
+          title={decisionDisabled ? "Available when the studio workflow completes" : undefined}
+          onClick={() => onModeChange("decision")}
+          className={mode === "decision" ? STUDIO_REF_CLASSES.modeToggleOn : undefined}
+        >
+          Decision Mode
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(

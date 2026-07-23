@@ -18,6 +18,10 @@ import type {
 import { parseCategoriesInput, parseLanguagesInput } from "./utils";
 import { requireCreatorBaselineDna } from "@/features/creator-dna/services/baseline-dna-populator";
 import {
+  countryWritePayload,
+  persistInfluencerCountryFields,
+} from "@/lib/creators/country-persistence";
+import {
   archiveVendorSchema,
   createVendorSchema,
   platformAccountInputSchema,
@@ -130,6 +134,11 @@ export async function createVendorAction(
           currency: parsed.data.pricing_currency,
         }
       : {};
+  const countryWrite = persistInfluencerCountryFields({
+    incomingCodes: [emptyToNull(parsed.data.country_code)],
+    preferredPrimary: emptyToNull(parsed.data.country_code),
+    preserveExistingPrimary: false,
+  });
 
   const { data: vendor, error } = await supabase
     .from("influencers")
@@ -138,7 +147,7 @@ export async function createVendorAction(
       legal_name: emptyToNull(parsed.data.legal_name),
       email: emptyToNull(parsed.data.email),
       phone: emptyToNull(parsed.data.phone),
-      country_code: emptyToNull(parsed.data.country_code),
+      ...(countryWritePayload(countryWrite)),
       categories,
       status: parsed.data.status,
       rate_card: rateCard,
@@ -296,6 +305,20 @@ export async function updateVendorOverviewAction(
     return { ok: false, message: authError };
   }
 
+  const { data: existing } = await supabase
+    .from("influencers")
+    .select("country_code, country_codes")
+    .eq("id", parsed.data.influencer_id)
+    .maybeSingle();
+
+  const countryWrite = persistInfluencerCountryFields({
+    existingCountryCode: existing?.country_code,
+    existingCountryCodes: existing?.country_codes,
+    incomingCodes: [emptyToNull(parsed.data.country_code)],
+    preferredPrimary: emptyToNull(parsed.data.country_code),
+    preserveExistingPrimary: false,
+  });
+
   const { error } = await supabase
     .from("influencers")
     .update({
@@ -304,7 +327,7 @@ export async function updateVendorOverviewAction(
       email: emptyToNull(parsed.data.email),
       phone: emptyToNull(parsed.data.phone),
       status: parsed.data.status,
-      country_code: emptyToNull(parsed.data.country_code),
+      ...(countryWritePayload(countryWrite)),
       city: emptyToNull(parsed.data.city),
       nationality: emptyToNull(parsed.data.nationality),
       gender: (emptyToNull(parsed.data.gender) ?? null) as InfluencerGender | null,

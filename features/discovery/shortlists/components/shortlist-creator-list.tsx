@@ -1,411 +1,272 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  CreatorProfileLink,
-  creatorProfileSourceFromUnified,
-} from "@/components/creator/creator-profile-link";
-import { CountryFlagBadge } from "@/components/creator/country-flag-badge";
-import { CreatorTierBadge } from "@/components/creator/creator-tier-badge";
-import { resolveCreatorTierFromUnified } from "@/lib/creators/creator-tier";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
-import { filterPlatformsForDisplay } from "@/lib/creators/creator-centric";
-import { resolveDiscoveryCreatorDisplayCategories } from "@/lib/creators/creator-display-categories";
 import {
-  brandSafetyMeta,
-  formatEngagementRate,
-  normalizeCountryCode,
-} from "@/features/discovery/components/creator-search/creator-search-utils";
-import {
-  InterestChips,
-  PlatformCell,
-} from "@/features/discovery/components/creator-result-row";
-import { EnrichmentStatusBadge } from "@/features/discovery/enrichment/components/enrichment-status-badge";
-import { DeleteDiscoveryCreatorDialog } from "@/features/discovery/delete-creator/delete-discovery-creator-dialog";
+  DiscoveryCreatorExactHeader,
+  DiscoveryCreatorExactRow,
+} from "@/features/discovery/components/discovery-creator-exact-row";
 import {
   isEnrichmentInProgress,
-  resolveEnrichmentDisplayStatus,
+  resolveCreatorEnrichmentStatus,
 } from "@/features/discovery/enrichment/status";
-import { PlatformMetricStack } from "@/features/discovery/components/platform-metric-stack";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import type { ShortlistCreatorQuotationRef } from "../types";
-import type { ShortlistItemStatus } from "@/types/database";
-import { ArrowDownIcon, ArrowUpIcon, MoreHorizontalIcon, UsersIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, UsersIcon } from "lucide-react";
 
-import { ShortlistItemStatusBadge, ShortlistCreatorQuotedBadge } from "./shortlist-badges";
 import { SHORTLIST_QUOTED_COLUMN_LABEL } from "../constants";
-import { ShortlistDetailCheckbox } from "./shortlist-detail-primitives";
+import {
+  isGroupPartiallyOrFullySelected,
+  resolveGroupCheckboxState,
+} from "../bulk-selection-policy";
 import {
   applyShortlistHeaderSort,
   sortShortlistCreators,
   type ShortlistCreatorSortField,
   type ShortlistCreatorSortState,
 } from "../shortlist-creator-sort";
+import type { ShortlistCreatorItem } from "../types";
+import {
+  buildShortlistDisplayBlocks,
+  type ShortlistDisplayBlock,
+} from "../shortlist-collapse-groups";
+import { ShortlistCollapseContentHeader } from "./shortlist-collapse-content-header";
+import {
+  ShortlistCreatorQuotedCell,
+  ShortlistCreatorStatusCell,
+  ShortlistCreatorTierCell,
+  shortlistCreatorSyncBorderClass,
+} from "./shortlist-creator-meta-columns";
 
-type ShortlistRowItem = {
-  item_id: string;
-  item_status: ShortlistItemStatus;
-  creator: UnifiedCreatorResult | null;
-  quotation_refs: ShortlistCreatorQuotationRef[];
-};
+type ShortlistRowItem = Pick<
+  ShortlistCreatorItem,
+  "item_id" | "item_status" | "creator" | "quotation_refs"
+>;
 
 type Props = {
-  items: ShortlistRowItem[];
+  items: ShortlistCreatorItem[];
   selectedIds: Set<string>;
   selectable: boolean;
   allSelected: boolean;
   indeterminate: boolean;
-  editable: boolean;
-  busy?: boolean;
   onToggleSelect: (itemId: string) => void;
+  onToggleSelectGroup?: (itemIds: string[]) => void;
   onToggleSelectAll: () => void;
-  onRemove: (itemId: string) => void;
-  onAddToQuotation: (itemId: string) => void;
-  onCreatorDeleted?: () => void;
+  onOpenCreator?: (creator: UnifiedCreatorResult) => void;
 };
 
-const TH_CLASS =
-  "border-b border-border bg-muted/50 px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wide text-muted-foreground";
-const TD_CLASS = "border-b border-border px-4 py-3.5 align-middle text-xs text-muted-foreground";
-const ENRICHING_ROW_CLASS =
-  "bg-sky-500/[0.07] ring-1 ring-inset ring-sky-500/25 hover:bg-sky-500/10";
+function shortlistCreatorMetaHeaderColumns(
+  sort: ShortlistCreatorSortState | null,
+  onSortChange: (next: ShortlistCreatorSortState) => void
+) {
+  return {
+    tier: (
+      <SortableMetaLabel label="Tier" field="tier" sort={sort} onSortChange={onSortChange} />
+    ),
+    status: (
+      <SortableMetaLabel label="Status" field="status" sort={sort} onSortChange={onSortChange} />
+    ),
+    quoted: (
+      <SortableMetaLabel
+        label={SHORTLIST_QUOTED_COLUMN_LABEL}
+        field="quoted"
+        sort={sort}
+        onSortChange={onSortChange}
+      />
+    ),
+  };
+}
 
-function SortableHeader({
+function shortlistCreatorMetaRowColumns(item: ShortlistRowItem) {
+  return {
+    tier: <ShortlistCreatorTierCell creator={item.creator} />,
+    status: <ShortlistCreatorStatusCell itemStatus={item.item_status} />,
+    quoted: <ShortlistCreatorQuotedCell quotationRefs={item.quotation_refs} />,
+  };
+}
+
+function SortableMetaLabel({
   label,
   field,
-  align,
   sort,
   onSortChange,
 }: {
   label: string;
   field: ShortlistCreatorSortField;
-  align?: "left" | "right";
   sort: ShortlistCreatorSortState | null;
   onSortChange: (next: ShortlistCreatorSortState) => void;
 }) {
   const isActive = sort?.field === field;
 
   return (
-    <th className={cn(TH_CLASS, align === "right" && "text-right")}>
-      <button
-        type="button"
-        onClick={() => onSortChange(applyShortlistHeaderSort(sort, field))}
-        aria-sort={isActive ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}
+    <button
+      type="button"
+      onClick={() => onSortChange(applyShortlistHeaderSort(sort, field))}
+      aria-sort={isActive ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}
+      className={cn(
+        "inline-flex min-w-0 items-center gap-0.5 text-left transition-colors hover:text-[#41495a]",
+        isActive && "text-[#41495a]"
+      )}
+    >
+      <span className="truncate">{label}</span>
+      {isActive ? (
+        sort.direction === "asc" ? (
+          <ArrowUpIcon className="size-3 shrink-0" aria-hidden />
+        ) : (
+          <ArrowDownIcon className="size-3 shrink-0" aria-hidden />
+        )
+      ) : null}
+    </button>
+  );
+}
+
+function ShortlistCreatorRow({
+  item,
+  selected,
+  selectable,
+  onToggleSelect,
+  onOpenCreator,
+}: {
+  item: ShortlistRowItem;
+  selected: boolean;
+  selectable: boolean;
+  onToggleSelect: () => void;
+  onOpenCreator?: (creator: UnifiedCreatorResult) => void;
+}) {
+  const creator = item.creator;
+
+  if (!creator) {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => selectable && onToggleSelect()}
+        onKeyDown={(event) => {
+          if (!selectable) return;
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onToggleSelect();
+          }
+        }}
         className={cn(
-          "inline-flex w-full min-w-0 items-center gap-0.5 transition-colors hover:text-foreground",
-          align === "right" && "justify-end text-right",
-          isActive && "text-foreground"
+          "discovery-search-exact-row discovery-search-exact-row--with-meta",
+          shortlistCreatorSyncBorderClass("never"),
+          selected && "is-selected"
         )}
       >
-        <span className="truncate">{label}</span>
-        {isActive ? (
-          sort.direction === "asc" ? (
-            <ArrowUpIcon className="size-3 shrink-0" aria-hidden />
-          ) : (
-            <ArrowDownIcon className="size-3 shrink-0" aria-hidden />
-          )
-        ) : null}
-      </button>
-    </th>
-  );
-}
-
-function resolveDisplayEngagementRate(
-  creator: UnifiedCreatorResult,
-  displayPlatforms: UnifiedCreatorResult["platforms"]
-): string {
-  if (displayPlatforms.length === 1) {
-    return formatEngagementRate(displayPlatforms[0]?.engagement_rate ?? null);
-  }
-  return formatEngagementRate(creator.metrics.engagement_rate.value);
-}
-
-function RowActions({
-  editable,
-  busy,
-  visible,
-  onAddToQuotation,
-  onRemove,
-  onDeleteCreator,
-}: {
-  editable: boolean;
-  busy?: boolean;
-  visible?: boolean;
-  onAddToQuotation: () => void;
-  onRemove: () => void;
-  onDeleteCreator?: () => void;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex justify-end opacity-0 transition-opacity group-hover:opacity-100",
-        visible && "opacity-100"
-      )}
-      onClick={(e) => e.stopPropagation()}
-      onKeyDown={(e) => e.stopPropagation()}
-    >
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-7 shrink-0 text-muted-foreground"
-            disabled={busy}
-            aria-label="Creator actions"
-          >
-            <MoreHorizontalIcon className="size-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44">
-          <DropdownMenuItem onSelect={onAddToQuotation} disabled={busy}>
-            Add to quotation
-          </DropdownMenuItem>
-          {onDeleteCreator ? (
-            <DropdownMenuItem
-              onSelect={onDeleteCreator}
-              disabled={busy}
-              className="text-red-600 focus:text-red-600"
-            >
-              Delete creator
-            </DropdownMenuItem>
+        <div className="discovery-search-exact-photo-cell">
+          {selectable ? (
+            <span className="discovery-search-exact-select">
+              <Checkbox
+                checked={selected}
+                onCheckedChange={onToggleSelect}
+                aria-label="Select unknown creator"
+              />
+            </span>
           ) : null}
-          {editable ? (
-            <>
-              {onDeleteCreator ? <DropdownMenuSeparator /> : null}
-              <DropdownMenuItem
-                onSelect={onRemove}
-                disabled={busy}
-                className="text-red-600 focus:text-red-600"
-              >
-                Remove from shortlist
-              </DropdownMenuItem>
-            </>
-          ) : null}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
-  );
-}
-
-function CreatorDataRow({
-  item,
-  rank,
-  selected,
-  selectable,
-  editable,
-  busy,
-  onToggleSelect,
-  onRemove,
-  onAddToQuotation,
-  onCreatorDeleted,
-}: {
-  item: ShortlistRowItem;
-  rank: number;
-  selected: boolean;
-  selectable: boolean;
-  editable: boolean;
-  busy?: boolean;
-  onToggleSelect: () => void;
-  onRemove: () => void;
-  onAddToQuotation: () => void;
-  onCreatorDeleted?: () => void;
-}) {
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const creator = item.creator!;
-  const source = creatorProfileSourceFromUnified(creator);
-  const displayPlatforms = filterPlatformsForDisplay(creator.platforms);
-  const avgEr = resolveDisplayEngagementRate(creator, displayPlatforms);
-  const hasCountryCode = Boolean(normalizeCountryCode(creator.country_code));
-  const safety = brandSafetyMeta(creator.authenticity_score);
-  const enrichmentStatus = resolveEnrichmentDisplayStatus(
-    creator.enrichment_status,
-    creator
-  );
-  const enriching = isEnrichmentInProgress(enrichmentStatus);
-  const tier = resolveCreatorTierFromUnified(creator);
-  return (
-    <tr
-      className={cn(
-        "group cursor-pointer transition-colors hover:bg-muted/40",
-        enriching && ENRICHING_ROW_CLASS,
-        selected && !enriching && "bg-primary/5 hover:bg-primary/10",
-        selected && enriching && "bg-sky-500/10 hover:bg-sky-500/[0.12]"
-      )}
-      onClick={() => selectable && onToggleSelect()}
-    >
-      <td className={cn(TD_CLASS, "w-9")}>
-        {selectable ? (
-          <ShortlistDetailCheckbox
-            checked={selected}
-            onChange={onToggleSelect}
-            aria-label={`Select ${source.displayName}`}
-          />
-        ) : null}
-      </td>
-      <td className={cn(TD_CLASS, "w-7 tabular-nums text-muted-foreground")}>{rank}</td>
-      <td className={cn(TD_CLASS, "min-w-0 overflow-hidden")}>
-        <CreatorProfileLink
-          source={source}
-          size="lg"
-          avatarBadge="country"
-          showPlatformBadge={false}
-          linkName={false}
-          nameClassName="truncate"
-          className="min-w-0 max-w-full"
-        />
-      </td>
-      <td className={TD_CLASS}>
-        <PlatformCell creator={creator} />
-      </td>
-      <td className={cn(TD_CLASS, "text-right tabular-nums")}>
-        <PlatformMetricStack platforms={displayPlatforms} metric="followers" align="right" />
-      </td>
-      <td className={cn(TD_CLASS, "min-w-[5.5rem]")}>
-        <CreatorTierBadge tier={tier} />
-      </td>
-      <td className={TD_CLASS}>
-        <div className="flex items-center gap-1">
-          {hasCountryCode ? (
-            <CountryFlagBadge countryCode={creator.country_code} size="inline" />
-          ) : null}
-          <span>{creator.country_code ?? "—"}</span>
+          <div className="discovery-search-exact-photo-wrap flex size-[84px] items-center justify-center rounded-full bg-muted text-[11px] text-muted-foreground">
+            ?
+          </div>
         </div>
-      </td>
-      <td className={cn(TD_CLASS, "max-w-[9rem] overflow-hidden")}>
-        <InterestChips
-          interests={resolveDiscoveryCreatorDisplayCategories(creator)}
-          variant="compact"
-          maxVisible={2}
-        />
-      </td>
-      <td className={cn(TD_CLASS, "text-right font-semibold tabular-nums text-foreground")}>
-        {avgEr}
-      </td>
-      <td className={cn(TD_CLASS, "overflow-hidden text-[11px] font-medium", safety.className)}>
-        <span className="block truncate" title={safety.label}>
-          {safety.label}
-        </span>
-      </td>
-      <td className={cn(TD_CLASS, "min-w-[108px] whitespace-nowrap")}>
-        <EnrichmentStatusBadge status={enrichmentStatus} className="text-xs font-semibold" />
-      </td>
-      <td className={TD_CLASS}>
-        <ShortlistItemStatusBadge status={item.item_status} variant="table" />
-      </td>
-      <td className={cn(TD_CLASS, "min-w-[7.5rem]")}>
-        <ShortlistCreatorQuotedBadge refs={item.quotation_refs} variant="table" />
-      </td>
-      <td className={cn(TD_CLASS, "w-10 overflow-hidden p-2 text-right")}>
-        <RowActions
-          editable={editable}
-          busy={busy}
-          visible={selected}
-          onAddToQuotation={onAddToQuotation}
-          onRemove={onRemove}
-          onDeleteCreator={
-            creator.influencer_id ? () => setDeleteOpen(true) : undefined
-          }
-        />
-        {creator.influencer_id ? (
-          <DeleteDiscoveryCreatorDialog
-            open={deleteOpen}
-            onOpenChange={setDeleteOpen}
-            creator={creator}
-            onDeleted={onCreatorDeleted}
-          />
-        ) : null}
-      </td>
-    </tr>
+        <div className="discovery-search-exact-info-cell">
+          <div className="discovery-search-exact-info-stack">
+            <div className="discovery-search-exact-name">Unknown creator</div>
+            <div className="discovery-search-exact-handle">Profile not resolved</div>
+          </div>
+        </div>
+        <div className="discovery-search-exact-tier-cell">
+          <ShortlistCreatorTierCell creator={null} />
+        </div>
+        <div className="discovery-search-exact-category-cell">
+          <span className="text-[11px] text-muted-foreground/60">—</span>
+        </div>
+        <div className="discovery-search-exact-stat-box opacity-40">
+          <span className="text-[11px] text-muted-foreground">No metrics</span>
+        </div>
+        <div className="discovery-search-exact-feed-thumbs discovery-search-exact-feed-thumbs--empty" />
+        <div className="discovery-search-exact-status-cell">
+          <ShortlistCreatorStatusCell itemStatus={item.item_status} />
+        </div>
+        <div className="discovery-search-exact-quoted-cell">
+          <ShortlistCreatorQuotedCell quotationRefs={item.quotation_refs} />
+        </div>
+      </div>
+    );
+  }
+
+  const enrichmentStatus = resolveCreatorEnrichmentStatus(creator.enrichment_status);
+  const enriching = isEnrichmentInProgress(enrichmentStatus);
+
+  return (
+    <DiscoveryCreatorExactRow
+      creator={creator}
+      selected={selected}
+      selectable={selectable}
+      enriching={enriching}
+      onToggleSelect={onToggleSelect}
+      onOpenCreator={() => onOpenCreator?.(creator)}
+      rowBehavior="open-detail"
+      interestChipVariant="icat"
+      className={shortlistCreatorSyncBorderClass(enrichmentStatus)}
+      metaColumns={shortlistCreatorMetaRowColumns(item)}
+      feedMaxItems={2}
+    />
   );
 }
 
-function UnknownCreatorRow({
-  item,
-  rank,
-  selected,
+function ShortlistDisplayBlockRows({
+  block,
+  selectedIds,
   selectable,
-  editable,
-  busy,
   onToggleSelect,
-  onRemove,
-  onAddToQuotation,
+  onToggleSelectGroup,
+  onOpenCreator,
 }: {
-  item: ShortlistRowItem;
-  rank: number;
-  selected: boolean;
+  block: ShortlistDisplayBlock;
+  selectedIds: Set<string>;
   selectable: boolean;
-  editable: boolean;
-  busy?: boolean;
-  onToggleSelect: () => void;
-  onRemove: () => void;
-  onAddToQuotation: () => void;
+  onToggleSelect: (itemId: string) => void;
+  onToggleSelectGroup?: (itemIds: string[]) => void;
+  onOpenCreator?: (creator: UnifiedCreatorResult) => void;
 }) {
-  return (
-    <tr
-      className={cn(
-        "group cursor-pointer transition-colors hover:bg-muted/40",
-        selected && "bg-primary/5 hover:bg-primary/10"
-      )}
-      onClick={() => selectable && onToggleSelect()}
-    >
-      <td className={cn(TD_CLASS, "w-9")}>
-        {selectable ? (
-          <ShortlistDetailCheckbox
-            checked={selected}
-            onChange={onToggleSelect}
-            aria-label="Select unknown creator"
+  if (block.kind === "collapse") {
+    const memberIds = block.items.map((item) => item.item_id);
+    const groupChecked = resolveGroupCheckboxState(memberIds, selectedIds);
+    const groupSelected = isGroupPartiallyOrFullySelected(memberIds, selectedIds);
+
+    return (
+      <div className="shortlist-collapse-content-block collapse-content-frame">
+        <ShortlistCollapseContentHeader
+          label={block.label}
+          creatorCount={block.items.length}
+          selectable={selectable}
+          checked={groupChecked}
+          selected={groupSelected}
+          onToggleSelect={() => onToggleSelectGroup?.(memberIds)}
+        />
+        {block.items.map((item) => (
+          <ShortlistCreatorRow
+            key={item.item_id}
+            item={item}
+            selected={selectedIds.has(item.item_id)}
+            selectable={false}
+            onToggleSelect={() => onToggleSelect(item.item_id)}
+            onOpenCreator={onOpenCreator}
           />
-        ) : null}
-      </td>
-      <td className={cn(TD_CLASS, "w-7 tabular-nums text-muted-foreground")}>{rank}</td>
-      <td className={cn(TD_CLASS, "min-w-[180px]")}>
-        <CreatorProfileLink
-          source={{
-            displayName: "Unknown creator",
-            avatarUrl: null,
-            handle: "Profile not resolved",
-          }}
-          size="lg"
-          avatarBadge="country"
-          showPlatformBadge={false}
-          linkName={false}
-        />
-      </td>
-      <td className={TD_CLASS}>—</td>
-      <td className={TD_CLASS}>—</td>
-      <td className={TD_CLASS}>—</td>
-      <td className={TD_CLASS}>—</td>
-      <td className={TD_CLASS}>—</td>
-      <td className={TD_CLASS}>—</td>
-      <td className={TD_CLASS}>—</td>
-      <td className={TD_CLASS}>
-        <span className="text-[11px] text-muted-foreground/50">—</span>
-      </td>
-      <td className={TD_CLASS}>
-        <ShortlistItemStatusBadge status={item.item_status} variant="table" />
-      </td>
-      <td className={cn(TD_CLASS, "min-w-[7.5rem]")}>
-        <ShortlistCreatorQuotedBadge refs={item.quotation_refs} variant="table" />
-      </td>
-      <td className={cn(TD_CLASS, "w-10 overflow-hidden p-2 text-right")}>
-        <RowActions
-          editable={editable}
-          busy={busy}
-          visible={selected}
-          onAddToQuotation={onAddToQuotation}
-          onRemove={onRemove}
-        />
-      </td>
-    </tr>
+        ))}
+      </div>
+    );
+  }
+
+  const item = block.items[0]!;
+  return (
+    <ShortlistCreatorRow
+      item={item}
+      selected={selectedIds.has(item.item_id)}
+      selectable={selectable}
+      onToggleSelect={() => onToggleSelect(item.item_id)}
+      onOpenCreator={onOpenCreator}
+    />
   );
 }
 
@@ -415,114 +276,50 @@ export function ShortlistCreatorList({
   selectable,
   allSelected,
   indeterminate,
-  editable,
-  busy,
   onToggleSelect,
+  onToggleSelectGroup,
   onToggleSelectAll,
-  onRemove,
-  onAddToQuotation,
-  onCreatorDeleted,
+  onOpenCreator,
 }: Props) {
   const [sort, setSort] = useState<ShortlistCreatorSortState | null>(null);
   const sortedItems = useMemo(() => sortShortlistCreators(items, sort), [items, sort]);
+  const displayBlocks = useMemo(
+    () => buildShortlistDisplayBlocks(sortedItems),
+    [sortedItems]
+  );
 
   return (
-    <div className="w-full overflow-x-auto px-1 pb-1">
-      <table className="w-full min-w-[1040px] table-fixed border-collapse [&_tbody_tr:last-child_td]:border-b-0">
-        <colgroup>
-          <col className="w-9" />
-          <col className="w-7" />
-          <col className="w-[13%]" />
-          <col className="w-[7%]" />
-          <col className="w-[7%]" />
-          <col className="w-[6%]" />
-          <col className="w-[6%]" />
-          <col className="w-[10%]" />
-          <col className="w-[5%]" />
-          <col className="w-[7%]" />
-          <col className="w-[7%]" />
-          <col className="w-[6%]" />
-          <col className="w-[8%]" />
-          <col className="w-10" />
-        </colgroup>
-        <thead>
-          <tr>
-            <th className={cn(TH_CLASS, "w-9")}>
-              {selectable ? (
-                <ShortlistDetailCheckbox
-                  checked={allSelected}
-                  indeterminate={indeterminate}
-                  onChange={onToggleSelectAll}
-                  aria-label="Select all creators"
-                />
-              ) : null}
-            </th>
-            <SortableHeader label="#" field="rank" sort={sort} onSortChange={setSort} />
-            <SortableHeader label="Creator" field="creator" sort={sort} onSortChange={setSort} />
-            <SortableHeader label="Platform" field="platform" sort={sort} onSortChange={setSort} />
-            <SortableHeader
-              label="Followers"
-              field="followers"
-              align="right"
-              sort={sort}
-              onSortChange={setSort}
-            />
-            <SortableHeader label="Tier" field="tier" sort={sort} onSortChange={setSort} />
-            <SortableHeader label="Country" field="country" sort={sort} onSortChange={setSort} />
-            <SortableHeader
-              label="Audience interests"
-              field="interests"
-              sort={sort}
-              onSortChange={setSort}
-            />
-            <SortableHeader
-              label="Avg ER"
-              field="engagement"
-              align="right"
-              sort={sort}
-              onSortChange={setSort}
-            />
-            <SortableHeader
-              label="Brand safety"
-              field="brand_safety"
-              sort={sort}
-              onSortChange={setSort}
-            />
-            <SortableHeader label="Sync" field="sync" sort={sort} onSortChange={setSort} />
-            <SortableHeader label="Status" field="status" sort={sort} onSortChange={setSort} />
-            <SortableHeader
-              label={SHORTLIST_QUOTED_COLUMN_LABEL}
-              field="quoted"
-              sort={sort}
-              onSortChange={setSort}
-            />
-            <th className={cn(TH_CLASS, "w-10")} aria-label="Actions" />
-          </tr>
-        </thead>
-        <tbody>
-          {sortedItems.map((item, index) => {
-            const isSelected = selectedIds.has(item.item_id);
-            const common = {
-              item,
-              rank: index + 1,
-              selected: isSelected,
-              selectable,
-              editable,
-              busy,
-              onToggleSelect: () => onToggleSelect(item.item_id),
-              onRemove: () => onRemove(item.item_id),
-              onAddToQuotation: () => onAddToQuotation(item.item_id),
-              onCreatorDeleted,
-            };
-
-            if (!item.creator) {
-              return <UnknownCreatorRow key={item.item_id} {...common} />;
+    <div className="shortlist-creator-exact-root discovery-search-exact-root">
+      <div className="discovery-search-exact-header-bar">
+        <DiscoveryCreatorExactHeader
+          total={sortedItems.length}
+          allSelected={indeterminate ? "indeterminate" : allSelected}
+          hasCreators={sortedItems.length > 0}
+          onToggleSelectAll={onToggleSelectAll}
+          showSelectAll={selectable}
+          headersClassName="shortlist-exact-table-head"
+          infoColumnLabel="Creator"
+          countLabel={`${sortedItems.length} Creator${sortedItems.length === 1 ? "" : "s"}`}
+          metaColumns={shortlistCreatorMetaHeaderColumns(sort, setSort)}
+        />
+      </div>
+      <div className="discovery-search-exact-scroll">
+        {displayBlocks.map((block) => (
+          <ShortlistDisplayBlockRows
+            key={
+              block.kind === "collapse"
+                ? `collapse-${block.collapseGroupId}`
+                : block.items[0]!.item_id
             }
-
-            return <CreatorDataRow key={item.item_id} {...common} />;
-          })}
-        </tbody>
-      </table>
+            block={block}
+            selectedIds={selectedIds}
+            selectable={selectable}
+            onToggleSelect={onToggleSelect}
+            onToggleSelectGroup={onToggleSelectGroup}
+            onOpenCreator={onOpenCreator}
+          />
+        ))}
+      </div>
     </div>
   );
 }

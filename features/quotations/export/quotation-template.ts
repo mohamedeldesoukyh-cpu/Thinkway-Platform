@@ -2,7 +2,8 @@ export type QuotationTemplateVariant =
   | "detailed"
   | "lump-sum"
   | "showcase"
-  | "showcase-lump-sum";
+  | "showcase-lump-sum"
+  | "pitch";
 
 export function resolveQuotationTemplate(
   raw: string | null | undefined
@@ -10,7 +11,23 @@ export function resolveQuotationTemplate(
   if (raw === "lump-sum") return "lump-sum";
   if (raw === "showcase") return "showcase";
   if (raw === "showcase-lump-sum") return "showcase-lump-sum";
+  if (raw === "pitch") return "pitch";
   return "detailed";
+}
+
+/** Creator-deck layouts (showcase, lump-sum showcase, pitch). */
+export function isCreatorDeckTemplate(
+  template: QuotationTemplateVariant
+): boolean {
+  return (
+    template === "showcase" ||
+    template === "showcase-lump-sum" ||
+    template === "pitch"
+  );
+}
+
+export function isPitchTemplate(template: QuotationTemplateVariant): boolean {
+  return template === "pitch";
 }
 
 /** Showcase creator-deck layouts (with or without lump-sum pricing). */
@@ -32,6 +49,7 @@ export const QUOTATION_TEMPLATE_OPTIONS: Array<{
   label: string;
   hint: string;
 }> = [
+  { id: "pitch", label: "Pitch presentation", hint: "Large avatars · deck" },
   { id: "detailed", label: "Detailed", hint: "Line items" },
   { id: "lump-sum", label: "Lump sum", hint: "Summary" },
   { id: "showcase", label: "Showcase", hint: "Creator deck" },

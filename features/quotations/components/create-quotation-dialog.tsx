@@ -74,8 +74,11 @@ export function CreateQuotationDialog({ options }: { options: QuotationFormOptio
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <PlusIcon className="size-4" />
+        <Button
+          className="h-9 gap-[7px] border-0 px-3.5 text-[12.5px] font-bold text-white shadow-[0_6px_16px_rgba(0,87,255,0.22)] hover:brightness-105"
+          style={{ backgroundImage: "var(--tw-brand-gradient)" }}
+        >
+          <PlusIcon className="size-3.5" strokeWidth={2.4} />
           New Quotation
         </Button>
       </DialogTrigger>

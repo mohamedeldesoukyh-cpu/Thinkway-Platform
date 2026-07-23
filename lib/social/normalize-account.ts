@@ -1,5 +1,6 @@
 import type { MetricsSource } from "./enrichment/metrics-status";
 import type { PlatformSyncStatus } from "./enrichment/types";
+import { normalizeSocialPlatform } from "./normalize-platform";
 import {
   buildCanonicalProfileUrl,
   normalizeProfileUrl,
@@ -59,7 +60,14 @@ export function buildNormalizedPlatformAccount(input: {
       platform: input.platform,
     }) ?? null;
 
-  const platform = (resolved?.platform ?? input.platform) as SocialPlatform;
+  // Never persist mixed-case / alias platforms ("Snapchat", "SC", "IG").
+  const platform =
+    normalizeSocialPlatform(resolved?.platform) ??
+    normalizeSocialPlatform(input.platform);
+  if (!platform) {
+    throw new Error(`Unsupported platform: ${input.platform}`);
+  }
+
   const username = resolved?.username ?? input.username.trim().replace(/^@+/, "");
   const normalized_username = normalizeUsername(username);
   const profile_url =

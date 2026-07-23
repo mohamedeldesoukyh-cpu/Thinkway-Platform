@@ -220,9 +220,13 @@ export function QuotationClientBrandPanel({ detail, options, disabled, wizard }:
   }
 
   return (
-    <div className="grid gap-3 rounded-xl border border-border bg-card p-4 md:grid-cols-3">
-      <div className="md:col-span-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
+    <div className="cb-panel field-row grid gap-3 md:grid-cols-3">
+      <div className="sec-head md:col-span-3 items-center" style={{ marginBottom: 12, alignItems: "center" }}>
+        <div>
+          <h2>Client &amp; brand</h2>
+          <p>Legal entity and brand this quotation is billed under.</p>
+        </div>
+        <div className="cb-toggle">
           <Checkbox
             id="temp-client-brand"
             checked={useTemporary}
@@ -230,7 +234,8 @@ export function QuotationClientBrandPanel({ detail, options, disabled, wizard }:
             disabled={disabled || pending}
           />
           <Label htmlFor="temp-client-brand" className="text-xs font-normal">
-            Use temporary client &amp; brand (quotation-scoped until promoted)
+            Use temporary client &amp; brand{" "}
+            <span className="font-normal text-[var(--text-4)]">(quotation-scoped)</span>
           </Label>
         </div>
         {!wizard && manualSave.hasClientBrandPending ? (

@@ -322,7 +322,7 @@ export function ClientProfile({
           crumbs={[
             { label: "Clients", href: "/clients" },
             { label: "Legal Entities", href: "/clients" },
-            { label: "Edit" },
+            { label: clientRecord.name },
           ]}
           actions={
             <>

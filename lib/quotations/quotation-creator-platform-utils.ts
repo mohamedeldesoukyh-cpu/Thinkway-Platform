@@ -1,6 +1,11 @@
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import type { QuotationCreatorPlatformOption } from "@/features/quotations/actions";
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
+import {
+  deliverableTypeValues,
+  platformsFromSelectedPostTypes,
+} from "@/lib/quotations/quotation-deliverable-types";
+import { sortPlatformsStable } from "@/lib/creators/creator-centric";
 
 /** Platforms offered when a manual creator has no linked profile accounts. */
 export const QUOTATION_MANUAL_CREATOR_PLATFORMS = [
@@ -67,4 +72,44 @@ export function bootstrapPlatformOptionsFromItem(
     ];
   }
   return [];
+}
+
+/**
+ * Union of platforms for a creator group header: linked accounts, line platforms,
+ * and every platform implied by option deliverable types (IG Reel + TT Video → both).
+ */
+export function unionQuotationCreatorGroupPlatforms(
+  items: readonly QuotationItemRow[],
+  extraPlatforms: readonly string[] = []
+): string[] {
+  const found = new Set<string>();
+
+  const add = (raw: string | null | undefined) => {
+    const key = raw?.trim() ? canonicalPlatformKey(raw) : "";
+    if (key) found.add(key);
+  };
+
+  for (const platform of extraPlatforms) add(platform);
+
+  for (const item of items) {
+    add(item.platform);
+    for (const platform of item.creator_profile_source?.linkedPlatforms ?? []) {
+      add(platform);
+    }
+    for (const deliverable of item.deliverables ?? []) {
+      const raw = deliverable.platform?.trim();
+      if (raw) {
+        for (const part of raw.split(",")) add(part);
+      }
+      for (const platform of platformsFromSelectedPostTypes(
+        deliverableTypeValues(deliverable)
+      )) {
+        add(platform);
+      }
+    }
+  }
+
+  return sortPlatformsStable([...found].map((platform) => ({ platform }))).map(
+    (entry) => entry.platform
+  );
 }

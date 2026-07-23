@@ -21,6 +21,7 @@ import {
   groupBatchTargetsByPlatform,
 } from "@/lib/creator-enrichment/batch-profile-target-resolver";
 import { priorityForTrigger } from "@/lib/creator-enrichment/policy";
+import { assertApifyAcquisitionBudget } from "@/lib/discovery/control-center/apify-budget";
 import { groupApifyRowsIntoCreators } from "@/lib/discovery/apify-dataset-grouping";
 import { importApifyStoredPayloadWithDnaPipeline } from "@/lib/discovery/apify-import-pipeline";
 import type { SocialPlatform } from "@/lib/social/platforms";
@@ -117,10 +118,24 @@ async function markCreatorOutcome(
 
 function findBundleForTarget(
   bundles: ReturnType<typeof groupApifyRowsIntoCreators>,
-  username: string
+  username: string,
+  fallbackRows?: Record<string, unknown>[]
 ) {
   const normalized = username.replace(/^@+/, "").trim().toLowerCase();
-  return bundles.find((b) => b.username === normalized) ?? null;
+  const exact = bundles.find((b) => b.username === normalized) ?? null;
+  if (exact) return exact;
+
+  // Single-target / single-row fallback (Snapchat private / odd payload shapes).
+  if (bundles.length === 1) return bundles[0] ?? null;
+  if (fallbackRows && fallbackRows.length === 1) {
+    return {
+      username: normalized,
+      profileUrl: "",
+      profileRows: fallbackRows,
+      postRows: [] as Record<string, unknown>[],
+    };
+  }
+  return null;
 }
 
 export async function runBatchProfileAcquisition(
@@ -141,6 +156,7 @@ export async function runBatchProfileAcquisition(
       const usage = estimateBatchProfileAcquisitionUsage({
         profileCount: platformTargets.length,
         platform,
+        scope: input.scope,
         config,
       });
       return sum + usage.estimatedApifyRuns;
@@ -153,6 +169,7 @@ export async function runBatchProfileAcquisition(
       const usage = estimateBatchProfileAcquisitionUsage({
         profileCount: platformTargets.length,
         platform,
+        scope: input.scope,
         config,
       });
       return sum + usage.estimatedCredits;
@@ -166,6 +183,41 @@ export async function runBatchProfileAcquisition(
     estimatedCredits,
     batchesTotal
   );
+
+  const budget = await assertApifyAcquisitionBudget(supabase, {
+    source: "batch_profile_acquisition_worker",
+    meta: {
+      jobId: input.jobId,
+      creatorCount: targets.length,
+      trigger: input.trigger,
+    },
+  });
+  if (!budget.allowed) {
+    const failedProgress: BatchProfileAcquisitionProgress = {
+      ...progress,
+      status: "failed",
+      errors: [budget.reason],
+    };
+    await updateDiscoveryJob(supabase, input.jobId, {
+      status: "failed",
+      completed_at: new Date().toISOString(),
+      error_message: budget.reason,
+      result: failedProgress,
+    });
+    return {
+      ok: false,
+      jobId: input.jobId,
+      creatorsTotal: targets.length,
+      creatorsImported: 0,
+      creatorsMerged: 0,
+      creatorsFailed: 0,
+      creatorsSkipped: targets.length,
+      apifyRunIds: [],
+      estimatedCredits,
+      reason: budget.reason,
+      progress: failedProgress,
+    };
+  }
 
   await markCreatorsQueued(
     supabase,
@@ -189,6 +241,10 @@ export async function runBatchProfileAcquisition(
     const chunks = chunkBatchTargets(platformTargets, config.batchSize);
     const platformKey = platform as SocialPlatform;
 
+    console.log(
+      `[batch-profile-acquisition] platform=${platformKey} targets=${platformTargets.length} batches=${chunks.length}`
+    );
+
     progress.platforms[platform] = {
       batches_completed: 0,
       batches_total: chunks.length,
@@ -206,13 +262,18 @@ export async function runBatchProfileAcquisition(
       const profileUrls = chunk.map((t) => t.profileUrl);
       const usernames = chunk.map((t) => t.username);
 
+      // Metrics refresh: one attempt only — retries were multiplying Instagram runs.
+      const maxRetries =
+        input.scope === "metrics" ? 1 : config.maxRetries;
+
       const fetchResult = await fetchBatchProfileRowsWithRetry({
         platform: platformKey,
         profileUrls,
         usernames,
         timeoutMs: config.timeoutMs,
-        maxRetries: config.maxRetries,
+        maxRetries,
         retryBackoffMs: config.retryBackoffMs,
+        scope: input.scope,
       });
 
       apifyRunIds.push(...fetchResult.apifyRunIds);
@@ -220,6 +281,7 @@ export async function runBatchProfileAcquisition(
       const creditsThisBatch = estimateBatchProfileAcquisitionUsage({
         profileCount: chunk.length,
         platform,
+        scope: input.scope,
         config,
       }).estimatedCredits;
       progress.actual_credits_estimate = Number(
@@ -254,7 +316,7 @@ export async function runBatchProfileAcquisition(
       const primaryRunId = fetchResult.apifyRunIds[0] ?? null;
 
       for (const target of chunk) {
-        const bundle = findBundleForTarget(bundles, target.username);
+        const bundle = findBundleForTarget(bundles, target.username, allRows);
         if (!bundle) {
           creatorsFailed += 1;
           progress.errors.push(
@@ -286,6 +348,8 @@ export async function runBatchProfileAcquisition(
             postRows: bundle.postRows,
             apifyRunId: primaryRunId,
             uploadAvatar: input.uploadAvatars ?? false,
+            // Batch already paid for Apify — never launch per-creator IG backfill runs.
+            allowLiveApifyBackfill: false,
           });
 
           if (!result.ok) {

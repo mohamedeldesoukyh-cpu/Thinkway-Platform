@@ -19,9 +19,41 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { createShortlistAction } from "@/features/discovery/actions";
+import {
+  DISCOVERY_DIALOG_BODY_CLASS,
+  DISCOVERY_DIALOG_CANCEL_BUTTON_CLASS,
+  DISCOVERY_DIALOG_CHECKBOX_CLASS,
+  DISCOVERY_DIALOG_CONTENT_CLASS,
+  DISCOVERY_DIALOG_CREATOR_ITEM_CLASS,
+  DISCOVERY_DIALOG_EMPTY_CLASS,
+  DISCOVERY_DIALOG_FIELD_LABEL_CLASS,
+  DISCOVERY_DIALOG_FOOTER_ACTIONS_CLASS,
+  DISCOVERY_DIALOG_FOOTER_CLASS,
+  DISCOVERY_DIALOG_FORM_CLASS,
+  DISCOVERY_DIALOG_FORM_PANEL_CLASS,
+  DISCOVERY_DIALOG_HEADER_BAR_CLASS,
+  DISCOVERY_DIALOG_HEADER_WRAP_CLASS,
+  DISCOVERY_DIALOG_PANEL_INSET_CLASS,
+  DISCOVERY_DIALOG_TABS_CONTENT_CLASS,
+  DISCOVERY_DIALOG_HINT_CLASS,
+  DISCOVERY_DIALOG_INPUT_CLASS,
+  DISCOVERY_DIALOG_LIST_ITEM_CLASS,
+  DROPDOWN_ITEM_SELECTED_CLASS,
+  DISCOVERY_DIALOG_PANEL_CLASS,
+  DISCOVERY_DIALOG_PRIMARY_BUTTON_CLASS,
+  DISCOVERY_DIALOG_RECENT_BUTTON_CLASS,
+  DISCOVERY_DIALOG_SEARCH_ICON_CLASS,
+  DISCOVERY_DIALOG_SEARCH_INPUT_CLASS,
+  DISCOVERY_DIALOG_SEARCH_WRAP_CLASS,
+  DISCOVERY_DIALOG_TABS_CLASS,
+  DISCOVERY_DIALOG_TABS_LIST_CLASS,
+  DISCOVERY_DIALOG_TABS_TRIGGER_CLASS,
+  DISCOVERY_DIALOG_TEXTAREA_CLASS,
+  DISCOVERY_DIALOG_TITLE_CLASS,
+} from "@/features/discovery/components/design-system";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
-import { cn } from "@/lib/utils";
 import { PlatformIcon } from "@/lib/performance/platform-icon";
+import { cn } from "@/lib/utils";
 
 import { readRecentShortlistId, writeRecentShortlistId } from "../recent-shortlist-storage";
 
@@ -156,192 +188,240 @@ export function AddToShortlistDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{formatDialogTitle(creatorCount)}</DialogTitle>
-          <DialogDescription>
-            Choose an existing shortlist or create a new one. Nothing is preselected — pick where
-            these creators should go.
-          </DialogDescription>
+      <DialogContent className={cn(DISCOVERY_DIALOG_CONTENT_CLASS, "sm:max-w-lg")}>
+        <DialogHeader className={DISCOVERY_DIALOG_HEADER_WRAP_CLASS}>
+          <div className={DISCOVERY_DIALOG_HEADER_BAR_CLASS}>
+            <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-[#64748b]">
+              Discovery
+            </p>
+            <DialogTitle className={DISCOVERY_DIALOG_TITLE_CLASS}>
+              {formatDialogTitle(creatorCount)}
+            </DialogTitle>
+            <DialogDescription className="text-xs leading-relaxed text-[#64748b]">
+              Choose an existing shortlist or create a new one.
+            </DialogDescription>
+          </div>
         </DialogHeader>
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          {pendingCreators.length > 0 ? (
-            <div className="space-y-2">
-              <Label>Creators to add ({pendingCreators.length})</Label>
-              <div className="max-h-36 space-y-1 overflow-y-auto rounded-lg border border-border p-1">
-                {pendingCreators.map((creator) => {
-                  const primary = creator.platforms[0];
-                  return (
-                    <div
-                      key={creator.unified_id}
-                      className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/40"
-                    >
-                      <div className="flex min-w-0 flex-1 items-center gap-2">
-                        {primary ? (
-                          <PlatformIcon
-                            platform={primary.platform}
-                            size="xs"
-                            className="size-5 shrink-0 rounded-full"
-                          />
-                        ) : null}
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">{creator.display_name}</p>
-                          {primary?.handle ? (
-                            <p className="truncate text-xs text-muted-foreground">
-                              @{primary.handle.replace(/^@/, "")}
-                            </p>
-                          ) : null}
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 shrink-0 p-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => removePendingCreator(creator.unified_id)}
-                        disabled={pending}
-                        aria-label={`Remove ${creator.display_name}`}
-                      >
-                        <XIcon className="size-3.5" />
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
-
-          <Tabs
-            value={mode}
-            onValueChange={(value) => setMode(value as "existing" | "create")}
-          >
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="existing">Add to existing</TabsTrigger>
-              <TabsTrigger value="create">Create new</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="existing" className="space-y-3 pt-3">
-              {recentShortlist ? (
-                <button
-                  type="button"
-                  onClick={applyRecentSuggestion}
-                  disabled={pending}
+        <form className={DISCOVERY_DIALOG_FORM_CLASS} onSubmit={handleSubmit}>
+          <div className={DISCOVERY_DIALOG_BODY_CLASS}>
+            {pendingCreators.length > 0 ? (
+              <div className={DISCOVERY_DIALOG_FORM_PANEL_CLASS}>
+                <Label className={DISCOVERY_DIALOG_FIELD_LABEL_CLASS}>
+                  Creators to add ({pendingCreators.length})
+                </Label>
+                <div
                   className={cn(
-                    "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors",
-                    selectedIds.has(recentShortlist.id)
-                      ? "border-primary/40 bg-primary/5 text-foreground"
-                      : "border-border bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                    DISCOVERY_DIALOG_PANEL_CLASS,
+                    DISCOVERY_DIALOG_PANEL_INSET_CLASS,
+                    "max-h-28"
                   )}
                 >
-                  <ClockIcon className="size-4 shrink-0" aria-hidden />
-                  <span>
-                    Recently used:{" "}
-                    <span className="font-medium text-foreground">{recentShortlist.name}</span>
-                  </span>
-                </button>
-              ) : null}
+                  {pendingCreators.map((creator) => {
+                    const primary = creator.platforms[0];
+                    return (
+                      <div key={creator.unified_id} className={DISCOVERY_DIALOG_CREATOR_ITEM_CLASS}>
+                        <div className="flex min-w-0 flex-1 items-center gap-2">
+                          {primary ? (
+                            <PlatformIcon
+                              platform={primary.platform}
+                              size="xs"
+                              variant="logo"
+                              className="size-5 shrink-0"
+                            />
+                          ) : null}
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-semibold text-[#0f172a]">
+                              {creator.display_name}
+                            </p>
+                            {primary?.handle ? (
+                              <p className="truncate text-[11px] text-[#64748b]">
+                                @{primary.handle.replace(/^@/, "")}
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="discovery-dialog-creator-item__remove"
+                          onClick={() => removePendingCreator(creator.unified_id)}
+                          disabled={pending}
+                          aria-label={`Remove ${creator.display_name}`}
+                        >
+                          <XIcon className="size-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
 
-              <div className="space-y-1.5">
-                <Label htmlFor="shortlist-search">Search shortlists</Label>
-                <div className="relative">
-                  <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <div className={DISCOVERY_DIALOG_FORM_PANEL_CLASS}>
+              <Tabs
+                value={mode}
+                onValueChange={(value) => setMode(value as "existing" | "create")}
+                className={DISCOVERY_DIALOG_TABS_CLASS}
+              >
+              <TabsList className={DISCOVERY_DIALOG_TABS_LIST_CLASS}>
+                <TabsTrigger value="existing" className={DISCOVERY_DIALOG_TABS_TRIGGER_CLASS}>
+                  Add to existing
+                </TabsTrigger>
+                <TabsTrigger value="create" className={DISCOVERY_DIALOG_TABS_TRIGGER_CLASS}>
+                  Create new
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent
+                value="existing"
+                className={cn(DISCOVERY_DIALOG_TABS_CONTENT_CLASS, "space-y-2.5")}
+              >
+                {recentShortlist ? (
+                  <button
+                    type="button"
+                    onClick={applyRecentSuggestion}
+                    disabled={pending}
+                    className={cn(
+                      DISCOVERY_DIALOG_RECENT_BUTTON_CLASS,
+                      selectedIds.has(recentShortlist.id) &&
+                        "discovery-dialog-recent-button--active"
+                    )}
+                  >
+                    <ClockIcon className="size-3.5 shrink-0" aria-hidden />
+                    <span>
+                      Recently used:{" "}
+                      <span className="font-semibold text-[#0f172a]">{recentShortlist.name}</span>
+                    </span>
+                  </button>
+                ) : null}
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="shortlist-search" className={DISCOVERY_DIALOG_FIELD_LABEL_CLASS}>
+                    Search shortlists
+                  </Label>
+                  <div className={DISCOVERY_DIALOG_SEARCH_WRAP_CLASS}>
+                    <SearchIcon className={DISCOVERY_DIALOG_SEARCH_ICON_CLASS} aria-hidden />
+                    <Input
+                      id="shortlist-search"
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                      placeholder="Search by name…"
+                      className={DISCOVERY_DIALOG_SEARCH_INPUT_CLASS}
+                      disabled={pending}
+                    />
+                  </div>
+                </div>
+
+                <div
+                  className={cn(
+                    DISCOVERY_DIALOG_PANEL_CLASS,
+                    DISCOVERY_DIALOG_PANEL_INSET_CLASS,
+                    "max-h-48"
+                  )}
+                >
+                  {filteredShortlists.length === 0 ? (
+                    <p className={DISCOVERY_DIALOG_EMPTY_CLASS}>
+                      {shortlists.length === 0
+                        ? "No shortlists yet. Create a new one instead."
+                        : "No shortlists match your search."}
+                    </p>
+                  ) : (
+                    filteredShortlists.map((shortlist) => {
+                      const checked = selectedIds.has(shortlist.id);
+                      return (
+                        <label
+                          key={shortlist.id}
+                          className={cn(
+                            DISCOVERY_DIALOG_LIST_ITEM_CLASS,
+                            checked && DROPDOWN_ITEM_SELECTED_CLASS
+                          )}
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={(value) =>
+                              toggleShortlist(shortlist.id, value === true)
+                            }
+                            disabled={pending}
+                            className={DISCOVERY_DIALOG_CHECKBOX_CLASS}
+                          />
+                          <span className="min-w-0 flex-1 truncate text-xs font-medium text-[#0f172a]">
+                            {shortlist.name}
+                          </span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+
+                {selectedIds.size > 0 ? (
+                  <p className={DISCOVERY_DIALOG_HINT_CLASS}>
+                    {selectedIds.size} shortlist{selectedIds.size === 1 ? "" : "s"} selected
+                  </p>
+                ) : null}
+              </TabsContent>
+
+              <TabsContent
+                value="create"
+                className={cn(DISCOVERY_DIALOG_TABS_CONTENT_CLASS, "space-y-3")}
+              >
+                <div className="space-y-1.5">
+                  <Label htmlFor="new-shortlist-name" className={DISCOVERY_DIALOG_FIELD_LABEL_CLASS}>
+                    Shortlist name <span className="text-red-500">*</span>
+                  </Label>
                   <Input
-                    id="shortlist-search"
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Search by name…"
-                    className="pl-9"
+                    id="new-shortlist-name"
+                    value={newName}
+                    onChange={(event) => setNewName(event.target.value)}
+                    placeholder="e.g. Q3 Beauty Shortlist"
+                    className={DISCOVERY_DIALOG_INPUT_CLASS}
+                    autoFocus={mode === "create"}
                     disabled={pending}
                   />
                 </div>
-              </div>
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="new-shortlist-description"
+                    className={DISCOVERY_DIALOG_FIELD_LABEL_CLASS}
+                  >
+                    Description
+                  </Label>
+                  <Textarea
+                    id="new-shortlist-description"
+                    value={newDescription}
+                    onChange={(event) => setNewDescription(event.target.value)}
+                    placeholder="Optional notes about this list"
+                    rows={2}
+                    disabled={pending}
+                    className={DISCOVERY_DIALOG_TEXTAREA_CLASS}
+                  />
+                </div>
+              </TabsContent>
+              </Tabs>
+            </div>
+          </div>
 
-              <div className="max-h-56 space-y-1 overflow-y-auto rounded-lg border border-border p-1">
-                {filteredShortlists.length === 0 ? (
-                  <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-                    {shortlists.length === 0
-                      ? "No shortlists yet. Create a new one instead."
-                      : "No shortlists match your search."}
-                  </p>
-                ) : (
-                  filteredShortlists.map((shortlist) => {
-                    const checked = selectedIds.has(shortlist.id);
-                    return (
-                      <label
-                        key={shortlist.id}
-                        className={cn(
-                          "flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 hover:bg-muted/40",
-                          checked && "bg-muted/30"
-                        )}
-                      >
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={(value) =>
-                            toggleShortlist(shortlist.id, value === true)
-                          }
-                          disabled={pending}
-                        />
-                        <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                          {shortlist.name}
-                        </span>
-                      </label>
-                    );
-                  })
-                )}
-              </div>
-
-              {selectedIds.size > 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  {selectedIds.size} shortlist{selectedIds.size === 1 ? "" : "s"} selected
-                </p>
-              ) : null}
-            </TabsContent>
-
-            <TabsContent value="create" className="space-y-3 pt-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="new-shortlist-name">
-                  Shortlist name <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="new-shortlist-name"
-                  value={newName}
-                  onChange={(event) => setNewName(event.target.value)}
-                  placeholder="e.g. Q3 Beauty Shortlist"
-                  autoFocus={mode === "create"}
-                  disabled={pending}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="new-shortlist-description">Description</Label>
-                <Textarea
-                  id="new-shortlist-description"
-                  value={newDescription}
-                  onChange={(event) => setNewDescription(event.target.value)}
-                  placeholder="Optional notes about this list"
-                  rows={3}
-                  disabled={pending}
-                />
-              </div>
-            </TabsContent>
-          </Tabs>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={pending}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={pending || (mode === "existing" ? !canSubmitExisting : !canSubmitCreate)}
-            >
-              {pending ? <Loader2Icon className="size-4 animate-spin" /> : null}
-              {mode === "create" ? "Create & add" : `Add to ${selectedIds.size || ""} list`.replace(/\s+/g, " ").trim()}
-            </Button>
+          <DialogFooter className={DISCOVERY_DIALOG_FOOTER_CLASS}>
+            <div className={DISCOVERY_DIALOG_FOOTER_ACTIONS_CLASS}>
+              <Button
+                type="button"
+                variant="outline"
+                className={DISCOVERY_DIALOG_CANCEL_BUTTON_CLASS}
+                onClick={() => onOpenChange(false)}
+                disabled={pending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className={DISCOVERY_DIALOG_PRIMARY_BUTTON_CLASS}
+                disabled={pending || (mode === "existing" ? !canSubmitExisting : !canSubmitCreate)}
+              >
+                {pending ? <Loader2Icon className="size-3.5 animate-spin" /> : null}
+                {mode === "create"
+                  ? "Create & add"
+                  : `Add to ${selectedIds.size || ""} list`.replace(/\s+/g, " ").trim()}
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>

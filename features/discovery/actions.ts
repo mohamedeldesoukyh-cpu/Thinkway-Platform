@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { matchCampaignBrief } from "@/lib/discovery/campaign-match";
+import { matchCreatorsForCampaign } from "@/lib/creators/campaign-match";
 import { enqueueDiscoveryJob, enqueueEnrichmentJob } from "@/lib/discovery/queue";
 import type { CampaignMatchRequest, DiscoveryJobPayload } from "@/lib/discovery/types";
 import { createSupabaseServerClient, requireRequestUser } from "@/lib/supabase/server";
@@ -102,4 +103,17 @@ export async function matchCampaignBriefAction(request: CampaignMatchRequest) {
   const matches = await matchCampaignBrief(supabase, request);
   revalidatePath("/discovery");
   return matches;
+}
+
+export async function matchDiscoveryCreatorsBriefAction(input: {
+  brief: string;
+  platform?: string;
+  country?: string;
+  limit?: number;
+}) {
+  const { supabase, userId } = await requireRequestUser();
+  return matchCreatorsForCampaign(supabase, {
+    ...input,
+    createdBy: userId,
+  });
 }

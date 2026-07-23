@@ -34,7 +34,8 @@ export function DiscoveryDiagnosticsSection({
 }: {
   snapshot: DiscoveryDiagnosticsSnapshot;
 }) {
-  const { settings, queue, apify, database, jobs, coverageDecisions } = snapshot;
+  const { settings, queue, apify, database, countryCompleteness, jobs, coverageDecisions } =
+    snapshot;
 
   return (
     <div className="grid gap-6">
@@ -111,6 +112,26 @@ export function DiscoveryDiagnosticsSection({
           />
           <MetricCard label="Missing DNA" value={String(database.missingDna)} />
           <MetricCard label="Pending discovery jobs" value={String(database.pendingDiscoveryJobs)} />
+        </div>
+      </OperationalFormSection>
+
+      <OperationalFormSection
+        title="Country completeness"
+        description="Profile-identity coverage for Discovery flags. Offline Apify exports await Instagram profile-details before commercial ready."
+      >
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <MetricCard
+            label="Country completeness %"
+            value={`${countryCompleteness.countryCompletenessPercent}%`}
+          />
+          <MetricCard
+            label="Profile enrichment backlog"
+            value={String(countryCompleteness.profileEnrichmentBacklog)}
+          />
+          <MetricCard
+            label="Creators awaiting profile-details"
+            value={String(countryCompleteness.awaitingProfileDetails)}
+          />
         </div>
       </OperationalFormSection>
 

@@ -9,16 +9,16 @@ import {
 } from "lucide-react";
 
 import { ThinkwayLogo } from "@/components/brand/thinkway-logo";
-import { CollapsibleAppSidebar } from "@/components/layout/collapsible-app-sidebar";
 import { DashboardHelpButton } from "@/components/layout/dashboard-help-button";
+import { DashboardShellUserSlot } from "@/components/layout/dashboard-shell-user-slot";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { PageBackButton } from "@/components/navigation/page-back-button";
-import { UserAccount } from "@/components/layout/user-account";
+import { AppNavLink } from "@/components/navigation/app-nav-link";
+import { DiscoveryTopNavTabs } from "@/features/discovery/components/discovery-top-nav-tabs";
 import {
   HomeWorkspaceNavTabs,
   type HomeWorkspaceNavTab,
 } from "@/features/home/components/home-workspace-nav-tabs";
-import { getAuthUser } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
 const mobileNavItems = [
@@ -44,17 +44,22 @@ type DashboardShellProps = {
   /**
    * Lock shell height and delegate scrolling to page content (campaign workspaces).
    * Prevents document/main scroll so inner sticky regions work.
+   * Full-bleed main (no outer p-4/md:p-6) — pages own their gutters.
    */
   containedMain?: boolean;
   mainClassName?: string;
+  /** Extra classes on the compact topbar (hidePageHeader / non–platform-v6). */
+  headerClassName?: string;
   /** When set, shows Overview / Finance / Campaigns / Clients switcher in the shell topbar. */
   workspaceNavActive?: HomeWorkspaceNavTab;
+  /** When set, shows Discovery section links (Search, Shortlists, …) next to the logo. */
+  discoveryNavActiveHref?: string;
   /** When set, shows a back control that navigates to this path. */
   backFallbackHref?: string;
   backLabel?: string;
 };
 
-export async function DashboardShell({
+export function DashboardShell({
   children,
   title,
   description,
@@ -64,49 +69,52 @@ export async function DashboardShell({
   immersiveLayout = false,
   containedMain = false,
   mainClassName,
+  headerClassName,
   workspaceNavActive,
+  discoveryNavActiveHref,
   backFallbackHref,
   backLabel = "Go back",
 }: DashboardShellProps) {
-  const { user, fullName } = await getAuthUser();
-  const userEmail = user?.email ?? null;
+  const showDiscoveryNav = Boolean(discoveryNavActiveHref);
 
   return (
-    <div className="relative flex min-h-svh bg-background text-foreground">
-      <CollapsibleAppSidebar userEmail={userEmail} />
-      <div
-        className={cn(
-          "flex min-h-0 min-w-0 flex-1 flex-col transition-all duration-300 ease-in-out",
-          containedMain && "h-svh max-h-svh overflow-hidden"
-        )}
-      >
+    <div
+      className={cn(
+        "flex min-h-0 min-w-0 flex-1 flex-col",
+        containedMain && "h-svh max-h-svh overflow-hidden"
+      )}
+    >
         {!immersiveLayout ? (
         <div className="flex items-center justify-between gap-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur-md md:hidden dark:bg-background/90">
           <Link href="/" className="flex items-center">
             <ThinkwayLogo compact className="mb-0" />
           </Link>
-          <nav className="flex items-center gap-1">
-            {mobileNavItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-2xl border border-border px-3 py-2 text-xs font-medium",
-                    "bg-card text-foreground shadow-[var(--card-shadow)]"
-                  )}
-                >
-                  <Icon className="size-3.5" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
+          {showDiscoveryNav ? (
+            <DiscoveryTopNavTabs activeHref={discoveryNavActiveHref!} />
+          ) : (
+            <nav className="flex items-center gap-1">
+              {mobileNavItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <AppNavLink
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-2xl border border-border px-3 py-2 text-xs font-medium",
+                      "bg-card text-foreground shadow-[var(--card-shadow)]"
+                    )}
+                  >
+                    <Icon className="size-3.5" />
+                    {item.label}
+                  </AppNavLink>
+                );
+              })}
+            </nav>
+          )}
           <div className="flex items-center gap-2">
             <DashboardHelpButton />
             <ThemeToggle />
-            <UserAccount email={userEmail} name={fullName} compact inSidebar={false} />
+            <DashboardShellUserSlot compact inSidebar={false} />
           </div>
         </div>
         ) : null}
@@ -124,26 +132,41 @@ export async function DashboardShell({
                     "thinkway-platform-v6-topbar",
                     workspaceNavActive && "thinkway-platform-v6-topbar--workspace-nav"
                   )
-                : "thinkway-shell-header px-4 py-2.5 md:px-8"
+                : cn(
+                    "thinkway-shell-header px-4 py-2.5 md:px-8",
+                    showDiscoveryNav && "discovery-shell-header--with-nav",
+                    headerClassName
+                  )
             )}
           >
             {platformV6 ? (
-              <div>
-                <span className="platform-v6-tb-title">{title}</span>
-                {description ? (
-                  <p className="platform-v6-tb-sub">{description}</p>
+              workspaceNavActive ? (
+                <Link href="/" className="flex shrink-0 items-center" title="Thinkway home">
+                  <ThinkwayLogo compact showText className="mb-0" />
+                </Link>
+              ) : (
+                <div>
+                  <span className="platform-v6-tb-title">{title}</span>
+                  {description ? (
+                    <p className="platform-v6-tb-sub">{description}</p>
+                  ) : null}
+                </div>
+              )
+            ) : (
+              <div className="flex min-w-0 flex-1 items-center gap-8">
+                <Link href="/" className="flex shrink-0 items-center" title="Thinkway home">
+                  <ThinkwayLogo compact showText className="mb-0" />
+                </Link>
+                {showDiscoveryNav ? (
+                  <DiscoveryTopNavTabs activeHref={discoveryNavActiveHref!} />
                 ) : null}
               </div>
-            ) : (
-              <Link href="/" className="flex shrink-0 items-center" title="Thinkway home">
-                <ThinkwayLogo compact showText className="mb-0" />
-              </Link>
             )}
             {workspaceNavActive ? <HomeWorkspaceNavTabs active={workspaceNavActive} /> : null}
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <DashboardHelpButton />
               <ThemeToggle />
-              <UserAccount email={userEmail} name={fullName} compact inSidebar={false} />
+              <DashboardShellUserSlot compact inSidebar={false} />
             </div>
           </header>
         ) : !immersiveLayout && platformV6 ? (
@@ -154,15 +177,21 @@ export async function DashboardShell({
               workspaceNavActive && "thinkway-platform-v6-topbar--workspace-nav"
             )}
           >
-            <div>
-              <span className="platform-v6-tb-title">{title}</span>
-              {description ? <p className="platform-v6-tb-sub">{description}</p> : null}
-            </div>
+            {workspaceNavActive ? (
+              <Link href="/" className="flex shrink-0 items-center" title="Thinkway home">
+                <ThinkwayLogo compact showText className="mb-0" />
+              </Link>
+            ) : (
+              <div>
+                <span className="platform-v6-tb-title">{title}</span>
+                {description ? <p className="platform-v6-tb-sub">{description}</p> : null}
+              </div>
+            )}
             {workspaceNavActive ? <HomeWorkspaceNavTabs active={workspaceNavActive} /> : null}
             <div className="flex items-center gap-2">
               <DashboardHelpButton />
               <ThemeToggle />
-              <UserAccount email={userEmail} name={fullName} compact inSidebar={false} />
+              <DashboardShellUserSlot compact inSidebar={false} />
             </div>
           </header>
         ) : !immersiveLayout ? (
@@ -204,17 +233,19 @@ export async function DashboardShell({
         <main
           className={cn(
             platformV6 && "thinkway-platform-v6",
+            /* containedMain is full-bleed — pages own their own gutters (e.g. Discovery px-4).
+               Do not add p-4 md:p-6 here: callers overriding with only p-0 still left md:p-6,
+               which framed header+content as one outer panel. */
             containedMain
-              ? "flex min-h-0 flex-1 flex-col overflow-hidden bg-background p-4 md:p-6"
+              ? "flex min-h-0 flex-1 flex-col overflow-hidden bg-background"
               : "min-h-0 flex-1 overflow-y-auto bg-background p-4 md:p-6",
-            platformV6 && !containedMain && "bg-[#f8fafc] p-6 md:p-6",
-            platformV6 && containedMain && "bg-[#f8fafc] p-0 md:p-0",
+            platformV6 && !containedMain && "bg-background p-6 md:p-6",
+            platformV6 && containedMain && "bg-background",
             mainClassName
           )}
         >
           {children}
         </main>
-      </div>
     </div>
   );
 }

@@ -16,6 +16,7 @@ import { gpHealthTextClass } from "@/features/quotations/quotation-gp-health";
 
 type QuotationKpiStripProps = {
   creatorCount: number;
+  audienceSize: number;
   estimatedReach: number;
   estimatedEngagementRate: number | null;
   totalCostEgp: number;
@@ -38,6 +39,7 @@ function egp(n: number): string {
 
 export function QuotationKpiStrip({
   creatorCount,
+  audienceSize,
   estimatedReach,
   estimatedEngagementRate,
   totalCostEgp,
@@ -60,6 +62,14 @@ export function QuotationKpiStrip({
       id: "creators",
       label: "Creators",
       value: String(creatorCount),
+      icon: UsersIcon,
+      accentKey: "blue",
+      valueClassName: NEUTRAL_VALUE,
+    },
+    {
+      id: "audience",
+      label: "Audience Size",
+      value: formatCreatorCount(audienceSize),
       icon: UsersIcon,
       accentKey: "blue",
       valueClassName: NEUTRAL_VALUE,

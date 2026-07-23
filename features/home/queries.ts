@@ -5,8 +5,10 @@ import {
 } from "@/features/groups/types";
 import { resolveLineCommercialMetrics } from "@/lib/analytics/metrics/financial";
 import { CAMPAIGN_STATUS_OPTIONS } from "@/lib/campaigns/constants";
+import { formatCountryCodeLabel } from "@/lib/creators/creator-display-utils";
+import { mergeCountryCodes } from "@/lib/creators/country-inference";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getRequestAuth, createSupabaseServerClient } from "@/lib/supabase/server";
 import type { CampaignStatus } from "@/types/database";
 
 export type HomeRecentCampaign = {
@@ -26,6 +28,8 @@ export type HomeTopVendor = {
   document_number: string;
   platform: string;
   country_code: string | null;
+  country_codes: string[] | null;
+  country_label: string | null;
   follower_count: number;
   initials: string;
 };
@@ -104,18 +108,15 @@ function primaryPlatformLabel(
 
 /** KPIs scoped to campaigns the signed-in user can access (RLS via can_access_campaign_header). */
 export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot> {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
+  const { user, fullName, error: authError } = await getRequestAuth();
   if (authError || !user) {
     throw new Error("You must be signed in to continue.");
   }
 
+  const supabase = await createSupabaseServerClient();
+  const profile = { full_name: fullName };
+
   const [
-    profileResult,
     headersResult,
     linesResult,
     vendorsResult,
@@ -124,71 +125,39 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
     vendorRowsResult,
   ] = await Promise.all([
     supabase
-      .from("profiles")
-      .select("full_name, email")
-      .eq("id", user.id)
-      .maybeSingle(),
-    supabase
       .from("campaign_headers")
       .select("id, status, currency_code, po_amount_campaign_currency, po_consumed_amount")
-      .limit(5000),
+      .limit(3000),
     supabase
       .from("campaign_lines")
       .select(
         "campaign_header_id, revenue, cost, profit, billing_status, revenue_before_vat, usage_rights_amount, usage_rights_cost, agency_fee_percent, agency_fee_amount, cost_before_vat"
       )
-      .limit(10000),
+      .limit(6000),
     supabase
       .from("campaign_influencers")
-      .select("id, influencer_id, campaign_header_id")
-      .limit(20000),
-    supabase.from("invoices").select("total, amount_paid").limit(5000),
+      .select("influencer_id, campaign_header_id")
+      .limit(8000),
+    supabase.from("invoices").select("total, amount_paid").limit(3000),
     supabase
       .from("campaign_headers")
       .select("id, name, document_number, status")
       .order("updated_at", { ascending: false })
       .limit(5),
+    // Embed platform accounts to avoid a second round-trip for the top-vendors strip.
     supabase
       .from("influencers")
-      .select("id, document_number, display_name, country_code")
+      .select(
+        "id, document_number, display_name, country_code, country_codes, influencer_platform_accounts!influencer_platform_accounts_influencer_id_fkey(platform, follower_count, is_primary)"
+      )
       .eq("status", "active")
       .limit(40),
   ]);
 
-  const profile = profileResult.data;
-  const greetingName = resolveGreetingName(
-    profile as { full_name: string | null } | null,
-    user.email
-  );
-  const displayName = resolveDisplayName(
-    profile as { full_name: string | null } | null,
-    user.email
-  );
+  const greetingName = resolveGreetingName(profile, user.email);
+  const displayName = resolveDisplayName(profile, user.email);
   const userHandle = user.email?.split("@")[0] ?? displayName;
   const userInitials = resolveInitials(displayName);
-
-  const vendorIdsForAccounts = (vendorRowsResult.data ?? []).map((row) => row.id);
-  const platformAccountsResult =
-    vendorIdsForAccounts.length > 0
-      ? await supabase
-          .from("influencer_platform_accounts")
-          .select("influencer_id, platform, follower_count, is_primary")
-          .in("influencer_id", vendorIdsForAccounts)
-      : { data: [], error: null };
-
-  if (platformAccountsResult.error) {
-    throw new Error(platformAccountsResult.error.message);
-  }
-
-  const accountsByVendor = new Map<
-    string,
-    { platform: string; follower_count: number | null; is_primary: boolean | null }[]
-  >();
-  for (const account of platformAccountsResult.data ?? []) {
-    const list = accountsByVendor.get(account.influencer_id) ?? [];
-    list.push(account);
-    accountsByVendor.set(account.influencer_id, list);
-  }
 
   if (headersResult.error) throw new Error(headersResult.error.message);
   if (linesResult.error) throw new Error(linesResult.error.message);
@@ -196,6 +165,26 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
   if (invoicesResult.error) throw new Error(invoicesResult.error.message);
   if (recentCampaignsResult.error) throw new Error(recentCampaignsResult.error.message);
   if (vendorRowsResult.error) throw new Error(vendorRowsResult.error.message);
+
+  const accountsByVendor = new Map<
+    string,
+    { platform: string; follower_count: number | null; is_primary: boolean | null }[]
+  >();
+  for (const row of vendorRowsResult.data ?? []) {
+    // Typed Database Relationships omit this embed; runtime join still returns rows.
+    const accounts = (
+      row as unknown as {
+        influencer_platform_accounts?: {
+          platform: string;
+          follower_count: number | null;
+          is_primary: boolean | null;
+        }[];
+      }
+    ).influencer_platform_accounts;
+    if (accounts?.length) {
+      accountsByVendor.set(row.id, accounts);
+    }
+  }
 
   const headers = headersResult.data ?? [];
   const activeCampaigns = headers.filter((h) => isActiveCampaignStatus(h.status)).length;
@@ -297,12 +286,18 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
   const top_vendors: HomeTopVendor[] = [...(vendorRowsResult.data ?? [])]
     .map((row) => {
       const accounts = accountsByVendor.get(row.id) ?? [];
+      const countryCodes = mergeCountryCodes(row.country_codes, row.country_code);
       return {
         id: row.id,
         display_name: row.display_name,
         document_number: row.document_number,
         platform: primaryPlatformLabel(accounts),
         country_code: row.country_code,
+        country_codes: row.country_codes,
+        country_label:
+          countryCodes.length > 0
+            ? countryCodes.map(formatCountryCodeLabel).join(" · ")
+            : null,
         follower_count: maxFollowerCount(accounts),
         initials: resolveInitials(row.display_name),
       };

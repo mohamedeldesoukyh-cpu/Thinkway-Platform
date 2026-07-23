@@ -4,6 +4,7 @@
 
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { avatarSourceFromDnaUrl } from "@/lib/creators/dna-avatar";
+import { parseCreatorAvatarStoragePathFromUrl } from "@/lib/discovery-import/import-avatar-storage";
 import { detectAvatarCdn } from "@/lib/performance/creator-avatar";
 import {
   isDisplayableAvatarUrl,
@@ -180,31 +181,33 @@ export function collectAvatarCandidates(input: {
       normalizeAvatarSource(account.avatar_source) === "apify" &&
       isUsableAvatarUrl(account.profile_picture_url)
   );
+  const storedIsDurable = Boolean(
+    storedUrl && parseCreatorAvatarStoragePathFromUrl(storedUrl)
+  );
+  const apifyIsDurable = Boolean(
+    apifyPlatformAvatar?.profile_picture_url &&
+      parseCreatorAvatarStoragePathFromUrl(apifyPlatformAvatar.profile_picture_url)
+  );
+  // Durable Thinkway uploads must not be dropped for ephemeral Apify CDN links.
   const storedUploadedSupersededByApify =
     storedSource === "uploaded" &&
     Boolean(storedUrl) &&
     Boolean(apifyPlatformAvatar?.profile_picture_url?.trim()) &&
-    !isSameProviderAvatarUrl(storedUrl, apifyPlatformAvatar!.profile_picture_url!);
-
-  const storedPrimaryStale =
-    Boolean(storedUrl) &&
-    storedSource !== "manual" &&
-    storedSource !== "uploaded" &&
-    !isUsableAvatarUrl(storedUrl);
+    !isSameProviderAvatarUrl(storedUrl, apifyPlatformAvatar!.profile_picture_url!) &&
+    (!storedIsDurable || apifyIsDurable);
 
   const includeStoredPrimary =
     storedMode !== "none" &&
     storedUrl &&
     storedSource &&
     storedSource in AVATAR_SOURCE_PRIORITY &&
-    !storedPrimaryStale &&
+    isDisplayableAvatarUrl(storedUrl) &&
     (storedMode === "all" ||
       storedSource === "manual" ||
       (storedSource === "uploaded" && !storedUploadedSupersededByApify) ||
       (storedMode === "operator" &&
         storedSource !== "placeholder" &&
-        storedSource !== "uploaded" &&
-        isDisplayableAvatarUrl(storedUrl)));
+        storedSource !== "uploaded"));
 
   if (includeStoredPrimary) {
     candidates.push({ url: storedUrl, source: storedSource });

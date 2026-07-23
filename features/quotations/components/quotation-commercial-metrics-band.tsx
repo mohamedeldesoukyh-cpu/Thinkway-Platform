@@ -4,38 +4,39 @@ import { QUOTATION_CLIENT_LABELS } from "@/features/quotations/constants";
 import { cn } from "@/lib/utils";
 
 type MetricDef = {
-  id: string;
   label: string;
   value: string;
-  tone?: "amber" | "blue" | "green" | "red" | "gray";
+  unit?: string;
+  tone?: "amber" | "blue" | "green" | "red";
+  compact?: boolean;
 };
 
-const TONE_CLASS = {
-  amber: "thinkway-campaign-c-amber",
-  blue: "thinkway-campaign-c-blue",
-  green: "thinkway-campaign-c-green",
-  red: "thinkway-campaign-c-red",
-  gray: "thinkway-campaign-c-gray",
-} as const;
-
-function egp(n: number): string {
-  return `${new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(Number.isFinite(n) ? n : 0)} EGP`;
+function egpParts(n: number): { value: string; unit: string } {
+  return {
+    value: new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(Number.isFinite(n) ? n : 0),
+    unit: "EGP",
+  };
 }
 
-function MetricItem({ label, value, tone }: MetricDef) {
+function MetricItem({ label, value, unit, tone, compact }: MetricDef) {
   return (
-    <div className="thinkway-campaign-metric-item">
-      <div className="thinkway-campaign-metric-lbl">{label}</div>
+    <div className="metric">
+      <div className="l">{label}</div>
       <div
         className={cn(
-          "thinkway-campaign-metric-val tabular-nums",
-          tone ? TONE_CLASS[tone] : undefined
+          "v",
+          compact && "sm",
+          tone === "blue" && "blue",
+          tone === "amber" && "amber",
+          tone === "green" && "green",
+          tone === "red" && "red"
         )}
       >
         {value}
+        {unit ? <span className="u"> {unit}</span> : null}
       </div>
     </div>
   );
@@ -67,77 +68,44 @@ export function QuotationCommercialMetricsBand({
   const gpTone: MetricDef["tone"] =
     totalGpValueEgp < 0 ? "red" : totalGpPct < gpTargetPct ? "amber" : "green";
 
-  const commercialMetrics: MetricDef[] = [
-    { id: "base", label: "Base cost", value: egp(totalCostEgp) },
-    {
-      id: "total",
-      label: QUOTATION_CLIENT_LABELS.totalClientCost,
-      value: egp(totalRevenueEgp),
-      tone: "blue",
-    },
-    {
-      id: "gp",
-      label: "GP margin",
-      value: egp(totalGpValueEgp),
-      tone: gpTone,
-    },
-    {
-      id: "gp_pct",
-      label: "GP%",
-      value: `${totalGpPct.toFixed(1)}%`,
-      tone: gpTone,
-    },
-    {
-      id: "pm_pct",
-      label: "PM%",
-      value: `${totalPmPct.toFixed(1)}%`,
-      tone: gpTone,
-    },
-  ];
-
   const daysTone: MetricDef["tone"] =
     validDaysRemaining == null
-      ? undefined
+      ? "blue"
       : validDaysRemaining <= 0
         ? "red"
         : validDaysRemaining <= 7
           ? "amber"
-          : undefined;
+          : "blue";
 
-  const documentMetrics: MetricDef[] = [
-    { id: "version", label: "Version", value: version },
-    { id: "creators", label: "Creators", value: String(creatorCount) },
-    {
-      id: "days",
-      label: "Days left",
-      value:
-        validDaysRemaining == null
-          ? "—"
-          : validDaysRemaining < 0
-            ? "Expired"
-            : String(validDaysRemaining),
-      tone: daysTone,
-    },
-  ];
+  const base = egpParts(totalCostEgp);
+  const client = egpParts(totalRevenueEgp);
+  const gp = egpParts(totalGpValueEgp);
 
   return (
-    <div className="thinkway-campaign-metrics-band">
-      <div className="thinkway-campaign-metrics-section">
-        <div className="thinkway-campaign-metrics-label">Commercial</div>
-        <div className="thinkway-campaign-metrics-row">
-          {commercialMetrics.map((metric) => (
-            <MetricItem key={metric.id} {...metric} />
-          ))}
-        </div>
-      </div>
-      <div className="thinkway-campaign-metrics-section">
-        <div className="thinkway-campaign-metrics-label">Document</div>
-        <div className="thinkway-campaign-metrics-row">
-          {documentMetrics.map((metric) => (
-            <MetricItem key={metric.id} {...metric} />
-          ))}
-        </div>
-      </div>
+    <div className="metricsband" aria-label="Quotation commercial metrics">
+      <MetricItem label="Base cost" value={base.value} unit={base.unit} />
+      <MetricItem
+        label={QUOTATION_CLIENT_LABELS.totalClientCost}
+        value={client.value}
+        unit={client.unit}
+        tone="blue"
+      />
+      <MetricItem label="GP margin" value={gp.value} unit={gp.unit} tone={gpTone} />
+      <MetricItem label="GP %" value={`${totalGpPct.toFixed(1)}%`} tone={gpTone} />
+      <MetricItem label="PM %" value={`${totalPmPct.toFixed(1)}%`} tone={gpTone} />
+      <MetricItem label="Version" value={version} compact />
+      <MetricItem label="Creators" value={String(creatorCount)} />
+      <MetricItem
+        label="Days left"
+        value={
+          validDaysRemaining == null
+            ? "—"
+            : validDaysRemaining < 0
+              ? "Expired"
+              : String(validDaysRemaining)
+        }
+        tone={daysTone}
+      />
     </div>
   );
 }

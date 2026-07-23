@@ -45,7 +45,9 @@ export async function buildShortlistExcel(doc: ShortlistDocument): Promise<Buffe
       ? "Detailed"
       : doc.template === "showcase"
         ? "Showcase"
-        : "Summary";
+        : doc.template === "pitch"
+          ? "Pitch presentation"
+          : "Summary";
 
   const sheet: StyledSheetConfig = {
     name: "Shortlist",
@@ -95,7 +97,8 @@ export async function buildShortlistExcel(doc: ShortlistDocument): Promise<Buffe
         entityLine: [doc.clientName, doc.brandName].filter((v) => v && v !== "—").join(" · ") || doc.name,
         meta: [
           { label: "Creators", value: String(doc.creatorCount) },
-          { label: "Total reach", value: doc.summary.totalFollowersLabel },
+          { label: "Audience size", value: doc.summary.totalFollowersLabel },
+          { label: "Est. reach", value: doc.summary.estimatedReachLabel },
           { label: "Avg ER", value: doc.summary.avgEngagementRateLabel },
         ],
         generatedAt: doc.generatedAt,

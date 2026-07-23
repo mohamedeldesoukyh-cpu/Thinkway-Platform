@@ -7,6 +7,8 @@ import {
   CreatorProfileLink,
   type CreatorProfileSource,
 } from "@/components/creator/creator-profile-link";
+import { formatCountryCodeLabel } from "@/lib/creators/creator-display-utils";
+import { extractCountryCodesFromText, mergeCountryCodes } from "@/lib/creators/country-inference";
 import type { DiscoverySearchResult } from "@/lib/discovery/types";
 import { formatCreatorBio } from "@/lib/text/decode-html-entities";
 import { cn } from "@/lib/utils";
@@ -20,14 +22,29 @@ function formatCount(value: number | null | undefined): string {
   return String(value);
 }
 
+function profileCountryLabels(profile: Profile): string[] {
+  const codes = mergeCountryCodes(
+    profile.country_code,
+    ...extractCountryCodesFromText(profile.bio),
+    ...extractCountryCodesFromText(profile.city)
+  );
+  return codes.map(formatCountryCodeLabel);
+}
+
 function profileSourceFromDiscoveryProfile(profile: Profile): CreatorProfileSource {
+  const countryCodes = mergeCountryCodes(
+    profile.country_code,
+    ...extractCountryCodesFromText(profile.bio),
+    ...extractCountryCodesFromText(profile.city)
+  );
   return {
     displayName: profile.display_name ?? profile.username,
     avatarUrl: profile.profile_image_url,
     platform: profile.platform,
     handle: profile.username,
     profile_url: profile.profile_url,
-    countryCode: profile.country_code,
+    countryCode: countryCodes[0] ?? profile.country_code,
+    countryCodes,
   };
 }
 
@@ -84,13 +101,13 @@ export function DiscoveryProfileCard({ profile, onEnrich, onSave, enriching }: P
           />
         </div>
 
-        {(profile.country_code || profile.city || ai?.category) && (
+        {(profileCountryLabels(profile).length > 0 || profile.city || ai?.category) && (
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {profile.country_code ? (
-              <Badge variant="outline" className="text-[10px]">
-                {profile.country_code}
+            {profileCountryLabels(profile).map((label) => (
+              <Badge key={label} variant="outline" className="text-[10px]">
+                {label}
               </Badge>
-            ) : null}
+            ))}
             {profile.city ? (
               <Badge variant="outline" className="text-[10px]">
                 {profile.city}

@@ -1,107 +1,60 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  DownloadIcon,
-  FileSpreadsheetIcon,
-  FileTextIcon,
+  ArchiveIcon,
   Loader2Icon,
   MoreHorizontalIcon,
   SaveIcon,
+  SendIcon,
+  XCircleIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { PageBackButton } from "@/components/navigation/page-back-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { QuotationCommercialMetricsBand } from "@/features/quotations/components/quotation-commercial-metrics-band";
-import { QuotationLifecyclePills } from "@/features/quotations/components/quotation-lifecycle-pills";
+import { GenerateOutputsLauncher } from "@/features/campaign-outputs/components/generate-outputs-launcher-lazy";
+import { OpenCampaignStudioLauncher } from "@/features/campaign-outputs/components/open-campaign-studio-launcher";
+import { seedFromQuotation } from "@/features/campaign-outputs/hydration/seed-adapters";
 import { QuotationLifecycleSheet } from "@/features/quotations/components/quotation-lifecycle-sheet";
-import { QuotationStatusBadge } from "@/features/quotations/components/quotation-status-badge";
-import { QuotationValidityBar } from "@/features/quotations/components/quotation-validity-bar";
-import { buildExportHref } from "@/features/quotations/components/quotation-preview-downloads";
-import { QUOTATIONS_LIST_PATH } from "@/features/quotations/constants";
+import { QuotationPreviewToolbarActions } from "@/features/quotations/components/quotation-preview-toolbar-actions";
+import { QuotationToolbarButton } from "@/features/quotations/components/quotation-detail-primitives";
+import { QuotationWorkspaceStatusPill } from "@/features/quotations/components/quotation-list-status-pill";
 import { archiveQuotation, updateQuotationHeader } from "@/features/quotations/actions";
-import {
-  QUOTATION_TEMPLATE_OPTIONS as TEMPLATE_OPTIONS,
-  appendQuotationExportRevision,
-  appendQuotationTemplateParam,
-  type QuotationTemplateVariant,
-} from "@/features/quotations/export/quotation-template";
-import type { AutosaveStatus } from "@/lib/hooks/use-debounced-autosave";
-import { cn } from "@/lib/utils";
+import type { QuotationTemplateVariant } from "@/features/quotations/export/quotation-template";
 import type { PromoteWizardOptions, QuotationDetail } from "@/features/quotations/types";
-
-function quotationPreviewHref(
-  quotationId: string,
-  template: QuotationTemplateVariant,
-  exportRevision?: string | null
-): string {
-  const params = new URLSearchParams();
-  appendQuotationTemplateParam(params, template);
-  appendQuotationExportRevision(params, exportRevision);
-  const query = params.toString();
-  return `/discovery/quotations/${quotationId}/preview${query ? `?${query}` : ""}`;
-}
 
 type Props = {
   detail: QuotationDetail;
   promoteOptions: PromoteWizardOptions;
-  totals: {
-    totalCostEgp: number;
-    totalRevenueEgp: number;
-    totalGpValueEgp: number;
-    totalGpPct: number;
-    totalPmPct: number;
-  };
-  saveStatus: AutosaveStatus;
   hasUnsavedChanges: boolean;
   savePending: boolean;
   onSave: () => void;
   exportTemplate: QuotationTemplateVariant;
   onExportTemplateChange: (template: QuotationTemplateVariant) => void;
-  uniqueCreatorCount: number;
 };
-
-function SaveIndicator({ status }: { status: AutosaveStatus }) {
-  if (status === "saving")
-    return (
-      <span className="inline-flex items-center gap-1 text-[10px] text-[var(--camp-text-3)]">
-        <Loader2Icon className="size-3 animate-spin" /> Saving…
-      </span>
-    );
-  if (status === "pending")
-    return <span className="text-[10px] text-[var(--camp-amber)]">Unsaved</span>;
-  if (status === "error")
-    return <span className="text-[10px] text-[var(--camp-red)]">Save failed</span>;
-  return null;
-}
 
 export function QuotationWorkspaceHeader({
   detail,
   promoteOptions,
-  totals,
-  saveStatus,
   hasUnsavedChanges,
   savePending,
   onSave,
   exportTemplate,
   onExportTemplateChange,
-  uniqueCreatorCount,
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [lifecycleOpen, setLifecycleOpen] = useState(false);
   const [lifecycleTab, setLifecycleTab] = useState<"links" | "activity">("links");
+  const campaignSeed = useMemo(() => seedFromQuotation(detail), [detail]);
 
   function runStatus(status: "under_review" | "cancelled") {
     startTransition(async () => {
@@ -127,203 +80,176 @@ export function QuotationWorkspaceHeader({
     });
   }
 
+  const metaNodes: ReactNode[] = [];
+  if (detail.shortlist_id) {
+    metaNodes.push(
+      <span key="shortlist">
+        <span className="k">Linked shortlist </span>
+        <Link href={`/discovery/shortlists/${detail.shortlist_id}`}>
+          {detail.shortlist_serial ?? detail.shortlist_id}
+        </Link>
+      </span>
+    );
+  }
+  if (detail.client_name) {
+    metaNodes.push(
+      <span key="client">
+        <span className="k">Legal entity </span>
+        <span className="v">{detail.client_name}</span>
+      </span>
+    );
+  }
+  if (detail.brand_name) {
+    metaNodes.push(
+      <span key="brand">
+        <span className="k">Brand </span>
+        <span className="v">{detail.brand_name}</span>
+      </span>
+    );
+  }
+  if (detail.owner_name) {
+    metaNodes.push(
+      <span key="owner">
+        <span className="k">Owner </span>
+        <span className="v">{detail.owner_name}</span>
+      </span>
+    );
+  }
+
   return (
     <>
-      <div className="thinkway-campaign-header shrink-0">
-        <div className="thinkway-campaign-header-inner">
-          <div className="mb-1 flex flex-wrap items-center gap-2">
-            <PageBackButton
-              fallbackHref={QUOTATIONS_LIST_PATH}
-              label="Back to quotations"
-              className="thinkway-campaign-back-btn size-[26px] rounded-[var(--camp-radius)] p-0 hover:bg-[var(--camp-surface)]"
-            />
-            <h1 className="thinkway-campaign-title truncate">{detail.name}</h1>
-            <QuotationStatusBadge
-              status={detail.status}
-              validityDate={detail.validity_date}
-              isExpired={detail.is_expired}
-              className="thinkway-campaign-status-chip"
-            />
-            <SaveIndicator status={saveStatus} />
-            <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
-              {detail.canManage ? (
-                <button
-                  type="button"
-                  className="thinkway-campaign-btn thinkway-campaign-btn-primary"
-                  disabled={savePending || !hasUnsavedChanges}
-                  onClick={onSave}
-                >
-                  {savePending ? (
-                    <Loader2Icon className="size-3.5 animate-spin" />
-                  ) : (
-                    <SaveIcon className="size-3.5" />
-                  )}
-                  Save
-                </button>
-              ) : null}
+      <div className="wtop">
+        <div className="wtop-left">
+          <div className="qtitle">
+            {detail.serial_number ? (
+              <span className="serial">{detail.serial_number}</span>
+            ) : null}
+            <h1 title={detail.name}>{detail.name}</h1>
+          </div>
+          {metaNodes.length > 0 ? (
+            <div className="qmeta">
+              {metaNodes.map((node, index) => (
+                <span key={index} className="inline-flex items-center gap-3">
+                  {index > 0 ? <span className="mdot" aria-hidden /> : null}
+                  {node}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="wtop-acts">
+          <QuotationWorkspaceStatusPill
+            status={detail.status}
+            isExpired={detail.is_expired}
+            className="spill"
+          />
+          {detail.canManage ? (
+            <QuotationToolbarButton
+              variant="glow"
+              size="sm"
+              disabled={savePending || !hasUnsavedChanges}
+              onClick={onSave}
+              className="btn-glow"
+            >
+              {savePending ? (
+                <Loader2Icon className="size-3.5 animate-spin" />
+              ) : (
+                <SaveIcon className="size-3.5" />
+              )}
+              Save
+            </QuotationToolbarButton>
+          ) : null}
+          <QuotationPreviewToolbarActions
+            quotationId={detail.id}
+            serialNumber={detail.serial_number}
+            exportTemplate={exportTemplate}
+            onExportTemplateChange={onExportTemplateChange}
+            exportRevision={detail.updated_at}
+            busy={pending}
+          />
+          <OpenCampaignStudioLauncher
+            seed={campaignSeed}
+            tab="studio"
+            workspace={{ type: "quotation", id: detail.id }}
+            variant="ghost"
+            size="md"
+            showIcon
+            buttonClassName="btn btn-ghost"
+          />
+          <GenerateOutputsLauncher
+            seed={campaignSeed}
+            tab="outputs"
+            workspace={{ type: "quotation", id: detail.id }}
+            triggerClassName="gen-trigger"
+          />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="thinkway-campaign-btn"
-                onClick={() => {
+                disabled={pending}
+                aria-label="Quotation actions"
+                className="ibtn disabled:opacity-50"
+              >
+                <MoreHorizontalIcon className="size-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem
+                onSelect={() => {
                   setLifecycleTab("links");
                   setLifecycleOpen(true);
                 }}
               >
-                Links &amp; Actions
-              </button>
-              <button
-                type="button"
-                className="thinkway-campaign-btn"
-                onClick={() => {
+                Links &amp; actions
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => {
                   setLifecycleTab("activity");
                   setLifecycleOpen(true);
                 }}
               >
                 Activity
-              </button>
+              </DropdownMenuItem>
               {detail.canManage && detail.status === "draft" ? (
-                <button
-                  type="button"
-                  className="thinkway-campaign-btn thinkway-campaign-btn-primary"
-                  disabled={pending}
-                  onClick={() => runStatus("under_review")}
-                >
-                  Submit for review
-                </button>
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={() => runStatus("under_review")}
+                    disabled={pending}
+                  >
+                    <SendIcon className="size-3.5" />
+                    Submit for review
+                  </DropdownMenuItem>
+                </>
               ) : null}
-              {detail.canManage && detail.status !== "cancelled" && detail.status !== "archived" ? (
-                <button
-                  type="button"
-                  className="thinkway-campaign-btn"
+              {detail.canManage &&
+              detail.status !== "cancelled" &&
+              detail.status !== "archived" ? (
+                <DropdownMenuItem
+                  onSelect={() => runStatus("cancelled")}
                   disabled={pending}
-                  onClick={() => runStatus("cancelled")}
                 >
-                  Cancel
-                </button>
+                  <XCircleIcon className="size-3.5" />
+                  Cancel quotation
+                </DropdownMenuItem>
               ) : null}
               {detail.canManage && !detail.is_archived ? (
-                <button
-                  type="button"
-                  className="thinkway-campaign-btn thinkway-campaign-btn-danger"
-                  disabled={pending}
-                  onClick={runArchive}
-                >
-                  Archive
-                </button>
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onSelect={runArchive}
+                    disabled={pending}
+                  >
+                    <ArchiveIcon className="size-3.5" />
+                    Archive
+                  </DropdownMenuItem>
+                </>
               ) : null}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button type="button" className="thinkway-campaign-btn" aria-label="Export options">
-                    <MoreHorizontalIcon className="size-3.5" />
-                    Export
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  {TEMPLATE_OPTIONS.map((option) => {
-                    // Bake template into each href so PDF/Word/Excel do not use a
-                    // stale exportTemplate from a prior selection in the same menu.
-                    const templateExportHref = (format: string) =>
-                      buildExportHref(detail.id, format, option.id, {
-                        download: true,
-                        exportRevision: detail.updated_at,
-                      });
-                    const templatePreviewHref = quotationPreviewHref(
-                      detail.id,
-                      option.id,
-                      detail.updated_at
-                    );
-
-                    return (
-                      <DropdownMenuSub key={option.id}>
-                        <DropdownMenuSubTrigger
-                          className={cn(exportTemplate === option.id && "bg-muted")}
-                          onPointerEnter={() => onExportTemplateChange(option.id)}
-                          onFocus={() => onExportTemplateChange(option.id)}
-                        >
-                          <span className="flex flex-col items-start gap-0.5">
-                            <span>{option.label}</span>
-                            <span className="text-[10px] font-normal text-muted-foreground">
-                              {option.hint}
-                            </span>
-                          </span>
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent className="w-44">
-                          <DropdownMenuItem asChild>
-                            <Link
-                              href={templatePreviewHref}
-                              target="_blank"
-                              rel="noreferrer"
-                              onClick={() => onExportTemplateChange(option.id)}
-                            >
-                              <FileTextIcon className="size-4" /> Preview
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <a
-                              href={templateExportHref("excel")}
-                              onClick={() => onExportTemplateChange(option.id)}
-                            >
-                              <FileSpreadsheetIcon className="size-4" /> Excel
-                            </a>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <a
-                              href={templateExportHref("word")}
-                              onClick={() => onExportTemplateChange(option.id)}
-                            >
-                              <DownloadIcon className="size-4" /> Word
-                            </a>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <a
-                              href={templateExportHref("pdf")}
-                              onClick={() => onExportTemplateChange(option.id)}
-                            >
-                              <DownloadIcon className="size-4" /> PDF
-                            </a>
-                          </DropdownMenuItem>
-                        </DropdownMenuSubContent>
-                      </DropdownMenuSub>
-                    );
-                  })}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-          <p className="thinkway-campaign-meta">
-            {detail.serial_number ?? "QT-PENDING"}
-            {detail.shortlist_id ? (
-              <>
-                {" · Linked shortlist "}
-                <Link
-                  href={`/discovery/shortlists/${detail.shortlist_id}`}
-                  className="thinkway-campaign-link"
-                >
-                  {detail.shortlist_serial ?? detail.shortlist_id}
-                </Link>
-              </>
-            ) : null}
-            {detail.client_name ? ` · ${detail.client_name}` : null}
-            {detail.owner_name ? ` · Owner: ${detail.owner_name}` : null}
-          </p>
-          <QuotationCommercialMetricsBand
-            totalCostEgp={totals.totalCostEgp}
-            totalRevenueEgp={totals.totalRevenueEgp}
-            totalGpValueEgp={totals.totalGpValueEgp}
-            totalGpPct={totals.totalGpPct}
-            totalPmPct={totals.totalPmPct}
-            gpTargetPct={detail.gp_target_pct}
-            creatorCount={uniqueCreatorCount}
-            version={detail.version}
-            validDaysRemaining={detail.valid_days_remaining}
-          />
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-        <QuotationLifecyclePills detail={detail} />
-        <QuotationValidityBar
-          validityDate={detail.validity_date}
-          validDaysRemaining={detail.valid_days_remaining}
-          isExpired={detail.is_expired}
-        />
       </div>
 
       <QuotationLifecycleSheet

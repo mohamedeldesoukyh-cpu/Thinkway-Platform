@@ -41,6 +41,7 @@ export type CreatorEnrichmentStatus =
   | "running"
   | "enriched"
   | "partial"
+  | "awaiting_profile_details"
   | "failed"
   | "skipped";
 
@@ -52,6 +53,9 @@ export type EnrichmentScope =
   | "audience"
   | "categories"
   | "all";
+
+/** Manual refresh only — whether to reuse IPL cache or force a live Apify fetch. */
+export type ManualRefreshDataSource = "cached_snapshot" | "live_apify";
 
 /** Job payload placed on the `creator-enrichment` queue. */
 export type CreatorEnrichmentJobPayload = {
@@ -75,12 +79,16 @@ export type CreatorEnrichmentJobPayload = {
   requestedBy?: string | null;
   /** When set, only enrich this platform account (Discovery per-platform refresh). */
   platformAccountId?: string | null;
+  /** Manual refresh only — cached path skips live Apify when IPL snapshot is fresh. */
+  dataSource?: ManualRefreshDataSource;
 };
 
 export type EnqueueResult = {
   queued: boolean;
   reason?: string;
   jobId?: string;
+  /** True when the decision engine skipped enqueue (e.g. creator already fresh). */
+  skipped?: boolean;
 };
 
 /** Normalized profile snapshot returned by the Apify profile fetch. */

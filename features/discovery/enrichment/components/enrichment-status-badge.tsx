@@ -38,6 +38,10 @@ const STATUS_META: Record<
     label: "Partial failure",
     icon: CircleAlertIcon,
   },
+  awaiting_profile_details: {
+    label: "Awaiting profile details",
+    icon: ClockIcon,
+  },
   failed: {
     label: "Failed",
     icon: CircleAlertIcon,

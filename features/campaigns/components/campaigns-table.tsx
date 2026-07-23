@@ -24,6 +24,7 @@ import {
 } from "@/lib/finance/po/status";
 import type { CampaignListItem } from "@/types/database";
 import { formatGroupDisplayName } from "@/lib/groups/group-display";
+import { campaignDetailPath } from "@/lib/routing/entity-paths";
 import { cn } from "@/lib/utils";
 
 type CampaignsTableProps = {
@@ -35,6 +36,19 @@ function formatDate(value: string | null) {
     return "—";
   }
   return format(new Date(`${value}T00:00:00`), "MMM d, yyyy");
+}
+
+function formatDateRange(start: string | null, end: string | null) {
+  if (!start && !end) {
+    return "—";
+  }
+  if (!start) {
+    return formatDate(end);
+  }
+  if (!end || start === end) {
+    return formatDate(start);
+  }
+  return `${formatDate(start)} – ${formatDate(end)}`;
 }
 
 function campaignPoBudget(campaign: CampaignListItem) {
@@ -54,8 +68,9 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "document_number",
     label: "Campaign #",
+    colWidth: "10%",
     renderCell: (campaign) => (
-      <Link href={`/campaigns/${campaign.id}`} className="platform-v6-link">
+      <Link href={campaignDetailPath(campaign)} className="platform-v6-link">
         <DocumentNumber value={campaign.document_number} />
       </Link>
     ),
@@ -64,9 +79,10 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "name",
     label: "Name",
+    colWidth: "20%",
     renderCell: (campaign) => (
       <Link
-        href={`/campaigns/${campaign.id}`}
+        href={campaignDetailPath(campaign)}
         className="text-xs font-semibold text-[var(--tw-text)] no-underline hover:text-[var(--tw-blue)]"
       >
         {campaign.name}
@@ -76,12 +92,14 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "brand",
     label: "Brand",
+    colWidth: "10%",
     renderCell: (campaign) => campaign.brand?.name ?? "—",
     cellClassName: "text-muted-foreground",
   },
   {
     id: "group_client",
     label: "Group · Legal entity",
+    colWidth: "18%",
     renderCell: (campaign) => (
       <>
         {formatGroupDisplayName(campaign.group?.name)}
@@ -95,6 +113,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "lines",
     label: "Lines",
+    colWidth: "8%",
     renderCell: (campaign) =>
       campaign.lines.length > 0 ? (
         <Badge
@@ -113,6 +132,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "status",
     label: "Status",
+    colWidth: "10%",
     renderCell: (campaign) => (
       <CampaignStatusBadge
         status={campaign.status}
@@ -124,6 +144,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
     id: "po_total",
     label: "PO total",
     headerClassName: "text-right",
+    colWidth: "12%",
     amountCell: true,
     renderCell: (campaign) => {
       const poAlertStatus = listPoAlertStatus(campaign);
@@ -160,8 +181,9 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "dates",
     label: "Dates",
+    colWidth: "12%",
     renderCell: (campaign) =>
-      `${formatDate(campaign.start_date)} – ${formatDate(campaign.end_date)}`,
+      formatDateRange(campaign.start_date, campaign.end_date),
     cellClassName: "whitespace-nowrap text-muted-foreground",
   },
 ];

@@ -31,6 +31,14 @@ type Props = {
   onDeleted?: () => void;
 };
 
+function unlockDocumentBodyInteraction() {
+  window.requestAnimationFrame(() => {
+    document.body.style.pointerEvents = "";
+    document.body.style.overflow = "";
+    document.body.removeAttribute("data-scroll-locked");
+  });
+}
+
 function DeleteBlockersList({ links }: { links: CreatorDeleteLinkRef[] }) {
   if (links.length === 0) return null;
 
@@ -116,13 +124,20 @@ export function DeleteDiscoveryCreatorDialog({
       }
 
       toast.success(result.message);
+      unlockDocumentBodyInteraction();
       onOpenChange(false);
       onDeleted?.();
     });
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) unlockDocumentBodyInteraction();
+        onOpenChange(nextOpen);
+      }}
+    >
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Delete creator</DialogTitle>

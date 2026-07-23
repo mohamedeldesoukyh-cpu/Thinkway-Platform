@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 
 import { cn } from "@/lib/utils";
@@ -8,43 +9,46 @@ import type { QuotationDetail } from "@/features/quotations/types";
 type Props = {
   detail: QuotationDetail;
   className?: string;
+  trailing?: ReactNode;
 };
 
 function LifecyclePill({
   label,
   tone,
   pulse,
+  href,
 }: {
   label: string;
   tone: "blue" | "gray" | "green";
   pulse?: boolean;
+  href?: string;
 }) {
-  const toneClass =
-    tone === "blue"
-      ? "bg-[var(--camp-blue-light)] text-[var(--camp-blue-text)]"
-      : tone === "green"
-        ? "bg-[var(--camp-green-bg)] text-[var(--camp-green-text)]"
-        : "border border-[var(--camp-border)] bg-[var(--camp-surface)] text-[var(--camp-text-2)]";
-
-  const dotClass =
-    tone === "blue"
-      ? "bg-[var(--camp-blue)]"
-      : tone === "green"
-        ? "bg-[var(--camp-green)]"
-        : "bg-[var(--camp-text-3)]";
-
-  return (
-    <span className={cn("thinkway-campaign-sh-pill", toneClass)}>
-      <span
-        className={cn("thinkway-campaign-sh-dot", dotClass, pulse && "pulse")}
-        aria-hidden
-      />
+  const pill = (
+    <span
+      className={cn(
+        "chip",
+        tone === "blue" && "link",
+        tone === "green" && "ok",
+        tone === "gray" && "mut"
+      )}
+    >
+      <span className={cn("d", pulse && "animate-pulse")} aria-hidden />
       {label}
     </span>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="transition-opacity hover:opacity-80">
+        {pill}
+      </Link>
+    );
+  }
+
+  return pill;
 }
 
-export function QuotationLifecyclePills({ detail, className }: Props) {
+export function QuotationLifecyclePills({ detail, className, trailing }: Props) {
   const shortlistLabel = detail.shortlist_id
     ? `Shortlist ${detail.shortlist_serial ?? detail.shortlist_id} · Linked`
     : "Shortlist · Not linked";
@@ -56,35 +60,32 @@ export function QuotationLifecyclePills({ detail, className }: Props) {
   const syncLabel = detail.sync_enabled ? "Live sync enabled" : "Snapshot locked";
 
   return (
-    <div
-      className={cn(
-        "thinkway-campaign-sync-health thinkway-campaign-sync-health--header",
-        className
-      )}
-      aria-label="Quotation lifecycle"
-    >
-      <span className="thinkway-campaign-sh-title">Lifecycle</span>
-      <div className="thinkway-campaign-sh-pills">
-        {detail.shortlist_id ? (
-          <Link href={`/discovery/shortlists/${detail.shortlist_id}`}>
-            <LifecyclePill label={shortlistLabel} tone="blue" />
-          </Link>
-        ) : (
-          <LifecyclePill label={shortlistLabel} tone="gray" />
-        )}
-        {detail.campaign_header_id ? (
-          <Link href={`/campaigns/${detail.campaign_header_id}`}>
-            <LifecyclePill label={campaignLabel} tone="blue" />
-          </Link>
-        ) : (
-          <LifecyclePill label={campaignLabel} tone="gray" />
-        )}
+    <div className={cn("lcband", className)} aria-label="Quotation lifecycle">
+      <span className="lclabel">Lifecycle</span>
+      {detail.shortlist_id ? (
         <LifecyclePill
-          label={syncLabel}
-          tone={detail.sync_enabled ? "green" : "gray"}
-          pulse={detail.sync_enabled}
+          label={shortlistLabel}
+          tone="blue"
+          href={`/discovery/shortlists/${detail.shortlist_id}`}
         />
-      </div>
+      ) : (
+        <LifecyclePill label={shortlistLabel} tone="gray" />
+      )}
+      {detail.campaign_header_id ? (
+        <LifecyclePill
+          label={campaignLabel}
+          tone="blue"
+          href={`/campaigns/${detail.campaign_header_id}`}
+        />
+      ) : (
+        <LifecyclePill label={campaignLabel} tone="gray" />
+      )}
+      <LifecyclePill
+        label={syncLabel}
+        tone={detail.sync_enabled ? "green" : "gray"}
+        pulse={detail.sync_enabled}
+      />
+      {trailing}
     </div>
   );
 }

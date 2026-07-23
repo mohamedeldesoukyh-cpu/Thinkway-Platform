@@ -1,0 +1,125 @@
+{
+  "flags": {
+    "showcaseCreators": false,
+    "showCommercialSummary": true,
+    "pricing": "itemized",
+    "itemizedPricing": true,
+    "showFees": true,
+    "includeTerms": true,
+    "includeAcceptance": true
+  },
+  "quotation": {
+    "number": "QT-2026-0012",
+    "title": "E& Summer Campaign Song",
+    "client": "Essencemediacom",
+    "brand": "E&",
+    "preparedBy": "mohamedeldesouky",
+    "issueDate": "14 Jul 2026",
+    "validUntil": "29 Jul 2026",
+    "version": "v1.0",
+    "status": "DRAFT"
+  },
+  "cover": {
+    "kicker": "Client Quotation",
+    "subtitle": "Influencer marketing proposal prepared exclusively for Essencemediacom.",
+    "stat3": { "label": "Client Investment", "value": "3,499,999.92 EGP", "valueShort": "E£3.50M" }
+  },
+  "campaign": {
+    "creatorCount": "13",
+    "tierSummary": "across 4 tiers",
+    "estReach": "15,791,000",
+    "estReachShort": "15.79M",
+    "estEngagement": "13.07%"
+  },
+  "categories": [
+    { "name": "Lifestyle", "count": "10", "countLabel": "creators", "share": "76.9%" },
+    { "name": "Beauty",    "count": "3",  "countLabel": "creators", "share": "23.1%" },
+    { "name": "Fitness",   "count": "3",  "countLabel": "creators", "share": "23.1%" },
+    { "name": "Travel",    "count": "1",  "countLabel": "creator",  "share": "7.7%"  }
+  ],
+  "tiers": [
+    { "name": "Celebrity", "slug": "celebrity", "profileCount": "1 profile", "followers": "6.2M", "estReach": "3.4M", "reachShare": "42.8%", "avgER": "1.54%",
+      "creators": [
+        { "handle": "yourfavlillyxox", "platform": "TikTok", "followers": "6.2M", "category": "Lifestyle", "er": "1.54%", "estReach": "3.4M" }
+      ] },
+    { "name": "Mega", "slug": "mega", "profileCount": "2 profiles", "followers": "6.4M", "estReach": "3.1M", "reachShare": "39.5%", "avgER": "1.98%",
+      "creators": [
+        { "handle": "farahroushdy", "platform": "TikTok", "followers": "4.9M", "category": "Lifestyle", "er": "0.57%", "estReach": "2.7M" },
+        { "handle": "linatahtawy", "platform": "Instagram", "followers": "1.5M", "category": "Beauty, Fitness", "er": "3.39%", "estReach": "450.0K" }
+      ] },
+    { "name": "Macro", "slug": "macro", "profileCount": "3 profiles", "followers": "1.8M", "estReach": "664.8K", "reachShare": "8.3%", "avgER": "13.68%",
+      "creators": [
+        { "handle": "cheroukcherif", "platform": "Instagram", "followers": "622.2K", "category": "Lifestyle, Travel", "er": "2.52%", "estReach": "186.7K" },
+        { "handle": "karimkabany", "platform": "Instagram", "followers": "601.3K", "category": "Beauty, Fitness", "er": "4.75%", "estReach": "180.4K" },
+        { "handle": "hadirelnahas", "platform": "TikTok", "followers": "541.4K", "category": "Lifestyle", "er": "33.78%", "estReach": "297.8K" }
+      ] },
+    { "name": "Mid", "slug": "mid", "profileCount": "5 profiles", "followers": "1.4M", "estReach": "751.4K", "reachShare": "9.4%", "avgER": "19.45%",
+      "creators": [
+        { "handle": "joumanaelhadaryy", "platform": "TikTok", "followers": "499.9K", "category": "Lifestyle", "er": "24.35%", "estReach": "274.9K" },
+        { "handle": "reem.a.elkhashab", "platform": "TikTok", "followers": "454.4K", "category": "Lifestyle", "er": "12.83%", "estReach": "249.9K" },
+        { "handle": "nourhan3mad_", "platform": "TikTok", "followers": "203.9K", "category": "Lifestyle", "er": "1.36%", "estReach": "112.1K" },
+        { "handle": "hanyellethyy", "platform": "TikTok", "followers": "136.1K", "category": "Lifestyle", "er": "56.80%", "estReach": "74.9K" },
+        { "handle": "hayahashem.m", "platform": "Instagram", "followers": "131.8K", "category": "Beauty, Fitness", "er": "1.92%", "estReach": "39.5K" }
+      ] },
+    { "name": "Unknown", "slug": "unknown", "profileCount": "2 profiles", "followers": "0", "estReach": "0", "reachShare": "0.0%", "avgER": "—",
+      "creators": [
+        { "handle": "— TBC", "platform": "Instagram", "followers": "—", "category": "Lifestyle", "er": "—", "estReach": "—" },
+        { "handle": "— TBC", "platform": "Instagram", "followers": "—", "category": "Lifestyle", "er": "—", "estReach": "—" }
+      ] }
+  ],
+  "totals": { "creatorCount": "13", "followers": "15.8M", "estReach": "8.0M", "avgER": "13.07%" },
+  "insight": {
+    "categoryMix": "Category mix — Lifestyle 10 · Beauty 3 · Fitness 3 · Travel 1.",
+    "tierMix": "Tier mix — Mid 5 · Macro 3 · Mega 2 · Celebrity 1.",
+    "scale": "Scale — 13 creators delivering an estimated reach of 15,791,000 at an average engagement rate of 13.07%."
+  },
+  "commercial": {
+    "sectionNo": "02",
+    "headlineLabel": "Client investment",
+    "headlineValue": "E£3,499,999.92",
+    "subtotalLabel": "Client cost",
+    "subtotalValue": "E£3,499,999.92",
+    "agencyFee": "E£0.00",
+    "totalInclAF": "E£3,499,999.92",
+    "lumpSumNote": "Deliverables below are covered by a single lump-sum fee; individual creator pricing is not itemized."
+  },
+  "feeLines": [
+    { "creator": "cheroukcherif", "tier": "Macro", "platform": "TikTok", "deliverable": "1× TT Video", "grossFee": "187,500.00" },
+    { "creator": "hayahashem.m", "tier": "Mid", "platform": "TikTok", "deliverable": "2× TT Video", "grossFee": "262,500.00" },
+    { "creator": "farahroushdy", "tier": "Mega", "platform": "TikTok", "deliverable": "2× TT Video", "grossFee": "437,500.00" },
+    { "creator": "yourfavlillyxox", "tier": "Celebrity", "platform": "TikTok", "deliverable": "1× TT Video", "grossFee": "375,000.00" },
+    { "creator": "reem.a.elkhashab", "tier": "Mid", "platform": "TikTok", "deliverable": "1× TT Video", "grossFee": "135,000.00" },
+    { "creator": "linatahtawy", "tier": "Mega", "platform": "TikTok", "deliverable": "1× TT Video", "grossFee": "375,000.00" },
+    { "creator": "hadirelnahas", "tier": "Macro", "platform": "TikTok", "deliverable": "2× TT Video", "grossFee": "375,000.00" },
+    { "creator": "joumanaelhadaryy", "tier": "Mid", "platform": "TikTok", "deliverable": "2× TT Video", "grossFee": "150,000.00" },
+    { "creator": "karimkabany", "tier": "Macro", "platform": "TikTok", "deliverable": "1× TT Video", "grossFee": "150,000.00" },
+    { "creator": "nourhan3mad_", "tier": "Mid", "platform": "TikTok", "deliverable": "2× TT Video", "grossFee": "312,500.00" },
+    { "creator": "hanyellethyy", "tier": "Mid", "platform": "TikTok", "deliverable": "2× TT Video", "grossFee": "150,000.00" },
+    { "creator": "Instagram TBH", "tier": "IG", "platform": "Instagram", "deliverable": "1× IG Reel + 1× Story set", "grossFee": "130,000.00" },
+    { "creator": "UGC TBH", "tier": "UGC", "platform": "—", "deliverable": "2× UGC (per option)", "grossFee": "33,333.32" }
+  ],
+  "showcaseCreators": [],
+  "roster": [],
+  "terms": {
+    "sectionNo": "03",
+    "items": [
+      { "heading": "Quotation validity", "body": "This quotation is valid for the period stated on the cover page. Pricing, creator availability, and deliverables are subject to change after the validity date." },
+      { "heading": "Payment terms", "body": "Full payment is due in advance prior to campaign launch unless otherwise agreed in writing. Thinkway reserves the right to suspend any campaign activity in the event of payment delay, without further liability. All amounts are exclusive of applicable taxes unless stated otherwise." },
+      { "heading": "Content approval", "body": "The Client shall review and approve influencer content within two (2) business days of submission. Failure to respond within this period shall constitute approval to publish." },
+      { "heading": "Usage rights", "body": "Usage rights are limited to the campaign period and channels specified in this quotation unless extended usage is explicitly quoted and agreed in writing." },
+      { "heading": "Creator availability", "body": "Creator participation is subject to final confirmation. Thinkway will propose suitable alternatives of comparable reach and profile should a listed creator become unavailable." },
+      { "heading": "Taxes", "body": "Quoted amounts exclude VAT and withholding taxes unless explicitly stated. Applicable taxes will be added to invoices in accordance with Egyptian tax regulations." },
+      { "heading": "Cancellation", "body": "Cancellation or material amendment requests must be submitted in writing at least seven (7) business days before the scheduled campaign start. Fees for work performed and non-recoverable creator commitments may apply." },
+      { "heading": "Confidentiality", "body": "This quotation, including pricing, creator identities, and campaign strategy, is confidential and prepared exclusively for the named Client. It may not be shared with third parties without Thinkway's prior written consent." }
+    ]
+  },
+  "acceptance": {
+    "sectionNo": "04",
+    "revision": "v1.0 · mohamedeldesouky · 14 Jul 2026 — Initial quotation created"
+  },
+  "company": {
+    "legalLine": "Thinkway · CR 57920 · VAT 780-879-732",
+    "address": "44B Saraya Mall, Sheikh Zayed, Giza, Egypt · hello@thinkwaymedia.com"
+  },
+  "footer": { "left": "Confidential · Thinkway Platform · 14 Jul 2026" }
+}

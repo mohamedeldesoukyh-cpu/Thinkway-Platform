@@ -7,6 +7,8 @@ import {
 import { getCreatorIntelligenceMode } from "@/lib/creator-intelligence/flags";
 import { creatorIntelligenceMatchesCategories } from "@/lib/creator-intelligence/shadow";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { resolveCountryCode } from "@/lib/creators/country-code";
+import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
 import type { CampaignSearchCriterion } from "@/features/campaign-intelligence-profile/types/profile";
 import type { DiscoverySearchFilterKey } from "@/features/campaign-intelligence-profile/services/discovery-search-mapping/types";
 import {
@@ -65,18 +67,16 @@ function toEvaluation(matched: boolean): CriterionEvaluation {
 }
 
 function normalizeCountryCode(value: string | null | undefined): string {
-  return (value ?? "").trim().toUpperCase();
+  return resolveCountryCode(value);
 }
 
 function creatorCountryCodes(creator: UnifiedCreatorResult): string[] {
-  const codes = new Set<string>();
-  const primary = normalizeCountryCode(creator.country_code ?? creator.estimated_country);
-  if (primary) codes.add(primary);
-  for (const platform of creator.platforms) {
-    const audience = normalizeCountryCode(platform.audience_country);
-    if (audience) codes.add(audience);
-  }
-  return [...codes];
+  return resolveCreatorCountryCodes({
+    country_codes: creator.country_codes,
+    country_code: creator.country_code,
+    estimated_country: creator.estimated_country,
+    platformAudienceCountries: creator.platforms.map((platform) => platform.audience_country),
+  });
 }
 
 function haystackText(creator: UnifiedCreatorResult): string {
@@ -443,4 +443,47 @@ export function rankCreatorsByCampaignRelevance(
   if (aboveMin.length > 0) return aboveMin;
 
   return scored.slice(0, CAMPAIGN_RELEVANCE_FALLBACK_TOP_N);
+}
+
+const CRITERION_MATCH_LABELS: Partial<Record<DiscoverySearchFilterKey, string>> = {
+  category: "Same category",
+  niche: "Matching niche",
+  content_tag: "Matching content tag",
+  content_keyword: "Matching keyword",
+  creator_country: "Same creator country",
+  creator_city: "Same creator country",
+  audience_country: "Same audience country",
+  audience_city: "Same audience country",
+  language: "Same language",
+  platform: "Same platform",
+  follower_min: "Follower range",
+  follower_max: "Follower range",
+  engagement_min: "Engagement rate",
+  brand_safety_min: "Brand safety",
+  brand_fit_min: "Brand fit",
+  audience_gender: "Audience gender",
+  audience_age_min: "Audience age",
+  audience_age_max: "Audience age",
+};
+
+function formatCriterionMatchLabel(criterion: CampaignSearchCriterion): string {
+  const key = criterion.meta?.discoveryKey as DiscoverySearchFilterKey | undefined;
+  if (key && CRITERION_MATCH_LABELS[key]) return CRITERION_MATCH_LABELS[key]!;
+  return criterion.label.trim() || criterion.kind;
+}
+
+/** Human-readable matched attributes for recommendation rows (e.g. zero-results UX). */
+export function describeMatchedCampaignCriteria(
+  creator: UnifiedCreatorResult,
+  criteria: CampaignSearchCriterion[]
+): string[] {
+  const enabled = criteria.filter((c) => c.enabled && c.value.trim());
+  const labels = new Set<string>();
+
+  for (const criterion of enabled) {
+    if (evaluateCriterion(creator, criterion) !== "match") continue;
+    labels.add(formatCriterionMatchLabel(criterion));
+  }
+
+  return [...labels];
 }

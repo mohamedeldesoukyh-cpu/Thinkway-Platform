@@ -117,7 +117,110 @@ export const SHOWCASE_AVATAR_COMPRESS: CompressExportImageOptions = {
   quality: 70,
 };
 
+/** Higher-res avatars for pitch presentation decks (large hero portraits). */
+export const PITCH_AVATAR_COMPRESS: CompressExportImageOptions = {
+  maxEdge: 480,
+  quality: 78,
+};
+
 export const SHOWCASE_PUBLICATION_COMPRESS: CompressExportImageOptions = {
   maxEdge: 640,
   quality: 68,
 };
+
+export type CropExportImageCoverOptions = {
+  aspectW: number;
+  aspectH: number;
+  /** Longest edge of the cropped output in pixels. */
+  maxEdge?: number;
+  quality?: number;
+};
+
+async function cropWithSharp(
+  buffer: Buffer,
+  options: CropExportImageCoverOptions
+): Promise<{ buffer: Buffer; contentType: string } | null> {
+  try {
+    const sharp = (await import("sharp")).default;
+    const { aspectW, aspectH, maxEdge = 720, quality = 78 } = options;
+    const ratio = aspectW / aspectH;
+    let width: number;
+    let height: number;
+    if (ratio >= 1) {
+      width = Math.max(1, Math.round(maxEdge));
+      height = Math.max(1, Math.round(maxEdge / ratio));
+    } else {
+      height = Math.max(1, Math.round(maxEdge));
+      width = Math.max(1, Math.round(maxEdge * ratio));
+    }
+
+    const out = await sharp(buffer)
+      .rotate()
+      .resize(width, height, { fit: "cover", position: "centre" })
+      .jpeg({ quality, mozjpeg: true })
+      .toBuffer();
+    return { buffer: out, contentType: "image/jpeg" };
+  } catch {
+    return null;
+  }
+}
+
+async function cropWithCanvas(
+  buffer: Buffer,
+  options: CropExportImageCoverOptions
+): Promise<{ buffer: Buffer; contentType: string } | null> {
+  try {
+    const { createCanvas, loadImage } = await import("@napi-rs/canvas");
+    const { aspectW, aspectH, maxEdge = 720, quality = 78 } = options;
+    const ratio = aspectW / aspectH;
+    const image = await loadImage(buffer);
+    const imgRatio = image.width / image.height;
+
+    let sourceW: number;
+    let sourceH: number;
+    let sourceX: number;
+    let sourceY: number;
+    if (imgRatio > ratio) {
+      sourceH = image.height;
+      sourceW = sourceH * ratio;
+      sourceX = (image.width - sourceW) / 2;
+      sourceY = 0;
+    } else {
+      sourceW = image.width;
+      sourceH = sourceW / ratio;
+      sourceX = 0;
+      sourceY = (image.height - sourceH) / 2;
+    }
+
+    let width: number;
+    let height: number;
+    if (ratio >= 1) {
+      width = Math.max(1, Math.round(maxEdge));
+      height = Math.max(1, Math.round(maxEdge / ratio));
+    } else {
+      height = Math.max(1, Math.round(maxEdge));
+      width = Math.max(1, Math.round(maxEdge * ratio));
+    }
+
+    const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(image, sourceX, sourceY, sourceW, sourceH, 0, 0, width, height);
+    return {
+      buffer: Buffer.from(canvas.toBuffer("image/jpeg", quality / 100)),
+      contentType: "image/jpeg",
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Center-crop to an aspect ratio (e.g. 1×1 showcase tiles). Used when PPTX embed cannot crop. */
+export async function cropExportImageBufferCover(
+  buffer: Buffer,
+  options: CropExportImageCoverOptions
+): Promise<{ buffer: Buffer; contentType: string } | null> {
+  const { aspectW, aspectH } = options;
+  if (aspectW <= 0 || aspectH <= 0 || !buffer.length) return null;
+
+  return (await cropWithSharp(buffer, options)) ?? (await cropWithCanvas(buffer, options));
+}

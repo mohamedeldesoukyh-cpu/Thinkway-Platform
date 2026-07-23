@@ -1,17 +1,21 @@
 "use client";
 
+import { AlertCircleIcon } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 export type CampaignPlanLifecycleHintProps = {
   lifecycleStatus: string;
   canGenerate: boolean;
   className?: string;
+  variant?: "inline" | "banner";
 };
 
 export function CampaignPlanLifecycleHint({
   lifecycleStatus,
   canGenerate,
   className,
+  variant = "inline",
 }: CampaignPlanLifecycleHintProps) {
   if (canGenerate) return null;
 
@@ -24,6 +28,15 @@ export function CampaignPlanLifecycleHint({
       "Complete the Campaign Plan readiness checklist and submit for director review from the Presentation section.";
   } else {
     message = `Campaign Plan is ${lifecycleStatus.replaceAll("_", " ")}. Approval is required before generation.`;
+  }
+
+  if (variant === "banner") {
+    return (
+      <div className={cn("oc-alert-banner", className)}>
+        <AlertCircleIcon aria-hidden />
+        <p>{message}</p>
+      </div>
+    );
   }
 
   return (

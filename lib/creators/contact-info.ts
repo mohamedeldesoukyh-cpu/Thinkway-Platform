@@ -81,6 +81,91 @@ export function hasCreatorContact(contact: CreatorContactFields): boolean {
   );
 }
 
+export type PlatformContactSection = {
+  accountId: string;
+  platform: string;
+  handle: string | null;
+  contact: CreatorContactFields;
+};
+
+/** One contact block per platform account that has email, phone, or links. */
+export function resolveCreatorPlatformContactSections<
+  T extends {
+    id: string;
+    platform: string;
+    handle?: string | null;
+    contact_email?: string | null;
+    contact_phone?: string | null;
+    contact_links?: string[] | null;
+  },
+>(platforms: T[]): PlatformContactSection[] {
+  return platforms
+    .map((platform) => ({
+      accountId: platform.id,
+      platform: platform.platform,
+      handle: platform.handle?.replace(/^@/, "").trim() || null,
+      contact: resolveCreatorContactFields(platform),
+    }))
+    .filter((section) => hasCreatorContact(section.contact));
+}
+
+/** True when any platform account or creator-level fields include contact data. */
+export function creatorHasAnyContact(input: {
+  platforms: Array<{
+    id: string;
+    platform: string;
+    handle?: string | null;
+    contact_email?: string | null;
+    contact_phone?: string | null;
+    contact_links?: string[] | null;
+  }>;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  contact_links?: string[] | null;
+}): boolean {
+  if (resolveCreatorPlatformContactSections(input.platforms).length > 0) {
+    return true;
+  }
+  return hasCreatorContact(resolveCreatorContactFields(input));
+}
+
+/**
+ * Platform sections plus optional creator-level fallback when no platform rows
+ * have contact but influencer-level fields do.
+ */
+export function resolveCreatorContactSections(input: {
+  platforms: Array<{
+    id: string;
+    platform: string;
+    handle?: string | null;
+    contact_email?: string | null;
+    contact_phone?: string | null;
+    contact_links?: string[] | null;
+  }>;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  contact_links?: string[] | null;
+}): PlatformContactSection[] {
+  const platformSections = resolveCreatorPlatformContactSections(input.platforms);
+  if (platformSections.length > 0) {
+    return platformSections;
+  }
+
+  const creatorContact = resolveCreatorContactFields(input);
+  if (!hasCreatorContact(creatorContact)) {
+    return [];
+  }
+
+  return [
+    {
+      accountId: "creator",
+      platform: "profile",
+      handle: null,
+      contact: creatorContact,
+    },
+  ];
+}
+
 export function pickCreatorContactFromPlatforms<
   T extends {
     id?: string;

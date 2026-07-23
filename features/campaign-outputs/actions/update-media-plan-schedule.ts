@@ -16,8 +16,12 @@ import { applyMediaPlanScheduleChange } from "../media-plan-schedule";
 
 const moveSchema = z.object({
   creatorId: z.string().min(1),
+  fromWeek: z.number().int().min(1).max(52),
+  fromDayIndex: z.number().int().min(0).max(6),
   toWeek: z.number().int().min(1).max(52),
   toDayIndex: z.number().int().min(0).max(6),
+  deliverableTypes: z.array(z.string().min(1)).min(1),
+  remainingTypes: z.array(z.string().min(1)).optional(),
 });
 
 const inputSchema = z.object({
@@ -75,8 +79,12 @@ export async function updateMediaPlanScheduleAction(
     moveCreators: [
       {
         creatorIds: [move.creatorId],
+        fromWeek: move.fromWeek,
+        fromDayIndex: move.fromDayIndex,
         toWeek: move.toWeek,
         toDayIndex: move.toDayIndex,
+        deliverableTypes: move.deliverableTypes,
+        remainingTypes: move.remainingTypes,
       },
     ],
   });

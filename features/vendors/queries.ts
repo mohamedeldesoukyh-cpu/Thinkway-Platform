@@ -52,10 +52,11 @@ const VENDOR_LIST_SELECT = `
   email,
   status,
   country_code,
+  country_codes,
   categories,
   rate_card,
   created_at,
-  platform_accounts:influencer_platform_accounts(
+  platform_accounts:influencer_platform_accounts!influencer_platform_accounts_influencer_id_fkey(
     id,
     platform,
     handle,
@@ -65,8 +66,8 @@ const VENDOR_LIST_SELECT = `
 `;
 
 const VENDOR_LIST_SELECT_PLATFORM_FILTER = VENDOR_LIST_SELECT.replace(
-  "platform_accounts:influencer_platform_accounts",
-  "platform_accounts:influencer_platform_accounts!inner"
+  "influencer_platform_accounts!influencer_platform_accounts_influencer_id_fkey(",
+  "influencer_platform_accounts!influencer_platform_accounts_influencer_id_fkey!inner("
 );
 
 
@@ -238,7 +239,7 @@ export async function getVendorById(id: string): Promise<VendorDetail | null> {
     .select(
       `
       *,
-      platform_accounts:influencer_platform_accounts(
+      platform_accounts:influencer_platform_accounts!influencer_platform_accounts_influencer_id_fkey(
         id,
         platform,
         handle,

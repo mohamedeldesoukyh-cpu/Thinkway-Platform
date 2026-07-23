@@ -102,6 +102,8 @@ export type IplFetchContext = {
   force?: boolean;
   followerCount?: number | null;
   auditMetadata?: Record<string, unknown>;
+  /** When false, skip Instagram posts actor (metrics refresh uses details.latestPosts). */
+  includePosts?: boolean;
   /** When true, persistSnapshot skips DNA bridge — caller awaits bridge after post-processing. */
   deferDnaBridge?: boolean;
 };

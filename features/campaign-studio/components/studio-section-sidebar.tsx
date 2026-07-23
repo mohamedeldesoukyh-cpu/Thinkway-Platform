@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 
 import { cn } from "@/lib/utils";
 
+import { STUDIO_REF_CLASSES } from "../constants/campaign-studio-ref-tokens";
 import {
   DEFAULT_PHASE_NAV,
   STUDIO_PHASE_NAV,
@@ -12,6 +13,7 @@ import {
 import { STUDIO_CLASSES } from "../constants/studio-tokens";
 import type { StudioStoryPhase } from "../constants/studio-layout";
 import type { CampaignStudioLayoutMode, CampaignStudioSection } from "../types/campaign-studio";
+import { studioPhaseDomId } from "./studio-step-bar";
 
 type StudioSectionSidebarProps = {
   phases: Array<StudioStoryPhase<CampaignStudioSection>>;
@@ -25,10 +27,104 @@ type StudioSectionSidebarProps = {
   activeSectionId: string;
   onNavigate: (sectionId: string) => void;
   className?: string;
-  /** When true, omits outer rail chrome (e.g. mobile sheet). */
   embedded?: boolean;
   layoutMode?: CampaignStudioLayoutMode;
+  refMode?: boolean;
 };
+
+function RefNavigatorBody({
+  phases,
+  activeSectionId,
+  onNavigate,
+  onScrollTop,
+}: {
+  phases: Array<StudioStoryPhase<CampaignStudioSection>>;
+  activeSectionId: string;
+  onNavigate: (sectionId: string) => void;
+  onScrollTop?: () => void;
+}) {
+  const [openPhases, setOpenPhases] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(phases.map((phase) => [phase.id, true]))
+  );
+
+  useEffect(() => {
+    for (const phase of phases) {
+      if (phase.sections.some((section) => section.id === activeSectionId)) {
+        setOpenPhases((prev) =>
+          prev[phase.id] === true ? prev : { ...prev, [phase.id]: true }
+        );
+      }
+    }
+  }, [activeSectionId, phases]);
+
+  const togglePhase = useCallback((phaseId: string) => {
+    setOpenPhases((prev) => ({ ...prev, [phaseId]: !prev[phaseId] }));
+  }, []);
+
+  return (
+    <>
+      <button type="button" className={STUDIO_REF_CLASSES.navTopItem} onClick={onScrollTop}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+          <path d="M13 2L4 14h7l-1 8 9-12h-7z" />
+        </svg>
+        Campaign Studio
+      </button>
+      {phases.map((phase, index) => {
+        const open = openPhases[phase.id] ?? true;
+        return (
+          <div key={phase.id} className={cn(STUDIO_REF_CLASSES.navSection, open && "open")}>
+            <button
+              type="button"
+              className={STUDIO_REF_CLASSES.navSectionHead}
+              aria-expanded={open}
+              onClick={() => {
+                togglePhase(phase.id);
+                const main = document.querySelector<HTMLElement>(`.${STUDIO_REF_CLASSES.main}`);
+                const target = document.getElementById(studioPhaseDomId(phase.id, "ref"));
+                if (main && target) {
+                  const offset = 20;
+                  const mainRect = main.getBoundingClientRect();
+                  const targetRect = target.getBoundingClientRect();
+                  main.scrollTo({
+                    top: Math.max(0, main.scrollTop + targetRect.top - mainRect.top - offset),
+                    behavior: "smooth",
+                  });
+                }
+              }}
+            >
+              <span className={STUDIO_REF_CLASSES.navSecNum}>{index + 1}</span>
+              <span className="lbl">{phase.label}</span>
+              <span className="cnt">{phase.sections.length}</span>
+              <span className={STUDIO_REF_CLASSES.navChev} aria-hidden />
+            </button>
+            <div className={STUDIO_REF_CLASSES.navSub}>
+              {phase.sections.map((section) => {
+                const isActive = section.id === activeSectionId;
+                const isComplete = section.status === "complete";
+                return (
+                  <button
+                    key={section.id}
+                    type="button"
+                    data-studio-nav-section={section.id}
+                    className={cn(STUDIO_REF_CLASSES.navSubItem, isActive && "active")}
+                    onClick={() => onNavigate(section.id)}
+                    aria-current={isActive ? "true" : undefined}
+                  >
+                    <span
+                      className={cn("sdot", !isComplete && "pending")}
+                      aria-hidden
+                    />
+                    {section.title}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+}
 
 function SidebarRailBody({
   phases,
@@ -41,10 +137,8 @@ function SidebarRailBody({
   totalSectionCount,
   activeSectionId,
   onNavigate,
-}: Omit<StudioSectionSidebarProps, "className" | "embedded">) {
-  const [collapsedPhases, setCollapsedPhases] = useState<Record<string, boolean>>(
-    {}
-  );
+}: Omit<StudioSectionSidebarProps, "className" | "embedded" | "refMode">) {
+  const [collapsedPhases, setCollapsedPhases] = useState<Record<string, boolean>>({});
   const navListRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -213,14 +307,64 @@ export function StudioSectionSidebar({
   className,
   embedded,
   layoutMode = "panel",
+  refMode = false,
+  phases,
+  activeSectionId,
+  onNavigate,
   ...props
 }: StudioSectionSidebarProps) {
   const isChatLayout = layoutMode === "chat";
 
+  const handleScrollTop = useCallback(() => {
+    if (refMode) {
+      document.querySelector<HTMLElement>(`.${STUDIO_REF_CLASSES.main}`)?.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+      return;
+    }
+    const firstPhase = phases[0];
+    if (firstPhase) {
+      document.getElementById(studioPhaseDomId(firstPhase.id))?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [phases, refMode]);
+
+  if (refMode) {
+    const body = (
+      <RefNavigatorBody
+        phases={phases}
+        activeSectionId={activeSectionId}
+        onNavigate={onNavigate}
+        onScrollTop={handleScrollTop}
+      />
+    );
+
+    if (embedded) {
+      return <div className={cn(STUDIO_REF_CLASSES.navigator, className)}>{body}</div>;
+    }
+
+    return (
+      <aside
+        className={cn(STUDIO_REF_CLASSES.navigator, "hidden lg:block", className)}
+        aria-label="Campaign Studio navigation"
+      >
+        {body}
+      </aside>
+    );
+  }
+
   if (embedded) {
     return (
       <div className={cn("px-1 py-2 text-[#EAF0FF]", className)}>
-        <SidebarRailBody {...props} />
+        <SidebarRailBody
+          phases={phases}
+          activeSectionId={activeSectionId}
+          onNavigate={onNavigate}
+          {...props}
+        />
       </div>
     );
   }
@@ -238,7 +382,12 @@ export function StudioSectionSidebar({
       aria-label="Campaign Studio navigation"
     >
       <div className={isChatLayout ? STUDIO_CLASSES.sidebarChatInner : undefined}>
-        <SidebarRailBody {...props} />
+        <SidebarRailBody
+          phases={phases}
+          activeSectionId={activeSectionId}
+          onNavigate={onNavigate}
+          {...props}
+        />
       </div>
     </aside>
   );
@@ -248,10 +397,12 @@ export function StudioSectionSidebarSheet({
   open,
   onOpenChange,
   children,
+  refMode = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: ReactNode;
+  refMode?: boolean;
 }) {
   if (!open) return null;
 
@@ -264,7 +415,12 @@ export function StudioSectionSidebarSheet({
         onClick={() => onOpenChange(false)}
       />
       <aside
-        className="fixed inset-y-0 left-0 z-50 w-[min(300px,88vw)] overflow-y-auto border-r border-white/6 bg-[#070911] bg-[radial-gradient(120%_60%_at_0%_0%,rgba(0,87,255,0.30)_0%,rgba(0,87,255,0)_55%),linear-gradient(180deg,#070911_0%,#05060c_100%)] px-3.5 py-5 lg:hidden"
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 overflow-y-auto lg:hidden",
+          refMode
+            ? cn(STUDIO_REF_CLASSES.navigator, "w-[min(260px,88vw)]")
+            : "w-[min(300px,88vw)] border-r border-white/6 bg-[#070911] bg-[radial-gradient(120%_60%_at_0%_0%,rgba(0,87,255,0.30)_0%,rgba(0,87,255,0)_55%),linear-gradient(180deg,#070911_0%,#05060c_100%)] px-3.5 py-5"
+        )}
         aria-label="Campaign Studio navigation"
       >
         {children}

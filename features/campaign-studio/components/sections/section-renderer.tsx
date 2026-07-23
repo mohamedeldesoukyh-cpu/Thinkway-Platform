@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { StudioDraftState } from "@/features/campaign-intelligence/types/section-schemas";
 import type { CampaignStudioDecisionMode } from "@/features/campaign-decision-workspace/types/studio-decision-mode";
@@ -11,25 +13,94 @@ import {
   type StudioLayoutType,
 } from "../../constants/studio-layout";
 import type { CampaignStudioSection } from "../../types/campaign-studio";
-import { CampaignSummarySection } from "./campaign-summary-section";
-import { ExecutiveStrategySection } from "./executive-strategy-section";
-import { VendorDiscoverySection } from "./vendor-discovery-section";
-import { VendorRecommendationsSection } from "./vendor-recommendations-section";
-import { BudgetPlannerSection } from "./budget-planner-section";
-import { TimelineSection } from "./timeline-section";
-import { KpiForecastSection } from "./kpi-forecast-section";
-import { RiskAnalysisSection } from "./risk-analysis-section";
-import { CreativeConceptsSection } from "./creative-concepts-section";
-import { ContentPlanSection } from "./content-plan-section";
-import { CreatorMixSection } from "./creator-mix-section";
-import { WhyAiSection } from "./why-ai-section";
-import { IndustryBenchmarkSection } from "./industry-benchmark-section";
-import { SuccessProbabilitySection } from "./success-probability-section";
-import { OpportunityFinderSection } from "./opportunity-finder-section";
-import { ExecutiveSummarySection } from "./executive-summary-section";
-import { PresentationStatusSection } from "./presentation-status-section";
+import { SectionSkeleton } from "./shared/section-skeleton";
 
 export { STUDIO_LAYOUT, getSectionLayout, isFullWidthSection, type StudioLayoutType };
+
+const sectionLoading = () => <SectionSkeleton />;
+
+/** Each studio section is its own chunk — only fetched when the section body mounts. */
+const CampaignSummarySection = dynamic(
+  () =>
+    import("./campaign-summary-section").then((m) => m.CampaignSummarySection),
+  { loading: sectionLoading, ssr: false }
+);
+const ExecutiveStrategySection = dynamic(
+  () =>
+    import("./executive-strategy-section").then((m) => m.ExecutiveStrategySection),
+  { loading: sectionLoading, ssr: false }
+);
+const VendorDiscoverySection = dynamic(
+  () =>
+    import("./vendor-discovery-section").then((m) => m.VendorDiscoverySection),
+  { loading: sectionLoading, ssr: false }
+);
+const VendorRecommendationsSection = dynamic(
+  () =>
+    import("./vendor-recommendations-section").then(
+      (m) => m.VendorRecommendationsSection
+    ),
+  { loading: sectionLoading, ssr: false }
+);
+const BudgetPlannerSection = dynamic(
+  () =>
+    import("./budget-planner-section").then((m) => m.BudgetPlannerSection),
+  { loading: sectionLoading, ssr: false }
+);
+const TimelineSection = dynamic(
+  () => import("./timeline-section").then((m) => m.TimelineSection),
+  { loading: sectionLoading, ssr: false }
+);
+const KpiForecastSection = dynamic(
+  () => import("./kpi-forecast-section").then((m) => m.KpiForecastSection),
+  { loading: sectionLoading, ssr: false }
+);
+const RiskAnalysisSection = dynamic(
+  () => import("./risk-analysis-section").then((m) => m.RiskAnalysisSection),
+  { loading: sectionLoading, ssr: false }
+);
+const CreativeConceptsSection = dynamic(
+  () =>
+    import("./creative-concepts-section").then((m) => m.CreativeConceptsSection),
+  { loading: sectionLoading, ssr: false }
+);
+const ContentPlanSection = dynamic(
+  () => import("./content-plan-section").then((m) => m.ContentPlanSection),
+  { loading: sectionLoading, ssr: false }
+);
+const CreatorMixSection = dynamic(
+  () => import("./creator-mix-section").then((m) => m.CreatorMixSection),
+  { loading: sectionLoading, ssr: false }
+);
+const WhyAiSection = dynamic(
+  () => import("./why-ai-section").then((m) => m.WhyAiSection),
+  { loading: sectionLoading, ssr: false }
+);
+const IndustryBenchmarkSection = dynamic(
+  () =>
+    import("./industry-benchmark-section").then((m) => m.IndustryBenchmarkSection),
+  { loading: sectionLoading, ssr: false }
+);
+const SuccessProbabilitySection = dynamic(
+  () =>
+    import("./success-probability-section").then((m) => m.SuccessProbabilitySection),
+  { loading: sectionLoading, ssr: false }
+);
+const OpportunityFinderSection = dynamic(
+  () =>
+    import("./opportunity-finder-section").then((m) => m.OpportunityFinderSection),
+  { loading: sectionLoading, ssr: false }
+);
+const ExecutiveSummarySection = dynamic(
+  () =>
+    import("./executive-summary-section").then((m) => m.ExecutiveSummarySection),
+  { loading: sectionLoading, ssr: false }
+);
+const PresentationStatusSection = dynamic(
+  () =>
+    import("./presentation-status-section").then((m) => m.PresentationStatusSection),
+  { loading: sectionLoading, ssr: false }
+);
 
 type SectionRendererProps = {
   section: CampaignStudioSection;

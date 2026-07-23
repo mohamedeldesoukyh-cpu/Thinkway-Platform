@@ -1,0 +1,105 @@
+/* ═══════════════════════════════════════════════════════
+   THINKWAY DESIGN TOKENS — v1.0 (canonical)
+   Source: Thinkway_Brand_Kit.pdf v1.0 + THINKWAY_DESIGN_SPEC.md
+   Imported globally via app/globals.css.
+   Ref modules alias these names inside scoped roots (.outputs-center-ref, etc.).
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+  /* ---- Brand ---- */
+  --navy: #060810;
+  --ink: #0b0f1a;
+  --muted: #6b7280;
+  --lavender: #e8effe;
+
+  --blue: #0057ff;
+  --blue-hover: #0048dd;
+  --blue-400: #1a6fff;
+  --blue-300: #3d8bff;
+  --blue-light: #eef3ff;
+  --blue-text: #0048dd;
+
+  --brand-gradient: linear-gradient(145deg, #0040cc, #0057ff, #1a6fff, #0048dd);
+
+  /* ---- Semantic status (not brand) ---- */
+  --green: #10b981;
+  --green-bg: #ecfdf5;
+  --green-text: #065f46;
+
+  --amber: #f59e0b;
+  --amber-bg: #fffbeb;
+  --amber-text: #92400e;
+
+  --red: #ef4444;
+  --red-bg: #fef2f2;
+  --red-text: #991b1b;
+
+  --purple: #a855f7;
+  --purple-bg: #faf5ff;
+  --purple-text: #6b21a8;
+
+  /* ---- Neutral scale ---- */
+  --text: var(--ink);
+  --text-2: #3f4757;
+  --text-3: #6b7280;
+
+  --border: #e3e8f2;
+  --surface: #f3f6fc;
+  --white: #ffffff;
+
+  /* ---- Shape (HTML mock: 8 / 10 / 16). Prefer --tw-radius / --radius-lg in
+     Discovery UI — globals.css overwrites --radius for shadcn (0.75rem). ---- */
+  --radius: 8px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  /* ---- Motion ---- */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+
+  /*
+   * Shadcn-safe aliases — globals.css keeps --muted, --border, and --radius for
+   * the legacy platform shell. --brand-gradient is canonical here (do not
+   * override in globals). Product UI ref modules should prefer these names
+   * when they need official spec values.
+   */
+  --tw-muted-text: #6b7280;
+  --tw-border: #e3e8f2;
+  --tw-radius: 8px;
+  --tw-brand-gradient: linear-gradient(145deg, #0040cc, #0057ff, #1a6fff, #0048dd);
+}
+
+.mono,
+.font-mono {
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, "SF Mono", Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Product tokens — dark mode (platform-v6, Discovery lists, clients) */
+.dark {
+  --ink: #fafafa;
+  --text: #fafafa;
+  --text-2: #d4d4d8;
+  --text-3: #a1a1aa;
+  --border: rgba(255, 255, 255, 0.08);
+  --surface: #141419;
+  --white: #18181b;
+  --lavender: #0a0a0f;
+
+  --blue-light: rgba(0, 87, 255, 0.12);
+  --blue-text: #60a5fa;
+
+  --green-bg: rgba(16, 185, 129, 0.12);
+  --green-text: #34d399;
+
+  --amber-bg: rgba(245, 158, 11, 0.12);
+  --amber-text: #fbbf24;
+
+  --red-bg: rgba(239, 68, 68, 0.12);
+  --red-text: #f87171;
+
+  --purple-bg: rgba(168, 85, 247, 0.12);
+  --purple-text: #c084fc;
+
+  --tw-border: rgba(255, 255, 255, 0.08);
+  --tw-muted-text: #a1a1aa;
+}

@@ -73,10 +73,14 @@ export function ShortlistCreatorPreviewStack({
   previews,
   totalCount,
   className,
+  align = "end",
+  overflowVariant = "muted",
 }: {
   previews: ShortlistCreatorPreview[];
   totalCount: number;
   className?: string;
+  align?: "start" | "end";
+  overflowVariant?: "muted" | "solid";
 }) {
   if (totalCount === 0) {
     return (
@@ -88,7 +92,13 @@ export function ShortlistCreatorPreviewStack({
   const overflow = totalCount - visible.length;
 
   return (
-    <div className={cn("flex items-center justify-end gap-1.5", className)}>
+    <div
+      className={cn(
+        "flex items-center",
+        align === "start" ? "justify-start" : "justify-end",
+        className
+      )}
+    >
       {visible.length > 0 ? (
         <div className="flex items-center" aria-hidden>
           {visible.map((preview, index) => {
@@ -98,23 +108,23 @@ export function ShortlistCreatorPreviewStack({
               <span
                 key={`${preview.display_name}-${index}`}
                 className={cn(
-                  "relative inline-flex overflow-hidden rounded-full border border-white/80 ring-2 ring-background",
-                  "dark:border-white/15",
-                  index > 0 && "-ml-1.5",
-                  "size-6"
+                  /* HTML `.creator-chip`: 26px, border 2px white, overlap -8px */
+                  "relative inline-flex size-[26px] overflow-hidden rounded-full border-2 border-white bg-[var(--surface)]",
+                  "dark:border-background",
+                  index > 0 && "-ml-2"
                 )}
                 style={{ zIndex: visible.length - index }}
               >
                 {hasImage ? (
                   <CreatorAvatarImage
                     avatarUrl={preview.profile_image_url}
-                    sizeClassName="size-6"
+                    sizeClassName="size-[26px]"
                     className="rounded-full"
                   />
                 ) : (
                   <span
                     className={cn(
-                      "flex size-6 items-center justify-center bg-gradient-to-br text-[9px] font-semibold",
+                      "flex size-[26px] items-center justify-center bg-gradient-to-br text-[9px] font-bold",
                       palette.gradient,
                       palette.textClass
                     )}
@@ -128,8 +138,10 @@ export function ShortlistCreatorPreviewStack({
           {overflow > 0 ? (
             <span
               className={cn(
-                "relative -ml-1.5 inline-flex size-6 items-center justify-center rounded-full",
-                "border border-dashed border-border bg-muted/80 text-[9px] font-medium text-muted-foreground ring-2 ring-background"
+                "relative -ml-2 inline-flex size-[26px] items-center justify-center rounded-full border-2 border-white text-[9px] font-bold dark:border-background",
+                overflowVariant === "solid"
+                  ? "bg-[var(--ink)] text-white"
+                  : "border-dashed border-border bg-muted/80 font-medium text-muted-foreground"
               )}
               style={{ zIndex: 0 }}
             >
@@ -138,7 +150,14 @@ export function ShortlistCreatorPreviewStack({
           ) : null}
         </div>
       ) : null}
-      <span className="text-xs font-medium tabular-nums text-foreground">
+      <span
+        className={cn(
+          "ml-2 text-[10.5px] font-bold tabular-nums",
+          overflowVariant === "solid"
+            ? "text-[var(--text-3)]"
+            : "text-foreground"
+        )}
+      >
         {totalCount}
       </span>
     </div>

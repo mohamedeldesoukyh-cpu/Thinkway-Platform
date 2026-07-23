@@ -20,11 +20,11 @@ const DARK_COLORS = [
 ];
 
 const LIGHT_COLORS = [
-  "rgba(99,102,241,.35)",
-  "rgba(124,58,237,.3)",
-  "rgba(16,185,129,.25)",
-  "rgba(245,158,11,.25)",
-  "rgba(236,72,153,.3)",
+  "rgba(0,87,255,.35)",
+  "rgba(26,111,255,.3)",
+  "rgba(61,139,255,.3)",
+  "rgba(0,72,221,.25)",
+  "rgba(0,87,255,.2)",
 ];
 
 function isDarkTheme(): boolean {
@@ -47,14 +47,17 @@ export function HomeCanvas() {
     let mouseX = 0;
     let mouseY = 0;
 
-    const particles: Particle[] = Array.from({ length: 55 }, () => ({
-      x: Math.random(),
-      y: Math.random(),
-      vx: (Math.random() - 0.5) * 0.0003,
-      vy: (Math.random() - 0.5) * 0.0003,
-      r: 1 + Math.random() * 1.8,
-      c: DARK_COLORS[Math.floor(Math.random() * DARK_COLORS.length)]!,
-    }));
+    const particles: Particle[] = Array.from({ length: 55 }, () => {
+      const palette = isDarkTheme() ? DARK_COLORS : LIGHT_COLORS;
+      return {
+        x: Math.random(),
+        y: Math.random(),
+        vx: (Math.random() - 0.5) * 0.0003,
+        vy: (Math.random() - 0.5) * 0.0003,
+        r: 1 + Math.random() * 1.8,
+        c: palette[Math.floor(Math.random() * palette.length)]!,
+      };
+    });
 
     const resize = () => {
       width = canvas.offsetWidth;
@@ -91,7 +94,7 @@ export function HomeCanvas() {
           if (distance < 120) {
             ctx.strokeStyle = dark
               ? `rgba(255,255,255,${0.04 * (1 - distance / 120)})`
-              : `rgba(99,102,241,${0.08 * (1 - distance / 120)})`;
+              : `rgba(0,87,255,${0.08 * (1 - distance / 120)})`;
             ctx.lineWidth = 0.5;
             ctx.beginPath();
             ctx.moveTo(ax, ay);

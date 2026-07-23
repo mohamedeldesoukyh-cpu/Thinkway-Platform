@@ -3,6 +3,7 @@ import {
   fetchImageBuffer,
 } from "@/lib/performance/screenshot-capture/storage";
 import { initialsFromCreatorName } from "@/lib/performance/creator-avatar";
+import { resolveMediaPlanCreatorProfileHref } from "./media-plan-html-avatars";
 
 import type { CampaignOutputContent } from "../output-types";
 import type {
@@ -14,10 +15,11 @@ import type {
   MediaPlanWeek,
 } from "../generators/media-plan";
 import {
-  MEDIA_PLAN_COST_VAT_DISCLAIMER,
+  MEDIA_PLAN_PRICING_DISCLAIMER,
   formatMediaPlanPreparedForLabel,
 } from "../generators/media-plan";
 import { buildMediaPlanStrategyBlocks, type MediaPlanStrategyBlock } from "../media-plan-strategy-blocks";
+import { refreshMediaPlanStrategySummaryForDisplay } from "../media-plan-strategy-summary";
 import { formatMoney } from "../generators/generator-utils";
 import {
   formatDayColumnDate,
@@ -30,6 +32,8 @@ import {
   MEDIA_PLAN_DAY_TYPE_COLORS,
 } from "../components/media-plan-brand";
 import { mergeMediaPlanContext } from "../components/media-plan-context-merge";
+import { resolvePlatformBarSolidColor } from "../platform-brand";
+import { deriveMediaPlanWeekPhase } from "../media-plan-strategy-narrative";
 import { isMediaPlanContent } from "./media-plan-content";
 import { MEDIA_PLAN_PAGE } from "./media-plan-page";
 
@@ -63,17 +67,10 @@ const GENERIC_OPERATIONAL_TYPES = new Set([
   "Performance review",
 ]);
 
-const PLATFORM_BAR_COLORS = [
-  BLUE,
-  "3B82F6",
-  "8B5CF6",
-  "EC4899",
-  "F59E0B",
-  "10B981",
-];
-
 export type BuildMediaPlanPptxOptions = {
   contextOverride?: MediaPlanCampaignContext;
+  /** When false, omit campaign cost from the cover slide. Defaults to true. */
+  includeCampaignCost?: boolean;
 };
 
 type PptxGen = InstanceType<typeof import("pptxgenjs").default>;
@@ -96,10 +93,16 @@ function typesForDay(day: MediaPlanDay): string[] {
       ? [day.serviceType]
       : [];
   const additional =
-    day.additionalDeliverables?.map((entry) => entry.serviceType).filter((type): type is string =>
-      Boolean(type?.trim())
-    ) ?? [];
-  return [...new Set([...primary, ...additional])];
+    day.additionalDeliverables
+      ?.filter((entry) => !entry.isMirror && !entry.isCompanion)
+      .map((entry) => entry.serviceType)
+      .filter((type): type is string => Boolean(type?.trim())) ?? [];
+  const mirrors =
+    day.additionalDeliverables
+      ?.filter((entry) => entry.isMirror)
+      .map((entry) => entry.serviceType)
+      .filter((type): type is string => Boolean(type?.trim())) ?? [];
+  return [...new Set([...primary, ...mirrors, ...additional])];
 }
 
 function collectLegendTypes(data: MediaPlanData): string[] {
@@ -288,8 +291,10 @@ function addAvatarCircle(
   name: string,
   x: number,
   y: number,
-  size: number
+  size: number,
+  profileHref?: string
 ): void {
+  const hyperlink = profileHref ? { url: profileHref } : undefined;
   if (avatarUrl && avatarData) {
     slide.addImage({
       data: avatarData,
@@ -298,6 +303,7 @@ function addAvatarCircle(
       w: size,
       h: size,
       rounding: true,
+      hyperlink,
     });
     return;
   }
@@ -358,11 +364,11 @@ function addConfidenceBadge(slide: Slide, confidence: MediaPlanStrategyBlock["co
 }
 
 function addStrategySlide(pptx: PptxGen, data: MediaPlanData): void {
-  const summary = data.strategySummary;
+  const summary = refreshMediaPlanStrategySummaryForDisplay(data.strategySummary, data) ?? data.strategySummary;
   if (!summary) return;
 
   const blocks = summary.hasContent
-    ? buildMediaPlanStrategyBlocks(summary)
+    ? buildMediaPlanStrategyBlocks(summary, { clientFacing: true })
     : [{ label: "Strategy", body: "Strategy summary will appear here once the campaign brief or strategy section is complete.", kind: "narrative" as const }];
 
   const slide = pptx.addSlide();
@@ -403,15 +409,60 @@ function addStrategySlide(pptx: PptxGen, data: MediaPlanData): void {
     }
 
     let bodyText = block.body;
-    if (block.kind === "weekly-grid" && block.weeklyObjectives?.length) {
+    if (block.label === "Campaign Rollout Strategy" && block.weekWeights?.length) {
+      const avg = block.weekWeights.reduce((sum, weight) => sum + weight, 0) / block.weekWeights.length;
+      const weekLines = block.weekWeights
+        .map((weight, index) => {
+          const phase = deriveMediaPlanWeekPhase(
+            weight,
+            index,
+            block.weekWeights!.length,
+            avg,
+            block.weekWeights!
+          );
+          return `W${index + 1} ${phase} ${weight}%`;
+        })
+        .join("\n");
+      const tierLine = block.tierChips?.length
+        ? block.tierChips.map((chip) => `${chip.count} ${chip.tier}`).join(" · ")
+        : "";
+      bodyText = tierLine ? `${weekLines}\n${tierLine}` : weekLines;
+    } else if (block.kind === "weekly-grid" && block.weeklyObjectives?.length) {
       bodyText = block.weeklyObjectives
         .map((week) => `W${week.week} ${week.phase} (${week.weight}%): ${week.goals[0] ?? ""}`)
         .join("\n");
     } else if (block.kind === "creative-list" && block.creativeItems?.length) {
-      bodyText = block.creativeItems
-        .slice(0, 4)
-        .map((entry) => `• ${entry.format} — ${entry.reason}`)
-        .join("\n");
+      bodyText =
+        block.creativeConceptDisplays?.length
+          ? block.creativeConceptDisplays
+              .flatMap((concept) =>
+                [
+                  concept.source === "thinkway"
+                    ? `Thinkway Creative Recommendation — ${concept.english.conceptName}`
+                    : concept.english.conceptName,
+                  `Creative Idea: ${concept.english.creativeIdea}`,
+                  concept.english.storyFlow ? `Story Flow: ${concept.english.storyFlow}` : null,
+                  concept.english.talkingPoints?.length
+                    ? `Talking Points: ${concept.english.talkingPoints.join(" · ")}`
+                    : null,
+                  concept.english.cta ? `CTA: ${concept.english.cta}` : null,
+                  concept.english.suggestedDialogue
+                    ? `Suggested Dialogue: ${concept.english.suggestedDialogue}`
+                    : null,
+                  concept.english.creatorNotes ? `Creator Notes: ${concept.english.creatorNotes}` : null,
+                  concept.arabic
+                    ? [
+                        concept.arabic.conceptName,
+                        `الفكرة الإبداعية: ${concept.arabic.creativeIdea}`,
+                      ].join("\n")
+                    : null,
+                ].filter(Boolean)
+              )
+              .join("\n\n")
+          : block.creativeItems
+              .slice(0, 4)
+              .map((entry) => `• ${entry.format} — ${entry.reason}`)
+              .join("\n");
     } else if (block.kind === "tier-chips" && block.tierChips?.length) {
       bodyText = `${block.tierChips.map((chip) => `${chip.count} ${chip.tier}`).join(", ")}\n${block.body}`;
     } else if (block.kind === "platform-bars" && block.platformBars?.length) {
@@ -573,7 +624,7 @@ function addCoverSlide(
       x: statStartX,
       y: 2.75,
       w: statW * 3 + 0.2,
-      h: 0.95,
+      h: 1.08,
       fill: { color: GREEN, transparency: 12 },
       line: { color: GREEN, transparency: 40, pt: 0.5 },
       rectRadius: 0.08,
@@ -598,13 +649,13 @@ function addCoverSlide(
       bold: true,
       color: WHITE,
     });
-    slide.addText(MEDIA_PLAN_COST_VAT_DISCLAIMER, {
+    slide.addText(MEDIA_PLAN_PRICING_DISCLAIMER, {
       x: statStartX + 0.15,
       y: 3.45,
       w: statW * 3,
-      h: 0.18,
+      h: 0.32,
       fontFace: FONT,
-      fontSize: 7.5,
+      fontSize: 7,
       color: COVER_TEXT_SOFT,
     });
   }
@@ -696,7 +747,12 @@ function addDayCard(
     color: MUTED,
   });
 
-  const entries: Array<{ name: string; types: string[]; avatarUrl?: string }> = [];
+  const entries: Array<{
+    name: string;
+    types: string[];
+    avatarUrl?: string;
+    profileHref?: string;
+  }> = [];
   if (day.creator) {
     const primaryTypes =
       day.serviceTypes?.length
@@ -708,8 +764,10 @@ function addDayCard(
       name: day.shortName ?? day.creator,
       types: primaryTypes,
       avatarUrl: day.avatarUrl,
+      profileHref: resolveMediaPlanCreatorProfileHref(day),
     });
     for (const extra of day.additionalDeliverables ?? []) {
+      if (extra.isCompanion || extra.isMirror) continue;
       entries.push({
         name: extra.shortName ?? extra.creator ?? "Creator",
         types:
@@ -719,6 +777,7 @@ function addDayCard(
               ? [extra.serviceType]
               : [],
         avatarUrl: extra.avatarUrl,
+        profileHref: resolveMediaPlanCreatorProfileHref(extra),
       });
     }
   } else {
@@ -741,7 +800,8 @@ function addDayCard(
         entry.name,
         x + 0.05,
         cardY,
-        avatarSize
+        avatarSize,
+        entry.profileHref
       );
       slide.addText(entry.name, {
         x: x + 0.28,
@@ -930,6 +990,98 @@ function addCalendarSlides(
   });
 }
 
+function addPlatformAllocationCard(
+  slide: Slide,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  bars: Array<{ platform: string; percentage: number }>
+): void {
+  slide.addShape("roundRect", {
+    x,
+    y,
+    w,
+    h,
+    fill: { color: CARD_BG },
+    line: { color: LINE, pt: 0.5 },
+    rectRadius: 0.06,
+  });
+  slide.addText("Platform Allocation", {
+    x: x + 0.15,
+    y: y + 0.12,
+    w: w - 0.3,
+    h: 0.22,
+    fontFace: FONT,
+    fontSize: 10,
+    bold: true,
+    color: NAVY,
+  });
+
+  if (!bars.length) {
+    slide.addText("No platform allocation data.", {
+      x: x + 0.15,
+      y: y + 0.45,
+      w: w - 0.3,
+      h: h - 0.55,
+      fontFace: FONT,
+      fontSize: 9,
+      color: MUTED,
+      valign: "top",
+    });
+    return;
+  }
+
+  const maxPct = Math.max(...bars.map((entry) => entry.percentage), 1);
+  let rowY = y + 0.42;
+  const rowH = 0.34;
+  for (const [index, entry] of bars.entries()) {
+    const barColor = hex(resolvePlatformBarSolidColor(entry.platform, index));
+    slide.addText(entry.platform, {
+      x: x + 0.15,
+      y: rowY,
+      w: 1.15,
+      h: rowH,
+      fontFace: FONT,
+      fontSize: 8.5,
+      bold: true,
+      color: INK,
+      valign: "middle",
+    });
+    slide.addShape("roundRect", {
+      x: x + 1.35,
+      y: rowY + 0.12,
+      w: w - 1.85,
+      h: 0.1,
+      fill: { color: LAVENDER },
+      line: { type: "none" },
+      rectRadius: 0.05,
+    });
+    slide.addShape("roundRect", {
+      x: x + 1.35,
+      y: rowY + 0.12,
+      w: Math.max(0.08, ((w - 1.85) * entry.percentage) / maxPct),
+      h: 0.1,
+      fill: { color: barColor },
+      line: { type: "none" },
+      rectRadius: 0.05,
+    });
+    slide.addText(`${entry.percentage}%`, {
+      x: x + w - 0.55,
+      y: rowY,
+      w: 0.4,
+      h: rowH,
+      fontFace: FONT,
+      fontSize: 8.5,
+      bold: true,
+      color: INK,
+      align: "right",
+      valign: "middle",
+    });
+    rowY += rowH;
+  }
+}
+
 function addOperationsSlide(
   pptx: PptxGen,
   content: CampaignOutputContent,
@@ -981,19 +1133,7 @@ function addOperationsSlide(
   addOpsCard("Activation Waves", MARGIN_X, cardY, cardW, cardH, wavesBody);
 
   const allocationBars = platformAllocationBars(data);
-  let platformBody = "";
-  if (allocationBars.length) {
-    platformBody = allocationBars
-      .map((entry, index) => {
-        const bar = "█".repeat(Math.max(1, Math.round(entry.percentage / 10)));
-        const color = PLATFORM_BAR_COLORS[index % PLATFORM_BAR_COLORS.length];
-        return `${entry.platform} ${entry.percentage}% ${bar}`;
-      })
-      .join("\n");
-  } else {
-    platformBody = "No platform allocation data.";
-  }
-  addOpsCard("Platform Allocation", MARGIN_X + cardW + 0.2, cardY, cardW, cardH, platformBody);
+  addPlatformAllocationCard(slide, MARGIN_X + cardW + 0.2, cardY, cardW, cardH, allocationBars);
 
   const milestonesBody = data.milestones
     .slice(0, 10)
@@ -1036,19 +1176,19 @@ function addDeadlinesSlide(
     ],
   ];
 
-  for (const deadline of data.deadlines.slice(0, 12)) {
+  for (const deadline of data.deadlines.slice(0, 24)) {
     rows.push([
       { text: deadline.shortName ?? deadline.creator, options: { fontSize: 8, color: INK } },
       {
         text: formatDeadlineDeliverables(deadline),
-        options: { fontSize: 8, color: INK },
+        options: { fontSize: 8, color: INK, valign: "top" },
       },
       {
         text: `Week ${deadline.publishWeek} · ${deadline.publishDay}`,
-        options: { fontSize: 8, color: INK },
+        options: { fontSize: 8, color: INK, valign: "top" },
       },
-      { text: deadline.productionStart, options: { fontSize: 8, color: MUTED } },
-      { text: deadline.assetDelivery, options: { fontSize: 8, color: MUTED } },
+      { text: deadline.productionStart, options: { fontSize: 8, color: MUTED, valign: "top" } },
+      { text: deadline.assetDelivery, options: { fontSize: 8, color: MUTED, valign: "top" } },
     ]);
   }
 
@@ -1059,9 +1199,11 @@ function addDeadlinesSlide(
     fontFace: FONT,
     border: { type: "solid", color: LINE, pt: 0.5 },
     fill: { color: WHITE },
-    colW: [2.4, 2.8, 2.2, 2.2, 2.333],
-    rowH: 0.32,
-    autoPage: false,
+    colW: [2.1, 3.1, 2.1, 2.1, 2.033],
+    rowH: 0.34,
+    autoPage: true,
+    autoPageRepeatHeader: true,
+    autoPageLineWeight: 0.5,
   });
 
 }
@@ -1128,7 +1270,11 @@ export async function buildMediaPlanPptxBuffer(
   }
 
   const data = content.data;
-  const context = mergeMediaPlanContext(data.campaignContext, options?.contextOverride);
+  const mergedContext = mergeMediaPlanContext(data.campaignContext, options?.contextOverride);
+  const context =
+    options?.includeCampaignCost === false && mergedContext
+      ? { ...mergedContext, campaignCost: undefined }
+      : mergedContext;
   const typeColorMap = buildAdTypeColorMap(collectLegendTypes(data));
   const avatarData = await resolveAvatarDataMap(data);
 

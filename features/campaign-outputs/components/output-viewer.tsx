@@ -1,9 +1,12 @@
 import type { CampaignOutputContent, CampaignOutputContentSection } from "../output-types";
 import type { MediaPlanCampaignContext, MediaPlanData } from "../generators/media-plan";
+import type { CampaignObject } from "@/features/campaign-intelligence";
+import type { MediaPlanMarketIntelligenceMeta } from "@/features/market-intelligence/market-intelligence-config";
 import {
   MediaPlanCalendar,
   type MediaPlanCreatorMoveTarget,
 } from "./media-plan-calendar";
+import { MediaPlanMarketIntelligenceToggles } from "./media-plan-market-intelligence-toggles";
 import { MEDIA_PLAN_BRAND } from "./media-plan-brand";
 import { mergeMediaPlanContext } from "./media-plan-context-merge";
 import {
@@ -14,6 +17,7 @@ import {
   MediaPlanStrategySection,
   shouldSkipMediaPlanSection,
 } from "./media-plan-preview-sections";
+import { refreshMediaPlanStrategySummaryForDisplay } from "../media-plan-strategy-summary";
 
 function isMediaPlanData(data: unknown): data is MediaPlanData {
   return Boolean(
@@ -81,12 +85,21 @@ export function OutputViewer({
   editableMediaPlan = false,
   savingMediaPlanSchedule = false,
   onMoveMediaPlanCreator,
+  onExitEditMode,
+  campaignObject,
+  onMarketIntelligenceChange,
+  onInfluencerConceptsPersist,
 }: {
   content: CampaignOutputContent;
   mediaPlanContextOverride?: MediaPlanCampaignContext;
   editableMediaPlan?: boolean;
   savingMediaPlanSchedule?: boolean;
   onMoveMediaPlanCreator?: (target: MediaPlanCreatorMoveTarget) => void;
+  /** Click outside the calendar while editing — exit edit mode without closing the modal. */
+  onExitEditMode?: () => void;
+  campaignObject?: CampaignObject;
+  onMarketIntelligenceChange?: (patch: Partial<MediaPlanMarketIntelligenceMeta>) => void | Promise<void>;
+  onInfluencerConceptsPersist?: (next: CampaignObject) => void | Promise<void>;
 }) {
   const mediaPlan = isMediaPlanData(content.data) ? content.data : undefined;
   const hasDeadlines = Boolean(mediaPlan?.deadlines?.length);
@@ -96,7 +109,17 @@ export function OutputViewer({
   );
 
   return (
-    <article className="space-y-5">
+    <article
+      className="space-y-5"
+      onClick={(event) => {
+        if (!editableMediaPlan || !onExitEditMode) return;
+        const target = event.target as HTMLElement;
+        if (target.closest("[data-media-plan-calendar]") || target.closest("[data-no-drag]")) {
+          return;
+        }
+        onExitEditMode();
+      }}
+    >
       <header className="space-y-3">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1 space-y-1">
@@ -115,17 +138,35 @@ export function OutputViewer({
       </header>
 
       {mediaPlan ? (
-        <MediaPlanStrategySection summary={mediaPlan.strategySummary} />
+        <MediaPlanStrategySection
+          summary={
+            refreshMediaPlanStrategySummaryForDisplay(mediaPlan.strategySummary, mediaPlan) ??
+            mediaPlan.strategySummary
+          }
+          campaignObject={campaignObject}
+          platformAllocation={mediaPlan.platformAllocation}
+          onInfluencerConceptsPersist={onInfluencerConceptsPersist}
+        />
+      ) : null}
+
+      {mediaPlan && editableMediaPlan && campaignObject && onMarketIntelligenceChange ? (
+        <MediaPlanMarketIntelligenceToggles
+          campaignObject={campaignObject}
+          saving={savingMediaPlanSchedule}
+          onChange={onMarketIntelligenceChange}
+        />
       ) : null}
 
       {mediaPlan ? (
-        <MediaPlanCalendar
-          data={mediaPlan}
-          orientation="landscape"
-          editable={editableMediaPlan}
-          saving={savingMediaPlanSchedule}
-          onMoveCreator={onMoveMediaPlanCreator}
-        />
+        <div data-media-plan-calendar>
+          <MediaPlanCalendar
+            data={mediaPlan}
+            orientation="landscape"
+            editable={editableMediaPlan}
+            saving={savingMediaPlanSchedule}
+            onMoveCreator={onMoveMediaPlanCreator}
+          />
+        </div>
       ) : null}
 
       {mediaPlan && hasDeadlines ? (

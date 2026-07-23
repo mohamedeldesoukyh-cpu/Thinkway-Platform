@@ -1,0 +1,1777 @@
+/* ============================================================
+   Quotation editor — pixel-faithful port of quotation-redesign_5.html
+   Scoped under .quotation-editor-rd4. Imported unlayered so these
+   rules beat Tailwind utilities on the quotation surface.
+   See docs/QUOTATION_REDESIGN_HANDOFF.md
+   ============================================================ */
+
+.quotation-editor-rd4 {
+  --navy: #0a0e17;
+  --ink: #0d1220;
+  --blue: #0057ff;
+  --blue-hover: #0048dd;
+  --blue-soft: #eef3ff;
+  --blue-text: #0b52e0;
+  --green: #0f9d6b;
+  --green-bg: #e9f8f1;
+  --green-text: #0a6b4a;
+  --amber-bg: #fef6e7;
+  --amber-text: #a15c07;
+  --text: #0d1220;
+  --text-2: #41495a;
+  --text-3: #727d92;
+  --text-4: #9aa3b5;
+  --line: #eaedf4;
+  --line-2: #e3e8f2;
+  --surface: #f6f8fc;
+  --surface-2: #f1f4fa;
+  --white: #fff;
+  --hover: #f7f9fd;
+  --ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --gut: 32px;
+  --shadow-pop: 0 12px 34px rgba(15, 23, 42, 0.13), 0 3px 10px rgba(15, 23, 42, 0.06);
+
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  background: var(--white) !important;
+  color: var(--text);
+  font-size: 14px;
+  letter-spacing: -0.006em;
+  -webkit-font-smoothing: antialiased;
+}
+
+.dark .quotation-editor-rd4 {
+  --navy: #05070d;
+  --ink: #f5f6f8;
+  --text: #f4f5f7;
+  --text-2: #c4c9d4;
+  --text-3: #8b93a5;
+  --text-4: #6b7285;
+  --line: rgba(255, 255, 255, 0.07);
+  --line-2: rgba(255, 255, 255, 0.09);
+  --surface: #15161c;
+  --surface-2: #1b1c23;
+  --white: #101116;
+  --hover: rgba(255, 255, 255, 0.028);
+  --blue-soft: rgba(0, 87, 255, 0.14);
+  --blue-text: #7ba7ff;
+  --green-bg: rgba(15, 157, 107, 0.14);
+  --green-text: #4ecb9a;
+  --amber-bg: rgba(245, 158, 11, 0.13);
+  --amber-text: #f2b24a;
+}
+
+/* —— Buttons (mock .btn) —— */
+.quotation-editor-rd4 .btn,
+.quotation-editor-rd4 [data-slot="button"].q-btn,
+.quotation-editor-rd4 .q-wtop-acts > button,
+.quotation-editor-rd4 .q-wtop-acts > a,
+.quotation-editor-rd4 .q-wtop-acts > div > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--line-2);
+  background: var(--white);
+  color: var(--text-2);
+  white-space: nowrap;
+  box-shadow: none;
+  transition:
+    transform 0.13s var(--ease),
+    background 0.14s,
+    border-color 0.14s;
+}
+
+.quotation-editor-rd4 .q-wtop-acts > button:hover,
+.quotation-editor-rd4 .q-wtop-acts > a:hover,
+.quotation-editor-rd4 .q-wtop-acts > div > button:hover {
+  background: var(--hover);
+  border-color: #d2d9e8;
+}
+
+.quotation-editor-rd4 .btn.sm,
+.quotation-editor-rd4 .q-sec-tools button,
+.quotation-editor-rd4 .q-sec-tools a {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12.5px;
+  border-radius: 9px;
+}
+
+.quotation-editor-rd4 .btn-primary,
+.quotation-editor-rd4 .q-sec-tools .btn-primary,
+.quotation-editor-rd4 .q-sec-tools a.bg-\[var\(--q-blue\#0057ff\)\],
+.quotation-editor-rd4 .q-sec-tools a[class*="bg-[var(--q-blue"] {
+  background: var(--blue) !important;
+  border-color: var(--blue) !important;
+  color: #fff !important;
+  box-shadow:
+    0 1px 2px rgba(0, 87, 255, 0.35),
+    0 6px 16px -6px rgba(0, 87, 255, 0.5) !important;
+}
+
+.quotation-editor-rd4 .btn-glow,
+.quotation-editor-rd4 .q-wtop-acts button.btn-glow {
+  background: var(--white) !important;
+  border: 1.5px solid rgba(0, 87, 255, 0.55) !important;
+  color: var(--blue-text) !important;
+  font-weight: 700 !important;
+  box-shadow:
+    0 0 0 3px rgba(0, 87, 255, 0.08),
+    0 2px 14px -3px rgba(0, 87, 255, 0.4) !important;
+}
+
+.quotation-editor-rd4 .btn-glow:hover:not(:disabled) {
+  border-color: var(--blue) !important;
+  background: var(--blue-soft) !important;
+}
+
+.quotation-editor-rd4 .btn-ghost {
+  border-color: transparent !important;
+  background: transparent !important;
+}
+
+.quotation-editor-rd4 .btn-ghost:hover {
+  background: var(--surface) !important;
+}
+
+.quotation-editor-rd4 .ibtn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  border: 1px solid var(--line-2);
+  background: var(--white);
+  color: var(--text-2);
+}
+
+.quotation-editor-rd4 .ibtn:hover {
+  background: var(--hover);
+  border-color: #d2d9e8;
+  color: var(--text);
+}
+
+.quotation-editor-rd4 .ibtn.mini {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.quotation-editor-rd4 .ibtn.mini:hover {
+  background: var(--surface-2);
+  border-color: transparent;
+}
+
+.quotation-editor-rd4 .ibtn.mini svg {
+  width: 14px;
+  height: 14px;
+}
+
+.quotation-editor-rd4 .spill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+.quotation-editor-rd4 .spill .led {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #94a0b8;
+}
+
+.quotation-editor-rd4 .spill.spill-compact {
+  height: 20px;
+  padding: 0 7px;
+}
+
+.quotation-editor-rd4 .gen-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 36px;
+  padding: 0 8px 0 14px;
+  border-radius: 10px;
+  background: var(--blue) !important;
+  border: 1px solid var(--blue) !important;
+  color: #fff !important;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow:
+    0 1px 2px rgba(0, 87, 255, 0.35),
+    0 6px 16px -6px rgba(0, 87, 255, 0.5) !important;
+}
+
+.quotation-editor-rd4 .gen-trigger:hover:not(:disabled) {
+  background: var(--blue-hover) !important;
+  border-color: var(--blue-hover) !important;
+}
+
+.quotation-editor-rd4 .gen-trigger .rdy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.quotation-editor-rd4 .gen-trigger .rdy .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffd66e;
+  box-shadow: 0 0 0 3px rgba(255, 214, 110, 0.25);
+}
+
+.quotation-editor-rd4 .gen-trigger .car {
+  width: 14px;
+  height: 14px;
+  opacity: 0.85;
+}
+
+.quotation-editor-rd4 .wtop-acts > div > button.gen-trigger,
+.quotation-editor-rd4 .wtop-acts > button.btn,
+.quotation-editor-rd4 .wtop-acts > div > button.btn {
+  flex-shrink: 0;
+}
+
+/* —— Sticky top —— */
+.quotation-editor-rd4 .wtop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+  max-width: none;
+  padding: 12px var(--gut);
+  border-bottom: 1px solid var(--line);
+  background: var(--white);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.quotation-editor-rd4 .wtop-left {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.quotation-editor-rd4 .wtop-left .qmeta {
+  margin-top: 0;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.quotation-editor-rd4 .wtop-left .qmeta > span {
+  white-space: nowrap;
+}
+
+.quotation-editor-rd4 .wtop-left .qtitle h1 {
+  font-size: 18px;
+}
+
+.quotation-editor-rd4 .scroll {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: none;
+  overflow-y: auto;
+  background: var(--white);
+}
+
+.quotation-editor-rd4 .wtop-acts {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.quotation-editor-rd4 .qtitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.quotation-editor-rd4 .qtitle .serial {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-4);
+  padding-right: 11px;
+  border-right: 1px solid var(--line-2);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.quotation-editor-rd4 .qtitle h1 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+  margin: 0;
+  min-width: 0;
+}
+
+.quotation-editor-rd4 .qmeta {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 12px;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.quotation-editor-rd4 .qmeta > span {
+  white-space: nowrap;
+}
+
+.quotation-editor-rd4 .qmeta .k {
+  color: var(--text-4);
+}
+
+.quotation-editor-rd4 .qmeta .v {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.quotation-editor-rd4 .qmeta .mdot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text-4);
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.quotation-editor-rd4 .qmeta a {
+  color: var(--blue-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.quotation-editor-rd4 .qmeta a:hover {
+  text-decoration: underline;
+}
+
+/* —— Metrics —— */
+.quotation-editor-rd4 .metricsband {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  border-bottom: 1px solid var(--line);
+  background: var(--white);
+}
+
+.quotation-editor-rd4 .metric {
+  padding: 14px 18px;
+  min-width: 0;
+}
+
+.quotation-editor-rd4 .metric + .metric {
+  border-left: 1px solid var(--line);
+}
+
+.quotation-editor-rd4 .metric:first-child {
+  padding-left: var(--gut);
+}
+
+.quotation-editor-rd4 .metric:last-child {
+  padding-right: var(--gut);
+}
+
+.quotation-editor-rd4 .metric .l {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-4);
+}
+
+.quotation-editor-rd4 .metric .v {
+  margin-top: 5px;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.quotation-editor-rd4 .metric .v.blue {
+  color: var(--blue-text);
+}
+
+.quotation-editor-rd4 .metric .v.sm {
+  font-size: 15px;
+}
+
+.quotation-editor-rd4 .metric .v .u {
+  font-size: 11px;
+  color: var(--text-4);
+  font-weight: 600;
+}
+
+.quotation-editor-rd4 .metric .v.amber {
+  color: var(--amber-text);
+}
+
+.quotation-editor-rd4 .metric .v.green {
+  color: var(--green-text);
+}
+
+.quotation-editor-rd4 .metric .v.red {
+  color: #d64545;
+}
+
+/* —— Lifecycle —— */
+.quotation-editor-rd4 .lcband {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 13px var(--gut);
+  border-bottom: 1px solid var(--line);
+  background: var(--white);
+}
+
+.quotation-editor-rd4 .lclabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-4);
+  margin-right: 2px;
+}
+
+.quotation-editor-rd4 .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 11px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: 1px solid var(--line-2);
+  background: var(--white);
+  color: var(--text-3);
+}
+
+.quotation-editor-rd4 .chip .d {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-4);
+}
+
+.quotation-editor-rd4 .chip.ok {
+  background: var(--green-bg);
+  color: var(--green-text);
+  border-color: transparent;
+}
+
+.quotation-editor-rd4 .chip.ok .d {
+  background: var(--green);
+}
+
+.quotation-editor-rd4 .chip.link {
+  background: var(--blue-soft);
+  color: var(--blue-text);
+  border-color: transparent;
+}
+
+.quotation-editor-rd4 .chip.link .d {
+  background: var(--blue);
+}
+
+.quotation-editor-rd4 .chip.mut .d {
+  background: var(--text-4);
+}
+
+.quotation-editor-rd4 .validity {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--amber-bg);
+  color: var(--amber-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.quotation-editor-rd4 .validity.expired {
+  background: rgba(214, 69, 69, 0.12);
+  color: #d64545;
+}
+
+.quotation-editor-rd4 .validity svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* —— Sections —— */
+.quotation-editor-rd4 .sec {
+  padding: 22px var(--gut);
+  border-bottom: 1px solid var(--line);
+  background: var(--white);
+}
+
+.quotation-editor-rd4 .sec.flush {
+  padding: 22px 0;
+}
+
+.quotation-editor-rd4 .sec.compact {
+  padding: 15px var(--gut);
+}
+
+.quotation-editor-rd4 .sec:last-child {
+  border-bottom: none;
+  padding-bottom: 52px;
+}
+
+.quotation-editor-rd4 .sec-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.quotation-editor-rd4 .sec.flush > .sec-head,
+.quotation-editor-rd4 .sec.flush > .ctools {
+  padding: 0 var(--gut);
+}
+
+.quotation-editor-rd4 .sec-head h2 {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin: 0;
+}
+
+.quotation-editor-rd4 .sec-head h2 span {
+  color: var(--text-4);
+  font-weight: 500;
+}
+
+.quotation-editor-rd4 .sec-head p {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.quotation-editor-rd4 .sec-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quotation-editor-rd4 .cb-toggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+.quotation-editor-rd4 .field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+  max-width: 980px;
+}
+
+.quotation-editor-rd4 .field-row label,
+.quotation-editor-rd4 .cb-panel label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-4);
+  margin-bottom: 6px;
+}
+
+.quotation-editor-rd4 .cb-panel {
+  border: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+.quotation-editor-rd4 .cb-panel [data-slot="select-trigger"],
+.quotation-editor-rd4 .cb-panel .thinkway-dropdown-trigger,
+.quotation-editor-rd4 .cb-panel input {
+  height: 38px !important;
+  border: 1px solid var(--line-2) !important;
+  border-radius: 10px !important;
+  background: var(--white) !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  color: var(--text) !important;
+  box-shadow: none !important;
+}
+
+/* —— Creators toolbar —— */
+.quotation-editor-rd4 .ctools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+  border: none !important;
+  padding: 0 var(--gut) !important;
+  background: transparent !important;
+}
+
+.quotation-editor-rd4 .searchbox {
+  flex: 0 0 300px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-3);
+  max-width: 100%;
+}
+
+.quotation-editor-rd4 .searchbox svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.quotation-editor-rd4 .searchbox input {
+  border: none !important;
+  background: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+  font-size: 13px;
+  width: 100%;
+  height: auto !important;
+  padding: 0 !important;
+  color: var(--text);
+}
+
+.quotation-editor-rd4 .selpill,
+.quotation-editor-rd4 .ctools [data-slot="select-trigger"] {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  height: 36px !important;
+  padding: 0 12px !important;
+  border: 1px solid var(--line-2) !important;
+  border-radius: 10px !important;
+  background: var(--white) !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: var(--text-2) !important;
+  box-shadow: none !important;
+}
+
+/* —— Creator list (mock flex layout) —— */
+.quotation-editor-rd4 .creators-list {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  padding-bottom: 8px;
+  background: linear-gradient(180deg, var(--white) 0%, var(--surface, #f3f6fc) 140px);
+}
+
+.quotation-editor-rd4 .creators-list .clist-head {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: none;
+  padding: 11px var(--gut, 32px) 12px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-4);
+  background: var(--white);
+  z-index: 20;
+}
+
+.quotation-editor-rd4 .creators-list .co-chk {
+  width: 34px;
+  flex-shrink: 0;
+}
+
+.quotation-editor-rd4 .creators-list .co-opt {
+  width: 150px;
+  flex-shrink: 0;
+}
+
+.quotation-editor-rd4 .creators-list .co-tier {
+  width: 78px;
+  flex-shrink: 0;
+}
+
+.quotation-editor-rd4 .creators-list .co-svc {
+  flex: 1;
+  min-width: 0;
+  padding-right: 12px;
+}
+
+.quotation-editor-rd4 .creators-list .co-plat {
+  width: 70px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.quotation-editor-rd4 .creators-list .co-type {
+  width: 150px;
+  flex-shrink: 0;
+  padding-right: 12px;
+}
+
+.quotation-editor-rd4 .creators-list .co-price {
+  width: 120px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.quotation-editor-rd4 .creators-list .co-status {
+  width: 96px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.quotation-editor-rd4 .creators-list .co-act {
+  width: 96px;
+  flex-shrink: 0;
+}
+
+.quotation-editor-rd4 .creators-list .co-empty.co-chk {
+  width: 34px;
+}
+
+.quotation-editor-rd4 .creators-list .co-empty.co-opt {
+  width: 150px;
+}
+
+.quotation-editor-rd4 .creators-list .co-empty.co-tier {
+  width: 78px;
+}
+
+.quotation-editor-rd4 .creators-list .co-empty.co-status {
+  width: 96px;
+}
+
+.quotation-editor-rd4 .creators-list .co-empty.co-act {
+  width: 96px;
+}
+
+.quotation-editor-rd4 .creators-list .cgroup.quotation-creator-card {
+  position: relative;
+  margin: 0 max(16px, calc(var(--gut, 32px) - 12px)) 12px;
+  border-radius: 16px;
+  background: var(--white);
+  overflow: hidden;
+  transition:
+    box-shadow 0.25s ease,
+    border-color 0.25s ease,
+    transform 0.2s ease;
+}
+
+.quotation-editor-rd4 .creators-list .cgroup.quotation-creator-card--green {
+  border: 1px solid rgba(29, 158, 117, 0.14);
+  background: linear-gradient(180deg, rgba(236, 253, 245, 0.55) 0%, var(--white) 100%);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.03),
+    0 0 0 1px rgba(29, 158, 117, 0.08),
+    0 0 10px rgba(29, 158, 117, 0.12);
+}
+
+.quotation-editor-rd4 .creators-list .cgroup.quotation-creator-card--orange {
+  border: 1px solid rgba(234, 88, 12, 0.14);
+  background: linear-gradient(180deg, rgba(255, 247, 237, 0.55) 0%, var(--white) 100%);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.03),
+    0 0 0 1px rgba(234, 88, 12, 0.08),
+    0 0 10px rgba(234, 88, 12, 0.12);
+}
+
+.quotation-editor-rd4 .creators-list .cgroup.quotation-creator-card--missing-cost {
+  border: 1px solid rgba(220, 38, 38, 0.12);
+  background: linear-gradient(180deg, rgba(254, 242, 242, 0.5) 0%, var(--white) 100%);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.03),
+    0 0 0 1px rgba(220, 38, 38, 0.07),
+    0 0 10px rgba(220, 38, 38, 0.1);
+}
+
+.quotation-editor-rd4 .creators-list .cgroup.quotation-creator-card:first-of-type {
+  margin-top: 6px;
+}
+
+.quotation-editor-rd4 .creators-list .cgroup.quotation-creator-card:last-of-type {
+  margin-bottom: 16px;
+}
+
+.quotation-editor-rd4 .creators-list .cgroup.quotation-creator-card:hover,
+.quotation-editor-rd4 .creators-list .cgroup.quotation-creator-card:focus-within {
+  z-index: 8;
+  transform: translateY(-1px);
+}
+
+.quotation-editor-rd4
+  .creators-list
+  .cgroup.quotation-creator-card--green:hover,
+.quotation-editor-rd4
+  .creators-list
+  .cgroup.quotation-creator-card--green:focus-within {
+  box-shadow:
+    0 2px 6px rgba(15, 23, 42, 0.04),
+    0 0 0 1px rgba(29, 158, 117, 0.12),
+    0 0 14px rgba(29, 158, 117, 0.16);
+}
+
+.quotation-editor-rd4
+  .creators-list
+  .cgroup.quotation-creator-card--orange:hover,
+.quotation-editor-rd4
+  .creators-list
+  .cgroup.quotation-creator-card--orange:focus-within {
+  box-shadow:
+    0 2px 6px rgba(15, 23, 42, 0.04),
+    0 0 0 1px rgba(234, 88, 12, 0.12),
+    0 0 14px rgba(234, 88, 12, 0.16);
+}
+
+.quotation-editor-rd4
+  .creators-list
+  .cgroup.quotation-creator-card--missing-cost:hover,
+.quotation-editor-rd4
+  .creators-list
+  .cgroup.quotation-creator-card--missing-cost:focus-within {
+  box-shadow:
+    0 2px 6px rgba(15, 23, 42, 0.04),
+    0 0 0 1px rgba(220, 38, 38, 0.11),
+    0 0 14px rgba(220, 38, 38, 0.14);
+}
+
+.quotation-editor-rd4 .creators-list .cgroup {
+  border-bottom: none;
+}
+
+.quotation-editor-rd4 .creators-list .cg-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px var(--gut, 32px) 12px;
+  background: linear-gradient(180deg, #f8faff 0%, var(--white) 100%);
+  border-top: none !important;
+  border-bottom: 1px solid var(--line);
+}
+
+.quotation-editor-rd4 .creators-list .cgroup .cg-head + .cg-head,
+.quotation-editor-rd4 .creators-list .cgroup .oline + .cg-head {
+  border-top: 1px solid var(--line);
+}
+
+.quotation-editor-rd4 .creators-list .oline {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: none;
+  padding: 11px var(--gut, 32px);
+  background: var(--surface);
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.quotation-editor-rd4 .creators-list .cgroup .cg-head + .oline {
+  border-top: none;
+}
+
+.quotation-editor-rd4 .creators-list .oline-act {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.quotation-editor-rd4 .creators-list .price-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.quotation-editor-rd4 .creators-list .price-cell .dash {
+  color: var(--text-4);
+}
+
+.quotation-editor-rd4 .creators-list .price-cell .price-gp-sub {
+  display: none;
+}
+
+.quotation-editor-rd4 .creators-list .totals {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px var(--gut, 32px);
+  margin: 8px max(16px, calc(var(--gut, 32px) - 12px)) 0;
+  border-top: 2px solid var(--line-2);
+  border-radius: 12px 12px 0 0;
+  background: var(--white);
+  position: relative;
+  z-index: 12;
+  box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.04);
+}
+
+.quotation-editor-rd4 .creators-list .totals .lbl {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.quotation-editor-rd4 .creators-list .totals .amt {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.quotation-editor-rd4 .creators-list .cgroup .collapse-content-header {
+  padding-left: var(--gut, 32px);
+}
+
+.quotation-editor-rd4 .creators-list .collapse-content-frame.quotation-collapse-content-block {
+  background: var(--white);
+}
+
+/* —— Creator table (legacy) —— */
+.quotation-editor-rd4 .creators-table {
+  width: 100%;
+  border-top: none !important;
+  overflow-x: auto;
+}
+
+.quotation-editor-rd4 .creators-table table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+.quotation-editor-rd4 .creators-table col.q-col-chk {
+  width: 34px;
+}
+
+.quotation-editor-rd4 .creators-table col.q-col-opt {
+  width: 150px;
+}
+
+.quotation-editor-rd4 .creators-table col.q-col-followers {
+  width: 0;
+}
+
+.quotation-editor-rd4 .creators-table col.q-col-tier {
+  width: 78px;
+}
+
+.quotation-editor-rd4 .creators-table col.q-col-svc {
+  width: auto;
+}
+
+.quotation-editor-rd4 .creators-table col.q-col-plat {
+  width: 70px;
+}
+
+.quotation-editor-rd4 .creators-table col.q-col-type {
+  width: 150px;
+}
+
+.quotation-editor-rd4 .creators-table col.q-col-price {
+  width: 120px;
+}
+
+.quotation-editor-rd4 .creators-table col.q-col-status {
+  width: 96px;
+}
+
+.quotation-editor-rd4 .creators-table col.q-col-act {
+  width: 96px;
+}
+
+.quotation-editor-rd4 .creators-table .q-col-followers,
+.quotation-editor-rd4 .creators-table th.q-col-followers,
+.quotation-editor-rd4 .creators-table td.q-col-followers {
+  display: none !important;
+  width: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  overflow: hidden;
+}
+
+.quotation-editor-rd4 .creators-table thead.clist-head {
+  background: var(--white) !important;
+}
+
+.quotation-editor-rd4 .creators-table tbody tr,
+.quotation-editor-rd4 .creators-table tbody tr:nth-child(even),
+.quotation-editor-rd4 .creators-table tbody tr:hover,
+.quotation-editor-rd4 .creators-table tbody tr[data-state="selected"] {
+  background: transparent !important;
+  border-color: var(--line) !important;
+}
+
+.quotation-editor-rd4 .creators-table tbody tr.cg-head-row,
+.quotation-editor-rd4 .creators-table tbody tr.cg-head-row td,
+.quotation-editor-rd4 .creators-table tbody tr.cg-head-row:hover td {
+  background: var(--white) !important;
+  border-bottom: none !important;
+}
+
+.quotation-editor-rd4 .creators-table tbody tr.oline {
+  background: transparent !important;
+}
+
+.quotation-editor-rd4 .creators-table tbody.collapse-content-frame.quotation-collapse-content-block,
+.quotation-editor-rd4
+  .creators-table
+  tbody.collapse-content-frame.quotation-collapse-content-block
+  > tr,
+.quotation-editor-rd4
+  .creators-table
+  tbody.collapse-content-frame.quotation-collapse-content-block
+  > tr
+  > td {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.quotation-editor-rd4
+  .creators-table
+  tbody.collapse-content-frame.quotation-collapse-content-block
+  + tbody {
+  border-top: none !important;
+}
+
+.quotation-editor-rd4 .creators-table tbody.cgroup {
+  border-bottom: 1px solid var(--line);
+}
+
+.quotation-editor-rd4 .creators-table [data-slot="table-header"],
+.quotation-editor-rd4 .creators-table [data-slot="table-body"],
+.quotation-editor-rd4 .creators-table [data-slot="table-footer"] {
+  background: transparent !important;
+}
+
+.quotation-editor-rd4 .creators-table [data-slot="table-row"] {
+  border-bottom: none !important;
+  transition: none !important;
+}
+
+.quotation-editor-rd4 .creators-table [data-slot="table-row"]:hover {
+  background: transparent !important;
+}
+
+.quotation-editor-rd4 .creators-table thead {
+  background: var(--white) !important;
+  backdrop-filter: none !important;
+}
+
+.quotation-editor-rd4 .creators-table thead tr {
+  border-bottom: 1px solid var(--line) !important;
+  background: var(--white) !important;
+}
+
+.quotation-editor-rd4 .creators-table thead th {
+  height: auto !important;
+  padding: 9px 8px 10px !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  color: var(--text-4) !important;
+  background: var(--white) !important;
+  border: none !important;
+}
+
+.quotation-editor-rd4 .creators-table thead th:first-child {
+  padding-left: var(--gut) !important;
+}
+
+.quotation-editor-rd4 .creators-table thead th:last-child {
+  padding-right: var(--gut) !important;
+}
+
+.quotation-editor-rd4 .creators-table tbody {
+  border-bottom: 1px solid var(--line);
+}
+
+.quotation-editor-rd4 .cg-head-cell {
+  padding: 13px var(--gut) !important;
+  background: var(--white) !important;
+  border: none !important;
+}
+
+.quotation-editor-rd4 .cg-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 0;
+  width: 100%;
+}
+
+.quotation-editor-rd4 .cg-head .quotation-cg-avatar-block {
+  width: auto;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.quotation-editor-rd4 .cg-head .quotation-cg-avatar-block .discovery-search-exact-photo-wrap {
+  position: relative;
+  flex-shrink: 0;
+  /* Room for ★ score badge (bottom: -6px) so it is not clipped by the row. */
+  padding-bottom: 10px;
+  overflow: visible;
+}
+
+.quotation-editor-rd4 .cg-head .quotation-cg-avatar-block .discovery-search-exact-star {
+  z-index: 3;
+}
+
+/* Sync glow outside overflow:hidden avatar (same ::before pattern as shortlist). */
+.quotation-editor-rd4 .cg-head .quotation-cg-avatar-block .discovery-search-exact-photo-wrap::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  box-shadow: 0 4px 12px -3px rgba(16, 24, 40, 0.2);
+  transition: box-shadow 0.25s ease;
+}
+
+.quotation-editor-rd4
+  .cg-head
+  .quotation-cg-avatar-block.shortlist-creator-row-sync--updated
+  .discovery-search-exact-photo-wrap::before {
+  box-shadow:
+    0 4px 12px -3px rgba(16, 24, 40, 0.2),
+    0 0 0 3px rgba(15, 157, 107, 0.22),
+    0 0 16px rgba(15, 157, 107, 0.42),
+    0 0 32px rgba(15, 157, 107, 0.16);
+}
+
+.quotation-editor-rd4
+  .cg-head
+  .quotation-cg-avatar-block.shortlist-creator-row-sync--failed
+  .discovery-search-exact-photo-wrap::before {
+  box-shadow:
+    0 4px 12px -3px rgba(16, 24, 40, 0.2),
+    0 0 0 3px rgba(220, 38, 38, 0.2),
+    0 0 16px rgba(220, 38, 38, 0.38),
+    0 0 32px rgba(220, 38, 38, 0.14);
+}
+
+.quotation-editor-rd4
+  .cg-head
+  .quotation-cg-avatar-block.shortlist-creator-row-sync--partial
+  .discovery-search-exact-photo-wrap::before {
+  box-shadow:
+    0 4px 12px -3px rgba(16, 24, 40, 0.2),
+    0 0 0 3px rgba(234, 88, 12, 0.2),
+    0 0 16px rgba(234, 88, 12, 0.38),
+    0 0 32px rgba(234, 88, 12, 0.14);
+}
+
+.quotation-editor-rd4
+  .cg-head
+  .quotation-cg-avatar-block.shortlist-creator-row-sync--syncing
+  .discovery-search-exact-photo-wrap::before {
+  animation: shortlist-avatar-sync-pulse 1.6s ease-in-out infinite;
+  box-shadow:
+    0 4px 12px -3px rgba(16, 24, 40, 0.2),
+    0 0 0 3px rgba(37, 99, 235, 0.24),
+    0 0 16px rgba(37, 99, 235, 0.45),
+    0 0 32px rgba(37, 99, 235, 0.18);
+}
+
+.quotation-editor-rd4
+  .cg-head
+  .quotation-cg-avatar-block.shortlist-creator-row-sync--never
+  .discovery-search-exact-photo-wrap::before {
+  box-shadow:
+    0 4px 12px -3px rgba(16, 24, 40, 0.2),
+    0 0 0 2px rgba(148, 163, 184, 0.12),
+    0 0 12px rgba(148, 163, 184, 0.16);
+}
+
+.quotation-editor-rd4 .cg-id {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.quotation-editor-rd4 .cg-name {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.quotation-editor-rd4 .cg-handle {
+  font-size: 11.5px;
+  color: var(--text-4);
+  margin-top: 1px;
+  line-height: 1.2;
+}
+
+.quotation-editor-rd4 .cg-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+.quotation-editor-rd4 .plat-ic {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--white);
+  border: 1px solid var(--line-2);
+}
+
+.quotation-editor-rd4 .cg-head .cg-name,
+.quotation-editor-rd4 .cg-head [class*="font-semibold"],
+.quotation-editor-rd4 .cg-head [class*="font-bold"] {
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  color: var(--text) !important;
+  letter-spacing: -0.01em;
+}
+
+.quotation-editor-rd4 .cg-head [class*="text-muted"],
+.quotation-editor-rd4 .cg-handle {
+  font-size: 11.5px !important;
+  color: var(--text-4) !important;
+  margin-top: 1px;
+}
+
+.quotation-editor-rd4 .cg-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+.quotation-editor-rd4 .cg-cats > * {
+  display: inline-flex !important;
+  align-items: center;
+  padding: 2px 8px !important;
+  border-radius: 6px !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+  font-size: 10.5px !important;
+  font-weight: 500 !important;
+  color: var(--text-2) !important;
+}
+
+.quotation-editor-rd4 .cg-foll {
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 11.5px;
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+.quotation-editor-rd4 .cg-foll b {
+  display: block;
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.quotation-editor-rd4 .oline td,
+.quotation-editor-rd4 .creators-table tr.oline [data-slot="table-cell"] {
+  padding: 8px 8px !important;
+  background: var(--surface) !important;
+  border-top: 1px solid var(--line) !important;
+  border-bottom: none !important;
+  vertical-align: middle !important;
+  white-space: nowrap !important;
+  line-height: 1.2;
+}
+
+.quotation-editor-rd4 .oline td.oline-act {
+  padding-right: var(--gut) !important;
+}
+
+.quotation-editor-rd4 .oline td.price-cell {
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+.quotation-editor-rd4 .oline .price-cell .price-gp-sub {
+  display: none !important;
+}
+
+.quotation-editor-rd4 .oline .price-cell > div {
+  gap: 1px !important;
+  padding: 0 !important;
+}
+
+.quotation-editor-rd4 .oline .price-cell .text-sm {
+  font-size: 12.5px !important;
+  line-height: 1.2 !important;
+}
+
+.quotation-editor-rd4 td.oline-act .oline-act-inner {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.quotation-editor-rd4 .oline .q-remove-type {
+  flex-shrink: 0;
+}
+
+.quotation-editor-rd4 .oline .type-sel,
+.quotation-editor-rd4 .oline .type-sel-trigger,
+.quotation-editor-rd4 .oline .type-sel-trigger.type-sel {
+  height: 34px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
+  border: 1px solid var(--line-2) !important;
+  border-radius: 8px !important;
+  background: var(--white) !important;
+  font-size: 12.5px !important;
+  box-shadow: none !important;
+}
+
+.quotation-editor-rd4 .oline .svc-input {
+  height: 34px !important;
+  min-height: 34px !important;
+  max-height: 34px !important;
+}
+
+.quotation-editor-rd4 .oline [data-slot="checkbox"] {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.quotation-editor-rd4 .oline .plat-ic,
+.quotation-editor-rd4 .oline .co-plat [data-slot="button"],
+.quotation-editor-rd4 .oline .co-plat .size-\[26px\] {
+  width: 26px !important;
+  height: 26px !important;
+  min-height: 26px !important;
+}
+
+/* Multi-type rows: keep overlapping platform badges stacked (do not expand the cell). */
+.quotation-editor-rd4 .oline .co-plat .inline-flex {
+  flex-wrap: nowrap;
+}
+
+.quotation-editor-rd4 .spill.spill-row-status {
+  height: 22px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+
+.quotation-editor-rd4 .oline td:first-child {
+  padding-left: var(--gut) !important;
+}
+
+.quotation-editor-rd4 .oline td:last-child {
+  padding-right: var(--gut) !important;
+}
+
+.quotation-editor-rd4 .oline:hover td {
+  background: var(--surface) !important;
+}
+
+.quotation-editor-rd4 .oline input,
+.quotation-editor-rd4 .oline [data-slot="select-trigger"] {
+  height: 34px !important;
+  padding: 0 11px !important;
+  border: 1px solid var(--line-2) !important;
+  border-radius: 8px !important;
+  background: var(--white) !important;
+  font-size: 12.5px !important;
+  color: var(--text) !important;
+  box-shadow: none !important;
+}
+
+.quotation-editor-rd4 .tierbadge,
+.quotation-editor-rd4 .oline [class*="tier"] {
+  display: inline-flex !important;
+  align-items: center;
+  height: 20px !important;
+  padding: 0 9px !important;
+  border-radius: 20px !important;
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+}
+
+.quotation-editor-rd4 .oline button[class*="text-[var(--blue-text"],
+.quotation-editor-rd4 .price-cell a,
+.quotation-editor-rd4 .oline a {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: var(--blue-text) !important;
+  text-decoration: none !important;
+}
+
+.quotation-editor-rd4 .totals,
+.quotation-editor-rd4 tfoot.totals {
+  background: var(--white) !important;
+  border-top: 2px solid var(--line-2) !important;
+}
+
+.quotation-editor-rd4 .totals td,
+.quotation-editor-rd4 tfoot.totals td {
+  padding: 16px 8px !important;
+  background: var(--white) !important;
+  border: none !important;
+}
+
+.quotation-editor-rd4 .totals td:first-child,
+.quotation-editor-rd4 tfoot.totals td:first-child {
+  padding-left: var(--gut) !important;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.quotation-editor-rd4 .totals .amt,
+.quotation-editor-rd4 tfoot.totals td.amt {
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em;
+  color: var(--text) !important;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.quotation-editor-rd4 .totals td:last-child,
+.quotation-editor-rd4 tfoot.totals td:last-child {
+  padding-right: var(--gut) !important;
+}
+
+/* —— Docs + notes —— */
+.quotation-editor-rd4 .sec .cols2 {
+  padding: 0;
+  border-bottom: none;
+  background: transparent;
+}
+
+.quotation-editor-rd4 .cols2 {
+  display: grid;
+  grid-template-columns: 1.1fr 1px 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+.quotation-editor-rd4 .dgrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.quotation-editor-rd4 .dfield {
+  margin-bottom: 14px;
+}
+
+.quotation-editor-rd4 .dfield.mb-0 {
+  margin-bottom: 0;
+}
+
+.quotation-editor-rd4 .dfield[class*="col-span-2"] {
+  grid-column: span 2;
+}
+
+.quotation-editor-rd4 .inp {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  background: var(--white);
+  font-size: 13px;
+  color: var(--text);
+  box-shadow: none !important;
+}
+
+.quotation-editor-rd4 .ta {
+  min-height: 70px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 9px;
+  background: var(--white);
+  font-size: 13px;
+  color: var(--text);
+  box-shadow: none !important;
+}
+
+.quotation-editor-rd4 .revline {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.quotation-editor-rd4 .revline b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.quotation-editor-rd4 .revline .dt {
+  float: right;
+  color: var(--text-4);
+}
+
+.quotation-editor-rd4 .acc-item {
+  display: block;
+  border-bottom: 1px solid var(--line);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.quotation-editor-rd4 .acc-item:last-child {
+  border-bottom: none;
+}
+
+.quotation-editor-rd4 .acc-item button:hover {
+  color: var(--blue-text);
+}
+
+.quotation-editor-rd4 .acc-item .n {
+  color: var(--text-4);
+  font-weight: 700;
+  margin-right: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.quotation-editor-rd4 .acc-item .car {
+  width: 16px;
+  height: 16px;
+  color: var(--text-4);
+}
+
+.quotation-editor-rd4 .svc-input {
+  width: 100%;
+  border: 1px solid var(--line-2) !important;
+  border-radius: 8px !important;
+  background: var(--white) !important;
+  box-shadow: none !important;
+}
+
+.quotation-editor-rd4 .svc-input::placeholder {
+  color: var(--text-4);
+}
+
+.quotation-editor-rd4 .cols2 .thinkway-campaign-section-card,
+.quotation-editor-rd4 .cols2 .thinkway-campaign-info-card {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+}
+
+.quotation-editor-rd4 .cols2 .thinkway-campaign-section-head {
+  display: none !important;
+}
+
+.quotation-editor-rd4 .vdiv {
+  background: var(--line);
+  align-self: stretch;
+}
+
+.quotation-editor-rd4 .subh {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.quotation-editor-rd4 .subp {
+  font-size: 11.5px;
+  color: var(--text-3);
+  margin-bottom: 14px;
+}
+
+.quotation-editor-rd4 .cols2 .thinkway-campaign-form-grid,
+.quotation-editor-rd4 .cols2 [class*="grid"] {
+  gap: 14px !important;
+}
+
+.quotation-editor-rd4 .cols2 .thinkway-campaign-field-label,
+.quotation-editor-rd4 .cols2 .dlbl {
+  display: block;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  color: var(--text-4) !important;
+  margin-bottom: 6px !important;
+}
+
+.quotation-editor-rd4 .cols2 input,
+.quotation-editor-rd4 .cols2 [data-slot="select-trigger"],
+.quotation-editor-rd4 .cols2 .thinkway-dropdown-trigger,
+.quotation-editor-rd4 .cols2 textarea {
+  border: 1px solid var(--line-2) !important;
+  border-radius: 9px !important;
+  background: var(--white) !important;
+  font-size: 13px !important;
+  color: var(--text) !important;
+  box-shadow: none !important;
+}
+
+.quotation-editor-rd4 .cols2 input,
+.quotation-editor-rd4 .cols2 [data-slot="select-trigger"],
+.quotation-editor-rd4 .cols2 .thinkway-dropdown-trigger {
+  height: 40px !important;
+}
+
+.quotation-editor-rd4 .cols2 textarea,
+.quotation-editor-rd4 .notes-ta {
+  min-height: 250px !important;
+  padding: 12px 14px !important;
+  border-radius: 10px !important;
+}
+
+/* —— Terms —— */
+.quotation-editor-rd4 .acc-item,
+.quotation-editor-rd4 .thinkway-campaign-term-item {
+  border-bottom: 1px solid var(--line) !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.quotation-editor-rd4 .thinkway-campaign-term-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 15px 4px !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  color: var(--text) !important;
+  background: transparent !important;
+}
+
+.quotation-editor-rd4 .thinkway-campaign-term-head:hover {
+  color: var(--blue-text) !important;
+}
+
+.quotation-editor-rd4 .thinkway-campaign-term-body {
+  padding: 0 4px 14px !important;
+  font-size: 12.5px;
+  color: var(--text-3);
+  background: transparent !important;
+}
+
+/* Kill leftover campaign-card chrome inside the redesign */
+.quotation-editor-rd4 .thinkway-campaign-data-table {
+  --camp-border: var(--line);
+}
+
+.quotation-editor-rd4 .rounded-xl.border.bg-card {
+  border: none !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+@media (max-width: 1100px) {
+  .quotation-editor-rd4 .metricsband {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .quotation-editor-rd4 .metric:nth-child(4n + 1) {
+    border-left: none;
+    padding-left: var(--gut);
+  }
+
+  .quotation-editor-rd4 .metric:nth-child(n + 5) {
+    border-top: 1px solid var(--line);
+  }
+}
+
+@media (max-width: 900px) {
+  .quotation-editor-rd4 {
+    --gut: 20px;
+  }
+
+  .quotation-editor-rd4 .field-row,
+  .quotation-editor-rd4 .cols2 {
+    grid-template-columns: 1fr;
+  }
+
+  .quotation-editor-rd4 .vdiv {
+    display: none;
+  }
+
+  .quotation-editor-rd4 .qmeta {
+    flex-wrap: wrap;
+  }
+}

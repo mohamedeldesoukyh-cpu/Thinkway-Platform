@@ -38,6 +38,7 @@ export {
   generateCampaignOutput,
   markStaleCampaignOutputs,
   regenerateStaleCampaignOutputs,
+  regeneratableStaleCampaignOutputKinds,
   staleCampaignOutputKinds,
   describeStaleReason,
   getOutputVersions,
@@ -83,6 +84,19 @@ export {
   generateInternalOperations,
   INTERNAL_OPERATIONS_GENERATOR_VERSION,
 } from "./generators/internal-operations";
+export {
+  MARKET_OPPORTUNITY_DAY_INFLUENCE,
+  MARKET_OPPORTUNITY_WEEK_INFLUENCE,
+} from "./media-plan-priority-weights";
+export {
+  buildMarketSchedulingContext,
+  resolveMarketIntelligenceConfig,
+  resolveMarketWindows,
+  scoreMarketOpportunityForDate,
+  buildMarketTimingRationale,
+  type MarketSchedulingContext,
+  type MarketIntelligenceConfig,
+} from "@/features/market-intelligence";
 export {
   generateExecutiveProposal,
   EXECUTIVE_PROPOSAL_GENERATOR_VERSION,

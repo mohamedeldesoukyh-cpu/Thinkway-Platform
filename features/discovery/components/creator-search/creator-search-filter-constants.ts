@@ -23,6 +23,23 @@ export const DISCOVERY_FILTER_COUNTRIES = DISCOVERY_FILTER_COUNTRY_CODES.map((co
 
 export const CONTENT_TAG_SUGGESTIONS = ["reels", "viral", "fyp", "travel", "beauty"] as const;
 
+/** Quick-add language pills for creator / content language filters. */
+export const DISCOVERY_FILTER_LANGUAGES = [
+  { code: "en", label: "English" },
+  { code: "ar", label: "Arabic" },
+  { code: "fr", label: "French" },
+  { code: "es", label: "Spanish" },
+  { code: "de", label: "German" },
+  { code: "hi", label: "Hindi" },
+  { code: "tr", label: "Turkish" },
+  { code: "pt", label: "Portuguese" },
+] as const;
+
+export function languageLabel(code: string): string {
+  const normalized = code.trim().toLowerCase();
+  return DISCOVERY_FILTER_LANGUAGES.find((entry) => entry.code === normalized)?.label ?? code;
+}
+
 export const LAST_POST_WITHIN_OPTIONS = [
   { value: "", label: "Any time" },
   { value: "7d", label: "Last 7 days" },

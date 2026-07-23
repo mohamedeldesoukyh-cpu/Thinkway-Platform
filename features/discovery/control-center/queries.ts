@@ -10,6 +10,10 @@ import { isInlineDiscoveryBackfillEnabled } from "@/lib/discovery/coverage-backf
 import { isDiscoveryQueueAvailable } from "@/lib/discovery/queue";
 import { getMetricsCollectorEnv } from "@/lib/performance/metrics-collector/config";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  getCountryCompletenessMetrics,
+  type CountryCompletenessMetrics,
+} from "@/lib/discovery/country-completeness-metrics";
 
 export type DiscoveryCoverageDecisionRow = {
   id: string;
@@ -44,6 +48,7 @@ export type DiscoveryDiagnosticsSnapshot = {
     missingDna: number;
     pendingDiscoveryJobs: number;
   };
+  countryCompleteness: CountryCompletenessMetrics;
   jobs: {
     lastDiscoveryJob: Record<string, unknown> | null;
     lastEnrichmentJob: Record<string, unknown> | null;
@@ -78,6 +83,7 @@ export async function getDiscoveryDiagnosticsSnapshot(): Promise<DiscoveryDiagno
     dnaRows,
     lastDiscoveryJob,
     coverageDecisions,
+    countryCompleteness,
   ] = await Promise.all([
     supabase
       .from("influencers")
@@ -105,6 +111,16 @@ export async function getDiscoveryDiagnosticsSnapshot(): Promise<DiscoveryDiagno
       )
       .order("timestamp", { ascending: false })
       .limit(20),
+    "error" in auth
+      ? Promise.resolve({
+          activeInfluencers: 0,
+          withCountry: 0,
+          missingCountry: 0,
+          countryCompletenessPercent: 0,
+          awaitingProfileDetails: 0,
+          profileEnrichmentBacklog: 0,
+        } satisfies CountryCompletenessMetrics)
+      : getCountryCompletenessMetrics(supabase),
   ]);
 
   const dnaScores = (dnaRows.data ?? [])
@@ -141,6 +157,7 @@ export async function getDiscoveryDiagnosticsSnapshot(): Promise<DiscoveryDiagno
       missingDna,
       pendingDiscoveryJobs: pendingJobs.count ?? 0,
     },
+    countryCompleteness,
     jobs: {
       lastDiscoveryJob: (lastDiscoveryJob.data as Record<string, unknown> | null) ?? null,
       lastEnrichmentJob: null,

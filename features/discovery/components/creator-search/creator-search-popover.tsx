@@ -8,9 +8,26 @@ import { useDebouncedValue } from "@/features/creators/picker/creator-selection-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-const SEARCH_DEBOUNCE_MS = 250;
+import {
+  clearDiscoverySearchDraft,
+  readDiscoverySearchDraft,
+  writeDiscoverySearchDraft,
+} from "./creator-search-draft-storage";
+import {
+  DISCOVERY_TOOLBAR_ICON_PROPS,
+  DiscoveryToolbarActiveBadge,
+  discoveryToolbarBtnClass,
+} from "./creator-search-toolbar-utils";
+import { shouldPropagateDebouncedSearchDraft } from "./creator-search-popover-sync";
+
+/** Typing is instant; browse/URL update after this pause while the popover is open. */
+const APPLY_SEARCH_DEBOUNCE_MS = 700;
 
 type Props = {
   /** External query (URL, clear filters, programmatic sync). */
@@ -20,6 +37,11 @@ type Props = {
   loading?: boolean;
 };
 
+function resolveDraftSeed(searchQuery: string): string {
+  if (searchQuery.trim()) return searchQuery;
+  return readDiscoverySearchDraft();
+}
+
 export function CreatorSearchPopover({
   searchQuery,
   onDebouncedSearchChange,
@@ -27,53 +49,83 @@ export function CreatorSearchPopover({
   loading,
 }: Props) {
   const [open, setOpen] = useState(false);
-  const [draftSearch, setDraftSearch] = useState(searchQuery);
-  const debouncedDraft = useDebouncedValue(draftSearch, SEARCH_DEBOUNCE_MS);
+  const [draftSearch, setDraftSearch] = useState(() => resolveDraftSeed(searchQuery));
+  const debouncedDraft = useDebouncedValue(draftSearch, APPLY_SEARCH_DEBOUNCE_MS);
   const inputRef = useRef<HTMLInputElement>(null);
+  const previousSearchQueryRef = useRef(searchQuery);
+  const wasOpenRef = useRef(false);
 
   useEffect(() => {
     setDraftSearch(searchQuery);
+    if (!searchQuery.trim()) {
+      clearDiscoverySearchDraft();
+    } else {
+      writeDiscoverySearchDraft(searchQuery);
+    }
   }, [searchQuery]);
 
   useEffect(() => {
-    if (debouncedDraft === searchQuery) return;
-    onDebouncedSearchChange(debouncedDraft);
-  }, [debouncedDraft, searchQuery, onDebouncedSearchChange]);
+    if (!open) {
+      wasOpenRef.current = false;
+      return;
+    }
+
+    if (!wasOpenRef.current) {
+      wasOpenRef.current = true;
+      const seed = searchQuery.trim() || readDiscoverySearchDraft();
+      setDraftSearch(seed);
+      const id = requestAnimationFrame(() => {
+        const input = inputRef.current;
+        if (!input) return;
+        input.focus();
+        const end = input.value.length;
+        input.setSelectionRange(end, end);
+      });
+      return () => cancelAnimationFrame(id);
+    }
+  }, [open, searchQuery]);
 
   useEffect(() => {
     if (!open) return;
-    const id = requestAnimationFrame(() => {
-      inputRef.current?.focus();
-      inputRef.current?.select();
-    });
-    return () => cancelAnimationFrame(id);
-  }, [open]);
+    if (
+      !shouldPropagateDebouncedSearchDraft({
+        debouncedDraft,
+        draftSearch,
+        searchQuery,
+        previousSearchQuery: previousSearchQueryRef.current,
+      })
+    ) {
+      return;
+    }
+    onDebouncedSearchChange(debouncedDraft);
+    writeDiscoverySearchDraft(debouncedDraft);
+  }, [debouncedDraft, draftSearch, open, searchQuery, onDebouncedSearchChange]);
+
+  useEffect(() => {
+    previousSearchQueryRef.current = searchQuery;
+  }, [searchQuery]);
 
   const hasQuery = searchQuery.trim().length > 0;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className={cn(
-            "h-8 gap-1.5 text-xs",
-            hasQuery && "border-primary/30 bg-primary/5"
-          )}
-          aria-label={hasQuery ? `Search: ${searchQuery}` : "Search creators"}
-        >
-          <SearchIcon className="size-3.5 shrink-0" />
-          {hasQuery ? (
-            <span className="max-w-[100px] truncate font-normal text-muted-foreground sm:max-w-[140px]">
-              {searchQuery}
-            </span>
-          ) : (
-            <span className="sr-only">Search</span>
-          )}
-        </Button>
-      </PopoverTrigger>
+      <Tooltip open={open ? false : undefined}>
+        <PopoverTrigger asChild>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className={discoveryToolbarBtnClass(hasQuery)}
+              aria-label={hasQuery ? `Search: ${searchQuery}` : "Search creators"}
+            >
+              <SearchIcon {...DISCOVERY_TOOLBAR_ICON_PROPS} />
+              {hasQuery ? <DiscoveryToolbarActiveBadge /> : null}
+            </Button>
+          </TooltipTrigger>
+        </PopoverTrigger>
+        <TooltipContent side="bottom">Search</TooltipContent>
+      </Tooltip>
       <PopoverContent
         align="end"
         sideOffset={8}
@@ -82,6 +134,7 @@ export function CreatorSearchPopover({
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            writeDiscoverySearchDraft(draftSearch);
             onSearchSubmit(draftSearch);
             setOpen(false);
           }}
@@ -97,9 +150,15 @@ export function CreatorSearchPopover({
             <Input
               ref={inputRef}
               value={draftSearch}
-              onChange={(e) => setDraftSearch(e.target.value)}
+              onChange={(e) => {
+                const next = e.target.value;
+                setDraftSearch(next);
+                writeDiscoverySearchDraft(next);
+              }}
               placeholder="Type to search"
               className="h-8 border-border bg-background pl-8 pr-8 text-[12px] focus-visible:border-primary"
+              autoComplete="off"
+              spellCheck={false}
             />
           </div>
         </form>

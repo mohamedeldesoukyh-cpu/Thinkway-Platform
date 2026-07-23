@@ -113,3 +113,12 @@ export const VENDOR_PAYMENT_STATUS_LABELS: Record<string, string> = {
   paid: "Paid out",
   cancelled: "Cancelled",
 };
+
+export {
+  CAMPAIGNS_LIST_PATH,
+  campaignDetailPath,
+  campaignDetailPathWithTab,
+  clientDetailPath,
+  vendorDetailPath,
+  groupDetailPath,
+} from "@/lib/routing/entity-paths";

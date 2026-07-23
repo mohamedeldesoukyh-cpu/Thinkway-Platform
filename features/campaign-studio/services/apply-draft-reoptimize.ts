@@ -13,6 +13,8 @@ import {
 import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
 
 import { computeCampaignScores } from "./campaign-scores";
+import { studioForecastArtifacts } from "./campaign-forecast-service";
+import { studioDecisionArtifacts } from "./campaign-decision-service";
 import { mapBrowseCreatorToSearchResult } from "./creator-platform-utils";
 import { composeCreatorSlate, creatorTierOf } from "./creator-slate";
 import { patchSlateIntelligence } from "./slate-intelligence";
@@ -122,11 +124,24 @@ export async function reoptimizeCampaignAfterApply(
     unenrichedCreatorIds: options.unenrichedCreatorIds,
   });
 
+  const { snapshot, groundedKpis } = studioForecastArtifacts({ cards: finalCards, facts });
+  const { optimization, decision } = studioDecisionArtifacts({
+    cards: finalCards,
+    facts,
+    tierMix,
+    scores,
+    unenrichedCreatorIds: options.unenrichedCreatorIds,
+  });
+
   const performanceData = (campaignObject.sections.performance.data ??
     {}) as PerformanceSectionData;
   const nextPerformance: PerformanceSectionData = {
     ...performanceData,
     campaignScores: scores,
+    campaignForecast: snapshot,
+    campaignOptimization: optimization,
+    campaignDecision: decision,
+    groundedKpis,
     ...(performanceData.successProbability
       ? {
           successProbability: {

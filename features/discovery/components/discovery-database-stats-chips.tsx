@@ -46,10 +46,10 @@ function CategoryChip({
   className?: string;
 }) {
   const chipClass = cn(
-    "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] transition-colors",
+    "inline-flex items-center gap-[5px] rounded-[20px] border px-[11px] py-1 text-[11.5px] font-semibold transition-colors",
     active
-      ? "border-[#1D9E75]/40 bg-[#1D9E75]/10 font-medium text-[#1D9E75]"
-      : "border-border/80 bg-background text-foreground hover:border-[#1D9E75]/30",
+      ? "border-[var(--ink)] bg-[var(--ink)] text-white"
+      : "border-[var(--tw-border)] bg-[var(--surface)] text-[var(--text-2)] hover:bg-muted/80",
     className
   );
 
@@ -68,6 +68,9 @@ function CategoryChip({
   );
 }
 
+/**
+ * Category chips — matches HTML `.d-cats` / `.d-cat-chip` (inline with creators stat).
+ */
 export function DiscoveryDatabaseStatsChips({
   categories,
   uncategorized,
@@ -104,20 +107,15 @@ export function DiscoveryDatabaseStatsChips({
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-1.5">
-      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">
+    <>
+      <div className="ml-1.5 flex min-w-0 flex-wrap items-center gap-2">
+        <span className="mr-0.5 text-[10px] font-bold uppercase tracking-[0.4px] text-[var(--text-3)]">
           By category
         </span>
         <CategoryChip
           active={isUnfilteredSearch}
           href={isSearchPage ? undefined : buildCreatorSearchHref()}
           onClick={isSearchPage ? handleClearCategories : undefined}
-          className={
-            isUnfilteredSearch
-              ? "border-[#1D9E75]/40 bg-[#1D9E75]/10 font-medium text-[#1D9E75]"
-              : "border-border/80 bg-background text-muted-foreground hover:border-[#1D9E75]/30 hover:text-foreground"
-          }
         >
           All
         </CategoryChip>
@@ -130,15 +128,10 @@ export function DiscoveryDatabaseStatsChips({
               href={isSearchPage ? undefined : buildCreatorSearchHref(item.label)}
               onClick={isSearchPage ? () => handleToggleCategory(item.label) : undefined}
             >
-              <span className="font-medium">{item.label}</span>
-              <span
-                className={cn(
-                  "tabular-nums",
-                  active ? "text-[#1D9E75]/80" : "text-muted-foreground"
-                )}
-              >
+              <span>{item.label}</span>
+              <b className={cn("font-bold", active ? "text-white" : "text-[var(--text)]")}>
                 {formatCount(item.count)}
-              </span>
+              </b>
             </CategoryChip>
           );
         })}
@@ -155,19 +148,28 @@ export function DiscoveryDatabaseStatsChips({
             }
             className={
               isCategoryActive(activeCategories, CREATOR_CATEGORY_UNCATEGORIZED)
-                ? "border-[#1D9E75]/40 bg-[#1D9E75]/10 font-medium text-[#1D9E75]"
-                : "border-dashed border-border/80 bg-background text-muted-foreground hover:border-[#1D9E75]/30 hover:text-foreground"
+                ? undefined
+                : "border-dashed"
             }
           >
             <span>Uncategorized</span>
-            <span className="tabular-nums">{formatCount(uncategorized.count)}</span>
+            <b
+              className={cn(
+                "font-bold",
+                isCategoryActive(activeCategories, CREATOR_CATEGORY_UNCATEGORIZED)
+                  ? "text-white"
+                  : "text-[var(--text)]"
+              )}
+            >
+              {formatCount(uncategorized.count)}
+            </b>
           </CategoryChip>
         ) : null}
       </div>
 
       {isSearchPage && activeCategories.length > 0 ? (
-        <div className="flex min-w-0 flex-wrap items-center gap-1.5 pl-0.5">
-          <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">
+        <div className="flex basis-full min-w-0 flex-wrap items-center gap-1.5 pt-1">
+          <span className="text-[10px] font-bold uppercase tracking-[0.4px] text-[var(--text-3)]">
             Active
           </span>
           {activeCategories.map((category) => (
@@ -176,8 +178,8 @@ export function DiscoveryDatabaseStatsChips({
               type="button"
               onClick={() => handleRemoveCategory(category)}
               className={cn(
-                "group inline-flex items-center gap-1 rounded-full border border-[#1D9E75]/25 bg-[#1D9E75]/5 py-0.5 pr-1 pl-2",
-                "text-[11px] font-medium text-[#1D9E75] transition-colors hover:bg-[#1D9E75]/10"
+                "group inline-flex items-center gap-1 rounded-[20px] border border-[var(--tw-border)] bg-[var(--surface)] py-0.5 pr-1 pl-[11px]",
+                "text-[11.5px] font-semibold text-[var(--text-2)] transition-colors hover:bg-muted"
               )}
             >
               <span className="max-w-[160px] truncate">{categoryFilterLabel(category)}</span>
@@ -186,6 +188,6 @@ export function DiscoveryDatabaseStatsChips({
           ))}
         </div>
       ) : null}
-    </div>
+    </>
   );
 }

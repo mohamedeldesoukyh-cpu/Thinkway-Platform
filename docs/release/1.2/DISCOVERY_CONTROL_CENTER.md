@@ -91,8 +91,9 @@ All discovery browse, backfill, progressive AI search, and enrichment gate paths
 
 | Cost protection | Behavior |
 |-----------------|----------|
-| `maxRequestsPerDay > 0` | Blocks backfill enqueue when daily count reached |
-| `maxCreditsPerDay > 0` | Blocks backfill when daily credits reached |
+| `maxRequestsPerDay` / `maxCreditsPerDay` **≤ 0 or unset** | **Fail-closed** — rejects ALL Apify acquisition (never unlimited) |
+| Both caps **> 0** | Allows acquisition until daily usage reaches either cap |
+| Rejections | Logged as `[apify-budget] rejected` with code/reason/caps/usage |
 
 ## Wiring
 

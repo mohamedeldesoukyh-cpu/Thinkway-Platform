@@ -1,5 +1,6 @@
 import { filterPlatformsForDisplay } from "@/lib/creators/creator-centric";
 import { resolveDiscoveryCreatorDisplayCategories } from "@/lib/creators/creator-display-categories";
+import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
 import {
   INFLUENCER_TIER_ORDER,
   resolveCreatorTierFromUnified,
@@ -51,6 +52,7 @@ const ENRICHMENT_STATUS_ORDER: CreatorEnrichmentStatus[] = [
   "never",
   "queued",
   "running",
+  "awaiting_profile_details",
   "partial",
   "enriched",
   "failed",
@@ -120,15 +122,13 @@ function resolveSortPlatform(creator: UnifiedCreatorResult): string {
 }
 
 function resolveSortCountry(creator: UnifiedCreatorResult): string {
-  const primary = creator.platforms[0];
-  return (
-    primary?.audience_country ??
-    creator.estimated_country ??
-    creator.country_code ??
-    ""
-  )
-    .trim()
-    .toUpperCase();
+  const codes = resolveCreatorCountryCodes({
+    country_codes: creator.country_codes,
+    country_code: creator.country_code,
+    estimated_country: creator.estimated_country,
+    platformAudienceCountries: creator.platforms.map((platform) => platform.audience_country),
+  });
+  return codes.join(",");
 }
 
 function resolveSortBrandSafety(creator: UnifiedCreatorResult): number {

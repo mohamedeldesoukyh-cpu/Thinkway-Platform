@@ -1,5 +1,11 @@
 import { Worker, type Job } from "bullmq";
 
+import {
+  AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON,
+  isAutomaticEnrichmentAndAcquisitionDisabled,
+  logBlockedAutomaticAction,
+} from "@/lib/discovery/operational-safety.js";
+
 import { getRedisConnection } from "../queues/connection.js";
 import { QUEUES } from "../queues/names.js";
 import { runHashtagDiscovery } from "../discovery/hashtag-discovery.js";
@@ -120,6 +126,28 @@ export function startDiscoveryWorker(): Worker<DiscoveryJobData> {
   return new Worker<DiscoveryJobData>(
     QUEUES.discovery,
     async (job: Job<DiscoveryJobData>) => {
+      if (isAutomaticEnrichmentAndAcquisitionDisabled()) {
+        logBlockedAutomaticAction(
+          "discovery_run_worker",
+          AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON,
+          { jobId: job.data.jobId ?? null, method: job.data.method }
+        );
+        const tracker = new DiscoveryJobTracker(job.data.jobId);
+        await tracker.markFailed(AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON);
+        return {
+          discovered: 0,
+          profiles_added: 0,
+          crawl_discovered: 0,
+          seeded: false,
+          seed_count: 0,
+          outcome: "crawl_blocked" as const,
+          crawl_error: AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON,
+          usernames: [],
+          logs: tracker.getLogs(),
+          method: job.data.method,
+        };
+      }
+
       const tracker = new DiscoveryJobTracker(job.data.jobId);
       await tracker.markRunning();
 

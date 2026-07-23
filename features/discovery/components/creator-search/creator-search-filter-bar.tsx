@@ -64,7 +64,7 @@ export function CreatorSearchFilterBottomBar({
   const totalActive = buildActiveFilterChips(filters, search).length;
 
   return (
-    <div className="sticky bottom-0 z-20 flex shrink-0 items-center gap-2 border-t border-[#e2e8f0] bg-white/95 px-4 py-2.5 backdrop-blur-sm lg:hidden">
+    <div className="sticky bottom-0 z-20 flex shrink-0 items-center gap-2 border-t border-[#e2e8f0] dark:border-border bg-white/95 dark:bg-background/95 px-4 py-2.5 backdrop-blur-sm lg:hidden">
       <Button
         variant="outline"
         size="sm"

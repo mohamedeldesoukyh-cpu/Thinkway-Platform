@@ -126,6 +126,7 @@ export function fromDeliverableDrafts(drafts: DeliverableDraft[]): QuotationDeli
         type_lines: type_lines.length ? type_lines : undefined,
         quantity: Math.max(1, Number(rest.quantity) || 1),
         revenue: rest.revenue != null ? Number(rest.revenue) : null,
+        free_for_client: rest.free_for_client === true,
         service_description: rest.service_description?.trim() || null,
         commercial_input_mode: rest.commercial_input_mode,
         cost: rest.cost != null ? Number(rest.cost) : null,

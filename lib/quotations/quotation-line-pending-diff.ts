@@ -26,6 +26,7 @@ export function normalizeDeliverablesForCompare(
       : undefined,
     quantity: Math.max(1, Math.floor(Number(d.quantity) || 1)),
     revenue: numOrNull(d.revenue),
+    free_for_client: d.free_for_client === true,
     service_description: strOrNull(d.service_description),
     commercial_input_mode: d.commercial_input_mode ?? null,
     cost: numOrNull(d.cost),
@@ -94,6 +95,9 @@ export function linePendingDiffersFromItem(
     payload.gp_value !== undefined &&
     numOrNull(payload.gp_value) !== numOrNull(item.gp_value)
   ) {
+    return true;
+  }
+  if (payload.af_pct !== undefined && numOrNull(payload.af_pct) !== numOrNull(item.af_pct)) {
     return true;
   }
   return false;

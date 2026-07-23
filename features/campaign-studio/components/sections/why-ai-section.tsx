@@ -8,7 +8,9 @@ import {
   SectionPendingMessage,
   shouldShowPendingPlaceholder,
 } from "./shared/section-status-utils";
+import { STUDIO_REF_CLASSES } from "../../constants/campaign-studio-ref-tokens";
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
+import { useStudioRefMode } from "../../hooks/use-studio-ref-mode";
 import {
   directorDecisionMinutesToInsights,
   resolveDirectorDecisionMinutes,
@@ -28,6 +30,8 @@ export function WhyAiSection({
   fallbackText,
   status,
 }: WhyAiSectionProps) {
+  const refMode = useStudioRefMode();
+
   if (status === "running" && !fallbackText.trim() && !campaignObject) {
     return <SectionSkeleton variant="cards" />;
   }
@@ -40,6 +44,41 @@ export function WhyAiSection({
       return <SectionPendingMessage label="Thinkway decision rationale pending…" />;
     }
     return <SectionFallbackContent text={fallbackText} />;
+  }
+
+  if (refMode) {
+    return (
+      <div className="min-w-0">
+        {insights.map((insight) => (
+          <div key={insight.category} className={STUDIO_REF_CLASSES.decisionItem}>
+            <div className={STUDIO_REF_CLASSES.decisionIco}>
+              <ZapIcon aria-hidden />
+            </div>
+            <div className={STUDIO_REF_CLASSES.decisionBody}>
+              <div className={STUDIO_REF_CLASSES.decisionHead}>
+                <div className={STUDIO_REF_CLASSES.decisionTitle}>{insight.category}</div>
+                {insight.confidence != null ? (
+                  <span className={STUDIO_REF_CLASSES.decisionConf}>
+                    {insight.confidence}% confidence
+                  </span>
+                ) : null}
+              </div>
+              <div className={STUDIO_REF_CLASSES.decisionDetail}>
+                <b>{insight.title}</b>
+                <br />
+                {insight.rationale}
+                {insight.evidence ? (
+                  <>
+                    <br />
+                    <span style={{ color: "var(--cs-text-3)" }}>Evidence: {insight.evidence}</span>
+                  </>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   }
 
   return (

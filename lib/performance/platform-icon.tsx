@@ -30,6 +30,7 @@ export const PLATFORM_ICON_STYLES: Record<string, PlatformIconStyle> = {
     label: "SC",
     title: "Snapchat",
     className: "bg-[#FFFC00] text-[#111111]",
+    imageUrl: "/platform-icons/snapchat.svg",
   },
   facebook: {
     label: "FB",
@@ -46,6 +47,7 @@ export const PLATFORM_ICON_STYLES: Record<string, PlatformIconStyle> = {
     label: "IN",
     title: "LinkedIn",
     className: "bg-[#0A66C2] text-white",
+    imageUrl: "/platform-icons/linkedin.svg",
   },
 };
 

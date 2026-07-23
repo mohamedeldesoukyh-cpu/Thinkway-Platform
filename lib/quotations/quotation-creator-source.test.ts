@@ -87,6 +87,44 @@ test("buildQuotationCreatorProfileSource preserves server-enriched avatar withou
   assert.equal(built.avatarUrl, dnaAvatar);
 });
 
+test("buildQuotationCreatorProfileSource surfaces country when countryCodes is empty array", () => {
+  const built = buildQuotationCreatorProfileSource(
+    item({
+      country_code: "EG",
+      creator_profile_source: {
+        displayName: "reem_elkhashab",
+        avatarUrl: dnaAvatar,
+        platform: "instagram",
+        handle: "reem_elkhashab",
+        countryCode: null,
+        countryCodes: [],
+        linkedPlatforms: ["instagram"],
+      },
+    })
+  );
+  assert.equal(built.countryCode, "EG");
+  assert.deepEqual(built.countryCodes, ["EG"]);
+});
+
+test("buildQuotationCreatorProfileSource keeps profile-source country over empty item code", () => {
+  const built = buildQuotationCreatorProfileSource(
+    item({
+      country_code: null,
+      creator_profile_source: {
+        displayName: "reem_elkhashab",
+        avatarUrl: dnaAvatar,
+        platform: "instagram",
+        handle: "reem_elkhashab",
+        countryCode: "EG",
+        countryCodes: ["EG"],
+        linkedPlatforms: ["instagram"],
+      },
+    })
+  );
+  assert.equal(built.countryCode, "EG");
+  assert.deepEqual(built.countryCodes, ["EG"]);
+});
+
 test("mergeQuotationItemIntoProfileSource does not resurrect expired line snapshot when enriched avatar is null", () => {
   const merged = mergeQuotationItemIntoProfileSource(
     {

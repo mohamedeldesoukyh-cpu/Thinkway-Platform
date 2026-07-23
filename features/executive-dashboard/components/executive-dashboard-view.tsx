@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
+import { SparklesIcon } from "lucide-react";
 
 import { PlatformV6PageSectionHeader } from "@/components/platform/platform-v6-layout";
 import { ExecutiveChartsGrid } from "@/components/dashboard/charts/executive-charts-grid";
@@ -31,6 +32,18 @@ export function ExecutiveDashboardView({
       >
         <DashboardFilterBar options={filterOptions} />
       </Suspense>
+
+      {data.ai_insight ? (
+        <div className="platform-v6-ai-insights">
+          <div className="platform-v6-ai-insights-icon">
+            <SparklesIcon aria-hidden strokeWidth={2} />
+          </div>
+          <div className="platform-v6-ai-insights-body">
+            <div className="platform-v6-ai-insights-label">Thinkway Intelligence</div>
+            <div className="platform-v6-ai-insights-text">{data.ai_insight}</div>
+          </div>
+        </div>
+      ) : null}
 
       <ExecutiveKpiStrip strip={data.executive_kpis} />
 

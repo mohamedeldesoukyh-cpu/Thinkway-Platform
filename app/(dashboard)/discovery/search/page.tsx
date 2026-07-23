@@ -1,19 +1,37 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { CreatorSearchWorkspace } from "@/features/discovery/components/creator-search/creator-search-workspace";
-import { DiscoverySubNav } from "@/features/discovery-import/components/discovery-sub-nav";
+import { DiscoveryPageShell } from "@/features/discovery/components/discovery-page-shell";
 import { loadCampaignIntelligenceWorkspaceAction } from "@/features/campaign-intelligence-profile/actions/profile-actions";
 import {
   getCampaignOptionsForShortlist,
   getDiscoveryShortlists,
 } from "@/features/discovery/queries";
 import { getDiscoverySearchTaxonomy } from "@/lib/discovery/search-taxonomy";
+import { metadataTitleForEntity } from "@/lib/routing/entity-page";
 
 type PageProps = {
   searchParams: Promise<{ profileId?: string }>;
 };
+
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const { profileId } = await searchParams;
+  const trimmedProfileId = profileId?.trim();
+  if (!trimmedProfileId) {
+    return { title: "Creator search" };
+  }
+
+  const briefState = await loadCampaignIntelligenceWorkspaceAction(trimmedProfileId);
+  const profileName = briefState?.profile?.campaignName?.trim();
+  if (!profileName) {
+    return { title: "Creator search" };
+  }
+
+  return {
+    title: metadataTitleForEntity({ id: trimmedProfileId, name: profileName }),
+  };
+}
 
 export default async function CreatorSearchPage({ searchParams }: PageProps) {
   const { profileId } = await searchParams;
@@ -27,33 +45,21 @@ export default async function CreatorSearchPage({ searchParams }: PageProps) {
   ]);
 
   return (
-    <DashboardShell
-      title="Creator Search"
-      hidePageHeader
-      containedMain
-      mainClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
-    >
-      <PlatformErrorBoundary surface="generic">
-        <div className="flex h-full min-h-0 flex-col overflow-hidden">
-          <DiscoverySubNav activeHref="/discovery/search" />
-          <div className="min-h-0 flex-1 overflow-hidden">
-            <Suspense
-              fallback={
-                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                  Loading search…
-                </div>
-              }
-            >
-              <CreatorSearchWorkspace
-                shortlists={shortlists}
-                campaigns={campaigns}
-                searchTaxonomy={searchTaxonomy}
-                initialBriefState={initialBriefState}
-              />
-            </Suspense>
+    <DiscoveryPageShell page="search" variant="flush">
+      <Suspense
+        fallback={
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+            Loading search…
           </div>
-        </div>
-      </PlatformErrorBoundary>
-    </DashboardShell>
+        }
+      >
+        <CreatorSearchWorkspace
+          shortlists={shortlists}
+          campaigns={campaigns}
+          searchTaxonomy={searchTaxonomy}
+          initialBriefState={initialBriefState}
+        />
+      </Suspense>
+    </DiscoveryPageShell>
   );
 }

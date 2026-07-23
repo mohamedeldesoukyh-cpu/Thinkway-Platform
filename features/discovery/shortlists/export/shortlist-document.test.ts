@@ -10,6 +10,7 @@ function mockDetail(overrides: Partial<ShortlistDetail> = {}): ShortlistDetail {
   return {
     id: "sl-1",
     serial_number: "SL-2026-0001",
+    slug: null,
     name: "Summer Creators",
     description: "Top picks for Q3",
     status: "approved",
@@ -61,7 +62,6 @@ function mockDetail(overrides: Partial<ShortlistDetail> = {}): ShortlistDetail {
   const doc = buildShortlistDocument(mockDetail(), { template: "showcase" });
   const html = buildShortlistHtml(doc);
   assert.ok(html.includes("shortlist-showcase"));
-  assert.ok(html.includes("Creator Showcase"));
   assert.ok(html.includes("Discovery Shortlist · Showcase"));
   assert.ok(!html.includes("Proposed deliverables"), "shortlist showcase has no quotation deliverables");
 }
@@ -69,7 +69,8 @@ function mockDetail(overrides: Partial<ShortlistDetail> = {}): ShortlistDetail {
 {
   const doc = buildShortlistDocument(mockDetail(), { template: "summary" });
   const html = buildShortlistHtml(doc);
-  assert.ok(html.includes("Executive Summary"));
+  assert.ok(html.includes("Creator mix"));
+  assert.ok(html.includes("Summary roster"));
   assert.ok(!html.includes("shortlist-showcase"));
 }
 

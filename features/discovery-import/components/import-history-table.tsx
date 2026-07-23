@@ -13,6 +13,11 @@ import {
   isPausableCreatorImportStatus,
   isResumableCreatorImportStatus,
 } from "@/features/discovery-import/import-status";
+import {
+  DiscoveryEmptyState,
+  DiscoveryListCard,
+  DiscoverySectionHeader,
+} from "@/features/discovery/components/design-system";
 import type { CreatorImportFileRow } from "@/features/discovery-import/types";
 import { cn } from "@/lib/utils";
 
@@ -31,30 +36,19 @@ export function ImportHistoryTable({
   onImportAction,
 }: ImportHistoryTableProps) {
   return (
-    <section className="overflow-hidden rounded-[10px] border border-border bg-background">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3.5">
-        <div>
-          <h2 className="text-[13px] font-bold text-foreground">Upload history</h2>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
-            Track uploaded files and processing outcomes.
-          </p>
-        </div>
-        {headerAction}
-      </div>
+    <DiscoveryListCard>
+      <DiscoverySectionHeader
+        title="Upload history"
+        description="Track uploaded files and processing outcomes."
+        action={headerAction}
+      />
 
       {files.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
-          <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-            <FileSpreadsheetIcon className="size-5" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-medium">No imports yet</p>
-            <p className="max-w-md text-xs text-muted-foreground">
-              Upload agency lists, platform exports, or client spreadsheets to start building your
-              import history.
-            </p>
-          </div>
-        </div>
+        <DiscoveryEmptyState
+          title="No imports yet"
+          description="Upload agency lists, platform exports, or client spreadsheets to start building your import history."
+          icon={FileSpreadsheetIcon}
+        />
       ) : (
         <div className="max-h-[420px] overflow-y-auto [scrollbar-color:rgb(226_232_240)_transparent] [scrollbar-width:thin]">
           <table className="w-full border-collapse">
@@ -198,6 +192,6 @@ export function ImportHistoryTable({
           </table>
         </div>
       )}
-    </section>
+    </DiscoveryListCard>
   );
 }

@@ -1,8 +1,9 @@
 "use client";
 
-import { PlusIcon } from "lucide-react";
+import { ClockIcon, PlusIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { STUDIO_REF_CLASSES } from "@/features/campaign-studio/constants/campaign-studio-ref-tokens";
 import { cn } from "@/lib/utils";
 
 import type { ConversationListItem } from "../types";
@@ -17,6 +18,7 @@ type StudioConversationControlsProps = {
   onNewChat: () => void;
   onRefresh?: () => void;
   className?: string;
+  refMode?: boolean;
 };
 
 export function StudioConversationControls({
@@ -28,7 +30,31 @@ export function StudioConversationControls({
   onNewChat,
   onRefresh,
   className,
+  refMode = false,
 }: StudioConversationControlsProps) {
+  if (refMode) {
+    return (
+      <div className={cn("flex shrink-0 items-center gap-2", className)}>
+        <button type="button" className={cn(STUDIO_REF_CLASSES.btn, STUDIO_REF_CLASSES.btnPrimary)} onClick={onNewChat}>
+          <PlusIcon aria-hidden />
+          New chat
+        </button>
+        <ConversationHistorySheet
+          conversations={conversations}
+          loading={loading}
+          error={error}
+          activeId={activeId}
+          onSelect={onSelect}
+          onNewChat={onNewChat}
+          onRefresh={onRefresh}
+          triggerClassName={STUDIO_REF_CLASSES.btn}
+          triggerLabel="History"
+          triggerIcon={<ClockIcon aria-hidden />}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className={cn("flex shrink-0 items-center gap-1.5", className)}>
       <Button

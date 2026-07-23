@@ -1,7 +1,5 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-
 import { SectionSkeleton } from "./shared/section-skeleton";
 import {
   SectionFallbackContent,
@@ -9,7 +7,9 @@ import {
   shouldShowPendingPlaceholder,
 } from "./shared/section-status-utils";
 import { ObjectiveBadge } from "./shared/studio-ui-primitives";
+import { STUDIO_REF_CLASSES } from "../../constants/campaign-studio-ref-tokens";
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
+import { useStudioRefMode } from "../../hooks/use-studio-ref-mode";
 import { resolveContentPlan } from "../../services/section-data-resolver";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
@@ -25,6 +25,8 @@ export function ContentPlanSection({
   fallbackText,
   status,
 }: ContentPlanSectionProps) {
+  const refMode = useStudioRefMode();
+
   if (status === "running" && !fallbackText.trim() && !campaignObject) {
     return <SectionSkeleton variant="cards" />;
   }
@@ -37,28 +39,32 @@ export function ContentPlanSection({
     return <SectionFallbackContent text={fallbackText} />;
   }
 
+  const tableClass = refMode ? STUDIO_REF_CLASSES.planTable : STUDIO_CLASSES.ptable;
+  const thClass = refMode ? undefined : STUDIO_CLASSES.ptableTh;
+  const tdClass = refMode ? undefined : STUDIO_CLASSES.ptableTd;
+
   return (
     <div className="overflow-x-auto">
-      <table className={STUDIO_CLASSES.ptable}>
+      <table className={tableClass}>
         <caption className="sr-only">Campaign content plan by platform and objective</caption>
         <thead>
           <tr>
-            <th scope="col" className={STUDIO_CLASSES.ptableTh}>
+            <th scope="col" className={thClass}>
               Platform
             </th>
-            <th scope="col" className={STUDIO_CLASSES.ptableTh}>
+            <th scope="col" className={thClass}>
               Content Type
             </th>
-            <th scope="col" className={STUDIO_CLASSES.ptableTh}>
+            <th scope="col" className={thClass}>
               Tier
             </th>
-            <th scope="col" className={STUDIO_CLASSES.ptableTh}>
+            <th scope="col" className={thClass}>
               Qty
             </th>
-            <th scope="col" className={STUDIO_CLASSES.ptableTh}>
+            <th scope="col" className={thClass}>
               Posting
             </th>
-            <th scope="col" className={STUDIO_CLASSES.ptableTh}>
+            <th scope="col" className={thClass}>
               Objective
             </th>
           </tr>
@@ -66,14 +72,12 @@ export function ContentPlanSection({
         <tbody>
           {items.map((item, index) => (
             <tr key={`${item.platform}-${index}`}>
-              <td className={cn(STUDIO_CLASSES.ptableTd, "font-semibold capitalize")}>
-                {item.platform}
-              </td>
-              <td className={STUDIO_CLASSES.ptableTd}>{item.contentType}</td>
-              <td className={STUDIO_CLASSES.ptableTd}>{item.creatorTier}</td>
-              <td className={cn(STUDIO_CLASSES.ptableTd, "font-extrabold")}>{item.quantity}</td>
-              <td className={STUDIO_CLASSES.ptableTd}>{item.postingDate}</td>
-              <td className={STUDIO_CLASSES.ptableTd}>
+              <td className={tdClass}>{item.platform}</td>
+              <td className={tdClass}>{item.contentType}</td>
+              <td className={tdClass}>{item.creatorTier}</td>
+              <td className={refMode ? STUDIO_REF_CLASSES.mono : tdClass}>{item.quantity}</td>
+              <td className={tdClass}>{item.postingDate}</td>
+              <td className={tdClass}>
                 <ObjectiveBadge objective={item.objective} />
               </td>
             </tr>

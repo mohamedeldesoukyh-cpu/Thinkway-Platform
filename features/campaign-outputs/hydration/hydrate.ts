@@ -191,8 +191,12 @@ function slateFromSeed(creators: SeedCreator[]): CreatorsSectionData {
 }
 
 /** Fields on the seed that map to campaign facts (for gap-filling + provenance). */
-function factsFromSeed(seed: CampaignSeed, now: string): Partial<CampaignFacts> {
+function factsFromSeed(seed: CampaignSeed | undefined, now: string): Partial<CampaignFacts> {
   const facts: Partial<CampaignFacts> = {};
+  if (!seed) {
+    facts.extractedAt = now;
+    return facts;
+  }
   if (seed.client) facts.clientName = seed.client;
   if (seed.brand) facts.brandName = seed.brand;
   if (seed.objective) facts.objective = seed.objective;

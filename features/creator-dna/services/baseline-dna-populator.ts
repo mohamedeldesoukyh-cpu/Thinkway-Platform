@@ -33,7 +33,7 @@ export type EnsureBaselineDnaResult = {
 };
 
 const INFLUENCER_SELECT =
-  "id, display_name, status, country_code, languages, categories, email, phone, rate_card, exclusivity, thinkway_score, profile_id, primary_avatar_url, default_metrics_platform_account_id, audience_age_13_17, audience_age_18_24, audience_age_25_34, audience_age_35_44, audience_age_45_54, audience_age_55_plus, audience_gender_male, audience_gender_female, audience_top_countries, audience_top_cities, demographic_source, metadata";
+  "id, display_name, status, country_code, country_codes, languages, categories, email, phone, rate_card, exclusivity, thinkway_score, profile_id, primary_avatar_url, default_metrics_platform_account_id, audience_age_13_17, audience_age_18_24, audience_age_25_34, audience_age_35_44, audience_age_45_54, audience_age_55_plus, audience_gender_male, audience_gender_female, audience_top_countries, audience_top_cities, demographic_source, metadata";
 
 const ACCOUNT_SELECT =
   "id, influencer_id, platform, handle, username, profile_url, profile_display_name, profile_picture_url, profile_bio, follower_count, following_count, posts_count, engagement_rate, avg_likes, avg_comments, avg_views, audience_country, is_verified, hashtags, mentions, interest_categories, contact_email, contact_phone, contact_links, recent_publications, field_sources, metrics_source, sync_status, metrics_is_manual_override";

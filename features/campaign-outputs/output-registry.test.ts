@@ -6,6 +6,7 @@ import {
   getCampaignOutput,
   listCampaignOutputs,
   markStaleCampaignOutputs,
+  regeneratableStaleCampaignOutputKinds,
   staleCampaignOutputKinds,
 } from "./output-registry";
 import { buildCampaignObjectFixture } from "./output-test-fixture";
@@ -32,6 +33,7 @@ test("views expose source data, dependencies, and generator version", () => {
     "Platforms",
     "Timeline",
     "Deliverables scope",
+    "Market intelligence",
   ]);
   assert.deepEqual(media.dependencies, media.sourceData);
   assert.equal(media.generatorVersion, MEDIA_PLAN_GENERATOR_VERSION);
@@ -95,6 +97,26 @@ test("markStaleCampaignOutputs is idempotent when nothing changed", () => {
   const obj = buildCampaignObjectFixture();
   const withMedia = generateCampaignOutput(obj, "media_plan").campaignObject;
   assert.equal(markStaleCampaignOutputs(withMedia), withMedia);
+});
+
+test("regeneratable stale kinds follow catalog order and skip unwired generators", () => {
+  const obj = buildCampaignObjectFixture();
+  const withMedia = generateCampaignOutput(obj, "media_plan").campaignObject;
+  const withBoth = generateCampaignOutput(withMedia, "full_strategy").campaignObject;
+
+  const edited = buildCampaignObjectFixture({
+    creators: [{ id: "cr_new", name: "New Face", tier: "Micro" }],
+  });
+  const editedWithRegistry = {
+    ...edited,
+    meta: { ...edited.meta, campaignOutputs: withBoth.meta.campaignOutputs },
+  };
+
+  const stale = markStaleCampaignOutputs(editedWithRegistry);
+  const kinds = regeneratableStaleCampaignOutputKinds(stale);
+
+  assert.deepEqual(kinds, ["full_strategy", "media_plan"]);
+  assert.equal(kinds.includes("posting_timeline"), false);
 });
 
 test("generating an unwired output throws", () => {

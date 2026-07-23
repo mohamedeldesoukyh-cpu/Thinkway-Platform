@@ -14,6 +14,7 @@ export type BrowseInvocationCaller =
   | "import_refresh"
   | "manual_retry"
   | "explicit_run_search"
+  | "zero_results_recommendations"
   | "studio_add_creator"
   | "unknown";
 

@@ -1,4 +1,8 @@
-import { computeCommercials, type CommercialInputMode } from "@/lib/commercial/commercial-engine";
+import {
+  computeAgencyFee,
+  computeCommercials,
+  type CommercialInputMode,
+} from "@/lib/commercial/commercial-engine";
 import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-types";
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 import { deliverableLineCost } from "@/lib/quotations/quotation-deliverable-rollup";
@@ -29,11 +33,27 @@ export function deliverableQuantity(deliverable: { quantity?: number | null }): 
   return n > 0 ? n : 1;
 }
 
-/** Client price (line currency) from deliverable cost-detail fields. */
+export function isDeliverableFreeForClient(
+  deliverable: Pick<QuotationDeliverable, "free_for_client"> | null | undefined
+): boolean {
+  return deliverable?.free_for_client === true;
+}
+
+export function resolveDeliverableAfPct(
+  deliverable: QuotationDeliverable,
+  fallbackAfPct?: number | null
+): number {
+  const afPct = deliverable.af_pct ?? fallbackAfPct ?? 0;
+  return Number.isFinite(afPct) ? Math.max(0, afPct) : 0;
+}
+
+/** Base client cost (line currency) before agency fee. */
 export function computeDeliverableClientPrice(
   deliverable: QuotationDeliverable,
   _fxRateToEgp = 1
 ): number {
+  if (isDeliverableFreeForClient(deliverable)) return 0;
+
   const qty = deliverableQuantity(deliverable);
   const mode =
     deliverable.commercial_input_mode ?? QUOTATION_DELIVERABLE_DEFAULT_COMMERCIAL_MODE;
@@ -57,22 +77,69 @@ export function computeDeliverableClientPrice(
   return line.revenue;
 }
 
+/** Agency fee amount for one deliverable row (AF% × base client cost). */
+export function computeDeliverableAgencyFee(
+  deliverable: QuotationDeliverable,
+  fxRateToEgp = 1,
+  fallbackAfPct?: number | null
+) {
+  const revenue = computeDeliverableClientPrice(deliverable, fxRateToEgp);
+  return computeAgencyFee({
+    revenue,
+    afPct: resolveDeliverableAfPct(deliverable, fallbackAfPct),
+  });
+}
+
+/** Total client cost including agency fee. */
+export function computeDeliverableTotalClientCost(
+  deliverable: QuotationDeliverable,
+  fxRateToEgp = 1,
+  fallbackAfPct?: number | null
+): number {
+  if (isDeliverableFreeForClient(deliverable)) return 0;
+  const revenue = computeDeliverableClientPrice(deliverable, fxRateToEgp);
+  const { afValue } = computeDeliverableAgencyFee(deliverable, fxRateToEgp, fallbackAfPct);
+  return revenue + afValue;
+}
+
 export function withDeliverableCommercialPatch(
   deliverable: QuotationDeliverable,
   patch: Partial<QuotationDeliverable>,
   fxRateToEgp: number
 ): QuotationDeliverable {
   const merged: QuotationDeliverable = { ...deliverable, ...patch };
+  const freeForClient = isDeliverableFreeForClient(merged);
   const revenue = computeDeliverableClientPrice(merged, fxRateToEgp);
-  return { ...merged, revenue: revenue > 0 ? revenue : null };
+  return {
+    ...merged,
+    free_for_client: freeForClient ? true : false,
+    revenue: freeForClient ? 0 : revenue > 0 ? revenue : null,
+  };
 }
 
 export function formatDeliverablePrice(
   revenue: number | null | undefined,
-  currency: string
+  currency: string,
+  options?: { freeForClient?: boolean }
 ): string {
+  if (options?.freeForClient) return "Free";
   if (revenue == null || revenue <= 0) return "—";
   return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(revenue)} ${currency}`;
+}
+
+export function formatDeliverableTotalClientPrice(
+  deliverable: QuotationDeliverable,
+  currency: string,
+  fxRateToEgp = 1,
+  options?: { freeForClient?: boolean; fallbackAfPct?: number | null }
+): string {
+  if (options?.freeForClient || deliverable.free_for_client === true) return "Free";
+  const total = computeDeliverableTotalClientCost(
+    deliverable,
+    fxRateToEgp,
+    options?.fallbackAfPct
+  );
+  return formatDeliverablePrice(total, currency);
 }
 
 /** Blended GP% for one deliverable pricing row (margin on client cost). */

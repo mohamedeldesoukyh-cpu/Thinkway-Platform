@@ -17,9 +17,10 @@ import { getCampaignFacts } from "@/features/campaign-director/facts/facts-displ
 
 import type { CampaignOutputInputKey } from "./output-types";
 import { resolveBriefTextForScheduling } from "./brief-media-plan-schedule";
-import { parseAggregatedServiceLabel } from "./hydration/quotation-service-types";
+import { parseAggregatedServiceLabel, normalizeCreatorMatchKey } from "./hydration/quotation-service-types";
 import type { VendorSelectedReasoning } from "@/features/campaign-intelligence/types/section-schemas";
 import { quotationCommercialsFromMeta } from "./hydration/quotation-commercials-meta";
+import { marketIntelligenceFingerprintValue } from "@/features/market-intelligence/market-intelligence-config";
 
 /** One creator on the slate, resolved from the object's own reasoning (no hydration). */
 export type SlateCreator = {
@@ -35,6 +36,12 @@ export type SlateCreator = {
   serviceTypes?: string[];
   quotedRevenue?: number;
   quotedCurrency?: string;
+  /** Hydrated audience metrics — optional; scheduler degrades gracefully when absent. */
+  followers?: number;
+  engagementRate?: number;
+  views?: number;
+  category?: string;
+  brandFit?: number;
 };
 
 function normalizeId(id: string): string {
@@ -108,6 +115,68 @@ function slateFromQuotationCommercials(
     quotedRevenue: creator.quotedRevenue,
     quotedCurrency: creator.quotedCurrency,
   }));
+}
+
+/** Merge missing tier (and identity fields) from a quotation-backed reference slate. */
+export function enrichSlateTiersFromReference(
+  slate: SlateCreator[],
+  reference: SlateCreator[]
+): SlateCreator[] {
+  if (!reference.length || !slate.length) return slate;
+
+  const byId = new Map<string, SlateCreator>();
+  const byHandle = new Map<string, SlateCreator>();
+  const byName = new Map<string, SlateCreator>();
+
+  for (const creator of reference) {
+    byId.set(normalizeId(creator.creatorId), creator);
+    const handle = creator.handle?.replace(/^@/, "").trim().toLowerCase();
+    if (handle) byHandle.set(handle, creator);
+    const displayKey = normalizeCreatorMatchKey(creator.displayName);
+    if (displayKey) byName.set(displayKey, creator);
+    const shortKey = normalizeCreatorMatchKey(creator.displayName.split(" ")[0] ?? creator.displayName);
+    if (shortKey) byName.set(shortKey, creator);
+  }
+
+  function resolveReference(entry: SlateCreator): SlateCreator | undefined {
+    const idKey = normalizeId(entry.creatorId);
+    const byIdMatch = byId.get(idKey);
+    if (byIdMatch) return byIdMatch;
+
+    const handle = entry.handle?.replace(/^@/, "").trim().toLowerCase();
+    if (handle) {
+      const byHandleMatch = byHandle.get(handle);
+      if (byHandleMatch) return byHandleMatch;
+    }
+
+    for (const key of [
+      normalizeCreatorMatchKey(entry.displayName),
+      normalizeCreatorMatchKey(entry.displayName.split(" ")[0] ?? ""),
+    ]) {
+      if (!key) continue;
+      const byNameMatch = byName.get(key);
+      if (byNameMatch) return byNameMatch;
+      for (const [nameKey, creator] of byName) {
+        if (nameKey.startsWith(key) || key.startsWith(nameKey)) return creator;
+      }
+    }
+
+    return undefined;
+  }
+
+  return slate.map((creator) => {
+    const referenceCreator = resolveReference(creator);
+    if (!referenceCreator) return creator;
+
+    return {
+      ...creator,
+      tier: creator.tier?.trim() || referenceCreator.tier,
+      handle: creator.handle?.trim() || referenceCreator.handle,
+      platform: creator.platform?.trim() || referenceCreator.platform,
+      avatarUrl: creator.avatarUrl?.trim() || referenceCreator.avatarUrl,
+      profileUrl: creator.profileUrl?.trim() || referenceCreator.profileUrl,
+    };
+  });
 }
 
 /** Resolve the current creator slate as name + tier from the Campaign Object alone. */
@@ -214,6 +283,12 @@ export function resolveInputValue(
         durationWeeks: facts?.durationWeeks ?? null,
         campaignStartDate: facts?.campaignStartDate ?? null,
         weekWeights: campaignObject.meta.mediaPlanSchedule?.weekWeights ?? null,
+        assignments: (campaignObject.meta.mediaPlanSchedule?.assignments ?? [])
+          .map(
+            (assignment) =>
+              `${assignment.creatorId}@${assignment.week}-${assignment.dayIndex}:${assignment.serviceType ?? "*"}`
+          )
+          .sort(),
       };
     case "kpis":
       return facts?.kpis ?? [];
@@ -225,6 +300,8 @@ export function resolveInputValue(
       return stringContent(campaignObject, "strategy").slice(0, 4000);
     case "risks":
       return [...(facts?.risks ?? [])].sort();
+    case "market_intelligence":
+      return marketIntelligenceFingerprintValue(campaignObject);
     default:
       return null;
   }

@@ -6,9 +6,9 @@ import type { ReactNode } from "react";
 
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
 import {
-  CountryFlagBadge,
   type CountryFlagBadgeOverlaySize,
 } from "@/components/creator/country-flag-badge";
+import { CountryFlagsStack } from "@/components/creator/country-flags-stack";
 
 import {
   Tooltip,
@@ -27,9 +27,7 @@ import {
   profileLinkTooltip,
   resolveCreatorProfileUrl,
   resolvePrimaryProfileUrl,
-  type ProfileUrlSource,
 } from "@/lib/discovery/profile-url";
-import { normalizeCountryCode } from "@/lib/creators/creator-display-utils";
 import { PlatformIcon } from "@/lib/performance/platform-icon";
 import { cn } from "@/lib/utils";
 
@@ -162,12 +160,13 @@ export function CreatorProfileLink({
   nameClassName,
   trailing,
 }: CreatorProfileLinkProps) {
-  const profileUrl = resolveCreatorProfileUrl(source as ProfileUrlSource);
+  const profileUrl = resolveCreatorProfileUrl(source);
   const handleLabel = formatHandle(source.handle);
   const tooltip = profileLinkTooltip(source.displayName, source.platform);
   const badgeDim = BADGE_SIZE_CLASS[size];
   const badgeMode = avatarBadge ?? (showPlatformBadge ? "platform" : "none");
-  const showCountryBadge = badgeMode === "country" && Boolean(normalizeCountryCode(source.countryCode));
+  const showCountryBadge =
+    badgeMode === "country" && Boolean(source.countryCodes?.length || source.countryCode);
 
   const avatarNode = (
     <CreatorAvatarImage avatarUrl={source.avatarUrl} profileUrl={profileUrl} size={size} />
@@ -194,8 +193,8 @@ export function CreatorProfileLink({
             BADGE_SIZE_CLASS[AVATAR_COUNTRY_BADGE_SIZE[size]]
           )}
         >
-          <CountryFlagBadge
-            countryCode={source.countryCode}
+          <CountryFlagsStack
+            countryCodes={source.countryCodes ?? (source.countryCode ? [source.countryCode] : [])}
             size={AVATAR_COUNTRY_BADGE_SIZE[size]}
             overlay
             className="size-full"

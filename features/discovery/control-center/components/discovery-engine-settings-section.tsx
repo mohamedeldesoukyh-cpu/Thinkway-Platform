@@ -242,7 +242,7 @@ export function DiscoveryEngineSettingsSection({
 
       <OperationalFormSection
         title="Cost protection"
-        description="Daily Apify usage limits. Set 0 to disable a limit."
+        description="Daily Apify budgets (fail-closed). Both must be greater than 0 or all Apify acquisition is rejected. 0 is never unlimited."
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="grid gap-2">
@@ -251,7 +251,7 @@ export function DiscoveryEngineSettingsSection({
               id="maxRequestsPerDay"
               name="maxRequestsPerDay"
               type="number"
-              min={0}
+              min={1}
               defaultValue={settings.costProtection.maxRequestsPerDay}
             />
           </div>
@@ -261,7 +261,7 @@ export function DiscoveryEngineSettingsSection({
               id="maxCreditsPerDay"
               name="maxCreditsPerDay"
               type="number"
-              min={0}
+              min={0.01}
               step={0.01}
               defaultValue={settings.costProtection.maxCreditsPerDay}
             />

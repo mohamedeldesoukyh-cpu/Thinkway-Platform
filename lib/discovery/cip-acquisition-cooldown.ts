@@ -38,22 +38,8 @@ export async function checkCipAcquisitionCooldown(
 
   const since = new Date(Date.now() - cooldownMs).toISOString();
 
-  const { data: pendingJob } = await supabase
-    .from("discovery_jobs")
-    .select("id, created_at")
-    .in("status", ["pending", "running"])
-    .filter("payload->>campaignIntelligenceProfileId", "eq", id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (pendingJob?.created_at) {
-    return {
-      skip: true,
-      reason: `Apify skipped — acquisition already in progress for this brief (job ${pendingJob.id}).`,
-      lastAcquisitionAt: String(pendingJob.created_at),
-    };
-  }
+  // In-flight jobs are coalesced by coverage-acquisition-dedupe (attach, don't skip).
+  // This cooldown only blocks repeat Apify after a recent successful CIP acquisition.
 
   const { data: recentAudit } = await supabase
     .from("discovery_coverage_decisions")

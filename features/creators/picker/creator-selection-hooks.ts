@@ -52,6 +52,7 @@ export {
   creatorDedupKeys,
   deselectAllCreatorIds,
   deselectAllIds,
+  existingKeysFromStandaloneShortlistItems,
   filterSelectedCreators,
   isCreatorOnExistingList,
   resolveCreatorCheckboxState,

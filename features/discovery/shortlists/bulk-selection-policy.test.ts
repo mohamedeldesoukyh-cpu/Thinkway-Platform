@@ -10,7 +10,9 @@ import {
   isAllVisibleSelected,
   isIndeterminateSelection,
   pruneSelection,
+  resolveGroupCheckboxState,
   resolveBulkTargetIds,
+  toggleGroupSelection,
   toggleItemSelection,
   toggleSelectAll,
 } from "@/features/discovery/shortlists/bulk-selection-policy";
@@ -55,6 +57,19 @@ const items = [
   const partial = new Set(["a"]);
   assert.equal(isIndeterminateSelection(ids, partial), true);
   assert.equal(isAllVisibleSelected(ids, partial), false);
+}
+
+{
+  const group = ["a", "b"];
+  const selected = toggleGroupSelection(group, new Set());
+  assert.equal(isAllVisibleSelected(group, selected), true);
+
+  const cleared = toggleGroupSelection(group, selected);
+  assert.equal(countSelected(cleared), 0);
+
+  const partial = new Set(["a"]);
+  assert.equal(resolveGroupCheckboxState(group, partial), "indeterminate");
+  assert.equal(resolveGroupCheckboxState(group, new Set(["a", "b"])), true);
 }
 
 // ---------------------------------------------------------------------------

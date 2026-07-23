@@ -1,26 +1,35 @@
-import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
-import { DiscoverySubNav } from "@/features/discovery-import/components/discovery-sub-nav";
-import {
-  DISCOVERY_PAGE_IDENTITY,
-  DiscoveryPageHeader,
-} from "@/features/discovery/components/discovery-page-identity";
+import type { Metadata } from "next";
+import { Suspense } from "react";
+
+import { DiscoveryEmptyState } from "@/features/discovery/components/design-system";
+import { DiscoveryPageShell } from "@/features/discovery/components/discovery-page-shell";
 import { CreateQuotationDialog } from "@/features/quotations/components/create-quotation-dialog";
 import { QuotationsList } from "@/features/quotations/components/quotations-list";
-import { getQuotationFormOptions, getQuotationsList } from "@/features/quotations/queries";
-import type { QuotationListRow } from "@/features/quotations/types";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  getCachedQuotationFormOptions,
+  getQuotationsList,
+} from "@/features/quotations/queries";
 
 export const dynamic = "force-dynamic";
 
-export default async function DiscoveryQuotationsPage() {
-  let quotations: QuotationListRow[] = [];
-  let formOptions: Awaited<ReturnType<typeof getQuotationFormOptions>> | null = null;
+export const metadata: Metadata = {
+  title: "Client Quotations",
+};
+
+async function QuotationsListSection() {
+  let quotations: Awaited<ReturnType<typeof getQuotationsList>> = [];
+  let formOptions: Awaited<ReturnType<typeof getCachedQuotationFormOptions>> = {
+    clients: [],
+    brands: [],
+    campaigns: [],
+  };
   let errorMessage: string | null = null;
 
   try {
     const [list, options] = await Promise.all([
       getQuotationsList(),
-      getQuotationFormOptions(),
+      getCachedQuotationFormOptions(),
     ]);
     quotations = list;
     formOptions = options;
@@ -29,47 +38,60 @@ export default async function DiscoveryQuotationsPage() {
       error instanceof Error ? error.message : "Failed to load quotations.";
   }
 
-  return (
-    <DashboardShell
-      title="Client Quotations"
-      description="Build, price, and export client quotations with EGP reporting."
-      hidePageHeader
-      containedMain
-      mainClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
-    >
-      <PlatformErrorBoundary surface="generic">
-        <div className="flex h-full min-h-0 flex-col overflow-hidden">
-          <DiscoverySubNav activeHref="/discovery/quotations" showDatabaseStats={false} />
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-3 md:p-4">
-            <DiscoveryPageHeader
-              identity={DISCOVERY_PAGE_IDENTITY.quotations}
-              actions={
-                <CreateQuotationDialog
-                  options={formOptions ?? { clients: [], brands: [], campaigns: [] }}
-                />
-              }
-            />
+  if (errorMessage) {
+    return (
+      <div className="mx-8 mt-6 rounded-[var(--radius-lg)] border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        {errorMessage}
+      </div>
+    );
+  }
 
-            {errorMessage ? (
-              <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                {errorMessage}
-              </div>
-            ) : quotations.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border px-4 py-12 text-center">
-                <p className="text-sm font-medium">No quotations yet</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Create one manually, from a shortlist, or from a Discovery selection.
-                </p>
-              </div>
-            ) : (
-              <QuotationsList
-                quotations={quotations}
-                brands={formOptions?.brands ?? []}
-              />
-            )}
-          </div>
-        </div>
-      </PlatformErrorBoundary>
-    </DashboardShell>
+  if (quotations.length === 0) {
+    return (
+      <div className="mx-8 mt-6 rounded-[var(--radius-lg)] border border-dashed border-border px-6 py-12">
+        <DiscoveryEmptyState
+          title="No quotations yet"
+          description="Create one manually, from a shortlist, or from a Discovery selection."
+        >
+          <CreateQuotationDialog options={formOptions} />
+        </DiscoveryEmptyState>
+      </div>
+    );
+  }
+
+  return (
+    <QuotationsList
+      quotations={quotations}
+      brands={formOptions.brands}
+      formOptions={formOptions}
+    />
+  );
+}
+
+function QuotationsListFallback() {
+  return (
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden px-8 py-6">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-9 w-36 rounded-lg" />
+      </div>
+      <div className="space-y-2 rounded-xl border border-border bg-card p-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Skeleton key={i} className="h-12 w-full rounded-lg" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function DiscoveryQuotationsPage() {
+  return (
+    <DiscoveryPageShell page="quotations" variant="flush" showHeader={false}>
+      <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
+        <Suspense fallback={<QuotationsListFallback />}>
+          <QuotationsListSection />
+        </Suspense>
+      </div>
+    </DiscoveryPageShell>
   );
 }

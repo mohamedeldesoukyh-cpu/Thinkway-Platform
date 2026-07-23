@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +44,7 @@ export function MessageActions({
   className,
 }: MessageActionsProps) {
   const [copied, setCopied] = useState(false);
+  const confirmDelete = useConfirmDelete();
 
   const handleCopy = useCallback(async () => {
     try {
@@ -114,7 +116,14 @@ export function MessageActions({
           ) : null}
           {onDelete ? (
             <DropdownMenuItem
-              onClick={onDelete}
+              onClick={async () => {
+                const ok = await confirmDelete(
+                  "Delete this message? This cannot be undone.",
+                  "Delete message?"
+                );
+                if (!ok) return;
+                onDelete();
+              }}
               className="text-destructive focus:text-destructive"
             >
               <Trash2Icon className="size-3.5" />

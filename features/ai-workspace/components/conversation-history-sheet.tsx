@@ -1,6 +1,7 @@
 "use client";
 
 import { HistoryIcon } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +28,9 @@ type ConversationHistorySheetProps = {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   className?: string;
+  triggerClassName?: string;
+  triggerLabel?: string;
+  triggerIcon?: ReactNode;
 };
 
 export function ConversationHistorySheet({
@@ -40,6 +44,9 @@ export function ConversationHistorySheet({
   open,
   onOpenChange,
   className,
+  triggerClassName,
+  triggerLabel = "History",
+  triggerIcon,
 }: ConversationHistorySheetProps) {
   const handleSelect = (id: string) => {
     onSelect(id);
@@ -54,18 +61,25 @@ export function ConversationHistorySheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className={cn(
-            "h-8 gap-1.5 rounded-lg border-black/[0.08] bg-white/80 px-2.5 text-xs font-semibold text-foreground shadow-sm hover:bg-[#0057FF]/[0.06] hover:text-[#0057FF] dark:border-border dark:bg-background",
-            className
-          )}
-        >
-          <HistoryIcon className="size-3.5" aria-hidden />
-          <span className="hidden sm:inline">History</span>
-        </Button>
+        {triggerClassName ? (
+          <button type="button" className={triggerClassName}>
+            {triggerIcon ?? <HistoryIcon aria-hidden />}
+            {triggerLabel}
+          </button>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={cn(
+              "h-8 gap-1.5 rounded-lg border-black/[0.08] bg-white/80 px-2.5 text-xs font-semibold text-foreground shadow-sm hover:bg-[#0057FF]/[0.06] hover:text-[#0057FF] dark:border-border dark:bg-background",
+              className
+            )}
+          >
+            {triggerIcon ?? <HistoryIcon className="size-3.5" aria-hidden />}
+            <span className="hidden sm:inline">{triggerLabel}</span>
+          </Button>
+        )}
       </SheetTrigger>
       <SheetContent
         side="left"

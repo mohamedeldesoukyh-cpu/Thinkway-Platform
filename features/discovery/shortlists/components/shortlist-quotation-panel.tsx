@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { QuotationStatusBadge } from "@/features/quotations/components/quotation-status-badge";
+import { QuotationListStatusPill } from "@/features/quotations/components/quotation-list-status-pill";
 import { quotationDetailPath } from "@/features/quotations/constants";
 import type { QuotationStatus } from "@/types/database";
 
@@ -23,6 +23,10 @@ const ISSUED_STATUSES = new Set<QuotationStatus>([
   "approved",
   "accepted",
 ]);
+
+function formatDisplayVersion(versionNumber: number): string {
+  return `v${versionNumber}`;
+}
 
 function quotationCountLabel(count: number): string {
   return count === 1 ? "1 quotation linked" : `${count} quotations linked`;
@@ -47,6 +51,8 @@ export function ShortlistQuotationPanel({
   const latest = quotations[0];
   const issued = ISSUED_STATUSES.has(latest.status);
   const multiple = quotations.length > 1;
+  const detailHref = quotationDetailPath(latest.id, latest.serial_number);
+  const displayVersion = formatDisplayVersion(latest.version_number);
 
   const openButton = multiple ? (
     <DropdownMenu>
@@ -63,13 +69,13 @@ export function ShortlistQuotationPanel({
         {quotations.map((q) => (
           <DropdownMenuItem key={q.id} asChild>
             <Link
-              href={quotationDetailPath(q.id)}
+              href={quotationDetailPath(q.id, q.serial_number)}
               className="flex cursor-pointer items-center justify-between gap-2"
             >
               <span className="min-w-0 truncate font-mono text-xs">
                 {q.serial_number ?? q.name}
               </span>
-              <QuotationStatusBadge status={q.status} />
+              <QuotationListStatusPill status={q.status} />
             </Link>
           </DropdownMenuItem>
         ))}
@@ -77,7 +83,7 @@ export function ShortlistQuotationPanel({
     </DropdownMenu>
   ) : (
     <Button size="sm" asChild disabled={busy}>
-      <Link href={quotationDetailPath(latest.id)}>
+      <Link href={detailHref}>
         <ExternalLinkIcon className="size-4" />
         Open quotation
       </Link>
@@ -99,24 +105,37 @@ export function ShortlistQuotationPanel({
   }
 
   return (
-    <div className="rounded-2xl border border-border/80 bg-muted/20 p-4">
+    <div className="rounded-[var(--radius-lg)] border border-[var(--tw-border)] bg-background p-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1.5">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="min-w-0 space-y-2">
+          <p className="text-[10px] font-bold uppercase tracking-[0.4px] text-[var(--text-3)]">
             Quotation
           </p>
-          <p className="text-sm font-medium">
-            {issued ? "Quotation issued" : "Quotation linked"}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {quotationCountLabel(quotations.length)}
-            {" · "}
-            Latest version:{" "}
-            <span className="font-mono text-foreground">
-              {latest.serial_number ?? "—"}
-            </span>
-          </p>
-          <QuotationStatusBadge status={latest.status} />
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-foreground">
+              {issued ? "Quotation issued" : "Quotation linked"}
+              {latest.serial_number ? (
+                <>
+                  {" · "}
+                  <Link
+                    href={detailHref}
+                    className="font-mono text-[12.5px] font-bold text-[var(--blue-text)] hover:underline"
+                  >
+                    {latest.serial_number}
+                  </Link>
+                </>
+              ) : null}
+            </p>
+            <p className="text-xs text-[var(--text-3)]">
+              {quotationCountLabel(quotations.length)}
+              {" · "}
+              Latest version:{" "}
+              <span className="font-mono font-semibold text-foreground">
+                {displayVersion}
+              </span>
+            </p>
+          </div>
+          <QuotationListStatusPill status={latest.status} />
         </div>
         {actionButtons}
       </div>

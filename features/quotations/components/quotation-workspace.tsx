@@ -17,16 +17,19 @@ import {
   PercentIcon,
   SearchIcon,
   Trash2Icon,
+  UserPlusIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
+import { TooltipIconButton } from "@/components/shared/tooltip-icon-button";
 import {
   GlassSelectionFlyout,
   GLASS_FLYOUT_PRIMARY_ACTION_CLASS,
-  glassFlyoutContentClass,
   type GlassFlyoutAction,
 } from "@/components/shared/navigation/glass-selection-flyout";
+import { discoverySelectionFlyoutContentClass } from "@/features/discovery/components/design-system/discovery-selection-flyout";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
@@ -37,31 +40,26 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { COMMERCIAL_CURRENCIES } from "@/lib/commercial/fx-aggregation";
 import { platformLabel } from "@/features/campaigns/line-assignment";
 import { cn } from "@/lib/utils";
 import {
   CALCULATION_MODE_LABELS,
   QUOTATION_CLIENT_LABELS,
+  quotationPreviewPath,
 } from "@/features/quotations/constants";
 import { AddCreatorsToQuotationButton } from "@/features/quotations/components/add-creators-to-quotation-modal";
 import type { QuotationCreatorsAddedResult } from "@/features/quotations/components/add-creators-to-quotation-modal";
 import { useQuotationWorkspaceShortcuts } from "@/features/quotations/components/use-quotation-workspace-shortcuts";
-import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
 import { QuotationTermsAccordion } from "@/features/quotations/components/quotation-terms-accordion";
+import { QuotationCommercialMetricsBand } from "@/features/quotations/components/quotation-commercial-metrics-band";
+import { QuotationLifecyclePills } from "@/features/quotations/components/quotation-lifecycle-pills";
+import { QuotationValidityBar } from "@/features/quotations/components/quotation-validity-bar";
 import { QuotationWorkspaceHeader } from "@/features/quotations/components/quotation-workspace-header";
 import { QuotationClientBrandPanel } from "@/features/quotations/components/quotation-client-brand-panel";
 import { QuotationDocumentMetaPanel } from "@/features/quotations/components/quotation-document-meta-panel";
 import { QuotationSetupWizard } from "@/features/quotations/components/quotation-setup-wizard";
+import { QuotationCollapseContentGroupRows } from "@/features/quotations/components/quotation-collapse-content-group-rows";
 import { QuotationCreatorGroupRows } from "@/features/quotations/components/quotation-creator-group-rows";
 import { useQuotationCreatorDetailSheet } from "@/features/quotations/hooks/use-quotation-creator-detail-sheet";
 import {
@@ -79,6 +77,7 @@ import {
   computeQuotationRowComputed,
   draftFromQuotationItem,
   draftsFromItems,
+  resolveQuotationHeaderCommercialTotals,
   resolveQuotationRowDraft,
   type CalculationModePreference,
   type QuotationRowDraft,
@@ -89,10 +88,15 @@ import {
   countUniqueQuotationCreators,
 } from "@/lib/quotations/quotation-creator-options";
 import {
-  buildCreatorGroupsFromSortedItems,
   sortQuotationWorkspaceItems,
   type QuotationWorkspaceSortState,
 } from "@/lib/quotations/quotation-workspace-sort";
+import { buildQuotationWorkspaceDisplayGroups } from "@/lib/quotations/quotation-collapse-groups";
+import {
+  quotationCreatorCardPricingClass,
+  quotationDisplayGroupPricingCompleteness,
+} from "@/lib/quotations/quotation-creator-group-pricing";
+import { shouldIncludeItemInLiveTotals } from "@/lib/quotations/quotation-collapse-package";
 import { QuotationCommercialSummaryDialog } from "@/features/quotations/components/quotation-commercial-summary-dialog";
 import { QuotationWorkspaceSortableHead } from "@/features/quotations/components/quotation-workspace-sort-header";
 import {
@@ -233,6 +237,7 @@ function QuotationWorkspaceContent({
   const [focusNewItemId, setFocusNewItemId] = useState<string | null>(null);
   const [tableSort, setTableSort] = useState<QuotationWorkspaceSortState | null>(null);
   const [bulkPending, startBulkTransition] = useTransition();
+  const confirmDelete = useConfirmDelete();
   const creatorSearchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -260,7 +265,19 @@ function QuotationWorkspaceContent({
     [detail.items, drafts]
   );
 
-  const totals = useMemo(() => computeLiveQuotationTotals(draftList), [draftList]);
+  const totalsDraftList = useMemo(
+    () =>
+      detail.items
+        .filter((item) => shouldIncludeItemInLiveTotals(item, detail.items))
+        .map((item) => resolveQuotationRowDraft(item, drafts[item.id]))
+        .filter(Boolean),
+    [detail.items, drafts]
+  );
+
+  const totals = useMemo(
+    () => resolveQuotationHeaderCommercialTotals(computeLiveQuotationTotals(totalsDraftList)),
+    [totalsDraftList]
+  );
 
   const platformOptions = useMemo(() => {
     const set = new Set(detail.items.map((i) => i.platform).filter(Boolean) as string[]);
@@ -302,8 +319,8 @@ function QuotationWorkspaceContent({
     [detail.items]
   );
 
-  const creatorGroups = useMemo(
-    () => buildCreatorGroupsFromSortedItems(sortedFilteredItems),
+  const displayGroups = useMemo(
+    () => buildQuotationWorkspaceDisplayGroups(sortedFilteredItems),
     [sortedFilteredItems]
   );
 
@@ -451,7 +468,15 @@ function QuotationWorkspaceContent({
     });
   }, [detail.id, selectedIds, router]);
 
-  const handleRemoveSelected = useCallback(() => {
+  const handleRemoveSelected = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    const count = selectedIds.size;
+    const ok = await confirmDelete(
+      `Remove ${count} selected creator${count === 1 ? "" : "s"} from this quotation? This cannot be undone.`,
+      "Remove selected creators?"
+    );
+    if (!ok) return;
+
     startBulkTransition(async () => {
       for (const id of selectedIds) {
         const res = await removeQuotationItem({
@@ -467,15 +492,19 @@ function QuotationWorkspaceContent({
       setSelectedIds(new Set());
       router.refresh();
     });
-  }, [detail.id, selectedIds, router]);
+  }, [confirmDelete, detail.id, selectedIds, router]);
 
   const previewHref = useMemo(() => {
     const params = new URLSearchParams();
     appendQuotationTemplateParam(params, exportTemplate);
     appendQuotationExportRevision(params, detail.updated_at);
     const query = params.toString();
-    return `/discovery/quotations/${detail.id}/preview${query ? `?${query}` : ""}`;
-  }, [detail.id, detail.updated_at, exportTemplate]);
+    return quotationPreviewPath(
+      detail.id,
+      detail.serial_number,
+      query || undefined
+    );
+  }, [detail.id, detail.serial_number, detail.updated_at, exportTemplate]);
 
   const focusCreatorSearch = useCallback(() => {
     const el =
@@ -508,13 +537,11 @@ function QuotationWorkspaceContent({
   });
 
   return (
-    <div className="thinkway-campaign-workspace flex min-h-0 flex-col">
+    <div className="quotation-editor-rd4 flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
       <QuotationSetupWizard detail={detail} options={formOptions} />
       <QuotationWorkspaceHeader
         detail={detail}
         promoteOptions={promoteOptions}
-        totals={totals}
-        saveStatus={manualSave.saveStatus}
         hasUnsavedChanges={manualSave.hasUnsavedChanges}
         savePending={manualSave.savePending}
         onSave={() => {
@@ -524,42 +551,83 @@ function QuotationWorkspaceContent({
         }}
         exportTemplate={exportTemplate}
         onExportTemplateChange={setExportTemplate}
-        uniqueCreatorCount={uniqueCreatorCount}
       />
 
-      <div
-        className={cn(
-          "thinkway-campaign-content-inner min-h-0",
-          glassFlyoutContentClass(selectedIds.size > 0)
-        )}
-      >
-        <QuotationClientBrandPanel
-          detail={detail}
-          options={formOptions}
-          disabled={!detail.canManage}
+      <div className="scroll flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain">
+        <QuotationCommercialMetricsBand
+          totalCostEgp={totals.totalCostEgp}
+          totalRevenueEgp={totals.totalClientCostEgp}
+          totalGpValueEgp={totals.headerGpValueEgp}
+          totalGpPct={totals.headerGpPct}
+          totalPmPct={totals.headerPmPct}
+          gpTargetPct={detail.gp_target_pct}
+          creatorCount={uniqueCreatorCount}
+          version={detail.version}
+          validDaysRemaining={detail.valid_days_remaining}
         />
+        <QuotationLifecyclePills
+          detail={detail}
+          trailing={
+            <QuotationValidityBar
+              inline
+              validityDate={detail.validity_date}
+              validDaysRemaining={detail.valid_days_remaining}
+              isExpired={detail.is_expired}
+            />
+          }
+        />
+
+        <section
+          className={cn(discoverySelectionFlyoutContentClass(selectedIds.size > 0))}
+        >
+        <div className="sec compact">
+          <QuotationClientBrandPanel
+            detail={detail}
+            options={formOptions}
+            disabled={!detail.canManage}
+          />
+        </div>
         {detail.items.length === 0 ? (
           <EmptyState
             quotationId={detail.id}
+            canManage={detail.canManage}
             onAdded={handleCreatorsAdded}
             addCreatorsOpen={addCreatorsOpen}
             onAddCreatorsOpenChange={setAddCreatorsOpen}
           />
         ) : (
-          <CampaignFlatSection
-            title="Creators"
-            description="Grouped by influencer — duplicated creators are labeled Option 1, 2, 3… on each line."
-            flushBody
-            actions={
-              <AddCreatorsToQuotationButton
-                quotationId={detail.id}
-                onAdded={handleCreatorsAdded}
-                label="+ Add creator"
-                open={addCreatorsOpen}
-                onOpenChange={setAddCreatorsOpen}
-              />
-            }
-          >
+          <>
+            <div className="sec flush">
+            <div className="sec-head">
+              <div className="min-w-0">
+                <h2>
+                  Creators{" "}
+                  <span>
+                    · {uniqueCreatorCount} · {detail.items.length} lines
+                  </span>
+                </h2>
+                <p>
+                  Grouped by influencer — duplicated creators are labeled Option 1, 2, 3… on each line.
+                </p>
+              </div>
+              <div className="sec-tools">
+                <QuotationCommercialSummaryDialog
+                  items={detail.items}
+                  drafts={drafts}
+                  triggerClassName="btn sm"
+                />
+                {detail.canManage ? (
+                  <AddCreatorsToQuotationButton
+                    quotationId={detail.id}
+                    onAdded={handleCreatorsAdded}
+                    label="Add creator"
+                    open={addCreatorsOpen}
+                    onOpenChange={setAddCreatorsOpen}
+                    triggerClassName="btn btn-primary sm"
+                  />
+                ) : null}
+              </div>
+            </div>
             <Toolbar
               creatorSearch={creatorSearch}
               onCreatorSearch={setCreatorSearch}
@@ -569,9 +637,6 @@ function QuotationWorkspaceContent({
               platformOptions={platformOptions}
               globalCalcMode={globalCalcMode}
               onGlobalCalcMode={setGlobalCalcMode}
-              commercialSummary={
-                <QuotationCommercialSummaryDialog items={detail.items} drafts={drafts} />
-              }
             />
 
             <BulkToolbar
@@ -590,84 +655,118 @@ function QuotationWorkspaceContent({
               }
             />
 
-            <div className="thinkway-campaign-table-scroll w-full">
-              <Table variant="flush" className="thinkway-campaign-data-table w-full">
-                <TableHeader className="sticky top-0 z-10 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/80">
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="w-9 px-2">
-                      <Checkbox
-                        checked={allVisibleSelected}
-                        onCheckedChange={toggleSelectAllVisible}
-                        aria-label="Select all visible creators"
-                      />
-                    </TableHead>
-                    <QuotationWorkspaceSortableHead
-                      label="Option"
-                      field="option"
-                      sort={tableSort}
-                      onSortChange={setTableSort}
-                      className="min-w-[92px]"
+            <div className="creators-list">
+              <div className="clist-head sticky top-0 z-10">
+                <span className="co-chk">
+                  <Checkbox
+                    checked={allVisibleSelected}
+                    onCheckedChange={toggleSelectAllVisible}
+                    aria-label="Select all visible creators"
+                  />
+                </span>
+                <QuotationWorkspaceSortableHead
+                  variant="flex"
+                  columnClassName="co-opt"
+                  label="Option"
+                  field="option"
+                  sort={tableSort}
+                  onSortChange={setTableSort}
+                />
+                <QuotationWorkspaceSortableHead
+                  variant="flex"
+                  columnClassName="co-tier"
+                  label="Tier"
+                  field="tier"
+                  sort={tableSort}
+                  onSortChange={setTableSort}
+                />
+                <QuotationWorkspaceSortableHead
+                  variant="flex"
+                  columnClassName="co-svc"
+                  label="Service description"
+                  field="service"
+                  sort={tableSort}
+                  onSortChange={setTableSort}
+                />
+                <QuotationWorkspaceSortableHead
+                  variant="flex"
+                  columnClassName="co-plat"
+                  label="Platform"
+                  field="platform"
+                  align="center"
+                  sort={tableSort}
+                  onSortChange={setTableSort}
+                />
+                <QuotationWorkspaceSortableHead
+                  variant="flex"
+                  columnClassName="co-type"
+                  label="Type"
+                  field="type"
+                  sort={tableSort}
+                  onSortChange={setTableSort}
+                />
+                <QuotationWorkspaceSortableHead
+                  variant="flex"
+                  columnClassName="co-price"
+                  label="Price"
+                  field="price"
+                  align="right"
+                  sort={tableSort}
+                  onSortChange={setTableSort}
+                />
+                <QuotationWorkspaceSortableHead
+                  variant="flex"
+                  columnClassName="co-status"
+                  label="Status"
+                  field="status"
+                  align="center"
+                  sort={tableSort}
+                  onSortChange={setTableSort}
+                />
+                <span className="co-act" aria-hidden />
+              </div>
+
+              {displayGroups.map((group, groupIndex) => {
+                const pricingCompleteness = quotationDisplayGroupPricingCompleteness(
+                  group,
+                  manualSave.getLinePendingPayload,
+                  drafts
+                );
+
+                return (
+                <div
+                  key={
+                    group.kind === "collapse"
+                      ? `collapse-${group.collapseGroupId}`
+                      : group.creatorKey
+                  }
+                  className={cn(
+                    "cgroup quotation-creator-card",
+                    quotationCreatorCardPricingClass(pricingCompleteness),
+                    group.kind === "collapse" &&
+                      "collapse-content-frame quotation-collapse-content-block"
+                  )}
+                >
+                  {group.kind === "collapse" ? (
+                    <QuotationCollapseContentGroupRows
+                      quotationId={detail.id}
+                      shortlistId={detail.shortlist_id}
+                      label={group.label}
+                      allItems={detail.items}
+                      creatorGroups={group.creatorGroups}
+                      drafts={drafts}
+                      groupIndex={groupIndex}
+                      optionContextByItemId={optionContextByItemId}
+                      selectedIds={selectedIds}
+                      onToggleSelect={toggleSelect}
+                      onDraftChange={updateDraft}
+                      onRemoved={() => router.refresh()}
+                      onLineChanged={refreshQuotationLines}
+                      onOpenCreator={openCreatorFromItem}
+                      focusItemId={focusNewItemId}
                     />
-                    <QuotationWorkspaceSortableHead
-                      label="Followers"
-                      field="followers"
-                      align="right"
-                      sort={tableSort}
-                      onSortChange={setTableSort}
-                      className="w-[8%]"
-                    />
-                    <QuotationWorkspaceSortableHead
-                      label="Tier"
-                      field="tier"
-                      sort={tableSort}
-                      onSortChange={setTableSort}
-                      className="w-[8%]"
-                    />
-                    <QuotationWorkspaceSortableHead
-                      label="Service description"
-                      field="service"
-                      sort={tableSort}
-                      onSortChange={setTableSort}
-                      className="min-w-[140px]"
-                    />
-                    <QuotationWorkspaceSortableHead
-                      label="Platform"
-                      field="platform"
-                      align="center"
-                      sort={tableSort}
-                      onSortChange={setTableSort}
-                      className="w-[4.5rem]"
-                    />
-                    <QuotationWorkspaceSortableHead
-                      label="Type"
-                      field="type"
-                      sort={tableSort}
-                      onSortChange={setTableSort}
-                      className="min-w-[200px]"
-                    />
-                    <QuotationWorkspaceSortableHead
-                      label="Price"
-                      subLabel="Via +Cost detail"
-                      field="price"
-                      align="right"
-                      sort={tableSort}
-                      onSortChange={setTableSort}
-                      className="min-w-[11rem] w-auto px-3 whitespace-nowrap"
-                    />
-                    <QuotationWorkspaceSortableHead
-                      label="Status"
-                      field="status"
-                      sort={tableSort}
-                      onSortChange={setTableSort}
-                      className="w-[72px]"
-                    />
-                    <TableHead className="w-10" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {creatorGroups.map((group, groupIndex) => (
+                  ) : (
                     <QuotationCreatorGroupRows
-                      key={group.creatorKey}
                       quotationId={detail.id}
                       shortlistId={detail.shortlist_id}
                       items={group.items}
@@ -682,48 +781,60 @@ function QuotationWorkspaceContent({
                       onOpenCreator={openCreatorFromItem}
                       focusItemId={focusNewItemId}
                     />
-                  ))}
-                </TableBody>
-                <TableFooter className="sticky bottom-0 z-10 bg-muted/95 font-medium backdrop-blur">
-                  <TableRow className="hover:bg-transparent">
-                    <TableCell
-                      colSpan={7}
-                      className="text-xs uppercase tracking-wide text-muted-foreground"
-                    >
-                      Totals · {uniqueCreatorCount} creators · {draftList.length} option lines
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums text-sm font-semibold">
-                      {egp(totals.totalRevenueEgp)}
-                    </TableCell>
-                    <TableCell colSpan={2} />
-                  </TableRow>
-                </TableFooter>
-              </Table>
+                  )}
+                </div>
+                );
+              })}
+
+              <div className="totals sticky bottom-0 z-10">
+                <span className="lbl">
+                  Totals · {uniqueCreatorCount} creators · {totalsDraftList.length} option lines
+                </span>
+                <span className="amt">{egp(totals.totalClientCostEgp)}</span>
+              </div>
             </div>
-            <div className="thinkway-campaign-section-footer justify-start">
-              <AddCreatorsToQuotationButton
-                quotationId={detail.id}
-                onAdded={handleCreatorsAdded}
-                triggerClassName="thinkway-campaign-btn-add"
-                label="+ Add creator"
-                open={addCreatorsOpen}
-                onOpenChange={setAddCreatorsOpen}
-              />
+            {detail.canManage ? (
+              <div className="px-[var(--gut,32px)] py-3">
+                <AddCreatorsToQuotationButton
+                  quotationId={detail.id}
+                  onAdded={handleCreatorsAdded}
+                  label="Add creator"
+                  open={addCreatorsOpen}
+                  onOpenChange={setAddCreatorsOpen}
+                  triggerClassName="btn sm"
+                />
+              </div>
+            ) : null}
             </div>
-          </CampaignFlatSection>
+          </>
         )}
 
-        <div className="thinkway-campaign-two-col thinkway-campaign-two-col--wide">
-          <QuotationDocumentMetaPanel detail={detail} />
-          <HeaderNotes detail={detail} />
-        </div>
+        <section className="sec">
+          <div className="cols2">
+            <div>
+              <div className="subh">Document details</div>
+              <div className="subp">Version, ownership, and validity.</div>
+              <QuotationDocumentMetaPanel detail={detail} layout="flush" />
+            </div>
+            <div className="vdiv" aria-hidden />
+            <div>
+              <div className="subh">Quotation notes</div>
+              <div className="subp">Internal &amp; client-facing.</div>
+              <HeaderNotes detail={detail} />
+            </div>
+          </div>
+        </section>
 
-        <CampaignFlatSection
-          title="Terms & conditions"
-          description="Applies to this quotation unless amended in writing."
-        >
+        <section className="sec">
+          <div className="sec-head">
+            <div>
+              <h2>Terms &amp; conditions</h2>
+              <p>Applies to this quotation unless amended in writing.</p>
+            </div>
+          </div>
           <QuotationTermsAccordion termsText={detail.terms} />
-        </CampaignFlatSection>
+        </section>
+        </section>
       </div>
       {detailSheet}
     </div>
@@ -732,32 +843,40 @@ function QuotationWorkspaceContent({
 
 function EmptyState({
   quotationId,
+  canManage,
   onAdded,
   addCreatorsOpen,
   onAddCreatorsOpenChange,
 }: {
   quotationId: string;
+  canManage: boolean;
   onAdded: (result?: QuotationCreatorsAddedResult) => void;
   addCreatorsOpen: boolean;
   onAddCreatorsOpenChange: (open: boolean) => void;
 }) {
   return (
-    <CampaignFlatSection title="Creators" description="Add creators to build this quotation.">
-      <div className="px-4 py-12 text-center">
-        <p className="text-sm font-medium text-[var(--camp-text)]">No creators yet</p>
-        <p className="mt-1 text-xs text-[var(--camp-text-3)]">
-          Add creators from a shortlist, Discovery selection, campaign, or manual entry.
-        </p>
-        <div className="mt-4 flex justify-center">
+    <div className="flex flex-col items-center gap-2 px-8 py-10 text-center">
+      <div className="flex size-10 items-center justify-center rounded-[10px] border border-border bg-muted/50">
+        <UserPlusIcon className="size-[18px] text-muted-foreground" strokeWidth={1.5} />
+      </div>
+      <p className="text-[13px] font-semibold text-foreground">No creators yet</p>
+      <p className="max-w-[320px] text-[11px] leading-relaxed text-muted-foreground">
+        {canManage
+          ? "Add creators from a shortlist, Discovery selection, campaign, or manual entry."
+          : "This quotation is locked in its current status."}
+      </p>
+      {canManage ? (
+        <div className="mt-2">
           <AddCreatorsToQuotationButton
             quotationId={quotationId}
             onAdded={onAdded}
             open={addCreatorsOpen}
             onOpenChange={onAddCreatorsOpenChange}
+            triggerClassName="inline-flex h-[34px] items-center gap-1.5 rounded-lg bg-primary px-3.5 text-xs font-semibold text-primary-foreground shadow-sm"
           />
         </div>
-      </div>
-    </CampaignFlatSection>
+      ) : null}
+    </div>
   );
 }
 
@@ -770,7 +889,6 @@ function Toolbar({
   platformOptions,
   globalCalcMode,
   onGlobalCalcMode,
-  commercialSummary,
 }: {
   creatorSearch: string;
   onCreatorSearch: (v: string) => void;
@@ -783,20 +901,20 @@ function Toolbar({
   commercialSummary?: ReactNode;
 }) {
   return (
-    <div className="thinkway-campaign-grid-toolbar border-b px-4 py-3">
-      <div className="thinkway-campaign-search-box">
-        <SearchIcon className="thinkway-campaign-search-ico size-3" />
+    <div className="ctools">
+      <div className="searchbox">
+        <SearchIcon className="pointer-events-none size-[15px] shrink-0" />
         <input
           ref={creatorSearchRef}
           type="text"
           data-quotation-search
-          placeholder="Search creators..."
+          placeholder="Search creators…"
           value={creatorSearch}
           onChange={(e) => onCreatorSearch(e.target.value)}
         />
       </div>
       <Select value={platformFilter} onValueChange={onPlatformFilter}>
-        <SelectTrigger className="thinkway-campaign-filter-select h-[30px] w-[130px] border-[var(--camp-border)] text-[11px] shadow-none">
+        <SelectTrigger className="selpill w-[140px]">
           <SelectValue placeholder="Platform · All" />
         </SelectTrigger>
         <SelectContent>
@@ -812,7 +930,7 @@ function Toolbar({
         value={globalCalcMode}
         onValueChange={(v) => onGlobalCalcMode(v as CalculationModePreference)}
       >
-        <SelectTrigger className="thinkway-campaign-filter-select h-[30px] w-[150px] border-[var(--camp-border)] text-[11px] shadow-none">
+        <SelectTrigger className="selpill w-[160px]">
           <SelectValue placeholder="Calc · Markup %" />
         </SelectTrigger>
         <SelectContent>
@@ -823,9 +941,6 @@ function Toolbar({
           ))}
         </SelectContent>
       </Select>
-      {commercialSummary ? (
-        <div className="thinkway-campaign-grid-actions">{commercialSummary}</div>
-      ) : null}
     </div>
   );
 }
@@ -945,21 +1060,16 @@ function HeaderNotes({ detail }: { detail: QuotationDetail }) {
   }, [detail.id, detail.notes]);
 
   return (
-    <CampaignFlatSection
-      title="Quotation notes"
-      description="Internal & client-facing."
-      actions={
-        hasUnsavedChanges ? (
-          <span className="text-[10px] text-[var(--camp-amber)]">
-            {saveStatus === "saving" ? "Saving…" : saveStatus === "error" ? "Save failed" : "Unsaved"}
-          </span>
-        ) : null
-      }
-    >
+    <div>
+      {hasUnsavedChanges ? (
+        <div className="mb-2 text-right text-[10px] font-semibold text-amber-600">
+          {saveStatus === "saving" ? "Saving…" : saveStatus === "error" ? "Save failed" : "Unsaved"}
+        </div>
+      ) : null}
       <Textarea
         id="quotation-notes"
         rows={9}
-        className="min-h-[220px] text-xs"
+        className="notes-ta"
         value={notes}
         onChange={(e) => {
           setNotes(e.target.value);
@@ -967,6 +1077,6 @@ function HeaderNotes({ detail }: { detail: QuotationDetail }) {
         }}
         placeholder="Internal or client-facing notes for this quotation…"
       />
-    </CampaignFlatSection>
+    </div>
   );
 }

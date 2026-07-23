@@ -471,7 +471,7 @@ function renderShowcaseCoverPage(doc: ShortlistDocument): string {
         </div>
         <div class="cover-kpi-row">
           <div class="cover-kpi avoid-break"><span class="label">Creators</span><span class="value">${doc.summary.creatorCount}</span></div>
-          <div class="cover-kpi avoid-break"><span class="label">Total reach</span><span class="value">${escapeHtml(doc.summary.totalFollowersLabel)}</span></div>
+          <div class="cover-kpi avoid-break"><span class="label">Audience size</span><span class="value">${escapeHtml(doc.summary.totalFollowersLabel)}</span></div>
           <div class="cover-kpi avoid-break"><span class="label">Avg ER</span><span class="value">${escapeHtml(doc.summary.avgEngagementRateLabel)}</span></div>
           <div class="cover-kpi avoid-break"><span class="label">Countries</span><span class="value">${doc.summary.countryBreakdown.length}</span></div>
         </div>
@@ -511,6 +511,37 @@ function renderShowcaseCreatorPage(
       ${renderShowcaseContextCards(group)}
       </div>
     </section>`;
+}
+
+function renderShowcaseCollapseContentSections(doc: ShortlistDocument): string {
+  if (!doc.collapseContentGroups.length) return "";
+
+  return doc.collapseContentGroups
+    .map((group) => {
+      const creatorBlocks = group.creators
+        .map(
+          (creator) => `<div class="showcase-collapse-creator avoid-break">
+        <p class="showcase-collapse-creator-name">${escapeHtml(creator.creator)}</p>
+        <p class="showcase-collapse-creator-handle">${escapeHtml(creator.handle)}</p>
+        <div class="showcase-collapse-creator-meta">
+          <span>${escapeHtml(creator.followers)} followers</span>
+          <span>${escapeHtml(creator.engagementRate)} ER</span>
+          <span>${renderTierBadge(creator.tier)}</span>
+        </div>
+      </div>`
+        )
+        .join("");
+
+      return `<section class="showcase-collapse-content-page avoid-break">
+      ${sectionLabel("CC", escapeHtml(group.previewLabel))}
+      <div class="showcase-collapse-content-sheet">
+        <h3 class="showcase-collapse-title">${escapeHtml(group.label)}</h3>
+        <p class="report-note">${escapeHtml(group.previewLabel)} — bundled creator deliverables.</p>
+        <div class="showcase-collapse-creator-grid">${creatorBlocks}</div>
+      </div>
+    </section>`;
+    })
+    .join("");
 }
 
 function renderShowcaseCreatorPages(doc: ShortlistDocument, siteOrigin?: string): string {
@@ -633,6 +664,7 @@ ${baseTag}
   ${renderShowcaseCoverPage(doc)}
   <div class="report-body">
     ${renderCategorySummarySection(doc)}
+    ${renderShowcaseCollapseContentSections(doc)}
     ${renderShowcaseCreatorPages(doc, siteOrigin)}
     ${renderShowcaseRosterSection(doc)}
   </div>

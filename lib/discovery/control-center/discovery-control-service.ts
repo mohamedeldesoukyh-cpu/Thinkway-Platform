@@ -36,9 +36,10 @@ export function getDefaultDiscoveryControlSettings(): DiscoveryControlSettings {
       calculateCompleteness: true,
     },
     dataFreshnessDays: null,
+    // Fail-closed defaults: 0 means reject all Apify acquisition until ops set positive caps.
     costProtection: {
-      maxRequestsPerDay: 0,
-      maxCreditsPerDay: 0,
+      maxRequestsPerDay: envNumber("DISCOVERY_APIFY_MAX_REQUESTS_PER_DAY", 0),
+      maxCreditsPerDay: envNumber("DISCOVERY_APIFY_MAX_CREDITS_PER_DAY", 0),
       confirmBeforeExceed: false,
     },
   };

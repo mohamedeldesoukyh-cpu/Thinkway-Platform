@@ -1,9 +1,9 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useRef, useState, type ReactNode } from "react";
 
 import type { CampaignObject } from "@/features/campaign-intelligence";
-import { CampaignStudio } from "@/features/campaign-studio/components/campaign-studio";
 import type {
   CampaignStudioInput,
   CampaignStudioLayoutMode,
@@ -11,13 +11,29 @@ import type {
 } from "@/features/campaign-studio/types/campaign-studio";
 import { cn } from "@/lib/utils";
 
-import { CreatorDrawer, type CreatorDrawerSelection } from "./creator-drawer";
+import { DiscoveryCreatorDetailHost } from "@/features/discovery/components/discovery-creator-detail-host";
+import type { CreatorDrawerSelection } from "./creator-drawer";
 import { DecisionRightPanel } from "./decision-right-panel";
 import { ScenarioBar } from "./scenario-bar";
 import { StudioModeToggle, type StudioWorkspaceMode } from "./studio-mode-toggle";
 import { useDecisionWorkspace } from "../hooks/use-decision-workspace";
 import { applyScenarioToCampaignObject } from "../services/promote-scenario";
 import type { CampaignStudioDecisionMode } from "../types/studio-decision-mode";
+
+const CampaignStudio = dynamic(
+  () =>
+    import("@/features/campaign-studio/components/campaign-studio").then((m) => ({
+      default: m.CampaignStudio,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full min-h-[240px] items-center justify-center text-sm text-muted-foreground">
+        Loading Campaign Studio…
+      </div>
+    ),
+  }
+);
 
 type CampaignStudioHostProps = CampaignStudioInput & {
   conversationId?: string;
@@ -230,7 +246,11 @@ function CampaignStudioDecisionHost({
         <DecisionRightPanel workspace={workspace} />
       </div>
 
-      <CreatorDrawer creator={drawerCreator} open={drawerOpen} onOpenChange={setDrawerOpen} />
+      <DiscoveryCreatorDetailHost
+        selection={drawerCreator}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+      />
     </div>
   );
 }

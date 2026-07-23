@@ -11,7 +11,11 @@ import {
   resolveBriefTextForScheduling,
 } from "@/features/campaign-outputs/brief-media-plan-schedule";
 import { resolveSlate } from "@/features/campaign-outputs/output-inputs";
+import { upsertCampaignBriefRef, type CampaignBriefSource } from "@/features/campaign-outputs/campaign-brief-ref";
 import { markStaleCampaignOutputs } from "@/features/campaign-outputs/output-registry";
+import type { StrategySectionData } from "@/features/campaign-intelligence/types/section-schemas";
+
+import { studioPlanningArtifacts } from "./campaign-planning-service";
 
 const MIN_BRIEF_CHARS = 40;
 
@@ -100,7 +104,8 @@ function mergeFactsFromBrief(
  */
 export function mergeBriefIntoCampaignObject(
   campaignObject: CampaignObject,
-  briefText: string
+  briefText: string,
+  options?: { source?: CampaignBriefSource }
 ): MergeCampaignBriefResult {
   const trimmed = briefText.trim();
   if (trimmed.length < MIN_BRIEF_CHARS) {
@@ -137,6 +142,10 @@ export function mergeBriefIntoCampaignObject(
         }
       : existingSchedule;
 
+  const { strategy: generatedStrategy } = studioPlanningArtifacts(mergedFacts);
+  const strategySection = campaignObject.sections.strategy;
+  const strategyData = (strategySection.data ?? {}) as StrategySectionData;
+
   let next: CampaignObject = {
     ...campaignObject,
     updatedAt: new Date().toISOString(),
@@ -148,13 +157,25 @@ export function mergeBriefIntoCampaignObject(
         data: { ...summaryData, summaryCards: nextCards, campaignBrief: trimmed },
         status: "complete",
       },
+      strategy: {
+        ...strategySection,
+        data: {
+          ...strategyData,
+          creatorMix: generatedStrategy.creatorMix.tiers,
+          generatedStrategy,
+        },
+        status: strategySection.status ?? "complete",
+      },
       creators: campaignObject.sections.creators,
     },
-    meta: {
-      ...campaignObject.meta,
-      campaignFacts: mergedFacts,
-      ...(Object.keys(nextSchedule).length ? { mediaPlanSchedule: nextSchedule } : {}),
-    },
+    meta: upsertCampaignBriefRef(
+      {
+        ...campaignObject.meta,
+        campaignFacts: mergedFacts,
+        ...(Object.keys(nextSchedule).length ? { mediaPlanSchedule: nextSchedule } : {}),
+      },
+      { briefText: trimmed, source: options?.source ?? "studio" }
+    ),
   };
 
   next = markStaleCampaignOutputs(next);

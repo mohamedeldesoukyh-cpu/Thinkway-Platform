@@ -54,6 +54,7 @@ import {
   generateExecutiveProposal,
   EXECUTIVE_PROPOSAL_GENERATOR_VERSION,
 } from "./generators/executive-proposal";
+import { MARKET_INTELLIGENCE_DEPENDENT_KINDS } from "./market-intelligence-output-deps";
 
 export type OutputGenerator = (campaignObject: CampaignObject) => CampaignOutputContent;
 
@@ -72,6 +73,8 @@ export type OutputDefinition = {
   generate?: OutputGenerator;
   /** Semantic version of the wired generator, stored on each record for compare/repro. */
   generatorVersion?: string;
+  /** When set, capability lives inside another output — card links there instead of showing Soon. */
+  linkedOutputKind?: CampaignOutputKind;
 };
 
 /** Ordered groups + labels for the Outputs Center. Metadata-driven, not hardcoded in the UI. */
@@ -91,7 +94,7 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     category: "strategy",
     group: "strategy",
     estimatedGenerationMs: 4500,
-    inputKeys: ["brief", "objective", "audience", "market", "platforms", "creators", "budget", "timeline", "strategy"],
+    inputKeys: ["brief", "objective", "audience", "market", "platforms", "creators", "budget", "timeline", "strategy", "market_intelligence"],
     generate: generateFullStrategy,
     generatorVersion: STRATEGY_GENERATOR_VERSION,
   },
@@ -103,7 +106,7 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     category: "planning",
     group: "planning",
     estimatedGenerationMs: 5000,
-    inputKeys: ["brief", "creators", "platforms", "timeline", "deliverables_scope"],
+    inputKeys: ["brief", "creators", "platforms", "timeline", "deliverables_scope", "market_intelligence"],
     generate: generateMediaPlan,
     generatorVersion: MEDIA_PLAN_GENERATOR_VERSION,
   },
@@ -125,7 +128,7 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     category: "performance",
     group: "strategy",
     estimatedGenerationMs: 3000,
-    inputKeys: ["budget", "kpis", "platforms"],
+    inputKeys: ["budget", "kpis", "platforms", "market_intelligence"],
     generate: generateKpiForecast,
     generatorVersion: KPI_FORECAST_GENERATOR_VERSION,
   },
@@ -169,18 +172,19 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     category: "planning",
     group: "planning",
     estimatedGenerationMs: 4000,
-    inputKeys: ["brief", "creators", "platforms", "timeline"],
+    inputKeys: ["brief", "creators", "platforms", "timeline", "market_intelligence"],
     generate: generateContentCalendar,
     generatorVersion: CONTENT_CALENDAR_GENERATOR_VERSION,
   },
   {
     kind: "posting_timeline",
     label: "Posting Timeline",
-    description: "Sequenced posting timeline and creator dependencies.",
+    description:
+      "Sequenced posting timeline and creator dependencies. Partially covered today by the Media Plan calendar and Content Calendar; dedicated generator coming soon.",
     category: "planning",
     group: "planning",
     estimatedGenerationMs: 3000,
-    inputKeys: ["brief", "creators", "timeline", "platforms"],
+    inputKeys: ["brief", "creators", "timeline", "platforms", "market_intelligence"],
   },
   {
     kind: "creator_activation",
@@ -214,11 +218,13 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
   {
     kind: "creative_concepts",
     label: "Creative Concepts",
-    description: "Creative concepts and key messages for the campaign.",
+    description:
+      "Influencer creative concepts and key messages — edit and approve in Media Plan → Creative Direction.",
     category: "creative",
     group: "strategy",
     estimatedGenerationMs: 3500,
     inputKeys: ["brief", "objective", "audience", "creative_concepts"],
+    linkedOutputKind: "media_plan",
   },
   {
     kind: "client_presentation",
@@ -275,6 +281,8 @@ export function outputsDependingOn(inputKey: CampaignOutputInputKey): CampaignOu
   );
 }
 
+export { MARKET_INTELLIGENCE_DEPENDENT_KINDS };
+
 /** Human labels for input keys — shown as an output's "Source Data" / "Dependencies". */
 export const INPUT_KEY_LABELS: Record<CampaignOutputInputKey, string> = {
   brief: "Campaign brief",
@@ -290,4 +298,5 @@ export const INPUT_KEY_LABELS: Record<CampaignOutputInputKey, string> = {
   creative_concepts: "Creative concepts",
   risks: "Risks",
   deliverables_scope: "Deliverables scope",
+  market_intelligence: "Market intelligence",
 };

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import {
   appendShortlistExportRevision,
   appendShortlistTemplateParam,
+  isCreatorDeckTemplate,
   type ShortlistTemplateVariant,
 } from "@/features/discovery/shortlists/export/shortlist-template";
 
@@ -65,7 +66,7 @@ export function ShortlistPreviewDownloads({
           Excel
         </a>
       </Button>
-      {template === "showcase" ? (
+      {isCreatorDeckTemplate(template) ? (
         <Button size="sm" variant="outline" asChild>
           <a href={buildShortlistExportHref(shortlistId, "pptx", template, exportOptions)}>
             <PresentationIcon data-icon="inline-start" className="size-3.5" />

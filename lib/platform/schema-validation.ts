@@ -70,10 +70,12 @@ export function isMissingColumnError(message: string): boolean {
   );
 }
 
-export function isMissingTableError(message: string): boolean {
+export function isMissingTableError(message: string, code?: string | null): boolean {
+  if (code === "42P01" || code === "PGRST205") return true;
   return (
-    message.includes("relation") && message.includes("does not exist") ||
-    /Could not find the table/i.test(message)
+    (message.includes("relation") && message.includes("does not exist")) ||
+    /Could not find the table/i.test(message) ||
+    (/schema cache/i.test(message) && /table/i.test(message))
   );
 }
 

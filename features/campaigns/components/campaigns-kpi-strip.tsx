@@ -27,8 +27,8 @@ export function CampaignsKpiStrip({ kpis, className }: CampaignsKpiStripProps) {
           label: "TOTAL CAMPAIGNS",
           value: String(kpis.total_campaigns),
           icon: CheckCircle2Icon,
-          iconStroke: "#2563eb",
-          iconBg: "#eff6ff",
+          iconStroke: "#0057FF",
+          iconBg: "var(--blue-light)",
         },
         {
           id: "revenue",
@@ -36,7 +36,7 @@ export function CampaignsKpiStrip({ kpis, className }: CampaignsKpiStripProps) {
           value: formatMoney(kpis.total_revenue, kpis.currency_code),
           icon: WalletIcon,
           iconStroke: "#a855f7",
-          iconBg: "#faf5ff",
+          iconBg: "var(--purple-bg)",
           valueClassName: "platform-v6-c-blue",
         },
         {
@@ -45,7 +45,7 @@ export function CampaignsKpiStrip({ kpis, className }: CampaignsKpiStripProps) {
           value: `${kpis.avg_margin.toFixed(1)}%`,
           icon: TrendingUpIcon,
           iconStroke: "#f59e0b",
-          iconBg: "#fffbeb",
+          iconBg: "var(--amber-bg)",
           valueClassName: "platform-v6-c-amber",
         },
         {
@@ -54,7 +54,7 @@ export function CampaignsKpiStrip({ kpis, className }: CampaignsKpiStripProps) {
           value: String(kpis.assignments),
           icon: UsersIcon,
           iconStroke: "#10b981",
-          iconBg: "#ecfdf5",
+          iconBg: "var(--green-bg)",
         },
       ]}
     />

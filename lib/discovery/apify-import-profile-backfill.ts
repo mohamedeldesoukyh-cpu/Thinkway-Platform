@@ -12,19 +12,25 @@ export type ApifyImportRowBundle = {
   normalized: ApifyProfileData | null;
 };
 
-/** Instagram hashtag discovery returns post rows only — follower counts need a profile scrape. */
+/**
+ * Instagram hashtag / post-only exports need a profile-details scrape for
+ * followers and audience country before commercial enrichment can complete.
+ */
 export function shouldBackfillInstagramProfileDetails(
   platform: string,
   profileRows: Record<string, unknown>[],
   postRows: Record<string, unknown>[],
   normalized: ApifyProfileData | null
 ): boolean {
-  return (
-    canonicalPlatformKey(platform) === "instagram" &&
-    profileRows.length === 0 &&
-    postRows.length > 0 &&
-    (normalized?.followers == null || normalized.followers <= 0)
-  );
+  if (canonicalPlatformKey(platform) !== "instagram") return false;
+  if (profileRows.length > 0) return false;
+  if (postRows.length === 0) return false;
+
+  const missingFollowers =
+    normalized?.followers == null || normalized.followers <= 0;
+  const missingCountry = !normalized?.audienceCountry?.trim();
+
+  return missingFollowers || missingCountry;
 }
 
 /**
@@ -42,6 +48,8 @@ export async function backfillInstagramProfileRowsForImport(input: {
     platform: input.platform,
     username: input.username,
     profileUrl: input.profileUrl,
+    // Never launch a second Instagram posts actor during backfill.
+    includePosts: false,
   });
 
   if (!backfill.ok || backfill.profileRows.length === 0) {

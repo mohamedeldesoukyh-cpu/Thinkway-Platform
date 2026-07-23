@@ -3,6 +3,7 @@ import {
   isSocialPlatform,
   normalizeProfileUrl,
   normalizeUsername,
+  resolveDiscoveryPlatform,
   type SocialPlatform,
 } from "./platforms";
 
@@ -236,8 +237,9 @@ export function resolvePlatformAccountFields(input: {
     if (parsed) return parsed;
   }
 
-  if (input.username?.trim() && input.platform && isSocialPlatform(input.platform)) {
-    return parseFromHandle(input.username, input.platform);
+  const platform = resolveDiscoveryPlatform(input.platform);
+  if (input.username?.trim() && platform) {
+    return parseFromHandle(input.username, platform);
   }
 
   return null;

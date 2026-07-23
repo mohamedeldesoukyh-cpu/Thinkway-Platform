@@ -14,7 +14,9 @@ import { getCampaignFacts } from "@/features/campaign-director/facts/facts-displ
 import type { CampaignOutputContent } from "../output-types";
 import { benchmarkFor, formatMoney, parseKpiTargets } from "./generator-utils";
 
-export const KPI_FORECAST_GENERATOR_VERSION = "1.0.0";
+import { resolveMarketIntelligenceConfig } from "@/features/market-intelligence/market-intelligence-config";
+
+export const KPI_FORECAST_GENERATOR_VERSION = "1.1.0";
 
 function round(n: number): number {
   return Math.round(n);
@@ -25,6 +27,7 @@ export function generateKpiForecast(campaignObject: CampaignObject): CampaignOut
   const budget = facts?.budget;
   const platforms = facts?.platforms?.length ? facts.platforms : ["Instagram"];
   const targets = parseKpiTargets(facts?.kpis ?? []);
+  const marketConfig = resolveMarketIntelligenceConfig(campaignObject);
 
   const currency = budget?.currency ?? "";
   const totalBudget = budget?.amount ?? 0;
@@ -125,6 +128,13 @@ export function generateKpiForecast(campaignObject: CampaignObject): CampaignOut
       },
     });
   }
+
+  sections.push({
+    heading: "Market Intelligence Context",
+    body: marketConfig.enabled
+      ? `Market intelligence is active (${marketConfig.countries.join(", ")}, ${marketConfig.category} vertical). Publishing aligned to local purchase-intent windows may lift conversion KPIs beyond the budget-only baseline above.`
+      : "Market intelligence is disabled — projections assume even delivery without local timing uplift.",
+  });
 
   const gaps = targetRows.filter((r) => typeof r.status === "string" && r.status.startsWith("Gap"));
   sections.push({

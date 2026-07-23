@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2Icon, RefreshCwIcon } from "lucide-react";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
@@ -17,12 +16,12 @@ import {
   syncStatusToEnrichmentStatus,
   type CreatorEnrichmentStatus,
 } from "../status";
+import { useManualRefreshFlow } from "../use-manual-refresh-flow";
+import { ManualRefreshConfirmDialog } from "./manual-refresh-confirm-dialog";
 
 /**
  * Self-contained "Refresh Creator" control (spec §1/§3, priority 4).
- * Enqueues a forced enrichment job, shows a loading state, and reports the last
- * update time. Designed to be slotted into the creator detail sheet by Phase 2.5
- * without touching shared files.
+ * Prompts for cache vs live Apify when recent IPL snapshots exist.
  */
 export function RefreshCreatorButton({
   influencerId,
@@ -49,10 +48,26 @@ export function RefreshCreatorButton({
   onStatusChange?: (status: CreatorEnrichmentStatus) => void;
   onCreatorUpdated?: (creator: UnifiedCreatorResult) => void;
 }) {
-  const [isPending, startTransition] = useTransition();
   const [localStatus, setLocalStatus] = useState<CreatorEnrichmentStatus | null>(null);
   const [isPolling, setIsPolling] = useState(false);
   const pollActiveRef = useRef(false);
+
+  const {
+    isPending,
+    dialogOpen,
+    setDialogOpen,
+    assessment,
+    scopeLabel,
+    requestRefresh,
+    chooseRefreshSource,
+  } = useManualRefreshFlow({
+    onStatusChange: (status) => {
+      setLocalStatus(status);
+      onStatusChange?.(status);
+      if (status === "queued") onQueued?.();
+    },
+    onCreatorUpdated,
+  });
 
   const displayStatus = resolveCreatorEnrichmentStatus(localStatus ?? enrichmentStatusProp);
   const inProgress = isPending || isEnrichmentInProgress(displayStatus) || isPolling;
@@ -81,13 +96,6 @@ export function RefreshCreatorButton({
           const next = syncStatusToEnrichmentStatus(syncStatus);
           setLocalStatus(next);
           onStatusChange?.(next);
-          if (syncStatus === "completed") {
-            toast.success("Creator metrics updated");
-          } else if (syncStatus === "failed") {
-            toast.error("Creator refresh failed", {
-              description: "Apify enrichment did not complete successfully.",
-            });
-          }
         },
       }
     ).finally(() => {
@@ -109,49 +117,63 @@ export function RefreshCreatorButton({
     if (!unifiedId || !influencerId) return;
     const status = resolveCreatorEnrichmentStatus(enrichmentStatusProp);
     if (!isEnrichmentInProgress(status)) return;
+    // Resume at most one poll loop — do not restart on every queued→running flicker.
+    if (pollActiveRef.current) return;
     beginPoll();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- resume poll when creator id changes
   }, [enrichmentStatusProp, influencerId, unifiedId]);
 
   function handleClick() {
-    startTransition(async () => {
-      const result = await refreshCreatorAction(influencerId);
-      if (result.queued) {
-        setLocalStatus("queued");
-        onStatusChange?.("queued");
-        onQueued?.();
-        beginPoll();
-      } else {
-        toast.error("Could not refresh", { description: result.message });
-      }
+    requestRefresh({
+      influencerId,
+      unifiedId,
+      scope: "metrics",
+      refreshAction: refreshCreatorAction,
+      onStatusChange: (status) => {
+        setLocalStatus(status);
+        onStatusChange?.(status);
+        if (status === "queued") onQueued?.();
+      },
+      onCreatorUpdated,
     });
   }
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      <Button
-        type="button"
-        size={size}
-        variant={variant}
-        onClick={handleClick}
-        disabled={inProgress}
-      >
-        {isCollecting || isPolling || isPending ? (
-          <Loader2Icon className="animate-spin" aria-hidden />
-        ) : (
-          <RefreshCwIcon aria-hidden />
-        )}
-        {displayStatus === "queued"
-          ? "Queued"
-          : displayStatus === "running"
-            ? "Collecting"
-            : "Refresh Metrics"}
-      </Button>
-      {showTimestamp ? (
-        <span className="text-xs text-muted-foreground">
-          Updated {formatLastUpdated(lastEnrichedAt)}
-        </span>
-      ) : null}
-    </div>
+    <>
+      <div className={cn("flex items-center gap-2", className)}>
+        <Button
+          type="button"
+          size={size}
+          variant={variant}
+          onClick={handleClick}
+          disabled={inProgress}
+        >
+          {isCollecting || isPolling || isPending ? (
+            <Loader2Icon className="animate-spin" aria-hidden />
+          ) : (
+            <RefreshCwIcon aria-hidden />
+          )}
+          {displayStatus === "queued"
+            ? "Queued"
+            : displayStatus === "running"
+              ? "Collecting"
+              : "Refresh Metrics"}
+        </Button>
+        {showTimestamp ? (
+          <span className="text-xs text-muted-foreground">
+            Last updated {formatLastUpdated(lastEnrichedAt)}
+          </span>
+        ) : null}
+      </div>
+
+      <ManualRefreshConfirmDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        assessment={assessment}
+        scopeLabel={scopeLabel}
+        isSubmitting={isPending}
+        onChoose={chooseRefreshSource}
+      />
+    </>
   );
 }

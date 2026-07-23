@@ -33,6 +33,7 @@ import {
 } from "./output-fingerprint";
 import { describeInputsChanged } from "./output-stale-reason";
 import { resolveSlate } from "./output-inputs";
+import { marketIntelligenceDisplayKey } from "@/features/market-intelligence/market-intelligence-config";
 import {
   enrichMediaPlanCampaignContext,
   enrichMediaPlanFromSlate,
@@ -76,9 +77,20 @@ function mediaPlanDisplayEnrichKey(
     inputCache.inputFingerprint("creators"),
     inputCache.inputFingerprint("budget"),
     inputCache.inputFingerprint("timeline"),
+    inputCache.inputFingerprint("market_intelligence"),
+    marketIntelligenceDisplayKey(campaignObject),
     raw.generatorVersion,
     raw.durationWeeks,
     raw.creatorCount,
+    // Include calendar publish slots so deadline rebuild invalidates with schedule moves.
+    raw.weeks
+      .flatMap((week) =>
+        week.days.map(
+          (day) =>
+            `${week.week}:${day.day}:${day.creatorId ?? day.creator ?? ""}:${(day.serviceTypes ?? []).join("|")}`
+        )
+      )
+      .join(";"),
   ].join("|");
 }
 
@@ -130,13 +142,16 @@ function withOutputState(
   return { ...campaignObject, meta: { ...campaignObject.meta, campaignOutputs: state } };
 }
 
-/** The live status of a stored record: a generated record whose inputs changed is stale. */
+/** The live status of a stored record: any generated view whose inputs changed is stale. */
 function liveStatus(
   record: CampaignOutputRecord | undefined,
   currentFingerprint: string
 ): CampaignOutputStatus {
   if (!record || record.status === "not_generated") return "not_generated";
-  if (record.status === "generated" && record.sourceFingerprint !== currentFingerprint) {
+  if (
+    record.sourceFingerprint !== currentFingerprint &&
+    (record.status === "generated" || record.status === "needs_update")
+  ) {
     return "needs_update";
   }
   return record.status;
@@ -164,6 +179,8 @@ export type OutputView = {
   staleReason?: string;
   /** True when a deterministic generator is wired for this kind. */
   generatable: boolean;
+  /** When set, open this output instead — capability lives inside another card. */
+  linkedOutputKind?: CampaignOutputKind;
 };
 
 /**
@@ -201,6 +218,7 @@ export function listCampaignOutputs(campaignObject: CampaignObject): OutputView[
       dependencies: sourceData,
       staleReason,
       generatable: typeof definition.generate === "function",
+      linkedOutputKind: definition.linkedOutputKind,
     };
   });
 }
@@ -344,14 +362,28 @@ export function describeStaleReason(
 ): CampaignOutputStaleReason | undefined {
   const record = getCampaignOutputState(campaignObject)[kind];
   const definition = getOutputDefinition(kind);
-  if (!record || record.status !== "generated" || !definition) return undefined;
+  if (!record || record.status === "not_generated" || !definition) return undefined;
 
   const current = computeInputFingerprints(campaignObject, definition.inputKeys);
   const staleInputs = definition.inputKeys.filter(
     (key) => record.inputFingerprints?.[key] !== current[key]
   );
-  if (staleInputs.length === 0) return undefined;
-  return { staleInputs, reason: describeInputsChanged(staleInputs) };
+  if (staleInputs.length > 0) {
+    return { staleInputs, reason: describeInputsChanged(staleInputs) };
+  }
+
+  const fingerprint = computeSourceFingerprint(campaignObject, definition.inputKeys);
+  if (
+    record.sourceFingerprint !== fingerprint &&
+    (record.status === "generated" || record.status === "needs_update")
+  ) {
+    return {
+      staleInputs: definition.inputKeys,
+      reason: "Campaign inputs changed since this output was generated.",
+    };
+  }
+
+  return undefined;
 }
 
 /**
@@ -391,6 +423,18 @@ export function staleCampaignOutputKinds(campaignObject: CampaignObject): Campai
 }
 
 /**
+ * Stale outputs that can be rebuilt now — catalog order (Strategy → Planning →
+ * Client → Internal) so downstream views see fresh upstream inputs.
+ */
+export function regeneratableStaleCampaignOutputKinds(
+  campaignObject: CampaignObject
+): CampaignOutputKind[] {
+  return staleCampaignOutputKinds(campaignObject).filter(
+    (kind) => typeof getOutputDefinition(kind)?.generate === "function"
+  );
+}
+
+/**
  * Regenerate every output whose inputs changed — keeps stored views in sync with
  * the Campaign Object without waiting for manual Copilot commands.
  */
@@ -399,7 +443,7 @@ export function regenerateStaleCampaignOutputs(
   options?: { origin?: CampaignOutputOrigin }
 ): CampaignObject {
   let next = campaignObject;
-  for (const kind of staleCampaignOutputKinds(next)) {
+  for (const kind of regeneratableStaleCampaignOutputKinds(next)) {
     ({ campaignObject: next } = generateCampaignOutput(next, kind, {
       origin: options?.origin ?? "automatic",
     }));

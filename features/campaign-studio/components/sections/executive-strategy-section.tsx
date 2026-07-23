@@ -6,8 +6,7 @@ import {
   SectionPendingMessage,
   shouldShowPendingPlaceholder,
 } from "./shared/section-status-utils";
-import { ReasonCard } from "./shared/studio-ui-primitives";
-import { STUDIO_CLASSES } from "../../constants/studio-tokens";
+import { InsightGrid, ReasonCard } from "./shared/studio-ui-primitives";
 import {
   executiveStrategyReasoningToFields,
   resolveExecutiveStrategyReasoning,
@@ -43,7 +42,7 @@ export function ExecutiveStrategySection({
   }
 
   return (
-    <div className={STUDIO_CLASSES.reasonGrid}>
+    <InsightGrid>
       {fields.map((field) => (
         <ReasonCard
           key={field.label}
@@ -56,6 +55,6 @@ export function ExecutiveStrategySection({
           }
         />
       ))}
-    </div>
+    </InsightGrid>
   );
 }

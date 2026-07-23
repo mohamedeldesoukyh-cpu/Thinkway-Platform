@@ -71,13 +71,33 @@ function isEditableTarget(target: EventTarget | null): boolean {
   );
 }
 
+function normalizeEventKey(event: Pick<KeyboardEvent, "key">): string {
+  return typeof event.key === "string" ? event.key : "";
+}
+
+function normalizeEventKeyLower(event: Pick<KeyboardEvent, "key">): string {
+  return normalizeEventKey(event).toLowerCase();
+}
+
+function normalizeEventCode(event: Pick<KeyboardEvent, "code">): string {
+  return typeof event.code === "string" ? event.code : "";
+}
+
+function keyboardKeyMatches(event: KeyboardEvent, keyPart: string): boolean {
+  const eventKey = normalizeEventKeyLower(event);
+  if (eventKey && eventKey === keyPart) return true;
+
+  if (keyPart.length !== 1) return false;
+  const code = normalizeEventCode(event);
+  return code === `Key${keyPart.toUpperCase()}`;
+}
+
 /** Never steal standard browser edit/clipboard shortcuts from inputs or selections. */
 export function isNativeEditShortcut(event: KeyboardEvent): boolean {
   if (!(event.ctrlKey || event.metaKey)) return false;
-  const key = event.key.toLowerCase();
-  if (key === "s" || key === "enter") return false;
-  if (key === "a" && event.shiftKey) return false;
-  return ["c", "x", "v", "a", "z", "y"].includes(key);
+  if (keyboardKeyMatches(event, "s") || keyboardKeyMatches(event, "enter")) return false;
+  if (keyboardKeyMatches(event, "a") && event.shiftKey) return false;
+  return ["c", "x", "v", "a", "z", "y"].some((key) => keyboardKeyMatches(event, key));
 }
 
 function matchShortcut(event: KeyboardEvent, keys: string): boolean {
@@ -94,11 +114,15 @@ function matchShortcut(event: KeyboardEvent, keys: string): boolean {
   if (needShift !== event.shiftKey) return false;
   if (!keyPart) return false;
 
-  if (keyPart === "enter") return event.key === "Enter";
-  if (keyPart === "esc" || keyPart === "escape") return event.key === "Escape";
+  if (keyPart === "enter") {
+    return event.key === "Enter" || normalizeEventCode(event) === "Enter";
+  }
+  if (keyPart === "esc" || keyPart === "escape") {
+    return event.key === "Escape" || normalizeEventCode(event) === "Escape";
+  }
   if (keyPart === "/") return event.key === "/" && !event.ctrlKey && !event.altKey;
 
-  return event.key.toLowerCase() === keyPart;
+  return keyboardKeyMatches(event, keyPart);
 }
 
 type KeyboardShortcutsProviderProps = {
@@ -183,6 +207,8 @@ export function KeyboardShortcutsProvider({
         setHelpOpen(false);
         return;
       }
+
+      if (!normalizeEventKey(event) && !event.code) return;
 
       if (isNativeEditShortcut(event)) return;
 

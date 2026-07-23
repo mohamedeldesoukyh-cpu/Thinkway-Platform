@@ -89,21 +89,5 @@ export const SHORTLIST_PERMISSIONS = {
   admin: "discovery.admin",
 } as const;
 
-export function shortlistDetailPath(shortlistId: string): string {
-  return `/discovery/shortlists/${shortlistId}`;
-}
-
-export function shortlistPreviewPath(
-  shortlistId: string,
-  options?: { template?: "summary" | "detailed" | "showcase"; itemIds?: string[] }
-): string {
-  const params = new URLSearchParams();
-  if (options?.template && options.template !== "summary") {
-    params.set("template", options.template);
-  }
-  if (options?.itemIds?.length) {
-    params.set("items", options.itemIds.join(","));
-  }
-  const query = params.toString();
-  return `/discovery/shortlists/${shortlistId}/preview${query ? `?${query}` : ""}`;
-}
+/** @see lib/routing/entity-paths.ts */
+export { shortlistDetailPath, shortlistPreviewPath } from "@/lib/routing/entity-paths";

@@ -1,132 +1,95 @@
 "use client";
 
-
-
-import { ListPlusIcon, SaveIcon, SparklesIcon } from "lucide-react";
-
+import { WandSparklesIcon } from "lucide-react";
 import Link from "next/link";
 
-
-
 import { Button } from "@/components/ui/button";
-
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
-  DISCOVERY_PAGE_IDENTITY,
+import { CreatorSearchPopover } from "./creator-search-popover";
+import {
+  CreatorSearchFiltersPopover,
+  CreatorSearchFollowersPopover,
+  CreatorSearchSortPopover,
+} from "./creator-search-toolbar-popovers";
+import {
+  DISCOVERY_TOOLBAR_ICON_PROPS,
+  discoveryToolbarBtnClass,
+} from "./creator-search-toolbar-utils";
+import type { CreatorSearchFilters, CreatorSearchSortState } from "./creator-search-types";
 
-  DiscoveryPageIconBadge,
-
-} from "@/features/discovery/components/discovery-page-identity";
-
-
-
-type Props = {
-
-  total: number;
-
-  loadedCount: number;
-
-  onSaveSearch: () => void;
-
-  onCreateList: () => void;
-
-  loading?: boolean;
-
+export type CreatorSearchToolbarControlsProps = {
+  searchQuery: string;
+  onDebouncedSearchChange: (value: string) => void;
+  onSearchSubmit: (value: string) => void;
+  searchLoading?: boolean;
+  sort: CreatorSearchSortState;
+  onSortChange: (value: CreatorSearchSortState) => void;
+  filters: CreatorSearchFilters;
+  onFiltersChange: (filters: CreatorSearchFilters) => void;
+  onOpenFilters: () => void;
+  showCampaignRelevance?: boolean;
+  className?: string;
 };
 
-
-
-export function CreatorSearchTopBar({
-
-  total,
-
-  loadedCount,
-
-  onSaveSearch,
-
-  onCreateList,
-
-  loading,
-
-}: Props) {
-
+/** Icon popovers + AI Search — lives in the results header row. */
+export function CreatorSearchToolbarControls({
+  searchQuery,
+  onDebouncedSearchChange,
+  onSearchSubmit,
+  searchLoading,
+  sort,
+  onSortChange,
+  filters,
+  onFiltersChange,
+  onOpenFilters,
+  showCampaignRelevance = false,
+  className,
+}: CreatorSearchToolbarControlsProps) {
   return (
+    <TooltipProvider delayDuration={300}>
+      <div className={cn("discovery-search-exact-toolbar", className)}>
+        <CreatorSearchPopover
+          searchQuery={searchQuery}
+          onDebouncedSearchChange={onDebouncedSearchChange}
+          onSearchSubmit={onSearchSubmit}
+          loading={searchLoading}
+        />
 
-    <div className="shrink-0 border-b border-border bg-background px-3 py-2 md:px-4">
+        <CreatorSearchFiltersPopover
+          filters={filters}
+          onChange={onFiltersChange}
+          onOpenAllFilters={onOpenFilters}
+        />
 
-      <div className="flex flex-col gap-1.5 lg:flex-row lg:items-center lg:justify-between">
+        <CreatorSearchFollowersPopover
+          filters={filters}
+          onChange={onFiltersChange}
+        />
 
-        <div className="flex min-w-0 items-center gap-2.5">
+        <CreatorSearchSortPopover
+          sort={sort}
+          onSortChange={onSortChange}
+          showCampaignRelevance={showCampaignRelevance}
+        />
 
-          <DiscoveryPageIconBadge
-
-            identity={DISCOVERY_PAGE_IDENTITY.search}
-
-            size="sm"
-
-            className="!size-8 !rounded-lg"
-
-          />
-
-          <div className="min-w-0">
-
-            <h1 className="text-[15px] font-bold tracking-tight text-foreground">
-
-              {DISCOVERY_PAGE_IDENTITY.search.title}
-
-            </h1>
-
-            <p className="text-[10px] text-muted-foreground">
-
-              {loading
-
-                ? "Searching…"
-
-                : `${loadedCount.toLocaleString()} loaded · ${total.toLocaleString()} matched`}
-
-            </p>
-
-          </div>
-
-        </div>
-
-        <div className="flex flex-wrap items-center gap-1.5">
-
-          <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" asChild>
-
-            <Link href="/ai">
-
-              <SparklesIcon className="size-3.5" />
-
-              AI Search
-
-            </Link>
-
-          </Button>
-
-          <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={onSaveSearch}>
-
-            <SaveIcon className="size-3.5" />
-
-            <span className="hidden sm:inline">Save Search</span>
-
-          </Button>
-
-          <Button size="sm" className="h-7 gap-1 text-xs" onClick={onCreateList}>
-
-            <ListPlusIcon className="size-3.5" />
-
-            <span className="hidden sm:inline">Create List</span>
-
-          </Button>
-
-        </div>
-
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" className={discoveryToolbarBtnClass()} asChild>
+              <Link href="/ai" aria-label="AI Search">
+                <WandSparklesIcon {...DISCOVERY_TOOLBAR_ICON_PROPS} />
+              </Link>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">AI Search</TooltipContent>
+        </Tooltip>
       </div>
-
-    </div>
-
+    </TooltipProvider>
   );
-
 }
-

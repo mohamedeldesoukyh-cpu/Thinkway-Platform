@@ -60,7 +60,7 @@ export function ClientsListSection({
         ) : (
           <>
             <ClientsTable clients={clients} />
-            <div className="border-t px-4 py-3 md:px-[14px]">
+            <div className="border-t border-border px-4 py-3 md:px-[14px]">
               <ClientsPagination page={page} totalPages={totalPages} search={search} />
             </div>
           </>

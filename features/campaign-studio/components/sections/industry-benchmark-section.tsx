@@ -6,8 +6,7 @@ import {
   SectionPendingMessage,
   shouldShowPendingPlaceholder,
 } from "./shared/section-status-utils";
-import { BenchCard } from "./shared/studio-ui-primitives";
-import { STUDIO_CLASSES } from "../../constants/studio-tokens";
+import { BenchCard, BenchGrid } from "./shared/studio-ui-primitives";
 import { resolveIndustryBenchmark } from "../../services/section-data-resolver";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
@@ -58,7 +57,7 @@ export function IndustryBenchmarkSection({
 
   return (
     <div className="min-w-0 space-y-2.5">
-      <div className={STUDIO_CLASSES.benchGrid}>
+      <BenchGrid>
         {benchmark.comparisons.map((row) => (
           <BenchCard
             key={row.metric}
@@ -77,7 +76,7 @@ export function IndustryBenchmarkSection({
             industry={row.industry}
           />
         ))}
-      </div>
+      </BenchGrid>
     </div>
   );
 }

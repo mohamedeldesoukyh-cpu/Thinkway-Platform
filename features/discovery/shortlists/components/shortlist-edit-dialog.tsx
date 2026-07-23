@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
+import { shortlistDetailPath } from "../constants";
 import { updateShortlistDetails } from "../actions";
 import type {
   ShortlistBrandOption,
@@ -132,6 +133,17 @@ export function ShortlistEditDialog({
 
       toast.success(result.message ?? "Shortlist updated.");
       onOpenChange(false);
+
+      if (trimmedName !== detail.name) {
+        router.push(
+          shortlistDetailPath({
+            id: detail.id,
+            name: trimmedName,
+          })
+        );
+        return;
+      }
+
       router.refresh();
     });
   }

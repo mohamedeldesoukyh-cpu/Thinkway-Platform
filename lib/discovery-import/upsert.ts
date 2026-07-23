@@ -11,6 +11,10 @@ import type { Database } from "@/types/database";
 import { mergeAuthoritative, isImportFieldEmpty } from "./merge";
 import { mergeContactLinks } from "@/lib/creators/contact-info";
 import {
+  countryWritePayload,
+  persistCountryFromImportRow,
+} from "@/lib/creators/country-persistence";
+import {
   buildCreatorImportMetadata,
   buildImportFieldSources,
   mergeCreatorImportMetadataAuthoritative,
@@ -95,7 +99,7 @@ async function findInfluencerProfile(
 ) {
   const { data, error } = await supabase
     .from("influencers")
-    .select("display_name, categories, country_code, metadata")
+    .select("display_name, categories, country_code, country_codes, metadata")
     .eq("id", influencerId)
     .maybeSingle();
 
@@ -437,8 +441,15 @@ export async function upsertImportedCreators(
           "influencer.country_code",
           log
         );
-        if (mergedCountryCode !== existingInfluencer?.country_code) {
-          influencerPatch.country_code = mergedCountryCode;
+        const countryWrite = persistCountryFromImportRow({
+          existingCountryCode: existingInfluencer?.country_code,
+          existingCountryCodes: existingInfluencer?.country_codes,
+          country: mergedCountryCode,
+          displayName: row.display_name,
+          preferredPrimary: mergedCountryCode,
+        });
+        if (countryWrite) {
+          Object.assign(influencerPatch, countryWritePayload(countryWrite));
         }
 
         if (
@@ -547,11 +558,16 @@ export async function upsertImportedCreators(
       let createdInfluencer = false;
 
       if (!influencerId) {
+        const countryWrite = persistCountryFromImportRow({
+          country: countryCode,
+          displayName: row.display_name,
+          preferredPrimary: countryCode || null,
+        });
         const { data: influencer, error: influencerError } = await ctx.supabase
           .from("influencers")
           .insert({
             display_name: importDisplayName,
-            country_code: countryCode,
+            ...countryWritePayload(countryWrite),
             categories: influencerCategories,
             status: "active",
             notes: row.source

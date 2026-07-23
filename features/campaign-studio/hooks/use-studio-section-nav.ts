@@ -4,6 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { CampaignStudioLayoutMode } from "../types/campaign-studio";
 
+/** Scroll offset inside reference desktop main column (thinkway-campaign-studio_3.html). */
+export const STUDIO_REF_SCROLL_OFFSET = 20;
+
 /** Fallback scroll offset when chrome height is not yet measured (panel mode). */
 export const STUDIO_SCROLL_CHROME_OFFSET = 52;
 
@@ -12,8 +15,11 @@ type StudioNavSection = {
   title: string;
 };
 
-export function studioSectionDomId(sectionId: string): string {
-  return `studio-section-${sectionId}`;
+export function studioSectionDomId(
+  sectionId: string,
+  variant: "default" | "ref" = "default"
+): string {
+  return variant === "ref" ? `sub-${sectionId}` : `studio-section-${sectionId}`;
 }
 
 function cssLengthToPx(length: string, element: HTMLElement): number {
@@ -49,8 +55,10 @@ function resolveChromeHeightPx(
 /** Resolve scroll offset for scroll-spy and smooth scroll (panel vs chat embed). */
 export function resolveStudioScrollOffsetPx(
   scrollRoot: HTMLElement | null,
-  layoutMode: CampaignStudioLayoutMode
+  layoutMode: CampaignStudioLayoutMode,
+  refMode = false
 ): number {
+  if (refMode) return STUDIO_REF_SCROLL_OFFSET;
   if (!scrollRoot) return STUDIO_SCROLL_CHROME_OFFSET;
 
   const chrome = scrollRoot.querySelector<HTMLElement>("[data-studio-top-chrome]");
@@ -80,7 +88,8 @@ export function resolveStudioScrollOffsetPx(
 export function useStudioSectionNav(
   sections: StudioNavSection[],
   scrollRoot: HTMLElement | null,
-  layoutMode: CampaignStudioLayoutMode = "panel"
+  layoutMode: CampaignStudioLayoutMode = "panel",
+  refMode = false
 ) {
   const [activeId, setActiveId] = useState(sections[0]?.id ?? "");
   const activeIdRef = useRef(activeId);
@@ -95,10 +104,11 @@ export function useStudioSectionNav(
     let observer: IntersectionObserver | null = null;
 
     const connectObserver = () => {
-      const offset = resolveStudioScrollOffsetPx(scrollRoot, layoutMode);
+      const offset = resolveStudioScrollOffsetPx(scrollRoot, layoutMode, refMode);
+      const sectionIdPrefix = refMode ? "sub-" : "studio-section-";
 
       const elements = sections
-        .map((s) => document.getElementById(studioSectionDomId(s.id)))
+        .map((s) => document.getElementById(studioSectionDomId(s.id, refMode ? "ref" : "default")))
         .filter((el): el is HTMLElement => el != null);
 
       observer?.disconnect();
@@ -114,7 +124,7 @@ export function useStudioSectionNav(
             }
           }
 
-          const nextId = topmost.target.id.replace("studio-section-", "");
+          const nextId = topmost.target.id.replace(sectionIdPrefix, "");
           if (nextId !== activeIdRef.current) {
             setActiveId(nextId);
           }
@@ -133,12 +143,20 @@ export function useStudioSectionNav(
 
     connectObserver();
 
+    let resizeRaf = 0;
+
     const chrome = scrollRoot.querySelector<HTMLElement>("[data-studio-top-chrome]");
     const shell = scrollRoot.querySelector<HTMLElement>(".studio-shell-chat");
 
     const resizeObserver =
       typeof ResizeObserver !== "undefined" && (shell || chrome)
-        ? new ResizeObserver(() => connectObserver())
+        ? new ResizeObserver(() => {
+            if (resizeRaf) return;
+            resizeRaf = requestAnimationFrame(() => {
+              resizeRaf = 0;
+              connectObserver();
+            });
+          })
         : null;
 
     if (shell) resizeObserver?.observe(shell);
@@ -148,19 +166,20 @@ export function useStudioSectionNav(
     window.addEventListener("resize", onResize);
 
     return () => {
+      if (resizeRaf) cancelAnimationFrame(resizeRaf);
       window.removeEventListener("resize", onResize);
       resizeObserver?.disconnect();
       observer?.disconnect();
     };
-  }, [sections, scrollRoot, layoutMode]);
+  }, [sections, scrollRoot, layoutMode, refMode]);
 
   const scrollToSection = useCallback(
     (id: string) => {
       const root = scrollRoot;
-      const target = document.getElementById(studioSectionDomId(id));
+      const target = document.getElementById(studioSectionDomId(id, refMode ? "ref" : "default"));
       if (!root || !target) return;
 
-      const offset = resolveStudioScrollOffsetPx(root, layoutMode);
+      const offset = resolveStudioScrollOffsetPx(root, layoutMode, refMode);
       const rootRect = root.getBoundingClientRect();
       const targetRect = target.getBoundingClientRect();
       const nextScrollTop =
@@ -172,7 +191,7 @@ export function useStudioSectionNav(
       });
       setActiveId(id);
     },
-    [scrollRoot, layoutMode]
+    [scrollRoot, layoutMode, refMode]
   );
 
   const activeTitle =

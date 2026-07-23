@@ -3,6 +3,8 @@
 import { PlusIcon, RotateCcwIcon, Trash2Icon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
+import { TooltipHint, TooltipIconButton } from "@/components/shared/tooltip-icon-button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -32,12 +34,18 @@ export function ClientIoTermsEditor({
   description,
 }: Props) {
   const platformV6 = useClientProfilePlatformV6();
+  const confirmDelete = useConfirmDelete();
 
   function updateTerm(index: number, patch: Partial<ClientIoTerm>) {
     onChange(terms.map((term, i) => (i === index ? { ...term, ...patch } : term)));
   }
 
-  function removeTerm(index: number) {
+  async function removeTerm(index: number) {
+    const ok = await confirmDelete(
+      `Remove term ${index + 1}${terms[index]?.title ? ` (${terms[index]?.title})` : ""}?`,
+      "Remove term?"
+    );
+    if (!ok) return;
     onChange(terms.filter((_, i) => i !== index));
   }
 
@@ -59,18 +67,20 @@ export function ClientIoTermsEditor({
                 Term {index + 1}
                 {term.title ? ` — ${term.title}` : ""}
               </span>
-              <button
-                type="button"
-                className="platform-v6-io-term-delete"
-                onClick={(event) => {
-                  event.preventDefault();
-                  removeTerm(index);
-                }}
-                disabled={disabled || terms.length <= 1}
-                aria-label={`Remove term ${index + 1}`}
-              >
-                <Trash2Icon className="size-3.5" strokeWidth={2} />
-              </button>
+              <TooltipHint label={`Remove term ${index + 1}`}>
+                <button
+                  type="button"
+                  className="platform-v6-io-term-delete"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    void removeTerm(index);
+                  }}
+                  disabled={disabled || terms.length <= 1}
+                  aria-label={`Remove term ${index + 1}`}
+                >
+                  <Trash2Icon className="size-3.5" strokeWidth={2} />
+                </button>
+              </TooltipHint>
             </summary>
             <div className="platform-v6-io-term-edit">
               <Input
@@ -136,17 +146,17 @@ export function ClientIoTermsEditor({
               <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
                 Term {index + 1}
               </span>
-              <Button
+              <TooltipIconButton
                 type="button"
                 variant="ghost"
                 size="icon"
                 className="size-[30px] rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                onClick={() => removeTerm(index)}
+                onClick={() => void removeTerm(index)}
                 disabled={disabled || terms.length <= 1}
-                aria-label={`Remove term ${index + 1}`}
+                tooltip={`Remove term ${index + 1}`}
               >
                 <Trash2Icon className="size-4" strokeWidth={1.8} />
-              </Button>
+              </TooltipIconButton>
             </div>
             <Input
               value={term.title}

@@ -54,6 +54,9 @@ export type UnifiedCreatorPlatform = {
   contact_links?: string[];
   /** Last metrics sync provider (e.g. apify, discovery_add). */
   sync_source?: string | null;
+  sync_status?: string | null;
+  sync_error?: string | null;
+  enrichment_status?: CreatorEnrichmentStatus | null;
   metadata?: Record<string, unknown> | null;
 };
 
@@ -75,6 +78,7 @@ export type CreatorEnrichmentStatus =
   | "running"
   | "enriched"
   | "partial"
+  | "awaiting_profile_details"
   | "failed"
   | "skipped";
 
@@ -88,6 +92,8 @@ export type UnifiedCreatorResult = {
   display_name: string;
   status: string | null;
   country_code: string | null;
+  /** All creator location countries (ISO-2) — bio-inferred + enrichment. */
+  country_codes?: string[] | null;
   estimated_country: string | null;
   city: string | null;
   categories: string[];
@@ -136,8 +142,12 @@ export type UnifiedCreatorResult = {
   platforms: UnifiedCreatorPlatform[];
   notes?: string | null;
   suggested_currency?: string;
+  /** Manual average price per content (`influencers.rate_card`). */
+  rate_card?: Record<string, unknown> | null;
   enrichment_status?: CreatorEnrichmentStatus | null;
   last_enriched_at?: string | null;
+  /** Row touch time — used for browse recency when enrichment has not run yet. */
+  updated_at?: string | null;
   enrichment_source?: string | null;
   recent_publications?: CreatorRecentPublication[];
   /** PostgreSQL ts_rank when a full-text search query is active. */
@@ -173,6 +183,10 @@ export type UnifiedCreatorBrowseFilters = {
   /** Match creators tagged with any of these categories (OR semantics). */
   categories?: string[];
   language?: string;
+  /** Creator language OR filter — first entry may be sent to SQL; all apply client-side. */
+  languages?: string[];
+  /** Content language OR filter — client-side only on language_codes. */
+  contentLanguages?: string[];
   minFollowers?: number;
   maxFollowers?: number;
   minEngagement?: number;

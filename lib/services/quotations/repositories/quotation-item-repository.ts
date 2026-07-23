@@ -7,6 +7,7 @@ export {
   fetchExistingShortlistSourceIds,
   fetchQuotationItemsByIds,
   duplicateQuotationItemRows,
+  syncCollapsePackageOptionNumbers,
   fetchQuotationItemsForCampaign,
   copyQuotationItems,
   copyQuotationItemsToShortlist,

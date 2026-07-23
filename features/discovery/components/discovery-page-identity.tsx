@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
+  ArrowLeftRightIcon,
   BrainIcon,
   FileSpreadsheetIcon,
   FileTextIcon,
@@ -14,6 +15,7 @@ import { cn } from "@/lib/utils";
 
 export type DiscoveryPageKey =
   | "search"
+  | "compare"
   | "intelligence"
   | "shortlists"
   | "quotations"
@@ -29,6 +31,8 @@ export type DiscoveryPageIdentity = {
   icon: LucideIcon;
   accent: string;
   iconClass: string;
+  /** Solid icon tile (list page headers) — overrides gradient badge when set. */
+  iconSolidClass?: string;
 };
 
 export const DISCOVERY_PAGE_IDENTITY: Record<DiscoveryPageKey, DiscoveryPageIdentity> = {
@@ -40,7 +44,19 @@ export const DISCOVERY_PAGE_IDENTITY: Record<DiscoveryPageKey, DiscoveryPageIden
     description: "Browse, filter, and shortlist creators across platforms.",
     icon: SearchIcon,
     accent: "from-sky-400/25 via-sky-300/15 to-blue-500/10",
-    iconClass: "text-sky-600 dark:text-sky-400",
+    iconClass: "text-sky-700 dark:text-sky-300",
+    iconSolidClass: "bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300",
+  },
+  compare: {
+    key: "compare",
+    href: "/discovery/compare",
+    navLabel: "Compare",
+    title: "Creator Comparison",
+    description: "Compare creators side by side across metrics and platforms.",
+    icon: ArrowLeftRightIcon,
+    accent: "from-indigo-400/25 via-indigo-300/15 to-blue-500/10",
+    iconClass: "text-indigo-700 dark:text-indigo-300",
+    iconSolidClass: "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300",
   },
   intelligence: {
     key: "intelligence",
@@ -50,7 +66,8 @@ export const DISCOVERY_PAGE_IDENTITY: Record<DiscoveryPageKey, DiscoveryPageIden
     description: "Shared brief intelligence for Discovery, campaigns, Studio, and AI workflows.",
     icon: BrainIcon,
     accent: "from-teal-400/25 via-teal-300/15 to-emerald-500/10",
-    iconClass: "text-[#1D9E75]",
+    iconClass: "text-teal-700 dark:text-teal-300",
+    iconSolidClass: "bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300",
   },
   shortlists: {
     key: "shortlists",
@@ -60,7 +77,8 @@ export const DISCOVERY_PAGE_IDENTITY: Record<DiscoveryPageKey, DiscoveryPageIden
     description: "Build, review, approve, and move creators into campaigns.",
     icon: ListChecksIcon,
     accent: "from-violet-400/25 via-violet-300/15 to-purple-500/10",
-    iconClass: "text-violet-600 dark:text-violet-400",
+    iconClass: "text-violet-700 dark:text-violet-300",
+    iconSolidClass: "bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300",
   },
   quotations: {
     key: "quotations",
@@ -70,7 +88,9 @@ export const DISCOVERY_PAGE_IDENTITY: Record<DiscoveryPageKey, DiscoveryPageIden
     description: "Serial-numbered quotations (QT-YYYY-NNNN). Totals reported in EGP.",
     icon: FileTextIcon,
     accent: "from-amber-400/25 via-amber-300/15 to-orange-500/10",
-    iconClass: "text-amber-700 dark:text-amber-400",
+    iconClass: "text-amber-800 dark:text-amber-300",
+    iconSolidClass:
+      "bg-[var(--amber-bg)] text-[var(--amber-text)] dark:bg-amber-950/50 dark:text-amber-300",
   },
   "campaign-match": {
     key: "campaign-match",
@@ -80,7 +100,8 @@ export const DISCOVERY_PAGE_IDENTITY: Record<DiscoveryPageKey, DiscoveryPageIden
     description: "Match discovered creators to campaign briefs with AI scoring.",
     icon: RadarIcon,
     accent: "from-rose-400/25 via-rose-300/15 to-pink-500/10",
-    iconClass: "text-rose-600 dark:text-rose-400",
+    iconClass: "text-rose-700 dark:text-rose-300",
+    iconSolidClass: "bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300",
   },
   import: {
     key: "import",
@@ -90,7 +111,8 @@ export const DISCOVERY_PAGE_IDENTITY: Record<DiscoveryPageKey, DiscoveryPageIden
     description: "Upload creator datasets from agencies, platforms, or clients.",
     icon: UploadIcon,
     accent: "from-emerald-400/25 via-emerald-300/15 to-teal-500/10",
-    iconClass: "text-emerald-700 dark:text-emerald-400",
+    iconClass: "text-emerald-700 dark:text-emerald-300",
+    iconSolidClass: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300",
   },
 };
 
@@ -111,7 +133,7 @@ type DiscoveryPageIconBadgeProps = {
 
 const BADGE_SIZE = {
   sm: "size-6 rounded-md [&_svg]:size-3",
-  md: "size-10 rounded-xl [&_svg]:size-5",
+  md: "size-[38px] rounded-[10px] [&_svg]:size-[19px]",
   lg: "size-12 rounded-xl [&_svg]:size-6",
 } as const;
 
@@ -121,13 +143,20 @@ export function DiscoveryPageIconBadge({
   className,
 }: DiscoveryPageIconBadgeProps) {
   const Icon = identity.icon;
+  const solid = identity.iconSolidClass;
+
   return (
     <div
       className={cn(
-        "flex shrink-0 items-center justify-center border border-white/60 bg-gradient-to-br shadow-sm backdrop-blur-sm",
-        "dark:border-white/10",
-        identity.accent,
-        BADGE_SIZE[size],
+        "flex shrink-0 items-center justify-center",
+        solid
+          ? cn(solid, BADGE_SIZE[size])
+          : cn(
+              "border border-white/60 bg-gradient-to-br shadow-sm backdrop-blur-sm",
+              "dark:border-white/10",
+              identity.accent,
+              BADGE_SIZE[size]
+            ),
         className
       )}
       aria-hidden
@@ -151,17 +180,18 @@ export function DiscoveryPageHeader({
   return (
     <section
       className={cn(
-        "flex flex-wrap items-start justify-between gap-3",
+        /* HTML `.page-head`: items-center, gap 16px, margin-bottom via parent space-y-4 */
+        "flex flex-wrap items-center justify-between gap-4",
         className
       )}
     >
-      <div className="flex min-w-0 items-start gap-3">
+      <div className="flex min-w-0 items-center gap-[13px]">
         <DiscoveryPageIconBadge identity={identity} />
-        <div className="min-w-0 space-y-0.5">
-          <h2 className="font-heading text-xl font-semibold tracking-tight">
+        <div className="min-w-0">
+          <h2 className="text-[19px] font-extrabold tracking-[-0.028em] text-[var(--text)] dark:text-foreground">
             {identity.title}
           </h2>
-          <p className="text-xs text-muted-foreground">{identity.description}</p>
+          <p className="mt-[3px] text-[12.5px] tracking-[-0.005em] text-[var(--text-3)]">{identity.description}</p>
         </div>
       </div>
       {actions ? <div className="shrink-0">{actions}</div> : null}

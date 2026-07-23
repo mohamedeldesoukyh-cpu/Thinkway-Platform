@@ -8,10 +8,14 @@ import { cn } from "@/lib/utils";
 import type { CampaignStudioLayoutMode } from "../types/campaign-studio";
 
 import { CAMPAIGN_STUDIO_COPY } from "../constants/copy";
+import { STUDIO_REF_CLASSES } from "../constants/campaign-studio-ref-tokens";
 import { STUDIO_CLASSES } from "../constants/studio-tokens";
+import { resolveStudioReadinessLabel } from "../services/section-data-resolver";
 import { CampaignProposalExportActions } from "./campaign-proposal-export-actions";
 
 type StudioTopChromeProps = {
+  /** Campaign display name for meta title (brand — campaign). Falls back to workflowName. */
+  displayTitle?: string;
   workflowName: string;
   currentSectionTitle: string;
   campaignObjectId?: string;
@@ -24,6 +28,7 @@ type StudioTopChromeProps = {
   layoutMode?: CampaignStudioLayoutMode;
   className?: string;
   compact?: boolean;
+  refMode?: boolean;
 };
 
 function publishChromeHeight(el: HTMLElement) {
@@ -35,7 +40,39 @@ function publishChromeHeight(el: HTMLElement) {
   );
 }
 
+function ProgressRing({ percent }: { percent: number }) {
+  const radius = 15.5;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (percent / 100) * circumference;
+  const readyLabel = resolveStudioReadinessLabel(percent);
+
+  return (
+    <div className={STUDIO_REF_CLASSES.progressRingWrap}>
+      <svg className={STUDIO_REF_CLASSES.progressRing} viewBox="0 0 36 36" aria-hidden>
+        <circle cx="18" cy="18" r={radius} fill="none" stroke="#e3e8f2" strokeWidth="3" />
+        <circle
+          cx="18"
+          cy="18"
+          r={radius}
+          fill="none"
+          stroke="#10b981"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray={`${circumference}`}
+          strokeDashoffset={`${offset}`}
+          transform="rotate(-90 18 18)"
+        />
+      </svg>
+      <div className={STUDIO_REF_CLASSES.progressLabel}>
+        <b>{percent}%</b>
+        <span>{readyLabel}</span>
+      </div>
+    </div>
+  );
+}
+
 export function StudioTopChrome({
+  displayTitle,
   workflowName,
   currentSectionTitle,
   campaignObjectId,
@@ -48,6 +85,7 @@ export function StudioTopChrome({
   layoutMode = "panel",
   className,
   compact = false,
+  refMode = false,
 }: StudioTopChromeProps) {
   const headerRef = useRef<HTMLElement>(null);
   const isChatLayout = layoutMode === "chat";
@@ -65,7 +103,36 @@ export function StudioTopChrome({
     observer?.observe(el);
 
     return () => observer?.disconnect();
-  }, [workflowName, currentSectionTitle, showExportActions, showNavToggle, isChatLayout]);
+  }, [displayTitle, workflowName, currentSectionTitle, showExportActions, showNavToggle, isChatLayout, refMode]);
+
+  const metaTitle = displayTitle?.trim() || workflowName;
+
+  if (refMode) {
+    return (
+      <header
+        ref={headerRef}
+        data-studio-top-chrome
+        className={cn(STUDIO_REF_CLASSES.metaBar, className)}
+      >
+        <div className={STUDIO_REF_CLASSES.metaLeft}>
+          <div className={STUDIO_REF_CLASSES.crumb}>
+            <b>{CAMPAIGN_STUDIO_COPY.studioLabel}</b> / {currentSectionTitle}
+          </div>
+          <div className={STUDIO_REF_CLASSES.metaTitle}>{metaTitle}</div>
+        </div>
+        <div className={STUDIO_REF_CLASSES.metaRight}>
+          {showExportActions && campaignObjectId ? (
+            <CampaignProposalExportActions
+              campaignObjectId={campaignObjectId}
+              conversationId={conversationId}
+            />
+          ) : null}
+          {studioModeToggle}
+          <ProgressRing percent={progressPercent} />
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header
@@ -112,7 +179,7 @@ export function StudioTopChrome({
               compact ? "text-[14px]" : "text-[17px] sm:text-[19px]"
             )}
           >
-            {workflowName}
+            {metaTitle}
           </h2>
         </div>
         <span className="hidden shrink-0 text-[#0B0F1A]/15 sm:inline dark:text-border" aria-hidden>

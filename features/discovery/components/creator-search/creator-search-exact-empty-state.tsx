@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { AddMissingCreatorEmptyState } from "@/features/discovery/components/add-missing-creator-dialog";
+import { DiscoveryEmptyState } from "@/features/discovery/components/design-system";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import type { CreatorEnrichmentStatus } from "@/features/discovery/enrichment/status";
 
@@ -29,43 +30,35 @@ export function CreatorSearchExactEmptyState({
   onMissingCreatorUpdated,
 }: Props) {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 px-6 py-24 text-center">
-      <div>
-        <p className="text-sm font-semibold text-foreground">
-          No creators found matching &lsquo;{query}&rsquo;.
-        </p>
-        <p className="mt-1 max-w-sm text-[12px] text-muted-foreground">
-          We looked for an exact handle or name match and did not find this creator in Thinkway.
-        </p>
-      </div>
+    <DiscoveryEmptyState
+      title={`No creators found matching '${query}'.`}
+      description="We looked for an exact handle or name match and did not find this creator in Thinkway."
+    >
+      <AddMissingCreatorEmptyState
+        visible
+        onSuccess={onMissingCreatorAdded}
+        onEnrichmentStatusChange={onMissingCreatorEnrichmentStatusChange}
+        onCreatorUpdated={onMissingCreatorUpdated}
+      />
 
-      <div className="flex flex-col items-center gap-2">
-        <AddMissingCreatorEmptyState
-          visible
-          onSuccess={onMissingCreatorAdded}
-          onEnrichmentStatusChange={onMissingCreatorEnrichmentStatusChange}
-          onCreatorUpdated={onMissingCreatorUpdated}
-        />
-
-        {canSimplifyQuery ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-8 text-xs"
-            onClick={onSearchWithFewerWords}
-          >
-            Search with fewer words
-          </Button>
-        ) : null}
-
-        <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" asChild>
-          <Link href="/ai">
-            <SparklesIcon className="size-3.5" />
-            AI Search
-          </Link>
+      {canSimplifyQuery ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-8 text-xs"
+          onClick={onSearchWithFewerWords}
+        >
+          Search with fewer words
         </Button>
-      </div>
-    </div>
+      ) : null}
+
+      <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" asChild>
+        <Link href="/ai">
+          <SparklesIcon className="size-3.5" />
+          AI Search
+        </Link>
+      </Button>
+    </DiscoveryEmptyState>
   );
 }

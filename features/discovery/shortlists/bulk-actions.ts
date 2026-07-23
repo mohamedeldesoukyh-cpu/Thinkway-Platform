@@ -7,6 +7,12 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database, ShortlistItemStatus } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { COLLAPSE_CONTENT_LABEL } from "@/lib/discovery/collapse-content";
+import {
+  COLLAPSE_MIGRATION_HINT,
+  isMissingCollapseColumnsError,
+} from "@/lib/discovery/shortlist-item-collapse-select";
+
 import { describeBulkOutcome } from "./bulk-selection-policy";
 import {
   assertItemTransition,
@@ -327,4 +333,186 @@ export async function submitEntireShortlistForReview(
 
   revalidate(shortlistId);
   return { ok: true, message: "Entire shortlist submitted for review." };
+}
+
+async function assertShortlistCreatorsEditable(
+  supabase: Supabase,
+  shortlistId: string
+): Promise<ActionResult | { ok: true }> {
+  const { data: shortlist, error: shortlistError } = await supabase
+    .from("discovery_shortlists")
+    .select("id, status, is_archived")
+    .eq("id", shortlistId)
+    .maybeSingle();
+
+  if (shortlistError) return { ok: false, message: shortlistError.message };
+  if (!shortlist) return { ok: false, message: "Shortlist not found." };
+  if (shortlist.is_archived) {
+    return { ok: false, message: "Archived shortlists cannot be edited." };
+  }
+  if (!canEditCreators(shortlist.status)) {
+    return { ok: false, message: "This shortlist is locked and cannot be edited." };
+  }
+  return { ok: true };
+}
+
+/** Bundle two or more creators under a shared Collap content header. */
+export async function collapseShortlistCreators(
+  shortlistId: string,
+  itemIds: string[]
+): Promise<ActionResult> {
+  if (itemIds.length < 2) {
+    return { ok: false, message: "Select at least two creators to collapse content." };
+  }
+
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+
+  const editable = await assertShortlistCreatorsEditable(actor.supabase, shortlistId);
+  if (!editable.ok) return editable;
+
+  const uniqueIds = [...new Set(itemIds)];
+  if (uniqueIds.length < 2) {
+    return { ok: false, message: "Select at least two distinct creators to collapse content." };
+  }
+
+  const { data: items, error: itemsError } = await actor.supabase
+    .from("discovery_shortlist_items")
+    .select("id, collapse_group_id")
+    .eq("shortlist_id", shortlistId)
+    .in("id", uniqueIds);
+
+  if (itemsError) return { ok: false, message: itemsError.message };
+  if (!items || items.length !== uniqueIds.length) {
+    return { ok: false, message: "One or more selected creators were not found on this shortlist." };
+  }
+
+  const typedItems = items as Array<{ id: string; collapse_group_id: string | null }>;
+  const existingGroupIds = [
+    ...new Set(typedItems.map((item) => item.collapse_group_id).filter(Boolean)),
+  ] as string[];
+
+  if (existingGroupIds.length > 1) {
+    return {
+      ok: false,
+      message: "Selected creators belong to different collapse groups. Uncollapse them first.",
+    };
+  }
+
+  const ungroupedCount = typedItems.filter((item) => !item.collapse_group_id).length;
+  if (existingGroupIds.length === 1 && ungroupedCount === 0) {
+    return { ok: false, message: "These creators are already collapsed together." };
+  }
+
+  const collapseGroupId = existingGroupIds[0] ?? crypto.randomUUID();
+
+  const { error: updateError } = await actor.supabase
+    .from("discovery_shortlist_items")
+    .update({
+      collapse_group_id: collapseGroupId,
+      collapse_label: COLLAPSE_CONTENT_LABEL,
+    } as never)
+    .eq("shortlist_id", shortlistId)
+    .in("id", uniqueIds);
+
+  if (updateError) {
+    if (isMissingCollapseColumnsError(updateError.message)) {
+      return { ok: false, message: COLLAPSE_MIGRATION_HINT };
+    }
+    return { ok: false, message: updateError.message };
+  }
+
+  revalidate(shortlistId);
+  const count = uniqueIds.length;
+  return {
+    ok: true,
+    message: `${count} creator${count === 1 ? "" : "s"} collapsed into Collap content.`,
+  };
+}
+
+/** Remove selected creators from their collapse bundle. */
+export async function uncollapseShortlistCreators(
+  shortlistId: string,
+  itemIds: string[]
+): Promise<ActionResult> {
+  if (itemIds.length === 0) {
+    return { ok: false, message: "Select at least one collapsed creator to uncollapse." };
+  }
+
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+
+  const editable = await assertShortlistCreatorsEditable(actor.supabase, shortlistId);
+  if (!editable.ok) return editable;
+
+  const uniqueIds = [...new Set(itemIds)];
+
+  const { data: items, error: itemsError } = await actor.supabase
+    .from("discovery_shortlist_items")
+    .select("id, collapse_group_id")
+    .eq("shortlist_id", shortlistId)
+    .in("id", uniqueIds);
+
+  if (itemsError) return { ok: false, message: itemsError.message };
+  if (!items?.length) {
+    return { ok: false, message: "No matching creators found on this shortlist." };
+  }
+
+  const collapsedIds = (items as Array<{ id: string; collapse_group_id: string | null }>)
+    .filter((item) => item.collapse_group_id)
+    .map((item) => item.id);
+
+  if (collapsedIds.length === 0) {
+    return { ok: false, message: "Selected creators are not part of a collapse bundle." };
+  }
+
+  const affectedGroupIds = [
+    ...new Set(
+      (items as Array<{ id: string; collapse_group_id: string | null }>)
+        .map((item) => item.collapse_group_id)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+
+  const { error: updateError } = await actor.supabase
+    .from("discovery_shortlist_items")
+    .update({
+      collapse_group_id: null,
+      collapse_label: null,
+    } as never)
+    .eq("shortlist_id", shortlistId)
+    .in("id", collapsedIds);
+
+  if (updateError) {
+    if (isMissingCollapseColumnsError(updateError.message)) {
+      return { ok: false, message: COLLAPSE_MIGRATION_HINT };
+    }
+    return { ok: false, message: updateError.message };
+  }
+
+  for (const groupId of affectedGroupIds) {
+    const { data: remaining } = await actor.supabase
+      .from("discovery_shortlist_items")
+      .select("id")
+      .eq("shortlist_id", shortlistId)
+      .eq("collapse_group_id", groupId);
+
+    const remainingIds = ((remaining ?? []) as Array<{ id: string }>).map((row) => row.id);
+    if (remainingIds.length === 1) {
+      await actor.supabase
+        .from("discovery_shortlist_items")
+        .update({
+          collapse_group_id: null,
+          collapse_label: null,
+        } as never)
+        .eq("id", remainingIds[0]!);
+    }
+  }
+
+  revalidate(shortlistId);
+  const count = collapsedIds.length;
+  return {
+    ok: true,
+    message: `${count} creator${count === 1 ? "" : "s"} removed from Collap content.`,
+  };
 }

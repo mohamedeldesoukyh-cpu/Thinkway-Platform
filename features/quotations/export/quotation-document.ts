@@ -3,6 +3,10 @@
  */
 import { formatDualCurrency, REPORTING_CURRENCY } from "@/lib/commercial/fx-aggregation";
 import {
+  COLLAPSE_CONTENT_LABEL,
+  collapseContentPreviewLabel,
+} from "@/lib/discovery/collapse-content";
+import {
   QUOTATION_CLIENT_LABELS,
   resolveQuotationStatusLabel,
 } from "@/features/quotations/constants";
@@ -17,7 +21,15 @@ import type { QuotationDetail, QuotationItemRow } from "../types";
 import type { CreatorTierLabel } from "@/lib/creators/creator-tier";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
 import { formatCreatorCount } from "@/features/discovery/components/creator-search/creator-search-utils";
-import { computeReachForecast } from "@/lib/performance/reach-forecast-engine";
+import { deliverableTypeLines } from "@/lib/quotations/quotation-deliverable-types";
+import { optimizeQuotationCampaign } from "@/lib/quotations/quotation-optimization";
+import { evaluateQuotationDecision } from "@/lib/quotations/quotation-decision";
+import {
+  computeCampaignForecastFromProfiles,
+  forecastCreator,
+  quotationItemsToForecastProfiles,
+  type CampaignForecastDeliverableInput,
+} from "@/lib/campaign-forecast";
 import {
   buildQuotationMainCategoryBreakdown,
   formatQuotationMainCategoryLabels,
@@ -29,8 +41,10 @@ import {
   exportItemServiceDescription,
   exportItemTierLabel,
   exportItemTypeLabel,
+  formatCreatorHandle,
   groupQuotationExportItems,
   optionNumberLabel,
+  quotationCreatorDuplicateKey,
   resolveExportCreatorProfile,
   resolveExportGroupEngagementRate,
   resolveExportGroupFollowers,
@@ -38,11 +52,18 @@ import {
   resolveExportItemCreatorCategories,
   type QuotationExportItem,
 } from "./quotation-export-utils";
+import {
+  collapsePackageCreatorSignature,
+  collapsePackageGroupItems,
+  collapsePackageLeaderItem,
+  collapsePackageOptionNumber,
+} from "@/lib/quotations/quotation-collapse-package";
+import { platformLabel } from "@/features/campaigns/line-assignment";
 import { buildQuotationCreatorProfileSource } from "@/lib/quotations/quotation-creator-source";
 import { resolveExportAvatarProxyUrl } from "./quotation-export-avatars";
 import {
   isLumpSumPricingTemplate,
-  isShowcaseTemplate,
+  isCreatorDeckTemplate,
   type QuotationTemplateVariant,
 } from "./quotation-template";
 
@@ -79,6 +100,41 @@ export type QuotationDocCreatorGroup = {
   rows: QuotationDocRow[];
 };
 
+export type QuotationDocCollapsePackageCreator = {
+  creator: string;
+  handle: string;
+  platform: string;
+  platformIcons: string[];
+  avatarUrl: string | null;
+  avatarProxyUrl: string | null;
+  profileUrl: string | null;
+  followers: string;
+  engagementRate: string;
+  tier: string;
+};
+
+export type QuotationDocCollapsePackage = {
+  collapseGroupId: string;
+  optionLabel: string;
+  optionNumber: number;
+  serviceDescription: string;
+  type: string;
+  /** Human-readable platform labels (fallback). */
+  platforms: string;
+  platformIcons: string[];
+  deliverables: string;
+  clientCost: string;
+  creators: QuotationDocCollapsePackageCreator[];
+};
+
+export type QuotationDocCollapseContentGroup = {
+  bundleKey: string;
+  label: string;
+  previewLabel: string;
+  optionCount: number;
+  packages: QuotationDocCollapsePackage[];
+};
+
 export type QuotationDocRow = {
   creator: string;
   option: string;
@@ -92,6 +148,10 @@ export type QuotationDocRow = {
   serviceDescription: string;
   tier: string;
   type: string;
+  /** Collap package follower rows are identity-only and excluded from commercial tables. */
+  isCollapsePackageFollower?: boolean;
+  isCollapsePackageLeader?: boolean;
+  collapseOptionLabel?: string | null;
   /** Internal only — unit influencer cost. */
   unitCost?: string;
   /** Client cost (revenue). */
@@ -173,6 +233,7 @@ export type QuotationDocument = {
   dateLabel: string;
   rows: QuotationDocRow[];
   creatorGroups: QuotationDocCreatorGroup[];
+  collapseContentGroups: QuotationDocCollapseContentGroup[];
   commercialKpis: QuotationDocumentKpi[];
   summary: {
     totalCost?: string;
@@ -184,12 +245,18 @@ export type QuotationDocument = {
     grandTotal: string;
     totalAgencyMargin: string;
     creatorCount: number;
+    audienceSize: string;
     estimatedReach: string;
     estimatedEngagement: string;
     categoryBreakdown: QuotationDocumentBreakdown[];
     tierBreakdown: QuotationDocumentBreakdown[];
     fullTierBreakdown: QuotationDocumentFullTierBreakdown;
     insightBullets: string[];
+    campaignHealthScore?: number;
+    campaignDecisionScore?: number;
+    launchReadiness?: string | null;
+    topDecisionRecommendation?: string | null;
+    topOptimizationRecommendation?: string | null;
   };
   notes: string | null;
   termsSections: Array<{ title: string; body: string }>;
@@ -246,16 +313,44 @@ function exportEngagementRateLabel(rate: number | null | undefined): string {
   return `${num(rate, 2)}%`;
 }
 
+function deliverablesFromExportItems(
+  items: QuotationExportItem[]
+): CampaignForecastDeliverableInput[] {
+  const deliverables: CampaignForecastDeliverableInput[] = [];
+  for (const item of items) {
+    for (const deliverable of item.deliverables ?? []) {
+      for (const line of deliverableTypeLines(deliverable)) {
+        if (!line.type.trim()) continue;
+        deliverables.push({
+          contentType: line.type,
+          platform: deliverable.platform ?? item.platform,
+          quantity: line.quantity,
+        });
+      }
+    }
+  }
+  return deliverables;
+}
+
 function exportGroupEstimatedReach(input: {
   followers: number | null;
   platform: string | null;
+  engagementRate?: number | null;
+  deliverables?: CampaignForecastDeliverableInput[];
 }): number | null {
   const platform =
     input.platform ?? (input.followers != null ? "instagram" : null);
-  return computeReachForecast({
-    followers: input.followers,
-    platform,
-  }).forecastReach;
+  const forecast = forecastCreator(
+    {
+      creatorKey: "export",
+      followers: input.followers,
+      platform,
+      engagementRate: input.engagementRate ?? null,
+      deliverables: input.deliverables,
+    },
+    null
+  );
+  return forecast?.estimatedReach ?? null;
 }
 
 function averageFinite(values: number[]): number | null {
@@ -285,8 +380,14 @@ function buildQuotationFullTierBreakdown(input: {
     const platform = resolveExportGroupPlatform(group.items);
     const followers = resolveExportGroupFollowers(group.items);
     const engagementRate = resolveExportGroupEngagementRate(group.items, followers);
+    const deliverables = deliverablesFromExportItems(group.items);
     const tier = resolveCreatorTierLabel({ followers });
-    const estimatedReach = exportGroupEstimatedReach({ followers, platform });
+    const estimatedReach = exportGroupEstimatedReach({
+      followers,
+      platform,
+      engagementRate,
+      deliverables: deliverables.length ? deliverables : undefined,
+    });
     const mainCategories = resolveQuotationCreatorMainCategories(
       mergeCreatorGroupCategories(group.items)
     );
@@ -408,7 +509,6 @@ function buildSummaryInsightBullets(input: {
   creatorCount: number;
   categoryBreakdown: QuotationDocumentBreakdown[];
   tierBreakdown: QuotationDocumentBreakdown[];
-  estimatedReach: string;
   estimatedEngagement: string;
 }): string[] {
   const bullets: string[] = [];
@@ -431,24 +531,39 @@ function buildSummaryInsightBullets(input: {
 
   if (input.creatorCount > 0) {
     bullets.push(
-      `Campaign scale: ${input.creatorCount} creator${input.creatorCount === 1 ? "" : "s"} with estimated reach ${input.estimatedReach} and average ER ${input.estimatedEngagement}.`
+      `Campaign scale: ${input.creatorCount} creator${input.creatorCount === 1 ? "" : "s"} with average ER ${input.estimatedEngagement}.`
     );
   }
 
   return bullets;
 }
 
-function deliverablesLabel(item: QuotationItemRow): string {
-  if (!item.deliverables.length) return "—";
-  return item.deliverables
-    .map((d) => `${d.quantity}× ${d.platform} ${d.type}`.trim())
-    .join(", ");
+function deliverablesLabel(item: QuotationExportItem): string {
+  return exportItemTypeLabel(item);
+}
+
+function exportPlatformDisplayLabel(
+  item: QuotationExportItem,
+  platformFields: ReturnType<typeof exportItemPlatformIcons>
+): string {
+  if (platformFields.allPlatforms) return "All platforms";
+  if (platformFields.platformIcons.length > 1) {
+    return platformFields.platformIcons
+      .map((platform) => platformLabel(platform))
+      .join(" + ");
+  }
+  if (platformFields.platformIcons.length === 1) {
+    return platformLabel(platformFields.platformIcons[0]!);
+  }
+  const raw = item.platform?.trim();
+  return raw ? platformLabel(raw) : "—";
 }
 
 function buildDocRow(
   item: QuotationExportItem,
   audience: QuotationDocumentAudience,
-  gpTargetPct: number | null | undefined
+  gpTargetPct: number | null | undefined,
+  allItems?: readonly QuotationExportItem[]
 ): QuotationDocRow {
   const rowGpColor = gpHealthExportColor({
     gpValueEgp: item.gp_value_egp,
@@ -456,11 +571,25 @@ function buildDocRow(
     targetPct: gpTargetPct ?? undefined,
   });
   const platformFields = exportItemPlatformIcons(item);
+  const collapseGroupId = item.collapse_group_id ?? null;
+  const collapseMembers =
+    collapseGroupId && allItems
+      ? collapsePackageGroupItems([...allItems], collapseGroupId)
+      : [];
+  const isCollapsePackageLeader =
+    collapseMembers.length > 0 &&
+    collapsePackageLeaderItem(collapseMembers).id === item.id;
+  const isCollapsePackageFollower =
+    collapseMembers.length > 0 && !isCollapsePackageLeader;
+  const collapseOptionLabel =
+    collapseMembers.length > 0
+      ? optionNumberLabel(collapsePackageOptionNumber(allItems ?? [], collapseMembers))
+      : null;
 
   const row: QuotationDocRow = {
     creator: item.creator_name ?? item.handle ?? "Creator",
     option: optionNumberLabel(item.option_number),
-    platform: item.platform ?? "—",
+    platform: exportPlatformDisplayLabel(item, platformFields),
     platformIcons: platformFields.platformIcons,
     allPlatforms: platformFields.allPlatforms,
     followers: item.followers != null ? num(item.followers) : "—",
@@ -471,6 +600,9 @@ function buildDocRow(
     serviceDescription: exportItemServiceDescription(item),
     tier: exportItemTierLabel(item),
     type: exportItemTypeLabel(item),
+    isCollapsePackageFollower,
+    isCollapsePackageLeader,
+    collapseOptionLabel,
     clientCost: formatDualCurrency({
       amount: item.revenue,
       currency: item.cost_currency,
@@ -513,6 +645,7 @@ function buildCreatorGroup(
   group: ReturnType<typeof groupQuotationExportItems>[number],
   audience: QuotationDocumentAudience,
   gpTargetPct: number | null | undefined,
+  allItems: QuotationExportItem[],
   publicationShotsByCreatorKey?: Map<string, QuotationDocPublicationShot[]>
 ): QuotationDocCreatorGroup {
   const headerItem = group.items[0]!;
@@ -542,8 +675,119 @@ function buildCreatorGroup(
     isVerified: Boolean(profileSource.isVerified),
     optionCount: group.items.length,
     publicationShots: publicationShotsByCreatorKey?.get(group.creatorKey) ?? [],
-    rows: group.items.map((item) => buildDocRow(item, audience, gpTargetPct)),
+    rows: group.items.map((item) => buildDocRow(item, audience, gpTargetPct, allItems)),
   };
+}
+
+function buildCollapsePackageCreator(item: QuotationExportItem): QuotationDocCollapsePackageCreator {
+  const profile = resolveExportCreatorProfile(item);
+  const platformFields = exportItemPlatformIcons(item);
+  return {
+    creator: profile.creator,
+    handle: formatCreatorHandle(item.handle),
+    platform: profile.platform ?? item.platform ?? "—",
+    platformIcons: platformFields.platformIcons,
+    avatarUrl: profile.avatarUrl,
+    avatarProxyUrl: resolveExportAvatarProxyUrl(item, profile.profileUrl, profile.avatarUrl),
+    profileUrl: profile.profileUrl,
+    followers: item.followers != null ? num(item.followers) : "—",
+    engagementRate:
+      item.engagement_rate != null ? `${num(item.engagement_rate, 2)}%` : "—",
+    tier: exportItemTierLabel(item),
+  };
+}
+
+function buildCollapsePackage(
+  groupItems: QuotationExportItem[],
+  allItems: QuotationExportItem[],
+  audience: QuotationDocumentAudience,
+  gpTargetPct: number | null | undefined
+): QuotationDocCollapsePackage {
+  const leader = collapsePackageLeaderItem(groupItems);
+  const leaderRow = buildDocRow(leader as QuotationExportItem, audience, gpTargetPct, allItems);
+  const leaderPlatformFields = exportItemPlatformIcons(leader as QuotationExportItem);
+
+  return {
+    collapseGroupId: groupItems[0]!.collapse_group_id!,
+    optionLabel: optionNumberLabel(collapsePackageOptionNumber(allItems, groupItems)),
+    optionNumber: collapsePackageOptionNumber(allItems, groupItems),
+    serviceDescription: leaderRow.serviceDescription,
+    type: leaderRow.type,
+    /** Package deliverable platform (leader line) — not a union of every creator profile. */
+    platforms: leaderRow.platform,
+    platformIcons: leaderPlatformFields.platformIcons,
+    deliverables: leaderRow.deliverables,
+    clientCost: leaderRow.clientCost,
+    creators: groupItems.map((item) => buildCollapsePackageCreator(item)),
+  };
+}
+
+function buildQuotationCollapseContentGroups(
+  items: QuotationExportItem[],
+  audience: QuotationDocumentAudience,
+  gpTargetPct: number | null | undefined
+): QuotationDocCollapseContentGroup[] {
+  const byCollapseId = new Map<string, QuotationExportItem[]>();
+  for (const item of items) {
+    if (!item.collapse_group_id) continue;
+    const bucket = byCollapseId.get(item.collapse_group_id) ?? [];
+    bucket.push(item);
+    byCollapseId.set(item.collapse_group_id, bucket);
+  }
+
+  const bySignature = new Map<string, QuotationExportItem[][]>();
+  for (const members of byCollapseId.values()) {
+    const sortedMembers = [...members].sort(
+      (a, b) => a.sort_order - b.sort_order || a.id.localeCompare(b.id)
+    );
+    const signature = collapsePackageCreatorSignature(sortedMembers);
+    const bucket = bySignature.get(signature) ?? [];
+    bucket.push(sortedMembers);
+    bySignature.set(signature, bucket);
+  }
+
+  const bundles: QuotationDocCollapseContentGroup[] = [];
+
+  for (const [bundleKey, groups] of bySignature.entries()) {
+    const sortedGroups = [...groups].sort((left, right) => {
+      const leaderLeft = collapsePackageLeaderItem(left);
+      const leaderRight = collapsePackageLeaderItem(right);
+      return (
+        leaderLeft.sort_order - leaderRight.sort_order ||
+        leaderLeft.id.localeCompare(leaderRight.id)
+      );
+    });
+
+    const firstMembers = sortedGroups[0] ?? [];
+    const label =
+      firstMembers.find((row) => row.collapse_label)?.collapse_label?.trim() ||
+      COLLAPSE_CONTENT_LABEL;
+
+    bundles.push({
+      bundleKey,
+      label,
+      previewLabel: collapseContentPreviewLabel(label),
+      optionCount: sortedGroups.length,
+      packages: sortedGroups.map((members) =>
+        buildCollapsePackage(members, items, audience, gpTargetPct)
+      ),
+    });
+  }
+
+  bundles.sort((left, right) => {
+    const leaderLeft = collapsePackageLeaderItem(
+      byCollapseId.get(left.packages[0]?.collapseGroupId ?? "") ?? []
+    );
+    const leaderRight = collapsePackageLeaderItem(
+      byCollapseId.get(right.packages[0]?.collapseGroupId ?? "") ?? []
+    );
+    return (
+      leaderLeft.sort_order - leaderRight.sort_order ||
+      leaderLeft.id.localeCompare(leaderRight.id)
+    );
+  });
+
+  return bundles;
 }
 
 export function buildQuotationDocument(
@@ -557,7 +801,7 @@ export function buildQuotationDocument(
 ): QuotationDocument {
   const audience = options?.audience ?? "client";
   const template = options?.template ?? "detailed";
-  const publicationShotsByCreatorKey = isShowcaseTemplate(template)
+  const publicationShotsByCreatorKey = isCreatorDeckTemplate(template)
     ? options?.publicationShotsByCreatorKey
     : undefined;
   const items = detail.items as QuotationExportItem[];
@@ -569,7 +813,18 @@ export function buildQuotationDocument(
   });
 
   const creatorGroups = groupQuotationExportItems(items).map((group) =>
-    buildCreatorGroup(group, audience, detail.gp_target_pct, publicationShotsByCreatorKey)
+    buildCreatorGroup(
+      group,
+      audience,
+      detail.gp_target_pct,
+      items,
+      publicationShotsByCreatorKey
+    )
+  );
+  const collapseContentGroups = buildQuotationCollapseContentGroups(
+    items,
+    audience,
+    detail.gp_target_pct
   );
   const exportGroups = groupQuotationExportItems(items);
   const rows = creatorGroups.flatMap((group) => group.rows);
@@ -591,6 +846,20 @@ export function buildQuotationDocument(
     groups: exportGroups,
     campaignName: detail.campaign_name ?? detail.name,
   });
+  const rosterForecast = computeCampaignForecastFromProfiles(
+    quotationItemsToForecastProfiles(detail.items)
+  );
+  const optimization = optimizeQuotationCampaign(detail.items, {
+    budgetAmount: detail.total_revenue_egp + detail.total_af_egp,
+    currency: REPORTING_CURRENCY,
+    campaignPlatform: detail.items[0]?.platform ?? null,
+  });
+  const decision = evaluateQuotationDecision(detail.items, {
+    commercial: {
+      budget: { amount: detail.total_revenue_egp + detail.total_af_egp, currency: REPORTING_CURRENCY },
+    },
+    platforms: detail.items[0]?.platform ? [detail.items[0].platform] : [],
+  });
 
   const gpColor = gpHealthExportColor({
     gpValueEgp: detail.total_gp_value_egp,
@@ -611,15 +880,14 @@ export function buildQuotationDocument(
     creatorCount: uniqueCreatorCount,
     categoryBreakdown,
     tierBreakdown,
-    estimatedReach: num(detail.estimated_reach),
     estimatedEngagement: avgEr,
   });
 
   const clientKpis: QuotationDocumentKpi[] = [
     { label: "Creators", value: String(uniqueCreatorCount) },
-    { label: "Est. Reach", value: num(detail.estimated_reach) },
+    { label: "Audience Size", value: num(rosterForecast.audienceSize) },
     { label: "Est. Engagement", value: avgEr },
-    ...(template === "showcase"
+    ...(template === "showcase" || template === "pitch"
       ? []
       : isLumpSumPricingTemplate(template)
         ? [
@@ -669,6 +937,7 @@ export function buildQuotationDocument(
     dateLabel: formatDateLabel(detail.issue_date),
     rows,
     creatorGroups,
+    collapseContentGroups,
     commercialKpis: audience === "internal" ? internalKpis : clientKpis,
     summary: {
       ...(audience === "internal"
@@ -684,12 +953,18 @@ export function buildQuotationDocument(
       grandTotal,
       totalAgencyMargin,
       creatorCount: uniqueCreatorCount,
-      estimatedReach: num(detail.estimated_reach),
+      audienceSize: num(rosterForecast.audienceSize),
+      estimatedReach: num(rosterForecast.estimatedReach),
       estimatedEngagement: avgEr,
       categoryBreakdown,
       tierBreakdown,
       fullTierBreakdown,
       insightBullets,
+      campaignHealthScore: optimization.healthScore.overall,
+      campaignDecisionScore: decision.decisionScore.overall,
+      launchReadiness: decision.readinessLabel,
+      topDecisionRecommendation: decision.approvalSummary.recommendation,
+      topOptimizationRecommendation: optimization.recommendations[0]?.action ?? null,
     },
     notes: detail.notes,
     termsSections: parseQuotationTermsText(detail.terms),

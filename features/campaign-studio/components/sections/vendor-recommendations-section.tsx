@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
 import { cn } from "@/lib/utils";
 import type {
@@ -61,9 +62,11 @@ import {
   getCampaignFacts,
   resolveInfluencerEstimateCurrency,
 } from "@/features/campaign-director/facts/facts-display-bridge";
+import { DiscoveryCreatorDetailHost } from "@/features/discovery/components/discovery-creator-detail-host";
 import type { CreatorDrawerSelection } from "@/features/campaign-decision-workspace/components/creator-drawer";
-import { CreatorDrawer } from "@/features/campaign-decision-workspace/components/creator-drawer";
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
+import { STUDIO_REF_CLASSES } from "../../constants/campaign-studio-ref-tokens";
+import { useStudioRefMode } from "../../hooks/use-studio-ref-mode";
 import { ShowMoreButton } from "./shared/studio-ui-primitives";
 import { STUDIO_VENDOR_INITIAL_VISIBLE } from "../../constants/hydration-limits";
 import type { CampaignObject } from "@/features/campaign-intelligence";
@@ -139,22 +142,41 @@ function toDrawerSelection(vendor: DisplayVendor): CreatorDrawerSelection {
   };
 }
 
+function vendorInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
 function VendorAvatar({
   vendor,
   onOpenDetails,
+  refMode = false,
 }: {
   vendor: DisplayVendor;
   onOpenDetails: () => void;
+  refMode?: boolean;
 }) {
-  const avatar = (
+  const avatarInner = vendor.avatarUrl ? (
+    <CreatorAvatarImage
+      avatarUrl={vendor.avatarUrl}
+      profileUrl={vendor.profileUrl}
+      size="sm"
+      alt={vendor.displayName}
+      className="size-full"
+    />
+  ) : (
+    vendorInitials(vendor.displayName)
+  );
+
+  const avatar = refMode ? (
+    <div className={STUDIO_REF_CLASSES.vendorAv}>{avatarInner}</div>
+  ) : (
     <div className="relative size-[38px] shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-[#0057FF] to-[#7C3AED]">
-      <CreatorAvatarImage
-        avatarUrl={vendor.avatarUrl}
-        profileUrl={vendor.profileUrl}
-        size="sm"
-        alt={vendor.displayName}
-        className="size-full"
-      />
+      {avatarInner}
     </div>
   );
 
@@ -266,6 +288,7 @@ function VendorCardBlock({
   stageRoleChange: (creatorId: string, role: "main" | "alternative", displayName?: string) => Promise<void>;
   openCreatorDetails: (vendor: DisplayVendor) => void;
 }) {
+  const refMode = useStudioRefMode();
   const decision = vendor.id ? vendorDecisions[vendor.id] : undefined;
   const isPending = pendingCreatorId === vendor.id;
   const draftChange = draftChangeForCreator(draft, vendor.id);
@@ -292,6 +315,171 @@ function VendorCardBlock({
     campaignObject,
     index
   );
+
+  const actionButtons = pendingRemoval ? (
+    <button
+      type="button"
+      disabled={!canAct || isPending}
+      className={refMode ? STUDIO_REF_CLASSES.vaction : STUDIO_CLASSES.actBtn}
+      onClick={() => vendor.id && void undoDraftChange(vendor.id)}
+    >
+      <Undo2Icon className="size-3" />
+      Undo removal
+    </button>
+  ) : (
+    <>
+      <button
+        type="button"
+        disabled={!canAct || isPending || decision === "approved" || pendingApprove}
+        className={
+          refMode
+            ? cn(STUDIO_REF_CLASSES.vaction, STUDIO_REF_CLASSES.vactionApprove)
+            : STUDIO_CLASSES.actBtnApprove
+        }
+        onClick={() =>
+          vendor.id && void applyDecision(vendor.id, "approve", undefined, vendor.displayName)
+        }
+      >
+        <CheckIcon className="size-3" />
+        {decision === "approved" || pendingApprove ? "Approved (staged)" : "Approve"}
+      </button>
+      <button
+        type="button"
+        disabled={!canAct || isPending || pendingReject}
+        className={refMode ? STUDIO_REF_CLASSES.vaction : STUDIO_CLASSES.actBtn}
+        onClick={() =>
+          vendor.id && void applyDecision(vendor.id, "reject", undefined, vendor.displayName)
+        }
+      >
+        <XIcon className="size-3" />
+        {pendingReject ? "Rejected (staged)" : "Reject"}
+      </button>
+      {vendor.slateRole === "maybe" ? (
+        <button
+          type="button"
+          disabled={!canAct || isPending}
+          className={refMode ? STUDIO_REF_CLASSES.vaction : STUDIO_CLASSES.actBtn}
+          onClick={() => vendor.id && void stageRoleChange(vendor.id, "main", vendor.displayName)}
+        >
+          Promote to main
+        </button>
+      ) : (
+        <button
+          type="button"
+          disabled={!canAct || isPending}
+          className={refMode ? STUDIO_REF_CLASSES.vaction : STUDIO_CLASSES.actBtn}
+          onClick={() =>
+            vendor.id && void stageRoleChange(vendor.id, "alternative", vendor.displayName)
+          }
+        >
+          Move to alt
+        </button>
+      )}
+      <button
+        type="button"
+        disabled={!canAct || isPending || decision === "shortlisted"}
+        className={refMode ? STUDIO_REF_CLASSES.vaction : STUDIO_CLASSES.actBtn}
+        onClick={() => vendor.id && void applyDecision(vendor.id, "shortlist", vendor.id)}
+      >
+        <PlusIcon className="size-3" />+ Shortlist
+      </button>
+      <button
+        type="button"
+        className={refMode ? STUDIO_REF_CLASSES.vaction : STUDIO_CLASSES.actBtn}
+        onClick={() => openCreatorDetails(vendor)}
+      >
+        View details
+      </button>
+      <button
+        type="button"
+        disabled={!canAct || isPending}
+        className={refMode ? STUDIO_REF_CLASSES.vaction : STUDIO_CLASSES.actBtn}
+        onClick={() => void stageRemoval(vendor)}
+        title="Stage removal — recalculated on Apply All Updates"
+      >
+        <Trash2Icon className="size-3" />
+        Remove
+      </button>
+    </>
+  );
+
+  if (refMode) {
+    return (
+      <div
+        key={vendor.id ?? `${vendor.handle}-${index}`}
+        className={cn(STUDIO_REF_CLASSES.vendorCard, pendingRemoval && "opacity-75")}
+      >
+        <div className={STUDIO_REF_CLASSES.vendorTop}>
+          {vendor.rank != null ? (
+            <span className={STUDIO_REF_CLASSES.vendorRank}>#{vendor.rank}</span>
+          ) : null}
+          <VendorAvatar vendor={vendor} onOpenDetails={() => openCreatorDetails(vendor)} refMode />
+          <div className={STUDIO_REF_CLASSES.vendorInfo}>
+            <button
+              type="button"
+              className={cn(STUDIO_REF_CLASSES.vendorName, STUDIO_REF_CLASSES.vendorNameBtn)}
+              onClick={() => openCreatorDetails(vendor)}
+            >
+              {vendor.displayName}
+            </button>
+            <div className={STUDIO_REF_CLASSES.vendorHandle}>
+              {vendor.handle}
+              {vendor.platform ? ` · ${vendor.platform}` : ""}
+            </div>
+          </div>
+          <div className={STUDIO_REF_CLASSES.vendorBadges}>
+            {vendor.tier ? (
+              <span className={cn(STUDIO_REF_CLASSES.vbadge, STUDIO_REF_CLASSES.vbadgeTier)}>
+                {vendor.tier}
+              </span>
+            ) : null}
+            {vendor.fitScore != null ? (
+              <span className={cn(STUDIO_REF_CLASSES.vbadge, STUDIO_REF_CLASSES.vbadgeFit)}>
+                Fit {Math.round(vendor.fitScore)}/100
+              </span>
+            ) : null}
+            {grounding.grounding.confidence != null ? (
+              <span className={cn(STUDIO_REF_CLASSES.vbadge, STUDIO_REF_CLASSES.vbadgeAi)}>
+                AI {grounding.grounding.confidence}%
+              </span>
+            ) : null}
+          </div>
+        </div>
+
+        <div className={STUDIO_REF_CLASSES.vendorStats}>
+          {formatFollowers(vendor.followers)} followers · {formatEngagement(vendor.engagementRate)} ER
+          {vendor.country ? <> · {vendor.country}</> : null}
+          {vendor.priceEstimate ? <> · {vendor.priceEstimate}</> : null}
+          {vendor.platform ? <> · est. 1 {vendor.platform} post</> : null}
+        </div>
+
+        <div className={STUDIO_REF_CLASSES.vendorWhy}>
+          <b>Why:</b> {grounding.whySelected}
+          {vendor.contentIdea ? (
+            <>
+              <br />
+              <span style={{ color: "var(--cs-blue-text)" }}>{vendor.contentIdea}</span>
+            </>
+          ) : null}
+        </div>
+
+        <div className={STUDIO_REF_CLASSES.vendorScores}>
+          {grounding.factors.slice(0, 5).map((f) => (
+            <span key={f.factor} className={STUDIO_REF_CLASSES.scoreChip} title={f.reason}>
+              {f.factor} {f.score}
+            </span>
+          ))}
+        </div>
+
+        <div className={STUDIO_REF_CLASSES.vendorActions}>{actionButtons}</div>
+        {!canAct ? (
+          <p className={STUDIO_REF_CLASSES.remainingNote}>
+            Save this studio message to enable creator actions.
+          </p>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -378,6 +566,7 @@ function VendorCardBlock({
         <p className="mt-2 text-[11.5px] text-[#6B7280]">
           {formatFollowers(vendor.followers)} followers ·{" "}
           <b className="text-foreground">{formatEngagement(vendor.engagementRate)} ER</b>
+          {vendor.country ? <> · {vendor.country}</> : null}
           {vendor.priceEstimate ? <> · {vendor.priceEstimate}</> : null}
           {vendor.platform ? <> · est. 1 {vendor.platform} post</> : null}
         </p>
@@ -417,88 +606,7 @@ function VendorCardBlock({
           ))}
         </div>
 
-        <div className="mt-2.5 flex flex-wrap gap-2">
-          {pendingRemoval ? (
-            <button
-              type="button"
-              disabled={!canAct || isPending}
-              className={STUDIO_CLASSES.actBtn}
-              onClick={() => vendor.id && void undoDraftChange(vendor.id)}
-            >
-              <Undo2Icon className="size-3" />
-              Undo removal
-            </button>
-          ) : (
-            <>
-              <button
-                type="button"
-                disabled={!canAct || isPending || decision === "approved" || pendingApprove}
-                className={STUDIO_CLASSES.actBtnApprove}
-                onClick={() => vendor.id && void applyDecision(vendor.id, "approve", undefined, vendor.displayName)}
-              >
-                <CheckIcon className="size-3" />
-                {decision === "approved" || pendingApprove ? "Approved (staged)" : "Approve"}
-              </button>
-              <button
-                type="button"
-                disabled={!canAct || isPending || pendingReject}
-                className={STUDIO_CLASSES.actBtn}
-                onClick={() => vendor.id && void applyDecision(vendor.id, "reject", undefined, vendor.displayName)}
-              >
-                <XIcon className="size-3" />
-                {pendingReject ? "Rejected (staged)" : "Reject"}
-              </button>
-              {vendor.slateRole === "maybe" ? (
-                <button
-                  type="button"
-                  disabled={!canAct || isPending}
-                  className={STUDIO_CLASSES.actBtn}
-                  onClick={() =>
-                    vendor.id && void stageRoleChange(vendor.id, "main", vendor.displayName)
-                  }
-                >
-                  Promote to main
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  disabled={!canAct || isPending}
-                  className={STUDIO_CLASSES.actBtn}
-                  onClick={() =>
-                    vendor.id && void stageRoleChange(vendor.id, "alternative", vendor.displayName)
-                  }
-                >
-                  Move to alt
-                </button>
-              )}
-              <button
-                type="button"
-                disabled={!canAct || isPending || decision === "shortlisted"}
-                className={STUDIO_CLASSES.actBtn}
-                onClick={() => vendor.id && void applyDecision(vendor.id, "shortlist", vendor.id)}
-              >
-                <PlusIcon className="size-3" />+ Shortlist
-              </button>
-              <button
-                type="button"
-                className={STUDIO_CLASSES.actBtn}
-                onClick={() => openCreatorDetails(vendor)}
-              >
-                View details
-              </button>
-              <button
-                type="button"
-                disabled={!canAct || isPending}
-                className={STUDIO_CLASSES.actBtn}
-                onClick={() => void stageRemoval(vendor)}
-                title="Stage removal — recalculated on Apply All Updates"
-              >
-                <Trash2Icon className="size-3" />
-                Remove
-              </button>
-            </>
-          )}
-        </div>
+        <div className="mt-2.5 flex flex-wrap gap-2">{actionButtons}</div>
         {!canAct ? (
           <p className="mt-1 text-[10px] text-[#6B7280]">
             Save this studio message to enable creator actions.
@@ -545,6 +653,7 @@ export function VendorRecommendationsSection({
   const [drawerCreator, setDrawerCreator] = useState<CreatorDrawerSelection | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [shortlistPickerMode, setShortlistPickerMode] = useState<"replace" | "merge" | null>(null);
+  const confirmDelete = useConfirmDelete();
 
   const previewCreatorsData = useMemo(() => {
     if (!campaignObject) return {} as CreatorsSectionData;
@@ -669,6 +778,12 @@ export function VendorRecommendationsSection({
   const stageRemoval = useCallback(
     async (vendor: DisplayVendor) => {
       if (!conversationId || !messageId || !vendor.id) return;
+      const ok = await confirmDelete(
+        `Remove ${vendor.displayName} from vendor recommendations? Changes apply when you save updates.`,
+        "Remove vendor?"
+      );
+      if (!ok) return;
+
       setPendingCreatorId(vendor.id);
       try {
         const result = await stageStudioDraftChangeAction({
@@ -690,7 +805,7 @@ export function VendorRecommendationsSection({
         setPendingCreatorId(null);
       }
     },
-    [conversationId, messageId, publishDraft]
+    [confirmDelete, conversationId, messageId, publishDraft]
   );
 
   const undoDraftChange = useCallback(
@@ -1133,7 +1248,11 @@ export function VendorRecommendationsSection({
         />
       ) : null}
       {!onCreatorClick ? (
-        <CreatorDrawer creator={drawerCreator} open={drawerOpen} onOpenChange={setDrawerOpen} />
+        <DiscoveryCreatorDetailHost
+          selection={drawerCreator}
+          open={drawerOpen}
+          onOpenChange={setDrawerOpen}
+        />
       ) : null}
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
-import { PlusIcon } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { PlusIcon, XIcon } from "lucide-react";
+import { Fragment, useState, type ReactNode } from "react";
 
 import { Input } from "@/components/ui/input";
 import { toggleCategoryInList } from "@/lib/creators/category-filter";
@@ -10,6 +10,8 @@ import {
   tierFilterPresetFields,
 } from "@/lib/creators/influencer-tier";
 import { DISCOVERY_PLATFORMS } from "@/lib/discovery/types";
+import { PLATFORM_LABELS } from "@/lib/social/platforms";
+import { PlatformIcon } from "@/lib/performance/platform-icon";
 import { cn } from "@/lib/utils";
 
 import {
@@ -17,24 +19,14 @@ import {
   AGE_RANGE_OPTIONS,
   CONTENT_TAG_SUGGESTIONS,
   DISCOVERY_FILTER_COUNTRIES,
+  DISCOVERY_FILTER_LANGUAGES,
   LAST_POST_WITHIN_OPTIONS,
 } from "./creator-search-filter-constants";
 import type { CreatorSearchFilters } from "./creator-search-types";
 
-/** Filter panel palette — Thinkway discovery filters */
-const TW_PRIMARY = "#1D9E75";
-const FP_LABEL = "#94a3b8";
-
 type FieldProps = {
   filters: CreatorSearchFilters;
   onChange: (next: CreatorSearchFilters) => void;
-};
-
-const PLATFORM_LABELS: Record<string, string> = {
-  instagram: "Instagram",
-  tiktok: "TikTok",
-  youtube: "YouTube",
-  twitter: "X (Twitter)",
 };
 
 const FOLLOWER_PRESETS = TIER_FILTER_RANGES.map((range) => ({
@@ -77,10 +69,9 @@ export function FieldLabel({ children, className }: { children: ReactNode; class
   return (
     <p
       className={cn(
-        "mb-[7px] text-[10px] font-bold uppercase tracking-[0.05em]",
+        "discovery-filter-field-label mb-[7px] text-[10px] font-bold uppercase tracking-[0.06em] text-[#64748b] dark:text-muted-foreground",
         className
       )}
-      style={{ color: FP_LABEL }}
     >
       {children}
     </p>
@@ -89,14 +80,75 @@ export function FieldLabel({ children, className }: { children: ReactNode; class
 
 export function FieldHint({ children }: { children: ReactNode }) {
   return (
-    <p className="mt-[5px] text-[10px]" style={{ color: FP_LABEL }}>
-      {children}
-    </p>
+    <p className="discovery-filter-field-hint mt-[5px] text-[10px] text-[#94a3b8] dark:text-muted-foreground">{children}</p>
   );
 }
 
 const filterInputClass =
-  "h-9 rounded-md border-[#e2e8f0] bg-white px-3 text-xs text-[#0f172a] shadow-none placeholder:text-[#94a3b8] focus-visible:border-[#1D9E75] focus-visible:ring-[3px] focus-visible:ring-[#1D9E75]/[0.08]";
+  "discovery-filter-input h-9 rounded-[10px] border-[rgba(0,87,255,0.14)] dark:border-[rgba(0,87,255,0.24)] bg-white dark:bg-card px-3 text-xs text-[#0f172a] dark:text-foreground shadow-none placeholder:text-[#94a3b8] dark:placeholder:text-muted-foreground focus-visible:border-[#0057FF] focus-visible:ring-[3px] focus-visible:ring-[rgba(0,87,255,0.12)]";
+
+const filterAddButtonClass =
+  "discovery-filter-add-btn inline-flex size-[34px] shrink-0 items-center justify-center rounded-[10px] border border-[rgba(0,87,255,0.14)] dark:border-[rgba(0,87,255,0.24)] bg-white dark:bg-card text-[#94a3b8] dark:text-muted-foreground transition-all duration-120 hover:border-[#0057FF] hover:bg-[#0057FF] hover:text-white disabled:opacity-40";
+
+const filterChipInactiveClass =
+  "border-[rgba(0,87,255,0.14)] dark:border-[rgba(0,87,255,0.24)] bg-white dark:bg-card text-[#475569] dark:text-muted-foreground hover:border-[rgba(0,87,255,0.24)] hover:bg-[rgba(239,246,255,0.95)] dark:hover:bg-primary/10 hover:text-[#0057FF] dark:hover:text-blue-300";
+
+const FILTER_CHIP_PREVIEW_COUNT = 6;
+
+function ExpandableChipGrid<T>({
+  items,
+  previewCount = FILTER_CHIP_PREVIEW_COUNT,
+  getKey,
+  isHighlighted,
+  renderChip,
+}: {
+  items: readonly T[];
+  previewCount?: number;
+  getKey: (item: T) => string;
+  isHighlighted?: (item: T) => boolean;
+  renderChip: (item: T) => ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const isActive = isHighlighted ?? (() => false);
+
+  const visibleItems = expanded
+    ? items
+    : items.filter((item, index) => index < previewCount || isActive(item));
+
+  const hiddenCount = items.filter(
+    (item, index) => index >= previewCount && !isActive(item)
+  ).length;
+
+  if (items.length <= previewCount) {
+    return (
+      <div className="flex flex-wrap gap-1.5">
+        {items.map((item) => (
+          <Fragment key={getKey(item)}>{renderChip(item)}</Fragment>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="flex flex-wrap gap-1.5">
+        {visibleItems.map((item) => (
+          <Fragment key={getKey(item)}>{renderChip(item)}</Fragment>
+        ))}
+      </div>
+      {hiddenCount > 0 || expanded ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((value) => !value)}
+          className="mt-2 text-[11px] font-medium text-[#0057FF] transition-colors hover:text-[#0046cc]"
+          aria-expanded={expanded}
+        >
+          {expanded ? "Show less" : `Show ${hiddenCount} more`}
+        </button>
+      ) : null}
+    </>
+  );
+}
 
 export function FilterInput(props: React.ComponentProps<typeof Input>) {
   return <Input className={cn(filterInputClass, props.className)} {...props} />;
@@ -129,22 +181,52 @@ export function FilterChip({
       onClick={onToggle}
       aria-pressed={active}
       className={cn(
-        "inline-flex h-[26px] shrink-0 items-center gap-1 whitespace-nowrap rounded-[20px] border px-2.5 text-[11px] font-medium transition-all duration-[140ms]",
+        "discovery-filter-chip inline-flex h-[26px] shrink-0 items-center gap-1 whitespace-nowrap rounded-[20px] border px-2.5 text-[11px] font-medium transition-all duration-[140ms]",
         active
-          ? "border-[#9edfc8] bg-[#ecfdf5] font-semibold text-[#168a66]"
-          : "border-[#e2e8f0] bg-white text-[#475569] hover:border-[#9edfc8] hover:bg-[#ecfdf5] hover:text-[#168a66]"
+          ? "border-[rgba(0,87,255,0.32)] bg-[rgba(0,87,255,0.1)] font-semibold text-[#0057FF] dark:text-blue-300"
+          : "border-[rgba(0,87,255,0.14)] dark:border-border bg-white dark:bg-card text-[#475569] dark:text-muted-foreground hover:border-[rgba(0,87,255,0.24)] hover:bg-[rgba(239,246,255,0.95)] dark:hover:bg-primary/10 hover:text-[#0057FF] dark:hover:text-blue-300"
       )}
     >
       <span>{label}</span>
       {active ? (
-        <span className="ml-px text-[12px] leading-none text-[#168a66]">×</span>
+        <span className="ml-px text-[12px] leading-none text-[#0057FF]">×</span>
       ) : (
-        <span
-          className="ml-px flex size-3.5 items-center justify-center rounded-full text-[10px] font-bold"
-          style={{ backgroundColor: "rgba(29,158,117,.12)", color: TW_PRIMARY }}
-        >
+        <span className="ml-px flex size-3.5 items-center justify-center rounded-full bg-[rgba(0,87,255,0.1)] text-[10px] font-bold text-[#0057FF]">
           +
         </span>
+      )}
+    </button>
+  );
+}
+
+export function PlatformFilterChip({
+  platform,
+  active,
+  onToggle,
+}: {
+  platform: string;
+  active: boolean;
+  onToggle: () => void;
+}) {
+  const label = PLATFORM_LABELS[platform as keyof typeof PLATFORM_LABELS] ?? platform;
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={active}
+      className={cn(
+        "discovery-filter-platform-chip inline-flex h-9 shrink-0 items-center gap-2 rounded-[10px] border px-2.5 text-[11px] font-semibold transition-all duration-[140ms]",
+        active
+          ? "border-[rgba(0,87,255,0.38)] bg-[rgba(0,87,255,0.1)] text-[#0057FF] shadow-[0_1px_3px_rgba(0,87,255,0.12)]"
+          : filterChipInactiveClass
+      )}
+    >
+      <PlatformIcon platform={platform} size="xs" variant="logo" className="size-5 shrink-0" />
+      <span>{label}</span>
+      {active ? (
+        <XIcon className="size-3 shrink-0 opacity-70" aria-hidden />
+      ) : (
+        <PlusIcon className="size-3 shrink-0 text-[#0057FF] opacity-50" aria-hidden />
       )}
     </button>
   );
@@ -165,10 +247,10 @@ export function RatePill({
       onClick={onToggle}
       aria-pressed={active}
       className={cn(
-        "inline-flex h-7 shrink-0 items-center rounded-md border px-3 text-[11px] font-semibold transition-all duration-[140ms]",
+        "discovery-filter-rate-pill inline-flex h-7 shrink-0 items-center rounded-[10px] border px-3 text-[11px] font-semibold transition-all duration-[140ms]",
         active
-          ? "border-[#1D9E75] bg-[#1D9E75] text-white"
-          : "border-[#e2e8f0] bg-white text-[#475569] hover:border-[#9edfc8] hover:bg-[#ecfdf5] hover:text-[#168a66]"
+          ? "border-[#0057FF] bg-[#0057FF] text-white"
+          : filterChipInactiveClass
       )}
     >
       {label}
@@ -190,7 +272,7 @@ export function SegmentedControl<T extends string>({
   return (
     <div
       className={cn(
-        "flex overflow-hidden rounded-md border border-[#e2e8f0]",
+        "flex overflow-hidden rounded-[10px] border border-[rgba(0,87,255,0.14)] dark:border-[rgba(0,87,255,0.24)]",
         className
       )}
       role="group"
@@ -204,10 +286,10 @@ export function SegmentedControl<T extends string>({
             aria-pressed={selected}
             onClick={() => onChange(option.value)}
             className={cn(
-              "flex-1 border-r border-[#e2e8f0] px-2 py-[7px] text-center text-[11px] font-medium transition-colors last:border-r-0",
+              "flex-1 border-r border-[rgba(0,87,255,0.12)] dark:border-[rgba(0,87,255,0.2)] px-2 py-[7px] text-center text-[11px] font-medium transition-colors last:border-r-0",
               selected
-                ? "bg-[#ecfdf5] font-semibold text-[#168a66]"
-                : "text-[#94a3b8] hover:bg-[#f8fafc] hover:text-[#475569]"
+                ? "bg-[rgba(0,87,255,0.1)] font-semibold text-[#0057FF] dark:text-blue-300"
+                : "text-[#94a3b8] dark:text-muted-foreground hover:bg-[rgba(239,246,255,0.95)] dark:hover:bg-primary/10 hover:text-[#475569] dark:hover:text-foreground"
             )}
           >
             {option.label}
@@ -261,7 +343,7 @@ function ClearLink({ onClear }: { onClear: () => void }) {
     <button
       type="button"
       onClick={onClear}
-      className="text-[10px] font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+      className="text-[10px] font-medium text-[#0057FF] underline-offset-2 hover:text-[#0046cc] hover:underline"
     >
       Clear
     </button>
@@ -282,7 +364,12 @@ function FieldGroup({
   className?: string;
 }) {
   return (
-    <div className={cn("mt-3.5 first:mt-0", className)}>
+    <div
+      className={cn(
+        "discovery-filter-field-group border-t border-[rgba(0,87,255,0.1)] pt-5 first:border-t-0 first:pt-0",
+        className
+      )}
+    >
       <div className="mb-[7px] flex items-center justify-between gap-2">
         <FieldLabel className="mb-0">{label}</FieldLabel>
         {showClear && onClear ? <ClearLink onClear={onClear} /> : null}
@@ -344,7 +431,7 @@ function CountryPillGrid({
           type="button"
           onClick={addDraftCountry}
           disabled={!draft.trim()}
-          className="inline-flex size-[34px] shrink-0 items-center justify-center rounded-md border border-[#e2e8f0] bg-white text-[#94a3b8] transition-all duration-120 hover:border-[#1D9E75] hover:bg-[#1D9E75] hover:text-white disabled:opacity-40"
+          className={filterAddButtonClass}
           aria-label="Add country"
         >
           <PlusIcon className="size-3.5" />
@@ -362,22 +449,109 @@ function CountryPillGrid({
           ))}
         </div>
       ) : null}
-      <div className="flex flex-wrap gap-1.5">
-        {DISCOVERY_FILTER_COUNTRIES.map(({ code, label }) => (
+      <ExpandableChipGrid
+        items={DISCOVERY_FILTER_COUNTRIES}
+        previewCount={6}
+        getKey={({ code }) => code}
+        isHighlighted={({ code }) => selected.includes(code)}
+        renderChip={({ code, label }) => (
           <FilterChip
-            key={code}
             label={label}
             active={selected.includes(code)}
             onToggle={() => onChange(toggleInList(selected, code))}
           />
-        ))}
+        )}
+      />
+    </>
+  );
+}
+
+function LanguagePillGrid({
+  selected,
+  onChange,
+  draft,
+  onDraftChange,
+  placeholder,
+  label,
+}: {
+  selected: string[];
+  onChange: (next: string[]) => void;
+  draft: string;
+  onDraftChange: (value: string) => void;
+  placeholder: string;
+  label?: string;
+}) {
+  function addDraftLanguage() {
+    const code = draft.trim().toLowerCase();
+    if (!code) return;
+    if (selected.some((entry) => entry.toLowerCase() === code)) {
+      onDraftChange("");
+      return;
+    }
+    onChange([...selected, code]);
+    onDraftChange("");
+  }
+
+  return (
+    <>
+      <div className="mb-2 flex gap-1.5">
+        <FilterInput
+          value={draft}
+          onChange={(e) => onDraftChange(e.target.value.toLowerCase())}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addDraftLanguage();
+            }
+          }}
+          placeholder={placeholder}
+          className="flex-1"
+          aria-label={label ?? "Language code"}
+        />
+        <button
+          type="button"
+          onClick={addDraftLanguage}
+          disabled={!draft.trim()}
+          className={filterAddButtonClass}
+          aria-label="Add language"
+        >
+          <PlusIcon className="size-3.5" />
+        </button>
       </div>
+      {selected.length > 0 ? (
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {selected.map((code) => (
+            <FilterChip
+              key={code}
+              label={
+                DISCOVERY_FILTER_LANGUAGES.find((entry) => entry.code === code)?.label ?? code
+              }
+              active
+              onToggle={() => onChange(selected.filter((value) => value !== code))}
+            />
+          ))}
+        </div>
+      ) : null}
+      <ExpandableChipGrid
+        items={DISCOVERY_FILTER_LANGUAGES}
+        previewCount={6}
+        getKey={({ code }) => code}
+        isHighlighted={({ code }) => selected.includes(code)}
+        renderChip={({ code, label: langLabel }) => (
+          <FilterChip
+            label={langLabel}
+            active={selected.includes(code)}
+            onToggle={() => onChange(toggleInList(selected, code, (value) => value.toLowerCase()))}
+          />
+        )}
+      />
     </>
   );
 }
 
 export function ContentSearchField({ filters, onChange }: FieldProps) {
   const [draftTag, setDraftTag] = useState("");
+  const [draftContentLanguage, setDraftContentLanguage] = useState("");
 
   function addDraftTag() {
     const value = draftTag.trim().replace(/^#+/, "");
@@ -402,8 +576,8 @@ export function ContentSearchField({ filters, onChange }: FieldProps) {
           className={cn(
             "relative inline-flex h-5 w-9 shrink-0 rounded-full border transition-colors",
             filters.advancedSearch
-              ? "border-[#1D9E75] bg-[#1D9E75]"
-              : "border-[#e2e8f0] bg-[#f1f5f9]"
+              ? "border-[#0057FF] bg-[#0057FF]"
+              : "border-[rgba(0,87,255,0.14)] dark:border-[rgba(0,87,255,0.24)] bg-[#f1f5f9] dark:bg-muted"
           )}
         >
           <span
@@ -421,24 +595,31 @@ export function ContentSearchField({ filters, onChange }: FieldProps) {
           onChange={(e) => onChange({ ...filters, contentKeyword: e.target.value })}
           placeholder="e.g. travel, #beauty"
         />
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {CONTENT_TAG_SUGGESTIONS.map((tag) => (
-            <FilterChip
-              key={tag}
-              label={tag.startsWith("#") ? tag : `#${tag}`}
-              active={filters.contentTags.some(
-                (selected) => selected.toLowerCase() === tag.toLowerCase()
-              )}
-              onToggle={() =>
-                onChange({
-                  ...filters,
-                  contentTags: toggleInList(filters.contentTags, tag, (value) =>
-                    value.toLowerCase()
-                  ),
-                })
-              }
-            />
-          ))}
+        <div className="mt-2">
+          <ExpandableChipGrid
+            items={CONTENT_TAG_SUGGESTIONS}
+            previewCount={3}
+            getKey={(tag) => tag}
+            isHighlighted={(tag) =>
+              filters.contentTags.some((selected) => selected.toLowerCase() === tag.toLowerCase())
+            }
+            renderChip={(tag) => (
+              <FilterChip
+                label={tag.startsWith("#") ? tag : `#${tag}`}
+                active={filters.contentTags.some(
+                  (selected) => selected.toLowerCase() === tag.toLowerCase()
+                )}
+                onToggle={() =>
+                  onChange({
+                    ...filters,
+                    contentTags: toggleInList(filters.contentTags, tag, (value) =>
+                      value.toLowerCase()
+                    ),
+                  })
+                }
+              />
+            )}
+          />
         </div>
       </FieldGroup>
 
@@ -461,7 +642,7 @@ export function ContentSearchField({ filters, onChange }: FieldProps) {
               type="button"
               onClick={addDraftTag}
               disabled={!draftTag.trim()}
-              className="inline-flex size-[34px] shrink-0 items-center justify-center rounded-md border border-[#e2e8f0] bg-white text-[#94a3b8] transition-all duration-120 hover:border-[#1D9E75] hover:bg-[#1D9E75] hover:text-white disabled:opacity-40"
+              className={filterAddButtonClass}
               aria-label="Add hashtag"
             >
               <PlusIcon className="size-3.5" />
@@ -470,19 +651,82 @@ export function ContentSearchField({ filters, onChange }: FieldProps) {
         </FieldGroup>
       ) : null}
 
-      <FieldGroup label="Last post within">
-        <FilterSelect
-          value={filters.lastPostWithin}
-          onChange={(e) => onChange({ ...filters, lastPostWithin: e.target.value })}
-          aria-label="Last post within"
-        >
-          {LAST_POST_WITHIN_OPTIONS.map((option) => (
-            <option key={option.value || "any"} value={option.value}>
-              {option.label}
-            </option>
+      <FieldGroup
+        label="Content language"
+        showClear={filters.contentLanguages.length > 0}
+        onClear={() => onChange({ ...filters, contentLanguages: [] })}
+      >
+        <LanguagePillGrid
+          selected={filters.contentLanguages}
+          onChange={(contentLanguages) => onChange({ ...filters, contentLanguages })}
+          draft={draftContentLanguage}
+          onDraftChange={setDraftContentLanguage}
+          placeholder="ISO code e.g. en"
+          label="Content language code"
+        />
+      </FieldGroup>
+
+    </>
+  );
+}
+
+export function LastPostField({ filters, onChange }: FieldProps) {
+  return (
+    <FieldGroup label="Last post within" className="mt-0">
+      <FilterSelect
+        value={filters.lastPostWithin}
+        onChange={(e) => onChange({ ...filters, lastPostWithin: e.target.value })}
+        aria-label="Last post within"
+      >
+        {LAST_POST_WITHIN_OPTIONS.map((option) => (
+          <option key={option.value || "any"} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </FilterSelect>
+      <FieldHint>Filters creators with synced recent publication dates when available.</FieldHint>
+    </FieldGroup>
+  );
+}
+
+export function BrandSafetyField({ filters, onChange }: FieldProps) {
+  return (
+    <FieldGroup label="Min. brand safety score" className="mt-0">
+      <FilterInput
+        value={filters.minBrandSafety}
+        onChange={(e) => onChange({ ...filters, minBrandSafety: e.target.value })}
+        type="number"
+        placeholder="60"
+      />
+    </FieldGroup>
+  );
+}
+
+export function CommercialPricingField({ filters, onChange }: FieldProps) {
+  return (
+    <>
+      <FieldGroup label="Pricing range (USD)" className="mt-0">
+        <RangeRow
+          min={filters.minEstimatedCost}
+          max={filters.maxEstimatedCost}
+          onMinChange={(value) => onChange({ ...filters, minEstimatedCost: value })}
+          onMaxChange={(value) => onChange({ ...filters, maxEstimatedCost: value })}
+          type="number"
+        />
+      </FieldGroup>
+      <FieldGroup label="Exclusivity">
+        <div className="flex flex-wrap gap-1.5">
+          {MOCKUP_CHIP_LABELS.exclusivity.map((label) => (
+            <MockupChip key={label} label={label} />
           ))}
-        </FilterSelect>
-        <FieldHint>Filters creators with synced recent publication dates when available.</FieldHint>
+        </div>
+      </FieldGroup>
+      <FieldGroup label="Contract status">
+        <div className="flex flex-wrap gap-1.5">
+          {MOCKUP_CHIP_LABELS.contractStatus.map((label) => (
+            <MockupChip key={label} label={label} />
+          ))}
+        </div>
       </FieldGroup>
     </>
   );
@@ -501,16 +745,19 @@ export function PlatformField({ filters, onChange }: FieldProps) {
       showClear={filters.platforms.length > 0}
       onClear={() => onChange({ ...filters, platforms: [] })}
     >
-      <div className="flex flex-wrap gap-1.5">
-        {DISCOVERY_PLATFORMS.map((platform) => (
-          <FilterChip
-            key={platform}
-            label={PLATFORM_LABELS[platform] ?? platform}
+      <ExpandableChipGrid
+        items={DISCOVERY_PLATFORMS}
+        previewCount={4}
+        getKey={(platform) => platform}
+        isHighlighted={(platform) => filters.platforms.includes(platform)}
+        renderChip={(platform) => (
+          <PlatformFilterChip
+            platform={platform}
             active={filters.platforms.includes(platform)}
             onToggle={() => toggle(platform)}
           />
-        ))}
-      </div>
+        )}
+      />
     </FieldGroup>
   );
 }
@@ -594,10 +841,11 @@ export function EngagementField({ filters, onChange }: FieldProps) {
 
 export function LocationField({ filters, onChange }: FieldProps) {
   const [draftCountry, setDraftCountry] = useState("");
+  const [draftLanguage, setDraftLanguage] = useState("");
 
   return (
     <>
-      <FieldGroup label="Creator country" className="mt-0">
+      <FieldGroup label="Creator country">
         <CountryPillGrid
           selected={filters.countries}
           onChange={(countries) => onChange({ ...filters, countries })}
@@ -606,24 +854,27 @@ export function LocationField({ filters, onChange }: FieldProps) {
           placeholder="ISO code e.g. EG"
         />
       </FieldGroup>
-      <div className="mt-3.5 grid grid-cols-2 gap-3">
-        <div>
-          <FieldLabel className="mt-0">Language</FieldLabel>
-          <FilterInput
-            value={filters.language}
-            onChange={(e) => onChange({ ...filters, language: e.target.value })}
-            placeholder="e.g. en"
-          />
-        </div>
-        <div>
-          <FieldLabel className="mt-0">Verification</FieldLabel>
-          <FilterSelect disabled aria-label="Verification (coming soon)" className="cursor-not-allowed opacity-60">
-            <option>Any</option>
-            <option>Verified</option>
-            <option>Unverified</option>
-          </FilterSelect>
-        </div>
-      </div>
+      <FieldGroup
+        label="Language"
+        showClear={filters.languages.length > 0}
+        onClear={() => onChange({ ...filters, languages: [] })}
+      >
+        <LanguagePillGrid
+          selected={filters.languages}
+          onChange={(languages) => onChange({ ...filters, languages })}
+          draft={draftLanguage}
+          onDraftChange={setDraftLanguage}
+          placeholder="ISO code e.g. en"
+          label="Creator language code"
+        />
+      </FieldGroup>
+      <FieldGroup label="Verification">
+        <FilterSelect disabled aria-label="Verification (coming soon)" className="cursor-not-allowed opacity-60">
+          <option>Any</option>
+          <option>Verified</option>
+          <option>Unverified</option>
+        </FilterSelect>
+      </FieldGroup>
     </>
   );
 }
@@ -667,7 +918,7 @@ export function CategoryField({ filters, onChange }: FieldProps) {
             type="button"
             onClick={addDraftCategory}
             disabled={!draftCategory.trim()}
-            className="inline-flex size-[34px] shrink-0 items-center justify-center rounded-md border border-[#e2e8f0] bg-white text-[#94a3b8] transition-all duration-120 hover:border-[#1D9E75] hover:bg-[#1D9E75] hover:text-white disabled:opacity-40"
+            className={filterAddButtonClass}
             aria-label="Add category"
           >
             <PlusIcon className="size-3.5" />
@@ -678,7 +929,7 @@ export function CategoryField({ filters, onChange }: FieldProps) {
             {customCategories.map((category) => (
               <span
                 key={category}
-                className="inline-flex h-6 items-center gap-[5px] rounded-[5px] border border-[#9edfc8] bg-[#ecfdf5] px-2 text-[11px] font-medium text-[#168a66]"
+                className="inline-flex h-6 items-center gap-[5px] rounded-[8px] border border-[rgba(0,87,255,0.24)] bg-[rgba(0,87,255,0.08)] px-2 text-[11px] font-medium text-[#0057FF]"
               >
                 {category}
                 <button
@@ -689,8 +940,7 @@ export function CategoryField({ filters, onChange }: FieldProps) {
                       categories: filters.categories.filter((value) => value !== category),
                     })
                   }
-                  className="flex size-3.5 items-center justify-center rounded-full text-[10px] text-[#168a66] transition-colors hover:bg-[rgba(29,158,117,.3)]"
-                  style={{ backgroundColor: "rgba(29,158,117,.15)" }}
+                  className="flex size-3.5 items-center justify-center rounded-full bg-[rgba(0,87,255,0.12)] text-[10px] text-[#0057FF] transition-colors hover:bg-[rgba(0,87,255,0.22)]"
                   aria-label={`Remove ${category}`}
                 >
                   ×
@@ -699,10 +949,17 @@ export function CategoryField({ filters, onChange }: FieldProps) {
             ))}
           </div>
         ) : null}
-        <div className="flex flex-wrap gap-1.5">
-          {QUICK_CATEGORIES.map((category) => (
+        <ExpandableChipGrid
+          items={QUICK_CATEGORIES}
+          previewCount={4}
+          getKey={(category) => category}
+          isHighlighted={(category) =>
+            filters.categories.some(
+              (selected) => selected.toLowerCase() === category.toLowerCase()
+            )
+          }
+          renderChip={(category) => (
             <FilterChip
-              key={category}
               label={category}
               active={filters.categories.some(
                 (selected) => selected.toLowerCase() === category.toLowerCase()
@@ -714,8 +971,8 @@ export function CategoryField({ filters, onChange }: FieldProps) {
                 })
               }
             />
-          ))}
-        </div>
+          )}
+        />
       </FieldGroup>
     </>
   );
@@ -728,12 +985,9 @@ const MOCKUP_CHIP_LABELS = {
 
 function MockupChip({ label }: { label: string }) {
   return (
-    <span className="inline-flex h-[26px] shrink-0 items-center gap-1 whitespace-nowrap rounded-[20px] border border-[#e2e8f0] bg-white px-2.5 text-[11px] font-medium text-[#475569]">
+    <span className="inline-flex h-[26px] shrink-0 items-center gap-1 whitespace-nowrap rounded-[20px] border border-[rgba(0,87,255,0.14)] dark:border-[rgba(0,87,255,0.24)] bg-white dark:bg-card px-2.5 text-[11px] font-medium text-[#475569] dark:text-muted-foreground">
       <span>{label}</span>
-      <span
-        className="ml-px flex size-3.5 items-center justify-center rounded-full text-[10px] font-bold"
-        style={{ backgroundColor: "rgba(29,158,117,.12)", color: TW_PRIMARY }}
-      >
+      <span className="ml-px flex size-3.5 items-center justify-center rounded-full bg-[rgba(0,87,255,0.1)] text-[10px] font-bold text-[#0057FF]">
         +
       </span>
     </span>
@@ -835,7 +1089,7 @@ export function AudienceField({ filters, onChange }: FieldProps) {
             type="button"
             onClick={addDraftInterest}
             disabled={!draftInterest.trim()}
-            className="inline-flex size-[34px] shrink-0 items-center justify-center rounded-md border border-[#e2e8f0] bg-white text-[#94a3b8] transition-all duration-120 hover:border-[#1D9E75] hover:bg-[#1D9E75] hover:text-white disabled:opacity-40"
+            className={filterAddButtonClass}
             aria-label="Add audience interest"
           >
             <PlusIcon className="size-3.5" />
@@ -860,10 +1114,17 @@ export function AudienceField({ filters, onChange }: FieldProps) {
             ))}
           </div>
         ) : null}
-        <div className="flex flex-wrap gap-1.5">
-          {QUICK_INTERESTS.map((interest) => (
+        <ExpandableChipGrid
+          items={QUICK_INTERESTS}
+          previewCount={4}
+          getKey={(interest) => interest}
+          isHighlighted={(interest) =>
+            filters.audienceInterestTags.some(
+              (selected) => selected.toLowerCase() === interest.toLowerCase()
+            )
+          }
+          renderChip={(interest) => (
             <FilterChip
-              key={interest}
               label={interest}
               active={filters.audienceInterestTags.some(
                 (selected) => selected.toLowerCase() === interest.toLowerCase()
@@ -879,8 +1140,8 @@ export function AudienceField({ filters, onChange }: FieldProps) {
                 })
               }
             />
-          ))}
-        </div>
+          )}
+        />
       </FieldGroup>
     </>
   );
@@ -889,37 +1150,8 @@ export function AudienceField({ filters, onChange }: FieldProps) {
 export function CommercialField({ filters, onChange }: FieldProps) {
   return (
     <>
-      <FieldGroup label="Pricing range (USD)" className="mt-0">
-        <RangeRow
-          min={filters.minEstimatedCost}
-          max={filters.maxEstimatedCost}
-          onMinChange={(value) => onChange({ ...filters, minEstimatedCost: value })}
-          onMaxChange={(value) => onChange({ ...filters, maxEstimatedCost: value })}
-          type="number"
-        />
-      </FieldGroup>
-      <FieldGroup label="Exclusivity">
-        <div className="flex flex-wrap gap-1.5">
-          {MOCKUP_CHIP_LABELS.exclusivity.map((label) => (
-            <MockupChip key={label} label={label} />
-          ))}
-        </div>
-      </FieldGroup>
-      <FieldGroup label="Contract status">
-        <div className="flex flex-wrap gap-1.5">
-          {MOCKUP_CHIP_LABELS.contractStatus.map((label) => (
-            <MockupChip key={label} label={label} />
-          ))}
-        </div>
-      </FieldGroup>
-      <FieldGroup label="Min. brand safety score">
-        <FilterInput
-          value={filters.minBrandSafety}
-          onChange={(e) => onChange({ ...filters, minBrandSafety: e.target.value })}
-          type="number"
-          placeholder="60"
-        />
-      </FieldGroup>
+      <CommercialPricingField filters={filters} onChange={onChange} />
+      <BrandSafetyField filters={filters} onChange={onChange} />
     </>
   );
 }

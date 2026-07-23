@@ -3,9 +3,25 @@
  */
 
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+import { shouldIncludeApifyProfilePosts } from "@/lib/creator-enrichment/apify-fetch-policy";
+import type { EnrichmentScope } from "@/lib/creator-enrichment/enabled";
 import { getMetricsCollectorEnv } from "@/lib/performance/metrics-collector/config";
 import { apifyProfileActorIdForPlatform } from "@/lib/performance/metrics-collector/providers/apify-input";
+import { assertApifyAcquisitionBudget } from "@/lib/discovery/control-center/apify-budget";
+import {
+  apifyRunGateKey,
+  beginApifyRunGate,
+} from "@/lib/performance/apify-run-gate";
 import type { SocialPlatform } from "@/lib/social/platforms";
+
+async function resolveBudgetSupabase() {
+  try {
+    const { createSupabaseAdminClient } = await import("@/lib/supabase/admin");
+    return createSupabaseAdminClient();
+  } catch {
+    return null;
+  }
+}
 
 export type BatchApifyFetchResult = {
   ok: boolean;
@@ -45,6 +61,11 @@ function buildBatchProfileDetailsInput(
       return {
         startUrls: profileUrls.map((url) => ({ url })),
       };
+    case "snapchat": {
+      const handles = usernames.map(normalizeHandle).filter(Boolean);
+      const entries = profileUrls.map((url, index) => handles[index] || url);
+      return { usernames: entries };
+    }
     default:
       return { directUrls: profileUrls, resultsLimit: limit };
   }
@@ -104,12 +125,52 @@ export async function runBatchApifyActor(input: {
     };
   }
   if (!actorId) {
+    console.warn(
+      `[batch-profile-apify] skipped platform=${platformKey} reason=no actor configured`
+    );
     return {
       ok: false,
       apifyRunId: null,
       datasetId: null,
       rows: [],
       reason: `No Apify actor configured for platform ${platformKey}.`,
+    };
+  }
+
+  const budgetClient = await resolveBudgetSupabase();
+  const budget = await assertApifyAcquisitionBudget(budgetClient, {
+    source: "batch_profile_apify_fetch",
+    meta: {
+      platform: platformKey,
+      label: input.label,
+      profileCount: input.profileUrls.length,
+    },
+  });
+  if (!budget.allowed) {
+    return {
+      ok: false,
+      apifyRunId: null,
+      datasetId: null,
+      rows: [],
+      reason: budget.reason,
+    };
+  }
+
+  const gateKey = apifyRunGateKey({
+    actorId,
+    platform: platformKey,
+    identities: [...input.usernames, ...input.profileUrls],
+    label: input.label,
+  });
+  const gate = beginApifyRunGate(gateKey);
+  if (!gate.allowed) {
+    console.warn(`[batch-profile-apify] ${gate.reason} key=${gate.key}`);
+    return {
+      ok: false,
+      apifyRunId: null,
+      datasetId: null,
+      rows: [],
+      reason: gate.reason,
     };
   }
 
@@ -168,6 +229,7 @@ export async function fetchBatchProfileRowsFromApify(input: {
   profileUrls: string[];
   usernames: string[];
   timeoutMs: number;
+  scope?: EnrichmentScope;
 }): Promise<{
   ok: boolean;
   profileRows: Record<string, unknown>[];
@@ -203,7 +265,9 @@ export async function fetchBatchProfileRowsFromApify(input: {
   const apifyRunIds = detailsRun.apifyRunId ? [detailsRun.apifyRunId] : [];
   let postRows: Record<string, unknown>[] = [];
 
-  const postsInput = buildBatchProfilePostsInput(input.platform, input.profileUrls);
+  const postsInput = shouldIncludeApifyProfilePosts(input.scope)
+    ? buildBatchProfilePostsInput(input.platform, input.profileUrls)
+    : null;
   if (postsInput) {
     const postsRun = await runBatchApifyActor({
       platform: input.platform,
@@ -228,6 +292,13 @@ export async function fetchBatchProfileRowsFromApify(input: {
   };
 }
 
+/** Failures that will not succeed on retry — do not burn Apify credits. */
+function isPermanentBatchApifyFailure(reason: string): boolean {
+  return /not configured|no apify actor|APIFY_TOKEN|unsupported platform|invalid input|fail-closed|daily budget|daily Apify|budget usage could not be verified/i.test(
+    reason
+  );
+}
+
 export async function fetchBatchProfileRowsWithRetry(input: {
   platform: SocialPlatform;
   profileUrls: string[];
@@ -235,6 +306,7 @@ export async function fetchBatchProfileRowsWithRetry(input: {
   timeoutMs: number;
   maxRetries: number;
   retryBackoffMs: number;
+  scope?: EnrichmentScope;
 }): Promise<{
   ok: boolean;
   profileRows: Record<string, unknown>[];
@@ -251,13 +323,20 @@ export async function fetchBatchProfileRowsWithRetry(input: {
         profileUrls: input.profileUrls,
         usernames: input.usernames,
         timeoutMs: input.timeoutMs,
+        scope: input.scope,
       });
       if (result.ok) {
         return { ...result, attempts: attempt };
       }
       lastReason = result.reason;
+      if (isPermanentBatchApifyFailure(lastReason)) {
+        return { ...result, attempts: attempt };
+      }
     } catch (error) {
       lastReason = error instanceof Error ? error.message : "Batch profile fetch threw.";
+      if (isPermanentBatchApifyFailure(lastReason)) {
+        break;
+      }
     }
 
     if (attempt < input.maxRetries) {

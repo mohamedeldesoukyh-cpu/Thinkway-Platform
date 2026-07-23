@@ -47,6 +47,8 @@ export function CreatorLinkedPlatformIcons({
   if (ordered.length === 0) return null;
 
   if (variant === "inline") {
+    const overlapClass =
+      ordered.length <= 2 ? "-ml-2" : ordered.length === 3 ? "-ml-1.5" : "-ml-1";
     return (
       <span
         className={cn("flex shrink-0 items-center", className)}
@@ -56,7 +58,7 @@ export function CreatorLinkedPlatformIcons({
         {ordered.map((platform, index) => (
           <span
             key={platform}
-            className={cn("relative shrink-0", index > 0 && "-ml-1.5")}
+            className={cn("relative shrink-0", index > 0 && overlapClass)}
             style={{ zIndex: index + 1 }}
           >
             <PlatformIcon

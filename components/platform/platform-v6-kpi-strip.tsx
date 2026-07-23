@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import type { LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -11,18 +12,23 @@ type PlatformV6KpiCellProps = {
   iconStroke?: string;
   iconBg?: string;
   valueClassName?: string;
+  accent?: string;
 };
 
 function PlatformV6KpiCell({
   label,
   value,
   icon: Icon,
-  iconStroke = "#2563eb",
-  iconBg = "#eff6ff",
+  iconStroke = "#0057FF",
+  iconBg = "var(--blue-light)",
   valueClassName,
+  accent,
 }: PlatformV6KpiCellProps) {
   return (
-    <div className="platform-v6-kpi-cell">
+    <div
+      className="platform-v6-kpi-cell"
+      style={{ "--kpi-accent": accent ?? iconStroke } as CSSProperties}
+    >
       <div className="platform-v6-kpi-lbl">
         <span
           className="inline-flex shrink-0 items-center justify-center rounded-[4px] p-[2px]"
@@ -30,7 +36,7 @@ function PlatformV6KpiCell({
         >
           <Icon aria-hidden className="size-[13px]" strokeWidth={2} style={{ color: iconStroke }} />
         </span>
-        {label}
+        <span className="platform-v6-kpi-lbl-text">{label}</span>
       </div>
       <div className={cn("platform-v6-kpi-val", valueClassName)}>{value}</div>
     </div>

@@ -34,7 +34,7 @@ import type { Database } from "@/types/database";
 
 import type { QuotationDocument, QuotationDocPublicationShot } from "./quotation-document";
 import { quotationCreatorDuplicateKey } from "./quotation-export-utils";
-import { isShowcaseTemplate } from "./quotation-template";
+import { isCreatorDeckTemplate } from "./quotation-template";
 
 export const SHOWCASE_PUBLICATION_SHOT_LIMIT = 6;
 
@@ -275,7 +275,7 @@ async function embedPublicationShot(
 export async function embedQuotationDocumentPublicationShots(
   doc: QuotationDocument
 ): Promise<QuotationDocument> {
-  if (!isShowcaseTemplate(doc.template)) return doc;
+  if (!isCreatorDeckTemplate(doc.template)) return doc;
 
   const creatorGroups = await Promise.all(
     doc.creatorGroups.map(async (group) => {

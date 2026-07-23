@@ -10,6 +10,7 @@ import {
   quotationPostTypeLabel,
   selectedTypesFromTypeLines,
   syncDeliverableFromTypeLines,
+  syncServiceDescriptionWithTypeLines,
   typeLinesFromSelectedTypes,
   typeLinesIncludeAllPlatforms,
 } from "@/lib/quotations/quotation-deliverable-types";
@@ -49,6 +50,11 @@ import {
 
 assert.equal(isPostTypeAllowedForCreator("video", []), true);
 assert.equal(isPostTypeAllowedForCreator("stories", []), true);
+assert.equal(isPostTypeAllowedForCreator("boosting", []), true);
+assert.equal(isPostTypeAllowedForCreator("boosting", ["tiktok"]), true);
+assert.equal(isPostTypeAllowedForCreator("boosting", ["instagram"]), true);
+assert.equal(postTypePlatformKey("boosting"), null);
+assert.equal(quotationPostTypeLabel("boosting"), "Boosting");
 assert.equal(isPostTypeAllowedForCreator("mirrored_on_all_pf", []), true);
 assert.equal(isPostTypeAllowedForCreator("instagram_reel", ["tiktok"]), false);
 
@@ -158,6 +164,42 @@ assert.equal(
     lines.map((line) => line.type),
     ["tiktok_video", "tiktok_story", "mirrored_fb", "mirrored_ig"]
   );
+}
+
+{
+  const emptyToOne = syncServiceDescriptionWithTypeLines(
+    "",
+    [],
+    [{ type: "instagram_reel", quantity: 1 }]
+  );
+  assert.equal(emptyToOne, "1× IG Reel");
+
+  const addSecond = syncServiceDescriptionWithTypeLines(
+    "1× IG Reel",
+    [{ type: "instagram_reel", quantity: 1 }],
+    [
+      { type: "instagram_reel", quantity: 1 },
+      { type: "instagram_story", quantity: 2 },
+    ]
+  );
+  assert.equal(addSecond, "1× IG Reel + 2× IG Story");
+
+  const keepNotes = syncServiceDescriptionWithTypeLines(
+    "1× IG Reel · exclusivity 30 days",
+    [{ type: "instagram_reel", quantity: 1 }],
+    [
+      { type: "instagram_reel", quantity: 1 },
+      { type: "tiktok_video", quantity: 1 },
+    ]
+  );
+  assert.equal(keepNotes, "1× IG Reel + 1× TT Video · exclusivity 30 days");
+
+  const appendToCustom = syncServiceDescriptionWithTypeLines(
+    "Hero package",
+    [],
+    [{ type: "instagram_reel", quantity: 1 }]
+  );
+  assert.equal(appendToCustom, "Hero package + 1× IG Reel");
 }
 
 console.log("quotation-deliverable-types.test.ts — all tests passed");

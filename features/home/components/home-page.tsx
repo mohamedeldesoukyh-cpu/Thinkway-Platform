@@ -46,9 +46,9 @@ const MODULES = [
     href: "/dashboard",
     title: "Finance",
     description: "KPIs, trends, billing alerts",
-    borderColor: "rgba(99,102,241,.15)",
-    iconBg: "rgba(99,102,241,.15)",
-    iconColor: "#818cf8",
+    borderColor: "var(--border)",
+    iconBg: "var(--blue-light)",
+    iconColor: "#0057FF",
     icon: TrendingUpIcon,
   },
   {
@@ -56,9 +56,9 @@ const MODULES = [
     href: "/campaigns",
     title: "Campaigns",
     description: "Plans, IO, performance",
-    borderColor: "rgba(16,185,129,.15)",
-    iconBg: "rgba(16,185,129,.15)",
-    iconColor: "#34d399",
+    borderColor: "var(--border)",
+    iconBg: "var(--green-bg)",
+    iconColor: "#10b981",
     icon: ActivityIcon,
   },
   {
@@ -66,9 +66,9 @@ const MODULES = [
     href: "/clients",
     title: "Clients",
     description: "Accounts, legal, brands",
-    borderColor: "rgba(139,92,246,.15)",
-    iconBg: "rgba(139,92,246,.15)",
-    iconColor: "#a78bfa",
+    borderColor: "var(--border)",
+    iconBg: "var(--purple-bg)",
+    iconColor: "#a855f7",
     icon: Building2Icon,
   },
   {
@@ -76,9 +76,9 @@ const MODULES = [
     href: "/vendors",
     title: "Vendors",
     description: "Creators, payouts, stats",
-    borderColor: "rgba(245,158,11,.15)",
-    iconBg: "rgba(245,158,11,.15)",
-    iconColor: "#fbbf24",
+    borderColor: "var(--border)",
+    iconBg: "var(--amber-bg)",
+    iconColor: "#f59e0b",
     icon: UsersIcon,
   },
 ] as const;
@@ -200,9 +200,9 @@ export function HomePage({ snapshot }: HomePageProps) {
             <div className="platform-v6-hs-kpi">
               <div
                 className="platform-v6-hs-kpi-icon"
-                style={{ background: "rgba(99,102,241,.15)" }}
+                style={{ background: "var(--blue-light)" }}
               >
-                <LineChartIcon aria-hidden stroke="#818cf8" strokeWidth={2} />
+                <LineChartIcon aria-hidden stroke="#0057FF" strokeWidth={2} />
               </div>
               <div className="platform-v6-hs-kpi-lbl">Revenue</div>
               <div className="platform-v6-hs-kpi-val">
@@ -221,9 +221,9 @@ export function HomePage({ snapshot }: HomePageProps) {
             <div className="platform-v6-hs-kpi">
               <div
                 className="platform-v6-hs-kpi-icon"
-                style={{ background: "rgba(16,185,129,.15)" }}
+                style={{ background: "var(--green-bg)" }}
               >
-                <DollarSignIcon aria-hidden stroke="#34d399" strokeWidth={2} />
+                <DollarSignIcon aria-hidden stroke="#10b981" strokeWidth={2} />
               </div>
               <div className="platform-v6-hs-kpi-lbl">Gross profit</div>
               <div className="platform-v6-hs-kpi-val">
@@ -239,9 +239,9 @@ export function HomePage({ snapshot }: HomePageProps) {
             <div className="platform-v6-hs-kpi">
               <div
                 className="platform-v6-hs-kpi-icon"
-                style={{ background: "rgba(245,158,11,.15)" }}
+                style={{ background: "var(--amber-bg)" }}
               >
-                <AlertCircleIcon aria-hidden stroke="#fbbf24" strokeWidth={2} />
+                <AlertCircleIcon aria-hidden stroke="#f59e0b" strokeWidth={2} />
               </div>
               <div className="platform-v6-hs-kpi-lbl">Outstanding</div>
               <div className="platform-v6-hs-kpi-val platform-v6-hs-kpi-val-warn">
@@ -263,9 +263,9 @@ export function HomePage({ snapshot }: HomePageProps) {
             <div className="platform-v6-hs-kpi">
               <div
                 className="platform-v6-hs-kpi-icon"
-                style={{ background: "rgba(139,92,246,.15)" }}
+                style={{ background: "var(--purple-bg)" }}
               >
-                <UsersIcon aria-hidden stroke="#a78bfa" strokeWidth={2} />
+                <UsersIcon aria-hidden stroke="#a855f7" strokeWidth={2} />
               </div>
               <div className="platform-v6-hs-kpi-lbl">Active vendors</div>
               <div className="platform-v6-hs-kpi-val">{snapshot.active_vendors}</div>
@@ -409,31 +409,21 @@ export function HomePage({ snapshot }: HomePageProps) {
               </Link>
             </div>
             {snapshot.top_vendors.length > 0 ? (
-              snapshot.top_vendors.map((vendor, index) => (
+              snapshot.top_vendors.map((vendor) => (
                 <Link
                   key={vendor.id}
                   href={`/vendors/${vendor.id}`}
                   className="platform-v6-hs-panel-row"
                 >
                   <div className="platform-v6-hs-pr-left">
-                    <div
-                      className="platform-v6-hs-pr-av"
-                      style={{
-                        background:
-                          index === 0
-                            ? "linear-gradient(135deg,#c084fc,#818cf8)"
-                            : index === 1
-                              ? "linear-gradient(135deg,#34d399,#059669)"
-                              : "linear-gradient(135deg,#fbbf24,#f97316)",
-                      }}
-                    >
+                    <div className="platform-v6-hs-pr-av">
                       {vendor.initials}
                     </div>
                     <div>
                       <div className="platform-v6-hs-pr-name">{vendor.display_name}</div>
                       <div className="platform-v6-hs-pr-meta">
                         {vendor.document_number} · {vendor.platform}
-                        {vendor.country_code ? ` · ${vendor.country_code}` : ""}
+                        {vendor.country_label ? ` · ${vendor.country_label}` : ""}
                       </div>
                     </div>
                   </div>

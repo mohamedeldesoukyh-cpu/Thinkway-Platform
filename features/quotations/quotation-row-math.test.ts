@@ -5,6 +5,7 @@ import {
   computeLiveQuotationTotals,
   computeQuotationRowComputed,
   draftFromQuotationItem,
+  resolveQuotationHeaderCommercialTotals,
   type QuotationRowDraft,
 } from "@/features/quotations/quotation-row-math";
 import type { QuotationItemRow } from "@/features/quotations/types";
@@ -203,6 +204,27 @@ function mockItem(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
   const totals = computeLiveQuotationTotals([draft]);
   assert.equal(totals.totalAfValueEgp, 120);
   assert.equal(totals.totalAgencyMarginEgp, totals.totalGpValueEgp + 120);
+}
+
+// Header totals include agency fee in client cost and margin KPIs
+{
+  const draft: QuotationRowDraft = {
+    id: "af",
+    mode: "cost_revenue",
+    cost: 800,
+    costCurrency: "EGP",
+    gpPct: 0,
+    revenue: 1200,
+    gpValue: 400,
+    afPct: 10,
+    fxRateToEgp: 1,
+  };
+  const base = computeLiveQuotationTotals([draft]);
+  const header = resolveQuotationHeaderCommercialTotals(base);
+  assert.equal(header.totalClientCostEgp, 1320);
+  assert.equal(header.headerGpValueEgp, 520);
+  assert.ok(Math.abs(header.headerGpPct - 39.3939) < 0.01);
+  assert.equal(header.headerPmPct, 65);
 }
 
 console.log("quotation-row-math.test.ts: all assertions passed");

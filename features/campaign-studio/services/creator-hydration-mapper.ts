@@ -1,4 +1,5 @@
 import { resolveCreatorTierLabel, type CreatorTierLabel } from "@/lib/creators/creator-tier";
+import { formatCreatorCountryLabels } from "@/lib/creators/creator-display-utils";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { resolveBrowseCreatorProfileImageUrl } from "@/lib/performance/creator-avatar";
 
@@ -169,11 +170,7 @@ function buildPerCreatorReason(
       platform,
       followers,
       engagementRate,
-      country:
-        creator.estimated_country ??
-        creator.country_code ??
-        account?.audience_country ??
-        undefined,
+      country: resolveHydratedVendorCountry(creator),
       audienceSummary:
         creator.audience_interests?.slice(0, 2).join(", ") ??
         creator.categories?.slice(0, 2).join(", ") ??
@@ -189,6 +186,11 @@ function buildPerCreatorReason(
   );
 
   return whySelected;
+}
+
+function resolveHydratedVendorCountry(creator: UnifiedCreatorResult): string | undefined {
+  const label = formatCreatorCountryLabels(creator);
+  return label !== "—" ? label : undefined;
 }
 
 export function mapCreatorToHydratedVendor(
@@ -243,11 +245,7 @@ export function mapCreatorToHydratedVendor(
     profileUrl: extractProfileUrl(creator, preferredPlatforms),
     followers,
     engagementRate: extractEngagement(creator, preferredPlatforms),
-    country:
-      creator.estimated_country ??
-      creator.country_code ??
-      account?.audience_country ??
-      undefined,
+    country: resolveHydratedVendorCountry(creator),
     language: creator.language_codes?.slice(0, 2).join(" / ") || "Arabic / English",
     audienceSummary:
       creator.audience_interests?.slice(0, 2).join(", ") ??

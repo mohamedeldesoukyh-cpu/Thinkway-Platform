@@ -20,6 +20,7 @@ export const INPUT_CHANGE_PHRASES: Record<CampaignOutputInputKey, string> = {
   creative_concepts: "Creative concepts changed",
   risks: "Risks changed",
   deliverables_scope: "Deliverables scope changed",
+  market_intelligence: "Market intelligence settings changed",
 };
 
 function lowerFirst(text: string): string {

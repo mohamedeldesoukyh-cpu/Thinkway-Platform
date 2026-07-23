@@ -69,10 +69,28 @@ function testAutoTriggersBlockedByDefault() {
   );
 }
 
+function testOperationalSafetyKillSwitchBlocksAutoOnly() {
+  withEnv(
+    {
+      DISABLE_AUTOMATIC_ENRICHMENT_AND_ACQUISITION: "true",
+      DISABLE_CREATOR_ENRICHMENT: undefined,
+      ALLOW_MANUAL_ENRICHMENT: "true",
+      AUTO_CREATOR_ENRICHMENT: "true",
+    },
+    () => {
+      assert.equal(canEnqueueCreatorEnrichment({ trigger: "detail", scope: "all" }).allowed, false);
+      assert.equal(canEnqueueCreatorEnrichment({ trigger: "campaign", scope: "all" }).allowed, false);
+      assert.equal(canEnqueueCreatorEnrichment({ trigger: "stale", scope: "all" }).allowed, false);
+      assert.equal(canEnqueueCreatorEnrichment({ trigger: "manual", scope: "all" }).allowed, true);
+    }
+  );
+}
+
 function run() {
   testManualAllowedByDefault();
   testMasterKillDisablesAll();
   testAutoTriggersBlockedByDefault();
+  testOperationalSafetyKillSwitchBlocksAutoOnly();
   console.log("lib/creator-enrichment/enabled.test.ts — all tests passed");
 }
 

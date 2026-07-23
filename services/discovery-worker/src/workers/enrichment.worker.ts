@@ -1,5 +1,11 @@
 import { Worker, type Job } from "bullmq";
 
+import {
+  AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON,
+  isAutomaticEnrichmentAndAcquisitionDisabled,
+  logBlockedAutomaticAction,
+} from "@/lib/discovery/operational-safety.js";
+
 import { getRedisConnection } from "../queues/connection.js";
 import { QUEUES } from "../queues/names.js";
 import { supabase } from "../db/supabase.js";
@@ -30,6 +36,30 @@ export function startEnrichmentWorker(): Worker<EnrichmentJobData> {
       const log = (level: JobLogEntry["level"], message: string) => {
         logs.push({ at: new Date().toISOString(), level, message });
       };
+
+      if (isAutomaticEnrichmentAndAcquisitionDisabled()) {
+        logBlockedAutomaticAction(
+          "legacy_discovery_enrich_worker",
+          AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON,
+          { profileId, jobId: jobId ?? null }
+        );
+        await updateEnrichmentJob(jobId, {
+          status: "cancelled",
+          completed_at: new Date().toISOString(),
+          error_message: AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON,
+          result: {
+            profile_id: profileId,
+            logs: [
+              {
+                at: new Date().toISOString(),
+                level: "warn",
+                message: AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON,
+              },
+            ],
+          },
+        });
+        return { skipped: true, reason: AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON };
+      }
 
       await updateEnrichmentJob(jobId, {
         status: "running",

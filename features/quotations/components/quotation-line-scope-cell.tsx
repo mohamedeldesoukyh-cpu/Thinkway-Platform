@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Loader2Icon, PlusIcon, Trash2Icon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
+import { TooltipIconButton } from "@/components/shared/tooltip-icon-button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -32,6 +34,17 @@ export function QuotationLinePostTypesCell({
   onAddDeliverable,
   costCurrency,
 }: PostTypesProps) {
+  const confirmDelete = useConfirmDelete();
+
+  async function removeDeliverableDraft(key: string) {
+    const ok = await confirmDelete(
+      "Remove this post type from the quotation line? This cannot be undone.",
+      "Remove post type?"
+    );
+    if (!ok) return;
+    saveDeliverables(deliverableDrafts.filter((d) => d.key !== key));
+  }
+
   return (
     <div className="space-y-2 py-0.5">
       {deliverableDrafts.length === 0 ? (
@@ -101,16 +114,16 @@ export function QuotationLinePostTypesCell({
                 }}
                 aria-label="Total price for this post type"
               />
-              <Button
+              <TooltipIconButton
                 type="button"
                 size="icon"
                 variant="ghost"
                 className="size-7 shrink-0"
-                onClick={() => saveDeliverables(deliverableDrafts.filter((d) => d.key !== draft.key))}
-                aria-label="Remove post type"
+                onClick={() => void removeDeliverableDraft(draft.key)}
+                tooltip="Remove post type"
               >
                 <Trash2Icon className="size-3" />
-              </Button>
+              </TooltipIconButton>
             </div>
             <Textarea
               rows={1}

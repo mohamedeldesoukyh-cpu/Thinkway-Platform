@@ -63,6 +63,11 @@ export function buildApifyProfileDetailsInput(
       return { startUrls: [{ url: profileUrl }], maxResults: 6 };
     case "facebook":
       return { startUrls: [{ url: profileUrl }] };
+    case "snapchat": {
+      const handle = username?.replace(/^@+/, "").trim().toLowerCase();
+      const usernames = [handle || profileUrl].filter(Boolean);
+      return { usernames };
+    }
     default:
       return { directUrls: [profileUrl], resultsLimit: 6 };
   }

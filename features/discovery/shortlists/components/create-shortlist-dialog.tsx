@@ -153,7 +153,12 @@ export function CreateShortlistDialog({
       }}
     >
       <DialogTrigger asChild>
-        {trigger ?? <Button>New shortlist</Button>}
+        {trigger ?? (
+          <Button className="h-9 gap-[7px] rounded-[10px] border border-primary bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground shadow-[0_1px_2px_rgba(0,87,255,0.35),0_6px_16px_-6px_rgba(0,87,255,0.5)] hover:bg-[var(--blue-hover,#0048dd)]">
+            <ListPlusIcon className="size-3.5" strokeWidth={2.4} />
+            New Shortlist
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent
         overlayClassName="!bg-transparent bg-[radial-gradient(ellipse_90%_80%_at_50%_35%,rgba(15,23,42,0.05),rgba(15,23,42,0.02)_42%,transparent_72%)] supports-backdrop-filter:backdrop-blur-none dark:bg-[radial-gradient(ellipse_90%_80%_at_50%_35%,rgba(0,0,0,0.18),rgba(0,0,0,0.06)_42%,transparent_72%)]"

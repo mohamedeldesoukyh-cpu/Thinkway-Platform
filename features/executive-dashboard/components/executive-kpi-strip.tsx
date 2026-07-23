@@ -35,51 +35,59 @@ type ExecutiveKpiId = (typeof EXECUTIVE_KPI_IDS)[number];
 
 const KPI_STYLE: Record<
   ExecutiveKpiId,
-  { icon: LucideIcon; iconStroke: string; iconBg: string; valueClassName?: string }
+  { icon: LucideIcon; iconStroke: string; iconBg: string; valueClassName?: string; accent?: string }
 > = {
   revenue: {
     icon: TrendingUpIcon,
-    iconStroke: "#3b82f6",
-    iconBg: "#eff6ff",
+    iconStroke: "#0057FF",
+    iconBg: "var(--blue-light)",
     valueClassName: "platform-v6-c-blue",
+    accent: "#0057FF",
   },
   gp: {
     icon: TrendingUpIcon,
     iconStroke: "#a855f7",
-    iconBg: "#faf5ff",
+    iconBg: "var(--purple-bg)",
     valueClassName: "platform-v6-c-purple",
+    accent: "#a855f7",
   },
   margin: {
     icon: PercentIcon,
     iconStroke: "#ef4444",
-    iconBg: "#fef2f2",
+    iconBg: "var(--red-bg)",
+    accent: "#ef4444",
   },
   invoiced: {
     icon: CalendarIcon,
     iconStroke: "#10b981",
-    iconBg: "#ecfdf5",
+    iconBg: "var(--green-bg)",
+    accent: "#10b981",
   },
   collected: {
     icon: CheckCircle2Icon,
-    iconStroke: "#2563eb",
-    iconBg: "#eff6ff",
+    iconStroke: "#0057FF",
+    iconBg: "var(--blue-light)",
+    accent: "#0057FF",
   },
   outstanding: {
     icon: CircleAlertIcon,
     iconStroke: "#f59e0b",
-    iconBg: "#fffbeb",
+    iconBg: "var(--amber-bg)",
     valueClassName: "platform-v6-c-amber",
+    accent: "#f59e0b",
   },
   vendor: {
     icon: UsersIcon,
-    iconStroke: "#ec4899",
-    iconBg: "#fdf2f8",
-    valueClassName: "platform-v6-c-pink",
+    iconStroke: "#a855f7",
+    iconBg: "var(--purple-bg)",
+    valueClassName: "platform-v6-c-purple",
+    accent: "#a855f7",
   },
   unbilled: {
     icon: ActivityIcon,
     iconStroke: "#10b981",
-    iconBg: "#ecfdf5",
+    iconBg: "var(--green-bg)",
+    accent: "#10b981",
   },
 };
 
@@ -122,6 +130,7 @@ export function ExecutiveKpiStrip({ strip, loading }: ExecutiveKpiStripProps) {
       iconStroke: style.iconStroke,
       iconBg: style.iconBg,
       valueClassName: style.valueClassName,
+      accent: style.accent,
     };
   });
 

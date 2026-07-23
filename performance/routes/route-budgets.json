@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "description": "Major route performance tracking targets. Bundle attribution under Turbopack is approximate; use shared largest-chunk + hydration/nav RUM.",
+  "routes": [
+    {
+      "id": "dashboard",
+      "path": "/dashboard",
+      "label": "Dashboard",
+      "track": ["js", "css", "hydration", "navigation"]
+    },
+    {
+      "id": "discovery",
+      "path": "/discovery/search",
+      "label": "Discovery",
+      "track": ["js", "css", "hydration", "navigation"]
+    },
+    {
+      "id": "campaign-studio",
+      "path": "/studio",
+      "label": "Campaign Studio",
+      "track": ["js", "css", "hydration", "navigation"]
+    },
+    {
+      "id": "ai-studio",
+      "path": "/ai",
+      "label": "AI Studio",
+      "track": ["js", "css", "hydration", "navigation"]
+    },
+    {
+      "id": "outputs",
+      "path": "/campaigns",
+      "label": "Outputs / Campaigns",
+      "track": ["js", "css", "hydration", "navigation"]
+    },
+    {
+      "id": "presentation",
+      "path": "/reports",
+      "label": "Presentation / Reports",
+      "track": ["js", "css", "hydration", "navigation"]
+    },
+    {
+      "id": "media-planner",
+      "path": "/planning",
+      "label": "Media Planner",
+      "track": ["js", "css", "hydration", "navigation"]
+    },
+    {
+      "id": "login",
+      "path": "/login",
+      "label": "Login",
+      "track": ["js", "css", "hydration", "navigation"]
+    }
+  ],
+  "measurement": {
+    "ci": "Shared largest JS/CSS + client module audit (global gate)",
+    "rum": "Per-route LCP/INP/CLS/TTFB via monitoring/rum-slos.json",
+    "local": "npm run measure:frontend-bundle && npm run measure:css-bundle"
+  }
+}

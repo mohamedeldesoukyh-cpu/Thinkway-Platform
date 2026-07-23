@@ -42,6 +42,8 @@ export type ExecutiveDashboardPayload = {
   charts: ExecutiveDashboardCharts;
   alerts: FinanceAlertsPayload;
   executive_kpis: AnalyticsKpiStrip;
+  /** Rule-based period summary (not an LLM call). */
+  ai_insight: string | null;
   meta: ExecutiveDashboardMeta;
   profitability_tables: {
     top_clients: AnalyticsRollupNode[];
@@ -51,6 +53,41 @@ export type ExecutiveDashboardPayload = {
     brand_profitability: AnalyticsRollupNode[];
   };
 };
+
+function buildExecutiveAiInsight(input: {
+  marginPercent: number;
+  revenueFormatted: string;
+  outstandingFormatted: string;
+  topClientName: string | null;
+  alertCount: number;
+}): string {
+  const margin = input.marginPercent;
+  const marginLabel =
+    margin > 0 ? `${margin.toFixed(1)}%` : margin === 0 ? "0%" : `${margin.toFixed(1)}%`;
+  const marginTone = margin >= 20 ? "healthy" : margin >= 10 ? "moderate" : "tight";
+
+  const parts: string[] = [
+    `Period margin is ${marginTone} at ${marginLabel} on ${input.revenueFormatted} revenue.`,
+  ];
+
+  if (input.topClientName) {
+    parts.push(`Top client by revenue: ${input.topClientName}.`);
+  }
+
+  if (input.outstandingFormatted && input.outstandingFormatted !== "—" ) {
+    parts.push(`Outstanding collections: ${input.outstandingFormatted}.`);
+  }
+
+  if (input.alertCount > 0) {
+    parts.push(
+      `${input.alertCount} finance alert${input.alertCount === 1 ? "" : "s"} need${input.alertCount === 1 ? "s" : ""} attention.`
+    );
+  } else {
+    parts.push("No open finance alerts in this filter window.");
+  }
+
+  return parts.join(" ");
+}
 
 async function requireSupabase() {
   const supabase = await createSupabaseServerClient();
@@ -158,6 +195,10 @@ export async function loadExecutiveDashboard(
   const charts = buildExecutiveDashboardCharts(snapshot);
   const alerts = buildFinanceAlerts({ snapshot, collections, filters });
 
+  const revenueCard = executive_kpis.cards.find((c) => c.id === "revenue");
+  const outstandingCard = executive_kpis.cards.find((c) => c.id === "outstanding");
+  const topClient = clientNodes[0] ?? null;
+
   const payload: ExecutiveDashboardPayload = {
     executive,
     revenue,
@@ -167,6 +208,13 @@ export async function loadExecutiveDashboard(
     charts,
     alerts,
     executive_kpis,
+    ai_insight: buildExecutiveAiInsight({
+      marginPercent: global.metrics.margin_percent,
+      revenueFormatted: revenueCard?.formatted_value ?? "—",
+      outstandingFormatted: outstandingCard?.formatted_value ?? "—",
+      topClientName: topClient?.label ?? null,
+      alertCount: alerts.alerts.length,
+    }),
     meta: {
       active_campaigns: snapshot.facts.length,
       po_remaining: Math.max(0, global.metrics.budget_variance),

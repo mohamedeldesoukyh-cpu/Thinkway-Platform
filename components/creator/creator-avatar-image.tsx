@@ -1,8 +1,9 @@
 "use client";
 
 import { UserIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { useMediaProxyImageRecovery } from "@/hooks/use-media-proxy-image-recovery";
 import { creatorAvatarBrowserDisplayUrl } from "@/lib/performance/creator-avatar";
 import { cn } from "@/lib/utils";
 
@@ -42,19 +43,28 @@ export function CreatorAvatarImage({
     ? creatorAvatarBrowserDisplayUrl(null, profileUrl)
     : null;
   const [useProfileFallback, setUseProfileFallback] = useState(false);
-  const [failed, setFailed] = useState(false);
 
-  const src =
+  const activeBase =
     useProfileFallback && profileOnlySrc && profileOnlySrc !== primarySrc
       ? profileOnlySrc
       : primarySrc;
 
+  const recovery = useMediaProxyImageRecovery(activeBase);
+  const notifiedFail = useRef(false);
+
   useEffect(() => {
     setUseProfileFallback(false);
-    setFailed(false);
+    notifiedFail.current = false;
   }, [primarySrc, profileOnlySrc]);
 
-  if (!src || failed) {
+  useEffect(() => {
+    if (recovery.exhausted && !notifiedFail.current) {
+      notifiedFail.current = true;
+      onFailed?.();
+    }
+  }, [recovery.exhausted, onFailed]);
+
+  if (!activeBase || recovery.exhausted) {
     return (
       <div
         className={cn(
@@ -75,8 +85,8 @@ export function CreatorAvatarImage({
     <div className={cn(AVATAR_CONTAINER_CLASS, dim, className)}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        key={src}
-        src={src}
+        key={recovery.displaySrc ?? activeBase}
+        src={recovery.displaySrc ?? activeBase}
         alt={alt}
         referrerPolicy="no-referrer"
         className="size-full object-cover object-center"
@@ -89,8 +99,7 @@ export function CreatorAvatarImage({
             setUseProfileFallback(true);
             return;
           }
-          setFailed(true);
-          onFailed?.();
+          recovery.onError();
         }}
       />
     </div>

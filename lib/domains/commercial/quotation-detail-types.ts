@@ -44,6 +44,8 @@ export type QuotationItemRow = {
   af_value: number;
   af_value_egp: number;
   sort_order: number;
+  collapse_group_id: string | null;
+  collapse_label: string | null;
 };
 
 export type QuotationRevisionRow = {
@@ -162,7 +164,10 @@ export type QuotationDetail = {
   items: QuotationItemRow[];
   revisions: QuotationRevisionRow[];
   canManage: boolean;
-  /** Aggregated reach / engagement for cover & summary KPIs. */
+  /** Aggregated forecast KPIs for cover & summary. */
+  /** Deduplicated sum of creator followers — not reach. */
+  audience_size: number;
+  /** Expected unique people reached (Campaign Forecast Engine). */
   estimated_reach: number;
   estimated_engagement_rate: number | null;
 };

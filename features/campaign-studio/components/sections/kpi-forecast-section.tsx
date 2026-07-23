@@ -6,8 +6,9 @@ import {
   SectionPendingMessage,
   shouldShowPendingPlaceholder,
 } from "./shared/section-status-utils";
-import { BudgetRow } from "./shared/studio-ui-primitives";
+import { DetailGrid, DetailItem, BudgetRow } from "./shared/studio-ui-primitives";
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
+import { useStudioRefMode } from "../../hooks/use-studio-ref-mode";
 import { resolveGroundedKpis } from "../../services/section-data-resolver";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
@@ -23,6 +24,7 @@ export function KpiForecastSection({
   fallbackText,
   status,
 }: KpiForecastSectionProps) {
+  const refMode = useStudioRefMode();
   const isRunning = status === "running";
   const kpis = resolveGroundedKpis(campaignObject);
 
@@ -37,6 +39,24 @@ export function KpiForecastSection({
     return <SectionFallbackContent text={fallbackText} />;
   }
 
+  if (refMode) {
+    return (
+      <DetailGrid>
+        {kpis.slice(0, 6).map((kpi, index) => (
+          <DetailItem
+            key={`${kpi.metric}-${index}`}
+            label={kpi.metric}
+            value={
+              kpi.confidence != null
+                ? `${kpi.prediction} · Historical ${kpi.confidence}%`
+                : kpi.prediction
+            }
+          />
+        ))}
+      </DetailGrid>
+    );
+  }
+
   return (
     <div className="min-w-0">
       {kpis.slice(0, 6).map((kpi, index) => (
@@ -46,9 +66,7 @@ export function KpiForecastSection({
           amount={kpi.prediction}
           trailing={
             kpi.confidence != null ? (
-              <span className={STUDIO_CLASSES.pillFit}>
-                Historical · {kpi.confidence}%
-              </span>
+              <span className={STUDIO_CLASSES.pillFit}>Historical · {kpi.confidence}%</span>
             ) : null
           }
         />

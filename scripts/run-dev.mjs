@@ -17,7 +17,7 @@ const env = {
 };
 
 const npxCmd = process.platform === "win32" ? "npx.cmd" : "npx";
-const result = spawnSync(npxCmd, ["next", "dev", ...process.argv.slice(2)], {
+const result = spawnSync(npxCmd, ["next", "dev", "--turbo", ...process.argv.slice(2)], {
   cwd: root,
   stdio: "inherit",
   env,

@@ -6,7 +6,7 @@ import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
 import { resolveQuotationCreatorDisplayCategories } from "@/lib/quotations/quotation-creator-categories";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
-import { resolveCreatorProfileUrl, type ProfileUrlSource } from "@/lib/discovery/profile-url";
+import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
 import { parseProfileInput } from "@/lib/social/parse-profile-url";
 import { isSocialPlatform } from "@/lib/social/platforms";
 import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-types";
@@ -401,7 +401,7 @@ export function resolveExportGroupEngagementRate(
 export function resolveExportCreatorProfile(item: QuotationExportItem) {
   const source = buildQuotationCreatorProfileSource(item);
   const profileUrl =
-    resolveCreatorProfileUrl(source as ProfileUrlSource) ??
+    resolveCreatorProfileUrl(source) ??
     item.profile_url ??
     (item.platform && item.handle
       ? resolveCreatorProfileUrl({ platform: item.platform, handle: item.handle })

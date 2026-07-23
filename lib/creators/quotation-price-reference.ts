@@ -1,6 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { formatQuotationDeliverablesSummary } from "@/lib/quotations/quotation-deliverable-types";
+import { platformLabel } from "@/lib/campaigns/line-assignment";
+import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+import {
+  deliverableTypeValues,
+  formatQuotationDeliverablesSummary,
+  platformsFromSelectedPostTypes,
+  typeLinesIncludeAllPlatforms,
+} from "@/lib/quotations/quotation-deliverable-types";
 import type { Database } from "@/types/database";
 
 export type CreatorQuotationPriceEntry = {
@@ -12,6 +19,18 @@ export type CreatorQuotationPriceEntry = {
   cost_egp: number;
   quoted_at: string;
   deliverable_summary: string;
+  pricing_kind: "package" | "platform";
+  platform: string | null;
+};
+
+export type CreatorQuotationPriceSegment = {
+  kind: "package" | "platform";
+  platform: string | null;
+  platform_label: string;
+  quote_count: number;
+  avg_cost: number;
+  avg_cost_egp: number;
+  avg_cost_currency: string;
 };
 
 export type CreatorQuotationPriceReference = {
@@ -22,6 +41,7 @@ export type CreatorQuotationPriceReference = {
   avg_cost_currency: string;
   last_quoted_at: string | null;
   recent_quotes: CreatorQuotationPriceEntry[];
+  segments: CreatorQuotationPriceSegment[];
 };
 
 type QuotationItemPriceRow = {
@@ -41,8 +61,171 @@ type QuotationItemPriceRow = {
 
 const RECENT_QUOTE_LIMIT = 5;
 
+const PACKAGE_POST_TYPES = new Set([
+  "cross_posting",
+  "mirrored_on_all_pf",
+  "all_platforms",
+  "campaign_series",
+]);
+
+const PLATFORM_SEGMENT_ORDER = ["instagram", "tiktok", "youtube", "snapchat", "facebook"];
+
 function roundMoney(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+function resolveQuotePlatformsFromDeliverables(deliverables: unknown): string[] {
+  if (!Array.isArray(deliverables) || deliverables.length === 0) return [];
+
+  const platforms = new Set<string>();
+  for (const raw of deliverables) {
+    if (!raw || typeof raw !== "object") continue;
+    const deliverable = raw as {
+      platform?: string | null;
+      type?: string | null;
+      types?: string[] | null;
+      type_lines?: Array<{ type?: string; quantity?: number }> | null;
+    };
+
+    const platformField = deliverable.platform?.trim();
+    if (platformField) {
+      for (const part of platformField.split(",")) {
+        const key = canonicalPlatformKey(part.trim());
+        if (key) platforms.add(key);
+      }
+    }
+
+    for (const platform of platformsFromSelectedPostTypes(deliverableTypeValues(deliverable), [])) {
+      platforms.add(platform);
+    }
+  }
+
+  return [...platforms].sort(
+    (a, b) => PLATFORM_SEGMENT_ORDER.indexOf(a) - PLATFORM_SEGMENT_ORDER.indexOf(b)
+  );
+}
+
+function isPackageQuote(deliverables: unknown, platforms: string[]): boolean {
+  if (platforms.length >= 2) return true;
+  if (!Array.isArray(deliverables)) return false;
+
+  for (const raw of deliverables) {
+    if (!raw || typeof raw !== "object") continue;
+    const deliverable = raw as {
+      type?: string | null;
+      types?: string[] | null;
+      type_lines?: Array<{ type?: string; quantity?: number }> | null;
+    };
+    if (typeLinesIncludeAllPlatforms(deliverable)) return true;
+    if (deliverableTypeValues(deliverable).some((type) => PACKAGE_POST_TYPES.has(type))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function classifyQuotationPricing(
+  deliverables: unknown
+): { kind: "package" | "platform"; platform: string | null } {
+  const platforms = resolveQuotePlatformsFromDeliverables(deliverables);
+  if (isPackageQuote(deliverables, platforms)) {
+    return { kind: "package", platform: null };
+  }
+  return { kind: "platform", platform: platforms[0] ?? null };
+}
+
+function segmentKeyForPricing(pricing: {
+  kind: "package" | "platform";
+  platform: string | null;
+}): string {
+  return pricing.kind === "package" ? "package" : `platform:${pricing.platform ?? "unknown"}`;
+}
+
+function segmentLabelForPricing(pricing: {
+  kind: "package" | "platform";
+  platform: string | null;
+}): string {
+  if (pricing.kind === "package") return "Package";
+  if (!pricing.platform) return "Quoted line";
+  return platformLabel(pricing.platform);
+}
+
+function computeSegmentAverages(
+  rows: QuotationItemPriceRow[]
+): Pick<
+  CreatorQuotationPriceSegment,
+  "avg_cost" | "avg_cost_egp" | "avg_cost_currency" | "quote_count"
+> {
+  const quoteCount = rows.length;
+  const avgCostEgp =
+    rows.reduce((sum, row) => sum + Number(row.cost_egp ?? 0), 0) / quoteCount;
+
+  const currencyCounts = new Map<string, number>();
+  for (const row of rows) {
+    const currency = row.cost_currency?.toUpperCase() ?? "EGP";
+    currencyCounts.set(currency, (currencyCounts.get(currency) ?? 0) + 1);
+  }
+  const dominantCurrency = [...currencyCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "EGP";
+
+  const sameCurrencyRows = rows.filter(
+    (row) => (row.cost_currency?.toUpperCase() ?? "EGP") === dominantCurrency
+  );
+  const avgCost =
+    sameCurrencyRows.length > 0
+      ? sameCurrencyRows.reduce((sum, row) => sum + Number(row.cost), 0) / sameCurrencyRows.length
+      : avgCostEgp;
+
+  return {
+    quote_count: quoteCount,
+    avg_cost: roundMoney(avgCost),
+    avg_cost_egp: roundMoney(avgCostEgp),
+    avg_cost_currency: dominantCurrency,
+  };
+}
+
+function buildQuotationPriceSegments(
+  rows: QuotationItemPriceRow[]
+): CreatorQuotationPriceSegment[] {
+  const grouped = new Map<string, { pricing: ReturnType<typeof classifyQuotationPricing>; rows: QuotationItemPriceRow[] }>();
+
+  for (const row of rows) {
+    const pricing = classifyQuotationPricing(row.deliverables);
+    const key = segmentKeyForPricing(pricing);
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.rows.push(row);
+      continue;
+    }
+    grouped.set(key, { pricing, rows: [row] });
+  }
+
+  const segments = [...grouped.values()].map(({ pricing, rows: segmentRows }) => ({
+    kind: pricing.kind,
+    platform: pricing.platform,
+    platform_label: segmentLabelForPricing(pricing),
+    ...computeSegmentAverages(segmentRows),
+  }));
+
+  return segments.sort((left, right) => {
+    if (left.kind !== right.kind) return left.kind === "package" ? -1 : 1;
+    if (left.kind === "package") return 0;
+    const leftIndex = PLATFORM_SEGMENT_ORDER.indexOf(left.platform ?? "");
+    const rightIndex = PLATFORM_SEGMENT_ORDER.indexOf(right.platform ?? "");
+    return (leftIndex === -1 ? 99 : leftIndex) - (rightIndex === -1 ? 99 : rightIndex);
+  });
+}
+
+function formatAverageAmount(amount: number, currency: string): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function formatQuoteCountLabel(quoteCount: number): string {
+  return quoteCount === 1 ? "1 quote" : `${quoteCount} quotes`;
 }
 
 function deliverableSummary(deliverables: unknown): string {
@@ -83,16 +266,23 @@ export function aggregateQuotationPriceReference(
   const recentQuotes: CreatorQuotationPriceEntry[] = [...priced]
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
     .slice(0, RECENT_QUOTE_LIMIT)
-    .map((row) => ({
-      quotation_id: row.quotation_id,
-      quotation_serial: row.quotations?.serial_number ?? null,
-      quotation_name: row.quotations?.name ?? null,
-      cost: Number(row.cost),
-      cost_currency: row.cost_currency,
-      cost_egp: Number(row.cost_egp ?? 0),
-      quoted_at: row.created_at,
-      deliverable_summary: deliverableSummary(row.deliverables),
-    }));
+    .map((row) => {
+      const pricing = classifyQuotationPricing(row.deliverables);
+      return {
+        quotation_id: row.quotation_id,
+        quotation_serial: row.quotations?.serial_number ?? null,
+        quotation_name: row.quotations?.name ?? null,
+        cost: Number(row.cost),
+        cost_currency: row.cost_currency,
+        cost_egp: Number(row.cost_egp ?? 0),
+        quoted_at: row.created_at,
+        deliverable_summary: deliverableSummary(row.deliverables),
+        pricing_kind: pricing.kind,
+        platform: pricing.platform,
+      };
+    });
+
+  const segments = buildQuotationPriceSegments(priced);
 
   return {
     influencer_id: influencerId,
@@ -102,6 +292,7 @@ export function aggregateQuotationPriceReference(
     avg_cost_currency: dominantCurrency,
     last_quoted_at: recentQuotes[0]?.quoted_at ?? null,
     recent_quotes: recentQuotes,
+    segments,
   };
 }
 
@@ -172,21 +363,32 @@ export async function getQuotationPriceReferencesBatch(
   return result;
 }
 
+export function formatQuotationPriceSegmentLabel(
+  segment: CreatorQuotationPriceSegment,
+  currency?: string
+): string {
+  const displayCurrency = currency ?? segment.avg_cost_currency;
+  const amount =
+    displayCurrency === segment.avg_cost_currency ? segment.avg_cost : segment.avg_cost_egp;
+  return `${formatAverageAmount(amount, displayCurrency)} avg · ${formatQuoteCountLabel(segment.quote_count)}`;
+}
+
+export function formatQuotationPriceSegmentHeadline(segment: CreatorQuotationPriceSegment): string {
+  return `${segment.platform_label} · ${formatQuotationPriceSegmentLabel(segment)}`;
+}
+
 export function formatQuotationPriceReferenceLabel(
   reference: CreatorQuotationPriceReference,
   currency?: string
 ): string {
+  if (reference.segments.length === 1) {
+    return formatQuotationPriceSegmentHeadline(reference.segments[0]!);
+  }
+
   const displayCurrency = currency ?? reference.avg_cost_currency;
   const amount =
     displayCurrency === reference.avg_cost_currency
       ? reference.avg_cost
       : reference.avg_cost_egp;
-  const formatted = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: displayCurrency,
-    maximumFractionDigits: 0,
-  }).format(amount);
-
-  const countLabel = reference.quote_count === 1 ? "1 quote" : `${reference.quote_count} quotes`;
-  return `${formatted} avg · ${countLabel}`;
+  return `${formatAverageAmount(amount, displayCurrency)} avg · ${formatQuoteCountLabel(reference.quote_count)}`;
 }

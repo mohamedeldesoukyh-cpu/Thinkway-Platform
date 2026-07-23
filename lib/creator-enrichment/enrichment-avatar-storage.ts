@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { resolveNextPrimaryAvatar } from "@/lib/creator-enrichment/enrichment-avatar-policy";
 import { fetchImageBuffer } from "@/lib/creators/publication-preview-proxy";
 import {
   parseCreatorAvatarStoragePathFromUrl,
@@ -72,6 +73,38 @@ export async function syncEnrichmentAvatarToStorage(
 
   if (updateError) {
     return { uploaded: false, reason: updateError.message };
+  }
+
+  const { data: influencer } = await supabase
+    .from("influencers")
+    .select("primary_avatar_url, primary_avatar_source")
+    .eq("id", input.influencerId)
+    .maybeSingle();
+
+  const row = influencer as {
+    primary_avatar_url?: string | null;
+    primary_avatar_source?: string | null;
+  } | null;
+
+  const nextPrimary = resolveNextPrimaryAvatar({
+    existingUrl: row?.primary_avatar_url,
+    existingSource: row?.primary_avatar_source,
+    incomingUrl: publicUrl,
+    incomingSource: "uploaded",
+  });
+
+  if (
+    nextPrimary.url !== row?.primary_avatar_url ||
+    nextPrimary.source !== row?.primary_avatar_source
+  ) {
+    await supabase
+      .from("influencers")
+      .update({
+        primary_avatar_url: nextPrimary.url,
+        primary_avatar_source: nextPrimary.source,
+        updated_at: syncedAt,
+      } as never)
+      .eq("id", input.influencerId);
   }
 
   return { uploaded: true, url: publicUrl };

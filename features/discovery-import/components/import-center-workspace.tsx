@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import {
+  DiscoveryListCard,
+  DiscoverySectionHeader,
+} from "@/features/discovery/components/design-system";
 import { ImportDropzone } from "@/features/discovery-import/components/import-dropzone";
 import { ImportHistoryTable } from "@/features/discovery-import/components/import-history-table";
 import { ResetDemoCreatorsButton } from "@/features/discovery-import/components/reset-demo-creators-button";
@@ -61,16 +65,16 @@ export function ImportCenterWorkspace({
   }, [files]);
 
   return (
-    <div className="space-y-5">
-      <section>
-        <h2 className="text-sm font-bold text-foreground">Upload datasets</h2>
-        <p className="mt-1 mb-4 max-w-2xl text-xs leading-relaxed text-muted-foreground">
-          Uploads are processed automatically;{" "}
-          <span className="font-medium text-blue-600 dark:text-blue-400">source files</span> are
-          removed after import completes. Filename and row counts stay in upload history.
-        </p>
-        <ImportDropzone onUploadComplete={handleUploadComplete} />
-      </section>
+    <div className="space-y-4">
+      <DiscoveryListCard>
+        <DiscoverySectionHeader
+          title="Upload datasets"
+          description="Uploads are processed automatically; source files are removed after import completes. Filename and row counts stay in upload history."
+        />
+        <div className="p-4 md:p-5">
+          <ImportDropzone onUploadComplete={handleUploadComplete} />
+        </div>
+      </DiscoveryListCard>
 
       <ImportHistoryTable
         files={files}

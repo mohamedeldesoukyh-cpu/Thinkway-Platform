@@ -6,8 +6,20 @@ import { formatQuotationTermsText } from "@/lib/commercial/quotation-default-ter
 import { defaultValidityDateFromIssue } from "@/lib/commercial/quotation-validity";
 import { normalizeCommercialLine } from "@/lib/commercial/quotation-engine";
 import { DEFAULT_QUOTATION_LINE_COMMERCIAL_MODE } from "@/lib/domains/commercial/quotation-constants";
+import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 import { buildQuotationOptionRenumberPlan, isSameQuotationCreator, nextQuotationOptionNumber, type QuotationCreatorRef } from "@/lib/quotations/quotation-creator-options";
+import {
+  buildCollapsePackageOptionRenumberPlan,
+  isFullCollapsePackageSelection,
+  nextCollapsePackageOptionNumber,
+} from "@/lib/quotations/quotation-collapse-package";
 import type { CommercialInputMode, Database } from "@/types/database";
+import {
+  collapseFieldsFromRow,
+  COLLAPSE_MIGRATION_HINT,
+  isMissingCollapseColumnsError,
+  queryShortlistSeedItemsWithCollapseFallback,
+} from "@/lib/discovery/shortlist-item-collapse-select";
 
 import type { QuotationItemSeed } from "../quotation-helpers";
 
@@ -70,6 +82,12 @@ export async function buildItemInsertRows(
       gp_value_egp: line.gp_value_egp,
       af_value_egp: line.af_value_egp,
       sort_order: sort++,
+      ...(seed.collapse_group_id
+        ? {
+            collapse_group_id: seed.collapse_group_id,
+            collapse_label: seed.collapse_label ?? null,
+          }
+        : {}),
     });
   }
   return rows;
@@ -134,6 +152,76 @@ export async function fetchQuotationItemsByIds(
     .in("id", itemIds);
 }
 
+export async function duplicateQuotationCollapsePackage(
+  supabase: SupabaseClient<Database>,
+  quotationId: string,
+  collapseGroupId: string
+) {
+  const { data: allItemsData, error: loadError } = await supabase
+    .from("quotation_items")
+    .select("*")
+    .eq("quotation_id", quotationId)
+    .order("sort_order", { ascending: true });
+
+  if (loadError) {
+    return { ok: false as const, message: loadError.message, inserts: [] as Record<string, unknown>[] };
+  }
+
+  const allItems = (allItemsData ?? []) as Array<Record<string, unknown>>;
+  const members = allItems
+    .filter((item) => item.collapse_group_id === collapseGroupId)
+    .sort((a, b) => (a.sort_order as number) - (b.sort_order as number));
+
+  if (members.length === 0) {
+    return { ok: false as const, message: "Collap package not found.", inserts: [] as Record<string, unknown>[] };
+  }
+
+  const lastMember = members[members.length - 1]!;
+  const newCollapseGroupId = crypto.randomUUID();
+  const nextOption = nextCollapsePackageOptionNumber(
+    allItems as unknown as QuotationItemRow[],
+    members as unknown as QuotationItemRow[]
+  );
+
+  const insertsAfter = members.map((row) => {
+    const {
+      id: _id,
+      created_at: _created,
+      updated_at: _updated,
+      source_shortlist_item_id: _source,
+      ...rest
+    } = row;
+    const isLeader = (row.id as string) === (members[0]?.id as string);
+    return {
+      afterItemId: lastMember.id as string,
+      payload: {
+        ...rest,
+        quotation_id: quotationId,
+        collapse_group_id: newCollapseGroupId,
+        collapse_label: row.collapse_label ?? null,
+        source_shortlist_item_id: null,
+        option_number: nextOption,
+        ...(isLeader
+          ? {}
+          : {
+              deliverables: [],
+              service_description: null,
+              revenue: 0,
+              cost: 0,
+              gp_value: 0,
+              gp_pct: 0,
+            }),
+      },
+    };
+  });
+
+  const insertResult = await insertQuotationRowsAfter(supabase, quotationId, insertsAfter);
+  if (!insertResult.ok) return insertResult;
+
+  await syncCollapsePackageOptionNumbers(supabase, quotationId);
+  return insertResult;
+}
+
 export async function duplicateQuotationItemRows(
   supabase: SupabaseClient<Database>,
   quotationId: string,
@@ -151,6 +239,14 @@ export async function duplicateQuotationItemRows(
   }
 
   const allItems = (allItemsData ?? []) as Array<Record<string, unknown>>;
+  const collapseGroupId = isFullCollapsePackageSelection(
+    allItems as unknown as QuotationItemRow[],
+    uniqueIds
+  );
+  if (collapseGroupId) {
+    return duplicateQuotationCollapsePackage(supabase, quotationId, collapseGroupId);
+  }
+
   const sourceIdSet = new Set(uniqueIds);
   const foundSources = allItems.filter((item) => sourceIdSet.has(item.id as string));
   if (!foundSources.length) {
@@ -186,6 +282,29 @@ export async function duplicateQuotationItemRows(
   return insertResult;
 }
 
+export async function syncCollapsePackageOptionNumbers(
+  supabase: SupabaseClient<Database>,
+  quotationId: string
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("quotation_items")
+    .select(
+      "id, sort_order, option_number, collapse_group_id, collapse_label, unified_id, influencer_id, profile_id, creator_name, handle"
+    )
+    .eq("quotation_id", quotationId);
+
+  if (error || !data?.length) return;
+
+  const updates = buildCollapsePackageOptionRenumberPlan(data as unknown as QuotationItemRow[]);
+  if (updates.length === 0) return;
+
+  await Promise.all(
+    updates.map(({ id, option_number }) =>
+      supabase.from("quotation_items").update({ option_number } as never).eq("id", id)
+    )
+  );
+}
+
 export async function renumberQuotationOptionNumbers(
   supabase: SupabaseClient<Database>,
   quotationId: string
@@ -193,30 +312,35 @@ export async function renumberQuotationOptionNumbers(
   const { data, error } = await supabase
     .from("quotation_items")
     .select(
-      "id, sort_order, option_number, unified_id, influencer_id, profile_id, creator_name, handle"
+      "id, sort_order, option_number, collapse_group_id, unified_id, influencer_id, profile_id, creator_name, handle"
     )
     .eq("quotation_id", quotationId);
 
   if (error || !data?.length) return;
 
-  const updates = buildQuotationOptionRenumberPlan(
-    data as Array<{
-      id: string;
-      sort_order: number;
-      option_number: number | null;
-      unified_id: string | null;
-      influencer_id: string | null;
-      profile_id: string | null;
-      creator_name: string | null;
-      handle: string | null;
-    }>
-  );
+  const typed = data as Array<{
+    id: string;
+    sort_order: number;
+    option_number: number | null;
+    collapse_group_id: string | null;
+    unified_id: string | null;
+    influencer_id: string | null;
+    profile_id: string | null;
+    creator_name: string | null;
+    handle: string | null;
+  }>;
 
-  await Promise.all(
-    updates.map(({ id, option_number }) =>
-      supabase.from("quotation_items").update({ option_number } as never).eq("id", id)
-    )
-  );
+  const updates = buildQuotationOptionRenumberPlan(typed);
+
+  if (updates.length > 0) {
+    await Promise.all(
+      updates.map(({ id, option_number }) =>
+        supabase.from("quotation_items").update({ option_number } as never).eq("id", id)
+      )
+    );
+  }
+
+  await syncCollapsePackageOptionNumbers(supabase, quotationId);
 }
 
 type QuotationRowInsertAfter = {
@@ -392,19 +516,29 @@ export async function loadShortlistItemsForSeeds(
   shortlistId: string,
   itemIds?: string[]
 ) {
-  let query = supabase
-    .from("discovery_shortlist_items")
-    .select(
-      "id, influencer_id, profile_id, unified_id, commercial_input_mode, cost, cost_currency, gp_pct, revenue, gp_value, deliverables, sort_order"
-    )
-    .eq("shortlist_id", shortlistId)
-    .order("sort_order", { ascending: true });
+  const { data, error } = await queryShortlistSeedItemsWithCollapseFallback((select) => {
+    let query = supabase
+      .from("discovery_shortlist_items")
+      .select(select)
+      .eq("shortlist_id", shortlistId)
+      .order("sort_order", { ascending: true });
 
-  if (itemIds?.length) {
-    query = query.in("id", itemIds);
-  }
+    if (itemIds?.length) {
+      query = query.in("id", itemIds);
+    }
 
-  return query;
+    return query;
+  });
+
+  if (error) return { data, error };
+
+  // Dynamic select strings are not parseable by the typed client (GenericStringError).
+  const mapped = ((data ?? []) as unknown as Array<Record<string, unknown>>).map((row) => ({
+    ...row,
+    ...collapseFieldsFromRow(row),
+  }));
+
+  return { data: mapped, error: null };
 }
 
 export async function fetchShortlistHeader(

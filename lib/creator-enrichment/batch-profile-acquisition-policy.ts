@@ -2,6 +2,10 @@
  * Configuration for batch profile acquisition (Apify actor runs with many profile URLs).
  */
 
+import type { EnrichmentScope } from "@/lib/creator-enrichment/enabled";
+
+import { shouldIncludeApifyProfilePosts } from "./apify-fetch-policy";
+
 export type BatchProfileAcquisitionConfig = {
   /** Max profile URLs per Apify actor run (per platform). */
   batchSize: number;
@@ -67,6 +71,8 @@ export function getBatchProfileAcquisitionConfig(): BatchProfileAcquisitionConfi
 export function estimateBatchProfileAcquisitionUsage(input: {
   profileCount: number;
   platform: string;
+  /** Enrichment scope — metrics refresh skips the Instagram posts actor. */
+  scope?: EnrichmentScope;
   config?: BatchProfileAcquisitionConfig;
 }): {
   estimatedApifyRuns: number;
@@ -76,7 +82,8 @@ export function estimateBatchProfileAcquisitionUsage(input: {
   const config = input.config ?? getBatchProfileAcquisitionConfig();
   const count = Math.max(0, input.profileCount);
   const batchCount = count === 0 ? 0 : Math.ceil(count / config.batchSize);
-  const includesPostsBatch = input.platform === "instagram";
+  const includesPostsBatch =
+    input.platform === "instagram" && shouldIncludeApifyProfilePosts(input.scope);
   const runsPerBatch = includesPostsBatch ? 2 : 1;
   const estimatedApifyRuns = batchCount * runsPerBatch;
   const creditsPerProfile =

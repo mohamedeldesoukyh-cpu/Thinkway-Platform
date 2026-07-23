@@ -13,6 +13,7 @@ export {
   bootstrapManualCreatorPlatformOptions,
   isManualQuotationCreator,
   mergeCreatorPlatformOptions,
+  unionQuotationCreatorGroupPlatforms,
 } from "@/lib/quotations/quotation-creator-platform-utils";
 
 const platformOptionsCache = new Map<string, QuotationCreatorPlatformOption[]>();

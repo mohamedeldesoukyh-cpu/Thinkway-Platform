@@ -37,3 +37,12 @@ export const MEDIA_PLAN_DAY_TYPE_COLORS = {
   boost: "#D97706",
   monitoring: MEDIA_PLAN_BRAND.muted,
 } as const;
+
+/** Rollout / weekly objective phase accents — Launch · Amplify · Momentum · Maintain · Wrap-up */
+export const MEDIA_PLAN_WEEK_PHASE_COLORS: Record<string, string> = {
+  Launch: MEDIA_PLAN_BRAND.electricBlue,
+  Amplify: "#7C3AED",
+  Momentum: "#3B82F6",
+  Maintain: "#0C9D57",
+  "Wrap-up": "#D97706",
+};

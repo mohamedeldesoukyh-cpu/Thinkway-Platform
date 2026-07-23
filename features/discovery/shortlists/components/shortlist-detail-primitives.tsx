@@ -79,8 +79,8 @@ export function ShortlistDetailCard({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl border border-border bg-card",
-        padding === "default" && "p-[22px] px-6",
+        "overflow-hidden rounded-[var(--radius-lg)] border border-[var(--tw-border)] bg-background shadow-sm",
+        padding === "default" && "px-6 py-4",
         className
       )}
     >
@@ -93,21 +93,30 @@ export function ShortlistToolbarButton({
   children,
   className,
   variant = "outline",
+  size = "default",
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "outline" | "primary" | "danger";
+  variant?: "outline" | "primary" | "danger" | "ghost" | "glow";
+  size?: "default" | "sm";
 }) {
   return (
     <button
       type="button"
       className={cn(
-        "inline-flex h-[34px] items-center gap-1.5 rounded-lg px-3.5 text-xs font-semibold transition-all active:scale-[0.97]",
+        "inline-flex items-center gap-1.5 font-semibold transition-all active:scale-[0.97]",
+        size === "sm"
+          ? "h-8 rounded-[9px] px-3 text-[12.5px]"
+          : "h-9 rounded-[10px] px-3.5 text-[13px]",
         variant === "outline" &&
-          "border border-border bg-background text-muted-foreground hover:border-slate-300 hover:bg-muted/50",
+          "border border-border bg-background text-[var(--text-2)] hover:border-border hover:bg-muted/30",
+        variant === "ghost" &&
+          "border border-transparent bg-transparent text-[var(--text-2)] hover:bg-muted/40",
         variant === "primary" &&
-          "border-0 bg-primary text-primary-foreground shadow-[0_2px_10px_rgba(0,87,255,0.28)] hover:-translate-y-px hover:shadow-[0_4px_18px_rgba(0,87,255,0.35)]",
+          "border border-primary bg-primary text-primary-foreground shadow-[0_1px_2px_rgba(0,87,255,0.35),0_6px_16px_-6px_rgba(0,87,255,0.5)] hover:bg-[var(--blue-hover,#0048dd)]",
         variant === "danger" &&
-          "border border-red-200 bg-red-50 text-red-600 hover:border-red-300 hover:bg-red-100",
+          "border border-transparent bg-transparent text-red-600 hover:bg-red-500/10",
+        variant === "glow" &&
+          "border-[1.5px] border-primary/55 bg-background text-[var(--blue-text)] font-bold shadow-[0_0_0_3px_rgba(0,87,255,0.08),0_2px_14px_-3px_rgba(0,87,255,0.4)] hover:border-primary hover:bg-[var(--blue-light)] hover:shadow-[0_0_0_3px_rgba(0,87,255,0.14),0_4px_18px_-3px_rgba(0,87,255,0.55)] dark:bg-primary/5 [&_svg]:text-primary",
         props.disabled && "pointer-events-none opacity-50",
         className
       )}
@@ -115,5 +124,29 @@ export function ShortlistToolbarButton({
     >
       {children}
     </button>
+  );
+}
+
+export function ShortlistMetaDot() {
+  return (
+    <span
+      className="size-[3px] shrink-0 rounded-full bg-muted-foreground/50"
+      aria-hidden
+    />
+  );
+}
+
+export function ShortlistMetaItem({
+  label,
+  value,
+}: {
+  label: string;
+  value: ReactNode;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[12px]">
+      <span className="font-medium text-muted-foreground">{label}</span>
+      <span className="font-semibold text-[var(--text)]">{value}</span>
+    </span>
   );
 }

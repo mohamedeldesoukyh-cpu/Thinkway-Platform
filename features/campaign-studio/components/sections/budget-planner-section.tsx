@@ -7,7 +7,7 @@ import {
   SectionPendingMessage,
   shouldShowPendingPlaceholder,
 } from "./shared/section-status-utils";
-import { BudgetHero, BudgetRow } from "./shared/studio-ui-primitives";
+import { BudgetHero, BudgetRow, RationaleBar } from "./shared/studio-ui-primitives";
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
 import { resolveBudgetData } from "../../services/section-data-resolver";
 import type { CampaignObject } from "@/features/campaign-intelligence";
@@ -72,9 +72,9 @@ export function BudgetPlannerSection({
       })}
 
       {budget.budgetPlannerReasoning ? (
-        <div className={STUDIO_CLASSES.rationaleBox}>
+        <RationaleBar>
           <b>Director rationale:</b> {budget.budgetPlannerReasoning}
-        </div>
+        </RationaleBar>
       ) : null}
     </div>
   );

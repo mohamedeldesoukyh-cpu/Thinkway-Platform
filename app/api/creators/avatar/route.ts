@@ -1,10 +1,15 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
-import { fetchCreatorAvatarImage } from "@/lib/creators/creator-avatar-proxy";
+import {
+  refreshCreatorAvatarInBackground,
+  resolveCreatorAvatarForHttpRequest,
+} from "@/lib/creators/creator-avatar-proxy";
+import { recordMediaProxyRefreshScheduled } from "@/lib/creators/media-proxy-cache";
 import { requireApiPermission } from "@/lib/auth/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+/** Keep high enough for `after()` background refresh (scrape / OpenGraph). */
 export const maxDuration = 30;
 
 export async function GET(request: Request) {
@@ -20,9 +25,24 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Missing avatar source." }, { status: 400 });
   }
 
-  const result = await fetchCreatorAvatarImage({ src, profileUrl, supabase });
+  const result = await resolveCreatorAvatarForHttpRequest({ src, profileUrl, supabase });
   if (!result.ok) {
-    return NextResponse.json({ error: "Avatar unavailable." }, { status: result.status });
+    if (result.needsRefresh) {
+      recordMediaProxyRefreshScheduled();
+      after(() =>
+        refreshCreatorAvatarInBackground({ src, profileUrl, supabase })
+      );
+    }
+    return NextResponse.json(
+      { error: "Avatar unavailable." },
+      {
+        status: result.status,
+        headers: {
+          "Cache-Control": "private, max-age=30",
+          "X-Avatar-Cache": result.source,
+        },
+      }
+    );
   }
 
   return new NextResponse(result.buffer, {
@@ -30,6 +50,7 @@ export async function GET(request: Request) {
     headers: {
       "Content-Type": result.contentType,
       "Cache-Control": "private, max-age=3600",
+      "X-Avatar-Cache": result.source,
     },
   });
 }

@@ -134,7 +134,7 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.equal(getReportPlatformIconTitle("yt_video"), "YouTube");
 }
 
-// Quotation HTML renders platform logos, not text badges
+// Quotation HTML renders platform labels in the commercial fee table
 {
   const detail = mockDetail({
     items: [
@@ -147,16 +147,15 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
         id: "yt-item",
         platform: "youtube",
         deliverables: [{ platform: "youtube", type: "yt_short", types: ["yt_short"], quantity: 1 }],
+        sort_order: 1,
       }),
     ],
   });
   const html = buildQuotationHtml(buildQuotationDocument(detail));
 
-  assert.ok(html.includes('class="platform-link-icon"'), "Platform logo images render in export");
-  assert.ok(html.includes('title="Facebook"'), "Facebook platform title on icon");
-  assert.ok(html.includes('title="YouTube"'), "YouTube platform title on icon");
-  assert.ok(!html.includes('class="platform-text-badge">Facebook'), "Facebook must not fall back to text badge");
-  assert.ok(!html.includes('class="platform-text-badge">YouTube'), "YouTube must not fall back to text badge");
+  assert.ok(html.includes("Facebook"), "Facebook platform label renders in export");
+  assert.ok(html.includes("YouTube"), "YouTube platform label renders in export");
+  assert.ok(html.includes("platform-cell"), "Platform column present in fee table");
 }
 
 console.log("report-platform-icons.test.ts passed");

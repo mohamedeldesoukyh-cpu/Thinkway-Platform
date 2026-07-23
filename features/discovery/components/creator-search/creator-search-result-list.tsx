@@ -5,8 +5,10 @@ import { Loader2Icon, RotateCwIcon, SearchXIcon } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DiscoveryEmptyState,
+  DiscoverySearchExactListSkeleton,
+} from "@/features/discovery/components/design-system";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { resolveCreatorCheckboxState } from "@/features/creators/picker/creator-selection-hooks";
 import { AddMissingCreatorEmptyState } from "@/features/discovery/components/add-missing-creator-dialog";
@@ -14,20 +16,26 @@ import type { CreatorEnrichmentStatus } from "@/features/discovery/enrichment/st
 
 import { CreatorSearchExactEmptyState } from "./creator-search-exact-empty-state";
 import {
+  CreatorSearchRecommendedSection,
+  type CreatorSearchRecommendation,
+} from "./creator-search-recommended-section";
+import {
+  CreatorSearchExactHeader,
+  CreatorSearchExactRow,
+} from "./creator-search-exact-row";
+import {
   CreatorSearchHybridSectionHeader,
   type CreatorSearchHybridListItem,
 } from "./creator-search-hybrid-sections";
 import type { CreatorSearchIntentMode } from "./creator-search-intent-engine";
-
 import {
-  CreatorResultGridHeader,
-  CreatorResultRow,
-} from "../creator-result-row";
-
-const ROW_ESTIMATE = 92;
-const SECTION_ESTIMATE = 52;
-
+  CreatorSearchToolbarControls,
+  type CreatorSearchToolbarControlsProps,
+} from "./creator-search-top-bar";
 import type { CreatorSearchSortState } from "./creator-search-types";
+
+const ROW_ESTIMATE = 148;
+const SECTION_ESTIMATE = 52;
 
 type Props = {
   creators: UnifiedCreatorResult[];
@@ -41,10 +49,12 @@ type Props = {
   error: string | null;
   total: number;
   selectedIds: Set<string>;
+  shortlistedIds: Set<string>;
   onToggleSelect: (creator: UnifiedCreatorResult) => void;
   onToggleSelectAll: () => void;
   onOpenCreator: (creator: UnifiedCreatorResult) => void;
-  onAddToList: (creator: UnifiedCreatorResult) => void;
+  onToggleShortlist: (creator: UnifiedCreatorResult) => void;
+  onRejectCreator: (creator: UnifiedCreatorResult) => void;
   onRefreshMetrics?: (
     creator: UnifiedCreatorResult,
     platformAccountId?: string | null
@@ -55,9 +65,7 @@ type Props = {
   onRetry: () => void;
   loadMoreRef: (node: HTMLDivElement | null) => void;
   platformFilter?: string[];
-  /** When true, show "Add missing creator" in the empty state. */
   showAddMissingCreator?: boolean;
-  /** Exact-creator lookup with zero handle/name matches (hide fuzzy suggestions). */
   exactCreatorEmptyState?: boolean;
   searchQuery?: string;
   canSimplifyExactQuery?: boolean;
@@ -69,127 +77,89 @@ type Props = {
   ) => void;
   onMissingCreatorUpdated?: (creator: UnifiedCreatorResult) => void;
   onCreatorDeleted?: (creator: UnifiedCreatorResult) => void;
-  /** Creators imported from the current Apify acquisition session. */
   apifySourceUnifiedIds?: Set<string>;
-  /** Show campaign brief relevance column (AI search with active strategy criteria). */
+  workerOfflineHint?: boolean;
   showCampaignRelevance?: boolean;
+  showExactMatchesZeroHeader?: boolean;
+  recommendations?: CreatorSearchRecommendation[];
+  loadingRecommendations?: boolean;
+  toolbar: CreatorSearchToolbarControlsProps;
 };
 
 type VirtualRowProps = {
   creator: UnifiedCreatorResult;
-  rank: number;
   selected: boolean;
+  addedToShortlist: boolean;
   platformFilter?: string[];
   isApifyAcquired?: boolean;
-  showCampaignRelevance?: boolean;
+  workerOfflineHint?: boolean;
   onToggleSelect: (creator: UnifiedCreatorResult) => void;
   onOpenCreator: (creator: UnifiedCreatorResult) => void;
-  onAddToList: (creator: UnifiedCreatorResult) => void;
-  onRefreshMetrics?: (
-    creator: UnifiedCreatorResult,
-    platformAccountId?: string | null
-  ) => void;
-  onStopRefresh?: (creator: UnifiedCreatorResult) => void;
-  onCreatorDeleted?: (creator: UnifiedCreatorResult) => void;
+  onToggleShortlist: (creator: UnifiedCreatorResult) => void;
+  onRejectCreator: (creator: UnifiedCreatorResult) => void;
 };
 
 const CreatorSearchVirtualRow = memo(function CreatorSearchVirtualRow({
   creator,
-  rank,
   selected,
+  addedToShortlist,
   platformFilter,
   isApifyAcquired,
-  showCampaignRelevance,
+  workerOfflineHint,
   onToggleSelect,
   onOpenCreator,
-  onAddToList,
-  onRefreshMetrics,
-  onStopRefresh,
-  onCreatorDeleted,
+  onToggleShortlist,
+  onRejectCreator,
 }: VirtualRowProps) {
-  const handleToggleSelect = useCallback(
-    () => onToggleSelect(creator),
-    [onToggleSelect, creator]
-  );
   const handleOpenCreator = useCallback(
     () => onOpenCreator(creator),
     [onOpenCreator, creator]
   );
-  const handleAddToList = useCallback(
-    () => onAddToList(creator),
-    [onAddToList, creator]
+  const handleToggleSelect = useCallback(
+    () => onToggleSelect(creator),
+    [onToggleSelect, creator]
   );
-  const handleRefreshMetrics = useCallback(
-    (platformAccountId?: string | null) => onRefreshMetrics?.(creator, platformAccountId),
-    [onRefreshMetrics, creator]
+  const handleToggleShortlist = useCallback(
+    () => onToggleShortlist(creator),
+    [onToggleShortlist, creator]
   );
-  const handleStopRefresh = useCallback(
-    () => onStopRefresh?.(creator),
-    [onStopRefresh, creator]
-  );
-  const handleCreatorDeleted = useCallback(
-    () => onCreatorDeleted?.(creator),
-    [onCreatorDeleted, creator]
+  const handleReject = useCallback(
+    () => onRejectCreator(creator),
+    [onRejectCreator, creator]
   );
 
   return (
-    <CreatorResultRow
+    <CreatorSearchExactRow
       creator={creator}
-      rank={rank}
       selected={selected}
-      variant="search"
+      addedToShortlist={addedToShortlist}
       platformFilter={platformFilter}
       isApifyAcquired={isApifyAcquired}
-      showCampaignRelevance={showCampaignRelevance}
+      workerOfflineHint={workerOfflineHint}
       onToggleSelect={handleToggleSelect}
       onOpenCreator={handleOpenCreator}
-      onAddToList={handleAddToList}
-      onRefreshMetrics={onRefreshMetrics ? handleRefreshMetrics : undefined}
-      onStopRefresh={onStopRefresh ? handleStopRefresh : undefined}
-      onCreatorDeleted={onCreatorDeleted ? handleCreatorDeleted : undefined}
+      onToggleShortlist={handleToggleShortlist}
+      onReject={handleReject}
     />
   );
 });
-
-function ResultSkeleton() {
-  return (
-    <div className="flex items-center gap-4 border-b border-border px-4 py-3 md:px-5">
-      <Skeleton className="size-4 rounded" />
-      <Skeleton className="size-12 rounded-full" />
-      <div className="w-[200px] space-y-2">
-        <Skeleton className="h-3 w-32" />
-        <Skeleton className="h-2.5 w-20" />
-        <Skeleton className="h-2.5 w-24" />
-      </div>
-      <div className="hidden flex-1 gap-1.5 md:flex">
-        <Skeleton className="h-4 w-20 rounded-full" />
-        <Skeleton className="h-4 w-24 rounded-full" />
-        <Skeleton className="h-4 w-16 rounded-full" />
-      </div>
-      <Skeleton className="hidden h-8 w-24 md:block" />
-      <Skeleton className="h-6 w-12" />
-    </div>
-  );
-}
 
 export function CreatorSearchResultList({
   creators,
   hybridListItems,
   searchMode = "discovery",
   sort,
-  onSortChange,
   loading,
   loadingMore,
   hasMore,
   error,
   total,
   selectedIds,
-  onToggleSelect,
+  shortlistedIds,
   onToggleSelectAll,
   onOpenCreator,
-  onAddToList,
-  onRefreshMetrics,
-  onStopRefresh,
+  onToggleShortlist,
+  onRejectCreator,
   onStopAllRefresh,
   inFlightCount = 0,
   onRetry,
@@ -203,11 +173,16 @@ export function CreatorSearchResultList({
   onMissingCreatorAdded,
   onMissingCreatorEnrichmentStatusChange,
   onMissingCreatorUpdated,
-  onCreatorDeleted,
+  toolbar,
   apifySourceUnifiedIds,
-  showCampaignRelevance = false,
+  workerOfflineHint,
+  showExactMatchesZeroHeader = false,
+  recommendations = [],
+  loadingRecommendations = false,
+  onToggleSelect,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const headerToolbar = <CreatorSearchToolbarControls {...toolbar} />;
 
   const listItems = useMemo<CreatorSearchHybridListItem[]>(() => {
     if (hybridListItems && hybridListItems.length > 0) return hybridListItems;
@@ -249,108 +224,108 @@ export function CreatorSearchResultList({
   );
 
   const hasCreators = visibleCreatorIds.length > 0;
+  const exactMatchesCountLabel = showExactMatchesZeroHeader
+    ? `Exact Matches — ${total.toLocaleString()} creator${total === 1 ? "" : "s"}`
+    : undefined;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-card">
-      <div className="flex shrink-0 items-center gap-3 border-b border-border bg-muted/40 px-4 py-2 md:px-5">
-        <Checkbox
-          checked={allSelected}
-          onCheckedChange={onToggleSelectAll}
-          aria-label="Select all loaded creators"
-          disabled={!hasCreators}
+    <div className="discovery-search-exact-root">
+      <div className="discovery-search-exact-header-bar">
+        <CreatorSearchExactHeader
+          total={total}
+          allSelected={allSelected}
+          hasCreators={hasCreators}
+          onToggleSelectAll={onToggleSelectAll}
+          toolbar={headerToolbar}
+          countLabel={exactMatchesCountLabel}
         />
-        <span className="text-[12px] font-medium text-muted-foreground">
-          {loading && !hasCreators
-            ? "Searching…"
-            : `${total.toLocaleString()} ${total === 1 ? "result" : "results"}`}
-          {searchMode === "hybrid" && hasCreators ? (
-            <span className="ml-1 text-muted-foreground/70">· hybrid match</span>
-          ) : null}
-        </span>
         {inFlightCount > 0 && onStopAllRefresh ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="xs"
-            className="ml-auto h-7 shrink-0 rounded-full text-xs"
-            onClick={onStopAllRefresh}
-          >
-            Stop all refresh ({inFlightCount})
-          </Button>
+          <div className="flex justify-end pb-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              className="h-7 shrink-0 rounded-full text-xs"
+              onClick={onStopAllRefresh}
+            >
+              Stop all refresh ({inFlightCount})
+            </Button>
+          </div>
         ) : null}
       </div>
 
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto overscroll-y-contain">
+      <div ref={scrollRef} className="discovery-search-exact-scroll">
         {error ? (
-          <div className="flex flex-col items-center justify-center gap-3 px-6 py-24 text-center">
-            <div className="flex size-12 items-center justify-center rounded-full bg-destructive/10">
-              <SearchXIcon className="size-6 text-destructive" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">Search failed</p>
-              <p className="mt-1 max-w-sm text-[12px] text-muted-foreground">{error}</p>
-            </div>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={onRetry}>
+          <DiscoveryEmptyState
+            title="Search failed"
+            description={error}
+            icon={SearchXIcon}
+            className="[&>div:first-child]:bg-destructive/10 [&>div:first-child]:text-destructive"
+          >
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => onRetry()}>
               <RotateCwIcon className="size-3.5" />
               Try again
             </Button>
-          </div>
+          </DiscoveryEmptyState>
         ) : loading && !hasCreators ? (
-          <div>
-            <CreatorResultGridHeader
-              variant="search"
-              sort={sort}
-              onSortChange={onSortChange}
-              showCampaignRelevance={showCampaignRelevance}
-            />
-            {Array.from({ length: 8 }).map((_, i) => (
-              <ResultSkeleton key={i} />
-            ))}
-          </div>
+          <DiscoverySearchExactListSkeleton />
         ) : !hasCreators ? (
-          exactCreatorEmptyState ? (
-            <CreatorSearchExactEmptyState
-              query={searchQuery}
-              canSimplifyQuery={canSimplifyExactQuery}
-              onSearchWithFewerWords={() => onSearchWithFewerWords?.()}
-              onMissingCreatorAdded={onMissingCreatorAdded}
-              onMissingCreatorEnrichmentStatusChange={onMissingCreatorEnrichmentStatusChange}
-              onMissingCreatorUpdated={onMissingCreatorUpdated}
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center gap-3 px-6 py-24 text-center">
-              <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-                <SearchXIcon className="size-6 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground">
-                  {showAddMissingCreator
-                    ? "No creators match your search"
-                    : "No creators match your filters"}
-                </p>
-                <p className="mt-1 max-w-sm text-[12px] text-muted-foreground">
-                  {showAddMissingCreator
-                    ? "Try a different spelling or handle, or add the creator by profile link."
-                    : "Try widening the follower range, removing a category, or clearing some filters."}
-                </p>
-              </div>
-              <AddMissingCreatorEmptyState
-                visible={showAddMissingCreator}
-                className="mt-1"
-                onSuccess={onMissingCreatorAdded}
-                onEnrichmentStatusChange={onMissingCreatorEnrichmentStatusChange}
-                onCreatorUpdated={onMissingCreatorUpdated}
+          <>
+            {exactCreatorEmptyState ? (
+              <CreatorSearchExactEmptyState
+                query={searchQuery}
+                canSimplifyQuery={canSimplifyExactQuery}
+                onSearchWithFewerWords={() => onSearchWithFewerWords?.()}
+                onMissingCreatorAdded={onMissingCreatorAdded}
+                onMissingCreatorEnrichmentStatusChange={onMissingCreatorEnrichmentStatusChange}
+                onMissingCreatorUpdated={onMissingCreatorUpdated}
               />
-            </div>
-          )
+            ) : (
+              <DiscoveryEmptyState
+                title={
+                  showAddMissingCreator
+                    ? "No creators match your search"
+                    : showExactMatchesZeroHeader
+                      ? "No exact matches"
+                      : "No creators match your filters"
+                }
+                description={
+                  showAddMissingCreator
+                    ? "Try a different spelling or handle, or add the creator by profile link."
+                    : showExactMatchesZeroHeader
+                      ? "Your filters are still applied. Review recommended creators below for the closest matches."
+                      : "Try widening the follower range, removing a category, or clearing some filters."
+                }
+                icon={SearchXIcon}
+              >
+                <AddMissingCreatorEmptyState
+                  visible={showAddMissingCreator}
+                  className="mt-1"
+                  onSuccess={onMissingCreatorAdded}
+                  onEnrichmentStatusChange={onMissingCreatorEnrichmentStatusChange}
+                  onCreatorUpdated={onMissingCreatorUpdated}
+                />
+              </DiscoveryEmptyState>
+            )}
+            {showExactMatchesZeroHeader ? (
+              <CreatorSearchRecommendedSection
+                recommendations={recommendations}
+                loading={loadingRecommendations}
+                platformFilter={platformFilter}
+                selectedIds={selectedIds}
+                shortlistedIds={shortlistedIds}
+                onToggleSelect={onToggleSelect}
+                onOpenCreator={onOpenCreator}
+                onToggleShortlist={onToggleShortlist}
+                onRejectCreator={onRejectCreator}
+              />
+            ) : null}
+          </>
         ) : (
           <>
-            <CreatorResultGridHeader
-              variant="search"
-              sort={sort}
-              onSortChange={onSortChange}
-              showCampaignRelevance={showCampaignRelevance}
-            />
+            {searchMode === "hybrid" && hasCreators ? (
+              <p className="pb-2 text-[11px] text-muted-foreground">Hybrid match</p>
+            ) : null}
             <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
               {virtualizer.getVirtualItems().map((virtualRow) => {
                 const item = listItems[virtualRow.index];
@@ -383,17 +358,15 @@ export function CreatorSearchResultList({
                   >
                     <CreatorSearchVirtualRow
                       creator={item.creator}
-                      rank={item.rank}
                       selected={selectedIds.has(item.creator.unified_id)}
+                      addedToShortlist={shortlistedIds.has(item.creator.unified_id)}
                       platformFilter={platformFilter}
-                      isApifyAcquired={apifySourceUnifiedIds?.has(item.creator.unified_id) ?? false}
-                      showCampaignRelevance={showCampaignRelevance}
+                      isApifyAcquired={apifySourceUnifiedIds?.has(item.creator.unified_id)}
+                      workerOfflineHint={workerOfflineHint}
                       onToggleSelect={onToggleSelect}
                       onOpenCreator={onOpenCreator}
-                      onAddToList={onAddToList}
-                      onRefreshMetrics={onRefreshMetrics}
-                      onStopRefresh={onStopRefresh}
-                      onCreatorDeleted={onCreatorDeleted}
+                      onToggleShortlist={onToggleShortlist}
+                      onRejectCreator={onRejectCreator}
                     />
                   </div>
                 );

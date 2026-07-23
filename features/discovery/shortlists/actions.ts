@@ -29,6 +29,7 @@ import { priorityForTrigger } from "@/lib/creator-enrichment/policy";
 import { getDiscoveryControlSettings } from "@/lib/discovery/control-center/discovery-control-service";
 import { shouldAutoEnrichForTrigger } from "@/lib/discovery/control-center/discovery-control-policy";
 import { promoteDiscoveredProfileToInfluencer } from "./promote";
+import { ensureDiscoveredProfileBrowsable, ensureDiscoveryCreatorBrowsable } from "@/lib/creators/discovery-browse-eligibility";
 import { canMoveItemToCampaign } from "./item-transitions";
 import {
   assertTransition,
@@ -704,7 +705,8 @@ export async function addCreatorToShortlistV2(
   let existingQuery = actor.supabase
     .from("discovery_shortlist_items")
     .select("id")
-    .eq("shortlist_id", resolved.shortlistId);
+    .eq("shortlist_id", resolved.shortlistId)
+    .is("collapse_group_id", null);
   if (resolved.discoveredProfileId) {
     existingQuery = existingQuery.eq("profile_id", resolved.discoveredProfileId);
   } else if (resolved.influencerId) {
@@ -716,7 +718,10 @@ export async function addCreatorToShortlistV2(
   }
   const { data: existing } = await existingQuery.maybeSingle();
   if (existing?.id) {
-    return { ok: true, message: "Creator is already on this shortlist." };
+    return {
+      ok: true,
+      message: "Creator is already on this shortlist as an individual row.",
+    };
   }
 
   const { data: inserted, error } = await actor.supabase.from("discovery_shortlist_items").insert({
@@ -739,6 +744,12 @@ export async function addCreatorToShortlistV2(
     });
   }
 
+  if (resolved.influencerId) {
+    await ensureDiscoveryCreatorBrowsable(actor.supabase, resolved.influencerId);
+  } else if (resolved.discoveredProfileId) {
+    await ensureDiscoveredProfileBrowsable(actor.supabase, resolved.discoveredProfileId);
+  }
+
   await logCreatorMovement(actor.supabase, {
     action: "discovery_to_shortlist",
     sourceType: "discovery",
@@ -756,13 +767,16 @@ export async function addCreatorToShortlistV2(
     resolved.influencerId &&
     shouldAutoEnrichForTrigger("shortlist", controlSettings)
   ) {
-    enqueueCreatorEnrichmentBestEffort({
-      influencerId: resolved.influencerId,
-      trigger: "shortlist",
-      scope: "all",
-      priority: priorityForTrigger("shortlist"),
-      force: false,
-    });
+    enqueueCreatorEnrichmentBestEffort(
+      {
+        influencerId: resolved.influencerId,
+        trigger: "shortlist",
+        scope: "all",
+        priority: priorityForTrigger("shortlist"),
+        force: false,
+      },
+      { feature: "shortlist" }
+    );
   }
 
   revalidateShortlist(resolved.shortlistId);

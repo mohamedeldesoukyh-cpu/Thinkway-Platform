@@ -8,10 +8,11 @@ import { toast } from "sonner";
 import { MAX_CREATOR_COMPARE } from "@/lib/creators/creator-compare-bundle";
 import { CREATOR_IMPORT_COMPLETED_EVENT } from "@/lib/discovery-import/constants";
 
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { glassFlyoutContentClass } from "@/components/shared/navigation/glass-selection-flyout";
+import { DiscoveryFilterSheet } from "@/features/discovery/components/design-system";
+import { discoverySelectionFlyoutContentClass } from "@/features/discovery/components/design-system/discovery-selection-flyout";
 import { cn } from "@/lib/utils";
-import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet";
+import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet-lazy";
+import { useCreatorDetailSheetState } from "@/features/discovery/hooks/use-creator-detail-sheet-state";
 import { browseUnifiedCreatorsAction, browseCreatorsByInfluencerIdsAction, getAcquisitionJobsStatusAction } from "@/features/campaigns/creator-discovery-actions";
 import { createAcquisitionSessionController } from "./creator-search-acquisition-session";
 import type { BrowseInvocationCaller } from "@/lib/discovery/browse-invocation-trace";
@@ -30,6 +31,7 @@ import {
   pollCreatorAfterRefresh,
   pollCreatorsAfterBatchRefresh,
 } from "@/features/discovery/enrichment/poll-creator-refresh";
+import { useManualRefreshFlow } from "@/features/discovery/enrichment/use-manual-refresh-flow";
 import {
   isEnrichmentInProgress,
   syncStatusToEnrichmentStatus,
@@ -40,36 +42,44 @@ import {
   describeAddOutcome,
   type AddCreatorPlatformSelection,
 } from "@/features/discovery/shortlists/add-to-shortlist-client";
-import { AddToShortlistDialog } from "@/features/discovery/shortlists/components/add-to-shortlist-dialog";
-import {
-  needsPlatformAccountSelection,
-  SelectPlatformAccountsDialog,
-} from "@/features/discovery/shortlists/components/select-platform-accounts-dialog";
+import { removeUnifiedCreatorFromShortlists } from "@/features/discovery/shortlists/remove-from-shortlist-client";
+import { needsPlatformAccountSelection } from "@/features/discovery/shortlists/platform-account-selection";
 import type { ShortlistCampaignOption } from "@/features/discovery/queries";
 import { createQuotationFromSelection } from "@/features/quotations/actions";
 import { quotationDetailPath } from "@/features/quotations/constants";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
+import { CREATOR_SEARCH_QUERY_PARAM } from "@/lib/creators/category-filter";
 import {
-  CREATOR_SEARCH_QUERY_PARAM,
-  applyCategoriesToUrlParams,
-  categoriesEqual,
-  categoriesFromUrlParams,
-} from "@/lib/creators/category-filter";
+  applyCreatorSearchFiltersToUrlParams,
+  creatorSearchFiltersFromUrlParams,
+  creatorSearchFiltersUrlEqual,
+} from "@/lib/creators/creator-search-url-params";
 
-import { CreateListDialog, type CreatedShortlist } from "./create-list-dialog";
+import type { CreatedShortlist } from "./create-list-dialog";
 import { CreatorSearchActiveFilters } from "./creator-search-active-filters";
+import { clearDiscoverySearchDraft } from "./creator-search-draft-storage";
 import { applyCreatorSearchClientFilters, hasClientOnlyCreatorSearchFilters } from "./creator-search-client-filters";
 import { CreatorSearchBulkBar } from "./creator-search-bulk-bar";
-import { CreatorSearchFilterBottomBar } from "./creator-search-filter-bar";
 import { CreatorSearchFilterPanel } from "./creator-search-filter-panel";
 import { CreatorSearchResultList } from "./creator-search-result-list";
-import { CreatorSearchTopBar } from "./creator-search-top-bar";
+import {
+  CampaignBriefSidebar,
+  AiSearchStrategySheet,
+  CreatorSearchCampaignRequirementsPanel,
+  CreateListDialog,
+  AddToShortlistDialog,
+  SelectPlatformAccountsDialog,
+  ManualRefreshConfirmDialog,
+  DeleteDiscoveryCreatorDialog,
+} from "./creator-search-lazy-panels";
 import {
   DEFAULT_CREATOR_SEARCH_FILTERS,
   DEFAULT_CREATOR_SEARCH_SORT,
+  cloneCreatorSearchFilters,
   filtersToBrowseParams,
   filtersToRelaxedBrowseParams,
+  hasActiveCreatorSearchFilters,
   type CreatorSearchFilters,
   type CreatorSearchSortState,
 } from "./creator-search-types";
@@ -103,12 +113,10 @@ import { stashDiscoverySelection } from "./discovery-selection-storage";
 import {
   useCreatorSelection,
 } from "@/features/creators/picker/creator-selection-hooks";
-import { CreatorSearchCampaignBriefBar } from "./creator-search-campaign-brief-bar";
-import { CreatorSearchCampaignRequirementsPanel } from "./creator-search-campaign-requirements-panel";
 import { CreatorSearchAiCriteriaChips } from "./creator-search-ai-criteria-chips";
 import { CreatorSearchAiExtractingState } from "./creator-search-ai-extracting-state";
-import { CampaignBriefSidebar } from "@/features/campaign-intelligence-profile/components/campaign-brief-sidebar";
-import { AiSearchStrategySheet } from "@/features/campaign-intelligence-profile/components/ai-search-strategy-sheet";
+import { type CreatorSearchRecommendation } from "./creator-search-recommended-section";
+import { buildCreatorSearchRecommendations } from "./creator-search-zero-results-recommendations";
 import type { CampaignIntelligenceWorkspaceState } from "@/features/campaign-intelligence-profile/actions/profile-actions";
 import {
   buildCreatorFiltersFromProfile,
@@ -119,6 +127,8 @@ import type { CampaignIntelligenceProfile, CampaignSearchCriterion } from "@/fea
 const PAGE_SIZE = 50;
 /** Max creators loaded for AI campaign scoring before Apify acquisition completes. */
 const AI_CAMPAIGN_PAGE_SIZE = 200;
+/** Relaxed pool size for zero-results recommendations (manual filter mode). */
+const ZERO_RESULTS_RECOMMENDATION_PAGE_SIZE = 200;
 const SAVED_SEARCH_KEY = "thinkway:creator-search-saved:v1";
 
 type Props = {
@@ -137,15 +147,12 @@ export function CreatorSearchWorkspace({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const initialCategories = categoriesFromUrlParams(searchParams);
+  const initialFiltersFromUrl = creatorSearchFiltersFromUrlParams(searchParams);
   const initialSearch = searchParams.get(CREATOR_SEARCH_QUERY_PARAM)?.trim() ?? "";
   const profileIdFromUrl = searchParams.get("profileId");
   const aiModeFromUrl = searchParams.get("mode") === "ai";
   const [shortlists, setShortlists] = useState(initialShortlists);
-  const [filters, setFilters] = useState<CreatorSearchFilters>(() => ({
-    ...DEFAULT_CREATOR_SEARCH_FILTERS,
-    categories: initialCategories,
-  }));
+  const [filters, setFilters] = useState<CreatorSearchFilters>(() => initialFiltersFromUrl);
   const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
   const [sort, setSort] = useState<CreatorSearchSortState>(DEFAULT_CREATOR_SEARCH_SORT);
   const [page, setPage] = useState(1);
@@ -185,7 +192,14 @@ export function CreatorSearchWorkspace({
     toggle,
     toggleAllVisible,
   } = useCreatorSelection({ mode: "multi" });
-  const [detailCreator, setDetailCreator] = useState<UnifiedCreatorResult | null>(null);
+  const {
+    open: detailOpen,
+    creator: detailCreator,
+    openCreator,
+    onOpenChange: onDetailOpenChange,
+    closeIfShowing,
+    setCreator: setDetailCreator,
+  } = useCreatorDetailSheetState();
   const [filtersDrawerOpen, setFiltersDrawerOpen] = useState(false);
   const [createListOpen, setCreateListOpen] = useState(false);
   const [addToShortlistOpen, setAddToShortlistOpen] = useState(false);
@@ -197,7 +211,25 @@ export function CreatorSearchWorkspace({
   const [pendingShortlistCreator, setPendingShortlistCreator] = useState<UnifiedCreatorResult | null>(
     null
   );
+  const [deleteCreatorTarget, setDeleteCreatorTarget] = useState<UnifiedCreatorResult | null>(
+    null
+  );
+  /** Session “Added” state: unified_id → shortlist ids they were added to. */
+  const [shortlistMembership, setShortlistMembership] = useState<Map<string, string[]>>(
+    () => new Map()
+  );
+  /** Hidden via row X when the creator cannot be permanently deleted. */
+  const [hiddenUnifiedIds, setHiddenUnifiedIds] = useState<Set<string>>(() => new Set());
   const [isPending, startTransition] = useTransition();
+  const {
+    isPending: manualRefreshPending,
+    dialogOpen: manualRefreshDialogOpen,
+    setDialogOpen: setManualRefreshDialogOpen,
+    assessment: manualRefreshAssessment,
+    scopeLabel: manualRefreshScopeLabel,
+    requestRefresh: requestManualRefresh,
+    chooseRefreshSource: chooseManualRefreshSource,
+  } = useManualRefreshFlow();
   const [selectedCreatorMap, setSelectedCreatorMap] = useState<
     Map<string, UnifiedCreatorResult>
   >(() => new Map());
@@ -205,11 +237,11 @@ export function CreatorSearchWorkspace({
   const filtersRef = useRef(filters);
   const reqIdRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
-  const skipCategoryUrlWriteRef = useRef(false);
+  const skipFilterUrlWriteRef = useRef(false);
   const skipSearchUrlWriteRef = useRef(false);
   const pinnedCreatorsRef = useRef<Map<string, UnifiedCreatorResult>>(new Map());
   /** Blocks URL → state sync while a full clear is flushing stale query params. */
-  const pendingUrlClearRef = useRef(false);
+  const pendingUrlClearRef = useRef<"search" | "all" | false>(false);
   /** Prevents server-provided brief from re-applying after the user clears everything. */
   const suppressBriefHydrationRef = useRef(false);
   /** Runs AI campaign search once when opening /discovery/search?profileId=… */
@@ -243,10 +275,25 @@ export function CreatorSearchWorkspace({
   const [apifySourceUnifiedIds, setApifySourceUnifiedIds] = useState<Set<string>>(
     () => new Set()
   );
+  const [recommendedCreators, setRecommendedCreators] = useState<CreatorSearchRecommendation[]>(
+    []
+  );
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+  const recommendationReqRef = useRef(0);
 
   useEffect(() => {
-    if (!pendingUrlClearRef.current) return;
-    if (searchParams.toString() === "") {
+    const pending = pendingUrlClearRef.current;
+    if (!pending) return;
+
+    if (pending === "all") {
+      if (searchParams.toString() === "") {
+        pendingUrlClearRef.current = false;
+      }
+      return;
+    }
+
+    const queryParam = searchParams.get(CREATOR_SEARCH_QUERY_PARAM)?.trim() ?? "";
+    if (!searchParams.has(CREATOR_SEARCH_QUERY_PARAM) || !queryParam) {
       pendingUrlClearRef.current = false;
     }
   }, [searchParams]);
@@ -254,7 +301,10 @@ export function CreatorSearchWorkspace({
   filtersRef.current = filters;
   searchRef.current = debouncedSearch;
 
-  const categoriesFromUrl = useMemo(() => categoriesFromUrlParams(searchParams), [searchParams]);
+  const filtersFromUrl = useMemo(
+    () => creatorSearchFiltersFromUrlParams(searchParams),
+    [searchParams]
+  );
   const searchFromUrl = searchParams.get(CREATOR_SEARCH_QUERY_PARAM)?.trim() ?? "";
 
   // URL → search (back/forward, refresh)
@@ -268,25 +318,25 @@ export function CreatorSearchWorkspace({
   useEffect(() => {
     if (pendingUrlClearRef.current) return;
     setFilters((prev) => {
-      if (categoriesEqual(prev.categories, categoriesFromUrl)) return prev;
-      skipCategoryUrlWriteRef.current = true;
-      return { ...prev, categories: categoriesFromUrl };
+      if (creatorSearchFiltersUrlEqual(prev, filtersFromUrl)) return prev;
+      skipFilterUrlWriteRef.current = true;
+      return cloneCreatorSearchFilters(filtersFromUrl);
     });
-  }, [categoriesFromUrl]);
+  }, [filtersFromUrl]);
 
   // filters → URL (filter bar / clear). Only react to filter changes, not URL updates.
   useEffect(() => {
-    if (skipCategoryUrlWriteRef.current) {
-      skipCategoryUrlWriteRef.current = false;
+    if (pendingUrlClearRef.current === "all") return;
+    if (skipFilterUrlWriteRef.current) {
+      skipFilterUrlWriteRef.current = false;
       return;
     }
 
-    const filterCategories = filters.categories;
-    const urlCategories = categoriesFromUrlParams(searchParams);
-    if (categoriesEqual(filterCategories, urlCategories)) return;
+    const urlFilters = creatorSearchFiltersFromUrlParams(searchParams);
+    if (creatorSearchFiltersUrlEqual(filters, urlFilters)) return;
 
     const params = new URLSearchParams(searchParams.toString());
-    applyCategoriesToUrlParams(params, filterCategories);
+    applyCreatorSearchFiltersToUrlParams(params, filters);
     const nextQuery = params.toString();
     const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
     const currentQuery = searchParams.toString();
@@ -296,7 +346,7 @@ export function CreatorSearchWorkspace({
     router.replace(nextUrl, { scroll: false });
     // searchParams read for merge/compare only; URL → filters handled above.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: avoid replace loop on navigation
-  }, [filters.categories, pathname, router]);
+  }, [filters, pathname, router]);
 
   // search → URL (debounced live sync)
   useEffect(() => {
@@ -378,18 +428,49 @@ export function CreatorSearchWorkspace({
   }, [debouncedSearch, searchIntent.mode, sortedCreators]);
 
   const displayCreators = useMemo(() => {
-    if (!debouncedSearch.trim() || searchIntent.mode === "discovery") return sortedCreators;
-    if (isExactCreatorSearch) return exactMatches;
-    return sortedCreators;
-  }, [debouncedSearch, exactMatches, isExactCreatorSearch, searchIntent.mode, sortedCreators]);
+    const base =
+      !debouncedSearch.trim() || searchIntent.mode === "discovery"
+        ? sortedCreators
+        : isExactCreatorSearch
+          ? exactMatches
+          : sortedCreators;
+    if (hiddenUnifiedIds.size === 0) return base;
+    return base.filter((creator) => !hiddenUnifiedIds.has(creator.unified_id));
+  }, [
+    debouncedSearch,
+    exactMatches,
+    hiddenUnifiedIds,
+    isExactCreatorSearch,
+    searchIntent.mode,
+    sortedCreators,
+  ]);
+
+  const shortlistedIds = useMemo(
+    () => new Set(shortlistMembership.keys()),
+    [shortlistMembership]
+  );
 
   const hybridListItems = useMemo(() => {
     if (!isHybridCreatorSearch || !debouncedSearch.trim()) return undefined;
+    const visibleExact =
+      hiddenUnifiedIds.size === 0
+        ? exactMatches
+        : exactMatches.filter((c) => !hiddenUnifiedIds.has(c.unified_id));
+    const visibleAll =
+      hiddenUnifiedIds.size === 0
+        ? sortedCreators
+        : sortedCreators.filter((c) => !hiddenUnifiedIds.has(c.unified_id));
     return buildCreatorSearchHybridListItems({
-      exactMatches,
-      allCreators: sortedCreators,
+      exactMatches: visibleExact,
+      allCreators: visibleAll,
     });
-  }, [debouncedSearch, exactMatches, isHybridCreatorSearch, sortedCreators]);
+  }, [
+    debouncedSearch,
+    exactMatches,
+    hiddenUnifiedIds,
+    isHybridCreatorSearch,
+    sortedCreators,
+  ]);
 
   const resultCount = useMemo(() => {
     if (hybridListItems) return countCreatorSearchHybridResults(hybridListItems);
@@ -401,6 +482,21 @@ export function CreatorSearchWorkspace({
     !loading &&
     debouncedSearch.trim().length > 0 &&
     exactMatches.length === 0;
+
+  const showZeroResultsRecommendations =
+    !aiModeActive &&
+    !loading &&
+    !acquisitionPolling &&
+    displayCreators.length === 0 &&
+    hasActiveCreatorSearchFilters(filters, debouncedSearch);
+
+  const visibleRecommendations = useMemo(() => {
+    if (!showZeroResultsRecommendations) return [];
+    if (hiddenUnifiedIds.size === 0) return recommendedCreators;
+    return recommendedCreators.filter(
+      (entry) => !hiddenUnifiedIds.has(entry.creator.unified_id)
+    );
+  }, [hiddenUnifiedIds, recommendedCreators, showZeroResultsRecommendations]);
   const canSimplifyExactQuery = useMemo(() => {
     const simplified = simplifyCreatorSearchQuery(debouncedSearch);
     return simplified.length > 0 && simplified !== debouncedSearch.trim();
@@ -442,6 +538,28 @@ export function CreatorSearchWorkspace({
     await acquisitionSessionRef.current.cancelSession();
   }, [stopAcquisitionPolling]);
 
+  const handleClearSearch = useCallback(() => {
+    pendingUrlClearRef.current = "search";
+    searchRef.current = "";
+    skipSearchUrlWriteRef.current = true;
+    setDebouncedSearch("");
+    clearDiscoverySearchDraft();
+
+    abortRef.current?.abort();
+    reqIdRef.current += 1;
+    void cancelActiveAcquisitionSession();
+    acquisitionRefreshedForJobRef.current = null;
+    pinnedCreatorsRef.current.clear();
+    setBackfillStatus(null);
+
+    const params = new URLSearchParams(searchParams.toString());
+    if (!params.has(CREATOR_SEARCH_QUERY_PARAM)) return;
+    params.delete(CREATOR_SEARCH_QUERY_PARAM);
+    const nextQuery = params.toString();
+    const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
+    router.replace(nextUrl, { scroll: false });
+  }, [cancelActiveAcquisitionSession, pathname, router, searchParams]);
+
   const startAcquisitionPolling = useCallback(
     (jobIds: string[], requestId: number, filtersSnapshot: CreatorSearchFilters) => {
       const uniqueJobIds = [...new Set(jobIds.map((id) => id.trim()).filter(Boolean))];
@@ -453,6 +571,8 @@ export function CreatorSearchWorkspace({
       acquisitionLastStatusRef.current = null;
       acquisitionRefreshedForJobRef.current = null;
       acquisitionPollSeqRef.current = 0;
+      const pollStartedAt = Date.now();
+      const maxPollMs = 3 * 60_000;
       setAcquisitionPolling(true);
       setBackfillStatus(
         uniqueJobIds.length > 1
@@ -468,6 +588,15 @@ export function CreatorSearchWorkspace({
           acquisitionPollRequestRef.current !== requestId ||
           reqIdRef.current !== requestId
         ) {
+          return;
+        }
+
+        if (Date.now() - pollStartedAt > maxPollMs) {
+          stopAcquisitionPolling();
+          setBackfillStatus(
+            "Acquisition is taking too long. Stopped waiting — try again or add the creator by URL."
+          );
+          void cancelActiveAcquisitionSession();
           return;
         }
 
@@ -565,10 +694,58 @@ export function CreatorSearchWorkspace({
 
       void tick();
     },
-    [stopAcquisitionPolling]
+    [cancelActiveAcquisitionSession, stopAcquisitionPolling]
   );
 
   startAcquisitionPollingRef.current = startAcquisitionPolling;
+
+  const fetchZeroResultRecommendations = useCallback(
+    async (filtersSnapshot: CreatorSearchFilters, requestId: number) => {
+      const recRequestId = ++recommendationReqRef.current;
+      setLoadingRecommendations(true);
+      setRecommendedCreators([]);
+
+      try {
+        const relaxed = await browseUnifiedCreatorsAction(
+          {
+            ...filtersToRelaxedBrowseParams(
+              filtersSnapshot,
+              1,
+              ZERO_RESULTS_RECOMMENDATION_PAGE_SIZE
+            ),
+            searchSessionId: acquisitionSessionRef.current.getSessionId(),
+            skipCoverageBackfill: true,
+          },
+          {
+            caller: "zero_results_recommendations",
+            requestId,
+            acquisitionJobId: acquisitionPollJobRef.current[0] ?? null,
+          }
+        );
+
+        if (
+          recRequestId !== recommendationReqRef.current ||
+          requestId !== reqIdRef.current
+        ) {
+          return;
+        }
+
+        const recommendations = buildCreatorSearchRecommendations(
+          relaxed.creators,
+          filtersSnapshot
+        );
+        setRecommendedCreators(recommendations);
+      } catch {
+        if (recRequestId !== recommendationReqRef.current) return;
+        setRecommendedCreators([]);
+      } finally {
+        if (recRequestId === recommendationReqRef.current) {
+          setLoadingRecommendations(false);
+        }
+      }
+    },
+    []
+  );
 
   const fetchPage = useCallback(async (
     pageNum: number,
@@ -586,10 +763,13 @@ export function CreatorSearchWorkspace({
 
     const requestId = ++reqIdRef.current;
     if (!append && !options?.skipCoverageBackfill) {
+      const hadActiveAcquisition = acquisitionPollJobRef.current.length > 0;
       stopAcquisitionPolling();
       acquisitionSessionRef.current.stopHeartbeat();
+      if (hadActiveAcquisition) {
+        await acquisitionSessionRef.current.cancelSession();
+      }
       await acquisitionSessionRef.current.rotateSession();
-      acquisitionSessionRef.current.startHeartbeat();
     }
     if (append) setLoadingMore(true);
     else {
@@ -785,6 +965,21 @@ export function CreatorSearchWorkspace({
         }
       });
 
+      if (
+        !append &&
+        !useAiRelevance &&
+        filtered.length === 0 &&
+        hasActiveCreatorSearchFilters(mergedFilters, queryAtFetch)
+      ) {
+        void fetchZeroResultRecommendations(mergedFilters, requestId);
+      } else if (!append) {
+        recommendationReqRef.current += 1;
+        startTransition(() => {
+          setRecommendedCreators([]);
+          setLoadingRecommendations(false);
+        });
+      }
+
       if (!append && queryAtFetch.trim()) {
         const exactOnly =
           intentAtFetch.mode === "exact"
@@ -811,18 +1006,17 @@ export function CreatorSearchWorkspace({
       });
       toast.error(message);
     } finally {
-      if (controller.signal.aborted || requestId !== reqIdRef.current) return;
+      if (requestId !== reqIdRef.current) return;
       startTransition(() => {
         setLoading(false);
         setLoadingMore(false);
       });
     }
-  }, [searchTaxonomy, startTransition, stopAcquisitionPolling]);
+  }, [searchTaxonomy, startTransition, stopAcquisitionPolling, fetchZeroResultRecommendations]);
 
   fetchPageRef.current = fetchPage;
 
   useEffect(() => {
-    acquisitionSessionRef.current.startHeartbeat();
     const session = acquisitionSessionRef.current;
 
     const onBeforeUnload = () => {
@@ -832,8 +1026,9 @@ export function CreatorSearchWorkspace({
 
     return () => {
       window.removeEventListener("beforeunload", onBeforeUnload);
-      void session.cancelSession();
+      // Stop heartbeat first — do not leave a timer firing server actions after unmount.
       session.stopHeartbeat();
+      void session.cancelSession();
     };
   }, []);
 
@@ -868,7 +1063,7 @@ export function CreatorSearchWorkspace({
   const runSearch = useCallback(
     (immediateQuery?: string) => {
       if (loading) return;
-      if (immediateQuery !== undefined) {
+      if (typeof immediateQuery === "string") {
         const normalizedQuery = normalizeDiscoverySearchQuery(immediateQuery);
         searchRef.current = normalizedQuery;
         setDebouncedSearch(normalizedQuery);
@@ -996,6 +1191,16 @@ export function CreatorSearchWorkspace({
     startTransition(async () => {
       try {
         const outcome = await addUnifiedCreatorsToShortlists(shortlistIds, targets, selections);
+        if (outcome.added > 0 || outcome.alreadyOnList > 0) {
+          setShortlistMembership((prev) => {
+            const next = new Map(prev);
+            for (const creator of targets) {
+              const existing = next.get(creator.unified_id) ?? [];
+              next.set(creator.unified_id, [...new Set([...existing, ...shortlistIds])]);
+            }
+            return next;
+          });
+        }
         if (outcome.added > 0) {
           toast.success(describeAddOutcome(outcome));
         } else if (outcome.failed > 0) {
@@ -1015,14 +1220,70 @@ export function CreatorSearchWorkspace({
     });
   }
 
-  const handleAddCreatorToList = useCallback((creator: UnifiedCreatorResult) => {
-    if (needsPlatformAccountSelection(creator)) {
-      setPendingShortlistCreator(creator);
-      setPlatformSelectOpen(true);
+  const handleToggleShortlist = useCallback(
+    (creator: UnifiedCreatorResult) => {
+      const membership = shortlistMembership.get(creator.unified_id);
+      if (membership && membership.length > 0) {
+        startTransition(async () => {
+          try {
+            const outcome = await removeUnifiedCreatorFromShortlists(membership, {
+              unified_id: creator.unified_id,
+              influencer_id: creator.influencer_id,
+              discovered_profile_id: creator.discovered_profile_id,
+            });
+            setShortlistMembership((prev) => {
+              const next = new Map(prev);
+              next.delete(creator.unified_id);
+              return next;
+            });
+            if (outcome.removed > 0) {
+              toast.success("Removed from shortlist");
+            } else if (outcome.firstError) {
+              toast.error(outcome.firstError);
+            } else {
+              toast.info("Removed from shortlist");
+            }
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Failed to remove from shortlist");
+          }
+        });
+        return;
+      }
+
+      if (needsPlatformAccountSelection(creator)) {
+        setPendingShortlistCreator(creator);
+        setPlatformSelectOpen(true);
+        return;
+      }
+      openAddToShortlistModal([creator]);
+    },
+    // openAddToShortlistModal is a stable function declaration in this component body
+    [shortlistMembership]
+  );
+
+  const handleRejectCreator = useCallback((creator: UnifiedCreatorResult) => {
+    if (creator.influencer_id) {
+      setDeleteCreatorTarget(creator);
       return;
     }
-    openAddToShortlistModal([creator]);
-  }, []);
+
+    setHiddenUnifiedIds((prev) => {
+      const next = new Set(prev);
+      next.add(creator.unified_id);
+      return next;
+    });
+    setSelectedIds((prev) => {
+      if (!prev.has(creator.unified_id)) return prev;
+      const next = new Set(prev);
+      next.delete(creator.unified_id);
+      return next;
+    });
+    toast.info("Removed from results");
+  }, [setSelectedIds]);
+
+  const handleAddCreatorToList = useCallback((creator: UnifiedCreatorResult) => {
+    handleToggleShortlist(creator);
+  }, [handleToggleShortlist]);
 
   function handleConfirmPlatformAccounts(platformAccountIds: string[]) {
     if (!pendingShortlistCreator) return;
@@ -1123,24 +1384,6 @@ export function CreatorSearchWorkspace({
     });
   }
 
-  const selectionStats = useMemo(() => {
-    if (selectedCreators.length === 0) {
-      return { followers: 0, reach: 0, engagement: 0 };
-    }
-    const followers = selectedCreators.reduce(
-      (sum, c) => sum + (c.metrics.followers.value ?? c.platforms[0]?.follower_count ?? 0),
-      0
-    );
-    const erValues = selectedCreators
-      .map((c) => c.metrics.engagement_rate.value)
-      .filter((v): v is number => typeof v === "number");
-    const engagement =
-      erValues.length > 0 ? erValues.reduce((a, b) => a + b, 0) / erValues.length : 0;
-    // Estimated reach ≈ followers × average ER (rough planning heuristic).
-    const reach = Math.round(followers * (engagement / 100));
-    return { followers, reach, engagement };
-  }, [selectedCreators]);
-
   function syncDiscoverySearchQuery(query: string) {
     const normalized = normalizeDiscoverySearchQuery(query);
     if (!normalized || searchRef.current === normalized) return;
@@ -1152,9 +1395,6 @@ export function CreatorSearchWorkspace({
     pinnedCreatorsRef.current.set(next.unified_id, next);
     setCreators((prev) => upsertCreatorInResults(prev, next).creators);
     setTotal((prev) => Math.max(prev, 1));
-    setDetailCreator((current) =>
-      current?.unified_id === next.unified_id ? next : current
-    );
   }
 
   function patchCreatorInList(next: UnifiedCreatorResult) {
@@ -1206,9 +1446,7 @@ export function CreatorSearchWorkspace({
       next.delete(creator.unified_id);
       return next;
     });
-    setDetailCreator((current) =>
-      current?.unified_id === creator.unified_id ? null : current
-    );
+    closeIfShowing(creator.unified_id);
     router.refresh();
   }
 
@@ -1284,39 +1522,22 @@ export function CreatorSearchWorkspace({
     }
 
     const { unified_id: unifiedId, influencer_id: influencerId } = creator;
-    const previousStatus = resolveCreatorEnrichmentStatus(creator.enrichment_status);
-    patchCreatorEnrichmentStatus(unifiedId, "queued");
 
-    startTransition(async () => {
-      const result = platformAccountId
-        ? await refreshCreatorPlatformAction(influencerId, platformAccountId)
-        : await refreshCreatorAction(influencerId);
-      if (result.queued) {
-        void pollCreatorAfterRefresh(
-          { unifiedId, influencerId },
-          {
-            onUpdated: patchCreatorInList,
-            onStatusChange: (syncStatus) => {
-              patchCreatorEnrichmentStatus(unifiedId, syncStatusToEnrichmentStatus(syncStatus));
-            },
-            onComplete: (syncStatus) => {
-              if (syncStatus === "completed") {
-                toast.success(
-                  platformAccountId ? "Platform metrics updated" : "Creator metrics updated"
-                );
-              } else if (syncStatus === "failed") {
-                toast.error("Creator refresh failed", {
-                  description: "Apify enrichment did not complete successfully.",
-                });
-              }
-            },
-          }
-        );
-        return;
-      }
-
-      patchCreatorEnrichmentStatus(unifiedId, previousStatus);
-      toast.error("Could not refresh", { description: result.message });
+    requestManualRefresh({
+      influencerId,
+      unifiedId,
+      scope: "metrics",
+      platformAccountId,
+      refreshAction: (id, dataSource) =>
+        platformAccountId
+          ? refreshCreatorPlatformAction(id, platformAccountId, "metrics", dataSource)
+          : refreshCreatorAction(id, dataSource),
+      onStatusChange: (status) => {
+        patchCreatorEnrichmentStatus(unifiedId, status);
+      },
+      onCreatorUpdated: (updated) => {
+        patchCreatorInList(updated);
+      },
     });
   }
 
@@ -1357,7 +1578,7 @@ export function CreatorSearchWorkspace({
   }
 
   const clearAllFilters = useCallback(() => {
-    pendingUrlClearRef.current = true;
+    pendingUrlClearRef.current = "all";
     suppressBriefHydrationRef.current = true;
     initialBriefSearchDoneRef.current = false;
 
@@ -1370,14 +1591,15 @@ export function CreatorSearchWorkspace({
     sessionAcquiredInfluencerIdsRef.current = [];
     setApifySourceUnifiedIds(new Set());
 
-    const cleared = { ...DEFAULT_CREATOR_SEARCH_FILTERS };
+    const cleared = cloneCreatorSearchFilters();
     filtersRef.current = cleared;
     searchRef.current = "";
     skipSearchUrlWriteRef.current = true;
-    skipCategoryUrlWriteRef.current = true;
+    skipFilterUrlWriteRef.current = true;
 
     setFilters(cleared);
     setDebouncedSearch("");
+    clearDiscoverySearchDraft();
     setCreators([]);
     setTotal(0);
     setError(null);
@@ -1391,13 +1613,25 @@ export function CreatorSearchWorkspace({
     setActiveProfile(null);
     setSort(DEFAULT_CREATOR_SEARCH_SORT);
     setBackfillStatus(null);
+    setRecommendedCreators([]);
+    setLoadingRecommendations(false);
+    recommendationReqRef.current += 1;
     setPage(1);
     setHasMore(true);
     setFilterResetKey((key) => key + 1);
     clearCreatorSelection();
 
-    router.replace(pathname, { scroll: false });
-  }, [pathname, router, cancelActiveAcquisitionSession]);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete(CREATOR_SEARCH_QUERY_PARAM);
+    params.delete("profileId");
+    params.delete("mode");
+    params.delete("brief");
+    applyCreatorSearchFiltersToUrlParams(params, cleared);
+    const nextQuery = params.toString();
+    const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
+    router.replace(nextUrl, { scroll: false });
+    setFiltersDrawerOpen(false);
+  }, [cancelActiveAcquisitionSession, pathname, router, searchParams]);
 
   const applyAiProfileFilters = useCallback(
     (profile: CampaignIntelligenceProfile, criteria?: CampaignSearchCriterion[]) => {
@@ -1468,9 +1702,9 @@ export function CreatorSearchWorkspace({
         confidence: searchIntent.confidence,
         creatorUnifiedId: creator.unified_id,
       });
-      setDetailCreator(creator);
+      openCreator(creator);
     },
-    [debouncedSearch, searchIntent.confidence, searchIntent.mode]
+    [debouncedSearch, openCreator, searchIntent.confidence, searchIntent.mode]
   );
 
   const handleSearchWithFewerWords = useCallback(() => {
@@ -1560,6 +1794,9 @@ export function CreatorSearchWorkspace({
     setAiCriteria([]);
     setAiModeActive(false);
     setAiExtracting(false);
+    setFilters(cloneCreatorSearchFilters());
+    setPage(1);
+    setHasMore(true);
 
     const params = new URLSearchParams(searchParams.toString());
     params.delete("brief");
@@ -1612,41 +1849,17 @@ export function CreatorSearchWorkspace({
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <CreatorSearchTopBar
-        total={headerTotal}
-        loadedCount={displayCreators.length}
-        onSaveSearch={handleSaveSearch}
-        onCreateList={() => setCreateListOpen(true)}
-        loading={loading || isPending}
-      />
-
-      <CreatorSearchCampaignBriefBar
-        fileName={briefFileName}
-        hasBrief={Boolean(activeProfileId && activeProfile)}
-        onUploadClick={() => setBriefSidebarOpen(true)}
-        onUseAiSearch={handleUseAiCampaign}
-        aiSearchDisabled={loading || isPending}
-        aiExtracting={aiExtracting}
-        searchQuery={debouncedSearch}
-        onDebouncedSearchChange={handleDebouncedSearchChange}
-        onSearchSubmit={runSearch}
-        searchLoading={loading || isPending}
-        sort={sort}
-        onSortChange={setSort}
-        filters={filters}
-        onOpenFilters={() => setFiltersDrawerOpen(true)}
-        showCampaignRelevance={showCampaignRelevance}
-      />
-
-      <CampaignBriefSidebar
-        open={briefSidebarOpen}
-        onOpenChange={setBriefSidebarOpen}
-        initialState={briefWorkspaceState}
-        onWorkspaceChange={handleBriefWorkspaceChange}
-        onBriefCleared={handleBriefCleared}
-        onRunAiSearch={handleUseAiCampaign}
-        onBriefAnalyzed={handleBriefAnalyzed}
-      />
+      {briefSidebarOpen ? (
+        <CampaignBriefSidebar
+          open={briefSidebarOpen}
+          onOpenChange={setBriefSidebarOpen}
+          initialState={briefWorkspaceState}
+          onWorkspaceChange={handleBriefWorkspaceChange}
+          onBriefCleared={handleBriefCleared}
+          onRunAiSearch={handleUseAiCampaign}
+          onBriefAnalyzed={handleBriefAnalyzed}
+        />
+      ) : null}
 
       {activeProfile && aiModeActive ? (
         <CreatorSearchCampaignRequirementsPanel
@@ -1656,14 +1869,16 @@ export function CreatorSearchWorkspace({
         />
       ) : null}
 
-      <AiSearchStrategySheet
-        open={strategySheetOpen}
-        onOpenChange={setStrategySheetOpen}
-        criteria={aiCriteria}
-        onCriteriaChange={setAiCriteria}
-        onRunSearch={handleRunAiSearch}
-        running={loading || isPending}
-      />
+      {strategySheetOpen ? (
+        <AiSearchStrategySheet
+          open={strategySheetOpen}
+          onOpenChange={setStrategySheetOpen}
+          criteria={aiCriteria}
+          onCriteriaChange={setAiCriteria}
+          onRunSearch={handleRunAiSearch}
+          running={loading || isPending}
+        />
+      ) : null}
 
       {aiModeActive && aiCriteria.some((c) => c.enabled) ? (
         <CreatorSearchAiCriteriaChips
@@ -1676,7 +1891,8 @@ export function CreatorSearchWorkspace({
           filters={filters}
           search={debouncedSearch}
           onChange={setFilters}
-          onClearSearch={() => setDebouncedSearch("")}
+          onClearSearch={handleClearSearch}
+          onClearAll={clearAllFilters}
         />
       )}
 
@@ -1690,6 +1906,7 @@ export function CreatorSearchWorkspace({
         selectedCount={selectedCreators.length}
         onClearSelection={clearCreatorSelection}
         onAddToList={handleBulkAddToList}
+        onCreateList={() => setCreateListOpen(true)}
         onCompare={handleBulkCompare}
         onExport={handleBulkExport}
         onShare={handleBulkShare}
@@ -1697,9 +1914,6 @@ export function CreatorSearchWorkspace({
         onRefreshMetrics={handleBulkRefreshMetrics}
         onStopRefresh={handleBulkStopRefresh}
         stopRefreshDisabled={selectedInFlightCreators.length === 0}
-        estFollowers={selectionStats.followers}
-        estReach={selectionStats.reach}
-        estEngagement={selectionStats.engagement}
         onAiMatch={() => {
           if (selectedCreators.length === 0) {
             toast.info("Select creators, then run AI Match from AI Analyst");
@@ -1721,7 +1935,7 @@ export function CreatorSearchWorkspace({
       <div
         className={cn(
           "relative flex min-h-0 flex-1 overflow-hidden",
-          glassFlyoutContentClass(selectedCreators.length > 0)
+          discoverySelectionFlyoutContentClass(selectedCreators.length > 0)
         )}
       >
         {aiExtracting ? (
@@ -1734,7 +1948,7 @@ export function CreatorSearchWorkspace({
           sort={sort}
           onSortChange={setSort}
           platformFilter={filters.platforms}
-          loading={loading || (acquisitionPolling && displayCreators.length === 0)}
+          loading={loading && displayCreators.length === 0}
           loadingMore={loadingMore}
           hasMore={isExactCreatorSearch || aiModeActive ? false : hasMore}
           error={error}
@@ -1742,15 +1956,17 @@ export function CreatorSearchWorkspace({
           apifySourceUnifiedIds={apifySourceUnifiedIds}
           showCampaignRelevance={showCampaignRelevance}
           selectedIds={selectedIds}
+          shortlistedIds={shortlistedIds}
           onToggleSelect={handleToggleSelect}
           onToggleSelectAll={handleToggleSelectAll}
           onOpenCreator={handleOpenCreator}
-          onAddToList={handleAddCreatorToList}
+          onToggleShortlist={handleToggleShortlist}
+          onRejectCreator={handleRejectCreator}
           onRefreshMetrics={handleRefreshMetricsForCreator}
           onStopRefresh={handleStopRefreshForCreator}
           onStopAllRefresh={handleStopAllRefresh}
           inFlightCount={inFlightCreators.length}
-          onRetry={runSearch}
+          onRetry={() => runSearch()}
           loadMoreRef={loadMoreRef}
           showAddMissingCreator={
             debouncedSearch.trim().length > 0 && !exactCreatorZeroMatch
@@ -1763,79 +1979,108 @@ export function CreatorSearchWorkspace({
           onMissingCreatorEnrichmentStatusChange={patchCreatorEnrichmentStatus}
           onMissingCreatorUpdated={handleMissingCreatorUpdated}
           onCreatorDeleted={handleCreatorDeleted}
+          showExactMatchesZeroHeader={showZeroResultsRecommendations}
+          recommendations={visibleRecommendations}
+          loadingRecommendations={loadingRecommendations}
+          toolbar={{
+            searchQuery: debouncedSearch,
+            onDebouncedSearchChange: handleDebouncedSearchChange,
+            onSearchSubmit: (query) => runSearch(query),
+            searchLoading: loading || isPending,
+            sort,
+            onSortChange: setSort,
+            filters,
+            onFiltersChange: setFilters,
+            onOpenFilters: () => setFiltersDrawerOpen(true),
+            showCampaignRelevance,
+          }}
         />
       </div>
 
-      <CreatorSearchFilterBottomBar
-        filters={filters}
-        search={debouncedSearch}
-        onOpenAllFilters={() => setFiltersDrawerOpen(true)}
-        onShowResults={() => setFiltersDrawerOpen(false)}
-        total={headerTotal}
-        loading={loading || isPending}
-      />
-
-      <Sheet open={filtersDrawerOpen} onOpenChange={setFiltersDrawerOpen}>
-        <SheetContent
-          side="right"
-          showCloseButton={false}
-          className="flex h-full w-[min(360px,90vw)] max-w-[360px] flex-col border-l border-[#e2e8f0] p-0 sm:max-w-[360px]"
-        >
-          <SheetTitle className="sr-only">Search filters</SheetTitle>
+      <DiscoveryFilterSheet open={filtersDrawerOpen} onOpenChange={setFiltersDrawerOpen}>
           <CreatorSearchFilterPanel
             key={filterResetKey}
+            open={filtersDrawerOpen}
             filters={filters}
-            onChange={setFilters}
+            onApply={setFilters}
             onClearAll={clearAllFilters}
             onClose={() => setFiltersDrawerOpen(false)}
-            total={headerTotal}
             loading={loading || isPending}
           />
-        </SheetContent>
-      </Sheet>
+      </DiscoveryFilterSheet>
 
       <CreatorDetailSheet
+        key={detailOpen && detailCreator ? detailCreator.unified_id : "closed"}
         creator={detailCreator}
-        open={detailCreator != null}
-        onOpenChange={(open) => {
-          if (!open) setDetailCreator(null);
-        }}
+        open={detailOpen}
+        onOpenChange={onDetailOpenChange}
         onCreatorUpdated={patchCreatorInList}
       />
 
-      <CreateListDialog
-        open={createListOpen}
-        onOpenChange={setCreateListOpen}
-        campaigns={campaigns}
-        onCreated={handleListCreated}
-      />
+      {createListOpen ? (
+        <CreateListDialog
+          open={createListOpen}
+          onOpenChange={setCreateListOpen}
+          campaigns={campaigns}
+          onCreated={handleListCreated}
+        />
+      ) : null}
 
-      <SelectPlatformAccountsDialog
-        open={platformSelectOpen}
-        onOpenChange={(open) => {
-          setPlatformSelectOpen(open);
-          if (!open) setPendingShortlistCreator(null);
-        }}
-        creator={pendingShortlistCreator}
-        onConfirm={handleConfirmPlatformAccounts}
-      />
+      {platformSelectOpen ? (
+        <SelectPlatformAccountsDialog
+          open={platformSelectOpen}
+          onOpenChange={(open) => {
+            setPlatformSelectOpen(open);
+            if (!open) setPendingShortlistCreator(null);
+          }}
+          creator={pendingShortlistCreator}
+          onConfirm={handleConfirmPlatformAccounts}
+        />
+      ) : null}
 
-      <AddToShortlistDialog
-        open={addToShortlistOpen}
-        onOpenChange={(open) => {
-          setAddToShortlistOpen(open);
-          if (!open) {
-            setPendingAddCreators([]);
-            setPendingPlatformSelections([]);
-          }
-        }}
-        creators={pendingAddCreators}
-        onCreatorsChange={syncPendingCreators}
-        shortlists={shortlists}
-        onShortlistsChange={setShortlists}
-        onConfirm={handleAddToShortlistConfirm}
-        busy={isPending}
-      />
+      {addToShortlistOpen ? (
+        <AddToShortlistDialog
+          open={addToShortlistOpen}
+          onOpenChange={(open) => {
+            setAddToShortlistOpen(open);
+            if (!open) {
+              setPendingAddCreators([]);
+              setPendingPlatformSelections([]);
+            }
+          }}
+          creators={pendingAddCreators}
+          onCreatorsChange={syncPendingCreators}
+          shortlists={shortlists}
+          onShortlistsChange={setShortlists}
+          onConfirm={handleAddToShortlistConfirm}
+          busy={isPending}
+        />
+      ) : null}
+
+      {manualRefreshDialogOpen ? (
+        <ManualRefreshConfirmDialog
+          open={manualRefreshDialogOpen}
+          onOpenChange={setManualRefreshDialogOpen}
+          assessment={manualRefreshAssessment}
+          scopeLabel={manualRefreshScopeLabel}
+          isSubmitting={manualRefreshPending}
+          onChoose={chooseManualRefreshSource}
+        />
+      ) : null}
+
+      {deleteCreatorTarget ? (
+        <DeleteDiscoveryCreatorDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setDeleteCreatorTarget(null);
+          }}
+          creator={deleteCreatorTarget}
+          onDeleted={() => {
+            handleCreatorDeleted(deleteCreatorTarget);
+            setDeleteCreatorTarget(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

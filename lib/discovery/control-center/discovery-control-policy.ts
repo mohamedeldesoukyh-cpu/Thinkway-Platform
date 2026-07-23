@@ -15,8 +15,14 @@ import type {
 import type { EnrichmentTrigger } from "@/lib/creator-enrichment/types";
 
 import {
+  AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON,
+  isAutomaticEnrichmentAndAcquisitionDisabled,
+  logBlockedAutomaticAction,
+} from "@/lib/discovery/operational-safety";
+
+import { assertApifyAcquisitionBudget } from "./apify-budget";
+import {
   getCachedDiscoveryControlSettings,
-  getDiscoveryApifyDailyUsage,
   getDiscoveryControlSettings,
 } from "./discovery-control-service";
 import type { DiscoveryControlSettings } from "./discovery-control-types";
@@ -39,18 +45,27 @@ export function getCoverageThreshold(
 export function isPlatformDatabaseOnly(
   settings: DiscoveryControlSettings = getCachedDiscoveryControlSettings()
 ): boolean {
+  if (isAutomaticEnrichmentAndAcquisitionDisabled()) {
+    return true;
+  }
   return settings.discoverySource === "platform_database_only";
 }
 
 export function isApifyLiveOnly(
   settings: DiscoveryControlSettings = getCachedDiscoveryControlSettings()
 ): boolean {
+  if (isAutomaticEnrichmentAndAcquisitionDisabled()) {
+    return false;
+  }
   return settings.discoverySource === "apify_live_only";
 }
 
 export function shouldSkipDatabaseBrowse(
   settings: DiscoveryControlSettings = getCachedDiscoveryControlSettings()
 ): boolean {
+  if (isAutomaticEnrichmentAndAcquisitionDisabled()) {
+    return false;
+  }
   return (
     settings.discoverySource === "apify_live_only" &&
     settings.searchPriority === "apify_first"
@@ -61,10 +76,11 @@ export function applyPolicyToBrowse(
   filters: UnifiedCreatorBrowseFilters,
   settings: DiscoveryControlSettings = getCachedDiscoveryControlSettings()
 ): UnifiedCreatorBrowseFilters {
-  if (settings.discoverySource === "platform_database_only") {
+  if (isPlatformDatabaseOnly(settings)) {
     return {
       ...filters,
       source: filters.source && filters.source !== "all" ? filters.source : "internal",
+      skipCoverageBackfill: true,
     };
   }
 
@@ -79,6 +95,10 @@ export function shouldCallApify(
   settings: DiscoveryControlSettings = getCachedDiscoveryControlSettings(),
   context?: ApifyGateContext
 ): boolean {
+  if (isAutomaticEnrichmentAndAcquisitionDisabled()) {
+    return false;
+  }
+
   if (settings.discoverySource === "platform_database_only") {
     return false;
   }
@@ -116,29 +136,22 @@ export function shouldCallApify(
   return gate.needsBackfill;
 }
 
+/**
+ * Fail-closed daily Apify budget check.
+ * Budget 0 / undefined / missing rejects acquisition — never treated as unlimited.
+ */
 export async function isApifyUsageWithinLimits(
   supabase: SupabaseClient,
   settings: DiscoveryControlSettings = getCachedDiscoveryControlSettings()
 ): Promise<{ allowed: boolean; reason?: string }> {
-  const { maxRequestsPerDay, maxCreditsPerDay } = settings.costProtection;
-  if (maxRequestsPerDay <= 0 && maxCreditsPerDay <= 0) {
-    return { allowed: true };
-  }
-
-  const usage = await getDiscoveryApifyDailyUsage(supabase);
-  if (maxRequestsPerDay > 0 && usage.requestCount >= maxRequestsPerDay) {
-    return {
-      allowed: false,
-      reason: `Daily Apify request limit reached (${usage.requestCount}/${maxRequestsPerDay}).`,
-    };
-  }
-  if (maxCreditsPerDay > 0 && usage.creditsUsed >= maxCreditsPerDay) {
-    return {
-      allowed: false,
-      reason: `Daily Apify credit limit reached (${usage.creditsUsed}/${maxCreditsPerDay}).`,
-    };
-  }
-  return { allowed: true };
+  const decision = await assertApifyAcquisitionBudget(supabase, {
+    settings,
+    source: "isApifyUsageWithinLimits",
+  });
+  return {
+    allowed: decision.allowed,
+    reason: decision.reason,
+  };
 }
 
 export async function gateApifyBackfill(
@@ -146,8 +159,19 @@ export async function gateApifyBackfill(
   settings: DiscoveryControlSettings,
   context?: ApifyGateContext
 ): Promise<{ allowed: boolean; reason: string }> {
+  if (isAutomaticEnrichmentAndAcquisitionDisabled()) {
+    logBlockedAutomaticAction("coverage_apify_backfill", AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON, {
+      creatorCount: context?.creatorCount ?? null,
+      coverageLevel: context?.coverage?.coverageLevel ?? null,
+    });
+    return {
+      allowed: false,
+      reason: AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON,
+    };
+  }
+
   if (!shouldCallApify(settings, context)) {
-    if (isPlatformDatabaseOnly(settings)) {
+    if (settings.discoverySource === "platform_database_only") {
       return {
         allowed: false,
         reason: "Apify disabled — discovery source is platform_database_only.",
@@ -160,7 +184,14 @@ export async function gateApifyBackfill(
     };
   }
 
-  const costGate = await isApifyUsageWithinLimits(supabase, settings);
+  const costGate = await assertApifyAcquisitionBudget(supabase, {
+    settings,
+    source: "coverage_apify_backfill",
+    meta: {
+      creatorCount: context?.creatorCount ?? null,
+      coverageLevel: context?.coverage?.coverageLevel ?? null,
+    },
+  });
   if (!costGate.allowed) {
     return {
       allowed: false,
@@ -175,6 +206,12 @@ export function shouldAutoEnrichForTrigger(
   trigger: EnrichmentTrigger,
   settings: DiscoveryControlSettings = getCachedDiscoveryControlSettings()
 ): boolean {
+  if (isAutomaticEnrichmentAndAcquisitionDisabled()) {
+    logBlockedAutomaticAction("automatic_creator_enrichment", AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON, {
+      trigger,
+    });
+    return false;
+  }
   const mode = settings.automaticEnrichment;
   if (mode === "never") return false;
   if (mode === "always") return true;

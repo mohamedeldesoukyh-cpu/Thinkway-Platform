@@ -1,4 +1,6 @@
 import { getTierFollowerRange } from "@/lib/creators/influencer-tier";
+import { resolveCountryCode } from "@/lib/creators/country-code";
+import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
 
 import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
 
@@ -15,7 +17,22 @@ export function creatorCity(creator: UnifiedCreatorResult): string | null {
 }
 
 export function creatorCountry(creator: UnifiedCreatorResult): string | null {
-  return creator.country_code?.trim() || creator.estimated_country?.trim() || null;
+  const codes = resolveCreatorCountryCodes({
+    country_codes: creator.country_codes,
+    country_code: creator.country_code,
+    estimated_country: creator.estimated_country,
+    platformAudienceCountries: creator.platforms?.map((platform) => platform.audience_country),
+  });
+  return codes[0] ?? null;
+}
+
+function creatorCountryCodes(creator: UnifiedCreatorResult): string[] {
+  return resolveCreatorCountryCodes({
+    country_codes: creator.country_codes,
+    country_code: creator.country_code,
+    estimated_country: creator.estimated_country,
+    platformAudienceCountries: creator.platforms?.map((platform) => platform.audience_country),
+  });
 }
 
 export function creatorEngagementRate(creator: UnifiedCreatorResult): number | null {
@@ -42,7 +59,13 @@ export function creatorMatchesRemoval(
   criteria: SlateRemovalCriteria
 ): boolean {
   if (criteria.city && textMatches(creatorCity(creator), criteria.city)) return true;
-  if (criteria.country && textMatches(creatorCountry(creator), criteria.country)) return true;
+  if (criteria.country) {
+    const target = resolveCountryCode(criteria.country);
+    const codes = creatorCountryCodes(creator);
+    if (target && codes.includes(target)) return true;
+    if (codes.some((code) => textMatches(code, criteria.country!))) return true;
+    if (textMatches(creatorCountry(creator), criteria.country)) return true;
+  }
   if (criteria.belowEngagement != null) {
     const er = creatorEngagementRate(creator);
     if (er != null && er < criteria.belowEngagement) return true;

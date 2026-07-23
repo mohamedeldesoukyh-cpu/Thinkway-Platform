@@ -5,9 +5,12 @@ import {
 } from "@/features/discovery/shortlists/export/shortlist-csv";
 import {
   buildShortlistDocument,
-  embedShortlistDocumentAvatars,
   shortlistDocumentBaseName,
 } from "@/features/discovery/shortlists/export/shortlist-document";
+import {
+  embedShortlistDocumentAvatars,
+  resolveShortlistExportSiteOrigin,
+} from "@/features/discovery/shortlists/export/shortlist-export-avatars";
 import { buildShortlistExcel } from "@/features/discovery/shortlists/export/shortlist-excel";
 import {
   embedShortlistDocumentPublicationShots,
@@ -16,7 +19,7 @@ import {
 import { buildShortlistHtml } from "@/features/discovery/shortlists/export/shortlist-html";
 import { buildShortlistPptxBuffer } from "@/features/discovery/shortlists/export/shortlist-pptx";
 import {
-  isShowcaseTemplate,
+  isCreatorDeckTemplate,
   resolveShortlistTemplate,
 } from "@/features/discovery/shortlists/export/shortlist-template";
 import { getShortlistDetail } from "@/features/discovery/shortlists/queries";
@@ -49,19 +52,6 @@ function parseItemIds(raw: string | null): string[] | undefined {
     .map((value) => value.trim())
     .filter(Boolean);
   return ids.length > 0 ? ids : undefined;
-}
-
-function resolveShortlistExportSiteOrigin(
-  requestHost?: string | null,
-  requestProto?: string | null
-): string {
-  if (requestHost) {
-    const proto = requestProto?.replace(/:$/, "") || "http";
-    return `${proto}://${requestHost}`;
-  }
-  const envOrigin = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
-  if (envOrigin) return envOrigin;
-  return "http://localhost:3000";
 }
 
 function templateSuffix(template: ReturnType<typeof resolveShortlistTemplate>): string {
@@ -102,7 +92,7 @@ export async function GET(request: Request, context: RouteContext) {
         : detail.creators;
 
     const publicationShotsByCreatorKey =
-      isShowcaseTemplate(template) && format !== "excel" && format !== "csv"
+      isCreatorDeckTemplate(template) && format !== "excel" && format !== "csv"
         ? await loadShortlistCreatorPublicationShots(supabase, filteredItems)
         : undefined;
 
@@ -147,9 +137,9 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     if (format === "pptx") {
-      if (!isShowcaseTemplate(template)) {
+      if (!isCreatorDeckTemplate(template)) {
         return NextResponse.json(
-          { error: "PPTX export is available for the Showcase template only." },
+          { error: "PPTX export is available for Showcase and Pitch presentation templates only." },
           { status: 400 }
         );
       }

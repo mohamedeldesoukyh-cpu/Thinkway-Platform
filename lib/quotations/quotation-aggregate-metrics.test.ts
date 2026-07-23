@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 
 import {
+  aggregateQuotationAudienceSize,
   aggregateQuotationEngagementRate,
+  aggregateQuotationForecast,
   aggregateQuotationReach,
 } from "./quotation-aggregate-metrics";
 
@@ -44,11 +46,14 @@ function mockItem(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
 }
 
 {
-  const reach = aggregateQuotationReach([
+  const items = [
     mockItem({ followers: 1000 }),
-    mockItem({ id: "item-2", followers: 2500 }),
-  ]);
-  assert.equal(reach, 3500);
+    mockItem({ id: "item-2", influencer_id: "inf-2", followers: 2500 }),
+  ];
+  const forecast = aggregateQuotationForecast(items);
+  assert.equal(aggregateQuotationAudienceSize(items), 3500);
+  assert.equal(forecast.audienceSize, 3500);
+  assert.ok(aggregateQuotationReach(items) < 3500, "reach uses multipliers, not raw followers");
 }
 
 {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useTransition } from "react";
 import {
   CopyIcon,
   MoreHorizontalIcon,
@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
+import { TooltipIconButton } from "@/components/shared/tooltip-icon-button";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -20,7 +22,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { TableCell, TableRow } from "@/components/ui/table";
 import { CreatorLinkedPlatformIcons } from "@/components/creator/creator-linked-platform-icons";
 import { CreatorIdentityCell } from "@/components/creator/creator-profile-link";
 import { CreatorTierBadge } from "@/components/creator/creator-tier-badge";
@@ -52,23 +53,58 @@ import {
   deliverableTypeValues,
   platformsFromSelectedPostTypes,
   syncDeliverableFromTypeLines,
+  syncServiceDescriptionWithTypeLines,
   typeLinesIncludeAllPlatforms,
 } from "@/lib/quotations/quotation-deliverable-types";
 import {
   formatDeliverableGpPct,
-  formatDeliverablePrice,
+  formatDeliverableTotalClientPrice,
 } from "@/lib/quotations/quotation-deliverable-commercial";
 import type { AutosaveStatus } from "@/lib/hooks/use-debounced-autosave";
 import { cn } from "@/lib/utils";
 import { isManualQuotationCreator } from "@/lib/quotations/quotation-creator-platform-options";
 
 function SaveIndicator({ status }: { status: AutosaveStatus }) {
-  if (status === "pending") return <span className="text-[10px] text-warning">Unsaved</span>;
+  if (status === "idle") {
+    return (
+      <span className="spill spill-row-status" style={{ height: 22 }}>
+        Draft
+      </span>
+    );
+  }
+  if (status === "pending")
+    return (
+      <span className="spill spill-row-status">
+        <span className="led" aria-hidden />
+        Unsaved
+      </span>
+    );
   if (status === "saving")
-    return <span className="text-[10px] text-muted-foreground">Saving…</span>;
-  if (status === "saved") return <span className="text-[10px] text-primary">Saved</span>;
-  if (status === "error") return <span className="text-[10px] text-destructive">Failed</span>;
+    return (
+      <span className="spill spill-row-status">
+        <span className="led" aria-hidden />
+        Saving…
+      </span>
+    );
+  if (status === "saved")
+    return (
+      <span className="spill spill-row-status spill-row-status--ok">
+        <span className="led" aria-hidden />
+        Saved
+      </span>
+    );
+  if (status === "error")
+    return (
+      <span className="spill spill-row-status spill-row-status--err">
+        <span className="led" aria-hidden />
+        Failed
+      </span>
+    );
   return null;
+}
+
+function FlexColEmpty({ className }: { className: string }) {
+  return <span className={cn(className, "co-empty")} aria-hidden />;
 }
 
 type Props = {
@@ -91,6 +127,10 @@ type Props = {
   onOpenCreator?: () => void;
   /** When true, open platform/type/cost selectors for immediate configuration. */
   autoOpenEditors?: boolean;
+  /** Report platforms used on this option so the creator header can stack them. */
+  onUsedPlatformsChange?: (itemId: string, platforms: string[]) => void;
+  /** All option line ids for this creator (enables remove-option vs remove-creator). */
+  creatorOptionItemIds?: string[];
 };
 
 function resolveDeliverableDisplayPlatforms(
@@ -132,10 +172,18 @@ export function QuotationCreatorDeliverableRows({
   onLineChanged,
   onOpenCreator,
   autoOpenEditors = false,
+  onUsedPlatformsChange,
+  creatorOptionItemIds,
 }: Props) {
   const [pending, startTransition] = useTransition();
   const manualSave = useQuotationManualSave();
+  const confirmDelete = useConfirmDelete();
   const costCurrency = draft?.costCurrency ?? item.cost_currency;
+  const optionItemIds = useMemo(() => {
+    const ids = creatorOptionItemIds?.length ? creatorOptionItemIds : [item.id];
+    return [...new Set(ids.filter(Boolean))];
+  }, [creatorOptionItemIds, item.id]);
+  const hasMultipleCreatorOptions = optionItemIds.length > 1;
 
   const optionSelectValues = useMemo(() => {
     const upper = Math.max(creatorDuplicateCount, displayOptionNumber, 1) + 1;
@@ -148,6 +196,7 @@ export function QuotationCreatorDeliverableRows({
       revenue: number;
       gpValue: number;
       gpPct: number;
+      afPct: number;
     }) => {
       onDraftChange(item.id, {
         mode: "cost_revenue",
@@ -155,6 +204,7 @@ export function QuotationCreatorDeliverableRows({
         revenue: commercials.revenue,
         gpPct: commercials.gpPct,
         gpValue: commercials.gpValue,
+        afPct: commercials.afPct,
       });
     },
     [item.id, onDraftChange]
@@ -202,7 +252,28 @@ export function QuotationCreatorDeliverableRows({
     });
   }, [lineFields.deliverableDrafts, item.platform, allowedCreatorPlatforms]);
 
-  const rowSpan = displayRows.length;
+  const usedPlatforms = useMemo(() => {
+    const found = new Set<string>();
+    for (const deliverable of displayRows) {
+      for (const platform of resolveDeliverableDisplayPlatforms(
+        deliverable,
+        allowedCreatorPlatforms,
+        item.platform
+      )) {
+        found.add(platform);
+      }
+    }
+    return [...found];
+  }, [displayRows, allowedCreatorPlatforms, item.platform]);
+
+  const usedPlatformsKey = usedPlatforms.join(",");
+  useEffect(() => {
+    if (!onUsedPlatformsChange) return;
+    onUsedPlatformsChange(
+      item.id,
+      usedPlatformsKey ? usedPlatformsKey.split(",") : []
+    );
+  }, [item.id, usedPlatformsKey, onUsedPlatformsChange]);
 
   function handleOptionChange(value: string) {
     const nextOption = Number(value);
@@ -226,16 +297,26 @@ export function QuotationCreatorDeliverableRows({
     typeLines: QuotationDeliverableTypeLine[],
     options?: { persist?: boolean }
   ) {
+    const current = lineFields.deliverableDrafts.find((d) => d.key === key);
+    const previousLines = current ? deliverableTypeLines(current) : [];
     const synced = syncDeliverableFromTypeLines(
       typeLines,
       allowedCreatorPlatforms,
       item.platform ?? allowedCreatorPlatforms[0] ?? "instagram"
     );
+    const patch = {
+      ...synced,
+      service_description: syncServiceDescriptionWithTypeLines(
+        current?.service_description,
+        previousLines,
+        synced.type_lines
+      ),
+    };
     if (options?.persist === false) {
-      lineFields.updateDeliverableDraftLocal(key, synced);
+      lineFields.updateDeliverableDraftLocal(key, patch);
       return;
     }
-    updateDraft(key, synced);
+    updateDraft(key, patch);
   }
 
   function handleAddOption() {
@@ -291,16 +372,58 @@ export function QuotationCreatorDeliverableRows({
     lineFields.handleAddDeliverable();
   }
 
-  function handleRemoveType(key: string) {
+  async function handleRemoveType(key: string) {
+    const ok = await confirmDelete(
+      "Remove this pricing line from the quotation? This cannot be undone.",
+      "Remove pricing line?"
+    );
+    if (!ok) return;
     lineFields.removeDeliverable(key);
   }
 
-  function handleRemoveCreator() {
+  async function handleRemoveOption() {
+    const label = `Option ${displayOptionNumber}`;
+    const ok = await confirmDelete(
+      `Remove ${label} for this creator from the quotation? This cannot be undone.`,
+      "Remove option?"
+    );
+    if (!ok) return;
     startTransition(async () => {
       const res = await removeQuotationItem({ item_id: item.id, quotation_id: quotationId });
       if (!res.ok) {
         toast.error(res.message);
         return;
+      }
+      toast.success(`${label} removed.`);
+      if (hasMultipleCreatorOptions) {
+        onLineChanged();
+      } else {
+        onRemoved();
+      }
+    });
+  }
+
+  async function handleRemoveCreator() {
+    const name = item.creator_name ?? item.handle ?? "this creator";
+    const optionCount = optionItemIds.length;
+    const ok = await confirmDelete(
+      optionCount > 1
+        ? `Remove ${name} and all ${optionCount} options from this quotation? This cannot be undone.`
+        : `Remove ${name} from this quotation? This cannot be undone.`,
+      "Remove creator?"
+    );
+    if (!ok) return;
+    startTransition(async () => {
+      for (const itemId of optionItemIds) {
+        const res = await removeQuotationItem({
+          item_id: itemId,
+          quotation_id: quotationId,
+        });
+        if (!res.ok) {
+          toast.error(res.message);
+          onLineChanged();
+          return;
+        }
       }
       toast.success("Creator removed.");
       onRemoved();
@@ -308,11 +431,9 @@ export function QuotationCreatorDeliverableRows({
   }
 
   const rowClass = cn(
-    "align-top [&_td]:py-1.5",
+    "oline align-middle",
     optionShadeClass,
-    selected && "ring-1 ring-inset ring-primary/25",
-    !optionShadeClass && zebra && "bg-muted/30",
-    !optionShadeClass && "hover:bg-muted/50"
+    selected && "ring-1 ring-inset ring-primary/25"
   );
 
   return (
@@ -327,23 +448,26 @@ export function QuotationCreatorDeliverableRows({
         );
 
         return (
-          <TableRow
+          <div
             key={`${item.id}-${deliverable.key}`}
             className={rowClass}
             data-quotation-item-id={isFirst ? item.id : undefined}
           >
             {isFirst ? (
-              <TableCell rowSpan={rowSpan} className="px-2 align-middle">
+              <span className="co-chk">
                 <Checkbox
                   checked={selected}
                   onCheckedChange={onToggleSelect}
                   aria-label={`Select ${item.creator_name ?? item.handle ?? "creator"}`}
+                  className="size-4"
                 />
-              </TableCell>
-            ) : null}
+              </span>
+            ) : (
+              <FlexColEmpty className="co-chk" />
+            )}
 
             {isFirst ? (
-              <TableCell rowSpan={rowSpan} className="min-w-[92px] align-middle px-2">
+              <span className="co-opt">
                 {showOptionLabel ? (
                   <QuotationCreatorOptionSelect
                     displayOptionNumber={displayOptionNumber}
@@ -351,13 +475,20 @@ export function QuotationCreatorDeliverableRows({
                     onChange={handleOptionChange}
                   />
                 ) : (
-                  <span className="text-xs text-muted-foreground">—</span>
+                  <span className="co-opt-label text-[12.5px] text-[var(--text-4)]">
+                    — ·{" "}
+                    <b className="font-semibold text-[var(--text-2)]">
+                      {item.followers != null ? formatCreatorCount(item.followers) : "—"}
+                    </b>
+                  </span>
                 )}
-              </TableCell>
-            ) : null}
+              </span>
+            ) : (
+              <FlexColEmpty className="co-opt" />
+            )}
 
             {!groupMode && isFirst ? (
-              <TableCell rowSpan={rowSpan} className="min-w-[160px] align-middle px-2">
+              <span className="co-id min-w-[160px] shrink-0">
                 <CreatorIdentityCell
                   source={creatorProfileSource}
                   avatarBadge="country"
@@ -376,41 +507,34 @@ export function QuotationCreatorDeliverableRows({
                     ) : null
                   }
                 />
-              </TableCell>
+              </span>
             ) : null}
 
             {isFirst ? (
-              <TableCell
-                rowSpan={rowSpan}
-                className="align-middle text-right tabular-nums text-xs text-muted-foreground"
-              >
-                {formatCreatorCount(item.followers)}
-              </TableCell>
-            ) : null}
-
-            {isFirst ? (
-              <TableCell rowSpan={rowSpan} className="min-w-[72px] align-middle">
+              <span className="co-tier">
                 {creatorTier === "Unknown" ? (
-                  <span className="text-[11px] text-muted-foreground">—</span>
+                  <span className="text-[11px] text-[var(--text-4)]">—</span>
                 ) : (
-                  <CreatorTierBadge tier={creatorTier} />
+                  <CreatorTierBadge tier={creatorTier} className="tierbadge" />
                 )}
-              </TableCell>
-            ) : null}
+              </span>
+            ) : (
+              <FlexColEmpty className="co-tier" />
+            )}
 
-            <TableCell className="min-w-[140px] align-top">
+            <span className="co-svc">
               <Input
-                className="h-8 text-[11px]"
+                className="svc-input h-[34px] text-[12.5px]"
                 placeholder="Service description…"
                 value={deliverable.service_description ?? ""}
                 onChange={(e) => {
                   updateDraft(deliverable.key, { service_description: e.target.value });
                 }}
               />
-            </TableCell>
+            </span>
 
-            <TableCell className="w-[4.5rem] align-top text-center">
-              <div className="flex justify-center pt-0.5">
+            <span className="co-plat">
+              <div className="flex justify-center">
                 {isManualCreator && lineFields.platformSelectOptions.length > 0 ? (
                   <QuotationLinePlatformCell
                     loadingPlatforms={lineFields.loadingPlatforms}
@@ -425,13 +549,14 @@ export function QuotationCreatorDeliverableRows({
                     allPlatforms={typeLinesIncludeAllPlatforms(deliverable)}
                     platforms={displayPlatforms}
                     loading={lineFields.loadingPlatforms && displayPlatforms.length === 0}
+                    compact
                   />
                 )}
               </div>
-            </TableCell>
+            </span>
 
-            <TableCell className="min-w-[200px] align-top">
-              <div className="space-y-1">
+            <span className="co-type">
+              <div className="flex min-w-0 items-center gap-1">
                 <QuotationDeliverableTypeLinesEditor
                   lines={deliverableTypeLines(deliverable)}
                   allowedPlatforms={allowedCreatorPlatforms}
@@ -439,73 +564,83 @@ export function QuotationCreatorDeliverableRows({
                     handleTypeLinesChange(deliverable.key, lines, options)
                   }
                   defaultOpen={autoOpenEditors && isFirst}
+                  compact
                 />
                 {canRemoveRow ? (
-                  <Button
+                  <TooltipIconButton
                     type="button"
                     variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-[10px] text-muted-foreground"
-                    onClick={() => handleRemoveType(deliverable.key)}
+                    size="icon"
+                    className="q-remove-type ibtn mini size-7 shrink-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => void handleRemoveType(deliverable.key)}
+                    tooltip="Remove pricing line"
                   >
-                    <Trash2Icon className="mr-1 size-3" />
-                    Remove pricing line
-                  </Button>
+                    <Trash2Icon className="size-3.5" />
+                  </TooltipIconButton>
                 ) : null}
               </div>
-            </TableCell>
+            </span>
 
-            <TableCell className="min-w-[11rem] w-auto max-w-none align-top px-3 py-2 text-right whitespace-nowrap">
+            <span className="co-price">
               <QuotationDeliverableCostDetails
                 deliverable={deliverable}
                 item={item}
                 draft={draft}
-                priceLabel={formatDeliverablePrice(
-                  deliverable.revenue,
-                  deliverable.cost_currency ?? costCurrency
+                priceLabel={formatDeliverableTotalClientPrice(
+                  deliverable,
+                  deliverable.cost_currency ?? costCurrency,
+                  draft?.fxRateToEgp ?? item.fx_rate_to_egp ?? 1,
+                  {
+                    freeForClient: deliverable.free_for_client === true,
+                    fallbackAfPct: item.af_pct,
+                  }
                 )}
                 gpPctLabel={formatDeliverableGpPct(
                   deliverable,
                   draft?.fxRateToEgp ?? item.fx_rate_to_egp ?? 1
                 )}
                 onApply={(next) => applyDeliverable(deliverable.key, next)}
+                onLiveChange={(next) => applyDeliverable(deliverable.key, next)}
                 defaultOpen={autoOpenEditors && isFirst}
+                priceLayout="stacked"
               />
-            </TableCell>
+            </span>
 
             {isFirst ? (
-              <TableCell rowSpan={rowSpan} className="align-middle">
+              <span className="co-status">
                 <SaveIndicator status={lineFields.lineSaveStatus} />
-              </TableCell>
-            ) : null}
+              </span>
+            ) : (
+              <FlexColEmpty className="co-status" />
+            )}
 
             {isFirst ? (
-              <TableCell rowSpan={rowSpan} className="align-middle">
-                <div className="flex flex-col items-center gap-0.5">
-                  <Button
+              <span className="co-act">
+                <div className="oline-act">
+                  <TooltipIconButton
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="size-8"
+                    className="ibtn mini size-7"
                     onClick={handleAddType}
-                    aria-label="Add pricing line"
+                    tooltip="Add pricing line"
                   >
                     <PlusIcon className="size-3.5" />
-                  </Button>
+                  </TooltipIconButton>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button
+                      <TooltipIconButton
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="size-8"
+                        className="ibtn mini size-7"
                         disabled={pending}
-                        aria-label="Line actions"
+                        tooltip="Line actions"
                       >
                         <MoreHorizontalIcon className="size-3.5" />
-                      </Button>
+                      </TooltipIconButton>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuContent align="end" className="w-52">
                       <DropdownMenuItem onClick={handleAddOption}>
                         <PlusIcon className="size-3.5" />
                         Add option
@@ -513,6 +648,23 @@ export function QuotationCreatorDeliverableRows({
                       <DropdownMenuItem onClick={handleDuplicateLine}>
                         <CopyIcon className="size-3.5" />
                         Duplicate option (same creator)
+                      </DropdownMenuItem>
+                      {hasMultipleCreatorOptions ? (
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => void handleRemoveOption()}
+                        >
+                          <Trash2Icon className="size-3.5" />
+                          Remove this option
+                        </DropdownMenuItem>
+                      ) : null}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => void handleRemoveCreator()}
+                      >
+                        <Trash2Icon className="size-3.5" />
+                        Remove creator from quotation
                       </DropdownMenuItem>
                       {shortlistId ? (
                         <>
@@ -525,20 +677,45 @@ export function QuotationCreatorDeliverableRows({
                       ) : null}
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  <Button
+                  <TooltipIconButton
                     variant="ghost"
                     size="icon"
-                    className="size-8"
-                    onClick={handleRemoveCreator}
+                    className="ibtn mini size-7 text-muted-foreground hover:text-destructive"
+                    onClick={() =>
+                      void (hasMultipleCreatorOptions
+                        ? handleRemoveOption()
+                        : handleRemoveCreator())
+                    }
                     disabled={pending}
-                    aria-label="Remove creator"
+                    tooltip={
+                      hasMultipleCreatorOptions
+                        ? `Remove Option ${displayOptionNumber}`
+                        : "Remove creator from quotation"
+                    }
                   >
                     <Trash2Icon className="size-3.5" />
-                  </Button>
+                  </TooltipIconButton>
                 </div>
-              </TableCell>
-            ) : null}
-          </TableRow>
+              </span>
+            ) : canRemoveRow ? (
+              <span className="co-act">
+                <div className="oline-act">
+                  <TooltipIconButton
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="ibtn mini size-7 text-muted-foreground hover:text-destructive"
+                    onClick={() => void handleRemoveType(deliverable.key)}
+                    tooltip="Remove pricing line"
+                  >
+                    <Trash2Icon className="size-3.5" />
+                  </TooltipIconButton>
+                </div>
+              </span>
+            ) : (
+              <FlexColEmpty className="co-act" />
+            )}
+          </div>
         );
       })}
     </>

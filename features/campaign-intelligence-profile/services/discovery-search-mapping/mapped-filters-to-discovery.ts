@@ -1,7 +1,10 @@
 import type { CreatorSearchFilters } from "@/features/discovery/components/creator-search/creator-search-types";
-import { DEFAULT_CREATOR_SEARCH_FILTERS } from "@/features/discovery/components/creator-search/creator-search-types";
+import {
+  cloneCreatorSearchFilters,
+  DEFAULT_CREATOR_SEARCH_FILTERS,
+  filtersToBrowseParams,
+} from "@/features/discovery/components/creator-search/creator-search-types";
 import type { UnifiedCreatorBrowseFilters } from "@/lib/creators/types";
-import { filtersToBrowseParams } from "@/features/discovery/components/creator-search/creator-search-types";
 
 import type { CampaignSearchCriterion } from "../../types/profile";
 import type { DiscoveryMappedFilter } from "./types";
@@ -12,7 +15,7 @@ export function discoveryMappedFiltersToCreatorFilters(
   mapped: DiscoveryMappedFilter[]
 ): CreatorSearchFilters {
   const filters: CreatorSearchFilters = {
-    ...DEFAULT_CREATOR_SEARCH_FILTERS,
+    ...cloneCreatorSearchFilters(DEFAULT_CREATOR_SEARCH_FILTERS),
     search: "",
     contentKeyword: "",
   };
@@ -63,7 +66,9 @@ export function discoveryMappedFiltersToCreatorFilters(
         if (!filters.ageMax) filters.ageMax = item.value;
         break;
       case "language":
-        if (!filters.language) filters.language = item.value;
+        if (!filters.languages.includes(item.value)) {
+          filters.languages.push(item.value);
+        }
         break;
       case "platform": {
         const platform = item.value.toLowerCase();

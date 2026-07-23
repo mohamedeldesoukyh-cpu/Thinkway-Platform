@@ -1,13 +1,72 @@
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 import { detectIndustryFromBrief } from "@/features/campaign-studio/services/industry-intelligence";
+import { normalizeInfluencerTier } from "@/lib/creators/influencer-tier";
 
 import { parseAggregatedServiceLabel } from "./hydration/quotation-service-types";
+import { isUgcServiceType } from "./media-plan-deliverable-classification";
+import {
+  resolveAllowedMechanics,
+  mechanicAllowed,
+  sanitizeMechanicReferences,
+  type CampaignMechanic,
+} from "./media-plan-mechanics-ssot";
+import { classifyCampaignType, campaignTypeWeeklyPhase, type CampaignType } from "./campaign-type-classifier";
+import { buildPlatformIntelligenceNarrative } from "./platform-intelligence";
 import { resolveBriefTextForScheduling } from "./brief-media-plan-schedule";
 import { detectWeightProfile } from "./media-plan-weight-profile";
+import { mergePlatformAllocation } from "./platform-allocation";
 import type { SlateCreator } from "./output-inputs";
+import { buildMarketTimingRationale, buildMarketTimingCitations, type MarketTimingCitation } from "@/features/market-intelligence/market-timing-rationale";
+import {
+  buildSectionRationale,
+  type MediaPlanSectionRationaleKey,
+} from "./media-plan-section-rationale";
+import {
+  buildMarketSchedulingContext,
+  resolveMarketIntelligenceConfig,
+} from "@/features/market-intelligence";
 
-export type StrategyConfidenceLevel = "high" | "medium" | "low";
+function parseCampaignStartForMarket(iso?: string): Date {
+  if (iso && /^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    const [year, month, day] = iso.split("-").map((part) => Number(part));
+    if (year && month && day) {
+      return new Date(year, month - 1, day, 12, 0, 0, 0);
+    }
+  }
+  const now = new Date();
+  const day = now.getDay();
+  const daysUntilMonday = day === 0 ? 1 : day === 1 ? 0 : 8 - day;
+  now.setDate(now.getDate() + daysUntilMonday);
+  now.setHours(12, 0, 0, 0);
+  return now;
+}
+
+function resolveMarketContextForNarrative(
+  input: MediaPlanStrategyNarrativeInput
+): import("@/features/market-intelligence").MarketSchedulingContext | undefined {
+  if (input.marketContext) return input.marketContext;
+  if (!input.campaignObject && !input.campaignStartDate) return undefined;
+
+  const start = parseCampaignStartForMarket(
+    input.campaignStartDate ?? getCampaignFacts(input.campaignObject!)?.campaignStartDate
+  );
+  const config = input.campaignObject
+    ? resolveMarketIntelligenceConfig(input.campaignObject, input.briefText)
+    : resolveMarketIntelligenceConfig(
+        { meta: {} } as import("@/features/campaign-intelligence").CampaignObject,
+        input.briefText
+      );
+
+  return buildMarketSchedulingContext({
+    campaignStartDate: start,
+    durationWeeks: input.durationWeeks,
+    config,
+  });
+}
+
+
+export type StrategyConfidenceLevel = "low" | "medium" | "high";
 
 export type MediaPlanStrategySectionConfidence = {
   level: StrategyConfidenceLevel;
@@ -33,6 +92,8 @@ export type MediaPlanStrategyEvidence = {
   platformAllocation: Array<{ platform: string; count: number; percentage: number }>;
   tierSummary: string;
   tierCounts: Partial<Record<CreatorTier, number>>;
+  ugcCreatorCount: number;
+  ugcDeliverableCount: number;
   totalCreators: number;
   totalDeliverables: number;
   maxDeliverablesPerCreator: number;
@@ -56,6 +117,13 @@ export type MediaPlanStrategyNarrative = {
   creativeConfidence: MediaPlanStrategySectionConfidence;
   creativeLimitations?: string;
   creatorTypeRecommendations: MediaPlanCreativeRecommendation[];
+  /** Consumer purchase-cycle timing rationale — additive to rollout strategy. */
+  marketTimingIntelligence?: string;
+  marketTimingConfidence?: MediaPlanStrategySectionConfidence;
+  /** Structured citations per market driver — rendered in Market Timing section. */
+  marketTimingCitations?: MarketTimingCitation[];
+  /** Expandable "Why?" bullets keyed by section — internal view only. */
+  sectionRationale?: Partial<Record<MediaPlanSectionRationaleKey, string[]>>;
   evidence: MediaPlanStrategyEvidence;
 };
 
@@ -71,6 +139,17 @@ export type MediaPlanStrategyNarrativeInput = {
   audience?: string;
   industry?: string;
   platforms?: string[];
+  /**
+   * Calendar-derived display weights — SSOT for rollout bars and weekly objective %.
+   * When omitted, brief weekWeights are used for display as well.
+   */
+  activityWeights?: number[];
+  /** ISO campaign start date for market intelligence (YYYY-MM-DD). */
+  campaignStartDate?: string;
+  /** Pre-built market context — built from campaign object when omitted. */
+  marketContext?: import("@/features/market-intelligence").MarketSchedulingContext;
+  /** Campaign object for market config resolution when marketContext omitted. */
+  campaignObject?: import("@/features/campaign-intelligence").CampaignObject;
 };
 
 type CreatorTier = "mega" | "macro" | "mid" | "micro" | "nano" | "unknown";
@@ -110,13 +189,23 @@ function normalizePlatformKey(platform: string): string {
 }
 
 function classifyTier(tier?: string): CreatorTier {
-  const value = (tier ?? "").toLowerCase();
-  if (/celebrity|mega|star|a-?list/.test(value)) return "mega";
-  if (/\bmid\b|mid-tier|mid tier/.test(value)) return "mid";
-  if (/macro/.test(value)) return "macro";
-  if (/nano/.test(value)) return "nano";
-  if (/micro/.test(value)) return "micro";
-  return "unknown";
+  const normalized = normalizeInfluencerTier(tier);
+  if (!normalized) return "unknown";
+  switch (normalized) {
+    case "Celebrity":
+    case "Mega":
+      return "mega";
+    case "Macro":
+      return "macro";
+    case "Mid":
+      return "mid";
+    case "Micro":
+      return "micro";
+    case "Nano":
+      return "nano";
+    default:
+      return "unknown";
+  }
 }
 
 export function countTiers(slate: SlateCreator[]): Record<CreatorTier, number> {
@@ -132,6 +221,34 @@ export function countTiers(slate: SlateCreator[]): Record<CreatorTier, number> {
     counts[classifyTier(creator.tier)] += 1;
   }
   return counts;
+}
+
+function serviceTypesForCreator(creator: SlateCreator): string[] {
+  if (creator.serviceTypes?.length) return creator.serviceTypes;
+  if (creator.serviceLabel?.trim()) {
+    return parseAggregatedServiceLabel(creator.serviceLabel);
+  }
+  return [];
+}
+
+function creatorHasUgcDeliverable(creator: SlateCreator): boolean {
+  return serviceTypesForCreator(creator).some((type) => isUgcServiceType(type, creator));
+}
+
+/** Creators with explicit UGC deliverables in the quotation — never inferred from tier or brief. */
+export function countUgcCreators(slate: SlateCreator[]): number {
+  return slate.filter(creatorHasUgcDeliverable).length;
+}
+
+/** UGC activation slots across the slate — quotation service labels containing UGC only. */
+export function countUgcDeliverables(slate: SlateCreator[]): number {
+  let total = 0;
+  for (const creator of slate) {
+    for (const type of serviceTypesForCreator(creator)) {
+      if (isUgcServiceType(type, creator)) total += 1;
+    }
+  }
+  return total;
 }
 
 /** Detect verbatim client-brief email language that must not appear in strategy output. */
@@ -181,6 +298,17 @@ export function slateDeliverableStats(slate: SlateCreator[]): {
   };
 }
 
+export function sumTierCounts(counts: Record<CreatorTier, number>): number {
+  return (
+    (counts.mega ?? 0) +
+    (counts.macro ?? 0) +
+    (counts.mid ?? 0) +
+    (counts.micro ?? 0) +
+    (counts.nano ?? 0) +
+    (counts.unknown ?? 0)
+  );
+}
+
 export function formatTierCountSummary(counts: Record<CreatorTier, number>): string {
   const labels: Array<[CreatorTier, string]> = [
     ["mega", "Mega"],
@@ -188,11 +316,21 @@ export function formatTierCountSummary(counts: Record<CreatorTier, number>): str
     ["mid", "Mid"],
     ["micro", "Micro"],
     ["nano", "Nano"],
+    ["unknown", "Unclassified"],
   ];
   return labels
     .filter(([tier]) => (counts[tier] ?? 0) > 0)
     .map(([tier, label]) => `${counts[tier]} ${label}`)
     .join(", ");
+}
+
+export function formatCreatorMixCountSummary(
+  counts: Record<CreatorTier, number>,
+  ugcCreatorCount: number
+): string {
+  const parts = [formatTierCountSummary(counts)];
+  if (ugcCreatorCount > 0) parts.push(`${ugcCreatorCount} UGC`);
+  return parts.filter(Boolean).join(", ");
 }
 
 export function detectCreativeAssetAvailability(briefText: string): {
@@ -222,15 +360,19 @@ export function extractMediaPlanStrategyEvidence(
   input: MediaPlanStrategyNarrativeInput
 ): MediaPlanStrategyEvidence {
   const tierCounts = countTiers(input.slate);
+  const ugcCreatorCount = countUgcCreators(input.slate);
+  const ugcDeliverableCount = countUgcDeliverables(input.slate);
   const deliverables = slateDeliverableStats(input.slate);
   const creativeAssets = detectCreativeAssetAvailability(input.briefText);
 
   return {
     durationWeeks: input.durationWeeks,
-    weekWeightDistribution: formatWeightDistribution(input.weekWeights),
+    weekWeightDistribution: formatWeightDistribution(input.activityWeights ?? input.weekWeights),
     platformAllocation: sortedPlatforms(input.platformAllocation),
-    tierSummary: formatTierCountSummary(tierCounts),
+    tierSummary: formatCreatorMixCountSummary(tierCounts, ugcCreatorCount),
     tierCounts,
+    ugcCreatorCount,
+    ugcDeliverableCount,
     totalCreators: input.slate.length,
     totalDeliverables: deliverables.total,
     maxDeliverablesPerCreator: deliverables.max,
@@ -313,7 +455,9 @@ function detectCreatorCategories(text: string, slate: SlateCreator[]): CreatorCa
 export function sortedPlatforms(
   platformAllocation: Record<string, number>
 ): Array<{ platform: string; count: number; percentage: number }> {
-  const entries = Object.entries(platformAllocation).filter(([, count]) => count > 0);
+  const entries = Object.entries(mergePlatformAllocation(platformAllocation)).filter(
+    ([, count]) => count > 0
+  );
   const total = entries.reduce((sum, [, count]) => sum + count, 0);
   return entries
     .sort((a, b) => b[1] - a[1])
@@ -336,9 +480,12 @@ export function buildRolloutStrategyNarrative(input: {
   durationWeeks: number;
   briefText: string;
   objective?: string;
+  slate?: SlateCreator[];
 }): string {
-  const { weekWeights, baselineWeights, scheduleAdjusted, briefText, objective } = input;
+  const { weekWeights, baselineWeights, scheduleAdjusted, briefText, objective, slate } = input;
   if (!weekWeights.length) return "";
+
+  const allowedMechanics = resolveAllowedMechanics({ briefText, objective, slate });
 
   const profile = detectWeightProfile(weekWeights);
   const distribution = formatWeightDistribution(weekWeights);
@@ -359,14 +506,14 @@ export function buildRolloutStrategyNarrative(input: {
 
   if (profile === "burst" || firstHalfShare >= 55) {
     const openers = [
-      `A front-loaded rollout (${distribution}) concentrates ${first}% of creator publishing in Week 1, establishing immediate launch momentum${objectiveHook}.`,
-      `Publishing weight tilts early (${distribution}), with Week 1 carrying ${first}% of the flight — designed to spark awareness and social conversation from day one${objectiveHook}.`,
-      `The activation opens with decisive weight (${distribution}): ${first}% lands in Week 1 to capture relevance while audience attention is highest${objectiveHook}.`,
+      `A launch-weighted rollout (${distribution}) concentrates strategic emphasis in Week 1 (${first}%) — hero creators and awareness content lead while the campaign sustains meaningful activity across all ${weekWeights.length} weeks${objectiveHook}.`,
+      `Publishing weight tilts toward the opening phase (${distribution}), with Week 1 carrying ${first}% emphasis — designed to spark awareness without compressing the full creator slate into a single week${objectiveHook}.`,
+      `The activation opens with decisive launch emphasis (${distribution}): Week 1 leads at ${first}% weight while Weeks 2–${weekWeights.length} maintain brand presence through the full purchased duration${objectiveHook}.`,
     ];
     const middles = [
-      `Weeks 2–${weekWeights.length} taper deliberately (${weekWeights.slice(1).map((weight, index) => `W${index + 2} ${weight}%`).join(", ")}), sustaining visibility without oversaturating feeds.`,
-      `Lighter weight in the back half keeps the story alive through earned conversation rather than volume alone.`,
-      `The descending curve after the opening burst protects creative freshness while maintaining category presence through the close.`,
+      `Weeks 2–${weekWeights.length} carry lighter emphasis (${weekWeights.slice(1).map((weight, index) => `W${index + 2} ${weight}%`).join(", ")}) but remain active publishing windows — sustaining visibility without oversaturating feeds.`,
+      `Lighter weight in the back half keeps the story alive through earned conversation rather than abandoning the remaining campaign weeks.`,
+      `Campaign weight signals launch priority, not early completion — creator activations continue through amplification, momentum, and close phases.`,
     ];
     core = `${pickVariant(openers, seed)} ${pickVariant(middles, seed + 3)}`;
   } else if (profile === "close" || profile === "ramp" || secondHalfShare >= 55) {
@@ -377,7 +524,9 @@ export function buildRolloutStrategyNarrative(input: {
     ];
     const middles = [
       `This reversed weighting lets audience familiarity build before the hero push, maximising participation when the campaign narrative is most established.`,
-      `Early weeks seed curiosity and UGC participation; the back-loaded curve ensures the peak lands when the audience is primed to act.`,
+      mechanicAllowed(allowedMechanics, "ugc")
+        ? `Early weeks seed curiosity and UGC participation; the back-loaded curve ensures the peak lands when the audience is primed to act.`
+        : `Early weeks seed curiosity and audience familiarity; the back-loaded curve ensures the peak lands when the audience is primed to act.`,
       `The progressive build mirrors how social conversation compounds — light touch first, then a decisive final-week surge.`,
     ];
     core = `${pickVariant(openers, seed)} ${pickVariant(middles, seed + 5)}`;
@@ -412,77 +561,19 @@ export function buildRolloutStrategyNarrative(input: {
   return core;
 }
 
-/** Platform allocation rationale with audience behaviour reasoning. */
-export function buildPlatformIntelligenceNarrative(input: {
-  platformAllocation: Record<string, number>;
-  briefText: string;
-  audience?: string;
-  platforms?: string[];
-}): string {
-  const ranked = sortedPlatforms(input.platformAllocation);
-  if (!ranked.length) {
-    const fallback = input.platforms?.length ? input.platforms.join(" and ") : "the primary platforms";
-    return `Creator content is distributed across ${fallback}, aligned to where the target audience discovers and engages with brand stories.`;
-  }
+export { buildPlatformIntelligenceNarrative } from "./platform-intelligence";
 
-  const dominant = ranked[0]!;
-  const secondary = ranked[1];
-  const audienceNote = input.audience?.trim()
-    ? ` for ${input.audience.trim()}`
-    : "";
-
-  const dominantKey = normalizePlatformKey(dominant.platform);
-  let dominantReason: string;
-
-  if (dominantKey.includes("tiktok")) {
-    const variants = [
-      `${dominant.percentage}% on TikTok leverages the recommendation engine's viral distribution — short-form hooks, trend participation, and audio-driven discovery reach audiences${audienceNote} who consume entertainment-first content in scroll sessions.`,
-      `TikTok carries ${dominant.percentage}% of slots because its algorithm rewards native, music-led and challenge-based formats that compound reach through duets, stitches, and For You Page amplification${audienceNote}.`,
-      `With ${dominant.percentage}% weight on TikTok, the plan prioritises algorithmic reach and cultural velocity — the platform where trends originate and audience participation scales fastest${audienceNote}.`,
-    ];
-    dominantReason = pickVariant(variants, dominant.percentage);
-  } else if (dominantKey.includes("instagram")) {
-    const variants = [
-      `${dominant.percentage}% on Instagram capitalises on Reels discovery and Stories intimacy — combining scroll-stopping short video with credible, lifestyle-integrated feed presence${audienceNote}.`,
-      `Instagram receives ${dominant.percentage}% of publishing because Reels and Stories deliver both reach and brand credibility, especially for visually-led narratives${audienceNote}.`,
-      `The ${dominant.percentage}% Instagram allocation reflects audience behaviour on a platform where Reels drive discovery and Stories sustain daily brand presence${audienceNote}.`,
-    ];
-    dominantReason = pickVariant(variants, dominant.percentage);
-  } else if (dominantKey.includes("youtube")) {
-    dominantReason = `YouTube carries ${dominant.percentage}% of the plan, favouring longer narrative arcs, tutorials, and search-discoverable content that builds depth and consideration${audienceNote}.`;
-  } else if (dominantKey.includes("snap")) {
-    dominantReason = `Snapchat accounts for ${dominant.percentage}% of slots, leaning into ephemeral Stories and AR-native formats that resonate with youth-first, in-the-moment consumption${audienceNote}.`;
-  } else {
-    dominantReason = `${dominant.platform} leads at ${dominant.percentage}%, reflecting where this audience segment is most active and receptive to creator-led brand content${audienceNote}.`;
-  }
-
-  if (!secondary) return dominantReason;
-
-  const secondaryKey = normalizePlatformKey(secondary.platform);
-  let secondaryReason: string;
-
-  if (secondaryKey.includes("instagram") && dominantKey.includes("tiktok")) {
-    secondaryReason = ` Instagram (${secondary.percentage}%) complements with Reels polish and Stories retention — capturing audiences who discover on TikTok but validate and follow brands on Instagram.`;
-  } else if (secondaryKey.includes("tiktok") && dominantKey.includes("instagram")) {
-    secondaryReason = ` TikTok (${secondary.percentage}%) adds trend velocity and participation formats alongside Instagram's credibility layer.`;
-  } else if (secondaryKey.includes("youtube")) {
-    secondaryReason = ` YouTube (${secondary.percentage}%) extends reach into longer-form storytelling and search-driven discovery.`;
-  } else {
-    secondaryReason = ` ${secondary.platform} (${secondary.percentage}%) provides complementary reach and format diversity to the primary channel mix.`;
-  }
-
-  return dominantReason + secondaryReason;
-}
-
-/** Creator tier mix rationale — only tiers present in the slate, with exact counts. */
+/** Creator tier mix rationale — tiers and UGC activations present in the slate, with exact counts. */
 export function buildCreatorMixIntelligenceNarrative(slate: SlateCreator[]): string {
   const counts = countTiers(slate);
+  const ugcCreators = countUgcCreators(slate);
+  const ugcDeliverables = countUgcDeliverables(slate);
   const total = slate.length;
   if (!total) {
     return "Creator tier mix cannot be assessed reliably — the slate has no confirmed creators yet.";
   }
 
-  const mixSummary = formatTierCountSummary(counts);
+  const mixSummary = formatCreatorMixCountSummary(counts, ugcCreators);
   if (!mixSummary) {
     return `${total} creator${total === 1 ? "" : "s"} on the slate — tier classification is pending confirmation before mix rationale can be finalised.`;
   }
@@ -511,23 +602,78 @@ export function buildCreatorMixIntelligenceNarrative(slate: SlateCreator[]): str
   }
   if (counts.nano > 0) {
     parts.push(
-      `${counts.nano} Nano add posting frequency and UGC texture — everyday voices that make the campaign participatory`
+      `${counts.nano} Nano add posting frequency and everyday authenticity — voices that keep the campaign active between hero moments`
+    );
+  }
+  if (ugcCreators > 0) {
+    const slotNote =
+      ugcDeliverables > ugcCreators
+        ? ` across ${ugcDeliverables} UGC activation${ugcDeliverables === 1 ? "" : "s"}`
+        : "";
+    parts.push(
+      `${ugcCreators} UGC creator${ugcCreators === 1 ? "" : "s"}${slotNote} deliver participation-led, community-proof content — authentic responses and challenge formats granted as usage rights upon client request`
     );
   }
 
   return `The ${total}-creator slate (${mixSummary}) layers tiers by role: ${parts.join("; ")}.`;
 }
 
-function deriveWeekPhase(weight: number, weekIndex: number, totalWeeks: number, avgWeight: number): string {
+/** Distinct phases for equal-weight trailing weeks after a launch-heavy W1. */
+function deriveBurstTrailingPhase(position: number, totalTrailing: number): string {
+  if (totalTrailing <= 1) return "Wrap-up";
+  if (totalTrailing === 2) return position === 0 ? "Amplify" : "Wrap-up";
+  if (totalTrailing === 3) {
+    return (["Amplify", "Momentum", "Wrap-up"] as const)[position] ?? "Maintain";
+  }
+  if (position === totalTrailing - 1) return "Wrap-up";
+  if (position === 0) return "Amplify";
+  if (position === totalTrailing - 2) return "Momentum";
+  return "Maintain";
+}
+
+function isBurstTrailingPattern(allWeights: number[], weekIndex: number): boolean {
+  if (weekIndex <= 0 || allWeights.length < 2) return false;
+  const firstWeight = allWeights[0] ?? 0;
+  const trailing = allWeights.slice(1);
+  if (!trailing.length) return false;
+  const trailingWeight = trailing[0] ?? 0;
+  const allTrailingEqual = trailing.every((weight) => weight === trailingWeight);
+  const peakIndex = allWeights.indexOf(Math.max(...allWeights));
+  return (
+    peakIndex === 0 &&
+    allTrailingEqual &&
+    firstWeight > trailingWeight + 15
+  );
+}
+
+/** Derive Launch / Amplify / Momentum / Maintain / Wrap-up from brief weekWeights — shared by rollout and weekly objectives. */
+export function deriveMediaPlanWeekPhase(
+  weight: number,
+  weekIndex: number,
+  totalWeeks: number,
+  avgWeight: number,
+  allWeights: number[]
+): string {
+  const spread = Math.max(...allWeights) - Math.min(...allWeights);
   const isFirst = weekIndex === 0;
   const isLast = weekIndex === totalWeeks - 1;
 
+  if (isBurstTrailingPattern(allWeights, weekIndex)) {
+    return deriveBurstTrailingPhase(weekIndex - 1, totalWeeks - 1);
+  }
+
+  if (spread <= 8) {
+    return isLast && totalWeeks > 1 ? "Wrap-up" : "Maintain";
+  }
+
+  if (isLast) {
+    if (weight >= avgWeight + 5) return "Wrap-up";
+    return weight <= avgWeight - 8 ? "Maintain" : "Wrap-up";
+  }
+
+  if (weight >= avgWeight + 8) return isFirst ? "Launch" : "Amplify";
+  if (weight <= avgWeight - 8) return "Maintain";
   if (isFirst && weight >= avgWeight + 5) return "Launch";
-  if (isLast && weight >= avgWeight + 5) return "Final push";
-  if (weight >= avgWeight + 8) return "Amplify";
-  if (weight <= avgWeight - 6) return "Maintain";
-  if (isFirst) return "Launch";
-  if (isLast) return "Final push";
   if (weight >= avgWeight) return "Amplify";
   return "Maintain";
 }
@@ -539,8 +685,9 @@ function goalsForWeek(input: {
   weight: number;
   briefText: string;
   objective?: string;
+  allowedMechanics: Set<CampaignMechanic>;
 }): string[] {
-  const { phase, weekIndex, totalWeeks, briefText, objective } = input;
+  const { phase, weekIndex, totalWeeks, briefText, objective, allowedMechanics } = input;
   const goals: string[] = [];
   const vertical = detectBriefVertical(briefText);
 
@@ -552,17 +699,44 @@ function goalsForWeek(input: {
     else goals.push("Create first-impression buzz and social conversation starters");
   } else if (phase === "Amplify") {
     goals.push("Increase publishing volume and participation");
-    goals.push("Encourage duets, stitches, comments, and UGC responses");
-    if (objective?.match(/engagement|ugc|community/i)) {
+    const participationGoals: string[] = [];
+    if (mechanicAllowed(allowedMechanics, "duet")) participationGoals.push("duets");
+    if (mechanicAllowed(allowedMechanics, "stitch")) participationGoals.push("stitches");
+    if (mechanicAllowed(allowedMechanics, "ugc")) participationGoals.push("UGC responses");
+    if (participationGoals.length) {
+      goals.push(`Encourage ${participationGoals.join(", ")}, comments, and audience participation`);
+    } else {
+      goals.push("Encourage comments, shares, and audience engagement with creator content");
+    }
+    if (
+      mechanicAllowed(allowedMechanics, "ugc") &&
+      objective?.match(/engagement|ugc|community/i)
+    ) {
       goals.push("Convert passive viewers into active participants");
     }
+    if (weekIndex === 1) {
+      goals.push("Extend launch momentum with mid-tier creators and participation formats");
+    }
+  } else if (phase === "Momentum") {
+    goals.push("Keep conversation flowing with varied creator perspectives");
+    goals.push("Reinforce key messages without repeating Week 1 launch framing");
+    if (vertical === "music") goals.push("Sustain track visibility through remixes, reactions, and creator interpretations");
+    else if (vertical === "beauty") goals.push("Deepen product consideration through tutorials and routine integrations");
+    else goals.push("Maintain category presence through authentic, non-repetitive storytelling");
   } else if (phase === "Maintain") {
     goals.push("Sustain category presence without oversaturating feeds");
     goals.push("Reinforce key messages through varied creator perspectives");
-  } else if (phase === "Final push") {
+    if (vertical === "music") goals.push("Sustain track visibility through ongoing creator content");
+    if (weekIndex === totalWeeks - 2 && totalWeeks > 2) {
+      goals.push("Bridge mid-flight energy toward the campaign close");
+    }
+  } else if (phase === "Wrap-up") {
     goals.push("Concentrate energy on conversion and last-mile awareness");
-    if (weekIndex === totalWeeks - 1) goals.push("Close the flight with decisive calls-to-action and recap content");
-    else goals.push("Build anticipation toward the campaign peak");
+    if (weekIndex === totalWeeks - 1) {
+      goals.push("Close the flight with decisive calls-to-action and recap content");
+    } else {
+      goals.push("Build anticipation toward the campaign close");
+    }
   }
 
   if (/\bpeak|hero|moment\b/i.test(briefText) && weekIndex === Math.floor(totalWeeks / 2)) {
@@ -572,30 +746,60 @@ function goalsForWeek(input: {
   return goals.slice(0, 3);
 }
 
-/** Per-week strategic objectives derived from weights, brief, and position. */
+/**
+ * Per-week strategic objectives — display % from calendar activity weights when provided.
+ * Brief weekWeights drive rollout narrative text; activityWeights drive card % and phases.
+ */
 export function buildWeeklyObjectives(input: {
   weekWeights: number[];
+  activityWeights?: number[];
   briefText: string;
   objective?: string;
+  industry?: string;
+  slate?: SlateCreator[];
+  campaignType?: CampaignType;
 }): MediaPlanWeeklyObjective[] {
-  const { weekWeights, briefText, objective } = input;
+  const { weekWeights, activityWeights, briefText, objective, slate, industry } = input;
   if (!weekWeights.length) return [];
 
-  const avgWeight = weekWeights.reduce((sum, weight) => sum + weight, 0) / weekWeights.length;
+  const displayWeights =
+    activityWeights?.length === weekWeights.length
+      ? activityWeights
+      : weekWeights;
 
-  return weekWeights.map((weight, index) => {
-    const phase = deriveWeekPhase(weight, index, weekWeights.length, avgWeight);
+  const classification = classifyCampaignType({ briefText, objective, industry });
+  const campaignType = input.campaignType ?? classification.primary;
+
+  const allowedMechanics = resolveAllowedMechanics({ briefText, objective, slate });
+  const avgWeight =
+    displayWeights.reduce((sum, weight) => sum + weight, 0) / displayWeights.length;
+
+  return displayWeights.map((weight, index) => {
+    const genericPhase = deriveMediaPlanWeekPhase(
+      weight,
+      index,
+      displayWeights.length,
+      avgWeight,
+      displayWeights
+    );
+    const phase = campaignTypeWeeklyPhase(
+      campaignType,
+      genericPhase,
+      index,
+      displayWeights.length
+    );
     return {
       week: index + 1,
       phase,
       weight,
       goals: goalsForWeek({
-        phase,
+        phase: genericPhase,
         weekIndex: index,
-        totalWeeks: weekWeights.length,
+        totalWeeks: displayWeights.length,
         weight,
         briefText,
         objective,
+        allowedMechanics,
       }),
     };
   });
@@ -707,8 +911,8 @@ const VERTICAL_CREATIVE_FORMATS: Record<
       reason: "Optimised for algorithmic distribution and scroll-stopping first seconds.",
     },
     {
-      format: "Story-led UGC",
-      reason: "Authentic creator voice builds trust and encourages audience participation.",
+      format: "Creator-native storytelling",
+      reason: "Authentic creator voice builds trust and encourages audience engagement.",
     },
     {
       format: "Trend-adaptive hooks",
@@ -814,6 +1018,21 @@ function dominantPlatformName(platformAllocation: Record<string, number>): strin
   return ranked[0]?.platform;
 }
 
+function formatRequiresMechanic(format: string): CampaignMechanic | null {
+  if (/\bugc\b/i.test(format)) return "ugc";
+  if (/\bduets?\b/i.test(format)) return "duet";
+  if (/\bstitches?\b/i.test(format)) return "stitch";
+  if (/\bchallenge|competition\b/i.test(format)) return "challenge";
+  if (/\blive\b/i.test(format)) return "live";
+  return null;
+}
+
+function isFormatAllowedForMechanics(format: string, allowed: Set<CampaignMechanic>): boolean {
+  const mechanic = formatRequiresMechanic(format);
+  if (!mechanic) return true;
+  return mechanicAllowed(allowed, mechanic);
+}
+
 function isFormatAllowedForDeliverables(format: string, maxDeliverables: number): boolean {
   if (maxDeliverables <= 0) return false;
   if (maxDeliverables === 1) {
@@ -825,7 +1044,16 @@ function isFormatAllowedForDeliverables(format: string, maxDeliverables: number)
   return true;
 }
 
-function deliverableAwareFormats(maxDeliverables: number, vertical: BriefVertical): MediaPlanCreativeRecommendation[] {
+function strategyAwareFormats(input: {
+  campaignType: import("./campaign-type-classifier").CampaignType;
+  objective?: string;
+  vertical: BriefVertical;
+  maxDeliverables: number;
+  allowedMechanics: Set<CampaignMechanic>;
+}): MediaPlanCreativeRecommendation[] {
+  const { campaignType, objective, vertical, maxDeliverables, allowedMechanics } = input;
+  const objectiveLower = objective?.toLowerCase() ?? "";
+
   if (maxDeliverables <= 0) return [];
 
   if (maxDeliverables === 1) {
@@ -849,15 +1077,22 @@ function deliverableAwareFormats(maxDeliverables: number, vertical: BriefVertica
   }
 
   if (maxDeliverables === 2) {
+    const secondPostFormat = mechanicAllowed(allowedMechanics, "challenge")
+      ? "Post 2 — Participation or CTA"
+      : "Post 2 — Conversion CTA";
+    const secondPostReason = mechanicAllowed(allowedMechanics, "challenge")
+      ? `Second deliverable converts awareness into action — explicit call-to-participate where brief signals participation.`
+      : `Second deliverable converts awareness into action with a clear product or brand CTA.`;
+
     return [
       {
         format: "Post 1 — Intro / awareness hook",
-        reason: `First of 2 deliverables establishes the narrative and primes the audience for participation.`,
+        reason: `First of 2 deliverables establishes the narrative and primes the audience for the campaign objective.`,
         confidence: "high",
       },
       {
-        format: "Post 2 — Challenge or CTA",
-        reason: `Second deliverable converts awareness into action — a challenge, duet prompt, or explicit call-to-participate.`,
+        format: secondPostFormat,
+        reason: secondPostReason,
         confidence: "medium",
       },
       {
@@ -868,23 +1103,44 @@ function deliverableAwareFormats(maxDeliverables: number, vertical: BriefVertica
     ];
   }
 
-  return [
+  const multiPostFormats: MediaPlanCreativeRecommendation[] = [
     {
-      format: "Awareness → challenge → engagement arc",
-      reason: `With ${maxDeliverables}+ deliverables per creator, a full funnel from intro through participation to winner/recap content is viable.`,
+      format: "Awareness → action → recap arc",
+      reason: `With ${maxDeliverables}+ deliverables per creator, a narrative arc from intro through proof to closing CTA is viable.`,
       confidence: "medium",
     },
     {
-      format: "Multi-part challenge series",
-      reason: `Multiple posts support escalating participation formats — teaser, challenge launch, UGC response, and finale.`,
+      format: "Multi-part storytelling series",
+      reason: `Multiple posts support escalating narrative formats — teaser, hero content, proof point, and finale.`,
       confidence: "medium",
-    },
-    {
-      format: "Competition or winner reveal",
-      reason: `3+ deliverables provide enough slots for entry prompts, shortlist highlights, and a closing winner announcement.`,
-      confidence: "low",
     },
   ];
+
+  if (mechanicAllowed(allowedMechanics, "challenge")) {
+    multiPostFormats.push({
+      format: "Participation-led content series",
+      reason: `Brief or quotation signals participation mechanics — entry prompts and community response content fit the deliverable count.`,
+      confidence: "medium",
+    });
+  }
+
+  if (campaignType === "product_launch" || objectiveLower.includes("launch")) {
+    multiPostFormats.push({
+      format: "Launch reveal → demo → social proof",
+      reason: "Product launch campaigns benefit from reveal, demonstration, and peer validation beats across multiple posts.",
+      confidence: "high",
+    });
+  }
+
+  if (campaignType === "brand_awareness" || objectiveLower.includes("awareness")) {
+    multiPostFormats.push({
+      format: "Hero moment → sustained visibility",
+      reason: "Awareness campaigns front-load a hero post then sustain reach with supporting creator content.",
+      confidence: "high",
+    });
+  }
+
+  return multiPostFormats;
 }
 
 function scoreRolloutConfidence(input: {
@@ -931,23 +1187,31 @@ function scoreCreatorMixConfidence(slate: SlateCreator[]): MediaPlanStrategySect
     return { level: "low", reason: "Slate not confirmed" };
   }
   const counts = countTiers(slate);
-  const classified = counts.mega + counts.macro + counts.mid + counts.micro + counts.nano;
+  const ugcCreators = countUgcCreators(slate);
+  const classified = sumTierCounts(counts);
+  const mixSummary = formatCreatorMixCountSummary(counts, ugcCreators);
   if (classified === slate.length) {
     return {
       level: "high",
-      reason: `All ${slate.length} creators tier-classified (${formatTierCountSummary(counts)})`,
+      reason: `All ${slate.length} creators tier-classified${ugcCreators > 0 ? ` · ${ugcCreators} UGC` : ""} (${mixSummary})`,
     };
   }
-  return { level: "medium", reason: `${classified} of ${slate.length} creators tier-classified` };
+  const classifiedNote = mixSummary || `${classified} of ${slate.length} creators tier-classified`;
+  return {
+    level: "medium",
+    reason: ugcCreators > 0 ? `${classifiedNote} · ${ugcCreators} UGC` : classifiedNote,
+  };
 }
 
-function scoreWeeklyObjectivesConfidence(weekWeights: number[]): MediaPlanStrategySectionConfidence {
-  if (!weekWeights.length) {
+function scoreWeeklyObjectivesConfidence(
+  displayWeights: number[]
+): MediaPlanStrategySectionConfidence {
+  if (!displayWeights.length) {
     return { level: "low", reason: "Week weights unavailable" };
   }
   return {
     level: "high",
-    reason: `Derived from ${weekWeights.length}-week publishing weights`,
+    reason: `Derived from ${displayWeights.length}-week calendar creator distribution (${formatWeightDistribution(displayWeights)})`,
   };
 }
 
@@ -1014,8 +1278,25 @@ export function buildCreativeRecommendations(input: {
   const deliverables = slateDeliverableStats(input.slate ?? []);
   const maxDeliverables = deliverables.max || 1;
   const assets = detectCreativeAssetAvailability(input.briefText);
+  const allowedMechanics = resolveAllowedMechanics({
+    briefText: input.briefText,
+    objective: input.objective,
+    slate: input.slate,
+  });
 
-  const deliverableFormats = deliverableAwareFormats(maxDeliverables, vertical);
+  const campaignClassification = classifyCampaignType({
+    briefText: input.briefText,
+    objective: input.objective,
+    industry: input.industry ?? detectIndustryFromBrief(input.briefText),
+  });
+
+  const deliverableFormats = strategyAwareFormats({
+    campaignType: campaignClassification.primary,
+    objective: input.objective,
+    vertical,
+    maxDeliverables,
+    allowedMechanics,
+  }).filter((entry) => isFormatAllowedForMechanics(entry.format, allowedMechanics));
   const base: MediaPlanCreativeRecommendation[] = [...deliverableFormats];
 
   if (maxDeliverables >= 2 && (!assets.songMentionedButUnknown || assets.hasCreativeAssetDetails)) {
@@ -1028,6 +1309,7 @@ export function buildCreativeRecommendations(input: {
     }
     for (const entry of verticalFormats) {
       if (!isFormatAllowedForDeliverables(entry.format, maxDeliverables)) continue;
+      if (!isFormatAllowedForMechanics(entry.format, allowedMechanics)) continue;
       if (assets.songMentionedButUnknown && HIGH_CONFIDENCE_FORMAT_PATTERNS.test(entry.format)) {
         continue;
       }
@@ -1063,9 +1345,12 @@ export function buildCreativeRecommendations(input: {
     });
   }
   if (input.objective?.match(/engagement|ugc|community/i) && maxDeliverables >= 2) {
+    const inviteParts = ["comment"];
+    if (mechanicAllowed(allowedMechanics, "duet")) inviteParts.push("duet");
+    if (mechanicAllowed(allowedMechanics, "ugc")) inviteParts.push("create response content");
     base.push({
       format: "Participation prompts and CTA overlays",
-      reason: "Engagement objectives need explicit invitations to comment, duet, or create response content.",
+      reason: `Engagement objectives need explicit invitations to ${inviteParts.join(", ")}.`,
       confidence: maxDeliverables >= 3 ? "high" : "medium",
     });
   }
@@ -1076,7 +1361,12 @@ export function buildCreativeRecommendations(input: {
       const key = entry.format.toLowerCase();
       if (seen.has(key)) return false;
       seen.add(key);
-      return isFormatAllowedForDeliverables(entry.format, maxDeliverables);
+      const sanitizedReason = sanitizeMechanicReferences(entry.reason, allowedMechanics);
+      entry.reason = sanitizedReason;
+      return (
+        isFormatAllowedForDeliverables(entry.format, maxDeliverables) &&
+        isFormatAllowedForMechanics(entry.format, allowedMechanics)
+      );
     })
     .slice(0, 6);
 }
@@ -1119,6 +1409,8 @@ export function buildMediaPlanStrategyNarrative(
     maxDeliverables: deliverables.max,
   });
 
+  const displayWeights = input.activityWeights ?? input.weekWeights;
+
   const rolloutStrategy = buildRolloutStrategyNarrative({
     weekWeights: input.weekWeights,
     baselineWeights: input.baselineWeights,
@@ -1126,6 +1418,7 @@ export function buildMediaPlanStrategyNarrative(
     durationWeeks: input.durationWeeks,
     briefText: input.briefText,
     objective: input.objective,
+    slate: input.slate,
   });
 
   const platformIntelligence = buildPlatformIntelligenceNarrative({
@@ -1137,6 +1430,45 @@ export function buildMediaPlanStrategyNarrative(
 
   const creatorMixIntelligence = buildCreatorMixIntelligenceNarrative(input.slate);
 
+  const marketContext = resolveMarketContextForNarrative(input);
+
+  const marketTimingIntelligence = marketContext
+    ? buildMarketTimingRationale({
+        context: marketContext,
+        weekWeights: input.weekWeights,
+        durationWeeks: input.durationWeeks,
+        objective: input.objective,
+      })
+    : undefined;
+
+  const marketTimingCitations = marketContext
+    ? buildMarketTimingCitations({
+        context: marketContext,
+        weekWeights: input.weekWeights,
+        durationWeeks: input.durationWeeks,
+        objective: input.objective,
+      })
+    : undefined;
+
+  const rationaleInput = {
+    briefText: input.briefText,
+    objective: input.objective,
+    industry,
+    weekWeights: input.weekWeights,
+    activityWeights: input.activityWeights,
+    platformAllocation: input.platformAllocation,
+    slate: input.slate,
+    marketContext,
+    campaignStartDate: input.campaignStartDate,
+  };
+
+  const sectionRationale: Partial<Record<MediaPlanSectionRationaleKey, string[]>> = {
+    platformAllocation: buildSectionRationale("platformAllocation", rationaleInput),
+    weeklyObjectives: buildSectionRationale("weeklyObjectives", rationaleInput),
+    creatorOrdering: buildSectionRationale("creatorOrdering", rationaleInput),
+    marketTiming: buildSectionRationale("marketTiming", rationaleInput),
+  };
+
   return {
     rolloutStrategy: evidence.weekWeightDistribution
       ? `${rolloutStrategy} Evidence: ${input.durationWeeks}-week flight · ${evidence.weekWeightDistribution}.`
@@ -1146,20 +1478,21 @@ export function buildMediaPlanStrategyNarrative(
       briefText: input.briefText,
       objective: input.objective,
     }),
-    platformIntelligence: evidence.platformAllocation.length
-      ? `${platformIntelligence} Evidence: ${evidence.platformAllocation.map((entry) => `${entry.percentage}% ${entry.platform}`).join(", ")} of publishing slots.`
-      : platformIntelligence,
+    platformIntelligence,
     platformConfidence: scorePlatformConfidence(input.platformAllocation, input.platforms),
     creatorMixIntelligence: evidence.tierSummary
-      ? `${creatorMixIntelligence} Evidence: ${evidence.totalCreators} creators · ${evidence.totalDeliverables} total deliverables.`
+      ? `${creatorMixIntelligence} Evidence: ${evidence.totalCreators} creators (${evidence.tierSummary}) · ${evidence.totalDeliverables} total deliverables${evidence.ugcDeliverableCount > 0 ? ` · ${evidence.ugcDeliverableCount} UGC activation${evidence.ugcDeliverableCount === 1 ? "" : "s"}` : ""}.`
       : creatorMixIntelligence,
     creatorMixConfidence: scoreCreatorMixConfidence(input.slate),
     weeklyObjectives: buildWeeklyObjectives({
       weekWeights: input.weekWeights,
+      activityWeights: input.activityWeights,
       briefText: input.briefText,
       objective: input.objective,
+      industry,
+      slate: input.slate,
     }),
-    weeklyObjectivesConfidence: scoreWeeklyObjectivesConfidence(input.weekWeights),
+    weeklyObjectivesConfidence: scoreWeeklyObjectivesConfidence(displayWeights),
     creativeRecommendations: buildCreativeRecommendations({
       briefText: input.briefText,
       objective: input.objective,
@@ -1173,6 +1506,17 @@ export function buildMediaPlanStrategyNarrative(
       briefText: input.briefText,
       slate: input.slate,
     }),
+    marketTimingIntelligence,
+    marketTimingCitations,
+    marketTimingConfidence: marketContext
+      ? {
+          level: marketContext.windows.length ? "high" : "medium",
+          reason: marketContext.windows.length
+            ? `${marketContext.countries.join(", ")} calendar · ${marketContext.windows.length} active windows`
+            : "Market enabled — no high-intent windows in flight dates",
+        }
+      : { level: "low", reason: "Campaign start or geography not configured" },
+    sectionRationale,
     evidence,
   };
 }
@@ -1182,6 +1526,7 @@ export function buildMediaPlanStrategyNarrativeFromObject(
   campaignObject: CampaignObject,
   options: {
     weekWeights: number[];
+    activityWeights?: number[];
     baselineWeights?: number[];
     scheduleAdjusted?: boolean;
     durationWeeks: number;
@@ -1194,6 +1539,7 @@ export function buildMediaPlanStrategyNarrativeFromObject(
 
   return buildMediaPlanStrategyNarrative({
     weekWeights: options.weekWeights,
+    activityWeights: options.activityWeights,
     baselineWeights: options.baselineWeights,
     scheduleAdjusted: options.scheduleAdjusted,
     durationWeeks: options.durationWeeks,
@@ -1204,5 +1550,7 @@ export function buildMediaPlanStrategyNarrativeFromObject(
     audience: facts?.audience,
     industry: facts?.industry,
     platforms: facts?.platforms,
+    campaignStartDate: facts?.campaignStartDate,
+    campaignObject,
   });
 }

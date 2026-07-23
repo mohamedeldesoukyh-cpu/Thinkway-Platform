@@ -1,5 +1,11 @@
 import { Queue, Worker } from "bullmq";
 
+import {
+  AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON,
+  isAutomaticEnrichmentAndAcquisitionDisabled,
+  logBlockedAutomaticAction,
+} from "@/lib/discovery/operational-safety.js";
+
 import { getRedisConnection } from "../queues/connection.js";
 import { QUEUES } from "../queues/names.js";
 import { supabase } from "../db/supabase.js";
@@ -12,6 +18,14 @@ export function startRefreshWorker(): Worker {
   return new Worker(
     QUEUES.refresh,
     async () => {
+      if (isAutomaticEnrichmentAndAcquisitionDisabled()) {
+        logBlockedAutomaticAction(
+          "legacy_discovery_enrich_enqueue",
+          AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON
+        );
+        return { queued: 0, skipped: true };
+      }
+
       const now = new Date().toISOString();
       const { data: dueProfiles, error } = await supabase
         .from("discovered_profiles")

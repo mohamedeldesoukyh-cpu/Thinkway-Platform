@@ -5,6 +5,7 @@ import {
   FileTextIcon,
   GitCompareArrowsIcon,
   ListPlusIcon,
+  PlusIcon,
   RefreshCwIcon,
   Share2Icon,
   SparklesIcon,
@@ -12,14 +13,15 @@ import {
 } from "lucide-react";
 
 import {
-  GlassSelectionFlyout,
-  type GlassFlyoutAction,
-} from "@/components/shared/navigation/glass-selection-flyout";
+  DiscoverySelectionFlyout,
+  type DiscoverySelectionFlyoutAction,
+} from "@/features/discovery/components/design-system";
 
 type Props = {
   selectedCount: number;
   onClearSelection: () => void;
   onAddToList: () => void;
+  onCreateList: () => void;
   onCompare: () => void;
   onExport: () => void;
   onShare: () => void;
@@ -28,23 +30,14 @@ type Props = {
   onRefreshMetrics?: () => void;
   onStopRefresh?: () => void;
   stopRefreshDisabled?: boolean;
-  /** Quick stats computed from the current selection (spec §1). */
-  estFollowers?: number;
-  estReach?: number;
-  estEngagement?: number;
   busy?: boolean;
 };
-
-function compact(n: number): string {
-  return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(
-    Number.isFinite(n) ? n : 0
-  );
-}
 
 export function CreatorSearchBulkBar({
   selectedCount,
   onClearSelection,
   onAddToList,
+  onCreateList,
   onCompare,
   onExport,
   onShare,
@@ -53,12 +46,9 @@ export function CreatorSearchBulkBar({
   onRefreshMetrics,
   onStopRefresh,
   stopRefreshDisabled,
-  estFollowers,
-  estReach,
-  estEngagement,
   busy,
 }: Props) {
-  const actions: GlassFlyoutAction[] = [
+  const actions: DiscoverySelectionFlyoutAction[] = [
     {
       id: "add",
       label: "Add to list",
@@ -66,6 +56,14 @@ export function CreatorSearchBulkBar({
       variant: "primary",
       disabled: busy,
       onClick: onAddToList,
+    },
+    {
+      id: "create-list",
+      label: "Create list",
+      icon: PlusIcon,
+      variant: "outline",
+      disabled: busy,
+      onClick: onCreateList,
     },
     {
       id: "refresh-metrics",
@@ -121,26 +119,15 @@ export function CreatorSearchBulkBar({
     },
   ];
 
-  const hasStats =
-    estFollowers != null || estReach != null || estEngagement != null;
-
   return (
-    <GlassSelectionFlyout
+    <DiscoverySelectionFlyout
       open={selectedCount > 0}
       selectedCount={selectedCount}
       entityLabel="creator"
       actions={actions}
       onClearSelection={onClearSelection}
       busy={busy}
-      maxVisibleActions={2}
-    >
-      {hasStats ? (
-        <span className="hidden shrink-0 text-[11px] text-muted-foreground sm:inline">
-          {estFollowers != null && <>{compact(estFollowers)} followers </>}
-          {estReach != null && <>· {compact(estReach)} est. reach </>}
-          {estEngagement != null && <>· {estEngagement.toFixed(1)}% avg ER</>}
-        </span>
-      ) : null}
-    </GlassSelectionFlyout>
+      maxVisibleActions={3}
+    />
   );
 }

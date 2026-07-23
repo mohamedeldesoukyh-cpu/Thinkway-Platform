@@ -7,7 +7,9 @@ import {
   shouldShowPendingPlaceholder,
 } from "./shared/section-status-utils";
 import { QuadCard } from "./shared/studio-ui-primitives";
+import { STUDIO_REF_CLASSES } from "../../constants/campaign-studio-ref-tokens";
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
+import { useStudioRefMode } from "../../hooks/use-studio-ref-mode";
 import { resolveSuccessProbability } from "../../services/section-data-resolver";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
@@ -35,8 +37,32 @@ export function SuccessProbabilitySection({
     return <SectionFallbackContent text={fallbackText} />;
   }
 
+  const refMode = useStudioRefMode();
+
   return (
     <div className="min-w-0 space-y-3.5">
+      {refMode ? (
+        <>
+          <div className={STUDIO_REF_CLASSES.successScore}>
+            <span className={STUDIO_REF_CLASSES.successPct}>{data.score}%</span>
+            <span className={STUDIO_REF_CLASSES.successDesc}>
+              Objective Achievement Assessment — scored from campaign facts and Director Strategy
+            </span>
+          </div>
+          <div className={STUDIO_REF_CLASSES.successTrack}>
+            <div className={STUDIO_REF_CLASSES.successFill} style={{ width: `${data.score}%` }} />
+          </div>
+          <div className={STUDIO_REF_CLASSES.twoColList}>
+            <QuadCard label="Top strengths" items={data.strengths} labelColor="" variant="pos" />
+            <QuadCard label="Weaknesses" items={data.weaknesses} labelColor="" variant="neg" />
+          </div>
+          <div className={STUDIO_REF_CLASSES.twoColList}>
+            <QuadCard label="Risks" items={data.risks} labelColor="" variant="neg" />
+            <QuadCard label="How to improve" items={data.improvements} labelColor="" variant="pos" />
+          </div>
+        </>
+      ) : (
+        <>
       <div className={STUDIO_CLASSES.scoreWrap}>
         <p className="text-[38px] font-black leading-none text-[#0C9D57]">{data.score}%</p>
         <div className="min-w-0 flex-1">
@@ -58,6 +84,8 @@ export function SuccessProbabilitySection({
         <QuadCard label="Risks" items={data.risks} labelColor="text-[#D6336C]" />
         <QuadCard label="How To Improve" items={data.improvements} labelColor="text-[#0057FF]" />
       </div>
+        </>
+      )}
     </div>
   );
 }

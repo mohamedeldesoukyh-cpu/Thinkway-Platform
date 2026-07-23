@@ -64,12 +64,38 @@ function stripPlatformPageTitleSuffix(name: string): string {
   return result.trim();
 }
 
+/**
+ * Bare platform / page-shell titles sometimes scraped as og:title / actor title
+ * (e.g. login wall → "Instagram"). Not a real creator name.
+ */
+const BARE_PLATFORM_DISPLAY_NAMES = new Set([
+  "instagram",
+  "tiktok",
+  "youtube",
+  "snapchat",
+  "twitter",
+  "x",
+  "x (twitter)",
+  "facebook",
+  "linkedin",
+  "instagram photos and videos",
+  "tiktok - make your day",
+]);
+
+export function isBarePlatformDisplayName(name: string | null | undefined): boolean {
+  if (name == null) return false;
+  const normalized = name.trim().toLowerCase().replace(/\s+/g, " ");
+  return normalized.length > 0 && BARE_PLATFORM_DISPLAY_NAMES.has(normalized);
+}
+
 /** Normalize creator display names for UI (decode entities, strip bidi marks). */
 export function formatCreatorDisplayName(name: string | null | undefined): string {
   if (name == null) return "";
   const trimmed = name.trim();
   if (!trimmed) return "";
-  return stripPlatformPageTitleSuffix(decodeHtmlEntities(trimmed));
+  const cleaned = stripPlatformPageTitleSuffix(decodeHtmlEntities(trimmed));
+  if (!cleaned || isBarePlatformDisplayName(cleaned)) return "";
+  return cleaned;
 }
 
 /** Normalize creator bios for UI (decode HTML entities from scraped metadata). */

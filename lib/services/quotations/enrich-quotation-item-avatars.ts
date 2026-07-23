@@ -12,6 +12,7 @@ import {
   resolveCreatorEngagementRate,
   resolveCreatorFollowersCount,
 } from "@/lib/creators/creator-display-utils";
+import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
 import {
   creatorProfileSourceFromUnified,
   type CreatorProfileSource,
@@ -24,6 +25,9 @@ import {
   resolveCreatorAvatarWithDnaFallback,
 } from "@/lib/creators/dna-avatar";
 import { normalizeThinkwayStoredAvatarUrl } from "@/lib/performance/creator-avatar";
+import { resolveEnrichmentDisplayStatus } from "@/lib/creator-enrichment/enrichment-metrics";
+import type { CreatorEnrichmentStatus } from "@/lib/creators/types";
+import { buildQuotationCreatorProfileSource } from "@/lib/quotations/quotation-creator-source";
 import type { CreatorDNADocument } from "@/features/creator-dna/types";
 import {
   resolveCreatorFromRefLookup,
@@ -38,7 +42,8 @@ import {
 import { formatCreatorDisplayName } from "@/lib/text/decode-html-entities";
 import type { Database } from "@/types/database";
 
-function pickBestDisplayableAvatarUrl(
+/** Exported for tests — prefers usable + higher storage quality (enrichment > imports). */
+export function pickBestDisplayableAvatarUrl(
   ...candidates: Array<string | null | undefined>
 ): string | null {
   let best: string | null = null;
@@ -197,8 +202,26 @@ function resolveLineCreatorProfileSource(
     platform,
     linkedPlatforms,
     handle: platformAccount?.handle ?? item.handle ?? source.handle,
-    countryCode: source.countryCode ?? normalizeCountryCode(item.country_code) ?? null,
+    ...(() => {
+      const countryCodes = resolveCreatorCountryCodes({
+        country_codes: source.countryCodes,
+        country_code: source.countryCode ?? normalizeCountryCode(item.country_code),
+        estimated_country: creator.estimated_country,
+        platformAudienceCountries: creator.platforms.map(
+          (platform) => platform.audience_country
+        ),
+      });
+      return {
+        countryCode: countryCodes[0] ?? null,
+        countryCodes: countryCodes.length > 0 ? countryCodes : null,
+      };
+    })(),
     isVerified: source.isVerified,
+    thinkwayScore: creator.thinkway_score ?? source.thinkwayScore ?? null,
+    enrichmentDisplayStatus: resolveEnrichmentDisplayStatus(
+      creator.enrichment_status,
+      creator
+    ),
   };
 }
 
@@ -268,6 +291,7 @@ function resolveLineAvatarFields(
   platform: string | null;
   followers: number | null;
   engagement_rate: number | null;
+  country_code: string | null;
   creator_profile_source: CreatorProfileSource;
   creator_categories: string[];
 } {
@@ -286,6 +310,10 @@ function resolveLineAvatarFields(
     platform: resolvedPlatform,
     followers: resolveLineFollowers(item, creator),
     engagement_rate: resolveLineEngagementRate(item, creator),
+    country_code:
+      creatorProfileSource.countryCode ??
+      normalizeCountryCode(item.country_code) ??
+      null,
     creator_profile_source: {
       ...creatorProfileSource,
       avatarUrl:
@@ -324,22 +352,24 @@ async function resolveInfluencerIdsByHandles(
   const byHandle = new Map<string, string>();
   if (!normalized.length) return byHandle;
 
-  await Promise.all(
-    normalized.map(async (handle) => {
-      const { data, error } = await supabase
-        .from("influencer_platform_accounts")
-        .select("influencer_id, handle")
-        .ilike("handle", handle)
-        .limit(5);
-      if (error) throw new Error(error.message);
-      const match = (data ?? []).find(
-        (row) => row.handle?.trim().replace(/^@+/, "").toLowerCase() === handle
-      );
-      if (match?.influencer_id) {
-        byHandle.set(handle, match.influencer_id);
+  const BATCH = 40;
+  for (let offset = 0; offset < normalized.length; offset += BATCH) {
+    const batch = normalized.slice(offset, offset + BATCH);
+    const orFilter = batch.map((handle) => `handle.ilike.${handle}`).join(",");
+    const { data, error } = await supabase
+      .from("influencer_platform_accounts")
+      .select("influencer_id, handle")
+      .or(orFilter)
+      .limit(batch.length * 5);
+    if (error) throw new Error(error.message);
+
+    for (const row of data ?? []) {
+      const key = row.handle?.trim().replace(/^@+/, "").toLowerCase();
+      if (key && row.influencer_id && !byHandle.has(key)) {
+        byHandle.set(key, row.influencer_id);
       }
-    })
-  );
+    }
+  }
 
   return byHandle;
 }
@@ -359,11 +389,220 @@ function resolveCreatorForQuotationItem(
   return lookup.byInfluencerId.get(influencerId) ?? null;
 }
 
+type InfluencerWorkspaceMeta = {
+  thinkway_score: number | null;
+  enrichment_status: string | null;
+  primary_avatar_url: string | null;
+  /** Platform account photos — same sources Creator Details uses for avatar pick. */
+  platform_avatar_urls: string[];
+};
+
+/** Resolve influencer UUID from line refs (`influencer_id` or `unified_id` = `inf:…`). */
+function resolveWorkspaceInfluencerId(item: QuotationItemRow): string | null {
+  if (item.influencer_id?.trim()) return item.influencer_id.trim();
+  const unified = item.unified_id?.trim();
+  if (unified?.startsWith("inf:") && unified.length > 4) {
+    return unified.slice(4);
+  }
+  return null;
+}
+
+async function loadInfluencerPlatformAvatarUrlsByIds(
+  supabase: SupabaseClient<Database>,
+  influencerIds: string[]
+): Promise<Map<string, string[]>> {
+  const map = new Map<string, string[]>();
+  if (!influencerIds.length) return map;
+
+  const { data, error } = await supabase
+    .from("influencer_platform_accounts")
+    .select("influencer_id, profile_picture_url")
+    .in("influencer_id", influencerIds);
+
+  if (error) throw new Error(error.message);
+
+  for (const row of data ?? []) {
+    const url = row.profile_picture_url?.trim();
+    if (!url || !row.influencer_id) continue;
+    const list = map.get(row.influencer_id) ?? [];
+    list.push(url);
+    map.set(row.influencer_id, list);
+  }
+
+  return map;
+}
+
+async function loadInfluencerWorkspaceMetaByIds(
+  supabase: SupabaseClient<Database>,
+  influencerIds: string[]
+): Promise<Map<string, InfluencerWorkspaceMeta>> {
+  const map = new Map<string, InfluencerWorkspaceMeta>();
+  if (!influencerIds.length) return map;
+
+  const [influencerResult, platformAvatars] = await Promise.all([
+    supabase
+      .from("influencers")
+      .select("id, thinkway_score, enrichment_status, primary_avatar_url")
+      .in("id", influencerIds),
+    loadInfluencerPlatformAvatarUrlsByIds(supabase, influencerIds),
+  ]);
+
+  if (influencerResult.error) throw new Error(influencerResult.error.message);
+
+  for (const row of influencerResult.data ?? []) {
+    const score = row.thinkway_score == null ? null : Number(row.thinkway_score);
+    map.set(row.id, {
+      thinkway_score: score != null && Number.isFinite(score) ? score : null,
+      enrichment_status: row.enrichment_status,
+      primary_avatar_url: row.primary_avatar_url?.trim() || null,
+      platform_avatar_urls: platformAvatars.get(row.id) ?? [],
+    });
+  }
+
+  return map;
+}
+
+async function loadDiscoveredProfileScoresByIds(
+  supabase: SupabaseClient<Database>,
+  profileIds: string[]
+): Promise<Map<string, number | null>> {
+  const map = new Map<string, number | null>();
+  if (!profileIds.length) return map;
+
+  const { data, error } = await supabase
+    .from("discovered_profiles")
+    .select("id, thinkway_score")
+    .in("id", profileIds);
+
+  if (error) throw new Error(error.message);
+
+  for (const row of data ?? []) {
+    const score = row.thinkway_score == null ? null : Number(row.thinkway_score);
+    map.set(row.id, score != null && Number.isFinite(score) ? score : null);
+  }
+
+  return map;
+}
+
+/** Fast path for quotation workspace — stored line data + batched influencer scores. */
+export async function enrichQuotationItemsForWorkspace(
+  supabase: SupabaseClient<Database>,
+  items: QuotationItemRow[]
+): Promise<QuotationItemRow[]> {
+  if (items.length === 0) return items;
+
+  const influencerIds = [
+    ...new Set(
+      items
+        .map((item) => resolveWorkspaceInfluencerId(item))
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+  const profileIds = [
+    ...new Set(
+      items
+        .map((item) => item.profile_id?.trim())
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+
+  const [influencerMeta, profileScores] = await Promise.all([
+    loadInfluencerWorkspaceMetaByIds(supabase, influencerIds),
+    loadDiscoveredProfileScoresByIds(supabase, profileIds),
+  ]);
+
+  return items.map((item) => {
+    const creatorProfileSource = buildQuotationCreatorProfileSource(item);
+    const influencerId = resolveWorkspaceInfluencerId(item);
+    const meta = influencerId ? influencerMeta.get(influencerId) : undefined;
+    const profileScore = item.profile_id
+      ? profileScores.get(item.profile_id)
+      : undefined;
+
+    const thinkwayScore =
+      meta?.thinkway_score ??
+      profileScore ??
+      creatorProfileSource.thinkwayScore ??
+      null;
+
+    // Prefer settled DB status for the green ring. Do not require thinkway_score —
+    // enrichment can complete (or stage as awaiting_profile_details) without a score.
+    const rawStatus = meta?.enrichment_status as CreatorEnrichmentStatus | null | undefined;
+    const enrichmentDisplayStatus: CreatorEnrichmentStatus =
+      rawStatus === "failed"
+        ? "failed"
+        : rawStatus === "partial"
+          ? "partial"
+          : rawStatus === "queued" || rawStatus === "running"
+            ? rawStatus
+            : rawStatus === "enriched" ||
+                rawStatus === "skipped" ||
+                rawStatus === "awaiting_profile_details"
+              ? rawStatus
+              : thinkwayScore != null
+                ? "enriched"
+                : "never";
+
+    // Same quality ranking as Creator Details / unified browse: enrichment storage
+    // beats PDF-import crops. Never blindly prefer influencers.primary_avatar_url
+    // when the line or platform account already has a higher-rank durable photo.
+    const resolvedAvatar = pickBestDisplayableAvatarUrl(
+      meta?.primary_avatar_url,
+      ...(meta?.platform_avatar_urls ?? []),
+      creatorProfileSource.avatarUrl,
+      item.profile_image_url
+    );
+
+    const enrichedProfileSource = {
+      ...creatorProfileSource,
+      avatarUrl: resolvedAvatar,
+      thinkwayScore,
+      enrichmentDisplayStatus,
+    };
+
+    return {
+      ...item,
+      influencer_id: item.influencer_id ?? influencerId,
+      profile_image_url: resolvedAvatar ?? item.profile_image_url,
+      creator_profile_source: enrichedProfileSource,
+      // Prefer stored line categories; skip expensive bio inference on workspace paint.
+      creator_categories:
+        item.creator_categories?.length
+          ? item.creator_categories.slice(0, 3)
+          : resolveQuotationCreatorDisplayCategories({
+              itemCategories: item.creator_categories,
+              creatorName: item.creator_name,
+              handle: item.handle,
+              linePlatform: item.platform,
+              followers: item.followers,
+              countryCode: item.country_code,
+            }),
+    };
+  });
+}
+
 export async function enrichQuotationItemsWithCreatorAvatars(
   supabase: SupabaseClient<Database>,
   items: QuotationItemRow[]
 ): Promise<QuotationItemRow[]> {
   if (items.length === 0) return items;
+
+  const allDisplayReady = items.every((item) => {
+    const hasCountry = Boolean(
+      normalizeCountryCode(item.country_code) ||
+        normalizeCountryCode(item.creator_profile_source?.countryCode) ||
+        (item.creator_profile_source?.countryCodes?.length ?? 0) > 0
+    );
+    return (
+      isDisplayableAvatarUrl(item.profile_image_url) &&
+      item.creator_name?.trim() &&
+      (item.followers != null || item.handle?.trim()) &&
+      (item.creator_categories?.length ?? 0) > 0 &&
+      // Details sheet loads live creator country — line must enrich when missing.
+      hasCountry
+    );
+  });
+  if (allDisplayReady) return items;
 
   const influencerIdsByHandle = await resolveInfluencerIdsByHandles(
     supabase,

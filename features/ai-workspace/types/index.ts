@@ -185,5 +185,5 @@ export const SUGGESTED_ACTIONS: SuggestedAction[] = [
 
 export type ConversationListItem = Pick<
   AiConversation,
-  "id" | "title" | "isPinned" | "status" | "updatedAt" | "workspaceType"
+  "id" | "title" | "isPinned" | "status" | "updatedAt" | "workspaceType" | "workspaceId"
 >;

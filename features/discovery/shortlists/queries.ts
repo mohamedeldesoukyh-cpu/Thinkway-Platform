@@ -12,8 +12,13 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { getBrandsForSelect, getClientsForSelect } from "@/lib/master-data/queries";
 import { buildClientSelectOptions } from "@/lib/clients/client-select-options";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { slugifyDisplayName } from "@/lib/routing/entity-slug";
 import { listQuotationsByShortlistQuery } from "@/lib/services/quotations/repositories/quotation-repository";
 import type { QuotationStatus } from "@/types/database";
+import {
+  collapseFieldsFromRow,
+  queryShortlistItemsWithCollapseFallback,
+} from "@/lib/discovery/shortlist-item-collapse-select";
 
 import { SHORTLIST_PERMISSIONS } from "./constants";
 import type {
@@ -237,11 +242,34 @@ async function loadShortlistCreatorQuotationRefs(
 
   if (itemsError) throw new Error(itemsError.message);
 
-  const itemIdByInfluencer = new Map<string, string>();
-  const itemIdByUnified = new Map<string, string>();
+  const itemIdsByInfluencer = new Map<string, string[]>();
+  const itemIdsByUnified = new Map<string, string[]>();
   for (const item of shortlistItems) {
-    if (item.influencer_id) itemIdByInfluencer.set(item.influencer_id, item.item_id);
-    if (item.unified_id) itemIdByUnified.set(item.unified_id, item.item_id);
+    if (item.influencer_id) {
+      const bucket = itemIdsByInfluencer.get(item.influencer_id) ?? [];
+      bucket.push(item.item_id);
+      itemIdsByInfluencer.set(item.influencer_id, bucket);
+    }
+    if (item.unified_id) {
+      const bucket = itemIdsByUnified.get(item.unified_id) ?? [];
+      bucket.push(item.item_id);
+      itemIdsByUnified.set(item.unified_id, bucket);
+    }
+  }
+
+  function resolveShortlistItemId(row: {
+    source_shortlist_item_id: string | null;
+    influencer_id: string | null;
+    unified_id: string | null;
+  }): string | null {
+    if (row.source_shortlist_item_id) return row.source_shortlist_item_id;
+    const byInfluencer = row.influencer_id
+      ? itemIdsByInfluencer.get(row.influencer_id)
+      : undefined;
+    if (byInfluencer?.length === 1) return byInfluencer[0];
+    const byUnified = row.unified_id ? itemIdsByUnified.get(row.unified_id) : undefined;
+    if (byUnified?.length === 1) return byUnified[0];
+    return null;
   }
 
   const seen = new Set<string>();
@@ -255,10 +283,7 @@ async function loadShortlistCreatorQuotationRefs(
     const quotation = quotationById.get(row.quotation_id);
     if (!quotation) continue;
 
-    const itemId =
-      row.source_shortlist_item_id ??
-      (row.influencer_id ? itemIdByInfluencer.get(row.influencer_id) : null) ??
-      (row.unified_id ? itemIdByUnified.get(row.unified_id) : null);
+    const itemId = resolveShortlistItemId(row);
     if (!itemId) continue;
 
     const dedupeKey = `${itemId}:${quotation.quotation_id}`;
@@ -287,54 +312,72 @@ async function loadShortlistCreatorQuotationRefs(
   return refsByItem;
 }
 
+type ShortlistItemDetailRow = Pick<
+  Database["public"]["Tables"]["discovery_shortlist_items"]["Row"],
+  | "id"
+  | "profile_id"
+  | "influencer_id"
+  | "unified_id"
+  | "notes"
+  | "match_score"
+  | "sort_order"
+  | "item_status"
+  | "platform_account_ids"
+  | "collapse_group_id"
+  | "collapse_label"
+>;
+
 async function loadShortlistCreators(
   supabase: Supabase,
   shortlistId: string
 ): Promise<ShortlistCreatorItem[]> {
-  const { data: items, error } = await supabase
-    .from("discovery_shortlist_items")
-    .select(
-      "id, profile_id, influencer_id, unified_id, notes, match_score, sort_order, item_status, platform_account_ids"
-    )
-    .eq("shortlist_id", shortlistId)
-    .order("sort_order", { ascending: true });
+  // Dynamic select strings are not parseable by the typed client (GenericStringError).
+  const { data, error } = await queryShortlistItemsWithCollapseFallback(async (select) =>
+    supabase
+      .from("discovery_shortlist_items")
+      .select(select)
+      .eq("shortlist_id", shortlistId)
+      .order("sort_order", { ascending: true })
+  );
 
   if (error) throw new Error(error.message);
-  if (!items || items.length === 0) return [];
+  const items = (data ?? []) as unknown as ShortlistItemDetailRow[];
+  if (items.length === 0) return [];
 
   const itemRefs = items.map((item) => ({
-    item_id: item.id as string,
-    influencer_id: (item.influencer_id as string | null) ?? null,
-    unified_id: (item.unified_id as string | null) ?? null,
+    item_id: item.id,
+    influencer_id: item.influencer_id ?? null,
+    unified_id: item.unified_id ?? null,
   }));
 
   const [lookup, quotationRefsByItem] = await Promise.all([
     resolveUnifiedCreatorsByRefs(supabase, {
-      unifiedIds: items.map((item) => item.unified_id as string | null),
-      influencerIds: items.map((item) => item.influencer_id as string | null),
-      discoveredProfileIds: items.map((item) => item.profile_id as string | null),
+      unifiedIds: items.map((item) => item.unified_id),
+      influencerIds: items.map((item) => item.influencer_id),
+      discoveredProfileIds: items.map((item) => item.profile_id),
     }),
     loadShortlistCreatorQuotationRefs(supabase, shortlistId, itemRefs),
   ]);
 
   return items.map((item) => {
     const creator = resolveCreatorFromRefLookup(lookup, {
-      unified_id: item.unified_id as string | null,
-      profile_id: item.profile_id as string | null,
-      influencer_id: item.influencer_id as string | null,
+      unified_id: item.unified_id,
+      profile_id: item.profile_id,
+      influencer_id: item.influencer_id,
     });
 
     return {
-      item_id: item.id as string,
-      item_status: ((item.item_status as ShortlistItemStatus) ?? "draft"),
-      notes: (item.notes as string) ?? null,
-      match_score: (item.match_score as number) ?? null,
-      unified_id: (item.unified_id as string) ?? creator?.unified_id ?? null,
-      profile_id: (item.profile_id as string) ?? null,
-      influencer_id: (item.influencer_id as string) ?? null,
-      platform_account_ids: ((item.platform_account_ids as string[]) ?? []).filter(Boolean),
+      item_id: item.id,
+      item_status: item.item_status ?? "draft",
+      notes: item.notes ?? null,
+      match_score: item.match_score ?? null,
+      unified_id: item.unified_id ?? creator?.unified_id ?? null,
+      profile_id: item.profile_id ?? null,
+      influencer_id: item.influencer_id ?? null,
+      platform_account_ids: (item.platform_account_ids ?? []).filter(Boolean),
       creator,
-      quotation_refs: quotationRefsByItem.get(item.id as string) ?? [],
+      quotation_refs: quotationRefsByItem.get(item.id) ?? [],
+      ...collapseFieldsFromRow(item as Record<string, unknown>),
     };
   });
 }
@@ -510,7 +553,23 @@ export async function getShortlistDetail(
     [row.owner_id, row.approved_by],
     "full_name"
   );
-  const clientNames = await nameMap(supabase, "clients", [row.client_id], "name");
+
+  let resolvedClientId = row.client_id;
+  if (!resolvedClientId && row.brand_id) {
+    const { data: brandRow } = await supabase
+      .from("brands")
+      .select("client_id")
+      .eq("id", row.brand_id)
+      .maybeSingle();
+    resolvedClientId = (brandRow as { client_id: string | null } | null)?.client_id ?? null;
+  }
+
+  const clientNames = await nameMap(
+    supabase,
+    "clients",
+    [resolvedClientId, row.client_id].filter(Boolean) as string[],
+    "name"
+  );
   const brandNames = await nameMap(supabase, "brands", [row.brand_id], "name");
 
   const isOwner = auth.userId === row.owner_id;
@@ -520,6 +579,7 @@ export async function getShortlistDetail(
   return {
     id: row.id,
     serial_number: row.serial_number,
+    slug: slugifyDisplayName(row.name) || null,
     name: row.name,
     description: row.description,
     status: row.status,
@@ -527,8 +587,12 @@ export async function getShortlistDetail(
     owner_id: row.owner_id,
     owner_name: names.get(row.owner_id) ?? null,
     created_by: row.created_by,
-    client_id: row.client_id,
-    client_name: row.client_id ? clientNames.get(row.client_id) ?? null : null,
+    client_id: resolvedClientId ?? row.client_id,
+    client_name: resolvedClientId
+      ? clientNames.get(resolvedClientId) ?? null
+      : row.client_id
+        ? clientNames.get(row.client_id) ?? null
+        : null,
     brand_id: row.brand_id,
     brand_name: row.brand_id ? brandNames.get(row.brand_id) ?? null : null,
     approved_by: row.approved_by,

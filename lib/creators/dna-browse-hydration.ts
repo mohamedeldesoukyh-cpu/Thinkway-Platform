@@ -24,6 +24,10 @@ import type {
   UnifiedCreatorResult,
 } from "@/lib/creators/types";
 import { isPositiveNumericMetric } from "@/lib/creators/creator-display-utils";
+import {
+  computeProfileEngagementRate,
+  resolvePlatformEngagementRates,
+} from "@/lib/creators/profile-engagement-rate";
 import { formatCreatorBio, formatCreatorDisplayName } from "@/lib/text/decode-html-entities";
 import { isDnaCompletenessCalculationEnabled } from "@/lib/discovery/control-center/discovery-control-policy";
 import { getCachedDiscoveryControlSettings } from "@/lib/discovery/control-center/discovery-control-service";
@@ -66,28 +70,63 @@ function shouldOverlayNumericMetric(
   return existing == null || existing <= 0;
 }
 
+function shouldOverlayNumericMetricAllowZero(
+  existing: number | null | undefined,
+  dnaValue: number | null | undefined
+): boolean {
+  if (dnaValue == null || !Number.isFinite(dnaValue)) return false;
+  return existing == null || !Number.isFinite(existing);
+}
+
+function dnaDocumentHasBrowseData(document: CreatorDNADocument): boolean {
+  if (envelopeHasValue(document.identity.displayName)) return true;
+  if (envelopeHasValue(document.identity.avatarUrl)) return true;
+  if (envelopeHasValue(document.identity.platform)) return true;
+  if (envelopeHasValue(document.identity.handle)) return true;
+  if (envelopeHasValue(document.metrics.followers)) return true;
+  if (envelopeHasValue(document.metrics.engagementRate)) return true;
+  if (envelopeHasValue(document.metrics.avgLikes)) return true;
+  if (envelopeHasValue(document.metrics.avgComments)) return true;
+  if (envelopeHasValue(document.metrics.avgViews)) return true;
+  return false;
+}
+
+function deriveEngagementForPlatform(platform: UnifiedCreatorPlatform): number | null {
+  return (
+    computeProfileEngagementRate({
+      avgLikes: platform.avg_likes,
+      avgComments: platform.avg_comments,
+      followers: platform.follower_count,
+    }) ?? platform.engagement_rate ?? null
+  );
+}
+
+function finalizePlatformMetrics(platform: UnifiedCreatorPlatform): UnifiedCreatorPlatform {
+  return {
+    ...platform,
+    engagement_rate: deriveEngagementForPlatform(platform),
+  };
+}
+
 /**
  * Discovery per-platform columns read platform account rows. After Refresh Metrics,
  * IPL → Creator DNA is updated first; fill missing platform-account metrics from DNA
- * for the platform that was last enriched (identity.platform).
+ * for identity.platform, or the primary platform row when no exact match exists.
  */
 export function overlayPlatformMetricsFromDna(
   platforms: UnifiedCreatorPlatform[],
   document: CreatorDNADocument
 ): UnifiedCreatorPlatform[] {
   const dnaPlatform = envelopeValue(document.identity.platform);
-  if (!dnaPlatform) return platforms;
-
-  const platformKey = canonicalPlatformKey(dnaPlatform);
+  const dnaHandle = envelopeValue(document.identity.handle);
   const dnaFollowers = envelopeValue(document.metrics.followers);
   const dnaAvgViews = envelopeValue(document.metrics.avgViews);
   const dnaEngagementRate = envelopeValue(document.metrics.engagementRate);
+  const dnaAvgLikes = envelopeValue(document.metrics.avgLikes);
+  const dnaAvgComments = envelopeValue(document.metrics.avgComments);
 
-  let matched = false;
-  const updated = platforms.map((platform) => {
-    if (canonicalPlatformKey(platform.platform) !== platformKey) return platform;
-    matched = true;
-    return {
+  const overlayOnto = (platform: UnifiedCreatorPlatform): UnifiedCreatorPlatform =>
+    finalizePlatformMetrics({
       ...platform,
       follower_count: shouldOverlayNumericMetric(platform.follower_count, dnaFollowers)
         ? dnaFollowers
@@ -95,16 +134,50 @@ export function overlayPlatformMetricsFromDna(
       avg_views: shouldOverlayNumericMetric(platform.avg_views, dnaAvgViews)
         ? dnaAvgViews
         : platform.avg_views,
-      engagement_rate: shouldOverlayNumericMetric(
-        platform.engagement_rate,
-        dnaEngagementRate
-      )
+      avg_likes: shouldOverlayNumericMetricAllowZero(platform.avg_likes, dnaAvgLikes)
+        ? dnaAvgLikes
+        : platform.avg_likes,
+      avg_comments: shouldOverlayNumericMetricAllowZero(platform.avg_comments, dnaAvgComments)
+        ? dnaAvgComments
+        : platform.avg_comments,
+      engagement_rate: shouldOverlayNumericMetric(platform.engagement_rate, dnaEngagementRate)
         ? dnaEngagementRate
         : platform.engagement_rate,
-    };
-  });
+      handle: platform.handle ?? dnaHandle ?? platform.handle,
+    });
 
-  return matched ? updated : platforms;
+  if (platforms.length === 0) {
+    if (!dnaPlatform) return platforms;
+    return [
+      finalizePlatformMetrics({
+        id: `dna:${dnaPlatform}`,
+        platform: dnaPlatform,
+        handle: dnaHandle ?? "",
+        profile_url: null,
+        follower_count: isPositiveNumericMetric(dnaFollowers) ? dnaFollowers : null,
+        engagement_rate: isPositiveNumericMetric(dnaEngagementRate) ? dnaEngagementRate : null,
+        avg_likes: dnaAvgLikes,
+        avg_comments: dnaAvgComments,
+        avg_views: isPositiveNumericMetric(dnaAvgViews) ? dnaAvgViews : null,
+        audience_country: envelopeValue(document.audience.country),
+        is_verified: envelopeValue(document.identity.isVerified) === true,
+      }),
+    ];
+  }
+
+  if (!dnaPlatform) {
+    return platforms.map(finalizePlatformMetrics);
+  }
+
+  const platformKey = canonicalPlatformKey(dnaPlatform);
+  let matchedIndex = platforms.findIndex(
+    (platform) => canonicalPlatformKey(platform.platform) === platformKey
+  );
+  if (matchedIndex < 0) matchedIndex = 0;
+
+  return platforms.map((platform, index) =>
+    index === matchedIndex ? overlayOnto(platform) : finalizePlatformMetrics(platform)
+  );
 }
 
 function metricFromDnaOrFallback(
@@ -124,7 +197,7 @@ function metricsFromDna(document: CreatorDNADocument, fallback: UnifiedCreatorMe
   const confLevel = (conf: number) =>
     conf >= 0.85 ? ("verified" as const) : conf >= 0.6 ? ("estimated" as const) : ("inferred" as const);
 
-  return {
+  const metrics: UnifiedCreatorMetrics = {
     followers: metricFromDnaOrFallback(
       m.followers.value,
       m.followers.confidence,
@@ -157,6 +230,19 @@ function metricsFromDna(document: CreatorDNADocument, fallback: UnifiedCreatorMe
     ),
     posting_frequency_per_week: fallback.posting_frequency_per_week,
   };
+
+  if (metrics.engagement_rate.value == null && isPositiveNumericMetric(metrics.followers.value)) {
+    const derived = computeProfileEngagementRate({
+      avgLikes: metrics.avg_likes.value,
+      avgComments: metrics.avg_comments.value,
+      followers: metrics.followers.value,
+    });
+    if (derived != null) {
+      metrics.engagement_rate = metricWithConfidence(derived, confLevel(m.engagementRate.confidence));
+    }
+  }
+
+  return metrics;
 }
 
 function applyDnaDocumentToCreator(
@@ -214,7 +300,9 @@ function applyDnaDocumentToCreator(
     bio: bio ? formatCreatorBio(bio) : creator.bio,
     profile_image_url: mergedAvatar,
     primaryAvatarUrl: mergedAvatar,
-    platforms: overlayPlatformMetricsFromDna(creator.platforms, document),
+    platforms: resolvePlatformEngagementRates(
+      overlayPlatformMetricsFromDna(creator.platforms, document)
+    ),
     country_code: country ?? creator.country_code,
     estimated_country: country ?? creator.estimated_country,
     categories,
@@ -261,11 +349,7 @@ export async function loadCanonicalDnaByInfluencerIds(
 
   for (const row of (data ?? []) as DnaRow[]) {
     const document = parseCreatorDNADocument(row.document);
-    if (
-      !envelopeHasValue(document.identity.displayName) &&
-      !envelopeHasValue(document.metrics.followers) &&
-      !envelopeHasValue(document.identity.avatarUrl)
-    ) {
+    if (!dnaDocumentHasBrowseData(document)) {
       continue;
     }
     map.set(row.influencer_id, document);

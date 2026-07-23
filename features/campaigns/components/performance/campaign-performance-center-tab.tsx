@@ -8,6 +8,7 @@ import {
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
 import {
   Select,
   SelectContent,
@@ -91,6 +92,7 @@ export function CampaignPerformanceCenterTab({
   >("publication_date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [isPending, startTransition] = useTransition();
+  const confirmDelete = useConfirmDelete();
   const importRef = useRef<HTMLInputElement>(null);
   const metricsImportRef = useRef<HTMLInputElement>(null);
   const refreshAfterPublicationMutation = useRefreshCampaignAfterPublicationMutation();
@@ -308,10 +310,14 @@ export function CampaignPerformanceCenterTab({
     });
   }
 
-  function handleRemovePublication(publicationId: string) {
+  async function handleRemovePublication(publicationId: string) {
     const row = publications.find((r) => r.id === publicationId);
     const label = row?.influencer_name ?? row?.publication_type_label ?? "this publication";
-    if (!window.confirm(`Remove ${label} from the campaign? This cannot be undone.`)) return;
+    const ok = await confirmDelete(
+      `Remove ${label} from the campaign? This cannot be undone.`,
+      "Remove publication?"
+    );
+    if (!ok) return;
 
     startTransition(async () => {
       const result = await deleteCampaignPublicationAction({

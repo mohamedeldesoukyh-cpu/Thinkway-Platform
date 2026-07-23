@@ -68,6 +68,15 @@ export function pickApifyAuthorFollowerCount(
     );
   }
 
+  if (platformKey === "snapchat") {
+    return (
+      sanitizeMetricValue(row.subscriberCount) ??
+      sanitizeMetricValue(row.subscribers) ??
+      sanitizeMetricValue(row.followerCount) ??
+      sanitizeMetricValue(row.followersCount)
+    );
+  }
+
   const author = nestedRecord(row.author);
   return (
     sanitizeMetricValue(row.followerCount) ??

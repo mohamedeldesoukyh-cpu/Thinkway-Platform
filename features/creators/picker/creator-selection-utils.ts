@@ -76,6 +76,17 @@ export function buildExistingCreatorKeys(items: ExistingCreatorKey[]): Set<strin
   return keys;
 }
 
+export type ShortlistExistingItemKey = ExistingCreatorKey & {
+  collapse_group_id?: string | null;
+};
+
+/** Dedup keys for standalone shortlist rows only (collapsed rows can be re-added individually). */
+export function existingKeysFromStandaloneShortlistItems(
+  items: ShortlistExistingItemKey[]
+): Set<string> {
+  return buildExistingCreatorKeys(items.filter((item) => !item.collapse_group_id));
+}
+
 export function creatorDedupKeys(creator: UnifiedCreatorResult): string[] {
   const keys = [creator.unified_id];
   if (creator.influencer_id) keys.push(`inf:${creator.influencer_id}`);

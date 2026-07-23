@@ -80,6 +80,8 @@ export const CALCULATION_MODE_LABELS: Record<"markup" | "margin", string> = {
 
 export const QUOTATIONS_LIST_PATH = "/discovery/quotations";
 
-export function quotationDetailPath(id: string): string {
-  return `${QUOTATIONS_LIST_PATH}/${id}`;
-}
+/** @see lib/routing/entity-paths.ts */
+export {
+  quotationDetailPath,
+  quotationPreviewPath,
+} from "@/lib/routing/entity-paths";

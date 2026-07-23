@@ -1,13 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-import type { CampaignObject } from "@/features/campaign-intelligence";
+import type { CampaignObject, CampaignObjectSnapshot } from "@/features/campaign-intelligence";
+import { deserializeCampaignObject } from "@/features/campaign-intelligence";
 
+import { useCampaignObjectOverlay } from "../hooks/use-campaign-object-overlay";
 import { listCampaignOutputs, getOutputContentForDisplay } from "../output-registry";
 import { CampaignInputCache } from "../output-fingerprint";
+import { marketIntelligenceDisplayKey } from "@/features/market-intelligence/market-intelligence-config";
 import { reviewCampaign } from "../director/director-engine";
 import { outputActionCommand } from "../integration/output-commands";
+import { regenerateStaleOutputsAction } from "../actions/regenerate-stale-outputs";
+import type { OutputView } from "../output-registry";
 import type { CampaignOutputKind } from "../output-types";
 import { OutputsCenter } from "./outputs-center";
 import type { OutputCardActions } from "./output-card";
@@ -20,6 +25,10 @@ export type StudioOutputsViewProps = {
   mode: "outputs" | "director";
   /** Optional conversation id for export API snapshot resolution. */
   conversationId?: string;
+  /** Studio message id — required for brief edit actions. */
+  messageId?: string;
+  /** Called after the campaign brief is saved from the Outputs card. */
+  onBriefApplied?: (campaignObject: Record<string, unknown>) => void;
   /**
    * Dispatch a Campaign Copilot command — the SAME path chat uses. Card actions
    * and Apply route through here, so there is one execution path and live sync
@@ -28,6 +37,10 @@ export type StudioOutputsViewProps = {
   onSendMessage: (message: string) => void;
   /** True while the Copilot is processing a dispatched command. */
   isCopilotStreaming?: boolean;
+  /** Amber plan-readiness alert (reference layout). */
+  planReadinessBanner?: ReactNode;
+  /** Execution Campaign + Quotation cards row. */
+  upNextCards?: ReactNode;
 };
 
 function buildDisplayContentKey(campaignObject: CampaignObject): string {
@@ -47,10 +60,15 @@ function buildDisplayContentKey(campaignObject: CampaignObject): string {
       ].join(":")
     : "";
   const scheduleKey = schedule
-    ? `${(schedule.weekWeights ?? []).join(",")}:${(schedule.assignments ?? [])
-        .map((entry) => `${entry.creatorId}@${entry.week}-${entry.dayIndex}`)
-        .join("|")}`
-    : "";
+    ? [
+        (schedule.weekWeights ?? []).join(","),
+        (schedule.assignments ?? [])
+          .map((entry) => `${entry.creatorId}@${entry.week}-${entry.dayIndex}`)
+          .join("|"),
+        marketIntelligenceDisplayKey(campaignObject),
+      ].join(":")
+    : marketIntelligenceDisplayKey(campaignObject);
+  const presentationKey = JSON.stringify(campaignObject.meta.mediaPlanPresentation ?? null);
   const briefKey = inputCache.inputFingerprint("brief");
   const creatorsKey = inputCache.inputFingerprint("creators");
   const budgetKey = inputCache.inputFingerprint("budget");
@@ -58,7 +76,7 @@ function buildDisplayContentKey(campaignObject: CampaignObject): string {
     .map(([kind, record]) => `${kind}:${record?.version ?? 0}:${record?.status ?? "none"}`)
     .sort()
     .join("|");
-  return `${campaignObject.updatedAt}:${commercialsKey}:${scheduleKey}:${briefKey}:${creatorsKey}:${budgetKey}:${outputKeys}`;
+  return `${campaignObject.updatedAt}:${presentationKey}:${commercialsKey}:${scheduleKey}:${briefKey}:${creatorsKey}:${budgetKey}:${outputKeys}`;
 }
 
 /**
@@ -71,15 +89,16 @@ export function StudioOutputsView({
   campaignObject,
   mode,
   conversationId,
+  messageId,
+  onBriefApplied,
   onSendMessage,
   isCopilotStreaming = false,
+  planReadinessBanner,
+  upNextCards,
 }: StudioOutputsViewProps) {
-  const [localCampaignObject, setLocalCampaignObject] = useState<CampaignObject | null>(null);
-  const effectiveCampaignObject = localCampaignObject ?? campaignObject;
-
-  useEffect(() => {
-    setLocalCampaignObject(null);
-  }, [campaignObject.id, campaignObject.updatedAt]);
+  const { effectiveCampaignObject: overlayCampaignObject, setLocalCampaignObject } =
+    useCampaignObjectOverlay(campaignObject);
+  const effectiveCampaignObject = overlayCampaignObject ?? campaignObject;
 
   const displayContentKey = useMemo(
     () => buildDisplayContentKey(effectiveCampaignObject),
@@ -89,7 +108,20 @@ export function StudioOutputsView({
       effectiveCampaignObject.meta.campaignOutputs,
       effectiveCampaignObject.meta.quotationCommercials,
       effectiveCampaignObject.meta.mediaPlanSchedule,
+      effectiveCampaignObject.meta.mediaPlanPresentation,
+      effectiveCampaignObject.meta.campaignFacts,
+      effectiveCampaignObject.sections.summary?.content,
     ]
+  );
+
+  const handleBriefApplied = useCallback(
+    (raw: Record<string, unknown>) => {
+      setLocalCampaignObject(
+        deserializeCampaignObject(raw as CampaignObjectSnapshot)
+      );
+      onBriefApplied?.(raw);
+    },
+    [onBriefApplied, setLocalCampaignObject]
   );
 
   const outputs = useMemo(
@@ -102,26 +134,73 @@ export function StudioOutputsView({
   }, [displayContentKey]);
 
   const [pendingKind, setPendingKind] = useState<CampaignOutputKind | null>(null);
-  const wasStreamingRef = useRef(false);
+  const [regeneratingAll, setRegeneratingAll] = useState(false);
+  const [regenerateError, setRegenerateError] = useState<string | null>(null);
+  const pendingBaselineRef = useRef<{
+    status: OutputView["status"];
+    version: number;
+    updatedAt?: string;
+  } | null>(null);
 
+  // Keep generating UI until the registry reflects a real change (not merely when streaming stops).
   useEffect(() => {
-    if (isCopilotStreaming) {
-      wasStreamingRef.current = true;
-      return;
-    }
-    if (wasStreamingRef.current) {
-      wasStreamingRef.current = false;
+    if (!pendingKind || isCopilotStreaming) return;
+
+    const view = outputs.find((output) => output.kind === pendingKind);
+    const baseline = pendingBaselineRef.current;
+    if (!view || !baseline) return;
+
+    const changed =
+      view.status !== baseline.status ||
+      view.version !== baseline.version ||
+      view.updatedAt !== baseline.updatedAt;
+
+    if (changed) {
       setPendingKind(null);
+      pendingBaselineRef.current = null;
     }
-  }, [isCopilotStreaming]);
+  }, [outputs, pendingKind, isCopilotStreaming]);
 
   useEffect(() => {
     if (!pendingKind) return;
-    const timeout = window.setTimeout(() => setPendingKind(null), 120_000);
+    const timeout = window.setTimeout(() => {
+      setPendingKind(null);
+      pendingBaselineRef.current = null;
+    }, 120_000);
     return () => window.clearTimeout(timeout);
   }, [pendingKind]);
 
   const generatingKind = pendingKind;
+
+  const handleRegenerateAllStale = useCallback(async () => {
+    if (!conversationId || regeneratingAll || isCopilotStreaming) return;
+
+    setRegeneratingAll(true);
+    setRegenerateError(null);
+
+    const result = await regenerateStaleOutputsAction({
+      conversationId,
+      campaignObjectId: effectiveCampaignObject.id,
+    });
+
+    setRegeneratingAll(false);
+
+    if (!result.ok) {
+      setRegenerateError(result.message);
+      return;
+    }
+
+    const next = deserializeCampaignObject(result.campaignObject as CampaignObjectSnapshot);
+    setLocalCampaignObject(next);
+    onBriefApplied?.(result.campaignObject);
+  }, [
+    conversationId,
+    regeneratingAll,
+    isCopilotStreaming,
+    effectiveCampaignObject.id,
+    setLocalCampaignObject,
+    onBriefApplied,
+  ]);
 
   const directorReview = useMemo(
     () => reviewCampaign(effectiveCampaignObject),
@@ -132,6 +211,13 @@ export function StudioOutputsView({
     () => ({
       onRegenerate: (kind) => {
         const view = outputs.find((o) => o.kind === kind);
+        if (view) {
+          pendingBaselineRef.current = {
+            status: view.status,
+            version: view.version,
+            updatedAt: view.updatedAt,
+          };
+        }
         setPendingKind(kind);
         onSendMessage(
           outputActionCommand(view && view.status === "not_generated" ? "generate" : "regenerate", kind)
@@ -161,11 +247,21 @@ export function StudioOutputsView({
       campaignObject={effectiveCampaignObject}
       outputs={outputs}
       generatingKind={generatingKind}
+      regeneratingAll={regeneratingAll}
+      onRegenerateAllStale={
+        conversationId ? handleRegenerateAllStale : undefined
+      }
+      regenerateAllError={regenerateError}
+      regenerateAllDisabled={isCopilotStreaming}
       getContent={getContent}
       campaignObjectId={effectiveCampaignObject.id}
       conversationId={conversationId}
+      messageId={messageId}
+      onBriefApplied={handleBriefApplied}
       onCampaignObjectUpdated={setLocalCampaignObject}
       actions={actions}
+      planReadinessBanner={planReadinessBanner}
+      upNextCards={upNextCards}
     />
   );
 }

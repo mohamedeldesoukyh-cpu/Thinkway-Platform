@@ -11,10 +11,12 @@ import type { QuotationItemSeed } from "@/lib/domains/commercial/quotation-types
 
 import { sortPlatformsStable } from "@/lib/creators/creator-centric";
 import { resolveCreatorFollowersCount } from "@/lib/creators/creator-display-utils";
+import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { creatorProfileSourceFromUnified } from "@/lib/creators/creator-profile-source";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
 import { resolveBrowseCreatorProfileImageUrl } from "@/lib/performance/creator-avatar";
+import { COLLAPSE_CONTENT_LABEL } from "@/lib/discovery/collapse-content";
 
 type Supabase = SupabaseClient<Database>;
 
@@ -32,6 +34,8 @@ export type ShortlistItemForSeed = {
   deliverables?: unknown;
   option_number?: number | null;
   service_description?: string | null;
+  collapse_group_id?: string | null;
+  collapse_label?: string | null;
 };
 
 function resolveQuotationSeedPlatformAccount(creator: UnifiedCreatorResult) {
@@ -84,7 +88,13 @@ export function buildQuotationSeedFromCreator(
       null,
     engagement_rate:
       creator.metrics.engagement_rate.value ?? metricsAccount?.engagement_rate ?? null,
-    country_code: creator.country_code ?? creator.estimated_country ?? null,
+    country_code:
+      resolveCreatorCountryCodes({
+        country_codes: creator.country_codes,
+        country_code: creator.country_code,
+        estimated_country: creator.estimated_country,
+        platformAudienceCountries: creator.platforms.map((platform) => platform.audience_country),
+      })[0] ?? null,
     profile_image_url: profileImageUrl,
     profile_url: profileUrl,
     cost_currency: creator.suggested_currency ?? "EGP",
@@ -126,6 +136,8 @@ export function buildQuotationSeedFromShortlistItem(
     gp_pct: item.gp_pct ?? null,
     revenue: item.revenue ?? null,
     gp_value: item.gp_value ?? null,
+    collapse_group_id: item.collapse_group_id ?? null,
+    collapse_label: item.collapse_label ?? null,
   };
 }
 
@@ -167,4 +179,127 @@ export function filterNewShortlistImportItems(
 ): ShortlistItemForSeed[] {
   const existing = new Set(existingSourceItemIds);
   return items.filter((item) => !existing.has(item.id));
+}
+
+export type ShortlistImportSeedPlanEntry = {
+  item: ShortlistItemForSeed;
+  /** Fresh quotation collapse group id; null for standalone lines. */
+  collapseGroupId: string | null;
+  collapseLabel: string | null;
+  /** Drop source link so an existing standalone priced line stays untouched. */
+  detachSourceLink: boolean;
+  /** Identity-only seat (no package commercials) — followers + already-quoted members. */
+  identityOnly: boolean;
+};
+
+/**
+ * Plan shortlist → quotation inserts.
+ * Standalone: skip rows already linked by source_shortlist_item_id.
+ * Collap: always insert the full selected package as a new group; already-quoted
+ * members are duplicated as detached identity seats so priced standalone lines remain.
+ */
+export function planShortlistItemsForQuotationImport(
+  items: ShortlistItemForSeed[],
+  existingSourceItemIds: Iterable<string>,
+  options?: { newCollapseGroupId?: () => string }
+): ShortlistImportSeedPlanEntry[] {
+  const existing = new Set(existingSourceItemIds);
+  const newCollapseGroupId = options?.newCollapseGroupId ?? (() => crypto.randomUUID());
+  const plan: ShortlistImportSeedPlanEntry[] = [];
+
+  const standalone: ShortlistItemForSeed[] = [];
+  const byGroup = new Map<string, ShortlistItemForSeed[]>();
+
+  for (const item of items) {
+    const groupId = item.collapse_group_id?.trim() || null;
+    if (!groupId) {
+      standalone.push(item);
+      continue;
+    }
+    const members = byGroup.get(groupId) ?? [];
+    members.push(item);
+    byGroup.set(groupId, members);
+  }
+
+  for (const item of standalone) {
+    if (existing.has(item.id)) continue;
+    plan.push({
+      item,
+      collapseGroupId: null,
+      collapseLabel: null,
+      detachSourceLink: false,
+      identityOnly: false,
+    });
+  }
+
+  for (const members of byGroup.values()) {
+    if (members.length === 0) continue;
+    const collapseGroupId = newCollapseGroupId();
+    const collapseLabel =
+      members.find((member) => member.collapse_label?.trim())?.collapse_label?.trim() ||
+      COLLAPSE_CONTENT_LABEL;
+    const sorted = [...members].sort((a, b) => a.id.localeCompare(b.id));
+    const leader = sorted.find((member) => !existing.has(member.id)) ?? sorted[0]!;
+
+    for (const item of sorted) {
+      const detachSourceLink = existing.has(item.id);
+      const isLeader = item.id === leader.id;
+      plan.push({
+        item,
+        collapseGroupId,
+        collapseLabel,
+        detachSourceLink,
+        identityOnly: !isLeader || detachSourceLink,
+      });
+    }
+  }
+
+  return plan;
+}
+
+export function buildQuotationSeedsFromImportPlan(
+  plan: ShortlistImportSeedPlanEntry[],
+  creators: Map<string, UnifiedCreatorResult>
+): QuotationItemSeed[] {
+  return plan.map((entry) => {
+    const seed = buildQuotationSeedFromShortlistItem(
+      entry.item,
+      creators.get(entry.item.id) ?? null
+    );
+    return {
+      ...seed,
+      collapse_group_id: entry.collapseGroupId,
+      collapse_label: entry.collapseLabel,
+      ...(entry.detachSourceLink ? { source_shortlist_item_id: null } : {}),
+      ...(entry.identityOnly
+        ? {
+            deliverables: [],
+            service_description: null,
+            cost: null,
+            revenue: null,
+            gp_pct: null,
+            gp_value: null,
+          }
+        : {}),
+    };
+  });
+}
+
+export async function buildSeedsForShortlistQuotationImport(
+  supabase: Supabase,
+  items: ShortlistItemForSeed[],
+  existingSourceItemIds: Iterable<string>,
+  options?: { newCollapseGroupId?: () => string }
+): Promise<QuotationItemSeed[]> {
+  const plan = planShortlistItemsForQuotationImport(
+    items,
+    existingSourceItemIds,
+    options
+  );
+  if (plan.length === 0) return [];
+  const creators = await resolveCreatorsForShortlistItems(
+    supabase,
+    plan.map((entry) => entry.item)
+  );
+  return buildQuotationSeedsFromImportPlan(plan, creators);
 }

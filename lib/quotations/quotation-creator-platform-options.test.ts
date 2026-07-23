@@ -4,6 +4,7 @@ import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail
 import {
   bootstrapPlatformOptionsFromItem,
   mergeCreatorPlatformOptions,
+  unionQuotationCreatorGroupPlatforms,
 } from "@/lib/quotations/quotation-creator-platform-utils";
 import { isPostTypeAllowedForCreator } from "@/lib/quotations/quotation-deliverable-types";
 
@@ -108,6 +109,45 @@ function mockItem(overrides?: Partial<QuotationItemRow>): QuotationItemRow {
   assert.equal(isPostTypeAllowedForCreator("facebook_post", allowed), true);
   assert.equal(isPostTypeAllowedForCreator("facebook_reel", allowed), true);
   assert.equal(isPostTypeAllowedForCreator("tiktok_video", allowed), true);
+}
+
+{
+  const platforms = unionQuotationCreatorGroupPlatforms([
+    mockItem({
+      id: "opt-1",
+      platform: "instagram",
+      deliverables: [
+        {
+          type: "instagram_reel",
+          types: ["instagram_reel"],
+          platform: "instagram",
+          service_description: null,
+          cost: 0,
+          revenue: 0,
+          gp_pct: 0,
+          gp_value: 0,
+        },
+      ],
+    }),
+    mockItem({
+      id: "opt-2",
+      platform: "tiktok",
+      option_number: 2,
+      deliverables: [
+        {
+          type: "tiktok_video",
+          types: ["tiktok_video"],
+          platform: "tiktok",
+          service_description: null,
+          cost: 0,
+          revenue: 0,
+          gp_pct: 0,
+          gp_value: 0,
+        },
+      ],
+    }),
+  ]);
+  assert.deepEqual(platforms, ["instagram", "tiktok"]);
 }
 
 console.log("quotation-creator-platform-options.test.ts — all tests passed");

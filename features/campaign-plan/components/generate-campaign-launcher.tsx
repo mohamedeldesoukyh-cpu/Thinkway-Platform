@@ -13,6 +13,7 @@ import {
 } from "../actions/generate-campaign-from-plan";
 import { CampaignPlanLifecycleHint } from "./campaign-plan-lifecycle-hint";
 import { GenerateCampaignEntry } from "./generate-campaign-entry";
+import { GenerateLauncherPlaceholder } from "./generate-launcher-placeholder";
 
 export type GenerateCampaignLauncherProps = {
   campaignObject: CampaignObject;
@@ -38,7 +39,7 @@ export function GenerateCampaignLauncher({
 
   useEffect(() => {
     let cancelled = false;
-    setLoadingContext(true);
+    if (!context) setLoadingContext(true);
     void getCampaignPlanExecutionContext({
       campaignObjectId: campaignObject.id,
       conversationId,
@@ -71,8 +72,8 @@ export function GenerateCampaignLauncher({
     };
   }, [campaignObject.id, campaignObject.updatedAt, conversationId]);
 
-  if (loadingContext) {
-    return null;
+  if (loadingContext && !context) {
+    return <GenerateLauncherPlaceholder variant={variant} className={className} />;
   }
 
   if (!context) {

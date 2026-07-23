@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
@@ -5,14 +6,21 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageBackButton } from "@/components/navigation/page-back-button";
 import { QuotationPreviewDownloads } from "@/features/quotations/components/quotation-preview-downloads";
 import { QuotationPreviewTemplateToggle } from "@/features/quotations/components/quotation-preview-template-toggle";
-import { quotationDetailPath } from "@/features/quotations/constants";
+import {
+  quotationDetailPath,
+  quotationPreviewPath,
+} from "@/features/quotations/constants";
 import {
   appendQuotationExportRevision,
   resolveQuotationTemplate,
 } from "@/features/quotations/export/quotation-template";
 import { getQuotationDetail } from "@/features/quotations/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isUuid } from "@/lib/validation/uuid";
+import { metadataTitleForEntity, redirectToCanonicalEntityRoute } from "@/lib/routing/entity-page";
+import {
+  fetchQuotationRouteSummary,
+  resolveQuotationIdByRouteKey,
+} from "@/lib/routing/entity-route-queries";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +28,21 @@ type QuotationPreviewPageProps = {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ template?: string }>;
 };
+
+export async function generateMetadata({
+  params,
+}: Pick<QuotationPreviewPageProps, "params">): Promise<Metadata> {
+  const { id: routeKey } = await params;
+  const quotationId = await resolveQuotationIdByRouteKey(routeKey);
+  if (!quotationId) return { title: "Quotation preview" };
+
+  const summary = await fetchQuotationRouteSummary(quotationId);
+  if (!summary) return { title: "Quotation preview" };
+
+  return {
+    title: `${metadataTitleForEntity(summary, summary.serial_number)} preview`,
+  };
+}
 
 function quotationTemplateLabel(
   template: ReturnType<typeof resolveQuotationTemplate>
@@ -40,13 +63,9 @@ export default async function QuotationPreviewPage({
   params,
   searchParams,
 }: QuotationPreviewPageProps) {
-  const { id } = await params;
+  const { id: routeKey } = await params;
   const query = await searchParams;
   const template = resolveQuotationTemplate(query.template);
-
-  if (!isUuid(id)) {
-    notFound();
-  }
 
   const supabase = await createSupabaseServerClient();
   const {
@@ -57,7 +76,41 @@ export default async function QuotationPreviewPage({
     notFound();
   }
 
-  const detail = await getQuotationDetail(id);
+  const quotationId = await resolveQuotationIdByRouteKey(routeKey);
+  if (!quotationId) notFound();
+
+  const routeSummary = await fetchQuotationRouteSummary(quotationId);
+  const previewQuery =
+    template !== "detailed" ? `template=${encodeURIComponent(template)}` : undefined;
+  const canonicalPath = routeSummary
+    ? quotationPreviewPath(
+        {
+          id: routeSummary.id,
+          slug: routeSummary.slug,
+          name: routeSummary.name,
+          serial_number: routeSummary.serial_number,
+        },
+        undefined,
+        previewQuery
+      )
+    : quotationPreviewPath(quotationId, undefined, previewQuery);
+
+  if (routeSummary) {
+    redirectToCanonicalEntityRoute(
+      {
+        routeKey,
+        entity: {
+          ...routeSummary,
+          serial_number: routeSummary.serial_number ?? null,
+        },
+        canonicalPath,
+      },
+      undefined,
+      previewQuery ? { template } : undefined
+    );
+  }
+
+  const detail = await getQuotationDetail(quotationId);
   if (!detail) {
     notFound();
   }
@@ -69,7 +122,7 @@ export default async function QuotationPreviewPage({
     previewParams.set("template", template);
   }
   appendQuotationExportRevision(previewParams, detail.updated_at);
-  const previewSrc = `/api/quotations/${id}/export?${previewParams.toString()}`;
+  const previewSrc = `/api/quotations/${detail.id}/export?${previewParams.toString()}`;
 
   return (
     <DashboardShell
@@ -81,19 +134,24 @@ export default async function QuotationPreviewPage({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <PageBackButton
-              fallbackHref={quotationDetailPath(id)}
+              fallbackHref={quotationDetailPath({
+                id: detail.id,
+                name: detail.name,
+                serial_number: detail.serial_number,
+              })}
               label="Back to quotation"
               variant="text"
             />
             <Suspense fallback={null}>
               <QuotationPreviewTemplateToggle
-                quotationId={id}
+                quotationId={detail.id}
+                serialNumber={detail.serial_number}
                 activeTemplate={template}
               />
             </Suspense>
           </div>
           <QuotationPreviewDownloads
-            quotationId={id}
+            quotationId={detail.id}
             template={template}
             exportRevision={detail.updated_at}
           />

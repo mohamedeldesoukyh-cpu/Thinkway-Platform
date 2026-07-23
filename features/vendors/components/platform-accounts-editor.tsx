@@ -20,6 +20,8 @@ import {
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
+import { TooltipIconButton } from "@/components/shared/tooltip-icon-button";
 import { OperationalFormSection } from "@/components/workspace/operational-workspace-ui";
 import {
   DETAIL_FORM_INPUT_CLASS,
@@ -217,6 +219,7 @@ type PlatformAccountsEditorProps = {
 };
 
 export function PlatformAccountsEditor({ vendor }: PlatformAccountsEditorProps) {
+  const confirmDelete = useConfirmDelete();
   const initial = useMemo(
     () =>
       vendor.platform_accounts.length > 0
@@ -360,20 +363,24 @@ export function PlatformAccountsEditor({ vendor }: PlatformAccountsEditorProps) 
                     />
                     Primary
                   </label>
-                  <Button
+                  <TooltipIconButton
                     type="button"
                     variant="ghost"
                     size="icon-sm"
                     disabled={accounts.length <= 1}
-                    onClick={() =>
-                      setAccounts((prev) =>
-                        prev.filter((row) => row.key !== account.key)
-                      )
-                    }
+                    onClick={async () => {
+                      const ok = await confirmDelete(
+                        `Remove the ${account.platform} account (@${account.username || "unknown"}) from this vendor?`,
+                        "Remove platform account?"
+                      );
+                      if (!ok) return;
+                      setAccounts((prev) => prev.filter((row) => row.key !== account.key));
+                    }}
+                    tooltip="Remove platform account"
                   >
                     <Trash2Icon className="size-4" />
                     <span className="sr-only">Remove platform</span>
-                  </Button>
+                  </TooltipIconButton>
                 </div>
               </div>
 

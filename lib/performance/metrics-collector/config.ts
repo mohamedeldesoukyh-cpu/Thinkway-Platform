@@ -36,7 +36,8 @@ export function getMetricsCollectorEnv(): MetricsCollectorEnv {
       "apify/facebook-pages-scraper",
     apifyYouTubeActorId:
       process.env.APIFY_YOUTUBE_ACTOR_ID?.trim() || "streamers/youtube-scraper",
-    apifySnapchatActorId: process.env.APIFY_SNAPCHAT_ACTOR_ID?.trim() || null,
+    apifySnapchatActorId:
+      process.env.APIFY_SNAPCHAT_ACTOR_ID?.trim() || "automation-lab/snapchat-scraper",
     tiktokClientKey: process.env.TIKTOK_CLIENT_KEY?.trim() || null,
     tiktokClientSecret: process.env.TIKTOK_CLIENT_SECRET?.trim() || null,
     youtubeApiKey: process.env.YOUTUBE_API_KEY?.trim() || null,

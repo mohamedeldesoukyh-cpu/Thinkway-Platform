@@ -53,6 +53,9 @@ export type ShortlistCreatorItem = {
   creator: UnifiedCreatorResult | null;
   /** Quotations this creator has been sent to from this shortlist. */
   quotation_refs: ShortlistCreatorQuotationRef[];
+  /** When set, this creator is bundled with others under a collapse content header. */
+  collapse_group_id: string | null;
+  collapse_label: string | null;
 };
 
 export type ShortlistMovementRow = {
@@ -91,6 +94,7 @@ export type ShortlistMovedAssignment = {
 export type ShortlistDetail = {
   id: string;
   serial_number: string | null;
+  slug: string | null;
   name: string;
   description: string | null;
   status: ShortlistStatus;

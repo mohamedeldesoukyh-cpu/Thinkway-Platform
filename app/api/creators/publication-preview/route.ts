@@ -1,10 +1,15 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
-import { fetchPublicationPreviewImage } from "@/lib/creators/publication-preview-proxy";
+import {
+  refreshPublicationPreviewInBackground,
+  resolvePublicationPreviewForHttpRequest,
+} from "@/lib/creators/publication-preview-proxy";
+import { recordMediaProxyRefreshScheduled } from "@/lib/creators/media-proxy-cache";
 import { requireApiAnyPermission } from "@/lib/auth/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
+/** Keep high enough for `after()` background refresh (oEmbed / OpenGraph). */
 export const maxDuration = 30;
 
 export async function GET(request: Request) {
@@ -25,9 +30,22 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Missing preview source." }, { status: 400 });
   }
 
-  const result = await fetchPublicationPreviewImage({ src, postUrl });
+  const result = await resolvePublicationPreviewForHttpRequest({ src, postUrl });
   if (!result.ok) {
-    return NextResponse.json({ error: "Preview unavailable." }, { status: result.status });
+    if (result.needsRefresh) {
+      recordMediaProxyRefreshScheduled();
+      after(() => refreshPublicationPreviewInBackground({ src, postUrl }));
+    }
+    return NextResponse.json(
+      { error: "Preview unavailable." },
+      {
+        status: result.status,
+        headers: {
+          "Cache-Control": "private, max-age=30",
+          "X-Preview-Cache": result.source,
+        },
+      }
+    );
   }
 
   return new NextResponse(result.buffer, {
@@ -35,6 +53,7 @@ export async function GET(request: Request) {
     headers: {
       "Content-Type": result.contentType,
       "Cache-Control": "private, max-age=3600",
+      "X-Preview-Cache": result.source,
     },
   });
 }

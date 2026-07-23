@@ -1,20 +1,22 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Link from "next/link";
 
-import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
-import { Button } from "@/components/ui/button";
-import { DiscoverySubNav } from "@/features/discovery-import/components/discovery-sub-nav";
-import { QUOTATIONS_LIST_PATH } from "@/features/quotations/constants";
+import { DiscoveryPageShell } from "@/features/discovery/components/discovery-page-shell";
 import { QuotationWorkspace } from "@/features/quotations/components/quotation-workspace";
+import { quotationDetailPath } from "@/features/quotations/constants";
 import {
-  getPromoteWizardOptions,
+  getCachedPromoteWizardOptions,
+  getCachedQuotationFormOptions,
   getQuotationDetail,
-  getQuotationFormOptions,
 } from "@/features/quotations/queries";
-import { GenerateOutputsLauncher } from "@/features/campaign-outputs/components/generate-outputs-launcher";
-import { seedFromQuotation } from "@/features/campaign-outputs/hydration/seed-adapters";
-import { isUuid } from "@/lib/validation/uuid";
+import {
+  metadataTitleForEntity,
+  redirectToCanonicalEntityRoute,
+} from "@/lib/routing/entity-page";
+import {
+  fetchQuotationRouteSummary,
+  resolveQuotationIdByRouteKey,
+} from "@/lib/routing/entity-route-queries";
 
 export const dynamic = "force-dynamic";
 
@@ -22,51 +24,68 @@ type PageProps = {
   params: Promise<{ id: string }>;
 };
 
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id: routeKey } = await params;
+  const quotationId = await resolveQuotationIdByRouteKey(routeKey);
+  if (!quotationId) return { title: "Quotation" };
+
+  const summary = await fetchQuotationRouteSummary(quotationId);
+  if (!summary) return { title: "Quotation" };
+
+  return {
+    title: metadataTitleForEntity(summary, summary.serial_number),
+  };
+}
+
 export default async function QuotationDetailPage({ params }: PageProps) {
-  const { id } = await params;
-  if (!isUuid(id)) notFound();
+  const { id: routeKey } = await params;
+
+  const quotationId = await resolveQuotationIdByRouteKey(routeKey);
+  if (!quotationId) notFound();
+
+  const routeSummary = await fetchQuotationRouteSummary(quotationId);
+  const canonicalPath = routeSummary
+    ? quotationDetailPath({
+        id: routeSummary.id,
+        slug: routeSummary.slug,
+        name: routeSummary.name,
+        serial_number: routeSummary.serial_number,
+      })
+    : quotationDetailPath(quotationId);
+
+  if (routeSummary) {
+    redirectToCanonicalEntityRoute({
+      routeKey,
+      entity: {
+        ...routeSummary,
+        serial_number: routeSummary.serial_number ?? null,
+      },
+      canonicalPath,
+    });
+  }
 
   const [detail, formOptions, promoteOptions] = await Promise.all([
-    getQuotationDetail(id),
-    getQuotationFormOptions(),
-    getPromoteWizardOptions(),
+    getQuotationDetail(quotationId),
+    getCachedQuotationFormOptions(),
+    getCachedPromoteWizardOptions(),
   ]);
+
   if (!detail) notFound();
 
   return (
-    <DashboardShell
-      title={detail.name}
-      description={detail.serial_number ?? "Client quotation"}
-      hidePageHeader
-      containedMain
-      mainClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0"
+    <DiscoveryPageShell
+      page="quotations"
+      activeHref={canonicalPath}
+      variant="flush"
+      showHeader={false}
     >
-      <PlatformErrorBoundary surface="generic">
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <DiscoverySubNav activeHref="/discovery/quotations" showDatabaseStats={false} />
-          <div
-            className="thinkway-campaign-workspace min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain bg-[var(--camp-surface)]"
-            data-campaign-workspace-scroll
-          >
-            <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border bg-background px-4 py-2 md:px-6">
-              <Button asChild variant="ghost" size="sm" className="-ml-2">
-                <Link href={QUOTATIONS_LIST_PATH}>← Back to client quotations</Link>
-              </Button>
-              <GenerateOutputsLauncher
-                seed={seedFromQuotation(detail)}
-                tab="outputs"
-                workspace={{ type: "quotation", id: detail.id }}
-                className="w-full max-w-md sm:w-auto"
-              />
-            </div>
-            <QuotationWorkspace
-              detail={detail}
-              formOptions={formOptions}
-              promoteOptions={promoteOptions}
-            />
-          </div>
-        </div>
-      </PlatformErrorBoundary>
-    </DashboardShell>
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-white dark:bg-[var(--background)]">
+        <QuotationWorkspace
+          detail={detail}
+          formOptions={formOptions}
+          promoteOptions={promoteOptions}
+        />
+      </div>
+    </DiscoveryPageShell>
   );
 }

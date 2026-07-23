@@ -24,6 +24,10 @@ assert.equal(formatCreatorDisplayName("Jane Creator | TikTok"), "Jane Creator");
 assert.equal(formatCreatorDisplayName("Jane Creator / X"), "Jane Creator");
 assert.equal(formatCreatorDisplayName("The Instagram Guy"), "The Instagram Guy");
 assert.equal(formatCreatorDisplayName("Photos and Videos Studio"), "Photos and Videos Studio");
+assert.equal(formatCreatorDisplayName("Instagram"), "");
+assert.equal(formatCreatorDisplayName("instagram"), "");
+assert.equal(formatCreatorDisplayName("TikTok"), "");
+assert.equal(formatCreatorDisplayName("Instagram photos and videos"), "");
 assert.equal(formatCreatorBio("Beauty &amp; lifestyle"), "Beauty & lifestyle");
 assert.equal(formatCreatorBio(null), null);
 

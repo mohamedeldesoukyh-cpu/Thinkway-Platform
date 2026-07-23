@@ -31,7 +31,7 @@ export function CreatorSearchCampaignRequirementsPanel({
       aria-label="Campaign requirements from brief"
     >
       <div className="flex flex-wrap items-start gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/80 text-[#168a66] shadow-sm ring-1 ring-[#9edfc8]/60">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/80 dark:bg-card text-[#168a66] dark:text-emerald-400 shadow-sm ring-1 ring-[#9edfc8]/60 dark:ring-emerald-500/30">
           <FileTextIcon className="size-4" aria-hidden />
         </div>
         <div className="min-w-0 flex-1">

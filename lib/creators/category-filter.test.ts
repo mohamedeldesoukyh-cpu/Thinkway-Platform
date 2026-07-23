@@ -114,7 +114,7 @@ test("creatorBrowseCategoryTags prefers stored browse tags", () => {
   );
 });
 
-test("shouldUseUnifiedBrowseIndexPath skips category-filtered browse", () => {
+test("shouldUseUnifiedBrowseIndexPath gates unified SQL browse", () => {
   assert.equal(shouldUseUnifiedBrowseIndexPath({}), true);
   assert.equal(shouldUseUnifiedBrowseIndexPath({ search: "food" }), false);
   assert.equal(shouldUseUnifiedBrowseIndexPath({ source: "internal" }), false);

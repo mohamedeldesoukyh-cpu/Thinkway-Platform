@@ -223,13 +223,13 @@ assert.match(
   /^\/api\/creators\/avatar\?/,
   "TikTok CDN avatar uses server proxy"
 );
-assert.equal(
+assert.match(
   creatorAvatarBrowserDisplayUrl(
     "https://abc.supabase.co/storage/v1/object/public/creator-avatars/x.jpg",
     "https://www.instagram.com/amiryoussef.official/"
-  ),
-  "https://abc.supabase.co/storage/v1/object/public/creator-avatars/x.jpg",
-  "Supabase avatar loads directly even when profile URL is present"
+  ) ?? "",
+  /^\/api\/creators\/avatar\?src=.*creator-avatars/,
+  "Thinkway storage avatars use durable API proxy"
 );
 assert.equal(
   creatorAvatarBrowserDisplayUrl(null, "https://www.instagram.com/amiryoussef.official/"),
@@ -245,13 +245,13 @@ assert.equal(
       expiredIg,
       "https://www.instagram.com/radwaadeeel/"
     ),
-    "/api/creators/avatar?profileUrl=https%3A%2F%2Fwww.instagram.com%2Fradwaadeeel%2F",
-    "expired Instagram CDN falls back to profileUrl proxy"
+    "/api/creators/avatar?src=https%3A%2F%2Fscontent.cdninstagram.com%2Fv%2Ft51.2885-19%2Fexpired.jpg%3Foe%3D68500000&profileUrl=https%3A%2F%2Fwww.instagram.com%2Fradwaadeeel%2F",
+    "expired Instagram CDN still proxies src + profileUrl fallback"
   );
   assert.equal(
     creatorAvatarBrowserDisplayUrl(expiredIg, null),
-    null,
-    "expired Instagram CDN without profileUrl returns null"
+    "/api/creators/avatar?src=https%3A%2F%2Fscontent.cdninstagram.com%2Fv%2Ft51.2885-19%2Fexpired.jpg%3Foe%3D68500000",
+    "expired Instagram CDN without profileUrl still attempts proxy"
   );
 }
 

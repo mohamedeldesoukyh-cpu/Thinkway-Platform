@@ -1,4 +1,10 @@
-import { countryLabel, LAST_POST_WITHIN_OPTIONS } from "./creator-search-filter-constants";
+import { resolveDiscoveryPlatform } from "@/lib/social/platforms";
+
+import { PLATFORM_LABELS } from "@/lib/social/platforms";
+
+import { countryLabel, languageLabel, LAST_POST_WITHIN_OPTIONS } from "./creator-search-filter-constants";
+import type { CampaignSearchCriterion } from "@/features/campaign-intelligence-profile/types/profile";
+import type { DiscoverySearchFilterKey } from "@/features/campaign-intelligence-profile/services/discovery-search-mapping/types";
 
 export type CreatorSearchFilters = {
   search: string;
@@ -6,7 +12,10 @@ export type CreatorSearchFilters = {
   platforms: string[];
   /** Creator location — first entry is sent to browse RPC; all apply client-side OR filter. */
   countries: string[];
-  language: string;
+  /** Creator profile languages — first entry sent to SQL; OR within group client-side. */
+  languages: string[];
+  /** Content languages — client-side OR filter on language_codes. */
+  contentLanguages: string[];
   /** Audience geography — client-side filter when enrichment data is sparse. */
   audienceCountries: string[];
   /** Audience interest tags — OR match against creator categories / niche. */
@@ -40,7 +49,8 @@ export const DEFAULT_CREATOR_SEARCH_FILTERS: CreatorSearchFilters = {
   handle: "",
   platforms: [],
   countries: [],
-  language: "",
+  languages: [],
+  contentLanguages: [],
   audienceCountries: [],
   audienceInterestTags: [],
   contentKeyword: "",
@@ -63,6 +73,35 @@ export const DEFAULT_CREATOR_SEARCH_FILTERS: CreatorSearchFilters = {
   aiNiche: "",
   minBrandFit: "",
 };
+
+/** Deep-clone filter arrays — never mutate `DEFAULT_CREATOR_SEARCH_FILTERS` in place. */
+export function cloneCreatorSearchFilters(
+  base: CreatorSearchFilters = DEFAULT_CREATOR_SEARCH_FILTERS
+): CreatorSearchFilters {
+  return {
+    ...base,
+    platforms: [...base.platforms],
+    countries: [...base.countries],
+    languages: [...base.languages],
+    contentLanguages: [...base.contentLanguages],
+    audienceCountries: [...base.audienceCountries],
+    audienceInterestTags: [...base.audienceInterestTags],
+    contentTags: [...base.contentTags],
+    categories: [...base.categories],
+  };
+}
+
+function normalizePlatformFilterValues(platforms: string[]): string[] {
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+  for (const raw of platforms) {
+    const platform = resolveDiscoveryPlatform(raw) ?? raw.trim().toLowerCase();
+    if (!platform || seen.has(platform)) continue;
+    seen.add(platform);
+    normalized.push(platform);
+  }
+  return normalized;
+}
 
 export const CREATOR_SEARCH_SORT_FIELDS = [
   { value: "relevance", label: "Relevance", defaultDirection: "desc" },
@@ -92,7 +131,7 @@ export type CreatorSearchSortState = {
 export type CreatorSearchSort = CreatorSearchSortField;
 
 export const DEFAULT_CREATOR_SEARCH_SORT: CreatorSearchSortState = {
-  field: "followers",
+  field: "last_synced",
   direction: "desc",
 };
 
@@ -104,21 +143,40 @@ export function defaultDirectionForSortField(
   );
 }
 
+export type CreatorSearchFilterSectionId =
+  | "search"
+  | "creator"
+  | "audience"
+  | "performance"
+  | "content"
+  | "ai"
+  | "advanced";
+
+/** Active filter bar section labels (grouped chips). */
+export const CREATOR_SEARCH_ACTIVE_FILTER_GROUPS: ReadonlyArray<{
+  id: CreatorSearchFilterSectionId;
+  label: string;
+}> = [
+  { id: "search", label: "Search" },
+  { id: "creator", label: "Creator" },
+  { id: "audience", label: "Audience" },
+  { id: "performance", label: "Performance" },
+  { id: "content", label: "Content" },
+  { id: "advanced", label: "Advanced" },
+  { id: "ai", label: "AI" },
+] as const;
+
 /** A removable filter pill shown above the result list. */
 export type ActiveFilterChip = {
   id: string;
   label: string;
+  section: CreatorSearchFilterSectionId;
   /** Patch applied to clear this single chip. */
   clear: Partial<CreatorSearchFilters>;
 };
 
 
-const PLATFORM_CHIP_LABELS: Record<string, string> = {
-  instagram: "Instagram",
-  tiktok: "TikTok",
-  youtube: "YouTube",
-  twitter: "X (Twitter)",
-};
+const PLATFORM_CHIP_LABELS: Record<string, string> = PLATFORM_LABELS;
 
 function lastPostWithinLabel(value: string): string {
   return LAST_POST_WITHIN_OPTIONS.find((option) => option.value === value)?.label ?? value;
@@ -168,6 +226,7 @@ export function buildActiveFilterChips(
     chips.push({
       id: "topSearch",
       label: `Search: ${topBarSearch.trim()}`,
+      section: "search",
       clear: { search: "" },
     });
   }
@@ -175,6 +234,7 @@ export function buildActiveFilterChips(
     chips.push({
       id: "contentKeyword",
       label: `Keyword: ${filters.contentKeyword.trim()}`,
+      section: "content",
       clear: { contentKeyword: "" },
     });
   }
@@ -182,23 +242,41 @@ export function buildActiveFilterChips(
     chips.push({
       id: `contentTag:${tag}`,
       label: `Tag: ${tag.startsWith("#") ? tag : `#${tag}`}`,
+      section: "content",
       clear: { contentTags: filters.contentTags.filter((value) => value !== tag) },
+    });
+  }
+  for (const lang of filters.contentLanguages) {
+    chips.push({
+      id: `contentLanguage:${lang}`,
+      label: `Content language: ${languageLabel(lang)}`,
+      section: "content",
+      clear: {
+        contentLanguages: filters.contentLanguages.filter((value) => value !== lang),
+      },
     });
   }
   if (filters.lastPostWithin) {
     chips.push({
       id: "lastPostWithin",
       label: `Last post: ${lastPostWithinLabel(filters.lastPostWithin)}`,
+      section: "advanced",
       clear: { lastPostWithin: "" },
     });
   }
   if (filters.handle.trim()) {
-    chips.push({ id: "handle", label: `Handle: ${filters.handle.trim()}`, clear: { handle: "" } });
+    chips.push({
+      id: "handle",
+      label: `Handle: ${filters.handle.trim()}`,
+      section: "creator",
+      clear: { handle: "" },
+    });
   }
   for (const platform of filters.platforms) {
     chips.push({
       id: `platform:${platform}`,
       label: PLATFORM_CHIP_LABELS[platform] ?? platform,
+      section: "creator",
       clear: { platforms: filters.platforms.filter((p) => p !== platform) },
     });
   }
@@ -206,16 +284,23 @@ export function buildActiveFilterChips(
     chips.push({
       id: `country:${code}`,
       label: `Creator country: ${countryLabel(code)}`,
+      section: "creator",
       clear: { countries: filters.countries.filter((value) => value !== code) },
     });
   }
-  if (filters.language.trim()) {
-    chips.push({ id: "language", label: `Language: ${filters.language.trim()}`, clear: { language: "" } });
+  for (const lang of filters.languages) {
+    chips.push({
+      id: `language:${lang}`,
+      label: `Language: ${languageLabel(lang)}`,
+      section: "creator",
+      clear: { languages: filters.languages.filter((value) => value !== lang) },
+    });
   }
   for (const code of filters.audienceCountries) {
     chips.push({
       id: `audienceCountry:${code}`,
       label: `Audience country: ${countryLabel(code)}`,
+      section: "audience",
       clear: {
         audienceCountries: filters.audienceCountries.filter((value) => value !== code),
       },
@@ -225,6 +310,7 @@ export function buildActiveFilterChips(
     chips.push({
       id: `audienceInterest:${interest}`,
       label: `Audience interest: ${interest}`,
+      section: "audience",
       clear: {
         audienceInterestTags: filters.audienceInterestTags.filter((value) => value !== interest),
       },
@@ -234,6 +320,7 @@ export function buildActiveFilterChips(
     chips.push({
       id: "gender",
       label: `Gender: ${formatGenderLabel(filters.gender)}`,
+      section: "audience",
       clear: { gender: "" },
     });
   }
@@ -241,6 +328,7 @@ export function buildActiveFilterChips(
     chips.push({
       id: "age",
       label: rangeLabel("Age", filters.ageMin, filters.ageMax),
+      section: "audience",
       clear: { ageMin: "", ageMax: "" },
     });
   }
@@ -248,6 +336,7 @@ export function buildActiveFilterChips(
     chips.push({
       id: "followers",
       label: rangeLabel("Followers", filters.minFollowers, filters.maxFollowers),
+      section: "performance",
       clear: { minFollowers: "", maxFollowers: "" },
     });
   }
@@ -255,26 +344,47 @@ export function buildActiveFilterChips(
     chips.push({
       id: "engagement",
       label: `Eng. ≥ ${filters.minEngagement}%`,
+      section: "performance",
       clear: { minEngagement: "" },
     });
   }
   if (filters.minViews) {
-    chips.push({ id: "views", label: `Views ≥ ${filters.minViews}`, clear: { minViews: "" } });
+    chips.push({
+      id: "views",
+      label: `Views ≥ ${filters.minViews}`,
+      section: "performance",
+      clear: { minViews: "" },
+    });
+  }
+  if (filters.minEstimatedCost || filters.maxEstimatedCost) {
+    chips.push({
+      id: "pricing",
+      label: rangeLabel("Pricing", filters.minEstimatedCost, filters.maxEstimatedCost),
+      section: "advanced",
+      clear: { minEstimatedCost: "", maxEstimatedCost: "" },
+    });
   }
   if (filters.minBrandSafety) {
     chips.push({
       id: "brandSafety",
       label: `Safety ≥ ${filters.minBrandSafety}`,
+      section: "ai",
       clear: { minBrandSafety: "" },
     });
   }
   if (filters.aiNiche.trim()) {
-    chips.push({ id: "aiNiche", label: `Niche: ${filters.aiNiche.trim()}`, clear: { aiNiche: "" } });
+    chips.push({
+      id: "aiNiche",
+      label: `Niche: ${filters.aiNiche.trim()}`,
+      section: "ai",
+      clear: { aiNiche: "" },
+    });
   }
   if (filters.minThinkwayScore) {
     chips.push({
       id: "thinkway",
       label: `TW AI ≥ ${filters.minThinkwayScore}`,
+      section: "ai",
       clear: { minThinkwayScore: "" },
     });
   }
@@ -282,6 +392,7 @@ export function buildActiveFilterChips(
     chips.push({
       id: "brandFit",
       label: `Brand fit ≥ ${filters.minBrandFit}`,
+      section: "ai",
       clear: { minBrandFit: "" },
     });
   }
@@ -289,6 +400,7 @@ export function buildActiveFilterChips(
     chips.push({
       id: "aiQuality",
       label: `AI quality ≥ ${filters.minAiScore}`,
+      section: "ai",
       clear: { minAiScore: "" },
     });
   }
@@ -296,12 +408,78 @@ export function buildActiveFilterChips(
     chips.push({
       id: `category:${category}`,
       label: `Category: ${category}`,
+      section: "creator",
       clear: {
         categories: filters.categories.filter((value) => value !== category),
       },
     });
   }
   return chips;
+}
+
+/** Clears every active filter field belonging to a filter section in one action. */
+export function clearCreatorSearchSectionFilters(
+  section: CreatorSearchFilterSectionId,
+  filters: CreatorSearchFilters
+): CreatorSearchFilters {
+  const next = cloneCreatorSearchFilters(filters);
+
+  switch (section) {
+    case "search":
+      return { ...next, search: "" };
+    case "creator":
+      return {
+        ...next,
+        handle: "",
+        platforms: [],
+        countries: [],
+        languages: [],
+        categories: [],
+      };
+    case "audience":
+      return {
+        ...next,
+        audienceCountries: [],
+        audienceInterestTags: [],
+        gender: "",
+        ageMin: "",
+        ageMax: "",
+      };
+    case "performance":
+      return {
+        ...next,
+        minFollowers: "",
+        maxFollowers: "",
+        minEngagement: "",
+        minViews: "",
+        minEstimatedCost: "",
+        maxEstimatedCost: "",
+      };
+    case "content":
+      return {
+        ...next,
+        contentKeyword: "",
+        contentTags: [],
+        contentLanguages: [],
+      };
+    case "advanced":
+      return {
+        ...next,
+        lastPostWithin: "",
+        advancedSearch: false,
+      };
+    case "ai":
+      return {
+        ...next,
+        minBrandSafety: "",
+        aiNiche: "",
+        minThinkwayScore: "",
+        minBrandFit: "",
+        minAiScore: "",
+      };
+    default:
+      return next;
+  }
 }
 
 function contentSearchTokens(filters: CreatorSearchFilters): string[] {
@@ -329,12 +507,13 @@ function buildCoverageIntent(filters: CreatorSearchFilters) {
     ...filters.audienceInterestTags.map((tag) => tag.trim()).filter(Boolean),
     ...(filters.aiNiche.trim() ? [filters.aiNiche.trim()] : []),
   ];
+  const platformFilters = normalizePlatformFilterValues(filters.platforms);
 
   return {
     country: primaryCountry || undefined,
     categories: filters.categories.length > 0 ? filters.categories : undefined,
     niches: nicheTags.length > 0 ? nicheTags : undefined,
-    platforms: filters.platforms.length > 0 ? filters.platforms : undefined,
+    platforms: platformFilters.length > 0 ? platformFilters : undefined,
     audience: audienceSignal || undefined,
     minFollowers: filters.minFollowers ? Number(filters.minFollowers) : undefined,
     maxFollowers: filters.maxFollowers ? Number(filters.maxFollowers) : undefined,
@@ -354,14 +533,19 @@ export function filtersToBrowseParams(filters: CreatorSearchFilters, page: numbe
     .filter((n) => !Number.isNaN(n));
   const minAiScore = minAi.length ? Math.max(...minAi) : undefined;
   const primaryCountry = filters.countries[0]?.trim().toUpperCase();
+  const primaryLanguage = filters.languages[0]?.trim().toLowerCase();
+  const platformFilters = normalizePlatformFilterValues(filters.platforms);
 
   return {
     search: search || undefined,
-    platform: filters.platforms.length === 1 ? filters.platforms[0] : undefined,
-    platforms: filters.platforms.length > 1 ? filters.platforms : undefined,
+    platform: platformFilters.length === 1 ? platformFilters[0] : undefined,
+    platforms: platformFilters.length > 1 ? platformFilters : undefined,
     country: primaryCountry || undefined,
     creatorCountries: filters.countries.length > 0 ? filters.countries : undefined,
-    language: filters.language.trim() || undefined,
+    language: primaryLanguage || undefined,
+    languages: filters.languages.length > 0 ? filters.languages : undefined,
+    contentLanguages:
+      filters.contentLanguages.length > 0 ? filters.contentLanguages : undefined,
     categories: filters.categories.length > 0 ? filters.categories : undefined,
     audienceCountries:
       filters.audienceCountries.length > 0 ? filters.audienceCountries : undefined,
@@ -392,9 +576,10 @@ export function filtersToRelaxedBrowseParams(
   page: number,
   pageSize: number
 ) {
+  const platformFilters = normalizePlatformFilterValues(filters.platforms);
   return {
-    platform: filters.platforms.length === 1 ? filters.platforms[0] : undefined,
-    platforms: filters.platforms.length > 1 ? filters.platforms : undefined,
+    platform: platformFilters.length === 1 ? platformFilters[0] : undefined,
+    platforms: platformFilters.length > 1 ? platformFilters : undefined,
     productionOnly: true as const,
     page,
     pageSize,
@@ -404,35 +589,225 @@ export function filtersToRelaxedBrowseParams(
 
 /** Active filter count per collapsible panel section. */
 export function creatorSearchSectionFilterCounts(filters: CreatorSearchFilters) {
-  const set = (value: string) => (value.trim() ? 1 : 0);
-  const range = (a: string, b: string) => (a || b ? 1 : 0);
-
-  return {
-    content:
-      set(filters.contentKeyword) +
-      filters.contentTags.length +
-      set(filters.lastPostWithin) +
-      (filters.advancedSearch ? 0 : 0),
-    audience:
-      filters.audienceCountries.length +
-      filters.audienceInterestTags.length +
-      set(filters.gender) +
-      range(filters.ageMin, filters.ageMax),
-    metrics:
-      set(filters.handle) +
-      filters.platforms.length +
-      filters.countries.length +
-      set(filters.language) +
-      range(filters.minFollowers, filters.maxFollowers) +
-      set(filters.minEngagement) +
-      set(filters.minViews) +
-      filters.categories.length,
-    commercial:
-      range(filters.minEstimatedCost, filters.maxEstimatedCost) + set(filters.minBrandSafety),
-    ai:
-      set(filters.minThinkwayScore) +
-      set(filters.aiNiche) +
-      set(filters.minBrandFit) +
-      set(filters.minAiScore),
+  const counts: Record<CreatorSearchFilterSectionId, number> = {
+    search: 0,
+    creator: 0,
+    audience: 0,
+    performance: 0,
+    content: 0,
+    ai: 0,
+    advanced: 0,
   };
+
+  for (const chip of buildActiveFilterChips(filters)) {
+    counts[chip.section] += 1;
+  }
+
+  return counts;
+}
+
+/** Total removable active filter chips (excludes top-bar search when omitted). */
+export function countActiveCreatorSearchFilterChips(
+  filters: CreatorSearchFilters,
+  topBarSearch = ""
+): number {
+  return buildActiveFilterChips(filters, topBarSearch).length;
+}
+
+function pushCriterion(
+  criteria: CampaignSearchCriterion[],
+  seed: Omit<CampaignSearchCriterion, "id"> & { id?: string }
+): void {
+  criteria.push({
+    id: seed.id ?? `filter-${criteria.length + 1}`,
+    kind: seed.kind,
+    label: seed.label,
+    value: seed.value,
+    weight: seed.weight,
+    enabled: seed.enabled,
+    meta: seed.meta,
+  });
+}
+
+/**
+ * Converts manual Discovery filter state into campaign relevance criteria
+ * for zero-results recommendations (reuses campaign-relevance-scoring.ts).
+ */
+export function creatorSearchFiltersToCriteria(
+  filters: CreatorSearchFilters
+): CampaignSearchCriterion[] {
+  const criteria: CampaignSearchCriterion[] = [];
+
+  for (const category of filters.categories) {
+    pushCriterion(criteria, {
+      kind: "category",
+      label: "Category",
+      value: category,
+      weight: 2,
+      enabled: true,
+      meta: { discoveryKey: "category", rawValue: category },
+    });
+  }
+  for (const platform of normalizePlatformFilterValues(filters.platforms)) {
+    pushCriterion(criteria, {
+      kind: "platform",
+      label: "Platform",
+      value: platform,
+      weight: 2,
+      enabled: true,
+      meta: { discoveryKey: "platform", rawValue: platform },
+    });
+  }
+  for (const code of filters.countries) {
+    pushCriterion(criteria, {
+      kind: "country",
+      label: "Creator country",
+      value: code.trim().toUpperCase(),
+      weight: 2,
+      enabled: true,
+      meta: { discoveryKey: "creator_country", rawValue: code },
+    });
+  }
+  for (const code of filters.audienceCountries) {
+    pushCriterion(criteria, {
+      kind: "country",
+      label: "Audience country",
+      value: code.trim().toUpperCase(),
+      weight: 2,
+      enabled: true,
+      meta: { discoveryKey: "audience_country", rawValue: code },
+    });
+  }
+  for (const lang of filters.languages) {
+    pushCriterion(criteria, {
+      kind: "language",
+      label: "Language",
+      value: lang.trim().toLowerCase(),
+      weight: 1.5,
+      enabled: true,
+      meta: { discoveryKey: "language", rawValue: lang },
+    });
+  }
+  for (const lang of filters.contentLanguages) {
+    pushCriterion(criteria, {
+      kind: "language",
+      label: "Content language",
+      value: lang.trim().toLowerCase(),
+      weight: 1.5,
+      enabled: true,
+      meta: { discoveryKey: "language" as DiscoverySearchFilterKey, rawValue: lang },
+    });
+  }
+  for (const interest of filters.audienceInterestTags) {
+    pushCriterion(criteria, {
+      kind: "niche",
+      label: "Audience interest",
+      value: interest,
+      weight: 1.5,
+      enabled: true,
+      meta: { discoveryKey: "niche", rawValue: interest },
+    });
+  }
+  for (const tag of filters.contentTags) {
+    pushCriterion(criteria, {
+      kind: "niche",
+      label: "Content tag",
+      value: tag,
+      weight: 1,
+      enabled: true,
+      meta: { discoveryKey: "content_tag", rawValue: tag },
+    });
+  }
+  if (filters.contentKeyword.trim()) {
+    pushCriterion(criteria, {
+      kind: "niche",
+      label: "Keyword",
+      value: filters.contentKeyword.trim(),
+      weight: 1,
+      enabled: true,
+      meta: { discoveryKey: "content_keyword", rawValue: filters.contentKeyword.trim() },
+    });
+  }
+  if (filters.gender.trim()) {
+    pushCriterion(criteria, {
+      kind: "audience",
+      label: "Gender",
+      value: filters.gender.trim(),
+      weight: 1,
+      enabled: true,
+      meta: { discoveryKey: "audience_gender", rawValue: filters.gender.trim() },
+    });
+  }
+  if (filters.ageMin.trim()) {
+    pushCriterion(criteria, {
+      kind: "audience",
+      label: "Min age",
+      value: filters.ageMin.trim(),
+      weight: 1,
+      enabled: true,
+      meta: { discoveryKey: "audience_age_min", rawValue: filters.ageMin.trim() },
+    });
+  }
+  if (filters.ageMax.trim()) {
+    pushCriterion(criteria, {
+      kind: "audience",
+      label: "Max age",
+      value: filters.ageMax.trim(),
+      weight: 1,
+      enabled: true,
+      meta: { discoveryKey: "audience_age_max", rawValue: filters.ageMax.trim() },
+    });
+  }
+  if (filters.minFollowers.trim()) {
+    pushCriterion(criteria, {
+      kind: "niche",
+      label: "Min followers",
+      value: filters.minFollowers.trim(),
+      weight: 1.5,
+      enabled: true,
+      meta: { discoveryKey: "follower_min", rawValue: filters.minFollowers.trim() },
+    });
+  }
+  if (filters.maxFollowers.trim()) {
+    pushCriterion(criteria, {
+      kind: "niche",
+      label: "Max followers",
+      value: filters.maxFollowers.trim(),
+      weight: 1,
+      enabled: true,
+      meta: { discoveryKey: "follower_max", rawValue: filters.maxFollowers.trim() },
+    });
+  }
+  if (filters.minEngagement.trim()) {
+    pushCriterion(criteria, {
+      kind: "engagement",
+      label: "Engagement",
+      value: filters.minEngagement.trim(),
+      weight: 1.5,
+      enabled: true,
+      meta: { discoveryKey: "engagement_min", rawValue: filters.minEngagement.trim() },
+    });
+  }
+  if (filters.minBrandSafety.trim()) {
+    pushCriterion(criteria, {
+      kind: "brand_fit",
+      label: "Brand safety",
+      value: filters.minBrandSafety.trim(),
+      weight: 1,
+      enabled: true,
+      meta: { discoveryKey: "brand_safety_min", rawValue: filters.minBrandSafety.trim() },
+    });
+  }
+  if (filters.minThinkwayScore.trim()) {
+    pushCriterion(criteria, {
+      kind: "authenticity",
+      label: "Thinkway score",
+      value: filters.minThinkwayScore.trim(),
+      weight: 1,
+      enabled: true,
+      meta: { discoveryKey: "brand_fit_min", rawValue: filters.minThinkwayScore.trim() },
+    });
+  }
+
+  return criteria;
 }

@@ -34,6 +34,25 @@ export function TrendBarChart({
     return <ChartEmptyState />;
   }
 
+  if (chart.filtered.length === 1) {
+    const point = chart.filtered[0];
+    return (
+      <div
+        className="platform-v6-trend-single"
+        role="img"
+        aria-label={`${ariaLabel}: ${formatChartAxisValue(point.value)} in ${point.label}`}
+      >
+        <div className="platform-v6-trend-single-val">
+          {formatChartAxisValue(point.value)}
+        </div>
+        <div className="platform-v6-trend-single-period">{point.label}</div>
+        <p className="platform-v6-trend-single-caption">
+          Trend appears once 2+ periods are available
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="platform-v6-sparkline" role="img" aria-label={ariaLabel}>

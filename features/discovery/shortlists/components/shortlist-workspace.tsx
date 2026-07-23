@@ -4,16 +4,31 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
-  FileTextIcon,
-  GitCompareArrowsIcon,
+  ArchiveIcon,
+  MoreHorizontalIcon,
   PencilIcon,
   SendIcon,
   UserPlusIcon,
+  XCircleIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { glassFlyoutContentClass } from "@/components/shared/navigation/glass-selection-flyout";
+import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { GenerateOutputsLauncher } from "@/features/campaign-outputs/components/generate-outputs-launcher-lazy";
+import { OpenCampaignStudioLauncher } from "@/features/campaign-outputs/components/open-campaign-studio-launcher";
+import type { CampaignSeed } from "@/features/campaign-outputs/hydration/hydration-types";
+
+import { discoverySelectionFlyoutContentClass } from "@/features/discovery/components/design-system/discovery-selection-flyout";
 import { cn } from "@/lib/utils";
+import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet-lazy";
+import { useCreatorDetailSheetState } from "@/features/discovery/hooks/use-creator-detail-sheet-state";
 import { stashCompareQueue } from "@/features/discovery/components/creator-search/creator-search-utils";
 import { refreshCreatorsBatchAction } from "@/features/discovery/enrichment/actions";
 import { pollCreatorsAfterBatchRefresh } from "@/features/discovery/enrichment/poll-creator-refresh";
@@ -42,8 +57,14 @@ import {
   bulkRejectCreators,
   bulkRemoveCreatorsFromShortlist,
   bulkSubmitCreatorsForReview,
+  collapseShortlistCreators,
+  uncollapseShortlistCreators,
   submitEntireShortlistForReview,
 } from "../bulk-actions";
+import {
+  selectedItemsCanCollapse,
+  selectedItemsCanUncollapse,
+} from "../shortlist-collapse-groups";
 import {
   countSelected,
   filterEligibleForMove,
@@ -51,6 +72,7 @@ import {
   isAllVisibleSelected,
   isIndeterminateSelection,
   pruneSelection,
+  toggleGroupSelection,
   toggleItemSelection,
   toggleSelectAll,
 } from "../bulk-selection-policy";
@@ -60,7 +82,6 @@ import {
   cancelShortlist,
   rejectShortlist,
   reopenShortlist,
-  removeCreatorFromShortlistV2,
 } from "../actions";
 import { canEditCreators, canMoveToCampaign, isMovementLocked } from "../transitions";
 import type {
@@ -74,7 +95,6 @@ import { GenerateQuotationShortlistDialog } from "./generate-quotation-shortlist
 import { MoveToCampaignDialog } from "./move-to-campaign-dialog";
 import { ShortlistEditDialog } from "./shortlist-edit-dialog";
 import {
-  ShortlistQuotationActions,
   ShortlistQuotationPanel,
 } from "./shortlist-quotation-panel";
 import { ShortlistBulkToolbar } from "./shortlist-bulk-toolbar";
@@ -83,20 +103,15 @@ import {
   ShortlistCreatorEmptyState,
   ShortlistCreatorList,
 } from "./shortlist-creator-list";
+import { resolveShortlistClientLabel } from "./shortlist-creator-meta-columns";
 import { ShortlistMetricsRefreshBanner } from "./shortlist-metrics-refresh-banner";
 import { SubmitShortlistDialog } from "./submit-shortlist-dialog";
 import {
   AssignmentStatusBadge,
+  ShortlistWorkspaceStatusPill,
 } from "./shortlist-badges";
-import {
-  ShortlistDetailCard,
-  ShortlistHeaderPill,
-  ShortlistToolbarButton,
-} from "./shortlist-detail-primitives";
-import {
-  SHORTLIST_STATUS_LABELS,
-  SHORTLIST_VISIBILITY_LABELS,
-} from "../constants";
+import { ShortlistToolbarButton } from "./shortlist-detail-primitives";
+
 
 const MOVEMENT_LABELS: Record<CreatorMovementAction, string> = {
   discovery_to_shortlist: "Added from discovery",
@@ -115,23 +130,33 @@ const MOVEMENT_LABELS: Record<CreatorMovementAction, string> = {
 
 export function ShortlistWorkspace({
   detail,
+  seed,
   campaigns,
   brands,
   clients,
 }: {
   detail: ShortlistDetail;
+  seed: CampaignSeed;
   campaigns: ShortlistCampaignOption[];
   brands: ShortlistBrandOption[];
   clients: ShortlistClientOption[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const confirmDelete = useConfirmDelete();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [moveOpen, setMoveOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [submitAllOpen, setSubmitAllOpen] = useState(false);
   const [quoteAllOpen, setQuoteAllOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const {
+    open: detailOpen,
+    creator: detailCreator,
+    openCreator,
+    onOpenChange: onDetailOpenChange,
+    setCreator: setDetailCreator,
+  } = useCreatorDetailSheetState();
   const [exportTemplate, setExportTemplate] = useState<ShortlistTemplateVariant>("showcase");
   const [enrichmentOverrides, setEnrichmentOverrides] = useState<
     Map<string, CreatorEnrichmentStatus>
@@ -179,13 +204,25 @@ export function ShortlistWorkspace({
     [selectedItems]
   );
 
+  const canCollapseSelected = useMemo(
+    () => editable && selectedItemsCanCollapse(selectedItems),
+    [editable, selectedItems]
+  );
+
+  const canUncollapseSelected = useMemo(
+    () => editable && selectedItemsCanUncollapse(selectedItems),
+    [editable, selectedItems]
+  );
+
   const existingItems = useMemo(
     () =>
-      detail.creators.map((item) => ({
-        unified_id: item.unified_id,
-        profile_id: item.profile_id,
-        influencer_id: item.influencer_id,
-      })),
+      detail.creators
+        .filter((item) => !item.collapse_group_id)
+        .map((item) => ({
+          unified_id: item.unified_id,
+          profile_id: item.profile_id,
+          influencer_id: item.influencer_id,
+        })),
     [detail.creators]
   );
 
@@ -197,11 +234,20 @@ export function ShortlistWorkspace({
     });
   }, []);
 
+  const handleOpenCreator = useCallback(
+    (creator: UnifiedCreatorResult) => {
+      const patch = creatorPatches.get(creator.unified_id);
+      openCreator(patch ?? creator);
+    },
+    [creatorPatches, openCreator]
+  );
+
   useEffect(() => {
     setCreatorPatches((prev) => (prev.size === 0 ? prev : new Map()));
 
     setEnrichmentOverrides((prev) => {
       if (prev.size === 0) return prev;
+      let changed = false;
       const next = new Map(prev);
       for (const item of detail.creators) {
         const unifiedId = item.unified_id ?? item.creator?.unified_id ?? null;
@@ -213,9 +259,10 @@ export function ShortlistWorkspace({
           !isEnrichmentInProgress(serverStatus)
         ) {
           next.delete(unifiedId);
+          changed = true;
         }
       }
-      return next;
+      return changed ? next : prev;
     });
   }, [detail.creators]);
 
@@ -235,6 +282,25 @@ export function ShortlistWorkspace({
         return { ...item, creator };
       }),
     [detail.creators, creatorPatches, enrichmentOverrides]
+  );
+
+  // Keep all hooks above event handlers — Fast Refresh can otherwise mismatch hook order
+  // after edits when a later useCallback sits below large handler blocks.
+  const runQuotation = useCallback(
+    (itemIds?: string[]) => {
+      startTransition(async () => {
+        const res = itemIds?.length
+          ? await createQuotationFromShortlist(detail.id, { itemIds })
+          : await createQuotationFromShortlist(detail.id);
+        if (!res.ok) {
+          toast.error(res.message);
+          return;
+        }
+        toast.success(res.message ?? "Quotation created.");
+        if (res.data?.id) router.push(quotationDetailPath(res.data.id));
+      });
+    },
+    [detail.id, router]
   );
 
   function selectedCreators(): UnifiedCreatorResult[] {
@@ -354,24 +420,30 @@ export function ShortlistWorkspace({
     });
   }
 
-  const runQuotation = useCallback(
-    (itemIds?: string[]) => {
-      startTransition(async () => {
-        const res = itemIds?.length
-          ? await createQuotationFromShortlist(detail.id, { itemIds })
-          : await createQuotationFromShortlist(detail.id);
-        if (!res.ok) {
-          toast.error(res.message);
-          return;
-        }
-        toast.success(res.message ?? "Quotation created.");
-        if (res.data?.id) router.push(quotationDetailPath(res.data.id));
-      });
-    },
-    [detail.id, router]
-  );
+  function handleBulkCollapse() {
+    if (!canCollapseSelected) return;
+    runAction(async () => {
+      const result = await collapseShortlistCreators(detail.id, selectedItemIdList);
+      if (result.ok) clearSelection();
+      return result;
+    });
+  }
 
-  function handleGenerateQuotation() {
+  function handleBulkUncollapse() {
+    if (!canUncollapseSelected) return;
+    runAction(async () => {
+      const result = await uncollapseShortlistCreators(detail.id, selectedItemIdList);
+      if (result.ok) clearSelection();
+      return result;
+    });
+  }
+
+  const existingQuotationLabel =
+    latestQuotation?.serial_number?.trim() ||
+    latestQuotation?.name?.trim() ||
+    null;
+
+  function handleGenerateNewQuotation() {
     if (detail.creators.length === 0) {
       toast.error("Add creators to this shortlist first.");
       return;
@@ -380,12 +452,30 @@ export function ShortlistWorkspace({
       runQuotation(selectedItemIdList);
       return;
     }
-    setQuoteAllOpen(true);
+    setQuoteAllOpen(false);
+    runQuotation();
+  }
+
+  function handleAddSelectedToQuotation() {
+    if (detail.creators.length === 0) {
+      toast.error("Add creators to this shortlist first.");
+      return;
+    }
+    if (selectedCount > 0) {
+      handleAddToQuotation(selectedItemIdList);
+      return;
+    }
+    setQuoteAllOpen(false);
+    handleAddToQuotation(detail.creators.map((item) => item.item_id));
   }
 
   function handleGenerateNewVersion() {
     if (!latestQuotation) {
-      handleGenerateQuotation();
+      if (selectedCount === 0) {
+        setQuoteAllOpen(true);
+        return;
+      }
+      handleGenerateNewQuotation();
       return;
     }
     if (canGenerateQuotationVersion(latestQuotation.status)) {
@@ -404,15 +494,20 @@ export function ShortlistWorkspace({
       });
       return;
     }
-    handleGenerateQuotation();
+    if (selectedCount === 0) {
+      setQuoteAllOpen(true);
+      return;
+    }
+    handleGenerateNewQuotation();
   }
 
-  function handleAddToQuotation(itemId: string) {
+  function handleAddToQuotation(itemIds: string | string[]) {
+    const ids = Array.isArray(itemIds) ? itemIds : [itemIds];
     startTransition(async () => {
       try {
         const res = await addShortlistCreatorsToQuotation({
           shortlistId: detail.id,
-          itemIds: [itemId],
+          itemIds: ids,
         });
         if (!res.ok) {
           toast.error(res.message);
@@ -434,16 +529,6 @@ export function ShortlistWorkspace({
     });
   }
 
-  function handleSubmitForReview() {
-    if (selectedCount > 0) {
-      runAction(async () =>
-        bulkSubmitCreatorsForReview(detail.id, selectedItemIdList)
-      );
-      return;
-    }
-    setSubmitAllOpen(true);
-  }
-
   function handleSubmitEntireShortlist() {
     runAction(async () => {
       const result = await submitEntireShortlistForReview(detail.id);
@@ -455,7 +540,14 @@ export function ShortlistWorkspace({
     });
   }
 
-  function handleBulkRemove() {
+  async function handleBulkRemove() {
+    const count = selectedItemIdList.length;
+    const ok = await confirmDelete(
+      `Remove ${count} selected creator${count === 1 ? "" : "s"} from this shortlist? This cannot be undone.`,
+      "Remove from shortlist?"
+    );
+    if (!ok) return;
+
     runAction(async () => {
       const result = await bulkRemoveCreatorsFromShortlist(detail.id, selectedItemIdList);
       if (result.ok) clearSelection();
@@ -504,127 +596,58 @@ export function ShortlistWorkspace({
     setSelectedIds(toggleSelectAll(visibleItemIds, effectiveSelectedIds, !allSelected));
   }
 
+  const clientLabel = resolveShortlistClientLabel(
+    detail.name,
+    detail.brand_name,
+    detail.client_name
+  );
+
   return (
-    <div className="space-y-4">
-      <ShortlistDetailCard className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 space-y-2.5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
-            {detail.serial_number ?? "—"}
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
-              {detail.name}
-            </h1>
-            {canEditDetails ? (
-              <button
-                type="button"
-                onClick={() => setEditOpen(true)}
-                disabled={isPending}
-                className="inline-flex size-8 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-colors hover:border-slate-300 hover:bg-muted/50 hover:text-foreground disabled:opacity-50"
-                aria-label="Edit shortlist"
-              >
-                <PencilIcon className="size-3.5" />
-              </button>
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-background">
+      <div className="sticky top-0 z-20 flex shrink-0 items-center justify-between gap-3 border-b border-border bg-background px-8 py-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+          <h1 className="min-w-0 truncate text-[19px] font-bold tracking-[-0.022em] text-[var(--text)]">
+            {detail.name}
+            {detail.serial_number ? (
+              <span className="ml-2 font-bold uppercase tracking-[0.1em] text-[#9aa3b5] tabular-nums text-[10.5px]">
+                {detail.serial_number}
+              </span>
             ) : null}
-          </div>
-          {detail.description ? (
-            <p className="text-sm text-muted-foreground">{detail.description}</p>
-          ) : null}
-          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-            <ShortlistHeaderPill>{SHORTLIST_STATUS_LABELS[detail.status]}</ShortlistHeaderPill>
-            <ShortlistHeaderPill>
-              {SHORTLIST_VISIBILITY_LABELS[detail.visibility]}
-            </ShortlistHeaderPill>
-            <ShortlistHeaderPill>
-              Owner:{" "}
-              <strong className="ml-0.5 font-medium text-foreground">
-                {detail.owner_name ?? "—"}
-              </strong>
-            </ShortlistHeaderPill>
-            {detail.client_name ? (
-              <ShortlistHeaderPill>Legal entity: {detail.client_name}</ShortlistHeaderPill>
-            ) : null}
-            {detail.brand_name ? (
-              <ShortlistHeaderPill>Brand: {detail.brand_name}</ShortlistHeaderPill>
-            ) : null}
-          </div>
-          {detail.status === "approved" && detail.approved_by_name ? (
-            <p className="text-xs text-emerald-600 dark:text-emerald-400">
-              Approved by {detail.approved_by_name}
-              {detail.approved_at
-                ? ` · ${format(new Date(detail.approved_at), "MMM d, yyyy")}`
-                : ""}
-            </p>
-          ) : null}
-          {detail.status === "cancelled" && detail.cancellation_reason ? (
-            <p className="text-xs text-destructive">
-              Cancelled: {detail.cancellation_reason}
-            </p>
+          </h1>
+          <ShortlistWorkspaceStatusPill status={detail.status} />
+          {canEditDetails ? (
+            <button
+              type="button"
+              onClick={() => setEditOpen(true)}
+              disabled={isPending}
+              className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-colors hover:bg-muted/30 hover:text-[var(--text-2)] disabled:opacity-50"
+              aria-label="Edit shortlist"
+            >
+              <PencilIcon className="size-3.5" />
+            </button>
           ) : null}
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center gap-2 pt-0.5">
-          {detail.status === "draft" ? (
-            <ShortlistToolbarButton
-              variant="primary"
-              onClick={handleSubmitForReview}
-              disabled={isPending || detail.creators.length === 0}
-            >
-              <SendIcon className="size-3.5" />
-              Submit for review
-            </ShortlistToolbarButton>
-          ) : null}
-          {detail.status === "under_review" && detail.canApprove ? (
-            <>
-              <ShortlistToolbarButton
-                variant="primary"
-                onClick={() => runAction(() => approveShortlist(detail.id))}
-                disabled={isPending}
-              >
-                Approve
-              </ShortlistToolbarButton>
-              <ShortlistToolbarButton
-                onClick={() => runAction(() => rejectShortlist(detail.id))}
-                disabled={isPending}
-              >
-                Return to draft
-              </ShortlistToolbarButton>
-            </>
-          ) : null}
-          {detail.status === "approved" && selectedCount > 0 ? (
-            <ShortlistToolbarButton onClick={handleBulkMove} disabled={isPending}>
-              Move to campaign ({selectedCount})
-            </ShortlistToolbarButton>
-          ) : null}
-          {detail.status === "cancelled" ? (
-            <ShortlistToolbarButton
-              onClick={() => runAction(() => reopenShortlist(detail.id))}
-              disabled={isPending}
-            >
-              Reopen
-            </ShortlistToolbarButton>
-          ) : null}
-          {detail.status !== "archived" && detail.status !== "cancelled" ? (
-            <ShortlistToolbarButton
-              onClick={() => runAction(() => cancelShortlist(detail.id))}
-              disabled={isPending}
-            >
-              Cancel
-            </ShortlistToolbarButton>
-          ) : null}
-          {detail.status !== "archived" ? (
-            <ShortlistToolbarButton
-              variant="danger"
-              onClick={() => runAction(() => archiveShortlist(detail.id))}
-              disabled={isPending}
-            >
-              Archive
-            </ShortlistToolbarButton>
-          ) : null}
+        <div className="flex shrink-0 items-center gap-2">
+          <OpenCampaignStudioLauncher
+            seed={seed}
+            tab="studio"
+            workspace={{ type: "shortlist", id: detail.id }}
+            variant="ghost"
+            size="md"
+            showIcon
+          />
+          <GenerateOutputsLauncher
+            seed={seed}
+            tab="outputs"
+            workspace={{ type: "shortlist", id: detail.id }}
+          />
         </div>
+      </div>
 
+      <section className={cn(discoverySelectionFlyoutContentClass(selectedCount > 0))}>
         {hasLinkedQuotation ? (
-          <div className="w-full border-t border-border pt-4">
+          <div className="border-b border-border px-8 py-2">
             <ShortlistQuotationPanel
               quotations={linkedQuotations}
               onGenerateNewVersion={handleGenerateNewVersion}
@@ -632,60 +655,58 @@ export function ShortlistWorkspace({
             />
           </div>
         ) : null}
-      </ShortlistDetailCard>
+        <div className="flex items-center justify-between gap-6 px-8 py-3.5">
+          <div className="flex min-w-0 flex-1 items-center gap-5">
+            <h2 className="whitespace-nowrap text-[15px] font-extrabold tracking-[-0.02em] text-[var(--text)]">
+              Creators{" "}
+              <span className="font-medium text-[#9aa3b5]">· {displayCreators.length}</span>
+            </h2>
 
-      <ShortlistDetailCard padding="none" className={cn(glassFlyoutContentClass(selectedCount > 0), "overflow-hidden")}>
-        <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:px-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="min-w-0 flex-1 space-y-1">
-              <p className="text-sm font-bold text-foreground">
-                Creators{" "}
-                <span className="font-normal text-muted-foreground">
-                  ({detail.creators.length})
-                </span>
-              </p>
-              <p className="max-w-xl text-xs leading-relaxed text-muted-foreground">
-                Discovery-style creator rows with review status. Select creators for bulk
-                actions.
-              </p>
-            </div>
-
-            <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
-            {detail.creators.length > 0 ? (
-              <>
-                {hasLinkedQuotation ? (
-                  <ShortlistQuotationActions
-                    quotations={linkedQuotations}
-                    onGenerateNewVersion={handleGenerateNewVersion}
-                    busy={isPending}
-                  />
-                ) : (
-                  <ShortlistToolbarButton
-                    onClick={handleGenerateQuotation}
-                    disabled={isPending}
+            {clientLabel || detail.brand_name ? (
+              <div className="flex min-w-0 items-center gap-2.5 border-l border-border/60 pl-5">
+                {clientLabel ? (
+                  <span
+                    className="truncate text-[13px] font-semibold tracking-[-0.015em] text-foreground"
+                    title={clientLabel}
                   >
-                    <FileTextIcon className="size-3.5" />
-                    Generate quotation
-                  </ShortlistToolbarButton>
-                )}
-                <ShortlistToolbarButton onClick={handleCompare} disabled={isPending}>
-                  <GitCompareArrowsIcon className="size-3.5" />
-                  Compare
-                </ShortlistToolbarButton>
-                <ShortlistCreatorToolbarActions
-                  shortlistId={detail.id}
-                  exportTemplate={exportTemplate}
-                  onExportTemplateChange={setExportTemplate}
-                  selectedItemIds={selectedItemIdList}
-                  exportRevision={detail.updated_at}
-                  busy={isPending || refreshingMetrics}
-                  onRefreshMetrics={handleRefreshMetrics}
-                />
-              </>
+                    {clientLabel}
+                  </span>
+                ) : null}
+                {clientLabel && detail.brand_name ? (
+                  <span
+                    aria-hidden
+                    className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/55"
+                  >
+                    ×
+                  </span>
+                ) : null}
+                {detail.brand_name ? (
+                  <span
+                    className="truncate text-[13px] font-medium tracking-[-0.01em] text-[var(--text-2)]"
+                    title={detail.brand_name}
+                  >
+                    {detail.brand_name}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            {detail.creators.length > 0 ? (
+              <ShortlistCreatorToolbarActions
+                shortlistId={detail.id}
+                exportTemplate={exportTemplate}
+                onExportTemplateChange={setExportTemplate}
+                selectedItemIds={selectedItemIdList}
+                exportRevision={detail.updated_at}
+                busy={isPending}
+              />
             ) : null}
             {editable ? (
               <ShortlistToolbarButton
                 variant="primary"
+                size="sm"
                 onClick={() => setAddOpen(true)}
                 disabled={isPending}
               >
@@ -693,7 +714,20 @@ export function ShortlistWorkspace({
                 Add creators
               </ShortlistToolbarButton>
             ) : null}
-            </div>
+            <ShortlistWorkspaceOverflowMenu
+              detail={detail}
+              selectedCount={selectedCount}
+              isPending={isPending}
+              onApprove={() => runAction(() => approveShortlist(detail.id))}
+              onReturnToDraft={() => runAction(() => rejectShortlist(detail.id))}
+              onBulkMove={handleBulkMove}
+              onReopen={() => runAction(() => reopenShortlist(detail.id))}
+              onCancel={() => runAction(() => cancelShortlist(detail.id))}
+              onArchive={() => runAction(() => archiveShortlist(detail.id))}
+              onEdit={() => setEditOpen(true)}
+              onSubmitForReview={() => setSubmitAllOpen(true)}
+              canEditDetails={canEditDetails}
+            />
           </div>
         </div>
 
@@ -705,7 +739,7 @@ export function ShortlistWorkspace({
           />
         ) : null}
 
-        {detail.creators.length === 0 ? (
+        {displayCreators.length === 0 ? (
           <ShortlistCreatorEmptyState
             editable={editable}
             onAddCreators={() => setAddOpen(true)}
@@ -717,8 +751,6 @@ export function ShortlistWorkspace({
             selectable={selectable}
             allSelected={allSelected}
             indeterminate={indeterminate}
-            editable={editable}
-            busy={isPending}
             onToggleSelect={(itemId) =>
               setSelectedIds(
                 toggleItemSelection(
@@ -728,20 +760,21 @@ export function ShortlistWorkspace({
                 )
               )
             }
-            onToggleSelectAll={handleToggleSelectAll}
-            onRemove={(itemId) =>
-              runAction(() => removeCreatorFromShortlistV2(detail.id, itemId))
+            onToggleSelectGroup={(itemIds) =>
+              setSelectedIds(toggleGroupSelection(itemIds, effectiveSelectedIds))
             }
-            onAddToQuotation={handleAddToQuotation}
-            onCreatorDeleted={() => router.refresh()}
+            onToggleSelectAll={handleToggleSelectAll}
+            onOpenCreator={handleOpenCreator}
           />
         )}
-      </ShortlistDetailCard>
+      </section>
 
       {detail.movedAssignments.length > 0 ? (
-        <ShortlistDetailCard>
-          <h2 className="text-sm font-bold text-foreground">Moved to campaigns</h2>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
+        <section className="border-t border-border px-8 py-5">
+          <h2 className="text-[15px] font-extrabold tracking-[-0.02em] text-[var(--text)]">
+            Moved to campaigns
+          </h2>
+          <p className="mt-0.5 text-[12px] text-[var(--text-3)]">
             Creators moved from this shortlist and their current assignment status.
           </p>
           <div className="mt-4 space-y-2">
@@ -764,12 +797,14 @@ export function ShortlistWorkspace({
               </div>
             ))}
           </div>
-        </ShortlistDetailCard>
+        </section>
       ) : null}
 
-      <ShortlistDetailCard>
-        <h2 className="text-sm font-bold text-foreground">Movement history</h2>
-        <p className="mt-0.5 text-[11px] text-muted-foreground">
+      <section className="px-8 pb-10 pt-6">
+        <h2 className="text-[15px] font-extrabold tracking-[-0.02em] text-[var(--text)]">
+          Movement history
+        </h2>
+        <p className="mt-0.5 text-[12px] text-[var(--text-3)]">
           Audit trail of every creator movement.
         </p>
         {detail.movements.length === 0 ? (
@@ -777,32 +812,32 @@ export function ShortlistWorkspace({
             No movements recorded yet.
           </p>
         ) : (
-          <div className="mt-4">
+          <div className="mt-[18px]">
             {detail.movements.map((movement, index) => (
               <div
                 key={movement.id}
                 className={cn(
-                  "relative flex gap-3 py-2.5",
+                  "relative flex gap-3 py-[11px]",
                   index < detail.movements.length - 1 && "border-b border-border"
                 )}
               >
                 {index < detail.movements.length - 1 ? (
                   <span
-                    className="absolute left-[7px] top-[26px] bottom-[-10px] w-px bg-border"
+                    className="absolute bottom-[-11px] left-[7px] top-[27px] w-px bg-border"
                     aria-hidden
                   />
                 ) : null}
                 <span
-                  className="relative z-[1] mt-0.5 size-[15px] shrink-0 rounded-full border-2 border-primary bg-primary/10 shadow-[0_0_0_3px_rgba(0,87,255,0.1)]"
+                  className="relative z-[1] mt-0.5 size-[15px] shrink-0 rounded-full border-[2.5px] border-primary bg-background shadow-[0_0_0_3px_rgba(0,87,255,0.09)]"
                   aria-hidden
                 />
                 <div className="min-w-0 pb-0.5">
-                  <p className="text-xs font-semibold text-foreground">
+                  <p className="text-[12.5px] font-bold text-[var(--text)]">
                     {MOVEMENT_LABELS[movement.action]}
                   </p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  <p className="mt-0.5 text-[11.5px] text-[var(--text-3)]">
                     {movement.performed_by_name ? (
-                      <span className="font-medium text-primary">
+                      <span className="font-semibold text-[var(--blue-text)]">
                         {movement.performed_by_name}
                       </span>
                     ) : (
@@ -817,7 +852,9 @@ export function ShortlistWorkspace({
             ))}
           </div>
         )}
-      </ShortlistDetailCard>
+      </section>
+
+      <div className="h-10 shrink-0" aria-hidden />
 
       <ShortlistEditDialog
         open={editOpen}
@@ -854,10 +891,9 @@ export function ShortlistWorkspace({
         onOpenChange={setQuoteAllOpen}
         creatorCount={detail.creators.length}
         shortlistName={detail.name}
-        onConfirm={() => {
-          setQuoteAllOpen(false);
-          runQuotation();
-        }}
+        existingQuotationLabel={existingQuotationLabel}
+        onGenerateNew={handleGenerateNewQuotation}
+        onAddToQuotation={handleAddSelectedToQuotation}
         busy={isPending}
       />
 
@@ -867,6 +903,16 @@ export function ShortlistWorkspace({
         shortlistId={detail.id}
         existingItems={existingItems}
         onAdded={() => router.refresh()}
+      />
+
+      <CreatorDetailSheet
+        creator={detailCreator}
+        open={detailOpen}
+        onOpenChange={onDetailOpenChange}
+        onCreatorUpdated={(next) => {
+          patchCreatorInList(next);
+          setDetailCreator(next);
+        }}
       />
 
       <ShortlistBulkToolbar
@@ -883,12 +929,154 @@ export function ShortlistWorkspace({
         onRefreshMetrics={handleRefreshMetrics}
         onExportSelected={handleExportSelected}
         onMoveSelected={handleBulkMove}
-        onGenerateQuotation={handleGenerateQuotation}
+        onGenerateNewQuotation={handleGenerateNewQuotation}
+        onAddToQuotation={handleAddSelectedToQuotation}
+        existingQuotationLabel={existingQuotationLabel}
+        showCollapse={canCollapseSelected}
+        onCollapseSelected={handleBulkCollapse}
+        showUncollapse={canUncollapseSelected}
+        onUncollapseSelected={handleBulkUncollapse}
         onApproveSelected={handleBulkApprove}
         onRejectSelected={handleBulkReject}
         onCancelSelected={handleBulkCancel}
         onClearSelection={clearSelection}
       />
     </div>
+  );
+}
+
+function ShortlistWorkspaceOverflowMenu({
+  detail,
+  selectedCount,
+  isPending,
+  canEditDetails,
+  onApprove,
+  onReturnToDraft,
+  onBulkMove,
+  onReopen,
+  onCancel,
+  onArchive,
+  onEdit,
+  onSubmitForReview,
+}: {
+  detail: ShortlistDetail;
+  selectedCount: number;
+  isPending: boolean;
+  canEditDetails: boolean;
+  onApprove: () => void;
+  onReturnToDraft: () => void;
+  onBulkMove: () => void;
+  onReopen: () => void;
+  onCancel: () => void;
+  onArchive: () => void;
+  onEdit: () => void;
+  onSubmitForReview: () => void;
+}) {
+  const items: Array<{
+    key: string;
+    label: string;
+    onSelect: () => void;
+    destructive?: boolean;
+    show: boolean;
+  }> = [
+    {
+      key: "edit",
+      label: "Edit shortlist",
+      onSelect: onEdit,
+      show: canEditDetails,
+    },
+    {
+      key: "submit-all",
+      label: "Submit for review",
+      onSelect: onSubmitForReview,
+      show: detail.status === "draft" && detail.creators.length > 0,
+    },
+    {
+      key: "approve",
+      label: "Approve",
+      onSelect: onApprove,
+      show: detail.status === "under_review" && detail.canApprove,
+    },
+    {
+      key: "return",
+      label: "Return to draft",
+      onSelect: onReturnToDraft,
+      show: detail.status === "under_review" && detail.canApprove,
+    },
+    {
+      key: "move",
+      label: `Move to campaign (${selectedCount})`,
+      onSelect: onBulkMove,
+      show: detail.status === "approved" && selectedCount > 0,
+    },
+    {
+      key: "reopen",
+      label: "Reopen",
+      onSelect: onReopen,
+      show: detail.status === "cancelled",
+    },
+    {
+      key: "cancel",
+      label: "Cancel",
+      onSelect: onCancel,
+      show: detail.status !== "archived" && detail.status !== "cancelled",
+    },
+    {
+      key: "archive",
+      label: "Archive",
+      onSelect: onArchive,
+      destructive: true,
+      show: detail.status !== "archived",
+    },
+  ].filter((item) => item.show);
+
+  if (items.length === 0) return null;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          disabled={isPending}
+          aria-label="More shortlist actions"
+          className="inline-flex size-8 items-center justify-center rounded-[9px] border border-border bg-background text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground disabled:opacity-50"
+        >
+          <MoreHorizontalIcon className="size-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        {items.map((item, index) => {
+          const showSeparator =
+            item.destructive &&
+            index > 0 &&
+            !items.slice(0, index).some((prev) => prev.destructive);
+          return (
+            <div key={item.key}>
+              {showSeparator ? <DropdownMenuSeparator /> : null}
+              <DropdownMenuItem
+                variant={item.destructive ? "destructive" : "default"}
+                disabled={isPending}
+                onSelect={(event) => {
+                  event.preventDefault();
+                  item.onSelect();
+                }}
+                className="gap-2"
+              >
+                {item.key === "archive" ? (
+                  <ArchiveIcon className="size-3.5" />
+                ) : item.key === "cancel" ? (
+                  <XCircleIcon className="size-3.5" />
+                ) : item.key === "edit" ? (
+                  <PencilIcon className="size-3.5" />
+                ) : item.key === "submit-all" ? (
+                  <SendIcon className="size-3.5" />
+                ) : null}
+                {item.label}
+              </DropdownMenuItem>
+            </div>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

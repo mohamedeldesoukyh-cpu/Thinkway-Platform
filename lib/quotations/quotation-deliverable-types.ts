@@ -40,6 +40,7 @@ export const QUOTATION_POST_TYPES = [
   { value: "instagram_live", label: "IG Live" },
   { value: "ig_collab_post", label: "IG Collab Post" },
   { value: "usage_right", label: "Usage Right" },
+  { value: "boosting", label: "Boosting" },
 ] as const;
 
 export type QuotationPostType = (typeof QUOTATION_POST_TYPES)[number]["value"];
@@ -60,7 +61,7 @@ export function deliverableTypeLines(
   deliverable: {
     type?: string | null;
     types?: string[] | null;
-    type_lines?: QuotationDeliverableTypeLine[] | null;
+    type_lines?: Array<{ type?: string | null; quantity?: number | null }> | null;
     quantity?: number | null;
   }
 ): QuotationDeliverableTypeLine[] {
@@ -98,9 +99,61 @@ export function formatTypeLinesSummary(
 ): string {
   const filled = lines.filter((line) => line.type.trim());
   if (!filled.length) return "Select type…";
+  return typeLinesAutoDescription(filled);
+}
+
+/** Auto service-description text from selected type lines (empty when none). */
+export function typeLinesAutoDescription(
+  lines: QuotationDeliverableTypeLine[]
+): string {
+  const filled = lines.filter((line) => line.type.trim());
+  if (!filled.length) return "";
   return filled
-    .map((line) => `${line.quantity}× ${quotationPostTypeLabel(line.type)}`)
+    .map(
+      (line) =>
+        `${normalizeTypeLineQuantity(line.quantity)}× ${quotationPostTypeLabel(line.type)}`
+    )
     .join(" + ");
+}
+
+/**
+ * Keep service description helpful when types change:
+ * - empty / still matching the previous auto summary → replace with new summary
+ * - auto summary + custom notes → refresh the summary prefix, keep notes
+ * - fully custom text → append newly added type fragments only
+ */
+export function syncServiceDescriptionWithTypeLines(
+  currentDescription: string | null | undefined,
+  previousLines: QuotationDeliverableTypeLine[],
+  nextLines: QuotationDeliverableTypeLine[]
+): string {
+  const prevAuto = typeLinesAutoDescription(previousLines);
+  const nextAuto = typeLinesAutoDescription(nextLines);
+  const current = (currentDescription ?? "").trimEnd();
+
+  if (!current) return nextAuto;
+  if (current === prevAuto) return nextAuto;
+
+  if (prevAuto && current.startsWith(prevAuto)) {
+    const suffix = current.slice(prevAuto.length);
+    if (!nextAuto) {
+      return suffix.replace(/^\s*[·+|,—\-–]+\s*/, "").trim();
+    }
+    if (!suffix.trim()) return nextAuto;
+    return `${nextAuto}${suffix}`;
+  }
+
+  const prevTypes = new Set(selectedTypesFromTypeLines(previousLines));
+  let result = current;
+  for (const line of nextLines) {
+    const type = line.type.trim();
+    if (!type || prevTypes.has(type)) continue;
+    const label = quotationPostTypeLabel(type);
+    if (result.toLowerCase().includes(label.toLowerCase())) continue;
+    const fragment = `${normalizeTypeLineQuantity(line.quantity)}× ${label}`;
+    result = `${result} + ${fragment}`;
+  }
+  return result;
 }
 
 export function filterTypeLinesForCreatorPlatforms(
@@ -156,7 +209,7 @@ export function typeLinesIncludeAllPlatforms(
   deliverable: {
     type?: string | null;
     types?: string[] | null;
-    type_lines?: QuotationDeliverableTypeLine[] | null;
+    type_lines?: Array<{ type?: string | null; quantity?: number | null }> | null;
   }
 ): boolean {
   return deliverableTypeLines(deliverable).some(
@@ -232,6 +285,7 @@ export function isPostTypeAllowedForCreator(
 ): boolean {
   const required = postTypePlatformKey(type);
   if (!required) return true;
+  if (allowedPlatforms.length === 0) return true;
   const allowed = new Set(allowedPlatforms.map((p) => canonicalPlatformKey(p)));
   return allowed.has(required);
 }

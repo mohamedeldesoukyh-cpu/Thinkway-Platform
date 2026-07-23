@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   compressExportDataUri,
   compressExportImageBuffer,
+  cropExportImageBufferCover,
   toCompressedExportDataUri,
 } from "./compress-export-image";
 
@@ -40,6 +41,18 @@ async function main() {
       quality: 60,
     });
     assert.ok(out.startsWith("data:image/jpeg;base64,"));
+  }
+
+  {
+    const source = tinyJpeg();
+    const cropped = await cropExportImageBufferCover(source, {
+      aspectW: 1,
+      aspectH: 1,
+      maxEdge: 64,
+    });
+    assert.ok(cropped, "center-crops to square aspect");
+    assert.equal(cropped.contentType, "image/jpeg");
+    assert.ok(cropped.buffer.length > 0);
   }
 
   console.log("compress-export-image.test.ts: ok");

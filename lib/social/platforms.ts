@@ -35,6 +35,11 @@ export const PLATFORM_SHORT_LABELS: Record<SocialPlatform, string> = {
   facebook: "FB",
 };
 
+/**
+ * Type-guard for already-canonical keys only (`"snapchat"`, not `"Snapchat"`).
+ * For untrusted / mixed-case input use {@link resolveDiscoveryPlatform} or
+ * `normalizeSocialPlatform` from `@/lib/social/normalize-platform`.
+ */
 export function isSocialPlatform(value: string): value is SocialPlatform {
   return value in PLATFORM_LABELS;
 }

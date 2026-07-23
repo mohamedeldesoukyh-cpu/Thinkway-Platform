@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { CreatorHistoricalMetrics } from "@/lib/creators/types";
+import { isMissingTableError } from "@/lib/platform/schema-validation";
 
 export async function loadDiscoveryHistoricalMetrics(
   supabase: SupabaseClient,
@@ -40,14 +41,45 @@ export async function loadDiscoveryHistoricalMetrics(
 }
 
 export async function loadInternalHistoricalMetrics(
-  _supabase: SupabaseClient,
-  _influencerId: string
+  supabase: SupabaseClient,
+  influencerId: string
 ): Promise<CreatorHistoricalMetrics> {
-  // Placeholder until influencer_metrics_history table is added
+  const { data, error } = await supabase
+    .from("influencer_metrics_history")
+    .select(
+      "followers, engagement_rate, posting_frequency_per_week, captured_at"
+    )
+    .eq("influencer_id", influencerId)
+    .order("captured_at", { ascending: true })
+    .limit(90);
+
+  if (error) {
+    // Table may exist in migrations but not yet applied locally (PostgREST PGRST205).
+    if (isMissingTableError(error.message, error.code)) {
+      return { followers: [], engagement_rate: [], posting_frequency: [] };
+    }
+    throw new Error(error.message);
+  }
+
+  const rows = data ?? [];
+
   return {
-    followers: [],
-    engagement_rate: [],
-    posting_frequency: [],
+    followers: rows.map((r) => ({
+      captured_at: r.captured_at as string,
+      value: Number(r.followers ?? 0),
+    })),
+    engagement_rate: rows
+      .filter((r) => r.engagement_rate != null)
+      .map((r) => ({
+        captured_at: r.captured_at as string,
+        value: Number(r.engagement_rate),
+      })),
+    posting_frequency: rows
+      .filter((r) => r.posting_frequency_per_week != null)
+      .map((r) => ({
+        captured_at: r.captured_at as string,
+        value: Number(r.posting_frequency_per_week),
+      })),
   };
 }
 

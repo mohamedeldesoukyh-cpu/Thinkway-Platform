@@ -49,6 +49,9 @@ export function useQuotationLineFields(
   registerSaveFlush?: (flush: () => void) => () => void
 ) {
   const cacheKey = quotationCreatorPlatformCacheKey(item);
+  const linkedPlatformsKey = (item.creator_profile_source?.linkedPlatforms ?? []).join(",");
+  const linkedPlatformHandle =
+    item.creator_profile_source?.handle ?? item.handle ?? "";
   const [platformOptions, setPlatformOptions] = useState<QuotationCreatorPlatformOption[]>(() => {
     const bootstrap = bootstrapPlatformOptionsFromItem(item);
     const cached = getCachedCreatorPlatformOptions(cacheKey);
@@ -116,7 +119,7 @@ export function useQuotationLineFields(
     item.handle,
     item.followers,
     item.engagement_rate,
-    item.creator_profile_source,
+    linkedPlatformsKey,
   ]);
 
   const [serviceDescription, setServiceDescription] = useState(item.service_description ?? "");
@@ -126,12 +129,14 @@ export function useQuotationLineFields(
   });
 
   const platformSelectOptions = useMemo(() => {
-    const fromLinked = (item.creator_profile_source?.linkedPlatforms ?? []).map((platform) => ({
-      platform,
-      handle: item.creator_profile_source?.handle ?? item.handle ?? "",
-      followers: item.followers,
-      engagement_rate: item.engagement_rate,
-    }));
+    const fromLinked = linkedPlatformsKey
+      ? linkedPlatformsKey.split(",").map((platform) => ({
+          platform,
+          handle: linkedPlatformHandle,
+          followers: item.followers,
+          engagement_rate: item.engagement_rate,
+        }))
+      : [];
     const fromLinePlatform = item.platform
       ? [
           {
@@ -161,28 +166,39 @@ export function useQuotationLineFields(
     item.handle,
     item.followers,
     item.engagement_rate,
-    item.creator_profile_source,
+    linkedPlatformsKey,
+    linkedPlatformHandle,
     item.influencer_id,
     item.profile_id,
     item.unified_id,
   ]);
 
+  const platformSelectKey = platformSelectOptions.map((p) => p.platform).join(",");
+
   useEffect(() => {
-    if (hasPendingChanges) return;
+    if (hasPendingChanges || localDraftDirtyRef.current || commitTimerRef.current) return;
     setServiceDescription(item.service_description ?? "");
-    const allowed = platformSelectOptions.map((p) => p.platform);
+    const allowed = platformSelectKey ? platformSelectKey.split(",") : [];
     setDeliverableDrafts((prev) =>
       mergeDeliverableDraftsFromServer(prev, item, allowed, { preserveLocal: false })
     );
-  }, [item.id, item.service_description, item.deliverables, item.platform, platformSelectOptions, hasPendingChanges]);
+  }, [
+    item.id,
+    item.service_description,
+    item.deliverables,
+    item.platform,
+    platformSelectKey,
+    hasPendingChanges,
+  ]);
 
   const derivedCommercials = useMemo(() => {
     const deliverables = fromDeliverableDrafts(deliverableDrafts);
     return rollupDeliverableCommercials(deliverables, {
       lineCurrency: item.cost_currency || "EGP",
       fxRateToEgp: item.fx_rate_to_egp ?? 1,
+      lineAfPct: item.af_pct,
     });
-  }, [deliverableDrafts, item.cost_currency, item.fx_rate_to_egp]);
+  }, [deliverableDrafts, item.cost_currency, item.fx_rate_to_egp, item.af_pct]);
 
   const onDeliverableCommercialsDerivedRef = useRef(onDeliverableCommercialsDerived);
   onDeliverableCommercialsDerivedRef.current = onDeliverableCommercialsDerived;
@@ -199,6 +215,8 @@ export function useQuotationLineFields(
       derivedCommercials.revenue,
       derivedCommercials.gpValue,
       derivedCommercials.gpPct,
+      derivedCommercials.afValue,
+      derivedCommercials.afPct,
     ].join("|");
     if (lastDerivedCommercialsKeyRef.current === key) return;
     lastDerivedCommercialsKeyRef.current = key;
@@ -225,6 +243,7 @@ export function useQuotationLineFields(
       const rolled = rollupDeliverableCommercials(deliverables, {
         lineCurrency: item.cost_currency || "EGP",
         fxRateToEgp: item.fx_rate_to_egp ?? 1,
+        lineAfPct: item.af_pct,
       });
       const payload: QuotationLinePendingPayload = {
         deliverables,
@@ -232,6 +251,7 @@ export function useQuotationLineFields(
         cost: rolled?.cost ?? item.cost,
         gp_pct: rolled?.gpPct ?? item.gp_pct,
         gp_value: rolled?.gpValue ?? item.gp_value,
+        af_pct: rolled?.afPct ?? item.af_pct,
         mode: rolled ? ("cost_revenue" as const) : undefined,
       };
 
@@ -245,7 +265,7 @@ export function useQuotationLineFields(
       if (rolled) onDeliverableCommercialsDerived?.(rolled);
       return withMinimum;
     },
-    [onLinePendingChange, onDeliverableCommercialsDerived, item.revenue, item.cost, item.gp_pct, item.gp_value, item.cost_currency, item.fx_rate_to_egp, item.platform, platformSelectOptions]
+    [onLinePendingChange, onDeliverableCommercialsDerived, item.revenue, item.cost, item.gp_pct, item.gp_value, item.af_pct, item.cost_currency, item.fx_rate_to_egp, item.platform, platformSelectOptions]
   );
 
   const flushScheduledCommit = useCallback(() => {

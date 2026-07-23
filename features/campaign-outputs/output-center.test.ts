@@ -64,6 +64,27 @@ test("stale reason surfaces in the list view for needs_update outputs", () => {
   assert.equal(view.staleReason, "Timeline changed.");
 });
 
+test("stale reason works when stored output status is already needs_update", () => {
+  const obj = buildCampaignObjectFixture();
+  const generated = generateCampaignOutput(obj, "media_plan").campaignObject;
+  const edited = carryRegistry(buildCampaignObjectFixture({ facts: { durationWeeks: 4 } }), generated);
+  const state = edited.meta.campaignOutputs!;
+  const media = state.media_plan!;
+  const marked = {
+    ...edited,
+    meta: {
+      ...edited.meta,
+      campaignOutputs: {
+        ...state,
+        media_plan: { ...media, status: "needs_update" as const },
+      },
+    },
+  };
+  const view = listCampaignOutputs(marked).find((v) => v.kind === "media_plan")!;
+  assert.equal(view.status, "needs_update");
+  assert.equal(view.staleReason, "Timeline changed.");
+});
+
 test("initial generation records a reason and no history; regeneration records the trigger", () => {
   const obj = buildCampaignObjectFixture();
   const first = generateCampaignOutput(obj, "media_plan");

@@ -1,0 +1,47 @@
+{
+  "measuredAt": "2026-07-21T02:00:18.821Z",
+  "browse": {
+    "skipped": false,
+    "hydrationMs": 2630,
+    "creatorCount": 50,
+    "total": 6789,
+    "payloadBytes": 199592,
+    "payloadKb": 194.9,
+    "feedPublicationSlots": 74,
+    "creatorsWithFeed": 50,
+    "feedRenderSuccessRatePct": 100,
+    "browsePayloadKeepsCaptionOrLikes": false
+  },
+  "previewRecovery": {
+    "firstMissOk": false,
+    "firstMissMs": 0,
+    "warmPathMs": 1345,
+    "recoveredOk": true,
+    "clientRetryDelaysMs": [
+      900,
+      2200,
+      5000
+    ],
+    "clientRetryBudgetMs": 8100,
+    "exampleRetryUrl": "/api/creators/publication-preview?postUrl=https%3A%2F%2Fwww.instagram.com%2Fp%2FRecoveryProbeOnly%2F&_twr=1",
+    "metrics": {
+      "hits": 1,
+      "misses": 1,
+      "negativeHits": 1,
+      "storageHits": 0,
+      "cdnHits": 0,
+      "placeholders": 2,
+      "refreshScheduled": 0,
+      "refreshSuccess": 0,
+      "refreshFailed": 1,
+      "externalRequests": 3,
+      "inflightJoins": 0,
+      "cacheSize": 1
+    }
+  },
+  "notes": [
+    "browse.payloadKb is post-slim (≤3 display-only pubs).",
+    "feedRenderSuccessRatePct = creators with ≥1 recent_publications after slim.",
+    "previewRecovery models fail-fast miss + warm + client _twr retry budget."
+  ]
+}

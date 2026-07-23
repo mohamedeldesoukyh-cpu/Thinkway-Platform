@@ -69,6 +69,7 @@ export function draftFromQuotationItem(item: QuotationItemRow): QuotationRowDraf
   const rolled = rollupDeliverableCommercials(item.deliverables ?? [], {
     lineCurrency: costCurrency,
     fxRateToEgp: item.fx_rate_to_egp,
+    lineAfPct: item.af_pct,
   });
   if (!rolled) return base;
 
@@ -79,6 +80,7 @@ export function draftFromQuotationItem(item: QuotationItemRow): QuotationRowDraf
     revenue: rolled.revenue,
     gpPct: rolled.gpPct,
     gpValue: rolled.gpValue,
+    afPct: rolled.afPct,
   };
 }
 
@@ -89,24 +91,24 @@ export function resolveQuotationRowDraft(
 ): QuotationRowDraft {
   const base = draft ?? draftFromQuotationItem(item);
 
-  if (base.mode === "cost_revenue" && (base.cost > 0 || base.revenue > 0)) {
-    return base;
-  }
-
   const rolled = rollupDeliverableCommercials(item.deliverables ?? [], {
     lineCurrency: base.costCurrency,
     fxRateToEgp: base.fxRateToEgp,
+    lineAfPct: base.afPct ?? item.af_pct,
   });
-  if (!rolled) return base;
+  if (rolled) {
+    return {
+      ...base,
+      mode: "cost_revenue",
+      cost: rolled.cost,
+      revenue: rolled.revenue,
+      gpPct: rolled.gpPct,
+      gpValue: rolled.gpValue,
+      afPct: rolled.afPct,
+    };
+  }
 
-  return {
-    ...base,
-    mode: "cost_revenue",
-    cost: rolled.cost,
-    revenue: rolled.revenue,
-    gpPct: rolled.gpPct,
-    gpValue: rolled.gpValue,
-  };
+  return base;
 }
 
 export function draftsFromItems(items: QuotationItemRow[]): Record<string, QuotationRowDraft> {
@@ -167,6 +169,39 @@ export function computeLiveQuotationTotals(
     };
   });
   return computeQuotationTotals(lines);
+}
+
+export type QuotationHeaderCommercialTotals = CommercialTotals & {
+  /** Client cost including agency fee (base revenue + AF). */
+  totalClientCostEgp: number;
+  /** Agency margin for header display (GP + AF). */
+  headerGpValueEgp: number;
+  headerGpPct: number;
+  headerPmPct: number;
+};
+
+/** Map stored/live totals to header metrics that include agency fees in client cost. */
+export function resolveQuotationHeaderCommercialTotals(
+  totals: CommercialTotals
+): QuotationHeaderCommercialTotals {
+  const totalClientCostEgp = Math.round((totals.totalRevenueEgp + totals.totalAfValueEgp + Number.EPSILON) * 100) / 100;
+  const headerGpValueEgp = totals.totalAgencyMarginEgp;
+  const headerGpPct =
+    totalClientCostEgp === 0
+      ? 0
+      : Math.round(((headerGpValueEgp / totalClientCostEgp) * 100 + Number.EPSILON) * 10000) / 10000;
+  const headerPmPct =
+    totals.totalCostEgp === 0
+      ? 0
+      : Math.round(((headerGpValueEgp / totals.totalCostEgp) * 100 + Number.EPSILON) * 10000) / 10000;
+
+  return {
+    ...totals,
+    totalClientCostEgp,
+    headerGpValueEgp,
+    headerGpPct,
+    headerPmPct,
+  };
 }
 
 export function aggregateAutosaveStatus(

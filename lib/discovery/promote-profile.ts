@@ -1,6 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { normalizeContactEmail } from "@/lib/creators/contact-info";
+import {
+  countryWritePayload,
+  persistCountryFromDiscoveredProfile,
+} from "@/lib/creators/country-persistence";
+import { ensureDiscoveryCreatorBrowsable } from "@/lib/creators/discovery-browse-eligibility";
 import { requireCreatorBaselineDna } from "@/features/creator-dna/services/baseline-dna-populator";
 import type { Database } from "@/types/database";
 
@@ -24,7 +29,7 @@ export async function promoteDiscoveredProfileToInfluencer(
   const { data: profile, error: profileError } = await supabase
     .from("discovered_profiles")
     .select(
-      "id, platform, username, profile_url, display_name, country_code, category_tags, profile_image_url, influencer_id, email_in_bio"
+      "id, platform, username, profile_url, display_name, country_code, city, bio, category_tags, profile_image_url, influencer_id, email_in_bio"
     )
     .eq("id", profileId)
     .maybeSingle();
@@ -44,6 +49,7 @@ export async function promoteDiscoveredProfileToInfluencer(
             : "Creator DNA baseline failed for linked influencer.",
       };
     }
+    await ensureDiscoveryCreatorBrowsable(supabase, profile.influencer_id);
     return { ok: true, influencerId: profile.influencer_id, created: false };
   }
 
@@ -58,13 +64,20 @@ export async function promoteDiscoveredProfileToInfluencer(
   const displayName =
     profile.display_name?.trim() || profile.username || "Discovered creator";
 
+  const countryFields = persistCountryFromDiscoveredProfile({
+    country_code: profile.country_code,
+    bio: profile.bio,
+    displayName,
+    city: profile.city,
+  });
+
   const { data: influencer, error: influencerError } = await supabase
     .from("influencers")
     .insert({
       display_name: displayName,
-      country_code: profile.country_code ?? null,
+      ...countryWritePayload(countryFields),
       categories: profile.category_tags ?? [],
-      status: "prospect",
+      status: "active",
       notes: "Promoted from Discovery shortlist",
       created_by: actorId,
     } as never)
@@ -116,6 +129,8 @@ export async function promoteDiscoveredProfileToInfluencer(
     .from("discovered_profiles")
     .update({ influencer_id: influencerId })
     .eq("id", profileId);
+
+  await ensureDiscoveryCreatorBrowsable(supabase, influencerId);
 
   try {
     await requireCreatorBaselineDna(supabase, influencerId);

@@ -13,6 +13,9 @@ import {
   resolveCampaignSummary,
   resolveContentPlan,
   resolveCreatorIds,
+  resolveCampaignOptimization,
+  resolveCampaignDecision,
+  resolveCampaignStrategy,
   resolveGroundedKpis,
   resolveSuccessProbability,
   resolveTimelineData,
@@ -366,4 +369,93 @@ export function deepFreeze<T extends object>(obj: T): T {
 /** Snapshot CampaignObject for before/after comparison. */
 export function snapshotCampaignObject(campaignObject: CampaignObject): string {
   return JSON.stringify(campaignObject);
+}
+
+/** Decision intelligence for AI Campaign Assistant — read-only from persisted report. */
+export function extractDecisionForAssistant(campaignObject: CampaignObject) {
+  const report = resolveCampaignDecision(campaignObject);
+  if (!report) return null;
+
+  return {
+    readiness: report.readiness,
+    readinessLabel: report.readinessLabel,
+    decisionScore: report.decisionScore.overall,
+    approvalSummary: report.approvalSummary,
+    topRisks: report.risks.slice(0, 5).map((risk) => ({
+      category: risk.category,
+      severity: risk.severity,
+      title: risk.title,
+      mitigation: risk.mitigation,
+    })),
+    kpiProbabilities: report.kpiProbabilities.map((kpi) => ({
+      metric: kpi.metric,
+      probability: kpi.probability,
+    })),
+    recommendations: report.recommendations.slice(0, 5).map((rec) => ({
+      kind: rec.kind,
+      action: rec.action,
+      expectedBusinessImpact: rec.expectedBusinessImpact,
+      confidence: rec.confidence,
+    })),
+    explainability: report.explainability,
+  };
+}
+
+/** Optimization insights for AI Campaign Assistant — read-only from persisted report. */
+export function extractOptimizationForAssistant(campaignObject: CampaignObject) {
+  const report = resolveCampaignOptimization(campaignObject);
+  if (!report) return null;
+
+  return {
+    healthScore: report.healthScore.overall,
+    healthLabel: report.healthScore.label,
+    optimizationScore: report.optimizationScore,
+    topOpportunities: report.opportunities.slice(0, 5).map((item) => ({
+      impact: item.impact,
+      title: item.title,
+      summary: item.summary,
+      expectedReachGainPct: item.expectedReachGainPct,
+      expectedEngagementGainPct: item.expectedEngagementGainPct,
+    })),
+    topRecommendations: report.recommendations.slice(0, 5).map((item) => ({
+      action: item.action,
+      expectedImpact: item.expectedImpact,
+      confidence: item.confidence,
+      reasoning: item.reasoning,
+    })),
+    scenarios: report.scenarioComparisons.map((item) => ({
+      label: item.label,
+      estimatedReach: item.kpis.estimatedReach,
+      deltaReachPct: item.deltaFromCurrent.estimatedReachPct,
+      deltaEngagementPct: item.deltaFromCurrent.estimatedEngagementsPct,
+    })),
+    explainability: report.explainability,
+  };
+}
+
+/** Campaign planning strategy for AI Assistant — read-only from strategy section. */
+export function extractPlanningForAssistant(campaignObject: CampaignObject) {
+  const strategy = resolveCampaignStrategy(campaignObject);
+  if (!strategy) return null;
+
+  return {
+    strategyScore: strategy.strategyScore.overall,
+    strategyLabel: strategy.strategyScore.label,
+    briefSummary: strategy.briefSummary,
+    creatorMix: strategy.creatorMix.tiers.map((tier) => ({
+      tier: tier.tier,
+      count: tier.count,
+      percent: tier.percent,
+    })),
+    platforms: strategy.platformStrategy.platforms.map((p) => ({
+      platform: p.platform,
+      budgetPercent: p.budgetPercent,
+    })),
+    deliverableMix: strategy.deliverableStrategy.contentMixSummary,
+    timelineMode: strategy.timelineStrategy.mode,
+    audienceGaps: strategy.audienceStrategy.gaps,
+    discoveryFilterCount: strategy.discoveryBrief.mappedFilters.length,
+    recommendations: strategy.strategyScore.recommendations,
+    explainability: strategy.explainability,
+  };
 }

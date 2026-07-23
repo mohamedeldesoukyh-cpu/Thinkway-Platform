@@ -6,13 +6,14 @@ import {
 } from "@/features/campaign-intelligence/services/campaign-export";
 import { enrichCampaignObjectQuotationContext } from "@/features/campaign-outputs/hydration/enrich-quotation-commercials-context";
 import { embedMediaPlanContentAvatars } from "@/features/campaign-outputs/export/media-plan-export-avatars";
+import { mediaPlanExportBaseName } from "@/features/campaign-outputs/export/media-plan-export-utils";
 import { buildMediaPlanExcel } from "@/features/campaign-outputs/export/media-plan-excel";
 import { buildMediaPlanHtml } from "@/features/campaign-outputs/export/media-plan-html";
 import { resolveMediaPlanCampaignContext } from "@/features/campaign-outputs/generators/media-plan";
 import { MEDIA_PLAN_PDF_OPTIONS } from "@/features/campaign-outputs/export/media-plan-pdf";
 import { buildMediaPlanPptxBuffer } from "@/features/campaign-outputs/export/media-plan-pptx";
 import { resolveThinkwayReportLogoSrcsForExport } from "@/lib/reports/document/thinkway-report-logo-embed";
-import { mediaPlanExportBaseName } from "@/features/campaign-outputs/export/media-plan-export-utils";
+import { resolveExportPresentation } from "@/features/campaign-outputs/media-plan-presentation";
 import {
   generateCampaignOutput,
   getOutputContentForDisplay,
@@ -112,29 +113,64 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     const baseName = mediaPlanExportBaseName(content);
+    const includeCampaignCost = url.searchParams.get("includeCost") !== "0";
 
     if (format === "excel") {
-      const buffer = await buildMediaPlanExcel(content);
+      const buffer = await buildMediaPlanExcel(content, { includeCampaignCost });
       return createXlsxDocumentResponse(buffer, baseName, download);
     }
 
     const contextOverride = resolveMediaPlanCampaignContext(campaignObject);
 
+    let exportContent = content;
+    if (format === "pdf" || format === "html") {
+      exportContent = await embedMediaPlanContentAvatars(content);
+    }
+
     if (format === "pptx") {
-      const exportContent = await embedMediaPlanContentAvatars(content);
-      const buffer = await buildMediaPlanPptxBuffer(exportContent, { contextOverride });
+      const pptxContent = await embedMediaPlanContentAvatars(content);
+      const buffer = await buildMediaPlanPptxBuffer(pptxContent, {
+        contextOverride,
+        includeCampaignCost,
+      });
       return createPptxDocumentResponse(buffer, baseName, download);
     }
 
-    let exportContent = content;
-    if (format === "pdf") {
-      exportContent = await embedMediaPlanContentAvatars(content);
-    }
+    const viewParam = url.searchParams.get("view");
+    const exportPresentation = resolveExportPresentation(campaignObject, {
+      mode: url.searchParams.get("exportMode") === "strategy" ? "strategy" : url.searchParams.get("exportMode") === "standard" ? "standard" : undefined,
+      influencerConceptsExport:
+        url.searchParams.get("conceptsExport") === "full"
+          ? "full"
+          : url.searchParams.get("conceptsExport") === "none"
+            ? "none"
+            : url.searchParams.get("conceptsExport") === "summary"
+              ? "summary"
+              : undefined,
+      view:
+        viewParam === "internal"
+          ? "internal"
+          : viewParam === "client"
+            ? "client"
+            : undefined,
+      exportLanguage:
+        url.searchParams.get("exportLanguage") === "ar"
+          ? "ar"
+          : url.searchParams.get("exportLanguage") === "bilingual"
+            ? "bilingual"
+            : url.searchParams.get("exportLanguage") === "en"
+              ? "en"
+              : undefined,
+      includeProductionSchedule: url.searchParams.get("productionSchedule") === "0" ? false : undefined,
+      includeInternalNotes: url.searchParams.get("internalNotes") === "1",
+      includeCampaignCost,
+    });
 
     const logoSrcs = format === "pdf" ? resolveThinkwayReportLogoSrcsForExport() : undefined;
     const html = buildMediaPlanHtml(exportContent, {
       logoSrcs,
       contextOverride,
+      presentation: exportPresentation,
     });
 
     if (format === "pdf") {

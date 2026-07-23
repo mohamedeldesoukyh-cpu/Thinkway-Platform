@@ -7,6 +7,7 @@ import {
   CREATOR_ENRICHMENT_JOB_ATTEMPTS,
 } from "@/lib/creator-enrichment/constants.js";
 import {
+  canEnqueueCreatorEnrichment,
   creatorEnrichmentDisabledMessage,
   isCreatorEnrichmentWorkerEnabled,
 } from "@/lib/creator-enrichment/enabled.js";
@@ -57,13 +58,32 @@ export function startCreatorEnrichmentWorker(): Worker<CreatorEnrichmentJobPaylo
         };
       }
 
+      const trigger = job.data.trigger ?? "manual";
+      const gate = canEnqueueCreatorEnrichment({
+        trigger,
+        scope: job.data.scope ?? "all",
+      });
+      if (!gate.allowed) {
+        console.log(
+          `[creator-enrichment] skipped ${job.id} — ${gate.reason}`,
+          JSON.stringify({ influencerId: job.data.influencerId, trigger })
+        );
+        return {
+          ok: true,
+          status: "skipped",
+          message: gate.reason ?? "Enrichment enqueue gate denied.",
+          fieldsUpdated: [],
+          skippedReason: gate.reason,
+        };
+      }
+
       console.log(
         `[creator-enrichment] processing ${job.id}`,
         JSON.stringify({
           influencerId: job.data.influencerId,
           bypassMetricsManualOverride: Boolean(job.data.bypassMetricsManualOverride),
           force: Boolean(job.data.force),
-          trigger: job.data.trigger,
+          trigger,
         })
       );
       const result = await executeCreatorMetricsRefresh(supabase, job.data, {
@@ -74,8 +94,8 @@ export function startCreatorEnrichmentWorker(): Worker<CreatorEnrichmentJobPaylo
     },
     {
       connection: getRedisConnection(),
-      // Concurrency kept low to preserve Apify credit + avoid rate limits.
-      concurrency: 2,
+      // Concurrency 1 — parallel jobs were launching duplicate Instagram Apify runs.
+      concurrency: 1,
     }
   );
 

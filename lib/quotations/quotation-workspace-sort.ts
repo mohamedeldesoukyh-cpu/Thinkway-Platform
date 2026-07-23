@@ -190,9 +190,14 @@ export function sortQuotationWorkspaceItems(
 }
 
 /** Preserve creator grouping while respecting the sorted line order. */
+export type QuotationWorkspaceCreatorGroup = {
+  creatorKey: string;
+  items: QuotationItemRow[];
+};
+
 export function buildCreatorGroupsFromSortedItems(
   sortedItems: QuotationItemRow[]
-): Array<{ creatorKey: string; items: QuotationItemRow[] }> {
+): QuotationWorkspaceCreatorGroup[] {
   const byCreator = new Map<string, QuotationItemRow[]>();
 
   for (const item of sortedItems) {
@@ -202,7 +207,7 @@ export function buildCreatorGroupsFromSortedItems(
     byCreator.set(key, bucket);
   }
 
-  const groups: Array<{ creatorKey: string; items: QuotationItemRow[] }> = [];
+  const groups: QuotationWorkspaceCreatorGroup[] = [];
   const seen = new Set<string>();
 
   for (const item of sortedItems) {

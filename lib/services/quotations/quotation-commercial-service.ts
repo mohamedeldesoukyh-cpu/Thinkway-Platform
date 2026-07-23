@@ -9,6 +9,7 @@ import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-ty
 
 import {
   fetchQuotationItemEgpTotals,
+  syncCollapsePackageOptionNumbers,
   updateQuotationHeaderRecord,
 } from "./repositories/quotation-repository";
 import { rollupDeliverableCommercials } from "@/lib/quotations/quotation-deliverable-rollup";
@@ -158,6 +159,7 @@ export async function removeQuotationItemWithSync(
     .eq("id", input.item_id);
   if (error) return { ok: false as const, message: error.message };
 
+  await syncCollapsePackageOptionNumbers(supabase, input.quotation_id);
   await recomputeQuotationTotals(supabase, input.quotation_id);
   return { ok: true as const };
 }

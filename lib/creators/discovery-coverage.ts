@@ -3,6 +3,8 @@ import type {
   UnifiedCreatorBrowseResult,
   UnifiedCreatorResult,
 } from "@/lib/creators/types";
+import { resolveCountryCode } from "@/lib/creators/country-code";
+import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
 import {
   getCoverageThreshold,
 } from "@/lib/discovery/control-center/discovery-control-policy";
@@ -92,7 +94,7 @@ function normalizeToken(value: string): string {
 
 function normalizeCountry(value: string | null | undefined): string | null {
   if (!value?.trim()) return null;
-  return value.trim().toUpperCase();
+  return resolveCountryCode(value);
 }
 
 function creatorCountry(creator: UnifiedCreatorResult): string | null {
@@ -128,8 +130,12 @@ function matchesCategoryIntent(creator: UnifiedCreatorResult, categories: string
 function matchesCountryIntent(creator: UnifiedCreatorResult, country: string): boolean {
   const target = normalizeCountry(country);
   if (!target) return true;
-  const creatorCode = creatorCountry(creator);
-  return creatorCode === target;
+  return resolveCreatorCountryCodes({
+    country_codes: creator.country_codes,
+    country_code: creator.country_code,
+    estimated_country: creator.estimated_country,
+    platformAudienceCountries: creator.platforms.map((platform) => platform.audience_country),
+  }).includes(target);
 }
 
 function matchesPlatformIntent(creator: UnifiedCreatorResult, platforms: string[]): boolean {

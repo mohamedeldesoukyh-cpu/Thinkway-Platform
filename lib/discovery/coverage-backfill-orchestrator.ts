@@ -34,6 +34,11 @@ import {
   maybeTriggerBrowseCoverageBackfill,
 } from "@/lib/discovery/coverage-backfill";
 import { checkCipAcquisitionCooldown } from "@/lib/discovery/cip-acquisition-cooldown";
+import {
+  AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON,
+  isAutomaticEnrichmentAndAcquisitionDisabled,
+  logBlockedAutomaticAction,
+} from "@/lib/discovery/operational-safety";
 import type { DiscoveryBrowseBackfillMeta, DiscoveryBrowseWithBackfillResult } from "@/lib/discovery/types";
 
 export type { DiscoveryBrowseBackfillMeta, DiscoveryBrowseWithBackfillResult };
@@ -138,11 +143,21 @@ export async function browseUnifiedCreatorsWithCoverageBackfill(
       ? await checkCipAcquisitionCooldown(supabase, filters.campaignIntelligenceProfileId)
       : { skip: false as const };
 
-  const needsBackfill =
+  const wouldNeedBackfill =
     !filters.skipCoverageBackfill &&
     !cipCooldown.skip &&
     shouldEvaluate &&
     (forceApifyLive || enterpriseGate.needsBackfill);
+
+  if (wouldNeedBackfill && isAutomaticEnrichmentAndAcquisitionDisabled()) {
+    logBlockedAutomaticAction("browse_coverage_backfill_orchestrator", AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON, {
+      searchId,
+      creatorCount: browseResult.creators.length,
+    });
+  }
+
+  const needsBackfill =
+    wouldNeedBackfill && !isAutomaticEnrichmentAndAcquisitionDisabled();
 
   if (needsBackfill) {
     const backfillCoverage =

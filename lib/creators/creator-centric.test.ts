@@ -176,10 +176,11 @@ function testBrowsePrefersFreshPlatformAvatarOverStaleStoredInstagramPrimary() {
   assert.ok(result.url?.includes("fresh.jpg"));
 }
 
-function testBrowsePrefersApifyPlatformOverStoredUploadedPrimary() {
+function testBrowseKeepsDurableUploadedOverApifyCdn() {
   const result = resolvePrimaryAvatar(
     collectAvatarCandidates({
-      storedPrimaryAvatarUrl: "https://example.supabase.co/storage/v1/object/public/creator-avatars/imports/pdf-crop.png",
+      storedPrimaryAvatarUrl:
+        "https://example.supabase.co/storage/v1/object/public/creator-avatars/imports/pdf-crop.png",
       storedPrimaryAvatarSource: "uploaded",
       accounts: [
         {
@@ -192,8 +193,26 @@ function testBrowsePrefersApifyPlatformOverStoredUploadedPrimary() {
       storedPrimaryMode: "operator",
     })
   );
+  assert.equal(result.source, "uploaded");
+  assert.ok(
+    result.url?.includes("/creator-avatars/"),
+    "durable Thinkway avatar must win over ephemeral Apify CDN"
+  );
+}
+
+function testBrowseKeepsExpiredStoredPrimaryWhenNoBetterCandidate() {
+  const expiredOe = Math.floor(Date.now() / 1000 - 3600).toString(16);
+  const expired = `https://scontent.cdninstagram.com/v/stale.jpg?oe=${expiredOe}`;
+  const result = resolvePrimaryAvatar(
+    collectAvatarCandidates({
+      storedPrimaryAvatarUrl: expired,
+      storedPrimaryAvatarSource: "instagram",
+      accounts: [],
+      storedPrimaryMode: "operator",
+    })
+  );
   assert.equal(result.source, "instagram");
-  assert.ok(result.url?.includes("cdninstagram.com"));
+  assert.ok(result.url?.includes("stale.jpg"));
 }
 
 function testPrefersEnrichmentUploadOverPdfImportCrop() {
@@ -249,7 +268,8 @@ testFilterPlatformsForDisplay();
 testResolveDefaultMetricsPlatformAccountId();
 testMergeCreatorInterestTags();
 testCollectAvatarCandidates();
-testBrowsePrefersApifyPlatformOverStoredUploadedPrimary();
+testBrowseKeepsDurableUploadedOverApifyCdn();
+testBrowseKeepsExpiredStoredPrimaryWhenNoBetterCandidate();
 testPrefersEnrichmentUploadOverPdfImportCrop();
 testMultiPlatformNullAvatarSourceDoesNotBeatInstagram();
 testBrowseIgnoresStaleStoredPlatformPrimary();

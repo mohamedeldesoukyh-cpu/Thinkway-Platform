@@ -34,6 +34,11 @@ export const operationalTableChrome = {
     "h-8 rounded-lg border-0 bg-transparent pl-9 pr-9 text-xs shadow-none",
     "focus-visible:border-transparent focus-visible:ring-0"
   ),
+  /** Discovery list toolbar — HTML `.search-box input` (36px, bordered). */
+  searchInputBoxed: cn(
+    "h-9 w-full rounded-[var(--tw-radius)] border border-[var(--tw-border)] bg-background pl-[34px] pr-9 text-[12.5px] shadow-none",
+    "focus-visible:border-[var(--blue)] focus-visible:ring-0"
+  ),
   panelShell: "rounded-2xl border border-border/55 bg-popover shadow-xl",
 } as const;
 
@@ -77,6 +82,10 @@ type OperationalTableSearchFieldProps = {
   onClear: () => void;
   placeholder: string;
   isPending?: boolean;
+  /** ghost = transparent toolbar chrome; boxed = Discovery list search. */
+  variant?: "ghost" | "boxed";
+  className?: string;
+  inputClassName?: string;
 };
 
 export function OperationalTableSearchField({
@@ -85,11 +94,25 @@ export function OperationalTableSearchField({
   onClear,
   placeholder,
   isPending = false,
+  variant = "ghost",
+  className,
+  inputClassName,
 }: OperationalTableSearchFieldProps) {
+  const boxed = variant === "boxed";
+
   return (
-    <div className="relative w-full min-w-[12rem] max-w-sm">
+    <div
+      className={cn(
+        "relative w-full min-w-[12rem]",
+        boxed ? "max-w-none" : "max-w-sm",
+        className
+      )}
+    >
       <SearchIcon
-        className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground"
+        className={cn(
+          "pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2",
+          boxed ? "text-[var(--text-3)]" : "text-muted-foreground"
+        )}
         strokeWidth={2}
         aria-hidden
       />
@@ -98,7 +121,12 @@ export function OperationalTableSearchField({
         placeholder={placeholder}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={operationalTableChrome.searchInput}
+        className={cn(
+          boxed
+            ? operationalTableChrome.searchInputBoxed
+            : operationalTableChrome.searchInput,
+          inputClassName
+        )}
         aria-busy={isPending}
       />
       {value ? (

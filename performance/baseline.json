@@ -1,0 +1,33 @@
+{
+  "capturedAt": "2026-07-21T01:45:00.000Z",
+  "gitRef": "phase-performance-governance",
+  "bundle": {
+    "largestJsKb": 554.9,
+    "largestCssKb": 328.8,
+    "totalJsKb": 12016.6,
+    "totalCssKb": 623.5,
+    "assetsOver100kb": 18,
+    "jsFileCount": 270,
+    "cssFileCount": 9
+  },
+  "source": {
+    "rootGlobalCssKb": 27.9,
+    "clientModuleCount": 726,
+    "largestClientSourceKb": 72.5,
+    "largestClientSourceFile": "features/discovery/components/creator-search/creator-search-workspace.tsx"
+  },
+  "discoveryBrowse": {
+    "source": "rpc",
+    "rpcWallMs": 308,
+    "legacyWallMs": 2104
+  },
+  "mediaProxy": {
+    "avatarP95Ms": 0.31,
+    "previewP95Ms": 0.2,
+    "externalRequestsWarmHalf": 0
+  },
+  "notes": [
+    "Baseline after Phases 1–4 (browse RPC live, media proxy fail-fast, code-splitting, CSS route split).",
+    "Update via: npm run report:performance -- --write-baseline"
+  ]
+}

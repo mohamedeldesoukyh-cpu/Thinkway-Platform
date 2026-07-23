@@ -14,6 +14,8 @@ import { useRouter } from "next/navigation";
 import { startTransition } from "react";
 import { toast } from "sonner";
 
+import { useRegisterShortcut } from "@/lib/productivity/keyboard-shortcuts";
+
 import {
   finalizeQuotationSave,
   updateQuotationHeader,
@@ -33,6 +35,7 @@ export type QuotationLinePendingPayload = {
   cost?: number | null;
   gp_pct?: number | null;
   gp_value?: number | null;
+  af_pct?: number | null;
   mode?: "cost_revenue";
   platform?: string | null;
   handle?: string | null;
@@ -69,6 +72,7 @@ type QuotationManualSaveContextValue = {
   registerClientBrandPending: (payload: QuotationClientBrandPendingPayload | null) => void;
   registerSaveFlush: (flush: () => void) => () => void;
   isLinePending: (itemId: string) => boolean;
+  getLinePendingPayload: (itemId: string) => QuotationLinePendingPayload | undefined;
   hasUnsavedChanges: boolean;
   hasClientBrandPending: boolean;
   saveStatus: AutosaveStatus;
@@ -77,6 +81,29 @@ type QuotationManualSaveContextValue = {
 };
 
 const QuotationManualSaveContext = createContext<QuotationManualSaveContextValue | null>(null);
+
+function QuotationManualSaveShortcuts() {
+  const { saveAll, hasUnsavedChanges } = useQuotationManualSave();
+  const saveAllRef = useRef(saveAll);
+  const hasUnsavedRef = useRef(hasUnsavedChanges);
+  saveAllRef.current = saveAll;
+  hasUnsavedRef.current = hasUnsavedChanges;
+
+  useRegisterShortcut({
+    id: "quotation-save",
+    keys: "ctrl+s",
+    label: "Save quotation",
+    group: "Quotation",
+    handler: () => {
+      const hadChanges = hasUnsavedRef.current;
+      void saveAllRef.current().then((ok) => {
+        if (ok && hadChanges) toast.success("Quotation saved.");
+      });
+    },
+  });
+
+  return null;
+}
 
 type ProviderProps = {
   quotationId: string;
@@ -190,6 +217,10 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
     [pendingLineIds]
   );
 
+  const getLinePendingPayload = useCallback((itemId: string) => {
+    return linePendingRef.current.get(itemId);
+  }, []);
+
   const saveAll = useCallback(async (): Promise<boolean> => {
     if (
       !hasUnsavedRef.current &&
@@ -226,6 +257,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
           ? rollupDeliverableCommercials(payload.deliverables, {
               lineCurrency: item.cost_currency || "EGP",
               fxRateToEgp: item.fx_rate_to_egp ?? 1,
+              lineAfPct: payload.af_pct ?? item.af_pct,
             })
           : null;
 
@@ -240,7 +272,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
             gp_pct: rolled?.gpPct ?? payload.gp_pct ?? item.gp_pct,
             revenue: rolled?.revenue ?? payload.revenue ?? item.revenue,
             gp_value: rolled?.gpValue ?? payload.gp_value ?? item.gp_value,
-            af_pct: item.af_pct,
+            af_pct: rolled?.afPct ?? payload.af_pct ?? item.af_pct,
           },
           saveOptions
         );
@@ -322,22 +354,6 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
   const savePendingRef = useRef(false);
 
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() !== "s" || !(event.ctrlKey || event.metaKey)) return;
-      event.preventDefault();
-      if (savePendingRef.current) return;
-
-      const hadChanges = hasUnsavedRef.current;
-      void saveAllRef.current().then((ok) => {
-        if (ok && hadChanges) toast.success("Quotation saved.");
-      });
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
-
-  useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       if (!hasUnsavedRef.current) return;
       event.preventDefault();
@@ -370,6 +386,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
       registerClientBrandPending,
       registerSaveFlush,
       isLinePending,
+      getLinePendingPayload,
       hasUnsavedChanges,
       hasClientBrandPending,
       saveStatus,
@@ -382,6 +399,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
       registerClientBrandPending,
       registerSaveFlush,
       isLinePending,
+      getLinePendingPayload,
       hasUnsavedChanges,
       hasClientBrandPending,
       saveStatus,
@@ -392,6 +410,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
 
   return (
     <QuotationManualSaveContext.Provider value={value}>
+      <QuotationManualSaveShortcuts />
       {children}
     </QuotationManualSaveContext.Provider>
   );

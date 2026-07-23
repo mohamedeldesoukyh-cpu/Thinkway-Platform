@@ -33,6 +33,8 @@ export type QuotationDeliverable = {
   quantity: number;
   /** Total client price for this post-type line (computed from cost details). */
   revenue?: number | null;
+  /** When true, client price is intentionally zero (complimentary for the client). */
+  free_for_client?: boolean | null;
   service_description?: string | null;
   commercial_input_mode?: CommercialInputMode;
   cost?: number | null;
@@ -69,6 +71,8 @@ export type QuotationItemSeed = {
   revenue?: number | null;
   gp_value?: number | null;
   af_pct?: number | null;
+  collapse_group_id?: string | null;
+  collapse_label?: string | null;
 };
 
 export type ImportCreatorOption = {

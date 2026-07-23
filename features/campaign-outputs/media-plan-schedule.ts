@@ -1,6 +1,8 @@
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 
+import type { MediaPlanPriorityWeights } from "./media-plan-priority-weights";
+import type { MediaPlanMarketIntelligenceMeta } from "@/features/market-intelligence/market-intelligence-config";
 import { resolveSlate, type SlateCreator } from "./output-inputs";
 import { normalizeCreatorMatchKey } from "./hydration/quotation-service-types";
 import {
@@ -16,13 +18,31 @@ export type MediaPlanScheduleMeta = {
   weekWeights?: number[];
   /** Explicit creator slot overrides (week 1-based, dayIndex 0=Monday). */
   assignments?: MediaPlanSlotAssignment[];
+  /** Optional per-campaign creator-priority weight overrides (merged onto defaults). */
+  priorityWeights?: Partial<MediaPlanPriorityWeights>;
+  /** Market intelligence toggles — all factors enabled by default. */
+  marketIntelligence?: MediaPlanMarketIntelligenceMeta;
 };
 
 export type MediaPlanSlotAssignment = {
   creatorId: string;
   week: number;
   dayIndex: number;
+  /** When set, pins this specific deliverable type; omit for legacy whole-creator moves. */
+  serviceType?: string;
 };
+
+export function normalizeDeliverableTypeLabel(label: string): string {
+  return label.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function assignmentKey(assignment: MediaPlanSlotAssignment): string {
+  const creator = assignment.creatorId.trim().toLowerCase();
+  const type = assignment.serviceType
+    ? normalizeDeliverableTypeLabel(assignment.serviceType)
+    : "*";
+  return `${creator}::${type}`;
+}
 
 export function mediaPlanScheduleFromMeta(
   meta: CampaignObject["meta"] | undefined
@@ -90,15 +110,56 @@ export type RescheduleMediaPlanInput = {
     /** Direct slate creator ids — used by interactive schedule UI. */
     creatorIds?: string[];
     fromWeek?: number;
+    fromDayIndex?: number;
     toWeek?: number;
     toDayIndex?: number;
+    /** Deliverable labels selected to move to the target slot. */
+    deliverableTypes?: string[];
+    /** Deliverable labels staying on the source slot (partial moves). */
+    remainingTypes?: string[];
   }>;
+  /** Partial market intelligence overrides — merged onto existing meta. */
+  marketIntelligence?: Partial<MediaPlanMarketIntelligenceMeta>;
 };
 
 export type RescheduleMediaPlanResult = {
   campaignObject: CampaignObject;
   change: string | null;
 };
+
+function cloneMediaPlanScheduleMeta(existing: MediaPlanScheduleMeta): MediaPlanScheduleMeta {
+  return {
+    weekWeights: existing.weekWeights ? [...existing.weekWeights] : undefined,
+    assignments: existing.assignments ? [...existing.assignments] : undefined,
+    priorityWeights: existing.priorityWeights ? { ...existing.priorityWeights } : undefined,
+    marketIntelligence: existing.marketIntelligence
+      ? {
+          ...existing.marketIntelligence,
+          toggles: existing.marketIntelligence.toggles
+            ? { ...existing.marketIntelligence.toggles }
+            : undefined,
+          countries: existing.marketIntelligence.countries
+            ? [...existing.marketIntelligence.countries]
+            : undefined,
+        }
+      : undefined,
+  };
+}
+
+export function mergeMediaPlanMarketIntelligenceMeta(
+  existing: MediaPlanMarketIntelligenceMeta | undefined,
+  patch: Partial<MediaPlanMarketIntelligenceMeta>
+): MediaPlanMarketIntelligenceMeta {
+  return {
+    ...existing,
+    ...patch,
+    toggles: {
+      ...existing?.toggles,
+      ...patch.toggles,
+    },
+    countries: patch.countries ?? existing?.countries,
+  };
+}
 
 export function applyMediaPlanScheduleChange(
   campaignObject: CampaignObject,
@@ -108,11 +169,16 @@ export function applyMediaPlanScheduleChange(
   const durationWeeks = Math.max(1, facts?.durationWeeks ?? 4);
   const slate = resolveSlate(campaignObject);
   const existing = mediaPlanScheduleFromMeta(campaignObject.meta) ?? {};
-  const next: MediaPlanScheduleMeta = {
-    weekWeights: existing.weekWeights ? [...existing.weekWeights] : undefined,
-    assignments: existing.assignments ? [...existing.assignments] : undefined,
-  };
+  const next = cloneMediaPlanScheduleMeta(existing);
   const changes: string[] = [];
+
+  if (input.marketIntelligence) {
+    next.marketIntelligence = mergeMediaPlanMarketIntelligenceMeta(
+      existing.marketIntelligence,
+      input.marketIntelligence
+    );
+    changes.push("updated market intelligence scheduling factors");
+  }
 
   if (input.weekWeights?.length) {
     next.weekWeights = normalizeWeekWeights(input.weekWeights, durationWeeks);
@@ -125,7 +191,7 @@ export function applyMediaPlanScheduleChange(
 
   if (input.moveCreators?.length) {
     const assignments = new Map(
-      (next.assignments ?? []).map((assignment) => [assignment.creatorId, assignment])
+      (next.assignments ?? []).map((assignment) => [assignmentKey(assignment), assignment])
     );
 
     for (const move of input.moveCreators) {
@@ -135,29 +201,89 @@ export function applyMediaPlanScheduleChange(
         move.toDayIndex != null && move.toDayIndex >= 0 && move.toDayIndex <= 6
           ? move.toDayIndex
           : 0;
+      const fromWeek =
+        move.fromWeek != null && move.fromWeek >= 1 && move.fromWeek <= durationWeeks
+          ? move.fromWeek
+          : undefined;
+      const fromDayIndex =
+        move.fromDayIndex != null && move.fromDayIndex >= 0 && move.fromDayIndex <= 6
+          ? move.fromDayIndex
+          : undefined;
+      const deliverableTypes = move.deliverableTypes?.filter((type) => type.trim()) ?? [];
+      const remainingTypes = move.remainingTypes?.filter((type) => type.trim()) ?? [];
+      const partialMove =
+        remainingTypes.length > 0 &&
+        fromWeek != null &&
+        fromDayIndex != null &&
+        (fromWeek !== toWeek || fromDayIndex !== toDayIndex);
+
+      const applyCreatorMove = (creator: SlateCreator) => {
+        if (deliverableTypes.length) {
+          for (const serviceType of deliverableTypes) {
+            assignments.set(
+              assignmentKey({
+                creatorId: creator.creatorId,
+                week: toWeek,
+                dayIndex: toDayIndex,
+                serviceType,
+              }),
+              {
+                creatorId: creator.creatorId,
+                week: toWeek,
+                dayIndex: toDayIndex,
+                serviceType,
+              }
+            );
+          }
+          if (partialMove && fromWeek != null && fromDayIndex != null) {
+            for (const serviceType of remainingTypes) {
+              assignments.set(
+                assignmentKey({
+                  creatorId: creator.creatorId,
+                  week: fromWeek,
+                  dayIndex: fromDayIndex,
+                  serviceType,
+                }),
+                {
+                  creatorId: creator.creatorId,
+                  week: fromWeek,
+                  dayIndex: fromDayIndex,
+                  serviceType,
+                }
+              );
+            }
+          }
+          const moveLabel =
+            partialMove
+              ? `${deliverableTypes.length} deliverable${deliverableTypes.length === 1 ? "" : "s"}`
+              : creator.displayName;
+          changes.push(`moved ${moveLabel} for ${creator.displayName} to Week ${toWeek}`);
+          return;
+        }
+
+        assignments.set(
+          assignmentKey({ creatorId: creator.creatorId, week: toWeek, dayIndex: toDayIndex }),
+          {
+            creatorId: creator.creatorId,
+            week: toWeek,
+            dayIndex: toDayIndex,
+          }
+        );
+        changes.push(`moved ${creator.displayName} to Week ${toWeek}`);
+      };
 
       for (const creatorId of move.creatorIds ?? []) {
         const creator = slate.find(
           (entry) => normalizeCreatorId(entry.creatorId) === normalizeCreatorId(creatorId)
         );
         if (!creator) continue;
-        assignments.set(creator.creatorId, {
-          creatorId: creator.creatorId,
-          week: toWeek,
-          dayIndex: toDayIndex,
-        });
-        changes.push(`moved ${creator.displayName} to Week ${toWeek}`);
+        applyCreatorMove(creator);
       }
 
       for (const name of move.names ?? []) {
         const creator = findSlateCreatorByName(slate, name);
         if (!creator) continue;
-        assignments.set(creator.creatorId, {
-          creatorId: creator.creatorId,
-          week: toWeek,
-          dayIndex: toDayIndex,
-        });
-        changes.push(`moved ${creator.displayName} to Week ${toWeek}`);
+        applyCreatorMove(creator);
       }
     }
 
@@ -282,10 +408,6 @@ export function deriveEffectiveWeekWeights(
     );
 
   const schedule = mediaPlanScheduleFromMeta(campaignObject.meta);
-  if (!schedule?.assignments?.length) {
-    return { weights: baselineWeights, baselineWeights, scheduleAdjusted: false };
-  }
-
   const weekCounts = countCreatorsPerWeekFromSchedule(campaignObject, weeks);
   const total = weekCounts.reduce((sum, count) => sum + count, 0);
   if (total <= 0) {
@@ -293,6 +415,8 @@ export function deriveEffectiveWeekWeights(
   }
 
   const weights = normalizeWeekWeights(weekCounts, weeks);
-  const scheduleAdjusted = weightsDifferSignificantly(baselineWeights, weights);
+  const scheduleAdjusted =
+    Boolean(schedule?.assignments?.length) ||
+    weightsDifferSignificantly(baselineWeights, weights);
   return { weights, baselineWeights, scheduleAdjusted };
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import type { QuotationDeliverableTypeLine } from "@/lib/domains/commercial/quotation-types";
 import { QuotationPostTypeMultiSelect } from "@/features/quotations/components/quotation-post-type-multi-select";
 import {
@@ -28,6 +29,8 @@ type Props = {
   disabled?: boolean;
   /** Open the type picker on mount (e.g. after adding a manual row). */
   defaultOpen?: boolean;
+  /** Flush quotation row — single-line 34px trigger. */
+  compact?: boolean;
 };
 
 export function QuotationDeliverableTypeLinesEditor({
@@ -36,6 +39,7 @@ export function QuotationDeliverableTypeLinesEditor({
   onChange,
   disabled,
   defaultOpen,
+  compact = false,
 }: Props) {
   const displayLines = lines.length > 0 ? lines : [{ type: "", quantity: 1 }];
   const selectedTypes = selectedTypesFromTypeLines(displayLines);
@@ -60,11 +64,14 @@ export function QuotationDeliverableTypeLinesEditor({
   }
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-start gap-1">
+    <div className={compact ? "type-lines-editor min-w-0 flex-1" : "space-y-1.5"}>
+      <div className={compact ? "flex min-w-0 items-center gap-1" : "flex items-start gap-1"}>
         {!showPerTypeQuantity && selectedTypes.length === 1 ? (
           <Input
-            className="h-8 w-11 shrink-0 px-1 text-center text-xs tabular-nums"
+            className={cn(
+              "h-8 w-11 shrink-0 px-1 text-center text-xs tabular-nums",
+              compact && "hidden"
+            )}
             inputMode="numeric"
             min={1}
             step={1}
@@ -86,11 +93,12 @@ export function QuotationDeliverableTypeLinesEditor({
           allowedPlatforms={allowedPlatforms}
           disabled={disabled}
           summaryLabel={summaryLabel}
-          className="min-w-0 flex-1"
+          className={cn("min-w-0 flex-1", compact && "type-sel-trigger")}
           defaultOpen={defaultOpen}
+          compact={compact}
         />
       </div>
-      {showPerTypeQuantity
+      {showPerTypeQuantity && !compact
         ? selectedTypes.map((type) => {
             const line = displayLines.find((entry) => entry.type === type);
             return (

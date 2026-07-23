@@ -34,7 +34,12 @@ type NavItem = {
 const navItems: NavItem[] = [
   { href: "/", label: "Home", icon: LayoutDashboardIcon },
   { href: "/dashboard", label: "Executive", icon: LayoutDashboardIcon },
-  { href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon },
+  { href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon,
+    children: [
+      { href: "/campaigns", label: "All campaigns" },
+      { href: "/studio", label: "Studio" },
+    ],
+  },
   {
     href: "/discovery/search",
     label: "Discovery",
@@ -98,6 +103,7 @@ const navItems: NavItem[] = [
       { href: "/finance/exchange-rates", label: "Exchange rates" },
       { href: "/finance/periods", label: "Period management" },
       { href: "/system/health", label: "System health" },
+      { href: "/system/performance", label: "Performance" },
     ],
   },
   {

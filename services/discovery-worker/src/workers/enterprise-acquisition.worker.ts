@@ -6,6 +6,12 @@ import {
 } from "@/lib/discovery/acquisition-session.js";
 import { runDatasetAcquisitionBackfill } from "@/lib/discovery/dataset-acquisition-orchestrator.js";
 import type { EnterpriseAcquisitionJobData } from "@/lib/discovery/enterprise-acquisition-types.js";
+import { assertApifyAcquisitionBudget } from "@/lib/discovery/control-center/apify-budget.js";
+import {
+  AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON,
+  isAutomaticEnrichmentAndAcquisitionDisabled,
+  logBlockedAutomaticAction,
+} from "@/lib/discovery/operational-safety.js";
 
 import { supabase } from "../db/supabase.js";
 import { getRedisConnection } from "../queues/connection.js";
@@ -26,6 +32,37 @@ export function startEnterpriseAcquisitionWorker(): Worker<EnterpriseAcquisition
     QUEUES.enterpriseAcquisition,
     async (job: Job<EnterpriseAcquisitionJobData>) => {
       const data = job.data;
+
+      if (isAutomaticEnrichmentAndAcquisitionDisabled()) {
+        logBlockedAutomaticAction(
+          "enterprise_acquisition_worker",
+          AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON,
+          { jobId: data.jobId, searchId: data.searchId }
+        );
+        await finalizeCancelledDiscoveryJob(
+          supabase,
+          data.jobId,
+          AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON
+        );
+        return {
+          ok: false,
+          cancelled: true,
+          reason: AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON,
+        };
+      }
+
+      const budget = await assertApifyAcquisitionBudget(supabase, {
+        source: "enterprise_acquisition_worker",
+        meta: { jobId: data.jobId, searchId: data.searchId, platform: data.platform },
+      });
+      if (!budget.allowed) {
+        await finalizeCancelledDiscoveryJob(supabase, data.jobId, budget.reason);
+        return {
+          ok: false,
+          cancelled: true,
+          reason: budget.reason,
+        };
+      }
 
       const preCheck = await checkAcquisitionJobCancelled(
         supabase,

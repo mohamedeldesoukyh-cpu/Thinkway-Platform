@@ -1,6 +1,6 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
-import { IntelligenceWorkspace } from "@/features/ai-workspace/components/intelligence-workspace";
+import { IntelligenceWorkspace } from "@/features/ai-workspace/components/intelligence-workspace-lazy";
 import { AI_WORKSPACE_COPY } from "@/features/ai-workspace/constants/ai-copy";
 import {
   buildWorkspaceContextInput,
@@ -21,7 +21,7 @@ export default async function AiConversationPage({
 }: ConversationPageProps) {
   const { conversationId } = await params;
   const urlParams = parseWorkspaceParams(await searchParams);
-  const { user } = await getAuthUser();
+  const { user, fullName } = await getAuthUser();
 
   let workspaceLabel: string | undefined;
   if (user && (urlParams.workspace || urlParams.id)) {
@@ -53,6 +53,7 @@ export default async function AiConversationPage({
           initialConversationId={conversationId}
           workspaceParams={urlParams}
           workspaceLabel={workspaceLabel}
+          userDisplayName={fullName ?? undefined}
         />
       </PlatformErrorBoundary>
     </DashboardShell>

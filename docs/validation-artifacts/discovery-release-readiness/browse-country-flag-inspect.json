@@ -1,0 +1,342 @@
+{
+  "measuredAt": "2026-07-21T02:00:10.723Z",
+  "hydrationMs": 4261,
+  "creatorCount": 50,
+  "total": 6789,
+  "payloadBytes": 199592,
+  "payloadKb": 194.9,
+  "feedPublicationSlots": 74,
+  "creatorsWithFeed": 50,
+  "feedRenderSuccessRateSample": 100,
+  "flagSample": {
+    "inspected": 12,
+    "withVmFlags": 10,
+    "layerCounts": {
+      "css_or_render": 10,
+      "hydration": 2
+    },
+    "rootCauseHint": "css_or_render — ViewModel has countryFlagCodes; if UI shows none, inspect CSS/CountryFlagsStack (do not change until confirmed)"
+  },
+  "samples": [
+    {
+      "display_name": "ahmed_elbadawy",
+      "country_code": "EG",
+      "country_codes": [
+        "EG"
+      ],
+      "estimated_country": "EG",
+      "audience_countries": [
+        "EG",
+        null
+      ],
+      "feed_pubs": 3,
+      "feed_sample": [
+        {
+          "url": "https://www.tiktok.com/@ahmed_elbadawy1/video/7545925984168496402",
+          "thumbnail": "https://p19-common-sign.tiktokcdn-us.com/tos-alisg-p-0037/oIAC4iz5eXK7Bg09IPyAD6Czwqi7A6QI90tZII~tplv-tiktokx-origin.image?dr=9636&x-expires=1784714400&x-signature=KJy1dj9K0bcGIGkz9LfaiHwl8Dg%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast8",
+          "caption": null,
+          "likes": null
+        }
+      ],
+      "vm_countryFlagCodes": [
+        "EG"
+      ],
+      "vm_countryLabel": "Egypt",
+      "vm_feedPublications": 3,
+      "layer": "css_or_render"
+    },
+    {
+      "display_name": "Instagram",
+      "country_code": "EG",
+      "country_codes": [
+        "EG",
+        "AE"
+      ],
+      "estimated_country": "EG",
+      "audience_countries": [
+        "EG",
+        null
+      ],
+      "feed_pubs": 3,
+      "feed_sample": [
+        {
+          "url": "https://www.tiktok.com/@nourhanneeissa/video/7635426899061181714",
+          "thumbnail": "https://p19-common-sign.tiktokcdn-us.com/tos-alisg-p-0037/oUgsgLDkjfS7AHGTlLfWe83I8iJIJIxAoMPGCx~tplv-tiktokx-origin.image?dr=9636&x-expires=1784714400&x-signature=5uU48z8y3TVTBKBvN9HQqJ3p%2FeQ%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast5",
+          "caption": null,
+          "likes": null
+        }
+      ],
+      "vm_countryFlagCodes": [
+        "EG",
+        "AE"
+      ],
+      "vm_countryLabel": "Egypt · United Arab Emirates",
+      "vm_feedPublications": 3,
+      "layer": "css_or_render"
+    },
+    {
+      "display_name": "itsfarahhosny",
+      "country_code": "EG",
+      "country_codes": [
+        "EG"
+      ],
+      "estimated_country": "EG",
+      "audience_countries": [
+        "EG",
+        null
+      ],
+      "feed_pubs": 3,
+      "feed_sample": [
+        {
+          "url": "https://www.tiktok.com/@itsfarahhosny/video/7402311555733310721",
+          "thumbnail": "https://p19-common-sign.tiktokcdn-us.com/tos-alisg-p-0037/1c984559d01949068655b712726003f7_1723485019~tplv-tiktokx-dmt-logom:tos-alisg-i-0068/oEkBYAZ6AHCiyxxJAAiBUrzLERACSp3IEPijL.image?dr=9634&x-expires=1784714400&x-signature=krVV9kNephIwW36xe1SP2WG3iAo%3D&t=4d5b0474&ps=13740610&shp=81f88b70&shcp=43f4a2f9&idc=useast5",
+          "caption": null,
+          "likes": null
+        }
+      ],
+      "vm_countryFlagCodes": [
+        "EG"
+      ],
+      "vm_countryLabel": "Egypt",
+      "vm_feedPublications": 3,
+      "layer": "css_or_render"
+    },
+    {
+      "display_name": "ouda.5",
+      "country_code": "EG",
+      "country_codes": [
+        "EG"
+      ],
+      "estimated_country": "EG",
+      "audience_countries": [
+        "EG",
+        "EG"
+      ],
+      "feed_pubs": 3,
+      "feed_sample": [
+        {
+          "url": "https://www.instagram.com/p/DaulqdhMaIQ/",
+          "thumbnail": "https://scontent-ord5-1.cdninstagram.com/v/t51.71878-15/747605254_1739540667480121_479481449294368582_n.jpg?stp=dst-jpg_e15_tt6&_nc_ht=scontent-ord5-1.cdninstagram.com&_nc_cat=101&_nc_oc=Q6cZ2gF81JXT4SZqwsCqaIReTGY2ULI-WC9nU0KH0nuTPk6RypOXPrvVKMUUmgA49A63vBM&_nc_ohc=FfZnz8DUz2MQ7kNvwHhO1D_&_nc_gid=z-BcCgS5OImjOp4x3MDJ7Q&edm=ADp7STQBAAAA&ccb=7-5&oh=00_AQB8TsNv_pnieNX7hRJuOvv43VVPdwXSu0TOMEIwsYs4FQ&oe=6A63E2DB&_nc_sid=c6f216",
+          "caption": null,
+          "likes": null
+        }
+      ],
+      "vm_countryFlagCodes": [
+        "EG"
+      ],
+      "vm_countryLabel": "Egypt",
+      "vm_feedPublications": 3,
+      "layer": "css_or_render"
+    },
+    {
+      "display_name": "Karim Kabbany | كريم قباني",
+      "country_code": "EG",
+      "country_codes": [
+        "EG",
+        "FR"
+      ],
+      "estimated_country": "EG",
+      "audience_countries": [
+        null,
+        "EG"
+      ],
+      "feed_pubs": 3,
+      "feed_sample": [
+        {
+          "url": "https://www.instagram.com/p/CoxMZUvASh1/",
+          "thumbnail": "https://scontent-ord5-2.cdninstagram.com/v/t51.71878-15/498127441_1738628640344537_1405067468408748459_n.jpg?stp=dst-jpg_e15_tt6&_nc_ht=scontent-ord5-2.cdninstagram.com&_nc_cat=105&_nc_oc=Q6cZ2gFYNhqic9unadNaVzgfMlJpsFYg0n7oylLmSe4pYyCa9SC_KcMNE7vVIWPwe4X_clo&_nc_ohc=RouQG5xQ7rcQ7kNvwHsTbCM&_nc_gid=dvrI3K2WXw769ukHgmwOew&edm=AOQ1c0wBAAAA&ccb=7-5&oh=00_AQAP7zDHTiBaFWonlnxy_3j1M_O-zIDScZDK4mUf-w__6g&oe=6A5A5B75&_nc_sid=8b3546",
+          "caption": null,
+          "likes": null
+        }
+      ],
+      "vm_countryFlagCodes": [
+        "EG",
+        "FR"
+      ],
+      "vm_countryLabel": "Egypt · France",
+      "vm_feedPublications": 3,
+      "layer": "css_or_render"
+    },
+    {
+      "display_name": "ayaibrahimx",
+      "country_code": "EG",
+      "country_codes": [
+        "EG"
+      ],
+      "estimated_country": "EG",
+      "audience_countries": [
+        "EG",
+        "EG"
+      ],
+      "feed_pubs": 3,
+      "feed_sample": [
+        {
+          "url": "https://www.instagram.com/p/DaI1hxoozaR/",
+          "thumbnail": "https://scontent-den2-1.cdninstagram.com/v/t51.82787-15/731111397_18604180963062253_7172316170804346335_n.jpg?stp=dst-jpg_e35_p1080x1080_sh2.08_tt6&_nc_ht=scontent-den2-1.cdninstagram.com&_nc_cat=101&_nc_oc=Q6cZ2gHtjYjAv6bbeqGKPR-_tE7Peu39PVOjxGh4cbDra0Y29Oe6mmxUwZrDu90YPNJDzxg&_nc_ohc=9XO4eTrWNv0Q7kNvwFiYiD8&_nc_gid=JCLEdIpKek2sFF0XcxTmnQ&edm=ADp7STQBAAAA&ccb=7-5&oh=00_AQAS9RhHzl9bfTI5dssyBZF2lL7bIOmAUFh0g9sA1EErQw&oe=6A62A6B0&_nc_sid=c6f216",
+          "caption": null,
+          "likes": null
+        }
+      ],
+      "vm_countryFlagCodes": [
+        "EG"
+      ],
+      "vm_countryLabel": "Egypt",
+      "vm_feedPublications": 3,
+      "layer": "css_or_render"
+    },
+    {
+      "display_name": "Yasser Ahmed - ياسر أحمد",
+      "country_code": "EG",
+      "country_codes": [
+        "EG"
+      ],
+      "estimated_country": "EG",
+      "audience_countries": [
+        null,
+        "EG"
+      ],
+      "feed_pubs": 3,
+      "feed_sample": [
+        {
+          "url": "https://www.instagram.com/p/DY11o_JSom3/",
+          "thumbnail": "https://scontent-ord5-3.cdninstagram.com/v/t51.82787-15/706154854_18591496237030284_5317838905919767547_n.jpg?stp=dst-jpg_e35_p1080x1080_sh2.08_tt6&_nc_ht=scontent-ord5-3.cdninstagram.com&_nc_cat=100&_nc_oc=Q6cZ2gFGCxODfgWIRUigUqkw3jEsWIvK4hTS9bUvpG9RLEjmAVsavUvXetdfGJMVSkIILxU&_nc_ohc=IgekJimZC2AQ7kNvwFBJMmD&_nc_gid=SRN-ShTrmrjUcVrJJtAjyA&edm=AOQ1c0wBAAAA&ccb=7-5&oh=00_AQBB1OQJr2AKsZgtyIyBO3BzOjt1ZRJXVaAiYUcIdoMUDw&oe=6A5A44AB&_nc_sid=8b3546",
+          "caption": null,
+          "likes": null
+        }
+      ],
+      "vm_countryFlagCodes": [
+        "EG"
+      ],
+      "vm_countryLabel": "Egypt",
+      "vm_feedPublications": 3,
+      "layer": "css_or_render"
+    },
+    {
+      "display_name": "amryosseff",
+      "country_code": "EG",
+      "country_codes": [
+        "EG"
+      ],
+      "estimated_country": "EG",
+      "audience_countries": [
+        "EG",
+        null
+      ],
+      "feed_pubs": 3,
+      "feed_sample": [
+        {
+          "url": "https://www.instagram.com/p/DavpOrmti4Y/",
+          "thumbnail": "https://scontent-bos5-1.cdninstagram.com/v/t51.71878-15/746761812_2071466807130395_8131122590714536279_n.jpg?stp=dst-jpg_e15_tt6&_nc_ht=scontent-bos5-1.cdninstagram.com&_nc_cat=111&_nc_oc=Q6cZ2gE9p6vxi9o3rK2j80XQRQiOiWYeLQUUqdl9yhsZcovZwXgdeshjmMZ2yjjC-Y4_SwA7JD1C4q4z6XHhXgs6rwZn&_nc_ohc=yn1ua4OO5DcQ7kNvwHKo189&_nc_gid=nxQWiSbOLRGmMtFLi44xoA&edm=ADp7STQBAAAA&ccb=7-5&oh=00_AQA6x1u-CvWfso8qC-rXOurkuwGaRvoMr0PKV-f014Tn6Q&oe=6A62AF69&_nc_sid=c6f216",
+          "caption": null,
+          "likes": null
+        }
+      ],
+      "vm_countryFlagCodes": [
+        "EG"
+      ],
+      "vm_countryLabel": "Egypt",
+      "vm_feedPublications": 3,
+      "layer": "css_or_render"
+    },
+    {
+      "display_name": "adanys.table",
+      "country_code": "EG",
+      "country_codes": [
+        "EG"
+      ],
+      "estimated_country": "EG",
+      "audience_countries": [
+        null,
+        "EG"
+      ],
+      "feed_pubs": 3,
+      "feed_sample": [
+        {
+          "url": "https://www.instagram.com/p/Da0K8xVCe5a/",
+          "thumbnail": "https://scontent-phl2-1.cdninstagram.com/v/t51.82787-15/747613237_18103720382132446_7262988389069324815_n.jpg?stp=dst-jpg_e35_p1080x1080_sh2.08_tt6&_nc_ht=scontent-phl2-1.cdninstagram.com&_nc_cat=110&_nc_oc=Q6cZ2gHYvR9Hcky6FldGvGH44IahuyXd7oEAPE6xb6eh2BfMTYeGEOMAI8sC8kzZ6rwl6NA&_nc_ohc=zMYvWw9wSzoQ7kNvwEmA5va&_nc_gid=YhX43oJL_txDlLMtakVH5A&edm=AOQ1c0wBAAAA&ccb=7-5&oh=00_AQBSq2DjEPLoIez-svegUchuSGnMzsArY5w0mj_QkQ-KoQ&oe=6A61ECF5&_nc_sid=8b3546",
+          "caption": null,
+          "likes": null
+        }
+      ],
+      "vm_countryFlagCodes": [
+        "EG"
+      ],
+      "vm_countryLabel": "Egypt",
+      "vm_feedPublications": 3,
+      "layer": "css_or_render"
+    },
+    {
+      "display_name": "cairofoodiecouple",
+      "country_code": "EG",
+      "country_codes": [
+        "EG",
+        "IT"
+      ],
+      "estimated_country": "EG",
+      "audience_countries": [
+        null,
+        null
+      ],
+      "feed_pubs": 3,
+      "feed_sample": [
+        {
+          "url": "https://www.instagram.com/p/C0zYaoOttai/",
+          "thumbnail": "https://scontent-iad3-2.cdninstagram.com/v/t51.71878-15/505800262_1066878092036399_112012281614260523_n.jpg?stp=dst-jpg_e15_tt6&_nc_ht=scontent-iad3-2.cdninstagram.com&_nc_cat=111&_nc_oc=Q6cZ2gHUfWFp9Yn8lzJkW3iUnXX-MEFaClfyFNtERh7PjCfnP69bq33j_kLuaoEFYu2mOhY&_nc_ohc=wBviLy3GtX4Q7kNvwFP5U9Y&_nc_gid=HXLRZKFVGNSSnqJGLp1sYg&edm=AOQ1c0wBAAAA&ccb=7-5&oh=00_AQC5gXu1qFALIhc92QFea_GMZWaPvYSwqLImvasVFSESVQ&oe=6A621922&_nc_sid=8b3546",
+          "caption": null,
+          "likes": null
+        }
+      ],
+      "vm_countryFlagCodes": [
+        "EG",
+        "IT"
+      ],
+      "vm_countryLabel": "Egypt · Italy",
+      "vm_feedPublications": 3,
+      "layer": "css_or_render"
+    },
+    {
+      "display_name": "raquelhadassaviagens_",
+      "country_code": null,
+      "country_codes": [],
+      "estimated_country": null,
+      "audience_countries": [
+        null
+      ],
+      "feed_pubs": 1,
+      "feed_sample": [
+        {
+          "url": "https://www.instagram.com/p/Da7-UjsOItR/",
+          "thumbnail": "https://scontent-hel3-1.cdninstagram.com/v/t51.82787-15/748812380_18123180619712048_1986025652660512356_n.webp?stp=dst-webp_s1080x1080_sh2.08&_nc_cat=104&ig_cache_key=Mzk0NDAxOTk5MDI4OTA5MTQwOQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkZFRUQueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=GorEOS4ToVYQ7kNvwH5uDfS&_nc_oc=Adqt13W223yMrVNzgibE5x2OEftWzumoLWw0q8P6xfY7cAqKv6ByT87pgRcodGrLTwM&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-hel3-1.cdninstagram.com&_nc_gid=6EVCdh8iVsFUzcOqCR4Fpw&_nc_ss=7a3ba&oh=00_AQBFLWJ-EYurN0W1174dJhF64UPM4ABDe4ReCoibR5xrnw&oe=6A63E5EB",
+          "caption": null,
+          "likes": null
+        }
+      ],
+      "vm_countryFlagCodes": [],
+      "vm_countryLabel": "—",
+      "vm_feedPublications": 1,
+      "layer": "hydration"
+    },
+    {
+      "display_name": "alhussinefatima",
+      "country_code": null,
+      "country_codes": [],
+      "estimated_country": null,
+      "audience_countries": [
+        null
+      ],
+      "feed_pubs": 1,
+      "feed_sample": [
+        {
+          "url": "https://www.instagram.com/p/Da8BkcnjEJV/",
+          "thumbnail": "https://scontent-hel3-1.cdninstagram.com/v/t51.82787-15/743050433_18110074114961374_4673491500848239334_n.jpg?stp=dst-jpegr_e35_p1080x1080_tt6&_nc_cat=108&ig_cache_key=Mzk0NDAzMDYyOTQzNDI0NDQyMw%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMzAyNC5oZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=9edO6hq5sx8Q7kNvwHZXota&_nc_oc=AdrturXnNsYIxzL7420MqRwif0oJR_bNRnJDCxeksFeSRu9WgHwlWcHpz4LAlWogetI&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&se=-1&_nc_ht=scontent-hel3-1.cdninstagram.com&_nc_gid=6EVCdh8iVsFUzcOqCR4Fpw&_nc_ss=7a3ba&oh=00_AQAYT58HxarAxu_aeiYBYWKB4CM3-8K-h_7atPakl_KDFA&oe=6A63C973",
+          "caption": null,
+          "likes": null
+        }
+      ],
+      "vm_countryFlagCodes": [],
+      "vm_countryLabel": "—",
+      "vm_feedPublications": 1,
+      "layer": "hydration"
+    }
+  ]
+}

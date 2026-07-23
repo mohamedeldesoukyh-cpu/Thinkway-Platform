@@ -12,6 +12,7 @@ import { mergeBriefIntoCampaignObject } from "@/features/campaign-studio/service
 import {
   generateCampaignOutput,
   getCampaignOutput,
+  listCampaignOutputs,
   staleCampaignOutputKinds,
 } from "./output-registry";
 import { resolveSlate } from "./output-inputs";
@@ -51,10 +52,14 @@ test("with brief weights, more deliverables land in early weeks", () => {
   const slate = Array.from({ length: 8 }, (_, index) => ({
     creatorId: `c${index}`,
     displayName: `Creator ${index}`,
+    tier: "Macro",
     serviceTypes: ["1× IG Reel"],
   }));
   const weekCounts = countDeliverablesPerWeek(slate, 4, { weekWeights: weights });
-  assert.ok(weekCounts[0]! > weekCounts[3]!);
+  const early = (weekCounts[0] ?? 0) + (weekCounts[1] ?? 0);
+  const late = (weekCounts[2] ?? 0) + (weekCounts[3] ?? 0);
+  assert.ok(early > late, "launch-heavy weights should concentrate influence in early weeks");
+  assert.ok((weekCounts[0] ?? 0) < slate.length, "week 1 should not schedule every creator");
 });
 
 test("mergeBriefIntoCampaignObject marks brief-dependent outputs as needs_update", () => {
@@ -76,6 +81,13 @@ test("mergeBriefIntoCampaignObject marks brief-dependent outputs as needs_update
   assert.equal(getCampaignOutput(campaignObject, "media_plan")?.status, "needs_update");
   assert.ok(staleCampaignOutputKinds(campaignObject).includes("full_strategy"));
   assert.ok(staleCampaignOutputKinds(campaignObject).includes("media_plan"));
+
+  const strategyView = listCampaignOutputs(campaignObject).find((v) => v.kind === "full_strategy");
+  const mediaView = listCampaignOutputs(campaignObject).find((v) => v.kind === "media_plan");
+  assert.equal(strategyView?.status, "needs_update");
+  assert.equal(mediaView?.status, "needs_update");
+  assert.match(strategyView?.staleReason ?? "", /Campaign brief changed/);
+  assert.match(mediaView?.staleReason ?? "", /Campaign brief changed/);
 });
 
 test("mergeBriefIntoCampaignObject preserves quotation slate", () => {

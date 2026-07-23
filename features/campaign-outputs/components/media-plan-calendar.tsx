@@ -1,10 +1,20 @@
 "use client";
 
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GripVerticalIcon, Loader2Icon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Popover,
   PopoverContent,
@@ -30,6 +40,7 @@ import {
   MEDIA_PLAN_BRAND,
   MEDIA_PLAN_DAY_TYPE_COLORS,
 } from "./media-plan-brand";
+import { DOCUMENT_PREVIEW_DIALOG_Z } from "./document-preview-window";
 
 const DAY_ABBR = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -52,8 +63,12 @@ const GENERIC_OPERATIONAL_TYPES = new Set([
 export type MediaPlanCreatorMoveTarget = {
   creatorId: string;
   creatorName: string;
+  fromWeek: number;
+  fromDayIndex: number;
   toWeek: number;
   toDayIndex: number;
+  deliverableTypes: string[];
+  remainingTypes?: string[];
 };
 
 type DraggableCreator = {
@@ -66,8 +81,35 @@ type DraggableCreator = {
   dayIndex: number;
 };
 
-function formatMirrorChipLabel(serviceType: string): string {
-  return serviceType.includes("↔") ? serviceType : serviceType.replace(/\s*\(Mirror\)\s*$/i, " (Mirror)");
+type PendingDrop = {
+  creator: DraggableCreator;
+  toWeek: number;
+  toDayIndex: number;
+};
+
+const CREATOR_DRAG_MIME = "application/x-thinkway-creator";
+
+function isDraggableCreator(value: unknown): value is DraggableCreator {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<DraggableCreator>;
+  return (
+    typeof candidate.creatorId === "string" &&
+    typeof candidate.name === "string" &&
+    Array.isArray(candidate.types) &&
+    typeof candidate.week === "number" &&
+    typeof candidate.dayIndex === "number"
+  );
+}
+
+function readDraggedCreator(event: React.DragEvent): DraggableCreator | null {
+  const raw = event.dataTransfer.getData(CREATOR_DRAG_MIME);
+  if (!raw) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return isDraggableCreator(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
 }
 
 function typesForDay(day: MediaPlanDay): string[] {
@@ -78,15 +120,10 @@ function typesForDay(day: MediaPlanDay): string[] {
       : [];
   const additional =
     day.additionalDeliverables
-      ?.filter((entry) => !entry.isMirror)
+      ?.filter((entry) => !entry.isMirror && !entry.isCompanion)
       .map((entry) => entry.serviceType)
       .filter((type): type is string => Boolean(type?.trim())) ?? [];
-  const mirrors =
-    day.additionalDeliverables
-      ?.filter((entry) => entry.isMirror)
-      .map((entry) => entry.serviceType)
-      .filter((type): type is string => Boolean(type?.trim())) ?? [];
-  return [...new Set([...primary, ...mirrors, ...additional])];
+  return [...new Set([...primary, ...additional])];
 }
 
 function collectLegendTypes(data: MediaPlanData): string[] {
@@ -151,6 +188,7 @@ const CreatorCard = memo(function CreatorCard({
   editable,
   draggable,
   isDragging,
+  isDragGhost,
   onDragStart,
   onDragEnd,
   onClickMove,
@@ -164,7 +202,8 @@ const CreatorCard = memo(function CreatorCard({
   editable?: boolean;
   draggable?: boolean;
   isDragging?: boolean;
-  onDragStart?: () => void;
+  isDragGhost?: boolean;
+  onDragStart?: (event: React.DragEvent<HTMLDivElement>) => void;
   onDragEnd?: () => void;
   onClickMove?: () => void;
 }) {
@@ -174,16 +213,19 @@ const CreatorCard = memo(function CreatorCard({
       onDragStart={(event) => {
         if (!editable || !draggable) return;
         event.dataTransfer.effectAllowed = "move";
-        onDragStart?.();
+        event.dataTransfer.setData("text/plain", name);
+        event.stopPropagation();
+        onDragStart?.(event);
       }}
       onDragEnd={() => onDragEnd?.()}
       onClick={() => {
         if (editable && onClickMove) onClickMove();
       }}
       className={cn(
-        "rounded-lg border border-[#0B0F1A]/6 bg-[#fafbff] p-1.5 transition-opacity",
+        "rounded-lg border border-[#0B0F1A]/6 bg-[#fafbff] p-1.5 transition-[opacity,transform,box-shadow]",
         editable && draggable && "cursor-grab active:cursor-grabbing hover:border-[#0057FF]/25 hover:shadow-sm",
-        isDragging && "opacity-40",
+        isDragging && !isDragGhost && "scale-[0.97] opacity-35",
+        isDragGhost && "pointer-events-none border-[#0057FF]/40 shadow-lg ring-2 ring-[#0057FF]/25",
         editable && "group/card"
       )}
     >
@@ -236,7 +278,12 @@ function MoveCreatorPopover({
       <PopoverTrigger asChild>
         <span className="sr-only">Move {creator.name}</span>
       </PopoverTrigger>
-      <PopoverContent className="w-64 space-y-3" align="start" data-no-drag>
+      <PopoverContent
+        className="z-[9999] w-64 space-y-3"
+        style={{ zIndex: DOCUMENT_PREVIEW_DIALOG_Z }}
+        align="start"
+        data-no-drag
+      >
         <div>
           <p className="text-xs font-semibold text-foreground">Move creator</p>
           <p className="text-[11px] text-muted-foreground">{creator.name}</p>
@@ -250,7 +297,7 @@ function MoveCreatorPopover({
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[10000]" style={{ zIndex: DOCUMENT_PREVIEW_DIALOG_Z + 1 }}>
                 {Array.from({ length: durationWeeks }, (_, index) => (
                   <SelectItem key={index + 1} value={String(index + 1)}>
                     Week {index + 1}
@@ -267,7 +314,7 @@ function MoveCreatorPopover({
               <SelectTrigger className="h-8 text-xs">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[10000]" style={{ zIndex: DOCUMENT_PREVIEW_DIALOG_Z + 1 }}>
                 {DAY_NAMES.map((day, index) => (
                   <SelectItem key={day} value={String(index)}>
                     {DAY_ABBR[index]}
@@ -284,8 +331,11 @@ function MoveCreatorPopover({
             onMove({
               creatorId: creator.creatorId,
               creatorName: creator.name,
+              fromWeek: creator.week,
+              fromDayIndex: creator.dayIndex,
               toWeek: Number(week),
               toDayIndex: Number(dayIndex),
+              deliverableTypes: creator.types.length ? creator.types : ["Activation"],
             })
           }
           className="inline-flex h-8 w-full items-center justify-center rounded-md bg-[#1D9E75] text-xs font-semibold text-white hover:bg-[#178a66] disabled:opacity-50"
@@ -294,6 +344,153 @@ function MoveCreatorPopover({
         </button>
       </PopoverContent>
     </Popover>
+  );
+}
+
+function MoveDeliverablesDialog({
+  pending,
+  open,
+  saving,
+  onOpenChange,
+  onConfirm,
+}: {
+  pending: PendingDrop | null;
+  open: boolean;
+  saving?: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: (target: MediaPlanCreatorMoveTarget) => void;
+}) {
+  const [mode, setMode] = useState<"all" | "selected">("all");
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  /** Ignore the trailing pointer event from HTML5 drag-drop that otherwise auto-dismisses Radix. */
+  const ignoreOutsideUntilRef = useRef(0);
+
+  const deliverableTypes = pending?.creator.types.length
+    ? pending.creator.types
+    : ["Activation"];
+
+  useEffect(() => {
+    if (!open || !pending) return;
+    ignoreOutsideUntilRef.current = Date.now() + 300;
+    setMode("all");
+    setSelectedTypes(
+      pending.creator.types.length ? pending.creator.types : ["Activation"]
+    );
+  }, [open, pending]);
+
+  const movedTypes =
+    mode === "all"
+      ? deliverableTypes
+      : selectedTypes.filter((type) => deliverableTypes.includes(type));
+  const remainingTypes = deliverableTypes.filter((type) => !movedTypes.includes(type));
+  const canConfirm = movedTypes.length > 0 && Boolean(pending);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="z-[9999] max-w-md"
+        overlayClassName="z-[9999]"
+        style={{ zIndex: DOCUMENT_PREVIEW_DIALOG_Z }}
+        data-no-drag
+        onPointerDownOutside={(event) => {
+          if (Date.now() < ignoreOutsideUntilRef.current) {
+            event.preventDefault();
+          }
+        }}
+        onInteractOutside={(event) => {
+          if (Date.now() < ignoreOutsideUntilRef.current) {
+            event.preventDefault();
+          }
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle>Move deliverables</DialogTitle>
+          <DialogDescription>
+            {pending
+              ? `Move ${pending.creator.name} from ${DAY_ABBR[pending.creator.dayIndex]} (Week ${pending.creator.week}) to ${DAY_ABBR[pending.toDayIndex]} (Week ${pending.toWeek}).`
+              : "Choose which deliverables to move."}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-border p-3 hover:bg-muted/40">
+            <input
+              type="radio"
+              name="move-mode"
+              className="mt-0.5"
+              checked={mode === "all"}
+              onChange={() => setMode("all")}
+            />
+            <span>
+              <span className="block text-sm font-semibold text-foreground">Move all deliverables</span>
+              <span className="text-xs text-muted-foreground">
+                Moves every deliverable on this card to the new day.
+              </span>
+            </span>
+          </label>
+
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-border p-3 hover:bg-muted/40">
+            <input
+              type="radio"
+              name="move-mode"
+              className="mt-0.5"
+              checked={mode === "selected"}
+              onChange={() => setMode("selected")}
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-foreground">Move selected deliverables</span>
+              <span className="text-xs text-muted-foreground">
+                Only checked types move; the rest stay on the original day.
+              </span>
+              {mode === "selected" ? (
+                <div className="mt-2 space-y-2 pt-2">
+                  {deliverableTypes.map((type) => (
+                    <label key={type} className="flex items-center gap-2 text-xs text-foreground">
+                      <Checkbox
+                        checked={selectedTypes.includes(type)}
+                        onCheckedChange={(checked) => {
+                          setSelectedTypes((current) =>
+                            checked
+                              ? [...new Set([...current, type])]
+                              : current.filter((entry) => entry !== type)
+                          );
+                        }}
+                      />
+                      <span className="break-words">{type}</span>
+                    </label>
+                  ))}
+                </div>
+              ) : null}
+            </span>
+          </label>
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            disabled={!canConfirm || saving}
+            onClick={() => {
+              if (!pending || !canConfirm) return;
+              onConfirm({
+                creatorId: pending.creator.creatorId,
+                creatorName: pending.creator.name,
+                fromWeek: pending.creator.week,
+                fromDayIndex: pending.creator.dayIndex,
+                toWeek: pending.toWeek,
+                toDayIndex: pending.toDayIndex,
+                deliverableTypes: movedTypes,
+                remainingTypes: remainingTypes.length ? remainingTypes : undefined,
+              });
+            }}
+          >
+            {saving ? <Loader2Icon className="size-4 animate-spin" /> : "Apply move"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -331,9 +528,9 @@ const DayColumn = memo(function DayColumn({
   saving?: boolean;
   onDragOver?: () => void;
   onDragLeave?: () => void;
-  onDrop?: () => void;
+  onDrop?: (event: React.DragEvent<HTMLDivElement>) => void;
   onMoveCreator?: (target: MediaPlanCreatorMoveTarget) => void;
-  onBeginDrag?: (creator: DraggableCreator) => void;
+  onBeginDrag?: (creator: DraggableCreator, event: React.DragEvent<HTMLDivElement>) => void;
   onEndDrag?: () => void;
   onOpenMovePopover?: (creator: DraggableCreator) => void;
   onCloseMovePopover?: () => void;
@@ -341,6 +538,14 @@ const DayColumn = memo(function DayColumn({
   const style = TYPE_STYLES[day.type];
   const dateStr = day.dateLabel ?? formatDayColumnDate(campaignStart, weekNum, dayIndex);
   const dayAbbr = (DAY_ABBR[dayIndex] ?? day.day).toUpperCase();
+
+  const acceptDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!editable) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = "move";
+    onDragOver?.();
+  };
 
   const renderCreatorEntry = (
     entry: {
@@ -381,7 +586,9 @@ const DayColumn = memo(function DayColumn({
           editable={editable}
           draggable
           isDragging={draggingCreatorId === creator.creatorId}
-          onDragStart={() => onBeginDrag?.({ ...creator, week: weekNum, dayIndex })}
+          onDragStart={(event) =>
+            onBeginDrag?.({ ...creator, week: weekNum, dayIndex }, event)
+          }
           onDragEnd={() => onEndDrag?.()}
           onClickMove={() => onOpenMovePopover?.({ ...creator, week: weekNum, dayIndex })}
         />
@@ -404,20 +611,21 @@ const DayColumn = memo(function DayColumn({
   return (
     <div
       className={cn(
-        "flex min-h-[5.5rem] flex-col overflow-hidden rounded-[10px] border bg-white transition-colors",
-        dragOver ? "border-[#0057FF]/40 bg-[#0057FF]/5 ring-2 ring-[#0057FF]/20" : "border-[#0B0F1A]/6"
+        "flex min-h-[5.5rem] flex-col overflow-visible rounded-[10px] border bg-white transition-[colors,transform,box-shadow]",
+        dragOver
+          ? "scale-[1.01] border-[#0057FF] bg-[#0057FF]/8 shadow-md ring-2 ring-[#0057FF]/30"
+          : draggingCreatorId
+            ? "border-[#0057FF]/15"
+            : "border-[#0B0F1A]/6"
       )}
-      onDragOver={(event) => {
-        if (!editable) return;
-        event.preventDefault();
-        event.dataTransfer.dropEffect = "move";
-        onDragOver?.();
-      }}
+      onDragEnter={acceptDrop}
+      onDragOver={acceptDrop}
       onDragLeave={() => onDragLeave?.()}
       onDrop={(event) => {
         if (!editable) return;
         event.preventDefault();
-        onDrop?.();
+        event.stopPropagation();
+        onDrop?.(event);
       }}
     >
       <div
@@ -434,28 +642,22 @@ const DayColumn = memo(function DayColumn({
           {dateStr}
         </span>
       </div>
-      <div className="flex flex-1 flex-col gap-1 p-1">
+      <div
+        className="flex flex-1 flex-col gap-1 p-1"
+        onDragEnter={acceptDrop}
+        onDragOver={acceptDrop}
+        onDrop={(event) => {
+          if (!editable) return;
+          event.preventDefault();
+          event.stopPropagation();
+          onDrop?.(event);
+        }}
+      >
         {day.creator ? (
           <>
             {renderCreatorEntry(day, `${weekNum}-${dayIndex}-primary`)}
             {(day.additionalDeliverables ?? [])
-              .filter((entry) => entry.isMirror)
-              .map((entry, index) => {
-                const mirrorType = entry.serviceType?.trim();
-                if (!mirrorType) return null;
-                return (
-                  <div
-                    key={`${weekNum}-${dayIndex}-mirror-${index}`}
-                    className="rounded-md border border-dashed border-[#0B0F1A]/10 bg-white/80 px-1.5 py-1"
-                  >
-                    <span className="text-[8px] font-medium" style={{ color: MEDIA_PLAN_BRAND.muted }}>
-                      ↔ {formatMirrorChipLabel(mirrorType)}
-                    </span>
-                  </div>
-                );
-              })}
-            {(day.additionalDeliverables ?? [])
-              .filter((entry) => !entry.isMirror)
+              .filter((entry) => !entry.isMirror && !entry.isCompanion)
               .map((entry, index) =>
                 renderCreatorEntry(entry, `${weekNum}-${dayIndex}-extra-${index}`)
               )}
@@ -510,26 +712,104 @@ export function MediaPlanCalendar({
     null
   );
   const [movePopoverCreator, setMovePopoverCreator] = useState<DraggableCreator | null>(null);
+  const [pendingDrop, setPendingDrop] = useState<PendingDrop | null>(null);
+  const [dragPointer, setDragPointer] = useState<{ x: number; y: number } | null>(null);
+  const calendarRef = useRef<HTMLDivElement>(null);
+  const draggingCreatorRef = useRef<DraggableCreator | null>(null);
+  const dropOpenTimerRef = useRef<number | null>(null);
+
+  const clearDragVisualState = useCallback(() => {
+    draggingCreatorRef.current = null;
+    setDraggingCreator(null);
+    setDragOverSlot(null);
+    setDragPointer(null);
+  }, []);
+
+  const handleBeginDrag = useCallback(
+    (creator: DraggableCreator, event: React.DragEvent<HTMLDivElement>) => {
+      if (dropOpenTimerRef.current != null) {
+        window.clearTimeout(dropOpenTimerRef.current);
+        dropOpenTimerRef.current = null;
+      }
+      draggingCreatorRef.current = creator;
+      setDraggingCreator(creator);
+      setMovePopoverCreator(null);
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", creator.creatorId);
+      event.dataTransfer.setData("application/x-thinkway-creator-id", creator.creatorId);
+      event.dataTransfer.setData(CREATOR_DRAG_MIME, JSON.stringify(creator));
+
+      const target = event.currentTarget;
+      const clone = target.cloneNode(true) as HTMLElement;
+      clone.style.width = `${target.offsetWidth}px`;
+      clone.style.position = "absolute";
+      clone.style.top = "-9999px";
+      clone.style.left = "-9999px";
+      document.body.appendChild(clone);
+      event.dataTransfer.setDragImage(clone, target.offsetWidth / 2, target.offsetHeight / 2);
+      window.setTimeout(() => clone.remove(), 0);
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!draggingCreator) {
+      setDragPointer(null);
+      return;
+    }
+    const onDragOver = (event: DragEvent) => {
+      setDragPointer({ x: event.clientX, y: event.clientY });
+    };
+    window.addEventListener("dragover", onDragOver);
+    return () => window.removeEventListener("dragover", onDragOver);
+  }, [draggingCreator]);
+
+  useEffect(() => {
+    return () => {
+      if (dropOpenTimerRef.current != null) {
+        window.clearTimeout(dropOpenTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleDrop = useCallback(
-    (week: number, dayIndex: number) => {
-      if (!draggingCreator || !onMoveCreator) return;
-      if (draggingCreator.week === week && draggingCreator.dayIndex === dayIndex) {
-        setDraggingCreator(null);
-        setDragOverSlot(null);
+    (week: number, dayIndex: number, event: React.DragEvent<HTMLDivElement>) => {
+      if (!onMoveCreator) return;
+      const creator = draggingCreatorRef.current ?? readDraggedCreator(event);
+      if (!creator) return;
+
+      if (creator.week === week && creator.dayIndex === dayIndex) {
+        clearDragVisualState();
         return;
       }
-      onMoveCreator({
-        creatorId: draggingCreator.creatorId,
-        creatorName: draggingCreator.name,
+
+      const nextPending: PendingDrop = {
+        creator,
         toWeek: week,
         toDayIndex: dayIndex,
-      });
-      setDraggingCreator(null);
-      setDragOverSlot(null);
+      };
+
+      clearDragVisualState();
       setMovePopoverCreator(null);
+
+      // Defer dialog open past the drag pointer-up sequence so Radix does not auto-dismiss.
+      if (dropOpenTimerRef.current != null) {
+        window.clearTimeout(dropOpenTimerRef.current);
+      }
+      dropOpenTimerRef.current = window.setTimeout(() => {
+        dropOpenTimerRef.current = null;
+        setPendingDrop(nextPending);
+      }, 0);
     },
-    [draggingCreator, onMoveCreator]
+    [clearDragVisualState, onMoveCreator]
+  );
+
+  const handleConfirmMove = useCallback(
+    (target: MediaPlanCreatorMoveTarget) => {
+      onMoveCreator?.(target);
+      setPendingDrop(null);
+    },
+    [onMoveCreator]
   );
 
   const slotLabel =
@@ -541,8 +821,11 @@ export function MediaPlanCalendar({
 
   return (
     <div
-      className="space-y-4 rounded-2xl border border-[#0B0F1A]/6 p-4 sm:p-5"
+      ref={calendarRef}
+      className="relative space-y-4 rounded-2xl border border-[#0B0F1A]/6 p-4 sm:p-5"
       style={{ backgroundColor: MEDIA_PLAN_BRAND.lavender }}
+      data-no-drag
+      data-media-plan-calendar
     >
       <div className="flex flex-wrap items-center gap-2.5">
         <span
@@ -553,7 +836,7 @@ export function MediaPlanCalendar({
         </span>
         {editable ? (
           <span className="rounded-full border border-[#0057FF]/20 bg-white px-2.5 py-0.5 text-[10px] font-medium text-[#0057FF]">
-            Drag creators between days · click a card to pick a slot
+            Drag creators between days · release to choose what moves
           </span>
         ) : null}
         {saving ? (
@@ -628,12 +911,12 @@ export function MediaPlanCalendar({
                       setDragOverSlot(null);
                     }
                   }}
-                  onDrop={() => handleDrop(week.week, dayIndex)}
+                  onDrop={(event) => handleDrop(week.week, dayIndex, event)}
                   onMoveCreator={onMoveCreator}
-                  onBeginDrag={setDraggingCreator}
+                  onBeginDrag={handleBeginDrag}
                   onEndDrag={() => {
-                    setDraggingCreator(null);
-                    setDragOverSlot(null);
+                    // dragend always fires after drop; keep pending-drop open intact.
+                    clearDragVisualState();
                   }}
                   onOpenMovePopover={setMovePopoverCreator}
                   onCloseMovePopover={() => setMovePopoverCreator(null)}
@@ -643,6 +926,33 @@ export function MediaPlanCalendar({
           </div>
         ))}
       </div>
+
+      {dragPointer && draggingCreator ? (
+        <div
+          className="pointer-events-none fixed z-[80] w-36 -translate-x-1/2 -translate-y-1/2"
+          style={{ left: dragPointer.x, top: dragPointer.y }}
+        >
+          <CreatorCard
+            name={draggingCreator.name}
+            types={draggingCreator.types}
+            avatarUrl={draggingCreator.avatarUrl}
+            profileUrl={draggingCreator.profileUrl}
+            typeColorMap={typeColorMap}
+            dotFallback={MEDIA_PLAN_BRAND.electricBlue}
+            isDragGhost
+          />
+        </div>
+      ) : null}
+
+      <MoveDeliverablesDialog
+        pending={pendingDrop}
+        open={Boolean(pendingDrop)}
+        saving={saving}
+        onOpenChange={(open) => {
+          if (!open) setPendingDrop(null);
+        }}
+        onConfirm={handleConfirmMove}
+      />
     </div>
   );
 }

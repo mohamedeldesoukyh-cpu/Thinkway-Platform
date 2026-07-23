@@ -1,5 +1,12 @@
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { discoveryCreatorCategoriesLabel } from "@/lib/creators/creator-display-categories";
+import {
+  countryFlag,
+  countryFlagImageUrl,
+  countryFlagImageFallbackUrls,
+  formatCreatorCountryLabels,
+  normalizeCountryCode,
+} from "@/lib/creators/creator-display-utils";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
 
 export {
@@ -20,8 +27,9 @@ export {
   countryFlag,
   countryFlagImageUrl,
   countryFlagImageFallbackUrls,
+  formatCreatorCountryLabels,
   normalizeCountryCode,
-} from "@/lib/creators/creator-display-utils";
+};
 
 /** Distinct audience-interest / category tags for a creator. */
 export function audienceInterestList(creator: UnifiedCreatorResult): string[] {
@@ -59,9 +67,7 @@ export function brandSafetyMeta(score: number | null): {
 }
 
 export function audienceCountryLabel(creator: UnifiedCreatorResult): string {
-  const primary = creator.platforms[0];
-  const code = primary?.audience_country ?? creator.estimated_country ?? creator.country_code;
-  return code ?? "—";
+  return formatCreatorCountryLabels(creator);
 }
 
 export function categoriesLabel(creator: UnifiedCreatorResult): string {
@@ -97,7 +103,7 @@ export function exportCreatorsCsv(creators: UnifiedCreatorResult[]): string {
       String(c.metrics.followers.value ?? ""),
       String(c.metrics.engagement_rate.value ?? ""),
       String(c.metrics.avg_views.value ?? ""),
-      esc(c.country_code ?? ""),
+      esc(formatCreatorCountryLabels(c)),
       esc(audienceCountryLabel(c)),
       esc(categoriesLabel(c)),
       String(thinkwayAiScore(c) ?? ""),

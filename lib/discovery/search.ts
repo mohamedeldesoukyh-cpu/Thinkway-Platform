@@ -157,12 +157,16 @@ export async function searchDiscoveredProfiles(
     supabase
       .from("discovered_profiles")
       .select(DISCOVERY_PROFILE_SELECT, { count: searchQuery ? undefined : "exact" })
+      .is("influencer_id", null)
   );
 
   if (searchQuery && rankByProfileId) {
     query = query.in("id", [...rankByProfileId.keys()]);
   } else {
-    query = query.order("updated_at", { ascending: false }).range(from, from + pageSize - 1);
+    query = query
+      .order("last_enriched_at", { ascending: false, nullsFirst: false })
+      .order("updated_at", { ascending: false })
+      .range(from, from + pageSize - 1);
   }
 
   if (filters.platform) {

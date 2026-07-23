@@ -11,7 +11,10 @@ import {
   expandSchedulableDeliverables,
   expandRawSchedulableDeliverables,
   orderDeliverablesForWeekAllocation,
+  orderDeliverablesForOptimization,
   parseServiceTypeQuantity,
+  publishingScore,
+  publishingScorePerWeek,
   scheduleDeliverables,
 } from "./media-plan-scheduler";
 import {
@@ -120,7 +123,7 @@ test("UGC allowed in week 1 when brief requests immediate UGC", () => {
   assert.equal(placements[0]!.week, 1);
 });
 
-test("70/10/10/10 weights apply to activations not mirror duplicates", () => {
+test("70/10/10/10 weights emphasize week 1 impact while sustaining activity in every week", () => {
   const slate = [
     creator("c1", "Coach A", ["2× TT Video", "1× Mirrored IG"]),
     ...Array.from({ length: 6 }, (_, index) =>
@@ -132,16 +135,23 @@ test("70/10/10/10 weights apply to activations not mirror duplicates", () => {
 
   const counts = countDeliverablesPerWeek(slate, 4, { weekWeights: [70, 10, 10, 10] });
   assert.equal(counts.reduce((sum, count) => sum + count, 0), 8);
-  assert.ok(counts[0]! >= 5, `expected ~70% activations in week 1, got ${counts[0]}`);
-  assert.ok(counts[0]! > counts[1]! + counts[2]! + counts[3]!);
+  assert.ok(counts[0]! >= 2, `week 1 should lead but not absorb the campaign, got ${counts[0]}`);
+  assert.ok(counts.every((count) => count >= 1), `every week should carry activity: ${counts.join(",")}`);
+
+  const scoreByWeek = publishingScorePerWeek(slate, 4, { weekWeights: [70, 10, 10, 10] });
+  assert.ok(scoreByWeek[0]! >= scoreByWeek[1]!);
+  assert.ok(scoreByWeek[0]! >= scoreByWeek[3]!);
 });
 
-test("70/10/10/10 weights allocate ~70% of deliverables to week 1", () => {
+test("70/10/10/10 continuous targets spread 7 activations across 4 weeks", () => {
   const weights = normalizeWeekWeights([70, 10, 10, 10], 4);
-  const counts = allocateCountByWeights(14, weights);
-  assert.equal(counts.reduce((sum, count) => sum + count, 0), 14);
-  assert.ok(counts[0]! >= 9, `expected week 1 to hold ~70%, got ${counts[0]}`);
-  assert.ok(counts[0]! > counts[1]! + counts[2]! + counts[3]!);
+  const slate = Array.from({ length: 7 }, (_, index) =>
+    creator(`c${index}`, `Creator ${index}`, ["1× TT Video"], index === 0 ? "Mega" : "Mid")
+  );
+  const counts = countDeliverablesPerWeek(slate, 4, { weekWeights: weights });
+  assert.equal(counts.reduce((sum, count) => sum + count, 0), 7);
+  assert.ok(counts.every((count) => count >= 1));
+  assert.ok(counts[0]! >= 2);
 });
 
 test("2× TikTok creator splits across weeks under launch-heavy weights", () => {
@@ -193,13 +203,75 @@ test("orderDeliverablesForWeekAllocation interleaves first posts before second p
   assert.equal(ordered[2]!.creatorRound, 1);
 });
 
-test("countDeliverablesPerWeek honors 70/10/10/10 on a multi-creator slate", () => {
+test("orderDeliverablesForOptimization prioritizes heroes before reinforcement", () => {
+  const slate = [
+    creator("mega", "Mega Hero", ["2× TT Video"], "Mega"),
+    creator("macro", "Macro Voice", ["1× TT Video"], "Macro"),
+    creator("ugc", "Community UGC", ["1× UGC"], "Nano"),
+  ];
+  const deliverables = expandSchedulableDeliverables(slate, ["TikTok"]);
+  const ordered = orderDeliverablesForOptimization(deliverables);
+  assert.equal(ordered[0]!.creator.creatorId, "mega");
+  assert.equal(ordered[0]!.creatorRound, 0);
+  assert.ok(ordered.findIndex((entry) => entry.role === "ugc") > 0);
+});
+
+test("publishingScore ranks tiers for optimization", () => {
+  const mega = creator("m", "Mega", ["1× TT Video"], "Mega");
+  const macro = creator("a", "Macro", ["1× TT Video"], "Macro");
+  const ugc = creator("u", "UGC", ["1× UGC"], "Nano");
+  const [megaUnit, macroUnit, ugcUnit] = expandSchedulableDeliverables([mega, macro, ugc], ["TikTok"]);
+  assert.equal(publishingScore(megaUnit!), 100);
+  assert.equal(publishingScore(macroUnit!), 85);
+  assert.equal(publishingScore(ugcUnit!), 40);
+});
+
+test("scheduler leaves breathing room — not every day in a week has content", () => {
+  const slate = Array.from({ length: 5 }, (_, index) =>
+    creator(`c${index}`, `Creator ${index}`, ["1× TT Video"], "Macro")
+  );
+  const deliverables = expandSchedulableDeliverables(slate, ["TikTok"]);
+  const placements = scheduleDeliverables({
+    deliverables,
+    durationWeeks: 4,
+    weekWeights: [70, 10, 10, 10],
+  });
+
+  const daysUsedWeek1 = new Set(
+    placements.filter((placement) => placement.week === 1).map((placement) => placement.dayIndex)
+  );
+  assert.ok(daysUsedWeek1.size < 7, "week 1 should not fill every calendar day");
+  assert.ok(daysUsedWeek1.size >= 2, "week 1 should still carry launch density");
+});
+
+test("scheduler never stacks two Mega creators on the same day", () => {
+  const slate = [
+    creator("m1", "Mega One", ["1× TT Video"], "Mega"),
+    creator("m2", "Mega Two", ["1× TT Video"], "Mega"),
+    creator("m3", "Mega Three", ["1× TT Video"], "Celebrity"),
+  ];
+  const deliverables = expandSchedulableDeliverables(slate, ["TikTok"]);
+  const placements = scheduleDeliverables({
+    deliverables,
+    durationWeeks: 4,
+    weekWeights: [70, 10, 10, 10],
+  });
+
+  const megaDays = new Map<number, number>();
+  for (const placement of placements) {
+    if (placement.deliverable.tierRank > 1) continue;
+    megaDays.set(placement.absoluteDay, (megaDays.get(placement.absoluteDay) ?? 0) + 1);
+  }
+  assert.ok([...megaDays.values()].every((count) => count === 1));
+});
+
+test("countDeliverablesPerWeek sustains activity in every week under launch-heavy weights", () => {
   const slate = Array.from({ length: 8 }, (_, index) =>
     creator(`c${index}`, `Creator ${index}`, ["1× TT Video"])
   );
   const counts = countDeliverablesPerWeek(slate, 4, { weekWeights: [70, 10, 10, 10] });
-  assert.ok(counts[0]! > counts[1]!);
-  assert.ok(counts[0]! > counts[3]!);
+  assert.ok(counts[0]! >= counts[1]!);
+  assert.ok(counts.every((count) => count >= 1));
   assert.equal(counts.reduce((sum, count) => sum + count, 0), 8);
 });
 
@@ -227,16 +299,15 @@ test("media plan groups mirror under primary creator card on same day", () => {
     )
   );
 
-  assert.equal(nourDays.length, 2, "IG Reel+Mirror and Stories = 2 activation days");
-  assert.equal(data.postingSlotCount, 2);
+  assert.equal(nourDays.length, 1, "IG Reel + Stories + Mirror = 1 strategic activation day");
+  assert.equal(data.postingSlotCount, 1);
 
-  const reelDay = nourDays.find((day) =>
-    (day.serviceTypes ?? []).some((type) => /IG Reel/i.test(type))
-  );
-  assert.ok(reelDay);
-  const mirrorOnReelDay = reelDay!.additionalDeliverables?.find((entry) => entry.isMirror);
+  const reelDay = nourDays[0]!;
+  const mirrorOnReelDay = reelDay.additionalDeliverables?.find((entry) => entry.isMirror);
   assert.ok(mirrorOnReelDay, "Mirrored IG should nest under the reel activation");
   assert.match(mirrorOnReelDay!.serviceType ?? "", /Mirror/i);
+  const storyCompanion = reelDay.additionalDeliverables?.find((entry) => entry.isCompanion);
+  assert.ok(storyCompanion, "IG Story Set should publish on the same day as the Reel");
 });
 
 test("2× TikTok creator schedules on different days with 70/10/10/10 weights", () => {
@@ -267,8 +338,8 @@ test("2× TikTok creator schedules on different days with 70/10/10/10 weights", 
   );
 
   assert.equal(heroDays.length, 2);
-  assert.equal(heroDays[0]!.serviceType, "1× TT Video");
-  assert.equal(heroDays[1]!.serviceType, "1× TT Video");
+  assert.match(heroDays[0]!.serviceType ?? "", /TT Video/);
+  assert.match(heroDays[1]!.serviceType ?? "", /TT Video/);
   assert.notEqual(`${heroDays[0]!.week}-${heroDays[0]!.day}`, `${heroDays[1]!.week}-${heroDays[1]!.day}`);
   assert.equal(heroDays[0]!.week, 1);
   assert.ok(heroDays[1]!.week! > 1);

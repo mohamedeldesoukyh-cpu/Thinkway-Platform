@@ -10,8 +10,53 @@ import {
   detectWeightProfile,
 } from "@/features/campaign-outputs/media-plan-strategy-summary";
 import { generateMediaPlan } from "@/features/campaign-outputs/generators/media-plan";
+import type { MediaPlanData } from "@/features/campaign-outputs/generators/media-plan";
 import { buildMediaPlanHtml } from "@/features/campaign-outputs/export/media-plan-html";
-import { generateCampaignOutput } from "@/features/campaign-outputs/output-registry";
+import {
+  generateCampaignOutput,
+  getOutputContentForDisplay,
+} from "@/features/campaign-outputs/output-registry";
+
+const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+function mediaPlanData(content: ReturnType<typeof generateMediaPlan>): MediaPlanData {
+  assert.ok(content.data);
+  return content.data as MediaPlanData;
+}
+
+function findCreatorSlot(data: MediaPlanData, creatorId: string) {
+  for (const week of data.weeks) {
+    for (const day of week.days) {
+      if (day.creatorId === creatorId) {
+        return {
+          week: week.week,
+          day: day.day,
+          dayIndex: DAYS.indexOf(day.day),
+          types: day.serviceTypes?.length
+            ? day.serviceTypes
+            : day.serviceType
+              ? [day.serviceType]
+              : [],
+        };
+      }
+      for (const extra of day.additionalDeliverables ?? []) {
+        if (extra.creatorId === creatorId && !extra.isMirror && !extra.isCompanion) {
+          return {
+            week: week.week,
+            day: day.day,
+            dayIndex: DAYS.indexOf(day.day),
+            types: extra.serviceTypes?.length
+              ? extra.serviceTypes
+              : extra.serviceType
+                ? [extra.serviceType]
+                : [],
+          };
+        }
+      }
+    }
+  }
+  return null;
+}
 
 test("buildMediaPlanStrategySummary derives objective and week weights from brief", () => {
   const object = buildCampaignObjectFixture({
@@ -54,7 +99,16 @@ test("buildMediaPlanStrategySummary returns placeholder-friendly empty state", (
 test("applyMediaPlanScheduleChange accepts creatorIds for interactive moves", () => {
   const object = buildCampaignObjectFixture();
   const result = applyMediaPlanScheduleChange(object, {
-    moveCreators: [{ creatorIds: ["cr_star"], toWeek: 3, toDayIndex: 2 }],
+    moveCreators: [
+      {
+        creatorIds: ["cr_star"],
+        fromWeek: 2,
+        fromDayIndex: 0,
+        toWeek: 3,
+        toDayIndex: 2,
+        deliverableTypes: ["1× IG Reel"],
+      },
+    ],
   });
 
   assert.ok(result.change?.includes("Nour Star"));
@@ -63,6 +117,45 @@ test("applyMediaPlanScheduleChange accepts creatorIds for interactive moves", ()
   );
   assert.equal(assignment?.week, 3);
   assert.equal(assignment?.dayIndex, 2);
+});
+
+test("applyMediaPlanScheduleChange pins remaining deliverables on partial moves", () => {
+  const object = buildCampaignObjectFixture({
+    facts: { durationWeeks: 4 },
+    creators: [{ id: "cr_star", name: "Nour Star", tier: "Celebrity" }],
+  });
+  const creatorsData = object.sections.creators?.data as import("@/features/campaign-intelligence/types/section-schemas").CreatorsSectionData;
+  const reasoning = creatorsData.recommendations?.selectedReasoning ?? [];
+  if (reasoning[0]) {
+    reasoning[0].serviceTypes = ["1× IG Reel", "1× IG Set of stories"];
+    reasoning[0].serviceLabel = reasoning[0].serviceTypes.join(" · ");
+  }
+
+  const result = applyMediaPlanScheduleChange(object, {
+    moveCreators: [
+      {
+        creatorIds: ["cr_star"],
+        fromWeek: 2,
+        fromDayIndex: 1,
+        toWeek: 3,
+        toDayIndex: 4,
+        deliverableTypes: ["1× IG Reel"],
+        remainingTypes: ["1× IG Set of stories"],
+      },
+    ],
+  });
+
+  const assignments = result.campaignObject.meta.mediaPlanSchedule?.assignments ?? [];
+  const moved = assignments.find(
+    (entry) => entry.creatorId === "cr_star" && entry.serviceType === "1× IG Reel"
+  );
+  const stayed = assignments.find(
+    (entry) => entry.creatorId === "cr_star" && entry.serviceType === "1× IG Set of stories"
+  );
+  assert.equal(moved?.week, 3);
+  assert.equal(moved?.dayIndex, 4);
+  assert.equal(stayed?.week, 2);
+  assert.equal(stayed?.dayIndex, 1);
 });
 
 test("drag move to week 1 updates publishing rhythm with launch rationale", () => {
@@ -95,6 +188,68 @@ test("drag move to week 1 updates publishing rhythm with launch rationale", () =
   assert.notEqual(after.weekWeightRationale, before.weekWeightRationale);
 });
 
+test("schedule move keeps asset delivery deadlines synced with calendar", () => {
+  const object = buildCampaignObjectFixture({
+    facts: {
+      durationWeeks: 4,
+      platforms: ["Instagram", "TikTok"],
+      campaignStartDate: "2026-08-03",
+      rawBriefExcerpt: "Four-week summer launch with creators publishing across the calendar.",
+      objective: "Drive awareness",
+    },
+  });
+
+  const beforeData = mediaPlanData(generateMediaPlan(object));
+  const beforeSlot = findCreatorSlot(beforeData, "cr_star");
+  assert.ok(beforeSlot, "fixture should place cr_star on the calendar");
+  assert.ok(beforeSlot.dayIndex >= 0);
+
+  const toDayIndex = (beforeSlot.dayIndex + 2) % 7;
+  const moved = applyMediaPlanScheduleChange(object, {
+    moveCreators: [
+      {
+        creatorIds: ["cr_star"],
+        fromWeek: beforeSlot.week,
+        fromDayIndex: beforeSlot.dayIndex,
+        toWeek: beforeSlot.week,
+        toDayIndex,
+        deliverableTypes: beforeSlot.types.length ? beforeSlot.types : ["1× Instagram Reel"],
+      },
+    ],
+  }).campaignObject;
+
+  const { campaignObject: regenerated } = generateCampaignOutput(moved, "media_plan", {
+    origin: "user",
+  });
+  const after = getOutputContentForDisplay(regenerated, "media_plan");
+  assert.ok(after?.data);
+  const afterData = after!.data as unknown as MediaPlanData;
+  const afterSlot = findCreatorSlot(afterData, "cr_star");
+  assert.ok(afterSlot);
+  assert.equal(afterSlot.day, DAYS[toDayIndex]);
+  assert.equal(afterSlot.week, beforeSlot.week);
+
+  const deadline = afterData.deadlines.find(
+    (row) =>
+      row.creatorId === "cr_star" &&
+      row.publishWeek === afterSlot.week &&
+      row.publishDay === afterSlot.day
+  );
+  assert.ok(deadline, "deadlines should include the moved publish slot");
+  assert.equal(deadline.publishDay, DAYS[toDayIndex]);
+  assert.ok(deadline.assetDelivery);
+  assert.ok(deadline.productionStart);
+
+  const stale = afterData.deadlines.find(
+    (row) =>
+      row.creatorId === "cr_star" &&
+      row.publishWeek === beforeSlot.week &&
+      row.publishDay === beforeSlot.day &&
+      beforeSlot.day !== afterSlot.day
+  );
+  assert.equal(stale, undefined, "old publish day deadline should not remain after move");
+});
+
 test("generateCampaignOutput after drag regenerates strategy in media plan output", () => {
   const object = buildCampaignObjectFixture({
     facts: {
@@ -117,12 +272,13 @@ test("generateCampaignOutput after drag regenerates strategy in media plan outpu
     origin: "user",
   });
   const content = generateMediaPlan(regenerated);
-  const rationale = content.data.strategySummary?.weekWeightRationale ?? "";
+  const data = mediaPlanData(content);
+  const rationale = data.strategySummary?.weekWeightRationale ?? "";
 
   assert.ok(rationale.match(/W1|Week 1/i));
   assert.ok(
-    content.data.strategySummary?.narrative?.creativeRecommendations.length ||
-      content.data.strategySummary?.creativeDirection?.length
+    data.strategySummary?.narrative?.creativeRecommendations.length ||
+      data.strategySummary?.creativeDirection?.length
   );
 });
 
@@ -167,11 +323,12 @@ test("buildPublishingRhythmRationale appends schedule adjustment note when brief
 
 test("generateMediaPlan embeds strategy summary in structured data", () => {
   const content = generateMediaPlan(buildCampaignObjectFixture());
-  assert.ok(content.data.strategySummary);
-  assert.equal(content.data.strategySummary?.hasContent, true);
+  const data = mediaPlanData(content);
+  assert.ok(data.strategySummary);
+  assert.equal(data.strategySummary?.hasContent, true);
   assert.ok(
-    content.data.strategySummary?.narrative?.creativeRecommendations.length ||
-      content.data.strategySummary?.creativeDirection?.length
+    data.strategySummary?.narrative?.creativeRecommendations.length ||
+      data.strategySummary?.creativeDirection?.length
   );
 });
 
@@ -180,9 +337,9 @@ test("buildMediaPlanHtml renders Campaign Strategy section with creative directi
   const html = buildMediaPlanHtml(content);
 
   assert.ok(html.includes("Campaign Strategy"));
-  assert.ok(html.includes("strategy-deck"));
-  assert.ok(html.includes("confidence-badge"));
-  assert.ok(html.includes("week-obj-grid"));
+  assert.ok(html.includes("strat-card"));
+  assert.ok(!html.includes('class="conf-pill medium"'));
+  assert.ok(html.includes("obj-card"));
   assert.ok(html.includes("Executive Summary"));
-  assert.ok(html.includes("Creative"));
+  assert.ok(html.includes("Creative Recommendations"));
 });

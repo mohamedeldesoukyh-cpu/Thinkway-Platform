@@ -32,3 +32,16 @@ test("keeps ctrl+shift+a available for workspace select-all", () => {
     false
   );
 });
+
+test("does not throw when keyboard events omit key", () => {
+  const event = {
+    ctrlKey: true,
+    metaKey: false,
+    altKey: false,
+    shiftKey: false,
+    code: "KeyS",
+  } as KeyboardEvent;
+
+  assert.doesNotThrow(() => isNativeEditShortcut(event));
+  assert.equal(isNativeEditShortcut(event), false);
+});

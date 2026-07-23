@@ -4,10 +4,12 @@ import { ArrowLeftIcon, ChevronRightIcon } from "lucide-react";
 import { QUOTATIONS_LIST_PATH } from "@/features/quotations/constants";
 
 type QuotationBreadcrumbsProps = {
+  name: string | null;
   serial: string | null;
 };
 
-export function QuotationBreadcrumbs({ serial }: QuotationBreadcrumbsProps) {
+export function QuotationBreadcrumbs({ name, serial }: QuotationBreadcrumbsProps) {
+  const terminalLabel = name?.trim() || serial?.trim() || "Quotation";
   return (
     <nav
       aria-label="Breadcrumb"
@@ -25,7 +27,7 @@ export function QuotationBreadcrumbs({ serial }: QuotationBreadcrumbsProps) {
       <ChevronRightIcon className="size-3 text-muted-foreground" aria-hidden />
       <span className="text-muted-foreground">Client Quotations</span>
       <ChevronRightIcon className="size-3 text-muted-foreground" aria-hidden />
-      <span className="font-semibold text-foreground">{serial ?? "QT-PENDING"}</span>
+      <span className="font-semibold text-foreground">{terminalLabel}</span>
     </nav>
   );
 }

@@ -19,6 +19,7 @@ export type CreatorStatusResolutionInput = {
 
 const PROCESSING: CreatorEnrichmentStatus[] = ["queued", "running"];
 const COMPLETED: CreatorEnrichmentStatus[] = ["enriched", "partial", "skipped"];
+const STAGED_INCOMPLETE: CreatorEnrichmentStatus[] = ["awaiting_profile_details"];
 
 function isProcessing(status: CreatorEnrichmentStatus): boolean {
   return PROCESSING.includes(status);
@@ -99,11 +100,22 @@ function resolveTerminalFromPlatforms(
 
   const anyFailed = terminals.some((status) => status === "failed");
   const anyCompleted = terminals.some((status) => isCompleted(status));
+  const anyAwaiting = terminals.some((status) =>
+    STAGED_INCOMPLETE.includes(status)
+  );
 
   if (anyFailed && anyCompleted) return "partial";
   if (anyFailed) return "failed";
+  if (anyAwaiting && !anyCompleted) return "awaiting_profile_details";
+  if (anyAwaiting && anyCompleted) return "partial";
   if (anyCompleted) return "enriched";
 
-  if (isCompleted(stored) || stored === "failed") return stored;
+  if (
+    isCompleted(stored) ||
+    stored === "failed" ||
+    stored === "awaiting_profile_details"
+  ) {
+    return stored;
+  }
   return "never";
 }

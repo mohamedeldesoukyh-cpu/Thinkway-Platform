@@ -3,10 +3,17 @@ import {
   primaryAvatarDisplayPlatform,
   sortPlatformsStable,
 } from "@/lib/creators/creator-centric";
+import { creatorRecentPublicationDisplayUrl } from "@/lib/creators/recent-publication-thumb";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { formatCreatorDisplayName } from "@/lib/text/decode-html-entities";
 import { pickPrimaryPlatformAccount } from "@/lib/discovery/profile-url";
-import { isDisplayableAvatarUrl, isUsableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
+import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
+import {
+  isDisplayableAvatarUrl,
+  isInstagramCdnUrlExpired,
+  isUsableAvatarUrl,
+} from "@/lib/performance/avatar-sync-policy";
+import type { CreatorEnrichmentStatus } from "@/lib/creator-enrichment/types";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
 export type CreatorProfileSource = {
@@ -20,6 +27,12 @@ export type CreatorProfileSource = {
   isVerified?: boolean;
   /** ISO 3166-1 alpha-2 — used when avatar badge shows country flag. */
   countryCode?: string | null;
+  /** All creator location countries for multi-flag avatar overlays. */
+  countryCodes?: string[] | null;
+  /** Thinkway score (0–100) for exact-row star badge. */
+  thinkwayScore?: number | null;
+  /** Resolved enrichment badge — drives shortlist-style avatar sync glow. */
+  enrichmentDisplayStatus?: CreatorEnrichmentStatus | null;
 };
 
 export function linkedPlatformsFromCreator(
@@ -56,12 +69,43 @@ function pickBestAvatarCandidate(
   return best;
 }
 
+function resolvePublicationAvatarFallback(creator: UnifiedCreatorResult): string | null {
+  const publications =
+    (creator.recent_publications?.length ?? 0) > 0
+      ? creator.recent_publications!
+      : creator.platforms.flatMap((platform) => platform.recent_publications ?? []);
+
+  for (const publication of publications) {
+    const displayUrl = creatorRecentPublicationDisplayUrl(publication);
+    if (displayUrl) return displayUrl;
+  }
+
+  return null;
+}
+
+/**
+ * Prefer a usable (non-expired) profile avatar. When the stored CDN is expired —
+ * common after enrichment without durable upload — prefer a publication preview
+ * URL (has postUrl scrape fallback) over a dead profile CDN that only silhouettes.
+ */
 function resolveUnifiedCreatorAvatarUrl(creator: UnifiedCreatorResult): string | null {
-  return pickBestAvatarCandidate([
+  const primary = pickBestAvatarCandidate([
     creator.primaryAvatarUrl,
     creator.profile_image_url,
     ...sortPlatformsStable(creator.platforms).map((account) => account.profile_picture_url),
   ]);
+  const publicationFallback = resolvePublicationAvatarFallback(creator);
+
+  if (primary && isUsableAvatarUrl(primary)) return primary;
+
+  // Expired IG CDN + working publication preview → show post thumb instead of grey silhouette.
+  if (publicationFallback && (!primary || isInstagramCdnUrlExpired(primary))) {
+    return publicationFallback;
+  }
+
+  // Still pass expired displayable CDN so the avatar proxy can try profileUrl scrape.
+  if (primary) return primary;
+  return publicationFallback;
 }
 
 export function creatorProfileSourceFromUnified(
@@ -82,6 +126,12 @@ export function creatorProfileSourceFromUnified(
         )
       : null;
   const linkedPlatforms = linkedPlatformsFromCreator(creator);
+  const countryCodes = resolveCreatorCountryCodes({
+    country_codes: creator.country_codes,
+    country_code: creator.country_code,
+    estimated_country: creator.estimated_country,
+    platformAudienceCountries: creator.platforms.map((platform) => platform.audience_country),
+  });
 
   return {
     displayName: formatCreatorDisplayName(creator.display_name),
@@ -92,11 +142,9 @@ export function creatorProfileSourceFromUnified(
     profile_url:
       avatarPlatformAccount?.profile_url ?? metricsPlatform?.profile_url ?? null,
     isVerified: creator.is_platform_verified,
-    countryCode:
-      creator.country_code ??
-      metricsPlatform?.audience_country ??
-      creator.estimated_country ??
-      null,
+    countryCode: countryCodes[0] ?? null,
+    countryCodes,
+    thinkwayScore: creator.thinkway_score ?? null,
   };
 }
 

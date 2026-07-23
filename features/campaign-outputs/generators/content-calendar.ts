@@ -12,7 +12,9 @@ import type { CampaignOutputContent } from "../output-types";
 import { resolveSlate } from "../output-inputs";
 import { primaryService, tierRank } from "./generator-utils";
 
-export const CONTENT_CALENDAR_GENERATOR_VERSION = "1.0.0";
+import { resolveMarketIntelligenceConfig } from "@/features/market-intelligence/market-intelligence-config";
+
+export const CONTENT_CALENDAR_GENERATOR_VERSION = "1.1.0";
 
 const DEFAULT_DURATION_WEEKS = 6;
 /** Content pieces scheduled per week. */
@@ -23,6 +25,7 @@ export function generateContentCalendar(campaignObject: CampaignObject): Campaig
   const durationWeeks = Math.max(1, Math.min(52, facts?.durationWeeks ?? DEFAULT_DURATION_WEEKS));
   const platforms = facts?.platforms?.length ? facts.platforms : ["Instagram"];
   const slate = [...resolveSlate(campaignObject)].sort((a, b) => tierRank(a.tier) - tierRank(b.tier));
+  const marketConfig = resolveMarketIntelligenceConfig(campaignObject);
 
   const serviceCounts: Record<string, number> = {};
   let cursor = 0;
@@ -59,6 +62,13 @@ export function generateContentCalendar(campaignObject: CampaignObject): Campaig
       items: mixEntries.map(([service, count]) => `${service}: ${count} pieces`),
     });
   }
+
+  sections.unshift({
+    heading: "Scheduling Context",
+    body: marketConfig.enabled
+      ? `Market intelligence is active for ${marketConfig.countries.join(", ")} — content weeks follow the same local timing signals as the Media Plan.`
+      : "Market intelligence is off — weeks distribute content evenly without local market timing.",
+  });
 
   return {
     title: "Content Calendar",

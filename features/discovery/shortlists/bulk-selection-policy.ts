@@ -38,6 +38,34 @@ export function toggleSelectAll(
   return next;
 }
 
+/** Toggle every member in a collapse bundle on/off (all-on if any member is off). */
+export function toggleGroupSelection(
+  memberIds: string[],
+  selected: ReadonlySet<string>
+): Set<string> {
+  const allSelected =
+    memberIds.length > 0 && memberIds.every((id) => selected.has(id));
+  return toggleSelectAll(memberIds, selected, !allSelected);
+}
+
+export function resolveGroupCheckboxState(
+  memberIds: string[],
+  selected: ReadonlySet<string>
+): boolean | "indeterminate" {
+  if (memberIds.length === 0) return false;
+  const selectedCount = memberIds.filter((id) => selected.has(id)).length;
+  if (selectedCount === 0) return false;
+  if (selectedCount === memberIds.length) return true;
+  return "indeterminate";
+}
+
+export function isGroupPartiallyOrFullySelected(
+  memberIds: string[],
+  selected: ReadonlySet<string>
+): boolean {
+  return memberIds.some((id) => selected.has(id));
+}
+
 export function countSelected(selected: ReadonlySet<string>): number {
   return selected.size;
 }

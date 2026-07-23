@@ -70,4 +70,16 @@ assert.equal(
   "orphaned queued with no completions → never"
 );
 
+assert.equal(
+  resolve("awaiting_profile_details", ["awaiting_profile_details"], false),
+  "awaiting_profile_details",
+  "awaiting profile-details stays staged incomplete"
+);
+
+assert.equal(
+  resolve("enriched", ["awaiting_profile_details", "never"], false),
+  "awaiting_profile_details",
+  "platform awaiting without completed peers stays awaiting"
+);
+
 console.log("status-resolution.test.ts: all tests passed");

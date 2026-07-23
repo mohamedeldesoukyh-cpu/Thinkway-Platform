@@ -58,3 +58,5 @@ Handles `SIGINT` / `SIGTERM`: closes workers, browser pool, exits.
 | `worker.alive: false` | Process running, Redis reachable, heartbeat key |
 | Backlog growing | `/api/admin/queues` failed/waiting counts |
 | Enrichment off | `DISABLE_CREATOR_ENRICHMENT`, enrichment flags |
+| Auto enrich/acquire off (runaway brake) | `DISABLE_AUTOMATIC_ENRICHMENT_AND_ACQUISITION` (default **true**): DB-only browse, no coverage/AI acquisition, legacy discovery-enrich scheduler paused; manual refresh still allowed. Set `false` to re-enable automatic paths. Blocks log as `[operational-safety] blocked …` |
+| Apify budget fail-closed | `costProtection.maxRequestsPerDay` / `maxCreditsPerDay` must both be **> 0** (CCC or `DISCOVERY_APIFY_MAX_REQUESTS_PER_DAY` / `DISCOVERY_APIFY_MAX_CREDITS_PER_DAY`). `0`/unset rejects all Apify acquisition. Logs: `[apify-budget] rejected` |

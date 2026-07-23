@@ -9,6 +9,7 @@ import {
   type MetricsPlatformAccount,
 } from "@/lib/creators/creator-centric";
 import { isDisplayableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
+import { mergeCountryCodes } from "@/lib/creators/country-inference";
 import type { NormalizedProfileSnapshot } from "@/lib/intelligence-persistence/types";
 
 import { calculateConfidence, calculateFieldCompleteness } from "./confidence-calculator";
@@ -21,6 +22,7 @@ export type BaselineInfluencerRow = {
   display_name: string;
   status: string;
   country_code: string | null;
+  country_codes: string[] | null;
   languages: string[] | null;
   categories: string[] | null;
   email: string | null;
@@ -206,9 +208,10 @@ function mapInfluencerCandidates(
     push("identity.avatarUrl", influencer.primary_avatar_url);
   }
 
-  if (influencer.country_code) {
-    push("audience.country", influencer.country_code);
-    push("audience.countries", [influencer.country_code]);
+  const countryCodes = mergeCountryCodes(influencer.country_codes, influencer.country_code);
+  if (countryCodes.length > 0) {
+    push("audience.country", countryCodes[0] ?? null);
+    push("audience.countries", countryCodes);
   }
 
   if (influencer.languages?.length) {

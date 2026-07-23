@@ -6,8 +6,8 @@ import {
   SectionPendingMessage,
   shouldShowPendingPlaceholder,
 } from "./shared/section-status-utils";
-import { DetailItem, StatBox } from "./shared/studio-ui-primitives";
-import { STUDIO_CLASSES } from "../../constants/studio-tokens";
+import { DetailGrid, DetailItem, StatBox, StatGrid } from "./shared/studio-ui-primitives";
+import { useStudioRefMode } from "../../hooks/use-studio-ref-mode";
 import { resolveCampaignSummary } from "../../services/section-data-resolver";
 import { CampaignBriefCard } from "./campaign-brief-card";
 import type { CampaignObject } from "@/features/campaign-intelligence";
@@ -30,6 +30,8 @@ export function CampaignSummarySection({
   messageId,
   onBriefApplied,
 }: CampaignSummarySectionProps) {
+  const refMode = useStudioRefMode();
+
   if (status === "running" && !campaignObject) {
     return <SectionSkeleton variant="cards" />;
   }
@@ -45,30 +47,32 @@ export function CampaignSummarySection({
   ) : null;
 
   if (!data) {
-    return (
-      <div className="min-w-0 space-y-3">
+    const pending = (
+      <>
         {briefCard}
         {shouldShowPendingPlaceholder(status, false) ? (
           <SectionPendingMessage label="Campaign summary pending…" />
         ) : (
           <SectionFallbackContent text={fallbackText} />
         )}
-      </div>
+      </>
     );
+    return refMode ? pending : <div className="min-w-0 space-y-3">{pending}</div>;
   }
 
-  const clientBrand = [data.client, data.brand].filter(Boolean).join(" · ") || data.brand || data.client || "";
+  const clientBrand =
+    [data.client, data.brand].filter(Boolean).join(" · ") || data.brand || data.client || "";
 
-  return (
-    <div className="min-w-0 space-y-3">
+  const body = (
+    <>
       {briefCard}
-      <div className={STUDIO_CLASSES.statGrid}>
-        <StatBox label="Budget" value={data.budget ?? ""} sub="Influencer program" />
+      <StatGrid>
+        <StatBox label="Budget" value={data.budget ?? ""} sub="Influencer program" mono />
         <StatBox label="Duration" value={data.duration ?? ""} />
         <StatBox label="Campaign Type" value={data.campaignType ?? ""} sub="Mass awareness" />
         <StatBox label="Platforms" value={data.platforms ?? ""} />
-      </div>
-      <div className={STUDIO_CLASSES.detailGrid}>
+      </StatGrid>
+      <DetailGrid>
         <DetailItem label="Client / Brand" value={clientBrand} />
         <DetailItem label="Estimated Reach" value={data.estimatedReach ?? ""} />
         <DetailItem label="Objective" value={data.objective ?? ""} />
@@ -77,7 +81,9 @@ export function CampaignSummarySection({
         <DetailItem label="Product" value={data.product ?? ""} />
         <DetailItem label="Market" value={data.market ?? ""} />
         <DetailItem label="Deliverables" value={data.deliverables ?? ""} />
-      </div>
-    </div>
+      </DetailGrid>
+    </>
   );
+
+  return refMode ? body : <div className="min-w-0 space-y-3">{body}</div>;
 }

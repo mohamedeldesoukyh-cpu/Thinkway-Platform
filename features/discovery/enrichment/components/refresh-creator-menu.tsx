@@ -1,8 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
 import { ChevronDownIcon, Loader2Icon, RefreshCwIcon } from "lucide-react";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,13 +21,13 @@ import {
   refreshCreatorCategoriesAction,
   refreshCreatorProfileAction,
 } from "../actions";
-import { pollCreatorAfterRefresh } from "../poll-creator-refresh";
 import {
   isEnrichmentInProgress,
   resolveCreatorEnrichmentStatus,
-  syncStatusToEnrichmentStatus,
   type CreatorEnrichmentStatus,
 } from "../status";
+import { useManualRefreshFlow } from "../use-manual-refresh-flow";
+import { ManualRefreshConfirmDialog } from "./manual-refresh-confirm-dialog";
 
 const REFRESH_OPTIONS: Array<{
   scope: EnrichmentScope;
@@ -65,70 +63,70 @@ export function RefreshCreatorMenu({
   onStatusChange,
   onCreatorUpdated,
 }: RefreshCreatorMenuProps) {
-  const [isPending, startTransition] = useTransition();
   const displayStatus = resolveCreatorEnrichmentStatus(enrichmentStatus);
+  const {
+    isPending,
+    dialogOpen,
+    setDialogOpen,
+    assessment,
+    scopeLabel,
+    requestRefresh,
+    chooseRefreshSource,
+  } = useManualRefreshFlow({
+    onStatusChange,
+    onCreatorUpdated,
+  });
   const inProgress = isPending || isEnrichmentInProgress(displayStatus);
 
-  function runRefresh(action: typeof refreshCreatorAction) {
-    startTransition(async () => {
-      const result = await action(influencerId);
-      if (result.queued) {
-        onStatusChange?.("queued");
-        if (unifiedId) {
-          void pollCreatorAfterRefresh(
-            { unifiedId, influencerId },
-            {
-              onStatusChange: (syncStatus) => {
-                onStatusChange?.(syncStatusToEnrichmentStatus(syncStatus));
-              },
-              onUpdated: (creator) => {
-                onCreatorUpdated?.(creator);
-                onStatusChange?.(resolveCreatorEnrichmentStatus(creator.enrichment_status));
-              },
-              onComplete: (syncStatus) => {
-                const next = syncStatusToEnrichmentStatus(syncStatus);
-                onStatusChange?.(next);
-                if (syncStatus === "completed") {
-                  toast.success("Creator refresh completed");
-                } else if (syncStatus === "failed") {
-                  toast.error("Creator refresh failed");
-                }
-              },
-            }
-          );
-        }
-      } else {
-        toast.error("Could not refresh", { description: result.message });
-      }
-    });
-  }
-
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          size={size}
-          variant={variant}
-          disabled={inProgress}
-          className={cn("gap-1", className)}
-        >
-          {inProgress ? (
-            <Loader2Icon className="size-3.5 animate-spin" aria-hidden />
-          ) : (
-            <RefreshCwIcon className="size-3.5" aria-hidden />
-          )}
-          Refresh
-          <ChevronDownIcon className="size-3 opacity-60" aria-hidden />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
-        {REFRESH_OPTIONS.map((option) => (
-          <DropdownMenuItem key={option.scope} onClick={() => runRefresh(option.action)}>
-            {option.label}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            size={size}
+            variant={variant}
+            disabled={inProgress}
+            className={cn("gap-1", className)}
+          >
+            {inProgress ? (
+              <Loader2Icon className="size-3.5 animate-spin" aria-hidden />
+            ) : (
+              <RefreshCwIcon aria-hidden />
+            )}
+            Refresh
+            <ChevronDownIcon className="opacity-60" aria-hidden />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          {REFRESH_OPTIONS.map((option) => (
+            <DropdownMenuItem
+              key={option.scope}
+              onClick={() =>
+                requestRefresh({
+                  influencerId,
+                  unifiedId,
+                  scope: option.scope,
+                  refreshAction: option.action,
+                  onStatusChange,
+                  onCreatorUpdated,
+                })
+              }
+            >
+              {option.label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <ManualRefreshConfirmDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        assessment={assessment}
+        scopeLabel={scopeLabel}
+        isSubmitting={isPending}
+        onChoose={chooseRefreshSource}
+      />
+    </>
   );
 }

@@ -10,11 +10,7 @@ import type {
   TimelineSectionExtras,
 } from "@/features/campaign-intelligence/types/section-schemas";
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
-import { getStrategyFromWorkflowData } from "@/features/campaign-director/services/campaign-director";
-import {
-  buildKpiForecastFromStrategy,
-  buildRiskAnalysisFromBudget,
-} from "@/features/campaign-intelligence/services/structured-section-builders";
+import { buildRiskAnalysisFromBudget } from "@/features/campaign-intelligence/services/structured-section-builders";
 import {
   deriveContentPlan,
   deriveCreativeConcepts,
@@ -23,6 +19,7 @@ import {
 
 import type { SearchCreatorCardItem } from "./creator-platform-utils";
 import { estimateCreatorPostFee } from "./creator-fee-estimator";
+import { studioForecastArtifacts } from "./campaign-forecast-service";
 import { creatorTierOf } from "./creator-slate";
 import { parseFeeAmount } from "./plan-section-utils";
 import { resolveCreatorMix } from "./section-data-resolver";
@@ -189,22 +186,19 @@ function patchBudgetFromSlate(
 
 function patchKpiForecastFromSlate(
   campaignObject: CampaignObject,
-  slateSize: number
+  cards: SearchCreatorCardItem[]
 ): CampaignObject {
-  const strategyText =
-    typeof campaignObject.sections.strategy.content === "string"
-      ? campaignObject.sections.strategy.content
-      : "";
-  const summaryText =
-    typeof campaignObject.sections.summary.content === "string"
-      ? campaignObject.sections.summary.content
-      : "";
   const facts = getCampaignFacts(campaignObject);
-  const strategy = getStrategyFromWorkflowData(
-    campaignObject.meta as unknown as Record<string, unknown>
-  );
-  const kpiData = buildKpiForecastFromStrategy(strategyText, facts, strategy);
+  const { snapshot, groundedKpis } = studioForecastArtifacts({ cards, facts });
   const performanceData = (campaignObject.sections.performance.data ?? {}) as PerformanceSectionData;
+
+  const kpiRows = groundedKpis.map((kpi) => ({
+    label: kpi.metric,
+    target: kpi.prediction,
+    projected: kpi.prediction,
+    status: "Roster forecast",
+    isPercent: kpi.metric.toLowerCase().includes("rate"),
+  }));
 
   return {
     ...campaignObject,
@@ -212,10 +206,15 @@ function patchKpiForecastFromSlate(
       ...campaignObject.sections,
       performance: {
         ...campaignObject.sections.performance,
-        content: kpiData,
+        content: {
+          kpis: kpiRows,
+          forecastNotes: snapshot.explanation.slice(0, 3).join(" "),
+        },
         data: {
           ...performanceData,
-          kpiForecastNote: `KPI forecast refreshed for ${slateSize} creator${slateSize === 1 ? "" : "s"} on the applied slate.`,
+          campaignForecast: snapshot,
+          groundedKpis,
+          kpiForecastNote: `KPI forecast computed from ${cards.length} creator${cards.length === 1 ? "" : "s"} via Campaign Forecast Engine (${snapshot.engineVersion}).`,
         },
       },
     },
@@ -334,7 +333,7 @@ export function regeneratePlanSectionsFromSlate(
   let next = patchCreatorMixActuals(campaignObject, actualMix);
   next = redistributeActivationTimeline(next, cards, mainIds);
   next = patchBudgetFromSlate(next, cards);
-  next = patchKpiForecastFromSlate(next, cards.length);
+  next = patchKpiForecastFromSlate(next, cards);
   next = patchContentPlanFromSlate(next);
   next = patchDirectorInsightsFromSlate(next, cards.length);
   return next;

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 
 import { cn } from "@/lib/utils";
+import { quotationPreviewPath } from "@/features/quotations/constants";
 import {
   QUOTATION_TEMPLATE_OPTIONS,
   appendQuotationTemplateParam,
@@ -12,6 +13,7 @@ import {
 
 type QuotationPreviewTemplateToggleProps = {
   quotationId: string;
+  serialNumber?: string | null;
   activeTemplate: QuotationTemplateVariant;
   /** When set, links target this path instead of the current pathname. */
   basePath?: string;
@@ -19,13 +21,14 @@ type QuotationPreviewTemplateToggleProps = {
 
 export function QuotationPreviewTemplateToggle({
   quotationId,
+  serialNumber,
   activeTemplate,
   basePath,
 }: QuotationPreviewTemplateToggleProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const resolvedBasePath =
-    basePath ?? pathname ?? `/discovery/quotations/${quotationId}/preview`;
+    basePath ?? pathname ?? quotationPreviewPath(quotationId, serialNumber);
 
   return (
     <div

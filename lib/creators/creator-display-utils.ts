@@ -1,4 +1,6 @@
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+import { COUNTRY_OPTIONS, labelForOption } from "@/lib/master-data/constants";
+import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
 
@@ -220,10 +222,33 @@ export function brandSafetyMeta(score: number | null): {
   return { label: "Review", className: "text-rose-600" };
 }
 
+export function formatCountryCodeLabel(code: string | null | undefined): string {
+  const normalized = normalizeCountryCode(code);
+  if (!normalized) return "—";
+  return labelForOption(COUNTRY_OPTIONS, normalized) ?? normalized;
+}
+
+export function formatCreatorCountryLabels(
+  creator: Pick<
+    UnifiedCreatorResult,
+    "country_code" | "country_codes" | "estimated_country" | "platforms"
+  >,
+  codes?: string[]
+): string {
+  const resolved =
+    codes ??
+    resolveCreatorCountryCodes({
+      country_codes: creator.country_codes,
+      country_code: creator.country_code,
+      estimated_country: creator.estimated_country,
+      platformAudienceCountries: creator.platforms.map((platform) => platform.audience_country),
+    });
+  if (resolved.length === 0) return "—";
+  return resolved.map(formatCountryCodeLabel).join(" · ");
+}
+
 export function audienceCountryLabel(creator: UnifiedCreatorResult): string {
-  const primary = creator.platforms[0];
-  const code = primary?.audience_country ?? creator.estimated_country ?? creator.country_code;
-  return code ?? "—";
+  return formatCreatorCountryLabels(creator);
 }
 
 export function categoriesLabel(creator: UnifiedCreatorResult): string {

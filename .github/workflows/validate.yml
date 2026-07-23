@@ -21,6 +21,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Discovery UI contract
+        run: npm run validate:discovery-ui-contract
+
       - name: Service layer tests
         run: npm run test:services
 
@@ -32,3 +35,34 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIn0.placeholder
         run: npm run build
+
+      - name: Performance budgets
+        run: npm run check:performance-budgets
+
+      - name: Performance report
+        run: npm run report:performance
+
+      - name: Upload performance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-report
+          path: |
+            performance/reports/latest.json
+            performance/reports/latest.md
+            performance/reports/latest-check.json
+          if-no-files-found: warn
+
+      - name: Discovery browse RPC (optional)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "Skipping Discovery browse measure — Supabase secrets not configured"
+            exit 0
+          fi
+          npm run measure:discovery-browse-pool
+
+      - name: Media proxy harness
+        run: npm run measure:media-proxy

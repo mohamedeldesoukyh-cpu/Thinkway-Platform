@@ -1,0 +1,1713 @@
+{
+  "mode": "offline_payload_preflight",
+  "measuredAt": "2026-07-21T02:07:42.025Z",
+  "probeBaseline": {
+    "source": "flag-render-probe-full-chain",
+    "countryFlagCodes": [
+      "EG"
+    ],
+    "expectsFlagDom": true,
+    "componentTree": [
+      "discovery-search-exact-row",
+      "discovery-search-exact-photo-wrap",
+      "discovery-search-exact-flag",
+      "CountryFlagsStack/CountryFlagBadge",
+      "img[flagcdn]"
+    ]
+  },
+  "summary": {
+    "creators": 50,
+    "empty_props": 37,
+    "expect_flag_dom": 13
+  },
+  "firstDivergenceVsPuppeteerProbe": {
+    "point": "3.countryFlagCodes_non_empty",
+    "live": {
+      "creatorId": "58c7ab5f-24aa-4cfc-b91f-fab8be5e5e8a",
+      "displayName": "raquelhadassaviagens_",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ]
+    },
+    "probe": {
+      "countryFlagCodes": [
+        "EG"
+      ]
+    },
+    "category": "empty_props",
+    "note": "Offline: this row never reaches CountryFlagsStack/DOM flag. Live browser must confirm whether user-reported missing-flag rows are this class or expect_flag_dom with missing DOM."
+  },
+  "sampleExpectFlag": {
+    "virtualRowIndex": 0,
+    "virtualItemKey": "inf:dab5e61e-e82b-4fa4-a587-a2ee580d6cd8",
+    "reactKey": "inf:dab5e61e-e82b-4fa4-a587-a2ee580d6cd8",
+    "creatorId": "dab5e61e-e82b-4fa4-a587-a2ee580d6cd8",
+    "creatorUnifiedId": "inf:dab5e61e-e82b-4fa4-a587-a2ee580d6cd8",
+    "displayName": "ahmed_elbadawy",
+    "countryFlagCodes": [
+      "EG"
+    ],
+    "country_codes": [
+      "EG"
+    ],
+    "country_code": "EG",
+    "audience_country": [
+      "EG",
+      null
+    ],
+    "countryFlagsStackProps": {
+      "countryCodes": [
+        "EG"
+      ],
+      "size": "md",
+      "overlay": true,
+      "className": "size-full"
+    },
+    "expectedRenderedDom": {
+      "hasFlagSlot": true,
+      "flagAriaLabel": "EG",
+      "tree": [
+        "discovery-search-exact-row",
+        "discovery-search-exact-photo-wrap",
+        "discovery-search-exact-flag",
+        "CountryFlagsStack/CountryFlagBadge",
+        "img[flagcdn]"
+      ]
+    },
+    "classification": "expect_flag_dom",
+    "vsProbe": "matches_probe_codes"
+  },
+  "sampleEmptyProps": {
+    "virtualRowIndex": 10,
+    "virtualItemKey": "inf:58c7ab5f-24aa-4cfc-b91f-fab8be5e5e8a",
+    "reactKey": "inf:58c7ab5f-24aa-4cfc-b91f-fab8be5e5e8a",
+    "creatorId": "58c7ab5f-24aa-4cfc-b91f-fab8be5e5e8a",
+    "creatorUnifiedId": "inf:58c7ab5f-24aa-4cfc-b91f-fab8be5e5e8a",
+    "displayName": "raquelhadassaviagens_",
+    "countryFlagCodes": [],
+    "country_codes": [],
+    "country_code": null,
+    "audience_country": [
+      null
+    ],
+    "countryFlagsStackProps": {
+      "countryCodes": [],
+      "size": "md",
+      "overlay": true,
+      "className": "size-full"
+    },
+    "expectedRenderedDom": {
+      "hasFlagSlot": false,
+      "tree": [
+        "discovery-search-exact-row",
+        "NO_FLAG"
+      ]
+    },
+    "classification": "empty_props",
+    "vsProbe": "diverges_at_countryFlagCodes_empty"
+  },
+  "rows": [
+    {
+      "virtualRowIndex": 0,
+      "virtualItemKey": "inf:dab5e61e-e82b-4fa4-a587-a2ee580d6cd8",
+      "reactKey": "inf:dab5e61e-e82b-4fa4-a587-a2ee580d6cd8",
+      "creatorId": "dab5e61e-e82b-4fa4-a587-a2ee580d6cd8",
+      "creatorUnifiedId": "inf:dab5e61e-e82b-4fa4-a587-a2ee580d6cd8",
+      "displayName": "ahmed_elbadawy",
+      "countryFlagCodes": [
+        "EG"
+      ],
+      "country_codes": [
+        "EG"
+      ],
+      "country_code": "EG",
+      "audience_country": [
+        "EG",
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [
+          "EG"
+        ],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": true,
+        "flagAriaLabel": "EG",
+        "tree": [
+          "discovery-search-exact-row",
+          "discovery-search-exact-photo-wrap",
+          "discovery-search-exact-flag",
+          "CountryFlagsStack/CountryFlagBadge",
+          "img[flagcdn]"
+        ]
+      },
+      "classification": "expect_flag_dom",
+      "vsProbe": "matches_probe_codes"
+    },
+    {
+      "virtualRowIndex": 1,
+      "virtualItemKey": "inf:a76dbc9b-b654-404f-a402-18a0e7ea158e",
+      "reactKey": "inf:a76dbc9b-b654-404f-a402-18a0e7ea158e",
+      "creatorId": "a76dbc9b-b654-404f-a402-18a0e7ea158e",
+      "creatorUnifiedId": "inf:a76dbc9b-b654-404f-a402-18a0e7ea158e",
+      "displayName": "Instagram",
+      "countryFlagCodes": [
+        "EG",
+        "AE"
+      ],
+      "country_codes": [
+        "EG",
+        "AE"
+      ],
+      "country_code": "EG",
+      "audience_country": [
+        "EG",
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [
+          "EG",
+          "AE"
+        ],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": true,
+        "flagAriaLabel": "EG",
+        "tree": [
+          "discovery-search-exact-row",
+          "discovery-search-exact-photo-wrap",
+          "discovery-search-exact-flag",
+          "CountryFlagsStack/CountryFlagBadge",
+          "img[flagcdn]"
+        ]
+      },
+      "classification": "expect_flag_dom",
+      "vsProbe": "matches_probe_codes"
+    },
+    {
+      "virtualRowIndex": 2,
+      "virtualItemKey": "inf:422fa13c-53f6-4138-b599-973ea9fc7232",
+      "reactKey": "inf:422fa13c-53f6-4138-b599-973ea9fc7232",
+      "creatorId": "422fa13c-53f6-4138-b599-973ea9fc7232",
+      "creatorUnifiedId": "inf:422fa13c-53f6-4138-b599-973ea9fc7232",
+      "displayName": "itsfarahhosny",
+      "countryFlagCodes": [
+        "EG"
+      ],
+      "country_codes": [
+        "EG"
+      ],
+      "country_code": "EG",
+      "audience_country": [
+        "EG",
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [
+          "EG"
+        ],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": true,
+        "flagAriaLabel": "EG",
+        "tree": [
+          "discovery-search-exact-row",
+          "discovery-search-exact-photo-wrap",
+          "discovery-search-exact-flag",
+          "CountryFlagsStack/CountryFlagBadge",
+          "img[flagcdn]"
+        ]
+      },
+      "classification": "expect_flag_dom",
+      "vsProbe": "matches_probe_codes"
+    },
+    {
+      "virtualRowIndex": 3,
+      "virtualItemKey": "inf:6b16b11d-5a5b-4e7d-acc4-b057efaec211",
+      "reactKey": "inf:6b16b11d-5a5b-4e7d-acc4-b057efaec211",
+      "creatorId": "6b16b11d-5a5b-4e7d-acc4-b057efaec211",
+      "creatorUnifiedId": "inf:6b16b11d-5a5b-4e7d-acc4-b057efaec211",
+      "displayName": "ouda.5",
+      "countryFlagCodes": [
+        "EG"
+      ],
+      "country_codes": [
+        "EG"
+      ],
+      "country_code": "EG",
+      "audience_country": [
+        "EG",
+        "EG"
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [
+          "EG"
+        ],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": true,
+        "flagAriaLabel": "EG",
+        "tree": [
+          "discovery-search-exact-row",
+          "discovery-search-exact-photo-wrap",
+          "discovery-search-exact-flag",
+          "CountryFlagsStack/CountryFlagBadge",
+          "img[flagcdn]"
+        ]
+      },
+      "classification": "expect_flag_dom",
+      "vsProbe": "matches_probe_codes"
+    },
+    {
+      "virtualRowIndex": 4,
+      "virtualItemKey": "inf:b1d178d3-f882-4ec7-b45d-888e85ab921e",
+      "reactKey": "inf:b1d178d3-f882-4ec7-b45d-888e85ab921e",
+      "creatorId": "b1d178d3-f882-4ec7-b45d-888e85ab921e",
+      "creatorUnifiedId": "inf:b1d178d3-f882-4ec7-b45d-888e85ab921e",
+      "displayName": "Karim Kabbany | كريم قباني",
+      "countryFlagCodes": [
+        "EG",
+        "FR"
+      ],
+      "country_codes": [
+        "EG",
+        "FR"
+      ],
+      "country_code": "EG",
+      "audience_country": [
+        null,
+        "EG"
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [
+          "EG",
+          "FR"
+        ],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": true,
+        "flagAriaLabel": "EG",
+        "tree": [
+          "discovery-search-exact-row",
+          "discovery-search-exact-photo-wrap",
+          "discovery-search-exact-flag",
+          "CountryFlagsStack/CountryFlagBadge",
+          "img[flagcdn]"
+        ]
+      },
+      "classification": "expect_flag_dom",
+      "vsProbe": "matches_probe_codes"
+    },
+    {
+      "virtualRowIndex": 5,
+      "virtualItemKey": "inf:6043fa2d-e5ad-49c7-8d81-6af77f8ae2d3",
+      "reactKey": "inf:6043fa2d-e5ad-49c7-8d81-6af77f8ae2d3",
+      "creatorId": "6043fa2d-e5ad-49c7-8d81-6af77f8ae2d3",
+      "creatorUnifiedId": "inf:6043fa2d-e5ad-49c7-8d81-6af77f8ae2d3",
+      "displayName": "ayaibrahimx",
+      "countryFlagCodes": [
+        "EG"
+      ],
+      "country_codes": [
+        "EG"
+      ],
+      "country_code": "EG",
+      "audience_country": [
+        "EG",
+        "EG"
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [
+          "EG"
+        ],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": true,
+        "flagAriaLabel": "EG",
+        "tree": [
+          "discovery-search-exact-row",
+          "discovery-search-exact-photo-wrap",
+          "discovery-search-exact-flag",
+          "CountryFlagsStack/CountryFlagBadge",
+          "img[flagcdn]"
+        ]
+      },
+      "classification": "expect_flag_dom",
+      "vsProbe": "matches_probe_codes"
+    },
+    {
+      "virtualRowIndex": 6,
+      "virtualItemKey": "inf:52215772-78d1-4c17-9f13-4d3f47a0837e",
+      "reactKey": "inf:52215772-78d1-4c17-9f13-4d3f47a0837e",
+      "creatorId": "52215772-78d1-4c17-9f13-4d3f47a0837e",
+      "creatorUnifiedId": "inf:52215772-78d1-4c17-9f13-4d3f47a0837e",
+      "displayName": "Yasser Ahmed - ياسر أحمد",
+      "countryFlagCodes": [
+        "EG"
+      ],
+      "country_codes": [
+        "EG"
+      ],
+      "country_code": "EG",
+      "audience_country": [
+        null,
+        "EG"
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [
+          "EG"
+        ],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": true,
+        "flagAriaLabel": "EG",
+        "tree": [
+          "discovery-search-exact-row",
+          "discovery-search-exact-photo-wrap",
+          "discovery-search-exact-flag",
+          "CountryFlagsStack/CountryFlagBadge",
+          "img[flagcdn]"
+        ]
+      },
+      "classification": "expect_flag_dom",
+      "vsProbe": "matches_probe_codes"
+    },
+    {
+      "virtualRowIndex": 7,
+      "virtualItemKey": "inf:b2369b60-063d-43ec-ab3a-76e01e592381",
+      "reactKey": "inf:b2369b60-063d-43ec-ab3a-76e01e592381",
+      "creatorId": "b2369b60-063d-43ec-ab3a-76e01e592381",
+      "creatorUnifiedId": "inf:b2369b60-063d-43ec-ab3a-76e01e592381",
+      "displayName": "amryosseff",
+      "countryFlagCodes": [
+        "EG"
+      ],
+      "country_codes": [
+        "EG"
+      ],
+      "country_code": "EG",
+      "audience_country": [
+        "EG",
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [
+          "EG"
+        ],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": true,
+        "flagAriaLabel": "EG",
+        "tree": [
+          "discovery-search-exact-row",
+          "discovery-search-exact-photo-wrap",
+          "discovery-search-exact-flag",
+          "CountryFlagsStack/CountryFlagBadge",
+          "img[flagcdn]"
+        ]
+      },
+      "classification": "expect_flag_dom",
+      "vsProbe": "matches_probe_codes"
+    },
+    {
+      "virtualRowIndex": 8,
+      "virtualItemKey": "inf:79b74fa9-852b-429d-b9da-57c14ad7c37c",
+      "reactKey": "inf:79b74fa9-852b-429d-b9da-57c14ad7c37c",
+      "creatorId": "79b74fa9-852b-429d-b9da-57c14ad7c37c",
+      "creatorUnifiedId": "inf:79b74fa9-852b-429d-b9da-57c14ad7c37c",
+      "displayName": "adanys.table",
+      "countryFlagCodes": [
+        "EG"
+      ],
+      "country_codes": [
+        "EG"
+      ],
+      "country_code": "EG",
+      "audience_country": [
+        null,
+        "EG"
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [
+          "EG"
+        ],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": true,
+        "flagAriaLabel": "EG",
+        "tree": [
+          "discovery-search-exact-row",
+          "discovery-search-exact-photo-wrap",
+          "discovery-search-exact-flag",
+          "CountryFlagsStack/CountryFlagBadge",
+          "img[flagcdn]"
+        ]
+      },
+      "classification": "expect_flag_dom",
+      "vsProbe": "matches_probe_codes"
+    },
+    {
+      "virtualRowIndex": 9,
+      "virtualItemKey": "inf:9606033e-be8a-4601-9091-83e63e3f9ea4",
+      "reactKey": "inf:9606033e-be8a-4601-9091-83e63e3f9ea4",
+      "creatorId": "9606033e-be8a-4601-9091-83e63e3f9ea4",
+      "creatorUnifiedId": "inf:9606033e-be8a-4601-9091-83e63e3f9ea4",
+      "displayName": "cairofoodiecouple",
+      "countryFlagCodes": [
+        "EG",
+        "IT"
+      ],
+      "country_codes": [
+        "EG",
+        "IT"
+      ],
+      "country_code": "EG",
+      "audience_country": [
+        null,
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [
+          "EG",
+          "IT"
+        ],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": true,
+        "flagAriaLabel": "EG",
+        "tree": [
+          "discovery-search-exact-row",
+          "discovery-search-exact-photo-wrap",
+          "discovery-search-exact-flag",
+          "CountryFlagsStack/CountryFlagBadge",
+          "img[flagcdn]"
+        ]
+      },
+      "classification": "expect_flag_dom",
+      "vsProbe": "matches_probe_codes"
+    },
+    {
+      "virtualRowIndex": 10,
+      "virtualItemKey": "inf:58c7ab5f-24aa-4cfc-b91f-fab8be5e5e8a",
+      "reactKey": "inf:58c7ab5f-24aa-4cfc-b91f-fab8be5e5e8a",
+      "creatorId": "58c7ab5f-24aa-4cfc-b91f-fab8be5e5e8a",
+      "creatorUnifiedId": "inf:58c7ab5f-24aa-4cfc-b91f-fab8be5e5e8a",
+      "displayName": "raquelhadassaviagens_",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 11,
+      "virtualItemKey": "inf:bf99b7ec-deb8-4bca-94a9-5b87758b51e7",
+      "reactKey": "inf:bf99b7ec-deb8-4bca-94a9-5b87758b51e7",
+      "creatorId": "bf99b7ec-deb8-4bca-94a9-5b87758b51e7",
+      "creatorUnifiedId": "inf:bf99b7ec-deb8-4bca-94a9-5b87758b51e7",
+      "displayName": "alhussinefatima",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 12,
+      "virtualItemKey": "inf:45b1f771-dfc7-4888-9aaa-cae35960dbec",
+      "reactKey": "inf:45b1f771-dfc7-4888-9aaa-cae35960dbec",
+      "creatorId": "45b1f771-dfc7-4888-9aaa-cae35960dbec",
+      "creatorUnifiedId": "inf:45b1f771-dfc7-4888-9aaa-cae35960dbec",
+      "displayName": "milleniumantiguidades",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 13,
+      "virtualItemKey": "inf:7a6d5b61-f351-4039-820f-7062ef4f6b33",
+      "reactKey": "inf:7a6d5b61-f351-4039-820f-7062ef4f6b33",
+      "creatorId": "7a6d5b61-f351-4039-820f-7062ef4f6b33",
+      "creatorUnifiedId": "inf:7a6d5b61-f351-4039-820f-7062ef4f6b33",
+      "displayName": "entrecuentaycuenta",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 14,
+      "virtualItemKey": "inf:8125abd9-a10c-4985-938a-33022595332d",
+      "reactKey": "inf:8125abd9-a10c-4985-938a-33022595332d",
+      "creatorId": "8125abd9-a10c-4985-938a-33022595332d",
+      "creatorUnifiedId": "inf:8125abd9-a10c-4985-938a-33022595332d",
+      "displayName": "banda_fn13",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 15,
+      "virtualItemKey": "inf:2f8f0fd4-e41f-4f38-982b-b549d7d776da",
+      "reactKey": "inf:2f8f0fd4-e41f-4f38-982b-b549d7d776da",
+      "creatorId": "2f8f0fd4-e41f-4f38-982b-b549d7d776da",
+      "creatorUnifiedId": "inf:2f8f0fd4-e41f-4f38-982b-b549d7d776da",
+      "displayName": "206tours",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 16,
+      "virtualItemKey": "inf:f41bb9da-3fab-4b65-bc61-f41770873948",
+      "reactKey": "inf:f41bb9da-3fab-4b65-bc61-f41770873948",
+      "creatorId": "f41bb9da-3fab-4b65-bc61-f41770873948",
+      "creatorUnifiedId": "inf:f41bb9da-3fab-4b65-bc61-f41770873948",
+      "displayName": "gpcristobuenamuerteydefension",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 17,
+      "virtualItemKey": "inf:9579d968-a5b1-4305-8da5-d9f905a946f7",
+      "reactKey": "inf:9579d968-a5b1-4305-8da5-d9f905a946f7",
+      "creatorId": "9579d968-a5b1-4305-8da5-d9f905a946f7",
+      "creatorUnifiedId": "inf:9579d968-a5b1-4305-8da5-d9f905a946f7",
+      "displayName": "alcorta.y.luna",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 18,
+      "virtualItemKey": "inf:1de35813-9c74-4905-9862-e1b2bcfbfa1b",
+      "reactKey": "inf:1de35813-9c74-4905-9862-e1b2bcfbfa1b",
+      "creatorId": "1de35813-9c74-4905-9862-e1b2bcfbfa1b",
+      "creatorUnifiedId": "inf:1de35813-9c74-4905-9862-e1b2bcfbfa1b",
+      "displayName": "araujo_hobby",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 19,
+      "virtualItemKey": "inf:e14a2470-4c70-463b-a4be-f24fcdb8ed98",
+      "reactKey": "inf:e14a2470-4c70-463b-a4be-f24fcdb8ed98",
+      "creatorId": "e14a2470-4c70-463b-a4be-f24fcdb8ed98",
+      "creatorUnifiedId": "inf:e14a2470-4c70-463b-a4be-f24fcdb8ed98",
+      "displayName": "lrgarcons",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 20,
+      "virtualItemKey": "inf:9c083179-5ddb-423a-91e3-24e9f27e85f1",
+      "reactKey": "inf:9c083179-5ddb-423a-91e3-24e9f27e85f1",
+      "creatorId": "9c083179-5ddb-423a-91e3-24e9f27e85f1",
+      "creatorUnifiedId": "inf:9c083179-5ddb-423a-91e3-24e9f27e85f1",
+      "displayName": "daniela_doamaral",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 21,
+      "virtualItemKey": "inf:dbf558f6-271c-49cf-b662-7d892690a2b6",
+      "reactKey": "inf:dbf558f6-271c-49cf-b662-7d892690a2b6",
+      "creatorId": "dbf558f6-271c-49cf-b662-7d892690a2b6",
+      "creatorUnifiedId": "inf:dbf558f6-271c-49cf-b662-7d892690a2b6",
+      "displayName": "fatima_hairbraiding_1",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 22,
+      "virtualItemKey": "inf:98690eb9-d04d-4aa0-b7fc-51e349574b60",
+      "reactKey": "inf:98690eb9-d04d-4aa0-b7fc-51e349574b60",
+      "creatorId": "98690eb9-d04d-4aa0-b7fc-51e349574b60",
+      "creatorUnifiedId": "inf:98690eb9-d04d-4aa0-b7fc-51e349574b60",
+      "displayName": "mariacristina.maza.1",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 23,
+      "virtualItemKey": "inf:3c5107f3-7a20-4c2c-bf69-85d169cba57d",
+      "reactKey": "inf:3c5107f3-7a20-4c2c-bf69-85d169cba57d",
+      "creatorId": "3c5107f3-7a20-4c2c-bf69-85d169cba57d",
+      "creatorUnifiedId": "inf:3c5107f3-7a20-4c2c-bf69-85d169cba57d",
+      "displayName": "fati_mameme",
+      "countryFlagCodes": [
+        "PK"
+      ],
+      "country_codes": [
+        "PK"
+      ],
+      "country_code": "PK",
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [
+          "PK"
+        ],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": true,
+        "flagAriaLabel": "PK",
+        "tree": [
+          "discovery-search-exact-row",
+          "discovery-search-exact-photo-wrap",
+          "discovery-search-exact-flag",
+          "CountryFlagsStack/CountryFlagBadge",
+          "img[flagcdn]"
+        ]
+      },
+      "classification": "expect_flag_dom",
+      "vsProbe": "has_codes_not_eg"
+    },
+    {
+      "virtualRowIndex": 24,
+      "virtualItemKey": "inf:061ec44c-905e-4a28-b6e4-fb676e793894",
+      "reactKey": "inf:061ec44c-905e-4a28-b6e4-fb676e793894",
+      "creatorId": "061ec44c-905e-4a28-b6e4-fb676e793894",
+      "creatorUnifiedId": "inf:061ec44c-905e-4a28-b6e4-fb676e793894",
+      "displayName": "fatima.rajpoot019",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 25,
+      "virtualItemKey": "inf:5ff53585-b620-46f7-8ce8-b6914bcd854f",
+      "reactKey": "inf:5ff53585-b620-46f7-8ce8-b6914bcd854f",
+      "creatorId": "5ff53585-b620-46f7-8ce8-b6914bcd854f",
+      "creatorUnifiedId": "inf:5ff53585-b620-46f7-8ce8-b6914bcd854f",
+      "displayName": "irfan.tahir.7906",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 26,
+      "virtualItemKey": "inf:65925d83-9866-4fa0-aea6-dbfa4ac02163",
+      "reactKey": "inf:65925d83-9866-4fa0-aea6-dbfa4ac02163",
+      "creatorId": "65925d83-9866-4fa0-aea6-dbfa4ac02163",
+      "creatorUnifiedId": "inf:65925d83-9866-4fa0-aea6-dbfa4ac02163",
+      "displayName": "fatimanouman_",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 27,
+      "virtualItemKey": "inf:1b66dd91-1709-4cad-824d-b0750ef8727c",
+      "reactKey": "inf:1b66dd91-1709-4cad-824d-b0750ef8727c",
+      "creatorId": "1b66dd91-1709-4cad-824d-b0750ef8727c",
+      "creatorUnifiedId": "inf:1b66dd91-1709-4cad-824d-b0750ef8727c",
+      "displayName": "consolata_artigos_religiosos",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 28,
+      "virtualItemKey": "inf:7bc10729-d447-4bca-91d7-7223a3448a0a",
+      "reactKey": "inf:7bc10729-d447-4bca-91d7-7223a3448a0a",
+      "creatorId": "7bc10729-d447-4bca-91d7-7223a3448a0a",
+      "creatorUnifiedId": "inf:7bc10729-d447-4bca-91d7-7223a3448a0a",
+      "displayName": "yellowcabtttours.pt",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 29,
+      "virtualItemKey": "inf:192a978d-9175-4dfd-8876-089984a50d24",
+      "reactKey": "inf:192a978d-9175-4dfd-8876-089984a50d24",
+      "creatorId": "192a978d-9175-4dfd-8876-089984a50d24",
+      "creatorUnifiedId": "inf:192a978d-9175-4dfd-8876-089984a50d24",
+      "displayName": "lux_fatimae",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 30,
+      "virtualItemKey": "inf:76c25841-6ae6-4e59-9052-031509a31579",
+      "reactKey": "inf:76c25841-6ae6-4e59-9052-031509a31579",
+      "creatorId": "76c25841-6ae6-4e59-9052-031509a31579",
+      "creatorUnifiedId": "inf:76c25841-6ae6-4e59-9052-031509a31579",
+      "displayName": "abeehafatima225",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 31,
+      "virtualItemKey": "inf:9aedd674-5cd3-468e-bdb3-191e29537e64",
+      "reactKey": "inf:9aedd674-5cd3-468e-bdb3-191e29537e64",
+      "creatorId": "9aedd674-5cd3-468e-bdb3-191e29537e64",
+      "creatorUnifiedId": "inf:9aedd674-5cd3-468e-bdb3-191e29537e64",
+      "displayName": "rokeya.collective",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 32,
+      "virtualItemKey": "inf:7e75b0f2-2262-4a9f-8283-b093a1e5de85",
+      "reactKey": "inf:7e75b0f2-2262-4a9f-8283-b093a1e5de85",
+      "creatorId": "7e75b0f2-2262-4a9f-8283-b093a1e5de85",
+      "creatorUnifiedId": "inf:7e75b0f2-2262-4a9f-8283-b093a1e5de85",
+      "displayName": "aviansummit",
+      "countryFlagCodes": [
+        "ES"
+      ],
+      "country_codes": [
+        "ES"
+      ],
+      "country_code": "ES",
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [
+          "ES"
+        ],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": true,
+        "flagAriaLabel": "ES",
+        "tree": [
+          "discovery-search-exact-row",
+          "discovery-search-exact-photo-wrap",
+          "discovery-search-exact-flag",
+          "CountryFlagsStack/CountryFlagBadge",
+          "img[flagcdn]"
+        ]
+      },
+      "classification": "expect_flag_dom",
+      "vsProbe": "has_codes_not_eg"
+    },
+    {
+      "virtualRowIndex": 33,
+      "virtualItemKey": "inf:9a6f0164-6a2b-4eac-aac7-ba2e026ca57d",
+      "reactKey": "inf:9a6f0164-6a2b-4eac-aac7-ba2e026ca57d",
+      "creatorId": "9a6f0164-6a2b-4eac-aac7-ba2e026ca57d",
+      "creatorUnifiedId": "inf:9a6f0164-6a2b-4eac-aac7-ba2e026ca57d",
+      "displayName": "handmadebymackenzie_",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 34,
+      "virtualItemKey": "inf:19faa856-ccb6-4019-8a2f-1a207dabf869",
+      "reactKey": "inf:19faa856-ccb6-4019-8a2f-1a207dabf869",
+      "creatorId": "19faa856-ccb6-4019-8a2f-1a207dabf869",
+      "creatorUnifiedId": "inf:19faa856-ccb6-4019-8a2f-1a207dabf869",
+      "displayName": "ohfranchini",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 35,
+      "virtualItemKey": "inf:d01908cf-557f-4d9b-a45c-1cf3d5c695ee",
+      "reactKey": "inf:d01908cf-557f-4d9b-a45c-1cf3d5c695ee",
+      "creatorId": "d01908cf-557f-4d9b-a45c-1cf3d5c695ee",
+      "creatorUnifiedId": "inf:d01908cf-557f-4d9b-a45c-1cf3d5c695ee",
+      "displayName": "fa_facollection",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 36,
+      "virtualItemKey": "inf:d524ec08-3e3d-48f1-b4e6-baa3217f7ef9",
+      "reactKey": "inf:d524ec08-3e3d-48f1-b4e6-baa3217f7ef9",
+      "creatorId": "d524ec08-3e3d-48f1-b4e6-baa3217f7ef9",
+      "creatorUnifiedId": "inf:d524ec08-3e3d-48f1-b4e6-baa3217f7ef9",
+      "displayName": "luxmeasacra",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 37,
+      "virtualItemKey": "inf:4f8e9bd3-b917-4f47-b11b-fe7d00b13198",
+      "reactKey": "inf:4f8e9bd3-b917-4f47-b11b-fe7d00b13198",
+      "creatorId": "4f8e9bd3-b917-4f47-b11b-fe7d00b13198",
+      "creatorUnifiedId": "inf:4f8e9bd3-b917-4f47-b11b-fe7d00b13198",
+      "displayName": "rysaa_28",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 38,
+      "virtualItemKey": "inf:31b02cd1-1095-4d80-8d87-5b6dcd72019c",
+      "reactKey": "inf:31b02cd1-1095-4d80-8d87-5b6dcd72019c",
+      "creatorId": "31b02cd1-1095-4d80-8d87-5b6dcd72019c",
+      "creatorUnifiedId": "inf:31b02cd1-1095-4d80-8d87-5b6dcd72019c",
+      "displayName": "Andi Music and Art",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 39,
+      "virtualItemKey": "inf:a41bac20-2327-43f5-9724-4d69b844b97b",
+      "reactKey": "inf:a41bac20-2327-43f5-9724-4d69b844b97b",
+      "creatorId": "a41bac20-2327-43f5-9724-4d69b844b97b",
+      "creatorUnifiedId": "inf:a41bac20-2327-43f5-9724-4d69b844b97b",
+      "displayName": "Canada Needs Our Lady",
+      "countryFlagCodes": [
+        "CA"
+      ],
+      "country_codes": [
+        "CA"
+      ],
+      "country_code": "CA",
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [
+          "CA"
+        ],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": true,
+        "flagAriaLabel": "CA",
+        "tree": [
+          "discovery-search-exact-row",
+          "discovery-search-exact-photo-wrap",
+          "discovery-search-exact-flag",
+          "CountryFlagsStack/CountryFlagBadge",
+          "img[flagcdn]"
+        ]
+      },
+      "classification": "expect_flag_dom",
+      "vsProbe": "has_codes_not_eg"
+    },
+    {
+      "virtualRowIndex": 40,
+      "virtualItemKey": "inf:f1d9187c-5398-40e0-a447-78e6ea847ae6",
+      "reactKey": "inf:f1d9187c-5398-40e0-a447-78e6ea847ae6",
+      "creatorId": "f1d9187c-5398-40e0-a447-78e6ea847ae6",
+      "creatorUnifiedId": "inf:f1d9187c-5398-40e0-a447-78e6ea847ae6",
+      "displayName": "Flavio Mesquita",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 41,
+      "virtualItemKey": "inf:5c453b84-9a09-4846-93d5-e0c17bf33517",
+      "reactKey": "inf:5c453b84-9a09-4846-93d5-e0c17bf33517",
+      "creatorId": "5c453b84-9a09-4846-93d5-e0c17bf33517",
+      "creatorUnifiedId": "inf:5c453b84-9a09-4846-93d5-e0c17bf33517",
+      "displayName": "Fatima Yaakoub",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 42,
+      "virtualItemKey": "inf:6367e901-162d-45df-80f7-10047acba63b",
+      "reactKey": "inf:6367e901-162d-45df-80f7-10047acba63b",
+      "creatorId": "6367e901-162d-45df-80f7-10047acba63b",
+      "creatorUnifiedId": "inf:6367e901-162d-45df-80f7-10047acba63b",
+      "displayName": "Paola Cassol | Arte em Papel",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 43,
+      "virtualItemKey": "inf:0025841f-c2fd-48b5-80a4-f532e2d339dd",
+      "reactKey": "inf:0025841f-c2fd-48b5-80a4-f532e2d339dd",
+      "creatorId": "0025841f-c2fd-48b5-80a4-f532e2d339dd",
+      "creatorUnifiedId": "inf:0025841f-c2fd-48b5-80a4-f532e2d339dd",
+      "displayName": "Alberto Trafalgar",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 44,
+      "virtualItemKey": "inf:a6085a4d-6d3e-4d6b-b60c-9edc4ceb5bf5",
+      "reactKey": "inf:a6085a4d-6d3e-4d6b-b60c-9edc4ceb5bf5",
+      "creatorId": "a6085a4d-6d3e-4d6b-b60c-9edc4ceb5bf5",
+      "creatorUnifiedId": "inf:a6085a4d-6d3e-4d6b-b60c-9edc4ceb5bf5",
+      "displayName": "MQ_SPORTS™",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 45,
+      "virtualItemKey": "inf:79c36980-7306-49d3-83da-5f24067c7a0f",
+      "reactKey": "inf:79c36980-7306-49d3-83da-5f24067c7a0f",
+      "creatorId": "79c36980-7306-49d3-83da-5f24067c7a0f",
+      "creatorUnifiedId": "inf:79c36980-7306-49d3-83da-5f24067c7a0f",
+      "displayName": "Maria Alejandra Montenegro Silva",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 46,
+      "virtualItemKey": "inf:8b14564c-c4bd-4061-8fa9-95c22e8bde39",
+      "reactKey": "inf:8b14564c-c4bd-4061-8fa9-95c22e8bde39",
+      "creatorId": "8b14564c-c4bd-4061-8fa9-95c22e8bde39",
+      "creatorUnifiedId": "inf:8b14564c-c4bd-4061-8fa9-95c22e8bde39",
+      "displayName": "Escola de Futsal do Fátima",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 47,
+      "virtualItemKey": "inf:e4eabb9b-69db-48b1-94df-f022134a77a6",
+      "reactKey": "inf:e4eabb9b-69db-48b1-94df-f022134a77a6",
+      "creatorId": "e4eabb9b-69db-48b1-94df-f022134a77a6",
+      "creatorUnifiedId": "inf:e4eabb9b-69db-48b1-94df-f022134a77a6",
+      "displayName": "Celebrities Styles",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 48,
+      "virtualItemKey": "inf:7c4eddad-d906-4c66-947f-d2d1acde1c19",
+      "reactKey": "inf:7c4eddad-d906-4c66-947f-d2d1acde1c19",
+      "creatorId": "7c4eddad-d906-4c66-947f-d2d1acde1c19",
+      "creatorUnifiedId": "inf:7c4eddad-d906-4c66-947f-d2d1acde1c19",
+      "displayName": "Bryan Ramirez",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    },
+    {
+      "virtualRowIndex": 49,
+      "virtualItemKey": "inf:5ce7439a-c9bd-468d-a238-31faee897bfe",
+      "reactKey": "inf:5ce7439a-c9bd-468d-a238-31faee897bfe",
+      "creatorId": "5ce7439a-c9bd-468d-a238-31faee897bfe",
+      "creatorUnifiedId": "inf:5ce7439a-c9bd-468d-a238-31faee897bfe",
+      "displayName": "Azeite Fátima",
+      "countryFlagCodes": [],
+      "country_codes": [],
+      "country_code": null,
+      "audience_country": [
+        null
+      ],
+      "countryFlagsStackProps": {
+        "countryCodes": [],
+        "size": "md",
+        "overlay": true,
+        "className": "size-full"
+      },
+      "expectedRenderedDom": {
+        "hasFlagSlot": false,
+        "tree": [
+          "discovery-search-exact-row",
+          "NO_FLAG"
+        ]
+      },
+      "classification": "empty_props",
+      "vsProbe": "diverges_at_countryFlagCodes_empty"
+    }
+  ]
+}

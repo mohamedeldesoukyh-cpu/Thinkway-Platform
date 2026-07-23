@@ -131,6 +131,7 @@ export async function fetchProfileWithIpl(
     platform: context.platform,
     username: context.username,
     profileUrl: context.profileUrl,
+    includePosts: context.includePosts,
   });
 
   if (!rawResult.ok) {

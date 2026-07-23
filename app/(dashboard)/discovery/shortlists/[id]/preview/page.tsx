@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 
@@ -5,7 +6,10 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageBackButton } from "@/components/navigation/page-back-button";
 import { ShortlistPreviewDownloads } from "@/features/discovery/shortlists/components/shortlist-preview-downloads";
 import { ShortlistPreviewTemplateToggle } from "@/features/discovery/shortlists/components/shortlist-preview-template-toggle";
-import { shortlistDetailPath } from "@/features/discovery/shortlists/constants";
+import {
+  shortlistDetailPath,
+  shortlistPreviewPath,
+} from "@/features/discovery/shortlists/constants";
 import {
   appendShortlistExportRevision,
   appendShortlistTemplateParam,
@@ -13,7 +17,11 @@ import {
 } from "@/features/discovery/shortlists/export/shortlist-template";
 import { getShortlistDetail } from "@/features/discovery/shortlists/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isUuid } from "@/lib/validation/uuid";
+import { metadataTitleForEntity, redirectToCanonicalEntityRoute } from "@/lib/routing/entity-page";
+import {
+  fetchShortlistRouteSummary,
+  resolveShortlistIdByRouteKey,
+} from "@/lib/routing/entity-route-queries";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +29,21 @@ type ShortlistPreviewPageProps = {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ template?: string; items?: string }>;
 };
+
+export async function generateMetadata({
+  params,
+}: Pick<ShortlistPreviewPageProps, "params">): Promise<Metadata> {
+  const { id: routeKey } = await params;
+  const shortlistId = await resolveShortlistIdByRouteKey(routeKey);
+  if (!shortlistId) return { title: "Shortlist preview" };
+
+  const summary = await fetchShortlistRouteSummary(shortlistId);
+  if (!summary) return { title: "Shortlist preview" };
+
+  return {
+    title: `${metadataTitleForEntity(summary, summary.serial_number)} preview`,
+  };
+}
 
 function shortlistTemplateLabel(
   template: ReturnType<typeof resolveShortlistTemplate>
@@ -39,15 +62,45 @@ export default async function ShortlistPreviewPage({
   params,
   searchParams,
 }: ShortlistPreviewPageProps) {
-  const { id } = await params;
+  const { id: routeKey } = await params;
   const query = await searchParams;
   const template = resolveShortlistTemplate(query.template);
   const itemIds = query.items
     ? query.items.split(",").map((value) => value.trim()).filter(Boolean)
     : undefined;
 
-  if (!isUuid(id)) {
-    notFound();
+  const shortlistId = await resolveShortlistIdByRouteKey(routeKey);
+  if (!shortlistId) notFound();
+
+  const routeSummary = await fetchShortlistRouteSummary(shortlistId);
+  const canonicalPath = routeSummary
+    ? shortlistPreviewPath(
+        {
+          id: routeSummary.id,
+          slug: routeSummary.slug,
+          name: routeSummary.name,
+          serial_number: routeSummary.serial_number ?? null,
+        },
+        { template, itemIds }
+      )
+    : shortlistPreviewPath(shortlistId, { template, itemIds });
+
+  if (routeSummary) {
+    redirectToCanonicalEntityRoute(
+      {
+        routeKey,
+        entity: {
+          ...routeSummary,
+          serial_number: routeSummary.serial_number ?? null,
+        },
+        canonicalPath,
+      },
+      undefined,
+      {
+        ...(template !== "summary" ? { template } : {}),
+        ...(itemIds?.length ? { items: itemIds.join(",") } : {}),
+      }
+    );
   }
 
   const supabase = await createSupabaseServerClient();
@@ -59,7 +112,7 @@ export default async function ShortlistPreviewPage({
     notFound();
   }
 
-  const detail = await getShortlistDetail(id);
+  const detail = await getShortlistDetail(shortlistId);
   if (!detail) {
     notFound();
   }
@@ -72,7 +125,7 @@ export default async function ShortlistPreviewPage({
   if (itemIds?.length) {
     previewParams.set("items", itemIds.join(","));
   }
-  const previewSrc = `/api/shortlists/${id}/export?${previewParams.toString()}`;
+  const previewSrc = `/api/shortlists/${shortlistId}/export?${previewParams.toString()}`;
 
   return (
     <DashboardShell
@@ -84,20 +137,25 @@ export default async function ShortlistPreviewPage({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <PageBackButton
-              fallbackHref={shortlistDetailPath(id)}
+              fallbackHref={shortlistDetailPath({
+                id: detail.id,
+                slug: detail.slug ?? null,
+                name: detail.name,
+                serial_number: detail.serial_number,
+              })}
               label="Back to shortlist"
               variant="text"
             />
             <Suspense fallback={null}>
               <ShortlistPreviewTemplateToggle
-                shortlistId={id}
+                shortlistId={shortlistId}
                 activeTemplate={template}
                 itemIds={itemIds}
               />
             </Suspense>
           </div>
           <ShortlistPreviewDownloads
-            shortlistId={id}
+            shortlistId={shortlistId}
             template={template}
             itemIds={itemIds}
             exportRevision={detail.updated_at}

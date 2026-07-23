@@ -11,12 +11,16 @@ import type { StudioDraftState } from "@/features/campaign-intelligence/types/se
 import type { CampaignStudioDecisionMode } from "@/features/campaign-decision-workspace/types/studio-decision-mode";
 
 import { SECTION_LOADING_MESSAGES } from "../../constants/copy";
+import { STUDIO_REF_CLASSES } from "../../constants/campaign-studio-ref-tokens";
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
 import { studioSectionDomId } from "../../hooks/use-studio-section-nav";
+import { useStudioRefMode } from "../../hooks/use-studio-ref-mode";
 import type { CampaignStudioLayoutMode, CampaignStudioViewportMode } from "../../types/campaign-studio";
 import type { StudioLayoutType } from "../../constants/studio-layout";
 import type { CampaignStudioSection } from "../../types/campaign-studio";
+import { useSectionBodyMount } from "../../hooks/use-section-body-mount";
 import { SectionRenderer } from "../sections/section-renderer";
+import { SectionSkeleton } from "../sections/shared/section-skeleton";
 
 type StudioSectionCardProps = {
   section: CampaignStudioSection;
@@ -41,6 +45,8 @@ type StudioSectionCardProps = {
   outdated?: boolean;
   layoutMode?: CampaignStudioLayoutMode;
   viewportMode?: CampaignStudioViewportMode;
+  /** Prefetch/mount body when this section is the active nav target. */
+  forceMountBody?: boolean;
 };
 
 const STATUS_STYLES = {
@@ -89,6 +95,28 @@ const SECTION_ICON_ACCENTS: Record<string, { bg: string; text: string }> = {
 
 const DEFAULT_ICON_ACCENT = { bg: "bg-[#0057FF]/10", text: "text-[#0057FF]" };
 
+const REF_SECTION_ICON_COLORS: Record<string, { bg: string; color: string }> = {
+  "campaign-summary": { bg: "#EEF3FF", color: "#0048DD" },
+  "executive-summary": { bg: "#faf5ff", color: "#6b21a8" },
+  "executive-strategy": { bg: "#faf5ff", color: "#6b21a8" },
+  "creative-concepts": { bg: "#faf5ff", color: "#6b21a8" },
+  "why-ai": { bg: "#faf5ff", color: "#6b21a8" },
+  "creator-discovery": { bg: "#EEF3FF", color: "#0048DD" },
+  "creator-recommendations": { bg: "#EEF3FF", color: "#0048DD" },
+  "creator-mix": { bg: "#EEF3FF", color: "#0048DD" },
+  timeline: { bg: "#fffbeb", color: "#92400e" },
+  "content-plan": { bg: "#fffbeb", color: "#92400e" },
+  "budget-planner": { bg: "#fffbeb", color: "#92400e" },
+  "presentation-status": { bg: "#EEF3FF", color: "#0048DD" },
+  "kpi-forecast": { bg: "#ecfdf5", color: "#065f46" },
+  "success-probability": { bg: "#ecfdf5", color: "#065f46" },
+  "industry-benchmark": { bg: "#ecfdf5", color: "#065f46" },
+  "risk-analysis": { bg: "#fef2f2", color: "#991b1b" },
+  "opportunity-finder": { bg: "#ecfdf5", color: "#065f46" },
+};
+
+const DEFAULT_REF_ICON = { bg: "#EEF3FF", color: "#0048DD" };
+
 function SectionLoadingState({ sectionId }: { sectionId: CampaignStudioSection["id"] }) {
   const loading = SECTION_LOADING_MESSAGES[sectionId];
   const specialist = loading?.specialist ?? "Specialist";
@@ -123,15 +151,96 @@ export function StudioSectionCard({
   outdated,
   layoutMode = "panel",
   viewportMode = "default",
+  forceMountBody = false,
 }: StudioSectionCardProps) {
   const isChatLayout = layoutMode === "chat";
   const isDesktopViewport = viewportMode === "desktop" && !isChatLayout;
+  const refMode = useStudioRefMode();
   const styles = STATUS_STYLES[section.status as keyof typeof STATUS_STYLES];
   const isLoading = section.status === "pending";
   const hasRenderableContent =
     section.status !== "pending" || campaignObject != null;
+  const { containerRef, mounted: bodyMounted } = useSectionBodyMount({
+    forceMount:
+      forceMountBody ||
+      section.status === "running" ||
+      section.status === "blocked",
+  });
 
   const statusId = `studio-section-${section.id}-status`;
+  const badgeLabel = outdated ? "Outdated" : styles.label;
+  const badgeClass = outdated
+    ? "outdated"
+    : section.status === "complete"
+      ? undefined
+      : section.status;
+
+  const body = (
+    <div ref={containerRef} className="min-w-0">
+      {!bodyMounted ? (
+        <SectionSkeleton />
+      ) : isLoading && !hasRenderableContent ? (
+        <SectionLoadingState sectionId={section.id} />
+      ) : hasRenderableContent ? (
+        <SectionRenderer
+          section={section}
+          campaignObject={campaignObject}
+          decisionMode={
+            section.id === "creator-recommendations" ? decisionMode : undefined
+          }
+          conversationId={conversationId}
+          messageId={messageId}
+          onVendorDecisionsUpdated={onVendorDecisionsUpdated}
+          onSlateUpdated={onSlateUpdated}
+          studioDraft={studioDraft}
+          onStudioDraftUpdated={onStudioDraftUpdated}
+          appliedRemovedCreatorIds={appliedRemovedCreatorIds}
+        />
+      ) : (
+        <SectionLoadingState sectionId={section.id} />
+      )}
+    </div>
+  );
+
+  if (refMode) {
+    const iconColors = REF_SECTION_ICON_COLORS[section.id] ?? DEFAULT_REF_ICON;
+    return (
+      <article
+        id={studioSectionDomId(section.id, "ref")}
+        className={cn(STUDIO_REF_CLASSES.card, className)}
+        aria-labelledby={`studio-section-${section.id}-title`}
+        aria-describedby={statusId}
+      >
+        <header className={STUDIO_REF_CLASSES.cardHead}>
+          <div className={STUDIO_REF_CLASSES.cardHeadLeft}>
+            {Icon ? (
+              <div
+                className={STUDIO_REF_CLASSES.cardIco}
+                style={{ background: iconColors.bg, color: iconColors.color }}
+              >
+                <Icon aria-hidden />
+              </div>
+            ) : null}
+            <div className="min-w-0">
+              <h3 id={`studio-section-${section.id}-title`} className={STUDIO_REF_CLASSES.cardTitle}>
+                {section.title}
+              </h3>
+              {description ? (
+                <p className={STUDIO_REF_CLASSES.cardSub}>{description}</p>
+              ) : null}
+            </div>
+          </div>
+          <span id={statusId} className={cn(STUDIO_REF_CLASSES.badgeComplete, badgeClass)}>
+            {badgeLabel}
+          </span>
+        </header>
+        <div className={STUDIO_REF_CLASSES.cardBody}>
+          {body}
+          {sectionFooter}
+        </div>
+      </article>
+    );
+  }
 
   return (
     <article
@@ -205,26 +314,7 @@ export function StudioSectionCard({
           section.status === "complete" && STUDIO_CLASSES.sectionEnter
         )}
       >
-        {isLoading && !hasRenderableContent ? (
-          <SectionLoadingState sectionId={section.id} />
-        ) : hasRenderableContent ? (
-          <SectionRenderer
-            section={section}
-            campaignObject={campaignObject}
-            decisionMode={
-              section.id === "creator-recommendations" ? decisionMode : undefined
-            }
-            conversationId={conversationId}
-            messageId={messageId}
-            onVendorDecisionsUpdated={onVendorDecisionsUpdated}
-            onSlateUpdated={onSlateUpdated}
-            studioDraft={studioDraft}
-            onStudioDraftUpdated={onStudioDraftUpdated}
-            appliedRemovedCreatorIds={appliedRemovedCreatorIds}
-          />
-        ) : (
-          <SectionLoadingState sectionId={section.id} />
-        )}
+        {body}
       </div>
       {sectionFooter}
     </article>

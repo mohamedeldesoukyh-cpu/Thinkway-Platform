@@ -1,0 +1,93 @@
+/* Shared logo + page loader (used outside /login) */
+.login-v2-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.login-v2-logo-mark {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--login-navy);
+  flex-shrink: 0;
+}
+.login-v2-logo-mark::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+}
+.login-v2-logo-mark::after {
+  content: "";
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: var(--login-blue);
+}
+.login-v2-logo-text {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--login-navy);
+  letter-spacing: -0.4px;
+}
+.login-v2-logo-text span {
+  color: var(--login-blue);
+}
+.thinkway-logo-compact .login-v2-logo-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+}
+.thinkway-logo-compact .login-v2-logo-mark::before {
+  top: 6px;
+  left: 6px;
+  width: 8px;
+  height: 8px;
+}
+.thinkway-logo-compact .login-v2-logo-mark::after {
+  right: 4px;
+  bottom: 4px;
+  width: 11px;
+  height: 11px;
+}
+.thinkway-page-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+.thinkway-page-loader-logo .login-v2-logo-mark {
+  animation: thinkway-loader-pulse 1.15s ease-in-out infinite;
+}
+@keyframes thinkway-loader-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.07);
+    opacity: 0.88;
+  }
+}
+
+/* In-app navigation overlay (dashboard shell) */
+.thinkway-navigation-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--background) 88%, transparent);
+  backdrop-filter: blur(2px);
+}

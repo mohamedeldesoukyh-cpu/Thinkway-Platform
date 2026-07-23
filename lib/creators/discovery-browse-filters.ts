@@ -1,7 +1,10 @@
+import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { creatorMatchesBrowseCategories } from "@/lib/creators/category-filter";
 import { resolveCountryCode } from "@/lib/creators/country-code";
-import type { UnifiedCreatorBrowseFilters, UnifiedCreatorResult } from "@/lib/creators/types";
 import {
+  resolveCreatorCountryCodes,
+} from "@/lib/creators/country-inference";
+import type { UnifiedCreatorBrowseFilters, UnifiedCreatorResult } from "@/lib/creators/types";import {
   audienceFilterFromSearchFields,
   hasAnyAudienceFilter,
   matchesAudienceFilter,
@@ -15,16 +18,13 @@ function normalizeCountryCode(value: string | null | undefined): string {
 }
 
 function creatorCountryCodes(creator: UnifiedCreatorResult): string[] {
-  const codes = new Set<string>();
-  const primary = normalizeCountryCode(creator.country_code ?? creator.estimated_country);
-  if (primary) codes.add(primary);
-  for (const platform of creator.platforms) {
-    const audience = normalizeCountryCode(platform.audience_country);
-    if (audience) codes.add(audience);
-  }
-  return [...codes];
+  return resolveCreatorCountryCodes({
+    country_codes: creator.country_codes,
+    country_code: creator.country_code,
+    estimated_country: creator.estimated_country,
+    platformAudienceCountries: creator.platforms.map((platform) => platform.audience_country),
+  });
 }
-
 function matchesAudienceCountries(
   creator: UnifiedCreatorResult,
   audienceCountries: string[]
@@ -95,6 +95,19 @@ function matchesCreatorCountries(
   return targets.some((code) => creatorCodes.includes(code));
 }
 
+function matchesLanguageCodes(
+  creator: UnifiedCreatorResult,
+  languages: string[]
+): boolean {
+  if (languages.length === 0) return true;
+  const codes = creator.language_codes.map((code) => code.trim().toLowerCase()).filter(Boolean);
+  if (codes.length === 0) return false;
+  return languages.some((lang) => {
+    const needle = lang.trim().toLowerCase();
+    return codes.some((code) => code === needle || code.includes(needle));
+  });
+}
+
 /** True when Discovery UI audience / interest chips require post-hydration filtering. */
 export function hasDiscoveryAudienceBrowseFilters(
   filters: UnifiedCreatorBrowseFilters
@@ -105,7 +118,9 @@ export function hasDiscoveryAudienceBrowseFilters(
     Boolean(filters.audienceGender?.trim()) ||
     Boolean(filters.audienceAgeMin?.trim()) ||
     Boolean(filters.audienceAgeMax?.trim()) ||
-    (filters.creatorCountries?.length ?? 0) > 1
+    (filters.creatorCountries?.length ?? 0) > 1 ||
+    (filters.languages?.length ?? 0) > 1 ||
+    (filters.contentLanguages?.length ?? 0) > 0
   );
 }
 
@@ -131,9 +146,20 @@ export function creatorMatchesDiscoveryBrowseFilters(
   if (!matchesAudienceInterestTags(creator, filters.audienceInterestTags ?? [])) return false;
   if (!matchesDemographicFilters(creator, filters)) return false;
 
-  if (filters.platforms?.length) {
-    const set = new Set(filters.platforms.map((p) => p.toLowerCase()));
-    if (!creator.platforms.some((p) => set.has(p.platform.toLowerCase()))) return false;
+  const languageFilters = [
+    ...(filters.languages ?? []),
+    ...(filters.language?.trim() ? [filters.language.trim()] : []),
+  ];
+  if (!matchesLanguageCodes(creator, languageFilters)) return false;
+  if (!matchesLanguageCodes(creator, filters.contentLanguages ?? [])) return false;
+
+  const platformFilterValues = [
+    ...(filters.platform?.trim() ? [filters.platform.trim()] : []),
+    ...(filters.platforms ?? []),
+  ];
+  if (platformFilterValues.length > 0) {
+    const set = new Set(platformFilterValues.map((p) => canonicalPlatformKey(p)));
+    if (!creator.platforms.some((p) => set.has(canonicalPlatformKey(p.platform)))) return false;
   }
 
   if (filters.minThinkwayScore != null && (creator.thinkway_score ?? 0) < filters.minThinkwayScore) {
@@ -149,7 +175,12 @@ export function applyDiscoveryBrowseFilters(
 ): UnifiedCreatorResult[] {
   if (!hasDiscoveryAudienceBrowseFilters(filters)) {
     const categories = filters.categories ?? [];
-    if (categories.length === 0 && !filters.country && !filters.platforms?.length) {
+    if (
+      categories.length === 0 &&
+      !filters.country &&
+      !filters.platform?.trim() &&
+      !filters.platforms?.length
+    ) {
       return creators;
     }
   }

@@ -1,14 +1,32 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { LayersIcon, LayoutDashboardIcon, SparklesIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { OUTPUTS_CLASSES } from "@/features/campaign-outputs/constants/outputs-center-tokens";
+import { STUDIO_REF_CLASSES } from "@/features/campaign-studio/constants/campaign-studio-ref-tokens";
+import "@/features/campaign-studio/styles/campaign-studio-ref.css";
+import { OutputsPlanReadinessBanner } from "@/features/campaign-outputs/components/outputs-plan-readiness-banner";
 import { CampaignStudioHost } from "@/features/campaign-decision-workspace/components/campaign-studio-host";
 import { GenerateCampaignLauncher } from "@/features/campaign-plan/components/generate-campaign-launcher";
 import { GenerateQuotationLauncher } from "@/features/campaign-plan/components/generate-quotation-launcher";
-import { CampaignBriefCard } from "@/features/campaign-studio/components/sections/campaign-brief-card";
-import { StudioOutputsView } from "@/features/campaign-outputs/components/studio-outputs-view";
+
+const StudioOutputsView = dynamic(
+  () =>
+    import("@/features/campaign-outputs/components/studio-outputs-view").then((m) => ({
+      default: m.StudioOutputsView,
+    })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex min-h-[200px] items-center justify-center text-sm text-muted-foreground">
+        Loading outputs…
+      </div>
+    ),
+  }
+);
 
 import type { CopilotChangeLogEntry } from "@/features/campaign-intelligence/types/campaign-object";
 import type { CampaignStudioInput } from "@/features/campaign-studio/types/campaign-studio";
@@ -19,6 +37,7 @@ import { CampaignHistoryPanel } from "./campaign-history-panel";
 import { findLatestStudioMessage } from "./campaign-studio-panel-utils";
 import { StudioConversationControls } from "./studio-conversation-controls";
 import { toWorkflowDisplayMetadata } from "./workflow-dashboard-panel";
+import { resolvePresentationCompletion } from "@/features/campaign-studio/services/section-data-resolver";
 
 type StudioView = "studio" | "outputs" | "director";
 
@@ -59,6 +78,8 @@ type CampaignStudioPanelProps = {
   onSelectConversation?: (id: string) => void;
   onNewChat?: () => void;
   onRefreshConversations?: () => void;
+  /** Copilot dock expanded — show edit-target bar for section focus. */
+  copilotOpen?: boolean;
 };
 
 /** Sections the Copilot can author — clicking one sets "this section" for the next message. */
@@ -94,16 +115,21 @@ export function CampaignStudioPanel({
   onSelectConversation,
   onNewChat,
   onRefreshConversations,
+  copilotOpen = false,
 }: CampaignStudioPanelProps) {
   const display = useMemo(
     () => (message ? toWorkflowDisplayMetadata(message.metadata) : null),
     [message?.id, message?.metadata]
   );
+  const boundCampaignObject = useMemo(
+    () => display?.campaignObject,
+    [display?.campaignObject?.id, display?.campaignObject?.updatedAt]
+  );
   const [view, setView] = useState<StudioView>(initialView ?? "studio");
   const noopSendMessage = useCallback(() => {}, []);
   const sendMessage = onSendMessage ?? noopSendMessage;
 
-  const hasCampaignObject = Boolean(display?.campaignObject);
+  const hasCampaignObject = Boolean(boundCampaignObject);
 
   // Diagnostics: which object is the Studio actually rendering right now?
   useEffect(() => {
@@ -129,12 +155,18 @@ export function CampaignStudioPanel({
 
   if (!hasCampaignObject && !streamingInput) return null;
 
-  const campaignObjectId = display?.campaignObject?.id;
-  const changeLog = (display?.campaignObject?.meta.copilotChangeLog ?? []) as CopilotChangeLogEntry[];
+  const campaignObjectId = boundCampaignObject?.id;
+  const changeLog = (boundCampaignObject?.meta.copilotChangeLog ?? []) as CopilotChangeLogEntry[];
 
-  const progressPercent = display?.totalSteps
-    ? Math.round((display.completedTasks.length / display.totalSteps) * 100)
-    : streamingInput?.progressPercent ?? 0;
+  const progressPercent = boundCampaignObject
+    ? resolvePresentationCompletion(boundCampaignObject).completionPercent
+    : display?.totalSteps
+      ? Math.round((display.completedTasks.length / display.totalSteps) * 100)
+      : streamingInput?.progressPercent ?? 0;
+
+  const showEditTargetBar =
+    Boolean(onFocusSection) &&
+    (variant !== "main" || copilotOpen || Boolean(focusedSectionId));
 
   const studioHostProps: CampaignStudioInput & {
     conversationId?: string;
@@ -147,7 +179,7 @@ export function CampaignStudioPanel({
         currentStep: display!.currentStep,
         totalSteps: display!.totalSteps,
         progressPercent,
-        campaignObject: display!.campaignObject,
+        campaignObject: boundCampaignObject!,
         summarySections: display!.summarySections,
         clarificationQuestion: display!.clarificationQuestion,
         completedTasks: display!.completedTasks,
@@ -166,19 +198,16 @@ export function CampaignStudioPanel({
     <div
       className={cn(
         "flex h-full min-h-0 flex-col overflow-hidden",
-        variant === "side" ? "border-l border-border/80 bg-muted/20" : "bg-background",
-        variant === "main" && "studio-desktop-zoom"
+        variant === "side" ? "border-l border-border/80 bg-muted/20" : STUDIO_REF_CLASSES.scope
       )}
     >
-      {/* Workspace navigation — Studio / Outputs Center / Director, all reading the
-          same Campaign Object. Integrated into the panel, not a separate app shell. */}
+      {/* Workspace navigation — Studio / Outputs Center / Director */}
       <div
         className={cn(
-          "flex items-center justify-between gap-2 border-b border-border/60",
-          variant === "main" ? "px-2 py-1" : "px-3 py-2"
+          variant === "main" ? STUDIO_REF_CLASSES.subnav : "flex h-[46px] shrink-0 items-center justify-between gap-2 border-b border-[#DFE4EE] bg-white px-4 dark:border-border dark:bg-background"
         )}
       >
-        <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
+        <div className={variant === "main" ? STUDIO_REF_CLASSES.subtabs : "flex min-w-0 items-center gap-1 overflow-x-auto"}>
           {STUDIO_TABS.map((tab) => {
             const active = view === tab.id;
             const Icon = tab.icon;
@@ -191,57 +220,67 @@ export function CampaignStudioPanel({
                 onClick={() => setView(tab.id)}
                 aria-pressed={active}
                 className={cn(
-                  "inline-flex shrink-0 items-center gap-1.5 rounded-md font-semibold transition-colors",
-                  variant === "main" ? "px-2 py-1 text-[11px]" : "px-2.5 py-1.5 text-[12px]",
-                  active
-                    ? "bg-[#1D9E75]/10 text-[#1D9E75]"
-                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-                  disabled && "pointer-events-none opacity-40"
+                  variant === "main"
+                    ? cn(STUDIO_REF_CLASSES.subtab, active && STUDIO_REF_CLASSES.subtabActive)
+                    : cn(
+                        "mr-[22px] inline-flex shrink-0 items-center gap-1.5 border-b-2 px-1.5 pb-[13px] pt-[13px] text-[13px] font-semibold transition-colors",
+                        active
+                          ? "border-[#0057FF] text-[#0B0F1A]"
+                          : "border-transparent text-[#6B7280] hover:text-[#0B0F1A]",
+                        disabled && "pointer-events-none opacity-40"
+                      )
                 )}
               >
-                <Icon className={variant === "main" ? "size-3" : "size-3.5"} />
+                <Icon aria-hidden className={variant === "main" ? undefined : "size-3.5"} />
                 {tab.label}
               </button>
             );
           })}
         </div>
         {variant === "main" && onNewChat && onSelectConversation && conversations ? (
-          <StudioConversationControls
-            conversations={conversations}
-            loading={conversationsLoading}
-            error={conversationsError}
-            activeId={conversationId}
-            onSelect={onSelectConversation}
-            onNewChat={onNewChat}
-            onRefresh={onRefreshConversations}
-          />
+          <div className={STUDIO_REF_CLASSES.subnavActions}>
+            <StudioConversationControls
+              conversations={conversations}
+              loading={conversationsLoading}
+              error={conversationsError}
+              activeId={conversationId}
+              onSelect={onSelectConversation}
+              onNewChat={onNewChat}
+              onRefresh={onRefreshConversations}
+              refMode
+            />
+          </div>
         ) : null}
       </div>
 
       {view === "studio" ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          {onFocusSection ? (
+          {showEditTargetBar ? (
             <div
               className={cn(
-                "border-b border-border/60",
-                variant === "main" ? "px-2 py-1" : "px-4 py-2.5"
+                variant === "main" ? STUDIO_REF_CLASSES.editTargetBar : "border-b border-border/60 px-4 py-2.5"
               )}
             >
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[10px] font-medium text-muted-foreground">Edit target:</span>
+                <span className="text-[10px] font-medium text-[#6B7280]">Edit target:</span>
                 {FOCUSABLE_SECTIONS.map((s) => {
                   const active = focusedSectionId === s.id;
                   return (
                     <button
                       key={s.id}
                       type="button"
-                      className={
-                        active
-                          ? "rounded-full border border-[#1D9E75] bg-[#1D9E75]/10 px-2 py-0.5 text-[10px] font-semibold text-[#1D9E75]"
-                          : "rounded-full border border-border/70 px-2 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:border-[#1D9E75]/50 hover:text-foreground"
-                      }
+                      className={cn(
+                        variant === "main"
+                          ? cn(
+                              STUDIO_REF_CLASSES.editTargetPill,
+                              active && STUDIO_REF_CLASSES.editTargetPillActive
+                            )
+                          : active
+                            ? "rounded-full border border-[#1D9E75] bg-[#1D9E75]/10 px-2 py-0.5 text-[10px] font-semibold text-[#1D9E75]"
+                            : "rounded-full border border-border/70 px-2 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:border-[#1D9E75]/50 hover:text-foreground"
+                      )}
                       aria-pressed={active}
-                      onClick={() => onFocusSection(active ? undefined : s.id)}
+                      onClick={() => onFocusSection?.(active ? undefined : s.id)}
                       title={active ? `"this section" = ${s.label} (click to clear)` : `Set "this section" to ${s.label}`}
                     >
                       {s.label}
@@ -291,45 +330,48 @@ export function CampaignStudioPanel({
         </div>
       ) : view === "outputs" && hasCampaignObject ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="shrink-0 space-y-2 border-b border-border/60 px-3 py-2">
-            <CampaignBriefCard
-              campaignObject={display!.campaignObject!}
-              conversationId={conversationId}
-              messageId={message?.id}
-              onBriefApplied={
-                message
-                  ? (campaignObject) => onSlateUpdated?.(message.id, campaignObject)
-                  : undefined
-              }
-            />
-            <div className="overflow-hidden rounded-lg border border-border bg-background divide-y divide-border md:grid md:grid-cols-2 md:divide-x md:divide-y-0">
-              <GenerateCampaignLauncher
-                campaignObject={display!.campaignObject!}
+          <StudioOutputsView
+            campaignObject={boundCampaignObject!}
+            conversationId={conversationId}
+            messageId={message?.id}
+            onBriefApplied={
+              message
+                ? (campaignObject) => onSlateUpdated?.(message.id, campaignObject)
+                : undefined
+            }
+            mode="outputs"
+            onSendMessage={sendMessage}
+            isCopilotStreaming={isCopilotStreaming}
+            planReadinessBanner={
+              <OutputsPlanReadinessBanner
+                campaignObject={boundCampaignObject!}
                 conversationId={conversationId}
-                variant="compact"
               />
-              <GenerateQuotationLauncher
-                campaignObject={display!.campaignObject!}
-                conversationId={conversationId}
-                variant="compact"
-                showLifecycleHint={false}
-              />
-            </div>
-          </div>
-          <div className="min-h-0 flex-1 overflow-hidden">
-            <StudioOutputsView
-              campaignObject={display!.campaignObject!}
-              conversationId={conversationId}
-              mode="outputs"
-              onSendMessage={sendMessage}
-              isCopilotStreaming={isCopilotStreaming}
-            />
-          </div>
+            }
+            upNextCards={
+              <div className={OUTPUTS_CLASSES.upnextGrid}>
+                <GenerateCampaignLauncher
+                  campaignObject={boundCampaignObject!}
+                  conversationId={conversationId}
+                  variant="compact"
+                  className={OUTPUTS_CLASSES.upnextCard}
+                  showLifecycleHint={false}
+                />
+                <GenerateQuotationLauncher
+                  campaignObject={boundCampaignObject!}
+                  conversationId={conversationId}
+                  variant="compact"
+                  showLifecycleHint={false}
+                  className={OUTPUTS_CLASSES.upnextCard}
+                />
+              </div>
+            }
+          />
         </div>
       ) : hasCampaignObject ? (
         <div className="min-h-0 flex-1 overflow-y-auto">
           <StudioOutputsView
-            campaignObject={display!.campaignObject!}
+            campaignObject={boundCampaignObject!}
             mode="director"
             onSendMessage={sendMessage}
           />

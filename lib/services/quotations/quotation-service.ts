@@ -1,8 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
+  buildSeedsForShortlistQuotationImport,
   buildSeedsFromShortlistItems,
-  filterNewShortlistImportItems,
   type ShortlistItemForSeed,
 } from "@/lib/commercial-sync/shortlist-seeds";
 import type { Database } from "@/types/database";
@@ -21,6 +21,7 @@ import {
   fetchShortlistHeader,
   insertQuotationRowsAfter,
   renumberQuotationOptionNumbers,
+  syncCollapsePackageOptionNumbers,
   findLatestQuotationForShortlistQuery,
   findEditableQuotationForShortlistQuery,
   insertQuotationHeaderRecord,
@@ -38,6 +39,7 @@ import {
   isQuotationCommercialImmutable,
 } from "@/lib/commercial-sync/rules";
 import { generateQuotationVersion } from "./quotation-version-service";
+import { ensureDiscoveryCreatorsBrowsable, ensureDiscoverySeedsBrowsable } from "@/lib/creators/discovery-browse-eligibility";
 
 async function insertQuotationHeader(
   supabase: SupabaseClient<Database>,
@@ -68,6 +70,8 @@ async function insertQuotationSeeds(
   const rows = await buildItemInsertRows(supabase, quotationId, seeds, startSort);
   const { data, error } = await insertQuotationItems(supabase, rows);
   if (error) return { ok: false, message: error.message };
+  await ensureDiscoverySeedsBrowsable(supabase, seeds);
+  await syncCollapsePackageOptionNumbers(supabase, quotationId);
   await recomputeQuotationTotals(supabase, quotationId);
   const itemIds = ((data ?? []) as Array<{ id: string }>).map((row) => row.id);
   return { ok: true, data: { inserted: rows.length, itemIds } };
@@ -299,18 +303,20 @@ export async function importShortlistItemsToQuotation(
     supabase,
     input.quotationId
   );
+  const existingSourceIds = (
+    (existingRows ?? []) as Array<{ source_shortlist_item_id: string | null }>
+  )
+    .map((r) => r.source_shortlist_item_id)
+    .filter((id): id is string => Boolean(id));
 
-  const pendingItems = filterNewShortlistImportItems(
+  const seeds = await buildSeedsForShortlistQuotationImport(
+    supabase,
     loadedItems,
-    ((existingRows ?? []) as Array<{ source_shortlist_item_id: string | null }>)
-      .map((r) => r.source_shortlist_item_id)
-      .filter((id): id is string => Boolean(id))
+    existingSourceIds
   );
-  if (pendingItems.length === 0) {
+  if (seeds.length === 0) {
     return { ok: false, message: "All selected creators are already on this quotation." };
   }
-
-  const seeds = await buildSeedsFromShortlistItems(supabase, pendingItems);
 
   const { data: maxRow } = await fetchMaxItemSortOrder(supabase, input.quotationId);
   const startSort = ((maxRow as { sort_order: number } | null)?.sort_order ?? -1) + 1;
@@ -318,10 +324,18 @@ export async function importShortlistItemsToQuotation(
   const inserted = await insertQuotationSeeds(supabase, input.quotationId, seeds, startSort);
   if (!inserted.ok) return inserted;
 
+  const added = inserted.data?.inserted ?? 0;
+  const collapGroups = new Set(
+    seeds.map((seed) => seed.collapse_group_id).filter((id): id is string => Boolean(id))
+  );
+  if (collapGroups.size > 0) {
+    await syncCollapsePackageOptionNumbers(supabase, input.quotationId);
+  }
+
   return {
     ok: true,
-    data: { added: inserted.data?.inserted ?? 0 },
-    message: `Added ${inserted.data?.inserted ?? 0} creator(s).`,
+    data: { added },
+    message: `Added ${added} creator(s).`,
   };
 }
 
@@ -493,10 +507,17 @@ export async function duplicateQuotationItems(
   if (!result.ok) return { ok: false, message: result.message };
 
   await recomputeQuotationTotals(supabase, input.quotation_id);
+  const isCollapsePackage =
+    input.item_ids.length > 1 &&
+    result.inserts.length > 0 &&
+    result.inserts.every((row) => row.collapse_group_id);
+  const optionNumber = result.inserts[0]?.option_number;
   return {
     ok: true,
     data: { duplicated: result.inserts.length },
-    message: `Duplicated ${result.inserts.length} creator${result.inserts.length === 1 ? "" : "s"}.`,
+    message: isCollapsePackage
+      ? `Option ${optionNumber ?? 2} added for Collap package.`
+      : `Duplicated ${result.inserts.length} creator${result.inserts.length === 1 ? "" : "s"}.`,
   };
 }
 

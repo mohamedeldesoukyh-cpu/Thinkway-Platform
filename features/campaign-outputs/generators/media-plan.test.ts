@@ -34,7 +34,7 @@ test("media plan has one week per campaign week, each with 7 days", () => {
   assert.ok(data.weeks.every((w) => w.days.length === 7));
 });
 
-test("quotation calendar schedules each deliverable on separate days", () => {
+test("quotation calendar groups mirrors onto primary activation days", () => {
   const obj = withQuotationCreators(
     buildCampaignObjectFixture({
       facts: { durationWeeks: 4 },
@@ -54,14 +54,13 @@ test("quotation calendar schedules each deliverable on separate days", () => {
     .flatMap((w) => w.days)
     .filter((d) => d.creator === "Nour Star");
 
-  assert.equal(nourDays.length, 3);
-  assert.deepEqual(
-    nourDays.map((day) => day.serviceType).sort(),
-    ["1× IG Reel", "1× IG Set of stories", "1× Mirrored IG"].sort()
+  assert.equal(nourDays.length, 1, "IG Reel + Stories + Mirror = 1 strategic activation day");
+  assert.ok(nourDays.some((day) => day.additionalDeliverables?.some((entry) => entry.isMirror)));
+  assert.ok(
+    nourDays.some((day) => day.additionalDeliverables?.some((entry) => entry.isCompanion)),
+    "IG Story Set should bundle as companion on the Reel day"
   );
-  assert.ok(data.serviceTypes.includes("1× IG Reel"));
-  assert.ok(data.serviceTypes.includes("1× Mirrored IG"));
-  assert.equal(data.postingSlotCount, 3);
+  assert.equal(data.postingSlotCount, 1);
 });
 
 test("quotation calendar keeps brief duration and packs deliverables across days", () => {
@@ -95,7 +94,8 @@ test("quotation calendar keeps brief duration and packs deliverables across days
     .flatMap((week) => week.days)
     .reduce((total, day) => {
       const primary = day.creator ? 1 : 0;
-      const additional = day.additionalDeliverables?.length ?? 0;
+      const additional =
+        day.additionalDeliverables?.filter((entry) => !entry.isMirror).length ?? 0;
       return total + primary + additional;
     }, 0);
 
@@ -106,7 +106,7 @@ test("quotation calendar keeps brief duration and packs deliverables across days
   assert.equal(data.unscheduledDeliverableCount, undefined);
 });
 
-test("many quoted lines schedule each deliverable separately across the calendar", () => {
+test("many quoted lines collapse mirrors into activations across the calendar", () => {
   const creators = Array.from({ length: 32 }, (_, index) => ({
     id: `cr_${index + 1}`,
     name: `Creator ${index + 1}`,
@@ -132,13 +132,14 @@ test("many quoted lines schedule each deliverable separately across the calendar
     .flatMap((week) => week.days)
     .reduce((total, day) => {
       const primary = day.creator ? 1 : 0;
-      const additional = day.additionalDeliverables?.length ?? 0;
+      const additional =
+        day.additionalDeliverables?.filter((entry) => !entry.isMirror).length ?? 0;
       return total + primary + additional;
     }, 0);
 
   assert.equal(data.weeks.length, 4);
-  assert.equal(data.postingSlotCount, 96);
-  assert.equal(scheduledDeliverables, 96);
+  assert.equal(data.postingSlotCount, 64);
+  assert.equal(scheduledDeliverables, 64);
 });
 
 test("platform allocation totals match quoted posting slots, not calendar capacity", () => {
@@ -181,7 +182,7 @@ test("multi-platform quotation lines split platform allocation by service type",
   const data = planData(generateMediaPlan(obj));
   assert.equal(data.platformAllocation.TikTok, 1);
   assert.equal(data.platformAllocation.Instagram, 1);
-  assert.equal(data.postingSlotCount, 2);
+  assert.equal(data.postingSlotCount, 1);
 });
 
 test("quotation campaigns exclude paid amplification milestones", () => {
@@ -205,13 +206,72 @@ test("every creator appears on the publishing calendar", () => {
 test("agency-grade fields: waves, milestones/windows, dependencies, deadlines, allocation", () => {
   const obj = buildCampaignObjectFixture({ facts: { durationWeeks: 6 } });
   const data = planData(generateMediaPlan(obj));
-  assert.equal(data.waves.length, 3);
+  assert.ok(data.waves.length >= 1);
+  assert.ok(!data.milestones.some((m) => m.label.includes("content review & approvals")));
   assert.ok(data.milestones.some((m) => m.type === "client_approval"));
   assert.ok(data.milestones.some((m) => m.type === "review"));
   assert.ok(data.dependencies.length >= 1);
   assert.ok(data.deadlines.length >= 1);
   assert.ok(data.deadlines.every((d) => d.productionStart && d.assetDelivery));
+  assert.ok(!data.deadlines.some((d) => d.productionStart.startsWith("Week ")));
   assert.ok(Object.keys(data.platformAllocation).length >= 1);
+});
+
+test("strategy mode activates when campaign brief is present", () => {
+  const obj = withQuotationCreators(
+    buildCampaignObjectFixture({
+      facts: {
+        durationWeeks: 4,
+        rawBriefExcerpt:
+          "Four-week summer launch — front-load Week 1 with hero creators and sustain through weeks 2–4.",
+        platforms: ["TikTok", "Instagram"],
+      },
+      creators: [{ id: "cr_star", name: "Nour Star", tier: "Celebrity" }],
+    })
+  );
+
+  const data = planData(generateMediaPlan(obj));
+  assert.equal(data.planMode, "strategy");
+  assert.ok(data.waves.length >= 1);
+  assert.ok(data.strategySummary?.narrative?.platformIntelligence);
+  assert.ok(data.strategySummary?.executiveSummary);
+});
+
+test("planning mode omits strategy waves and uses quotation overview", () => {
+  const obj = withQuotationCreators(
+    buildCampaignObjectFixture({
+      facts: {
+        durationWeeks: 4,
+        objective: "",
+        platforms: ["Instagram"],
+      },
+      strategyContent: "",
+      creators: [{ id: "cr_star", name: "Nour Star", tier: "Celebrity" }],
+    })
+  );
+  const creatorsData = obj.sections.creators?.data as CreatorsSectionData;
+  const reasoning = creatorsData.recommendations?.selectedReasoning ?? [];
+  if (reasoning[0]) {
+    reasoning[0].serviceTypes = ["1× IG Reel", "1× FB Post", "1× YT Video"];
+    reasoning[0].serviceLabel = reasoning[0].serviceTypes.join(" · ");
+    reasoning[0].platform = "Instagram";
+  }
+
+  const data = planData(generateMediaPlan(obj));
+  assert.equal(data.planMode, "planning");
+  assert.equal(data.waves.length, 0);
+  assert.ok(data.strategySummary?.campaignOverview);
+  assert.ok(data.platformAllocation.Facebook);
+  assert.ok(data.platformAllocation.YouTube);
+  assert.ok(data.platformAllocation.Instagram);
+});
+
+test("calendar-driven activation waves include activation counts", () => {
+  const obj = withQuotationCreators(buildCampaignObjectFixture({ facts: { durationWeeks: 4 } }));
+  const data = planData(generateMediaPlan(obj));
+  assert.ok(data.waves.length >= 1);
+  assert.ok(data.waves.every((wave) => /activation/i.test(wave.theme)));
+  assert.ok(!data.waves.some((wave) => wave.theme === "Hero launch & awareness"));
 });
 
 test("plan renders exportable sections including the deadline table", () => {
@@ -305,7 +365,7 @@ test("media plan embeds campaign context from quotation commercials meta", () =>
   assert.equal(data.campaignContext?.agencyName, "Media Agency Egypt");
 });
 
-test("media plan includes campaign cost with VAT exclusion disclaimer", () => {
+test("media plan includes campaign cost with VAT and usage-rights disclaimers", () => {
   const obj = buildCampaignObjectFixture({
     facts: { budget: { amount: 2_500_000, currency: "EGP" } },
   });
@@ -317,6 +377,11 @@ test("media plan includes campaign cost with VAT exclusion disclaimer", () => {
   const costSection = content.sections.find((section) => section.heading === "Campaign Cost");
   assert.ok(costSection?.items?.some((item) => item.includes("2,500,000 EGP")));
   assert.ok(costSection?.items?.some((item) => item.includes("Price excludes VAT")));
+  assert.ok(
+    costSection?.items?.some((item) =>
+      item.includes("Usage rights are not included in quoted prices and are granted upon request")
+    )
+  );
 });
 
 test("campaign cost falls back to summed quoted creator revenue", () => {
@@ -419,10 +484,14 @@ test("deadlines consolidate only when multiple deliverables share the same publi
   const nourDeadlines = data.deadlines.filter((deadline) => deadline.creator === "Nour Star");
 
   assert.equal(nourDeadlines.length, 1);
-  assert.deepEqual(nourDeadlines[0]!.serviceTypes, ["1× IG Reel"]);
+  // Deadlines are rebuilt from calendar cells, which use activation display labels.
+  assert.ok(
+    nourDeadlines[0]!.serviceTypes?.some((type) => /IG Reel/i.test(type)),
+    `expected IG Reel deliverable, got ${JSON.stringify(nourDeadlines[0]!.serviceTypes)}`
+  );
 });
 
-test("quotation deadlines use one row per deliverable publish slot", () => {
+test("quotation deadlines use one row per activation publish slot", () => {
   const creators = Array.from({ length: 32 }, (_, index) => ({
     id: `cr_${index + 1}`,
     name: `Creator ${index + 1}`,
@@ -441,8 +510,12 @@ test("quotation deadlines use one row per deliverable publish slot", () => {
   }
 
   const data = planData(generateMediaPlan(obj));
-  assert.equal(data.deadlines.length, 96);
-  assert.ok(data.deadlines.every((deadline) => (deadline.serviceTypes?.length ?? 0) === 1));
+  assert.equal(data.deadlines.length, 64);
+  assert.ok(
+    data.deadlines.some(
+      (deadline) => (deadline.serviceTypes?.length ?? 0) > 1 && deadline.serviceTypes?.some((type) => /Mirror/i.test(type))
+    )
+  );
 });
 
 test("manual quotation lines each become separate seed creators", () => {
@@ -499,7 +572,7 @@ test("manual quotation lines each become separate seed creators", () => {
   assert.ok(scheduledNames.has("TikTok TBH"));
 });
 
-test("quotation calendar omits empty open publishing slot cards", () => {
+test("quotation calendar leaves unscheduled days blank — no open publishing slot filler", () => {
   const obj = withQuotationCreators(
     buildCampaignObjectFixture({
       facts: { durationWeeks: 4 },
@@ -513,10 +586,15 @@ test("quotation calendar omits empty open publishing slot cards", () => {
   const data = planData(generateMediaPlan(obj));
   const openSlots = data.weeks
     .flatMap((week) => week.days)
-    .filter((day) => day.label === "Open publishing slot");
-  assert.ok(openSlots.length > 0);
-  for (const day of openSlots) {
-    assert.equal(day.creator, undefined);
+    .filter((day) => day.label === "Open publishing slot" || day.label === "Creator publishing slot");
+  assert.equal(openSlots.length, 0);
+
+  const blankDays = data.weeks
+    .flatMap((week) => week.days)
+    .filter((day) => !day.creator && !(day.additionalDeliverables?.length));
+  assert.ok(blankDays.length > 0, "calendar should include intentional blank days");
+  for (const day of blankDays) {
+    assert.equal(day.label, "");
   }
 });
 

@@ -127,7 +127,8 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.altKey && event.key.toLowerCase() === "n") {
+      const key = typeof event.key === "string" ? event.key.toLowerCase() : "";
+      if (event.altKey && key === "n") {
         const target = event.target as HTMLElement | null;
         if (
           target &&

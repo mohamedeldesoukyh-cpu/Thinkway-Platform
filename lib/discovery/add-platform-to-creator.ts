@@ -227,9 +227,10 @@ export async function addPlatformToCreator(
     influencerId,
     inserted.id,
     {
-      force: true,
+      force: false,
       trigger: "manual",
       requestedBy: input.actorId,
+      feature: "add_platform",
     }
   );
 

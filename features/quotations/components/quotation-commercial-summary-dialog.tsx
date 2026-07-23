@@ -196,7 +196,7 @@ export function QuotationCommercialSummaryDialog({
           variant="outline"
           size="sm"
           className={cn(
-            "h-[30px] gap-1.5 border-[var(--camp-border)] text-[11px] shadow-none",
+            "h-8 gap-1.5 rounded-[9px] border-[var(--q-line-2,#e3e8f2)] text-[12.5px] font-semibold shadow-none",
             triggerClassName
           )}
         >

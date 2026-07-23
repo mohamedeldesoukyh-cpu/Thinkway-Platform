@@ -16,6 +16,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { addCreatorByProfileUrlAction } from "@/features/discovery/add-creator-by-url/actions";
 import {
+  DISCOVERY_DIALOG_BODY_CLASS,
+  DISCOVERY_DIALOG_CONTENT_CLASS,
+  DISCOVERY_DIALOG_DESC_CLASS,
+  DISCOVERY_DIALOG_FOOTER_CLASS,
+  DISCOVERY_DIALOG_HEADER_BAR_CLASS,
+  DISCOVERY_DIALOG_HEADER_WRAP_CLASS,
+  DISCOVERY_DIALOG_INPUT_CLASS,
+  DISCOVERY_DIALOG_TITLE_CLASS,
+} from "@/features/discovery/components/design-system";
+import {
   pollCreatorAfterRefresh,
 } from "@/features/discovery/enrichment/poll-creator-refresh";
 import {
@@ -116,17 +126,22 @@ export function AddMissingCreatorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
-        <DialogHeader className="space-y-1.5 border-b border-border px-6 py-5 text-left">
-          <DialogTitle className="text-base font-bold tracking-tight">
-            Add creator
-          </DialogTitle>
-          <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
-            Paste the link to the creator profile you want to add
-          </DialogDescription>
+      <DialogContent className={DISCOVERY_DIALOG_CONTENT_CLASS}>
+        <DialogHeader className={DISCOVERY_DIALOG_HEADER_WRAP_CLASS}>
+          <div className={DISCOVERY_DIALOG_HEADER_BAR_CLASS}>
+            <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-[#64748b] dark:text-muted-foreground">
+              Discovery
+            </p>
+            <DialogTitle className={DISCOVERY_DIALOG_TITLE_CLASS}>
+              Add creator
+            </DialogTitle>
+            <DialogDescription className={DISCOVERY_DIALOG_DESC_CLASS}>
+              Paste the link to the creator profile you want to add
+            </DialogDescription>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-2 px-6 py-5">
+        <div className={cn("space-y-2", DISCOVERY_DIALOG_BODY_CLASS)}>
           <Input
             value={profileUrl}
             onChange={(event) => {
@@ -137,6 +152,7 @@ export function AddMissingCreatorDialog({
             inputMode="url"
             autoComplete="off"
             placeholder="Creator's profile link"
+            className={DISCOVERY_DIALOG_INPUT_CLASS}
             disabled={isPending}
             autoFocus
             onKeyDown={(event) => {
@@ -165,7 +181,7 @@ export function AddMissingCreatorDialog({
           ) : null}
         </div>
 
-        <DialogFooter className="gap-2 border-t border-border px-6 py-4 sm:justify-end">
+        <DialogFooter className={DISCOVERY_DIALOG_FOOTER_CLASS}>
           <Button
             type="button"
             variant="outline"

@@ -1,0 +1,323 @@
+{
+  "propsTrace": {
+    "countryFlagCodes": [
+      "EG"
+    ],
+    "conditional": "vm.countryFlagCodes.length > 0 → render span.discovery-search-exact-flag",
+    "CountryFlagsStack": {
+      "countryCodes": [
+        "EG"
+      ],
+      "size": "md",
+      "overlay": true,
+      "className": "size-full"
+    },
+    "CountryFlagBadge": {
+      "countryCode": "EG",
+      "size": "md",
+      "overlay": true,
+      "className": "size-full"
+    }
+  },
+  "html": {
+    "flagSlot": "<span class=\"discovery-search-exact-flag\" data-probe=\"flag-slot\">\n                  <span class=\"inline-flex shrink-0 overflow-hidden rounded-full bg-card ring-2 size-5 size-full\" aria-label=\"EG\" data-probe=\"flag-badge\" style=\"box-shadow:0 0 0 2px #fff\">\n                    <img data-probe=\"flag-img\" class=\"size-full object-cover object-center\" alt=\"\" src=\"https://flagcdn.com/w40/eg.png\">\n                  </span>\n                </span>",
+    "star": "<span class=\"discovery-search-exact-star\" data-probe=\"star\">★ 7.2</span>"
+  },
+  "computed": {
+    "flagSlot": {
+      "rect": {
+        "x": 147,
+        "y": 126,
+        "width": 22,
+        "height": 22,
+        "top": 126,
+        "right": 169,
+        "bottom": 148,
+        "left": 147
+      },
+      "visibility": "visible",
+      "opacity": "1",
+      "display": "block",
+      "overflow": "visible",
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "zIndex": "1",
+      "position": "absolute",
+      "transform": "none",
+      "clipPath": "none",
+      "maskImage": "none",
+      "pointerEvents": "none"
+    },
+    "flagBadge": {
+      "rect": {
+        "x": 147,
+        "y": 126,
+        "width": 20,
+        "height": 20,
+        "top": 126,
+        "right": 167,
+        "bottom": 146,
+        "left": 147
+      },
+      "visibility": "visible",
+      "opacity": "1",
+      "display": "inline-flex",
+      "overflow": "hidden",
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "zIndex": "auto",
+      "position": "static",
+      "transform": "none",
+      "clipPath": "none",
+      "maskImage": "none",
+      "pointerEvents": "none"
+    },
+    "flagImg": {
+      "rect": {
+        "x": 147,
+        "y": 126,
+        "width": 20,
+        "height": 20,
+        "top": 126,
+        "right": 167,
+        "bottom": 146,
+        "left": 147
+      },
+      "visibility": "visible",
+      "opacity": "1",
+      "display": "block",
+      "overflow": "clip",
+      "overflowX": "clip",
+      "overflowY": "clip",
+      "zIndex": "auto",
+      "position": "static",
+      "transform": "none",
+      "clipPath": "none",
+      "maskImage": "none",
+      "pointerEvents": "none"
+    },
+    "star": {
+      "rect": {
+        "x": 101.8,
+        "y": 136,
+        "width": 43.3,
+        "height": 20,
+        "top": 136,
+        "right": 145.2,
+        "bottom": 156,
+        "left": 101.8
+      },
+      "visibility": "visible",
+      "opacity": "1",
+      "display": "flex",
+      "overflow": "visible",
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "zIndex": "2",
+      "position": "absolute",
+      "transform": "matrix(1, 0, 0, 1, -21.6562, 0)",
+      "clipPath": "none",
+      "maskImage": "none",
+      "pointerEvents": "auto"
+    },
+    "wrap": {
+      "rect": {
+        "x": 80,
+        "y": 63,
+        "width": 87,
+        "height": 87,
+        "top": 63,
+        "right": 167,
+        "bottom": 150,
+        "left": 80
+      },
+      "visibility": "visible",
+      "opacity": "1",
+      "display": "block",
+      "overflow": "visible",
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "zIndex": "auto",
+      "position": "relative",
+      "transform": "none",
+      "clipPath": "none",
+      "maskImage": "none",
+      "pointerEvents": "auto"
+    },
+    "photoCell": {
+      "rect": {
+        "x": 80,
+        "y": 63,
+        "width": 238,
+        "height": 87,
+        "top": 63,
+        "right": 318,
+        "bottom": 150,
+        "left": 80
+      },
+      "visibility": "visible",
+      "opacity": "1",
+      "display": "flex",
+      "overflow": "visible",
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "zIndex": "auto",
+      "position": "static",
+      "transform": "none",
+      "clipPath": "none",
+      "maskImage": "none",
+      "pointerEvents": "auto"
+    },
+    "row": {
+      "rect": {
+        "x": 80,
+        "y": 40,
+        "width": 1120,
+        "height": 132,
+        "top": 40,
+        "right": 1200,
+        "bottom": 172,
+        "left": 80
+      },
+      "visibility": "visible",
+      "opacity": "1",
+      "display": "flex",
+      "overflow": "visible",
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "zIndex": "auto",
+      "position": "static",
+      "transform": "none",
+      "clipPath": "none",
+      "maskImage": "none",
+      "pointerEvents": "auto"
+    },
+    "avatar": {
+      "rect": {
+        "x": 80,
+        "y": 63,
+        "width": 87,
+        "height": 87,
+        "top": 63,
+        "right": 167,
+        "bottom": 150,
+        "left": 80
+      },
+      "visibility": "visible",
+      "opacity": "1",
+      "display": "block",
+      "overflow": "hidden",
+      "overflowX": "hidden",
+      "overflowY": "hidden",
+      "zIndex": "auto",
+      "position": "relative",
+      "transform": "none",
+      "clipPath": "none",
+      "maskImage": "none",
+      "pointerEvents": "auto"
+    },
+    "scroll": {
+      "rect": {
+        "x": 40,
+        "y": 40,
+        "width": 1200,
+        "height": 240,
+        "top": 40,
+        "right": 1240,
+        "bottom": 280,
+        "left": 40
+      },
+      "visibility": "visible",
+      "opacity": "1",
+      "display": "block",
+      "overflow": "auto",
+      "overflowX": "auto",
+      "overflowY": "auto",
+      "zIndex": "auto",
+      "position": "static",
+      "transform": "none",
+      "clipPath": "none",
+      "maskImage": "none",
+      "pointerEvents": "auto"
+    },
+    "virtualItem": {
+      "rect": {
+        "x": 80,
+        "y": 40,
+        "width": 1120,
+        "height": 132,
+        "top": 40,
+        "right": 1200,
+        "bottom": 172,
+        "left": 80
+      },
+      "visibility": "visible",
+      "opacity": "1",
+      "display": "block",
+      "overflow": "visible",
+      "overflowX": "visible",
+      "overflowY": "visible",
+      "zIndex": "auto",
+      "position": "static",
+      "transform": "matrix(1, 0, 0, 1, 0, 0)",
+      "clipPath": "none",
+      "maskImage": "none",
+      "pointerEvents": "auto"
+    }
+  },
+  "diagnostics": {
+    "starOverlapsFlag": false,
+    "flagArea": 484,
+    "flagHasZeroSize": false,
+    "elementAtFlagCenter": {
+      "tag": "DIV",
+      "className": "discovery-creator-avatar-hover-trigger discovery-search-exact-photo-wrap",
+      "probe": null
+    },
+    "topChain": [
+      {
+        "tag": "DIV",
+        "className": "discovery-creator-avatar-hover-trigger discovery-search-exact-photo-wrap",
+        "probe": null
+      },
+      {
+        "tag": "DIV",
+        "className": "discovery-search-exact-photo-cell",
+        "probe": null
+      },
+      {
+        "tag": "DIV",
+        "className": "discovery-search-exact-row",
+        "probe": null
+      },
+      {
+        "tag": "DIV",
+        "className": "absolute top-0 left-0 w-full",
+        "probe": null
+      },
+      {
+        "tag": "DIV",
+        "className": "relative w-full",
+        "probe": null
+      },
+      {
+        "tag": "DIV",
+        "className": "discovery-search-exact-scroll",
+        "probe": null
+      },
+      {
+        "tag": "DIV",
+        "className": "discovery-search-exact-root",
+        "probe": null
+      },
+      {
+        "tag": "BODY",
+        "className": "",
+        "probe": null
+      }
+    ],
+    "flagCoveredByStarAtCenter": false,
+    "imgNaturalWidth": 40,
+    "imgComplete": true
+  }
+}

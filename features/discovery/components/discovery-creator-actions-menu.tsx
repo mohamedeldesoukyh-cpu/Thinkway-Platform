@@ -5,6 +5,7 @@ import {
   ChevronRightIcon,
   ExternalLinkIcon,
   EyeIcon,
+  GitMergeIcon,
   ListPlusIcon,
   Loader2Icon,
   MoreHorizontalIcon,
@@ -27,6 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { platformLabel } from "@/features/campaigns/line-assignment";
 import { DeleteDiscoveryCreatorDialog } from "@/features/discovery/delete-creator/delete-discovery-creator-dialog";
+import { CombineCreatorsDialog } from "@/features/discovery/components/combine-creators-dialog";
 import { isEnrichmentInProgress, resolveCreatorEnrichmentStatus } from "@/features/discovery/enrichment/status";
 import { PlatformIcon, PLATFORM_ICON_STYLES } from "@/lib/performance/platform-icon";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
@@ -306,6 +308,7 @@ export type DiscoveryCreatorActionsMenuProps = {
   onRefreshMetrics?: (platformAccountId?: string | null) => void;
   onStopRefresh?: () => void;
   onCreatorDeleted?: () => void;
+  onCreatorUpdated?: (creator: UnifiedCreatorResult) => void;
   addLabel?: string;
 };
 
@@ -319,9 +322,11 @@ export function DiscoveryCreatorActionsMenu({
   onRefreshMetrics,
   onStopRefresh,
   onCreatorDeleted,
+  onCreatorUpdated,
   addLabel = "Add",
 }: DiscoveryCreatorActionsMenuProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [combineOpen, setCombineOpen] = useState(false);
   const platforms = sortPlatformsStable(creator.platforms);
   const metricsPlatform =
     platforms.find((p) => p.id === creator.default_metrics_platform_account_id) ?? platforms[0];
@@ -441,6 +446,22 @@ export function DiscoveryCreatorActionsMenu({
   }
 
   if (creator.influencer_id) {
+    menuItems.push({
+      key: "combine-creators",
+      onSelect: () => setCombineOpen(true),
+      content: {
+        title: "Combine creators",
+        subtitle: "Merge duplicate profile with another platform",
+        icon: (
+          <MenuIcon variant="addToList">
+            <GitMergeIcon strokeWidth={2} className="size-full" aria-hidden />
+          </MenuIcon>
+        ),
+        iconClassName: badgeClassName("addToList"),
+        trailing: "chevron",
+      },
+    });
+
     menuItems.push({
       key: "delete-creator",
       onSelect: () => setDeleteOpen(true),
@@ -584,6 +605,14 @@ export function DiscoveryCreatorActionsMenu({
           onOpenChange={setDeleteOpen}
           creator={creator}
           onDeleted={onCreatorDeleted}
+        />
+      ) : null}
+      {creator.influencer_id ? (
+        <CombineCreatorsDialog
+          open={combineOpen}
+          onOpenChange={setCombineOpen}
+          targetCreator={creator}
+          onMerged={(next) => onCreatorUpdated?.(next)}
         />
       ) : null}
     </div>

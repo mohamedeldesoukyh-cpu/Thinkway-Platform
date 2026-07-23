@@ -10,6 +10,9 @@ import {
 } from "@/lib/performance/avatar-sync-policy";
 import { isSocialPlatform } from "@/lib/social/platforms";
 
+/** Re-export so UI modules can import expiry checks from this public avatar API. */
+export { isInstagramCdnUrlExpired };
+
 export type CreatorAvatarInput = {
   creator_profile_image_url?: string | null;
   influencer_avatar_url?: string | null;
@@ -351,17 +354,9 @@ export function creatorAvatarBrowserDisplayUrl(
     return trimmed;
   }
 
-  // Dead signed Instagram CDN links cannot be fetched — fall back to profile OpenGraph
-  // when available instead of returning null (which forces initials/placeholder).
-  if (trimmed && isInstagramCdnUrlExpired(trimmed)) {
-    if (!profile) return null;
-    const params = new URLSearchParams();
-    params.set("profileUrl", profile);
-    const bust = cacheKey?.trim();
-    if (bust) params.set("v", bust);
-    return `/api/creators/avatar?${params.toString()}`;
-  }
-
+  // Always pass displayable src (including expired IG CDN) plus profileUrl.
+  // The avatar proxy tries src, then OpenGraph/profile scrape — dropping src
+  // caused first-paint silhouettes for creators like hayahashem.m.
   const params = new URLSearchParams();
   if (trimmed) params.set("src", trimmed);
   if (profile) params.set("profileUrl", profile);

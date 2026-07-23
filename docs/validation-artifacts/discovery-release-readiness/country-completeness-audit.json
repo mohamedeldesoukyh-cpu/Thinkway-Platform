@@ -1,0 +1,1490 @@
+{
+  "measuredAt": "2026-07-21T02:15:26.546Z",
+  "browse": {
+    "page": 1,
+    "pageSize": 50,
+    "returned": 50,
+    "total": 6789
+  },
+  "summary": {
+    "withBrowseCountry": 13,
+    "emptyBrowseCountry": 37,
+    "recoverableButBrowseEmpty": 0,
+    "noRecoverableSignal": 37,
+    "offlineApifyImportEmpty": 37,
+    "emptyPostOnlyProfileRows": 26,
+    "emptyWithPlatformBio": 10,
+    "emptyBrowseCauseCounts": {
+      "import_pipeline": 37
+    },
+    "completeSourceCounts": {
+      "influencer.country_code": 13
+    }
+  },
+  "why37of50": {
+    "emptyCount": 37,
+    "primaryCause": "import_pipeline",
+    "evidence": {
+      "allEmptyAreOfflineApifyExport": true,
+      "allEmptyEnrichmentSourceNull": true,
+      "allEmptyStatusEnriched": true,
+      "postOnlyRawSnapshots": 26,
+      "iplAudienceCountryPresent": 0,
+      "dnaCountryPresent": 0,
+      "platformAudienceCountryPresent": 0
+    },
+    "narrative": "All 37 creators without flags were created by the offline Apify dataset export pipeline. That path marked enrichment_status=enriched while leaving country_code, country_codes, platform.audience_country, IPL audienceCountry, and DNA audience.country empty. Most raw snapshots are post-only (empty profileRows), so Instagram country was never present to normalize. Browse projection and CountryFlagsStack are working — there is simply no country data to show. The 13 creators with flags mostly came from Discovery Import Center / live Apify (enrichment_source=apify) or rare offline rows whose display-name/bio matched MENA-centric COUNTRY_OPTIONS aliases."
+  },
+  "recommendation": {
+    "smallestChange": "Re-run Instagram profile-details enrichment for the 37 offline Apify dataset imports (existing backfillInstagramProfileRowsForImport / live enrichment path), then persist country via persistCountryFromApifyProfile → influencers.country_code/country_codes + platform.audience_country. No UI/browse/ViewModel changes.",
+    "whyNotBackfillOnly": "country-backfill cannot invent ISO codes: 0/37 empty rows have recoverable country in DNA/IPL/platform/bio_inference under current geography index (COUNTRY_OPTIONS is MENA-heavy and omits PT etc.).",
+    "preventiveTinyCodeChange": "In apify-import-pipeline ensureCommercialCreatorFromApifyData: do not set enrichment_status='enriched' for Instagram post-only imports when audience_country is null and follower_count<=0; leave pending until shouldBackfillInstagramProfileDetails succeeds.",
+    "commandHint": "Target influencer IDs where notes ILIKE '%Apify dataset export (offline)%' AND country_code IS NULL — queue existing enrichment/IPL profile scrape.",
+    "preservesArchitecture": true,
+    "ruledOut": {
+      "browse_projection": "omitHeavyFields still selects country_code/country_codes/audience_country; ViewModel correctly omits flags when empty",
+      "migration": "country_codes null, not a half-migrated array issue",
+      "normalization_of_bad_iso": "no non-empty raw ISO-like country values failing resolveCountryCode on primary fields",
+      "ui": "CountryFlagsStack validated when codes present"
+    }
+  },
+  "matrix": [
+    {
+      "creatorId": "dab5e61e-e82b-4fa4-a587-a2ee580d6cd8",
+      "displayName": "ahmed_elbadawy",
+      "countrySource": "influencer.country_code",
+      "currentValue": [
+        "EG"
+      ],
+      "expectedValue": [
+        "EG"
+      ],
+      "missingReason": "none — browse has countryFlagCodes",
+      "causeCategory": "complete",
+      "enrichment_status": "enriched",
+      "enrichment_source": "apify",
+      "importSource": null,
+      "diagnostics": {
+        "platformCount": 2,
+        "audienceCountry": "EG",
+        "profileBioPresent": true,
+        "followerCount": 909700,
+        "hasDna": true,
+        "dnaCountry": "EG",
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": true,
+        "profileRowsCount": 6,
+        "postRowsCount": 0,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "a76dbc9b-b654-404f-a402-18a0e7ea158e",
+      "displayName": "Instagram",
+      "countrySource": "influencer.country_code",
+      "currentValue": [
+        "EG",
+        "AE"
+      ],
+      "expectedValue": [
+        "EG",
+        "AE"
+      ],
+      "missingReason": "none — browse has countryFlagCodes",
+      "causeCategory": "complete",
+      "enrichment_status": "enriched",
+      "enrichment_source": "apify",
+      "importSource": null,
+      "diagnostics": {
+        "platformCount": 2,
+        "audienceCountry": "EG",
+        "profileBioPresent": true,
+        "followerCount": 767582,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 6,
+        "postRowsCount": 0,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "422fa13c-53f6-4138-b599-973ea9fc7232",
+      "displayName": "itsfarahhosny",
+      "countrySource": "influencer.country_code",
+      "currentValue": [
+        "EG"
+      ],
+      "expectedValue": [
+        "EG"
+      ],
+      "missingReason": "none — browse has countryFlagCodes",
+      "causeCategory": "complete",
+      "enrichment_status": "enriched",
+      "enrichment_source": "apify",
+      "importSource": null,
+      "diagnostics": {
+        "platformCount": 2,
+        "audienceCountry": "EG",
+        "profileBioPresent": true,
+        "followerCount": 19500,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": true,
+        "profileRowsCount": 6,
+        "postRowsCount": 0,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "6b16b11d-5a5b-4e7d-acc4-b057efaec211",
+      "displayName": "ouda.5",
+      "countrySource": "influencer.country_code",
+      "currentValue": [
+        "EG"
+      ],
+      "expectedValue": [
+        "EG"
+      ],
+      "missingReason": "none — browse has countryFlagCodes",
+      "causeCategory": "complete",
+      "enrichment_status": "enriched",
+      "enrichment_source": "apify",
+      "importSource": null,
+      "diagnostics": {
+        "platformCount": 2,
+        "audienceCountry": "EG",
+        "profileBioPresent": true,
+        "followerCount": 221500,
+        "hasDna": true,
+        "dnaCountry": "EG",
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": true,
+        "profileRowsCount": 1,
+        "postRowsCount": 6,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "b1d178d3-f882-4ec7-b45d-888e85ab921e",
+      "displayName": "Karim Kabbany | كريم قباني",
+      "countrySource": "influencer.country_code",
+      "currentValue": [
+        "EG",
+        "FR"
+      ],
+      "expectedValue": [
+        "EG",
+        "FR"
+      ],
+      "missingReason": "none — browse has countryFlagCodes",
+      "causeCategory": "complete",
+      "enrichment_status": "enriched",
+      "enrichment_source": "apify",
+      "importSource": null,
+      "diagnostics": {
+        "platformCount": 2,
+        "audienceCountry": "EG",
+        "profileBioPresent": true,
+        "followerCount": 1400000,
+        "hasDna": true,
+        "dnaCountry": "EG",
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": true,
+        "profileRowsCount": 1,
+        "postRowsCount": 6,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "6043fa2d-e5ad-49c7-8d81-6af77f8ae2d3",
+      "displayName": "ayaibrahimx",
+      "countrySource": "influencer.country_code",
+      "currentValue": [
+        "EG"
+      ],
+      "expectedValue": [
+        "EG"
+      ],
+      "missingReason": "none — browse has countryFlagCodes",
+      "causeCategory": "complete",
+      "enrichment_status": "enriched",
+      "enrichment_source": "apify",
+      "importSource": null,
+      "diagnostics": {
+        "platformCount": 2,
+        "audienceCountry": "EG",
+        "profileBioPresent": false,
+        "followerCount": 1700000,
+        "hasDna": true,
+        "dnaCountry": "EG",
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": true,
+        "profileRowsCount": 1,
+        "postRowsCount": 6,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": [
+          "London, UK"
+        ]
+      }
+    },
+    {
+      "creatorId": "52215772-78d1-4c17-9f13-4d3f47a0837e",
+      "displayName": "Yasser Ahmed - ياسر أحمد",
+      "countrySource": "influencer.country_code",
+      "currentValue": [
+        "EG"
+      ],
+      "expectedValue": [
+        "EG"
+      ],
+      "missingReason": "none — browse has countryFlagCodes",
+      "causeCategory": "complete",
+      "enrichment_status": "enriched",
+      "enrichment_source": "apify",
+      "importSource": null,
+      "diagnostics": {
+        "platformCount": 2,
+        "audienceCountry": "EG",
+        "profileBioPresent": true,
+        "followerCount": 3000000,
+        "hasDna": true,
+        "dnaCountry": "EG",
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": true,
+        "profileRowsCount": 1,
+        "postRowsCount": 6,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "b2369b60-063d-43ec-ab3a-76e01e592381",
+      "displayName": "amryosseff",
+      "countrySource": "influencer.country_code",
+      "currentValue": [
+        "EG"
+      ],
+      "expectedValue": [
+        "EG"
+      ],
+      "missingReason": "none — browse has countryFlagCodes",
+      "causeCategory": "complete",
+      "enrichment_status": "enriched",
+      "enrichment_source": "apify",
+      "importSource": null,
+      "diagnostics": {
+        "platformCount": 2,
+        "audienceCountry": "EG",
+        "profileBioPresent": false,
+        "followerCount": 239500,
+        "hasDna": true,
+        "dnaCountry": "EG",
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": true,
+        "profileRowsCount": 6,
+        "postRowsCount": 0,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "79b74fa9-852b-429d-b9da-57c14ad7c37c",
+      "displayName": "adanys.table",
+      "countrySource": "influencer.country_code",
+      "currentValue": [
+        "EG"
+      ],
+      "expectedValue": [
+        "EG"
+      ],
+      "missingReason": "none — browse has countryFlagCodes",
+      "causeCategory": "complete",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": null,
+      "diagnostics": {
+        "platformCount": 2,
+        "audienceCountry": "EG",
+        "profileBioPresent": true,
+        "followerCount": 76900,
+        "hasDna": true,
+        "dnaCountry": "EG",
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": true,
+        "profileRowsCount": 1,
+        "postRowsCount": 16,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "9606033e-be8a-4601-9091-83e63e3f9ea4",
+      "displayName": "cairofoodiecouple",
+      "countrySource": "influencer.country_code",
+      "currentValue": [
+        "EG",
+        "IT"
+      ],
+      "expectedValue": [
+        "EG",
+        "IT"
+      ],
+      "missingReason": "none — browse has countryFlagCodes",
+      "causeCategory": "complete",
+      "enrichment_status": "enriched",
+      "enrichment_source": "apify",
+      "importSource": null,
+      "diagnostics": {
+        "platformCount": 2,
+        "audienceCountry": null,
+        "profileBioPresent": true,
+        "followerCount": 28100,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": true,
+        "profileRowsCount": 1,
+        "postRowsCount": 16,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": [
+          "Cairo, Egypt",
+          "Galleria Vittorio Emanuele"
+        ]
+      }
+    },
+    {
+      "creatorId": "58c7ab5f-24aa-4cfc-b91f-fab8be5e5e8a",
+      "displayName": "raquelhadassaviagens_",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "bf99b7ec-deb8-4bca-94a9-5b87758b51e7",
+      "displayName": "alhussinefatima",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "45b1f771-dfc7-4888-9aaa-cae35960dbec",
+      "displayName": "milleniumantiguidades",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": [
+          "Travessa Ranulfo Féo"
+        ]
+      }
+    },
+    {
+      "creatorId": "7a6d5b61-f351-4039-820f-7062ef4f6b33",
+      "displayName": "entrecuentaycuenta",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "8125abd9-a10c-4985-938a-33022595332d",
+      "displayName": "banda_fn13",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": [
+          "Belén Fátima"
+        ]
+      }
+    },
+    {
+      "creatorId": "2f8f0fd4-e41f-4f38-982b-b549d7d776da",
+      "displayName": "206tours",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "f41bb9da-3fab-4b65-bc61-f41770873948",
+      "displayName": "gpcristobuenamuerteydefension",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "9579d968-a5b1-4305-8da5-d9f905a946f7",
+      "displayName": "alcorta.y.luna",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": [
+          "villa soldati \"Barrio Fatima\" Buenos Aires. Argentina"
+        ]
+      }
+    },
+    {
+      "creatorId": "1de35813-9c74-4905-9862-e1b2bcfbfa1b",
+      "displayName": "araujo_hobby",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 6,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": [
+          "Santuário Nossa Senhora de Fátima",
+          "Santuário Nossa Senhora de Fátima",
+          "Santuário Nossa Senhora de Fátima",
+          "Santuário De Fátima / Portugal",
+          "Santuário De Fátima / Portugal"
+        ]
+      }
+    },
+    {
+      "creatorId": "e14a2470-4c70-463b-a4be-f24fcdb8ed98",
+      "displayName": "lrgarcons",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "9c083179-5ddb-423a-91e3-24e9f27e85f1",
+      "displayName": "daniela_doamaral",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": [
+          "Fatima,Portugal"
+        ]
+      }
+    },
+    {
+      "creatorId": "dbf558f6-271c-49cf-b662-7d892690a2b6",
+      "displayName": "fatima_hairbraiding_1",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "98690eb9-d04d-4aa0-b7fc-51e349574b60",
+      "displayName": "mariacristina.maza.1",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "3c5107f3-7a20-4c2c-bf69-85d169cba57d",
+      "displayName": "fati_mameme",
+      "countrySource": "influencer.country_code",
+      "currentValue": [
+        "PK"
+      ],
+      "expectedValue": [
+        "PK"
+      ],
+      "missingReason": "none — browse has countryFlagCodes",
+      "causeCategory": "complete",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 2,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "061ec44c-905e-4a28-b6e4-fb676e793894",
+      "displayName": "fatima.rajpoot019",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "5ff53585-b620-46f7-8ce8-b6914bcd854f",
+      "displayName": "irfan.tahir.7906",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "65925d83-9866-4fa0-aea6-dbfa4ac02163",
+      "displayName": "fatimanouman_",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "1b66dd91-1709-4cad-824d-b0750ef8727c",
+      "displayName": "consolata_artigos_religiosos",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "7bc10729-d447-4bca-91d7-7223a3448a0a",
+      "displayName": "yellowcabtttours.pt",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "192a978d-9175-4dfd-8876-089984a50d24",
+      "displayName": "lux_fatimae",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "76c25841-6ae6-4e59-9052-031509a31579",
+      "displayName": "abeehafatima225",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "9aedd674-5cd3-468e-bdb3-191e29537e64",
+      "displayName": "rokeya.collective",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "7e75b0f2-2262-4a9f-8283-b093a1e5de85",
+      "displayName": "aviansummit",
+      "countrySource": "influencer.country_code",
+      "currentValue": [
+        "ES"
+      ],
+      "expectedValue": [
+        "ES"
+      ],
+      "missingReason": "none — browse has countryFlagCodes",
+      "causeCategory": "complete",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "9a6f0164-6a2b-4eac-aac7-ba2e026ca57d",
+      "displayName": "handmadebymackenzie_",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "19faa856-ccb6-4019-8a2f-1a207dabf869",
+      "displayName": "ohfranchini",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": [
+          "Santuário Nossa Senhora de Fátima"
+        ]
+      }
+    },
+    {
+      "creatorId": "d01908cf-557f-4d9b-a45c-1cf3d5c695ee",
+      "displayName": "fa_facollection",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "d524ec08-3e3d-48f1-b4e6-baa3217f7ef9",
+      "displayName": "luxmeasacra",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "4f8e9bd3-b917-4f47-b11b-fe7d00b13198",
+      "displayName": "rysaa_28",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; raw snapshot has empty profileRows (post-only); follower_count=0; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 0,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 0,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "31b02cd1-1095-4d80-8d87-5b6dcd72019c",
+      "displayName": "Andi Music and Art",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": true,
+        "followerCount": 170,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": true,
+        "profileRowsCount": 1,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "a41bac20-2327-43f5-9724-4d69b844b97b",
+      "displayName": "Canada Needs Our Lady",
+      "countrySource": "influencer.country_code",
+      "currentValue": [
+        "CA"
+      ],
+      "expectedValue": [
+        "CA"
+      ],
+      "missingReason": "none — browse has countryFlagCodes",
+      "causeCategory": "complete",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 747,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 1,
+        "postRowsCount": 2,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "f1d9187c-5398-40e0-a447-78e6ea847ae6",
+      "displayName": "Flavio Mesquita",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": true,
+        "followerCount": 213,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": true,
+        "profileRowsCount": 1,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": [
+          "Santuário de Fátima"
+        ]
+      }
+    },
+    {
+      "creatorId": "5c453b84-9a09-4846-93d5-e0c17bf33517",
+      "displayName": "Fatima Yaakoub",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": true,
+        "followerCount": 391,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": true,
+        "profileRowsCount": 1,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": [
+          "El Yammoûné, Béqaa, Lebanon"
+        ]
+      }
+    },
+    {
+      "creatorId": "6367e901-162d-45df-80f7-10047acba63b",
+      "displayName": "Paola Cassol | Arte em Papel",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": true,
+        "followerCount": 1761,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": true,
+        "profileRowsCount": 1,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": [
+          "Santuário  Nossa Senhora de Fátima - Siderópolis/SC"
+        ]
+      }
+    },
+    {
+      "creatorId": "0025841f-c2fd-48b5-80a4-f532e2d339dd",
+      "displayName": "Alberto Trafalgar",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": false,
+        "followerCount": 888,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": false,
+        "profileRowsCount": 1,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "a6085a4d-6d3e-4d6b-b60c-9edc4ceb5bf5",
+      "displayName": "MQ_SPORTS™",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": true,
+        "followerCount": 93,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": true,
+        "profileRowsCount": 1,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "79c36980-7306-49d3-83da-5f24067c7a0f",
+      "displayName": "Maria Alejandra Montenegro Silva",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": true,
+        "followerCount": 1771,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": true,
+        "profileRowsCount": 1,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": [
+          "Fatima,Portugal"
+        ]
+      }
+    },
+    {
+      "creatorId": "8b14564c-c4bd-4061-8fa9-95c22e8bde39",
+      "displayName": "Escola de Futsal do Fátima",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": true,
+        "followerCount": 3761,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": true,
+        "profileRowsCount": 1,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "e4eabb9b-69db-48b1-94df-f022134a77a6",
+      "displayName": "Celebrities Styles",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": true,
+        "followerCount": 399877,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": true,
+        "profileRowsCount": 1,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "7c4eddad-d906-4c66-947f-d2d1acde1c19",
+      "displayName": "Bryan Ramirez",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": true,
+        "followerCount": 59329,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": true,
+        "profileRowsCount": 1,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    },
+    {
+      "creatorId": "5ce7439a-c9bd-468d-a238-31faee897bfe",
+      "displayName": "Azeite Fátima",
+      "countrySource": "none",
+      "currentValue": [],
+      "expectedValue": [],
+      "missingReason": "offline Apify dataset export marked enriched without country; platform.audience_country=null; IPL audienceCountry=null; DNA audience.country empty",
+      "causeCategory": "import_pipeline",
+      "enrichment_status": "enriched",
+      "enrichment_source": null,
+      "importSource": "apify_dataset_export",
+      "diagnostics": {
+        "platformCount": 1,
+        "audienceCountry": null,
+        "profileBioPresent": true,
+        "followerCount": 858,
+        "hasDna": true,
+        "dnaCountry": null,
+        "hasIpl": true,
+        "iplAudienceCountry": null,
+        "iplBioPresent": true,
+        "profileRowsCount": 1,
+        "postRowsCount": 1,
+        "rawPickAudienceCountry": null,
+        "postLocationNames": []
+      }
+    }
+  ]
+}

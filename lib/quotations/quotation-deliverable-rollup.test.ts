@@ -53,6 +53,19 @@ function deliverable(overrides: Partial<QuotationDeliverable> = {}): QuotationDe
   assert.ok(rolled.revenue > rolled.cost);
 }
 
+// Deliverable rollup includes agency fee from deliverable AF%
+{
+  const rolled = rollupDeliverableCommercials(
+    [deliverable({ cost: 10000, gp_pct: 25, af_pct: 10 })],
+    { lineCurrency: "EGP", fxRateToEgp: 1 }
+  );
+  assert.ok(rolled);
+  assert.ok(rolled.revenue > 13333 && rolled.revenue < 13334);
+  assert.ok(rolled.afValue > 1333 && rolled.afValue < 1334);
+  assert.equal(rolled.afPct, 10);
+  assert.ok(rolled.totalClientCost > rolled.revenue);
+}
+
 // Item draft rolls up priced deliverables (not stale item cost_gp_pct)
 {
   const item = {
@@ -112,6 +125,10 @@ function deliverable(overrides: Partial<QuotationDeliverable> = {}): QuotationDe
 
 assert.equal(hasPricedDeliverables([deliverable()]), true);
 assert.equal(hasPricedDeliverables([deliverable({ cost: 0, revenue: 0 })]), false);
+assert.equal(
+  hasPricedDeliverables([deliverable({ cost: 0, revenue: 0, free_for_client: true })]),
+  true
+);
 assert.equal(deliverableLineCost(deliverable({ cost: 5000, quantity: 2 })), 10000);
 
 console.log("quotation-deliverable-rollup.test.ts: all assertions passed");

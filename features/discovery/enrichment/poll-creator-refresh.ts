@@ -7,7 +7,9 @@ import {
 } from "./actions";
 
 const POLL_INTERVAL_MS = 3_000;
-const MAX_POLL_ATTEMPTS = 40;
+const MAX_POLL_ATTEMPTS = 20;
+/** Stop early when Auth/DB only returns opaque "pending" (worker offline / stuck). */
+const MAX_PENDING_STREAK = 4;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -15,6 +17,11 @@ function sleep(ms: number): Promise<void> {
 
 function isTerminalSyncStatus(status: CreatorMetricsSyncStatus): boolean {
   return status === "completed" || status === "failed";
+}
+
+/** Statuses that mean "still working" — everything else should end the poll. */
+function isActiveSyncStatus(status: CreatorMetricsSyncStatus): boolean {
+  return status === "queued" || status === "collecting";
 }
 
 export type CreatorRefreshPollCallbacks = {
@@ -46,24 +53,40 @@ export async function pollCreatorAfterRefresh(
   callbacks: CreatorRefreshPollCallbacks
 ): Promise<CreatorMetricsSyncStatus | "timeout"> {
   let lastStatus: CreatorMetricsSyncStatus | null = null;
+  let pendingStreak = 0;
 
   for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt += 1) {
     await sleep(POLL_INTERVAL_MS);
     const status = await getCreatorEnrichmentStatusAction(input.influencerId);
+    if (status === "pending") {
+      pendingStreak += 1;
+      if (pendingStreak >= MAX_PENDING_STREAK) {
+        callbacks.onComplete?.("failed");
+        return "timeout";
+      }
+    } else {
+      pendingStreak = 0;
+    }
     if (status !== lastStatus) {
       lastStatus = status;
       callbacks.onStatusChange?.(status);
     }
-    if (!isTerminalSyncStatus(status)) continue;
-
-    callbacks.onComplete?.(status);
-    if (status === "completed") {
-      const creator = await getUnifiedCreatorAfterRefreshAction(input.unifiedId);
-      if (creator) callbacks.onUpdated(creator);
+    if (isTerminalSyncStatus(status)) {
+      callbacks.onComplete?.(status);
+      if (status === "completed") {
+        const creator = await getUnifiedCreatorAfterRefreshAction(input.unifiedId);
+        if (creator) callbacks.onUpdated(creator);
+      }
+      return status;
     }
-    return status;
+    // "pending" or unknown non-active statuses should not spin forever.
+    if (!isActiveSyncStatus(status) && status !== "pending") {
+      callbacks.onComplete?.(status === "failed" ? "failed" : "completed");
+      return status;
+    }
   }
 
+  callbacks.onComplete?.("failed");
   return "timeout";
 }
 

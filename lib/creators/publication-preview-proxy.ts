@@ -1,3 +1,17 @@
+import {
+  MEDIA_PROXY_FAST_TIMEOUT_MS,
+  MEDIA_PROXY_REFRESH_TIMEOUT_MS,
+  getMediaProxyCache,
+  mediaProxyCacheKey,
+  recordMediaProxyCdnHit,
+  recordMediaProxyExternalRequest,
+  recordMediaProxyPlaceholder,
+  recordMediaProxyRefreshFailed,
+  recordMediaProxyRefreshSuccess,
+  setMediaProxyCacheNegative,
+  setMediaProxyCachePositive,
+  withMediaProxyInflight,
+} from "@/lib/creators/media-proxy-cache";
 import { tryInstagramMediaRedirectThumbnail } from "@/lib/performance/screenshot-capture/providers/instagram-media-redirect";
 import { tryInstagramOembedThumbnail } from "@/lib/performance/screenshot-capture/providers/instagram-oembed";
 import { tryOpenGraphThumbnail } from "@/lib/performance/screenshot-capture/providers/opengraph";
@@ -76,15 +90,19 @@ function isInstagramPostUrl(url: string): boolean {
   return host?.includes("instagram.com") ?? false;
 }
 
-async function fetchImageBuffer(
+export async function fetchImageBuffer(
   url: string,
-  options?: { referer?: string | null }
+  options?: { referer?: string | null; timeoutMs?: number; countExternal?: boolean }
 ): Promise<{ ok: true; buffer: ArrayBuffer; contentType: string } | { ok: false }> {
   const referer = options?.referer ?? refererForImageUrl(url);
+  const timeoutMs = options?.timeoutMs ?? MEDIA_PROXY_REFRESH_TIMEOUT_MS;
+  if (options?.countExternal !== false) {
+    recordMediaProxyExternalRequest();
+  }
   try {
     const response = await fetch(url, {
       redirect: "follow",
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(timeoutMs),
       headers: {
         Accept: "image/*,*/*;q=0.8",
         "User-Agent":
@@ -105,7 +123,15 @@ async function fetchImageBuffer(
   }
 }
 
-/** Server-side fetch for creator publication preview images (CDN + oEmbed/OpenGraph fallback). */
+type PreviewResult =
+  | { ok: true; buffer: ArrayBuffer; contentType: string; source: "cache" | "cdn" | "refresh" }
+  | { ok: false; status: number; source: "cache" | "miss"; needsRefresh: boolean };
+
+function previewKey(src: string | null, postUrl: string | null): string {
+  return mediaProxyCacheKey({ kind: "preview", src, postUrl });
+}
+
+/** Full resolution path (exports / background refresh) — may call oEmbed/OpenGraph. */
 export async function fetchPublicationPreviewImage(input: {
   src?: string | null;
   postUrl?: string | null;
@@ -114,14 +140,35 @@ export async function fetchPublicationPreviewImage(input: {
 > {
   const src = input.src?.trim() || null;
   const postUrl = input.postUrl?.trim() || null;
+  const key = previewKey(src, postUrl);
+
+  return withMediaProxyInflight(`refresh:${key}`, async () => {
+    const resolved = await resolvePublicationPreviewExternal({ src, postUrl });
+    if (resolved.ok) {
+      setMediaProxyCachePositive(key, resolved.buffer, resolved.contentType);
+      recordMediaProxyRefreshSuccess();
+      return resolved;
+    }
+    setMediaProxyCacheNegative(key, 404);
+    recordMediaProxyRefreshFailed();
+    return { ok: false, status: 404 };
+  });
+}
+
+async function resolvePublicationPreviewExternal(input: {
+  src: string | null;
+  postUrl: string | null;
+}): Promise<{ ok: true; buffer: ArrayBuffer; contentType: string } | { ok: false }> {
+  const { src, postUrl } = input;
 
   if (src && isAllowedPublicationPreviewSrcUrl(src)) {
-    const direct = await fetchImageBuffer(src);
+    const direct = await fetchImageBuffer(src, { timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS });
     if (direct.ok) return direct;
   }
 
   if (postUrl && isAllowedPublicationPreviewPostUrl(postUrl)) {
     if (isTikTokPostUrl(postUrl)) {
+      recordMediaProxyExternalRequest();
       const oembed = await tryTikTokOembedThumbnail({ contentUrl: postUrl });
       if (oembed.imageUrl) {
         const fromOembed = await fetchImageBuffer(oembed.imageUrl);
@@ -130,12 +177,14 @@ export async function fetchPublicationPreviewImage(input: {
     }
 
     if (isInstagramPostUrl(postUrl)) {
+      recordMediaProxyExternalRequest();
       const mediaRedirect = await tryInstagramMediaRedirectThumbnail({ contentUrl: postUrl });
       if (mediaRedirect.imageUrl) {
         const fromRedirect = await fetchImageBuffer(mediaRedirect.imageUrl);
         if (fromRedirect.ok) return fromRedirect;
       }
 
+      recordMediaProxyExternalRequest();
       const oembed = await tryInstagramOembedThumbnail({ contentUrl: postUrl });
       if (oembed.imageUrl) {
         const fromOembed = await fetchImageBuffer(oembed.imageUrl);
@@ -143,6 +192,7 @@ export async function fetchPublicationPreviewImage(input: {
       }
     }
 
+    recordMediaProxyExternalRequest();
     const og = await tryOpenGraphThumbnail({ contentUrl: postUrl });
     if (og.imageUrl) {
       const fromOg = await fetchImageBuffer(og.imageUrl);
@@ -150,7 +200,72 @@ export async function fetchPublicationPreviewImage(input: {
     }
   }
 
-  return { ok: false, status: 404 };
+  return { ok: false };
 }
 
-export { fetchImageBuffer };
+/**
+ * Request-path resolver — cache + short CDN only. Never runs oEmbed/OpenGraph/HTML scrape.
+ * Callers should schedule refreshPublicationPreviewInBackground on needsRefresh.
+ */
+export async function resolvePublicationPreviewForHttpRequest(input: {
+  src?: string | null;
+  postUrl?: string | null;
+}): Promise<PreviewResult> {
+  const src = input.src?.trim() || null;
+  const postUrl = input.postUrl?.trim() || null;
+  const key = previewKey(src, postUrl);
+
+  const cached = getMediaProxyCache(key);
+  if (cached?.ok) {
+    return {
+      ok: true,
+      buffer: cached.buffer,
+      contentType: cached.contentType,
+      source: "cache",
+    };
+  }
+  if (cached && !cached.ok) {
+    recordMediaProxyPlaceholder();
+    return { ok: false, status: cached.status, source: "cache", needsRefresh: false };
+  }
+
+  if (src && isAllowedPublicationPreviewSrcUrl(src)) {
+    const direct = await withMediaProxyInflight(`cdn:${key}`, () =>
+      fetchImageBuffer(src, { timeoutMs: MEDIA_PROXY_FAST_TIMEOUT_MS })
+    );
+    if (direct.ok) {
+      setMediaProxyCachePositive(key, direct.buffer, direct.contentType);
+      recordMediaProxyCdnHit();
+      return {
+        ok: true,
+        buffer: direct.buffer,
+        contentType: direct.contentType,
+        source: "cdn",
+      };
+    }
+  }
+
+  const needsRefresh = Boolean(
+    (src && isAllowedPublicationPreviewSrcUrl(src)) ||
+      (postUrl && isAllowedPublicationPreviewPostUrl(postUrl))
+  );
+
+  recordMediaProxyPlaceholder();
+  return {
+    ok: false,
+    status: 404,
+    source: "miss",
+    needsRefresh,
+  };
+}
+
+export async function refreshPublicationPreviewInBackground(input: {
+  src?: string | null;
+  postUrl?: string | null;
+}): Promise<void> {
+  try {
+    await fetchPublicationPreviewImage(input);
+  } catch {
+    recordMediaProxyRefreshFailed();
+  }
+}

@@ -1,4 +1,7 @@
-import { decodeHtmlEntities } from "@/lib/text/decode-html-entities";
+import {
+  decodeHtmlEntities,
+  formatCreatorDisplayName,
+} from "@/lib/text/decode-html-entities";
 import { parseCompactCount } from "@/lib/social/parse-compact-count";
 
 import {
@@ -128,7 +131,7 @@ export class OpenGraphEnrichmentProvider implements ProfileEnrichmentProvider {
       !hasStats && API_METRICS_PLATFORMS.includes(context.platform);
 
     return {
-      display_name: title,
+      display_name: formatCreatorDisplayName(title) || null,
       bio: description,
       profile_picture_url: image,
       follower_count: counts.follower_count,

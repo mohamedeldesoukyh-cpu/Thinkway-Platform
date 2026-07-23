@@ -139,10 +139,10 @@ export async function generateQuotationFromPlanAction(
   const result = await generateQuotationFromCampaignPlan(supabase, auth.userId, parsed.data);
   if (!result.ok) return result;
 
-  revalidatePath(quotationDetailPath(result.quotationId));
+  revalidatePath(quotationDetailPath(result.quotationId, result.serialNumber));
 
   return {
     ...result,
-    href: quotationDetailPath(result.quotationId),
+    href: quotationDetailPath(result.quotationId, result.serialNumber),
   };
 }

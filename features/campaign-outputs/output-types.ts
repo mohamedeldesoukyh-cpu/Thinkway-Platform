@@ -55,7 +55,8 @@ export type CampaignOutputInputKey =
   | "strategy"
   | "creative_concepts"
   | "risks"
-  | "deliverables_scope";
+  | "deliverables_scope"
+  | "market_intelligence";
 
 export type CampaignOutputStatus = "not_generated" | "generated" | "needs_update";
 

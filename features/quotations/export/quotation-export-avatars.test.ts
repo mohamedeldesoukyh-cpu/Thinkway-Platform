@@ -54,7 +54,7 @@ function item(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
 
 {
   const fresh =
-    "https://scontent.cdninstagram.com/v/t51.2885-19/fresh.jpg?oe=6A539B1C";
+    "https://scontent.cdninstagram.com/v/t51.2885-19/fresh.jpg?oe=FFFFFFFF";
   assert.equal(
     quotationItemsAvatarEnriched([
       item({
@@ -148,12 +148,12 @@ function item(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
     quotationItemsFullyEnrichedForExport([
       item({
         profile_image_url:
-          "https://scontent.cdninstagram.com/v/t51.2885-19/fresh.jpg?oe=6A539B1C",
+          "https://scontent.cdninstagram.com/v/t51.2885-19/fresh.jpg?oe=FFFFFFFF",
         creator_categories: ["General influencer"],
         creator_profile_source: {
           displayName: "Creator",
           avatarUrl:
-            "https://scontent.cdninstagram.com/v/t51.2885-19/fresh.jpg?oe=6A539B1C",
+            "https://scontent.cdninstagram.com/v/t51.2885-19/fresh.jpg?oe=FFFFFFFF",
           platform: "instagram",
           handle: "creator",
           profile_url: "https://www.instagram.com/creator/",
@@ -167,7 +167,7 @@ function item(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
 
 {
   const fresh =
-    "https://scontent.cdninstagram.com/v/t51.2885-19/fresh.jpg?oe=6A539B1C";
+    "https://scontent.cdninstagram.com/v/t51.2885-19/fresh.jpg?oe=FFFFFFFF";
   assert.equal(
     quotationItemsExportMetricsReady([
       item({

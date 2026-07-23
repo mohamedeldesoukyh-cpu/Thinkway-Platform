@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
 import { audienceInterestList, categoriesLabel, sortCreators } from "./creator-search-utils";
-import { DEFAULT_CREATOR_SEARCH_SORT } from "./creator-search-types";
 
 function baseCreator(
   overrides: Partial<UnifiedCreatorResult> = {}
@@ -131,10 +130,54 @@ assert.deepEqual(
   ["Alpha", "Beta"]
 );
 assert.deepEqual(
-  sortCreators([alpha, beta], { ...DEFAULT_CREATOR_SEARCH_SORT, field: "last_synced", direction: "desc" }).map(
+  sortCreators([alpha, beta], { field: "last_synced", direction: "desc" }).map(
     (c) => c.unified_id
   ),
   ["inf:b", "inf:a"]
+);
+
+const NOW = Date.parse("2026-07-18T12:00:00.000Z");
+const DAY = 86_400_000;
+
+const updatedToday = baseCreator({
+  unified_id: "inf:today",
+  display_name: "Updated Today",
+  last_enriched_at: new Date(NOW - 12 * 60 * 60 * 1000).toISOString(),
+});
+const updatedOneDay = baseCreator({
+  unified_id: "inf:one-day",
+  display_name: "Updated One Day",
+  last_enriched_at: new Date(NOW - DAY).toISOString(),
+});
+const updatedTwoDays = baseCreator({
+  unified_id: "inf:two-days",
+  display_name: "Updated Two Days",
+  last_enriched_at: new Date(NOW - 2 * DAY).toISOString(),
+});
+const neverUpdatedForRecency = baseCreator({
+  unified_id: "inf:never-recency",
+  display_name: "Never Updated",
+  last_enriched_at: null,
+  enrichment_status: "never",
+});
+
+assert.deepEqual(
+  sortCreators(
+    [neverUpdatedForRecency, updatedTwoDays, updatedOneDay, updatedToday],
+    { field: "last_synced", direction: "desc" },
+    NOW
+  ).map((c) => c.unified_id),
+  ["inf:today", "inf:one-day", "inf:two-days", "inf:never-recency"],
+  "last_synced desc buckets by days since update with never last"
+);
+
+assert.deepEqual(
+  sortCreators([neverUpdatedForRecency, updatedOneDay], {
+    field: "last_synced",
+    direction: "desc",
+  }, NOW).map((c) => c.unified_id),
+  ["inf:one-day", "inf:never-recency"],
+  "never-updated stays last even when other sort fields would pin enriched rows"
 );
 
 const instagramCreator = baseCreator({
@@ -176,6 +219,156 @@ assert.deepEqual(
     (c) => c.unified_id
   ),
   ["inf:ig", "inf:tt"]
+);
+
+const enrichedSmall = baseCreator({
+  unified_id: "inf:enriched",
+  display_name: "Enriched Small",
+  enrichment_status: "enriched",
+  last_enriched_at: "2025-06-01T00:00:00.000Z",
+  metrics: {
+    followers: { value: 50, confidence: "verified" },
+    engagement_rate: { value: 1, confidence: "verified" },
+    avg_likes: { value: null, confidence: "estimated" },
+    avg_comments: { value: null, confidence: "estimated" },
+    avg_views: { value: 10, confidence: "estimated" },
+    posting_frequency_per_week: { value: null, confidence: "estimated" },
+  },
+});
+const neverLarge = baseCreator({
+  unified_id: "inf:never",
+  display_name: "Never Large",
+  enrichment_status: "never",
+  last_enriched_at: null,
+  metrics: {
+    followers: { value: 9_000_000, confidence: "estimated" },
+    engagement_rate: { value: 5, confidence: "estimated" },
+    avg_likes: { value: null, confidence: "estimated" },
+    avg_comments: { value: null, confidence: "estimated" },
+    avg_views: { value: 1000, confidence: "estimated" },
+    posting_frequency_per_week: { value: null, confidence: "estimated" },
+  },
+});
+const partialMid = baseCreator({
+  unified_id: "inf:partial",
+  display_name: "Partial Mid",
+  enrichment_status: "partial",
+  last_enriched_at: "2025-05-01T00:00:00.000Z",
+  metrics: {
+    followers: { value: 500, confidence: "verified" },
+    engagement_rate: { value: 2, confidence: "verified" },
+    avg_likes: { value: null, confidence: "estimated" },
+    avg_comments: { value: null, confidence: "estimated" },
+    avg_views: { value: 50, confidence: "estimated" },
+    posting_frequency_per_week: { value: null, confidence: "estimated" },
+  },
+});
+
+assert.deepEqual(
+  sortCreators([neverLarge, enrichedSmall, partialMid], {
+    field: "followers",
+    direction: "desc",
+  }).map((c) => c.unified_id),
+  ["inf:enriched", "inf:partial", "inf:never"],
+  "enriched creators pin above others regardless of followers sort"
+);
+
+assert.deepEqual(
+  sortCreators([neverLarge, enrichedSmall], { field: "name", direction: "asc" }).map(
+    (c) => c.unified_id
+  ),
+  ["inf:enriched", "inf:never"],
+  "enriched creators pin above others for name sort too"
+);
+
+const timestampOnly = baseCreator({
+  unified_id: "inf:timestamp-only",
+  display_name: "Timestamp Only",
+  enrichment_status: "never",
+  last_enriched_at: "2025-07-01T00:00:00.000Z",
+  metrics: {
+    followers: { value: 9_999_999, confidence: "estimated" },
+    engagement_rate: { value: 9, confidence: "estimated" },
+    avg_likes: { value: null, confidence: "estimated" },
+    avg_comments: { value: null, confidence: "estimated" },
+    avg_views: { value: 9000, confidence: "estimated" },
+    posting_frequency_per_week: { value: null, confidence: "estimated" },
+  },
+});
+const enrichedLarge = baseCreator({
+  unified_id: "inf:enriched-large",
+  display_name: "Enriched Large",
+  enrichment_status: "enriched",
+  last_enriched_at: "2025-04-01T00:00:00.000Z",
+  metrics: {
+    followers: { value: 800, confidence: "verified" },
+    engagement_rate: { value: 3, confidence: "verified" },
+    avg_likes: { value: null, confidence: "estimated" },
+    avg_comments: { value: null, confidence: "estimated" },
+    avg_views: { value: 80, confidence: "estimated" },
+    posting_frequency_per_week: { value: null, confidence: "estimated" },
+  },
+});
+
+assert.deepEqual(
+  sortCreators([timestampOnly, neverLarge, enrichedSmall, partialMid], {
+    field: "followers",
+    direction: "desc",
+  }).map((c) => c.unified_id),
+  ["inf:enriched", "inf:timestamp-only", "inf:partial", "inf:never"],
+  "timestamp-only rows sit with partial, never above true enriched"
+);
+
+assert.deepEqual(
+  sortCreators([enrichedLarge, enrichedSmall], {
+    field: "followers",
+    direction: "desc",
+  }).map((c) => c.unified_id),
+  ["inf:enriched-large", "inf:enriched"],
+  "user sort still applies within the enriched group"
+);
+
+const enrichedSinglePlatform = baseCreator({
+  unified_id: "inf:enriched-single",
+  display_name: "Enriched Single",
+  enrichment_status: "enriched",
+  country_code: "US",
+  last_enriched_at: new Date(NOW - 12 * 60 * 60 * 1000).toISOString(),
+  platforms: [
+    { id: "p1", platform: "tiktok", handle: "single", profile_url: null, follower_count: 100, engagement_rate: 2, audience_country: "US" },
+  ],
+});
+const enrichedMultiPlatform = baseCreator({
+  unified_id: "inf:enriched-multi",
+  display_name: "Enriched Multi",
+  enrichment_status: "enriched",
+  country_code: "US",
+  last_enriched_at: new Date(NOW - 12 * 60 * 60 * 1000).toISOString(),
+  platforms: [
+    { id: "p1", platform: "tiktok", handle: "multi-tt", profile_url: null, follower_count: 100, engagement_rate: 2, audience_country: "US" },
+    { id: "p2", platform: "instagram", handle: "multi-ig", profile_url: null, follower_count: 80, engagement_rate: 1.5, audience_country: "US" },
+  ],
+});
+const egyptEnrichedMultiPlatform = baseCreator({
+  unified_id: "inf:enriched-eg-multi",
+  display_name: "Egypt Enriched Multi",
+  enrichment_status: "enriched",
+  country_code: "EG",
+  estimated_country: "EG",
+  last_enriched_at: new Date(NOW - 12 * 60 * 60 * 1000).toISOString(),
+  platforms: [
+    { id: "p1", platform: "tiktok", handle: "eg-tt", profile_url: null, follower_count: 100, engagement_rate: 2, audience_country: "EG" },
+    { id: "p2", platform: "instagram", handle: "eg-ig", profile_url: null, follower_count: 80, engagement_rate: 1.5, audience_country: "EG" },
+  ],
+});
+
+assert.deepEqual(
+  sortCreators([egyptEnrichedMultiPlatform, enrichedMultiPlatform, enrichedSinglePlatform], {
+    field: "last_synced",
+    direction: "desc",
+  }, NOW).map((c) => c.unified_id),
+  ["inf:enriched-eg-multi", "inf:enriched-multi", "inf:enriched-single"],
+  "last_synced uses Egypt + multi + full pin tiers before recency tie-breaks"
 );
 
 console.log(

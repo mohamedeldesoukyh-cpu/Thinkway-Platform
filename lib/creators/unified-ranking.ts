@@ -1,6 +1,7 @@
 import { getCreatorIntelligenceMode } from "@/lib/creator-intelligence/flags";
 import { resolveCreatorIntelligence } from "@/lib/creator-intelligence/resolver";
 import { categoriesIntersect } from "@/lib/creator-intelligence/taxonomy";
+import { compareBrowseDefaultOrder } from "@/lib/creators/browse-pin-tier";
 import type { DiscoveryCoverageIntent } from "@/lib/creators/discovery-coverage";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
@@ -154,10 +155,11 @@ function discoveryRankScore(
   );
 }
 
-/** Rank unified browse rows — DNA-led signals; followers are supporting only. */
+/** Rank unified browse rows — Egypt pin tiers, recency, then DNA-led signals. */
 export function sortUnifiedCreatorsByDiscoveryRank(
   creators: UnifiedCreatorResult[],
-  intent?: DiscoveryCoverageIntent
+  intent?: DiscoveryCoverageIntent,
+  nowMs: number = Date.now()
 ): UnifiedCreatorResult[] {
   return [...creators]
     .map((creator, index) => ({
@@ -167,6 +169,7 @@ export function sortUnifiedCreatorsByDiscoveryRank(
     }))
     .sort(
       (a, b) =>
+        compareBrowseDefaultOrder(a.creator, b.creator, "desc", nowMs) ||
         b.rankScore - a.rankScore ||
         (b.creator.search_rank ?? 0) - (a.creator.search_rank ?? 0) ||
         a.index - b.index

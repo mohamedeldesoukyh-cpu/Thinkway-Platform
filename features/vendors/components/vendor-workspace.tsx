@@ -37,6 +37,7 @@ import { VendorDocumentsTab } from "@/features/vendors/components/tabs/vendor-do
 import { VendorOverviewTab } from "@/features/vendors/components/tabs/vendor-overview-tab";
 import { VendorPlatformsTab } from "@/features/vendors/components/tabs/vendor-platforms-tab";
 import { DocumentNumber } from "@/components/ui/document-number";
+import { formatCreatorCountryLabels } from "@/lib/creators/creator-display-utils";
 import type { VendorWorkspace } from "@/features/vendors/types";
 import type { InfluencerStatus } from "@/types/database";
 import { cn } from "@/lib/utils";
@@ -113,6 +114,22 @@ export function VendorWorkspaceView({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [depOpen, setDepOpen] = useState(false);
+  const countryLabel = useMemo(() => {
+    return formatCreatorCountryLabels({
+      country_code: workspace.country_code,
+      country_codes: workspace.country_codes,
+      estimated_country: null,
+      platforms: (workspace.platform_accounts ?? []).map((account) => ({
+        id: account.id,
+        platform: account.platform,
+        handle: account.handle,
+        profile_url: account.profile_url ?? null,
+        follower_count: account.follower_count,
+        engagement_rate: account.engagement_rate,
+        audience_country: account.audience_country ?? null,
+      })),
+    });
+  }, [workspace.country_code, workspace.country_codes, workspace.platform_accounts]);
   const initialTab = isVendorWorkspaceTabId(defaultTab) ? defaultTab : "overview";
   const [activeTab, setActiveTab] = useState<VendorWorkspaceTabId>(initialTab);
 
@@ -229,7 +246,7 @@ export function VendorWorkspaceView({
 
             <p className="px-5 pb-2.5 text-[11px] text-muted-foreground">
               <DocumentNumber value={workspace.document_number} />
-              {workspace.country_code ? ` · ${workspace.country_code}` : null}
+              {countryLabel !== "—" ? ` · ${countryLabel}` : null}
             </p>
 
             <div className="border-b border-border px-5 pb-2.5">
@@ -262,7 +279,7 @@ export function VendorWorkspaceView({
           <PlatformV6EntityBreadcrumb
             crumbs={[
               { label: "Vendors", href: "/vendors" },
-              { label: "Creator workspace" },
+              { label: workspace.display_name },
             ]}
             actions={
               <>

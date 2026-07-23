@@ -1,5 +1,8 @@
 import { resolveDiscoveryCreatorDisplayCategories } from "@/lib/creators/creator-display-categories";
+import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { compareBrowseDefaultOrder } from "@/lib/creators/browse-pin-tier";
+import { compareBrowseQualityRank } from "@/lib/creators/browse-quality-sort";
 import { resolveCreatorDiscoverySource } from "@/features/discovery/components/creator-search/creator-discovery-source";
 
 import {
@@ -10,6 +13,10 @@ import {
 
 function thinkwayAiScore(creator: UnifiedCreatorResult): number | null {
   return creator.thinkway_score ?? creator.brand_fit_score ?? null;
+}
+
+function compareQualityFirst(a: UnifiedCreatorResult, b: UnifiedCreatorResult): number {
+  return compareBrowseQualityRank(a, b);
 }
 
 function resolveSortFollowers(creator: UnifiedCreatorResult): number {
@@ -44,15 +51,13 @@ function resolveSortPlatform(creator: UnifiedCreatorResult): string {
 }
 
 function resolveSortCountry(creator: UnifiedCreatorResult): string {
-  const primary = creator.platforms[0];
-  return (
-    primary?.audience_country ??
-    creator.estimated_country ??
-    creator.country_code ??
-    ""
-  )
-    .trim()
-    .toUpperCase();
+  const codes = resolveCreatorCountryCodes({
+    country_codes: creator.country_codes,
+    country_code: creator.country_code,
+    estimated_country: creator.estimated_country,
+    platformAudienceCountries: creator.platforms.map((platform) => platform.audience_country),
+  });
+  return codes.join(",");
 }
 
 function resolveSortCategories(creator: UnifiedCreatorResult): string {
@@ -142,12 +147,15 @@ export function applyCreatorSearchHeaderSort(
 /** Stable client-side sort over the full loaded result set. */
 export function sortCreators(
   creators: UnifiedCreatorResult[],
-  sort: CreatorSearchSortState
+  sort: CreatorSearchSortState,
+  nowMs: number = Date.now()
 ): UnifiedCreatorResult[] {
   const next = [...creators];
 
   if (sort.field === "name") {
     next.sort((a, b) => {
+      const enrichment = compareQualityFirst(a, b);
+      if (enrichment !== 0) return enrichment;
       const cmp = a.display_name.localeCompare(b.display_name, undefined, {
         sensitivity: "base",
       });
@@ -159,10 +167,8 @@ export function sortCreators(
 
   if (sort.field === "last_synced") {
     next.sort((a, b) => {
-      const left = a.last_enriched_at ? Date.parse(a.last_enriched_at) : 0;
-      const right = b.last_enriched_at ? Date.parse(b.last_enriched_at) : 0;
-      const primary = compareWithDirection(left, right, sort.direction);
-      return primary !== 0 ? primary : stableNameTiebreak(a, b, sort.direction);
+      const ordered = compareBrowseDefaultOrder(a, b, sort.direction, nowMs);
+      return ordered !== 0 ? ordered : stableNameTiebreak(a, b, sort.direction);
     });
     return next;
   }
@@ -170,6 +176,8 @@ export function sortCreators(
   if (sort.field in STRING_SORT_VALUE) {
     const getValue = STRING_SORT_VALUE[sort.field as keyof typeof STRING_SORT_VALUE];
     next.sort((a, b) => {
+      const enrichment = compareQualityFirst(a, b);
+      if (enrichment !== 0) return enrichment;
       const primary = compareStringsWithDirection(getValue(a), getValue(b), sort.direction);
       return primary !== 0 ? primary : stableNameTiebreak(a, b, sort.direction);
     });
@@ -178,6 +186,8 @@ export function sortCreators(
 
   const getValue = NUMERIC_SORT_VALUE[sort.field as keyof typeof NUMERIC_SORT_VALUE];
   next.sort((a, b) => {
+    const enrichment = compareQualityFirst(a, b);
+    if (enrichment !== 0) return enrichment;
     const primary = compareWithDirection(getValue(a), getValue(b), sort.direction);
     return primary !== 0 ? primary : stableNameTiebreak(a, b, sort.direction);
   });

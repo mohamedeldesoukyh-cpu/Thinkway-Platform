@@ -20,7 +20,7 @@ export function CreatorSelectionPreview({ creators, onRemove, className }: Props
   return (
     <div
       className={cn(
-        "shrink-0 border-t border-border bg-slate-50/80 px-4 py-2.5",
+        "creator-picker-selection-preview shrink-0 border-t border-[#e2e8f0] bg-[#f8fafc] px-4 py-2.5",
         className
       )}
     >

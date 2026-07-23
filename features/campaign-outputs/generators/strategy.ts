@@ -12,8 +12,28 @@ import { getCampaignFacts } from "@/features/campaign-director/facts/facts-displ
 
 import type { CampaignOutputContent, CampaignOutputContentSection } from "../output-types";
 import { resolveSlate, type SlateCreator } from "../output-inputs";
+import { resolveMarketIntelligenceConfig } from "@/features/market-intelligence/market-intelligence-config";
+import { buildMarketSchedulingContext } from "@/features/market-intelligence";
+import { buildMarketTimingRationale } from "@/features/market-intelligence/market-timing-rationale";
+import { deriveEffectiveWeekWeights } from "../media-plan-schedule";
+import { resolveBriefTextForScheduling } from "../brief-media-plan-schedule";
 
-export const STRATEGY_GENERATOR_VERSION = "1.0.0";
+export const STRATEGY_GENERATOR_VERSION = "1.1.0";
+
+function parseCampaignStartForMarket(iso?: string): Date {
+  if (iso && /^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    const [year, month, day] = iso.split("-").map((part) => Number(part));
+    if (year && month && day) {
+      return new Date(year, month - 1, day, 12, 0, 0, 0);
+    }
+  }
+  const now = new Date();
+  const day = now.getDay();
+  const daysUntilMonday = day === 0 ? 1 : day === 1 ? 0 : 8 - day;
+  now.setDate(now.getDate() + daysUntilMonday);
+  now.setHours(12, 0, 0, 0);
+  return now;
+}
 
 function tierMix(slate: SlateCreator[]): string[] {
   const counts: Record<string, number> = {};
@@ -69,6 +89,27 @@ export function generateFullStrategy(campaignObject: CampaignObject): CampaignOu
   }
 
   if (narrative) sections.push({ heading: "Creative Direction & Key Messages", body: narrative });
+
+  const durationForMarket = Math.max(1, facts?.durationWeeks ?? 4);
+  const { weights: weekWeights } = deriveEffectiveWeekWeights(campaignObject, durationForMarket);
+  const marketConfig = resolveMarketIntelligenceConfig(
+    campaignObject,
+    resolveBriefTextForScheduling(campaignObject)
+  );
+  const marketContext = buildMarketSchedulingContext({
+    campaignStartDate: parseCampaignStartForMarket(facts?.campaignStartDate),
+    durationWeeks: durationForMarket,
+    config: marketConfig,
+  });
+  sections.push({
+    heading: "Market & Timing Intelligence",
+    body: buildMarketTimingRationale({
+      context: marketContext,
+      weekWeights,
+      durationWeeks: durationForMarket,
+      objective: facts?.objective,
+    }),
+  });
 
   sections.push({
     heading: "Activation Phases & Timeline",
