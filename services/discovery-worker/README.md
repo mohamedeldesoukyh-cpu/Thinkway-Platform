@@ -31,7 +31,9 @@ cd services/discovery-worker && npm install && cd ../..
 npm run discovery:worker:dev
 ```
 
-Production start (`npm run discovery:worker`) runs TypeScript via `tsx` (no `dist/` build). Worker package install must include production deps (`tsx` is a dependency).
+Production start (`npm run discovery:worker`) runs TypeScript via `tsx` (no `dist/` build).
+
+**Railway:** use the repo-root `railway.toml` (Dockerfile builder). Do not use Nixpacks/Railpack against root `package.json` alone — worker deps such as `playwright` will be missing. Service root directory must be `/` (monorepo root).
 
 ## Enrichment stages
 

@@ -57,6 +57,7 @@ Handles `SIGINT` / `SIGTERM`: closes workers, browser pool, exits.
 |---------|-------|
 | `Cannot find module …/dist/index.js` | Stale start command. Production uses `node --import tsx src/index.ts` via `npm run discovery:worker`. Rebuild from repo root Dockerfile (or ensure root prod install includes `tsx`). Do **not** expect a `tsc` `dist/` emit — worker imports monorepo `@/*`. |
 | `tsx: not found` | Host ran `tsx` as a shell binary without worker `node_modules/.bin`. Prefer Dockerfile build, or redeploy with root dependency `tsx` + `node --import tsx` entry (no PATH binary required). |
+| `Cannot find package 'playwright'` (or other worker-only deps) | Railway/Nixpacks installed **root** `package.json` only. Worker must build via `services/discovery-worker/Dockerfile` (see root `railway.toml`). Service Root Directory must be repo root `/` so the image can copy monorepo `@/*` sources and install worker deps (including Playwright browsers). |
 | `worker.alive: false` | Process running, Redis reachable, heartbeat key |
 | Backlog growing | `/api/admin/queues` failed/waiting counts |
 | Enrichment off | `DISABLE_CREATOR_ENRICHMENT`, enrichment flags |
