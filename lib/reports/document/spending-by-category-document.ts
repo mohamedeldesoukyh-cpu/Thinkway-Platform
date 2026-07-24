@@ -7,17 +7,14 @@ import {
   type ReportTableSection,
 } from "@/lib/reports/document/thinkway-report-html";
 import { sanitizeFileNameSegment } from "@/lib/reports/document/report-document-response";
+import { csvEscapeCell } from "@/lib/security/csv-formula";
 
 function formatPercent(value: number): string {
   return `${value.toFixed(2)}%`;
 }
 
 function escapeCsvValue(value: string | number): string {
-  const text = String(value);
-  if (text.includes(",") || text.includes('"') || text.includes("\n")) {
-    return `"${text.replace(/"/g, '""')}"`;
-  }
-  return text;
+  return csvEscapeCell(value);
 }
 
 function renderSummaryTable(report: SpendingByCategoryReportData): string {

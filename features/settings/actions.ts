@@ -2,23 +2,19 @@
 
 import { revalidatePath } from "next/cache";
 
+import { generateInviteToken, hashInviteToken } from "@/lib/auth/invite-token";
 import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient, requireRequestUser } from "@/lib/supabase/server";
 import { logAuditEvent } from "@/lib/audit/log-audit-event";
+import { inviteUserSchema } from "@/lib/validation/schemas";
 import { debugSettings } from "@/features/settings/queries";
 
 type ActionState = {
   ok: boolean;
   message?: string;
+  /** One-time invite URL for the inviting admin; never logged. */
+  inviteUrl?: string;
 };
-
-function randomInviteToken() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
-}
-
-function hashToken(token: string) {
-  return token;
-}
 
 async function requireSettingsWrite() {
   try {
@@ -50,31 +46,48 @@ export async function inviteUserAction(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  const fullName = String(formData.get("full_name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const roleId = String(formData.get("role_id") ?? "").trim();
-  const portalType = String(formData.get("portal_type") ?? "internal").trim();
-  const department = String(formData.get("department") ?? "").trim();
-  const countryCode = String(formData.get("country_code") ?? "").trim().toUpperCase();
   const businessFunctionRaw = String(formData.get("business_function") ?? "").trim();
-  const businessFunction =
-    businessFunctionRaw === "ops" || businessFunctionRaw === "sales"
-      ? businessFunctionRaw
-      : null;
-  const clientId = String(formData.get("client_id") ?? "").trim();
-  const accessRole = String(formData.get("access_role") ?? "view").trim();
-  const isPrimaryInvite = formData.get("is_primary") === "on";
+  const parsed = inviteUserSchema.safeParse({
+    full_name: String(formData.get("full_name") ?? "").trim(),
+    email: String(formData.get("email") ?? "").trim().toLowerCase(),
+    role_id: String(formData.get("role_id") ?? "").trim(),
+    portal_type: String(formData.get("portal_type") ?? "internal").trim() || "internal",
+    department: String(formData.get("department") ?? "").trim(),
+    country_code: String(formData.get("country_code") ?? "").trim().toUpperCase(),
+    business_function:
+      businessFunctionRaw === "ops" || businessFunctionRaw === "sales"
+        ? businessFunctionRaw
+        : null,
+    client_id: String(formData.get("client_id") ?? "").trim() || undefined,
+    access_role: String(formData.get("access_role") ?? "view").trim() || "view",
+    is_primary: formData.get("is_primary") === "on",
+  });
 
-  if (!email || !roleId) return { ok: false, message: "Email and role are required." };
-  if (portalType === "client" && !clientId) {
-    return { ok: false, message: "Legal entity is required for client portal invites." };
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: parsed.error.issues[0]?.message ?? "Invalid invite form.",
+    };
   }
+
+  const {
+    full_name: fullName,
+    email,
+    role_id: roleId,
+    portal_type: portalType,
+    department,
+    country_code: countryCode,
+    business_function: businessFunction,
+    client_id: clientId,
+    access_role: accessRole,
+    is_primary: isPrimaryInvite,
+  } = parsed.data;
 
   const { supabase, user, error } = await requireSettingsWrite();
   if (error || !user) return { ok: false, message: error ?? "Unauthorized" };
 
-  const rawToken = randomInviteToken();
-  const tokenHash = hashToken(rawToken);
+  const rawToken = generateInviteToken();
+  const tokenHash = hashInviteToken(rawToken);
   const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString();
 
   const inviteMetadata =
@@ -104,7 +117,8 @@ export async function inviteUserAction(
   if (insertError) return { ok: false, message: insertError.message };
 
   const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/login?invite=${encodeURIComponent(rawToken)}`;
-  debugSettings("user-invite", "invite created", { email, portalType, inviteUrl });
+  // Never log raw tokens or invite URLs (P1-01).
+  debugSettings("user-invite", "invite created", { email, portalType });
 
   await supabase.from("access_logs").insert({
     actor_id: user.id,
@@ -114,7 +128,11 @@ export async function inviteUserAction(
   } as never);
 
   revalidateSettings();
-  return { ok: true, message: "User invited. Invite link logged in dev logs." };
+  return {
+    ok: true,
+    message: "User invited. Copy the invite link now — it is shown once and never stored in plaintext.",
+    inviteUrl,
+  };
 }
 
 export async function updateUserRoleAction(

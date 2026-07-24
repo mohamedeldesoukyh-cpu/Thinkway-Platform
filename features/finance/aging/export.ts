@@ -1,5 +1,6 @@
 import { AGING_BUCKET_LABELS } from "@/lib/collections/aging";
 import type { AgingBucket } from "@/lib/collections/aging/types";
+import { csvEscapeCell } from "@/lib/security/csv-formula";
 
 import type { AgingWorkspaceData } from "./types";
 
@@ -12,7 +13,7 @@ const BUCKET_KEYS: AgingBucket[] = [
 ];
 
 function csvCell(value: string | number): string {
-  return `"${String(value).replace(/"/g, '""')}"`;
+  return csvEscapeCell(value);
 }
 
 export function buildAgingSummaryCsv(data: AgingWorkspaceData): string {

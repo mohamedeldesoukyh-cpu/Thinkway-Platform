@@ -1,5 +1,9 @@
 import { BaseAiAgent } from "../agents/base-agent";
 import { getDefaultPromptLibrary } from "../prompts";
+import {
+  buildPromptLayers,
+  type PromptLayers,
+} from "../prompts/prompt-isolation";
 import { getDefaultToolRegistry } from "../tools";
 import { AI_SEARCH_CREATORS_PAGE_SIZE } from "../tools/search-creators-browse";
 import type {
@@ -36,40 +40,69 @@ export class StrategistAgent extends BaseAiAgent {
     return false;
   }
 
-  async buildPrompt(request: AiRequest, context: AiContext): Promise<string> {
+  async buildPromptLayers(
+    request: AiRequest,
+    context: AiContext
+  ): Promise<PromptLayers> {
     const library = getDefaultPromptLibrary();
     const analysis = analyzeStrategistRequest(request, context);
     const missing = detectMissingCriticalInfo(analysis, context);
 
     if (missing) {
-      const clarification = library.render("agent.strategist.clarify", {
+      const systemTemplate = library.get("agent.strategist.clarify")?.template;
+      const developerTemplate = library.get(
+        "agent.strategist.clarify.developer"
+      )?.template;
+      if (!systemTemplate) {
+        throw new Error("Prompt template not found: agent.strategist.clarify");
+      }
+      return buildPromptLayers({
+        systemTemplate,
+        developerTemplate,
+        systemVariables: { missingField: missing.field },
+        developerVariables: {
+          missingField: missing.field,
+          clientName: context.client?.name ?? "",
+          campaignName: context.campaign?.name ?? "",
+        },
         userMessage: request.message,
-        missingField: missing.field,
-        clientName: context.client?.name ?? "",
-        campaignName: context.campaign?.name ?? "",
       });
-      return clarification.content;
     }
 
-    const strategy = library.render("agent.strategist.generate", {
-      userMessage: request.message,
-      workspaceType: context.workspace.type,
-      workspaceLabel: context.workspace.label ?? context.workspace.id ?? "",
-      clientName: context.client?.name ?? analysis.clientName ?? "",
-      campaignName: context.campaign?.name ?? analysis.campaignTitle ?? "",
-      brandName: analysis.brandName ?? context.workspace.brandId ?? "",
-      objective: analysis.objective ?? "",
-      budget:
-        analysis.budget != null
-          ? String(analysis.budget)
-          : context.campaign?.poAmount != null
-            ? String(context.campaign.poAmount)
-            : "",
-      audience: analysis.audience ?? "",
-      timeline: analysis.timeline ?? "",
-    });
+    const systemTemplate = library.get("agent.strategist.generate")?.template;
+    const developerTemplate = library.get(
+      "agent.strategist.generate.developer"
+    )?.template;
+    if (!systemTemplate) {
+      throw new Error("Prompt template not found: agent.strategist.generate");
+    }
 
-    return strategy.content;
+    return buildPromptLayers({
+      systemTemplate,
+      developerTemplate,
+      developerVariables: {
+        workspaceType: context.workspace.type,
+        workspaceLabel: context.workspace.label ?? context.workspace.id ?? "",
+        clientName: context.client?.name ?? analysis.clientName ?? "",
+        campaignName: context.campaign?.name ?? analysis.campaignTitle ?? "",
+        brandName: analysis.brandName ?? context.workspace.brandId ?? "",
+        objective: analysis.objective ?? "",
+        budget:
+          analysis.budget != null
+            ? String(analysis.budget)
+            : context.campaign?.poAmount != null
+              ? String(context.campaign.poAmount)
+              : "",
+        audience: analysis.audience ?? "",
+        timeline: analysis.timeline ?? "",
+      },
+      userMessage: request.message,
+    });
+  }
+
+  async buildPrompt(request: AiRequest, context: AiContext): Promise<string> {
+    const layers = await this.buildPromptLayers(request, context);
+    return layers.system;
   }
 
   async selectTools(request: AiRequest, context: AiContext): Promise<string[]> {

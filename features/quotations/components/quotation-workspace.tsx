@@ -42,6 +42,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { COMMERCIAL_CURRENCIES } from "@/lib/commercial/fx-aggregation";
 import { platformLabel } from "@/features/campaigns/line-assignment";
+import { csvEscapeRow } from "@/lib/security/csv-formula";
 import { cn } from "@/lib/utils";
 import {
   CALCULATION_MODE_LABELS,
@@ -187,9 +188,7 @@ function exportSelectedCsv(
         computed?.agencyMarginEgp ?? item.gp_value_egp + item.af_value_egp,
       ];
     });
-  const csv = [headers, ...rows]
-    .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-    .join("\n");
+  const csv = [headers, ...rows].map((row) => csvEscapeRow(row)).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

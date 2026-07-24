@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 
 import { normalizeAuditAction, AUDIT_ACTIONS } from "@/lib/audit/audit-action";
+import {
+  requireFinanceOverrideAccess,
+  requireFinancePermission,
+} from "@/lib/auth/permissions-server";
 import { convertAmount } from "@/lib/finance/fx/conversion";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -52,6 +56,9 @@ export async function upsertCurrencyAction(
   const { supabase, user, error } = await requireUser();
   if (error || !user) return { ok: false, message: error ?? "Unauthorized" };
 
+  const access = await requireFinanceOverrideAccess(supabase);
+  if ("error" in access) return { ok: false, message: access.error };
+
   const { error: upsertError } = await supabase.from("md_currencies").upsert({
     code: parsed.data.code,
     name: parsed.data.name,
@@ -92,6 +99,9 @@ export async function upsertExchangeRateAction(
 
   const { supabase, user, error } = await requireUser();
   if (error || !user) return { ok: false, message: error ?? "Unauthorized" };
+
+  const access = await requireFinanceOverrideAccess(supabase);
+  if ("error" in access) return { ok: false, message: access.error };
 
   const payload = {
     from_currency: parsed.data.from_currency,
@@ -163,6 +173,9 @@ export async function updateCampaignPoAction(
 
   const { supabase, user, error } = await requireUser();
   if (error || !user) return { ok: false, message: error ?? "Unauthorized" };
+
+  const access = await requireFinancePermission(supabase, "finance.write");
+  if ("error" in access) return { ok: false, message: access.error };
 
   const { data: header, error: fetchError } = await supabase
     .from("campaign_headers")
@@ -246,6 +259,9 @@ export async function confirmPoOverrideAction(
 
   const { supabase, user, error } = await requireUser();
   if (error || !user) return { ok: false, message: error ?? "Unauthorized" };
+
+  const access = await requireFinanceOverrideAccess(supabase);
+  if ("error" in access) return { ok: false, message: access.error };
 
   await supabase
     .from("campaign_headers")

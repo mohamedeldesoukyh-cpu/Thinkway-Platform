@@ -1,4 +1,10 @@
 import type { ScreenshotCaptureAttempt } from "@/lib/performance/screenshot-capture/types";
+import {
+  SOCIAL_MEDIA_SRC_ALLOWLIST,
+  SOCIAL_POST_ALLOWLIST,
+  fetchWithStrictRedirects,
+  isUrlAllowedByHostlist,
+} from "@/lib/security/ssrf";
 
 type Ctx = {
   contentUrl: string | null;
@@ -29,9 +35,21 @@ export async function tryOpenGraphThumbnail(ctx: Ctx): Promise<ScreenshotCapture
     };
   }
 
+  if (!isUrlAllowedByHostlist(ctx.contentUrl, SOCIAL_POST_ALLOWLIST)) {
+    return {
+      source: "opengraph",
+      available: true,
+      error: "URL host is not allowlisted.",
+      errorCode: "opengraph_host_blocked",
+      durationMs: Date.now() - started,
+    };
+  }
+
   try {
-    const response = await fetch(ctx.contentUrl, {
-      signal: AbortSignal.timeout(30_000),
+    const response = await fetchWithStrictRedirects(ctx.contentUrl, {
+      allowlist: SOCIAL_POST_ALLOWLIST,
+      maxRedirects: 3,
+      timeoutMs: 30_000,
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -55,6 +73,15 @@ export async function tryOpenGraphThumbnail(ctx: Ctx): Promise<ScreenshotCapture
         available: true,
         error: "No og:image found.",
         errorCode: "opengraph_empty",
+        durationMs: Date.now() - started,
+      };
+    }
+    if (!isUrlAllowedByHostlist(imageUrl, SOCIAL_MEDIA_SRC_ALLOWLIST)) {
+      return {
+        source: "opengraph",
+        available: true,
+        error: "og:image host is not allowlisted.",
+        errorCode: "opengraph_image_blocked",
         durationMs: Date.now() - started,
       };
     }

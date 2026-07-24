@@ -8,6 +8,7 @@ import {
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { csvEscapeRow } from "@/lib/security/csv-formula";
 import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
 import {
   Select,
@@ -201,9 +202,7 @@ export function CampaignPerformanceCenterTab({
       r.cpv ?? "",
       r.cpe ?? "",
     ]);
-    const csv = [header, ...body]
-      .map((line) => line.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
+    const csv = [header, ...body].map((line) => csvEscapeRow(line)).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

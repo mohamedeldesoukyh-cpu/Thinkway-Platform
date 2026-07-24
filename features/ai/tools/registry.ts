@@ -54,6 +54,11 @@ export class ToolRegistry {
     }
 
     try {
+      const { assertAiToolAllowedForWorkspace } = await import(
+        "@/lib/security/ai-workspace-isolation"
+      );
+      assertAiToolAllowedForWorkspace(request.toolName);
+
       const parsedInput = tool.inputSchema.parse(request.input);
       const output = await tool.execute(parsedInput, context);
       const validatedOutput = tool.outputSchema.parse(output);

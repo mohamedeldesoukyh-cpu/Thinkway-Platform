@@ -8,6 +8,7 @@ import {
   normalizeCountryCode,
 } from "@/lib/creators/creator-display-utils";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
+import { csvEscapeRow } from "@/lib/security/csv-formula";
 
 export {
   applyCreatorSearchHeaderSort,
@@ -95,23 +96,22 @@ export function exportCreatorsCsv(creators: UnifiedCreatorResult[]): string {
   ];
   const rows = creators.map((c) => {
     const p = c.platforms[0];
-    const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
-    return [
-      esc(c.display_name),
-      esc(p?.handle ? `@${p.handle.replace(/^@/, "")}` : ""),
-      esc(p?.platform ?? ""),
-      String(c.metrics.followers.value ?? ""),
-      String(c.metrics.engagement_rate.value ?? ""),
-      String(c.metrics.avg_views.value ?? ""),
-      esc(formatCreatorCountryLabels(c)),
-      esc(audienceCountryLabel(c)),
-      esc(categoriesLabel(c)),
-      String(thinkwayAiScore(c) ?? ""),
-      String(c.authenticity_score ?? ""),
-      esc(resolveCreatorProfileUrl(p) ?? ""),
-    ].join(",");
+    return csvEscapeRow([
+      c.display_name,
+      p?.handle ? `@${p.handle.replace(/^@/, "")}` : "",
+      p?.platform ?? "",
+      c.metrics.followers.value ?? "",
+      c.metrics.engagement_rate.value ?? "",
+      c.metrics.avg_views.value ?? "",
+      formatCreatorCountryLabels(c),
+      audienceCountryLabel(c),
+      categoriesLabel(c),
+      thinkwayAiScore(c) ?? "",
+      c.authenticity_score ?? "",
+      resolveCreatorProfileUrl(p) ?? "",
+    ]);
   });
-  return [header.join(","), ...rows].join("\n");
+  return [header.map((h) => `"${h}"`).join(","), ...rows].join("\n");
 }
 
 export {

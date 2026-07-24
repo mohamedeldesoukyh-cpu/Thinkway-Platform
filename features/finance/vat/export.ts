@@ -1,3 +1,5 @@
+import { csvEscapeRow } from "@/lib/security/csv-formula";
+
 import type { VatWorkspaceData } from "./types";
 
 export function buildVatAuditCsv(data: VatWorkspaceData, includeVatColumns = true) {
@@ -35,7 +37,5 @@ export function buildVatAuditCsv(data: VatWorkspaceData, includeVatColumns = tru
         ]
   );
 
-  return [headers, ...rows]
-    .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-    .join("\n");
+  return [headers, ...rows].map((row) => csvEscapeRow(row)).join("\n");
 }

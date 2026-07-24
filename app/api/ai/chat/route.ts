@@ -33,6 +33,8 @@ import { tryExecuteWorkflow, buildPausedWorkflowSnapshot, getPausedWorkflowSnaps
 import type { ChatRequestBody } from "@/features/ai-workspace/types";
 import { createStreamingOpenAiProvider } from "@/features/ai-workspace/services/streaming-openai-provider";
 import { runWithToolAuthContext } from "@/features/ai/tools/tool-auth";
+import { parseJsonWithSchema } from "@/lib/validation/http";
+import { aiChatBodySchema } from "@/lib/validation/schemas";
 import {
   attachCampaignObjectToSnapshot,
   loadCampaignObjectForConversation,
@@ -74,36 +76,20 @@ export async function POST(request: Request) {
     });
   }
 
-  let body: ChatRequestBody;
-  try {
-    body = (await request.json()) as ChatRequestBody;
-  } catch {
+  const parsedBody = await parseJsonWithSchema(request, aiChatBodySchema);
+  if (!parsedBody.ok) {
+    const errorBody = await parsedBody.response.json();
     recordWorkflowMetrics({
       route: "/api/ai/chat",
       startedAt,
       status: "error",
       userId: auth.userId,
-      error: "Invalid JSON body",
+      error: errorBody.message ?? "validation_error",
     });
-    return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
+    return parsedBody.response;
   }
 
-  if (!body.message?.trim()) {
-    recordWorkflowMetrics({
-      route: "/api/ai/chat",
-      startedAt,
-      status: "error",
-      userId: auth.userId,
-      error: "Message is required",
-    });
-    return new Response(JSON.stringify({ error: "Message is required" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+  const body = parsedBody.data as ChatRequestBody;
 
   const { data: profile } = await supabase
     .from("profiles")

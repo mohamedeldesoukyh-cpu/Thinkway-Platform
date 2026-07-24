@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { SafeHtml } from "@/components/security/safe-html";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { debugIo } from "@/features/io/queries";
@@ -99,7 +100,7 @@ export default async function ClientIoApprovalPage({ searchParams }: Props) {
 
               <div className="rounded-lg border border-border p-3 text-sm">
                 {context.terms_html ? (
-                  <div dangerouslySetInnerHTML={{ __html: context.terms_html }} />
+                  <SafeHtml html={context.terms_html} />
                 ) : (
                   <p className="whitespace-pre-wrap">
                     {context.terms_text ?? "No terms provided."}

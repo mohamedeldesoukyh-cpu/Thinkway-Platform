@@ -7,6 +7,8 @@ import {
 import { recordMediaProxyRefreshScheduled } from "@/lib/creators/media-proxy-cache";
 import { requireApiAnyPermission } from "@/lib/auth/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { parseSearchParamsWithSchema } from "@/lib/validation/http";
+import { mediaProxyQuerySchema } from "@/lib/validation/schemas";
 
 export const dynamic = "force-dynamic";
 /** Keep high enough for `after()` background refresh (oEmbed / OpenGraph). */
@@ -23,12 +25,10 @@ export async function GET(request: Request) {
   if ("response" in auth) return auth.response;
 
   const { searchParams } = new URL(request.url);
-  const src = searchParams.get("src");
-  const postUrl = searchParams.get("postUrl");
-
-  if (!src && !postUrl) {
-    return NextResponse.json({ error: "Missing preview source." }, { status: 400 });
-  }
+  const parsedQuery = parseSearchParamsWithSchema(searchParams, mediaProxyQuerySchema);
+  if (!parsedQuery.ok) return parsedQuery.response;
+  const src = parsedQuery.data.src ?? null;
+  const postUrl = parsedQuery.data.postUrl ?? null;
 
   const result = await resolvePublicationPreviewForHttpRequest({ src, postUrl });
   if (!result.ok) {

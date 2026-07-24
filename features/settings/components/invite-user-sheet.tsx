@@ -14,7 +14,7 @@ import { inviteUserAction } from "@/features/settings/actions";
 import { BUSINESS_FUNCTION_OPTIONS } from "@/features/settings/constants";
 import type { SettingsRoleRow } from "@/features/settings/types";
 
-const INITIAL = { ok: false } as const;
+const INITIAL: { ok: boolean; message?: string; inviteUrl?: string } = { ok: false };
 
 type ClientOption = { id: string; name: string; document_number: string };
 
@@ -34,10 +34,16 @@ export function InviteUserSheet({
   const [isPrimary, setIsPrimary] = useState(false);
   const [state, action, pending] = useActionState(inviteUserAction, INITIAL);
 
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+
   useEffect(() => {
     if (!state.message) return;
     if (state.ok) {
       toast.success(state.message);
+      if (state.inviteUrl) {
+        setInviteUrl(state.inviteUrl);
+        return;
+      }
       setOpen(false);
       return;
     }
@@ -184,6 +190,36 @@ export function InviteUserSheet({
             </Button>
           </div>
         </form>
+
+        {inviteUrl ? (
+          <div className="mt-4 grid gap-2 rounded-md border p-3">
+            <p className="text-sm font-medium">Invite link (shown once)</p>
+            <p className="break-all text-xs text-muted-foreground">{inviteUrl}</p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(inviteUrl);
+                  toast.success("Invite link copied");
+                }}
+              >
+                Copy link
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setInviteUrl(null);
+                  setOpen(false);
+                }}
+              >
+                Done
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </SheetContent>
     </Sheet>
   );

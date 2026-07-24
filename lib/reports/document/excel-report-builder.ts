@@ -1,5 +1,7 @@
 import { Workbook, type Cell, type Worksheet } from "exceljs";
 
+import { neutralizeSpreadsheetFormula } from "@/lib/security/csv-formula";
+
 /** Thinkway report palette (matches thinkway-report-styles.ts). */
 const COLORS = {
   navy: "FF0A0F1E",
@@ -224,7 +226,7 @@ function populateSheet(worksheet: Worksheet, sheet: StyledSheetConfig): void {
   for (let rowIndex = 0; rowIndex < titleRowCount; rowIndex += 1) {
     const excelRow = worksheet.getRow(rowIndex + 1);
     const cell = excelRow.getCell(1);
-    cell.value = titleRows[rowIndex];
+    cell.value = neutralizeSpreadsheetFormula(titleRows[rowIndex]);
 
     const styleKind = titleBlockStyleForRow(sheet.header, rowIndex);
     if (styleKind === "title") {
@@ -252,7 +254,10 @@ function populateSheet(worksheet: Worksheet, sheet: StyledSheetConfig): void {
     for (let colIndex = 0; colIndex < totalCols; colIndex += 1) {
       const cell = excelRow.getCell(colIndex + 1);
       const value = headerRow[colIndex];
-      cell.value = value === null || value === undefined ? "" : value;
+      cell.value =
+        value === null || value === undefined
+          ? ""
+          : neutralizeSpreadsheetFormula(value);
       applyColumnHeaderStyle(cell);
     }
 
@@ -284,8 +289,12 @@ function populateSheet(worksheet: Worksheet, sheet: StyledSheetConfig): void {
         cell.value = "";
       } else if (format === "percent" && typeof raw === "number") {
         cell.value = raw / 100;
-      } else {
+      } else if (format === "money" && typeof raw === "number") {
         cell.value = raw;
+      } else if (typeof raw === "number") {
+        cell.value = raw;
+      } else {
+        cell.value = neutralizeSpreadsheetFormula(raw);
       }
 
       applyDataCellStyle(cell, format, kind);

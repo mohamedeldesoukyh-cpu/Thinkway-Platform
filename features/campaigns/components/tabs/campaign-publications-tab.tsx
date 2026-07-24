@@ -13,6 +13,7 @@ import { OperationalTableSuiteProvider } from "@/components/tables/operational-t
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { csvEscapeRow } from "@/lib/security/csv-formula";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { Input } from "@/components/ui/input";
@@ -191,9 +192,7 @@ export function CampaignPublicationsTab({
       r.platform_label,
       r.notes ?? "",
     ]);
-    const csv = [header, ...body]
-      .map((line) => line.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
+    const csv = [header, ...body].map((line) => csvEscapeRow(line)).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");

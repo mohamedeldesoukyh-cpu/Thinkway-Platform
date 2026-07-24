@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import {
   fetchPublicationPreviewImage,
+  isAllowedPublicationPreviewPostUrl,
   isAllowedPublicationPreviewSrcUrl,
   resolvePublicationPreviewForHttpRequest,
 } from "./publication-preview-proxy";
@@ -25,6 +26,20 @@ async function main() {
   assert.equal(
     isAllowedPublicationPreviewSrcUrl("https://scontent.cdninstagram.com/v/t51.jpg"),
     true
+  );
+
+  assert.equal(
+    isAllowedPublicationPreviewSrcUrl("https://notinstagram.com/v/t51.jpg"),
+    false,
+    "substring lookalike hosts must be rejected"
+  );
+  assert.equal(
+    isAllowedPublicationPreviewSrcUrl("https://127.0.0.1/secret.jpg"),
+    false
+  );
+  assert.equal(
+    isAllowedPublicationPreviewPostUrl("https://evil-instagram.com/p/abc/"),
+    false
   );
 
   assert.equal(instagramShortcodeFromUrl("https://www.instagram.com/p/DaIquJuMyax/"), "DaIquJuMyax");

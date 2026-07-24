@@ -52,6 +52,9 @@ performance/reports/report-*.json
 
 # temporary debug / local artifacts
 .tmp/
+.tmp-*
+.tmp-*.zip
+.tmp-*.json
 services/discovery-worker/.tmp/
 /probe-*.ts
 /validate-*.ts
@@ -61,5 +64,8 @@ response.html
 services/discovery-worker/*.log
 
 .tmp-compile/
+
+# Accidental compiled JS next to TypeScript sources
+/types/*.js
 
 .vercel

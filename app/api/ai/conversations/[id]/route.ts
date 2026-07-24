@@ -11,6 +11,8 @@ import { hydrateConversationCampaignObject } from "@/features/ai-workspace/servi
 import { hasPermission } from "@/lib/auth/permissions";
 import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { parseJsonWithSchema } from "@/lib/validation/http";
+import { aiConversationPatchSchema, uuidSchema } from "@/lib/validation/schemas";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -58,6 +60,18 @@ export async function GET(_request: Request, context: RouteContext) {
 
 export async function PATCH(request: Request, context: RouteContext) {
   const { id } = await context.params;
+  const idParsed = uuidSchema.safeParse(id);
+  if (!idParsed.success) {
+    return NextResponse.json(
+      {
+        error: "validation_error",
+        message: "Invalid conversation id.",
+        issues: [{ path: "id", message: "Invalid uuid" }],
+      },
+      { status: 400 }
+    );
+  }
+
   const supabase = await createSupabaseServerClient();
   const auth = await requirePermission(supabase, "ai.write");
   if ("error" in auth) {
@@ -65,11 +79,9 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   try {
-    const body = (await request.json()) as {
-      title?: string;
-      isPinned?: boolean;
-      archived?: boolean;
-    };
+    const parsedBody = await parseJsonWithSchema(request, aiConversationPatchSchema);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.data;
 
     if (body.title !== undefined) {
       await updateConversationTitle(supabase, id, auth.userId, body.title);

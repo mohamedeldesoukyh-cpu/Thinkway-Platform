@@ -6,6 +6,8 @@ import { searchDiscoveredProfiles } from "@/lib/discovery/search";
 import type { DiscoveryPlatform } from "@/lib/discovery/types";
 import { requireApiPermission } from "@/lib/auth/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { parseSearchParamsWithSchema } from "@/lib/validation/http";
+import { discoverySearchQuerySchema } from "@/lib/validation/schemas";
 
 export async function GET(request: Request) {
   const startedAt = performance.now();
@@ -14,26 +16,27 @@ export async function GET(request: Request) {
   const auth = await requireApiPermission(supabase, "discovery.read");
   if ("response" in auth) return auth.response;
 
+  const parsedQuery = parseSearchParamsWithSchema(
+    searchParams,
+    discoverySearchQuerySchema
+  );
+  if (!parsedQuery.ok) return parsedQuery.response;
+  const query = parsedQuery.data;
+
   try {
     const result = await searchDiscoveredProfiles(supabase, {
-      q: searchParams.get("q") ?? undefined,
-      platform: (searchParams.get("platform") as DiscoveryPlatform) || undefined,
-      country: searchParams.get("country") ?? undefined,
-      city: searchParams.get("city") ?? undefined,
-      category: searchParams.get("category") ?? undefined,
-      language: searchParams.get("language") ?? undefined,
-      minFollowers: searchParams.get("minFollowers")
-        ? Number(searchParams.get("minFollowers"))
-        : undefined,
-      maxFollowers: searchParams.get("maxFollowers")
-        ? Number(searchParams.get("maxFollowers"))
-        : undefined,
-      minEngagement: searchParams.get("minEngagement")
-        ? Number(searchParams.get("minEngagement"))
-        : undefined,
-      minViews: searchParams.get("minViews") ? Number(searchParams.get("minViews")) : undefined,
-      page: searchParams.get("page") ? Number(searchParams.get("page")) : 1,
-      pageSize: searchParams.get("pageSize") ? Number(searchParams.get("pageSize")) : 24,
+      q: query.q,
+      platform: (query.platform as DiscoveryPlatform) || undefined,
+      country: query.country,
+      city: query.city,
+      category: query.category,
+      language: query.language,
+      minFollowers: query.minFollowers,
+      maxFollowers: query.maxFollowers,
+      minEngagement: query.minEngagement,
+      minViews: query.minViews,
+      page: query.page,
+      pageSize: query.pageSize,
     });
 
     logDiscoveryApiBoundary({

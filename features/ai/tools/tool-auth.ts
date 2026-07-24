@@ -1,5 +1,9 @@
 import { createSupabaseServerClient, getRequestAuth } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  isPortalActor,
+  resolveWorkspaceActor,
+} from "@/lib/security/workspace-actor";
 
 export type ToolAuthContext = {
   supabase: SupabaseClient;
@@ -39,6 +43,13 @@ export async function requireToolAuthContext(): Promise<ToolAuthContext> {
 
   if (!user) {
     throw new Error("You must be signed in to use AI tools.");
+  }
+
+  const actor = await resolveWorkspaceActor(supabase, user.id);
+  if (isPortalActor(actor.kind)) {
+    throw new Error(
+      "Portal users cannot use Discovery AI tools. Isolation boundary.",
+    );
   }
 
   return { supabase, userId: user.id };

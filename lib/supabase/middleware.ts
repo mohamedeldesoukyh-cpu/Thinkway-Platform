@@ -7,6 +7,19 @@ import {
   isCronPath,
   isPublicPath,
 } from "@/lib/auth/routes";
+import {
+  getSupabaseCookieOptions,
+  mergeSupabaseCookieOptions,
+} from "@/lib/security/cookie-options";
+import {
+  authorizeWorkspacePath,
+  portalHomePath,
+} from "@/lib/security/workspace-auth";
+import {
+  isPortalActor,
+  resolveWorkspaceActor,
+} from "@/lib/security/workspace-actor";
+import { classifyApiPath } from "@/lib/security/workspace-classify";
 import { supabaseAnonKey, supabaseUrl } from "@/lib/supabase/env";
 import type { Database } from "@/types/database";
 
@@ -35,6 +48,7 @@ export async function updateSession(request: NextRequest) {
   });
 
   const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+    cookieOptions: getSupabaseCookieOptions(),
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -49,7 +63,11 @@ export async function updateSession(request: NextRequest) {
         });
 
         cookiesToSet.forEach(({ name, value, options }) => {
-          supabaseResponse.cookies.set(name, value, options);
+          supabaseResponse.cookies.set(
+            name,
+            value,
+            mergeSupabaseCookieOptions(options)
+          );
         });
 
         Object.entries(headers).forEach(([key, value]) => {
@@ -115,6 +133,56 @@ export async function updateSession(request: NextRequest) {
     const redirectResponse = NextResponse.redirect(loginUrl);
     copyResponseCookies(supabaseResponse, redirectResponse);
     return redirectResponse;
+  }
+
+  // Service cron credentials bypass session-based workspace checks.
+  if (isCronPath(pathname) && authorizeCronRequest(request)) {
+    return supabaseResponse;
+  }
+
+  // P4: fail-closed unclassified APIs + portal → internal isolation.
+  if (user && isApiPath(pathname) && !isCronPath(pathname)) {
+    const apiClass = classifyApiPath(pathname);
+    if (apiClass === null) {
+      const denied = NextResponse.json(
+        { error: "Unclassified API route", code: "API_UNCLASSIFIED" },
+        { status: 403 }
+      );
+      copyResponseCookies(supabaseResponse, denied);
+      return denied;
+    }
+  }
+
+  if (user && !publicPath) {
+    const actor = await resolveWorkspaceActor(supabase, user.id);
+    const decision = authorizeWorkspacePath(pathname, actor.kind);
+
+    if (!decision.allowed) {
+      if (isApiPath(pathname)) {
+        const forbidden = NextResponse.json(
+          {
+            error: decision.reason ?? "Forbidden",
+            code: "WORKSPACE_FORBIDDEN",
+          },
+          { status: 403 }
+        );
+        copyResponseCookies(supabaseResponse, forbidden);
+        return forbidden;
+      }
+
+      if (isPortalActor(actor.kind)) {
+        const home = request.nextUrl.clone();
+        home.pathname = portalHomePath(actor.kind);
+        home.search = "";
+        const redirectResponse = NextResponse.redirect(home);
+        copyResponseCookies(supabaseResponse, redirectResponse);
+        return redirectResponse;
+      }
+
+      const forbiddenPage = NextResponse.redirect(new URL("/login", request.url));
+      copyResponseCookies(supabaseResponse, forbiddenPage);
+      return forbiddenPage;
+    }
   }
 
   return supabaseResponse;

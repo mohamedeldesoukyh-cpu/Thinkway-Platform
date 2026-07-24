@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 
+import { requireFinancePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   buildPostingBatchPreview,
@@ -12,6 +12,10 @@ import {
   unpostPostingBatch,
 } from "@/lib/finance/posting-engine";
 import type { FinanceDocumentKind } from "@/lib/finance/status/document-kind";
+import {
+  financeBatchIdSchema,
+  financePostingPreviewSchema,
+} from "@/lib/validation/schemas";
 
 export type PostingCenterActionState = {
   ok: boolean;
@@ -20,27 +24,16 @@ export type PostingCenterActionState = {
   document_number?: string;
 };
 
-const previewSchema = z.object({
-  transaction_type: z.string(),
-  period_from: z.string().min(1),
-  period_to: z.string().min(1),
-  legal_entity_id: z.string().uuid().optional(),
-  currency: z.string().length(3).optional(),
-});
+const previewSchema = financePostingPreviewSchema;
+const batchIdSchema = financeBatchIdSchema;
 
-const batchIdSchema = z.object({
-  batch_id: z.string().uuid(),
-  reason: z.string().trim().optional(),
-});
-
-async function requireUser() {
+async function requireFinanceActor(permission: "finance.read" | "finance.write") {
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-  if (error || !user) throw new Error(error?.message ?? "Unauthorized");
-  return { supabase, user };
+  const access = await requireFinancePermission(supabase, permission);
+  if ("error" in access) {
+    throw new Error(access.error);
+  }
+  return { supabase, userId: access.userId };
 }
 
 export async function previewPostingBatchAction(
@@ -53,7 +46,7 @@ export async function previewPostingBatchAction(
       return { ok: false, message: "Period and transaction type are required." };
     }
 
-    const { supabase } = await requireUser();
+    const { supabase } = await requireFinanceActor("finance.read");
     const preview = await buildPostingBatchPreview(supabase, {
       transaction_type: parsed.data.transaction_type as FinanceDocumentKind,
       period_from: parsed.data.period_from,
@@ -86,7 +79,7 @@ export async function createAndPostBatchAction(
       return { ok: false, message: "Period and transaction type are required." };
     }
 
-    const { supabase, user } = await requireUser();
+    const { supabase, userId } = await requireFinanceActor("finance.write");
 
     const created = await createPostingBatch(supabase, {
       transaction_type: parsed.data.transaction_type as FinanceDocumentKind,
@@ -94,14 +87,14 @@ export async function createAndPostBatchAction(
       period_to: parsed.data.period_to,
       legal_entity_id: parsed.data.legal_entity_id,
       currency: parsed.data.currency,
-      actor_id: user.id,
+      actor_id: userId,
     });
 
     if (!created.ok) return { ok: false, message: created.error };
 
     const posted = await postPostingBatch(supabase, {
       batch_id: created.batch_id,
-      actor_id: user.id,
+      actor_id: userId,
     });
 
     if (!posted.ok) return { ok: false, message: posted.error };
@@ -131,10 +124,10 @@ export async function reversePostingBatchAction(
       return { ok: false, message: "Batch id is required." };
     }
 
-    const { supabase, user } = await requireUser();
+    const { supabase, userId } = await requireFinanceActor("finance.write");
     const result = await reversePostingBatch(supabase, {
       batch_id: parsed.data.batch_id,
-      actor_id: user.id,
+      actor_id: userId,
       reason: parsed.data.reason,
     });
 
@@ -165,10 +158,10 @@ export async function unpostPostingBatchAction(
       return { ok: false, message: "Batch id is required." };
     }
 
-    const { supabase, user } = await requireUser();
+    const { supabase, userId } = await requireFinanceActor("finance.write");
     const result = await unpostPostingBatch(supabase, {
       batch_id: parsed.data.batch_id,
-      actor_id: user.id,
+      actor_id: userId,
     });
 
     if (!result.ok) return { ok: false, message: result.error };

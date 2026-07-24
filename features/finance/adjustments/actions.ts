@@ -2,11 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 
+import { requireFinancePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { asFinanceControlClient } from "@/lib/finance/supabase-finance";
 import { computeAdjustmentVatAmounts } from "@/lib/finance/credit-note-vat";
 import { FINANCE_AUDIT_EVENTS } from "@/lib/finance/audit-events";
 import { logFinanceAuditEvent } from "@/lib/finance/audit-log";
+import { createCreditNoteSchema } from "@/lib/validation/schemas";
 import type { CreateClientCreditNoteInput } from "@/features/finance/adjustments/types";
 
 export type FinanceAdjustmentActionState = {
@@ -31,18 +33,38 @@ export async function createClientCreditNoteAction(
 ): Promise<FinanceAdjustmentActionState> {
   try {
     const { supabase: baseClient, user } = await requireUser();
+    const access = await requireFinancePermission(baseClient, "finance.write");
+    if ("error" in access) return { ok: false, message: access.error };
+
     const supabase = asFinanceControlClient(baseClient);
 
-    const invoice_id = String(formData.get("invoice_id") ?? "");
-    const issue_date = String(formData.get("issue_date") ?? "");
-    const reason = String(formData.get("reason") ?? "").trim();
-    const amount_before_vat = Number(formData.get("amount_before_vat") ?? 0);
-    const vat_affected = formData.get("vat_affected") === "on" || formData.get("vat_affected") === "true";
-    const notes = String(formData.get("notes") ?? "").trim() || null;
-
-    if (!invoice_id || !issue_date || !reason || amount_before_vat <= 0) {
-      return { ok: false, message: "Invoice, date, reason, and amount are required." };
+    const parsed = createCreditNoteSchema.safeParse({
+      invoice_id: String(formData.get("invoice_id") ?? ""),
+      issue_date: String(formData.get("issue_date") ?? ""),
+      reason: String(formData.get("reason") ?? "").trim(),
+      amount_before_vat: formData.get("amount_before_vat"),
+      vat_affected:
+        formData.get("vat_affected") === "on" ||
+        formData.get("vat_affected") === "true",
+      notes: String(formData.get("notes") ?? "").trim() || null,
+    });
+    if (!parsed.success) {
+      return {
+        ok: false,
+        message:
+          parsed.error.issues[0]?.message ??
+          "Invoice, date, reason, and amount are required.",
+      };
     }
+
+    const {
+      invoice_id,
+      issue_date,
+      reason,
+      amount_before_vat,
+      vat_affected,
+      notes,
+    } = parsed.data;
 
     const { data: invoice, error: invoiceError } = await supabase
       .from("invoices")

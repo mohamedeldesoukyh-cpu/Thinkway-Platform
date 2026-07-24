@@ -1,5 +1,9 @@
 import type { CreatorRecentPublication } from "@/lib/creators/types";
 import { pickApifyPreviewImageUrl } from "@/lib/performance/apify-preview-image";
+import {
+  SOCIAL_MEDIA_SRC_ALLOWLIST,
+  isUrlAllowedByHostlist,
+} from "@/lib/security/ssrf";
 
 function str(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -34,25 +38,9 @@ function hostFromUrl(url: string): string | null {
 export function shouldProxyPublicationMediaUrl(url: string): boolean {
   const host = hostFromUrl(url);
   if (!host) return false;
-  if (host.includes("supabase.co") || host.includes("supabase.in")) return false;
-  if (host.includes("cdninstagram") || host.endsWith("instagram.com")) return true;
-  if (host.includes("fbsbx") || host.includes("facebook.com")) return true;
-  if (
-    host.includes("tiktokcdn") ||
-    host.includes("tiktokv.com") ||
-    host.includes("ibyteimg.com") ||
-    host.includes("ibytedtos.com") ||
-    host.includes("byteoversea.com") ||
-    host.includes("ttwstatic.com") ||
-    host.includes("muscdn.com")
-  ) {
-    return true;
-  }
-  if (host.includes("fbcdn")) return true;
-  if (host.includes("ytimg.com") || host.includes("youtube.com") || host.includes("youtu.be")) {
-    return true;
-  }
-  return false;
+  if (host === "supabase.co" || host.endsWith(".supabase.co")) return false;
+  if (host === "supabase.in" || host.endsWith(".supabase.in")) return false;
+  return isUrlAllowedByHostlist(url, SOCIAL_MEDIA_SRC_ALLOWLIST);
 }
 
 /** Resolve a displayable thumbnail from normalized or raw Apify publication rows. */

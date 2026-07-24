@@ -28,6 +28,11 @@ import {
   fetchImageBuffer,
   isAllowedPublicationPreviewSrcUrl,
 } from "@/lib/creators/publication-preview-proxy";
+import {
+  SOCIAL_PROFILE_ALLOWLIST,
+  fetchWithStrictRedirects,
+  isUrlAllowedByHostlist,
+} from "@/lib/security/ssrf";
 
 function decodeEmbeddedUrl(value: string): string {
   return value
@@ -80,11 +85,13 @@ function extractEmbeddedProfilePictureUrls(html: string): string[] {
 }
 
 async function fetchProfilePageHtml(profileUrl: string): Promise<string | null> {
+  if (!isAllowedCreatorAvatarProfileUrl(profileUrl)) return null;
   recordMediaProxyExternalRequest();
   try {
-    const response = await fetch(profileUrl, {
-      redirect: "follow",
-      signal: AbortSignal.timeout(MEDIA_PROXY_REFRESH_TIMEOUT_MS),
+    const response = await fetchWithStrictRedirects(profileUrl, {
+      allowlist: SOCIAL_PROFILE_ALLOWLIST,
+      maxRedirects: 3,
+      timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS,
       headers: {
         Accept: "text/html,application/xhtml+xml",
         "Accept-Language": "en-US,en;q=0.9",
@@ -119,22 +126,9 @@ async function resolveProfilePictureFromSocialPage(
   return null;
 }
 
-function hostFromUrl(url: string): string | null {
-  try {
-    return new URL(url).hostname.toLowerCase();
-  } catch {
-    return null;
-  }
-}
-
 /** Social profile pages usable for OpenGraph avatar fallback. */
 export function isAllowedCreatorAvatarProfileUrl(url: string): boolean {
-  const host = hostFromUrl(url);
-  if (!host) return false;
-  if (host.includes("instagram.com")) return true;
-  if (host.includes("tiktok.com")) return true;
-  if (host.includes("youtube.com") || host === "youtu.be") return true;
-  return false;
+  return isUrlAllowedByHostlist(url, SOCIAL_PROFILE_ALLOWLIST);
 }
 
 async function fetchThinkwayStoredAvatar(

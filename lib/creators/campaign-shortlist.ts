@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
+import { csvEscapeRow } from "@/lib/security/csv-formula";
 
 import {
   resolveCreatorFromRefLookup,
@@ -182,7 +183,7 @@ export function shortlistToCsv(
     const c = row.creator;
     if (!c) return "";
     const p = c.platforms[0];
-    return [
+    return csvEscapeRow([
       c.display_name,
       p?.handle ?? "",
       p?.platform ?? "",
@@ -195,9 +196,7 @@ export function shortlistToCsv(
       c.estimated_country ?? "",
       c.ai_niche ?? c.ai_category ?? "",
       row.notes ?? "",
-    ]
-      .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-      .join(",");
+    ]);
   });
 
   return [header, ...lines.filter(Boolean)].join("\n");

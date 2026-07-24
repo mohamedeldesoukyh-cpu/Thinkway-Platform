@@ -16,6 +16,12 @@ test("isAllowedCreatorAvatarProfileUrl accepts instagram and tiktok profiles", (
   assert.equal(isAllowedCreatorAvatarProfileUrl("https://www.instagram.com/mohamed.farag/"), true);
   assert.equal(isAllowedCreatorAvatarProfileUrl("https://www.tiktok.com/@creator"), true);
   assert.equal(isAllowedCreatorAvatarProfileUrl("https://example.com/user"), false);
+  assert.equal(
+    isAllowedCreatorAvatarProfileUrl("https://notinstagram.com/user"),
+    false,
+    "substring lookalike hosts must be rejected"
+  );
+  assert.equal(isAllowedCreatorAvatarProfileUrl("https://127.0.0.1/"), false);
 });
 
 test("embedded profile picture regex extracts instagram CDN urls", () => {

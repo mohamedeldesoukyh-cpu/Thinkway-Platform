@@ -3,6 +3,9 @@
 import { revalidatePath } from "next/cache";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { sanitizeRichHtml } from "@/lib/security/sanitize-html";
+import { parseFormDataWithSchema } from "@/lib/validation/form";
+import { updateVendorIoSchema } from "@/lib/validation/schemas";
 import { fetchClientIoRow } from "@/lib/io/client-io-query";
 import {
   buildClientIoEmailHtml,
@@ -282,16 +285,28 @@ export async function updateVendorIoAction(
   _prev: IoActionState,
   formData: FormData
 ): Promise<IoActionState> {
-  const id = String(formData.get("id") ?? "");
-  const campaignHeaderId = String(formData.get("campaign_header_id") ?? "");
-  const termsText = String(formData.get("terms_text") ?? "").trim();
-  const termsHtml = String(formData.get("terms_html") ?? "").trim();
-  const usageRights = String(formData.get("usage_rights") ?? "").trim();
-  const exclusivity = String(formData.get("exclusivity") ?? "").trim();
-  const attachmentUrl = String(formData.get("attachment_url") ?? "").trim();
-  const status = String(formData.get("status") ?? "draft") as VendorIoStatus;
+  const parsed = parseFormDataWithSchema(formData, updateVendorIoSchema);
+  if (!parsed.ok) {
+    return { ok: false, message: parsed.message };
+  }
 
-  if (!id || !campaignHeaderId) return { ok: false, message: "Missing IO context." };
+  const {
+    id,
+    campaign_header_id: campaignHeaderId,
+    terms_text: termsTextRaw,
+    terms_html: termsHtmlRaw,
+    usage_rights: usageRightsRaw,
+    exclusivity: exclusivityRaw,
+    attachment_url: attachmentUrlRaw,
+    status,
+    amount,
+  } = parsed.data;
+
+  const termsText = (termsTextRaw ?? "").trim();
+  const termsHtml = sanitizeRichHtml(termsHtmlRaw ?? "");
+  const usageRights = (usageRightsRaw ?? "").trim();
+  const exclusivity = (exclusivityRaw ?? "").trim();
+  const attachmentUrl = (attachmentUrlRaw ?? "").trim();
 
   const { supabase, user, error } = await requireAuthUser();
   if (error || !user) return { ok: false, message: error ?? "Unauthorized" };
@@ -313,23 +328,17 @@ export async function updateVendorIoAction(
     };
   }
 
-  const amountRaw = formData.get("amount");
-  const amount =
-    amountRaw != null && String(amountRaw).trim() !== ""
-      ? Number(amountRaw)
-      : undefined;
-
   const patch: Record<string, unknown> = {
     terms_text: termsText || null,
     terms_html: termsHtml || null,
     usage_rights: usageRights || null,
     exclusivity: exclusivity || null,
     attachment_url: attachmentUrl || null,
-    status,
+    status: status as VendorIoStatus,
     updated_by: user.id,
   };
 
-  if (amount !== undefined && Number.isFinite(amount) && amount >= 0) {
+  if (amount !== undefined) {
     patch.amount = amount;
   }
 

@@ -2,7 +2,9 @@
 
 import { redirect } from "next/navigation";
 
-import { sanitizeNextPath } from "@/lib/auth/routes";
+import { resolvePostLoginMfaPath } from "@/lib/auth/mfa-session";
+import { sanitizeNextPathForActor } from "@/lib/auth/routes";
+import { resolveWorkspaceActor } from "@/lib/security/workspace-actor";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { signInSchema } from "./schemas";
@@ -65,9 +67,11 @@ export async function signInAction(
     };
   }
 
+  const supabase = await createSupabaseServerClient();
+  let userId: string | null = null;
+
   try {
-    const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: parsed.data.email,
       password: parsed.data.password,
     });
@@ -75,18 +79,21 @@ export async function signInAction(
     if (error) {
       return { error: formatSignInError(error) };
     }
+    userId = data.user?.id ?? null;
   } catch (error) {
     return { error: formatSignInError(error) };
   }
 
-  const next = sanitizeNextPath(
+  const actor = await resolveWorkspaceActor(supabase, userId);
+  const next = sanitizeNextPathForActor(
     typeof formData.get("next") === "string"
       ? (formData.get("next") as string)
-      : null
+      : null,
+    actor.kind,
   );
 
-  // Prefer framework redirect so the action response stays on the RSC protocol.
-  redirect(next);
+  const mfaPath = await resolvePostLoginMfaPath(next);
+  redirect(mfaPath ?? next);
 }
 
 export async function signOutAction() {

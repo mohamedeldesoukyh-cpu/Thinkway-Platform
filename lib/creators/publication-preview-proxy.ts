@@ -16,65 +16,54 @@ import { tryInstagramMediaRedirectThumbnail } from "@/lib/performance/screenshot
 import { tryInstagramOembedThumbnail } from "@/lib/performance/screenshot-capture/providers/instagram-oembed";
 import { tryOpenGraphThumbnail } from "@/lib/performance/screenshot-capture/providers/opengraph";
 import { tryTikTokOembedThumbnail } from "@/lib/performance/screenshot-capture/providers/tiktok-oembed";
+import {
+  SOCIAL_MEDIA_SRC_ALLOWLIST,
+  SOCIAL_POST_ALLOWLIST,
+  fetchWithStrictRedirects,
+  isExactHostOrSuffix,
+  isUrlAllowedByHostlist,
+  parseSafeOutboundUrl,
+} from "@/lib/security/ssrf";
 
 function hostFromUrl(url: string): string | null {
-  try {
-    return new URL(url).hostname.toLowerCase();
-  } catch {
-    return null;
-  }
+  const parsed = parseSafeOutboundUrl(url);
+  return parsed.ok ? parsed.hostname : null;
 }
 
-const ALLOWED_SRC_HOST_FRAGMENTS = [
-  "cdninstagram",
-  "instagram.com",
-  "fbcdn",
-  "fbsbx.com",
-  "facebook.com",
-  "tiktokcdn",
-  "tiktokv.com",
-  "ibyteimg.com",
-  "ibytedtos.com",
-  "byteoversea.com",
-  "ttwstatic.com",
-  "muscdn.com",
-  "ytimg.com",
-];
-
-const ALLOWED_POST_HOST_FRAGMENTS = ["instagram.com", "tiktok.com", "youtube.com", "youtu.be"];
-
-const TIKTOK_CDN_HOST_FRAGMENTS = [
-  "tiktokcdn",
-  "tiktokv.com",
-  "ibyteimg.com",
-  "ibytedtos.com",
-  "byteoversea.com",
-  "ttwstatic.com",
-  "muscdn.com",
-];
-
 export function isAllowedPublicationPreviewSrcUrl(url: string): boolean {
-  const host = hostFromUrl(url);
-  if (!host) return false;
-  return ALLOWED_SRC_HOST_FRAGMENTS.some((fragment) => host.includes(fragment));
+  return isUrlAllowedByHostlist(url, SOCIAL_MEDIA_SRC_ALLOWLIST);
 }
 
 export function isAllowedPublicationPreviewPostUrl(url: string): boolean {
-  const host = hostFromUrl(url);
-  if (!host) return false;
-  return ALLOWED_POST_HOST_FRAGMENTS.some((fragment) => host.includes(fragment));
+  return isUrlAllowedByHostlist(url, SOCIAL_POST_ALLOWLIST);
 }
 
 function refererForImageUrl(url: string): string | undefined {
   const host = hostFromUrl(url);
   if (!host) return undefined;
-  if (TIKTOK_CDN_HOST_FRAGMENTS.some((fragment) => host.includes(fragment))) {
+  if (
+    isExactHostOrSuffix(host, {
+      exact: [],
+      suffixes: [
+        "tiktokcdn.com",
+        "tiktokcdn-us.com",
+        "tiktokv.com",
+        "ibyteimg.com",
+        "ibytedtos.com",
+        "byteoversea.com",
+        "ttwstatic.com",
+        "muscdn.com",
+      ],
+    })
+  ) {
     return "https://www.tiktok.com/";
   }
-  if (host.includes("cdninstagram") || host.includes("fbcdn") || host.includes("instagram.com")) {
-    return "https://www.instagram.com/";
-  }
-  if (host.includes("fbsbx.com") || host.includes("facebook.com")) {
+  if (
+    isExactHostOrSuffix(host, {
+      exact: [],
+      suffixes: ["cdninstagram.com", "fbcdn.net", "instagram.com", "fbsbx.com", "facebook.com"],
+    })
+  ) {
     return "https://www.instagram.com/";
   }
   return undefined;
@@ -82,27 +71,32 @@ function refererForImageUrl(url: string): string | undefined {
 
 function isTikTokPostUrl(url: string): boolean {
   const host = hostFromUrl(url);
-  return host?.includes("tiktok.com") ?? false;
+  return host ? isExactHostOrSuffix(host, { exact: [], suffixes: ["tiktok.com"] }) : false;
 }
 
 function isInstagramPostUrl(url: string): boolean {
   const host = hostFromUrl(url);
-  return host?.includes("instagram.com") ?? false;
+  return host ? isExactHostOrSuffix(host, { exact: [], suffixes: ["instagram.com"] }) : false;
 }
 
 export async function fetchImageBuffer(
   url: string,
   options?: { referer?: string | null; timeoutMs?: number; countExternal?: boolean }
 ): Promise<{ ok: true; buffer: ArrayBuffer; contentType: string } | { ok: false }> {
+  if (!isAllowedPublicationPreviewSrcUrl(url)) {
+    return { ok: false };
+  }
+
   const referer = options?.referer ?? refererForImageUrl(url);
   const timeoutMs = options?.timeoutMs ?? MEDIA_PROXY_REFRESH_TIMEOUT_MS;
   if (options?.countExternal !== false) {
     recordMediaProxyExternalRequest();
   }
   try {
-    const response = await fetch(url, {
-      redirect: "follow",
-      signal: AbortSignal.timeout(timeoutMs),
+    const response = await fetchWithStrictRedirects(url, {
+      allowlist: SOCIAL_MEDIA_SRC_ALLOWLIST,
+      maxRedirects: 3,
+      timeoutMs,
       headers: {
         Accept: "image/*,*/*;q=0.8",
         "User-Agent":

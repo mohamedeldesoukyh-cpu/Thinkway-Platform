@@ -3,6 +3,10 @@ import type { AuthError, User } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { cache } from "react";
 
+import {
+  getSupabaseCookieOptions,
+  mergeSupabaseCookieOptions,
+} from "@/lib/security/cookie-options";
 import { supabaseAnonKey, supabaseUrl } from "@/lib/supabase/env";
 import type { Database } from "@/types/database";
 
@@ -17,6 +21,7 @@ export const createSupabaseServerClient = cache(async () => {
   const cookieStore = await cookies();
 
   return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+    cookieOptions: getSupabaseCookieOptions(),
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -24,7 +29,7 @@ export const createSupabaseServerClient = cache(async () => {
       setAll(cookiesToSet, _headers) {
         try {
           cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
+            cookieStore.set(name, value, mergeSupabaseCookieOptions(options));
           });
         } catch {
           // Server Component — session refresh is handled in middleware.

@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { SafeHtml } from "@/components/security/safe-html";
 import type { ClientIoEmailPreview } from "@/lib/email/client-io-email";
 
 type RecipientLine = {
@@ -69,9 +70,9 @@ export function ClientIoEmailViewDialog({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-          <div
+          <SafeHtml
             className="rounded-md border border-border/60 bg-card p-4 text-sm text-foreground"
-            dangerouslySetInnerHTML={{ __html: preview.html }}
+            html={preview.html}
           />
         </div>
       </DialogContent>

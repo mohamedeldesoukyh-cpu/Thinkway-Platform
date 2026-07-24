@@ -7,6 +7,8 @@ import {
 import { recordMediaProxyRefreshScheduled } from "@/lib/creators/media-proxy-cache";
 import { requireApiPermission } from "@/lib/auth/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { parseSearchParamsWithSchema } from "@/lib/validation/http";
+import { mediaProxyQuerySchema } from "@/lib/validation/schemas";
 
 export const dynamic = "force-dynamic";
 /** Keep high enough for `after()` background refresh (scrape / OpenGraph). */
@@ -18,12 +20,10 @@ export async function GET(request: Request) {
   if ("response" in auth) return auth.response;
 
   const { searchParams } = new URL(request.url);
-  const src = searchParams.get("src");
-  const profileUrl = searchParams.get("profileUrl");
-
-  if (!src && !profileUrl) {
-    return NextResponse.json({ error: "Missing avatar source." }, { status: 400 });
-  }
+  const parsedQuery = parseSearchParamsWithSchema(searchParams, mediaProxyQuerySchema);
+  if (!parsedQuery.ok) return parsedQuery.response;
+  const src = parsedQuery.data.src ?? null;
+  const profileUrl = parsedQuery.data.profileUrl ?? null;
 
   const result = await resolveCreatorAvatarForHttpRequest({ src, profileUrl, supabase });
   if (!result.ok) {

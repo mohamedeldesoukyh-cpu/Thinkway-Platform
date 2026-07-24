@@ -52,6 +52,10 @@ VALUES
   ('payments.write', 'payments', 'write', 'Record and update payments'),
   ('payments.delete', 'payments', 'delete', 'Remove payment records'),
 
+  ('finance.read', 'finance', 'read', 'Read finance control documents, postings, and adjustments'),
+  ('finance.write', 'finance', 'write', 'Create and update finance control documents and postings'),
+  ('finance.override', 'finance', 'override', 'Override invoice/period locks and mutate FX rates'),
+
   ('approvals.read', 'approvals', 'read', 'View approval requests'),
   ('approvals.write', 'approvals', 'write', 'Create approval requests'),
   ('approvals.decide', 'approvals', 'decide', 'Approve or reject requests'),
@@ -108,6 +112,7 @@ WHERE
     'campaigns.read',
     'invoices.read', 'invoices.write',
     'payments.read', 'payments.write',
+    'finance.read', 'finance.write', 'finance.override',
     'approvals.read', 'approvals.decide',
     'audit.read',
     'analytics.read'

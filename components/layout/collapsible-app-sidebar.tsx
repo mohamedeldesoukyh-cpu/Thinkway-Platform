@@ -233,7 +233,14 @@ const navGroups: NavGroup[] = [
     icon: Settings2Icon,
     iconTone: "navy",
     items: [
+      {
+        kind: "link",
+        href: "/operations",
+        label: "Operations Center",
+        icon: ActivityIcon,
+      },
       { kind: "link", href: "/settings/users", label: "Users", icon: Settings2Icon },
+      { kind: "link", href: "/settings/security", label: "Security", icon: ShieldIcon },
       { kind: "link", href: "/settings/roles", label: "Roles", icon: UserCogIcon },
       { kind: "link", href: "/settings/permissions", label: "Permissions", icon: ShieldIcon },
       {

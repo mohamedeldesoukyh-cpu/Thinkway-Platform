@@ -1,8 +1,10 @@
 import type { ShortlistDocument } from "./shortlist-document";
 import { formatShortlistPlatformLinksForExport } from "./shortlist-document";
 
+import { csvEscapeCell } from "@/lib/security/csv-formula";
+
 function csvCell(value: string | number): string {
-  return `"${String(value).replace(/"/g, '""')}"`;
+  return csvEscapeCell(value);
 }
 
 export function buildShortlistCsv(doc: ShortlistDocument): string {

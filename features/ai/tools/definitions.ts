@@ -177,17 +177,21 @@ export const generateReportTool: AiToolDefinition<
   inputSchema: generateReportInputSchema,
   outputSchema: generateReportOutputSchema,
   async execute(input, context: AiContext) {
+    const { assertAiReportTypeAllowed } = await import(
+      "@/lib/security/ai-workspace-isolation"
+    );
+    assertAiReportTypeAllowed(input.reportType);
+
     return {
       title: `${input.reportType} Report — ${context.campaign?.name ?? input.campaignId}`,
-      summary: "Campaign is tracking on plan with healthy GP margin.",
+      summary: "Campaign is tracking on plan with healthy delivery metrics.",
       metrics: [
         { label: "Total Reach", value: "2.4M" },
         { label: "Engagement Rate", value: "3.8%" },
-        { label: "GP Margin", value: "32%" },
       ],
       recommendations: [
         "Increase Reels allocation for top-performing creators.",
-        "Review remaining PO on underperforming lines.",
+        "Review underperforming lines with the campaign owner.",
       ],
     };
   },

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { requireFinancePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { AdjustmentTableKind } from "@/lib/finance/adjustment-table-config";
 import {
@@ -57,6 +58,9 @@ async function runLifecycle(
     }
 
     const { supabase, user } = await requireUser();
+    const access = await requireFinancePermission(supabase, "finance.write");
+    if ("error" in access) return { ok: false, message: access.error };
+
     const ctx = {
       supabase,
       kind: parsed.data.kind,
