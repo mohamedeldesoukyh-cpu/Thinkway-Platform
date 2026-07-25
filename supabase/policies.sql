@@ -1,6 +1,7 @@
 -- =============================================================================
 -- Thinkway Platform — Row Level Security Policies (idempotent)
--- Safe to re-run without errors. Run AFTER schema.sql and seed.sql
+-- Safe to re-run without errors. Run AFTER schema.sql and seed.sql.
+-- Baseline only: hierarchy invoice header checks are applied by later migrations.
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
@@ -490,6 +491,10 @@ CREATE POLICY invoices_select
     )
   );
 
+-- Baseline invoice write policies use legacy campaign_id only.
+-- campaign_header_id + can_access_campaign_header are introduced by
+-- 20260531140000 / 20260531160000 and re-applied in
+-- 20260531610000_billing_invoice_line_items_rls.sql (+ update hardening).
 DROP POLICY IF EXISTS invoices_insert ON public.invoices;
 CREATE POLICY invoices_insert
   ON public.invoices
@@ -501,10 +506,6 @@ CREATE POLICY invoices_insert
     AND (
       campaign_id IS NULL
       OR public.can_access_campaign(campaign_id)
-    )
-    AND (
-      campaign_header_id IS NULL
-      OR public.can_access_campaign_header(campaign_header_id)
     )
   );
 
@@ -520,10 +521,6 @@ CREATE POLICY invoices_update
       campaign_id IS NULL
       OR public.can_access_campaign(campaign_id)
     )
-    AND (
-      campaign_header_id IS NULL
-      OR public.can_access_campaign_header(campaign_header_id)
-    )
   )
   WITH CHECK (
     public.has_permission('invoices.write')
@@ -531,10 +528,6 @@ CREATE POLICY invoices_update
     AND (
       campaign_id IS NULL
       OR public.can_access_campaign(campaign_id)
-    )
-    AND (
-      campaign_header_id IS NULL
-      OR public.can_access_campaign_header(campaign_header_id)
     )
   );
 
