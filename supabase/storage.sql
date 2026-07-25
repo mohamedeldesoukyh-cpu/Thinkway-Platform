@@ -1,6 +1,72 @@
 -- =============================================================================
--- Supabase Storage policies — run AFTER migrations and policies.sql
+-- Supabase Storage buckets + baseline policies
+-- Run AFTER schema.sql, seed.sql, and policies.sql (needs RLS helpers).
+-- Safe before migrations: bucket inserts are idempotent (ON CONFLICT).
+-- Later migrations may refine policies / add more buckets.
 -- =============================================================================
+
+-- Baseline private buckets (also re-asserted by early migrations)
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'client-documents',
+  'client-documents',
+  false,
+  52428800,
+  ARRAY[
+    'application/pdf',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ]::text[]
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = EXCLUDED.public,
+  file_size_limit = EXCLUDED.file_size_limit,
+  allowed_mime_types = EXCLUDED.allowed_mime_types;
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'influencer-documents',
+  'influencer-documents',
+  false,
+  52428800,
+  ARRAY[
+    'application/pdf',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ]::text[]
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = EXCLUDED.public,
+  file_size_limit = EXCLUDED.file_size_limit,
+  allowed_mime_types = EXCLUDED.allowed_mime_types;
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'creator-imports',
+  'creator-imports',
+  false,
+  52428800,
+  ARRAY[
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-excel',
+    'text/csv',
+    'application/csv',
+    'application/zip',
+    'application/x-zip-compressed',
+    'application/octet-stream'
+  ]::text[]
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = EXCLUDED.public,
+  file_size_limit = EXCLUDED.file_size_limit,
+  allowed_mime_types = EXCLUDED.allowed_mime_types;
 
 -- Client documents: path layout {client_id}/{document_type}/{file}
 DROP POLICY IF EXISTS "client_documents_storage_select" ON storage.objects;
