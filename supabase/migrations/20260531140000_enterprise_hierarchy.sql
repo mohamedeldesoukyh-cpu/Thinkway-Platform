@@ -793,6 +793,35 @@ DROP POLICY IF EXISTS md_vr_rates_select ON public.md_vr_rates;
 CREATE POLICY md_vr_rates_select ON public.md_vr_rates FOR SELECT TO authenticated USING (true);
 
 -- Compatibility view: legacy campaigns queries → campaign_headers
+-- Fresh bootstraps create public.campaigns as a TABLE (schema.sql). Rename it so
+-- the view can take that name while preserving FK targets for campaign_id columns.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relname = 'campaigns'
+      AND c.relkind = 'r'
+  ) THEN
+    IF EXISTS (
+      SELECT 1
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public'
+        AND c.relname = 'campaigns_legacy'
+    ) THEN
+      RAISE EXCEPTION
+        'Cannot rename public.campaigns to campaigns_legacy: target already exists';
+    END IF;
+
+    ALTER TABLE public.campaigns RENAME TO campaigns_legacy;
+    COMMENT ON TABLE public.campaigns_legacy IS
+      'Pre-hierarchy campaigns table retained for FK compatibility. Prefer campaign_headers.';
+  END IF;
+END $$;
+
 CREATE OR REPLACE VIEW public.campaigns AS
 SELECT
   h.id,
