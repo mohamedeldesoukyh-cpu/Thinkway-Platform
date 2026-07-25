@@ -3,7 +3,10 @@
 -- - Line operational_status gate for invoicing
 -- - VIO-YYYY-NNNN numbering + line linkage
 -- - Disable auto vendor IO triggers (manual generation only)
--- - One-time invoice data reset (preserves campaigns, assignments, vendor IOs)
+-- - Invoice operational lock flag + vendor_io_lines RLS
+--
+-- NOTE: The former one-time invoice/payment wipe was removed from this migration.
+-- See scripts/manual/one_time_invoice_payment_cleanup.sql (manual only — not db push).
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
@@ -138,59 +141,6 @@ UPDATE public.invoices
 SET is_operational_locked = true
 WHERE regeneration_status = 'pending_regeneration'
    OR status IN ('paid', 'void');
-
--- -----------------------------------------------------------------------------
--- One-time invoice reset (keeps campaigns, lines, vendor IOs)
--- Run via: npx supabase db push
--- -----------------------------------------------------------------------------
-DO $$
-DECLARE
-  v_year text := to_char(timezone('utc', now()), 'YYYY');
-  v_inv_prefix text := 'INV-' || v_year;
-BEGIN
-  -- Unlock deliverables
-  UPDATE public.assignment_deliverables
-  SET
-    invoiced_amount = 0,
-    remaining_amount = billable_amount,
-    billing_status = 'ready_to_invoice',
-    invoice_line_item_id = NULL,
-    invoiced_at = NULL,
-    locked_at = NULL
-  WHERE invoice_line_item_id IS NOT NULL OR locked_at IS NOT NULL;
-
-  UPDATE public.assignment_post_schedule
-  SET
-    invoiced_amount = 0,
-    remaining_amount = COALESCE(billable_amount, revenue_before_vat, 0),
-    billing_status = 'ready_to_invoice',
-    invoice_line_item_id = NULL,
-    locked_at = NULL
-  WHERE invoice_line_item_id IS NOT NULL OR locked_at IS NOT NULL;
-
-  UPDATE public.campaign_lines
-  SET
-    billing_status = 'moved_to_billing',
-    operational_status = CASE
-      WHEN vendor_io_id IS NOT NULL THEN 'io_generated'::public.campaign_line_operational_status
-      ELSE 'draft'::public.campaign_line_operational_status
-    END,
-    invoice_id = NULL
-  WHERE billing_status IN ('invoiced', 'partially_invoiced', 'partially_paid', 'paid')
-     OR invoice_id IS NOT NULL;
-
-  DELETE FROM public.payments WHERE invoice_id IS NOT NULL;
-
-  DELETE FROM public.invoice_versions;
-  DELETE FROM public.invoice_line_items;
-  DELETE FROM public.invoices;
-
-  DELETE FROM public.document_sequences WHERE prefix = v_inv_prefix;
-
-  INSERT INTO public.document_sequences (prefix, last_value)
-  VALUES (v_inv_prefix, 0)
-  ON CONFLICT (prefix) DO UPDATE SET last_value = 0;
-END $$;
 
 -- RLS for vendor_io_lines
 ALTER TABLE public.vendor_io_lines ENABLE ROW LEVEL SECURITY;
