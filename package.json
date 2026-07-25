@@ -83,6 +83,7 @@
     "test:operations": "npx tsx features/operations-center/health/score.test.ts && npx tsx features/operations-center/health/engine.test.ts && npx tsx features/operations-center/adapters/registry.test.ts && npx tsx features/operations-center/alerts/engine.test.ts && npx tsx features/operations-center/dependency-graph/build-graph.test.ts && npx tsx features/operations-center/auth.test.ts",
     "test:production": "npx tsx lib/production/production-readiness.test.ts && npm run test:auth-p1 && npm run test:appsec-p3 && npm run test:appsec-p4 && npm run test:operations",
     "docs:handover": "node scripts/generate-handover-package.mjs",
+    "db:bootstrap-empty": "node scripts/bootstrap-empty-database.mjs",
     "test:discovery-import-permissions": "npx tsx lib/discovery-import/discovery-import-permissions.test.ts",
     "test:discovery-import-immutability": "npx tsx lib/discovery-import/discovery-import-immutability.test.ts",
     "test:discovery-demo-data": "npx tsx lib/discovery/demo-data.test.ts",
