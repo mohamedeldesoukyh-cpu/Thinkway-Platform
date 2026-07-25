@@ -2,6 +2,8 @@
 -- and unified search_creators RPC (replaces FTS-only short-circuit paths).
 
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
+-- Supabase provides this schema; create it for plain-Postgres / empty bootstraps.
+CREATE SCHEMA IF NOT EXISTS extensions;
 CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA extensions;
 
 -- Supabase installs extensions in the `extensions` schema; qualify unaccent explicitly.
