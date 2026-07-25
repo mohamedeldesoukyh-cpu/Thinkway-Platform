@@ -292,7 +292,7 @@ export function OperationsCenterDashboard({
                 value={worker.lastFailedJob ?? "Not instrumented"}
               />
             </div>
-            {needsExplain(worker.status) || worker.status === "expected" ? (
+            {needsExplain(worker.status) ? (
               <p className="text-[11px] text-muted-foreground">
                 Action: {worker.suggestedAction}
               </p>
