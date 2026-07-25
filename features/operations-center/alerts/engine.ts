@@ -4,6 +4,7 @@ import type {
   HealthCheckResult,
   QueueMonitorRow,
 } from "../types";
+import { getOpsRuntimeMode, type OpsRuntimeMode } from "../environment/runtime-context";
 
 export type AlertRuleContext = {
   components: HealthCheckResult[];
@@ -11,6 +12,7 @@ export type AlertRuleContext = {
   workerAlive: boolean;
   workerStale: boolean;
   overallHealthScore: number;
+  runtimeMode?: OpsRuntimeMode;
 };
 
 function alert(
@@ -32,14 +34,26 @@ function alert(
 
 /**
  * Deterministic alert evaluation from the latest health + queue snapshot.
+ * Local development downgrades expected gaps to info (not critical warnings).
  */
 export function evaluateAlerts(ctx: AlertRuleContext): AlertRecord[] {
   const alerts: AlertRecord[] = [];
+  const local = (ctx.runtimeMode ?? getOpsRuntimeMode()) === "local";
 
   const byId = new Map(ctx.components.map((c) => [c.id, c]));
 
   const redis = byId.get("redis");
-  if (redis && (redis.status === "offline" || redis.status === "critical")) {
+  if (redis && redis.status === "expected" && local) {
+    alerts.push(
+      alert(
+        "redis-local-expected",
+        "info",
+        "Expected in Local Development",
+        "Redis is not configured locally.",
+        "redis",
+      ),
+    );
+  } else if (redis && (redis.status === "offline" || redis.status === "critical")) {
     alerts.push(
       alert(
         "redis-offline",
@@ -94,20 +108,44 @@ export function evaluateAlerts(ctx: AlertRuleContext): AlertRecord[] {
   }
 
   if (!ctx.workerAlive || ctx.workerStale) {
-    alerts.push(
-      alert(
-        "worker-crashed",
-        ctx.workerAlive ? "warning" : "critical",
-        "Worker crashed or stale",
-        ctx.workerAlive
-          ? "Discovery worker heartbeat is stale."
-          : "Discovery worker heartbeat missing.",
-        "workers",
-      ),
-    );
+    if (local && !ctx.workerAlive) {
+      alerts.push(
+        alert(
+          "worker-local-expected",
+          "info",
+          "Expected in Local Development",
+          "Discovery worker is not running locally. Start with: npm run discovery:worker:dev",
+          "workers",
+        ),
+      );
+    } else if (local && ctx.workerStale) {
+      alerts.push(
+        alert(
+          "worker-stale-local",
+          "warning",
+          "Worker heartbeat stale",
+          "Discovery worker heartbeat is stale — process may have hung. Restart: npm run discovery:worker:dev",
+          "workers",
+        ),
+      );
+    } else {
+      alerts.push(
+        alert(
+          "worker-crashed",
+          ctx.workerAlive ? "warning" : "critical",
+          "Worker crashed or stale",
+          ctx.workerAlive
+            ? "Discovery worker heartbeat is stale."
+            : "Discovery worker heartbeat missing.",
+          "workers",
+        ),
+      );
+    }
   }
 
-  const stuck = ctx.queues.filter((q) => q.waiting > 200 || (q.oldestWaitingAgeMs ?? 0) > 30 * 60_000);
+  const stuck = ctx.queues.filter(
+    (q) => q.waiting > 200 || (q.oldestWaitingAgeMs ?? 0) > 30 * 60_000,
+  );
   if (stuck.length > 0) {
     alerts.push(
       alert(
@@ -148,7 +186,8 @@ export function evaluateAlerts(ctx: AlertRuleContext): AlertRecord[] {
     );
   }
 
-  if (ctx.overallHealthScore < 50) {
+  // Local overall score is often lower when optional infra is absent; only spike in production.
+  if (ctx.overallHealthScore < 50 && !local) {
     alerts.push(
       alert(
         "error-spike",
@@ -161,7 +200,17 @@ export function evaluateAlerts(ctx: AlertRuleContext): AlertRecord[] {
   }
 
   const vercel = byId.get("vercel");
-  if (vercel?.meta && vercel.meta.deploymentFailed === true) {
+  if (vercel?.status === "expected" && local) {
+    alerts.push(
+      alert(
+        "vercel-local-expected",
+        "info",
+        "Expected in Local Development",
+        "Running locally — Vercel deployment metadata is not available.",
+        "vercel",
+      ),
+    );
+  } else if (vercel?.meta && vercel.meta.deploymentFailed === true) {
     alerts.push(
       alert(
         "deployment-failed",

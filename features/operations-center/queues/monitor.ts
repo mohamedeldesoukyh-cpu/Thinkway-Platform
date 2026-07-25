@@ -81,7 +81,10 @@ export async function collectQueueMonitorRows(): Promise<QueueMonitorRow[]> {
   return rows;
 }
 
-export function summarizeQueueTotals(rows: QueueMonitorRow[]) {
+export function summarizeQueueTotals(
+  rows: QueueMonitorRow[],
+  workerCount = 0,
+) {
   return rows.reduce(
     (acc, q) => ({
       waiting: acc.waiting + q.waiting,
@@ -90,6 +93,8 @@ export function summarizeQueueTotals(rows: QueueMonitorRow[]) {
       failed: acc.failed + q.failed,
       delayed: acc.delayed + q.delayed,
       deadLetter: acc.deadLetter + q.deadLetter,
+      retries: acc.retries + q.retries,
+      workerCount: acc.workerCount,
     }),
     {
       waiting: 0,
@@ -98,6 +103,8 @@ export function summarizeQueueTotals(rows: QueueMonitorRow[]) {
       failed: 0,
       delayed: 0,
       deadLetter: 0,
+      retries: 0,
+      workerCount,
     },
   );
 }

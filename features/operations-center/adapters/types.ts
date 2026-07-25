@@ -37,6 +37,7 @@ export function scoreFromStatus(
 ): number {
   switch (status) {
     case "healthy":
+    case "expected":
       return 100;
     case "warning":
       return 70;

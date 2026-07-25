@@ -8,7 +8,11 @@ import type {
   HealthCheckResult,
   HealthEngineReport,
 } from "../types";
-import { calculateOverallHealthScore, statusFromScore } from "./score";
+import { buildScoreBreakdown, statusFromScore } from "./score";
+import {
+  suggestedActionForStatus,
+  defaultLogsUrl,
+} from "./diagnostics";
 
 export async function runHealthEngine(
   ctx: HealthProviderContext = {},
@@ -18,7 +22,15 @@ export async function runHealthEngine(
   const components = await Promise.all(
     providers.map(async (provider) => {
       try {
-        return await provider.check(ctx);
+        const result = await provider.check(ctx);
+        return {
+          ...result,
+          reason: result.reason ?? result.message ?? `${result.status}`,
+          suggestedAction:
+            result.suggestedAction ??
+            suggestedActionForStatus(result.status, result.id),
+          logsUrl: result.logsUrl ?? defaultLogsUrl(result.id),
+        } satisfies HealthCheckResult;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         return {
@@ -30,8 +42,12 @@ export async function runHealthEngine(
           checkedAt: new Date().toISOString(),
           score: 0,
           message,
+          reason: `Health probe threw: ${message}`,
+          suggestedAction: suggestedActionForStatus("critical", provider.id),
+          logsUrl: defaultLogsUrl(provider.id),
           lastFailure: message,
           lastFailureAt: new Date().toISOString(),
+          technicalDetails: { error: message },
         } satisfies HealthCheckResult;
       }
     }),
@@ -41,20 +57,23 @@ export async function runHealthEngine(
     const provider = providers.find((p) => p.id === component.id);
     return {
       id: component.id,
+      name: component.name,
       weight: provider?.weight ?? 1,
       status: component.status,
       score: component.score,
     };
   });
 
-  const overallHealthScore = calculateOverallHealthScore(weighted);
-  const overallStatus = deriveOverallStatus(components, overallHealthScore);
+  const { breakdown, totalWeight, overall } = buildScoreBreakdown(weighted);
+  const overallStatus = deriveOverallStatus(components, overall);
 
   return {
-    overallHealthScore,
+    overallHealthScore: overall,
     overallStatus,
     checkedAt: new Date().toISOString(),
     components,
+    scoreBreakdown: breakdown,
+    totalWeight,
   };
 }
 

@@ -52,7 +52,7 @@ export async function GET() {
   const hints: string[] = [];
   if (!build.supabaseAligned) {
     hints.push(
-      "Production NEXT_PUBLIC_SUPABASE_URL does not match the project where migrations were applied (thinkway-dev / hsxrewjcbvmbkqdlzjhs). Update Vercel Production env vars, then redeploy."
+      `NEXT_PUBLIC_SUPABASE_URL project ref does not match expected ${build.expectedSupabaseProjectRef} for this environment (${build.environment}). Update Vercel env vars, then redeploy.`
     );
   }
   if (build.legacyAssignmentsEnvPresent) {

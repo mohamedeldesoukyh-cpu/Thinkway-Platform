@@ -4,6 +4,7 @@ import type { AlertLevel, ComponentStatus } from "../types";
 
 const STATUS_CLASS: Record<ComponentStatus, string> = {
   healthy: "bg-emerald-600/15 text-emerald-700 dark:text-emerald-400",
+  expected: "bg-sky-500/15 text-sky-700 dark:text-sky-400",
   warning: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
   critical: "bg-red-600/15 text-red-700 dark:text-red-400",
   offline: "bg-zinc-500/20 text-zinc-700 dark:text-zinc-300",

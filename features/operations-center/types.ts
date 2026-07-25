@@ -2,6 +2,7 @@
 
 export const COMPONENT_STATUSES = [
   "healthy",
+  "expected",
   "warning",
   "critical",
   "offline",
@@ -37,6 +38,15 @@ export type ProviderKind =
   | "auth"
   | "domain";
 
+export type LatencyThresholds = {
+  /** Latency strictly below this is healthy (ms). */
+  healthyMaxMs: number;
+  /** Latency at/above this is warning (ms). */
+  warningMs: number;
+  /** Latency at/above this is critical (ms). */
+  criticalMs: number;
+};
+
 export type HealthCheckResult = {
   id: string;
   name: string;
@@ -44,9 +54,19 @@ export type HealthCheckResult = {
   status: ComponentStatus;
   latencyMs: number | null;
   checkedAt: string;
-  /** 0–100 component contribution before weighting */
+  /** 0–100 component score before weighting */
   score: number;
   message?: string;
+  /** Human-readable explanation of the current status */
+  reason?: string;
+  /** What an engineer should do next */
+  suggestedAction?: string;
+  /** Link into Operations logs / related surface */
+  logsUrl?: string;
+  /** Latency bands when status is latency-derived */
+  thresholds?: LatencyThresholds;
+  /** Expandable structured probe output */
+  technicalDetails?: Record<string, unknown>;
   lastSuccessAt?: string | null;
   lastFailureAt?: string | null;
   lastFailure?: string | null;
@@ -55,9 +75,22 @@ export type HealthCheckResult = {
 
 export type WeightedComponent = {
   id: string;
+  name?: string;
   weight: number;
   status: ComponentStatus;
   score: number;
+};
+
+export type ScoreContribution = {
+  id: string;
+  name: string;
+  weight: number;
+  status: ComponentStatus;
+  score: number;
+  /** score × weight (pre-normalization) */
+  weightedPoints: number;
+  /** Approximate points contributed to the 0–100 overall score */
+  contribution: number;
 };
 
 export type HealthEngineReport = {
@@ -65,6 +98,35 @@ export type HealthEngineReport = {
   overallStatus: ComponentStatus;
   checkedAt: string;
   components: HealthCheckResult[];
+  /** Explainable score breakdown for the Overall Health card */
+  scoreBreakdown: ScoreContribution[];
+  totalWeight: number;
+};
+
+export type DeploymentInformation = {
+  application: {
+    environment: string;
+    gitCommitSha: string | null;
+    gitCommitShaShort: string | null;
+    gitBranch: string | null;
+    buildTimestamp: string;
+    buildNumber: string | null;
+    deployedBy: string | null;
+  };
+  vercel: {
+    deploymentId: string | null;
+    deploymentUrl: string | null;
+    deploymentStatus: string | null;
+    vercelEnv: string | null;
+  };
+  supabase: {
+    projectRef: string | null;
+    projectUrl: string | null;
+    region: string | null;
+    postgresVersion: string | null;
+    expectedProjectRef: string | null;
+    alignedWithExpected: boolean | null;
+  };
 };
 
 export type QueueMonitorRow = {
@@ -124,11 +186,70 @@ export type DomainMetricCard = {
   value: string | number;
   status: ComponentStatus;
   hint?: string;
+  reason?: string;
+  suggestedAction?: string;
+  technicalDetails?: Record<string, unknown>;
+  checkedAt?: string;
+};
+
+export type ExpectedWorkerProcess = {
+  id: string;
+  label: string;
+  startCommand: string;
+  required: boolean;
+  running: boolean;
+};
+
+export type WorkerHealthSummary = {
+  alive: boolean;
+  stale: boolean;
+  ageMs: number | null;
+  error?: string;
+  version: string | null;
+  lastHeartbeat: string | null;
+  lastCompletedJob: string | null;
+  lastFailedJob: string | null;
+  uptimeMs: number | null;
+  queues: string[];
+  status: ComponentStatus;
+  reason: string;
+  suggestedAction: string;
+  /** Local vs production interpretation */
+  expectation: "required" | "optional_local";
+  expectedProcesses: ExpectedWorkerProcess[];
+  runningProcesses: string[];
+  missingProcesses: string[];
+};
+
+export type ReleaseReadinessCheckStatus =
+  | "pass"
+  | "fail"
+  | "expected_local"
+  | "manual";
+
+export type ReleaseReadinessCheck = {
+  id: string;
+  label: string;
+  status: ReleaseReadinessCheckStatus;
+  detail: string;
+  /** When true, Ready for Production is NO */
+  blocksRelease: boolean;
+};
+
+export type ReleaseReadiness = {
+  readyForProduction: boolean;
+  runtimeMode: "local" | "production";
+  summary: string;
+  blockers: string[];
+  checks: ReleaseReadinessCheck[];
 };
 
 export type OperationsCenterSnapshot = {
   generatedAt: string;
   health: HealthEngineReport;
+  deployment: DeploymentInformation;
+  releaseReadiness: ReleaseReadiness;
+  runtimeMode: "local" | "production";
   queues: QueueMonitorRow[];
   queueTotals: {
     waiting: number;
@@ -137,6 +258,8 @@ export type OperationsCenterSnapshot = {
     failed: number;
     delayed: number;
     deadLetter: number;
+    retries: number;
+    workerCount: number;
   };
   alerts: AlertRecord[];
   dependencyGraph: DependencyGraph;
@@ -150,11 +273,7 @@ export type OperationsCenterSnapshot = {
     finance: DomainMetricCard[];
     storage: DomainMetricCard[];
     security: DomainMetricCard[];
+    api: DomainMetricCard[];
   };
-  worker: {
-    alive: boolean;
-    stale: boolean;
-    ageMs: number | null;
-    error?: string;
-  };
+  worker: WorkerHealthSummary;
 };

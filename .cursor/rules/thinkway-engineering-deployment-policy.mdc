@@ -1,0 +1,94 @@
+---
+description: Thinkway engineering & deployment policy — Dev vs Prod Supabase, migrations, Ops Center, release safety
+alwaysApply: true
+---
+
+# Thinkway Engineering & Deployment Policy
+
+## 1. Database policy
+
+| Environment | Project ref | Role |
+|-------------|-------------|------|
+| **Development** | `hsxrewjcbvmbkqdlzjhs` | Default for all development, debugging, testing, and schema changes |
+| **Production** | `ienowhwfyxoqtzbgltno` | Never modify unless the user **explicitly** requests a production deployment, migration, hotfix, or operational change |
+
+**Before any database write**, state which project will be modified.
+
+If the target is Production and the user has not explicitly approved it, **stop and ask for confirmation**.
+
+## 2. Permanent release workflow
+
+**Development is always updated first. Production is only updated after explicit user approval.**
+
+### Phase 1 – Development
+
+1. Implement and test locally against Development Supabase (`hsxrewjcbvmbkqdlzjhs`)
+2. Commit and push to GitHub
+3. Ensure Development is fully up to date
+4. Verify: TypeScript, Build, Operations Center, Redis, BullMQ, Discovery Worker, Release Readiness
+5. Do **not** modify Production Supabase in this phase
+
+### Phase 2 – Production (approval required)
+
+Before any Production action, provide a deployment summary (files changed, migrations, schema impact, data impact, downtime). Wait for approval before:
+
+- Deploying Production
+- Running migrations on Production
+- Writing to the Production database (`ienowhwfyxoqtzbgltno`)
+
+**Production is never the first place where a feature is tested.**
+
+## 3. Migration policy
+
+- All future database changes must be delivered as **migrations**.
+- Never make manual schema changes directly in Production.
+- Every migration must first be validated against the Development database.
+
+## 4. Production safety
+
+Before any destructive action, explicitly confirm:
+
+- Target project  
+- Target environment  
+- Expected impact  
+
+Examples: `DROP`, `DELETE`, `TRUNCATE`, `ALTER TABLE`, database restore, bulk updates, schema changes.
+
+If Production is the target, **wait for user approval** before executing.
+
+## 5. Operations Center
+
+The Operations Center (`/operations`) is the **single source of truth** for deployment health. It must clearly display:
+
+- Environment (Development / Preview / Production)  
+- Connected Supabase project reference  
+- Expected project reference  
+- Verification status (aligned / mismatch)  
+- Build information, git commit, deployment timestamp, deployment ID  
+- Overall health breakdown  
+- Explainable warnings + suggested actions  
+
+A production deployment must **immediately** reveal if it is connected to the wrong Supabase project.
+
+## 6. Release policy
+
+Every production release should include:
+
+- Build verification  
+- TypeScript validation  
+- Lint validation  
+- Database migration status (if applicable)  
+- Smoke test  
+- Operations Center verification  
+- Release summary  
+
+## 7. Communication policy
+
+Before executing any action that affects infrastructure, databases, or production services, clearly state:
+
+- What will change  
+- Which environment will be affected  
+- Whether the action is reversible  
+- Any risks or prerequisites  
+
+**Never assume production approval. Always ask if there is any uncertainty.**

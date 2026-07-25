@@ -38,6 +38,17 @@ yarn-error.log*
 !.env.example
 !**/.env.example
 
+# hosted→hosted migration dumps (may contain secrets / PII)
+/migration-artifacts/
+/*.dump
+/*.backup
+/thinkway-dev-*.sql
+/dev-data.sql
+/schema.sql
+/production-backup*.sql
+/backup_contents.txt
+/scripts/migrate-dev-to-prod.js
+
 # vercel
 .vercel
 

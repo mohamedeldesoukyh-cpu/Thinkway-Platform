@@ -24,12 +24,13 @@ test("evaluateAlerts fires on Redis offline", () => {
     workerAlive: true,
     workerStale: false,
     overallHealthScore: 80,
+    runtimeMode: "production",
   });
   assert.ok(alerts.some((a) => a.id === "redis-offline"));
   assert.equal(alerts.find((a) => a.id === "redis-offline")?.level, "critical");
 });
 
-test("evaluateAlerts fires on stuck queues and stale worker", () => {
+test("evaluateAlerts fires on stuck queues and stale worker in production", () => {
   const queues: QueueMonitorRow[] = [
     {
       name: "discovery-run",
@@ -53,8 +54,30 @@ test("evaluateAlerts fires on stuck queues and stale worker", () => {
     workerAlive: false,
     workerStale: true,
     overallHealthScore: 40,
+    runtimeMode: "production",
   });
   assert.ok(alerts.some((a) => a.id === "queue-stuck"));
   assert.ok(alerts.some((a) => a.id === "worker-crashed"));
   assert.ok(alerts.some((a) => a.id === "error-spike"));
+});
+
+test("evaluateAlerts treats missing local worker as info, not critical", () => {
+  const alerts = evaluateAlerts({
+    components: [
+      component({ id: "vercel", status: "expected", message: "local" }),
+    ],
+    queues: [],
+    workerAlive: false,
+    workerStale: false,
+    overallHealthScore: 40,
+    runtimeMode: "local",
+  });
+  assert.ok(alerts.some((a) => a.id === "worker-local-expected"));
+  assert.equal(
+    alerts.find((a) => a.id === "worker-local-expected")?.level,
+    "info",
+  );
+  assert.ok(!alerts.some((a) => a.id === "worker-crashed"));
+  assert.ok(!alerts.some((a) => a.id === "error-spike"));
+  assert.ok(alerts.some((a) => a.id === "vercel-local-expected"));
 });

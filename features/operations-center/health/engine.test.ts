@@ -43,4 +43,7 @@ test("runHealthEngine aggregates provider results into overallHealthScore", asyn
   assert.equal(report.components.length, 2);
   assert.ok(report.overallHealthScore >= 70 && report.overallHealthScore <= 100);
   assert.ok(["healthy", "warning"].includes(report.overallStatus));
+  assert.equal(report.scoreBreakdown.length, 2);
+  assert.ok(report.totalWeight > 0);
+  assert.ok(report.components.every((c) => typeof c.reason === "string"));
 });

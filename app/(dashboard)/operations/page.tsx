@@ -28,7 +28,7 @@ export default async function OperationsCenterPage() {
   return (
     <DashboardShell
       title="Operations Center"
-      description="Unified platform health, queues, AI, integrations, security, and dependency diagnostics. Internal staff only."
+      description="Deployment verification and explainable production health — adapters, score breakdown, queues, and dependency diagnostics. Internal staff only."
     >
       <PlatformErrorBoundary surface="generic">
         {result.fallbackUsed || !result.data ? (
