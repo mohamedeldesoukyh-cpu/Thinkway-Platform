@@ -12,15 +12,22 @@ function parseAllowedOrigins(): string[] {
       .map((value) => value.trim())
       .filter(Boolean) ?? [];
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const developmentAppUrl =
+    process.env.NEXT_PUBLIC_DEVELOPMENT_APP_URL?.trim() ||
+    "https://dev.thinkwaymedia.com";
+  const productionAppUrl =
+    process.env.NEXT_PUBLIC_PRODUCTION_APP_URL?.trim() ||
+    "https://app.thinkwaymedia.com";
   const origins = [...fromEnv];
-  if (appUrl) {
+  for (const candidate of [appUrl, developmentAppUrl, productionAppUrl]) {
+    if (!candidate) continue;
     try {
-      origins.push(new URL(appUrl).origin);
+      origins.push(new URL(candidate).origin);
     } catch {
-      // ignore invalid app url
+      // ignore invalid url
     }
   }
-  return origins;
+  return [...new Set(origins)];
 }
 
 export function isMutatingMethod(method: string): boolean {

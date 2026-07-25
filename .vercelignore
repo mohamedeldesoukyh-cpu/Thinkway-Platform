@@ -9,3 +9,13 @@ coverage
 .tmp
 .turbo
 agent-transcripts
+migration-artifacts
+*.dump
+*.backup
+*.sql
+!supabase/**/*.sql
+dev-data.sql
+thinkway-dev-*
+production-backup*
+backup_contents.txt
+schema.sql

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { EnvironmentBannerSlot } from "@/components/environment/environment-banner-slot";
 import { AppProviders } from "@/components/providers/app-providers";
 import { ThemeHeadScript } from "@/lib/theme/theme-head-script";
 import { cn } from "@/lib/utils";
@@ -47,7 +48,10 @@ export default function RootLayout({
         suppressHydrationWarning
         className="flex min-h-full flex-col bg-background text-foreground"
       >
-        <AppProviders>{children}</AppProviders>
+        <AppProviders>
+          <EnvironmentBannerSlot />
+          {children}
+        </AppProviders>
       </body>
     </html>
   );

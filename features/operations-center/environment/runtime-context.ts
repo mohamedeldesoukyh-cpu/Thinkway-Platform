@@ -1,3 +1,4 @@
+import { getDeploymentSurface } from "@/lib/deploy/deployment-environment";
 import { isLocalDevelopmentRuntime } from "@/lib/observability/environment";
 
 export const DISCOVERY_WORKER_PROCESS = {
@@ -7,10 +8,20 @@ export const DISCOVERY_WORKER_PROCESS = {
   startCommandProduction: "npm run discovery:worker",
 } as const;
 
+/** Ops Center severity mode: local laptop vs hosted (dev or prod). */
 export type OpsRuntimeMode = "local" | "production";
 
 export function getOpsRuntimeMode(): OpsRuntimeMode {
+  // Hosted Development is production-like for infra severity (Redis/worker matter).
+  // Only the local laptop uses "expected in local development" softening.
   return isLocalDevelopmentRuntime() ? "local" : "production";
+}
+
+export function getOpsDeploymentLabel(): string {
+  const surface = getDeploymentSurface();
+  if (surface === "development") return "Development";
+  if (surface === "production") return "Production";
+  return "Local";
 }
 
 export function isOpsLocalRuntime(): boolean {

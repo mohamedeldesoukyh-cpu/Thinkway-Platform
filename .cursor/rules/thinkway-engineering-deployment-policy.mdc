@@ -20,19 +20,27 @@ If the target is Production and the user has not explicitly approved it, **stop 
 
 **Development is always updated first. Production is only updated after explicit user approval.**
 
+See `docs/RELEASE_WORKFLOW.md`.
+
+| Surface | URL | Supabase | Deploy |
+|---|---|---|---|
+| Development | `https://dev.thinkwaymedia.com` | `hsxrewjcbvmbkqdlzjhs` | Auto from branch `develop` |
+| Production | `https://app.thinkwaymedia.com` | `ienowhwfyxoqtzbgltno` | Only after explicit approval |
+
+The in-app environment switch **navigates between deployments**. Never switch Supabase/Redis inside one running app.
+
 ### Phase 1 – Development
 
 1. Implement and test locally against Development Supabase (`hsxrewjcbvmbkqdlzjhs`)
-2. Commit and push to GitHub
-3. Ensure Development is fully up to date
-4. Verify: TypeScript, Build, Operations Center, Redis, BullMQ, Discovery Worker, Release Readiness
-5. Do **not** modify Production Supabase in this phase
+2. Commit and push to `develop` (auto-deploys Development)
+3. Verify: TypeScript, Build, Operations Center, Redis, BullMQ, Discovery Worker, Release Readiness
+4. Do **not** modify Production Supabase in this phase
 
 ### Phase 2 – Production (approval required)
 
 Before any Production action, provide a deployment summary (files changed, migrations, schema impact, data impact, downtime). Wait for approval before:
 
-- Deploying Production
+- Deploying Production (`vercel deploy --prod` or commit marker `[deploy-production]`)
 - Running migrations on Production
 - Writing to the Production database (`ienowhwfyxoqtzbgltno`)
 

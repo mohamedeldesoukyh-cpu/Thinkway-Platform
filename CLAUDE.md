@@ -10,6 +10,7 @@
 - **`docs/PERFORMANCE_ENGINEERING_STANDARDS.md`** — coding / lazy / client / bundle / CSS checklist.
 - **`.cursor/rules/thinkway-product-reference.mdc`** — persistent AI guardrails.
 - **`.cursor/rules/thinkway-engineering-deployment-policy.mdc`** — Dev vs Prod Supabase, migrations, Ops Center, release safety.
+- **`docs/RELEASE_WORKFLOW.md`** — Dual deployment (`dev` / `app` thinkwaymedia.com), approval-gated Production.
 
 ## Stack
 

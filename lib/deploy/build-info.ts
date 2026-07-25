@@ -20,6 +20,24 @@ export function getExpectedSupabaseProjectRef(
 ): string {
   const override = process.env.EXPECTED_SUPABASE_PROJECT_REF?.trim();
   if (override) return override;
+
+  const thinkway = (
+    process.env.THINKWAY_ENV?.trim() ||
+    process.env.NEXT_PUBLIC_THINKWAY_ENV?.trim() ||
+    ""
+  ).toLowerCase();
+  if (thinkway === "production" || thinkway === "prod") {
+    return PRODUCTION_SUPABASE_PROJECT_REF;
+  }
+  if (
+    thinkway === "development" ||
+    thinkway === "dev" ||
+    thinkway === "staging" ||
+    thinkway === "local"
+  ) {
+    return DEVELOPMENT_SUPABASE_PROJECT_REF;
+  }
+
   if (vercelEnv === "production") return PRODUCTION_SUPABASE_PROJECT_REF;
   return DEVELOPMENT_SUPABASE_PROJECT_REF;
 }
@@ -39,6 +57,10 @@ export function getBuildInfo() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseRef = parseSupabaseProjectRef(supabaseUrl);
   const vercelEnv = process.env.VERCEL_ENV ?? "local";
+  const thinkwayEnv =
+    process.env.THINKWAY_ENV?.trim() ||
+    process.env.NEXT_PUBLIC_THINKWAY_ENV?.trim() ||
+    vercelEnv;
   const expectedRef = getExpectedSupabaseProjectRef(vercelEnv);
   const gitSha =
     process.env.VERCEL_GIT_COMMIT_SHA ??
@@ -47,7 +69,8 @@ export function getBuildInfo() {
 
   return {
     app: "thinkway-platform",
-    environment: vercelEnv,
+    environment: thinkwayEnv,
+    vercelEnvironment: vercelEnv,
     gitSha,
     gitShaShort: gitSha ? gitSha.slice(0, 7) : null,
     gitBranch:
