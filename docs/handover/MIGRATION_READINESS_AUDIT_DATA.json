@@ -1,0 +1,186 @@
+{
+  "generatedAt": "2026-07-25T02:07:05.959Z",
+  "migrationFileCount": 176,
+  "duplicateVersions": {
+    "20260723120000": [
+      "20260723120000_canonicalize_social_platforms.sql",
+      "20260723120000_shortlist_display_currency.sql"
+    ]
+  },
+  "firstMigration": "20260531120000_enterprise_master_data.sql",
+  "lastMigration": "20260724180000_p4_campaign_publication_media_select.sql",
+  "counts": {
+    "tables": 119,
+    "views": 3,
+    "functions": 132,
+    "policies": 250,
+    "indexes": 323,
+    "triggers": 83,
+    "types": 57,
+    "extensions": 2,
+    "storageBuckets": 9,
+    "enableRls": 119,
+    "forceRls": 40
+  },
+  "extensions": [
+    "pg_trgm",
+    "unaccent"
+  ],
+  "storageBuckets": [
+    "campaign-intelligence-documents",
+    "campaign-publication-media",
+    "client-documents",
+    "client-io-documents",
+    "creator-avatars",
+    "creator-imports",
+    "group-documents",
+    "influencer-documents",
+    "vendor-io-documents"
+  ],
+  "forceRlsTables": [
+    "public.access_logs",
+    "public.agencies",
+    "public.brands",
+    "public.campaign_headers",
+    "public.campaign_lines",
+    "public.campaign_purchase_orders",
+    "public.client_credit_notes",
+    "public.client_debit_notes",
+    "public.client_documents",
+    "public.client_ios",
+    "public.collection_audit_logs",
+    "public.creator_import_files",
+    "public.creator_sources",
+    "public.erp_sync_queue",
+    "public.finance_document_links",
+    "public.finance_documents",
+    "public.finance_notifications",
+    "public.finance_override_logs",
+    "public.finance_posting_batches",
+    "public.financial_approval_requests",
+    "public.financial_periods",
+    "public.fx_rate_audit_logs",
+    "public.group_documents",
+    "public.groups",
+    "public.influencer_documents",
+    "public.invoice_versions",
+    "public.io_notifications",
+    "public.md_currencies",
+    "public.md_exchange_rates",
+    "public.md_vat_rates",
+    "public.payment_allocations",
+    "public.period_lock_logs",
+    "public.po_governance_logs",
+    "public.portal_notifications",
+    "public.portal_uploads",
+    "public.user_invites",
+    "public.vendor_credit_notes",
+    "public.vendor_debit_notes",
+    "public.vendor_ios",
+    "public.vendor_payment_batches"
+  ],
+  "riskyMigrations": [
+    {
+      "file": "20260531170000_hierarchy_validation.sql",
+      "kind": "DROP COLUMN"
+    },
+    {
+      "file": "20260531260000_campaign_influencers_line_unique.sql",
+      "kind": "DELETE FROM (review)"
+    },
+    {
+      "file": "20260605010000_vendor_io_invoice_lifecycle.sql",
+      "kind": "DELETE FROM (review)"
+    },
+    {
+      "file": "20260606010000_phase2_vio_revision_operational_status.sql",
+      "kind": "DELETE FROM (review)"
+    },
+    {
+      "file": "20260613010000_invoice_line_uniqueness_and_repair.sql",
+      "kind": "DELETE FROM (review)"
+    },
+    {
+      "file": "20260625180000_audit_remove_demo_creators.sql",
+      "kind": "DELETE FROM (review)"
+    }
+  ],
+  "liveProbe": {
+    "attempted": true,
+    "projectRef": "hsxrewjcbvmbkqdlzjhs",
+    "error": null,
+    "liveTableCount": 132,
+    "liveTablesNotFoundInMigrationCreates": [
+      "approval_steps",
+      "approvals",
+      "audit_logs",
+      "campaign_bootstrap_shell_lines",
+      "campaign_influencers",
+      "campaign_members",
+      "campaigns",
+      "campaigns_legacy",
+      "client_contacts",
+      "client_users",
+      "clients",
+      "deliverables",
+      "document_sequences",
+      "influencer_platform_accounts",
+      "influencers",
+      "invoice_line_items",
+      "invoice_lines",
+      "invoices",
+      "payments",
+      "permissions",
+      "profiles",
+      "role_permissions",
+      "roles"
+    ],
+    "migrationTablesMissingFromLiveOpenApi": [
+      "intelligence.historical_campaigns_raw",
+      "intelligence.historical_influencers_raw",
+      "intelligence.int_clients",
+      "intelligence.int_brands",
+      "intelligence.int_influencers",
+      "intelligence.int_campaigns",
+      "intelligence.int_pricing_history",
+      "intelligence.int_margin_history",
+      "intelligence.int_benchmarks",
+      "intelligence.entity_resolution_overrides"
+    ],
+    "migrationTablesMissingFromLiveOpenApiTotal": 10
+  },
+  "schemaSqlTableCount": 20,
+  "notes": [
+    "OpenAPI only exposes tables/views granted to the API role; auth/storage internals and unexposed tables will appear as gaps.",
+    "CREATE TABLE parsing is heuristic; dynamic SQL and renamed tables may under-count.",
+    "schema.sql is a point-in-time dump and may lag migrations."
+  ],
+  "baselineGap": {
+    "conclusion": "Dev does not match migrations alone; schema.sql baseline required",
+    "tablesOnlyInSchemaSql": [
+      "public.roles",
+      "public.permissions",
+      "public.role_permissions",
+      "public.profiles",
+      "public.clients",
+      "public.client_contacts",
+      "public.client_users",
+      "public.campaigns",
+      "public.campaign_members",
+      "public.campaign_influencers",
+      "public.influencers",
+      "public.influencer_platform_accounts",
+      "public.deliverables",
+      "public.invoices",
+      "public.invoice_line_items",
+      "public.payments",
+      "public.approvals",
+      "public.approval_steps",
+      "public.audit_logs",
+      "public.document_sequences"
+    ],
+    "duplicateVersion": "20260723120000",
+    "recommendedStrategy": "baseline_then_replay_all_migrations",
+    "report": "docs/handover/PRODUCTION_MIGRATION_READINESS_AUDIT.md"
+  }
+}

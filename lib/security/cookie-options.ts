@@ -1,12 +1,10 @@
-export type SupabaseCookieOptions = {
-  path?: string;
-  sameSite?: "lax" | "strict" | "none";
-  secure?: boolean;
-  httpOnly?: boolean;
-  domain?: string;
-  maxAge?: number;
-  name?: string;
-};
+import type { CookieOptions, CookieOptionsWithName } from "@supabase/ssr";
+
+/**
+ * Supabase SSR cookie options (`@supabase/ssr` → `cookie` SerializeOptions).
+ * Prefer this alias at call sites that configure createBrowserClient / createServerClient.
+ */
+export type SupabaseCookieOptions = CookieOptionsWithName;
 
 /**
  * Supabase Auth cookie defaults (P3).
@@ -15,7 +13,7 @@ export type SupabaseCookieOptions = {
  * compatibility (session is read from document cookies on the client).
  * Secure + SameSite are enforced; Secure is required in production.
  */
-export function getSupabaseCookieOptions(): SupabaseCookieOptions {
+export function getSupabaseCookieOptions(): CookieOptionsWithName {
   const isProd = process.env.NODE_ENV === "production";
   return {
     path: "/",
@@ -45,10 +43,14 @@ export function auditSupabaseCookieFlags(): CookieFlagAudit {
   };
 }
 
-/** Merge library cookie options with hardened defaults. */
+/**
+ * Merge library cookie options (from setAll) with hardened defaults.
+ * Accepts full `@supabase/ssr` CookieOptions, including SerializeOptions.sameSite
+ * boolean values from the `cookie` package.
+ */
 export function mergeSupabaseCookieOptions(
-  options?: Partial<SupabaseCookieOptions> | null
-): SupabaseCookieOptions {
+  options?: CookieOptions | null
+): CookieOptionsWithName {
   return {
     ...getSupabaseCookieOptions(),
     ...options,
