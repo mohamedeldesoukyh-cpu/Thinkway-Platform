@@ -99,7 +99,9 @@ const nextConfig: NextConfig = {
     "pdfjs-dist",
     "@napi-rs/canvas",
     "sharp",
-    "sanitize-html",
+    // Do NOT externalize sanitize-html: its htmlparser2@12 dependency is ESM-only.
+    // Turbopack externalRequire() then throws ERR_REQUIRE_ESM and crashes campaign
+    // Server Actions (Assignments tab) with a Server Components digest error.
   ],
   // Tree-shake barrel imports on critical client paths (sidebar, discovery, sheets).
   experimental: {

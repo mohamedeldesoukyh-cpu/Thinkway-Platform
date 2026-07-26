@@ -67,8 +67,15 @@ export function CampaignCreatorDiscoveryProvider({
 
   const refreshShortlistCount = useCallback(() => {
     startTransition(async () => {
-      const rows = await getCampaignShortlistAction(campaignHeaderId);
-      setShortlistCount(rows.length);
+      try {
+        const rows = await getCampaignShortlistAction(campaignHeaderId);
+        setShortlistCount(rows.length);
+      } catch (error) {
+        console.error("[Assignments] shortlist count refresh failed", {
+          campaignHeaderId,
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
     });
   }, [campaignHeaderId]);
 

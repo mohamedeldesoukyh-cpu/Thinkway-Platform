@@ -613,7 +613,13 @@ export type InfluencerDocumentRow = {
 export type VendorListItem = InfluencerRow & {
   platform_accounts: Pick<
     InfluencerPlatformAccountRow,
-    "id" | "platform" | "handle" | "follower_count" | "is_primary"
+    | "id"
+    | "platform"
+    | "handle"
+    | "follower_count"
+    | "is_primary"
+    | "profile_url"
+    | "profile_picture_url"
   >[];
 };
 

@@ -61,7 +61,9 @@ const VENDOR_LIST_SELECT = `
     platform,
     handle,
     follower_count,
-    is_primary
+    is_primary,
+    profile_url,
+    profile_picture_url
   )
 `;
 

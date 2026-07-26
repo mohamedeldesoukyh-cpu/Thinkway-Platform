@@ -410,14 +410,16 @@ export function CampaignWorkspaceView({
             {tabLoadError("lines") ? (
               <CampaignWorkspaceTabLoading error={tabLoadError("lines")} />
             ) : (
-              <CampaignAssignmentsTab
-                workspace={workspace}
-                po={workspace.po}
-                currencyOptions={currencyOptions}
-                assignmentHierarchy={assignmentHierarchy}
-                billingGroups={billingGroups}
-                operationalBilling={operationalBilling}
-              />
+              <TabErrorBoundary tabName="Assignments">
+                <CampaignAssignmentsTab
+                  workspace={workspace}
+                  po={workspace.po}
+                  currencyOptions={currencyOptions}
+                  assignmentHierarchy={assignmentHierarchy}
+                  billingGroups={billingGroups}
+                  operationalBilling={operationalBilling}
+                />
+              </TabErrorBoundary>
             )}
           </CampaignWorkspaceTabPanel>
         </CampaignWorkspaceTabContent>

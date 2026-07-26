@@ -45,3 +45,31 @@ export function documentNumberDisplayTitle(
   const display = formatDocumentNumberForDisplay(trimmed);
   return display !== trimmed ? trimmed : undefined;
 }
+
+/**
+ * Lookup candidates for route/document resolution.
+ * Display forms (INF-10483) also try common zero-padded storage forms (INF-010483).
+ */
+export function documentNumberLookupCandidates(value: string): string[] {
+  const trimmed = value.trim();
+  if (!trimmed) return [];
+
+  const candidates = [trimmed];
+  const segments = trimmed.split("-");
+  if (segments.length < 2) return candidates;
+
+  const lastIdx = segments.length - 1;
+  const last = segments[lastIdx]!;
+  const revisionMatch = last.match(/^(\d+)(\/\d+)?$/);
+  if (!revisionMatch) return candidates;
+
+  const digits = revisionMatch[1]!;
+  const revisionSuffix = revisionMatch[2] ?? "";
+  for (const pad of [4, 5, 6, 7, 8]) {
+    if (digits.length >= pad) continue;
+    const next = [...segments];
+    next[lastIdx] = `${digits.padStart(pad, "0")}${revisionSuffix}`;
+    candidates.push(next.join("-"));
+  }
+  return candidates;
+}

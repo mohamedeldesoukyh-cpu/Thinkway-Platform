@@ -36,3 +36,12 @@ test("sanitize-html is installed for XSS sanitizer", () => {
   ) as { dependencies: Record<string, string> };
   assert.ok(pkg.dependencies["sanitize-html"]);
 });
+
+test("sanitize-html is not server-externalized (htmlparser2 ESM-safe bundle)", () => {
+  const config = readFileSync(path.join(process.cwd(), "next.config.ts"), "utf8");
+  assert.equal(
+    /serverExternalPackages:\s*\[[^\]]*["']sanitize-html["']/.test(config),
+    false,
+    "sanitize-html must be bundled — externalRequire + htmlparser2@12 throws ERR_REQUIRE_ESM"
+  );
+});

@@ -38,6 +38,14 @@ describe("parseEntityRouteKey", () => {
       kind: "documentNumber",
       value: "TW-2026-0042",
     });
+    assert.deepEqual(parseEntityRouteKey("INF-10483"), {
+      kind: "documentNumber",
+      value: "INF-10483",
+    });
+    assert.deepEqual(parseEntityRouteKey("INF-CI-RLS-1"), {
+      kind: "documentNumber",
+      value: "INF-CI-RLS-1",
+    });
   });
 
   it("detects slug-shortId keys", () => {
