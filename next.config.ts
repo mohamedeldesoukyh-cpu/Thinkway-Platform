@@ -121,6 +121,9 @@ const nextConfig: NextConfig = {
     },
   },
   async headers() {
+    // Platform-wide DENY / frame-ancestors 'none'. Preview HTML responses that
+    // still need same-origin framing set SAMEORIGIN on the Response itself
+    // (see EMBEDDABLE_DOCUMENT_FRAME_HEADERS) — never widen framing here.
     return [
       {
         source: "/:path*",

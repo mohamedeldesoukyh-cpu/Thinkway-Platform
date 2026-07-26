@@ -61,9 +61,21 @@ export function ShortlistPreviewDownloads({
         </a>
       </Button>
       <Button size="sm" variant="outline" asChild>
+        <a href={buildShortlistExportHref(shortlistId, "word", template, exportOptions)}>
+          <FileTextIcon data-icon="inline-start" className="size-3.5" />
+          Word
+        </a>
+      </Button>
+      <Button size="sm" variant="outline" asChild>
         <a href={buildShortlistExportHref(shortlistId, "excel", template, exportOptions)}>
           <FileSpreadsheetIcon data-icon="inline-start" className="size-3.5" />
           Excel
+        </a>
+      </Button>
+      <Button size="sm" variant="outline" asChild>
+        <a href={buildShortlistExportHref(shortlistId, "csv", template, exportOptions)}>
+          <FileSpreadsheetIcon data-icon="inline-start" className="size-3.5" />
+          CSV
         </a>
       </Button>
       {isCreatorDeckTemplate(template) ? (

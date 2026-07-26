@@ -10,11 +10,8 @@ import {
   shortlistDetailPath,
   shortlistPreviewPath,
 } from "@/features/discovery/shortlists/constants";
-import {
-  appendShortlistExportRevision,
-  appendShortlistTemplateParam,
-  resolveShortlistTemplate,
-} from "@/features/discovery/shortlists/export/shortlist-template";
+import { resolveShortlistTemplate } from "@/features/discovery/shortlists/export/shortlist-template";
+import { renderShortlistPreviewHtml } from "@/features/discovery/shortlists/export/render-shortlist-preview-html";
 import { getShortlistDetail } from "@/features/discovery/shortlists/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { metadataTitleForEntity, redirectToCanonicalEntityRoute } from "@/lib/routing/entity-page";
@@ -53,6 +50,8 @@ function shortlistTemplateLabel(
       return "Showcase";
     case "detailed":
       return "Detailed";
+    case "pitch":
+      return "Pitch presentation";
     default:
       return "Summary";
   }
@@ -119,13 +118,19 @@ export default async function ShortlistPreviewPage({
 
   const templateLabel = shortlistTemplateLabel(template);
   const serial = detail.serial_number ?? "SL-PENDING";
-  const previewParams = new URLSearchParams({ format: "preview" });
-  appendShortlistTemplateParam(previewParams, template);
-  appendShortlistExportRevision(previewParams, detail.updated_at);
-  if (itemIds?.length) {
-    previewParams.set("items", itemIds.join(","));
+
+  let html = "";
+  let errorMessage: string | null = null;
+  try {
+    const rendered = await renderShortlistPreviewHtml(supabase, shortlistId, {
+      template,
+      itemIds,
+    });
+    html = rendered.html;
+  } catch (error) {
+    errorMessage =
+      error instanceof Error ? error.message : "Failed to render shortlist preview.";
   }
-  const previewSrc = `/api/shortlists/${shortlistId}/export?${previewParams.toString()}`;
 
   return (
     <DashboardShell
@@ -154,20 +159,28 @@ export default async function ShortlistPreviewPage({
               />
             </Suspense>
           </div>
-          <ShortlistPreviewDownloads
-            shortlistId={shortlistId}
-            template={template}
-            itemIds={itemIds}
-            exportRevision={detail.updated_at}
-          />
+          {!errorMessage ? (
+            <ShortlistPreviewDownloads
+              shortlistId={shortlistId}
+              template={template}
+              itemIds={itemIds}
+              exportRevision={detail.updated_at}
+            />
+          ) : null}
         </div>
       </div>
 
-      <iframe
-        title={`${templateLabel} shortlist ${serial}`}
-        src={previewSrc}
-        className="min-h-[1200px] w-full rounded-xl border border-border bg-card"
-      />
+      {errorMessage ? (
+        <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {errorMessage}
+        </div>
+      ) : (
+        <iframe
+          title={`${templateLabel} shortlist ${serial}`}
+          srcDoc={html}
+          className="min-h-[1200px] w-full rounded-xl border border-border bg-card"
+        />
+      )}
     </DashboardShell>
   );
 }
