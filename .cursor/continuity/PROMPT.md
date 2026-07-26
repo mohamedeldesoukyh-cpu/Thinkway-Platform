@@ -39,3 +39,6 @@ See `docs/RELEASE_WORKFLOW.md` and `.cursor/rules/thinkway-engineering-deploymen
 ## Continuity maintenance
 
 Keep this file, `SUMMARY.md`, and `PROMPT_SUMMARY.md` concise and current as the platform evolves.
+
+- **Prompt** / **Summary** — durable; update when principles or platform facts change.
+- **Prompt Summary** — update **automatically after each significant milestone or sprint** (no need for the user to paste it each session).

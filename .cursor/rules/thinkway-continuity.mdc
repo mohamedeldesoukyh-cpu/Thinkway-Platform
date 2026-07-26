@@ -19,6 +19,6 @@ Update these **naturally** when the project evolves (new envs, architecture deci
 
 - **Prompt** — principles/methodology only (rarely changes).
 - **Summary** — durable platform facts (stack, hierarchy, envs, SSOT docs).
-- **Prompt Summary** — replace/refresh each sprint or major conversation arc; drop stale blockers when resolved.
+- **Prompt Summary** — update **automatically after each significant milestone or sprint**; drop stale blockers when resolved. User does not need to paste it each session.
 
 Do not duplicate full product specs here — link to `docs/THINKWAY_SYSTEM_REFERENCE.md` and related docs instead.
