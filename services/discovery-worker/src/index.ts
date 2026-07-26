@@ -1,3 +1,6 @@
+import "./config.js";
+import { assertWorkerRuntimeGuards } from "./runtime-guards.js";
+
 import { shutdownBrowser } from "./browser/browser-pool.js";
 
 import { registerRepeatableJobs } from "./schedulers/refresh-scheduler.js";
@@ -62,7 +65,8 @@ import type { Worker } from "bullmq";
 
 console.log("[discovery-worker] starting Thinkway discovery engine…");
 
-
+// Fail-fast before any BullMQ consumers register.
+assertWorkerRuntimeGuards();
 
 const creatorEnrichmentEnabled = isCreatorEnrichmentWorkerEnabled();
 
