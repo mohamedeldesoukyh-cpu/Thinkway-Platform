@@ -20,19 +20,49 @@ The in-app **environment switch** navigates between hosts. It does **not** chang
 
 ## Phase 2 – Production (approval required)
 
-**Automatic Production deployments from `main` are disabled.**
+**Automatic Production deployments from `main` are skipped by default.**
 
 Controls:
 
-1. `vercel.json` → `git.deploymentEnabled.main = false` (no Git deploy created for `main`)
+1. `ignoreCommand` → `scripts/vercel-ignored-build-step.mjs`  
+   - Vercel convention: **exit 0 = ignore build**, **exit 1 = continue build**
+   - Production Git pushes without an override → ignored (canceled)
+   - Preview / `develop` → always builds
 2. `github.autoAlias = false` (merges do not auto-alias Production)
-3. `ignoreCommand` → `scripts/vercel-ignored-build-step.mjs` (skips any Production Git build if re-enabled)
+3. Approved CLI path remains available (not gated by the Git ignore step)
 
-### Approved Production deploy workflow
+### Why a normal `main` push may show no Production deploy
+
+Pushes such as `8084ca7` do not go live automatically: the ignored-build step
+exits `0` for Production unless an explicit override is present. (Older
+`git.deploymentEnabled.main = false` also prevented any Git deploy job from
+being created at all.)
+
+### Manual override — deploy a specific `main` commit via Git
+
+Include one of these tokens in the **commit message**:
+
+- `[deploy-production]`
+- `[force-deploy]`
+
+Example:
+
+```bash
+git commit -m "release: ship Media Plan start-date messaging [deploy-production]"
+git push origin main
+```
+
+Emergency project env (remove after use):
+
+```text
+THINKWAY_FORCE_PRODUCTION_GIT_DEPLOY=1
+```
+
+### Approved Production deploy workflow (CLI)
 
 1. Provide a deployment summary (commit SHA, changes, risk, rollback).
 2. Obtain **explicit human approval** for Production.
-3. Deploy only via:
+3. Deploy via:
 
 ```bash
 npx vercel deploy --prod --non-interactive
@@ -40,7 +70,7 @@ npx vercel deploy --prod --non-interactive
 
 Optional: stage with `--skip-domain`, validate, then `npx vercel promote <deployment-url-or-id>`.
 
-Do **not** rely on pushing to `main` to release Production.
+Prefer CLI for Production releases; use `[deploy-production]` only when a Git-triggered Production build is deliberately requested.
 
 ## Environment variables
 
