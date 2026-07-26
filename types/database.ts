@@ -2956,6 +2956,14 @@ export type Database = {
           total_count: number;
         }[];
       };
+      vendor_list_total_count: {
+        Args: {
+          p_search?: string | null;
+          p_status?: string | null;
+          p_platform?: string | null;
+        };
+        Returns: number;
+      };
     };
     Enums: {
       client_status: ClientStatus;
