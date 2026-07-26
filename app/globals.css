@@ -406,3 +406,31 @@
     transform: translateX(200%);
   }
 }
+
+/* PWA splash — dark brand background, centred icon, no layout shift */
+#pwa-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: #090b14;
+  pointer-events: none;
+}
+
+#pwa-splash img {
+  width: 96px;
+  height: 96px;
+  display: block;
+}
+
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  #pwa-splash:not([data-done="true"]) {
+    display: flex;
+  }
+}
+
+#pwa-splash[data-done="true"] {
+  display: none !important;
+}

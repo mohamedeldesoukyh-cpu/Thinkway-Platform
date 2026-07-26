@@ -5,6 +5,30 @@ const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
 });
 
+/**
+ * Build-time release metadata for client + server (never hardcoded in UI).
+ * Version comes from npm's package env when running via `npm run build` / Vercel.
+ */
+const releaseEnv = {
+  NEXT_PUBLIC_APP_VERSION:
+    process.env.npm_package_version?.trim() ||
+    process.env.NEXT_PUBLIC_APP_VERSION?.trim() ||
+    "0.0.0",
+  NEXT_PUBLIC_GIT_SHA:
+    process.env.VERCEL_GIT_COMMIT_SHA?.trim() ||
+    process.env.GITHUB_SHA?.trim() ||
+    process.env.GIT_SHA?.trim() ||
+    "",
+  NEXT_PUBLIC_BUILD_TIMESTAMP:
+    process.env.BUILD_TIMESTAMP?.trim() ||
+    process.env.NEXT_PUBLIC_BUILD_TIMESTAMP?.trim() ||
+    new Date().toISOString(),
+  NEXT_PUBLIC_VERCEL_ENV:
+    process.env.VERCEL_ENV?.trim() ||
+    process.env.NEXT_PUBLIC_VERCEL_ENV?.trim() ||
+    "development",
+};
+
 function allowedServerActionOrigins(): string[] {
   const hosts = new Set<string>(["localhost:3000", "127.0.0.1:3000"]);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
@@ -52,6 +76,7 @@ const securityHeaders = [
       "font-src 'self' data:",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://*.openai.com",
       "frame-src 'self' blob:",
+      "worker-src 'self' blob:",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
@@ -62,6 +87,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  env: releaseEnv,
   // Pre-existing type debt outside Phase 3 scope can block bundle measurement.
   typescript: {
     ignoreBuildErrors: process.env.SKIP_TYPECHECK === "true",

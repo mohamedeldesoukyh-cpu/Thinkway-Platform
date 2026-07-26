@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronUpIcon, LogOutIcon } from "lucide-react";
+import { ChevronUpIcon, InfoIcon, LogOutIcon } from "lucide-react";
+import Link from "next/link";
 import { useFormStatus } from "react-dom";
 
 import {
@@ -11,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { AppVersion } from "@/components/version/app-version";
 import { signOutAction } from "@/features/auth/actions";
 import { cn } from "@/lib/utils";
 
@@ -159,6 +161,14 @@ export function UserAccount({
             <DropdownMenuSeparator />
           </>
         ) : null}
+        <AppVersion variant="menu" />
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/settings/about" className="cursor-pointer">
+            <InfoIcon />
+            <span>About</span>
+          </Link>
+        </DropdownMenuItem>
         <form action={signOutAction}>
           <SignOutMenuItem />
         </form>
