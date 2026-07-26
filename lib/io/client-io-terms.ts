@@ -1,9 +1,16 @@
 import { CLIENT_IO_DEFAULT_TERMS } from "@/lib/io/client-io-default-terms";
+import { VENDOR_IO_DEFAULT_TERMS } from "@/lib/io/vendor-io-default-terms";
 
 export type ClientIoTerm = {
   title: string;
   body: string;
 };
+
+/** Alias — same structured `{title, body}` shape for Client and Vendor IO terms. */
+export type IoTerm = ClientIoTerm;
+
+/** Which layer wins after resolution (for UI badges). */
+export type IoTermsSource = "platform" | "entity" | "io";
 
 function escapeHtml(value: string): string {
   return value
@@ -59,6 +66,46 @@ export function resolveDefaultTermsForClient(
     parseTermsText(clientTermsText),
     null
   );
+}
+
+/** Vendor defaults only (no per-IO override). */
+export function resolveDefaultTermsForVendor(
+  vendorTermsText: string | null | undefined
+): ClientIoTerm[] {
+  return resolveEffectiveTerms(
+    VENDOR_IO_DEFAULT_TERMS,
+    parseTermsText(vendorTermsText),
+    null
+  );
+}
+
+/** Full Vendor IO hierarchy: IO → vendor → platform. */
+export function resolveEffectiveVendorIoTerms(
+  vendorTermsText: string | null | undefined,
+  ioTermsText: string | null | undefined
+): ClientIoTerm[] {
+  return resolveEffectiveTerms(
+    VENDOR_IO_DEFAULT_TERMS,
+    parseTermsText(vendorTermsText),
+    parseTermsText(ioTermsText)
+  );
+}
+
+export function resolveIoTermsSource(
+  entityTerms: ClientIoTerm[] | null,
+  ioTerms: ClientIoTerm[] | null
+): IoTermsSource {
+  if (ioTerms && ioTerms.length > 0) return "io";
+  if (entityTerms && entityTerms.length > 0) return "entity";
+  return "platform";
+}
+
+/** Normalize form/DB payload — empty/invalid → null (inherit parent layer). */
+export function normalizeIoTermsText(
+  value: string | null | undefined
+): string | null {
+  const parsed = parseTermsText(value);
+  return parsed ? serializeTermsText(parsed) : null;
 }
 
 export function termsAreEqual(a: ClientIoTerm[], b: ClientIoTerm[]): boolean {

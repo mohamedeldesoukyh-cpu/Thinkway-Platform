@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { UserIcon } from "lucide-react";
+import { FileTextIcon, UserIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
@@ -15,6 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { ClientIoTermsEditor } from "@/features/io/components/client-io-terms-editor";
+import { IoTermsSourceBadge } from "@/features/io/components/io-terms-source-badge";
 import {
   updateVendorOverviewAction,
   type FormActionState,
@@ -35,6 +37,14 @@ import {
   VENDOR_FORM_SELECT_TRIGGER_CLASS,
   VENDOR_FORM_TEXTAREA_CLASS,
 } from "@/features/vendors/components/vendor-form-ui";
+import { VENDOR_IO_DEFAULT_TERMS } from "@/lib/io/vendor-io-default-terms";
+import {
+  parseTermsText,
+  resolveIoTermsSource,
+  serializeTermsText,
+  termsAreEqual,
+  type ClientIoTerm,
+} from "@/lib/io/client-io-terms";
 import type { InfluencerStatus, VendorDetail } from "@/types/database";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +63,12 @@ export function VendorOverviewTab({
   const [country, setCountry] = useState(vendor.country_code ?? "");
   const [nationality, setNationality] = useState(vendor.nationality ?? "");
   const [gender, setGender] = useState(vendor.gender ?? "");
+  const [ioTerms, setIoTerms] = useState<ClientIoTerm[]>(
+    () => parseTermsText(vendor.vendor_io_terms_text) ?? VENDOR_IO_DEFAULT_TERMS
+  );
+  const [usePlatformIoTerms, setUsePlatformIoTerms] = useState(
+    () => !parseTermsText(vendor.vendor_io_terms_text)
+  );
 
   const [state, formAction, isPending] = useActionState(
     updateVendorOverviewAction,
@@ -69,6 +85,21 @@ export function VendorOverviewTab({
     }
     toast.error(state.message);
   }, [state]);
+
+  useEffect(() => {
+    setIoTerms(parseTermsText(vendor.vendor_io_terms_text) ?? VENDOR_IO_DEFAULT_TERMS);
+    setUsePlatformIoTerms(!parseTermsText(vendor.vendor_io_terms_text));
+  }, [vendor.vendor_io_terms_text]);
+
+  const vendorIoTermsPayload =
+    usePlatformIoTerms || termsAreEqual(ioTerms, VENDOR_IO_DEFAULT_TERMS)
+      ? ""
+      : serializeTermsText(ioTerms);
+
+  const termsSource = resolveIoTermsSource(
+    usePlatformIoTerms ? null : ioTerms,
+    null
+  );
 
   return (
     <>
@@ -93,6 +124,7 @@ export function VendorOverviewTab({
           <input type="hidden" name="country_code" value={country} />
           <input type="hidden" name="nationality" value={nationality} />
           <input type="hidden" name="gender" value={gender} />
+          <input type="hidden" name="vendor_io_terms_text" value={vendorIoTermsPayload} />
 
           <VendorFormSection
             icon={UserIcon}
@@ -270,6 +302,30 @@ export function VendorOverviewTab({
                 disabled={isPending}
               />
             </VendorFormField>
+          </VendorFormSection>
+
+          <VendorFormSection
+            icon={FileTextIcon}
+            title="Vendor IO Default Terms"
+            description="These become the default for all new Vendor IOs with this influencer."
+          >
+            <div className="mb-3 flex items-center gap-2">
+              <span className="text-[11px] text-muted-foreground">Current source</span>
+              <IoTermsSourceBadge source={termsSource} />
+            </div>
+            <ClientIoTermsEditor
+              terms={ioTerms}
+              onChange={(next) => {
+                setIoTerms(next);
+                setUsePlatformIoTerms(false);
+              }}
+              onRecover={() => {
+                setIoTerms(VENDOR_IO_DEFAULT_TERMS);
+                setUsePlatformIoTerms(true);
+              }}
+              recoverLabel="Restore Platform Default"
+              disabled={isPending}
+            />
           </VendorFormSection>
         </form>
       </VendorProfileTabShell>

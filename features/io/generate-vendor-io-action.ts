@@ -185,6 +185,19 @@ export async function generateVendorIosFromLinesAction(
       assignmentId = (insertedCi as { id: string }).id;
     }
 
+    const { data: influencerDefaults } = await supabase
+      .from("influencers")
+      .select("vendor_io_terms_text")
+      .eq("id", group.influencer_id)
+      .maybeSingle();
+
+    const vendorDefaultTerms =
+      typeof (influencerDefaults as { vendor_io_terms_text?: string | null } | null)
+        ?.vendor_io_terms_text === "string"
+        ? (influencerDefaults as { vendor_io_terms_text: string }).vendor_io_terms_text.trim() ||
+          null
+        : null;
+
     const { data: vendorIo, error: vioError } = await supabase
       .from("vendor_ios")
       .insert({
@@ -194,7 +207,8 @@ export async function generateVendorIosFromLinesAction(
         amount: group.total_fee,
         currency_code: group.currency,
         status: "draft",
-        terms_text: `Vendor IO for ${group.influencer_name} — ${group.lines.length} assignment line(s).`,
+        // Copy vendor defaults into the IO row (null = inherit platform at document time).
+        terms_text: vendorDefaultTerms,
         created_by: user.id,
         updated_by: user.id,
         revision_number: 0,

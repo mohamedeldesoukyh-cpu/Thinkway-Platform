@@ -62,6 +62,8 @@ export type VendorIoRow = {
   influencer_id: string;
   influencer_name: string;
   creator_avatar_url: string | null;
+  /** Influencer default Vendor IO terms JSON (null = platform default). */
+  vendor_io_terms_text: string | null;
   amount: number;
   currency_code: string;
   status: VendorIoStatus;

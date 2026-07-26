@@ -7,6 +7,7 @@ import {
   removeStorageObject,
   uploadEntityDocument,
 } from "@/lib/supabase/storage";
+import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient, requireRequestUser } from "@/lib/supabase/server";
 import type {
   ContractStatus,
@@ -305,6 +306,11 @@ export async function updateVendorOverviewAction(
     return { ok: false, message: authError };
   }
 
+  const permission = await requirePermission(supabase, "influencers.write");
+  if ("error" in permission) {
+    return { ok: false, message: permission.error };
+  }
+
   const { data: existing } = await supabase
     .from("influencers")
     .select("country_code, country_codes")
@@ -318,6 +324,26 @@ export async function updateVendorOverviewAction(
     preferredPrimary: emptyToNull(parsed.data.country_code),
     preserveExistingPrimary: false,
   });
+
+  let vendorIoTermsText: string | null = null;
+  try {
+    const { normalizeIoTermsText } = await import("@/lib/io/client-io-terms");
+    const raw = parsed.data.vendor_io_terms_text?.trim() ?? "";
+    if (raw) {
+      vendorIoTermsText = normalizeIoTermsText(raw);
+      if (!vendorIoTermsText) {
+        return {
+          ok: false,
+          message: "Vendor IO terms must be a valid JSON list of title and body pairs.",
+        };
+      }
+    }
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Invalid Vendor IO terms.",
+    };
+  }
 
   const { error } = await supabase
     .from("influencers")
@@ -336,7 +362,8 @@ export async function updateVendorOverviewAction(
       influencer_url: emptyToNull(parsed.data.influencer_url),
       management_agency: emptyToNull(parsed.data.management_agency),
       notes: emptyToNull(parsed.data.notes),
-    })
+      vendor_io_terms_text: vendorIoTermsText,
+    } as never)
     .eq("id", parsed.data.influencer_id);
 
   if (error) {

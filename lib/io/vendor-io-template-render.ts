@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { renderTermsListHtml } from "@/lib/io/client-io-terms";
 import { THINKWAY_AGENCY_DEFAULTS } from "@/lib/io/thinkway-agency-defaults";
 import type { VendorIoDocumentData } from "@/lib/io/vendor-io-document-types";
 import { applyThinkwayLogoToDocumentHtml } from "@/lib/reports/document/thinkway-report-logo";
@@ -268,6 +269,12 @@ export function renderVendorIoHtml(data: VendorIoDocumentData): string {
         /<div class="svalue empty" style="color:var\(--rule\);">——<\/div>/,
         `<div class="svalue">${influencerName}</div>`
       )
+  );
+
+  // Section 8 — Terms & Conditions (IO → vendor → platform)
+  html = html.replace(
+    /<ul class="terms-list">[\s\S]*?<\/ul>/,
+    `<ul class="terms-list">${renderTermsListHtml(data.terms)}</ul>`
   );
 
   return applyThinkwayLogoToDocumentHtml(html);

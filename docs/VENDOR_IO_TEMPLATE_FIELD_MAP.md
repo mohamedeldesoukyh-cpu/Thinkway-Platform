@@ -121,7 +121,17 @@ Currency from `vendor_ios.currency_code` or `campaign_lines.currency_code`.
 
 ## Section 8 — Terms & conditions
 
-Static legal copy from template — **not replaced** (preserved verbatim).
+Replaced at generate time via `renderTermsListHtml(data.terms)` in `lib/io/vendor-io-template-render.ts`.
+
+**Precedence (first non-empty wins):**
+
+1. `vendor_ios.terms_text` — structured JSON `[{title, body}, …]` (deal override)
+2. `influencers.vendor_io_terms_text` — vendor default (same JSON shape)
+3. Platform defaults — `VENDOR_IO_DEFAULT_TERMS` (`lib/io/vendor-io-default-terms.ts`), synced with the static list in `Thinkway_IO_Global.html`
+
+Legacy freeform `terms_text` (pre-structured seed prose) does not parse as JSON and falls through to vendor/platform defaults. Existing generated `terms_html` documents are not rewritten unless the IO is regenerated.
+
+See `docs/VENDOR_IO_TERMS.md` for the full hierarchy and UX.
 
 ---
 

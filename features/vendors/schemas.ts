@@ -159,6 +159,7 @@ export const updateVendorOverviewSchema = z.object({
     ),
   management_agency: z.string().trim().max(200).optional().or(z.literal("")),
   notes: z.string().trim().max(2000).optional().or(z.literal("")),
+  vendor_io_terms_text: z.string().trim().max(50_000).optional().or(z.literal("")),
 });
 
 export const updateVendorLegalSchema = z.object({

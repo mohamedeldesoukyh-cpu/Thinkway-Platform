@@ -31,8 +31,16 @@ type VendorIoQueryRow = {
   updated_at: string;
   campaign: { document_number: string; name: string } | null;
   influencer:
-    | { display_name: string; payment_terms?: PaymentTerms | string | null }
-    | Array<{ display_name: string; payment_terms?: PaymentTerms | string | null }>
+    | {
+        display_name: string;
+        payment_terms?: PaymentTerms | string | null;
+        vendor_io_terms_text?: string | null;
+      }
+    | Array<{
+        display_name: string;
+        payment_terms?: PaymentTerms | string | null;
+        vendor_io_terms_text?: string | null;
+      }>
     | null;
   assignment:
     | { line: { document_number: string } | { document_number: string }[] | null }
@@ -70,6 +78,7 @@ export function mapVendorIoQueryRow(row: VendorIoQueryRow): VendorIoRow {
     influencer_id: row.influencer_id,
     influencer_name: influencer?.display_name ?? "—",
     creator_avatar_url: null,
+    vendor_io_terms_text: influencer?.vendor_io_terms_text ?? null,
     amount: Number(row.amount),
     currency_code: row.currency_code,
     status: row.status,

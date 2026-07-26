@@ -8,6 +8,8 @@ export type VendorIoDeliverableRow = {
   totalCost: number;
 };
 
+import type { ClientIoTerm } from "@/lib/io/client-io-terms";
+
 export type VendorIoDocumentData = {
   vendorIoId: string;
   documentNumber: string;
@@ -18,6 +20,8 @@ export type VendorIoDocumentData = {
   status: string;
   amount: number;
   usageRights: string | null;
+  /** Resolved Section 8 terms (IO → vendor → platform). */
+  terms: ClientIoTerm[];
   influencer: {
     id: string;
     displayName: string;

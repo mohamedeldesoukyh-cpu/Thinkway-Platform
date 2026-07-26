@@ -439,6 +439,8 @@ export type InfluencerRow = {
   default_vat_percent: number;
   tax_registration_number: string | null;
   notes: string | null;
+  /** JSON [{title, body}] — default Vendor IO Section 8 terms; NULL = platform default. */
+  vendor_io_terms_text: string | null;
   metadata: Record<string, unknown>;
   search_vector: string | null;
   created_by: string | null;
@@ -1928,6 +1930,7 @@ export type Database = {
           default_vat_percent?: number;
           tax_registration_number?: string | null;
           notes?: string | null;
+          vendor_io_terms_text?: string | null;
           created_by?: string | null;
           last_enriched_at?: string | null;
           enrichment_status?: CreatorEnrichmentStatus;
