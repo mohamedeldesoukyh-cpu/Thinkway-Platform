@@ -20,6 +20,7 @@ export const config = {
      * Match app + API routes for session, rate limits, CSRF, and security headers.
      * Skip Next internals and static asset extensions.
      */
-    "/((?!_next/static|_next/image|_next/webpack-hmr|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|woff2?)$).*)",
+    // Skip Next internals, favicon, and static brand/PWA assets (incl. webmanifest).
+    "/((?!_next/static|_next/image|_next/webpack-hmr|favicon.ico|manifest\\.webmanifest|browserconfig\\.xml|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|woff2?|webmanifest|xml)$).*)",
   ],
 };
