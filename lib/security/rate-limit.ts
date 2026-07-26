@@ -75,16 +75,29 @@ export function consumeRateLimit(input: {
     store.set(key, entry);
   }
 
-  entry.count += 1;
-  const allowed = entry.count <= rule.max;
-  const remaining = Math.max(0, rule.max - entry.count);
   const retryAfterSec = Math.max(1, Math.ceil((entry.resetAt - now) / 1000));
 
+  // Once the window is exhausted, reject without further increments so retries
+  // (and parallel 429s) do not distort the counter or extend the ban window.
+  if (entry.count >= rule.max) {
+    return {
+      allowed: false,
+      category: input.category,
+      limit: rule.max,
+      remaining: 0,
+      resetAt: entry.resetAt,
+      retryAfterSec,
+    };
+  }
+
+  entry.count += 1;
+  const remaining = Math.max(0, rule.max - entry.count);
+
   return {
-    allowed,
+    allowed: true,
     category: input.category,
     limit: rule.max,
-    remaining: allowed ? remaining : 0,
+    remaining,
     resetAt: entry.resetAt,
     retryAfterSec,
   };
@@ -99,9 +112,15 @@ export type RateLimitErrorBody = {
 };
 
 export function rateLimitExceededBody(result: RateLimitResult): RateLimitErrorBody {
+  const wait = `Try again in ${result.retryAfterSec}s.`;
+  const message =
+    result.category === "ai"
+      ? `You're sending AI requests too quickly. ${wait}`
+      : `Rate limit exceeded for ${result.category}. ${wait}`;
+
   return {
     error: "rate_limit_exceeded",
-    message: `Rate limit exceeded for ${result.category}. Try again in ${result.retryAfterSec}s.`,
+    message,
     category: result.category,
     limit: result.limit,
     retryAfterSec: result.retryAfterSec,

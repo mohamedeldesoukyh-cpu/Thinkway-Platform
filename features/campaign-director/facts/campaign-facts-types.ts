@@ -29,8 +29,21 @@ export type CampaignFacts = {
   objective?: string;
   budget?: { amount: number; currency: string };
   durationWeeks?: number;
-  /** ISO calendar date (YYYY-MM-DD) for the first day of the campaign. */
+  /**
+   * ISO calendar date (YYYY-MM-DD) for the user-requested first day of the campaign.
+   * Alias of {@link requestedStartDate}; kept for backward compatibility.
+   */
   campaignStartDate?: string;
+  /**
+   * ISO calendar date (YYYY-MM-DD) the user asked to start on.
+   * May fall mid-week; the Publishing Calendar still anchors Week 1 to Monday.
+   */
+  requestedStartDate?: string;
+  /**
+   * ISO calendar date (YYYY-MM-DD) — Monday of Media Plan Week 1
+   * (Monday on or after {@link requestedStartDate} / {@link campaignStartDate}).
+   */
+  scheduledStartDate?: string;
   geography?: string[];
   audience?: string;
   platforms?: string[];

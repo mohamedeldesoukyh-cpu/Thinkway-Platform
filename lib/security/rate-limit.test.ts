@@ -11,6 +11,15 @@ import { resolveRateLimitCategory } from "./rate-limit-policy";
 test("resolveRateLimitCategory maps endpoint families", () => {
   assert.equal(resolveRateLimitCategory({ pathname: "/login", method: "POST" }), "auth");
   assert.equal(resolveRateLimitCategory({ pathname: "/api/ai/chat", method: "POST" }), "ai");
+  // Conversation reads and Studio page navigations must not share the AI mutation budget.
+  assert.equal(
+    resolveRateLimitCategory({ pathname: "/api/ai/conversations", method: "GET" }),
+    "default"
+  );
+  assert.equal(
+    resolveRateLimitCategory({ pathname: "/ai/conv-123", method: "GET" }),
+    "default"
+  );
   assert.equal(
     resolveRateLimitCategory({ pathname: "/api/discovery/search", method: "GET" }),
     "discovery"

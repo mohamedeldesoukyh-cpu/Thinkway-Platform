@@ -113,6 +113,39 @@ export class OpenAiProvider implements LlmProvider {
     }
 
     if (!response.ok) {
+      if (response.status === 429 || payload.error?.code === "rate_limit_exceeded") {
+        console.warn(
+          JSON.stringify({
+            event: "llm_rate_limit_exceeded",
+            provider: "openai",
+            model: request.model ?? this.defaultModel,
+            tokens: null,
+            status: response.status,
+            code: payload.error?.code ?? "rate_limit_exceeded",
+            type: payload.error?.type ?? null,
+            message: payload.error?.message ?? null,
+            requestId: response.headers.get("x-request-id"),
+            retryAfter: response.headers.get("retry-after"),
+            rateLimitHeaders: {
+              "Retry-After": response.headers.get("retry-after"),
+              "x-ratelimit-limit-requests": response.headers.get(
+                "x-ratelimit-limit-requests"
+              ),
+              "x-ratelimit-remaining-requests": response.headers.get(
+                "x-ratelimit-remaining-requests"
+              ),
+              "x-ratelimit-limit-tokens": response.headers.get(
+                "x-ratelimit-limit-tokens"
+              ),
+              "x-ratelimit-remaining-tokens": response.headers.get(
+                "x-ratelimit-remaining-tokens"
+              ),
+            },
+            durationMs: null,
+            retryCount: 0,
+          })
+        );
+      }
       throw new LlmProviderError(
         payload.error?.message ??
           `OpenAI API request failed with status ${response.status}.`,

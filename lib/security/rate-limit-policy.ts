@@ -25,11 +25,10 @@ export function resolveRateLimitCategory(input: {
     return "auth";
   }
 
-  if (
-    pathname.startsWith("/api/ai/") ||
-    pathname.startsWith("/ai") ||
-    pathname.includes("/campaign-studio")
-  ) {
+  // Tight AI budget applies only to mutating `/api/ai/*` calls (chat / generation).
+  // GET conversation loads and `/ai` page navigations must NOT share that 10/min
+  // bucket — Studio/Copilot chatter was exhausting it and blocking regenerates.
+  if (pathname.startsWith("/api/ai/") && mutating) {
     return "ai";
   }
 
