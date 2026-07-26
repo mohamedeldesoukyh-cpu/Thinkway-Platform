@@ -1,38 +1,29 @@
 #!/usr/bin/env node
 /**
- * Vercel Ignored Build Step
+ * Vercel Ignored Build Step (defense in depth)
  *
  * Exit 0 → skip the build
  * Exit 1 → continue the build
  *
  * Policy:
  * - Preview / Development (non-production Vercel env): always build
- * - Production Git deploys: skip unless the commit message contains
- *   `[deploy-production]` (explicit approval marker)
+ * - Production Git deploys: always skip
  *
- * CLI `vercel deploy --prod` is unaffected by this script (Git-only gate).
+ * Structural control: `vercel.json` → `git.deploymentEnabled.main = false`
+ * disables automatic Production deploys from `main`. This script is a
+ * second gate if Production Git builds are ever re-enabled.
+ *
+ * Approved Production path: explicit CLI `vercel deploy --prod` after
+ * human approval (CLI deploys are not gated by this Git ignore step).
  */
 
 const vercelEnv = (process.env.VERCEL_ENV || "").toLowerCase();
-const message = process.env.VERCEL_GIT_COMMIT_MESSAGE || "";
-const force =
-  process.env.FORCE_PRODUCTION_DEPLOY === "1" ||
-  process.env.FORCE_PRODUCTION_DEPLOY === "true";
-
-const allowProduction =
-  force || /\[deploy-production\]/i.test(message);
 
 if (vercelEnv === "production") {
-  if (allowProduction) {
-    console.log(
-      "[vercel-ignored-build-step] Production build allowed (approval marker present).",
-    );
-    process.exit(1);
-  }
   console.log(
     "[vercel-ignored-build-step] Skipping Production Git deploy. " +
-      "Push to `develop` for Development, or approve with commit marker " +
-      "`[deploy-production]` / CLI `vercel deploy --prod`.",
+      "Production requires explicit approval via `vercel deploy --prod`. " +
+      "Push to `develop` for Development/Preview.",
   );
   process.exit(0);
 }

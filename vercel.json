@@ -1,4 +1,12 @@
 {
+  "git": {
+    "deploymentEnabled": {
+      "main": false
+    }
+  },
+  "github": {
+    "autoAlias": false
+  },
   "ignoreCommand": "node scripts/vercel-ignored-build-step.mjs",
   "functions": {
     "app/api/cron/publication-metrics/route.ts": {

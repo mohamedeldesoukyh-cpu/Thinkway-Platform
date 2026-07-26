@@ -4,8 +4,8 @@ Permanent dual-deployment model.
 
 | Surface | URL | Supabase | Redis | Git |
 |---|---|---|---|---|
-| **Development** | https://dev.thinkwaymedia.com | `hsxrewjcbvmbkqdlzjhs` | Development `REDIS_URL` | Branch `develop` (auto-deploy) |
-| **Production** | https://app.thinkwaymedia.com | `ienowhwfyxoqtzbgltno` | Production `REDIS_URL` | Git Production only after approval |
+| **Development** | https://dev.thinkwaymedia.com | `hsxrewjcbvmbkqdlzjhs` | Development `REDIS_URL` | Branch `develop` (auto-deploy Preview) |
+| **Production** | https://app.thinkwaymedia.com | `ienowhwfyxoqtzbgltno` | Production `REDIS_URL` | **Manual approval only** — no auto-deploy from `main` |
 | **Local** | `localhost` | Development (default) | Local Redis | — |
 
 The in-app **environment switch** navigates between hosts. It does **not** change databases inside a single running app.
@@ -20,15 +20,27 @@ The in-app **environment switch** navigates between hosts. It does **not** chang
 
 ## Phase 2 – Production (approval required)
 
-Before any Production action, provide a deployment summary and wait for explicit approval.
+**Automatic Production deployments from `main` are disabled.**
 
-Then deploy Production **only** via one of:
+Controls:
 
-- `npx vercel deploy --prod --non-interactive` (approved CLI deploy), or
-- Git commit to the Production branch whose message contains `[deploy-production]`
+1. `vercel.json` → `git.deploymentEnabled.main = false` (no Git deploy created for `main`)
+2. `github.autoAlias = false` (merges do not auto-alias Production)
+3. `ignoreCommand` → `scripts/vercel-ignored-build-step.mjs` (skips any Production Git build if re-enabled)
 
-Unapproved pushes that would target Vercel Production are skipped by
-`scripts/vercel-ignored-build-step.mjs`.
+### Approved Production deploy workflow
+
+1. Provide a deployment summary (commit SHA, changes, risk, rollback).
+2. Obtain **explicit human approval** for Production.
+3. Deploy only via:
+
+```bash
+npx vercel deploy --prod --non-interactive
+```
+
+Optional: stage with `--skip-domain`, validate, then `npx vercel promote <deployment-url-or-id>`.
+
+Do **not** rely on pushing to `main` to release Production.
 
 ## Environment variables
 
