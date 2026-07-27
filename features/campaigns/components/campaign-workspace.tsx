@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { CopyIcon, FileTextIcon, MoreHorizontalIcon, PencilIcon } from "lucide-react";
+import Link from "next/link";
+import { CalendarRangeIcon, CopyIcon, FileTextIcon, MoreHorizontalIcon, PencilIcon } from "lucide-react";
 
 import { PageBackButton } from "@/components/navigation/page-back-button";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,7 @@ import { flattenOperationalDeliverables } from "@/lib/campaigns/flatten-operatio
 import { buildConsolidatedInvoiceQueueRows } from "@/lib/billing/consolidated-invoice-queue";
 import { OpenCampaignStudioLauncher } from "@/features/campaign-outputs/components/open-campaign-studio-launcher-lazy";
 import { seedFromCampaign } from "@/features/campaign-outputs/hydration/seed-adapters";
+import { campaignMediaPlanPath } from "@/lib/routing/entity-paths";
 
 type CampaignWorkspaceViewProps = {
   workspace: CampaignWorkspace;
@@ -304,6 +306,23 @@ export function CampaignWorkspaceView({
                     className="thinkway-campaign-status-chip"
                   />
                   <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="thinkway-campaign-btn h-[30px] px-[11px] text-[11px] font-medium shadow-none"
+                    >
+                      <Link
+                        href={campaignMediaPlanPath({
+                          id: workspace.id,
+                          document_number: workspace.document_number,
+                          name: workspace.name,
+                        })}
+                      >
+                        <CalendarRangeIcon className="size-3.5" />
+                        Media Plans
+                      </Link>
+                    </Button>
                     <OpenCampaignStudioLauncher
                       seed={campaignStudioSeed}
                       workspace={campaignStudioWorkspace}

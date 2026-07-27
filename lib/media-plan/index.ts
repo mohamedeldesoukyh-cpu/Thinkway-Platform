@@ -47,6 +47,13 @@ export type {
   MediaPlanLifecycleMeta,
 } from "./lifecycle-meta";
 export { createDefaultMediaPlanLifecycle, cloneJson } from "./lifecycle-meta";
+export {
+  emptyMediaPlanData,
+  itemsToMediaPlanData,
+  mediaPlanDataToItems,
+} from "./calendar-adapter";
+export { mediaPlanStateFromCampaignObject, baselineItemsFromState } from "./campaign-object-state";
+export { performanceFactsFromAssignmentHierarchy } from "./performance-facts";
 export type {
   EnsureWorkingDraftResult,
   MediaPlanApprovalMethod,

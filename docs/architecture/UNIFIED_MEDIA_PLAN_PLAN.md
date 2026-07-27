@@ -65,8 +65,8 @@ Disabled regenerate message:
 | Phase | Scope |
 |---|---|
 | **0** | Engine + invariants + tests + this plan |
-| **1** | Studio schedule writes via Engine bridge (`media-plan-mutations`) + lifecycle meta *(current)* |
-| **2** | Campaign full-page workspace reusing Studio calendar; timeline feed UI |
+| **1** | Studio schedule writes via Engine bridge (`media-plan-mutations`) + lifecycle meta |
+| **2** | Campaign full-page workspace reusing Studio calendar *(current)* — see `UNIFIED_MEDIA_PLAN_PHASE2_REPORT.md` |
 | **3** | Actual / Remaining UI views from Performance facts |
 | **4** | Client Portal Original read-only + approvals |
 | **5** | Timeline feed, comparison UI, regression matrix |

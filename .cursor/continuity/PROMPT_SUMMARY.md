@@ -3,14 +3,14 @@
 **Branch focus:** `feature/unified-media-plan` (from `develop`).  
 **Prior stash on `main`:** `WIP commercial CRM before unified-media-plan` — restore separately; do not mix with Media Plan work.
 
-## Active: Unified Media Plan (Phase 1 complete → Phase 2 next)
+## Active: Unified Media Plan (Phase 2 complete → Phase 3/4 next)
 
 - Architecture: `docs/architecture/UNIFIED_MEDIA_PLAN_PLAN.md`
-- Write-path report: `docs/architecture/UNIFIED_MEDIA_PLAN_PHASE1_WRITE_PATHS.md`
-- Engine: `lib/media-plan` + Studio bridge `features/campaign-outputs/media-plan-mutations.ts`
-- All Studio schedule writes route through Engine; audit test enforces no direct assigns
-- Tests: `npm run test:media-plan-phase1`
-- Next: Phase 2 — Campaign full-page Media Plan workspace reusing Studio calendar
+- Phase 1 write paths: `docs/architecture/UNIFIED_MEDIA_PLAN_PHASE1_WRITE_PATHS.md`
+- Phase 2 report: `docs/architecture/UNIFIED_MEDIA_PLAN_PHASE2_REPORT.md`
+- Route: `/campaigns/[id]/media-plan` — Original/Actual/Remaining via shared `MediaPlanCalendar`
+- Tests: `npm run test:media-plan-phase1` · `npm run test:media-plan-phase2`
+- Next: Timeline events + Client Portal Original read-only (Phase 4)
 
 ## Done earlier
 

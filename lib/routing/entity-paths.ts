@@ -82,6 +82,15 @@ export function campaignDetailPathWithTab(entity: EntityRouteInput, tab?: string
   return tab ? `${base}?tab=${encodeURIComponent(tab)}` : base;
 }
 
+/** Full-page Campaign Media Plan workspace (Original / Actual / Remaining). */
+export function campaignMediaPlanPath(
+  entity: EntityRouteInput | string,
+  view?: "original" | "actual" | "remaining"
+): string {
+  const base = `${campaignDetailPath(entity)}/media-plan`;
+  return view && view !== "original" ? `${base}?view=${encodeURIComponent(view)}` : base;
+}
+
 export function clientDetailPath(entity: EntityRouteInput | string): string {
   if (typeof entity === "string") {
     return `${CLIENTS_LIST_PATH}/${encodeURIComponent(entity)}`;
