@@ -823,3 +823,52 @@ export async function getClientDocumentDownloadUrlAction(
     return { error: friendlyClientDocumentError(message) };
   }
 }
+
+export async function upsertClientCommercialRequirementsAction(
+  _prev: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
+  const clientId = String(formData.get("client_id") ?? "").trim();
+  if (!clientId) {
+    return { ok: false, message: "Client is required." };
+  }
+
+  const { supabase, error: authError } = await requireAuthUser();
+  if (authError) {
+    return { ok: false, message: authError };
+  }
+
+  const requiredDocumentTypes = String(formData.get("required_document_types") ?? "")
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+  const legalClauses = String(formData.get("legal_clauses") ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((text) => ({ text }));
+
+  const payload = {
+    client_id: clientId,
+    required_document_types: requiredDocumentTypes,
+    usage_rights: String(formData.get("usage_rights") ?? "").trim() || null,
+    approval_workflow: String(formData.get("approval_workflow") ?? "").trim() || null,
+    exclusivity_notes: String(formData.get("exclusivity_notes") ?? "").trim() || null,
+    confidentiality_notes:
+      String(formData.get("confidentiality_notes") ?? "").trim() || null,
+    notes: String(formData.get("notes") ?? "").trim() || null,
+    legal_clauses: legalClauses,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await supabase
+    .from("client_commercial_requirements")
+    .upsert(payload as never, { onConflict: "client_id" });
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  revalidatePath(`/clients/${clientId}`);
+  return { ok: true, message: "Commercial requirements saved." };
+}

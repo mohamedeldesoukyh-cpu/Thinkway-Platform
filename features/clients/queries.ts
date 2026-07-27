@@ -193,12 +193,18 @@ export async function getClientById(id: string): Promise<ClientDetail | null> {
     return null;
   }
 
-  const [documents, campaigns, brands, vrRateMap] = await Promise.all([
-    fetchClientDocumentsSafe(supabase, id),
-    fetchClientCampaignsSafe(supabase, id),
-    fetchClientBrandsSafe(id),
-    fetchClientVrRateMapSafe(supabase, clientRow.vr_rate_id),
-  ]);
+  const [documents, campaigns, brands, vrRateMap, commercialRequirementsResult] =
+    await Promise.all([
+      fetchClientDocumentsSafe(supabase, id),
+      fetchClientCampaignsSafe(supabase, id),
+      fetchClientBrandsSafe(id),
+      fetchClientVrRateMapSafe(supabase, clientRow.vr_rate_id),
+      supabase
+        .from("client_commercial_requirements")
+        .select("*")
+        .eq("client_id", id)
+        .maybeSingle(),
+    ]);
 
   return {
     ...clientRow,
@@ -207,5 +213,9 @@ export async function getClientById(id: string): Promise<ClientDetail | null> {
     documents,
     campaigns,
     brands,
+    commercial_requirements: commercialRequirementsResult.error
+      ? null
+      : ((commercialRequirementsResult.data ??
+          null) as ClientDetail["commercial_requirements"]),
   };
 }

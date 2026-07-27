@@ -1,8 +1,8 @@
 /**
  * Shared CRM activation helpers.
  *
- * Phase 2B: assignment + quote→campaign dual-event (writers gated).
- * Do not call from Discovery import / Apify / shortlist-add / draft quotes / VIO / Convert.
+ * Assignment + quote→campaign + Vendor IO (writers gated).
+ * Do not call from Discovery import / Apify / shortlist-add / draft quotes.
  *
  * Dual-event strategy (quote → campaign):
  * - Persist audit reason `quotation_operational` when quotation becomes operational.

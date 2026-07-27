@@ -12,6 +12,9 @@ import {
 } from "@/lib/io/vendor-io-generate-eligibility";
 import { generateVendorIoDocument } from "@/lib/io/vendor-io-document-service";
 import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
+import { ensureCommercialCreatorFromVendorIo } from "@/lib/creators/crm/activation-helpers";
+import { composeCreatorAgreementTerms } from "@/lib/creators/crm/agreement-compose";
+import { logVendorPaymentTimelineEvent } from "@/lib/creators/crm/payment-timeline";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const generateVendorIoSchema = z.object({
@@ -185,11 +188,18 @@ export async function generateVendorIosFromLinesAction(
       assignmentId = (insertedCi as { id: string }).id;
     }
 
-    const { data: influencerDefaults } = await supabase
-      .from("influencers")
-      .select("vendor_io_terms_text")
-      .eq("id", group.influencer_id)
-      .maybeSingle();
+    const [{ data: influencerDefaults }, { data: campaignHeader }] = await Promise.all([
+      supabase
+        .from("influencers")
+        .select("vendor_io_terms_text")
+        .eq("id", group.influencer_id)
+        .maybeSingle(),
+      supabase
+        .from("campaign_headers")
+        .select("client_id, brand_id")
+        .eq("id", campaignId)
+        .maybeSingle(),
+    ]);
 
     const vendorDefaultTerms =
       typeof (influencerDefaults as { vendor_io_terms_text?: string | null } | null)
@@ -197,6 +207,25 @@ export async function generateVendorIosFromLinesAction(
         ? (influencerDefaults as { vendor_io_terms_text: string }).vendor_io_terms_text.trim() ||
           null
         : null;
+
+    let composedTerms: string | null = null;
+    const clientId = (campaignHeader as { client_id?: string | null } | null)?.client_id;
+    const brandId = (campaignHeader as { brand_id?: string | null } | null)?.brand_id;
+    if (clientId) {
+      try {
+        const composed = await composeCreatorAgreementTerms(supabase, {
+          influencerId: group.influencer_id,
+          clientId,
+          brandId,
+          preferSavedTemplate: true,
+        });
+        if (composed.termsText.trim()) {
+          composedTerms = composed.termsText.trim();
+        }
+      } catch {
+        composedTerms = null;
+      }
+    }
 
     const { data: vendorIo, error: vioError } = await supabase
       .from("vendor_ios")
@@ -207,8 +236,8 @@ export async function generateVendorIosFromLinesAction(
         amount: group.total_fee,
         currency_code: group.currency,
         status: "draft",
-        // Copy vendor defaults into the IO row (null = inherit platform at document time).
-        terms_text: vendorDefaultTerms,
+        // Prefer composed client/brand agreement; else vendor defaults; else platform.
+        terms_text: composedTerms ?? vendorDefaultTerms,
         created_by: user.id,
         updated_by: user.id,
         revision_number: 0,
@@ -258,6 +287,22 @@ export async function generateVendorIosFromLinesAction(
       };
     }
 
+    await ensureCommercialCreatorFromVendorIo(supabase, {
+      influencerId: group.influencer_id,
+      vendorIoId,
+      actorId: user.id,
+      bypassRoleCheck: true,
+    });
+
+    await logVendorPaymentTimelineEvent(supabase, {
+      influencerId: group.influencer_id,
+      assignmentId,
+      vendorIoId,
+      eventType: "io_generated",
+      summary: "IO generated",
+      actorId: user.id,
+    });
+
     created += 1;
   }
 
@@ -267,6 +312,7 @@ export async function generateVendorIosFromLinesAction(
   revalidatePath("/ios/vendor");
   revalidatePath("/campaigns");
   revalidatePath("/ios/vendor");
+  revalidatePath("/vendors");
 
   const docNumbers = created === 1 ? "Vendor IO" : `${created} Vendor IOs`;
   return {

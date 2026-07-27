@@ -90,11 +90,19 @@ export async function ensureCommercialCreator(
     };
   }
 
+  const onboardingSource =
+    typeof input.metadata?.source === "string"
+      ? input.metadata.source
+      : typeof input.metadata?.path === "string"
+        ? input.metadata.path
+        : input.reason;
+
   const { error: insertError } = await supabase.from("creator_crm_profiles").insert({
     influencer_id: influencerId,
     crm_status: initialStatus,
     activated_by: input.actorId,
     activated_reason: input.reason,
+    onboarding_source: onboardingSource,
   });
 
   if (insertError) {

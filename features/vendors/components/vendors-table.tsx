@@ -117,6 +117,29 @@ export const VENDORS_TABLE_COLUMNS: OperationalConfigurableColumnDef<VendorRow>[
     ),
   },
   {
+    id: "crm_status",
+    label: "CRM",
+    renderCell: (vendor) => (
+      <span className="text-[11px] font-medium capitalize text-foreground">
+        {vendor.crm_status?.replace(/_/g, " ") ??
+          (vendor.has_commercial_profile ? "incomplete" : "—")}
+      </span>
+    ),
+  },
+  {
+    id: "completeness",
+    label: "Complete",
+    headerClassName: "text-right",
+    amountCell: true,
+    renderCell: (vendor) => (
+      <span className="platform-v6-num">
+        {typeof vendor.completeness_score === "number"
+          ? `${Math.round(vendor.completeness_score)}%`
+          : "—"}
+      </span>
+    ),
+  },
+  {
     id: "status",
     label: "Status",
     renderCell: (vendor) => <VendorListStatusCell status={vendor.status} />,

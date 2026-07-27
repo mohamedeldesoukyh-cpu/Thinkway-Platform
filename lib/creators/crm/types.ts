@@ -4,12 +4,16 @@
  */
 
 export type CreatorCrmStatus =
+  | "draft"
   | "incomplete"
+  | "pending_legal"
+  | "pending_finance"
   | "prospect"
   | "negotiating"
   | "active"
   | "preferred"
   | "inactive"
+  | "archived"
   | "do_not_use";
 
 export type CreatorCrmActivationReason =
@@ -73,7 +77,7 @@ export type EnsureCommercialCreatorResult = {
   created: boolean;
   crmStatus: CreatorCrmStatus;
   eventId: string | null;
-  /** True when CREATOR_CRM_WRITERS_ENABLED is OFF — no DB writes. */
+  /** True when CRM writers are disabled — no DB writes. */
   writersDisabled?: boolean;
 };
 

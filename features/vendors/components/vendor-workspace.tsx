@@ -29,13 +29,16 @@ import {
 import { VENDOR_STATUS_OPTIONS } from "@/features/vendors/constants";
 import { VendorDependencyDialog } from "@/features/vendors/components/vendor-dependency-dialog";
 import { VendorKpiStrip } from "@/features/vendors/components/vendor-kpi-strip";
+import { CrmCompletenessStrip } from "@/features/vendors/components/crm-completeness-strip";
 import { VendorActivityTab } from "@/features/vendors/components/tabs/vendor-activity-tab";
 import { VendorAssignmentsTab } from "@/features/vendors/components/tabs/vendor-assignments-tab";
 import { VendorBillingTab } from "@/features/vendors/components/tabs/vendor-billing-tab";
+import { VendorCommercialTab } from "@/features/vendors/components/tabs/vendor-commercial-tab";
 import { VendorContractsTab } from "@/features/vendors/components/tabs/vendor-contracts-tab";
 import { VendorDocumentsTab } from "@/features/vendors/components/tabs/vendor-documents-tab";
 import { VendorOverviewTab } from "@/features/vendors/components/tabs/vendor-overview-tab";
 import { VendorPlatformsTab } from "@/features/vendors/components/tabs/vendor-platforms-tab";
+import { VendorQuotationsTab } from "@/features/vendors/components/tabs/vendor-quotations-tab";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { formatCreatorCountryLabels } from "@/lib/creators/creator-display-utils";
 import type { VendorWorkspace } from "@/features/vendors/types";
@@ -51,8 +54,10 @@ type VendorWorkspaceViewProps = {
 
 const VENDOR_WORKSPACE_TAB_IDS = [
   "overview",
+  "commercial",
   "platforms",
   "assignments",
+  "quotations",
   "billing",
   "documents",
   "contracts",
@@ -67,8 +72,10 @@ function isVendorWorkspaceTabId(value: string): value is VendorWorkspaceTabId {
 
 const TAB_SAVE_LABELS: Record<VendorWorkspaceTabId, string> = {
   overview: "Save overview",
+  commercial: "Save commercial",
   platforms: "Save platforms",
   assignments: "Save",
+  quotations: "Save",
   billing: "Save billing",
   documents: "Save",
   contracts: "Save legal",
@@ -77,6 +84,7 @@ const TAB_SAVE_LABELS: Record<VendorWorkspaceTabId, string> = {
 
 const TAB_FORM_IDS: Partial<Record<VendorWorkspaceTabId, string>> = {
   overview: "vendor-overview-form",
+  commercial: "vendor-commercial-form",
   platforms: "platform-accounts-form",
   billing: "vendor-bank-details-form",
   contracts: "vendor-legal-form",
@@ -173,18 +181,24 @@ export function VendorWorkspaceView({
     () =>
       [
         { id: "overview" as const, label: "Overview" },
+        { id: "commercial" as const, label: "Commercial" },
         { id: "platforms" as const, label: "Platforms", count: tabCounts.platforms },
         {
           id: "assignments" as const,
-          label: "Assignments",
+          label: "Campaigns",
           count: tabCounts.assignments,
         },
-        { id: "billing" as const, label: "Billing & Payments" },
+        {
+          id: "quotations" as const,
+          label: "Quotations",
+          count: workspace.quotation_history?.length ?? 0,
+        },
+        { id: "billing" as const, label: "Payments" },
         { id: "documents" as const, label: "Documents", count: tabCounts.documents },
-        { id: "contracts" as const, label: "Contracts" },
+        { id: "contracts" as const, label: "Legal & Contracts" },
         {
           id: "activity" as const,
-          label: "Activity & Audit",
+          label: "Timeline",
           count: tabCounts.activity,
         },
       ] satisfies Array<{
@@ -192,7 +206,7 @@ export function VendorWorkspaceView({
         label: string;
         count?: number;
       }>,
-    [tabCounts]
+    [tabCounts, workspace.quotation_history?.length]
   );
 
   const entityBadge = resolveEntityStatusBadge(workspace.status);
@@ -249,8 +263,12 @@ export function VendorWorkspaceView({
               {countryLabel !== "—" ? ` · ${countryLabel}` : null}
             </p>
 
-            <div className="border-b border-border px-5 pb-2.5">
+            <div className="space-y-2 border-b border-border px-5 pb-2.5">
               <VendorKpiStrip workspace={workspace} />
+              <CrmCompletenessStrip
+                profile={workspace.crm_profile}
+                completeness={workspace.crm_completeness}
+              />
             </div>
 
             <div className="flex items-center px-5">
@@ -321,6 +339,11 @@ export function VendorWorkspaceView({
                 />
               </OperationalWorkspaceTabPanel>
             </OperationalWorkspaceTabContent>
+            <OperationalWorkspaceTabContent value="commercial" className={tabPanelClassName}>
+              <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <VendorCommercialTab workspace={workspace} onCancel={handleCancel} />
+              </OperationalWorkspaceTabPanel>
+            </OperationalWorkspaceTabContent>
             <OperationalWorkspaceTabContent value="platforms" className={tabPanelClassName}>
               <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <VendorPlatformsTab vendor={workspace} onCancel={handleCancel} />
@@ -329,6 +352,11 @@ export function VendorWorkspaceView({
             <OperationalWorkspaceTabContent value="assignments" className={tabPanelClassName}>
               <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <VendorAssignmentsTab workspace={workspace} onCancel={handleCancel} />
+              </OperationalWorkspaceTabPanel>
+            </OperationalWorkspaceTabContent>
+            <OperationalWorkspaceTabContent value="quotations" className={tabPanelClassName}>
+              <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <VendorQuotationsTab workspace={workspace} onCancel={handleCancel} />
               </OperationalWorkspaceTabPanel>
             </OperationalWorkspaceTabContent>
             <OperationalWorkspaceTabContent value="billing" className={tabPanelClassName}>

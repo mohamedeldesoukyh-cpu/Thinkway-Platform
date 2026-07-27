@@ -307,7 +307,7 @@ function groupRowsByInfluencer(rows: QuotationItemPriceRow[]): Map<string, Quota
   return grouped;
 }
 
-async function fetchQuotationItemPriceRows(
+export async function fetchQuotationItemPriceRows(
   supabase: SupabaseClient<Database>,
   influencerIds: string[]
 ): Promise<QuotationItemPriceRow[]> {
@@ -342,6 +342,34 @@ export async function getQuotationPriceReferenceForInfluencer(
 ): Promise<CreatorQuotationPriceReference | null> {
   const rows = await fetchQuotationItemPriceRows(supabase, [influencerId]);
   return aggregateQuotationPriceReference(influencerId, rows);
+}
+
+/** Full quotation line history for Commercial CRM Quotations tab. */
+export async function listQuotationHistoryForInfluencer(
+  supabase: SupabaseClient<Database>,
+  influencerId: string,
+  limit = 50
+): Promise<CreatorQuotationPriceEntry[]> {
+  const rows = await fetchQuotationItemPriceRows(supabase, [influencerId]);
+  return [...rows]
+    .filter((row) => row.influencer_id === influencerId && Number(row.cost) > 0)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .slice(0, limit)
+    .map((row) => {
+      const pricing = classifyQuotationPricing(row.deliverables);
+      return {
+        quotation_id: row.quotation_id,
+        quotation_serial: row.quotations?.serial_number ?? null,
+        quotation_name: row.quotations?.name ?? null,
+        cost: Number(row.cost),
+        cost_currency: row.cost_currency,
+        cost_egp: Number(row.cost_egp ?? 0),
+        quoted_at: row.created_at,
+        deliverable_summary: deliverableSummary(row.deliverables),
+        pricing_kind: pricing.kind,
+        platform: pricing.platform,
+      };
+    });
 }
 
 export async function getQuotationPriceReferencesBatch(

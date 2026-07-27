@@ -28,6 +28,7 @@ type VendorsListSectionProps = {
   search: string;
   status?: InfluencerStatus;
   platform?: string;
+  crmOnly?: boolean;
   errorSlot?: ReactNode;
 };
 
@@ -40,6 +41,7 @@ export function VendorsListSection({
   search,
   status,
   platform,
+  crmOnly = true,
   errorSlot,
 }: VendorsListSectionProps) {
   return (
@@ -49,10 +51,13 @@ export function VendorsListSection({
       rows={vendors}
       filterAccessors={VENDORS_TABLE_FILTER_ACCESSORS}
     >
-      <PlatformV6SectionMeta title="All vendors" meta={meta} />
+      <PlatformV6SectionMeta
+        title={crmOnly ? "Commercial creators" : "All identities"}
+        meta={meta}
+      />
       <PlatformV6Toolbar>
         <Suspense fallback={null}>
-          <OperationalTableToolbar contextLabel="Vendors">
+          <OperationalTableToolbar contextLabel="Commercial CRM">
             <VendorsSearch />
             <VendorsFilters />
           </OperationalTableToolbar>
@@ -63,7 +68,7 @@ export function VendorsListSection({
         {errorSlot}
 
         {vendors.length === 0 ? (
-          <VendorsEmptyState hasFilters={hasFilters} />
+          <VendorsEmptyState hasFilters={hasFilters} crmOnly={crmOnly} />
         ) : (
           <>
             <VendorsTable vendors={vendors} />

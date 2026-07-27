@@ -118,7 +118,10 @@ export async function recordVendorPaymentAction(_prev: BillingActionState, formD
   const { supabase, user, error: authError } = await requireAuthUser();
   if (authError || !user) return { ok: false, message: authError ?? "Unauthorized" };
   const result = await recordVendorPayment(supabase, user.id, parsed.data);
-  if (result.ok) revalidateBilling({ campaignId: parsed.data.campaign_id });
+  if (result.ok) {
+    revalidateBilling({ campaignId: parsed.data.campaign_id });
+    revalidatePath("/vendors");
+  }
   return result;
 }
 

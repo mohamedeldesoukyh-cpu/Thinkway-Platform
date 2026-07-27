@@ -22,6 +22,7 @@ import {
   ClientInlineDocumentAttach,
   findClientDocumentByType,
 } from "@/features/clients/components/client-inline-document-attach";
+import { ClientCommercialRequirementsSection } from "@/features/clients/components/client-commercial-requirements-section";
 import {
   updateClientLegalAction,
   type FormActionState,
@@ -403,6 +404,13 @@ export function ClientLegalTab({
             </ClientFormGrid>
           </ClientFormSection>
         </form>
+
+        <div className="mt-[18px]">
+          <ClientCommercialRequirementsSection
+            clientId={client.id}
+            initial={client.commercial_requirements}
+          />
+        </div>
       </ClientProfileTabShell>
     </>
   );

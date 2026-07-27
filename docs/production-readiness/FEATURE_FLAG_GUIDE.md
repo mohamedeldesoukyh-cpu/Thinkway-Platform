@@ -6,23 +6,23 @@ Server-only flags unless prefixed `NEXT_PUBLIC_`.
 
 | Flag | Default | Scope | Effect |
 |---|---|---|---|
-| `CREATOR_CRM_WRITERS_ENABLED` | **OFF** | Server | When false/unset, `ensureCommercialCreator` performs **zero** CRM DB writes |
-| `CREATOR_CRM_FILTER_ENABLED` / `NEXT_PUBLIC_CREATOR_CRM_FILTER_ENABLED` | **OFF** | List UX (Phase 5+) | When OFF, Vendors list stays legacy full list |
+| `CREATOR_CRM_WRITERS_ENABLED` | **ON** (unset) | Server | Explicit `false`/`0`/`off` disables CRM DB writes |
+| `CREATOR_CRM_FILTER_ENABLED` / `NEXT_PUBLIC_CREATOR_CRM_FILTER_ENABLED` | **ON** (unset) | Vendors list | Explicit false shows full identity inventory (`?inventory=all` also works) |
 
-### Production / Preview policy (Internal Pilot)
+### Production / Preview policy
 
-- **Never enable** `CREATOR_CRM_WRITERS_ENABLED` on Production without an explicit enablement ticket and soak evidence.
-- Development Preview may enable writers only for a timed soak window, then **remove** the env var immediately.
-- As of Internal Pilot packaging (2026-07-27): Production and Preview have **no** `CREATOR_CRM_*` env vars set (writers and filter both OFF by default).
+- Commercial CRM completion defaults writers + CRM-only list **ON** when env vars are unset.
+- Rollback: set `CREATOR_CRM_WRITERS_ENABLED=false` and/or `CREATOR_CRM_FILTER_ENABLED=false`.
+- Apply migration `20260727090000_commercial_crm_completion.sql` before relying on multi-bank / requirements tables.
 
 ### Implementation
 
 - `lib/creators/crm/feature-flag.ts`
 - Gate inside `lib/creators/crm/ensure-commercial-creator.ts`
 
-### Truthy values
+### Disable values
 
-Only `1`, `true`, `yes` (case-insensitive) enable a flag. Empty / unset / `false` / `0` → OFF.
+`false`, `0`, `off`, `no` (case-insensitive) disable. Empty / unset → ON.
 
 ## Other operational env (not product flags)
 

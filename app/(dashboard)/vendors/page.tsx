@@ -1,6 +1,7 @@
 import { PageAlert } from "@/components/ui/page-alert";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PlatformV6Page, PlatformV6PageHeader } from "@/components/platform/platform-v6-layout";
+import { AddFromDiscoveryToCrmDialog } from "@/features/vendors/components/new-commercial-creator-dialog";
 import { NewVendorDialog } from "@/features/vendors/components/new-vendor-dialog";
 import { VendorsListSection } from "@/features/vendors/components/vendors-list-section";
 import { getVendorsList } from "@/features/vendors/queries";
@@ -14,6 +15,8 @@ type VendorsPageProps = {
     q?: string;
     status?: string;
     platform?: string;
+    /** `all` = legacy full identity inventory (filter off for this view). */
+    inventory?: string;
   }>;
 };
 
@@ -40,6 +43,7 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
   const search = params.q?.trim() ?? "";
   const status = parseStatus(params.status);
   const platform = params.platform?.trim() ?? "";
+  const showAllInventory = params.inventory === "all";
 
   let list;
   let currencyOptions: { value: string; label: string }[] = [];
@@ -52,6 +56,7 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
         search,
         status: status || undefined,
         platform: platform || undefined,
+        crmOnly: showAllInventory ? false : undefined,
       }),
       getMasterDataOptions(),
     ]);
@@ -74,22 +79,34 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
       page: 1,
       pageSize: 10,
       totalPages: 1,
+      crmOnly: !showAllInventory,
     };
   }
 
-  const { vendors, total, totalPages } = list;
+  const { vendors, total, totalPages, crmOnly } = list;
   const hasFilters = Boolean(search || status || platform);
   const meta =
-    total === 1 ? "1 vendor" : `${total} vendors` + (hasFilters ? " matching filters" : "");
+    (total === 1 ? "1 creator" : `${total} creators`) +
+    (crmOnly ? " in Commercial CRM" : " (full identity inventory)") +
+    (hasFilters ? " matching filters" : "");
 
   return (
-    <DashboardShell title="Vendors" platformV6>
+    <DashboardShell title="Commercial CRM" platformV6>
       <PlatformV6Page>
         <PlatformV6PageHeader
           inline
-          title="Vendors"
-          description="Manage creators, agencies, and platform presence for campaign assignments."
-          actions={<NewVendorDialog currencyOptions={currencyOptions} />}
+          title="Commercial CRM"
+          description={
+            crmOnly
+              ? "Creators with an active commercial relationship — Discovery stays separate until converted."
+              : "Full identity inventory (Commercial CRM filter temporarily off)."
+          }
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <AddFromDiscoveryToCrmDialog />
+              <NewVendorDialog currencyOptions={currencyOptions} />
+            </div>
+          }
         />
 
         <VendorsListSection
@@ -101,6 +118,7 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
           search={search}
           status={status || undefined}
           platform={platform || undefined}
+          crmOnly={crmOnly}
           errorSlot={
             errorMessage ? (
               <div className="border-b px-4 py-3">

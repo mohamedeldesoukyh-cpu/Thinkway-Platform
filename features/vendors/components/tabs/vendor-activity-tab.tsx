@@ -60,8 +60,8 @@ export function VendorActivityTab({
 
   return (
     <VendorProfileTabShell
-      title="Activity & Audit"
-      description="Profile edits, assignments, and operational changes."
+      title="Timeline"
+      description="CRM activation events, profile edits, assignments, and operational changes in one chronology."
       onCancel={onCancel}
     >
       <div className="grid gap-[18px] xl:grid-cols-2">

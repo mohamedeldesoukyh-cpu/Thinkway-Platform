@@ -11,12 +11,16 @@ export type CampaignStatus =
 export type InfluencerStatus = "prospect" | "active" | "inactive" | "blacklisted" | "archived";
 
 export type CreatorCrmStatus =
+  | "draft"
   | "incomplete"
+  | "pending_legal"
+  | "pending_finance"
   | "prospect"
   | "negotiating"
   | "active"
   | "preferred"
   | "inactive"
+  | "archived"
   | "do_not_use";
 
 export type CreatorCrmActivationReason =
@@ -527,6 +531,116 @@ export type CreatorCrmActivationEventRow = {
   created_at: string;
 };
 
+export type InfluencerBankAccountRow = {
+  id: string;
+  influencer_id: string;
+  bank_name: string | null;
+  account_holder: string | null;
+  beneficiary_name: string | null;
+  relationship_type: string | null;
+  relationship_description: string | null;
+  iban: string | null;
+  account_number: string | null;
+  swift: string | null;
+  country_code: string | null;
+  currency: string | null;
+  branch_name: string | null;
+  address: string | null;
+  routing_number: string | null;
+  sort_code: string | null;
+  national_id: string | null;
+  tax_number: string | null;
+  is_default: boolean;
+  is_verified: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type VendorIoSignedArtifactRow = {
+  id: string;
+  vendor_io_id: string;
+  influencer_id: string;
+  artifact_kind: "upload" | "external_link";
+  provider: string | null;
+  file_name: string | null;
+  url: string | null;
+  storage_path: string | null;
+  version_label: string | null;
+  uploaded_by: string | null;
+  uploaded_at: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type VendorIoCommunicationRow = {
+  id: string;
+  vendor_io_id: string | null;
+  influencer_id: string;
+  assignment_id: string | null;
+  channel: "email" | "whatsapp" | "instagram_dm" | "tiktok" | "phone" | "manual";
+  direction: "outbound" | "inbound" | "internal";
+  subject: string | null;
+  body: string | null;
+  external_message_id: string | null;
+  metadata: Record<string, unknown>;
+  logged_by: string | null;
+  occurred_at: string;
+  created_at: string;
+};
+
+export type VendorPaymentTimelineEventRow = {
+  id: string;
+  influencer_id: string;
+  assignment_id: string | null;
+  vendor_io_id: string | null;
+  event_type: string;
+  summary: string;
+  metadata: Record<string, unknown>;
+  actor_id: string | null;
+  created_at: string;
+};
+
+export type ClientCommercialRequirementsRow = {
+  id: string;
+  client_id: string;
+  required_document_types: string[];
+  payment_rules: Record<string, unknown>;
+  usage_rights: string | null;
+  approval_workflow: string | null;
+  legal_clauses: unknown[];
+  mandatory_deliverables: string[];
+  exclusivity_notes: string | null;
+  confidentiality_notes: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BrandCommercialRequirementsRow = {
+  id: string;
+  brand_id: string;
+  client_id: string;
+  extra_document_types: string[];
+  extra_legal_clauses: unknown[];
+  extra_deliverables: string[];
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreatorAgreementTemplateRow = {
+  id: string;
+  influencer_id: string;
+  client_id: string;
+  brand_id: string | null;
+  terms_text: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type CreatorEnrichmentStatus =
   | "never"
   | "queued"
@@ -715,6 +829,7 @@ export type ClientDetail = ClientRow & {
   brands: ClientBrandRow[];
   group: { id: string; name: string; document_number: string } | null;
   vr_rate_percent: number | null;
+  commercial_requirements: ClientCommercialRequirementsRow | null;
 };
 
 export type ClientOnboardingStatus =
@@ -2049,6 +2164,144 @@ export type Database = {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["creator_crm_activation_events"]["Insert"]>;
+        Relationships: [];
+      };
+      influencer_bank_accounts: {
+        Row: InfluencerBankAccountRow;
+        Insert: {
+          id?: string;
+          influencer_id: string;
+          bank_name?: string | null;
+          account_holder?: string | null;
+          beneficiary_name?: string | null;
+          relationship_type?: string | null;
+          relationship_description?: string | null;
+          iban?: string | null;
+          account_number?: string | null;
+          swift?: string | null;
+          country_code?: string | null;
+          currency?: string | null;
+          branch_name?: string | null;
+          address?: string | null;
+          routing_number?: string | null;
+          sort_code?: string | null;
+          national_id?: string | null;
+          tax_number?: string | null;
+          is_default?: boolean;
+          is_verified?: boolean;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["influencer_bank_accounts"]["Insert"]>;
+        Relationships: [];
+      };
+      vendor_io_signed_artifacts: {
+        Row: VendorIoSignedArtifactRow;
+        Insert: {
+          id?: string;
+          vendor_io_id: string;
+          influencer_id: string;
+          artifact_kind: "upload" | "external_link";
+          provider?: string | null;
+          file_name?: string | null;
+          url?: string | null;
+          storage_path?: string | null;
+          version_label?: string | null;
+          uploaded_by?: string | null;
+          uploaded_at?: string;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["vendor_io_signed_artifacts"]["Insert"]>;
+        Relationships: [];
+      };
+      vendor_io_communications: {
+        Row: VendorIoCommunicationRow;
+        Insert: {
+          id?: string;
+          vendor_io_id?: string | null;
+          influencer_id: string;
+          assignment_id?: string | null;
+          channel: VendorIoCommunicationRow["channel"];
+          direction?: VendorIoCommunicationRow["direction"];
+          subject?: string | null;
+          body?: string | null;
+          external_message_id?: string | null;
+          metadata?: Record<string, unknown>;
+          logged_by?: string | null;
+          occurred_at?: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["vendor_io_communications"]["Insert"]>;
+        Relationships: [];
+      };
+      vendor_payment_timeline_events: {
+        Row: VendorPaymentTimelineEventRow;
+        Insert: {
+          id?: string;
+          influencer_id: string;
+          assignment_id?: string | null;
+          vendor_io_id?: string | null;
+          event_type: string;
+          summary: string;
+          metadata?: Record<string, unknown>;
+          actor_id?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["vendor_payment_timeline_events"]["Insert"]>;
+        Relationships: [];
+      };
+      client_commercial_requirements: {
+        Row: ClientCommercialRequirementsRow;
+        Insert: {
+          id?: string;
+          client_id: string;
+          required_document_types?: string[];
+          payment_rules?: Record<string, unknown>;
+          usage_rights?: string | null;
+          approval_workflow?: string | null;
+          legal_clauses?: unknown[];
+          mandatory_deliverables?: string[];
+          exclusivity_notes?: string | null;
+          confidentiality_notes?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["client_commercial_requirements"]["Insert"]>;
+        Relationships: [];
+      };
+      brand_commercial_requirements: {
+        Row: BrandCommercialRequirementsRow;
+        Insert: {
+          id?: string;
+          brand_id: string;
+          client_id: string;
+          extra_document_types?: string[];
+          extra_legal_clauses?: unknown[];
+          extra_deliverables?: string[];
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["brand_commercial_requirements"]["Insert"]>;
+        Relationships: [];
+      };
+      creator_agreement_templates: {
+        Row: CreatorAgreementTemplateRow;
+        Insert: {
+          id?: string;
+          influencer_id: string;
+          client_id: string;
+          brand_id?: string | null;
+          terms_text: string;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["creator_agreement_templates"]["Insert"]>;
         Relationships: [];
       };
       influencer_platform_accounts: {

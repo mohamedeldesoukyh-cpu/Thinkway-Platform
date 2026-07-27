@@ -1,66 +1,54 @@
 import assert from "node:assert/strict";
-import { afterEach, test } from "node:test";
+import test from "node:test";
 
 import {
   isCreatorCrmFilterEnabled,
   isCreatorCrmWritersEnabled,
 } from "./feature-flag";
 
-const ENV_KEYS = [
+const KEYS = [
+  "CREATOR_CRM_WRITERS_ENABLED",
   "CREATOR_CRM_FILTER_ENABLED",
   "NEXT_PUBLIC_CREATOR_CRM_FILTER_ENABLED",
-  "CREATOR_CRM_WRITERS_ENABLED",
 ] as const;
 
-const snapshot: Record<string, string | undefined> = {};
-
-afterEach(() => {
-  for (const key of ENV_KEYS) {
-    if (snapshot[key] === undefined) delete process.env[key];
-    else process.env[key] = snapshot[key];
-  }
-});
-
-function clearFlagEnv() {
-  for (const key of ENV_KEYS) {
-    snapshot[key] = process.env[key];
-    delete process.env[key];
-  }
+function clearFlags() {
+  for (const key of KEYS) delete process.env[key];
 }
 
-test("isCreatorCrmFilterEnabled defaults to false (Phase 1 / production-safe)", () => {
-  clearFlagEnv();
-  assert.equal(isCreatorCrmFilterEnabled(), false);
+test("writers default ON when unset (Commercial CRM completion)", () => {
+  clearFlags();
+  assert.equal(isCreatorCrmWritersEnabled(), true);
 });
 
-test("isCreatorCrmWritersEnabled defaults to false (Phase 2A)", () => {
-  clearFlagEnv();
+test("writers OFF only on explicit falsey values", () => {
+  clearFlags();
+  process.env.CREATOR_CRM_WRITERS_ENABLED = "false";
+  assert.equal(isCreatorCrmWritersEnabled(), false);
+  process.env.CREATOR_CRM_WRITERS_ENABLED = "0";
+  assert.equal(isCreatorCrmWritersEnabled(), false);
+  process.env.CREATOR_CRM_WRITERS_ENABLED = "off";
   assert.equal(isCreatorCrmWritersEnabled(), false);
 });
 
-test("isCreatorCrmFilterEnabled treats empty and falsey strings as OFF", () => {
-  clearFlagEnv();
-  process.env.CREATOR_CRM_FILTER_ENABLED = "false";
-  assert.equal(isCreatorCrmFilterEnabled(), false);
-  process.env.CREATOR_CRM_FILTER_ENABLED = "0";
-  assert.equal(isCreatorCrmFilterEnabled(), false);
-  process.env.CREATOR_CRM_FILTER_ENABLED = "";
-  assert.equal(isCreatorCrmFilterEnabled(), false);
-});
-
-test("isCreatorCrmFilterEnabled enables only on explicit true-like values", () => {
-  clearFlagEnv();
-  process.env.CREATOR_CRM_FILTER_ENABLED = "true";
-  assert.equal(isCreatorCrmFilterEnabled(), true);
-  process.env.CREATOR_CRM_FILTER_ENABLED = "1";
-  assert.equal(isCreatorCrmFilterEnabled(), true);
-  process.env.NEXT_PUBLIC_CREATOR_CRM_FILTER_ENABLED = "yes";
-  delete process.env.CREATOR_CRM_FILTER_ENABLED;
-  assert.equal(isCreatorCrmFilterEnabled(), true);
-});
-
-test("isCreatorCrmWritersEnabled enables only on explicit true-like values", () => {
-  clearFlagEnv();
+test("writers ON for true-like and other non-disabled values", () => {
+  clearFlags();
   process.env.CREATOR_CRM_WRITERS_ENABLED = "true";
   assert.equal(isCreatorCrmWritersEnabled(), true);
+  process.env.CREATOR_CRM_WRITERS_ENABLED = "1";
+  assert.equal(isCreatorCrmWritersEnabled(), true);
+});
+
+test("filter defaults ON when unset", () => {
+  clearFlags();
+  assert.equal(isCreatorCrmFilterEnabled(), true);
+});
+
+test("filter OFF on explicit false", () => {
+  clearFlags();
+  process.env.CREATOR_CRM_FILTER_ENABLED = "false";
+  assert.equal(isCreatorCrmFilterEnabled(), false);
+  delete process.env.CREATOR_CRM_FILTER_ENABLED;
+  process.env.NEXT_PUBLIC_CREATOR_CRM_FILTER_ENABLED = "off";
+  assert.equal(isCreatorCrmFilterEnabled(), false);
 });

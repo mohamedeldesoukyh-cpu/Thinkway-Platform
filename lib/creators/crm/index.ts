@@ -22,6 +22,30 @@ export {
   canConvertToCommercialCreator,
   isManualCrmActivationReason,
 } from "@/lib/creators/crm/permissions";
+export {
+  computeCompletenessBreakdown,
+  refreshCommercialCreatorCompleteness,
+} from "@/lib/creators/crm/completeness";
+export {
+  composeCreatorAgreementTerms,
+  saveCreatorAgreementTemplate,
+} from "@/lib/creators/crm/agreement-compose";
+export {
+  computePaymentReadiness,
+  resolvePaymentBankAccount,
+  BANK_RELATIONSHIP_OPTIONS,
+} from "@/lib/creators/crm/payment-readiness";
+export type {
+  PaymentReadinessResult,
+  PaymentReadinessMissingItem,
+  BankRelationshipType,
+} from "@/lib/creators/crm/payment-readiness";
+export { logVendorPaymentTimelineEvent } from "@/lib/creators/crm/payment-timeline";
+export type {
+  CompletenessBreakdown,
+  CompletenessDimension,
+  CompletenessMissingItem,
+} from "@/lib/creators/crm/completeness";
 export type {
   CreatorCrmActivationEventRow,
   CreatorCrmActivationReason,
@@ -33,3 +57,4 @@ export type {
   EnsureCommercialCreatorResult,
 } from "@/lib/creators/crm/types";
 export type { CrmActivationActor } from "@/lib/creators/crm/activation-helpers";
+export type { ComposedAgreement } from "@/lib/creators/crm/agreement-compose";

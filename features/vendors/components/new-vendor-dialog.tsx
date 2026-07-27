@@ -152,15 +152,15 @@ export function NewVendorDialog({ currencyOptions }: NewVendorDialogProps) {
       <DialogTrigger asChild>
         <button type="button" className="platform-v6-btn platform-v6-btn-primary">
           <PlusIcon className="size-3.5" aria-hidden />
-          New Vendor
+          New Creator
         </button>
       </DialogTrigger>
       <DialogContent className="max-h-[min(90vh,840px)] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>New vendor</DialogTitle>
+          <DialogTitle>New Creator</DialogTitle>
           <DialogDescription>
-            Add a creator or agency. Paste a profile URL to auto-fill platform
-            details, or enter them manually.
+            Add a commercial creator (manual or URL enrichment). Creates one CRM
+            record. Discovery identities stay out of CRM until converted.
           </DialogDescription>
         </DialogHeader>
         <form action={formAction} className="grid gap-4">

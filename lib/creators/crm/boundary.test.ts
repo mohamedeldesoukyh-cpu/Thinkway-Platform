@@ -60,6 +60,9 @@ const PHASE2B_ALLOWED_ENSURE_PATHS = [
   "/services/quotations/repositories/quotation-repository.ts",
   "/services/quotations/quotation-lifecycle-service.ts",
   "/discovery/shortlists/actions.ts",
+  // Commercial CRM completion — Vendors module + Vendor IO
+  "/vendors/actions.ts",
+  "/io/generate-vendor-io-action.ts",
 ];
 
 test("ensureCommercialCreator only wired at Phase 2B allowlisted call sites", () => {

@@ -15,21 +15,47 @@ import type {
   VendorAssignmentRow,
   VendorDeliverableRow,
   VendorFinancialSummary,
+  VendorPayoutIoSummary,
   VendorPayoutRow,
   VendorWorkspace,
 } from "./types";
-import { getQuotationPriceReferenceForInfluencer } from "@/lib/creators/quotation-price-reference";
+import {
+  getQuotationPriceReferenceForInfluencer,
+  listQuotationHistoryForInfluencer,
+} from "@/lib/creators/quotation-price-reference";
 import { fetchProfileNamesByIds } from "@/lib/services/campaigns/repositories/workspace-repository";
+import { isCreatorCrmFilterEnabled } from "@/lib/creators/crm/feature-flag";
+import {
+  computeCompletenessBreakdown,
+  type CompletenessBreakdown,
+} from "@/lib/creators/crm/completeness";
+import {
+  computePaymentReadiness,
+  resolvePaymentBankAccount,
+} from "@/lib/creators/crm/payment-readiness";
+import type { CreatorCrmStatus } from "@/lib/creators/crm/types";
+import type {
+  CreatorCrmActivationEventRow,
+  CreatorCrmProfileRow,
+  InfluencerBankAccountRow,
+  VendorIoCommunicationRow,
+  VendorIoSignedArtifactRow,
+  VendorPaymentTimelineEventRow,
+} from "@/types/database";
 
 export type VendorsListResult = {
   vendors: (VendorListItem & {
     assignment_count: number;
     active_campaign_count: number;
+    has_commercial_profile?: boolean;
+    crm_status?: CreatorCrmStatus | null;
+    completeness_score?: number | null;
   })[];
   total: number;
   page: number;
   pageSize: number;
   totalPages: number;
+  crmOnly: boolean;
 };
 
 export type VendorListFilters = {
@@ -37,6 +63,8 @@ export type VendorListFilters = {
   search?: string;
   status?: InfluencerStatus;
   platform?: string;
+  /** Override CRM-only filter; default follows feature flag. */
+  crmOnly?: boolean;
 };
 
 function escapeIlikePattern(value: string): string {
@@ -56,6 +84,13 @@ const VENDOR_LIST_SELECT = `
   categories,
   rate_card,
   created_at,
+  has_commercial_profile,
+  crm_profile:creator_crm_profiles!creator_crm_profiles_influencer_id_fkey(
+    crm_status,
+    completeness_score,
+    activated_reason,
+    onboarding_source
+  ),
   platform_accounts:influencer_platform_accounts!influencer_platform_accounts_influencer_id_fkey(
     id,
     platform,
@@ -80,6 +115,7 @@ export async function getVendorsList(
   const search = params.search?.trim() ?? "";
   const status = params.status;
   const platform = params.platform?.trim() ?? "";
+  const crmOnly = params.crmOnly ?? isCreatorCrmFilterEnabled();
   const from = (page - 1) * VENDORS_PAGE_SIZE;
   const to = from + VENDORS_PAGE_SIZE - 1;
 
@@ -94,6 +130,9 @@ export async function getVendorsList(
     .select(select)
     .order("created_at", { ascending: false });
 
+  if (crmOnly) {
+    query = query.eq("has_commercial_profile", true);
+  }
   if (platform) {
     query = query.eq("platform_accounts.platform", platform);
   }
@@ -118,6 +157,7 @@ export async function getVendorsList(
       p_search: search || null,
       p_status: status ?? null,
       p_platform: platform || null,
+      p_crm_only: crmOnly,
     }),
   ]);
 
@@ -129,10 +169,7 @@ export async function getVendorsList(
   }
 
   const total = Number(countResult.data ?? 0);
-  const vendors = await enrichVendorList(
-    supabase,
-    (pageResult.data ?? []) as unknown as VendorListItem[]
-  );
+  const vendors = await enrichVendorList(supabase, pageResult.data ?? []);
 
   return {
     vendors,
@@ -140,14 +177,34 @@ export async function getVendorsList(
     page,
     pageSize: VENDORS_PAGE_SIZE,
     totalPages: Math.max(1, Math.ceil(total / VENDORS_PAGE_SIZE)),
+    crmOnly,
   };
 }
 
+type VendorListRow = VendorListItem & {
+  has_commercial_profile?: boolean;
+  crm_profile?:
+    | {
+        crm_status: CreatorCrmStatus;
+        completeness_score: number;
+        activated_reason?: string;
+        onboarding_source?: string | null;
+      }
+    | {
+        crm_status: CreatorCrmStatus;
+        completeness_score: number;
+        activated_reason?: string;
+        onboarding_source?: string | null;
+      }[]
+    | null;
+};
+
 async function enrichVendorList(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  vendorRows: VendorListItem[]
+  vendorRows: unknown[]
 ) {
-  const influencerIds = vendorRows.map((v) => v.id);
+  const rows = vendorRows as VendorListRow[];
+  const influencerIds = rows.map((v) => v.id);
   const assignmentCounts = new Map<string, number>();
   if (influencerIds.length > 0) {
     const { data: assignRows } = await supabase
@@ -159,11 +216,48 @@ async function enrichVendorList(
       assignmentCounts.set(id, (assignmentCounts.get(id) ?? 0) + 1);
     }
   }
-  return vendorRows.map((v) => ({
-    ...v,
-    assignment_count: assignmentCounts.get(v.id) ?? 0,
-    active_campaign_count: assignmentCounts.get(v.id) ?? 0,
-  }));
+  return rows.map((v) => {
+    const crm = Array.isArray(v.crm_profile)
+      ? v.crm_profile[0]
+      : v.crm_profile;
+    return {
+      ...v,
+      assignment_count: assignmentCounts.get(v.id) ?? 0,
+      active_campaign_count: assignmentCounts.get(v.id) ?? 0,
+      has_commercial_profile: Boolean(v.has_commercial_profile),
+      crm_status: crm?.crm_status ?? null,
+      completeness_score:
+        typeof crm?.completeness_score === "number"
+          ? crm.completeness_score
+          : null,
+    };
+  });
+}
+
+/** Search identities not yet in CRM — for New Creator → Discovery import. */
+export async function searchIdentitiesForCrmImport(query: string, limit = 20) {
+  const supabase = await createSupabaseServerClient();
+  const search = query.trim();
+  let q = supabase
+    .from("influencers")
+    .select("id, display_name, legal_name, email, document_number, has_commercial_profile")
+    .eq("has_commercial_profile", false)
+    .order("display_name")
+    .limit(limit);
+  if (search) {
+    const pattern = `%${escapeIlikePattern(search)}%`;
+    q = q.or(
+      [
+        `display_name.ilike.${pattern}`,
+        `legal_name.ilike.${pattern}`,
+        `email.ilike.${pattern}`,
+        `document_number.ilike.${pattern}`,
+      ].join(",")
+    );
+  }
+  const { data, error } = await q;
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }
 
 export async function getLinkableCreatorProfiles(
@@ -418,7 +512,19 @@ export async function getVendorWorkspace(
 
   const assignmentIds = assignments.map((a) => a.id);
 
-  const [deliverableResult, quotation_price_reference, auditRows] = await Promise.all([
+  const [
+    deliverableResult,
+    quotation_price_reference,
+    quotation_history,
+    auditRows,
+    crmProfileResult,
+    bankAccountsResult,
+    activationEventsResult,
+    vendorIosResult,
+    signedIoResult,
+    ioCommsResult,
+    paymentTimelineResult,
+  ] = await Promise.all([
     supabase
       .from("deliverables")
       .select(
@@ -428,8 +534,94 @@ export async function getVendorWorkspace(
       .order("created_at", { ascending: false })
       .limit(100),
     getQuotationPriceReferenceForInfluencer(supabase, id),
+    listQuotationHistoryForInfluencer(supabase, id, 50),
     fetchVendorActivityLogs(supabase, id, assignmentIds),
+    supabase
+      .from("creator_crm_profiles")
+      .select("*")
+      .eq("influencer_id", id)
+      .maybeSingle(),
+    supabase
+      .from("influencer_bank_accounts")
+      .select("*")
+      .eq("influencer_id", id)
+      .order("is_default", { ascending: false })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("creator_crm_activation_events")
+      .select("*")
+      .eq("influencer_id", id)
+      .order("created_at", { ascending: false })
+      .limit(40),
+    supabase
+      .from("vendor_ios")
+      .select(
+        "id, document_number, status, revision_number, created_at, document_generated_at, generated_pdf_url, is_superseded, root_vendor_io_id, assignment_id, campaign_header_id"
+      )
+      .eq("influencer_id", id)
+      .order("created_at", { ascending: false })
+      .limit(100),
+    supabase
+      .from("vendor_io_signed_artifacts")
+      .select("*")
+      .eq("influencer_id", id)
+      .order("uploaded_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("vendor_io_communications")
+      .select("*")
+      .eq("influencer_id", id)
+      .order("occurred_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("vendor_payment_timeline_events")
+      .select("*")
+      .eq("influencer_id", id)
+      .order("created_at", { ascending: false })
+      .limit(60),
   ]);
+
+  const crm_profile = (crmProfileResult.data ?? null) as CreatorCrmProfileRow | null;
+  const bank_accounts = (
+    bankAccountsResult.error ? [] : (bankAccountsResult.data ?? [])
+  ) as InfluencerBankAccountRow[];
+  const activation_events = (activationEventsResult.data ??
+    []) as CreatorCrmActivationEventRow[];
+  const signed_io_artifacts = (
+    signedIoResult.error ? [] : (signedIoResult.data ?? [])
+  ) as VendorIoSignedArtifactRow[];
+  const io_communications = (
+    ioCommsResult.error ? [] : (ioCommsResult.data ?? [])
+  ) as VendorIoCommunicationRow[];
+  const payment_timeline = (
+    paymentTimelineResult.error ? [] : (paymentTimelineResult.data ?? [])
+  ) as VendorPaymentTimelineEventRow[];
+
+  type IoRow = VendorPayoutIoSummary & {
+    assignment_id: string | null;
+    campaign_header_id: string | null;
+  };
+  const vendorIos = (vendorIosResult.error ? [] : (vendorIosResult.data ?? [])) as IoRow[];
+  const iosByAssignment = new Map<string, IoRow[]>();
+  const iosByCampaign = new Map<string, IoRow[]>();
+  for (const io of vendorIos) {
+    if (io.assignment_id) {
+      const list = iosByAssignment.get(io.assignment_id) ?? [];
+      list.push(io);
+      iosByAssignment.set(io.assignment_id, list);
+    }
+    if (io.campaign_header_id) {
+      const list = iosByCampaign.get(io.campaign_header_id) ?? [];
+      list.push(io);
+      iosByCampaign.set(io.campaign_header_id, list);
+    }
+  }
+  const signedByIo = new Map<string, VendorIoSignedArtifactRow>();
+  for (const artifact of signed_io_artifacts) {
+    if (!signedByIo.has(artifact.vendor_io_id)) {
+      signedByIo.set(artifact.vendor_io_id, artifact);
+    }
+  }
 
   const deliverableRows = deliverableResult.data;
 
@@ -475,15 +667,114 @@ export async function getVendorWorkspace(
     };
   });
 
-  const payouts: VendorPayoutRow[] = assignments.map((a) => ({
-    id: a.id,
-    assignment_id: a.id,
-    campaign_name: a.campaign_name,
-    amount: a.agreed_fee,
-    currency: a.currency,
-    status: a.vendor_payment_status ?? "unpaid",
-    paid_at: null,
-  }));
+  const assignmentCampaignIds = [
+    ...new Set(assignments.map((a) => a.campaign_id).filter(Boolean) as string[]),
+  ];
+  const campaignContextById = new Map<
+    string,
+    {
+      document_number: string | null;
+      po_status: string | null;
+      po_number: string | null;
+      po_issue_date: string | null;
+      client_name: string | null;
+      brand_name: string | null;
+    }
+  >();
+  if (assignmentCampaignIds.length > 0) {
+    const { data: campaignRows } = await supabase
+      .from("campaign_headers")
+      .select(
+        `
+        id, document_number, po_status, po_number, created_at,
+        client:clients(name),
+        brand:brands(name)
+      `
+      )
+      .in("id", assignmentCampaignIds);
+    for (const row of campaignRows ?? []) {
+      const r = row as unknown as {
+        id: string;
+        document_number: string | null;
+        po_status: string | null;
+        po_number: string | null;
+        created_at: string | null;
+        client: { name: string } | null;
+        brand: { name: string } | null;
+      };
+      campaignContextById.set(r.id, {
+        document_number: r.document_number,
+        po_status: r.po_status,
+        po_number: r.po_number,
+        po_issue_date: r.created_at,
+        client_name: r.client?.name ?? null,
+        brand_name: r.brand?.name ?? null,
+      });
+    }
+  }
+
+  const paymentBank = resolvePaymentBankAccount(
+    bank_accounts,
+    (base.payment_details as Record<string, unknown> | null) ?? null
+  );
+  const bankLabel = paymentBank
+    ? [paymentBank.bank_name, paymentBank.currency, paymentBank.iban || paymentBank.account_number]
+        .filter(Boolean)
+        .join(" · ")
+    : null;
+
+  const payouts: VendorPayoutRow[] = assignments.map((a) => {
+    const ctx = a.campaign_id ? campaignContextById.get(a.campaign_id) : null;
+    const versions =
+      (a.id && iosByAssignment.get(a.id)) ||
+      (a.campaign_id ? iosByCampaign.get(a.campaign_id) : null) ||
+      [];
+    const activeIo =
+      versions.find((io) => !io.is_superseded) ?? versions[0] ?? null;
+    return {
+      id: a.id,
+      assignment_id: a.id,
+      campaign_id: a.campaign_id,
+      campaign_name: a.campaign_name,
+      campaign_document_number: ctx?.document_number ?? a.campaign_document_number,
+      client_name: ctx?.client_name ?? null,
+      brand_name: ctx?.brand_name ?? null,
+      line_id: a.campaign_line_id,
+      amount: a.agreed_fee,
+      currency: a.currency,
+      status: a.vendor_payment_status ?? "unpaid",
+      paid_at: null,
+      po_status: ctx?.po_status ?? null,
+      po_number: ctx?.po_number ?? null,
+      po_issue_date: ctx?.po_number ? ctx.po_issue_date : null,
+      io: activeIo
+        ? {
+            id: activeIo.id,
+            document_number: activeIo.document_number,
+            status: activeIo.status,
+            revision_number: activeIo.revision_number ?? 0,
+            created_at: activeIo.created_at,
+            document_generated_at: activeIo.document_generated_at,
+            generated_pdf_url: activeIo.generated_pdf_url,
+            is_superseded: activeIo.is_superseded,
+            root_vendor_io_id: activeIo.root_vendor_io_id,
+          }
+        : null,
+      io_versions: versions.map((io) => ({
+        id: io.id,
+        document_number: io.document_number,
+        status: io.status,
+        revision_number: io.revision_number ?? 0,
+        created_at: io.created_at,
+        document_generated_at: io.document_generated_at,
+        generated_pdf_url: io.generated_pdf_url,
+        is_superseded: io.is_superseded,
+        root_vendor_io_id: io.root_vendor_io_id,
+      })),
+      signed_io: activeIo ? signedByIo.get(activeIo.id) ?? null : null,
+      bank_label: bankLabel,
+    };
+  });
 
   const totalRevenue = assignments.reduce((s, a) => s + a.revenue, 0);
   const totalCost = assignments.reduce((s, a) => s + a.cost, 0);
@@ -518,7 +809,7 @@ export async function getVendorWorkspace(
   const profileMap =
     actorIds.length > 0 ? await fetchProfileNamesByIds(supabase, actorIds) : new Map();
 
-  const activity: VendorActivityItem[] = auditRows.map((row) => {
+  const activityFromAudit: VendorActivityItem[] = auditRows.map((row) => {
     const actor = row.actor_id ? profileMap.get(row.actor_id) : null;
     return {
       id: row.id,
@@ -536,6 +827,75 @@ export async function getVendorWorkspace(
     };
   });
 
+  const activityFromCrm: VendorActivityItem[] = activation_events.map((event) => ({
+    id: `crm-${event.id}`,
+    action: event.reason,
+    entity_type: event.source_entity_type ?? "creator_crm",
+    summary: `CRM · ${event.reason.replace(/_/g, " ")}${
+      event.source_entity_type ? ` · ${event.source_entity_type.replace(/_/g, " ")}` : ""
+    }`,
+    created_at: event.created_at,
+    actor: null,
+  }));
+
+  let crm_completeness: CompletenessBreakdown | null = null;
+  if (crm_profile) {
+    const storedMissing = Array.isArray(crm_profile.completeness_missing)
+      ? (crm_profile.completeness_missing as CompletenessBreakdown["missing"])
+      : [];
+    crm_completeness = computeCompletenessBreakdown({
+      influencer: {
+        display_name: base.display_name,
+        email: base.email,
+        phone: base.phone,
+        country_code: base.country_code,
+        legal_name: base.legal_name,
+        rate_card: (base.rate_card as Record<string, unknown> | null) ?? null,
+        payment_details:
+          (base.payment_details as Record<string, unknown> | null) ?? null,
+        payment_terms: base.payment_terms,
+        vat_registered: base.vat_registered,
+        tax_registration_number: base.tax_registration_number,
+        contract_status: base.contract_status,
+        preferred_currency: crm_profile.preferred_currency,
+      },
+      platformCount: base.platform_accounts.length,
+      documentTypes: base.documents.map((d) => d.document_type),
+      bankAccountCount: bank_accounts.length,
+      verifiedDefaultBank: bank_accounts.some((b) => b.is_default && b.is_verified),
+    });
+    if (storedMissing.length > 0 && crm_profile.completeness_score != null) {
+      crm_completeness = {
+        ...crm_completeness,
+        overall: Number(crm_profile.completeness_score),
+        missing:
+          storedMissing.length > 0 ? storedMissing : crm_completeness.missing,
+      };
+    }
+  }
+
+  const payment_readiness = computePaymentReadiness({
+    bank: paymentBank,
+    documentTypes: base.documents.map((d) => d.document_type),
+  });
+
+  const activityFromPayment: VendorActivityItem[] = payment_timeline.map((event) => ({
+    id: `pay-${event.id}`,
+    action: event.event_type,
+    entity_type: "vendor_payment",
+    summary: event.summary,
+    created_at: event.created_at,
+    actor: null,
+  }));
+
+  const activityMerged: VendorActivityItem[] = [
+    ...activityFromAudit,
+    ...activityFromCrm,
+    ...activityFromPayment,
+  ]
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .slice(0, 80);
+
   return {
     ...base,
     financials,
@@ -548,7 +908,16 @@ export async function getVendorWorkspace(
     assignments,
     deliverables,
     payouts,
-    activity,
+    activity: activityMerged,
     quotation_price_reference,
+    quotation_history,
+    crm_profile,
+    crm_completeness,
+    bank_accounts,
+    activation_events,
+    payment_readiness,
+    payment_timeline,
+    io_communications,
+    signed_io_artifacts,
   };
 }

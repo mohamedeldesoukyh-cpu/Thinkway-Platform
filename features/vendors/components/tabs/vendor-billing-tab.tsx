@@ -6,56 +6,14 @@ import {
   WalletIcon,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import {
-  OperationalConfigurableTable,
-  type OperationalConfigurableColumnDef,
-} from "@/components/tables/operational-configurable-table";
-import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
-import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { KpiStrip, type KpiCarouselItem } from "@/components/shared/kpi/kpi-strip";
-import { OPERATIONAL_CHROME_STATUS_BADGE } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
+import { VendorBankAccountsSection } from "@/features/vendors/components/tabs/vendor-bank-accounts-section";
 import { VendorBankDetailsSection } from "@/features/vendors/components/tabs/vendor-bank-details-section";
 import { VendorFinanceTab } from "@/features/vendors/components/tabs/vendor-finance-tab";
-import {
-  VendorFormSection,
-  VendorProfileTabShell,
-} from "@/features/vendors/components/vendor-form-ui";
+import { VendorPaymentOpsSection } from "@/features/vendors/components/tabs/vendor-payment-ops-section";
+import { VendorProfileTabShell } from "@/features/vendors/components/vendor-form-ui";
 import type { VendorWorkspace } from "@/features/vendors/types";
-import { formatMoney, hasVendorBankDetails } from "@/features/vendors/utils";
-import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
-import { cn } from "@/lib/utils";
-import { VENDOR_PAYMENT_STATUS_LABELS } from "@/features/campaigns/constants";
-import { VENDOR_PAYOUTS_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
-
-type PayoutRow = VendorWorkspace["payouts"][number];
-
-const VENDOR_BILLING_COLUMNS: OperationalConfigurableColumnDef<PayoutRow>[] = [
-  {
-    id: "campaign",
-    label: "Campaign",
-    cellClassName: "text-muted-foreground",
-    renderCell: (payout) => payout.campaign_name ?? "—",
-  },
-  {
-    id: "amount",
-    label: "Amount",
-    amountCell: true,
-    renderCell: (payout) => formatMoney(payout.amount, payout.currency),
-  },
-  {
-    id: "status",
-    label: "Status",
-    renderCell: (payout) => (
-      <Badge
-        variant="outline"
-        className={cn(OPERATIONAL_CHROME_STATUS_BADGE, "font-normal")}
-      >
-        {VENDOR_PAYMENT_STATUS_LABELS[payout.status] ?? payout.status}
-      </Badge>
-    ),
-  },
-];
+import { formatMoney } from "@/features/vendors/utils";
 
 export function VendorBillingTab({
   workspace,
@@ -67,7 +25,9 @@ export function VendorBillingTab({
   onCancel?: () => void;
 }) {
   const currency =
-    (workspace.payment_details as { currency?: string })?.currency ?? "USD";
+    workspace.bank_accounts.find((b) => b.is_default)?.currency ??
+    (workspace.payment_details as { currency?: string })?.currency ??
+    "EGP";
   const { financials } = workspace;
 
   const summaryItems: KpiCarouselItem[] = [
@@ -115,19 +75,15 @@ export function VendorBillingTab({
     },
   ];
 
-  const bankConfigured = hasVendorBankDetails(workspace.payment_details);
-
   return (
     <VendorProfileTabShell
-      title="Billing & Payments"
-      description={
-        bankConfigured
-          ? "Vendor payout bank details are on file and linked to Vendor IO Section 6."
-          : "Add vendor bank details below — they flow into Vendor IO payment terms automatically."
-      }
+      title="Payments"
+      description="Payment readiness, PO, IO, signed IO, communication, and payout recording — Profile Completeness never blocks payment."
       onCancel={onCancel}
     >
       <div className="grid gap-[18px]">
+        <VendorPaymentOpsSection workspace={workspace} />
+        <VendorBankAccountsSection workspace={workspace} />
         <VendorBankDetailsSection workspace={workspace} />
 
         <VendorFinanceTab
@@ -139,34 +95,6 @@ export function VendorBillingTab({
         />
 
         <KpiStrip items={summaryItems} showNavigation={false} />
-
-        <VendorFormSection
-          icon={ReceiptIcon}
-          title="Payout history"
-          description="Creator payouts linked to campaign assignments and payment batches."
-        >
-          <OperationalTableSuiteProvider
-            tableId={OPERATIONAL_TABLE_IDS.vendorBilling}
-            columns={VENDOR_BILLING_COLUMNS}
-            rows={workspace.payouts}
-            filterAccessors={VENDOR_PAYOUTS_FILTER_ACCESSORS}
-          >
-            <div className="flex flex-wrap items-center justify-end gap-2 pb-1">
-              <OperationalTableControlsSlot contextLabel="Vendor billing" />
-            </div>
-            {workspace.payouts.length === 0 ? (
-              <p className="py-8 text-center text-[13px] text-muted-foreground">
-                No payout records.
-              </p>
-            ) : (
-              <OperationalConfigurableTable
-                columns={VENDOR_BILLING_COLUMNS}
-                rows={workspace.payouts}
-                rowKey={(payout) => payout.id}
-              />
-            )}
-          </OperationalTableSuiteProvider>
-        </VendorFormSection>
       </div>
     </VendorProfileTabShell>
   );

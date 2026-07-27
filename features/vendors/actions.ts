@@ -41,6 +41,9 @@ import { buildNormalizedPlatformAccount } from "@/lib/social/normalize-account";
 import { enrichCreatorProfile } from "@/lib/social/enrichment/providers/open-graph";
 import { resolveMetricsSourceForEnrichment } from "@/lib/social/enrichment/metrics-status";
 import { resolvePlatformAccountFields } from "@/lib/social/parse-profile-url";
+import { ensureCommercialCreator } from "@/lib/creators/crm/ensure-commercial-creator";
+import { refreshCommercialCreatorCompleteness } from "@/lib/creators/crm/completeness";
+import { canConvertToCommercialCreator } from "@/lib/creators/crm/permissions";
 
 export type FormActionState = {
   ok: boolean;
@@ -59,13 +62,14 @@ function emptyToNull(value: string | undefined): string | null {
 
 async function requireAuthUser() {
   try {
-    const { supabase, user } = await requireRequestUser();
-    return { supabase, user, error: null };
+    const { supabase, user, roleSlug } = await requireRequestUser();
+    return { supabase, user, roleSlug, error: null };
   } catch (error) {
     const supabase = await createSupabaseServerClient();
     return {
       supabase,
       user: null,
+      roleSlug: null as string | null,
       error: error instanceof Error ? error.message : "You must be signed in to continue.",
     };
   }
@@ -122,7 +126,7 @@ export async function createVendorAction(
     };
   }
 
-  const { supabase, user, error: authError } = await requireAuthUser();
+  const { supabase, user, roleSlug, error: authError } = await requireAuthUser();
   if (authError || !user) {
     return { ok: false, message: authError ?? "Unauthorized" };
   }
@@ -275,14 +279,389 @@ export async function createVendorAction(
     return { ok: false, message };
   }
 
+  const crm = await ensureCommercialCreator(supabase, {
+    influencerId: vendor.id,
+    reason: "manual_create",
+    actorId: user.id,
+    roleSlug,
+    sourceEntityType: "influencer",
+    sourceEntityId: vendor.id,
+    initialStatus: "incomplete",
+    metadata: {
+      path: "createVendorAction",
+      source: profileUrl ? "url" : "manual",
+    },
+  });
+  if (!crm.ok) {
+    return { ok: false, message: crm.message };
+  }
+  if (!crm.writersDisabled) {
+    await refreshCommercialCreatorCompleteness(supabase, vendor.id);
+  }
+
   revalidatePath("/vendors");
   revalidatePath(`/vendors/${vendor.id}`);
 
   return {
     ok: true,
-    message: "Vendor created successfully.",
+    message: "Commercial creator created successfully.",
     vendorId: vendor.id,
   };
+}
+
+/**
+ * Add an existing identity (Discovery / shortlist / quotation creator) to Commercial CRM.
+ * Does not create a new influencer row.
+ */
+export async function convertInfluencerToCommercialCrmAction(
+  _prev: FormActionState,
+  formData: FormData
+): Promise<FormActionState & { vendorId?: string }> {
+  const influencerId = String(formData.get("influencer_id") ?? "").trim();
+  const source = String(formData.get("source") ?? "discovery").trim();
+  if (!influencerId) {
+    return { ok: false, message: "Creator is required." };
+  }
+
+  const { supabase, user, roleSlug, error: authError } = await requireAuthUser();
+  if (authError || !user) {
+    return { ok: false, message: authError ?? "Unauthorized" };
+  }
+
+  if (!canConvertToCommercialCreator(roleSlug)) {
+    return {
+      ok: false,
+      message:
+        "Only Account Manager, Operations, Admin, or Super Admin may add creators to CRM.",
+    };
+  }
+
+  const reason =
+    source === "shortlist"
+      ? ("manual_convert" as const)
+      : source === "quotation"
+        ? ("manual_convert" as const)
+        : ("manual_convert" as const);
+
+  const crm = await ensureCommercialCreator(supabase, {
+    influencerId,
+    reason,
+    actorId: user.id,
+    roleSlug,
+    sourceEntityType: source,
+    sourceEntityId: influencerId,
+    initialStatus: "incomplete",
+    metadata: { path: "convertInfluencerToCommercialCrmAction", source },
+  });
+
+  if (!crm.ok) {
+    return { ok: false, message: crm.message };
+  }
+  if (!crm.writersDisabled) {
+    await refreshCommercialCreatorCompleteness(supabase, influencerId);
+  }
+
+  revalidatePath("/vendors");
+  revalidatePath(`/vendors/${influencerId}`);
+  return {
+    ok: true,
+    message: crm.created
+      ? "Creator added to Commercial CRM."
+      : "Creator already in Commercial CRM.",
+    vendorId: influencerId,
+  };
+}
+
+export async function updateVendorCommercialCrmAction(
+  _prev: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
+  const influencerId = String(formData.get("influencer_id") ?? "").trim();
+  if (!influencerId) {
+    return { ok: false, message: "Creator is required." };
+  }
+
+  const preferredCurrency = String(formData.get("preferred_currency") ?? "")
+    .trim()
+    .toUpperCase();
+  const negotiationNotes = String(formData.get("negotiation_notes") ?? "").trim();
+  const commercialNotes = String(formData.get("commercial_notes") ?? "").trim();
+  const baseRateRaw = String(formData.get("base_rate") ?? "").trim();
+
+  const { supabase, error: authError } = await requireAuthUser();
+  if (authError) {
+    return { ok: false, message: authError };
+  }
+
+  const { data: existing, error: loadError } = await supabase
+    .from("influencers")
+    .select("rate_card")
+    .eq("id", influencerId)
+    .maybeSingle();
+
+  if (loadError || !existing) {
+    return { ok: false, message: loadError?.message ?? "Creator not found." };
+  }
+
+  const rateCard = {
+    ...(((existing as { rate_card?: Record<string, unknown> }).rate_card ??
+      {}) as Record<string, unknown>),
+  };
+  if (baseRateRaw) {
+    const parsedRate = Number(baseRateRaw);
+    if (Number.isFinite(parsedRate)) rateCard.base_rate = parsedRate;
+  }
+  if (preferredCurrency) rateCard.currency = preferredCurrency;
+  if (commercialNotes) rateCard.commercial_notes = commercialNotes;
+  else delete rateCard.commercial_notes;
+
+  const { error: influencerError } = await supabase
+    .from("influencers")
+    .update({ rate_card: rateCard } as never)
+    .eq("id", influencerId);
+
+  if (influencerError) {
+    return { ok: false, message: influencerError.message };
+  }
+
+  const { data: crmRow } = await supabase
+    .from("creator_crm_profiles")
+    .select("influencer_id")
+    .eq("influencer_id", influencerId)
+    .maybeSingle();
+
+  if (crmRow) {
+    await supabase
+      .from("creator_crm_profiles")
+      .update({
+        preferred_currency: preferredCurrency || null,
+        negotiation_notes: negotiationNotes || null,
+      } as never)
+      .eq("influencer_id", influencerId);
+  }
+
+  await refreshCommercialCreatorCompleteness(supabase, influencerId);
+  revalidatePath(`/vendors/${influencerId}`);
+  return { ok: true, message: "Commercial details saved." };
+}
+
+export async function upsertInfluencerBankAccountAction(
+  _prev: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
+  const influencerId = String(formData.get("influencer_id") ?? "").trim();
+  if (!influencerId) {
+    return { ok: false, message: "Creator is required." };
+  }
+
+  const { supabase, error: authError } = await requireAuthUser();
+  if (authError) {
+    return { ok: false, message: authError };
+  }
+
+  const isDefault = formData.get("is_default") === "true";
+  const isVerified = formData.get("is_verified") === "true";
+  const relationshipType = emptyToNull(
+    String(formData.get("relationship_type") ?? "")
+  );
+  const relationshipDescription = emptyToNull(
+    String(formData.get("relationship_description") ?? "")
+  );
+  if (relationshipType === "other" && !relationshipDescription) {
+    return {
+      ok: false,
+      message: "Relationship Description is required when Relationship is Other.",
+    };
+  }
+  const beneficiaryName = emptyToNull(
+    String(formData.get("beneficiary_name") ?? "")
+  );
+  const accountHolder =
+    emptyToNull(String(formData.get("account_holder") ?? "")) ?? beneficiaryName;
+  const payload = {
+    influencer_id: influencerId,
+    bank_name: emptyToNull(String(formData.get("bank_name") ?? "")),
+    account_holder: accountHolder,
+    beneficiary_name: beneficiaryName ?? accountHolder,
+    relationship_type: relationshipType,
+    relationship_description:
+      relationshipType === "other" ? relationshipDescription : relationshipDescription,
+    iban:
+      emptyToNull(String(formData.get("iban") ?? ""))
+        ?.replace(/\s/g, "")
+        .toUpperCase() ?? null,
+    account_number: emptyToNull(String(formData.get("account_number") ?? "")),
+    swift: emptyToNull(String(formData.get("swift") ?? "")),
+    currency:
+      emptyToNull(String(formData.get("currency") ?? ""))?.toUpperCase() ?? null,
+    branch_name: emptyToNull(String(formData.get("branch_name") ?? "")),
+    address: emptyToNull(String(formData.get("address") ?? "")),
+    routing_number: emptyToNull(String(formData.get("routing_number") ?? "")),
+    sort_code: emptyToNull(String(formData.get("sort_code") ?? "")),
+    national_id: emptyToNull(String(formData.get("national_id") ?? "")),
+    tax_number: emptyToNull(String(formData.get("tax_number") ?? "")),
+    notes: emptyToNull(String(formData.get("notes") ?? "")),
+    is_default: isDefault,
+    is_verified: isVerified,
+  };
+
+  if (isDefault) {
+    await supabase
+      .from("influencer_bank_accounts")
+      .update({ is_default: false } as never)
+      .eq("influencer_id", influencerId);
+  }
+
+  const { error } = await supabase
+    .from("influencer_bank_accounts")
+    .insert(payload as never);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  await refreshCommercialCreatorCompleteness(supabase, influencerId);
+  revalidatePath(`/vendors/${influencerId}`);
+  return { ok: true, message: "Bank account saved." };
+}
+
+export async function saveSignedIoExternalLinkAction(
+  _prev: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
+  const influencerId = String(formData.get("influencer_id") ?? "").trim();
+  const vendorIoId = String(formData.get("vendor_io_id") ?? "").trim();
+  const assignmentId = String(formData.get("assignment_id") ?? "").trim() || null;
+  const url = String(formData.get("url") ?? "").trim();
+  const provider = String(formData.get("provider") ?? "").trim() || "other";
+  const fileName = String(formData.get("file_name") ?? "").trim() || null;
+
+  if (!influencerId || !vendorIoId || !url) {
+    return { ok: false, message: "Vendor IO and URL are required." };
+  }
+
+  const { supabase, user, error: authError } = await requireAuthUser();
+  if (authError || !user) {
+    return { ok: false, message: authError ?? "Unauthorized" };
+  }
+
+  const { error } = await supabase.from("vendor_io_signed_artifacts").insert({
+    vendor_io_id: vendorIoId,
+    influencer_id: influencerId,
+    artifact_kind: "external_link",
+    provider,
+    file_name: fileName,
+    url,
+    version_label: "signed",
+    uploaded_by: user.id,
+  } as never);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  const { logVendorPaymentTimelineEvent } = await import(
+    "@/lib/creators/crm/payment-timeline"
+  );
+  await logVendorPaymentTimelineEvent(supabase, {
+    influencerId,
+    assignmentId,
+    vendorIoId,
+    eventType: "signed_io_linked",
+    summary: `Signed IO linked (${provider})`,
+    actorId: user.id,
+    metadata: { url, fileName },
+  });
+
+  revalidatePath(`/vendors/${influencerId}`);
+  return { ok: true, message: "Signed IO link saved." };
+}
+
+export async function logVendorIoCommunicationAction(
+  _prev: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
+  const influencerId = String(formData.get("influencer_id") ?? "").trim();
+  const vendorIoId = String(formData.get("vendor_io_id") ?? "").trim() || null;
+  const assignmentId = String(formData.get("assignment_id") ?? "").trim() || null;
+  const channel = String(formData.get("channel") ?? "manual").trim();
+  const subject = String(formData.get("subject") ?? "").trim() || null;
+  const body = String(formData.get("body") ?? "").trim() || null;
+
+  if (!influencerId) {
+    return { ok: false, message: "Creator is required." };
+  }
+
+  const { supabase, user, error: authError } = await requireAuthUser();
+  if (authError || !user) {
+    return { ok: false, message: authError ?? "Unauthorized" };
+  }
+
+  const { error } = await supabase.from("vendor_io_communications").insert({
+    influencer_id: influencerId,
+    vendor_io_id: vendorIoId,
+    assignment_id: assignmentId,
+    channel,
+    direction: "outbound",
+    subject,
+    body,
+    logged_by: user.id,
+  } as never);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  const { logVendorPaymentTimelineEvent } = await import(
+    "@/lib/creators/crm/payment-timeline"
+  );
+  await logVendorPaymentTimelineEvent(supabase, {
+    influencerId,
+    assignmentId,
+    vendorIoId,
+    eventType: "communication_logged",
+    summary: `Communication logged · ${channel.replace(/_/g, " ")}`,
+    actorId: user.id,
+    metadata: { subject },
+  });
+
+  revalidatePath(`/vendors/${influencerId}`);
+  return { ok: true, message: "Communication logged." };
+}
+
+export async function setDefaultVerifiedBankAccountAction(
+  _prev: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
+  const influencerId = String(formData.get("influencer_id") ?? "").trim();
+  const bankAccountId = String(formData.get("bank_account_id") ?? "").trim();
+  if (!influencerId || !bankAccountId) {
+    return { ok: false, message: "Bank account is required." };
+  }
+
+  const { supabase, error: authError } = await requireAuthUser();
+  if (authError) {
+    return { ok: false, message: authError };
+  }
+
+  await supabase
+    .from("influencer_bank_accounts")
+    .update({ is_default: false } as never)
+    .eq("influencer_id", influencerId);
+
+  const { error } = await supabase
+    .from("influencer_bank_accounts")
+    .update({ is_default: true, is_verified: true } as never)
+    .eq("id", bankAccountId)
+    .eq("influencer_id", influencerId);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  await refreshCommercialCreatorCompleteness(supabase, influencerId);
+  revalidatePath(`/vendors/${influencerId}`);
+  return { ok: true, message: "Verified default bank account set." };
 }
 
 export async function updateVendorOverviewAction(
@@ -528,6 +907,27 @@ export async function updateVendorBankDetailsAction(
     return { ok: false, message: updateError.message };
   }
 
+  // Keep multi-account table in sync with IO-linked legacy payment_details.
+  const { data: existingBanks } = await supabase
+    .from("influencer_bank_accounts")
+    .select("id")
+    .eq("influencer_id", parsed.data.influencer_id)
+    .limit(1);
+
+  if (!existingBanks?.length) {
+    await supabase.from("influencer_bank_accounts").insert({
+      influencer_id: parsed.data.influencer_id,
+      bank_name: paymentDetails.bank_name,
+      account_holder: paymentDetails.beneficiary_name,
+      iban: paymentDetails.iban,
+      account_number: paymentDetails.account_number,
+      swift: paymentDetails.swift,
+      is_default: true,
+      is_verified: false,
+    } as never);
+  }
+
+  await refreshCommercialCreatorCompleteness(supabase, parsed.data.influencer_id);
   revalidatePath(`/vendors/${parsed.data.influencer_id}`);
   revalidatePath("/vendors");
   revalidatePath("/ios/vendor");
