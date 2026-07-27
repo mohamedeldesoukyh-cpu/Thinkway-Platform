@@ -21,7 +21,7 @@ import {
   refreshMediaPlanStrategySummaryForDisplay,
   type MediaPlanStrategySummary,
 } from "@/features/campaign-outputs/media-plan-strategy-summary";
-import { applyMediaPlanScheduleChange } from "@/features/campaign-outputs/media-plan-schedule";
+import { applyMediaPlanScheduleChange } from "@/features/campaign-outputs/media-plan-mutations";
 import { generateMediaPlan } from "@/features/campaign-outputs/generators/media-plan";
 import { weeklyObjectiveCardFlex, weeklyObjectiveWeightBarWidth } from "@/features/campaign-outputs/media-plan-week-objectives-layout";
 import type { MediaPlanData } from "@/features/campaign-outputs/generators/media-plan";

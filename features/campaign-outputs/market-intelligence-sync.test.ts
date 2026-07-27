@@ -8,7 +8,7 @@ import {
   listCampaignOutputs,
   markStaleCampaignOutputs,
 } from "./output-registry";
-import { applyMediaPlanScheduleChange } from "./media-plan-schedule";
+import { applyMediaPlanScheduleChange } from "./media-plan-mutations";
 import { marketIntelligenceDisplayKey } from "@/features/market-intelligence/market-intelligence-config";
 import { computeInputFingerprint } from "./output-fingerprint";
 

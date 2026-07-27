@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import {
   type OperationalConfigurableColumnDef,
   getOperationalTableColumnMetas,
@@ -17,7 +19,12 @@ const CLIENT_CAMPAIGNS_COLUMNS: OperationalConfigurableColumnDef<ClientCampaignR
     label: "Campaign",
     renderCell: (row) => (
       <div>
-        <p className="font-medium">{row.campaign_name}</p>
+        <Link
+          href={`/client-portal/campaigns/${row.campaign_header_id}/media-plan`}
+          className="font-medium text-foreground underline-offset-2 hover:underline"
+        >
+          {row.campaign_name}
+        </Link>
         <p className="text-xs text-muted-foreground">
           <DocumentNumber value={row.campaign_document_number} />
         </p>
