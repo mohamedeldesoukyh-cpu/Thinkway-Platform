@@ -285,7 +285,7 @@ SELECT DISTINCT
   'incomplete'::public.creator_crm_status,
   'backfill'::public.creator_crm_activation_reason,
   'commercial_activity_backfill',
-  NULL
+  NULL::uuid
 FROM public.influencers i
 WHERE i.has_commercial_profile = false
   AND (
