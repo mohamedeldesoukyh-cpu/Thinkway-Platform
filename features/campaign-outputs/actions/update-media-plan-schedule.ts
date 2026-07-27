@@ -119,11 +119,18 @@ export async function updateMediaPlanScheduleAction(
     /* keep schedule meta even if regeneration fails */
   }
 
+  const headerIdForSave = await resolveCampaignHeaderIdForMediaPlan(
+    supabase,
+    campaignObjectId,
+    campaignId
+  );
+
   const saved = await saveCampaignObject(conversationId, next, {
     supabase,
     userId: auth.userId,
     persistToDb: true,
     saveReason: "manual",
+    campaignHeaderId: headerIdForSave,
   });
 
   try {
@@ -139,11 +146,7 @@ export async function updateMediaPlanScheduleAction(
 
   // Timeline: only lifecycle-worthy events (e.g. draft fork), not every drag.
   try {
-    const headerId = await resolveCampaignHeaderIdForMediaPlan(
-      supabase,
-      campaignObjectId,
-      campaignId
-    );
+    const headerId = headerIdForSave;
     if (headerId && scheduleResult.events.length) {
       await logMediaPlanTimelineEvents(supabase, {
         campaignHeaderId: headerId,
