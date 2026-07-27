@@ -1,5 +1,6 @@
 # Unified Media Plan — Phase 3 Report (Timeline · Compare · Approval)
 
+**Status:** Historical phase report — **superseded for release decisions** by [`MEDIA_PLANNING_V1_PRODUCTION_READINESS.md`](./MEDIA_PLANNING_V1_PRODUCTION_READINESS.md)  
 **Branch:** `feature/unified-media-plan`  
 **Date:** 2026-07-27
 
