@@ -3,7 +3,10 @@
 **Milestone ID:** `creator-crm-phase-1-foundation`  
 **Date closed:** 2026-07-27  
 **Branch:** `develop`  
-**Status:** **CLOSED**
+**Status:** **CLOSED**  
+**Commit:** `13ca561` (`13ca561c7f7b908f9d49fcd4a33921d50c40344c`)  
+**Preview:** Ready — `gitSha` matches commit; `/api/ready` → `{"status":"ok"}`; Supabase Dev (`hsxrewjcbvmbkqdlzjhs`) aligned  
+**Preview URL:** https://thinkway-platform-git-develop-mohamedeldesoukyh-cpus-projects.vercel.app  
 
 ## What this milestone means
 

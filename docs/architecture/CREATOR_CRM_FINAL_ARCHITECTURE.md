@@ -5,7 +5,8 @@
 **Supersedes / extends:** `CREATOR_CRM_DISCOVERY_SEPARATION_PROPOSAL.md`  
 **Platform validation:** [CRM vs platform explore](ef94d45b-7869-4698-adce-02a3ed2646f6)  
 **Canvas:** `creator-crm-architecture-proposal.canvas.tsx`  
-**Phase 1 plan:** `CREATOR_CRM_PHASE1_IMPLEMENTATION_PLAN.md`
+**Phase 1 plan / milestone:** `CREATOR_CRM_PHASE1_IMPLEMENTATION_PLAN.md` · `CREATOR_CRM_PHASE1_MILESTONE.md`  
+**Phase 2 proposal (pending approval):** `CREATOR_CRM_PHASE2_IMPLEMENTATION_PROPOSAL.md`
 
 ---
 
