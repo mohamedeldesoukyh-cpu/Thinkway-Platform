@@ -152,7 +152,8 @@
     "cleanup:creators": "node scripts/run-ops-script.mjs scripts/cleanup-creators.ts",
     "test:cleanup-classification": "npx tsx lib/creators/cleanup-classification.test.ts",
     "test:discovery-ui-contract": "npx tsx features/discovery/components/discovery-ui-contract.test.ts",
-    "validate:discovery-ui-contract": "node scripts/validate-discovery-ui-contract.mjs"
+    "validate:discovery-ui-contract": "node scripts/validate-discovery-ui-contract.mjs",
+    "soak:creator-crm-phase2a": "npx tsx scripts/soak-creator-crm-phase2a.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

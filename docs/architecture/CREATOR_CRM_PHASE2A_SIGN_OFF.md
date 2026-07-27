@@ -101,4 +101,6 @@ DNA staging merge runs only on existing identity promote paths and improves inte
 
 ## Gate for next steps
 
-After Dev soak review, approve workflow integration streams separately (proposal Option C continuation: assignment/quote/VIO/convert). Portal invite remains deferred to Creator Portal phase.
+Dev soak report: [`CREATOR_CRM_PHASE2A_DEV_SOAK_REPORT.md`](./CREATOR_CRM_PHASE2A_DEV_SOAK_REPORT.md) — **Ready with conditions**.  
+
+After soak approval, approve workflow integration streams separately (Option C continuation). Portal invite remains deferred to Creator Portal phase. Do **not** begin Phase 2B–2F until soak report is approved.
