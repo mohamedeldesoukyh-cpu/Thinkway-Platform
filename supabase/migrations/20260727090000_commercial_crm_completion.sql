@@ -96,20 +96,9 @@ $$;
 REVOKE ALL ON FUNCTION public.vendor_list_total_count(text, text, text, boolean) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.vendor_list_total_count(text, text, text, boolean) TO authenticated;
 
--- Keep 3-arg overload for older callers
-CREATE OR REPLACE FUNCTION public.vendor_list_total_count(
-  p_search text DEFAULT NULL,
-  p_status text DEFAULT NULL,
-  p_platform text DEFAULT NULL
-)
-RETURNS bigint
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT public.vendor_list_total_count(p_search, p_status, p_platform, false);
-$$;
+-- Do not keep a 3-arg overload: PostgREST cannot disambiguate it from the
+-- 4-arg signature when callers omit optional named args. See
+-- 20260727130000_drop_vendor_list_total_count_3arg_overload.sql.
 
 -- 3) Multi bank accounts
 CREATE TABLE IF NOT EXISTS public.influencer_bank_accounts (
