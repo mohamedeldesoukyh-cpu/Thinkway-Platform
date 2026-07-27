@@ -24,6 +24,7 @@ function buildContentSecurityPolicy(): string {
     "font-src 'self' data:",
     `connect-src 'self' ${supabaseConnect} https://api.openai.com https://*.openai.com`,
     "frame-src 'self' blob:",
+    "worker-src 'self' blob:",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

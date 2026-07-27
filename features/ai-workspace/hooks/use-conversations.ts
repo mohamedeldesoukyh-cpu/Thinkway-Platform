@@ -2,19 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { parseApiError } from "@/lib/security/api-error";
+
 import type { ConversationListItem } from "../types";
-
-async function readErrorMessage(response: Response): Promise<string> {
-  const text = await response.text();
-  if (!text.trim()) return "Failed to load conversations";
-
-  try {
-    const payload = JSON.parse(text) as { error?: string; message?: string };
-    return payload.error ?? payload.message ?? "Failed to load conversations";
-  } catch {
-    return text.slice(0, 200) || "Failed to load conversations";
-  }
-}
 
 export function useConversations() {
   const [conversations, setConversations] = useState<ConversationListItem[]>([]);
@@ -32,7 +22,8 @@ export function useConversations() {
     try {
       const response = await fetch("/api/ai/conversations");
       if (!response.ok) {
-        throw new Error(await readErrorMessage(response));
+        const parsed = await parseApiError(response, "Failed to load conversations");
+        throw new Error(parsed.message);
       }
       const data = (await response.json()) as { conversations: ConversationListItem[] };
       setConversations(data.conversations ?? []);

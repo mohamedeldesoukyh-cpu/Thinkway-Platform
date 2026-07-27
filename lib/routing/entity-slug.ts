@@ -15,7 +15,16 @@ export function entityShortId(uuid: string): string {
 }
 
 /** Human-readable document / serial prefixes accepted as legacy route keys. */
-const DOCUMENT_NUMBER_PREFIXES = ["TW", "QT", "SL", "GRP", "BRD", "AGY", "C"] as const;
+const DOCUMENT_NUMBER_PREFIXES = [
+  "TW",
+  "QT",
+  "SL",
+  "GRP",
+  "BRD",
+  "AGY",
+  "INF",
+  "C",
+] as const;
 
 export function isDocumentOrSerialRouteKey(value: string): boolean {
   const key = value.trim();

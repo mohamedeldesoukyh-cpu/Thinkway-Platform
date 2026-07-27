@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { documentNumberLookupCandidates } from "@/lib/documents/format-document-number";
 import { isUuid } from "@/lib/validation/uuid";
 import type { Database } from "@/types/database";
 
@@ -224,18 +225,21 @@ export async function resolveEntityIdByRouteKey(
   const parsed = parseEntityRouteKey(key);
 
   if (parsed.kind === "documentNumber") {
+    const candidates = documentNumberLookupCandidates(parsed.value);
     for (const column of [documentNumberColumn, serialNumberColumn]) {
-      const { data, error } = await supabase
-        .from(table)
-        .select("id")
-        .eq(column, parsed.value)
-        .maybeSingle();
-      if (error) {
-        // Shortlists use serial_number; other entities use document_number.
-        if (/column|does not exist|schema cache/i.test(error.message)) continue;
-        throw new Error(error.message);
+      for (const candidate of candidates) {
+        const { data, error } = await supabase
+          .from(table)
+          .select("id")
+          .eq(column, candidate)
+          .maybeSingle();
+        if (error) {
+          // Shortlists use serial_number; other entities use document_number.
+          if (/column|does not exist|schema cache/i.test(error.message)) break;
+          throw new Error(error.message);
+        }
+        if (data) return (data as EntityIdRow).id;
       }
-      if (data) return (data as EntityIdRow).id;
     }
     return null;
   }

@@ -60,6 +60,31 @@ export function preAuthRequestGuard(
     incrementSecurityMetric("rateLimitEvents");
     incrementSecurityMetric("blockedRequests");
     const body = rateLimitExceededBody(rate);
+    // Structured edge log — provider is Thinkway's own limiter, not OpenAI/etc.
+    console.warn(
+      JSON.stringify({
+        event: "rate_limit_exceeded",
+        provider: "thinkway_edge",
+        model: null,
+        tokens: null,
+        category: rate.category,
+        limit: rate.limit,
+        remaining: rate.remaining,
+        retryAfterSec: rate.retryAfterSec,
+        resetAt: rate.resetAt,
+        identity,
+        pathname,
+        method: request.method,
+        durationMs: null,
+        retryCount: 0,
+        rateLimitHeaders: {
+          "Retry-After": rate.retryAfterSec,
+          "X-RateLimit-Limit": rate.limit,
+          "X-RateLimit-Remaining": 0,
+          "X-RateLimit-Reset": Math.ceil(rate.resetAt / 1000),
+        },
+      })
+    );
     const limited = NextResponse.json(body, {
       status: 429,
       headers: {

@@ -81,6 +81,38 @@ test("timeline change clamps and updates duration weeks", () => {
   assert.equal(getCampaignFacts(clamped.campaignObject)?.durationWeeks, 52);
 });
 
+test("mid-week start stores requested + Monday scheduled dates and explains alignment", () => {
+  const { campaignObject: next, change } = applyTimelineChange(campaignObject(), {
+    startDate: "24/07/2026",
+  });
+  const facts = getCampaignFacts(next);
+  assert.equal(facts?.campaignStartDate, "2026-07-24");
+  assert.equal(facts?.requestedStartDate, "2026-07-24");
+  assert.equal(facts?.scheduledStartDate, "2026-07-27");
+  assert.match(change ?? "", /24\/07\/2026/);
+  assert.match(change ?? "", /27\/07\/2026/);
+  assert.match(change ?? "", /Monday–Sunday|Week 1 begins/i);
+});
+
+test("Monday start keeps requested and scheduled identical", () => {
+  const { campaignObject: next, change } = applyTimelineChange(campaignObject(), {
+    startDate: "27/07/2026",
+  });
+  const facts = getCampaignFacts(next);
+  assert.equal(facts?.requestedStartDate, "2026-07-27");
+  assert.equal(facts?.scheduledStartDate, "2026-07-27");
+  assert.doesNotMatch(change ?? "", /Week 1 begins/);
+});
+
+test("natural-language start dates parse through timeline change", () => {
+  const { campaignObject: next, change } = applyTimelineChange(campaignObject(), {
+    startDate: "24th of July 2026",
+  });
+  assert.equal(getCampaignFacts(next)?.requestedStartDate, "2026-07-24");
+  assert.equal(getCampaignFacts(next)?.scheduledStartDate, "2026-07-27");
+  assert.match(change ?? "", /Week 1 begins/);
+});
+
 test("platforms change sets priority order with primary noted", () => {
   const { campaignObject: next, change } = applyPlatformsChange(campaignObject(), {
     platforms: ["TikTok", "Instagram"],

@@ -439,6 +439,8 @@ export type InfluencerRow = {
   default_vat_percent: number;
   tax_registration_number: string | null;
   notes: string | null;
+  /** JSON [{title, body}] — default Vendor IO Section 8 terms; NULL = platform default. */
+  vendor_io_terms_text: string | null;
   metadata: Record<string, unknown>;
   search_vector: string | null;
   created_by: string | null;
@@ -613,7 +615,13 @@ export type InfluencerDocumentRow = {
 export type VendorListItem = InfluencerRow & {
   platform_accounts: Pick<
     InfluencerPlatformAccountRow,
-    "id" | "platform" | "handle" | "follower_count" | "is_primary"
+    | "id"
+    | "platform"
+    | "handle"
+    | "follower_count"
+    | "is_primary"
+    | "profile_url"
+    | "profile_picture_url"
   >[];
 };
 
@@ -1922,6 +1930,7 @@ export type Database = {
           default_vat_percent?: number;
           tax_registration_number?: string | null;
           notes?: string | null;
+          vendor_io_terms_text?: string | null;
           created_by?: string | null;
           last_enriched_at?: string | null;
           enrichment_status?: CreatorEnrichmentStatus;
@@ -2946,6 +2955,14 @@ export type Database = {
           id: string;
           total_count: number;
         }[];
+      };
+      vendor_list_total_count: {
+        Args: {
+          p_search?: string | null;
+          p_status?: string | null;
+          p_platform?: string | null;
+        };
+        Returns: number;
       };
     };
     Enums: {

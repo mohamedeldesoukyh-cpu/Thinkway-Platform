@@ -335,8 +335,34 @@ CREATE POLICY influencers_select
   FOR SELECT
   TO authenticated
   USING (
-    public.has_permission('influencers.read')
-    AND public.can_access_influencer(id)
+    -- Internal readers: STABLE helper (see can_read_all_influencers).
+    -- Avoid per-row can_access_influencer() — that timed out listing ~7k vendors.
+    public.can_read_all_influencers()
+    OR (
+      public.has_permission('influencers.read')
+      AND profile_id = auth.uid()
+    )
+    OR (
+      public.has_permission('influencers.read')
+      AND EXISTS (
+        SELECT 1
+        FROM public.campaign_influencers ci
+        WHERE ci.influencer_id = influencers.id
+          AND ci.campaign_header_id IS NOT NULL
+          AND public.can_access_campaign_header(ci.campaign_header_id)
+      )
+    )
+    OR (
+      public.has_permission('influencers.read')
+      AND EXISTS (
+        SELECT 1
+        FROM public.campaign_influencers ci
+        JOIN public.campaigns c ON c.id = ci.campaign_id
+        WHERE ci.influencer_id = influencers.id
+          AND ci.campaign_id IS NOT NULL
+          AND public.can_access_campaign(c.id)
+      )
+    )
   );
 
 DROP POLICY IF EXISTS influencers_insert ON public.influencers;
@@ -356,11 +382,19 @@ CREATE POLICY influencers_update
   TO authenticated
   USING (
     public.has_permission('influencers.write')
-    AND public.can_access_influencer(id)
+    AND (
+      public.is_internal_user()
+      OR profile_id = auth.uid()
+      OR public.can_access_influencer(id)
+    )
   )
   WITH CHECK (
     public.has_permission('influencers.write')
-    AND public.can_access_influencer(id)
+    AND (
+      public.is_internal_user()
+      OR profile_id = auth.uid()
+      OR public.can_access_influencer(id)
+    )
   );
 
 DROP POLICY IF EXISTS influencers_delete ON public.influencers;

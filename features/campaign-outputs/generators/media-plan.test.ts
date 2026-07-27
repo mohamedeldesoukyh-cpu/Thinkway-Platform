@@ -299,6 +299,17 @@ test("media plan days carry short calendar date labels", () => {
   assert.ok(monday.dateLabel && /^\d{1,2}\/\d{1,2}\/\d{2}$/.test(monday.dateLabel));
 });
 
+test("media plan dual-stores requested Friday and scheduled Monday Week 1", () => {
+  const obj = buildCampaignObjectFixture({
+    facts: { durationWeeks: 2, campaignStartDate: "2026-07-24" },
+  });
+  const data = planData(generateMediaPlan(obj));
+  assert.equal(data.requestedStartDate, "2026-07-24");
+  assert.equal(data.scheduledStartDate, "2026-07-27");
+  assert.equal(data.campaignStartDate, "2026-07-27");
+  assert.equal(data.weeks[0]!.days[0]!.dateLabel, "27/7/26");
+});
+
 test("enrichMediaPlanFromSlate patches avatars and quotation ad types onto legacy calendar cells", () => {
   const obj = buildCampaignObjectFixture();
   const data = planData(generateMediaPlan(obj));

@@ -130,6 +130,18 @@ const AI_CAMPAIGN_PAGE_SIZE = 200;
 /** Relaxed pool size for zero-results recommendations (manual filter mode). */
 const ZERO_RESULTS_RECOMMENDATION_PAGE_SIZE = 200;
 const SAVED_SEARCH_KEY = "thinkway:creator-search-saved:v1";
+/** Temporary pagination diagnostics — remove after Search infinite-scroll validation. */
+const DEBUG_DISCOVERY_SEARCH_PAGINATION =
+  process.env.NODE_ENV === "development" ||
+  process.env.NEXT_PUBLIC_DEBUG_DISCOVERY_SEARCH === "1";
+
+function debugDiscoverySearchPagination(
+  event: string,
+  payload: Record<string, unknown>
+) {
+  if (!DEBUG_DISCOVERY_SEARCH_PAGINATION) return;
+  console.debug(`[discovery-search-pagination] ${event}`, payload);
+}
 
 type Props = {
   shortlists: Array<{ id: string; name: string }>;
@@ -233,10 +245,14 @@ export function CreatorSearchWorkspace({
   const [selectedCreatorMap, setSelectedCreatorMap] = useState<
     Map<string, UnifiedCreatorResult>
   >(() => new Map());
-  const loadMoreObserver = useRef<IntersectionObserver | null>(null);
   const filtersRef = useRef(filters);
   const reqIdRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
+  const pagesLoadedRef = useRef(0);
+  const loadMoreInFlightRef = useRef(false);
+  const hasMoreRef = useRef(true);
+  const loadingRef = useRef(true);
+  const loadingMoreRef = useRef(false);
   const skipFilterUrlWriteRef = useRef(false);
   const skipSearchUrlWriteRef = useRef(false);
   const pinnedCreatorsRef = useRef<Map<string, UnifiedCreatorResult>>(new Map());
@@ -915,25 +931,52 @@ export function CreatorSearchWorkspace({
       startTransition(() => {
         const clientOnlyActive =
           !useAiRelevance && hasClientOnlyCreatorSearchFilters(mergedFilters);
-        const displayTotal =
-          filtered.length === 0
-            ? 0
-            : useAiRelevance
-              ? filtered.length
-              : clientOnlyActive && filtered.length < result.creators.length
+        // Empty append pages must not wipe the authoritative catalog total while
+        // previously loaded rows remain visible.
+        if (!(append && filtered.length === 0)) {
+          const displayTotal =
+            !append && filtered.length === 0
+              ? 0
+              : useAiRelevance
                 ? filtered.length
-                : result.total;
-        setTotal(displayTotal);
+                : clientOnlyActive &&
+                    !append &&
+                    filtered.length < result.creators.length
+                  ? filtered.length
+                  : result.total;
+          setTotal((prev) => (append ? Math.max(prev, displayTotal) : displayTotal));
+        }
+
         setCreators((prev) => {
           const next = append ? [...prev, ...filtered] : filtered;
           const unique = new Map(next.map((c) => [c.unified_id, c]));
           return [...unique.values()];
         });
-        setHasMore(
-          useAiRelevance || showAcquiredOnly
+
+        const serverPageEmpty = result.creators.length === 0;
+        const nextHasMore =
+          useAiRelevance || showAcquiredOnly || (append && serverPageEmpty)
             ? false
-            : (result.has_more ?? pageNum * PAGE_SIZE < result.total)
-        );
+            : (result.has_more ?? pageNum * PAGE_SIZE < result.total);
+        setHasMore(nextHasMore);
+
+        pagesLoadedRef.current = append
+          ? pagesLoadedRef.current + 1
+          : filtered.length > 0 || result.total > 0
+            ? 1
+            : 0;
+        debugDiscoverySearchPagination("pageSettled", {
+          totalCount: result.total,
+          pageCreators: result.creators.length,
+          filteredRows: filtered.length,
+          pages: pagesLoadedRef.current,
+          hasNextPage: nextHasMore,
+          nextCursor: null,
+          nextPage: nextHasMore ? pageNum + 1 : null,
+          isFetchingNextPage: append,
+          pageNum,
+          append,
+        });
 
         const backfill = result.backfill;
         if (!append && backfill && !useAiRelevance) {
@@ -1116,22 +1159,50 @@ export function CreatorSearchWorkspace({
     };
   }, []);
 
-  const loadMoreRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      if (loadMoreObserver.current) loadMoreObserver.current.disconnect();
-      if (!node) return;
-      loadMoreObserver.current = new IntersectionObserver(
-        (entries) => {
-          if (entries[0]?.isIntersecting && hasMore && !loading && !loadingMore) {
-            setPage((p) => p + 1);
-          }
-        },
-        { rootMargin: "240px" }
-      );
-      loadMoreObserver.current.observe(node);
-    },
-    [hasMore, loading, loadingMore]
-  );
+  hasMoreRef.current = hasMore;
+  loadingRef.current = loading;
+  loadingMoreRef.current = loadingMore;
+
+  useEffect(() => {
+    if (!loadingMore) {
+      loadMoreInFlightRef.current = false;
+    }
+  }, [loadingMore]);
+
+  useEffect(() => {
+    debugDiscoverySearchPagination("state", {
+      totalCount: total,
+      renderedRows: creators.length,
+      pages: pagesLoadedRef.current,
+      hasNextPage: hasMore,
+      nextCursor: null,
+      isFetchingNextPage: loadingMore,
+      page,
+    });
+  }, [total, creators.length, hasMore, loadingMore, page]);
+
+  const handleLoadMore = useCallback(() => {
+    if (
+      !hasMoreRef.current ||
+      loadingRef.current ||
+      loadingMoreRef.current ||
+      loadMoreInFlightRef.current ||
+      aiModeActive
+    ) {
+      return;
+    }
+    loadMoreInFlightRef.current = true;
+    debugDiscoverySearchPagination("fetchNextPage", {
+      totalCount: total,
+      renderedRows: creators.length,
+      pages: pagesLoadedRef.current,
+      hasNextPage: hasMoreRef.current,
+      nextCursor: null,
+      isFetchingNextPage: true,
+      fromPage: page,
+    });
+    setPage((p) => p + 1);
+  }, [aiModeActive, creators.length, page, total]);
 
   const handleToggleSelect = useCallback((creator: UnifiedCreatorResult) => {
     toggle(creator.unified_id);
@@ -1967,7 +2038,7 @@ export function CreatorSearchWorkspace({
           onStopAllRefresh={handleStopAllRefresh}
           inFlightCount={inFlightCreators.length}
           onRetry={() => runSearch()}
-          loadMoreRef={loadMoreRef}
+          onLoadMore={handleLoadMore}
           showAddMissingCreator={
             debouncedSearch.trim().length > 0 && !exactCreatorZeroMatch
           }

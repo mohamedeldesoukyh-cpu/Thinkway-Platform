@@ -180,5 +180,11 @@ export function creatorProfileSourceFromAccounts(
   options?: { avatarUrl?: string | null; isVerified?: boolean }
 ): CreatorProfileSource {
   const primary = pickPrimaryPlatformAccount(accounts ?? []);
-  return creatorProfileSourceFromPlatformAccount(displayName, primary, options);
+  const bestAvatar =
+    options?.avatarUrl ??
+    pickBestAvatarCandidate((accounts ?? []).map((account) => account.profile_picture_url));
+  return creatorProfileSourceFromPlatformAccount(displayName, primary, {
+    ...options,
+    avatarUrl: bestAvatar,
+  });
 }

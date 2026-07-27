@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { formatPaymentMethodLabel } from "@/lib/vendors/format-utils";
+import { resolveEffectiveVendorIoTerms } from "@/lib/io/client-io-terms";
 import { resolveVendorIoPaymentSchedule } from "@/lib/io/vendor-io-payment-terms";
 import { THINKWAY_AGENCY_DEFAULTS } from "@/lib/io/thinkway-agency-defaults";
 import type { VendorIoDocumentData, VendorIoDeliverableRow } from "@/lib/io/vendor-io-document-types";
@@ -27,7 +28,7 @@ export async function loadVendorIoDocumentData(
   const { data: vendorIo, error: vioError } = await supabase
     .from("vendor_ios")
     .select(
-      "id, document_number, revision_number, amount, currency_code, status, usage_rights, special_payment_terms, created_at, influencer_id, campaign_header_id"
+      "id, document_number, revision_number, amount, currency_code, status, usage_rights, special_payment_terms, terms_text, created_at, influencer_id, campaign_header_id"
     )
     .eq("id", vendorIoId)
     .single();
@@ -45,6 +46,7 @@ export async function loadVendorIoDocumentData(
     status: string;
     usage_rights: string | null;
     special_payment_terms: string | null;
+    terms_text: string | null;
     created_at: string;
     influencer_id: string;
     campaign_header_id: string;
@@ -54,7 +56,7 @@ export async function loadVendorIoDocumentData(
     supabase
       .from("influencers")
       .select(
-        "id, display_name, legal_name, email, phone, nationality, country_code, languages, categories, payment_details, payment_terms, metadata, city"
+        "id, display_name, legal_name, email, phone, nationality, country_code, languages, categories, payment_details, payment_terms, vendor_io_terms_text, metadata, city"
       )
       .eq("id", typedVio.influencer_id)
       .single(),
@@ -87,9 +89,15 @@ export async function loadVendorIoDocumentData(
     categories: string[];
     payment_details: Record<string, unknown>;
     payment_terms: string | null;
+    vendor_io_terms_text: string | null;
     metadata: Record<string, unknown>;
     city: string | null;
   };
+
+  const terms = resolveEffectiveVendorIoTerms(
+    typedInfluencer.vendor_io_terms_text,
+    typedVio.terms_text
+  );
 
   const typedCampaignRaw = campaign as {
     id: string;
@@ -265,6 +273,7 @@ export async function loadVendorIoDocumentData(
     status: typedVio.status,
     amount: Number(typedVio.amount),
     usageRights: typedVio.usage_rights,
+    terms,
     influencer: {
       id: typedInfluencer.id,
       displayName: typedInfluencer.display_name,

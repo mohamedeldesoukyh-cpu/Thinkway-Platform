@@ -63,7 +63,7 @@ type Props = {
   onStopAllRefresh?: () => void;
   inFlightCount?: number;
   onRetry: () => void;
-  loadMoreRef: (node: HTMLDivElement | null) => void;
+  onLoadMore: () => void;
   platformFilter?: string[];
   showAddMissingCreator?: boolean;
   exactCreatorEmptyState?: boolean;
@@ -163,7 +163,7 @@ export function CreatorSearchResultList({
   onStopAllRefresh,
   inFlightCount = 0,
   onRetry,
-  loadMoreRef,
+  onLoadMore,
   platformFilter,
   showAddMissingCreator = false,
   exactCreatorEmptyState = false,
@@ -202,12 +202,15 @@ export function CreatorSearchResultList({
     [listItems]
   );
 
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+  const loadMoreLockedRef = useRef(false);
+
   const virtualizer = useVirtualizer({
     count: listItems.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: (index) =>
       listItems[index]?.kind === "section" ? SECTION_ESTIMATE : ROW_ESTIMATE,
-    overscan: 12,
+    overscan: 8,
     getItemKey: (index) => listItems[index]?.id ?? index,
   });
 
@@ -224,6 +227,37 @@ export function CreatorSearchResultList({
   );
 
   const hasCreators = visibleCreatorIds.length > 0;
+
+  useEffect(() => {
+    if (!loadingMore) {
+      loadMoreLockedRef.current = false;
+    }
+  }, [loadingMore]);
+
+  useEffect(() => {
+    const root = scrollRef.current;
+    const sentinel = loadMoreSentinelRef.current;
+    if (!root || !sentinel || error || !hasMore || !hasCreators) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (
+          !entries[0]?.isIntersecting ||
+          !hasMore ||
+          loading ||
+          loadingMore ||
+          loadMoreLockedRef.current
+        ) {
+          return;
+        }
+        loadMoreLockedRef.current = true;
+        onLoadMore();
+      },
+      { root, rootMargin: "160px 0px", threshold: 0 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [error, hasCreators, hasMore, loading, loadingMore, onLoadMore]);
   const exactMatchesCountLabel = showExactMatchesZeroHeader
     ? `Exact Matches — ${total.toLocaleString()} creator${total === 1 ? "" : "s"}`
     : undefined;
@@ -375,14 +409,18 @@ export function CreatorSearchResultList({
           </>
         )}
 
-        {!error ? <div ref={loadMoreRef} className="h-12" aria-hidden /> : null}
-        {loadingMore ? (
-          <div className="flex justify-center py-3">
-            <Loader2Icon className="size-4 animate-spin text-muted-foreground" />
+        {/* Fixed-height footer avoids viewport jumps when the spinner appears/disappears. */}
+        {!error && hasCreators ? (
+          <div className="flex h-16 flex-col justify-end" aria-hidden={!loadingMore}>
+            <div ref={loadMoreSentinelRef} className="h-4 w-full shrink-0" />
+            <div className="flex h-12 items-center justify-center">
+              {loadingMore ? (
+                <Loader2Icon className="size-4 animate-spin text-muted-foreground" />
+              ) : !hasMore ? (
+                <p className="text-center text-[10px] text-muted-foreground">End of results</p>
+              ) : null}
+            </div>
           </div>
-        ) : null}
-        {!hasMore && hasCreators && !error ? (
-          <p className="py-3 text-center text-[10px] text-muted-foreground">End of results</p>
         ) : null}
       </div>
     </div>

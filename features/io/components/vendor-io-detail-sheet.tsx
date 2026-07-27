@@ -22,6 +22,7 @@ import {
 } from "@/features/campaigns/components/operational-detail-panel";
 import { VendorIoDocumentActions } from "@/features/io/components/vendor-io-document-actions";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
+import { IoTermsSourceBadge } from "@/features/io/components/io-terms-source-badge";
 import { VendorIoUngenerateTrigger } from "@/features/io/components/vendor-io-ungenerate-dialog";
 import type { VendorIoRow } from "@/features/io/types";
 import {
@@ -29,6 +30,11 @@ import {
   initialsFromName,
 } from "@/lib/campaigns/assignment-detail-presenters";
 import { formatMoney } from "@/features/campaigns/utils";
+import {
+  parseTermsText,
+  resolveEffectiveVendorIoTerms,
+  resolveIoTermsSource,
+} from "@/lib/io/client-io-terms";
 
 type VendorIoDetailSheetProps = {
   open: boolean;
@@ -99,8 +105,14 @@ function VendorIoGeneralTab({ row }: { row: VendorIoRow }) {
 }
 
 function VendorIoTermsTab({ row }: { row: VendorIoRow }) {
-  const termsText = row.terms_text?.trim();
   const termsHtml = row.terms_html?.trim();
+  const ioTerms = parseTermsText(row.terms_text);
+  const vendorTerms = parseTermsText(row.vendor_io_terms_text);
+  const effective = resolveEffectiveVendorIoTerms(
+    row.vendor_io_terms_text,
+    row.terms_text
+  );
+  const source = resolveIoTermsSource(vendorTerms, ioTerms);
 
   return (
     <div className="px-1">
@@ -134,19 +146,25 @@ function VendorIoTermsTab({ row }: { row: VendorIoRow }) {
         )}
       </DetailField>
       <div className="border-b border-border/40 py-3.5 last:border-b-0">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          Terms (plain text)
-        </p>
-        {termsText ? (
-          <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{termsText}</p>
-        ) : (
-          <p className="mt-2 text-sm text-muted-foreground">—</p>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            Terms &amp; conditions
+          </p>
+          <IoTermsSourceBadge source={source} />
+        </div>
+        <ul className="mt-2 space-y-2 text-sm text-foreground">
+          {effective.map((term, index) => (
+            <li key={index}>
+              <span className="font-medium">{index + 1}. {term.title}</span>{" "}
+              <span className="text-muted-foreground">{term.body}</span>
+            </li>
+          ))}
+        </ul>
       </div>
       {termsHtml ? (
         <div className="border-b border-border/40 py-3.5 last:border-b-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Terms (HTML)
+            Generated document HTML
           </p>
           <p className="mt-2 line-clamp-6 whitespace-pre-wrap text-xs text-muted-foreground">
             {termsHtml}

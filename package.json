@@ -1,6 +1,6 @@
 {
   "name": "thinkway-platform",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "packageManager": "npm@10.9.2",
   "engines": {
@@ -39,6 +39,8 @@
     "test:script-env": "npx tsx lib/performance/script-env.test.ts",
     "test:campaign-performance-audit": "npx tsx lib/performance/campaign-performance-audit.test.ts",
     "test:campaign-performance": "npx tsx lib/performance/campaign-performance-regression.test.ts",
+    "test:vendor-io-terms": "npx tsx lib/io/vendor-io-terms.test.ts && npx tsx lib/io/vendor-io-terms-regression.test.ts && npx tsx lib/io/vendor-io-document-parity.test.ts",
+    "verify:vendor-io-terms-production": "node scripts/verify-vendor-io-terms-production.mjs",
     "test:creator-intelligence": "npx tsx lib/creator-intelligence/creator-intelligence.test.ts",
     "test:creator-search-parser": "npx tsx features/ai/tools/creator-search-parser.test.ts",
     "test:metrics-sync-poll-policy": "npx tsx features/campaigns/hooks/metrics-sync-poll-policy.test.ts",

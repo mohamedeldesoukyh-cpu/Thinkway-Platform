@@ -10,10 +10,8 @@ import {
   quotationDetailPath,
   quotationPreviewPath,
 } from "@/features/quotations/constants";
-import {
-  appendQuotationExportRevision,
-  resolveQuotationTemplate,
-} from "@/features/quotations/export/quotation-template";
+import { resolveQuotationTemplate } from "@/features/quotations/export/quotation-template";
+import { renderQuotationPreviewHtml } from "@/features/quotations/export/render-quotation-preview-html";
 import { getQuotationDetail } from "@/features/quotations/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { metadataTitleForEntity, redirectToCanonicalEntityRoute } from "@/lib/routing/entity-page";
@@ -121,12 +119,16 @@ export default async function QuotationPreviewPage({
 
   const templateLabel = quotationTemplateLabel(template);
   const serial = detail.serial_number ?? "QT-PENDING";
-  const previewParams = new URLSearchParams({ format: "preview" });
-  if (template !== "detailed") {
-    previewParams.set("template", template);
+
+  let html = "";
+  let errorMessage: string | null = null;
+  try {
+    const rendered = await renderQuotationPreviewHtml(supabase, detail.id, { template });
+    html = rendered.html;
+  } catch (error) {
+    errorMessage =
+      error instanceof Error ? error.message : "Failed to render quotation preview.";
   }
-  appendQuotationExportRevision(previewParams, detail.updated_at);
-  const previewSrc = `/api/quotations/${detail.id}/export?${previewParams.toString()}`;
 
   return (
     <DashboardShell
@@ -154,19 +156,27 @@ export default async function QuotationPreviewPage({
               />
             </Suspense>
           </div>
-          <QuotationPreviewDownloads
-            quotationId={detail.id}
-            template={template}
-            exportRevision={detail.updated_at}
-          />
+          {!errorMessage ? (
+            <QuotationPreviewDownloads
+              quotationId={detail.id}
+              template={template}
+              exportRevision={detail.updated_at}
+            />
+          ) : null}
         </div>
       </div>
 
-      <iframe
-        title={`${templateLabel} quotation ${serial}`}
-        src={previewSrc}
-        className="min-h-[1200px] w-full rounded-xl border border-border bg-card"
-      />
+      {errorMessage ? (
+        <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {errorMessage}
+        </div>
+      ) : (
+        <iframe
+          title={`${templateLabel} quotation ${serial}`}
+          srcDoc={html}
+          className="min-h-[1200px] w-full rounded-xl border border-border bg-card"
+        />
+      )}
     </DashboardShell>
   );
 }

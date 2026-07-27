@@ -210,6 +210,8 @@ export function StudioOutputsView({
   const actions = useMemo<OutputCardActions>(
     () => ({
       onRegenerate: (kind) => {
+        // One Copilot request per user action — ignore clicks while a turn is in flight.
+        if (isCopilotStreaming) return;
         const view = outputs.find((o) => o.kind === kind);
         if (view) {
           pendingBaselineRef.current = {
@@ -223,10 +225,16 @@ export function StudioOutputsView({
           outputActionCommand(view && view.status === "not_generated" ? "generate" : "regenerate", kind)
         );
       },
-      onExport: (kind) => onSendMessage(outputActionCommand("export", kind)),
-      onCompare: (kind) => onSendMessage(outputActionCommand("compare", kind)),
+      onExport: (kind) => {
+        if (isCopilotStreaming) return;
+        onSendMessage(outputActionCommand("export", kind));
+      },
+      onCompare: (kind) => {
+        if (isCopilotStreaming) return;
+        onSendMessage(outputActionCommand("compare", kind));
+      },
     }),
-    [outputs, onSendMessage]
+    [outputs, onSendMessage, isCopilotStreaming]
   );
 
   if (mode === "director") {

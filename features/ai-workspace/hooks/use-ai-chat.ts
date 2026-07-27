@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { parseApiError, sleep } from "@/lib/security/api-error";
 import { splitSseBuffer } from "../services/sse-utils";
 import { logMessageStateEvent } from "../debug/message-state-logger";
 import type { AiActionCard, AiMessage, ChatRequestBody } from "../types";
@@ -39,16 +40,120 @@ export type WorkflowStreamState = {
   status: string;
 };
 
-async function readErrorMessage(response: Response): Promise<string> {
-  const text = await response.text();
-  if (!text.trim()) return "Chat request failed";
+const CHAT_429_MAX_RETRIES = 1;
+const CHAT_429_MAX_WAIT_MS = 45_000;
 
-  try {
-    const payload = JSON.parse(text) as { error?: string; message?: string };
-    return payload.error ?? payload.message ?? "Chat request failed";
-  } catch {
-    return text.slice(0, 200) || "Chat request failed";
+function logChatRateLimit(details: {
+  status: number;
+  code?: string;
+  category?: string;
+  retryAfterSec?: number;
+  retryCount: number;
+  durationMs: number;
+  limitHeader: string | null;
+  remainingHeader: string | null;
+  resetHeader: string | null;
+}) {
+  console.warn(
+    JSON.stringify({
+      event: "ai_chat_rate_limited",
+      provider: "thinkway_edge",
+      model: null,
+      tokens: null,
+      status: details.status,
+      code: details.code,
+      category: details.category,
+      retryAfterSec: details.retryAfterSec,
+      retryCount: details.retryCount,
+      durationMs: details.durationMs,
+      rateLimitHeaders: {
+        "Retry-After": details.retryAfterSec,
+        "X-RateLimit-Limit": details.limitHeader,
+        "X-RateLimit-Remaining": details.remainingHeader,
+        "X-RateLimit-Reset": details.resetHeader,
+      },
+    })
+  );
+}
+
+async function fetchChatWithBackoff(
+  init: RequestInit,
+  signal: AbortSignal
+): Promise<Response> {
+  let attempt = 0;
+  let lastResponse: Response | null = null;
+
+  while (attempt <= CHAT_429_MAX_RETRIES) {
+    const started = performance.now();
+    const response = await fetch("/api/ai/chat", { ...init, signal });
+    const durationMs = Math.round(performance.now() - started);
+    lastResponse = response;
+
+    if (response.status !== 429 || attempt >= CHAT_429_MAX_RETRIES) {
+      if (response.status === 429) {
+        const preview = await response.clone().text();
+        let category: string | undefined;
+        let code: string | undefined;
+        let bodyRetry: number | undefined;
+        try {
+          const payload = JSON.parse(preview) as {
+            error?: string;
+            category?: string;
+            retryAfterSec?: number;
+          };
+          code = payload.error;
+          category = payload.category;
+          bodyRetry = payload.retryAfterSec;
+        } catch {
+          /* ignore */
+        }
+        const retryAfterSec =
+          Number.parseInt(response.headers.get("Retry-After") ?? "", 10) ||
+          bodyRetry;
+        logChatRateLimit({
+          status: response.status,
+          code,
+          category,
+          retryAfterSec: Number.isFinite(retryAfterSec) ? retryAfterSec : undefined,
+          retryCount: attempt,
+          durationMs,
+          limitHeader: response.headers.get("X-RateLimit-Limit"),
+          remainingHeader: response.headers.get("X-RateLimit-Remaining"),
+          resetHeader: response.headers.get("X-RateLimit-Reset"),
+        });
+      }
+      return response;
+    }
+
+    const retryAfterHeader = Number.parseInt(
+      response.headers.get("Retry-After") ?? "",
+      10
+    );
+    const waitMs = Math.min(
+      Number.isFinite(retryAfterHeader) && retryAfterHeader > 0
+        ? retryAfterHeader * 1000
+        : 1000 * 2 ** attempt,
+      CHAT_429_MAX_WAIT_MS
+    );
+
+    logChatRateLimit({
+      status: response.status,
+      code: "rate_limit_exceeded",
+      category: "ai",
+      retryAfterSec: Math.ceil(waitMs / 1000),
+      retryCount: attempt,
+      durationMs,
+      limitHeader: response.headers.get("X-RateLimit-Limit"),
+      remainingHeader: response.headers.get("X-RateLimit-Remaining"),
+      resetHeader: response.headers.get("X-RateLimit-Reset"),
+    });
+
+    await sleep(waitMs);
+    if (signal.aborted) return response;
+    attempt += 1;
   }
+
+  return lastResponse!;
 }
 
 export type ChatSendOptions = {
@@ -224,22 +329,25 @@ export function useAiChat(options: {
       };
 
       try {
-        const response = await fetch("/api/ai/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: message.trim(),
-            conversationId: conversationIdRef.current,
-            rerunUserMessageId: sendOptions?.rerunUserMessageId,
-            intent,
-            workspace: workspaceRef.current,
-            studioFocus: sendOptions?.studioFocus,
-          } satisfies ChatRequestBody),
-          signal: controller.signal,
-        });
+        const response = await fetchChatWithBackoff(
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              message: message.trim(),
+              conversationId: conversationIdRef.current,
+              rerunUserMessageId: sendOptions?.rerunUserMessageId,
+              intent,
+              workspace: workspaceRef.current,
+              studioFocus: sendOptions?.studioFocus,
+            } satisfies ChatRequestBody),
+          },
+          controller.signal
+        );
 
         if (!response.ok) {
-          throw new Error(await readErrorMessage(response));
+          const parsed = await parseApiError(response, "Chat request failed");
+          throw new Error(parsed.message);
         }
 
         const reader = response.body?.getReader();

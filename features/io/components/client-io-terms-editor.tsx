@@ -23,6 +23,8 @@ type Props = {
   disabled?: boolean;
   showRecover?: boolean;
   description?: string;
+  /** Button label for restore action (Client IO / Vendor IO). */
+  recoverLabel?: string;
 };
 
 export function ClientIoTermsEditor({
@@ -32,6 +34,7 @@ export function ClientIoTermsEditor({
   disabled = false,
   showRecover = true,
   description,
+  recoverLabel,
 }: Props) {
   const platformV6 = useClientProfilePlatformV6();
   const confirmDelete = useConfirmDelete();
@@ -118,7 +121,7 @@ export function ClientIoTermsEditor({
               className="platform-v6-link inline-flex items-center gap-1 text-[11px]"
             >
               <RotateCcwIcon className="size-3" />
-              Restore to default
+              {recoverLabel ?? "Restore to default"}
             </button>
           ) : null}
         </div>
@@ -202,7 +205,7 @@ export function ClientIoTermsEditor({
           className="gap-1.5 text-muted-foreground"
         >
           <RotateCcwIcon className="size-3.5" />
-          Recover to default
+          {recoverLabel ?? "Recover to default"}
         </Button>
       ) : null}
     </div>
@@ -217,6 +220,7 @@ export function ClientIoTermsEditorField({
   disabled,
   showRecover,
   description,
+  recoverLabel,
 }: Props & { label: string }) {
   return (
     <DetailEditBlock label={label}>
@@ -227,6 +231,7 @@ export function ClientIoTermsEditorField({
         disabled={disabled}
         showRecover={showRecover}
         description={description}
+        recoverLabel={recoverLabel}
       />
     </DetailEditBlock>
   );

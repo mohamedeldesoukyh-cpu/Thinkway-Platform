@@ -5,6 +5,11 @@ import {
   applyFactsToSummaryData,
   getCampaignFacts,
 } from "@/features/campaign-director/facts/facts-display-bridge";
+import {
+  describeMondayAlignment,
+  formatCampaignDateLabel,
+  resolveScheduledStartDate,
+} from "@/features/campaign-outputs/media-plan-week-start";
 
 import { clampCampaignDurationWeeks } from "../timeline-duration";
 
@@ -15,6 +20,8 @@ export type EditableFactsPatch = Partial<
     | "budget"
     | "durationWeeks"
     | "campaignStartDate"
+    | "requestedStartDate"
+    | "scheduledStartDate"
     | "platforms"
     | "objective"
     | "audience"
@@ -22,7 +29,34 @@ export type EditableFactsPatch = Partial<
   >
 >;
 
-/** Parse DD/MM/YYYY, DD-MM-YYYY, or YYYY-MM-DD into ISO YYYY-MM-DD. */
+const MONTH_NAME_TO_NUMBER: Record<string, string> = {
+  january: "01",
+  jan: "01",
+  february: "02",
+  feb: "02",
+  march: "03",
+  mar: "03",
+  april: "04",
+  apr: "04",
+  may: "05",
+  june: "06",
+  jun: "06",
+  july: "07",
+  jul: "07",
+  august: "08",
+  aug: "08",
+  september: "09",
+  sep: "09",
+  sept: "09",
+  october: "10",
+  oct: "10",
+  november: "11",
+  nov: "11",
+  december: "12",
+  dec: "12",
+};
+
+/** Parse DD/MM/YYYY, YYYY-MM-DD, or "24 July 2026" / "24th of July 2026" into ISO. */
 export function parseCampaignStartDateInput(raw: string): string | null {
   const text = raw.trim();
   const iso = text.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
@@ -35,13 +69,18 @@ export function parseCampaignStartDateInput(raw: string): string | null {
     const year = dmy[3]!;
     return `${year}-${month}-${day}`;
   }
-  return null;
-}
 
-function formatCampaignStartDateLabel(iso: string): string {
-  const [year, month, day] = iso.split("-");
-  if (!year || !month || !day) return iso;
-  return `${day}/${month}/${year}`;
+  const named = text.match(
+    /\b(\d{1,2})(?:st|nd|rd|th)?(?:\s+of)?\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+(\d{4})\b/i
+  );
+  if (named) {
+    const day = named[1]!.padStart(2, "0");
+    const month = MONTH_NAME_TO_NUMBER[named[2]!.toLowerCase()];
+    const year = named[3]!;
+    if (month) return `${year}-${month}-${day}`;
+  }
+
+  return null;
 }
 
 /**
@@ -121,16 +160,28 @@ export function applyTimelineChange(
 
   const startIso = input.startDate ? parseCampaignStartDateInput(input.startDate) : null;
   if (startIso) {
+    const scheduledIso = resolveScheduledStartDate(startIso) ?? startIso;
+    // Dual-store: requested go-live day + Monday Week-1 anchor for the calendar.
     patch.campaignStartDate = startIso;
-    changes.push(`set campaign start date to ${formatCampaignStartDateLabel(startIso)}`);
+    patch.requestedStartDate = startIso;
+    patch.scheduledStartDate = scheduledIso;
+    changes.push(`set campaign start date to ${formatCampaignDateLabel(startIso)}`);
+    const alignment = describeMondayAlignment(startIso, scheduledIso);
+    if (alignment) changes.push(alignment);
   }
 
   if (changes.length === 0) return { campaignObject, change: null };
 
   const next = patchCampaignFacts(campaignObject, patch);
+  // Alignment note is a full sentence — keep it outside the "Updated X." wrapper.
+  const alignmentNote = changes.find((line) => line.startsWith("Publishing calendar"));
+  const primaryChanges = changes.filter((line) => line !== alignmentNote);
+  const change = alignmentNote
+    ? `Updated ${primaryChanges.join(" and ")}. ${alignmentNote}`
+    : `Updated ${primaryChanges.join(" and ")}.`;
   return {
     campaignObject: next,
-    change: `Updated ${changes.join(" and ")}.`,
+    change,
   };
 }
 

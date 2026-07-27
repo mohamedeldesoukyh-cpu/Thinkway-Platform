@@ -21,6 +21,7 @@ import { resolveThinkwayReportLogoSrcsForExport } from "@/lib/reports/document/t
 import { getQuotationDetail } from "@/features/quotations/queries";
 import { resolveRateToEgp } from "@/lib/commercial/fx-server";
 import { pdfUnavailableMessage, renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
+import { EMBEDDABLE_DOCUMENT_FRAME_HEADERS } from "@/lib/security/embeddable-document-headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /** Showcase embed + Chromium PDF can exceed 60s with many publication shots. */
@@ -32,8 +33,15 @@ const EXPORT_CACHE_HEADERS = {
   Pragma: "no-cache",
 } as const;
 
-function withExportCacheHeaders(headers: Record<string, string>): Record<string, string> {
-  return { ...headers, ...EXPORT_CACHE_HEADERS };
+function withExportCacheHeaders(
+  headers: Record<string, string>,
+  options?: { embeddable?: boolean }
+): Record<string, string> {
+  return {
+    ...headers,
+    ...EXPORT_CACHE_HEADERS,
+    ...(options?.embeddable ? EMBEDDABLE_DOCUMENT_FRAME_HEADERS : {}),
+  };
 }
 
 type RouteContext = {
@@ -139,12 +147,18 @@ export async function GET(request: Request, context: RouteContext) {
       });
     }
 
-    // Default: preview (inline HTML)
+    // Inline HTML only — SAMEORIGIN/frame-ancestors self for same-origin embeds.
+    // File downloads (Word/PDF/Excel/PPTX) keep the platform DENY framing policy.
+    const isInlineHtmlPreview =
+      !download && (format === "preview" || format === "html" || format === "htm");
     return new NextResponse(html, {
-      headers: withExportCacheHeaders({
-        "Content-Type": "text/html; charset=utf-8",
-        "Content-Disposition": `${disposition}; filename="${baseName}${templateSuffix}.html"`,
-      }),
+      headers: withExportCacheHeaders(
+        {
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Disposition": `${disposition}; filename="${baseName}${templateSuffix}.html"`,
+        },
+        { embeddable: isInlineHtmlPreview }
+      ),
     });
   } catch (error) {
     const message =

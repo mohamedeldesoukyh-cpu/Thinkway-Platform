@@ -19,6 +19,7 @@ import {
   FileSignatureIcon,
   FileTextIcon,
   HomeIcon,
+  InfoIcon,
   LayoutDashboardIcon,
   LineChartIcon,
   LayersIcon,
@@ -257,6 +258,7 @@ const navGroups: NavGroup[] = [
         icon: TagsIcon,
       },
       { kind: "link", href: "/settings/email", label: "Email", icon: Settings2Icon },
+      { kind: "link", href: "/settings/about", label: "About", icon: InfoIcon },
       { kind: "link", href: "/system/health", label: "System Health", icon: ActivityIcon },
       {
         kind: "link",

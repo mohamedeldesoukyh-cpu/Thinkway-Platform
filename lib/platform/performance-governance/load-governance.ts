@@ -80,7 +80,7 @@ export type BudgetCheckReport = {
 };
 
 function readJson<T>(rel: string): T | null {
-  const full = join(process.cwd(), rel);
+  const full = join(/* turbopackIgnore: true */ process.cwd(), rel);
   if (!existsSync(full)) return null;
   return JSON.parse(readFileSync(full, "utf8")) as T;
 }

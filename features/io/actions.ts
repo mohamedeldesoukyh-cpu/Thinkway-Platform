@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
+import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { sanitizeRichHtml } from "@/lib/security/sanitize-html";
 import { parseFormDataWithSchema } from "@/lib/validation/form";
 import { updateVendorIoSchema } from "@/lib/validation/schemas";
 import { fetchClientIoRow } from "@/lib/io/client-io-query";
@@ -21,7 +21,11 @@ import {
   downloadIoDocumentBuffer,
   EMAIL_SIGNED_URL_SECONDS,
 } from "@/lib/io/io-document-storage";
-import { parseTermsText, serializeTermsText } from "@/lib/io/client-io-terms";
+import {
+  normalizeIoTermsText,
+  parseTermsText,
+  serializeTermsText,
+} from "@/lib/io/client-io-terms";
 import {
   parseSendRecipientsField,
   serializeSendRecipients,
@@ -294,7 +298,6 @@ export async function updateVendorIoAction(
     id,
     campaign_header_id: campaignHeaderId,
     terms_text: termsTextRaw,
-    terms_html: termsHtmlRaw,
     usage_rights: usageRightsRaw,
     exclusivity: exclusivityRaw,
     attachment_url: attachmentUrlRaw,
@@ -302,8 +305,18 @@ export async function updateVendorIoAction(
     amount,
   } = parsed.data;
 
-  const termsText = (termsTextRaw ?? "").trim();
-  const termsHtml = sanitizeRichHtml(termsHtmlRaw ?? "");
+  const termsRaw = (termsTextRaw ?? "").trim();
+  let termsText: string | null = null;
+  if (termsRaw) {
+    termsText = normalizeIoTermsText(termsRaw);
+    if (!termsText) {
+      return {
+        ok: false,
+        message: "Terms must be a valid JSON list of title and body pairs.",
+      };
+    }
+  }
+
   const usageRights = (usageRightsRaw ?? "").trim();
   const exclusivity = (exclusivityRaw ?? "").trim();
   const attachmentUrl = (attachmentUrlRaw ?? "").trim();
@@ -328,9 +341,9 @@ export async function updateVendorIoAction(
     };
   }
 
+  // Do not touch terms_html here — document generation owns the full HTML blob.
   const patch: Record<string, unknown> = {
-    terms_text: termsText || null,
-    terms_html: termsHtml || null,
+    terms_text: termsText,
     usage_rights: usageRights || null,
     exclusivity: exclusivity || null,
     attachment_url: attachmentUrl || null,
@@ -355,6 +368,43 @@ export async function updateVendorIoAction(
   debugIo("vendor-io", "updated draft", { id, status });
   revalidateIoPaths(campaignHeaderId);
   return { ok: true, message: "Vendor IO saved." };
+}
+
+/** Persist current structured terms onto the influencer as vendor defaults. */
+export async function saveVendorIoTermsAsVendorDefaultAction(input: {
+  influencerId: string;
+  termsText: string;
+  campaignHeaderId?: string | null;
+}): Promise<IoActionState> {
+  const termsText = normalizeIoTermsText(input.termsText);
+  if (!termsText) {
+    return {
+      ok: false,
+      message: "Terms must be a valid JSON list of title and body pairs.",
+    };
+  }
+
+  const { supabase, user, error } = await requireAuthUser();
+  if (error || !user) return { ok: false, message: error ?? "Unauthorized" };
+
+  const permission = await requirePermission(supabase, "influencers.write");
+  if ("error" in permission) {
+    return { ok: false, message: permission.error };
+  }
+
+  const { error: updateError } = await supabase
+    .from("influencers")
+    .update({ vendor_io_terms_text: termsText } as never)
+    .eq("id", input.influencerId);
+
+  if (updateError) {
+    return { ok: false, message: updateError.message };
+  }
+
+  revalidatePath("/vendors");
+  revalidatePath(`/vendors/${input.influencerId}`);
+  revalidateIoPaths(input.campaignHeaderId);
+  return { ok: true, message: "Saved as vendor default terms for future Vendor IOs." };
 }
 
 export async function sendVendorIoAction(

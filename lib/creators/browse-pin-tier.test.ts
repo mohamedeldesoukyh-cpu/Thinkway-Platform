@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
 
 import {
+  BROWSE_PIN_SORT_POOL_MAX,
   browsePinTier,
+  browseSortedPoolHasMore,
   compareBrowseDefaultOrder,
   compareBrowsePinTier,
+  paginateBrowseCreators,
+  resolveBrowseSortPoolSize,
 } from "@/lib/creators/browse-pin-tier";
 
 const NOW = Date.parse("2026-07-18T12:00:00.000Z");
@@ -129,6 +133,26 @@ assert.deepEqual(
     "inf:never",
   ],
   "full browse default order respects pin tiers"
+);
+
+const pageSize = 50;
+const pool = Array.from({ length: BROWSE_PIN_SORT_POOL_MAX }, (_, i) => i);
+assert.equal(resolveBrowseSortPoolSize(6, pageSize), BROWSE_PIN_SORT_POOL_MAX);
+assert.deepEqual(paginateBrowseCreators(pool, 6, pageSize), []);
+assert.equal(
+  browseSortedPoolHasMore(5 * pageSize, 0, pool.length),
+  false,
+  "empty page beyond capped pool must stop pagination"
+);
+assert.equal(
+  browseSortedPoolHasMore(4 * pageSize, pageSize, pool.length),
+  false,
+  "final full page of capped pool has no next page"
+);
+assert.equal(
+  browseSortedPoolHasMore(3 * pageSize, pageSize, pool.length),
+  true,
+  "earlier pages within capped pool still have more"
 );
 
 console.log("lib/creators/browse-pin-tier.test.ts — all tests passed");

@@ -150,6 +150,19 @@ export function resolveBrowseSortPoolSize(page: number, pageSize: number): numbe
   return Math.min(Math.max(base, minimum), BROWSE_PIN_SORT_POOL_MAX);
 }
 
+/**
+ * Whether another page can be sliced from the in-memory sorted browse pool.
+ * Must not use catalog totals — the pool is capped at {@link BROWSE_PIN_SORT_POOL_MAX},
+ * so comparing against catalog size falsely keeps `has_more` true after the pool ends.
+ */
+export function browseSortedPoolHasMore(
+  offset: number,
+  pageLength: number,
+  poolLength: number
+): boolean {
+  return offset + pageLength < poolLength;
+}
+
 export function sortBrowseCreatorsInDefaultOrder<T extends BrowseDefaultOrderFields>(
   creators: T[],
   direction: "asc" | "desc" = "desc",

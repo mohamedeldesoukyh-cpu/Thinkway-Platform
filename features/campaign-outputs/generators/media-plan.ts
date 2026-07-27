@@ -53,6 +53,11 @@ import {
 } from "../media-plan-operations";
 import { expandRawSchedulableDeliverables } from "../media-plan-scheduler";
 import { canonicalPlatformLabel, mergePlatformAllocation } from "../platform-allocation";
+import {
+  parseIsoCampaignDate,
+  startOfCampaignWeek,
+  toIsoCampaignDate,
+} from "@/features/campaign-outputs/media-plan-week-start";
 import { formatMoney } from "./generator-utils";
 
 export const MEDIA_PLAN_GENERATOR_VERSION = "3.7.0";
@@ -85,25 +90,36 @@ const ASSET_LEAD_DAYS = 3;
 /** Production must start this many days before the publish date. */
 const PRODUCTION_LEAD_DAYS = 7;
 
-/** Monday on or after the given anchor date. */
-function startOfCampaignWeek(anchor = new Date()): Date {
-  const date = new Date(anchor);
-  date.setHours(12, 0, 0, 0);
-  const day = date.getDay();
-  const daysUntilMonday = day === 0 ? 1 : day === 1 ? 0 : 8 - day;
-  if (daysUntilMonday > 0) date.setDate(date.getDate() + daysUntilMonday);
-  return date;
+function resolveRequestedStartIso(facts: ReturnType<typeof getCampaignFacts>): string | null {
+  const iso =
+    facts?.requestedStartDate?.trim() ||
+    facts?.campaignStartDate?.trim() ||
+    null;
+  return iso && parseIsoCampaignDate(iso) ? iso : null;
 }
 
-function resolveCampaignStartAnchor(facts: ReturnType<typeof getCampaignFacts>): Date {
-  const iso = facts?.campaignStartDate?.trim();
-  if (iso && /^\d{4}-\d{2}-\d{2}$/.test(iso)) {
-    const [year, month, day] = iso.split("-").map((part) => Number(part));
-    if (year && month && day) {
-      return startOfCampaignWeek(new Date(year, month - 1, day, 12, 0, 0, 0));
-    }
+/** Monday Week-1 anchor derived from the user-requested campaign start (or today). */
+function resolveCampaignStartAnchor(facts: ReturnType<typeof getCampaignFacts>): {
+  requestedIso: string | null;
+  scheduled: Date;
+  scheduledIso: string;
+} {
+  const requestedIso = resolveRequestedStartIso(facts);
+  if (requestedIso) {
+    const requested = parseIsoCampaignDate(requestedIso)!;
+    const scheduled = startOfCampaignWeek(requested);
+    return {
+      requestedIso,
+      scheduled,
+      scheduledIso: toIsoCampaignDate(scheduled),
+    };
   }
-  return startOfCampaignWeek();
+  const scheduled = startOfCampaignWeek();
+  return {
+    requestedIso: null,
+    scheduled,
+    scheduledIso: toIsoCampaignDate(scheduled),
+  };
 }
 
 /** d/M/yy — e.g. 1/7/26 */
@@ -229,8 +245,12 @@ export type MediaPlanData = {
   durationWeeks: number;
   /** Weeks rendered on the publishing calendar (may exceed brief duration to fit all deliverables). */
   calendarWeeks?: number;
-  /** ISO date — Monday of week 1 */
+  /** ISO date — Monday of week 1 (scheduled publishing anchor). */
   campaignStartDate: string;
+  /** ISO date — user-requested campaign start (may be mid-week). */
+  requestedStartDate?: string;
+  /** ISO date — Monday of week 1; same as {@link campaignStartDate}. */
+  scheduledStartDate?: string;
   weeks: MediaPlanWeek[];
   waves: MediaPlanWave[];
   milestones: MediaPlanMilestone[];
@@ -1061,8 +1081,10 @@ export function generateMediaPlan(campaignObject: CampaignObject): CampaignOutpu
     postingSlotCount: activationCount,
     quotationCalendar,
   });
-  const campaignStart = resolveCampaignStartAnchor(facts);
-  const campaignStartIso = campaignStart.toISOString().slice(0, 10);
+  const startAnchor = resolveCampaignStartAnchor(facts);
+  const campaignStart = startAnchor.scheduled;
+  const campaignStartIso = startAnchor.scheduledIso;
+  const requestedStartIso = startAnchor.requestedIso;
   const schedule = mediaPlanScheduleFromMeta(campaignObject.meta);
   const weekWeights = resolveMediaPlanWeekWeights(campaignObject, calendarWeekCount);
   const briefText = resolveBriefTextForScheduling(campaignObject);
@@ -1197,6 +1219,8 @@ export function generateMediaPlan(campaignObject: CampaignObject): CampaignOutpu
   const data: MediaPlanData = {
     durationWeeks,
     campaignStartDate: campaignStartIso,
+    requestedStartDate: requestedStartIso ?? undefined,
+    scheduledStartDate: campaignStartIso,
     weeks: calendarWeeks,
     waves,
     milestones,

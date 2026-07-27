@@ -3,12 +3,16 @@ import { isCampaignWorkflow } from "@/features/campaign-studio/constants/workflo
 import type { AiMessage } from "../types";
 
 const LOG_PREFIX = "[studio-bind]";
+const ENABLED =
+  process.env.NODE_ENV === "development" &&
+  process.env.NEXT_PUBLIC_DEBUG_STUDIO_BIND === "1";
 
 /** Studio binding diagnostics — which object the panel renders and why. */
 export function logStudioBindEvent(
   event: string,
   detail?: Record<string, unknown>
 ): void {
+  if (!ENABLED) return;
   const payload = detail ? ` ${JSON.stringify(detail)}` : "";
   console.log(`${LOG_PREFIX} ${event}${payload}`);
 }

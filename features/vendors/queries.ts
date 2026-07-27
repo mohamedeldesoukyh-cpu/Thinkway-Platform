@@ -61,7 +61,9 @@ const VENDOR_LIST_SELECT = `
     platform,
     handle,
     follower_count,
-    is_primary
+    is_primary,
+    profile_url,
+    profile_picture_url
   )
 `;
 
@@ -82,61 +84,22 @@ export async function getVendorsList(
   const to = from + VENDORS_PAGE_SIZE - 1;
 
   // Middleware already validates the session; RLS enforces row access.
+  // Pagination total uses vendor_list_total_count (avoids PostgREST exact-count
+  // under per-row RLS, which timed out on ~7k influencers).
   const supabase = await createSupabaseServerClient();
 
-  if (platform) {
-    let query = supabase
-      .from("influencers")
-      .select(VENDOR_LIST_SELECT_PLATFORM_FILTER, { count: "exact" })
-      .eq("platform_accounts.platform", platform)
-      .order("created_at", { ascending: false });
-
-    if (status) {
-      query = query.eq("status", status);
-    }
-
-    if (search) {
-      const pattern = `%${escapeIlikePattern(search)}%`;
-      query = query.or(
-        [
-          `display_name.ilike.${pattern}`,
-          `legal_name.ilike.${pattern}`,
-          `document_number.ilike.${pattern}`,
-          `email.ilike.${pattern}`,
-        ].join(",")
-      );
-    }
-
-    const { data, error, count } = await query.range(from, to);
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    const total = count ?? 0;
-    const vendors = await enrichVendorList(
-      supabase,
-      (data ?? []) as unknown as VendorListItem[]
-    );
-
-    return {
-      vendors,
-      total,
-      page,
-      pageSize: VENDORS_PAGE_SIZE,
-      totalPages: Math.max(1, Math.ceil(total / VENDORS_PAGE_SIZE)),
-    };
-  }
-
+  const select = platform ? VENDOR_LIST_SELECT_PLATFORM_FILTER : VENDOR_LIST_SELECT;
   let query = supabase
     .from("influencers")
-    .select(VENDOR_LIST_SELECT, { count: "exact" })
+    .select(select)
     .order("created_at", { ascending: false });
 
+  if (platform) {
+    query = query.eq("platform_accounts.platform", platform);
+  }
   if (status) {
     query = query.eq("status", status);
   }
-
   if (search) {
     const pattern = `%${escapeIlikePattern(search)}%`;
     query = query.or(
@@ -149,16 +112,26 @@ export async function getVendorsList(
     );
   }
 
-  const { data, error, count } = await query.range(from, to);
+  const [pageResult, countResult] = await Promise.all([
+    query.range(from, to),
+    supabase.rpc("vendor_list_total_count", {
+      p_search: search || null,
+      p_status: status ?? null,
+      p_platform: platform || null,
+    }),
+  ]);
 
-  if (error) {
-    throw new Error(error.message);
+  if (pageResult.error) {
+    throw new Error(pageResult.error.message);
+  }
+  if (countResult.error) {
+    throw new Error(countResult.error.message);
   }
 
-  const total = count ?? 0;
+  const total = Number(countResult.data ?? 0);
   const vendors = await enrichVendorList(
     supabase,
-    (data ?? []) as unknown as VendorListItem[]
+    (pageResult.data ?? []) as unknown as VendorListItem[]
   );
 
   return {

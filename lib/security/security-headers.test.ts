@@ -24,6 +24,7 @@ test("document security headers include required set", () => {
     assert.ok(headers[key], `missing ${key}`);
   }
   assert.match(headers["Content-Security-Policy"]!, /frame-ancestors 'none'/);
+  assert.match(headers["Content-Security-Policy"]!, /worker-src 'self' blob:/);
   assert.equal(headers["X-Frame-Options"], "DENY");
   assert.equal(headers["X-Content-Type-Options"], "nosniff");
   // COEP intentionally omitted for document responses (cross-origin media).

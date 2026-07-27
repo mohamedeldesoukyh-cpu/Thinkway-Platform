@@ -86,6 +86,7 @@ import { compareBrowseRecencyDesc } from "@/lib/creators/last-enriched-sort";
 import {
   BROWSE_PIN_PRIORITY_COUNTRY,
   BROWSE_PIN_PRIORITY_POOL_SIZE,
+  browseSortedPoolHasMore,
   paginateBrowseCreators,
   resolveBrowseSortPoolSize,
   sortBrowseCreatorsInDefaultOrder,
@@ -1802,9 +1803,10 @@ export async function browseUnifiedCreators(
       perf?.span("serialization");
       const result = {
         creators: slimRecentPublicationsForBrowse(pageCreators),
+        // Authoritative catalog size for the header badge; pagination stops at the
+        // sorted pool (capped), not when catalogTotal is exhausted.
         total: Math.max(catalogTotal, offset + pageCreators.length),
-        has_more:
-          offset + pageCreators.length < Math.max(catalogTotal, merged.length),
+        has_more: browseSortedPoolHasMore(offset, pageCreators.length, merged.length),
         page,
         pageSize,
         internal_count: pageCreators.filter((creator) => creator.influencer_id).length,
