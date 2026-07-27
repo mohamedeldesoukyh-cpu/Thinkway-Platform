@@ -41,7 +41,15 @@ export async function searchCreators(
 
   const { data, error } = await supabase.rpc("search_creators", rpcParams);
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    const message = error.message ?? "Creator search failed";
+    if (/statement timeout|canceling statement/i.test(message)) {
+      throw new Error(
+        "Creator search timed out. Try a more specific name or handle."
+      );
+    }
+    throw new Error(message);
+  }
 
   const rows = data ?? [];
   const hits = rows.map(

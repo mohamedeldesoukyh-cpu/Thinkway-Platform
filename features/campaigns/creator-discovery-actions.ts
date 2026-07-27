@@ -194,17 +194,28 @@ export async function browseUnifiedCreatorsAction(
   });
   const { supabase } = await requireUserId();
   searchTrace("3_unified_browse_filters", { browseFilters: filters }, { path: "discovery" });
-  const result = await browseUnifiedCreatorsWithCoverageBackfill(supabase, filters, "discovery");
-  searchTrace("9_final_creator_count", {
-    total: result.total,
-    creatorCount: result.creators.length,
-    internal_count: result.internal_count,
-    discovery_count: result.discovery_count,
-    coverage_level: result.coverage?.coverageLevel ?? null,
-    backfill_queued: result.backfill?.queued ?? false,
-    backfill_completed: result.backfill?.completed ?? false,
-  }, { path: "discovery" });
-  return result;
+  try {
+    const result = await browseUnifiedCreatorsWithCoverageBackfill(supabase, filters, "discovery");
+    searchTrace("9_final_creator_count", {
+      total: result.total,
+      creatorCount: result.creators.length,
+      internal_count: result.internal_count,
+      discovery_count: result.discovery_count,
+      coverage_level: result.coverage?.coverageLevel ?? null,
+      backfill_queued: result.backfill?.queued ?? false,
+      backfill_completed: result.backfill?.completed ?? false,
+    }, { path: "discovery" });
+    return result;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Creator search failed";
+    // Re-throw a stable, user-visible message so Production digests don't mask timeouts.
+    if (/statement timeout|canceling statement|timed out/i.test(message)) {
+      throw new Error(
+        "Creator search timed out. Try a more specific name or handle."
+      );
+    }
+    throw error instanceof Error ? error : new Error(message);
+  }
 }
 
 export async function getUnifiedCreatorDetailAction(unifiedId: string) {
