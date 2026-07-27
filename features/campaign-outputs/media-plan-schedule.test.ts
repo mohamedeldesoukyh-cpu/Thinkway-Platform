@@ -2,10 +2,8 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 
 import { buildCampaignObjectFixture } from "@/features/campaign-outputs/output-test-fixture";
-import {
-  applyMediaPlanScheduleChange,
-  mergeMediaPlanMarketIntelligenceMeta,
-} from "@/features/campaign-outputs/media-plan-schedule";
+import { applyMediaPlanScheduleChange } from "@/features/campaign-outputs/media-plan-mutations";
+import { mergeMediaPlanMarketIntelligenceMeta } from "@/features/campaign-outputs/media-plan-schedule";
 import { resolveMarketIntelligenceConfig } from "@/features/market-intelligence/market-intelligence-config";
 
 test("applyMediaPlanScheduleChange preserves marketIntelligence and priorityWeights on moves", () => {

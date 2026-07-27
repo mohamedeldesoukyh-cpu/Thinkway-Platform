@@ -11,7 +11,7 @@ import { saveCampaignObject } from "@/features/campaign-intelligence/services/ca
 import { updateConversationContextSnapshot } from "@/features/ai-workspace/services/conversation-service";
 import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { applyMediaPlanScheduleChange } from "../media-plan-schedule";
+import { mutateMediaPlanSchedule } from "../media-plan-mutations";
 
 const togglesSchema = z.object({
   salaryCycle: z.boolean().optional(),
@@ -78,9 +78,19 @@ export async function updateCampaignMarketIntelligenceAction(
     return { ok: false, message: "Campaign object not found." };
   }
 
-  const scheduleResult = applyMediaPlanScheduleChange(restored, {
-    marketIntelligence,
-  });
+  const scheduleResult = mutateMediaPlanSchedule(
+    restored,
+    { marketIntelligence },
+    {
+      source: "studio_media_plan_ui",
+      actorUserId: auth.userId,
+      autoForkDraft: true,
+    }
+  );
+
+  if (!scheduleResult.ok) {
+    return { ok: false, message: scheduleResult.message };
+  }
 
   if (!scheduleResult.change) {
     return { ok: false, message: "Could not update market intelligence settings." };

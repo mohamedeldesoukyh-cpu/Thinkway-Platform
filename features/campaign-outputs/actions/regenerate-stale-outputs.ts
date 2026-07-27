@@ -55,6 +55,8 @@ export async function regenerateStaleOutputsAction(
       return { ok: false, message: "No outputs need updating right now." };
     }
 
+    // Stale output refresh rebuilds views only — it must not fork Media Plan drafts
+    // or mutate mediaPlanSchedule. Explicit Media Plan regenerate uses prepareMediaPlanRegenerate.
     const regenerated = regenerateStaleCampaignOutputs(restored, { origin: "user" });
     const saved = await saveCampaignObject(conversationId, regenerated, {
       supabase,

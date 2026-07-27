@@ -127,7 +127,7 @@ export type RescheduleMediaPlanResult = {
   change: string | null;
 };
 
-function cloneMediaPlanScheduleMeta(existing: MediaPlanScheduleMeta): MediaPlanScheduleMeta {
+export function cloneMediaPlanScheduleMeta(existing: MediaPlanScheduleMeta): MediaPlanScheduleMeta {
   return {
     weekWeights: existing.weekWeights ? [...existing.weekWeights] : undefined,
     assignments: existing.assignments ? [...existing.assignments] : undefined,
@@ -161,7 +161,12 @@ export function mergeMediaPlanMarketIntelligenceMeta(
   };
 }
 
-export function applyMediaPlanScheduleChange(
+/**
+ * Low-level schedule patch — **do not call from feature code**.
+ * Production writes must use `mutateMediaPlanSchedule` in `media-plan-mutations.ts`
+ * (Media Plan Engine). Exported only for the engine bridge and tightly scoped tests.
+ */
+export function applyMediaPlanScheduleChangeUnchecked(
   campaignObject: CampaignObject,
   input: RescheduleMediaPlanInput
 ): RescheduleMediaPlanResult {

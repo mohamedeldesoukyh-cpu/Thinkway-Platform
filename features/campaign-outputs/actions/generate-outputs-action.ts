@@ -91,6 +91,7 @@ async function syncSeedIntoConversation(
         );
 
   for (const kind of regenKinds) {
+    // Output generators consume the Media Plan schedule — they must never mutate it.
     ({ campaignObject: objectForStudio } = generateCampaignOutput(objectForStudio, kind, {
       origin: "automatic",
     }));

@@ -32,6 +32,8 @@ Environment switch navigates between **hosts** — never switches DB inside one 
 - `docs/THINKWAY_SYSTEM_REFERENCE.md` — product SSOT  
 - `docs/ARCHITECTURE_ALIGNMENT.md` — codebase vs spec  
 - `docs/RELEASE_WORKFLOW.md` — dual deploy + approval gate  
+- `docs/architecture/UNIFIED_MEDIA_PLAN_PLAN.md` — Media Plan SSOT (baseline + draft)  
+- `lib/media-plan` — Media Plan Engine (Studio / Campaign / Portal / Performance)  
 - `docs/DISCOVERY_*` · `docs/PERFORMANCE_*` — discovery & perf contracts  
 - Ops Center `/operations` — deployment/health SSOT  
 

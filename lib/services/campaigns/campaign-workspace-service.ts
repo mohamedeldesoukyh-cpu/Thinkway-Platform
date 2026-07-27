@@ -746,8 +746,15 @@ export async function getCampaignWorkspace(
         entity_type: string;
         created_at: string;
         actor_id: string | null;
+        metadata?: { summary?: string; label?: string; event?: string } | null;
       };
       const actor = row.actor_id ? profileMap.get(row.actor_id) : null;
+      const metaSummary =
+        typeof row.metadata?.summary === "string" && row.metadata.summary.trim()
+          ? row.metadata.summary.trim()
+          : typeof row.metadata?.label === "string" && row.metadata.label.trim()
+            ? row.metadata.label.trim()
+            : null;
       return {
         id: row.id,
         action: row.action,
@@ -760,7 +767,7 @@ export async function getCampaignWorkspace(
               email: actor.email,
             }
           : null,
-        summary: `${row.action} · ${row.entity_type}`,
+        summary: metaSummary ?? `${row.action} · ${row.entity_type}`,
       };
     }),
     blockers,
