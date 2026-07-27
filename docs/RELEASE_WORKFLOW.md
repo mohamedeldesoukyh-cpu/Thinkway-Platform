@@ -1,19 +1,61 @@
 # Thinkway Release Workflow
 
-Permanent dual-deployment model.
+Permanent dual-deployment model. **`develop` is the source of truth.** Production is released from Development; `main` must never permanently diverge ahead of `develop`.
 
 | Surface | URL | Supabase | Redis | Git |
 |---|---|---|---|---|
 | **Development** | https://dev.thinkwaymedia.com | `hsxrewjcbvmbkqdlzjhs` | Development `REDIS_URL` | Branch `develop` (auto-deploy Preview) |
-| **Production** | https://app.thinkwaymedia.com | `ienowhwfyxoqtzbgltno` | Production `REDIS_URL` | **Manual approval only** — no auto-deploy from `main` |
-| **Local** | `localhost` | Development (default) | Local Redis | — |
+| **Production** | https://app.thinkwaymedia.com | `ienowhwfyxoqtzbgltno` | Production `REDIS_URL` | **Manual approval only** — release via `develop` → `main`, then approved deploy |
+| **Local** | `localhost` | Development (default) | Local Redis | Checkout **`develop`** by default |
 
 The in-app **environment switch** navigates between hosts. It does **not** change databases inside a single running app.
 
+## Branching model (mandatory)
+
+```
+feature/*  →  develop  →  QA on Dev  →  main  →  approved Production deploy
+```
+
+| Rule | Detail |
+|---|---|
+| Working branch | Always start from `develop` (`git checkout develop && git pull`) |
+| Feature work | `feature/*` (or equivalent) branched off `develop`; merge back to `develop` via PR |
+| Never | Commit feature work directly on `main` |
+| Release | Merge `develop` → `main` only when ready to release; then deploy with approval |
+| Invariant | After any Production change, `main` must not stay ahead of `develop` |
+
+### Hotfix workflow
+
+If Production needs an emergency fix:
+
+1. Branch `hotfix/*` from `main`
+2. Merge hotfix → `main` and deploy with approval
+3. **Immediately** merge the same fix back into `develop` (PR or merge)
+4. Delete the hotfix branch
+
+Production-only fixes that never return to `develop` are not allowed.
+
+### Recommended GitHub branch protection
+
+Configure in GitHub (Settings → Branches). Local CLI may lack permission.
+
+**`main`**
+- Require pull request before merging
+- Restrict who can push / dismiss reviews
+- Require status checks (Validate workflow) to pass
+- Do not allow force pushes or deletions
+- Prefer PRs whose head is `develop` (or an approved `hotfix/*`)
+
+**`develop`**
+- Prefer PRs for feature integration
+- Require status checks (Validate workflow) to pass
+- Allow maintainers to merge feature branches
+- Do not allow force pushes
+
 ## Phase 1 – Development (default)
 
-1. Implement and test locally against Development Supabase.
-2. Merge / push to `develop`.
+1. Checkout `develop` and implement against Development Supabase.
+2. Open a PR into `develop` (or merge the feature branch), then push `develop`.
 3. Vercel Preview build deploys to `dev.thinkwaymedia.com` automatically.
 4. Verify TypeScript, Build, Operations Center, Redis, BullMQ, Worker, Release Readiness.
 5. Do **not** modify Production Supabase.

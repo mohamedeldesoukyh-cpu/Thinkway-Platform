@@ -1,85 +1,93 @@
 # Thinkway deployment checklist
 
-Use this when production does not match the latest code or database behavior.
+Use this when a hosted environment does not match the expected code or database behavior.
+
+Canonical release process: [`docs/RELEASE_WORKFLOW.md`](./RELEASE_WORKFLOW.md).
+
+## Branch defaults
+
+| Intent | Branch |
+|---|---|
+| Day-to-day development | `develop` |
+| Production release tip | `main` (merged from `develop`) |
+| Never | Feature commits directly on `main` |
 
 ## 1. Verify the running app
 
-Open (no login required):
-
-```
-https://thinkway-platform.vercel.app/api/build-info
-```
+| Surface | Build info |
+|---|---|
+| Development | https://dev.thinkwaymedia.com/api/build-info |
+| Production | https://app.thinkwaymedia.com/api/build-info |
 
 Check:
 
-| Field | Expected |
-|-------|----------|
-| `gitShaShort` | Latest commit on `main` (compare with GitHub) |
-| `supabaseAligned` | `true` |
-| `supabaseProjectRef` | `hsxrewjcbvmbkqdlzjhs` |
-| `schema.operationalStatusReadable` | `true` (after signing in and re-opening the URL) |
-| `schema.vendorIoSupersededReadable` | `true` (after signing in) |
+| Field | Development expected | Production expected |
+|---|---|---|
+| `gitShaShort` | Tip of `develop` | Tip of `main` (after release) |
+| `supabaseAligned` | `true` | `true` |
+| `supabaseProjectRef` | `hsxrewjcbvmbkqdlzjhs` | `ienowhwfyxoqtzbgltno` |
 
-If `supabaseAligned` is `false`, Vercel **Production** is pointing at a different Supabase project than the one where you ran `supabase db push`.
+Also use Operations Center (`/operations`) for environment / Redis / worker / Release Readiness.
 
-## 2. Align Vercel Production env
+## 2. Align Vercel env
 
-In [Vercel → thinkway-platform → Settings → Environment Variables](https://vercel.com) (Production):
-
-- `NEXT_PUBLIC_SUPABASE_URL` = `https://hsxrewjcbvmbkqdlzjhs.supabase.co`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` = anon key from that same project (Supabase → Settings → API)
-
-Redeploy after changing env vars.
+Keep **Preview** (Development host) and **Production** on separate Supabase and Redis values. Never point Production at the Development project.
 
 ## 3. Apply database migrations
 
-From the repo root (linked to **thinkway-dev** / `hsxrewjcbvmbkqdlzjhs`):
+Always validate migrations on **Development** first:
 
 ```bash
+# Linked to Development project hsxrewjcbvmbkqdlzjhs
 npx supabase db push
-```
-
-Confirm with:
-
-```bash
 npx supabase migration list
 ```
 
-Local and Remote columns must match for all `202606*` migrations.
+Production migrations only after explicit approval (see engineering deployment policy).
 
 ## 4. Deploy application code
 
-Commit and push so Vercel’s Git integration matches your workspace:
+### Development
 
 ```bash
-git add -A
-git commit -m "Your message"
-git push origin main
+git checkout develop
+git pull origin develop
+# … feature work via feature/* → merge to develop …
+git push origin develop
 ```
 
-Vercel deploys `main` automatically. For an emergency CLI deploy from the current folder:
+Vercel auto-deploys Preview / `dev.thinkwaymedia.com` from `develop`.
+
+### Production (approval required)
+
+1. Merge `develop` → `main` (PR preferred).
+2. Obtain explicit approval for Production.
+3. Prefer:
 
 ```bash
-npx vercel --prod
+npx vercel deploy --prod --non-interactive
 ```
 
-Compare `gitShaShort` on `/api/build-info` with `git log -1 --oneline` locally.
+Git-triggered Production builds are skipped by default unless the commit message includes `[deploy-production]` / `[force-deploy]` (see `RELEASE_WORKFLOW.md`).
+
+Do **not** treat `git push origin main` as an automatic Production go-live.
 
 ## 5. Browser cache
 
-Hard refresh (Ctrl+Shift+R) or open an incognito window on `https://thinkway-platform.vercel.app`.
+Hard refresh (Ctrl+Shift+R) or use an incognito window after deploy.
 
 ## Common symptoms
 
 | Symptom | Likely cause |
-|---------|----------------|
-| Old UI layout, no assignment footer actions | Old deployment or wrong URL |
+|---|---|
+| Old UI / missing actions | Stale deployment or wrong host (`dev` vs `app`) |
+| `supabaseAligned: false` | Vercel env points at the wrong Supabase project |
+| Dev missing features that are live in Prod | `main` diverged ahead of `develop` — merge `main` → `develop` immediately |
 | Invoice/VIO buttons missing on lines with IO | `operational_status` stale — run `db push` (includes backfill migration) |
-| Server errors on campaign workspace | Prod Supabase missing Phase 1/2 migrations |
-| Document numbers still show `0001` padding | Old JS bundle — redeploy + hard refresh |
 | Assignments tab red error / digest | See **Assignments UI layers** below |
+| Assignments / finance errors | Missing migrations on that environment’s Supabase |
 
-## 6. Assignments UI layers (isolation / recovery)
+## Assignments UI layers (isolation / recovery)
 
 Production defaults to `operational_actions` (checkboxes + VIO footer). Use `rows` to roll back if the tab crashes again.
 
@@ -92,7 +100,7 @@ NEXT_PUBLIC_ASSIGNMENTS_UI_LAYER=rows
 Progressive values (enable one step at a time after the tab loads):
 
 | Value | Enables |
-|-------|---------|
+|---|---|
 | `minimal` | 4-column static table only |
 | `rows` | Full parent rows, text status labels (no checkboxes) |
 | `expansion` | Expand deliverable/post children + line edit sheet |

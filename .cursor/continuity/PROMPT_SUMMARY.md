@@ -1,25 +1,24 @@
 # Prompt Summary — Current Sprint
 
-**Updated automatically after each significant milestone or sprint.**
-
-**Branch focus:** `develop` (Development default).  
-**Continuity pack:** `101ad5d` · Dual-deploy: `61783a8`.
+**Branch focus:** `develop` (Development SSOT / official baseline).  
+**Sync:** `0c94c99` — merged `main` → `develop` so Development contains all Production commits.  
+**Ahead/behind:** `origin/main...origin/develop` = `0 4` (main not ahead).
 
 ## Done this sprint
 
-- Migrated live Dev Supabase → empty Prod project `ienowhwfyxoqtzbgltno` (dump/restore; storage via APIs). Dev remains `hsxrewjcbvmbkqdlzjhs`.
-- Ops Center: explainable health, environment-aware local messaging, Release Readiness card, Redis/worker diagnostics.
-- Dual hosted deployments: `develop` → Dev Supabase; Production gated; env banner + cross-host switch.
-- Continuity pack: Prompt / Summary / Prompt Summary under `.cursor/continuity/` (auto-refresh Prompt Summary on milestones).
+- Restored Development-first Git workflow: merge `main` into `develop`, conflict resolved on worker provisioning plan (main/Executed).
+- CI `validate.yml` now runs on `develop` (+ PRs targeting develop/main).
+- Release/deployment docs updated for feature → develop → main → approved Production.
+- Prior: dual-deploy, Ops Center, Dev/Prod Supabase split, continuity pack.
 
 ## Open / blocked
 
-1. **Restore Production `REDIS_URL`** on Vercel (accidentally removed during Preview split).
-2. **Add dedicated Development Redis** for Preview/`develop` (not Production Redis).
-3. **DNS:** `app` / `dev.thinkwaymedia.com` → Vercel (`A 76.76.21.21` or CNAME).
-4. Disable automatic Production deploys from `main` in Vercel (approval should be structural).
-5. Production deploy of banner/workflow commit — **only after explicit approval**.
+1. **GitHub branch protection** — configure in UI (`gh` unauthenticated locally): protect `main` (PR + CI, no direct push); protect `develop` (CI on PR).
+2. **Restore Production `REDIS_URL`** on Vercel (if still missing).
+3. **Dedicated Development Redis** for Preview/`develop`.
+4. **DNS:** `app` / `dev.thinkwaymedia.com` → Vercel.
+5. Do **not** merge develop → main or deploy Production unless explicitly approved.
 
 ## Working agreement
 
-Continue from current project state. Development first; Production only with approval. Ops Center + `/api/build-info` for deploy verification.
+All implementation starts from `develop` → `feature/*` → `develop` → QA → `main` → approved Production. Never develop on `main`. Hotfixes on `main` must merge back to `develop` immediately.
