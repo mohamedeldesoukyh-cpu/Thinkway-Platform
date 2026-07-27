@@ -1,3 +1,4 @@
+import { getThinkwayLogoDarkDataUri } from "@/lib/reports/document/thinkway-report-logo-embed";
 import { renderThinkwayReportLogoHtml } from "@/lib/reports/document/thinkway-report-logo";
 import { THINKWAY_REPORT_STYLES } from "@/lib/reports/document/thinkway-report-styles";
 
@@ -78,6 +79,8 @@ function renderTableSections(sections: ReportTableSection[]): string {
 export function renderThinkwayReportHtml(input: ThinkwayReportHtmlInput): string {
   const generatedLabel = formatGeneratedDate(input.generatedAt);
   const footerBrand = input.footerBrand?.trim() || "Thinkway Platform";
+  // Puppeteer aborts remote/relative images — always embed data URI or CSS text.
+  const logoDarkSrc = getThinkwayLogoDarkDataUri() ?? "";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -91,7 +94,13 @@ export function renderThinkwayReportHtml(input: ThinkwayReportHtmlInput): string
 <div class="page">
   <div class="doc-header">
     <div class="brand">
-      ${renderThinkwayReportLogoHtml({ variant: "header", theme: "dark" })}
+      ${renderThinkwayReportLogoHtml({
+        variant: "header",
+        theme: "dark",
+        logoDarkSrc,
+        logoLightSrc: "",
+        showText: true,
+      })}
       <div class="tagline">Influencer Marketing Agency · ثينكواي</div>
     </div>
     <div class="title-block">

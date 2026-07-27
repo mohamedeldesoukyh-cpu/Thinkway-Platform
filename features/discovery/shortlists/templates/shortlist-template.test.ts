@@ -132,7 +132,11 @@ function docWithTemplate(template: ShortlistTemplateVariant) {
   assert.ok(html.includes("creator-name-cell"));
   assert.ok(html.includes("tier-breakdown-header"));
   assert.ok(html.includes("summary-overview-page"));
-  assert.ok(html.includes("@page{size:A4 landscape"));
+  assert.ok(html.includes("@page{size:A4 landscape; margin:0;}"));
+  assert.ok(html.includes("--sl-page-h:210mm"));
+  assert.ok(html.includes("sl-measure-root"));
+  assert.ok(html.includes("sl-page-root"));
+  assert.ok(html.includes("paginateShowcase"));
   assert.ok(html.includes("--blue:#0057FF"));
   assert.ok(!html.includes("Proposed deliverables"));
   assert.ok(!html.includes("Commercial summary"));
@@ -143,9 +147,36 @@ function docWithTemplate(template: ShortlistTemplateVariant) {
   assert.ok(showcaseHtml.includes("Discovery Shortlist · Showcase"));
   assert.ok(showcaseHtml.includes("sc-avatar"));
   assert.ok(showcaseHtml.includes("showcase-creator-page"));
+  assert.ok(showcaseHtml.includes("shortlist-export-preview"));
   assert.ok(showcaseHtml.includes("Recent publications"));
   assert.ok(showcaseHtml.includes("Shortlist context"));
+  assert.ok(showcaseHtml.includes("position:absolute"));
+  assert.ok(showcaseHtml.includes("height:calc(var(--sl-page-h) - var(--sl-footer-h))"));
+  assert.ok(showcaseHtml.includes('data-sl-block'));
+  assert.ok(showcaseHtml.includes("getBoundingClientRect"));
   assert.ok(!showcaseHtml.includes("Proposed deliverables"));
+}
+
+{
+  const pdfHtml = buildShortlistTemplateHtml(docWithTemplate("showcase"), { forPdf: true });
+  assert.ok(pdfHtml.includes('body class="shortlist-export-print shortlist-showcase shortlist-report"'));
+  assert.ok(pdfHtml.includes("@page{size:A4 landscape; margin:0;}"));
+  assert.ok(pdfHtml.includes("--sl-page-h:210mm"));
+  assert.ok(pdfHtml.includes("height:210mm !important"));
+  assert.ok(pdfHtml.includes("position:absolute"));
+  assert.ok(pdfHtml.includes("bottom:0"));
+  assert.ok(pdfHtml.includes("margin-top:0 !important"));
+  assert.ok(pdfHtml.includes("paginateShowcase"));
+  assert.ok(pdfHtml.includes("data-sl-paginated"));
+  assert.ok(pdfHtml.includes("summary-tier-page") || pdfHtml.includes("summary-totals-page"));
+  assert.ok(!pdfHtml.includes('body class="shortlist-export-preview'));
+  // Preview and PDF share the same pagination engine (forPdf only flips body class).
+  const previewHtml = buildShortlistTemplateHtml(docWithTemplate("showcase"), { forPdf: false });
+  assert.ok(previewHtml.includes("paginateShowcase"));
+  assert.equal(
+    previewHtml.includes("sl-measure-root"),
+    pdfHtml.includes("sl-measure-root")
+  );
 }
 
 {

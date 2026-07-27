@@ -1,7 +1,25 @@
 import { NextResponse } from "next/server";
 
 import { createPdfDocumentResponse } from "@/lib/documents/pdf-response";
-import { pdfUnavailableMessage, renderHtmlToPdf, type HtmlToPdfOptions } from "@/lib/io/vendor-io-pdf";
+import {
+  pdfUnavailableMessage,
+  renderHtmlToPdf,
+  type HtmlToPdfOptions,
+} from "@/lib/io/vendor-io-pdf";
+
+/** A4 portrait — matches Thinkway report HTML `@page` / fixed canvas. */
+export const THINKWAY_REPORT_PDF_OPTIONS: HtmlToPdfOptions = {
+  width: "210mm",
+  height: "297mm",
+  printBackground: true,
+  preferCSSPageSize: true,
+  margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
+  viewport: {
+    width: 794,
+    height: 1123,
+    deviceScaleFactor: 1,
+  },
+};
 
 export type ReportDocumentFormat = "html" | "pdf" | "xlsx" | "pptx";
 
@@ -45,7 +63,10 @@ export async function createPdfFromHtmlResponse(
   download: boolean,
   pdfOptions?: HtmlToPdfOptions
 ): Promise<NextResponse> {
-  const pdfResult = await renderHtmlToPdf(html, pdfOptions);
+  const pdfResult = await renderHtmlToPdf(
+    html,
+    pdfOptions ?? THINKWAY_REPORT_PDF_OPTIONS
+  );
   if (!pdfResult.ok) {
     return NextResponse.json(
       { error: pdfUnavailableMessage(pdfResult.error) },

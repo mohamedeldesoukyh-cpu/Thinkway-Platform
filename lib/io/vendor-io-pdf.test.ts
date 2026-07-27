@@ -26,6 +26,21 @@ async function main() {
     /PDF_SET_CONTENT_TIMEOUT_MS\s*=\s*90_000/,
     "Showcase large HTML needs a longer setContent budget"
   );
+  assert.match(
+    source,
+    /document\.fonts\?\.ready/,
+    "PDF must wait for fonts before page.pdf"
+  );
+  assert.match(
+    source,
+    /fonts\.googleapis\.com|isAllowedPdfFontUrl/,
+    "PDF must allow Google Fonts for preview parity"
+  );
+  assert.match(
+    source,
+    /waitForDocumentAttribute/,
+    "PDF must support waiting for pagination-ready document attributes"
+  );
 
   // Hanging remote <img> used to fail setContent(waitUntil:load) after 30s.
   const html = `<!doctype html><html><body>

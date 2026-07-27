@@ -1,6 +1,6 @@
 import { THINKWAY_REPORT_LOGO_STYLES } from "@/lib/reports/document/thinkway-report-logo";
 
-/** IO-style document CSS extracted from Thinkway_IO_Global.html for report exports. */
+/** IO-style document CSS for report HTML preview + PDF (A4 portrait canvas). */
 export const THINKWAY_REPORT_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
@@ -16,40 +16,64 @@ export const THINKWAY_REPORT_STYLES = `
     --white:  #FFFFFF;
     --green:  #059669;
     --radius: 6px;
+    --page-w: 210mm;
+    --page-h: 297mm;
+    --footer-h: 56px;
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  @page {
+    size: A4;
+    margin: 0;
+  }
 
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 13px;
     color: var(--ink);
-    background: var(--bg);
+    background: #c9d4e8;
     line-height: 1.5;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
 
   .page {
-    max-width: 1100px;
-    margin: 32px auto;
+    position: relative;
+    width: var(--page-w);
+    min-height: var(--page-h);
+    margin: 24px auto;
     background: var(--white);
-    border-radius: 10px;
-    box-shadow: 0 1px 3px rgba(0,0,0,.07), 0 8px 32px rgba(0,0,0,.05);
+    border-radius: 0;
+    box-shadow: 0 3px 18px rgba(6,8,16,.14);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 
   .doc-header {
     background: var(--navy);
-    padding: 32px 40px 28px;
+    padding: 28px 36px 24px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 24px;
+    flex: none;
   }
-  .doc-header .brand { display: flex; flex-direction: column; gap: 6px; }
-  .doc-header .tagline { font-size: 11px; color: #8899BB; letter-spacing: 0.5px; text-transform: uppercase; }
+  .doc-header .brand { display: flex; flex-direction: column; gap: 8px; }
+  .doc-header .tagline {
+    font-size: 10.5px;
+    color: #8899BB;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+  }
   ${THINKWAY_REPORT_LOGO_STYLES}
+  .doc-header .thinkway-report-logo--header .thinkway-report-logo-img {
+    height: 28px;
+  }
+  .doc-header .thinkway-report-logo--header .thinkway-report-logo-text {
+    font-size: 20px;
+  }
 
   .doc-header .title-block { text-align: right; }
   .doc-header .report-title {
@@ -76,11 +100,15 @@ export const THINKWAY_REPORT_STYLES = `
     color: #8899BB;
   }
 
-  .stripe { height: 4px; background: var(--blue); }
+  .stripe { height: 4px; background: var(--blue); flex: none; }
 
-  .doc-body { padding: 36px 40px 48px; }
+  .doc-body {
+    padding: 28px 36px;
+    padding-bottom: calc(var(--footer-h) + 28px);
+    flex: 1 1 auto;
+  }
 
-  .section { margin-bottom: 36px; }
+  .section { margin-bottom: 28px; }
   .section:last-child { margin-bottom: 0; }
 
   .section-label {
@@ -120,7 +148,7 @@ export const THINKWAY_REPORT_STYLES = `
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    margin-bottom: 24px;
+    margin-bottom: 22px;
   }
   .scope-pill {
     display: inline-flex;
@@ -139,7 +167,7 @@ export const THINKWAY_REPORT_STYLES = `
   .report-note {
     font-size: 11px;
     color: var(--muted);
-    margin-bottom: 16px;
+    margin-bottom: 14px;
     line-height: 1.6;
   }
 
@@ -177,10 +205,12 @@ export const THINKWAY_REPORT_STYLES = `
   .data-table tbody td {
     padding: 9px 12px;
     color: var(--ink);
+    vertical-align: top;
   }
   .data-table tbody td.num {
     text-align: right;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
   .data-table tbody tr.emphasis {
     background: var(--navy) !important;
@@ -208,31 +238,49 @@ export const THINKWAY_REPORT_STYLES = `
 
   .table-scroll { overflow-x: auto; }
 
+  /* Footer belongs to the page canvas, not the content flow. */
   .doc-footer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: var(--footer-h);
     background: var(--bg);
     border-top: 1px solid var(--rule);
-    padding: 16px 40px;
+    padding: 0 36px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-wrap: wrap;
     gap: 8px;
+    box-sizing: border-box;
   }
   .doc-footer .left { font-size: 11px; color: var(--muted); }
   .doc-footer .left strong { color: var(--ink); }
   .doc-footer .right { font-size: 11px; color: var(--blue); font-weight: 600; letter-spacing: 0.3px; }
 
   @media print {
-    body { background: white; }
-    .page { margin: 0; box-shadow: none; border-radius: 0; max-width: none; }
+    body { background: #fff !important; }
+    .page {
+      margin: 0 !important;
+      box-shadow: none !important;
+      width: 210mm !important;
+      min-height: 297mm !important;
+    }
     .section { page-break-inside: avoid; }
     .table-scroll { overflow: visible; }
+    .doc-footer {
+      position: absolute !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+    }
   }
 
   @media (max-width: 600px) {
+    .page { width: 100%; min-height: auto; }
     .doc-header { flex-direction: column; align-items: flex-start; }
     .doc-header .title-block { text-align: left; }
-    .doc-body { padding: 24px 20px 36px; }
-    .doc-footer { flex-direction: column; }
+    .doc-body { padding: 24px 20px 72px; }
+    .doc-footer { position: relative; height: auto; padding: 14px 20px; }
   }
 `;

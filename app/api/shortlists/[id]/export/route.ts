@@ -17,6 +17,7 @@ import {
   loadShortlistCreatorPublicationShots,
 } from "@/features/discovery/shortlists/export/shortlist-export-publications";
 import { buildShortlistHtml } from "@/features/discovery/shortlists/export/shortlist-html";
+import { SHORTLIST_PDF_OPTIONS } from "@/features/discovery/shortlists/export/shortlist-pdf";
 import { buildShortlistPptxBuffer } from "@/features/discovery/shortlists/export/shortlist-pptx";
 import {
   isCreatorDeckTemplate,
@@ -172,8 +173,8 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     if (format === "pdf") {
-      const pdfHtml = buildShortlistHtml(doc, { siteOrigin });
-      const pdfResult = await renderHtmlToPdf(pdfHtml);
+      const pdfHtml = buildShortlistHtml(doc, { siteOrigin, forPdf: true });
+      const pdfResult = await renderHtmlToPdf(pdfHtml, SHORTLIST_PDF_OPTIONS);
       if (!pdfResult.ok) {
         return NextResponse.json(
           { error: pdfUnavailableMessage(pdfResult.error) },

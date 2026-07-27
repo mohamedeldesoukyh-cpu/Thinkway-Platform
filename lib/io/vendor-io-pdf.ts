@@ -49,6 +49,15 @@ export type HtmlToPdfOptions = {
     height: number;
     deviceScaleFactor?: number;
   };
+  /**
+   * Wait for a documentElement attribute (e.g. pagination engine ready)
+   * before calling page.pdf(). Layout must already be finalized in the DOM.
+   */
+  waitForDocumentAttribute?: {
+    name: string;
+    value: string;
+    timeoutMs?: number;
+  };
 };
 
 const PDF_VIEWPORT = {
@@ -164,6 +173,56 @@ async function launchBrowser() {
  */
 const PDF_SET_CONTENT_TIMEOUT_MS = 90_000;
 const PDF_NETWORK_IDLE_TIMEOUT_MS = 5_000;
+const PDF_ASSETS_READY_TIMEOUT_MS = 8_000;
+
+function isAllowedPdfFontUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname;
+    return (
+      host === "fonts.googleapis.com" ||
+      host === "fonts.gstatic.com" ||
+      host.endsWith(".googleapis.com") ||
+      host.endsWith(".gstatic.com")
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function waitForPdfAssetsReady(page: {
+  evaluate: (pageFunction: () => Promise<void>) => Promise<void>;
+}): Promise<void> {
+  await Promise.race([
+    page.evaluate(async () => {
+      if (document.fonts?.ready) {
+        await document.fonts.ready;
+      }
+      const images = Array.from(document.images);
+      await Promise.all(
+        images.map(async (img) => {
+          if (img.complete) {
+            if (typeof img.decode === "function") {
+              try {
+                await img.decode();
+              } catch {
+                // Broken/decorative images must not block PDF export.
+              }
+            }
+            return;
+          }
+          await new Promise<void>((resolve) => {
+            const done = () => resolve();
+            img.addEventListener("load", done, { once: true });
+            img.addEventListener("error", done, { once: true });
+          });
+        })
+      );
+    }),
+    new Promise<void>((resolve) => {
+      setTimeout(resolve, PDF_ASSETS_READY_TIMEOUT_MS);
+    }),
+  ]);
+}
 
 /** Server-side HTML → PDF via headless Chrome (local or Vercel serverless). */
 export async function renderHtmlToPdf(
@@ -182,15 +241,24 @@ export async function renderHtmlToPdf(
         deviceScaleFactor: options.viewport.deviceScaleFactor ?? 1,
       });
     }
-    // Abort remote image/font fetches that can hang `load` / network idle when
-    // a Showcase export still contains a handful of unresolved CDN URLs.
+    // Abort remote image/media fetches that can hang when a Showcase export
+    // still contains unresolved CDN URLs. Allow Google Fonts so PDF typography
+    // matches the on-screen preview.
     await page.setRequestInterception(true);
     page.on("request", (request) => {
       const url = request.url();
       const resourceType = request.resourceType();
       if (
-        (resourceType === "image" || resourceType === "media" || resourceType === "font") &&
+        (resourceType === "image" || resourceType === "media") &&
         (url.startsWith("http://") || url.startsWith("https://"))
+      ) {
+        void request.abort();
+        return;
+      }
+      if (
+        resourceType === "font" &&
+        (url.startsWith("http://") || url.startsWith("https://")) &&
+        !isAllowedPdfFontUrl(url)
       ) {
         void request.abort();
         return;
@@ -208,6 +276,17 @@ export async function renderHtmlToPdf(
       });
     } catch {
       // Non-fatal: remaining external resources must not block PDF export.
+    }
+    await waitForPdfAssetsReady(page);
+    if (options.waitForDocumentAttribute) {
+      const { name, value, timeoutMs = 30_000 } = options.waitForDocumentAttribute;
+      await page.waitForFunction(
+        (attrName: string, attrValue: string) =>
+          document.documentElement.getAttribute(attrName) === attrValue,
+        { timeout: timeoutMs },
+        name,
+        value
+      );
     }
     const pdf = await page.pdf(options);
     return { ok: true, buffer: Buffer.from(pdf) };

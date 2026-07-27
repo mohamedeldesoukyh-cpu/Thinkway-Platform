@@ -23,6 +23,17 @@ function formatDateLabel(value: string | null): string {
   });
 }
 
+function formatLedgerDate(value: string | null): string {
+  if (!value) return "—";
+  const parsed = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 function statementTypeLabel(type: StatementsReportData["type"]): string {
   return type === "client" ? "Client Statement" : "Vendor Statement";
 }
@@ -43,7 +54,7 @@ function renderStatementLedgerTable(report: StatementsReportData): string {
           .map(
             (line) => `
         <tr>
-          <td>${line.date}</td>
+          <td>${formatLedgerDate(line.date)}</td>
           <td>${line.document_number}</td>
           <td>${line.campaign_name ?? "—"}</td>
           <td class="num">${line.debit > 0 ? formatReportAmountAlways(line.debit) : "—"}</td>
