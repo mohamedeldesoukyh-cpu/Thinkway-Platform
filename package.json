@@ -58,6 +58,8 @@
     "test:media-plan-engine": "npx tsx --test lib/media-plan/media-plan-engine.test.ts",
     "test:media-plan-phase1": "npx tsx --test lib/media-plan/media-plan-engine.test.ts features/campaign-outputs/media-plan-mutations.test.ts features/campaign-outputs/media-plan-write-path-audit.test.ts features/campaign-outputs/media-plan-schedule.test.ts features/campaign-outputs/market-intelligence-sync.test.ts",
     "test:media-plan-phase2": "npx tsx --test lib/media-plan/calendar-adapter.test.ts lib/media-plan/media-plan-engine.test.ts",
+    "test:media-plan-phase3": "npx tsx --test lib/media-plan/log-media-plan-timeline.test.ts features/campaign-outputs/media-plan-mutations.test.ts lib/media-plan/calendar-adapter.test.ts",
+    "test:media-plan-phase4": "npx tsx --test features/portals/queries/load-client-media-plan.test.ts",
     "test:impressions-forecast-engine": "npx tsx lib/performance/impressions-forecast-engine.test.ts",
     "test:engagement-rate-audit": "npx tsx lib/performance/engagement-rate-audit.test.ts",
     "test:extract-publication-date": "npx tsx lib/performance/metrics-collector/extract-publication-date.test.ts",

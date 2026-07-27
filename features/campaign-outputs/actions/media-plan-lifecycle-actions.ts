@@ -10,16 +10,25 @@ import {
 import { saveCampaignObject } from "@/features/campaign-intelligence/services/campaign-object-store";
 import { updateConversationContextSnapshot } from "@/features/ai-workspace/services/conversation-service";
 import { requirePermission } from "@/lib/auth/permissions-server";
+import {
+  logMediaPlanTimelineEvents,
+  resolveCampaignHeaderIdForMediaPlan,
+} from "@/lib/media-plan/log-media-plan-timeline";
+import type { MediaPlanTimelineEvent } from "@/lib/media-plan";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   approveMediaPlanOnCampaignObject,
   lockMediaPlanOnCampaignObject,
+  rejectMediaPlanOnCampaignObject,
+  requestChangesMediaPlanOnCampaignObject,
   unlockMediaPlanOnCampaignObject,
 } from "../media-plan-mutations";
 
 const baseSchema = z.object({
   campaignObjectId: z.string().uuid(),
   conversationId: z.string().uuid(),
+  /** Optional campaign header id — preferred for Timeline Activity feed. */
+  campaignId: z.string().uuid().optional(),
 });
 
 export type MediaPlanLifecycleActionResult =
@@ -99,6 +108,45 @@ async function persist(
   return saved;
 }
 
+async function persistWithTimeline(input: {
+  conversationId: string;
+  campaignObjectId: string;
+  campaignId?: string | null;
+  campaignObject: CampaignObject;
+  events: MediaPlanTimelineEvent[];
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
+  userId: string;
+  contextSnapshot: Record<string, unknown>;
+}): Promise<CampaignObject> {
+  const saved = await persist(
+    input.conversationId,
+    input.campaignObject,
+    input.supabase,
+    input.userId,
+    input.contextSnapshot
+  );
+
+  const headerId = await resolveCampaignHeaderIdForMediaPlan(
+    input.supabase,
+    input.campaignObjectId,
+    input.campaignId
+  );
+  if (headerId) {
+    try {
+      await logMediaPlanTimelineEvents(input.supabase, {
+        campaignHeaderId: headerId,
+        campaignObjectId: input.campaignObjectId,
+        actorId: input.userId,
+        events: input.events,
+      });
+    } catch {
+      /* timeline logging must not fail the mutation */
+    }
+  }
+
+  return saved;
+}
+
 /** Lock the working draft Media Plan (awaiting client approval). */
 export async function lockMediaPlanAction(
   input: z.infer<typeof baseSchema>
@@ -119,13 +167,16 @@ export async function lockMediaPlanAction(
     return { ok: false, message: result.ok ? "Could not lock Media Plan." : result.message };
   }
 
-  const saved = await persist(
-    parsed.data.conversationId,
-    result.campaignObject,
-    loaded.supabase,
-    loaded.userId,
-    loaded.contextSnapshot
-  );
+  const saved = await persistWithTimeline({
+    conversationId: parsed.data.conversationId,
+    campaignObjectId: parsed.data.campaignObjectId,
+    campaignId: parsed.data.campaignId,
+    campaignObject: result.campaignObject,
+    events: result.events,
+    supabase: loaded.supabase,
+    userId: loaded.userId,
+    contextSnapshot: loaded.contextSnapshot,
+  });
   return { ok: true, campaignObject: saved, change: result.change };
 }
 
@@ -151,13 +202,16 @@ export async function unlockMediaPlanAction(
     return { ok: false, message: result.ok ? "Could not unlock Media Plan." : result.message };
   }
 
-  const saved = await persist(
-    parsed.data.conversationId,
-    result.campaignObject,
-    loaded.supabase,
-    loaded.userId,
-    loaded.contextSnapshot
-  );
+  const saved = await persistWithTimeline({
+    conversationId: parsed.data.conversationId,
+    campaignObjectId: parsed.data.campaignObjectId,
+    campaignId: parsed.data.campaignId,
+    campaignObject: result.campaignObject,
+    events: result.events,
+    supabase: loaded.supabase,
+    userId: loaded.userId,
+    contextSnapshot: loaded.contextSnapshot,
+  });
   return { ok: true, campaignObject: saved, change: result.change };
 }
 
@@ -193,12 +247,85 @@ export async function approveMediaPlanAction(
     return { ok: false, message: result.ok ? "Could not approve Media Plan." : result.message };
   }
 
-  const saved = await persist(
-    parsed.data.conversationId,
-    result.campaignObject,
-    loaded.supabase,
-    loaded.userId,
-    loaded.contextSnapshot
+  const saved = await persistWithTimeline({
+    conversationId: parsed.data.conversationId,
+    campaignObjectId: parsed.data.campaignObjectId,
+    campaignId: parsed.data.campaignId,
+    campaignObject: result.campaignObject,
+    events: result.events,
+    supabase: loaded.supabase,
+    userId: loaded.userId,
+    contextSnapshot: loaded.contextSnapshot,
+  });
+  return { ok: true, campaignObject: saved, change: result.change };
+}
+
+/** Request changes on locked/approved plan — opens or continues Working Draft. */
+export async function requestMediaPlanChangesAction(
+  input: z.infer<typeof baseSchema> & { notes?: string }
+): Promise<MediaPlanLifecycleActionResult> {
+  const schema = baseSchema.extend({ notes: z.string().max(4000).optional() });
+  const parsed = schema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "Invalid request." };
+
+  const loaded = await loadEditableObject(
+    parsed.data.campaignObjectId,
+    parsed.data.conversationId
   );
+  if (!loaded.ok) return loaded;
+
+  const result = requestChangesMediaPlanOnCampaignObject(loaded.restored, {
+    actorUserId: loaded.userId,
+    notes: parsed.data.notes,
+  });
+  if (!result.ok || !result.change) {
+    return { ok: false, message: result.ok ? "Could not request changes." : result.message };
+  }
+
+  const saved = await persistWithTimeline({
+    conversationId: parsed.data.conversationId,
+    campaignObjectId: parsed.data.campaignObjectId,
+    campaignId: parsed.data.campaignId,
+    campaignObject: result.campaignObject,
+    events: result.events,
+    supabase: loaded.supabase,
+    userId: loaded.userId,
+    contextSnapshot: loaded.contextSnapshot,
+  });
+  return { ok: true, campaignObject: saved, change: result.change };
+}
+
+/** Reject a locked plan awaiting approval. */
+export async function rejectMediaPlanAction(
+  input: z.infer<typeof baseSchema> & { notes?: string }
+): Promise<MediaPlanLifecycleActionResult> {
+  const schema = baseSchema.extend({ notes: z.string().max(4000).optional() });
+  const parsed = schema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "Invalid request." };
+
+  const loaded = await loadEditableObject(
+    parsed.data.campaignObjectId,
+    parsed.data.conversationId
+  );
+  if (!loaded.ok) return loaded;
+
+  const result = rejectMediaPlanOnCampaignObject(loaded.restored, {
+    actorUserId: loaded.userId,
+    notes: parsed.data.notes,
+  });
+  if (!result.ok || !result.change) {
+    return { ok: false, message: result.ok ? "Could not reject Media Plan." : result.message };
+  }
+
+  const saved = await persistWithTimeline({
+    conversationId: parsed.data.conversationId,
+    campaignObjectId: parsed.data.campaignObjectId,
+    campaignId: parsed.data.campaignId,
+    campaignObject: result.campaignObject,
+    events: result.events,
+    supabase: loaded.supabase,
+    userId: loaded.userId,
+    contextSnapshot: loaded.contextSnapshot,
+  });
   return { ok: true, campaignObject: saved, change: result.change };
 }

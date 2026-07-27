@@ -12,6 +12,8 @@ import type { MediaPlanCreatorMoveTarget } from "@/features/campaign-outputs/com
 import { OpenCampaignStudioLauncher } from "@/features/campaign-outputs/components/open-campaign-studio-launcher-lazy";
 import { updateMediaPlanScheduleAction } from "@/features/campaign-outputs/actions/update-media-plan-schedule";
 import { seedFromCampaign } from "@/features/campaign-outputs/hydration/seed-adapters";
+import { MediaPlanApprovalToolbar } from "@/features/campaigns/components/media-plan/media-plan-approval-toolbar";
+import { MediaPlanComparisonPanel } from "@/features/campaigns/components/media-plan/media-plan-comparison-panel";
 import type { CampaignMediaPlanWorkspacePayload } from "@/features/campaigns/queries/load-campaign-media-plan";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { mediaPlanStatusLabel, type MediaPlanViewKind } from "@/lib/media-plan";
@@ -46,6 +48,7 @@ export function CampaignMediaPlanWorkspace({
   const [orientation, setOrientation] = useState<"portrait" | "landscape">("landscape");
   const [saving, setSaving] = useState(false);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [compareOpen, setCompareOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollByView = useRef<Partial<Record<MediaPlanViewKind, number>>>({});
@@ -108,6 +111,7 @@ export function CampaignMediaPlanWorkspace({
       const result = await updateMediaPlanScheduleAction({
         campaignObjectId: payload.campaignObjectId,
         conversationId: payload.conversationId,
+        campaignId: workspace.id,
         move: {
           creatorId: target.creatorId,
           fromWeek: target.fromWeek,
@@ -125,7 +129,7 @@ export function CampaignMediaPlanWorkspace({
       }
       startTransition(() => router.refresh());
     },
-    [payload.campaignObjectId, payload.conversationId, router]
+    [payload.campaignObjectId, payload.conversationId, router, workspace.id]
   );
 
   const backHref = campaignDetailPath({
@@ -183,6 +187,17 @@ export function CampaignMediaPlanWorkspace({
               label="Open in Studio"
               variant="outline"
             />
+            {payload.campaignObjectId && payload.conversationId ? (
+              <MediaPlanApprovalToolbar
+                campaignId={workspace.id}
+                campaignObjectId={payload.campaignObjectId}
+                conversationId={payload.conversationId}
+                status={payload.status}
+                hasApprovedBaseline={payload.hasApprovedBaseline}
+                hasWorkingDraft={payload.hasWorkingDraft}
+                onCompare={() => setCompareOpen(true)}
+              />
+            ) : null}
           </div>
         </div>
 
@@ -229,6 +244,13 @@ export function CampaignMediaPlanWorkspace({
       </header>
 
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto px-4 py-4 md:px-6">
+        <MediaPlanComparisonPanel
+          open={compareOpen}
+          onOpenChange={setCompareOpen}
+          diffs={payload.comparisonDiffs}
+          baselineVersion={payload.baselineVersion}
+          draftVersion={payload.draftVersion}
+        />
         {payload.emptyReason ? (
           <div className="mx-auto flex max-w-lg flex-col items-start gap-3 rounded-xl border border-dashed border-border p-6">
             <p className="text-sm text-muted-foreground">{payload.emptyReason}</p>

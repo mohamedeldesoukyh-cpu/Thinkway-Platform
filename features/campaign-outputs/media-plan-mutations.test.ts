@@ -11,6 +11,8 @@ import {
   lockMediaPlanOnCampaignObject,
   mutateMediaPlanSchedule,
   prepareMediaPlanRegenerate,
+  rejectMediaPlanOnCampaignObject,
+  requestChangesMediaPlanOnCampaignObject,
   unlockMediaPlanOnCampaignObject,
 } from "./media-plan-mutations";
 
@@ -167,4 +169,52 @@ test("output generators cannot mutate schedule via ownership guard", () => {
     { source: "campaign_output_generator", at: AT }
   );
   assert.equal(result.ok, false);
+});
+
+test("request changes and reject emit timeline events and preserve baseline", () => {
+  const object = buildCampaignObjectFixture();
+  const seeded = mutateMediaPlanSchedule(
+    object,
+    { weekWeights: [40, 30, 20, 10] },
+    { source: "studio_media_plan_ui", at: AT }
+  );
+  assert.equal(seeded.ok, true);
+  if (!seeded.ok) throw new Error(seeded.message);
+
+  const locked = lockMediaPlanOnCampaignObject(seeded.campaignObject, { at: AT });
+  assert.equal(locked.ok, true);
+  if (!locked.ok) throw new Error(locked.message);
+
+  const approved = approveMediaPlanOnCampaignObject(locked.campaignObject, {
+    at: AT,
+    method: "client_portal",
+  });
+  assert.equal(approved.ok, true);
+  if (!approved.ok) throw new Error(approved.message);
+  const baseline = getApprovedBaselineSchedule(approved.campaignObject);
+
+  const changes = requestChangesMediaPlanOnCampaignObject(approved.campaignObject, {
+    at: AT,
+    notes: "Please move launch week",
+  });
+  assert.equal(changes.ok, true);
+  if (!changes.ok) throw new Error(changes.message);
+  assert.ok(changes.events.some((event) => event.type === "changes_requested"));
+  assert.equal(
+    JSON.stringify(getApprovedBaselineSchedule(changes.campaignObject)),
+    JSON.stringify(baseline)
+  );
+
+  const relocked = lockMediaPlanOnCampaignObject(changes.campaignObject, { at: AT });
+  assert.equal(relocked.ok, true);
+  if (!relocked.ok) throw new Error(relocked.message);
+
+  const rejected = rejectMediaPlanOnCampaignObject(relocked.campaignObject, {
+    at: AT,
+    notes: "Not ready",
+  });
+  assert.equal(rejected.ok, true);
+  if (!rejected.ok) throw new Error(rejected.message);
+  assert.ok(rejected.events.some((event) => event.type === "rejected"));
+  assert.equal(getMediaPlanLifecycle(rejected.campaignObject).status, "draft");
 });

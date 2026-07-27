@@ -145,7 +145,7 @@ export async function fetchCampaignAuditLogs(
     deliverableIds: string[];
   }
 ) {
-  const select = "id, action, entity_type, entity_id, created_at, actor_id, new_data";
+  const select = "id, action, entity_type, entity_id, created_at, actor_id, new_data, metadata";
 
   const requests = [
     supabase

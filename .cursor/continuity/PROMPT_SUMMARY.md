@@ -3,14 +3,15 @@
 **Branch focus:** `feature/unified-media-plan` (from `develop`).  
 **Prior stash on `main`:** `WIP commercial CRM before unified-media-plan` — restore separately; do not mix with Media Plan work.
 
-## Active: Unified Media Plan (Phase 2 complete → Phase 3/4 next)
+## Active: Unified Media Plan (Phase 4 Original portal complete)
 
 - Architecture: `docs/architecture/UNIFIED_MEDIA_PLAN_PLAN.md`
-- Phase 1 write paths: `docs/architecture/UNIFIED_MEDIA_PLAN_PHASE1_WRITE_PATHS.md`
-- Phase 2 report: `docs/architecture/UNIFIED_MEDIA_PLAN_PHASE2_REPORT.md`
-- Route: `/campaigns/[id]/media-plan` — Original/Actual/Remaining via shared `MediaPlanCalendar`
-- Tests: `npm run test:media-plan-phase1` · `npm run test:media-plan-phase2`
-- Next: Timeline events + Client Portal Original read-only (Phase 4)
+- Phase 3: Timeline + Compare + Approval — `UNIFIED_MEDIA_PLAN_PHASE3_REPORT.md`
+- Phase 4: Client Portal Original read-only — `UNIFIED_MEDIA_PLAN_PHASE4_REPORT.md`
+- Routes: `/campaigns/[id]/media-plan` · `/client-portal/campaigns/[id]/media-plan`
+- Tests: `npm run test:media-plan-phase1|phase2|phase3|phase4`
+- Next: Portal approve / request changes + baseline snapshot refinement
+- Migration (Dev first): `20260727120000_campaign_objects_client_portal_select.sql`
 
 ## Done earlier
 

@@ -96,6 +96,8 @@ export type MediaPlanTimelineEventType =
   | "approved_on_behalf"
   | "revision_created"
   | "baseline_published"
+  | "changes_requested"
+  | "rejected"
   | "schedule_edited"
   | "sync";
 

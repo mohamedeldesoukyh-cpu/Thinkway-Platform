@@ -494,6 +494,157 @@ export function approveMediaPlanOnCampaignObject(
   };
 }
 
+/**
+ * Request changes — unlock/fork into an editable Working Draft.
+ * Approved baseline remains frozen.
+ */
+export function requestChangesMediaPlanOnCampaignObject(
+  campaignObject: CampaignObject,
+  input: { at?: string; actorUserId?: string | null; notes?: string | null }
+): MediaPlanMutationResult {
+  const at = nowIso(input.at);
+  let next = ensureMediaPlanLifecycle(campaignObject, at);
+  const lifecycle = cloneJson(getMediaPlanLifecycle(next));
+
+  if (isApprovedStatus(lifecycle.status)) {
+    const forked = ensureWorkingDraftOnCampaignObject(next, {
+      at,
+      actorUserId: input.actorUserId,
+      label: "Changes requested",
+    });
+    if (!forked.ok) return forked;
+    // Fork preserves baseline; tip must be editable draft (not pending_approval).
+    const draftLifecycle = cloneJson(getMediaPlanLifecycle(forked.campaignObject));
+    draftLifecycle.status = "draft";
+    draftLifecycle.lockedAt = null;
+    draftLifecycle.lockedBy = null;
+    next = withLifecycle(forked.campaignObject, draftLifecycle);
+    return {
+      ok: true,
+      campaignObject: next,
+      change: "Changes requested — working draft opened",
+      forkedDraft: forked.forkedDraft,
+      draftVersion: draftLifecycle.workingDraftVersion,
+      events: [
+        ...forked.events,
+        {
+          type: "changes_requested",
+          mediaPlanId: next.id,
+          campaignId: next.id,
+          version: draftLifecycle.workingDraftVersion,
+          at,
+          actorUserId: input.actorUserId ?? null,
+          summary: input.notes
+            ? `Changes requested: ${input.notes}`
+            : "Changes requested on approved Media Plan",
+          newValue: { notes: input.notes },
+        },
+      ],
+    };
+  }
+
+  if (lifecycle.status !== "locked" && lifecycle.status !== "pending_approval") {
+    return {
+      ok: false,
+      message: "Changes can only be requested on a locked or approved Media Plan.",
+    };
+  }
+
+  lifecycle.status = "draft";
+  lifecycle.lockedAt = null;
+  lifecycle.lockedBy = null;
+  lifecycle.history = [
+    ...lifecycle.history,
+    {
+      version: lifecycle.workingDraftVersion ?? nextVersionNumber(lifecycle),
+      kind: "draft",
+      status: "draft",
+      at,
+      label: "Changes requested",
+      actorUserId: input.actorUserId ?? null,
+    },
+  ];
+  next = withLifecycle(next, lifecycle);
+
+  return {
+    ok: true,
+    campaignObject: next,
+    change: "Changes requested — Media Plan returned to draft",
+    forkedDraft: false,
+    draftVersion: lifecycle.workingDraftVersion,
+    events: [
+      {
+        type: "changes_requested",
+        mediaPlanId: next.id,
+        campaignId: next.id,
+        version: lifecycle.workingDraftVersion,
+        at,
+        actorUserId: input.actorUserId ?? null,
+        summary: input.notes
+          ? `Changes requested: ${input.notes}`
+          : "Changes requested — plan returned to draft",
+        newValue: { notes: input.notes },
+      },
+    ],
+  };
+}
+
+/**
+ * Reject a locked Media Plan awaiting approval — returns Working Draft to draft.
+ * Does not mutate any approved baseline.
+ */
+export function rejectMediaPlanOnCampaignObject(
+  campaignObject: CampaignObject,
+  input: { at?: string; actorUserId?: string | null; notes?: string | null }
+): MediaPlanMutationResult {
+  const at = nowIso(input.at);
+  let next = ensureMediaPlanLifecycle(campaignObject, at);
+  const lifecycle = cloneJson(getMediaPlanLifecycle(next));
+
+  if (lifecycle.status !== "locked" && lifecycle.status !== "pending_approval") {
+    return {
+      ok: false,
+      message: "Only a locked Media Plan awaiting approval can be rejected.",
+    };
+  }
+
+  lifecycle.status = "draft";
+  lifecycle.lockedAt = null;
+  lifecycle.lockedBy = null;
+  lifecycle.history = [
+    ...lifecycle.history,
+    {
+      version: lifecycle.workingDraftVersion ?? nextVersionNumber(lifecycle),
+      kind: "draft",
+      status: "draft",
+      at,
+      label: "Rejected",
+      actorUserId: input.actorUserId ?? null,
+    },
+  ];
+  next = withLifecycle(next, lifecycle);
+
+  return {
+    ok: true,
+    campaignObject: next,
+    change: "Media Plan rejected — returned to draft",
+    forkedDraft: false,
+    draftVersion: lifecycle.workingDraftVersion,
+    events: [
+      {
+        type: "rejected",
+        mediaPlanId: next.id,
+        campaignId: next.id,
+        version: lifecycle.workingDraftVersion,
+        at,
+        actorUserId: input.actorUserId ?? null,
+        summary: input.notes ? `Media Plan rejected: ${input.notes}` : "Media Plan rejected",
+        newValue: { notes: input.notes },
+      },
+    ],
+  };
+}
+
 export type PrepareMediaPlanRegenerateResult =
   | {
       ok: true;

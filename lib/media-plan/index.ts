@@ -27,7 +27,15 @@ export {
   projectRemainingMediaPlan,
 } from "./projections";
 export { compareMediaPlanVersions } from "./compare";
-export { mediaPlanEventsForCampaignTimeline, buildMediaPlanTimelineEvent } from "./timeline-events";
+export {
+  mediaPlanEventsForCampaignTimeline,
+  buildMediaPlanTimelineEvent,
+  MEDIA_PLAN_TIMELINE_EVENT_LABELS,
+} from "./timeline-events";
+export {
+  logMediaPlanTimelineEvents,
+  resolveCampaignHeaderIdForMediaPlan,
+} from "./log-media-plan-timeline";
 export {
   assertCanMutateWorkingVersion,
   assertMediaPlanInvariants,

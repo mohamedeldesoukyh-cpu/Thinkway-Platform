@@ -24,7 +24,14 @@ import {
   mutateMediaPlanSchedule,
   prepareMediaPlanRegenerate,
 } from "@/features/campaign-outputs/media-plan-mutations";
-import { MEDIA_PLAN_REGENERATE_DISABLED_MESSAGE } from "@/lib/media-plan";
+import {
+  MEDIA_PLAN_REGENERATE_DISABLED_MESSAGE,
+  type MediaPlanTimelineEvent,
+} from "@/lib/media-plan";
+import {
+  logMediaPlanTimelineEvents,
+  resolveCampaignHeaderIdForMediaPlan,
+} from "@/lib/media-plan/log-media-plan-timeline";
 import { saveCampaignObject } from "@/features/campaign-intelligence/services/campaign-object-store";
 import { CampaignObjectPersistenceService } from "@/features/campaign-intelligence/services/campaign-object-persistence";
 import { isCampaignPlanLockedForEdits, APPROVED_PLAN_EDIT_BLOCKED_MESSAGE } from "@/lib/domains/commercial/campaign-plan-approval";
@@ -881,6 +888,7 @@ async function generateOutputEdit(
   }
 
   let campaignObjectForGenerate = input.campaignObject;
+  let mediaPlanTimelineEvents: MediaPlanTimelineEvent[] = [];
   // Explicit Media Plan regenerate must respect immutable baseline rules.
   if (kind === "media_plan" && options.regenerate) {
     const prepared = prepareMediaPlanRegenerate(input.campaignObject, {
@@ -903,6 +911,7 @@ async function generateOutputEdit(
       };
     }
     campaignObjectForGenerate = prepared.campaignObject;
+    mediaPlanTimelineEvents = [...prepared.events];
   }
 
   const result = runGenerateOutput(campaignObjectForGenerate, {
@@ -927,6 +936,38 @@ async function generateOutputEdit(
     appliedAt: new Date().toISOString(),
   });
   const persisted = await persistVersion(input.supabase, input.conversationId, input.userId, logged);
+
+  if (kind === "media_plan" && options.regenerate) {
+    try {
+      const headerId = await resolveCampaignHeaderIdForMediaPlan(
+        input.supabase,
+        persisted.id
+      );
+      const draftVersion =
+        persisted.meta.mediaPlanLifecycle?.workingDraftVersion ?? null;
+      if (draftVersion != null) {
+        mediaPlanTimelineEvents.push({
+          type: "media_plan_regenerated",
+          mediaPlanId: persisted.id,
+          campaignId: headerId ?? persisted.id,
+          version: draftVersion,
+          at: new Date().toISOString(),
+          actorUserId: input.userId,
+          summary: `Media Plan draft v${draftVersion} regenerated`,
+        });
+      }
+      if (headerId && mediaPlanTimelineEvents.length) {
+        await logMediaPlanTimelineEvents(input.supabase, {
+          campaignHeaderId: headerId,
+          campaignObjectId: persisted.id,
+          actorId: input.userId,
+          events: mediaPlanTimelineEvents,
+        });
+      }
+    } catch {
+      /* timeline logging must not fail regenerate */
+    }
+  }
 
   return { campaignObject: persisted, reply: result.reply, changed: true, intentKind };
 }

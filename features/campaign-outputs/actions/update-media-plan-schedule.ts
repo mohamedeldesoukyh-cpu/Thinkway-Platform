@@ -11,6 +11,10 @@ import { saveCampaignObject } from "@/features/campaign-intelligence/services/ca
 import { updateConversationContextSnapshot } from "@/features/ai-workspace/services/conversation-service";
 import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  logMediaPlanTimelineEvents,
+  resolveCampaignHeaderIdForMediaPlan,
+} from "@/lib/media-plan/log-media-plan-timeline";
 import { generateCampaignOutput } from "../output-registry";
 import { mutateMediaPlanSchedule } from "../media-plan-mutations";
 
@@ -27,6 +31,7 @@ const moveSchema = z.object({
 const inputSchema = z.object({
   campaignObjectId: z.string().uuid(),
   conversationId: z.string().uuid(),
+  campaignId: z.string().uuid().optional(),
   move: moveSchema,
 });
 
@@ -46,7 +51,7 @@ export async function updateMediaPlanScheduleAction(
     return { ok: false, message: "Invalid schedule update." };
   }
 
-  const { campaignObjectId, conversationId, move } = parsed.data;
+  const { campaignObjectId, conversationId, campaignId, move } = parsed.data;
 
   const supabase = await createSupabaseServerClient();
   const auth = await requirePermission(supabase, "ai.write");
@@ -130,6 +135,25 @@ export async function updateMediaPlanScheduleAction(
     );
   } catch {
     /* studio message carries the object */
+  }
+
+  // Timeline: only lifecycle-worthy events (e.g. draft fork), not every drag.
+  try {
+    const headerId = await resolveCampaignHeaderIdForMediaPlan(
+      supabase,
+      campaignObjectId,
+      campaignId
+    );
+    if (headerId && scheduleResult.events.length) {
+      await logMediaPlanTimelineEvents(supabase, {
+        campaignHeaderId: headerId,
+        campaignObjectId,
+        actorId: auth.userId,
+        events: scheduleResult.events,
+      });
+    }
+  } catch {
+    /* timeline logging must not fail the mutation */
   }
 
   return {
