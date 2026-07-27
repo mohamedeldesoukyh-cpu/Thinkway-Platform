@@ -952,7 +952,7 @@ async function generateOutputEdit(
           campaignId: headerId ?? persisted.id,
           version: draftVersion,
           at: new Date().toISOString(),
-          actorUserId: input.userId,
+          actorUserId: input.userId ?? null,
           summary: `Media Plan draft v${draftVersion} regenerated`,
         });
       }
@@ -960,7 +960,7 @@ async function generateOutputEdit(
         await logMediaPlanTimelineEvents(input.supabase, {
           campaignHeaderId: headerId,
           campaignObjectId: persisted.id,
-          actorId: input.userId,
+          actorId: input.userId ?? null,
           events: mediaPlanTimelineEvents,
         });
       }
