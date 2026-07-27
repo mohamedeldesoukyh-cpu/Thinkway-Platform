@@ -12,6 +12,7 @@ import {
 } from "@/features/campaign-outputs/brief-media-plan-schedule";
 import { resolveSlate } from "@/features/campaign-outputs/output-inputs";
 import { upsertCampaignBriefRef, type CampaignBriefSource } from "@/features/campaign-outputs/campaign-brief-ref";
+import { mutateMediaPlanSchedule } from "@/features/campaign-outputs/media-plan-mutations";
 import { markStaleCampaignOutputs } from "@/features/campaign-outputs/output-registry";
 import type { StrategySectionData } from "@/features/campaign-intelligence/types/section-schemas";
 
@@ -132,15 +133,12 @@ export function mergeBriefIntoCampaignObject(
     deriveWeekWeightsFromBrief(resolveBriefTextForScheduling(campaignObject), durationWeeks);
 
   const existingSchedule = campaignObject.meta.mediaPlanSchedule ?? {};
-  const nextSchedule =
+  const scheduleWeekWeights =
     weekWeights?.length
-      ? {
-          ...existingSchedule,
-          weekWeights: existingSchedule.assignments?.length
-            ? (existingSchedule.weekWeights ?? weekWeights)
-            : weekWeights,
-        }
-      : existingSchedule;
+      ? existingSchedule.assignments?.length
+        ? (existingSchedule.weekWeights ?? weekWeights)
+        : weekWeights
+      : null;
 
   const { strategy: generatedStrategy } = studioPlanningArtifacts(mergedFacts);
   const strategySection = campaignObject.sections.strategy;
@@ -172,11 +170,22 @@ export function mergeBriefIntoCampaignObject(
       {
         ...campaignObject.meta,
         campaignFacts: mergedFacts,
-        ...(Object.keys(nextSchedule).length ? { mediaPlanSchedule: nextSchedule } : {}),
       },
       { briefText: trimmed, source: options?.source ?? "studio" }
     ),
   };
+
+  // Schedule writes must go through the Media Plan Engine — never assign mediaPlanSchedule directly.
+  if (scheduleWeekWeights?.length) {
+    const scheduleResult = mutateMediaPlanSchedule(
+      next,
+      { weekWeights: scheduleWeekWeights },
+      { source: "studio_media_plan_ui", autoForkDraft: true }
+    );
+    if (scheduleResult.ok) {
+      next = scheduleResult.campaignObject;
+    }
+  }
 
   next = markStaleCampaignOutputs(next);
 

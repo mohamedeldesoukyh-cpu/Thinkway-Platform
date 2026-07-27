@@ -12,7 +12,7 @@ import { updateConversationContextSnapshot } from "@/features/ai-workspace/servi
 import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { generateCampaignOutput } from "../output-registry";
-import { applyMediaPlanScheduleChange } from "../media-plan-schedule";
+import { mutateMediaPlanSchedule } from "../media-plan-mutations";
 
 const moveSchema = z.object({
   creatorId: z.string().min(1),
@@ -75,19 +75,31 @@ export async function updateMediaPlanScheduleAction(
     return { ok: false, message: "Campaign object not found." };
   }
 
-  const scheduleResult = applyMediaPlanScheduleChange(restored, {
-    moveCreators: [
-      {
-        creatorIds: [move.creatorId],
-        fromWeek: move.fromWeek,
-        fromDayIndex: move.fromDayIndex,
-        toWeek: move.toWeek,
-        toDayIndex: move.toDayIndex,
-        deliverableTypes: move.deliverableTypes,
-        remainingTypes: move.remainingTypes,
-      },
-    ],
-  });
+  const scheduleResult = mutateMediaPlanSchedule(
+    restored,
+    {
+      moveCreators: [
+        {
+          creatorIds: [move.creatorId],
+          fromWeek: move.fromWeek,
+          fromDayIndex: move.fromDayIndex,
+          toWeek: move.toWeek,
+          toDayIndex: move.toDayIndex,
+          deliverableTypes: move.deliverableTypes,
+          remainingTypes: move.remainingTypes,
+        },
+      ],
+    },
+    {
+      source: "studio_media_plan_ui",
+      actorUserId: auth.userId,
+      autoForkDraft: true,
+    }
+  );
+
+  if (!scheduleResult.ok) {
+    return { ok: false, message: scheduleResult.message };
+  }
 
   if (!scheduleResult.change) {
     return { ok: false, message: "Could not move creator — check the target week." };

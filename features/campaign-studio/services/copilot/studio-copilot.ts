@@ -20,7 +20,11 @@ import {
 } from "@/features/campaign-outputs/copilot/output-copilot";
 import { runReviewCampaign } from "@/features/campaign-outputs/director/director-copilot";
 import { generateCampaignOutput } from "@/features/campaign-outputs/output-registry";
-import { applyMediaPlanScheduleChange } from "@/features/campaign-outputs/media-plan-schedule";
+import {
+  mutateMediaPlanSchedule,
+  prepareMediaPlanRegenerate,
+} from "@/features/campaign-outputs/media-plan-mutations";
+import { MEDIA_PLAN_REGENERATE_DISABLED_MESSAGE } from "@/lib/media-plan";
 import { saveCampaignObject } from "@/features/campaign-intelligence/services/campaign-object-store";
 import { CampaignObjectPersistenceService } from "@/features/campaign-intelligence/services/campaign-object-persistence";
 import { isCampaignPlanLockedForEdits, APPROVED_PLAN_EDIT_BLOCKED_MESSAGE } from "@/lib/domains/commercial/campaign-plan-approval";
@@ -614,10 +618,27 @@ async function rescheduleMediaPlan(
   digest: CampaignContextDigest,
   intent: Extract<StudioCopilotIntent, { kind: "reschedule_media_plan" }>
 ): Promise<StudioCopilotResult> {
-  const result = applyMediaPlanScheduleChange(input.campaignObject, {
-    weekWeights: intent.weekWeights,
-    moveCreators: intent.moveCreators,
-  });
+  const result = mutateMediaPlanSchedule(
+    input.campaignObject,
+    {
+      weekWeights: intent.weekWeights,
+      moveCreators: intent.moveCreators,
+    },
+    {
+      source: "studio_media_plan_ui",
+      actorUserId: input.userId,
+      autoForkDraft: true,
+    }
+  );
+
+  if (!result.ok) {
+    return {
+      campaignObject: input.campaignObject,
+      reply: result.message,
+      changed: false,
+      intentKind: "reschedule_media_plan",
+    };
+  }
 
   if (!result.change) {
     return {
@@ -859,7 +880,32 @@ async function generateOutputEdit(
     };
   }
 
-  const result = runGenerateOutput(input.campaignObject, {
+  let campaignObjectForGenerate = input.campaignObject;
+  // Explicit Media Plan regenerate must respect immutable baseline rules.
+  if (kind === "media_plan" && options.regenerate) {
+    const prepared = prepareMediaPlanRegenerate(input.campaignObject, {
+      actorUserId: input.userId,
+    });
+    if (!prepared.ok) {
+      return {
+        campaignObject: input.campaignObject,
+        reply: prepared.message,
+        changed: false,
+        intentKind,
+      };
+    }
+    if (!prepared.canRegenerateNow) {
+      return {
+        campaignObject: prepared.campaignObject,
+        reply: prepared.message ?? MEDIA_PLAN_REGENERATE_DISABLED_MESSAGE,
+        changed: false,
+        intentKind,
+      };
+    }
+    campaignObjectForGenerate = prepared.campaignObject;
+  }
+
+  const result = runGenerateOutput(campaignObjectForGenerate, {
     kind,
     regenerate: options.regenerate,
   });

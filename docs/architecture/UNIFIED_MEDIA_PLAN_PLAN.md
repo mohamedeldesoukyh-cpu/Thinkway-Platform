@@ -64,9 +64,9 @@ Disabled regenerate message:
 
 | Phase | Scope |
 |---|---|
-| **0** | Engine + invariants + tests + this plan *(current)* |
-| **1** | Persist version pointers on Campaign Object; Campaign full-page workspace reusing Studio calendar |
-| **2** | Wire schedule mutations / regenerate / lock / approve through engine guards |
+| **0** | Engine + invariants + tests + this plan |
+| **1** | Studio schedule writes via Engine bridge (`media-plan-mutations`) + lifecycle meta *(current)* |
+| **2** | Campaign full-page workspace reusing Studio calendar; timeline feed UI |
 | **3** | Actual / Remaining UI views from Performance facts |
 | **4** | Client Portal Original read-only + approvals |
 | **5** | Timeline feed, comparison UI, regression matrix |
@@ -79,15 +79,31 @@ Disabled regenerate message:
 - [x] Same `mediaPlanId` / `campaignObjectId` contract for Studio + Campaign
 - [x] Regenerate never modifies approved version
 - [x] Actual / Remaining from approved baseline only
-- [ ] Existing Studio UI wired through engine (Phase 1–2)
-- [ ] No duplicate APIs/components/scheduling logic (enforce in Phase 1–2 review)
+- [x] Existing Studio schedule mutations wired through engine (`mutateMediaPlanSchedule`)
+- [x] Regenerate / lock / unlock / approve go through Engine bridge
+- [x] Write-path audit test blocks direct `mediaPlanSchedule` assigns outside allowlist
+- [ ] Campaign full-page workspace (Phase 2)
 
 ## Test
 
 ```bash
 npm run test:media-plan-engine
+npm run test:media-plan-phase1
 ```
+
+## Phase 1 write-path map
+
+| Previous path | Now |
+|---|---|
+| `updateMediaPlanScheduleAction` → `applyMediaPlanScheduleChange` | → `mutateMediaPlanSchedule` |
+| `updateCampaignMarketIntelligenceAction` → direct apply | → `mutateMediaPlanSchedule` |
+| Copilot `rescheduleMediaPlan` → direct apply | → `mutateMediaPlanSchedule` |
+| `merge-campaign-brief` direct `mediaPlanSchedule` assign | → `mutateMediaPlanSchedule` |
+| Copilot `generate/regenerate_output` media_plan | → `prepareMediaPlanRegenerate` then output generate |
+| Lock / Unlock / Approve | → `media-plan-lifecycle-actions.ts` |
+
+Low-level `applyMediaPlanScheduleChangeUnchecked` is private to the Engine bridge.
 
 ## Environment
 
-Development only (`hsxrewjcbvmbkqdlzjhs`). No Production schema or deploy in Phase 0.
+Development only (`hsxrewjcbvmbkqdlzjhs`). No Production schema or deploy in Phase 1.

@@ -1,8 +1,8 @@
-import { strict as assert } from "node:assert";
+﻿import { strict as assert } from "node:assert";
 import { test } from "node:test";
 
 import { buildCampaignObjectFixture } from "@/features/campaign-outputs/output-test-fixture";
-import { applyMediaPlanScheduleChange } from "@/features/campaign-outputs/media-plan-schedule";
+import { applyMediaPlanScheduleChange } from "@/features/campaign-outputs/media-plan-mutations";
 import {
   buildCreativeDirectionThemes,
   buildMediaPlanStrategySummary,
@@ -61,10 +61,10 @@ function findCreatorSlot(data: MediaPlanData, creatorId: string) {
 test("buildMediaPlanStrategySummary derives objective and week weights from brief", () => {
   const object = buildCampaignObjectFixture({
     strategyContent:
-      "Launch-heavy burst in week 1 with sustained Macro creators through weeks 2–4. Peak moment in week 3.",
+      "Launch-heavy burst in week 1 with sustained Macro creators through weeks 2â€“4. Peak moment in week 3.",
     facts: {
       rawBriefExcerpt:
-        "Summer launch for Acme — front-load awareness in the first two weeks, then sustain engagement.",
+        "Summer launch for Acme â€” front-load awareness in the first two weeks, then sustain engagement.",
       objective: "Drive 10M reach for the summer product drop",
       durationWeeks: 4,
       platforms: ["TikTok", "Instagram"],
@@ -106,7 +106,7 @@ test("applyMediaPlanScheduleChange accepts creatorIds for interactive moves", ()
         fromDayIndex: 0,
         toWeek: 3,
         toDayIndex: 2,
-        deliverableTypes: ["1× IG Reel"],
+        deliverableTypes: ["1Ã— IG Reel"],
       },
     ],
   });
@@ -127,8 +127,8 @@ test("applyMediaPlanScheduleChange pins remaining deliverables on partial moves"
   const creatorsData = object.sections.creators?.data as import("@/features/campaign-intelligence/types/section-schemas").CreatorsSectionData;
   const reasoning = creatorsData.recommendations?.selectedReasoning ?? [];
   if (reasoning[0]) {
-    reasoning[0].serviceTypes = ["1× IG Reel", "1× IG Set of stories"];
-    reasoning[0].serviceLabel = reasoning[0].serviceTypes.join(" · ");
+    reasoning[0].serviceTypes = ["1Ã— IG Reel", "1Ã— IG Set of stories"];
+    reasoning[0].serviceLabel = reasoning[0].serviceTypes.join(" Â· ");
   }
 
   const result = applyMediaPlanScheduleChange(object, {
@@ -139,18 +139,18 @@ test("applyMediaPlanScheduleChange pins remaining deliverables on partial moves"
         fromDayIndex: 1,
         toWeek: 3,
         toDayIndex: 4,
-        deliverableTypes: ["1× IG Reel"],
-        remainingTypes: ["1× IG Set of stories"],
+        deliverableTypes: ["1Ã— IG Reel"],
+        remainingTypes: ["1Ã— IG Set of stories"],
       },
     ],
   });
 
   const assignments = result.campaignObject.meta.mediaPlanSchedule?.assignments ?? [];
   const moved = assignments.find(
-    (entry) => entry.creatorId === "cr_star" && entry.serviceType === "1× IG Reel"
+    (entry) => entry.creatorId === "cr_star" && entry.serviceType === "1Ã— IG Reel"
   );
   const stayed = assignments.find(
-    (entry) => entry.creatorId === "cr_star" && entry.serviceType === "1× IG Set of stories"
+    (entry) => entry.creatorId === "cr_star" && entry.serviceType === "1Ã— IG Set of stories"
   );
   assert.equal(moved?.week, 3);
   assert.equal(moved?.dayIndex, 4);
@@ -164,7 +164,7 @@ test("drag move to week 1 updates publishing rhythm with launch rationale", () =
       durationWeeks: 4,
       platforms: ["TikTok", "Instagram"],
       rawBriefExcerpt:
-        "Four-week summer launch — steady publishing across all weeks with even creator distribution.",
+        "Four-week summer launch â€” steady publishing across all weeks with even creator distribution.",
       objective: "Drive awareness for the summer launch",
     },
   });
@@ -213,7 +213,7 @@ test("schedule move keeps asset delivery deadlines synced with calendar", () => 
         fromDayIndex: beforeSlot.dayIndex,
         toWeek: beforeSlot.week,
         toDayIndex,
-        deliverableTypes: beforeSlot.types.length ? beforeSlot.types : ["1× Instagram Reel"],
+        deliverableTypes: beforeSlot.types.length ? beforeSlot.types : ["1Ã— Instagram Reel"],
       },
     ],
   }).campaignObject;
@@ -313,7 +313,7 @@ test("buildPublishingRhythmRationale appends schedule adjustment note when brief
     baselineWeights: [25, 25, 25, 25],
     scheduleAdjusted: true,
     durationWeeks: 4,
-    briefText: "Summer launch — front-load week 1.",
+    briefText: "Summer launch â€” front-load week 1.",
     objective: "Drive awareness",
   });
 
@@ -343,3 +343,4 @@ test("buildMediaPlanHtml renders Campaign Strategy section with creative directi
   assert.ok(html.includes("Executive Summary"));
   assert.ok(html.includes("Creative Recommendations"));
 });
+

@@ -93,6 +93,11 @@ export type CampaignObjectMeta = {
   quotationCommercials?: import("@/features/campaign-outputs/hydration/quotation-commercials-meta").QuotationCommercialsMeta;
   /** Media plan slot distribution — week weights and per-creator overrides (not start date). */
   mediaPlanSchedule?: import("@/features/campaign-outputs/media-plan-schedule").MediaPlanScheduleMeta;
+  /**
+   * Media Plan Engine lifecycle — approved baseline pointers, working draft, frozen snapshots.
+   * Schedule tip remains `mediaPlanSchedule`; mutations must go through the Media Plan Engine.
+   */
+  mediaPlanLifecycle?: import("@/lib/media-plan/lifecycle-meta").MediaPlanLifecycleMeta;
   /** Approved influencer concepts + upload refs for Media Plan Creative Direction. */
   influencerConcepts?: import("@/features/campaign-outputs/influencer-concepts").InfluencerConceptsMeta;
   /** Media plan section visibility, standard/strategy mode, and export preferences. */

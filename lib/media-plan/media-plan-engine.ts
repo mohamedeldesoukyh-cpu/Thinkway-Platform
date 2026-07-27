@@ -34,6 +34,10 @@ export type { MediaPlanMutationSource } from "./ownership";
  *
  * Studio, Campaign, Client Portal, Performance, and Reporting must consume
  * this engine. Modules must not implement independent Media Plan business logic.
+ *
+ * Campaign Object schedule writes: use `mutateMediaPlanSchedule` /
+ * `prepareMediaPlanRegenerate` from `@/features/campaign-outputs/media-plan-mutations`
+ * (Studio bridge that enforces these rules against `meta.mediaPlanSchedule`).
  */
 export const mediaPlanEngine = {
   version: MEDIA_PLAN_ENGINE_VERSION,

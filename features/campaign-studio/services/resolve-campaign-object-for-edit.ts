@@ -90,6 +90,9 @@ export function resolveCampaignObjectForBriefEdit(input: {
     if (!mergedMeta.mediaPlanSchedule && candidate.meta.mediaPlanSchedule) {
       mergedMeta.mediaPlanSchedule = candidate.meta.mediaPlanSchedule;
     }
+    if (!mergedMeta.mediaPlanLifecycle && candidate.meta.mediaPlanLifecycle) {
+      mergedMeta.mediaPlanLifecycle = candidate.meta.mediaPlanLifecycle;
+    }
     if (!mergedMeta.campaignFacts && candidate.meta.campaignFacts) {
       mergedMeta.campaignFacts = candidate.meta.campaignFacts;
     }

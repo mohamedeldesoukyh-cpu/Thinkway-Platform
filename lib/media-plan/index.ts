@@ -1,4 +1,8 @@
-export { MEDIA_PLAN_ENGINE_VERSION, MEDIA_PLAN_REGENERATE_DISABLED_MESSAGE } from "./config";
+export {
+  MEDIA_PLAN_ENGINE_VERSION,
+  MEDIA_PLAN_REGENERATE_DISABLED_MESSAGE,
+  MEDIA_PLAN_IMMUTABLE_BASELINE_MESSAGE,
+} from "./config";
 export { mediaPlanEngine } from "./media-plan-engine";
 export type { MediaPlanMutationSource } from "./ownership";
 export {
@@ -38,6 +42,11 @@ export {
   replaceWorkingDraftItems,
   validateMediaPlanState,
 } from "./versioning";
+export type {
+  MediaPlanLifecycleHistoryEntry,
+  MediaPlanLifecycleMeta,
+} from "./lifecycle-meta";
+export { createDefaultMediaPlanLifecycle, cloneJson } from "./lifecycle-meta";
 export type {
   EnsureWorkingDraftResult,
   MediaPlanApprovalMethod,
