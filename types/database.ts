@@ -10,6 +10,27 @@ export type CampaignStatus =
 
 export type InfluencerStatus = "prospect" | "active" | "inactive" | "blacklisted" | "archived";
 
+export type CreatorCrmStatus =
+  | "incomplete"
+  | "prospect"
+  | "negotiating"
+  | "active"
+  | "preferred"
+  | "inactive"
+  | "do_not_use";
+
+export type CreatorCrmActivationReason =
+  | "manual_convert"
+  | "manual_create"
+  | "campaign_assignment"
+  | "quotation_operational"
+  | "vendor_io"
+  | "portal_invite"
+  | "payment_details"
+  | "finance_document"
+  | "backfill"
+  | "other";
+
 export type AgencyOrDirect = "agency" | "direct" | "hybrid";
 
 export type ShortlistStatus =
@@ -441,6 +462,8 @@ export type InfluencerRow = {
   notes: string | null;
   /** JSON [{title, body}] — default Vendor IO Section 8 terms; NULL = platform default. */
   vendor_io_terms_text: string | null;
+  /** Denorm: true when creator_crm_profiles row exists (CRM Phase 1). */
+  has_commercial_profile: boolean;
   metadata: Record<string, unknown>;
   search_vector: string | null;
   created_by: string | null;
@@ -473,6 +496,35 @@ export type InfluencerRow = {
   default_metrics_platform_account_id: string | null;
   thinkway_score: number | null;
   source_confidence: number | null;
+};
+
+export type CreatorCrmProfileRow = {
+  influencer_id: string;
+  crm_status: CreatorCrmStatus;
+  activated_at: string;
+  activated_by: string | null;
+  activated_reason: CreatorCrmActivationReason;
+  completeness_score: number;
+  completeness_missing: unknown[];
+  completeness_updated_at: string | null;
+  managed_by_agency_id: string | null;
+  commercial_owner_profile_id: string | null;
+  preferred_currency: string | null;
+  onboarding_source: string | null;
+  negotiation_notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreatorCrmActivationEventRow = {
+  id: string;
+  influencer_id: string;
+  reason: CreatorCrmActivationReason;
+  actor_id: string | null;
+  source_entity_type: string | null;
+  source_entity_id: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
 };
 
 export type CreatorEnrichmentStatus =
@@ -1931,6 +1983,7 @@ export type Database = {
           tax_registration_number?: string | null;
           notes?: string | null;
           vendor_io_terms_text?: string | null;
+          has_commercial_profile?: boolean;
           created_by?: string | null;
           last_enriched_at?: string | null;
           enrichment_status?: CreatorEnrichmentStatus;
@@ -1959,6 +2012,43 @@ export type Database = {
   source_confidence?: number | null;
 };
         Update: Partial<Database["public"]["Tables"]["influencers"]["Insert"]>;
+        Relationships: [];
+      };
+      creator_crm_profiles: {
+        Row: CreatorCrmProfileRow;
+        Insert: {
+          influencer_id: string;
+          crm_status?: CreatorCrmStatus;
+          activated_at?: string;
+          activated_by?: string | null;
+          activated_reason: CreatorCrmActivationReason;
+          completeness_score?: number;
+          completeness_missing?: unknown[];
+          completeness_updated_at?: string | null;
+          managed_by_agency_id?: string | null;
+          commercial_owner_profile_id?: string | null;
+          preferred_currency?: string | null;
+          onboarding_source?: string | null;
+          negotiation_notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["creator_crm_profiles"]["Insert"]>;
+        Relationships: [];
+      };
+      creator_crm_activation_events: {
+        Row: CreatorCrmActivationEventRow;
+        Insert: {
+          id?: string;
+          influencer_id: string;
+          reason: CreatorCrmActivationReason;
+          actor_id?: string | null;
+          source_entity_type?: string | null;
+          source_entity_id?: string | null;
+          metadata?: Record<string, unknown>;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["creator_crm_activation_events"]["Insert"]>;
         Relationships: [];
       };
       influencer_platform_accounts: {

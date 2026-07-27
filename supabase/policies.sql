@@ -408,6 +408,77 @@ CREATE POLICY influencers_delete
   );
 
 -- -----------------------------------------------------------------------------
+-- Creator CRM (Phase 1) — commercial profiles + append-only activation events
+-- -----------------------------------------------------------------------------
+DROP POLICY IF EXISTS creator_crm_profiles_select ON public.creator_crm_profiles;
+CREATE POLICY creator_crm_profiles_select
+  ON public.creator_crm_profiles
+  FOR SELECT
+  TO authenticated
+  USING (
+    public.has_permission('influencers.read')
+    AND public.can_access_influencer(influencer_id)
+  );
+
+DROP POLICY IF EXISTS creator_crm_profiles_insert ON public.creator_crm_profiles;
+CREATE POLICY creator_crm_profiles_insert
+  ON public.creator_crm_profiles
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    public.has_permission('influencers.write')
+    AND public.is_internal_user()
+    AND public.can_access_influencer(influencer_id)
+  );
+
+DROP POLICY IF EXISTS creator_crm_profiles_update ON public.creator_crm_profiles;
+CREATE POLICY creator_crm_profiles_update
+  ON public.creator_crm_profiles
+  FOR UPDATE
+  TO authenticated
+  USING (
+    public.has_permission('influencers.write')
+    AND public.is_internal_user()
+    AND public.can_access_influencer(influencer_id)
+  )
+  WITH CHECK (
+    public.has_permission('influencers.write')
+    AND public.is_internal_user()
+    AND public.can_access_influencer(influencer_id)
+  );
+
+DROP POLICY IF EXISTS creator_crm_profiles_delete ON public.creator_crm_profiles;
+CREATE POLICY creator_crm_profiles_delete
+  ON public.creator_crm_profiles
+  FOR DELETE
+  TO authenticated
+  USING (
+    public.has_permission('influencers.delete')
+    AND public.is_admin()
+  );
+
+DROP POLICY IF EXISTS creator_crm_activation_events_select ON public.creator_crm_activation_events;
+CREATE POLICY creator_crm_activation_events_select
+  ON public.creator_crm_activation_events
+  FOR SELECT
+  TO authenticated
+  USING (
+    public.has_permission('influencers.read')
+    AND public.can_access_influencer(influencer_id)
+  );
+
+DROP POLICY IF EXISTS creator_crm_activation_events_insert ON public.creator_crm_activation_events;
+CREATE POLICY creator_crm_activation_events_insert
+  ON public.creator_crm_activation_events
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    public.has_permission('influencers.write')
+    AND public.is_internal_user()
+    AND public.can_access_influencer(influencer_id)
+  );
+
+-- -----------------------------------------------------------------------------
 -- Influencer platform accounts
 -- -----------------------------------------------------------------------------
 DROP POLICY IF EXISTS influencer_platform_accounts_select ON public.influencer_platform_accounts;
