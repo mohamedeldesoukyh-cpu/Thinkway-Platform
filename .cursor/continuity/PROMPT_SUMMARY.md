@@ -3,16 +3,13 @@
 **Branch focus:** `feature/unified-media-plan` (from `develop`).  
 **Prior stash on `main`:** `WIP commercial CRM before unified-media-plan` — restore separately; do not mix with Media Plan work.
 
-## Media Planning v1 — COMPLETE / FROZEN
+## Media Planning v1 — RELEASED TO PRODUCTION
 
 - **Canonical SSOT:** `docs/architecture/MEDIA_PLANNING_V1_PRODUCTION_READINESS.md`
-- Phase reports + architecture plan: historical (superseded for release; not deleted)
-- Branch: `feature/unified-media-plan` — final docs commit is last v1 change unless bugs found
-- Routes: `/campaigns/[id]/media-plan` · `/client-portal/campaigns/[id]/media-plan`
-- Tests: `npm run test:media-plan-engine|phase1|phase2|phase3|phase4`
-- Migration (Dev applied; Prod not): `20260727120000_campaign_objects_client_portal_select.sql`
+- Release commit on `main`/`develop`: `e1624adb` (`[deploy-production]`)
+- Prod DB (`ienowhwfyxoqtzbgltno`): Media Plan portal SELECT policies + Commercial CRM completion/payment readiness applied
 - **Feature freeze:** no new Media Planning work unless requirements are approved
-- Next: PR → `develop` → Dev QA → explicit Production approval
+- Verify: Ops Center Production ↔ `ienowhwfyxoqtzbgltno`; smoke Studio/Campaign/Portal Media Plan
 
 ## Done earlier
 
