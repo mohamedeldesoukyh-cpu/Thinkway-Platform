@@ -10,6 +10,10 @@ export type StructuredLogFields = {
   conversationId?: string;
   campaignId?: string;
   userId?: string;
+  creatorId?: string;
+  influencerId?: string;
+  jobId?: string;
+  outcome?: string;
   duration?: number;
   durationMs?: number;
   status?: string | number;
@@ -47,6 +51,10 @@ function buildPayload(
     conversationId: fields?.conversationId ?? ctx?.conversationId,
     campaignId: fields?.campaignId ?? ctx?.campaignId,
     userId: fields?.userId ?? ctx?.userId,
+    creatorId: fields?.creatorId ?? ctx?.creatorId,
+    influencerId: fields?.influencerId ?? ctx?.influencerId ?? fields?.creatorId ?? ctx?.creatorId,
+    jobId: fields?.jobId ?? ctx?.jobId,
+    outcome: fields?.outcome ?? ctx?.outcome,
     ...(duration != null ? { durationMs: duration } : {}),
     ...(fields?.status != null ? { status: fields.status } : {}),
     ...(fields?.error ? { error: fields.error } : {}),
@@ -60,6 +68,10 @@ function buildPayload(
             "conversationId",
             "campaignId",
             "userId",
+            "creatorId",
+            "influencerId",
+            "jobId",
+            "outcome",
             "duration",
             "durationMs",
             "status",

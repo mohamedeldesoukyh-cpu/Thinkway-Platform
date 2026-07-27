@@ -4,7 +4,8 @@
 **Branch / commit:** `develop` @ `0edf8e0` (+ soak harness)  
 **Environment:** Development Supabase `hsxrewjcbvmbkqdlzjhs`  
 **Harness:** `npx tsx scripts/soak-creator-crm-phase2a.ts`  
-**Status:** Soak complete — **Ready with conditions** for Phase 2B review (no implementation started)
+**Status:** Soak complete — **Ready with conditions** for Phase 2B review (no implementation started)  
+**Superseding note (2026-07-27):** Phase 2B was later approved, implemented, and soaked. The platform then entered the **Internal Pilot** milestone. See `CREATOR_CRM_PHASE2B_DEV_SOAK_REPORT.md` and `docs/releases/INTERNAL_PILOT_RELEASE.md`. Historical §10 text below is retained for audit.
 
 ---
 

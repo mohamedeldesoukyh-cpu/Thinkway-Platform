@@ -1,3 +1,4 @@
+import type { ConnectionOptions } from "bullmq";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { insertAuditLog } from "@/lib/audit/insert-audit-log";
@@ -23,10 +24,10 @@ export type CancelCreatorImportJobsResult = {
 async function removeImportJob(
   queueName: string,
   jobId: string,
-  url: string
+  connection: ConnectionOptions
 ): Promise<boolean> {
   const { Queue } = await import("bullmq");
-  const queue = new Queue(queueName, { connection: { url } });
+  const queue = new Queue(queueName, { connection });
 
   try {
     const job = await queue.getJob(jobId);
@@ -54,10 +55,10 @@ async function removeImportJob(
 async function removeImportJobsByImportFileId(
   queueName: string,
   importFileId: string,
-  url: string
+  connection: ConnectionOptions
 ): Promise<number> {
   const { Queue } = await import("bullmq");
-  const queue = new Queue(queueName, { connection: { url } });
+  const queue = new Queue(queueName, { connection });
   let removed = 0;
 
   try {
@@ -101,7 +102,6 @@ export async function cancelCreatorImportJobs(
     return { removed: 0 };
   }
 
-  const url = connection.url;
   let removed = 0;
 
   const knownJobIds = [
@@ -117,11 +117,15 @@ export async function cancelCreatorImportJobs(
   for (const queueName of Object.values(CREATOR_IMPORT_QUEUES)) {
     for (const jobId of knownJobIds) {
       if (queueName === CREATOR_IMPORT_QUEUES.enrich) continue;
-      const didRemove = await removeImportJob(queueName, jobId, url);
+      const didRemove = await removeImportJob(queueName, jobId, connection);
       if (didRemove) removed += 1;
     }
 
-    removed += await removeImportJobsByImportFileId(queueName, importFileId, url);
+    removed += await removeImportJobsByImportFileId(
+      queueName,
+      importFileId,
+      connection
+    );
   }
 
   return { removed };

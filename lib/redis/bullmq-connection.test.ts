@@ -1,10 +1,23 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 import IORedis from "ioredis";
 
 import { createBullMqQueueConnection } from "./bullmq-connection";
 
 const URL = "redis://user:secret@queue-host.internal:12999/3";
+
+/** Producer modules that previously used `{ connection: { url } }` (localhost bug). */
+const PRODUCER_SOURCE_FILES = [
+  "lib/performance/metrics-collector/queue.ts",
+  "lib/discovery-import/queue-connection.ts",
+  "lib/discovery/acquisition-session.ts",
+  "lib/discovery/queue.ts",
+] as const;
+
+/** Must use shared getConnectionOptions (which wraps createBullMqQueueConnection). */
+const IMPORT_CANCEL_SOURCE = "lib/discovery-import/cancel-import.ts";
 
 /**
  * Regression for the producer/consumer Redis mismatch: the web app used
@@ -64,8 +77,33 @@ function testProducerMatchesWorkerConnection(): void {
   }
 }
 
+function testProducersDoNotUseUrlConnectionShape(): void {
+  for (const relative of PRODUCER_SOURCE_FILES) {
+    const source = readFileSync(resolve(relative), "utf8");
+    assert.equal(
+      /connection:\s*\{\s*url\s*:/.test(source),
+      false,
+      `${relative} must not use { connection: { url } } (ioredis localhost fallback)`
+    );
+    assert.match(
+      source,
+      /createBullMqQueueConnection/,
+      `${relative} must use createBullMqQueueConnection`
+    );
+  }
+
+  const cancelSource = readFileSync(resolve(IMPORT_CANCEL_SOURCE), "utf8");
+  assert.equal(
+    /connection:\s*\{\s*url\s*:/.test(cancelSource),
+    false,
+    `${IMPORT_CANCEL_SOURCE} must not use { connection: { url } }`
+  );
+  assert.match(cancelSource, /getConnectionOptions/);
+}
+
 function run(): void {
   testProducerMatchesWorkerConnection();
+  testProducersDoNotUseUrlConnectionShape();
   console.log("bullmq-connection.test.ts: PASS");
 }
 

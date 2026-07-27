@@ -144,6 +144,7 @@
     "validate:f1-one-workspace": "npx tsx scripts/validate-f1-one-workspace.mjs",
     "trace:discovery": "node scripts/run-ops-script.mjs scripts/trace-discovery.ts",
     "test:bullmq-connection": "npx tsx lib/redis/bullmq-connection.test.ts",
+    "test:storage-mime": "npx tsx lib/supabase/storage-mime.test.ts",
     "backfill:creator-intelligence": "node scripts/run-ops-script.mjs scripts/backfill-creator-intelligence.ts",
     "backfill:influencer-country-codes": "node scripts/run-ops-script.mjs scripts/backfill-influencer-country-codes.ts",
     "rollout:preflight": "node scripts/run-ops-script.mjs scripts/rollout-preflight.ts",
@@ -154,7 +155,8 @@
     "test:cleanup-classification": "npx tsx lib/creators/cleanup-classification.test.ts",
     "test:discovery-ui-contract": "npx tsx features/discovery/components/discovery-ui-contract.test.ts",
     "validate:discovery-ui-contract": "node scripts/validate-discovery-ui-contract.mjs",
-    "soak:creator-crm-phase2a": "npx tsx scripts/soak-creator-crm-phase2a.ts"
+    "soak:creator-crm-phase2a": "npx tsx scripts/soak-creator-crm-phase2a.ts",
+    "soak:creator-crm-phase2b": "npx tsx scripts/soak-creator-crm-phase2b.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

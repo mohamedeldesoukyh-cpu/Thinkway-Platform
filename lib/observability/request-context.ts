@@ -8,6 +8,11 @@ export type RequestContext = {
   conversationId?: string;
   campaignId?: string;
   userId?: string;
+  /** Commercial / identity influencer id when known. */
+  creatorId?: string;
+  influencerId?: string;
+  jobId?: string;
+  outcome?: string;
 };
 
 const storage = new AsyncLocalStorage<RequestContext>();

@@ -28,6 +28,18 @@ jobs:
       - name: Service layer tests
         run: npm run test:services
 
+      - name: Creator CRM Phase 2B regression
+        run: npm run test:creator-crm-phase2b
+
+      - name: BullMQ producer connection
+        run: npm run test:bullmq-connection
+
+      - name: Storage MIME allowlist
+        run: npm run test:storage-mime
+
+      - name: Auth / appsec P1
+        run: npm run test:auth-p1
+
       - name: Typecheck
         run: npx tsc --noEmit -p tsconfig.json
 

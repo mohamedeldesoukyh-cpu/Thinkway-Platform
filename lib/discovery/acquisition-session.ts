@@ -11,6 +11,7 @@ import IORedis from "ioredis";
 
 import { mergeCoverageSessionIds } from "@/lib/discovery/coverage-acquisition-dedupe";
 import { DISCOVERY_QUEUE_NAMES } from "@/lib/discovery/queue";
+import { createBullMqQueueConnection } from "@/lib/redis/bullmq-connection";
 
 const SESSION_KEY_PREFIX = "thinkway:discovery:acquisition:session:";
 const JOB_CANCEL_KEY_PREFIX = "thinkway:discovery:acquisition:job:";
@@ -143,7 +144,7 @@ async function removeEnterpriseAcquisitionBullmqJob(jobId: string): Promise<bool
   let queue: InstanceType<typeof Queue> | null = null;
   try {
     queue = new Queue(DISCOVERY_QUEUE_NAMES.enterpriseAcquisition, {
-      connection: { url: connection },
+      connection: createBullMqQueueConnection(connection),
     });
     const job = await queue.getJob(jobId);
     if (!job) return false;

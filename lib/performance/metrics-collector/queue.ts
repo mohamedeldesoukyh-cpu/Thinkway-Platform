@@ -2,6 +2,7 @@ import { Queue } from "bullmq";
 
 import { CAMPAIGN_PERFORMANCE_JOB_OPTIONS } from "@/lib/performance/campaign-performance-queue-options";
 import { logMetricsQueueEvent } from "@/lib/performance/metrics-collector/metrics-queue-log";
+import { createBullMqQueueConnection } from "@/lib/redis/bullmq-connection";
 
 export const PUBLICATION_METRICS_QUEUE = "publication-metrics";
 
@@ -29,7 +30,7 @@ function getQueue(): Queue<PublicationMetricsJobData> | null {
 
   if (!queue) {
     queue = new Queue(PUBLICATION_METRICS_QUEUE, {
-      connection: { url: redisUrl },
+      connection: createBullMqQueueConnection(redisUrl),
     });
   }
   return queue;

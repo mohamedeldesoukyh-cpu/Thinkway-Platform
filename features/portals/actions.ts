@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createSupabaseServerClient, requireRequestUser } from "@/lib/supabase/server";
 import { uploadEntityDocument } from "@/lib/supabase/storage";
+import { parseOptionalSafeExternalUrl } from "@/lib/security/safe-external-url";
 import { requireClientScope, requireCreatorScope } from "@/features/portals/scope";
 
 type PortalActionState = {
@@ -99,12 +100,21 @@ export async function creatorUploadDeliverableAction(
 ): Promise<PortalActionState> {
   const deliverableId = String(formData.get("deliverable_id") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
-  const externalLink = String(formData.get("external_link") ?? "").trim();
+  const externalLinkRaw = String(formData.get("external_link") ?? "").trim();
   const file = formData.get("file");
 
   if (!deliverableId) {
     return { ok: false, message: "Deliverable is required." };
   }
+
+  const externalLinkParsed = parseOptionalSafeExternalUrl(externalLinkRaw, {
+    allowHttp: true,
+    promoteBareDomain: true,
+  });
+  if (!externalLinkParsed.ok) {
+    return { ok: false, message: externalLinkParsed.error };
+  }
+  const externalLink = externalLinkParsed.url ?? "";
 
   try {
     const { supabase, scope } = await requireCreatorScope("creator_portal.write");
@@ -349,8 +359,17 @@ export async function clientUploadPoAction(
   formData: FormData
 ): Promise<PortalActionState> {
   const campaignHeaderId = String(formData.get("campaign_header_id") ?? "").trim();
-  const externalLink = String(formData.get("external_link") ?? "").trim();
+  const externalLinkRaw = String(formData.get("external_link") ?? "").trim();
   const file = formData.get("file");
+
+  const externalLinkParsed = parseOptionalSafeExternalUrl(externalLinkRaw, {
+    allowHttp: true,
+    promoteBareDomain: true,
+  });
+  if (!externalLinkParsed.ok) {
+    return { ok: false, message: externalLinkParsed.error };
+  }
+  const externalLink = externalLinkParsed.url ?? "";
 
   if (!campaignHeaderId) return { ok: false, message: "Campaign is required." };
   if (!(file instanceof File) && !externalLink) {

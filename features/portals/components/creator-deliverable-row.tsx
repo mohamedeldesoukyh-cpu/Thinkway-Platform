@@ -1,6 +1,5 @@
-import Link from "next/link";
-
 import { DocumentNumber } from "@/components/ui/document-number";
+import { SafeExternalLink } from "@/components/ui/safe-external-link";
 import { PortalStatusBadge } from "@/features/portals/components/portal-status-badge";
 import { CreatorDeliverableUploadForm } from "@/features/portals/components/creator-deliverable-upload-form";
 import { getPortalUploadsForDeliverable } from "@/features/portals/queries";
@@ -34,14 +33,14 @@ export async function CreatorDeliverableRowPanel({
         {deliverable.content_url ? (
           <p>
             Content:{" "}
-            <Link
+            <SafeExternalLink
               href={deliverable.content_url}
+              allowHttp
               className="text-primary underline-offset-2 hover:underline"
-              target="_blank"
-              rel="noreferrer"
+              fallback={<span>Submitted (file or non-http link)</span>}
             >
               View link
-            </Link>
+            </SafeExternalLink>
           </p>
         ) : null}
       </div>
@@ -51,9 +50,14 @@ export async function CreatorDeliverableRowPanel({
             <li key={upload.id}>
               {upload.file_name ?? "Upload"}{" "}
               {upload.external_link ? (
-                <Link href={upload.external_link} target="_blank" rel="noreferrer" className="text-primary">
+                <SafeExternalLink
+                  href={upload.external_link}
+                  allowHttp
+                  className="text-primary"
+                  fallback={<span className="text-muted-foreground">(unsafe link hidden)</span>}
+                >
                   (link)
-                </Link>
+                </SafeExternalLink>
               ) : null}
               <span className="ml-1">
                 · {new Date(upload.created_at).toLocaleString()}

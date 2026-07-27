@@ -19,8 +19,11 @@ import {
 } from "@/features/quotations/export/quotation-template";
 import { resolveThinkwayReportLogoSrcsForExport } from "@/lib/reports/document/thinkway-report-logo-embed";
 import { getQuotationDetail } from "@/features/quotations/queries";
+import { QUOTATION_PERMISSIONS } from "@/features/quotations/constants";
 import { resolveRateToEgp } from "@/lib/commercial/fx-server";
 import { pdfUnavailableMessage, renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
+import { getClientIp, requireApiPermission } from "@/lib/auth/api-auth";
+import { logAuditEvent } from "@/lib/audit/log-audit-event";
 import { EMBEDDABLE_DOCUMENT_FRAME_HEADERS } from "@/lib/security/embeddable-document-headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -56,18 +59,23 @@ export async function GET(request: Request, context: RouteContext) {
   const template = resolveQuotationTemplate(searchParams.get("template"));
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireApiPermission(supabase, QUOTATION_PERMISSIONS.read);
+  if ("response" in auth) return auth.response;
 
   try {
     const detail = await getQuotationDetail(id);
     if (!detail) {
       return NextResponse.json({ error: "Quotation not found" }, { status: 404 });
     }
+
+    void logAuditEvent(supabase, {
+      userId: auth.userId,
+      action: "export",
+      entityType: "quotation",
+      entityId: id,
+      metadata: { format, download, template },
+      ip: getClientIp(request),
+    });
 
     const enriched = await enrichQuotationDetailForExport(supabase, detail);
     const publicationShotsByCreatorKey =

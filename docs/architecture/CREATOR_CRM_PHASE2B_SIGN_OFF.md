@@ -2,8 +2,11 @@
 
 **Date:** 2026-07-27  
 **Branch:** `develop`  
-**Status:** Implemented — writers remain OFF by default (Production unchanged)  
-**Pre-coding record:** `CREATOR_CRM_PHASE2B_PRE_CODING.md`
+**Status:** Implemented + Development soak complete — writers OFF by default (Production unchanged)  
+**Pre-coding record:** `CREATOR_CRM_PHASE2B_PRE_CODING.md`  
+**Soak report:** `CREATOR_CRM_PHASE2B_DEV_SOAK_REPORT.md`  
+**Milestone:** Included in Internal Pilot — `docs/releases/INTERNAL_PILOT_RELEASE.md`  
+**Stabilisation:** `docs/production-readiness/PRODUCTION_READINESS_REPORT.md`
 
 ---
 

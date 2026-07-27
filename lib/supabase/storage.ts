@@ -57,7 +57,8 @@ export async function uploadEntityDocument(params: {
     throw new Error("File exceeds the 50 MB limit.");
   }
 
-  if (params.file.type && !ALLOWED_MIME_TYPES.has(params.file.type)) {
+  const mimeType = params.file.type?.trim() ?? "";
+  if (!mimeType || !ALLOWED_MIME_TYPES.has(mimeType)) {
     throw new Error("File type is not allowed.");
   }
 
@@ -72,7 +73,7 @@ export async function uploadEntityDocument(params: {
     .upload(storagePath, params.file, {
       cacheControl: "3600",
       upsert: false,
-      contentType: params.file.type || undefined,
+      contentType: mimeType,
     });
 
   if (error) {
@@ -81,7 +82,7 @@ export async function uploadEntityDocument(params: {
 
   return {
     storagePath,
-    mimeType: params.file.type,
+    mimeType,
     fileSize: params.file.size,
   };
 }
