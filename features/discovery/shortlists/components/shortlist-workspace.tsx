@@ -359,7 +359,13 @@ export function ShortlistWorkspace({
   function handleExportSelected() {
     const itemIds = selectedCount > 0 ? selectedItemIdList : undefined;
     const href = buildShortlistExportHref(detail.id, "csv", exportTemplate, { itemIds });
-    window.open(href, "_blank", "noopener,noreferrer");
+    const anchor = document.createElement("a");
+    anchor.href = href;
+    anchor.download = "";
+    anchor.rel = "noopener";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
   }
 
   function handleRefreshMetrics() {

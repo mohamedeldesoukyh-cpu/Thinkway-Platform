@@ -49,38 +49,56 @@ export function ShortlistPreviewDownloads({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Button size="sm" variant="outline" asChild>
-        <a href={buildShortlistExportHref(shortlistId, "html", template, exportOptions)}>
+        <a
+          href={buildShortlistExportHref(shortlistId, "html", template, exportOptions)}
+          download
+        >
           <FileTextIcon data-icon="inline-start" className="size-3.5" />
           HTML
         </a>
       </Button>
       <Button size="sm" variant="outline" asChild>
-        <a href={buildShortlistExportHref(shortlistId, "pdf", template, exportOptions)}>
+        <a
+          href={buildShortlistExportHref(shortlistId, "pdf", template, exportOptions)}
+          download
+        >
           <DownloadIcon data-icon="inline-start" className="size-3.5" />
           PDF
         </a>
       </Button>
       <Button size="sm" variant="outline" asChild>
-        <a href={buildShortlistExportHref(shortlistId, "word", template, exportOptions)}>
+        <a
+          href={buildShortlistExportHref(shortlistId, "word", template, exportOptions)}
+          download
+        >
           <FileTextIcon data-icon="inline-start" className="size-3.5" />
           Word
         </a>
       </Button>
       <Button size="sm" variant="outline" asChild>
-        <a href={buildShortlistExportHref(shortlistId, "excel", template, exportOptions)}>
+        <a
+          href={buildShortlistExportHref(shortlistId, "excel", template, exportOptions)}
+          download
+        >
           <FileSpreadsheetIcon data-icon="inline-start" className="size-3.5" />
           Excel
         </a>
       </Button>
       <Button size="sm" variant="outline" asChild>
-        <a href={buildShortlistExportHref(shortlistId, "csv", template, exportOptions)}>
+        <a
+          href={buildShortlistExportHref(shortlistId, "csv", template, exportOptions)}
+          download
+        >
           <FileSpreadsheetIcon data-icon="inline-start" className="size-3.5" />
           CSV
         </a>
       </Button>
       {isCreatorDeckTemplate(template) ? (
         <Button size="sm" variant="outline" asChild>
-          <a href={buildShortlistExportHref(shortlistId, "pptx", template, exportOptions)}>
+          <a
+            href={buildShortlistExportHref(shortlistId, "pptx", template, exportOptions)}
+            download
+          >
             <PresentationIcon data-icon="inline-start" className="size-3.5" />
             PPTX
           </a>

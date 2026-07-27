@@ -135,7 +135,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     if (format === "excel") {
       const buffer = await buildShortlistExcel(doc);
-      return new NextResponse(buffer as unknown as BodyInit, {
+      return new NextResponse(new Uint8Array(buffer), {
         headers: withExportCacheHeaders({
           "Content-Type":
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -152,7 +152,7 @@ export async function GET(request: Request, context: RouteContext) {
         );
       }
       const buffer = await buildShortlistPptxBuffer(doc);
-      return new NextResponse(buffer as unknown as BodyInit, {
+      return new NextResponse(new Uint8Array(buffer), {
         headers: withExportCacheHeaders({
           "Content-Type":
             "application/vnd.openxmlformats-officedocument.presentationml.presentation",
@@ -180,7 +180,7 @@ export async function GET(request: Request, context: RouteContext) {
           { status: 503 }
         );
       }
-      return new NextResponse(pdfResult.buffer as unknown as BodyInit, {
+      return new NextResponse(new Uint8Array(pdfResult.buffer), {
         headers: withExportCacheHeaders({
           "Content-Type": "application/pdf",
           "Content-Disposition": `${disposition}; filename="${baseName}${suffix}.pdf"`,

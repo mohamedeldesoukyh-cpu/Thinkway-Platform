@@ -79,13 +79,14 @@ export function ShortlistCreatorToolbarActions({
               <DownloadIcon className="size-4" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40">
+          <DropdownMenuContent align="end" className="min-w-[180px] w-[180px]">
             {EXPORT_FORMATS.filter(
               (entry) => !entry.deckOnly || isCreatorDeckTemplate(exportTemplate)
             ).map(({ format, label, icon: Icon }) => (
               <DropdownMenuItem key={format} asChild>
                 <a
                   href={buildShortlistExportHref(shortlistId, format, exportTemplate, exportOptions)}
+                  download
                   className="flex cursor-pointer items-center gap-2"
                 >
                   <Icon className="size-3.5" />

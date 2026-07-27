@@ -200,13 +200,15 @@ function CampaignCreatorDiscoverySheets({
   function exportShortlist() {
     startTransition(async () => {
       const csv = await exportCampaignShortlistCsvAction(campaignHeaderId);
-      const blob = new Blob([csv], { type: "text/csv" });
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = `${campaignName.replace(/\s+/g, "-").toLowerCase()}-shortlist.csv`;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
     });
   }
 
