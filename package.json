@@ -55,6 +55,7 @@
     "test:campaign-optimization": "npx tsx lib/campaign-optimization/campaign-optimization.test.ts",
     "test:campaign-decision": "npx tsx lib/campaign-decision/campaign-decision.test.ts",
     "test:campaign-planning": "npx tsx lib/campaign-planning/campaign-planning.test.ts",
+    "test:media-plan-engine": "npx tsx --test lib/media-plan/media-plan-engine.test.ts",
     "test:impressions-forecast-engine": "npx tsx lib/performance/impressions-forecast-engine.test.ts",
     "test:engagement-rate-audit": "npx tsx lib/performance/engagement-rate-audit.test.ts",
     "test:extract-publication-date": "npx tsx lib/performance/metrics-collector/extract-publication-date.test.ts",
