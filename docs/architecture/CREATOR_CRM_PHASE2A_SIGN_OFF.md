@@ -3,7 +3,9 @@
 **Date:** 2026-07-27  
 **Branch:** `develop`  
 **Status:** Complete — awaiting Dev soak review before workflow wiring (2B–2F)  
-**Parent decision:** Option C (`CREATOR_CRM_PHASE2_IMPLEMENTATION_PROPOSAL.md`)
+**Parent decision:** Option C (`CREATOR_CRM_PHASE2_IMPLEMENTATION_PROPOSAL.md`)  
+**Commit:** `8d87d01`  
+**Preview:** Ready — `gitSha` `8d87d01…`; `/api/ready` → `{"status":"ok"}`; Dev Supabase aligned
 
 ---
 
