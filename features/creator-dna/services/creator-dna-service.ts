@@ -14,7 +14,14 @@ import { applyMergeMetadata } from "./merge-metadata";
 import { mergeCandidatesIntoDocument, mergeFieldCandidate } from "./dna-merge-engine";
 import { createEmptyCreatorDNADocument, parseCreatorDNADocument } from "./document-factory";
 import type { FieldEnvelope } from "../types";
-import { createEmptyEnvelope, wrapValue } from "./field-envelope";
+import {
+  createEmptyEnvelope,
+  envelopeHasValue,
+  getNestedEnvelope,
+  wrapValue,
+} from "./field-envelope";
+import { APIFY_DNA_FIELD_PATHS } from "./apify-to-dna-mapper";
+import { DNA_STAGING_PROMOTE_FIELD_PATHS } from "./staging-promote-paths";
 import type {
   CreatorDNADocument,
   CreatorDNARecord,
@@ -311,6 +318,127 @@ export class CreatorDNAService {
       ok: true,
       changedFields,
       message: `Merged ${changedFields.length} field(s) for influencer ${influencerId}.`,
+    };
+  }
+
+  /**
+   * Merge `creator_dna_staging` → canonical `creator_dna` on identity promote.
+   * Identity-only: does not touch Commercial Creator CRM.
+   */
+  async promoteStaging(
+    discoveredProfileId: string,
+    influencerId: string
+  ): Promise<{
+    ok: boolean;
+    promoted: boolean;
+    changedFields: string[];
+    message: string;
+  }> {
+    const staging = await this.getStagingDNA(discoveredProfileId);
+    if (!staging) {
+      return {
+        ok: true,
+        promoted: false,
+        changedFields: [],
+        message: "No staging DNA to promote.",
+      };
+    }
+
+    if (
+      staging.promotedToInfluencerId &&
+      staging.promotedToInfluencerId === influencerId
+    ) {
+      return {
+        ok: true,
+        promoted: false,
+        changedFields: [],
+        message: "Staging DNA already promoted for this influencer.",
+      };
+    }
+
+    const paths = new Set<string>([
+      ...DNA_STAGING_PROMOTE_FIELD_PATHS,
+      ...APIFY_DNA_FIELD_PATHS,
+    ]);
+    const fields: MergeOptions["fields"] = [];
+    const stagingDoc = staging.document as unknown as Record<string, unknown>;
+
+    for (const path of paths) {
+      if (path.startsWith("meta.")) continue;
+      const envelope = getNestedEnvelope(stagingDoc, path);
+      if (!envelopeHasValue(envelope)) continue;
+      fields.push({
+        path,
+        value: envelope!.value,
+        confidence: envelope!.confidence,
+        source: envelope!.source,
+        sourceVersion: envelope!.sourceVersion ?? null,
+        updatedAt: envelope!.updatedAt,
+        snapshotId: staging.lastSnapshotId,
+      });
+    }
+
+    const mergeResult = await this.mergeEvidence(influencerId, {
+      snapshotId: staging.lastSnapshotId,
+      fields,
+      platformAccountId: staging.platformAccountId,
+      changeReason: "staging_promotion",
+      eventType: "staging_promotion",
+      intelligenceSource: "apify_enrichment",
+      ensureRow: true,
+      enrichedAt: new Date().toISOString(),
+      lifecycleContext: {
+        influencerStatus: "active",
+        isImport: false,
+        hasEnrichmentSnapshot: Boolean(staging.lastSnapshotId),
+      },
+    });
+
+    if (!mergeResult.ok) {
+      return {
+        ok: false,
+        promoted: false,
+        changedFields: mergeResult.changedFields,
+        message: mergeResult.message,
+      };
+    }
+
+    const promotedAt = new Date().toISOString();
+    const { error: markError } = await this.supabase
+      .from("creator_dna_staging")
+      .update({
+        promoted_to_influencer_id: influencerId,
+        promoted_at: promotedAt,
+        updated_at: promotedAt,
+      } as never)
+      .eq("discovered_profile_id", discoveredProfileId);
+
+    if (markError) {
+      return {
+        ok: false,
+        promoted: false,
+        changedFields: mergeResult.changedFields,
+        message: markError.message,
+      };
+    }
+
+    await this.recordLineageEvent({
+      influencerId,
+      discoveredProfileId,
+      snapshotId: staging.lastSnapshotId,
+      eventType: "staging_promotion",
+      fieldPaths: mergeResult.changedFields,
+      metadata: {
+        promoted: true,
+        stagingVersion: staging.version,
+      },
+    });
+
+    return {
+      ok: true,
+      promoted: true,
+      changedFields: mergeResult.changedFields,
+      message: `Promoted staging DNA to influencer ${influencerId}.`,
     };
   }
 

@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 
-import { isCreatorCrmFilterEnabled } from "./feature-flag";
+import {
+  isCreatorCrmFilterEnabled,
+  isCreatorCrmWritersEnabled,
+} from "./feature-flag";
 
 const ENV_KEYS = [
   "CREATOR_CRM_FILTER_ENABLED",
   "NEXT_PUBLIC_CREATOR_CRM_FILTER_ENABLED",
+  "CREATOR_CRM_WRITERS_ENABLED",
 ] as const;
 
 const snapshot: Record<string, string | undefined> = {};
@@ -29,6 +33,11 @@ test("isCreatorCrmFilterEnabled defaults to false (Phase 1 / production-safe)", 
   assert.equal(isCreatorCrmFilterEnabled(), false);
 });
 
+test("isCreatorCrmWritersEnabled defaults to false (Phase 2A)", () => {
+  clearFlagEnv();
+  assert.equal(isCreatorCrmWritersEnabled(), false);
+});
+
 test("isCreatorCrmFilterEnabled treats empty and falsey strings as OFF", () => {
   clearFlagEnv();
   process.env.CREATOR_CRM_FILTER_ENABLED = "false";
@@ -48,4 +57,10 @@ test("isCreatorCrmFilterEnabled enables only on explicit true-like values", () =
   process.env.NEXT_PUBLIC_CREATOR_CRM_FILTER_ENABLED = "yes";
   delete process.env.CREATOR_CRM_FILTER_ENABLED;
   assert.equal(isCreatorCrmFilterEnabled(), true);
+});
+
+test("isCreatorCrmWritersEnabled enables only on explicit true-like values", () => {
+  clearFlagEnv();
+  process.env.CREATOR_CRM_WRITERS_ENABLED = "true";
+  assert.equal(isCreatorCrmWritersEnabled(), true);
 });

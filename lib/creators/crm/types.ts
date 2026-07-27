@@ -73,6 +73,8 @@ export type EnsureCommercialCreatorResult = {
   created: boolean;
   crmStatus: CreatorCrmStatus;
   eventId: string | null;
+  /** True when CREATOR_CRM_WRITERS_ENABLED is OFF — no DB writes. */
+  writersDisabled?: boolean;
 };
 
 export type EnsureCommercialCreatorFailure = {

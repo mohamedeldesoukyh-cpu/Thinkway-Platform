@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { isCreatorCrmWritersEnabled } from "@/lib/creators/crm/feature-flag";
 import {
   canConvertToCommercialCreator,
   isManualCrmActivationReason,
@@ -19,8 +20,8 @@ type Supabase = SupabaseClient<Database>;
  * - Idempotent on influencer_id (PK).
  * - Never creates influencers, platform accounts, or discovered_profiles.
  * - Never advances Incomplete → Active automatically.
- * - Identity lifecycle (Apify / promote / import) must not call this until
- *   an approved activation matrix reason is wired (Phase 6+).
+ * - Respects CREATOR_CRM_WRITERS_ENABLED (default OFF in Phase 2A).
+ * - Identity lifecycle must not call this for Discovery import/Apify/promote alone.
  */
 export async function ensureCommercialCreator(
   supabase: Supabase,
@@ -39,6 +40,17 @@ export async function ensureCommercialCreator(
 
   const influencerId = input.influencerId;
   const initialStatus: CreatorCrmStatus = input.initialStatus ?? "incomplete";
+
+  if (!isCreatorCrmWritersEnabled()) {
+    return {
+      ok: true,
+      influencerId,
+      created: false,
+      crmStatus: initialStatus,
+      eventId: null,
+      writersDisabled: true,
+    };
+  }
 
   const { data: existing, error: existingError } = await supabase
     .from("creator_crm_profiles")

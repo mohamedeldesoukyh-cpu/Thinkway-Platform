@@ -44,7 +44,7 @@ function postOnlyNormalized(overrides: Partial<ApifyProfileData> = {}): ApifyPro
   } as ApifyProfileData;
 }
 
-/** Mirrors import pipeline status resolution used by ensureCommercialCreatorFromApifyData. */
+/** Mirrors import pipeline status resolution used by ensureIdentityCreatorFromApifyData. */
 function resolveImportStatus(
   normalized: ApifyProfileData,
   profileRowsCount: number,

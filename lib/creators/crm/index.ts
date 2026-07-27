@@ -3,10 +3,21 @@
  *
  * Only export CRM lifecycle helpers from this package.
  * Do not import Discovery promote / Apify identity helpers here.
+ *
+ * Activation helpers are for future approved workflow wiring only.
  */
 
 export { ensureCommercialCreator } from "@/lib/creators/crm/ensure-commercial-creator";
-export { isCreatorCrmFilterEnabled } from "@/lib/creators/crm/feature-flag";
+export {
+  ensureCommercialCreatorFromAssignment,
+  ensureCommercialCreatorFromOperationalQuotation,
+  ensureCommercialCreatorFromQuoteToCampaign,
+  ensureCommercialCreatorFromVendorIo,
+} from "@/lib/creators/crm/activation-helpers";
+export {
+  isCreatorCrmFilterEnabled,
+  isCreatorCrmWritersEnabled,
+} from "@/lib/creators/crm/feature-flag";
 export {
   canConvertToCommercialCreator,
   isManualCrmActivationReason,
@@ -21,3 +32,4 @@ export type {
   EnsureCommercialCreatorOutcome,
   EnsureCommercialCreatorResult,
 } from "@/lib/creators/crm/types";
+export type { CrmActivationActor } from "@/lib/creators/crm/activation-helpers";

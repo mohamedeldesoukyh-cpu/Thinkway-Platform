@@ -172,7 +172,11 @@ function resolveImportEnrichmentStatus(input: {
   });
 }
 
-async function ensureCommercialCreatorFromApifyData(
+/**
+ * Identity-only Apify upsert (L1). Never writes Commercial Creator CRM.
+ * Exported for `lib/creators/identity` boundary; never writes creator_crm_profiles.
+ */
+export async function ensureIdentityCreatorFromApifyData(
   supabase: SupabaseClient,
   platform: string,
   normalized: ApifyProfileData,
@@ -457,7 +461,7 @@ async function finalizeImportedCreatorPresentation(
       default_metrics_platform_account_id: input.platformAccountId,
       primary_avatar_url: nextPrimary.url,
       primary_avatar_source: nextPrimary.source,
-      // Preserve staged status from ensureCommercialCreatorFromApifyData —
+      // Preserve staged status from ensureIdentityCreatorFromApifyData —
       // never promote post-only imports to enriched here.
       enrichment_status: input.enrichmentStatus,
       last_enriched_at: nowIso,
@@ -472,7 +476,7 @@ async function finalizeImportedCreatorPresentation(
 
 /**
  * Offline Apify import: ingest pre-fetched actor rows (file export or dataset read)
- * without launching new actor runs. Upserts commercial creator rows, IPL snapshot, DNA.
+ * without launching new actor runs. Upserts identity creator rows, IPL snapshot, DNA.
  */
 export async function importApifyStoredPayloadWithDnaPipeline(
   supabase: SupabaseClient,
@@ -539,14 +543,14 @@ export async function importApifyStoredPayloadWithDnaPipeline(
   const tx = createApifyImportTransactionState();
 
   try {
-    const commercial = await ensureCommercialCreatorFromApifyData(supabase, platform, normalized, {
+    const identity = await ensureIdentityCreatorFromApifyData(supabase, platform, normalized, {
       profileRowsCount: profileRows.length,
       importCountryCode: input.countryCode,
     });
-    tx.influencerId = commercial.influencerId;
-    tx.influencerCreated = commercial.created;
-    tx.platformAccountId = commercial.platformAccountId;
-    tx.platformAccountCreated = commercial.created;
+    tx.influencerId = identity.influencerId;
+    tx.influencerCreated = identity.created;
+    tx.platformAccountId = identity.platformAccountId;
+    tx.platformAccountCreated = identity.created;
 
     let discoveredProfileId = existingProfile?.id ?? null;
     if (!discoveredProfileId) {
@@ -560,7 +564,7 @@ export async function importApifyStoredPayloadWithDnaPipeline(
             country_code: input.countryCode ?? normalized.audienceCountry ?? null,
             category_tags: input.categoryTags ?? normalized.categories ?? [],
             stage: "discovered",
-            influencer_id: commercial.influencerId,
+            influencer_id: identity.influencerId,
             metadata: {
               import_source: "apify_dataset_export",
               search_id: input.searchId ?? null,
@@ -583,7 +587,7 @@ export async function importApifyStoredPayloadWithDnaPipeline(
         .from("discovered_profiles")
         .update({
           profile_url: profileUrl,
-          influencer_id: commercial.influencerId,
+          influencer_id: identity.influencerId,
           country_code: input.countryCode ?? normalized.audienceCountry ?? undefined,
           category_tags: input.categoryTags?.length ? input.categoryTags : undefined,
           updated_at: new Date().toISOString(),
@@ -615,8 +619,8 @@ export async function importApifyStoredPayloadWithDnaPipeline(
       provider: "apify",
       platform,
       profileUrl,
-      influencerId: commercial.influencerId,
-      platformAccountId: commercial.platformAccountId,
+      influencerId: identity.influencerId,
+      platformAccountId: identity.platformAccountId,
       discoveredProfileId,
       rawSnapshot: rawPayload,
       normalizedSnapshot: normalized,
@@ -633,21 +637,21 @@ export async function importApifyStoredPayloadWithDnaPipeline(
         ok: false,
         merged,
         discoveredProfileId,
-        influencerId: commercial.influencerId,
-        platformAccountId: commercial.platformAccountId,
+        influencerId: identity.influencerId,
+        platformAccountId: identity.platformAccountId,
         message: "IPL snapshot persistence failed.",
       };
     }
     tx.snapshotId = snapshotId;
 
     const { avatarUrlOverride } = await finalizeImportedCreatorPresentation(supabase, {
-      influencerId: commercial.influencerId,
-      platformAccountId: commercial.platformAccountId,
+      influencerId: identity.influencerId,
+      platformAccountId: identity.platformAccountId,
       platform,
       username,
       normalized,
       uploadAvatar: input.uploadAvatar ?? true,
-      enrichmentStatus: commercial.enrichmentStatus,
+      enrichmentStatus: identity.enrichmentStatus,
     });
 
     if (generateDnaAfterImport) {
@@ -662,12 +666,12 @@ export async function importApifyStoredPayloadWithDnaPipeline(
 
     return {
       ok: true,
-      merged: merged || !commercial.created,
+      merged: merged || !identity.created,
       discoveredProfileId,
-      influencerId: commercial.influencerId,
-      platformAccountId: commercial.platformAccountId,
+      influencerId: identity.influencerId,
+      platformAccountId: identity.platformAccountId,
       snapshotId,
-      message: commercial.created
+      message: identity.created
         ? "Imported new creator from stored Apify payload."
         : "Merged stored Apify payload.",
     };

@@ -493,7 +493,7 @@ async function main() {
     whyNotBackfillOnly:
       "country-backfill cannot invent ISO codes: 0/37 empty rows have recoverable country in DNA/IPL/platform/bio_inference under current geography index (COUNTRY_OPTIONS is MENA-heavy and omits PT etc.).",
     preventiveTinyCodeChange:
-      "In apify-import-pipeline ensureCommercialCreatorFromApifyData: do not set enrichment_status='enriched' for Instagram post-only imports when audience_country is null and follower_count<=0; leave pending until shouldBackfillInstagramProfileDetails succeeds.",
+      "In apify-import-pipeline ensureIdentityCreatorFromApifyData: do not set enrichment_status='enriched' for Instagram post-only imports when audience_country is null and follower_count<=0; leave pending until shouldBackfillInstagramProfileDetails succeeds.",
     commandHint:
       "Target influencer IDs where notes ILIKE '%Apify dataset export (offline)%' AND country_code IS NULL — queue existing enrichment/IPL profile scrape.",
     preservesArchitecture: true,

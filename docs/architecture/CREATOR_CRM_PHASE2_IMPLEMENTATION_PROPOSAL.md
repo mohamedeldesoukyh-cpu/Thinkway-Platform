@@ -1,10 +1,12 @@
 # Creator CRM — Phase 2 Implementation Proposal
 
-**Status:** DRAFT — pending review and approval (no implementation until approved)  
+**Status:** APPROVED — Option C  
 **Date:** 2026-07-27  
 **Branch context:** `develop`  
 **Depends on:** Phase 1 CLOSED — `CREATOR_CRM_PHASE1_MILESTONE.md`  
-**Parent architecture:** `CREATOR_CRM_FINAL_ARCHITECTURE.md` (locked decisions §16)
+**Parent architecture:** `CREATOR_CRM_FINAL_ARCHITECTURE.md` (locked decisions §16)  
+**Phase 2A:** Implemented — see `CREATOR_CRM_PHASE2A_SIGN_OFF.md`  
+**Decisions locked:** Writer gate OFF by default · Portal invite deferred · Dual-event quote→campaign strategy approved for future wiring
 
 ---
 

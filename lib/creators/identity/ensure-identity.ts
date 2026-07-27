@@ -1,10 +1,6 @@
 /**
  * Identity lifecycle boundary (L1).
  *
- * Phase 1: placeholder module only. Commercial CRM must never live here.
- * Phase 2: rename Apify `ensureCommercialCreatorFromApifyData` → identity helper
- * and host it (or re-export) from this module.
- *
  * Rules:
  * - May create/update `influencers` + platform accounts / discovered links.
  * - Must NEVER insert into `creator_crm_profiles` or call `ensureCommercialCreator`.
@@ -12,5 +8,10 @@
  *   commercial activation reason is wired (separate CRM entry point).
  */
 
+export { ensureIdentityCreatorFromApifyData } from "@/lib/discovery/apify-import-pipeline";
+
 export const IDENTITY_LIFECYCLE_BOUNDARY =
   "Identity ensure must not activate Commercial Creator CRM." as const;
+
+/** Stable alias — prefer this name at call sites outside the Apify pipeline file. */
+export { ensureIdentityCreatorFromApifyData as ensureIdentityFromApifyData } from "@/lib/discovery/apify-import-pipeline";

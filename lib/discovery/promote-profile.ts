@@ -7,6 +7,7 @@ import {
 } from "@/lib/creators/country-persistence";
 import { ensureDiscoveryCreatorBrowsable } from "@/lib/creators/discovery-browse-eligibility";
 import { requireCreatorBaselineDna } from "@/features/creator-dna/services/baseline-dna-populator";
+import { CreatorDNAService } from "@/features/creator-dna/services/creator-dna-service";
 import type { Database } from "@/types/database";
 
 type Supabase = SupabaseClient<Database>;
@@ -16,10 +17,8 @@ export type PromoteResult =
   | { ok: false; message: string };
 
 /**
- * Promote a discovered profile into a real influencer so it can be assigned to a
- * campaign. Idempotent: if the profile is already linked to an influencer, returns
- * the existing id. Creates a minimal influencer + platform account otherwise and
- * back-links `discovered_profiles.influencer_id`.
+ * Identity promote (L1): discovered profile → influencer + platform account.
+ * Merges creator_dna_staging → creator_dna. Never activates Commercial Creator CRM.
  */
 export async function promoteDiscoveredProfileToInfluencer(
   supabase: Supabase,
@@ -38,6 +37,13 @@ export async function promoteDiscoveredProfileToInfluencer(
   if (!profile) return { ok: false, message: "Discovered profile not found." };
 
   if (profile.influencer_id) {
+    const stagingPromote = await new CreatorDNAService(supabase).promoteStaging(
+      profileId,
+      profile.influencer_id
+    );
+    if (!stagingPromote.ok) {
+      return { ok: false, message: stagingPromote.message };
+    }
     try {
       await requireCreatorBaselineDna(supabase, profile.influencer_id);
     } catch (error) {
@@ -129,6 +135,14 @@ export async function promoteDiscoveredProfileToInfluencer(
     .from("discovered_profiles")
     .update({ influencer_id: influencerId })
     .eq("id", profileId);
+
+  const stagingPromote = await new CreatorDNAService(supabase).promoteStaging(
+    profileId,
+    influencerId
+  );
+  if (!stagingPromote.ok) {
+    return { ok: false, message: stagingPromote.message };
+  }
 
   await ensureDiscoveryCreatorBrowsable(supabase, influencerId);
 

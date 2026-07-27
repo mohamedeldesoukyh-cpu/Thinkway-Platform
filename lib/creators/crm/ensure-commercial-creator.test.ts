@@ -1,8 +1,21 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { afterEach, beforeEach, test } from "node:test";
 
 import { ensureCommercialCreator } from "./ensure-commercial-creator";
 import type { EnsureCommercialCreatorInput } from "./types";
+
+const WRITERS_KEY = "CREATOR_CRM_WRITERS_ENABLED";
+let writersSnapshot: string | undefined;
+
+beforeEach(() => {
+  writersSnapshot = process.env[WRITERS_KEY];
+  process.env[WRITERS_KEY] = "true";
+});
+
+afterEach(() => {
+  if (writersSnapshot === undefined) delete process.env[WRITERS_KEY];
+  else process.env[WRITERS_KEY] = writersSnapshot;
+});
 
 type TableState = {
   profiles: Map<string, { influencer_id: string; crm_status: string }>;
@@ -280,4 +293,20 @@ test("ensureCommercialCreator never invents identity rows", async () => {
   await ensureCommercialCreator(createMockSupabase(state), baseInput());
   assert.equal(state.influencers.size, 0);
   assert.equal(state.profiles.size, 0);
+});
+
+test("ensureCommercialCreator no-ops when writers gate is OFF", async () => {
+  process.env[WRITERS_KEY] = "false";
+  const state: TableState = {
+    profiles: new Map(),
+    events: [],
+    influencers: new Set(["inf-1"]),
+  };
+  const result = await ensureCommercialCreator(createMockSupabase(state), baseInput());
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.writersDisabled, true);
+  assert.equal(result.created, false);
+  assert.equal(state.profiles.size, 0);
+  assert.equal(state.events.length, 0);
 });
