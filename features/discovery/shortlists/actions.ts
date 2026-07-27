@@ -1079,28 +1079,52 @@ export async function moveShortlistToCampaign(
       returned_to_shortlist_at: null,
     };
 
-    const assignError = existingAssignment?.id
-      ? (
-          await actor.supabase
-            .from("campaign_influencers")
-            .update(assignmentPayload as never)
-            .eq("id", existingAssignment.id)
-        ).error
-      : (
-          await actor.supabase.from("campaign_influencers").insert({
-            campaign_id: campaignId,
-            campaign_header_id: campaignId,
-            campaign_line_id: null,
-            influencer_id: influencerId,
-            status: "invited",
-            created_by: actor.userId,
-            ...assignmentPayload,
-          } as never)
-        ).error;
+    let campaignInfluencerId = existingAssignment?.id ?? null;
+    let assignError: { message: string } | null = null;
+
+    if (existingAssignment?.id) {
+      const updated = await actor.supabase
+        .from("campaign_influencers")
+        .update(assignmentPayload as never)
+        .eq("id", existingAssignment.id);
+      assignError = updated.error;
+    } else {
+      const inserted = await actor.supabase
+        .from("campaign_influencers")
+        .insert({
+          campaign_id: campaignId,
+          campaign_header_id: campaignId,
+          campaign_line_id: null,
+          influencer_id: influencerId,
+          status: "invited",
+          created_by: actor.userId,
+          ...assignmentPayload,
+        } as never)
+        .select("id")
+        .single();
+      assignError = inserted.error;
+      campaignInfluencerId = (inserted.data?.id as string | undefined) ?? null;
+    }
 
     if (assignError) {
       failures.push(assignError.message);
       continue;
+    }
+
+    if (campaignInfluencerId) {
+      const { maybeActivateCommercialCreatorForAssignment } = await import(
+        "@/lib/campaigns/campaign-influencer-commercial"
+      );
+      await maybeActivateCommercialCreatorForAssignment(actor.supabase, {
+        influencerId,
+        campaignInfluencerId,
+        actorId: actor.userId,
+        metadata: {
+          path: "moveShortlistToCampaign",
+          campaignId,
+          shortlistId: input.shortlistId,
+        },
+      });
     }
 
     moved += 1;

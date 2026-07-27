@@ -1,5 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { maybeActivateCommercialCreatorForAssignment } from "@/lib/campaigns/campaign-influencer-commercial";
+import type { Database } from "@/types/database";
+
+type TypedSupabase = SupabaseClient<Database>;
+
 export type CampaignInfluencerLinePayload = {
   status: string;
   currency: string;
@@ -25,10 +30,37 @@ export type SyncCampaignInfluencerInput = {
  * Uses upsert on (campaign_header_id, campaign_line_id, influencer_id).
  * Attaches legacy orphan rows (header + influencer, no line) before insert.
  */
+async function finishSyncSuccess(
+  supabase: TypedSupabase,
+  input: SyncCampaignInfluencerInput,
+  campaignInfluencerId: string
+): Promise<{ id: string }> {
+  await maybeActivateCommercialCreatorForAssignment(supabase, {
+    influencerId: input.influencerId,
+    campaignInfluencerId,
+    actorId: input.payload.created_by ?? null,
+    metadata: {
+      path: "syncCampaignInfluencerForLine",
+      campaignId: input.campaignId,
+      lineId: input.lineId,
+    },
+  });
+  return { id: campaignInfluencerId };
+}
+
+/**
+ * Idempotent campaign_influencers sync for a campaign line assignment.
+ * Uses upsert on (campaign_header_id, campaign_line_id, influencer_id).
+ * Attaches legacy orphan rows (header + influencer, no line) before insert.
+ *
+ * Phase 2B.1: sole line-assignment hub for Commercial Creator activation
+ * (`campaign_assignment`) via maybeActivateCommercialCreatorForAssignment.
+ */
 export async function syncCampaignInfluencerForLine(
   supabase: SupabaseClient,
   input: SyncCampaignInfluencerInput
 ): Promise<{ id: string; error?: string }> {
+  const typed = supabase as TypedSupabase;
   const row = {
     campaign_id: input.campaignId,
     campaign_header_id: input.campaignId,
@@ -37,14 +69,14 @@ export async function syncCampaignInfluencerForLine(
     ...input.payload,
   };
 
-  const { data: byLine } = await supabase
+  const { data: byLine } = await typed
     .from("campaign_influencers")
     .select("id")
     .eq("campaign_line_id", input.lineId)
     .maybeSingle();
 
   if (byLine) {
-    const { data: updated, error: updateError } = await supabase
+    const { data: updated, error: updateError } = await typed
       .from("campaign_influencers")
       .update({
         influencer_id: input.influencerId,
@@ -56,7 +88,7 @@ export async function syncCampaignInfluencerForLine(
       .single();
 
     if (!updateError && updated) {
-      return { id: updated.id };
+      return finishSyncSuccess(typed, input, updated.id);
     }
     return {
       id: "",
@@ -64,7 +96,7 @@ export async function syncCampaignInfluencerForLine(
     };
   }
 
-  const { data: orphan } = await supabase
+  const { data: orphan } = await typed
     .from("campaign_influencers")
     .select("id")
     .or(
@@ -75,7 +107,7 @@ export async function syncCampaignInfluencerForLine(
     .maybeSingle();
 
   if (orphan) {
-    const { data: attached, error: attachError } = await supabase
+    const { data: attached, error: attachError } = await typed
       .from("campaign_influencers")
       .update({
         campaign_header_id: input.campaignId,
@@ -87,7 +119,7 @@ export async function syncCampaignInfluencerForLine(
       .single();
 
     if (!attachError && attached) {
-      return { id: attached.id };
+      return finishSyncSuccess(typed, input, attached.id);
     }
     return {
       id: "",
@@ -95,7 +127,7 @@ export async function syncCampaignInfluencerForLine(
     };
   }
 
-  const { data: upserted, error: upsertError } = await supabase
+  const { data: upserted, error: upsertError } = await typed
     .from("campaign_influencers")
     .upsert(row, {
       onConflict: "campaign_header_id,campaign_line_id,influencer_id",
@@ -104,10 +136,10 @@ export async function syncCampaignInfluencerForLine(
     .single();
 
   if (!upsertError && upserted) {
-    return { id: upserted.id };
+    return finishSyncSuccess(typed, input, upserted.id);
   }
 
-  const { data: legacy } = await supabase
+  const { data: legacy } = await typed
     .from("campaign_influencers")
     .select("id, campaign_line_id")
     .eq("campaign_id", input.campaignId)
@@ -118,7 +150,7 @@ export async function syncCampaignInfluencerForLine(
     legacy &&
     (!legacy.campaign_line_id || legacy.campaign_line_id === input.lineId)
   ) {
-    const { data: updated, error: updateError } = await supabase
+    const { data: updated, error: updateError } = await typed
       .from("campaign_influencers")
       .update({
         campaign_header_id: input.campaignId,
@@ -130,7 +162,7 @@ export async function syncCampaignInfluencerForLine(
       .single();
 
     if (!updateError && updated) {
-      return { id: updated.id };
+      return finishSyncSuccess(typed, input, updated.id);
     }
     return {
       id: "",

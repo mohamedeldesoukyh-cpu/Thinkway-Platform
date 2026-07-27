@@ -52,20 +52,31 @@ function collectTsFiles(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-test("no production call sites wire ensureCommercialCreator yet (Phase 2A)", () => {
+const PHASE2B_ALLOWED_ENSURE_PATHS = [
+  "/creators/crm/",
+  "/creators/identity/",
+  "/campaigns/campaign-influencer-commercial.ts",
+  "/campaigns/campaign-influencer-sync.ts",
+  "/services/quotations/repositories/quotation-repository.ts",
+  "/services/quotations/quotation-lifecycle-service.ts",
+  "/discovery/shortlists/actions.ts",
+];
+
+test("ensureCommercialCreator only wired at Phase 2B allowlisted call sites", () => {
   const roots = ["lib", "features", "app"].map((d) => resolve(d));
   const hits: string[] = [];
   for (const root of roots) {
     for (const file of collectTsFiles(root)) {
-      // Allow identity boundary docs and crm package itself (crm dirs skipped under lib/creators only).
-      if (file.replace(/\\/g, "/").includes("/creators/crm/")) continue;
-      if (file.replace(/\\/g, "/").includes("/creators/identity/")) continue;
+      const normalized = file.replace(/\\/g, "/");
+      if (PHASE2B_ALLOWED_ENSURE_PATHS.some((p) => normalized.includes(p))) continue;
       const src = readFileSync(file, "utf8");
-      // Match CRM ensure only — not Apify's ensureCommercialCreatorFromApifyData (Phase 2 rename).
       if (/(?<![A-Za-z])ensureCommercialCreator(?![A-Za-z])/.test(src)) {
+        hits.push(file);
+      }
+      if (src.includes("maybeActivateCommercialCreatorForAssignment")) {
         hits.push(file);
       }
     }
   }
-  assert.deepEqual(hits, [], `Unexpected Phase 1 wiring:\n${hits.join("\n")}`);
+  assert.deepEqual(hits, [], `Unexpected CRM wiring:\n${hits.join("\n")}`);
 });

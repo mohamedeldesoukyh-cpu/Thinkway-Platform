@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { ensureCommercialCreatorFromQuoteToCampaign } from "@/lib/creators/crm/activation-helpers";
 import { promoteDiscoveredProfileToInfluencer } from "@/lib/discovery/promote-profile";
 import {
   executePromoteMasterData,
@@ -278,13 +279,41 @@ export async function createCampaignFromQuotation(
 
     if (existing?.id) continue;
 
-    await insertCampaignAssignment(supabase, {
+    const assignmentInsert = await insertCampaignAssignment(supabase, {
       campaignId: created.id,
       influencerId,
       shortlistId,
       sourceShortlistItemId: item.source_shortlist_item_id,
       userId,
     });
+
+    if (assignmentInsert.error) {
+      continue;
+    }
+
+    const campaignInfluencerId = (assignmentInsert.data?.id as string | undefined) ?? null;
+    if (campaignInfluencerId) {
+      try {
+        // Dual-event: quotation_operational (audit) + campaign_assignment (deduped if 2B.1 already wrote).
+        await ensureCommercialCreatorFromQuoteToCampaign(supabase, {
+          influencerId,
+          quotationId: input.quotationId,
+          campaignInfluencerId,
+          actorId: userId,
+          bypassRoleCheck: true,
+          metadata: {
+            path: "createCampaignFromQuotation",
+            campaignId: created.id,
+          },
+        });
+      } catch (error) {
+        console.warn(
+          "[creator-crm] quote→campaign dual-event failed",
+          error instanceof Error ? error.message : error,
+          campaignInfluencerId
+        );
+      }
+    }
 
     assigned += 1;
   }

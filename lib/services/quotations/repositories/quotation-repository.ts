@@ -21,6 +21,8 @@ import {
   queryShortlistSeedItemsWithCollapseFallback,
 } from "@/lib/discovery/shortlist-item-collapse-select";
 
+import { maybeActivateCommercialCreatorForAssignment } from "@/lib/campaigns/campaign-influencer-commercial";
+
 import type { QuotationItemSeed } from "../quotation-helpers";
 
 export async function buildItemInsertRows(
@@ -881,16 +883,35 @@ export async function insertCampaignAssignment(
     userId: string;
   }
 ) {
-  return supabase.from("campaign_influencers").insert({
-    campaign_id: input.campaignId,
-    campaign_header_id: input.campaignId,
-    influencer_id: input.influencerId,
-    status: "invited",
-    source_shortlist_id: input.shortlistId,
-    source_shortlist_item_id: input.sourceShortlistItemId,
-    shortlist_assignment_status: "suggested",
-    created_by: input.userId,
-  } as never);
+  const result = await supabase
+    .from("campaign_influencers")
+    .insert({
+      campaign_id: input.campaignId,
+      campaign_header_id: input.campaignId,
+      influencer_id: input.influencerId,
+      status: "invited",
+      source_shortlist_id: input.shortlistId,
+      source_shortlist_item_id: input.sourceShortlistItemId,
+      shortlist_assignment_status: "suggested",
+      created_by: input.userId,
+    } as never)
+    .select("id")
+    .single();
+
+  if (!result.error && result.data?.id) {
+    await maybeActivateCommercialCreatorForAssignment(supabase, {
+      influencerId: input.influencerId,
+      campaignInfluencerId: result.data.id as string,
+      actorId: input.userId,
+      metadata: {
+        path: "insertCampaignAssignment",
+        campaignId: input.campaignId,
+        shortlistId: input.shortlistId,
+      },
+    });
+  }
+
+  return result;
 }
 
 export async function resolveMaxVersionNumber(

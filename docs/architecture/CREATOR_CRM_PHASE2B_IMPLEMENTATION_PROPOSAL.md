@@ -1,7 +1,7 @@
 # Creator CRM — Phase 2B Implementation Proposal  
 ## Option C next stream: Operational Campaign Activation (incremental)
 
-**Status:** DRAFT — pending review and explicit approval (no implementation until approved)  
+**Status:** APPROVED with modifications · **IMPLEMENTED** — see `CREATOR_CRM_PHASE2B_SIGN_OFF.md` / `CREATOR_CRM_PHASE2B_PRE_CODING.md`  
 **Date:** 2026-07-27  
 **Depends on:** Phase 2A CLOSED + Dev soak approved + operational checks (`CREATOR_CRM_PHASE2A_OPERATIONAL_CHECKS.md`)  
 **Parent:** `CREATOR_CRM_PHASE2_IMPLEMENTATION_PROPOSAL.md` (Option C) · `CREATOR_CRM_FINAL_ARCHITECTURE.md`
