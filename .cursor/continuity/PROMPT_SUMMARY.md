@@ -22,3 +22,5 @@
 ## Working agreement
 
 All implementation starts from `develop` → `feature/*` → `develop` → QA → `main` → approved Production. Never develop on `main`. Hotfixes on `main` must merge back to `develop` immediately.
+
+**Branch gate (always):** verify current Git branch before any implementation; if not on `develop` or an approved feature branch from `develop`, stop and switch first. Rule: `.cursor/rules/thinkway-git-workflow.mdc`.

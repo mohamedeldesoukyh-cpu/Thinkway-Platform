@@ -1,0 +1,32 @@
+---
+description: Development-first Git branch gate — verify branch before any implementation
+alwaysApply: true
+---
+
+# Thinkway Git Workflow (Branch Gate)
+
+## Before any implementation
+
+1. Run `git rev-parse --abbrev-ref HEAD` (or equivalent).
+2. **Allowed to proceed:**
+   - `develop`
+   - An approved `feature/*`, `hotfix/*`, or similarly named working branch **created from `develop`** (or from `main` only for an approved Production hotfix)
+3. **If on `main` or any other disallowed branch:** stop. Switch to `develop` (or create/checkout the correct feature branch from `develop`) **before** editing files, committing, or pushing.
+4. Do not implement, commit, or push feature work on `main`.
+
+## Branch roles
+
+| Branch | Role |
+|---|---|
+| `develop` | Authoritative development baseline — all new work starts here |
+| `main` | Release / Production tip only — not a development branch |
+| `feature/*` | Branched from `develop` → merge back to `develop` |
+| `hotfix/*` | From `main` for emergencies → merge to `main`, then **immediately** merge back to `develop` |
+
+## Release path
+
+```
+develop → feature/* → develop → QA → main → approved Production deploy
+```
+
+Invariant: `main` must never permanently stay ahead of `develop`. See `docs/RELEASE_WORKFLOW.md`.

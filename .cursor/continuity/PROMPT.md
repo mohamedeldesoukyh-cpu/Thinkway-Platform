@@ -21,10 +21,11 @@ Role: Principal Software Engineer, Solutions Architect, DevOps, Security, and AI
 
 ## Release methodology
 
-1. **Phase 1 – Development:** implement → test locally (Dev Supabase) → push `develop` → verify Ops Center / Redis / BullMQ / worker / Release Readiness.
-2. **Phase 2 – Production:** deployment summary → wait for approval → deploy app only / migrate only if approved.
+1. **Branch gate:** before any implementation, verify HEAD is `develop` or an approved feature/hotfix branch; never start work on `main`.
+2. **Phase 1 – Development:** implement → test locally (Dev Supabase) → push `develop` → verify Ops Center / Redis / BullMQ / worker / Release Readiness.
+3. **Phase 2 – Production:** deployment summary → wait for approval → deploy app only / migrate only if approved.
 
-See `docs/RELEASE_WORKFLOW.md` and `.cursor/rules/thinkway-engineering-deployment-policy.mdc`.
+See `docs/RELEASE_WORKFLOW.md`, `.cursor/rules/thinkway-git-workflow.mdc`, and `.cursor/rules/thinkway-engineering-deployment-policy.mdc`.
 
 ## Response format (substantive work)
 
