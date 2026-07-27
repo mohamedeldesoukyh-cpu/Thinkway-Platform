@@ -1,6 +1,6 @@
 # Creator CRM ↔ Discovery — Final Architecture (Pre-Implementation)
 
-**Status:** Architecture locked · Phase 1 **CLOSED** · Phase 2 Option C · Phase 2A complete (`CREATOR_CRM_PHASE2A_SIGN_OFF.md`) · Workflow wiring gated on Dev soak  
+**Status:** Architecture locked · Phase 1 **CLOSED** · Phase 2A soak approved · Operational checks recorded · Phase 2B proposal pending approval (`CREATOR_CRM_PHASE2B_IMPLEMENTATION_PROPOSAL.md`)  
 **Date:** 2026-07-27  
 **Supersedes / extends:** `CREATOR_CRM_DISCOVERY_SEPARATION_PROPOSAL.md`  
 **Platform validation:** [CRM vs platform explore](ef94d45b-7869-4698-adce-02a3ed2646f6)  

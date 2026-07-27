@@ -5,7 +5,8 @@
 **Branch context:** `develop`  
 **Depends on:** Phase 1 CLOSED — `CREATOR_CRM_PHASE1_MILESTONE.md`  
 **Parent architecture:** `CREATOR_CRM_FINAL_ARCHITECTURE.md` (locked decisions §16)  
-**Phase 2A:** Implemented — see `CREATOR_CRM_PHASE2A_SIGN_OFF.md`  
+**Phase 2A:** Implemented + soak approved — see `CREATOR_CRM_PHASE2A_SIGN_OFF.md` / `CREATOR_CRM_PHASE2A_DEV_SOAK_REPORT.md`  
+**Next stream:** `CREATOR_CRM_PHASE2B_IMPLEMENTATION_PROPOSAL.md` (pending approval — not implemented)  
 **Decisions locked:** Writer gate OFF by default · Portal invite deferred · Dual-event quote→campaign strategy approved for future wiring
 
 ---
