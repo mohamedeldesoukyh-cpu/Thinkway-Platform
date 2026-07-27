@@ -68,8 +68,8 @@ Disabled regenerate message:
 | **1** | Studio schedule writes via Engine bridge (`media-plan-mutations`) + lifecycle meta |
 | **2** | Campaign full-page workspace reusing Studio calendar — `UNIFIED_MEDIA_PLAN_PHASE2_REPORT.md` |
 | **3** | Timeline + Comparison + Approval workflow *(current)* — `UNIFIED_MEDIA_PLAN_PHASE3_REPORT.md` |
-| **4** | Client Portal Original read-only *(current)* — `UNIFIED_MEDIA_PLAN_PHASE4_REPORT.md` |
-| **5** | Portal approve / request changes + baseline snapshot refinement + regression matrix |
+| **4** | Client Portal Original + portal Approve / Request Changes / Reject — `UNIFIED_MEDIA_PLAN_PHASE4_REPORT.md` |
+| **5** | Regression matrix / QA hardening (baseline snapshot refinement only if gaps appear) |
 
 ## Acceptance checklist
 

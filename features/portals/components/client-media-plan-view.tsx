@@ -4,10 +4,11 @@ import { useState } from "react";
 
 import { PageBackButton } from "@/components/navigation/page-back-button";
 import { DocumentNumber } from "@/components/ui/document-number";
-import { MediaPlanCalendar } from "@/features/campaign-outputs/components/media-plan-calendar";
-import type { ClientMediaPlanPayload } from "@/features/portals/queries/client-media-plan-payload";
-import { PortalStatusBadge } from "@/features/portals/components/portal-status-badge";
 import { Button } from "@/components/ui/button";
+import { MediaPlanCalendar } from "@/features/campaign-outputs/components/media-plan-calendar";
+import { ClientMediaPlanApprovalToolbar } from "@/features/portals/components/client-media-plan-approval-toolbar";
+import { PortalStatusBadge } from "@/features/portals/components/portal-status-badge";
+import type { ClientMediaPlanPayload } from "@/features/portals/queries/client-media-plan-payload";
 import { cn } from "@/lib/utils";
 
 type ClientMediaPlanViewProps = {
@@ -16,6 +17,11 @@ type ClientMediaPlanViewProps = {
 
 export function ClientMediaPlanView({ payload }: ClientMediaPlanViewProps) {
   const [orientation, setOrientation] = useState<"portrait" | "landscape">("landscape");
+
+  const subtitle =
+    payload.viewMode === "pending_review"
+      ? "Proposed Original Media Plan · awaiting your decision"
+      : "Original Media Plan";
 
   return (
     <div className="space-y-4">
@@ -31,7 +37,7 @@ export function ClientMediaPlanView({ payload }: ClientMediaPlanViewProps) {
             {payload.campaignName}
           </h2>
           <p className="text-sm text-muted-foreground">
-            Original Media Plan
+            {subtitle}
             {payload.documentNumber ? (
               <>
                 {" · "}
@@ -42,23 +48,28 @@ export function ClientMediaPlanView({ payload }: ClientMediaPlanViewProps) {
           </p>
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <PortalStatusBadge value={payload.statusLabel} />
-            <span className="text-xs text-muted-foreground">Read-only</span>
+            <span className="text-xs text-muted-foreground">
+              {payload.viewMode === "pending_review" ? "Review mode" : "Read-only calendar"}
+            </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
-          {(["portrait", "landscape"] as const).map((mode) => (
-            <Button
-              key={mode}
-              type="button"
-              size="sm"
-              variant={orientation === mode ? "secondary" : "ghost"}
-              className={cn("h-8 capitalize", orientation === mode && "shadow-sm")}
-              onClick={() => setOrientation(mode)}
-            >
-              {mode}
-            </Button>
-          ))}
+        <div className="flex flex-col items-end gap-2">
+          <ClientMediaPlanApprovalToolbar payload={payload} />
+          <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
+            {(["portrait", "landscape"] as const).map((mode) => (
+              <Button
+                key={mode}
+                type="button"
+                size="sm"
+                variant={orientation === mode ? "secondary" : "ghost"}
+                className={cn("h-8 capitalize", orientation === mode && "shadow-sm")}
+                onClick={() => setOrientation(mode)}
+              >
+                {mode}
+              </Button>
+            ))}
+          </div>
         </div>
       </div>
 

@@ -10,6 +10,20 @@ import { safeOperationalQuery } from "@/lib/platform/safe-query";
 export type { ClientMediaPlanPayload } from "@/features/portals/queries/client-media-plan-payload";
 export { buildClientPortalOriginalPayload } from "@/features/portals/queries/client-media-plan-payload";
 
+async function clientHasApproveRole(
+  supabase: Awaited<ReturnType<typeof requireClientScope>>["supabase"],
+  userId: string,
+  clientId: string
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("client_users")
+    .select("access_role")
+    .eq("profile_id", userId)
+    .eq("client_id", clientId)
+    .maybeSingle();
+  return (data as { access_role: string } | null)?.access_role === "approve";
+}
+
 export async function loadClientMediaPlan(
   campaignHeaderId: string
 ): Promise<ClientMediaPlanPayload | null> {
@@ -41,6 +55,12 @@ export async function loadClientMediaPlan(
         return null;
       }
 
+      const hasApproveRole = await clientHasApproveRole(
+        supabase,
+        scope.userId,
+        typed.client_id
+      );
+
       const campaignObjectId = typed.campaign_object_id?.trim() || null;
       if (!campaignObjectId) {
         return buildClientPortalOriginalPayload({
@@ -48,6 +68,7 @@ export async function loadClientMediaPlan(
           campaignName: typed.name,
           documentNumber: typed.document_number,
           campaignObject: null,
+          hasApproveRole,
         });
       }
 
@@ -86,6 +107,8 @@ export async function loadClientMediaPlan(
         campaignName: typed.name,
         documentNumber: typed.document_number,
         campaignObject,
+        conversationId: typedHead?.conversation_id ?? null,
+        hasApproveRole,
       });
     },
     null
