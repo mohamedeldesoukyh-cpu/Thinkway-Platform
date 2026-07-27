@@ -117,7 +117,19 @@ export class CampaignObjectPersistenceService {
       .maybeSingle();
 
     if (readError) throw new Error(readError.message);
-    if (existing) return mapRecord(existing as CampaignObjectRow);
+    if (existing) {
+      const mapped = mapRecord(existing as CampaignObjectRow);
+      const headerId = input.campaignHeaderId?.trim() || null;
+      if (headerId && !mapped.campaignHeaderId) {
+        const { error: linkError } = await supabase
+          .from("campaign_objects")
+          .update({ campaign_header_id: headerId })
+          .eq("id", mapped.id);
+        if (linkError) throw new Error(linkError.message);
+        return { ...mapped, campaignHeaderId: headerId };
+      }
+      return mapped;
+    }
 
     const insertRow: Database["public"]["Tables"]["campaign_objects"]["Insert"] = {
       id: input.campaignObject.id,
@@ -183,6 +195,15 @@ export class CampaignObjectPersistenceService {
       userId: input.userId,
       campaignHeaderId: input.campaignHeaderId,
     });
+
+    const headerId = input.campaignHeaderId?.trim() || null;
+    if (headerId) {
+      const { error: headerLinkError } = await supabase
+        .from("campaign_headers")
+        .update({ campaign_object_id: record.id })
+        .eq("id", headerId);
+      if (headerLinkError) throw new Error(headerLinkError.message);
+    }
 
     return runSerializedVersionSave(record.id, () =>
       CampaignObjectPersistenceService.insertVersionWithRetry(supabase, {

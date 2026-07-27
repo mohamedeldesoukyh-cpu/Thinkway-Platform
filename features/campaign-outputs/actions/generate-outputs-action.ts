@@ -59,7 +59,7 @@ async function syncSeedIntoConversation(
   conversationId: string,
   seed: CampaignSeed,
   userId: string,
-  options?: { quotationId?: string }
+  options?: { quotationId?: string; campaignHeaderId?: string }
 ) {
   const existing = await loadCampaignObjectForConversation(supabase, conversationId);
   const hydrated = hydrateCampaignObject(seed, existing ?? undefined, {
@@ -77,6 +77,7 @@ async function syncSeedIntoConversation(
     userId,
     persistToDb: true,
     saveReason: "manual",
+    campaignHeaderId: options?.campaignHeaderId,
   });
 
   let objectForStudio = regenerateStaleCampaignOutputs(markStaleCampaignOutputs(saved), {
@@ -103,6 +104,7 @@ async function syncSeedIntoConversation(
       userId,
       persistToDb: true,
       saveReason: "manual",
+      campaignHeaderId: options?.campaignHeaderId,
     });
   }
 
@@ -148,7 +150,9 @@ export async function startCampaignOutputsFromSeed(
     const seed = await resolveLaunchSeed(supabase, input);
     const quotationId =
       input.workspace?.type === "quotation" ? input.workspace.id : undefined;
-    const syncOptions = { quotationId };
+    const campaignHeaderId =
+      input.workspace?.type === "campaign" ? input.workspace.id : undefined;
+    const syncOptions = { quotationId, campaignHeaderId };
 
     if (input.existingConversationId) {
       await syncSeedIntoConversation(
@@ -199,6 +203,7 @@ export async function startCampaignOutputsFromSeed(
       userId: auth.userId,
       persistToDb: true,
       saveReason: "manual",
+      campaignHeaderId,
     });
 
     if (seed.source === "quotation") {
@@ -210,6 +215,7 @@ export async function startCampaignOutputsFromSeed(
         userId: auth.userId,
         persistToDb: true,
         saveReason: "manual",
+        campaignHeaderId,
       });
     }
 
