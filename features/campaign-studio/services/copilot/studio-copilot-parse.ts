@@ -135,7 +135,7 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
   {
     name: "update_timeline",
     description:
-      "Set campaign timeline duration in weeks and/or the campaign START DATE only when the user explicitly asks to change when the campaign begins. Do NOT use this for moving creators between weeks, redistributing posts across weeks, or weighting the schedule — use reschedule_media_plan instead.",
+      "Set campaign timeline: duration in weeks, START DATE, and/or END DATE when the user asks to change when the campaign begins or ends. Do NOT use this for moving creators between weeks, redistributing posts across weeks, or weighting the schedule — use reschedule_media_plan instead.",
     parameters: {
       type: "object",
       properties: {
@@ -143,6 +143,11 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
         startDate: {
           type: "string",
           description: "Campaign start date (YYYY-MM-DD or DD/MM/YYYY) — only when explicitly requested.",
+        },
+        endDate: {
+          type: "string",
+          description:
+            "Campaign end date (YYYY-MM-DD or DD/MM/YYYY) — inclusive publishing window end when explicitly requested.",
         },
       },
     },
@@ -486,6 +491,23 @@ function extractNames(message: string): string[] {
  * Pre-LLM / fallback guard for start-date updates.
  * "Change/move/shift/reschedule/update start date to …" must never route to generate.
  */
+const DATE_TOKEN_RE =
+  /\b(\d{4}-\d{2}-\d{2}|\d{1,2}[/.-]\d{1,2}[/.-]\d{4}|\d{1,2}(?:st|nd|rd|th)?(?:\s+of)?\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{4})\b/gi;
+
+function extractDateNearKeyword(
+  text: string,
+  keywordRe: RegExp
+): string | null {
+  const match = text.match(keywordRe);
+  if (!match || match.index == null) return null;
+  const window = text.slice(match.index, match.index + match[0].length + 48);
+  return parseCampaignStartDateInput(window);
+}
+
+/**
+ * Deterministic start/end timeline parse.
+ * Handles: "starting 24/07/2026 ending 23/08/2026", "end date to …", start-only.
+ */
 export function parseDeterministicStartDateTimelineIntent(
   message: string
 ): Extract<StudioCopilotIntent, { kind: "update_timeline" }> | null {
@@ -497,18 +519,68 @@ export function parseDeterministicStartDateTimelineIntent(
     return null;
   }
 
-  const startDate = parseCampaignStartDateInput(text);
-  if (!startDate) return null;
-
   const mentionsStart =
     /\b(start(?:ing)?(?:\s+date)?|launch(?:\s+date)?|go[-\s]?live|kick[-\s]?off)\b/i.test(
       text
     );
+  const mentionsEnd =
+    /\b(end(?:ing)?(?:\s+date)?|until|through|thru)\b/i.test(text);
   const updateVerb =
     /\b(change|move|shift|reschedule|update|set|make|push|bring)\b/i.test(text);
 
+  let startDate =
+    extractDateNearKeyword(
+      text,
+      /\b(start(?:ing)?(?:\s+date)?|launch(?:\s+date)?|go[-\s]?live|kick[-\s]?off)\b/i
+    ) ?? null;
+  let endDate =
+    extractDateNearKeyword(
+      text,
+      /\b(end(?:ing)?(?:\s+date)?|until|through|thru)\b/i
+    ) ?? null;
+
+  // "from X to Y" / two dates with start+end keywords — fill gaps from ordered tokens.
+  if ((mentionsStart || mentionsEnd) && (!startDate || !endDate)) {
+    const tokens = [...text.matchAll(DATE_TOKEN_RE)]
+      .map((m) => parseCampaignStartDateInput(m[0]!))
+      .filter((iso): iso is string => Boolean(iso));
+    if (!startDate && mentionsStart && tokens[0]) startDate = tokens[0];
+    if (!endDate && mentionsEnd) {
+      endDate =
+        tokens.length > 1 ? tokens[tokens.length - 1]! : tokens[0] ?? null;
+      // Avoid collapsing start==end when both keywords present and only one unique date.
+      if (mentionsStart && startDate && endDate === startDate && tokens.length < 2) {
+        endDate = null;
+      }
+    }
+  }
+
+  if (!startDate && !endDate) return null;
+
+  if (mentionsStart && mentionsEnd && (startDate || endDate)) {
+    return {
+      kind: "update_timeline",
+      ...(startDate ? { startDate } : {}),
+      ...(endDate ? { endDate } : {}),
+    };
+  }
+
+  if (mentionsEnd && endDate && (updateVerb || /\bto\b/i.test(text) || mentionsStart)) {
+    return {
+      kind: "update_timeline",
+      ...(startDate ? { startDate } : {}),
+      endDate,
+    };
+  }
+
+  if (!startDate) return null;
+
   if (mentionsStart && (updateVerb || /\bto\b/i.test(text))) {
-    return { kind: "update_timeline", startDate };
+    return {
+      kind: "update_timeline",
+      startDate,
+      ...(endDate ? { endDate } : {}),
+    };
   }
 
   // Bare "start … <date>" / "launch on <date>" without explicit output verb.
@@ -516,7 +588,11 @@ export function parseDeterministicStartDateTimelineIntent(
     mentionsStart &&
     !/\b(media\s*plan|proposal|strategy|forecast|presentation)\b/i.test(text)
   ) {
-    return { kind: "update_timeline", startDate };
+    return {
+      kind: "update_timeline",
+      startDate,
+      ...(endDate ? { endDate } : {}),
+    };
   }
 
   return null;
@@ -807,6 +883,12 @@ export function parseToolCallIntent(call: LlmToolCall): StudioCopilotIntent | nu
             ? args.startDate
             : typeof args.startDate === "number"
               ? String(args.startDate)
+              : undefined,
+        endDate:
+          typeof args.endDate === "string"
+            ? args.endDate
+            : typeof args.endDate === "number"
+              ? String(args.endDate)
               : undefined,
       };
     case "reschedule_media_plan":

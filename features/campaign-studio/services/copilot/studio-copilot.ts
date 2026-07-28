@@ -28,12 +28,7 @@ import {
 } from "@/features/campaign-outputs/output-registry";
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 import { ensureCreatorsFromAssignmentHierarchy } from "@/features/campaign-outputs/hydration";
-import {
-  applyMediaPlanStartDateOffset,
-  commitPatchedMediaPlanOutput,
-  syncMediaPlanDurationFact,
-} from "@/features/campaign-outputs/media-plan-date-offset";
-import { asMediaPlanData } from "@/features/campaign-outputs/generators/media-plan";
+import { applyMediaPlanStartDateOffset } from "@/features/campaign-outputs/media-plan-date-offset";
 import {
   mutateMediaPlanSchedule,
   prepareMediaPlanRegenerate,
@@ -122,7 +117,7 @@ Rules:
 - To remove creators, call remove_creators (use tier for a whole follower tier, names for specific creators).
 - To set or update the campaign brief (client brief, pasted text), call update_brief — this merges strategy and scheduling and never clears the creator slate.
 - To move creators between weeks/days or weight publishing across weeks, call reschedule_media_plan — do NOT change campaignStartDate unless the user explicitly asks to change when the campaign starts.
-- To change only the campaign start date or total duration, call update_timeline. This **Revises** the Publishing Calendar range (Saturday–Friday calendar weeks overlapping the campaign dates) while preserving creators, slots, and strategy — never regenerate_output for start-date changes.
+- To change the campaign start date, end date, and/or total duration, call update_timeline (include both startDate and endDate when the user gives a window). This **Revises** the Publishing Calendar range (Saturday–Friday calendar weeks overlapping the campaign dates) while preserving creators, slots, and strategy — never regenerate_output for date-window changes.
 - Media Plan versioning (SSOT): before client approval, edits stay on the same business version (e.g. v1.0) with audit only. After approval, the plan is immutable — further changes open a new business version.
 - Media Plan ops after approval: prefer **Revise** (update_timeline / reschedule_media_plan). If the request could be revise OR regenerate, **ask the user to confirm** — never silently regenerate. Call regenerate_output only when the user explicitly says regenerate/rebuild, or when strategy/budget/objectives/audience/platforms/creator mix/deliverables clearly require a new strategic plan.
 - To generate a Campaign Output, call generate_output only when the user explicitly asks to generate/create that artifact. Never use generate/regenerate for "change/move/shift/update start date".
@@ -653,12 +648,13 @@ async function applyTimelineEdit(
   const result = applyTimelineChange(input.campaignObject, {
     durationWeeks: intent.durationWeeks,
     startDate: intent.startDate,
+    endDate: intent.endDate,
   });
   if (!result.change) {
     return {
       campaignObject: input.campaignObject,
       reply:
-        "I couldn't apply that timeline change — please restate the start date or duration (for example \"change campaign start date to 24/07/2026\" or \"make it 6 weeks\").",
+        "I couldn't apply that timeline change — please restate the start date, end date, or duration (for example \"campaign starting 24/07/2026 ending 23/08/2026\" or \"make it 6 weeks\").",
       changed: false,
       intentKind: "update_timeline",
     };
@@ -672,12 +668,17 @@ async function applyTimelineEdit(
     afterFacts?.requestedStartDate ?? afterFacts?.campaignStartDate ?? null;
   const hasMediaPlan = Boolean(getCampaignOutputState(next).media_plan?.content?.data);
   const effects: string[] = [];
+  const reviseCalendar =
+    hasMediaPlan &&
+    afterScheduled &&
+    Boolean(intent.startDate || intent.endDate || intent.durationWeeks != null);
 
-  if (hasMediaPlan && intent.startDate && afterScheduled) {
+  if (reviseCalendar) {
     const { campaignObject: shifted, shifted: didShift, dayOffset } =
       applyMediaPlanStartDateOffset(next, afterScheduled, {
         requestedStartDate: afterRequested,
         durationWeeks: afterFacts?.durationWeeks,
+        campaignEndDate: afterFacts?.campaignEndDate,
         origin: "copilot",
       });
     next = shifted;
@@ -686,26 +687,14 @@ async function applyTimelineEdit(
         dayOffset != null && dayOffset !== 0
           ? `the Publishing Calendar was revised by ${Math.abs(dayOffset)} day${
               Math.abs(dayOffset) === 1 ? "" : "s"
-            } (${dayOffset > 0 ? "forward" : "backward"}) — creators were rebound to the new publishing slots; waves and strategy are unchanged (not a regeneration)`
-          : "the Publishing Calendar range was revised and creators were rebound to the new slot dates — waves and strategy are unchanged (not a regeneration)"
+            } (${dayOffset > 0 ? "forward" : "backward"}) — creators were rebound to the new publishing slots within the campaign window; waves and strategy are unchanged (not a regeneration)`
+          : "the Publishing Calendar range was revised to the campaign start–end window and creators were rebound — waves and strategy are unchanged (not a regeneration)"
       );
     } else {
-      effects.push("timeline facts were updated; the Media Plan calendar already matched the new start");
+      effects.push(
+        "timeline facts were updated; the Media Plan calendar already matched the campaign window"
+      );
     }
-  } else if (hasMediaPlan && intent.durationWeeks != null && afterFacts?.durationWeeks != null) {
-    // Duration fact only — do not grow/shrink the publishing grid.
-    const data = asMediaPlanData(getCampaignOutputState(next).media_plan?.content?.data);
-    if (data) {
-      const synced = syncMediaPlanDurationFact(data, afterFacts.durationWeeks);
-      const committed = commitPatchedMediaPlanOutput(next, synced, {
-        origin: "copilot",
-        changeReason: "Timeline duration fact synced (calendar structure unchanged).",
-      });
-      if (committed) next = committed.campaignObject;
-    }
-    effects.push(
-      "campaign duration was updated; the existing Media Plan week grid was left unchanged — ask to regenerate the Media Plan only if you want a new calendar length"
-    );
   } else {
     effects.push("timeline facts were updated on the campaign");
   }

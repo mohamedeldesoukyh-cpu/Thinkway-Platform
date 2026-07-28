@@ -12,6 +12,7 @@ export type CampaignFactsField =
   | "budget"
   | "durationWeeks"
   | "campaignStartDate"
+  | "campaignEndDate"
   | "geography"
   | "audience"
   | "platforms"
@@ -44,6 +45,11 @@ export type CampaignFacts = {
    * (Saturday of the week containing {@link requestedStartDate} / {@link campaignStartDate}).
    */
   scheduledStartDate?: string;
+  /**
+   * ISO calendar date (YYYY-MM-DD) for the inclusive Campaign End Date.
+   * When set, this is the absolute publishing window end (not merely derived from duration).
+   */
+  campaignEndDate?: string;
   geography?: string[];
   audience?: string;
   platforms?: string[];

@@ -493,11 +493,27 @@ export function applyMediaPlanStartDateOffset(
   const prevGrid = data.scheduledStartDate ?? data.campaignStartDate;
   const gridOffset = calendarDayOffset(prevGrid, nextScheduledIso);
 
+  const nextEnd =
+    options?.campaignEndDate?.trim() ||
+    resolveBusinessCampaignEndIso({
+      campaignStartIso: nextBusinessStart,
+      campaignEndIso: options?.campaignEndDate,
+      durationWeeks: options?.durationWeeks ?? data.durationWeeks,
+    });
+  const priorEnd =
+    data.campaignEndDate?.trim() ||
+    resolveBusinessCampaignEndIso({
+      campaignStartIso: priorBusinessStart ?? data.scheduledStartDate ?? data.campaignStartDate ?? "",
+      campaignEndIso: data.campaignEndDate,
+      durationWeeks: data.durationWeeks,
+    });
+
   if (
     businessOffset === 0 &&
     gridOffset === 0 &&
     (options?.durationWeeks == null || options.durationWeeks === data.durationWeeks) &&
-    data.requestedStartDate === (options?.requestedStartDate ?? data.requestedStartDate)
+    data.requestedStartDate === (options?.requestedStartDate ?? data.requestedStartDate) &&
+    (nextEnd == null || nextEnd === priorEnd)
   ) {
     return { campaignObject, shifted: false, dayOffset: 0 };
   }

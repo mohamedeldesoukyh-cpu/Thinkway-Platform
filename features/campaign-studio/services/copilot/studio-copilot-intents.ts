@@ -101,6 +101,8 @@ export type UpdateTimelineIntent = {
   durationWeeks?: number;
   /** ISO date YYYY-MM-DD */
   startDate?: string;
+  /** ISO date YYYY-MM-DD — inclusive Campaign End Date */
+  endDate?: string;
 };
 export type RescheduleMediaPlanIntent = {
   kind: "reschedule_media_plan";

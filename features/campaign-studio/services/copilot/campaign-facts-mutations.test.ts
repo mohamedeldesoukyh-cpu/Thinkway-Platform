@@ -130,6 +130,27 @@ test("natural-language start dates parse through timeline change", () => {
   assert.doesNotMatch(change ?? "", /Publishing Calendar Start/i);
 });
 
+test("start + end window sets absolute Campaign End Date (not duration-derived September)", () => {
+  const { campaignObject: next, change } = applyTimelineChange(campaignObject(), {
+    startDate: "24/07/2026",
+    endDate: "23/08/2026",
+  });
+  const facts = getCampaignFacts(next);
+  assert.equal(facts?.requestedStartDate, "2026-07-24");
+  assert.equal(facts?.campaignEndDate, "2026-08-23");
+  assert.equal(facts?.durationWeeks, 5); // ceil(31 inclusive days / 7)
+  assert.match(change ?? "", /24\/07\/2026/);
+  assert.match(change ?? "", /23\/08\/2026/);
+  const cards = (next.sections.summary.data as { summaryCards?: {
+    campaignStartDate?: string;
+    campaignEndDate?: string;
+    duration?: string;
+  } }).summaryCards;
+  assert.equal(cards?.campaignStartDate, "24/07/2026");
+  assert.equal(cards?.campaignEndDate, "23/08/2026");
+  assert.equal(cards?.duration, "5 weeks");
+});
+
 test("platforms change sets priority order with primary noted", () => {
   const { campaignObject: next, change } = applyPlatformsChange(campaignObject(), {
     platforms: ["TikTok", "Instagram"],

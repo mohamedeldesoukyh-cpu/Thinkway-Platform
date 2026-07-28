@@ -7,7 +7,9 @@ import {
 } from "@/features/campaign-director/facts/facts-display-bridge";
 import {
   describeMondayAlignment,
+  durationWeeksFromCampaignWindow,
   formatCampaignDateLabel,
+  resolveCampaignEndDate,
   resolveScheduledStartDate,
 } from "@/features/campaign-outputs/media-plan-week-start";
 
@@ -22,6 +24,7 @@ export type EditableFactsPatch = Partial<
     | "campaignStartDate"
     | "requestedStartDate"
     | "scheduledStartDate"
+    | "campaignEndDate"
     | "platforms"
     | "objective"
     | "audience"
@@ -83,6 +86,9 @@ export function parseCampaignStartDateInput(raw: string): string | null {
   return null;
 }
 
+/** Alias — same parsers accept start or end date strings. */
+export const parseCampaignDateInput = parseCampaignStartDateInput;
+
 /**
  * Mutate the campaign facts SSOT and refresh the stored summary cards from the
  * new facts. Budget total, currency, duration, waves, and creator mix all
@@ -143,7 +149,7 @@ export function applyBudgetChange(
 
 export function applyTimelineChange(
   campaignObject: CampaignObject,
-  input: { durationWeeks?: number; startDate?: string }
+  input: { durationWeeks?: number; startDate?: string; endDate?: string }
 ): FactsEditResult {
   const facts = getCampaignFacts(campaignObject);
   if (!facts) return { campaignObject, change: null };
@@ -151,17 +157,10 @@ export function applyTimelineChange(
   const patch: EditableFactsPatch = {};
   const changes: string[] = [];
 
-  if (input.durationWeeks != null && Number.isFinite(input.durationWeeks)) {
-    patch.durationWeeks = clampCampaignDurationWeeks(Math.round(input.durationWeeks));
-    changes.push(
-      `set campaign duration to ${patch.durationWeeks} week${patch.durationWeeks === 1 ? "" : "s"}`
-    );
-  }
-
-  const startIso = input.startDate ? parseCampaignStartDateInput(input.startDate) : null;
+  const startIso = input.startDate ? parseCampaignDateInput(input.startDate) : null;
   if (startIso) {
     const scheduledIso = resolveScheduledStartDate(startIso) ?? startIso;
-    // Dual-store: requested go-live day + Monday Week-1 anchor for the calendar.
+    // Dual-store: requested go-live day + Saturday Week-1 anchor for the calendar.
     patch.campaignStartDate = startIso;
     patch.requestedStartDate = startIso;
     patch.scheduledStartDate = scheduledIso;
@@ -170,13 +169,55 @@ export function applyTimelineChange(
     if (alignment) changes.push(alignment);
   }
 
+  const endIso = input.endDate ? parseCampaignDateInput(input.endDate) : null;
+  if (endIso) {
+    patch.campaignEndDate = endIso;
+    changes.push(`set campaign end date to ${formatCampaignDateLabel(endIso)}`);
+  }
+
+  const nextStart =
+    patch.requestedStartDate ?? facts.requestedStartDate ?? facts.campaignStartDate;
+  const nextEnd = patch.campaignEndDate ?? facts.campaignEndDate;
+
+  if (input.durationWeeks != null && Number.isFinite(input.durationWeeks) && !endIso) {
+    // Duration-only (or with start): derive absolute end from duration.
+    patch.durationWeeks = clampCampaignDurationWeeks(Math.round(input.durationWeeks));
+    changes.push(
+      `set campaign duration to ${patch.durationWeeks} week${patch.durationWeeks === 1 ? "" : "s"}`
+    );
+    if (nextStart) {
+      const derivedEnd = resolveCampaignEndDate(nextStart, patch.durationWeeks);
+      if (derivedEnd) patch.campaignEndDate = derivedEnd;
+    }
+  } else if (nextStart && (endIso || (nextEnd && startIso))) {
+    // Explicit end (and/or start+existing end): duration follows the absolute window.
+    const windowEnd = endIso ?? nextEnd!;
+    const weeks = durationWeeksFromCampaignWindow(nextStart, windowEnd);
+    if (weeks != null) {
+      patch.durationWeeks = clampCampaignDurationWeeks(weeks);
+    }
+  }
+
   if (changes.length === 0) return { campaignObject, change: null };
+
+  // Guard: end must not precede start.
+  const finalStart =
+    patch.requestedStartDate ?? facts.requestedStartDate ?? facts.campaignStartDate;
+  const finalEnd = patch.campaignEndDate ?? facts.campaignEndDate;
+  if (finalStart && finalEnd && finalEnd < finalStart) {
+    return {
+      campaignObject,
+      change: null,
+    };
+  }
 
   const next = patchCampaignFacts(campaignObject, patch);
   // Alignment note is a full sentence — keep it outside the "Updated X." wrapper.
   const alignmentNote = changes.find(
     (line) =>
-      line.startsWith("Calendar Week mode:") || line.startsWith("Publishing calendar")
+      line.startsWith("Calendar Week mode:") ||
+      line.startsWith("Publishing calendar") ||
+      line.startsWith("The Publishing Calendar")
   );
   const primaryChanges = changes.filter((line) => line !== alignmentNote);
   const change = alignmentNote

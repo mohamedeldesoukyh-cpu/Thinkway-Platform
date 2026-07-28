@@ -136,6 +136,38 @@ test("shift backward preserves creators and publishing order", () => {
   assert.equal(after.weeks[1]!.days[0]!.dateLabel, "1/8/26");
 });
 
+test("shortening campaign end rebinds calendar and clears post-end weeks", () => {
+  // Long plan through mid-September; revise end to 23/08/2026.
+  const before = fixturePlan("2026-07-18", "2026-07-24");
+  before.durationWeeks = 8;
+  before.campaignEndDate = "2026-09-18";
+  before.calendarWeeks = 2;
+
+  const after = shiftMediaPlanDataToScheduledStart(before, "2026-07-18", {
+    requestedStartDate: "2026-07-24",
+    campaignEndDate: "2026-08-23",
+    durationWeeks: 5,
+  });
+
+  assert.equal(after.requestedStartDate, "2026-07-24");
+  assert.equal(after.campaignEndDate, "2026-08-23");
+  // Last publishing week ends Fri 28/08 (week containing 23/08) — not September.
+  const lastWeek = after.weeks[after.weeks.length - 1]!;
+  assert.equal(lastWeek.days[6]!.dateLabel, "28/8/26");
+  for (const week of after.weeks) {
+    for (const day of week.days) {
+      if (!day.creatorId && !day.additionalDeliverables?.length) continue;
+      // No creator content after 23/08
+      const dayNum = Number(day.dateLabel.split("/")[0]);
+      const month = Number(day.dateLabel.split("/")[1]);
+      assert.ok(
+        month < 8 || (month === 8 && dayNum <= 23),
+        `creator on ${day.dateLabel} is after campaign end`
+      );
+    }
+  }
+});
+
 test("Revision mid-week start rebinds first creator onto campaign start date", () => {
   // Week 1 = 18–24 Jul. First creator was on Sat 18/07.
   // Start changes to Fri 24/07/2026 — same Week 1, creator must move to 24/07.

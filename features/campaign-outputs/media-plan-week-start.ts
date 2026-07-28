@@ -112,6 +112,23 @@ export function resolveCampaignEndDate(
   return toIsoCampaignDate(end);
 }
 
+/**
+ * Inclusive day-span → whole weeks for CampaignFacts.durationWeeks
+ * (ceil of inclusive days / 7, minimum 1).
+ */
+export function durationWeeksFromCampaignWindow(
+  startIso: string,
+  endIso: string
+): number | null {
+  const start = parseIsoCampaignDate(startIso);
+  const end = parseIsoCampaignDate(endIso);
+  if (!start || !end) return null;
+  const inclusiveDays =
+    Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+  if (inclusiveDays < 1) return null;
+  return Math.max(1, Math.ceil(inclusiveDays / 7));
+}
+
 export type PublishingCalendarWeek = {
   /** 1-based Week N label for the rendered Publishing Calendar. */
   week: number;

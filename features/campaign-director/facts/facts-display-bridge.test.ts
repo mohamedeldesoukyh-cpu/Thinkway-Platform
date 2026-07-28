@@ -42,3 +42,17 @@ test("applyFactsToSummaryData clears start/end when facts have no start", () => 
   assert.equal(cards.campaignEndDate, undefined);
   assert.equal(cards.duration, "4 weeks");
 });
+
+test("applyFactsToSummaryData prefers explicit campaignEndDate over duration-derived end", () => {
+  const cards = applyFactsToSummaryData(
+    {},
+    {
+      durationWeeks: 6,
+      requestedStartDate: "2026-07-24",
+      campaignStartDate: "2026-07-24",
+      campaignEndDate: "2026-08-23",
+    }
+  );
+  assert.equal(cards.campaignStartDate, "24/07/2026");
+  assert.equal(cards.campaignEndDate, "23/08/2026");
+});

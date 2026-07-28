@@ -329,12 +329,15 @@ export function applyFactsToSummaryData(
   const startIso =
     facts.requestedStartDate?.trim() || facts.campaignStartDate?.trim() || "";
   const durationWeeks = resolveFactsDurationWeeks(facts);
+  const explicitEndIso = facts.campaignEndDate?.trim() || "";
 
   if (startIso) {
     result.campaignStartDate = formatCampaignDateLabel(startIso);
-    const endIso = resolveCampaignEndDate(startIso, durationWeeks);
-    if (endIso) {
-      result.campaignEndDate = formatCampaignDateLabel(endIso);
+    // Prefer explicit Campaign End Date when present; otherwise derive from duration.
+    const resolvedEnd =
+      explicitEndIso || resolveCampaignEndDate(startIso, durationWeeks);
+    if (resolvedEnd) {
+      result.campaignEndDate = formatCampaignDateLabel(resolvedEnd);
     } else {
       delete result.campaignEndDate;
     }

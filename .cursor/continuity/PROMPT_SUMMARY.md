@@ -38,6 +38,7 @@
 - **Revise** on date change: recalculate range + rebind slots; preserve creators/strategy unless Regenerated
 - Example: 15 Jul – 14 Aug 2026 → five weeks (11–17 Jul … 8–14 Aug)
 - **Campaign Window (hard constraint):** Start–End is absolute; Generate/Revise rebalance into window; save rejects out-of-window slots (`media-plan-campaign-window.ts`)
+- **Copilot end date:** `update_timeline` accepts start+end (e.g. “starting 24/07/2026 ending 23/08/2026”); stores `facts.campaignEndDate` and rebinds Publishing Calendar to that window (not duration-only derived end)
 
 ## Media Plan Versioning (SSOT + domain aligned on develop)
 

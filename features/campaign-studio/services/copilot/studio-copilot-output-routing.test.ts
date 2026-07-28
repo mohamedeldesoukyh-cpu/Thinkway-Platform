@@ -88,6 +88,20 @@ test("start-date change/move/shift/update routes to update_timeline, never gener
   );
 });
 
+test("starting + ending window parses both campaign dates", () => {
+  const intent = parseDeterministicStartDateTimelineIntent(
+    "Campaign starting sate 24/07/2026 ending 23/08/2026"
+  );
+  assert.ok(intent);
+  assert.equal(intent!.kind, "update_timeline");
+  assert.equal(intent!.startDate, "2026-07-24");
+  assert.equal(intent!.endDate, "2026-08-23");
+  assert.equal(
+    parseStudioIntentFallback("Campaign starting 24/07/2026 ending 23/08/2026").kind,
+    "update_timeline"
+  );
+});
+
 test("tool-call path maps output tools to typed intents", () => {
   assert.deepEqual(
     parseToolCallIntent({ id: "c1", name: "generate_output", arguments: JSON.stringify({ output: "media_plan" }) }),
