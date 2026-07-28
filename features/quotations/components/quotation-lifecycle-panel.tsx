@@ -24,11 +24,11 @@ import {
   canGenerateQuotationVersion,
 } from "@/lib/commercial-sync/rules";
 import {
-  createCampaignFromQuotation,
   generateQuotationVersion,
   getQuotationLifecycleActivity,
   moveQuotationToShortlist,
 } from "@/features/quotations/lifecycle-actions";
+import { ConvertQuotationDialog } from "@/features/quotations/components/convert-quotation-dialog";
 import { PromoteMasterDataWizard } from "@/features/quotations/components/promote-master-data-wizard";
 import { quotationDetailPath } from "@/features/quotations/constants";
 import type { PromoteWizardOptions, QuotationDetail } from "@/features/quotations/types";
@@ -48,6 +48,7 @@ type Props = {
 
 export function QuotationLifecyclePanel({ detail, promoteOptions }: Props) {
   const router = useRouter();
+  const [convertOpen, setConvertOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [tab, setTab] = useState<"links" | "activity">("links");
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
@@ -194,14 +195,8 @@ export function QuotationLifecyclePanel({ detail, promoteOptions }: Props) {
               </Button>
             ) : null}
             {canCreateCampaign ? (
-              <Button
-                size="sm"
-                disabled={pending}
-                onClick={() =>
-                  run(() => createCampaignFromQuotation({ quotationId: detail.id }))
-                }
-              >
-                Create campaign
+              <Button size="sm" disabled={pending} onClick={() => setConvertOpen(true)}>
+                Convert to Campaign
               </Button>
             ) : null}
             {canPromote ? (
@@ -275,6 +270,12 @@ export function QuotationLifecyclePanel({ detail, promoteOptions }: Props) {
         options={promoteOptions}
         open={promoteOpen}
         onOpenChange={setPromoteOpen}
+      />
+
+      <ConvertQuotationDialog
+        detail={detail}
+        open={convertOpen}
+        onOpenChange={setConvertOpen}
       />
     </div>
   );

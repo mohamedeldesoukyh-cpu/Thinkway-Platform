@@ -308,6 +308,8 @@ export function CampaignLinesTabInner({
           >
             {!hasAssignments ? (
               <AssignmentsEmptyState
+                campaignId={workspace.id}
+                quotationId={workspace.quotation_id}
                 onCreateAssignment={enableLineSheet ? openCreate : undefined}
               />
             ) : (

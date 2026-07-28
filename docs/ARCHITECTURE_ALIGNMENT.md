@@ -4,6 +4,11 @@ This document compares the **current Thinkway platform** (`thinkway-platform`) a
 
 **Last reviewed:** Jun 2026 (Vendor IO → invoice lifecycle Phase 1; see `docs/VENDOR_IO_INVOICE_LIFECYCLE.md`)
 
+### Release 2.0 — Enterprise Campaign Lifecycle (Jul 2026)
+
+Architecture package (pre-implementation, awaiting approval): [`docs/release/2.0/`](./release/2.0/README.md).  
+Preserves this doc’s rule: **`campaign_lines` = Assignment / PO unit** — do not invent a parallel assignments table. Quotation remains commercial SSOT; convert projects lean Assignments once.
+
 ### Vendor IO & invoice lifecycle (Jun 2026)
 
 | Capability | Status |

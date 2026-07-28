@@ -34,6 +34,16 @@
 - Preview iframe + PDF share the same HTML/runtime; Puppeteer waits for `data-sl-paginated=ready` then prints (no Chromium page-splitting layout)
 - Key files: `shortlist-pagination-engine.ts`, `shortlist-page-geometry.ts`, template HTML/styles, `SHORTLIST_PDF_OPTIONS`
 
+## Release 2.0 — Enterprise Campaign Lifecycle
+
+- **Status:** Phase 1 foundation **complete** on `feature/release-2-0-lifecycle` — see `docs/release/2.0/PHASE_1_VALIDATION.md`
+- **Dev migration applied** (`hsxrewjcbvmbkqdlzjhs`): provenance + `campaign_commercial_snapshots`
+- **Convert engine:** `convertQuotationToAssignments` (Path A + Path B when quote linked)
+- **UI:** Convert to Campaign dialog + Backfill wizard
+- **Flag:** on for `development` surface; explicit env overrides; Production off by default
+- **Next:** PR → develop → Dev soak; Production No-Go until approval
+- **Out of Phase 1:** Media Plan / Performance / Billing refactors, Difference Engine
+
 ## Working agreement
 
 `develop` → `feature/*` → `develop` → QA → `main` → approved Production. Never develop on `main`.

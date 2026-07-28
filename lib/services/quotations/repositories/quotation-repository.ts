@@ -804,7 +804,16 @@ export async function createLinkedShortlist(
 export async function createCampaignHeaderFromBrand(
   supabase: SupabaseClient<Database>,
   userId: string,
-  input: { name: string; brandId: string; quotationId: string; shortlistId: string | null }
+  input: {
+    name: string;
+    brandId: string;
+    quotationId: string;
+    shortlistId: string | null;
+    /** Release 2.0 D4 — default `planning` for Assignment convert. */
+    status?: Database["public"]["Tables"]["campaign_headers"]["Row"]["status"];
+    acceptedQuotationId?: string | null;
+    acceptedQuotationVersion?: number | null;
+  }
 ) {
   const { data: brand, error: brandError } = await supabase
     .from("brands")
@@ -836,7 +845,8 @@ export async function createCampaignHeaderFromBrand(
       brand_id: brandRow.id,
       client_id: brandRow.client_id,
       group_id: brandRow.group_id,
-      status: "draft",
+      // Release 2.0 convert passes `planning` (D4). Legacy callers may omit → draft.
+      status: input.status ?? "draft",
       currency_code: brandRow.currency_code,
       category_id: brandRow.category_id,
       subcategory_id: brandRow.subcategory_id,
@@ -844,6 +854,12 @@ export async function createCampaignHeaderFromBrand(
       vr_rate_id: brandRow.vr_rate_id,
       shortlist_id: input.shortlistId,
       quotation_id: input.quotationId,
+      ...(input.acceptedQuotationId
+        ? {
+            accepted_quotation_id: input.acceptedQuotationId,
+            accepted_quotation_version: input.acceptedQuotationVersion ?? 1,
+          }
+        : {}),
       created_by: userId,
     } as never)
     .select("id, document_number")
