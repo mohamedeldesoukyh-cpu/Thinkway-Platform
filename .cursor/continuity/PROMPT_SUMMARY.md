@@ -36,14 +36,13 @@
 
 ## Release 2.0 — Enterprise Campaign Lifecycle
 
-- **Status:** Phase 1 foundation **complete** on `feature/release-2-0-lifecycle` — see `docs/release/2.0/PHASE_1_VALIDATION.md`
-- **Dev migration applied** (`hsxrewjcbvmbkqdlzjhs`): provenance + `campaign_commercial_snapshots`
-- **Convert engine:** `convertQuotationToAssignments` (Path A + Path B when quote linked)
-- **UI:** Convert to Campaign dialog + Backfill wizard
-- **Flag:** on for `development` surface; explicit env overrides; Production off by default
-- **Next:** PR → develop → Dev soak; Production No-Go until approval
-- **Infra backlog (separate):** `docs/infrastructure/BACKLOG_DEV_SCHEMA_VALIDATION_CREDENTIALS.md` — fix Dev schema validation credentials (`SUPABASE_DB_PASSWORD`); not an R2.0 blocker
-- **Out of Phase 1:** Media Plan / Performance / Billing refactors, Difference Engine
+- **Status:** Phase 1 **code complete** on `feature/release-2-0-lifecycle` — next gate = Development soak
+- **Soak plan:** `docs/release/2.0/DEVELOPMENT_SOAK_PLAN.md` (all exit areas must be green; no yellow)
+- **After soak:** author `PRODUCTION_READINESS_REVIEW.md` (4 questions only) → seek Production approval
+- **Phase 2 blocked** until Phase 1 is Production-stable (Media Plan ownership / locking / Actual only — not Revision/Reporting)
+- **Flag:** Dev surface may default ON; do not enable Production until soak + approval
+- **Infra backlog (separate):** `BACKLOG_DEV_SCHEMA_VALIDATION_CREDENTIALS.md` — not an R2.0 blocker
+- **Next action:** PR → `develop` → execute soak checklist on `dev.thinkwaymedia.com`
 
 ## Working agreement
 

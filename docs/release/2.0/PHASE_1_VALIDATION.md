@@ -1,10 +1,10 @@
 # Release 2.0 — Phase 1 Validation Report
 
-**Status:** Development foundation complete — sign-off artefact  
+**Status:** Phase 1 **code complete** — Development soak is the next gate ([DEVELOPMENT_SOAK_PLAN.md](./DEVELOPMENT_SOAK_PLAN.md))  
 **Branch:** `feature/release-2-0-lifecycle`  
 **Date:** 2026-07-28  
-**Environment validated:** Development Supabase `hsxrewjcbvmbkqdlzjhs`  
-**Production:** Not touched
+**Environment validated (schema/code):** Development Supabase `hsxrewjcbvmbkqdlzjhs`  
+**Production:** Not touched · **Phase 2:** Blocked until Phase 1 is Production-stable
 
 ---
 
@@ -166,7 +166,7 @@ No measured regression vs Path B line loop; Path B with quote now delegates to t
 | Enable soak on `dev.thinkwaymedia.com` | **Go** (flag defaults on for `development` surface) |
 | Production migration / flag | **No-Go** until Dev soak + explicit Production approval |
 
-**Overall Phase 1 foundation:** **Go for Development** · **No-Go for Production**.
+**Overall Phase 1 code:** **Go for Development soak** · **No-Go for Production** until soak exit criteria are all green.
 
 ---
 
@@ -177,5 +177,7 @@ No measured regression vs Path B line loop; Path B with quote now delegates to t
 - [x] Automated conversion / selection / flag / backfill tests  
 - [x] UI Convert dialog + Backfill wizard  
 - [x] Path B unified engine when quote linked  
-- [ ] Deployed Dev soak (manual)  
-- [ ] Product sign-off for Production planning  
+- [ ] Deployed Dev soak (manual) — [DEVELOPMENT_SOAK_PLAN.md](./DEVELOPMENT_SOAK_PLAN.md)  
+- [ ] All soak exit criteria green (no yellow)  
+- [ ] `PRODUCTION_READINESS_REVIEW.md` authored  
+- [ ] Explicit Production approval  
