@@ -42,6 +42,7 @@
 - **UI:** Convert to Campaign dialog + Backfill wizard
 - **Flag:** on for `development` surface; explicit env overrides; Production off by default
 - **Next:** PR → develop → Dev soak; Production No-Go until approval
+- **Infra backlog (separate):** `docs/infrastructure/BACKLOG_DEV_SCHEMA_VALIDATION_CREDENTIALS.md` — fix Dev schema validation credentials (`SUPABASE_DB_PASSWORD`); not an R2.0 blocker
 - **Out of Phase 1:** Media Plan / Performance / Billing refactors, Difference Engine
 
 ## Working agreement

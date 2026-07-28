@@ -45,6 +45,13 @@
 | `campaign_commercial_snapshots` | Yes |
 | RLS policies select + insert on snapshots | Yes |
 
+### Background schema validation
+
+A background schema validation failed due to a temporary Supabase authentication/configuration issue (`LegacyDbConfigConnectTempRoleError` caused by a missing `SUPABASE_DB_PASSWORD` in the validation environment). This was verified not to be a schema migration failure. Manual verification on the Development Supabase instance confirmed that all Release 2.0 schema objects, including `campaign_commercial_snapshots` and the required Assignment lifecycle columns, were successfully applied.
+
+**Tracking (infrastructure only — not Release 2.0):**  
+`docs/infrastructure/BACKLOG_DEV_SCHEMA_VALIDATION_CREDENTIALS.md`
+
 ### Smoke after migration
 
 | Check | Result |
