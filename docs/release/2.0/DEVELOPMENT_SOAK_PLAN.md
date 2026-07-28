@@ -22,7 +22,7 @@
 | Dev schema — accepted pin | `accepted_quotation_id` / `_version` | ✅ |
 | Dev schema — line provenance | `source_quotation_id` / `_item_id` | ✅ |
 | Validate CI on PR #2 | GitHub Actions | ✅ pass (`4476e759`) |
-| Vercel Preview build | Preview Ready | ✅ https://thinkway-platform-git-fe-6efc75-mohamedeldesoukyh-cpus-projects.vercel.app |
+| Vercel Preview build | Preview Ready | ✅ Ready — **Deployment Protection (Vercel SSO) blocks unattended soak** |
 
 ### Soak fixes applied (discovered during gate run)
 
@@ -156,7 +156,7 @@ Assignment → Vendor IO → Invoice → Payment
 
 | Date | Tester | Environment | Outcome | Notes |
 |---|---|---|---|---|
-| 2026-07-28 | Agent | Local + Dev DB + CI/Preview | Partial | Automated pre-gates + CI + Preview green; manual UI scenarios pending authenticated soak |
+| 2026-07-28 | Agent | Local + Dev DB + CI/Preview | Partial | Automated pre-gates + CI + Preview green; Preview URL requires Vercel SSO — manual UI soak needs authenticated access (Preview SSO, local `.env`, or merge → `dev.thinkwaymedia.com`) |
 | | | Preview / Dev | | Manual commercial → billing → revision matrix |
 
 ---
