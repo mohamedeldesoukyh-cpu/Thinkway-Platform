@@ -5,6 +5,7 @@
  */
 
 import type { CampaignObject } from "@/features/campaign-intelligence";
+import { sanitizeAssignmentCreatorName } from "@/lib/campaigns/assignment-line-naming";
 import type { AssignmentHierarchy } from "@/lib/domains/campaign/assignment-hierarchy-types";
 import { resolveSlate } from "@/features/campaign-outputs/output-inputs";
 
@@ -51,7 +52,10 @@ export function seedCreatorsFromAssignmentHierarchy(
 
     byId.set(creatorId, {
       creatorId,
-      displayName: group.line.influencer_name?.trim() || "Creator",
+      displayName: sanitizeAssignmentCreatorName(
+        group.line.influencer_name,
+        "Creator"
+      ),
       platform,
       avatarUrl: group.line.influencer_avatar_url?.trim() || undefined,
       serviceTypes: serviceTypes.length ? serviceTypes : undefined,

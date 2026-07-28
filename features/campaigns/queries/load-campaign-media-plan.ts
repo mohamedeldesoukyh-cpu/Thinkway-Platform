@@ -2,8 +2,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import { CampaignObjectPersistenceService } from "@/features/campaign-intelligence/services/campaign-object-persistence";
-import type { MediaPlanData } from "@/features/campaign-outputs/generators/media-plan";
+import {
+  generateMediaPlan,
+  type MediaPlanData,
+} from "@/features/campaign-outputs/generators/media-plan";
 import { ensureCreatorsFromAssignmentHierarchy } from "@/features/campaign-outputs/hydration";
+import { resolveSlate } from "@/features/campaign-outputs/output-inputs";
 import { getMediaPlanLifecycle } from "@/features/campaign-outputs/media-plan-mutations";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { getCampaignAssignmentHierarchy } from "@/features/campaigns/queries/assignment-hierarchy";
@@ -186,7 +190,22 @@ export async function loadCampaignMediaPlanWorkspace(
   // Campaign vendors feed the slate when Studio never hydrated creators.
   const objectForPlan = ensureCreatorsFromAssignmentHierarchy(campaignObject, hierarchy);
 
-  const original = resolveOriginalData(objectForPlan);
+  let original = resolveOriginalData(objectForPlan);
+  // Cached empty tip wins over slate in resolveOriginalData — rebuild in-memory
+  // when Assignments hydrated creators but the saved calendar has none.
+  const slateCount = resolveSlate(objectForPlan).length;
+  const tipCreatorCount = original.creatorCount ?? 0;
+  if (slateCount > 0 && tipCreatorCount === 0) {
+    try {
+      const generated = generateMediaPlan(objectForPlan);
+      if (generated.data) {
+        original = generated.data as unknown as MediaPlanData;
+      }
+    } catch {
+      /* keep cached tip */
+    }
+  }
+
   const baselineData = resolveApprovedBaselineData(objectForPlan, original);
   const lifecycle = getMediaPlanLifecycle(objectForPlan);
   const state = mediaPlanStateFromCampaignObject(objectForPlan, baselineData, {

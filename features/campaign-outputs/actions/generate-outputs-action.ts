@@ -19,7 +19,9 @@ import {
 
 import type { CampaignSeed } from "../hydration/hydration-types";
 import { hydrateCampaignObject } from "../hydration/hydrate";
+import { seedCreatorsFromAssignmentHierarchy } from "../hydration/seed-from-assignment-hierarchy";
 import { seedFromQuotation } from "../hydration/seed-adapters";
+import { getCampaignAssignmentHierarchy } from "@/features/campaigns/queries/assignment-hierarchy";
 import { getQuotationDetail } from "@/lib/services/quotations/quotation-document-service";
 import { generateCampaignOutput, getCampaignOutput, markStaleCampaignOutputs, regenerateStaleCampaignOutputs } from "../output-registry";
 import type { CampaignOutputKind } from "../output-types";
@@ -51,6 +53,24 @@ async function resolveLaunchSeed(
     const detail = await getQuotationDetail(supabase, input.workspace.id);
     if (detail) return seedFromQuotation(detail);
   }
+
+  // CRM campaign → fill empty Studio slate from Assignments hierarchy.
+  if (
+    input.workspace?.type === "campaign" &&
+    input.workspace.id &&
+    input.seed.creators.length === 0
+  ) {
+    try {
+      const hierarchy = await getCampaignAssignmentHierarchy(input.workspace.id);
+      const creators = seedCreatorsFromAssignmentHierarchy(hierarchy);
+      if (creators.length > 0) {
+        return { ...input.seed, creators };
+      }
+    } catch {
+      /* launch must still open Studio even if hierarchy load fails */
+    }
+  }
+
   return input.seed;
 }
 
@@ -85,7 +105,7 @@ async function syncSeedIntoConversation(
   });
 
   const regenKinds: CampaignOutputKind[] =
-    seed.source === "quotation"
+    seed.source === "quotation" || seed.creators.length > 0
       ? ["media_plan"]
       : (["media_plan", "budget_allocation"] as const).filter((kind) =>
           Boolean(getCampaignOutput(objectForStudio, kind))
@@ -108,11 +128,17 @@ async function syncSeedIntoConversation(
     });
   }
 
+  const syncMessage =
+    seed.source === "quotation"
+      ? "Campaign workspace synced from your quotation — creator avatars, ad types, and fees are up to date. The Media Plan calendar has been refreshed from quotation lines."
+      : seed.creators.length > 0
+        ? `Campaign workspace synced from Assignments — ${seed.creators.length} creator${seed.creators.length === 1 ? "" : "s"} loaded into the slate. The Media Plan calendar has been refreshed.`
+        : "Campaign workspace synced. Generate the Media Plan once creators are assigned.";
+
   await appendMessage(supabase, {
     conversationId,
     role: "assistant",
-    content:
-      "Campaign workspace synced from your quotation — creator avatars, ad types, and fees are up to date. The Media Plan calendar has been refreshed from quotation lines.",
+    content: syncMessage,
     metadata: buildStudioMessageMetadata(objectForStudio),
   });
 
@@ -206,7 +232,7 @@ export async function startCampaignOutputsFromSeed(
       campaignHeaderId,
     });
 
-    if (seed.source === "quotation") {
+    if (seed.source === "quotation" || seed.creators.length > 0) {
       ({ campaignObject } = generateCampaignOutput(campaignObject, "media_plan", {
         origin: "automatic",
       }));

@@ -917,7 +917,8 @@ async function generateOutputEdit(
     mediaPlanTimelineEvents = [...prepared.events];
   }
 
-  // Linked campaign vendors fill an empty Studio slate so regenerate schedules creators.
+  // Linked campaign vendors fill an empty Studio slate so generate schedules creators.
+  let seededFromAssignments = false;
   if (kind === "media_plan" && resolveSlate(campaignObjectForGenerate).length === 0) {
     try {
       const headerId = await resolveCampaignHeaderIdForMediaPlan(
@@ -930,6 +931,7 @@ async function generateOutputEdit(
           campaignObjectForGenerate,
           hierarchy
         );
+        seededFromAssignments = resolveSlate(campaignObjectForGenerate).length > 0;
       }
     } catch {
       /* assignment hydrate must not block generate */
@@ -938,7 +940,9 @@ async function generateOutputEdit(
 
   const result = runGenerateOutput(campaignObjectForGenerate, {
     kind,
-    regenerate: options.regenerate,
+    // Force rebuild when we just hydrated vendors into a previously empty slate
+    // (plain generate would no-op on an already-"generated" empty Media Plan).
+    regenerate: options.regenerate || seededFromAssignments,
   });
   if (!result.changed) {
     return {

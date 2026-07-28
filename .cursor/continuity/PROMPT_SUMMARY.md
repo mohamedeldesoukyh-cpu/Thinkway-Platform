@@ -22,11 +22,12 @@
 2. Production `REDIS_URL` / dedicated Dev Redis / DNS as needed
 3. Do **not** merge to `main` or deploy Production without explicit approval
 
-## Media Plan hotfix (in progress on develop)
+## Media Plan — assignment hydration (shipping)
 
-- Actual now includes Performance live dates even when approved baseline has 0 creators
-- Empty Studio slate seeds creators from campaign assignment hierarchy on generate/regenerate + campaign Media Plan load
-- TW-2026-0001 still needs Studio regenerate after deploy to persist creators into the draft tip
+- Branch `feature/media-plan-assignment-hydration-v2` (from develop) brings parked `f4a11683` + launch/generate wiring
+- Empty slate seeds from Assignments hierarchy on: Studio generate/regenerate, open Studio from campaign, Campaign Media Plan load
+- Open Studio / sync now auto-generates Media Plan when creators are seeded; generate forces rebuild if slate was just filled
+- After deploy: open Studio from campaign (or regenerate Media Plan) to persist tip for TW-2026-0005 / similar
 
 ## Showcase PDF v2 (in progress on develop)
 
