@@ -1,6 +1,6 @@
 # Release 2.0 Phase 1 — Development Soak Plan
 
-**Status:** In progress — automated gates green; **manual UI soak pending** Preview/Dev deploy  
+**Status:** In progress — Dev DB engine soak green; **UI soak blocked by Vercel Deployment Protection SSO** on `dev.thinkwaymedia.com`  
 **Branch / RC:** `feature/release-2-0-lifecycle` · [PR #2](https://github.com/mohamedeldesoukyh-cpu/Thinkway-Platform/pull/2)  
 **Baseline:** RC PR is the implementation baseline (fix soak blockers only; no Phase 2)  
 **Deploy path for UI soak:** Vercel Preview on the RC branch (preferred before merge) **or** merge → `develop` → `dev.thinkwaymedia.com`  
@@ -24,12 +24,17 @@
 | Validate CI on PR #2 | GitHub Actions | ✅ pass (`4476e759`) |
 | Vercel Preview build | Preview Ready | ✅ Ready — **Deployment Protection (Vercel SSO) blocks unattended soak** |
 
-### Soak fixes applied (discovered during gate run)
+### Soak fixes applied (discovered during gate / Dev DB soak)
 
-1. CRM boundary allowlist — `convert-quotation-to-assignments.ts` (intentional Quote→Assignment CRM wiring).  
-2. Backfill wizard + convert dialog — narrow `ActionResult` before reading `message` / `data` (Vercel TS failure).  
-3. Legacy flag-off convert return shape + audit event `quotation.converted_to_assignments`.  
-4. Added `npm run test:release-2-0` for soak regression.
+1. CRM boundary allowlist — `convert-quotation-to-assignments.ts`.  
+2. Backfill wizard + convert dialog — `ActionResult` narrowing (Vercel TS).  
+3. Flag **OFF by default** (no Development surface auto-on).  
+4. `sync_campaign_header_from_brand` — read `agency_or_direct` from **clients** (was broken after brand column drop).  
+5. service_role grants for convert path tables + `md_vat_rates` (Dev workers/soak).  
+6. Convert resolver — `inf:` unified_id + display_name/handle fallback; default deliverable when empty; hydrate platforms from `influencer_platform_accounts`.  
+7. Fail convert when zero Assignments created.  
+8. Soft-fail legacy `deliverables` insert when FK still points at `campaigns_legacy`.  
+9. Harness: `npm run test:release-2-0` + `npx tsx scripts/soak-release-2-0-dev.mjs`.
 
 ---
 
@@ -57,7 +62,7 @@
 | 1.5 | Validate accepted pin | `accepted_quotation_id` + version on header |
 | 1.6 | Validate Assignments | Lines + deliverables; header `planning`; provenance set |
 
-**Result:** ☐ Pass · ☐ Fail — notes: ________
+**Result:** ☑ Pass (Dev DB harness on QT-2026-0005 → TW-2026-0002, 2 Assignments) · ☐ Fail — notes: UI Convert dialog still pending SSO
 
 ---
 
@@ -72,7 +77,7 @@
 | 2.5 | Verify Billing | Existing invoices unchanged; new flow eligible if applicable |
 | 2.6 | Verify Payments | No breakage on vendor payment status / readiness |
 
-**Result:** ☐ Pass · ☐ Fail — notes: ________
+**Result:** ☐ Pass · ☐ Fail — notes: No zero-line quote-linked campaign found for backfill on Dev after convert soak
 
 ---
 
@@ -85,7 +90,7 @@
 | 3.3 | References | No broken creator/deliverable links |
 | 3.4 | Deliverables visible | Hierarchy / plan items render |
 
-**Result:** ☐ Pass · ☐ Fail — notes: ________
+**Result:** ☐ Pass · ☐ Fail — notes: Blocked — Vercel SSO on `dev.thinkwaymedia.com`
 
 ---
 
@@ -97,7 +102,7 @@
 | 4.2 | Metrics update | Still updates |
 | 4.3 | URLs update | Still updates |
 
-**Result:** ☐ Pass · ☐ Fail — notes: ________
+**Result:** ☐ Pass · ☐ Fail — notes: Blocked — Vercel SSO on `dev.thinkwaymedia.com`
 
 ---
 
@@ -115,7 +120,7 @@ Assignment → Vendor IO → Invoice → Payment
 | 5.4 | Payment path | Client collections / vendor payout unchanged vs Prod behaviour |
 | 5.5 | Compare to Production behaviour | **No differences** in lifecycle rules |
 
-**Result:** ☐ Pass · ☐ Fail — notes: ________
+**Result:** ☐ Pass · ☑ Partial — notes: Convert creates no VIO/invoices (Dev: 5 VIO / 1 invoice unchanged by convert). Full Assignment→VIO→Invoice→Payment UI E2E pending SSO
 
 ---
 
@@ -129,7 +134,7 @@ Assignment → Vendor IO → Invoice → Payment
 | 6.4 | Accepted quotation | Remains pinned |
 | 6.5 | Draft quotation convert | Rejected |
 
-**Result:** ☐ Pass · ☐ Fail — notes: ________
+**Result:** ☑ Pass (engine) — notes: dry-run clean; second convert idempotent; draft rejected by D1; pin retained; UI confirm pending SSO
 
 ---
 
@@ -137,18 +142,20 @@ Assignment → Vendor IO → Invoice → Payment
 
 | Area | Status |
 |---|---|
-| Conversion | ☐ |
-| Snapshot | ☐ |
-| Assignment | ☐ |
-| Billing | ☐ |
-| Vendor IO | ☐ |
-| Backfill | ☐ |
-| Regression (Media Plan + Performance) | ☐ |
-| Feature Flag | ☐ |
-| Performance (ops) | ☐ |
-| RLS | ☐ |
+| Conversion | ✅ Dev DB harness (QT-2026-0005 → TW-2026-0002) |
+| Snapshot | ✅ row + hash + accepted pin |
+| Assignment | ✅ 2 lines + provenance + deliverables; header `planning` |
+| Billing | ⛔ UI E2E pending (no auto-invoice on convert verified) |
+| Vendor IO | ⛔ UI E2E pending (no auto-VIO on convert verified) |
+| Backfill | ⛔ no eligible zero-line campaign; UI pending SSO |
+| Regression (Media Plan + Performance) | ⛔ blocked by Vercel SSO |
+| Feature Flag | ✅ OFF by default (unset/false); explicit true enables |
+| Performance (ops) | ⛔ blocked by Vercel SSO |
+| RLS | ✅ anon cannot insert commercial snapshots |
 
-**No yellow items.**
+**No yellow items.** Open items are **blocked (SSO / missing backfill candidate)**, not yellow.
+
+**Production readiness:** **No-Go** until every ⛔ is cleared to ✅. `PRODUCTION_READINESS_REVIEW.md` not authored.
 
 ---
 
@@ -156,8 +163,8 @@ Assignment → Vendor IO → Invoice → Payment
 
 | Date | Tester | Environment | Outcome | Notes |
 |---|---|---|---|---|
-| 2026-07-28 | Agent | Local + Dev DB + CI/Preview | Partial | Automated pre-gates + CI + Preview green; Preview URL requires Vercel SSO — manual UI soak needs authenticated access (Preview SSO, local `.env`, or merge → `dev.thinkwaymedia.com`) |
-| | | Preview / Dev | | Manual commercial → billing → revision matrix |
+| 2026-07-28 | Agent | Local + Dev DB + CI/Preview | Partial | Automated pre-gates green |
+| 2026-07-28 | Agent | `develop` merge + Dev DB harness | Partial | PR #2 merged; flag OFF by default; convert engine soak green on QT-2026-0005; UI blocked by Vercel SSO on `dev.thinkwaymedia.com` |
 
 ---
 

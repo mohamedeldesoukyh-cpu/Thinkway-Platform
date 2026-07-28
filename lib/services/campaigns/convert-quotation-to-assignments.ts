@@ -9,13 +9,14 @@ import { isQuotationExpired } from "@/lib/commercial/quotation-validity";
 import { logQuotationLifecycleEvent } from "@/lib/commercial-sync/audit";
 import { canCreateCampaignFromQuotation } from "@/lib/commercial-sync/rules";
 import { ensureCommercialCreatorFromQuoteToCampaign } from "@/lib/creators/crm/activation-helpers";
-import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
 import { promoteDiscoveredProfileToInfluencer } from "@/lib/discovery/promote-profile";
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 import {
   mapQuotationItemsToExecutionLineSeeds,
   type QuotationItemExecutionRow,
 } from "@/lib/domains/commercial/quotation-execution-mapper";
+import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
+import { fetchInfluencerPlatformAccounts } from "@/lib/services/campaigns/repositories/assignment-repository";
 import {
   buildQuotationConvertUnits,
   summarizeQuotationConvertSelection,
@@ -190,6 +191,13 @@ function mergeUnitDeliverables(unit: QuotationConvertUnit): QuotationDeliverable
   for (const member of unit.memberItems) {
     out.push(...(member.deliverables ?? []));
   }
+  if (out.length === 0 && unit.primaryItem.platform) {
+    out.push({
+      platform: unit.primaryItem.platform,
+      type: "other",
+      quantity: 1,
+    });
+  }
   return out;
 }
 
@@ -218,12 +226,42 @@ function unitToExecutionRow(
   };
 }
 
+function influencerIdFromUnifiedId(unifiedId: string | null | undefined): string | null {
+  if (!unifiedId) return null;
+  const trimmed = unifiedId.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("inf:")) {
+    const id = trimmed.slice(4).trim();
+    return id || null;
+  }
+  // Some rows store a bare influencer uuid in unified_id.
+  if (
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      trimmed
+    )
+  ) {
+    return trimmed;
+  }
+  return null;
+}
+
 async function resolveInfluencerForItem(
   supabase: SupabaseClient<Database>,
   userId: string,
   item: QuotationItemRow
 ): Promise<string | null> {
   if (item.influencer_id) return item.influencer_id;
+
+  const fromUnified = influencerIdFromUnifiedId(item.unified_id);
+  if (fromUnified) {
+    const { data } = await supabase
+      .from("influencers")
+      .select("id")
+      .eq("id", fromUnified)
+      .maybeSingle();
+    if (data?.id) return data.id as string;
+  }
+
   if (item.profile_id) {
     const promotion = await promoteDiscoveredProfileToInfluencer(
       supabase,
@@ -232,6 +270,20 @@ async function resolveInfluencerForItem(
     );
     if (promotion.ok) return promotion.influencerId;
   }
+
+  const handle = item.handle?.replace(/^@/, "").trim() || null;
+  const creatorName = item.creator_name?.trim() || null;
+  for (const candidate of [handle, creatorName]) {
+    if (!candidate) continue;
+    const { data } = await supabase
+      .from("influencers")
+      .select("id")
+      .ilike("display_name", candidate)
+      .limit(1)
+      .maybeSingle();
+    if (data?.id) return data.id as string;
+  }
+
   return null;
 }
 
@@ -504,21 +556,60 @@ export async function convertQuotationToAssignments(
   }
 
   const influencerIds = [...new Set(resolvedPrimaryByUnit.values())];
-  const creators =
-    influencerIds.length > 0
-      ? (
-          await browseUnifiedCreators(
-            supabase,
-            {
-              influencerIds,
-              page: 1,
-              pageSize: Math.max(influencerIds.length, 20),
-              productionOnly: true,
-            },
-            "discovery"
-          )
-        ).creators
-      : [];
+  // Prefer direct platform-account hydration over Discovery browse (productionOnly
+  // browse can omit vendors that still have influencer_platform_accounts).
+  const creators: UnifiedCreatorResult[] = [];
+  for (const influencerId of influencerIds) {
+    const { data: influencer } = await supabase
+      .from("influencers")
+      .select("id, display_name, status, country_code")
+      .eq("id", influencerId)
+      .maybeSingle();
+    const { data: accounts } = await fetchInfluencerPlatformAccounts(
+      supabase,
+      influencerId
+    );
+    creators.push({
+      unified_id: `inf:${influencerId}`,
+      source_type: "internal",
+      influencer_id: influencerId,
+      discovered_profile_id: null,
+      document_number: null,
+      display_name: (influencer?.display_name as string | null) ?? "Vendor",
+      status: (influencer?.status as string | null) ?? null,
+      country_code: (influencer?.country_code as string | null) ?? null,
+      estimated_country: null,
+      city: null,
+      categories: [],
+      language_codes: [],
+      profile_image_url: null,
+      bio: null,
+      metrics: {
+        followers: { value: null, confidence: "estimated" },
+        engagement_rate: { value: null, confidence: "estimated" },
+        avg_likes: { value: null, confidence: "estimated" },
+        avg_comments: { value: null, confidence: "estimated" },
+        avg_views: { value: null, confidence: "estimated" },
+        posting_frequency_per_week: { value: null, confidence: "estimated" },
+      },
+      ai_category: null,
+      ai_niche: null,
+      authenticity_score: null,
+      thinkway_score: 0,
+      source_confidence: 0,
+      brand_fit_score: null,
+      is_platform_verified: false,
+      platforms: (accounts ?? []).map((account) => ({
+        id: account.id as string,
+        platform: String(account.platform ?? "instagram"),
+        handle: String(account.handle ?? ""),
+        profile_url: (account.profile_url as string | null) ?? null,
+        follower_count: (account.follower_count as number | null) ?? null,
+        engagement_rate: (account.engagement_rate as number | null) ?? null,
+        audience_country: (account.audience_country as string | null) ?? null,
+      })),
+    });
+  }
 
   const influencerIdByCreatorId = new Map<string, string>();
   for (const creator of creators) {
@@ -685,6 +776,15 @@ export async function convertQuotationToAssignments(
         `CRM activation warning: ${error instanceof Error ? error.message : "unknown"}`
       );
     }
+  }
+
+  if (lineIds.length === 0) {
+    return {
+      ok: false,
+      message:
+        warnings[0] ??
+        "No Assignments were created. Quotation items need a resolvable influencer (influencer_id, inf: unified_id, or profile_id).",
+    };
   }
 
   await linkQuotationToCampaign(supabase, input.quotationId, campaignId);

@@ -45,9 +45,12 @@
 - **RC PR:** https://github.com/mohamedeldesoukyh-cpu/Thinkway-Platform/pull/2 → `develop` (**do not merge** until soak all-green)
 - **Labels:** architecture, release-2.0, breaking-internals, feature-flag, requires-soak
 - **Parked:** Media Plan WIP on `feature/media-plan-assignment-hydration` (excluded from RC)
-- **Soak:** automated pre-gates green (`test:release-2-0`, CRM 2B, tsc, Dev schema); UI soak pending Preview/Dev
-- **Soak fixes on RC:** CRM allowlist, wizard/dialog TS narrowing, audit event, legacy flag-off return shape
-- **Next action:** Push soak fixes → green CI/Preview → execute manual soak scenarios → all-green exit matrix → `PRODUCTION_READINESS_REVIEW.md`
+- **Merged:** PR #2 → `develop` (2026-07-28). Flag OFF by default.
+- **Dev DB soak:** QT-2026-0005 → TW-2026-0002 (2 Assignments, snapshot, pin, idempotent) via `scripts/soak-release-2-0-dev.mjs`
+- **UI soak blocked:** Vercel Deployment Protection SSO on `dev.thinkwaymedia.com`
+- **Exit matrix:** Conversion/Snapshot/Assignment/Flag/RLS green; Billing/VIO/Backfill/Media Plan/Performance UI still open
+- **No Production.** No Phase 2. Do **not** write `PRODUCTION_READINESS_REVIEW.md` until matrix 100% green
+- **Next action:** User clears Vercel SSO (or disables protection) → finish UI soak → then readiness review
 
 ## Working agreement
 

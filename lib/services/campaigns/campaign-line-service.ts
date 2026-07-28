@@ -84,19 +84,29 @@ async function syncLineDeliverables(
     dueDate: string | null;
   }
 ) {
-  await deleteLegacyDeliverablesForAssignment(supabase, {
-    assignmentId: input.assignmentId,
-    campaignId: input.campaignId,
-    influencerId: input.influencerId,
-  });
+  // Legacy `deliverables` still FKs campaigns_legacy on some DBs. Assignment SSOT is
+  // assignment_deliverables (synced separately). Never fail line create on legacy write.
+  try {
+    await deleteLegacyDeliverablesForAssignment(supabase, {
+      assignmentId: input.assignmentId,
+      campaignId: input.campaignId,
+      influencerId: input.influencerId,
+    });
 
-  await insertLegacyDeliverablesForPlatforms(supabase, userId, {
-    campaignId: input.campaignId,
-    influencerId: input.influencerId,
-    assignmentId: input.assignmentId,
-    platforms: input.platforms,
-    dueDate: input.dueDate,
-  });
+    await insertLegacyDeliverablesForPlatforms(supabase, userId, {
+      campaignId: input.campaignId,
+      influencerId: input.influencerId,
+      assignmentId: input.assignmentId,
+      platforms: input.platforms,
+      dueDate: input.dueDate,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (/deliverables_campaign_id_fkey|campaigns_legacy/i.test(message)) {
+      return;
+    }
+    throw error;
+  }
 }
 
 export type CampaignLineMutationInput = {

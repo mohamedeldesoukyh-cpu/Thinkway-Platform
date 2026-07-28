@@ -127,4 +127,6 @@ test("dry-run path exists and creates no writes before dryRun check ordering", (
   assert.match(src, /accepted_quotation_id/);
   assert.match(src, /source_quotation_item_id/);
   assert.match(src, /snapshot_hash/);
+  assert.match(src, /influencerIdFromUnifiedId/);
+  assert.match(src, /No Assignments were created/);
 });
