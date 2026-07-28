@@ -211,6 +211,165 @@ export async function createCampaignFromQuotation(input: {
   return result;
 }
 
+export async function previewConvertQuotationToCampaign(input: {
+  quotationId: string;
+  campaignName?: string | null;
+}): Promise<
+  ActionResult<{
+    alreadyExists?: boolean;
+    dryRun: true;
+    campaignId: string;
+    documentNumber: string;
+    linesCreated: number;
+    skippedAlternatives: number;
+    warnings: string[];
+    preview?: {
+      snapshotHash: string;
+      headerStatus: "planning";
+      copied: readonly string[];
+      remainsOnQuotation: readonly string[];
+      assignments: Array<{
+        kind: "item" | "package";
+        name: string;
+        revenue: number;
+        cost: number;
+        afPct: number;
+        memberCount: number;
+        deliverableCount: number;
+        primaryItemId: string;
+      }>;
+      packageCount: number;
+      itemCount: number;
+      quotationSerial: string | null;
+      versionNumber: number;
+    };
+    snapshotHash?: string;
+  }>
+> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+
+  const campaignAuth = await requirePermission(actor.supabase, "campaigns.write");
+  if ("error" in campaignAuth) {
+    return { ok: false, message: "You need campaign write access to convert a quotation." };
+  }
+
+  const { convertQuotationToAssignments } = await import(
+    "@/lib/services/campaigns/convert-quotation-to-assignments"
+  );
+  const { isRelease20AssignmentConvertEnabled } = await import(
+    "@/lib/release/release-2-0-feature-flag"
+  );
+
+  if (!isRelease20AssignmentConvertEnabled()) {
+    return {
+      ok: false,
+      message: "Release 2.0 Assignment convert is not enabled in this environment.",
+    };
+  }
+
+  const result = await convertQuotationToAssignments(actor.supabase, actor.userId, {
+    quotationId: input.quotationId,
+    campaignName: input.campaignName,
+    dryRun: true,
+  });
+
+  if (!result.ok) return { ok: false, message: result.message };
+
+  return {
+    ok: true,
+    data: {
+      alreadyExists: result.alreadyExists,
+      dryRun: true,
+      campaignId: result.campaignId,
+      documentNumber: result.documentNumber,
+      linesCreated: result.linesCreated,
+      skippedAlternatives: result.skippedAlternatives,
+      warnings: result.warnings,
+      preview: result.preview,
+      snapshotHash: result.snapshotHash,
+    },
+    message: result.message,
+  };
+}
+
+export async function convertQuotationToCampaign(input: {
+  quotationId: string;
+  campaignName?: string | null;
+}): Promise<
+  ActionResult<{
+    campaignId: string;
+    documentNumber: string;
+    shortlistId: string;
+    linesCreated: number;
+    warnings: string[];
+    snapshotHash?: string;
+  }>
+> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+
+  const campaignAuth = await requirePermission(actor.supabase, "campaigns.write");
+  if ("error" in campaignAuth) {
+    return { ok: false, message: "You need campaign write access to convert a quotation." };
+  }
+
+  const { convertQuotationToAssignments } = await import(
+    "@/lib/services/campaigns/convert-quotation-to-assignments"
+  );
+  const { isRelease20AssignmentConvertEnabled } = await import(
+    "@/lib/release/release-2-0-feature-flag"
+  );
+
+  if (!isRelease20AssignmentConvertEnabled()) {
+    // Fall back to legacy create when flag off.
+    const legacy = await createCampaignFromQuotation(input);
+    if (!legacy.ok || !legacy.data) {
+      return legacy.ok
+        ? { ok: false, message: "Legacy convert returned no campaign data." }
+        : legacy;
+    }
+    return {
+      ok: true,
+      data: {
+        campaignId: legacy.data.campaignId,
+        documentNumber: legacy.data.documentNumber,
+        shortlistId: legacy.data.shortlistId,
+        linesCreated: 0,
+        warnings: ["Release 2.0 Assignment convert is disabled; legacy header convert used."],
+      },
+      message: legacy.message,
+    };
+  }
+
+  const result = await convertQuotationToAssignments(actor.supabase, actor.userId, {
+    quotationId: input.quotationId,
+    campaignName: input.campaignName,
+    dryRun: false,
+  });
+
+  if (!result.ok) return { ok: false, message: result.message };
+
+  revalidateQuotation(
+    input.quotationId,
+    result.shortlistId,
+    result.campaignId
+  );
+
+  return {
+    ok: true,
+    data: {
+      campaignId: result.campaignId,
+      documentNumber: result.documentNumber,
+      shortlistId: result.shortlistId ?? "",
+      linesCreated: result.linesCreated,
+      warnings: result.warnings,
+      snapshotHash: result.snapshotHash,
+    },
+    message: result.message,
+  };
+}
+
 export async function getQuotationLifecycleActivity(
   quotationId: string
 ): Promise<

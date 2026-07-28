@@ -249,6 +249,10 @@ export type CampaignHeaderRow = {
   fx_snapshot_at: string | null;
   shortlist_id: string | null;
   quotation_id: string | null;
+  /** Release 2.0: immutable pin of approved quotation at Assignment convert. */
+  accepted_quotation_id: string | null;
+  /** Release 2.0: quotations.version_number at convert time. */
+  accepted_quotation_version: number | null;
   campaign_object_id: string | null;
   source_campaign_object_version: number | null;
   created_by: string | null;
@@ -312,9 +316,24 @@ export type CampaignLineRow = {
   sort_order: number;
   pricing_mode: AssignmentPricingMode;
   metadata: Record<string, unknown>;
+  /** Release 2.0: quotation that projected this Assignment. */
+  source_quotation_id: string | null;
+  /** Release 2.0: primary quotation_items id (package leader or selected item). */
+  source_quotation_item_id: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type CampaignCommercialSnapshotRow = {
+  id: string;
+  campaign_header_id: string;
+  quotation_id: string;
+  quotation_serial: string | null;
+  version_number: number | null;
+  payload: Record<string, unknown>;
+  created_by: string | null;
+  created_at: string;
 };
 
 export type CampaignObjectLifecycleStatus =
@@ -1016,12 +1035,31 @@ export type Database = {
           metadata?: Record<string, unknown>;
           shortlist_id?: string | null;
           quotation_id?: string | null;
+          accepted_quotation_id?: string | null;
+          accepted_quotation_version?: number | null;
           campaign_object_id?: string | null;
           source_campaign_object_version?: number | null;
           created_by?: string | null;
         };
         Update: Partial<
           Database["public"]["Tables"]["campaign_headers"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      campaign_commercial_snapshots: {
+        Row: CampaignCommercialSnapshotRow;
+        Insert: {
+          id?: string;
+          campaign_header_id: string;
+          quotation_id: string;
+          quotation_serial?: string | null;
+          version_number?: number | null;
+          payload?: Record<string, unknown>;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["campaign_commercial_snapshots"]["Insert"]
         >;
         Relationships: [];
       };
@@ -1077,6 +1115,8 @@ export type Database = {
           sort_order?: number;
           pricing_mode?: AssignmentPricingMode;
           metadata?: Record<string, unknown>;
+          source_quotation_id?: string | null;
+          source_quotation_item_id?: string | null;
           created_by?: string | null;
         };
         Update: Partial<

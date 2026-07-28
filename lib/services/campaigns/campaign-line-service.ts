@@ -129,6 +129,9 @@ export type CampaignLineMutationInput = {
   end_date: string | null;
   assignment_status: string;
   title_user_edited?: boolean;
+  /** Release 2.0 provenance — optional. */
+  source_quotation_id?: string | null;
+  source_quotation_item_id?: string | null;
 };
 
 export async function createCampaignLine(
@@ -252,6 +255,8 @@ export async function createCampaignLine(
     start_date: parsed.start_date,
     end_date: parsed.end_date,
     metadata: { [LINE_ASSIGNMENT_META_KEY]: assignmentMeta },
+    source_quotation_id: parsed.source_quotation_id ?? null,
+    source_quotation_item_id: parsed.source_quotation_item_id ?? null,
     created_by: userId,
   });
 

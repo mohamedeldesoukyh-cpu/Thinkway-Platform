@@ -27,12 +27,19 @@
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes |
 | `REDIS_URL` | Yes |
 
+## Local / CLI schema validation (Development)
+
+| Secret | Required | Notes |
+|--------|----------|-------|
+| `SUPABASE_DB_PASSWORD` | For `supabase db query --linked` / migration probes | Database password for the linked Dev project — **never commit**. See backlog: `BACKLOG_DEV_SCHEMA_VALIDATION_CREDENTIALS.md` |
+
 ## Verification
 
 - [ ] No secrets in git history (`.env`, `.env.local` gitignored)
 - [ ] Vercel env scoped: Production ≠ Preview where projects differ
 - [ ] Service role key never exposed to client bundles
 - [ ] `CRON_SECRET` length ≥ 32 random bytes
+- [ ] Dev CLI schema probes succeed when `SUPABASE_DB_PASSWORD` is set (infra backlog)
 
 ## Sentry
 

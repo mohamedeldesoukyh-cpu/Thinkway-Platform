@@ -64,6 +64,7 @@ export type QuotationLifecycleAuditEvent =
   | "quotation.deliverables_updated"
   | "quotation.version_created"
   | "quotation.campaign_created"
+  | "quotation.converted_to_assignments"
   | "quotation.shortlist_created"
   | "quotation.client_promoted"
   | "quotation.brand_promoted"

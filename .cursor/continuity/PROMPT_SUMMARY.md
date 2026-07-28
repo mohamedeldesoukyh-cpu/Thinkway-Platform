@@ -34,6 +34,21 @@
 - Preview iframe + PDF share the same HTML/runtime; Puppeteer waits for `data-sl-paginated=ready` then prints (no Chromium page-splitting layout)
 - Key files: `shortlist-pagination-engine.ts`, `shortlist-page-geometry.ts`, template HTML/styles, `SHORTLIST_PDF_OPTIONS`
 
+## Release 2.0 — Enterprise Campaign Lifecycle
+
+- **Status:** Phase 1 **code complete** on `feature/release-2-0-lifecycle` — next gate = Development soak
+- **Soak plan:** `docs/release/2.0/DEVELOPMENT_SOAK_PLAN.md` (all exit areas must be green; no yellow)
+- **After soak:** author `PRODUCTION_READINESS_REVIEW.md` (4 questions only) → seek Production approval
+- **Phase 2 blocked** until Phase 1 is Production-stable (Media Plan ownership / locking / Actual only — not Revision/Reporting)
+- **Flag:** Dev surface may default ON; do not enable Production until soak + approval
+- **Infra backlog (separate):** `BACKLOG_DEV_SCHEMA_VALIDATION_CREDENTIALS.md` — not an R2.0 blocker
+- **RC PR:** https://github.com/mohamedeldesoukyh-cpu/Thinkway-Platform/pull/2 → `develop` (**do not merge** until soak all-green)
+- **Labels:** architecture, release-2.0, breaking-internals, feature-flag, requires-soak
+- **Parked:** Media Plan WIP on `feature/media-plan-assignment-hydration` (excluded from RC)
+- **Soak:** automated pre-gates green (`test:release-2-0`, CRM 2B, tsc, Dev schema); UI soak pending Preview/Dev
+- **Soak fixes on RC:** CRM allowlist, wizard/dialog TS narrowing, audit event, legacy flag-off return shape
+- **Next action:** Push soak fixes → green CI/Preview → execute manual soak scenarios → all-green exit matrix → `PRODUCTION_READINESS_REVIEW.md`
+
 ## Working agreement
 
 `develop` → `feature/*` → `develop` → QA → `main` → approved Production. Never develop on `main`.

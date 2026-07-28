@@ -367,7 +367,12 @@ export function AssignmentSafeGrid({
         </p>
       );
     }
-    return <AssignmentsEmptyState onCreateAssignment={onCreateAssignment} />;
+    return (
+      <AssignmentsEmptyState
+        campaignId={campaignId}
+        onCreateAssignment={onCreateAssignment}
+      />
+    );
   }
 
   return (

@@ -30,11 +30,11 @@ import {
   canGenerateQuotationVersion,
 } from "@/lib/commercial-sync/rules";
 import {
-  createCampaignFromQuotation,
   generateQuotationVersion,
   getQuotationLifecycleActivity,
   moveQuotationToShortlist,
 } from "@/features/quotations/lifecycle-actions";
+import { ConvertQuotationDialog } from "@/features/quotations/components/convert-quotation-dialog";
 import { PromoteMasterDataWizard } from "@/features/quotations/components/promote-master-data-wizard";
 import { quotationDetailPath } from "@/features/quotations/constants";
 import type { PromoteWizardOptions, QuotationDetail } from "@/features/quotations/types";
@@ -69,6 +69,7 @@ export function QuotationLifecycleSheet({
   const [versionOpen, setVersionOpen] = useState(false);
   const [revisionNotes, setRevisionNotes] = useState("");
   const [promoteOpen, setPromoteOpen] = useState(false);
+  const [convertOpen, setConvertOpen] = useState(false);
 
   useEffect(() => {
     if (open) setTab(defaultTab);
@@ -220,15 +221,14 @@ export function QuotationLifecycleSheet({
                     </Button>
                   ) : null}
                   {canCreateCampaign ? (
-                    <Button
-                      size="sm"
-                      disabled={pending}
-                      onClick={() =>
-                        run(() => createCampaignFromQuotation({ quotationId: detail.id }))
-                      }
-                    >
-                      Create campaign
+                    <Button size="sm" disabled={pending} onClick={() => setConvertOpen(true)}>
+                      Convert to Campaign
                     </Button>
+                  ) : null}
+                  {detail.campaign_header_id ? (
+                    <Badge variant="secondary" className="text-[10px]">
+                      Linked campaign
+                    </Badge>
                   ) : null}
                   {canPromote ? (
                     <Button size="sm" variant="secondary" onClick={() => setPromoteOpen(true)}>
@@ -304,6 +304,12 @@ export function QuotationLifecycleSheet({
         options={promoteOptions}
         open={promoteOpen}
         onOpenChange={setPromoteOpen}
+      />
+
+      <ConvertQuotationDialog
+        detail={detail}
+        open={convertOpen}
+        onOpenChange={setConvertOpen}
       />
     </>
   );

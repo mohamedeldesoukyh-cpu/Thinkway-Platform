@@ -127,6 +127,7 @@
     "test:discovery-shortlist-workflow": "npx tsx features/discovery/shortlists/shortlist-workflow.test.ts",
     "test:discovery-shortlist": "npx tsx features/discovery/shortlists/shortlist-policy.test.ts && npx tsx features/discovery/shortlists/shortlist-workflow.test.ts && npx tsx features/discovery/shortlists/bulk-selection-policy.test.ts && npx tsx lib/discovery/demo-data.test.ts && npx tsx lib/discovery/mock-seed-policy.test.ts",
     "test:discovery-shortlist-bulk": "npx tsx features/discovery/shortlists/bulk-selection-policy.test.ts",
+    "test:release-2-0": "npx tsx --test lib/domains/commercial/quotation-convert-selection.test.ts lib/domains/commercial/quotation-convert-snapshot.test.ts lib/release/release-2-0-feature-flag.test.ts lib/services/campaigns/convert-quotation-to-assignments.test.ts lib/services/campaigns/backfill-assignments-from-quotation.test.ts lib/creators/crm/boundary.test.ts",
     "test:commercial-engine": "npx tsx lib/commercial/commercial-engine.test.ts",
     "test:quotation-engine": "npx tsx features/quotations/quotation-engine.test.ts",
     "test:quotation-serial": "npx tsx features/quotations/serial.test.ts",

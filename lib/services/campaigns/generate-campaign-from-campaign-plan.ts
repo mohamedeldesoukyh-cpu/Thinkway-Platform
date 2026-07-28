@@ -32,8 +32,11 @@ import { METADATA_PLATFORM_KEY } from "@/lib/campaigns/constants";
 import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
 import type { Database } from "@/types/database";
 
+import { isRelease20AssignmentConvertEnabled } from "@/lib/release/release-2-0-feature-flag";
+
 import { applyInheritedTentativeScheduleToLine } from "./apply-inherited-tentative-schedule";
 import { createCampaignLine } from "./campaign-line-service";
+import { convertQuotationToAssignments } from "./convert-quotation-to-assignments";
 import {
   fetchBrandForCampaignCreate,
   insertCampaignHeader,
@@ -358,6 +361,98 @@ export async function generateCampaignFromCampaignPlan(
   }
 
   const quotationSource = await loadQuotationExecutionSource(supabase, campaignObjectId);
+  const facts = getCampaignFacts(version.campaignObject);
+  const campaignName =
+    input.campaignName?.trim() || resolveCampaignNameFromPlan(version.campaignObject);
+  const { startDate, endDate } = resolvePlanDates(version.campaignObject);
+  const currencyCode = facts?.budget?.currency ?? brand.currency_code;
+  const poAmount = Math.round(facts?.budget?.amount ?? 0);
+  const platform = facts?.platforms?.[0] ?? null;
+  const metadata = platform ? { [METADATA_PLATFORM_KEY]: platform } : {};
+
+  const provenance = parseCampaignPlanProvenance({
+    campaign_object_id: campaignObjectId,
+    source_campaign_object_version: head.current_version,
+  });
+
+  // Release 2.0: quotation-linked Path B uses the unified Assignment convert engine.
+  if (quotationSource && isRelease20AssignmentConvertEnabled()) {
+    const converted = await convertQuotationToAssignments(supabase, userId, {
+      quotationId: quotationSource.quotationId,
+      campaignName,
+      dryRun: false,
+    });
+
+    if (!converted.ok) {
+      return { ok: false, message: converted.message };
+    }
+
+    if (!converted.alreadyExists) {
+      await supabase
+        .from("campaign_headers")
+        .update({
+          campaign_object_id: provenance?.campaignObjectId ?? campaignObjectId,
+          source_campaign_object_version:
+            provenance?.sourceCampaignObjectVersion ?? head.current_version,
+          start_date: startDate,
+          end_date: endDate,
+          metadata,
+          name: campaignName,
+        } as never)
+        .eq("id", converted.campaignId);
+
+      if (poAmount > 0) {
+        await updateCampaignPoFields(supabase, converted.campaignId, {
+          currency: currencyCode,
+          fxRate: 1,
+          poAmount,
+        });
+      }
+    }
+
+    await supabase
+      .from("campaign_objects")
+      .update({
+        campaign_header_id: converted.campaignId,
+        updated_by: userId,
+      })
+      .eq("id", campaignObjectId);
+
+    await logAuditEvent(supabase, {
+      userId,
+      action: "create",
+      entityType: "campaign_header",
+      entityId: converted.campaignId,
+      metadata: {
+        audit_action: "campaign_generated_from_plan",
+        campaign_object_id: campaignObjectId,
+        source_campaign_object_version: head.current_version,
+        execution_source: "quotation",
+        conversion_engine: "convertQuotationToAssignments",
+        quotation_id: quotationSource.quotationId,
+        lines_created: converted.linesCreated,
+        already_exists: Boolean(converted.alreadyExists),
+        snapshot_hash: converted.snapshotHash ?? null,
+      },
+      newData: {
+        document_number: converted.documentNumber,
+        campaign_object_id: campaignObjectId,
+      },
+    });
+
+    return {
+      ok: true,
+      campaignId: converted.campaignId,
+      documentNumber: converted.documentNumber,
+      linesCreated: converted.linesCreated,
+      alreadyExists: Boolean(converted.alreadyExists),
+      source: "quotation",
+      message: converted.alreadyExists
+        ? converted.message
+        : `Campaign ${converted.documentNumber} created with ${converted.linesCreated} Assignment(s) via unified quotation convert.`,
+    };
+  }
+
   const { seeds: lineSeeds, source } = await resolveExecutionLineSeeds({
     supabase,
     userId,
@@ -373,20 +468,6 @@ export async function generateCampaignFromCampaignPlan(
         : "No approved slate creators could be resolved to campaign lines.",
     };
   }
-
-  const facts = getCampaignFacts(version.campaignObject);
-  const campaignName =
-    input.campaignName?.trim() || resolveCampaignNameFromPlan(version.campaignObject);
-  const { startDate, endDate } = resolvePlanDates(version.campaignObject);
-  const currencyCode = facts?.budget?.currency ?? brand.currency_code;
-  const poAmount = Math.round(facts?.budget?.amount ?? 0);
-  const platform = facts?.platforms?.[0] ?? null;
-  const metadata = platform ? { [METADATA_PLATFORM_KEY]: platform } : {};
-
-  const provenance = parseCampaignPlanProvenance({
-    campaign_object_id: campaignObjectId,
-    source_campaign_object_version: head.current_version,
-  });
 
   const { data: header, error: headerError } = await insertCampaignHeader(supabase, {
     name: campaignName,

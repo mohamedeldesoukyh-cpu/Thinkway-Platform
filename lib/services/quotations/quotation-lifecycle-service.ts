@@ -11,6 +11,8 @@ import { logQuotationLifecycleEvent } from "@/lib/commercial-sync/audit";
 import {
   canCreateCampaignFromQuotation,
 } from "@/lib/commercial-sync/rules";
+import { convertQuotationToAssignments } from "@/lib/services/campaigns/convert-quotation-to-assignments";
+import { isRelease20AssignmentConvertEnabled } from "@/lib/release/release-2-0-feature-flag";
 import type { Database } from "@/types/database";
 
 import type { QuotationMutationResult } from "./quotation-helpers";
@@ -210,6 +212,24 @@ export async function createCampaignFromQuotation(
     shortlistId: string;
   }>
 > {
+  // Release 2.0 Phase 1 — unified Assignment convert (feature-flagged).
+  if (isRelease20AssignmentConvertEnabled()) {
+    const converted = await convertQuotationToAssignments(supabase, userId, {
+      quotationId: input.quotationId,
+      campaignName: input.campaignName,
+    });
+    if (!converted.ok) return { ok: false, message: converted.message };
+    return {
+      ok: true,
+      data: {
+        campaignId: converted.campaignId,
+        documentNumber: converted.documentNumber,
+        shortlistId: converted.shortlistId ?? "",
+      },
+      message: converted.message,
+    };
+  }
+
   const row = await loadQuotationRow(supabase, input.quotationId);
   if (!row) return { ok: false, message: "Quotation not found." };
 
@@ -238,6 +258,7 @@ export async function createCampaignFromQuotation(
     input.campaignName?.trim() ||
     `Campaign — ${row.name ?? row.serial_number ?? "Quotation"}`;
 
+  // Legacy Path A (flag off): header + vendor links only. Do not require R2.0 columns.
   const created = await createCampaignHeaderFromBrand(supabase, userId, {
     name: campaignName,
     brandId: row.brand_id as string,
