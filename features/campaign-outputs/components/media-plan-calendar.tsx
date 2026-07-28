@@ -42,8 +42,16 @@ import {
 } from "./media-plan-brand";
 import { DOCUMENT_PREVIEW_DIALOG_Z } from "./document-preview-window";
 
-const DAY_ABBR = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const DAY_ABBR = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
+const DAY_NAMES = [
+  "Saturday",
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+];
 
 const TYPE_STYLES: Record<MediaPlanDayType, { dot: string }> = {
   content: { dot: MEDIA_PLAN_DAY_TYPE_COLORS.content },

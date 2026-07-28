@@ -60,6 +60,13 @@ export {
   beginMediaPlanBusinessVersion,
 } from "./media-plan-versioning";
 export {
+  PUBLISHING_CALENDAR_DAYS,
+  resolvePublishingCalendarRange,
+  resolveScheduledStartDate,
+  startOfPublishingWeek,
+  describePublishingCalendarAlignment,
+} from "./media-plan-week-start";
+export {
   reviseMediaPlanOutput,
   regenerateMediaPlanOutput,
   readMediaPlanData,

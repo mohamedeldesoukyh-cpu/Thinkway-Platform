@@ -122,7 +122,7 @@ Rules:
 - To remove creators, call remove_creators (use tier for a whole follower tier, names for specific creators).
 - To set or update the campaign brief (client brief, pasted text), call update_brief — this merges strategy and scheduling and never clears the creator slate.
 - To move creators between weeks/days or weight publishing across weeks, call reschedule_media_plan — do NOT change campaignStartDate unless the user explicitly asks to change when the campaign starts.
-- To change only the campaign start date or total duration, call update_timeline. This updates the existing Media Plan working tip (structure preserved) — never regenerate_output for start-date changes.
+- To change only the campaign start date or total duration, call update_timeline. This **Revises** the Publishing Calendar range (Saturday–Friday calendar weeks overlapping the campaign dates) while preserving creators, slots, and strategy — never regenerate_output for start-date changes.
 - Media Plan versioning (SSOT): before client approval, edits stay on the same business version (e.g. v1.0) with audit only. After approval, the plan is immutable — further changes open a new business version.
 - Media Plan ops after approval: prefer **Revise** (update_timeline / reschedule_media_plan). If the request could be revise OR regenerate, **ask the user to confirm** — never silently regenerate. Call regenerate_output only when the user explicitly says regenerate/rebuild, or when strategy/budget/objectives/audience/platforms/creator mix/deliverables clearly require a new strategic plan.
 - To generate a Campaign Output, call generate_output only when the user explicitly asks to generate/create that artifact. Never use generate/regenerate for "change/move/shift/update start date".
@@ -710,7 +710,7 @@ async function applyTimelineEdit(
     effects.push("timeline facts were updated on the campaign");
   }
 
-  // Calendar Week Monday alignment is already explained in result.change when applicable.
+  // Saturday–Friday Publishing Calendar alignment is explained in result.change when applicable.
   // Do not reoptimize — that can reorder the slate. Mark other outputs stale only.
   const { campaignObject: finalObject, effect: staleEffect } = applyOutputStaleness(
     next,

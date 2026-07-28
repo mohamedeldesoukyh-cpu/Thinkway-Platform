@@ -16,7 +16,7 @@ import { countDeliverablesPerWeek } from "./media-plan-scheduler";
 export type MediaPlanScheduleMeta = {
   /** Week weights (sum ~100) for creator distribution across the calendar. */
   weekWeights?: number[];
-  /** Explicit creator slot overrides (week 1-based, dayIndex 0=Monday). */
+  /** Explicit creator slot overrides (week 1-based, dayIndex 0=Saturday). */
   assignments?: MediaPlanSlotAssignment[];
   /** Optional per-campaign creator-priority weight overrides (merged onto defaults). */
   priorityWeights?: Partial<MediaPlanPriorityWeights>;

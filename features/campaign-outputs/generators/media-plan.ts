@@ -54,13 +54,17 @@ import {
 import { expandRawSchedulableDeliverables } from "../media-plan-scheduler";
 import { canonicalPlatformLabel, mergePlatformAllocation } from "../platform-allocation";
 import {
+  PUBLISHING_CALENDAR_DAYS,
   parseIsoCampaignDate,
-  startOfCampaignWeek,
+  resolveBusinessCampaignEndIso,
+  resolvePublishingCalendarRange,
+  resolveScheduledStartDate,
+  startOfPublishingWeek,
   toIsoCampaignDate,
 } from "@/features/campaign-outputs/media-plan-week-start";
 import { formatMoney } from "./generator-utils";
 
-export const MEDIA_PLAN_GENERATOR_VERSION = "3.7.0";
+export const MEDIA_PLAN_GENERATOR_VERSION = "3.8.0";
 
 /** Shown beside campaign cost on media plan documents. */
 export const MEDIA_PLAN_COST_VAT_DISCLAIMER = "Price excludes VAT.";
@@ -80,11 +84,18 @@ const TIER_PRIORITY: Record<string, number> = {
 };
 
 const DEFAULT_DURATION_WEEKS = 6;
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
+/** Publishing Calendar columns — Saturday→Friday (SSOT). */
+const DAYS = PUBLISHING_CALENDAR_DAYS;
 /** All seven days carry creator publishing in quotation-style calendars. */
 const ALL_DAY_INDEXES = [0, 1, 2, 3, 4, 5, 6] as const;
-/** Legacy paid-media rhythm — only when brief explicitly requests amplification. */
-const PAID_RHYTHM_CONTENT_INDEXES = [0, 1, 2, 4] as const;
+/**
+ * Legacy paid-media rhythm on Sat–Fri columns:
+ * Mon/Tue/Wed/Fri content (indexes 2,3,4,6); Thu stories (5); Sat boost (0); Sun monitor (1).
+ */
+const PAID_RHYTHM_CONTENT_INDEXES = [2, 3, 4, 6] as const;
+const PAID_RHYTHM_STORIES_INDEX = 5;
+const PAID_RHYTHM_BOOST_INDEX = 0;
+const PAID_RHYTHM_MONITOR_INDEX = 1;
 /** Assets must be delivered this many days before the publish date. */
 const ASSET_LEAD_DAYS = 3;
 /** Production must start this many days before the publish date. */
@@ -98,7 +109,10 @@ function resolveRequestedStartIso(facts: ReturnType<typeof getCampaignFacts>): s
   return iso && parseIsoCampaignDate(iso) ? iso : null;
 }
 
-/** Monday Week-1 anchor derived from the user-requested campaign start (or today). */
+/**
+ * Publishing Calendar grid anchor: Saturday of the week containing the campaign start.
+ * Business start remains `requestedIso` (may be mid-week).
+ */
 function resolveCampaignStartAnchor(facts: ReturnType<typeof getCampaignFacts>): {
   requestedIso: string | null;
   scheduled: Date;
@@ -106,15 +120,15 @@ function resolveCampaignStartAnchor(facts: ReturnType<typeof getCampaignFacts>):
 } {
   const requestedIso = resolveRequestedStartIso(facts);
   if (requestedIso) {
-    const requested = parseIsoCampaignDate(requestedIso)!;
-    const scheduled = startOfCampaignWeek(requested);
+    const scheduledIso = resolveScheduledStartDate(requestedIso) ?? requestedIso;
+    const scheduled = parseIsoCampaignDate(scheduledIso) ?? startOfPublishingWeek();
     return {
       requestedIso,
       scheduled,
-      scheduledIso: toIsoCampaignDate(scheduled),
+      scheduledIso,
     };
   }
-  const scheduled = startOfCampaignWeek();
+  const scheduled = startOfPublishingWeek();
   return {
     requestedIso: null,
     scheduled,
@@ -242,15 +256,21 @@ export function formatMediaPlanPreparedForLabel(
 }
 
 export type MediaPlanData = {
+  /** Business duration fact (weeks) — does not redefine calendar week boundaries. */
   durationWeeks: number;
-  /** Weeks rendered on the publishing calendar (may exceed brief duration to fit all deliverables). */
+  /** Count of Saturday–Friday weeks rendered on the Publishing Calendar. */
   calendarWeeks?: number;
-  /** ISO date — Monday of week 1 (scheduled publishing anchor). */
+  /**
+   * ISO date — Saturday that opens Publishing Calendar Week 1
+   * (Saturday of the week containing the campaign start).
+   */
   campaignStartDate: string;
-  /** ISO date — user-requested campaign start (may be mid-week). */
+  /** ISO date — user-requested / business campaign start (may be mid-week). */
   requestedStartDate?: string;
-  /** ISO date — Monday of week 1; same as {@link campaignStartDate}. */
+  /** ISO date — Saturday grid anchor; same as {@link campaignStartDate}. */
   scheduledStartDate?: string;
+  /** ISO date — inclusive business campaign end (may be mid-week). */
+  campaignEndDate?: string;
   weeks: MediaPlanWeek[];
   waves: MediaPlanWave[];
   milestones: MediaPlanMilestone[];
@@ -811,13 +831,31 @@ function calendarContentCapacity(
   return calendarWeeks * rhythmDays;
 }
 
-/** Calendar always follows the campaign brief duration — deliverables pack onto days instead. */
+/**
+ * Publishing Calendar week count from the overlapping Saturday–Friday range.
+ * Falls back to durationWeeks only when a date range cannot be resolved.
+ */
 export function resolveCalendarWeekCount(input: {
   durationWeeks: number;
   postingSlotCount: number;
   quotationCalendar: boolean;
+  campaignStartIso?: string | null;
+  campaignEndIso?: string | null;
 }): number {
-  return input.durationWeeks;
+  const startIso = input.campaignStartIso?.trim();
+  if (startIso) {
+    const endIso =
+      input.campaignEndIso?.trim() ||
+      resolveBusinessCampaignEndIso({
+        campaignStartIso: startIso,
+        durationWeeks: input.durationWeeks,
+      });
+    if (endIso) {
+      const range = resolvePublishingCalendarRange(startIso, endIso);
+      if (range?.weeks.length) return range.weeks.length;
+    }
+  }
+  return Math.max(1, input.durationWeeks);
 }
 
 /** True when a calendar day has no scheduled creator content (blank day — client-facing). */
@@ -1076,15 +1114,28 @@ export function generateMediaPlan(campaignObject: CampaignObject): CampaignOutpu
   const activationCount = activationCountForSlate(slate, platforms);
   const quotationCalendar = useQuotationStyleCalendar(campaignObject, slate);
   const includePaidRhythm = !quotationCalendar && wantsPaidAmplification(campaignObject, slate);
+  const startAnchor = resolveCampaignStartAnchor(facts);
+  const requestedStartIso = startAnchor.requestedIso;
+  const businessStartIso = requestedStartIso ?? startAnchor.scheduledIso;
+  const businessEndIso = resolveBusinessCampaignEndIso({
+    campaignStartIso: businessStartIso,
+    campaignEndIso: (facts as { campaignEndDate?: string } | undefined)?.campaignEndDate,
+    durationWeeks,
+  });
+  const publishingRange =
+    businessEndIso != null
+      ? resolvePublishingCalendarRange(businessStartIso, businessEndIso)
+      : null;
   const calendarWeekCount = resolveCalendarWeekCount({
     durationWeeks,
     postingSlotCount: activationCount,
     quotationCalendar,
+    campaignStartIso: businessStartIso,
+    campaignEndIso: businessEndIso,
   });
-  const startAnchor = resolveCampaignStartAnchor(facts);
-  const campaignStart = startAnchor.scheduled;
-  const campaignStartIso = startAnchor.scheduledIso;
-  const requestedStartIso = startAnchor.requestedIso;
+  const campaignStart = publishingRange?.gridStartSaturday ?? startAnchor.scheduled;
+  const campaignStartIso = publishingRange?.gridStartIso ?? startAnchor.scheduledIso;
+  const campaignEndIso = businessEndIso ?? undefined;
   const schedule = mediaPlanScheduleFromMeta(campaignObject.meta);
   const weekWeights = resolveMediaPlanWeekWeights(campaignObject, calendarWeekCount);
   const briefText = resolveBriefTextForScheduling(campaignObject);
@@ -1149,13 +1200,13 @@ export function generateMediaPlan(campaignObject: CampaignObject): CampaignOutpu
       if ((PAID_RHYTHM_CONTENT_INDEXES as readonly number[]).includes(index)) {
         return postingSlots.length ? schedulePostingSlot("content") : scheduleCreator("content");
       }
-      if (includePaidRhythm && index === 3) {
+      if (includePaidRhythm && index === PAID_RHYTHM_STORIES_INDEX) {
         return postingSlots.length ? schedulePostingSlot("stories") : scheduleCreator("stories");
       }
-      if (includePaidRhythm && index === 5) {
+      if (includePaidRhythm && index === PAID_RHYTHM_BOOST_INDEX) {
         return postingSlots.length ? schedulePostingSlot("boost") : scheduleCreator("boost");
       }
-      if (index === 6) {
+      if (index === PAID_RHYTHM_MONITOR_INDEX || index === 6) {
         return { day, dateLabel, type: "monitoring", label: "Performance review", serviceType: "Reporting" };
       }
       return { day, dateLabel, type: "monitoring", label: "Performance review", serviceType: "Reporting" };
@@ -1218,9 +1269,11 @@ export function generateMediaPlan(campaignObject: CampaignObject): CampaignOutpu
 
   const data: MediaPlanData = {
     durationWeeks,
+    calendarWeeks: calendarWeekCount,
     campaignStartDate: campaignStartIso,
     requestedStartDate: requestedStartIso ?? undefined,
     scheduledStartDate: campaignStartIso,
+    campaignEndDate: campaignEndIso,
     weeks: calendarWeeks,
     waves,
     milestones,

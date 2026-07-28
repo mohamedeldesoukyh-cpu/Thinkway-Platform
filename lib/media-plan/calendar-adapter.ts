@@ -15,7 +15,16 @@ import {
 
 import type { MediaPlanItem, MediaPlanViewKind } from "./types";
 
-const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+/** Publishing Calendar columns — Saturday→Friday. */
+const DAY_NAMES = [
+  "Saturday",
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+];
 
 function toIsoDate(date: Date): string {
   const y = date.getFullYear();

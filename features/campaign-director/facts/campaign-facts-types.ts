@@ -36,12 +36,12 @@ export type CampaignFacts = {
   campaignStartDate?: string;
   /**
    * ISO calendar date (YYYY-MM-DD) the user asked to start on.
-   * May fall mid-week; the Publishing Calendar still anchors Week 1 to Monday.
+   * May fall mid-week; the Publishing Calendar includes that partial week.
    */
   requestedStartDate?: string;
   /**
-   * ISO calendar date (YYYY-MM-DD) — Monday of Media Plan Week 1
-   * (Monday on or after {@link requestedStartDate} / {@link campaignStartDate}).
+   * ISO calendar date (YYYY-MM-DD) — Saturday that opens Publishing Calendar Week 1
+   * (Saturday of the week containing {@link requestedStartDate} / {@link campaignStartDate}).
    */
   scheduledStartDate?: string;
   geography?: string[];

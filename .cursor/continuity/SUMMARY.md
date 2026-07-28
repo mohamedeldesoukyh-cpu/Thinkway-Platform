@@ -33,6 +33,8 @@ Environment switch navigates between **hosts** — never switches DB inside one 
 - `docs/ARCHITECTURE_ALIGNMENT.md` — codebase vs spec  
 - `docs/RELEASE_WORKFLOW.md` — dual deploy + approval gate  
 - `docs/architecture/UNIFIED_MEDIA_PLAN_PLAN.md` — Media Plan SSOT (baseline + draft)  
+- `docs/architecture/MEDIA_PLAN_VERSIONING.md` — business version vs audit; approval boundary  
+- Publishing Calendar: Saturday–Friday calendar weeks (`media-plan-week-start.ts`); range from campaign start/end  
 - `lib/media-plan` — Media Plan Engine (Studio / Campaign / Portal / Performance)  
 - `docs/DISCOVERY_*` · `docs/PERFORMANCE_*` — discovery & perf contracts  
 - Ops Center `/operations` — deployment/health SSOT  

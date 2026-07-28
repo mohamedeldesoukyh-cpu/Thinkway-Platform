@@ -27,6 +27,15 @@
 - Empty slate seeds from Assignments hierarchy on: Studio generate/regenerate, open Studio from campaign, Campaign Media Plan load
 - Open Studio / sync auto-generates Media Plan when creators are seeded
 
+## Publishing Calendar (Saturday–Friday)
+
+- **Calendar-based**, not campaign-relative: weeks are **Sat → Fri**
+- Range = first Saturday of week containing campaign start → last Friday of week containing campaign end
+- Mid-week starts/ends still render that partial publishing week
+- Week labels Week 1…N continue across months (no month restart)
+- **Revise** on date change: recalculate range + rebind slots; preserve creators/strategy unless Regenerated
+- Example: 15 Jul – 14 Aug 2026 → five weeks (11–17 Jul … 8–14 Aug)
+
 ## Media Plan Versioning (SSOT + domain aligned on develop)
 
 - **SSOT:** `docs/architecture/MEDIA_PLAN_VERSIONING.md` (contract; code yields to spec)

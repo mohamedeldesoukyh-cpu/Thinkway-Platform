@@ -10,6 +10,7 @@
 |---|---|
 | [`MEDIA_PLANNING_V1_PRODUCTION_READINESS.md`](./MEDIA_PLANNING_V1_PRODUCTION_READINESS.md) | v1 engine SSOT (baseline / working draft / portal) |
 | [`../release/2.0/MEDIA_PLAN_LIFECYCLE_OWNERSHIP.md`](../release/2.0/MEDIA_PLAN_LIFECYCLE_OWNERSHIP.md) | Original / Current / Actual ownership (R2.0) |
+| Publishing Calendar | Saturday–Friday calendar weeks; range from campaign start/end — see `features/campaign-outputs/media-plan-week-start.ts` |
 | Thinkway enterprise principle | Approved business artefacts are revised in a controlled manner; strategic redesigns are explicit and versioned separately |
 
 ---

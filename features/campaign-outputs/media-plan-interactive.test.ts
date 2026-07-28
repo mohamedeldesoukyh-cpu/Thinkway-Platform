@@ -17,7 +17,15 @@ import {
   getOutputContentForDisplay,
 } from "@/features/campaign-outputs/output-registry";
 
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const DAYS = [
+  "Saturday",
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+];
 
 function mediaPlanData(content: ReturnType<typeof generateMediaPlan>): MediaPlanData {
   assert.ok(content.data);

@@ -81,18 +81,19 @@ test("timeline change clamps and updates duration weeks", () => {
   assert.equal(getCampaignFacts(clamped.campaignObject)?.durationWeeks, 52);
 });
 
-test("mid-week start stores requested + Monday scheduled dates and explains alignment", () => {
+test("mid-week start stores requested + Saturday grid start and explains alignment", () => {
   const { campaignObject: next, change } = applyTimelineChange(campaignObject(), {
     startDate: "24/07/2026",
   });
   const facts = getCampaignFacts(next);
   assert.equal(facts?.campaignStartDate, "2026-07-24");
   assert.equal(facts?.requestedStartDate, "2026-07-24");
-  assert.equal(facts?.scheduledStartDate, "2026-07-27");
+  assert.equal(facts?.scheduledStartDate, "2026-07-18");
   assert.match(change ?? "", /24\/07\/2026/);
-  assert.match(change ?? "", /27\/07\/2026/);
+  assert.match(change ?? "", /18\/07\/2026/);
+  assert.match(change ?? "", /Saturday–Friday/);
   assert.doesNotMatch(change ?? "", /Publishing Calendar Start/i);
-  assert.equal(getCampaignFacts(next)?.scheduledStartDate, "2026-07-27");
+  assert.equal(getCampaignFacts(next)?.scheduledStartDate, "2026-07-18");
   const cards = (next.sections.summary.data as { summaryCards?: {
     campaignStartDate?: string;
     campaignEndDate?: string;
@@ -103,20 +104,20 @@ test("mid-week start stores requested + Monday scheduled dates and explains alig
   assert.equal(cards?.duration, "6 weeks");
 });
 
-test("Monday start keeps requested and scheduled identical", () => {
+test("Saturday start keeps requested and scheduled identical", () => {
   const { campaignObject: next, change } = applyTimelineChange(campaignObject(), {
-    startDate: "27/07/2026",
+    startDate: "18/07/2026",
   });
   const facts = getCampaignFacts(next);
-  assert.equal(facts?.requestedStartDate, "2026-07-27");
-  assert.equal(facts?.scheduledStartDate, "2026-07-27");
+  assert.equal(facts?.requestedStartDate, "2026-07-18");
+  assert.equal(facts?.scheduledStartDate, "2026-07-18");
   assert.doesNotMatch(change ?? "", /Publishing Calendar Start/i);
   const cards = (next.sections.summary.data as { summaryCards?: {
     campaignStartDate?: string;
     campaignEndDate?: string;
   } }).summaryCards;
-  assert.equal(cards?.campaignStartDate, "27/07/2026");
-  assert.equal(cards?.campaignEndDate, "06/09/2026");
+  assert.equal(cards?.campaignStartDate, "18/07/2026");
+  assert.equal(cards?.campaignEndDate, "28/08/2026");
 });
 
 test("natural-language start dates parse through timeline change", () => {
@@ -124,8 +125,8 @@ test("natural-language start dates parse through timeline change", () => {
     startDate: "24th of July 2026",
   });
   assert.equal(getCampaignFacts(next)?.requestedStartDate, "2026-07-24");
-  assert.equal(getCampaignFacts(next)?.scheduledStartDate, "2026-07-27");
-  assert.match(change ?? "", /27\/07\/2026/);
+  assert.equal(getCampaignFacts(next)?.scheduledStartDate, "2026-07-18");
+  assert.match(change ?? "", /18\/07\/2026/);
   assert.doesNotMatch(change ?? "", /Publishing Calendar Start/i);
 });
 

@@ -19,7 +19,15 @@ import type {
 
 export type MediaPlanDocumentMode = "planning" | "strategy";
 
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
+const DAYS = [
+  "Saturday",
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+] as const;
 
 /** Planning = quotation/shortlist only; strategy = brief + quotation. */
 export function resolveMediaPlanDocumentMode(hasBrief: boolean): MediaPlanDocumentMode {
@@ -31,7 +39,7 @@ function dayIndexForName(dayName: string): number {
   return index >= 0 ? index : 0;
 }
 
-/** Format a calendar date relative to campaign start (week 1 Monday). */
+/** Format a calendar date relative to campaign start (week 1 Saturday). */
 export function formatLeadDateLabel(
   campaignStartIso: string,
   publishWeek: number,
