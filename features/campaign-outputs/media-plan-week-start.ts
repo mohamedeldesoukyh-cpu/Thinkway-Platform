@@ -58,8 +58,23 @@ export function formatCampaignDateLabel(iso: string): string {
 }
 
 /**
- * When Calendar Week mode must start later than the requested go-live day,
- * return a user-facing explanation. Null when dates already align.
+ * Inclusive campaign end date from business start + duration weeks
+ * (start + durationWeeks×7 − 1 day). Publication slot dates live on the Media Plan.
+ */
+export function resolveCampaignEndDate(
+  startIso: string,
+  durationWeeks: number
+): string | null {
+  const start = parseIsoCampaignDate(startIso);
+  if (!start || !Number.isFinite(durationWeeks) || durationWeeks < 1) return null;
+  const end = new Date(start);
+  end.setDate(end.getDate() + Math.round(durationWeeks) * 7 - 1);
+  return toIsoCampaignDate(end);
+}
+
+/**
+ * Optional Copilot note when Week 1 Monday differs from the campaign start.
+ * Does not expose Monday alignment as a business field — Media Plan dates remain SSOT.
  */
 export function describeMondayAlignment(
   requestedIso: string,
@@ -67,10 +82,7 @@ export function describeMondayAlignment(
 ): string | null {
   if (requestedIso === scheduledIso) return null;
   return (
-    `Calendar Week mode: publishing weeks run Monday–Sunday, so Week 1 begins ` +
-    `${formatCampaignDateLabel(scheduledIso)} (the Monday on or after ` +
-    `${formatCampaignDateLabel(requestedIso)}). ` +
-    `Your requested go-live date (${formatCampaignDateLabel(requestedIso)}) is kept; ` +
-    `only the publishing calendar is Monday-aligned.`
+    `The Media Plan uses Monday–Sunday weeks, so the first publishing week begins ` +
+    `${formatCampaignDateLabel(scheduledIso)}.`
   );
 }

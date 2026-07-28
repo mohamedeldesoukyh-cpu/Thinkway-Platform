@@ -3,7 +3,8 @@
 **Status:** Approved hard rules (D7) — Phase 1 documents only; no Media Plan refactor in Phase 1  
 **Parent:** [RELEASE_2_0_ARCHITECTURE.md](./RELEASE_2_0_ARCHITECTURE.md)  
 **Normative:** [DECISIONS.md](./DECISIONS.md) D6–D7 · [FIELD_OWNERSHIP_MATRIX.md](./FIELD_OWNERSHIP_MATRIX.md)  
-**Builds on:** `docs/architecture/MEDIA_PLANNING_V1_PRODUCTION_READINESS.md` (v1 engine SSOT — not replaced)
+**Builds on:** `docs/architecture/MEDIA_PLANNING_V1_PRODUCTION_READINESS.md` (v1 engine SSOT — not replaced)  
+**Business versioning:** [`docs/architecture/MEDIA_PLAN_VERSIONING.md`](../../architecture/MEDIA_PLAN_VERSIONING.md) — when Draft/Under Review stay on one business version + audit; post-approval immutability; Revise vs Regenerate
 
 ---
 

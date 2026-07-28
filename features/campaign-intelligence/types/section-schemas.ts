@@ -543,6 +543,10 @@ export type SummarySectionData = {
   targetAudience?: string;
   budget?: string;
   duration?: string;
+  /** Campaign go-live (DD/MM/YYYY) — business start, not Media Plan slot dates. */
+  campaignStartDate?: string;
+  /** Inclusive campaign end from start + duration (DD/MM/YYYY). */
+  campaignEndDate?: string;
   objective?: string;
   campaignType?: string;
   platforms?: string;

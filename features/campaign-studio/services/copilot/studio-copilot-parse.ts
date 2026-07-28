@@ -307,7 +307,7 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
   {
     name: "regenerate_output",
     description:
-      "Rebuild an existing Campaign Output only when the user explicitly asks to regenerate/rebuild/refresh that artifact (e.g. 'regenerate the media plan', 'rebuild the KPI forecast', 'refresh the proposal'). Do NOT use for changing campaign start date, moving/shifting weeks, or updating timeline facts — use update_timeline. Do NOT use for moving creators between weeks — use reschedule_media_plan. Only the requested output is rebuilt.",
+      "Strategically rebuild an existing Campaign Output when the user explicitly asks to regenerate/rebuild it. For Media Plan this creates a new major version (v2.0, v3.0…) and may reorder creators, waves, and the schedule. Do NOT use for start-date changes or slot moves — those are Revise (update_timeline / reschedule_media_plan). Examples: 'regenerate the media plan', 'rebuild the KPI forecast'.",
     parameters: {
       type: "object",
       properties: {
@@ -529,6 +529,22 @@ export function parseDeterministicStartDateTimelineIntent(
  */
 export function parseStudioIntentFallback(message: string): StudioCopilotIntent {
   const text = message.trim();
+
+  const mediaPlanRestore = text.match(
+    /\b(?:restore|revert)\b.{0,48}\bmedia\s*plan\b.{0,28}(?:version\s+)?(v?\d+(?:\.\d+)?)/i
+  );
+  if (mediaPlanRestore) {
+    const raw = mediaPlanRestore[1]!.trim();
+    if (raw.includes(".")) {
+      const label = raw.toLowerCase().startsWith("v") ? raw.toLowerCase() : `v${raw}`;
+      return { kind: "restore_output_version", output: "media_plan", versionLabel: label };
+    }
+    return {
+      kind: "restore_output_version",
+      output: "media_plan",
+      version: Number(raw.replace(/^v/i, "")),
+    };
+  }
 
   const restoreMatch = text.match(/\b(?:restore|revert|go back)\b[^\d]*version\s+(\d+)/i);
   if (restoreMatch) {

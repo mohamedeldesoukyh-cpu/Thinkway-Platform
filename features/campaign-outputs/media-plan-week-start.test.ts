@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   describeMondayAlignment,
+  resolveCampaignEndDate,
   resolveScheduledStartDate,
   startOfCampaignWeek,
   toIsoCampaignDate,
@@ -26,11 +27,14 @@ test("alignment message is null when dates match", () => {
   assert.equal(describeMondayAlignment("2026-07-27", "2026-07-27"), null);
 });
 
-test("alignment message explains Friday → Monday shift in Calendar Week mode", () => {
+test("alignment note stays internal — no Publishing Calendar Start field name", () => {
   const note = describeMondayAlignment("2026-07-24", "2026-07-27");
-  assert.match(note ?? "", /Calendar Week mode/);
-  assert.match(note ?? "", /24\/07\/2026/);
   assert.match(note ?? "", /27\/07\/2026/);
   assert.match(note ?? "", /Monday–Sunday/);
-  assert.match(note ?? "", /requested go-live/);
+  assert.doesNotMatch(note ?? "", /Publishing Calendar Start/i);
+});
+
+test("campaign end date is inclusive last day of duration window", () => {
+  assert.equal(resolveCampaignEndDate("2026-07-24", 6), "2026-09-03");
+  assert.equal(resolveCampaignEndDate("2026-07-27", 1), "2026-08-02");
 });

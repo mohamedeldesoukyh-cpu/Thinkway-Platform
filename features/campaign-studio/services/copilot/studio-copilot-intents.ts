@@ -49,6 +49,7 @@ export type StudioCopilotIntentKind =
   | "review_campaign"
   | "undo_last_change"
   | "restore_version"
+  | "restore_output_version"
   | "answer_question"
   | "clarify";
 
@@ -178,6 +179,16 @@ export type ClarifyIntent = { kind: "clarify"; question: string };
 export type UndoIntent = { kind: "undo_last_change" };
 export type RestoreVersionIntent = { kind: "restore_version"; version: number };
 
+/** Forward-restore a Campaign Output snapshot (Media Plan v1.x history). */
+export type RestoreOutputVersionIntent = {
+  kind: "restore_output_version";
+  output: CampaignOutputKind;
+  /** Monotonic revision sequence (compare/restore key). */
+  version?: number;
+  /** Enterprise label, e.g. "v1.1". */
+  versionLabel?: string;
+};
+
 /** Intents wired to executors in this increment; the rest are typed for forward-compat. */
 export type ExecutableStudioCopilotIntent =
   | RemoveCreatorsIntent
@@ -204,7 +215,8 @@ export type ExecutableStudioCopilotIntent =
   | AnswerQuestionIntent
   | ClarifyIntent
   | UndoIntent
-  | RestoreVersionIntent;
+  | RestoreVersionIntent
+  | RestoreOutputVersionIntent;
 
 export type StudioCopilotIntent =
   | ExecutableStudioCopilotIntent
@@ -303,7 +315,8 @@ export function buildCampaignContextDigest(campaignObject: CampaignObject): Camp
     platforms: facts?.platforms ?? [],
     budget: facts?.budget,
     durationWeeks: facts?.durationWeeks,
-    campaignStartDate: facts?.campaignStartDate,
+    campaignStartDate:
+      facts?.requestedStartDate ?? facts?.campaignStartDate,
     deliverables: facts?.deliverables ?? [],
     kpis: facts?.kpis ?? [],
     slate,
@@ -329,7 +342,9 @@ export function renderDigestForPrompt(digest: CampaignContextDigest): string {
   if (digest.budget)
     lines.push(`Budget: ${digest.budget.amount.toLocaleString()} ${digest.budget.currency}`);
   if (digest.durationWeeks) lines.push(`Duration: ${digest.durationWeeks} weeks`);
-  if (digest.campaignStartDate) lines.push(`Start date: ${digest.campaignStartDate}`);
+  if (digest.campaignStartDate) {
+    lines.push(`Campaign Start Date: ${digest.campaignStartDate}`);
+  }
   if (digest.deliverables.length) lines.push(`Deliverables: ${digest.deliverables.join("; ")}`);
   if (digest.kpis.length) lines.push(`KPIs: ${digest.kpis.join("; ")}`);
   if (digest.overallScore != null) lines.push(`Overall score: ${digest.overallScore}/100`);

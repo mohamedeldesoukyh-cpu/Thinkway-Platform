@@ -35,7 +35,6 @@ import {
   formatWeekRangeLabel,
   parseCampaignStartDate,
 } from "../media-plan-week-range";
-import { describeMondayAlignment } from "../media-plan-week-start";
 import {
   MEDIA_PLAN_AD_TYPE_COLORS,
   MEDIA_PLAN_BRAND,
@@ -707,12 +706,6 @@ export function MediaPlanCalendar({
     () => parseCampaignStartDate(data.campaignStartDate),
     [data.campaignStartDate]
   );
-  const alignmentNote = useMemo(() => {
-    const requested = data.requestedStartDate?.trim();
-    const scheduled = (data.scheduledStartDate ?? data.campaignStartDate)?.trim();
-    if (!requested || !scheduled) return null;
-    return describeMondayAlignment(requested, scheduled);
-  }, [data.campaignStartDate, data.requestedStartDate, data.scheduledStartDate]);
 
   const [draggingCreator, setDraggingCreator] = useState<DraggableCreator | null>(null);
   const [dragOverSlot, setDragOverSlot] = useState<{ week: number; dayIndex: number } | null>(
@@ -871,15 +864,6 @@ export function MediaPlanCalendar({
           </span>
         ))}
       </div>
-
-      {alignmentNote ? (
-        <p
-          className="rounded-xl border border-[#0057FF]/15 bg-white/80 px-3 py-2 text-[11px] leading-relaxed"
-          style={{ color: MEDIA_PLAN_BRAND.deepNavy }}
-        >
-          {alignmentNote}
-        </p>
-      ) : null}
 
       <div className={cn("space-y-5", landscape ? "w-full" : "min-w-[720px] overflow-x-auto")}>
         {data.weeks.map((week) => (

@@ -924,7 +924,13 @@ export function IntelligenceWorkspace({
         disabled={isStreaming}
       />
     ) : (
-      <div className="sc-chat-thread">
+      <div
+        className={
+          inDock
+            ? "sc-chat-thread flex min-h-0 flex-1 flex-col overflow-hidden"
+            : "sc-chat-thread"
+        }
+      >
         <ChatThread
           messages={messages}
           streamingContent={streamingContent}
@@ -944,7 +950,7 @@ export function IntelligenceWorkspace({
           onScrollContainerChange={inDock ? handleChatScrollContainerChange : undefined}
           variant={inDock ? "overlay" : "reference"}
           externalScrollContainer={inDock ? null : chatScrollContainer}
-          className={inDock ? "pt-3" : undefined}
+          className={inDock ? "min-h-0 flex-1 pt-3" : undefined}
         />
         <SuggestedActionsBar
           onSelect={(p, intent) => void handleSend(p, intent)}
@@ -952,6 +958,7 @@ export function IntelligenceWorkspace({
           messages={messages}
           workspace={workspace}
           variant={inDock ? "default" : "reference"}
+          className={inDock ? "shrink-0" : undefined}
         />
       </div>
     );

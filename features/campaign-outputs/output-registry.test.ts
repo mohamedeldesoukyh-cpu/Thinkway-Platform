@@ -50,15 +50,18 @@ test("generate sets status generated at version 1 with a cached view + fingerpri
   assert.equal(getCampaignOutput(campaignObject, "media_plan")?.status, "generated");
 });
 
-test("regenerating bumps the version and keeps generatedAt", () => {
+test("regenerating Media Plan pre-approval keeps business version and updates tip", () => {
   const obj = buildCampaignObjectFixture();
   const first = generateCampaignOutput(obj, "media_plan", { now: "2026-01-01T00:00:00.000Z" });
   const second = generateCampaignOutput(first.campaignObject, "media_plan", {
     now: "2026-02-01T00:00:00.000Z",
+    operation: "regenerate",
   });
-  assert.equal(second.record.version, 2);
+  assert.equal(second.record.version, 1);
+  assert.equal(second.record.versionLabel, "v1.0");
   assert.equal(second.record.generatedAt, "2026-01-01T00:00:00.000Z");
   assert.equal(second.record.updatedAt, "2026-02-01T00:00:00.000Z");
+  assert.ok((second.record.auditHistory?.length ?? 0) >= 1);
 });
 
 test("dependency graph: changing creators flips only dependent outputs to needs_update", () => {

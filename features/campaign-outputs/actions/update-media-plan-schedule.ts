@@ -112,8 +112,13 @@ export async function updateMediaPlanScheduleAction(
 
   let next = scheduleResult.campaignObject;
   try {
+    // Schedule slot moves are a Revise: keep structure, sync the calendar view.
     ({ campaignObject: next } = generateCampaignOutput(next, "media_plan", {
       origin: "user",
+      actorUserId: auth.userId,
+      operation: "revise",
+      changeSummary:
+        "Revised Media Plan: publishing slots updated — creators, waves, and strategy preserved.",
     }));
   } catch {
     /* keep schedule meta even if regeneration fails */

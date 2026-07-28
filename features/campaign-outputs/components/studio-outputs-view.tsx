@@ -246,6 +246,14 @@ export function StudioOutputsView({
         if (isCopilotStreaming) return;
         onSendMessage(outputActionCommand("compare", kind));
       },
+      onHistory: (kind) => {
+        if (isCopilotStreaming) return;
+        onSendMessage(
+          kind === "media_plan"
+            ? "Show Media Plan version history and compare the last two versions"
+            : outputActionCommand("compare", kind)
+        );
+      },
     }),
     [outputs, onSendMessage, isCopilotStreaming]
   );

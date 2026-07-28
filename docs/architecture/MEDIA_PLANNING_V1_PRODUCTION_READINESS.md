@@ -10,6 +10,7 @@ This report **supersedes** phase-by-phase notes for all release and deployment d
 | Doc | Role after v1 |
 |---|---|
 | **This file** | Canonical SSOT |
+| `MEDIA_PLAN_VERSIONING.md` | Business version lifecycle (Draft → Approved); revise vs regenerate; audit vs business version |
 | `UNIFIED_MEDIA_PLAN_PLAN.md` | Design principles (superseded for release) |
 | `UNIFIED_MEDIA_PLAN_PHASE1_WRITE_PATHS.md` | Historical Phase 1 |
 | `UNIFIED_MEDIA_PLAN_PHASE2_REPORT.md` | Historical Phase 2 |

@@ -18,6 +18,7 @@ import type {
   CampaignOutputGroup,
   CampaignOutputInputKey,
   CampaignOutputKind,
+  CampaignOutputOperation,
   CampaignOutputOrigin,
   CampaignOutputRecord,
   CampaignOutputRegistryState,
@@ -39,6 +40,22 @@ import {
   enrichMediaPlanFromSlate,
   type MediaPlanData,
 } from "./generators/media-plan";
+import {
+  appendMediaPlanAuditEntry,
+  actorKindFromOrigin,
+  defaultApprovalImpactForOperation,
+  formatMediaPlanVersionLabel,
+  nextMediaPlanVersion,
+  resolveMediaPlanVersionParts,
+  shouldCreateNewBusinessVersion,
+  syncMediaPlanBusinessStatusFromEngine,
+  versionFieldsForSnapshot,
+} from "./media-plan-versioning";
+import {
+  ensureWorkingDraftOnCampaignObject,
+  getMediaPlanWorkingStatus,
+} from "./media-plan-mutations";
+import { isApprovedStatus } from "@/lib/media-plan";
 
 /** Prior versions kept per output for compare / restore / history. */
 const MAX_OUTPUT_HISTORY = 12;
@@ -123,6 +140,7 @@ function estimateSizeBytes(record: Pick<CampaignOutputRecord, "content">): numbe
 function snapshotOf(record: CampaignOutputRecord): CampaignOutputVersionSnapshot {
   return {
     version: record.version,
+    ...versionFieldsForSnapshot(record),
     generatedAt: record.generatedAt,
     updatedAt: record.updatedAt,
     sourceFingerprint: record.sourceFingerprint,
@@ -168,7 +186,15 @@ export type OutputView = {
   /** Metadata-driven Outputs Center group. */
   group: CampaignOutputGroup;
   status: CampaignOutputStatus;
+  /** Monotonic revision sequence. */
   version: number;
+  /** Enterprise display label (Media Plan: v1.2). Falls back to v{n}. */
+  versionLabel: string;
+  versionMajor?: number;
+  versionMinor?: number;
+  operation?: CampaignOutputOperation;
+  changeSummary?: string;
+  changeReason?: string;
   generatedAt?: string;
   updatedAt?: string;
   generatorVersion?: string;
@@ -203,6 +229,13 @@ export function listCampaignOutputs(campaignObject: CampaignObject): OutputView[
       status === "needs_update"
         ? describeStaleReason(campaignObject, definition.kind)?.reason
         : undefined;
+    const parts = resolveMediaPlanVersionParts(record);
+    const version = record?.version ?? 0;
+    const versionLabel =
+      record?.versionLabel ??
+      (version > 0
+        ? formatMediaPlanVersionLabel(parts.major || version, parts.minor)
+        : "—");
     return {
       kind: definition.kind,
       label: definition.label,
@@ -210,7 +243,13 @@ export function listCampaignOutputs(campaignObject: CampaignObject): OutputView[
       category: definition.category,
       group: definition.group,
       status,
-      version: record?.version ?? 0,
+      version,
+      versionLabel,
+      versionMajor: record?.versionMajor ?? (version > 0 ? parts.major : undefined),
+      versionMinor: record?.versionMinor ?? (version > 0 ? parts.minor : undefined),
+      operation: record?.operation,
+      changeSummary: record?.changeSummary,
+      changeReason: record?.changeReason,
       generatedAt: record?.generatedAt,
       updatedAt: record?.updatedAt,
       generatorVersion: record?.generatorVersion ?? definition.generatorVersion,
@@ -294,15 +333,33 @@ export type GenerateCampaignOutputResult = {
   record: CampaignOutputRecord;
 };
 
+export type GenerateCampaignOutputOptions = {
+  campaignVersion?: number;
+  now?: string;
+  origin?: CampaignOutputOrigin;
+  /**
+   * Media Plan operation. Defaults: first generate → initial; subsequent → regenerate.
+   * Pass `revise` only when the caller preserves structure and syncs a controlled view
+   * (e.g. schedule slot moves). Prefer `reviseMediaPlanOutput` for field patches.
+   */
+  operation?: CampaignOutputOperation;
+  changeSummary?: string;
+  actorUserId?: string;
+};
+
 /**
  * Generate (or regenerate) an output: run its deterministic generator, store the
- * rendered view + a fresh fingerprint + the generator version, and bump the
- * output version. Throws if no generator is wired for the kind.
+ * rendered view + fingerprint + generator version.
+ *
+ * Media Plan (SSOT MEDIA_PLAN_VERSIONING.md):
+ * - Initial → business version v1.0
+ * - Draft / Under Review → same business version + audit (no bump)
+ * - Leaving Approved → fork opens revise/regenerate business version first
  */
 export function generateCampaignOutput(
   campaignObject: CampaignObject,
   kind: CampaignOutputKind,
-  options?: { campaignVersion?: number; now?: string; origin?: CampaignOutputOrigin }
+  options?: GenerateCampaignOutputOptions
 ): GenerateCampaignOutputResult {
   const definition = getOutputDefinition(kind);
   if (!definition?.generate) {
@@ -310,13 +367,42 @@ export function generateCampaignOutput(
   }
 
   const now = options?.now ?? new Date().toISOString();
-  const content = definition.generate(campaignObject);
-  const fingerprint = computeSourceFingerprint(campaignObject, definition.inputKeys);
-  const inputFingerprints = computeInputFingerprints(campaignObject, definition.inputKeys);
-  const state = getCampaignOutputState(campaignObject);
+  const origin = options?.origin ?? "copilot";
+  let workingObject = campaignObject;
+  let forkedFromApproved = false;
+
+  const priorState = getCampaignOutputState(workingObject);
+  const prior = priorState[kind];
+  const operation: CampaignOutputOperation =
+    options?.operation ?? (!prior || prior.version <= 0 ? "initial" : "regenerate");
+
+  // Approved Media Plan tip is immutable — fork before generating.
+  if (kind === "media_plan" && prior && isApprovedStatus(getMediaPlanWorkingStatus(workingObject))) {
+    const forked = ensureWorkingDraftOnCampaignObject(workingObject, {
+      at: now,
+      actorUserId: options?.actorUserId,
+      label:
+        operation === "regenerate"
+          ? "Draft revision for regenerate"
+          : "Revision from approved Media Plan",
+      businessOperation: operation === "regenerate" ? "regenerate" : "revise",
+      approvalImpact:
+        operation === "regenerate" ? "client_reapproval" : "internal",
+      origin,
+      changeSummary: options?.changeSummary,
+    });
+    if (forked.ok) {
+      workingObject = forked.campaignObject;
+      forkedFromApproved = forked.forkedDraft;
+    }
+  }
+
+  const content = definition.generate(workingObject);
+  const fingerprint = computeSourceFingerprint(workingObject, definition.inputKeys);
+  const inputFingerprints = computeInputFingerprints(workingObject, definition.inputKeys);
+  const state = getCampaignOutputState(workingObject);
   const previous = state[kind];
 
-  // Why this (re)generation happened: which inputs differ from the prior version.
   const changedInputs = previous?.inputFingerprints
     ? definition.inputKeys.filter(
         (key) => previous.inputFingerprints?.[key] !== inputFingerprints[key]
@@ -328,30 +414,145 @@ export function generateCampaignOutput(
       ? describeInputsChanged(changedInputs)
       : "Manual regeneration.";
 
-  const history = previous
-    ? [...(previous.history ?? []), snapshotOf(previous)].slice(-MAX_OUTPUT_HISTORY)
-    : [];
+  const changeSummary =
+    options?.changeSummary ??
+    (operation === "regenerate"
+      ? "Regenerated Media Plan (new strategic version)."
+      : operation === "revise"
+        ? "Revised Media Plan from updated campaign inputs."
+        : changeReason);
 
-  const record: CampaignOutputRecord = {
+  // Non–Media Plan outputs keep prior bump-on-generate behaviour.
+  if (kind !== "media_plan") {
+    const history = previous
+      ? [...(previous.history ?? []), snapshotOf(previous)].slice(-MAX_OUTPUT_HISTORY)
+      : [];
+    const versionNext = nextMediaPlanVersion(previous, operation);
+    const record: CampaignOutputRecord = {
+      kind,
+      status: "generated",
+      version: versionNext.version,
+      versionMajor: versionNext.major,
+      versionMinor: versionNext.minor,
+      versionLabel: versionNext.versionLabel,
+      operation,
+      generatedAt: previous?.generatedAt ?? now,
+      updatedAt: now,
+      campaignVersion: options?.campaignVersion,
+      sourceFingerprint: fingerprint,
+      inputFingerprints,
+      generatorVersion: definition.generatorVersion,
+      origin,
+      actorKind: actorKindFromOrigin(origin),
+      actorUserId: options?.actorUserId,
+      sizeBytes: estimateSizeBytes({ content }),
+      changeReason,
+      changeSummary,
+      changedInputs,
+      history,
+      content,
+    };
+    return {
+      campaignObject: withOutputState(workingObject, { ...state, [kind]: record }),
+      record,
+    };
+  }
+
+  const engineStatus = getMediaPlanWorkingStatus(workingObject);
+  const createBusinessVersion =
+    !previous ||
+    shouldCreateNewBusinessVersion({
+      engineStatus,
+      forkedFromApproved,
+      operation: operation === "initial" || !previous ? "initial" : operation,
+    });
+
+  // Fork already opened the business version — update tip content only.
+  const bumpNow = createBusinessVersion && !forkedFromApproved;
+  const versionNext = bumpNow
+    ? nextMediaPlanVersion(previous, !previous ? "initial" : operation)
+    : previous
+      ? {
+          version: previous.version,
+          major: previous.versionMajor ?? resolveMediaPlanVersionParts(previous).major,
+          minor: previous.versionMinor ?? resolveMediaPlanVersionParts(previous).minor,
+          versionLabel:
+            previous.versionLabel ??
+            formatMediaPlanVersionLabel(
+              previous.versionMajor ?? 1,
+              previous.versionMinor ?? 0
+            ),
+        }
+      : nextMediaPlanVersion(null, "initial");
+
+  const history =
+    bumpNow && previous
+      ? [...(previous.history ?? []), snapshotOf(previous)].slice(-MAX_OUTPUT_HISTORY)
+      : previous?.history ?? [];
+
+  let record: CampaignOutputRecord = {
     kind,
     status: "generated",
-    version: (previous?.version ?? 0) + 1,
+    version: versionNext.version,
+    versionMajor: versionNext.major,
+    versionMinor: versionNext.minor,
+    versionLabel: versionNext.versionLabel,
+    operation: !previous ? "initial" : forkedFromApproved ? previous.operation ?? operation : operation,
     generatedAt: previous?.generatedAt ?? now,
     updatedAt: now,
     campaignVersion: options?.campaignVersion,
     sourceFingerprint: fingerprint,
     inputFingerprints,
     generatorVersion: definition.generatorVersion,
-    origin: options?.origin ?? "copilot",
+    origin,
+    actorKind: actorKindFromOrigin(origin),
+    actorUserId: options?.actorUserId,
     sizeBytes: estimateSizeBytes({ content }),
     changeReason,
+    changeSummary:
+      bumpNow || forkedFromApproved
+        ? changeSummary
+        : options?.changeSummary ??
+          `Updated Media Plan ${versionNext.versionLabel} (same business version; audit recorded).`,
     changedInputs,
     history,
     content,
+    auditHistory: previous?.auditHistory,
+    businessStatus: previous?.businessStatus ?? "draft",
+    approvedBy: bumpNow || forkedFromApproved ? null : previous?.approvedBy ?? null,
+    approvedAt: bumpNow || forkedFromApproved ? null : previous?.approvedAt ?? null,
+    approvalSource: bumpNow || forkedFromApproved ? null : previous?.approvalSource ?? null,
+    approvalImpact:
+      previous?.approvalImpact ??
+      (bumpNow || forkedFromApproved
+        ? defaultApprovalImpactForOperation(!previous ? "initial" : operation)
+        : "none"),
   };
 
-  const nextState: CampaignOutputRegistryState = { ...state, [kind]: record };
-  return { campaignObject: withOutputState(campaignObject, nextState), record };
+  record = syncMediaPlanBusinessStatusFromEngine(record, engineStatus);
+  record = {
+    ...record,
+    auditHistory: appendMediaPlanAuditEntry(record, {
+      at: now,
+      actorKind: actorKindFromOrigin(origin),
+      actorUserId: options?.actorUserId,
+      reason: changeReason,
+      after: { operation, versionLabel: record.versionLabel },
+      operationClass:
+        operation === "regenerate"
+          ? bumpNow || forkedFromApproved
+            ? "business_regenerate"
+            : "working_regenerate"
+          : operation === "revise"
+            ? "revise_generate"
+            : "generate",
+    }),
+  };
+
+  return {
+    campaignObject: withOutputState(workingObject, { ...state, [kind]: record }),
+    record,
+  };
 }
 
 /**
@@ -447,8 +648,15 @@ export function regenerateStaleCampaignOutputs(
 ): CampaignObject {
   let next = campaignObject;
   for (const kind of regeneratableStaleCampaignOutputKinds(next)) {
+    // Auto-sync of stale Media Plans is a Revise (structure-preserving refresh),
+    // not an explicit strategic Regenerate.
     ({ campaignObject: next } = generateCampaignOutput(next, kind, {
       origin: options?.origin ?? "automatic",
+      operation: kind === "media_plan" ? "revise" : undefined,
+      changeSummary:
+        kind === "media_plan"
+          ? "Revised Media Plan to sync with updated campaign inputs."
+          : undefined,
     }));
   }
   return next;
@@ -472,11 +680,14 @@ export function getOutputVersions(
 export type OutputVersionDiff = {
   fromVersion: number;
   toVersion: number;
+  fromVersionLabel?: string;
+  toVersionLabel?: string;
   addedSections: string[];
   removedSections: string[];
   changedSections: string[];
   /** Why the newer version was (re)generated. */
   reason?: string;
+  changeSummary?: string;
 };
 
 function sectionMap(snapshot: CampaignOutputVersionSnapshot): Map<string, string> {
@@ -519,10 +730,23 @@ export function compareOutputVersions(
   return {
     fromVersion: from.version,
     toVersion: to.version,
+    fromVersionLabel:
+      from.versionLabel ??
+      formatMediaPlanVersionLabel(
+        from.versionMajor ?? resolveMediaPlanVersionParts(from).major,
+        from.versionMinor ?? resolveMediaPlanVersionParts(from).minor
+      ),
+    toVersionLabel:
+      to.versionLabel ??
+      formatMediaPlanVersionLabel(
+        to.versionMajor ?? resolveMediaPlanVersionParts(to).major,
+        to.versionMinor ?? resolveMediaPlanVersionParts(to).minor
+      ),
     addedSections,
     removedSections,
     changedSections,
     reason: to.changeReason,
+    changeSummary: to.changeSummary,
   };
 }
 
@@ -535,7 +759,7 @@ export function restoreOutputVersion(
   campaignObject: CampaignObject,
   kind: CampaignOutputKind,
   version: number,
-  options?: { now?: string; origin?: CampaignOutputOrigin }
+  options?: { now?: string; origin?: CampaignOutputOrigin; actorUserId?: string }
 ): GenerateCampaignOutputResult | undefined {
   const definition = getOutputDefinition(kind);
   const state = getCampaignOutputState(campaignObject);
@@ -551,22 +775,59 @@ export function restoreOutputVersion(
   const inputFingerprints = computeInputFingerprints(campaignObject, definition.inputKeys);
   const history = [...(current.history ?? []), snapshotOf(current)].slice(-MAX_OUTPUT_HISTORY);
 
-  const record: CampaignOutputRecord = {
+  const origin = options?.origin ?? "user";
+  const versionNext = nextMediaPlanVersion(current, "restore");
+  const restoredLabel =
+    target.versionLabel ??
+    formatMediaPlanVersionLabel(
+      target.versionMajor ?? resolveMediaPlanVersionParts(target).major,
+      target.versionMinor ?? resolveMediaPlanVersionParts(target).minor
+    );
+
+  let record: CampaignOutputRecord = {
     kind,
     status: "generated",
-    version: current.version + 1,
+    version: versionNext.version,
+    versionMajor: versionNext.major,
+    versionMinor: versionNext.minor,
+    versionLabel: versionNext.versionLabel,
+    operation: "restore",
     generatedAt: current.generatedAt ?? now,
     updatedAt: now,
     sourceFingerprint: fingerprint,
     inputFingerprints,
     generatorVersion: definition.generatorVersion,
-    origin: options?.origin ?? "user",
+    origin,
+    actorKind: actorKindFromOrigin(origin),
+    actorUserId: options?.actorUserId,
     sizeBytes: estimateSizeBytes({ content: target.content }),
-    changeReason: `Restored version ${version}.`,
+    changeReason: `Restored ${restoredLabel}.`,
+    changeSummary: `Restored Media Plan ${restoredLabel} as ${versionNext.versionLabel}.`,
     changedInputs: [],
     history,
     content: target.content,
+    businessStatus: "draft",
+    approvedBy: null,
+    approvedAt: null,
+    approvalSource: null,
+    approvalImpact: "client_reapproval",
+    auditHistory: current.auditHistory,
   };
+
+  if (kind === "media_plan") {
+    record = {
+      ...record,
+      auditHistory: appendMediaPlanAuditEntry(record, {
+        at: now,
+        actorKind: actorKindFromOrigin(origin),
+        actorUserId: options?.actorUserId,
+        reason: `Restored ${restoredLabel} as new business version ${versionNext.versionLabel}.`,
+        before: { version: current.version, versionLabel: current.versionLabel },
+        after: { version: versionNext.version, versionLabel: versionNext.versionLabel },
+        operationClass: "restore",
+      }),
+    };
+  }
 
   const nextState: CampaignOutputRegistryState = { ...state, [kind]: record };
   return { campaignObject: withOutputState(campaignObject, nextState), record };

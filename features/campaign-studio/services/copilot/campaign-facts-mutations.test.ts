@@ -91,8 +91,16 @@ test("mid-week start stores requested + Monday scheduled dates and explains alig
   assert.equal(facts?.scheduledStartDate, "2026-07-27");
   assert.match(change ?? "", /24\/07\/2026/);
   assert.match(change ?? "", /27\/07\/2026/);
-  assert.match(change ?? "", /Calendar Week mode/);
-  assert.match(change ?? "", /Monday–Sunday|Week 1 begins/i);
+  assert.doesNotMatch(change ?? "", /Publishing Calendar Start/i);
+  assert.equal(getCampaignFacts(next)?.scheduledStartDate, "2026-07-27");
+  const cards = (next.sections.summary.data as { summaryCards?: {
+    campaignStartDate?: string;
+    campaignEndDate?: string;
+    duration?: string;
+  } }).summaryCards;
+  assert.equal(cards?.campaignStartDate, "24/07/2026");
+  assert.equal(cards?.campaignEndDate, "03/09/2026");
+  assert.equal(cards?.duration, "6 weeks");
 });
 
 test("Monday start keeps requested and scheduled identical", () => {
@@ -102,7 +110,13 @@ test("Monday start keeps requested and scheduled identical", () => {
   const facts = getCampaignFacts(next);
   assert.equal(facts?.requestedStartDate, "2026-07-27");
   assert.equal(facts?.scheduledStartDate, "2026-07-27");
-  assert.doesNotMatch(change ?? "", /Week 1 begins/);
+  assert.doesNotMatch(change ?? "", /Publishing Calendar Start/i);
+  const cards = (next.sections.summary.data as { summaryCards?: {
+    campaignStartDate?: string;
+    campaignEndDate?: string;
+  } }).summaryCards;
+  assert.equal(cards?.campaignStartDate, "27/07/2026");
+  assert.equal(cards?.campaignEndDate, "06/09/2026");
 });
 
 test("natural-language start dates parse through timeline change", () => {
@@ -111,7 +125,8 @@ test("natural-language start dates parse through timeline change", () => {
   });
   assert.equal(getCampaignFacts(next)?.requestedStartDate, "2026-07-24");
   assert.equal(getCampaignFacts(next)?.scheduledStartDate, "2026-07-27");
-  assert.match(change ?? "", /Week 1 begins/);
+  assert.match(change ?? "", /27\/07\/2026/);
+  assert.doesNotMatch(change ?? "", /Publishing Calendar Start/i);
 });
 
 test("platforms change sets priority order with primary noted", () => {

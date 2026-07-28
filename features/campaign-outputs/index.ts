@@ -47,7 +47,23 @@ export {
   type OutputView,
   type OutputVersionDiff,
   type GenerateCampaignOutputResult,
+  type GenerateCampaignOutputOptions,
 } from "./output-registry";
+export {
+  formatMediaPlanVersionLabel,
+  nextMediaPlanVersion,
+  resolveMediaPlanVersionParts,
+  shouldCreateNewBusinessVersion,
+  toBusinessStatus,
+  businessStatusLabel,
+  stampMediaPlanApproval,
+  beginMediaPlanBusinessVersion,
+} from "./media-plan-versioning";
+export {
+  reviseMediaPlanOutput,
+  regenerateMediaPlanOutput,
+  readMediaPlanData,
+} from "./media-plan-revise-regenerate";
 export { renderOutputMarkdown } from "./output-markdown";
 export {
   generateMediaPlan,

@@ -96,20 +96,47 @@ export function runGenerateOutput(
 
   const existing = getCampaignOutput(campaignObject, input.kind);
   if (!input.regenerate && existing?.status === "generated") {
+    const existingLabel = existing.versionLabel ?? `v${existing.version}`;
     return {
       campaignObject,
       changed: false,
-      reply: `The ${label} is already generated and current (v${existing.version}). Say "regenerate the ${label}" if you want me to rebuild it.`,
+      reply: `The ${label} is already generated and current (${existingLabel}). Say "regenerate the ${label}" if you want a new strategic version.`,
       record: existing,
       preview: input.kind,
     };
   }
 
+  const operation =
+    input.kind === "media_plan"
+      ? !existing || existing.version <= 0
+        ? "initial"
+        : "regenerate"
+      : undefined;
   const { campaignObject: next, record } = generateCampaignOutput(campaignObject, input.kind, {
     now: input.now,
+    operation,
+    changeSummary:
+      input.kind === "media_plan" && operation === "regenerate"
+        ? "Regenerated Media Plan — new strategic version (creators/waves/schedule may change)."
+        : undefined,
   });
-  const verb = existing ? "regenerated" : "generated";
-  const reply = `I ${verb} the **${label}** (v${record.version}) directly from the Campaign Object — derived from ${sourceLabel(input.kind)}. Only this output changed; every other output is untouched.`;
+  const versionLabel = record.versionLabel ?? `v${record.version}`;
+  const verb =
+    record.operation === "regenerate"
+      ? "regenerated"
+      : record.operation === "revise"
+        ? "revised"
+        : existing
+          ? "regenerated"
+          : "generated";
+  const mediaPlanNote =
+    input.kind === "media_plan" && input.regenerate
+      ? record.operation === "regenerate" &&
+        (record.versionMajor ?? 1) > 1
+        ? " This opened a **new major business version** — creators, waves, and schedule may change. Prefer timeline/slot edits to revise operationally."
+        : " Updated the working Media Plan on the **same business version** (pre-approval edits do not bump the client-facing version; audit trail recorded)."
+      : "";
+  const reply = `I ${verb} the **${label}** (${versionLabel}) directly from the Campaign Object — derived from ${sourceLabel(input.kind)}. Only this output changed; every other output is untouched.${mediaPlanNote}`;
   return { campaignObject: next, changed: true, reply, record };
 }
 
@@ -257,14 +284,22 @@ export function runCompareVersions(
     };
   }
 
+  const fromLabel = diff.fromVersionLabel ?? `v${diff.fromVersion}`;
+  const toLabel = diff.toVersionLabel ?? `v${diff.toVersion}`;
   const lines: string[] = [
-    `Comparing the **${label}** — v${diff.fromVersion} → v${diff.toVersion}${diff.reason ? ` (${diff.reason})` : ""}:`,
+    `Comparing the **${label}** — ${fromLabel} → ${toLabel}${diff.reason ? ` (${diff.reason})` : ""}:`,
   ];
+  if (diff.changeSummary) lines.push(`- Summary: ${diff.changeSummary}`);
   if (diff.changedSections.length) lines.push(`- Changed: ${diff.changedSections.join(", ")}`);
   if (diff.addedSections.length) lines.push(`- Added: ${diff.addedSections.join(", ")}`);
   if (diff.removedSections.length) lines.push(`- Removed: ${diff.removedSections.join(", ")}`);
   if (diff.changedSections.length + diff.addedSections.length + diff.removedSections.length === 0) {
     lines.push("- No section-level differences — the rendered content is identical.");
+  }
+  if (input.kind === "media_plan") {
+    lines.push(
+      "- Restore a prior version with: restore media plan version N (uses the revision sequence)."
+    );
   }
   return { campaignObject, changed: false, reply: lines.join("\n"), navigate: input.kind };
 }

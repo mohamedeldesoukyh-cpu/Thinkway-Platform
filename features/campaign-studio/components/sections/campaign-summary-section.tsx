@@ -68,6 +68,8 @@ export function CampaignSummarySection({
       {briefCard}
       <StatGrid>
         <StatBox label="Budget" value={data.budget ?? ""} sub="Influencer program" mono />
+        <StatBox label="Campaign Start Date" value={data.campaignStartDate ?? "—"} />
+        <StatBox label="Campaign End Date" value={data.campaignEndDate ?? "—"} />
         <StatBox label="Duration" value={data.duration ?? ""} />
         <StatBox label="Campaign Type" value={data.campaignType ?? ""} sub="Mass awareness" />
         <StatBox label="Platforms" value={data.platforms ?? ""} />

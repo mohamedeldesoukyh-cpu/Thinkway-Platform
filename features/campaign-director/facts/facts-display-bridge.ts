@@ -24,6 +24,11 @@ import {
 } from "../services/budget-rules";
 import { buildClientTimelineFromStrategy } from "../services/timeline-rules";
 import type { CampaignStrategyDocument } from "../types";
+import {
+  formatCampaignDateLabel,
+  resolveCampaignEndDate,
+} from "@/features/campaign-outputs/media-plan-week-start";
+
 import type { CampaignFacts } from "./campaign-facts-types";
 
 export function getCampaignFacts(
@@ -320,6 +325,26 @@ export function applyFactsToSummaryData(
   if (budgetDisplay) result.budget = budgetDisplay;
 
   result.duration = formatFactsDurationDisplay(facts);
+
+  const startIso =
+    facts.requestedStartDate?.trim() || facts.campaignStartDate?.trim() || "";
+  const durationWeeks = resolveFactsDurationWeeks(facts);
+
+  if (startIso) {
+    result.campaignStartDate = formatCampaignDateLabel(startIso);
+    const endIso = resolveCampaignEndDate(startIso, durationWeeks);
+    if (endIso) {
+      result.campaignEndDate = formatCampaignDateLabel(endIso);
+    } else {
+      delete result.campaignEndDate;
+    }
+  } else {
+    delete result.campaignStartDate;
+    delete result.campaignEndDate;
+  }
+  // Drop legacy scheduling-detail cards if still present on older objects.
+  delete (result as Record<string, unknown>).publishingCalendarStart;
+  delete (result as Record<string, unknown>).calendarAlignmentNote;
 
   if (facts.platforms?.length) {
     result.platforms = facts.platforms.join(", ");

@@ -23,6 +23,8 @@ import {
   generateCampaignOutput,
   getCampaignOutput,
   getCampaignOutputState,
+  getOutputVersions,
+  restoreOutputVersion,
 } from "@/features/campaign-outputs/output-registry";
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 import { ensureCreatorsFromAssignmentHierarchy } from "@/features/campaign-outputs/hydration";
@@ -120,8 +122,10 @@ Rules:
 - To remove creators, call remove_creators (use tier for a whole follower tier, names for specific creators).
 - To set or update the campaign brief (client brief, pasted text), call update_brief — this merges strategy and scheduling and never clears the creator slate.
 - To move creators between weeks/days or weight publishing across weeks, call reschedule_media_plan — do NOT change campaignStartDate unless the user explicitly asks to change when the campaign starts.
-- To change only the campaign start date or total duration, call update_timeline. This patches the existing Media Plan calendar (date offset) — never regenerate_output for start-date changes.
-- To generate a Campaign Output (Media Plan, Full Campaign Strategy, Executive Proposal, Timeline, KPI Forecast, Budget Allocation, Risk Assessment, Amplification Plan, Creative Concepts, Executive Summary, Presentation, …), call generate_output only when the user explicitly asks to generate/create that artifact. To rebuild one after changes, call regenerate_output only for explicit regenerate/rebuild/refresh wording. Never use generate/regenerate for "change/move/shift/update start date".
+- To change only the campaign start date or total duration, call update_timeline. This updates the existing Media Plan working tip (structure preserved) — never regenerate_output for start-date changes.
+- Media Plan versioning (SSOT): before client approval, edits stay on the same business version (e.g. v1.0) with audit only. After approval, the plan is immutable — further changes open a new business version.
+- Media Plan ops after approval: prefer **Revise** (update_timeline / reschedule_media_plan). If the request could be revise OR regenerate, **ask the user to confirm** — never silently regenerate. Call regenerate_output only when the user explicitly says regenerate/rebuild, or when strategy/budget/objectives/audience/platforms/creator mix/deliverables clearly require a new strategic plan.
+- To generate a Campaign Output, call generate_output only when the user explicitly asks to generate/create that artifact. Never use generate/regenerate for "change/move/shift/update start date".
 - To undo, call undo_last_change.
 - To answer a question about the campaign, call answer_question.
 - Only call clarify when the request is genuinely ambiguous, and reference the campaign's real contents in your question (e.g. mention how many Celebrity creators it currently has).
@@ -282,6 +286,8 @@ export async function runStudioCopilot(input: RunInput): Promise<StudioCopilotRe
       return undoLastChange(input);
     case "restore_version":
       return restoreVersion(input, intent.version);
+    case "restore_output_version":
+      return restoreOutputVersionEdit(input, intent);
     case "answer_question":
       return answerQuestion(input, digest, intent.question, provider);
     case "clarify":
@@ -787,6 +793,10 @@ async function rescheduleMediaPlan(
   try {
     ({ campaignObject: next } = generateCampaignOutput(next, "media_plan", {
       origin: "copilot",
+      actorUserId: input.userId,
+      operation: "revise",
+      changeSummary:
+        "Revised Media Plan: publishing slots updated — creators, waves, and strategy preserved.",
     }));
   } catch {
     /* keep schedule meta even if regeneration fails */
@@ -1078,8 +1088,10 @@ async function generateOutputEdit(
   }
 
   const label = getOutputDefinition(kind)?.label ?? kind;
+  const versionLabel =
+    result.record?.versionLabel ?? `v${result.record?.version ?? 1}`;
   const logged = appendChangeLog(result.campaignObject, {
-    summary: `${options.regenerate ? "Regenerated" : "Generated"} the ${label} (v${result.record?.version ?? 1})`,
+    summary: `${options.regenerate ? "Regenerated" : "Generated"} the ${label} (${versionLabel})`,
     intent: intentKind,
     overallScoreAfter: overallScore(result.campaignObject),
     appliedAt: new Date().toISOString(),
@@ -1350,8 +1362,74 @@ async function undoLastChange(input: RunInput): Promise<StudioCopilotResult> {
 }
 
 /**
- * Restore a specific earlier version: load its snapshot and save it as a new
- * current version (forward-restore — the history is preserved, never rewritten).
+ * Forward-restore a Media Plan (or other output) snapshot from output history.
+ */
+async function restoreOutputVersionEdit(
+  input: RunInput,
+  intent: Extract<StudioCopilotIntent, { kind: "restore_output_version" }>
+): Promise<StudioCopilotResult> {
+  const versions = getOutputVersions(input.campaignObject, intent.output);
+  const target =
+    intent.versionLabel != null
+      ? versions.find(
+          (entry) =>
+            (entry.versionLabel ?? "").toLowerCase() === intent.versionLabel!.toLowerCase()
+        )
+      : versions.find((entry) => entry.version === intent.version);
+
+  if (!target) {
+    const available = versions
+      .map((entry) => entry.versionLabel ?? `v${entry.version}`)
+      .join(", ");
+    return {
+      campaignObject: input.campaignObject,
+      reply: available
+        ? `I couldn't find that Media Plan version. Available: ${available}.`
+        : "There is no Media Plan version history to restore yet.",
+      changed: false,
+      intentKind: "restore_output_version",
+    };
+  }
+
+  const restored = restoreOutputVersion(input.campaignObject, intent.output, target.version, {
+    origin: "user",
+    actorUserId: input.userId,
+  });
+  if (!restored) {
+    return {
+      campaignObject: input.campaignObject,
+      reply: "I couldn't restore that Media Plan version.",
+      changed: false,
+      intentKind: "restore_output_version",
+    };
+  }
+
+  const label = restored.record.versionLabel ?? `v${restored.record.version}`;
+  const logged = appendChangeLog(restored.campaignObject, {
+    summary: restored.record.changeSummary ?? `Restored Media Plan ${label}`,
+    intent: "restore_output_version",
+    overallScoreAfter: overallScore(restored.campaignObject),
+    appliedAt: new Date().toISOString(),
+  });
+  const persisted = await persistVersion(
+    input.supabase,
+    input.conversationId,
+    input.userId,
+    logged
+  );
+
+  return {
+    campaignObject: persisted,
+    reply: `Restored Media Plan ${target.versionLabel ?? `revision ${target.version}`} as **${label}** (forward-restore — history kept).`,
+    changed: true,
+    intentKind: "restore_output_version",
+    outputNavigate: "media_plan",
+  };
+}
+
+/**
+ * Restore a specific earlier Campaign Object version: load its snapshot and save
+ * it as a new current version (forward-restore — the history is preserved).
  */
 async function restoreVersion(input: RunInput, version: number): Promise<StudioCopilotResult> {
   if (!Number.isFinite(version) || version < 1) {

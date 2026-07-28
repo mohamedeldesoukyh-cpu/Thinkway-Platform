@@ -30,6 +30,15 @@ import {
   type RescheduleMediaPlanInput,
   type RescheduleMediaPlanResult,
 } from "./media-plan-schedule";
+import {
+  beginMediaPlanBusinessVersion,
+  stampMediaPlanApproval,
+  syncMediaPlanBusinessStatusFromEngine,
+} from "./media-plan-versioning";
+import type {
+  CampaignOutputOrigin,
+  MediaPlanApprovalImpact,
+} from "./output-types";
 
 export type MediaPlanMutationOptions = {
   source: MediaPlanMutationSource;
@@ -115,11 +124,23 @@ function snapshotKey(version: number): string {
  */
 export function ensureWorkingDraftOnCampaignObject(
   campaignObject: CampaignObject,
-  input: { at?: string; actorUserId?: string | null; label?: string | null }
+  input: {
+    at?: string;
+    actorUserId?: string | null;
+    label?: string | null;
+    /** When forking from Approved, opens a new business version (SSOT). */
+    businessOperation?: "revise" | "regenerate";
+    approvalImpact?: MediaPlanApprovalImpact;
+    origin?: CampaignOutputOrigin;
+    changeReason?: string;
+    changeSummary?: string;
+  }
 ): MediaPlanMutationResult {
   const at = nowIso(input.at);
   let next = ensureMediaPlanLifecycle(campaignObject, at);
   const lifecycle = cloneJson(getMediaPlanLifecycle(next));
+  const forkedFromApproved =
+    isApprovedStatus(lifecycle.status) && lifecycle.workingDraftVersion == null;
 
   // At most one working draft — continue it whenever the pointer exists.
   if (lifecycle.workingDraftVersion != null) {
@@ -169,6 +190,35 @@ export function ensureWorkingDraftOnCampaignObject(
       mediaPlanSchedule: cloneMediaPlanScheduleMeta(sourceSchedule),
     },
   };
+
+  // SSOT: leaving Approved creates a new business version (not every later edit).
+  if (forkedFromApproved) {
+    const tip = next.meta.campaignOutputs?.media_plan;
+    if (tip) {
+      const businessOperation = input.businessOperation ?? "revise";
+      const bumped = beginMediaPlanBusinessVersion(tip, {
+        operation: businessOperation,
+        now: at,
+        origin: input.origin,
+        actorUserId: input.actorUserId ?? undefined,
+        changeReason: input.changeReason,
+        changeSummary: input.changeSummary,
+        approvalImpact:
+          input.approvalImpact ??
+          (businessOperation === "regenerate" ? "client_reapproval" : "internal"),
+      });
+      next = {
+        ...next,
+        meta: {
+          ...next.meta,
+          campaignOutputs: {
+            ...next.meta.campaignOutputs,
+            media_plan: bumped,
+          },
+        },
+      };
+    }
+  }
 
   return {
     ok: true,
@@ -227,6 +277,9 @@ export function mutateMediaPlanSchedule(
     const forked = ensureWorkingDraftOnCampaignObject(next, {
       at,
       actorUserId: options.actorUserId,
+      businessOperation: "revise",
+      approvalImpact: "internal",
+      changeReason: "Schedule edit required a working draft from the approved plan.",
     });
     if (!forked.ok) return forked;
     next = forked.campaignObject;
@@ -308,6 +361,21 @@ export function lockMediaPlanOnCampaignObject(
   ];
 
   next = withLifecycle(next, lifecycle);
+
+  const lockedTip = next.meta.campaignOutputs?.media_plan;
+  if (lockedTip) {
+    next = {
+      ...next,
+      meta: {
+        ...next.meta,
+        campaignOutputs: {
+          ...next.meta.campaignOutputs,
+          media_plan: syncMediaPlanBusinessStatusFromEngine(lockedTip, "locked"),
+        },
+      },
+    };
+  }
+
   return {
     ok: true,
     campaignObject: next,
@@ -463,6 +531,26 @@ export function approveMediaPlanOnCampaignObject(
   ];
 
   next = withLifecycle(next, lifecycle);
+
+  // SSOT: approval freezes the current business version (no label bump) + governance fields.
+  const tip = next.meta.campaignOutputs?.media_plan;
+  if (tip) {
+    const stamped = stampMediaPlanApproval(tip, {
+      at,
+      approvedBy: input.actorUserId ?? null,
+      approvalSource: input.method === "client_portal" ? "client" : "internal",
+    });
+    next = {
+      ...next,
+      meta: {
+        ...next.meta,
+        campaignOutputs: {
+          ...next.meta.campaignOutputs,
+          media_plan: stamped,
+        },
+      },
+    };
+  }
 
   return {
     ok: true,
@@ -701,6 +789,10 @@ export function prepareMediaPlanRegenerate(
       at,
       actorUserId: input.actorUserId,
       label: "Draft revision for regenerate",
+      businessOperation: "regenerate",
+      approvalImpact: "client_reapproval",
+      changeSummary:
+        "Opened regenerated Media Plan major version from approved baseline.",
     });
     if (!forked.ok) return { ok: false, message: forked.message };
     return {

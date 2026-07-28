@@ -10,6 +10,9 @@ import {
   runExplainStaleness,
   runCompareVersions,
 } from "./output-copilot";
+import { asMediaPlanData } from "../generators/media-plan";
+import { approveMediaPlanOnCampaignObject } from "../media-plan-mutations";
+import { reviseMediaPlanOutput } from "../media-plan-revise-regenerate";
 import { generateCampaignOutput, getCampaignOutput } from "../output-registry";
 import { buildCampaignObjectFixture } from "../output-test-fixture";
 
@@ -57,13 +60,15 @@ test("plain generate on an already-current output is a no-op (no unnecessary reg
   assert.equal(again.preview, "media_plan");
 });
 
-test("regenerate always rebuilds and bumps the version", () => {
+test("regenerate rebuilds working tip without bumping business version pre-approval", () => {
   const obj = buildCampaignObjectFixture();
   const first = runGenerateOutput(obj, { kind: "media_plan" });
   const regen = runGenerateOutput(first.campaignObject, { kind: "media_plan", regenerate: true });
   assert.equal(regen.changed, true);
-  assert.equal(regen.record?.version, 2);
-  assert.match(regen.reply, /regenerated/);
+  assert.equal(regen.record?.version, 1);
+  assert.equal(regen.record?.versionLabel, "v1.0");
+  assert.match(regen.reply, /regenerated|updated/i);
+  assert.match(regen.reply, /same business version/i);
 });
 
 test("generating an unwired output is honest, not a silent no-op", () => {
@@ -122,15 +127,22 @@ test("explain staleness gives the precise reason, not a generic message", () => 
   assert.match(stale.reply, /Creator slate changed/);
 });
 
-test("compare versions summarizes the last two versions", () => {
-  const obj = buildCampaignObjectFixture({ facts: { durationWeeks: 6 } });
-  const first = generateCampaignOutput(obj, "media_plan");
-  const edited = carryRegistry(buildCampaignObjectFixture({ facts: { durationWeeks: 3 } }), first.campaignObject);
-  const second = generateCampaignOutput(edited, "media_plan");
+test("compare versions summarizes the last two business versions", () => {
+  let obj = buildCampaignObjectFixture({ facts: { durationWeeks: 6 } });
+  obj = generateCampaignOutput(obj, "media_plan").campaignObject;
+  const approved = approveMediaPlanOnCampaignObject(obj, {
+    method: "client_portal",
+    actorUserId: "u1",
+  });
+  assert.equal(approved.ok, true);
+  obj = approved.campaignObject;
+  const data = asMediaPlanData(obj.meta.campaignOutputs!.media_plan!.content!.data)!;
+  obj = reviseMediaPlanOutput(obj, { ...data, durationWeeks: 3 }, {
+    changeReason: "Timeline changed",
+  })!.campaignObject;
 
-  const compare = runCompareVersions(second.campaignObject, { kind: "media_plan" });
-  assert.match(compare.reply, /v1 → v2/);
-  assert.match(compare.reply, /Timeline changed/);
+  const compare = runCompareVersions(obj, { kind: "media_plan" });
+  assert.match(compare.reply, /v1\.0 → v1\.1/);
 });
 
 test("compare with only one version explains there is nothing to compare", () => {

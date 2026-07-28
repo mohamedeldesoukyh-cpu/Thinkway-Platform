@@ -282,6 +282,31 @@
   background: var(--blue-light);
 }
 
+/**
+ * Bound the dock chat thread so overlay ChatThread becomes a real scrollport.
+ * Without this, sc-chat-thread grows with content inside overflow:hidden parents
+ * and history is clipped (regression after Copilot turns stopped collapsing).
+ */
+.copilot-ref .sc-chat-thread {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.copilot-ref .sc-chat-thread > .relative {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.copilot-ref .sc-chat-thread [data-chat-scroll-root] {
+  flex: 1;
+  min-height: 0;
+}
+
 /* Composer overrides inside the dock */
 .copilot-ref .copilot-panel-body .ai-composer-footer {
   background: var(--white);

@@ -102,7 +102,7 @@ export const OUTPUT_CATALOG: OutputDefinition[] = [
     kind: "media_plan",
     label: "Media Plan",
     description:
-      "Quotation-aligned publishing calendar: weekly grid with creator avatar, name, and quoted ad type on every slot — synced automatically when the slate or budget changes.",
+      "Quotation-aligned publishing calendar with enterprise versioning: Revise (v1.x) preserves creators, waves, and slots; Regenerate (v2.0+) creates a new strategic plan.",
     category: "planning",
     group: "planning",
     estimatedGenerationMs: 5000,

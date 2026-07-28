@@ -27,13 +27,17 @@
 - Empty slate seeds from Assignments hierarchy on: Studio generate/regenerate, open Studio from campaign, Campaign Media Plan load
 - Open Studio / sync auto-generates Media Plan when creators are seeded
 
-## Copilot timeline — deterministic calendar offset (local WIP on develop — not pushed)
+## Media Plan Versioning (SSOT + domain aligned on develop)
 
-- `update_timeline` uses `shiftMediaPlanDataToScheduledStart` — **not** AI / `generateCampaignOutput`
-- UI bind fix: Studio was sticky on `id+updatedAt`; now rebinds on timeline + Media Plan version; SSE done mirrors full assistant metadata; `outputNavigate` opens Media Plan
-- Calendar Week mode + Monday alignment copy; `campaign_relative_week` scaffolded
-- **Blocked until commit/push to develop** — Preview still runs pre-offset path
-- Tests: `media-plan-date-offset.test.ts`
+- **SSOT:** `docs/architecture/MEDIA_PLAN_VERSIONING.md` (contract; code yields to spec)
+- **Business Version ≠ Audit History** — separate fields (`versionLabel` / `history` vs `auditHistory`)
+- **Approval is the version boundary** — Draft/Under Review edits stay on tip (e.g. v1.0) + audit; Approved immutable
+- Leaving Approved: Revise → minor (`v1.1`); Regenerate → major (`v2.0`); Restore append-only
+- Governance on each version: Status, Approved By/Date/Source, Approval Impact (`none` | `internal` | `client_reapproval`)
+- AI: prefer Revise; ask if ambiguous; Regenerate only when explicit/strategic
+- **Release gate:** revise-on-every-edit must not merge — domain tests enforce SSOT
+- Intelligence Summary: Campaign Start / End / Duration only; Monday align internal
+- Dock chat scroll CSS fix (local)
 
 ## Showcase PDF v2 (in progress on develop)
 

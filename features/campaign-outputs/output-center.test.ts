@@ -1,6 +1,7 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 
+import { approveMediaPlanOnCampaignObject } from "./media-plan-mutations";
 import {
   compareOutputVersions,
   describeStaleReason,
@@ -14,6 +15,32 @@ import { buildCampaignObjectFixture } from "./output-test-fixture";
 
 function carryRegistry(base: ReturnType<typeof buildCampaignObjectFixture>, from: ReturnType<typeof buildCampaignObjectFixture>) {
   return { ...base, meta: { ...base.meta, campaignOutputs: from.meta.campaignOutputs } };
+}
+
+/** Approve tip then open a revise business version with regenerated content from new facts. */
+function approveThenReviseWithFacts(
+  approvedFrom: ReturnType<typeof buildCampaignObjectFixture>,
+  facts: { durationWeeks: number }
+) {
+  const approved = approveMediaPlanOnCampaignObject(approvedFrom, {
+    method: "client_portal",
+    actorUserId: "u1",
+  });
+  assert.equal(approved.ok, true);
+  const nextFacts = buildCampaignObjectFixture({ facts });
+  const withApprovedMeta = {
+    ...nextFacts,
+    meta: {
+      ...nextFacts.meta,
+      campaignOutputs: approved.campaignObject.meta.campaignOutputs,
+      mediaPlanLifecycle: approved.campaignObject.meta.mediaPlanLifecycle,
+      mediaPlanSchedule: approved.campaignObject.meta.mediaPlanSchedule,
+    },
+  };
+  return generateCampaignOutput(withApprovedMeta, "media_plan", {
+    operation: "revise",
+    changeSummary: "Timeline changed.",
+  });
 }
 
 test("views carry Center metadata: group, estimated time, origin, size", () => {
@@ -85,55 +112,53 @@ test("stale reason works when stored output status is already needs_update", () 
   assert.equal(view.staleReason, "Timeline changed.");
 });
 
-test("initial generation records a reason and no history; regeneration records the trigger", () => {
+test("initial generation records a reason; working regenerate stays on v1.0 with audit", () => {
   const obj = buildCampaignObjectFixture();
   const first = generateCampaignOutput(obj, "media_plan");
   assert.equal(first.record.changeReason, "Initial generation.");
   assert.equal(first.record.history?.length ?? 0, 0);
 
   const edited = carryRegistry(buildCampaignObjectFixture({ facts: { durationWeeks: 4 } }), first.campaignObject);
-  const second = generateCampaignOutput(edited, "media_plan");
-  assert.equal(second.record.version, 2);
+  const second = generateCampaignOutput(edited, "media_plan", { operation: "regenerate" });
+  assert.equal(second.record.version, 1);
+  assert.equal(second.record.versionLabel, "v1.0");
   assert.equal(second.record.changeReason, "Timeline changed.");
-  assert.equal(second.record.history?.length, 1);
-  assert.equal(second.record.history?.[0]?.version, 1);
+  assert.equal(second.record.history?.length ?? 0, 0);
+  assert.ok((second.record.auditHistory?.length ?? 0) >= 1);
 });
 
-test("compare defaults to the last two versions and reports section changes + reason", () => {
+test("compare defaults to the last two business versions after approval boundary", () => {
   const obj = buildCampaignObjectFixture({ facts: { durationWeeks: 6 } });
   const first = generateCampaignOutput(obj, "media_plan");
-  const edited = carryRegistry(buildCampaignObjectFixture({ facts: { durationWeeks: 3 } }), first.campaignObject);
-  const second = generateCampaignOutput(edited, "media_plan");
+  const revised = approveThenReviseWithFacts(first.campaignObject, { durationWeeks: 3 });
 
-  const diff = compareOutputVersions(second.campaignObject, "media_plan");
+  const diff = compareOutputVersions(revised.campaignObject, "media_plan");
   assert.ok(diff);
   assert.equal(diff!.fromVersion, 1);
   assert.equal(diff!.toVersion, 2);
-  assert.equal(diff!.reason, "Timeline changed.");
-  // Going from 6 weeks to 3 removes later week sections.
+  assert.equal(diff!.fromVersionLabel, "v1.0");
+  assert.equal(diff!.toVersionLabel, "v1.1");
   assert.ok(diff!.removedSections.some((h) => h.startsWith("Week")));
 });
 
-test("restore brings an earlier version back as a new version, preserving history", () => {
+test("restore brings an earlier business version back as a new version, preserving history", () => {
   const obj = buildCampaignObjectFixture({ facts: { durationWeeks: 6 } });
   const first = generateCampaignOutput(obj, "media_plan");
-  const edited = carryRegistry(buildCampaignObjectFixture({ facts: { durationWeeks: 3 } }), first.campaignObject);
-  const second = generateCampaignOutput(edited, "media_plan");
+  const revised = approveThenReviseWithFacts(first.campaignObject, { durationWeeks: 3 });
 
-  const restored = restoreOutputVersion(second.campaignObject, "media_plan", 1);
+  const restored = restoreOutputVersion(revised.campaignObject, "media_plan", 1);
   assert.ok(restored);
   assert.equal(restored!.record.version, 3);
-  assert.equal(restored!.record.changeReason, "Restored version 1.");
-  // v3 content equals the v1 content (6-week plan).
-  const v1 = getOutputVersions(second.campaignObject, "media_plan").find((v) => v.version === 1);
+  assert.equal(restored!.record.versionLabel, "v1.2");
+  assert.match(restored!.record.changeReason ?? "", /Restored/);
+  const v1 = getOutputVersions(revised.campaignObject, "media_plan").find((v) => v.version === 1);
   assert.deepEqual(restored!.record.content, v1!.content);
 });
 
-test("getOutputVersions returns all versions ascending", () => {
+test("getOutputVersions returns business versions ascending", () => {
   const obj = buildCampaignObjectFixture();
   const first = generateCampaignOutput(obj, "media_plan");
-  const edited = carryRegistry(buildCampaignObjectFixture({ facts: { durationWeeks: 4 } }), first.campaignObject);
-  const second = generateCampaignOutput(edited, "media_plan");
-  const versions = getOutputVersions(second.campaignObject, "media_plan").map((v) => v.version);
+  const revised = approveThenReviseWithFacts(first.campaignObject, { durationWeeks: 4 });
+  const versions = getOutputVersions(revised.campaignObject, "media_plan").map((v) => v.version);
   assert.deepEqual(versions, [1, 2]);
 });
