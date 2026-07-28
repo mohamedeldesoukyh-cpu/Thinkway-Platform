@@ -41,6 +41,8 @@ On Development (`dev.thinkwaymedia.com` + Supabase `hsxrewjcbvmbkqdlzjhs`):
 
 Automated pre-gates (`test:release-2-0`, CRM Phase 2B, TypeScript) passed. No critical Conversion / Billing / Vendor IO / Assignment / RLS / data-integrity regressions found in soak.
 
+**Soak-discovered (unrelated to Release 2.0):** `/discovery/search` Server Component crashed when `get_discovery_search_taxonomy` hit PostgreSQL `statement_timeout`. Fixed by raising the function-local timeout (Dev applied) and soft-failing cancel/timeout in `lib/discovery/search-taxonomy.ts` so SSR does not throw. Not an Assignment-convert regression.
+
 ---
 
 ## 3. What remains behind feature flags?
