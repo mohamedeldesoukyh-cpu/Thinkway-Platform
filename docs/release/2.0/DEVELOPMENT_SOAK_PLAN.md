@@ -1,9 +1,9 @@
 # Release 2.0 Phase 1 — Development Soak Plan
 
 **Status:** In progress — Dev DB engine soak green; **UI soak blocked by Vercel Deployment Protection SSO** on `dev.thinkwaymedia.com`  
-**Branch / RC:** `feature/release-2-0-lifecycle` · [PR #2](https://github.com/mohamedeldesoukyh-cpu/Thinkway-Platform/pull/2)  
-**Baseline:** RC PR is the implementation baseline (fix soak blockers only; no Phase 2)  
-**Deploy path for UI soak:** Vercel Preview on the RC branch (preferred before merge) **or** merge → `develop` → `dev.thinkwaymedia.com`  
+**Branch:** `develop` (PR #2 merged) · tip includes soak fixes `8a639e6d`  
+**Baseline:** Release 2.0 Phase 1 on Development (fix soak blockers only; no Phase 2)  
+**UI soak URL:** `https://dev.thinkwaymedia.com` (currently behind Vercel Deployment Protection SSO)  
 **Database:** Development Supabase `hsxrewjcbvmbkqdlzjhs` (migration already applied)  
 **Feature flag:** `RELEASE_2_0_ASSIGNMENT_CONVERT` is **OFF by default** (all surfaces). Enable explicitly on Development for R2.0 soak scenarios; do **not** enable Production.  
 **Sign-off after soak:** [`PRODUCTION_READINESS_REVIEW.md`](./PRODUCTION_READINESS_REVIEW.md) (create only when exit criteria are all green)  
