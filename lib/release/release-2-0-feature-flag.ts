@@ -3,10 +3,12 @@
  *
  * - Explicit true/1/on/yes → enabled
  * - Explicit false/0/off/no → disabled
- * - Unset → enabled on Development deployment surface only (soak), off elsewhere
+ * - Unset → OFF (all surfaces, including Development)
+ *
+ * Enable soak/Production only via explicit env:
+ *   RELEASE_2_0_ASSIGNMENT_CONVERT=true
+ *   (or NEXT_PUBLIC_RELEASE_2_0_ASSIGNMENT_CONVERT=true)
  */
-
-import { getDeploymentSurface } from "@/lib/deploy/deployment-environment";
 
 function envFlag(raw: string | undefined): boolean | null {
   if (raw == null) return null;
@@ -38,7 +40,5 @@ export function isRelease20AssignmentConvertEnabled(): boolean {
     process.env.NEXT_PUBLIC_RELEASE_2_0_ASSIGNMENT_CONVERT;
   const explicit = envFlag(raw);
   if (explicit != null) return explicit;
-
-  // Development soak default (after Phase 1 foundation validation).
-  return getDeploymentSurface() === "development";
+  return false;
 }

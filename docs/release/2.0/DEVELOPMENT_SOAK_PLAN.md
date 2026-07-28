@@ -5,7 +5,7 @@
 **Baseline:** RC PR is the implementation baseline (fix soak blockers only; no Phase 2)  
 **Deploy path for UI soak:** Vercel Preview on the RC branch (preferred before merge) **or** merge → `develop` → `dev.thinkwaymedia.com`  
 **Database:** Development Supabase `hsxrewjcbvmbkqdlzjhs` (migration already applied)  
-**Feature flag:** Prefer explicit soak cohort first; Dev surface may default ON — do **not** enable Production  
+**Feature flag:** `RELEASE_2_0_ASSIGNMENT_CONVERT` is **OFF by default** (all surfaces). Enable explicitly on Development for R2.0 soak scenarios; do **not** enable Production.  
 **Sign-off after soak:** [`PRODUCTION_READINESS_REVIEW.md`](./PRODUCTION_READINESS_REVIEW.md) (create only when exit criteria are all green)  
 **Phase 2:** Do **not** start until Phase 1 is deployed and stable in Production
 

@@ -21,7 +21,7 @@
 | Quotation UI “Convert to Campaign” | Done |
 | Backfill wizard (detect → preview → execute → summary) | Done |
 | Path B → `convertQuotationToAssignments` when quote linked | Done |
-| Feature flag Dev soak default | Done (`development` surface) |
+| Feature flag OFF by default | Done (explicit env required to enable) |
 | Media Plan / Performance / Billing refactors | Out of scope (unchanged) |
 
 ---
