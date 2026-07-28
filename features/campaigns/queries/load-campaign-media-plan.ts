@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import { CampaignObjectPersistenceService } from "@/features/campaign-intelligence/services/campaign-object-persistence";
 import type { MediaPlanData } from "@/features/campaign-outputs/generators/media-plan";
+import { ensureCreatorsFromAssignmentHierarchy } from "@/features/campaign-outputs/hydration";
 import { getMediaPlanLifecycle } from "@/features/campaign-outputs/media-plan-mutations";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { getCampaignAssignmentHierarchy } from "@/features/campaigns/queries/assignment-hierarchy";
@@ -18,8 +19,35 @@ import {
   resolveOriginalData,
 } from "@/lib/media-plan/resolve-calendar-data";
 import { mediaPlanEngine } from "@/lib/media-plan";
-import type { MediaPlanDiffEntry, MediaPlanStatus, MediaPlanViewKind } from "@/lib/media-plan";
+import type {
+  MediaPlanDiffEntry,
+  MediaPlanItem,
+  MediaPlanStatus,
+  MediaPlanViewKind,
+} from "@/lib/media-plan";
 import type { Database } from "@/types/database";
+
+function actualCalendarWindow(
+  items: MediaPlanItem[],
+  fallbackStart: string,
+  fallbackWeeks: number
+): { campaignStartDate: string; durationWeeks: number } {
+  const liveDates = items
+    .map((item) => item.actualLiveDate)
+    .filter((date): date is string => Boolean(date))
+    .sort();
+  if (!liveDates.length) {
+    return { campaignStartDate: fallbackStart, durationWeeks: fallbackWeeks };
+  }
+
+  const campaignStartDate = liveDates[0]!;
+  const last = liveDates[liveDates.length - 1]!;
+  const startMs = new Date(`${campaignStartDate}T00:00:00.000Z`).getTime();
+  const lastMs = new Date(`${last}T00:00:00.000Z`).getTime();
+  const diffDays = Math.max(0, Math.round((lastMs - startMs) / (24 * 60 * 60 * 1000)));
+  const durationWeeks = Math.max(fallbackWeeks, Math.ceil((diffDays + 1) / 7));
+  return { campaignStartDate, durationWeeks };
+}
 
 export { resolveApprovedBaselineData, resolveOriginalData } from "@/lib/media-plan/resolve-calendar-data";
 
@@ -154,30 +182,33 @@ export async function loadCampaignMediaPlanWorkspace(
     };
   }
 
-  const original = resolveOriginalData(campaignObject);
-  const baselineData = resolveApprovedBaselineData(campaignObject, original);
-  const lifecycle = getMediaPlanLifecycle(campaignObject);
-  const state = mediaPlanStateFromCampaignObject(campaignObject, baselineData, {
+  const hierarchy = await getCampaignAssignmentHierarchy(workspace.id);
+  // Campaign vendors feed the slate when Studio never hydrated creators.
+  const objectForPlan = ensureCreatorsFromAssignmentHierarchy(campaignObject, hierarchy);
+
+  const original = resolveOriginalData(objectForPlan);
+  const baselineData = resolveApprovedBaselineData(objectForPlan, original);
+  const lifecycle = getMediaPlanLifecycle(objectForPlan);
+  const state = mediaPlanStateFromCampaignObject(objectForPlan, baselineData, {
     campaignId: workspace.id,
     tipData: original,
   });
 
-  const hierarchy = await getCampaignAssignmentHierarchy(workspace.id);
   const performance = performanceFactsFromAssignmentHierarchy(hierarchy);
   const execution = mediaPlanEngine.projectExecutionViews(state, performance);
 
   const start = original.campaignStartDate;
   const durationWeeks = original.durationWeeks || original.calendarWeeks || 4;
 
-  const actual =
-    execution.baselineVersion != null
-      ? itemsToMediaPlanData(execution.actual.items, {
-          campaignStartDate: start,
-          durationWeeks,
-          viewKind: "actual",
-          dateField: "actualLiveDate",
-        })
-      : emptyMediaPlanData(start, durationWeeks);
+  const actualWindow = actualCalendarWindow(execution.actual.items, start, durationWeeks);
+  const actual = execution.actual.items.length
+    ? itemsToMediaPlanData(execution.actual.items, {
+        campaignStartDate: actualWindow.campaignStartDate,
+        durationWeeks: actualWindow.durationWeeks,
+        viewKind: "actual",
+        dateField: "actualLiveDate",
+      })
+    : emptyMediaPlanData(start, durationWeeks);
 
   const remaining =
     execution.baselineVersion != null

@@ -116,6 +116,8 @@ export type MediaPlanTimelineEvent = {
 /** Performance row used to build Actual / Remaining projections. */
 export type MediaPlanPerformanceFact = {
   creatorId: string;
+  /** Display name when known (Actual-only rows use this when no baseline item). */
+  creatorName?: string | null;
   platform: string;
   deliverable: string;
   /** ISO live date when published. */

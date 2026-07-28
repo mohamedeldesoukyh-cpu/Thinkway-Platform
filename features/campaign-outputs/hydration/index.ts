@@ -9,6 +9,10 @@ export {
 } from "./seed-adapters";
 export { hydrateCampaignObject, emptyCampaignObject, mergeCommercialFieldsFromSeed } from "./hydrate";
 export {
+  ensureCreatorsFromAssignmentHierarchy,
+  seedCreatorsFromAssignmentHierarchy,
+} from "./seed-from-assignment-hierarchy";
+export {
   detectMissingInformation,
   readinessForOutput,
   type OutputReadiness,

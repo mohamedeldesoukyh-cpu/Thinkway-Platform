@@ -20,10 +20,13 @@ import {
 } from "@/features/campaign-outputs/copilot/output-copilot";
 import { runReviewCampaign } from "@/features/campaign-outputs/director/director-copilot";
 import { generateCampaignOutput } from "@/features/campaign-outputs/output-registry";
+import { ensureCreatorsFromAssignmentHierarchy } from "@/features/campaign-outputs/hydration";
 import {
   mutateMediaPlanSchedule,
   prepareMediaPlanRegenerate,
 } from "@/features/campaign-outputs/media-plan-mutations";
+import { resolveSlate } from "@/features/campaign-outputs/output-inputs";
+import { getCampaignAssignmentHierarchy } from "@/features/campaigns/queries/assignment-hierarchy";
 import {
   MEDIA_PLAN_REGENERATE_DISABLED_MESSAGE,
   type MediaPlanTimelineEvent,
@@ -912,6 +915,25 @@ async function generateOutputEdit(
     }
     campaignObjectForGenerate = prepared.campaignObject;
     mediaPlanTimelineEvents = [...prepared.events];
+  }
+
+  // Linked campaign vendors fill an empty Studio slate so regenerate schedules creators.
+  if (kind === "media_plan" && resolveSlate(campaignObjectForGenerate).length === 0) {
+    try {
+      const headerId = await resolveCampaignHeaderIdForMediaPlan(
+        input.supabase,
+        campaignObjectForGenerate.id
+      );
+      if (headerId) {
+        const hierarchy = await getCampaignAssignmentHierarchy(headerId);
+        campaignObjectForGenerate = ensureCreatorsFromAssignmentHierarchy(
+          campaignObjectForGenerate,
+          hierarchy
+        );
+      }
+    } catch {
+      /* assignment hydrate must not block generate */
+    }
   }
 
   const result = runGenerateOutput(campaignObjectForGenerate, {

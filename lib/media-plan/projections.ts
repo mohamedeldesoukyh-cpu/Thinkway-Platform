@@ -19,8 +19,25 @@ function factMatchKey(fact: MediaPlanPerformanceFact): string {
   return itemMatchKey(fact);
 }
 
+function actualItemFromFact(fact: MediaPlanPerformanceFact): MediaPlanItem {
+  const liveDate = fact.liveDate!;
+  const key = factMatchKey(fact);
+  return {
+    id: `actual::${key}::${liveDate}`,
+    creatorId: fact.creatorId,
+    creatorName: fact.creatorName?.trim() || fact.creatorId,
+    platform: fact.platform,
+    deliverable: fact.deliverable,
+    plannedDate: null,
+    actualLiveDate: liveDate,
+    status: "completed",
+  };
+}
+
 /**
- * Actual Media Plan — always from Current Approved Baseline + Performance live dates.
+ * Actual Media Plan — Performance live dates, matched to the Current Approved
+ * Baseline when possible. Unmatched live deliverables still appear (including
+ * when the baseline has zero creators / empty schedule).
  * Never uses the Working Draft.
  */
 export function projectActualMediaPlan(
@@ -32,30 +49,41 @@ export function projectActualMediaPlan(
   items: MediaPlanItem[];
 } {
   const baseline = getCurrentApprovedBaseline(state);
-  if (!baseline) {
-    return { baselineVersion: null, days: [], items: [] };
-  }
+  const factsWithLive = performance.filter((fact) => Boolean(fact.liveDate));
 
   const factsByKey = new Map<string, MediaPlanPerformanceFact>();
-  for (const fact of performance) {
-    if (!fact.liveDate) continue;
+  for (const fact of factsWithLive) {
     factsByKey.set(factMatchKey(fact), fact);
   }
 
   const items: MediaPlanItem[] = [];
-  for (const planned of baseline.items) {
-    const fact = factsByKey.get(itemMatchKey(planned));
-    if (!fact?.liveDate) continue;
-    items.push({
-      ...planned,
-      actualLiveDate: fact.liveDate,
-      plannedDate: planned.plannedDate,
-      status: "completed",
-    });
+  const matchedKeys = new Set<string>();
+
+  if (baseline) {
+    for (const planned of baseline.items) {
+      const key = itemMatchKey(planned);
+      const fact = factsByKey.get(key);
+      if (!fact?.liveDate) continue;
+      matchedKeys.add(key);
+      items.push({
+        ...planned,
+        actualLiveDate: fact.liveDate,
+        plannedDate: planned.plannedDate,
+        status: "completed",
+      });
+    }
+  }
+
+  // Include live Performance rows that have no matching planned baseline item.
+  for (const fact of factsWithLive) {
+    const key = factMatchKey(fact);
+    if (matchedKeys.has(key)) continue;
+    items.push(actualItemFromFact(fact));
+    matchedKeys.add(key);
   }
 
   return {
-    baselineVersion: baseline.version,
+    baselineVersion: baseline?.version ?? null,
     days: groupItemsByDate(items, "actualLiveDate"),
     items,
   };

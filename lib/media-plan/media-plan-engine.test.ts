@@ -245,6 +245,77 @@ test("same-day actual deliverables group onto one calendar day card", () => {
   assert.equal(actual.days[0]!.creators[0]!.deliverables.length, 2);
 });
 
+test("Actual includes Performance live dates even when baseline has no creators", () => {
+  const created = mediaPlanEngine.createInitial({
+    mediaPlanId: "mp_empty",
+    campaignId: "camp_empty",
+    campaignObjectId: "co_empty",
+    source: "campaign",
+    items: [],
+    at: AT,
+    actorUserId: "user_1",
+  });
+  const approved = approveDraft(created.state);
+  assert.equal(approved.ok, true);
+  if (!approved.ok) throw new Error(approved.error);
+
+  const performance: MediaPlanPerformanceFact[] = [
+    {
+      creatorId: "creator-1",
+      creatorName: "Layla",
+      platform: "Instagram",
+      deliverable: "IG Reel",
+      liveDate: "2026-04-30",
+      completed: true,
+    },
+    {
+      creatorId: "creator-2",
+      creatorName: "Omar",
+      platform: "TikTok",
+      deliverable: "TikTok Video",
+      liveDate: "2026-05-01",
+      completed: true,
+    },
+  ];
+
+  const actual = mediaPlanEngine.projectActual(approved.state, performance);
+  assert.equal(actual.items.length, 2);
+  assert.equal(actual.items[0]!.creatorName, "Layla");
+  assert.equal(actual.items[0]!.actualLiveDate, "2026-04-30");
+  assert.equal(actual.items[0]!.plannedDate, null);
+  assert.equal(actual.days.length, 2);
+});
+
+test("Actual includes unmatched Performance rows beyond baseline matches", () => {
+  const { state } = createPlan();
+  const approved = approveDraft(state);
+  assert.equal(approved.ok, true);
+  if (!approved.ok) throw new Error(approved.error);
+
+  const performance: MediaPlanPerformanceFact[] = [
+    {
+      creatorId: "ahmed",
+      platform: "Instagram",
+      deliverable: "IG Reel",
+      liveDate: "2026-08-10",
+      completed: true,
+    },
+    {
+      creatorId: "unplanned",
+      creatorName: "Extra Creator",
+      platform: "Instagram",
+      deliverable: "IG Story",
+      liveDate: "2026-08-11",
+      completed: true,
+    },
+  ];
+
+  const actual = mediaPlanEngine.projectActual(approved.state, performance);
+  assert.equal(actual.items.length, 2);
+  assert.ok(actual.items.some((item) => item.creatorId === "unplanned"));
+  assert.ok(actual.items.some((item) => item.creatorId === "ahmed" && item.id === "i1"));
+});
+
 test("outputs cannot mutate Media Plan schedule", () => {
   const { state } = createPlan();
   const fromGenerator = mediaPlanEngine.applyScheduleItems(state, [], {
