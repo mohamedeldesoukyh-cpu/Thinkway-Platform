@@ -5,7 +5,7 @@
 **Baseline:** Release 2.0 Phase 1 on Development (fix soak blockers only; no Phase 2)  
 **UI soak URL:** `https://dev.thinkwaymedia.com` (currently behind Vercel Deployment Protection SSO)  
 **Database:** Development Supabase `hsxrewjcbvmbkqdlzjhs` (migration already applied)  
-**Feature flag:** `RELEASE_2_0_ASSIGNMENT_CONVERT` is **OFF by default** (all surfaces). Enable explicitly on Development for R2.0 soak scenarios; do **not** enable Production.  
+**Feature flag:** Code default remains **OFF**. Explicitly enabled on Vercel **Preview (`develop`)** only (`RELEASE_2_0_ASSIGNMENT_CONVERT` + `NEXT_PUBLIC_…` = `true`). Production unset / OFF.  
 **Sign-off after soak:** [`PRODUCTION_READINESS_REVIEW.md`](./PRODUCTION_READINESS_REVIEW.md) (create only when exit criteria are all green)  
 **Phase 2:** Do **not** start until Phase 1 is deployed and stable in Production
 
@@ -165,6 +165,7 @@ Assignment → Vendor IO → Invoice → Payment
 |---|---|---|---|---|
 | 2026-07-28 | Agent | Local + Dev DB + CI/Preview | Partial | Automated pre-gates green |
 | 2026-07-28 | Agent | `develop` merge + Dev DB harness | Partial | PR #2 merged; flag OFF by default; convert engine soak green on QT-2026-0005; UI blocked by Vercel SSO on `dev.thinkwaymedia.com` |
+| 2026-07-28 | Agent | Dev Preview | Partial | Flag ON for Preview(`develop`) only; Vercel protection bypass reached Thinkway login; awaiting app auth for UI soak |
 
 ---
 
