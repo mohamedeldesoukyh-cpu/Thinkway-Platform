@@ -23,6 +23,11 @@ import {
   type MediaPlanLifecycleMeta,
 } from "@/lib/media-plan/lifecycle-meta";
 
+import { asMediaPlanData } from "./generators/media-plan";
+import {
+  MediaPlanCampaignWindowError,
+  assertScheduleTargetWithinCampaignWindow,
+} from "./media-plan-campaign-window";
 import {
   applyMediaPlanScheduleChangeUnchecked,
   cloneMediaPlanScheduleMeta,
@@ -296,6 +301,27 @@ export function mutateMediaPlanSchedule(
           ? "This Media Plan is locked. Unlock and continue the working draft to make changes."
           : MEDIA_PLAN_IMMUTABLE_BASELINE_MESSAGE,
     };
+  }
+
+  // Hard constraint: reject moves onto days outside Campaign Start–End.
+  const mediaPlanData = asMediaPlanData(
+    next.meta.campaignOutputs?.media_plan?.content?.data
+  );
+  if (mediaPlanData && input.moveCreators?.length) {
+    try {
+      for (const move of input.moveCreators) {
+        if (move.toWeek == null || move.toDayIndex == null) continue;
+        assertScheduleTargetWithinCampaignWindow(mediaPlanData, {
+          week: move.toWeek,
+          dayIndex: move.toDayIndex,
+        });
+      }
+    } catch (error) {
+      if (error instanceof MediaPlanCampaignWindowError) {
+        return { ok: false, message: error.message };
+      }
+      throw error;
+    }
   }
 
   const applied = applyMediaPlanScheduleChangeUnchecked(next, input);

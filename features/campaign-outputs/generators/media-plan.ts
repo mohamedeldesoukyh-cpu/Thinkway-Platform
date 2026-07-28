@@ -62,9 +62,13 @@ import {
   startOfPublishingWeek,
   toIsoCampaignDate,
 } from "@/features/campaign-outputs/media-plan-week-start";
+import {
+  enforceMediaPlanCampaignWindow,
+  resolveCampaignWindowFromMediaPlan,
+} from "@/features/campaign-outputs/media-plan-campaign-window";
 import { formatMoney } from "./generator-utils";
 
-export const MEDIA_PLAN_GENERATOR_VERSION = "3.8.0";
+export const MEDIA_PLAN_GENERATOR_VERSION = "3.9.0";
 
 /** Shown beside campaign cost on media plan documents. */
 export const MEDIA_PLAN_COST_VAT_DISCLAIMER = "Price excludes VAT.";
@@ -1267,11 +1271,11 @@ export function generateMediaPlan(campaignObject: CampaignObject): CampaignOutpu
       ? Math.ceil(activationCount / (calendarWeekCount * 7))
       : undefined;
 
-  const data: MediaPlanData = {
+  const draftData: MediaPlanData = {
     durationWeeks,
     calendarWeeks: calendarWeekCount,
     campaignStartDate: campaignStartIso,
-    requestedStartDate: requestedStartIso ?? undefined,
+    requestedStartDate: requestedStartIso ?? businessStartIso,
     scheduledStartDate: campaignStartIso,
     campaignEndDate: campaignEndIso,
     weeks: calendarWeeks,
@@ -1293,30 +1297,42 @@ export function generateMediaPlan(campaignObject: CampaignObject): CampaignOutpu
           .filter((label): label is string => Boolean(label?.trim()))
       ),
     ],
-    strategySummary: refreshMediaPlanStrategySummaryForDisplay(
-      buildMediaPlanStrategySummary(campaignObject, {
-        platformAllocation,
-        planMode,
-        serviceTypes: [
-          ...new Set(
-            calendarWeeks
-              .flatMap((w) =>
-                w.days.flatMap((d) => d.serviceTypes ?? (d.serviceType ? [d.serviceType] : []))
-              )
-              .filter((label): label is string => Boolean(label?.trim()))
-          ),
-        ],
-      }),
-      {
-        weeks: calendarWeeks,
-        durationWeeks,
-        platformAllocation,
-        referenceSlate: slate,
-      }
-    ),
+    strategySummary: undefined,
     planMode,
     generatorVersion: MEDIA_PLAN_GENERATOR_VERSION,
   };
+
+  // Hard constraint: no creator/deliverable slots outside Campaign Start–End.
+  const data = resolveCampaignWindowFromMediaPlan(draftData)
+    ? enforceMediaPlanCampaignWindow(draftData)
+    : draftData;
+
+  data.strategySummary = refreshMediaPlanStrategySummaryForDisplay(
+    buildMediaPlanStrategySummary(campaignObject, {
+      platformAllocation,
+      planMode,
+      serviceTypes: data.serviceTypes,
+    }),
+    {
+      weeks: data.weeks,
+      durationWeeks,
+      platformAllocation,
+      referenceSlate: slate,
+    }
+  );
+  data.deadlines = rebuildMediaPlanDeadlinesFromWeeks(
+    data.weeks,
+    data.scheduledStartDate ?? data.campaignStartDate
+  );
+  data.serviceTypes = [
+    ...new Set(
+      data.weeks
+        .flatMap((w) =>
+          w.days.flatMap((d) => d.serviceTypes ?? (d.serviceType ? [d.serviceType] : []))
+        )
+        .filter((label): label is string => Boolean(label?.trim()))
+    ),
+  ];
 
   const platformCount = Object.keys(platformAllocation).length;
   return {

@@ -37,6 +37,7 @@
 - Week labels Week 1…N continue across months (no month restart)
 - **Revise** on date change: recalculate range + rebind slots; preserve creators/strategy unless Regenerated
 - Example: 15 Jul – 14 Aug 2026 → five weeks (11–17 Jul … 8–14 Aug)
+- **Campaign Window (hard constraint):** Start–End is absolute; Generate/Revise rebalance into window; save rejects out-of-window slots (`media-plan-campaign-window.ts`)
 
 ## Media Plan Versioning (SSOT + domain aligned on develop)
 

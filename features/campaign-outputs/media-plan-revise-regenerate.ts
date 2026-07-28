@@ -14,6 +14,7 @@ import {
   mediaPlanContentFromData,
   type MediaPlanData,
 } from "./generators/media-plan";
+import { enforceMediaPlanCampaignWindow } from "./media-plan-campaign-window";
 import {
   appendMediaPlanAuditEntry,
   actorKindFromOrigin,
@@ -100,9 +101,12 @@ export function reviseMediaPlanOutput(
   const previous = state.media_plan;
   if (!previous) return null;
 
+  // Hard constraint: rebalance into Campaign Start–End, then reject if still invalid.
+  const windowSafeData = enforceMediaPlanCampaignWindow(data);
+
   const now = options?.now ?? new Date().toISOString();
   const origin = options?.origin ?? previous.origin ?? "copilot";
-  const content = mediaPlanContentFromData(data, previous.content);
+  const content = mediaPlanContentFromData(windowSafeData, previous.content);
   const fingerprint = computeSourceFingerprint(nextObject, definition.inputKeys);
   const inputFingerprints = computeInputFingerprints(nextObject, definition.inputKeys);
   const tipStatus = getMediaPlanWorkingStatus(nextObject);
@@ -148,7 +152,10 @@ export function reviseMediaPlanOutput(
     actorUserId: options?.actorUserId,
     reason: changeReason,
     before: options?.before,
-    after: options?.after ?? { durationWeeks: data.durationWeeks },
+    after: options?.after ?? {
+      durationWeeks: windowSafeData.durationWeeks,
+      campaignEndDate: windowSafeData.campaignEndDate,
+    },
     operationClass: options?.operationClass ?? "revise_patch",
   });
 

@@ -11,6 +11,7 @@
 | [`MEDIA_PLANNING_V1_PRODUCTION_READINESS.md`](./MEDIA_PLANNING_V1_PRODUCTION_READINESS.md) | v1 engine SSOT (baseline / working draft / portal) |
 | [`../release/2.0/MEDIA_PLAN_LIFECYCLE_OWNERSHIP.md`](../release/2.0/MEDIA_PLAN_LIFECYCLE_OWNERSHIP.md) | Original / Current / Actual ownership (R2.0) |
 | Publishing Calendar | Saturday–Friday calendar weeks; range from campaign start/end — see `features/campaign-outputs/media-plan-week-start.ts` |
+| Campaign Window | Hard scheduling constraint: Campaign Start–End is the absolute publishing window — see `features/campaign-outputs/media-plan-campaign-window.ts` |
 | Thinkway enterprise principle | Approved business artefacts are revised in a controlled manner; strategic redesigns are explicit and versioned separately |
 
 ---
@@ -336,6 +337,7 @@ The domain model must enforce:
 3. Business version history (`history`) stores **business** milestones only; audit log is a separate append-only list.
 4. Copilot / Studio: prefer Revise; confirm if ambiguous; Regenerate only when explicit or strategic.
 5. UI shows business version + Status + approval fields; audit log is separate from version history.
+6. **Campaign Window hard constraint:** Campaign Start Date and Campaign End Date define the absolute publishing window. Generate and Revise must never leave creators, deliverables, or publishing slots outside that window (overrides cadence/optimisation; rebalance within the window preserving order/waves/strategy as much as possible). Persist paths must reject any remaining out-of-window slot (`media-plan-campaign-window.ts`).
 
 ---
 
@@ -350,3 +352,4 @@ The domain model must enforce:
 7. Restore `v1.0` after `v1.2` yields `v1.3` without mutating `v1.0`–`v1.2`.
 8. Compare operates across business versions; audit explains intra-version edits before first approval.
 9. Non-compliant revise-on-every-edit behaviour is rejected by tests and release gate.
+10. No saved Media Plan may contain a publishing slot before Campaign Start or after Campaign End.

@@ -31,6 +31,7 @@ import {
   type MediaPlanWeekSchedulingMode,
   type PublishingCalendarRange,
 } from "./media-plan-week-start";
+import { enforceMediaPlanCampaignWindow } from "./media-plan-campaign-window";
 import {
   cloneMediaPlanScheduleMeta,
   mediaPlanScheduleFromMeta,
@@ -172,6 +173,33 @@ export function rebindMediaPlanPublishingCalendar(
 
   const oldGridStart = parseIsoCampaignDate(data.scheduledStartDate ?? data.campaignStartDate);
   const weeks = buildEmptyWeeks(range, data.weeks);
+  const overflow: MediaPlanDay[] = [];
+
+  const placeOrPark = (day: MediaPlanDay, target: { week: number; dayIndex: number } | null) => {
+    if (!target) {
+      overflow.push(day);
+      return;
+    }
+    const targetWeek = weeks.find((w) => w.week === target.week);
+    if (!targetWeek) {
+      overflow.push(day);
+      return;
+    }
+    const dateLabel = formatShortCampaignDate(
+      dateForCampaignSlot(range.gridStartSaturday, target.week, target.dayIndex)
+    );
+    const existing = targetWeek.days[target.dayIndex]!;
+    if (!dayHasPublishingContent(existing)) {
+      targetWeek.days[target.dayIndex] = {
+        ...day,
+        day: PUBLISHING_CALENDAR_DAYS[target.dayIndex] ?? day.day,
+        dateLabel,
+      };
+      return;
+    }
+    // Collision after shift — park for campaign-window rebalance.
+    overflow.push(day);
+  };
 
   if (oldGridStart) {
     for (const week of data.weeks) {
@@ -179,20 +207,50 @@ export function rebindMediaPlanPublishingCalendar(
         if (!dayHasPublishingContent(day)) return;
         const oldIso = toIsoCampaignDate(dateForCampaignSlot(oldGridStart, week.week, dayIndex));
         const newIso = addCalendarDays(oldIso, offsetDays);
-        if (!newIso) return;
-        const target = slotIndexOnGrid(range, newIso);
-        if (!target) return;
-        const targetWeek = weeks.find((w) => w.week === target.week);
-        if (!targetWeek) return;
-        const dateLabel = formatShortCampaignDate(
-          dateForCampaignSlot(range.gridStartSaturday, target.week, target.dayIndex)
-        );
-        targetWeek.days[target.dayIndex] = {
-          ...day,
-          day: PUBLISHING_CALENDAR_DAYS[target.dayIndex] ?? day.day,
-          dateLabel,
-        };
+        if (!newIso) {
+          overflow.push(day);
+          return;
+        }
+        placeOrPark(day, slotIndexOnGrid(range, newIso));
       });
+    }
+  }
+
+  // Park overflow on the last grid cell so enforce/rebalance can redistribute in-window.
+  if (overflow.length) {
+    const lastWeek = weeks[weeks.length - 1];
+    if (lastWeek?.days.length) {
+      const parkIndex = lastWeek.days.length - 1;
+      for (const day of overflow) {
+        const existing = lastWeek.days[parkIndex]!;
+        if (!dayHasPublishingContent(existing)) {
+          lastWeek.days[parkIndex] = {
+            ...day,
+            day: PUBLISHING_CALENDAR_DAYS[parkIndex] ?? day.day,
+            dateLabel: existing.dateLabel,
+          };
+        } else {
+          lastWeek.days[parkIndex] = {
+            ...existing,
+            additionalDeliverables: [
+              ...(existing.additionalDeliverables ?? []),
+              {
+                creatorId: day.creatorId,
+                creator: day.creator,
+                shortName: day.shortName,
+                handle: day.handle,
+                avatarUrl: day.avatarUrl,
+                profileUrl: day.profileUrl,
+                platform: day.platform,
+                serviceType: day.serviceType,
+                serviceTypes: day.serviceTypes,
+                tier: day.tier,
+              },
+              ...(day.additionalDeliverables ?? []),
+            ],
+          };
+        }
+      }
     }
   }
 
@@ -209,7 +267,7 @@ export function rebindMediaPlanPublishingCalendar(
   const gridStartIso = range.gridStartIso;
   const deadlines = rebuildMediaPlanDeadlinesFromWeeks(weeks, gridStartIso);
 
-  return {
+  const rebound: MediaPlanData = {
     ...data,
     durationWeeks:
       input.durationWeeks != null && Number.isFinite(input.durationWeeks)
@@ -226,6 +284,9 @@ export function rebindMediaPlanPublishingCalendar(
     weeks,
     deadlines,
   };
+
+  // Hard constraint overrides cadence — nothing outside Campaign Start–End.
+  return enforceMediaPlanCampaignWindow(rebound);
 }
 
 /** Rebuild meta.mediaPlanSchedule.assignments from rebound calendar weeks. */
@@ -441,20 +502,30 @@ export function applyMediaPlanStartDateOffset(
     return { campaignObject, shifted: false, dayOffset: 0 };
   }
 
-  const shiftedData = shiftMediaPlanDataToScheduledStart(data, nextScheduledIso, options);
-  let withSchedule = syncScheduleAssignmentsFromMediaPlanData(campaignObject, shiftedData);
-  const committed = commitPatchedMediaPlanOutput(withSchedule, shiftedData, {
-    now: options?.now,
-    origin: options?.origin,
-    actorUserId: options?.actorUserId,
-    changeReason: "Timeline start date shifted (deterministic slot rebind).",
-    changeSummary:
-      businessOffset != null && businessOffset !== 0
-        ? `Revised Media Plan: publishing slots shifted ${Math.abs(businessOffset)} day${
-            Math.abs(businessOffset) === 1 ? "" : "s"
-          } (${businessOffset > 0 ? "later" : "earlier"}) — creators rebound; waves and strategy preserved.`
-        : "Revised Media Plan publishing calendar range — creators rebound to new slot dates.",
-  });
+  let shiftedData: MediaPlanData;
+  try {
+    shiftedData = shiftMediaPlanDataToScheduledStart(data, nextScheduledIso, options);
+  } catch {
+    return { campaignObject, shifted: false, dayOffset: businessOffset };
+  }
+  const withSchedule = syncScheduleAssignmentsFromMediaPlanData(campaignObject, shiftedData);
+  let committed: ReturnType<typeof commitPatchedMediaPlanOutput>;
+  try {
+    committed = commitPatchedMediaPlanOutput(withSchedule, shiftedData, {
+      now: options?.now,
+      origin: options?.origin,
+      actorUserId: options?.actorUserId,
+      changeReason: "Timeline start date shifted (deterministic slot rebind).",
+      changeSummary:
+        businessOffset != null && businessOffset !== 0
+          ? `Revised Media Plan: publishing slots shifted ${Math.abs(businessOffset)} day${
+              Math.abs(businessOffset) === 1 ? "" : "s"
+            } (${businessOffset > 0 ? "later" : "earlier"}) — creators rebound; waves and strategy preserved.`
+          : "Revised Media Plan publishing calendar range — creators rebound to new slot dates.",
+    });
+  } catch {
+    return { campaignObject, shifted: false, dayOffset: businessOffset };
+  }
 
   if (!committed) {
     return { campaignObject, shifted: false, dayOffset: businessOffset };

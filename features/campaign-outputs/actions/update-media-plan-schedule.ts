@@ -15,7 +15,12 @@ import {
   logMediaPlanTimelineEvents,
   resolveCampaignHeaderIdForMediaPlan,
 } from "@/lib/media-plan/log-media-plan-timeline";
-import { generateCampaignOutput } from "../output-registry";
+import { asMediaPlanData } from "../generators/media-plan";
+import {
+  MediaPlanCampaignWindowError,
+  assertMediaPlanWithinCampaignWindow,
+} from "../media-plan-campaign-window";
+import { generateCampaignOutput, getCampaignOutputState } from "../output-registry";
 import { mutateMediaPlanSchedule } from "../media-plan-mutations";
 
 const moveSchema = z.object({
@@ -120,8 +125,15 @@ export async function updateMediaPlanScheduleAction(
       changeSummary:
         "Revised Media Plan: publishing slots updated — creators, waves, and strategy preserved.",
     }));
-  } catch {
-    /* keep schedule meta even if regeneration fails */
+    const generated = asMediaPlanData(
+      getCampaignOutputState(next).media_plan?.content?.data
+    );
+    if (generated) assertMediaPlanWithinCampaignWindow(generated);
+  } catch (error) {
+    if (error instanceof MediaPlanCampaignWindowError) {
+      return { ok: false, message: error.message };
+    }
+    /* keep schedule meta even if regeneration fails for other reasons */
   }
 
   const headerIdForSave = await resolveCampaignHeaderIdForMediaPlan(

@@ -312,6 +312,23 @@ test("media plan dual-stores requested Friday and Saturday publishing Week 1", (
   assert.equal(data.weeks[0]!.days[6]!.dateLabel, "24/7/26");
 });
 
+test("generate never places creators before Campaign Start (hard window)", () => {
+  const obj = buildCampaignObjectFixture({
+    facts: { durationWeeks: 2, campaignStartDate: "2026-07-24" },
+  });
+  const data = planData(generateMediaPlan(obj));
+  // Sat–Thu (18–23 Jul) are grid days before business start — must stay empty of creators.
+  for (let dayIndex = 0; dayIndex < 6; dayIndex += 1) {
+    const day = data.weeks[0]!.days[dayIndex]!;
+    assert.equal(
+      day.creatorId,
+      undefined,
+      `dayIndex ${dayIndex} (${day.dateLabel}) must not hold a creator before campaign start`
+    );
+    assert.equal(day.additionalDeliverables?.length ?? 0, 0);
+  }
+});
+
 test("enrichMediaPlanFromSlate patches avatars and quotation ad types onto legacy calendar cells", () => {
   const obj = buildCampaignObjectFixture();
   const data = planData(generateMediaPlan(obj));

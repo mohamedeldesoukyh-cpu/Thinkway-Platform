@@ -71,6 +71,15 @@ export {
   regenerateMediaPlanOutput,
   readMediaPlanData,
 } from "./media-plan-revise-regenerate";
+export {
+  MediaPlanCampaignWindowError,
+  resolveCampaignWindowFromMediaPlan,
+  findCampaignWindowViolations,
+  assertMediaPlanWithinCampaignWindow,
+  rebalanceMediaPlanWithinCampaignWindow,
+  enforceMediaPlanCampaignWindow,
+  assertScheduleTargetWithinCampaignWindow,
+} from "./media-plan-campaign-window";
 export { renderOutputMarkdown } from "./output-markdown";
 export {
   generateMediaPlan,
