@@ -1,10 +1,10 @@
 # Release 2.0 — Enterprise Campaign Lifecycle Refactoring
 
-**Status:** Phase 1 **code complete** — pending [Development soak](./DEVELOPMENT_SOAK_PLAN.md)  
-**Branch:** `feature/release-2-0-lifecycle` (from `develop`)  
+**Status:** Phase 1 **Development soak complete** — awaiting Production approval  
+**Branch:** `develop` (RC PR #2 merged)  
 **Code validation:** [PHASE_1_VALIDATION.md](./PHASE_1_VALIDATION.md)  
-**Soak plan:** [DEVELOPMENT_SOAK_PLAN.md](./DEVELOPMENT_SOAK_PLAN.md)  
-**After soak (all green):** `PRODUCTION_READINESS_REVIEW.md` (not written until soak passes)  
+**Soak plan:** [DEVELOPMENT_SOAK_PLAN.md](./DEVELOPMENT_SOAK_PLAN.md) — exit matrix 100% green  
+**Production readiness:** [PRODUCTION_READINESS_REVIEW.md](./PRODUCTION_READINESS_REVIEW.md)  
 **Environment:** Development Supabase (`hsxrewjcbvmbkqdlzjhs`). Production requires separate approval.  
 **Phase 2:** Do not start until Phase 1 is Production-stable.
 
@@ -38,7 +38,7 @@ Replace fragmented Quote → Campaign conversion with a unified **Assignment-bas
 | 7 | [MIGRATION_BACKFILL_AND_RISKS.md](./MIGRATION_BACKFILL_AND_RISKS.md) | Backfill tiers (D5) + risks |
 | 8 | [PHASE_1_VALIDATION.md](./PHASE_1_VALIDATION.md) | Code-complete validation artefact |
 | 9 | [DEVELOPMENT_SOAK_PLAN.md](./DEVELOPMENT_SOAK_PLAN.md) | Dev soak scenarios + exit criteria |
-| 10 | `PRODUCTION_READINESS_REVIEW.md` | After soak only — 4 release questions |
+| 10 | [PRODUCTION_READINESS_REVIEW.md](./PRODUCTION_READINESS_REVIEW.md) | 4 release questions + Go recommendation |
 
 ---
 

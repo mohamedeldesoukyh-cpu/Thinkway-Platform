@@ -1,6 +1,6 @@
 # Prompt Summary — Current Sprint
 
-**Branch focus:** `feature/unified-media-plan` (from `develop`).  
+**Branch focus:** `develop` (Release 2.0 Phase 1 soak complete).  
 **Prior stash on `main`:** `WIP commercial CRM before unified-media-plan` — restore separately; do not mix with Media Plan work.
 
 ## Media Planning v1 — RELEASED TO PRODUCTION
@@ -36,21 +36,15 @@
 
 ## Release 2.0 — Enterprise Campaign Lifecycle
 
-- **Status:** Phase 1 **code complete** on `feature/release-2-0-lifecycle` — next gate = Development soak
-- **Soak plan:** `docs/release/2.0/DEVELOPMENT_SOAK_PLAN.md` (all exit areas must be green; no yellow)
-- **After soak:** author `PRODUCTION_READINESS_REVIEW.md` (4 questions only) → seek Production approval
-- **Phase 2 blocked** until Phase 1 is Production-stable (Media Plan ownership / locking / Actual only — not Revision/Reporting)
-- **Flag:** Dev surface may default ON; do not enable Production until soak + approval
-- **Infra backlog (separate):** `BACKLOG_DEV_SCHEMA_VALIDATION_CREDENTIALS.md` — not an R2.0 blocker
-- **RC PR:** https://github.com/mohamedeldesoukyh-cpu/Thinkway-Platform/pull/2 → `develop` (**do not merge** until soak all-green)
-- **Labels:** architecture, release-2.0, breaking-internals, feature-flag, requires-soak
-- **Parked:** Media Plan WIP on `feature/media-plan-assignment-hydration` (excluded from RC)
-- **Merged:** PR #2 → `develop` (2026-07-28). Flag OFF by default.
-- **Dev DB soak:** QT-2026-0005 → TW-2026-0002 (2 Assignments, snapshot, pin, idempotent) via `scripts/soak-release-2-0-dev.mjs`
-- **UI soak blocked:** Vercel Deployment Protection SSO on `dev.thinkwaymedia.com`
-- **Exit matrix:** Conversion/Snapshot/Assignment/Flag/RLS green; Billing/VIO/Backfill/Media Plan/Performance UI still open
-- **No Production.** No Phase 2. Do **not** write `PRODUCTION_READINESS_REVIEW.md` until matrix 100% green
-- **Next action:** User clears Vercel SSO (or disables protection) → finish UI soak → then readiness review
+- **Status:** Phase 1 **Development soak 100% green** (2026-07-28)
+- **Soak plan:** `docs/release/2.0/DEVELOPMENT_SOAK_PLAN.md`
+- **Readiness:** `docs/release/2.0/PRODUCTION_READINESS_REVIEW.md` — recommendation **Go** (flag-gated), Production deploy still needs explicit approval
+- **Phase 2 blocked** until Phase 1 is Production-stable
+- **Flag:** `RELEASE_2_0_ASSIGNMENT_CONVERT` **OFF by default**; Preview(`develop`) may be ON for soak only; keep Production unset/OFF until approved enablement
+- **Convert soak:** QT-2026-0005 → TW-2026-0002 (2 Assignments, snapshot, pin, billing E2E VIO→INV→PAY)
+- **Backfill soak:** Isolated Dev fixtures QT-2026-0019 → TW-2026-0003 via `scripts/soak-release-2-0-backfill-dev.mjs` (detect/dry-run/execute/idempotent)
+- **No Production deploy executed.** No Phase 2.
+- **Next action:** Seek explicit Production approval using PRODUCTION_READINESS_REVIEW.md (migration + deploy + keep flag OFF initially)
 
 ## Working agreement
 

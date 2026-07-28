@@ -28,10 +28,16 @@ export async function getDiscoverySearchTaxonomy(): Promise<DiscoverySearchTaxon
       error.message.includes("get_discovery_search_taxonomy") ||
       error.code === "PGRST202" ||
       error.code === "42883";
+    // PostgREST/Postgres ~8s statement_timeout: full-scan taxonomy RPC can cancel under load.
+    // Do not crash Creator Search SSR — degrade to empty taxonomy (same as missing RPC).
+    const timedOut = /statement timeout|canceling statement/i.test(error.message);
 
-    if (rpcMissing) {
+    if (rpcMissing || timedOut) {
       const fallback = buildDiscoverySearchTaxonomyIndex([]);
-      taxonomyCache = { expiresAt: now + TAXONOMY_TTL_MS, taxonomy: fallback };
+      // Cache only hard-missing RPC. Timeouts are transient — allow the next request to retry.
+      if (rpcMissing) {
+        taxonomyCache = { expiresAt: now + TAXONOMY_TTL_MS, taxonomy: fallback };
+      }
       return fallback;
     }
 
