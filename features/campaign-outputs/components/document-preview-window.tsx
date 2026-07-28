@@ -21,7 +21,7 @@ import {
 } from "../hooks/document-window-bounds";
 import { DocumentPreviewWindowControls } from "./document-preview-window-controls";
 
-/** App chrome reference z-indexes: sidebar/copilot/studio sticky z-50, dialogs z-[110]. */
+/** App chrome reference z-indexes: app sidebar expanded z-[60], studio sticky z-40/50, dialogs z-[110], copilot dock ~200. */
 export const DOCUMENT_PREVIEW_LAYER_Z = 9998;
 export const DOCUMENT_PREVIEW_DIALOG_Z = 9999;
 
