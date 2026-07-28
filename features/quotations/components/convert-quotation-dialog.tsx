@@ -22,14 +22,8 @@ import {
 } from "@/features/quotations/lifecycle-actions";
 import type { QuotationDetail } from "@/features/quotations/types";
 
-type PreviewData = NonNullable<
-  Awaited<ReturnType<typeof previewConvertQuotationToCampaign>> extends {
-    ok: true;
-    data?: infer D;
-  }
-    ? D
-    : never
->;
+type PreviewResult = Awaited<ReturnType<typeof previewConvertQuotationToCampaign>>;
+type PreviewData = NonNullable<Extract<PreviewResult, { ok: true }>["data"]>;
 
 type Props = {
   detail: QuotationDetail;
@@ -52,8 +46,13 @@ export function ConvertQuotationDialog({ detail, open, onOpenChange }: Props) {
 
     startTransition(async () => {
       const res = await previewConvertQuotationToCampaign({ quotationId: detail.id });
-      if (!res.ok || !res.data) {
-        setError(res.message ?? "Failed to preview conversion.");
+      if (!res.ok) {
+        setError(res.message || "Failed to preview conversion.");
+        setPreview(null);
+        return;
+      }
+      if (!res.data) {
+        setError("Failed to preview conversion.");
         setPreview(null);
         return;
       }
@@ -65,8 +64,12 @@ export function ConvertQuotationDialog({ detail, open, onOpenChange }: Props) {
   function execute() {
     startTransition(async () => {
       const res = await convertQuotationToCampaign({ quotationId: detail.id });
-      if (!res.ok || !res.data) {
+      if (!res.ok) {
         toast.error(res.message);
+        return;
+      }
+      if (!res.data) {
+        toast.error("Conversion failed.");
         return;
       }
       toast.success(res.message ?? "Converted to campaign");

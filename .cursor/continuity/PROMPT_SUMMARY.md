@@ -45,7 +45,9 @@
 - **RC PR:** https://github.com/mohamedeldesoukyh-cpu/Thinkway-Platform/pull/2 → `develop` (**do not merge** until soak all-green)
 - **Labels:** architecture, release-2.0, breaking-internals, feature-flag, requires-soak
 - **Parked:** Media Plan WIP on `feature/media-plan-assignment-hydration` (excluded from RC)
-- **Next action:** Reviewer checklist on PR → merge to `develop` only after soak gate agreed → execute soak on `dev.thinkwaymedia.com`
+- **Soak:** automated pre-gates green (`test:release-2-0`, CRM 2B, tsc, Dev schema); UI soak pending Preview/Dev
+- **Soak fixes on RC:** CRM allowlist, wizard/dialog TS narrowing, audit event, legacy flag-off return shape
+- **Next action:** Push soak fixes → green CI/Preview → execute manual soak scenarios → all-green exit matrix → `PRODUCTION_READINESS_REVIEW.md`
 
 ## Working agreement
 

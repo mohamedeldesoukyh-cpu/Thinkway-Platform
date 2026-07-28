@@ -70,8 +70,12 @@ export function BackfillAssignmentsWizard({ campaignId, open, onOpenChange }: Pr
 
     startTransition(async () => {
       const res = await detectCampaignBackfillEligibility(campaignId);
-      if (!res.ok || !res.data) {
-        setError(res.message ?? "Detection failed.");
+      if (!res.ok) {
+        setError(res.message || "Detection failed.");
+        return;
+      }
+      if (!res.data) {
+        setError("Detection failed.");
         return;
       }
       setDetection(res.data as Detection);
@@ -82,8 +86,12 @@ export function BackfillAssignmentsWizard({ campaignId, open, onOpenChange }: Pr
   function runPreview() {
     startTransition(async () => {
       const res = await previewCampaignAssignmentBackfill(campaignId);
-      if (!res.ok || !res.data) {
-        setError(res.message ?? "Preview failed.");
+      if (!res.ok) {
+        setError(res.message || "Preview failed.");
+        return;
+      }
+      if (!res.data) {
+        setError("Preview failed.");
         return;
       }
       setPreview(res.data);
@@ -96,8 +104,13 @@ export function BackfillAssignmentsWizard({ campaignId, open, onOpenChange }: Pr
     startTransition(async () => {
       setStep("execute");
       const res = await executeCampaignAssignmentBackfill(campaignId);
-      if (!res.ok || !res.data) {
-        setError(res.message ?? "Backfill failed.");
+      if (!res.ok) {
+        setError(res.message || "Backfill failed.");
+        setStep("preview");
+        return;
+      }
+      if (!res.data) {
+        setError("Backfill failed.");
         setStep("preview");
         return;
       }

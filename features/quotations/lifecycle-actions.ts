@@ -323,7 +323,23 @@ export async function convertQuotationToCampaign(input: {
 
   if (!isRelease20AssignmentConvertEnabled()) {
     // Fall back to legacy create when flag off.
-    return createCampaignFromQuotation(input);
+    const legacy = await createCampaignFromQuotation(input);
+    if (!legacy.ok || !legacy.data) {
+      return legacy.ok
+        ? { ok: false, message: "Legacy convert returned no campaign data." }
+        : legacy;
+    }
+    return {
+      ok: true,
+      data: {
+        campaignId: legacy.data.campaignId,
+        documentNumber: legacy.data.documentNumber,
+        shortlistId: legacy.data.shortlistId,
+        linesCreated: 0,
+        warnings: ["Release 2.0 Assignment convert is disabled; legacy header convert used."],
+      },
+      message: legacy.message,
+    };
   }
 
   const result = await convertQuotationToAssignments(actor.supabase, actor.userId, {

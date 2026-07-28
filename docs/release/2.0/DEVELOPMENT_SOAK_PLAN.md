@@ -1,21 +1,46 @@
 # Release 2.0 Phase 1 — Development Soak Plan
 
-**Status:** Ready to execute (Phase 1 **code complete**)  
-**Branch:** `feature/release-2-0-lifecycle`  
-**Prerequisite:** Merge to `develop` → Dev deploy (`dev.thinkwaymedia.com`) with Development Supabase `hsxrewjcbvmbkqdlzjhs`  
+**Status:** In progress — automated gates green; **manual UI soak pending** Preview/Dev deploy  
+**Branch / RC:** `feature/release-2-0-lifecycle` · [PR #2](https://github.com/mohamedeldesoukyh-cpu/Thinkway-Platform/pull/2)  
+**Baseline:** RC PR is the implementation baseline (fix soak blockers only; no Phase 2)  
+**Deploy path for UI soak:** Vercel Preview on the RC branch (preferred before merge) **or** merge → `develop` → `dev.thinkwaymedia.com`  
+**Database:** Development Supabase `hsxrewjcbvmbkqdlzjhs` (migration already applied)  
 **Feature flag:** Prefer explicit soak cohort first; Dev surface may default ON — do **not** enable Production  
 **Sign-off after soak:** [`PRODUCTION_READINESS_REVIEW.md`](./PRODUCTION_READINESS_REVIEW.md) (create only when exit criteria are all green)  
 **Phase 2:** Do **not** start until Phase 1 is deployed and stable in Production
 
 ---
 
+## Automated pre-gates (must pass before marking exit matrix)
+
+| Gate | Command / check | Status (2026-07-28) |
+|---|---|---|
+| R2.0 unit + CRM boundary | `npm run test:release-2-0` | ✅ 18/18 |
+| Creator CRM Phase 2B | `npm run test:creator-crm-phase2b` | ✅ 20/20 |
+| TypeScript (`tsc --noEmit`) | full project | ✅ |
+| Dev schema — snapshot table | `campaign_commercial_snapshots` | ✅ |
+| Dev schema — accepted pin | `accepted_quotation_id` / `_version` | ✅ |
+| Dev schema — line provenance | `source_quotation_id` / `_item_id` | ✅ |
+| Validate CI on PR #2 | GitHub Actions | ⏳ re-run after soak fixes |
+| Vercel Preview build | Preview deploy | ⏳ re-run after soak fixes |
+
+### Soak fixes applied (discovered during gate run)
+
+1. CRM boundary allowlist — `convert-quotation-to-assignments.ts` (intentional Quote→Assignment CRM wiring).  
+2. Backfill wizard + convert dialog — narrow `ActionResult` before reading `message` / `data` (Vercel TS failure).  
+3. Legacy flag-off convert return shape + audit event `quotation.converted_to_assignments`.  
+4. Added `npm run test:release-2-0` for soak regression.
+
+---
+
 ## Rollout discipline
 
-1. Merge feature branch → `develop` (Dev auto-deploy).  
-2. Confirm Ops Center: Development ↔ `hsxrewjcbvmbkqdlzjhs`.  
-3. Soak with structured scenarios below (not ad-hoc clicking).  
+1. Keep RC green (CI + Preview).  
+2. Execute structured scenarios below on Preview **or** Dev after merge.  
+3. Confirm Ops Center: Development ↔ `hsxrewjcbvmbkqdlzjhs`.  
 4. Every area in the exit matrix must be **green** — no yellow.  
-5. Only then draft Production readiness review and seek Production approval.
+5. Only then draft Production readiness review and seek Production approval.  
+6. Merge to `develop` is allowed for Dev soak when Preview is insufficient; **do not** merge to `main` / Production without all-green soak + approval.
 
 ---
 
@@ -131,7 +156,8 @@ Assignment → Vendor IO → Invoice → Payment
 
 | Date | Tester | Environment | Outcome | Notes |
 |---|---|---|---|---|
-| | | Dev | | |
+| 2026-07-28 | Agent | Local + Dev DB | Partial | Automated pre-gates green; Preview/CI re-run pending; UI scenarios not yet executed |
+| | | Preview / Dev | | Manual commercial → billing → revision matrix |
 
 ---
 

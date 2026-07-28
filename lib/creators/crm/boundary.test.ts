@@ -59,6 +59,8 @@ const PHASE2B_ALLOWED_ENSURE_PATHS = [
   "/campaigns/campaign-influencer-sync.ts",
   "/services/quotations/repositories/quotation-repository.ts",
   "/services/quotations/quotation-lifecycle-service.ts",
+  // Release 2.0 — Quote → Assignment convert (unified Path A/B)
+  "/services/campaigns/convert-quotation-to-assignments.ts",
   "/discovery/shortlists/actions.ts",
   // Commercial CRM completion — Vendors module + Vendor IO
   "/vendors/actions.ts",
