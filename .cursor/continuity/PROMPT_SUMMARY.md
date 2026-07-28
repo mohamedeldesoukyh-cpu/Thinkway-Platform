@@ -1,6 +1,8 @@
 # Prompt Summary — Current Sprint
 
 **Branch focus:** `develop` (Release 2.0 Phase 1 soak complete).  
+**Release 2.0 MR:** https://github.com/mohamedeldesoukyh-cpu/Thinkway-Platform/pull/3 (`develop` → `main`) — includes Media Plan versioning + Sat–Fri Publishing Calendar.  
+
 **Prior stash on `main`:** `WIP commercial CRM before unified-media-plan` — restore separately; do not mix with Media Plan work.
 
 ## Media Planning v1 — RELEASED TO PRODUCTION
