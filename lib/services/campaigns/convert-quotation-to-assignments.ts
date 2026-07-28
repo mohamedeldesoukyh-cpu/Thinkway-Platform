@@ -390,7 +390,7 @@ export async function convertQuotationToAssignments(
 
   const items = ((itemRows ?? []) as Record<string, unknown>[]).map(toItemRow);
   const selection = summarizeQuotationConvertSelection(items);
-  const units = buildQuotationConvertUnits(items);
+  let units = buildQuotationConvertUnits(items);
 
   if (units.length === 0) {
     return {
@@ -412,13 +412,25 @@ export async function convertQuotationToAssignments(
     (row.campaign_header_id as string | null) ||
     null;
 
+  // Partial convert resume: skip units that already have a line for this quote item.
+  let existingSourceItemIds = new Set<string>();
   if (existingHeaderId) {
-    const { count } = await supabase
+    const { data: existingLines } = await supabase
       .from("campaign_lines")
-      .select("id", { count: "exact", head: true })
+      .select("id, source_quotation_item_id")
       .eq("campaign_header_id", existingHeaderId);
 
-    if ((count ?? 0) > 0) {
+    existingSourceItemIds = new Set(
+      (existingLines ?? [])
+        .map((line) => (line as { source_quotation_item_id?: string | null }).source_quotation_item_id)
+        .filter((id): id is string => Boolean(id))
+    );
+
+    const pendingUnits = units.filter(
+      (unit) => !existingSourceItemIds.has(unit.primaryItem.id)
+    );
+
+    if ((existingLines?.length ?? 0) > 0 && pendingUnits.length === 0) {
       const { data: header } = await supabase
         .from("campaign_headers")
         .select("id, document_number")
@@ -441,6 +453,14 @@ export async function convertQuotationToAssignments(
         preview,
         snapshotHash: preview.snapshotHash,
       };
+    }
+
+    // Resume incomplete convert: only create missing units.
+    if (pendingUnits.length > 0 && pendingUnits.length < units.length) {
+      warnings.push(
+        `Resuming convert: ${existingSourceItemIds.size} Assignment(s) already present; creating ${pendingUnits.length} missing.`
+      );
+      units = pendingUnits;
     }
   }
 
@@ -518,25 +538,28 @@ export async function convertQuotationToAssignments(
     documentNumber = (header as { document_number: string }).document_number;
   }
 
-  const snapshotPayload = buildSnapshotPayload({
-    row,
-    units,
-    selection,
-    snapshotHash: preview.snapshotHash,
-  });
-  const { error: snapshotError } = await supabase
-    .from("campaign_commercial_snapshots")
-    .insert({
-      campaign_header_id: campaignId,
-      quotation_id: input.quotationId,
-      quotation_serial: (row.serial_number as string | null) ?? null,
-      version_number: Number(row.version_number ?? 1),
-      payload: snapshotPayload,
-      created_by: userId,
+  // Do not duplicate commercial snapshot when resuming a partial convert.
+  if (existingSourceItemIds.size === 0) {
+    const snapshotPayload = buildSnapshotPayload({
+      row,
+      units,
+      selection,
+      snapshotHash: preview.snapshotHash,
     });
+    const { error: snapshotError } = await supabase
+      .from("campaign_commercial_snapshots")
+      .insert({
+        campaign_header_id: campaignId,
+        quotation_id: input.quotationId,
+        quotation_serial: (row.serial_number as string | null) ?? null,
+        version_number: Number(row.version_number ?? 1),
+        payload: snapshotPayload,
+        created_by: userId,
+      });
 
-  if (snapshotError) {
-    warnings.push(`Commercial snapshot warning: ${snapshotError.message}`);
+    if (snapshotError) {
+      warnings.push(`Commercial snapshot warning: ${snapshotError.message}`);
+    }
   }
 
   const lineIds: string[] = [];

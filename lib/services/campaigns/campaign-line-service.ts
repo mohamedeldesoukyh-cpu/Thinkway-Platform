@@ -100,12 +100,10 @@ async function syncLineDeliverables(
       platforms: input.platforms,
       dueDate: input.dueDate,
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (/deliverables_campaign_id_fkey|campaigns_legacy/i.test(message)) {
-      return;
-    }
-    throw error;
+  } catch {
+    // Soft-fail all legacy writes (enum mismatches like ig_story_set / tiktok_story,
+    // FK to campaigns_legacy, etc.). Assignment SSOT is assignment_deliverables.
+    return;
   }
 }
 

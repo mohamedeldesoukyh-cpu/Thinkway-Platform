@@ -57,6 +57,16 @@ function findCreatorForItem(
   return null;
 }
 
+/** Split quotation platform cells like "instagram,tiktok,facebook" into canonical keys. */
+function platformKeysFromRaw(raw: string | null | undefined): string[] {
+  if (!raw?.trim()) return [];
+  const parts = raw
+    .split(/[,|/]+/)
+    .map((part) => canonicalPlatformKey(part.trim()))
+    .filter(Boolean);
+  return [...new Set(parts)];
+}
+
 function quotationDeliverablesToPlatforms(
   deliverables: QuotationDeliverable[],
   creator: UnifiedCreatorResult | null,
@@ -65,14 +75,23 @@ function quotationDeliverablesToPlatforms(
   const grouped = new Map<string, string[]>();
 
   for (const deliverable of deliverables) {
-    const platformKey = canonicalPlatformKey(deliverable.platform || item.platform || "instagram");
     const lines = deliverableTypeLines(deliverable);
     const types = lines.flatMap((line) =>
       Array.from({ length: Math.max(1, line.quantity) }, () => line.type.trim())
     ).filter(Boolean);
 
-    const existing = grouped.get(platformKey) ?? [];
-    grouped.set(platformKey, [...existing, ...types]);
+    let platformKeys = platformKeysFromRaw(deliverable.platform);
+    if (platformKeys.length === 0) {
+      platformKeys = platformKeysFromRaw(item.platform);
+    }
+    if (platformKeys.length === 0) {
+      platformKeys = ["instagram"];
+    }
+
+    for (const platformKey of platformKeys) {
+      const existing = grouped.get(platformKey) ?? [];
+      grouped.set(platformKey, [...existing, ...types]);
+    }
   }
 
   const selections: LinePlatformSelection[] = [];
