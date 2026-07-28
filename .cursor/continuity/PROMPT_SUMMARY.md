@@ -42,7 +42,10 @@
 - **Phase 2 blocked** until Phase 1 is Production-stable (Media Plan ownership / locking / Actual only — not Revision/Reporting)
 - **Flag:** Dev surface may default ON; do not enable Production until soak + approval
 - **Infra backlog (separate):** `BACKLOG_DEV_SCHEMA_VALIDATION_CREDENTIALS.md` — not an R2.0 blocker
-- **Next action:** PR → `develop` → execute soak checklist on `dev.thinkwaymedia.com`
+- **RC PR:** https://github.com/mohamedeldesoukyh-cpu/Thinkway-Platform/pull/2 → `develop` (**do not merge** until soak all-green)
+- **Labels:** architecture, release-2.0, breaking-internals, feature-flag, requires-soak
+- **Parked:** Media Plan WIP on `feature/media-plan-assignment-hydration` (excluded from RC)
+- **Next action:** Reviewer checklist on PR → merge to `develop` only after soak gate agreed → execute soak on `dev.thinkwaymedia.com`
 
 ## Working agreement
 
