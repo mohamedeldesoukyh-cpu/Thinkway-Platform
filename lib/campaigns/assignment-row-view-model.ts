@@ -6,7 +6,10 @@ import type {
 import { LINE_OPERATIONAL_STATUS_LABELS } from "@/lib/campaigns/constants/operational-status";
 import type { AssignmentHierarchyGroup } from "@/lib/domains/campaign/assignment-hierarchy-types";
 import type { CampaignLineOperationalStatus } from "@/lib/domains/campaign/operational-utils";
-import { buildAssignmentDisplayName } from "@/lib/campaigns/assignment-line-naming";
+import {
+  buildAssignmentDisplayName,
+  sanitizeAssignmentCreatorName,
+} from "@/lib/campaigns/assignment-line-naming";
 import { coalesceAssignmentRollups } from "@/lib/campaigns/assignment-rollups";
 import { effectiveLineOperationalStatusForUi } from "@/lib/campaigns/effective-operational-status";
 import {
@@ -192,14 +195,17 @@ export function buildAssignmentRowViewModel(
   const childBillingStatus = deriveChildBillingStatus(lineBillingStatus);
   const deliverables = Array.isArray(group.deliverables) ? group.deliverables : [];
 
+  const creatorLabel = sanitizeAssignmentCreatorName(
+    line.influencer_name ?? line.name.split(" — ")[0] ?? line.name
+  );
   const displayName =
-    buildAssignmentDisplayName(line.influencer_name ?? line.name.split(" — ")[0] ?? line.name, [
+    buildAssignmentDisplayName(creatorLabel, [
       ...deliverables.map((d) => ({
         platform: d.platform,
         deliverable_type: d.deliverable_type,
         posts_count: Array.isArray(d.posts) ? d.posts.length : 0,
       })),
-    ]) || line.name;
+    ]) || creatorLabel;
 
   return {
     lineId: line.id,

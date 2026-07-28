@@ -1,6 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { buildAssignmentDisplayName } from "@/lib/campaigns/assignment-line-naming";
+import {
+  buildAssignmentDisplayName,
+  sanitizeAssignmentCreatorName,
+} from "@/lib/campaigns/assignment-line-naming";
 import { parseLineAssignment } from "@/lib/campaigns/line-assignment";
 
 /** Recomputes campaign line display name from deliverables when not user-edited. */
@@ -19,8 +22,9 @@ export async function syncAssignmentLineTitleFromDeliverables(
   const assignment = parseLineAssignment(line.metadata as Record<string, unknown>);
   if (assignment?.title_user_edited) return;
 
-  const influencerName =
-    assignment?.influencer_name ?? line.name.split(" — ")[0] ?? line.name;
+  const influencerName = sanitizeAssignmentCreatorName(
+    assignment?.influencer_name ?? line.name.split(" — ")[0] ?? line.name
+  );
 
   const { data: deliverableRows } = await supabase
     .from("assignment_deliverables")

@@ -1,3 +1,4 @@
+import { sanitizeAssignmentCreatorName } from "@/lib/campaigns/assignment-line-naming";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import type { LinePlatformSelection } from "@/lib/campaigns/line-assignment";
 import {
@@ -183,7 +184,10 @@ export function mapQuotationItemsToExecutionLineSeeds(input: {
     seeds.push({
       influencerId: item.influencer_id,
       unifiedId: item.unified_id ?? creator?.unified_id ?? item.influencer_id,
-      displayName: (item.creator_name ?? creator?.display_name ?? "Vendor") + optionLabel,
+      displayName:
+        sanitizeAssignmentCreatorName(
+          item.creator_name ?? creator?.display_name ?? "Vendor"
+        ) + optionLabel,
       platforms,
       revenue,
       cost,

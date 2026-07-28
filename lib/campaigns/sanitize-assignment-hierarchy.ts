@@ -8,6 +8,7 @@ import type {
 } from "@/lib/domains/campaign/assignment-hierarchy-types";
 import type { CampaignLineBillingStatus } from "@/lib/domains/campaign/types";
 import type { CampaignLineWorkspace } from "@/lib/domains/campaign/workspace-types";
+import { sanitizeAssignmentCreatorName } from "@/lib/campaigns/assignment-line-naming";
 import { coalesceAssignmentRollups } from "@/lib/campaigns/assignment-rollups";
 import { effectiveLineOperationalStatusForUi } from "@/lib/campaigns/effective-operational-status";
 import { normalizeOperationalStatus } from "@/lib/campaigns/operational-status-utils";
@@ -281,10 +282,22 @@ function sanitizeLine(
       operational_status = "io_revised";
     }
 
+    const rawName = String(line.name ?? "Assignment");
+    // Prefer cleaned creator label; keep package suffixes like " — Multi-platform package".
+    const nameParts = rawName.split(" — ");
+    const safeName =
+      nameParts.length > 1
+        ? `${sanitizeAssignmentCreatorName(nameParts[0])} — ${nameParts.slice(1).join(" — ")}`
+        : sanitizeAssignmentCreatorName(rawName, rawName);
+    const safeInfluencerName =
+      line.influencer_name == null
+        ? null
+        : sanitizeAssignmentCreatorName(line.influencer_name, line.influencer_name);
+
     return {
       ...line,
       id: String(line.id),
-      name: String(line.name ?? "Assignment"),
+      name: safeName,
       document_number: line.document_number ?? null,
       operational_status,
       billing_status: normalizeLineBillingForHierarchy(line, deliverables),
@@ -303,7 +316,7 @@ function sanitizeLine(
       currency_code: line.currency_code ?? null,
       active_vendor_io_id: line.active_vendor_io_id ?? null,
       deliverable_count: Math.max(0, finiteNumber(line.deliverable_count, 1)),
-      influencer_name: line.influencer_name ?? null,
+      influencer_name: safeInfluencerName,
       influencer_id: line.influencer_id ?? null,
       campaign_influencer_id: line.campaign_influencer_id ?? null,
       vendor_io_id: line.vendor_io_id ?? null,

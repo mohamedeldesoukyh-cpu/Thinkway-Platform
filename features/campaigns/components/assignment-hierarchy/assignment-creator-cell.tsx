@@ -1,6 +1,7 @@
 "use client";
 
 import { CreatorThumbAvatar } from "@/components/creator/creator-thumb-cell";
+import { sanitizeAssignmentCreatorName } from "@/lib/campaigns/assignment-line-naming";
 import { cn } from "@/lib/utils";
 
 type AssignmentCreatorCellProps = {
@@ -10,17 +11,21 @@ type AssignmentCreatorCellProps = {
   className?: string;
 };
 
-/** Creator column — profile photo + name (thinkway-campaign_2.html asgn-table). */
+/** Creator column — profile photo + wrapping name (thinkway-campaign_2.html asgn-table). */
 export function AssignmentCreatorCell({
   name,
   avatarUrl,
   onClick,
   className,
 }: AssignmentCreatorCellProps) {
+  const displayName = sanitizeAssignmentCreatorName(name, name);
+
   const inner = (
     <>
-      <CreatorThumbAvatar name={name} avatarUrl={avatarUrl} size={18} />
-      <span className="truncate text-[11px] font-medium text-[var(--camp-text)]">{name}</span>
+      <CreatorThumbAvatar name={displayName} avatarUrl={avatarUrl} size={18} />
+      <span className="min-w-0 whitespace-normal break-words text-[11px] font-medium leading-tight text-[var(--camp-text)]">
+        {displayName}
+      </span>
     </>
   );
 
@@ -30,15 +35,17 @@ export function AssignmentCreatorCell({
         type="button"
         onClick={onClick}
         className={cn(
-          "flex min-w-0 items-center gap-1 text-left transition-colors hover:text-primary",
+          "flex min-w-0 items-start gap-1.5 text-left transition-colors hover:text-primary",
           className
         )}
-        title={`View ${name} details`}
+        title={`View ${displayName} details`}
       >
         {inner}
       </button>
     );
   }
 
-  return <div className={cn("flex min-w-0 items-center gap-1", className)}>{inner}</div>;
+  return (
+    <div className={cn("flex min-w-0 items-start gap-1.5", className)}>{inner}</div>
+  );
 }

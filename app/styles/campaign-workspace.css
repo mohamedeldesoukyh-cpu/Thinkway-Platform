@@ -1128,6 +1128,9 @@
     width: 108px;
     min-width: 96px;
     max-width: 120px;
+    white-space: normal;
+    overflow: hidden;
+    vertical-align: top;
   }
 
   .thinkway-campaign-asgn-parent td[data-assignment-col="platforms"],
@@ -1139,6 +1142,10 @@
 
   .thinkway-campaign-asgn-parent td[data-assignment-col="assignment"],
   .thinkway-campaign-asgn-parent-open td[data-assignment-col="assignment"] {
+    max-width: 220px;
+    white-space: normal;
+    overflow: hidden;
+    vertical-align: top;
     border-left: 3px solid var(--camp-blue);
     padding-left: 9px;
   }
@@ -3046,6 +3053,9 @@
   width: 108px !important;
   min-width: 96px !important;
   max-width: 120px !important;
+  white-space: normal !important;
+  overflow: hidden !important;
+  vertical-align: top !important;
 }
 
 .thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent td[data-assignment-col="platforms"],
@@ -3056,8 +3066,19 @@
   max-width: 88px !important;
 }
 
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-col-hdrs th[data-assignment-col="assignment"],
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table thead th[data-assignment-col="assignment"] {
+  max-width: 220px !important;
+  white-space: normal !important;
+  overflow: hidden !important;
+}
+
 .thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent td[data-assignment-col="assignment"],
 .thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent-open td[data-assignment-col="assignment"] {
+  max-width: 220px !important;
+  white-space: normal !important;
+  overflow: hidden !important;
+  vertical-align: top !important;
   border-left: 3px solid var(--camp-blue) !important;
   padding-left: 9px !important;
 }

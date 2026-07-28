@@ -569,8 +569,8 @@ export function AssignmentSafeGrid({
                               className="min-w-0 flex-1 text-left transition-colors hover:text-primary"
                               title={`View ${row.displayName} details`}
                             >
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="text-[11px] font-semibold text-[var(--camp-text)]">
+                              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                                <span className="min-w-0 whitespace-normal break-words text-[11px] font-semibold leading-tight text-[var(--camp-text)]">
                                   {row.displayName}
                                 </span>
                                 {gates.showInternalFinancials &&
