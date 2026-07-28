@@ -29,7 +29,8 @@ const moveSchema = z.object({
   fromDayIndex: z.number().int().min(0).max(6),
   toWeek: z.number().int().min(1).max(52),
   toDayIndex: z.number().int().min(0).max(6),
-  deliverableTypes: z.array(z.string().min(1)).min(1),
+  /** Omit for whole-creator move; required when moving selected deliverable types. */
+  deliverableTypes: z.array(z.string().min(1)).optional(),
   remainingTypes: z.array(z.string().min(1)).optional(),
 });
 

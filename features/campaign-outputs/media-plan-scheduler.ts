@@ -747,17 +747,30 @@ function allocateDeliverablesToWeeks(
   return byWeek;
 }
 
-function deliverableMatchesAssignmentType(
+function deliverableTypeMatchKeys(label: string): string[] {
+  const normalized = normalizeDeliverableTypeLabel(label);
+  const { baseLabel } = parseServiceTypeQuantity(label);
+  const base = normalizeDeliverableTypeLabel(baseLabel);
+  const unit = normalizeDeliverableTypeLabel(`1× ${baseLabel}`);
+  return [...new Set([normalized, base, unit].filter(Boolean))];
+}
+
+function labelsMatchDeliverableType(candidate: string, assignmentType: string): boolean {
+  const targets = new Set(deliverableTypeMatchKeys(assignmentType));
+  return deliverableTypeMatchKeys(candidate).some((key) => targets.has(key));
+}
+
+/** Exported for drag/drop assignment regression tests. */
+export function deliverableMatchesAssignmentType(
   deliverable: SchedulableDeliverable,
   assignmentType: string
 ): boolean {
-  const target = normalizeDeliverableTypeLabel(assignmentType);
   const candidates = [
     deliverable.serviceType,
     formatActivationServiceLabel(deliverable.serviceType, deliverable.role),
     formatActivationServiceLabel(deliverable.serviceType, deliverable.role, true),
   ];
-  if (candidates.some((label) => normalizeDeliverableTypeLabel(label) === target)) {
+  if (candidates.some((label) => labelsMatchDeliverableType(label, assignmentType))) {
     return true;
   }
   for (const mirror of deliverable.attachedMirrors ?? []) {
@@ -765,12 +778,12 @@ function deliverableMatchesAssignmentType(
       mirror.serviceType,
       formatActivationServiceLabel(mirror.serviceType, mirror.role, true),
     ];
-    if (mirrorLabels.some((label) => normalizeDeliverableTypeLabel(label) === target)) {
+    if (mirrorLabels.some((label) => labelsMatchDeliverableType(label, assignmentType))) {
       return true;
     }
   }
   for (const companion of deliverable.attachedCompanions ?? []) {
-    if (normalizeDeliverableTypeLabel(companion.serviceType) === target) return true;
+    if (labelsMatchDeliverableType(companion.serviceType, assignmentType)) return true;
   }
   return false;
 }
@@ -806,9 +819,11 @@ function applyDeliverableAssignments(
     const targetDayIndex = Math.max(0, Math.min(6, assignment.dayIndex));
     const absoluteDay = (targetWeek - 1) * 7 + targetDayIndex;
 
+    // Untyped ("*") whole-creator pins move every deliverable for that creator.
+    // Typed pins match by label, including aggregate "2× …" ↔ expanded "1× …".
     const matchingSlots = assignment.serviceType
       ? slots.filter((slot) => deliverableMatchesAssignmentType(slot, assignment.serviceType!))
-      : [[...slots].sort((a, b) => a.deliverableIndex - b.deliverableIndex)[0]!];
+      : [...slots].sort((a, b) => a.deliverableIndex - b.deliverableIndex);
 
     for (const slot of matchingSlots) {
       const existingIndex = remaining.findIndex(

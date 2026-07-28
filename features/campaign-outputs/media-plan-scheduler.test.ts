@@ -8,6 +8,7 @@ import {
 } from "./media-plan-schedule";
 import {
   countDeliverablesPerWeek,
+  deliverableMatchesAssignmentType,
   expandSchedulableDeliverables,
   expandRawSchedulableDeliverables,
   orderDeliverablesForWeekAllocation,
@@ -47,6 +48,35 @@ test("parseServiceTypeQuantity expands multi-quantity lines", () => {
     quantity: 1,
     baseLabel: "IG Reel",
   });
+});
+
+test("deliverableMatchesAssignmentType equates aggregate 2× labels with expanded 1× units", () => {
+  const units = expandSchedulableDeliverables(
+    [creator("c1", "Coach A", ["2× IG Reel"])],
+    ["Instagram"]
+  );
+  assert.equal(units.length, 2);
+  assert.ok(deliverableMatchesAssignmentType(units[0]!, "2× IG Reel"));
+  assert.ok(deliverableMatchesAssignmentType(units[0]!, "1× IG Reel"));
+  assert.ok(deliverableMatchesAssignmentType(units[0]!, "IG Reel"));
+  assert.equal(deliverableMatchesAssignmentType(units[0]!, "1× TT Video"), false);
+});
+
+test("whole-creator assignment pin moves every deliverable for that creator", () => {
+  const slate = [creator("c1", "Coach A", ["2× IG Reel", "1× TT Video"])];
+  const deliverables = expandSchedulableDeliverables(slate, ["Instagram", "TikTok"]);
+  assert.ok(deliverables.length >= 2);
+
+  const placements = scheduleDeliverables({
+    deliverables,
+    durationWeeks: 4,
+    weekWeights: [25, 25, 25, 25],
+    assignments: [{ creatorId: "c1", week: 3, dayIndex: 4 }],
+  });
+
+  const pinned = placements.filter((p) => p.deliverable.creator.creatorId === "c1");
+  assert.equal(pinned.length, deliverables.length);
+  assert.ok(pinned.every((p) => p.week === 3 && p.dayIndex === 4));
 });
 
 test("expandSchedulableDeliverables splits 2× TikTok into two units", () => {

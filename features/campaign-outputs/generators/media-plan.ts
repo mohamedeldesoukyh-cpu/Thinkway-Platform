@@ -415,6 +415,11 @@ export function enrichMediaPlanFromSlate(data: MediaPlanData, slate: SlateCreato
     const allTypes = serviceTypesForCreator(creator, platform);
     const shortName = entry.shortName?.trim() || shortCreatorName(creator.displayName);
 
+    // Preserve scheduled per-day types — never overwrite with slate aggregates
+    // (e.g. "2× IG Reel"). Drag/drop pins must match expanded unit labels ("1× …").
+    const scheduledTypes = entry.serviceTypes?.filter((type) => type.trim()) ?? [];
+    const scheduledType = entry.serviceType?.trim();
+
     return {
       ...entry,
       creator: entry.creator ?? creator.displayName,
@@ -422,8 +427,12 @@ export function enrichMediaPlanFromSlate(data: MediaPlanData, slate: SlateCreato
       handle: entry.handle ?? creator.handle,
       avatarUrl: creator.avatarUrl ?? entry.avatarUrl,
       profileUrl: creator.profileUrl ?? entry.profileUrl,
-      serviceTypes: allTypes.length ? allTypes : entry.serviceTypes,
-      serviceType: allTypes[0] ?? entry.serviceType,
+      serviceTypes: scheduledTypes.length
+        ? scheduledTypes
+        : allTypes.length
+          ? allTypes
+          : entry.serviceTypes,
+      serviceType: scheduledType || allTypes[0] || entry.serviceType,
       tier: entry.tier ?? creator.tier,
       platform: entry.platform ?? creator.platform ?? platform,
     };

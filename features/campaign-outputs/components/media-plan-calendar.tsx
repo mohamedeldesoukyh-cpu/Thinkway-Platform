@@ -75,7 +75,8 @@ export type MediaPlanCreatorMoveTarget = {
   fromDayIndex: number;
   toWeek: number;
   toDayIndex: number;
-  deliverableTypes: string[];
+  /** Omit for whole-creator move (Move all). Typed pins for partial moves. */
+  deliverableTypes?: string[];
   remainingTypes?: string[];
 };
 
@@ -343,7 +344,7 @@ function MoveCreatorPopover({
               fromDayIndex: creator.dayIndex,
               toWeek: Number(week),
               toDayIndex: Number(dayIndex),
-              deliverableTypes: creator.types.length ? creator.types : ["Activation"],
+              // Whole-creator pin — avoids aggregate/"Activation" label mismatches.
             })
           }
           className="inline-flex h-8 w-full items-center justify-center rounded-md bg-[#1D9E75] text-xs font-semibold text-white hover:bg-[#178a66] disabled:opacity-50"
@@ -482,6 +483,9 @@ function MoveDeliverablesDialog({
             disabled={!canConfirm || saving}
             onClick={() => {
               if (!pending || !canConfirm) return;
+              // "Move all" uses a whole-creator pin (no typed labels) so aggregate
+              // quotation labels like "2× IG Reel" cannot miss expanded "1×" units.
+              const moveAll = mode === "all";
               onConfirm({
                 creatorId: pending.creator.creatorId,
                 creatorName: pending.creator.name,
@@ -489,8 +493,9 @@ function MoveDeliverablesDialog({
                 fromDayIndex: pending.creator.dayIndex,
                 toWeek: pending.toWeek,
                 toDayIndex: pending.toDayIndex,
-                deliverableTypes: movedTypes,
-                remainingTypes: remainingTypes.length ? remainingTypes : undefined,
+                deliverableTypes: moveAll ? undefined : movedTypes,
+                remainingTypes:
+                  moveAll || !remainingTypes.length ? undefined : remainingTypes,
               });
             }}
           >

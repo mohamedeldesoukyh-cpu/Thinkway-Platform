@@ -127,6 +127,49 @@ test("applyMediaPlanScheduleChange accepts creatorIds for interactive moves", ()
   assert.equal(assignment?.dayIndex, 2);
 });
 
+test("Move all (whole-creator pin) relocates multi-quantity creator after regenerate", () => {
+  const object = buildCampaignObjectFixture({
+    facts: { durationWeeks: 4, platforms: ["Instagram"], campaignStartDate: "2026-08-01" },
+    creators: [{ id: "cr_qty", name: "Qty Creator", tier: "Macro" }],
+  });
+  const creatorsData = object.sections.creators?.data as import("@/features/campaign-intelligence/types/section-schemas").CreatorsSectionData;
+  const reasoning = creatorsData.recommendations?.selectedReasoning ?? [];
+  if (reasoning[0]) {
+    reasoning[0].id = "cr_qty";
+    reasoning[0].name = "Qty Creator";
+    reasoning[0].serviceTypes = ["2× IG Reel"];
+    reasoning[0].serviceLabel = "2× IG Reel";
+  }
+
+  const beforeData = mediaPlanData(generateMediaPlan(object));
+  const beforeSlot = findCreatorSlot(beforeData, "cr_qty");
+  assert.ok(beforeSlot, "fixture should place multi-quantity creator");
+
+  const toDayIndex = (beforeSlot.dayIndex + 3) % 7;
+  const moved = applyMediaPlanScheduleChange(object, {
+    moveCreators: [
+      {
+        creatorIds: ["cr_qty"],
+        fromWeek: beforeSlot.week,
+        fromDayIndex: beforeSlot.dayIndex,
+        toWeek: beforeSlot.week,
+        toDayIndex,
+        // Move all — no typed labels (mirrors Studio dialog).
+      },
+    ],
+  }).campaignObject;
+
+  const { campaignObject: regenerated } = generateCampaignOutput(moved, "media_plan", {
+    origin: "user",
+  });
+  const after = getOutputContentForDisplay(regenerated, "media_plan");
+  const afterData = after!.data as unknown as MediaPlanData;
+  const afterSlot = findCreatorSlot(afterData, "cr_qty");
+  assert.ok(afterSlot);
+  assert.equal(afterSlot.week, beforeSlot.week);
+  assert.equal(afterSlot.day, DAYS[toDayIndex]);
+});
+
 test("applyMediaPlanScheduleChange pins remaining deliverables on partial moves", () => {
   const object = buildCampaignObjectFixture({
     facts: { durationWeeks: 4 },

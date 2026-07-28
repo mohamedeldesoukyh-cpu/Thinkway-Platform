@@ -223,7 +223,18 @@ export function applyMediaPlanScheduleChangeUnchecked(
         (fromWeek !== toWeek || fromDayIndex !== toDayIndex);
 
       const applyCreatorMove = (creator: SlateCreator) => {
+        const creatorPrefix = `${creator.creatorId.trim().toLowerCase()}::`;
+        const clearCreatorAssignments = (onlyStar = false) => {
+          for (const key of [...assignments.keys()]) {
+            if (!key.startsWith(creatorPrefix)) continue;
+            if (onlyStar && !key.endsWith("::*")) continue;
+            if (!onlyStar || key.endsWith("::*")) assignments.delete(key);
+          }
+        };
+
         if (deliverableTypes.length) {
+          // Typed pins must win over a legacy whole-creator "*" pin.
+          clearCreatorAssignments(true);
           for (const serviceType of deliverableTypes) {
             assignments.set(
               assignmentKey({
@@ -266,6 +277,8 @@ export function applyMediaPlanScheduleChangeUnchecked(
           return;
         }
 
+        // Whole-creator move: replace any prior typed pins for this creator.
+        clearCreatorAssignments(false);
         assignments.set(
           assignmentKey({ creatorId: creator.creatorId, week: toWeek, dayIndex: toDayIndex }),
           {

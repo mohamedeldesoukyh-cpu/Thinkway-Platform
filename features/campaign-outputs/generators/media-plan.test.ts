@@ -329,6 +329,62 @@ test("generate never places creators before Campaign Start (hard window)", () =>
   }
 });
 
+test("enrichMediaPlanFromSlate does not overwrite scheduled day types with slate aggregates", () => {
+  const data: MediaPlanData = {
+    durationWeeks: 1,
+    calendarWeeks: 1,
+    campaignStartDate: "2026-07-18",
+    scheduledStartDate: "2026-07-18",
+    weeks: [
+      {
+        week: 1,
+        wave: 1,
+        phase: "Launch",
+        days: [
+          {
+            day: "Saturday",
+            dateLabel: "18/7/26",
+            type: "content",
+            label: "Coach A — 1× IG Reel",
+            creatorId: "c1",
+            creator: "Coach A",
+            serviceType: "1× IG Reel",
+            serviceTypes: ["1× IG Reel"],
+            platform: "Instagram",
+          },
+          ...Array.from({ length: 6 }, (_, i) => ({
+            day: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"][i]!,
+            dateLabel: `${19 + i}/7/26`,
+            type: "content" as const,
+            label: "",
+          })),
+        ],
+      },
+    ],
+    waves: [],
+    milestones: [],
+    platformAllocation: {},
+    dependencies: [],
+    deadlines: [],
+    creatorCount: 1,
+    serviceTypes: ["1× IG Reel"],
+    generatorVersion: "test",
+  };
+
+  const enriched = enrichMediaPlanFromSlate(data, [
+    {
+      creatorId: "c1",
+      displayName: "Coach A",
+      serviceTypes: ["2× IG Reel"],
+      serviceLabel: "2× IG Reel",
+      platform: "Instagram",
+    },
+  ]);
+
+  assert.deepEqual(enriched.weeks[0]!.days[0]!.serviceTypes, ["1× IG Reel"]);
+  assert.equal(enriched.weeks[0]!.days[0]!.serviceType, "1× IG Reel");
+});
+
 test("enrichMediaPlanFromSlate patches avatars and quotation ad types onto legacy calendar cells", () => {
   const obj = buildCampaignObjectFixture();
   const data = planData(generateMediaPlan(obj));
