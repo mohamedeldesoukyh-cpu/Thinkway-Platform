@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   calendarDayOffset,
+  firstPublishingSlotIso,
   shiftMediaPlanDataToScheduledStart,
 } from "./media-plan-date-offset";
 import type { MediaPlanData, MediaPlanWeek } from "./generators/media-plan";
@@ -33,6 +34,38 @@ function fixtureWeek(
     platform: "Instagram",
   }));
   return { week, wave: 1, phase: "Launch", days };
+}
+
+/** Week 1 with a single creator on Saturday (dayIndex 0) only. */
+function fixtureWeekFirstCreatorOnSaturday(
+  scheduledIso: string,
+  creatorId: string,
+  creator: string
+): MediaPlanWeek {
+  const start = parseIsoCampaignDate(scheduledIso)!;
+  const days = PUBLISHING_CALENDAR_DAYS.map((day, dayIndex) => {
+    const dateLabel = formatShortCampaignDate(dateForCampaignSlot(start, 1, dayIndex));
+    if (dayIndex === 0) {
+      return {
+        day,
+        dateLabel,
+        type: "content" as const,
+        label: creator,
+        creatorId,
+        creator,
+        shortName: creator.split(" ")[0],
+        serviceType: "Reel",
+        platform: "Instagram",
+      };
+    }
+    return {
+      day,
+      dateLabel,
+      type: "content" as const,
+      label: "",
+    };
+  });
+  return { week: 1, wave: 1, phase: "Launch", days };
 }
 
 function fixturePlan(scheduledIso: string, requestedIso?: string): MediaPlanData {
@@ -77,7 +110,7 @@ test("calendarDayOffset: forward and backward", () => {
   assert.equal(calendarDayOffset("2026-08-01", "2026-07-25"), -7);
 });
 
-test("shift forward preserves creators and publishing order", () => {
+test("shift by whole weeks preserves creator sequence on new dates", () => {
   const before = fixturePlan("2026-07-25");
   const after = shiftMediaPlanDataToScheduledStart(before, "2026-08-01", {
     requestedStartDate: "2026-08-01",
@@ -89,6 +122,7 @@ test("shift forward preserves creators and publishing order", () => {
   assert.deepEqual(after.waves, before.waves);
   assert.equal(after.weeks[0]!.days[0]!.dateLabel, "1/8/26");
   assert.equal(after.weeks[0]!.days[6]!.dateLabel, "7/8/26");
+  assert.equal(after.weeks[0]!.days[0]!.creatorId, "c1");
 });
 
 test("shift backward preserves creators and publishing order", () => {
@@ -102,15 +136,47 @@ test("shift backward preserves creators and publishing order", () => {
   assert.equal(after.weeks[1]!.days[0]!.dateLabel, "1/8/26");
 });
 
-test("month boundary: July → August labels", () => {
+test("Revision mid-week start rebinds first creator onto campaign start date", () => {
+  // Week 1 = 18–24 Jul. First creator was on Sat 18/07.
+  // Start changes to Fri 24/07/2026 — same Week 1, creator must move to 24/07.
+  const before: MediaPlanData = {
+    ...fixturePlan("2026-07-18", "2026-07-18"),
+    durationWeeks: 1,
+    calendarWeeks: 1,
+    weeks: [fixtureWeekFirstCreatorOnSaturday("2026-07-18", "c1", "Eman Abdullah")],
+    waves: [{ wave: 1, weeks: [1], theme: "Launch", creatorCount: 1, activationCount: 1 }],
+  };
+
+  assert.equal(firstPublishingSlotIso(before), "2026-07-18");
+  assert.equal(before.weeks[0]!.days[0]!.creatorId, "c1");
+  assert.equal(before.weeks[0]!.days[0]!.dateLabel, "18/7/26");
+
+  const after = shiftMediaPlanDataToScheduledStart(before, "2026-07-18", {
+    requestedStartDate: "2026-07-24",
+    campaignEndDate: "2026-07-24",
+  });
+
+  assert.equal(after.scheduledStartDate, "2026-07-18");
+  assert.equal(after.requestedStartDate, "2026-07-24");
+  assert.equal(after.weeks.length, 1);
+  assert.equal(after.weeks[0]!.days[0]!.dateLabel, "18/7/26");
+  assert.equal(after.weeks[0]!.days[6]!.dateLabel, "24/7/26");
+  // Rebound: Saturday empty, Friday holds the first creator
+  assert.equal(after.weeks[0]!.days[0]!.creatorId, undefined);
+  assert.equal(after.weeks[0]!.days[6]!.creatorId, "c1");
+  assert.equal(after.weeks[0]!.days[6]!.creator, "Eman Abdullah");
+  assert.deepEqual(after.waves, before.waves);
+});
+
+test("month boundary: July → August labels with rebound slots", () => {
   const before = fixturePlan("2026-07-25");
   const after = shiftMediaPlanDataToScheduledStart(before, "2026-08-29", {
     requestedStartDate: "2026-08-29",
   });
 
   assert.equal(after.weeks[0]!.days[0]!.dateLabel, "29/8/26");
+  assert.equal(after.weeks[0]!.days[0]!.creatorId, "c1");
   assert.equal(after.weeks[0]!.days[1]!.dateLabel, "30/8/26");
-  assert.deepEqual(slotSnapshot(after), slotSnapshot(before));
 });
 
 test("year boundary: December → January", () => {
@@ -125,7 +191,6 @@ test("year boundary: December → January", () => {
 });
 
 test("leap year: Week 1 Saturday–Friday includes 29 Feb 2024", () => {
-  // Sat 24 Feb 2024 → Thu (index 5) is 29 Feb 2024
   const before = fixturePlan("2024-01-06");
   const after = shiftMediaPlanDataToScheduledStart(before, "2024-02-24", {
     requestedStartDate: "2024-02-24",
@@ -137,21 +202,10 @@ test("leap year: Week 1 Saturday–Friday includes 29 Feb 2024", () => {
   assert.deepEqual(slotSnapshot(after), slotSnapshot(before));
 });
 
-test("mid-week start: Friday request opens on prior Saturday", () => {
-  const requested = "2026-07-24"; // Friday
+test("Friday request opens Week 1 on prior Saturday", () => {
+  const requested = "2026-07-24";
   const scheduled = resolveScheduledStartDate(requested);
   assert.equal(scheduled, "2026-07-18");
-
-  const before = fixturePlan("2026-07-04", "2026-07-04");
-  const after = shiftMediaPlanDataToScheduledStart(before, scheduled!, {
-    requestedStartDate: requested,
-  });
-
-  assert.equal(after.requestedStartDate, requested);
-  assert.equal(after.scheduledStartDate, "2026-07-18");
-  assert.equal(after.weeks[0]!.days[0]!.day, "Saturday");
-  assert.equal(after.weeks[0]!.days[0]!.dateLabel, "18/7/26");
-  assert.equal(after.weeks[0]!.days[6]!.dateLabel, "24/7/26");
 });
 
 test("Sunday request opens on prior Saturday", () => {

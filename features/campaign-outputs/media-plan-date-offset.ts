@@ -1,9 +1,13 @@
 /**
  * Deterministic Media Plan calendar shifts — a **Revise** operation.
  *
- * Start/end updates recalculate the Saturday–Friday Publishing Calendar range and
- * rebind existing creator slots by absolute date. Waves, strategy, and deliverable
- * assignments are preserved unless the user explicitly Regenerates.
+ * When the campaign start (or end) changes:
+ * 1. Recalculate the Saturday–Friday Publishing Calendar range
+ * 2. Shift every publishing slot by the business-start day offset
+ * 3. Rebind creators onto the new slot dates
+ *
+ * Preserves creator sequence, waves, deliverables, and strategy.
+ * Never regenerates — that is an explicit Regenerate.
  */
 
 import type { CampaignObject } from "@/features/campaign-intelligence";
@@ -25,7 +29,13 @@ import {
   resolveScheduledStartDate,
   toIsoCampaignDate,
   type MediaPlanWeekSchedulingMode,
+  type PublishingCalendarRange,
 } from "./media-plan-week-start";
+import {
+  cloneMediaPlanScheduleMeta,
+  mediaPlanScheduleFromMeta,
+  type MediaPlanSlotAssignment,
+} from "./media-plan-schedule";
 import { reviseMediaPlanOutput } from "./media-plan-revise-regenerate";
 import type { CampaignOutputOrigin, CampaignOutputRecord } from "./output-types";
 
@@ -41,6 +51,13 @@ export function calendarDayOffset(fromIso: string, toIso: string): number | null
   return Math.round((to.getTime() - from.getTime()) / (24 * 60 * 60 * 1000));
 }
 
+function addCalendarDays(iso: string, days: number): string | null {
+  const date = parseIsoCampaignDate(iso);
+  if (!date) return null;
+  date.setDate(date.getDate() + days);
+  return toIsoCampaignDate(date);
+}
+
 function emptyDay(dayIndex: number, dateLabel: string): MediaPlanDay {
   return {
     day: PUBLISHING_CALENDAR_DAYS[dayIndex] ?? "Saturday",
@@ -50,23 +67,86 @@ function emptyDay(dayIndex: number, dateLabel: string): MediaPlanDay {
   };
 }
 
-/** Collect day content keyed by absolute ISO date from an existing plan. */
-function contentByAbsoluteDate(data: MediaPlanData): Map<string, MediaPlanDay> {
+function dayHasPublishingContent(day: MediaPlanDay): boolean {
+  return Boolean(
+    day.creatorId ||
+      day.creator ||
+      day.additionalDeliverables?.length ||
+      (day.label?.trim() &&
+        day.label !== "Open publishing slot" &&
+        day.label !== "Creator publishing slot")
+  );
+}
+
+/** First absolute ISO date that holds creator/publishing content (sequence start). */
+export function firstPublishingSlotIso(data: MediaPlanData): string | null {
   const gridStart = parseIsoCampaignDate(data.scheduledStartDate ?? data.campaignStartDate);
-  const map = new Map<string, MediaPlanDay>();
-  if (!gridStart) return map;
-  for (const week of data.weeks) {
-    week.days.forEach((day, dayIndex) => {
-      const iso = toIsoCampaignDate(dateForCampaignSlot(gridStart, week.week, dayIndex));
-      map.set(iso, day);
-    });
+  if (!gridStart) return null;
+  const ordered = [...data.weeks].sort((a, b) => a.week - b.week);
+  for (const week of ordered) {
+    for (let dayIndex = 0; dayIndex < week.days.length; dayIndex += 1) {
+      const day = week.days[dayIndex]!;
+      if (!dayHasPublishingContent(day)) continue;
+      return toIsoCampaignDate(dateForCampaignSlot(gridStart, week.week, dayIndex));
+    }
   }
-  return map;
+  return null;
+}
+
+/**
+ * Business start used as the Revision offset anchor.
+ * Prefer explicit requested start; else first occupied publish day; else grid Saturday.
+ */
+export function resolvePriorBusinessStartIso(data: MediaPlanData): string | null {
+  const requested = data.requestedStartDate?.trim();
+  if (requested && parseIsoCampaignDate(requested)) return requested;
+  return firstPublishingSlotIso(data) ?? data.scheduledStartDate ?? data.campaignStartDate ?? null;
+}
+
+function buildEmptyWeeks(range: PublishingCalendarRange, prior: MediaPlanWeek[]): MediaPlanWeek[] {
+  const priorByWeek = new Map(prior.map((w) => [w.week, w]));
+  return range.weeks.map((meta) => {
+    const prev = priorByWeek.get(meta.week);
+    return {
+      week: meta.week,
+      wave: prev?.wave ?? meta.week,
+      phase: prev?.phase ?? "",
+      days: PUBLISHING_CALENDAR_DAYS.map((day, dayIndex) =>
+        emptyDay(
+          dayIndex,
+          formatShortCampaignDate(
+            dateForCampaignSlot(range.gridStartSaturday, meta.week, dayIndex)
+          )
+        )
+      ),
+    };
+  });
+}
+
+function slotIndexOnGrid(
+  range: PublishingCalendarRange,
+  iso: string
+): { week: number; dayIndex: number } | null {
+  const date = parseIsoCampaignDate(iso);
+  if (!date) return null;
+  if (
+    date.getTime() < range.gridStartSaturday.getTime() ||
+    date.getTime() > range.gridEndFriday.getTime()
+  ) {
+    return null;
+  }
+  const dayOffset = Math.round(
+    (date.getTime() - range.gridStartSaturday.getTime()) / (24 * 60 * 60 * 1000)
+  );
+  const week = Math.floor(dayOffset / 7) + 1;
+  const dayIndex = dayOffset % 7;
+  if (week < 1 || week > range.weeks.length) return null;
+  return { week, dayIndex };
 }
 
 /**
  * Rebuild the Saturday–Friday grid for a new campaign date range and rebind
- * prior slot content onto matching calendar dates.
+ * prior slot content by shifting absolute publish dates by the business-start offset.
  */
 export function rebindMediaPlanPublishingCalendar(
   data: MediaPlanData,
@@ -84,44 +164,47 @@ export function rebindMediaPlanPublishingCalendar(
     );
   }
 
-  const priorByDate = contentByAbsoluteDate(data);
+  const priorBusinessStart = resolvePriorBusinessStartIso(data);
+  const offsetDays =
+    priorBusinessStart != null
+      ? calendarDayOffset(priorBusinessStart, input.campaignStartIso) ?? 0
+      : 0;
+
+  const oldGridStart = parseIsoCampaignDate(data.scheduledStartDate ?? data.campaignStartDate);
+  const weeks = buildEmptyWeeks(range, data.weeks);
+
+  if (oldGridStart) {
+    for (const week of data.weeks) {
+      week.days.forEach((day, dayIndex) => {
+        if (!dayHasPublishingContent(day)) return;
+        const oldIso = toIsoCampaignDate(dateForCampaignSlot(oldGridStart, week.week, dayIndex));
+        const newIso = addCalendarDays(oldIso, offsetDays);
+        if (!newIso) return;
+        const target = slotIndexOnGrid(range, newIso);
+        if (!target) return;
+        const targetWeek = weeks.find((w) => w.week === target.week);
+        if (!targetWeek) return;
+        const dateLabel = formatShortCampaignDate(
+          dateForCampaignSlot(range.gridStartSaturday, target.week, target.dayIndex)
+        );
+        targetWeek.days[target.dayIndex] = {
+          ...day,
+          day: PUBLISHING_CALENDAR_DAYS[target.dayIndex] ?? day.day,
+          dateLabel,
+        };
+      });
+    }
+  }
+
+  // Preserve wave/phase metadata from prior weeks where possible
   const priorByWeek = new Map(data.weeks.map((w) => [w.week, w]));
-  const sameWeekCount = range.weeks.length === data.weeks.length;
-
-  // Same week count → structure-preserving relabel (Revise date shift).
-  // Different count → rebind by absolute date only (new empty cells for added weeks).
-  const weeks: MediaPlanWeek[] = range.weeks.map((meta) => {
-    const prior = priorByWeek.get(meta.week);
-    const days = PUBLISHING_CALENDAR_DAYS.map((dayName, dayIndex) => {
-      const slotDate = dateForCampaignSlot(range.gridStartSaturday, meta.week, dayIndex);
-      const iso = toIsoCampaignDate(slotDate);
-      const dateLabel = formatShortCampaignDate(slotDate);
-
-      if (sameWeekCount && prior?.days[dayIndex]) {
-        return {
-          ...prior.days[dayIndex]!,
-          day: dayName,
-          dateLabel,
-        };
-      }
-
-      const fromDate = priorByDate.get(iso);
-      if (fromDate) {
-        return {
-          ...fromDate,
-          day: dayName,
-          dateLabel,
-        };
-      }
-      return emptyDay(dayIndex, dateLabel);
-    });
-    return {
-      week: meta.week,
-      wave: prior?.wave ?? meta.week,
-      phase: prior?.phase ?? "",
-      days,
-    };
-  });
+  for (const week of weeks) {
+    const prior = priorByWeek.get(week.week);
+    if (prior) {
+      week.wave = prior.wave;
+      week.phase = prior.phase;
+    }
+  }
 
   const gridStartIso = range.gridStartIso;
   const deadlines = rebuildMediaPlanDeadlinesFromWeeks(weeks, gridStartIso);
@@ -145,6 +228,61 @@ export function rebindMediaPlanPublishingCalendar(
   };
 }
 
+/** Rebuild meta.mediaPlanSchedule.assignments from rebound calendar weeks. */
+export function syncScheduleAssignmentsFromMediaPlanData(
+  campaignObject: CampaignObject,
+  data: MediaPlanData
+): CampaignObject {
+  const existing = mediaPlanScheduleFromMeta(campaignObject.meta) ?? {};
+  const assignments: MediaPlanSlotAssignment[] = [];
+  for (const week of data.weeks) {
+    week.days.forEach((day, dayIndex) => {
+      if (!day.creatorId) return;
+      const types =
+        day.serviceTypes?.length
+          ? day.serviceTypes
+          : day.serviceType
+            ? [day.serviceType]
+            : [undefined];
+      for (const serviceType of types) {
+        assignments.push({
+          creatorId: day.creatorId,
+          week: week.week,
+          dayIndex,
+          ...(serviceType ? { serviceType } : {}),
+        });
+      }
+      for (const extra of day.additionalDeliverables ?? []) {
+        if (!extra.creatorId) continue;
+        const extraTypes =
+          extra.serviceTypes?.length
+            ? extra.serviceTypes
+            : extra.serviceType
+              ? [extra.serviceType]
+              : [undefined];
+        for (const serviceType of extraTypes) {
+          assignments.push({
+            creatorId: extra.creatorId,
+            week: week.week,
+            dayIndex,
+            ...(serviceType ? { serviceType } : {}),
+          });
+        }
+      }
+    });
+  }
+  return {
+    ...campaignObject,
+    meta: {
+      ...campaignObject.meta,
+      mediaPlanSchedule: cloneMediaPlanScheduleMeta({
+        ...existing,
+        assignments,
+      }),
+    },
+  };
+}
+
 export type ShiftMediaPlanStartOptions = {
   /** User-requested go-live (may be mid-week). */
   requestedStartDate?: string | null;
@@ -160,7 +298,7 @@ export type ShiftMediaPlanStartOptions = {
 
 /**
  * Shift / resize an existing Media Plan onto a new Publishing Calendar range.
- * Preserves structure by absolute date; refreshes labels + deadlines.
+ * Rebinds creators by business-start day offset onto new slot dates.
  */
 export function shiftMediaPlanDataToScheduledStart(
   data: MediaPlanData,
@@ -181,7 +319,6 @@ export function shiftMediaPlanDataToScheduledStart(
   const businessStart = parseIsoCampaignDate(requested)
     ? requested
     : nextScheduledIso;
-  const gridFromRequested = resolveScheduledStartDate(businessStart) ?? nextScheduledIso;
 
   const durationWeeks = options?.durationWeeks ?? data.durationWeeks;
   const campaignEndIso =
@@ -192,33 +329,20 @@ export function shiftMediaPlanDataToScheduledStart(
     }) ?? data.campaignEndDate;
 
   if (!campaignEndIso) {
-    // Fallback: pure day-offset relabel on existing week count
-    const scheduledStart = parseIsoCampaignDate(gridFromRequested);
-    if (!scheduledStart) {
-      throw new Error(`Invalid scheduled start date: ${gridFromRequested}`);
+    // Derive a minimal end from existing week span so rebind can still run.
+    const gridStart = resolveScheduledStartDate(businessStart) ?? nextScheduledIso;
+    const weekCount = Math.max(1, data.weeks.length);
+    const endDate = parseIsoCampaignDate(gridStart);
+    if (!endDate) {
+      throw new Error(`Invalid scheduled start date: ${gridStart}`);
     }
-    const weeks = data.weeks.map((week) => ({
-      ...week,
-      days: week.days.map((day, dayIndex) => ({
-        ...day,
-        day: PUBLISHING_CALENDAR_DAYS[dayIndex] ?? day.day,
-        dateLabel: formatShortCampaignDate(
-          dateForCampaignSlot(scheduledStart, week.week, dayIndex)
-        ),
-      })),
-    }));
-    return {
-      ...data,
-      campaignStartDate: gridFromRequested,
-      scheduledStartDate: gridFromRequested,
-      requestedStartDate:
-        options?.requestedStartDate !== undefined
-          ? options.requestedStartDate ?? undefined
-          : data.requestedStartDate,
+    endDate.setDate(endDate.getDate() + weekCount * 7 - 1);
+    return rebindMediaPlanPublishingCalendar(data, {
+      campaignStartIso: businessStart,
+      campaignEndIso: toIsoCampaignDate(endDate),
+      requestedStartDate: options?.requestedStartDate ?? businessStart,
       durationWeeks,
-      weeks,
-      deadlines: rebuildMediaPlanDeadlinesFromWeeks(weeks, gridFromRequested),
-    };
+    });
   }
 
   return rebindMediaPlanPublishingCalendar(data, {
@@ -231,7 +355,7 @@ export function shiftMediaPlanDataToScheduledStart(
 
 /**
  * Duration-only fact sync — recalculates Publishing Calendar range when an end
- * date can be derived; otherwise updates the fact only.
+ * date can be derived; rebinds slots when the range changes.
  */
 export function syncMediaPlanDurationFact(
   data: MediaPlanData,
@@ -274,7 +398,7 @@ export function commitPatchedMediaPlanOutput(
     changeReason: options?.changeReason ?? "Timeline calendar shifted (date offset).",
     changeSummary:
       options?.changeSummary ??
-      "Revised Media Plan calendar dates — creators, waves, deliverables, and publishing order preserved.",
+      "Revised Media Plan calendar dates — creators rebound to new publishing slots; waves and strategy preserved.",
     changedInputs: ["timeline"],
   });
 }
@@ -295,39 +419,49 @@ export function applyMediaPlanStartDateOffset(
     return { campaignObject, shifted: false, dayOffset: null };
   }
 
-  const prevAnchor = data.scheduledStartDate ?? data.campaignStartDate;
-  const dayOffset = calendarDayOffset(prevAnchor, nextScheduledIso);
-  if (dayOffset === 0 && (options?.durationWeeks == null || options.durationWeeks === data.durationWeeks)) {
-    if (
-      data.scheduledStartDate === nextScheduledIso &&
-      data.campaignStartDate === nextScheduledIso &&
-      (options?.requestedStartDate == null ||
-        data.requestedStartDate === options.requestedStartDate)
-    ) {
-      return { campaignObject, shifted: false, dayOffset: 0 };
-    }
+  const priorBusinessStart = resolvePriorBusinessStartIso(data);
+  const nextBusinessStart =
+    options?.requestedStartDate?.trim() ||
+    priorBusinessStart ||
+    nextScheduledIso;
+  const businessOffset =
+    priorBusinessStart != null
+      ? calendarDayOffset(priorBusinessStart, nextBusinessStart)
+      : calendarDayOffset(data.scheduledStartDate ?? data.campaignStartDate, nextScheduledIso);
+
+  const prevGrid = data.scheduledStartDate ?? data.campaignStartDate;
+  const gridOffset = calendarDayOffset(prevGrid, nextScheduledIso);
+
+  if (
+    businessOffset === 0 &&
+    gridOffset === 0 &&
+    (options?.durationWeeks == null || options.durationWeeks === data.durationWeeks) &&
+    data.requestedStartDate === (options?.requestedStartDate ?? data.requestedStartDate)
+  ) {
+    return { campaignObject, shifted: false, dayOffset: 0 };
   }
 
   const shiftedData = shiftMediaPlanDataToScheduledStart(data, nextScheduledIso, options);
-  const committed = commitPatchedMediaPlanOutput(campaignObject, shiftedData, {
+  let withSchedule = syncScheduleAssignmentsFromMediaPlanData(campaignObject, shiftedData);
+  const committed = commitPatchedMediaPlanOutput(withSchedule, shiftedData, {
     now: options?.now,
     origin: options?.origin,
     actorUserId: options?.actorUserId,
-    changeReason: "Timeline start date shifted (deterministic calendar offset).",
+    changeReason: "Timeline start date shifted (deterministic slot rebind).",
     changeSummary:
-      dayOffset != null && dayOffset !== 0
-        ? `Revised Media Plan: calendar shifted ${Math.abs(dayOffset)} day${
-            Math.abs(dayOffset) === 1 ? "" : "s"
-          } (${dayOffset > 0 ? "later" : "earlier"}) on Saturday–Friday weeks — structure preserved.`
-        : "Revised Media Plan publishing calendar range — creators and slots rebound by date.",
+      businessOffset != null && businessOffset !== 0
+        ? `Revised Media Plan: publishing slots shifted ${Math.abs(businessOffset)} day${
+            Math.abs(businessOffset) === 1 ? "" : "s"
+          } (${businessOffset > 0 ? "later" : "earlier"}) — creators rebound; waves and strategy preserved.`
+        : "Revised Media Plan publishing calendar range — creators rebound to new slot dates.",
   });
 
   if (!committed) {
-    return { campaignObject, shifted: false, dayOffset };
+    return { campaignObject, shifted: false, dayOffset: businessOffset };
   }
   return {
     campaignObject: committed.campaignObject,
     shifted: true,
-    dayOffset,
+    dayOffset: businessOffset,
   };
 }

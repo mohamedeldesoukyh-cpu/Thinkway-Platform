@@ -684,10 +684,10 @@ async function applyTimelineEdit(
     if (didShift) {
       effects.push(
         dayOffset != null && dayOffset !== 0
-          ? `the Media Plan calendar was shifted by ${Math.abs(dayOffset)} day${
+          ? `the Publishing Calendar was revised by ${Math.abs(dayOffset)} day${
               Math.abs(dayOffset) === 1 ? "" : "s"
-            } (${dayOffset > 0 ? "forward" : "backward"}) without regenerating — creators, deliverables, waves, and publishing order are unchanged`
-          : "the Media Plan calendar anchors were updated without regenerating — creators, deliverables, waves, and publishing order are unchanged"
+            } (${dayOffset > 0 ? "forward" : "backward"}) — creators were rebound to the new publishing slots; waves and strategy are unchanged (not a regeneration)`
+          : "the Publishing Calendar range was revised and creators were rebound to the new slot dates — waves and strategy are unchanged (not a regeneration)"
       );
     } else {
       effects.push("timeline facts were updated; the Media Plan calendar already matched the new start");
