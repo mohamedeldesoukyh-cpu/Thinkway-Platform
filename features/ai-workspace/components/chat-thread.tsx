@@ -588,14 +588,26 @@ const MessageBubble = memo(function MessageBubble({
   );
 });
 
+/**
+ * Collapse stacked full Studio seed embeds to the latest one.
+ * Copilot conversational turns (`copilotIntent` / `copilotEdit` / `studioSync`)
+ * must remain visible — otherwise history disappears after each reply.
+ */
+function isCollapsibleStudioSeedEmbed(message: AiMessage): boolean {
+  if (message.role !== "assistant" || !isWorkflowMetadata(message.metadata)) {
+    return false;
+  }
+  if (!isCampaignWorkflow(message.metadata.workflowId)) return false;
+  const meta = message.metadata as Record<string, unknown>;
+  if (meta.copilotIntent || meta.copilotEdit || meta.studioSync) {
+    return false;
+  }
+  return true;
+}
+
 function collapseDuplicateCampaignStudioMessages(messages: AiMessage[]): AiMessage[] {
   const campaignStudioMessageIds = messages
-    .filter(
-      (message) =>
-        message.role === "assistant" &&
-        isWorkflowMetadata(message.metadata) &&
-        isCampaignWorkflow(message.metadata.workflowId)
-    )
+    .filter(isCollapsibleStudioSeedEmbed)
     .map((message) => message.id);
 
   if (campaignStudioMessageIds.length <= 1) {
@@ -604,13 +616,7 @@ function collapseDuplicateCampaignStudioMessages(messages: AiMessage[]): AiMessa
 
   const keepId = campaignStudioMessageIds[campaignStudioMessageIds.length - 1]!;
   return messages.filter((message) => {
-    if (
-      message.role !== "assistant" ||
-      !isWorkflowMetadata(message.metadata) ||
-      !isCampaignWorkflow(message.metadata.workflowId)
-    ) {
-      return true;
-    }
+    if (!isCollapsibleStudioSeedEmbed(message)) return true;
     return message.id === keepId;
   });
 }

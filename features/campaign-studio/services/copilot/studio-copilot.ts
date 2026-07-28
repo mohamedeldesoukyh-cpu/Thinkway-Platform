@@ -19,7 +19,11 @@ import {
   runPreviewOutput,
 } from "@/features/campaign-outputs/copilot/output-copilot";
 import { runReviewCampaign } from "@/features/campaign-outputs/director/director-copilot";
-import { generateCampaignOutput } from "@/features/campaign-outputs/output-registry";
+import {
+  generateCampaignOutput,
+  getCampaignOutput,
+} from "@/features/campaign-outputs/output-registry";
+import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 import { ensureCreatorsFromAssignmentHierarchy } from "@/features/campaign-outputs/hydration";
 import {
   mutateMediaPlanSchedule,
@@ -81,6 +85,7 @@ import {
   type StudioCopilotIntent,
 } from "./studio-copilot-intents";
 import {
+  parseDeterministicStartDateTimelineIntent,
   parseStudioIntentFallback,
   parseToolCallIntent,
   STUDIO_COPILOT_TOOLS,
@@ -102,14 +107,14 @@ export type StudioCopilotResult = {
 
 const SYSTEM_PROMPT = `You are the Thinkway Campaign Copilot. You are permanently editing ONE specific campaign, described in the context below. You already know exactly which campaign this is — NEVER ask the user which campaign or brand they mean.
 
-You do not edit campaign data directly. You choose exactly ONE tool that best matches the user's request. A deterministic engine executes it and regenerates the studio.
+You do not edit campaign data directly. You choose exactly ONE tool that best matches the user's request. A deterministic engine executes it.
 
 Rules:
 - To remove creators, call remove_creators (use tier for a whole follower tier, names for specific creators).
 - To set or update the campaign brief (client brief, pasted text), call update_brief — this merges strategy and scheduling and never clears the creator slate.
 - To move creators between weeks/days or weight publishing across weeks, call reschedule_media_plan — do NOT change campaignStartDate unless the user explicitly asks to change when the campaign starts.
-- To change only the campaign start date or total duration, call update_timeline.
-- To generate a Campaign Output (Media Plan, Full Campaign Strategy, Executive Proposal, Timeline, KPI Forecast, Budget Allocation, Risk Assessment, Amplification Plan, Creative Concepts, Executive Summary, Presentation, …), call generate_output. To rebuild one after changes, call regenerate_output. To export one, call export_output. Generate ONLY the output the user asked for — never regenerate unrelated outputs.
+- To change only the campaign start date or total duration, call update_timeline. This patches the existing Media Plan calendar (date offset) — never regenerate_output for start-date changes.
+- To generate a Campaign Output (Media Plan, Full Campaign Strategy, Executive Proposal, Timeline, KPI Forecast, Budget Allocation, Risk Assessment, Amplification Plan, Creative Concepts, Executive Summary, Presentation, …), call generate_output only when the user explicitly asks to generate/create that artifact. To rebuild one after changes, call regenerate_output only for explicit regenerate/rebuild/refresh wording. Never use generate/regenerate for "change/move/shift/update start date".
 - To undo, call undo_last_change.
 - To answer a question about the campaign, call answer_question.
 - Only call clarify when the request is genuinely ambiguous, and reference the campaign's real contents in your question (e.g. mention how many Celebrity creators it currently has).
@@ -121,6 +126,10 @@ export async function interpretStudioMessage(
   digest: CampaignContextDigest,
   provider: LlmProvider
 ): Promise<StudioCopilotIntent> {
+  // Deterministic guard — never let the LLM misroute start-date updates to generate.
+  const startDateIntent = parseDeterministicStartDateTimelineIntent(message);
+  if (startDateIntent) return startDateIntent;
+
   try {
     const response = await provider.complete({
       messages: [
@@ -221,12 +230,7 @@ export async function runStudioCopilot(input: RunInput): Promise<StudioCopilotRe
         applyBudgetChange(obj, { amount: intent.amount, currency: intent.currency })
       );
     case "update_timeline":
-      return applyFactsEdit(input, digest, "update_timeline", (obj) =>
-        applyTimelineChange(obj, {
-          durationWeeks: intent.durationWeeks,
-          startDate: intent.startDate,
-        })
-      );
+      return applyTimelineEdit(input, digest, intent);
     case "reschedule_media_plan":
       return rescheduleMediaPlan(input, digest, intent);
     case "update_platforms":
@@ -620,6 +624,113 @@ async function applyFactsEdit(
     reply: renderChangeSummary(summary),
     changed: true,
     intentKind,
+  };
+}
+
+/**
+ * Update campaign start/duration and refresh the Media Plan calendar from the
+ * existing schedule meta (assignments preserved). Never runs regenerate/rebuild.
+ */
+async function applyTimelineEdit(
+  input: RunInput,
+  digest: CampaignContextDigest,
+  intent: Extract<StudioCopilotIntent, { kind: "update_timeline" }>
+): Promise<StudioCopilotResult> {
+  const beforeFacts = getCampaignFacts(input.campaignObject);
+  const beforeScheduled =
+    beforeFacts?.scheduledStartDate ?? beforeFacts?.campaignStartDate ?? null;
+
+  const result = applyTimelineChange(input.campaignObject, {
+    durationWeeks: intent.durationWeeks,
+    startDate: intent.startDate,
+  });
+  if (!result.change) {
+    return {
+      campaignObject: input.campaignObject,
+      reply:
+        "I couldn't apply that timeline change — please restate the start date or duration (for example \"change campaign start date to 24/07/2026\" or \"make it 6 weeks\").",
+      changed: false,
+      intentKind: "update_timeline",
+    };
+  }
+
+  let next = result.campaignObject;
+  const afterFacts = getCampaignFacts(next);
+  const afterScheduled =
+    afterFacts?.scheduledStartDate ?? afterFacts?.campaignStartDate ?? null;
+  const startShifted =
+    Boolean(intent.startDate) &&
+    beforeScheduled != null &&
+    afterScheduled != null &&
+    beforeScheduled !== afterScheduled;
+
+  const effects: string[] = [];
+
+  // Re-render Media Plan from existing schedule meta + new start anchor.
+  // Preserves creator assignments, week/day slots, weights — not a slate rebuild.
+  if (
+    getCampaignOutput(next, "media_plan") &&
+    (Boolean(intent.startDate) || intent.durationWeeks != null)
+  ) {
+    try {
+      ({ campaignObject: next } = generateCampaignOutput(next, "media_plan", {
+        origin: "copilot",
+      }));
+      effects.push(
+        startShifted
+          ? "the Media Plan calendar was shifted to the new start date while keeping creators, waves, and publishing order"
+          : Boolean(intent.startDate)
+            ? "the Media Plan was updated for the new start date while keeping creators, waves, and publishing order"
+            : "the Media Plan calendar was refreshed for the new duration while keeping existing schedule slots"
+      );
+    } catch {
+      effects.push(
+        "timeline facts were updated — open the Media Plan to confirm the calendar"
+      );
+    }
+  } else {
+    effects.push("timeline facts were updated on the campaign");
+  }
+
+  const reoptimized = await reoptimizeCampaignAfterApply(input.supabase, next);
+  // Media Plan already refreshed above — mark other outputs stale only.
+  const { campaignObject: finalObject, effect: staleEffect } = applyOutputStaleness(
+    reoptimized,
+    input.campaignObject
+  );
+  if (staleEffect) effects.push(staleEffect);
+
+  const scoresAfter = (finalObject.sections.performance.data as PerformanceSectionData | undefined)
+    ?.campaignScores;
+
+  const summary = buildChangeSummary({
+    action: toAction(result.change),
+    effects,
+    scoreBefore: digest.overallScore,
+    scoresAfter,
+  });
+
+  const logged = appendChangeLog(finalObject, {
+    summary: result.change,
+    intent: "update_timeline",
+    overallScoreAfter: scoresAfter?.overall,
+    appliedAt: new Date().toISOString(),
+  });
+  const persisted = await persistVersion(
+    input.supabase,
+    input.conversationId,
+    input.userId,
+    logged
+  );
+
+  return {
+    campaignObject: persisted,
+    reply: renderChangeSummary(summary),
+    changed: true,
+    intentKind: "update_timeline",
+    outputNavigate: getCampaignOutput(persisted, "media_plan")
+      ? "media_plan"
+      : undefined,
   };
 }
 

@@ -291,7 +291,7 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
   {
     name: "generate_output",
     description:
-      "Generate a Campaign Output (a whole-campaign artifact â€” NOT a creator asset) from the Campaign Object: Full Campaign Strategy, Executive Proposal, Media Plan, Timeline, KPI Forecast, Budget Allocation, Risk Assessment, Amplification Plan, Creative Concepts, Executive Summary, Presentation, etc. Use for 'generate a media plan', 'create a full strategy', 'generate only the timeline'. Only the requested output is generated.",
+      "Generate a Campaign Output (a whole-campaign artifact — NOT a creator asset) from the Campaign Object: Full Campaign Strategy, Executive Proposal, Media Plan, Timeline, KPI Forecast, Budget Allocation, Risk Assessment, Amplification Plan, Creative Concepts, Executive Summary, Presentation, etc. Use for 'generate a media plan', 'create a full strategy', 'generate only the timeline'. Do NOT use for changing the campaign start date, shifting weeks, or rescheduling — use update_timeline / reschedule_media_plan. Only the requested output is generated.",
     parameters: {
       type: "object",
       properties: {
@@ -307,7 +307,7 @@ export const STUDIO_COPILOT_TOOLS: LlmToolDefinition[] = [
   {
     name: "regenerate_output",
     description:
-      "Rebuild an existing Campaign Output after inputs changed. Use for 'regenerate the media plan', 'rebuild the KPI forecast', 'update the timeline', 'refresh the proposal'. Only the requested output is rebuilt.",
+      "Rebuild an existing Campaign Output only when the user explicitly asks to regenerate/rebuild/refresh that artifact (e.g. 'regenerate the media plan', 'rebuild the KPI forecast', 'refresh the proposal'). Do NOT use for changing campaign start date, moving/shifting weeks, or updating timeline facts — use update_timeline. Do NOT use for moving creators between weeks — use reschedule_media_plan. Only the requested output is rebuilt.",
     parameters: {
       type: "object",
       properties: {
@@ -483,6 +483,46 @@ function extractNames(message: string): string[] {
 }
 
 /**
+ * Pre-LLM / fallback guard for start-date updates.
+ * "Change/move/shift/reschedule/update start date to …" must never route to generate.
+ */
+export function parseDeterministicStartDateTimelineIntent(
+  message: string
+): Extract<StudioCopilotIntent, { kind: "update_timeline" }> | null {
+  const text = message.trim();
+  if (!text) return null;
+
+  // Explicit regenerate/rebuild of an output — leave for generate routing.
+  if (/\b(regenerate|rebuild|re-?generate|re-?run)\b/i.test(text)) {
+    return null;
+  }
+
+  const startDate = parseCampaignStartDateInput(text);
+  if (!startDate) return null;
+
+  const mentionsStart =
+    /\b(start(?:ing)?(?:\s+date)?|launch(?:\s+date)?|go[-\s]?live|kick[-\s]?off)\b/i.test(
+      text
+    );
+  const updateVerb =
+    /\b(change|move|shift|reschedule|update|set|make|push|bring)\b/i.test(text);
+
+  if (mentionsStart && (updateVerb || /\bto\b/i.test(text))) {
+    return { kind: "update_timeline", startDate };
+  }
+
+  // Bare "start … <date>" / "launch on <date>" without explicit output verb.
+  if (
+    mentionsStart &&
+    !/\b(media\s*plan|proposal|strategy|forecast|presentation)\b/i.test(text)
+  ) {
+    return { kind: "update_timeline", startDate };
+  }
+
+  return null;
+}
+
+/**
  * Deterministic fallback used when the model is unavailable (no API key, tests)
  * or returns no tool call. Covers the highest-frequency edits so the Copilot is
  * never dead. The model, when present, handles the long tail.
@@ -498,6 +538,9 @@ export function parseStudioIntentFallback(message: string): StudioCopilotIntent 
   if (UNDO_RE.test(text) && !REMOVE_RE.test(text)) {
     return { kind: "undo_last_change" };
   }
+
+  const startDateIntent = parseDeterministicStartDateTimelineIntent(text);
+  if (startDateIntent) return startDateIntent;
 
   if (
     /\b(generate|write|create|update|set|add|upload)\b[^.]{0,40}\b(campaign\s+)?brief\b/i.test(text) ||
@@ -546,11 +589,6 @@ export function parseStudioIntentFallback(message: string): StudioCopilotIntent 
   const weekWeights = parseWeekWeightIntent(text, parseWeeks(text) ?? 4);
   if (weekWeights) {
     return { kind: "reschedule_media_plan", weekWeights };
-  }
-
-  if (/\b(start(?:ing)?|launch|go[-\s]?live|kick[-\s]?off)\b/i.test(text)) {
-    const startDate = parseCampaignStartDateInput(text);
-    if (startDate) return { kind: "update_timeline", startDate };
   }
 
   // "replace macro creators with micro creators" â€” split on "with", read each side.

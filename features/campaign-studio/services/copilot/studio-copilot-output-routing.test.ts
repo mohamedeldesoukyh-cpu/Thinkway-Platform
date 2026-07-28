@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { parseStudioIntentFallback, parseToolCallIntent } from "./studio-copilot-parse";
+import {
+  parseDeterministicStartDateTimelineIntent,
+  parseStudioIntentFallback,
+  parseToolCallIntent,
+} from "./studio-copilot-parse";
 
 test("fallback routes 'generate'/'create' output commands to generate_output", () => {
   for (const [message, output] of [
@@ -56,6 +60,32 @@ test("content-editing phrasings are NOT hijacked by output routing", () => {
   assert.equal(parseStudioIntentFallback("set the budget to EGP 2M").kind, "update_budget");
   assert.equal(parseStudioIntentFallback("remove the celebrity creators").kind, "remove_creators");
   assert.equal(parseStudioIntentFallback("add parenting creators").kind, "add_creators");
+});
+
+test("start-date change/move/shift/update routes to update_timeline, never generate", () => {
+  for (const message of [
+    "Change campaign start date to 24/07/2026.",
+    "change the start date to 24/07/2026",
+    "Move start date to 2026-07-24",
+    "Shift the campaign start to 24/07/2026",
+    "Update start date to 24th of July 2026",
+    "Reschedule the campaign start date to 24/07/2026",
+    "set campaign start date to 24/07/2026",
+  ]) {
+    const intent = parseDeterministicStartDateTimelineIntent(message);
+    assert.ok(intent, message);
+    assert.equal(intent!.kind, "update_timeline", message);
+    assert.equal(intent!.startDate, "2026-07-24", message);
+    assert.equal(parseStudioIntentFallback(message).kind, "update_timeline", message);
+  }
+
+  // Explicit regenerate must not be captured by the start-date guard.
+  assert.equal(
+    parseDeterministicStartDateTimelineIntent(
+      "Regenerate the media plan starting 24/07/2026"
+    ),
+    null
+  );
 });
 
 test("tool-call path maps output tools to typed intents", () => {
