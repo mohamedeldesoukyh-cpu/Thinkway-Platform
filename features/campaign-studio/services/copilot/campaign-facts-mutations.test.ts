@@ -91,6 +91,7 @@ test("mid-week start stores requested + Monday scheduled dates and explains alig
   assert.equal(facts?.scheduledStartDate, "2026-07-27");
   assert.match(change ?? "", /24\/07\/2026/);
   assert.match(change ?? "", /27\/07\/2026/);
+  assert.match(change ?? "", /Calendar Week mode/);
   assert.match(change ?? "", /Monday–Sunday|Week 1 begins/i);
 });
 

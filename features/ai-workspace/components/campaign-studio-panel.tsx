@@ -34,7 +34,10 @@ import type { CampaignStudioInput } from "@/features/campaign-studio/types/campa
 import type { AiActionCard, AiMessage, ConversationListItem } from "../types";
 import { logStudioBindEvent } from "../debug/studio-bind-logger";
 import { CampaignHistoryPanel } from "./campaign-history-panel";
-import { findLatestStudioMessage } from "./campaign-studio-panel-utils";
+import {
+  findLatestStudioMessage,
+  studioCampaignObjectBindKey,
+} from "./campaign-studio-panel-utils";
 import { StudioConversationControls } from "./studio-conversation-controls";
 import { toWorkflowDisplayMetadata } from "./workflow-dashboard-panel";
 import { resolvePresentationCompletion } from "@/features/campaign-studio/services/section-data-resolver";
@@ -121,15 +124,23 @@ export function CampaignStudioPanel({
     () => (message ? toWorkflowDisplayMetadata(message.metadata) : null),
     [message?.id, message?.metadata]
   );
-  const boundCampaignObject = useMemo(
-    () => display?.campaignObject,
-    [display?.campaignObject?.id, display?.campaignObject?.updatedAt]
-  );
+  // Do not memoize on id/updatedAt alone — timeline / Media Plan patches can share a timestamp.
+  const campaignBindKey = studioCampaignObjectBindKey(message?.id, display?.campaignObject);
+  const boundCampaignObject = display?.campaignObject;
+  const hasCampaignObject = Boolean(boundCampaignObject);
   const [view, setView] = useState<StudioView>(initialView ?? "studio");
+  const navigateOutputKind =
+    typeof message?.metadata?.outputNavigate === "string"
+      ? message.metadata.outputNavigate
+      : undefined;
+
+  // After a Copilot timeline/output edit, open Outputs so the calendar is visible.
+  useEffect(() => {
+    if (!navigateOutputKind || !hasCampaignObject) return;
+    setView("outputs");
+  }, [message?.id, navigateOutputKind, hasCampaignObject, campaignBindKey]);
   const noopSendMessage = useCallback(() => {}, []);
   const sendMessage = onSendMessage ?? noopSendMessage;
-
-  const hasCampaignObject = Boolean(boundCampaignObject);
 
   // Diagnostics: which object is the Studio actually rendering right now?
   useEffect(() => {
@@ -331,6 +342,7 @@ export function CampaignStudioPanel({
       ) : view === "outputs" && hasCampaignObject ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <StudioOutputsView
+            key={campaignBindKey}
             campaignObject={boundCampaignObject!}
             conversationId={conversationId}
             messageId={message?.id}
@@ -342,6 +354,7 @@ export function CampaignStudioPanel({
             mode="outputs"
             onSendMessage={sendMessage}
             isCopilotStreaming={isCopilotStreaming}
+            navigateOutputKind={navigateOutputKind}
             planReadinessBanner={
               <OutputsPlanReadinessBanner
                 campaignObject={boundCampaignObject!}

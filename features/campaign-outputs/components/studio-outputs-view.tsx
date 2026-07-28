@@ -41,6 +41,8 @@ export type StudioOutputsViewProps = {
   planReadinessBanner?: ReactNode;
   /** Execution Campaign + Quotation cards row. */
   upNextCards?: ReactNode;
+  /** Copilot directive — open this output when the view mounts/rebinds. */
+  navigateOutputKind?: CampaignOutputKind | string;
 };
 
 function buildDisplayContentKey(campaignObject: CampaignObject): string {
@@ -72,11 +74,21 @@ function buildDisplayContentKey(campaignObject: CampaignObject): string {
   const briefKey = inputCache.inputFingerprint("brief");
   const creatorsKey = inputCache.inputFingerprint("creators");
   const budgetKey = inputCache.inputFingerprint("budget");
+  const timelineKey = inputCache.inputFingerprint("timeline");
+  const mediaPlan = outputsState.media_plan;
+  const mediaPlanStart =
+    (mediaPlan?.content?.data as { scheduledStartDate?: string; campaignStartDate?: string } | undefined)
+      ?.scheduledStartDate ??
+    (mediaPlan?.content?.data as { campaignStartDate?: string } | undefined)?.campaignStartDate ??
+    "";
   const outputKeys = Object.entries(outputsState)
-    .map(([kind, record]) => `${kind}:${record?.version ?? 0}:${record?.status ?? "none"}`)
+    .map(
+      ([kind, record]) =>
+        `${kind}:${record?.version ?? 0}:${record?.status ?? "none"}:${record?.updatedAt ?? ""}`
+    )
     .sort()
     .join("|");
-  return `${campaignObject.updatedAt}:${presentationKey}:${commercialsKey}:${scheduleKey}:${briefKey}:${creatorsKey}:${budgetKey}:${outputKeys}`;
+  return `${campaignObject.updatedAt}:${presentationKey}:${commercialsKey}:${scheduleKey}:${briefKey}:${creatorsKey}:${budgetKey}:${timelineKey}:${mediaPlanStart}:${outputKeys}`;
 }
 
 /**
@@ -95,6 +107,7 @@ export function StudioOutputsView({
   isCopilotStreaming = false,
   planReadinessBanner,
   upNextCards,
+  navigateOutputKind,
 }: StudioOutputsViewProps) {
   const { effectiveCampaignObject: overlayCampaignObject, setLocalCampaignObject } =
     useCampaignObjectOverlay(campaignObject);
@@ -270,6 +283,7 @@ export function StudioOutputsView({
       actions={actions}
       planReadinessBanner={planReadinessBanner}
       upNextCards={upNextCards}
+      navigateOutputKind={navigateOutputKind}
     />
   );
 }

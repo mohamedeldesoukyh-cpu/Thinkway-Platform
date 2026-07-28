@@ -22,12 +22,18 @@
 2. Production `REDIS_URL` / dedicated Dev Redis / DNS as needed
 3. Do **not** merge to `main` or deploy Production without explicit approval
 
-## Media Plan — assignment hydration (shipping)
+## Media Plan — assignment hydration (shipped on develop)
 
-- Branch `feature/media-plan-assignment-hydration-v2` (from develop) brings parked `f4a11683` + launch/generate wiring
 - Empty slate seeds from Assignments hierarchy on: Studio generate/regenerate, open Studio from campaign, Campaign Media Plan load
-- Open Studio / sync now auto-generates Media Plan when creators are seeded; generate forces rebuild if slate was just filled
-- After deploy: open Studio from campaign (or regenerate Media Plan) to persist tip for TW-2026-0005 / similar
+- Open Studio / sync auto-generates Media Plan when creators are seeded
+
+## Copilot timeline — deterministic calendar offset (local WIP on develop — not pushed)
+
+- `update_timeline` uses `shiftMediaPlanDataToScheduledStart` — **not** AI / `generateCampaignOutput`
+- UI bind fix: Studio was sticky on `id+updatedAt`; now rebinds on timeline + Media Plan version; SSE done mirrors full assistant metadata; `outputNavigate` opens Media Plan
+- Calendar Week mode + Monday alignment copy; `campaign_relative_week` scaffolded
+- **Blocked until commit/push to develop** — Preview still runs pre-offset path
+- Tests: `media-plan-date-offset.test.ts`
 
 ## Showcase PDF v2 (in progress on develop)
 

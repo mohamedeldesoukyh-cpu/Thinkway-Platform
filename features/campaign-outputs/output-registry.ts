@@ -82,6 +82,9 @@ function mediaPlanDisplayEnrichKey(
     raw.generatorVersion,
     raw.durationWeeks,
     raw.creatorCount,
+    raw.campaignStartDate,
+    raw.scheduledStartDate ?? "",
+    raw.requestedStartDate ?? "",
     // Include calendar publish slots so deadline rebuild invalidates with schedule moves.
     raw.weeks
       .flatMap((week) =>

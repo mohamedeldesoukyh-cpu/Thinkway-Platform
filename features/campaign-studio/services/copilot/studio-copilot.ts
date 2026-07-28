@@ -22,9 +22,16 @@ import { runReviewCampaign } from "@/features/campaign-outputs/director/director
 import {
   generateCampaignOutput,
   getCampaignOutput,
+  getCampaignOutputState,
 } from "@/features/campaign-outputs/output-registry";
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 import { ensureCreatorsFromAssignmentHierarchy } from "@/features/campaign-outputs/hydration";
+import {
+  applyMediaPlanStartDateOffset,
+  commitPatchedMediaPlanOutput,
+  syncMediaPlanDurationFact,
+} from "@/features/campaign-outputs/media-plan-date-offset";
+import { asMediaPlanData } from "@/features/campaign-outputs/generators/media-plan";
 import {
   mutateMediaPlanSchedule,
   prepareMediaPlanRegenerate,
@@ -628,18 +635,15 @@ async function applyFactsEdit(
 }
 
 /**
- * Update campaign start/duration and refresh the Media Plan calendar from the
- * existing schedule meta (assignments preserved). Never runs regenerate/rebuild.
+ * Update campaign start/duration via deterministic date-offset on the existing
+ * Media Plan. Never regenerates the plan or re-optimizes the slate — those require
+ * an explicit generate/regenerate request.
  */
 async function applyTimelineEdit(
   input: RunInput,
   digest: CampaignContextDigest,
   intent: Extract<StudioCopilotIntent, { kind: "update_timeline" }>
 ): Promise<StudioCopilotResult> {
-  const beforeFacts = getCampaignFacts(input.campaignObject);
-  const beforeScheduled =
-    beforeFacts?.scheduledStartDate ?? beforeFacts?.campaignStartDate ?? null;
-
   const result = applyTimelineChange(input.campaignObject, {
     durationWeeks: intent.durationWeeks,
     startDate: intent.startDate,
@@ -658,44 +662,52 @@ async function applyTimelineEdit(
   const afterFacts = getCampaignFacts(next);
   const afterScheduled =
     afterFacts?.scheduledStartDate ?? afterFacts?.campaignStartDate ?? null;
-  const startShifted =
-    Boolean(intent.startDate) &&
-    beforeScheduled != null &&
-    afterScheduled != null &&
-    beforeScheduled !== afterScheduled;
-
+  const afterRequested =
+    afterFacts?.requestedStartDate ?? afterFacts?.campaignStartDate ?? null;
+  const hasMediaPlan = Boolean(getCampaignOutputState(next).media_plan?.content?.data);
   const effects: string[] = [];
 
-  // Re-render Media Plan from existing schedule meta + new start anchor.
-  // Preserves creator assignments, week/day slots, weights — not a slate rebuild.
-  if (
-    getCampaignOutput(next, "media_plan") &&
-    (Boolean(intent.startDate) || intent.durationWeeks != null)
-  ) {
-    try {
-      ({ campaignObject: next } = generateCampaignOutput(next, "media_plan", {
+  if (hasMediaPlan && intent.startDate && afterScheduled) {
+    const { campaignObject: shifted, shifted: didShift, dayOffset } =
+      applyMediaPlanStartDateOffset(next, afterScheduled, {
+        requestedStartDate: afterRequested,
+        durationWeeks: afterFacts?.durationWeeks,
         origin: "copilot",
-      }));
+      });
+    next = shifted;
+    if (didShift) {
       effects.push(
-        startShifted
-          ? "the Media Plan calendar was shifted to the new start date while keeping creators, waves, and publishing order"
-          : Boolean(intent.startDate)
-            ? "the Media Plan was updated for the new start date while keeping creators, waves, and publishing order"
-            : "the Media Plan calendar was refreshed for the new duration while keeping existing schedule slots"
+        dayOffset != null && dayOffset !== 0
+          ? `the Media Plan calendar was shifted by ${Math.abs(dayOffset)} day${
+              Math.abs(dayOffset) === 1 ? "" : "s"
+            } (${dayOffset > 0 ? "forward" : "backward"}) without regenerating — creators, deliverables, waves, and publishing order are unchanged`
+          : "the Media Plan calendar anchors were updated without regenerating — creators, deliverables, waves, and publishing order are unchanged"
       );
-    } catch {
-      effects.push(
-        "timeline facts were updated — open the Media Plan to confirm the calendar"
-      );
+    } else {
+      effects.push("timeline facts were updated; the Media Plan calendar already matched the new start");
     }
+  } else if (hasMediaPlan && intent.durationWeeks != null && afterFacts?.durationWeeks != null) {
+    // Duration fact only — do not grow/shrink the publishing grid.
+    const data = asMediaPlanData(getCampaignOutputState(next).media_plan?.content?.data);
+    if (data) {
+      const synced = syncMediaPlanDurationFact(data, afterFacts.durationWeeks);
+      const committed = commitPatchedMediaPlanOutput(next, synced, {
+        origin: "copilot",
+        changeReason: "Timeline duration fact synced (calendar structure unchanged).",
+      });
+      if (committed) next = committed.campaignObject;
+    }
+    effects.push(
+      "campaign duration was updated; the existing Media Plan week grid was left unchanged — ask to regenerate the Media Plan only if you want a new calendar length"
+    );
   } else {
     effects.push("timeline facts were updated on the campaign");
   }
 
-  const reoptimized = await reoptimizeCampaignAfterApply(input.supabase, next);
-  // Media Plan already refreshed above — mark other outputs stale only.
+  // Calendar Week Monday alignment is already explained in result.change when applicable.
+  // Do not reoptimize — that can reorder the slate. Mark other outputs stale only.
   const { campaignObject: finalObject, effect: staleEffect } = applyOutputStaleness(
-    reoptimized,
+    next,
     input.campaignObject
   );
   if (staleEffect) effects.push(staleEffect);

@@ -291,6 +291,8 @@ export async function POST(request: Request) {
           }
 
           send("action_cards", { cards: [], messageId: assistantMessage.id });
+          // Mirror DB assistant metadata so the client Studio rebinds to the
+          // patched Campaign Object (timeline / Media Plan) without a reload.
           send("done", {
             conversationId,
             messageId: assistantMessage.id,
@@ -298,6 +300,7 @@ export async function POST(request: Request) {
             workflow: true,
             workflowId,
             workflowMetadata: {
+              ...assistantMetadata,
               workflow: true,
               workflowId,
               workflowName: "Campaign Studio",

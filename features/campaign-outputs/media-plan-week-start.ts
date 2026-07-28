@@ -1,8 +1,22 @@
 /**
- * Media Plan weeks are Mon–Sun grids (dayIndex 0 = Monday).
- * When the user requests a mid-week campaign start, Week 1 anchors to the
- * Monday on or after that date so calendar columns stay correct.
+ * Media Plan week anchoring.
+ *
+ * Scheduling modes (product):
+ * - `calendar_week` (current default): Week 1 is the Monday on/after the requested
+ *   start. Day columns are always Monday–Sunday.
+ * - `campaign_relative_week` (future): Week 1 day 0 = the requested start date even
+ *   when mid-week; columns are campaign-relative rather than calendar Mon–Sun.
+ *
+ * Only `calendar_week` is implemented today. Do not invent mid-week Week-1 anchors
+ * until campaign_relative_week ships.
  */
+
+/** How Week 1 is anchored relative to the user-requested campaign start. */
+export type MediaPlanWeekSchedulingMode = "calendar_week" | "campaign_relative_week";
+
+/** Product default until campaign-relative mode is implemented. */
+export const DEFAULT_MEDIA_PLAN_WEEK_SCHEDULING_MODE: MediaPlanWeekSchedulingMode =
+  "calendar_week";
 
 /** Monday on or after the given anchor date (local calendar). */
 export function startOfCampaignWeek(anchor = new Date()): Date {
@@ -44,7 +58,7 @@ export function formatCampaignDateLabel(iso: string): string {
 }
 
 /**
- * When the publishing calendar must start later than the requested go-live day,
+ * When Calendar Week mode must start later than the requested go-live day,
  * return a user-facing explanation. Null when dates already align.
  */
 export function describeMondayAlignment(
@@ -53,8 +67,10 @@ export function describeMondayAlignment(
 ): string | null {
   if (requestedIso === scheduledIso) return null;
   return (
-    `Publishing calendar weeks run Monday–Sunday, so Week 1 begins ` +
+    `Calendar Week mode: publishing weeks run Monday–Sunday, so Week 1 begins ` +
     `${formatCampaignDateLabel(scheduledIso)} (the Monday on or after ` +
-    `${formatCampaignDateLabel(requestedIso)}).`
+    `${formatCampaignDateLabel(requestedIso)}). ` +
+    `Your requested go-live date (${formatCampaignDateLabel(requestedIso)}) is kept; ` +
+    `only the publishing calendar is Monday-aligned.`
   );
 }

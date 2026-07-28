@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import { staleCampaignOutputKinds } from "../output-registry";
@@ -8,7 +8,23 @@ import { staleCampaignOutputKinds } from "../output-registry";
 function parentOverlaySyncKey(campaignObject: CampaignObject | undefined): string {
   if (!campaignObject) return "";
   const staleKinds = staleCampaignOutputKinds(campaignObject);
-  return `${campaignObject.id}:${campaignObject.updatedAt}:${staleKinds.join(",")}`;
+  const facts = campaignObject.meta.campaignFacts;
+  const mediaPlan = campaignObject.meta.campaignOutputs?.media_plan;
+  const planData = mediaPlan?.content?.data as
+    | { campaignStartDate?: string; scheduledStartDate?: string }
+    | undefined;
+  return [
+    campaignObject.id,
+    campaignObject.updatedAt,
+    staleKinds.join(","),
+    facts?.scheduledStartDate ?? "",
+    facts?.requestedStartDate ?? "",
+    facts?.campaignStartDate ?? "",
+    facts?.durationWeeks ?? "",
+    mediaPlan?.version ?? 0,
+    mediaPlan?.updatedAt ?? "",
+    planData?.scheduledStartDate ?? planData?.campaignStartDate ?? "",
+  ].join(":");
 }
 
 /**
@@ -21,13 +37,7 @@ export function useCampaignObjectOverlay(campaignObject: CampaignObject | undefi
   const campaignObjectRef = useRef(campaignObject);
   campaignObjectRef.current = campaignObject;
 
-  const parentStaleKey = campaignObject
-    ? staleCampaignOutputKinds(campaignObject).join(",")
-    : "";
-  const parentSyncKey = useMemo(
-    () => parentOverlaySyncKey(campaignObject),
-    [campaignObject?.id, campaignObject?.updatedAt, parentStaleKey]
-  );
+  const parentSyncKey = parentOverlaySyncKey(campaignObject);
 
   useEffect(() => {
     const parent = campaignObjectRef.current;

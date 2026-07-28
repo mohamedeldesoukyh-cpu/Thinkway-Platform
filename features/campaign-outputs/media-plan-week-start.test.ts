@@ -26,9 +26,11 @@ test("alignment message is null when dates match", () => {
   assert.equal(describeMondayAlignment("2026-07-27", "2026-07-27"), null);
 });
 
-test("alignment message explains Friday → Monday shift", () => {
+test("alignment message explains Friday → Monday shift in Calendar Week mode", () => {
   const note = describeMondayAlignment("2026-07-24", "2026-07-27");
+  assert.match(note ?? "", /Calendar Week mode/);
   assert.match(note ?? "", /24\/07\/2026/);
   assert.match(note ?? "", /27\/07\/2026/);
-  assert.match(note ?? "", /Monday/);
+  assert.match(note ?? "", /Monday–Sunday/);
+  assert.match(note ?? "", /requested go-live/);
 });

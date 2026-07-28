@@ -104,6 +104,8 @@ export type OutputsCenterProps = {
   planReadinessBanner?: ReactNode;
   /** Execution Campaign + Quotation launcher row. */
   upNextCards?: ReactNode;
+  /** Copilot directive — open this output panel when the Studio rebinds. */
+  navigateOutputKind?: OutputView["kind"] | string;
 };
 
 function summarizeStaleCause(outputs: OutputView[]): string {
@@ -156,6 +158,7 @@ export function OutputsCenter({
   regenerateAllDisabled = false,
   planReadinessBanner,
   upNextCards,
+  navigateOutputKind,
 }: OutputsCenterProps) {
   const [panel, setPanel] = useState<PanelState | null>(null);
   const [briefViewerOpen, setBriefViewerOpen] = useState(false);
@@ -193,13 +196,39 @@ export function OutputsCenter({
 
   const staleCause = useMemo(() => summarizeStaleCause(outputs), [outputs]);
 
+  const mediaPlanOutput = effectiveCampaignObject?.meta.campaignOutputs?.media_plan;
+  const mediaPlanCalendarKey = [
+    mediaPlanOutput?.version ?? 0,
+    mediaPlanOutput?.updatedAt ?? "",
+    (mediaPlanOutput?.content?.data as { scheduledStartDate?: string; campaignStartDate?: string } | undefined)
+      ?.scheduledStartDate ??
+      (mediaPlanOutput?.content?.data as { campaignStartDate?: string } | undefined)?.campaignStartDate ??
+      "",
+    effectiveCampaignObject?.meta.campaignFacts?.scheduledStartDate ?? "",
+    effectiveCampaignObject?.meta.campaignFacts?.requestedStartDate ?? "",
+  ].join("|");
+
+  useEffect(() => {
+    if (!navigateOutputKind) return;
+    const exists = outputs.some((output) => output.kind === navigateOutputKind);
+    if (!exists) return;
+    setPanel({ kind: navigateOutputKind as OutputView["kind"], mode: "open" });
+  }, [navigateOutputKind, campaignObjectId, mediaPlanCalendarKey, outputs]);
+
   const panelContent = useMemo(() => {
     if (!panel || !getContent) return undefined;
     if (panel.kind === "media_plan" && effectiveCampaignObject) {
       return getOutputContentForDisplay(effectiveCampaignObject, "media_plan");
     }
     return getContent(panel.kind);
-  }, [panel?.kind, panel?.mode, getContent, effectiveCampaignObject?.id, effectiveCampaignObject?.meta.campaignOutputs]);
+  }, [
+    panel?.kind,
+    panel?.mode,
+    getContent,
+    effectiveCampaignObject?.id,
+    effectiveCampaignObject?.meta.campaignOutputs,
+    mediaPlanCalendarKey,
+  ]);
 
   const isMediaPlanPanel = panel?.kind === "media_plan";
   const mediaPlanPresentation = useMemo(

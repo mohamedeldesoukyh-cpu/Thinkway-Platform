@@ -22,3 +22,49 @@ export function findLatestStudioMessage(messages: AiMessage[]): AiMessage | null
   }
   return null;
 }
+
+/**
+ * Invalidate Studio binding when timeline / Media Plan calendar patches land.
+ * `id` + `updatedAt` alone can miss in-memory patches that share the prior timestamp.
+ */
+export function studioCampaignObjectBindKey(
+  messageId: string | undefined,
+  campaignObject: {
+    id?: string;
+    updatedAt?: string;
+    meta?: {
+      campaignFacts?: {
+        scheduledStartDate?: string | null;
+        requestedStartDate?: string | null;
+        campaignStartDate?: string | null;
+        durationWeeks?: number | null;
+      };
+      campaignOutputs?: {
+        media_plan?: {
+          version?: number;
+          updatedAt?: string;
+          content?: { data?: { campaignStartDate?: string; scheduledStartDate?: string } };
+        };
+      };
+      copilotChangeLog?: unknown[];
+    };
+  } | null | undefined
+): string {
+  if (!campaignObject) return messageId ?? "";
+  const facts = campaignObject.meta?.campaignFacts;
+  const mediaPlan = campaignObject.meta?.campaignOutputs?.media_plan;
+  const planData = mediaPlan?.content?.data;
+  return [
+    messageId ?? "",
+    campaignObject.id ?? "",
+    campaignObject.updatedAt ?? "",
+    facts?.scheduledStartDate ?? "",
+    facts?.requestedStartDate ?? "",
+    facts?.campaignStartDate ?? "",
+    facts?.durationWeeks ?? "",
+    mediaPlan?.version ?? 0,
+    mediaPlan?.updatedAt ?? "",
+    planData?.scheduledStartDate ?? planData?.campaignStartDate ?? "",
+    campaignObject.meta?.copilotChangeLog?.length ?? 0,
+  ].join("|");
+}

@@ -1277,12 +1277,13 @@ export function generateMediaPlan(campaignObject: CampaignObject): CampaignOutpu
               : ""
           }.`
         : `${durationWeeks}-week client-approval-ready publishing plan across ${slate.length} creator${slate.length === 1 ? "" : "s"} and ${platformCount} platform${platformCount === 1 ? "" : "s"}.`,
-    sections: buildSections(data),
+    sections: buildMediaPlanSections(data),
     data: data as unknown as Record<string, unknown>,
   };
 }
 
-function buildSections(data: MediaPlanData): CampaignOutputContentSection[] {
+/** Rebuild section views from structured Media Plan data (no slate regeneration). */
+export function buildMediaPlanSections(data: MediaPlanData): CampaignOutputContentSection[] {
   const sections: CampaignOutputContentSection[] = [];
 
   if (data.campaignContext?.campaignCost) {
@@ -1370,4 +1371,25 @@ function buildSections(data: MediaPlanData): CampaignOutputContentSection[] {
   });
 
   return sections;
+}
+
+/** Renderable output content from structured data — preserves title/summary when patching. */
+export function mediaPlanContentFromData(
+  data: MediaPlanData,
+  previous?: Pick<CampaignOutputContent, "title" | "summary">
+): CampaignOutputContent {
+  return {
+    title: previous?.title ?? "Media Plan",
+    summary: previous?.summary,
+    sections: buildMediaPlanSections(data),
+    data: data as unknown as Record<string, unknown>,
+  };
+}
+
+/** Narrow unknown output payload to Media Plan data when structure looks valid. */
+export function asMediaPlanData(value: unknown): MediaPlanData | null {
+  if (!value || typeof value !== "object") return null;
+  const data = value as MediaPlanData;
+  if (typeof data.campaignStartDate !== "string" || !Array.isArray(data.weeks)) return null;
+  return data;
 }

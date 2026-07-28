@@ -174,7 +174,10 @@ export function applyTimelineChange(
 
   const next = patchCampaignFacts(campaignObject, patch);
   // Alignment note is a full sentence — keep it outside the "Updated X." wrapper.
-  const alignmentNote = changes.find((line) => line.startsWith("Publishing calendar"));
+  const alignmentNote = changes.find(
+    (line) =>
+      line.startsWith("Calendar Week mode:") || line.startsWith("Publishing calendar")
+  );
   const primaryChanges = changes.filter((line) => line !== alignmentNote);
   const change = alignmentNote
     ? `Updated ${primaryChanges.join(" and ")}. ${alignmentNote}`
