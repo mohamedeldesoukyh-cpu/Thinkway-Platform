@@ -46,17 +46,16 @@ import {
 import {
   PlatformSelect,
   DeliverableTypeSelect,
-  platformBadgeClass,
 } from "@/features/campaigns/components/assignment-hierarchy/platform-deliverable-selects";
 import {
   assignmentChildColDataAttr,
   assignmentChildLeadingParentColumnIds,
   assignmentChildRowColSpan,
-  assignmentChildTypeLabel,
+  assignmentChildTypeLabelBesidePlatform,
   assignmentParentToChildLeadingColumnId,
-  platformShortLabel,
   SCHEDULE_STATUS_OPTIONS,
 } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
+import { PlatformIcon } from "@/lib/performance/platform-icon";
 import { formatPercent } from "@/features/campaigns/utils";
 import {
   ASSIGNMENT_GRID_MONEY_COL,
@@ -510,55 +509,59 @@ export function EditablePostRow({
             {...assignmentChildColDataAttr(childColumnId)}
             className={cellClass}
           >
-            <div className="flex min-w-0 items-center">
+            <div className="flex min-w-0 items-center gap-1.5">
               {canEdit && editing ? (
-                <DeliverableTypeSelect
-                  platform={meta.platform}
-                  deliverableType={meta.deliverable_type}
-                  disabled={pending}
-                  onDeliverableTypeChange={(deliverableType) =>
-                    setMeta((m) => ({ ...m, deliverable_type: deliverableType }))
-                  }
-                />
+                <>
+                  <PlatformSelect
+                    platform={meta.platform}
+                    platformOptions={platformOptions}
+                    disabled={pending}
+                    onPlatformChange={(platform) => {
+                      const types = getDeliverableTypeCodesForPlatform(platform);
+                      setMeta((m) => ({
+                        ...m,
+                        platform,
+                        deliverable_type: types[0] ?? "other",
+                      }));
+                    }}
+                  />
+                  <DeliverableTypeSelect
+                    platform={meta.platform}
+                    deliverableType={meta.deliverable_type}
+                    disabled={pending}
+                    onDeliverableTypeChange={(deliverableType) =>
+                      setMeta((m) => ({ ...m, deliverable_type: deliverableType }))
+                    }
+                  />
+                </>
               ) : (
-                <span className="min-w-0 truncate">
-                  {assignmentChildTypeLabel(
-                    post.deliverable_type,
-                    post.deliverable_type_label
-                  )}
-                </span>
+                <>
+                  <PlatformIcon
+                    platform={post.platform}
+                    size="xs"
+                    variant="logo"
+                    className="size-4 rounded-full"
+                  />
+                  <span className="min-w-0 truncate">
+                    {assignmentChildTypeLabelBesidePlatform(
+                      post.deliverable_type,
+                      post.deliverable_type_label
+                    )}
+                  </span>
+                </>
               )}
             </div>
           </td>
         );
       case "platform":
+        // Alignment slot under parent Creator — platform avatar lives beside Type.
         return (
-          <td key={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
-            {canEdit && editing ? (
-              <PlatformSelect
-                platform={meta.platform}
-                platformOptions={platformOptions}
-                disabled={pending}
-                onPlatformChange={(platform) => {
-                  const types = getDeliverableTypeCodesForPlatform(platform);
-                  setMeta((m) => ({
-                    ...m,
-                    platform,
-                    deliverable_type: types[0] ?? "other",
-                  }));
-                }}
-              />
-            ) : (
-              <span
-                className={cn(
-                  "inline-flex min-w-[2rem] justify-center rounded-md border px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-                  platformBadgeClass(post.platform)
-                )}
-              >
-                {platformShortLabel(post.platform)}
-              </span>
-            )}
-          </td>
+          <td
+            key={parentColumnId}
+            {...assignmentChildColDataAttr(childColumnId)}
+            className={cellClass}
+            aria-hidden
+          />
         );
       case "qty":
         return (
@@ -959,9 +962,12 @@ export function OperationalGridHeader({
         );
       case "platform":
         return (
-          <th key={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
-            {OPERATIONAL_GRID_LABELS.platform}
-          </th>
+          <th
+            key={parentColumnId}
+            {...assignmentChildColDataAttr(childColumnId)}
+            className={cellClass}
+            aria-hidden
+          />
         );
       case "qty":
         return (

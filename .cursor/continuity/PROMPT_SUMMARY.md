@@ -44,7 +44,9 @@
 - **Convert soak:** QT-2026-0005 → TW-2026-0002 (2 Assignments, snapshot, pin, billing E2E VIO→INV→PAY)
 - **Backfill soak:** Isolated Dev fixtures QT-2026-0019 → TW-2026-0003 via `scripts/soak-release-2-0-backfill-dev.mjs` (detect/dry-run/execute/idempotent)
 - **No Production deploy executed.** No Phase 2.
-- **Next action:** Seek explicit Production approval using PRODUCTION_READINESS_REVIEW.md (migration + deploy + keep flag OFF initially)
+- **Soak fix (unrelated to R2.0):** `/discovery/search` SSR crash from `get_discovery_search_taxonomy` statement timeout — soft-fail + Dev function timeout 30s (`3cb56e3f`)
+- **Convert type×platform bug (fixed on develop, Dev data repaired):** `quotationDeliverablesToPlatforms` was copying every selected type onto every package platform. Now maps each type via `postTypePlatformKey` (native → home PF; `mirrored_*` → target PF). Repaired TW-2026-0005 (QT-2026-0009-V2) — 10 multi-PF lines incl. Eman. Script: `scripts/repair-assignment-types-from-quotation.ts`
+- **Next action:** Seek explicit Production approval using PRODUCTION_READINESS_REVIEW.md (migration + deploy + keep flag OFF initially; include taxonomy timeout migration)
 
 ## Working agreement
 

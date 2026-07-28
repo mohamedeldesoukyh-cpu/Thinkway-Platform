@@ -417,12 +417,14 @@ export function AssignmentSafeGrid({
                 </th>
               ) : null}
               {col("assignment") ? (
-                <th {...assignmentParentColDataAttr("assignment")} className={cn(SAFE_GRID_TH, "min-w-[140px]")}>
+                <th {...assignmentParentColDataAttr("assignment")} className={cn(SAFE_GRID_TH, "min-w-[160px]")}>
                   {HIERARCHY_COLUMN_LABELS.assignment}
                 </th>
               ) : null}
               {col("creator") ? (
-                <th {...assignmentParentColDataAttr("creator")} className={cn(SAFE_GRID_TH, "min-w-[140px]")}>{HIERARCHY_COLUMN_LABELS.creator}</th>
+                <th {...assignmentParentColDataAttr("creator")} className={cn(SAFE_GRID_TH, "w-[108px] max-w-[120px]")}>
+                  {HIERARCHY_COLUMN_LABELS.creator}
+                </th>
               ) : null}
               {col("platforms") ? (
                 <th {...assignmentParentColDataAttr("platforms")} className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.platforms}</th>
@@ -591,7 +593,10 @@ export function AssignmentSafeGrid({
                         </td>
                         ) : null}
                         {col("creator") ? (
-                        <td {...assignmentParentColDataAttr("creator")} className={SAFE_GRID_TD}>
+                        <td
+                          {...assignmentParentColDataAttr("creator")}
+                          className={cn(SAFE_GRID_TD, "w-[108px] max-w-[120px]")}
+                        >
                           {line.influencer_name || row.displayName ? (
                             <AssignmentCreatorCell
                               name={line.influencer_name ?? row.displayName}

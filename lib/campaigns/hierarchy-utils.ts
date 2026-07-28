@@ -38,6 +38,21 @@ export function assignmentChildTypeLabel(
   return titleCaseWords(raw);
 }
 
+/**
+ * Type label when a platform avatar is shown beside it — drop redundant platform prefixes
+ * (e.g. "Instagram Reel" → "Reel", "Ig Story Set" → "Story Set").
+ */
+export function assignmentChildTypeLabelBesidePlatform(
+  deliverableType: string,
+  fallbackLabel?: string | null
+): string {
+  const full = assignmentChildTypeLabel(deliverableType, fallbackLabel);
+  const stripped = full
+    .replace(/^(Instagram|TikTok|YouTube|Facebook|Snapchat|Ig|Tt|Yt|Fb|Sc)\s+/i, "")
+    .trim();
+  return stripped || full;
+}
+
 export const HIERARCHY_COLUMN_LABELS = {
   expand: "",
   select: "",

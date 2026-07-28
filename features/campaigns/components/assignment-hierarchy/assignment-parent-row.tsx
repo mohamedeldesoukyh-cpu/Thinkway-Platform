@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { AssignmentExpandToggle } from "@/features/campaigns/components/assignment-hierarchy/assignment-expand-toggle";
+import { AssignmentPlatformPills } from "@/features/campaigns/components/assignment-hierarchy/assignment-platform-pills";
 import { AssignmentOperationalStatusBadge } from "@/features/campaigns/components/assignment-operational-status-badge";
 import { LineBillingStatusBadge } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-billing-status-badge";
 import { formatOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
@@ -75,7 +76,7 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
     displayName,
     operationalStatus,
     childBillingStatus,
-    platformSummary,
+    platforms,
     postingSummary,
     opsStatusLabel,
     billingStatusLabel,
@@ -139,7 +140,10 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
           </p>
         </div>
       </TableCell>
-      <TableCell {...assignmentParentColDataAttr("creator")} className="px-1.5 py-1.5">
+      <TableCell
+        {...assignmentParentColDataAttr("creator")}
+        className="w-[108px] max-w-[120px] px-1.5 py-1.5"
+      >
         {line.influencer_name ? (
           <CreatorIdentityCell
             source={creatorProfileSourceFromAccounts(
@@ -155,7 +159,9 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
           <span className="text-muted-foreground">—</span>
         )}
       </TableCell>
-      <TableCell {...assignmentParentColDataAttr("platforms")} className="px-1.5 py-1.5">{platformSummary}</TableCell>
+      <TableCell {...assignmentParentColDataAttr("platforms")} className="w-[72px] max-w-[88px] px-1.5 py-1.5">
+        <AssignmentPlatformPills platforms={platforms} />
+      </TableCell>
       <TableCell {...assignmentParentColDataAttr("deliverables")} className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
         {rollups.deliverable_count}
       </TableCell>

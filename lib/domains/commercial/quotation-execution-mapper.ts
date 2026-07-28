@@ -1,6 +1,10 @@
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import type { LinePlatformSelection } from "@/lib/campaigns/line-assignment";
-import { deliverableTypeLines } from "@/lib/quotations/quotation-deliverable-types";
+import {
+  ALL_PLATFORMS_TYPE,
+  deliverableTypeLines,
+  postTypePlatformKey,
+} from "@/lib/quotations/quotation-deliverable-types";
 import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
 import { normalizeCreatorId } from "@/features/campaign-studio/services/studio-draft";
 
@@ -67,7 +71,12 @@ function platformKeysFromRaw(raw: string | null | undefined): string[] {
   return [...new Set(parts)];
 }
 
-function quotationDeliverablesToPlatforms(
+/**
+ * Assign each selected post type to its native / mirrored platform.
+ * Multi-platform cells (e.g. "instagram,tiktok,youtube") are package context only —
+ * they must not copy every type onto every platform.
+ */
+export function quotationDeliverablesToPlatforms(
   deliverables: QuotationDeliverable[],
   creator: UnifiedCreatorResult | null,
   item: QuotationItemExecutionRow
@@ -76,21 +85,43 @@ function quotationDeliverablesToPlatforms(
 
   for (const deliverable of deliverables) {
     const lines = deliverableTypeLines(deliverable);
-    const types = lines.flatMap((line) =>
-      Array.from({ length: Math.max(1, line.quantity) }, () => line.type.trim())
-    ).filter(Boolean);
+    const types = lines
+      .flatMap((line) =>
+        Array.from({ length: Math.max(1, line.quantity) }, () => line.type.trim())
+      )
+      .filter(Boolean);
 
-    let platformKeys = platformKeysFromRaw(deliverable.platform);
-    if (platformKeys.length === 0) {
-      platformKeys = platformKeysFromRaw(item.platform);
-    }
-    if (platformKeys.length === 0) {
-      platformKeys = ["instagram"];
-    }
+    const packagePlatforms = platformKeysFromRaw(deliverable.platform);
+    const itemPlatforms = platformKeysFromRaw(item.platform);
+    const fallbackPlatform =
+      itemPlatforms[0] ?? packagePlatforms[0] ?? "instagram";
 
-    for (const platformKey of platformKeys) {
-      const existing = grouped.get(platformKey) ?? [];
-      grouped.set(platformKey, [...existing, ...types]);
+    for (const type of types) {
+      const required = postTypePlatformKey(type);
+      let targets: string[];
+
+      if (
+        type === "mirrored_on_all_pf" ||
+        type === ALL_PLATFORMS_TYPE ||
+        type === "cross_posting"
+      ) {
+        targets =
+          packagePlatforms.length > 0
+            ? packagePlatforms
+            : itemPlatforms.length > 0
+              ? itemPlatforms
+              : [fallbackPlatform];
+      } else if (required) {
+        targets = [required];
+      } else {
+        // Platform-agnostic types (visit, event_coverage, legacy generics).
+        targets = [fallbackPlatform];
+      }
+
+      for (const platformKey of targets) {
+        const existing = grouped.get(platformKey) ?? [];
+        grouped.set(platformKey, [...existing, type]);
+      }
     }
   }
 

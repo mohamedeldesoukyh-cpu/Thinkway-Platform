@@ -34,7 +34,8 @@ export const ASSIGNMENT_CHILD_GRID_COLUMN_METAS: OperationalTableColumnMeta[] = 
   { id: "expand", label: "Expand", locked: true },
   { id: "select", label: "Select", locked: true },
   { id: "type", label: "Type" },
-  { id: "platform", label: "Platform" },
+  /** Kept for parent↔child width alignment; platform shown as avatar beside Type. */
+  { id: "platform", label: "Platform", defaultVisible: false },
   { id: "qty", label: "Qty" },
   { id: "revPerAd", label: "Rev/ad" },
   { id: "costPerAd", label: "Cost/ad" },

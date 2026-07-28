@@ -1123,6 +1123,20 @@
     vertical-align: middle;
   }
 
+  .thinkway-campaign-asgn-parent td[data-assignment-col="creator"],
+  .thinkway-campaign-asgn-col-hdrs th[data-assignment-col="creator"] {
+    width: 108px;
+    min-width: 96px;
+    max-width: 120px;
+  }
+
+  .thinkway-campaign-asgn-parent td[data-assignment-col="platforms"],
+  .thinkway-campaign-asgn-col-hdrs th[data-assignment-col="platforms"] {
+    width: 72px;
+    min-width: 64px;
+    max-width: 88px;
+  }
+
   .thinkway-campaign-asgn-parent td[data-assignment-col="assignment"],
   .thinkway-campaign-asgn-parent-open td[data-assignment-col="assignment"] {
     border-left: 3px solid var(--camp-blue);
@@ -3026,6 +3040,22 @@
   text-align: center !important;
 }
 
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent td[data-assignment-col="creator"],
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-col-hdrs th[data-assignment-col="creator"],
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table thead th[data-assignment-col="creator"] {
+  width: 108px !important;
+  min-width: 96px !important;
+  max-width: 120px !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent td[data-assignment-col="platforms"],
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-col-hdrs th[data-assignment-col="platforms"],
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table thead th[data-assignment-col="platforms"] {
+  width: 72px !important;
+  min-width: 64px !important;
+  max-width: 88px !important;
+}
+
 .thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent td[data-assignment-col="assignment"],
 .thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent-open td[data-assignment-col="assignment"] {
   border-left: 3px solid var(--camp-blue) !important;
@@ -3059,6 +3089,14 @@
 .thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child td[data-child-col="type"] {
   border-left: 3px solid var(--camp-child-accent) !important;
   padding-left: 28px !important;
+  text-align: left !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child-hdr th[data-child-col="platform"],
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child-hdr td[data-child-col="platform"],
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child td[data-child-col="platform"] {
+  padding-left: 4px !important;
+  padding-right: 4px !important;
 }
 
 .thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child-hdr td[data-child-col="expand"],

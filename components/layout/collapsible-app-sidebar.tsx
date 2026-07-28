@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentType, ReactNode } from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   ActivityIcon,
@@ -27,8 +27,9 @@ import {
   ListIcon,
   MegaphoneIcon,
   PanelLeftCloseIcon,
-  PanelLeftOpenIcon,
   PercentIcon,
+  PinIcon,
+  PinOffIcon,
   ReceiptIcon,
   RefreshCwIcon,
   SearchIcon,
@@ -55,11 +56,11 @@ import {
 } from "@/components/ui/tooltip";
 import { isIntelligenceEnabled } from "@/lib/intelligence/feature-flag";
 import {
+  APP_SIDEBAR_PEEK_CLOSE_DELAY_MS,
   APP_SIDEBAR_WIDTH_COLLAPSED,
   APP_SIDEBAR_WIDTH_CSS_VAR,
   APP_SIDEBAR_WIDTH_EXPANDED,
   getAppSidebarLayoutWidth,
-  resolveAppSidebarExpanded,
 } from "@/lib/layout/app-sidebar-width";
 import { cn } from "@/lib/utils";
 
@@ -272,6 +273,7 @@ const navGroups: NavGroup[] = [
 
 const ALL_GROUP_LABELS = navGroups.map((g) => g.label);
 const STORAGE_EXPANDED = "thinkway-sidebar-expanded";
+const STORAGE_PINNED = "thinkway-sidebar-pinned";
 const STORAGE_COLLAPSED_GROUPS = "thinkway-sidebar-collapsed-groups";
 
 const RAIL_PRIMARY_HREF: Record<string, string> = {
@@ -397,14 +399,18 @@ function readCollapsedGroups(): Set<string> {
   }
 }
 
-function readSidebarExpanded(): boolean {
-  if (typeof window === "undefined") return true;
+/** Pinned = stays open. Unpinned = rail + edge peek with delayed close. */
+function readSidebarPinned(): boolean {
+  if (typeof window === "undefined") return false;
   try {
-    const raw = localStorage.getItem(STORAGE_EXPANDED);
-    if (raw === null) return true;
-    return raw === "true";
+    const pinned = localStorage.getItem(STORAGE_PINNED);
+    if (pinned !== null) return pinned === "true";
+    // Migrate legacy expand toggle: expanded → pinned, collapsed → auto.
+    const legacy = localStorage.getItem(STORAGE_EXPANDED);
+    if (legacy === null) return false;
+    return legacy === "true";
   } catch {
-    return true;
+    return false;
   }
 }
 
@@ -417,14 +423,36 @@ function initialCollapsedGroups(pathname: string): Set<string> {
 
 export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps) {
   const pathname = usePathname();
-  const [expanded, setExpanded] = useState(true);
+  const [pinned, setPinned] = useState(false);
+  const [peekOpen, setPeekOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState(() =>
     initialCollapsedGroups(pathname)
   );
   const [hydrated, setHydrated] = useState(false);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearCloseTimer = useCallback(() => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  }, []);
+
+  const openPeek = useCallback(() => {
+    clearCloseTimer();
+    setPeekOpen(true);
+  }, [clearCloseTimer]);
+
+  const scheduleClosePeek = useCallback(() => {
+    clearCloseTimer();
+    closeTimerRef.current = setTimeout(() => {
+      setPeekOpen(false);
+      closeTimerRef.current = null;
+    }, APP_SIDEBAR_PEEK_CLOSE_DELAY_MS);
+  }, [clearCloseTimer]);
 
   useEffect(() => {
-    setExpanded(readSidebarExpanded());
+    setPinned(readSidebarPinned());
     const hasStored = localStorage.getItem(STORAGE_COLLAPSED_GROUPS) !== null;
     if (hasStored) {
       const stored = readCollapsedGroups();
@@ -434,6 +462,9 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
       setCollapsedGroups(next);
     }
     setHydrated(true);
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -452,22 +483,32 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
     });
   }, [pathname, hydrated]);
 
-  const persistExpanded = useCallback((value: boolean) => {
-    setExpanded(value);
-    localStorage.setItem(STORAGE_EXPANDED, String(value));
-  }, []);
+  const persistPinned = useCallback(
+    (value: boolean) => {
+      setPinned(value);
+      localStorage.setItem(STORAGE_PINNED, String(value));
+      localStorage.setItem(STORAGE_EXPANDED, String(value));
+      clearCloseTimer();
+      if (value) setPeekOpen(false);
+    },
+    [clearCloseTimer]
+  );
 
-  const displayExpanded = resolveAppSidebarExpanded(expanded);
+  const displayExpanded = pinned || peekOpen;
+  const layoutPinned = pinned;
 
   useEffect(() => {
     if (!hydrated) return;
     document.documentElement.style.setProperty(
       APP_SIDEBAR_WIDTH_CSS_VAR,
-      getAppSidebarLayoutWidth(displayExpanded)
+      getAppSidebarLayoutWidth(layoutPinned)
     );
-  }, [displayExpanded, hydrated]);
+  }, [layoutPinned, hydrated]);
 
-  const sidebarWidth = displayExpanded
+  const layoutWidth = layoutPinned
+    ? APP_SIDEBAR_WIDTH_EXPANDED
+    : APP_SIDEBAR_WIDTH_COLLAPSED;
+  const panelWidth = displayExpanded
     ? APP_SIDEBAR_WIDTH_EXPANDED
     : APP_SIDEBAR_WIDTH_COLLAPSED;
 
@@ -487,20 +528,29 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
   return (
     <TooltipProvider delayDuration={300}>
       <div
-        className="relative hidden shrink-0 self-stretch overflow-hidden transition-all duration-300 ease-in-out md:sticky md:top-0 md:block md:h-full md:max-h-full"
-        style={{ width: sidebarWidth }}
+        className="relative hidden shrink-0 self-stretch transition-all duration-300 ease-in-out md:sticky md:top-0 md:block md:h-full md:max-h-full"
+        style={{ width: layoutWidth }}
       >
+        {/* Screen-edge hit target when unpinned (escapes shell overflow clipping). */}
+        {!pinned ? (
+          <div
+            className="pointer-events-auto fixed inset-y-0 left-0 z-40 w-3"
+            aria-hidden
+            onPointerEnter={openPeek}
+          />
+        ) : null}
+
         <aside
           className={cn(
-            "thinkway-app-sidebar absolute flex flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out",
+            "thinkway-app-sidebar flex flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out",
+            !pinned && peekOpen
+              ? "fixed inset-y-0 left-0 z-50 shadow-[4px_0_24px_rgba(15,23,42,0.12)] dark:shadow-[4px_0_24px_rgba(0,0,0,0.45)]"
+              : "absolute inset-y-0 left-0",
             !displayExpanded && "thinkway-app-sidebar--rail"
           )}
-          style={{
-            left: 0,
-            top: 0,
-            height: "100%",
-            width: sidebarWidth,
-          }}
+          style={{ width: panelWidth }}
+          onPointerEnter={pinned ? undefined : openPeek}
+          onPointerLeave={pinned ? undefined : scheduleClosePeek}
         >
           <div
             className={cn(
@@ -514,14 +564,47 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
               <ThinkwayLogo showText={displayExpanded} compact className="mb-0" />
             </AppNavLink>
             {displayExpanded ? (
-              <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+              <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
                 <span aria-hidden className="h-6 w-px shrink-0 bg-[#e2e8f0] dark:bg-border" />
-                <SidebarRailTooltip label="Collapse to icons">
+                {pinned ? (
+                  <SidebarRailTooltip label="Unpin — auto-hide sidebar">
+                    <button
+                      type="button"
+                      onClick={() => persistPinned(false)}
+                      className={sidebarControlButtonClass}
+                      aria-label="Unpin sidebar"
+                      aria-pressed={true}
+                    >
+                      <PinOffIcon className="size-4" />
+                    </button>
+                  </SidebarRailTooltip>
+                ) : (
+                  <SidebarRailTooltip label="Pin sidebar open">
+                    <button
+                      type="button"
+                      onClick={() => persistPinned(true)}
+                      className={sidebarControlButtonClass}
+                      aria-label="Pin sidebar open"
+                      aria-pressed={false}
+                    >
+                      <PinIcon className="size-4" />
+                    </button>
+                  </SidebarRailTooltip>
+                )}
+                <SidebarRailTooltip
+                  label={pinned ? "Collapse to icons" : "Close sidebar"}
+                >
                   <button
                     type="button"
-                    onClick={() => persistExpanded(false)}
+                    onClick={() => {
+                      if (pinned) persistPinned(false);
+                      else {
+                        clearCloseTimer();
+                        setPeekOpen(false);
+                      }
+                    }}
                     className={sidebarControlButtonClass}
-                    aria-label="Collapse to icons"
+                    aria-label={pinned ? "Collapse to icons" : "Close sidebar"}
                   >
                     <PanelLeftCloseIcon className="size-4" />
                   </button>
@@ -559,14 +642,14 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
 
               <div className="min-h-3 flex-1" aria-hidden />
 
-              <SidebarRailTooltip label="Expand sidebar">
+              <SidebarRailTooltip label="Pin sidebar open">
                 <button
                   type="button"
-                  onClick={() => persistExpanded(true)}
+                  onClick={() => persistPinned(true)}
                   className={sidebarControlButtonClass}
-                  aria-label="Expand sidebar"
+                  aria-label="Pin sidebar open"
                 >
-                  <PanelLeftOpenIcon className="size-4" />
+                  <PinIcon className="size-4" />
                 </button>
               </SidebarRailTooltip>
             </nav>
