@@ -78,7 +78,9 @@ export type CommercialSsotAuditEvent =
   | "commercial.master_synced"
   | "commercial.sync_blocked_finance_lock"
   | "commercial.sync_rejected"
-  | "commercial.sync_not_confirmed";
+  | "commercial.sync_not_confirmed"
+  | "commercial.sync_rolled_back"
+  | "commercial.sync_conflict";
 
 export type AuditVerdict = "PASS" | "WARN" | "FAIL";
 

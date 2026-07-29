@@ -4,7 +4,9 @@ import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { useConfirmAction } from "@/components/shared/confirm-action-provider";
 import { InfluencerTypeahead } from "@/components/forms/influencer-typeahead";
+import { COMMERCIAL_SYNC_CONFIRMATION_REQUIRED } from "@/lib/services/commercial/confirmation-copy";
 import { VatAmountSection } from "@/components/forms/vat-amount-section";
 import { FieldError } from "@/components/forms/field-error";
 import { Badge } from "@/components/ui/badge";
@@ -102,6 +104,7 @@ export function CampaignLineSheet({
   onOpenChange,
 }: CampaignLineSheetProps) {
   const router = useRouter();
+  const { confirm } = useConfirmAction();
   const isEdit = line !== null;
   const [assignmentStatus, setAssignmentStatus] =
     useState<CampaignLineAssignmentStatus>(line?.assignment_status ?? "assigned");
@@ -149,6 +152,8 @@ export function CampaignLineSheet({
   const poExceededAmountRef = useRef(0);
   const [ioRevisionOpen, setIoRevisionOpen] = useState(false);
   const ioRevisionAckRef = useRef(false);
+  const [confirmCommercialSync, setConfirmCommercialSync] = useState(false);
+  const commercialSyncPromptedRef = useRef(false);
 
   const [createState, createAction, createPending] = useActionState(
     createCampaignLineAction,
@@ -441,6 +446,8 @@ export function CampaignLineSheet({
       poExceededAmountRef.current = 0;
       setIoRevisionOpen(false);
       ioRevisionAckRef.current = false;
+      setConfirmCommercialSync(false);
+      commercialSyncPromptedRef.current = false;
     }
   }, [open]);
 
@@ -454,12 +461,40 @@ export function CampaignLineSheet({
           { duration: 6000 }
         );
       }
+      setConfirmCommercialSync(false);
+      commercialSyncPromptedRef.current = false;
       router.refresh();
       onOpenChange(false);
       return;
     }
+
+    if (
+      state.code === COMMERCIAL_SYNC_CONFIRMATION_REQUIRED &&
+      !commercialSyncPromptedRef.current
+    ) {
+      commercialSyncPromptedRef.current = true;
+      submitLockRef.current = false;
+      void (async () => {
+        const accepted = await confirm({
+          title:
+            state.commercialSync?.confirmationTitle ?? "Update linked Quotation?",
+          description:
+            state.commercialSync?.confirmationDescription ??
+            "Updating these commercial values will automatically update both the Quotation and the Campaign.",
+          confirmLabel: "Continue",
+        });
+        if (!accepted) {
+          commercialSyncPromptedRef.current = false;
+          return;
+        }
+        setConfirmCommercialSync(true);
+        queueMicrotask(() => formRef.current?.requestSubmit());
+      })();
+      return;
+    }
+
     toast.error(state.message);
-  }, [state, onOpenChange, router, currencyCode]);
+  }, [state, onOpenChange, router, currencyCode, confirm]);
 
   async function loadProfile(id: string, existing?: PlatformSelectionState[]) {
     setLoadingProfile(true);
@@ -695,6 +730,16 @@ export function CampaignLineSheet({
         <DetailFormScrollBody>
           <input type="hidden" name="campaign_id" value={campaignId} />
           {isEdit ? <input type="hidden" name="line_id" value={line.id} /> : null}
+          {confirmCommercialSync ? (
+            <input type="hidden" name="confirm_commercial_sync" value="1" />
+          ) : null}
+          {confirmCommercialSync ? (
+            <input
+              type="hidden"
+              name="commercial_sync_idempotency_key"
+              value={`campaign-line:${line?.id ?? "new"}:${campaignId}`}
+            />
+          ) : null}
           <input type="hidden" name="influencer_id" value={influencerId} />
           <input type="hidden" name="assignment_json" value={assignmentJson} />
           <input type="hidden" name="assignment_status" value={assignmentStatus} />

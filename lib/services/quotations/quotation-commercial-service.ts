@@ -3,6 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { syncQuotationChangeToShortlist } from "@/lib/commercial-sync/engine";
 import { resolveRateToEgp } from "@/lib/commercial/fx-server";
 import { normalizeCommercialLine, computeQuotationTotals } from "@/lib/commercial/quotation-engine";
+import { applyQuotationMasterSyncIfLinked } from "@/lib/services/commercial/linked-commercial-gate";
+import type { MasterCommercialValues } from "@/lib/services/commercial/types";
 import type { CommercialInputMode, Database } from "@/types/database";
 
 import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-types";
@@ -62,7 +64,12 @@ export async function updateQuotationItemCommercials(
     followers?: number | null;
     engagement_rate?: number | null;
   },
-  options?: { skipTotalsRecompute?: boolean }
+  options?: {
+    skipTotalsRecompute?: boolean;
+    confirmCommercialSync?: boolean;
+    idempotencyKey?: string;
+    expectedConcurrencyToken?: string;
+  }
 ) {
   const rate = await resolveRateToEgp(supabase, input.cost_currency);
   const rolled = input.deliverables?.length
@@ -83,21 +90,54 @@ export async function updateQuotationItemCommercials(
     fxRateToEgp: rate,
   });
 
-  const patch: Record<string, unknown> = {
-    commercial_input_mode: line.commercial_input_mode,
-    cost: line.cost,
+  const masterChanges: MasterCommercialValues = {
+    creator_cost: line.cost,
+    client_revenue: line.revenue,
     cost_currency: line.cost_currency,
-    revenue: line.revenue,
-    gp_pct: line.gp_pct,
-    gp_value: line.gp_value,
-    af_pct: line.af_pct,
-    af_value: line.af_value,
-    fx_rate_to_egp: line.fx_rate_to_egp,
-    cost_egp: line.cost_egp,
-    revenue_egp: line.revenue_egp,
-    gp_value_egp: line.gp_value_egp,
-    af_value_egp: line.af_value_egp,
+    exchange_rate: line.fx_rate_to_egp,
+    agency_fee_percent: line.af_pct,
+    commercial_input_mode: line.commercial_input_mode,
+    gp_pct_input: line.gp_pct,
+    gp_value_input: line.gp_value,
   };
+
+  const gate = await applyQuotationMasterSyncIfLinked(supabase, {
+    actorId: userId,
+    quotationItemId: input.item_id,
+    changes: masterChanges,
+    options: {
+      confirmCommercialSync: options?.confirmCommercialSync,
+      idempotencyKey: options?.idempotencyKey,
+      expectedConcurrencyToken: options?.expectedConcurrencyToken,
+    },
+  });
+
+  if (!gate.ok) {
+    return {
+      ok: false as const,
+      message: gate.message,
+      code: gate.code,
+      commercialSync: gate.commercialSync,
+    };
+  }
+
+  const patch: Record<string, unknown> = gate.synced
+    ? {}
+    : {
+        commercial_input_mode: line.commercial_input_mode,
+        cost: line.cost,
+        cost_currency: line.cost_currency,
+        revenue: line.revenue,
+        gp_pct: line.gp_pct,
+        gp_value: line.gp_value,
+        af_pct: line.af_pct,
+        af_value: line.af_value,
+        fx_rate_to_egp: line.fx_rate_to_egp,
+        cost_egp: line.cost_egp,
+        revenue_egp: line.revenue_egp,
+        gp_value_egp: line.gp_value_egp,
+        af_value_egp: line.af_value_egp,
+      };
   if (input.deliverables) patch.deliverables = input.deliverables;
   if (input.option_number !== undefined) {
     patch.option_number =
@@ -113,15 +153,19 @@ export async function updateQuotationItemCommercials(
   if (input.followers !== undefined) patch.followers = input.followers;
   if (input.engagement_rate !== undefined) patch.engagement_rate = input.engagement_rate;
 
-  const { error } = await supabase
-    .from("quotation_items")
-    .update(patch as never)
-    .eq("id", input.item_id);
-  if (error) return { ok: false as const, message: error.message };
+  if (Object.keys(patch).length > 0) {
+    const { error } = await supabase
+      .from("quotation_items")
+      .update(patch as never)
+      .eq("id", input.item_id);
+    if (error) return { ok: false as const, message: error.message };
+  }
 
+  // Sync service already recalculates when linked; still recompute unless deferred.
   const totals = options?.skipTotalsRecompute
     ? null
     : await recomputeQuotationTotals(supabase, input.quotation_id);
+
   await syncQuotationChangeToShortlist(supabase, {
     quotationId: input.quotation_id,
     actorId: userId,
@@ -138,6 +182,7 @@ export async function updateQuotationItemCommercials(
     ok: true as const,
     totals,
     fx_rate_to_egp: line.fx_rate_to_egp,
+    commercialSynced: gate.synced,
   };
 }
 

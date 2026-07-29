@@ -191,11 +191,18 @@ export async function updateQuotationItemCommercials(
     followers?: number | null;
     engagement_rate?: number | null;
   },
-  options?: { deferRevalidate?: boolean; skipTotalsRecompute?: boolean }
+  options?: {
+    deferRevalidate?: boolean;
+    skipTotalsRecompute?: boolean;
+    confirmCommercialSync?: boolean;
+    idempotencyKey?: string;
+    expectedConcurrencyToken?: string;
+  }
 ): Promise<
   ActionResult<{
     totals: ReturnType<typeof computeQuotationTotals> | null;
     fx_rate_to_egp: number;
+    commercialSynced?: boolean;
   }>
 > {
   const actor = await getActor();
@@ -204,13 +211,35 @@ export async function updateQuotationItemCommercials(
     actor.supabase,
     actor.userId,
     input,
-    { skipTotalsRecompute: options?.skipTotalsRecompute }
+    {
+      skipTotalsRecompute: options?.skipTotalsRecompute,
+      confirmCommercialSync: options?.confirmCommercialSync,
+      idempotencyKey: options?.idempotencyKey,
+      expectedConcurrencyToken: options?.expectedConcurrencyToken,
+    }
   );
-  if (result.ok && !options?.deferRevalidate) revalidate(input.quotation_id);
-  if (!result.ok) return result;
+  if (result.ok && !options?.deferRevalidate) {
+    revalidate(input.quotation_id);
+    // Refresh campaigns list/detail when Master commercials synced across.
+    if (result.commercialSynced) {
+      revalidatePath("/campaigns");
+    }
+  }
+  if (!result.ok) {
+    return {
+      ok: false,
+      message: result.message,
+      code: result.code,
+      commercialSync: result.commercialSync,
+    };
+  }
   return {
     ok: true,
-    data: { totals: result.totals, fx_rate_to_egp: result.fx_rate_to_egp },
+    data: {
+      totals: result.totals,
+      fx_rate_to_egp: result.fx_rate_to_egp,
+      commercialSynced: result.commercialSynced,
+    },
   };
 }
 

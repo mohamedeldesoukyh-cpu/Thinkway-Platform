@@ -20,6 +20,24 @@ export {
 export type { CommercialAuditEvent } from "./commercial-audit";
 
 export {
+  COMMERCIAL_SYNC_CONFIRMATION_REQUIRED,
+  commercialSyncConfirmationCopy,
+  financeLockConfirmationCopy,
+} from "./confirmation-copy";
+
+export {
+  applyCampaignMasterSyncIfLinked,
+  applyQuotationMasterSyncIfLinked,
+} from "./linked-commercial-gate";
+
+export {
+  probeCommercialLinkByAssignment,
+  probeCommercialLinkByQuotationItem,
+} from "./probe-commercial-link";
+
+export { createSupabaseCommercialSyncPorts } from "./supabase-ports";
+
+export {
   ABSOLUTE_MASTER_KEYS,
   RATE_MASTER_KEYS,
   allocateMasterAcrossAssignments,
@@ -42,6 +60,7 @@ export {
   CommercialSynchronizationService,
   createCommercialSynchronizationService,
   financeLockStub,
+  pickRateMasterChanges,
 } from "./commercial-synchronization-service";
 
 export type {
@@ -55,7 +74,9 @@ export type {
   CommercialLineRegistryEntry,
   CommercialMasterFieldKey,
   CommercialOperationalFieldKey,
+  CommercialSyncLinkProbe,
   CommercialSyncPorts,
+  CommercialSyncResultStatus,
   CommercialSyncSource,
   FinanceLockResult,
   MasterCommercialValues,

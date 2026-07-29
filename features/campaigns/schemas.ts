@@ -160,6 +160,11 @@ export const createCampaignLineSchema = z.object({
 
 export const updateCampaignLineSchema = createCampaignLineSchema.extend({
   line_id: z.string().uuid(),
+  confirm_commercial_sync: z
+    .enum(["0", "1", "true", "false"])
+    .optional()
+    .transform((v) => v === "1" || v === "true"),
+  commercial_sync_idempotency_key: z.string().trim().max(128).optional().or(z.literal("")),
 });
 
 /** @deprecated Use createCampaignLineSchema — manual vendor linking is no longer supported. */

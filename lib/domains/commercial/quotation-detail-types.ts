@@ -5,7 +5,23 @@ import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-ty
 
 export type ActionResult<T = undefined> =
   | { ok: true; message?: string; data?: T }
-  | { ok: false; message: string };
+  | {
+      ok: false;
+      message: string;
+      code?: string;
+      commercialSync?: {
+        linked?: boolean;
+        commercialLineId?: string | null;
+        quotationId?: string | null;
+        quotationSerial?: string | null;
+        campaignHeaderId?: string | null;
+        campaignDocumentNumber?: string | null;
+        assignmentIds?: string[];
+        concurrencyToken?: string | null;
+        confirmationTitle?: string;
+        confirmationDescription?: string;
+      };
+    };
 
 export type { QuotationDeliverable };
 

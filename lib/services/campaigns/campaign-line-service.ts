@@ -24,6 +24,9 @@ import {
   type LinePlatformSelection,
 } from "@/lib/campaigns/line-assignment";
 
+import { applyCampaignMasterSyncIfLinked } from "@/lib/services/commercial/linked-commercial-gate";
+import type { MasterCommercialValues } from "@/lib/services/commercial/types";
+
 import {
   emptyToNull,
   resolveAssignmentCommercialBilling,
@@ -347,6 +350,8 @@ export async function createCampaignLine(
 
 export type UpdateCampaignLineInput = CampaignLineMutationInput & {
   line_id: string;
+  confirm_commercial_sync?: boolean;
+  commercial_sync_idempotency_key?: string;
 };
 
 export async function updateCampaignLine(
@@ -355,7 +360,18 @@ export async function updateCampaignLine(
   parsed: UpdateCampaignLineInput
 ): Promise<
   | { ok: true; message: string; clientId?: string; reviseVendorIo: boolean }
-  | { ok: false; message: string }
+  | {
+      ok: false;
+      message: string;
+      code?: string;
+      commercialSync?: {
+        quotationSerial?: string | null;
+        campaignDocumentNumber?: string | null;
+        concurrencyToken?: string | null;
+        confirmationTitle?: string;
+        confirmationDescription?: string;
+      };
+    }
 > {
   const { data: existingLine, error: lineError } = await fetchCampaignLineById(
     supabase,
@@ -382,6 +398,16 @@ export async function updateCampaignLine(
     metadata?: Record<string, unknown> | null;
     operational_status?: string | null;
     invoice_id?: string | null;
+    source_quotation_item_id?: string | null;
+    agency_fee_percent?: number | null;
+    currency_code?: string | null;
+    fx_rate?: number | null;
+    usage_rights_amount?: number | null;
+    usage_rights_cost?: number | null;
+    revenue_vat_percent?: number | null;
+    cost_vat_percent?: number | null;
+    revenue_vat_exempt?: boolean | null;
+    cost_vat_exempt?: boolean | null;
   };
 
   const financeOverrideActive = hasActiveFinanceOverride(
@@ -390,6 +416,58 @@ export async function updateCampaignLine(
 
   const revenueBeforeVat = parsed.revenue_before_vat ?? parsed.revenue;
   const costBeforeVat = parsed.cost_before_vat ?? parsed.cost;
+
+  if (existingLineMeta.source_quotation_item_id) {
+    const masterChanges: MasterCommercialValues = {
+      creator_cost: costBeforeVat,
+      client_revenue: revenueBeforeVat,
+      cost_currency: parsed.currency_code ?? existingLineMeta.currency_code ?? "EGP",
+      agency_fee_percent: parsed.agency_fee_percent,
+      usage_rights_amount: parsed.usage_rights_amount,
+      usage_rights_cost: parsed.usage_rights_cost,
+      revenue_vat_percent: parsed.revenue_vat_percent,
+      cost_vat_percent: parsed.cost_vat_percent,
+      revenue_vat_exempt: parsed.revenue_vat_exempt ?? false,
+      cost_vat_exempt: parsed.cost_vat_exempt ?? true,
+    };
+    if (parsed.fx_rate != null) masterChanges.exchange_rate = parsed.fx_rate;
+
+    const mastersChanged =
+      Number(existingLineMeta.cost_before_vat ?? existingLineMeta.cost) !==
+        Number(costBeforeVat) ||
+      Number(existingLineMeta.revenue_before_vat ?? existingLineMeta.revenue) !==
+        Number(revenueBeforeVat) ||
+      Number(existingLineMeta.agency_fee_percent ?? 0) !==
+        Number(parsed.agency_fee_percent) ||
+      Number(existingLineMeta.usage_rights_amount ?? 0) !==
+        Number(parsed.usage_rights_amount) ||
+      Number(existingLineMeta.usage_rights_cost ?? 0) !==
+        Number(parsed.usage_rights_cost) ||
+      (parsed.currency_code != null &&
+        parsed.currency_code !== existingLineMeta.currency_code) ||
+      (parsed.fx_rate != null &&
+        Number(parsed.fx_rate) !== Number(existingLineMeta.fx_rate ?? 0));
+
+    if (mastersChanged) {
+      const gate = await applyCampaignMasterSyncIfLinked(supabase, {
+        actorId: userId,
+        assignmentId: parsed.line_id,
+        changes: masterChanges,
+        options: {
+          confirmCommercialSync: parsed.confirm_commercial_sync,
+          idempotencyKey: parsed.commercial_sync_idempotency_key,
+        },
+      });
+      if (!gate.ok) {
+        return {
+          ok: false,
+          message: gate.message,
+          code: gate.code,
+          commercialSync: gate.commercialSync,
+        };
+      }
+    }
+  }
 
   if (
     existingLineMeta.revenue_locked &&

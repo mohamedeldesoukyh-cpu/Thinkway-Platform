@@ -174,13 +174,20 @@ export async function updateCampaignLineAction(
 
   const result = await updateCampaignLine(supabase, user.id, parsed.data);
   if (!result.ok) {
-    return { ok: false, message: result.message };
+    return {
+      ok: false,
+      message: result.message,
+      code: result.code,
+      commercialSync: result.commercialSync,
+    };
   }
 
   revalidateCampaign(parsed.data.campaign_id, result.clientId);
   if (result.reviseVendorIo) {
     revalidatePath("/ios/vendor");
   }
+  // Also refresh linked quotation when commercials synced.
+  revalidatePath("/quotations");
   return { ok: true, message: result.message };
 }
 

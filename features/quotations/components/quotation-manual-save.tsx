@@ -14,7 +14,9 @@ import { useRouter } from "next/navigation";
 import { startTransition } from "react";
 import { toast } from "sonner";
 
+import { useConfirmAction } from "@/components/shared/confirm-action-provider";
 import { useRegisterShortcut } from "@/lib/productivity/keyboard-shortcuts";
+import { COMMERCIAL_SYNC_CONFIRMATION_REQUIRED } from "@/lib/services/commercial/confirmation-copy";
 
 import {
   finalizeQuotationSave,
@@ -113,6 +115,7 @@ type ProviderProps = {
 
 export function QuotationManualSaveProvider({ quotationId, items, children }: ProviderProps) {
   const router = useRouter();
+  const { confirm } = useConfirmAction();
   const linePendingRef = useRef(new Map<string, QuotationLinePendingPayload>());
   const metaPendingRef = useRef<QuotationMetaPendingPayload | null>(null);
   const clientBrandPendingRef = useRef<QuotationClientBrandPendingPayload | null>(null);
@@ -246,38 +249,76 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
       return item && linePendingDiffersFromItem(item, payload);
     });
 
-    const saveOptions = { deferRevalidate: true, skipTotalsRecompute: true } as const;
+    const saveLines = async (confirmCommercialSync: boolean) => {
+      const saveOptions = {
+        deferRevalidate: true,
+        skipTotalsRecompute: true,
+        confirmCommercialSync,
+      } as const;
 
-    const lineResults = await Promise.all(
-      pendingEntries.map(async ([itemId, payload]) => {
-        const item = itemById.get(itemId);
-        if (!item) return { ok: true as const };
+      return Promise.all(
+        pendingEntries.map(async ([itemId, payload]) => {
+          const item = itemById.get(itemId);
+          if (!item) return { ok: true as const };
 
-        const rolled = payload.deliverables?.length
-          ? rollupDeliverableCommercials(payload.deliverables, {
-              lineCurrency: item.cost_currency || "EGP",
-              fxRateToEgp: item.fx_rate_to_egp ?? 1,
-              lineAfPct: payload.af_pct ?? item.af_pct,
-            })
-          : null;
+          const rolled = payload.deliverables?.length
+            ? rollupDeliverableCommercials(payload.deliverables, {
+                lineCurrency: item.cost_currency || "EGP",
+                fxRateToEgp: item.fx_rate_to_egp ?? 1,
+                lineAfPct: payload.af_pct ?? item.af_pct,
+              })
+            : null;
 
-        return updateQuotationItemCommercials(
-          {
-            item_id: itemId,
-            quotation_id: quotationId,
-            ...payload,
-            mode: (rolled ? "cost_revenue" : item.commercial_input_mode) as CommercialInputMode,
-            cost: rolled?.cost ?? payload.cost ?? item.cost,
-            cost_currency: item.cost_currency,
-            gp_pct: rolled?.gpPct ?? payload.gp_pct ?? item.gp_pct,
-            revenue: rolled?.revenue ?? payload.revenue ?? item.revenue,
-            gp_value: rolled?.gpValue ?? payload.gp_value ?? item.gp_value,
-            af_pct: rolled?.afPct ?? payload.af_pct ?? item.af_pct,
-          },
-          saveOptions
-        );
-      })
+          return updateQuotationItemCommercials(
+            {
+              item_id: itemId,
+              quotation_id: quotationId,
+              ...payload,
+              mode: (rolled
+                ? "cost_revenue"
+                : item.commercial_input_mode) as CommercialInputMode,
+              cost: rolled?.cost ?? payload.cost ?? item.cost,
+              cost_currency: item.cost_currency,
+              gp_pct: rolled?.gpPct ?? payload.gp_pct ?? item.gp_pct,
+              revenue: rolled?.revenue ?? payload.revenue ?? item.revenue,
+              gp_value: rolled?.gpValue ?? payload.gp_value ?? item.gp_value,
+              af_pct: rolled?.afPct ?? payload.af_pct ?? item.af_pct,
+            },
+            {
+              ...saveOptions,
+              idempotencyKey: confirmCommercialSync
+                ? `quote-save:${quotationId}:${itemId}:${Date.now()}`
+                : undefined,
+            }
+          );
+        })
+      );
+    };
+
+    let lineResults = await saveLines(false);
+    const syncGate = lineResults.find(
+      (res) =>
+        !res.ok &&
+        "code" in res &&
+        res.code === COMMERCIAL_SYNC_CONFIRMATION_REQUIRED
     );
+    if (syncGate && !syncGate.ok && "commercialSync" in syncGate) {
+      const meta = syncGate.commercialSync;
+      const accepted = await confirm({
+        title: meta?.confirmationTitle ?? "Update linked Campaign?",
+        description:
+          meta?.confirmationDescription ??
+          "Updating these commercial values will automatically update both the Quotation and the Campaign.",
+        confirmLabel: "Continue",
+      });
+      if (!accepted) {
+        setSavePending(false);
+        savePendingRef.current = false;
+        setSaveStatus("pending");
+        return false;
+      }
+      lineResults = await saveLines(true);
+    }
 
     for (const res of lineResults) {
       if (!res.ok && !firstError) firstError = res.message;
@@ -347,7 +388,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
       router.refresh();
     });
     return true;
-  }, [quotationId, router]);
+  }, [quotationId, router, confirm]);
 
   const saveAllRef = useRef(saveAll);
   saveAllRef.current = saveAll;

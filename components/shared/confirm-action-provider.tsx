@@ -78,7 +78,9 @@ export function ConfirmActionProvider({ children }: { children: ReactNode }) {
         <DialogContent showCloseButton={false} className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{options?.title ?? "Are you sure?"}</DialogTitle>
-            <DialogDescription>{options?.description}</DialogDescription>
+            <DialogDescription className="whitespace-pre-line">
+              {options?.description}
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => handleClose(false)}>

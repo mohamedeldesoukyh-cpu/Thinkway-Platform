@@ -4,25 +4,24 @@
  *
  * Spec: docs/architecture/COMMERCIAL_SSOT_QUOTE_CAMPAIGN.md §5–§6
  *
- * Phase 1: foundation (registry, identity, audit, sync by CML ID).
- * Phase 2: UI confirmation + wire into editors.
- * Phase 3: real Campaign.isFinanceLocked() implementation.
- * Phase 4: Commercial Revision path.
+ * Sync is registry-driven: new Master fields require Field Registry updates only.
  */
 
 import {
   allocateMasterAcrossAssignments,
   assertOnlyMasterChanges,
+  RATE_MASTER_KEYS,
 } from "./field-registry";
 import type {
   ApplyMasterChangeInput,
   ApplyMasterChangeResult,
+  CommercialAuditEntry,
   CommercialSyncPorts,
   FinanceLockResult,
   MasterCommercialValues,
 } from "./types";
 
-/** Phase 1 stub — always unlocked. Phase 3 replaces via ports.isFinanceLocked. */
+/** Phase 1–2 stub — always unlocked. Phase 3 replaces via ports.isFinanceLocked. */
 export async function financeLockStub(
   _campaignHeaderId: string
 ): Promise<FinanceLockResult> {
@@ -35,12 +34,16 @@ export class CommercialSynchronizationService {
   /**
    * Apply Master commercial changes from Quotation or Campaign and sync peers
    * by immutable Commercial Line ID.
+   *
+   * Re-entrancy safe: does not call itself; peers are written through ports only.
    */
   async applyMasterChange(
     input: ApplyMasterChangeInput
   ): Promise<ApplyMasterChangeResult> {
+    const occurredAt = new Date().toISOString();
+
     if (!input.confirmed) {
-      await this.ports.writeAudit({
+      await this.audit({
         event: "commercial.sync_not_confirmed",
         actorId: input.actorId,
         commercialLineId: null,
@@ -48,6 +51,8 @@ export class CommercialSynchronizationService {
         campaignHeaderId: null,
         assignmentIds: [],
         sourceSide: input.source.side,
+        occurredAt,
+        result: "not_confirmed",
         oldData: null,
         newData: { changes: input.changes },
       });
@@ -72,7 +77,7 @@ export class CommercialSynchronizationService {
 
     const masterCheck = assertOnlyMasterChanges(input.changes);
     if (!masterCheck.ok) {
-      await this.ports.writeAudit({
+      await this.audit({
         event: "commercial.sync_rejected",
         actorId: input.actorId,
         commercialLineId: null,
@@ -80,6 +85,8 @@ export class CommercialSynchronizationService {
         campaignHeaderId: null,
         assignmentIds: [],
         sourceSide: input.source.side,
+        occurredAt,
+        result: "rejected",
         oldData: null,
         newData: { changes: input.changes },
         metadata: {
@@ -96,6 +103,37 @@ export class CommercialSynchronizationService {
       };
     }
 
+    const idempotencyKey = input.idempotencyKey?.trim() || null;
+    if (idempotencyKey) {
+      const prior = await this.ports.getIdempotentResult(idempotencyKey);
+      if (prior) {
+        return { ...prior, duplicate: true };
+      }
+      const began = await this.ports.tryBeginIdempotent(idempotencyKey);
+      if (!began) {
+        return {
+          ok: false,
+          code: "DUPLICATE_IN_FLIGHT",
+          message:
+            "A commercial synchronization with this request is already in progress",
+        };
+      }
+    }
+
+    try {
+      return await this.executeConfirmedChange(input, occurredAt, changeKeys);
+    } finally {
+      if (idempotencyKey) {
+        await this.ports.endIdempotent(idempotencyKey);
+      }
+    }
+  }
+
+  private async executeConfirmedChange(
+    input: ApplyMasterChangeInput,
+    occurredAt: string,
+    changeKeys: string[]
+  ): Promise<ApplyMasterChangeResult> {
     const registry =
       input.source.side === "quotation"
         ? await this.ports.resolveByQuotationItemId(input.source.quotationItemId)
@@ -113,7 +151,7 @@ export class CommercialSynchronizationService {
     if (registry.campaignHeaderId) {
       const lock = await this.ports.isFinanceLocked(registry.campaignHeaderId);
       if (lock.locked) {
-        await this.ports.writeAudit({
+        await this.audit({
           event: "commercial.sync_blocked_finance_lock",
           actorId: input.actorId,
           commercialLineId: registry.commercialLineId,
@@ -121,6 +159,8 @@ export class CommercialSynchronizationService {
           campaignHeaderId: registry.campaignHeaderId,
           assignmentIds: registry.assignmentIds,
           sourceSide: input.source.side,
+          occurredAt,
+          result: "blocked",
           oldData: null,
           newData: { changes: input.changes },
           metadata: { reasons: lock.reasons },
@@ -135,6 +175,40 @@ export class CommercialSynchronizationService {
       }
     }
 
+    const currentToken = await this.ports.loadConcurrencyToken(
+      registry.commercialLineId
+    );
+    if (
+      input.expectedConcurrencyToken != null &&
+      input.expectedConcurrencyToken !== "" &&
+      currentToken != null &&
+      input.expectedConcurrencyToken !== currentToken
+    ) {
+      await this.audit({
+        event: "commercial.sync_conflict",
+        actorId: input.actorId,
+        commercialLineId: registry.commercialLineId,
+        quotationId: registry.quotationId,
+        campaignHeaderId: registry.campaignHeaderId,
+        assignmentIds: registry.assignmentIds,
+        sourceSide: input.source.side,
+        occurredAt,
+        result: "conflict",
+        oldData: null,
+        newData: { changes: input.changes },
+        metadata: {
+          expected: input.expectedConcurrencyToken,
+          current: currentToken,
+        },
+      });
+      return {
+        ok: false,
+        code: "CONCURRENCY_CONFLICT",
+        message:
+          "Commercial values were updated by another user. Refresh and try again.",
+      };
+    }
+
     const previousQuote = await this.ports.loadQuotationMaster(
       registry.quotationItemId
     );
@@ -143,9 +217,6 @@ export class CommercialSynchronizationService {
       ...input.changes,
     };
 
-    // When editing from Campaign with 1:N, absolute amounts on the edited
-    // Assignment are treated as that Assignment's share; reconstruct agreement
-    // totals for the Quotation Commercial Line.
     let quotationAgreement = agreement;
     if (
       input.source.side === "campaign" &&
@@ -160,75 +231,81 @@ export class CommercialSynchronizationService {
     }
 
     try {
-      await this.ports.writeQuotationMaster(
-        registry.quotationItemId,
-        quotationAgreement
-      );
+      const result = await this.ports.runInTransaction(async () => {
+        await this.ports.writeQuotationMaster(
+          registry.quotationItemId,
+          quotationAgreement
+        );
 
-      const allocation =
-        registry.assignmentIds.length <= 1
-          ? "single"
-          : "equal_split";
+        const shares = allocateMasterAcrossAssignments(
+          quotationAgreement,
+          Math.max(1, registry.assignmentIds.length)
+        );
 
-      const shares = allocateMasterAcrossAssignments(
-        quotationAgreement,
-        Math.max(1, registry.assignmentIds.length)
-      );
-
-      if (registry.assignmentIds.length === 0) {
-        // Quotation exists without Assignments yet — quote-only write + audit.
-      } else if (input.source.side === "campaign" && registry.assignmentIds.length > 1) {
-        // Preserve sibling shares; only patch the edited Assignment + rates on all.
-        for (const assignmentId of registry.assignmentIds) {
-          if (assignmentId === input.source.assignmentId) {
-            const current =
-              (await this.ports.loadAssignmentMaster(assignmentId)) ?? {};
-            await this.ports.writeAssignmentMaster(assignmentId, {
-              ...current,
-              ...input.changes,
-            });
-          } else {
-            const current =
-              (await this.ports.loadAssignmentMaster(assignmentId)) ?? {};
-            const rateOnly: MasterCommercialValues = {};
-            for (const [key, value] of Object.entries(input.changes)) {
-              if (
-                key === "cost_currency" ||
-                key === "exchange_rate" ||
-                key === "agency_fee_percent" ||
-                key === "commercial_input_mode" ||
-                key === "gp_pct_input" ||
-                key === "revenue_vat_percent" ||
-                key === "cost_vat_percent" ||
-                key === "revenue_vat_exempt" ||
-                key === "cost_vat_exempt"
-              ) {
-                rateOnly[key as keyof MasterCommercialValues] = value as never;
-              }
-            }
-            if (Object.keys(rateOnly).length > 0) {
+        if (registry.assignmentIds.length === 0) {
+          // Quote-only (no Assignments yet).
+        } else if (
+          input.source.side === "campaign" &&
+          registry.assignmentIds.length > 1
+        ) {
+          for (const assignmentId of registry.assignmentIds) {
+            if (assignmentId === input.source.assignmentId) {
+              const current =
+                (await this.ports.loadAssignmentMaster(assignmentId)) ?? {};
               await this.ports.writeAssignmentMaster(assignmentId, {
                 ...current,
-                ...rateOnly,
+                ...input.changes,
               });
+            } else {
+              const current =
+                (await this.ports.loadAssignmentMaster(assignmentId)) ?? {};
+              const rateOnly = pickRateMasterChanges(input.changes);
+              if (Object.keys(rateOnly).length > 0) {
+                await this.ports.writeAssignmentMaster(assignmentId, {
+                  ...current,
+                  ...rateOnly,
+                });
+              }
             }
           }
+        } else {
+          for (let i = 0; i < registry.assignmentIds.length; i++) {
+            await this.ports.writeAssignmentMaster(
+              registry.assignmentIds[i],
+              shares[i] ?? quotationAgreement
+            );
+          }
         }
-      } else {
-        for (let i = 0; i < registry.assignmentIds.length; i++) {
-          await this.ports.writeAssignmentMaster(
-            registry.assignmentIds[i],
-            shares[i] ?? quotationAgreement
-          );
+
+        await this.ports.recalculateQuotationDerived(registry.quotationId);
+        if (registry.campaignHeaderId) {
+          await this.ports.recalculateCampaignDerived(registry.campaignHeaderId);
         }
-      }
 
-      await this.ports.recalculateQuotationDerived(registry.quotationId);
-      if (registry.campaignHeaderId) {
-        await this.ports.recalculateCampaignDerived(registry.campaignHeaderId);
-      }
+        const nextToken = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        await this.ports.storeConcurrencyToken(
+          registry.commercialLineId,
+          nextToken
+        );
 
-      await this.ports.writeAudit({
+        return {
+          ok: true as const,
+          commercialLineId: registry.commercialLineId,
+          quotationId: registry.quotationId,
+          campaignHeaderId: registry.campaignHeaderId,
+          assignmentIds: registry.assignmentIds,
+          applied: quotationAgreement,
+          allocation:
+            registry.assignmentIds.length <= 1
+              ? ("single" as const)
+              : input.source.side === "campaign"
+                ? ("rates_only" as const)
+                : ("equal_split" as const),
+          concurrencyToken: nextToken,
+        };
+      });
+
+      await this.audit({
         event: "commercial.master_synced",
         actorId: input.actorId,
         commercialLineId: registry.commercialLineId,
@@ -236,30 +313,40 @@ export class CommercialSynchronizationService {
         campaignHeaderId: registry.campaignHeaderId,
         assignmentIds: registry.assignmentIds,
         sourceSide: input.source.side,
+        occurredAt,
+        result: "synced",
         oldData: (previousQuote as Record<string, unknown>) ?? null,
         newData: quotationAgreement as Record<string, unknown>,
         metadata: {
-          allocation,
+          allocation: result.allocation,
           reason: input.reason ?? null,
           changed_keys: changeKeys,
+          user_id: input.actorId,
         },
       });
 
-      return {
-        ok: true,
+      if (input.idempotencyKey?.trim()) {
+        await this.ports.putIdempotentResult(input.idempotencyKey.trim(), result);
+      }
+
+      return result;
+    } catch (error) {
+      await this.audit({
+        event: "commercial.sync_rolled_back",
+        actorId: input.actorId,
         commercialLineId: registry.commercialLineId,
         quotationId: registry.quotationId,
         campaignHeaderId: registry.campaignHeaderId,
         assignmentIds: registry.assignmentIds,
-        applied: quotationAgreement,
-        allocation:
-          registry.assignmentIds.length <= 1
-            ? "single"
-            : input.source.side === "campaign"
-              ? "rates_only"
-              : "equal_split",
-      };
-    } catch (error) {
+        sourceSide: input.source.side,
+        occurredAt: new Date().toISOString(),
+        result: "rolled_back",
+        oldData: (previousQuote as Record<string, unknown>) ?? null,
+        newData: { changes: input.changes },
+        metadata: {
+          error: error instanceof Error ? error.message : "unknown",
+        },
+      });
       return {
         ok: false,
         code: "WRITE_FAILED",
@@ -271,13 +358,20 @@ export class CommercialSynchronizationService {
     }
   }
 
+  private async audit(entry: CommercialAuditEntry): Promise<void> {
+    await this.ports.writeAudit(entry);
+  }
+
   private async reconstructAgreementFromCampaignEdit(input: {
     registryAssignmentIds: string[];
     editedAssignmentId: string;
     changes: MasterCommercialValues;
     previousQuote: MasterCommercialValues;
   }): Promise<MasterCommercialValues> {
-    const next: MasterCommercialValues = { ...input.previousQuote, ...input.changes };
+    const next: MasterCommercialValues = {
+      ...input.previousQuote,
+      ...input.changes,
+    };
 
     for (const absKey of [
       "creator_cost",
@@ -296,7 +390,7 @@ export class CommercialSynchronizationService {
                 ...((await this.ports.loadAssignmentMaster(assignmentId)) ?? {}),
                 ...input.changes,
               }
-            : (await this.ports.loadAssignmentMaster(assignmentId)) ?? {};
+            : ((await this.ports.loadAssignmentMaster(assignmentId)) ?? {});
         const raw = row[absKey];
         if (typeof raw === "number" && Number.isFinite(raw)) {
           total += raw;
@@ -310,7 +404,21 @@ export class CommercialSynchronizationService {
   }
 }
 
-/** Convenience factory. */
+/** Rate/flag masters only — driven by Field Registry, not hard-coded sync branches. */
+export function pickRateMasterChanges(
+  changes: MasterCommercialValues
+): MasterCommercialValues {
+  const out: MasterCommercialValues = {};
+  for (const [key, value] of Object.entries(changes) as [
+    keyof MasterCommercialValues,
+    MasterCommercialValues[keyof MasterCommercialValues],
+  ][]) {
+    if (value === undefined) continue;
+    if (RATE_MASTER_KEYS.has(key)) out[key] = value;
+  }
+  return out;
+}
+
 export function createCommercialSynchronizationService(
   ports: CommercialSyncPorts
 ): CommercialSynchronizationService {
