@@ -1,9 +1,11 @@
 # Deliverables Module — Documentation & Asset Repository
 
-**Status:** Approved for Phase 1 implementation (2026-07-30)  
+**Status:** Phase 1 **implemented & approved** — Preview/UAT (2026-07-30)  
 **Authority:** Product  
 **Scope this release:** Internal platform only (AM workspace + Media Plan indicator)  
-**Out of scope this release:** Creator Portal · Client Portal workflow · Client approval state machine  
+**Out of scope this release:** Creator Portal · Client Portal · Bulk Upload · Client approval state machine  
+**UAT sign-off:** [`DELIVERABLES_DOCUMENTATION_UAT.md`](./DELIVERABLES_DOCUMENTATION_UAT.md)  
+**Post-UAT freeze:** defect fixes only until Production approval (same discipline as Commercial SSOT)  
 
 **Supersedes:** [`DELIVERABLES_CONTENT_APPROVAL_SSOT.md`](./DELIVERABLES_CONTENT_APPROVAL_SSOT.md) (workflow framing).  
 
@@ -125,16 +127,23 @@ Computed per documentation unit from D2; rolled up per creator for Media Plan in
 
 ---
 
-## 4. Phase 1 implementation order
+## 4. Phase 1 implementation order — DONE
 
-1. Database (+ Dev apply)  
-2. API / services  
-3. Deliverables Workspace (internal)  
-4. Documentation indicator on Media Plan (Original + Actual)  
-5. Any soft data migration notes  
-6. Regression tests  
+1. Database (+ Dev apply) ✅  
+2. API / services ✅  
+3. Deliverables Workspace (internal) ✅  
+4. Documentation indicator on Media Plan (Original + Actual) ✅  
+5. Unit tests ✅  
+6. Preview / UAT ⏳  
 
-**Explicit non-goals Phase 1:** Creator Portal · Client Portal · approval engine · Performance coupling · workflow edits from Deliverables.
+**Explicit non-goals Phase 1:** Creator Portal · Client Portal · Bulk Upload · approval engine · Performance coupling · workflow edits from Deliverables.
+
+### Phase 2 backlog
+
+- **Bulk Documentation Upload** workspace (multi-file/link → assign to creators/units → review → save)  
+- Large-campaign list performance (pagination / virtualization / lazy detail) if UAT D-section requires  
+- Creator Portal asset submission  
+- Client Access view / download / comment (still no Deliverables approval engine)
 
 ---
 
