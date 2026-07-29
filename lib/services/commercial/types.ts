@@ -3,6 +3,13 @@
  * Spec: docs/architecture/COMMERCIAL_SSOT_QUOTE_CAMPAIGN.md
  */
 
+import type {
+  CampaignFinanceLockReason,
+  FinanceLockResult,
+} from "@/lib/finance/campaign-finance-lock";
+
+export type { CampaignFinanceLockReason, FinanceLockResult };
+
 /** Immutable Commercial Line ID (= quotation_items.id / Origin on Assignments). */
 export type CommercialLineId = string;
 
@@ -74,11 +81,6 @@ export type CommercialLineRegistryEntry = {
   /** campaign_lines.id values that Origin → this Commercial Line (1:N). */
   assignmentIds: string[];
 };
-
-export type {
-  CampaignFinanceLockReason,
-  FinanceLockResult,
-} from "@/lib/finance/campaign-finance-lock";
 
 export type MasterFieldChange = {
   field: CommercialMasterFieldKey;
