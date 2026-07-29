@@ -1,10 +1,13 @@
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import { CampaignObjectPersistenceService } from "@/features/campaign-intelligence/services/campaign-object-persistence";
+import { getCampaignAssignmentHierarchy } from "@/features/campaigns/queries/assignment-hierarchy";
 import {
   buildClientPortalOriginalPayload,
   type ClientMediaPlanPayload,
 } from "@/features/portals/queries/client-media-plan-payload";
 import { requireClientScope } from "@/features/portals/scope";
+import { annotateMediaPlanExecutionStatus } from "@/lib/media-plan/annotate-execution-status";
+import { performanceFactsFromAssignmentHierarchy } from "@/lib/media-plan/performance-facts";
 import { safeOperationalQuery } from "@/lib/platform/safe-query";
 
 export type { ClientMediaPlanPayload } from "@/features/portals/queries/client-media-plan-payload";
@@ -102,7 +105,7 @@ export async function loadClientMediaPlan(
         );
       }
 
-      return buildClientPortalOriginalPayload({
+      const payload = buildClientPortalOriginalPayload({
         campaignId: typed.id,
         campaignName: typed.name,
         documentNumber: typed.document_number,
@@ -110,6 +113,17 @@ export async function loadClientMediaPlan(
         conversationId: typedHead?.conversation_id ?? null,
         hasApproveRole,
       });
+
+      try {
+        const hierarchy = await getCampaignAssignmentHierarchy(typed.id);
+        const facts = performanceFactsFromAssignmentHierarchy(hierarchy);
+        return {
+          ...payload,
+          original: annotateMediaPlanExecutionStatus(payload.original, facts),
+        };
+      } catch {
+        return payload;
+      }
     },
     null
   );

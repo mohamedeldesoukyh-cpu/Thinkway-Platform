@@ -1,7 +1,11 @@
+import { useMemo } from "react";
+
 import type { CampaignOutputContent, CampaignOutputContentSection } from "../output-types";
 import type { MediaPlanCampaignContext, MediaPlanData } from "../generators/media-plan";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { MediaPlanMarketIntelligenceMeta } from "@/features/market-intelligence/market-intelligence-config";
+import { annotateMediaPlanExecutionStatus } from "@/lib/media-plan/annotate-execution-status";
+import type { MediaPlanPerformanceFact } from "@/lib/media-plan/types";
 import {
   MediaPlanCalendar,
   type MediaPlanCreatorMoveTarget,
@@ -89,6 +93,7 @@ export function OutputViewer({
   campaignObject,
   onMarketIntelligenceChange,
   onInfluencerConceptsPersist,
+  performanceFacts,
 }: {
   content: CampaignOutputContent;
   mediaPlanContextOverride?: MediaPlanCampaignContext;
@@ -100,8 +105,15 @@ export function OutputViewer({
   campaignObject?: CampaignObject;
   onMarketIntelligenceChange?: (patch: Partial<MediaPlanMarketIntelligenceMeta>) => void | Promise<void>;
   onInfluencerConceptsPersist?: (next: CampaignObject) => void | Promise<void>;
+  /** Performance live dates — colors Live / Partial / Not live cards (Studio ↔ Original). */
+  performanceFacts?: MediaPlanPerformanceFact[];
 }) {
-  const mediaPlan = isMediaPlanData(content.data) ? content.data : undefined;
+  const rawMediaPlan = isMediaPlanData(content.data) ? content.data : undefined;
+  const mediaPlan = useMemo(() => {
+    if (!rawMediaPlan) return undefined;
+    if (!performanceFacts?.length) return rawMediaPlan;
+    return annotateMediaPlanExecutionStatus(rawMediaPlan, performanceFacts);
+  }, [rawMediaPlan, performanceFacts]);
   const hasDeadlines = Boolean(mediaPlan?.deadlines?.length);
   const mediaPlanContext = mergeMediaPlanContext(
     mediaPlan?.campaignContext,

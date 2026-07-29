@@ -11,9 +11,11 @@ import type { CampaignOutputContent } from "../output-types";
 import type { MediaPlanData } from "../generators/media-plan";
 import { formatMoney } from "../generators/generator-utils";
 import { MEDIA_PLAN_PRICING_DISCLAIMER } from "../generators/media-plan";
+import { PUBLISHING_CALENDAR_DAYS } from "../media-plan-week-start";
 import { isMediaPlanContent } from "./media-plan-export-utils";
 
-const DAY_HEADERS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+/** Publishing Calendar columns — Saturday→Friday (dayIndex 0 = Saturday). */
+const DAY_HEADERS = [...PUBLISHING_CALENDAR_DAYS];
 
 function formatDayCell(day: MediaPlanData["weeks"][number]["days"][number]): string {
   const types =

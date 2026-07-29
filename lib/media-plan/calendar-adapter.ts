@@ -132,6 +132,8 @@ export function itemsToMediaPlanData(
       creatorName: string;
       platform: string;
       deliverables: string[];
+      statuses: Array<MediaPlanItem["status"]>;
+      liveDates: string[];
     }
   >();
 
@@ -149,6 +151,8 @@ export function itemsToMediaPlanData(
       if (!existing.deliverables.includes(item.deliverable)) {
         existing.deliverables.push(item.deliverable);
       }
+      existing.statuses.push(item.status);
+      if (item.actualLiveDate) existing.liveDates.push(item.actualLiveDate);
     } else {
       slots.set(key, {
         week,
@@ -157,8 +161,23 @@ export function itemsToMediaPlanData(
         creatorName: item.creatorName,
         platform: item.platform,
         deliverables: [item.deliverable],
+        statuses: [item.status],
+        liveDates: item.actualLiveDate ? [item.actualLiveDate] : [],
       });
     }
+  }
+
+  function executionFromSlot(slot: {
+    statuses: Array<MediaPlanItem["status"]>;
+    liveDates: string[];
+  }): { executionStatus: "planned" | "published" | "partial"; actualLiveDate: string | null } {
+    const completed = slot.statuses.filter((status) => status === "completed").length;
+    const actualLiveDate = slot.liveDates.length ? [...slot.liveDates].sort()[0]! : null;
+    if (completed <= 0) return { executionStatus: "planned", actualLiveDate };
+    if (completed >= slot.statuses.length) {
+      return { executionStatus: "published", actualLiveDate };
+    }
+    return { executionStatus: "partial", actualLiveDate };
   }
 
   const weeks: MediaPlanWeek[] = [];
@@ -178,6 +197,7 @@ export function itemsToMediaPlanData(
       // First creator owns the primary cell; others pack as additionalDeliverables.
       const [primary, ...rest] = matches;
       const primaryTypes = primary!.deliverables;
+      const primaryExec = executionFromSlot(primary!);
       return {
         day: dayName,
         type: classifyDayType(primaryTypes[0] ?? ""),
@@ -188,16 +208,21 @@ export function itemsToMediaPlanData(
         platform: primary!.platform,
         serviceType: primaryTypes[0],
         serviceTypes: primaryTypes,
-        additionalDeliverables: rest.flatMap((slot) =>
-          slot.deliverables.map((deliverable) => ({
+        executionStatus: primaryExec.executionStatus,
+        actualLiveDate: primaryExec.actualLiveDate,
+        additionalDeliverables: rest.map((slot) => {
+          const exec = executionFromSlot(slot);
+          return {
             creatorId: slot.creatorId,
             creator: slot.creatorName,
             shortName: slot.creatorName,
             platform: slot.platform,
-            serviceType: deliverable,
-            serviceTypes: [deliverable],
-          }))
-        ),
+            serviceType: slot.deliverables[0],
+            serviceTypes: slot.deliverables,
+            executionStatus: exec.executionStatus,
+            actualLiveDate: exec.actualLiveDate,
+          };
+        }),
       };
     });
 

@@ -243,6 +243,22 @@ test("buildMediaPlanHtml calendar-and-deliverables export hides campaign cost", 
   assert.ok(withoutCost.includes("Publishing Calendar"));
 });
 
+test("buildMediaPlanHtml uses Saturday–Friday column headers (18/7/2026 is Saturday)", () => {
+  const content = generateMediaPlan(
+    buildCampaignObjectFixture({
+      facts: { durationWeeks: 2, campaignStartDate: "2026-07-24" },
+    })
+  );
+  const html = buildMediaPlanHtml(content);
+  // Week 1 grid opens Sat 18/7 — must not label that column Monday.
+  assert.match(html, /class="dname"[^>]*>\s*Sat\s*</i);
+  assert.match(html, /class="ddate"[^>]*>\s*18\/7\/26\s*</i);
+  assert.doesNotMatch(
+    html,
+    /class="dname"[^>]*>\s*Mon\s*<\/[^>]*>[\s\S]{0,80}class="ddate"[^>]*>\s*18\/7\/26/i
+  );
+});
+
 test("buildMediaPlanHtml renders EMediaPlan document layout with preview calendar for standard mode", () => {
   const content = generateMediaPlan(buildCampaignObjectFixture());
   const html = buildMediaPlanHtml(content);

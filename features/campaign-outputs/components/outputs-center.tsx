@@ -53,9 +53,11 @@ import {
 import { MediaPlanPreviewPanelHeader } from "./media-plan-preview-panel-header";
 import { resolveMediaPlanContextForPreview } from "../actions/resolve-media-plan-context";
 import { updateMediaPlanScheduleAction } from "../actions/update-media-plan-schedule";
+import { loadMediaPlanPerformanceFactsAction } from "../actions/load-media-plan-performance-facts";
 import { updateCampaignMarketIntelligenceAction } from "../actions/update-campaign-market-intelligence";
 import { updateInfluencerConceptsAction } from "../actions/update-influencer-concepts";
 import type { MediaPlanMarketIntelligenceMeta } from "@/features/market-intelligence/market-intelligence-config";
+import type { MediaPlanPerformanceFact } from "@/lib/media-plan/types";
 import type { MediaPlanCreatorMoveTarget } from "./media-plan-calendar";
 import { OutputsCenterMarketIntelligenceToggle } from "./outputs-center-market-intelligence-toggle";
 import {
@@ -168,6 +170,7 @@ export function OutputsCenter({
   const [presentationSaving, setPresentationSaving] = useState(false);
   const [marketIntelligenceSaving, setMarketIntelligenceSaving] = useState(false);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [performanceFacts, setPerformanceFacts] = useState<MediaPlanPerformanceFact[]>([]);
   const effectiveCampaignObject = campaignObject;
   const presentationSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const presentationSaveInFlightRef = useRef(false);
@@ -301,6 +304,25 @@ export function OutputsCenter({
     conversationId,
     liveMediaPlanContextFallbackKey,
   ]);
+
+  // Performance live dates → same Live/Partial/Not-live card colors as Campaign Original.
+  useEffect(() => {
+    if (!isMediaPlanPanel || !campaignObjectId || !conversationId) {
+      setPerformanceFacts([]);
+      return;
+    }
+    let cancelled = false;
+    void loadMediaPlanPerformanceFactsAction({
+      campaignObjectId,
+      conversationId,
+    }).then((result) => {
+      if (cancelled || !result.ok) return;
+      setPerformanceFacts(result.facts);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isMediaPlanPanel, campaignObjectId, conversationId, mediaPlanCalendarKey]);
 
   const mergedActions = useMemo<OutputCardActions>(
     () => ({
@@ -910,6 +932,7 @@ export function OutputsCenter({
                     onInfluencerConceptsPersist={handleInfluencerConceptsPersist}
                     campaignObject={effectiveCampaignObject}
                     onExitEditMode={() => setMediaPlanEditMode(false)}
+                    performanceFacts={performanceFacts}
                   />
                 ) : (
                   <>

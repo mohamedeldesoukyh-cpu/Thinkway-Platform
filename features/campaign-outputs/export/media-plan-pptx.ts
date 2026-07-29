@@ -26,6 +26,7 @@ import {
   formatWeekRangeLabel,
   parseCampaignStartDate,
 } from "../media-plan-week-range";
+import { PUBLISHING_CALENDAR_DAY_ABBR } from "../media-plan-week-start";
 import {
   MEDIA_PLAN_AD_TYPE_COLORS,
   MEDIA_PLAN_BRAND,
@@ -56,7 +57,8 @@ const PAGE_H = 8.125;
 const MARGIN_X = 0.5;
 const CONTENT_W = PAGE_W - MARGIN_X * 2;
 
-const DAY_ABBR = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+/** Publishing Calendar columns — Saturday→Friday (dayIndex 0 = Saturday). */
+const DAY_ABBR = PUBLISHING_CALENDAR_DAY_ABBR;
 const WEEKS_PER_CALENDAR_SLIDE = 2;
 
 const GENERIC_OPERATIONAL_TYPES = new Set([
@@ -725,7 +727,9 @@ function addDayCard(
   });
 
   const dateStr = day.dateLabel ?? formatDayColumnDate(campaignStart, weekNum, dayIndex);
-  const dayAbbr = (DAY_ABBR[dayIndex] ?? day.day).toUpperCase();
+  const dayAbbr = (
+    day.day?.trim() ? day.day.slice(0, 3) : DAY_ABBR[dayIndex] ?? day.day
+  ).toUpperCase();
   slide.addText(dayAbbr, {
     x: x + 0.04,
     y: y + 0.04,

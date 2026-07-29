@@ -17,6 +17,7 @@ import {
   mediaPlanDataToItems,
 } from "@/lib/media-plan/calendar-adapter";
 import { mediaPlanStateFromCampaignObject } from "@/lib/media-plan/campaign-object-state";
+import { annotateMediaPlanExecutionStatus } from "@/lib/media-plan/annotate-execution-status";
 import { performanceFactsFromAssignmentHierarchy } from "@/lib/media-plan/performance-facts";
 import {
   resolveApprovedBaselineData,
@@ -219,24 +220,33 @@ export async function loadCampaignMediaPlanWorkspace(
   const start = original.campaignStartDate;
   const durationWeeks = original.durationWeeks || original.calendarWeeks || 4;
 
+  // Same Live/Partial/Not-live card colors as Studio — Performance live_date overlay.
+  const originalAnnotated = annotateMediaPlanExecutionStatus(original, performance);
+
   const actualWindow = actualCalendarWindow(execution.actual.items, start, durationWeeks);
   const actual = execution.actual.items.length
-    ? itemsToMediaPlanData(execution.actual.items, {
-        campaignStartDate: actualWindow.campaignStartDate,
-        durationWeeks: actualWindow.durationWeeks,
-        viewKind: "actual",
-        dateField: "actualLiveDate",
-      })
+    ? annotateMediaPlanExecutionStatus(
+        itemsToMediaPlanData(execution.actual.items, {
+          campaignStartDate: actualWindow.campaignStartDate,
+          durationWeeks: actualWindow.durationWeeks,
+          viewKind: "actual",
+          dateField: "actualLiveDate",
+        }),
+        performance
+      )
     : emptyMediaPlanData(start, durationWeeks);
 
   const remaining =
     execution.baselineVersion != null
-      ? itemsToMediaPlanData(execution.remaining.items, {
-          campaignStartDate: start,
-          durationWeeks,
-          viewKind: "remaining",
-          dateField: "plannedDate",
-        })
+      ? annotateMediaPlanExecutionStatus(
+          itemsToMediaPlanData(execution.remaining.items, {
+            campaignStartDate: start,
+            durationWeeks,
+            viewKind: "remaining",
+            dateField: "plannedDate",
+          }),
+          performance
+        )
       : emptyMediaPlanData(start, durationWeeks);
 
   const baseline = mediaPlanEngine.getBaseline(state);
@@ -259,7 +269,7 @@ export async function loadCampaignMediaPlanWorkspace(
     campaignStartDate: start,
     durationWeeks,
     views: {
-      original,
+      original: originalAnnotated,
       actual,
       remaining,
     },

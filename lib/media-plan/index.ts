@@ -62,6 +62,7 @@ export {
 } from "./calendar-adapter";
 export { mediaPlanStateFromCampaignObject, baselineItemsFromState } from "./campaign-object-state";
 export { performanceFactsFromAssignmentHierarchy } from "./performance-facts";
+export { annotateMediaPlanExecutionStatus } from "./annotate-execution-status";
 export type {
   EnsureWorkingDraftResult,
   MediaPlanApprovalMethod,

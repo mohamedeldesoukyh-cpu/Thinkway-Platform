@@ -36,22 +36,18 @@ import {
   parseCampaignStartDate,
 } from "../media-plan-week-range";
 import {
+  PUBLISHING_CALENDAR_DAYS,
+  PUBLISHING_CALENDAR_DAY_ABBR,
+} from "../media-plan-week-start";
+import {
   MEDIA_PLAN_AD_TYPE_COLORS,
   MEDIA_PLAN_BRAND,
   MEDIA_PLAN_DAY_TYPE_COLORS,
 } from "./media-plan-brand";
 import { DOCUMENT_PREVIEW_DIALOG_Z } from "./document-preview-window";
 
-const DAY_ABBR = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
-const DAY_NAMES = [
-  "Saturday",
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-];
+const DAY_ABBR = PUBLISHING_CALENDAR_DAY_ABBR;
+const DAY_NAMES = PUBLISHING_CALENDAR_DAYS;
 
 const TYPE_STYLES: Record<MediaPlanDayType, { dot: string }> = {
   content: { dot: MEDIA_PLAN_DAY_TYPE_COLORS.content },
@@ -194,6 +190,8 @@ const CreatorCard = memo(function CreatorCard({
   profileUrl,
   typeColorMap,
   dotFallback,
+  executionStatus = "planned",
+  actualLiveDate,
   editable,
   draggable,
   isDragging,
@@ -208,6 +206,8 @@ const CreatorCard = memo(function CreatorCard({
   profileUrl?: string | null;
   typeColorMap: Map<string, string>;
   dotFallback: string;
+  executionStatus?: "planned" | "published" | "partial";
+  actualLiveDate?: string | null;
   editable?: boolean;
   draggable?: boolean;
   isDragging?: boolean;
@@ -216,9 +216,22 @@ const CreatorCard = memo(function CreatorCard({
   onDragEnd?: () => void;
   onClickMove?: () => void;
 }) {
+  const published = executionStatus === "published";
+  const partial = executionStatus === "partial";
+  const statusTitle = published
+    ? actualLiveDate
+      ? `Published · live ${actualLiveDate}`
+      : "Published"
+    : partial
+      ? actualLiveDate
+        ? `Partially published · first live ${actualLiveDate}`
+        : "Partially published"
+      : "Not published yet";
+
   return (
     <div
       draggable={Boolean(draggable && editable)}
+      title={statusTitle}
       onDragStart={(event) => {
         if (!editable || !draggable) return;
         event.dataTransfer.effectAllowed = "move";
@@ -231,8 +244,18 @@ const CreatorCard = memo(function CreatorCard({
         if (editable && onClickMove) onClickMove();
       }}
       className={cn(
-        "rounded-lg border border-[#0B0F1A]/6 bg-[#fafbff] p-1.5 transition-[opacity,transform,box-shadow]",
-        editable && draggable && "cursor-grab active:cursor-grabbing hover:border-[#0057FF]/25 hover:shadow-sm",
+        "rounded-lg border p-1.5 transition-[opacity,transform,box-shadow,background-color,border-color]",
+        published &&
+          "border-[#1D9E75]/45 bg-[#E8F8F2] shadow-[inset_0_0_0_1px_rgba(29,158,117,0.12)]",
+        partial &&
+          "border-amber-400/55 bg-amber-50 shadow-[inset_0_0_0_1px_rgba(245,158,11,0.14)] dark:bg-amber-950/30",
+        !published &&
+          !partial &&
+          "border-[#0B0F1A]/6 bg-[#fafbff]",
+        editable &&
+          draggable &&
+          "cursor-grab active:cursor-grabbing hover:shadow-sm",
+        editable && draggable && !published && !partial && "hover:border-[#0057FF]/25",
         isDragging && !isDragGhost && "scale-[0.97] opacity-35",
         isDragGhost && "pointer-events-none border-[#0057FF]/40 shadow-lg ring-2 ring-[#0057FF]/25",
         editable && "group/card"
@@ -249,15 +272,33 @@ const CreatorCard = memo(function CreatorCard({
           avatarUrl={avatarUrl ?? null}
           profileUrl={profileUrl ?? null}
           size="xs"
-          className="shrink-0 ring-1 ring-[#0B0F1A]/6"
+          className={cn(
+            "shrink-0 ring-1",
+            published
+              ? "ring-[#1D9E75]/40"
+              : partial
+                ? "ring-amber-400/50"
+                : "ring-[#0B0F1A]/6"
+          )}
           alt={name}
         />
         <span
-          className="truncate text-[9px] font-semibold"
+          className="min-w-0 flex-1 truncate text-[9px] font-semibold"
           style={{ color: MEDIA_PLAN_BRAND.ink }}
         >
           {name}
         </span>
+        {published || partial ? (
+          <span
+            className={cn(
+              "shrink-0 rounded px-1 py-px text-[7px] font-bold uppercase tracking-wide",
+              published && "bg-[#1D9E75] text-white",
+              partial && "bg-amber-500 text-white"
+            )}
+          >
+            {published ? "Live" : "Partial"}
+          </span>
+        ) : null}
       </div>
       <ServiceChips types={types} typeColorMap={typeColorMap} fallback={dotFallback} />
     </div>
@@ -569,6 +610,8 @@ const DayColumn = memo(function DayColumn({
       profileUrl?: string | null;
       serviceTypes?: string[];
       serviceType?: string;
+      executionStatus?: "planned" | "published" | "partial";
+      actualLiveDate?: string | null;
     },
     key: string
   ) => {
@@ -596,6 +639,8 @@ const DayColumn = memo(function DayColumn({
           profileUrl={creator.profileUrl}
           typeColorMap={typeColorMap}
           dotFallback={style.dot}
+          executionStatus={entry.executionStatus}
+          actualLiveDate={entry.actualLiveDate}
           editable={editable}
           draggable
           isDragging={draggingCreatorId === creator.creatorId}
@@ -858,6 +903,24 @@ export function MediaPlanCalendar({
             Saving schedule…
           </span>
         ) : null}
+        <span
+          className="text-[10px] font-extrabold uppercase tracking-[0.5px]"
+          style={{ color: MEDIA_PLAN_BRAND.deepNavy }}
+        >
+          Publishing
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#1D9E75]/35 bg-[#E8F8F2] px-2.5 py-0.5 text-[10px] font-medium text-[#0B0F1A]">
+          <span className="size-2 rounded-full bg-[#1D9E75]" aria-hidden />
+          Live
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/45 bg-amber-50 px-2.5 py-0.5 text-[10px] font-medium text-[#0B0F1A] dark:bg-amber-950/30">
+          <span className="size-2 rounded-full bg-amber-500" aria-hidden />
+          Partial
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#0B0F1A]/8 bg-[#fafbff] px-2.5 py-0.5 text-[10px] font-medium text-[#0B0F1A]">
+          <span className="size-2 rounded-full bg-[#0B0F1A]/25" aria-hidden />
+          Not live
+        </span>
         {legendTypes.length > 0 ? (
           <span
             className="text-[10px] font-extrabold uppercase tracking-[0.5px]"

@@ -156,6 +156,9 @@ function dateForSlot(start: Date, week: number, dayIndex: number): Date {
 
 export type MediaPlanDayType = "content" | "stories" | "boost" | "monitoring";
 
+/** Execution overlay from Performance live dates — shared by Studio + Original calendars. */
+export type MediaPlanExecutionStatus = "planned" | "published" | "partial";
+
 export type MediaPlanDay = {
   day: string;
   /** Short calendar date for this slot, e.g. 1/7/26 */
@@ -176,6 +179,13 @@ export type MediaPlanDay = {
   serviceTypes?: string[];
   tier?: string;
   platform?: string;
+  /**
+   * Publishing execution state from Performance live_date.
+   * planned = not live yet; published = all card deliverables live; partial = some live.
+   */
+  executionStatus?: MediaPlanExecutionStatus;
+  /** ISO live date when known (Performance). */
+  actualLiveDate?: string | null;
   /** Extra quoted deliverables packed onto the same calendar day within the campaign window. */
   additionalDeliverables?: MediaPlanAdditionalDeliverable[];
 };
@@ -195,6 +205,8 @@ export type MediaPlanAdditionalDeliverable = {
   isMirror?: boolean;
   /** True when this line is a story/support companion on the same activation day. */
   isCompanion?: boolean;
+  executionStatus?: MediaPlanExecutionStatus;
+  actualLiveDate?: string | null;
 };
 
 export type MediaPlanWeek = {

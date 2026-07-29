@@ -21,6 +21,7 @@ import {
   formatWeekRangeLabel,
   parseCampaignStartDate,
 } from "../media-plan-week-range";
+import { PUBLISHING_CALENDAR_DAY_ABBR } from "../media-plan-week-start";
 import { buildMediaPlanStrategyBlocks, type MediaPlanStrategyBlock } from "../media-plan-strategy-blocks";
 import { refreshMediaPlanStrategySummaryForDisplay } from "../media-plan-strategy-summary";
 import { deriveMediaPlanWeekPhase } from "../media-plan-strategy-narrative";
@@ -57,7 +58,8 @@ import {
   type ThinkwayReportLogoSrcs,
 } from "@/lib/reports/document/thinkway-report-logo";
 
-const DAY_ABBR = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+/** Publishing Calendar columns — Saturday→Friday (dayIndex 0 = Saturday). */
+const DAY_ABBR = PUBLISHING_CALENDAR_DAY_ABBR;
 
 const GENERIC_OPERATIONAL_TYPES = new Set([
   "Stories",
@@ -316,7 +318,12 @@ const E_MEDIA_PLAN_CSS = `
   .ddate { font-size:8.5px; color:var(--muted); font-weight:600; }
   .daycol-body { display:flex; flex-direction:column; gap:5px; flex:1; }
   .empty-day { font-size:9px; color:#B8C2D9; text-align:center; margin-top:12px; }
-  .ccard { background:#fff; border:1px solid #E1E9FB; border-radius:7px; padding:5px 6px; }
+  .ccard { background:#fafbff; border:1px solid rgba(11,15,26,.12); border-radius:7px; padding:5px 6px; }
+  .ccard--published { background:#E8F8F2; border-color:rgba(29,158,117,.45); box-shadow:inset 0 0 0 1px rgba(29,158,117,.12); }
+  .ccard--partial { background:#FFFBEB; border-color:rgba(245,158,11,.55); box-shadow:inset 0 0 0 1px rgba(245,158,11,.14); }
+  .ccard-badge { margin-left:auto; font-size:6.5px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:#fff; border-radius:3px; padding:1px 4px; }
+  .ccard-badge--live { background:#1D9E75; }
+  .ccard-badge--partial { background:#F59E0B; }
   .ccard-top { display:flex; align-items:center; gap:5px; margin-bottom:4px; }
   .cav {
     width:16px; height:16px; border-radius:50%; background:var(--lavender);
@@ -580,7 +587,13 @@ function renderCreatorCard(
   name: string,
   day: Pick<
     MediaPlanDay,
-    "avatarUrl" | "creator" | "shortName" | "handle" | "profileUrl" | "platform"
+    | "avatarUrl"
+    | "creator"
+    | "shortName"
+    | "handle"
+    | "profileUrl"
+    | "platform"
+    | "executionStatus"
   >,
   types: string[],
   typeColorMap: Map<string, string>,
@@ -593,14 +606,27 @@ function renderCreatorCard(
   const handleHtml = handle
     ? `<div class="chandle">@${escapeHtml(handle.replace(/^@/, ""))}</div>`
     : "";
+  const published = day.executionStatus === "published";
+  const partial = day.executionStatus === "partial";
+  const cardClass = published
+    ? "ccard ccard--published"
+    : partial
+      ? "ccard ccard--partial"
+      : "ccard";
+  const badgeHtml = published
+    ? `<span class="ccard-badge ccard-badge--live">Live</span>`
+    : partial
+      ? `<span class="ccard-badge ccard-badge--partial">Partial</span>`
+      : "";
 
-  return `<div class="ccard">
+  return `<div class="${cardClass}">
     <div class="ccard-top">
       ${renderAvatar(avatarFields, options)}
       <div class="cinfo">
         <div class="cname" dir="auto">${displayName}</div>
         ${handleHtml}
       </div>
+      ${badgeHtml}
     </div>
     <div class="cchips">${renderChips(types, typeColorMap, fallback)}</div>
   </div>`;
@@ -616,7 +642,11 @@ function renderDayColumn(
 ): string {
   const fallback = dayTypeColor(day.type);
   const dateStr = day.dateLabel ?? formatDayColumnDate(campaignStart, weekNum, dayIndex);
-  const dayAbbr = DAY_ABBR[dayIndex] ?? day.day;
+  // Prefer stored day name when present; fall back to Sat→Fri index map.
+  const dayAbbr =
+    (day.day?.trim()
+      ? day.day.slice(0, 3)
+      : DAY_ABBR[dayIndex]) ?? day.day;
 
   let cards = "";
   if (day.creator) {
