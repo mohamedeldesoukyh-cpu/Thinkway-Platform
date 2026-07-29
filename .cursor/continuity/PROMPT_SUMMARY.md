@@ -41,6 +41,7 @@
 - **Copilot end date:** `update_timeline` accepts start+end (e.g. “starting 24/07/2026 ending 23/08/2026”); stores `facts.campaignEndDate` and rebinds Publishing Calendar to that window (not duration-only derived end)
 - **Published card colors:** Studio + Original Media Plan cards turn green (Live) / amber (Partial) from Performance `live_date` (`annotateMediaPlanExecutionStatus`)
 - **Commercial SSOT Phases 1–4 done (feature-complete + freeze):** Commit `73b8e574` on `develop`; Dev migration applied (`hsxrewjcbvmbkqdlzjhs`); Production untouched. Formal UAT: `docs/architecture/COMMERCIAL_SSOT_UAT_SIGNOFF.md`. **No further Commercial SSOT features** — bug fixes only. After green UAT → RC tag (e.g. `v2.0.0-rc1`) then Production only with explicit approval. Spec: `docs/architecture/COMMERCIAL_SSOT_QUOTE_CAMPAIGN.md` (D-COMM). Tests: `npm run test:commercial-ssot-phase4`.
+- **Deliverables SSOT locked (2026-07-30):** Deliverables = Content Collection & Approval only (draft assets, received/review/internal+client approval). Draft ≠ Publication/Performance. Flow: Assignment → Deliverable (draft+approvals) → Publication (live post) → Performance (metrics). Spec: `docs/architecture/DELIVERABLES_CONTENT_APPROVAL_SSOT.md`. Implementation not started.
 
 ## Media Plan Versioning (SSOT + domain aligned on develop)
 
