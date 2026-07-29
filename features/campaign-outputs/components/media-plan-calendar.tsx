@@ -191,6 +191,8 @@ const CreatorCard = memo(function CreatorCard({
   typeColorMap,
   dotFallback,
   executionStatus = "planned",
+  documentationStatus = "none",
+  onDocumentationClick,
   actualLiveDate,
   editable,
   draggable,
@@ -207,6 +209,9 @@ const CreatorCard = memo(function CreatorCard({
   typeColorMap: Map<string, string>;
   dotFallback: string;
   executionStatus?: "planned" | "published" | "partial";
+  /** Independent from execution ring — docs completeness only. */
+  documentationStatus?: "none" | "partial" | "complete";
+  onDocumentationClick?: () => void;
   actualLiveDate?: string | null;
   editable?: boolean;
   draggable?: boolean;
@@ -268,20 +273,43 @@ const CreatorCard = memo(function CreatorCard({
             aria-hidden
           />
         ) : null}
-        <CreatorAvatarImage
-          avatarUrl={avatarUrl ?? null}
-          profileUrl={profileUrl ?? null}
-          size="xs"
-          className={cn(
-            "shrink-0 ring-1",
-            published
-              ? "ring-[#1D9E75]/40"
-              : partial
-                ? "ring-amber-400/50"
-                : "ring-[#0B0F1A]/6"
-          )}
-          alt={name}
-        />
+        <span className="relative shrink-0">
+          <CreatorAvatarImage
+            avatarUrl={avatarUrl ?? null}
+            profileUrl={profileUrl ?? null}
+            size="xs"
+            className={cn(
+              "ring-1",
+              published
+                ? "ring-[#1D9E75]/40"
+                : partial
+                  ? "ring-amber-400/50"
+                  : "ring-[#0B0F1A]/6"
+            )}
+            alt={name}
+          />
+          <button
+            type="button"
+            title={
+              documentationStatus === "complete"
+                ? "Documentation complete — open Deliverables"
+                : documentationStatus === "partial"
+                  ? "Documentation partial — open Deliverables"
+                  : "No documentation received — open Deliverables"
+            }
+            onClick={(event) => {
+              event.stopPropagation();
+              onDocumentationClick?.();
+            }}
+            className={cn(
+              "absolute -right-0.5 -top-0.5 size-2 rounded-full border border-white shadow-sm",
+              documentationStatus === "complete" && "bg-emerald-500",
+              documentationStatus === "partial" && "bg-amber-500",
+              documentationStatus === "none" && "bg-slate-300"
+            )}
+            aria-label="Documentation status"
+          />
+        </span>
         <span
           className="min-w-0 flex-1 truncate text-[9px] font-semibold"
           style={{ color: MEDIA_PLAN_BRAND.ink }}
@@ -560,6 +588,8 @@ const DayColumn = memo(function DayColumn({
   movePopoverCreatorId,
   durationWeeks,
   saving,
+  documentationStatusByCreatorId,
+  onDocumentationClick,
   onDragOver,
   onDragLeave,
   onDrop,
@@ -580,6 +610,8 @@ const DayColumn = memo(function DayColumn({
   movePopoverCreatorId?: string | null;
   durationWeeks: number;
   saving?: boolean;
+  documentationStatusByCreatorId?: Record<string, "none" | "partial" | "complete">;
+  onDocumentationClick?: (creatorId: string) => void;
   onDragOver?: () => void;
   onDragLeave?: () => void;
   onDrop?: (event: React.DragEvent<HTMLDivElement>) => void;
@@ -640,6 +672,14 @@ const DayColumn = memo(function DayColumn({
           typeColorMap={typeColorMap}
           dotFallback={style.dot}
           executionStatus={entry.executionStatus}
+          documentationStatus={
+            documentationStatusByCreatorId?.[creator.creatorId] ?? "none"
+          }
+          onDocumentationClick={
+            onDocumentationClick
+              ? () => onDocumentationClick(creator.creatorId)
+              : undefined
+          }
           actualLiveDate={entry.actualLiveDate}
           editable={editable}
           draggable
@@ -750,12 +790,16 @@ export function MediaPlanCalendar({
   editable = false,
   saving = false,
   onMoveCreator,
+  documentationStatusByCreatorId,
+  onDocumentationClick,
 }: {
   data: MediaPlanData;
   orientation?: "portrait" | "landscape";
   editable?: boolean;
   saving?: boolean;
   onMoveCreator?: (target: MediaPlanCreatorMoveTarget) => void;
+  documentationStatusByCreatorId?: Record<string, "none" | "partial" | "complete">;
+  onDocumentationClick?: (creatorId: string) => void;
 }) {
   const landscape = orientation === "landscape";
   const legendTypes = useMemo(() => collectLegendTypes(data), [data]);
@@ -996,6 +1040,8 @@ export function MediaPlanCalendar({
                   }}
                   onOpenMovePopover={setMovePopoverCreator}
                   onCloseMovePopover={() => setMovePopoverCreator(null)}
+                  documentationStatusByCreatorId={documentationStatusByCreatorId}
+                  onDocumentationClick={onDocumentationClick}
                 />
               ))}
             </div>

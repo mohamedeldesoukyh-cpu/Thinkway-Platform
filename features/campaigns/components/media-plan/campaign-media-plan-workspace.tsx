@@ -12,11 +12,13 @@ import type { MediaPlanCreatorMoveTarget } from "@/features/campaign-outputs/com
 import { OpenCampaignStudioLauncher } from "@/features/campaign-outputs/components/open-campaign-studio-launcher-lazy";
 import { updateMediaPlanScheduleAction } from "@/features/campaign-outputs/actions/update-media-plan-schedule";
 import { seedFromCampaign } from "@/features/campaign-outputs/hydration/seed-adapters";
+import { getCreatorDocumentationCompletenessAction } from "@/features/campaigns/actions/deliverable-documentation-actions";
 import { MediaPlanApprovalToolbar } from "@/features/campaigns/components/media-plan/media-plan-approval-toolbar";
 import { MediaPlanComparisonPanel } from "@/features/campaigns/components/media-plan/media-plan-comparison-panel";
 import type { CampaignMediaPlanWorkspacePayload } from "@/features/campaigns/queries/load-campaign-media-plan";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { mediaPlanStatusLabel, type MediaPlanViewKind } from "@/lib/media-plan";
+import type { DocumentationCompleteness } from "@/lib/services/deliverables/documentation-types";
 import { campaignDetailPath } from "@/lib/routing/entity-paths";
 import { cn } from "@/lib/utils";
 
@@ -48,6 +50,17 @@ export function CampaignMediaPlanWorkspace({
   const [orientation, setOrientation] = useState<"portrait" | "landscape">("landscape");
   const [saving, setSaving] = useState(false);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [docsStatusByCreator, setDocsStatusByCreator] = useState<
+    Record<string, DocumentationCompleteness>
+  >({});
+
+  useEffect(() => {
+    void getCreatorDocumentationCompletenessAction({
+      campaignHeaderId: workspace.id,
+    }).then((result) => {
+      if (result.ok) setDocsStatusByCreator(result.data);
+    });
+  }, [workspace.id]);
   const [compareOpen, setCompareOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -273,6 +286,12 @@ export function CampaignMediaPlanWorkspace({
             editable={editable}
             saving={saving}
             onMoveCreator={editable ? handleMoveCreator : undefined}
+            documentationStatusByCreatorId={docsStatusByCreator}
+            onDocumentationClick={(creatorId) => {
+              router.push(
+                `${campaignDetailPath(workspace.id)}?tab=deliverables&docsCreator=${encodeURIComponent(creatorId)}`
+              );
+            }}
           />
         )}
       </div>

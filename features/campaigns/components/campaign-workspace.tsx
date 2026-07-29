@@ -35,7 +35,7 @@ import { CampaignKpiStrip } from "@/features/campaigns/components/campaign-kpi-s
 import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
 import { DuplicateCampaignDialog } from "@/features/campaigns/components/duplicate-campaign-dialog";
 import { CampaignBillingTab } from "@/features/campaigns/components/tabs/campaign-billing-tab";
-import { CampaignDeliverablesTab } from "@/features/campaigns/components/tabs/campaign-deliverables-tab";
+import { CampaignDeliverablesDocumentationTab } from "@/features/campaigns/components/tabs/campaign-deliverables-documentation-tab";
 import { CampaignAssignmentsTab } from "@/features/campaigns/components/tabs/campaign-assignments-tab";
 import { CampaignPerformanceCenterTab } from "@/features/campaigns/components/performance/campaign-performance-center-tab";
 import { CampaignOverviewTab } from "@/features/campaigns/components/tabs/campaign-overview-tab";
@@ -447,10 +447,10 @@ export function CampaignWorkspaceView({
             {renderTabContent(
               "deliverables",
               <TabErrorBoundary tabName="Deliverables">
-                <CampaignDeliverablesTab
+                <CampaignDeliverablesDocumentationTab
                   workspace={workspace}
                   assignmentHierarchy={assignmentHierarchy}
-                  publications={publications}
+                  initialCreatorFilter={searchParams.get("docsCreator")}
                 />
               </TabErrorBoundary>
             )}

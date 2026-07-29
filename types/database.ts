@@ -1543,6 +1543,176 @@ export type Database = {
         >;
         Relationships: [];
       };
+      deliverable_assets: {
+        Row: {
+          id: string;
+          campaign_header_id: string;
+          assignment_deliverable_id: string;
+          assignment_post_schedule_id: string | null;
+          asset_type: string;
+          medium: string;
+          label: string | null;
+          sort_order: number;
+          current_version_id: string | null;
+          created_by: string | null;
+          created_at: string;
+          archived_at: string | null;
+          metadata: Record<string, unknown>;
+        };
+        Insert: {
+          id?: string;
+          campaign_header_id: string;
+          assignment_deliverable_id: string;
+          assignment_post_schedule_id?: string | null;
+          asset_type: string;
+          medium?: string;
+          label?: string | null;
+          sort_order?: number;
+          current_version_id?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          archived_at?: string | null;
+          metadata?: Record<string, unknown>;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["deliverable_assets"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      deliverable_asset_versions: {
+        Row: {
+          id: string;
+          asset_id: string;
+          version_number: number;
+          storage_bucket: string | null;
+          storage_path: string | null;
+          external_url: string | null;
+          mime_type: string | null;
+          file_name: string | null;
+          file_size: number | null;
+          text_body: string | null;
+          change_summary: string | null;
+          uploaded_by: string | null;
+          uploaded_at: string;
+          metadata: Record<string, unknown>;
+        };
+        Insert: {
+          id?: string;
+          asset_id: string;
+          version_number: number;
+          storage_bucket?: string | null;
+          storage_path?: string | null;
+          external_url?: string | null;
+          mime_type?: string | null;
+          file_name?: string | null;
+          file_size?: number | null;
+          text_body?: string | null;
+          change_summary?: string | null;
+          uploaded_by?: string | null;
+          uploaded_at?: string;
+          metadata?: Record<string, unknown>;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["deliverable_asset_versions"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      deliverable_comments: {
+        Row: {
+          id: string;
+          campaign_header_id: string;
+          assignment_deliverable_id: string;
+          assignment_post_schedule_id: string | null;
+          asset_id: string | null;
+          audience: string;
+          body: string;
+          author_user_id: string | null;
+          author_display_name: string | null;
+          created_at: string;
+          edited_at: string | null;
+          deleted_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          campaign_header_id: string;
+          assignment_deliverable_id: string;
+          assignment_post_schedule_id?: string | null;
+          asset_id?: string | null;
+          audience?: string;
+          body: string;
+          author_user_id?: string | null;
+          author_display_name?: string | null;
+          created_at?: string;
+          edited_at?: string | null;
+          deleted_at?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["deliverable_comments"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      deliverable_documentation_events: {
+        Row: {
+          id: string;
+          campaign_header_id: string;
+          assignment_deliverable_id: string;
+          assignment_post_schedule_id: string | null;
+          asset_id: string | null;
+          version_id: string | null;
+          comment_id: string | null;
+          event_type: string;
+          actor_user_id: string | null;
+          actor_label: string | null;
+          payload: Record<string, unknown>;
+          occurred_at: string;
+        };
+        Insert: {
+          id?: string;
+          campaign_header_id: string;
+          assignment_deliverable_id: string;
+          assignment_post_schedule_id?: string | null;
+          asset_id?: string | null;
+          version_id?: string | null;
+          comment_id?: string | null;
+          event_type: string;
+          actor_user_id?: string | null;
+          actor_label?: string | null;
+          payload?: Record<string, unknown>;
+          occurred_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["deliverable_documentation_events"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      deliverable_publication_links: {
+        Row: {
+          id: string;
+          campaign_header_id: string;
+          assignment_deliverable_id: string;
+          assignment_post_schedule_id: string | null;
+          publication_id: string;
+          published_url: string | null;
+          platform: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          campaign_header_id: string;
+          assignment_deliverable_id: string;
+          assignment_post_schedule_id?: string | null;
+          publication_id: string;
+          published_url?: string | null;
+          platform?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["deliverable_publication_links"]["Insert"]
+        >;
+        Relationships: [];
+      };
       campaign_publications: {
         Row: {
           id: string;
