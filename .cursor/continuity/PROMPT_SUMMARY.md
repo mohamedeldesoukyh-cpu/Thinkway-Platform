@@ -39,6 +39,8 @@
 - Example: 15 Jul – 14 Aug 2026 → five weeks (11–17 Jul … 8–14 Aug)
 - **Campaign Window (hard constraint):** Start–End is absolute; Generate/Revise rebalance into window; save rejects out-of-window slots (`media-plan-campaign-window.ts`)
 - **Copilot end date:** `update_timeline` accepts start+end (e.g. “starting 24/07/2026 ending 23/08/2026”); stores `facts.campaignEndDate` and rebinds Publishing Calendar to that window (not duration-only derived end)
+- **Published card colors:** Studio + Original Media Plan cards turn green (Live) / amber (Partial) from Performance `live_date` (`annotateMediaPlanExecutionStatus`)
+- **Commercial SSOT Phase 1 (foundation done):** `lib/services/commercial/` — field registry (Master/Derived/Operational), CML identity (`source_quotation_item_id`), `CommercialSynchronizationService` (sync by CML ID), audit helpers, unit tests (`npm run test:commercial-ssot-phase1`). No UI yet. Phases 2–4 await approval. Spec: `docs/architecture/COMMERCIAL_SSOT_QUOTE_CAMPAIGN.md` (D-COMM).
 
 ## Media Plan Versioning (SSOT + domain aligned on develop)
 

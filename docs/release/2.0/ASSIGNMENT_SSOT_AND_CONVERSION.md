@@ -43,7 +43,13 @@ campaign_lines                          ← Assignment root (TW-YYYY-NNNN-A)
 | Live date / URL / metrics | — | Performance |
 | VIO / invoice / payment status | — | Owns |
 
-**Anti-pattern:** Maintaining editable cost/revenue on both `quotation_items` and `campaign_lines` as two books after convert. After convert, **Assignment PO fields are operational truth**; Quotation remains historical offer truth.
+**Superseded commercial model (2026-07-29):** Dual independent commercial books after convert are **rejected**. See [`docs/architecture/COMMERCIAL_SSOT_QUOTE_CAMPAIGN.md`](../../architecture/COMMERCIAL_SSOT_QUOTE_CAMPAIGN.md):
+
+- **Pre-finance:** Quotation and Campaign are two views of **one commercial SSOT** — bidirectional sync with confirmation.
+- **Finance-locked:** Direct commercial edits blocked; **Commercial Revision** required.
+- **Operational / performance fields** remain Campaign-only and never sync to Quotation.
+
+Phase 1 convert (projection + initial snapshot + pin) remains valid; post-convert commercial ownership above replaces the prior “Assignment-only live book” wording.
 
 ---
 

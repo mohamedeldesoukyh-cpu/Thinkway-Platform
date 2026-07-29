@@ -73,6 +73,13 @@ export type QuotationLifecycleAuditEvent =
   | "quotation.tentative_schedule_imported"
   | "quotation.generated_from_campaign_plan";
 
+/** Commercial SSOT sync events (Quotation ↔ Campaign Master fields). */
+export type CommercialSsotAuditEvent =
+  | "commercial.master_synced"
+  | "commercial.sync_blocked_finance_lock"
+  | "commercial.sync_rejected"
+  | "commercial.sync_not_confirmed";
+
 export type AuditVerdict = "PASS" | "WARN" | "FAIL";
 
 export type AuditVerdictResult = {

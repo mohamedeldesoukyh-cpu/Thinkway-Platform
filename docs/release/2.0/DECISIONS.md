@@ -9,6 +9,40 @@ These decisions are **normative**. Implementation must not reinterpret them.
 
 ---
 
+## D-COMM — Commercial SSOT after convert (2026-07-29)
+
+**Locked product direction:** Quotation and Campaign share **one commercial source of truth** after convert.
+
+| Level | Rule |
+|---|---|
+| **Master Commercial Fields** | Always synchronized Quotation ↔ Campaign until Finance Lock (confirm + audit) |
+| **Derived Financial Fields** | Never edited; recalculated from Master on both sides |
+| **Operational Fields** | Campaign-only; never sync to Quotation |
+
+| Identity | Rule |
+|---|---|
+| **Commercial Line ID** | Immutable; every quote-sourced Assignment permanently stores Origin CML ID |
+| **Join key** | Sync / audit / revision / change orders use CML ID — never row position or copied values |
+| **Cardinality** | Commercial Line → 1..N Assignments (split); future N:1 merges supported |
+| **Revisions** | Change Master values/versions; **never** rewrite Origin CML IDs |
+
+| Window | Rule |
+|---|---|
+| Pre-finance | Master edit either side → confirm → sync Master by CML ID → recalculate Derived → audit |
+| Finance-locked | No direct Master edit; Commercial Revision required |
+| Lock API | Single campaign-level `Campaign.isFinanceLocked()` / `isCampaignFinanceLocked` — all modules must use it |
+| Sync API | Single `CommercialSynchronizationService` + Commercial Line Registry — no duplicated sync logic |
+
+**Code bridge:** `campaign_lines.source_quotation_item_id` is the Phase 1 Origin pointer (`quotation_items.id` = Commercial Line ID).
+
+Future modules (Change Orders, Client Variations, Budget Revisions, PO Amendments, priced Additional Deliverables, Multi-Currency Adjustments, Campaign Extensions, Assignment split/merge) **reuse** the same SSOT + identity + sync + revision framework.
+
+**Normative spec:** [`docs/architecture/COMMERCIAL_SSOT_QUOTE_CAMPAIGN.md`](../../architecture/COMMERCIAL_SSOT_QUOTE_CAMPAIGN.md)
+
+This supersedes Phase 1 wording that treated Quotation as historical-only and Assignment as an independent live commercial book after convert. Convert projection + initial snapshot + pin + Origin CML ID remain.
+
+---
+
 ## D1 — Convert eligibility (quotation status)
 
 **Locked:** Only `approved` quotations may convert to Campaign Assignments.
