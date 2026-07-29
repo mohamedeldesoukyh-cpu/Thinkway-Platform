@@ -5,13 +5,10 @@ import { z } from "zod";
 import { loadCampaignObjectForConversation } from "@/features/campaign-intelligence";
 import { getCampaignAssignmentHierarchy } from "@/features/campaigns/queries/assignment-hierarchy";
 import { requirePermission } from "@/lib/auth/permissions-server";
-import { annotateMediaPlanExecutionStatus } from "@/lib/media-plan/annotate-execution-status";
 import { resolveCampaignHeaderIdForMediaPlan } from "@/lib/media-plan/log-media-plan-timeline";
 import { performanceFactsFromAssignmentHierarchy } from "@/lib/media-plan/performance-facts";
 import type { MediaPlanPerformanceFact } from "@/lib/media-plan/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-import type { MediaPlanData } from "../generators/media-plan";
 
 const inputSchema = z.object({
   campaignObjectId: z.string().uuid(),
@@ -78,12 +75,4 @@ export async function loadMediaPlanPerformanceFactsAction(
   } catch {
     return { ok: true, facts: [] };
   }
-}
-
-/** Annotate tip Media Plan data with Performance live dates (Studio + Original parity). */
-export function annotateStudioMediaPlanData(
-  data: MediaPlanData,
-  facts: MediaPlanPerformanceFact[]
-): MediaPlanData {
-  return annotateMediaPlanExecutionStatus(data, facts);
 }
