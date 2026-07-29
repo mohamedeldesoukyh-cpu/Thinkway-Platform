@@ -16,9 +16,10 @@ import {
 } from "@/lib/services/quotations/repositories/quotation-repository";
 import type { CommercialInputMode, Database } from "@/types/database";
 
+import { isCampaignFinanceLocked } from "@/lib/finance/campaign-finance-lock";
+
 import { createSupabaseAuditWriter } from "./commercial-audit";
 import { buildRegistryEntry } from "./commercial-line-identity";
-import { financeLockStub } from "./commercial-synchronization-service";
 import {
   fromCampaignRow,
   fromQuotationRow,
@@ -250,7 +251,7 @@ export function createSupabaseCommercialSyncPorts(
       // Profit/margin updated on assignment write; header KPIs refresh on load.
     },
     isFinanceLocked: async (campaignHeaderId) =>
-      financeLockStub(campaignHeaderId),
+      isCampaignFinanceLocked(supabase, campaignHeaderId),
     writeAudit,
     runInTransaction: async (work) => {
       snapQuotes.clear();

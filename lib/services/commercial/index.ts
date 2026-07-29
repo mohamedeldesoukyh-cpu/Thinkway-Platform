@@ -42,6 +42,7 @@ export {
   RATE_MASTER_KEYS,
   allocateMasterAcrossAssignments,
   assertOnlyMasterChanges,
+  diffMasterChanges,
   fromCampaignRow,
   fromQuotationRow,
   getFieldLevel,
@@ -52,9 +53,18 @@ export {
   listDerivedFields,
   listMasterFields,
   listOperationalFields,
+  masterFieldLabel,
+  resolveDerivedRecalcPlan,
   toCampaignColumns,
   toQuotationColumns,
+  valuesEqual,
 } from "./field-registry";
+
+export {
+  Campaign,
+  formatFinanceLockReasons,
+  isCampaignFinanceLocked,
+} from "@/lib/finance/campaign-finance-lock";
 
 export {
   CommercialSynchronizationService,
@@ -80,4 +90,5 @@ export type {
   CommercialSyncSource,
   FinanceLockResult,
   MasterCommercialValues,
+  MasterFieldChange,
 } from "./types";

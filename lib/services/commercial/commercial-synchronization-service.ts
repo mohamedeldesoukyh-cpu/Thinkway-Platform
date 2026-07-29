@@ -5,23 +5,32 @@
  * Spec: docs/architecture/COMMERCIAL_SSOT_QUOTE_CAMPAIGN.md §5–§6
  *
  * Sync is registry-driven: new Master fields require Field Registry updates only.
+ * Writes only dirty Master fields; audit is field-level; Derived recalc is dependency-driven.
  */
+
+import type { FinanceLockResult } from "@/lib/finance/campaign-finance-lock";
 
 import {
   allocateMasterAcrossAssignments,
   assertOnlyMasterChanges,
+  diffMasterChanges,
   RATE_MASTER_KEYS,
+  resolveDerivedRecalcPlan,
 } from "./field-registry";
 import type {
   ApplyMasterChangeInput,
   ApplyMasterChangeResult,
   CommercialAuditEntry,
+  CommercialMasterFieldKey,
   CommercialSyncPorts,
-  FinanceLockResult,
   MasterCommercialValues,
+  MasterFieldChange,
 } from "./types";
 
-/** Phase 1–2 stub — always unlocked. Phase 3 replaces via ports.isFinanceLocked. */
+/**
+ * @deprecated Phase 3 — use `Campaign.isFinanceLocked` /
+ * `isCampaignFinanceLocked` from `@/lib/finance/campaign-finance-lock`.
+ */
 export async function financeLockStub(
   _campaignHeaderId: string
 ): Promise<FinanceLockResult> {
@@ -121,7 +130,7 @@ export class CommercialSynchronizationService {
     }
 
     try {
-      return await this.executeConfirmedChange(input, occurredAt, changeKeys);
+      return await this.executeConfirmedChange(input, occurredAt);
     } finally {
       if (idempotencyKey) {
         await this.ports.endIdempotent(idempotencyKey);
@@ -131,8 +140,7 @@ export class CommercialSynchronizationService {
 
   private async executeConfirmedChange(
     input: ApplyMasterChangeInput,
-    occurredAt: string,
-    changeKeys: string[]
+    occurredAt: string
   ): Promise<ApplyMasterChangeResult> {
     const registry =
       input.source.side === "quotation"
@@ -212,17 +220,19 @@ export class CommercialSynchronizationService {
     const previousQuote = await this.ports.loadQuotationMaster(
       registry.quotationItemId
     );
-    const agreement: MasterCommercialValues = {
+
+    // Baseline for dirty detection: quote masters (canonical Commercial Line).
+    // Campaign 1:N may reconstruct agreement totals before diff.
+    let proposedAgreement: MasterCommercialValues = {
       ...(previousQuote ?? {}),
       ...input.changes,
     };
 
-    let quotationAgreement = agreement;
     if (
       input.source.side === "campaign" &&
       registry.assignmentIds.length > 1
     ) {
-      quotationAgreement = await this.reconstructAgreementFromCampaignEdit({
+      proposedAgreement = await this.reconstructAgreementFromCampaignEdit({
         registryAssignmentIds: registry.assignmentIds,
         editedAssignmentId: input.source.assignmentId,
         changes: input.changes,
@@ -230,56 +240,83 @@ export class CommercialSynchronizationService {
       });
     }
 
+    const { dirty, fieldChanges } = diffMasterChanges(
+      previousQuote ?? {},
+      // Only consider keys the caller intended to change (+ reconstructed abs totals)
+      proposedAgreementForDiff(input.changes, proposedAgreement, previousQuote ?? {})
+    );
+
+    if (fieldChanges.length === 0) {
+      return {
+        ok: true,
+        commercialLineId: registry.commercialLineId,
+        quotationId: registry.quotationId,
+        campaignHeaderId: registry.campaignHeaderId,
+        assignmentIds: registry.assignmentIds,
+        applied: {},
+        fieldChanges: [],
+        allocation: "noop",
+        concurrencyToken: currentToken,
+        recalculated: false,
+      };
+    }
+
+    const dirtyKeys = fieldChanges.map((c) => c.field);
+    const recalcPlan = resolveDerivedRecalcPlan(dirtyKeys);
+
     try {
       const result = await this.ports.runInTransaction(async () => {
-        await this.ports.writeQuotationMaster(
-          registry.quotationItemId,
-          quotationAgreement
-        );
+        // Write ONLY dirty Master fields — never rewrite identical peers.
+        await this.ports.writeQuotationMaster(registry.quotationItemId, dirty);
 
         const shares = allocateMasterAcrossAssignments(
-          quotationAgreement,
+          dirty,
           Math.max(1, registry.assignmentIds.length)
         );
 
         if (registry.assignmentIds.length === 0) {
-          // Quote-only (no Assignments yet).
+          // Quote-only.
         } else if (
           input.source.side === "campaign" &&
           registry.assignmentIds.length > 1
         ) {
+          const rateOnly = pickRateMasterChanges(dirty);
           for (const assignmentId of registry.assignmentIds) {
             if (assignmentId === input.source.assignmentId) {
-              const current =
-                (await this.ports.loadAssignmentMaster(assignmentId)) ?? {};
-              await this.ports.writeAssignmentMaster(assignmentId, {
-                ...current,
-                ...input.changes,
-              });
-            } else {
-              const current =
-                (await this.ports.loadAssignmentMaster(assignmentId)) ?? {};
-              const rateOnly = pickRateMasterChanges(input.changes);
-              if (Object.keys(rateOnly).length > 0) {
-                await this.ports.writeAssignmentMaster(assignmentId, {
-                  ...current,
-                  ...rateOnly,
-                });
+              const assignmentDirty = pickKeys(input.changes, dirtyKeys);
+              if (Object.keys(assignmentDirty).length > 0) {
+                await this.ports.writeAssignmentMaster(
+                  assignmentId,
+                  assignmentDirty
+                );
               }
+            } else if (Object.keys(rateOnly).length > 0) {
+              await this.ports.writeAssignmentMaster(assignmentId, rateOnly);
             }
           }
         } else {
           for (let i = 0; i < registry.assignmentIds.length; i++) {
-            await this.ports.writeAssignmentMaster(
-              registry.assignmentIds[i],
-              shares[i] ?? quotationAgreement
-            );
+            const share = shares[i] ?? dirty;
+            if (Object.keys(share).length > 0) {
+              await this.ports.writeAssignmentMaster(
+                registry.assignmentIds[i],
+                share
+              );
+            }
           }
         }
 
-        await this.ports.recalculateQuotationDerived(registry.quotationId);
-        if (registry.campaignHeaderId) {
+        let recalculated = false;
+        if (recalcPlan.requiresQuotationTotals) {
+          await this.ports.recalculateQuotationDerived(registry.quotationId);
+          recalculated = true;
+        }
+        if (
+          recalcPlan.requiresCampaignSummary &&
+          registry.campaignHeaderId
+        ) {
           await this.ports.recalculateCampaignDerived(registry.campaignHeaderId);
+          recalculated = true;
         }
 
         const nextToken = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -294,7 +331,8 @@ export class CommercialSynchronizationService {
           quotationId: registry.quotationId,
           campaignHeaderId: registry.campaignHeaderId,
           assignmentIds: registry.assignmentIds,
-          applied: quotationAgreement,
+          applied: dirty,
+          fieldChanges,
           allocation:
             registry.assignmentIds.length <= 1
               ? ("single" as const)
@@ -302,6 +340,7 @@ export class CommercialSynchronizationService {
                 ? ("rates_only" as const)
                 : ("equal_split" as const),
           concurrencyToken: nextToken,
+          recalculated,
         };
       });
 
@@ -315,13 +354,16 @@ export class CommercialSynchronizationService {
         sourceSide: input.source.side,
         occurredAt,
         result: "synced",
-        oldData: (previousQuote as Record<string, unknown>) ?? null,
-        newData: quotationAgreement as Record<string, unknown>,
+        oldData: fieldChangesToOldMap(fieldChanges),
+        newData: fieldChangesToNewMap(fieldChanges),
+        fieldChanges,
         metadata: {
           allocation: result.allocation,
           reason: input.reason ?? null,
-          changed_keys: changeKeys,
+          changed_keys: dirtyKeys,
           user_id: input.actorId,
+          recalculated: result.recalculated,
+          derived_keys: recalcPlan.derivedKeys,
         },
       });
 
@@ -341,8 +383,9 @@ export class CommercialSynchronizationService {
         sourceSide: input.source.side,
         occurredAt: new Date().toISOString(),
         result: "rolled_back",
-        oldData: (previousQuote as Record<string, unknown>) ?? null,
-        newData: { changes: input.changes },
+        oldData: fieldChangesToOldMap(fieldChanges),
+        newData: fieldChangesToNewMap(fieldChanges),
+        fieldChanges,
         metadata: {
           error: error instanceof Error ? error.message : "unknown",
         },
@@ -416,6 +459,61 @@ export function pickRateMasterChanges(
     if (value === undefined) continue;
     if (RATE_MASTER_KEYS.has(key)) out[key] = value;
   }
+  return out;
+}
+
+function pickKeys(
+  source: MasterCommercialValues,
+  keys: CommercialMasterFieldKey[]
+): MasterCommercialValues {
+  const out: MasterCommercialValues = {};
+  for (const key of keys) {
+    if (source[key] !== undefined) out[key] = source[key];
+  }
+  return out;
+}
+
+/**
+ * Diff baseline: caller-provided changes, plus reconstructed absolute totals
+ * when they differ from the previous quote agreement.
+ */
+function proposedAgreementForDiff(
+  callerChanges: MasterCommercialValues,
+  proposedAgreement: MasterCommercialValues,
+  previous: MasterCommercialValues
+): MasterCommercialValues {
+  const proposed: MasterCommercialValues = { ...callerChanges };
+  for (const key of Object.keys(proposedAgreement) as CommercialMasterFieldKey[]) {
+    if (callerChanges[key] !== undefined) continue;
+    // Include reconstructed abs totals that moved vs previous
+    if (
+      key === "creator_cost" ||
+      key === "client_revenue" ||
+      key === "gp_value_input" ||
+      key === "usage_rights_amount" ||
+      key === "usage_rights_cost"
+    ) {
+      if (proposedAgreement[key] !== previous[key]) {
+        proposed[key] = proposedAgreement[key];
+      }
+    }
+  }
+  return proposed;
+}
+
+function fieldChangesToOldMap(
+  changes: MasterFieldChange[]
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const c of changes) out[c.field] = c.oldValue ?? null;
+  return out;
+}
+
+function fieldChangesToNewMap(
+  changes: MasterFieldChange[]
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const c of changes) out[c.field] = c.newValue ?? null;
   return out;
 }
 

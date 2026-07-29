@@ -30,8 +30,8 @@ These decisions are **normative**. Implementation must not reinterpret them.
 |---|---|
 | Pre-finance | Master edit either side → confirm → sync Master by CML ID → recalculate Derived → audit |
 | Finance-locked | No direct Master edit; Commercial Revision required |
-| Lock API | Single campaign-level `Campaign.isFinanceLocked()` / `isCampaignFinanceLocked` — all modules must use it |
-| Sync API | Single `CommercialSynchronizationService` + Commercial Line Registry — no duplicated sync logic |
+| Lock API | Platform gateway `Campaign.isFinanceLocked()` / `isCampaignFinanceLocked` (`lib/finance/campaign-finance-lock.ts`) — **all modules** (Commercial SSOT, PO, VIO, Invoice, Payments, Change Orders, etc.) must use it |
+| Sync API | Single `CommercialSynchronizationService` + Commercial Line Registry — dirty Master fields only; field-level audit; registry-driven Derived recalc |
 
 **Code bridge:** `campaign_lines.source_quotation_item_id` is the Phase 1 Origin pointer (`quotation_items.id` = Commercial Line ID).
 

@@ -40,7 +40,7 @@
 - **Campaign Window (hard constraint):** Start–End is absolute; Generate/Revise rebalance into window; save rejects out-of-window slots (`media-plan-campaign-window.ts`)
 - **Copilot end date:** `update_timeline` accepts start+end (e.g. “starting 24/07/2026 ending 23/08/2026”); stores `facts.campaignEndDate` and rebinds Publishing Calendar to that window (not duration-only derived end)
 - **Published card colors:** Studio + Original Media Plan cards turn green (Live) / amber (Partial) from Performance `live_date` (`annotateMediaPlanExecutionStatus`)
-- **Commercial SSOT Phases 1–2 done:** Foundation + bidirectional Master sync via `CommercialSynchronizationService` (CML ID only), confirmation dialogs on Quotation save + Campaign line sheet, Supabase ports with compensating rollback, audit (CML/source/user/timestamp/old/new/result). Tests: `npm run test:commercial-ssot-phase2`. Phase 3 (finance lock) + Phase 4 (revision) await approval. Spec: `docs/architecture/COMMERCIAL_SSOT_QUOTE_CAMPAIGN.md` (D-COMM).
+- **Commercial SSOT Phases 1–3 done:** Bidirectional Master sync by CML ID; dirty-field writes; field-level audit; registry-driven Derived recalc; platform Finance Lock gateway `Campaign.isFinanceLocked` / `isCampaignFinanceLocked` (`lib/finance/campaign-finance-lock.ts`) used by sync + campaign/quotation commercial edits. Tests: `npm run test:commercial-ssot-phase3`. Phase 4 (Commercial Revision) awaits approval. Spec: `docs/architecture/COMMERCIAL_SSOT_QUOTE_CAMPAIGN.md` (D-COMM).
 
 ## Media Plan Versioning (SSOT + domain aligned on develop)
 

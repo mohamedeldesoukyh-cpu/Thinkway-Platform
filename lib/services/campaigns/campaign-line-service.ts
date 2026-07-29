@@ -417,7 +417,7 @@ export async function updateCampaignLine(
   const revenueBeforeVat = parsed.revenue_before_vat ?? parsed.revenue;
   const costBeforeVat = parsed.cost_before_vat ?? parsed.cost;
 
-  if (existingLineMeta.source_quotation_item_id) {
+  {
     const masterChanges: MasterCommercialValues = {
       creator_cost: costBeforeVat,
       client_revenue: revenueBeforeVat,
@@ -449,6 +449,7 @@ export async function updateCampaignLine(
         Number(parsed.fx_rate) !== Number(existingLineMeta.fx_rate ?? 0));
 
     if (mastersChanged) {
+      // Finance lock + Commercial SSOT sync (when Origin linked) — platform gateway.
       const gate = await applyCampaignMasterSyncIfLinked(supabase, {
         actorId: userId,
         assignmentId: parsed.line_id,

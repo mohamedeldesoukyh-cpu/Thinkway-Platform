@@ -34,6 +34,7 @@ export async function writeCommercialSyncAudit(
     result: entry.result,
     old_value: entry.oldData,
     new_value: entry.newData,
+    field_changes: entry.fieldChanges ?? null,
     ...entry.metadata,
   };
 
@@ -70,8 +71,15 @@ export function createSupabaseAuditWriter(
 
 function summarize(entry: CommercialAuditEntry): string {
   switch (entry.event) {
-    case "commercial.master_synced":
+    case "commercial.master_synced": {
+      if (entry.fieldChanges && entry.fieldChanges.length > 0) {
+        const lines = entry.fieldChanges.map(
+          (c) => `${c.label}: ${formatAuditValue(c.oldValue)} → ${formatAuditValue(c.newValue)}`
+        );
+        return `Commercial Line ${entry.commercialLineId ?? "unknown"} — ${lines.join("; ")}`;
+      }
       return `Master commercials synchronized for Commercial Line ${entry.commercialLineId ?? "unknown"}`;
+    }
     case "commercial.sync_blocked_finance_lock":
       return "Commercial sync blocked — Campaign is finance-locked";
     case "commercial.sync_not_confirmed":
@@ -85,4 +93,11 @@ function summarize(entry: CommercialAuditEntry): string {
     default:
       return "Commercial sync event";
   }
+}
+
+function formatAuditValue(
+  value: string | number | boolean | null | undefined
+): string {
+  if (value === null || value === undefined) return "—";
+  return String(value);
 }

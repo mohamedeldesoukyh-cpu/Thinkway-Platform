@@ -75,9 +75,16 @@ export type CommercialLineRegistryEntry = {
   assignmentIds: string[];
 };
 
-export type FinanceLockResult = {
-  locked: boolean;
-  reasons: string[];
+export type {
+  CampaignFinanceLockReason,
+  FinanceLockResult,
+} from "@/lib/finance/campaign-finance-lock";
+
+export type MasterFieldChange = {
+  field: CommercialMasterFieldKey;
+  label: string;
+  oldValue: string | number | boolean | null | undefined;
+  newValue: string | number | boolean | null | undefined;
 };
 
 export type CommercialSyncSource =
@@ -125,9 +132,11 @@ export type ApplyMasterChangeResult =
       campaignHeaderId: string | null;
       assignmentIds: string[];
       applied: MasterCommercialValues;
-      allocation: "single" | "equal_split" | "rates_only";
+      fieldChanges: MasterFieldChange[];
+      allocation: "single" | "equal_split" | "rates_only" | "noop";
       concurrencyToken: string | null;
       duplicate?: boolean;
+      recalculated: boolean;
     }
   | {
       ok: false;
@@ -222,6 +231,8 @@ export type CommercialAuditEntry = {
   result: CommercialSyncResultStatus;
   oldData: Record<string, unknown> | null;
   newData: Record<string, unknown> | null;
+  /** Field-level commercial changes for Finance-readable audit. */
+  fieldChanges?: MasterFieldChange[];
   metadata?: Record<string, unknown>;
 };
 

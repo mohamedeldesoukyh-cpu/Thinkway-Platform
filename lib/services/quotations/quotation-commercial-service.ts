@@ -118,6 +118,7 @@ export async function updateQuotationItemCommercials(
       message: gate.message,
       code: gate.code,
       commercialSync: gate.commercialSync,
+      financeLock: gate.financeLock,
     };
   }
 

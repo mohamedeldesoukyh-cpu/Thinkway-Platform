@@ -8,8 +8,14 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 
 import {
+  Campaign,
+  type FinanceLockResult,
+} from "@/lib/finance/campaign-finance-lock";
+
+import {
   COMMERCIAL_SYNC_CONFIRMATION_REQUIRED,
   commercialSyncConfirmationCopy,
+  financeLockConfirmationCopy,
 } from "./confirmation-copy";
 import { createCommercialSynchronizationService } from "./commercial-synchronization-service";
 import {
@@ -35,6 +41,7 @@ export type CommercialSyncGateDenied = {
   ok: false;
   code: string;
   message: string;
+  financeLock?: FinanceLockResult;
   commercialSync?: CommercialSyncLinkProbe & {
     confirmationTitle: string;
     confirmationDescription: string;
@@ -71,6 +78,27 @@ export async function applyQuotationMasterSyncIfLinked(
   );
   if (!probe.linked) {
     return { ok: true, synced: false, reason: "not_linked" };
+  }
+
+  if (probe.campaignHeaderId) {
+    const lock = await Campaign.isFinanceLocked(
+      supabase,
+      probe.campaignHeaderId
+    );
+    if (lock.locked) {
+      const copy = financeLockConfirmationCopy();
+      return {
+        ok: false,
+        code: "FINANCE_LOCKED",
+        message: copy.description,
+        financeLock: lock,
+        commercialSync: {
+          ...probe,
+          confirmationTitle: copy.title,
+          confirmationDescription: copy.description,
+        },
+      };
+    }
   }
 
   if (!input.options?.confirmCommercialSync) {
@@ -132,6 +160,37 @@ export async function applyCampaignMasterSyncIfLinked(
     supabase,
     input.assignmentId
   );
+
+  // Platform finance lock applies to the Campaign even when Origin is missing.
+  const campaignHeaderId =
+    probe.campaignHeaderId ??
+    (
+      await supabase
+        .from("campaign_lines")
+        .select("campaign_header_id")
+        .eq("id", input.assignmentId)
+        .maybeSingle()
+    ).data?.campaign_header_id;
+
+  if (campaignHeaderId) {
+    const lock = await Campaign.isFinanceLocked(supabase, campaignHeaderId);
+    if (lock.locked) {
+      const copy = financeLockConfirmationCopy();
+      return {
+        ok: false,
+        code: "FINANCE_LOCKED",
+        message: copy.description,
+        financeLock: lock,
+        commercialSync: {
+          ...probe,
+          campaignHeaderId,
+          confirmationTitle: copy.title,
+          confirmationDescription: copy.description,
+        },
+      };
+    }
+  }
+
   if (!probe.linked) {
     return { ok: true, synced: false, reason: "not_linked" };
   }

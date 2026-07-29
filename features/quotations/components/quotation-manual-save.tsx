@@ -16,7 +16,10 @@ import { toast } from "sonner";
 
 import { useConfirmAction } from "@/components/shared/confirm-action-provider";
 import { useRegisterShortcut } from "@/lib/productivity/keyboard-shortcuts";
-import { COMMERCIAL_SYNC_CONFIRMATION_REQUIRED } from "@/lib/services/commercial/confirmation-copy";
+import {
+  COMMERCIAL_SYNC_CONFIRMATION_REQUIRED,
+  financeLockConfirmationCopy,
+} from "@/lib/services/commercial/confirmation-copy";
 
 import {
   finalizeQuotationSave,
@@ -296,6 +299,28 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
     };
 
     let lineResults = await saveLines(false);
+
+    const financeGate = lineResults.find(
+      (res) => !res.ok && "code" in res && res.code === "FINANCE_LOCKED"
+    );
+    if (financeGate && !financeGate.ok) {
+      const copy = financeLockConfirmationCopy();
+      const meta =
+        "commercialSync" in financeGate ? financeGate.commercialSync : null;
+      const accepted = await confirm({
+        title: meta?.confirmationTitle ?? copy.title,
+        description: meta?.confirmationDescription ?? copy.description,
+        confirmLabel: copy.confirmLabel,
+      });
+      if (accepted) {
+        toast.message("Commercial Revision workflow will be available in Phase 4.");
+      }
+      setSavePending(false);
+      savePendingRef.current = false;
+      setSaveStatus("pending");
+      return false;
+    }
+
     const syncGate = lineResults.find(
       (res) =>
         !res.ok &&

@@ -12,7 +12,10 @@ import type {
   CommercialMasterFieldKey,
   CommercialOperationalFieldKey,
   MasterCommercialValues,
+  MasterFieldChange,
 } from "./types";
+
+export type { MasterFieldChange } from "./types";
 
 export type FieldPersistenceMap = {
   key: CommercialMasterFieldKey;
@@ -364,4 +367,182 @@ export function allocateMasterAcrossAssignments(
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+const MASTER_LABELS: Record<CommercialMasterFieldKey, string> = {
+  creator_cost: "Creator Cost",
+  client_revenue: "Client Revenue",
+  cost_currency: "Currency",
+  exchange_rate: "Exchange Rate",
+  agency_fee_percent: "Agency Fee / Commission",
+  commercial_input_mode: "Pricing Mode",
+  gp_pct_input: "GP %",
+  gp_value_input: "GP Value",
+  usage_rights_amount: "Usage Rights Amount",
+  usage_rights_cost: "Usage Rights Cost",
+  revenue_vat_percent: "Revenue VAT %",
+  cost_vat_percent: "Cost VAT %",
+  revenue_vat_exempt: "Revenue VAT Exempt",
+  cost_vat_exempt: "Cost VAT Exempt",
+};
+
+/** Master → Derived dependency graph (registry-driven recalculation). */
+const MASTER_DERIVED_DEPS: Record<
+  CommercialMasterFieldKey,
+  readonly CommercialDerivedFieldKey[]
+> = {
+  creator_cost: [
+    "total_cost",
+    "gross_profit",
+    "gross_margin_pct",
+    "cost_egp",
+    "gp_value_egp",
+    "profit",
+    "profit_margin",
+    "quotation_totals",
+    "campaign_financial_summary",
+  ],
+  client_revenue: [
+    "total_revenue",
+    "gross_profit",
+    "gross_margin_pct",
+    "agency_fee_amount",
+    "revenue_egp",
+    "gp_value_egp",
+    "af_value_egp",
+    "profit",
+    "profit_margin",
+    "quotation_totals",
+    "campaign_financial_summary",
+  ],
+  cost_currency: [
+    "cost_egp",
+    "revenue_egp",
+    "gp_value_egp",
+    "af_value_egp",
+    "quotation_totals",
+    "campaign_financial_summary",
+  ],
+  exchange_rate: [
+    "cost_egp",
+    "revenue_egp",
+    "gp_value_egp",
+    "af_value_egp",
+    "quotation_totals",
+    "campaign_financial_summary",
+  ],
+  agency_fee_percent: [
+    "agency_fee_amount",
+    "af_value_egp",
+    "quotation_totals",
+    "campaign_financial_summary",
+  ],
+  commercial_input_mode: [
+    "gross_profit",
+    "gross_margin_pct",
+    "quotation_totals",
+    "campaign_financial_summary",
+  ],
+  gp_pct_input: [
+    "gross_profit",
+    "gross_margin_pct",
+    "gp_value_egp",
+    "quotation_totals",
+    "campaign_financial_summary",
+  ],
+  gp_value_input: [
+    "gross_profit",
+    "gross_margin_pct",
+    "gp_value_egp",
+    "quotation_totals",
+    "campaign_financial_summary",
+  ],
+  usage_rights_amount: [
+    "total_revenue",
+    "gross_profit",
+    "quotation_totals",
+    "campaign_financial_summary",
+  ],
+  usage_rights_cost: [
+    "total_cost",
+    "gross_profit",
+    "quotation_totals",
+    "campaign_financial_summary",
+  ],
+  revenue_vat_percent: ["campaign_financial_summary"],
+  cost_vat_percent: ["campaign_financial_summary"],
+  revenue_vat_exempt: ["campaign_financial_summary"],
+  cost_vat_exempt: ["campaign_financial_summary"],
+};
+
+export function masterFieldLabel(key: CommercialMasterFieldKey): string {
+  return MASTER_LABELS[key] ?? key;
+}
+
+export function valuesEqual(
+  a: string | number | boolean | null | undefined,
+  b: string | number | boolean | null | undefined
+): boolean {
+  if (a === b) return true;
+  if (a == null && b == null) return true;
+  if (typeof a === "number" && typeof b === "number") {
+    return Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) < 1e-9;
+  }
+  return String(a) === String(b);
+}
+
+/**
+ * Dirty-state detection: only keys whose proposed value differs from current.
+ * Identical values are omitted so sync/audit stay field-precise.
+ */
+export function diffMasterChanges(
+  current: MasterCommercialValues,
+  proposed: MasterCommercialValues
+): {
+  dirty: MasterCommercialValues;
+  fieldChanges: MasterFieldChange[];
+} {
+  const dirty: MasterCommercialValues = {};
+  const fieldChanges: MasterFieldChange[] = [];
+
+  for (const [key, newValue] of Object.entries(proposed) as [
+    CommercialMasterFieldKey,
+    string | number | boolean | null | undefined,
+  ][]) {
+    if (newValue === undefined) continue;
+    if (!isMasterFieldKey(key)) continue;
+    const oldValue = current[key];
+    if (valuesEqual(oldValue, newValue)) continue;
+    dirty[key] = newValue;
+    fieldChanges.push({
+      field: key,
+      label: masterFieldLabel(key),
+      oldValue,
+      newValue,
+    });
+  }
+
+  return { dirty, fieldChanges };
+}
+
+export type DerivedRecalcPlan = {
+  derivedKeys: CommercialDerivedFieldKey[];
+  requiresQuotationTotals: boolean;
+  requiresCampaignSummary: boolean;
+};
+
+/** Resolve which Derived fields must recalculate given dirty Master keys. */
+export function resolveDerivedRecalcPlan(
+  dirtyKeys: readonly CommercialMasterFieldKey[]
+): DerivedRecalcPlan {
+  const derived = new Set<CommercialDerivedFieldKey>();
+  for (const key of dirtyKeys) {
+    for (const d of MASTER_DERIVED_DEPS[key] ?? []) derived.add(d);
+  }
+  const derivedKeys = [...derived];
+  return {
+    derivedKeys,
+    requiresQuotationTotals: derived.has("quotation_totals"),
+    requiresCampaignSummary: derived.has("campaign_financial_summary"),
+  };
 }

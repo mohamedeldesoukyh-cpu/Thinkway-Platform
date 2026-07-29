@@ -6,7 +6,10 @@ import { toast } from "sonner";
 
 import { useConfirmAction } from "@/components/shared/confirm-action-provider";
 import { InfluencerTypeahead } from "@/components/forms/influencer-typeahead";
-import { COMMERCIAL_SYNC_CONFIRMATION_REQUIRED } from "@/lib/services/commercial/confirmation-copy";
+import {
+  COMMERCIAL_SYNC_CONFIRMATION_REQUIRED,
+  financeLockConfirmationCopy,
+} from "@/lib/services/commercial/confirmation-copy";
 import { VatAmountSection } from "@/components/forms/vat-amount-section";
 import { FieldError } from "@/components/forms/field-error";
 import { Badge } from "@/components/ui/badge";
@@ -465,6 +468,25 @@ export function CampaignLineSheet({
       commercialSyncPromptedRef.current = false;
       router.refresh();
       onOpenChange(false);
+      return;
+    }
+
+    if (state.code === "FINANCE_LOCKED") {
+      submitLockRef.current = false;
+      void (async () => {
+        const copy = financeLockConfirmationCopy();
+        const accepted = await confirm({
+          title: state.commercialSync?.confirmationTitle ?? copy.title,
+          description:
+            state.commercialSync?.confirmationDescription ?? copy.description,
+          confirmLabel: copy.confirmLabel,
+        });
+        if (accepted) {
+          toast.message(
+            "Commercial Revision workflow will be available in Phase 4."
+          );
+        }
+      })();
       return;
     }
 

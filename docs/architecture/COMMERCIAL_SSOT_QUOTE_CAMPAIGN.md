@@ -1,6 +1,6 @@
 # Commercial SSOT — Quotation ↔ Campaign (Post-Convert)
 
-**Status:** Approved architecture — Phases 1–2 implemented (foundation + bidirectional sync with confirmation). Phases 3–4 pending approval.  
+**Status:** Approved architecture — Phases 1–3 implemented (foundation, bidirectional sync with dirty-field/field-level audit, Finance Lock gateway). Phase 4 pending approval.  
 **Date:** 2026-07-29  
 **Authority:** Product / Commercial Finance  
 **Supersedes (for commercial amounts):** Release 2.0 dual-book language in  
@@ -437,8 +437,11 @@ After finance lock, Commercial Revision is the only path to change Master commer
 | **0 — Spec lock** | This document + D-COMM | Done |
 | **1 — Foundation** | Field registry + identity + `CommercialSynchronizationService` + audit (no UI) — `lib/services/commercial/` | **Done** |
 | **2 — Bidirectional sync UI** | Confirmation dialog + wire Quotation/Campaign editors + Supabase ports + recalc + audit | **Done** |
-| **3 — Finance lock** | `isCampaignFinanceLocked` / `Campaign.isFinanceLocked()` + block Master writes | Pending approval |
-| **4 — Commercial Revision** | Versioned revision + approval + dual apply (IDs preserved) | Pending |
+| **2.5 — Sync precision** | Dirty-field sync only; field-level audit; registry-driven Derived recalc deps | **Done** |
+| **3 — Finance lock** | Platform `Campaign.isFinanceLocked()` / `isCampaignFinanceLocked` — single gateway for all modules | **Done** |
+| **4 — Commercial Revision** | Versioned revision + approval + dual apply (IDs preserved) | Pending approval |
+
+**Finance Lock code:** `lib/finance/campaign-finance-lock.ts` · tests: `npm run test:commercial-ssot-phase3`
 | **Later — Split / merge** | Explicit 1:N allocation policy refinements; N:1 merge origins | Pending |
 
 **Phase 1 code:** `lib/services/commercial/` · tests: `npm run test:commercial-ssot-phase1`
