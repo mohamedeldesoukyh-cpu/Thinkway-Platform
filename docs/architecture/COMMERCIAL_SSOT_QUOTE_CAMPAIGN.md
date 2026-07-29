@@ -1,6 +1,6 @@
 # Commercial SSOT — Quotation ↔ Campaign (Post-Convert)
 
-**Status:** Feature-complete — Phases 1–4 implemented (foundation, bidirectional dirty sync, Finance Lock gateway, Commercial Revision workflow).  
+**Status:** Feature-complete — Phases 1–4 implemented. **UAT in progress** (feature freeze). Sign-off: [`COMMERCIAL_SSOT_UAT_SIGNOFF.md`](./COMMERCIAL_SSOT_UAT_SIGNOFF.md).  
 **Date:** 2026-07-29  
 **Authority:** Product / Commercial Finance  
 **Supersedes (for commercial amounts):** Release 2.0 dual-book language in  
