@@ -156,7 +156,8 @@ export class CommercialSynchronizationService {
       };
     }
 
-    if (registry.campaignHeaderId) {
+    const revisionBypass = Boolean(input.approvedRevision?.revisionId);
+    if (registry.campaignHeaderId && !revisionBypass) {
       const lock = await this.ports.isFinanceLocked(registry.campaignHeaderId);
       if (lock.locked) {
         await this.audit({
@@ -364,6 +365,9 @@ export class CommercialSynchronizationService {
           user_id: input.actorId,
           recalculated: result.recalculated,
           derived_keys: recalcPlan.derivedKeys,
+          commercial_revision_id: input.approvedRevision?.revisionId ?? null,
+          commercial_revision_number:
+            input.approvedRevision?.revisionNumber ?? null,
         },
       });
 

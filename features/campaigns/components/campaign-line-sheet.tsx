@@ -38,6 +38,10 @@ import {
   type FormActionState,
 } from "@/features/campaigns/actions";
 import { AssignmentIoRevisionDialog } from "@/features/campaigns/components/assignment-io-revision-dialog";
+import {
+  CommercialRevisionDialog,
+  type CommercialRevisionDialogLine,
+} from "@/features/campaigns/components/commercial-revision-dialog";
 import { AssignmentStickyFooter } from "@/features/campaigns/components/assignment-sticky-footer";
 import { DeliverablePricingEditor } from "@/features/campaigns/components/deliverable-pricing-editor";
 import {
@@ -157,6 +161,13 @@ export function CampaignLineSheet({
   const ioRevisionAckRef = useRef(false);
   const [confirmCommercialSync, setConfirmCommercialSync] = useState(false);
   const commercialSyncPromptedRef = useRef(false);
+  const [revisionOpen, setRevisionOpen] = useState(false);
+  const [revisionLines, setRevisionLines] = useState<
+    CommercialRevisionDialogLine[]
+  >([]);
+  const [revisionQuotationId, setRevisionQuotationId] = useState<string | null>(
+    null
+  );
 
   const [createState, createAction, createPending] = useActionState(
     createCampaignLineAction,
@@ -481,11 +492,50 @@ export function CampaignLineSheet({
             state.commercialSync?.confirmationDescription ?? copy.description,
           confirmLabel: copy.confirmLabel,
         });
-        if (accepted) {
-          toast.message(
-            "Commercial Revision workflow will be available in Phase 4."
+        if (!accepted) return;
+
+        const commercialLineId = state.commercialSync?.commercialLineId ?? null;
+        const quotationId = state.commercialSync?.quotationId ?? null;
+        if (!commercialLineId || !quotationId || !line) {
+          toast.error(
+            "Cannot start Commercial Revision — missing Commercial Line linkage."
           );
+          return;
         }
+
+        setRevisionQuotationId(quotationId);
+        setRevisionLines([
+          {
+            commercialLineId,
+            assignmentIds: state.commercialSync?.assignmentIds ?? [line.id],
+            concurrencyToken: state.commercialSync?.concurrencyToken ?? null,
+            current: {
+              creator_cost: line.cost_before_vat ?? line.cost ?? 0,
+              client_revenue: line.revenue_before_vat ?? line.revenue ?? 0,
+              cost_currency: line.currency_code ?? currencyCode,
+              agency_fee_percent: line.agency_fee_percent ?? 0,
+              usage_rights_amount: line.usage_rights_amount ?? 0,
+              usage_rights_cost: line.usage_rights_cost ?? 0,
+              revenue_vat_percent: line.revenue_vat_percent ?? 0,
+              cost_vat_percent: line.cost_vat_percent ?? 0,
+              revenue_vat_exempt: line.revenue_vat_exempt ?? false,
+              cost_vat_exempt: line.cost_vat_exempt ?? true,
+            },
+            proposed: {
+              creator_cost: cost,
+              client_revenue: revenue,
+              cost_currency: currency,
+              agency_fee_percent: agencyFeePercent,
+              usage_rights_amount: usageRightsAmount,
+              usage_rights_cost: usageRightsCost,
+              revenue_vat_percent: revenueVatPercent,
+              cost_vat_percent: costVatPercent,
+              revenue_vat_exempt: revenueVatExempt,
+              cost_vat_exempt: costVatExempt,
+            },
+          },
+        ]);
+        setRevisionOpen(true);
       })();
       return;
     }
@@ -516,7 +566,24 @@ export function CampaignLineSheet({
     }
 
     toast.error(state.message);
-  }, [state, onOpenChange, router, currencyCode, confirm]);
+  }, [
+    state,
+    onOpenChange,
+    router,
+    currencyCode,
+    confirm,
+    line,
+    cost,
+    revenue,
+    currency,
+    agencyFeePercent,
+    usageRightsAmount,
+    usageRightsCost,
+    revenueVatPercent,
+    costVatPercent,
+    revenueVatExempt,
+    costVatExempt,
+  ]);
 
   async function loadProfile(id: string, existing?: PlatformSelectionState[]) {
     setLoadingProfile(true);
@@ -1169,6 +1236,16 @@ export function CampaignLineSheet({
           queueMicrotask(() => formRef.current?.requestSubmit());
         }}
       />
+      {revisionQuotationId ? (
+        <CommercialRevisionDialog
+          open={revisionOpen}
+          onOpenChange={setRevisionOpen}
+          campaignHeaderId={campaignId}
+          quotationId={revisionQuotationId}
+          lines={revisionLines}
+          onSubmitted={() => onOpenChange(false)}
+        />
+      ) : null}
     </OperationalDetailSheet>
   );
 }

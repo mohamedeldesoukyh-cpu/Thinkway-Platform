@@ -32,6 +32,9 @@ These decisions are **normative**. Implementation must not reinterpret them.
 | Finance-locked | No direct Master edit; Commercial Revision required |
 | Lock API | Platform gateway `Campaign.isFinanceLocked()` / `isCampaignFinanceLocked` (`lib/finance/campaign-finance-lock.ts`) — **all modules** (Commercial SSOT, PO, VIO, Invoice, Payments, Change Orders, etc.) must use it |
 | Sync API | Single `CommercialSynchronizationService` + Commercial Line Registry — dirty Master fields only; field-level audit; registry-driven Derived recalc |
+| Revision API | After Finance Lock: `CommercialRevisionService` only — create → submit → approve/apply → version history (append-only) |
+
+**Implementation status:** Phases 1–4 complete. Tests: `npm run test:commercial-ssot-phase4`.
 
 **Code bridge:** `campaign_lines.source_quotation_item_id` is the Phase 1 Origin pointer (`quotation_items.id` = Commercial Line ID).
 

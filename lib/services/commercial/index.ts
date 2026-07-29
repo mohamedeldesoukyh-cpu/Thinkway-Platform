@@ -73,6 +73,27 @@ export {
   pickRateMasterChanges,
 } from "./commercial-synchronization-service";
 
+export {
+  CommercialRevisionService,
+  buildRevisionLinesFromProposals,
+  createCommercialRevisionService,
+  createInMemoryRevisionPorts,
+  createInMemoryRevisionStore,
+} from "./commercial-revision-service";
+
+export { createSupabaseRevisionPorts } from "./commercial-revision-supabase-ports";
+
+export type {
+  CommercialRevisionLineInput,
+  CommercialRevisionRecord,
+  CommercialRevisionResult,
+  CommercialRevisionStatus,
+  CommercialVersionHistoryEntry,
+  CreateCommercialRevisionInput,
+} from "./commercial-revision-types";
+
+export type { CommercialRevisionPorts } from "./commercial-revision-ports";
+
 export type {
   ApplyMasterChangeInput,
   ApplyMasterChangeResult,

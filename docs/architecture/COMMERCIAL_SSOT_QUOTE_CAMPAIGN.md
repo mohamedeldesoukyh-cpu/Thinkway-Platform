@@ -1,6 +1,6 @@
 # Commercial SSOT — Quotation ↔ Campaign (Post-Convert)
 
-**Status:** Approved architecture — Phases 1–3 implemented (foundation, bidirectional sync with dirty-field/field-level audit, Finance Lock gateway). Phase 4 pending approval.  
+**Status:** Feature-complete — Phases 1–4 implemented (foundation, bidirectional dirty sync, Finance Lock gateway, Commercial Revision workflow).  
 **Date:** 2026-07-29  
 **Authority:** Product / Commercial Finance  
 **Supersedes (for commercial amounts):** Release 2.0 dual-book language in  
@@ -439,12 +439,16 @@ After finance lock, Commercial Revision is the only path to change Master commer
 | **2 — Bidirectional sync UI** | Confirmation dialog + wire Quotation/Campaign editors + Supabase ports + recalc + audit | **Done** |
 | **2.5 — Sync precision** | Dirty-field sync only; field-level audit; registry-driven Derived recalc deps | **Done** |
 | **3 — Finance lock** | Platform `Campaign.isFinanceLocked()` / `isCampaignFinanceLocked` — single gateway for all modules | **Done** |
-| **4 — Commercial Revision** | Versioned revision + approval + dual apply (IDs preserved) | Pending approval |
+| **4 — Commercial Revision** | Versioned revision + approval + dual apply (IDs preserved) | **Done** |
 
-**Finance Lock code:** `lib/finance/campaign-finance-lock.ts` · tests: `npm run test:commercial-ssot-phase3`
+**Finance Lock code:** `lib/finance/campaign-finance-lock.ts` · tests: `npm run test:commercial-ssot-phase3`  
+**Commercial Revision code:** `lib/services/commercial/commercial-revision-*.ts` · migration `20260729210000_commercial_revisions.sql` · tests: `npm run test:commercial-ssot-phase4`
+
 | **Later — Split / merge** | Explicit 1:N allocation policy refinements; N:1 merge origins | Pending |
 
 **Phase 1 code:** `lib/services/commercial/` · tests: `npm run test:commercial-ssot-phase1`
+
+**Post-lock rule (enforced):** Before Finance Lock → direct synchronized Master editing. After Finance Lock → Commercial Revision only (no other write path).
 
 ---
 

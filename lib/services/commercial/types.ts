@@ -122,6 +122,14 @@ export type ApplyMasterChangeInput = {
    * When set and mismatched, sync fails with CONCURRENCY_CONFLICT (no write).
    */
   expectedConcurrencyToken?: string | null;
+  /**
+   * Phase 4 — approved Commercial Revision may bypass Finance Lock.
+   * Only CommercialRevisionService.apply may set this after validation.
+   */
+  approvedRevision?: {
+    revisionId: string;
+    revisionNumber: number;
+  } | null;
 };
 
 export type ApplyMasterChangeResult =

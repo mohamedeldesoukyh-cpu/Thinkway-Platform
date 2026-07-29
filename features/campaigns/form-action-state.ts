@@ -6,6 +6,10 @@ export type FormActionState = {
   fieldErrors?: Record<string, string[]>;
   campaignId?: string;
   commercialSync?: {
+    commercialLineId?: string | null;
+    quotationId?: string | null;
+    campaignHeaderId?: string | null;
+    assignmentIds?: string[];
     quotationSerial?: string | null;
     campaignDocumentNumber?: string | null;
     concurrencyToken?: string | null;

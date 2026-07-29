@@ -334,6 +334,48 @@ export type CampaignCommercialSnapshotRow = {
   payload: Record<string, unknown>;
   created_by: string | null;
   created_at: string;
+  commercial_revision_id?: string | null;
+};
+
+export type CommercialRevisionStatus =
+  | "draft"
+  | "pending_approval"
+  | "approved"
+  | "rejected"
+  | "cancelled"
+  | "applied";
+
+export type CommercialRevisionRow = {
+  id: string;
+  campaign_header_id: string;
+  quotation_id: string;
+  revision_number: number;
+  commercial_version_number: number | null;
+  status: CommercialRevisionStatus;
+  reason: string;
+  comments: string | null;
+  created_by: string | null;
+  created_at: string;
+  submitted_at: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  rejected_by: string | null;
+  rejected_at: string | null;
+  decision_notes: string | null;
+  applied_at: string | null;
+  concurrency_tokens: Record<string, string>;
+  metadata: Record<string, unknown>;
+};
+
+export type CommercialRevisionLineRow = {
+  id: string;
+  revision_id: string;
+  commercial_line_id: string;
+  assignment_ids: string[];
+  old_values: Record<string, unknown>;
+  new_values: Record<string, unknown>;
+  changed_fields: string[];
+  created_at: string;
 };
 
 export type CampaignObjectLifecycleStatus =
@@ -1057,9 +1099,55 @@ export type Database = {
           payload?: Record<string, unknown>;
           created_by?: string | null;
           created_at?: string;
+          commercial_revision_id?: string | null;
         };
         Update: Partial<
           Database["public"]["Tables"]["campaign_commercial_snapshots"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      commercial_revisions: {
+        Row: CommercialRevisionRow;
+        Insert: {
+          id?: string;
+          campaign_header_id: string;
+          quotation_id: string;
+          revision_number: number;
+          commercial_version_number?: number | null;
+          status?: CommercialRevisionStatus;
+          reason: string;
+          comments?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          submitted_at?: string | null;
+          approved_by?: string | null;
+          approved_at?: string | null;
+          rejected_by?: string | null;
+          rejected_at?: string | null;
+          decision_notes?: string | null;
+          applied_at?: string | null;
+          concurrency_tokens?: Record<string, string>;
+          metadata?: Record<string, unknown>;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["commercial_revisions"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      commercial_revision_lines: {
+        Row: CommercialRevisionLineRow;
+        Insert: {
+          id?: string;
+          revision_id: string;
+          commercial_line_id: string;
+          assignment_ids?: string[];
+          old_values?: Record<string, unknown>;
+          new_values?: Record<string, unknown>;
+          changed_fields?: string[];
+          created_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["commercial_revision_lines"]["Insert"]
         >;
         Relationships: [];
       };

@@ -20,6 +20,10 @@ import {
   COMMERCIAL_SYNC_CONFIRMATION_REQUIRED,
   financeLockConfirmationCopy,
 } from "@/lib/services/commercial/confirmation-copy";
+import {
+  CommercialRevisionDialog,
+  type CommercialRevisionDialogLine,
+} from "@/features/campaigns/components/commercial-revision-dialog";
 
 import {
   finalizeQuotationSave,
@@ -130,6 +134,13 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
   const [hasClientBrandPending, setHasClientBrandPending] = useState(false);
   const [saveStatus, setSaveStatus] = useState<AutosaveStatus>("idle");
   const [savePending, setSavePending] = useState(false);
+  const [revisionOpen, setRevisionOpen] = useState(false);
+  const [revisionCampaignHeaderId, setRevisionCampaignHeaderId] = useState<
+    string | null
+  >(null);
+  const [revisionLines, setRevisionLines] = useState<
+    CommercialRevisionDialogLine[]
+  >([]);
 
   const hasUnsavedChanges =
     pendingLineIds.size > 0 || hasMetaPending || hasClientBrandPending;
@@ -313,7 +324,56 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
         confirmLabel: copy.confirmLabel,
       });
       if (accepted) {
-        toast.message("Commercial Revision workflow will be available in Phase 4.");
+        const campaignHeaderId = meta?.campaignHeaderId ?? null;
+        if (!campaignHeaderId) {
+          toast.error(
+            "Cannot start Commercial Revision — missing Campaign linkage."
+          );
+        } else {
+          const lines: CommercialRevisionDialogLine[] = [];
+          for (const [itemId, payload] of pendingEntries) {
+            const item = itemById.get(itemId);
+            if (!item) continue;
+            const rolled = payload.deliverables?.length
+              ? rollupDeliverableCommercials(payload.deliverables, {
+                  lineCurrency: item.cost_currency || "EGP",
+                  fxRateToEgp: item.fx_rate_to_egp ?? 1,
+                  lineAfPct: payload.af_pct ?? item.af_pct,
+                })
+              : null;
+            lines.push({
+              commercialLineId: itemId,
+              current: {
+                creator_cost: item.cost,
+                client_revenue: item.revenue,
+                cost_currency: item.cost_currency,
+                exchange_rate: item.fx_rate_to_egp,
+                agency_fee_percent: item.af_pct,
+                commercial_input_mode: item.commercial_input_mode,
+                gp_pct_input: item.gp_pct,
+                gp_value_input: item.gp_value,
+              },
+              proposed: {
+                creator_cost: rolled?.cost ?? payload.cost ?? item.cost,
+                client_revenue:
+                  rolled?.revenue ?? payload.revenue ?? item.revenue,
+                cost_currency: item.cost_currency,
+                exchange_rate: item.fx_rate_to_egp,
+                agency_fee_percent:
+                  rolled?.afPct ?? payload.af_pct ?? item.af_pct,
+                commercial_input_mode: (rolled
+                  ? "cost_revenue"
+                  : item.commercial_input_mode) as CommercialInputMode,
+                gp_pct_input: rolled?.gpPct ?? payload.gp_pct ?? item.gp_pct,
+                gp_value_input:
+                  rolled?.gpValue ?? payload.gp_value ?? item.gp_value,
+              },
+            });
+          }
+          setRevisionCampaignHeaderId(campaignHeaderId);
+          setRevisionLines(lines);
+          setRevisionOpen(true);
+        }
       }
       setSavePending(false);
       savePendingRef.current = false;
@@ -478,6 +538,15 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
     <QuotationManualSaveContext.Provider value={value}>
       <QuotationManualSaveShortcuts />
       {children}
+      {revisionCampaignHeaderId ? (
+        <CommercialRevisionDialog
+          open={revisionOpen}
+          onOpenChange={setRevisionOpen}
+          campaignHeaderId={revisionCampaignHeaderId}
+          quotationId={quotationId}
+          lines={revisionLines}
+        />
+      ) : null}
     </QuotationManualSaveContext.Provider>
   );
 }

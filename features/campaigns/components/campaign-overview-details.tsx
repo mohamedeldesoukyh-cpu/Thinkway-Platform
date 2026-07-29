@@ -1,13 +1,15 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { format } from "date-fns";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
 import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
+import { CommercialVersionHistoryDialog } from "@/features/campaigns/components/commercial-version-history-dialog";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { formatGroupDisplayName } from "@/lib/groups/group-display";
@@ -56,6 +58,7 @@ export function CampaignOverviewDetails({
   const displayGroup = resolveCampaignDisplayGroup(workspace);
   const displayPlatform = resolveCampaignDisplayPlatform(workspace);
   const displayDates = resolveCampaignDisplayDates(workspace);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const gridClass =
     layout === "grid" ? "thinkway-campaign-overview-grid" : "flex flex-col gap-3.5";
@@ -174,7 +177,23 @@ export function CampaignOverviewDetails({
           label="Margin"
           value={formatPercent(workspace.financials.margin_percent)}
         />
+        <div className="pt-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setHistoryOpen(true)}
+          >
+            Commercial history
+          </Button>
+        </div>
       </CampaignFlatSection>
+
+      <CommercialVersionHistoryDialog
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        campaignHeaderId={workspace.id}
+      />
     </div>
   );
 }
