@@ -114,7 +114,7 @@ Entities in reference **not yet implemented** as first-class modules:
 | Bonus: Calculate → FBP → CEO → HR | §12.6 | ❌ Not in app |
 | Conditional approvals (>$50k, margin <15%, etc.) | §20.2 | ❌ `approvals` table exists; no rule engine |
 | 15-stage campaign lifecycle | §29 | ⚠️ Simplified 6-stage workflow in UI; not full pipeline |
-| Deliverable status flow | §22.2 | ⚠️ Basic status update; no revision/version thread. **Target locked:** Deliverables = Content Collection & Approval only (draft ≠ Publication/Performance) — [`architecture/DELIVERABLES_CONTENT_APPROVAL_SSOT.md`](./architecture/DELIVERABLES_CONTENT_APPROVAL_SSOT.md) |
+| Deliverable documentation | §22.2 / assets | ⚠️ Ops explorer only today. **Target (proposal):** Documentation & Asset Repository SSOT — not workflow/Publication/Performance — [`architecture/DELIVERABLES_DOCUMENTATION_REPOSITORY.md`](./architecture/DELIVERABLES_DOCUMENTATION_REPOSITORY.md) |
 
 **Recommendation (Phase 1 priority):**
 
