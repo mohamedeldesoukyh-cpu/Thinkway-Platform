@@ -8,9 +8,9 @@
 **Product:** Accepted Pass with defects; Feature Freeze approved; Production **code** deploy approved with flag **OFF**  
 **Primary fixture:** `QT-2026-0009-V2` (TUNA DOLPHIN V2) — 32 lines · linked `TW-2026-0005`  
 **Secondary:** `QT-2026-0020` (soak) — 2 lines · linked `TW-2026-0004`  
-**Production:** Code deploy approved — Commercial Summary remains; flag stays **OFF** until separate enablement  
-**Spec:** [`QUOTATION_COMMERCIAL_WORKSPACE.md`](./QUOTATION_COMMERCIAL_WORKSPACE.md)  
-**Database:** No migrations (flag + UX only)
+**Production:** **Deployed** 2026-07-30 · `dpl_2tnVjrx1ExKgGUCaFVg7AQUoWkLx` · `app.thinkwaymedia.com`  
+**Release commit:** `2117788c` on `main`/`develop` · **No DB migrations** · Flag **OFF** (unset; defaults OFF when `VERCEL_ENV=production` / `NODE_ENV=production`)  
+**Spec:** [`QUOTATION_COMMERCIAL_WORKSPACE.md`](./QUOTATION_COMMERCIAL_WORKSPACE.md)
 
 **Feature flag:** `NEXT_PUBLIC_QUOTATION_COMMERCIAL_WORKSPACE`
 
@@ -65,7 +65,9 @@
 | `npm run test:media-plan-phase1` | ✅ Pass | 30/30 |
 | `vitest` `list-nav-context` | ✅ Pass | 2/2 |
 | Preview deploy SHA | ✅ Pass | Ops Center: `c647395` · Supabase `hsxrewjcbvmbkqdlzjhs` |
-| Production flag OFF | ✅ Pass | Flag unset on Production Vercel env |
+| Production flag OFF | ✅ Pass | `NEXT_PUBLIC_QUOTATION_COMMERCIAL_WORKSPACE` unset on Production; defaults OFF |
+| Production deploy Ready + aliased | ✅ Pass | `dpl_2tnVjrx1ExKgGUCaFVg7AQUoWkLx` → `app.thinkwaymedia.com` |
+| Authenticated Prod UI smoke (Summary vs Workspace) | ⚠️ | Login required on Production — not exercised this session; flag path verified via env + unit defaults |
 
 ---
 

@@ -55,13 +55,13 @@
 - Intelligence Summary: Campaign Start / End / Duration only; Monday align internal
 - Dock chat scroll CSS fix (local)
 
-## Quotation Commercial Workspace (Feature Freeze · Production code deploy)
+## Quotation Commercial Workspace (Feature Freeze · Shipped to Production code)
 
 - **Freeze:** 2026-07-30 — bug/perf/polish only; Phase 2 for new capabilities
 - **UAT:** Pass with defects — `docs/architecture/QUOTATION_COMMERCIAL_WORKSPACE_UAT.md`
-- **Commits:** `01e4ce8a` (feat) · `c6473956` (DEF-CW-01) · tip includes freeze docs
+- **Production:** `2117788c` · `dpl_2tnVjrx1ExKgGUCaFVg7AQUoWkLx` · `app.thinkwaymedia.com` · **flag OFF**
 - **Open Low (non-blocking):** DEF-CW-02 Creators chip display · DEF-CW-03 200+ soak before flag ON
-- **Flag:** ON Dev/Preview · **OFF Production** (separate enablement after DEF-CW-02 + 200+ soak + Prod smoke)
+- **Flag:** ON Dev/Preview · **OFF Production** until separate enablement
 - **Prod enablement gate:** DEF-CW-02 disposition · 200+ soak · Prod smoke (edit/draft/SSOT/lock/bulk/audit)
 
 ## Productivity & Navigation UX Sprint (Shipped to Production 2026-07-30)
