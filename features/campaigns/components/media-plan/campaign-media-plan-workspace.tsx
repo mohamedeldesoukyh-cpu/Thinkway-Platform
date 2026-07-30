@@ -13,8 +13,10 @@ import { OpenCampaignStudioLauncher } from "@/features/campaign-outputs/componen
 import { updateMediaPlanScheduleAction } from "@/features/campaign-outputs/actions/update-media-plan-schedule";
 import { seedFromCampaign } from "@/features/campaign-outputs/hydration/seed-adapters";
 import { getCreatorDocumentationCompletenessAction } from "@/features/campaigns/actions/deliverable-documentation-actions";
+import { restoreMediaPlanEditAction } from "@/features/campaign-outputs/actions/restore-media-plan-edit";
 import { MediaPlanApprovalToolbar } from "@/features/campaigns/components/media-plan/media-plan-approval-toolbar";
 import { MediaPlanComparisonPanel } from "@/features/campaigns/components/media-plan/media-plan-comparison-panel";
+import { MediaPlanHistoryPanel } from "@/features/campaigns/components/media-plan/media-plan-history-panel";
 import type { CampaignMediaPlanWorkspacePayload } from "@/features/campaigns/queries/load-campaign-media-plan";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { mediaPlanStatusLabel, type MediaPlanViewKind } from "@/lib/media-plan";
@@ -62,9 +64,84 @@ export function CampaignMediaPlanWorkspace({
     });
   }, [workspace.id]);
   const [compareOpen, setCompareOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [redoStack, setRedoStack] = useState<number[]>([]);
   const [pending, startTransition] = useTransition();
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollByView = useRef<Partial<Record<MediaPlanViewKind, number>>>({});
+  const editable = view === "original" && payload.canEditOriginal;
+
+  const latestEditNumber = useMemo(() => {
+    const nums = payload.editHistory.map((e) => e.editNumber);
+    return nums.length ? Math.max(...nums) : 0;
+  }, [payload.editHistory]);
+
+  const canUndo = editable && latestEditNumber > 1;
+  const canRedo = editable && redoStack.length > 0;
+
+  const restoreEdit = useCallback(
+    async (editNumber: number, mode: "undo" | "redo") => {
+      if (!payload.campaignObjectId || !payload.conversationId) return;
+      setScheduleError(null);
+      setSaving(true);
+      const tipBefore = latestEditNumber;
+      const result = await restoreMediaPlanEditAction({
+        campaignObjectId: payload.campaignObjectId,
+        conversationId: payload.conversationId,
+        campaignId: workspace.id,
+        editNumber,
+      });
+      setSaving(false);
+      if (!result.ok) {
+        setScheduleError(result.message);
+        return;
+      }
+      if (mode === "undo" && tipBefore > 0) {
+        setRedoStack((stack) => [...stack, tipBefore]);
+      }
+      if (mode === "redo") {
+        setRedoStack((stack) => stack.slice(0, -1));
+      }
+      startTransition(() => router.refresh());
+    },
+    [
+      latestEditNumber,
+      payload.campaignObjectId,
+      payload.conversationId,
+      router,
+      workspace.id,
+    ]
+  );
+
+  const handleUndo = useCallback(() => {
+    if (!canUndo) return;
+    void restoreEdit(latestEditNumber - 1, "undo");
+  }, [canUndo, latestEditNumber, restoreEdit]);
+
+  const handleRedo = useCallback(() => {
+    if (!canRedo) return;
+    const target = redoStack[redoStack.length - 1];
+    if (target == null) return;
+    void restoreEdit(target, "redo");
+  }, [canRedo, redoStack, restoreEdit]);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!editable) return;
+      const mod = event.metaKey || event.ctrlKey;
+      if (!mod) return;
+      const key = event.key.toLowerCase();
+      if (key === "z" && !event.shiftKey) {
+        event.preventDefault();
+        handleUndo();
+      } else if (key === "y" || (key === "z" && event.shiftKey)) {
+        event.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editable, handleRedo, handleUndo]);
 
   useEffect(() => {
     const fromQuery = searchParams.get("view");
@@ -96,7 +173,6 @@ export function CampaignMediaPlanWorkspace({
   }, [view]);
 
   const data = payload.views[view];
-  const editable = view === "original" && payload.canEditOriginal;
 
   const studioSeed = useMemo(
     () =>
@@ -140,6 +216,7 @@ export function CampaignMediaPlanWorkspace({
         setScheduleError(result.message);
         return;
       }
+      setRedoStack([]);
       startTransition(() => router.refresh());
     },
     [payload.campaignObjectId, payload.conversationId, router, workspace.id]
@@ -209,6 +286,11 @@ export function CampaignMediaPlanWorkspace({
                 hasApprovedBaseline={payload.hasApprovedBaseline}
                 hasWorkingDraft={payload.hasWorkingDraft}
                 onCompare={() => setCompareOpen(true)}
+                onHistory={() => setHistoryOpen(true)}
+                onUndo={editable ? handleUndo : undefined}
+                onRedo={editable ? handleRedo : undefined}
+                canUndo={canUndo}
+                canRedo={canRedo}
               />
             ) : null}
           </div>
@@ -264,6 +346,18 @@ export function CampaignMediaPlanWorkspace({
           baselineVersion={payload.baselineVersion}
           draftVersion={payload.draftVersion}
         />
+        {payload.campaignObjectId && payload.conversationId ? (
+          <MediaPlanHistoryPanel
+            open={historyOpen}
+            onOpenChange={setHistoryOpen}
+            campaignId={workspace.id}
+            campaignObjectId={payload.campaignObjectId}
+            conversationId={payload.conversationId}
+            editHistory={payload.editHistory}
+            businessVersions={payload.businessVersions}
+            currentVersionLabel={payload.tipVersionLabel ?? payload.versionLabel}
+          />
+        ) : null}
         {payload.emptyReason ? (
           <div className="mx-auto flex max-w-lg flex-col items-start gap-3 rounded-xl border border-dashed border-border p-6">
             <p className="text-sm text-muted-foreground">{payload.emptyReason}</p>

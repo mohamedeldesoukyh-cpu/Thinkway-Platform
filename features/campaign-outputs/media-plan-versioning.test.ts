@@ -160,6 +160,8 @@ test("pre-approval edits stay on v1.0 and append audit history", () => {
   assert.ok((edit2!.record.auditHistory?.length ?? 0) >= 2);
   // Business history must not grow for working edits
   assert.equal((edit2!.record.history?.length ?? 0), 0);
+  // Edit History grows on every persist; never bumps business version
+  assert.ok((edit2!.record.editHistory?.length ?? 0) >= 2);
 
   const locked = lockMediaPlanOnCampaignObject(edit2!.campaignObject, {
     at: "2026-07-01T03:00:00.000Z",

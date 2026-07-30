@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CalendarRangeIcon, CopyIcon, FileTextIcon, MoreHorizontalIcon, PencilIcon } from "lucide-react";
 
+import { EntityPrevNext } from "@/components/navigation/entity-prev-next";
 import { PageBackButton } from "@/components/navigation/page-back-button";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,7 +54,7 @@ import { flattenOperationalDeliverables } from "@/lib/campaigns/flatten-operatio
 import { buildConsolidatedInvoiceQueueRows } from "@/lib/billing/consolidated-invoice-queue";
 import { OpenCampaignStudioLauncher } from "@/features/campaign-outputs/components/open-campaign-studio-launcher-lazy";
 import { seedFromCampaign } from "@/features/campaign-outputs/hydration/seed-adapters";
-import { campaignMediaPlanPath } from "@/lib/routing/entity-paths";
+import { campaignDetailPath, campaignMediaPlanPath } from "@/lib/routing/entity-paths";
 
 type CampaignWorkspaceViewProps = {
   workspace: CampaignWorkspace;
@@ -293,6 +294,11 @@ export function CampaignWorkspaceView({
                     label="Back to campaigns"
                     className="thinkway-campaign-back-btn size-[26px] rounded-[var(--camp-radius)] p-0 hover:bg-[var(--camp-surface)]"
                   />
+                  <EntityPrevNext
+                    entity="campaigns"
+                    currentId={workspace.id}
+                    hrefForId={(id) => campaignDetailPath(id)}
+                  />
                   <button
                     type="button"
                     onClick={() => setDetailsOpen(true)}
@@ -360,7 +366,11 @@ export function CampaignWorkspaceView({
                           <CopyIcon className="size-4" />
                           Duplicate campaign
                         </DropdownMenuItem>
-                        <DropdownMenuItem disabled>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            handleTabChange("overview");
+                          }}
+                        >
                           <PencilIcon className="size-4" />
                           Edit header (Overview tab)
                         </DropdownMenuItem>

@@ -195,6 +195,34 @@ export async function listCampaignHeaders(
   return query.range(from, to);
 }
 
+/** Ordered campaign ids for filtered Previous/Next (full result set, not page-local). */
+export async function listCampaignHeaderIdsForNav(
+  supabase: SupabaseClient,
+  params: { search?: string; limit?: number }
+): Promise<{ ids: string[]; error: { message: string } | null }> {
+  const limit = Math.min(Math.max(params.limit ?? 5000, 1), 5000);
+  let query = supabase
+    .from("campaign_headers")
+    .select("id")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  const search = params.search?.trim() ?? "";
+  if (search) {
+    const pattern = `%${escapeIlikePattern(search)}%`;
+    query = query.or(
+      [`name.ilike.${pattern}`, `document_number.ilike.${pattern}`].join(",")
+    );
+  }
+
+  const { data, error } = await query;
+  if (error) return { ids: [], error };
+  return {
+    ids: (data ?? []).map((row) => (row as { id: string }).id),
+    error: null,
+  };
+}
+
 export async function syncListCampaignStatuses(
   supabase: SupabaseClient,
   campaigns: CampaignListItem[]

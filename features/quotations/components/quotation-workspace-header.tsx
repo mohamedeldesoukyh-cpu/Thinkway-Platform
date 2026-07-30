@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { EntityPrevNext } from "@/components/navigation/entity-prev-next";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +29,7 @@ import { QuotationPreviewToolbarActions } from "@/features/quotations/components
 import { QuotationToolbarButton } from "@/features/quotations/components/quotation-detail-primitives";
 import { QuotationWorkspaceStatusPill } from "@/features/quotations/components/quotation-list-status-pill";
 import { archiveQuotation, updateQuotationHeader } from "@/features/quotations/actions";
+import { quotationDetailPath } from "@/features/quotations/constants";
 import type { QuotationTemplateVariant } from "@/features/quotations/export/quotation-template";
 import type { PromoteWizardOptions, QuotationDetail } from "@/features/quotations/types";
 
@@ -120,6 +122,13 @@ export function QuotationWorkspaceHeader({
     <>
       <div className="wtop">
         <div className="wtop-left">
+          <div className="mb-1">
+            <EntityPrevNext
+              entity="quotations"
+              currentId={detail.id}
+              hrefForId={(id) => quotationDetailPath(id)}
+            />
+          </div>
           <div className="qtitle">
             {detail.serial_number ? (
               <span className="serial">{detail.serial_number}</span>

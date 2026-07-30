@@ -2,12 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { format } from "date-fns";
 import { MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  buildListNavFilterKey,
+  writeListNavContext,
+} from "@/lib/navigation/list-nav-context";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -114,6 +118,13 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
     () => filteredShortlists.map((row) => row.id),
     [filteredShortlists]
   );
+
+  useEffect(() => {
+    writeListNavContext("shortlists", {
+      ids: visibleIds,
+      filterKey: buildListNavFilterKey(filters as unknown as Record<string, unknown>),
+    });
+  }, [filters, visibleIds]);
 
   const effectiveSelectedIds = useMemo(
     () => pruneSelection(selectedIds, visibleIds),

@@ -125,6 +125,42 @@ export type MediaPlanAuditEntry = {
   operationClass?: string;
 };
 
+/**
+ * Edit History — productivity audit of every Media Plan persist.
+ * Completely separate from Business Versions (`history` / versionLabel).
+ * Append-only; never deleted. Never bumps business version.
+ * Spec: docs/architecture/PRODUCTIVITY_NAVIGATION_UX_SPRINT.md
+ */
+export type MediaPlanEditFieldChange = {
+  field: string;
+  label: string;
+  oldValue?: string | number | null;
+  newValue?: string | number | null;
+  changeKind: "added" | "modified" | "removed";
+};
+
+export type MediaPlanEditHistoryEntry = {
+  /** Monotonic edit sequence (1, 2, 3…) — not business version. */
+  editNumber: number;
+  at: string;
+  actorKind: CampaignOutputActorKind;
+  actorUserId?: string | null;
+  actorLabel?: string | null;
+  /** Short summary for collapsed list. */
+  summary: string;
+  /** Bullet lines for expansion. */
+  detailLines: string[];
+  fieldChanges: MediaPlanEditFieldChange[];
+  affectedCreatorCount: number;
+  addedCreatorIds?: string[];
+  removedCreatorIds?: string[];
+  /** Tip content after this edit (for restore / compare). */
+  contentSnapshot?: CampaignOutputContent;
+  /** When this entry was created by restoring an older edit. */
+  restoredFromEditNumber?: number | null;
+  operationClass?: string;
+};
+
 /** One block of rendered output content — generic so any output renders/exports uniformly. */
 export type CampaignOutputContentSection = {
   heading: string;
@@ -232,6 +268,11 @@ export type CampaignOutputRecord = {
    * Media Plan Audit History — every modification; never bumps business version.
    */
   auditHistory?: MediaPlanAuditEntry[];
+  /**
+   * Media Plan Edit History — append-only productivity trail (all entries retained).
+   * Never bumps business version. Separate from `history` (governance).
+   */
+  editHistory?: MediaPlanEditHistoryEntry[];
   /** Media Plan business lifecycle status for the current tip. */
   businessStatus?: MediaPlanBusinessStatus;
   approvedBy?: string | null;

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { EntityPrevNext } from "@/components/navigation/entity-prev-next";
 import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
 import {
   DropdownMenu,
@@ -26,6 +27,7 @@ import { OpenCampaignStudioLauncher } from "@/features/campaign-outputs/componen
 import type { CampaignSeed } from "@/features/campaign-outputs/hydration/hydration-types";
 
 import { discoverySelectionFlyoutContentClass } from "@/features/discovery/components/design-system/discovery-selection-flyout";
+import { shortlistDetailPath } from "@/features/discovery/shortlists/constants";
 import { cn } from "@/lib/utils";
 import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet-lazy";
 import { useCreatorDetailSheetState } from "@/features/discovery/hooks/use-creator-detail-sheet-state";
@@ -652,6 +654,11 @@ export function ShortlistWorkspace({
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-background">
       <div className="sticky top-0 z-20 flex shrink-0 items-center justify-between gap-3 border-b border-border bg-background px-8 py-2">
         <div className="flex min-w-0 flex-1 items-center gap-2.5">
+          <EntityPrevNext
+            entity="shortlists"
+            currentId={detail.id}
+            hrefForId={(id) => shortlistDetailPath(id)}
+          />
           <h1 className="min-w-0 truncate text-[19px] font-bold tracking-[-0.022em] text-[var(--text)]">
             {detail.name}
             {detail.serial_number ? (

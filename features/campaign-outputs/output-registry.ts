@@ -41,6 +41,10 @@ import {
   type MediaPlanData,
 } from "./generators/media-plan";
 import {
+  buildMediaPlanEditHistoryEntry,
+  withMediaPlanEditHistoryAppend,
+} from "./media-plan-edit-history";
+import {
   appendMediaPlanAuditEntry,
   actorKindFromOrigin,
   defaultApprovalImpactForOperation,
@@ -518,6 +522,7 @@ export function generateCampaignOutput(
     history,
     content,
     auditHistory: previous?.auditHistory,
+    editHistory: previous?.editHistory,
     businessStatus: previous?.businessStatus ?? "draft",
     approvedBy: bumpNow || forkedFromApproved ? null : previous?.approvedBy ?? null,
     approvedAt: bumpNow || forkedFromApproved ? null : previous?.approvedAt ?? null,
@@ -548,6 +553,25 @@ export function generateCampaignOutput(
             : "generate",
     }),
   };
+
+  // Edit History (productivity) — never bumps business version.
+  if (previous?.content || content) {
+    const editEntry = buildMediaPlanEditHistoryEntry({
+      record,
+      beforeContent: previous?.content,
+      afterContent: content,
+      actorKind: actorKindFromOrigin(origin),
+      actorUserId: options?.actorUserId,
+      operationClass:
+        operation === "regenerate"
+          ? "edit_regenerate"
+          : operation === "revise"
+            ? "edit_revise"
+            : "edit_generate",
+      at: now,
+    });
+    record = withMediaPlanEditHistoryAppend(record, editEntry);
+  }
 
   return {
     campaignObject: withOutputState(workingObject, { ...state, [kind]: record }),
@@ -812,6 +836,7 @@ export function restoreOutputVersion(
     approvalSource: null,
     approvalImpact: "client_reapproval",
     auditHistory: current.auditHistory,
+    editHistory: current.editHistory,
   };
 
   if (kind === "media_plan") {
@@ -827,6 +852,23 @@ export function restoreOutputVersion(
         operationClass: "restore",
       }),
     };
+    const editEntry = buildMediaPlanEditHistoryEntry({
+      record,
+      beforeContent: current.content,
+      afterContent: target.content,
+      actorKind: actorKindFromOrigin(origin),
+      actorUserId: options?.actorUserId,
+      operationClass: "business_restore",
+      at: now,
+    });
+    record = withMediaPlanEditHistoryAppend(record, {
+      ...editEntry,
+      summary: `Restored business version ${restoredLabel} as ${versionNext.versionLabel}`,
+      detailLines: [
+        `Business restore → ${versionNext.versionLabel}`,
+        ...editEntry.detailLines,
+      ],
+    });
   }
 
   const nextState: CampaignOutputRegistryState = { ...state, [kind]: record };

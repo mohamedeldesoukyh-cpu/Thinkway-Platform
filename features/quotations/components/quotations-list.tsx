@@ -2,8 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
+
+import {
+  buildListNavFilterKey,
+  writeListNavContext,
+} from "@/lib/navigation/list-nav-context";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -92,6 +97,13 @@ export function QuotationsList({ quotations, brands = [], formOptions }: Props) 
     () => filteredQuotations.map((row) => row.id),
     [filteredQuotations]
   );
+
+  useEffect(() => {
+    writeListNavContext("quotations", {
+      ids: visibleIds,
+      filterKey: buildListNavFilterKey(filters as unknown as Record<string, unknown>),
+    });
+  }, [filters, visibleIds]);
 
   const effectiveSelectedIds = useMemo(
     () => pruneSelection(selectedIds, visibleIds),

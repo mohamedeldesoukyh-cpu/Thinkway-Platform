@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { useMemo, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import { EntityPrevNext } from "@/components/navigation/entity-prev-next";
+import { ListNavSync } from "@/components/navigation/list-nav-sync";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { CLIENT_IOS_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
@@ -56,6 +58,7 @@ export function ClientIosWorkspace({
       rows={rows}
       filterAccessors={CLIENT_IOS_FILTER_ACCESSORS}
     >
+      <ListNavSync entity="cio" rows={rows} rowId={(row) => row.id} />
       <div className="space-y-4">
         <OperationalTableSection
           wide
@@ -64,6 +67,13 @@ export function ClientIosWorkspace({
           leading={
             <div className="flex w-full flex-wrap items-center gap-3">
               <div className="min-w-0 flex-1">{leading}</div>
+              {selected ? (
+                <EntityPrevNext
+                  entity="cio"
+                  currentId={selected.id}
+                  hrefForId={(id) => `${pathname}?io=${encodeURIComponent(id)}`}
+                />
+              ) : null}
               <OperationalTableControlsSlot contextLabel="Client IO register" />
             </div>
           }

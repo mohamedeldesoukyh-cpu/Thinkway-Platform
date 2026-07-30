@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { useMemo, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import { EntityPrevNext } from "@/components/navigation/entity-prev-next";
+import { ListNavSync } from "@/components/navigation/list-nav-sync";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
@@ -50,6 +52,7 @@ export function VendorIosWorkspace({ rows, initialSelectedId, leading }: Props) 
       rows={rows}
       filterAccessors={VENDOR_IOS_FILTER_ACCESSORS}
     >
+      <ListNavSync entity="vio" rows={rows} rowId={(row) => row.id} />
       <div className="space-y-4">
         <OperationalTableSection
           wide
@@ -58,6 +61,13 @@ export function VendorIosWorkspace({ rows, initialSelectedId, leading }: Props) 
           leading={
             <div className="flex w-full flex-wrap items-center gap-3">
               <div className="min-w-0 flex-1">{leading}</div>
+              {selected ? (
+                <EntityPrevNext
+                  entity="vio"
+                  currentId={selected.id}
+                  hrefForId={(id) => `${pathname}?io=${encodeURIComponent(id)}`}
+                />
+              ) : null}
               <OperationalTableControlsSlot contextLabel="Vendor IO register" />
             </div>
           }

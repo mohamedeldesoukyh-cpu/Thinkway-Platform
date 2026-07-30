@@ -9,6 +9,10 @@ import {
 import { ensureCreatorsFromAssignmentHierarchy } from "@/features/campaign-outputs/hydration";
 import { resolveSlate } from "@/features/campaign-outputs/output-inputs";
 import { getMediaPlanLifecycle } from "@/features/campaign-outputs/media-plan-mutations";
+import type {
+  CampaignOutputVersionSnapshot,
+  MediaPlanEditHistoryEntry,
+} from "@/features/campaign-outputs/output-types";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { getCampaignAssignmentHierarchy } from "@/features/campaigns/queries/assignment-hierarchy";
 import {
@@ -74,6 +78,12 @@ export type CampaignMediaPlanWorkspacePayload = {
   baselineVersion: number | null;
   draftVersion: number | null;
   comparisonDiffs: MediaPlanDiffEntry[];
+  /** Productivity Edit History (append-only; never bumps business version). */
+  editHistory: MediaPlanEditHistoryEntry[];
+  /** Business version snapshots (governance). */
+  businessVersions: CampaignOutputVersionSnapshot[];
+  /** Tip business version label from output registry (e.g. v1.2). */
+  tipVersionLabel: string | null;
   emptyReason: string | null;
 };
 
@@ -104,6 +114,9 @@ export async function loadCampaignMediaPlanWorkspace(
       baselineVersion: null,
       draftVersion: null,
       comparisonDiffs: [],
+      editHistory: [],
+      businessVersions: [],
+      tipVersionLabel: null,
       emptyReason:
         "No Studio Media Plan is linked to this campaign yet. Open Studio to attach or generate one — Campaign and Studio share the same Media Plan.",
     };
@@ -136,6 +149,9 @@ export async function loadCampaignMediaPlanWorkspace(
       baselineVersion: null,
       draftVersion: null,
       comparisonDiffs: [],
+      editHistory: [],
+      businessVersions: [],
+      tipVersionLabel: null,
       emptyReason: "The linked Media Plan could not be loaded.",
     };
   }
@@ -183,6 +199,9 @@ export async function loadCampaignMediaPlanWorkspace(
       baselineVersion: null,
       draftVersion: null,
       comparisonDiffs: [],
+      editHistory: [],
+      businessVersions: [],
+      tipVersionLabel: null,
       emptyReason: "The Media Plan has no saved version yet. Open Studio to generate it.",
     };
   }
@@ -256,6 +275,8 @@ export async function loadCampaignMediaPlanWorkspace(
 
   const versionNumber =
     lifecycle.workingDraftVersion ?? lifecycle.currentApprovedBaselineVersion ?? 1;
+  const tipRecord = objectForPlan.meta.campaignOutputs?.media_plan;
+  const tipVersionLabel = tipRecord?.versionLabel ?? null;
 
   return {
     campaignId: workspace.id,
@@ -264,7 +285,7 @@ export async function loadCampaignMediaPlanWorkspace(
     campaignObjectId,
     conversationId: typedHead.conversation_id,
     status: lifecycle.status,
-    versionLabel: `Version ${versionNumber}`,
+    versionLabel: tipVersionLabel ?? `Version ${versionNumber}`,
     canEditOriginal: lifecycle.status === "draft",
     campaignStartDate: start,
     durationWeeks,
@@ -279,6 +300,9 @@ export async function loadCampaignMediaPlanWorkspace(
     baselineVersion: lifecycle.currentApprovedBaselineVersion,
     draftVersion: lifecycle.workingDraftVersion,
     comparisonDiffs,
+    editHistory: tipRecord?.editHistory ?? [],
+    businessVersions: tipRecord?.history ?? [],
+    tipVersionLabel,
     emptyReason: null,
   };
 }

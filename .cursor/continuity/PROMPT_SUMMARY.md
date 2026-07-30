@@ -55,6 +55,14 @@
 - Intelligence Summary: Campaign Start / End / Duration only; Monday align internal
 - Dock chat scroll CSS fix (local)
 
+## Productivity & Navigation UX Sprint (on develop — Preview/UAT)
+
+- **Spec:** `docs/architecture/PRODUCTIVITY_NAVIGATION_UX_SPRINT.md` (decisions + backlog + freeze path)
+- **P0/P1 shipped:** Edit History (≠ Business Versions) · History panel · Undo/Redo/restore append-only · Studio Open Campaign/Quotation · Prev/Next · Campaign header inline + `UnsavedChangesBar`
+- **Next:** Preview UAT → freeze (bugs/perf/polish only) → Production only with explicit approval
+- **Backlog (post-freeze):** history search/export · platform keyboard conventions · richer nav context · history deep links
+- Does **not** change Commercial SSOT / Deliverables / Finance. Production untouched.
+
 ## Showcase PDF v2 (in progress on develop)
 
 - Unified pagination engine: measure DOM → pack atomic blocks → fixed A4 **landscape** Page objects

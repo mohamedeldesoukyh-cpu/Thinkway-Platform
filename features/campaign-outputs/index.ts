@@ -72,6 +72,14 @@ export {
   readMediaPlanData,
 } from "./media-plan-revise-regenerate";
 export {
+  appendMediaPlanEditHistoryEntry,
+  buildMediaPlanEditHistoryEntry,
+  pageMediaPlanEditHistory,
+  restoreMediaPlanEditOnRecord,
+  summarizeMediaPlanEditDiff,
+} from "./media-plan-edit-history";
+export { restoreMediaPlanEditOnCampaignObject } from "./media-plan-edit-restore";
+export {
   MediaPlanCampaignWindowError,
   resolveCampaignWindowFromMediaPlan,
   findCampaignWindowViolations,

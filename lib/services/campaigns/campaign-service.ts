@@ -31,6 +31,7 @@ import {
   fetchSourceCampaignLines,
   fetchSourceDeliverables,
   insertCampaignHeader,
+  listCampaignHeaderIdsForNav,
   listCampaignHeaders,
   syncListCampaignStatuses,
   updateCampaignHeaderFields,
@@ -473,6 +474,18 @@ export async function getCampaignsList(
     pageSize: CAMPAIGNS_PAGE_SIZE,
     totalPages,
   };
+}
+
+/** Full filtered id set for Previous/Next navigation (D3). */
+export async function getCampaignListNavIds(
+  supabase: SupabaseClient,
+  params: { search?: string } = {}
+): Promise<string[]> {
+  const { ids, error } = await listCampaignHeaderIdsForNav(supabase, {
+    search: params.search,
+  });
+  if (error) throw new Error(error.message);
+  return ids;
 }
 
 export type CampaignsKpis = {

@@ -60,6 +60,7 @@ import type { MediaPlanMarketIntelligenceMeta } from "@/features/market-intellig
 import type { MediaPlanPerformanceFact } from "@/lib/media-plan/types";
 import type { MediaPlanCreatorMoveTarget } from "./media-plan-calendar";
 import { OutputsCenterMarketIntelligenceToggle } from "./outputs-center-market-intelligence-toggle";
+import { StudioLinkedEntityOpen } from "./studio-linked-entity-open";
 import {
   applyMediaPlanPresentationPatch,
   readMediaPlanPresentation,
@@ -740,12 +741,18 @@ export function OutputsCenter({
                 </div>
               </div>
             </div>
-            {hasBrief ? (
-              <button type="button" onClick={() => setBriefViewerOpen(true)} className="oc-btn">
-                <FileTextIcon aria-hidden />
-                View Campaign Brief
-              </button>
-            ) : null}
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <StudioLinkedEntityOpen
+                campaignObjectId={campaignObjectId}
+                conversationId={conversationId}
+              />
+              {hasBrief ? (
+                <button type="button" onClick={() => setBriefViewerOpen(true)} className="oc-btn">
+                  <FileTextIcon aria-hidden />
+                  View Campaign Brief
+                </button>
+              ) : null}
+            </div>
           </div>
 
           {effectiveCampaignObject ? (

@@ -16,6 +16,10 @@ import {
 } from "./generators/media-plan";
 import { enforceMediaPlanCampaignWindow } from "./media-plan-campaign-window";
 import {
+  buildMediaPlanEditHistoryEntry,
+  withMediaPlanEditHistoryAppend,
+} from "./media-plan-edit-history";
+import {
   appendMediaPlanAuditEntry,
   actorKindFromOrigin,
   beginMediaPlanBusinessVersion,
@@ -159,6 +163,7 @@ export function reviseMediaPlanOutput(
     operationClass: options?.operationClass ?? "revise_patch",
   });
 
+  const beforeContent = previous.content;
   record = syncMediaPlanBusinessStatusFromEngine(
     {
       ...record,
@@ -177,6 +182,7 @@ export function reviseMediaPlanOutput(
       changedInputs: options?.changedInputs ?? ["timeline"],
       content,
       auditHistory,
+      editHistory: record.editHistory ?? previous.editHistory,
       businessStatus: record.businessStatus ?? "draft",
       approvalImpact:
         record.approvalImpact ??
@@ -186,6 +192,17 @@ export function reviseMediaPlanOutput(
     },
     tipStatus
   );
+
+  const editEntry = buildMediaPlanEditHistoryEntry({
+    record,
+    beforeContent,
+    afterContent: content,
+    actorKind: actorKindFromOrigin(origin),
+    actorUserId: options?.actorUserId,
+    operationClass: options?.operationClass ?? "revise_patch",
+    at: now,
+  });
+  record = withMediaPlanEditHistoryAppend(record, editEntry);
 
   return {
     campaignObject: {

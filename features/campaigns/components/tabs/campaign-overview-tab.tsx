@@ -1,6 +1,6 @@
 "use client";
 
-import { FileTextIcon, InfoIcon, PencilIcon } from "lucide-react";
+import { InfoIcon, PencilIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { CampaignFlatSection } from "@/features/campaigns/components/campaign-fl
 import { CampaignIntelligenceReference } from "@/features/campaigns/components/campaign-intelligence-reference";
 import { CampaignOperationalReadinessChecklist } from "@/features/campaigns/components/campaign-operational-readiness-checklist";
 import { CampaignPoSection } from "@/features/campaigns/components/campaign-po-section";
-import { CampaignEditSheet } from "@/features/campaigns/components/campaign-edit-sheet";
+import { CampaignHeaderInlineEditor } from "@/features/campaigns/components/campaign-header-inline-editor";
 import { CampaignOverviewDetails } from "@/features/campaigns/components/campaign-overview-details";
 import { ClientIoCampaignChrome } from "@/features/io/components/client-io-campaign-chrome";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
@@ -29,12 +29,12 @@ export function CampaignOverviewTab({
   workspace,
   assignmentHierarchy,
   accountManagers,
-  teams,
-  groups,
+  teams: _teams,
+  groups: _groups,
   currencyOptions,
   onOpenDetails,
 }: CampaignOverviewTabProps) {
-  const [editOpen, setEditOpen] = useState(false);
+  const [inlineEditing, setInlineEditing] = useState(false);
   const currency = workspace.currency_code;
   const operationalReadiness = useMemo(
     () => evaluateCampaignOperationalReadiness(workspace, assignmentHierarchy),
@@ -62,22 +62,32 @@ export function CampaignOverviewTab({
               Details panel
             </Button>
           ) : null}
-          <Button
-            variant="outline"
-            size="sm"
-            className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none"
-            onClick={() => setEditOpen(true)}
-          >
-            <PencilIcon data-icon="inline-start" className="size-3.5" />
-            Edit campaign
-          </Button>
+          {!inlineEditing ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none"
+              onClick={() => setInlineEditing(true)}
+            >
+              <PencilIcon data-icon="inline-start" className="size-3.5" />
+              Edit header
+            </Button>
+          ) : null}
         </div>
       </div>
 
       <div className="space-y-3.5">
         <CampaignOperationalReadinessChecklist readiness={operationalReadiness} />
 
-        <CampaignOverviewDetails workspace={workspace} layout="grid" />
+        <CampaignHeaderInlineEditor
+          workspace={workspace}
+          accountManagers={accountManagers}
+          editing={inlineEditing}
+          onEditingChange={setInlineEditing}
+        />
+        {!inlineEditing ? (
+          <CampaignOverviewDetails workspace={workspace} layout="grid" />
+        ) : null}
 
         <CampaignFlatSection
           title="Client IO"
@@ -109,16 +119,6 @@ export function CampaignOverviewTab({
           </CampaignFlatSection>
         ) : null}
       </div>
-
-      <CampaignEditSheet
-        workspace={workspace}
-        accountManagers={accountManagers}
-        teams={teams}
-        groups={groups}
-        currencyOptions={currencyOptions}
-        open={editOpen}
-        onOpenChange={setEditOpen}
-      />
     </>
   );
 }

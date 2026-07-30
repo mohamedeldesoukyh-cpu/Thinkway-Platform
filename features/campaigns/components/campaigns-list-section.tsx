@@ -12,6 +12,7 @@ import { OperationalTableSuiteProvider } from "@/components/tables/operational-t
 import { CampaignsEmptyState } from "@/features/campaigns/components/campaigns-empty-state";
 import { CampaignsPagination } from "@/features/campaigns/components/campaigns-pagination";
 import { CampaignsSearch } from "@/features/campaigns/components/campaigns-search";
+import { CampaignsListNavSync } from "@/features/campaigns/components/campaigns-list-nav-sync";
 import {
   CAMPAIGNS_TABLE_COLUMNS,
   CampaignsTable,
@@ -50,6 +51,7 @@ export function CampaignsListSection({
       filterAccessors={CAMPAIGNS_TABLE_FILTER_ACCESSORS}
       additionalFilterFields={CAMPAIGNS_ADDITIONAL_FILTER_FIELDS}
     >
+      <CampaignsListNavSync search={search} />
       <PlatformV6SectionMeta title="All campaigns" meta={meta} />
       <PlatformV6Toolbar>
         <Suspense fallback={null}>

@@ -39,6 +39,11 @@ type MediaPlanApprovalToolbarProps = {
   hasApprovedBaseline: boolean;
   hasWorkingDraft: boolean;
   onCompare?: () => void;
+  onHistory?: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
 };
 
 type DialogMode =
@@ -57,6 +62,11 @@ export function MediaPlanApprovalToolbar({
   hasApprovedBaseline,
   hasWorkingDraft,
   onCompare,
+  onHistory,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
 }: MediaPlanApprovalToolbarProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -86,6 +96,35 @@ export function MediaPlanApprovalToolbar({
   return (
     <div className="flex flex-col items-end gap-1">
       <div className="flex flex-wrap items-center justify-end gap-1.5">
+        {onHistory ? (
+          <Button type="button" size="sm" variant="outline" className="h-8 text-xs" onClick={onHistory}>
+            History
+          </Button>
+        ) : null}
+        {onUndo ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs"
+            disabled={!canUndo || pending}
+            onClick={onUndo}
+          >
+            Undo
+          </Button>
+        ) : null}
+        {onRedo ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs"
+            disabled={!canRedo || pending}
+            onClick={onRedo}
+          >
+            Redo
+          </Button>
+        ) : null}
         {hasApprovedBaseline && hasWorkingDraft && onCompare ? (
           <Button type="button" size="sm" variant="outline" className="h-8 text-xs" onClick={onCompare}>
             Compare
