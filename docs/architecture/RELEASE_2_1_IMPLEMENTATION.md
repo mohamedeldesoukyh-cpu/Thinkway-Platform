@@ -1,8 +1,10 @@
 # Release 2.1 — Implementation Package
 
-**Status:** Implemented on `develop` (pending Dev soak → Preview → UAT → Production approval)  
+**Status:** ✅ Feature Freeze approved (2026-07-31) — Production pending separate approval  
 **Parent:** [`ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md`](./ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md)  
-**Validation:** [`RELEASE_2_1_ARCHITECTURE_VALIDATION.md`](./RELEASE_2_1_ARCHITECTURE_VALIDATION.md) (**APPROVED**)
+**Validation:** [`RELEASE_2_1_ARCHITECTURE_VALIDATION.md`](./RELEASE_2_1_ARCHITECTURE_VALIDATION.md) (**APPROVED**)  
+**UAT:** [`RELEASE_2_1_UAT.md`](./RELEASE_2_1_UAT.md) · **Production package:** [`RELEASE_2_1_PRODUCTION_PACKAGE.md`](./RELEASE_2_1_PRODUCTION_PACKAGE.md)  
+**Commits:** `9d25a65f` · `7eaf219` · `388bab6c`
 
 ---
 
@@ -117,13 +119,12 @@ See [`RELEASE_2_1_UAT.md`](./RELEASE_2_1_UAT.md).
 
 ## 11. Production rollout plan
 
-1. Merge to `develop` → auto Dev deploy  
-2. Dev soak: Media Plan Original/Actual/Remaining + multi-plan selector + Timeline events  
-3. Preview verification  
-4. Architecture re-check (no Commercial/Finance drift)  
-5. Feature freeze for R2.1 defects only  
-6. **Explicit Production approval** required before `main` / prod deploy  
-7. Production smoke: single-plan campaigns unchanged; Assignment-linked Actual matching; Timeline feed  
+1. ~~Merge to `develop` → auto Dev deploy~~ ✅  
+2. ~~Dev soak / Preview / Interactive UAT~~ ✅  
+3. ~~DEF-R21-01 hotfix + U10 retest~~ ✅  
+4. ~~Feature Freeze~~ ✅ Approved 2026-07-31  
+5. **Explicit Production approval** required before `main` / prod deploy — see [`RELEASE_2_1_PRODUCTION_PACKAGE.md`](./RELEASE_2_1_PRODUCTION_PACKAGE.md)  
+6. Production smoke: single-plan campaigns unchanged; Assignment-linked Actual matching; Timeline feed  
 
 **DB:** no Production migration required for this slice.
 

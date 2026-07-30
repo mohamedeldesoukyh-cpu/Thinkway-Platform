@@ -77,13 +77,14 @@
 - Package: `docs/architecture/ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md`
 - Thesis: complete/harden existing ERP — no redesign
 - Decisions locked: multi Media Plans/campaign; CIO amendment chain; configurable milestones; credit notes; 1 VIO/creator; Convert enable after Prod smoke; post-start Commercial Revision → R3; Enterprise Timeline
-- **Release 2.1:** Media Plan ↔ Assignment Hardening — **IMPLEMENTATION ON `develop`**
-- Validation: `docs/architecture/RELEASE_2_1_ARCHITECTURE_VALIDATION.md` (**APPROVED**)
-- Implementation: `docs/architecture/RELEASE_2_1_IMPLEMENTATION.md` · UAT `RELEASE_2_1_UAT.md` · Timeline `ENTERPRISE_TIMELINE_CONTRACT.md`
-- Delivered: Assignment IDs on slots/facts/projections; ID-first Actual/Remaining; multi-plan list+selector; Timeline contract on `audit_logs`; grain lock guards
-- Tests: `npm run test:release-2-1`
+- **Release 2.1:** Media Plan ↔ Assignment Hardening — **FEATURE FREEZE APPROVED (2026-07-31)**
+- Commits: `9d25a65f` · `7eaf219` · `388bab6c` on `develop` · Preview `dev.thinkwaymedia.com` · Dev Supabase `hsxrewjcbvmbkqdlzjhs`
+- DEF-R21-01 **Closed** · UAT [`RELEASE_2_1_UAT.md`](../../docs/architecture/RELEASE_2_1_UAT.md) · Package [`RELEASE_2_1_PRODUCTION_PACKAGE.md`](../../docs/architecture/RELEASE_2_1_PRODUCTION_PACKAGE.md)
+- Freeze rules: no functional/architecture/schema/API/UI/refactor changes — release-critical Prod hotfixes only
+- Redis INFRA-01 still open (infra; not R2.1 blocker)
+- **Production:** ⛔ blocked until separate Production Approval after package review
 - **Untouched:** Commercial SSOT, Convert redesign, CIO/VIO/Invoice/Billing
-- Next: Dev soak → Preview → UAT → explicit Production approval
+- Next: Product reviews Production package → explicit Production approval only if authorized
 
 ## Media Plan PDF calendar fit (shipped to Production)
 
