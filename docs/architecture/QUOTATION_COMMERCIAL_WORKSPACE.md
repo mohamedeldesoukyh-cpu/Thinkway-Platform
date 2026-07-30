@@ -1,8 +1,9 @@
 # Quotation Commercial Workspace
 
-**Status:** Implemented behind feature flag (2026-07-30)  
+**Status:** Feature freeze (2026-07-30) — Production code deploy with flag OFF  
 **Type:** Quotation UX workstream — **not** Commercial SSOT Phase 5  
-**Authority:** Product-approved architecture (shared draft, explicit Save, session Undo)
+**Authority:** Product-approved architecture (shared draft, explicit Save, session Undo)  
+**UAT:** [`QUOTATION_COMMERCIAL_WORKSPACE_UAT.md`](./QUOTATION_COMMERCIAL_WORKSPACE_UAT.md) — Pass with defects
 
 ## Principle
 

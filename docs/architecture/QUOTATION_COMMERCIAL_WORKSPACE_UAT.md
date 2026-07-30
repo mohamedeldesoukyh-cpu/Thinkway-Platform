@@ -1,13 +1,14 @@
 # Quotation Commercial Workspace — UAT Sign-off
 
-**Status:** Interactive UAT complete — **Pass with defects** (no open Critical/High)  
+**Status:** UAT accepted — **Pass with defects** · **Feature freeze in effect** (2026-07-30)  
 **Type:** Quotation UX workstream (**not** Commercial SSOT Phase 5)  
 **Environment:** Development / Preview — `https://dev.thinkwaymedia.com`  
-**Branch:** `develop` · Feat `01e4ce8a` · Display fix `c6473956`  
+**Branch:** `develop` · Feat `01e4ce8a` · Display fix `c6473956` · UAT `ca00243c`  
 **UAT executed:** 2026-07-30 · Engineering agent (Preview interactive + automated gates)  
+**Product:** Accepted Pass with defects; Feature Freeze approved; Production **code** deploy approved with flag **OFF**  
 **Primary fixture:** `QT-2026-0009-V2` (TUNA DOLPHIN V2) — 32 lines · linked `TW-2026-0005`  
 **Secondary:** `QT-2026-0020` (soak) — 2 lines · linked `TW-2026-0004`  
-**Production:** Untouched — Commercial Summary remains; flag stays **OFF**  
+**Production:** Code deploy approved — Commercial Summary remains; flag stays **OFF** until separate enablement  
 **Spec:** [`QUOTATION_COMMERCIAL_WORKSPACE.md`](./QUOTATION_COMMERCIAL_WORKSPACE.md)  
 **Database:** No migrations (flag + UX only)
 
@@ -226,11 +227,11 @@ No open **Critical** or **High** defects.
 | Role | Name | Date | Decision |
 |---|---|---|---|
 | Engineering | Agent (Preview UAT) | 2026-07-30 | ✅ Automated gates green · interactive Pass with defects |
-| Product | | | ☐ Pass · ☐ Pass with defects · ☐ Fail |
+| Product | Mohamed | 2026-07-30 | ✅ Pass with defects · Feature Freeze · Production code (flag OFF) |
 
-**Feature freeze:** awaiting Product acceptance of this UAT.  
-**Production code deploy:** only after Product freeze approval — **keep flag OFF**.  
-**Production flag enablement:** separate explicit approval later.
+**Feature freeze:** in effect — bug fixes / performance / minor polish only.  
+**Production code deploy:** approved with flag **OFF** (this release).  
+**Production flag enablement:** blocked until DEF-CW-02 disposition + 200+ soak + Prod smoke (separate approval).
 
 ---
 
