@@ -8,8 +8,10 @@
 **Product:** Accepted Pass with defects; Feature Freeze approved; Production **code** deploy approved with flag **OFF**  
 **Primary fixture:** `QT-2026-0009-V2` (TUNA DOLPHIN V2) — 32 lines · linked `TW-2026-0005`  
 **Secondary:** `QT-2026-0020` (soak) — 2 lines · linked `TW-2026-0004`  
-**Production:** **Deployed** 2026-07-30 · `dpl_2tnVjrx1ExKgGUCaFVg7AQUoWkLx` · `app.thinkwaymedia.com`  
-**Release commit:** `2117788c` on `main`/`develop` · **No DB migrations** · Flag **OFF** (unset; defaults OFF when `VERCEL_ENV=production` / `NODE_ENV=production`)  
+**Production:** **Deployed + flag ON** 2026-07-30 · `dpl_EUY8GwxngNnu4zh836yMzD1jepxy` · `app.thinkwaymedia.com`  
+**Release commit:** `7596931d` on `main`/`develop` · **No DB migrations**  
+**Flag:** `NEXT_PUBLIC_QUOTATION_COMMERCIAL_WORKSPACE=true` (Production) — rebuild required; redeployed  
+**Prod smoke:** ✅ **Pass** 2026-07-30 (authenticated) — core Workspace path on `QT-2026-0009-V2`  
 **Spec:** [`QUOTATION_COMMERCIAL_WORKSPACE.md`](./QUOTATION_COMMERCIAL_WORKSPACE.md)
 
 **Feature flag:** `NEXT_PUBLIC_QUOTATION_COMMERCIAL_WORKSPACE`
@@ -17,7 +19,7 @@
 | Surface | Expected | Observed |
 |---|---|---|
 | Development / Preview | **ON** (default when unset) | ✅ Workspace button on quotations |
-| Production | **OFF** (default when unset) | ✅ Env unset on Production; unit defaults OFF; no Prod deploy this workstream |
+| Production | **ON** (explicit enablement) | ✅ Workspace (not Summary) on Prod quotations after flag + redeploy |
 
 **Automated gate:** `npm run test:commercial-workspace`
 
@@ -49,7 +51,7 @@
 | No alternative write paths | ✅ | Code review + Save → SSOT / Finance Lock dialog |
 | Finance Lock + Commercial Revision respected | ✅ | Interactive: “Commercial Revision required” on linked locked campaigns |
 | Commercial Audit preserved (+ workspace batch entry) | ✅ | Per-line SSOT path unchanged; `recordCommercialWorkspaceSaveAudit` on successful Workspace Save |
-| Production feature flag remains OFF | ✅ | Production env has no `NEXT_PUBLIC_QUOTATION_COMMERCIAL_WORKSPACE`; defaults OFF |
+| Production feature flag (post-enablement) | ✅ | `NEXT_PUBLIC_QUOTATION_COMMERCIAL_WORKSPACE=true`; Workspace live on Prod |
 | Derived values calculated only | ✅ | GP / GP% columns display-only (green); inputs are Master fields |
 
 ---
@@ -65,9 +67,9 @@
 | `npm run test:media-plan-phase1` | ✅ Pass | 30/30 |
 | `vitest` `list-nav-context` | ✅ Pass | 2/2 |
 | Preview deploy SHA | ✅ Pass | Ops Center: `c647395` · Supabase `hsxrewjcbvmbkqdlzjhs` |
-| Production flag OFF | ✅ Pass | `NEXT_PUBLIC_QUOTATION_COMMERCIAL_WORKSPACE` unset on Production; defaults OFF |
-| Production deploy Ready + aliased | ✅ Pass | `dpl_2tnVjrx1ExKgGUCaFVg7AQUoWkLx` → `app.thinkwaymedia.com` |
-| Authenticated Prod UI smoke (Summary vs Workspace) | ⚠️ | Login required on Production — not exercised this session; flag path verified via env + unit defaults |
+| Production flag ON (enablement) | ✅ Set | `NEXT_PUBLIC_QUOTATION_COMMERCIAL_WORKSPACE=true` verified via `vercel env pull` |
+| Production redeploy after flag | ✅ Pass | `dpl_EUY8GwxngNnu4zh836yMzD1jepxy` → `app.thinkwaymedia.com` · sha `7596931` |
+| Authenticated Prod UI smoke | ✅ Pass | See **Production smoke** below |
 
 ---
 
@@ -208,7 +210,29 @@ Validated on **2 selected rows** (multi) and **all 32** (Set GP%). One-row Curre
 | 10.7 | Finance | ✅ | Lock correctly enforced via Revision dialog |
 | 10.8 | Publications | ✅ | No Workspace coupling; not regressed by this UX surface |
 | 10.9 | Performance | ✅ | Media Plan / SSOT suites green |
-| 10.10 | Production still shows Commercial Summary | ✅ | Flag OFF by default; Production not redeployed for enablement |
+| 10.10 | Production Workspace after enablement | ✅ | Flag ON + redeploy; Workspace (not Summary) on Prod |
+
+---
+
+## Production smoke (2026-07-30)
+
+**Deploy:** `dpl_EUY8GwxngNnu4zh836yMzD1jepxy` · sha `7596931` · Supabase `ienowhwfyxoqtzbgltno` (aligned)  
+**Fixture:** `QT-2026-0009-V2` (TUNA DOLPHIN V2, 32 lines) · **Campaign:** Not linked on Prod (unlike Dev)
+
+| # | Check | Result | Notes |
+|---|---|:----:|---|
+| P1 | Open quotation | ✅ | Prod authenticated session |
+| P2 | Commercial Workspace (not Summary) | ✅ | Flag ON confirmed in UI |
+| P3 | Bulk Set GP% / health / unsaved | ✅ | Staged edits + health bands |
+| P4 | Edit cost + Undo | ✅ | Session Undo restored prior value |
+| P5 | Shared draft → header KPIs | ✅ | Live totals while staged (`1,237,447` / `25.0%`) |
+| P6 | Discard restores saved | ✅ | Back to `1,235,560` / `24.9%` |
+| P7 | Explicit Save | ✅ | Toast: “Commercial Workspace saved.” |
+| P8 | Secondary open (Wavemaker V2) | ✅ | Workspace opens; health cards + KPIs |
+| P9 | Finance Lock / Commercial Revision | ⏭ N/A | No linked campaign on available Prod fixtures |
+| P10 | Linked SSOT sync confirmation | ⏭ N/A | Same — requires linked assignment campaign |
+
+**Verdict:** Production enablement **Pass**. Rollback not required. Finance Lock / linked sync remain covered by Preview UAT; re-smoke when a Prod quote is campaign-linked + finance-locked.
 
 ---
 
@@ -230,10 +254,12 @@ No open **Critical** or **High** defects.
 |---|---|---|---|
 | Engineering | Agent (Preview UAT) | 2026-07-30 | ✅ Automated gates green · interactive Pass with defects |
 | Product | Mohamed | 2026-07-30 | ✅ Pass with defects · Feature Freeze · Production code (flag OFF) |
+| Engineering | Agent (Prod smoke) | 2026-07-30 | ✅ Flag ON · Workspace live · core smoke Pass |
+| Product | Mohamed | 2026-07-30 | ✅ Explicit approval to enable Production flag |
 
 **Feature freeze:** in effect — bug fixes / performance / minor polish only.  
-**Production code deploy:** approved with flag **OFF** (this release).  
-**Production flag enablement:** blocked until DEF-CW-02 disposition + 200+ soak + Prod smoke (separate approval).
+**Production code deploy:** done (flag OFF first).  
+**Production flag enablement:** ✅ complete — smoke Pass; DEF-CW-02 / DEF-CW-03 remain Low backlog.
 
 ---
 
@@ -244,7 +270,8 @@ develop commit
   → Preview deploy (flag ON by default)
   → UAT (this document)
   → Defect fixes (DEF-CW-01 done)
-  → Feature Freeze (awaiting Product)
+  → Feature Freeze
   → Production approval (code, flag OFF)
-  → Enable Production flag only after explicit approval
+  → Enable Production flag (explicit approval)
+  → Authenticated Prod smoke ✅
 ```

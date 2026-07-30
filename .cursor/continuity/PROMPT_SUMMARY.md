@@ -55,14 +55,15 @@
 - Intelligence Summary: Campaign Start / End / Duration only; Monday align internal
 - Dock chat scroll CSS fix (local)
 
-## Quotation Commercial Workspace (Feature Freeze · Shipped to Production code)
+## Quotation Commercial Workspace (Feature Freeze · Production enabled)
 
 - **Freeze:** 2026-07-30 — bug/perf/polish only; Phase 2 for new capabilities
 - **UAT:** Pass with defects — `docs/architecture/QUOTATION_COMMERCIAL_WORKSPACE_UAT.md`
-- **Production:** `2117788c` · `dpl_2tnVjrx1ExKgGUCaFVg7AQUoWkLx` · `app.thinkwaymedia.com` · **flag OFF**
-- **Open Low (non-blocking):** DEF-CW-02 Creators chip display · DEF-CW-03 200+ soak before flag ON
-- **Flag:** ON Dev/Preview · **OFF Production** until separate enablement
-- **Prod enablement gate:** DEF-CW-02 disposition · 200+ soak · Prod smoke (edit/draft/SSOT/lock/bulk/audit)
+- **Production:** `7596931d` · `dpl_EUY8GwxngNnu4zh836yMzD1jepxy` · `app.thinkwaymedia.com` · Supabase aligned
+- **Flag:** `NEXT_PUBLIC_QUOTATION_COMMERCIAL_WORKSPACE=true` on Production
+- **Prod smoke:** ✅ Pass (TUNA V2) — open Workspace, bulk/health, undo, shared draft KPIs, discard, save toast
+- **Deferred on Prod:** Finance Lock / linked SSOT sync (available Prod fixtures not campaign-linked)
+- **Open Low:** DEF-CW-02 Creators chip · DEF-CW-03 200+ soak (backlog)
 
 ## Productivity & Navigation UX Sprint (Shipped to Production 2026-07-30)
 
