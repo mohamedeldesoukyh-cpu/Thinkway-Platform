@@ -51,6 +51,11 @@ async function main() {
     /isAllowedPdfImageUrl|supabase\.co/,
     "PDF must allow Thinkway storage avatar images when not inlined"
   );
+  assert.match(
+    source,
+    /inlineRemoteImagesInHtml/,
+    "PDF must inline remote img tags for all document types before capture"
+  );
 
   // Hanging remote <img> used to fail setContent(waitUntil:load) after 30s.
   const html = `<!doctype html><html><body>

@@ -132,11 +132,21 @@ export async function enrichQuotationDetailForExport(
   return { ...detail, items };
 }
 
+async function resolveExportAvatarSupabase() {
+  try {
+    const { createSupabaseAdminClient } = await import("@/lib/supabase/admin");
+    return createSupabaseAdminClient();
+  } catch {
+    return null;
+  }
+}
+
 async function embedAvatarDataUri(
   src: string | null,
   profileUrl: string | null,
   compress: boolean,
-  compressOptions = SHOWCASE_AVATAR_COMPRESS
+  compressOptions = SHOWCASE_AVATAR_COMPRESS,
+  supabase: Awaited<ReturnType<typeof resolveExportAvatarSupabase>> = null
 ): Promise<string | null> {
   const trimmedSrc = src?.trim() || null;
   const trimmedProfile = profileUrl?.trim() || null;
@@ -150,6 +160,7 @@ async function embedAvatarDataUri(
   const result = await fetchCreatorAvatarImage({
     src: trimmedSrc,
     profileUrl: trimmedProfile,
+    supabase,
   });
 
   if (result.ok) {
@@ -184,13 +195,15 @@ export async function embedQuotationDocumentAvatars(
   const compressOptions = isPitchTemplate(doc.template)
     ? PITCH_AVATAR_COMPRESS
     : SHOWCASE_AVATAR_COMPRESS;
+  const supabase = await resolveExportAvatarSupabase();
   const creatorGroups = await Promise.all(
     doc.creatorGroups.map(async (group) => {
       const embedded = await embedAvatarDataUri(
         group.avatarUrl,
         group.profileUrl,
         compress,
-        compressOptions
+        compressOptions,
+        supabase
       );
       if (embedded?.startsWith("data:")) {
         return {
@@ -227,7 +240,8 @@ export async function embedQuotationDocumentAvatars(
                 creator.avatarUrl,
                 creator.profileUrl,
                 compress,
-                compressOptions
+                compressOptions,
+                supabase
               );
               if (embedded?.startsWith("data:")) {
                 return {

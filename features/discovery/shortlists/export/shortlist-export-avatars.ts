@@ -11,11 +11,21 @@ import {
 import type { ShortlistDocument } from "./shortlist-document";
 import { isCreatorDeckTemplate, isPitchTemplate } from "./shortlist-template";
 
+async function resolveExportAvatarSupabase() {
+  try {
+    const { createSupabaseAdminClient } = await import("@/lib/supabase/admin");
+    return createSupabaseAdminClient();
+  } catch {
+    return null;
+  }
+}
+
 async function embedShortlistAvatarDataUri(
   src: string | null,
   profileUrl: string | null,
   compress: boolean,
-  compressOptions = SHOWCASE_AVATAR_COMPRESS
+  compressOptions = SHOWCASE_AVATAR_COMPRESS,
+  supabase: Awaited<ReturnType<typeof resolveExportAvatarSupabase>> = null
 ): Promise<string | null> {
   const trimmedSrc = src?.trim() || null;
   const trimmedProfile = profileUrl?.trim() || null;
@@ -29,6 +39,7 @@ async function embedShortlistAvatarDataUri(
   const result = await fetchCreatorAvatarImage({
     src: trimmedSrc,
     profileUrl: trimmedProfile,
+    supabase,
   });
 
   if (result.ok) {
@@ -59,6 +70,7 @@ export async function embedShortlistDocumentAvatars(
   const compressOptions = isPitchTemplate(doc.template)
     ? PITCH_AVATAR_COMPRESS
     : SHOWCASE_AVATAR_COMPRESS;
+  const supabase = await resolveExportAvatarSupabase();
 
   const rows = await Promise.all(
     doc.rows.map(async (row) => ({
@@ -67,7 +79,8 @@ export async function embedShortlistDocumentAvatars(
         row.avatarUrl,
         row.avatarProfileUrl,
         compress,
-        compressOptions
+        compressOptions,
+        supabase
       ),
     }))
   );
@@ -80,7 +93,8 @@ export async function embedShortlistDocumentAvatars(
             group.avatarUrl,
             group.avatarProfileUrl,
             compress,
-            compressOptions
+            compressOptions,
+            supabase
           ),
           avatarProxyUrl: null,
         }))

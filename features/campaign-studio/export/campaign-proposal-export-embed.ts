@@ -29,8 +29,18 @@ function resolveEmbeddedUrl(embedded: string | null): string | undefined {
   return embedded?.startsWith("data:") ? embedded : undefined;
 }
 
+async function resolveExportAvatarSupabase() {
+  try {
+    const { createSupabaseAdminClient } = await import("@/lib/supabase/admin");
+    return createSupabaseAdminClient();
+  } catch {
+    return null;
+  }
+}
+
 async function embedProposalAvatarDataUri(
-  src: string | null | undefined
+  src: string | null | undefined,
+  supabase: Awaited<ReturnType<typeof resolveExportAvatarSupabase>>
 ): Promise<string | null> {
   const trimmedSrc = src?.trim() || null;
   if (!trimmedSrc) return null;
@@ -43,7 +53,7 @@ async function embedProposalAvatarDataUri(
   if (trimmedSrc.startsWith("data:")) {
     embedded = await compressExportDataUri(trimmedSrc, PROPOSAL_AVATAR_COMPRESS);
   } else {
-    const result = await fetchCreatorAvatarImage({ src: trimmedSrc });
+    const result = await fetchCreatorAvatarImage({ src: trimmedSrc, supabase });
     if (result.ok) {
       const buffer = Buffer.from(result.buffer);
       const contentType = result.contentType || detectImageContentType(buffer);
@@ -76,9 +86,12 @@ export async function embedProposalClientLogo(
   return compressExportDataUri(embedded, CLIENT_LOGO_COMPRESS);
 }
 
-async function embedProposalVendor(vendor: ProposalVendor): Promise<ProposalVendor> {
+async function embedProposalVendor(
+  vendor: ProposalVendor,
+  supabase: Awaited<ReturnType<typeof resolveExportAvatarSupabase>>
+): Promise<ProposalVendor> {
   const avatarUrl = resolveEmbeddedUrl(
-    await embedProposalAvatarDataUri(vendor.avatarUrl)
+    await embedProposalAvatarDataUri(vendor.avatarUrl, supabase)
   );
   return avatarUrl ? { ...vendor, avatarUrl } : { ...vendor, avatarUrl: undefined };
 }
@@ -89,9 +102,10 @@ export async function embedProposalExportAssets(input: {
   clientLogoUrl?: string;
 }): Promise<{ vendors: ProposalVendor[]; clientLogoUrl?: string }> {
   embedCache.clear();
+  const supabase = await resolveExportAvatarSupabase();
   const [clientLogoUrl, vendors] = await Promise.all([
     embedProposalClientLogo(input.clientLogoUrl),
-    Promise.all(input.vendors.map((vendor) => embedProposalVendor(vendor))),
+    Promise.all(input.vendors.map((vendor) => embedProposalVendor(vendor, supabase))),
   ]);
   return { vendors, clientLogoUrl };
 }

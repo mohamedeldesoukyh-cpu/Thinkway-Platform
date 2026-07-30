@@ -305,6 +305,10 @@ export async function renderHtmlToPdf(
   let browser: Awaited<ReturnType<typeof launchBrowser>> | null = null;
 
   try {
+    // All PDF types: inline remote <img> tags so Chromium never depends on CDN fetches.
+    const { inlineRemoteImagesInHtml } = await import("@/lib/io/pdf-inline-remote-images");
+    const pdfHtml = await inlineRemoteImagesInHtml(html);
+
     browser = await launchBrowser();
     const page = await browser.newPage();
     if (options.viewport) {
@@ -316,7 +320,7 @@ export async function renderHtmlToPdf(
     }
     // Abort remote image/media fetches that can hang when a Showcase export
     // still contains unresolved CDN URLs. Allow Google Fonts so PDF typography
-    // matches the on-screen preview.
+    // matches the on-screen preview. Thinkway storage images may remain as https.
     await page.setRequestInterception(true);
     page.on("request", (request) => {
       const url = request.url();
@@ -339,7 +343,7 @@ export async function renderHtmlToPdf(
       }
       void request.continue();
     });
-    await page.setContent(html, {
+    await page.setContent(pdfHtml, {
       waitUntil: "domcontentloaded",
       timeout: PDF_SET_CONTENT_TIMEOUT_MS,
     });

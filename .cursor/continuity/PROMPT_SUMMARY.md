@@ -77,7 +77,7 @@
 - Commit `869b0283` · Prod `dpl_941j3warcwr2gcQ4yC3FM4hva7n8` · `app.thinkwaymedia.com`
 - Standard download keeps **same multi-week calendar as preview** (not one week per page)
 - Fix: `sizeAutoHeightPages` in `vendor-io-pdf` measures `.calendar-preview-page` / `.deadlines-preview-page` and emits matching `@page` sizes so Chromium does not clip
-- **Avatar follow-up:** PDF embed now fetches Thinkway `creator-avatars` storage URLs (not on social CDN allowlist); Chromium allows supabase storage images as fallback
+- **Avatar follow-up (all PDF types):** `inlineRemoteImagesInHtml` runs in `renderHtmlToPdf` for every HTML→PDF; media plan also resolves durable `primary_avatar_url` by creatorId; quotation/shortlist/proposal embeds use admin supabase
 
 ## Showcase PDF v2 (in progress on develop)
 
