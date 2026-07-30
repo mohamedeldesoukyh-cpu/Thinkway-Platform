@@ -230,12 +230,14 @@ export async function loadCampaignFinanceAuditBundle(
   if (!isUuid(campaignId)) return invalidCampaignResult();
 
   try {
-    const supabase = await createSupabaseServerClient();
     const financeAudit = await withSoftTimeout(
-      loadFinanceAuditTimeline(supabase, {
-        campaign_id: campaignId,
-        limit: 40,
-      }),
+      (async () => {
+        const supabase = await createSupabaseServerClient();
+        return loadFinanceAuditTimeline(supabase, {
+          campaign_id: campaignId,
+          limit: 40,
+        });
+      })(),
       FINANCE_AUDIT_BUNDLE_TIMEOUT_MS,
       [],
       () => {
