@@ -42,6 +42,15 @@ import {
 import { formatCreatorDisplayName } from "@/lib/text/decode-html-entities";
 import type { Database } from "@/types/database";
 
+/** True when the line still needs a durable creator-avatars upload (CDN/null). */
+export function needsWorkspaceAvatarStabilize(
+  url: string | null | undefined
+): boolean {
+  const trimmed = url?.trim() ?? "";
+  if (!trimmed) return true;
+  return !isDurableStoredAvatarUrl(trimmed);
+}
+
 /** Exported for tests — prefers usable + higher storage quality (enrichment > imports). */
 export function pickBestDisplayableAvatarUrl(
   ...candidates: Array<string | null | undefined>
@@ -651,42 +660,80 @@ export async function enrichQuotationItemsForWorkspace(
   return enriched;
 }
 
-/** Fire-and-forget durable avatar recovery for workspace lines still on expired CDN / null. */
+/**
+ * Fire-and-forget durable avatar recovery for workspace lines still on CDN / null.
+ * Uses the service-role client — creator-avatars uploads are service_role-only.
+ * Falls back to Apify when Instagram CDN + OpenGraph are dead.
+ */
 async function stabilizeMissingWorkspaceAvatars(
-  supabase: SupabaseClient<Database>,
+  _userSupabase: SupabaseClient<Database>,
   items: QuotationItemRow[]
 ): Promise<void> {
-  const { stabilizeCreatorAvatar } = await import(
-    "@/lib/creators/stabilize-creator-avatar"
-  );
-
   const missing = items.filter((item) => {
-    const url = item.profile_image_url?.trim() ?? "";
-    if (url && isDurableStoredAvatarUrl(url)) return false;
-    if (url && isUsableAvatarUrl(url)) return false;
+    if (!needsWorkspaceAvatarStabilize(item.profile_image_url)) return false;
     return Boolean(resolveWorkspaceInfluencerId(item) || item.handle?.trim());
   });
   if (!missing.length) return;
 
-  const settled = await Promise.allSettled(
-    missing.slice(0, 40).map(async (item) => {
-      const influencerId = resolveWorkspaceInfluencerId(item);
-      if (!influencerId) return null;
-      const result = await stabilizeCreatorAvatar(supabase, influencerId, {
-        preferredHandle: item.handle?.replace(/^@+/, "") ?? undefined,
-        preferredPlatform: item.platform ?? undefined,
-      });
-      if (!result.ok || !result.url) return null;
-      if (result.url === item.profile_image_url) return null;
-      await supabase
-        .from("quotation_items")
-        .update({ profile_image_url: result.url } as never)
-        .eq("id", item.id);
-      return result.url;
-    })
+  let admin: SupabaseClient<Database>;
+  try {
+    const { createSupabaseAdminClient } = await import("@/lib/supabase/admin");
+    admin = createSupabaseAdminClient();
+  } catch (error) {
+    console.warn(
+      "[quotation-avatars] admin client unavailable; cannot persist durable avatars",
+      error instanceof Error ? error.message : error
+    );
+    return;
+  }
+
+  const { repairCreatorAvatarDurably } = await import(
+    "@/lib/creators/stabilize-creator-avatar"
   );
 
-  void settled;
+  // Cap concurrency — Apify avatar refresh can take ~60s per creator.
+  const queue = missing.slice(0, 40);
+  const concurrency = 2;
+  let cursor = 0;
+
+  async function worker() {
+    while (cursor < queue.length) {
+      const item = queue[cursor++];
+      if (!item) return;
+      const influencerId = resolveWorkspaceInfluencerId(item);
+      if (!influencerId) continue;
+      try {
+        const result = await repairCreatorAvatarDurably(admin, influencerId, {
+          preferredHandle: item.handle?.replace(/^@+/, "") ?? undefined,
+          preferredPlatform: item.platform ?? undefined,
+          allowApifyFallback: true,
+        });
+        if (!result.ok || !result.url) {
+          console.warn(
+            "[quotation-avatars] durable repair failed",
+            item.handle,
+            result.reason
+          );
+          continue;
+        }
+        if (result.url === item.profile_image_url) continue;
+        await admin
+          .from("quotation_items")
+          .update({ profile_image_url: result.url } as never)
+          .eq("id", item.id);
+      } catch (error) {
+        console.warn(
+          "[quotation-avatars] durable repair error",
+          item.handle,
+          error instanceof Error ? error.message : error
+        );
+      }
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, queue.length) }, () => worker())
+  );
 }
 
 export async function enrichQuotationItemsWithCreatorAvatars(

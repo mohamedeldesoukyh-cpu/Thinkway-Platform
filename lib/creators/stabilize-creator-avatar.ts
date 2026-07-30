@@ -225,10 +225,114 @@ export async function stabilizeCreatorAvatar(
   };
 }
 
+/**
+ * Durable repair: stabilize from CDN/OG first; if Instagram/TikTok CDN is dead,
+ * fetch a fresh profile photo via Apify and upload to creator-avatars.
+ * Caller must pass a service-role client (storage uploads are service_role-only).
+ */
+export async function repairCreatorAvatarDurably(
+  supabase: SupabaseClient<Database>,
+  influencerId: string,
+  options?: {
+    preferredHandle?: string;
+    preferredPlatform?: string;
+    forceRefresh?: boolean;
+    allowApifyFallback?: boolean;
+  }
+): Promise<StabilizeCreatorAvatarResult> {
+  const stabilized = await stabilizeCreatorAvatar(supabase, influencerId, options);
+  if (stabilized.ok) return stabilized;
+  if (options?.allowApifyFallback === false) return stabilized;
+
+  const { data: accounts } = await supabase
+    .from("influencer_platform_accounts")
+    .select("id, platform, handle, profile_url, is_primary")
+    .eq("influencer_id", influencerId);
+
+  const platformAccounts = accounts ?? [];
+  const primaryAccount =
+    platformAccounts.find((a) => a.is_primary) ??
+    platformAccounts.find(
+      (a) =>
+        options?.preferredPlatform &&
+        a.platform.toLowerCase() === options.preferredPlatform.toLowerCase()
+    ) ??
+    platformAccounts[0];
+
+  if (!primaryAccount) {
+    return {
+      ...stabilized,
+      reason: stabilized.reason ?? "no_platform_account",
+    };
+  }
+
+  const handle =
+    options?.preferredHandle?.replace(/^@+/, "") ||
+    primaryAccount.handle?.replace(/^@+/, "") ||
+    stabilized.handle;
+  const platform = options?.preferredPlatform ?? primaryAccount.platform ?? "instagram";
+  const profileUrl =
+    primaryAccount.profile_url?.trim() ||
+    (handle ? `https://www.instagram.com/${handle}/` : null);
+
+  if (!profileUrl || !handle) {
+    return {
+      influencerId,
+      handle,
+      ok: false,
+      reason: "missing_profile_url_for_apify",
+    };
+  }
+
+  const { fetchApifyProfile } = await import("@/lib/creator-enrichment/apify-profile");
+  const { syncEnrichmentAvatarToStorage } = await import(
+    "@/lib/creator-enrichment/enrichment-avatar-storage"
+  );
+
+  const apify = await fetchApifyProfile({
+    platform,
+    username: handle,
+    profileUrl,
+    timeoutMs: 90_000,
+  });
+
+  if (!apify.ok || !apify.data.profilePictureUrl?.trim()) {
+    return {
+      influencerId,
+      handle,
+      ok: false,
+      reason:
+        (!apify.ok ? apify.reason : null) ||
+        stabilized.reason ||
+        "apify_avatar_missing",
+    };
+  }
+
+  const stored = await syncEnrichmentAvatarToStorage(supabase, {
+    influencerId,
+    platformAccountId: primaryAccount.id,
+    platform,
+    username: handle,
+    providerAvatarUrl: apify.data.profilePictureUrl.trim(),
+  });
+
+  if (!stored.uploaded) {
+    return {
+      influencerId,
+      handle,
+      ok: false,
+      reason: stored.reason || "apify_storage_sync_failed",
+    };
+  }
+
+  await persistCreatorPrimaryIdentity(supabase, influencerId);
+  return { influencerId, handle, ok: true, url: stored.url };
+}
+
 export async function stabilizeCreatorsByHandles(
   supabase: SupabaseClient<Database>,
   handles: string[],
-  options?: { forceRefresh?: boolean }
+  options?: { forceRefresh?: boolean; allowApifyFallback?: boolean }
 ): Promise<StabilizeCreatorAvatarResult[]> {
   const results: StabilizeCreatorAvatarResult[] = [];
 
@@ -251,12 +355,16 @@ export async function stabilizeCreatorsByHandles(
 
     for (const influencerId of influencerIds) {
       const account = (accounts ?? []).find((a) => a.influencer_id === influencerId);
+      const repairOptions = {
+        preferredHandle: handle,
+        preferredPlatform: account?.platform,
+        forceRefresh: options?.forceRefresh,
+        allowApifyFallback: options?.allowApifyFallback,
+      };
       results.push(
-        await stabilizeCreatorAvatar(supabase, influencerId, {
-          preferredHandle: handle,
-          preferredPlatform: account?.platform,
-          forceRefresh: options?.forceRefresh,
-        })
+        options?.allowApifyFallback === false
+          ? await stabilizeCreatorAvatar(supabase, influencerId, repairOptions)
+          : await repairCreatorAvatarDurably(supabase, influencerId, repairOptions)
       );
     }
   }

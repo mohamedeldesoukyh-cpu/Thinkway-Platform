@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { pickBestDisplayableAvatarUrl } from "@/lib/services/quotations/enrich-quotation-item-avatars";
+import {
+  needsWorkspaceAvatarStabilize,
+  pickBestDisplayableAvatarUrl,
+} from "@/lib/services/quotations/enrich-quotation-item-avatars";
 import { pickBestQuotationSeedAvatarUrl } from "@/lib/commercial-sync/shortlist-seeds";
 
 const importCrop =
@@ -10,6 +13,8 @@ const enrichmentPhoto =
   "https://example.supabase.co/storage/v1/object/public/creator-avatars/enrichment/f2f688c2-5d47-4b07-b34f-7b1ee2ca44f6/instagram/zeinaelfakahany.jpg";
 const expiredIgCdn =
   "https://scontent.cdninstagram.com/v/t51.2885-19/x.jpg?oe=60000000";
+const freshIgCdn =
+  "https://scontent.cdninstagram.com/v/t51.2885-19/x.jpg?oe=FFFFFFFF";
 
 test("quotation workspace avatar pick prefers enrichment over import primary", () => {
   const resolved = pickBestDisplayableAvatarUrl(importCrop, enrichmentPhoto);
@@ -32,4 +37,11 @@ test("quotation seed avatar pick prefers durable storage over expired Instagram 
     pickBestQuotationSeedAvatarUrl(expiredIgCdn, null, importCrop),
     importCrop
   );
+});
+
+test("workspace stabilize needed for CDN/null but not durable storage", () => {
+  assert.equal(needsWorkspaceAvatarStabilize(null), true);
+  assert.equal(needsWorkspaceAvatarStabilize(expiredIgCdn), true);
+  assert.equal(needsWorkspaceAvatarStabilize(freshIgCdn), true);
+  assert.equal(needsWorkspaceAvatarStabilize(enrichmentPhoto), false);
 });

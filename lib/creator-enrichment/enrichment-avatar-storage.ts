@@ -6,7 +6,7 @@ import {
   parseCreatorAvatarStoragePathFromUrl,
   uploadEnrichmentCreatorAvatar,
 } from "@/lib/discovery-import/import-avatar-storage";
-import { isUsableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
+import { isDisplayableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
 
 export type EnrichmentAvatarStorageResult =
   | { uploaded: true; url: string }
@@ -27,7 +27,8 @@ export async function syncEnrichmentAvatarToStorage(
   }
 ): Promise<EnrichmentAvatarStorageResult> {
   const providerUrl = input.providerAvatarUrl.trim();
-  if (!isUsableAvatarUrl(providerUrl)) {
+  // Allow expired social CDN URLs — fetch may still succeed briefly after Apify returns them.
+  if (!isDisplayableAvatarUrl(providerUrl)) {
     return { uploaded: false, reason: "invalid_provider_url" };
   }
 
