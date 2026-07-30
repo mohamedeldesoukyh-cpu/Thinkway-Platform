@@ -59,10 +59,9 @@
 
 - **Freeze:** 2026-07-30 — bug/perf/polish only; Phase 2 for new capabilities
 - **UAT:** Pass with defects — `docs/architecture/QUOTATION_COMMERCIAL_WORKSPACE_UAT.md`
-- **Production:** `7596931d` · `dpl_EUY8GwxngNnu4zh836yMzD1jepxy` · `app.thinkwaymedia.com` · Supabase aligned
-- **Flag:** `NEXT_PUBLIC_QUOTATION_COMMERCIAL_WORKSPACE=true` on Production
-- **Prod smoke:** ✅ Pass (TUNA V2) — open Workspace, bulk/health, undo, shared draft KPIs, discard, save toast
-- **Deferred on Prod:** Finance Lock / linked SSOT sync (available Prod fixtures not campaign-linked)
+- **Production:** flag ON · Workspace live · smoke Pass (`08a94855` docs evidence)
+- **Polish:** KPI shells + line rows restyled to shortlist/quotation creator-card language (cool border, health pills, green/orange/critical card rows)
+- **Deferred on Prod:** Finance Lock / linked SSOT sync (no linked Prod fixtures during enablement smoke)
 - **Open Low:** DEF-CW-02 Creators chip · DEF-CW-03 200+ soak (backlog)
 
 ## Productivity & Navigation UX Sprint (Shipped to Production 2026-07-30)

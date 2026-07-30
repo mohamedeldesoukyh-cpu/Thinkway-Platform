@@ -82,14 +82,14 @@ import { optionNumberLabel } from "@/lib/quotations/quotation-deliverable-types"
 import { buildQuotationItemOptionContext } from "@/lib/quotations/quotation-creator-options";
 
 const CS = {
-  dark: "#141413",
-  gray: "#6b6a63",
-  muted: "#9a988f",
-  line: "#e8e6dc",
-  panel: "#f4f3ee",
-  green: "#3B6D11",
-  warn: "#A16207",
-  critical: "#B91C1C",
+  dark: "#0d1220",
+  gray: "#6b7280",
+  muted: "#9aa3b5",
+  line: "#e3e8f2",
+  panel: "#f6f8fc",
+  green: "#1D9E75",
+  warn: "#EA580C",
+  critical: "#DC2626",
 } as const;
 
 const MODE_OPTIONS = Object.entries(COMMERCIAL_INPUT_MODE_LABELS) as [
@@ -174,17 +174,17 @@ function StatCard({
   value: string;
   tone?: "green" | "warn" | "critical";
 }) {
-  const color =
-    tone === "green" ? CS.green : tone === "warn" ? CS.warn : tone === "critical" ? CS.critical : CS.dark;
   return (
-    <div className="rounded-lg px-3 py-2.5" style={{ backgroundColor: CS.panel }}>
+    <div className="cw-stat-card">
+      <p className="cw-stat-card-label">{label}</p>
       <p
-        className="m-0 text-[10px] font-medium uppercase tracking-[0.05em]"
-        style={{ color: CS.muted }}
+        className={cn(
+          "cw-stat-card-value",
+          tone === "green" && "cw-stat-card-value--green",
+          tone === "warn" && "cw-stat-card-value--warn",
+          tone === "critical" && "cw-stat-card-value--critical"
+        )}
       >
-        {label}
-      </p>
-      <p className="m-0 mt-1 text-base font-semibold tabular-nums" style={{ color }}>
         {value}
       </p>
     </div>
@@ -367,13 +367,6 @@ export function QuotationCommercialWorkspaceDialog({
     });
   };
 
-  const bandStyle = (gpPct: number) => {
-    const band = resolveProfitabilityBand(gpPct);
-    if (band === "healthy") return { background: "rgba(59,109,17,0.08)" };
-    if (band === "warning") return { background: "rgba(161,98,7,0.10)" };
-    return { background: "rgba(185,28,28,0.08)" };
-  };
-
   const show = (id: CommercialWorkspaceColumnId) => columnPrefs[id];
 
   return (
@@ -394,7 +387,7 @@ export function QuotationCommercialWorkspaceDialog({
       </DialogTrigger>
       <DialogContent
         showCloseButton
-        className="flex h-[min(92vh,820px)] max-h-[min(92vh,820px)] min-h-0 w-[min(98vw,1280px)] max-w-[min(98vw,1280px)] flex-col gap-0 overflow-hidden rounded-xl border-[0.5px] p-0 sm:max-w-[min(98vw,1280px)]"
+        className="commercial-workspace-dialog flex h-[min(92vh,820px)] max-h-[min(92vh,820px)] min-h-0 w-[min(98vw,1280px)] max-w-[min(98vw,1280px)] flex-col gap-0 overflow-hidden rounded-xl border-[0.5px] p-0 sm:max-w-[min(98vw,1280px)]"
         style={{ borderColor: CS.line, backgroundColor: "#fff", color: CS.dark }}
       >
         <div
@@ -416,10 +409,8 @@ export function QuotationCommercialWorkspaceDialog({
           style={{ borderBottom: `0.5px solid ${CS.line}`, background: "#fff" }}
         >
           <div className="grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
-            <div>
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: CS.muted }}>
-                Selection · {selectionRows.length}
-              </p>
+            <div className="cw-kpi-shell">
+              <p className="cw-kpi-shell-title">Selection · {selectionRows.length}</p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <StatCard label="Revenue" value={fmtStat(selectionTotals.revenue)} />
                 <StatCard label="Cost" value={fmtStat(selectionTotals.cost)} />
@@ -431,10 +422,8 @@ export function QuotationCommercialWorkspaceDialog({
                 />
               </div>
             </div>
-            <div>
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: CS.muted }}>
-                Quotation · {rows.length}
-              </p>
+            <div className="cw-kpi-shell">
+              <p className="cw-kpi-shell-title">Quotation · {rows.length}</p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <StatCard label="Revenue" value={fmtStat(quotationTotals.revenue)} />
                 <StatCard label="Cost" value={fmtStat(quotationTotals.cost)} />
@@ -446,11 +435,9 @@ export function QuotationCommercialWorkspaceDialog({
                 />
               </div>
             </div>
-            <div className="min-w-[140px]">
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide" style={{ color: CS.muted }}>
-                Commercial Health
-              </p>
-              <div className="flex flex-col gap-1">
+            <div className="cw-kpi-shell min-w-[148px]">
+              <p className="cw-kpi-shell-title">Commercial Health</p>
+              <div className="flex flex-col gap-1.5">
                 {(
                   [
                     ["band_healthy", "Healthy", health.healthy, "green"],
@@ -462,12 +449,12 @@ export function QuotationCommercialWorkspaceDialog({
                     key={filter}
                     type="button"
                     onClick={() => setQuickFilter(filter)}
-                    className="flex items-center justify-between rounded-md px-2 py-1 text-left text-xs font-medium"
-                    style={{
-                      background: CS.panel,
-                      color:
-                        tone === "green" ? CS.green : tone === "warn" ? CS.warn : CS.critical,
-                    }}
+                    className={cn(
+                      "cw-health-pill",
+                      tone === "green" && "cw-health-pill--green",
+                      tone === "warn" && "cw-health-pill--warn",
+                      tone === "critical" && "cw-health-pill--critical"
+                    )}
                   >
                     <span>{label}</span>
                     <span className="tabular-nums">{count}</span>
@@ -583,7 +570,7 @@ export function QuotationCommercialWorkspaceDialog({
           </div>
 
           {columnsOpen ? (
-            <div className="flex flex-wrap gap-3 rounded-lg px-3 py-2" style={{ background: CS.panel }}>
+            <div className="cw-kpi-shell flex flex-wrap gap-3 !py-2">
               {(Object.keys(COMMERCIAL_WORKSPACE_COLUMN_LABELS) as CommercialWorkspaceColumnId[]).map(
                 (id) => (
                   <label key={id} className="flex items-center gap-1.5 text-xs">
@@ -601,7 +588,7 @@ export function QuotationCommercialWorkspaceDialog({
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 pb-2">
           <div className="min-h-0 flex-1 overflow-auto">
-            <table className="w-full border-collapse text-[12.5px]">
+            <table className="cw-lines w-full text-[12.5px]">
               <thead className="sticky top-0 z-10 bg-white">
                 <tr>
                   <th className="pb-2 pr-1 pt-2" style={{ borderBottom: `0.5px solid ${CS.line}` }}>
@@ -678,8 +665,18 @@ export function QuotationCommercialWorkspaceDialog({
                     const selected = selectedIds.has(row.itemId);
                     const band = resolveProfitabilityBand(row.gpPct);
                     return (
-                      <tr key={row.itemId} style={bandStyle(row.gpPct)} className={cn(!selected && "opacity-50")}>
-                        <td className="border-t py-1.5 pr-1" style={{ borderColor: CS.line }}>
+                      <tr
+                        key={row.itemId}
+                        className={cn(
+                          "cw-line-card",
+                          band === "healthy" && "cw-line-card--green",
+                          band === "warning" && "cw-line-card--orange",
+                          band === "critical" && "cw-line-card--critical",
+                          selected && "cw-line-card--selected",
+                          !selected && "cw-line-card--dimmed"
+                        )}
+                      >
+                        <td className="pr-1">
                           <Checkbox
                             checked={selected}
                             onCheckedChange={() => {
@@ -692,15 +689,19 @@ export function QuotationCommercialWorkspaceDialog({
                             }}
                           />
                         </td>
-                        <td className="border-t py-1.5 pr-1.5" style={{ borderColor: CS.line }}>
-                          <div className="font-medium">{row.influencerName}</div>
-                          <div className="text-[10px]" style={{ color: CS.muted }}>
-                            {profitabilityBandLabel(band)}
-                            {row.optionLabel ? ` · ${row.optionLabel}` : null}
+                        <td className="pr-1.5">
+                          <div className="font-medium text-[#0d1220]">{row.influencerName}</div>
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                            <span className={cn("cw-band-pill", `cw-band-pill--${band}`)}>
+                              {profitabilityBandLabel(band)}
+                            </span>
+                            {row.optionLabel ? (
+                              <span className="cw-band-pill">{row.optionLabel}</span>
+                            ) : null}
                           </div>
                         </td>
                         {show("mode") ? (
-                          <td className="border-t px-1 py-1" style={{ borderColor: CS.line }}>
+                          <td className="px-1">
                             {canManage ? (
                               <select
                                 className="h-7 w-full max-w-[120px] rounded border px-1 text-[11px]"
@@ -742,7 +743,7 @@ export function QuotationCommercialWorkspaceDialog({
                           </td>
                         ) : null}
                         {show("cost") ? (
-                          <td className="border-t px-1 py-1 text-right" style={{ borderColor: CS.line }}>
+                          <td className="px-1 text-right">
                             {canManage ? (
                               <Input
                                 type="number"
@@ -768,7 +769,7 @@ export function QuotationCommercialWorkspaceDialog({
                           </td>
                         ) : null}
                         {show("revenue") ? (
-                          <td className="border-t px-1 py-1 text-right" style={{ borderColor: CS.line }}>
+                          <td className="px-1 text-right">
                             {canManage ? (
                               <Input
                                 type="number"
@@ -795,7 +796,7 @@ export function QuotationCommercialWorkspaceDialog({
                           </td>
                         ) : null}
                         {show("gpPctInput") ? (
-                          <td className="border-t px-1 py-1 text-right" style={{ borderColor: CS.line }}>
+                          <td className="px-1 text-right">
                             {canManage ? (
                               <Input
                                 type="number"
@@ -816,17 +817,17 @@ export function QuotationCommercialWorkspaceDialog({
                           </td>
                         ) : null}
                         {show("gp") ? (
-                          <td className="border-t px-1 py-1.5 text-right tabular-nums font-medium" style={{ borderColor: CS.line, color: CS.green }}>
+                          <td className="px-1 text-right tabular-nums font-semibold" style={{ color: CS.green }}>
                             {fmtCell(row.gpValueEgp)}
                           </td>
                         ) : null}
                         {show("gpPct") ? (
-                          <td className="border-t px-1 py-1.5 text-right tabular-nums font-medium" style={{ borderColor: CS.line, color: CS.green }}>
+                          <td className="px-1 text-right tabular-nums font-semibold" style={{ color: CS.green }}>
                             {fmtGpPct(row.gpValueEgp, row.revenueEgp, row.gpPct)}
                           </td>
                         ) : null}
                         {show("afPct") ? (
-                          <td className="border-t px-1 py-1 text-right" style={{ borderColor: CS.line }}>
+                          <td className="px-1 text-right">
                             {canManage ? (
                               <Input
                                 type="number"
@@ -846,7 +847,7 @@ export function QuotationCommercialWorkspaceDialog({
                           </td>
                         ) : null}
                         {show("currency") ? (
-                          <td className="border-t px-1 py-1 text-right" style={{ borderColor: CS.line }}>
+                          <td className="px-1 text-right">
                             {canManage ? (
                               <Input
                                 className="ml-auto h-7 w-[64px] text-right text-xs uppercase"
@@ -867,7 +868,7 @@ export function QuotationCommercialWorkspaceDialog({
                           </td>
                         ) : null}
                         {show("fx") ? (
-                          <td className="border-t px-1 py-1 text-right" style={{ borderColor: CS.line }}>
+                          <td className="px-1 text-right">
                             {canManage ? (
                               <Input
                                 type="number"

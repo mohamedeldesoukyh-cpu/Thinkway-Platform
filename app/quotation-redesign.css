@@ -1786,3 +1786,205 @@
     flex-wrap: wrap;
   }
 }
+
+/* Commercial Workspace — shortlist / quotation creator-card visual language */
+.commercial-workspace-dialog .cw-kpi-shell {
+  border-radius: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: linear-gradient(180deg, #f8faff 0%, #fff 100%);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.03),
+    0 0 0 1px rgba(227, 232, 242, 0.7);
+  padding: 12px 12px 10px;
+}
+
+.commercial-workspace-dialog .cw-kpi-shell-title {
+  margin: 0 0 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9aa3b5;
+}
+
+.commercial-workspace-dialog .cw-stat-card {
+  border: 1px solid var(--border, #e3e8f2);
+  border-radius: 12px;
+  background: #fff;
+  padding: 9px 11px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.commercial-workspace-dialog .cw-stat-card-label {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9aa3b5;
+  line-height: 1.2;
+}
+
+.commercial-workspace-dialog .cw-stat-card-value {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #0d1220;
+  line-height: 1.2;
+}
+
+.commercial-workspace-dialog .cw-stat-card-value--green {
+  color: #1d9e75;
+}
+
+.commercial-workspace-dialog .cw-stat-card-value--warn {
+  color: #ea580c;
+}
+
+.commercial-workspace-dialog .cw-stat-card-value--critical {
+  color: #dc2626;
+}
+
+.commercial-workspace-dialog .cw-health-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  border-radius: 999px;
+  border: 1px solid var(--border, #e3e8f2);
+  background: rgba(246, 248, 252, 0.9);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.commercial-workspace-dialog .cw-health-pill:hover {
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.commercial-workspace-dialog .cw-health-pill--green {
+  color: #1d9e75;
+  border-color: rgba(29, 158, 117, 0.22);
+  background: rgba(236, 253, 245, 0.75);
+}
+
+.commercial-workspace-dialog .cw-health-pill--warn {
+  color: #ea580c;
+  border-color: rgba(234, 88, 12, 0.22);
+  background: rgba(255, 247, 237, 0.8);
+}
+
+.commercial-workspace-dialog .cw-health-pill--critical {
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.2);
+  background: rgba(254, 242, 242, 0.8);
+}
+
+.commercial-workspace-dialog .cw-lines {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 8px;
+}
+
+.commercial-workspace-dialog .cw-lines thead th {
+  background: transparent;
+  border-bottom: none !important;
+  padding-top: 4px;
+  padding-bottom: 2px;
+}
+
+.commercial-workspace-dialog .cw-lines tbody tr.cw-line-card td {
+  border-top: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  vertical-align: middle;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.commercial-workspace-dialog .cw-lines tbody tr.cw-line-card td:first-child {
+  border-left: 1px solid transparent;
+  border-radius: 16px 0 0 16px;
+  padding-left: 12px;
+}
+
+.commercial-workspace-dialog .cw-lines tbody tr.cw-line-card td:last-child {
+  border-right: 1px solid transparent;
+  border-radius: 0 16px 16px 0;
+  padding-right: 12px;
+}
+
+.commercial-workspace-dialog .cw-lines tbody tr.cw-line-card--green td {
+  background: linear-gradient(180deg, rgba(236, 253, 245, 0.55) 0%, #fff 100%);
+  border-color: rgba(29, 158, 117, 0.14);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.03),
+    0 0 0 1px rgba(29, 158, 117, 0.06);
+}
+
+.commercial-workspace-dialog .cw-lines tbody tr.cw-line-card--orange td {
+  background: linear-gradient(180deg, rgba(255, 247, 237, 0.55) 0%, #fff 100%);
+  border-color: rgba(234, 88, 12, 0.14);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.03),
+    0 0 0 1px rgba(234, 88, 12, 0.06);
+}
+
+.commercial-workspace-dialog .cw-lines tbody tr.cw-line-card--critical td {
+  background: linear-gradient(180deg, rgba(254, 242, 242, 0.5) 0%, #fff 100%);
+  border-color: rgba(220, 38, 38, 0.12);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.03),
+    0 0 0 1px rgba(220, 38, 38, 0.06);
+}
+
+.commercial-workspace-dialog .cw-lines tbody tr.cw-line-card--dimmed {
+  opacity: 0.55;
+}
+
+.commercial-workspace-dialog .cw-lines tbody tr.cw-line-card--selected td {
+  box-shadow:
+    0 2px 6px rgba(15, 23, 42, 0.05),
+    0 0 0 1px rgba(59, 130, 246, 0.18);
+}
+
+.commercial-workspace-dialog .cw-band-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--border, #e3e8f2);
+  background: rgba(246, 248, 252, 0.9);
+  padding: 1px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #6b7280;
+}
+
+.commercial-workspace-dialog .cw-band-pill--healthy {
+  color: #1d9e75;
+  border-color: rgba(29, 158, 117, 0.22);
+  background: rgba(236, 253, 245, 0.9);
+}
+
+.commercial-workspace-dialog .cw-band-pill--warning {
+  color: #ea580c;
+  border-color: rgba(234, 88, 12, 0.22);
+  background: rgba(255, 247, 237, 0.95);
+}
+
+.commercial-workspace-dialog .cw-band-pill--critical {
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.2);
+  background: rgba(254, 242, 242, 0.95);
+}
