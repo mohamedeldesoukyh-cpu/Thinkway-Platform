@@ -55,16 +55,13 @@
 - Intelligence Summary: Campaign Start / End / Duration only; Monday align internal
 - Dock chat scroll CSS fix (local)
 
-## Quotation Commercial Workspace (Preview UAT)
+## Quotation Commercial Workspace (UAT complete — awaiting Product freeze)
 
-- **Commits on `develop`:** `01e4ce8a` (feat) · `124f4b41` (UAT doc pin) — pushed for Preview
-- **Type:** Quotation UX workstream (not Commercial SSOT Phase 5) — consumes frozen SSOT APIs only
-- **Flag:** `NEXT_PUBLIC_QUOTATION_COMMERCIAL_WORKSPACE` — default ON Dev/Preview, OFF Production (do not enable Prod until explicit approval)
-- **Locked:** shared draft · explicit Save · session Undo · bulk ops · health bands · column prefs
-- **Spec:** `docs/architecture/QUOTATION_COMMERCIAL_WORKSPACE.md`
-- **UAT:** `docs/architecture/QUOTATION_COMMERCIAL_WORKSPACE_UAT.md`
-- **Tests:** `npm run test:commercial-workspace` (13/13)
-- Next: complete UAT → defect fixes → freeze → Production flag enable only with approval
+- **Commits:** `01e4ce8a` (feat) · `c6473956` (DEF-CW-01 live-draft fix) on `develop` / Preview
+- **UAT:** Pass with defects — `docs/architecture/QUOTATION_COMMERCIAL_WORKSPACE_UAT.md`
+- **Open Low:** DEF-CW-02 grid chip display · DEF-CW-03 no 200+ fixture
+- **Flag:** ON Dev/Preview · OFF Production (do not enable Prod until separate approval)
+- **Next:** Product accepts freeze → Production **code** deploy with flag still OFF → later flag enablement
 
 ## Productivity & Navigation UX Sprint (Shipped to Production 2026-07-30)
 
