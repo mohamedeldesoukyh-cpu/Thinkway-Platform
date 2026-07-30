@@ -77,14 +77,13 @@
 - Package: `docs/architecture/ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md`
 - Thesis: complete/harden existing ERP — no redesign
 - Decisions locked: multi Media Plans/campaign; CIO amendment chain; configurable milestones; credit notes; 1 VIO/creator; Convert enable after Prod smoke; post-start Commercial Revision → R3; Enterprise Timeline
-- **Release 2.1:** Media Plan ↔ Assignment Hardening — **FEATURE FREEZE APPROVED (2026-07-31)**
-- Commits: `9d25a65f` · `7eaf219` · `388bab6c` on `develop` · Preview `dev.thinkwaymedia.com` · Dev Supabase `hsxrewjcbvmbkqdlzjhs`
-- DEF-R21-01 **Closed** · UAT [`RELEASE_2_1_UAT.md`](../../docs/architecture/RELEASE_2_1_UAT.md) · Package [`RELEASE_2_1_PRODUCTION_PACKAGE.md`](../../docs/architecture/RELEASE_2_1_PRODUCTION_PACKAGE.md)
-- Freeze rules: no functional/architecture/schema/API/UI/refactor changes — release-critical Prod hotfixes only
-- Redis INFRA-01 still open (infra; not R2.1 blocker)
-- **Production:** ⛔ blocked until separate Production Approval after package review
-- **Untouched:** Commercial SSOT, Convert redesign, CIO/VIO/Invoice/Billing
-- Next: Product reviews Production package → explicit Production approval only if authorized
+- **Release 2.1:** Media Plan ↔ Assignment Hardening — **PRODUCTION COMPLETE (2026-07-31)**
+- Tag `v2.1.0` · tip `35086130` · Prod deploy `dpl_7STrhfLRw3utjkVmRwr6Kj817m1e` · `app.thinkwaymedia.com` · Prod Supabase `ienowhwfyxoqtzbgltno`
+- Commits: `9d25a65f` · `7eaf219` · `388bab6c` · docs `35086130`
+- Package/UAT archived under `docs/architecture/RELEASE_2_1_*`
+- Redis latency warning on Prod Ops Center remains INFRA (not R2.1 defect)
+- **`develop` reopened for Release 2.2 — Client IO Enterprise Completion**
+- Next: kick off R2.2 per `ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md` §12 (CIO amendments, milestones, Timeline CIO events)
 
 ## Media Plan PDF calendar fit (shipped to Production)
 

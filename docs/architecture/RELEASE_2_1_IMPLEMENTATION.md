@@ -1,10 +1,11 @@
 # Release 2.1 — Implementation Package
 
-**Status:** ✅ Feature Freeze approved (2026-07-31) — Production pending separate approval  
+**Status:** ✅ **Production Complete** (2026-07-31) · tag `v2.1.0`  
 **Parent:** [`ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md`](./ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md)  
 **Validation:** [`RELEASE_2_1_ARCHITECTURE_VALIDATION.md`](./RELEASE_2_1_ARCHITECTURE_VALIDATION.md) (**APPROVED**)  
 **UAT:** [`RELEASE_2_1_UAT.md`](./RELEASE_2_1_UAT.md) · **Production package:** [`RELEASE_2_1_PRODUCTION_PACKAGE.md`](./RELEASE_2_1_PRODUCTION_PACKAGE.md)  
-**Commits:** `9d25a65f` · `7eaf219` · `388bab6c`
+**Commits:** `9d25a65f` · `7eaf219` · `388bab6c` · docs `35086130`  
+**Production deploy:** `dpl_7STrhfLRw3utjkVmRwr6Kj817m1e` · `app.thinkwaymedia.com`
 
 ---
 

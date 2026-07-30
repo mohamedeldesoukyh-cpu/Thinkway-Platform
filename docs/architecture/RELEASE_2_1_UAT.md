@@ -11,7 +11,7 @@
 **Media Plan URL:** `…/media-plan`  
 **Executed:** 2026-07-31 (Africa/Cairo)  
 **Feature Freeze:** ✅ Approved 2026-07-31  
-**Production:** ⛔ Blocked — see [`RELEASE_2_1_PRODUCTION_PACKAGE.md`](./RELEASE_2_1_PRODUCTION_PACKAGE.md)
+**Production:** ✅ Complete — `v2.1.0` · `35086130` · see [`RELEASE_2_1_PRODUCTION_PACKAGE.md`](./RELEASE_2_1_PRODUCTION_PACKAGE.md)
 
 ---
 
@@ -235,5 +235,6 @@ Effective immediately for Release 2.1:
 | Interactive UAT | ✅ Complete (U10 retest Pass) |
 | DEF-R21-01 | ✅ Closed |
 | Feature Freeze | ✅ **Approved** |
-| Production package | 🔄 Submitted for review |
-| Production Approval | ⛔ Blocked |
+| Production package | ✅ Approved |
+| Production Deployment | ✅ Complete (`v2.1.0`) |
+| Next | Release 2.2 planning / implementation on `develop` |

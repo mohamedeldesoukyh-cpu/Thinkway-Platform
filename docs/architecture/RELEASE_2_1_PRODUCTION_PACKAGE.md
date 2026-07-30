@@ -1,7 +1,10 @@
 # Release 2.1 — Production Package (for review)
 
-**Status:** Assembled for Production review — **Production deployment NOT authorized**  
+**Status:** ✅ **Production Complete** (2026-07-31)  
 **Feature Freeze:** ✅ Approved 2026-07-31  
+**Production deploy:** ✅ `dpl_7STrhfLRw3utjkVmRwr6Kj817m1e` · `app.thinkwaymedia.com` · tip `35086130`  
+**Production Supabase:** `ienowhwfyxoqtzbgltno` (aligned)  
+**Tag:** `v2.1.0`  
 **Parent architecture:** [`ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md`](./ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md)  
 **UAT:** [`RELEASE_2_1_UAT.md`](./RELEASE_2_1_UAT.md)  
 **Implementation:** [`RELEASE_2_1_IMPLEMENTATION.md`](./RELEASE_2_1_IMPLEMENTATION.md)  
@@ -171,11 +174,26 @@ Never recreate Assignment IDs as part of rollback.
 
 ---
 
-## Governance (this package)
+## 11. Production smoke evidence (2026-07-31)
+
+| Check | Result |
+|---|---|
+| build-info tip | ✅ `3508613` · production · `dpl_7STrhfLRw3utjkVmRwr6Kj817m1e` |
+| Supabase aligned | ✅ `ienowhwfyxoqtzbgltno` |
+| Ops Center | ✅ App healthy · DB 232 ms · Redis PING ok (latency warning INFRA) |
+| Media Plan (TW-2026-0001) | ✅ Original / Actual / Remaining load |
+| Assignment IDs on calendar | ✅ **8/8** slots with line + deliverable + post IDs |
+| Enterprise Timeline | ✅ Loads; Media Plan lifecycle events visible |
+| Assignments / Deliverables | ✅ 5 assignments · Deliverables documentation repository loads |
+| Commercial / Convert / CIO chrome | ✅ Campaign workspace Client IO chrome present (no write-path changes in R2.1) |
+
+## Governance (final)
 
 | Stage | Status |
 |---|---|
 | Feature Freeze | ✅ Approved |
-| Documentation Commit | ⏳ With this docs commit |
-| Production Review | 🔄 Submitted with this package |
-| Production Deployment | ⛔ Not approved |
+| Documentation Commit | ✅ `35086130` (+ this closure note) |
+| Production Review | ✅ Approved |
+| Production Deployment | ✅ Complete |
+| Tag | ✅ `v2.1.0` |
+| Next | Release 2.2 — Client IO Enterprise Completion |

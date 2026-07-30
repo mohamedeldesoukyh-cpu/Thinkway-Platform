@@ -757,21 +757,18 @@ flowchart LR
 
 ## 12. Release roadmap (approved sequence)
 
-> Architecture is **frozen**. Implementation begins with **Release 2.1** only. Later slices require their own implementation kickoff. Production convert enablement is approved **after final Prod smoke** (not part of writing code in this doc).
+> Architecture is **frozen**. **Release 2.1 is Production Complete** (2026-07-31, tag `v2.1.0`). Next implementation slice is **Release 2.2**. Later slices require their own implementation kickoff. Production convert enablement remains approved **after final Prod smoke** when that work ships.
 
-### Release 2.1 — Media Plan ↔ Assignment hardening — **NEXT**
+### Release 2.1 — Media Plan ↔ Assignment hardening — **COMPLETE (Production)**
 
 | | |
 |---|---|
+| **Status** | ✅ Production Complete · `v2.1.0` · tip `35086130` · deploy `dpl_7STrhfLRw3utjkVmRwr6Kj817m1e` |
 | **Scope** | Assignment ID as primary join key; preserve history; lock approved plans; remove temporary/label joins; authoritative Assignment ownership; non-live edit guards; multi-plan-per-campaign identity design; Enterprise Timeline event contract for Campaign/Plan events |
-| **Dependencies** | Convert Assignments available; Media Plan freeze exception for approved lifecycle work |
-| **Risks** | Calendar regressions; multi-plan identity migration complexity |
-| **Migrations** | Schedule item ID fields / multi-plan identity — design in 2.1 impl kickoff, Dev-first |
-| **Testing** | Engine tests; ID-based Actual; approved-plan immutability; multi-plan campaign fixtures |
-| **UAT** | Ops scheduling UAT |
-| **Prod rollout** | Dev → soak → explicit Prod approval |
+| **Package** | [`RELEASE_2_1_PRODUCTION_PACKAGE.md`](./RELEASE_2_1_PRODUCTION_PACKAGE.md) · UAT [`RELEASE_2_1_UAT.md`](./RELEASE_2_1_UAT.md) |
+| **Migrations** | None (JSON / audit_logs metadata only) |
 
-### Release 2.2 — Client IO completion (Ops↔Finance contract)
+### Release 2.2 — Client IO completion (Ops↔Finance contract) — **NEXT**
 
 | | |
 |---|---|
