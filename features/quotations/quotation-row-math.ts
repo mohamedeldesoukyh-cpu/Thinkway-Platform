@@ -84,31 +84,17 @@ export function draftFromQuotationItem(item: QuotationItemRow): QuotationRowDraf
   };
 }
 
-/** Prefer live draft edits, then deliverable rollup, then stored item commercials. */
+/**
+ * Prefer live draft edits, then deliverable rollup, then stored item commercials.
+ * When a draft is present it is authoritative — do not re-rollup deliverables over it
+ * (Creators grid / Commercial Workspace keep drafts in sync when deliverables change).
+ */
 export function resolveQuotationRowDraft(
   item: QuotationItemRow,
   draft?: QuotationRowDraft
 ): QuotationRowDraft {
-  const base = draft ?? draftFromQuotationItem(item);
-
-  const rolled = rollupDeliverableCommercials(item.deliverables ?? [], {
-    lineCurrency: base.costCurrency,
-    fxRateToEgp: base.fxRateToEgp,
-    lineAfPct: base.afPct ?? item.af_pct,
-  });
-  if (rolled) {
-    return {
-      ...base,
-      mode: "cost_revenue",
-      cost: rolled.cost,
-      revenue: rolled.revenue,
-      gpPct: rolled.gpPct,
-      gpValue: rolled.gpValue,
-      afPct: rolled.afPct,
-    };
-  }
-
-  return base;
+  if (draft) return draft;
+  return draftFromQuotationItem(item);
 }
 
 export function draftsFromItems(items: QuotationItemRow[]): Record<string, QuotationRowDraft> {
