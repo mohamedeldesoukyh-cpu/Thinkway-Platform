@@ -1,9 +1,10 @@
 # Productivity & Navigation UX Sprint — Implementation Plan
 
-**Status:** Implemented on `develop` — Preview/UAT (2026-07-30)  
+**Status:** UAT accepted — **Pass with defects** · **Feature freeze in effect** (2026-07-30)  
+**UAT record:** [`PRODUCTIVITY_NAVIGATION_UX_UAT.md`](./PRODUCTIVITY_NAVIGATION_UX_UAT.md)  
 **Scope:** Productivity, navigation, editing efficiency only  
 **Non-goals:** No changes to Commercial SSOT, Deliverables rules, Publication, Performance, Finance  
-**Governance:** Same freeze model as Commercial SSOT / Deliverables — after green UAT, feature-freeze (bug fixes, perf, minor polish only).
+**Governance:** Feature-frozen — bug fixes, perf, minor polish only. Production only with explicit approval after Medium defect validation.
 
 ---
 

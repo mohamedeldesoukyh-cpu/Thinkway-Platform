@@ -173,23 +173,23 @@ export async function startCampaignOutputsFromSeed(
   if ("error" in auth) return { ok: false, message: auth.error };
 
   try {
+    if (input.existingConversationId) {
+      // Fast path: conversation already linked (e.g. Media Plan → Open in Studio).
+      // Full sync regenerates outputs + appends a message and can hang for large
+      // plans (DEF-UX-05). Tip state is already persisted via Media Plan saves.
+      return {
+        ok: true,
+        href: workspaceHref(input.existingConversationId, tab),
+        reused: true,
+      };
+    }
+
     const seed = await resolveLaunchSeed(supabase, input);
     const quotationId =
       input.workspace?.type === "quotation" ? input.workspace.id : undefined;
     const campaignHeaderId =
       input.workspace?.type === "campaign" ? input.workspace.id : undefined;
     const syncOptions = { quotationId, campaignHeaderId };
-
-    if (input.existingConversationId) {
-      await syncSeedIntoConversation(
-        supabase,
-        input.existingConversationId,
-        seed,
-        auth.userId,
-        syncOptions
-      );
-      return { ok: true, href: workspaceHref(input.existingConversationId, tab), reused: true };
-    }
 
     // Reuse an existing workspace conversation for this source, if one exists —
     // never create a second Campaign workspace for the same business object.

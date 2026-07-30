@@ -55,12 +55,14 @@
 - Intelligence Summary: Campaign Start / End / Duration only; Monday align internal
 - Dock chat scroll CSS fix (local)
 
-## Productivity & Navigation UX Sprint (on develop — Preview/UAT)
+## Productivity & Navigation UX Sprint (Feature freeze — Production pending)
 
-- **Spec:** `docs/architecture/PRODUCTIVITY_NAVIGATION_UX_SPRINT.md` (decisions + backlog + freeze path)
-- **P0/P1 shipped:** Edit History (≠ Business Versions) · History panel · Undo/Redo/restore append-only · Studio Open Campaign/Quotation · Prev/Next · Campaign header inline + `UnsavedChangesBar`
-- **Next:** Preview UAT → freeze (bugs/perf/polish only) → Production only with explicit approval
-- **Backlog (post-freeze):** history search/export · platform keyboard conventions · richer nav context · history deep links
+- **Sprint commit:** `3f3f466a` on `develop`; Product accepted UAT **Pass with defects** and approved **feature freeze** (2026-07-30)
+- **UAT:** `docs/architecture/PRODUCTIVITY_NAVIGATION_UX_UAT.md`
+- **Freeze rules:** bug fixes / perf / minor UX polish only — no new features
+- **Freeze follow-ups:** DEF-UX-01 hide inactive Undo/Redo; DEF-UX-02 Open Campaign verified + Open Quotation workspace fallback; DEF-UX-03 empty Edit History copy; DEF-UX-04 list-nav 120-id stress test; DEF-UX-05 Open in Studio fast-path (skip heavy sync when conversation linked)
+- **Production:** not approved — after Preview validates Medium fixes, request explicit Production approval
+- **Backlog:** history search/export · keyboard conventions · richer nav context · history deep links
 - Does **not** change Commercial SSOT / Deliverables / Finance. Production untouched.
 
 ## Showcase PDF v2 (in progress on develop)

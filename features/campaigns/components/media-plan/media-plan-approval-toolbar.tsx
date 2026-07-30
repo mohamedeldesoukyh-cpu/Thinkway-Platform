@@ -101,25 +101,25 @@ export function MediaPlanApprovalToolbar({
             History
           </Button>
         ) : null}
-        {onUndo ? (
+        {onUndo && canUndo ? (
           <Button
             type="button"
             size="sm"
             variant="outline"
             className="h-8 text-xs"
-            disabled={!canUndo || pending}
+            disabled={pending}
             onClick={onUndo}
           >
             Undo
           </Button>
         ) : null}
-        {onRedo ? (
+        {onRedo && canRedo ? (
           <Button
             type="button"
             size="sm"
             variant="outline"
             className="h-8 text-xs"
-            disabled={!canRedo || pending}
+            disabled={pending}
             onClick={onRedo}
           >
             Redo

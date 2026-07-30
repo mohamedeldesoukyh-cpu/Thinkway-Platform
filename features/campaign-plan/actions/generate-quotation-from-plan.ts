@@ -56,7 +56,7 @@ export async function getCampaignPlanQuotationContext(input: {
   const head = resolved.head;
   if (!head) return null;
 
-  const { data: existingQuotation } = await supabase
+  const { data: linkedByObject } = await supabase
     .from("quotations")
     .select("id, serial_number")
     .eq("campaign_object_id", head.id)
@@ -64,6 +64,13 @@ export async function getCampaignPlanQuotationContext(input: {
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  let existingQuotation: CampaignPlanQuotationContext["existingQuotation"] = linkedByObject
+    ? {
+        id: linkedByObject.id,
+        serialNumber: linkedByObject.serial_number,
+      }
+    : null;
 
   let brandId: string | null = null;
   let brandName: string | null = null;
@@ -84,10 +91,24 @@ export async function getCampaignPlanQuotationContext(input: {
       if (row.workspace_type === "quotation") {
         const { data: quotation } = await supabase
           .from("quotations")
-          .select("brand_id, temporary_brand_name")
+          .select("id, serial_number, brand_id, temporary_brand_name, is_archived")
           .eq("id", row.workspace_id)
           .maybeSingle();
-        brandId = (quotation as { brand_id?: string | null } | null)?.brand_id ?? null;
+        const q = quotation as {
+          id?: string;
+          serial_number?: string | null;
+          brand_id?: string | null;
+          is_archived?: boolean | null;
+        } | null;
+        brandId = q?.brand_id ?? null;
+        // Workspace-scoped quotation workspaces should always expose Open Quotation
+        // even when the quotation row is not yet linked via campaign_object_id.
+        if (!existingQuotation && q?.id && !q.is_archived) {
+          existingQuotation = {
+            id: q.id,
+            serialNumber: q.serial_number ?? null,
+          };
+        }
       } else if (row.workspace_type === "shortlist") {
         const { data: shortlist } = await supabase
           .from("discovery_shortlists")
@@ -111,12 +132,7 @@ export async function getCampaignPlanQuotationContext(input: {
   return {
     lifecycleStatus: head.lifecycle_status,
     canGenerate: canGenerateFromCampaignPlan(head.lifecycle_status),
-    existingQuotation: existingQuotation
-      ? {
-          id: existingQuotation.id,
-          serialNumber: existingQuotation.serial_number,
-        }
-      : null,
+    existingQuotation,
     brandId,
     brandName,
   };

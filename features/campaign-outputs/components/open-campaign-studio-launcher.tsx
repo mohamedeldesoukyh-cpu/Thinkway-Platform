@@ -63,14 +63,25 @@ export function OpenCampaignStudioLauncher({
   const launch = () => {
     startTransition(async () => {
       setError(null);
-      const result = await startCampaignOutputsFromSeed({
-        seed,
-        existingConversationId,
-        tab,
-        workspace,
-      });
-      if (result.ok) router.push(result.href);
-      else setError(result.message);
+      try {
+        const result = await Promise.race([
+          startCampaignOutputsFromSeed({
+            seed,
+            existingConversationId,
+            tab,
+            workspace,
+          }),
+          new Promise<never>((_, reject) => {
+            window.setTimeout(() => {
+              reject(new Error("Timed out opening Studio. Please try again."));
+            }, 25_000);
+          }),
+        ]);
+        if (result.ok) router.push(result.href);
+        else setError(result.message);
+      } catch (error) {
+        setError(error instanceof Error ? error.message : "Failed to open Studio.");
+      }
     });
   };
 

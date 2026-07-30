@@ -296,9 +296,18 @@ export function MediaPlanHistoryPanel({
                 ) : null}
               </>
             ) : (
-              <p className="px-2 text-xs text-muted-foreground">
-                No edits recorded yet. Schedule changes and regenerations appear here.
-              </p>
+              <div className="space-y-1.5 px-2 text-xs text-muted-foreground">
+                <p className="font-medium text-foreground/80">No edit history yet</p>
+                <p>
+                  Edits made after this release are recorded here automatically — schedule moves,
+                  regenerations, and restores. Plans created earlier stay on their current tip until
+                  the next change.
+                </p>
+                <p>
+                  Business approval milestones remain under{" "}
+                  <span className="font-medium text-foreground/70">Business Versions</span>.
+                </p>
+              </div>
             )
           ) : (
             <>
