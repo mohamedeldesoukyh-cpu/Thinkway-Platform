@@ -60,7 +60,7 @@
 - **Freeze:** 2026-07-30 — bug/perf/polish only; Phase 2 for new capabilities
 - **UAT:** Pass with defects — `docs/architecture/QUOTATION_COMMERCIAL_WORKSPACE_UAT.md`
 - **Production:** flag ON · Workspace live · smoke Pass (`08a94855` docs evidence)
-- **Polish shipped:** `1c86592e` · Prod `dpl_5buWokFrQxk8njYQPfpjnJXFDk7F` · `app.thinkwaymedia.com` — KPI shells + line rows use shortlist/quotation creator-card language
+- **Polish shipped:** Commercial Workspace cards + Commercial lifecycle sheet/panel cards (shortlist/creator-card language)
 - **Deferred on Prod:** Finance Lock / linked SSOT sync (no linked Prod fixtures during enablement smoke)
 - **Open Low:** DEF-CW-02 Creators chip · DEF-CW-03 200+ soak (backlog)
 

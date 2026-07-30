@@ -1988,3 +1988,147 @@
   border-color: rgba(220, 38, 38, 0.2);
   background: rgba(254, 242, 242, 0.95);
 }
+
+/* Commercial lifecycle sheet/panel — same shortlist / creator-card language */
+.quotation-lifecycle .ql-card {
+  border-radius: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: linear-gradient(180deg, #f8faff 0%, #fff 100%);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.03),
+    0 0 0 1px rgba(227, 232, 242, 0.7);
+  padding: 12px 14px;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.quotation-lifecycle .ql-card:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 2px 6px rgba(15, 23, 42, 0.05),
+    0 0 0 1px rgba(227, 232, 242, 0.9);
+}
+
+.quotation-lifecycle .ql-card--linked {
+  border-color: rgba(29, 158, 117, 0.14);
+  background: linear-gradient(180deg, rgba(236, 253, 245, 0.55) 0%, #fff 100%);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.03),
+    0 0 0 1px rgba(29, 158, 117, 0.08),
+    0 0 10px rgba(29, 158, 117, 0.1);
+}
+
+.quotation-lifecycle .ql-card--empty {
+  border-color: rgba(234, 88, 12, 0.12);
+  background: linear-gradient(180deg, rgba(255, 247, 237, 0.45) 0%, #fff 100%);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.03),
+    0 0 0 1px rgba(234, 88, 12, 0.06);
+}
+
+.quotation-lifecycle .ql-card-label {
+  margin: 0 0 6px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9aa3b5;
+  line-height: 1.2;
+}
+
+.quotation-lifecycle .ql-card-value {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0d1220;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+
+.quotation-lifecycle .ql-card-value a {
+  color: #1d9e75;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.quotation-lifecycle .ql-card-value a:hover {
+  text-decoration: underline;
+}
+
+.quotation-lifecycle .ql-card-value--muted {
+  color: #9aa3b5;
+  font-weight: 600;
+}
+
+.quotation-lifecycle .ql-version-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  border-radius: 999px;
+  border: 1px solid var(--border, #e3e8f2);
+  background: #fff;
+  padding: 3px 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.quotation-lifecycle .ql-version-pill:hover {
+  border-color: rgba(29, 158, 117, 0.28);
+  color: #1d9e75;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.quotation-lifecycle .ql-version-pill--active {
+  border-color: rgba(29, 158, 117, 0.28);
+  background: #1d9e75;
+  color: #fff;
+  box-shadow: 0 0 0 1px rgba(29, 158, 117, 0.12);
+}
+
+.quotation-lifecycle .ql-version-pill--active:hover {
+  color: #fff;
+  border-color: rgba(29, 158, 117, 0.4);
+}
+
+.quotation-lifecycle .ql-status-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--border, #e3e8f2);
+  background: rgba(246, 248, 252, 0.9);
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.quotation-lifecycle .ql-status-pill--live {
+  color: #1d9e75;
+  border-color: rgba(29, 158, 117, 0.22);
+  background: rgba(236, 253, 245, 0.9);
+}
+
+.quotation-lifecycle .ql-activity-card {
+  border-radius: 12px;
+  border: 1px solid var(--border, #e3e8f2);
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  padding: 10px 12px;
+}
+
+.quotation-lifecycle .ql-actions-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}

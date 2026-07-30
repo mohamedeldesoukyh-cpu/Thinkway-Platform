@@ -6,7 +6,6 @@ import { useEffect, useState, useTransition } from "react";
 import { Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,7 +15,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -84,11 +82,11 @@ export function QuotationLifecyclePanel({ detail, promoteOptions }: Props) {
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-border bg-card p-4">
+    <div className="quotation-lifecycle space-y-3 rounded-2xl border border-[#e3e8f2] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold">Commercial lifecycle</h3>
+        <h3 className="text-sm font-semibold text-[#0d1220]">Commercial lifecycle</h3>
         <div
-          className="inline-flex rounded-lg border border-border bg-muted/30 p-0.5"
+          className="inline-flex rounded-full border border-[#e3e8f2] bg-[#f6f8fc] p-0.5"
           role="tablist"
           aria-label="Lifecycle sections"
         >
@@ -98,10 +96,10 @@ export function QuotationLifecyclePanel({ detail, promoteOptions }: Props) {
               type="button"
               role="tab"
               aria-selected={tab === key}
-              className={`rounded-md px-3 py-1 text-xs font-medium capitalize ${
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition-colors ${
                 tab === key
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground"
+                  ? "bg-white text-[#0d1220] shadow-sm"
+                  : "text-[#9aa3b5] hover:text-[#6b7280]"
               }`}
               onClick={() => setTab(key)}
             >
@@ -113,65 +111,56 @@ export function QuotationLifecyclePanel({ detail, promoteOptions }: Props) {
 
       {tab === "links" ? (
         <>
-          <div className="grid gap-2 text-sm md:grid-cols-3">
-            <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Linked shortlist
-              </p>
+          <div className="grid gap-3 text-sm md:grid-cols-3">
+            <div
+              className={`ql-card ${detail.shortlist_id ? "ql-card--linked" : "ql-card--empty"}`}
+            >
+              <p className="ql-card-label">Linked shortlist</p>
               {detail.shortlist_id ? (
-                <Link
-                  href={`/discovery/shortlists/${detail.shortlist_id}`}
-                  className="font-mono text-xs text-primary hover:underline"
-                >
-                  {detail.shortlist_serial ?? detail.shortlist_id}
-                </Link>
+                <p className="ql-card-value">
+                  <Link href={`/discovery/shortlists/${detail.shortlist_id}`}>
+                    {detail.shortlist_serial ?? detail.shortlist_id}
+                  </Link>
+                </p>
               ) : (
-                <p className="text-xs text-muted-foreground">Not linked</p>
+                <p className="ql-card-value ql-card-value--muted">Not linked</p>
               )}
             </div>
-            <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Linked campaign
-              </p>
+            <div
+              className={`ql-card ${detail.campaign_header_id ? "ql-card--linked" : "ql-card--empty"}`}
+            >
+              <p className="ql-card-label">Linked campaign</p>
               {detail.campaign_header_id ? (
-                <Link
-                  href={`/campaigns/${detail.campaign_header_id}`}
-                  className="font-mono text-xs text-primary hover:underline"
-                >
-                  {detail.campaign_document_number ?? detail.campaign_header_id}
-                </Link>
+                <p className="ql-card-value">
+                  <Link href={`/campaigns/${detail.campaign_header_id}`}>
+                    {detail.campaign_document_number ?? detail.campaign_header_id}
+                  </Link>
+                </p>
               ) : (
-                <p className="text-xs text-muted-foreground">Not linked</p>
+                <p className="ql-card-value ql-card-value--muted">Not linked</p>
               )}
             </div>
-            <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Versions
-              </p>
-              <div className="mt-1 flex flex-wrap gap-1">
+            <div className="ql-card">
+              <p className="ql-card-label">Versions</p>
+              <div className="mt-1 flex flex-wrap gap-1.5">
                 {detail.version_chain.map((v) => (
-                  <Link key={v.id} href={quotationDetailPath(v.id, v.serial_number)}>
-                    <Badge
-                      variant={v.id === detail.id ? "default" : "outline"}
-                      className="font-mono text-[10px]"
-                    >
-                      V{v.version_number}
-                    </Badge>
+                  <Link
+                    key={v.id}
+                    href={quotationDetailPath(v.id, v.serial_number)}
+                    className={`ql-version-pill ${v.id === detail.id ? "ql-version-pill--active" : ""}`}
+                  >
+                    V{v.version_number}
                   </Link>
                 ))}
               </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="ql-card ql-actions-card">
             {detail.sync_enabled ? (
-              <Badge variant="secondary" className="text-[10px]">
-                Live sync enabled
-              </Badge>
+              <span className="ql-status-pill ql-status-pill--live">Live sync enabled</span>
             ) : (
-              <Badge variant="outline" className="text-[10px]">
-                Snapshot locked
-              </Badge>
+              <span className="ql-status-pill">Snapshot locked</span>
             )}
             {canMoveToShortlist ? (
               <Button
@@ -209,15 +198,14 @@ export function QuotationLifecyclePanel({ detail, promoteOptions }: Props) {
       ) : (
         <ul className="max-h-64 space-y-2 overflow-y-auto text-sm">
           {activity.length === 0 ? (
-            <li className="text-xs text-muted-foreground">No lifecycle activity yet.</li>
+            <li className="ql-card">
+              <p className="ql-card-value ql-card-value--muted">No lifecycle activity yet.</p>
+            </li>
           ) : (
             activity.map((event) => (
-              <li
-                key={event.id}
-                className="rounded-lg border border-border/60 bg-muted/10 px-3 py-2"
-              >
-                <p>{event.summary}</p>
-                <p className="mt-0.5 text-[10px] text-muted-foreground">
+              <li key={event.id} className="ql-activity-card">
+                <p className="m-0 font-medium text-[#0d1220]">{event.summary}</p>
+                <p className="m-0 mt-1 text-[10px] font-medium text-[#9aa3b5]">
                   {event.actor_name ?? "System"} ·{" "}
                   {new Date(event.created_at).toLocaleString()}
                 </p>
