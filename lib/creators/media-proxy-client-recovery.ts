@@ -5,7 +5,7 @@
  */
 
 /** Delays (ms) before each retry attempt after the first error. */
-export const MEDIA_PROXY_CLIENT_RETRY_DELAYS_MS = [900, 2200, 5000] as const;
+export const MEDIA_PROXY_CLIENT_RETRY_DELAYS_MS = [900, 2200, 5000, 9000] as const;
 
 export const MEDIA_PROXY_RETRY_QUERY = "_twr";
 

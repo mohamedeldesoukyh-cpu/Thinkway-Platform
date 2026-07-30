@@ -285,7 +285,18 @@ export async function resolveCreatorAvatarForHttpRequest(input: {
   }
   if (cached && !cached.ok) {
     recordMediaProxyPlaceholder();
-    return { ok: false, status: cached.status, source: "cache", needsRefresh: false };
+    // Keep warming when a social profile URL (or expired IG CDN) can still recover —
+    // otherwise client retries stick on silhouette for the full negative TTL.
+    const canRetryWarm = Boolean(
+      (profileUrl && isAllowedCreatorAvatarProfileUrl(profileUrl)) ||
+        (src && isInstagramCdnUrlExpired(src))
+    );
+    return {
+      ok: false,
+      status: cached.status,
+      source: "cache",
+      needsRefresh: canRetryWarm,
+    };
   }
 
   if (src && input.supabase) {

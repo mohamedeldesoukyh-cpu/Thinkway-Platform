@@ -509,14 +509,18 @@ async function loadDiscoveredProfileScoresByIds(
   return map;
 }
 
-/** Fast path for quotation workspace — stored line data + batched influencer scores. */
+/**
+ * Quotation workspace enrich — must match export-quality avatar resolution.
+ * Loads DNA + platform photos, prefers durable storage, persists recovered URLs,
+ * and queues background stabilize for creators still missing a usable avatar.
+ */
 export async function enrichQuotationItemsForWorkspace(
   supabase: SupabaseClient<Database>,
   items: QuotationItemRow[]
 ): Promise<QuotationItemRow[]> {
   if (items.length === 0) return items;
 
-  const influencerIds = [
+  const linkedInfluencerIds = [
     ...new Set(
       items
         .map((item) => resolveWorkspaceInfluencerId(item))
@@ -531,15 +535,40 @@ export async function enrichQuotationItemsForWorkspace(
     ),
   ];
 
-  const [influencerMeta, profileScores] = await Promise.all([
+  // Resolve handle → influencer when the quotation line snapshot omitted influencer_id.
+  const needsHandleLookup = items.some(
+    (item) => !resolveWorkspaceInfluencerId(item) && item.handle?.trim()
+  );
+  const influencerIdsByHandle = needsHandleLookup
+    ? await resolveInfluencerIdsByHandles(
+        supabase,
+        items.map((item) => item.handle)
+      )
+    : new Map<string, string>();
+
+  const influencerIds = [
+    ...new Set([
+      ...linkedInfluencerIds,
+      ...influencerIdsByHandle.values(),
+    ]),
+  ];
+
+  const [influencerMeta, profileScores, dnaByInfluencer] = await Promise.all([
     loadInfluencerWorkspaceMetaByIds(supabase, influencerIds),
     loadDiscoveredProfileScoresByIds(supabase, profileIds),
+    loadCanonicalDnaByInfluencerIds(supabase, influencerIds),
   ]);
 
-  return items.map((item) => {
+  const enriched = items.map((item) => {
     const creatorProfileSource = buildQuotationCreatorProfileSource(item);
-    const influencerId = resolveWorkspaceInfluencerId(item);
+    const handle = item.handle?.trim().replace(/^@+/, "").toLowerCase() ?? "";
+    const influencerId =
+      resolveWorkspaceInfluencerId(item) ??
+      (handle ? influencerIdsByHandle.get(handle) ?? null : null);
     const meta = influencerId ? influencerMeta.get(influencerId) : undefined;
+    const dnaDocument = influencerId
+      ? dnaByInfluencer.get(influencerId)
+      : undefined;
     const profileScore = item.profile_id
       ? profileScores.get(item.profile_id)
       : undefined;
@@ -568,15 +597,24 @@ export async function enrichQuotationItemsForWorkspace(
                 ? "enriched"
                 : "never";
 
-    // Same quality ranking as Creator Details / unified browse: enrichment storage
-    // beats PDF-import crops. Never blindly prefer influencers.primary_avatar_url
-    // when the line or platform account already has a higher-rank durable photo.
-    const resolvedAvatar = pickBestDisplayableAvatarUrl(
-      meta?.primary_avatar_url,
-      ...(meta?.platform_avatar_urls ?? []),
-      creatorProfileSource.avatarUrl,
-      item.profile_image_url
-    );
+    // Same path as export: DNA durable storage wins, then ranked platform/line URLs.
+    const resolvedAvatar =
+      resolveQuotationLineAvatarUrl(
+        null,
+        [
+          meta?.primary_avatar_url,
+          ...(meta?.platform_avatar_urls ?? []),
+          creatorProfileSource.avatarUrl,
+          item.profile_image_url,
+        ],
+        dnaDocument
+      ) ??
+      pickBestDisplayableAvatarUrl(
+        meta?.primary_avatar_url,
+        ...(meta?.platform_avatar_urls ?? []),
+        creatorProfileSource.avatarUrl,
+        item.profile_image_url
+      );
 
     const enrichedProfileSource = {
       ...creatorProfileSource,
@@ -604,6 +642,51 @@ export async function enrichQuotationItemsForWorkspace(
             }),
     };
   });
+
+  // Persist recovered durable/DNA avatars onto the line so the next load is instant.
+  void persistQuotationItemAvatars(supabase, enriched, items);
+  // Background: upload CDN/profile photos into creator-avatars for lines still missing.
+  void stabilizeMissingWorkspaceAvatars(supabase, enriched);
+
+  return enriched;
+}
+
+/** Fire-and-forget durable avatar recovery for workspace lines still on expired CDN / null. */
+async function stabilizeMissingWorkspaceAvatars(
+  supabase: SupabaseClient<Database>,
+  items: QuotationItemRow[]
+): Promise<void> {
+  const { stabilizeCreatorAvatar } = await import(
+    "@/lib/creators/stabilize-creator-avatar"
+  );
+
+  const missing = items.filter((item) => {
+    const url = item.profile_image_url?.trim() ?? "";
+    if (url && isDurableStoredAvatarUrl(url)) return false;
+    if (url && isUsableAvatarUrl(url)) return false;
+    return Boolean(resolveWorkspaceInfluencerId(item) || item.handle?.trim());
+  });
+  if (!missing.length) return;
+
+  const settled = await Promise.allSettled(
+    missing.slice(0, 40).map(async (item) => {
+      const influencerId = resolveWorkspaceInfluencerId(item);
+      if (!influencerId) return null;
+      const result = await stabilizeCreatorAvatar(supabase, influencerId, {
+        preferredHandle: item.handle?.replace(/^@+/, "") ?? undefined,
+        preferredPlatform: item.platform ?? undefined,
+      });
+      if (!result.ok || !result.url) return null;
+      if (result.url === item.profile_image_url) return null;
+      await supabase
+        .from("quotation_items")
+        .update({ profile_image_url: result.url } as never)
+        .eq("id", item.id);
+      return result.url;
+    })
+  );
+
+  void settled;
 }
 
 export async function enrichQuotationItemsWithCreatorAvatars(

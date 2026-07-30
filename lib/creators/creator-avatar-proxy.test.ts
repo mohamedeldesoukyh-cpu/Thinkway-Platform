@@ -8,6 +8,7 @@ import {
 import {
   getMediaProxyMetrics,
   resetMediaProxyMetricsForTests,
+  setMediaProxyCacheNegative,
   setMediaProxyCachePositive,
   mediaProxyCacheKey,
 } from "@/lib/creators/media-proxy-cache";
@@ -61,6 +62,23 @@ test("resolveCreatorAvatarForHttpRequest misses instantly when no cache and no u
     assert.equal(result.source, "miss");
     assert.equal(result.needsRefresh, true);
     assert.equal(result.status, 404);
+  }
+});
+
+test("negative cache still allows warm retry when profileUrl can recover", async () => {
+  resetMediaProxyMetricsForTests();
+  const profileUrl = "https://www.instagram.com/radwaadeeel/";
+  const key = mediaProxyCacheKey({ kind: "avatar", src: null, profileUrl });
+  setMediaProxyCacheNegative(key, 404);
+
+  const result = await resolveCreatorAvatarForHttpRequest({
+    src: null,
+    profileUrl,
+  });
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.equal(result.source, "cache");
+    assert.equal(result.needsRefresh, true);
   }
 });
 

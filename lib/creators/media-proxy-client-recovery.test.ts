@@ -23,7 +23,8 @@ assert.equal(withMediaProxyRetryBust("https://cdn.example/a.jpg", 1), "https://c
 
 assert.equal(mediaProxyRetryDelayMs(0), 900);
 assert.equal(mediaProxyRetryDelayMs(2), 5000);
-assert.equal(mediaProxyRetryDelayMs(3), null);
-assert.equal(maxMediaProxyClientRetries(), 3);
+assert.equal(mediaProxyRetryDelayMs(3), 9000);
+assert.equal(mediaProxyRetryDelayMs(4), null);
+assert.equal(maxMediaProxyClientRetries(), 4);
 
 console.log("lib/creators/media-proxy-client-recovery.test.ts — all tests passed");

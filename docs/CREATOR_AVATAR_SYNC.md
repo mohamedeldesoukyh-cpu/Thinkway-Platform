@@ -61,6 +61,19 @@ UI component: `PublicationCreatorAvatar` in `lib/performance/publication-creator
 
 Used in: publication grid, publication workspace, performance detail drawer, HTML/PPTX reports.
 
+## Quotation workspace (hard guarantee)
+
+`enrichQuotationItemsForWorkspace` must resolve avatars at **export quality**:
+
+1. Creator DNA durable `creator-avatars` URL (canonical)
+2. Ranked `influencers.primary_avatar_url` + platform account photos + line snapshot
+3. Persist recovered URLs onto `quotation_items.profile_image_url`
+4. Background `stabilizeCreatorAvatar` for lines still on null / expired CDN
+
+Shortlist → quotation seeds prefer durable storage over ephemeral IG/TikTok CDN (`pickBestQuotationSeedAvatarUrl`).
+
+Proxy: negative cache must still set `needsRefresh` when a profile URL (or expired IG CDN) can recover — otherwise client retries stick on the grey silhouette.
+
 ## Backfill
 
 ```bash

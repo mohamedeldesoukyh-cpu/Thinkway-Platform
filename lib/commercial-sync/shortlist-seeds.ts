@@ -15,10 +15,40 @@ import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { creatorProfileSourceFromUnified } from "@/lib/creators/creator-profile-source";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
+import { isDurableStoredAvatarUrl } from "@/lib/creators/dna-avatar";
 import { resolveBrowseCreatorProfileImageUrl } from "@/lib/performance/creator-avatar";
+import {
+  isDisplayableAvatarUrl,
+  isUsableAvatarUrl,
+} from "@/lib/performance/avatar-sync-policy";
 import { COLLAPSE_CONTENT_LABEL } from "@/lib/discovery/collapse-content";
 
 type Supabase = SupabaseClient<Database>;
+
+/** Prefer durable storage, then fresh usable CDN, then any displayable URL. */
+export function pickBestQuotationSeedAvatarUrl(
+  ...candidates: Array<string | null | undefined>
+): string | null {
+  let bestDurable: string | null = null;
+  let bestUsable: string | null = null;
+  let bestDisplayable: string | null = null;
+
+  for (const candidate of candidates) {
+    const trimmed = candidate?.trim();
+    if (!trimmed || !isDisplayableAvatarUrl(trimmed)) continue;
+    if (isDurableStoredAvatarUrl(trimmed)) {
+      bestDurable ??= trimmed;
+      continue;
+    }
+    if (isUsableAvatarUrl(trimmed)) {
+      bestUsable ??= trimmed;
+      continue;
+    }
+    bestDisplayable ??= trimmed;
+  }
+
+  return bestDurable ?? bestUsable ?? bestDisplayable;
+}
 
 export type ShortlistItemForSeed = {
   id: string;
@@ -72,17 +102,22 @@ export function buildQuotationSeedFromCreator(
   const source = creatorProfileSourceFromUnified(creator);
   const profileUrl =
     resolveCreatorProfileUrl(metricsAccount ?? undefined) ?? source.profile_url ?? null;
-  const profileImageUrl =
-    source.avatarUrl ??
-    creator.primaryAvatarUrl ??
-    creator.profile_image_url ??
+  // Prefer durable Thinkway storage over ephemeral IG/TikTok CDN snapshots.
+  const browseFallback =
     resolveBrowseCreatorProfileImageUrl({
       platform: metricsAccount?.platform,
       platformPictureUrl: metricsAccount?.profile_picture_url,
       discoveryProfileImageUrl: creator.profile_image_url,
       influencerAvatarUrl: creator.primaryAvatarUrl ?? source.avatarUrl,
-    }) ??
-    null;
+    }) ?? null;
+  const profileImageUrl =
+    pickBestQuotationSeedAvatarUrl(
+      source.avatarUrl,
+      creator.primaryAvatarUrl,
+      metricsAccount?.profile_picture_url,
+      creator.profile_image_url,
+      browseFallback
+    ) ?? null;
 
   return {
     influencer_id: creator.influencer_id ?? null,
