@@ -3,7 +3,7 @@
 **Status:** Preview ready — UAT in progress  
 **Type:** Quotation UX workstream (**not** Commercial SSOT Phase 5)  
 **Environment:** Development / Preview — `https://dev.thinkwaymedia.com`  
-**Branch:** `develop`  
+**Branch:** `develop` · Implementation commit `01e4ce8a`  
 **Production:** Untouched — Commercial Summary remains; workspace flag stays **OFF** until separate enablement approval  
 **Spec:** [`QUOTATION_COMMERCIAL_WORKSPACE.md`](./QUOTATION_COMMERCIAL_WORKSPACE.md)  
 **UAT opened:** 2026-07-30  
