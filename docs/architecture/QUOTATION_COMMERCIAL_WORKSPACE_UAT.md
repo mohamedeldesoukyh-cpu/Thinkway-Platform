@@ -39,11 +39,11 @@
 
 | Check | Result | Evidence |
 |---|---|---|
-| `npm run test:commercial-workspace` | ☐ | |
-| `tsc --noEmit` (workspace-related) | ☐ | |
-| Preview deploy SHA matches commit | ☐ | `/api/build-info` |
-| Ops Center → Dev Supabase `hsxrewjcbvmbkqdlzjhs` | ☐ | |
-| Production flag remains OFF / Summary UI | ☐ | Do **not** enable Prod flag this release |
+| `npm run test:commercial-workspace` | ✅ Pass | 13/13 at commit `01e4ce8a` |
+| `tsc --noEmit` (workspace-related) | ✅ Pass | Clean before Preview push |
+| Preview deploy SHA matches commit | ✅ Pass | Vercel Preview Ready — Branch `develop`, Commit `124f4b4` (feat + UAT pin); tip also includes continuity `f5cff26c` |
+| Ops Center → Dev Supabase `hsxrewjcbvmbkqdlzjhs` | ☐ | Confirm in Ops Center during interactive UAT |
+| Production flag remains OFF / Summary UI | ✅ Pass | No Production deploy for this workstream; flag defaults OFF when unset on Production |
 
 ---
 
