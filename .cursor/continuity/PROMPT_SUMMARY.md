@@ -55,15 +55,22 @@
 - Intelligence Summary: Campaign Start / End / Duration only; Monday align internal
 - Dock chat scroll CSS fix (local)
 
-## Productivity & Navigation UX Sprint (Feature freeze — Production pending)
+## Quotation Commercial Workspace (Preview UAT)
 
-- **Sprint commit:** `3f3f466a` on `develop`; Product accepted UAT **Pass with defects** and approved **feature freeze** (2026-07-30)
-- **UAT:** `docs/architecture/PRODUCTIVITY_NAVIGATION_UX_UAT.md`
-- **Freeze rules:** bug fixes / perf / minor UX polish only — no new features
-- **Freeze follow-ups:** DEF-UX-01 hide inactive Undo/Redo; DEF-UX-02 Open Campaign verified + Open Quotation workspace fallback; DEF-UX-03 empty Edit History copy; DEF-UX-04 list-nav 120-id stress test; DEF-UX-05 Open in Studio fast-path (skip heavy sync when conversation linked)
-- **Production:** not approved — after Preview validates Medium fixes, request explicit Production approval
+- **Type:** Quotation UX workstream (not Commercial SSOT Phase 5) — consumes frozen SSOT APIs only
+- **Flag:** `NEXT_PUBLIC_QUOTATION_COMMERCIAL_WORKSPACE` — default ON Dev/Preview, OFF Production (do not enable Prod until explicit approval)
+- **Locked:** shared draft · explicit Save · session Undo · bulk ops · health bands · column prefs
+- **Spec:** `docs/architecture/QUOTATION_COMMERCIAL_WORKSPACE.md`
+- **UAT:** `docs/architecture/QUOTATION_COMMERCIAL_WORKSPACE_UAT.md`
+- **Tests:** `npm run test:commercial-workspace`
+- Next: complete UAT → defect fixes → freeze → Production flag enable only with approval
+
+## Productivity & Navigation UX Sprint (Shipped to Production 2026-07-30)
+
+- **Release commit:** `dfb3ef8c` on `main`/`develop` · Production `app.thinkwaymedia.com` · `dpl_3LkecZp8bkkk3iZSQA7ByHSQeAAP`
+- **Prod Supabase:** `ienowhwfyxoqtzbgltno` (aligned) · 6 migrations applied · R2.0 flag OFF
+- **UAT:** `docs/architecture/PRODUCTIVITY_NAVIGATION_UX_UAT.md` · Feature freeze remains for post-release polish only
 - **Backlog:** history search/export · keyboard conventions · richer nav context · history deep links
-- Does **not** change Commercial SSOT / Deliverables / Finance. Production untouched.
 
 ## Showcase PDF v2 (in progress on develop)
 
@@ -83,7 +90,7 @@
 - **No Production deploy executed.** No Phase 2.
 - **Soak fix (unrelated to R2.0):** `/discovery/search` SSR crash from `get_discovery_search_taxonomy` statement timeout — soft-fail + Dev function timeout 30s (`3cb56e3f`)
 - **Convert type×platform bug (fixed on develop, Dev data repaired):** `quotationDeliverablesToPlatforms` was copying every selected type onto every package platform. Now maps each type via `postTypePlatformKey` (native → home PF; `mirrored_*` → target PF). Repaired TW-2026-0005 (QT-2026-0009-V2) — 10 multi-PF lines incl. Eman. Script: `scripts/repair-assignment-types-from-quotation.ts`
-- **Next action:** Seek explicit Production approval using PRODUCTION_READINESS_REVIEW.md (migration + deploy + keep flag OFF initially; include taxonomy timeout migration)
+- **Production (2026-07-30):** Schema migrations applied with full stack release `dfb3ef8c`; **`RELEASE_2_0_ASSIGNMENT_CONVERT` remains unset/OFF** on Production. Phase 2 still blocked until Product enables convert.
 
 ## Working agreement
 

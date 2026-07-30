@@ -100,5 +100,18 @@ export function linePendingDiffersFromItem(
   if (payload.af_pct !== undefined && numOrNull(payload.af_pct) !== numOrNull(item.af_pct)) {
     return true;
   }
+  if (
+    payload.mode !== undefined &&
+    payload.mode !== item.commercial_input_mode
+  ) {
+    return true;
+  }
+  if (
+    payload.cost_currency !== undefined &&
+    (payload.cost_currency || "").toUpperCase() !==
+      (item.cost_currency || "").toUpperCase()
+  ) {
+    return true;
+  }
   return false;
 }

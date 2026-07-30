@@ -253,6 +253,41 @@ export async function finalizeQuotationSave(
   return { ok: true, data: { totals } };
 }
 
+/** Batch audit entry after Commercial Workspace Save (complements per-line SSOT audit). */
+export async function recordCommercialWorkspaceSaveAudit(input: {
+  quotationId: string;
+  lineCount: number;
+  changedFields: string[];
+}): Promise<ActionResult> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+
+  const { insertAuditLog } = await import("@/lib/audit/insert-audit-log");
+  const fields =
+    input.changedFields.length > 0
+      ? input.changedFields.join(", ")
+      : "commercial fields";
+  const summary = `Commercial Workspace — ${input.lineCount} quotation line${
+    input.lineCount === 1 ? "" : "s"
+  } updated — ${fields}`;
+
+  await insertAuditLog(actor.supabase, {
+    action: "commercial.workspace_saved",
+    entity_type: "quotation",
+    entity_id: input.quotationId,
+    actor_id: actor.userId,
+    metadata: {
+      summary,
+      surface: "commercial_workspace",
+      line_count: input.lineCount,
+      changed_fields: input.changedFields,
+      occurred_at: new Date().toISOString(),
+    },
+  });
+
+  return { ok: true };
+}
+
 export async function updateQuotationHeader(input: {
   id: string;
   name?: string;

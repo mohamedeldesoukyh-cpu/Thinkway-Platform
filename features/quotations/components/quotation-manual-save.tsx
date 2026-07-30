@@ -42,10 +42,12 @@ export type QuotationLinePendingPayload = {
   deliverables?: QuotationDeliverable[];
   revenue?: number | null;
   cost?: number | null;
+  cost_currency?: string;
   gp_pct?: number | null;
   gp_value?: number | null;
   af_pct?: number | null;
-  mode?: "cost_revenue";
+  /** Full commercial input mode when staged from Commercial Workspace / row editors. */
+  mode?: CommercialInputMode;
   platform?: string | null;
   handle?: string | null;
   followers?: number | null;
@@ -290,9 +292,9 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
               ...payload,
               mode: (rolled
                 ? "cost_revenue"
-                : item.commercial_input_mode) as CommercialInputMode,
+                : payload.mode ?? item.commercial_input_mode) as CommercialInputMode,
               cost: rolled?.cost ?? payload.cost ?? item.cost,
-              cost_currency: item.cost_currency,
+              cost_currency: payload.cost_currency ?? item.cost_currency,
               gp_pct: rolled?.gpPct ?? payload.gp_pct ?? item.gp_pct,
               revenue: rolled?.revenue ?? payload.revenue ?? item.revenue,
               gp_value: rolled?.gpValue ?? payload.gp_value ?? item.gp_value,

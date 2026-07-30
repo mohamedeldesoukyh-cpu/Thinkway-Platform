@@ -101,7 +101,7 @@ import {
   quotationDisplayGroupPricingCompleteness,
 } from "@/lib/quotations/quotation-creator-group-pricing";
 import { shouldIncludeItemInLiveTotals } from "@/lib/quotations/quotation-collapse-package";
-import { QuotationCommercialSummaryDialog } from "@/features/quotations/components/quotation-commercial-summary-dialog";
+import { QuotationCommercialEntry } from "@/features/quotations/components/quotation-commercial-entry";
 import { QuotationWorkspaceSortableHead } from "@/features/quotations/components/quotation-workspace-sort-header";
 import {
   deliverableTypeLines,
@@ -405,6 +405,16 @@ function QuotationWorkspaceContent({
     });
   }, []);
 
+  const mergeDrafts = useCallback((next: Record<string, QuotationRowDraft>) => {
+    setDrafts((prev) => {
+      const merged = { ...prev };
+      for (const [id, draft] of Object.entries(next)) {
+        merged[id] = draft;
+      }
+      return merged;
+    });
+  }, []);
+
   const refreshQuotationLines = useCallback(() => {
     router.refresh();
   }, [router]);
@@ -694,9 +704,13 @@ function QuotationWorkspaceContent({
                 </p>
               </div>
               <div className="sec-tools">
-                <QuotationCommercialSummaryDialog
+                <QuotationCommercialEntry
+                  quotationId={detail.id}
                   items={detail.items}
                   drafts={drafts}
+                  onDraftChange={updateDraft}
+                  onDraftsMerge={mergeDrafts}
+                  canManage={detail.canManage}
                   triggerClassName="btn sm"
                 />
                 {detail.canManage ? (
