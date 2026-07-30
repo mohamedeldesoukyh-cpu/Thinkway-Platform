@@ -60,7 +60,7 @@
 - **Freeze:** 2026-07-30 — bug/perf/polish only; Phase 2 for new capabilities
 - **UAT:** Pass with defects — `docs/architecture/QUOTATION_COMMERCIAL_WORKSPACE_UAT.md`
 - **Production:** flag ON · Workspace live · smoke Pass (`08a94855` docs evidence)
-- **Polish shipped:** Commercial Workspace cards + Commercial lifecycle sheet/panel cards (shortlist/creator-card language)
+- **Polish shipped:** Commercial Workspace + lifecycle now reuse exact `quotation-creator-card` SSOT classes (Creators grid shells, green/orange/missing-cost, avatars, shortlist status pills)
 - **Deferred on Prod:** Finance Lock / linked SSOT sync (no linked Prod fixtures during enablement smoke)
 - **Open Low:** DEF-CW-02 Creators chip · DEF-CW-03 200+ soak (backlog)
 

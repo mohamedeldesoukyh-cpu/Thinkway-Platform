@@ -27,10 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { COMMERCIAL_INPUT_MODE_LABELS } from "@/lib/domains/commercial/quotation-constants";
-import type { CommercialInputMode } from "@/lib/commercial/commercial-engine";
 import {
-  applyCommercialWorkspaceBulkOp,
   applyCommercialWorkspaceBulkOpToDrafts,
   type CommercialWorkspaceBulkOp,
 } from "@/lib/quotations/commercial-workspace/bulk-transforms";
@@ -58,16 +55,12 @@ import {
   QUICK_FILTER_LABELS,
   type CommercialWorkspaceQuickFilter,
 } from "@/lib/quotations/commercial-workspace/filters";
-import {
-  profitabilityBandLabel,
-  resolveProfitabilityBand,
-} from "@/lib/quotations/commercial-workspace/profitability-thresholds";
 import { draftToLinePending } from "@/lib/quotations/commercial-workspace/stage-pending";
 import { cn } from "@/lib/utils";
 
 import { recordCommercialWorkspaceSaveAudit } from "@/features/quotations/actions";
 import { useQuotationManualSave } from "@/features/quotations/components/quotation-manual-save";
-import { QuotationCommercialSummarySortableHead } from "@/features/quotations/components/quotation-commercial-summary-sort-header";
+import { QuotationCommercialWorkspaceRowCard } from "@/features/quotations/components/quotation-commercial-workspace-row-card";
 import {
   computeQuotationRowComputed,
   resolveQuotationRowDraft,
@@ -92,20 +85,10 @@ const CS = {
   critical: "#DC2626",
 } as const;
 
-const MODE_OPTIONS = Object.entries(COMMERCIAL_INPUT_MODE_LABELS) as [
-  CommercialInputMode,
-  string,
-][];
-
 function fmtStat(n: number): string {
   return `${new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 0,
   }).format(Number.isFinite(n) ? n : 0)} EGP`;
-}
-
-function fmtCell(n: number): string {
-  if (!Number.isFinite(n) || n === 0) return "—";
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(n);
 }
 
 function fmtGpPct(gp: number, revenue: number, rowGpPct: number): string {
@@ -116,6 +99,7 @@ function fmtGpPct(gp: number, revenue: number, rowGpPct: number): string {
 
 type WorkspaceRow = {
   itemId: string;
+  item: QuotationItemRow;
   influencerName: string;
   optionLabel: string | null;
   revenueEgp: number;
@@ -139,6 +123,7 @@ function buildRows(
       const showOption = (optionCtx?.duplicateCount ?? 1) > 1;
       return {
         itemId: item.id,
+        item,
         influencerName:
           item.creator_name?.trim() || item.handle?.trim() || "Unknown creator",
         optionLabel: showOption
@@ -175,15 +160,22 @@ function StatCard({
   tone?: "green" | "warn" | "critical";
 }) {
   return (
-    <div className="cw-stat-card">
-      <p className="cw-stat-card-label">{label}</p>
+    <div className="discovery-search-exact-stat-box">
+      <p className="discovery-search-exact-stat-col-label uppercase tracking-[0.03em]">
+        {label}
+      </p>
       <p
-        className={cn(
-          "cw-stat-card-value",
-          tone === "green" && "cw-stat-card-value--green",
-          tone === "warn" && "cw-stat-card-value--warn",
-          tone === "critical" && "cw-stat-card-value--critical"
-        )}
+        className="discovery-search-exact-stat-value mt-1"
+        style={{
+          color:
+            tone === "green"
+              ? CS.green
+              : tone === "warn"
+                ? CS.warn
+                : tone === "critical"
+                  ? CS.critical
+                  : "#0d1220",
+        }}
       >
         {value}
       </p>
@@ -409,57 +401,66 @@ export function QuotationCommercialWorkspaceDialog({
           style={{ borderBottom: `0.5px solid ${CS.line}`, background: "#fff" }}
         >
           <div className="grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
-            <div className="cw-kpi-shell">
-              <p className="cw-kpi-shell-title">Selection · {selectionRows.length}</p>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <StatCard label="Revenue" value={fmtStat(selectionTotals.revenue)} />
-                <StatCard label="Cost" value={fmtStat(selectionTotals.cost)} />
-                <StatCard label="GP" value={fmtStat(selectionTotals.gp)} tone="green" />
-                <StatCard
-                  label="GP %"
-                  value={fmtGpPct(selectionTotals.gp, selectionTotals.revenue, 0)}
-                  tone="green"
-                />
+            <div className="cgroup quotation-creator-card">
+              <div className="cw-kpi-inner">
+                <p className="cw-kpi-title">Selection · {selectionRows.length}</p>
+                <div className="cw-stat-grid">
+                  <StatCard label="Revenue" value={fmtStat(selectionTotals.revenue)} />
+                  <StatCard label="Cost" value={fmtStat(selectionTotals.cost)} />
+                  <StatCard label="GP" value={fmtStat(selectionTotals.gp)} tone="green" />
+                  <StatCard
+                    label="GP %"
+                    value={fmtGpPct(selectionTotals.gp, selectionTotals.revenue, 0)}
+                    tone="green"
+                  />
+                </div>
               </div>
             </div>
-            <div className="cw-kpi-shell">
-              <p className="cw-kpi-shell-title">Quotation · {rows.length}</p>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <StatCard label="Revenue" value={fmtStat(quotationTotals.revenue)} />
-                <StatCard label="Cost" value={fmtStat(quotationTotals.cost)} />
-                <StatCard label="GP" value={fmtStat(quotationTotals.gp)} tone="green" />
-                <StatCard
-                  label="GP %"
-                  value={fmtGpPct(quotationTotals.gp, quotationTotals.revenue, 0)}
-                  tone="green"
-                />
+            <div className="cgroup quotation-creator-card">
+              <div className="cw-kpi-inner">
+                <p className="cw-kpi-title">Quotation · {rows.length}</p>
+                <div className="cw-stat-grid">
+                  <StatCard label="Revenue" value={fmtStat(quotationTotals.revenue)} />
+                  <StatCard label="Cost" value={fmtStat(quotationTotals.cost)} />
+                  <StatCard label="GP" value={fmtStat(quotationTotals.gp)} tone="green" />
+                  <StatCard
+                    label="GP %"
+                    value={fmtGpPct(quotationTotals.gp, quotationTotals.revenue, 0)}
+                    tone="green"
+                  />
+                </div>
               </div>
             </div>
-            <div className="cw-kpi-shell min-w-[148px]">
-              <p className="cw-kpi-shell-title">Commercial Health</p>
-              <div className="flex flex-col gap-1.5">
-                {(
-                  [
-                    ["band_healthy", "Healthy", health.healthy, "green"],
-                    ["band_warning", "Warning", health.warning, "warn"],
-                    ["band_critical", "Critical", health.critical, "critical"],
-                  ] as const
-                ).map(([filter, label, count, tone]) => (
-                  <button
-                    key={filter}
-                    type="button"
-                    onClick={() => setQuickFilter(filter)}
-                    className={cn(
-                      "cw-health-pill",
-                      tone === "green" && "cw-health-pill--green",
-                      tone === "warn" && "cw-health-pill--warn",
-                      tone === "critical" && "cw-health-pill--critical"
-                    )}
-                  >
-                    <span>{label}</span>
-                    <span className="tabular-nums">{count}</span>
-                  </button>
-                ))}
+            <div className="cgroup quotation-creator-card min-w-[148px]">
+              <div className="cw-kpi-inner">
+                <p className="cw-kpi-title">Commercial Health</p>
+                <div className="cw-health-stack">
+                  {(
+                    [
+                      ["band_healthy", "Healthy", health.healthy, "quotation-creator-card--green"],
+                      ["band_warning", "Warning", health.warning, "quotation-creator-card--orange"],
+                      [
+                        "band_critical",
+                        "Critical",
+                        health.critical,
+                        "quotation-creator-card--missing-cost",
+                      ],
+                    ] as const
+                  ).map(([filter, label, count, cardClass]) => (
+                    <button
+                      key={filter}
+                      type="button"
+                      onClick={() => setQuickFilter(filter)}
+                      className={cn(
+                        "cgroup quotation-creator-card flex w-full items-center justify-between px-3 py-2 text-left text-xs font-semibold",
+                        cardClass
+                      )}
+                    >
+                      <span>{label}</span>
+                      <span className="tabular-nums">{count}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -570,332 +571,112 @@ export function QuotationCommercialWorkspaceDialog({
           </div>
 
           {columnsOpen ? (
-            <div className="cw-kpi-shell flex flex-wrap gap-3 !py-2">
-              {(Object.keys(COMMERCIAL_WORKSPACE_COLUMN_LABELS) as CommercialWorkspaceColumnId[]).map(
-                (id) => (
-                  <label key={id} className="flex items-center gap-1.5 text-xs">
-                    <Checkbox
-                      checked={columnPrefs[id]}
-                      onCheckedChange={() => toggleColumn(id)}
-                    />
-                    {COMMERCIAL_WORKSPACE_COLUMN_LABELS[id]}
-                  </label>
-                )
-              )}
+            <div className="cgroup quotation-creator-card">
+              <div className="cw-kpi-inner flex flex-wrap gap-3 !py-2">
+                {(Object.keys(COMMERCIAL_WORKSPACE_COLUMN_LABELS) as CommercialWorkspaceColumnId[]).map(
+                  (id) => (
+                    <label key={id} className="flex items-center gap-1.5 text-xs">
+                      <Checkbox
+                        checked={columnPrefs[id]}
+                        onCheckedChange={() => toggleColumn(id)}
+                      />
+                      {COMMERCIAL_WORKSPACE_COLUMN_LABELS[id]}
+                    </label>
+                  )
+                )}
+              </div>
             </div>
           ) : null}
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 pb-2">
-          <div className="min-h-0 flex-1 overflow-auto">
-            <table className="cw-lines w-full text-[12.5px]">
-              <thead className="sticky top-0 z-10 bg-white">
-                <tr>
-                  <th className="pb-2 pr-1 pt-2" style={{ borderBottom: `0.5px solid ${CS.line}` }}>
-                    <Checkbox
-                      checked={allFilteredSelected}
-                      onCheckedChange={() => {
-                        setSelectedIds((prev) => {
-                          const next = new Set(prev);
-                          if (allFilteredSelected) {
-                            filtered.forEach((row) => next.delete(row.itemId));
-                          } else {
-                            filtered.forEach((row) => next.add(row.itemId));
-                          }
-                          return next;
-                        });
-                      }}
-                      aria-label="Select filtered"
-                    />
-                  </th>
-                  <QuotationCommercialSummarySortableHead
-                    label="Influencer"
-                    field="influencer"
-                    sort={tableSort}
-                    onSortChange={setTableSort}
-                  />
-                  {show("mode") ? (
-                    <th className="px-1 pb-2 pt-2 text-left text-[11px] font-semibold" style={{ borderBottom: `0.5px solid ${CS.line}`, color: CS.muted }}>
-                      Mode
-                    </th>
-                  ) : null}
-                  {show("cost") ? (
-                    <QuotationCommercialSummarySortableHead label="Cost" field="cost" align="right" sort={tableSort} onSortChange={setTableSort} />
-                  ) : null}
-                  {show("revenue") ? (
-                    <QuotationCommercialSummarySortableHead label="Revenue" field="revenue" align="right" sort={tableSort} onSortChange={setTableSort} />
-                  ) : null}
-                  {show("gpPctInput") ? (
-                    <th className="px-1 pb-2 pt-2 text-right text-[11px] font-semibold" style={{ borderBottom: `0.5px solid ${CS.line}`, color: CS.muted }}>
-                      GP % in
-                    </th>
-                  ) : null}
-                  {show("gp") ? (
-                    <QuotationCommercialSummarySortableHead label="GP" field="gp" align="right" sort={tableSort} onSortChange={setTableSort} />
-                  ) : null}
-                  {show("gpPct") ? (
-                    <QuotationCommercialSummarySortableHead label="GP %" field="gpPct" align="right" sort={tableSort} onSortChange={setTableSort} />
-                  ) : null}
-                  {show("afPct") ? (
-                    <th className="px-1 pb-2 pt-2 text-right text-[11px] font-semibold" style={{ borderBottom: `0.5px solid ${CS.line}`, color: CS.muted }}>
-                      AF %
-                    </th>
-                  ) : null}
-                  {show("currency") ? (
-                    <th className="px-1 pb-2 pt-2 text-right text-[11px] font-semibold" style={{ borderBottom: `0.5px solid ${CS.line}`, color: CS.muted }}>
-                      Currency
-                    </th>
-                  ) : null}
-                  {show("fx") ? (
-                    <th className="px-1 pb-2 pt-2 text-right text-[11px] font-semibold" style={{ borderBottom: `0.5px solid ${CS.line}`, color: CS.muted }}>
-                      FX
-                    </th>
-                  ) : null}
-                </tr>
-              </thead>
-              <tbody>
-                {sortedRows.length === 0 ? (
-                  <tr>
-                    <td colSpan={12} className="py-10 text-center" style={{ color: CS.muted }}>
-                      No lines match this filter.
-                    </td>
-                  </tr>
-                ) : (
-                  sortedRows.map((row) => {
-                    const selected = selectedIds.has(row.itemId);
-                    const band = resolveProfitabilityBand(row.gpPct);
-                    return (
-                      <tr
-                        key={row.itemId}
-                        className={cn(
-                          "cw-line-card",
-                          band === "healthy" && "cw-line-card--green",
-                          band === "warning" && "cw-line-card--orange",
-                          band === "critical" && "cw-line-card--critical",
-                          selected && "cw-line-card--selected",
-                          !selected && "cw-line-card--dimmed"
-                        )}
-                      >
-                        <td className="pr-1">
-                          <Checkbox
-                            checked={selected}
-                            onCheckedChange={() => {
-                              setSelectedIds((prev) => {
-                                const next = new Set(prev);
-                                if (next.has(row.itemId)) next.delete(row.itemId);
-                                else next.add(row.itemId);
-                                return next;
-                              });
-                            }}
-                          />
-                        </td>
-                        <td className="pr-1.5">
-                          <div className="font-medium text-[#0d1220]">{row.influencerName}</div>
-                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                            <span className={cn("cw-band-pill", `cw-band-pill--${band}`)}>
-                              {profitabilityBandLabel(band)}
-                            </span>
-                            {row.optionLabel ? (
-                              <span className="cw-band-pill">{row.optionLabel}</span>
-                            ) : null}
-                          </div>
-                        </td>
-                        {show("mode") ? (
-                          <td className="px-1">
-                            {canManage ? (
-                              <select
-                                className="h-7 w-full max-w-[120px] rounded border px-1 text-[11px]"
-                                value={row.draft.mode}
-                                onChange={(e) => {
-                                  const mode = e.target.value as CommercialInputMode;
-                                  const next = applyCommercialWorkspaceBulkOp(
-                                    { ...row.draft, mode },
-                                    mode === "cost_markup_pct"
-                                      ? { kind: "apply_markup_pct", pct: row.draft.gpPct }
-                                      : { kind: "set_gp_pct", pct: row.draft.gpPct }
-                                  );
-                                  if (mode === "cost_revenue") {
-                                    stageDraft(row.itemId, {
-                                      ...row.draft,
-                                      mode,
-                                      gpValue: row.draft.revenue - row.draft.cost,
-                                      gpPct:
-                                        row.draft.revenue > 0
-                                          ? ((row.draft.revenue - row.draft.cost) /
-                                              row.draft.revenue) *
-                                            100
-                                          : 0,
-                                    });
-                                  } else {
-                                    stageDraft(row.itemId, { ...next, mode: next.mode });
-                                  }
-                                }}
-                              >
-                                {MODE_OPTIONS.map(([value, label]) => (
-                                  <option key={value} value={value}>
-                                    {label}
-                                  </option>
-                                ))}
-                              </select>
-                            ) : (
-                              COMMERCIAL_INPUT_MODE_LABELS[row.draft.mode]
-                            )}
-                          </td>
-                        ) : null}
-                        {show("cost") ? (
-                          <td className="px-1 text-right">
-                            {canManage ? (
-                              <Input
-                                type="number"
-                                className="ml-auto h-7 w-[88px] text-right text-xs"
-                                value={row.draft.cost}
-                                onChange={(e) => {
-                                  const cost = Number.isFinite(Number(e.target.value))
-                                    ? Number(e.target.value)
-                                    : 0;
-                                  const revenue = row.draft.revenue;
-                                  stageDraft(row.itemId, {
-                                    ...row.draft,
-                                    mode: "cost_revenue",
-                                    cost,
-                                    gpValue: revenue - cost,
-                                    gpPct: revenue > 0 ? ((revenue - cost) / revenue) * 100 : 0,
-                                  });
-                                }}
-                              />
-                            ) : (
-                              <span className="tabular-nums">{fmtCell(row.costEgp)}</span>
-                            )}
-                          </td>
-                        ) : null}
-                        {show("revenue") ? (
-                          <td className="px-1 text-right">
-                            {canManage ? (
-                              <Input
-                                type="number"
-                                className="ml-auto h-7 w-[88px] text-right text-xs"
-                                value={row.draft.revenue}
-                                onChange={(e) => {
-                                  const revenue = Number(e.target.value);
-                                  stageDraft(row.itemId, {
-                                    ...row.draft,
-                                    mode: "cost_revenue",
-                                    revenue: Number.isFinite(revenue) ? revenue : 0,
-                                    gpValue:
-                                      (Number.isFinite(revenue) ? revenue : 0) - row.draft.cost,
-                                    gpPct:
-                                      revenue > 0
-                                        ? (((revenue - row.draft.cost) / revenue) * 100)
-                                        : 0,
-                                  });
-                                }}
-                              />
-                            ) : (
-                              <span className="tabular-nums">{fmtCell(row.revenueEgp)}</span>
-                            )}
-                          </td>
-                        ) : null}
-                        {show("gpPctInput") ? (
-                          <td className="px-1 text-right">
-                            {canManage ? (
-                              <Input
-                                type="number"
-                                className="ml-auto h-7 w-[72px] text-right text-xs"
-                                value={row.draft.gpPct}
-                                onChange={(e) => {
-                                  const pct = Number(e.target.value);
-                                  const next = applyCommercialWorkspaceBulkOp(row.draft, {
-                                    kind: "set_gp_pct",
-                                    pct: Number.isFinite(pct) ? pct : 0,
-                                  });
-                                  stageDraft(row.itemId, next);
-                                }}
-                              />
-                            ) : (
-                              <span className="tabular-nums">{row.draft.gpPct.toFixed(1)}</span>
-                            )}
-                          </td>
-                        ) : null}
-                        {show("gp") ? (
-                          <td className="px-1 text-right tabular-nums font-semibold" style={{ color: CS.green }}>
-                            {fmtCell(row.gpValueEgp)}
-                          </td>
-                        ) : null}
-                        {show("gpPct") ? (
-                          <td className="px-1 text-right tabular-nums font-semibold" style={{ color: CS.green }}>
-                            {fmtGpPct(row.gpValueEgp, row.revenueEgp, row.gpPct)}
-                          </td>
-                        ) : null}
-                        {show("afPct") ? (
-                          <td className="px-1 text-right">
-                            {canManage ? (
-                              <Input
-                                type="number"
-                                className="ml-auto h-7 w-[64px] text-right text-xs"
-                                value={row.draft.afPct}
-                                onChange={(e) => {
-                                  const pct = Number(e.target.value);
-                                  stageDraft(row.itemId, {
-                                    ...row.draft,
-                                    afPct: Number.isFinite(pct) ? pct : 0,
-                                  });
-                                }}
-                              />
-                            ) : (
-                              <span className="tabular-nums">{row.draft.afPct.toFixed(1)}</span>
-                            )}
-                          </td>
-                        ) : null}
-                        {show("currency") ? (
-                          <td className="px-1 text-right">
-                            {canManage ? (
-                              <Input
-                                className="ml-auto h-7 w-[64px] text-right text-xs uppercase"
-                                value={row.draft.costCurrency}
-                                onChange={(e) => {
-                                  stageDraft(
-                                    row.itemId,
-                                    applyCommercialWorkspaceBulkOp(row.draft, {
-                                      kind: "set_currency",
-                                      currency: e.target.value || "EGP",
-                                    })
-                                  );
-                                }}
-                              />
-                            ) : (
-                              row.draft.costCurrency
-                            )}
-                          </td>
-                        ) : null}
-                        {show("fx") ? (
-                          <td className="px-1 text-right">
-                            {canManage ? (
-                              <Input
-                                type="number"
-                                className="ml-auto h-7 w-[64px] text-right text-xs"
-                                value={row.draft.fxRateToEgp}
-                                onChange={(e) => {
-                                  const fx = Number(e.target.value);
-                                  stageDraft(
-                                    row.itemId,
-                                    applyCommercialWorkspaceBulkOp(row.draft, {
-                                      kind: "set_fx",
-                                      fxRateToEgp: Number.isFinite(fx) ? fx : 1,
-                                    })
-                                  );
-                                }}
-                              />
-                            ) : (
-                              <span className="tabular-nums">{row.draft.fxRateToEgp}</span>
-                            )}
-                          </td>
-                        ) : null}
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+          <div
+            className="mb-2 flex shrink-0 items-center gap-3 py-1"
+            style={{ borderBottom: `0.5px solid ${CS.line}` }}
+          >
+            <Checkbox
+              checked={allFilteredSelected}
+              onCheckedChange={() => {
+                setSelectedIds((prev) => {
+                  const next = new Set(prev);
+                  if (allFilteredSelected) {
+                    filtered.forEach((row) => next.delete(row.itemId));
+                  } else {
+                    filtered.forEach((row) => next.add(row.itemId));
+                  }
+                  return next;
+                });
+              }}
+              aria-label="Select filtered"
+            />
+            <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: CS.muted }}>
+              Creators · {sortedRows.length}
+            </span>
+            <div className="ml-auto flex flex-wrap gap-1">
+              {(
+                [
+                  ["influencer", "Influencer"],
+                  ["cost", "Cost"],
+                  ["revenue", "Revenue"],
+                  ["gp", "GP"],
+                  ["gpPct", "GP %"],
+                ] as const
+              ).map(([field, label]) => (
+                <Button
+                  key={field}
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-[11px] font-semibold"
+                  style={{
+                    color:
+                      tableSort?.field === field ? CS.dark : CS.muted,
+                  }}
+                  onClick={() =>
+                    setTableSort((prev) => {
+                      if (prev?.field !== field) return { field, direction: "asc" };
+                      if (prev.direction === "asc") return { field, direction: "desc" };
+                      return null;
+                    })
+                  }
+                >
+                  {label}
+                  {tableSort?.field === field
+                    ? tableSort.direction === "asc"
+                      ? " ↑"
+                      : " ↓"
+                    : ""}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <div className="cw-card-list min-h-0 flex-1 overflow-auto">
+            {sortedRows.length === 0 ? (
+              <div className="cgroup quotation-creator-card">
+                <div className="cw-kpi-inner py-10 text-center text-sm" style={{ color: CS.muted }}>
+                  No lines match this filter.
+                </div>
+              </div>
+            ) : (
+              sortedRows.map((row) => (
+                <QuotationCommercialWorkspaceRowCard
+                  key={row.itemId}
+                  row={row}
+                  selected={selectedIds.has(row.itemId)}
+                  canManage={canManage}
+                  show={show}
+                  onToggleSelected={() => {
+                    setSelectedIds((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(row.itemId)) next.delete(row.itemId);
+                      else next.add(row.itemId);
+                      return next;
+                    });
+                  }}
+                  onStageDraft={(next) => stageDraft(row.itemId, next)}
+                />
+              ))
+            )}
           </div>
         </div>
 
