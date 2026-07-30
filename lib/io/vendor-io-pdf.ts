@@ -58,6 +58,14 @@ export type HtmlToPdfOptions = {
     value: string;
     timeoutMs?: number;
   };
+  /**
+   * Measure auto-height slides and emit matching named `@page` sizes so
+   * Chromium PDF does not clip tall content (e.g. media-plan calendar).
+   */
+  sizeAutoHeightPages?: {
+    selector: string;
+    widthPx: number;
+  };
 };
 
 const PDF_VIEWPORT = {
@@ -224,6 +232,57 @@ async function waitForPdfAssetsReady(page: {
   ]);
 }
 
+async function sizeAutoHeightPagesForPdf(
+  page: {
+    evaluate: <T>(
+      pageFunction: (config: { selector: string; widthPx: number }) => T,
+      arg: { selector: string; widthPx: number }
+    ) => Promise<T>;
+  },
+  config: { selector: string; widthPx: number }
+): Promise<void> {
+  await page.evaluate((cfg) => {
+    const nodes = Array.from(document.querySelectorAll(cfg.selector));
+    if (!nodes.length) return;
+
+    const styleEl = document.createElement("style");
+    styleEl.setAttribute("data-pdf-auto-page-size", "true");
+    const rules: string[] = [];
+
+    nodes.forEach((node, index) => {
+      const el = node as HTMLElement;
+      el.style.height = "auto";
+      el.style.minHeight = "0";
+      el.style.overflow = "visible";
+      // Force layout before measuring the natural slide height.
+      void el.offsetHeight;
+      const height = Math.max(1, Math.ceil(Math.max(el.scrollHeight, el.getBoundingClientRect().height)));
+      const pageName = `autosize${index}`;
+      const existing = (el.getAttribute("style") ?? "")
+        .replace(/(?:^|;)\s*page\s*:\s*[^;]+/gi, "")
+        .replace(/(?:^|;)\s*height\s*:\s*[^;]+/gi, "")
+        .replace(/(?:^|;)\s*min-height\s*:\s*[^;]+/gi, "")
+        .replace(/(?:^|;)\s*overflow\s*:\s*[^;]+/gi, "")
+        .replace(/^;\s*/, "")
+        .replace(/;\s*$/, "");
+      const next = [
+        existing,
+        `page: ${pageName}`,
+        `height: ${height}px`,
+        `min-height: ${height}px`,
+        "overflow: hidden",
+      ]
+        .filter(Boolean)
+        .join("; ");
+      el.setAttribute("style", `${next};`);
+      rules.push(`@page ${pageName} { size: ${cfg.widthPx}px ${height}px; margin: 0; }`);
+    });
+
+    styleEl.textContent = rules.join("\n");
+    document.head.appendChild(styleEl);
+  }, config);
+}
+
 /** Server-side HTML → PDF via headless Chrome (local or Vercel serverless). */
 export async function renderHtmlToPdf(
   html: string,
@@ -287,6 +346,9 @@ export async function renderHtmlToPdf(
         name,
         value
       );
+    }
+    if (options.sizeAutoHeightPages) {
+      await sizeAutoHeightPagesForPdf(page, options.sizeAutoHeightPages);
     }
     const pdf = await page.pdf(options);
     return { ok: true, buffer: Buffer.from(pdf) };

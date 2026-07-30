@@ -14,4 +14,9 @@ export const MEDIA_PLAN_PDF_OPTIONS: HtmlToPdfOptions = {
     height: MEDIA_PLAN_PAGE.heightPx,
     deviceScaleFactor: 1,
   },
+  // Preview-style calendar/deadlines are auto-height; size each PDF sheet to the slide.
+  sizeAutoHeightPages: {
+    selector: ".page.calendar-preview-page, .page.deadlines-preview-page",
+    widthPx: MEDIA_PLAN_PAGE.widthPx,
+  },
 };

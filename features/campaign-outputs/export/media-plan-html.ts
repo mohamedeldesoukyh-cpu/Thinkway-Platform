@@ -72,6 +72,7 @@ const GENERIC_OPERATIONAL_TYPES = new Set([
 const E_MEDIA_PLAN_CSS = `
   @page { size: 1280px 780px; margin: 0; }
   @page calendarpage { size: 1280px 860px; margin: 0; }
+  @page calendarpreview { size: 1280px 780px; margin: 0; }
   @page strategypage { size: 1280px 900px; margin: 0; }
   * { box-sizing: border-box; margin:0; padding:0; }
   html, body { width:1280px; }
@@ -303,6 +304,16 @@ const E_MEDIA_PLAN_CSS = `
   .footnote-bar { margin-top:14px; padding:11px 16px; background:var(--lavender); border-radius:10px; font-size:10.8px; color:var(--blue); font-weight:600; }
 
   .cal-body { padding:16px 56px 0 56px; }
+  /* Named @page calendarpage is 860px — lock the slide so PDF never clips mid-grid. */
+  .page.calendar-page {
+    height: 860px;
+    min-height: 860px;
+    overflow: hidden;
+  }
+  .page.calendar-page .cal-body {
+    max-height: calc(860px - 118px);
+    overflow: hidden;
+  }
   .weekblock { margin-bottom:10px; }
   .weekblock-head { display:flex; align-items:baseline; gap:12px; margin-bottom:6px; }
   .weeklabel {
@@ -1445,7 +1456,17 @@ function calendarPageTitle(data: MediaPlanData, campaignStart: Date, week?: Medi
   return data.durationWeeks > 1 ? `Weeks 1 – ${data.durationWeeks}` : "Week 1";
 }
 
-/** Single scrollable calendar for in-app preview — all weeks, auto height, no per-week page gaps. */
+/**
+ * Conservative height for print/PDF before Chromium measures the real slide.
+ * Dense weeks (many cards/day) need headroom so nothing clips if auto-size is skipped.
+ */
+function estimateCalendarPreviewPageHeight(weekCount: number): number {
+  const chrome = 140; // header + footer + cal-body padding
+  const perWeek = 320;
+  return Math.max(780, chrome + Math.max(1, weekCount) * perWeek);
+}
+
+/** Single calendar slide — all weeks together (same layout as in-app preview). */
 function renderCalendarPreviewPage(
   content: CampaignOutputContent,
   data: MediaPlanData,
@@ -1458,8 +1479,11 @@ function renderCalendarPreviewPage(
   const weeksHtml = data.weeks
     .map((week) => renderWeekBlock(week, data, typeColorMap, options))
     .join("\n");
+  const estimatedHeight = estimateCalendarPreviewPageHeight(data.weeks.length);
 
-  return `<div class="page calendar-preview-page">
+  // Named @page height must cover the full multi-week slide (PDF also re-measures exactly).
+  return `<style>@page calendarpreview { size: 1280px ${estimatedHeight}px; margin: 0; }</style>
+<div class="page calendar-preview-page" style="page: calendarpreview; min-height:${estimatedHeight}px;">
   ${renderPgHeader("Publishing Calendar", calendarPageTitle(data, campaignStart), options, "publishingCalendar")}
   <div class="cal-body">${weeksHtml}</div>
   ${renderPgFooter(context, content.title, pageNumber)}
@@ -1479,7 +1503,7 @@ function renderCalendarPages(
   const pages = data.weeks.map((week, index) => {
     const weekHtml = renderWeekBlock(week, data, typeColorMap, options);
 
-    return `<div class="page calendar-page" style="page: calendarpage; min-height:860px;">
+    return `<div class="page calendar-page" style="page: calendarpage;">
   ${renderPgHeader("Publishing Calendar", calendarPageTitle(data, campaignStart, week), options, "publishingCalendar")}
   <div class="cal-body">${weekHtml}</div>
   ${renderPgFooter(context, content.title, startPageNumber + index)}
@@ -1875,13 +1899,16 @@ function buildMediaPlanPreviewScreenStyles(widthPx: number): string {
 }
 
 type BuildMediaPlanBodyOptions = BuildMediaPlanHtmlOptions & {
-  /** Preview + standard export use one auto-height calendar; strategy export splits per week. */
+  /**
+   * `preview` — one multi-week calendar slide (standard preview + download).
+   * `export` — one week per landscape page (strategy mode).
+   */
   calendarLayout?: "preview" | "export";
   /** Interactive cards postMessage to parent; static export shows honest summary-only copy. */
   influencerConceptsVariant?: "static" | "interactive";
 };
 
-/** Resolve body build options so preview and standard export share pagination/layout. */
+/** Resolve body build options — standard keeps preview calendar; strategy paginates per week. */
 export function resolveMediaPlanDocumentBuildOptions(
   options?: BuildMediaPlanHtmlOptions,
   context: "preview" | "export" = "export"
@@ -1891,6 +1918,8 @@ export function resolveMediaPlanDocumentBuildOptions(
 
   return {
     ...options,
+    // Standard preview + download share one multi-week calendar slide (PDF auto-sizes the sheet).
+    // Strategy keeps per-week calendar pages.
     calendarLayout: isStandard ? "preview" : "export",
     browserAvatarProxy: context === "preview" ? true : options?.browserAvatarProxy,
     influencerConceptsVariant: context === "preview" ? "interactive" : "static",
@@ -1931,9 +1960,7 @@ function buildMediaPlanBody(
   const strategyPageCount = !isPlanning ? packedStrategyPageCount + creativeDirectionPageCount : 0;
   const preCalendarPages = isPlanning ? 2 : Math.max(1, 1 + strategyPageCount);
   const calendarStartPage = preCalendarPages + 1;
-  const calendarLayout =
-    options?.calendarLayout ??
-    (presentation.mode === "standard" ? "preview" : "export");
+  const calendarLayout = options?.calendarLayout ?? "export";
 
   const calendarHtml = isSectionVisible(presentation, "publishingCalendar")
     ? calendarLayout === "preview"

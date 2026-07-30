@@ -12,7 +12,6 @@ import { buildMediaPlanExportHref } from "@/features/campaign-outputs/components
 import { buildCampaignObjectFixture } from "@/features/campaign-outputs/output-test-fixture";
 import {
   defaultMediaPlanPresentation,
-  readMediaPlanPresentation,
   resolveExportPresentation,
 } from "@/features/campaign-outputs/media-plan-presentation";
 import type { CreatorsSectionData } from "@/features/campaign-intelligence/types/section-schemas";
@@ -181,7 +180,7 @@ test("buildMediaPlanStyles applies rounded page corners for PDF print output", (
   assert.match(styles, /@media print[\s\S]*border-radius:\s*14px/);
 });
 
-test("buildMediaPlanHtml standard export matches preview page structure", () => {
+test("buildMediaPlanHtml standard export matches preview multi-week calendar", () => {
   const content = generateMediaPlan(buildCampaignObjectFixture());
   const presentation = defaultMediaPlanPresentation("standard");
 
@@ -191,33 +190,37 @@ test("buildMediaPlanHtml standard export matches preview page structure", () => 
   const previewPages = extractMediaPlanPageSignatures(previewHtml);
   const exportPages = extractMediaPlanPageSignatures(exportHtml);
 
-  assert.deepEqual(
-    exportPages,
-    previewPages,
-    "standard export should use the same page sequence as in-app preview"
+  assert.ok(
+    previewPages.some((page) => page.includes("calendar-preview-page")),
+    "in-app preview keeps one multi-week calendar page"
   );
-  assert.ok(exportPages.some((page) => page.includes("calendar-preview-page")));
-  assert.ok(!exportPages.some((page) => page.includes("calendar-page")));
+  assert.ok(
+    exportPages.some((page) => page.includes("calendar-preview-page")),
+    "download must match preview — one multi-week calendar slide"
+  );
+  assert.ok(
+    !exportPages.some((page) => page.includes("calendar-page") && !page.includes("calendar-preview")),
+    "standard download must not split calendar into per-week pages"
+  );
+  assert.equal(
+    (exportHtml.match(/class="page calendar-preview-page"/g) ?? []).length,
+    1,
+    "exactly one calendar slide with all weeks"
+  );
+  assert.match(exportHtml, /@page calendarpreview \{ size: 1280px \d+px/);
 });
 
-test("standard export via resolveExportPresentation matches preview page structure", () => {
+test("standard export via resolveExportPresentation keeps preview calendar", () => {
   const obj = buildCampaignObjectFixture({ facts: { durationWeeks: 4 } });
   obj.meta.mediaPlanPresentation = defaultMediaPlanPresentation("standard");
   const content = generateMediaPlan(obj);
 
-  const stored = readMediaPlanPresentation(obj);
-  const previewHtml = buildMediaPlanPreviewHtmlDocument(content, {
-    presentation: { ...stored, view: stored.view ?? "internal" },
-  });
   const exportHtml = buildMediaPlanHtml(content, {
     presentation: resolveExportPresentation(obj, { mode: "standard", view: "client" }),
   });
 
-  assert.deepEqual(
-    extractMediaPlanPageSignatures(exportHtml),
-    extractMediaPlanPageSignatures(previewHtml),
-    "export route presentation should paginate like the in-app preview for standard mode"
-  );
+  assert.equal((exportHtml.match(/class="page calendar-preview-page"/g) ?? []).length, 1);
+  assert.ok(!exportHtml.includes('class="page calendar-page"'));
 });
 
 test("buildMediaPlanHtml calendar-and-deliverables export hides campaign cost", () => {
@@ -259,7 +262,7 @@ test("buildMediaPlanHtml uses Saturday–Friday column headers (18/7/2026 is Sat
   );
 });
 
-test("buildMediaPlanHtml renders EMediaPlan document layout with preview calendar for standard mode", () => {
+test("buildMediaPlanHtml renders EMediaPlan document layout with preview calendar for download", () => {
   const content = generateMediaPlan(buildCampaignObjectFixture());
   const html = buildMediaPlanHtml(content);
 
@@ -307,17 +310,15 @@ test("buildMediaPlanHtml renders EMediaPlan document layout with preview calenda
   assert.ok(!html.includes('heading">Campaign Cost'));
   assert.ok(html.includes('class="page calendar-preview-page"'));
   assert.ok(!html.includes('class="page calendar-page"'));
-  assert.ok(!html.includes("min-height:860px"));
+  assert.match(html, /@page calendarpreview \{ size: 1280px \d+px/);
 
   const pageCount = (html.match(/<div class="page[\s"]/g) ?? []).length;
-  const data = mediaPlanData(content);
-  const creativeDirectionPages = (html.match(/<div class="page creative-direction-page"/g) ?? []).length;
   const strategyBodyPages = (html.match(/class="strat-body"/g) ?? []).length;
-  const expectedPages = 1 + strategyBodyPages + 1 + 3;
+  const expectedPages = 1 + strategyBodyPages + 1 + 3; // cover + strategy + 1 calendar + ops + deadlines + close
   assert.equal(
     pageCount,
     expectedPages,
-    `standard media plan should render cover + ${strategyBodyPages - creativeDirectionPages} packed strategy + ${creativeDirectionPages} creative direction + 1 calendar preview + ops + deadlines + close`
+    "standard media plan download should render cover + strategy + one calendar slide + ops + deadlines + close"
   );
   assert.ok(
     !html.includes("Platform &amp; Creator Intelligence"),
@@ -334,7 +335,7 @@ test("buildMediaPlanHtml strategy export keeps per-week calendar pages", () => {
 
   assert.ok(html.includes('class="page calendar-page"'));
   assert.ok(!html.includes('class="page calendar-preview-page"'));
-  assert.ok(html.includes("min-height:860px"));
+  assert.ok(html.includes("height: 860px"));
 
   const pageCount = (html.match(/<div class="page[\s"]/g) ?? []).length;
   const creativeDirectionPages = (html.match(/<div class="page creative-direction-page"/g) ?? []).length;
@@ -379,6 +380,11 @@ test("MEDIA_PLAN_PDF_OPTIONS uses zero margins and 1280 viewport", () => {
   assert.equal(MEDIA_PLAN_PDF_OPTIONS.height, MEDIA_PLAN_PAGE.heightIn);
   assert.equal(MEDIA_PLAN_PDF_OPTIONS.viewport?.width, 1280);
   assert.equal(MEDIA_PLAN_PDF_OPTIONS.viewport?.height, 780);
+  assert.equal(
+    MEDIA_PLAN_PDF_OPTIONS.sizeAutoHeightPages?.selector,
+    ".page.calendar-preview-page, .page.deadlines-preview-page"
+  );
+  assert.equal(MEDIA_PLAN_PDF_OPTIONS.sizeAutoHeightPages?.widthPx, 1280);
 });
 
 test("embedMediaPlanContentAvatars inlines calendar and deadline avatars for PDF", async () => {

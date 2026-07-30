@@ -41,6 +41,11 @@ async function main() {
     /waitForDocumentAttribute/,
     "PDF must support waiting for pagination-ready document attributes"
   );
+  assert.match(
+    source,
+    /sizeAutoHeightPages/,
+    "PDF must support auto-sizing tall slides (media-plan calendar)"
+  );
 
   // Hanging remote <img> used to fail setContent(waitUntil:load) after 30s.
   const html = `<!doctype html><html><body>
