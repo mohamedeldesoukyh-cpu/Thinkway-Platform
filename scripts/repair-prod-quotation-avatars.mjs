@@ -187,9 +187,7 @@ for (const handle of TARGET_HANDLES) {
   try {
     const { data: accounts, error } = await supabase
       .from("influencer_platform_accounts")
-      .select(
-        "id, influencer_id, platform, handle, profile_picture_url, influencers!inner(id, primary_avatar_url)"
-      )
+      .select("id, influencer_id, platform, handle, profile_picture_url")
       .ilike("handle", handle)
       .eq("platform", "instagram")
       .limit(1);
@@ -201,8 +199,15 @@ for (const handle of TARGET_HANDLES) {
       continue;
     }
 
+    const { data: influencer, error: infLookupError } = await supabase
+      .from("influencers")
+      .select("id, primary_avatar_url")
+      .eq("id", account.influencer_id)
+      .maybeSingle();
+    if (infLookupError) throw new Error(infLookupError.message);
+
     const primaryUrl =
-      account.influencers?.primary_avatar_url?.trim() ||
+      influencer?.primary_avatar_url?.trim() ||
       account.profile_picture_url?.trim() ||
       "";
     const before = primaryUrl ? primaryUrl.slice(0, 72) : "(none)";

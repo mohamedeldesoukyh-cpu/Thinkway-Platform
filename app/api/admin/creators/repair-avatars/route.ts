@@ -73,7 +73,7 @@ export async function POST(request: Request) {
   for (const handle of handles) {
     const { data: accounts, error } = await admin
       .from("influencer_platform_accounts")
-      .select("influencer_id, platform, handle, influencers!inner(primary_avatar_url)")
+      .select("influencer_id, platform, handle")
       .ilike("handle", handle)
       .limit(1);
 
@@ -83,14 +83,12 @@ export async function POST(request: Request) {
     }
 
     const account = accounts[0];
-    const influencer = account.influencers as
-      | { primary_avatar_url?: string | null }
-      | { primary_avatar_url?: string | null }[]
-      | null;
-    const primary =
-      (Array.isArray(influencer)
-        ? influencer[0]?.primary_avatar_url
-        : influencer?.primary_avatar_url) ?? null;
+    const { data: influencer } = await admin
+      .from("influencers")
+      .select("primary_avatar_url")
+      .eq("id", account.influencer_id)
+      .maybeSingle();
+    const primary = influencer?.primary_avatar_url ?? null;
 
     if (primary && isDurableStoredAvatarUrl(primary)) {
       skipped.push({ handle, reason: "already_durable" });
