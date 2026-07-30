@@ -92,7 +92,7 @@
 | ID | Severity | Summary | Status |
 |---|---|---|---|
 | DEF-UX-01 | **Medium** | Undo/Redo shown as disabled when inactive | **Fixed** — render only when `canUndo` / `canRedo` |
-| DEF-UX-02 | **Medium** | Studio Open Campaign / Open Quotation not fully verified | **Open Campaign verified**; **Open Quotation fixed** (workspace_id fallback) — re-verify after Preview deploy |
+| DEF-UX-02 | **Medium** | Studio Open Campaign / Open Quotation not fully verified | **Resolved** — Open Campaign → TW-2026-0005; Open Quotation → QT-2026-0009-V2 on Preview `fdfe7b7` |
 | DEF-UX-03 | **Low** | Empty Edit History on legacy tips | **Polished** — clearer empty-state copy + pointer to Business Versions |
 | DEF-UX-04 | **Low** | Campaign Prev/Next page-boundary not stressed | **Mitigated** — unit stress with 120 IDs + boundary neighbors |
 | DEF-UX-05 | **Low** | Open in Studio from Media Plan appeared stuck | **Fixed** — skip heavy sync when `existingConversationId` present; client 25s timeout + error surface |
