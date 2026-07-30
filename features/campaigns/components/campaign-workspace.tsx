@@ -523,6 +523,7 @@ export function CampaignWorkspaceView({
                   workspace={workspace}
                   assignmentHierarchy={assignmentHierarchy}
                   financeAudit={financeAudit}
+                  financeAuditStatus={bundleStatuses.financeAudit}
                 />
               </TabErrorBoundary>
             )}

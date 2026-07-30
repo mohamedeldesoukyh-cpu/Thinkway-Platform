@@ -30,6 +30,8 @@ type CampaignTimelineTabProps = {
   workspace: CampaignWorkspace;
   assignmentHierarchy: AssignmentHierarchy;
   financeAudit?: FinanceAuditTimelineEntry[];
+  /** Soft status for the Finance audit panel only — never gates Enterprise Timeline. */
+  financeAuditStatus?: "idle" | "loading" | "loaded" | "error";
 };
 
 type VendorRow = CampaignWorkspace["vendors"][number];
@@ -94,7 +96,10 @@ export function CampaignTimelineTab({
   workspace,
   assignmentHierarchy,
   financeAudit = [],
+  financeAuditStatus = "loaded",
 }: CampaignTimelineTabProps) {
+  const financeAuditPending =
+    financeAuditStatus === "idle" || financeAuditStatus === "loading";
   const [detailActivityId, setDetailActivityId] = useState<string | null>(null);
   const [detailAuditId, setDetailAuditId] = useState<string | null>(null);
   const [detailLineId, setDetailLineId] = useState<string | null>(null);
@@ -140,7 +145,11 @@ export function CampaignTimelineTab({
           description="Invoice, CN/DN, posting, and cancellation events."
           flushBody
         >
-          {financeAudit.length === 0 ? (
+          {financeAuditPending && financeAudit.length === 0 ? (
+            <div className="thinkway-campaign-empty-state">
+              <p>Loading finance audit…</p>
+            </div>
+          ) : financeAudit.length === 0 ? (
             <div className="thinkway-campaign-empty-state">
               <p>No finance audit events yet.</p>
             </div>

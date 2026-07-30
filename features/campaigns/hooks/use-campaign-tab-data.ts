@@ -29,6 +29,10 @@ import type {
 } from "@/features/campaigns/queries/publications";
 import type { CampaignMetricsSyncHealth } from "@/lib/performance/metrics-collector/types";
 import {
+  TAB_BLOCKING_BUNDLES,
+  TAB_ERROR_BUNDLES,
+} from "@/features/campaigns/hooks/campaign-tab-bundle-policy";
+import {
   isSilentDeferredBundleRefresh,
   shouldFetchDeferredBundle,
 } from "@/features/campaigns/hooks/deferred-bundle-policy";
@@ -67,32 +71,6 @@ const PREFETCH_BUNDLES: CampaignDeferredBundle[] = [
   "publications",
   "financeAudit",
 ];
-
-/** Bundles that block tab content with a skeleton until loaded. */
-const TAB_BLOCKING_BUNDLES: Record<CampaignWorkspaceTabId, CampaignDeferredBundle[]> = {
-  overview: [],
-  "client-io": [],
-  lines: [],
-  "vendor-io": [],
-  deliverables: ["publications"],
-  publications: ["publications"],
-  workflow: [],
-  billing: ["billing"],
-  timeline: ["financeAudit"],
-};
-
-/** Bundles associated with a tab for error surfacing. */
-const TAB_BUNDLES: Record<CampaignWorkspaceTabId, CampaignDeferredBundle[]> = {
-  overview: ["formOptions"],
-  "client-io": [],
-  lines: ["formOptions", "assignmentsBilling"],
-  "vendor-io": [],
-  deliverables: ["publications"],
-  publications: ["publications"],
-  workflow: [],
-  billing: ["billing"],
-  timeline: ["financeAudit"],
-};
 
 function scheduleBackgroundPrefetch(run: () => void): () => void {
   if (typeof requestIdleCallback !== "undefined") {
@@ -366,7 +344,7 @@ export function useCampaignTabData(
 
   const tabLoadError = useCallback(
     (tabId: CampaignWorkspaceTabId) => {
-      const bundles = TAB_BUNDLES[tabId] ?? [];
+      const bundles = TAB_ERROR_BUNDLES[tabId] ?? [];
       for (const bundle of bundles) {
         if (bundleStatuses[bundle] === "error") {
           return bundleErrors[bundle] ?? "Failed to load tab data.";

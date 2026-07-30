@@ -197,6 +197,33 @@ export async function loadCampaignPublicationsBundle(
   return resolveCampaignPublicationsBundle(campaignId);
 }
 
+/** Soft timeout so a slow audit_logs scan cannot leave finance audit pending forever. */
+const FINANCE_AUDIT_BUNDLE_TIMEOUT_MS = 8_000;
+
+function withSoftTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  fallback: T,
+  onTimeout: () => void
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      onTimeout();
+      resolve(fallback);
+    }, ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
+
 export async function loadCampaignFinanceAuditBundle(
   campaignId: string
 ): Promise<BundleResult<CampaignFinanceAuditPayload>> {
@@ -204,10 +231,20 @@ export async function loadCampaignFinanceAuditBundle(
 
   try {
     const supabase = await createSupabaseServerClient();
-    const financeAudit = await loadFinanceAuditTimeline(supabase, {
-      campaign_id: campaignId,
-      limit: 40,
-    });
+    const financeAudit = await withSoftTimeout(
+      loadFinanceAuditTimeline(supabase, {
+        campaign_id: campaignId,
+        limit: 40,
+      }),
+      FINANCE_AUDIT_BUNDLE_TIMEOUT_MS,
+      [],
+      () => {
+        devLog("[campaign-tab-data] finance audit timed out", {
+          campaignId,
+          timeoutMs: FINANCE_AUDIT_BUNDLE_TIMEOUT_MS,
+        });
+      }
+    );
     return { ok: true, data: { financeAudit } };
   } catch (error) {
     devLog("[campaign-tab-data] finance audit failed", { campaignId, error });
