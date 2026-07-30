@@ -161,6 +161,37 @@ async function fetchThinkwayStoredAvatar(
   }
 }
 
+/**
+ * Public creator-avatars URLs are not on the social CDN allowlist — fetch them
+ * directly so PDF/PPTX export can embed durable Thinkway storage avatars.
+ */
+async function fetchThinkwayStoredAvatarHttp(
+  src: string,
+  timeoutMs: number
+): Promise<{ ok: true; buffer: ArrayBuffer; contentType: string } | null> {
+  if (!parseCreatorAvatarStoragePathFromUrl(src)) return null;
+
+  try {
+    const response = await fetch(src, {
+      signal: AbortSignal.timeout(timeoutMs),
+      headers: {
+        Accept: "image/*,*/*",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      },
+    });
+    if (!response.ok) return null;
+    const buffer = await response.arrayBuffer();
+    if (!buffer.byteLength) return null;
+    const headerType = response.headers.get("content-type")?.split(";")[0]?.trim();
+    const contentType =
+      headerType && headerType.startsWith("image/") ? headerType : "image/jpeg";
+    return { ok: true, buffer, contentType };
+  } catch {
+    return null;
+  }
+}
+
 function avatarKey(src: string | null, profileUrl: string | null): string {
   return mediaProxyCacheKey({ kind: "avatar", src, profileUrl });
 }
@@ -188,6 +219,14 @@ async function resolveCreatorAvatarExternal(input: {
       MEDIA_PROXY_REFRESH_TIMEOUT_MS
     );
     if (stored) return stored;
+  }
+
+  if (src) {
+    const storedHttp = await fetchThinkwayStoredAvatarHttp(
+      src,
+      MEDIA_PROXY_REFRESH_TIMEOUT_MS
+    );
+    if (storedHttp) return storedHttp;
   }
 
   const freshCdnSrc =

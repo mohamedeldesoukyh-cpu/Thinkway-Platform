@@ -124,11 +124,11 @@ export async function GET(request: Request, context: RouteContext) {
 
     let exportContent = content;
     if (format === "pdf" || format === "html") {
-      exportContent = await embedMediaPlanContentAvatars(content);
+      exportContent = await embedMediaPlanContentAvatars(content, { supabase });
     }
 
     if (format === "pptx") {
-      const pptxContent = await embedMediaPlanContentAvatars(content);
+      const pptxContent = await embedMediaPlanContentAvatars(content, { supabase });
       const buffer = await buildMediaPlanPptxBuffer(pptxContent, {
         contextOverride,
         includeCampaignCost,

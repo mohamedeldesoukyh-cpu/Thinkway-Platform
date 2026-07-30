@@ -46,6 +46,11 @@ async function main() {
     /sizeAutoHeightPages/,
     "PDF must support auto-sizing tall slides (media-plan calendar)"
   );
+  assert.match(
+    source,
+    /isAllowedPdfImageUrl|supabase\.co/,
+    "PDF must allow Thinkway storage avatar images when not inlined"
+  );
 
   // Hanging remote <img> used to fail setContent(waitUntil:load) after 30s.
   const html = `<!doctype html><html><body>

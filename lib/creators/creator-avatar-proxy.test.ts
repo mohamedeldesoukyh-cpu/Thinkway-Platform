@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  fetchCreatorAvatarImage,
   isAllowedCreatorAvatarProfileUrl,
   resolveCreatorAvatarForHttpRequest,
 } from "@/lib/creators/creator-avatar-proxy";
@@ -79,6 +80,34 @@ test("negative cache still allows warm retry when profileUrl can recover", async
   if (!result.ok) {
     assert.equal(result.source, "cache");
     assert.equal(result.needsRefresh, true);
+  }
+});
+
+test("fetchCreatorAvatarImage loads Thinkway creator-avatars public URLs", async () => {
+  resetMediaProxyMetricsForTests();
+  const src =
+    "https://example.supabase.co/storage/v1/object/public/creator-avatars/enrichment/inf/instagram/creator.jpg";
+  const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]).buffer;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    if (String(input) === src) {
+      return new Response(jpeg, {
+        status: 200,
+        headers: { "content-type": "image/jpeg" },
+      });
+    }
+    return new Response(null, { status: 404 });
+  }) as typeof fetch;
+
+  try {
+    const result = await fetchCreatorAvatarImage({ src, profileUrl: null });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.equal(result.contentType, "image/jpeg");
+      assert.equal(result.buffer.byteLength, 4);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
   }
 });
 

@@ -197,6 +197,20 @@ function isAllowedPdfFontUrl(url: string): boolean {
   }
 }
 
+/** Durable Thinkway storage avatars may remain as https URLs when data-URI embed fails. */
+function isAllowedPdfImageUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    return (
+      (host === "supabase.co" || host.endsWith(".supabase.co")) &&
+      parsed.pathname.includes("/storage/v1/object/")
+    );
+  } catch {
+    return false;
+  }
+}
+
 async function waitForPdfAssetsReady(page: {
   evaluate: (pageFunction: () => Promise<void>) => Promise<void>;
 }): Promise<void> {
@@ -309,7 +323,8 @@ export async function renderHtmlToPdf(
       const resourceType = request.resourceType();
       if (
         (resourceType === "image" || resourceType === "media") &&
-        (url.startsWith("http://") || url.startsWith("https://"))
+        (url.startsWith("http://") || url.startsWith("https://")) &&
+        !isAllowedPdfImageUrl(url)
       ) {
         void request.abort();
         return;

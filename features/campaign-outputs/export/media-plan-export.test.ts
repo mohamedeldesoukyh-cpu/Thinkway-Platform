@@ -419,6 +419,46 @@ test("embedMediaPlanContentAvatars inlines calendar and deadline avatars for PDF
   assert.ok(html.includes("https://www.instagram.com/nour/"));
 });
 
+test("embedMediaPlanContentAvatars inlines Thinkway storage avatars for PDF", async () => {
+  const content = generateMediaPlan(buildCampaignObjectFixture());
+  const data = mediaPlanData(content);
+  const storageUrl =
+    "https://example.supabase.co/storage/v1/object/public/creator-avatars/enrichment/inf/instagram/creator.jpg";
+  // Minimal JPEG (1x1)
+  const jpeg = Buffer.from(
+    "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAn/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAGfAP/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAQUCf//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQMBAT8Bf//EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQIBAT8Bf//Z",
+    "base64"
+  );
+
+  data.weeks[0]!.days[0]!.avatarUrl = storageUrl;
+  data.weeks[0]!.days[0]!.profileUrl = "https://www.instagram.com/creator/";
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.includes("creator-avatars")) {
+      return new Response(jpeg, {
+        status: 200,
+        headers: { "content-type": "image/jpeg" },
+      });
+    }
+    return new Response(null, { status: 404 });
+  }) as typeof fetch;
+
+  try {
+    const embedded = await embedMediaPlanContentAvatars(content);
+    const monday = mediaPlanData(embedded).weeks[0]!.days[0]!;
+    assert.ok(
+      monday.avatarUrl?.startsWith("data:image/"),
+      "Thinkway storage avatars must inline as data URIs for PDF"
+    );
+    const html = buildMediaPlanHtml(embedded);
+    assert.ok(html.includes('src="data:image/'), "export HTML should render inlined avatar images");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("buildMediaPlanHtml renders legal entity on cover and prepared-for close page", () => {
   const content = generateMediaPlan(buildCampaignObjectFixture());
   mediaPlanData(content).campaignContext = {
