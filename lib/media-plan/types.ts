@@ -42,6 +42,12 @@ export type MediaPlanItem = {
   /** ISO date from Performance live date when known. */
   actualLiveDate: string | null;
   status: MediaPlanItemStatus;
+  /** Assignment PK — authoritative operational join (Release 2.1). */
+  campaignLineId?: string | null;
+  assignmentDeliverableId?: string | null;
+  assignmentPostScheduleId?: string | null;
+  /** True when Planned↔Actual used legacy creator/label match (pre-2.1 plans). */
+  usedLegacyMatch?: boolean;
 };
 
 export type MediaPlanVersionKind = "baseline" | "draft" | "archived_baseline";
@@ -123,6 +129,13 @@ export type MediaPlanPerformanceFact = {
   /** ISO live date when published. */
   liveDate: string | null;
   completed: boolean;
+  /** Assignment PK — authoritative operational join (Release 2.1). */
+  campaignLineId?: string | null;
+  assignmentDeliverableId?: string | null;
+  assignmentPostScheduleId?: string | null;
+  /** Grain locks — used by Media Plan mutation guards. */
+  isLocked?: boolean;
+  billingLocked?: boolean;
 };
 
 export type MediaPlanProjectionDay = {

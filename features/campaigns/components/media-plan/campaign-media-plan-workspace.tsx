@@ -165,6 +165,21 @@ export function CampaignMediaPlanWorkspace({
     [pathname, router, searchParams, view]
   );
 
+  const handlePlanChange = useCallback(
+    (planId: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      const defaultId = payload.mediaPlans.find((plan) => plan.isDefault)?.campaignObjectId;
+      if (!planId || planId === defaultId) params.delete("planId");
+      else params.set("planId", planId);
+      const query = params.toString();
+      startTransition(() => {
+        router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+        router.refresh();
+      });
+    },
+    [pathname, payload.mediaPlans, router, searchParams]
+  );
+
   useEffect(() => {
     const saved = scrollByView.current[view];
     if (scrollRef.current != null && saved != null) {
@@ -249,6 +264,31 @@ export function CampaignMediaPlanWorkspace({
               </span>
             </div>
             <p className="truncate text-xs text-muted-foreground">{workspace.name}</p>
+            {payload.mediaPlans.length > 1 ? (
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                <label
+                  htmlFor="campaign-media-plan-select"
+                  className="text-[11px] font-medium text-muted-foreground"
+                >
+                  Plan
+                </label>
+                <select
+                  id="campaign-media-plan-select"
+                  className="h-7 max-w-xs rounded-md border border-border bg-background px-2 text-xs"
+                  value={payload.campaignObjectId ?? ""}
+                  onChange={(event) => handlePlanChange(event.target.value)}
+                  disabled={pending}
+                >
+                  {payload.mediaPlans.map((plan) => (
+                    <option key={plan.campaignObjectId} value={plan.campaignObjectId}>
+                      {plan.label}
+                      {plan.isDefault ? " (default)" : ""}
+                      {` · ${mediaPlanStatusLabel(plan.status)}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
             <Button

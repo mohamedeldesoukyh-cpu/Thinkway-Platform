@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
 
 type CampaignMediaPlanPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; planId?: string }>;
 };
 
 function resolveView(raw: string | undefined): MediaPlanViewKind {
@@ -51,6 +51,7 @@ export default async function CampaignMediaPlanPage({
   const { id: routeKey } = await params;
   const query = await searchParams;
   const view = resolveView(query.view);
+  const selectedPlanId = query.planId?.trim() || null;
 
   const campaignId = await resolveCampaignIdByRouteKey(routeKey);
   if (!campaignId) notFound();
@@ -77,7 +78,9 @@ export default async function CampaignMediaPlanPage({
   const workspace = await getCampaignWorkspace(campaignId);
   if (!workspace) notFound();
 
-  const payload = await loadCampaignMediaPlanWorkspace(supabase, workspace);
+  const payload = await loadCampaignMediaPlanWorkspace(supabase, workspace, {
+    selectedPlanId,
+  });
 
   return (
     <DashboardShell

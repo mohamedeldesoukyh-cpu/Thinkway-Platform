@@ -63,6 +63,17 @@ export {
 export { mediaPlanStateFromCampaignObject, baselineItemsFromState } from "./campaign-object-state";
 export { performanceFactsFromAssignmentHierarchy } from "./performance-facts";
 export { annotateMediaPlanExecutionStatus } from "./annotate-execution-status";
+export {
+  operationalMatchKey,
+  isAssignmentBackedMatch,
+  pickOperationalRefs,
+} from "./operational-refs";
+export type {
+  MediaPlanOperationalRefs,
+  OperationalMatchKey,
+  OperationalMatchMode,
+} from "./operational-refs";
+export { assertScheduleMoveAllowedByAssignmentGrain } from "./grain-lock-guards";
 export type {
   EnsureWorkingDraftResult,
   MediaPlanApprovalMethod,

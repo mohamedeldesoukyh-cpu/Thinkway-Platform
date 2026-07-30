@@ -69,6 +69,9 @@ export function mediaPlanDataToItems(data: MediaPlanData): MediaPlanItem[] {
           plannedDate,
           actualLiveDate: null,
           status: "planned",
+          campaignLineId: day.campaignLineId ?? null,
+          assignmentDeliverableId: day.assignmentDeliverableId ?? null,
+          assignmentPostScheduleId: day.assignmentPostScheduleId ?? null,
         });
       }
 
@@ -89,6 +92,11 @@ export function mediaPlanDataToItems(data: MediaPlanData): MediaPlanItem[] {
             plannedDate,
             actualLiveDate: null,
             status: "planned",
+            campaignLineId: extra.campaignLineId ?? day.campaignLineId ?? null,
+            assignmentDeliverableId:
+              extra.assignmentDeliverableId ?? day.assignmentDeliverableId ?? null,
+            assignmentPostScheduleId:
+              extra.assignmentPostScheduleId ?? day.assignmentPostScheduleId ?? null,
           });
         }
       }
@@ -134,6 +142,9 @@ export function itemsToMediaPlanData(
       deliverables: string[];
       statuses: Array<MediaPlanItem["status"]>;
       liveDates: string[];
+      campaignLineId: string | null;
+      assignmentDeliverableId: string | null;
+      assignmentPostScheduleId: string | null;
     }
   >();
 
@@ -145,7 +156,8 @@ export function itemsToMediaPlanData(
     const dayIndex = ((diffDays % 7) + 7) % 7;
     maxWeek = Math.max(maxWeek, week);
 
-    const key = `${week}::${dayIndex}::${item.creatorId}`;
+    const identity = item.campaignLineId?.trim() || item.creatorId;
+    const key = `${week}::${dayIndex}::${identity}`;
     const existing = slots.get(key);
     if (existing) {
       if (!existing.deliverables.includes(item.deliverable)) {
@@ -163,6 +175,9 @@ export function itemsToMediaPlanData(
         deliverables: [item.deliverable],
         statuses: [item.status],
         liveDates: item.actualLiveDate ? [item.actualLiveDate] : [],
+        campaignLineId: item.campaignLineId ?? null,
+        assignmentDeliverableId: item.assignmentDeliverableId ?? null,
+        assignmentPostScheduleId: item.assignmentPostScheduleId ?? null,
       });
     }
   }
@@ -208,6 +223,9 @@ export function itemsToMediaPlanData(
         platform: primary!.platform,
         serviceType: primaryTypes[0],
         serviceTypes: primaryTypes,
+        campaignLineId: primary!.campaignLineId,
+        assignmentDeliverableId: primary!.assignmentDeliverableId,
+        assignmentPostScheduleId: primary!.assignmentPostScheduleId,
         executionStatus: primaryExec.executionStatus,
         actualLiveDate: primaryExec.actualLiveDate,
         additionalDeliverables: rest.map((slot) => {
@@ -219,6 +237,9 @@ export function itemsToMediaPlanData(
             platform: slot.platform,
             serviceType: slot.deliverables[0],
             serviceTypes: slot.deliverables,
+            campaignLineId: slot.campaignLineId,
+            assignmentDeliverableId: slot.assignmentDeliverableId,
+            assignmentPostScheduleId: slot.assignmentPostScheduleId,
             executionStatus: exec.executionStatus,
             actualLiveDate: exec.actualLiveDate,
           };

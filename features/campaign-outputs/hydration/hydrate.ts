@@ -137,6 +137,15 @@ export function mergeCommercialFieldsFromSeed(
           ...(seed.quotedRevenue != null && seed.quotedRevenue > 0
             ? { quotedRevenue: seed.quotedRevenue, quotedCurrency: seed.quotedCurrency ?? "EGP" }
             : {}),
+          ...(seed.campaignLineId
+            ? { campaignLineId: seed.campaignLineId }
+            : {}),
+          ...(seed.assignmentDeliverableId
+            ? { assignmentDeliverableId: seed.assignmentDeliverableId }
+            : {}),
+          ...(seed.assignmentPostScheduleId
+            ? { assignmentPostScheduleId: seed.assignmentPostScheduleId }
+            : {}),
         };
       })
     : seedCreators.map((c) => ({
@@ -157,6 +166,13 @@ export function mergeCommercialFieldsFromSeed(
           : c.serviceLabel
             ? { serviceLabel: c.serviceLabel }
             : {}),
+        ...(c.campaignLineId ? { campaignLineId: c.campaignLineId } : {}),
+        ...(c.assignmentDeliverableId
+          ? { assignmentDeliverableId: c.assignmentDeliverableId }
+          : {}),
+        ...(c.assignmentPostScheduleId
+          ? { assignmentPostScheduleId: c.assignmentPostScheduleId }
+          : {}),
         whySelected: "Synced from quotation",
         expectedRole: c.tier ?? "Unclassified",
         audienceMatch: c.categories?.join(", ") ?? "",

@@ -11,10 +11,14 @@ import { saveCampaignObject } from "@/features/campaign-intelligence/services/ca
 import { updateConversationContextSnapshot } from "@/features/ai-workspace/services/conversation-service";
 import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCampaignAssignmentHierarchy } from "@/features/campaigns/queries/assignment-hierarchy";
+import { resolveSlate } from "@/features/campaign-outputs/output-inputs";
+import { assertScheduleMoveAllowedByAssignmentGrain } from "@/lib/media-plan/grain-lock-guards";
 import {
   logMediaPlanTimelineEvents,
   resolveCampaignHeaderIdForMediaPlan,
 } from "@/lib/media-plan/log-media-plan-timeline";
+import { performanceFactsFromAssignmentHierarchy } from "@/lib/media-plan/performance-facts";
 import { asMediaPlanData } from "../generators/media-plan";
 import {
   MediaPlanCampaignWindowError,
@@ -84,6 +88,33 @@ export async function updateMediaPlanScheduleAction(
 
   if (!restored || restored.id !== campaignObjectId) {
     return { ok: false, message: "Campaign object not found." };
+  }
+
+  // Release 2.1 — protect live / locked Assignment grains before schedule mutation.
+  const headerIdForGuard = await resolveCampaignHeaderIdForMediaPlan(
+    supabase,
+    campaignObjectId,
+    campaignId
+  );
+  if (headerIdForGuard) {
+    try {
+      const hierarchy = await getCampaignAssignmentHierarchy(headerIdForGuard);
+      const facts = performanceFactsFromAssignmentHierarchy(hierarchy);
+      const slateCreator = resolveSlate(restored).find(
+        (entry) => entry.creatorId.trim().toLowerCase() === move.creatorId.trim().toLowerCase()
+      );
+      const guard = assertScheduleMoveAllowedByAssignmentGrain(facts, {
+        creatorIds: [move.creatorId],
+        campaignLineIds: slateCreator?.campaignLineId
+          ? [slateCreator.campaignLineId]
+          : undefined,
+      });
+      if (!guard.ok) {
+        return { ok: false, message: guard.message };
+      }
+    } catch {
+      /* hierarchy load failure must not block edits when Assignment facts unavailable */
+    }
   }
 
   const scheduleResult = mutateMediaPlanSchedule(

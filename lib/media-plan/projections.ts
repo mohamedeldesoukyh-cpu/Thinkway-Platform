@@ -1,3 +1,4 @@
+import { operationalMatchKey } from "./operational-refs";
 import type {
   MediaPlanItem,
   MediaPlanPerformanceFact,
@@ -7,21 +8,27 @@ import type {
 } from "./types";
 import { getCurrentApprovedBaseline } from "./versioning";
 
-function itemMatchKey(item: Pick<MediaPlanItem, "creatorId" | "platform" | "deliverable">): string {
-  return [
-    item.creatorId.trim().toLowerCase(),
-    item.platform.trim().toLowerCase(),
-    item.deliverable.trim().toLowerCase(),
-  ].join("::");
+function matchForItem(
+  item: Pick<
+    MediaPlanItem,
+    | "creatorId"
+    | "platform"
+    | "deliverable"
+    | "campaignLineId"
+    | "assignmentDeliverableId"
+    | "assignmentPostScheduleId"
+  >
+) {
+  return operationalMatchKey(item);
 }
 
-function factMatchKey(fact: MediaPlanPerformanceFact): string {
-  return itemMatchKey(fact);
+function matchForFact(fact: MediaPlanPerformanceFact) {
+  return operationalMatchKey(fact);
 }
 
 function actualItemFromFact(fact: MediaPlanPerformanceFact): MediaPlanItem {
   const liveDate = fact.liveDate!;
-  const key = factMatchKey(fact);
+  const { key, mode } = matchForFact(fact);
   return {
     id: `actual::${key}::${liveDate}`,
     creatorId: fact.creatorId,
@@ -31,6 +38,10 @@ function actualItemFromFact(fact: MediaPlanPerformanceFact): MediaPlanItem {
     plannedDate: null,
     actualLiveDate: liveDate,
     status: "completed",
+    campaignLineId: fact.campaignLineId ?? null,
+    assignmentDeliverableId: fact.assignmentDeliverableId ?? null,
+    assignmentPostScheduleId: fact.assignmentPostScheduleId ?? null,
+    usedLegacyMatch: mode === "legacy_label",
   };
 }
 
@@ -39,6 +50,8 @@ function actualItemFromFact(fact: MediaPlanPerformanceFact): MediaPlanItem {
  * Baseline when possible. Unmatched live deliverables still appear (including
  * when the baseline has zero creators / empty schedule).
  * Never uses the Working Draft.
+ *
+ * Release 2.1: ID-first matching (Assignment / Deliverable / Post).
  */
 export function projectActualMediaPlan(
   state: MediaPlanState,
@@ -53,7 +66,7 @@ export function projectActualMediaPlan(
 
   const factsByKey = new Map<string, MediaPlanPerformanceFact>();
   for (const fact of factsWithLive) {
-    factsByKey.set(factMatchKey(fact), fact);
+    factsByKey.set(matchForFact(fact).key, fact);
   }
 
   const items: MediaPlanItem[] = [];
@@ -61,7 +74,7 @@ export function projectActualMediaPlan(
 
   if (baseline) {
     for (const planned of baseline.items) {
-      const key = itemMatchKey(planned);
+      const { key, mode } = matchForItem(planned);
       const fact = factsByKey.get(key);
       if (!fact?.liveDate) continue;
       matchedKeys.add(key);
@@ -70,13 +83,19 @@ export function projectActualMediaPlan(
         actualLiveDate: fact.liveDate,
         plannedDate: planned.plannedDate,
         status: "completed",
+        campaignLineId: planned.campaignLineId ?? fact.campaignLineId ?? null,
+        assignmentDeliverableId:
+          planned.assignmentDeliverableId ?? fact.assignmentDeliverableId ?? null,
+        assignmentPostScheduleId:
+          planned.assignmentPostScheduleId ?? fact.assignmentPostScheduleId ?? null,
+        usedLegacyMatch: mode === "legacy_label",
       });
     }
   }
 
   // Include live Performance rows that have no matching planned baseline item.
   for (const fact of factsWithLive) {
-    const key = factMatchKey(fact);
+    const key = matchForFact(fact).key;
     if (matchedKeys.has(key)) continue;
     items.push(actualItemFromFact(fact));
     matchedKeys.add(key);
@@ -92,6 +111,8 @@ export function projectActualMediaPlan(
 /**
  * Remaining Media Plan — Current Approved Baseline minus completed deliverables.
  * Never uses the Working Draft.
+ *
+ * Release 2.1: ID-first matching (Assignment / Deliverable / Post).
  */
 export function projectRemainingMediaPlan(
   state: MediaPlanState,
@@ -108,12 +129,19 @@ export function projectRemainingMediaPlan(
   }
 
   const completedKeys = new Set(
-    performance.filter((fact) => fact.completed).map((fact) => factMatchKey(fact))
+    performance
+      .filter((fact) => fact.completed)
+      .map((fact) => matchForFact(fact).key)
   );
 
   const remaining = baseline.items
-    .filter((item) => !completedKeys.has(itemMatchKey(item)))
-    .map((item) => ({ ...item, status: "remaining" as const, actualLiveDate: null }));
+    .filter((item) => !completedKeys.has(matchForItem(item).key))
+    .map((item) => ({
+      ...item,
+      status: "remaining" as const,
+      actualLiveDate: null,
+      usedLegacyMatch: matchForItem(item).mode === "legacy_label",
+    }));
 
   const scheduled = remaining.filter((item) => item.plannedDate);
   const unscheduled = remaining.filter((item) => !item.plannedDate);
@@ -151,24 +179,31 @@ function groupItemsByDate(
 
   return [...byDate.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, dayItems]) => {
-      const byCreator = new Map<string, MediaPlanItem[]>();
-      for (const item of dayItems) {
-        const list = byCreator.get(item.creatorId) ?? [];
-        list.push(item);
-        byCreator.set(item.creatorId, list);
-      }
-      return {
-        date,
-        creators: [...byCreator.entries()].map(([creatorId, creatorItems]) => ({
-          creatorId,
-          creatorName: creatorItems[0]!.creatorName,
-          deliverables: creatorItems.map((item) => ({
-            platform: item.platform,
-            deliverable: item.deliverable,
-            itemId: item.id,
-          })),
-        })),
-      };
+    .map(([date, dayItems]) => ({
+      date,
+      creators: groupCreators(dayItems),
+    }));
+}
+
+function groupCreators(items: MediaPlanItem[]): MediaPlanProjectionDay["creators"] {
+  const byCreator = new Map<string, MediaPlanProjectionDay["creators"][number]>();
+  for (const item of items) {
+    const key = item.campaignLineId?.trim() || item.creatorId;
+    const existing = byCreator.get(key);
+    const deliverable = {
+      platform: item.platform,
+      deliverable: item.deliverable,
+      itemId: item.id,
+    };
+    if (existing) {
+      existing.deliverables.push(deliverable);
+      continue;
+    }
+    byCreator.set(key, {
+      creatorId: item.creatorId,
+      creatorName: item.creatorName,
+      deliverables: [deliverable],
     });
+  }
+  return [...byCreator.values()];
 }

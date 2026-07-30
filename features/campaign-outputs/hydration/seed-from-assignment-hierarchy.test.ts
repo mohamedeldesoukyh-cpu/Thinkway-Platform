@@ -61,6 +61,9 @@ test("seedCreatorsFromAssignmentHierarchy maps vendors and deliverables", () => 
   assert.equal(creators[0]!.creatorId, "inf-1");
   assert.equal(creators[0]!.displayName, "Layla");
   assert.deepEqual(creators[0]!.serviceTypes, ["IG Reel"]);
+  assert.equal(creators[0]!.campaignLineId, "line-1");
+  assert.equal(creators[0]!.assignmentDeliverableId, "d1");
+  assert.equal(creators[0]!.assignmentPostScheduleId, "p1");
 });
 
 test("ensureCreatorsFromAssignmentHierarchy fills empty slate only", () => {

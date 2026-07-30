@@ -4,6 +4,12 @@ import { insertAuditLog } from "@/lib/audit/insert-audit-log";
 import type { Database } from "@/types/database";
 
 import {
+  buildEnterpriseTimelineMetadata,
+  ENTERPRISE_TIMELINE_SOURCE,
+  mapMediaPlanEngineEventToEnterprise,
+} from "@/lib/timeline/enterprise-timeline-contract";
+
+import {
   MEDIA_PLAN_TIMELINE_EVENT_LABELS,
   mediaPlanEventsForCampaignTimeline,
 } from "./timeline-events";
@@ -29,8 +35,22 @@ export async function logMediaPlanTimelineEvents(
   if (!events.length || !input.campaignHeaderId.trim()) return;
 
   await Promise.all(
-    events.map((event) =>
-      insertAuditLog(supabase, {
+    events.map((event) => {
+      const enterpriseEvent =
+        mapMediaPlanEngineEventToEnterprise(event.type) ?? event.type;
+      const metadata = buildEnterpriseTimelineMetadata({
+        source: ENTERPRISE_TIMELINE_SOURCE,
+        event: enterpriseEvent,
+        label: MEDIA_PLAN_TIMELINE_EVENT_LABELS[event.type] ?? event.type,
+        summary: event.summary,
+        campaign_id: input.campaignHeaderId,
+        campaign_header_id: input.campaignHeaderId,
+        campaign_object_id: input.campaignObjectId,
+        media_plan_id: event.mediaPlanId,
+        version: event.version,
+        module: "media_plan",
+      });
+      return insertAuditLog(supabase, {
         action: "update",
         entity_type: "campaign_headers",
         entity_id: input.campaignHeaderId,
@@ -44,18 +64,13 @@ export async function logMediaPlanTimelineEvents(
             ? ({ value: event.newValue } as Record<string, unknown>)
             : null,
         metadata: {
-          event: event.type,
-          label: MEDIA_PLAN_TIMELINE_EVENT_LABELS[event.type] ?? event.type,
-          summary: event.summary,
-          campaign_id: input.campaignHeaderId,
-          campaign_header_id: input.campaignHeaderId,
-          campaign_object_id: input.campaignObjectId,
-          media_plan_id: event.mediaPlanId,
-          version: event.version,
-          source: "media_plan_engine",
-        },
-      })
-    )
+          ...metadata,
+          // Preserve legacy engine type for older Timeline filters.
+          engine_event: event.type,
+          source_engine: "media_plan_engine",
+        } as unknown as Record<string, unknown>,
+      });
+    })
   );
 }
 

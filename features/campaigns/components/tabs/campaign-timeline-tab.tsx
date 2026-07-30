@@ -175,8 +175,8 @@ export function CampaignTimelineTab({
         </CampaignFlatSection>
 
         <CampaignFlatSection
-          title="Activity feed"
-          description="Edits, uploads, approvals, status changes, and assignments."
+          title="Enterprise Timeline"
+          description="Chronological campaign events from audit_logs (Assignments, Media Plan, operations)."
           flushBody
         >
           {workspace.activity.length === 0 ? (

@@ -42,6 +42,10 @@ export type SlateCreator = {
   views?: number;
   category?: string;
   brandFit?: number;
+  /** Assignment PK — authoritative operational join when known (Release 2.1). */
+  campaignLineId?: string | null;
+  assignmentDeliverableId?: string | null;
+  assignmentPostScheduleId?: string | null;
 };
 
 function normalizeId(id: string): string {
@@ -180,9 +184,61 @@ export function enrichSlateTiersFromReference(
 }
 
 /** Resolve the current creator slate as name + tier from the Campaign Object alone. */
+function assignmentRefsByCreatorId(
+  campaignObject: CampaignObject
+): Map<
+  string,
+  {
+    campaignLineId: string | null;
+    assignmentDeliverableId: string | null;
+    assignmentPostScheduleId: string | null;
+  }
+> {
+  const creatorsData = (campaignObject.sections.creators?.data ?? {}) as CreatorsSectionData;
+  const reasoning = creatorsData.recommendations?.selectedReasoning ?? [];
+  const map = new Map<
+    string,
+    {
+      campaignLineId: string | null;
+      assignmentDeliverableId: string | null;
+      assignmentPostScheduleId: string | null;
+    }
+  >();
+  for (const entry of reasoning) {
+    const key = normalizeId(entry.creatorId);
+    if (!key || map.has(key)) continue;
+    map.set(key, {
+      campaignLineId: entry.campaignLineId?.trim() || null,
+      assignmentDeliverableId: entry.assignmentDeliverableId?.trim() || null,
+      assignmentPostScheduleId: entry.assignmentPostScheduleId?.trim() || null,
+    });
+  }
+  return map;
+}
+
+function withAssignmentRefs(
+  slate: SlateCreator[],
+  refsByCreator: ReturnType<typeof assignmentRefsByCreatorId>
+): SlateCreator[] {
+  return slate.map((entry) => {
+    const refs = refsByCreator.get(normalizeId(entry.creatorId));
+    return {
+      ...entry,
+      campaignLineId: refs?.campaignLineId ?? entry.campaignLineId ?? null,
+      assignmentDeliverableId:
+        refs?.assignmentDeliverableId ?? entry.assignmentDeliverableId ?? null,
+      assignmentPostScheduleId:
+        refs?.assignmentPostScheduleId ?? entry.assignmentPostScheduleId ?? null,
+    };
+  });
+}
+
 export function resolveSlate(campaignObject: CampaignObject): SlateCreator[] {
+  const refsByCreator = assignmentRefsByCreatorId(campaignObject);
   const fromQuotation = slateFromQuotationCommercials(campaignObject);
-  if (fromQuotation?.length) return fromQuotation;
+  if (fromQuotation?.length) {
+    return withAssignmentRefs(fromQuotation, refsByCreator);
+  }
 
   const creatorsData = (campaignObject.sections.creators?.data ?? {}) as CreatorsSectionData;
   const ids = creatorsData.recommendations?.creatorIds ?? [];
@@ -209,6 +265,9 @@ export function resolveSlate(campaignObject: CampaignObject): SlateCreator[] {
           ? entry.quotedRevenue
           : undefined,
       quotedCurrency: entry?.quotedCurrency?.trim() || undefined,
+      campaignLineId: entry?.campaignLineId?.trim() || null,
+      assignmentDeliverableId: entry?.assignmentDeliverableId?.trim() || null,
+      assignmentPostScheduleId: entry?.assignmentPostScheduleId?.trim() || null,
     };
   });
 }

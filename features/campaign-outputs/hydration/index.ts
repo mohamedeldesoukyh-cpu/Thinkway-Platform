@@ -12,6 +12,7 @@ export {
   ensureCreatorsFromAssignmentHierarchy,
   seedCreatorsFromAssignmentHierarchy,
 } from "./seed-from-assignment-hierarchy";
+export { bindAssignmentRefsOntoCampaignObject } from "./bind-assignment-refs";
 export {
   detectMissingInformation,
   readinessForOutput,

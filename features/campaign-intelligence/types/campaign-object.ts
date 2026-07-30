@@ -94,6 +94,11 @@ export type CampaignObjectMeta = {
   /** Media plan slot distribution — week weights and per-creator overrides (not start date). */
   mediaPlanSchedule?: import("@/features/campaign-outputs/media-plan-schedule").MediaPlanScheduleMeta;
   /**
+   * Release 2.1 — multi Media Plan classification for one Campaign.
+   * Multiple `campaign_objects` may share a `campaign_header_id`; header.campaign_object_id remains default.
+   */
+  mediaPlanIdentity?: import("@/features/campaign-outputs/media-plan-identity").MediaPlanIdentityMeta;
+  /**
    * Media Plan Engine lifecycle — approved baseline pointers, working draft, frozen snapshots.
    * Schedule tip remains `mediaPlanSchedule`; mutations must go through the Media Plan Engine.
    */

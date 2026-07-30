@@ -23,6 +23,7 @@ import {
 import { mediaPlanStateFromCampaignObject } from "@/lib/media-plan/campaign-object-state";
 import { annotateMediaPlanExecutionStatus } from "@/lib/media-plan/annotate-execution-status";
 import { performanceFactsFromAssignmentHierarchy } from "@/lib/media-plan/performance-facts";
+import { stampMediaPlanAssignmentRefsFromSlate } from "@/lib/media-plan/stamp-assignment-refs";
 import {
   resolveApprovedBaselineData,
   resolveOriginalData,
@@ -35,6 +36,10 @@ import type {
   MediaPlanViewKind,
 } from "@/lib/media-plan";
 import type { Database } from "@/types/database";
+import {
+  listCampaignMediaPlans,
+  type CampaignMediaPlanListItem,
+} from "@/features/campaigns/queries/list-campaign-media-plans";
 
 function actualCalendarWindow(
   items: MediaPlanItem[],
@@ -85,13 +90,31 @@ export type CampaignMediaPlanWorkspacePayload = {
   /** Tip business version label from output registry (e.g. v1.2). */
   tipVersionLabel: string | null;
   emptyReason: string | null;
+  /** Release 2.1 — all Media Plans for this Campaign (default first). */
+  mediaPlans: CampaignMediaPlanListItem[];
+  /** True when the loaded plan is the header default pointer. */
+  isDefaultPlan: boolean;
 };
 
 export async function loadCampaignMediaPlanWorkspace(
   supabase: SupabaseClient<Database>,
-  workspace: CampaignWorkspace
+  workspace: CampaignWorkspace,
+  options?: { selectedPlanId?: string | null }
 ): Promise<CampaignMediaPlanWorkspacePayload> {
-  const campaignObjectId = workspace.campaign_object_id?.trim() || null;
+  const defaultPlanId = workspace.campaign_object_id?.trim() || null;
+  const mediaPlans = await listCampaignMediaPlans(supabase, workspace.id, defaultPlanId);
+  const requestedPlanId = options?.selectedPlanId?.trim() || null;
+  const selectedFromList = requestedPlanId
+    ? mediaPlans.find((plan) => plan.campaignObjectId === requestedPlanId)
+    : null;
+  const campaignObjectId =
+    selectedFromList?.campaignObjectId ??
+    defaultPlanId ??
+    mediaPlans[0]?.campaignObjectId ??
+    null;
+  const isDefaultPlan = Boolean(
+    campaignObjectId && defaultPlanId && campaignObjectId === defaultPlanId
+  );
 
   if (!campaignObjectId) {
     const start = new Date().toISOString().slice(0, 10);
@@ -119,6 +142,8 @@ export async function loadCampaignMediaPlanWorkspace(
       tipVersionLabel: null,
       emptyReason:
         "No Studio Media Plan is linked to this campaign yet. Open Studio to attach or generate one — Campaign and Studio share the same Media Plan.",
+      mediaPlans,
+      isDefaultPlan: false,
     };
   }
 
@@ -153,6 +178,8 @@ export async function loadCampaignMediaPlanWorkspace(
       businessVersions: [],
       tipVersionLabel: null,
       emptyReason: "The linked Media Plan could not be loaded.",
+      mediaPlans,
+      isDefaultPlan,
     };
   }
 
@@ -203,19 +230,21 @@ export async function loadCampaignMediaPlanWorkspace(
       businessVersions: [],
       tipVersionLabel: null,
       emptyReason: "The Media Plan has no saved version yet. Open Studio to generate it.",
+      mediaPlans,
+      isDefaultPlan,
     };
   }
 
   const hierarchy = await getCampaignAssignmentHierarchy(workspace.id);
   // Campaign vendors feed the slate when Studio never hydrated creators.
   const objectForPlan = ensureCreatorsFromAssignmentHierarchy(campaignObject, hierarchy);
+  const slate = resolveSlate(objectForPlan);
 
   let original = resolveOriginalData(objectForPlan);
   // Cached empty tip wins over slate in resolveOriginalData — rebuild in-memory
   // when Assignments hydrated creators but the saved calendar has none.
-  const slateCount = resolveSlate(objectForPlan).length;
   const tipCreatorCount = original.creatorCount ?? 0;
-  if (slateCount > 0 && tipCreatorCount === 0) {
+  if (slate.length > 0 && tipCreatorCount === 0) {
     try {
       const generated = generateMediaPlan(objectForPlan);
       if (generated.data) {
@@ -226,7 +255,13 @@ export async function loadCampaignMediaPlanWorkspace(
     }
   }
 
-  const baselineData = resolveApprovedBaselineData(objectForPlan, original);
+  // Release 2.1 — ensure calendar cards carry Assignment IDs even for older cached tips.
+  original = stampMediaPlanAssignmentRefsFromSlate(original, slate);
+
+  const baselineData = stampMediaPlanAssignmentRefsFromSlate(
+    resolveApprovedBaselineData(objectForPlan, original),
+    slate
+  );
   const lifecycle = getMediaPlanLifecycle(objectForPlan);
   const state = mediaPlanStateFromCampaignObject(objectForPlan, baselineData, {
     campaignId: workspace.id,
@@ -304,6 +339,8 @@ export async function loadCampaignMediaPlanWorkspace(
     businessVersions: tipRecord?.history ?? [],
     tipVersionLabel,
     emptyReason: null,
+    mediaPlans,
+    isDefaultPlan,
   };
 }
 

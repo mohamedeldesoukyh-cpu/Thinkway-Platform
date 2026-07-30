@@ -30,6 +30,10 @@ export type MediaPlanSlotAssignment = {
   dayIndex: number;
   /** When set, pins this specific deliverable type; omit for legacy whole-creator moves. */
   serviceType?: string;
+  /** Assignment PK — authoritative operational join (Release 2.1). */
+  campaignLineId?: string | null;
+  assignmentDeliverableId?: string | null;
+  assignmentPostScheduleId?: string | null;
 };
 
 export function normalizeDeliverableTypeLabel(label: string): string {
@@ -231,6 +235,11 @@ export function applyMediaPlanScheduleChangeUnchecked(
             if (!onlyStar || key.endsWith("::*")) assignments.delete(key);
           }
         };
+        const operationalRefs = {
+          campaignLineId: creator.campaignLineId ?? null,
+          assignmentDeliverableId: creator.assignmentDeliverableId ?? null,
+          assignmentPostScheduleId: creator.assignmentPostScheduleId ?? null,
+        };
 
         if (deliverableTypes.length) {
           // Typed pins must win over a legacy whole-creator "*" pin.
@@ -248,6 +257,7 @@ export function applyMediaPlanScheduleChangeUnchecked(
                 week: toWeek,
                 dayIndex: toDayIndex,
                 serviceType,
+                ...operationalRefs,
               }
             );
           }
@@ -265,6 +275,7 @@ export function applyMediaPlanScheduleChangeUnchecked(
                   week: fromWeek,
                   dayIndex: fromDayIndex,
                   serviceType,
+                  ...operationalRefs,
                 }
               );
             }
@@ -285,6 +296,7 @@ export function applyMediaPlanScheduleChangeUnchecked(
             creatorId: creator.creatorId,
             week: toWeek,
             dayIndex: toDayIndex,
+            ...operationalRefs,
           }
         );
         changes.push(`moved ${creator.displayName} to Week ${toWeek}`);

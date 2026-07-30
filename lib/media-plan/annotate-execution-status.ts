@@ -2,6 +2,8 @@
  * Overlay Performance live dates onto Media Plan calendar cards.
  * Same annotation for Studio tip and Campaign Original so published creators
  * share one visual language.
+ *
+ * Release 2.1: Assignment ID-first matching; creator/label is display fallback only.
  */
 
 import type {
@@ -11,6 +13,7 @@ import type {
   MediaPlanExecutionStatus,
 } from "@/features/campaign-outputs/generators/media-plan";
 
+import { operationalMatchKey } from "./operational-refs";
 import type { MediaPlanPerformanceFact } from "./types";
 
 function normId(id: string): string {
@@ -33,42 +36,101 @@ function deliverableLabelsMatch(cardType: string, factDeliverable: string): bool
   return baseDeliverableLabel(cardType) === baseDeliverableLabel(factDeliverable);
 }
 
-function creatorKeys(creatorId?: string | null, creatorName?: string | null): string[] {
-  const keys: string[] = [];
-  if (creatorId?.trim()) keys.push(`id:${normId(creatorId)}`);
-  if (creatorName?.trim()) keys.push(`name:${normLabel(creatorName)}`);
-  return keys;
-}
-
 type CompletedFact = MediaPlanPerformanceFact & { liveDate: string };
 
-function indexCompletedFacts(facts: MediaPlanPerformanceFact[]): Map<string, CompletedFact[]> {
-  const byKey = new Map<string, CompletedFact[]>();
+function indexCompletedFacts(facts: MediaPlanPerformanceFact[]): {
+  byOperationalKey: Map<string, CompletedFact[]>;
+  byLineId: Map<string, CompletedFact[]>;
+  byCreator: Map<string, CompletedFact[]>;
+} {
+  const byOperationalKey = new Map<string, CompletedFact[]>();
+  const byLineId = new Map<string, CompletedFact[]>();
+  const byCreator = new Map<string, CompletedFact[]>();
+
   for (const fact of facts) {
     if (!fact.completed || !fact.liveDate) continue;
     const completed = fact as CompletedFact;
-    for (const key of creatorKeys(fact.creatorId, fact.creatorName)) {
-      const list = byKey.get(key) ?? [];
-      list.push(completed);
-      byKey.set(key, list);
+
+    const opKey = operationalMatchKey(fact).key;
+    const opList = byOperationalKey.get(opKey) ?? [];
+    opList.push(completed);
+    byOperationalKey.set(opKey, opList);
+
+    const lineId = fact.campaignLineId?.trim();
+    if (lineId) {
+      const lineList = byLineId.get(normId(lineId)) ?? [];
+      lineList.push(completed);
+      byLineId.set(normId(lineId), lineList);
+    }
+
+    if (fact.creatorId?.trim()) {
+      const creatorList = byCreator.get(`id:${normId(fact.creatorId)}`) ?? [];
+      creatorList.push(completed);
+      byCreator.set(`id:${normId(fact.creatorId)}`, creatorList);
+    }
+    if (fact.creatorName?.trim()) {
+      const nameList = byCreator.get(`name:${normLabel(fact.creatorName)}`) ?? [];
+      nameList.push(completed);
+      byCreator.set(`name:${normLabel(fact.creatorName)}`, nameList);
     }
   }
-  return byKey;
+
+  return { byOperationalKey, byLineId, byCreator };
 }
 
-function factsForCreator(
-  index: Map<string, CompletedFact[]>,
-  creatorId?: string,
-  creatorName?: string
+function typesOf(entry: {
+  serviceTypes?: string[];
+  serviceType?: string;
+}): string[] {
+  if (entry.serviceTypes?.length) return entry.serviceTypes.filter((t) => t.trim());
+  if (entry.serviceType?.trim()) return [entry.serviceType.trim()];
+  return [];
+}
+
+function factsForCard(
+  index: ReturnType<typeof indexCompletedFacts>,
+  entry: MediaPlanDay | MediaPlanAdditionalDeliverable
 ): CompletedFact[] {
+  const types = typesOf(entry);
   const seen = new Set<CompletedFact>();
   const out: CompletedFact[] = [];
-  for (const key of creatorKeys(creatorId, creatorName)) {
-    for (const fact of index.get(key) ?? []) {
+
+  const pushUnique = (facts: CompletedFact[]) => {
+    for (const fact of facts) {
       if (seen.has(fact)) continue;
       seen.add(fact);
       out.push(fact);
     }
+  };
+
+  // 1) Exact operational key per typed deliverable when Assignment refs exist.
+  if (entry.campaignLineId?.trim() && types.length) {
+    for (const type of types) {
+      const key = operationalMatchKey({
+        campaignLineId: entry.campaignLineId,
+        assignmentDeliverableId: entry.assignmentDeliverableId,
+        assignmentPostScheduleId: entry.assignmentPostScheduleId,
+        creatorId: entry.creatorId,
+        platform: entry.platform,
+        deliverable: type,
+      }).key;
+      pushUnique(index.byOperationalKey.get(key) ?? []);
+    }
+    if (out.length) return out;
+  }
+
+  // 2) All completed facts on the Assignment line.
+  if (entry.campaignLineId?.trim()) {
+    pushUnique(index.byLineId.get(normId(entry.campaignLineId)) ?? []);
+    if (out.length) return out;
+  }
+
+  // 3) Legacy creator fallback (pre-2.1 plans without Assignment IDs).
+  if (entry.creatorId?.trim()) {
+    pushUnique(index.byCreator.get(`id:${normId(entry.creatorId)}`) ?? []);
+  }
+  if (entry.creator?.trim()) {
+    pushUnique(index.byCreator.get(`name:${normLabel(entry.creator)}`) ?? []);
   }
   return out;
 }
@@ -96,8 +158,7 @@ function resolveCardExecution(
   }
 
   if (matched <= 0) {
-    // Creator has live content but labels did not align — still mark published
-    // so operators see the influencer went live.
+    // Creator/Assignment went live even if type labels differ — keep published overlay.
     return { executionStatus: "published", actualLiveDate: earliest };
   }
   if (matched >= types.length) {
@@ -106,21 +167,12 @@ function resolveCardExecution(
   return { executionStatus: "partial", actualLiveDate: earliest };
 }
 
-function typesOf(entry: {
-  serviceTypes?: string[];
-  serviceType?: string;
-}): string[] {
-  if (entry.serviceTypes?.length) return entry.serviceTypes.filter((t) => t.trim());
-  if (entry.serviceType?.trim()) return [entry.serviceType.trim()];
-  return [];
-}
-
 function annotateEntry<T extends MediaPlanDay | MediaPlanAdditionalDeliverable>(
   entry: T,
-  index: Map<string, CompletedFact[]>
+  index: ReturnType<typeof indexCompletedFacts>
 ): T {
-  if (!entry.creatorId && !entry.creator) return entry;
-  const creatorFacts = factsForCreator(index, entry.creatorId, entry.creator);
+  if (!entry.creatorId && !entry.creator && !entry.campaignLineId) return entry;
+  const creatorFacts = factsForCard(index, entry);
   const { executionStatus, actualLiveDate } = resolveCardExecution(
     typesOf(entry),
     creatorFacts
@@ -146,8 +198,12 @@ export function annotateMediaPlanExecutionStatus(
       weeks: data.weeks.map((week) => ({
         ...week,
         days: week.days.map((day) =>
-          day.creatorId || day.creator
-            ? { ...day, executionStatus: day.executionStatus ?? "planned", actualLiveDate: day.actualLiveDate ?? null }
+          day.creatorId || day.creator || day.campaignLineId
+            ? {
+                ...day,
+                executionStatus: day.executionStatus ?? "planned",
+                actualLiveDate: day.actualLiveDate ?? null,
+              }
             : day
         ),
       })),
@@ -160,7 +216,12 @@ export function annotateMediaPlanExecutionStatus(
     weeks: data.weeks.map((week) => ({
       ...week,
       days: week.days.map((day) => {
-        if (!day.creatorId && !day.creator && !day.additionalDeliverables?.length) {
+        if (
+          !day.creatorId &&
+          !day.creator &&
+          !day.campaignLineId &&
+          !day.additionalDeliverables?.length
+        ) {
           return day;
         }
         const annotated = annotateEntry(day, index);

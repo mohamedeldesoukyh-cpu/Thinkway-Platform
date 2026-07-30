@@ -179,6 +179,10 @@ export type MediaPlanDay = {
   serviceTypes?: string[];
   tier?: string;
   platform?: string;
+  /** Assignment PK — authoritative operational join (Release 2.1). */
+  campaignLineId?: string | null;
+  assignmentDeliverableId?: string | null;
+  assignmentPostScheduleId?: string | null;
   /**
    * Publishing execution state from Performance live_date.
    * planned = not live yet; published = all card deliverables live; partial = some live.
@@ -201,6 +205,10 @@ export type MediaPlanAdditionalDeliverable = {
   serviceTypes?: string[];
   tier?: string;
   platform?: string;
+  /** Assignment PK — authoritative operational join (Release 2.1). */
+  campaignLineId?: string | null;
+  assignmentDeliverableId?: string | null;
+  assignmentPostScheduleId?: string | null;
   /** True when this line is a mirrored cross-post on the same activation day. */
   isMirror?: boolean;
   /** True when this line is a story/support companion on the same activation day. */
@@ -950,6 +958,9 @@ function creatorDayFields(creator: SlateCreator, platform: string, serviceType?:
     serviceType: resolvedType,
     tier: creator.tier,
     platform: platformForServiceType(resolvedType, creator.platform ?? platform),
+    campaignLineId: creator.campaignLineId ?? null,
+    assignmentDeliverableId: creator.assignmentDeliverableId ?? null,
+    assignmentPostScheduleId: creator.assignmentPostScheduleId ?? null,
   };
 }
 
@@ -1007,6 +1018,9 @@ function additionalDeliverableFromCompanion(
     serviceTypes: [companion.serviceType],
     tier: fields.tier,
     platform: fields.platform,
+    campaignLineId: fields.campaignLineId,
+    assignmentDeliverableId: fields.assignmentDeliverableId,
+    assignmentPostScheduleId: fields.assignmentPostScheduleId,
     isCompanion: true,
   };
 }
@@ -1027,6 +1041,9 @@ function additionalDeliverableFromMirror(
     serviceTypes: [displayType],
     tier: fields.tier,
     platform: fields.platform,
+    campaignLineId: fields.campaignLineId,
+    assignmentDeliverableId: fields.assignmentDeliverableId,
+    assignmentPostScheduleId: fields.assignmentPostScheduleId,
     isMirror: true,
   };
 }
@@ -1050,6 +1067,9 @@ function additionalDeliverableFromPlacement(
     serviceTypes: [placement.deliverable.serviceType],
     tier: fields.tier,
     platform: fields.platform,
+    campaignLineId: fields.campaignLineId,
+    assignmentDeliverableId: fields.assignmentDeliverableId,
+    assignmentPostScheduleId: fields.assignmentPostScheduleId,
   };
 }
 

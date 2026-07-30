@@ -311,6 +311,9 @@ export function syncScheduleAssignmentsFromMediaPlanData(
           week: week.week,
           dayIndex,
           ...(serviceType ? { serviceType } : {}),
+          campaignLineId: day.campaignLineId ?? null,
+          assignmentDeliverableId: day.assignmentDeliverableId ?? null,
+          assignmentPostScheduleId: day.assignmentPostScheduleId ?? null,
         });
       }
       for (const extra of day.additionalDeliverables ?? []) {
@@ -327,6 +330,11 @@ export function syncScheduleAssignmentsFromMediaPlanData(
             week: week.week,
             dayIndex,
             ...(serviceType ? { serviceType } : {}),
+            campaignLineId: extra.campaignLineId ?? day.campaignLineId ?? null,
+            assignmentDeliverableId:
+              extra.assignmentDeliverableId ?? day.assignmentDeliverableId ?? null,
+            assignmentPostScheduleId:
+              extra.assignmentPostScheduleId ?? day.assignmentPostScheduleId ?? null,
           });
         }
       }

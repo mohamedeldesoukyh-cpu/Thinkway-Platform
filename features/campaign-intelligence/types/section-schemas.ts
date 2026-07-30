@@ -82,6 +82,10 @@ export type VendorSelectedReasoning = {
   serviceTypes?: string[];
   /** Primary ad / service type from quotation deliverables (e.g. "1× IG Reel"). */
   serviceLabel?: string;
+  /** Assignment PK when hydrated from campaign hierarchy (Release 2.1). */
+  campaignLineId?: string | null;
+  assignmentDeliverableId?: string | null;
+  assignmentPostScheduleId?: string | null;
   whySelected: string;
   whyNotAnother?: string;
   contribution?: string;

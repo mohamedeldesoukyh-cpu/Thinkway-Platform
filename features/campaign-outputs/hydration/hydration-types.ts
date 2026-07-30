@@ -40,6 +40,10 @@ export type SeedCreator = {
   country?: string;
   brandFit?: number;
   aiScore?: number;
+  /** Assignment PK — `campaign_lines.id` when seeded from campaign hierarchy. */
+  campaignLineId?: string | null;
+  assignmentDeliverableId?: string | null;
+  assignmentPostScheduleId?: string | null;
 };
 
 /** Source-agnostic normalized campaign inputs. Only fields the source knows are set. */

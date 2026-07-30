@@ -72,6 +72,19 @@
 - **UAT:** `docs/architecture/PRODUCTIVITY_NAVIGATION_UX_UAT.md` · Feature freeze remains for post-release polish only
 - **Backlog:** history search/export · keyboard conventions · richer nav context · history deep links
 
+## Enterprise Ops & Finance Architecture — APPROVED & FROZEN (2026-07-30)
+
+- Package: `docs/architecture/ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md`
+- Thesis: complete/harden existing ERP — no redesign
+- Decisions locked: multi Media Plans/campaign; CIO amendment chain; configurable milestones; credit notes; 1 VIO/creator; Convert enable after Prod smoke; post-start Commercial Revision → R3; Enterprise Timeline
+- **Release 2.1:** Media Plan ↔ Assignment Hardening — **IMPLEMENTATION ON `develop`**
+- Validation: `docs/architecture/RELEASE_2_1_ARCHITECTURE_VALIDATION.md` (**APPROVED**)
+- Implementation: `docs/architecture/RELEASE_2_1_IMPLEMENTATION.md` · UAT `RELEASE_2_1_UAT.md` · Timeline `ENTERPRISE_TIMELINE_CONTRACT.md`
+- Delivered: Assignment IDs on slots/facts/projections; ID-first Actual/Remaining; multi-plan list+selector; Timeline contract on `audit_logs`; grain lock guards
+- Tests: `npm run test:release-2-1`
+- **Untouched:** Commercial SSOT, Convert redesign, CIO/VIO/Invoice/Billing
+- Next: Dev soak → Preview → UAT → explicit Production approval
+
 ## Media Plan PDF calendar fit (shipped to Production)
 
 - Commit `869b0283` · Prod `dpl_941j3warcwr2gcQ4yC3FM4hva7n8` · `app.thinkwaymedia.com`
