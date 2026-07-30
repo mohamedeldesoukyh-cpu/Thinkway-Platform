@@ -1824,6 +1824,22 @@
   flex-direction: column;
   gap: 12px;
   padding-bottom: 8px;
+  align-items: stretch;
+}
+
+/*
+ * Flex column + default flex-shrink:1 was crushing every creator card to ~2px
+ * (overflow:hidden then clipped the real 240px row). Cards must not shrink;
+ * the list scrolls instead.
+ */
+.commercial-workspace-dialog .cw-card-list > .quotation-creator-card {
+  flex: 0 0 auto;
+  min-height: min-content;
+  overflow: visible;
+}
+
+.commercial-workspace-dialog .cw-card-list > .quotation-creator-card .cw-card-row {
+  min-height: 72px;
 }
 
 .commercial-workspace-dialog .cw-kpi-inner,
