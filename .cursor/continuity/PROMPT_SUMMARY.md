@@ -82,8 +82,10 @@
 - Commits: `9d25a65f` · `7eaf219` · `388bab6c` · docs `35086130`
 - Package/UAT archived under `docs/architecture/RELEASE_2_1_*`
 - Redis latency warning on Prod Ops Center remains INFRA (not R2.1 defect)
-- **`develop` reopened for Release 2.2 — Client IO Enterprise Completion**
-- Next: kick off R2.2 per `ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md` §12 (CIO amendments, milestones, Timeline CIO events)
+- **`develop` reopened for Release 2.2 — Client IO Enterprise Completion** (no scope expansion)
+- **R2.2a Planning Board** architecture **APPROVED** (2026-07-31): [`RELEASE_2_2A_PLANNING_BOARD_ARCHITECTURE.md`](../../docs/architecture/RELEASE_2_2A_PLANNING_BOARD_ARCHITECTURE.md) — Assignment view only; same mutation engine; Commercial Workspace UX; Copilot deferred
+- **R2.2b Media Plan Copilot** architecture **APPROVED** (follow-on): NL → validate → same schedule service → Review Mode → Timeline; no direct UI writes
+- Next: Product chooses kickoff order — R2.2 CIO impl and/or R2.2a Planning Board impl package (coding only after explicit kickoff)
 
 ## Media Plan PDF calendar fit (shipped to Production)
 

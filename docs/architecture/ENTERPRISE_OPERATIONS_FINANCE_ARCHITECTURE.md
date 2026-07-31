@@ -757,7 +757,7 @@ flowchart LR
 
 ## 12. Release roadmap (approved sequence)
 
-> Architecture is **frozen**. **Release 2.1 is Production Complete** (2026-07-31, tag `v2.1.0`). Next implementation slice is **Release 2.2**. Later slices require their own implementation kickoff. Production convert enablement remains approved **after final Prod smoke** when that work ships.
+> Architecture is **frozen**. **Release 2.1 is Production Complete** (2026-07-31, tag `v2.1.0`). Next implementation slice is **Release 2.2** (Client IO). **Release 2.2a** (Planning Board) and **2.2b** (Media Plan Copilot) are approved as separate slices — see [`RELEASE_2_2A_PLANNING_BOARD_ARCHITECTURE.md`](./RELEASE_2_2A_PLANNING_BOARD_ARCHITECTURE.md). Production convert enablement remains approved **after final Prod smoke** when that work ships.
 
 ### Release 2.1 — Media Plan ↔ Assignment hardening — **COMPLETE (Production)**
 
@@ -779,6 +779,28 @@ flowchart LR
 | **Testing** | Document parity; amendment history; finance-lock; milestone configs |
 | **UAT** | Finance + AM |
 | **Prod rollout** | Explicit approval |
+| **Scope rule** | **No expansion** — Planning Board / Copilot are **not** part of 2.2 |
+
+### Release 2.2a — Media Plan Planning Board — **APPROVED (architecture)**
+
+| | |
+|---|---|
+| **Status** | Architecture approved 2026-07-31 · implementation pending kickoff |
+| **Scope** | Commercial Workspace–style Planning Board; DnD + multi-select + deliverable-level move + bulk Move; same Assignment mutation engine as Calendar; Timeline audit; 300–1,000 creator performance |
+| **Package** | [`RELEASE_2_2A_PLANNING_BOARD_ARCHITECTURE.md`](./RELEASE_2_2A_PLANNING_BOARD_ARCHITECTURE.md) |
+| **Dependencies** | 2.1 Assignment IDs + grain guards |
+| **Non-goals** | New tables; sync layer; Copilot (→ 2.2b); CIO scope |
+| **Prod rollout** | Explicit approval after own UAT |
+
+### Release 2.2b — AI Copilot for Media Plan Scheduling — **APPROVED (architecture)**
+
+| | |
+|---|---|
+| **Status** | Architecture approved 2026-07-31 · after 2.2a stable |
+| **Scope** | NL → intent → resolve → validate → **same scheduling service** → Timeline → UI refresh; **AI Review Mode** before confirm; never direct UI mutation |
+| **Package** | See §8 in [`RELEASE_2_2A_PLANNING_BOARD_ARCHITECTURE.md`](./RELEASE_2_2A_PLANNING_BOARD_ARCHITECTURE.md) |
+| **Dependencies** | 2.2a Planning Board + shared mutation path |
+| **Prod rollout** | Explicit approval after own UAT |
 
 ### Release 2.3 — Vendor IO + Billing completion
 
