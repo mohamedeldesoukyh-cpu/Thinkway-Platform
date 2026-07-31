@@ -5,6 +5,12 @@ export type IoApprovalOutcomeCode =
   | "superseded"
   | "invalid";
 
+/** Outcomes returned when approval cannot proceed (or must stop with an error page). */
+export type IoApprovalFailureCode = Exclude<
+  IoApprovalOutcomeCode,
+  "approved" | "already_approved"
+>;
+
 export type IoApprovalOutcomeView = {
   code: IoApprovalOutcomeCode;
   title: string;
@@ -46,10 +52,15 @@ export function getIoApprovalOutcomeView(
   return { code, ...OUTCOMES[code] };
 }
 
-/** Map Postgres exception text / ERRCODE-style markers to UX codes. */
-export function mapApprovalRpcErrorToOutcome(message: string | null | undefined): IoApprovalOutcomeCode {
+/**
+ * Map Postgres exception text / ERRCODE-style markers to failure UX codes.
+ * Already-approved is returned as a successful RPC payload (`already_approved: true`),
+ * not as an exception — so it is not part of this mapper.
+ */
+export function mapApprovalRpcErrorToOutcome(
+  message: string | null | undefined
+): IoApprovalFailureCode {
   const normalized = (message ?? "").toUpperCase();
-  if (normalized.includes("APPROVAL_ALREADY_APPROVED")) return "already_approved";
   if (normalized.includes("APPROVAL_EXPIRED")) return "expired";
   if (normalized.includes("APPROVAL_SUPERSEDED")) return "superseded";
   if (normalized.includes("APPROVAL_INVALID")) return "invalid";

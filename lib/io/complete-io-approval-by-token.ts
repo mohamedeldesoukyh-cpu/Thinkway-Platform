@@ -8,7 +8,7 @@ import { VENDOR_IO_DOCUMENTS_BUCKET } from "@/lib/io/vendor-io-document-service"
 import { downloadIoDocumentBuffer } from "@/lib/io/io-document-storage";
 import {
   mapApprovalRpcErrorToOutcome,
-  type IoApprovalOutcomeCode,
+  type IoApprovalFailureCode,
 } from "@/lib/io/io-approval-outcomes";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { emitEnterpriseTimelineEvent } from "@/lib/timeline/emit-enterprise-timeline-event";
@@ -22,7 +22,7 @@ export type OneClickApprovalResult =
     }
   | {
       ok: false;
-      outcome: Exclude<IoApprovalOutcomeCode, "approved" | "already_approved">;
+      outcome: IoApprovalFailureCode;
       documentNumber?: string | null;
     };
 

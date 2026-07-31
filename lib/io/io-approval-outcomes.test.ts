@@ -7,11 +7,7 @@ import {
 } from "@/lib/io/io-approval-outcomes";
 
 describe("io approval outcomes", () => {
-  it("maps RPC markers to friendly outcome codes", () => {
-    assert.equal(
-      mapApprovalRpcErrorToOutcome("APPROVAL_ALREADY_APPROVED"),
-      "already_approved"
-    );
+  it("maps RPC markers to failure outcome codes", () => {
     assert.equal(mapApprovalRpcErrorToOutcome("APPROVAL_EXPIRED"), "expired");
     assert.equal(
       mapApprovalRpcErrorToOutcome("APPROVAL_SUPERSEDED"),
