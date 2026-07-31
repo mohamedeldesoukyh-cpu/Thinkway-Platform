@@ -22,8 +22,8 @@ export default function DashboardLayout({
   return (
     <InternalWorkspaceGate>
       <DashboardProviders>
-        <div className="relative flex min-h-svh bg-background text-foreground">
-          <div className="thinkway-platform-shell flex min-h-svh min-w-0 flex-1 overflow-hidden">
+        <div className="relative flex h-full min-h-0 bg-background text-foreground">
+          <div className="thinkway-platform-shell flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
             <Suspense
               fallback={<CollapsibleAppSidebar userEmail={null} />}
             >

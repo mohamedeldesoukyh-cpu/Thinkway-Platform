@@ -74,7 +74,11 @@ export function ClientIoSendControls({
       {!hasDocument ? (
         <span className="text-[11px] text-muted-foreground">Generate document first</span>
       ) : recipientCount === 0 ? (
-        <span className="text-[11px] text-muted-foreground">Add recipients above</span>
+        <span className="text-[11px] text-muted-foreground">
+          {compact
+            ? "Open Client IO tab → add recipients → Save draft"
+            : "Add recipients above, then Save draft"}
+        </span>
       ) : null}
     </form>
   );

@@ -140,7 +140,7 @@ export default function RootLayout({
       </head>
       <body
         suppressHydrationWarning
-        className="flex min-h-full flex-col bg-background text-foreground"
+        className="flex h-svh max-h-svh flex-col overflow-hidden bg-background text-foreground"
       >
         <div id="pwa-splash" aria-hidden="true">
           {/* Splash must paint before hydration; next/image is unsuitable here. */}
@@ -155,7 +155,13 @@ export default function RootLayout({
         </div>
         <AppProviders>
           <EnvironmentBannerSlot />
-          {children}
+          {/*
+            Banner is shrink-0 above this region. App shells must use h-full/min-h-0
+            (not 100svh) so campaign chrome never slides under the orange bar.
+          */}
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+            {children}
+          </div>
         </AppProviders>
       </body>
     </html>

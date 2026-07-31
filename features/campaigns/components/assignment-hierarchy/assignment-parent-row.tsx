@@ -102,7 +102,8 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
         OPERATIONAL_TABLE_SURFACE,
         rowClass,
         focused && "ring-1 ring-inset ring-primary/20",
-        expanded && cn("sticky top-[36px] z-[5] border-b-0 shadow-sm", OPERATIONAL_TABLE_SURFACE)
+        // Sticky within campaign scrollport (banner is outside this region).
+        expanded && cn("sticky top-0 z-[5] border-b-0 shadow-sm", OPERATIONAL_TABLE_SURFACE)
       )}
     >
       {enableExpansion ? (

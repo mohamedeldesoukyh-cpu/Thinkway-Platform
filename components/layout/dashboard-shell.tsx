@@ -81,7 +81,8 @@ export function DashboardShell({
     <div
       className={cn(
         "flex min-h-0 min-w-0 flex-1 flex-col",
-        containedMain && "h-svh max-h-svh overflow-hidden"
+        // Fill remaining viewport under the environment banner (root flex chain).
+        containedMain && "h-full max-h-full min-h-0 overflow-hidden"
       )}
     >
         {!immersiveLayout ? (

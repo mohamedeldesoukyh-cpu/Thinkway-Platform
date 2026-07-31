@@ -25,7 +25,7 @@ function EnvironmentBannerFallback() {
   return (
     <div
       role="status"
-      className="sticky top-0 z-[100] flex min-h-9 w-full items-center border-b border-slate-500/30 bg-slate-600 px-3 py-1.5 text-xs font-medium text-white"
+      className="relative z-[100] flex min-h-9 w-full shrink-0 items-center border-b border-slate-500/30 bg-slate-600 px-3 py-1.5 text-xs font-medium text-white"
     >
       <span className="uppercase tracking-wide">{config.label}</span>
     </div>

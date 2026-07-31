@@ -44,7 +44,9 @@ export function EnvironmentBanner({
       role="status"
       aria-label={`Thinkway ${label} environment`}
       className={cn(
-        "sticky top-0 z-[100] flex min-h-9 w-full items-center justify-between gap-3 border-b px-3 py-1.5 text-xs font-medium sm:px-4",
+        // Flow layout (not sticky): reserves height so dashboard h-full shells
+        // sit below the bar instead of overlapping it.
+        "relative z-[100] flex min-h-9 w-full shrink-0 items-center justify-between gap-3 border-b px-3 py-1.5 text-xs font-medium sm:px-4",
         SURFACE_CLASS[surface],
       )}
     >
