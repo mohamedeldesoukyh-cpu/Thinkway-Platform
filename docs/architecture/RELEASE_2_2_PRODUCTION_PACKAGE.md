@@ -1,12 +1,14 @@
 # Release 2.2 — Production Review Package
 
 **Status:** 🚀 **Deployed to Production** · ⏸ **Release Closure PAUSED — OPS-EMAIL gate**  
+**Product ratification (2026-07-31):** Production deployment **accepted**; **do not** tag `v2.2.0` or mark Production Complete until E1–E7 pass.  
 **Feature Freeze:** ✅ Approved 2026-07-31 (Product)  
 **Interactive UAT:** ✅ Approved 2026-07-31  
 **Production Approval:** ✅ Authorized 2026-07-31  
 **Production tip:** `db7c8064` · deploy `dpl_GemydYz7E7J5BFwjfoqPeok8NpzW` · `app.thinkwaymedia.com`  
 **Production Supabase:** `ienowhwfyxoqtzbgltno` (aligned)  
 **Preview:** `https://dev.thinkwaymedia.com` · Dev Supabase `hsxrewjcbvmbkqdlzjhs`  
+**Tag `v2.2.0`:** ⛔ Blocked until OPS-EMAIL complete  
 **Parent architecture:** [`ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md`](./ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md)  
 **UAT:** [`RELEASE_2_2_UAT.md`](./RELEASE_2_2_UAT.md)  
 **Implementation:** [`RELEASE_2_2_IMPLEMENTATION.md`](./RELEASE_2_2_IMPLEMENTATION.md)  
@@ -158,7 +160,27 @@ Full evidence: [`RELEASE_2_2_UAT.md`](./RELEASE_2_2_UAT.md).
 | Ops Center Integrations | **SMTP (Email)** score 50 · **Resend (Email)** score 50 — not configured |
 | Action | **Release Closure paused** per Production Authorization sequence. App deploy + DB migrations remain live; outbound Client IO email will fail until secrets are added and redeployed/revalidated |
 
-**Required next step (Product / Ops):** Add Production Gmail OAuth secrets to Vercel Production, redeploy or restart as needed, then complete E2–E7 on a **controlled** recipient (do not send to live client contacts such as Arab Bank recipients during verification).
+**Required next step (Product / Ops):** Configure Production email on Vercel Production — preferred Gmail OAuth (`GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, recommended `GMAIL_FROM_EMAIL`) **or** the intended Production SMTP/provider stack — then resume closure.
+
+**Resume sequence (normative):**
+
+1. Verify provider healthy (E1)  
+2. Send Client IO to a **controlled internal test recipient** (not a live customer unless separately approved)  
+3. Verify delivery, rendering, approval link, approval workflow, Timeline, status transitions (E2–E7)  
+4. Complete remaining Production smoke (S3–S8, S10)  
+5. Only then: tag `v2.2.0` · mark Production Complete · close release · reopen roadmap for **Release 2.2a – Planning Board**
+
+### OPS-EMAIL evidence table (fill on resume — required before tag)
+
+| Test | Result |
+|---|---|
+| E1 – Provider configured | ⏸ Pending |
+| E2 – Test email delivered | ⏸ Pending |
+| E3 – Rendering correct | ⏸ Pending |
+| E4 – Approval link valid | ⏸ Pending |
+| E5 – Approval successful | ⏸ Pending |
+| E6 – Timeline emitted | ⏸ Pending |
+| E7 – Status transitioned correctly | ⏸ Pending |
 
 | # | Check | Expect | Done |
 |---|---|---|---|
@@ -166,9 +188,9 @@ Full evidence: [`RELEASE_2_2_UAT.md`](./RELEASE_2_2_UAT.md).
 | E2 | Send Client IO from a Production tip to a controlled recipient | `delivery_status` success (or provider-accepted) | ⏸ Blocked by E1 |
 | E3 | Email template renders (branding, amounts, campaign identity) | Readable; no broken placeholders | ⏸ |
 | E4 | Approval link / token URL works on Production host | Opens `/io-approval/client`; approves **current tip** | ⏸ |
-| E5 | Tip status after send | `under_client_review`; `sent_at` set | ⏸ |
-| E6 | Enterprise Timeline | Both `client_io.sent` and `client_io.under_client_review` visible | ⏸ |
-| E7 | `io_notifications` row | Present for send attempt with accurate delivery metadata | ⏸ |
+| E5 | Tip status after send / approve | `under_client_review` then `approved` as exercised | ⏸ |
+| E6 | Enterprise Timeline | `client_io.sent` + `client_io.under_client_review` (+ approve when exercised) | ⏸ |
+| E7 | `io_notifications` / delivery metadata | Present and accurate | ⏸ |
 
 If E2 fails on Production, **stop Release Closure** and treat as release-critical ops fix (not a Feature Freeze reopen for product scope).
 

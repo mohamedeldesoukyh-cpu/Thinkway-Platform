@@ -82,15 +82,12 @@
 - Commits: `9d25a65f` · `7eaf219` · `388bab6c` · docs `35086130`
 - Package/UAT archived under `docs/architecture/RELEASE_2_1_*`
 - Redis latency warning on Prod Ops Center remains INFRA (not R2.1 defect)
-- **Release 2.2 — Client IO Enterprise Completion — Deployed · Closure PAUSED (OPS-EMAIL)**
-- Prod tip `db7c8064` · deploy `dpl_GemydYz7E7J5BFwjfoqPeok8NpzW` · `app.thinkwaymedia.com`
-- Prod Supabase `ienowhwfyxoqtzbgltno` — 3 R2.2 migrations applied + verified
-- Architecture ✅ · UAT ✅ · Feature Freeze ✅ · Production Review ✅ · Deploy ✅
-- **OPS-EMAIL PAUSED:** Production Vercel missing `GMAIL_*` (Ops SMTP/Resend score 50) — do not tag `v2.2.0` yet
-- Package: [`RELEASE_2_2_PRODUCTION_PACKAGE.md`](../../docs/architecture/RELEASE_2_2_PRODUCTION_PACKAGE.md)
+- **Release 2.2 — Deployed · Closure PAUSED (OPS-EMAIL)** — Product ratified 2026-07-31
+- Prod tip `db7c8064` · `dpl_GemydYz7E7J5BFwjfoqPeok8NpzW` · `app.thinkwaymedia.com` · Supabase `ienowhwfyxoqtzbgltno`
+- Deploy ✅ · Migrations ✅ · Partial smoke ✅ · **OPS-EMAIL ❌** · Closure ⏸️ · **Do not tag `v2.2.0`**
+- Package: [`RELEASE_2_2_PRODUCTION_PACKAGE.md`](../../docs/architecture/RELEASE_2_2_PRODUCTION_PACKAGE.md) — E1–E7 evidence table required before closure
+- Next: Configure Prod `GMAIL_*` (or SMTP) → E1–E7 on internal recipient → remaining smoke → tag `v2.2.0` → reopen **2.2a Planning Board**
 - Suite: `npm run test:release-2-2` **17/17**
-- Next: Add Prod Gmail secrets → verify E1–E7 on controlled recipient → finish smoke → tag `v2.2.0` / Release Closure
-- **R2.2a / 2.2b** queued after closure
 
 ## Media Plan PDF calendar fit (shipped to Production)
 
