@@ -1,13 +1,12 @@
 # Release 2.2 — Production Review Package
 
-**Status:** ✅ **Production Review Approved** · 🚀 **Production deployment authorized** (2026-07-31)  
+**Status:** 🚀 **Deployed to Production** · ⏸ **Release Closure PAUSED — OPS-EMAIL gate**  
 **Feature Freeze:** ✅ Approved 2026-07-31 (Product)  
 **Interactive UAT:** ✅ Approved 2026-07-31  
-**Production Approval:** ✅ Authorized 2026-07-31 — sequence: migrations → deploy → OPS-EMAIL → smoke → closure  
-**Production deploy:** ⏳ In progress / pending execution evidence  
-**Release tip (develop):** `09f9b741` (+ docs commit)  
+**Production Approval:** ✅ Authorized 2026-07-31  
+**Production tip:** `db7c8064` · deploy `dpl_GemydYz7E7J5BFwjfoqPeok8NpzW` · `app.thinkwaymedia.com`  
+**Production Supabase:** `ienowhwfyxoqtzbgltno` (aligned)  
 **Preview:** `https://dev.thinkwaymedia.com` · Dev Supabase `hsxrewjcbvmbkqdlzjhs`  
-**Production target:** `https://app.thinkwaymedia.com` · Supabase `ienowhwfyxoqtzbgltno`  
 **Parent architecture:** [`ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md`](./ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md)  
 **UAT:** [`RELEASE_2_2_UAT.md`](./RELEASE_2_2_UAT.md)  
 **Implementation:** [`RELEASE_2_2_IMPLEMENTATION.md`](./RELEASE_2_2_IMPLEMENTATION.md)  
@@ -134,16 +133,16 @@ Full evidence: [`RELEASE_2_2_UAT.md`](./RELEASE_2_2_UAT.md).
 
 | # | Step | Done |
 |---|---|---|
-| 1 | Confirm Feature Freeze still in force (no unapproved functional commits on tip) | ☐ |
-| 2 | Confirm Production target Supabase `ienowhwfyxoqtzbgltno` (never Dev `hsxrewjcbvmbkqdlzjhs`) | ☐ |
-| 3 | Apply Production migrations (Dev-validated first): `20260731120000_release_2_2_client_io_composer.sql`, `20260731130000_release_2_2_client_io_amendments.sql`, `20260731140000_release_2_2_client_io_milestones_workflow.sql` | ☐ |
-| 4 | Verify Migration status on Production (tables/columns/enum present; no drift) | ☐ |
-| 5 | Merge approved tip `develop` → `main` (or approved PR) | ☐ |
-| 6 | Production deploy only after written approval (`[deploy-production]` or approved `vercel deploy --prod`) | ☐ |
-| 7 | Ops Center Production: environment = Production, Supabase aligned, git SHA matches release tip | ☐ |
-| 8 | **OPS-EMAIL:** Verify Gmail/SMTP credentials on Production (§8) | ☐ |
-| 9 | Run Production smoke checklist (§9) | ☐ |
-| 10 | Tag `v2.2.0` + record release notes + Ops evidence | ☐ |
+| 1 | Confirm Feature Freeze still in force (no unapproved functional commits on tip) | ✅ |
+| 2 | Confirm Production target Supabase `ienowhwfyxoqtzbgltno` (never Dev `hsxrewjcbvmbkqdlzjhs`) | ✅ |
+| 3 | Apply Production migrations: `20260731120000` · `20260731130000` · `20260731140000` | ✅ Applied 2026-07-31 via linked Production `db query` |
+| 4 | Verify schema on Production (`client_io_assignments`, milestones, snapshot, revision/root/superseded, `under_client_review`) | ✅ All present |
+| 5 | Merge approved tip `develop` → `main` | ✅ Fast-forward `93c311ae` → `db7c8064` |
+| 6 | Production deploy (`npx vercel deploy --prod` + promote) | ✅ `dpl_GemydYz7E7J5BFwjfoqPeok8NpzW` aliased to `app.thinkwaymedia.com` |
+| 7 | Ops Center Production: environment = Production, Supabase aligned, git SHA matches tip | ✅ `db7c806` · `ienowhwfyxoqtzbgltno` · Redis latency warning (INFRA) |
+| 8 | **OPS-EMAIL:** Verify Gmail/SMTP credentials on Production (§8) | ⏸ **PAUSED** — see §8 evidence |
+| 9 | Run Production smoke checklist (§9) | ⚠ Partial (UI smoke Pass; send/approve deferred pending email) |
+| 10 | Tag `v2.2.0` + record release notes + Ops evidence | ⛔ After OPS-EMAIL + remaining smoke |
 
 ---
 
@@ -151,15 +150,25 @@ Full evidence: [`RELEASE_2_2_UAT.md`](./RELEASE_2_2_UAT.md).
 
 > Product disposition: accepted on Preview as env/infra. **Production must prove delivery** before Release Closure.
 
+### Evidence (2026-07-31) — GATE FAILED / PAUSED
+
+| Finding | Detail |
+|---|---|
+| Vercel Production env | **No** `GMAIL_CLIENT_ID` / `GMAIL_CLIENT_SECRET` / `GMAIL_REFRESH_TOKEN` (or SMTP equivalents) present in `vercel env ls production` |
+| Ops Center Integrations | **SMTP (Email)** score 50 · **Resend (Email)** score 50 — not configured |
+| Action | **Release Closure paused** per Production Authorization sequence. App deploy + DB migrations remain live; outbound Client IO email will fail until secrets are added and redeployed/revalidated |
+
+**Required next step (Product / Ops):** Add Production Gmail OAuth secrets to Vercel Production, redeploy or restart as needed, then complete E2–E7 on a **controlled** recipient (do not send to live client contacts such as Arab Bank recipients during verification).
+
 | # | Check | Expect | Done |
 |---|---|---|---|
-| E1 | Production env has Gmail OAuth / SMTP secrets (`GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN` or current production mail stack) | Present + non-stale | ☐ |
-| E2 | Send Client IO from a Production (or Production-like) tip to a controlled recipient | `delivery_status` success (or provider-accepted) | ☐ |
-| E3 | Email template renders (branding, amounts, campaign identity) | Readable; no broken placeholders | ☐ |
-| E4 | Approval link / token URL works on Production host | Opens `/io-approval/client` (or current path); approves **current tip** | ☐ |
-| E5 | Tip status after send | `under_client_review`; `sent_at` set | ☐ |
-| E6 | Enterprise Timeline | Both `client_io.sent` and `client_io.under_client_review` visible | ☐ |
-| E7 | `io_notifications` row | Present for send attempt with accurate delivery metadata | ☐ |
+| E1 | Production env has Gmail OAuth / SMTP secrets (`GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN` or current production mail stack) | Present + non-stale | ❌ Missing |
+| E2 | Send Client IO from a Production tip to a controlled recipient | `delivery_status` success (or provider-accepted) | ⏸ Blocked by E1 |
+| E3 | Email template renders (branding, amounts, campaign identity) | Readable; no broken placeholders | ⏸ |
+| E4 | Approval link / token URL works on Production host | Opens `/io-approval/client`; approves **current tip** | ⏸ |
+| E5 | Tip status after send | `under_client_review`; `sent_at` set | ⏸ |
+| E6 | Enterprise Timeline | Both `client_io.sent` and `client_io.under_client_review` visible | ⏸ |
+| E7 | `io_notifications` row | Present for send attempt with accurate delivery metadata | ⏸ |
 
 If E2 fails on Production, **stop Release Closure** and treat as release-critical ops fix (not a Feature Freeze reopen for product scope).
 
@@ -167,19 +176,21 @@ If E2 fails on Production, **stop Release Closure** and treat as release-critica
 
 ## 9. Production smoke test checklist
 
-| # | Smoke | Expect |
-|---|---|---|
-| S1 | Open Campaign → Client IO on an Assignment-backed campaign | Tip loads; composer / history chrome present |
-| S2 | Ensure / load CIO tip | No crash; Convert still does **not** auto-create CIO |
-| S3 | Select Assignments → Generate (draft/safe fixture) | Document includes only selected lines; snapshot frozen |
-| S4 | Billing milestones on draft tip | Template save; totals ≠ 100% rejected |
-| S5 | Send → Under Client Review | Status + Timeline dual events (and email per §8) |
-| S6 | Token/portal Approve | Tip → `approved`; Timeline `client_io.approved` |
-| S7 | Create amendment (if fixture allows) | Prior superseded; new `/A{n}` tip; prior snap unchanged |
-| S8 | Re-open prior CIO version / document | Historical content unchanged (snapshot integrity) |
-| S9 | Media Plan / Assignments / Deliverables tabs | No regression |
-| S10 | Finance lock | Commercial amount edit blocked while CIO exists (expected) |
-| S11 | Ops Center | Production ↔ `ienowhwfyxoqtzbgltno`; build SHA = release tip |
+**Fixture used:** TW-2026-0001 (Arab Bank) — UI chrome only; **no Send** to live recipients.
+
+| # | Smoke | Expect | Result |
+|---|---|---|---|
+| S1 | Open Campaign → Client IO | Tip loads; composer / history chrome present | ✅ `CIO-2026-0001` · Assignment composer · milestones · version history |
+| S2 | Ensure / load CIO tip | No crash | ✅ |
+| S3 | Select Assignments → Generate | Selected-line docs + snapshot | ⏸ Deferred (avoid mutating live tip until email gate clear) |
+| S4 | Billing milestones UI | Templates visible | ✅ Templates + Save milestones chrome present |
+| S5 | Send → Under Client Review | Status + Timeline + email | ⏸ Blocked by OPS-EMAIL |
+| S6 | Token/portal Approve | Tip approved | ⏸ Blocked by OPS-EMAIL |
+| S7 | Create amendment | Prior superseded | ⏸ Requires sent/approved tip |
+| S8 | Prior document immutability | Snapshot stable | ⏸ After generate path exercised |
+| S9 | Assignments / Deliverables / Media Plan tabs | No regression | ✅ Counts load (5 / 14 / Media Plan link) |
+| S10 | Finance lock | Expected when CIO exists | ☐ Not re-probed on Prod write |
+| S11 | Ops Center | Prod ↔ `ienowhwfyxoqtzbgltno`; SHA = tip | ✅ `db7c806` · aligned · Redis latency warning INFRA |
 
 ---
 
@@ -224,9 +235,13 @@ If E2 fails on Production, **stop Release Closure** and treat as release-critica
 | Medium defects | ✅ Fixed or accepted (DEF-R22-03 → OPS-EMAIL) |
 | Schema / migration risk | ⚠ **Three additive migrations required on Production** |
 | Commercial / Finance blast radius | ✅ Controlled (CIO contract + lock; no invoice engine) |
-| Explicit Production Approval | ⛔ **Required before deploy** |
+| Explicit Production Approval | ✅ Received 2026-07-31 |
+| Production DB migrations | ✅ Applied |
+| Application deploy | ✅ Live `dpl_GemydYz7E7J5BFwjfoqPeok8NpzW` |
+| OPS-EMAIL | ⏸ **Blocked** — Gmail/SMTP secrets absent on Production |
+| Release Closure | ⛔ Paused until OPS-EMAIL + remaining smoke |
 
-**Recommendation:** **Ready for Production Approval review.** Do not deploy, merge to `main`, or apply Production migrations until Product authorizes Production.
+**Recommendation:** Application + schema are live. **Do not declare Production Complete / tag `v2.2.0` until OPS-EMAIL E1–E7 pass** and remaining smoke (S3/S5–S8) is completed on a controlled fixture.
 
 ---
 
@@ -243,8 +258,10 @@ If E2 fails on Production, **stop Release Closure** and treat as release-critica
 | Feature Freeze | ✅ Approved |
 | Production Review Package | ✅ Approved |
 | Production Approval | ✅ Authorized 2026-07-31 |
-| Production Deployment | ⏳ Contingent on migrations → deploy → OPS-EMAIL → smoke |
-| Production Smoke | ⏳ Pending post-deploy |
-| Release Closure | ⛔ Only after post-deploy checks pass |
+| Production DB migrations | ✅ Complete |
+| Production Deployment | ✅ Live (`db7c8064` / `dpl_GemydYz7E7J5BFwjfoqPeok8NpzW`) |
+| OPS-EMAIL | ⏸ Paused — secrets missing |
+| Production Smoke | ⚠ Partial |
+| Release Closure | ⛔ Blocked on OPS-EMAIL |
 
 **Merge policy after Feature Freeze:** No further functional enhancements into Release 2.2. Only release-critical deployment fixes arising during Production Review may be considered.
