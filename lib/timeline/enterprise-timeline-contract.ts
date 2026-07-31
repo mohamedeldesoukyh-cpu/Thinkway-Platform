@@ -28,7 +28,15 @@ export type EnterpriseTimelineEventType =
   | "performance.updated"
   | "commercial.revision"
   | "invoice.issued"
-  | "payment.received";
+  | "payment.received"
+  | "client_io.generated"
+  | "client_io.sent"
+  | "client_io.under_client_review"
+  | "client_io.approved"
+  | "client_io.rejected"
+  | "client_io.amendment_created"
+  | "client_io.superseded"
+  | "client_io.cancelled";
 
 export const ENTERPRISE_TIMELINE_EVENT_LABELS: Record<
   EnterpriseTimelineEventType,
@@ -54,6 +62,14 @@ export const ENTERPRISE_TIMELINE_EVENT_LABELS: Record<
   "commercial.revision": "Commercial revision",
   "invoice.issued": "Invoice issued",
   "payment.received": "Payment received",
+  "client_io.generated": "Client IO generated",
+  "client_io.sent": "Client IO sent",
+  "client_io.under_client_review": "Client IO under client review",
+  "client_io.approved": "Client IO approved",
+  "client_io.rejected": "Client IO rejected",
+  "client_io.amendment_created": "Client IO amendment created",
+  "client_io.superseded": "Client IO superseded",
+  "client_io.cancelled": "Client IO cancelled",
 };
 
 /**
@@ -73,6 +89,8 @@ export type EnterpriseTimelineEventMetadata = {
   assignment_post_schedule_id?: string | null;
   media_plan_id?: string | null;
   campaign_object_id?: string | null;
+  client_io_id?: string | null;
+  selected_assignment_ids?: string[] | null;
   version?: number | null;
   module?: string;
 };
@@ -132,6 +150,8 @@ export function buildEnterpriseTimelineMetadata(
     assignment_post_schedule_id: partial.assignment_post_schedule_id ?? null,
     media_plan_id: partial.media_plan_id ?? null,
     campaign_object_id: partial.campaign_object_id ?? null,
+    client_io_id: partial.client_io_id ?? null,
+    selected_assignment_ids: partial.selected_assignment_ids ?? null,
     version: partial.version ?? null,
     module: partial.module,
   };

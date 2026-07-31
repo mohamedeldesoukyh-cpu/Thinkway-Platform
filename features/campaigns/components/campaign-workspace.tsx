@@ -430,6 +430,17 @@ export function CampaignWorkspaceView({
                 recipients={workspace.client_io_send_recipients}
                 sendHistory={workspace.client_io_send_history}
                 senderName={workspace.client_io_sender_name}
+                currencyCode={workspace.currency_code}
+                assignments={workspace.lines.map((line) => ({
+                  id: line.id,
+                  document_number: line.document_number,
+                  name: line.name,
+                  influencer_name: line.influencer_name,
+                  revenue_before_vat: line.revenue_before_vat,
+                  currency_code: workspace.currency_code,
+                }))}
+                versions={workspace.client_io_versions ?? []}
+                milestones={workspace.client_io_milestones ?? []}
               />
             </TabErrorBoundary>
           </CampaignWorkspaceTabPanel>

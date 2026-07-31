@@ -1,3 +1,4 @@
+import type { ClientIoMilestoneDraft } from "@/lib/io/client-io-milestones";
 import type { ClientIoTerm } from "@/lib/io/client-io-terms";
 
 export type ClientIoAgencyContact = {
@@ -46,6 +47,8 @@ export type ClientIoDocumentData = {
   currencyCode: string;
   status: string;
   paymentSchedule: string | null;
+  /** Release 2.2 — configured billing milestones (schedule only). */
+  billingMilestones: ClientIoMilestoneDraft[];
   agencyContact: ClientIoAgencyContact;
   terms: ClientIoTerm[];
   client: {

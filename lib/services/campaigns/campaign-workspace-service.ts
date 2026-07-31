@@ -15,6 +15,8 @@ import {
   getClientIoSendHistory,
   getClientIoSendRecipients,
 } from "@/lib/io/campaign-io-queries";
+import { fetchClientIoVersionHistory } from "@/lib/io/client-io-query";
+import { listClientIoMilestones } from "@/lib/io/client-io-milestones-service";
 import { buildActiveVendorIoLinkMap } from "@/lib/io/vendor-io-active-link";
 import { buildActiveVendorIoDocumentMap } from "@/lib/io/vendor-io-document-map";
 import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
@@ -640,6 +642,12 @@ export async function getCampaignWorkspace(
     ? await getClientIoSendRecipients(clientIo.client_id)
     : [];
   const clientIoSendHistory = clientIo ? await getClientIoSendHistory(clientIo.id) : [];
+  const clientIoVersions = clientIo
+    ? await fetchClientIoVersionHistory(supabase, clientIo).catch(() => [])
+    : [];
+  const clientIoMilestones = clientIo
+    ? await listClientIoMilestones(supabase, clientIo.id).catch(() => [])
+    : [];
 
   const { data: currentProfile } = await supabase
     .from("profiles")
@@ -772,6 +780,8 @@ export async function getCampaignWorkspace(
     }),
     blockers,
     client_io: clientIo,
+    client_io_versions: clientIoVersions,
+    client_io_milestones: clientIoMilestones,
     client_io_send_recipients: clientIoSendRecipients,
     client_io_send_history: clientIoSendHistory,
     client_io_sender_name: clientIoSenderName,

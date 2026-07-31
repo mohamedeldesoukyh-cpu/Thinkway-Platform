@@ -27,3 +27,18 @@ test("buildEnterpriseTimelineMetadata normalizes Assignment-aware payload", () =
   assert.equal(meta.label, "Assignment created");
   assert.equal(meta.campaign_line_id, "line-1");
 });
+
+test("buildEnterpriseTimelineMetadata labels Client IO generated events", () => {
+  const meta = buildEnterpriseTimelineMetadata({
+    event: "client_io.generated",
+    summary: "Client IO CIO-2026-0001 generated (2 Assignments)",
+    campaign_id: "camp-1",
+    campaign_header_id: "camp-1",
+    client_io_id: "cio-1",
+    selected_assignment_ids: ["line-1", "line-2"],
+    module: "client_io",
+  });
+  assert.equal(meta.label, "Client IO generated");
+  assert.equal(meta.client_io_id, "cio-1");
+  assert.deepEqual(meta.selected_assignment_ids, ["line-1", "line-2"]);
+});

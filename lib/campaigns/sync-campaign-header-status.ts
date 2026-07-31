@@ -45,7 +45,13 @@ export function isClientIoGenerated(row: ClientIoGenerationSignals | null): bool
   }
 
   const status = row.status?.toLowerCase() ?? "";
-  if (status === "generated" || status === "sent" || status === "approved") {
+  if (
+    status === "generated" ||
+    status === "sent" ||
+    status === "under_client_review" ||
+    status === "approved" ||
+    status === "rejected"
+  ) {
     return true;
   }
 
@@ -213,8 +219,11 @@ export async function loadCampaignHeaderStatusSignals(
   const [clientIoResult, vendorIoCount, lines] = await Promise.all([
     supabase
       .from("client_ios")
-      .select("status, sent_at, attachment_url, terms_html")
+      .select("status, sent_at, attachment_url, terms_html, is_superseded")
       .eq("campaign_header_id", campaignHeaderId)
+      .eq("is_superseded", false)
+      .order("revision_number", { ascending: false })
+      .limit(1)
       .maybeSingle(),
     countGeneratedVendorIos(supabase, campaignHeaderId),
     lineSnapshots
@@ -222,14 +231,23 @@ export async function loadCampaignHeaderStatusSignals(
       : loadCampaignLineBillingSnapshots(supabase, campaignHeaderId),
   ]);
 
+  let clientIoSignals = clientIoResult.data as ClientIoGenerationSignals | null;
   if (clientIoResult.error) {
-    throw new Error(clientIoResult.error.message);
+    // Pre-2.2.B schemas may lack is_superseded — fall back to single-row lookup.
+    if (!clientIoResult.error.message.toLowerCase().includes("is_superseded")) {
+      throw new Error(clientIoResult.error.message);
+    }
+    const legacy = await supabase
+      .from("client_ios")
+      .select("status, sent_at, attachment_url, terms_html")
+      .eq("campaign_header_id", campaignHeaderId)
+      .maybeSingle();
+    if (legacy.error) throw new Error(legacy.error.message);
+    clientIoSignals = legacy.data as ClientIoGenerationSignals | null;
   }
 
   return {
-    hasGeneratedClientIo: isClientIoGenerated(
-      clientIoResult.data as ClientIoGenerationSignals | null
-    ),
+    hasGeneratedClientIo: isClientIoGenerated(clientIoSignals),
     hasGeneratedVendorIo: isVendorIoGenerated(vendorIoCount),
     fullyInvoiced: isCampaignFullyInvoicedFromLines(lines),
   };
@@ -318,21 +336,31 @@ export async function syncCampaignHeaderStatusesForList(
   const [clientIosResult, vendorCounts] = await Promise.all([
     supabase
       .from("client_ios")
-      .select("campaign_header_id, status, sent_at, attachment_url")
-      .in("campaign_header_id", campaignIds),
+      .select("campaign_header_id, status, sent_at, attachment_url, is_superseded, revision_number")
+      .in("campaign_header_id", campaignIds)
+      .eq("is_superseded", false),
     loadVendorIoCountsByCampaign(supabase, campaignIds),
   ]);
 
   if (clientIosResult.error) {
-    throw new Error(clientIosResult.error.message);
+    if (!clientIosResult.error.message.toLowerCase().includes("is_superseded")) {
+      throw new Error(clientIosResult.error.message);
+    }
   }
 
-  const clientIoByCampaign = new Map(
-    (clientIosResult.data ?? []).map((row) => {
-      const typed = row as ClientIoGenerationSignals & { campaign_header_id: string };
-      return [typed.campaign_header_id, typed] as const;
-    })
-  );
+  const clientIoByCampaign = new Map<string, ClientIoGenerationSignals>();
+  for (const row of clientIosResult.data ?? []) {
+    const typed = row as ClientIoGenerationSignals & {
+      campaign_header_id: string;
+      revision_number?: number | null;
+    };
+    const existing = clientIoByCampaign.get(typed.campaign_header_id) as
+      | (ClientIoGenerationSignals & { revision_number?: number | null })
+      | undefined;
+    if (!existing || Number(typed.revision_number ?? 0) >= Number(existing.revision_number ?? 0)) {
+      clientIoByCampaign.set(typed.campaign_header_id, typed);
+    }
+  }
 
   const updates: Array<PromiseLike<unknown>> = [];
 

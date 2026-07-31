@@ -9,6 +9,15 @@ import {
   deliverableLabel,
   parseLineAssignment,
 } from "@/lib/campaigns/line-assignment";
+import { listClientIoAssignmentIds } from "@/lib/io/client-io-assignments";
+import {
+  filterLinesBySelectedIds,
+  isClientIoAssignmentSnapshotV1,
+  type ClientIoAssignmentSnapshotDeliverable,
+  type ClientIoAssignmentSnapshotLine,
+} from "@/lib/io/client-io-assignment-snapshot";
+import { formatClientIoMilestonesPaymentSchedule } from "@/lib/io/client-io-milestones";
+import { listClientIoMilestones } from "@/lib/io/client-io-milestones-service";
 import { CLIENT_IO_DEFAULT_TERMS } from "@/lib/io/client-io-default-terms";
 import {
   parseTermsText,
@@ -22,6 +31,11 @@ import type {
   ClientIoDocumentData,
 } from "@/lib/io/client-io-document-types";
 import { computeVatLine, roundMoney } from "@/lib/vat/calculations";
+
+export type LoadClientIoDocumentDataOptions = {
+  /** Use live Assignments (composer / generate). Default: prefer issued snapshot when present. */
+  forceLive?: boolean;
+};
 
 function unwrapRelation<T>(value: T | T[] | null | undefined): T | null {
   if (value == null) return null;
@@ -153,15 +167,31 @@ function buildCampaignPricing(
 export async function loadClientIoDocumentData(
   supabase: SupabaseClient,
   clientIoId: string,
-  actorId?: string
+  actorId?: string,
+  options?: LoadClientIoDocumentDataOptions
 ): Promise<ClientIoDocumentData> {
-  const { data: clientIo, error: cioError } = await supabase
+  let clientIoResult = await supabase
     .from("client_ios")
     .select(
-      "id, document_number, status, billing_terms, terms_text, created_at, campaign_header_id, client_id"
+      "id, document_number, status, billing_terms, terms_text, created_at, campaign_header_id, client_id, assignment_snapshot"
     )
     .eq("id", clientIoId)
     .single();
+
+  if (
+    clientIoResult.error &&
+    clientIoResult.error.message.toLowerCase().includes("assignment_snapshot")
+  ) {
+    clientIoResult = await supabase
+      .from("client_ios")
+      .select(
+        "id, document_number, status, billing_terms, terms_text, created_at, campaign_header_id, client_id"
+      )
+      .eq("id", clientIoId)
+      .single();
+  }
+
+  const { data: clientIo, error: cioError } = clientIoResult;
 
   if (cioError || !clientIo) {
     throw new Error(cioError?.message ?? "Client IO not found");
@@ -176,7 +206,17 @@ export async function loadClientIoDocumentData(
     created_at: string;
     campaign_header_id: string;
     client_id: string;
+    assignment_snapshot?: unknown;
   };
+
+  const selectedAssignmentIds = await listClientIoAssignmentIds(supabase, clientIoId);
+  const snapshot = isClientIoAssignmentSnapshotV1(typedCio.assignment_snapshot)
+    ? typedCio.assignment_snapshot
+    : null;
+  const useSnapshot =
+    !options?.forceLive &&
+    snapshot != null &&
+    typedCio.status !== "draft";
 
   const profilePromise = actorId
     ? supabase
@@ -202,13 +242,15 @@ export async function loadClientIoDocumentData(
       )
       .eq("id", typedCio.client_id)
       .single(),
-    supabase
-      .from("campaign_lines")
-      .select(
-        "id, document_number, name, metadata, revenue_before_vat, revenue, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, currency_code, sort_order"
-      )
-      .eq("campaign_header_id", typedCio.campaign_header_id)
-      .order("sort_order", { ascending: true }),
+    useSnapshot
+      ? Promise.resolve({ data: null, error: null })
+      : supabase
+          .from("campaign_lines")
+          .select(
+            "id, document_number, name, metadata, revenue_before_vat, revenue, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, currency_code, sort_order"
+          )
+          .eq("campaign_header_id", typedCio.campaign_header_id)
+          .order("sort_order", { ascending: true }),
     profilePromise,
   ]);
 
@@ -270,18 +312,61 @@ export async function loadClientIoDocumentData(
     currency_code: string;
   };
 
-  const typedLines = (lines ?? []) as LineRow[];
-  const lineIds = typedLines.map((line) => line.id);
+  type DeliverableRow = {
+    platform: string;
+    deliverable_type: string;
+    quantity: number;
+    live_date: string | null;
+    campaign_line_id: string;
+    sort_order?: number | null;
+  };
 
-  const { data: deliverables } = lineIds.length
-    ? await supabase
-        .from("assignment_deliverables")
-        .select(
-          "platform, deliverable_type, quantity, live_date, campaign_line_id, sort_order"
-        )
-        .in("campaign_line_id", lineIds)
-        .order("sort_order", { ascending: true })
-    : { data: [] };
+  let typedLines: LineRow[];
+  let deliverables: DeliverableRow[];
+
+  if (useSnapshot && snapshot) {
+    typedLines = snapshot.lines.map((line: ClientIoAssignmentSnapshotLine) => ({
+      id: line.id,
+      document_number: line.document_number,
+      name: line.name,
+      metadata: line.metadata,
+      revenue_before_vat: line.revenue_before_vat,
+      revenue: line.revenue,
+      usage_rights_amount: line.usage_rights_amount,
+      agency_fee_amount: line.agency_fee_amount,
+      agency_fee_percent: line.agency_fee_percent,
+      revenue_vat_percent: line.revenue_vat_percent,
+      revenue_vat_exempt: line.revenue_vat_exempt,
+      currency_code: line.currency_code,
+    }));
+    deliverables = snapshot.deliverables.map(
+      (row: ClientIoAssignmentSnapshotDeliverable) => ({
+        platform: row.platform,
+        deliverable_type: row.deliverable_type,
+        quantity: row.quantity,
+        live_date: row.live_date,
+        campaign_line_id: row.campaign_line_id,
+        sort_order: row.sort_order,
+      })
+    );
+  } else {
+    const liveLines = filterLinesBySelectedIds(
+      (lines ?? []) as LineRow[],
+      selectedAssignmentIds
+    );
+    typedLines = liveLines;
+    const lineIds = typedLines.map((line) => line.id);
+    const { data: liveDeliverables } = lineIds.length
+      ? await supabase
+          .from("assignment_deliverables")
+          .select(
+            "platform, deliverable_type, quantity, live_date, campaign_line_id, sort_order"
+          )
+          .in("campaign_line_id", lineIds)
+          .order("sort_order", { ascending: true })
+      : { data: [] };
+    deliverables = (liveDeliverables ?? []) as DeliverableRow[];
+  }
 
   const lineContext = new Map<
     string,
@@ -305,7 +390,7 @@ export async function loadClientIoDocumentData(
     });
   }
 
-  const deliverableRows: ClientIoDeliverableRow[] = (deliverables ?? []).map((row) => {
+  const deliverableRows: ClientIoDeliverableRow[] = deliverables.map((row) => {
     const typed = row as {
       platform: string;
       deliverable_type: string;
@@ -340,10 +425,7 @@ export async function loadClientIoDocumentData(
   const mainAssignmentDeliverables: ClientIoDeliverableRow[] = typedLines.map((line) => {
     const assignment = parseLineAssignment(line.metadata);
     const platforms = assignment?.platforms ?? [];
-    const childRows = (deliverables ?? []).filter((row) => {
-      const typed = row as { campaign_line_id: string };
-      return typed.campaign_line_id === line.id;
-    });
+    const childRows = deliverables.filter((row) => row.campaign_line_id === line.id);
     const liveDates = childRows
       .map((row) => (row as { live_date: string | null }).live_date)
       .filter((value): value is string => Boolean(value))
@@ -434,7 +516,15 @@ export async function loadClientIoDocumentData(
     (typeof clientMetadata.contact_name === "string" && clientMetadata.contact_name.trim()) ||
     null;
 
+  let billingMilestones: Awaited<ReturnType<typeof listClientIoMilestones>> = [];
+  try {
+    billingMilestones = await listClientIoMilestones(supabase, typedCio.id);
+  } catch {
+    billingMilestones = [];
+  }
+
   const paymentSchedule =
+    formatClientIoMilestonesPaymentSchedule(billingMilestones) ||
     typedCio.billing_terms?.trim() ||
     formatPaymentTermsLabel(typedClient.payment_terms) ||
     "Advance — Prior to campaign launch";
@@ -465,6 +555,7 @@ export async function loadClientIoDocumentData(
     currencyCode,
     status: typedCio.status,
     paymentSchedule,
+    billingMilestones,
     agencyContact,
     terms,
     client: {

@@ -1,6 +1,6 @@
 # Release 2.2 — Client IO Enterprise Completion — Implementation Package
 
-**Status:** 📋 Implementation package ready — awaiting Product approval to start coding  
+**Status:** ✅ Development Complete · ✅ Architecture Validation **APPROVED** · ✅ Implementation Validation ready for Preview — see [`RELEASE_2_2_IMPLEMENTATION_VALIDATION.md`](./RELEASE_2_2_IMPLEMENTATION_VALIDATION.md)  
 **Parent:** [`ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md`](./ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md) (**APPROVED & FROZEN**)  
 **Depends on:** Release 2.1 Assignment IDs (`v2.1.0`)  
 **Out of scope:** Release 2.2a Planning Board · 2.2b Copilot · VIO/Billing execution (2.3) · Commercial Revision OS (3.0)  
@@ -33,9 +33,9 @@ Elevate Client IO from an operational PDF/email workflow into the **Ops↔Financ
 | **Internal approvals (optional)** | Existing `approvals` / `approval_steps` if Product wants AM→Finance internal gate | Wire optionally; not required for client-facing approve | Prefer extend over parallel workflow |
 | **Amendments** | **VIO revision/supersession pattern** (`revision_number`, root pointer, superseded flag) | CIO amendment chain + immutable prior docs | Append-only; never overwrite prior CIO content |
 | **Approval Flow** | Token/portal + status enum | Extend status language; audit each transition | Reuse where possible |
-| **Billing Milestones** | Existing commercial config patterns / terms snapshot where relevant | `client_io_billing_milestones` **or** versioned JSON on CIO — Product chooses at kickoff | **No billing engine / invoice eligibility execution in 2.2** (that is 2.3) |
-| **Timeline** | `audit_logs` + Enterprise Timeline contract (`lib/timeline/*`) | CIO event names: issued, sent, approved, amended, cancelled | Deep-link to CIO / amendment |
-| **Assignment Links** | `campaign_lines.id` (R2.1) | Composer selection store (junction or JSON on draft) | **No creator-name joins** for composition or commercial rollups |
+| **Billing Milestones** | Existing commercial config patterns / terms snapshot where relevant | Dedicated `client_io_billing_milestones` table (approved) | **No billing engine / invoice eligibility execution in 2.2** (that is 2.3) |
+| **Timeline** | `audit_logs` + Enterprise Timeline contract (`lib/timeline/*`) | CIO event names: issued, sent, under_client_review, approved, rejected, amended, superseded, cancelled | Deep-link to CIO / amendment |
+| **Assignment Links** | `campaign_lines.id` (R2.1) | Junction `client_io_assignments` (approved) | **No creator-name joins** for composition or commercial rollups |
 | **Commercial values** | Assignment rollups / SSOT Master / campaign commercial snapshot | Display-only on CIO | Finance lock already triggered by CIO existence |
 | **Finance lock** | `campaign-finance-lock.ts` reason `"client_io"` | Keep; document amendment interaction | Post-lock amount changes → Commercial Revision (R3) then CIO amendment |
 | **Notifications** | `io_notifications` + email send path | In-app/Timeline visibility; optional digest later | No mandatory chat/SMS |
@@ -64,14 +64,16 @@ Elevate Client IO from an operational PDF/email workflow into the **Ops↔Financ
 ### 3.1 Product lifecycle
 
 ```text
-Draft → Generated → Sent → Under Client Review → Approved
+Draft → Generated → Under Client Review → Approved
+                         ↑
+                    (send action; sent_at + Timeline client_io.sent)
                               ↓
-                    Amendments (append-only docs)
+                    Amendments (append-only docs · /A1…)
                               ↓
                          Cancelled
 ```
 
-Map “Under Client Review” onto existing statuses or add one enum value — prefer **minimal enum change**.
+**Normative tip status after send:** `under_client_review` (not a durable `sent` tip status). Send remains an auditable action via `sent_at` + Timeline `client_io.sent`.
 
 ### 3.2 Assignment-selected composer
 
@@ -137,14 +139,18 @@ No second commercial money ledger on CIO.
 
 > **Do not apply Production migrations until Production approval.** Validate on Development Supabase `hsxrewjcbvmbkqdlzjhs` first.
 
-| Change | Purpose |
-|---|---|
-| Amendment chain columns on `client_ios` **or** child `client_io_amendments` | root_id, revision/amendment number, superseded/tip flags, immutable artifact URLs |
-| Selected Assignment links | `client_io_assignments (client_io_id, campaign_line_id)` **or** JSON on tip |
-| Billing milestones | `client_io_billing_milestones` (preferred) **or** versioned JSON on tip |
-| Optional status enum value | `under_client_review` if product language requires it |
+| Change | Purpose | Slice |
+|---|---|---|
+| `client_io_assignments` junction | Selected Assignments for composition | **2.2.A** ✅ Dev |
+| `client_ios.assignment_snapshot` | Freeze Assignment state at issue | **2.2.A** ✅ Dev |
+| `under_client_review` enum value | Sent vs awaiting client decision | **2.2.A** ✅ Dev |
+| `client_io_billing_milestones` | 2.3-ready milestone schedule | Schema **2.2.A** ✅ · UI **2.2.C** |
+| Amendment chain + `/A1` numbering | Append-only CIO versions | **2.2.B** |
 
-Exact DDL in migration files at coding kickoff after Product confirms amendment numbering scheme.
+Migrations (Development `hsxrewjcbvmbkqdlzjhs` only; **not** Production):
+- `20260731120000_release_2_2_client_io_composer.sql` — Slice 2.2.A
+- `20260731130000_release_2_2_client_io_amendments.sql` — Slice 2.2.B
+- `20260731140000_release_2_2_client_io_milestones_workflow.sql` — Slice 2.2.C + send→`under_client_review`
 
 ---
 
@@ -169,10 +175,10 @@ Exact DDL in migration files at coding kickoff after Product confirms amendment 
 | Slice | Deliverable | Exit |
 |---|---|---|
 | **2.2.A** | Assignment composer + generate/preview/PDF parity | Selected-line docs match rollups |
-| **2.2.B** | Append-only amendments + history UI | Prior tips immutable; tip pointer correct |
-| **2.2.C** | Billing milestones config + document section | Templates + custom; no invoice execution |
-| **2.2.D** | Timeline + commercial audit + notification polish | Events visible on Enterprise Timeline |
-| **2.2.E** | Lifecycle status polish + UAT + Feature Freeze | Checklist green |
+| **2.2.B** | Append-only amendments + history UI | ✅ Implemented on Development — prior tips immutable; tip pointer correct |
+| **2.2.C** | Billing milestones config + document section | ✅ Templates + custom + document schedule; no invoice execution |
+| **2.2.D** | Timeline + commercial audit + notification polish | ✅ Core CIO events wired (generate/send/review/approve/amend/supersede) |
+| **2.2.E** | Lifecycle status polish + UAT + Feature Freeze | ⏳ Architecture Validation → Preview → UAT |
 
 Slices can land as sequential PRs on `develop`; Feature Freeze only after full UAT.
 
@@ -235,16 +241,25 @@ See [`RELEASE_2_2_UAT.md`](./RELEASE_2_2_UAT.md).
 | Enterprise Architecture | ✅ Approved & frozen |
 | R2.2 scope decision | ✅ Client IO first; 2.2a/2.2b queued |
 | Implementation package | ✅ This document |
-| Coding kickoff | ⛔ Pending Product “start coding” |
+| Coding kickoff | ✅ Complete — 2.2.A/B/C + under_client_review on Development |
+| Architecture Validation | ✅ Approved 2026-07-31 |
+| Implementation Validation | ✅ Complete — Preview authorized |
 | Feature Freeze / Production | ⛔ Later gates |
 
 ---
 
-## 12. Kickoff decision needed before first migration
+## 12. Kickoff decisions (approved)
 
-1. **Amendment identity:** new `document_number` per amendment vs suffix (`CIO-2026-0001/A1`)?  
-2. **Milestones storage:** table vs JSON on tip? (Recommendation: **table** for 2.3 billing joins.)  
-3. **Assignment selection storage:** junction table vs JSON? (Recommendation: **junction**.)  
-4. **Status:** add `under_client_review` or map to `sent`?
+| # | Decision | Approved choice | Notes |
+|---|---|---|---|
+| 1 | Amendment identity | **Suffix** `CIO-YYYY-NNNN/A1`, `/A2`, … | Slice **2.2.B** implements chain; numbering locked now |
+| 2 | Milestones storage | **Dedicated table** `client_io_billing_milestones` | Schema in 2.2.A for 2.3 readiness; editor UI in **2.2.C** |
+| 3 | Assignment selection | **Junction** `client_io_assignments` | Composer + generate filter in **2.2.A** |
+| 4 | Status | **Add** `under_client_review` | Distinguishes sent vs awaiting client decision |
 
-Once Product confirms these four, coding may begin on Development only.
+### Additional architecture directives (approved)
+
+1. Client IO remains **append-only**; approved versions immutable; amendments create new versions.
+2. Each issued Client IO captures an **Assignment snapshot**; later schedule changes must not alter historical documents.
+3. Significant CIO events emit Enterprise Timeline (`audit_logs`): Generated, Sent, Under Client Review, Approved, Rejected, Amendment Created, Superseded, Cancelled.
+4. Milestone rows must be consumable by Release **2.3** billing without transformation.

@@ -16,6 +16,7 @@ const sample: ClientIoDocumentData = {
   currencyCode: "EGP",
   status: "generated",
   paymentSchedule: "Advance — Prior to campaign launch",
+  billingMilestones: [],
   agencyContact: {
     fullName: "Alex Operator",
     title: "Account Manager",

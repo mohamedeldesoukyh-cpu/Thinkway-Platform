@@ -209,6 +209,18 @@ export async function getCampaignClientIo(campaignHeaderId: string): Promise<Cli
         return null;
       }
 
+      const { ensureClientIoAssignmentsSeeded } = await import(
+        "@/lib/io/client-io-assignments"
+      );
+      try {
+        await ensureClientIoAssignmentsSeeded(supabase, {
+          clientIoId,
+          campaignHeaderId,
+        });
+      } catch (error) {
+        console.warn("[io:getCampaignClientIo] assignment seed skipped", error);
+      }
+
       const row = await fetchClientIoRow(supabase, clientIoId);
       if (!row) {
         throw new Error("Client IO not found.");

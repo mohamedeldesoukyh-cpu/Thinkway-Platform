@@ -11,9 +11,11 @@ import type {
 import type {
   ClientIoRow,
   ClientIoSendHistoryEntry,
+  ClientIoVersionSummary,
   VendorIoRow,
   ClientIoSendRecipient,
 } from "@/lib/domains/io/types";
+import type { ClientIoMilestoneDraft } from "@/lib/io/client-io-milestones";
 
 export type {
   CampaignLineAssignmentStatus,
@@ -299,6 +301,8 @@ export type CampaignWorkspace = {
   activity: CampaignActivityItem[];
   blockers: string[];
   client_io: ClientIoRow | null;
+  client_io_versions: ClientIoVersionSummary[];
+  client_io_milestones: ClientIoMilestoneDraft[];
   client_io_send_recipients: ClientIoSendRecipient[];
   client_io_send_history: ClientIoSendHistoryEntry[];
   client_io_sender_name: string | null;

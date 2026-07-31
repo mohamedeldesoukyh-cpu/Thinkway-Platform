@@ -128,6 +128,8 @@ function baseWorkspace(overrides?: Partial<CampaignWorkspace>): CampaignWorkspac
     activity: [],
     blockers: [],
     client_io: { id: "io-1" } as CampaignWorkspace["client_io"],
+    client_io_versions: [],
+    client_io_milestones: [],
     client_io_send_recipients: [],
     client_io_send_history: [],
     client_io_sender_name: null,

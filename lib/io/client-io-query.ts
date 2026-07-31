@@ -1,12 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { ClientIoRow } from "@/lib/domains/io/types";
+import type { ClientIoRow, ClientIoVersionSummary } from "@/lib/domains/io/types";
+import { listClientIoAssignmentIds } from "@/lib/io/client-io-assignments";
 import { parseSendRecipientsJson } from "@/lib/io/client-io-send-recipients";
 
 export const CLIENT_IO_LIST_SELECT = `
   id, document_number, campaign_header_id, client_id, status, terms_html, terms_text, billing_terms,
   attachment_url, generated_html_url, generated_pdf_url, document_generated_at,
   sent_at, approved_at, approved_by_name, send_recipients, created_by, created_at, updated_at,
+  revision_number, is_superseded, root_client_io_id, replaces_client_io_id,
   campaign:campaign_headers!client_ios_campaign_header_id_fkey(document_number, name, brand:brands(name)),
   client:clients!client_ios_client_id_fkey(name, client_io_terms_text)
 `;
@@ -35,6 +37,10 @@ type ClientIoQueryRow = {
   approved_at: string | null;
   approved_by_name: string | null;
   send_recipients?: unknown;
+  revision_number?: number | null;
+  is_superseded?: boolean | null;
+  root_client_io_id?: string | null;
+  replaces_client_io_id?: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -73,6 +79,11 @@ export function mapClientIoQueryRow(row: ClientIoQueryRow): ClientIoRow {
     brand_name: brand?.name ?? null,
     client_io_terms_text: row.client?.client_io_terms_text ?? null,
     send_recipients: parseSendRecipientsJson(row.send_recipients),
+    selected_assignment_ids: [],
+    revision_number: Number(row.revision_number ?? 0),
+    is_superseded: Boolean(row.is_superseded),
+    root_client_io_id: row.root_client_io_id ?? null,
+    replaces_client_io_id: row.replaces_client_io_id ?? null,
     created_by: row.created_by,
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -90,8 +101,24 @@ function isClientIoSchemaMismatch(message: string): boolean {
     normalized.includes("document_generated_at") ||
     normalized.includes("generated_html_url") ||
     normalized.includes("generated_pdf_url") ||
-    normalized.includes("send_recipients")
+    normalized.includes("send_recipients") ||
+    normalized.includes("revision_number") ||
+    normalized.includes("is_superseded") ||
+    normalized.includes("root_client_io_id") ||
+    normalized.includes("replaces_client_io_id")
   );
+}
+
+async function attachSelectedAssignments(
+  supabase: SupabaseClient,
+  row: ClientIoRow
+): Promise<ClientIoRow> {
+  try {
+    row.selected_assignment_ids = await listClientIoAssignmentIds(supabase, row.id);
+  } catch {
+    row.selected_assignment_ids = [];
+  }
+  return row;
 }
 
 export async function fetchClientIoRow(
@@ -104,29 +131,31 @@ export async function fetchClientIoRow(
     .eq("id", clientIoId)
     .maybeSingle();
 
+  let mapped: ClientIoRow | null = null;
+
   if (!full.error && full.data) {
-    return mapClientIoQueryRow(full.data as unknown as ClientIoQueryRow);
-  }
-
-  if (full.error && !isClientIoSchemaMismatch(full.error.message)) {
+    mapped = mapClientIoQueryRow(full.data as unknown as ClientIoQueryRow);
+  } else if (full.error && !isClientIoSchemaMismatch(full.error.message)) {
     throw new Error(full.error.message);
+  } else {
+    const legacy = await supabase
+      .from("client_ios")
+      .select(CLIENT_IO_LEGACY_SELECT)
+      .eq("id", clientIoId)
+      .maybeSingle();
+
+    if (legacy.error) {
+      throw new Error(legacy.error.message);
+    }
+
+    if (!legacy.data) {
+      return null;
+    }
+
+    mapped = mapClientIoQueryRow(legacy.data as unknown as ClientIoQueryRow);
   }
 
-  const legacy = await supabase
-    .from("client_ios")
-    .select(CLIENT_IO_LEGACY_SELECT)
-    .eq("id", clientIoId)
-    .maybeSingle();
-
-  if (legacy.error) {
-    throw new Error(legacy.error.message);
-  }
-
-  if (!legacy.data) {
-    return null;
-  }
-
-  return mapClientIoQueryRow(legacy.data as unknown as ClientIoQueryRow);
+  return attachSelectedAssignments(supabase, mapped);
 }
 
 export async function fetchClientIoRows(
@@ -137,9 +166,13 @@ export async function fetchClientIoRows(
     limit?: number;
     status?: string;
     searchPattern?: string;
+    /** Default true — register/workspace show current tips only. */
+    tipsOnly?: boolean;
   }
 ): Promise<ClientIoRow[]> {
-  const runQuery = async (select: string) => {
+  const tipsOnly = options?.tipsOnly !== false;
+
+  const runQuery = async (select: string, applyTipFilter: boolean) => {
     let query = supabase.from("client_ios").select(select).order("created_at", { ascending: false });
 
     if (options?.campaignHeaderId) {
@@ -152,6 +185,10 @@ export async function fetchClientIoRows(
 
     if (options?.status && options.status !== "all") {
       query = query.eq("status", options.status);
+    }
+
+    if (applyTipFilter && tipsOnly) {
+      query = query.eq("is_superseded", false);
     }
 
     if (options?.searchPattern) {
@@ -167,19 +204,68 @@ export async function fetchClientIoRows(
     return query;
   };
 
-  const full = await runQuery(CLIENT_IO_LIST_SELECT);
+  let full = await runQuery(CLIENT_IO_LIST_SELECT, true);
+  if (full.error && isClientIoSchemaMismatch(full.error.message)) {
+    full = await runQuery(CLIENT_IO_LIST_SELECT.replace(
+      /,\s*revision_number, is_superseded, root_client_io_id, replaces_client_io_id/,
+      ""
+    ), false);
+  }
+
+  let rows: ClientIoRow[];
   if (!full.error) {
-    return ((full.data ?? []) as unknown as ClientIoQueryRow[]).map(mapClientIoQueryRow);
-  }
-
-  if (!isClientIoSchemaMismatch(full.error.message)) {
+    rows = ((full.data ?? []) as unknown as ClientIoQueryRow[]).map(mapClientIoQueryRow);
+  } else if (!isClientIoSchemaMismatch(full.error.message)) {
     throw new Error(full.error.message);
+  } else {
+    const legacy = await runQuery(CLIENT_IO_LEGACY_SELECT, false);
+    if (legacy.error) {
+      throw new Error(legacy.error.message);
+    }
+    rows = ((legacy.data ?? []) as unknown as ClientIoQueryRow[]).map(mapClientIoQueryRow);
   }
 
-  const legacy = await runQuery(CLIENT_IO_LEGACY_SELECT);
-  if (legacy.error) {
-    throw new Error(legacy.error.message);
+  await Promise.all(rows.map((row) => attachSelectedAssignments(supabase, row)));
+  return rows;
+}
+
+export async function fetchClientIoVersionHistory(
+  supabase: SupabaseClient,
+  tip: Pick<ClientIoRow, "id" | "root_client_io_id">
+): Promise<ClientIoVersionSummary[]> {
+  const rootId = tip.root_client_io_id ?? tip.id;
+  const { data, error } = await supabase
+    .from("client_ios")
+    .select(
+      "id, document_number, revision_number, status, is_superseded, created_at, document_generated_at, approved_at"
+    )
+    .or(`root_client_io_id.eq.${rootId},id.eq.${rootId}`)
+    .order("revision_number", { ascending: true });
+
+  if (error) {
+    if (isClientIoSchemaMismatch(error.message)) {
+      return [];
+    }
+    throw new Error(error.message);
   }
 
-  return ((legacy.data ?? []) as unknown as ClientIoQueryRow[]).map(mapClientIoQueryRow);
+  return ((data ?? []) as Array<{
+    id: string;
+    document_number: string | null;
+    revision_number: number | null;
+    status: ClientIoRow["status"];
+    is_superseded: boolean | null;
+    created_at: string;
+    document_generated_at: string | null;
+    approved_at: string | null;
+  }>).map((row) => ({
+    id: row.id,
+    document_number: row.document_number,
+    revision_number: Number(row.revision_number ?? 0),
+    status: row.status,
+    is_superseded: Boolean(row.is_superseded),
+    created_at: row.created_at,
+    document_generated_at: row.document_generated_at,
+    approved_at: row.approved_at,
+  }));
 }

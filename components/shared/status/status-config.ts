@@ -131,10 +131,11 @@ export const IO_STATUS_TONE = {
   draft: "neutral",
   generated: "foreground",
   sent: "foreground",
+  under_client_review: "warning",
   approved: "success",
   rejected: "destructive",
   cancelled: "destructive",
-} as const satisfies Record<string, SemanticStatusTone>;
+} as const satisfies Record<string, SemanticStatusTone>; // rejected included for CIO + VIO
 
 export const INVOICE_STATUS_TONE = {
   draft: "neutral",

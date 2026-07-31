@@ -4,6 +4,7 @@ import { SafeHtml } from "@/components/security/safe-html";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { debugIo } from "@/features/io/queries";
+import { emitEnterpriseTimelineEvent } from "@/lib/timeline/emit-enterprise-timeline-event";
 import type { ClientIoApprovalContext } from "@/types/io-approval";
 
 type Props = {
@@ -44,17 +45,52 @@ export default async function ClientIoApprovalPage({ searchParams }: Props) {
       redirect("/io-approval/client?error=Name%20and%20token%20are%20required.");
     }
 
-    const { error } = await (supabase as any).rpc("approve_client_io_by_token", {
-      p_token: token,
-      p_approved_by_name: approvedBy,
-      p_approval_ip: null,
-    });
+    const { data: approvedId, error } = await (supabase as any).rpc(
+      "approve_client_io_by_token",
+      {
+        p_token: token,
+        p_approved_by_name: approvedBy,
+        p_approval_ip: null,
+      }
+    );
 
     if (error) {
       debugIo("io-approval", "client approval failed", { message: error.message });
       const msg = encodeURIComponent(error.message);
       const t = encodeURIComponent(token);
       redirect(`/io-approval/client?token=${t}&error=${msg}`);
+    }
+
+    if (approvedId) {
+      const { data: cio } = await supabase
+        .from("client_ios")
+        .select("id, campaign_header_id, document_number")
+        .eq("id", approvedId as string)
+        .maybeSingle();
+      const typed = cio as {
+        id: string;
+        campaign_header_id: string;
+        document_number: string | null;
+      } | null;
+      if (typed) {
+        try {
+          await emitEnterpriseTimelineEvent(supabase, {
+            campaignHeaderId: typed.campaign_header_id,
+            entityType: "client_ios",
+            entityId: typed.id,
+            action: "update",
+            metadata: {
+              event: "client_io.approved",
+              summary: `Client IO ${typed.document_number ?? typed.id} approved by ${approvedBy}`,
+              module: "client_io",
+              client_io_id: typed.id,
+            },
+            newData: { status: "approved", approved_by_name: approvedBy },
+          });
+        } catch {
+          // Non-blocking audit
+        }
+      }
     }
 
     debugIo("io-approval", "client approved", { token: "redacted" });

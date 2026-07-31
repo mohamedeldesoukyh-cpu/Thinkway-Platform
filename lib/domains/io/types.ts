@@ -1,4 +1,11 @@
-export type ClientIoStatus = "draft" | "generated" | "sent" | "approved" | "cancelled";
+export type ClientIoStatus =
+  | "draft"
+  | "generated"
+  | "sent"
+  | "under_client_review"
+  | "approved"
+  | "rejected"
+  | "cancelled";
 export type VendorIoStatus = "draft" | "generated" | "sent" | "approved" | "rejected";
 
 export type ClientIoSendRecipient = {
@@ -46,9 +53,28 @@ export type ClientIoRow = {
   brand_name: string | null;
   client_io_terms_text: string | null;
   send_recipients: Array<{ name: string; email: string }>;
+  /** Release 2.2 — Assignments included in composition (`campaign_lines.id`). */
+  selected_assignment_ids: string[];
+  /** Release 2.2.B — 0 = original; 1+ = /A{n}. */
+  revision_number: number;
+  is_superseded: boolean;
+  root_client_io_id: string | null;
+  replaces_client_io_id: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
+};
+
+/** Lightweight amendment history row for tip UI. */
+export type ClientIoVersionSummary = {
+  id: string;
+  document_number: string | null;
+  revision_number: number;
+  status: ClientIoStatus;
+  is_superseded: boolean;
+  created_at: string;
+  document_generated_at: string | null;
+  approved_at: string | null;
 };
 
 export type VendorIoRow = {

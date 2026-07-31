@@ -135,10 +135,17 @@ export function ClientApprovalPill({ status }: { status: string | null }) {
       </DetailPill>
     );
   }
-  if (normalized === "sent") {
+  if (normalized === "under_client_review") {
     return (
       <DetailPill className="border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-100">
-        Pending approval
+        Under client review
+      </DetailPill>
+    );
+  }
+  if (normalized === "sent") {
+    return (
+      <DetailPill className="border-sky-500/30 bg-sky-500/10 text-sky-900 dark:text-sky-100">
+        Sent
       </DetailPill>
     );
   }
@@ -148,6 +155,9 @@ export function ClientApprovalPill({ status }: { status: string | null }) {
         Rejected
       </DetailPill>
     );
+  }
+  if (normalized === "generated") {
+    return <DetailPill>Generated</DetailPill>;
   }
   if (normalized === "cancelled") {
     return (

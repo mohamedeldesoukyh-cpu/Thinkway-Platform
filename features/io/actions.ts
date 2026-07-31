@@ -6,7 +6,17 @@ import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { parseFormDataWithSchema } from "@/lib/validation/form";
 import { updateVendorIoSchema } from "@/lib/validation/schemas";
+import {
+  ensureClientIoAssignmentsSeeded,
+  isClientIoComposerEditable,
+  replaceClientIoAssignments,
+} from "@/lib/io/client-io-assignments";
+import { createClientIoAmendment } from "@/lib/io/create-client-io-amendment";
 import { fetchClientIoRow } from "@/lib/io/client-io-query";
+import { replaceClientIoMilestones } from "@/lib/io/client-io-milestones-service";
+import type { ClientIoMilestoneDraft } from "@/lib/io/client-io-milestones";
+import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
+import { emitEnterpriseTimelineEvent } from "@/lib/timeline/emit-enterprise-timeline-event";
 import {
   buildClientIoEmailHtml,
   buildClientIoEmailPlainText,
@@ -88,9 +98,222 @@ export async function ensureClientIoForCampaignAction(
     return { ok: false, message: "Could not create Client IO for this campaign." };
   }
 
+  try {
+    await ensureClientIoAssignmentsSeeded(supabase, {
+      clientIoId,
+      campaignHeaderId,
+    });
+  } catch (seedError) {
+    console.warn("[client-io] assignment seed failed", seedError);
+  }
+
   debugIo("client-io", "ensured for campaign", { campaignHeaderId, clientIoId });
   revalidateIoPaths(campaignHeaderId);
   return { ok: true, message: "Client IO is ready for this campaign." };
+}
+
+export async function saveClientIoAssignmentsAction(
+  _prev: IoActionState,
+  formData: FormData
+): Promise<IoActionState> {
+  const id = String(formData.get("id") ?? "").trim();
+  const campaignHeaderId = String(formData.get("campaign_header_id") ?? "").trim();
+  const selectedRaw = String(formData.get("selected_assignment_ids") ?? "").trim();
+
+  if (!id || !campaignHeaderId) {
+    return { ok: false, message: "Missing Client IO context." };
+  }
+
+  const { supabase, user, error } = await requireAuthUser();
+  if (error || !user) {
+    return { ok: false, message: error ?? "Unauthorized" };
+  }
+
+  const clientIo = await fetchClientIoRow(supabase, id);
+  if (!clientIo) {
+    return { ok: false, message: "Client IO not found." };
+  }
+
+  if (clientIo.is_superseded) {
+    return {
+      ok: false,
+      message: "This Client IO version is superseded and immutable. Edit the current tip.",
+    };
+  }
+
+  if (!isClientIoComposerEditable(clientIo.status)) {
+    return {
+      ok: false,
+      message: "Assignment selection is locked after the Client IO is sent.",
+    };
+  }
+
+  let selectedIds: string[] = [];
+  if (selectedRaw) {
+    try {
+      const parsed = JSON.parse(selectedRaw) as unknown;
+      if (!Array.isArray(parsed) || parsed.some((value) => typeof value !== "string")) {
+        return { ok: false, message: "Invalid Assignment selection payload." };
+      }
+      selectedIds = parsed;
+    } catch {
+      return { ok: false, message: "Invalid Assignment selection payload." };
+    }
+  }
+
+  try {
+    const saved = await replaceClientIoAssignments(supabase, {
+      clientIoId: id,
+      campaignHeaderId,
+      campaignLineIds: selectedIds,
+    });
+
+    // Selection change invalidates the prior issued snapshot until regenerate.
+    if (clientIo.status === "generated") {
+      await supabase
+        .from("client_ios")
+        .update({
+          assignment_snapshot: null,
+          updated_by: user.id,
+        } as never)
+        .eq("id", id);
+    }
+
+    debugIo("client-io", "saved assignment selection", {
+      id,
+      count: saved.length,
+    });
+    revalidateIoPaths(campaignHeaderId);
+    revalidatePath(`/ios/client/${id}/preview`);
+    return {
+      ok: true,
+      message:
+        saved.length === 0
+          ? "Assignment selection cleared. Select at least one Assignment before generating."
+          : `Saved ${saved.length} Assignment${saved.length === 1 ? "" : "s"} for Client IO.`,
+    };
+  } catch (saveError) {
+    return {
+      ok: false,
+      message:
+        saveError instanceof Error ? saveError.message : "Could not save Assignment selection.",
+    };
+  }
+}
+
+export async function saveClientIoMilestonesAction(
+  _prev: IoActionState,
+  formData: FormData
+): Promise<IoActionState> {
+  const id = String(formData.get("id") ?? "").trim();
+  const campaignHeaderId = String(formData.get("campaign_header_id") ?? "").trim();
+  const milestonesRaw = String(formData.get("milestones") ?? "").trim();
+
+  if (!id || !campaignHeaderId) {
+    return { ok: false, message: "Missing Client IO context." };
+  }
+
+  let milestones: ClientIoMilestoneDraft[] = [];
+  if (milestonesRaw) {
+    try {
+      const parsed = JSON.parse(milestonesRaw) as unknown;
+      if (!Array.isArray(parsed)) {
+        return { ok: false, message: "Invalid milestones payload." };
+      }
+      milestones = parsed as ClientIoMilestoneDraft[];
+    } catch {
+      return { ok: false, message: "Invalid milestones payload." };
+    }
+  }
+
+  const { supabase, user, error } = await requireAuthUser();
+  if (error || !user) {
+    return { ok: false, message: error ?? "Unauthorized" };
+  }
+
+  const clientIo = await fetchClientIoRow(supabase, id);
+  if (!clientIo) {
+    return { ok: false, message: "Client IO not found." };
+  }
+
+  try {
+    const saved = await replaceClientIoMilestones(supabase, {
+      clientIoId: id,
+      campaignHeaderId,
+      actorId: user.id,
+      status: clientIo.status,
+      isSuperseded: clientIo.is_superseded,
+      milestones,
+    });
+    debugIo("client-io", "saved milestones", { id, count: saved.length });
+    revalidateIoPaths(campaignHeaderId);
+    revalidatePath(`/ios/client/${id}/preview`);
+    return {
+      ok: true,
+      message:
+        saved.length === 0
+          ? "Billing milestones cleared."
+          : `Saved ${saved.length} billing milestone${saved.length === 1 ? "" : "s"}.`,
+    };
+  } catch (saveError) {
+    return {
+      ok: false,
+      message:
+        saveError instanceof Error ? saveError.message : "Could not save billing milestones.",
+    };
+  }
+}
+
+export async function createClientIoAmendmentAction(
+  _prev: IoActionState,
+  formData: FormData
+): Promise<IoActionState> {
+  const id = String(formData.get("id") ?? "").trim();
+  const campaignHeaderId = String(formData.get("campaign_header_id") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim();
+
+  if (!id || !campaignHeaderId) {
+    return { ok: false, message: "Missing Client IO context." };
+  }
+
+  const { supabase, user, error } = await requireAuthUser();
+  if (error || !user) {
+    return { ok: false, message: error ?? "Unauthorized" };
+  }
+
+  const result = await createClientIoAmendment(supabase, {
+    clientIoId: id,
+    actorId: user.id,
+    reason: reason || null,
+    generateDocument: true,
+  });
+
+  if (!result.ok) {
+    return { ok: false, message: result.error };
+  }
+
+  try {
+    await syncCampaignHeaderStatus(supabase, campaignHeaderId);
+  } catch (syncError) {
+    console.warn("[client-io] status sync after amendment failed", syncError);
+  }
+
+  debugIo("client-io", "amendment created", {
+    priorId: result.priorClientIoId,
+    newId: result.newClientIoId,
+    documentNumber: result.documentNumber,
+  });
+
+  revalidateIoPaths(campaignHeaderId);
+  revalidatePath(`/ios/client/${result.newClientIoId}/preview`);
+  revalidatePath(`/ios/client?io=${result.newClientIoId}`);
+
+  return {
+    ok: true,
+    message: result.generated
+      ? `Amendment ${result.documentNumber} created and document generated.`
+      : `Amendment ${result.documentNumber} created. Generate the document to continue.`,
+  };
 }
 
 export async function updateClientIoAction(
@@ -123,6 +346,14 @@ export async function updateClientIoAction(
 
   const { supabase, user, error } = await requireAuthUser();
   if (error || !user) return { ok: false, message: error ?? "Unauthorized" };
+
+  const existing = await fetchClientIoRow(supabase, id);
+  if (existing?.is_superseded) {
+    return {
+      ok: false,
+      message: "This Client IO version is superseded and immutable. Edit the current tip.",
+    };
+  }
 
   const { error: updateError } = await supabase
     .from("client_ios")
@@ -269,19 +500,58 @@ export async function sendClientIoAction(
     gmailOk: gmailResult.ok,
   });
 
+  try {
+    await emitEnterpriseTimelineEvent(supabase, {
+      campaignHeaderId,
+      actorId: user.id,
+      entityType: "client_ios",
+      entityId: id,
+      action: "update",
+      metadata: {
+        event: "client_io.sent",
+        summary: `Client IO ${clientIo.document_number ?? id} sent to ${recipients.length} recipient${recipients.length === 1 ? "" : "s"}`,
+        module: "client_io",
+        client_io_id: id,
+      },
+      newData: { status: "sent", recipient_count: recipients.length },
+    });
+    await emitEnterpriseTimelineEvent(supabase, {
+      campaignHeaderId,
+      actorId: user.id,
+      entityType: "client_ios",
+      entityId: id,
+      action: "update",
+      metadata: {
+        event: "client_io.under_client_review",
+        summary: `Client IO ${clientIo.document_number ?? id} under client review`,
+        module: "client_io",
+        client_io_id: id,
+      },
+      newData: { status: "under_client_review" },
+    });
+  } catch (timelineError) {
+    console.warn("[client-io] Timeline emit after send failed", timelineError);
+  }
+
+  try {
+    await syncCampaignHeaderStatus(supabase, campaignHeaderId);
+  } catch (syncError) {
+    console.warn("[client-io] status sync after send failed", syncError);
+  }
+
   revalidateIoPaths(campaignHeaderId);
 
   if (!gmailResult.ok) {
     return {
       ok: false,
-      message: `IO marked as sent but email delivery failed: ${gmailResult.error}`,
+      message: `IO marked under client review but email delivery failed: ${gmailResult.error}`,
     };
   }
 
   const recipientCount = recipients.length;
   return {
     ok: true,
-    message: `Client IO sent to ${recipientCount} recipient${recipientCount === 1 ? "" : "s"} from ${senderEmail}.`,
+    message: `Client IO sent to ${recipientCount} recipient${recipientCount === 1 ? "" : "s"} and is now under client review.`,
   };
 }
 

@@ -10,11 +10,17 @@ type Props = {
   className?: string;
 };
 
+function formatIoStatusLabel(status: ClientIoStatus | VendorIoStatus): string {
+  if (status === "under_client_review") return "Under client review";
+  if (status === "cancelled") return "Cancelled";
+  if (status === "rejected") return "Rejected";
+  return status.replace(/_/g, " ");
+}
+
 export function IoStatusBadge({ status, className }: Props) {
-  const label = status === "cancelled" ? "Cancelled" : status;
   return (
     <StatusBadge
-      label={label}
+      label={formatIoStatusLabel(status)}
       tone={resolveStatusTone("io", status)}
       appearance="pill"
       className={className}

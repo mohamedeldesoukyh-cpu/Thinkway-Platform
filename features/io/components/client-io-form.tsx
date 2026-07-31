@@ -13,6 +13,12 @@ import {
 } from "@/features/campaigns/components/operational-detail-panel";
 import { updateClientIoAction } from "@/features/io/actions";
 import { generateClientIoDocumentAction } from "@/features/io/generate-client-io-document-action";
+import { ClientIoAmendmentHistory } from "@/features/io/components/client-io-amendment-history";
+import {
+  ClientIoAssignmentComposer,
+  type ClientIoComposerAssignment,
+} from "@/features/io/components/client-io-assignment-composer";
+import { ClientIoMilestonesEditor } from "@/features/io/components/client-io-milestones-editor";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
 import { ClientIoViewMenu } from "@/features/io/components/client-io-view-menu";
 import { ClientIoEmailPreviewSection } from "@/features/io/components/client-io-email-preview";
@@ -20,7 +26,14 @@ import { ClientIoRecipientsEditor } from "@/features/io/components/client-io-rec
 import { ClientIoSendControls } from "@/features/io/components/client-io-send-controls";
 import { ClientIoSendHistory } from "@/features/io/components/client-io-send-history";
 import { ClientIoTermsEditorField } from "@/features/io/components/client-io-terms-editor";
-import type { ClientIoRow, ClientIoSendHistoryEntry, ClientIoSendRecipient } from "@/features/io/types";
+import { isClientIoRegenerateAllowed } from "@/lib/io/client-io-assignments";
+import type {
+  ClientIoRow,
+  ClientIoSendHistoryEntry,
+  ClientIoSendRecipient,
+  ClientIoVersionSummary,
+} from "@/features/io/types";
+import type { ClientIoMilestoneDraft } from "@/lib/io/client-io-milestones";
 import {
   parseSendRecipientsJson,
   seedRecipientsFromContacts,
@@ -44,6 +57,10 @@ type Props = {
   senderName?: string | null;
   clientDefaultTermsText?: string | null;
   brandName?: string | null;
+  currencyCode?: string;
+  assignments?: ClientIoComposerAssignment[];
+  versions?: ClientIoVersionSummary[];
+  milestones?: ClientIoMilestoneDraft[];
 };
 
 function SummaryItem({ label, value }: { label: string; value: string | null | undefined }) {
@@ -64,6 +81,10 @@ export function ClientIoForm({
   senderName = null,
   clientDefaultTermsText = null,
   brandName = null,
+  currencyCode = "EGP",
+  assignments = [],
+  versions = [],
+  milestones = [],
 }: Props) {
   const defaultTerms = useMemo(
     () => resolveDefaultTermsForClient(clientDefaultTermsText),
@@ -114,6 +135,8 @@ export function ClientIoForm({
   const hasDocument = Boolean(
     row.document_generated_at || row.generated_html_url || row.terms_html
   );
+  const canRegenerate = isClientIoRegenerateAllowed(row.status);
+  const selectedCount = row.selected_assignment_ids?.length ?? 0;
 
   const sendRecipientsPayload = useMemo(
     () => serializeSendRecipients(sendRecipients),
@@ -176,6 +199,25 @@ export function ClientIoForm({
               </dl>
             </DetailFormSection>
 
+            <ClientIoAssignmentComposer
+              clientIoId={row.id}
+              campaignHeaderId={row.campaign_header_id}
+              status={row.status}
+              currencyCode={currencyCode}
+              assignments={assignments}
+              selectedAssignmentIds={row.selected_assignment_ids ?? []}
+            />
+
+            <ClientIoMilestonesEditor
+              clientIoId={row.id}
+              campaignHeaderId={row.campaign_header_id}
+              status={row.status}
+              isSuperseded={row.is_superseded}
+              milestones={milestones}
+            />
+
+            <ClientIoAmendmentHistory tip={row} versions={versions} />
+
             <ClientIoRecipientsEditor
               recipients={sendRecipients}
               onChange={setSendRecipients}
@@ -237,7 +279,14 @@ export function ClientIoForm({
               type="submit"
               variant="outline"
               size="sm"
-              disabled={generating}
+              disabled={generating || !canRegenerate || selectedCount === 0}
+              title={
+                !canRegenerate
+                  ? "Regenerate is locked after send. Use an amendment (Slice 2.2.B)."
+                  : selectedCount === 0
+                    ? "Select and save at least one Assignment first."
+                    : undefined
+              }
             >
               {generating
                 ? "Generating…"

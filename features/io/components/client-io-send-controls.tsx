@@ -39,7 +39,11 @@ export function ClientIoSendControls({
   }, [sendState]);
 
   const sendLabel =
-    io.status === "sent" || io.status === "approved" ? "Resend Client IO" : "Send Client IO";
+    io.status === "sent" ||
+    io.status === "under_client_review" ||
+    io.status === "approved"
+      ? "Resend Client IO"
+      : "Send Client IO";
 
   if (io.status === "approved") {
     return null;

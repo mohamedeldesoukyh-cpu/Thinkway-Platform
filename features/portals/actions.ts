@@ -6,6 +6,7 @@ import { createSupabaseServerClient, requireRequestUser } from "@/lib/supabase/s
 import { uploadEntityDocument } from "@/lib/supabase/storage";
 import { parseOptionalSafeExternalUrl } from "@/lib/security/safe-external-url";
 import { requireClientScope, requireCreatorScope } from "@/features/portals/scope";
+import { emitEnterpriseTimelineEvent } from "@/lib/timeline/emit-enterprise-timeline-event";
 
 type PortalActionState = {
   ok: boolean;
@@ -329,6 +330,36 @@ export async function clientApproveAction(
         p_approved_by_name: approvedByName || null,
       });
       if (error || !data) return { ok: false, message: error?.message ?? "Client IO approval failed." };
+
+      const { data: cio } = await supabase
+        .from("client_ios")
+        .select("campaign_header_id, document_number")
+        .eq("id", entityId)
+        .maybeSingle();
+      const typed = cio as {
+        campaign_header_id: string;
+        document_number: string | null;
+      } | null;
+      if (typed) {
+        try {
+          await emitEnterpriseTimelineEvent(supabase, {
+            campaignHeaderId: typed.campaign_header_id,
+            actorId: scope.userId,
+            entityType: "client_ios",
+            entityId,
+            action: "update",
+            metadata: {
+              event: "client_io.approved",
+              summary: `Client IO ${typed.document_number ?? entityId} approved via portal`,
+              module: "client_io",
+              client_io_id: entityId,
+            },
+            newData: { status: "approved" },
+          });
+        } catch {
+          // Non-blocking audit
+        }
+      }
     } else if (entityType === "deliverable") {
       const { data, error } = await (supabase as any).rpc("client_portal_set_deliverable_status", {
         p_deliverable_id: entityId,
