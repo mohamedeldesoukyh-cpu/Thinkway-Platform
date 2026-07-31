@@ -86,7 +86,8 @@
 - Architecture Validation ✅ Approved · Implementation Validation: [`RELEASE_2_2_IMPLEMENTATION_VALIDATION.md`](../../docs/architecture/RELEASE_2_2_IMPLEMENTATION_VALIDATION.md)
 - Risk dispositions: R-T1 intentional dual Timeline · R-T2 rejected/cancelled emitters deferred · R-T3 approve compat accepted
 - Evidence: `test:release-2-2` 17 · `test:release-2-1` 30 · Dev migrations `20260731120000`–`140000` on `hsxrewjcbvmbkqdlzjhs`
-- Next: commit + push `develop` → Preview (`dev.thinkwaymedia.com`) → Interactive UAT ([`RELEASE_2_2_UAT.md`](../../docs/architecture/RELEASE_2_2_UAT.md)) → Feature Freeze
+- Pushed Preview tip: `d6c983fe` on `develop` → `dev.thinkwaymedia.com`
+- Next: Interactive UAT ([`RELEASE_2_2_UAT.md`](../../docs/architecture/RELEASE_2_2_UAT.md)) → Feature Freeze → Production approval (separate)
 - **R2.2a / 2.2b** queued until R2.2 Feature Freeze · **No Production** without explicit approval
 
 ## Media Plan PDF calendar fit (shipped to Production)
