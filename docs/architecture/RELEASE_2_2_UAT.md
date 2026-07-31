@@ -1,11 +1,22 @@
 # Release 2.2 — Client IO Enterprise Completion — UAT Checklist
 
-**Environment:** Preview / Development (`dev.thinkwaymedia.com`) first  
+**Status:** 🚀 **Interactive UAT Active** (Product authorized 2026-07-31)  
+**Environment:** Preview `https://dev.thinkwaymedia.com` (authoritative build)  
 **Supabase:** Development `hsxrewjcbvmbkqdlzjhs`  
-**Production:** only after Feature Freeze + explicit approval  
+**Branch tip:** `develop` @ `d6c983fe` (feature) · continuity `298add93`  
+**Merge policy:** Defect fixes from UAT only — no new feature work into R2.2 Preview  
+**Production:** ⛔ after Feature Freeze + separate approval  
 **Parent:** [`RELEASE_2_2_IMPLEMENTATION.md`](./RELEASE_2_2_IMPLEMENTATION.md)  
 **Architecture Validation:** ✅ Approved ([`RELEASE_2_2_ARCHITECTURE_VALIDATION.md`](./RELEASE_2_2_ARCHITECTURE_VALIDATION.md))  
 **Implementation Validation:** [`RELEASE_2_2_IMPLEMENTATION_VALIDATION.md`](./RELEASE_2_2_IMPLEMENTATION_VALIDATION.md)
+
+### Feature Freeze exit criteria (Product)
+
+- All priority scenarios **P1–P5** pass  
+- No Critical or High defects open  
+- Medium defects resolved or explicitly accepted with rationale  
+- No architectural regressions  
+- Automated suites remain green after any UAT fixes
 
 ---
 

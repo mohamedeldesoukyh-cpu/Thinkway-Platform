@@ -1,9 +1,10 @@
 # Release 2.2 — Implementation Validation Package
 
 **Release:** 2.2 — Client IO Enterprise Completion  
-**Status:** ✅ **Implementation Validation complete** — authorized for commit → push `develop` → Preview  
+**Status:** ✅ **Implementation Validation complete** · Preview live · 🚀 **Interactive UAT Active**  
 **Date:** 2026-07-31  
-**Branch:** `develop`  
+**Branch:** `develop` (`d6c983fe` feature tip)  
+**Preview:** `https://dev.thinkwaymedia.com` · Dev Supabase `hsxrewjcbvmbkqdlzjhs`  
 **Architecture Validation:** [`RELEASE_2_2_ARCHITECTURE_VALIDATION.md`](./RELEASE_2_2_ARCHITECTURE_VALIDATION.md) — **APPROVED** (Product 2026-07-31)  
 **Implementation package:** [`RELEASE_2_2_IMPLEMENTATION.md`](./RELEASE_2_2_IMPLEMENTATION.md)  
 **UAT:** [`RELEASE_2_2_UAT.md`](./RELEASE_2_2_UAT.md)

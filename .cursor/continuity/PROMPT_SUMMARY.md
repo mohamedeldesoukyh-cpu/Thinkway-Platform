@@ -82,12 +82,12 @@
 - Commits: `9d25a65f` · `7eaf219` · `388bab6c` · docs `35086130`
 - Package/UAT archived under `docs/architecture/RELEASE_2_1_*`
 - Redis latency warning on Prod Ops Center remains INFRA (not R2.1 defect)
-- **Release 2.2 — Client IO Enterprise Completion — Preview authorized**
-- Architecture Validation ✅ Approved · Implementation Validation: [`RELEASE_2_2_IMPLEMENTATION_VALIDATION.md`](../../docs/architecture/RELEASE_2_2_IMPLEMENTATION_VALIDATION.md)
-- Risk dispositions: R-T1 intentional dual Timeline · R-T2 rejected/cancelled emitters deferred · R-T3 approve compat accepted
-- Evidence: `test:release-2-2` 17 · `test:release-2-1` 30 · Dev migrations `20260731120000`–`140000` on `hsxrewjcbvmbkqdlzjhs`
-- Pushed Preview tip: `d6c983fe` on `develop` → `dev.thinkwaymedia.com`
-- Next: Interactive UAT ([`RELEASE_2_2_UAT.md`](../../docs/architecture/RELEASE_2_2_UAT.md)) → Feature Freeze → Production approval (separate)
+- **Release 2.2 — Client IO Enterprise Completion — Interactive UAT Active**
+- Preview accepted · authoritative build `dev.thinkwaymedia.com` · tip `d6c983fe` on `develop` · Dev DB `hsxrewjcbvmbkqdlzjhs`
+- Architecture ✅ · Implementation Validation ✅ · R-T1/T2/T3 dispositions locked
+- Merge policy: **UAT defect fixes only** until Feature Freeze
+- UAT package: [`RELEASE_2_2_UAT.md`](../../docs/architecture/RELEASE_2_2_UAT.md) — must pass P1–P5 before Feature Freeze
+- Next: Interactive UAT → defect/retest if needed → Feature Freeze → Production Review (separate approval)
 - **R2.2a / 2.2b** queued until R2.2 Feature Freeze · **No Production** without explicit approval
 
 ## Media Plan PDF calendar fit (shipped to Production)
