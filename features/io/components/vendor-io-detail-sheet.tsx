@@ -21,10 +21,12 @@ import {
   OperationalDetailSheet,
 } from "@/features/campaigns/components/operational-detail-panel";
 import { VendorIoDocumentActions } from "@/features/io/components/vendor-io-document-actions";
+import { VendorIoDeliveryBadge } from "@/features/io/components/vendor-io-delivery-badge";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
 import { IoTermsSourceBadge } from "@/features/io/components/io-terms-source-badge";
 import { VendorIoUngenerateTrigger } from "@/features/io/components/vendor-io-ungenerate-dialog";
 import type { VendorIoRow } from "@/features/io/types";
+import { formatVendorIoDeliveryLabel } from "@/lib/io/vendor-io-delivery";
 import {
   formatAssignmentDetailDate,
   initialsFromName,
@@ -86,8 +88,18 @@ function VendorIoGeneralTab({ row }: { row: VendorIoRow }) {
       <DetailField label="Currency">
         <DetailPill>{row.currency_code}</DetailPill>
       </DetailField>
-      <DetailField label="Status">
+      <DetailField label="Workflow Status">
         <IoStatusBadge status={row.status} />
+      </DetailField>
+      <DetailField label="Delivery">
+        {formatVendorIoDeliveryLabel(row.delivery_method, row.delivery_status) ? (
+          <VendorIoDeliveryBadge
+            deliveryMethod={row.delivery_method}
+            deliveryStatus={row.delivery_status}
+          />
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
       </DetailField>
       <DetailField label="Ungenerate">
         {row.ungenerate_eligible ? (
@@ -234,6 +246,10 @@ export function VendorIoDetailSheet({
             badges={
               <>
                 <IoStatusBadge status={row.status} />
+                <VendorIoDeliveryBadge
+                  deliveryMethod={row.delivery_method}
+                  deliveryStatus={row.delivery_status}
+                />
                 <DetailPill>{formatMoney(row.amount, row.currency_code)}</DetailPill>
                 <DocumentNumber
                   value={row.document_number}

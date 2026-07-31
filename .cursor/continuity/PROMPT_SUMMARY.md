@@ -82,12 +82,22 @@
 - Commits: `9d25a65f` · `7eaf219` · `388bab6c` · docs `35086130`
 - Package/UAT archived under `docs/architecture/RELEASE_2_1_*`
 - Redis latency warning on Prod Ops Center remains INFRA (not R2.1 defect)
-- **Release 2.2 — Deployed · Closure PAUSED (OPS-EMAIL)** — Product ratified 2026-07-31
+- **Release 2.2 — Deployed · Closure PAUSED (OPS-EMAIL)** — Product ratified 2026-07-31 (unchanged)
 - Prod tip `db7c8064` · `dpl_GemydYz7E7J5BFwjfoqPeok8NpzW` · `app.thinkwaymedia.com` · Supabase `ienowhwfyxoqtzbgltno`
-- Deploy ✅ · Migrations ✅ · Partial smoke ✅ · **OPS-EMAIL ❌** · Closure ⏸️ · **Do not tag `v2.2.0`**
-- Package: [`RELEASE_2_2_PRODUCTION_PACKAGE.md`](../../docs/architecture/RELEASE_2_2_PRODUCTION_PACKAGE.md) — E1–E7 evidence table required before closure
-- Next: Configure Prod `GMAIL_*` (or SMTP) → E1–E7 on internal recipient → remaining smoke → tag `v2.2.0` → reopen **2.2a Planning Board**
+- Deploy ✅ · DB ✅ · Partial smoke ✅ · OPS-EMAIL ⏸️ · Closure ⏸️ · `v2.2.0` ⛔ · Production Complete ⛔
+- Package: [`RELEASE_2_2_PRODUCTION_PACKAGE.md`](../../docs/architecture/RELEASE_2_2_PRODUCTION_PACKAGE.md) — E1–E7 evidence required before tag/closure
+- Standing by: Prod email config → Product pre-authorized resume: E1–E7 → remaining smoke → evidence → `v2.2.0` → Production Complete → reopen **2.2a Planning Board** (pause + remediate if any E-check fails)
 - Suite: `npm run test:release-2-2` **17/17**
+
+## IO approval email experience (Preview testing on develop)
+
+- Simplified Client/Vendor IO send emails: Campaign Name, Brand Name, Campaign Duration, Agreed Amount + blue **Approve** CTA + legal notice; PDF remains SSOT
+- One-click approval pages (`/io-approval/client|vendor`) validate token and approve immediately (no review form)
+- **Idempotent approve:** repeat click → `Already Approved` (no duplicate emails / timeline / notifications)
+- Friendly outcomes: Already Approved · Expired · Superseded · Link Unavailable
+- Confirmation emails to approver + `traffic@thinkwaymedia.com` after first success only
+- Dev migrations applied on `hsxrewjcbvmbkqdlzjhs`: `20260731160000_*`, `20260731161000_io_approval_idempotent.sql` (Prod not applied)
+- Next: Preview E2E testing — **no Production deploy yet**
 
 ## Media Plan PDF calendar fit (shipped to Production)
 

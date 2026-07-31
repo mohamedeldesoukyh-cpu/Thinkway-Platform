@@ -15,13 +15,14 @@ import { fetchClientIoRow, fetchClientIoRows } from "@/lib/io/client-io-query";
 
 const VENDOR_IO_LIST_SELECT = `
   id, document_number, assignment_id, campaign_header_id, influencer_id, amount, currency_code, status,
+  delivery_method, delivery_status, delivery_error, delivered_at, delivery_recipient,
   special_payment_terms,
   terms_html, terms_text, usage_rights, exclusivity, attachment_url,
   generated_html_url, generated_pdf_url, document_generated_at,
   sent_at, approved_at,
   approved_by_name, rejection_reason, created_by, created_at, updated_at,
   campaign:campaign_headers!vendor_ios_campaign_header_id_fkey(document_number, name),
-  influencer:influencers!vendor_ios_influencer_id_fkey(display_name, payment_terms, vendor_io_terms_text),
+  influencer:influencers!vendor_ios_influencer_id_fkey(display_name, email, payment_terms, vendor_io_terms_text),
   assignment:campaign_influencers!vendor_ios_assignment_id_fkey(
     line:campaign_lines!campaign_influencers_campaign_line_id_fkey(document_number)
   )
@@ -334,9 +335,16 @@ export async function getVendorIos(filters: IoSearchFilters): Promise<VendorIoRo
   return result.data;
 }
 
-export function buildIoEmailLink(type: "client" | "vendor", token: string): string {
+export function buildIoEmailLink(
+  type: "client" | "vendor",
+  token: string,
+  options?: { email?: string | null }
+): string {
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  return `${base}/io-approval/${type}?token=${encodeURIComponent(token)}`;
+  const params = new URLSearchParams({ token });
+  const email = options?.email?.trim().toLowerCase();
+  if (email) params.set("email", email);
+  return `${base}/io-approval/${type}?${params.toString()}`;
 }
 
 export async function ensureVendorIoFromAssignment(assignmentId: string): Promise<string | null> {

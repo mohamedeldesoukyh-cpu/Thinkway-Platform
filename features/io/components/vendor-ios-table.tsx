@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { formatOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
+import { VendorIoDeliveryBadge } from "@/features/io/components/vendor-io-delivery-badge";
 import { VendorIoSendButton } from "@/features/io/components/vendor-io-send-button";
 import { VendorIoSpecialPaymentTermsCell } from "@/features/io/components/vendor-io-special-payment-terms-cell";
 import { VendorIoRowContextMenu } from "@/features/io/components/vendor-io-row-context-menu";
@@ -70,7 +71,29 @@ function buildVendorIosColumns(
     {
       id: "status",
       label: "Status",
-      renderCell: (row) => <IoStatusBadge status={row.status} />,
+      renderCell: (row) => (
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              Workflow
+            </span>
+            <IoStatusBadge status={row.status} />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              Delivery
+            </span>
+            {row.delivery_method ? (
+              <VendorIoDeliveryBadge
+                deliveryMethod={row.delivery_method}
+                deliveryStatus={row.delivery_status}
+              />
+            ) : (
+              <span className="text-[11px] text-muted-foreground">—</span>
+            )}
+          </div>
+        </div>
+      ),
     },
     {
       id: "current_payment_terms",

@@ -1,6 +1,26 @@
 import type { ClientIoRow } from "@/lib/domains/io/types";
-import { getGmailFromEmail } from "@/lib/email/gmail-config";
-import type { GmailAttachment } from "@/lib/email/gmail-send";
+import type { EmailAttachment } from "@/lib/email/provider";
+import {
+  appendThinkwayEmailPlainTextFooter,
+  renderEmailApprovalCta,
+  renderEmailSummaryTable,
+  wrapThinkwayEmailDocument,
+} from "@/lib/email/layout";
+import {
+  formatIoAgreedAmount,
+  formatIoCampaignDuration,
+} from "@/lib/email/io-email-summary";
+import { getEmailFromAddress } from "@/lib/email/provider";
+
+export type ClientIoEmailSummaryFields = {
+  campaign_name: string;
+  brand_name: string | null;
+  campaign_start_date?: string | null;
+  campaign_end_date?: string | null;
+  agreed_amount?: number | null;
+  currency_code?: string | null;
+  document_number?: string | null;
+};
 
 export type ClientIoEmailPreview = {
   subject: string;
@@ -11,84 +31,84 @@ export type ClientIoEmailPreview = {
   hasPdfAttachment: boolean;
 };
 
-export function buildClientIoEmailSubject(io: Pick<ClientIoRow, "document_number" | "campaign_name">): string {
+export function buildClientIoEmailSubject(
+  io: Pick<ClientIoRow, "document_number" | "campaign_name">
+): string {
   const doc = io.document_number ?? "CIO";
   return `Client Insertion Order — ${doc} — ${io.campaign_name}`;
 }
 
+function summaryRows(io: ClientIoEmailSummaryFields) {
+  return [
+    { label: "Campaign Name", value: io.campaign_name?.trim() || "—" },
+    { label: "Brand Name", value: io.brand_name?.trim() || "—" },
+    {
+      label: "Campaign Duration",
+      value: formatIoCampaignDuration(io.campaign_start_date, io.campaign_end_date),
+    },
+    {
+      label: "Agreed Amount",
+      value: formatIoAgreedAmount(io.agreed_amount, io.currency_code),
+    },
+  ];
+}
+
 export function buildClientIoEmailPlainText(input: {
-  io: Pick<
-    ClientIoRow,
-    "document_number" | "campaign_name" | "client_name" | "generated_html_url" | "generated_pdf_url"
-  >;
+  io: ClientIoEmailSummaryFields;
   senderName: string | null;
   approvalUrl?: string | null;
-  documentViewUrl?: string | null;
   includeAcknowledgmentNote?: boolean;
 }): string {
-  const doc = input.io.document_number ?? "Client IO";
-  const sender = input.senderName?.trim() || "Thinkway";
-  const fromEmail = getGmailFromEmail();
-  const viewUrl =
-    input.documentViewUrl ?? input.io.generated_html_url ?? input.io.generated_pdf_url;
-
-  const lines = [
+  const rows = summaryRows(input.io);
+  return appendThinkwayEmailPlainTextFooter([
     "Hello,",
     "",
-    `Please find the Client Insertion Order for ${input.io.campaign_name} (${doc}).`,
-    `Client: ${input.io.client_name}`,
-    viewUrl ? `View document: ${viewUrl}` : null,
+    "Please find attached the Client Insertion Order for your review and approval.",
+    "The attached PDF is the official document.",
+    "",
+    ...rows.map((row) => `${row.label}: ${row.value}`),
+    "",
     input.approvalUrl
-      ? `Acknowledgment link (included when sent): ${input.approvalUrl}`
+      ? `Approve Client IO: ${input.approvalUrl}`
       : input.includeAcknowledgmentNote
-        ? "An acknowledgment link will be included when the IO is sent."
+        ? "An approval link will be included when the IO is sent."
         : null,
-    "",
-    `This IO is issued on a deemed-acceptance basis. If you have questions or amendments, reply to this email within three (3) business days and reference ${doc}.`,
-    "",
-    `Best regards,`,
-    sender,
-    "Thinkway",
-    "",
-    `Sent from ${fromEmail}`,
-  ].filter((line): line is string => line != null);
-
-  return lines.join("\n");
+  ]);
 }
 
 export function buildClientIoEmailPreview(input: {
-  io: Pick<
-    ClientIoRow,
-    | "document_number"
-    | "campaign_name"
-    | "client_name"
-    | "generated_html_url"
-    | "generated_pdf_url"
-  >;
+  io: Pick<ClientIoRow, "document_number" | "campaign_name" | "brand_name" | "generated_pdf_url"> &
+    Partial<ClientIoEmailSummaryFields>;
   senderName: string | null;
   approvalUrl?: string | null;
-  documentViewUrl?: string | null;
   isDraftPreview?: boolean;
 }): ClientIoEmailPreview {
   const subject = buildClientIoEmailSubject(input.io);
-  const fromEmail = getGmailFromEmail();
+  const fromEmail = getEmailFromAddress();
   const fromName = input.senderName?.trim() || "Thinkway";
+  const summary: ClientIoEmailSummaryFields = {
+    campaign_name: input.io.campaign_name,
+    brand_name: input.io.brand_name,
+    campaign_start_date: input.io.campaign_start_date ?? null,
+    campaign_end_date: input.io.campaign_end_date ?? null,
+    agreed_amount: input.io.agreed_amount ?? null,
+    currency_code: input.io.currency_code ?? null,
+    document_number: input.io.document_number,
+  };
 
   return {
     subject,
     fromEmail,
     fromName,
     html: buildClientIoEmailHtml({
-      io: input.io,
+      io: summary,
       senderName: input.senderName,
       approvalUrl: input.approvalUrl ?? null,
-      documentViewUrl: input.documentViewUrl ?? null,
     }),
     plainText: buildClientIoEmailPlainText({
-      io: input.io,
+      io: summary,
       senderName: input.senderName,
       approvalUrl: input.approvalUrl ?? null,
-      documentViewUrl: input.documentViewUrl ?? null,
       includeAcknowledgmentNote: Boolean(input.isDraftPreview && !input.approvalUrl),
     }),
     hasPdfAttachment: Boolean(input.io.generated_pdf_url),
@@ -96,54 +116,34 @@ export function buildClientIoEmailPreview(input: {
 }
 
 export function buildClientIoEmailHtml(input: {
-  io: Pick<
-    ClientIoRow,
-    "document_number" | "campaign_name" | "client_name" | "generated_html_url" | "generated_pdf_url"
-  >;
+  io: ClientIoEmailSummaryFields;
   senderName: string | null;
   approvalUrl?: string | null;
-  documentViewUrl?: string | null;
 }): string {
-  const doc = input.io.document_number ?? "Client IO";
-  const viewUrl =
-    input.documentViewUrl ?? input.io.generated_html_url ?? input.io.generated_pdf_url;
-  const sender = input.senderName?.trim() || "Thinkway";
-  const fromEmail = getGmailFromEmail();
+  const bodyHtml = `
+    <p style="margin:0 0 16px;">Hello,</p>
+    <p style="margin:0 0 20px;">
+      Please find attached the <strong>Client Insertion Order</strong> for your review and approval.
+      The attached PDF is the official document.
+    </p>
+    ${renderEmailSummaryTable(summaryRows(input.io))}
+    ${
+      input.approvalUrl
+        ? renderEmailApprovalCta(input.approvalUrl, "Approve Client IO")
+        : ""
+    }
+  `;
 
-  return `<!DOCTYPE html>
-<html>
-<body style="font-family: Inter, Arial, sans-serif; color: #0A0F1E; line-height: 1.6; max-width: 640px;">
-  <p>Hello,</p>
-  <p>Please find the <strong>Client Insertion Order</strong> for <strong>${escapeHtml(input.io.campaign_name)}</strong> (${escapeHtml(doc)}).</p>
-  <p>Client: <strong>${escapeHtml(input.io.client_name)}</strong></p>
-  ${
-    viewUrl
-      ? `<p><a href="${escapeHtml(viewUrl)}" style="color:#0057FF;">View Client IO document</a></p>`
-      : ""
-  }
-  ${
-    input.approvalUrl
-      ? `<p>If you need to acknowledge or request changes, use this link: <a href="${escapeHtml(input.approvalUrl)}" style="color:#0057FF;">Open IO acknowledgment</a></p>`
-      : ""
-  }
-  <p>This IO is issued on a deemed-acceptance basis. If you have questions or amendments, reply to this email within three (3) business days and reference <strong>${escapeHtml(doc)}</strong>.</p>
-  <p>Best regards,<br>${escapeHtml(sender)}<br>Thinkway</p>
-  <p style="font-size:12px;color:#6B7280;">Sent from ${escapeHtml(fromEmail)}</p>
-</body>
-</html>`;
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+  return wrapThinkwayEmailDocument({
+    documentTitle: "Client Insertion Order",
+    documentKind: "Client Insertion Order notification",
+    bodyHtml,
+  });
 }
 
 export function buildClientIoPdfAttachmentFromBuffer(
   buffer: Buffer | null
-): GmailAttachment | null {
+): EmailAttachment | null {
   if (!buffer?.length) return null;
 
   return {
@@ -156,7 +156,7 @@ export function buildClientIoPdfAttachmentFromBuffer(
 /** @deprecated Prefer buildClientIoPdfAttachmentFromBuffer with storage download. */
 export async function buildClientIoPdfAttachment(
   pdfUrl: string | null
-): Promise<GmailAttachment | null> {
+): Promise<EmailAttachment | null> {
   if (!pdfUrl?.trim()) return null;
 
   try {

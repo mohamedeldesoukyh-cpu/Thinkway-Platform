@@ -13,6 +13,11 @@ type VendorIoQueryRow = {
   amount: number;
   currency_code: string;
   status: VendorIoRow["status"];
+  delivery_method?: string | null;
+  delivery_status?: string | null;
+  delivery_error?: string | null;
+  delivered_at?: string | null;
+  delivery_recipient?: string | null;
   special_payment_terms?: string | null;
   terms_html: string | null;
   terms_text: string | null;
@@ -33,11 +38,13 @@ type VendorIoQueryRow = {
   influencer:
     | {
         display_name: string;
+        email?: string | null;
         payment_terms?: PaymentTerms | string | null;
         vendor_io_terms_text?: string | null;
       }
     | Array<{
         display_name: string;
+        email?: string | null;
         payment_terms?: PaymentTerms | string | null;
         vendor_io_terms_text?: string | null;
       }>
@@ -51,6 +58,20 @@ type VendorIoQueryRow = {
 function unwrap<T>(value: T | T[] | null | undefined): T | null {
   if (value == null) return null;
   return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+function normalizeDeliveryMethod(
+  value: string | null | undefined
+): VendorIoRow["delivery_method"] {
+  if (value === "email" || value === "manual") return value;
+  return null;
+}
+
+function normalizeDeliveryStatus(
+  value: string | null | undefined
+): VendorIoRow["delivery_status"] {
+  if (value === "sent" || value === "failed" || value === "completed") return value;
+  return null;
 }
 
 export function mapVendorIoQueryRow(row: VendorIoQueryRow): VendorIoRow {
@@ -77,11 +98,17 @@ export function mapVendorIoQueryRow(row: VendorIoQueryRow): VendorIoRow {
     assignment_document_number: line?.document_number ?? null,
     influencer_id: row.influencer_id,
     influencer_name: influencer?.display_name ?? "—",
+    influencer_email: influencer?.email?.trim() || null,
     creator_avatar_url: null,
     vendor_io_terms_text: influencer?.vendor_io_terms_text ?? null,
     amount: Number(row.amount),
     currency_code: row.currency_code,
     status: row.status,
+    delivery_method: normalizeDeliveryMethod(row.delivery_method),
+    delivery_status: normalizeDeliveryStatus(row.delivery_status),
+    delivery_error: row.delivery_error ?? null,
+    delivered_at: row.delivered_at ?? null,
+    delivery_recipient: row.delivery_recipient?.trim() || null,
     terms_html: row.terms_html,
     terms_text: row.terms_text,
     usage_rights: row.usage_rights,

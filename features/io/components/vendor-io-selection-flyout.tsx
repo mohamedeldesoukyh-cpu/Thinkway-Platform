@@ -81,7 +81,7 @@ export function VendorIoSelectionFlyout({
 
   const primaryAction: PlatformFloatingBarAction = {
     id: "send",
-    label: pending ? "Sending…" : "Send selected",
+    label: pending ? "Sending…" : "Send / mark selected",
     icon: SendIcon,
     disabled: pending,
     loading: pending,

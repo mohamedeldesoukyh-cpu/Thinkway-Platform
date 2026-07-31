@@ -87,12 +87,21 @@ export type VendorIoRow = {
   assignment_document_number: string | null;
   influencer_id: string;
   influencer_name: string;
+  /** Vendor contact email when present — drives Send by Email vs Mark as Delivered Manually. */
+  influencer_email: string | null;
   creator_avatar_url: string | null;
   /** Influencer default Vendor IO terms JSON (null = platform default). */
   vendor_io_terms_text: string | null;
   amount: number;
   currency_code: string;
   status: VendorIoStatus;
+  /** Delivery channel — independent of workflow status. */
+  delivery_method: "email" | "manual" | null;
+  delivery_status: "sent" | "failed" | "completed" | null;
+  delivery_error: string | null;
+  delivered_at: string | null;
+  /** Actual recipient email, or "Manual" for manual delivery. */
+  delivery_recipient: string | null;
   ungenerate_eligible: boolean;
   ungenerate_ineligible_reason: string | null;
   terms_html: string | null;

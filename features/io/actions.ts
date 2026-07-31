@@ -23,14 +23,22 @@ import {
   buildClientIoEmailSubject,
   buildClientIoPdfAttachmentFromBuffer,
 } from "@/lib/email/client-io-email";
-import { getGmailFromEmail } from "@/lib/email/gmail-config";
-import { sendGmailEmail } from "@/lib/email/gmail-send";
+import {
+  buildVendorIoEmailHtml,
+  buildVendorIoEmailPlainText,
+  buildVendorIoEmailSubject,
+  buildVendorIoPdfAttachmentFromBuffer,
+} from "@/lib/email/vendor-io-email";
+import { buildIoDeliveryNotificationMeta } from "@/lib/email/delivery-notification";
+import { getEmailFromAddress, sendEmail } from "@/lib/email/provider";
 import { CLIENT_IO_DOCUMENTS_BUCKET } from "@/lib/io/client-io-document-service";
 import {
-  createIoDocumentSignedUrl,
-  downloadIoDocumentBuffer,
-  EMAIL_SIGNED_URL_SECONDS,
-} from "@/lib/io/io-document-storage";
+  hasValidVendorEmail,
+  VENDOR_IO_MANUAL_DELIVERY_RECIPIENT,
+} from "@/lib/io/vendor-io-delivery";
+import { VENDOR_IO_DOCUMENTS_BUCKET } from "@/lib/io/vendor-io-document-service";
+import { downloadIoDocumentBuffer } from "@/lib/io/io-document-storage";
+import { sumClientIoSnapshotAgreedAmount } from "@/lib/email/io-email-summary";
 import {
   normalizeIoTermsText,
   parseTermsText,
@@ -420,53 +428,88 @@ export async function sendClientIoAction(
 
   if (rpcError) return { ok: false, message: rpcError.message };
   const token = (data as string | null) ?? "";
-  const approvalUrl = token ? buildIoEmailLink("client", token) : null;
 
-  const documentViewUrl =
-    (await createIoDocumentSignedUrl(
-      supabase,
-      CLIENT_IO_DOCUMENTS_BUCKET,
-      clientIo.generated_html_url,
-      EMAIL_SIGNED_URL_SECONDS
-    )) ??
-    (await createIoDocumentSignedUrl(
-      supabase,
-      CLIENT_IO_DOCUMENTS_BUCKET,
-      clientIo.generated_pdf_url,
-      EMAIL_SIGNED_URL_SECONDS
-    ));
+  const [{ data: campaignDates }, { data: cioExtras }] = await Promise.all([
+    supabase
+      .from("campaign_headers")
+      .select("start_date, end_date, currency_code")
+      .eq("id", campaignHeaderId)
+      .maybeSingle(),
+    supabase
+      .from("client_ios")
+      .select("assignment_snapshot")
+      .eq("id", id)
+      .maybeSingle(),
+  ]);
+
+  const campaignMeta = campaignDates as {
+    start_date: string | null;
+    end_date: string | null;
+    currency_code: string | null;
+  } | null;
+  const agreed = sumClientIoSnapshotAgreedAmount(
+    (cioExtras as { assignment_snapshot?: unknown } | null)?.assignment_snapshot
+  );
+
+  const emailSummary = {
+    campaign_name: clientIo.campaign_name,
+    brand_name: clientIo.brand_name,
+    campaign_start_date: campaignMeta?.start_date ?? null,
+    campaign_end_date: campaignMeta?.end_date ?? null,
+    agreed_amount: agreed?.amount ?? null,
+    currency_code: agreed?.currencyCode ?? campaignMeta?.currency_code ?? null,
+    document_number: clientIo.document_number,
+  };
 
   const subject = buildClientIoEmailSubject(clientIo);
-  const html = buildClientIoEmailHtml({
-    io: clientIo,
-    senderName,
-    approvalUrl,
-    documentViewUrl,
-  });
-  const emailText = buildClientIoEmailPlainText({
-    io: clientIo,
-    senderName,
-    approvalUrl,
-    documentViewUrl,
-  });
   const pdfBuffer = await downloadIoDocumentBuffer(
     supabase,
     CLIENT_IO_DOCUMENTS_BUCKET,
     clientIo.generated_pdf_url
   );
   const pdfAttachment = buildClientIoPdfAttachmentFromBuffer(pdfBuffer);
-  const gmailResult = await sendGmailEmail({
-    to: recipients,
-    subject,
-    html,
-    attachments: pdfAttachment ? [pdfAttachment] : undefined,
-  });
 
   const sendBatchId = crypto.randomUUID();
-  const senderEmail = getGmailFromEmail();
+  const senderEmail = getEmailFromAddress();
   const sentAt = new Date().toISOString();
 
+  let anyEmailOk = false;
+  let lastEmailError: string | null = null;
+
   for (const recipient of recipients) {
+    const approvalUrl = token
+      ? buildIoEmailLink("client", token, { email: recipient.email })
+      : null;
+    const html = buildClientIoEmailHtml({
+      io: emailSummary,
+      senderName,
+      approvalUrl,
+    });
+    const emailText = buildClientIoEmailPlainText({
+      io: emailSummary,
+      senderName,
+      approvalUrl,
+    });
+    const emailResult = await sendEmail({
+      to: [recipient],
+      subject,
+      html,
+      text: emailText,
+      attachments: pdfAttachment ? [pdfAttachment] : undefined,
+    });
+
+    if (emailResult.ok) anyEmailOk = true;
+    else lastEmailError = emailResult.error;
+
+    const clientDeliveryStatus = emailResult.ok ? "sent" : "failed";
+    const deliveryMeta = buildIoDeliveryNotificationMeta({
+      deliveryMethod: "email",
+      deliveryStatus: clientDeliveryStatus,
+      recipient: recipient.email,
+      subject,
+      messageId: emailResult.ok ? emailResult.messageId : null,
+      sentAt,
+    });
     await supabase.from("io_notifications").insert({
       io_type: "client",
       io_id: id,
@@ -475,11 +518,11 @@ export async function sendClientIoAction(
       recipient_name: recipient.name || null,
       sender_email: senderEmail,
       subject,
-      gmail_message_id: gmailResult.ok ? gmailResult.messageId : null,
+      gmail_message_id: emailResult.ok ? emailResult.messageId : null,
       send_batch_id: sendBatchId,
       sent_by: user.id,
-      delivery_status: gmailResult.ok ? "sent" : "failed",
-      delivery_error: gmailResult.ok ? null : gmailResult.error,
+      delivery_status: clientDeliveryStatus,
+      delivery_error: emailResult.ok ? null : emailResult.error,
       payload: {
         document_number: clientIo.document_number,
         pdf_url: clientIo.generated_pdf_url,
@@ -488,6 +531,7 @@ export async function sendClientIoAction(
         email_html: html,
         email_text: emailText,
         sender_display_name: senderName,
+        ...deliveryMeta,
       },
       sent_at: sentAt,
     } as never);
@@ -495,9 +539,9 @@ export async function sendClientIoAction(
 
   debugIo("io-email", "client io send", {
     id,
-    approvalUrl,
     recipients: recipients.map((r) => r.email),
-    gmailOk: gmailResult.ok,
+    gmailOk: anyEmailOk,
+    lastEmailError,
   });
 
   try {
@@ -541,10 +585,10 @@ export async function sendClientIoAction(
 
   revalidateIoPaths(campaignHeaderId);
 
-  if (!gmailResult.ok) {
+  if (!anyEmailOk) {
     return {
       ok: false,
-      message: `IO marked under client review but email delivery failed: ${gmailResult.error}`,
+      message: `IO marked under client review but email delivery failed: ${lastEmailError ?? "unknown error"}`,
     };
   }
 
@@ -690,9 +734,66 @@ export async function sendVendorIoAction(
 
   const { data: vendorIo } = await supabase
     .from("vendor_ios")
-    .select("document_number, generated_pdf_url, influencer_id, influencers:influencer_id(email)")
+    .select(
+      `
+      document_number, amount, currency_code, created_at, document_generated_at,
+      generated_html_url, generated_pdf_url, influencer_id,
+      campaign:campaign_header_id(
+        name, start_date, end_date,
+        brands:brand_id(name),
+        clients:client_id(name, legal_name)
+      ),
+      influencers:influencer_id(email, display_name)
+    `
+    )
     .eq("id", id)
     .maybeSingle();
+
+  type ClientRel = { name: string; legal_name: string | null };
+  type BrandRel = { name: string };
+  type CampaignRel = {
+    name: string;
+    start_date: string | null;
+    end_date: string | null;
+    brands: BrandRel | BrandRel[] | null;
+    clients: ClientRel | ClientRel[] | null;
+  };
+  type InfluencerRel = { email: string | null; display_name: string | null };
+
+  const typed = vendorIo as {
+    document_number: string | null;
+    amount: number;
+    currency_code: string;
+    created_at: string;
+    document_generated_at: string | null;
+    generated_html_url: string | null;
+    generated_pdf_url: string | null;
+    campaign: CampaignRel | CampaignRel[] | null;
+    influencers: InfluencerRel | InfluencerRel[] | null;
+  } | null;
+
+  if (!typed) return { ok: false, message: "Vendor IO not found." };
+
+  const influencer = Array.isArray(typed.influencers)
+    ? typed.influencers[0] ?? null
+    : typed.influencers;
+  const campaign = Array.isArray(typed.campaign) ? typed.campaign[0] ?? null : typed.campaign;
+  const clientRel = Array.isArray(campaign?.clients)
+    ? campaign?.clients[0] ?? null
+    : campaign?.clients ?? null;
+  const brandRel = Array.isArray(campaign?.brands)
+    ? campaign?.brands[0] ?? null
+    : campaign?.brands ?? null;
+
+  const recipientEmail = influencer?.email?.trim() ?? "";
+  const sendByEmail = hasValidVendorEmail(recipientEmail);
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .maybeSingle();
+  const senderName = (profile as { full_name?: string | null } | null)?.full_name ?? null;
 
   const { data, error: rpcError } = await (supabase as any).rpc("send_vendor_io", {
     p_vendor_io_id: id,
@@ -701,31 +802,177 @@ export async function sendVendorIoAction(
 
   if (rpcError) return { ok: false, message: rpcError.message };
   const token = (data as string | null) ?? "";
-  const approvalUrl = token ? buildIoEmailLink("vendor", token) : null;
+  const recipientEmailNormalized = recipientEmail.toLowerCase();
+  const approvalUrl = token
+    ? buildIoEmailLink("vendor", token, { email: recipientEmailNormalized || null })
+    : null;
 
-  const typed = vendorIo as {
-    document_number: string | null;
-    generated_pdf_url: string | null;
-    influencers: { email: string | null } | null;
-  } | null;
+  const deliveredAt = new Date().toISOString();
+  const sendBatchId = crypto.randomUUID();
+  const senderEmail = getEmailFromAddress();
+  const influencerName = influencer?.display_name?.trim() || "Vendor";
+  const clientName =
+    clientRel?.legal_name?.trim() || clientRel?.name?.trim() || "Client";
+  const brandName = brandRel?.name?.trim() || null;
+
+  if (!sendByEmail) {
+    const deliveryMeta = buildIoDeliveryNotificationMeta({
+      deliveryMethod: "manual",
+      deliveryStatus: "completed",
+      recipient: VENDOR_IO_MANUAL_DELIVERY_RECIPIENT,
+      subject: null,
+      messageId: null,
+      sentAt: deliveredAt,
+    });
+
+    await supabase
+      .from("vendor_ios")
+      .update({
+        delivery_method: "manual",
+        delivery_status: "completed",
+        delivery_error: null,
+        delivered_at: deliveredAt,
+        delivery_recipient: VENDOR_IO_MANUAL_DELIVERY_RECIPIENT,
+      } as never)
+      .eq("id", id);
+
+    await supabase.from("io_notifications").insert({
+      io_type: "vendor",
+      io_id: id,
+      event_type: "vendor_io_sent",
+      recipient_email: null,
+      recipient_name: influencerName,
+      sender_email: senderEmail,
+      subject: null,
+      gmail_message_id: null,
+      send_batch_id: sendBatchId,
+      sent_by: user.id,
+      delivery_status: "completed",
+      delivery_error: null,
+      payload: {
+        document_number: typed.document_number,
+        pdf_url: typed.generated_pdf_url,
+        approval_url: approvalUrl,
+        campaign_header_id: campaignHeaderId,
+        sender_display_name: senderName,
+        ...deliveryMeta,
+      },
+      sent_at: deliveredAt,
+    } as never);
+
+    debugIo("io-email", "vendor io manual send", { id, approvalUrl });
+    revalidateIoPaths(campaignHeaderId);
+    return { ok: true, message: "Delivered Manually" };
+  }
+
+  const emailIo = {
+    document_number: typed.document_number,
+    campaign_name: campaign?.name ?? "Campaign",
+    brand_name: brandName,
+    client_name: clientName,
+    influencer_name: influencerName,
+    amount: Number(typed.amount) || 0,
+    currency_code: typed.currency_code || "USD",
+    campaign_start_date: campaign?.start_date ?? null,
+    campaign_end_date: campaign?.end_date ?? null,
+    issue_date: typed.document_generated_at ?? typed.created_at,
+    generated_html_url: typed.generated_html_url,
+    generated_pdf_url: typed.generated_pdf_url,
+  };
+
+  const pdfBuffer = await downloadIoDocumentBuffer(
+    supabase,
+    VENDOR_IO_DOCUMENTS_BUCKET,
+    typed.generated_pdf_url
+  );
+  const pdfAttachment = buildVendorIoPdfAttachmentFromBuffer(pdfBuffer);
+  const hasPdfAttachment = Boolean(pdfAttachment);
+
+  const subject = buildVendorIoEmailSubject(emailIo);
+  const html = buildVendorIoEmailHtml({
+    io: emailIo,
+    senderName,
+    approvalUrl,
+    hasPdfAttachment,
+  });
+  const emailText = buildVendorIoEmailPlainText({
+    io: emailIo,
+    senderName,
+    approvalUrl,
+    hasPdfAttachment,
+  });
+
+  const emailResult = await sendEmail({
+    to: [{ email: recipientEmail, name: influencerName }],
+    subject,
+    html,
+    text: emailText,
+    attachments: pdfAttachment ? [pdfAttachment] : undefined,
+  });
+
+  const vendorDeliveryStatus = emailResult.ok ? "sent" : "failed";
+  const deliveryMeta = buildIoDeliveryNotificationMeta({
+    deliveryMethod: "email",
+    deliveryStatus: vendorDeliveryStatus,
+    recipient: recipientEmail,
+    subject,
+    messageId: emailResult.ok ? emailResult.messageId : null,
+    sentAt: deliveredAt,
+  });
+
+  await supabase
+    .from("vendor_ios")
+    .update({
+      delivery_method: "email",
+      delivery_status: vendorDeliveryStatus,
+      delivery_error: emailResult.ok ? null : emailResult.error,
+      delivered_at: deliveredAt,
+      delivery_recipient: recipientEmail,
+    } as never)
+    .eq("id", id);
 
   await supabase.from("io_notifications").insert({
     io_type: "vendor",
     io_id: id,
     event_type: "vendor_io_sent",
-    recipient_email: typed?.influencers?.email ?? null,
-    delivery_status: "queued",
+    recipient_email: recipientEmail,
+    recipient_name: influencerName,
+    sender_email: senderEmail,
+    subject,
+    gmail_message_id: emailResult.ok ? emailResult.messageId : null,
+    send_batch_id: sendBatchId,
+    sent_by: user.id,
+    delivery_status: vendorDeliveryStatus,
+    delivery_error: emailResult.ok ? null : emailResult.error,
     payload: {
-      document_number: typed?.document_number,
-      pdf_url: typed?.generated_pdf_url,
+      document_number: typed.document_number,
+      pdf_url: typed.generated_pdf_url,
       approval_url: approvalUrl,
       campaign_header_id: campaignHeaderId,
+      email_html: html,
+      email_text: emailText,
+      sender_display_name: senderName,
+      has_pdf_attachment: hasPdfAttachment,
+      ...deliveryMeta,
     },
-    sent_at: new Date().toISOString(),
+    sent_at: deliveredAt,
   } as never);
 
-  debugIo("io-email", "vendor io send trigger", { id, approvalUrl });
+  debugIo("io-email", "vendor io send", {
+    id,
+    approvalUrl,
+    recipients: [recipientEmail],
+    gmailOk: emailResult.ok,
+  });
   revalidateIoPaths(campaignHeaderId);
-  return { ok: true, message: "Vendor IO sent with PDF attachment link when available." };
+
+  if (!emailResult.ok) {
+    return {
+      ok: false,
+      message: `Vendor IO marked as sent but email delivery failed: ${emailResult.error}`,
+    };
+  }
+
+  return { ok: true, message: "Email Sent" };
 }
 

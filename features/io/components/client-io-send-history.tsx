@@ -9,7 +9,7 @@ import { DetailFormSection } from "@/features/campaigns/components/operational-d
 import { ClientIoEmailViewDialog } from "@/features/io/components/client-io-email-view-dialog";
 import type { ClientIoSendHistoryEntry } from "@/features/io/types";
 import type { ClientIoEmailPreview } from "@/lib/email/client-io-email";
-import { getGmailFromEmail } from "@/lib/email/gmail-config";
+import { getEmailFromAddress } from "@/lib/email/provider";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -34,7 +34,7 @@ function historyEntryToPreview(entry: ClientIoSendHistoryEntry): ClientIoEmailPr
 
   return {
     subject: entry.subject ?? "Client Insertion Order",
-    fromEmail: entry.sender_email ?? getGmailFromEmail(),
+    fromEmail: entry.sender_email ?? getEmailFromAddress(),
     fromName: entry.sent_by_display_name ?? entry.sent_by_name ?? "Thinkway",
     html:
       entry.email_html ??

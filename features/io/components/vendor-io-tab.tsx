@@ -21,6 +21,7 @@ import {
   VendorIoSelectionFlyout,
   vendorIoFloatingBarContentClass,
 } from "@/features/io/components/vendor-io-selection-flyout";
+import { VendorIoDeliveryBadge } from "@/features/io/components/vendor-io-delivery-badge";
 import { VendorIoSendButton } from "@/features/io/components/vendor-io-send-button";
 import { VendorIoSpecialPaymentTermsCell } from "@/features/io/components/vendor-io-special-payment-terms-cell";
 import { VendorIoStatusPill } from "@/features/io/components/vendor-io-status-pill";
@@ -136,7 +137,15 @@ function buildCampaignVendorIoColumns(
     {
       id: "status",
       label: "Status",
-      renderCell: (row) => <VendorIoStatusPill status={row.status} />,
+      renderCell: (row) => (
+        <div className="flex flex-col gap-1">
+          <VendorIoStatusPill status={row.status} />
+          <VendorIoDeliveryBadge
+            deliveryMethod={row.delivery_method}
+            deliveryStatus={row.delivery_status}
+          />
+        </div>
+      ),
     },
     {
       id: "current_payment_terms",
