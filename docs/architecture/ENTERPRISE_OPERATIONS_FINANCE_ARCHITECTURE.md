@@ -768,24 +768,25 @@ flowchart LR
 | **Package** | [`RELEASE_2_1_PRODUCTION_PACKAGE.md`](./RELEASE_2_1_PRODUCTION_PACKAGE.md) · UAT [`RELEASE_2_1_UAT.md`](./RELEASE_2_1_UAT.md) |
 | **Migrations** | None (JSON / audit_logs metadata only) |
 
-### Release 2.2 — Client IO completion (Ops↔Finance contract) — **NEXT**
+### Release 2.2 — Client IO completion (Ops↔Finance contract) — **IMPLEMENTATION NEXT**
 
 | | |
 |---|---|
+| **Status** | Implementation package ready — [`RELEASE_2_2_IMPLEMENTATION.md`](./RELEASE_2_2_IMPLEMENTATION.md) · UAT [`RELEASE_2_2_UAT.md`](./RELEASE_2_2_UAT.md) |
 | **Scope** | CIO as commercial contract; assignment-selected composer; **append-only amendments**; approval; **configurable billing milestones**; commercial audit; lifecycle tracking; Timeline panel v1 (CIO events); notifications |
 | **Dependencies** | 2.1 (stable Assignment refs) |
 | **Risks** | Duplicate commercial display vs SSOT; amendment UX complexity |
-| **Migrations** | Amendment chain + milestone schedule model — Dev-first after 2.2 kickoff |
+| **Migrations** | Amendment chain + milestone schedule model — Dev-first after coding kickoff |
 | **Testing** | Document parity; amendment history; finance-lock; milestone configs |
 | **UAT** | Finance + AM |
 | **Prod rollout** | Explicit approval |
 | **Scope rule** | **No expansion** — Planning Board / Copilot are **not** part of 2.2 |
 
-### Release 2.2a — Media Plan Planning Board — **APPROVED (architecture)**
+### Release 2.2a — Media Plan Planning Board — **APPROVED (architecture) · QUEUED**
 
 | | |
 |---|---|
-| **Status** | Architecture approved 2026-07-31 · implementation pending kickoff |
+| **Status** | Architecture approved 2026-07-31 · **implementation starts only after R2.2 Feature Freeze** |
 | **Scope** | Commercial Workspace–style Planning Board; DnD + multi-select + deliverable-level move + bulk Move; same Assignment mutation engine as Calendar; Timeline audit; 300–1,000 creator performance |
 | **Package** | [`RELEASE_2_2A_PLANNING_BOARD_ARCHITECTURE.md`](./RELEASE_2_2A_PLANNING_BOARD_ARCHITECTURE.md) |
 | **Dependencies** | 2.1 Assignment IDs + grain guards |

@@ -1,9 +1,9 @@
 # Release 2.2a — Media Plan Planning Board Architecture
 
-**Status:** ✅ **APPROVED** (Product 2026-07-31)  
+**Status:** ✅ **APPROVED** (Product 2026-07-31) · ⏳ **Implementation queued** until Release 2.2 Client IO reaches Feature Freeze  
 **Parent:** [`ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md`](./ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md)  
 **Depends on:** Release 2.1 — Media Plan ↔ Assignment Hardening (`v2.1.0`)  
-**Sibling (unchanged):** Release 2.2 — Client IO Enterprise Completion  
+**Sibling (in progress first):** Release 2.2 — Client IO — [`RELEASE_2_2_IMPLEMENTATION.md`](./RELEASE_2_2_IMPLEMENTATION.md)  
 **Follow-on:** Release 2.2b — AI Copilot for Media Plan Scheduling (§8)
 
 ---

@@ -82,10 +82,11 @@
 - Commits: `9d25a65f` · `7eaf219` · `388bab6c` · docs `35086130`
 - Package/UAT archived under `docs/architecture/RELEASE_2_1_*`
 - Redis latency warning on Prod Ops Center remains INFRA (not R2.1 defect)
-- **`develop` reopened for Release 2.2 — Client IO Enterprise Completion** (no scope expansion)
-- **R2.2a Planning Board** architecture **APPROVED** (2026-07-31): [`RELEASE_2_2A_PLANNING_BOARD_ARCHITECTURE.md`](../../docs/architecture/RELEASE_2_2A_PLANNING_BOARD_ARCHITECTURE.md) — Assignment view only; same mutation engine; Commercial Workspace UX; Copilot deferred
-- **R2.2b Media Plan Copilot** architecture **APPROVED** (follow-on): NL → validate → same schedule service → Review Mode → Timeline; no direct UI writes
-- Next: Product chooses kickoff order — R2.2 CIO impl and/or R2.2a Planning Board impl package (coding only after explicit kickoff)
+- **Release 2.2 — Client IO Enterprise Completion — START** (programme priority)
+- Implementation package: [`RELEASE_2_2_IMPLEMENTATION.md`](../../docs/architecture/RELEASE_2_2_IMPLEMENTATION.md) · UAT [`RELEASE_2_2_UAT.md`](../../docs/architecture/RELEASE_2_2_UAT.md)
+- Reuse matrix locked: Assignment IDs, VIO-style amendments, audit_logs Timeline, milestones schedule-only (billing exec → 2.3)
+- **R2.2a Planning Board** / **R2.2b Copilot**: architecture approved · **implementation queued until R2.2 Feature Freeze**
+- Next: Product confirms 4 kickoff choices in §12 of R2.2 impl package → then coding on Development only
 
 ## Media Plan PDF calendar fit (shipped to Production)
 
