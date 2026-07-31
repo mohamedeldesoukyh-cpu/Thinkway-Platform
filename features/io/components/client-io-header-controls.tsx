@@ -13,6 +13,7 @@ import {
   OPERATIONAL_CHROME_LABEL,
 } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import type { ClientIoRow } from "@/features/io/types";
+import { isClientIoRegenerateAllowed } from "@/lib/io/client-io-assignments";
 import { serializeSendRecipients } from "@/lib/io/client-io-send-recipients";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +39,7 @@ export function ClientIoHeaderControls({ io, campaignId }: Props) {
   const hasDocument = Boolean(
     io.document_generated_at || io.generated_html_url || io.generated_pdf_url
   );
+  const canRegenerate = isClientIoRegenerateAllowed(io.status);
   const sendRecipientsJson = serializeSendRecipients(io.send_recipients ?? []);
 
   return (
@@ -59,7 +61,12 @@ export function ClientIoHeaderControls({ io, campaignId }: Props) {
           size="sm"
           variant="outline"
           type="submit"
-          disabled={generating}
+          disabled={generating || !canRegenerate}
+          title={
+            !canRegenerate
+              ? "Regenerate is locked after send. Use an amendment."
+              : undefined
+          }
           className={cn(OPERATIONAL_CHROME_LABEL, "h-7 px-2")}
         >
           {generating

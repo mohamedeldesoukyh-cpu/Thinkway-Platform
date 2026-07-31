@@ -179,44 +179,48 @@ export function ClientIoForm({
         </div>
       }
     >
-      <form id="client-io-save" action={saveAction} className="flex flex-col">
-        <input type="hidden" name="id" value={row.id} />
-        <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
-        <input type="hidden" name="status" value={row.status} />
-        <input type="hidden" name="terms_text" value={termsTextPayload} />
-        <input type="hidden" name="send_recipients" value={sendRecipientsPayload} />
+      <div className="px-6 py-4">
+        <div className="space-y-1">
+          <DetailFormSection label="Document details" className="py-3.5">
+            <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <SummaryItem label="Document number" value={row.document_number} />
+              <SummaryItem label="Campaign" value={row.campaign_name} />
+              <SummaryItem label="Client" value={row.client_name} />
+              <SummaryItem label="Brand" value={brandName} />
+              <SummaryItem label="Status" value={row.status} />
+              <SummaryItem label="Billing terms" value={billingTerms || row.billing_terms} />
+            </dl>
+          </DetailFormSection>
 
-        <div className="px-6 py-4">
-          <div className="space-y-1">
-            <DetailFormSection label="Document details" className="py-3.5">
-              <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <SummaryItem label="Document number" value={row.document_number} />
-                <SummaryItem label="Campaign" value={row.campaign_name} />
-                <SummaryItem label="Client" value={row.client_name} />
-                <SummaryItem label="Brand" value={brandName} />
-                <SummaryItem label="Status" value={row.status} />
-                <SummaryItem label="Billing terms" value={billingTerms || row.billing_terms} />
-              </dl>
-            </DetailFormSection>
+          {/*
+            Assignment / milestones / amendment each own a <form>. Keep them
+            outside client-io-save — nested forms break submit (DEF-R22-01).
+          */}
+          <ClientIoAssignmentComposer
+            clientIoId={row.id}
+            campaignHeaderId={row.campaign_header_id}
+            status={row.status}
+            currencyCode={currencyCode}
+            assignments={assignments}
+            selectedAssignmentIds={row.selected_assignment_ids ?? []}
+          />
 
-            <ClientIoAssignmentComposer
-              clientIoId={row.id}
-              campaignHeaderId={row.campaign_header_id}
-              status={row.status}
-              currencyCode={currencyCode}
-              assignments={assignments}
-              selectedAssignmentIds={row.selected_assignment_ids ?? []}
-            />
+          <ClientIoMilestonesEditor
+            clientIoId={row.id}
+            campaignHeaderId={row.campaign_header_id}
+            status={row.status}
+            isSuperseded={row.is_superseded}
+            milestones={milestones}
+          />
 
-            <ClientIoMilestonesEditor
-              clientIoId={row.id}
-              campaignHeaderId={row.campaign_header_id}
-              status={row.status}
-              isSuperseded={row.is_superseded}
-              milestones={milestones}
-            />
+          <ClientIoAmendmentHistory tip={row} versions={versions} />
 
-            <ClientIoAmendmentHistory tip={row} versions={versions} />
+          <form id="client-io-save" action={saveAction} className="flex flex-col">
+            <input type="hidden" name="id" value={row.id} />
+            <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
+            <input type="hidden" name="status" value={row.status} />
+            <input type="hidden" name="terms_text" value={termsTextPayload} />
+            <input type="hidden" name="send_recipients" value={sendRecipientsPayload} />
 
             <ClientIoRecipientsEditor
               recipients={sendRecipients}
@@ -262,9 +266,9 @@ export function ClientIoForm({
             </DetailFormSection>
 
             <ClientIoSendHistory history={sendHistory} />
-          </div>
+          </form>
         </div>
-      </form>
+      </div>
 
       <form id="client-io-generate" action={generateAction} className="hidden">
         <input type="hidden" name="id" value={row.id} />
