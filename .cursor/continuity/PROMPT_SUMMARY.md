@@ -82,13 +82,16 @@
 - Commits: `9d25a65f` · `7eaf219` · `388bab6c` · docs `35086130`
 - Package/UAT archived under `docs/architecture/RELEASE_2_1_*`
 - Redis latency warning on Prod Ops Center remains INFRA (not R2.1 defect)
-- **Release 2.2 — Client IO Enterprise Completion — Interactive UAT Active**
-- Preview accepted · authoritative build `dev.thinkwaymedia.com` · tip `d6c983fe` on `develop` · Dev DB `hsxrewjcbvmbkqdlzjhs`
-- Architecture ✅ · Implementation Validation ✅ · R-T1/T2/T3 dispositions locked
-- Merge policy: **UAT defect fixes only** until Feature Freeze
-- UAT package: [`RELEASE_2_2_UAT.md`](../../docs/architecture/RELEASE_2_2_UAT.md) — must pass P1–P5 before Feature Freeze
-- Next: Interactive UAT → defect/retest if needed → Feature Freeze → Production Review (separate approval)
-- **R2.2a / 2.2b** queued until R2.2 Feature Freeze · **No Production** without explicit approval
+- **Release 2.2 — Client IO Enterprise Completion — Feature Freeze Approved (2026-07-31)**
+- Preview `dev.thinkwaymedia.com` · tip `09f9b741` on `develop` · Dev DB `hsxrewjcbvmbkqdlzjhs`
+- Architecture ✅ · Implementation Validation ✅ · Interactive UAT ✅ · Feature Freeze ✅
+- Merge policy: **no further functional enhancements**; release-critical deploy fixes only
+- UAT: [`RELEASE_2_2_UAT.md`](../../docs/architecture/RELEASE_2_2_UAT.md) — P1–P5 PASS; Original→A3
+- Production Review: [`RELEASE_2_2_PRODUCTION_PACKAGE.md`](../../docs/architecture/RELEASE_2_2_PRODUCTION_PACKAGE.md)
+- Defects: 01/02 Fixed · 03 Accepted infra (OPS-EMAIL on Prod) · 04 Accepted UX backlog
+- Suite: `npm run test:release-2-2` **17/17** · **3 Prod migrations required**
+- Next: Production Approval (separate) → migrate Prod → deploy → smoke (incl. email) → `v2.2.0`
+- **R2.2a / 2.2b** queued · **No Production** without explicit approval
 
 ## Media Plan PDF calendar fit (shipped to Production)
 
