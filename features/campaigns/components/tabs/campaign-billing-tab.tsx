@@ -535,7 +535,6 @@ export function CampaignBillingTab({
             <span className="thinkway-campaign-billing-flow-step">closed</span>
           </div>
         }
-        registerLabel="Registers"
       >
       <OperationalTableSuiteProvider
         tableId={OPERATIONAL_TABLE_IDS.campaignConsolidatedInvoiceQueue}
