@@ -67,7 +67,7 @@
     gap: var(--etab-gap);
     min-width: 0;
     width: 100%;
-    scroll-smooth;
+    scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
   }
