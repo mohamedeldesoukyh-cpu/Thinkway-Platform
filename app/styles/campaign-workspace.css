@@ -142,11 +142,33 @@
     gap: 16px;
   }
 
-  .thinkway-aurora-chrome-nav {
+  .thinkway-aurora-topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 36px;
+  }
+
+  .thinkway-aurora-crumb {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--camp-text-3);
+  }
+
+  .thinkway-aurora-crumb-path b {
+    color: var(--camp-text);
+    font-weight: 600;
+  }
+
+  .thinkway-aurora-topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
 
   .thinkway-aurora-hero {
@@ -561,6 +583,227 @@
     color: var(--camp-text-4);
   }
 
+  .thinkway-aurora-command {
+    min-width: 0;
+  }
+
+  .thinkway-aurora-ops-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .thinkway-aurora-ops-card {
+    border: 1px solid var(--camp-hair);
+    border-radius: 14px;
+    background: var(--camp-surface);
+    padding: 14px 16px;
+    min-width: 0;
+  }
+
+  .thinkway-aurora-ops-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .thinkway-aurora-ops-card-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--camp-text);
+  }
+
+  .thinkway-aurora-ops-card-sub {
+    margin-top: 2px;
+    font-size: 11.5px;
+    color: var(--camp-text-4);
+  }
+
+  .thinkway-aurora-ops-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .thinkway-aurora-ops-stat {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--camp-hair);
+    font-size: 13px;
+  }
+
+  .thinkway-aurora-ops-stat:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .thinkway-aurora-ops-stat-k {
+    color: var(--camp-text-3);
+  }
+
+  .thinkway-aurora-ops-stat-v {
+    font-weight: 600;
+    color: var(--camp-text);
+    text-align: right;
+  }
+
+  .thinkway-aurora-flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .thinkway-aurora-fstep {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 34px;
+    padding: 0 15px;
+    border: 1px solid var(--camp-border);
+    border-radius: 999px;
+    background: var(--camp-white);
+    box-shadow: var(--camp-shadow-btn);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--camp-text-3);
+  }
+
+  .thinkway-aurora-fstep.done {
+    color: var(--camp-text-2);
+  }
+
+  .thinkway-aurora-fstep.done::before {
+    content: "✓";
+    color: var(--camp-green);
+    font-weight: 800;
+  }
+
+  .thinkway-aurora-fstep.now {
+    background: var(--camp-blue);
+    border-color: var(--camp-blue);
+    color: #fff;
+    box-shadow: 0 8px 18px -8px rgba(0, 87, 255, 0.6);
+  }
+
+  .thinkway-aurora-fstep.now::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #fff;
+  }
+
+  .thinkway-aurora-farrow {
+    width: 20px;
+    height: 1px;
+    background: var(--camp-border);
+    margin: 0 2px;
+  }
+
+  .thinkway-aurora-blocker {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 14px 16px;
+    border: 1px solid var(--camp-danger-border);
+    border-radius: 12px;
+    background: var(--camp-red-bg);
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--camp-red-text);
+  }
+
+  .thinkway-aurora-blocker-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--camp-red);
+    flex-shrink: 0;
+  }
+
+  .thinkway-aurora-quick {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+  }
+
+  .thinkway-aurora-tl-mini {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .thinkway-aurora-tblwrap {
+    border: 1px solid var(--camp-hair);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .thinkway-aurora-tblwrap table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .thinkway-aurora-tblwrap thead th {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--camp-text-4);
+    text-align: left;
+    padding: 12px 16px;
+    background: var(--camp-surface);
+    border-bottom: 1px solid var(--camp-hair);
+    white-space: nowrap;
+  }
+
+  .thinkway-aurora-tblwrap thead th.r,
+  .thinkway-aurora-tblwrap tbody td.r {
+    text-align: right;
+  }
+
+  .thinkway-aurora-tblwrap tbody td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--camp-hair);
+    font-size: 13.5px;
+    color: var(--camp-text-2);
+    vertical-align: middle;
+  }
+
+  .thinkway-aurora-tblwrap tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .thinkway-aurora-tblwrap .strong {
+    color: var(--camp-text);
+    font-weight: 600;
+  }
+
+  .thinkway-aurora-disclose {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 2px;
+    border: 0;
+    background: transparent;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--camp-text-2);
+    cursor: pointer;
+  }
+
+  .thinkway-aurora-disclose:hover {
+    color: var(--camp-text);
+  }
+
   @media (max-width: 1100px) {
     .thinkway-aurora-kpis {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -571,6 +814,10 @@
     }
 
     .thinkway-aurora-dgrid {
+      grid-template-columns: 1fr;
+    }
+
+    .thinkway-aurora-ops-grid {
       grid-template-columns: 1fr;
     }
   }
@@ -586,6 +833,10 @@
 
     .thinkway-aurora-htitle {
       font-size: 18px;
+    }
+
+    .thinkway-aurora-hactions {
+      gap: 8px;
     }
   }
 

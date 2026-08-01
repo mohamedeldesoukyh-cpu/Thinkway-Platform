@@ -257,6 +257,71 @@
     @apply border-b border-border bg-background/80 backdrop-blur-md;
   }
 
+  /* Aurora environment pill — replaces full-width orange/green banner */
+  .thinkway-env-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    border: 0;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .thinkway-env-pill-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .thinkway-env-pill-dev {
+    background: #fff6e6;
+    color: #a5680a;
+  }
+
+  .thinkway-env-pill-dev .thinkway-env-pill-dot {
+    background: #dd9a1e;
+  }
+
+  .thinkway-env-pill-prod {
+    background: #e9faf3;
+    color: #0a7a52;
+  }
+
+  .thinkway-env-pill-prod .thinkway-env-pill-dot {
+    background: #059669;
+  }
+
+  .thinkway-env-pill-local {
+    background: #f1f4f9;
+    color: #4a5468;
+  }
+
+  .thinkway-env-pill-local .thinkway-env-pill-dot {
+    background: #7b8598;
+  }
+
+  .dark .thinkway-env-pill-dev {
+    background: rgba(245, 158, 11, 0.16);
+    color: #fcd34d;
+  }
+
+  .dark .thinkway-env-pill-prod {
+    background: rgba(16, 185, 129, 0.16);
+    color: #6ee7b7;
+  }
+
+  .dark .thinkway-env-pill-local {
+    background: rgba(255, 255, 255, 0.06);
+    color: #a1a1aa;
+  }
+
   .thinkway-workspace-chrome {
     @apply border-b border-border bg-background/90 backdrop-blur-md;
   }

@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { EnvironmentBannerSlot } from "@/components/environment/environment-banner-slot";
+import { EnvironmentChrome } from "@/components/environment/environment-chrome";
 import { AppProviders } from "@/components/providers/app-providers";
 import { ThemeHeadScript } from "@/lib/theme/theme-head-script";
 import { cn } from "@/lib/utils";
@@ -154,14 +154,11 @@ export default function RootLayout({
           />
         </div>
         <AppProviders>
-          <EnvironmentBannerSlot />
-          {/*
-            Banner is shrink-0 above this region. App shells must use h-full/min-h-0
-            (not 100svh) so campaign chrome never slides under the orange bar.
-          */}
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-            {children}
-          </div>
+          <EnvironmentChrome>
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+              {children}
+            </div>
+          </EnvironmentChrome>
         </AppProviders>
       </body>
     </html>

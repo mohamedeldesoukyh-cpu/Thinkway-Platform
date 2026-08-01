@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import { ThinkwayLogo } from "@/components/brand/thinkway-logo";
+import { EnvironmentBadgeSlot } from "@/components/environment/environment-badge-slot";
 import { DashboardHelpButton } from "@/components/layout/dashboard-help-button";
 import { DashboardShellUserSlot } from "@/components/layout/dashboard-shell-user-slot";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
@@ -113,6 +114,7 @@ export function DashboardShell({
             </nav>
           )}
           <div className="flex items-center gap-2">
+            <EnvironmentBadgeSlot />
             <DashboardHelpButton />
             <ThemeToggle />
             <DashboardShellUserSlot compact inSidebar={false} />
@@ -165,6 +167,7 @@ export function DashboardShell({
             )}
             {workspaceNavActive ? <HomeWorkspaceNavTabs active={workspaceNavActive} /> : null}
             <div className="flex shrink-0 items-center gap-2">
+              <EnvironmentBadgeSlot />
               <DashboardHelpButton />
               <ThemeToggle />
               <DashboardShellUserSlot compact inSidebar={false} />
@@ -190,6 +193,7 @@ export function DashboardShell({
             )}
             {workspaceNavActive ? <HomeWorkspaceNavTabs active={workspaceNavActive} /> : null}
             <div className="flex items-center gap-2">
+              <EnvironmentBadgeSlot />
               <DashboardHelpButton />
               <ThemeToggle />
               <DashboardShellUserSlot compact inSidebar={false} />
@@ -225,6 +229,7 @@ export function DashboardShell({
               </div>
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <EnvironmentBadgeSlot />
               <DashboardHelpButton />
               <ThemeToggle />
               {actions}

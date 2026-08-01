@@ -2,18 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { CalendarRangeIcon, CopyIcon, FileTextIcon, MoreHorizontalIcon, PencilIcon } from "lucide-react";
-
 import { EntityPrevNext } from "@/components/navigation/entity-prev-next";
 import { PageBackButton } from "@/components/navigation/page-back-button";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Tabs } from "@/components/ui/tabs";
 import { CampaignWorkspaceScrollShell } from "@/features/campaigns/components/campaign-workspace-scroll-shell";
 import {
@@ -30,8 +20,8 @@ import { useMetricsSyncCompletionToasts } from "@/features/campaigns/hooks/use-m
 import { OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS } from "@/components/workspace/operational-workspace-ui";
 import { TabErrorBoundary } from "@/components/ui/tab-error-boundary";
 import { CampaignDetailsSheet } from "@/features/campaigns/components/campaign-details-sheet";
-import { CancelCampaignDialog } from "@/components/campaigns/cancel-campaign-dialog";
 import { CampaignHero } from "@/features/campaigns/components/aurora/campaign-hero";
+import { CampaignHeroActions } from "@/features/campaigns/components/aurora/campaign-hero-actions";
 import { CampaignKpiCards } from "@/features/campaigns/components/aurora/campaign-kpi-cards";
 import { DuplicateCampaignDialog } from "@/features/campaigns/components/duplicate-campaign-dialog";
 import { CampaignBillingTab } from "@/features/campaigns/components/tabs/campaign-billing-tab";
@@ -42,16 +32,16 @@ import { CampaignOverviewTab } from "@/features/campaigns/components/tabs/campai
 import { CampaignTimelineTab } from "@/features/campaigns/components/tabs/campaign-timeline-tab";
 import { CampaignWorkflowTab } from "@/features/campaigns/components/tabs/campaign-workflow-tab";
 import { CampaignWorkspaceTabLoading } from "@/features/campaigns/components/campaign-workspace-tab-loading";
-import { ClientIoCampaignChrome } from "@/features/io/components/client-io-campaign-chrome";
 import { ClientIoTab } from "@/features/io/components/client-io-tab";
 import { VendorIoTab } from "@/features/io/components/vendor-io-tab";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import { flattenOperationalDeliverables } from "@/lib/campaigns/flatten-operational-deliverables";
 import { buildConsolidatedInvoiceQueueRows } from "@/lib/billing/consolidated-invoice-queue";
-import { OpenCampaignStudioLauncher } from "@/features/campaign-outputs/components/open-campaign-studio-launcher-lazy";
 import { seedFromCampaign } from "@/features/campaign-outputs/hydration/seed-adapters";
-import { campaignDetailPath, campaignMediaPlanPath } from "@/lib/routing/entity-paths";
+import { campaignDetailPath } from "@/lib/routing/entity-paths";
+import { DocumentNumber } from "@/components/ui/document-number";
+import { EnvironmentBadgeSlot } from "@/components/environment/environment-badge-slot";
 
 type CampaignWorkspaceViewProps = {
   workspace: CampaignWorkspace;
@@ -284,91 +274,40 @@ export function CampaignWorkspaceView({
         <CampaignWorkspaceScrollShell
           chrome={
             <div className="thinkway-aurora-chrome">
-              <div className="thinkway-aurora-chrome-nav">
-                <PageBackButton
-                  fallbackHref="/campaigns"
-                  label="Back to campaigns"
-                  className="thinkway-campaign-back-btn size-[26px] rounded-[var(--camp-radius)] p-0 hover:bg-[var(--camp-surface)]"
-                />
-                <EntityPrevNext
-                  entity="campaigns"
-                  currentId={workspace.id}
-                  hrefForId={(id) => campaignDetailPath(id)}
-                />
+              <div className="thinkway-aurora-topbar">
+                <div className="thinkway-aurora-crumb">
+                  <PageBackButton
+                    fallbackHref="/campaigns"
+                    label="Back to campaigns"
+                    className="thinkway-campaign-back-btn size-[26px] rounded-[var(--camp-radius)] p-0 hover:bg-[var(--camp-surface)]"
+                  />
+                  <EntityPrevNext
+                    entity="campaigns"
+                    currentId={workspace.id}
+                    hrefForId={(id) => campaignDetailPath(id)}
+                  />
+                  <span className="thinkway-aurora-crumb-path">
+                    Campaigns<span className="thinkway-aurora-sep">/</span>
+                    <b>
+                      <DocumentNumber value={workspace.document_number} />
+                    </b>
+                  </span>
+                </div>
+                <div className="thinkway-aurora-topbar-right">
+                  <EnvironmentBadgeSlot />
+                </div>
               </div>
               <CampaignHero
                 workspace={workspace}
                 actions={
-                  <>
-                    <OpenCampaignStudioLauncher
-                      seed={campaignStudioSeed}
-                      workspace={campaignStudioWorkspace}
-                      tab="studio"
-                      variant="primary"
-                      buttonClassName="thinkway-campaign-btn thinkway-campaign-btn-primary h-[38px] px-[15px] text-[13px] font-semibold"
-                    />
-                    <Button
-                      asChild
-                      variant="outline"
-                      size="sm"
-                      className="thinkway-campaign-btn"
-                    >
-                      <Link
-                        href={campaignMediaPlanPath({
-                          id: workspace.id,
-                          document_number: workspace.document_number,
-                          name: workspace.name,
-                        })}
-                      >
-                        <CalendarRangeIcon className="size-3.5" />
-                        Media Plans
-                      </Link>
-                    </Button>
-                    <ClientIoCampaignChrome io={workspace.client_io} campaignId={workspace.id} />
-                    {workspace.status !== "cancelled" ? (
-                      <CancelCampaignDialog
-                        campaignId={workspace.id}
-                        campaignName={workspace.name}
-                      />
-                    ) : null}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="thinkway-campaign-btn size-[38px] p-0"
-                          aria-label="Campaign actions"
-                        >
-                          <MoreHorizontalIcon className="size-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <a
-                            href={`/api/campaigns/${workspace.id}/performance/document?format=pdf&download=1`}
-                          >
-                            <FileTextIcon className="size-4" />
-                            Generate Performance Report
-                          </a>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setDuplicateOpen(true)}>
-                          <CopyIcon className="size-4" />
-                          Duplicate campaign
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            handleTabChange("overview");
-                          }}
-                        >
-                          <PencilIcon className="size-4" />
-                          Edit header (Overview tab)
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setDetailsOpen(true)}>
-                          Campaign details
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </>
+                  <CampaignHeroActions
+                    workspace={workspace}
+                    studioSeed={campaignStudioSeed}
+                    studioWorkspace={campaignStudioWorkspace}
+                    onNavigateToTab={handleTabChange}
+                    onDuplicate={() => setDuplicateOpen(true)}
+                    onOpenDetails={() => setDetailsOpen(true)}
+                  />
                 }
               />
               <CampaignKpiCards workspace={workspace} />
@@ -392,6 +331,9 @@ export function CampaignWorkspaceView({
               groups={groups}
               currencyOptions={currencyOptions}
               onOpenDetails={() => setDetailsOpen(true)}
+              onNavigateToTab={handleTabChange}
+              performanceSummary={performanceSummary}
+              performanceLoaded={bundleStatuses.publications === "loaded"}
             />
           </CampaignWorkspaceTabPanel>
         </CampaignWorkspaceTabContent>
