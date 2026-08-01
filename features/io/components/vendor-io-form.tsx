@@ -231,13 +231,17 @@ export function VendorIoForm({ row }: Props) {
               </DetailFormSection>
             </div>
 
-            <DetailFormSection label="Attachment URL (PO/SOW/signed PDF)" className="py-3.5">
+            <DetailFormSection label="Signed document link (Drive / PDF)" className="py-3.5">
+              <p className="mb-2 text-xs text-muted-foreground">
+                Paste a Google Drive or https PDF link for the signed Vendor IO. No file upload —
+                host the signed file externally and save the share URL here.
+              </p>
               <Input
                 id="attachment_url"
                 name="attachment_url"
                 value={attachmentUrl}
                 onChange={(e) => setAttachmentUrl(e.target.value)}
-                placeholder="https://..."
+                placeholder="https://drive.google.com/..."
                 className={DETAIL_FORM_INPUT_CLASS}
               />
             </DetailFormSection>

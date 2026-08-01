@@ -23,6 +23,7 @@ import {
   vendorIoFloatingBarContentClass,
 } from "@/features/io/components/vendor-io-selection-flyout";
 import { VendorIoDeliveryBadge } from "@/features/io/components/vendor-io-delivery-badge";
+import { VendorIoManualApproveButton } from "@/features/io/components/vendor-io-manual-approve-button";
 import { VendorIoSendButton } from "@/features/io/components/vendor-io-send-button";
 import { VendorIoSpecialPaymentTermsCell } from "@/features/io/components/vendor-io-special-payment-terms-cell";
 import { VendorIoStatusPill } from "@/features/io/components/vendor-io-status-pill";
@@ -151,8 +152,11 @@ function buildCampaignVendorIoColumns(
     {
       id: "current_payment_terms",
       label: "Payment terms",
+      colWidth: "9rem",
+      headerClassName: "min-w-[8rem]",
+      cellClassName: "max-w-[10rem] whitespace-normal break-words align-top",
       renderCell: (row) => (
-        <span className="thinkway-campaign-cell-muted">
+        <span className="thinkway-campaign-cell-muted block whitespace-normal break-words leading-snug">
           {row.vendor_payment_terms_label || "—"}
         </span>
       ),
@@ -160,6 +164,9 @@ function buildCampaignVendorIoColumns(
     {
       id: "special_payment_terms",
       label: "Special terms",
+      colWidth: "11rem",
+      headerClassName: "min-w-[9rem]",
+      cellClassName: "max-w-[12rem] whitespace-normal break-words align-top",
       renderCell: (row) => <VendorIoSpecialPaymentTermsCell row={row} />,
     },
     {
@@ -184,17 +191,34 @@ function buildCampaignVendorIoColumns(
       id: "actions",
       label: "Actions",
       locked: true,
-      colWidth: "220px",
+      colWidth: "260px",
       headerClassName: "thinkway-campaign-vio-actions-col text-right",
-      cellClassName: "thinkway-campaign-vio-actions-col text-right",
+      cellClassName: "thinkway-campaign-vio-actions-col text-right align-top",
       renderCell: (row) => (
-        <div className="thinkway-campaign-action-links">
+        <div className="thinkway-campaign-action-links flex-wrap justify-end">
           <VendorIoSendButton
             row={row}
             variant="default"
             size="sm"
             className="h-7 px-2.5 text-[11px] font-semibold"
           />
+          <VendorIoManualApproveButton
+            row={row}
+            size="sm"
+            variant="outline"
+            className="h-7 px-2 text-[11px]"
+          />
+          {row.attachment_url?.trim() ? (
+            <a
+              className="thinkway-campaign-link"
+              href={row.attachment_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open signed document link"
+            >
+              Signed
+            </a>
+          ) : null}
           <a
             className="thinkway-campaign-link"
             href={`/ios/vendor/${row.id}/preview`}

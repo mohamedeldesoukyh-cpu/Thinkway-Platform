@@ -22,7 +22,9 @@ import {
 } from "@/features/campaigns/components/operational-detail-panel";
 import { VendorIoDocumentActions } from "@/features/io/components/vendor-io-document-actions";
 import { VendorIoDeliveryBadge } from "@/features/io/components/vendor-io-delivery-badge";
+import { VendorIoManualApproveButton } from "@/features/io/components/vendor-io-manual-approve-button";
 import { VendorIoSendButton } from "@/features/io/components/vendor-io-send-button";
+import { VendorIoSignedAttachmentField } from "@/features/io/components/vendor-io-signed-attachment-field";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
 import { IoTermsSourceBadge } from "@/features/io/components/io-terms-source-badge";
 import { VendorIoUngenerateTrigger } from "@/features/io/components/vendor-io-ungenerate-dialog";
@@ -144,20 +146,7 @@ function VendorIoTermsTab({ row }: { row: VendorIoRow }) {
       <DetailField label="IO payment schedule" valueClassName="max-w-[60%]">
         {row.effective_payment_terms_label || "—"}
       </DetailField>
-      <DetailField label="Attachment" valueClassName="max-w-[60%]">
-        {row.attachment_url?.trim() ? (
-          <a
-            href={row.attachment_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="break-all hover:text-primary hover:underline"
-          >
-            {row.attachment_url}
-          </a>
-        ) : (
-          "—"
-        )}
-      </DetailField>
+      <VendorIoSignedAttachmentField row={row} />
       <div className="border-b border-border/40 py-3.5 last:border-b-0">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
@@ -313,9 +302,10 @@ export function VendorIoDetailSheet({
 
           <div className="shrink-0 border-t border-border/60 px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <VendorIoDocumentActions row={row} />
+              <VendorIoDocumentActions row={row} showSend={false} />
               <div className="flex flex-wrap items-center gap-2">
                 <VendorIoSendButton row={row} />
+                <VendorIoManualApproveButton row={row} />
                 <VendorIoUngenerateTrigger
                   row={row}
                   disabled={!row.ungenerate_eligible}
