@@ -49,7 +49,8 @@ Group → Legal Entity (clients) → Brand → Campaign Header → Campaign Line
 9. **Enterprise Tabs** — only approved workspace tab rail (`components/workspace/enterprise-tabs.tsx`). No page-specific tab implementations.
 10. **Financial Display Standard** — ISO currency codes only (`formatMoneyKpi` / `formatMoneyDetail` in `lib/finance/currency-format.ts`). Never display `$`/`E£`/locale glyphs.
 11. **Functional delivery next** — Planning Board (2.2a) → Media Plan Copilot (2.2b) → Vendor IO Enterprise Completion → Reporting Hub → Notifications → Enterprise Analytics.
-12. **Platform UX architecture (final review)** — `docs/architecture/platform-ux/` (incl. Stakeholder Journey Architecture). **Do not implement** until Product gives final approval.
+12. **Platform UX architecture (paused)** — `docs/architecture/platform-ux/` · Campaign Lifecycle SSOT is doc **12**. **Do not implement** until Product approves doc 12 and freezes the architecture set; then Phase 1 only.
+
 
 ## Conflicts with reference doc (resolved in codebase)
 
