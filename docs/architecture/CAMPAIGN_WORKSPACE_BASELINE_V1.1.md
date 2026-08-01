@@ -12,7 +12,7 @@
 **Compliance:** [`PLATFORM_ARCHITECTURE_COMPLIANCE.md`](./PLATFORM_ARCHITECTURE_COMPLIANCE.md)  
 **Regression (mandatory / protected):** `npm run test:campaign-workspace-lifecycle-os`
 
-> **Freeze tip:** recorded on the Release 2.2b commit on `origin/develop` (see git history for `feat(campaign): refine Lifecycle OS with Decision Center and operational guidance`).
+> **Freeze tip on `origin/develop`:** `6148404e` — `feat(campaign): refine Lifecycle OS with Decision Center and operational guidance`
 
 ---
 
