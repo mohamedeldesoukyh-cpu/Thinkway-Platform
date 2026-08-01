@@ -4,13 +4,14 @@ This document compares the **current Thinkway platform** (`thinkway-platform`) a
 
 **Last reviewed:** Aug 2026 (Platform UX & Business Process Architecture — review package)
 
-### Platform UX & Business Process Architecture (Aug 2026) — REVIEW ONLY
+### Platform UX & Business Process Architecture (Aug 2026) — FINAL REVIEW
 
-- **Status:** Architecture package awaiting Product approval — **no implementation yet**
+- **Status:** Approved in principle · Stakeholder Journey layer added — awaiting **final** Product approval — **no implementation yet**
 - **Package:** [`docs/architecture/platform-ux/README.md`](./architecture/platform-ux/README.md)
-- **Thesis:** Workflow-driven enterprise OS; Business Process Navigation evolves Enterprise Tabs; Studio/AI join Campaign ecosystem
+- **Thesis:** Workflow-driven enterprise OS; Business Process Navigation + Stakeholder Journey Architecture on one campaign spine; portals/Reporting/AI extend journeys
+- **Stakeholder journeys:** Internal Ops · Commercial · Client · Vendor · Creator · Finance · Executive · AI Assistant — [`11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md`](./architecture/platform-ux/11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md)
 - **Preserves:** Campaign Module Baseline · Financial Display · Deliverables selection · calculations/APIs/DB
-- **Next after approval:** Phase 1 Campaign Process Navigation only (see migration strategy)
+- **Next after final approval:** Phase 1 Campaign Process Navigation only (see migration strategy)
 
 ### Campaign Module Baseline — PROTECTED (Aug 2026)
 

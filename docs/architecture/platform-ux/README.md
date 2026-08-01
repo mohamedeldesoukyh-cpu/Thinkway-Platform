@@ -1,9 +1,9 @@
 # Thinkway Platform UX & Business Process Architecture Initiative
 
-**Status:** Architecture review — awaiting Product approval  
-**Created:** 2026-08-01  
+**Status:** Approved in principle · Stakeholder Journey layer added — awaiting **final** Product approval  
+**Updated:** 2026-08-01  
 **Class:** Presentation · Navigation · Information Architecture only  
-**Implementation:** Forbidden until this package is explicitly approved  
+**Implementation:** Forbidden until final approval of this package  
 
 ---
 
@@ -12,6 +12,19 @@
 Thinkway is a **workflow-driven enterprise operating system**, not a page-driven website.
 
 Users must always feel they are progressing through a **business process**, not switching between unrelated applications or browser tabs.
+
+Every stakeholder — Internal Ops, Commercial, Client, Vendor, Creator, Finance, Executive, and AI Assistant — works on the **same campaign** through a journey appropriate to their responsibilities.
+
+---
+
+## Architecture layers
+
+```
+Platform UX Architecture
+  ├── Business Process Architecture      → shared campaign lifecycle spine
+  ├── Master Navigation Architecture     → one nav philosophy
+  └── Stakeholder Journey Architecture   → who enters where, same campaign
+```
 
 ---
 
@@ -32,11 +45,11 @@ This initiative **evolves navigation philosophy**. It does **not** discard:
 
 ---
 
-## Document package (approve before code)
+## Document package (final approval before code)
 
 | # | Document | Purpose |
 |---|----------|---------|
-| 01 | [`01-PLATFORM_UX_ARCHITECTURE.md`](./01-PLATFORM_UX_ARCHITECTURE.md) | Master product UX architecture |
+| 01 | [`01-PLATFORM_UX_ARCHITECTURE.md`](./01-PLATFORM_UX_ARCHITECTURE.md) | Master product UX architecture (+ stakeholder layer) |
 | 02 | [`02-MASTER_NAVIGATION_ARCHITECTURE.md`](./02-MASTER_NAVIGATION_ARCHITECTURE.md) | One navigation philosophy |
 | 03 | [`03-BUSINESS_PROCESS_ARCHITECTURE.md`](./03-BUSINESS_PROCESS_ARCHITECTURE.md) | Lifecycle-first organization |
 | 04 | [`04-MODULE_HIERARCHY.md`](./04-MODULE_HIERARCHY.md) | Module map and ownership |
@@ -46,21 +59,24 @@ This initiative **evolves navigation philosophy**. It does **not** discard:
 | 08 | [`08-USER_JOURNEY_MAPS.md`](./08-USER_JOURNEY_MAPS.md) | Operator journeys |
 | 09 | [`09-PLATFORM_COMPONENT_STANDARDS.md`](./09-PLATFORM_COMPONENT_STANDARDS.md) | Process-oriented component SSOT |
 | 10 | [`10-MIGRATION_STRATEGY.md`](./10-MIGRATION_STRATEGY.md) | Phased evolution from current nav |
+| 11 | [`11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md`](./11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md) | **NEW** — journeys for all participants on one campaign |
 
 ---
 
-## Success criteria (approval gate)
+## Success criteria (final approval gate)
 
 - [ ] Users feel one connected enterprise platform  
 - [ ] Users always know lifecycle stage and next action  
 - [ ] Portfolio → Workspace → Studio → AI → Finance feels continuous  
 - [ ] Navigation teaches the business process  
 - [ ] Every module shares one UX architecture  
-- [ ] New features plug into the workflow model without inventing nav  
+- [ ] Every stakeholder journey shares the same campaign identity  
+- [ ] Portals / Reporting Hub / AI extend journeys — they do not invent products  
+- [ ] New features plug into the workflow + stakeholder model without inventing nav  
 
 ---
 
 ## Next step
 
-**Product review & approval of this package.**  
-Implementation begins only after explicit approval.
+**Final Product approval** of this package (including Stakeholder Journey Architecture).  
+Implementation begins only after explicit final approval — Phase 1 first per migration strategy.

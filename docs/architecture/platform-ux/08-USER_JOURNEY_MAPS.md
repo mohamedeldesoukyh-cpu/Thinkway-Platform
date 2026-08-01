@@ -60,13 +60,36 @@
 
 ---
 
+## Journey F — Client approves Client IO (portal)
+
+| Step | Target |
+|------|--------|
+| 1 | Portal campaign list shows TW-… · stage · action required |
+| 2 | Open same campaign identity as internal ops |
+| 3 | Enter at Client IO / approval stage |
+| 4 | Approve; Ops/Commercial see lifecycle advance |
+| 5 | Remain in Client journey for performance/invoices later |
+
+## Journey G — Creator delivers on campaign
+
+| Step | Target |
+|------|--------|
+| 1 | Creator Portal → campaign TW-… |
+| 2 | Enter at Deliverables / Vendor IO |
+| 3 | Upload under Deliverables integrity rules |
+| 4 | Ops sees attention; campaign spine advances |
+
+Full stakeholder contracts: [`11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md`](./11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md).
+
+---
+
 ## Success check for journeys
 
-Operators can answer without hunting:
+Participants can answer without hunting:
 
 1. Where did I come from?  
-2. Where am I?  
+2. Where am I (which campaign + which journey)?  
 3. What is done?  
-4. What is next?  
+4. What is next for my role?  
 5. What needs attention?  
 6. What is the recommended action?

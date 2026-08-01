@@ -20,9 +20,10 @@
 
 ### Phase 0 — Approval gate (now)
 
-- [ ] Product approves docs 01–10  
+- [ ] Product gives **final** approval of docs 01–11 (including Stakeholder Journey Architecture)  
 - [ ] Lock non-goals (no logic/API/DB)  
 - [ ] Confirm Planning Board / Copilot integrate into process model  
+- [ ] Confirm portals / Reporting Hub / AI extend stakeholder journeys (not new products)  
 
 ### Phase 1 — Campaign Process Navigation (foundation)
 
@@ -66,11 +67,20 @@
 | Finance hubs | Document lifecycle chrome alignment |
 | Token convergence | Reduce V6 vs Aurora vs Studio divergence |
 
-### Phase 5 — Portfolio OS maturity
+### Phase 5 — Stakeholder journey continuity (portals & hubs)
 
 | Work | Detail |
 |------|--------|
-| Cross-module origin crumbs | “Opened from TW-…” |
+| Client / Creator / Vendor portals | Same campaign identity, stage cues, next action; scoped process rail |
+| Reporting Hub | Executive/Ops journey extension on campaign spine |
+| Cross-journey attention | “Waiting on client/vendor/creator” visible to Ops |
+| Origin crumbs | “Opened from TW-…” across Finance and portals |
+
+### Phase 6 — Portfolio OS maturity
+
+| Work | Detail |
+|------|--------|
+| Cross-module origin crumbs | Hardened everywhere |
 | Lifecycle heuristics | Richer next-action rules (still presentation) |
 | Discovery context links | Campaign-aware entry/return |
 

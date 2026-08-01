@@ -103,6 +103,27 @@ flowchart LR
 
 ---
 
-## 5. Approval question
+## 5. Stakeholder intersection (same campaign)
 
-Confirm these flows as the navigation contract for implementation phases.
+```mermaid
+flowchart TB
+  TW[Campaign TW identity]
+  TW --> Ops[Internal Ops journey]
+  TW --> Cli[Client journey]
+  TW --> Cre[Creator journey]
+  TW --> Fin[Finance journey]
+  TW --> AI[AI Assistant]
+  Ops --> Rail[Shared process stages]
+  Cli --> Rail
+  Cre --> Rail
+  Fin --> Rail
+  AI -.-> Rail
+```
+
+Detail: [`11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md`](./11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md).
+
+---
+
+## 6. Approval question
+
+Confirm these flows — including stakeholder intersection on one campaign — as the navigation contract for implementation phases.

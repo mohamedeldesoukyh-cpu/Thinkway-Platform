@@ -1,7 +1,8 @@
 # 01 — Thinkway Platform UX Architecture
 
-**Status:** Draft for Product approval  
+**Status:** Approved in principle · Stakeholder Journey layer added — awaiting **final** Product approval  
 **Initiative:** Platform UX & Business Process Architecture  
+**Stakeholder journeys:** [`11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md`](./11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md)  
 **Constraints:** No API · DB · workflow engine · calculation · permission changes
 
 ---
@@ -14,13 +15,14 @@ It is **not**:
 
 - A collection of independent pages  
 - A browser-tab metaphor applied to workspaces  
-- A set of separate apps (Campaign / Studio / AI / Finance) sharing a logo  
+- A set of separate apps (Campaign / Studio / AI / Finance / Portals) sharing a logo  
 
 It **is**:
 
 - A single product organized around **business lifecycles**  
-- A persistent business context that follows the operator  
-- A navigation system that teaches **what comes next**
+- A persistent business context that follows every participant  
+- A navigation system that teaches **what comes next**  
+- **One campaign, many stakeholder journeys** — Internal Ops, Commercial, Client, Vendor, Creator, Finance, Executive, and AI Assistant all work on the same campaign through responsibility-appropriate paths  
 
 ---
 
@@ -67,7 +69,8 @@ Operators think in **lifecycles and next actions**.
 5. **One design language** — Spacing, type, badges, tables, empty states, density converge (Campaign Baseline + Product UX Standards as seed).  
 6. **Extend, don’t discard** — Evolve Enterprise Tabs into Business Process Navigation; keep Financial Display, Deliverables binding, approval/IO logic.  
 7. **Recommended next action** — Every portfolio row and workspace header answers “what should I do next?”  
-8. **Same shell for Studio & AI** — Collaborative/AI surfaces inherit campaign (or entity) context; they are workspaces, not products.
+8. **Same shell for Studio & AI** — Collaborative/AI surfaces inherit campaign (or entity) context; they are workspaces, not products.  
+9. **Stakeholder journeys on one spine** — Every participant enters the shared campaign lifecycle at the stage matching their role; portals and hubs extend journeys, they never become independent products.
 
 ---
 
@@ -77,22 +80,33 @@ Operators think in **lifecycles and next actions**.
 Platform (enterprise OS shell)
   └── Module (e.g. Campaigns)
         └── Portfolio (operational command center)
-              └── Entity (Campaign)
-                    └── Business Lifecycle (stage progression)
+              └── Entity (Campaign)  ← shared identity for all stakeholders
+                    └── Business Lifecycle (shared stage spine)
+                          ├── Stakeholder Journey (role lens / entry stage)
                           └── Workspace / Stage surface
                                 └── Operational details
 ```
 
-Operators always know:
+### Dual architecture layers on the campaign
+
+| Layer | Answers |
+|-------|---------|
+| **Business Process Architecture** | What stages exist? What is the order of operational work? |
+| **Stakeholder Journey Architecture** | Who enters where? What can they do? How do hand-offs stay on one campaign? |
+
+Full stakeholder catalog and intersection model:  
+[`11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md`](./11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md)
+
+Participants always know:
 
 | Signal | Meaning |
 |--------|---------|
-| Where I came from | Portfolio / previous stage |
-| Where I am | Entity + current stage |
-| What is done | Completed stages |
-| What is next | Upcoming / recommended action |
-| What needs attention | Blocked / overdue / health |
-| What to do now | Primary CTA |
+| Where I came from | Portfolio / portal home / previous stage |
+| Where I am | Campaign identity + current stage + my journey |
+| What is done | Completed stages (shared spine) |
+| What is next | Upcoming / recommended action for my role |
+| What needs attention | Blocked / waiting on me or others |
+| What to do now | Primary CTA for this stakeholder |
 
 ---
 
@@ -108,21 +122,45 @@ Operators always know:
 | Finance | Process hubs | Same nav philosophy; document lifecycle cues |
 | Clients / Vendors | V6 entity workspaces | Same process nav + header hierarchy |
 | Discovery | Own topnav language | Align chrome over time; keep discovery-specific tools |
+| Client / Creator / Vendor portals | Separate portal shells | Stakeholder journeys on same campaign spine |
+| Reporting Hub (future) | Risk of standalone BI | Executive / Ops journey extension |
+| AI Assistant | Separate branded app risk | In-campaign participant mode |
 
 ---
 
-## 6. Non-goals
+## 6. Stakeholder journeys (summary)
+
+| Stakeholder | Enters lifecycle at | Extends via |
+|-------------|---------------------|-------------|
+| Internal Operations | Full rail | Campaign Workspace |
+| Commercial | Planning → Client IO | Campaign + Commercial |
+| Client | Client IO / approvals / performance | Client Collaboration Portal |
+| Vendor | Vendor IO / deliverables | Vendor Portal |
+| Creator | Deliverables / publications / payments | Creator Portal |
+| Finance | Finance / Collection | Finance module (campaign-bound) |
+| Executive | Overview / Reporting | Portfolio + Reporting Hub |
+| AI Assistant | Current user’s stage | In-context Assist / Copilot |
+
+All journeys **begin and end on the same campaign identity**.
+
+---
+
+## 7. Non-goals
 
 - Rewriting APIs, schema, RLS, server actions  
 - Changing billing/approval/IO calculation rules  
 - Wizard-forced linear UX that blocks legitimate skip-ahead  
 - Discarding Enterprise Tabs engineering — **evolve** it  
 - Reopening Campaign redesign for visual polish alone  
+- Building portals as independent products outside Stakeholder Journey Architecture  
 
 ---
 
-## 7. Approval question
+## 8. Final approval questions
 
-Do we accept that Thinkway’s primary UX metaphor is **business process progression**, and that all modules (starting with Campaigns, then Studio/AI, then Finance/CRM) must converge on one navigation and shell philosophy?
+1. Accept business process progression as the primary UX metaphor?  
+2. Accept Stakeholder Journey Architecture as a required layer (one campaign, many journeys)?  
+3. Accept that Client / Vendor / Creator portals, Reporting Hub, and AI Assistant must **extend** these journeys rather than invent new products?  
+4. Authorize implementation to begin with Migration Phase 1 only after this final approval?
 
-**Implementation must not start until Product answers Yes.**
+**Implementation must not start until Product answers Yes to the above.**
