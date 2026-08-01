@@ -30,6 +30,46 @@ function parseAllowedOrigins(): string[] {
   return [...new Set(origins)];
 }
 
+function isVercelAppHost(host: string): boolean {
+  const normalized = host.trim().toLowerCase();
+  return normalized === "vercel.app" || normalized.endsWith(".vercel.app");
+}
+
+function trustHostOrigin(allowed: Set<string>, proto: string, host: string) {
+  allowed.add(`${proto}://${host}`);
+  allowed.add(`http://${host}`);
+  allowed.add(`https://${host}`);
+}
+
+/**
+ * Allow Origin when it matches an allowlisted origin, the request host(s),
+ * or a Vercel Preview alias pair (unique *.vercel.app ↔ *-git-*.vercel.app).
+ */
+export function isAllowedCsrfOrigin(
+  origin: string,
+  hosts: string[],
+  allowedOrigins: Iterable<string>
+): boolean {
+  const allowed = new Set(allowedOrigins);
+  if (allowed.has(origin)) return true;
+
+  let originHost: string;
+  try {
+    originHost = new URL(origin).host;
+  } catch {
+    return false;
+  }
+
+  for (const host of hosts) {
+    if (!host) continue;
+    if (originHost === host) return true;
+    // Preview deployments expose multiple vercel.app aliases; treat as one site.
+    if (isVercelAppHost(originHost) && isVercelAppHost(host)) return true;
+  }
+
+  return false;
+}
+
 export function isMutatingMethod(method: string): boolean {
   return !["GET", "HEAD", "OPTIONS", "TRACE"].includes(method.toUpperCase());
 }
@@ -73,19 +113,26 @@ export function assertCsrfRequest(request: {
     return { ok: false, reason: "missing_host" };
   }
 
+  const forwardedHost =
+    request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() || null;
+
   const origin = request.headers.get("origin");
   const allowed = new Set(parseAllowedOrigins());
-  // Always trust the request Host as same-origin.
   const proto =
     request.nextUrl?.protocol?.replace(":", "") ||
     (request.headers.get("x-forwarded-proto") ?? "https");
-  allowed.add(`${proto}://${host}`);
-  // Local dev convenience
-  allowed.add(`http://${host}`);
-  allowed.add(`https://${host}`);
+
+  trustHostOrigin(allowed, proto, host);
+  if (forwardedHost) {
+    trustHostOrigin(allowed, proto, forwardedHost);
+  }
+
+  const requestHosts = [host, forwardedHost].filter(Boolean) as string[];
 
   if (origin) {
-    if (allowed.has(origin)) return { ok: true };
+    if (isAllowedCsrfOrigin(origin, requestHosts, allowed)) {
+      return { ok: true };
+    }
     return { ok: false, reason: "origin_mismatch" };
   }
 
@@ -103,7 +150,9 @@ export function assertCsrfRequest(request: {
   if (referer) {
     try {
       const refOrigin = new URL(referer).origin;
-      if (allowed.has(refOrigin)) return { ok: true };
+      if (isAllowedCsrfOrigin(refOrigin, requestHosts, allowed)) {
+        return { ok: true };
+      }
     } catch {
       return { ok: false, reason: "invalid_referer" };
     }

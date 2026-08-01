@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 import bundleAnalyzer from "@next/bundle-analyzer";
 
+import { resolveServerActionAllowedOrigins } from "./lib/security/server-action-origins";
+
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
 });
@@ -28,28 +30,6 @@ const releaseEnv = {
     process.env.NEXT_PUBLIC_VERCEL_ENV?.trim() ||
     "development",
 };
-
-function allowedServerActionOrigins(): string[] {
-  const hosts = new Set<string>(["localhost:3000", "127.0.0.1:3000"]);
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (appUrl) {
-    try {
-      hosts.add(new URL(appUrl).host);
-    } catch {
-      // ignore
-    }
-  }
-  for (const raw of process.env.CSRF_ALLOWED_ORIGINS?.split(",") ?? []) {
-    const value = raw.trim();
-    if (!value) continue;
-    try {
-      hosts.add(new URL(value).host);
-    } catch {
-      hosts.add(value.replace(/^https?:\/\//, ""));
-    }
-  }
-  return [...hosts];
-}
 
 const securityHeaders = [
   {
@@ -119,7 +99,9 @@ const nextConfig: NextConfig = {
     serverActions: {
       // Creator import uploads allow up to 50 MB (see CREATOR_IMPORT_MAX_BYTES).
       bodySizeLimit: "50mb",
-      allowedOrigins: allowedServerActionOrigins(),
+      // Include *.vercel.app so Preview unique URL vs git-branch alias Host/Origin
+      // mismatches do not abort login / MFA Server Actions.
+      allowedOrigins: resolveServerActionAllowedOrigins(),
     },
   },
   async headers() {

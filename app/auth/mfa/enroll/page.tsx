@@ -1,18 +1,23 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { MfaEnrollForm } from "@/features/auth/components/mfa-enroll-form";
 import { roleRequiresMfa } from "@/lib/auth/mfa-policy";
 import { sanitizeNextPath } from "@/lib/auth/routes";
-import { requireRequestUser } from "@/lib/supabase/server";
+import { getRequestAuth } from "@/lib/supabase/server";
 
 type Props = {
   searchParams: Promise<{ next?: string }>;
 };
 
 export default async function MfaEnrollPage({ searchParams }: Props) {
-  const { roleSlug } = await requireRequestUser();
   const params = await searchParams;
   const nextPath = sanitizeNextPath(params.next);
+  const { user, roleSlug } = await getRequestAuth();
+
+  if (!user) {
+    redirect(`/login?next=${encodeURIComponent(nextPath)}`);
+  }
 
   if (!roleRequiresMfa(roleSlug)) {
     return (

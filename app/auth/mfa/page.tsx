@@ -1,17 +1,22 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { MfaChallengeForm } from "@/features/auth/components/mfa-challenge-form";
 import { sanitizeNextPath } from "@/lib/auth/routes";
-import { requireRequestUser } from "@/lib/supabase/server";
+import { getRequestAuth } from "@/lib/supabase/server";
 
 type Props = {
   searchParams: Promise<{ next?: string }>;
 };
 
 export default async function MfaChallengePage({ searchParams }: Props) {
-  await requireRequestUser();
   const params = await searchParams;
   const nextPath = sanitizeNextPath(params.next);
+  const { user } = await getRequestAuth();
+
+  if (!user) {
+    redirect(`/login?next=${encodeURIComponent(nextPath)}`);
+  }
 
   return (
     <main className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background px-4">

@@ -28,7 +28,7 @@ CRON_SECRET=...   # mutating cron calls bypass CSRF via Bearer
 READY_API_SECRET=...
 ```
 
-Set on Vercel before deploy. `serverActions.allowedOrigins` is derived from `NEXT_PUBLIC_APP_URL` + `CSRF_ALLOWED_ORIGINS` + localhost.
+Set on Vercel before deploy. `serverActions.allowedOrigins` is derived from `NEXT_PUBLIC_APP_URL` + `CSRF_ALLOWED_ORIGINS` + localhost + `VERCEL_URL` / `VERCEL_BRANCH_URL` + `*.vercel.app` (required so Preview unique URL vs git-branch alias Host/Origin mismatches do not abort login/MFA Server Actions).
 
 ---
 
@@ -89,7 +89,7 @@ In production DevTools → auth cookies: `Secure`, `SameSite=Lax`, **not** HttpO
 | `xlsx` | **Deferred** — community package has no clean fix; keep ExcelJS for writers; isolate `xlsx` parsers. |
 | Next | Upgraded to **16.2.11** (advisory floor). |
 | sanitize-html | Already at latest secure line (`2.17.x`). |
-| Server Actions | `allowedOrigins` configured; CSRF Origin checks apply to mutating API + actions. |
+| Server Actions | `allowedOrigins` configured (incl. `*.vercel.app`); CSRF Origin checks apply to mutating API + actions and allow Preview vercel.app alias pairs. |
 
 ---
 

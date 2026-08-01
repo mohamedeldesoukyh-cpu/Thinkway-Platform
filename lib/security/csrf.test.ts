@@ -77,3 +77,36 @@ test("assertCsrfRequest allows cron bearer", () => {
     else process.env.CRON_SECRET = prev;
   }
 });
+
+test("assertCsrfRequest allows Vercel Preview unique URL vs git-branch alias", () => {
+  const prev = process.env.NODE_ENV;
+  process.env.NODE_ENV = "production";
+  try {
+    const result = assertCsrfRequest(
+      req({
+        origin:
+          "https://thinkway-platform-git-develop-team.vercel.app",
+        host: "thinkway-platform-abc123-team.vercel.app",
+      })
+    );
+    assert.equal(result.ok, true);
+  } finally {
+    process.env.NODE_ENV = prev;
+  }
+});
+
+test("assertCsrfRequest still rejects non-vercel cross-site Origin", () => {
+  const prev = process.env.NODE_ENV;
+  process.env.NODE_ENV = "production";
+  try {
+    const result = assertCsrfRequest(
+      req({
+        origin: "https://evil.example",
+        host: "thinkway-platform-abc123-team.vercel.app",
+      })
+    );
+    assert.equal(result.ok, false);
+  } finally {
+    process.env.NODE_ENV = prev;
+  }
+});
