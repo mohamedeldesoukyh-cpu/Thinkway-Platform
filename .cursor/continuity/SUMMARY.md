@@ -51,10 +51,10 @@ Includes: Campaign IA · Workspace UI · Enterprise Tabs · Financial Display St
 **Extend only — no redesign** unless Critical usability + Product approval.  
 Tip: `31c5a030` on `develop`.
 
-## Platform UX & Business Process Architecture (review)
+## Platform UX & Business Process Architecture (final review)
 
-- Package: `docs/architecture/platform-ux/` — awaiting Product approval before any implementation.
-- Direction: process navigation over page/tabs metaphor; Studio/AI inside Campaign ecosystem; one platform nav philosophy.
+- Package: `docs/architecture/platform-ux/` (01–11) — awaiting **final** Product approval before any implementation.
+- Direction: process navigation + Stakeholder Journey Architecture on one campaign spine; portals/Reporting/AI extend journeys.
 
 ## Product UX Standards
 

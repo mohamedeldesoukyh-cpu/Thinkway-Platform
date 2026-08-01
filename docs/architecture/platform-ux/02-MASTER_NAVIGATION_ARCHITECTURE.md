@@ -118,8 +118,21 @@ When jumping Campaign → Client IO register → Finance invoice:
 
 ---
 
-## 7. Approval questions
+## 7. Stakeholder entry (same hierarchy)
+
+Internal shell and portal shells may differ in density, but both use:
+
+```
+Entry surface → Campaign identity → Process Navigation (scoped) → Content
+```
+
+Stakeholder-specific paths: [`11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md`](./11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md).
+
+---
+
+## 8. Approval questions
 
 1. Confirm the four-layer hierarchy is the only allowed nav model.  
 2. Confirm Enterprise Tabs evolve into Business Process Navigation (not replaced by a new parallel system).  
-3. Confirm Studio/AI are Campaign-ecosystem surfaces, not peer products in Platform Nav.
+3. Confirm Studio/AI are Campaign-ecosystem surfaces, not peer products in Platform Nav.  
+4. Confirm portals reuse this hierarchy for Client / Vendor / Creator journeys on the same campaign.
