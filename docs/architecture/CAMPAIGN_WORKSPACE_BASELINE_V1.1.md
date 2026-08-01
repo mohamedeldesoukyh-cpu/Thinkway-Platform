@@ -19,9 +19,9 @@
 
 ## Canonical statement
 
-**Campaign Workspace v1.1 is the canonical implementation baseline.**
+**Campaign Workspace v1.1 is superseded.** Canonical baseline is **v1.2**.
 
-The Campaign Workspace remains the **Lifecycle Operating System** for Thinkway campaigns. Release 2.2b refined operational guidance (Decision Center, Smart Blocker Resolver, progressive disclosure, locked-workspace messaging) **without** redesigning navigation, BPN, lifecycle stages, APIs, database, permissions, workflows, or calculations.
+Release 2.2b refined operational guidance (Decision Center, Smart Blocker Resolver, progressive disclosure, locked-workspace messaging) **without** redesigning navigation, BPN, lifecycle stages, APIs, database, permissions, workflows, or calculations. Retained for historical reference only.
 
 ---
 

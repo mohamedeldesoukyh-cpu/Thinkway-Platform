@@ -13,7 +13,7 @@
 **Compliance:** [`PLATFORM_ARCHITECTURE_COMPLIANCE.md`](./PLATFORM_ARCHITECTURE_COMPLIANCE.md)  
 **Regression (mandatory / protected):** `npm run test:campaign-workspace-lifecycle-os`
 
-> **Freeze tip on `origin/develop`:** *(recorded in follow-up docs commit after feat push)* — `feat(campaign): finalize Campaign Workspace Lifecycle OS operational readiness`
+> **Freeze tip on `origin/develop`:** `2c88544c` — `feat(campaign): finalize Campaign Workspace Lifecycle OS operational readiness`
 
 ---
 
