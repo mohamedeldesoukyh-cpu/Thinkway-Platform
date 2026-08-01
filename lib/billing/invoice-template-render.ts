@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import type { InvoiceDocumentData, InvoiceLineItemRow } from "@/lib/billing/invoice-document-types";
 import { THINKWAY_AGENCY_DEFAULTS } from "@/lib/io/thinkway-agency-defaults";
+import { formatMoneyDetail } from "@/lib/finance/currency-format";
 import { applyThinkwayLogoToDocumentHtml } from "@/lib/reports/document/thinkway-report-logo";
 
 const TEMPLATE_PATH = join(process.cwd(), "lib/billing/templates/Thinkway_Invoice_Template.html");
@@ -21,11 +22,7 @@ function display(value: string | null | undefined, fallback = "——"): string 
 }
 
 function formatMoney(amount: number, currency: string): string {
-  const formatted = amount.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  return `${currency} ${formatted}`;
+  return formatMoneyDetail(amount, currency);
 }
 
 function formatMoneyAmount(amount: number): string {

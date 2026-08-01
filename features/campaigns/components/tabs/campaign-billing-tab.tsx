@@ -23,7 +23,7 @@ import {
   AuroraStatusPill,
   CampaignWorkspaceFrame,
 } from "@/features/campaigns/components/aurora/campaign-workspace-frame";
-import { formatMoney, formatPercent } from "@/features/campaigns/utils";
+import { formatMoneyCompact, formatPercent } from "@/features/campaigns/utils";
 import { sumIoGatedAssignmentBillable } from "@/lib/billing/queue-eligibility";
 import {
   Select,
@@ -401,36 +401,47 @@ export function CampaignBillingTab({
           {
             key: "revenue",
             label: "Revenue",
-            value: formatMoney(billingRevenue, currency),
+            value: formatMoneyCompact(billingRevenue, currency),
             tone: "blue",
           },
           {
-            key: "collected",
-            label: "Collected",
-            value: formatMoney(financials.collected, currency),
-            tone: "pos",
-          },
-          {
-            key: "outstanding",
-            label: "Outstanding",
-            value: formatMoney(financials.billing_outstanding, currency),
-            tone: financials.billing_outstanding > 0 ? "amber" : "mut",
-          },
-          {
-            key: "po",
-            label: "Remaining PO",
-            value: formatMoney(billingRemainingPo, currency),
+            key: "cost",
+            label: "Cost",
+            value: formatMoneyCompact(financials.cost, currency),
           },
           {
             key: "gp",
-            label: "GP",
-            value: formatMoney(financials.gp, currency),
+            label: "Gross Profit",
+            value: formatMoneyCompact(financials.gp, currency),
             tone: financials.gp < 0 ? "amber" : "pos",
           },
           {
             key: "margin",
             label: "Margin",
             value: formatPercent(financials.margin_percent),
+          },
+          {
+            key: "collected",
+            label: "Collected",
+            value: formatMoneyCompact(financials.collected, currency),
+            tone: "pos",
+          },
+          {
+            key: "outstanding",
+            label: "Outstanding",
+            value: formatMoneyCompact(financials.billing_outstanding, currency),
+            tone: financials.billing_outstanding > 0 ? "amber" : "mut",
+          },
+          {
+            key: "receivable",
+            label: "Receivable",
+            value: formatMoneyCompact(financials.billing_outstanding, currency),
+            tone: financials.billing_outstanding > 0 ? "amber" : "mut",
+          },
+          {
+            key: "po",
+            label: "Remaining PO",
+            value: formatMoneyCompact(billingRemainingPo, currency),
           },
         ]}
         detailsLabel="Billing lifecycle"

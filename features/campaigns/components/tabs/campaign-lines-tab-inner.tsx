@@ -52,7 +52,6 @@ import {
 } from "@/features/campaigns/components/aurora/campaign-workspace-frame";
 import { AssignmentAudienceViewProvider } from "@/features/campaigns/components/assignment-hierarchy/assignment-audience-view-context";
 import { AssignmentAudienceViewToggle } from "@/features/campaigns/components/assignment-hierarchy/assignment-audience-view-toggle";
-import { formatMoney, formatPercent } from "@/features/campaigns/utils";
 import { AssignmentInfluencerDetailSheet } from "@/features/campaigns/components/assignment-hierarchy/assignment-influencer-detail-sheet";
 import { AssignmentSafeGrid } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-grid";
 import type { AssignmentHierarchyGroup } from "@/features/campaigns/types/assignment-hierarchy";
@@ -269,19 +268,48 @@ export function CampaignLinesTabInner({
     (sum, group) => sum + (group.deliverables?.length ?? 0),
     0
   );
+  const completedCount = workspace.lines.filter((line) =>
+    ["posted", "verified", "invoiced", "paid", "closed"].includes(line.assignment_status)
+  ).length;
+  const readyCount = workspace.lines.filter((line) =>
+    ["approved", "scheduled"].includes(line.assignment_status)
+  ).length;
+  const blockedCount = workspace.lines.filter((line) => {
+    const unassigned =
+      !line.influencer_id?.trim() && !line.campaign_influencer_id?.trim();
+    return unassigned || line.assignment_status === "draft";
+  }).length;
+  const progressPercent =
+    workspace.lines.length > 0
+      ? Math.round((completedCount / workspace.lines.length) * 100)
+      : 0;
+  const completionPercent =
+    workspace.lines.length > 0
+      ? Math.round(
+          (workspace.lines.filter((line) =>
+            ["verified", "invoiced", "paid", "closed"].includes(line.assignment_status)
+          ).length /
+            workspace.lines.length) *
+            100
+        )
+      : 0;
 
   return (
     <>
       <CampaignWorkspaceFrame
         title="Assignments"
-        subtitle="Creator economics, deliverables, and billing status per line"
+        subtitle="Operational creator assignments, progress, and delivery readiness"
         status={
           <AuroraStatusPill tone={assignedCount > 0 ? "green" : "mut"}>
             {assignedCount}/{workspace.lines.length} assigned
           </AuroraStatusPill>
         }
         stats={[
-          { key: "lines", label: "Lines", value: String(workspace.lines.length) },
+          {
+            key: "assignments",
+            label: "Assignments",
+            value: String(workspace.lines.length),
+          },
           {
             key: "creators",
             label: "Creators",
@@ -294,21 +322,28 @@ export function CampaignLinesTabInner({
             value: String(deliverableCount),
           },
           {
-            key: "revenue",
-            label: "Revenue",
-            value: formatMoney(workspace.financials.revenue, workspace.currency_code),
-            tone: "blue",
+            key: "progress",
+            label: "Progress",
+            value: `${progressPercent}%`,
+            tone: progressPercent >= 50 ? "pos" : "mut",
           },
           {
-            key: "cost",
-            label: "Cost",
-            value: formatMoney(workspace.financials.cost, workspace.currency_code),
+            key: "completion",
+            label: "Completion",
+            value: `${completionPercent}%`,
+            tone: completionPercent >= 50 ? "pos" : "mut",
           },
           {
-            key: "margin",
-            label: "Margin",
-            value: formatPercent(workspace.financials.margin_percent),
-            tone: workspace.financials.margin_percent >= 20 ? "pos" : "amber",
+            key: "blocked",
+            label: "Blocked",
+            value: String(blockedCount),
+            tone: blockedCount > 0 ? "amber" : "mut",
+          },
+          {
+            key: "ready",
+            label: "Ready",
+            value: String(readyCount),
+            tone: readyCount > 0 ? "blue" : "mut",
           },
         ]}
         registerLabel="Creators"

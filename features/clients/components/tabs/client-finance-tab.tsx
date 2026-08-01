@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { DollarSignIcon, MailIcon } from "lucide-react";
+import { MailIcon, WalletIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
@@ -201,7 +201,7 @@ export function ClientFinanceTab({
           />
 
           <ClientFormSection
-            icon={DollarSignIcon}
+            icon={WalletIcon}
             title="Billing defaults"
             description="Currency, payment terms, and credit limit."
           >

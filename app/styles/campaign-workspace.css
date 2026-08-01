@@ -900,6 +900,10 @@
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
+  .thinkway-aurora-statrow.c7 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .thinkway-aurora-statrow.c6 {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
@@ -1161,6 +1165,7 @@
     .thinkway-aurora-statrow.c4,
     .thinkway-aurora-statrow.c5,
     .thinkway-aurora-statrow.c6,
+    .thinkway-aurora-statrow.c7,
     .thinkway-aurora-doc-meta {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -1171,6 +1176,7 @@
     .thinkway-aurora-statrow.c4,
     .thinkway-aurora-statrow.c5,
     .thinkway-aurora-statrow.c6,
+    .thinkway-aurora-statrow.c7,
     .thinkway-aurora-doc-meta {
       grid-template-columns: 1fr;
     }

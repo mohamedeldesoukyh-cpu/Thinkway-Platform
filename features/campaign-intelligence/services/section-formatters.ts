@@ -13,16 +13,10 @@ import {
   isTimelineSectionData,
 } from "../types/section-schemas";
 
+import { formatMoneyKpi } from "@/lib/finance/currency-format";
+
 function formatCurrency(amount: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency.length === 3 ? currency : "USD",
-      maximumFractionDigits: 0,
-    }).format(amount);
-  } catch {
-    return `${amount.toLocaleString()} ${currency}`;
-  }
+  return formatMoneyKpi(amount, currency);
 }
 
 export function formatBudgetForDisplay(data: BudgetSectionData): string {

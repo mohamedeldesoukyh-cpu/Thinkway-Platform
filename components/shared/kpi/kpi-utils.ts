@@ -101,7 +101,8 @@ export function formatKpiCurrency(
     }).format(Number.isFinite(amount) ? amount : 0);
   }
   return formatCurrencyAmount(amount, currency, {
-    decimals: options?.decimals ?? 0,
+    precision: "kpi",
+    decimals: options?.decimals,
   });
 }
 

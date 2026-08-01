@@ -1,13 +1,7 @@
+import { formatMoneyKpi } from "@/lib/finance/currency-format";
+
 export function formatCurrency(amount: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency.length === 3 ? currency : "USD",
-      maximumFractionDigits: 0,
-    }).format(amount);
-  } catch {
-    return `${amount.toLocaleString()} ${currency}`;
-  }
+  return formatMoneyKpi(amount, currency);
 }
 
 /** Approximate FX for benchmark localization when structured data uses non-USD currency. */

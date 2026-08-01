@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { EntityPrevNext } from "@/components/navigation/entity-prev-next";
 import { PageBackButton } from "@/components/navigation/page-back-button";
@@ -287,7 +288,10 @@ export function CampaignWorkspaceView({
                     hrefForId={(id) => campaignDetailPath(id)}
                   />
                   <span className="thinkway-aurora-crumb-path">
-                    Campaigns<span className="thinkway-aurora-sep">/</span>
+                    <Link href="/campaigns" className="hover:text-[var(--camp-blue-text)]">
+                      Campaigns
+                    </Link>
+                    <span className="thinkway-aurora-sep">/</span>
                     <b>
                       <DocumentNumber value={workspace.document_number} />
                     </b>

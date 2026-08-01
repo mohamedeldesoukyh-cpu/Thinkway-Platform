@@ -1,11 +1,19 @@
-import { formatCurrencyAmount } from "@/lib/finance/currency-format";
+import {
+  formatMoneyDetail,
+  formatMoneyKpi,
+} from "@/lib/finance/currency-format";
 
 export function formatBillingMoney(amount: number, currency = "USD"): string {
-  return formatCurrencyAmount(amount, currency, { decimals: 2 });
+  return formatMoneyDetail(amount, currency);
 }
 
 export function formatBillingMoneyCompact(amount: number, currency = "USD"): string {
-  return formatCurrencyAmount(amount, currency, { decimals: 0 });
+  return formatMoneyKpi(amount, currency);
 }
 
-export { formatCurrencyAmount, currencySymbol } from "@/lib/finance/currency-format";
+export {
+  formatCurrencyAmount,
+  formatMoneyDetail,
+  formatMoneyKpi,
+  currencySymbol,
+} from "@/lib/finance/currency-format";

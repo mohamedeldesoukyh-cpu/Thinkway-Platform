@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BadgeCheckIcon, CircleDollarSignIcon, MoreHorizontalIcon, PencilIcon } from "lucide-react";
+import { BadgeCheckIcon, MoreHorizontalIcon, PencilIcon } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,7 @@ import {
 } from "@/lib/campaigns/campaign-workspace-presenters";
 import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
-import { formatMoney, formatPercent } from "@/features/campaigns/utils";
+import { formatMoney } from "@/features/campaigns/utils";
 import { PO_STATUS_LABELS } from "@/lib/finance/po/status";
 import { cn } from "@/lib/utils";
 
@@ -265,72 +265,35 @@ function CampaignActivityTab({ workspace }: { workspace: CampaignWorkspace }) {
   );
 }
 
-function CampaignPerformanceTab({ workspace }: { workspace: CampaignWorkspace }) {
-  const currency = workspace.currency_code;
-  const financials = workspace.financials;
-  const total = financials.revenue;
-  const max = Math.max(total, 1);
-
+function CampaignPerformanceTab({
+  onNavigateToTab,
+}: {
+  workspace: CampaignWorkspace;
+  onNavigateToTab?: (tab: CampaignWorkspaceTabId) => void;
+}) {
   return (
-    <div className="space-y-6 px-1">
-      <div className="flex items-center gap-3">
-        <span className="inline-flex size-10 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-          <CircleDollarSignIcon className="size-5" aria-hidden />
-        </span>
-        <div>
-          <p className="text-2xl font-semibold tabular-nums tracking-tight">
-            {formatMoney(total, currency)}
-          </p>
-          <p className="text-xs text-muted-foreground">Total campaign revenue</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 text-xs">
-        <div className="rounded-xl border border-border/50 bg-muted/15 p-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Cost</p>
-          <p className="mt-1 font-semibold tabular-nums">{formatMoney(financials.cost, currency)}</p>
-        </div>
-        <div className="rounded-xl border border-border/50 bg-muted/15 p-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">GP</p>
-          <p className="mt-1 font-semibold tabular-nums">{formatMoney(financials.gp, currency)}</p>
-        </div>
-        <div className="rounded-xl border border-border/50 bg-muted/15 p-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Margin</p>
-          <p className="mt-1 font-semibold tabular-nums">{formatPercent(financials.margin_percent)}</p>
-        </div>
-        <div className="rounded-xl border border-border/50 bg-muted/15 p-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Collected</p>
-          <p className="mt-1 font-semibold tabular-nums">{formatMoney(financials.collected, currency)}</p>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-border/60 bg-muted/15 p-4">
-        <svg viewBox="0 0 320 140" className="h-36 w-full" aria-hidden>
-          {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-            const y = 120 - ratio * 90;
-            return (
-              <line
-                key={ratio}
-                x1="24"
-                x2="300"
-                y1={y}
-                y2={y}
-                stroke="currentColor"
-                strokeDasharray="4 4"
-                className="text-border/80"
-              />
-            );
-          })}
-          <line
-            x1="160"
-            x2="160"
-            y1={120 - (total / max) * 90}
-            y2="120"
-            stroke="currentColor"
-            className="text-emerald-500/50"
-          />
-          <circle cx="160" cy={120 - (total / max) * 90} r="5" className="fill-emerald-500" />
-        </svg>
+    <div className="space-y-4 px-1">
+      <p className="text-sm text-muted-foreground">
+        Campaign financial KPIs live in the workspace header and Finance workspace. Use those
+        surfaces for Revenue, Cost, GP, and Margin.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onNavigateToTab?.("billing")}
+        >
+          Open Finance workspace
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onNavigateToTab?.("publications")}
+        >
+          Open Performance workspace
+        </Button>
       </div>
     </div>
   );
@@ -460,7 +423,10 @@ export function CampaignDetailsSheet({
               <CampaignActivityTab workspace={workspace} />
             </TabsContent>
             <TabsContent value="performance" className="mt-0 outline-none">
-              <CampaignPerformanceTab workspace={workspace} />
+              <CampaignPerformanceTab
+                workspace={workspace}
+                onNavigateToTab={onNavigateToTab}
+              />
             </TabsContent>
           </div>
         </Tabs>

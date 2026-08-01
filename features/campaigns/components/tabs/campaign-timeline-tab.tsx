@@ -152,24 +152,25 @@ export function CampaignTimelineTab({
         stats={[
           {
             key: "activity",
-            label: "Activity",
+            label: "Activities",
             value: String(workspace.activity.length),
             tone: "blue",
-          },
-          {
-            key: "audit",
-            label: "Finance audit",
-            value: financeAuditPending ? "…" : String(financeAudit.length),
-          },
-          {
-            key: "vendors",
-            label: "Vendors",
-            value: String(workspace.vendors.length),
           },
           {
             key: "approvals",
             label: "Approvals",
             value: String(workspace.approvals.length),
+            tone: "mut",
+          },
+          {
+            key: "audit",
+            label: "Finance Events",
+            value: financeAuditPending ? "…" : String(financeAudit.length),
+          },
+          {
+            key: "notifications",
+            label: "Notifications",
+            value: "—",
             tone: "mut",
           },
         ]}

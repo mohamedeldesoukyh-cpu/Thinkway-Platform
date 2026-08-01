@@ -41,8 +41,9 @@ Group → Legal Entity (clients) → Brand → Campaign Header → Campaign Line
 4. **RLS + roles** — enforce Admin/Director/Manager/Account Manager/Finance/Data Entry matrix from reference §6.
 5. **Approvals** — use `approvals` / `approval_steps`; extend with workflow engine tables only when needed (§20).
 6. **Phased roadmap** — Phase 1: core ops; Phase 2: workflow/tasks/notifications/portals; Phase 3: AI; Phase 4: enterprise scale (reference §33).
-7. **Campaign Workspace UI freeze** — Aurora presentation at `/campaigns/[id]` is frozen (2026-08-01). No visual redesigns unless critical usability or approved release reopen. New features must adopt Aurora (`CAMPAIGN_WORKSPACE_UI_GUIDELINES.md`).
+7. **Campaign Information Architecture** — List + Workspace are one module (`CAMPAIGN_INFORMATION_ARCHITECTURE.md`). Enterprise Tabs = persistent shell; hide Planning Board until R2.2a; no duplicate campaign KPIs outside header/Finance; Assignments summaries are operational only.
 8. **Enterprise Tabs** — only approved workspace tab rail (`components/workspace/enterprise-tabs.tsx`). No page-specific tab implementations.
+9. **Financial Display Standard** — ISO currency codes only (`formatMoneyKpi` / `formatMoneyDetail` in `lib/finance/currency-format.ts`). Never display `$`/`E£`/locale glyphs. See `docs/architecture/FINANCIAL_DISPLAY_STANDARD.md`.
 
 ## Conflicts with reference doc (resolved in codebase)
 

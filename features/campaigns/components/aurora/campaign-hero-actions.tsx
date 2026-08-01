@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
   CalendarRangeIcon,
@@ -36,7 +36,11 @@ type CampaignHeroActionsProps = {
   trailing?: ReactNode;
 };
 
-/** Hero primary + secondary actions — promote common workspaces out of tabs. */
+/**
+ * Highest-frequency campaign actions only.
+ * Workspace navigation lives on Enterprise Tabs — not duplicated here.
+ * Planning Board stays hidden until Release 2.2a.
+ */
 export function CampaignHeroActions({
   workspace,
   studioSeed,
@@ -45,6 +49,8 @@ export function CampaignHeroActions({
   onDuplicate,
   onOpenDetails,
 }: CampaignHeroActionsProps) {
+  const [cancelOpen, setCancelOpen] = useState(false);
+
   return (
     <>
       <OpenCampaignStudioLauncher
@@ -66,75 +72,19 @@ export function CampaignHeroActions({
           Media Plans
         </Link>
       </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="thinkway-campaign-btn"
-        disabled
-        title="Planning Board — coming in Release 2.2a"
-      >
-        Planning Board
-      </Button>
       <ClientIoCampaignChrome io={workspace.client_io} campaignId={workspace.id} />
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="thinkway-campaign-btn"
-        onClick={() => onNavigateToTab("vendor-io")}
-      >
-        Vendor IO
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="thinkway-campaign-btn"
-        onClick={() => onNavigateToTab("billing")}
-      >
-        Finance
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="thinkway-campaign-btn"
-        onClick={() => onNavigateToTab("timeline")}
-      >
-        Timeline
-      </Button>
-      {workspace.status !== "cancelled" ? (
-        <CancelCampaignDialog
-          campaignId={workspace.id}
-          campaignName={workspace.name}
-        />
-      ) : null}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
             size="icon"
             className="thinkway-campaign-btn size-[38px] p-0"
-            aria-label="Campaign actions"
+            aria-label="More campaign actions"
           >
             <MoreHorizontalIcon className="size-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => onNavigateToTab("lines")}>
-            Assignments workspace
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onNavigateToTab("deliverables")}>
-            Deliverables workspace
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onNavigateToTab("publications")}>
-            Performance workspace
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onNavigateToTab("workflow")}>
-            Workflow workspace
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
             <a
               href={`/api/campaigns/${workspace.id}/performance/document?format=pdf&download=1`}
@@ -147,17 +97,36 @@ export function CampaignHeroActions({
             <CopyIcon className="size-4" />
             Duplicate campaign
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => {
-              onNavigateToTab("overview");
-            }}
-          >
+          <DropdownMenuItem onClick={() => onNavigateToTab("overview")}>
             <PencilIcon className="size-4" />
             Edit header (Overview)
           </DropdownMenuItem>
           <DropdownMenuItem onClick={onOpenDetails}>Campaign details</DropdownMenuItem>
+          {workspace.status !== "cancelled" ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onSelect={(event) => {
+                  event.preventDefault();
+                  setCancelOpen(true);
+                }}
+              >
+                Cancel campaign
+              </DropdownMenuItem>
+            </>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
+      {workspace.status !== "cancelled" ? (
+        <CancelCampaignDialog
+          campaignId={workspace.id}
+          campaignName={workspace.name}
+          hideTrigger
+          open={cancelOpen}
+          onOpenChange={setCancelOpen}
+        />
+      ) : null}
     </>
   );
 }

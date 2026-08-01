@@ -16,16 +16,13 @@ import {
   VendorProfileTabShell,
 } from "@/features/vendors/components/vendor-form-ui";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
+import { formatMoneyKpi } from "@/lib/finance/currency-format";
 import type { VendorDetail } from "@/types/database";
 
 type AssignmentRow = VendorDetail["campaign_assignments"][number];
 
 function formatMoney(amount: number, currency: string) {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amount);
+  return formatMoneyKpi(amount, currency);
 }
 
 const VENDOR_CAMPAIGNS_COLUMNS: OperationalConfigurableColumnDef<AssignmentRow>[] = [

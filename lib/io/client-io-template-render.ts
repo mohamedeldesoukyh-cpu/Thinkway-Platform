@@ -10,6 +10,7 @@ import {
 import type { ClientIoDocumentData } from "@/lib/io/client-io-document-types";
 import { renderTermsListHtml } from "@/lib/io/client-io-terms";
 import { THINKWAY_AGENCY_DEFAULTS } from "@/lib/io/thinkway-agency-defaults";
+import { formatMoneyDetail } from "@/lib/finance/currency-format";
 import { applyThinkwayLogoToDocumentHtml } from "@/lib/reports/document/thinkway-report-logo";
 
 const TEMPLATE_PATH = join(process.cwd(), "lib/io/templates/Thinkway_Client_IO_Global.html");
@@ -28,11 +29,7 @@ function display(value: string | null | undefined, fallback = "——"): string 
 }
 
 function formatMoney(amount: number, currency: string): string {
-  const formatted = amount.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  return `${currency} ${formatted}`;
+  return formatMoneyDetail(amount, currency);
 }
 
 function formatDateRange(start: string | null, end: string | null): string {

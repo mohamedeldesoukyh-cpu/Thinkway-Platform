@@ -52,7 +52,10 @@ export function CampaignsListSection({
       additionalFilterFields={CAMPAIGNS_ADDITIONAL_FILTER_FIELDS}
     >
       <CampaignsListNavSync search={search} />
-      <PlatformV6SectionMeta title="All campaigns" meta={meta} />
+      <PlatformV6SectionMeta
+        title="Campaign portfolio"
+        meta={`${meta} · open a row to enter the campaign workspace`}
+      />
       <PlatformV6Toolbar>
         <Suspense fallback={null}>
           <OperationalTableToolbar contextLabel="Campaigns">
@@ -61,7 +64,7 @@ export function CampaignsListSection({
         </Suspense>
       </PlatformV6Toolbar>
 
-      <PlatformV6SectionWrap>
+      <PlatformV6SectionWrap className="campaigns-module-register">
         {errorSlot}
 
         {campaigns.length === 0 ? (

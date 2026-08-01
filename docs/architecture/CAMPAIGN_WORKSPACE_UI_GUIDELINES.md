@@ -1,8 +1,9 @@
 # Campaign Workspace UI Guidelines (Aurora)
 
-**Status:** Governing guidelines (paired with UI freeze)  
-**Freeze:** [`CAMPAIGN_WORKSPACE_UI_FREEZE.md`](./CAMPAIGN_WORKSPACE_UI_FREEZE.md) — frozen 2026-08-01  
-**Audience:** Engineers and agents adding features to `/campaigns/[id]` after the Release 2.3 Aurora freeze.
+**Status:** Governing guidelines — Campaign Information Architecture Complete  
+**Freeze:** [`CAMPAIGN_WORKSPACE_UI_FREEZE.md`](./CAMPAIGN_WORKSPACE_UI_FREEZE.md)  
+**IA:** [`CAMPAIGN_INFORMATION_ARCHITECTURE.md`](./CAMPAIGN_INFORMATION_ARCHITECTURE.md)  
+**Audience:** Engineers and agents extending Campaign List / Workspace and future operational modules.
 
 ---
 
@@ -16,12 +17,15 @@ These guidelines exist so new capabilities (Planning Board, Copilot, Reporting, 
 
 ## Non-negotiables
 
-1. **Do not redesign** Campaign Workspace chrome, tab shells, summary cards, or Overview command-center structure unless Product explicitly reopens UI scope.
-2. **No new visual style** inside Campaign Workspace (no alternate card systems, banner themes, or one-off typography scales).
-3. Prefer **functional** change: new data, actions, sheets, boards, and workflows that plug into existing Aurora patterns.
-4. Keep tables **secondary** — never start a workspace with a large table above KPIs.
-5. Presentation changes that accompany features must reuse existing CSS tokens in `app/styles/campaign-workspace.css`.
-6. **Enterprise Tabs is the only approved workspace tab component** — see below.
+1. **Follow** [`CAMPAIGN_INFORMATION_ARCHITECTURE.md`](./CAMPAIGN_INFORMATION_ARCHITECTURE.md) — list + workspace are one module; do not invent parallel navigation.
+2. **Do not redesign** Campaign Workspace chrome, tab shells, or summary identity unless Product explicitly reopens UI/IA scope.
+3. **No new visual style** inside Campaign Workspace (no alternate card systems, banner themes, or one-off typography scales).
+4. Prefer **functional** change: new data, actions, sheets, boards, and workflows that plug into existing Aurora patterns.
+5. Keep tables **secondary** — never start a workspace with a large table above KPIs.
+6. Presentation changes that accompany features must reuse existing CSS tokens in `app/styles/campaign-workspace.css`.
+7. **Enterprise Tabs is the only approved workspace tab component** — persistent shell; only content body swaps.
+8. **Never show inactive primary actions** (Planning Board / Copilot) until the release ships them.
+9. Campaign finance KPIs appear once in the header; workspace summaries must stay identity-specific (Finance may repeat R/C/GP/Margin).
 
 ---
 
@@ -99,8 +103,8 @@ Default: **collapsed**.
 
 | Module | Integration rule |
 |--------|------------------|
-| Planning Board | New surface/tab or sheet that uses Aurora frame + ops language; disabled placeholder already exists — replace functionally, keep chrome |
-| Copilot | Dock / panel must use campaign tokens; do not introduce a separate “AI theme” |
+| Planning Board | Hidden until R2.2a — then new surface/tab or sheet using Aurora frame + ops language; no disabled stub beforehand |
+| Copilot | Hidden until R2.2b — dock/panel must use campaign tokens; do not introduce a separate “AI theme” |
 | Reporting Hub | Summary-first; exports in `tools`; charts in collapsible details or dedicated report view |
 | Notifications | Prefer subtle pills / inbox patterns aligned with Aurora; no full-width alarm banners |
 | Enterprise Analytics | KPI → insight → drill-down; reuse scard / ops-card patterns |

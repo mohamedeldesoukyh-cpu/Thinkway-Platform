@@ -32,7 +32,6 @@ import {
   AuroraStatusPill,
   CampaignWorkspaceFrame,
 } from "@/features/campaigns/components/aurora/campaign-workspace-frame";
-import { formatMoney } from "@/features/campaigns/utils";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import { cn } from "@/lib/utils";
 
@@ -363,16 +362,26 @@ export function VendorIoTab({ campaignId, rows }: Props) {
   );
 
   const summary = useMemo(() => {
+    const emailSent = sorted.filter(
+      (row) =>
+        row.delivery_method === "email" &&
+        (row.status === "sent" ||
+          row.delivery_status === "sent" ||
+          row.delivery_status === "completed")
+    ).length;
+    const manualDelivery = sorted.filter((row) => row.delivery_method === "manual").length;
+    const approved = sorted.filter((row) => row.status === "approved").length;
+    const outstanding = sorted.filter((row) => row.status !== "approved").length;
     const sent = sorted.filter(
       (row) => row.status === "sent" || row.delivery_status === "sent"
     ).length;
-    const approved = sorted.filter((row) => row.status === "approved").length;
-    const generated = sorted.filter(
-      (row) => row.status === "generated" || row.status === "draft"
-    ).length;
-    const totalAmount = sorted.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
-    const currency = sorted[0]?.currency_code ?? "EGP";
-    return { sent, approved, generated, totalAmount, currency };
+    return {
+      emailSent,
+      manualDelivery,
+      approved,
+      outstanding,
+      sent,
+    };
   }, [sorted]);
 
   return (
@@ -399,8 +408,17 @@ export function VendorIoTab({ campaignId, rows }: Props) {
         }
         stats={[
           { key: "total", label: "Orders", value: String(sorted.length) },
-          { key: "generated", label: "Draft / generated", value: String(summary.generated) },
-          { key: "sent", label: "Sent", value: String(summary.sent), tone: "blue" },
+          {
+            key: "email",
+            label: "Email Sent",
+            value: String(summary.emailSent),
+            tone: "blue",
+          },
+          {
+            key: "manual",
+            label: "Manual Delivery",
+            value: String(summary.manualDelivery),
+          },
           {
             key: "approved",
             label: "Approved",
@@ -408,10 +426,10 @@ export function VendorIoTab({ campaignId, rows }: Props) {
             tone: "pos",
           },
           {
-            key: "amount",
-            label: "Total amount",
-            value: formatMoney(summary.totalAmount, summary.currency),
-            tone: "blue",
+            key: "outstanding",
+            label: "Outstanding",
+            value: String(summary.outstanding),
+            tone: summary.outstanding > 0 ? "amber" : "mut",
           },
           {
             key: "selected",

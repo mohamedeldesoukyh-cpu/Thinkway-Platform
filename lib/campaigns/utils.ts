@@ -1,5 +1,9 @@
 import { METADATA_PLATFORM_KEY } from "@/lib/campaigns/constants";
-import { formatCurrencyAmount } from "@/lib/finance/currency-format";
+import {
+  formatCurrencyAmount,
+  formatMoneyDetail,
+  formatMoneyKpi,
+} from "@/lib/finance/currency-format";
 
 export {
   documentNumberDisplayTitle,
@@ -24,14 +28,17 @@ export function formatPlatformLabel(platform: string | null): string {
     .join(" ");
 }
 
+/** Detailed financial display — ISO code + two decimals (ledger / documents). */
 export function formatMoney(amount: number, currency: string): string {
-  return formatCurrencyAmount(amount, currency, { decimals: 2 });
+  return formatMoneyDetail(amount, currency);
 }
 
-/** KPI / queue display — whole units with symbol prefix. */
+/** Executive KPI / summary cards — ISO code + whole units (no decimals). */
 export function formatMoneyCompact(amount: number, currency: string): string {
-  return formatCurrencyAmount(amount, currency, { decimals: 0 });
+  return formatMoneyKpi(amount, currency);
 }
+
+export { formatCurrencyAmount, formatMoneyDetail, formatMoneyKpi };
 
 export function formatPercent(value: number | null | undefined): string {
   const n = Number(value);

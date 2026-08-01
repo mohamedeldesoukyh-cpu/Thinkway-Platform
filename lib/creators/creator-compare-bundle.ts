@@ -4,6 +4,7 @@ import { suggestCostFromRateCard } from "@/lib/campaigns/line-assignment";
 import { loadCreatorHistoricalMetrics } from "@/lib/creators/historical-metrics";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { getUnifiedCreatorById } from "@/lib/creators/unified-browse";
+import { formatMoneyKpi } from "@/lib/finance/currency-format";
 
 export const MAX_CREATOR_COMPARE = 4;
 
@@ -50,12 +51,7 @@ function formatGrowthRate(value: number | null): string {
 
 function formatPricing(amount: number | null, currency?: string): string {
   if (amount == null || amount <= 0) return "—";
-  const cur = currency ?? "USD";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: cur,
-    maximumFractionDigits: 0,
-  }).format(amount);
+  return formatMoneyKpi(amount, currency ?? "USD");
 }
 
 function audienceAgeFromPersona(persona: string | null): string {

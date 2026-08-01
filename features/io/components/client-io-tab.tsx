@@ -97,13 +97,11 @@ export function ClientIoTab({
         subtitle={`Campaign-level insertion order for ${campaignName}`}
         status={<AuroraStatusPill tone="mut">Not set up</AuroraStatusPill>}
         stats={[
-          { key: "version", label: "Versions", value: "0", tone: "mut" },
-          {
-            key: "assignments",
-            label: "Assignments",
-            value: String(assignments.length),
-          },
-          { key: "amount", label: "Agreed amount", value: "—", tone: "mut" },
+          { key: "documents", label: "Documents", value: "0", tone: "mut" },
+          { key: "generated", label: "Generated", value: "0", tone: "mut" },
+          { key: "sent", label: "Sent", value: "0", tone: "mut" },
+          { key: "approved", label: "Approved", value: "0", tone: "mut" },
+          { key: "pending", label: "Pending", value: "0", tone: "mut" },
         ]}
         empty={
           <AuroraEmptyState
@@ -132,31 +130,41 @@ export function ClientIoTab({
       }
       stats={[
         {
-          key: "version",
-          label: "Revision",
-          value: String(io.revision_number ?? (versions.length || 1)),
+          key: "documents",
+          label: "Documents",
+          value: "1",
+        },
+        {
+          key: "generated",
+          label: "Generated",
+          value: String(Math.max(versions.length || 1, io.status === "draft" ? 0 : 1)),
+          tone: "blue",
+        },
+        {
+          key: "sent",
+          label: "Sent",
+          value: io.sent_at || latestSend ? "Yes" : "No",
+          tone: io.sent_at || latestSend ? "blue" : "mut",
+        },
+        {
+          key: "approved",
+          label: "Approved",
+          value: io.status === "approved" ? "Yes" : "No",
+          tone: io.status === "approved" ? "pos" : "mut",
+        },
+        {
+          key: "pending",
+          label: "Pending",
+          value:
+            io.status === "approved" || io.status === "rejected" ? "No" : "Yes",
+          tone:
+            io.status === "approved" || io.status === "rejected" ? "mut" : "amber",
         },
         {
           key: "amount",
           label: "Agreed amount",
           value: formatMoney(agreedAmount, currencyCode),
           tone: "blue",
-        },
-        {
-          key: "assignments",
-          label: "Assignments",
-          value: String(assignments.length),
-        },
-        {
-          key: "recipients",
-          label: "Recipients",
-          value: String(recipients.filter((r) => r.email.trim()).length),
-        },
-        {
-          key: "delivery",
-          label: "Last send",
-          value: latestSend?.delivery_status ?? (io.sent_at ? "sent" : "—"),
-          tone: latestSend?.delivery_status === "failed" ? "amber" : "mut",
         },
       ]}
       detailsLabel="Document & delivery details"

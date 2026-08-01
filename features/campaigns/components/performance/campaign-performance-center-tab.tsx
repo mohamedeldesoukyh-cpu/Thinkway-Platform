@@ -23,7 +23,6 @@ import {
   CampaignWorkspaceFrame,
 } from "@/features/campaigns/components/aurora/campaign-workspace-frame";
 import { CampaignPerformanceCharts as PerformanceChartsSection, countPerformanceChartSeries } from "@/features/campaigns/components/performance/campaign-performance-charts";
-import { formatPercent } from "@/features/campaigns/utils";
 import { OperationalDetailSheet } from "@/features/campaigns/components/operational-detail-panel";
 import { PublicationWorkspace } from "@/features/campaigns/components/performance/publication-workspace/publication-workspace";
 import { CampaignPerformanceGrid } from "@/features/campaigns/components/performance/campaign-performance-grid";
@@ -421,27 +420,25 @@ export function CampaignPerformanceCenterTab({
             tone: "blue",
           },
           {
-            key: "impressions",
-            label: "Impressions",
-            value: String(summary.total_impressions),
-          },
-          {
-            key: "views",
-            label: "Views",
-            value: String(summary.total_views),
-          },
-          {
             key: "eng",
-            label: "Engagements",
+            label: "Engagement",
             value: String(summary.total_engagements),
             tone: "pos",
           },
           {
-            key: "er",
-            label: "Avg ER",
+            key: "completion",
+            label: "Completion",
             value:
-              summary.average_engagement_rate != null
-                ? formatPercent(summary.average_engagement_rate)
+              publications.length > 0
+                ? `${Math.round(
+                    (publications.filter(
+                      (row) =>
+                        Boolean(row.publication_date) ||
+                        ["live", "posted", "published", "verified"].includes(row.status)
+                    ).length /
+                      publications.length) *
+                      100
+                  )}%`
                 : "—",
             tone: "mut",
           },

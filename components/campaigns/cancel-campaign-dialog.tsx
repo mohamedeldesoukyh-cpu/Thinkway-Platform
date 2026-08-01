@@ -25,14 +25,24 @@ type CancelCampaignDialogProps = {
   campaignId: string;
   campaignName: string;
   disabled?: boolean;
+  /** Controlled open (e.g. from overflow menu). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** When true, dialog is opened only via controlled state (no built-in trigger). */
+  hideTrigger?: boolean;
 };
 
 export function CancelCampaignDialog({
   campaignId,
   campaignName,
   disabled,
+  open: openProp,
+  onOpenChange,
+  hideTrigger = false,
 }: CancelCampaignDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = openProp ?? uncontrolledOpen;
+  const setOpen = onOpenChange ?? setUncontrolledOpen;
   const [preview, setPreview] = useState<CampaignCancelActionState["preview"]>();
   const [state, formAction, pending] = useActionState(cancelCampaignAction, {
     ok: false,
@@ -47,15 +57,17 @@ export function CancelCampaignDialog({
 
   useEffect(() => {
     if (state.ok) setOpen(false);
-  }, [state]);
+  }, [state, setOpen]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="destructive" size="sm" disabled={disabled}>
-          Cancel campaign
-        </Button>
-      </DialogTrigger>
+      {hideTrigger ? null : (
+        <DialogTrigger asChild>
+          <Button variant="destructive" size="sm" disabled={disabled}>
+            Cancel campaign
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Cancel campaign</DialogTitle>

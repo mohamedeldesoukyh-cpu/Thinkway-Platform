@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { platformLabel } from "@/lib/campaigns/line-assignment";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+import { formatMoneyKpi } from "@/lib/finance/currency-format";
 import {
   deliverableTypeValues,
   formatQuotationDeliverablesSummary,
@@ -217,11 +218,7 @@ function buildQuotationPriceSegments(
 }
 
 function formatAverageAmount(amount: number, currency: string): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amount);
+  return formatMoneyKpi(amount, currency);
 }
 
 function formatQuoteCountLabel(quoteCount: number): string {

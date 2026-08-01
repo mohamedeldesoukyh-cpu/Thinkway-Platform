@@ -67,11 +67,11 @@ export default async function CampaignsPage({ searchParams }: CampaignsPageProps
 
   return (
     <DashboardShell title="Campaigns" platformV6 workspaceNavActive="campaigns">
-      <PlatformV6Page>
+      <PlatformV6Page className="campaigns-module-page">
         <PlatformV6PageHeader
           inline
           title="Campaigns"
-          description="Plan and manage campaign headers and lines across the brand hierarchy."
+          description="Campaign command center — open a campaign to continue operational work in its workspace."
           actions={<NewCampaignDialog {...formOptions} />}
         />
 

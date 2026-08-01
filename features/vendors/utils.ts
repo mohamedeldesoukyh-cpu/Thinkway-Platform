@@ -1,4 +1,5 @@
 import type { InfluencerStatus, PaymentTerms } from "@/types/database";
+import { formatMoneyKpi } from "@/lib/finance/currency-format";
 import {
   PAYMENT_TERMS_OPTIONS,
   VENDOR_PAYMENT_METHOD_OPTIONS,
@@ -138,12 +139,7 @@ export function formatPricing(
   }
 
   const currency = parsed.currency ?? "USD";
-
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(parsed.base_rate);
+  return formatMoneyKpi(parsed.base_rate, currency);
 }
 
 export function formatPlatformsSummary(
@@ -161,11 +157,7 @@ export function formatPlatformsSummary(
 }
 
 export function formatMoney(amount: number, currency = "USD"): string {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amount);
+  return formatMoneyKpi(amount, currency);
 }
 
 export function formatPercent(value: number): string {

@@ -2,6 +2,7 @@ import {
   isClientIoAssignmentSnapshotV1,
   type ClientIoAssignmentSnapshotV1,
 } from "@/lib/io/client-io-assignment-snapshot";
+import { formatMoneyDetail } from "@/lib/finance/currency-format";
 
 export function formatIoCampaignDuration(
   startDate: string | null | undefined,
@@ -31,17 +32,8 @@ export function formatIoAgreedAmount(
   currencyCode: string | null | undefined
 ): string {
   const value = Number(amount);
-  const currency = currencyCode?.trim() || "USD";
   if (!Number.isFinite(value)) return "—";
-  try {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 2,
-    }).format(value);
-  } catch {
-    return `${value.toFixed(2)} ${currency}`;
-  }
+  return formatMoneyDetail(value, currencyCode);
 }
 
 export function sumClientIoSnapshotAgreedAmount(

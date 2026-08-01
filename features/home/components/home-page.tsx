@@ -4,11 +4,10 @@ import {
   AlertCircleIcon,
   ArrowRightIcon,
   Building2Icon,
-  DollarSignIcon,
   LayoutGridIcon,
-  LineChartIcon,
   TrendingUpIcon,
   UsersIcon,
+  WalletIcon,
 } from "lucide-react";
 
 import { ThinkwayLogo } from "@/components/brand/thinkway-logo";
@@ -202,7 +201,7 @@ export function HomePage({ snapshot }: HomePageProps) {
                 className="platform-v6-hs-kpi-icon"
                 style={{ background: "var(--blue-light)" }}
               >
-                <LineChartIcon aria-hidden stroke="#0057FF" strokeWidth={2} />
+                <WalletIcon aria-hidden stroke="#0057FF" strokeWidth={2} />
               </div>
               <div className="platform-v6-hs-kpi-lbl">Revenue</div>
               <div className="platform-v6-hs-kpi-val">
@@ -223,9 +222,9 @@ export function HomePage({ snapshot }: HomePageProps) {
                 className="platform-v6-hs-kpi-icon"
                 style={{ background: "var(--green-bg)" }}
               >
-                <DollarSignIcon aria-hidden stroke="#10b981" strokeWidth={2} />
+                <TrendingUpIcon aria-hidden stroke="#10b981" strokeWidth={2} />
               </div>
-              <div className="platform-v6-hs-kpi-lbl">Gross profit</div>
+              <div className="platform-v6-hs-kpi-lbl">Gross Profit</div>
               <div className="platform-v6-hs-kpi-val">
                 <HomeKpiCounter
                   value={snapshot.gross_profit}

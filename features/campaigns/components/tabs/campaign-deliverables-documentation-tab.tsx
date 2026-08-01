@@ -239,6 +239,11 @@ export function CampaignDeliverablesDocumentationTab({
     [units]
   );
   const missingCount = Math.max(0, units.length - receivedCount);
+  const pendingCount = missingCount;
+  const approvedCount = useMemo(
+    () => units.filter((unit) => unit.publicationLinkCount > 0).length,
+    [units]
+  );
 
   const assertWriteBinding = useCallback(
     (writeUnit: DocumentationUnitSummary): boolean => {
@@ -372,22 +377,28 @@ export function CampaignDeliverablesDocumentationTab({
       stats={[
         { key: "total", label: "Units", value: loading ? "…" : String(units.length) },
         {
+          key: "pending",
+          label: "Pending",
+          value: loading ? "…" : String(pendingCount),
+          tone: pendingCount > 0 ? "amber" : "mut",
+        },
+        {
           key: "received",
           label: "Received",
           value: loading ? "…" : String(receivedCount),
           tone: "pos",
         },
         {
+          key: "approved",
+          label: "Approved",
+          value: loading ? "…" : String(approvedCount),
+          tone: approvedCount > 0 ? "blue" : "mut",
+        },
+        {
           key: "missing",
           label: "Missing",
           value: loading ? "…" : String(missingCount),
           tone: missingCount > 0 ? "amber" : "mut",
-        },
-        {
-          key: "creators",
-          label: "Creators",
-          value: String(creators.length),
-          tone: "blue",
         },
       ]}
       registerLabel="Repository"

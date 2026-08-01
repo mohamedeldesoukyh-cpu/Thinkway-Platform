@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { DollarSignIcon } from "lucide-react";
+import { WalletIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { FieldError } from "@/components/forms/field-error";
@@ -70,7 +70,7 @@ export function VendorFinanceTab({
       <input type="hidden" name="pricing_currency" value={currency} />
 
       <VendorFormSection
-        icon={DollarSignIcon}
+        icon={WalletIcon}
         title={sectionTitle}
         description="Base rates, currency, and tax registration."
       >
@@ -191,7 +191,7 @@ export function VendorFinanceTab({
       </VendorFormSection>
 
       <VendorFormSection
-        icon={DollarSignIcon}
+        icon={WalletIcon}
         title="Quotation price reference"
         description="Average creator cost from quotation lines — used in studio and influencer selection."
       >

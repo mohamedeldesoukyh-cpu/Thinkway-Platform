@@ -1,8 +1,7 @@
+import { formatMoneyDetail } from "@/lib/finance/currency-format";
+
 export function formatPortalCurrency(amount: number, currency: string) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-  }).format(amount);
+  return formatMoneyDetail(amount, currency);
 }
 
 export function formatPortalDate(value: string | null | undefined) {

@@ -2,14 +2,14 @@
 
 import type { ReactNode } from "react";
 import {
-  DollarSignIcon,
-  FileTextIcon,
+  WalletIcon,
+  ReceiptIcon,
   TrendingUpIcon,
   PercentIcon,
 } from "lucide-react";
 
 import type { CampaignWorkspace } from "@/features/campaigns/types";
-import { formatMoney, formatPercent } from "@/features/campaigns/utils";
+import { formatMoneyCompact, formatPercent } from "@/features/campaigns/utils";
 import { cn } from "@/lib/utils";
 
 type CampaignKpiCardsProps = {
@@ -27,7 +27,7 @@ type KpiCardDef = {
   valueClassName?: string;
 };
 
-/** Aurora KPI cards — live financials; replaces dense metrics band visually. */
+/** Aurora KPI cards — live financials; ISO currency, KPI precision (no decimals). */
 export function CampaignKpiCards({ workspace, className }: CampaignKpiCardsProps) {
   const { financials, lines } = workspace;
   const currency = workspace.currency_code;
@@ -38,40 +38,28 @@ export function CampaignKpiCards({ workspace, className }: CampaignKpiCardsProps
     {
       id: "revenue",
       label: "Revenue",
-      value: formatMoney(financials.revenue, currency),
-      sub: "Billable base · matches PO",
+      value: formatMoneyCompact(financials.revenue, currency),
+      sub: "Billable campaign value",
       tint: "blue",
-      icon: <DollarSignIcon aria-hidden />,
+      icon: <WalletIcon aria-hidden />,
     },
     {
       id: "cost",
       label: "Cost",
-      value: formatMoney(financials.cost, currency),
-      sub: "Vendor payouts + fees",
+      value: formatMoneyCompact(financials.cost, currency),
+      sub: "Committed vendor cost",
       tint: "slate",
-      icon: <FileTextIcon aria-hidden />,
+      icon: <ReceiptIcon aria-hidden />,
     },
     {
       id: "gp",
-      label: "Gross profit",
-      value: formatMoney(financials.gp, currency),
+      label: "Gross Profit",
+      value: formatMoneyCompact(financials.gp, currency),
       valueClassName:
         financials.gp < 0
           ? "text-[var(--camp-red-text)]"
           : "text-[var(--camp-green-text)]",
-      sub: (
-        <span
-          className={cn(
-            "thinkway-aurora-chip-sm",
-            financials.gp < 0
-              ? "bg-[var(--camp-red-bg)] text-[var(--camp-red-text)]"
-              : "bg-[var(--camp-green-bg)] text-[var(--camp-green-text)]"
-          )}
-        >
-          {financials.gp < 0 ? "" : "+"}
-          {formatPercent(financials.margin_percent)} margin
-        </span>
-      ),
+      sub: `${formatPercent(financials.margin_percent)} GP`,
       tint: "emer",
       icon: <TrendingUpIcon aria-hidden />,
     },
@@ -91,7 +79,7 @@ export function CampaignKpiCards({ workspace, className }: CampaignKpiCardsProps
                   : "bg-[var(--camp-amber-bg)] text-[var(--camp-amber-text)]"
             )}
           >
-            {marginWeak ? "Watch" : marginHealthy ? "Healthy" : "Moderate"}
+            {marginWeak ? "Watch" : marginHealthy ? "Healthy campaign" : "Moderate"}
           </span>
           <span>· {lines.length} creators</span>
         </>

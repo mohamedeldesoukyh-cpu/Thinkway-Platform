@@ -103,10 +103,14 @@ export function CampaignWorkspaceScrollShell({
       ref={scrollRef}
       className="h-0 min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain overscroll-x-none bg-[var(--camp-surface)]"
       data-campaign-workspace-scroll
+      data-campaign-persistent-shell="true"
     >
       <div className="thinkway-aurora-wrap">
-        <div className="thinkway-campaign-header">{chrome}</div>
-        <div ref={panelRef} className="thinkway-aurora-panel">
+        {/* Persistent campaign chrome — identity, KPIs, actions */}
+        <div className="thinkway-campaign-header" data-campaign-shell="chrome">
+          {chrome}
+        </div>
+        <div ref={panelRef} className="thinkway-aurora-panel" data-campaign-shell="panel">
           <div ref={sentinelRef} className="h-px w-full shrink-0" aria-hidden />
           {tabsPinned && tabsHeight > 0 ? (
             <div style={{ height: tabsHeight }} className="shrink-0" aria-hidden />
@@ -121,10 +125,19 @@ export function CampaignWorkspaceScrollShell({
             )}
             data-sticky="campaign-workspace-tabs"
             data-pinned={tabsPinned ? "true" : "false"}
+            data-campaign-shell="tabs"
           >
             {tabs}
           </div>
-          <div className="thinkway-aurora-panel-body">{children}</div>
+          {/* Only this region swaps when Enterprise Tabs change */}
+          <div
+            className="thinkway-aurora-panel-body"
+            data-campaign-shell="content"
+            role="region"
+            aria-label="Campaign workspace content"
+          >
+            {children}
+          </div>
         </div>
       </div>
     </div>

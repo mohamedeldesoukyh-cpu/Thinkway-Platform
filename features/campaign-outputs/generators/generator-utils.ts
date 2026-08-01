@@ -5,6 +5,8 @@
  * reproducible.
  */
 
+import { formatMoneyKpi } from "@/lib/finance/currency-format";
+
 export const TIER_PRIORITY: Record<string, number> = {
   celebrity: 0,
   mega: 0,
@@ -52,7 +54,7 @@ export function primaryService(tier: string | undefined, platform: string): stri
 }
 
 export function formatMoney(amount: number, currency: string): string {
-  return `${Math.round(amount).toLocaleString()} ${currency}`;
+  return formatMoneyKpi(amount, currency);
 }
 
 /** Blended benchmarks per platform (nominal, in the budget's currency for CPM). */

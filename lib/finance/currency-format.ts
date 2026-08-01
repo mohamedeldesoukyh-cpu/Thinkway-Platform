@@ -1,10 +1,16 @@
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 
 /**
- * Centralized currency display for finance surfaces.
- * Uses symbol-first formatting (e.g. E£600,000 · $9,000 · €12,500).
+ * Thinkway Platform Financial Display Standard.
+ *
+ * Always display ISO currency codes (never localized symbols):
+ *   KPI / executive:  EGP 1,235,561
+ *   Detail / ledger:  EGP 1,235,561.00
+ *
+ * Spec: docs/architecture/FINANCIAL_DISPLAY_STANDARD.md
  */
 
+/** @deprecated Legacy symbol map — kept only for parsing historical inputs. Never use for display. */
 export const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: "$",
   EUR: "€",
@@ -22,16 +28,32 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   OMR: "OMR ",
 };
 
+export type MoneyDisplayPrecision = "kpi" | "detail";
+
 export type FormatCurrencyOptions = {
-  /** Decimal places — defaults to 2 for ledger precision, use 0 for KPI cards. */
+  /**
+   * Explicit decimal places. When omitted, `precision` controls the default
+   * (`kpi` → 0, `detail` → 2).
+   */
   decimals?: number;
-  /** Show ISO code after amount (e.g. "1,000 USD") */
+  /** Display precision band. Defaults to `detail` (two decimals). */
+  precision?: MoneyDisplayPrecision;
+  /**
+   * @deprecated ISO currency codes are always shown. Ignored.
+   */
   showCode?: boolean;
 };
 
 function normalizeCurrencyCode(currency: string | null | undefined): string {
   const code = (currency ?? DEFAULT_PLATFORM_CURRENCY).trim().toUpperCase();
   return code.length === 3 ? code : DEFAULT_PLATFORM_CURRENCY;
+}
+
+function resolveDecimals(options: FormatCurrencyOptions): number {
+  if (typeof options.decimals === "number" && Number.isFinite(options.decimals)) {
+    return Math.max(0, Math.min(6, Math.trunc(options.decimals)));
+  }
+  return options.precision === "kpi" ? 0 : 2;
 }
 
 function formatNumber(amount: number, decimals: number): string {
@@ -42,62 +64,55 @@ function formatNumber(amount: number, decimals: number): string {
   }).format(safe);
 }
 
+/**
+ * @deprecated Do not use for display. Prefer `formatCurrencyAmount`.
+ * Retained only for parsing legacy symbol-prefixed strings.
+ */
 export function currencySymbol(currency: string | null | undefined): string {
   const code = normalizeCurrencyCode(currency);
   return CURRENCY_SYMBOLS[code] ?? `${code} `;
 }
 
-/** Symbol-first amount: £600,000.00 */
+/**
+ * Canonical money formatter — ISO code + grouped amount.
+ * Example: `EGP 1,235,561.00` (detail) · `EGP 1,235,561` (kpi)
+ */
 export function formatCurrencyAmount(
   amount: number,
   currency: string | null | undefined,
   options: FormatCurrencyOptions = {}
 ): string {
   const code = normalizeCurrencyCode(currency);
-  const decimals = options.decimals ?? 2;
-  const symbol = CURRENCY_SYMBOLS[code] ?? `${code} `;
-  const formatted = formatNumber(amount, decimals);
-
-  if (options.showCode && !CURRENCY_SYMBOLS[code]) {
-    return `${formatted} ${code}`;
-  }
-
-  const trailingSymbol = symbol.endsWith(" ");
-  if (trailingSymbol) {
-    return `${symbol.trim()} ${formatted}`;
-  }
-
-  return `${symbol}${formatted}`;
+  const decimals = resolveDecimals(options);
+  return `${code} ${formatNumber(amount, decimals)}`;
 }
 
-/** Delegates to Intl when a locale currency string is needed (legacy surfaces). */
+/** Detailed / ledger money — always two decimal places. */
+export function formatMoneyDetail(
+  amount: number,
+  currency: string | null | undefined
+): string {
+  return formatCurrencyAmount(amount, currency, { precision: "detail" });
+}
+
+/** Executive KPI money — whole units, no decimals. */
+export function formatMoneyKpi(
+  amount: number,
+  currency: string | null | undefined
+): string {
+  return formatCurrencyAmount(amount, currency, { precision: "kpi" });
+}
+
+/**
+ * @deprecated Prefer `formatCurrencyAmount` / `formatMoneyDetail`.
+ * Kept as a thin alias that now emits ISO codes (not Intl locale symbols).
+ */
 export function formatIntlCurrency(
   amount: number,
   currency: string | null | undefined,
   maximumFractionDigits = 2
 ): string {
-  const code = normalizeCurrencyCode(currency);
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency: code,
-      maximumFractionDigits,
-    }).format(Number.isFinite(amount) ? amount : 0);
-  } catch {
-    return formatCurrencyAmount(amount, code, { decimals: maximumFractionDigits });
-  }
-}
-
-if (process.env.NODE_ENV === "development") {
-  const sample = [
-    { amount: 600_000, currency: "EGP" },
-    { amount: 9_000, currency: "USD" },
-    { amount: 12_500, currency: "EUR" },
-  ];
-  for (const row of sample) {
-    console.debug("[currency-normalization]", {
-      currency: row.currency,
-      formatted: formatCurrencyAmount(row.amount, row.currency, { decimals: 0 }),
-    });
-  }
+  return formatCurrencyAmount(amount, currency, {
+    decimals: maximumFractionDigits,
+  });
 }

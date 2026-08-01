@@ -85,7 +85,8 @@ export function CampaignWorkspaceFrame({
         <div
           className={cn(
             "thinkway-aurora-statrow",
-            stats.length >= 6 && "c6",
+            stats.length >= 7 && "c7",
+            stats.length === 6 && "c6",
             stats.length === 5 && "c5",
             stats.length === 4 && "c4"
           )}

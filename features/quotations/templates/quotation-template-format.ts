@@ -1,5 +1,5 @@
 import { formatCreatorCount } from "@/features/discovery/components/creator-search/creator-search-utils";
-import { currencySymbol } from "@/lib/finance/currency-format";
+import { formatCurrencyAmount } from "@/lib/finance/currency-format";
 
 /** Full number with thousands separators (e.g. 15,791,000). */
 export function formatQuotationFullNumber(value: number | null | undefined): string {
@@ -60,31 +60,23 @@ export function parseQuotationMoneyString(value: string): {
   return null;
 }
 
-/** Symbol-first currency (E£1,234,567.89). */
+/** Detailed quotation money — ISO code (Financial Display Standard). */
 export function formatQuotationCurrencySymbolFirst(
   amount: number,
   currency = "EGP",
   decimals = 2
 ): string {
-  const symbol = currencySymbol(currency);
-  const formatted = new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  }).format(Number.isFinite(amount) ? amount : 0);
-  if (symbol.endsWith(" ")) return `${symbol.trim()} ${formatted}`;
-  return `${symbol}${formatted}`;
+  return formatCurrencyAmount(amount, currency, { decimals });
 }
 
-/** Abbreviated currency for cover stats (E£3.50M / AED 268.33K). */
+/** Abbreviated currency for cover stats (EGP 3.50M / AED 268.33K). */
 export function formatQuotationCurrencyShort(amount: number, currency = "EGP"): string {
-  const rawSymbol = currencySymbol(currency);
-  // Letter codes (AED, SAR) keep a space; glyph symbols (E£, $) stay glued.
-  const prefix = rawSymbol.endsWith(" ") ? `${rawSymbol.trim()} ` : rawSymbol.trim();
+  const code = (currency || "EGP").trim().toUpperCase() || "EGP";
   if (amount >= 1_000_000) {
-    return `${prefix}${(amount / 1_000_000).toFixed(2)}M`;
+    return `${code} ${(amount / 1_000_000).toFixed(2)}M`;
   }
   if (amount >= 1_000) {
-    return `${prefix}${(amount / 1_000).toFixed(2)}K`;
+    return `${code} ${(amount / 1_000).toFixed(2)}K`;
   }
   return formatQuotationCurrencySymbolFirst(amount, currency);
 }

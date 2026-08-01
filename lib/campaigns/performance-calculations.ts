@@ -3,6 +3,7 @@ import {
   computeEngagementRate as engineComputeEngagementRate,
   type EngagementRateInput,
 } from "@/lib/performance/engagement-rate-engine";
+import { formatMoneyDetail } from "@/lib/finance/currency-format";
 
 export type PerformanceMetricInput = {
   impressions: number | null;
@@ -112,9 +113,5 @@ export function formatMoneyValue(
   currency = "USD"
 ): string {
   if (value == null) return "—";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 2,
-  }).format(value);
+  return formatMoneyDetail(value, currency);
 }

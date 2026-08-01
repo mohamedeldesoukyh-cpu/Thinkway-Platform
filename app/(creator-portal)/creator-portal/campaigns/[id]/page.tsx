@@ -11,6 +11,7 @@ import {
 import { CreatorRejectVendorIoForm } from "@/features/portals/components/creator-reject-vendor-io-form";
 import { PortalStatusBadge } from "@/features/portals/components/portal-status-badge";
 import { getCreatorCampaignDetail } from "@/features/portals/queries";
+import { formatMoneyDetail } from "@/lib/finance/currency-format";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -64,10 +65,7 @@ export default async function CreatorCampaignDetailPage({ params }: Props) {
               </p>
               <p>
                 Agreed fee:{" "}
-                {new Intl.NumberFormat("en-US", {
-                  style: "currency",
-                  currency: detail.currency_code,
-                }).format(detail.agreed_amount)}
+                {formatMoneyDetail(detail.agreed_amount, detail.currency_code)}
               </p>
             </CardContent>
           </Card>

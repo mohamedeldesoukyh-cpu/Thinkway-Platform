@@ -9,7 +9,7 @@ import {
 
 import { PlatformV6KpiStrip } from "@/components/platform/platform-v6-kpi-strip";
 import type { CampaignsKpis } from "@/features/campaigns/queries";
-import { formatMoney } from "@/features/campaigns/utils";
+import { formatMoneyCompact } from "@/features/campaigns/utils";
 import { cn } from "@/lib/utils";
 
 type CampaignsKpiStripProps = {
@@ -17,14 +17,15 @@ type CampaignsKpiStripProps = {
   className?: string;
 };
 
+/** Module-level command KPIs for the Campaigns list (ISO KPI precision). */
 export function CampaignsKpiStrip({ kpis, className }: CampaignsKpiStripProps) {
   return (
     <PlatformV6KpiStrip
-      className={cn(className)}
+      className={cn("campaigns-module-kpi-strip", className)}
       items={[
         {
           id: "total",
-          label: "TOTAL CAMPAIGNS",
+          label: "CAMPAIGNS",
           value: String(kpis.total_campaigns),
           icon: CheckCircle2Icon,
           iconStroke: "#0057FF",
@@ -32,11 +33,11 @@ export function CampaignsKpiStrip({ kpis, className }: CampaignsKpiStripProps) {
         },
         {
           id: "revenue",
-          label: "TOTAL REVENUE",
-          value: formatMoney(kpis.total_revenue, kpis.currency_code),
+          label: "REVENUE",
+          value: formatMoneyCompact(kpis.total_revenue, kpis.currency_code),
           icon: WalletIcon,
-          iconStroke: "#a855f7",
-          iconBg: "var(--purple-bg)",
+          iconStroke: "#059669",
+          iconBg: "var(--green-bg)",
           valueClassName: "platform-v6-c-blue",
         },
         {

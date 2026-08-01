@@ -32,8 +32,10 @@ Environment switch navigates between **hosts** — never switches DB inside one 
 - `docs/THINKWAY_SYSTEM_REFERENCE.md` — product SSOT  
 - `docs/ARCHITECTURE_ALIGNMENT.md` — codebase vs spec  
 - `docs/RELEASE_WORKFLOW.md` — dual deploy + approval gate  
-- `docs/architecture/CAMPAIGN_WORKSPACE_UI_FREEZE.md` — **Campaign Workspace UI Design Freeze** (2026-08-01)  
-- `docs/architecture/CAMPAIGN_WORKSPACE_UI_GUIDELINES.md` — Aurora extension rules (no redesign; functional only)  
+- `docs/architecture/CAMPAIGN_INFORMATION_ARCHITECTURE.md` — **Campaign module IA** (list ↔ workspace; persistent shell)  
+- `docs/architecture/CAMPAIGN_WORKSPACE_UI_FREEZE.md` — Campaign Workspace UI freeze (IA-rebaselined 2026-08-01)  
+- `docs/architecture/CAMPAIGN_WORKSPACE_UI_GUIDELINES.md` — Aurora + IA extension rules  
+- `docs/architecture/FINANCIAL_DISPLAY_STANDARD.md` — ISO money display platform-wide  
 - `docs/architecture/UNIFIED_MEDIA_PLAN_PLAN.md` — Media Plan SSOT (baseline + draft)  
 - `docs/architecture/MEDIA_PLAN_VERSIONING.md` — business version vs audit; approval boundary  
 - Publishing Calendar: Saturday–Friday calendar weeks (`media-plan-week-start.ts`); range from campaign start/end  
@@ -51,6 +53,12 @@ Environment switch navigates between **hosts** — never switches DB inside one 
 
 - **Enterprise Tabs** (`components/workspace/enterprise-tabs.tsx` + `app/styles/enterprise-tabs.css`) — only approved workspace tab rail.
 - Future modules must reuse it; no page-specific tab implementations or sizing overrides.
+
+## Financial Display Standard
+
+- ISO codes only: `EGP 1,235,561` (KPI) · `EGP 1,235,561.00` (detail)
+- Canonical: `lib/finance/currency-format.ts` — `docs/architecture/FINANCIAL_DISPLAY_STANDARD.md`
+- No currency-symbol icons for Revenue/Cost KPIs
 
 ## Ops & workers
 

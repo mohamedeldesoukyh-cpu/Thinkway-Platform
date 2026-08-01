@@ -5957,3 +5957,21 @@
 .dark .thinkway-platform-v6-workspace-nav-mobile .platform-v6-hs-nav-tab:hover {
   color: var(--foreground);
 }
+
+/* Campaign module command center — continuity with workspace Aurora language */
+.thinkway-platform-v6 .campaigns-module-page .platform-v6-page-header h1 {
+  letter-spacing: -0.02em;
+}
+
+.thinkway-platform-v6 .campaigns-module-page .platform-v6-page-header p {
+  max-width: 42rem;
+}
+
+.thinkway-platform-v6 .campaigns-module-kpi-strip {
+  margin-bottom: 4px;
+}
+
+.thinkway-platform-v6 .campaigns-module-register {
+  border-radius: 14px;
+  overflow: hidden;
+}

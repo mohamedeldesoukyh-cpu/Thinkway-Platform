@@ -1,4 +1,5 @@
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
+import { formatMoneyKpi } from "@/lib/finance/currency-format";
 
 /**
  * MENA market post-fee benchmarks (calibrated from Thinkway rate cards / Zahran & agency lists).
@@ -20,15 +21,7 @@ const PLATFORM_MULTIPLIER: Record<string, number> = {
 };
 
 function formatMoney(amount: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  } catch {
-    return `${currency} ${Math.round(amount).toLocaleString()}`;
-  }
+  return formatMoneyKpi(amount, currency);
 }
 
 function egpToCurrency(egp: number, currency: string): number {

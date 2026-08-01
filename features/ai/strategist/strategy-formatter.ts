@@ -7,6 +7,8 @@ import type {
 } from "../tools/schemas";
 import type { ToolExecutionResult } from "../types";
 
+import { formatMoneyKpi } from "@/lib/finance/currency-format";
+
 import type { StrategistRequestAnalysis } from "./request-analysis";
 
 export type StrategySections = {
@@ -33,16 +35,7 @@ function getToolOutput<T>(toolResults: ToolExecutionResult[], toolName: string):
 }
 
 function formatCurrency(amount: number, currency?: string): string {
-  const code = currency?.trim() || "USD";
-  try {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: code.length === 3 ? code : "USD",
-      maximumFractionDigits: 0,
-    }).format(amount);
-  } catch {
-    return `${amount.toLocaleString()} ${code}`;
-  }
+  return formatMoneyKpi(amount, currency?.trim() || "USD");
 }
 
 function formatCreatorStrategy(

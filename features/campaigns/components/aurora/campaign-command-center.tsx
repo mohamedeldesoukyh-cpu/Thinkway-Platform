@@ -19,10 +19,9 @@ import { CampaignFlatSection } from "@/features/campaigns/components/campaign-fl
 import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
-import { formatMoney, formatPercent } from "@/features/campaigns/utils";
+import { formatMoneyCompact, formatPercent } from "@/features/campaigns/utils";
 import { evaluateCampaignOperationalReadiness } from "@/lib/domains/commercial/campaign-operational-readiness";
 import type { CampaignPerformanceSummary } from "@/lib/domains/campaign/types";
-import { PO_STATUS_LABELS } from "@/lib/finance/po/status";
 import { cn } from "@/lib/utils";
 
 const WORKFLOW_STAGES = [
@@ -198,29 +197,29 @@ export function CampaignCommandCenter({
 
       <div className="thinkway-aurora-ops-grid">
         <CampaignOpsCard
-          title="Commercial"
-          subtitle="Revenue · cost · margin"
+          title="Health"
+          subtitle="Operational readiness"
           status={pill(
-            financials.po_exceeded
-              ? "rose"
-              : financials.po_status === "near_limit"
-                ? "amber"
-                : "green",
-            PO_STATUS_LABELS[financials.po_status] ?? financials.po_status
+            readiness.status === "operational_ready" ? "green" : "amber",
+            readiness.statusLabel
           )}
-          actionLabel="Finance"
-          onAction={() => onNavigateToTab("billing")}
+          actionLabel="Workflow"
+          onAction={() => onNavigateToTab("workflow")}
         >
           <CampaignOpsStat
-            label="Revenue"
-            value={formatMoney(financials.revenue, currency)}
-            tone="blue"
+            label="Status"
+            value={readiness.status === "operational_ready" ? "Ready" : "Attention"}
+            tone={readiness.status === "operational_ready" ? "pos" : "amber"}
           />
-          <CampaignOpsStat label="Cost" value={formatMoney(financials.cost, currency)} />
           <CampaignOpsStat
-            label="GP · Margin"
-            value={`${formatMoney(financials.gp, currency)} · ${formatPercent(financials.margin_percent)}`}
-            tone={financials.gp < 0 ? "amber" : "pos"}
+            label="Blockers"
+            value={String(workspace.blockers.length)}
+            tone={workspace.blockers.length > 0 ? "amber" : "mut"}
+          />
+          <CampaignOpsStat
+            label="Gaps"
+            value={String(readiness.mandatoryMissing.length)}
+            tone={readiness.mandatoryMissing.length > 0 ? "amber" : "mut"}
           />
         </CampaignOpsCard>
 
@@ -233,7 +232,7 @@ export function CampaignCommandCenter({
               : "amber",
             `${assignmentStats.withVendor}/${assignmentStats.total} assigned`
           )}
-          actionLabel="Open"
+          actionLabel="Assignments"
           onAction={() => onNavigateToTab("lines")}
         >
           <CampaignOpsStat label="Creators" value={String(assignmentStats.withVendor)} tone="blue" />
@@ -258,20 +257,33 @@ export function CampaignCommandCenter({
             clientIoTone(workspace.client_io?.status),
             workspace.client_io?.status?.replaceAll("_", " ") ?? "Missing"
           )}
-          actionLabel="Open"
+          actionLabel="Client IO"
           onAction={() => onNavigateToTab("client-io")}
         >
+          <CampaignOpsStat
+            label="Documents"
+            value={workspace.client_io ? "1" : "0"}
+          />
           <CampaignOpsStat
             label="Status"
             value={workspace.client_io?.status?.replaceAll("_", " ") ?? "—"}
             tone={workspace.client_io?.status === "approved" ? "pos" : "default"}
           />
           <CampaignOpsStat
-            label="Agreed"
-            value={formatMoney(financials.revenue, currency)}
-            tone="blue"
+            label="Pending"
+            value={
+              workspace.client_io &&
+              !["approved", "rejected"].includes(workspace.client_io.status)
+                ? "Yes"
+                : "No"
+            }
+            tone={
+              workspace.client_io &&
+              !["approved", "rejected"].includes(workspace.client_io.status)
+                ? "amber"
+                : "mut"
+            }
           />
-          <CampaignOpsStat label="Lines" value={String(assignmentStats.total)} />
         </CampaignOpsCard>
 
         <CampaignOpsCard
@@ -287,7 +299,7 @@ export function CampaignCommandCenter({
               ? `${vendorIoStats.sent} sent`
               : `${vendorIoStats.generated} draft/generated`
           )}
-          actionLabel="Open"
+          actionLabel="Vendor IO"
           onAction={() => onNavigateToTab("vendor-io")}
         >
           <CampaignOpsStat label="Total" value={String(vendorIoStats.total)} />
@@ -312,7 +324,7 @@ export function CampaignCommandCenter({
               ? `${deliverableStats.pending} pending`
               : "None"
           )}
-          actionLabel="Open"
+          actionLabel="Deliverables"
           onAction={() => onNavigateToTab("deliverables")}
         >
           <CampaignOpsStat label="Total" value={String(deliverableStats.total)} />
@@ -339,7 +351,7 @@ export function CampaignCommandCenter({
                 )
               : pill("mut", "…")
           }
-          actionLabel="Open"
+          actionLabel="Performance"
           onAction={() => onNavigateToTab("publications")}
         >
           <CampaignOpsStat
@@ -376,21 +388,21 @@ export function CampaignCommandCenter({
             financials.billing_outstanding > 0 ? "amber" : "green",
             financials.billing_outstanding > 0 ? "Outstanding" : "Clear"
           )}
-          actionLabel="Open"
+          actionLabel="Finance"
           onAction={() => onNavigateToTab("billing")}
         >
           <CampaignOpsStat
             label="Collected"
-            value={formatMoney(financials.collected, currency)}
+            value={formatMoneyCompact(financials.collected, currency)}
           />
           <CampaignOpsStat
             label="Outstanding"
-            value={formatMoney(financials.billing_outstanding, currency)}
+            value={formatMoneyCompact(financials.billing_outstanding, currency)}
             tone={financials.billing_outstanding > 0 ? "amber" : "mut"}
           />
           <CampaignOpsStat
             label="Remaining PO"
-            value={formatMoney(financials.remaining_po, currency)}
+            value={formatMoneyCompact(financials.remaining_po, currency)}
           />
         </CampaignOpsCard>
 
@@ -398,7 +410,7 @@ export function CampaignCommandCenter({
           title="Timeline"
           subtitle="Recent activity"
           status={pill("mut", `${workspace.activity.length} events`)}
-          actionLabel="Open"
+          actionLabel="Timeline"
           onAction={() => onNavigateToTab("timeline")}
         >
           {recentActivity.length === 0 ? (
@@ -425,77 +437,6 @@ export function CampaignCommandCenter({
             </ul>
           )}
         </CampaignOpsCard>
-      </div>
-
-      {/* Quick actions + future entry points */}
-      <CampaignSectionHead title="Quick actions" />
-      <div className="thinkway-aurora-quick">
-        <Button
-          type="button"
-          variant="outline"
-          className="thinkway-campaign-btn"
-          onClick={() => onNavigateToTab("lines")}
-        >
-          Assignments
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="thinkway-campaign-btn"
-          onClick={() => onNavigateToTab("client-io")}
-        >
-          Client IO
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="thinkway-campaign-btn"
-          onClick={() => onNavigateToTab("vendor-io")}
-        >
-          Vendor IO
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="thinkway-campaign-btn"
-          onClick={() => onNavigateToTab("billing")}
-        >
-          Finance
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="thinkway-campaign-btn"
-          onClick={() => onNavigateToTab("timeline")}
-        >
-          Timeline
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="thinkway-campaign-btn"
-          onClick={() => onNavigateToTab("workflow")}
-        >
-          Workflow
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="thinkway-campaign-btn opacity-60"
-          disabled
-          title="Planning Board — coming in Release 2.2a"
-        >
-          Planning Board
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="thinkway-campaign-btn opacity-60"
-          disabled
-          title="Copilot — coming in Release 2.2b"
-        >
-          Copilot
-        </Button>
       </div>
 
       {/* Recent assignments preview */}
@@ -548,7 +489,7 @@ export function CampaignCommandCenter({
                       )}
                     </td>
                     <td className="r tabular strong">
-                      {formatMoney(line.revenue_before_vat ?? 0, currency)}
+                      {formatMoneyCompact(line.revenue_before_vat ?? 0, currency)}
                     </td>
                   </tr>
                 ))}
