@@ -170,7 +170,7 @@ export function CampaignBillingTab({
   campaignInvoiceRegister,
 }: CampaignBillingTabProps) {
   const refreshAfterOperationalMutation = useRefreshCampaignAfterOperationalMutation();
-  const { financials, po } = workspace;
+  const { financials } = workspace;
   const currency = workspace.currency_code;
   const [legacyInvoiceOpen, setLegacyInvoiceOpen] = useState(false);
   const [operationalInvoiceOpen, setOperationalInvoiceOpen] = useState(false);
