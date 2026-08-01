@@ -9,8 +9,11 @@ Before designing schema, UI, workflows, or new modules, read:
 
 - `docs/THINKWAY_SYSTEM_REFERENCE.md` — canonical product spec (May 2026)
 - `docs/ARCHITECTURE_ALIGNMENT.md` — current codebase vs spec gap analysis
-- `docs/architecture/CAMPAIGN_WORKSPACE_UI_FREEZE.md` — Campaign Workspace UI Design Freeze (2026-08-01)
+- `docs/architecture/CAMPAIGN_MODULE_BASELINE.md` — **protected Campaign module baseline** (closed 2026-08-01)
+- `docs/architecture/PRODUCT_UX_STANDARDS.md` — platform UX standards (Campaign = canonical)
+- `docs/architecture/CAMPAIGN_INFORMATION_ARCHITECTURE.md` — Campaign List ↔ Workspace IA
 - `docs/architecture/CAMPAIGN_WORKSPACE_UI_GUIDELINES.md` — Aurora extension rules (no redesign without approval)
+- `docs/architecture/FINANCIAL_DISPLAY_STANDARD.md` — ISO money presentation
 
 ## Non-negotiable hierarchy (preserve)
 
@@ -41,9 +44,11 @@ Group → Legal Entity (clients) → Brand → Campaign Header → Campaign Line
 4. **RLS + roles** — enforce Admin/Director/Manager/Account Manager/Finance/Data Entry matrix from reference §6.
 5. **Approvals** — use `approvals` / `approval_steps`; extend with workflow engine tables only when needed (§20).
 6. **Phased roadmap** — Phase 1: core ops; Phase 2: workflow/tasks/notifications/portals; Phase 3: AI; Phase 4: enterprise scale (reference §33).
-7. **Campaign Information Architecture** — List + Workspace are one module (`CAMPAIGN_INFORMATION_ARCHITECTURE.md`). Enterprise Tabs = persistent shell; hide Planning Board until R2.2a; no duplicate campaign KPIs outside header/Finance; Assignments summaries are operational only.
-8. **Enterprise Tabs** — only approved workspace tab rail (`components/workspace/enterprise-tabs.tsx`). No page-specific tab implementations.
-9. **Financial Display Standard** — ISO currency codes only (`formatMoneyKpi` / `formatMoneyDetail` in `lib/finance/currency-format.ts`). Never display `$`/`E£`/locale glyphs. See `docs/architecture/FINANCIAL_DISPLAY_STANDARD.md`.
+7. **Campaign Module Baseline (protected)** — IA + Workspace UI + Enterprise Tabs + Financial Display + Deliverables selection + persistent shell are frozen. Extend only; no Campaign redesign unless Critical usability + Product approval (`CAMPAIGN_MODULE_BASELINE.md`).
+8. **Product UX Standards** — Campaign is the canonical implementation for workspace architecture, navigation/information hierarchy, KPIs, summaries, Enterprise Tabs, financial presentation, status badges, action placement, and progressive disclosure (`PRODUCT_UX_STANDARDS.md`).
+9. **Enterprise Tabs** — only approved workspace tab rail (`components/workspace/enterprise-tabs.tsx`). No page-specific tab implementations.
+10. **Financial Display Standard** — ISO currency codes only (`formatMoneyKpi` / `formatMoneyDetail` in `lib/finance/currency-format.ts`). Never display `$`/`E£`/locale glyphs.
+11. **Functional delivery next** — Planning Board (2.2a) → Media Plan Copilot (2.2b) → Vendor IO Enterprise Completion → Reporting Hub → Notifications → Enterprise Analytics.
 
 ## Conflicts with reference doc (resolved in codebase)
 

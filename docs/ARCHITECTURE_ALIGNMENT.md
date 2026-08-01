@@ -2,16 +2,17 @@
 
 This document compares the **current Thinkway platform** (`thinkway-platform`) against the [System Reference](./THINKWAY_SYSTEM_REFERENCE.md). Use it before new modules: compare → detect gaps → recommend → avoid duplicate entities.
 
-**Last reviewed:** Aug 2026 (Campaign Information Architecture + Financial Display Standard)
+**Last reviewed:** Aug 2026 (Campaign Module Baseline protected · IA initiative closed)
 
-### Campaign Information Architecture Complete (Aug 2026)
+### Campaign Module Baseline — PROTECTED (Aug 2026)
 
-- **Milestone:** Campaign Information Architecture Complete — baseline for future operational modules
-- **Canonical:** [`docs/architecture/CAMPAIGN_INFORMATION_ARCHITECTURE.md`](./architecture/CAMPAIGN_INFORMATION_ARCHITECTURE.md)
-- List (`/campaigns`) + Workspace (`/campaigns/[id]`) = one continuous Campaign module
-- Persistent shell: identity → campaign KPIs → actions → Enterprise Tabs → content body only swaps
-- Planning Board / Copilot hidden until implemented; Assignments summaries operational-only; Finance keeps R/C/GP/Margin
-- Presentation / IA only — no API, schema, workflow, or calculation changes
+- **Initiative:** Campaign Information Architecture — **CLOSED permanently**
+- **Protected record:** [`docs/architecture/CAMPAIGN_MODULE_BASELINE.md`](./architecture/CAMPAIGN_MODULE_BASELINE.md)
+- **Product UX standards:** [`docs/architecture/PRODUCT_UX_STANDARDS.md`](./architecture/PRODUCT_UX_STANDARDS.md) — Campaign is canonical for workspace/nav/KPI/tabs/finance presentation patterns
+- **Includes:** Campaign IA · Workspace UI · Enterprise Tabs · Financial Display Standard · Deliverables selection · Persistent shell
+- **Next work (functional only):** Planning Board (2.2a) → Media Plan Copilot (2.2b) → Vendor IO Enterprise Completion → Reporting Hub → Notifications → Enterprise Analytics
+- **Low debt (non-blocking):** [`CAMPAIGN_MODULE_TECHNICAL_DEBT.md`](./architecture/CAMPAIGN_MODULE_TECHNICAL_DEBT.md)
+- **Rule:** No Campaign redesign unless Critical usability + formal Product approval
 
 ### Financial Display Standard (Aug 2026)
 
@@ -21,9 +22,8 @@ This document compares the **current Thinkway platform** (`thinkway-platform`) a
 
 ### Campaign Workspace UI Design Freeze (Aug 2026)
 
-- **Frozen (IA-rebaselined):** Presentation of `/campaigns/[id]` Aurora Campaign Workspace (Release 2.3).
-- **Docs:** [`CAMPAIGN_WORKSPACE_UI_FREEZE.md`](./architecture/CAMPAIGN_WORKSPACE_UI_FREEZE.md) · [`CAMPAIGN_WORKSPACE_UI_GUIDELINES.md`](./architecture/CAMPAIGN_WORKSPACE_UI_GUIDELINES.md) · IA above.
-- **Rule:** No further visual redesign of Campaign Workspace unless critical usability issue or approved future release. Future work (Planning Board, Copilot, Reporting Hub, Notifications, Enterprise Analytics) is **functional** and must adopt Aurora + IA.
+- **Frozen under Campaign Module Baseline:** Presentation of `/campaigns/[id]` Aurora Campaign Workspace.
+- **Docs:** [`CAMPAIGN_WORKSPACE_UI_FREEZE.md`](./architecture/CAMPAIGN_WORKSPACE_UI_FREEZE.md) · [`CAMPAIGN_WORKSPACE_UI_GUIDELINES.md`](./architecture/CAMPAIGN_WORKSPACE_UI_GUIDELINES.md) · baseline above.
 - Does **not** freeze APIs, schema, workflows, or business rules.
 
 ### Release 2.0 — Enterprise Campaign Lifecycle (Jul 2026)

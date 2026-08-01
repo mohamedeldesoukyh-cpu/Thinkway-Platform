@@ -1,10 +1,12 @@
 # Campaign Workspace UI Design Freeze
 
-**Status:** Frozen — Campaign Information Architecture Complete  
-**Freeze date:** 2026-08-01 (Aurora) · IA complete 2026-08-01  
-**Milestone:** Campaign Workspace UI Design Freeze (Release 2.3 Aurora) + Campaign Information Architecture Complete  
-**Branch baseline:** `develop`  
+**Status:** Frozen — protected Campaign Module Baseline · IA initiative **CLOSED**  
+**Freeze date:** 2026-08-01 (Aurora) · IA complete / closed 2026-08-01  
+**Milestone:** Campaign Workspace UI Design Freeze + Campaign Information Architecture Complete  
+**Protected baseline:** [`CAMPAIGN_MODULE_BASELINE.md`](./CAMPAIGN_MODULE_BASELINE.md)  
+**Branch tip:** `31c5a030` on `develop`  
 **Canonical IA:** [`CAMPAIGN_INFORMATION_ARCHITECTURE.md`](./CAMPAIGN_INFORMATION_ARCHITECTURE.md)  
+**Product standards:** [`PRODUCT_UX_STANDARDS.md`](./PRODUCT_UX_STANDARDS.md)  
 **Scope class:** Presentation / UX only — no API, database, workflow, server action, or business-logic freeze implications.
 
 ---

@@ -4,6 +4,9 @@
 
 - **`docs/THINKWAY_SYSTEM_REFERENCE.md`** — Thinkway product spec (May 2026): modules, hierarchy, campaigns, billing, roles, roadmap.
 - **`docs/ARCHITECTURE_ALIGNMENT.md`** — codebase vs spec gaps; consult before new entities or modules.
+- **`docs/architecture/CAMPAIGN_MODULE_BASELINE.md`** — protected Campaign module baseline (IA closed; extend only).
+- **`docs/architecture/PRODUCT_UX_STANDARDS.md`** — platform UX standards (Campaign = canonical).
+- **`docs/architecture/FINANCIAL_DISPLAY_STANDARD.md`** — ISO money presentation.
 - **`docs/DISCOVERY_UI_CONTRACT.md`** — mandatory Discovery UI components; run `npm run test:discovery-ui-contract` before merge.
 - **`docs/DISCOVERY_ARCHITECTURE.md`** — Discovery data flow and extension rules.
 - **`docs/PERFORMANCE_GOVERNANCE.md`** — performance budgets, CI gates, monitoring SLOs.

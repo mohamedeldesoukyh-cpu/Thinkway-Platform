@@ -1,8 +1,10 @@
 # Campaign Workspace UI Guidelines (Aurora)
 
-**Status:** Governing guidelines — Campaign Information Architecture Complete  
+**Status:** Governing guidelines — protected Campaign Module Baseline  
+**Baseline:** [`CAMPAIGN_MODULE_BASELINE.md`](./CAMPAIGN_MODULE_BASELINE.md)  
 **Freeze:** [`CAMPAIGN_WORKSPACE_UI_FREEZE.md`](./CAMPAIGN_WORKSPACE_UI_FREEZE.md)  
 **IA:** [`CAMPAIGN_INFORMATION_ARCHITECTURE.md`](./CAMPAIGN_INFORMATION_ARCHITECTURE.md)  
+**Product standards:** [`PRODUCT_UX_STANDARDS.md`](./PRODUCT_UX_STANDARDS.md)  
 **Audience:** Engineers and agents extending Campaign List / Workspace and future operational modules.
 
 ---

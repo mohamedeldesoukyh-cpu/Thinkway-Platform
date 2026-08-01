@@ -89,21 +89,15 @@
 - Standing by: Prod email config → Product pre-authorized resume: E1–E7 → remaining smoke → evidence → `v2.2.0` → Production Complete → reopen **2.2a Planning Board** (pause + remediate if any E-check fails)
 - Suite: `npm run test:release-2-2` **17/17**
 
-## Campaign Information Architecture Complete (2026-08-01)
+## Campaign Module Baseline — CLOSED (2026-08-01)
 
-- **Milestone:** **Campaign Information Architecture Complete** — baseline for future ops modules
-- **Canonical IA:** `docs/architecture/CAMPAIGN_INFORMATION_ARCHITECTURE.md`
-- **Freeze/guidelines:** `CAMPAIGN_WORKSPACE_UI_FREEZE.md` · `CAMPAIGN_WORKSPACE_UI_GUIDELINES.md`
-- **Also kept:** Financial Display Standard · Deliverables editor binding · Enterprise Tabs
-- **IA rules:** hide Planning Board until R2.2a; hero = Studio/Media Plans/Client IO/⋯ only; Enterprise Tabs = persistent shell; campaign KPIs once in header; Assignments operational stats; Finance keeps R/C/GP/Margin + receivable language; Overview Commercial → Health
-- **Future work (functional only):** Planning Board (R2.2a) · Copilot (R2.2b) · Reporting Hub · Notifications · Enterprise Analytics — must adopt Aurora + IA
+- **Initiative CLOSED permanently:** Campaign Information Architecture
+- **Protected baseline:** `docs/architecture/CAMPAIGN_MODULE_BASELINE.md`
+- **Product UX standards:** `docs/architecture/PRODUCT_UX_STANDARDS.md` (Campaign = canonical)
+- **Low debt (non-blocking):** `docs/architecture/CAMPAIGN_MODULE_TECHNICAL_DEBT.md`
+- **Tip:** `31c5a030` on `develop` — no further Campaign redesign unless Critical + Product approval
+- **Next (functional delivery):** Planning Board (2.2a) → Media Plan Copilot (2.2b) → Vendor IO Enterprise Completion → Reporting Hub → Notifications → Enterprise Analytics
 - **No Production deploy** without explicit approval
-
-## Post-freeze (functional / platform)
-
-- **Enterprise Tabs = platform navigation standard:** `components/workspace/enterprise-tabs.tsx` + `app/styles/enterprise-tabs.css` — only approved workspace tab rail; documented in `CAMPAIGN_WORKSPACE_UI_GUIDELINES.md`
-- **Deliverables editor binding:** `assertDocumentationEditorBinding` on every write; selection lock during upload; persistent context header (avatar, creator, platform, deliverable, assignment ID, status); unsaved Save/Discard/Cancel
-- **Financial Display Standard:** ISO currency codes platform-wide via `lib/finance/currency-format.ts` (`formatMoneyKpi` / `formatMoneyDetail`); KPI icons metric-based (no `$`); spec `docs/architecture/FINANCIAL_DISPLAY_STANDARD.md`
 
 ## IO approval email experience (Preview testing on develop)
 

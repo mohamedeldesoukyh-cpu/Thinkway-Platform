@@ -1,8 +1,10 @@
 # Campaign Information Architecture (Canonical)
 
-**Status:** Complete — baseline for all future operational modules  
+**Status:** Complete — initiative **CLOSED** · protected under Campaign Module Baseline  
 **Milestone:** Campaign Information Architecture Complete (2026-08-01)  
-**Branch:** `develop`  
+**Protected baseline:** [`CAMPAIGN_MODULE_BASELINE.md`](./CAMPAIGN_MODULE_BASELINE.md)  
+**Product standards:** [`PRODUCT_UX_STANDARDS.md`](./PRODUCT_UX_STANDARDS.md)  
+**Branch tip:** `31c5a030` on `develop`  
 **Scope:** Presentation / information architecture only  
 **Non-goals:** No API, database, workflow, calculation, or server-action changes
 
@@ -12,6 +14,7 @@ Related:
 - Deliverables documentation selection model (frozen keep)
 - Enterprise Tabs — `components/workspace/enterprise-tabs.tsx`
 - UI freeze / guidelines — [`CAMPAIGN_WORKSPACE_UI_FREEZE.md`](./CAMPAIGN_WORKSPACE_UI_FREEZE.md) · [`CAMPAIGN_WORKSPACE_UI_GUIDELINES.md`](./CAMPAIGN_WORKSPACE_UI_GUIDELINES.md)
+- Low debt (non-blocking) — [`CAMPAIGN_MODULE_TECHNICAL_DEBT.md`](./CAMPAIGN_MODULE_TECHNICAL_DEBT.md)
 
 ---
 

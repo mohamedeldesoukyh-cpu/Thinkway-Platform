@@ -1,9 +1,10 @@
 # Release 2.2a — Media Plan Planning Board Architecture
 
-**Status:** ✅ **APPROVED** (Product 2026-07-31) · ⏳ **Implementation queued** until Release 2.2 Client IO reaches Feature Freeze  
+**Status:** ✅ **APPROVED** (Product 2026-07-31) · ⏳ **Implementation queued** — next functional priority after Campaign Module Baseline close-out  
 **Parent:** [`ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md`](./ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md)  
+**UI / IA constraint:** Must **extend** the protected [`CAMPAIGN_MODULE_BASELINE.md`](./CAMPAIGN_MODULE_BASELINE.md) + Aurora shell — no Campaign redesign  
 **Depends on:** Release 2.1 — Media Plan ↔ Assignment Hardening (`v2.1.0`)  
-**Sibling (in progress first):** Release 2.2 — Client IO — [`RELEASE_2_2_IMPLEMENTATION.md`](./RELEASE_2_2_IMPLEMENTATION.md)  
+**Sibling:** Release 2.2 — Client IO — [`RELEASE_2_2_IMPLEMENTATION.md`](./RELEASE_2_2_IMPLEMENTATION.md)  
 **Follow-on:** Release 2.2b — AI Copilot for Media Plan Scheduling (§8)
 
 ---

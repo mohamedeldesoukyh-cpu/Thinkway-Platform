@@ -1,7 +1,8 @@
 # Thinkway Platform Financial Display Standard
 
-**Status:** Governing standard  
+**Status:** Governing standard — part of protected [Campaign Module Baseline](./CAMPAIGN_MODULE_BASELINE.md)  
 **Effective:** 2026-08-01  
+**Product standards:** [`PRODUCT_UX_STANDARDS.md`](./PRODUCT_UX_STANDARDS.md)  
 **Scope:** Platform-wide presentation of monetary values (not Campaign Workspace only)  
 **Non-goals:** No changes to calculations, APIs, database, workflows, or financial rules
 
