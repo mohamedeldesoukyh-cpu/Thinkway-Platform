@@ -27,7 +27,10 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   resolveCampaignWorkspaceTab,
 } from "@/features/campaigns/constants/campaign-workspace-tab-order";
-import { campaignDetailPath } from "@/lib/routing/entity-paths";
+import {
+  campaignProcessCueFromWorkspace,
+} from "@/features/campaigns/lifecycle/campaign-process-presentation";
+import { campaignDetailPath, campaignDetailPathWithTab } from "@/lib/routing/entity-paths";
 import {
   metadataTitleForEntity,
   redirectToCanonicalEntityRoute,
@@ -63,7 +66,6 @@ export default async function CampaignWorkspacePage({
 }: CampaignWorkspacePageProps) {
   const { id: routeKey } = await params;
   const { tab } = await searchParams;
-  const defaultTab = resolveCampaignWorkspaceTab(tab);
 
   const campaignId = await resolveCampaignIdByRouteKey(routeKey);
   if (!campaignId) notFound();
@@ -85,7 +87,7 @@ export default async function CampaignWorkspacePage({
   let assignmentHierarchy;
   let errorMessage: string | null = null;
 
-  traceCampaignRoute("page:load:start", { campaignId, tab: defaultTab });
+  traceCampaignRoute("page:load:start", { campaignId, tab: tab ?? null });
 
   try {
     workspace = await getCampaignWorkspace(campaignId);
@@ -114,6 +116,15 @@ export default async function CampaignWorkspacePage({
     }
     errorMessage =
       error instanceof Error ? error.message : "Failed to load campaign workspace.";
+  }
+
+  // Phase 1: open without ?tab= enters the current business stage (work required).
+  // Full lifecycle remains navigable; keep outside try/catch so redirect() is not swallowed.
+  if (workspace && !tab) {
+    const entryStage = campaignProcessCueFromWorkspace(workspace).entryStageId;
+    if (entryStage !== "overview") {
+      redirect(campaignDetailPathWithTab(workspace, entryStage));
+    }
   }
 
   if (!workspace && !errorMessage) {
@@ -146,6 +157,8 @@ export default async function CampaignWorkspacePage({
       }
     }
   }
+
+  const defaultTab = resolveCampaignWorkspaceTab(tab);
 
   return (
     <DashboardShell

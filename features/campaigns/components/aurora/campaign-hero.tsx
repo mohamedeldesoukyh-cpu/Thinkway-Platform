@@ -4,8 +4,10 @@ import type { ReactNode } from "react";
 
 import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
 import { CampaignHeroPoDonut } from "@/features/campaigns/components/aurora/campaign-hero-po-donut";
+import type { CampaignProcessCue } from "@/features/campaigns/lifecycle/campaign-process-presentation";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { formatPlatformLabel } from "@/features/campaigns/utils";
+import { BusinessProcessStageSummary } from "@/components/workspace/business-process-stage-summary";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { formatGroupDisplayName } from "@/lib/groups/group-display";
 import { cn } from "@/lib/utils";
@@ -13,6 +15,8 @@ import { cn } from "@/lib/utils";
 type CampaignHeroProps = {
   workspace: CampaignWorkspace;
   actions: ReactNode;
+  processCue?: CampaignProcessCue;
+  onNavigateToCurrentStage?: () => void;
   className?: string;
 };
 
@@ -45,7 +49,13 @@ function clientIoPillClass(status: string | undefined): string {
 }
 
 /** Aurora campaign hero — presentation only; actions stay owned by the workspace. */
-export function CampaignHero({ workspace, actions, className }: CampaignHeroProps) {
+export function CampaignHero({
+  workspace,
+  actions,
+  processCue,
+  onNavigateToCurrentStage,
+  className,
+}: CampaignHeroProps) {
   const groupName = formatGroupDisplayName(workspace.group?.name);
   const ioLabel = clientIoPillLabel(workspace.client_io?.status);
 
@@ -100,6 +110,13 @@ export function CampaignHero({ workspace, actions, className }: CampaignHeroProp
             </>
           ) : null}
         </div>
+
+        {processCue ? (
+          <BusinessProcessStageSummary
+            progress={processCue}
+            onContinue={onNavigateToCurrentStage}
+          />
+        ) : null}
 
         <div className="thinkway-aurora-hactions">{actions}</div>
       </div>

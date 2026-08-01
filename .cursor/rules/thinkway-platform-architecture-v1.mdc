@@ -1,0 +1,44 @@
+---
+description: Thinkway Enterprise Platform Architecture v1.0 — frozen baseline & compliance gate
+alwaysApply: true
+---
+
+# Thinkway Enterprise Platform Architecture v1.0 (Frozen)
+
+**Milestone:** `docs/architecture/THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md`  
+**Compliance template:** `docs/architecture/PLATFORM_ARCHITECTURE_COMPLIANCE.md`  
+**Package:** `docs/architecture/platform-ux/` (docs 01–12 frozen)
+
+## Product definition
+
+Thinkway is a **campaign-centric enterprise operating system**. The campaign is the single business object; the campaign lifecycle is the single business process. Stakeholder journeys enter that lifecycle at different stages. Nothing may exist outside this model.
+
+## Frozen — do not redefine
+
+- Navigation philosophy (Platform → Module → Business Process → Content)
+- Workspace philosophy / Campaign Lifecycle Architecture (doc 12)
+- Stakeholder Journey Architecture (doc 11)
+- Enterprise UX standards / Financial Display Standard
+- Campaign Module Baseline pillars (Enterprise Tabs evolve, not replaced)
+
+**No architectural redesign** unless Product formally reopens Architecture v1.0.
+
+## Mandatory for every ADR / release architecture / implementation proposal
+
+Include section **Platform Architecture Compliance** covering:
+
+1. Lifecycle stages affected (S00–S18 from doc 12)  
+2. Stakeholder journeys affected  
+3. Workspace(s) extended  
+4. Baseline documents referenced  
+5. Why no new navigation philosophy  
+6. Why no duplicate workflow  
+7. How the feature extends the campaign lifecycle  
+
+## Implementation posture
+
+- Extend the baseline; do not reinvent it.  
+- Authorized migration phases only (currently Phase 1 when in progress).  
+- Presentation/IA changes must inherit frozen architecture.  
+- No new architecture docs unless a genuine enterprise-wide capability requires one (and compliance section is present).  
+- Functional priority after Phase 1: Planning Board → Copilot → Client/Vendor/Creator journeys → Reporting → Notifications → Analytics.

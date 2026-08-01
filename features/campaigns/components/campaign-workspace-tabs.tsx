@@ -33,7 +33,7 @@ export function CampaignWorkspaceSortableTabsBar({
       tabsById={tabsById}
       onReorder={onReorder}
       className="thinkway-aurora-panel-tabs px-3 pt-1.5"
-      aria-label="Campaign workspace tabs"
+      aria-label="Campaign process navigation"
     />
   );
 }

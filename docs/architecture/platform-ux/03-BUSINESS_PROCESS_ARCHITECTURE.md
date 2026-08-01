@@ -1,6 +1,7 @@
 # 03 — Business Process Architecture
 
-**Status:** Conditionally approved — stage SSOT defers to [`12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md`](./12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md)  
+**Status:** FROZEN — Thinkway Enterprise Platform Architecture v1.0
+**Baseline:** [Thinkway Enterprise Platform Architecture v1.0](../THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md)
 **Depends on:** [`01-PLATFORM_UX_ARCHITECTURE.md`](./01-PLATFORM_UX_ARCHITECTURE.md) · [`12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md`](./12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md)
 
 ---

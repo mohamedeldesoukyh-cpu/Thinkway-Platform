@@ -1,6 +1,7 @@
 # 12 — Campaign Lifecycle Architecture
 
-**Status:** Draft for final Product approval — then **FROZEN** as highest-level business process SSOT  
+**Status:** FROZEN — Thinkway Enterprise Platform Architecture v1.0
+**Baseline:** [Thinkway Enterprise Platform Architecture v1.0](../THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md)
 **Authority:** Supersedes stage naming in docs 03/06 where they conflict; those docs defer to this lifecycle  
 **Related:** [`11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md`](./11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md) · [`01-PLATFORM_UX_ARCHITECTURE.md`](./01-PLATFORM_UX_ARCHITECTURE.md)  
 **Constraints:** Architecture only — no API · DB · workflow engine · calculation changes until Phase 1 is authorized

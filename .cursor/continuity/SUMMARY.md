@@ -32,6 +32,9 @@ Environment switch navigates between **hosts** — never switches DB inside one 
 - `docs/THINKWAY_SYSTEM_REFERENCE.md` — product SSOT  
 - `docs/ARCHITECTURE_ALIGNMENT.md` — codebase vs spec  
 - `docs/RELEASE_WORKFLOW.md` — dual deploy + approval gate  
+- `docs/architecture/THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md` — **frozen platform architecture v1.0**  
+- `docs/architecture/PLATFORM_ARCHITECTURE_COMPLIANCE.md` — mandatory ADR / proposal compliance section  
+- `docs/architecture/platform-ux/` — Platform UX package (docs 01–12 frozen)  
 - `docs/architecture/CAMPAIGN_MODULE_BASELINE.md` — **protected Campaign baseline** (IA initiative CLOSED)  
 - `docs/architecture/PRODUCT_UX_STANDARDS.md` — platform UX standards (Campaign = canonical)  
 - `docs/architecture/CAMPAIGN_INFORMATION_ARCHITECTURE.md` — Campaign List ↔ Workspace IA  
@@ -51,11 +54,13 @@ Includes: Campaign IA · Workspace UI · Enterprise Tabs · Financial Display St
 **Extend only — no redesign** unless Critical usability + Product approval.  
 Tip: `31c5a030` on `develop`.
 
-## Platform UX & Business Process Architecture (paused · doc 12)
+## Thinkway Enterprise Platform Architecture v1.0 (frozen 2026-08-01)
 
-- Package: `docs/architecture/platform-ux/` (01–12).
-- Highest SSOT: `12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md` — awaiting freeze approval before Phase 1.
-- Direction: campaign-centric OS; canonical lifecycle; stakeholder journeys; process navigation teaches stage state.
+- Package: `docs/architecture/platform-ux/` (01–12) **frozen**.
+- Highest process SSOT: `12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md`.
+- Definition: campaign-centric enterprise OS; one campaign; one lifecycle; stakeholder journeys on the same spine.
+- Phase 1 complete: Campaign Process Navigation (presentation/IA only; reusable business-process layer).
+- Every future ADR / release architecture / proposal must include Platform Architecture Compliance.
 
 ## Product UX Standards
 
@@ -65,10 +70,9 @@ Campaign is the canonical implementation for: workspace architecture, navigation
 
 1. Planning Board (R2.2a)  
 2. Media Plan Copilot (R2.2b)  
-3. Vendor IO Enterprise Completion  
-4. Reporting Hub  
-5. Notifications  
-6. Enterprise Analytics  
+3. Client / Vendor / Creator journeys  
+4. Reporting Hub · Notifications · Enterprise Analytics  
+5. Migration Phase 2+ when Product authorizes  
 
 ## Platform navigation standard
 

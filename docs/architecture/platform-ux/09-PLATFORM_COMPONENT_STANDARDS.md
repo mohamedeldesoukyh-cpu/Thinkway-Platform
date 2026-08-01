@@ -1,6 +1,7 @@
 # 09 — Platform Component Standards (Process-Oriented)
 
-**Status:** Draft for Product approval  
+**Status:** FROZEN — Thinkway Enterprise Platform Architecture v1.0
+**Baseline:** [Thinkway Enterprise Platform Architecture v1.0](../THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md)
 **Seed:** Campaign Baseline · Product UX Standards · Enterprise Tabs · Financial Display
 
 ---

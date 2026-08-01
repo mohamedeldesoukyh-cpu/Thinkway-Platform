@@ -15,12 +15,27 @@ import { cn } from "@/lib/utils";
 export type EnterpriseTabVariant = "underline" | "pill" | "plain";
 export type EnterpriseTabOverflow = "scroll" | "wrap";
 
+/** Optional Business Process Navigation cue (Architecture v1.0 Phase 1). */
+export type EnterpriseTabProcessState =
+  | "current"
+  | "completed"
+  | "upcoming"
+  | "waiting_internal"
+  | "waiting_client"
+  | "waiting_vendor"
+  | "blocked"
+  | "attention_required"
+  /** @deprecated Prefer waiting_internal / waiting_client / waiting_vendor */
+  | "waiting";
+
 export type EnterpriseTabItem = {
   value: string;
   label: string;
   count?: number;
   icon?: ReactNode;
   disabled?: boolean;
+  /** Process-rail semantics — presentation only; does not change tab availability. */
+  processState?: EnterpriseTabProcessState;
 };
 
 type EnterpriseTabsListProps = {
@@ -129,6 +144,7 @@ export function EnterpriseTabTrigger({
   count,
   icon,
   disabled,
+  processState,
   className,
   draggable = false,
   dragIndex,
@@ -144,6 +160,8 @@ export function EnterpriseTabTrigger({
       value={value}
       disabled={disabled}
       data-slot="enterprise-tab"
+      data-process-state={processState}
+      title={processState ? `${label} · ${processState}` : undefined}
       onDragOver={
         draggable && dragIndex != null
           ? (event) => {
@@ -209,6 +227,7 @@ export function EnterpriseTabButton({
   count,
   icon,
   disabled,
+  processState,
   active = false,
   className,
   onClick,
@@ -223,6 +242,8 @@ export function EnterpriseTabButton({
       disabled={disabled}
       data-slot="enterprise-tab"
       data-state={active ? "active" : "inactive"}
+      data-process-state={processState}
+      title={processState ? `${label} · ${processState}` : undefined}
       className={cn("enterprise-tab", active && "is-active", className)}
       onClick={onClick}
     >
@@ -289,6 +310,7 @@ export function EnterpriseSortableTabsBar<T extends string>({
             count={tab.count}
             icon={tab.icon}
             disabled={tab.disabled}
+            processState={tab.processState}
             draggable
             dragIndex={index}
             isDragging={dragIndex === index}

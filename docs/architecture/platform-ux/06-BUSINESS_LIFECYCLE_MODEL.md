@@ -1,6 +1,7 @@
 # 06 — Business Lifecycle Model
 
-**Status:** Conditionally approved — **canonical stages live in** [`12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md`](./12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md)  
+**Status:** FROZEN — Thinkway Enterprise Platform Architecture v1.0
+**Baseline:** [Thinkway Enterprise Platform Architecture v1.0](../THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md)
 **Note:** This doc retains the practical process rail. Where names differ, **doc 12 wins**. Underlying data/status fields remain unchanged until a later functional release explicitly maps them.
 
 ---

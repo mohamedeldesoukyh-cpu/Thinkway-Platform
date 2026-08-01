@@ -1,6 +1,7 @@
 # 05 — Workspace Hierarchy
 
-**Status:** Draft for Product approval
+**Status:** FROZEN — Thinkway Enterprise Platform Architecture v1.0
+**Baseline:** [Thinkway Enterprise Platform Architecture v1.0](../THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md)
 
 ---
 

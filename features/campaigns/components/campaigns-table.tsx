@@ -22,10 +22,16 @@ import {
   PO_STATUS_VARIANT,
   resolvePoAlertStatus,
 } from "@/lib/finance/po/status";
+import { campaignProcessCueFromListItem } from "@/features/campaigns/lifecycle/campaign-process-presentation";
 import type { CampaignListItem } from "@/types/database";
 import { formatGroupDisplayName } from "@/lib/groups/group-display";
-import { campaignDetailPath } from "@/lib/routing/entity-paths";
+import { campaignDetailPathWithTab } from "@/lib/routing/entity-paths";
 import { cn } from "@/lib/utils";
+
+function campaignOpenHref(campaign: CampaignListItem) {
+  const cue = campaignProcessCueFromListItem(campaign);
+  return campaignDetailPathWithTab(campaign, cue.entryStageId);
+}
 
 type CampaignsTableProps = {
   campaigns: CampaignListItem[];
@@ -68,9 +74,9 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "document_number",
     label: "Campaign #",
-    colWidth: "10%",
+    colWidth: "9%",
     renderCell: (campaign) => (
-      <Link href={campaignDetailPath(campaign)} className="platform-v6-link">
+      <Link href={campaignOpenHref(campaign)} className="platform-v6-link">
         <DocumentNumber value={campaign.document_number} />
       </Link>
     ),
@@ -79,10 +85,10 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "name",
     label: "Name",
-    colWidth: "20%",
+    colWidth: "16%",
     renderCell: (campaign) => (
       <Link
-        href={campaignDetailPath(campaign)}
+        href={campaignOpenHref(campaign)}
         className="text-xs font-semibold text-[var(--tw-text)] no-underline hover:text-[var(--tw-blue)]"
       >
         {campaign.name}
@@ -92,14 +98,14 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "brand",
     label: "Brand",
-    colWidth: "10%",
+    colWidth: "9%",
     renderCell: (campaign) => campaign.brand?.name ?? "—",
     cellClassName: "text-muted-foreground",
   },
   {
     id: "group_client",
     label: "Group · Legal entity",
-    colWidth: "18%",
+    colWidth: "14%",
     renderCell: (campaign) => (
       <>
         {formatGroupDisplayName(campaign.group?.name)}
@@ -111,9 +117,68 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
     cellClassName: "text-muted-foreground",
   },
   {
+    id: "stage",
+    label: "Current Stage",
+    colWidth: "10%",
+    renderCell: (campaign) => {
+      const cue = campaignProcessCueFromListItem(campaign);
+      return (
+        <Link
+          href={campaignDetailPathWithTab(campaign, cue.entryStageId)}
+          className="text-xs font-medium text-[var(--tw-text)] no-underline hover:text-[var(--tw-blue)] hover:underline"
+          title={`${cue.stageId} · Owner: ${cue.owner}`}
+        >
+          {cue.currentStageLabel}
+        </Link>
+      );
+    },
+  },
+  {
+    id: "health",
+    label: "Health",
+    colWidth: "10%",
+    renderCell: (campaign) => {
+      const cue = campaignProcessCueFromListItem(campaign);
+      return (
+        <Badge
+          variant="outline"
+          className={cn(
+            OPERATIONAL_CHROME_STATUS_BADGE,
+            "font-normal",
+            cue.health === "blocked" && "border-red-300 text-red-700",
+            cue.health === "waiting" && "border-blue-300 text-blue-700",
+            cue.health === "attention" && "border-amber-300 text-amber-800",
+            cue.health === "healthy" && "border-emerald-300 text-emerald-800"
+          )}
+          title={cue.statusLabel}
+        >
+          {cue.healthLabel}
+        </Badge>
+      );
+    },
+  },
+  {
+    id: "next_action",
+    label: "Next Action",
+    colWidth: "12%",
+    renderCell: (campaign) => {
+      const cue = campaignProcessCueFromListItem(campaign);
+      return (
+        <Link
+          href={campaignDetailPathWithTab(campaign, cue.entryStageId)}
+          className="text-xs text-[var(--tw-blue)] no-underline hover:underline"
+          title={`Continue in ${cue.currentStageLabel}`}
+        >
+          {cue.nextActionLabel}
+        </Link>
+      );
+    },
+    cellClassName: "text-muted-foreground",
+  },
+  {
     id: "lines",
     label: "Lines",
-    colWidth: "8%",
+    colWidth: "6%",
     renderCell: (campaign) =>
       campaign.lines.length > 0 ? (
         <Badge
@@ -132,7 +197,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "status",
     label: "Status",
-    colWidth: "10%",
+    colWidth: "8%",
     renderCell: (campaign) => (
       <CampaignStatusBadge
         status={campaign.status}
@@ -144,7 +209,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
     id: "po_total",
     label: "PO total",
     headerClassName: "text-right",
-    colWidth: "12%",
+    colWidth: "10%",
     amountCell: true,
     renderCell: (campaign) => {
       const poAlertStatus = listPoAlertStatus(campaign);
@@ -181,7 +246,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "dates",
     label: "Dates",
-    colWidth: "12%",
+    colWidth: "8%",
     renderCell: (campaign) =>
       formatDateRange(campaign.start_date, campaign.end_date),
     cellClassName: "whitespace-nowrap text-muted-foreground",

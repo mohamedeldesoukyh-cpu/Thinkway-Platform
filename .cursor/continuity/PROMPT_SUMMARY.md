@@ -99,13 +99,17 @@
 - **Next (functional delivery):** Planning Board (2.2a) → Media Plan Copilot (2.2b) → Vendor IO Enterprise Completion → Reporting Hub → Notifications → Enterprise Analytics
 - **No Production deploy** without explicit approval
 
-## Platform UX & Business Process Architecture (2026-08-01) — PAUSED FOR DOC 12
+## Thinkway Enterprise Platform Architecture v1.0 — FROZEN (2026-08-01)
 
-- **Status:** Conditional approval · **doc 12 Campaign Lifecycle Architecture** awaiting freeze approval — **no code**
-- **SSOT:** `docs/architecture/platform-ux/12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md`
-- **Package:** `docs/architecture/platform-ux/` (01–12)
-- **On doc 12 approval:** freeze Platform UX · Business Process · Stakeholder Journey · Campaign Lifecycle → authorize Phase 1 only
-- **Preserves:** Campaign Baseline · Enterprise Tabs (evolve) · Financial Display · Deliverables · all business logic
+- **Milestone:** `docs/architecture/THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md`
+- **Compliance gate:** `docs/architecture/PLATFORM_ARCHITECTURE_COMPLIANCE.md` + `.cursor/rules/thinkway-platform-architecture-v1.mdc`
+- **Package frozen:** `docs/architecture/platform-ux/` (01–12) — no architectural redesign without formal reopen
+- **Definition:** Campaign-centric enterprise OS; one campaign; one lifecycle; stakeholder journeys on the same spine
+- **Phase 0 complete · Phase 1 complete:** Campaign Process Navigation (presentation/IA only)
+- **Phase 1 surfaces:** reusable `lib/business-process` · stage context (Owner/Status/Next/Waiting For) · lifecycle signals (waiting_client/vendor/internal, blocked, attention) · portfolio continue-into-stage · recommended entry by business rules
+- **Future (not now):** configurable stage sets by campaign type (skip Vendor IO / etc.) — stage defs already data-driven
+- **Functional backlog (extends baseline):** Planning Board → Copilot → Client/Vendor/Creator journeys → Reporting Hub → Notifications → Enterprise Analytics
+- **Preserves:** Campaign Baseline · Enterprise Tabs (evolve) · Financial Display · Deliverables · all business logic / APIs / DB
 
 ## IO approval email experience (Preview testing on develop)
 

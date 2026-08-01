@@ -1,47 +1,54 @@
-# 10 — Migration Strategy
+# 10 ? Migration Strategy
 
-**Status:** Draft for Product approval  
-**Rule:** No implementation until this package is approved  
-**Rule:** Presentation / navigation / IA only — no API · DB · workflow · calculation changes
+**Status:** FROZEN ? Thinkway Enterprise Platform Architecture v1.0  
+**Baseline:** [Thinkway Enterprise Platform Architecture v1.0](../THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md)  
+**Rule:** Presentation / navigation / IA only ? no API � DB � workflow � calculation changes
 
 ---
 
 ## 1. Migration principles
 
-1. **Evolve, don’t rip** — preserve Campaign Baseline, Enterprise Tabs, Financial Display, Deliverables.  
-2. **Campaign first** — reference module proves the OS model.  
-3. **Functional releases stay unblocked** — Planning Board (2.2a) and Copilot (2.2b) plug into the evolving shell; they must not wait for full platform restyle.  
-4. **No parallel permanent systems** — temporary adapters OK; delete when stage complete.  
-5. **Measure continuity** — success = operators report one product, not prettier tabs.
+1. **Evolve, don?t rip** ? preserve Campaign Baseline, Enterprise Tabs, Financial Display, Deliverables.  
+2. **Campaign first** ? reference module proves the OS model.  
+3. **Functional releases stay unblocked** ? Planning Board (2.2a) and Copilot (2.2b) plug into the evolving shell; they must not wait for full platform restyle.  
+4. **No parallel permanent systems** ? temporary adapters OK; delete when stage complete.  
+5. **Measure continuity** ? success = operators report one product, not prettier tabs.
 
 ---
 
 ## 2. Phased plan
 
-### Phase 0 — Approval gate (now)
+### Phase 0 ? Approval gate (complete)
 
-- [ ] Product approves [`12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md`](./12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md)  
-- [ ] Freeze Platform UX · Business Process · Stakeholder Journey · Campaign Lifecycle architectures  
-- [ ] Lock non-goals (no logic/API/DB)  
-- [ ] Confirm Planning Board / Copilot / portals / Reporting / AI map into lifecycle stages  
-- [ ] Authorize **Phase 1 only**  
+- [x] Product approves [`12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md`](./12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md)  
+- [x] Freeze Platform UX � Business Process � Stakeholder Journey � Campaign Lifecycle architectures  
+- [x] Lock non-goals (no logic/API/DB)  
+- [x] Confirm Planning Board / Copilot / portals / Reporting / AI map into lifecycle stages  
+- [x] Authorize **Phase 1 only**  
 
-### Phase 1 — Campaign Process Navigation (foundation)
+### Phase 1 ? Campaign Process Navigation (complete � 2026-08-01)
 
-**Goal:** Replace peer-tab mental model inside Campaign Workspace.
+**Goal:** Replace peer-tab mental model inside Campaign Workspace with operational business progression.
 
-| Work | Detail |
-|------|--------|
-| Evolve Enterprise Tabs | Process semantics: order, current/completed/blocked, optional next CTA |
-| Map stages | Existing tab IDs → process stages (Overview…Timeline) |
-| Portfolio cues | Add Stage · Health · Next action columns/cards (derive from existing fields) |
-| Open behavior | Deep-link to recommended stage |
-| Header | Emphasize stage + next action; keep live actions only |
-| Demote parallel nav | No stage-jump hero duplication |
+| Work | Detail | Status |
+|------|--------|--------|
+| Evolve Enterprise Tabs | Lifecycle signals: completed / current / upcoming / waiting_* / blocked / attention_required | Done |
+| Map stages | Data-driven process stages (Overview?Finance); reusable business-process model | Done |
+| Portfolio cues | Current Stage � Health � Next Action ? continue into current stage | Done |
+| Open behavior | Deep-link to recommended business stage (work required); full lifecycle still navigable | Done |
+| Header | Stage context: Current Stage, Owner, Status, Next, Waiting For, Expected Action | Done |
+| Demote parallel nav | No stage-jump hero duplication; process strip explains state | Done |
 
 **Out of scope for Phase 1:** Full Studio chrome rewrite; Finance/Clients visual merge.
 
-### Phase 2 — Planning cluster continuity
+**Implementation notes**
+
+- Reusable layer: `lib/business-process/` + `components/workspace/business-process-stage-summary.tsx`  
+- Campaign adapter: `features/campaigns/lifecycle/campaign-process-presentation.ts`  
+- Stage set is data-driven so future campaign types may skip/add stages without redesigning navigation philosophy  
+- Presentation only ? no API, DB, workflow, permissions, calculations, or server-action changes  
+
+### Phase 2 ? Planning cluster continuity
 
 | Work | Detail |
 |------|--------|
@@ -51,7 +58,7 @@
 
 **Planning Board (2.2a)** ships as Planning-stage capability inside this cluster.
 
-### Phase 3 — AI in context
+### Phase 3 ? AI in context
 
 | Work | Detail |
 |------|--------|
@@ -59,31 +66,32 @@
 | Copilot (2.2b) | Docks into shell; no separate product OS |
 | Context payload | Use already-available workspace data (no new domain APIs required for UX wiring) |
 
-### Phase 4 — Platform shell unification
+### Phase 4 ? Platform shell unification
 
 | Work | Detail |
 |------|--------|
-| Platform Nav | One map; Home shortcuts don’t invent a second system |
+| Platform Nav | One map; Home shortcuts don?t invent a second system |
 | Clients / Vendors / Groups | Adopt process header + process rail patterns |
 | Finance hubs | Document lifecycle chrome alignment |
 | Token convergence | Reduce V6 vs Aurora vs Studio divergence |
 
-### Phase 5 — Stakeholder journey continuity (portals & hubs)
+### Phase 5 ? Stakeholder journey continuity (portals & hubs)
 
 | Work | Detail |
 |------|--------|
 | Client / Creator / Vendor portals | Same campaign identity, stage cues, next action; scoped process rail |
 | Reporting Hub | Executive/Ops journey extension on campaign spine |
-| Cross-journey attention | “Waiting on client/vendor/creator” visible to Ops |
-| Origin crumbs | “Opened from TW-…” across Finance and portals |
+| Cross-journey attention | ?Waiting on client/vendor/creator? visible to Ops |
+| Origin crumbs | ?Opened from TW-?? across Finance and portals |
 
-### Phase 6 — Portfolio OS maturity
+### Phase 6 ? Portfolio OS maturity
 
 | Work | Detail |
 |------|--------|
 | Cross-module origin crumbs | Hardened everywhere |
 | Lifecycle heuristics | Richer next-action rules (still presentation) |
 | Discovery context links | Campaign-aware entry/return |
+| Configurable stage sets | Campaign-type-aware lifecycle (skip Vendor IO / Media Buying / etc.) while preserving Architecture v1.0 |
 
 ---
 
@@ -93,7 +101,7 @@
 |-----------------|---------------------|
 | Campaign IA | Extended (process narrative), not discarded |
 | Persistent shell | Strengthened |
-| Enterprise Tabs | Evolved → Business Process Navigation |
+| Enterprise Tabs | Evolved ? Business Process Navigation |
 | Financial Display | Unchanged |
 | Deliverables selection | Unchanged |
 | Hidden Planning Board / Copilot until live | Unchanged |
@@ -106,10 +114,11 @@ If any phase requires reopening visual freeze scope, Product must approve explic
 
 | Risk | Mitigation |
 |------|------------|
-| Process rail feels like a wizard | Allow skip-ahead; show all stages |
+| Process rail feels like a wizard | Allow skip-ahead; show all stages; never disable navigation |
 | Studio rewrite blocks 2.2a | Phase 2 minimum viable continuity only |
 | Parallel nav creeps back | Architecture review checklist in PR template |
-| Portfolio stage heuristics wrong | Start with conservative mapping; tune |
+| Portfolio stage heuristics wrong | Business-rule priority; tune with ops feedback |
+| Static stage set blocks campaign types | Keep stage definitions data-driven (Phase 6) |
 
 ---
 
@@ -124,7 +133,8 @@ If any phase requires reopening visual freeze scope, Product must approve explic
 
 ---
 
-## 6. Immediate ask
+## 6. Authorization status
 
-**Approve Phase 0** (this package).  
-Then authorize **Phase 1 only** before broader Studio/platform work.
+**Phase 0 approved and frozen (2026-08-01).**  
+**Phase 1 complete (2026-08-01).**  
+**Phase 2+ gated** until Product authorizes the next migration phase.

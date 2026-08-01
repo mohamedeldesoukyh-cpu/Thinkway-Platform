@@ -255,6 +255,102 @@
     color: #d7dce6;
   }
 
+  /* Business Process progress strip — operational context, not tab chrome. */
+  .thinkway-bp-summary {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--camp-hair);
+    border-radius: var(--camp-radius);
+    background: color-mix(in srgb, var(--camp-surface) 88%, transparent);
+  }
+
+  .thinkway-bp-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px 14px;
+  }
+
+  .thinkway-bp-field {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .thinkway-bp-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--camp-text-3);
+  }
+
+  .thinkway-bp-value {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--camp-text);
+  }
+
+  .thinkway-bp-continue {
+    align-self: start;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--camp-blue-text);
+    font-size: 12.5px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .thinkway-bp-continue:hover {
+    text-decoration: underline;
+  }
+
+  .thinkway-bp-tone-current,
+  .thinkway-bp-tone-complete {
+    color: var(--camp-text);
+  }
+
+  .thinkway-bp-tone-waiting {
+    color: #1d4ed8;
+  }
+
+  .thinkway-bp-tone-attention {
+    color: #b45309;
+  }
+
+  .thinkway-bp-tone-blocked {
+    color: #b91c1c;
+  }
+
+  .thinkway-bp-summary-compact {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-size: 12.5px;
+    color: var(--camp-text-3);
+  }
+
+  .thinkway-bp-stage {
+    font-weight: 600;
+  }
+
+  .thinkway-bp-sep {
+    color: #d7dce6;
+  }
+
+  @media (max-width: 900px) {
+    .thinkway-bp-summary-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
   .thinkway-aurora-hactions {
     display: flex;
     flex-wrap: wrap;

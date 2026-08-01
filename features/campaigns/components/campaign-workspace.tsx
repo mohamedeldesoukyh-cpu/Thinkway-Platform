@@ -14,6 +14,11 @@ import {
 } from "@/features/campaigns/components/campaign-workspace-tabs";
 import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
 import { isCampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
+import {
+  campaignProcessCueFromWorkspace,
+  processNavStateForTab,
+  signalsFromCampaignWorkspace,
+} from "@/features/campaigns/lifecycle/campaign-process-presentation";
 import { useCampaignWorkspaceTabOrder } from "@/features/campaigns/hooks/use-campaign-workspace-tab-order";
 import { useCampaignTabData } from "@/features/campaigns/hooks/use-campaign-tab-data";
 import { CampaignOperationalRefreshProvider } from "@/features/campaigns/hooks/campaign-operational-refresh";
@@ -201,35 +206,74 @@ export function CampaignWorkspaceView({
     ]
   );
 
+  const processCue = useMemo(
+    () => campaignProcessCueFromWorkspace(workspace),
+    [workspace]
+  );
+  const processSignals = useMemo(
+    () => signalsFromCampaignWorkspace(workspace),
+    [workspace]
+  );
+
   const tabsById = useMemo(
-    (): Record<CampaignWorkspaceTabId, { value: string; label: string; count?: number }> => ({
-      overview: { value: "overview", label: "Overview" },
-      "client-io": {
-        value: "client-io",
-        label: "Client IO",
-        count: tabCounts.clientIo,
-      },
-      lines: { value: "lines", label: "Assignments", count: tabCounts.lines },
-      "vendor-io": { value: "vendor-io", label: "Vendor IO", count: tabCounts.vendorIo },
-      deliverables: {
-        value: "deliverables",
-        label: "Deliverables",
-        count: tabCounts.deliverables,
-      },
-      publications: {
-        value: "publications",
-        label: "Performance",
-        count: tabCounts.publications,
-      },
-      workflow: { value: "workflow", label: "Workflow", count: tabCounts.workflow },
-      billing: { value: "billing", label: "Finance", count: tabCounts.billing },
-      timeline: {
-        value: "timeline",
-        label: "Timeline",
-        count: tabCounts.timeline,
-      },
-    }),
-    [tabCounts]
+    (): Record<
+      CampaignWorkspaceTabId,
+      { value: string; label: string; count?: number; processState?: ReturnType<typeof processNavStateForTab> }
+    > => {
+      const defs: Record<
+        CampaignWorkspaceTabId,
+        { value: string; label: string; count?: number }
+      > = {
+        overview: { value: "overview", label: "Overview" },
+        "client-io": {
+          value: "client-io",
+          label: "Client IO",
+          count: tabCounts.clientIo,
+        },
+        lines: { value: "lines", label: "Assignments", count: tabCounts.lines },
+        "vendor-io": {
+          value: "vendor-io",
+          label: "Vendor IO",
+          count: tabCounts.vendorIo,
+        },
+        deliverables: {
+          value: "deliverables",
+          label: "Deliverables",
+          count: tabCounts.deliverables,
+        },
+        publications: {
+          value: "publications",
+          label: "Performance",
+          count: tabCounts.publications,
+        },
+        workflow: { value: "workflow", label: "Workflow", count: tabCounts.workflow },
+        billing: { value: "billing", label: "Finance", count: tabCounts.billing },
+        timeline: {
+          value: "timeline",
+          label: "Timeline",
+          count: tabCounts.timeline,
+        },
+      };
+      return (Object.keys(defs) as CampaignWorkspaceTabId[]).reduce(
+        (acc, tabId) => {
+          acc[tabId] = {
+            ...defs[tabId],
+            processState: processNavStateForTab(tabId, processCue, processSignals),
+          };
+          return acc;
+        },
+        {} as Record<
+          CampaignWorkspaceTabId,
+          {
+            value: string;
+            label: string;
+            count?: number;
+            processState?: ReturnType<typeof processNavStateForTab>;
+          }
+        >
+      );
+    },
+    [tabCounts, processCue, processSignals]
   );
 
   const tabPanelClass = OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS;
@@ -303,6 +347,8 @@ export function CampaignWorkspaceView({
               </div>
               <CampaignHero
                 workspace={workspace}
+                processCue={processCue}
+                onNavigateToCurrentStage={() => handleTabChange(processCue.entryStageId)}
                 actions={
                   <CampaignHeroActions
                     workspace={workspace}

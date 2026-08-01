@@ -2,16 +2,18 @@
 
 This document compares the **current Thinkway platform** (`thinkway-platform`) against the [System Reference](./THINKWAY_SYSTEM_REFERENCE.md). Use it before new modules: compare → detect gaps → recommend → avoid duplicate entities.
 
-**Last reviewed:** Aug 2026 (Platform UX & Business Process Architecture — review package)
+**Last reviewed:** Aug 2026 (Thinkway Enterprise Platform Architecture v1.0 — Frozen Baseline)
 
-### Platform UX & Business Process Architecture (Aug 2026) — IMPLEMENTATION PAUSED
+### Thinkway Enterprise Platform Architecture v1.0 — FROZEN (Aug 2026)
 
-- **Status:** Conditional approval · **Campaign Lifecycle Architecture (doc 12)** awaiting freeze approval — **no implementation**
-- **Highest SSOT:** [`12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md`](./architecture/platform-ux/12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md)
-- **Package:** [`docs/architecture/platform-ux/README.md`](./architecture/platform-ux/README.md)
-- **Thesis:** Campaign-centric OS; canonical lifecycle spine; stakeholder journeys + process navigation; nothing outside the lifecycle
-- **Freeze after doc 12 approval:** Platform UX · Business Process · Stakeholder Journey · Campaign Lifecycle
-- **Then:** Phase 1 only (migration strategy)
+- **Milestone:** [`THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md`](./architecture/THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md)
+- **Compliance (mandatory on every ADR / release architecture / proposal):** [`PLATFORM_ARCHITECTURE_COMPLIANCE.md`](./architecture/PLATFORM_ARCHITECTURE_COMPLIANCE.md)
+- **Package:** [`docs/architecture/platform-ux/README.md`](./architecture/platform-ux/README.md) (docs 01–12 frozen)
+- **Highest process SSOT:** [`12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md`](./architecture/platform-ux/12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md)
+- **Thesis:** Campaign-centric enterprise OS; one campaign object; one lifecycle; stakeholder journeys enter at different stages
+- **Phase 0:** Complete · **Phase 1:** Complete (Campaign Process Navigation — presentation/IA only)
+- **Reusable process layer:** `lib/business-process/` · campaign adapter under `features/campaigns/lifecycle/`
+- **Rule:** Future work extends the baseline; no architectural redesign without formal reopen
 
 ### Campaign Module Baseline — PROTECTED (Aug 2026)
 
