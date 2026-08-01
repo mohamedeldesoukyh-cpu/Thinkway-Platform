@@ -13,7 +13,7 @@
 **Compliance:** [`PLATFORM_ARCHITECTURE_COMPLIANCE.md`](./PLATFORM_ARCHITECTURE_COMPLIANCE.md)  
 **Regression (mandatory / protected):** `npm run test:campaign-workspace-lifecycle-os`
 
-> **Freeze tip on `origin/develop`:** *(recorded after feat commit)* — `feat(campaign): Decision Center business narrative and operational compliance`
+> **Freeze tip on `origin/develop`:** `84ef254c` — `feat(campaign): Decision Center business narrative and operational compliance`
 
 ---
 

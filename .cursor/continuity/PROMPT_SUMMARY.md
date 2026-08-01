@@ -34,6 +34,7 @@
 ## Campaign Workspace Baseline v1.3 — FROZEN (Release 2.2c · 2026-08-01)
 
 - **Canonical:** `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.3.md`
+- **Freeze tip:** `84ef254c` — `feat(campaign): Decision Center business narrative and operational compliance`
 - **Historical:** v1.2 · v1.1 · v1.0 superseded
 - **Class:** Protected implementation baseline — **Maintenance Mode**
 - **Includes:** Executive dependency chain · three severities · Vendor IO = Operational Compliance (never pins progression) · collapsible Decision Center · lean story cards · progressive registers · deep-links
