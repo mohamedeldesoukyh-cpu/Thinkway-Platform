@@ -3,64 +3,58 @@
 import type { ReactNode } from "react";
 
 import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
-import { CampaignHeroPoDonut } from "@/features/campaigns/components/aurora/campaign-hero-po-donut";
+import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
+import type { CampaignLifecycleView } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
+import { workspaceLabelForTab } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
+import { CampaignNextActionCard } from "@/features/campaigns/lifecycle/components/campaign-next-action-card";
+import { CampaignProcessRail } from "@/features/campaigns/lifecycle/components/campaign-process-rail";
 import type { CampaignProcessCue } from "@/features/campaigns/lifecycle/campaign-process-presentation";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
-import { formatPlatformLabel } from "@/features/campaigns/utils";
 import { BusinessProcessStageSummary } from "@/components/workspace/business-process-stage-summary";
 import { DocumentNumber } from "@/components/ui/document-number";
-import { formatGroupDisplayName } from "@/lib/groups/group-display";
 import { cn } from "@/lib/utils";
 
 type CampaignHeroProps = {
   workspace: CampaignWorkspace;
   actions: ReactNode;
   processCue?: CampaignProcessCue;
+  lifecycle?: CampaignLifecycleView;
+  activeWorkspaceTab?: CampaignWorkspaceTabId;
   onNavigateToCurrentStage?: () => void;
+  onSelectStage?: (tab: CampaignWorkspaceTabId) => void;
   className?: string;
 };
 
-function clientIoPillLabel(status: string | undefined): string | null {
-  if (!status) return null;
-  switch (status) {
-    case "approved":
-      return "Client IO approved";
-    case "sent":
-    case "under_client_review":
-      return "Client IO sent";
-    case "generated":
-      return "Client IO generated";
-    case "draft":
-      return "Client IO draft";
-    case "rejected":
-      return "Client IO rejected";
-    default:
-      return `Client IO ${status.replaceAll("_", " ")}`;
-  }
-}
-
-function clientIoPillClass(status: string | undefined): string {
-  if (status === "approved") return "thinkway-aurora-pill thinkway-aurora-pill-green";
-  if (status === "rejected") return "thinkway-aurora-pill thinkway-aurora-pill-rose";
-  if (status === "sent" || status === "under_client_review") {
-    return "thinkway-aurora-pill thinkway-aurora-pill-blue";
-  }
-  return "thinkway-aurora-pill thinkway-aurora-pill-mut";
-}
-
-/** Aurora campaign hero — presentation only; actions stay owned by the workspace. */
+/**
+ * Decision-first campaign hero.
+ * Identity is compact; Next Action + process rail drive the operating system.
+ */
 export function CampaignHero({
   workspace,
   actions,
   processCue,
+  lifecycle,
+  activeWorkspaceTab,
   onNavigateToCurrentStage,
+  onSelectStage,
   className,
 }: CampaignHeroProps) {
-  const groupName = formatGroupDisplayName(workspace.group?.name);
-  const ioLabel = clientIoPillLabel(workspace.client_io?.status);
+  const cue = lifecycle?.processCue ?? processCue;
+  const workspaceLabel = activeWorkspaceTab
+    ? workspaceLabelForTab(activeWorkspaceTab)
+    : undefined;
+  const identityMeta = [workspace.brand?.name, workspace.client?.name]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
-    <header className={cn("thinkway-aurora-hero", className)}>
+    <header
+      className={cn(
+        "thinkway-aurora-hero",
+        lifecycle && "thinkway-aurora-hero-os",
+        className
+      )}
+    >
       <div className="thinkway-aurora-hero-main">
         <div className="thinkway-aurora-hero-line1">
           <span className="thinkway-aurora-serial">
@@ -75,55 +69,44 @@ export function CampaignHero({
           />
         </div>
 
-        <div className="thinkway-aurora-hmeta">
-          {workspace.brand?.name ? <b>{workspace.brand.name}</b> : null}
-          {workspace.client?.name ? (
-            <>
-              <span className="thinkway-aurora-sep">·</span>
-              <span>{workspace.client.name}</span>
-            </>
-          ) : null}
-          {groupName ? (
-            <>
-              <span className="thinkway-aurora-sep">·</span>
-              <span>{groupName}</span>
-            </>
-          ) : null}
-          {workspace.currency_code ? (
-            <>
-              <span className="thinkway-aurora-sep">·</span>
-              <span>{workspace.currency_code}</span>
-            </>
-          ) : null}
-          {workspace.platform ? (
-            <>
-              <span className="thinkway-aurora-sep">·</span>
-              <span>{formatPlatformLabel(workspace.platform)}</span>
-            </>
-          ) : null}
-          {ioLabel ? (
-            <>
-              <span className="thinkway-aurora-sep">·</span>
-              <span className={cn(clientIoPillClass(workspace.client_io?.status), "h-5")}>
-                {ioLabel}
-              </span>
-            </>
-          ) : null}
-        </div>
+        {identityMeta ? (
+          <div className="thinkway-aurora-hmeta thinkway-aurora-hmeta-compact">
+            <b>{identityMeta}</b>
+            {lifecycle && workspaceLabel ? (
+              <>
+                <span className="thinkway-aurora-sep">·</span>
+                <span>
+                  Viewing <b>{workspaceLabel}</b>
+                </span>
+              </>
+            ) : null}
+          </div>
+        ) : null}
 
-        {processCue ? (
+        {lifecycle ? (
+          <>
+            <CampaignNextActionCard
+              className="mt-3"
+              lifecycle={lifecycle}
+              onContinue={onNavigateToCurrentStage}
+            />
+            <CampaignProcessRail
+              className="mt-3"
+              lifecycle={lifecycle}
+              onSelectStage={onSelectStage}
+              density="hero"
+            />
+          </>
+        ) : cue ? (
           <BusinessProcessStageSummary
-            progress={processCue}
+            progress={cue}
             onContinue={onNavigateToCurrentStage}
+            workspaceLabel={workspaceLabel}
           />
         ) : null}
 
         <div className="thinkway-aurora-hactions">{actions}</div>
       </div>
-
-      {workspace.financials.budget > 0 ? (
-        <CampaignHeroPoDonut workspace={workspace} />
-      ) : null}
     </header>
   );
 }

@@ -1,7 +1,10 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { CampaignCommandCenter } from "@/features/campaigns/components/aurora/campaign-command-center";
 import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
+import { campaignLifecycleFromWorkspace } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignPerformanceSummary } from "@/lib/domains/campaign/types";
@@ -32,6 +35,11 @@ export function CampaignOverviewTab({
   performanceSummary,
   performanceLoaded,
 }: CampaignOverviewTabProps) {
+  const lifecycle = useMemo(
+    () => campaignLifecycleFromWorkspace(workspace),
+    [workspace]
+  );
+
   return (
     <CampaignCommandCenter
       workspace={workspace}
@@ -42,6 +50,7 @@ export function CampaignOverviewTab({
       performanceLoaded={performanceLoaded}
       onNavigateToTab={onNavigateToTab}
       onOpenDetails={onOpenDetails}
+      lifecycle={lifecycle}
     />
   );
 }

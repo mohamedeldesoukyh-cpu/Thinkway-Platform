@@ -32,7 +32,7 @@ export function CampaignWorkspaceSortableTabsBar({
       tabOrder={tabOrder}
       tabsById={tabsById}
       onReorder={onReorder}
-      className="thinkway-aurora-panel-tabs px-3 pt-1.5"
+      className="thinkway-aurora-panel-tabs thinkway-process-nav-tabs px-3 pt-1.5"
       aria-label="Campaign process navigation"
     />
   );

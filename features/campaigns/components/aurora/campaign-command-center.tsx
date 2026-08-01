@@ -17,6 +17,8 @@ import { CampaignPoSection } from "@/features/campaigns/components/campaign-po-s
 import { CampaignIntelligenceReference } from "@/features/campaigns/components/campaign-intelligence-reference";
 import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
 import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
+import type { CampaignLifecycleView } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
+import { CampaignLifecycleChrome } from "@/features/campaigns/lifecycle/components/campaign-lifecycle-chrome";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import { formatMoneyCompact, formatPercent } from "@/features/campaigns/utils";
@@ -51,6 +53,7 @@ type CampaignCommandCenterProps = {
   performanceLoaded?: boolean;
   onNavigateToTab: (tab: CampaignWorkspaceTabId) => void;
   onOpenDetails?: () => void;
+  lifecycle?: CampaignLifecycleView;
 };
 
 function pill(tone: "green" | "blue" | "amber" | "rose" | "mut", label: string) {
@@ -88,6 +91,7 @@ export function CampaignCommandCenter({
   performanceLoaded = false,
   onNavigateToTab,
   onOpenDetails,
+  lifecycle,
 }: CampaignCommandCenterProps) {
   const [inlineEditing, setInlineEditing] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -157,40 +161,50 @@ export function CampaignCommandCenter({
 
   return (
     <div className="thinkway-aurora-command">
-      <CampaignOperationalReadinessChecklist readiness={readiness} />
-
-      {/* Workflow health strip */}
-      <CampaignSectionHead title="Campaign health" />
-      <div className="thinkway-aurora-flow" aria-label="Workflow stage">
-        {WORKFLOW_STAGES.map((stage, index) => {
-          const done = stageIndex >= 0 && index < stageIndex;
-          const now = stageIndex === index;
-          return (
-            <div key={stage} className="contents">
-              {index > 0 ? <span className="thinkway-aurora-farrow" aria-hidden /> : null}
-              <span
-                className={cn(
-                  "thinkway-aurora-fstep",
-                  done && "done",
-                  now && "now"
-                )}
-              >
-                {WORKFLOW_LABELS[stage]}
-              </span>
+      {lifecycle ? (
+        <CampaignLifecycleChrome
+          lifecycle={lifecycle}
+          activeWorkspaceTab="overview"
+          variant="dashboard"
+          onContinue={() => onNavigateToTab(lifecycle.nextActionTab)}
+          onSelectStage={onNavigateToTab}
+        />
+      ) : (
+        <>
+          <CampaignOperationalReadinessChecklist readiness={readiness} />
+          <CampaignSectionHead title="Campaign health" />
+          <div className="thinkway-aurora-flow" aria-label="Workflow stage">
+            {WORKFLOW_STAGES.map((stage, index) => {
+              const done = stageIndex >= 0 && index < stageIndex;
+              const now = stageIndex === index;
+              return (
+                <div key={stage} className="contents">
+                  {index > 0 ? <span className="thinkway-aurora-farrow" aria-hidden /> : null}
+                  <span
+                    className={cn(
+                      "thinkway-aurora-fstep",
+                      done && "done",
+                      now && "now"
+                    )}
+                  >
+                    {WORKFLOW_LABELS[stage]}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          {workspace.blockers.length > 0 ? (
+            <div className="mt-3 space-y-2">
+              {workspace.blockers.slice(0, 3).map((blocker) => (
+                <div key={blocker} className="thinkway-aurora-blocker">
+                  <span className="thinkway-aurora-blocker-dot" aria-hidden />
+                  {blocker}
+                </div>
+              ))}
             </div>
-          );
-        })}
-      </div>
-      {workspace.blockers.length > 0 ? (
-        <div className="mt-3 space-y-2">
-          {workspace.blockers.slice(0, 3).map((blocker) => (
-            <div key={blocker} className="thinkway-aurora-blocker">
-              <span className="thinkway-aurora-blocker-dot" aria-hidden />
-              {blocker}
-            </div>
-          ))}
-        </div>
-      ) : null}
+          ) : null}
+        </>
+      )}
 
       {/* Operational cards grid */}
       <CampaignSectionHead title="Operating dashboard" />

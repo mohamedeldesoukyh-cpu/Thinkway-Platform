@@ -62,6 +62,7 @@
     "test:media-plan-phase4": "npx tsx --test features/portals/queries/load-client-media-plan.test.ts",
     "test:release-2-1": "npx tsx --test lib/media-plan/operational-refs.test.ts lib/media-plan/media-plan-engine.test.ts lib/timeline/enterprise-timeline-contract.test.ts features/campaign-outputs/hydration/seed-from-assignment-hierarchy.test.ts features/campaign-outputs/hydration/bind-assignment-refs.test.ts features/campaign-outputs/media-plan-mutations.test.ts features/campaigns/hooks/campaign-tab-bundle-policy.test.ts",
     "test:release-2-2": "npx tsx --test lib/io/client-io-assignments.test.ts lib/io/client-io-amendment.test.ts lib/io/client-io-milestones.test.ts lib/timeline/enterprise-timeline-contract.test.ts",
+    "test:campaign-workspace-lifecycle-os": "npx tsx --test features/campaigns/lifecycle/campaign-workspace-lifecycle-os.regression.test.ts features/campaigns/lifecycle/campaign-lifecycle-orchestrator.test.ts features/campaigns/lifecycle/campaign-portfolio-intelligence.test.ts features/campaigns/lifecycle/campaign-process-presentation.test.ts",
     "test:impressions-forecast-engine": "npx tsx lib/performance/impressions-forecast-engine.test.ts",
     "test:engagement-rate-audit": "npx tsx lib/performance/engagement-rate-audit.test.ts",
     "test:extract-publication-date": "npx tsx lib/performance/metrics-collector/extract-publication-date.test.ts",

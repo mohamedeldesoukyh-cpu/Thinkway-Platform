@@ -34,8 +34,10 @@ Environment switch navigates between **hosts** — never switches DB inside one 
 - `docs/RELEASE_WORKFLOW.md` — dual deploy + approval gate  
 - `docs/architecture/THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md` — **frozen platform architecture v1.0**  
 - `docs/architecture/BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md` — **canonical BPN navigation baseline**  
-- `docs/architecture/PLATFORM_ARCHITECTURE_COMPLIANCE.md` — mandatory compliance (lifecycle · journeys · BPN reuse · no new nav)  
-- `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md` — next functional gate (2.2a)  
+- `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.md` — **frozen Campaign Workspace Lifecycle OS**  
+- `docs/architecture/PLATFORM_ARCHITECTURE_COMPLIANCE.md` — mandatory compliance (lifecycle · journeys · BPN reuse · Campaign Workspace invariants · no new nav)  
+- `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md` — 2.2a capability spec (in review)  
+- `docs/capabilities/PLANNING_BOARD_CAPABILITY_REVIEW.md` — functional capability review pack (**no code**)  
 - `docs/architecture/platform-ux/` — Platform UX package (docs 01–12 frozen)  
 - `docs/architecture/CAMPAIGN_MODULE_BASELINE.md` — **protected Campaign baseline** (IA initiative CLOSED)  
 - `docs/architecture/PRODUCT_UX_STANDARDS.md` — platform UX standards (Campaign = canonical)  
@@ -71,7 +73,7 @@ Campaign is the canonical implementation for: workspace architecture, navigation
 
 ## Next functional priority
 
-1. Approve Planning Board Capability Spec → implement R2.2a  
+1. Complete Planning Board capability review → approve spec → then implement R2.2a  
 2. Media Plan Copilot (R2.2b)  
 3. Client Collaboration · Vendor · Creator journeys  
 4. Reporting Hub · Notifications · Enterprise Analytics  

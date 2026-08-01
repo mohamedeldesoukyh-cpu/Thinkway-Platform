@@ -672,8 +672,8 @@ export function CampaignBillingTab({
         >
           {workspace.payments.length === 0 ? (
             <AuroraEmptyState
-              title="No payments recorded yet."
-              description="Payments appear here after client invoices are collected."
+              title="Payments are not available yet."
+              description="Finance unlocks after Client IO approval and invoicing. Payments appear once invoices are collected. Owner: Finance."
             />
           ) : (
             <OperationalConfigurableTable

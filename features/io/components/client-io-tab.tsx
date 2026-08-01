@@ -105,8 +105,8 @@ export function ClientIoTab({
         ]}
         empty={
           <AuroraEmptyState
-            title="No Client IO has been generated yet."
-            description="Set up the Client IO to build the branded document, send it for approval, and track revisions."
+            title="Client IO is not available yet."
+            description="This stage unlocks after Assignments are ready. Commercial owns the next action: generate the Client IO so the client can approve commercial terms."
             action={setupAction}
           />
         }

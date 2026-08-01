@@ -106,9 +106,18 @@
 - **Compliance gate:** lifecycle · journeys · BPN components reused · no new nav — `PLATFORM_ARCHITECTURE_COMPLIANCE.md`
 - **Package frozen:** `docs/architecture/platform-ux/` (01–12) — no architecture/UX redesign without formal reopen
 - **Architecture-first work:** Complete · Migration Phase 1 complete (`b8e09927`)
-- **Next gate:** Planning Board Capability Spec — `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md` (awaiting approval; not architecture)
-- **After capability approval:** Release 2.2a implementation → 2.2b Copilot → Client/Vendor/Creator journeys → Reporting → Notifications → Analytics
+- **BPN Foundation:** Accepted into protected Architecture v1.0 baseline; compliance permanence confirmed
+- **Planning Board:** Functional capability review in progress — `docs/capabilities/PLANNING_BOARD_CAPABILITY_REVIEW.md` · **no implementation**
+- **After review + capability approval:** Release 2.2a coding → 2.2b Copilot → Client/Vendor/Creator journeys → Reporting → Notifications → Analytics
 - **Preserves:** Campaign Baseline · BPN · Enterprise Tabs · Financial Display · Deliverables · all business logic / APIs / DB
+
+## Campaign Workspace Lifecycle OS — FROZEN BASELINE (2026-08-01)
+
+- **Canonical:** `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.md`
+- **Compliance invariants:** Campaign primary · Business Stage SSOT · workspaces as views · Next Action journey · no competing nav · extend lifecycle
+- **Regression (mandatory):** `npm run test:campaign-workspace-lifecycle-os`
+- **Scope frozen:** Presentation + lifecycle orchestration (no API/DB/workflow redesign)
+- **Next functional:** Planning Board capability review → approve spec → implement R2.2a into Planning stage
 
 ## IO approval email experience (Preview testing on develop)
 

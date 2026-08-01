@@ -452,7 +452,7 @@ export function CampaignPerformanceGrid({
               <div className="thinkway-campaign-empty-state">
                 <p className="font-medium text-[var(--camp-text-2)]">
                   {rows.length === 0
-                    ? "No publications have been added yet."
+                    ? "Performance unlocks after creators publish. Metrics appear once the campaign enters Publication stage."
                     : "No publications match your filters."}
                 </p>
                 <p className="mt-1 text-[12px] text-[var(--camp-text-3)]">

@@ -3,8 +3,9 @@
 **Status:** Permanent governance rule  
 **Baseline:** [`THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md`](./THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md)  
 **BPN foundation:** [`BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md`](./BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md)  
+**Campaign Workspace baseline:** [`CAMPAIGN_WORKSPACE_BASELINE_V1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.md)  
 **Effective:** 2026-08-01 (Architecture v1.0 freeze)  
-**Updated:** 2026-08-01 (Business Process Navigation Foundation Complete)
+**Updated:** 2026-08-01 (Campaign Workspace Lifecycle OS baseline freeze)
 
 ---
 
@@ -28,12 +29,28 @@ The section must explicitly state:
 2. **Which Stakeholder Journey(s) it extends** — Internal Ops · Commercial · Client · Vendor · Creator · Finance · Executive · AI Assistant ([doc 11](./platform-ux/11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md)).  
 3. **Which Business Process component(s) it reuses** — e.g. `lib/business-process`, stage summary, process-aware Enterprise Tabs, campaign process adapter, portfolio continue-into-stage patterns ([BPN foundation](./BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md)).  
 4. **Which workspace(s) are extended** — name existing surfaces; do not invent a peer product.  
-5. **Which existing baseline document(s) are referenced** — cite Architecture v1.0, BPN foundation, and any module baselines.  
+5. **Which existing baseline document(s) are referenced** — cite Architecture v1.0, BPN foundation, Campaign Workspace Baseline v1, and any module baselines.  
 6. **Why it does not introduce a new navigation philosophy** — confirm Platform → Module → Business Process Navigation → Content; no parallel tab/app system.  
 7. **Why no duplicate workflow is created** — confirm the feature extends the campaign lifecycle, not a side process.  
 8. **How the feature extends the existing campaign lifecycle** — one paragraph mapping inputs/outputs to stage transitions.
 
 Items **1, 2, 3, and 6** are the non-negotiable BPN gate for all future releases.
+
+---
+
+## Campaign Workspace invariants (mandatory)
+
+Any change that touches Campaign Workspace presentation, navigation, empty states, portfolio campaign columns, or lifecycle orchestration **must preserve**:
+
+1. **Campaign remains the primary business object** — screens orient around one campaign, not disconnected modules.  
+2. **Business Stage is always the source of truth** — independent of which workspace tab is open.  
+3. **Workspaces are contextual views, not separate applications** — Finance, Vendor IO, Performance, etc. open into the same lifecycle.  
+4. **Next Action remains the primary user journey** — hero, state strip, and portfolio continue into the recommended stage.  
+5. **No competing navigation patterns** — do not introduce parallel tab/app systems beside Business Process Navigation / process rail.  
+6. **New capabilities extend the lifecycle instead of bypassing it** — e.g. Planning Board plugs into Planning; stakeholder portals are windows into the same journey.
+
+Canonical reference: [`CAMPAIGN_WORKSPACE_BASELINE_V1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.md).  
+Regression gate: `npm run test:campaign-workspace-lifecycle-os`.
 
 ---
 
@@ -46,12 +63,13 @@ Items **1, 2, 3, and 6** are the non-negotiable BPN gate for all future releases
 |------|-----------|
 | Campaign Lifecycle stage(s) extended | e.g. S04 Media Planning |
 | Stakeholder Journey(s) extended | e.g. Internal Ops, Commercial, Client |
-| Business Process component(s) reused | e.g. lib/business-process; stage summary; process-aware Enterprise Tabs |
+| Business Process component(s) reused | e.g. lib/business-process; stage summary; process-aware Enterprise Tabs; Campaign State Strip / Process Rail |
 | Workspace(s) extended | e.g. Campaign Media Plan surface within Campaign Workspace |
-| Baseline documents referenced | Architecture v1.0; BPN Foundation; Campaign Module Baseline; … |
+| Baseline documents referenced | Architecture v1.0; BPN Foundation; Campaign Workspace Baseline v1; Campaign Module Baseline; … |
 | No new navigation philosophy | Extends Business Process Navigation; no parallel tab/app system |
 | No duplicate workflow | Extends campaign lifecycle stage(s) above; no side process |
 | Lifecycle extension | …how this capability advances or supports the stage… |
+| Campaign Workspace invariants preserved | Campaign primary · Business Stage SSOT · workspaces as views · Next Action journey · no competing nav · extends lifecycle |
 ```
 
 ---
@@ -62,6 +80,8 @@ Items **1, 2, 3, and 6** are the non-negotiable BPN gate for all future releases
 - Creating a separate application experience  
 - Shipping a feature that cannot map to a lifecycle stage  
 - Introducing a new navigation model alongside Business Process Navigation  
+- Treating Campaign workspaces as independent apps with their own journey model  
+- Bypassing Next Action / Business Stage for a parallel “home” experience inside Campaign  
 - Omitting this compliance section  
 
 ---

@@ -14,8 +14,10 @@ This document compares the **current Thinkway platform** (`thinkway-platform`) a
 - **Thesis:** Campaign-centric enterprise OS; one campaign object; one lifecycle; stakeholder journeys enter at different stages
 - **Architecture-first work:** Complete · Migration Phase 1 complete
 - **Next:** Capability specs → functional delivery (Planning Board 2.2a first)
-- **Planning Board gate:** [`capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md`](./capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md) (awaiting Product approval — not architecture)
+- **Campaign Workspace Lifecycle OS:** [`architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.md`](./architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.md) — **frozen** (Living Campaign Object · State Strip · Process Rail · Portfolio intelligence · Next Action)
+- **Planning Board:** [`capabilities/PLANNING_BOARD_CAPABILITY_REVIEW.md`](./capabilities/PLANNING_BOARD_CAPABILITY_REVIEW.md) in progress → then approve [`PLANNING_BOARD_CAPABILITY_SPEC.md`](./capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md) — **no implementation until review completes**
 - **Rule:** Future work extends the baseline; no architectural redesign without formal reopen
+- **Regression:** `npm run test:campaign-workspace-lifecycle-os`
 
 ### Campaign Module Baseline — PROTECTED (Aug 2026)
 

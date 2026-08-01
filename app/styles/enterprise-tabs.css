@@ -270,4 +270,93 @@
   .enterprise-tab[data-process-state="current"]:not([data-state="active"]):not([aria-selected="true"]):not(.is-active) {
     color: var(--etab-fg-active);
   }
+
+  /* Campaign process navigation — ERP-style progression over classic tabs. */
+  .thinkway-process-nav-tabs.enterprise-tabs {
+    position: relative;
+  }
+
+  .thinkway-process-nav-tabs .enterprise-tabs-list {
+    gap: 2px;
+  }
+
+  .thinkway-process-nav-tabs .enterprise-tab {
+    position: relative;
+    min-height: 52px;
+    padding-top: 22px;
+  }
+
+  .thinkway-process-nav-tabs .enterprise-tab::before {
+    content: "";
+    position: absolute;
+    top: 12px;
+    left: -6px;
+    width: 12px;
+    height: 2px;
+    background: #d7dce6;
+  }
+
+  .thinkway-process-nav-tabs .enterprise-tab:first-child::before {
+    display: none;
+  }
+
+  .thinkway-process-nav-tabs .enterprise-tab::after {
+    content: "";
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    border: 2px solid #d7dce6;
+    border-radius: 999px;
+    background: #fff;
+    transform: translateX(-50%);
+  }
+
+  .thinkway-process-nav-tabs .enterprise-tab .enterprise-tab-indicator {
+    top: auto;
+    bottom: 0;
+  }
+
+  .thinkway-process-nav-tabs .enterprise-tab[data-process-state="completed"]::before,
+  .thinkway-process-nav-tabs .enterprise-tab[data-process-state="current"]::before {
+    background: color-mix(in srgb, var(--etab-indicator) 65%, #d7dce6);
+  }
+
+  .thinkway-process-nav-tabs .enterprise-tab[data-process-state="completed"]::after {
+    border-color: color-mix(in srgb, var(--etab-indicator) 70%, #d7dce6);
+    background: color-mix(in srgb, var(--etab-indicator) 18%, #fff);
+  }
+
+  .thinkway-process-nav-tabs .enterprise-tab[data-process-state="current"]::after {
+    border-color: var(--etab-indicator);
+    background: var(--etab-indicator);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--etab-indicator) 18%, transparent);
+  }
+
+  .thinkway-process-nav-tabs .enterprise-tab[data-process-state="waiting"],
+  .thinkway-process-nav-tabs .enterprise-tab[data-process-state="waiting_internal"],
+  .thinkway-process-nav-tabs .enterprise-tab[data-process-state="waiting_client"],
+  .thinkway-process-nav-tabs .enterprise-tab[data-process-state="waiting_vendor"] {
+    box-shadow: inset 0 -2px 0 0 #1d4ed8;
+  }
+
+  .thinkway-process-nav-tabs .enterprise-tab[data-process-state="waiting"]::after,
+  .thinkway-process-nav-tabs .enterprise-tab[data-process-state="waiting_internal"]::after,
+  .thinkway-process-nav-tabs .enterprise-tab[data-process-state="waiting_client"]::after,
+  .thinkway-process-nav-tabs .enterprise-tab[data-process-state="waiting_vendor"]::after {
+    border-color: #1d4ed8;
+  }
+
+  .thinkway-process-nav-tabs .enterprise-tab[data-process-state="attention_required"]::after {
+    border-color: #b45309;
+  }
+
+  .thinkway-process-nav-tabs .enterprise-tab[data-process-state="blocked"]::after {
+    border-color: #b91c1c;
+  }
+
+  .thinkway-process-nav-tabs .enterprise-tab[data-process-state="upcoming"] {
+    opacity: 0.82;
+  }
 }

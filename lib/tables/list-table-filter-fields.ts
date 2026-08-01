@@ -3,6 +3,7 @@ import type { CampaignListItem } from "@/types/database";
 import type { ClientsListResult } from "@/features/clients/queries";
 import type { getGroupsList } from "@/features/groups/queries";
 import type { VendorsListResult } from "@/features/vendors/queries";
+import { campaignPortfolioIntel } from "@/features/campaigns/lifecycle/campaign-portfolio-intelligence";
 import type { OperationalTableFilterField } from "@/lib/tables/operational-table-filter-sort";
 import { resolveCampaignListPoBudget } from "@/lib/finance/po/operational-budget";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
@@ -16,6 +17,11 @@ export const CAMPAIGNS_TABLE_FILTER_ACCESSORS: Partial<
   group_client: (row) =>
     [row.group?.name, row.client?.legal_name ?? row.client?.name].filter(Boolean).join(" · ") ||
     null,
+  stage: (row) => campaignPortfolioIntel(row).businessStageLabel,
+  waiting_for: (row) => campaignPortfolioIntel(row).waitingFor,
+  days_waiting: (row) => campaignPortfolioIntel(row).daysWaiting,
+  risk: (row) => campaignPortfolioIntel(row).riskLabel,
+  next_action: (row) => campaignPortfolioIntel(row).nextAction,
   lines: (row) => row.lines.length,
   status: (row) => row.status,
   po_total: (row) => resolveCampaignListPoBudget(row),

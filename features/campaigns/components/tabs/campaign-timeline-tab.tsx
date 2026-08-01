@@ -22,6 +22,8 @@ import { DetailClickableLabel } from "@/features/campaigns/components/detail-she
 import { FinanceAuditDetailSheet } from "@/features/campaigns/components/detail-sheets/finance-audit-detail-sheet";
 import { OPERATIONAL_TABLE_FONT } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import { DocumentNumber } from "@/components/ui/document-number";
+import { campaignLifecycleFromWorkspace } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
+import { CampaignBusinessTimeline } from "@/features/campaigns/lifecycle/components/campaign-business-timeline";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import type { FinanceAuditTimelineEntry } from "@/lib/finance/queries/finance-audit";
@@ -138,23 +140,34 @@ export function CampaignTimelineTab({
 
   const recentActivity = workspace.activity.slice(0, 8);
   const recentAudit = financeAudit.slice(0, 8);
+  const lifecycle = useMemo(
+    () => campaignLifecycleFromWorkspace(workspace),
+    [workspace]
+  );
+  const occurredCount = lifecycle.timeline.filter((event) => event.occurred).length;
 
   return (
     <>
       <CampaignWorkspaceFrame
-        title="Timeline"
-        subtitle="Activity, finance audit, and recent assignment history"
+        title="Business Timeline"
+        subtitle="Campaign journey milestones — system activity remains secondary"
         status={
-          <AuroraStatusPill tone={workspace.activity.length > 0 ? "blue" : "mut"}>
-            {workspace.activity.length} events
+          <AuroraStatusPill tone={occurredCount > 0 ? "blue" : "mut"}>
+            {occurredCount}/{lifecycle.timeline.length} milestones
           </AuroraStatusPill>
         }
         stats={[
           {
-            key: "activity",
-            label: "Activities",
-            value: String(workspace.activity.length),
+            key: "milestones",
+            label: "Milestones",
+            value: String(occurredCount),
             tone: "blue",
+          },
+          {
+            key: "activity",
+            label: "System Events",
+            value: String(workspace.activity.length),
+            tone: "mut",
           },
           {
             key: "approvals",
@@ -167,88 +180,90 @@ export function CampaignTimelineTab({
             label: "Finance Events",
             value: financeAuditPending ? "…" : String(financeAudit.length),
           },
-          {
-            key: "notifications",
-            label: "Notifications",
-            value: "—",
-            tone: "mut",
-          },
         ]}
         banner={
-          <div className="mb-4 grid grid-cols-1 gap-3 xl:grid-cols-2">
-            <div className="thinkway-aurora-doc-panel">
-              <div className="eyebrow">Activity</div>
-              {recentActivity.length === 0 ? (
-                <p className="py-6 text-center text-[13px] text-[var(--camp-text-4)]">
-                  No activity yet — campaign events will appear here as work progresses.
-                </p>
-              ) : (
-                <div className="thinkway-aurora-tl-feed">
-                  {recentActivity.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className="thinkway-aurora-tl-row w-full text-left"
-                      onClick={() => setDetailActivityId(item.id)}
-                    >
-                      <span className="thinkway-aurora-tl-ic" aria-hidden>
-                        ↻
-                      </span>
-                      <div className="min-w-0">
-                        <div className="thinkway-aurora-tl-t1 truncate capitalize">
-                          {item.summary}
-                        </div>
-                        <div className="thinkway-aurora-tl-t2 truncate">
-                          {item.actor?.full_name ?? item.actor?.email ?? "System"}
-                        </div>
-                      </div>
-                      <time className="thinkway-aurora-tl-when">
-                        {format(new Date(item.created_at), "MMM d · HH:mm")}
-                      </time>
-                    </button>
-                  ))}
+          <div className="mb-4 space-y-3">
+            <CampaignBusinessTimeline lifecycle={lifecycle} />
+            <details className="thinkway-lc-timeline-secondary">
+              <summary>
+                Secondary records · System activity & finance audit ({workspace.activity.length + financeAudit.length})
+              </summary>
+              <div className="thinkway-lc-timeline-secondary-body grid grid-cols-1 gap-3 xl:grid-cols-2">
+                <div className="thinkway-aurora-doc-panel">
+                  <div className="eyebrow">System activity</div>
+                  {recentActivity.length === 0 ? (
+                    <p className="py-6 text-center text-[13px] text-[var(--camp-text-4)]">
+                      Technical database events stay here — the business story is above.
+                    </p>
+                  ) : (
+                    <div className="thinkway-aurora-tl-feed">
+                      {recentActivity.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className="thinkway-aurora-tl-row w-full text-left"
+                          onClick={() => setDetailActivityId(item.id)}
+                        >
+                          <span className="thinkway-aurora-tl-ic" aria-hidden>
+                            ↻
+                          </span>
+                          <div className="min-w-0">
+                            <div className="thinkway-aurora-tl-t1 truncate capitalize">
+                              {item.summary}
+                            </div>
+                            <div className="thinkway-aurora-tl-t2 truncate">
+                              {item.actor?.full_name ?? item.actor?.email ?? "System"}
+                            </div>
+                          </div>
+                          <time className="thinkway-aurora-tl-when">
+                            {format(new Date(item.created_at), "MMM d · HH:mm")}
+                          </time>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            <div className="thinkway-aurora-doc-panel">
-              <div className="eyebrow">Finance audit</div>
-              {financeAuditPending && financeAudit.length === 0 ? (
-                <p className="py-6 text-center text-[13px] text-[var(--camp-text-4)]">
-                  Loading finance audit…
-                </p>
-              ) : recentAudit.length === 0 ? (
-                <p className="py-6 text-center text-[13px] text-[var(--camp-text-4)]">
-                  No finance audit yet — invoice and payment events will appear here.
-                </p>
-              ) : (
-                <div className="thinkway-aurora-tl-feed">
-                  {recentAudit.map((entry) => (
-                    <button
-                      key={entry.id}
-                      type="button"
-                      className="thinkway-aurora-tl-row w-full text-left"
-                      onClick={() => setDetailAuditId(entry.id)}
-                    >
-                      <span className="thinkway-aurora-tl-ic" aria-hidden>
-                        $
-                      </span>
-                      <div className="min-w-0">
-                        <div className="thinkway-aurora-tl-t1 truncate">{entry.label}</div>
-                        <div className="thinkway-aurora-tl-t2 truncate">
-                          {entry.actor_name ?? "System"}
-                          {entry.payload.document_number
-                            ? ` · ${String(entry.payload.document_number)}`
-                            : ""}
-                        </div>
-                      </div>
-                      <time className="thinkway-aurora-tl-when">
-                        {format(new Date(entry.created_at), "MMM d · HH:mm")}
-                      </time>
-                    </button>
-                  ))}
+                <div className="thinkway-aurora-doc-panel">
+                  <div className="eyebrow">Finance audit</div>
+                  {financeAuditPending && financeAudit.length === 0 ? (
+                    <p className="py-6 text-center text-[13px] text-[var(--camp-text-4)]">
+                      Loading finance audit…
+                    </p>
+                  ) : recentAudit.length === 0 ? (
+                    <p className="py-6 text-center text-[13px] text-[var(--camp-text-4)]">
+                      No finance audit yet — invoice and payment events will appear here.
+                    </p>
+                  ) : (
+                    <div className="thinkway-aurora-tl-feed">
+                      {recentAudit.map((entry) => (
+                        <button
+                          key={entry.id}
+                          type="button"
+                          className="thinkway-aurora-tl-row w-full text-left"
+                          onClick={() => setDetailAuditId(entry.id)}
+                        >
+                          <span className="thinkway-aurora-tl-ic" aria-hidden>
+                            $
+                          </span>
+                          <div className="min-w-0">
+                            <div className="thinkway-aurora-tl-t1 truncate">{entry.label}</div>
+                            <div className="thinkway-aurora-tl-t2 truncate">
+                              {entry.actor_name ?? "System"}
+                              {entry.payload.document_number
+                                ? ` · ${String(entry.payload.document_number)}`
+                                : ""}
+                            </div>
+                          </div>
+                          <time className="thinkway-aurora-tl-when">
+                            {format(new Date(entry.created_at), "MMM d · HH:mm")}
+                          </time>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            </details>
           </div>
         }
         registerLabel="Recent assignments"

@@ -280,8 +280,8 @@ function VendorIoTableBody({
   if (sorted.length === 0) {
     return (
       <AuroraEmptyState
-        title="No Vendor IO has been generated yet."
-        description="Generate creator insertion orders from Assignments to send, track delivery, and record approvals."
+        title="Vendor Orders are not available yet."
+        description="Vendor IO unlocks after Client Approval. Until then, Commercial/Operations should complete Client IO. Next expected event: generate Vendor IO for creators."
       />
     );
   }

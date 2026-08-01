@@ -15,6 +15,13 @@ import {
 import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
 import { isCampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
 import {
+  buildWorkspaceGuidance,
+  campaignLifecycleFromWorkspace,
+  workspaceLabelForTab,
+} from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
+import { CampaignStateStrip } from "@/features/campaigns/lifecycle/components/campaign-state-strip";
+import { CampaignWorkspaceGuidance } from "@/features/campaigns/lifecycle/components/campaign-workspace-guidance";
+import {
   campaignProcessCueFromWorkspace,
   processNavStateForTab,
   signalsFromCampaignWorkspace,
@@ -214,6 +221,26 @@ export function CampaignWorkspaceView({
     () => signalsFromCampaignWorkspace(workspace),
     [workspace]
   );
+  const lifecycle = useMemo(
+    () => campaignLifecycleFromWorkspace(workspace),
+    [workspace]
+  );
+  const continueToNextAction = useCallback(() => {
+    handleTabChange(lifecycle.nextActionTab);
+  }, [handleTabChange, lifecycle.nextActionTab]);
+
+  const renderWithLifecycleGuidance = (
+    tabId: CampaignWorkspaceTabId,
+    content: React.ReactNode
+  ) => (
+    <>
+      <CampaignWorkspaceGuidance
+        guidance={buildWorkspaceGuidance(lifecycle, tabId)}
+        onContinue={continueToNextAction}
+      />
+      {content}
+    </>
+  );
 
   const tabsById = useMemo(
     (): Record<
@@ -339,6 +366,13 @@ export function CampaignWorkspaceView({
                     <b>
                       <DocumentNumber value={workspace.document_number} />
                     </b>
+                    <span className="thinkway-aurora-sep">·</span>
+                    <span className="thinkway-lc-crumb-state" title={lifecycle.reason}>
+                      {lifecycle.businessStageLabel}
+                      <span className="thinkway-lc-pill ml-1.5">
+                        {lifecycle.businessStateLabel}
+                      </span>
+                    </span>
                   </span>
                 </div>
                 <div className="thinkway-aurora-topbar-right">
@@ -348,7 +382,10 @@ export function CampaignWorkspaceView({
               <CampaignHero
                 workspace={workspace}
                 processCue={processCue}
-                onNavigateToCurrentStage={() => handleTabChange(processCue.entryStageId)}
+                lifecycle={lifecycle}
+                activeWorkspaceTab={activeTab}
+                onNavigateToCurrentStage={continueToNextAction}
+                onSelectStage={handleTabChange}
                 actions={
                   <CampaignHeroActions
                     workspace={workspace}
@@ -364,11 +401,22 @@ export function CampaignWorkspaceView({
             </div>
           }
           tabs={
-            <CampaignWorkspaceSortableTabsBar
-              tabOrder={tabOrder}
-              tabsById={tabsById}
-              onReorder={moveTab}
-            />
+            <>
+              <CampaignStateStrip
+                lifecycle={lifecycle}
+                documentNumber={workspace.document_number}
+                campaignName={workspace.name}
+                workspaceLabel={workspaceLabelForTab(activeTab)}
+                updatedAt={workspace.activity[0]?.created_at ?? workspace.start_date}
+                endDate={workspace.end_date}
+                onContinue={continueToNextAction}
+              />
+              <CampaignWorkspaceSortableTabsBar
+                tabOrder={tabOrder}
+                tabsById={tabsById}
+                onReorder={moveTab}
+              />
+            </>
           }
         >
         <CampaignWorkspaceTabContent value="overview" className={tabPanelClass}>
@@ -389,27 +437,30 @@ export function CampaignWorkspaceView({
         </CampaignWorkspaceTabContent>
         <CampaignWorkspaceTabContent value="client-io" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel>
-            <TabErrorBoundary tabName="Client IO">
-              <ClientIoTab
-                campaignId={workspace.id}
-                campaignName={workspace.name}
-                io={workspace.client_io}
-                recipients={workspace.client_io_send_recipients}
-                sendHistory={workspace.client_io_send_history}
-                senderName={workspace.client_io_sender_name}
-                currencyCode={workspace.currency_code}
-                assignments={workspace.lines.map((line) => ({
-                  id: line.id,
-                  document_number: line.document_number,
-                  name: line.name,
-                  influencer_name: line.influencer_name,
-                  revenue_before_vat: line.revenue_before_vat,
-                  currency_code: workspace.currency_code,
-                }))}
-                versions={workspace.client_io_versions ?? []}
-                milestones={workspace.client_io_milestones ?? []}
-              />
-            </TabErrorBoundary>
+            {renderWithLifecycleGuidance(
+              "client-io",
+              <TabErrorBoundary tabName="Client IO">
+                <ClientIoTab
+                  campaignId={workspace.id}
+                  campaignName={workspace.name}
+                  io={workspace.client_io}
+                  recipients={workspace.client_io_send_recipients}
+                  sendHistory={workspace.client_io_send_history}
+                  senderName={workspace.client_io_sender_name}
+                  currencyCode={workspace.currency_code}
+                  assignments={workspace.lines.map((line) => ({
+                    id: line.id,
+                    document_number: line.document_number,
+                    name: line.name,
+                    influencer_name: line.influencer_name,
+                    revenue_before_vat: line.revenue_before_vat,
+                    currency_code: workspace.currency_code,
+                  }))}
+                  versions={workspace.client_io_versions ?? []}
+                  milestones={workspace.client_io_milestones ?? []}
+                />
+              </TabErrorBoundary>
+            )}
           </CampaignWorkspaceTabPanel>
         </CampaignWorkspaceTabContent>
         <CampaignWorkspaceTabContent value="lines" className={tabPanelClass}>
@@ -417,16 +468,19 @@ export function CampaignWorkspaceView({
             {tabLoadError("lines") ? (
               <CampaignWorkspaceTabLoading error={tabLoadError("lines")} />
             ) : (
-              <TabErrorBoundary tabName="Assignments">
-                <CampaignAssignmentsTab
-                  workspace={workspace}
-                  po={workspace.po}
-                  currencyOptions={currencyOptions}
-                  assignmentHierarchy={assignmentHierarchy}
-                  billingGroups={billingGroups}
-                  operationalBilling={operationalBilling}
-                />
-              </TabErrorBoundary>
+              renderWithLifecycleGuidance(
+                "lines",
+                <TabErrorBoundary tabName="Assignments">
+                  <CampaignAssignmentsTab
+                    workspace={workspace}
+                    po={workspace.po}
+                    currencyOptions={currencyOptions}
+                    assignmentHierarchy={assignmentHierarchy}
+                    billingGroups={billingGroups}
+                    operationalBilling={operationalBilling}
+                  />
+                </TabErrorBoundary>
+              )
             )}
           </CampaignWorkspaceTabPanel>
         </CampaignWorkspaceTabContent>
@@ -434,61 +488,76 @@ export function CampaignWorkspaceView({
           <CampaignWorkspaceTabPanel>
             {renderTabContent(
               "deliverables",
-              <TabErrorBoundary tabName="Deliverables">
-                <CampaignDeliverablesDocumentationTab
-                  workspace={workspace}
-                  assignmentHierarchy={assignmentHierarchy}
-                  initialCreatorFilter={searchParams.get("docsCreator")}
-                />
-              </TabErrorBoundary>
+              renderWithLifecycleGuidance(
+                "deliverables",
+                <TabErrorBoundary tabName="Deliverables">
+                  <CampaignDeliverablesDocumentationTab
+                    workspace={workspace}
+                    assignmentHierarchy={assignmentHierarchy}
+                    initialCreatorFilter={searchParams.get("docsCreator")}
+                  />
+                </TabErrorBoundary>
+              )
             )}
           </CampaignWorkspaceTabPanel>
         </CampaignWorkspaceTabContent>
         <CampaignWorkspaceTabContent value="vendor-io" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel>
-            <TabErrorBoundary tabName="Vendor IO">
-              <VendorIoTab campaignId={workspace.id} rows={workspace.vendor_ios} />
-            </TabErrorBoundary>
+            {renderWithLifecycleGuidance(
+              "vendor-io",
+              <TabErrorBoundary tabName="Vendor IO">
+                <VendorIoTab campaignId={workspace.id} rows={workspace.vendor_ios} />
+              </TabErrorBoundary>
+            )}
           </CampaignWorkspaceTabPanel>
         </CampaignWorkspaceTabContent>
         <CampaignWorkspaceTabContent value="publications" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel>
             {renderTabContent(
               "publications",
-              <TabErrorBoundary tabName="Performance">
-                <CampaignPerformanceCenterTab
-                  workspace={workspace}
-                  publications={publications}
-                  summary={performanceSummary}
-                  charts={performanceCharts}
-                  syncHealth={publicationsSyncHealth}
-                  loadError={publicationsLoadError}
-                  schemaWarnings={publicationsSchemaWarnings}
-                />
-              </TabErrorBoundary>
+              renderWithLifecycleGuidance(
+                "publications",
+                <TabErrorBoundary tabName="Performance">
+                  <CampaignPerformanceCenterTab
+                    workspace={workspace}
+                    publications={publications}
+                    summary={performanceSummary}
+                    charts={performanceCharts}
+                    syncHealth={publicationsSyncHealth}
+                    loadError={publicationsLoadError}
+                    schemaWarnings={publicationsSchemaWarnings}
+                  />
+                </TabErrorBoundary>
+              )
             )}
           </CampaignWorkspaceTabPanel>
         </CampaignWorkspaceTabContent>
         <CampaignWorkspaceTabContent value="workflow" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel>
-            <TabErrorBoundary tabName="Workflow">
-              <CampaignWorkflowTab workspace={workspace} />
-            </TabErrorBoundary>
+            {renderWithLifecycleGuidance(
+              "workflow",
+              <TabErrorBoundary tabName="Workflow">
+                <CampaignWorkflowTab workspace={workspace} />
+              </TabErrorBoundary>
+            )}
           </CampaignWorkspaceTabPanel>
         </CampaignWorkspaceTabContent>
         <CampaignWorkspaceTabContent value="billing" className={tabPanelClass}>
           <CampaignWorkspaceTabPanel>
             {renderTabContent(
               "billing",
-              <TabErrorBoundary tabName="Billing">
-                <CampaignBillingTab
-                  workspace={workspace}
-                  billingLines={billingLines}
-                  billingGroups={billingGroups}
-                  operationalBilling={operationalBilling}
-                  campaignInvoiceRegister={campaignInvoiceRegister}
-                />
-              </TabErrorBoundary>
+              renderWithLifecycleGuidance(
+                "billing",
+                <TabErrorBoundary tabName="Billing">
+                  <CampaignBillingTab
+                    workspace={workspace}
+                    billingLines={billingLines}
+                    billingGroups={billingGroups}
+                    operationalBilling={operationalBilling}
+                    campaignInvoiceRegister={campaignInvoiceRegister}
+                  />
+                </TabErrorBoundary>
+              )
             )}
           </CampaignWorkspaceTabPanel>
         </CampaignWorkspaceTabContent>
@@ -496,14 +565,17 @@ export function CampaignWorkspaceView({
           <CampaignWorkspaceTabPanel>
             {renderTabContent(
               "timeline",
-              <TabErrorBoundary tabName="Timeline">
-                <CampaignTimelineTab
-                  workspace={workspace}
-                  assignmentHierarchy={assignmentHierarchy}
-                  financeAudit={financeAudit}
-                  financeAuditStatus={bundleStatuses.financeAudit}
-                />
-              </TabErrorBoundary>
+              renderWithLifecycleGuidance(
+                "timeline",
+                <TabErrorBoundary tabName="Timeline">
+                  <CampaignTimelineTab
+                    workspace={workspace}
+                    assignmentHierarchy={assignmentHierarchy}
+                    financeAudit={financeAudit}
+                    financeAuditStatus={bundleStatuses.financeAudit}
+                  />
+                </TabErrorBoundary>
+              )
             )}
           </CampaignWorkspaceTabPanel>
         </CampaignWorkspaceTabContent>

@@ -9,6 +9,10 @@ type BusinessProcessStageSummaryProps = {
   className?: string;
   /** Compact = single meta row; default = labeled grid for workspace hero. */
   density?: "default" | "compact";
+  /** Open workspace tab label — independent of business stage (Epic 3). */
+  workspaceLabel?: string;
+  /** Richer business-state wording when lifecycle orchestration is available. */
+  businessStateLabel?: string;
 };
 
 function signalTone(signal: BusinessProcessProgress["lifecycleSignal"]): string {
@@ -37,7 +41,11 @@ export function BusinessProcessStageSummary({
   onContinue,
   className,
   density = "default",
+  workspaceLabel,
+  businessStateLabel,
 }: BusinessProcessStageSummaryProps) {
+  const statusText = businessStateLabel ?? progress.statusLabel;
+
   if (density === "compact") {
     return (
       <div
@@ -48,7 +56,13 @@ export function BusinessProcessStageSummary({
           {progress.currentStageLabel}
         </span>
         <span className="thinkway-bp-sep">·</span>
-        <span>{progress.healthLabel}</span>
+        <span>{statusText}</span>
+        {workspaceLabel ? (
+          <>
+            <span className="thinkway-bp-sep">·</span>
+            <span>Workspace: {workspaceLabel}</span>
+          </>
+        ) : null}
         <span className="thinkway-bp-sep">·</span>
         {onContinue ? (
           <button type="button" className="thinkway-bp-continue" onClick={onContinue}>
@@ -68,7 +82,7 @@ export function BusinessProcessStageSummary({
     >
       <div className="thinkway-bp-summary-grid">
         <div className="thinkway-bp-field">
-          <span className="thinkway-bp-label">Current Stage</span>
+          <span className="thinkway-bp-label">Business Stage</span>
           <span className={cn("thinkway-bp-value", signalTone(progress.lifecycleSignal))}>
             {progress.currentStageLabel}
           </span>
@@ -78,9 +92,17 @@ export function BusinessProcessStageSummary({
           <span className="thinkway-bp-value">{progress.owner}</span>
         </div>
         <div className="thinkway-bp-field">
-          <span className="thinkway-bp-label">Status</span>
-          <span className="thinkway-bp-value">{progress.statusLabel}</span>
+          <span className="thinkway-bp-label">Business State</span>
+          <span className={cn("thinkway-bp-value", signalTone(progress.lifecycleSignal))}>
+            {statusText}
+          </span>
         </div>
+        {workspaceLabel ? (
+          <div className="thinkway-bp-field">
+            <span className="thinkway-bp-label">Workspace</span>
+            <span className="thinkway-bp-value">{workspaceLabel}</span>
+          </div>
+        ) : null}
         <div className="thinkway-bp-field">
           <span className="thinkway-bp-label">Next</span>
           <span className="thinkway-bp-value">

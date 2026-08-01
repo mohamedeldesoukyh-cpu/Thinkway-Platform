@@ -1,11 +1,13 @@
 # Business Process Navigation Foundation Complete
 
-**Status:** Protected platform baseline  
+**Status:** Protected platform baseline — **accepted into Architecture v1.0**  
 **Milestone:** Business Process Navigation Foundation Complete  
 **Approved:** 2026-08-01  
 **Branch tip:** `b8e09927` on `develop`  
 **Parent baseline:** [`THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md`](./THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md)  
-**Migration:** [`platform-ux/10-MIGRATION_STRATEGY.md`](./platform-ux/10-MIGRATION_STRATEGY.md) § Phase 1 — **Complete**
+**Migration:** [`platform-ux/10-MIGRATION_STRATEGY.md`](./platform-ux/10-MIGRATION_STRATEGY.md) § Phase 1 — **Complete**  
+**Governance:** [`PLATFORM_ARCHITECTURE_COMPLIANCE.md`](./PLATFORM_ARCHITECTURE_COMPLIANCE.md) remains mandatory for all future capabilities and releases.  
+**Campaign Workspace OS:** [`CAMPAIGN_WORKSPACE_BASELINE_V1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.md) — Lifecycle OS presentation extending this foundation.
 
 ---
 
@@ -32,8 +34,9 @@ It transitions the Campaign module from page-oriented navigation to **campaign o
 | Stage context UI | `components/workspace/business-process-stage-summary.tsx` |
 | Enterprise Tabs process signals | `components/workspace/enterprise-tabs.tsx` (+ CSS) |
 | Campaign adapter | `features/campaigns/lifecycle/campaign-process-presentation.ts` |
-| Portfolio continue-into-stage | Campaign list Current Stage · Health · Next Action |
+| Portfolio continue-into-stage | Campaign list Business Stage · Waiting For · Days Waiting · Risk · Next Action |
 | Recommended stage entry | Deep-link to current business stage; full lifecycle remains navigable |
+| Campaign Workspace Lifecycle OS | State Strip · ERP Process Rail · Next Action OS · workspace lifecycle summaries |
 
 Lifecycle signals (canonical):
 

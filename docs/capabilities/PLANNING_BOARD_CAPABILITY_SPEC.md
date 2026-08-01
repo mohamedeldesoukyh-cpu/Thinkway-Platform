@@ -1,18 +1,19 @@
 # Planning Board — Capability Specification (Release 2.2a)
 
-**Status:** Draft for Product approval — **not an architecture document**  
+**Status:** In functional capability review — **not an architecture document** · **no implementation**  
 **Class:** Capability specification (functional delivery gate)  
 **Release:** 2.2a — Campaign Planning Capability / Media Plan Planning Board  
+**Review pack:** [`PLANNING_BOARD_CAPABILITY_REVIEW.md`](./PLANNING_BOARD_CAPABILITY_REVIEW.md)  
 **Approved baselines (must inherit):**  
 - [`THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md`](../architecture/THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md)  
-- [`BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md`](../architecture/BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md)  
+- [`BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md`](../architecture/BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md) — protected  
 - [`CAMPAIGN_MODULE_BASELINE.md`](../architecture/CAMPAIGN_MODULE_BASELINE.md)  
 - Campaign Lifecycle doc 12 · Stakeholder Journeys doc 11  
 
 **Technical companion (already approved; subordinate to this capability + frozen architecture):**  
 [`RELEASE_2_2A_PLANNING_BOARD_ARCHITECTURE.md`](../architecture/RELEASE_2_2A_PLANNING_BOARD_ARCHITECTURE.md)
 
-**Implementation:** Blocked until this capability specification is approved.  
+**Implementation:** Blocked until capability review is completed **and** this specification is approved.  
 **Follow-on:** Media Plan Copilot (2.2b) — separate capability after 2.2a is stable.
 
 ---
@@ -178,9 +179,10 @@ Capability is successful when:
 
 | Gate | Owner | Status |
 |------|-------|--------|
-| Architecture v1.0 + BPN Foundation | Product | Approved / frozen |
-| This Capability Specification | Product | **Awaiting approval** |
-| Implementation on `develop` | Engineering | Blocked until capability approval |
+| Architecture v1.0 + BPN Foundation | Product | Approved / frozen / protected |
+| Functional capability review | Product / Ops | **In progress** — see review pack |
+| This Capability Specification | Product | Blocked on review completion |
+| Implementation on `develop` | Engineering | **Blocked** — no code until review + spec approval |
 | Production | Product | Separate explicit approval |
 
-**Once this specification is approved, Release 2.2a implementation may begin** under Dev-first rules (`develop` → Development Supabase only unless Production is explicitly approved).
+**Once the functional capability review is completed and this specification is approved, Release 2.2a implementation may begin** under Dev-first rules (`develop` → Development Supabase only unless Production is explicitly approved).

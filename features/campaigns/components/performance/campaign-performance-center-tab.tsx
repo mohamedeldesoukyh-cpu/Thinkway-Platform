@@ -355,12 +355,12 @@ export function CampaignPerformanceCenterTab({
     >
       <CampaignWorkspaceFrame
         title="Performance"
-        subtitle="Executive metrics first — publications register below"
+        subtitle="Metrics unlock after Publication — lifecycle context stays above"
         status={
           <AuroraStatusPill
             tone={summary.total_publications > 0 ? "green" : "mut"}
           >
-            {summary.total_publications > 0 ? "Live" : "No publications"}
+            {summary.total_publications > 0 ? "Live" : "Awaiting publication"}
           </AuroraStatusPill>
         }
         tools={

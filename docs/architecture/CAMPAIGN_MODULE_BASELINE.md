@@ -16,6 +16,7 @@ The Campaign module is the approved implementation for future Thinkway operation
 | Campaign Information Architecture | [`CAMPAIGN_INFORMATION_ARCHITECTURE.md`](./CAMPAIGN_INFORMATION_ARCHITECTURE.md) |
 | Campaign Workspace UI (Aurora) | [`CAMPAIGN_WORKSPACE_UI_FREEZE.md`](./CAMPAIGN_WORKSPACE_UI_FREEZE.md) · [`CAMPAIGN_WORKSPACE_UI_GUIDELINES.md`](./CAMPAIGN_WORKSPACE_UI_GUIDELINES.md) |
 | Business Process Navigation | [`BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md`](./BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md) · `lib/business-process/` |
+| Campaign Workspace Lifecycle OS | [`CAMPAIGN_WORKSPACE_BASELINE_V1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.md) — Living Campaign Object · State Strip · Process Rail · Next Action · Portfolio intelligence |
 | Enterprise Tabs | `components/workspace/enterprise-tabs.tsx` · `app/styles/enterprise-tabs.css` (process-aware) |
 | Financial Display Standard | [`FINANCIAL_DISPLAY_STANDARD.md`](./FINANCIAL_DISPLAY_STANDARD.md) · `lib/finance/currency-format.ts` |
 | Deliverables selection model | [`DELIVERABLES_DOCUMENTATION_REPOSITORY.md`](./DELIVERABLES_DOCUMENTATION_REPOSITORY.md) · `documentation-editor-binding.ts` |
@@ -44,14 +45,16 @@ Applies to:
 
 1. Integrate into the existing Campaign Workspace shell and Aurora design language.  
 2. Extend **Business Process Navigation** — no new navigation philosophy or parallel tab/app systems.  
-3. Use Enterprise Tabs (process-aware) for workspace process rails.  
-4. Use the Financial Display Standard for all money presentation.  
-5. Preserve Deliverables selection / upload-lock / Save·Discard·Cancel behavior.  
-6. Keep campaign-level finance KPIs in the header (Finance workspace may repeat R/C/GP/Margin).  
-7. Give each workspace a unique summary identity — do not reintroduce duplicate campaign KPIs everywhere.  
-8. Never ship disabled primary actions for unreleased capabilities.  
-9. Prefer functional delivery over presentation change.  
-10. Include Platform Architecture Compliance (lifecycle · journeys · BPN reuse · no new nav).
+3. Preserve **Campaign Workspace Baseline v1** invariants (Campaign primary · Business Stage SSOT · Next Action journey · workspaces as views).  
+4. Use Enterprise Tabs (process-aware) for workspace process rails.  
+5. Use the Financial Display Standard for all money presentation.  
+6. Preserve Deliverables selection / upload-lock / Save·Discard·Cancel behavior.  
+7. Keep campaign-level finance KPIs in the header (Finance workspace may repeat R/C/GP/Margin).  
+8. Give each workspace a unique summary identity — do not reintroduce duplicate campaign KPIs everywhere.  
+9. Never ship disabled primary actions for unreleased capabilities.  
+10. Prefer functional delivery over presentation change.  
+11. Include Platform Architecture Compliance (lifecycle · journeys · BPN reuse · no new nav).  
+12. Run `npm run test:campaign-workspace-lifecycle-os` when changing Campaign Workspace lifecycle presentation.
 
 **Exception:** Critical usability defect with formal Product approval to reopen scope.
 
