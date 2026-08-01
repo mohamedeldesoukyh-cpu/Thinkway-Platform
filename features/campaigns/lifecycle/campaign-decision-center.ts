@@ -144,6 +144,21 @@ function pushUnique(blockers: DecisionBlocker[], item: DecisionBlocker) {
   blockers.push(item);
 }
 
+/** Owners include Executive; waiting parties do not — coerce for DecisionBlocker.waitingFor. */
+function waitingPartyFromOwner(
+  owner: BusinessProcessOwner
+): BusinessProcessWaitingParty {
+  if (owner === "Executive") return "Operations";
+  return owner;
+}
+
+function resolveWaitingFor(
+  waitingFor: BusinessProcessWaitingParty,
+  owner: BusinessProcessOwner
+): BusinessProcessWaitingParty {
+  return waitingFor === "None" ? waitingPartyFromOwner(owner) : waitingFor;
+}
+
 function actionTabFromLabel(
   label: string,
   stageId: CampaignWorkspaceTabId
@@ -411,7 +426,7 @@ export function buildDecisionCenter(input: {
       title: trimmed.replace(/\.$/, ""),
       severity: hard || hardBlockers.length > 0 ? "hard" : "attention",
       owner,
-      waitingFor: waitingFor === "None" ? "Operations" : waitingFor,
+      waitingFor: resolveWaitingFor(waitingFor, owner),
       sinceLabel: since,
       whyBlocks: "Clear this open issue so the campaign can advance.",
       primaryAction: "Open Pending Approval",
@@ -439,7 +454,7 @@ export function buildDecisionCenter(input: {
       title: label,
       severity: "attention",
       owner,
-      waitingFor: waitingFor === "None" ? owner : waitingFor,
+      waitingFor: resolveWaitingFor(waitingFor, owner),
       sinceLabel: since,
       whyBlocks: `Complete "${label}" to finish ${stageLabel}.`,
       primaryAction: specificActionFromLabel(label, stageId),
