@@ -61,7 +61,7 @@ describe("campaign decision center", () => {
     assert.equal(refined, "Open Client IO");
   });
 
-  it("lists Client approval as an object-specific operational item", () => {
+  it("lists Client approval as a Business Blocker with object precision", () => {
     const dc = buildDecisionCenter({
       stageId: "client-io",
       stageLabel: "Client IO",
@@ -80,10 +80,11 @@ describe("campaign decision center", () => {
       objects: objects(),
     });
 
-    assert.equal(dc.severityMode, "attention");
-    assert.notEqual(dc.severityMode, "hard");
+    assert.equal(dc.severityMode, "business_blocker");
+    assert.equal(dc.narrative.progressionAllowed, false);
     const pending = dc.blockers.find((b) => b.id === "cio_pending");
     assert.ok(pending);
+    assert.equal(pending?.severity, "business_blocker");
     assert.equal(pending?.objectKind, "client_io");
     assert.equal(pending?.objectRef, "#CIO-2026-0003");
     assert.equal(pending?.waitingLabel, "Client");
@@ -91,24 +92,24 @@ describe("campaign decision center", () => {
     assert.equal(pending?.actionTab, "client-io");
     assert.deepEqual(pending?.focusQuery, { key: "io", value: "cio-1" });
     assert.match(pending?.primaryAction ?? "", /CIO-2026-0003/);
-    assert.match(pending?.impact ?? "", /Vendor IO cannot be sent/i);
+    assert.match(pending?.impact ?? "", /cannot advance/i);
     assert.ok(dc.unlocks.some((u) => u.label === "Vendor IO"));
     assert.match(dc.continueReason, /approved|Client/i);
     assert.notEqual(dc.primaryAction.toLowerCase(), "resolve blockers");
-    assert.match(dc.headline, /Operational Item/i);
+    assert.match(dc.headline, /Business Blocker/i);
   });
 
-  it("aggregates many pending Vendor IOs into one summary card", () => {
+  it("aggregates many pending Vendor IOs as Operational Attention", () => {
     const dc = buildDecisionCenter({
-      stageId: "vendor-io",
-      stageLabel: "Vendor IO",
-      businessState: "waiting",
+      stageId: "deliverables",
+      stageLabel: "Deliverables",
+      businessState: "needs_attention",
       enforcement: "soft",
       owner: "Operations",
-      waitingFor: "Vendor",
-      nextAction: "Follow Up Vendor IO",
+      waitingFor: "Operations",
+      nextAction: "Open Vendor IO Register",
       nextActionTab: "vendor-io",
-      expectedResult: "Vendor approvals unlock deliverables.",
+      expectedResult: "Vendor documentation recorded.",
       missing: [],
       hardBlockers: [],
       workspaceBlockers: [],
@@ -144,13 +145,18 @@ describe("campaign decision center", () => {
 
     const vioCards = dc.blockers.filter((b) => b.objectKind === "vendor_io");
     assert.equal(vioCards.length, 1);
-    assert.equal(vioCards[0]?.objectLabel, "Vendor Approval");
+    assert.equal(vioCards[0]?.severity, "operational_attention");
+    assert.equal(vioCards[0]?.objectLabel, "Vendor IO");
     assert.equal(vioCards[0]?.objectRef, "2 Vendor IOs");
-    assert.match(vioCards[0]?.waitingLabel ?? "", /Ahmed Hassan/);
-    assert.match(vioCards[0]?.impact ?? "", /Deliverables cannot start/i);
-    assert.match(vioCards[0]?.unlockLabel ?? "", /unlock/i);
+    assert.match(vioCards[0]?.waitingLabel ?? "", /2 creators|Ahmed/);
+    assert.match(vioCards[0]?.impact ?? "", /may continue|ops follow-up/i);
+    assert.match(vioCards[0]?.unlockLabel ?? "", /compliance|acknowledgement/i);
     assert.deepEqual(vioCards[0]?.focusQuery, { key: "io", value: "vio-38" });
-    assert.equal(vioCards[0]?.primaryAction, "Open Vendor IO");
+    assert.equal(vioCards[0]?.primaryAction, "Open Vendor IO Register");
+    assert.equal(dc.severityMode, "operational_attention");
+    assert.equal(dc.narrative.progressionAllowed, true);
+    assert.equal(dc.narrative.currentStageComplete, true);
+    assert.match(dc.narrative.currentStageLabel, /Client IO/i);
     assert.notEqual(dc.primaryAction.toLowerCase(), "follow up vendor io");
   });
 
@@ -176,10 +182,11 @@ describe("campaign decision center", () => {
     assert.equal(dc.blockers.filter((b) => b.objectKind === "client_io").length, 1);
     assert.equal(dc.blockers.filter((b) => b.objectKind === "vendor_io").length, 0);
     assert.match(dc.blockers[0]?.impact ?? "", /Vendor IO cannot be sent/i);
-    assert.match(dc.headline, /Operational Item/i);
+    assert.match(dc.headline, /Business Blocker/i);
+    assert.equal(dc.narrative.progressionAllowed, false);
   });
 
-  it("marks PO exceeded as a hard block", () => {
+  it("marks PO exceeded as a Business Blocker", () => {
     const dc = buildDecisionCenter({
       stageId: "billing",
       stageLabel: "Finance",
@@ -197,9 +204,40 @@ describe("campaign decision center", () => {
       daysWaiting: 1,
     });
 
-    assert.equal(dc.severityMode, "hard");
-    assert.ok(dc.blockers.some((b) => b.severity === "hard" && b.id === "po_exceeded"));
+    assert.equal(dc.severityMode, "business_blocker");
+    assert.ok(
+      dc.blockers.some(
+        (b) => b.severity === "business_blocker" && b.id === "po_exceeded"
+      )
+    );
     assert.equal(dc.primaryActionTab, "billing");
+    assert.equal(dc.narrative.progressionAllowed, false);
+  });
+
+  it("never implies Client IO is blocked after Client IO is approved", () => {
+    const lifecycle = deriveLifecycleForTest(
+      signals({
+        clientIoStatus: "approved",
+        vendorIoCount: 3,
+        approvedVendorIoCount: 0,
+        sentVendorIoCount: 3,
+      })
+    );
+    assert.equal(lifecycle.businessStageId, "deliverables");
+    assert.ok(
+      lifecycle.decisionCenter.blockers.every((b) => b.objectKind !== "client_io")
+    );
+    assert.match(lifecycle.decisionCenter.narrative.currentStageLabel, /Client IO/i);
+    assert.equal(lifecycle.decisionCenter.narrative.currentStageComplete, true);
+    assert.equal(lifecycle.decisionCenter.narrative.progressionAllowed, true);
+    assert.match(
+      lifecycle.decisionCenter.narrative.progressionLabel,
+      /may continue/i
+    );
+    assert.equal(
+      lifecycle.decisionCenter.blockers[0]?.severity,
+      "operational_attention"
+    );
   });
 
   it("never leaves Decision Center empty when there are no blockers", () => {
@@ -335,8 +373,8 @@ describe("campaign decision center", () => {
         }),
       },
       {
-        label: "Vendor IO",
-        stageHint: "vendor-io",
+        label: "Client approved + Vendor IO compliance",
+        stageHint: "deliverables",
         s: signals({
           clientIoStatus: "approved",
           vendorIoCount: 2,
@@ -429,8 +467,11 @@ describe("campaign decision center", () => {
         .join("|");
       const fp = [
         lifecycle.businessStageId,
+        lifecycle.decisionCenter.severityMode,
         lifecycle.decisionCenter.primaryAction,
         lifecycle.decisionCenter.primaryActionTab,
+        lifecycle.decisionCenter.blockers.map((b) => b.id).join(","),
+        lifecycle.decisionCenter.narrative.dependencyDetail,
         unlockKey,
         lifecycle.owner,
       ].join("::");

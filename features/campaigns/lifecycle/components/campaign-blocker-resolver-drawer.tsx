@@ -32,11 +32,13 @@ export function CampaignBlockerResolverDrawer({
 }: Props) {
   const dc = lifecycle.decisionCenter;
   const severityLabel =
-    dc.severityMode === "hard"
-      ? "Hard Block"
-      : dc.severityMode === "attention" || dc.severityMode === "waiting"
-        ? "Needs Attention"
-        : "Clear";
+    dc.severityMode === "business_blocker"
+      ? "Business Blocker"
+      : dc.severityMode === "operational_attention" || dc.severityMode === "waiting"
+        ? "Operational Attention"
+        : dc.severityMode === "optimization"
+          ? "Optimization"
+          : "Clear";
 
   return (
     <OperationalDetailSheet
@@ -81,7 +83,7 @@ export function CampaignBlockerResolverDrawer({
                 key={blocker.id}
                 className={cn(
                   "thinkway-lc-resolver-item",
-                  blocker.severity === "hard" && "is-hard"
+                  blocker.severity === "business_blocker" && "is-hard"
                 )}
               >
                 <div className="thinkway-lc-resolver-item-top">

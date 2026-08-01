@@ -3,10 +3,10 @@
 **Status:** Permanent governance rule  
 **Baseline:** [`THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md`](./THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md)  
 **BPN foundation:** [`BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md`](./BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md)  
-**Campaign Workspace baseline (canonical):** [`CAMPAIGN_WORKSPACE_BASELINE_V1.2.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.2.md)  
-**Historical:** [`CAMPAIGN_WORKSPACE_BASELINE_V1.1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.1.md) · [`CAMPAIGN_WORKSPACE_BASELINE_V1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.md)  
+**Campaign Workspace baseline (canonical):** [`CAMPAIGN_WORKSPACE_BASELINE_V1.3.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.3.md)  
+**Historical:** [`CAMPAIGN_WORKSPACE_BASELINE_V1.2.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.2.md) · [`CAMPAIGN_WORKSPACE_BASELINE_V1.1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.1.md) · [`CAMPAIGN_WORKSPACE_BASELINE_V1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.md)  
 **Effective:** 2026-08-01 (Architecture v1.0 freeze)  
-**Updated:** 2026-08-01 (Campaign Workspace Baseline v1.2 — Operational Readiness freeze)
+**Updated:** 2026-08-01 (Campaign Workspace Baseline v1.3 — Business Narrative & Operational Compliance freeze)
 
 ---
 
@@ -30,7 +30,7 @@ The section must explicitly state:
 2. **Which Stakeholder Journey(s) it extends** — Internal Ops · Commercial · Client · Vendor · Creator · Finance · Executive · AI Assistant ([doc 11](./platform-ux/11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md)).  
 3. **Which Business Process component(s) it reuses** — e.g. `lib/business-process`, stage summary, process-aware Enterprise Tabs, Decision Center, campaign process adapter, portfolio continue-into-stage patterns ([BPN foundation](./BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md)).  
 4. **Which workspace(s) are extended** — name existing surfaces; do not invent a peer product.  
-5. **Which existing baseline document(s) are referenced** — cite Architecture v1.0, BPN foundation, **Campaign Workspace Baseline v1.2**, and any module baselines.  
+5. **Which existing baseline document(s) are referenced** — cite Architecture v1.0, BPN foundation, **Campaign Workspace Baseline v1.3**, and any module baselines.  
 6. **Why it does not introduce a new navigation philosophy** — confirm Platform → Module → Business Process Navigation → Content; no parallel tab/app system.  
 7. **Why no duplicate workflow is created** — confirm the feature extends the campaign lifecycle, not a side process.  
 8. **How the feature extends the existing campaign lifecycle** — one paragraph mapping inputs/outputs to stage transitions.  
@@ -100,7 +100,18 @@ Large registers (Assignments, Client IO, Vendor IO, Deliverables, Performance, W
 **Invariant 9 — Single narrative**  
 Workspace banners carry KPIs only. Decision Center owns why / impact / unlock / action — never duplicated.
 
-Canonical reference: [`CAMPAIGN_WORKSPACE_BASELINE_V1.2.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.2.md).  
+### Business Narrative & Operational Compliance (v1.3 — Release 2.2c)
+
+**Invariant 10 — Three severities**  
+Every issue is exactly one of: Business Blocker · Operational Attention · Optimization Opportunity.
+
+**Invariant 11 — Only Business Blockers stop progression**  
+Operational Attention and Optimization never pin lifecycle progression. Vendor IO acceptance / manual delivery / missing signed copy are Operational Compliance.
+
+**Invariant 12 — Executive dependency chain**  
+Decision Center presents one story: Current → Next → Waiting → Impact → Owner → Action → Unlocks. No contradictory messaging (e.g. approved Client IO never framed as blocked).
+
+Canonical reference: [`CAMPAIGN_WORKSPACE_BASELINE_V1.3.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.3.md).  
 Regression gate (protected): `npm run test:campaign-workspace-lifecycle-os`.
 
 ---
@@ -116,7 +127,7 @@ Regression gate (protected): `npm run test:campaign-workspace-lifecycle-os`.
 | Stakeholder Journey(s) extended | e.g. Internal Ops, Commercial, Client |
 | Business Process component(s) reused | e.g. lib/business-process; Decision Center; State Strip; Process Rail; process-aware Enterprise Tabs |
 | Workspace(s) extended | e.g. Campaign Planning Workspace within Campaign Workspace |
-| Baseline documents referenced | Architecture v1.0; BPN Foundation; Campaign Workspace Baseline v1.2; Campaign Module Baseline; … |
+| Baseline documents referenced | Architecture v1.0; BPN Foundation; Campaign Workspace Baseline v1.3; Campaign Module Baseline; … |
 | No new navigation philosophy | Extends Business Process Navigation; no parallel tab/app system |
 | No duplicate workflow | Extends campaign lifecycle stage(s) above; no side process |
 | Lifecycle extension | …how this capability advances or supports the stage… |
@@ -146,7 +157,7 @@ Regression gate (protected): `npm run test:campaign-workspace-lifecycle-os`.
 
 ## Campaign Workspace Maintenance Mode
 
-After Baseline **v1.2** freeze, Campaign Workspace permits only: bug fixes · performance · accessibility · copy · additional deep-links · lifecycle extensions that preserve the baseline.  
+After Baseline **v1.3** freeze, Campaign Workspace permits only: bug fixes · performance · accessibility · copy · additional deep-links · lifecycle extensions that preserve the baseline.  
 Navigation / workspace / hero / Decision Center / lifecycle redesigns and alternative guidance systems require Architecture Reopen.
 
 ---

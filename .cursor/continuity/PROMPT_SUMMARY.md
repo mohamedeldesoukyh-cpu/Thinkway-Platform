@@ -2,7 +2,7 @@
 
 **Branch focus:** `develop` (synced with `origin/develop`).  
 **Active initiative:** **Release 2.3 — Campaign Planning Workspace** — start with Capability / UX / Spec / Compliance reviews · **no Campaign Workspace UX**  
-**Must inherit:** Campaign Workspace Baseline **v1.2** (Decision Center · Lifecycle OS · Operational Readiness) · BPN · Architecture v1.0.
+**Must inherit:** Campaign Workspace Baseline **v1.3** (Decision Center executive briefing · three severities · Vendor IO operational compliance) · BPN · Architecture v1.0.
 
 **Operational effort gate:** Every capability spec must state tasks eliminated · simplified · remaining human decisions.
 
@@ -31,23 +31,22 @@
 2. Production `REDIS_URL` / dedicated Dev Redis / DNS as needed
 3. Do **not** merge to `main` or deploy Production without explicit approval
 
-## Campaign Workspace Baseline v1.2 — FROZEN (Release 2.2c · 2026-08-01)
+## Campaign Workspace Baseline v1.3 — FROZEN (Release 2.2c · 2026-08-01)
 
-- **Canonical:** `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.2.md`
-- **Freeze tip:** `2c88544c` — `feat(campaign): finalize Campaign Workspace Lifecycle OS operational readiness`
-- **Historical:** v1.1 · v1.0 superseded
+- **Canonical:** `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.3.md`
+- **Historical:** v1.2 · v1.1 · v1.0 superseded
 - **Class:** Protected implementation baseline — **Maintenance Mode**
-- **Includes:** Decision Center operational inbox · progressive registers · exact-record deep-links · single narrative · executive scan
+- **Includes:** Executive dependency chain · three severities · Vendor IO = Operational Compliance (never pins progression) · collapsible Decision Center · lean story cards · progressive registers · deep-links
 - **Rule:** No Campaign Workspace redesign / further UX refinement without Architecture Reopen
 - **Permitted:** bug · perf · a11y · copy · additional deep-links · lifecycle extensions that preserve baseline
-- **Compliance:** `PLATFORM_ARCHITECTURE_COMPLIANCE.md` invariants 1–9 (v1.2)
+- **Compliance:** `PLATFORM_ARCHITECTURE_COMPLIANCE.md` invariants 1–12 (v1.3)
 - **Regression:** `npm run test:campaign-workspace-lifecycle-os`
-- **Technical debt (backlog):** enterprise browser soak · Portfolio/Notifications deep-link adoption · optional `?audit=`
+- **Technical debt (backlog):** enterprise browser soak · Portfolio/Notifications deep-link adoption · optional `?audit=` · Optimization Opportunity wiring
 
 ## Active — Release 2.3 Campaign Planning Workspace
 
 - **Status:** Review gate — Business Capability → Product UX → Spec approval → Architecture Compliance → Implementation
-- **Role:** Planning stage of the Campaign Lifecycle (inherits Campaign Workspace Baseline **v1.2**)
+- **Role:** Planning stage of the Campaign Lifecycle (inherits Campaign Workspace Baseline **v1.3**)
 - **Must not** introduce new navigation philosophy; extend Lifecycle OS + BPN only
 - Spec must include operational effort reduction (eliminated / simplified / human)
 
@@ -66,7 +65,7 @@
 
 - **Milestone:** `docs/architecture/THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md`
 - **BPN Foundation:** protected
-- **Preserves:** Campaign Workspace Baseline v1.2 · Campaign Module Baseline · BPN · all business logic / APIs / DB
+- **Preserves:** Campaign Workspace Baseline v1.3 · Campaign Module Baseline · BPN · all business logic / APIs / DB
 
 ## Working agreement
 

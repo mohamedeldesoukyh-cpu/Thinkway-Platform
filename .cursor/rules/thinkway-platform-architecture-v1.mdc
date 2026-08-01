@@ -1,5 +1,5 @@
 ---
-description: Thinkway Enterprise Platform Architecture v1.0 — frozen baseline, BPN, Campaign Workspace OS v1.2 & compliance gate
+description: Thinkway Enterprise Platform Architecture v1.0 — frozen baseline, BPN, Campaign Workspace OS v1.3 & compliance gate
 alwaysApply: true
 ---
 
@@ -7,8 +7,8 @@ alwaysApply: true
 
 **Milestone:** `docs/architecture/THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md`  
 **BPN foundation:** `docs/architecture/BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md`  
-**Campaign Workspace OS (canonical):** `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.2.md` — Lifecycle OS / Decision Center / Operational Readiness; **Maintenance Mode**; no redesign without Architecture Reopen  
-**Historical:** `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.1.md` · `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.md`  
+**Campaign Workspace OS (canonical):** `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.3.md` — Lifecycle OS / Decision Center executive briefing / Operational Compliance; **Maintenance Mode**; no redesign without Architecture Reopen  
+**Historical:** `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.2.md` · `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.1.md` · `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.md`  
 **Compliance template:** `docs/architecture/PLATFORM_ARCHITECTURE_COMPLIANCE.md`  
 **Package:** `docs/architecture/platform-ux/` (docs 01–12 frozen)
 
@@ -26,23 +26,25 @@ Thinkway is a **campaign-centric enterprise operating system**. The campaign is 
 - Workspace philosophy / Campaign Lifecycle Architecture (doc 12)
 - Stakeholder Journey Architecture (doc 11)
 - Enterprise UX standards / Financial Display Standard
-- Campaign Module Baseline + BPN Foundation + **Campaign Workspace Baseline v1.2**
+- Campaign Module Baseline + BPN Foundation + **Campaign Workspace Baseline v1.3**
 
 **No architectural redesign** unless Product formally reopens Architecture v1.0.  
 **No new architecture docs or UX redesign initiatives** unless Architecture Reopen is approved.
 
-## Campaign Workspace v1.2 — mandatory preserve
+## Campaign Workspace v1.3 — mandatory preserve
 
 Future Campaign Workspace changes **must** satisfy:
 
 1. Preserve **Business Stage SSOT**  
 2. Preserve **Decision Center** (only operational guidance component — extend, do not replace)  
 3. Preserve **Lifecycle OS**  
-4. Preserve **Next Action Journey** (executable, stage-specific, exact-record CTAs)  
-5. Preserve **Progressive Disclosure** (Lifecycle Details **and** collapsed operational registers)  
-6. Preserve **Workspace-as-View** philosophy  
+4. Preserve **three-severity model** (Business Blocker · Operational Attention · Optimization)  
+5. Preserve **Vendor IO operational-compliance semantics** (never pin progression alone)  
+6. Preserve **Next Action Journey** (executable, stage-specific, exact-record CTAs)  
+7. Preserve **Progressive Disclosure** (Decision Center · Lifecycle Details · collapsed operational registers)  
+8. Preserve **Workspace-as-View** philosophy  
 
-Also preserve: shared lifecycle object · Hard Block ≠ Needs Attention · object-specific blockers · KPI-only workspace banners · deep-link matrix.
+Also preserve: shared lifecycle object · Hard Block ≠ Needs Attention · object-specific blockers · KPI-only workspace banners · deep-link matrix · executive dependency chain.
 
 **Do not redesign Campaign Workspace without Architecture Reopen approval.**  
 **Do not perform further Campaign Workspace UX refinement** — Maintenance Mode only.
@@ -63,14 +65,14 @@ Include section **Platform Architecture Compliance** covering:
 2. Stakeholder Journey(s) extended  
 3. Business Process component(s) reused (`lib/business-process`, Decision Center, process rail, state strip, process-aware tabs, etc.)  
 4. Why no new navigation philosophy is introduced  
-5. Workspace(s) extended · baselines referenced (incl. Campaign Workspace v1.2) · no duplicate workflow · lifecycle extension paragraph  
+5. Workspace(s) extended · baselines referenced (incl. Campaign Workspace v1.3) · no duplicate workflow · lifecycle extension paragraph  
 6. Operational effort reduction (eliminated / simplified / human)  
 7. Campaign Workspace invariants preserved when touching Campaign surfaces  
 
 ## Implementation posture
 
 - Architecture-first work is **complete**. Prefer **capability specifications** then functional delivery.  
-- Extend BPN + Campaign Workspace Baseline **v1.2**; do not reinvent them.  
+- Extend BPN + Campaign Workspace Baseline **v1.3**; do not reinvent them.  
 - **Active initiative:** Release 2.3 — Campaign Planning Workspace — start with Business Capability Review → Product UX Review → Capability Spec approval → Architecture Compliance → Implementation. **No Campaign Workspace UX work.**  
-- Planning Workspace = Planning stage of Campaign Lifecycle; must inherit Campaign Workspace Lifecycle OS v1.2 (Decision Center; progressive registers; no new nav/layouts/workflows/competing guidance).  
+- Planning Workspace = Planning stage of Campaign Lifecycle; must inherit Campaign Workspace Lifecycle OS v1.3 (Decision Center briefing; three severities; progressive registers; no new nav/layouts/workflows/competing guidance).  
 - After 2.3: Media Plan Copilot → Client/Vendor/Creator journeys → Reporting → Notifications → Analytics.

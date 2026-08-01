@@ -12,7 +12,16 @@ import type {
   BusinessProcessWaitingParty,
 } from "@/lib/business-process/types";
 
-export type DecisionSeverity = "hard" | "attention";
+/**
+ * Three business severity levels (exactly one per issue):
+ * - business_blocker — stops campaign progression
+ * - operational_attention — campaign continues; ops must follow up
+ * - optimization — no operational impact
+ */
+export type DecisionSeverity =
+  | "business_blocker"
+  | "operational_attention"
+  | "optimization";
 
 export type DecisionObjectKind =
   | "client_io"
@@ -74,15 +83,40 @@ export type UnlockPreview = {
   label: string;
 };
 
+/** Executive dependency chain — one business story for the Decision Center. */
+export type DecisionNarrative = {
+  currentStageLabel: string;
+  currentStageComplete: boolean;
+  nextStageLabel: string | null;
+  dependencyKind: "Business dependency" | "Operational Follow-up" | "Optimization" | "None";
+  dependencyDetail: string;
+  progressionAllowed: boolean;
+  progressionLabel: string;
+  businessImpact: string;
+  ownerLabel: string;
+  waitingSince: string;
+  recommendedAction: string;
+  unlocksAfter: string;
+};
+
 export type CampaignDecisionCenter = {
   /** Operational count / clear posture — never a lifecycle essay. */
   headline: string;
-  severityMode: "hard" | "attention" | "waiting" | "clear" | "progress";
+  severityMode:
+    | "business_blocker"
+    | "operational_attention"
+    | "optimization"
+    | "waiting"
+    | "clear"
+    | "progress";
+  /** Executive dependency chain. */
+  narrative: DecisionNarrative;
   /** Resolver / a11y — not shown in the inbox strip. */
   continueReason: string;
   remainingBlockerLabels: string[];
   unlockHeadline: string;
   unlocks: UnlockPreview[];
+  /** Story-filtered issues (highest severity tier / one dependency family). */
   blockers: DecisionBlocker[];
   primaryAction: string;
   primaryActionTab: CampaignWorkspaceTabId;
@@ -103,6 +137,8 @@ export type DecisionCenterObjects = {
     document_number: string | null;
     status: string;
     influencer_name: string;
+    delivery_method?: string | null;
+    attachment_url?: string | null;
   }>;
   lines: Array<{
     id: string;
@@ -124,6 +160,12 @@ export type DecisionCenterObjects = {
     status: string;
   }>;
   campaignDocumentNumber: string | null;
+};
+
+export const DECISION_SEVERITY_LABEL: Record<DecisionSeverity, string> = {
+  business_blocker: "Business Blocker",
+  operational_attention: "Operational Attention",
+  optimization: "Optimization Opportunity",
 };
 
 export const DECISION_CLEAR_PATH_MESSAGE =
@@ -311,6 +353,168 @@ function makeBlocker(
   };
 }
 
+const STORY_KIND_PRIORITY: DecisionObjectKind[] = [
+  "po",
+  "client_io",
+  "assignment",
+  "vendor_io",
+  "deliverable",
+  "invoice",
+  "campaign",
+  "creator",
+];
+
+/** Keep one business story — highest severity tier, one dependency family. */
+export function selectStoryBlockers(
+  items: DecisionBlocker[],
+  stageId: CampaignWorkspaceTabId
+): DecisionBlocker[] {
+  if (items.length === 0) return [];
+  const blockers = items.filter((b) => b.severity === "business_blocker");
+  const attention = items.filter((b) => b.severity === "operational_attention");
+  const optimization = items.filter((b) => b.severity === "optimization");
+  const pool =
+    blockers.length > 0
+      ? blockers
+      : attention.length > 0
+        ? attention
+        : optimization;
+  if (pool.length <= 1) return pool;
+
+  const stagePreferred: DecisionObjectKind | null =
+    stageId === "client-io"
+      ? "client_io"
+      : stageId === "vendor-io"
+        ? "vendor_io"
+        : stageId === "deliverables"
+          ? "deliverable"
+          : stageId === "billing"
+            ? "invoice"
+            : stageId === "lines"
+              ? "assignment"
+              : null;
+
+  // After Client IO approval, Vendor IO compliance is the executive story even when
+  // the business stage has already advanced into Deliverables / Performance / Finance.
+  if (
+    pool.some((b) => b.objectKind === "vendor_io") &&
+    pool.every((b) => b.severity !== "business_blocker")
+  ) {
+    return pool.filter((b) => b.objectKind === "vendor_io");
+  }
+
+  const preferredKind =
+    (stagePreferred && pool.some((b) => b.objectKind === stagePreferred)
+      ? stagePreferred
+      : null) ??
+    STORY_KIND_PRIORITY.find((kind) => pool.some((b) => b.objectKind === kind)) ??
+    pool[0]!.objectKind;
+
+  return pool.filter((b) => b.objectKind === preferredKind);
+}
+
+export function buildDecisionNarrative(input: {
+  stageId: CampaignWorkspaceTabId;
+  stageLabel: string;
+  signals: CampaignProcessSignals;
+  storyBlockers: DecisionBlocker[];
+  primaryAction: string;
+  daysWaitingLabel: string;
+  cioRef: string;
+}): DecisionNarrative {
+  const { signals, storyBlockers, primaryAction, daysWaitingLabel, cioRef } = input;
+  const primary = storyBlockers[0] ?? null;
+  const clientApproved = signals.clientIoStatus === "approved";
+  const waitingClient =
+    signals.clientIoStatus === "sent" ||
+    signals.clientIoStatus === "under_client_review";
+
+  if (!primary) {
+    return {
+      currentStageLabel: input.stageLabel,
+      currentStageComplete: true,
+      nextStageLabel: null,
+      dependencyKind: "None",
+      dependencyDetail: "No open business dependency.",
+      progressionAllowed: true,
+      progressionLabel: "Campaign is progressing normally",
+      businessImpact: "None",
+      ownerLabel: "Operations",
+      waitingSince: daysWaitingLabel,
+      recommendedAction: primaryAction,
+      unlocksAfter: "Continue current stage work",
+    };
+  }
+
+  const isBlocker = primary.severity === "business_blocker";
+  const isVendorOps = primary.objectKind === "vendor_io";
+
+  // Never imply Client IO is the problem when it is already approved.
+  if (clientApproved && isVendorOps) {
+    return {
+      currentStageLabel: "Client IO",
+      currentStageComplete: true,
+      nextStageLabel: "Vendor IO",
+      dependencyKind: "Operational Follow-up",
+      dependencyDetail: primary.reason,
+      progressionAllowed: true,
+      progressionLabel: "Campaign may continue",
+      businessImpact: primary.impact,
+      ownerLabel: primary.owner,
+      waitingSince: primary.sinceLabel,
+      recommendedAction: primary.primaryAction,
+      unlocksAfter: primary.unlockLabel,
+    };
+  }
+
+  if (waitingClient || primary.id === "cio_pending") {
+    return {
+      currentStageLabel: "Client IO",
+      currentStageComplete: false,
+      nextStageLabel: "Vendor IO",
+      dependencyKind: "Business dependency",
+      dependencyDetail: `${cioRef} awaiting client approval`,
+      progressionAllowed: false,
+      progressionLabel: "Campaign cannot advance",
+      businessImpact: primary.impact,
+      ownerLabel: primary.owner,
+      waitingSince: primary.sinceLabel,
+      recommendedAction: primary.primaryAction,
+      unlocksAfter: primary.unlockLabel,
+    };
+  }
+
+  return {
+    currentStageLabel: input.stageLabel,
+    currentStageComplete: !isBlocker,
+    nextStageLabel:
+      primary.objectKind === "vendor_io"
+        ? "Deliverables"
+        : primary.objectKind === "client_io"
+          ? "Vendor IO"
+          : primary.objectKind === "deliverable"
+            ? "Performance"
+            : primary.objectKind === "invoice"
+              ? "Close-out"
+              : null,
+    dependencyKind: isBlocker
+      ? "Business dependency"
+      : primary.severity === "optimization"
+        ? "Optimization"
+        : "Operational Follow-up",
+    dependencyDetail: primary.reason,
+    progressionAllowed: !isBlocker,
+    progressionLabel: isBlocker
+      ? "Campaign cannot advance"
+      : "Campaign may continue",
+    businessImpact: primary.impact,
+    ownerLabel: primary.owner,
+    waitingSince: primary.sinceLabel,
+    recommendedAction: primary.primaryAction,
+    unlocksAfter: primary.unlockLabel,
+  };
+}
+
 /**
  * Build structured Decision Center items from lifecycle signals + workspace objects.
  */
@@ -335,7 +539,6 @@ export function buildDecisionCenter(input: {
     stageId,
     stageLabel,
     businessState,
-    enforcement,
     owner,
     waitingFor,
     nextAction,
@@ -351,7 +554,6 @@ export function buildDecisionCenter(input: {
 
   const since = daysLabel(daysWaiting);
   const blockers: DecisionBlocker[] = [];
-  const hard = enforcement === "hard";
   const cio = objects?.clientIo ?? null;
   const cioRef = hashRef(cio?.document_number, "Client IO");
   const cioFocus: DecisionFocusQuery | null = cio
@@ -368,12 +570,13 @@ export function buildDecisionCenter(input: {
         objectRef: hashRef(objects?.campaignDocumentNumber, "PO"),
         recordId: null,
         title: "PO limit exceeded",
-        severity: "hard",
+        severity: "business_blocker",
         owner: "Finance",
         waitingFor: "Finance",
         waitingLabel: "PO capacity",
         sinceLabel: since,
         reason: "Commercial spend exceeds the purchase-order ceiling.",
+        impact: "Campaign cannot legally continue commercial spend until PO capacity is restored.",
         primaryAction: "Review PO Limit",
         actionTab: "billing",
         focusQuery: null,
@@ -393,12 +596,14 @@ export function buildDecisionCenter(input: {
         objectRef: cioRef,
         recordId: cio?.id ?? null,
         title: "Waiting for Client Feedback review",
-        severity: hard ? "hard" : "attention",
+        severity: "business_blocker",
         owner: "Commercial",
         waitingFor: "Commercial",
         waitingLabel: "Client Feedback",
         sinceLabel: since,
-        reason: `Rework ${cioRef} — Vendor IO send stays disabled until approved.`,
+        reason: `Rework ${cioRef} — commercial terms were rejected.`,
+        impact: "Campaign cannot advance until Client IO is revised and re-approved.",
+        unlockLabel: "Vendor IO and creator work unlock after re-approval.",
         primaryAction: `Review ${cioRef}`,
         actionTab: "client-io",
         focusQuery: cioFocus,
@@ -413,7 +618,7 @@ export function buildDecisionCenter(input: {
     signals.clientIoStatus === "under_client_review";
 
   if (waitingClient) {
-    // Single narrative: Client approval is the blocker; Vendor IO impact is stated once.
+    // Single narrative: Client approval is the business blocker; Vendor IO impact stated once.
     pushUnique(
       blockers,
       makeBlocker({
@@ -423,13 +628,13 @@ export function buildDecisionCenter(input: {
         objectRef: cioRef,
         recordId: cio?.id ?? null,
         title: "Client approval pending",
-        severity: "attention",
+        severity: "business_blocker",
         owner: "Commercial",
         waitingFor: "Client",
         waitingLabel: "Client",
         sinceLabel: since,
         reason: "Client has not approved commercial terms.",
-        impact: "Vendor IO cannot be sent until Client IO is approved.",
+        impact: "Campaign cannot advance. Vendor IO cannot be sent until Client IO is approved.",
         unlockLabel: "Vendor IO send unlocks for creators.",
         primaryAction: `Open ${cioRef}`,
         actionTab: "client-io",
@@ -455,12 +660,13 @@ export function buildDecisionCenter(input: {
         objectRef: cioRef,
         recordId: cio?.id ?? null,
         title: "Waiting for Client IO generation",
-        severity: "attention",
+        severity: "business_blocker",
         owner: "Commercial",
         waitingFor: "Commercial",
         waitingLabel: "Generation",
         sinceLabel: since,
         reason: "Generate Client IO to package commercial terms for approval.",
+        impact: "Campaign cannot advance past commercial packaging.",
         primaryAction: cio ? `Open ${cioRef}` : "Generate Client IO",
         actionTab: "client-io",
         focusQuery: cioFocus,
@@ -480,12 +686,13 @@ export function buildDecisionCenter(input: {
         objectRef: cioRef,
         recordId: cio?.id ?? null,
         title: "Waiting to send Client IO",
-        severity: "attention",
+        severity: "business_blocker",
         owner: "Commercial",
         waitingFor: "Commercial",
         waitingLabel: "Send",
         sinceLabel: since,
         reason: `Send ${cioRef} so the client can approve commercial terms.`,
+        impact: "Campaign cannot advance until Client review begins.",
         primaryAction: `Send ${cioRef}`,
         actionTab: "client-io",
         focusQuery: cioFocus,
@@ -506,12 +713,13 @@ export function buildDecisionCenter(input: {
         objectRef: campaignRef,
         recordId: null,
         title: "Waiting for first assignment",
-        severity: "attention",
+        severity: "business_blocker",
         owner: "Operations",
         waitingFor: "Operations",
         waitingLabel: "Assignments",
         sinceLabel: since,
         reason: "Complete Assignments before Client IO can be prepared.",
+        impact: "Campaign cannot advance into commercial packaging.",
         primaryAction: "Open Assignments",
         actionTab: "lines",
         focusQuery: null,
@@ -532,12 +740,13 @@ export function buildDecisionCenter(input: {
           objectRef: lineRef,
           recordId: incomplete.id,
           title: "Waiting for vendor assignment",
-          severity: "attention",
+          severity: "operational_attention",
           owner: "Operations",
           waitingFor: "Operations",
           waitingLabel: "Vendor link",
           sinceLabel: since,
           reason: `${lineRef} has no linked creator.`,
+          impact: "Assignment packaging is incomplete for this line.",
           primaryAction: `Open ${lineRef}`,
           actionTab: "lines",
           focusQuery: { key: "line", value: incomplete.id },
@@ -548,10 +757,10 @@ export function buildDecisionCenter(input: {
     }
   }
 
+  // Vendor IO = Operational Compliance only — never a business blocker.
   if (
     signals.clientIoStatus === "approved" &&
-    signals.vendorIoCount === 0 &&
-    stageId === "vendor-io"
+    signals.vendorIoCount === 0
   ) {
     pushUnique(
       blockers,
@@ -561,18 +770,20 @@ export function buildDecisionCenter(input: {
         objectLabel: "Vendor IO",
         objectRef: "Vendor IO",
         recordId: null,
-        title: "Waiting for Vendor IO issuance",
-        severity: "attention",
+        title: "Vendor IO documentation outstanding",
+        severity: "operational_attention",
         owner: "Operations",
         waitingFor: "Operations",
         waitingLabel: "Issuance",
         sinceLabel: since,
-        reason: `${cioRef} is approved — issue Vendor IO so creators can confirm.`,
+        reason: `Issue Vendor IO documentation (${cioRef} approved).`,
+        impact: "Ops follow-up only — campaign work may continue.",
+        unlockLabel: "Compliance trail completes when Vendor IOs are recorded.",
         primaryAction: "Issue Vendor IO",
         actionTab: "vendor-io",
         focusQuery: null,
         relatedLabel: null,
-        expectedResult: "Vendor IO ready to send for approval.",
+        expectedResult: "Vendor IO ready for creator acknowledgement.",
       })
     );
   }
@@ -593,40 +804,64 @@ export function buildDecisionCenter(input: {
     const vioRef = first
       ? hashRef(first.document_number, "Vendor IO")
       : `${pending} pending`;
+    const manualCount = pendingRows.filter(
+      (row) => row.delivery_method === "manual"
+    ).length;
+    const missingSigned = pendingRows.filter(
+      (row) => !row.attachment_url?.trim()
+    ).length;
+    const complianceBits: string[] = [];
+    if (pending > 0) {
+      complianceBits.push(
+        pending === 1
+          ? "1 acknowledgement pending"
+          : `${pending} acknowledgements pending`
+      );
+    }
+    if (manualCount > 0) {
+      complianceBits.push(
+        `${manualCount} manual deliver${manualCount === 1 ? "y" : "ies"}`
+      );
+    }
+    if (missingSigned > 0) {
+      complianceBits.push(
+        `${missingSigned} signed agreement${missingSigned === 1 ? "" : "s"} missing`
+      );
+    }
     // One summary card for many creators — never dump dozens into Decision Center.
     pushUnique(
       blockers,
       makeBlocker({
         id: first ? `vio_pending_${first.id}` : "vio_pending",
         objectKind: "vendor_io",
-        objectLabel: "Vendor Approval",
+        objectLabel: "Vendor IO",
         objectRef:
           pending === 1
             ? vioRef
             : `${pending} Vendor IOs`,
         recordId: first?.id ?? null,
-        title: "Vendor acceptance pending",
-        severity: "attention",
+        title: "Vendor IO operational follow-up",
+        severity: "operational_attention",
         owner: "Operations",
-        waitingFor: "Vendor",
+        waitingFor: "Operations",
         waitingLabel:
           pending === 1
             ? first?.influencer_name ?? "Vendor"
-            : `${first?.influencer_name ?? "Vendors"} +${pending - 1}`,
+            : `${pending} creators`,
         sinceLabel: since,
         reason:
-          pending === 1
-            ? "Vendor has not accepted terms."
-            : `${pending} creators have not accepted Vendor IO terms.`,
-        impact: "Deliverables cannot start until Vendor IO is accepted.",
-        unlockLabel: "Deliverable uploads unlock after acceptance.",
+          complianceBits.length > 0
+            ? complianceBits.join(" · ")
+            : `${pending} creators have outstanding Vendor IO documentation.`,
+        impact: "Ops follow-up only — campaign work may continue.",
+        unlockLabel: "Acknowledgements and signed copies complete the compliance trail.",
         primaryAction:
-          pending === 1 && first ? `Open ${vioRef}` : "Open Vendor IO",
+          pending === 1 && first ? `Open ${vioRef}` : "Open Vendor IO Register",
         actionTab: "vendor-io",
         focusQuery: first ? { key: "io", value: first.id } : null,
         relatedLabel:
           pending > 1 ? `${pending} creators` : first?.influencer_name ?? null,
-        expectedResult: "Vendor approval unlocks deliverable work.",
+        expectedResult: "Vendor IO documentation recorded.",
       })
     );
   }
@@ -645,13 +880,13 @@ export function buildDecisionCenter(input: {
         objectRef: delRef,
         recordId: row.id,
         title: waiting === "Overdue" ? "Deliverable overdue" : waiting,
-        severity: "attention",
+        severity: "operational_attention",
         owner: "Operations",
         waitingFor: "Operations",
         waitingLabel: row.influencer_name || waiting,
         sinceLabel: since,
         reason: `${waiting} — ${row.title || row.display_status}.`,
-        impact: "Performance tracking and billing may slip.",
+        impact: "Schedule risk — campaign may continue.",
         unlockLabel: "Delivery schedule returns on track.",
         primaryAction: `Open ${delRef}`,
         actionTab: "deliverables",
@@ -671,13 +906,13 @@ export function buildDecisionCenter(input: {
         objectRef: `${overdueRows.length} overdue`,
         recordId: first.id,
         title: "Deliverables overdue",
-        severity: "attention",
+        severity: "operational_attention",
         owner: "Operations",
         waitingFor: "Operations",
         waitingLabel: `${first.influencer_name} +${overdueRows.length - 1}`,
         sinceLabel: since,
         reason: `${overdueRows.length} deliverables are past due.`,
-        impact: "Performance tracking and billing may slip.",
+        impact: "Schedule risk — campaign may continue.",
         unlockLabel: "Delivery schedule returns on track.",
         primaryAction: "Open Deliverables",
         actionTab: "deliverables",
@@ -696,7 +931,7 @@ export function buildDecisionCenter(input: {
         objectRef: `${signals.overdueDeliverableCount} overdue`,
         recordId: null,
         title: "Deliverables overdue",
-        severity: "attention",
+        severity: "operational_attention",
         owner: "Operations",
         waitingFor: "Operations",
         waitingLabel: "Overdue",
@@ -704,6 +939,7 @@ export function buildDecisionCenter(input: {
         reason: `${signals.overdueDeliverableCount} deliverable${
           signals.overdueDeliverableCount === 1 ? "" : "s"
         } past due.`,
+        impact: "Schedule risk — campaign may continue.",
         primaryAction: "Open Deliverables",
         actionTab: "deliverables",
         focusQuery: null,
@@ -728,12 +964,13 @@ export function buildDecisionCenter(input: {
         objectRef: "Invoice",
         recordId: null,
         title: "Waiting for first invoice",
-        severity: "attention",
+        severity: "operational_attention",
         owner: "Finance",
         waitingFor: "Finance",
         waitingLabel: "Invoice generation",
         sinceLabel: since,
         reason: "Generate the first invoice to start collections.",
+        impact: "Campaign may continue. Finance follow-up starts collections.",
         primaryAction: "Open Finance",
         actionTab: "billing",
         focusQuery: null,
@@ -757,7 +994,7 @@ export function buildDecisionCenter(input: {
         objectRef: invRef,
         recordId: openInvoice?.id ?? null,
         title: "Waiting for Payment",
-        severity: "attention",
+        severity: "operational_attention",
         owner: "Finance",
         waitingFor: "Finance",
         waitingLabel: "Payment",
@@ -765,6 +1002,7 @@ export function buildDecisionCenter(input: {
         reason: openInvoice
           ? `${invRef} has an outstanding balance.`
           : "Outstanding balances need Finance follow-up.",
+        impact: "Campaign may continue. Collections follow-up remains outstanding.",
         primaryAction: openInvoice ? `Open ${invRef}` : "Open Finance",
         actionTab: "billing",
         focusQuery: openInvoice
@@ -793,6 +1031,11 @@ export function buildDecisionCenter(input: {
       continue;
     }
     const tab = actionTabFromLabel(trimmed, nextActionTab);
+    const isHardWorkspace =
+      hardBlockers.length > 0 ||
+      lower.includes("po") ||
+      lower.includes("approval required") ||
+      lower.includes("contract required");
     pushUnique(
       blockers,
       makeBlocker({
@@ -802,7 +1045,7 @@ export function buildDecisionCenter(input: {
         objectRef: hashRef(objects?.campaignDocumentNumber, "Campaign"),
         recordId: null,
         title: trimmed.replace(/\.$/, ""),
-        severity: hard || hardBlockers.length > 0 ? "hard" : "attention",
+        severity: isHardWorkspace ? "business_blocker" : "operational_attention",
         owner,
         waitingFor: resolveWaitingFor(waitingFor, owner),
         waitingLabel: "Resolution",
@@ -830,13 +1073,24 @@ export function buildDecisionCenter(input: {
       continue;
     }
     if (lower.includes("campaign created")) continue;
+    // Progress markers are not Decision Center issues.
+    if (
+      lower.includes("in progress") ||
+      lower.includes("performance active") ||
+      lower.includes("underway")
+    ) {
+      continue;
+    }
     if (lower.includes("client") && blockers.some((b) => b.objectKind === "client_io")) {
       continue;
     }
-    if (lower.includes("vendor") && blockers.some((b) => b.objectKind === "vendor_io")) {
-      continue;
-    }
+    // Vendor requirements are operational compliance — never invent a business blocker here.
+    if (lower.includes("vendor")) continue;
     const tab = actionTabFromLabel(label, stageId);
+    const missingIsBlocker =
+      lower.includes("client") ||
+      lower.includes("assignment") ||
+      lower.includes("po");
     pushUnique(
       blockers,
       makeBlocker({
@@ -860,7 +1114,7 @@ export function buildDecisionCenter(input: {
             : hashRef(objects?.campaignDocumentNumber, label),
         recordId: tab === "client-io" ? cio?.id ?? null : null,
         title: `Waiting for ${label}`,
-        severity: "attention",
+        severity: missingIsBlocker ? "business_blocker" : "operational_attention",
         owner,
         waitingFor: resolveWaitingFor(waitingFor, owner),
         waitingLabel: label,
@@ -875,38 +1129,47 @@ export function buildDecisionCenter(input: {
     );
   }
 
-  const hardItems = blockers.filter((b) => b.severity === "hard");
-  const attentionItems = blockers.filter((b) => b.severity === "attention");
+  const storyBlockers = selectStoryBlockers(blockers, stageId);
+  const blockerItems = storyBlockers.filter((b) => b.severity === "business_blocker");
+  const attentionItems = storyBlockers.filter(
+    (b) => b.severity === "operational_attention"
+  );
+  const optimizationItems = storyBlockers.filter((b) => b.severity === "optimization");
 
   let severityMode: CampaignDecisionCenter["severityMode"] = "progress";
-  const issueWord = hardItems.length > 0 ? "Critical Issue" : "Operational Item";
   let headline =
-    blockers.length === 0
+    storyBlockers.length === 0
       ? `Working in ${stageLabel}`
-      : `${issueWord}${blockers.length === 1 ? "" : "s"} (${blockers.length})`;
+      : blockerItems.length > 0
+        ? `Business Blocker${blockerItems.length === 1 ? "" : "s"} (${blockerItems.length})`
+        : attentionItems.length > 0
+          ? `Operational Attention (${attentionItems.length})`
+          : `Optimization Opportunity${optimizationItems.length === 1 ? "" : "ies"} (${optimizationItems.length})`;
 
-  if (businessState === "blocked" || hardItems.length > 0) {
-    severityMode = "hard";
-  } else if (businessState === "needs_attention" || attentionItems.length > 0) {
-    severityMode = "attention";
+  if (blockerItems.length > 0 || businessState === "blocked") {
+    severityMode = "business_blocker";
+  } else if (attentionItems.length > 0 || businessState === "needs_attention") {
+    severityMode = "operational_attention";
+  } else if (optimizationItems.length > 0) {
+    severityMode = "optimization";
   } else if (businessState === "waiting") {
     severityMode = "waiting";
   } else if (businessState === "completed" || businessState === "closed") {
     severityMode = "clear";
     headline = "Campaign lifecycle complete";
   } else if (businessState === "draft") {
-    severityMode = blockers.length > 0 ? "attention" : "progress";
-    if (blockers.length === 0) headline = "Campaign draft";
-  } else if (blockers.length === 0) {
+    severityMode = storyBlockers.length > 0 ? "operational_attention" : "progress";
+    if (storyBlockers.length === 0) headline = "Campaign draft";
+  } else if (storyBlockers.length === 0) {
     severityMode = "clear";
   }
 
   const refinedFallback = refineGenericAction(nextAction, stageId, signals);
-  const primary = blockers[0]
+  const primary = storyBlockers[0]
     ? {
-        primaryAction: blockers[0].primaryAction,
-        actionTab: blockers[0].actionTab,
-        focusQuery: blockers[0].focusQuery,
+        primaryAction: storyBlockers[0].primaryAction,
+        actionTab: storyBlockers[0].actionTab,
+        focusQuery: storyBlockers[0].focusQuery,
       }
     : {
         primaryAction: refinedFallback,
@@ -919,9 +1182,19 @@ export function buildDecisionCenter(input: {
       ? "No operational items. Campaign lifecycle is complete."
       : DECISION_CLEAR_PATH_MESSAGE;
 
+  const narrative = buildDecisionNarrative({
+    stageId,
+    stageLabel,
+    signals,
+    storyBlockers,
+    primaryAction: primary.primaryAction,
+    daysWaitingLabel: since,
+    cioRef,
+  });
+
   const continueReason =
-    blockers.length > 0
-      ? blockers[0].reason
+    storyBlockers.length > 0
+      ? narrative.dependencyDetail
       : businessState === "waiting"
         ? `Waiting for ${waitingFor === "None" ? "the next stakeholder" : waitingFor}.`
         : clearPathMessage;
@@ -931,17 +1204,18 @@ export function buildDecisionCenter(input: {
   return {
     headline,
     severityMode,
+    narrative,
     continueReason,
-    remainingBlockerLabels: blockers.map(
+    remainingBlockerLabels: storyBlockers.map(
       (b) => `${b.objectLabel} ${b.objectRef} · ${b.waitingLabel}`
     ),
     unlockHeadline,
     unlocks,
-    blockers,
+    blockers: storyBlockers,
     primaryAction: primary.primaryAction,
     primaryActionTab: primary.actionTab,
     primaryFocusQuery: primary.focusQuery,
-    openResolver: blockers.length > 0,
+    openResolver: storyBlockers.length > 0,
     clearPathMessage,
   };
 }
@@ -1017,7 +1291,9 @@ export function refineGenericAction(
   if (lower === "manage deliverables") return "Open Deliverables";
   if (lower === "monitor performance") return "Open Performance";
   if (lower === "issue vendor io") return "Issue Vendor IO";
-  if (lower === "follow up vendor io") return "Open Vendor IO";
+  if (lower === "follow up vendor io" || lower === "open vendor io register") {
+    return "Open Vendor IO Register";
+  }
   if (lower === "review client io") return "Open Client IO";
   if (lower === "send client io") return "Send Client IO";
   if (lower === "review campaign status") return "Open Overview";
@@ -1065,6 +1341,14 @@ export function decisionObjectsFromWorkspace(workspace: {
       document_number: row.document_number,
       status: row.status,
       influencer_name: row.influencer_name,
+      delivery_method:
+        "delivery_method" in row
+          ? ((row as { delivery_method?: string | null }).delivery_method ?? null)
+          : null,
+      attachment_url:
+        "attachment_url" in row
+          ? ((row as { attachment_url?: string | null }).attachment_url ?? null)
+          : null,
     })),
     lines: (workspace.lines ?? []).map((row) => ({
       id: row.id,

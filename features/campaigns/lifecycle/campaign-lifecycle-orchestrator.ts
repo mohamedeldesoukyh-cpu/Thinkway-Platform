@@ -719,27 +719,16 @@ export function buildWorkspaceGuidance(
   }
 
   if (activeTab === "deliverables") {
-    const vioSignal = lifecycle.processCue.stageSignals["vendor-io"] ?? "upcoming";
-    if (
-      lifecycle.businessStageId !== "deliverables" &&
-      (vioSignal === "upcoming" ||
-        vioSignal === "waiting_client" ||
-        lifecycle.businessStageId === "client-io" ||
-        lifecycle.businessStageId === "vendor-io")
-    ) {
-      const waitingVio =
-        lifecycle.businessStageId === "vendor-io" ||
-        vioSignal === "waiting_vendor" ||
-        vioSignal === "current";
+    // Only true business blockers (e.g. Client IO) lock deliverables — never Vendor IO alone.
+    const clientPending =
+      lifecycle.businessStageId === "client-io" ||
+      lifecycle.processCue.lifecycleSignal === "waiting_client";
+    if (clientPending && lifecycle.businessStageId !== "deliverables") {
       const lockRef = primary
         ? `${primary.objectLabel} ${primary.objectRef}`
-        : waitingVio
-          ? "Vendor IO"
-          : "Client IO";
+        : "Client IO";
       return guidanceBase(lifecycle, activeTab, "Deliverables", {
-        whatHappened: waitingVio
-          ? "Deliverable uploads are prepared."
-          : "Deliverables stay locked until commercial approvals finish.",
+        whatHappened: "Deliverables stay locked until commercial approvals finish.",
         currentSituation: `Work is disabled until ${lockRef} clears.`,
         nextAction: primaryAction,
         owner: lifecycle.owner,

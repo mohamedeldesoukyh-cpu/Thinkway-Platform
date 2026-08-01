@@ -203,7 +203,15 @@ type ProgressDraft = {
   owner?: BusinessProcessOwner;
 };
 
-function toCue(draft: ProgressDraft): CampaignProcessCue {
+function toCue(
+  draft: ProgressDraft,
+  options?: {
+    /** Override rail signals so operational compliance (e.g. Vendor IO) is not marked completed. */
+    stageSignalOverrides?: Partial<
+      Record<CampaignWorkspaceTabId, BusinessProcessLifecycleSignal>
+    >;
+  }
+): CampaignProcessCue {
   const current = stageById(draft.currentStageId);
   const next =
     draft.nextStageId === null
@@ -225,6 +233,13 @@ function toCue(draft: ProgressDraft): CampaignProcessCue {
     healthLabel: health.healthLabel,
     entryStageId: current.id,
   });
+
+  if (options?.stageSignalOverrides) {
+    progress.stageSignals = {
+      ...progress.stageSignals,
+      ...options.stageSignalOverrides,
+    };
+  }
 
   return {
     ...progress,
@@ -351,110 +366,135 @@ export function deriveCampaignProcessCue(signals: CampaignProcessSignals): Campa
     });
   }
 
-  // 3) Vendor IO outstanding (after client approval)
-  if (clientStatus === "approved") {
-    if (signals.vendorIoCount === 0) {
-      return toCue({
-        currentStageId: "vendor-io",
-        statusLabel: "In Progress",
-        lifecycleSignal: "waiting_internal",
-        nextActionLabel: "Issue Vendor IO",
-        waitingFor: "Operations",
-        nextStageId: "deliverables",
-      });
-    }
-    if (vendorOutstanding) {
-      const waitingVendor = signals.sentVendorIoCount > 0 || signals.vendorIoCount > 0;
-      return toCue({
-        currentStageId: "vendor-io",
-        statusLabel: waitingVendor
-          ? "Waiting for Vendor Approval"
-          : "In Progress",
-        lifecycleSignal: waitingVendor ? "waiting_vendor" : "waiting_internal",
-        nextActionLabel: waitingVendor
-          ? "Follow up Vendor IO"
-          : "Issue Vendor IO",
-        waitingFor: waitingVendor ? "Vendor" : "Operations",
-        nextStageId: "deliverables",
-      });
-    }
-  }
+  // 3) Vendor IO is Operational Compliance — never pins business progression alone.
+  // After Client IO approval, advance to real work; Decision Center carries Vendor follow-up.
+  const vendorComplianceOutstanding =
+    clientStatus === "approved" &&
+    (signals.vendorIoCount === 0 || vendorOutstanding);
+  const vendorRailOverride = vendorComplianceOutstanding
+    ? {
+        "vendor-io":
+          signals.vendorIoCount === 0
+            ? ("waiting_internal" as const)
+            : ("waiting_vendor" as const),
+      }
+    : undefined;
 
   // 4) Deliverables overdue
-  if (signals.overdueDeliverableCount > 0) {
-    return toCue({
-      currentStageId: "deliverables",
-      statusLabel: "Deliverables overdue",
-      lifecycleSignal: "attention_required",
-      nextActionLabel: "Resolve overdue deliverables",
-      waitingFor: "Operations",
-      nextStageId: "publications",
-    });
+  if (clientStatus === "approved" && signals.overdueDeliverableCount > 0) {
+    return toCue(
+      {
+        currentStageId: "deliverables",
+        statusLabel: "Deliverables overdue",
+        lifecycleSignal: "attention_required",
+        nextActionLabel: "Resolve overdue deliverables",
+        waitingFor: "Operations",
+        nextStageId: "publications",
+      },
+      { stageSignalOverrides: vendorRailOverride }
+    );
   }
 
   // Deliverables in flight before performance
   if (
+    clientStatus === "approved" &&
     signals.deliverableCount > 0 &&
     !signals.activePerformance &&
     signals.billingOutstanding <= 0
   ) {
-    return toCue({
-      currentStageId: "deliverables",
-      statusLabel: "In Progress",
-      lifecycleSignal: "waiting_internal",
-      nextActionLabel: "Track deliverables",
-      waitingFor: "Operations",
-      nextStageId: "publications",
-    });
+    return toCue(
+      {
+        currentStageId: "deliverables",
+        statusLabel: "In Progress",
+        lifecycleSignal: vendorComplianceOutstanding
+          ? "attention_required"
+          : "waiting_internal",
+        nextActionLabel: vendorComplianceOutstanding
+          ? signals.vendorIoCount === 0
+            ? "Issue Vendor IO"
+            : "Open Vendor IO Register"
+          : "Track deliverables",
+        waitingFor: "Operations",
+        nextStageId: "publications",
+      },
+      { stageSignalOverrides: vendorRailOverride }
+    );
   }
 
   // 5) Performance active
-  if (signals.activePerformance && signals.billingOutstanding <= 0 && signals.invoiceCount === 0) {
-    return toCue({
-      currentStageId: "publications",
-      statusLabel: "In Progress",
-      lifecycleSignal: "current",
-      nextActionLabel: "Monitor performance",
-      waitingFor: "Operations",
-      nextStageId: "billing",
-    });
+  if (
+    clientStatus === "approved" &&
+    signals.activePerformance &&
+    signals.billingOutstanding <= 0 &&
+    signals.invoiceCount === 0
+  ) {
+    return toCue(
+      {
+        currentStageId: "publications",
+        statusLabel: "In Progress",
+        lifecycleSignal: vendorComplianceOutstanding
+          ? "attention_required"
+          : "current",
+        nextActionLabel: vendorComplianceOutstanding
+          ? "Open Vendor IO Register"
+          : "Monitor performance",
+        waitingFor: "Operations",
+        nextStageId: "billing",
+      },
+      { stageSignalOverrides: vendorRailOverride }
+    );
   }
 
   // 6) Finance waiting / active
-  if (signals.billingOutstanding > 0) {
-    return toCue({
-      currentStageId: "billing",
-      statusLabel: "Waiting for collection",
-      lifecycleSignal: "waiting_internal",
-      nextActionLabel: "Follow up finance",
-      waitingFor: "Finance",
-      nextStageId: null,
-      owner: "Finance",
-    });
+  if (clientStatus === "approved" && signals.billingOutstanding > 0) {
+    return toCue(
+      {
+        currentStageId: "billing",
+        statusLabel: "Waiting for collection",
+        lifecycleSignal: "waiting_internal",
+        nextActionLabel: "Follow up finance",
+        waitingFor: "Finance",
+        nextStageId: null,
+        owner: "Finance",
+      },
+      { stageSignalOverrides: vendorRailOverride }
+    );
   }
 
-  if (signals.invoiceCount > 0) {
-    return toCue({
-      currentStageId: "billing",
-      statusLabel: "In Progress",
-      lifecycleSignal: "current",
-      nextActionLabel: "Review finance",
-      waitingFor: "Finance",
-      nextStageId: null,
-      owner: "Finance",
-    });
+  if (clientStatus === "approved" && signals.invoiceCount > 0) {
+    return toCue(
+      {
+        currentStageId: "billing",
+        statusLabel: "In Progress",
+        lifecycleSignal: "current",
+        nextActionLabel: "Review finance",
+        waitingFor: "Finance",
+        nextStageId: null,
+        owner: "Finance",
+      },
+      { stageSignalOverrides: vendorRailOverride }
+    );
   }
 
-  // Commercial path complete → deliverables entry
-  if (clientStatus === "approved" && !vendorOutstanding) {
-    return toCue({
-      currentStageId: "deliverables",
-      statusLabel: "In Progress",
-      lifecycleSignal: "waiting_internal",
-      nextActionLabel: "Manage deliverables",
-      waitingFor: "Operations",
-      nextStageId: "publications",
-    });
+  // Client approved → campaign may continue into Deliverables (Vendor IO is compliance only).
+  if (clientStatus === "approved") {
+    return toCue(
+      {
+        currentStageId: "deliverables",
+        statusLabel: "In Progress",
+        lifecycleSignal: vendorComplianceOutstanding
+          ? "attention_required"
+          : "waiting_internal",
+        nextActionLabel: vendorComplianceOutstanding
+          ? signals.vendorIoCount === 0
+            ? "Issue Vendor IO"
+            : "Open Vendor IO Register"
+          : "Manage deliverables",
+        waitingFor: "Operations",
+        nextStageId: "publications",
+      },
+      { stageSignalOverrides: vendorRailOverride }
+    );
   }
 
   return toCue({

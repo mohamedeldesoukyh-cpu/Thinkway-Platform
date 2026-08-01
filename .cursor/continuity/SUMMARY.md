@@ -34,9 +34,11 @@ Environment switch navigates between **hosts** — never switches DB inside one 
 - `docs/RELEASE_WORKFLOW.md` — dual deploy + approval gate  
 - `docs/architecture/THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md` — **frozen platform architecture v1.0**  
 - `docs/architecture/BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md` — **canonical BPN navigation baseline**  
-- `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.2.md` — **canonical protected Campaign Workspace Lifecycle OS** (Operational Readiness) — Maintenance Mode; no redesign without Architecture Reopen
+- `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.3.md` — **canonical protected Campaign Workspace Lifecycle OS** (Business Narrative & Operational Compliance) — Maintenance Mode; no redesign without Architecture Reopen
+- `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.2.md` — historical (superseded by v1.3)
 - `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.1.md` · `CAMPAIGN_WORKSPACE_BASELINE_V1.md` — historical
-- `docs/architecture/PLATFORM_ARCHITECTURE_COMPLIANCE.md` — mandatory compliance (lifecycle · journeys · BPN reuse · Campaign Workspace v1.2 invariants · operational effort gate · no new nav)
+- `docs/architecture/PLATFORM_ARCHITECTURE_COMPLIANCE.md` — mandatory compliance (lifecycle · journeys · BPN reuse · Campaign Workspace v1.3 invariants · operational effort gate · no new nav)
+- `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.3.md` — canonical Campaign Workspace OS baseline (executive Decision Center · three severities · Vendor IO operational compliance)
 - `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md` — **active** R2.3 Campaign Planning Workspace capability spec (review gate)
 - `docs/capabilities/PLANNING_BOARD_CAPABILITY_REVIEW.md` — **active** R2.3 functional capability review pack
 - `docs/architecture/platform-ux/` — Platform UX package (docs 01–12 frozen)  
@@ -80,7 +82,7 @@ Regression: `npm run test:campaign-workspace-lifecycle-os`.
 
 ## Next functional priority
 
-1. **Active:** Release 2.3 Campaign Planning Workspace — Capability / UX / Spec / Compliance reviews → implement (Planning stage; inherits Campaign Workspace Baseline **v1.2**; operational effort gate required)  
+1. **Active:** Release 2.3 Campaign Planning Workspace — Capability / UX / Spec / Compliance reviews → implement (Planning stage; inherits Campaign Workspace Baseline **v1.3**; operational effort gate required)  
 2. Media Plan Copilot (R2.2b)  
 3. Client Collaboration · Vendor · Creator journeys  
 4. Reporting Hub · Notifications · Enterprise Analytics  

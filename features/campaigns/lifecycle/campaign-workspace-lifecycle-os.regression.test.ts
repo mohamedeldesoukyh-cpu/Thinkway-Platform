@@ -105,7 +105,7 @@ describe("Campaign Workspace Lifecycle OS — regression (baseline v1)", () => {
             sentVendorIoCount: 2,
           })
         ).entryStageId,
-        "vendor-io"
+        "deliverables"
       );
     });
   });

@@ -55,7 +55,7 @@ describe("deriveCampaignProcessCue — business rules", () => {
     assert.equal(cue.nextActionLabel, "Review Client IO");
   });
 
-  it("opens Vendor IO when vendor approvals are outstanding", () => {
+  it("does not pin progression on Vendor IO acceptance — campaign may continue", () => {
     const cue = deriveCampaignProcessCue(
       base({
         lineCount: 2,
@@ -66,9 +66,10 @@ describe("deriveCampaignProcessCue — business rules", () => {
         sentVendorIoCount: 1,
       })
     );
-    assert.equal(cue.entryStageId, "vendor-io");
-    assert.equal(cue.lifecycleSignal, "waiting_vendor");
-    assert.equal(cue.waitingFor, "Vendor");
+    assert.equal(cue.entryStageId, "deliverables");
+    assert.equal(cue.lifecycleSignal, "attention_required");
+    assert.equal(cue.stageSignals["vendor-io"], "waiting_vendor");
+    assert.notEqual(cue.lifecycleSignal, "blocked");
   });
 
   it("opens Deliverables when deliverables are overdue", () => {

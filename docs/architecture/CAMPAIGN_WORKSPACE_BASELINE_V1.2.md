@@ -1,10 +1,11 @@
 # Campaign Workspace Baseline v1.2 (Operational Readiness)
 
-**Status:** Protected implementation baseline — **canonical · frozen**  
+**Status:** **Superseded** by [`CAMPAIGN_WORKSPACE_BASELINE_V1.3.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.3.md) — retained as historical reference  
 **Milestone:** Release 2.2c — Campaign Workspace Final UX / Operational Readiness Gate  
 **Product Acceptance:** Passed · approved 2026-08-01  
-**Class:** Governance — **Campaign Workspace v1.2 is the canonical implementation baseline**  
-**Supersedes:** [`CAMPAIGN_WORKSPACE_BASELINE_V1.1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.1.md) (v1.1 remains historical; v1.2 is authoritative)  
+**Class:** Historical implementation baseline (v1.3 is canonical)  
+**Supersedes:** [`CAMPAIGN_WORKSPACE_BASELINE_V1.1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.1.md)  
+**Superseded by:** [`CAMPAIGN_WORKSPACE_BASELINE_V1.3.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.3.md)  
 **Historical:** [`CAMPAIGN_WORKSPACE_BASELINE_V1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.md)  
 **Parent baselines:**  
 [`THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md`](./THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md) ·  
@@ -19,11 +20,9 @@
 
 ## Canonical statement
 
-**Campaign Workspace v1.2 is the canonical implementation baseline.**
+**Campaign Workspace v1.2 is superseded.** Canonical baseline is **v1.3**.
 
-The Campaign Workspace remains the **Lifecycle Operating System** for Thinkway campaigns. Release 2.2c finalized operational readiness (object-specific Decision Center inbox, progressive register disclosure, exact-record deep-links, denser executive scan, KPI-only workspace banners) **without** redesigning navigation, BPN, lifecycle stages, APIs, database, permissions, workflows, or calculations.
-
-v1.2 **inherits all v1.1 invariants** and adds operational presentation rules below.
+Release 2.2c operational readiness (object-specific Decision Center inbox, progressive register disclosure, exact-record deep-links, denser executive scan, KPI-only workspace banners) remains historical. Retained for reference only.
 
 ---
 
