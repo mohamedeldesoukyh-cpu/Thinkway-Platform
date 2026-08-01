@@ -29,7 +29,12 @@ import {
   BUSINESS_PROCESS_STAGES,
   getStagePolicy,
 } from "@/features/campaigns/lifecycle/campaign-stage-policy";
+import {
+  buildCampaignWorkspaceTabUrl,
+  resolveBareCampaignEntryRedirect,
+} from "@/features/campaigns/lifecycle/campaign-workspace-entry-routing";
 import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
+import { CAMPAIGN_WORKSPACE_DEFAULT_TAB_ORDER } from "@/features/campaigns/constants/campaign-workspace-tab-order";
 
 function base(overrides: Partial<CampaignProcessSignals> = {}): CampaignProcessSignals {
   return {
@@ -120,6 +125,30 @@ describe("Campaign Workspace Lifecycle OS — regression (baseline v1)", () => {
       assert.ok(lifecycle.owner.length > 0);
       assert.ok(lifecycle.reason.length > 0);
       assert.ok(lifecycle.expectedResult.length > 0);
+    });
+
+    it("never redirects away from any explicit ?tab= (all workspaces stick)", () => {
+      for (const tab of CAMPAIGN_WORKSPACE_DEFAULT_TAB_ORDER) {
+        assert.equal(
+          resolveBareCampaignEntryRedirect(tab, "client-io"),
+          null,
+          `explicit ?tab=${tab} must not redirect`
+        );
+      }
+      assert.equal(resolveBareCampaignEntryRedirect("  ", "client-io"), "client-io");
+      assert.equal(resolveBareCampaignEntryRedirect(undefined, "client-io"), "client-io");
+      assert.equal(resolveBareCampaignEntryRedirect(undefined, "overview"), null);
+    });
+
+    it("keeps ?tab= in shareable URLs for every workspace (including overview)", () => {
+      for (const tab of CAMPAIGN_WORKSPACE_DEFAULT_TAB_ORDER) {
+        const url = buildCampaignWorkspaceTabUrl("/campaigns/demo", "?tab=client-io", tab);
+        assert.equal(url, `/campaigns/demo?tab=${tab}`);
+      }
+      assert.equal(
+        buildCampaignWorkspaceTabUrl("/campaigns/demo", "", "overview"),
+        "/campaigns/demo?tab=overview"
+      );
     });
   });
 

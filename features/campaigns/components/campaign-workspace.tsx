@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { EntityPrevNext } from "@/components/navigation/entity-prev-next";
 import { PageBackButton } from "@/components/navigation/page-back-button";
 import { Tabs } from "@/components/ui/tabs";
@@ -13,12 +13,18 @@ import {
   CampaignWorkspaceTabPanel,
 } from "@/features/campaigns/components/campaign-workspace-tabs";
 import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
-import { isCampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
+import {
+  isCampaignWorkspaceTabId,
+  resolveCampaignWorkspaceTab,
+} from "@/features/campaigns/constants/campaign-workspace-tab-order";
 import {
   buildWorkspaceGuidance,
   campaignLifecycleFromWorkspace,
   workspaceLabelForTab,
 } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
+import {
+  buildCampaignWorkspaceTabUrl,
+} from "@/features/campaigns/lifecycle/campaign-workspace-entry-routing";
 import { CampaignStateStrip } from "@/features/campaigns/lifecycle/components/campaign-state-strip";
 import { CampaignWorkspaceGuidance } from "@/features/campaigns/lifecycle/components/campaign-workspace-guidance";
 import {
@@ -67,12 +73,12 @@ export function CampaignWorkspaceView({
   defaultTab = "overview",
   initialAssignmentHierarchy,
 }: CampaignWorkspaceViewProps) {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<CampaignWorkspaceTabId>(defaultTab);
+  const campaignIdRef = useRef(workspace.id);
   const { tabOrder, moveTab } = useCampaignWorkspaceTabOrder();
 
   const tabData = useCampaignTabData(workspace.id, initialAssignmentHierarchy);
@@ -102,24 +108,40 @@ export function CampaignWorkspaceView({
 
   useMetricsSyncCompletionToasts(publications);
 
+  // Reset tab only when switching campaigns — never when server props refresh.
+  // Syncing on every defaultTab change raced RSC remounts and bounced users to
+  // the entry stage (Client IO / Needs Attention) a few seconds after any tab click.
   useEffect(() => {
+    if (campaignIdRef.current === workspace.id) return;
+    campaignIdRef.current = workspace.id;
     setActiveTab(defaultTab);
-  }, [defaultTab]);
+  }, [workspace.id, defaultTab]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      const tab = new URL(window.location.href).searchParams.get("tab");
+      setActiveTab(resolveCampaignWorkspaceTab(tab ?? undefined));
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   const handleTabChange = useCallback(
     (value: string) => {
       if (!isCampaignWorkspaceTabId(value)) return;
       setActiveTab(value);
-      const params = new URLSearchParams(searchParams.toString());
-      if (value === "overview") {
-        params.delete("tab");
-      } else {
-        params.set("tab", value);
-      }
-      const query = params.toString();
-      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+      // history.replaceState (not router.replace): keep ?tab= in the address bar
+      // without refetching the campaign page. router.replace remounted via loading.tsx
+      // after the slow workspace load and snapped back to the entry stage.
+      if (typeof window === "undefined") return;
+      const url = buildCampaignWorkspaceTabUrl(
+        pathname,
+        window.location.search,
+        value
+      );
+      window.history.replaceState(window.history.state, "", url);
     },
-    [pathname, router, searchParams]
+    [pathname]
   );
 
   const operationalDeliverableCount = useMemo(() => {

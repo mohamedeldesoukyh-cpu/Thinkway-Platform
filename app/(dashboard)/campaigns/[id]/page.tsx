@@ -30,6 +30,7 @@ import {
 import {
   campaignProcessCueFromWorkspace,
 } from "@/features/campaigns/lifecycle/campaign-process-presentation";
+import { resolveBareCampaignEntryRedirect } from "@/features/campaigns/lifecycle/campaign-workspace-entry-routing";
 import { campaignDetailPath, campaignDetailPathWithTab } from "@/lib/routing/entity-paths";
 import {
   metadataTitleForEntity,
@@ -118,12 +119,14 @@ export default async function CampaignWorkspacePage({
       error instanceof Error ? error.message : "Failed to load campaign workspace.";
   }
 
-  // Phase 1: open without ?tab= enters the current business stage (work required).
-  // Full lifecycle remains navigable; keep outside try/catch so redirect() is not swallowed.
-  if (workspace && !tab) {
+  // Lifecycle OS: bare /campaigns/[id] (no ?tab=) enters the recommended business stage.
+  // Any explicit ?tab= must stay — never bounce the user away from a chosen workspace.
+  // Keep outside try/catch so redirect() is not swallowed.
+  if (workspace) {
     const entryStage = campaignProcessCueFromWorkspace(workspace).entryStageId;
-    if (entryStage !== "overview") {
-      redirect(campaignDetailPathWithTab(workspace, entryStage));
+    const redirectTab = resolveBareCampaignEntryRedirect(tab, entryStage);
+    if (redirectTab) {
+      redirect(campaignDetailPathWithTab(workspace, redirectTab));
     }
   }
 

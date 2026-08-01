@@ -126,6 +126,7 @@
 - **Compliance invariants:** Campaign primary · Business Stage SSOT · workspaces as views · Next Action journey · no competing nav · extend lifecycle
 - **Regression (mandatory):** `npm run test:campaign-workspace-lifecycle-os`
 - **Future capabilities:** must **extend** this baseline — not modify its navigation philosophy
+- **Bugfix (tab stickiness):** Any workspace tab briefly showed then bounced to Client IO after ~seconds. Cause: `router.replace(?tab=)` refetched the slow campaign page + `loading.tsx` remount + `defaultTab` sync snapped back to entry stage; Overview also cleared `?tab=`. Fix: always keep `?tab=` (incl. overview); tab changes use `history.replaceState` (no RSC remount); sync `defaultTab` only on campaign switch. Bare `/campaigns/[id]` still deep-links to recommended stage.
 
 ## Active — Release 2.2a Planning Board (review gate)
 
