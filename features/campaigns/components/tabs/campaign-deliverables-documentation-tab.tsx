@@ -16,8 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import {
+  AuroraEmptyState,
   AuroraStatusPill,
   CampaignWorkspaceFrame,
 } from "@/features/campaigns/components/aurora/campaign-workspace-frame";
@@ -206,14 +206,9 @@ export function CampaignDeliverablesDocumentationTab({
           tone: "blue",
         },
       ]}
-      registerLabel="Documentation register"
+      registerLabel="Repository"
     >
     <div className="space-y-4">
-      <CampaignOperationalSectionHeader
-        title="Repository"
-        description="Search and open a unit to manage assets and comments."
-      />
-
       <OperationalTableSection wide>
         <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
           <div className="relative min-w-[220px] flex-1">
@@ -245,9 +240,10 @@ export function CampaignDeliverablesDocumentationTab({
             {loading ? (
               <p className="p-4 text-sm text-muted-foreground">Loading…</p>
             ) : filtered.length === 0 ? (
-              <p className="p-4 text-sm text-muted-foreground">
-                No documentation units. Add deliverables under Assignments first.
-              </p>
+              <AuroraEmptyState
+                title="No documentation units yet."
+                description="Add deliverables under Assignments first, then return here to upload files, links, and captions."
+              />
             ) : (
               <ul className="divide-y">
                 {filtered.map((unit) => (

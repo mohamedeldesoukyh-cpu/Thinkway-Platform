@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { formatDistanceToNowStrict } from "date-fns";
-import { ChevronDownIcon, LayoutGridIcon } from "lucide-react";
+import { ChevronDownIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { CampaignSectionHead } from "@/features/campaigns/components/aurora/campaign-tab-layout";
@@ -161,10 +161,7 @@ export function CampaignCommandCenter({
       <CampaignOperationalReadinessChecklist readiness={readiness} />
 
       {/* Workflow health strip */}
-      <CampaignSectionHead
-        title="Campaign health"
-        subtitle="Derived from assignment status & billing"
-      />
+      <CampaignSectionHead title="Campaign health" />
       <div className="thinkway-aurora-flow" aria-label="Workflow stage">
         {WORKFLOW_STAGES.map((stage, index) => {
           const done = stageIndex >= 0 && index < stageIndex;
@@ -197,16 +194,7 @@ export function CampaignCommandCenter({
       ) : null}
 
       {/* Operational cards grid */}
-      <CampaignSectionHead
-        title="Operating dashboard"
-        subtitle="Summaries first — open a workspace for deeper work"
-        tools={
-          <span className="inline-flex items-center gap-1.5 text-[12px] text-[var(--camp-text-4)]">
-            <LayoutGridIcon className="size-3.5" aria-hidden />
-            Live data
-          </span>
-        }
-      />
+      <CampaignSectionHead title="Operating dashboard" />
 
       <div className="thinkway-aurora-ops-grid">
         <CampaignOpsCard
@@ -440,7 +428,7 @@ export function CampaignCommandCenter({
       </div>
 
       {/* Quick actions + future entry points */}
-      <CampaignSectionHead title="Quick actions" subtitle="Primary workspaces & future modules" />
+      <CampaignSectionHead title="Quick actions" />
       <div className="thinkway-aurora-quick">
         <Button
           type="button"

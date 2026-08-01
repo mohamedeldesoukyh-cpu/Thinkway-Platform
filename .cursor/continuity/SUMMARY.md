@@ -32,12 +32,20 @@ Environment switch navigates between **hosts** — never switches DB inside one 
 - `docs/THINKWAY_SYSTEM_REFERENCE.md` — product SSOT  
 - `docs/ARCHITECTURE_ALIGNMENT.md` — codebase vs spec  
 - `docs/RELEASE_WORKFLOW.md` — dual deploy + approval gate  
+- `docs/architecture/CAMPAIGN_WORKSPACE_UI_FREEZE.md` — **Campaign Workspace UI Design Freeze** (2026-08-01)  
+- `docs/architecture/CAMPAIGN_WORKSPACE_UI_GUIDELINES.md` — Aurora extension rules (no redesign; functional only)  
 - `docs/architecture/UNIFIED_MEDIA_PLAN_PLAN.md` — Media Plan SSOT (baseline + draft)  
 - `docs/architecture/MEDIA_PLAN_VERSIONING.md` — business version vs audit; approval boundary  
 - Publishing Calendar: Saturday–Friday calendar weeks (`media-plan-week-start.ts`); range from campaign start/end  
 - `lib/media-plan` — Media Plan Engine (Studio / Campaign / Portal / Performance)  
 - `docs/DISCOVERY_*` · `docs/PERFORMANCE_*` — discovery & perf contracts  
 - Ops Center `/operations` — deployment/health SSOT  
+
+## Campaign Workspace UI (frozen)
+
+- Surface: `/campaigns/[id]` — Aurora language is the design foundation going forward.
+- After 2026-08-01 freeze: **no visual redesigns** unless critical usability or approved release reopen.
+- New capabilities integrate into existing frame/ops patterns; do not invent a parallel style.
 
 ## Ops & workers
 

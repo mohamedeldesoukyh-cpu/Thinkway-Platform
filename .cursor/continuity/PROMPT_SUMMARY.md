@@ -89,17 +89,15 @@
 - Standing by: Prod email config → Product pre-authorized resume: E1–E7 → remaining smoke → evidence → `v2.2.0` → Production Complete → reopen **2.2a Planning Board** (pause + remediate if any E-check fails)
 - Suite: `npm run test:release-2-2` **17/17**
 
-## Release 2.3 — Campaign Workspace Aurora redesign (consistency pass on develop)
+## Release 2.3 — Campaign Workspace UI Design Freeze (2026-08-01)
 
-- **Scope:** Presentation-only — shared `CampaignWorkspaceFrame` applied to all focused workspaces
-- **Overview:** Command center (Revision 2)
-- **Workspaces:** Assignments, Client IO, Vendor IO, Deliverables, Performance, Finance, Timeline, Workflow each have Aurora header + summary stats; tables/registers below
-- **CIO/VIO:** Document-management chrome (status, delivery, approval meta) above registers
-- **Performance:** Executive KPIs + inline trends before publications grid
-- **Finance:** Commercial snapshot (Rev/Cost/GP/Margin/CIO/VIO) before billing registers
+- **Milestone:** **Campaign Workspace UI Design Freeze** — Aurora redesign accepted; presentation frozen on `develop`
+- **Freeze docs:** `docs/architecture/CAMPAIGN_WORKSPACE_UI_FREEZE.md` · guidelines `CAMPAIGN_WORKSPACE_UI_GUIDELINES.md`
+- **Rule:** No further Campaign Workspace visual redesigns unless critical usability issue or approved future release
+- **Future work (functional only):** Planning Board (R2.2a) · Copilot (R2.2b) · Reporting Hub · Notifications · Enterprise Analytics — must adopt Aurora
 - **Env:** Aurora pill (no full-width banner)
-- URLs/APIs/DB/business logic unchanged; no Campaign Lines tab this release
-- **No Production deploy** — Preview validation next
+- URLs/APIs/DB/business logic unchanged by freeze; no Campaign Lines tab this release
+- **No Production deploy** without explicit approval
 
 ## IO approval email experience (Preview testing on develop)
 

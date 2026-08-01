@@ -11,6 +11,11 @@ type CampaignOperationalSectionHeaderProps = {
   description?: string;
   titleClassName?: string;
   actions?: ReactNode;
+  /**
+   * Aurora workspaces already show title/KPIs above — render only the action bar
+   * to avoid duplicated headers and cognitive noise.
+   */
+  actionsOnly?: boolean;
 };
 
 /** Matches reference section-head / tab toolbar title row. */
@@ -20,7 +25,19 @@ export function CampaignOperationalSectionHeader({
   description,
   titleClassName,
   actions,
+  actionsOnly = false,
 }: CampaignOperationalSectionHeaderProps) {
+  if (actionsOnly) {
+    if (!actions) return null;
+    return (
+      <div className="flex w-full flex-wrap items-center justify-end gap-2">
+        <div className="thinkway-campaign-section-actions thinkway-aurora-ws-tools">
+          {actions}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex w-full flex-wrap items-start justify-between gap-3">
       <div className="min-w-0">

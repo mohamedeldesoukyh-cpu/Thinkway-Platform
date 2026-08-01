@@ -28,6 +28,7 @@ import { VendorIoSpecialPaymentTermsCell } from "@/features/io/components/vendor
 import { VendorIoStatusPill } from "@/features/io/components/vendor-io-status-pill";
 import type { VendorIoRow } from "@/features/io/types";
 import {
+  AuroraEmptyState,
   AuroraStatusPill,
   CampaignWorkspaceFrame,
 } from "@/features/campaigns/components/aurora/campaign-workspace-frame";
@@ -279,9 +280,10 @@ function VendorIoTableBody({
 
   if (sorted.length === 0) {
     return (
-      <div className="thinkway-campaign-empty-state">
-        <p>No assignment IO drafts generated yet.</p>
-      </div>
+      <AuroraEmptyState
+        title="No Vendor IO has been generated yet."
+        description="Generate creator insertion orders from Assignments to send, track delivery, and record approvals."
+      />
     );
   }
 
@@ -387,6 +389,14 @@ export function VendorIoTab({ campaignId, rows }: Props) {
             {summary.sent} sent · {summary.approved} approved
           </AuroraStatusPill>
         }
+        tools={
+          <>
+            <VendorIoHeaderSend
+              selectedRows={selectedRows}
+              onClearSelection={onClearSelection}
+            />
+          </>
+        }
         stats={[
           { key: "total", label: "Orders", value: String(sorted.length) },
           { key: "generated", label: "Draft / generated", value: String(summary.generated) },
@@ -410,7 +420,7 @@ export function VendorIoTab({ campaignId, rows }: Props) {
             tone: selectedCount > 0 ? "amber" : "mut",
           },
         ]}
-        registerLabel="Document register"
+        registerLabel="Orders"
       >
       <OperationalTableSuiteProvider
         tableId={OPERATIONAL_TABLE_IDS.campaignVendorIos}
@@ -440,16 +450,8 @@ export function VendorIoTab({ campaignId, rows }: Props) {
             leading={
               <CampaignOperationalSectionHeader
                 title="Orders"
-                description="Select one or more rows to send. Each row also has Send in Actions."
-                actions={
-                  <>
-                    <VendorIoHeaderSend
-                      selectedRows={selectedRows}
-                      onClearSelection={onClearSelection}
-                    />
-                    <OperationalTableControlsSlot contextLabel="Vendor IO" />
-                  </>
-                }
+                actionsOnly
+                actions={<OperationalTableControlsSlot contextLabel="Vendor IO" />}
               />
             }
           >

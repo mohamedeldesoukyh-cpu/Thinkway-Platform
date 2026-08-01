@@ -18,12 +18,13 @@ import type { ConsolidatedInvoiceQueueRow } from "@/lib/billing/consolidated-inv
 import { FINANCE_INVOICE_REGISTER_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
-import { CampaignBillingKpiStrip } from "@/features/campaigns/components/campaign-billing-kpi-strip";
 import {
+  AuroraEmptyState,
   AuroraStatusPill,
   CampaignWorkspaceFrame,
 } from "@/features/campaigns/components/aurora/campaign-workspace-frame";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
+import { sumIoGatedAssignmentBillable } from "@/lib/billing/queue-eligibility";
 import {
   Select,
   SelectContent,
@@ -352,15 +353,20 @@ export function CampaignBillingTab({
     beginInvoiceFlow(payload);
   }
 
-  const clientIoStatus = workspace.client_io?.status ?? "missing";
-  const vendorIoApproved = workspace.vendor_ios.filter((r) => r.status === "approved").length;
-  const vendorIoTotal = workspace.vendor_ios.length;
+  const operationalRows = operationalBilling?.operational_rows;
+  const ioGatedBillable =
+    operationalRows && operationalRows.length > 0
+      ? sumIoGatedAssignmentBillable(operationalRows)
+      : null;
+  const billingRevenue = ioGatedBillable ?? financials.revenue;
+  const billingPoConsumed = ioGatedBillable ?? financials.po_consumed;
+  const billingRemainingPo = financials.po_total - billingPoConsumed;
 
   return (
     <div>
       <CampaignWorkspaceFrame
         title="Finance"
-        subtitle="Operational financial workspace — commercial snapshot before billing registers"
+        subtitle="Commercial snapshot and billing registers"
         status={
           <AuroraStatusPill
             tone={financials.billing_outstanding > 0 ? "amber" : "green"}
@@ -370,15 +376,15 @@ export function CampaignBillingTab({
         }
         tools={
           <>
-            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[33px] text-[12px]">
+            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn">
               <Link href="/finance/invoices">Invoice register</Link>
             </Button>
-            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[33px] text-[12px]">
+            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn">
               <Link href="/billing">Finance workspace</Link>
             </Button>
             <Button
               size="sm"
-              className="thinkway-campaign-btn thinkway-campaign-btn-primary h-[33px] text-[12px]"
+              className="thinkway-campaign-btn thinkway-campaign-btn-primary"
               onClick={() => {
                 if (operationalBilling) {
                   beginInvoiceFlow(undefined);
@@ -387,7 +393,7 @@ export function CampaignBillingTab({
                 }
               }}
             >
-              + Create new invoice
+              Create invoice
             </Button>
           </>
         }
@@ -395,13 +401,25 @@ export function CampaignBillingTab({
           {
             key: "revenue",
             label: "Revenue",
-            value: formatMoney(financials.revenue, currency),
+            value: formatMoney(billingRevenue, currency),
             tone: "blue",
           },
           {
-            key: "cost",
-            label: "Cost",
-            value: formatMoney(financials.cost, currency),
+            key: "collected",
+            label: "Collected",
+            value: formatMoney(financials.collected, currency),
+            tone: "pos",
+          },
+          {
+            key: "outstanding",
+            label: "Outstanding",
+            value: formatMoney(financials.billing_outstanding, currency),
+            tone: financials.billing_outstanding > 0 ? "amber" : "mut",
+          },
+          {
+            key: "po",
+            label: "Remaining PO",
+            value: formatMoney(billingRemainingPo, currency),
           },
           {
             key: "gp",
@@ -414,57 +432,39 @@ export function CampaignBillingTab({
             label: "Margin",
             value: formatPercent(financials.margin_percent),
           },
-          {
-            key: "cio",
-            label: "Client IO",
-            value: clientIoStatus.replaceAll("_", " "),
-            tone: clientIoStatus === "approved" ? "pos" : "mut",
-          },
-          {
-            key: "vio",
-            label: "Vendor IO",
-            value: `${vendorIoApproved}/${vendorIoTotal} approved`,
-            tone: vendorIoApproved > 0 ? "blue" : "mut",
-          },
         ]}
-        banner={
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <div className="thinkway-campaign-billing-flow">
-              <span className="thinkway-campaign-billing-flow-step">draft</span>
-              <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
-                →
-              </span>
-              <span className="thinkway-campaign-billing-flow-step">approved</span>
-              <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
-                →
-              </span>
-              <span className="thinkway-campaign-billing-flow-step">moved to billing</span>
-              <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
-                →
-              </span>
-              <span className="thinkway-campaign-billing-flow-step">partially invoiced</span>
-              <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
-                →
-              </span>
-              <span className="thinkway-campaign-billing-flow-step">invoiced</span>
-              <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
-                →
-              </span>
-              <span className="thinkway-campaign-billing-flow-step">paid</span>
-              <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
-                →
-              </span>
-              <span className="thinkway-campaign-billing-flow-step">closed</span>
-            </div>
+        detailsLabel="Billing lifecycle"
+        details={
+          <div className="thinkway-campaign-billing-flow">
+            <span className="thinkway-campaign-billing-flow-step">draft</span>
+            <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
+              →
+            </span>
+            <span className="thinkway-campaign-billing-flow-step">approved</span>
+            <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
+              →
+            </span>
+            <span className="thinkway-campaign-billing-flow-step">moved to billing</span>
+            <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
+              →
+            </span>
+            <span className="thinkway-campaign-billing-flow-step">partially invoiced</span>
+            <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
+              →
+            </span>
+            <span className="thinkway-campaign-billing-flow-step">invoiced</span>
+            <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
+              →
+            </span>
+            <span className="thinkway-campaign-billing-flow-step">paid</span>
+            <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
+              →
+            </span>
+            <span className="thinkway-campaign-billing-flow-step">closed</span>
           </div>
         }
-        registerLabel="Billing registers"
+        registerLabel="Registers"
       >
-      <CampaignBillingKpiStrip
-        workspace={workspace}
-        operationalRows={operationalBilling?.operational_rows}
-      />
-
       <OperationalTableSuiteProvider
         tableId={OPERATIONAL_TABLE_IDS.campaignConsolidatedInvoiceQueue}
         columns={operationalColumnsFromMetas(CAMPAIGN_CONSOLIDATED_INVOICE_QUEUE_COLUMN_METAS, {
@@ -534,7 +534,6 @@ export function CampaignBillingTab({
             leading={
               <CampaignOperationalSectionHeader
                 title="Operational billing"
-                description="Assignment lines, IO status, and invoice actions for this campaign."
                 actions={
                   <OperationalTableControlsSlot contextLabel="Assignment billing groups" />
                 }
@@ -557,11 +556,6 @@ export function CampaignBillingTab({
           leading={
             <CampaignOperationalSectionHeader
               title="Operational billing"
-              description={
-                drilldownVisible
-                  ? "Assignment lines, IO status, and invoice actions for the selected queue row."
-                  : "Select a campaign row in the billing queue above to load operational detail."
-              }
               actions={
                 drilldownVisible ? (
                   <Select
@@ -587,12 +581,10 @@ export function CampaignBillingTab({
           }
         >
           {!drilldownVisible ? (
-            <div className="thinkway-campaign-empty-state">
-              <p>
-                Click the campaign number in the billing queue to open assignment-level operational
-                billing.
-              </p>
-            </div>
+            <AuroraEmptyState
+              title="Select a queue row to open operational billing."
+              description="Click a campaign number in the billing queue above to load assignment-level detail."
+            />
           ) : (
             <div
               className={cn(
@@ -631,7 +623,6 @@ export function CampaignBillingTab({
           leading={
             <CampaignOperationalSectionHeader
               title="Invoices"
-              description="Client invoices linked to this campaign."
               actions={<OperationalTableControlsSlot contextLabel="Campaign invoices" />}
             />
           }
@@ -664,15 +655,15 @@ export function CampaignBillingTab({
           leading={
             <CampaignOperationalSectionHeader
               title="Payments"
-              description="Recorded payments against campaign invoices."
               actions={<OperationalTableControlsSlot contextLabel="Campaign payments" />}
             />
           }
         >
           {workspace.payments.length === 0 ? (
-            <div className="thinkway-campaign-empty-state">
-              <p>No payments recorded.</p>
-            </div>
+            <AuroraEmptyState
+              title="No payments recorded yet."
+              description="Payments appear here after client invoices are collected."
+            />
           ) : (
             <OperationalConfigurableTable
               columns={paymentColumns}

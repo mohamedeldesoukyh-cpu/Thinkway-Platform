@@ -9,6 +9,8 @@ Before designing schema, UI, workflows, or new modules, read:
 
 - `docs/THINKWAY_SYSTEM_REFERENCE.md` — canonical product spec (May 2026)
 - `docs/ARCHITECTURE_ALIGNMENT.md` — current codebase vs spec gap analysis
+- `docs/architecture/CAMPAIGN_WORKSPACE_UI_FREEZE.md` — Campaign Workspace UI Design Freeze (2026-08-01)
+- `docs/architecture/CAMPAIGN_WORKSPACE_UI_GUIDELINES.md` — Aurora extension rules (no redesign without approval)
 
 ## Non-negotiable hierarchy (preserve)
 
@@ -39,6 +41,7 @@ Group → Legal Entity (clients) → Brand → Campaign Header → Campaign Line
 4. **RLS + roles** — enforce Admin/Director/Manager/Account Manager/Finance/Data Entry matrix from reference §6.
 5. **Approvals** — use `approvals` / `approval_steps`; extend with workflow engine tables only when needed (§20).
 6. **Phased roadmap** — Phase 1: core ops; Phase 2: workflow/tasks/notifications/portals; Phase 3: AI; Phase 4: enterprise scale (reference §33).
+7. **Campaign Workspace UI freeze** — Aurora presentation at `/campaigns/[id]` is frozen (2026-08-01). No visual redesigns unless critical usability or approved release reopen. New features must adopt Aurora (`CAMPAIGN_WORKSPACE_UI_GUIDELINES.md`).
 
 ## Conflicts with reference doc (resolved in codebase)
 

@@ -2,7 +2,14 @@
 
 This document compares the **current Thinkway platform** (`thinkway-platform`) against the [System Reference](./THINKWAY_SYSTEM_REFERENCE.md). Use it before new modules: compare → detect gaps → recommend → avoid duplicate entities.
 
-**Last reviewed:** Jun 2026 (Vendor IO → invoice lifecycle Phase 1; see `docs/VENDOR_IO_INVOICE_LIFECYCLE.md`)
+**Last reviewed:** Aug 2026 (Campaign Workspace UI Design Freeze; see below)
+
+### Campaign Workspace UI Design Freeze (Aug 2026)
+
+- **Frozen:** Presentation of `/campaigns/[id]` Aurora Campaign Workspace (Release 2.3).
+- **Docs:** [`docs/architecture/CAMPAIGN_WORKSPACE_UI_FREEZE.md`](./architecture/CAMPAIGN_WORKSPACE_UI_FREEZE.md) · [`CAMPAIGN_WORKSPACE_UI_GUIDELINES.md`](./architecture/CAMPAIGN_WORKSPACE_UI_GUIDELINES.md).
+- **Rule:** No further visual redesign of Campaign Workspace unless critical usability issue or approved future release. Future work (Planning Board, Copilot, Reporting Hub, Notifications, Enterprise Analytics) is **functional** and must adopt Aurora.
+- Does **not** freeze APIs, schema, workflows, or business rules.
 
 ### Release 2.0 — Enterprise Campaign Lifecycle (Jul 2026)
 
@@ -58,7 +65,7 @@ Preserves this doc’s rule: **`campaign_lines` = Assignment / PO unit** — do 
 |--------|-------|------------------------|--------|
 | Groups | `/groups/[id]` | Overview, legal entities, brands, documents, financial, activity | ✅ Built |
 | Legal entities | `/clients/[id]` | Overview, brands, legal, finance, documents, campaigns | ✅ Built |
-| Campaigns | `/campaigns/[id]` | Overview, lines, vendors, deliverables, workflow, billing, timeline | ✅ Built |
+| Campaigns | `/campaigns/[id]` | Overview, Assignments, Client IO, Vendor IO, deliverables, performance, workflow, finance, timeline | ✅ Built · **UI frozen** (Aurora R2.3, 2026-08-01) |
 | Vendors | `/vendors/[id]` | Overview, legal, finance, documents, platforms, campaigns | ✅ Built |
 
 **Gap:** Workspaces exist but many fields from reference §5.1/§5.2 are not yet on forms (Thinkway PO entity, GR#, achievement, ad-live month, moved-to-billing, invoice #, line lock).

@@ -9,6 +9,7 @@ import { ensureClientIoForCampaignAction } from "@/features/io/actions";
 import type { ClientIoComposerAssignment } from "@/features/io/components/client-io-assignment-composer";
 import { ClientIoForm } from "@/features/io/components/client-io-form";
 import {
+  AuroraEmptyState,
   AuroraStatusPill,
   CampaignWorkspaceFrame,
 } from "@/features/campaigns/components/aurora/campaign-workspace-frame";
@@ -76,6 +77,19 @@ export function ClientIoTab({
     [assignments]
   );
 
+  const setupAction = (
+    <form action={ensureAction}>
+      <input type="hidden" name="campaign_header_id" value={campaignId} />
+      <Button
+        type="submit"
+        disabled={ensuring}
+        className="thinkway-campaign-btn thinkway-campaign-btn-primary"
+      >
+        {ensuring ? "Setting up…" : "Set up Client IO"}
+      </Button>
+    </form>
+  );
+
   if (!io) {
     return (
       <CampaignWorkspaceFrame
@@ -83,48 +97,40 @@ export function ClientIoTab({
         subtitle={`Campaign-level insertion order for ${campaignName}`}
         status={<AuroraStatusPill tone="mut">Not set up</AuroraStatusPill>}
         stats={[
-          { key: "status", label: "Status", value: "—", tone: "mut" },
-          { key: "version", label: "Versions", value: "0" },
-          { key: "assignments", label: "Assignments", value: String(assignments.length) },
+          { key: "version", label: "Versions", value: "0", tone: "mut" },
+          {
+            key: "assignments",
+            label: "Assignments",
+            value: String(assignments.length),
+          },
+          { key: "amount", label: "Agreed amount", value: "—", tone: "mut" },
         ]}
-        registerLabel="Setup"
-      >
-        <div className="rounded-[14px] border border-[var(--camp-hair)] bg-[var(--camp-surface)] p-6">
-          <p className="text-[13.5px] text-[var(--camp-text-3)]">
-            No Client IO record is linked to this campaign yet. Set one up to generate the branded
-            document and send it to the client.
-          </p>
-          <form action={ensureAction} className="mt-4 flex flex-wrap gap-2">
-            <input type="hidden" name="campaign_header_id" value={campaignId} />
-            <Button
-              type="submit"
-              disabled={ensuring}
-              className="thinkway-campaign-btn thinkway-campaign-btn-primary"
-            >
-              {ensuring ? "Setting up…" : "Set up Client IO"}
-            </Button>
-          </form>
-        </div>
-      </CampaignWorkspaceFrame>
+        empty={
+          <AuroraEmptyState
+            title="No Client IO has been generated yet."
+            description="Set up the Client IO to build the branded document, send it for approval, and track revisions."
+            action={setupAction}
+          />
+        }
+      />
     );
   }
 
   return (
     <CampaignWorkspaceFrame
-      title="Client Insertion Order"
+      title="Client IO"
       subtitle={`${io.document_number ?? "CIO"} · ${campaignName}`}
       status={
         <AuroraStatusPill tone={statusTone(io.status)}>
           {io.status.replaceAll("_", " ")}
         </AuroraStatusPill>
       }
+      tools={
+        <Button asChild variant="outline" size="sm" className="thinkway-campaign-btn">
+          <Link href={`/ios/client?io=${io.id}`}>Open register</Link>
+        </Button>
+      }
       stats={[
-        {
-          key: "status",
-          label: "Status",
-          value: io.status.replaceAll("_", " "),
-          tone: io.status === "approved" ? "pos" : "default",
-        },
         {
           key: "version",
           label: "Revision",
@@ -153,7 +159,8 @@ export function ClientIoTab({
           tone: latestSend?.delivery_status === "failed" ? "amber" : "mut",
         },
       ]}
-      banner={
+      detailsLabel="Document & delivery details"
+      details={
         <div className="thinkway-aurora-doc-meta">
           <div className="thinkway-aurora-doc-panel">
             <div className="eyebrow">Document</div>
@@ -170,16 +177,14 @@ export function ClientIoTab({
             <div className="thinkway-aurora-doc-row">
               <span className="dk">PDF</span>
               <span className="dv">
-                {io.generated_pdf_url || io.document_generated_at ? "Attached" : "Not generated"}
+                {io.generated_pdf_url || io.document_generated_at
+                  ? "Attached"
+                  : "Not generated"}
               </span>
             </div>
           </div>
           <div className="thinkway-aurora-doc-panel">
             <div className="eyebrow">Approval</div>
-            <div className="thinkway-aurora-doc-row">
-              <span className="dk">Status</span>
-              <span className="dv">{io.status.replaceAll("_", " ")}</span>
-            </div>
             <div className="thinkway-aurora-doc-row">
               <span className="dk">Approved at</span>
               <span className="dv">
@@ -196,10 +201,6 @@ export function ClientIoTab({
           <div className="thinkway-aurora-doc-panel">
             <div className="eyebrow">Delivery</div>
             <div className="thinkway-aurora-doc-row">
-              <span className="dk">Method</span>
-              <span className="dv">Email</span>
-            </div>
-            <div className="thinkway-aurora-doc-row">
               <span className="dk">Last recipient</span>
               <span className="dv">
                 {latestSend?.recipient_email ??
@@ -215,11 +216,6 @@ export function ClientIoTab({
         </div>
       }
       registerLabel="Document workspace"
-      tools={
-        <Button asChild variant="outline" size="sm" className="thinkway-campaign-btn h-[33px]">
-          <Link href={`/ios/client?io=${io.id}`}>Open register</Link>
-        </Button>
-      }
     >
       <ClientIoForm
         row={io}

@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import {
+  AuroraEmptyState,
   AuroraStatusPill,
   CampaignWorkspaceFrame,
 } from "@/features/campaigns/components/aurora/campaign-workspace-frame";
@@ -122,7 +123,6 @@ export function CampaignWorkflowTab({ workspace }: CampaignWorkflowTabProps) {
         subtitle="Derived from assignment status & billing"
         status={<AuroraStatusPill tone="blue">{currentLabel}</AuroraStatusPill>}
         stats={[
-          { key: "stage", label: "Current stage", value: currentLabel, tone: "blue" },
           {
             key: "blockers",
             label: "Blockers",
@@ -142,7 +142,7 @@ export function CampaignWorkflowTab({ workspace }: CampaignWorkflowTabProps) {
           },
         ]}
         banner={
-          <div className="mb-4 space-y-3">
+          <div className="mb-1 space-y-3">
             <div className="thinkway-aurora-flow" aria-label="Workflow stages">
               {WORKFLOW_STAGE_OPTIONS.map((stage, index) => {
                 const done = stageIndex >= 0 && index < stageIndex;
@@ -177,7 +177,7 @@ export function CampaignWorkflowTab({ workspace }: CampaignWorkflowTabProps) {
             ) : null}
           </div>
         }
-        registerLabel="Approvals register"
+        registerLabel="Approvals"
       >
         <div className={cn(OPERATIONAL_TABLE_FONT)}>
           <OperationalTableSuiteProvider
@@ -199,7 +199,7 @@ export function CampaignWorkflowTab({ workspace }: CampaignWorkflowTabProps) {
               leading={
                 <CampaignOperationalSectionHeader
                   title="Approvals"
-                  description="Pending and completed approval steps for this campaign."
+                  actionsOnly
                   actions={
                     <OperationalTableControlsSlot contextLabel="Campaign approvals" />
                   }
@@ -207,9 +207,10 @@ export function CampaignWorkflowTab({ workspace }: CampaignWorkflowTabProps) {
               }
             >
               {workspace.approvals.length === 0 ? (
-                <div className="thinkway-campaign-empty-state">
-                  <p>No approval records.</p>
-                </div>
+                <AuroraEmptyState
+                  title="No approval records yet."
+                  description="Approvals appear here when Client IO, Vendor IO, or billing steps require sign-off."
+                />
               ) : (
                 <OperationalConfigurableTable
                   columns={columns}

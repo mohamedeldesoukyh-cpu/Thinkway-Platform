@@ -12,6 +12,7 @@ import { OperationalTableControlsSlot } from "@/components/tables/operational-da
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import {
+  AuroraEmptyState,
   AuroraStatusPill,
   CampaignWorkspaceFrame,
 } from "@/features/campaigns/components/aurora/campaign-workspace-frame";
@@ -178,7 +179,7 @@ export function CampaignTimelineTab({
               <div className="eyebrow">Activity</div>
               {recentActivity.length === 0 ? (
                 <p className="py-6 text-center text-[13px] text-[var(--camp-text-4)]">
-                  No activity recorded yet.
+                  No activity yet — campaign events will appear here as work progresses.
                 </p>
               ) : (
                 <div className="thinkway-aurora-tl-feed">
@@ -216,7 +217,7 @@ export function CampaignTimelineTab({
                 </p>
               ) : recentAudit.length === 0 ? (
                 <p className="py-6 text-center text-[13px] text-[var(--camp-text-4)]">
-                  No finance audit events yet.
+                  No finance audit yet — invoice and payment events will appear here.
                 </p>
               ) : (
                 <div className="thinkway-aurora-tl-feed">
@@ -270,7 +271,7 @@ export function CampaignTimelineTab({
               leading={
                 <CampaignOperationalSectionHeader
                   title="Assignments"
-                  description="Latest vendor assignments on this campaign."
+                  actionsOnly
                   actions={
                     <OperationalTableControlsSlot contextLabel="Campaign timeline vendors" />
                   }
@@ -278,9 +279,10 @@ export function CampaignTimelineTab({
               }
             >
               {vendorRows.length === 0 ? (
-                <div className="thinkway-campaign-empty-state">
-                  <p>No vendor assignments.</p>
-                </div>
+                <AuroraEmptyState
+                  title="No vendor assignments yet."
+                  description="Create assignments to populate recent creator activity on this timeline."
+                />
               ) : (
                 <OperationalConfigurableTable
                   columns={columns}

@@ -37,6 +37,17 @@ See `docs/RELEASE_WORKFLOW.md`, `.cursor/rules/thinkway-git-workflow.mdc`, and `
 6. Validation Results  
 7. Next Recommendation  
 
+## UX initiative close-out
+
+When a major UX initiative finishes and Product accepts it:
+
+1. Create `docs/architecture/<SURFACE>_UI_FREEZE.md` (objectives, scope, accepted differences, freeze date, acceptance criteria, extension rules).
+2. Create or update `docs/architecture/<SURFACE>_UI_GUIDELINES.md` for how to extend without redesigning.
+3. Record the freeze in `SUMMARY.md` and `PROMPT_SUMMARY.md`.
+4. Treat further work as functional enhancement unless Product reopens UI scope.
+
+Campaign Workspace (Aurora) freeze: `docs/architecture/CAMPAIGN_WORKSPACE_UI_FREEZE.md`.
+
 ## Continuity maintenance
 
 Keep this file, `SUMMARY.md`, and `PROMPT_SUMMARY.md` concise and current as the platform evolves.

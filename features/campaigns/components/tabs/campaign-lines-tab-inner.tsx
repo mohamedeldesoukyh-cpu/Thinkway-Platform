@@ -311,7 +311,20 @@ export function CampaignLinesTabInner({
             tone: workspace.financials.margin_percent >= 20 ? "pos" : "amber",
           },
         ]}
-        registerLabel="Assignment register"
+        registerLabel="Creators"
+        tools={
+          enableLineSheet && audienceView === "internal" ? (
+            <Button
+              size="sm"
+              onClick={openCreate}
+              title="Create assignment (A)"
+              className="thinkway-campaign-btn thinkway-campaign-btn-primary"
+            >
+              <PlusIcon data-icon="inline-start" className="size-3.5" />
+              Create assignment
+            </Button>
+          ) : undefined
+        }
       >
       <CampaignCreatorDiscoveryProvider
         campaignHeaderId={workspace.id}
@@ -332,8 +345,8 @@ export function CampaignLinesTabInner({
             footer={<CampaignCreatorDiscoveryFooter />}
             leading={
               <CampaignOperationalSectionHeader
-                title="Grid"
-                description="Filter, sort, and edit creators in the operational register."
+                title="Assignments"
+                actionsOnly
                 actions={
                   <>
                     <AssignmentAudienceViewToggle
@@ -344,17 +357,6 @@ export function CampaignLinesTabInner({
                       contextLabel="Assignments"
                       columnSettings="assignment-grid"
                     />
-                    {enableLineSheet && audienceView === "internal" ? (
-                      <Button
-                        size="sm"
-                        onClick={openCreate}
-                        title="Create assignment (A)"
-                        className="thinkway-campaign-btn thinkway-campaign-btn-primary h-[30px] text-[11px] shadow-none"
-                      >
-                        <PlusIcon data-icon="inline-start" className="size-3.5" />
-                        Create assignment
-                      </Button>
-                    ) : null}
                   </>
                 }
               />

@@ -450,7 +450,16 @@ export function CampaignPerformanceGrid({
 
             {pageRows.length === 0 ? (
               <div className="thinkway-campaign-empty-state">
-                <p>No publications match your filters.</p>
+                <p className="font-medium text-[var(--camp-text-2)]">
+                  {rows.length === 0
+                    ? "No publications have been added yet."
+                    : "No publications match your filters."}
+                </p>
+                <p className="mt-1 text-[12px] text-[var(--camp-text-3)]">
+                  {rows.length === 0
+                    ? "Use Add publication to start tracking live posts and metrics."
+                    : "Clear filters or adjust search to see more rows."}
+                </p>
               </div>
             ) : (
               pageRows.map((row) => (

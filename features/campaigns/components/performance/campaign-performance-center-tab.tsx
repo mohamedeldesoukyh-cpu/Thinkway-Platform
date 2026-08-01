@@ -460,35 +460,37 @@ export function CampaignPerformanceCenterTab({
               </div>
             ) : null}
             <CampaignPerformanceSyncHealth health={syncHealth} />
-            <div className="mt-3 mb-1 rounded-[14px] border border-[var(--camp-hair)] bg-[var(--camp-surface)] p-3">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-[var(--camp-text-4)]">
-                  Trends
-                </span>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 text-[11px]"
-                  onClick={() => setChartsOpen(true)}
-                >
-                  Expand charts
-                  {chartSeriesCount > 0 ? ` · ${chartSeriesCount}` : ""}
-                </Button>
-              </div>
-              <PerformanceChartsSection charts={charts} />
-            </div>
           </>
         }
-        registerLabel="Publications register"
+        detailsLabel={
+          chartSeriesCount > 0 ? `Trends · ${chartSeriesCount} series` : "Trends"
+        }
+        details={
+          <div className="rounded-[14px] border border-[var(--camp-hair)] bg-[var(--camp-surface)] p-3">
+            <div className="mb-2 flex items-center justify-end">
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 text-[11px]"
+                onClick={() => setChartsOpen(true)}
+              >
+                Expand charts
+                {chartSeriesCount > 0 ? ` · ${chartSeriesCount}` : ""}
+              </Button>
+            </div>
+            <PerformanceChartsSection charts={charts} />
+          </div>
+        }
+        registerLabel="Publications"
       >
       <OperationalTableColumnsProvider
         tableId={PERFORMANCE_GRID_TABLE_ID}
         columns={PERFORMANCE_GRID_COLUMN_METAS}
       >
         <div className="thinkway-campaign-grid-toolbar">
-          <span className="text-[11px] font-semibold text-[var(--camp-text-2)]">
-            Publications grid · {filtered.length} of {publications.length}
+          <span className="text-[11px] text-[var(--camp-text-3)] tabular-nums">
+            {filtered.length} of {publications.length}
           </span>
           <div className="thinkway-campaign-search-box">
             <SearchIcon className="thinkway-campaign-search-ico size-3" aria-hidden />
