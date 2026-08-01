@@ -1,10 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
-
 import { CampaignCommandCenter } from "@/features/campaigns/components/aurora/campaign-command-center";
 import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
-import { campaignLifecycleFromWorkspace } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
+import type { CampaignLifecycleView } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignPerformanceSummary } from "@/lib/domains/campaign/types";
@@ -16,8 +14,12 @@ type CampaignOverviewTabProps = {
   teams: { id: string; name: string }[];
   groups: { id: string; name: string; document_number: string }[];
   currencyOptions: { value: string; label: string }[];
+  /** Single lifecycle SSOT from CampaignWorkspaceView — do not recompute. */
+  lifecycle: CampaignLifecycleView;
   onOpenDetails?: () => void;
   onNavigateToTab: (tab: CampaignWorkspaceTabId) => void;
+  onOpenResolver?: () => void;
+  onContinueLifecycle?: () => void;
   performanceSummary?: CampaignPerformanceSummary | null;
   performanceLoaded?: boolean;
 };
@@ -30,16 +32,14 @@ export function CampaignOverviewTab({
   teams: _teams,
   groups: _groups,
   currencyOptions,
+  lifecycle,
   onOpenDetails,
   onNavigateToTab,
+  onOpenResolver,
+  onContinueLifecycle,
   performanceSummary,
   performanceLoaded,
 }: CampaignOverviewTabProps) {
-  const lifecycle = useMemo(
-    () => campaignLifecycleFromWorkspace(workspace),
-    [workspace]
-  );
-
   return (
     <CampaignCommandCenter
       workspace={workspace}
@@ -50,6 +50,8 @@ export function CampaignOverviewTab({
       performanceLoaded={performanceLoaded}
       onNavigateToTab={onNavigateToTab}
       onOpenDetails={onOpenDetails}
+      onOpenResolver={onOpenResolver}
+      onContinueLifecycle={onContinueLifecycle}
       lifecycle={lifecycle}
     />
   );

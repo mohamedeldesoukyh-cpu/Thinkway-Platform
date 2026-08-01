@@ -53,6 +53,8 @@ type CampaignCommandCenterProps = {
   performanceLoaded?: boolean;
   onNavigateToTab: (tab: CampaignWorkspaceTabId) => void;
   onOpenDetails?: () => void;
+  onOpenResolver?: () => void;
+  onContinueLifecycle?: () => void;
   lifecycle?: CampaignLifecycleView;
 };
 
@@ -91,6 +93,8 @@ export function CampaignCommandCenter({
   performanceLoaded = false,
   onNavigateToTab,
   onOpenDetails,
+  onOpenResolver,
+  onContinueLifecycle,
   lifecycle,
 }: CampaignCommandCenterProps) {
   const [inlineEditing, setInlineEditing] = useState(false);
@@ -166,7 +170,11 @@ export function CampaignCommandCenter({
           lifecycle={lifecycle}
           activeWorkspaceTab="overview"
           variant="dashboard"
-          onContinue={() => onNavigateToTab(lifecycle.nextActionTab)}
+          onContinue={
+            onContinueLifecycle ??
+            (() => onNavigateToTab(lifecycle.decisionCenter.primaryActionTab))
+          }
+          onOpenResolver={onOpenResolver}
           onSelectStage={onNavigateToTab}
         />
       ) : (

@@ -1,10 +1,11 @@
 # Campaign Workspace Baseline v1.0 (Lifecycle OS)
 
-**Status:** Protected implementation baseline for Architecture v1.0 — **frozen on `origin/develop`**  
-**Milestone:** Campaign Workspace Lifecycle OS Complete  
+**Status:** Historical — **superseded for implementation by v1.1**  
+**Canonical baseline:** [`CAMPAIGN_WORKSPACE_BASELINE_V1.1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.1.md)  
+**Milestone:** Campaign Workspace Lifecycle OS Complete (v1.0)  
 **Approved:** 2026-08-01  
-**Freeze commits:** `e683ad57` · `692adc4f` on `develop` (pushed)  
-**Class:** Governance — **no further Campaign Workspace redesign** without formal Architecture Reopen
+**Freeze commits (v1.0):** `e683ad57` · `692adc4f` on `develop`  
+**Class:** Historical reference — do not treat as the current implementation baseline  
 **Parent baselines:**  
 [`THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md`](./THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md) ·  
 [`BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md`](./BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md) ·  

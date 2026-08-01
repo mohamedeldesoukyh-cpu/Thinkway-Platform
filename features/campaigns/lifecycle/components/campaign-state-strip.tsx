@@ -54,7 +54,12 @@ export function CampaignStateStrip({
         </div>
         <div>
           <span className="thinkway-bp-label">State</span>
-          <strong data-state={lifecycle.businessState}>{lifecycle.businessStateLabel}</strong>
+          <strong
+            data-state={lifecycle.businessState}
+            data-severity={lifecycle.decisionCenter.severityMode}
+          >
+            {lifecycle.businessStateLabel}
+          </strong>
         </div>
         <div>
           <span className="thinkway-bp-label">Waiting For</span>

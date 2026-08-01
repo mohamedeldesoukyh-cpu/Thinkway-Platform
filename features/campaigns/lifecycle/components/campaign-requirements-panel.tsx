@@ -5,17 +5,23 @@ import { cn } from "@/lib/utils";
 
 type Props = {
   lifecycle: CampaignLifecycleView;
+  /** Compact mode omits fields already shown in Decision Center / State Strip. */
+  compact?: boolean;
   className?: string;
 };
 
-/** Explains stage requirements, missing items, reason, action, owner, outcome. */
-export function CampaignRequirementsPanel({ lifecycle, className }: Props) {
+/** Explains stage requirements — compact when Decision Center owns next-action copy. */
+export function CampaignRequirementsPanel({
+  lifecycle,
+  compact = false,
+  className,
+}: Props) {
   const completed = lifecycle.requirements.filter((item) => item.met);
   const missing = lifecycle.requirements.filter((item) => !item.met);
 
   return (
     <section
-      className={cn("thinkway-lc-requirements", className)}
+      className={cn("thinkway-lc-requirements", compact && "is-compact", className)}
       aria-label={`${lifecycle.businessStageLabel} requirements`}
     >
       <div className="thinkway-lc-requirements-head">
@@ -56,39 +62,26 @@ export function CampaignRequirementsPanel({ lifecycle, className }: Props) {
           )}
         </div>
 
-        <div>
-          <div className="thinkway-bp-label">
-            {lifecycle.businessState === "blocked" ? "Hard blockers" : "Why here"}
+        {!compact ? (
+          <>
+            <div>
+              <div className="thinkway-bp-label">Expected Outcome</div>
+              <p>{lifecycle.expectedResult}</p>
+            </div>
+            <div>
+              <div className="thinkway-bp-label">Enforcement</div>
+              <p className="capitalize">
+                {lifecycle.mandatory ? "Mandatory" : "Optional"} · {lifecycle.enforcement}
+                {lifecycle.enforcement !== "hard" ? " (soft — work can continue)" : ""}
+              </p>
+            </div>
+          </>
+        ) : (
+          <div>
+            <div className="thinkway-bp-label">Expected Outcome</div>
+            <p>{lifecycle.expectedResult}</p>
           </div>
-          {lifecycle.businessState === "blocked" && lifecycle.blockers.length > 0 ? (
-            <ul className="thinkway-lc-blocker-list">
-              {lifecycle.blockers.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          ) : (
-            <p>{lifecycle.reason}</p>
-          )}
-        </div>
-
-        <div>
-          <div className="thinkway-bp-label">Next Action</div>
-          <p className="font-semibold">{lifecycle.nextAction}</p>
-          <p className="thinkway-lc-muted mt-1">Owner: {lifecycle.owner}</p>
-        </div>
-
-        <div>
-          <div className="thinkway-bp-label">Expected Outcome</div>
-          <p>{lifecycle.expectedResult}</p>
-        </div>
-
-        <div>
-          <div className="thinkway-bp-label">Enforcement</div>
-          <p className="capitalize">
-            {lifecycle.mandatory ? "Mandatory" : "Optional"} · {lifecycle.enforcement}
-            {lifecycle.enforcement !== "hard" ? " (soft — work can continue)" : ""}
-          </p>
-        </div>
+        )}
       </div>
     </section>
   );

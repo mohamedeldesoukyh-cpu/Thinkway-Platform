@@ -127,6 +127,25 @@ describe("Campaign Workspace Lifecycle OS — regression (baseline v1)", () => {
       assert.ok(lifecycle.expectedResult.length > 0);
     });
 
+    it("exposes a Decision Center with specific CTAs and unlocks", () => {
+      const lifecycle = deriveLifecycleForTest(
+        base({
+          lineCount: 2,
+          hasClientIo: true,
+          clientIoStatus: "under_client_review",
+        })
+      );
+      assert.ok(lifecycle.decisionCenter);
+      assert.ok(lifecycle.decisionCenter.blockers.length > 0);
+      assert.ok(lifecycle.decisionCenter.unlocks.length > 0);
+      assert.match(lifecycle.decisionCenter.continueReason, /./);
+      assert.notEqual(
+        lifecycle.decisionCenter.primaryAction.toLowerCase(),
+        "resolve blockers"
+      );
+      assert.equal(lifecycle.nextAction, lifecycle.decisionCenter.primaryAction);
+    });
+
     it("never redirects away from any explicit ?tab= (all workspaces stick)", () => {
       for (const tab of CAMPAIGN_WORKSPACE_DEFAULT_TAB_ORDER) {
         assert.equal(

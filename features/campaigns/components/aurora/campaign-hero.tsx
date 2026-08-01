@@ -21,6 +21,7 @@ type CampaignHeroProps = {
   lifecycle?: CampaignLifecycleView;
   activeWorkspaceTab?: CampaignWorkspaceTabId;
   onNavigateToCurrentStage?: () => void;
+  onOpenResolver?: () => void;
   onSelectStage?: (tab: CampaignWorkspaceTabId) => void;
   className?: string;
 };
@@ -36,6 +37,7 @@ export function CampaignHero({
   lifecycle,
   activeWorkspaceTab,
   onNavigateToCurrentStage,
+  onOpenResolver,
   onSelectStage,
   className,
 }: CampaignHeroProps) {
@@ -89,6 +91,8 @@ export function CampaignHero({
               className="mt-3"
               lifecycle={lifecycle}
               onContinue={onNavigateToCurrentStage}
+              onOpenResolver={onOpenResolver}
+              onNavigateToTab={onSelectStage}
             />
             <CampaignProcessRail
               className="mt-3"

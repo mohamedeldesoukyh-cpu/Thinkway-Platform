@@ -161,6 +161,9 @@ type CampaignBillingTabProps = {
   billingGroups: AssignmentBillingGroup[];
   operationalBilling: CampaignOperationalBillingDetail | null;
   campaignInvoiceRegister: FinanceInvoiceRegisterRow[];
+  /** When false, Create Invoice is hidden and a lifecycle unlock message is shown. */
+  invoiceCreationUnlocked?: boolean;
+  onNavigateToLifecycleAction?: () => void;
 };
 
 export function CampaignBillingTab({
@@ -169,6 +172,8 @@ export function CampaignBillingTab({
   billingGroups,
   operationalBilling,
   campaignInvoiceRegister,
+  invoiceCreationUnlocked = true,
+  onNavigateToLifecycleAction,
 }: CampaignBillingTabProps) {
   const refreshAfterOperationalMutation = useRefreshCampaignAfterOperationalMutation();
   const { financials } = workspace;
@@ -364,6 +369,26 @@ export function CampaignBillingTab({
 
   return (
     <div>
+      {!invoiceCreationUnlocked ? (
+        <aside className="thinkway-lc-finance-lock mb-3" aria-label="Invoice availability">
+          <div className="thinkway-bp-label">Create Invoice unavailable</div>
+          <p>
+            <b>Unlock:</b> Complete Client IO to unlock Billing.
+          </p>
+          <p className="thinkway-lc-muted">
+            Invoices become available when the campaign reaches the Billing stage.
+          </p>
+          {onNavigateToLifecycleAction ? (
+            <button
+              type="button"
+              className="thinkway-bp-continue mt-2"
+              onClick={onNavigateToLifecycleAction}
+            >
+              Take next action
+            </button>
+          ) : null}
+        </aside>
+      ) : null}
       <CampaignWorkspaceFrame
         title="Finance"
         subtitle="Commercial snapshot and billing registers"
@@ -382,19 +407,21 @@ export function CampaignBillingTab({
             <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn">
               <Link href="/billing">Finance workspace</Link>
             </Button>
-            <Button
-              size="sm"
-              className="thinkway-campaign-btn thinkway-campaign-btn-primary"
-              onClick={() => {
-                if (operationalBilling) {
-                  beginInvoiceFlow(undefined);
-                } else {
-                  setLegacyInvoiceOpen(true);
-                }
-              }}
-            >
-              Create invoice
-            </Button>
+            {invoiceCreationUnlocked ? (
+              <Button
+                size="sm"
+                className="thinkway-campaign-btn thinkway-campaign-btn-primary"
+                onClick={() => {
+                  if (operationalBilling) {
+                    beginInvoiceFlow(undefined);
+                  } else {
+                    setLegacyInvoiceOpen(true);
+                  }
+                }}
+              >
+                Create invoice
+              </Button>
+            ) : null}
           </>
         }
         stats={[

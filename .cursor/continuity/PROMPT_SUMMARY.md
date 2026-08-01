@@ -2,8 +2,7 @@
 
 **Branch focus:** `develop` (synced with `origin/develop`).  
 **Active initiative:** **Release 2.2a — Campaign Planning Capability (Planning Board)** — **review only · no implementation**  
-**Next step:** Review Capability Spec + Product Review pack **together** before any code.  
-**Must inherit:** Campaign Workspace Lifecycle OS · BPN · Architecture v1.0 (no new nav/layouts/workflows).  
+**Must inherit:** Campaign Workspace Baseline **v1.1** (Decision Center · Lifecycle OS) · BPN · Architecture v1.0.  
 
 **Gate docs:**  
 - `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md`  
@@ -113,26 +112,27 @@
 - **Package frozen:** `docs/architecture/platform-ux/` (01–12) — no architecture/UX redesign without formal reopen
 - **Architecture-first work:** Complete · Migration Phase 1 complete (`b8e09927`)
 - **BPN Foundation:** Accepted into protected Architecture v1.0 baseline; compliance permanence confirmed
-- **Campaign Workspace Lifecycle OS:** protected on `origin/develop` — see section below
+- **Campaign Workspace Baseline v1.1:** canonical · Maintenance Mode — see section below
 - **Planning Board:** **active review initiative** — Spec + Review pack · **no implementation until both approved**
-- **Preserves:** Campaign Workspace Baseline v1 · Campaign Module Baseline · BPN · Enterprise Tabs · Financial Display · Deliverables · all business logic / APIs / DB
+- **Preserves:** Campaign Workspace Baseline v1.1 · Campaign Module Baseline · BPN · Enterprise Tabs · Financial Display · Deliverables · all business logic / APIs / DB
 
-## Campaign Workspace Lifecycle OS — PROTECTED BASELINE (pushed 2026-08-01)
+## Campaign Workspace Baseline v1.1 — FROZEN (Release 2.2b · 2026-08-01)
 
-- **Canonical:** `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.md`
-- **Tip on `origin/develop`:** `e683ad57` (freeze) · `692adc4f` (tip annotation)
-- **Class:** Protected implementation baseline for Architecture v1.0
-- **Rule:** **No further Campaign Workspace redesign** unless formal Architecture Reopen is approved
-- **Compliance invariants:** Campaign primary · Business Stage SSOT · workspaces as views · Next Action journey · no competing nav · extend lifecycle
-- **Regression (mandatory):** `npm run test:campaign-workspace-lifecycle-os`
-- **Future capabilities:** must **extend** this baseline — not modify its navigation philosophy
-- **Bugfix (tab stickiness):** Any workspace tab briefly showed then bounced to Client IO after ~seconds. Cause: `router.replace(?tab=)` refetched the slow campaign page + `loading.tsx` remount + `defaultTab` sync snapped back to entry stage; Overview also cleared `?tab=`. Fix: always keep `?tab=` (incl. overview); tab changes use `history.replaceState` (no RSC remount); sync `defaultTab` only on campaign switch. Bare `/campaigns/[id]` still deep-links to recommended stage.
+- **Canonical:** `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.1.md`
+- **Historical v1.0:** `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.md`
+- **Class:** Protected implementation baseline — **Maintenance Mode**
+- **Includes:** Decision Center · Smart Blocker Resolver · Progressive Disclosure · Lifecycle SSOT · Hard≠Attention · Locked workspace guidance
+- **Rule:** No Campaign Workspace redesign without Architecture Reopen
+- **Permitted without reopen:** bug / perf / a11y / copy / lifecycle extensions that preserve baseline
+- **Compliance:** `PLATFORM_ARCHITECTURE_COMPLIANCE.md` invariants 1–6 (v1.1)
+- **Regression (mandatory / protected):** `npm run test:campaign-workspace-lifecycle-os`
+- **Tab stickiness:** `de7206b5` — `history.replaceState` for `?tab=`
 
 ## Active — Release 2.2a Planning Board (review gate)
 
 - **Status:** Capability Spec + Product Review open — **do not write code**
-- **Role:** Planning stage of the Campaign Lifecycle (inherits Campaign Workspace Lifecycle OS)
-- **After dual approval:** implement R2.2a → then 2.2b Copilot → Client/Vendor/Creator journeys → Reporting → Notifications → Analytics
+- **Role:** Planning stage of the Campaign Lifecycle (inherits Campaign Workspace Baseline **v1.1**)
+- **After dual approval:** implement R2.2a → Media Plan Copilot → Client/Vendor/Creator journeys → Reporting → Notifications → Analytics
 
 ## IO approval email experience (Preview testing on develop)
 

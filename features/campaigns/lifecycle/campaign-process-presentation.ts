@@ -287,7 +287,15 @@ export function deriveCampaignProcessCue(signals: CampaignProcessSignals): Campa
       currentStageId: stageId,
       statusLabel: signals.poExceeded ? "PO limit exceeded" : "Blocked by open issues",
       lifecycleSignal: "blocked",
-      nextActionLabel: "Resolve blockers",
+      nextActionLabel: signals.poExceeded
+        ? "Review PO Limit"
+        : clientStatus === "rejected"
+          ? "Review Client Feedback"
+          : waitingClient
+            ? "Open Client IO"
+            : signals.lineCount === 0
+              ? "Complete Assignments"
+              : "Open Pending Approval",
       waitingFor: "Operations",
     });
   }
@@ -336,7 +344,7 @@ export function deriveCampaignProcessCue(signals: CampaignProcessSignals): Campa
       statusLabel: clientStatus === "generated" ? "Ready to send" : "In Progress",
       lifecycleSignal: "waiting_internal",
       nextActionLabel:
-        clientStatus === "generated" ? "Send Client IO" : "Prepare Client IO",
+        clientStatus === "generated" ? "Send Client IO" : "Generate Client IO",
       waitingFor: "Commercial",
       nextStageId: "vendor-io",
       owner: "Commercial",

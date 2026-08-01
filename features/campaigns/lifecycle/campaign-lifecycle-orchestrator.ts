@@ -8,6 +8,11 @@
 
 import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
 import {
+  buildDecisionCenter,
+  refineGenericAction,
+  type CampaignDecisionCenter,
+} from "@/features/campaigns/lifecycle/campaign-decision-center";
+import {
   BUSINESS_PROCESS_STAGES,
   getStagePolicy,
   type CampaignStagePolicy,
@@ -105,6 +110,8 @@ export type CampaignLifecycleView = {
   health: CampaignHealthSlice[];
   readiness: CampaignReadinessItem[];
   timeline: BusinessTimelineEvent[];
+  /** Decision-first operating surface (blockers, unlocks, specific CTAs). */
+  decisionCenter: CampaignDecisionCenter;
   /** Compatibility with Phase 1 BPN cue. */
   processCue: CampaignProcessCue;
   policy: CampaignStagePolicy;
@@ -649,12 +656,11 @@ export function buildWorkspaceGuidance(
       lifecycle.businessStageId === "billing";
     if (!billingReady && lifecycle.businessStageId !== "billing") {
       return guidanceBase(lifecycle, activeTab, "Finance", {
-        whatHappened: "Campaign has not reached Billing.",
-        currentSituation:
-          "Invoices become available after Client IO approval and commercial progression.",
+        whatHappened: "Complete Client IO to unlock Billing.",
+        currentSituation: "Create Invoice stays unavailable until Billing starts.",
         nextAction: lifecycle.nextAction,
         owner: lifecycle.owner,
-        unlockHint: "Finance unlocks when the campaign reaches Billing.",
+        unlockHint: "Open the next action to progress toward Billing.",
         outOfBand: true,
       });
     }
@@ -667,11 +673,11 @@ export function buildWorkspaceGuidance(
       (pubSignal === "upcoming" || pubSignal === "waiting_internal")
     ) {
       return guidanceBase(lifecycle, activeTab, "Performance", {
-        whatHappened: "Campaign has not entered Publication stage.",
-        currentSituation: "Metrics will begin after creators publish.",
+        whatHappened: "Publish deliverables to unlock Performance metrics.",
+        currentSituation: "Metrics appear after publications go live.",
         nextAction: lifecycle.nextAction,
         owner: lifecycle.owner,
-        unlockHint: "Performance unlocks at the Publication stage.",
+        unlockHint: "Advance delivery so creators can publish.",
         outOfBand: true,
       });
     }
@@ -683,11 +689,39 @@ export function buildWorkspaceGuidance(
       lifecycle.businessStageId === "client-io"
     ) {
       return guidanceBase(lifecycle, activeTab, "Vendor IO", {
-        whatHappened: "Waiting for Client Approval.",
-        currentSituation: "Vendor Orders cannot be sent yet.",
-        nextAction: lifecycle.nextAction,
+        whatHappened: "Complete Client IO to unlock Vendor IO send.",
+        currentSituation: "Drafts may exist, but send stays blocked until Client approval.",
+        nextAction: "Open Client IO",
         owner: "Commercial",
-        unlockHint: "Vendor IO unlocks after Client Approval.",
+        unlockHint: "Open Client IO and secure approval.",
+        outOfBand: true,
+      });
+    }
+  }
+
+  if (activeTab === "deliverables") {
+    const vioSignal = lifecycle.processCue.stageSignals["vendor-io"] ?? "upcoming";
+    if (
+      lifecycle.businessStageId !== "deliverables" &&
+      (vioSignal === "upcoming" ||
+        vioSignal === "waiting_client" ||
+        lifecycle.businessStageId === "client-io" ||
+        lifecycle.businessStageId === "vendor-io")
+    ) {
+      const waitingVio =
+        lifecycle.businessStageId === "vendor-io" ||
+        vioSignal === "waiting_vendor" ||
+        vioSignal === "current";
+      return guidanceBase(lifecycle, activeTab, "Deliverables", {
+        whatHappened: waitingVio
+          ? "Complete Vendor IO to unlock Deliverables."
+          : "Complete commercial approvals to unlock Deliverables.",
+        currentSituation: waitingVio
+          ? "Creator uploads unlock after Vendor IO approval."
+          : "Finish Client IO, then Vendor IO, before delivery starts.",
+        nextAction: lifecycle.nextAction,
+        owner: lifecycle.owner,
+        unlockHint: "Open the next action to clear the approval path.",
         outOfBand: true,
       });
     }
@@ -787,7 +821,14 @@ function deriveLifecycleFromSignals(
       ? waitingStateLabel(processCue.waitingFor)
       : businessStateLabel(businessState);
 
-  return {
+  const expectedResult = expectedResultFor(processCue.entryStageId);
+  const refinedAction = refineGenericAction(
+    processCue.nextActionLabel,
+    processCue.entryStageId,
+    signals
+  );
+
+  const draftView: Omit<CampaignLifecycleView, "decisionCenter"> = {
     businessStageId: processCue.entryStageId,
     businessStageLabel: processCue.currentStageLabel,
     businessState,
@@ -796,8 +837,8 @@ function deriveLifecycleFromSignals(
     waitingFor: processCue.waitingFor,
     waitingLabel,
     reason: buildReason(processCue, businessState, reasonHints),
-    expectedResult: expectedResultFor(processCue.entryStageId),
-    nextAction: processCue.nextActionLabel,
+    expectedResult,
+    nextAction: refinedAction,
     nextActionTab: processCue.entryStageId,
     nextStageLabel: processCue.nextStageLabel,
     enforcement: policy.enforcement,
@@ -810,6 +851,48 @@ function deriveLifecycleFromSignals(
     timeline: buildBusinessTimeline(workspace, signals),
     processCue,
     policy,
+  };
+
+  // Days waiting uses latest activity as a movement proxy (presentation only).
+  const activityAt = workspace?.activity?.[0]?.created_at ?? null;
+  let daysWaiting: number | null = null;
+  if (
+    activityAt &&
+    (businessState === "waiting" ||
+      businessState === "needs_attention" ||
+      businessState === "blocked")
+  ) {
+    const from = new Date(activityAt);
+    if (!Number.isNaN(from.getTime())) {
+      daysWaiting = Math.max(
+        0,
+        Math.floor((Date.now() - from.getTime()) / (1000 * 60 * 60 * 24))
+      );
+    }
+  }
+
+  const decisionCenter = buildDecisionCenter({
+    stageId: processCue.entryStageId,
+    stageLabel: processCue.currentStageLabel,
+    businessState,
+    enforcement: policy.enforcement,
+    owner: processCue.owner,
+    waitingFor: processCue.waitingFor,
+    nextAction: refinedAction,
+    nextActionTab: processCue.entryStageId,
+    expectedResult,
+    missing,
+    hardBlockers: blockers,
+    workspaceBlockers: workspace?.blockers ?? [],
+    signals,
+    daysWaiting,
+  });
+
+  return {
+    ...draftView,
+    nextAction: decisionCenter.primaryAction,
+    nextActionTab: decisionCenter.primaryActionTab,
+    decisionCenter,
   };
 }
 

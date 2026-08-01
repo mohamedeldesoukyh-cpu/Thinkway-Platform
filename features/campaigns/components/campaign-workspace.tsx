@@ -25,7 +25,10 @@ import {
 import {
   buildCampaignWorkspaceTabUrl,
 } from "@/features/campaigns/lifecycle/campaign-workspace-entry-routing";
+import { isBillingInvoiceCreationUnlocked } from "@/features/campaigns/lifecycle/campaign-decision-center";
+import { CampaignBlockerResolverDrawer } from "@/features/campaigns/lifecycle/components/campaign-blocker-resolver-drawer";
 import { CampaignStateStrip } from "@/features/campaigns/lifecycle/components/campaign-state-strip";
+import { CampaignVendorIoLifecycleBanner } from "@/features/campaigns/lifecycle/components/campaign-vendor-io-lifecycle-banner";
 import { CampaignWorkspaceGuidance } from "@/features/campaigns/lifecycle/components/campaign-workspace-guidance";
 import {
   campaignProcessCueFromWorkspace,
@@ -77,6 +80,7 @@ export function CampaignWorkspaceView({
   const searchParams = useSearchParams();
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [resolverOpen, setResolverOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<CampaignWorkspaceTabId>(defaultTab);
   const campaignIdRef = useRef(workspace.id);
   const { tabOrder, moveTab } = useCampaignWorkspaceTabOrder();
@@ -247,9 +251,25 @@ export function CampaignWorkspaceView({
     () => campaignLifecycleFromWorkspace(workspace),
     [workspace]
   );
+  // Primary CTAs navigate to the exact workspace where the action is performed.
+  // Smart Blocker Resolver opens only from explicit "Open resolver" controls.
   const continueToNextAction = useCallback(() => {
-    handleTabChange(lifecycle.nextActionTab);
-  }, [handleTabChange, lifecycle.nextActionTab]);
+    handleTabChange(lifecycle.decisionCenter.primaryActionTab);
+  }, [handleTabChange, lifecycle.decisionCenter.primaryActionTab]);
+
+  const invoiceCreationUnlocked = useMemo(
+    () =>
+      isBillingInvoiceCreationUnlocked({
+        businessStageId: lifecycle.businessStageId,
+        billingSignal: lifecycle.processCue.stageSignals.billing,
+        invoiceCount: processSignals.invoiceCount,
+      }),
+    [
+      lifecycle.businessStageId,
+      lifecycle.processCue.stageSignals.billing,
+      processSignals.invoiceCount,
+    ]
+  );
 
   const renderWithLifecycleGuidance = (
     tabId: CampaignWorkspaceTabId,
@@ -407,6 +427,7 @@ export function CampaignWorkspaceView({
                 lifecycle={lifecycle}
                 activeWorkspaceTab={activeTab}
                 onNavigateToCurrentStage={continueToNextAction}
+                onOpenResolver={() => setResolverOpen(true)}
                 onSelectStage={handleTabChange}
                 actions={
                   <CampaignHeroActions
@@ -450,8 +471,11 @@ export function CampaignWorkspaceView({
               teams={teams}
               groups={groups}
               currencyOptions={currencyOptions}
+              lifecycle={lifecycle}
               onOpenDetails={() => setDetailsOpen(true)}
               onNavigateToTab={handleTabChange}
+              onOpenResolver={() => setResolverOpen(true)}
+              onContinueLifecycle={continueToNextAction}
               performanceSummary={performanceSummary}
               performanceLoaded={bundleStatuses.publications === "loaded"}
             />
@@ -528,6 +552,11 @@ export function CampaignWorkspaceView({
             {renderWithLifecycleGuidance(
               "vendor-io",
               <TabErrorBoundary tabName="Vendor IO">
+                <CampaignVendorIoLifecycleBanner
+                  lifecycle={lifecycle}
+                  rows={workspace.vendor_ios}
+                  onOpenClientIo={() => handleTabChange("client-io")}
+                />
                 <VendorIoTab campaignId={workspace.id} rows={workspace.vendor_ios} />
               </TabErrorBoundary>
             )}
@@ -577,6 +606,8 @@ export function CampaignWorkspaceView({
                     billingGroups={billingGroups}
                     operationalBilling={operationalBilling}
                     campaignInvoiceRegister={campaignInvoiceRegister}
+                    invoiceCreationUnlocked={invoiceCreationUnlocked}
+                    onNavigateToLifecycleAction={continueToNextAction}
                   />
                 </TabErrorBoundary>
               )
@@ -630,6 +661,13 @@ export function CampaignWorkspaceView({
         workspace={workspace}
         open={duplicateOpen}
         onOpenChange={setDuplicateOpen}
+      />
+
+      <CampaignBlockerResolverDrawer
+        open={resolverOpen}
+        onOpenChange={setResolverOpen}
+        lifecycle={lifecycle}
+        onResolveAction={handleTabChange}
       />
     </div>
     </CampaignOperationalRefreshProvider>
