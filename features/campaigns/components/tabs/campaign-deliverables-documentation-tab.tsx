@@ -17,6 +17,10 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
+import {
+  AuroraStatusPill,
+  CampaignWorkspaceFrame,
+} from "@/features/campaigns/components/aurora/campaign-workspace-frame";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import {
   addDeliverableExternalLinkAction,
@@ -143,6 +147,12 @@ export function CampaignDeliverablesDocumentationTab({
 
   const selected = units.find((u) => u.unitKey === selectedKey) ?? null;
 
+  const receivedCount = useMemo(
+    () => units.filter((unit) => unit.received).length,
+    [units]
+  );
+  const missingCount = Math.max(0, units.length - receivedCount);
+
   function withSelected(
     run: (unit: DocumentationUnitSummary) => Promise<void>
   ) {
@@ -155,10 +165,53 @@ export function CampaignDeliverablesDocumentationTab({
   }
 
   return (
+    <CampaignWorkspaceFrame
+      title="Deliverables"
+      subtitle="Documentation repository — files, links, captions, versions, and comments"
+      status={
+        <AuroraStatusPill
+          tone={
+            units.length === 0
+              ? "mut"
+              : missingCount === 0
+                ? "green"
+                : "amber"
+          }
+        >
+          {loading
+            ? "Loading…"
+            : units.length === 0
+              ? "No units"
+              : `${missingCount} missing docs`}
+        </AuroraStatusPill>
+      }
+      stats={[
+        { key: "total", label: "Units", value: loading ? "…" : String(units.length) },
+        {
+          key: "received",
+          label: "Received",
+          value: loading ? "…" : String(receivedCount),
+          tone: "pos",
+        },
+        {
+          key: "missing",
+          label: "Missing",
+          value: loading ? "…" : String(missingCount),
+          tone: missingCount > 0 ? "amber" : "mut",
+        },
+        {
+          key: "creators",
+          label: "Creators",
+          value: String(creators.length),
+          tone: "blue",
+        },
+      ]}
+      registerLabel="Documentation register"
+    >
     <div className="space-y-4">
       <CampaignOperationalSectionHeader
-        title="Deliverables"
-        description="Documentation repository — files, links, captions, versions, and comments. Not publishing or performance."
+        title="Repository"
+        description="Search and open a unit to manage assets and comments."
       />
 
       <OperationalTableSection wide>
@@ -532,5 +585,6 @@ export function CampaignDeliverablesDocumentationTab({
         </div>
       </OperationalTableSection>
     </div>
+    </CampaignWorkspaceFrame>
   );
 }

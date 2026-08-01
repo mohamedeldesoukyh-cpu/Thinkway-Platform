@@ -89,14 +89,16 @@
 - Standing by: Prod email config → Product pre-authorized resume: E1–E7 → remaining smoke → evidence → `v2.2.0` → Production Complete → reopen **2.2a Planning Board** (pause + remediate if any E-check fails)
 - Suite: `npm run test:release-2-2` **17/17**
 
-## Release 2.3 — Campaign Workspace Aurora redesign (Revision 2 on develop)
+## Release 2.3 — Campaign Workspace Aurora redesign (consistency pass on develop)
 
-- **Scope:** Presentation-only enterprise workspace redesign — no DB/API/workflow/business-logic changes
-- **Overview = Command Center:** readiness, workflow health, ops cards (Commercial / Assignments / CIO / VIO / Deliverables / Performance / Finance / Timeline), quick actions, recent assignments; details/PO behind progressive disclosure
-- **Hero:** identity + PO donut + promoted actions (Studio, Media Plans, Planning Board placeholder, CIO, VIO, Finance, Timeline)
-- **Env chrome:** full-width orange banner removed → Aurora pill in dashboard header + campaign topbar (`EnvironmentChrome` / `EnvironmentBadge`)
-- **Tabs remain focused workspaces** (URLs unchanged). Finance → existing `billing`. Workflow kept. No Campaign Lines tab this release.
-- Future-ready disabled entry points: Planning Board (2.2a), Copilot (2.2b)
+- **Scope:** Presentation-only — shared `CampaignWorkspaceFrame` applied to all focused workspaces
+- **Overview:** Command center (Revision 2)
+- **Workspaces:** Assignments, Client IO, Vendor IO, Deliverables, Performance, Finance, Timeline, Workflow each have Aurora header + summary stats; tables/registers below
+- **CIO/VIO:** Document-management chrome (status, delivery, approval meta) above registers
+- **Performance:** Executive KPIs + inline trends before publications grid
+- **Finance:** Commercial snapshot (Rev/Cost/GP/Margin/CIO/VIO) before billing registers
+- **Env:** Aurora pill (no full-width banner)
+- URLs/APIs/DB/business logic unchanged; no Campaign Lines tab this release
 - **No Production deploy** — Preview validation next
 
 ## IO approval email experience (Preview testing on develop)

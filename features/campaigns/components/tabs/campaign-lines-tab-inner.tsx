@@ -46,8 +46,13 @@ import {
   CampaignCreatorDiscoveryProvider,
 } from "@/features/campaigns/components/campaign-creator-discovery-panel";
 import { AssignmentsEmptyState } from "@/features/campaigns/components/assignments-empty-state";
+import {
+  AuroraStatusPill,
+  CampaignWorkspaceFrame,
+} from "@/features/campaigns/components/aurora/campaign-workspace-frame";
 import { AssignmentAudienceViewProvider } from "@/features/campaigns/components/assignment-hierarchy/assignment-audience-view-context";
 import { AssignmentAudienceViewToggle } from "@/features/campaigns/components/assignment-hierarchy/assignment-audience-view-toggle";
+import { formatMoney, formatPercent } from "@/features/campaigns/utils";
 import { AssignmentInfluencerDetailSheet } from "@/features/campaigns/components/assignment-hierarchy/assignment-influencer-detail-sheet";
 import { AssignmentSafeGrid } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-grid";
 import type { AssignmentHierarchyGroup } from "@/features/campaigns/types/assignment-hierarchy";
@@ -257,8 +262,57 @@ export function CampaignLinesTabInner({
     logAssignmentsStage("table render scheduled", { campaignId: workspace.id });
   }, [workspace.id]);
 
+  const assignedCount = workspace.lines.filter(
+    (line) => Boolean(line.influencer_id?.trim()) || Boolean(line.campaign_influencer_id?.trim())
+  ).length;
+  const deliverableCount = assignmentHierarchy.groups.reduce(
+    (sum, group) => sum + (group.deliverables?.length ?? 0),
+    0
+  );
+
   return (
     <>
+      <CampaignWorkspaceFrame
+        title="Assignments"
+        subtitle="Creator economics, deliverables, and billing status per line"
+        status={
+          <AuroraStatusPill tone={assignedCount > 0 ? "green" : "mut"}>
+            {assignedCount}/{workspace.lines.length} assigned
+          </AuroraStatusPill>
+        }
+        stats={[
+          { key: "lines", label: "Lines", value: String(workspace.lines.length) },
+          {
+            key: "creators",
+            label: "Creators",
+            value: String(assignedCount),
+            tone: "blue",
+          },
+          {
+            key: "deliverables",
+            label: "Deliverables",
+            value: String(deliverableCount),
+          },
+          {
+            key: "revenue",
+            label: "Revenue",
+            value: formatMoney(workspace.financials.revenue, workspace.currency_code),
+            tone: "blue",
+          },
+          {
+            key: "cost",
+            label: "Cost",
+            value: formatMoney(workspace.financials.cost, workspace.currency_code),
+          },
+          {
+            key: "margin",
+            label: "Margin",
+            value: formatPercent(workspace.financials.margin_percent),
+            tone: workspace.financials.margin_percent >= 20 ? "pos" : "amber",
+          },
+        ]}
+        registerLabel="Assignment register"
+      >
       <CampaignCreatorDiscoveryProvider
         campaignHeaderId={workspace.id}
         campaignName={workspace.name}
@@ -278,8 +332,8 @@ export function CampaignLinesTabInner({
             footer={<CampaignCreatorDiscoveryFooter />}
             leading={
               <CampaignOperationalSectionHeader
-                title="Creator assignments"
-                description="Revenue, cost, margin, and billing status per creator."
+                title="Grid"
+                description="Filter, sort, and edit creators in the operational register."
                 actions={
                   <>
                     <AssignmentAudienceViewToggle
@@ -337,6 +391,7 @@ export function CampaignLinesTabInner({
           </OperationalTableSection>
         </OperationalTableDualColumnsProvider>
       </CampaignCreatorDiscoveryProvider>
+      </CampaignWorkspaceFrame>
 
       <AssignmentInfluencerDetailSheet
         open={detailLineId != null}

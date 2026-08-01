@@ -27,6 +27,11 @@ import { VendorIoRowActions } from "@/features/io/components/vendor-io-row-actio
 import { VendorIoSpecialPaymentTermsCell } from "@/features/io/components/vendor-io-special-payment-terms-cell";
 import { VendorIoStatusPill } from "@/features/io/components/vendor-io-status-pill";
 import type { VendorIoRow } from "@/features/io/types";
+import {
+  AuroraStatusPill,
+  CampaignWorkspaceFrame,
+} from "@/features/campaigns/components/aurora/campaign-workspace-frame";
+import { formatMoney } from "@/features/campaigns/utils";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import { cn } from "@/lib/utils";
 
@@ -355,8 +360,58 @@ export function VendorIoTab({ campaignId, rows }: Props) {
     [sorted, selectedIds]
   );
 
+  const summary = useMemo(() => {
+    const sent = sorted.filter(
+      (row) => row.status === "sent" || row.delivery_status === "sent"
+    ).length;
+    const approved = sorted.filter((row) => row.status === "approved").length;
+    const generated = sorted.filter(
+      (row) => row.status === "generated" || row.status === "draft"
+    ).length;
+    const totalAmount = sorted.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+    const currency = sorted[0]?.currency_code ?? "EGP";
+    return { sent, approved, generated, totalAmount, currency };
+  }, [sorted]);
+
   return (
     <>
+      <CampaignWorkspaceFrame
+        title="Vendor IO"
+        subtitle="Creator insertion orders — send, track delivery, and record approvals"
+        status={
+          <AuroraStatusPill
+            tone={
+              summary.approved > 0 ? "green" : summary.sent > 0 ? "blue" : "mut"
+            }
+          >
+            {summary.sent} sent · {summary.approved} approved
+          </AuroraStatusPill>
+        }
+        stats={[
+          { key: "total", label: "Orders", value: String(sorted.length) },
+          { key: "generated", label: "Draft / generated", value: String(summary.generated) },
+          { key: "sent", label: "Sent", value: String(summary.sent), tone: "blue" },
+          {
+            key: "approved",
+            label: "Approved",
+            value: String(summary.approved),
+            tone: "pos",
+          },
+          {
+            key: "amount",
+            label: "Total amount",
+            value: formatMoney(summary.totalAmount, summary.currency),
+            tone: "blue",
+          },
+          {
+            key: "selected",
+            label: "Selected",
+            value: String(selectedCount),
+            tone: selectedCount > 0 ? "amber" : "mut",
+          },
+        ]}
+        registerLabel="Document register"
+      >
       <OperationalTableSuiteProvider
         tableId={OPERATIONAL_TABLE_IDS.campaignVendorIos}
         columns={providerColumns}
@@ -384,8 +439,8 @@ export function VendorIoTab({ campaignId, rows }: Props) {
             fillHeight
             leading={
               <CampaignOperationalSectionHeader
-                title="Vendor IO"
-                description="Select one or more rows to send. Each row also has Send in the sticky Actions column."
+                title="Orders"
+                description="Select one or more rows to send. Each row also has Send in Actions."
                 actions={
                   <>
                     <VendorIoHeaderSend
@@ -412,6 +467,7 @@ export function VendorIoTab({ campaignId, rows }: Props) {
           </OperationalTableSection>
         </div>
       </OperationalTableSuiteProvider>
+      </CampaignWorkspaceFrame>
 
       <VendorIoDetailSheet
         open={detailIoId != null}

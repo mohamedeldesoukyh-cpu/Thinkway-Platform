@@ -1,10 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
-import {
-  LineChartIcon,
-  SearchIcon,
-} from "lucide-react";
+import { SearchIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -21,12 +18,15 @@ import { OperationalTableColumnsProvider } from "@/components/tables/operational
 import { OperationalTableSettingsButton } from "@/components/tables/operational-table-settings-button";
 import { operationalFloatingBarContentClass } from "@/components/workspace/operational-floating-action-bar";
 import { CampaignPublicationSheet } from "@/features/campaigns/components/campaign-publication-sheet";
-import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
+import {
+  AuroraStatusPill,
+  CampaignWorkspaceFrame,
+} from "@/features/campaigns/components/aurora/campaign-workspace-frame";
 import { CampaignPerformanceCharts as PerformanceChartsSection, countPerformanceChartSeries } from "@/features/campaigns/components/performance/campaign-performance-charts";
+import { formatPercent } from "@/features/campaigns/utils";
 import { OperationalDetailSheet } from "@/features/campaigns/components/operational-detail-panel";
 import { PublicationWorkspace } from "@/features/campaigns/components/performance/publication-workspace/publication-workspace";
 import { CampaignPerformanceGrid } from "@/features/campaigns/components/performance/campaign-performance-grid";
-import { CampaignPerformanceKpiStrip } from "@/features/campaigns/components/performance/campaign-performance-kpi-strip";
 import { PerformanceSelectionFlyout } from "@/features/campaigns/components/performance/performance-selection-flyout";
 import {
   bulkImportPublicationsAction,
@@ -354,13 +354,19 @@ export function CampaignPerformanceCenterTab({
         "pb-14"
       )}
     >
-      <CampaignOperationalSectionHeader
-        title="Campaign Performance Center"
-        titleClassName="text-[14px]"
-        description="Central reporting workspace for live content, metrics, and client-ready exports."
-        actions={
+      <CampaignWorkspaceFrame
+        title="Performance"
+        subtitle="Executive metrics first — publications register below"
+        status={
+          <AuroraStatusPill
+            tone={summary.total_publications > 0 ? "green" : "mut"}
+          >
+            {summary.total_publications > 0 ? "Live" : "No publications"}
+          </AuroraStatusPill>
+        }
+        tools={
           <>
-            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none">
+            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[33px] text-[12px]">
               <a
                 href={`/campaigns/${workspace.id}/performance/preview`}
                 target="_blank"
@@ -369,24 +375,24 @@ export function CampaignPerformanceCenterTab({
                 Preview report
               </a>
             </Button>
-            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none">
+            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[33px] text-[12px]">
               <a href={`${reportBase}?format=pdf&download=1`}>↓ Combined PDF</a>
             </Button>
-            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none">
+            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[33px] text-[12px]">
               <a href={`${reportBase}?format=pdf&variant=influencers&download=1`}>
                 Influencer PDF
               </a>
             </Button>
-            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none">
+            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[33px] text-[12px]">
               <a href={`${reportBase}?format=xlsx&download=1`}>Excel</a>
             </Button>
-            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none">
+            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[33px] text-[12px]">
               <a href={`${reportBase}?format=pptx&download=1`}>PPT</a>
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none"
+              className="thinkway-campaign-btn h-[33px] text-[12px]"
               onClick={refreshAllCampaignMetrics}
               disabled={isPending || publications.length === 0}
             >
@@ -394,7 +400,7 @@ export function CampaignPerformanceCenterTab({
             </Button>
             <Button
               size="sm"
-              className="thinkway-campaign-btn thinkway-campaign-btn-primary h-[30px] text-[11px] shadow-none"
+              className="thinkway-campaign-btn thinkway-campaign-btn-primary h-[33px] text-[12px]"
               onClick={() => setSheetOpen(true)}
               disabled={lines.length === 0}
             >
@@ -402,25 +408,80 @@ export function CampaignPerformanceCenterTab({
             </Button>
           </>
         }
-      />
-
-      {loadError ? (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
-          Performance data could not be loaded. {loadError}
-        </div>
-      ) : null}
-
-      {!loadError && schemaWarnings.length > 0 ? (
-        <div className="rounded-lg border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
-          Some metrics columns are not migrated yet — counts show as — until{" "}
-          <code className="font-mono">20260623120000_campaign_publications_full_schema_reconcile.sql</code>{" "}
-          is applied.
-        </div>
-      ) : null}
-
-      <CampaignPerformanceKpiStrip summary={summary} />
-      <CampaignPerformanceSyncHealth health={syncHealth} />
-
+        stats={[
+          {
+            key: "pubs",
+            label: "Publications",
+            value: String(summary.total_publications),
+          },
+          {
+            key: "reach",
+            label: "Reach",
+            value: String(summary.total_reach),
+            tone: "blue",
+          },
+          {
+            key: "impressions",
+            label: "Impressions",
+            value: String(summary.total_impressions),
+          },
+          {
+            key: "views",
+            label: "Views",
+            value: String(summary.total_views),
+          },
+          {
+            key: "eng",
+            label: "Engagements",
+            value: String(summary.total_engagements),
+            tone: "pos",
+          },
+          {
+            key: "er",
+            label: "Avg ER",
+            value:
+              summary.average_engagement_rate != null
+                ? formatPercent(summary.average_engagement_rate)
+                : "—",
+            tone: "mut",
+          },
+        ]}
+        banner={
+          <>
+            {loadError ? (
+              <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+                Performance data could not be loaded. {loadError}
+              </div>
+            ) : null}
+            {!loadError && schemaWarnings.length > 0 ? (
+              <div className="mb-3 rounded-lg border border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
+                Some metrics columns are not migrated yet — counts show as — until migrations are
+                applied.
+              </div>
+            ) : null}
+            <CampaignPerformanceSyncHealth health={syncHealth} />
+            <div className="mt-3 mb-1 rounded-[14px] border border-[var(--camp-hair)] bg-[var(--camp-surface)] p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-[var(--camp-text-4)]">
+                  Trends
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-[11px]"
+                  onClick={() => setChartsOpen(true)}
+                >
+                  Expand charts
+                  {chartSeriesCount > 0 ? ` · ${chartSeriesCount}` : ""}
+                </Button>
+              </div>
+              <PerformanceChartsSection charts={charts} />
+            </div>
+          </>
+        }
+        registerLabel="Publications register"
+      >
       <OperationalTableColumnsProvider
         tableId={PERFORMANCE_GRID_TABLE_ID}
         columns={PERFORMANCE_GRID_COLUMN_METAS}
@@ -548,19 +609,9 @@ export function CampaignPerformanceCenterTab({
           sortDir={sortDir}
           onSort={handleSort}
         />
-        <div className="thinkway-campaign-section-footer">
-          <button
-            type="button"
-            className="thinkway-campaign-link inline-flex items-center gap-1 text-[11px]"
-            onClick={() => setChartsOpen(true)}
-          >
-            <LineChartIcon className="size-3" aria-hidden />
-            Performance charts
-            {chartSeriesCount > 0 ? ` · ${chartSeriesCount}` : ""}
-          </button>
-        </div>
         </div>
       </OperationalTableColumnsProvider>
+      </CampaignWorkspaceFrame>
 
       <PerformanceSelectionFlyout
         campaignId={workspace.id}

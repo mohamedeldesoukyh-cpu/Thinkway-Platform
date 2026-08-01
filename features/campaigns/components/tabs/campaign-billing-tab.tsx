@@ -20,6 +20,11 @@ import { OperationalTableSection } from "@/components/ui/operational-table-secti
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { CampaignBillingKpiStrip } from "@/features/campaigns/components/campaign-billing-kpi-strip";
 import {
+  AuroraStatusPill,
+  CampaignWorkspaceFrame,
+} from "@/features/campaigns/components/aurora/campaign-workspace-frame";
+import { formatMoney, formatPercent } from "@/features/campaigns/utils";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -347,59 +352,114 @@ export function CampaignBillingTab({
     beginInvoiceFlow(payload);
   }
 
+  const clientIoStatus = workspace.client_io?.status ?? "missing";
+  const vendorIoApproved = workspace.vendor_ios.filter((r) => r.status === "approved").length;
+  const vendorIoTotal = workspace.vendor_ios.length;
+
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="thinkway-campaign-billing-flow">
-          <span className="thinkway-campaign-billing-flow-step">draft</span>
-          <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
-            →
-          </span>
-          <span className="thinkway-campaign-billing-flow-step">approved</span>
-          <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
-            →
-          </span>
-          <span className="thinkway-campaign-billing-flow-step">moved to billing</span>
-          <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
-            →
-          </span>
-          <span className="thinkway-campaign-billing-flow-step">partially invoiced</span>
-          <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
-            →
-          </span>
-          <span className="thinkway-campaign-billing-flow-step">invoiced</span>
-          <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
-            →
-          </span>
-          <span className="thinkway-campaign-billing-flow-step">paid</span>
-          <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
-            →
-          </span>
-          <span className="thinkway-campaign-billing-flow-step">closed</span>
-        </div>
-        <div className="flex flex-wrap gap-[5px]">
-          <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none">
-            <Link href="/finance/invoices">Invoice register</Link>
-          </Button>
-          <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none">
-            <Link href="/billing">Finance workspace</Link>
-          </Button>
-          <Button
-            size="sm"
-            className="thinkway-campaign-btn thinkway-campaign-btn-primary h-[30px] text-[11px] shadow-none"
-            onClick={() => {
-              if (operationalBilling) {
-                beginInvoiceFlow(undefined);
-              } else {
-                setLegacyInvoiceOpen(true);
-              }
-            }}
+      <CampaignWorkspaceFrame
+        title="Finance"
+        subtitle="Operational financial workspace — commercial snapshot before billing registers"
+        status={
+          <AuroraStatusPill
+            tone={financials.billing_outstanding > 0 ? "amber" : "green"}
           >
-            + Create new invoice
-          </Button>
-        </div>
-      </div>
-
+            {financials.billing_outstanding > 0 ? "Outstanding balance" : "Clear"}
+          </AuroraStatusPill>
+        }
+        tools={
+          <>
+            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[33px] text-[12px]">
+              <Link href="/finance/invoices">Invoice register</Link>
+            </Button>
+            <Button size="sm" variant="outline" asChild className="thinkway-campaign-btn h-[33px] text-[12px]">
+              <Link href="/billing">Finance workspace</Link>
+            </Button>
+            <Button
+              size="sm"
+              className="thinkway-campaign-btn thinkway-campaign-btn-primary h-[33px] text-[12px]"
+              onClick={() => {
+                if (operationalBilling) {
+                  beginInvoiceFlow(undefined);
+                } else {
+                  setLegacyInvoiceOpen(true);
+                }
+              }}
+            >
+              + Create new invoice
+            </Button>
+          </>
+        }
+        stats={[
+          {
+            key: "revenue",
+            label: "Revenue",
+            value: formatMoney(financials.revenue, currency),
+            tone: "blue",
+          },
+          {
+            key: "cost",
+            label: "Cost",
+            value: formatMoney(financials.cost, currency),
+          },
+          {
+            key: "gp",
+            label: "GP",
+            value: formatMoney(financials.gp, currency),
+            tone: financials.gp < 0 ? "amber" : "pos",
+          },
+          {
+            key: "margin",
+            label: "Margin",
+            value: formatPercent(financials.margin_percent),
+          },
+          {
+            key: "cio",
+            label: "Client IO",
+            value: clientIoStatus.replaceAll("_", " "),
+            tone: clientIoStatus === "approved" ? "pos" : "mut",
+          },
+          {
+            key: "vio",
+            label: "Vendor IO",
+            value: `${vendorIoApproved}/${vendorIoTotal} approved`,
+            tone: vendorIoApproved > 0 ? "blue" : "mut",
+          },
+        ]}
+        banner={
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="thinkway-campaign-billing-flow">
+              <span className="thinkway-campaign-billing-flow-step">draft</span>
+              <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
+                →
+              </span>
+              <span className="thinkway-campaign-billing-flow-step">approved</span>
+              <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
+                →
+              </span>
+              <span className="thinkway-campaign-billing-flow-step">moved to billing</span>
+              <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
+                →
+              </span>
+              <span className="thinkway-campaign-billing-flow-step">partially invoiced</span>
+              <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
+                →
+              </span>
+              <span className="thinkway-campaign-billing-flow-step">invoiced</span>
+              <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
+                →
+              </span>
+              <span className="thinkway-campaign-billing-flow-step">paid</span>
+              <span className="thinkway-campaign-billing-flow-sep" aria-hidden>
+                →
+              </span>
+              <span className="thinkway-campaign-billing-flow-step">closed</span>
+            </div>
+          </div>
+        }
+        registerLabel="Billing registers"
+      >
       <CampaignBillingKpiStrip
         workspace={workspace}
         operationalRows={operationalBilling?.operational_rows}
@@ -622,6 +682,7 @@ export function CampaignBillingTab({
           )}
         </OperationalTableSection>
       </OperationalTableSuiteProvider>
+      </CampaignWorkspaceFrame>
 
       <CreateInvoiceSheet
         campaignId={workspace.id}

@@ -6,13 +6,15 @@ import { useMemo, useState } from "react";
 import {
   OperationalConfigurableTable,
   type OperationalConfigurableColumnDef,
-  getOperationalTableColumnMetas,
 } from "@/components/tables/operational-configurable-table";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
-import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
+import {
+  AuroraStatusPill,
+  CampaignWorkspaceFrame,
+} from "@/features/campaigns/components/aurora/campaign-workspace-frame";
 import { AssignmentInfluencerDetailSheet } from "@/features/campaigns/components/assignment-hierarchy/assignment-influencer-detail-sheet";
 import { ActivityDetailSheet } from "@/features/campaigns/components/detail-sheets/activity-detail-sheet";
 import { DetailClickableLabel } from "@/features/campaigns/components/detail-sheets/detail-clickable-label";
@@ -88,10 +90,6 @@ function buildTimelineVendorColumns(
   ];
 }
 
-const TIMELINE_VENDOR_COLUMN_METAS = getOperationalTableColumnMetas(
-  buildTimelineVendorColumns(() => {})
-);
-
 export function CampaignTimelineTab({
   workspace,
   assignmentHierarchy,
@@ -137,124 +135,163 @@ export function CampaignTimelineTab({
     workspace.id,
   ]);
 
+  const recentActivity = workspace.activity.slice(0, 8);
+  const recentAudit = financeAudit.slice(0, 8);
+
   return (
     <>
-      <div className={cn("thinkway-campaign-two-col", OPERATIONAL_TABLE_FONT)}>
-        <CampaignFlatSection
-          title="Finance audit"
-          description="Invoice, CN/DN, posting, and cancellation events."
-          flushBody
-        >
-          {financeAuditPending && financeAudit.length === 0 ? (
-            <div className="thinkway-campaign-empty-state">
-              <p>Loading finance audit…</p>
-            </div>
-          ) : financeAudit.length === 0 ? (
-            <div className="thinkway-campaign-empty-state">
-              <p>No finance audit events yet.</p>
-            </div>
-          ) : (
-            <div className="thinkway-campaign-activity-scroll">
-              {financeAudit.map((entry) => (
-                <div key={entry.id} className="thinkway-campaign-activity-item">
-                  <div>
-                    <DetailClickableLabel
-                      onClick={() => setDetailAuditId(entry.id)}
-                      title={`View ${entry.label} details`}
-                      className="thinkway-campaign-act-name"
-                    >
-                      {entry.label}
-                    </DetailClickableLabel>
-                    <p className="thinkway-campaign-act-by">
-                      {entry.actor_name ?? "System"}
-                      {entry.payload.document_number ? (
-                        <span className="ml-1 font-mono">
-                          · {String(entry.payload.document_number)}
-                        </span>
-                      ) : null}
-                    </p>
-                  </div>
-                  <time className="thinkway-campaign-act-date">
-                    {format(new Date(entry.created_at), "MMM d, yyyy HH:mm")}
-                  </time>
-                </div>
-              ))}
-            </div>
-          )}
-        </CampaignFlatSection>
-
-        <CampaignFlatSection
-          title="Enterprise Timeline"
-          description="Chronological campaign events from audit_logs (Assignments, Media Plan, operations)."
-          flushBody
-        >
-          {workspace.activity.length === 0 ? (
-            <div className="thinkway-campaign-empty-state">
-              <p>No activity recorded yet.</p>
-            </div>
-          ) : (
-            <div className="thinkway-campaign-activity-scroll">
-              {workspace.activity.map((item) => (
-                <div key={item.id} className="thinkway-campaign-activity-item">
-                  <div>
-                    <DetailClickableLabel
+      <CampaignWorkspaceFrame
+        title="Timeline"
+        subtitle="Activity, finance audit, and recent assignment history"
+        status={
+          <AuroraStatusPill tone={workspace.activity.length > 0 ? "blue" : "mut"}>
+            {workspace.activity.length} events
+          </AuroraStatusPill>
+        }
+        stats={[
+          {
+            key: "activity",
+            label: "Activity",
+            value: String(workspace.activity.length),
+            tone: "blue",
+          },
+          {
+            key: "audit",
+            label: "Finance audit",
+            value: financeAuditPending ? "…" : String(financeAudit.length),
+          },
+          {
+            key: "vendors",
+            label: "Vendors",
+            value: String(workspace.vendors.length),
+          },
+          {
+            key: "approvals",
+            label: "Approvals",
+            value: String(workspace.approvals.length),
+            tone: "mut",
+          },
+        ]}
+        banner={
+          <div className="mb-4 grid grid-cols-1 gap-3 xl:grid-cols-2">
+            <div className="thinkway-aurora-doc-panel">
+              <div className="eyebrow">Activity</div>
+              {recentActivity.length === 0 ? (
+                <p className="py-6 text-center text-[13px] text-[var(--camp-text-4)]">
+                  No activity recorded yet.
+                </p>
+              ) : (
+                <div className="thinkway-aurora-tl-feed">
+                  {recentActivity.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className="thinkway-aurora-tl-row w-full text-left"
                       onClick={() => setDetailActivityId(item.id)}
-                      title="View activity details"
-                      className="thinkway-campaign-act-name capitalize"
                     >
-                      {item.summary}
-                    </DetailClickableLabel>
-                    <p className="thinkway-campaign-act-by">
-                      {item.actor?.full_name ?? item.actor?.email ?? "System"}
-                    </p>
-                  </div>
-                  <time className="thinkway-campaign-act-date">
-                    {format(new Date(item.created_at), "MMM d, yyyy HH:mm")}
-                  </time>
+                      <span className="thinkway-aurora-tl-ic" aria-hidden>
+                        ↻
+                      </span>
+                      <div className="min-w-0">
+                        <div className="thinkway-aurora-tl-t1 truncate capitalize">
+                          {item.summary}
+                        </div>
+                        <div className="thinkway-aurora-tl-t2 truncate">
+                          {item.actor?.full_name ?? item.actor?.email ?? "System"}
+                        </div>
+                      </div>
+                      <time className="thinkway-aurora-tl-when">
+                        {format(new Date(item.created_at), "MMM d · HH:mm")}
+                      </time>
+                    </button>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-          )}
-        </CampaignFlatSection>
-
-        <OperationalTableSuiteProvider
-          tableId={OPERATIONAL_TABLE_IDS.campaignTimelineVendors}
-          columns={columns}
-          rows={vendorRows}
-          filterAccessors={{
-            vendor: (row) => row.influencer_name,
-            line: (row) => row.line_document_number,
-            status: (row) => row.status,
-            confirmed: (row) => row.confirmed_at,
-          }}
-        >
-          <OperationalTableSection
-            wide
-            tableOnly
-            cardSurface
-            className="xl:col-span-2"
-            leading={
-              <CampaignOperationalSectionHeader
-                title="Recent assignments"
-                description="Latest vendor assignments on this campaign."
-                actions={<OperationalTableControlsSlot contextLabel="Campaign timeline vendors" />}
-              />
-            }
+            <div className="thinkway-aurora-doc-panel">
+              <div className="eyebrow">Finance audit</div>
+              {financeAuditPending && financeAudit.length === 0 ? (
+                <p className="py-6 text-center text-[13px] text-[var(--camp-text-4)]">
+                  Loading finance audit…
+                </p>
+              ) : recentAudit.length === 0 ? (
+                <p className="py-6 text-center text-[13px] text-[var(--camp-text-4)]">
+                  No finance audit events yet.
+                </p>
+              ) : (
+                <div className="thinkway-aurora-tl-feed">
+                  {recentAudit.map((entry) => (
+                    <button
+                      key={entry.id}
+                      type="button"
+                      className="thinkway-aurora-tl-row w-full text-left"
+                      onClick={() => setDetailAuditId(entry.id)}
+                    >
+                      <span className="thinkway-aurora-tl-ic" aria-hidden>
+                        $
+                      </span>
+                      <div className="min-w-0">
+                        <div className="thinkway-aurora-tl-t1 truncate">{entry.label}</div>
+                        <div className="thinkway-aurora-tl-t2 truncate">
+                          {entry.actor_name ?? "System"}
+                          {entry.payload.document_number
+                            ? ` · ${String(entry.payload.document_number)}`
+                            : ""}
+                        </div>
+                      </div>
+                      <time className="thinkway-aurora-tl-when">
+                        {format(new Date(entry.created_at), "MMM d · HH:mm")}
+                      </time>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        }
+        registerLabel="Recent assignments"
+      >
+        <div className={cn(OPERATIONAL_TABLE_FONT)}>
+          <OperationalTableSuiteProvider
+            tableId={OPERATIONAL_TABLE_IDS.campaignTimelineVendors}
+            columns={columns}
+            rows={vendorRows}
+            filterAccessors={{
+              vendor: (row) => row.influencer_name,
+              line: (row) => row.line_document_number,
+              status: (row) => row.status,
+              confirmed: (row) => row.confirmed_at,
+            }}
           >
-            {vendorRows.length === 0 ? (
-              <div className="thinkway-campaign-empty-state">
-                <p>No vendor assignments.</p>
-              </div>
-            ) : (
-              <OperationalConfigurableTable
-                columns={columns}
-                rows={vendorRows}
-                rowKey={(v) => v.id}
-              />
-            )}
-          </OperationalTableSection>
-        </OperationalTableSuiteProvider>
-      </div>
+            <OperationalTableSection
+              wide
+              tableOnly
+              cardSurface
+              leading={
+                <CampaignOperationalSectionHeader
+                  title="Assignments"
+                  description="Latest vendor assignments on this campaign."
+                  actions={
+                    <OperationalTableControlsSlot contextLabel="Campaign timeline vendors" />
+                  }
+                />
+              }
+            >
+              {vendorRows.length === 0 ? (
+                <div className="thinkway-campaign-empty-state">
+                  <p>No vendor assignments.</p>
+                </div>
+              ) : (
+                <OperationalConfigurableTable
+                  columns={columns}
+                  rows={vendorRows}
+                  rowKey={(v) => v.id}
+                />
+              )}
+            </OperationalTableSection>
+          </OperationalTableSuiteProvider>
+        </div>
+      </CampaignWorkspaceFrame>
 
       <ActivityDetailSheet
         open={detailActivityId != null}
