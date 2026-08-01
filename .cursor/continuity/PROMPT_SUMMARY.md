@@ -1,7 +1,13 @@
 # Prompt Summary — Current Sprint
 
-**Branch focus:** `develop` (Release 2.0 Phase 1 soak complete).  
-**Release 2.0 MR:** https://github.com/mohamedeldesoukyh-cpu/Thinkway-Platform/pull/3 (`develop` → `main`) — includes Media Plan versioning + Sat–Fri Publishing Calendar.  
+**Branch focus:** `develop` (synced with `origin/develop`).  
+**Active initiative:** **Release 2.2a — Campaign Planning Capability (Planning Board)** — **review only · no implementation**  
+**Next step:** Review Capability Spec + Product Review pack **together** before any code.  
+**Must inherit:** Campaign Workspace Lifecycle OS · BPN · Architecture v1.0 (no new nav/layouts/workflows).  
+
+**Gate docs:**  
+- `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md`  
+- `docs/capabilities/PLANNING_BOARD_CAPABILITY_REVIEW.md`  
 
 **Prior stash on `main`:** `WIP commercial CRM before unified-media-plan` — restore separately; do not mix with Media Plan work.
 
@@ -107,17 +113,25 @@
 - **Package frozen:** `docs/architecture/platform-ux/` (01–12) — no architecture/UX redesign without formal reopen
 - **Architecture-first work:** Complete · Migration Phase 1 complete (`b8e09927`)
 - **BPN Foundation:** Accepted into protected Architecture v1.0 baseline; compliance permanence confirmed
-- **Planning Board:** Functional capability review in progress — `docs/capabilities/PLANNING_BOARD_CAPABILITY_REVIEW.md` · **no implementation**
-- **After review + capability approval:** Release 2.2a coding → 2.2b Copilot → Client/Vendor/Creator journeys → Reporting → Notifications → Analytics
-- **Preserves:** Campaign Baseline · BPN · Enterprise Tabs · Financial Display · Deliverables · all business logic / APIs / DB
+- **Campaign Workspace Lifecycle OS:** protected on `origin/develop` — see section below
+- **Planning Board:** **active review initiative** — Spec + Review pack · **no implementation until both approved**
+- **Preserves:** Campaign Workspace Baseline v1 · Campaign Module Baseline · BPN · Enterprise Tabs · Financial Display · Deliverables · all business logic / APIs / DB
 
-## Campaign Workspace Lifecycle OS — FROZEN BASELINE (2026-08-01)
+## Campaign Workspace Lifecycle OS — PROTECTED BASELINE (pushed 2026-08-01)
 
 - **Canonical:** `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.md`
+- **Tip on `origin/develop`:** `e683ad57` (freeze) · `692adc4f` (tip annotation)
+- **Class:** Protected implementation baseline for Architecture v1.0
+- **Rule:** **No further Campaign Workspace redesign** unless formal Architecture Reopen is approved
 - **Compliance invariants:** Campaign primary · Business Stage SSOT · workspaces as views · Next Action journey · no competing nav · extend lifecycle
 - **Regression (mandatory):** `npm run test:campaign-workspace-lifecycle-os`
-- **Scope frozen:** Presentation + lifecycle orchestration (no API/DB/workflow redesign)
-- **Next functional:** Planning Board capability review → approve spec → implement R2.2a into Planning stage
+- **Future capabilities:** must **extend** this baseline — not modify its navigation philosophy
+
+## Active — Release 2.2a Planning Board (review gate)
+
+- **Status:** Capability Spec + Product Review open — **do not write code**
+- **Role:** Planning stage of the Campaign Lifecycle (inherits Campaign Workspace Lifecycle OS)
+- **After dual approval:** implement R2.2a → then 2.2b Copilot → Client/Vendor/Creator journeys → Reporting → Notifications → Analytics
 
 ## IO approval email experience (Preview testing on develop)
 

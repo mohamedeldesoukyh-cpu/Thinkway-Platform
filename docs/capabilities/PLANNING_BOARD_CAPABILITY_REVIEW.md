@@ -4,9 +4,13 @@
 **Class:** Capability review pack — **not architecture · not implementation**  
 **Subject:** [`PLANNING_BOARD_CAPABILITY_SPEC.md`](./PLANNING_BOARD_CAPABILITY_SPEC.md)  
 **Technical companion (reference only):** [`../architecture/RELEASE_2_2A_PLANNING_BOARD_ARCHITECTURE.md`](../architecture/RELEASE_2_2A_PLANNING_BOARD_ARCHITECTURE.md)  
-**Baselines in force:** Architecture v1.0 · [`BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md`](../architecture/BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md) · Campaign Module Baseline  
+**Baselines in force:** Architecture v1.0 · [`BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md`](../architecture/BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md) · [`CAMPAIGN_WORKSPACE_BASELINE_V1.md`](../architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.md) · Campaign Module Baseline  
 
-**Implementation:** **Blocked** until this review is completed and approved.
+**Active initiative:** Release 2.2a — Campaign Planning Capability (Planning Board)  
+**Current step:** Review Capability Specification **and** this Product Review pack **together** — **no code**.  
+
+**Implementation:** **Blocked** until this review is completed and the Capability Specification is approved.  
+**Inheritance:** Planning Board becomes the Planning stage of the Campaign Lifecycle and must inherit the Campaign Workspace Lifecycle OS without new navigation, layouts, or workflow concepts.
 
 ---
 

@@ -1,9 +1,10 @@
 # Campaign Workspace Baseline v1.0 (Lifecycle OS)
 
-**Status:** Protected platform baseline — **frozen**  
+**Status:** Protected implementation baseline for Architecture v1.0 — **frozen on `origin/develop`**  
 **Milestone:** Campaign Workspace Lifecycle OS Complete  
 **Approved:** 2026-08-01  
-**Branch tip:** `e683ad57` on `develop`  
+**Freeze commits:** `e683ad57` · `692adc4f` on `develop` (pushed)  
+**Class:** Governance — **no further Campaign Workspace redesign** without formal Architecture Reopen
 **Parent baselines:**  
 [`THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md`](./THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md) ·  
 [`BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md`](./BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md) ·  
@@ -258,4 +259,11 @@ Applies to Planning Board, Client/Vendor/Creator views, Reporting Hub, Notificat
 
 ## Next
 
-After this freeze, functional delivery resumes with **Planning Board** (Release 2.2a), which plugs into the Planning stage of this lifecycle without inventing a new navigation model.
+**Active initiative (review only — no code yet):** Release 2.2a — Campaign Planning Capability (Planning Board).
+
+Planning Board becomes the **Planning stage** of the Campaign Lifecycle and **must inherit** this Campaign Workspace Lifecycle OS without introducing new navigation, layouts, or workflow concepts.
+
+Gate documents (review together before any implementation):
+
+- [`../capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md`](../capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md)  
+- [`../capabilities/PLANNING_BOARD_CAPABILITY_REVIEW.md`](../capabilities/PLANNING_BOARD_CAPABILITY_REVIEW.md)

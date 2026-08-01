@@ -34,10 +34,10 @@ Environment switch navigates between **hosts** — never switches DB inside one 
 - `docs/RELEASE_WORKFLOW.md` — dual deploy + approval gate  
 - `docs/architecture/THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md` — **frozen platform architecture v1.0**  
 - `docs/architecture/BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md` — **canonical BPN navigation baseline**  
-- `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.md` — **frozen Campaign Workspace Lifecycle OS**  
+- `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.md` — **protected Campaign Workspace Lifecycle OS** (`e683ad57` on `origin/develop`) — no redesign without Architecture Reopen  
 - `docs/architecture/PLATFORM_ARCHITECTURE_COMPLIANCE.md` — mandatory compliance (lifecycle · journeys · BPN reuse · Campaign Workspace invariants · no new nav)  
-- `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md` — 2.2a capability spec (in review)  
-- `docs/capabilities/PLANNING_BOARD_CAPABILITY_REVIEW.md` — functional capability review pack (**no code**)  
+- `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md` — **active** 2.2a capability spec (review with Product Review pack; **no code**)  
+- `docs/capabilities/PLANNING_BOARD_CAPABILITY_REVIEW.md` — **active** functional capability review pack (**no code**)  
 - `docs/architecture/platform-ux/` — Platform UX package (docs 01–12 frozen)  
 - `docs/architecture/CAMPAIGN_MODULE_BASELINE.md` — **protected Campaign baseline** (IA initiative CLOSED)  
 - `docs/architecture/PRODUCT_UX_STANDARDS.md` — platform UX standards (Campaign = canonical)  
@@ -71,9 +71,15 @@ Tip: `31c5a030` on `develop`.
 
 Campaign is the canonical implementation for: workspace architecture, navigation/information hierarchy, KPI presentation, workspace summaries, Enterprise Tabs, financial presentation, status badges, action placement, progressive disclosure.
 
+## Campaign Workspace Lifecycle OS (protected · 2026-08-01)
+
+Protected implementation baseline for Architecture v1.0. Living Campaign Object · State Strip · ERP Process Rail · Portfolio intelligence · Next Action journey.  
+**Extend only** — future capabilities must not modify its navigation philosophy.  
+Regression: `npm run test:campaign-workspace-lifecycle-os`.
+
 ## Next functional priority
 
-1. Complete Planning Board capability review → approve spec → then implement R2.2a  
+1. **Active:** Release 2.2a Planning Board — review Capability Spec **and** Product Review together → approve → **then** implement (Planning stage; inherits Campaign Workspace Lifecycle OS)  
 2. Media Plan Copilot (R2.2b)  
 3. Client Collaboration · Vendor · Creator journeys  
 4. Reporting Hub · Notifications · Enterprise Analytics  

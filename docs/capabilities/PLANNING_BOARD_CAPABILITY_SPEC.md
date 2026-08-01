@@ -7,8 +7,11 @@
 **Approved baselines (must inherit):**  
 - [`THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md`](../architecture/THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md)  
 - [`BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md`](../architecture/BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md) — protected  
+- [`CAMPAIGN_WORKSPACE_BASELINE_V1.md`](../architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.md) — **protected Campaign Workspace Lifecycle OS**  
 - [`CAMPAIGN_MODULE_BASELINE.md`](../architecture/CAMPAIGN_MODULE_BASELINE.md)  
 - Campaign Lifecycle doc 12 · Stakeholder Journeys doc 11  
+
+**Inheritance rule:** Planning Board is the Planning stage of the Campaign Lifecycle. It extends the Campaign Workspace Lifecycle OS — it does **not** introduce new navigation, layouts, or workflow concepts.
 
 **Technical companion (already approved; subordinate to this capability + frozen architecture):**  
 [`RELEASE_2_2A_PLANNING_BOARD_ARCHITECTURE.md`](../architecture/RELEASE_2_2A_PLANNING_BOARD_ARCHITECTURE.md)
@@ -24,12 +27,13 @@
 |------|-----------|
 | Campaign Lifecycle stage(s) extended | **S04 Media Planning** (primary); supports readiness into S05–S06 cues; does not redefine S00–S18 |
 | Stakeholder Journey(s) extended | **Internal Ops** (primary operator); **Commercial** (planning support); **Client** (review/approve of plan artifacts where already allowed); **AI Assistant** deferred to 2.2b |
-| Business Process component(s) reused | Business Process Navigation foundation; process-aware Campaign Workspace / Media Plan entry; stage context patterns; no new nav rail |
-| Workspace(s) extended | Existing **Campaign Media Plan** surface inside the Campaign module (Calendar / Original / Actual / Remaining family) |
-| Baseline documents referenced | Architecture v1.0; BPN Foundation; Campaign Module Baseline; Financial Display; Lifecycle doc 12; Stakeholder doc 11; R2.2a technical companion |
-| No new navigation philosophy | Enters via Campaign Lifecycle → Media Planning stage / Media Plan workspace; fullscreen board is a **view**, not a new module or portal |
+| Business Process component(s) reused | BPN foundation; Campaign Workspace Lifecycle OS (State Strip · Process Rail · Next Action); process-aware Media Plan entry; no new nav rail |
+| Workspace(s) extended | Existing **Campaign Media Plan** surface inside the Campaign Workspace (Calendar / Original / Actual / Remaining family) |
+| Baseline documents referenced | Architecture v1.0; BPN Foundation; Campaign Workspace Baseline v1; Campaign Module Baseline; Financial Display; Lifecycle doc 12; Stakeholder doc 11; R2.2a technical companion |
+| No new navigation philosophy | Enters via Campaign Lifecycle → Planning / Media Planning stage; fullscreen board is a **view** inside Campaign Workspace Lifecycle OS |
 | No duplicate workflow | Same Assignment-backed schedule + same mutation engine as Calendar; no parallel planner or schedule store |
 | Lifecycle extension | Operators schedule creators/deliverables across the campaign window in S04; board advances Media Plan draft → review readiness without inventing a second process |
+| Campaign Workspace invariants preserved | Campaign primary · Business Stage SSOT · workspace as view · Next Action journey · no competing nav · extends lifecycle |
 
 ---
 

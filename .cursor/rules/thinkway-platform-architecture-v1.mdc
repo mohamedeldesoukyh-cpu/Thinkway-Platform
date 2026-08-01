@@ -7,7 +7,7 @@ alwaysApply: true
 
 **Milestone:** `docs/architecture/THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md`  
 **BPN foundation:** `docs/architecture/BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md`  
-**Campaign Workspace OS:** `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.md`  
+**Campaign Workspace OS (protected):** `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.md` — tip `e683ad57` on `origin/develop`; no redesign without Architecture Reopen  
 **Compliance template:** `docs/architecture/PLATFORM_ARCHITECTURE_COMPLIANCE.md`  
 **Package:** `docs/architecture/platform-ux/` (docs 01–12 frozen)
 
@@ -50,5 +50,6 @@ Include section **Platform Architecture Compliance** covering:
 
 - Architecture-first work is **complete**. Prefer **capability specifications** then functional delivery.  
 - Extend BPN + Campaign Workspace baselines; do not reinvent them.  
-- Functional priority: Planning Board (2.2a) → Copilot (2.2b) → Client/Vendor/Creator journeys → Reporting → Notifications → Analytics.  
-- Planning Board coding starts only after `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md` is approved.
+- **Active initiative:** Release 2.2a Planning Board — review Spec + Review pack together; **no code** until both approved.  
+- Planning Board = Planning stage of Campaign Lifecycle; must inherit Campaign Workspace Lifecycle OS (no new nav/layouts/workflows).  
+- After 2.2a: Copilot (2.2b) → Client/Vendor/Creator journeys → Reporting → Notifications → Analytics.

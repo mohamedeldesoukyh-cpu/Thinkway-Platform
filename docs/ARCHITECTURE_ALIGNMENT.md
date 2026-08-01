@@ -14,9 +14,11 @@ This document compares the **current Thinkway platform** (`thinkway-platform`) a
 - **Thesis:** Campaign-centric enterprise OS; one campaign object; one lifecycle; stakeholder journeys enter at different stages
 - **Architecture-first work:** Complete · Migration Phase 1 complete
 - **Next:** Capability specs → functional delivery (Planning Board 2.2a first)
-- **Campaign Workspace Lifecycle OS:** [`architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.md`](./architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.md) — **frozen** (Living Campaign Object · State Strip · Process Rail · Portfolio intelligence · Next Action)
-- **Planning Board:** [`capabilities/PLANNING_BOARD_CAPABILITY_REVIEW.md`](./capabilities/PLANNING_BOARD_CAPABILITY_REVIEW.md) in progress → then approve [`PLANNING_BOARD_CAPABILITY_SPEC.md`](./capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md) — **no implementation until review completes**
-- **Rule:** Future work extends the baseline; no architectural redesign without formal reopen
+- **Campaign Workspace Lifecycle OS:** [`architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.md`](./architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.md) — **protected implementation baseline** on `origin/develop` (`e683ad57`) — no Campaign Workspace redesign without Architecture Reopen
+- **Active initiative (review only):** Release 2.2a — Campaign Planning Capability (Planning Board)
+- **Next step:** Review [`capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md`](./capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md) **and** [`capabilities/PLANNING_BOARD_CAPABILITY_REVIEW.md`](./capabilities/PLANNING_BOARD_CAPABILITY_REVIEW.md) together — **no implementation**
+- **Inheritance:** Planning Board = Planning stage of Campaign Lifecycle; must extend Campaign Workspace Lifecycle OS (no new nav/layouts/workflows)
+- **Rule:** Future capabilities extend baselines; no architectural redesign without formal reopen
 - **Regression:** `npm run test:campaign-workspace-lifecycle-os`
 
 ### Campaign Module Baseline — PROTECTED (Aug 2026)
