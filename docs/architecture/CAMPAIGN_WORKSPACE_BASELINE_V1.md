@@ -3,7 +3,7 @@
 **Status:** Protected platform baseline — **frozen**  
 **Milestone:** Campaign Workspace Lifecycle OS Complete  
 **Approved:** 2026-08-01  
-**Branch:** `develop`  
+**Branch tip:** `e683ad57` on `develop`  
 **Parent baselines:**  
 [`THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md`](./THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md) ·  
 [`BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md`](./BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md) ·  
