@@ -99,6 +99,14 @@
 - **Next (functional delivery):** Planning Board (2.2a) → Media Plan Copilot (2.2b) → Vendor IO Enterprise Completion → Reporting Hub → Notifications → Enterprise Analytics
 - **No Production deploy** without explicit approval
 
+## Platform UX & Business Process Architecture (2026-08-01) — REVIEW
+
+- **Status:** Architecture docs only — **awaiting Product approval; no code**
+- **Package:** `docs/architecture/platform-ux/` (README + docs 01–10)
+- **Thesis:** Thinkway = workflow-driven enterprise OS; replace peer-tab mental model with Business Process Navigation; Portfolio + Workspace + Studio + AI = one journey
+- **Preserves:** Campaign Baseline · Enterprise Tabs (evolve) · Financial Display · Deliverables · all business logic
+- **Do not implement** until package approved; then Phase 1 only per migration strategy
+
 ## IO approval email experience (Preview testing on develop)
 
 - Simplified Client/Vendor IO send emails: Campaign Name, Brand Name, Campaign Duration, Agreed Amount + blue **Approve** CTA + legal notice; PDF remains SSOT

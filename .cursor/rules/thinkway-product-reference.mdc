@@ -49,6 +49,7 @@ Group → Legal Entity (clients) → Brand → Campaign Header → Campaign Line
 9. **Enterprise Tabs** — only approved workspace tab rail (`components/workspace/enterprise-tabs.tsx`). No page-specific tab implementations.
 10. **Financial Display Standard** — ISO currency codes only (`formatMoneyKpi` / `formatMoneyDetail` in `lib/finance/currency-format.ts`). Never display `$`/`E£`/locale glyphs.
 11. **Functional delivery next** — Planning Board (2.2a) → Media Plan Copilot (2.2b) → Vendor IO Enterprise Completion → Reporting Hub → Notifications → Enterprise Analytics.
+12. **Platform UX architecture (review)** — `docs/architecture/platform-ux/` proposes Business Process Navigation and enterprise OS continuity. **Do not implement** until Product approves that package.
 
 ## Conflicts with reference doc (resolved in codebase)
 

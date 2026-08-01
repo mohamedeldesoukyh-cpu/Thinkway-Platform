@@ -2,7 +2,15 @@
 
 This document compares the **current Thinkway platform** (`thinkway-platform`) against the [System Reference](./THINKWAY_SYSTEM_REFERENCE.md). Use it before new modules: compare → detect gaps → recommend → avoid duplicate entities.
 
-**Last reviewed:** Aug 2026 (Campaign Module Baseline protected · IA initiative closed)
+**Last reviewed:** Aug 2026 (Platform UX & Business Process Architecture — review package)
+
+### Platform UX & Business Process Architecture (Aug 2026) — REVIEW ONLY
+
+- **Status:** Architecture package awaiting Product approval — **no implementation yet**
+- **Package:** [`docs/architecture/platform-ux/README.md`](./architecture/platform-ux/README.md)
+- **Thesis:** Workflow-driven enterprise OS; Business Process Navigation evolves Enterprise Tabs; Studio/AI join Campaign ecosystem
+- **Preserves:** Campaign Module Baseline · Financial Display · Deliverables selection · calculations/APIs/DB
+- **Next after approval:** Phase 1 Campaign Process Navigation only (see migration strategy)
 
 ### Campaign Module Baseline — PROTECTED (Aug 2026)
 

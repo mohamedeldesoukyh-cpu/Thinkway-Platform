@@ -51,6 +51,11 @@ Includes: Campaign IA · Workspace UI · Enterprise Tabs · Financial Display St
 **Extend only — no redesign** unless Critical usability + Product approval.  
 Tip: `31c5a030` on `develop`.
 
+## Platform UX & Business Process Architecture (review)
+
+- Package: `docs/architecture/platform-ux/` — awaiting Product approval before any implementation.
+- Direction: process navigation over page/tabs metaphor; Studio/AI inside Campaign ecosystem; one platform nav philosophy.
+
 ## Product UX Standards
 
 Campaign is the canonical implementation for: workspace architecture, navigation/information hierarchy, KPI presentation, workspace summaries, Enterprise Tabs, financial presentation, status badges, action placement, progressive disclosure.
