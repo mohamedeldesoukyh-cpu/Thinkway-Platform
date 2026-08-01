@@ -22,6 +22,7 @@ import {
 } from "@/features/campaigns/components/operational-detail-panel";
 import { VendorIoDocumentActions } from "@/features/io/components/vendor-io-document-actions";
 import { VendorIoDeliveryBadge } from "@/features/io/components/vendor-io-delivery-badge";
+import { VendorIoSendButton } from "@/features/io/components/vendor-io-send-button";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
 import { IoTermsSourceBadge } from "@/features/io/components/io-terms-source-badge";
 import { VendorIoUngenerateTrigger } from "@/features/io/components/vendor-io-ungenerate-dialog";
@@ -313,11 +314,14 @@ export function VendorIoDetailSheet({
           <div className="shrink-0 border-t border-border/60 px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <VendorIoDocumentActions row={row} />
-              <VendorIoUngenerateTrigger
-                row={row}
-                disabled={!row.ungenerate_eligible}
-                title={row.ungenerate_ineligible_reason ?? undefined}
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                <VendorIoSendButton row={row} />
+                <VendorIoUngenerateTrigger
+                  row={row}
+                  disabled={!row.ungenerate_eligible}
+                  title={row.ungenerate_ineligible_reason ?? undefined}
+                />
+              </div>
             </div>
           </div>
         </>

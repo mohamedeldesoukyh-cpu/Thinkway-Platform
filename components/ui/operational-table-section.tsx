@@ -25,6 +25,11 @@ type OperationalTableSectionProps = {
   footer?: ReactNode;
   /** Assignments tab shell — asgn-wrap / asgn-head-bar / asgn-scroll layout. */
   assignmentsShell?: boolean;
+  /**
+   * Stretch the section to fill remaining viewport height and scroll the table
+   * body internally (Vendor IO and similar dense grids).
+   */
+  fillHeight?: boolean;
 };
 
 /** Card header + flush table (single clean border like campaign assignments). */
@@ -42,6 +47,7 @@ export function OperationalTableSection({
   toolbar,
   footer,
   assignmentsShell = false,
+  fillHeight = false,
 }: OperationalTableSectionProps) {
   const showHeader = !tableOnly && Boolean(title || description || actions);
   const useReferenceSectionCard = cardSurface && tableOnly;
@@ -50,6 +56,7 @@ export function OperationalTableSection({
   const sectionHead = leading ? (
     <div
       className={cn(
+        "shrink-0",
         cardSurface &&
           (useAssignmentsShell
             ? "thinkway-campaign-asgn-head-bar"
@@ -63,7 +70,7 @@ export function OperationalTableSection({
   const sectionToolbar = toolbar ? (
     <div
       className={cn(
-        "border-b border-[var(--camp-border)]",
+        "shrink-0 border-b border-[var(--camp-border)]",
         cardSurface ? "thinkway-campaign-filter-panel border-b" : "border-border/40 px-4 md:px-5",
         !cardSurface && (compact ? "py-1.5" : "py-3")
       )}
@@ -108,7 +115,8 @@ export function OperationalTableSection({
       className={cn(
         useAssignmentsShell
           ? "thinkway-campaign-asgn-scroll"
-          : "thinkway-campaign-table-scroll"
+          : "thinkway-campaign-table-scroll",
+        fillHeight && "thinkway-campaign-table-scroll--fill min-h-0 flex-1"
       )}
     >
       {children}
@@ -117,26 +125,30 @@ export function OperationalTableSection({
     children
   );
 
+  const fillShellClass = fillHeight
+    ? "flex min-h-0 flex-1 flex-col overflow-hidden"
+    : undefined;
+
   if (useAssignmentsShell) {
     return (
-      <div className={cn("thinkway-campaign-asgn-wrap", className)}>
+      <div className={cn("thinkway-campaign-asgn-wrap", fillShellClass, className)}>
         {sectionHead}
         {sectionToolbar}
         {legacyHeader}
         {tableBody}
-        {footer}
+        {footer ? <div className="shrink-0">{footer}</div> : null}
       </div>
     );
   }
 
   if (useReferenceSectionCard) {
     return (
-      <div className={cn("thinkway-campaign-section-card", className)}>
+      <div className={cn("thinkway-campaign-section-card", fillShellClass, className)}>
         {sectionHead}
         {sectionToolbar}
         {legacyHeader}
         {tableBody}
-        {footer}
+        {footer ? <div className="shrink-0">{footer}</div> : null}
       </div>
     );
   }

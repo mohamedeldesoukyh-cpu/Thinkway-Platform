@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { formatOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
 import { VendorIoDetailSheet } from "@/features/io/components/vendor-io-detail-sheet";
+import { VendorIoHeaderSend } from "@/features/io/components/vendor-io-header-send";
 import { VendorIoInfluencerCell } from "@/features/io/components/vendor-io-influencer-cell";
 import { VendorIoRowContextMenu } from "@/features/io/components/vendor-io-row-context-menu";
 import {
@@ -183,17 +184,24 @@ function buildCampaignVendorIoColumns(
       id: "actions",
       label: "Actions",
       locked: true,
-      headerClassName: "text-right",
-      cellClassName: "text-right",
+      colWidth: "220px",
+      headerClassName: "thinkway-campaign-vio-actions-col text-right",
+      cellClassName: "thinkway-campaign-vio-actions-col text-right",
       renderCell: (row) => (
         <div className="thinkway-campaign-action-links">
+          <VendorIoSendButton
+            row={row}
+            variant="default"
+            size="sm"
+            className="h-7 px-2.5 text-[11px] font-semibold"
+          />
           <a
             className="thinkway-campaign-link"
             href={`/ios/vendor/${row.id}/preview`}
             target="_blank"
             rel="noopener noreferrer"
           >
-            View IO
+            View
           </a>
           <button
             type="button"
@@ -202,7 +210,6 @@ function buildCampaignVendorIoColumns(
           >
             Details
           </button>
-          <VendorIoSendButton row={row} variant="link" className="thinkway-campaign-link-btn px-0" />
         </div>
       ),
     },
@@ -229,6 +236,7 @@ type VendorIoTableBodyProps = {
   campaignId: string;
   sorted: VendorIoRow[];
   selectedIds: Set<string>;
+  selectedRows: VendorIoRow[];
   onToggleSelect: (id: string) => void;
   onToggleSelectAll: (ids: string[]) => void;
   onSelectAll: (ids: string[]) => void;
@@ -240,6 +248,7 @@ function VendorIoTableBody({
   campaignId,
   sorted,
   selectedIds,
+  selectedRows,
   onToggleSelect,
   onToggleSelectAll,
   onSelectAll,
@@ -253,11 +262,6 @@ function VendorIoTableBody({
   const onSelectAllVisible = useCallback(() => {
     onSelectAll(visibleIds);
   }, [onSelectAll, visibleIds]);
-
-  const selectedRows = useMemo(
-    () => visibleRows.filter((row) => selectedIds.has(row.id)),
-    [visibleRows, selectedIds]
-  );
 
   const columns = useMemo(
     () => [
@@ -350,6 +354,10 @@ export function VendorIoTab({ campaignId, rows }: Props) {
   }, []);
 
   const selectedCount = selectedIds.size;
+  const selectedRows = useMemo(
+    () => sorted.filter((row) => selectedIds.has(row.id)),
+    [sorted, selectedIds]
+  );
 
   return (
     <>
@@ -367,30 +375,46 @@ export function VendorIoTab({ campaignId, rows }: Props) {
           approved: (row) => row.approved_at,
         }}
       >
-        <OperationalTableSection
-          wide
-          tableOnly
-          cardSurface
-          className={vendorIoFloatingBarContentClass(selectedCount > 0)}
-          leading={
-            <CampaignOperationalSectionHeader
-              title="Vendor IO"
-              description="Auto-generated per assignment when status becomes assigned/confirmed. IO status never blocks campaign execution."
-              actions={<OperationalTableControlsSlot contextLabel="Vendor IO" />}
-            />
-          }
+        <div
+          className={cn(
+            "thinkway-campaign-vendor-io-fill",
+            vendorIoFloatingBarContentClass(selectedCount > 0)
+          )}
         >
-          <VendorIoTableBody
-            campaignId={campaignId}
-            sorted={sorted}
-            selectedIds={selectedIds}
-            onToggleSelect={onToggleSelect}
-            onToggleSelectAll={onToggleSelectAll}
-            onSelectAll={onSelectAll}
-            onClearSelection={onClearSelection}
-            setDetailIoId={setDetailIoId}
-          />
-        </OperationalTableSection>
+          <OperationalTableSection
+            wide
+            tableOnly
+            cardSurface
+            fillHeight
+            leading={
+              <CampaignOperationalSectionHeader
+                title="Vendor IO"
+                description="Select one or more rows to send. Each row also has Send in the sticky Actions column."
+                actions={
+                  <>
+                    <VendorIoHeaderSend
+                      selectedRows={selectedRows}
+                      onClearSelection={onClearSelection}
+                    />
+                    <OperationalTableControlsSlot contextLabel="Vendor IO" />
+                  </>
+                }
+              />
+            }
+          >
+            <VendorIoTableBody
+              campaignId={campaignId}
+              sorted={sorted}
+              selectedIds={selectedIds}
+              selectedRows={selectedRows}
+              onToggleSelect={onToggleSelect}
+              onToggleSelectAll={onToggleSelectAll}
+              onSelectAll={onSelectAll}
+              onClearSelection={onClearSelection}
+              setDetailIoId={setDetailIoId}
+            />
+          </OperationalTableSection>
+        </div>
       </OperationalTableSuiteProvider>
 
       <VendorIoDetailSheet
