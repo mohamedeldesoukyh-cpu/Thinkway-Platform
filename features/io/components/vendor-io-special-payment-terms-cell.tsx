@@ -31,7 +31,7 @@ export function VendorIoSpecialPaymentTermsCell({ row }: Props) {
   }, [state]);
 
   return (
-    <form action={action} className="min-w-[8rem] max-w-[12rem]">
+    <form action={action} className="w-full min-w-0 max-w-full">
       <input type="hidden" name="id" value={row.id} />
       <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
       <textarea
@@ -46,7 +46,7 @@ export function VendorIoSpecialPaymentTermsCell({ row }: Props) {
         disabled={pending}
         rows={2}
         className={cn(
-          "min-h-[2.25rem] w-full resize-y rounded-md border-transparent bg-transparent px-0 py-1 text-[11px] leading-snug text-[var(--camp-text-3)] shadow-none outline-none focus-visible:ring-0",
+          "min-h-[2.25rem] w-full max-w-full resize-none rounded-md border-transparent bg-transparent px-0 py-1 text-[11px] leading-snug text-[var(--camp-text-3)] shadow-none outline-none focus-visible:ring-0",
           "whitespace-pre-wrap break-words",
           row.special_payment_terms?.trim() && "text-[var(--camp-text-2)]"
         )}

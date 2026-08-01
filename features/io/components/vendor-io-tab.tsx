@@ -23,8 +23,7 @@ import {
   vendorIoFloatingBarContentClass,
 } from "@/features/io/components/vendor-io-selection-flyout";
 import { VendorIoDeliveryBadge } from "@/features/io/components/vendor-io-delivery-badge";
-import { VendorIoManualApproveButton } from "@/features/io/components/vendor-io-manual-approve-button";
-import { VendorIoSendButton } from "@/features/io/components/vendor-io-send-button";
+import { VendorIoRowActions } from "@/features/io/components/vendor-io-row-actions";
 import { VendorIoSpecialPaymentTermsCell } from "@/features/io/components/vendor-io-special-payment-terms-cell";
 import { VendorIoStatusPill } from "@/features/io/components/vendor-io-status-pill";
 import type { VendorIoRow } from "@/features/io/types";
@@ -97,10 +96,12 @@ function buildCampaignVendorIoColumns(
     {
       id: "io_number",
       label: "IO #",
+      colWidth: "10%",
+      cellClassName: "truncate",
       renderCell: (row) => (
         <button
           type="button"
-          className="thinkway-campaign-link-btn"
+          className="thinkway-campaign-link-btn max-w-full truncate"
           onClick={() => onViewDetail(row.id)}
           title={`View ${row.document_number ?? "vendor IO"} details`}
         >
@@ -111,8 +112,11 @@ function buildCampaignVendorIoColumns(
     {
       id: "assignment",
       label: "Assignment",
+      defaultVisible: false,
+      colWidth: "9%",
+      cellClassName: "truncate",
       renderCell: (row) => (
-        <span className="thinkway-campaign-link cursor-default">
+        <span className="thinkway-campaign-link block max-w-full cursor-default truncate">
           {row.assignment_document_number ?? "—"}
         </span>
       ),
@@ -120,6 +124,8 @@ function buildCampaignVendorIoColumns(
     {
       id: "influencer",
       label: "Influencer",
+      colWidth: "16%",
+      cellClassName: "min-w-0",
       renderCell: (row) => (
         <VendorIoInfluencerCell
           name={row.influencer_name}
@@ -130,8 +136,9 @@ function buildCampaignVendorIoColumns(
     {
       id: "amount",
       label: "Amount",
+      colWidth: "8%",
       headerClassName: "text-right",
-      cellClassName: "text-right",
+      cellClassName: "text-right tabular-nums",
       renderCell: (row) => (
         <span className="thinkway-campaign-num">{formatOperationalAmount(row.amount)}</span>
       ),
@@ -139,8 +146,9 @@ function buildCampaignVendorIoColumns(
     {
       id: "status",
       label: "Status",
+      colWidth: "12%",
       renderCell: (row) => (
-        <div className="flex flex-col gap-1">
+        <div className="flex min-w-0 flex-col gap-0.5">
           <VendorIoStatusPill status={row.status} />
           <VendorIoDeliveryBadge
             deliveryMethod={row.delivery_method}
@@ -152,9 +160,8 @@ function buildCampaignVendorIoColumns(
     {
       id: "current_payment_terms",
       label: "Payment terms",
-      colWidth: "9rem",
-      headerClassName: "min-w-[8rem]",
-      cellClassName: "max-w-[10rem] whitespace-normal break-words align-top",
+      colWidth: "12%",
+      cellClassName: "whitespace-normal break-words align-top",
       renderCell: (row) => (
         <span className="thinkway-campaign-cell-muted block whitespace-normal break-words leading-snug">
           {row.vendor_payment_terms_label || "—"}
@@ -164,16 +171,18 @@ function buildCampaignVendorIoColumns(
     {
       id: "special_payment_terms",
       label: "Special terms",
-      colWidth: "11rem",
-      headerClassName: "min-w-[9rem]",
-      cellClassName: "max-w-[12rem] whitespace-normal break-words align-top",
+      colWidth: "14%",
+      cellClassName: "whitespace-normal break-words align-top",
       renderCell: (row) => <VendorIoSpecialPaymentTermsCell row={row} />,
     },
     {
       id: "sent",
       label: "Sent",
+      defaultVisible: false,
+      colWidth: "8%",
+      cellClassName: "truncate",
       renderCell: (row) => (
-        <span className={cn(!row.sent_at && "thinkway-campaign-c-gray")}>
+        <span className={cn("truncate", !row.sent_at && "thinkway-campaign-c-gray")}>
           {formatSentApproved(row.sent_at)}
         </span>
       ),
@@ -181,8 +190,10 @@ function buildCampaignVendorIoColumns(
     {
       id: "approved",
       label: "Approved",
+      colWidth: "8%",
+      cellClassName: "truncate",
       renderCell: (row) => (
-        <span className={cn(!row.approved_at && "thinkway-campaign-c-gray")}>
+        <span className={cn("truncate", !row.approved_at && "thinkway-campaign-c-gray")}>
           {formatSentApproved(row.approved_at)}
         </span>
       ),
@@ -191,50 +202,11 @@ function buildCampaignVendorIoColumns(
       id: "actions",
       label: "Actions",
       locked: true,
-      colWidth: "260px",
-      headerClassName: "thinkway-campaign-vio-actions-col text-right",
-      cellClassName: "thinkway-campaign-vio-actions-col text-right align-top",
+      colWidth: "12%",
+      headerClassName: "text-right",
+      cellClassName: "text-right align-middle",
       renderCell: (row) => (
-        <div className="thinkway-campaign-action-links flex-wrap justify-end">
-          <VendorIoSendButton
-            row={row}
-            variant="default"
-            size="sm"
-            className="h-7 px-2.5 text-[11px] font-semibold"
-          />
-          <VendorIoManualApproveButton
-            row={row}
-            size="sm"
-            variant="outline"
-            className="h-7 px-2 text-[11px]"
-          />
-          {row.attachment_url?.trim() ? (
-            <a
-              className="thinkway-campaign-link"
-              href={row.attachment_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Open signed document link"
-            >
-              Signed
-            </a>
-          ) : null}
-          <a
-            className="thinkway-campaign-link"
-            href={`/ios/vendor/${row.id}/preview`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            View
-          </a>
-          <button
-            type="button"
-            className="thinkway-campaign-link-btn"
-            onClick={() => onViewDetail(row.id)}
-          >
-            Details
-          </button>
-        </div>
+        <VendorIoRowActions row={row} onViewDetail={onViewDetail} />
       ),
     },
   ];

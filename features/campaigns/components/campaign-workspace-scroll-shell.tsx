@@ -98,7 +98,7 @@ export function CampaignWorkspaceScrollShell({
   return (
     <div
       ref={scrollRef}
-      className="h-0 min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain bg-[var(--camp-surface)]"
+      className="h-0 min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain overscroll-x-none bg-[var(--camp-surface)]"
       data-campaign-workspace-scroll
     >
       <div className="thinkway-campaign-header">{chrome}</div>

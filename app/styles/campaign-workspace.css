@@ -331,8 +331,11 @@
   }
 
   .thinkway-campaign-content {
+    min-width: 0;
+    max-width: 100%;
     min-height: calc(100vh - 280px);
     padding: 16px 20px;
+    overflow-x: hidden;
   }
 
   .thinkway-campaign-workspace [data-campaign-workspace-scroll] {
@@ -1043,34 +1046,70 @@
     padding: 0;
   }
 
-  /* Fill remaining viewport — vertical + horizontal scroll inside the card */
+  /* Fill remaining viewport — vertical scroll only (no left/right page scroll) */
   .thinkway-campaign-table-scroll--fill {
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .thinkway-campaign-vendor-io-fill {
     display: flex;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     min-height: calc(100dvh - 11.5rem);
     flex-direction: column;
+    overflow-x: hidden;
   }
 
   .thinkway-campaign-vendor-io-fill .thinkway-campaign-section-card {
     margin-bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
   }
 
-  /* Keep Actions / Send visible while scrolling wide Vendor IO grids */
-  .thinkway-campaign-vendor-io-fill [data-slot="table-head"].thinkway-campaign-vio-actions-col,
-  .thinkway-campaign-vendor-io-fill [data-slot="table-cell"].thinkway-campaign-vio-actions-col {
-    position: sticky;
-    right: 0;
-    z-index: 12;
-    background: var(--camp-white);
-    box-shadow: -6px 0 10px -8px rgba(10, 15, 30, 0.35);
+  .thinkway-campaign-vendor-io-fill .thinkway-campaign-table-scroll,
+  .thinkway-campaign-vendor-io-fill .thinkway-campaign-table-scroll--fill {
+    overflow-x: hidden !important;
   }
 
-  .thinkway-campaign-vendor-io-fill [data-slot="table-head"].thinkway-campaign-vio-actions-col {
-    z-index: 14;
-    background: var(--camp-surface);
+  .thinkway-campaign-vendor-io-fill table.thinkway-campaign-data-table,
+  .thinkway-campaign-vendor-io-fill [data-slot="table"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+  }
+
+  .thinkway-campaign-vendor-io-fill [data-slot="table-head"],
+  .thinkway-campaign-vendor-io-fill [data-slot="table-cell"] {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .thinkway-campaign-vendor-io-fill [data-slot="table-head"] {
+    white-space: normal !important;
+    line-height: 1.2;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .thinkway-campaign-vendor-io-fill [data-slot="table-cell"] {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .thinkway-campaign-vendor-io-fill .thinkway-campaign-cr-cell {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .thinkway-campaign-vendor-io-fill .thinkway-campaign-cr-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .thinkway-campaign-asgn-scroll > * {
