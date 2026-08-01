@@ -33,7 +33,9 @@ Environment switch navigates between **hosts** — never switches DB inside one 
 - `docs/ARCHITECTURE_ALIGNMENT.md` — codebase vs spec  
 - `docs/RELEASE_WORKFLOW.md` — dual deploy + approval gate  
 - `docs/architecture/THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md` — **frozen platform architecture v1.0**  
-- `docs/architecture/PLATFORM_ARCHITECTURE_COMPLIANCE.md` — mandatory ADR / proposal compliance section  
+- `docs/architecture/BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md` — **canonical BPN navigation baseline**  
+- `docs/architecture/PLATFORM_ARCHITECTURE_COMPLIANCE.md` — mandatory compliance (lifecycle · journeys · BPN reuse · no new nav)  
+- `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md` — next functional gate (2.2a)  
 - `docs/architecture/platform-ux/` — Platform UX package (docs 01–12 frozen)  
 - `docs/architecture/CAMPAIGN_MODULE_BASELINE.md` — **protected Campaign baseline** (IA initiative CLOSED)  
 - `docs/architecture/PRODUCT_UX_STANDARDS.md` — platform UX standards (Campaign = canonical)  
@@ -59,8 +61,9 @@ Tip: `31c5a030` on `develop`.
 - Package: `docs/architecture/platform-ux/` (01–12) **frozen**.
 - Highest process SSOT: `12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md`.
 - Definition: campaign-centric enterprise OS; one campaign; one lifecycle; stakeholder journeys on the same spine.
-- Phase 1 complete: Campaign Process Navigation (presentation/IA only; reusable business-process layer).
-- Every future ADR / release architecture / proposal must include Platform Architecture Compliance.
+- Phase 1 complete: Business Process Navigation Foundation (protected baseline).
+- Architecture-first work complete — functional delivery via capability specs only.
+- Every future ADR / capability / proposal must include Platform Architecture Compliance (incl. BPN reuse).
 
 ## Product UX Standards
 
@@ -68,11 +71,11 @@ Campaign is the canonical implementation for: workspace architecture, navigation
 
 ## Next functional priority
 
-1. Planning Board (R2.2a)  
+1. Approve Planning Board Capability Spec → implement R2.2a  
 2. Media Plan Copilot (R2.2b)  
-3. Client / Vendor / Creator journeys  
+3. Client Collaboration · Vendor · Creator journeys  
 4. Reporting Hub · Notifications · Enterprise Analytics  
-5. Migration Phase 2+ when Product authorizes  
+5. Migration Phase 2+ only if Product authorizes (no new architecture by default)  
 
 ## Platform navigation standard
 

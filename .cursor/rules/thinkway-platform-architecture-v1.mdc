@@ -1,11 +1,12 @@
 ---
-description: Thinkway Enterprise Platform Architecture v1.0 — frozen baseline & compliance gate
+description: Thinkway Enterprise Platform Architecture v1.0 — frozen baseline, BPN foundation & compliance gate
 alwaysApply: true
 ---
 
 # Thinkway Enterprise Platform Architecture v1.0 (Frozen)
 
 **Milestone:** `docs/architecture/THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md`  
+**BPN foundation:** `docs/architecture/BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md`  
 **Compliance template:** `docs/architecture/PLATFORM_ARCHITECTURE_COMPLIANCE.md`  
 **Package:** `docs/architecture/platform-ux/` (docs 01–12 frozen)
 
@@ -13,32 +14,34 @@ alwaysApply: true
 
 Thinkway is a **campaign-centric enterprise operating system**. The campaign is the single business object; the campaign lifecycle is the single business process. Stakeholder journeys enter that lifecycle at different stages. Nothing may exist outside this model.
 
+## Canonical navigation
+
+**Business Process Navigation** is the approved navigation foundation. Future modules integrate into the Campaign Lifecycle — they do not introduce new pages, parallel workflows, or separate-application experiences.
+
 ## Frozen — do not redefine
 
-- Navigation philosophy (Platform → Module → Business Process → Content)
+- Navigation philosophy (Platform → Module → Business Process Navigation → Content)
 - Workspace philosophy / Campaign Lifecycle Architecture (doc 12)
 - Stakeholder Journey Architecture (doc 11)
 - Enterprise UX standards / Financial Display Standard
-- Campaign Module Baseline pillars (Enterprise Tabs evolve, not replaced)
+- Campaign Module Baseline + BPN Foundation
 
-**No architectural redesign** unless Product formally reopens Architecture v1.0.
+**No architectural redesign** unless Product formally reopens Architecture v1.0.  
+**No new architecture docs or UX redesign initiatives** unless Architecture Reopen is approved.
 
-## Mandatory for every ADR / release architecture / implementation proposal
+## Mandatory for every ADR / capability spec / release architecture / implementation proposal
 
 Include section **Platform Architecture Compliance** covering:
 
-1. Lifecycle stages affected (S00–S18 from doc 12)  
-2. Stakeholder journeys affected  
-3. Workspace(s) extended  
-4. Baseline documents referenced  
-5. Why no new navigation philosophy  
-6. Why no duplicate workflow  
-7. How the feature extends the campaign lifecycle  
+1. Campaign Lifecycle stage(s) extended (S00–S18 from doc 12)  
+2. Stakeholder Journey(s) extended  
+3. Business Process component(s) reused (`lib/business-process`, stage summary, process-aware tabs, etc.)  
+4. Why no new navigation philosophy is introduced  
+5. Workspace(s) extended · baselines referenced · no duplicate workflow · lifecycle extension paragraph  
 
 ## Implementation posture
 
-- Extend the baseline; do not reinvent it.  
-- Authorized migration phases only (currently Phase 1 when in progress).  
-- Presentation/IA changes must inherit frozen architecture.  
-- No new architecture docs unless a genuine enterprise-wide capability requires one (and compliance section is present).  
-- Functional priority after Phase 1: Planning Board → Copilot → Client/Vendor/Creator journeys → Reporting → Notifications → Analytics.
+- Architecture-first work is **complete**. Prefer **capability specifications** then functional delivery.  
+- Extend BPN + Campaign baselines; do not reinvent them.  
+- Functional priority: Planning Board (2.2a) → Copilot (2.2b) → Client/Vendor/Creator journeys → Reporting → Notifications → Analytics.  
+- Planning Board coding starts only after `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md` is approved.

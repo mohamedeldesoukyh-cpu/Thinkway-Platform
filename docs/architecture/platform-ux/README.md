@@ -41,8 +41,10 @@ Architecture-first work is **complete**.
 | Phase | Status |
 |-------|--------|
 | Phase 0 Approval / freeze | **Done** |
-| Phase 1 Campaign Process Navigation | **Complete** |
-| Phase 2+ | Gated until Product authorization |
+| Phase 1 Campaign Process Navigation | **Complete** — [`../BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md`](../BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md) |
+| Phase 2+ | Gated; prefer capability specs over new architecture |
+
+Architecture-first work is **complete**. Next: [`../../capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md`](../../capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md) → functional delivery.
 
 Future functional releases (Planning Board, Copilot, portals, Reporting, Notifications, Analytics) **extend** this baseline — they do not redefine it.
 

@@ -8,8 +8,10 @@ alwaysApply: true
 Before designing schema, UI, workflows, or new modules, read:
 
 - `docs/architecture/THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md` — **frozen platform architecture v1.0**
-- `docs/architecture/PLATFORM_ARCHITECTURE_COMPLIANCE.md` — mandatory compliance section for ADRs / proposals
+- `docs/architecture/BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md` — **canonical Business Process Navigation**
+- `docs/architecture/PLATFORM_ARCHITECTURE_COMPLIANCE.md` — mandatory compliance (lifecycle · journeys · BPN reuse · no new nav)
 - `docs/architecture/platform-ux/12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md` — campaign lifecycle SSOT
+- `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md` — next functional gate (approve before 2.2a coding)
 - `docs/THINKWAY_SYSTEM_REFERENCE.md` — canonical product spec (May 2026)
 - `docs/ARCHITECTURE_ALIGNMENT.md` — current codebase vs spec gap analysis
 - `docs/architecture/CAMPAIGN_MODULE_BASELINE.md` — **protected Campaign module baseline** (closed 2026-08-01)

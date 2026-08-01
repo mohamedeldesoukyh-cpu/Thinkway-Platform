@@ -1,8 +1,10 @@
 # Release 2.2a — Media Plan Planning Board Architecture
 
-**Status:** ✅ **APPROVED** (Product 2026-07-31) · ⏳ **Implementation queued** — next functional priority after Campaign Module Baseline close-out  
-**Parent:** [`ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md`](./ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md)  
-**UI / IA constraint:** Must **extend** the protected [`CAMPAIGN_MODULE_BASELINE.md`](./CAMPAIGN_MODULE_BASELINE.md) + Aurora shell — no Campaign redesign  
+**Status:** ✅ **APPROVED** (Product 2026-07-31) as technical companion · ⏳ **Implementation gated** by capability spec  
+**Capability gate (required before coding):** [`../capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md`](../capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md)  
+**Parent baselines:** Architecture v1.0 · [`BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md`](./BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md) · [`CAMPAIGN_MODULE_BASELINE.md`](./CAMPAIGN_MODULE_BASELINE.md)  
+**Also:** [`ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md`](./ENTERPRISE_OPERATIONS_FINANCE_ARCHITECTURE.md)  
+**UI / IA constraint:** Extend BPN + Campaign Module Baseline + Aurora shell — no Campaign redesign · no new navigation philosophy  
 **Depends on:** Release 2.1 — Media Plan ↔ Assignment Hardening (`v2.1.0`)  
 **Sibling:** Release 2.2 — Client IO — [`RELEASE_2_2_IMPLEMENTATION.md`](./RELEASE_2_2_IMPLEMENTATION.md)  
 **Follow-on:** Release 2.2b — AI Copilot for Media Plan Scheduling (§8)
@@ -211,13 +213,14 @@ Every confirmed AI action → Enterprise Timeline (e.g. “AI schedule update”
 
 ## 9. Implementation kickoff (next gate)
 
-When Product authorizes coding for 2.2a:
+When Product approves the **Planning Board Capability Specification** and authorizes coding for 2.2a:
 
-1. Architecture validation checklist vs codebase (Commercial Workspace reuse map, schedule action surface).  
-2. Implementation package (files, tests, UAT).  
-3. Dev-first on `develop`; no Production until explicit approval.
+1. Confirm capability spec compliance (S04 · BPN reuse · no new nav).  
+2. Validation checklist vs codebase (Commercial Workspace reuse map, schedule action surface).  
+3. Implementation package (files, tests, UAT).  
+4. Dev-first on `develop`; no Production until explicit approval.
 
-**Coding has not started.** This document freezes principles and scope only.
+**Coding has not started.** This document is a technical companion — not a new architecture initiative.
 
 ---
 
@@ -226,8 +229,10 @@ When Product authorizes coding for 2.2a:
 | Gate | Status |
 |---|---|
 | R2.1 Production | ✅ Complete |
-| R2.2 Client IO | ✅ Remains NEXT / no scope expansion |
-| R2.2a Planning Board principles + MVP scope | ✅ **Approved** |
+| Architecture v1.0 + BPN Foundation | ✅ Frozen / protected |
+| R2.2 Client IO | ✅ Remains separate / no scope expansion |
+| R2.2a technical principles + MVP scope | ✅ **Approved** (this doc) |
+| R2.2a Capability Specification | ⏳ **Awaiting approval** |
 | R2.2b Copilot principles | ✅ **Approved** (deferred implementation) |
-| 2.2a Implementation | ⛔ Pending kickoff approval |
+| 2.2a Implementation | ⛔ Pending capability approval |
 | Production (2.2a / 2.2b) | ⛔ Blocked until their own gates |

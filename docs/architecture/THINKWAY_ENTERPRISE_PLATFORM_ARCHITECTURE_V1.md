@@ -57,6 +57,7 @@ Package root: [`platform-ux/README.md`](./platform-ux/README.md)
 
 Related preserved baselines (still in force):
 
+- [`BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md`](./BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md) — **canonical navigation model**  
 - [`CAMPAIGN_MODULE_BASELINE.md`](./CAMPAIGN_MODULE_BASELINE.md)  
 - [`PRODUCT_UX_STANDARDS.md`](./PRODUCT_UX_STANDARDS.md)  
 - [`FINANCIAL_DISPLAY_STANDARD.md`](./FINANCIAL_DISPLAY_STANDARD.md)  
@@ -66,9 +67,11 @@ Related preserved baselines (still in force):
 
 ## Governance
 
-Every future ADR, Release Architecture document, and implementation proposal **must** include:
+Every future ADR, Release Architecture document, capability specification, and implementation proposal **must** include:
 
 **[`PLATFORM_ARCHITECTURE_COMPLIANCE.md`](./PLATFORM_ARCHITECTURE_COMPLIANCE.md)**
+
+Mandatory BPN gate: lifecycle stage(s) · stakeholder journey(s) · Business Process components reused · why no new navigation philosophy.
 
 No release may redefine navigation, workspace, business process, campaign lifecycle, stakeholder journeys, or enterprise UX standards without a **formal architecture reopen**.
 
@@ -79,12 +82,13 @@ No release may redefine navigation, workspace, business process, campaign lifecy
 | Allowed | Forbidden without reopen |
 |---------|---------------------------|
 | Functional delivery extending the baseline | Architectural redesign |
-| Migration Strategy phases (authorized sequentially) | New parallel navigation systems |
+| Capability specifications → implementation | New architecture / UX redesign initiatives |
 | Stage-mapped features (Planning Board, portals, etc.) | Separate application experiences |
-| Presentation evolution that inherits the baseline | Redefining the campaign lifecycle |
+| Presentation evolution that inherits BPN | New navigation models or parallel workflows |
 
-**Phase 1 complete:** Campaign Process Navigation foundation  
-([`platform-ux/10-MIGRATION_STRATEGY.md`](./platform-ux/10-MIGRATION_STRATEGY.md) § Phase 1)
+**Architecture-first work:** Complete.  
+**Migration Strategy Phase 1:** Complete — [`BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md`](./BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md).  
+**Next:** Functional delivery — Planning Board Capability Spec → Release 2.2a (after capability approval).
 
 ### Platform Architecture Compliance — Phase 1
 

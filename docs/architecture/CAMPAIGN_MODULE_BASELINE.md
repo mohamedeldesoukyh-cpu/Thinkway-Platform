@@ -15,7 +15,8 @@ The Campaign module is the approved implementation for future Thinkway operation
 |--------|---------------------|
 | Campaign Information Architecture | [`CAMPAIGN_INFORMATION_ARCHITECTURE.md`](./CAMPAIGN_INFORMATION_ARCHITECTURE.md) |
 | Campaign Workspace UI (Aurora) | [`CAMPAIGN_WORKSPACE_UI_FREEZE.md`](./CAMPAIGN_WORKSPACE_UI_FREEZE.md) · [`CAMPAIGN_WORKSPACE_UI_GUIDELINES.md`](./CAMPAIGN_WORKSPACE_UI_GUIDELINES.md) |
-| Enterprise Tabs | `components/workspace/enterprise-tabs.tsx` · `app/styles/enterprise-tabs.css` |
+| Business Process Navigation | [`BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md`](./BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md) · `lib/business-process/` |
+| Enterprise Tabs | `components/workspace/enterprise-tabs.tsx` · `app/styles/enterprise-tabs.css` (process-aware) |
 | Financial Display Standard | [`FINANCIAL_DISPLAY_STANDARD.md`](./FINANCIAL_DISPLAY_STANDARD.md) · `lib/finance/currency-format.ts` |
 | Deliverables selection model | [`DELIVERABLES_DOCUMENTATION_REPOSITORY.md`](./DELIVERABLES_DOCUMENTATION_REPOSITORY.md) · `documentation-editor-binding.ts` |
 | Persistent Workspace Shell | Campaign chrome + Enterprise Tabs stay mounted; content body swaps |
@@ -42,13 +43,15 @@ Applies to:
 ### Rules
 
 1. Integrate into the existing Campaign Workspace shell and Aurora design language.  
-2. Use Enterprise Tabs for workspace navigation — no parallel tab systems.  
-3. Use the Financial Display Standard for all money presentation.  
-4. Preserve Deliverables selection / upload-lock / Save·Discard·Cancel behavior.  
-5. Keep campaign-level finance KPIs in the header (Finance workspace may repeat R/C/GP/Margin).  
-6. Give each workspace a unique summary identity — do not reintroduce duplicate campaign KPIs everywhere.  
-7. Never ship disabled primary actions for unreleased capabilities.  
-8. Prefer functional delivery over presentation change.
+2. Extend **Business Process Navigation** — no new navigation philosophy or parallel tab/app systems.  
+3. Use Enterprise Tabs (process-aware) for workspace process rails.  
+4. Use the Financial Display Standard for all money presentation.  
+5. Preserve Deliverables selection / upload-lock / Save·Discard·Cancel behavior.  
+6. Keep campaign-level finance KPIs in the header (Finance workspace may repeat R/C/GP/Margin).  
+7. Give each workspace a unique summary identity — do not reintroduce duplicate campaign KPIs everywhere.  
+8. Never ship disabled primary actions for unreleased capabilities.  
+9. Prefer functional delivery over presentation change.  
+10. Include Platform Architecture Compliance (lifecycle · journeys · BPN reuse · no new nav).
 
 **Exception:** Critical usability defect with formal Product approval to reopen scope.
 
@@ -56,14 +59,15 @@ Applies to:
 
 ## Next development priority (functional delivery)
 
-Campaign redesign work is **closed**. Return to capability delivery in this order:
+Architecture and Campaign redesign work are **closed**. Capability delivery order:
 
-1. **Planning Board** — Release 2.2a  
+1. **Planning Board Capability Spec** — [`../capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md`](../capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md) → then Release 2.2a implementation  
 2. **Media Plan Copilot** — Release 2.2b  
-3. **Vendor IO Enterprise Completion**  
-4. **Reporting Hub**  
-5. **Notifications**  
-6. **Enterprise Analytics**
+3. **Client Collaboration Capability**  
+4. **Vendor Journey**  
+5. **Reporting Hub**  
+6. **Notifications**  
+7. **Enterprise Analytics**
 
 ---
 

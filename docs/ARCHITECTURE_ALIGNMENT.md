@@ -7,12 +7,14 @@ This document compares the **current Thinkway platform** (`thinkway-platform`) a
 ### Thinkway Enterprise Platform Architecture v1.0 — FROZEN (Aug 2026)
 
 - **Milestone:** [`THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md`](./architecture/THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md)
-- **Compliance (mandatory on every ADR / release architecture / proposal):** [`PLATFORM_ARCHITECTURE_COMPLIANCE.md`](./architecture/PLATFORM_ARCHITECTURE_COMPLIANCE.md)
+- **BPN Foundation (protected):** [`BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md`](./architecture/BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md) — canonical navigation model
+- **Compliance (mandatory):** [`PLATFORM_ARCHITECTURE_COMPLIANCE.md`](./architecture/PLATFORM_ARCHITECTURE_COMPLIANCE.md) — lifecycle · journeys · BPN reuse · no new nav
 - **Package:** [`docs/architecture/platform-ux/README.md`](./architecture/platform-ux/README.md) (docs 01–12 frozen)
 - **Highest process SSOT:** [`12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md`](./architecture/platform-ux/12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md)
 - **Thesis:** Campaign-centric enterprise OS; one campaign object; one lifecycle; stakeholder journeys enter at different stages
-- **Phase 0:** Complete · **Phase 1:** Complete (Campaign Process Navigation — presentation/IA only)
-- **Reusable process layer:** `lib/business-process/` · campaign adapter under `features/campaigns/lifecycle/`
+- **Architecture-first work:** Complete · Migration Phase 1 complete
+- **Next:** Capability specs → functional delivery (Planning Board 2.2a first)
+- **Planning Board gate:** [`capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md`](./capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md) (awaiting Product approval — not architecture)
 - **Rule:** Future work extends the baseline; no architectural redesign without formal reopen
 
 ### Campaign Module Baseline — PROTECTED (Aug 2026)
