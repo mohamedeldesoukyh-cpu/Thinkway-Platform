@@ -1,7 +1,7 @@
 # 06 — Business Lifecycle Model
 
-**Status:** Draft for Product approval  
-**Note:** Stage labels are UX/process model. Underlying data/status fields remain unchanged until a later functional release explicitly maps them.
+**Status:** Conditionally approved — **canonical stages live in** [`12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md`](./12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md)  
+**Note:** This doc retains the practical process rail. Where names differ, **doc 12 wins**. Underlying data/status fields remain unchanged until a later functional release explicitly maps them.
 
 ---
 

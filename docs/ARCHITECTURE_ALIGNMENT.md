@@ -4,14 +4,14 @@ This document compares the **current Thinkway platform** (`thinkway-platform`) a
 
 **Last reviewed:** Aug 2026 (Platform UX & Business Process Architecture — review package)
 
-### Platform UX & Business Process Architecture (Aug 2026) — FINAL REVIEW
+### Platform UX & Business Process Architecture (Aug 2026) — IMPLEMENTATION PAUSED
 
-- **Status:** Approved in principle · Stakeholder Journey layer added — awaiting **final** Product approval — **no implementation yet**
+- **Status:** Conditional approval · **Campaign Lifecycle Architecture (doc 12)** awaiting freeze approval — **no implementation**
+- **Highest SSOT:** [`12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md`](./architecture/platform-ux/12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md)
 - **Package:** [`docs/architecture/platform-ux/README.md`](./architecture/platform-ux/README.md)
-- **Thesis:** Workflow-driven enterprise OS; Business Process Navigation + Stakeholder Journey Architecture on one campaign spine; portals/Reporting/AI extend journeys
-- **Stakeholder journeys:** Internal Ops · Commercial · Client · Vendor · Creator · Finance · Executive · AI Assistant — [`11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md`](./architecture/platform-ux/11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md)
-- **Preserves:** Campaign Module Baseline · Financial Display · Deliverables selection · calculations/APIs/DB
-- **Next after final approval:** Phase 1 Campaign Process Navigation only (see migration strategy)
+- **Thesis:** Campaign-centric OS; canonical lifecycle spine; stakeholder journeys + process navigation; nothing outside the lifecycle
+- **Freeze after doc 12 approval:** Platform UX · Business Process · Stakeholder Journey · Campaign Lifecycle
+- **Then:** Phase 1 only (migration strategy)
 
 ### Campaign Module Baseline — PROTECTED (Aug 2026)
 

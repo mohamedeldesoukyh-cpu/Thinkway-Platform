@@ -20,10 +20,11 @@
 
 ### Phase 0 — Approval gate (now)
 
-- [ ] Product gives **final** approval of docs 01–11 (including Stakeholder Journey Architecture)  
+- [ ] Product approves [`12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md`](./12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md)  
+- [ ] Freeze Platform UX · Business Process · Stakeholder Journey · Campaign Lifecycle architectures  
 - [ ] Lock non-goals (no logic/API/DB)  
-- [ ] Confirm Planning Board / Copilot integrate into process model  
-- [ ] Confirm portals / Reporting Hub / AI extend stakeholder journeys (not new products)  
+- [ ] Confirm Planning Board / Copilot / portals / Reporting / AI map into lifecycle stages  
+- [ ] Authorize **Phase 1 only**  
 
 ### Phase 1 — Campaign Process Navigation (foundation)
 

@@ -60,7 +60,21 @@ Examples:
 
 This **replaces the browser-tab mental model**.
 
-Implementation note: Prefer **evolving Enterprise Tabs** into a process rail (ordered stages, completed/current/upcoming/blocked states, recommended next), not inventing a second tab component.
+Implementation note: Prefer **evolving Enterprise Tabs** into a process rail, not inventing a second tab component.
+
+Navigation must educate operational state (see doc 12):
+
+| Signal | Meaning |
+|--------|---------|
+| Current stage | Focus |
+| Completed stages | Done |
+| Upcoming stages | Ahead |
+| Blocked stages | Cannot proceed |
+| Waiting for external party | Client / vendor / creator |
+| Waiting for approval | Approval in flight |
+| Recommended next action | Primary CTA |
+
+Canonical stage spine: [`12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md`](./12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md).
 
 ### L4 — Workspace Content
 

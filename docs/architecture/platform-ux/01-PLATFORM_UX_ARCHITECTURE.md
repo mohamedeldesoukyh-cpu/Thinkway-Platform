@@ -1,9 +1,16 @@
 # 01 — Thinkway Platform UX Architecture
 
-**Status:** Approved in principle · Stakeholder Journey layer added — awaiting **final** Product approval  
+**Status:** Approved in principle · Campaign Lifecycle Architecture pending final freeze approval  
 **Initiative:** Platform UX & Business Process Architecture  
+**Campaign lifecycle SSOT:** [`12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md`](./12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md)  
 **Stakeholder journeys:** [`11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md`](./11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md)  
 **Constraints:** No API · DB · workflow engine · calculation · permission changes
+
+---
+
+## 0. Campaign-centric operating system principle
+
+> Thinkway is not a collection of pages, modules, or portals. It is a campaign-centric enterprise operating system. Every participant—internal teams, clients, vendors, creators, finance, executives, and AI—works on the same campaign through a stakeholder journey that enters the campaign lifecycle at different stages. Navigation, workspaces, approvals, documents, reporting, and collaboration must always reinforce the campaign lifecycle rather than independent applications or disconnected pages.
 
 ---
 
@@ -87,15 +94,14 @@ Platform (enterprise OS shell)
                                 └── Operational details
 ```
 
-### Dual architecture layers on the campaign
+### Architecture layers on the campaign
 
-| Layer | Answers |
-|-------|---------|
-| **Business Process Architecture** | What stages exist? What is the order of operational work? |
-| **Stakeholder Journey Architecture** | Who enters where? What can they do? How do hand-offs stay on one campaign? |
-
-Full stakeholder catalog and intersection model:  
-[`11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md`](./11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md)
+| Layer | Answers | SSOT |
+|-------|---------|------|
+| **Campaign Lifecycle Architecture** | What is the canonical stage spine? What must every feature map to? | [`12-…`](./12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md) |
+| **Business Process Architecture** | How do stages progress operationally? | [`03-…`](./03-BUSINESS_PROCESS_ARCHITECTURE.md) |
+| **Stakeholder Journey Architecture** | Who enters where? What can they do? | [`11-…`](./11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md) |
+| **Master Navigation Architecture** | How does the UI teach stage state and next action? | [`02-…`](./02-MASTER_NAVIGATION_ARCHITECTURE.md) |
 
 Participants always know:
 
@@ -156,11 +162,15 @@ All journeys **begin and end on the same campaign identity**.
 
 ---
 
-## 8. Final approval questions
+## 8. Final freeze approval (after doc 12)
 
-1. Accept business process progression as the primary UX metaphor?  
-2. Accept Stakeholder Journey Architecture as a required layer (one campaign, many journeys)?  
-3. Accept that Client / Vendor / Creator portals, Reporting Hub, and AI Assistant must **extend** these journeys rather than invent new products?  
-4. Authorize implementation to begin with Migration Phase 1 only after this final approval?
+Approve [`12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md`](./12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md), then freeze:
 
-**Implementation must not start until Product answers Yes to the above.**
+1. Platform UX Architecture (this doc)  
+2. Business Process Architecture  
+3. Stakeholder Journey Architecture  
+4. Campaign Lifecycle Architecture  
+
+Then authorize **Phase 1 only**.
+
+**Implementation remains paused until doc 12 is explicitly approved.**

@@ -1,82 +1,65 @@
 # Thinkway Platform UX & Business Process Architecture Initiative
 
-**Status:** Approved in principle · Stakeholder Journey layer added — awaiting **final** Product approval  
+**Status:** Conditional approval · Campaign Lifecycle Architecture (doc 12) awaiting final freeze approval  
 **Updated:** 2026-08-01  
 **Class:** Presentation · Navigation · Information Architecture only  
-**Implementation:** Forbidden until final approval of this package  
+**Implementation:** **Paused** until doc 12 is approved and architectures are frozen  
 
 ---
 
 ## Vision
 
-Thinkway is a **workflow-driven enterprise operating system**, not a page-driven website.
+Thinkway is a **campaign-centric enterprise operating system**.
 
-Users must always feel they are progressing through a **business process**, not switching between unrelated applications or browser tabs.
-
-Every stakeholder — Internal Ops, Commercial, Client, Vendor, Creator, Finance, Executive, and AI Assistant — works on the **same campaign** through a journey appropriate to their responsibilities.
+Every participant works on the **same campaign** through a stakeholder journey that enters the **canonical Campaign Lifecycle** at different stages.
 
 ---
 
-## Architecture layers
+## Architecture layers (freeze set)
 
 ```
-Platform UX Architecture
-  ├── Business Process Architecture      → shared campaign lifecycle spine
-  ├── Master Navigation Architecture     → one nav philosophy
-  └── Stakeholder Journey Architecture   → who enters where, same campaign
+12  Campaign Lifecycle Architecture     ← highest-level business process SSOT
+01  Platform UX Architecture
+02  Master Navigation Architecture
+03  Business Process Architecture
+11  Stakeholder Journey Architecture
 ```
 
----
-
-## Relationship to existing baselines
-
-This initiative **evolves navigation philosophy**. It does **not** discard:
-
-| Preserve | Reference |
-|----------|-----------|
-| Campaign Module Baseline | [`../CAMPAIGN_MODULE_BASELINE.md`](../CAMPAIGN_MODULE_BASELINE.md) |
-| Campaign Information Architecture | [`../CAMPAIGN_INFORMATION_ARCHITECTURE.md`](../CAMPAIGN_INFORMATION_ARCHITECTURE.md) |
-| Financial Display Standard | [`../FINANCIAL_DISPLAY_STANDARD.md`](../FINANCIAL_DISPLAY_STANDARD.md) |
-| Enterprise Tabs (evolve → Business Process Navigation) | `components/workspace/enterprise-tabs.tsx` |
-| Deliverables selection model | Deliverables documentation SSOT |
-| Persistent campaign shell | Campaign workspace scroll shell |
-| Product UX Standards | [`../PRODUCT_UX_STANDARDS.md`](../PRODUCT_UX_STANDARDS.md) |
-| Calculations, APIs, DB, workflows, permissions | Unchanged |
+Supporting: module/workspace hierarchy, diagrams, journeys, components, migration (04–10).
 
 ---
 
-## Document package (final approval before code)
+## Document package
 
 | # | Document | Purpose |
 |---|----------|---------|
-| 01 | [`01-PLATFORM_UX_ARCHITECTURE.md`](./01-PLATFORM_UX_ARCHITECTURE.md) | Master product UX architecture (+ stakeholder layer) |
+| 01 | [`01-PLATFORM_UX_ARCHITECTURE.md`](./01-PLATFORM_UX_ARCHITECTURE.md) | Master UX architecture + campaign-centric principle |
 | 02 | [`02-MASTER_NAVIGATION_ARCHITECTURE.md`](./02-MASTER_NAVIGATION_ARCHITECTURE.md) | One navigation philosophy |
 | 03 | [`03-BUSINESS_PROCESS_ARCHITECTURE.md`](./03-BUSINESS_PROCESS_ARCHITECTURE.md) | Lifecycle-first organization |
-| 04 | [`04-MODULE_HIERARCHY.md`](./04-MODULE_HIERARCHY.md) | Module map and ownership |
-| 05 | [`05-WORKSPACE_HIERARCHY.md`](./05-WORKSPACE_HIERARCHY.md) | Portfolio → entity → stage → details |
-| 06 | [`06-BUSINESS_LIFECYCLE_MODEL.md`](./06-BUSINESS_LIFECYCLE_MODEL.md) | Campaign & adjacent lifecycles |
+| 04 | [`04-MODULE_HIERARCHY.md`](./04-MODULE_HIERARCHY.md) | Module map |
+| 05 | [`05-WORKSPACE_HIERARCHY.md`](./05-WORKSPACE_HIERARCHY.md) | Portfolio → entity → stage |
+| 06 | [`06-BUSINESS_LIFECYCLE_MODEL.md`](./06-BUSINESS_LIFECYCLE_MODEL.md) | Practical rail (defers to 12) |
 | 07 | [`07-NAVIGATION_FLOW_DIAGRAMS.md`](./07-NAVIGATION_FLOW_DIAGRAMS.md) | Flow diagrams |
-| 08 | [`08-USER_JOURNEY_MAPS.md`](./08-USER_JOURNEY_MAPS.md) | Operator journeys |
-| 09 | [`09-PLATFORM_COMPONENT_STANDARDS.md`](./09-PLATFORM_COMPONENT_STANDARDS.md) | Process-oriented component SSOT |
-| 10 | [`10-MIGRATION_STRATEGY.md`](./10-MIGRATION_STRATEGY.md) | Phased evolution from current nav |
-| 11 | [`11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md`](./11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md) | **NEW** — journeys for all participants on one campaign |
+| 08 | [`08-USER_JOURNEY_MAPS.md`](./08-USER_JOURNEY_MAPS.md) | Journey narratives |
+| 09 | [`09-PLATFORM_COMPONENT_STANDARDS.md`](./09-PLATFORM_COMPONENT_STANDARDS.md) | Component SSOT |
+| 10 | [`10-MIGRATION_STRATEGY.md`](./10-MIGRATION_STRATEGY.md) | Phased implementation |
+| 11 | [`11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md`](./11-STAKEHOLDER_JOURNEY_ARCHITECTURE.md) | Role journeys on one campaign |
+| 12 | [`12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md`](./12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md) | **Canonical lifecycle + matrix + ownership** |
 
 ---
 
-## Success criteria (final approval gate)
+## Preserve
 
-- [ ] Users feel one connected enterprise platform  
-- [ ] Users always know lifecycle stage and next action  
-- [ ] Portfolio → Workspace → Studio → AI → Finance feels continuous  
-- [ ] Navigation teaches the business process  
-- [ ] Every module shares one UX architecture  
-- [ ] Every stakeholder journey shares the same campaign identity  
-- [ ] Portals / Reporting Hub / AI extend journeys — they do not invent products  
-- [ ] New features plug into the workflow + stakeholder model without inventing nav  
+Campaign Module Baseline · Financial Display · Enterprise Tabs (evolve) · Deliverables selection · Persistent shell · all business logic / APIs / DB.
 
 ---
 
-## Next step
+## Freeze gate (after approving doc 12)
 
-**Final Product approval** of this package (including Stakeholder Journey Architecture).  
-Implementation begins only after explicit final approval — Phase 1 first per migration strategy.
+- [ ] Campaign Lifecycle Architecture frozen  
+- [ ] Platform UX Architecture frozen  
+- [ ] Business Process Architecture frozen  
+- [ ] Stakeholder Journey Architecture frozen  
+- [ ] Phase 1 implementation authorized  
+
+**No code until that gate passes.**

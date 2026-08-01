@@ -99,14 +99,13 @@
 - **Next (functional delivery):** Planning Board (2.2a) → Media Plan Copilot (2.2b) → Vendor IO Enterprise Completion → Reporting Hub → Notifications → Enterprise Analytics
 - **No Production deploy** without explicit approval
 
-## Platform UX & Business Process Architecture (2026-08-01) — FINAL REVIEW
+## Platform UX & Business Process Architecture (2026-08-01) — PAUSED FOR DOC 12
 
-- **Status:** Approved in principle · Stakeholder Journey layer added — **awaiting final Product approval; no code**
-- **Package:** `docs/architecture/platform-ux/` (README + docs 01–11)
-- **Thesis:** Workflow-driven enterprise OS; Business Process Navigation + Stakeholder Journeys on one campaign; portals/Reporting/AI extend journeys (not separate products)
-- **Stakeholders:** Internal Ops · Commercial · Client · Vendor · Creator · Finance · Executive · AI Assistant
+- **Status:** Conditional approval · **doc 12 Campaign Lifecycle Architecture** awaiting freeze approval — **no code**
+- **SSOT:** `docs/architecture/platform-ux/12-CAMPAIGN_LIFECYCLE_ARCHITECTURE.md`
+- **Package:** `docs/architecture/platform-ux/` (01–12)
+- **On doc 12 approval:** freeze Platform UX · Business Process · Stakeholder Journey · Campaign Lifecycle → authorize Phase 1 only
 - **Preserves:** Campaign Baseline · Enterprise Tabs (evolve) · Financial Display · Deliverables · all business logic
-- **Do not implement** until final approval; then Phase 1 only per migration strategy
 
 ## IO approval email experience (Preview testing on develop)
 
