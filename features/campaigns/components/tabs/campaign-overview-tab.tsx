@@ -43,41 +43,36 @@ export function CampaignOverviewTab({
 
   return (
     <>
-      <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-sm font-bold text-[var(--camp-text)]">Campaign overview</h2>
-          <p className="text-[11px] text-[var(--camp-text-3)]">
-            Header, hierarchy, commercial, and insertion order
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {onOpenDetails ? (
-            <Button
-              variant="outline"
-              size="sm"
-              className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none"
-              onClick={onOpenDetails}
-            >
-              <InfoIcon data-icon="inline-start" className="size-3.5" />
-              Details panel
-            </Button>
-          ) : null}
-          {!inlineEditing ? (
-            <Button
-              variant="outline"
-              size="sm"
-              className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none"
-              onClick={() => setInlineEditing(true)}
-            >
-              <PencilIcon data-icon="inline-start" className="size-3.5" />
-              Edit header
-            </Button>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="space-y-3.5">
+      <div className="space-y-0">
         <CampaignOperationalReadinessChecklist readiness={operationalReadiness} />
+
+        <div className="thinkway-aurora-sechead">
+          <div className="thinkway-aurora-sechead-tt">Details</div>
+          <div className="thinkway-aurora-sechead-tools">
+            {onOpenDetails ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="thinkway-campaign-btn h-[33px] px-3 text-[12.5px]"
+                onClick={onOpenDetails}
+              >
+                <InfoIcon data-icon="inline-start" className="size-3.5" />
+                Details panel
+              </Button>
+            ) : null}
+            {!inlineEditing ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="thinkway-campaign-btn h-[33px] px-3 text-[12.5px]"
+                onClick={() => setInlineEditing(true)}
+              >
+                <PencilIcon data-icon="inline-start" className="size-3.5" />
+                Edit header
+              </Button>
+            ) : null}
+          </div>
+        </div>
 
         <CampaignHeaderInlineEditor
           workspace={workspace}

@@ -191,7 +191,7 @@ export function CampaignWorkspaceTabPanel({
   className?: string;
 }) {
   return (
-    <div className={cn("thinkway-campaign-content min-w-0 bg-[var(--camp-surface)]", className)}>
+    <div className={cn("thinkway-campaign-content min-w-0", className)}>
       {children}
     </div>
   );

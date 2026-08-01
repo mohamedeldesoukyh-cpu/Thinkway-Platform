@@ -30,10 +30,9 @@ import { useMetricsSyncCompletionToasts } from "@/features/campaigns/hooks/use-m
 import { OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS } from "@/components/workspace/operational-workspace-ui";
 import { TabErrorBoundary } from "@/components/ui/tab-error-boundary";
 import { CampaignDetailsSheet } from "@/features/campaigns/components/campaign-details-sheet";
-import { PoConsumptionBanner } from "@/components/finance/po-consumption-banner";
 import { CancelCampaignDialog } from "@/components/campaigns/cancel-campaign-dialog";
-import { CampaignKpiStrip } from "@/features/campaigns/components/campaign-kpi-strip";
-import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
+import { CampaignHero } from "@/features/campaigns/components/aurora/campaign-hero";
+import { CampaignKpiCards } from "@/features/campaigns/components/aurora/campaign-kpi-cards";
 import { DuplicateCampaignDialog } from "@/features/campaigns/components/duplicate-campaign-dialog";
 import { CampaignBillingTab } from "@/features/campaigns/components/tabs/campaign-billing-tab";
 import { CampaignDeliverablesDocumentationTab } from "@/features/campaigns/components/tabs/campaign-deliverables-documentation-tab";
@@ -48,8 +47,6 @@ import { ClientIoTab } from "@/features/io/components/client-io-tab";
 import { VendorIoTab } from "@/features/io/components/vendor-io-tab";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
-import { formatMoney, formatPlatformLabel } from "@/features/campaigns/utils";
-import { DocumentNumber } from "@/components/ui/document-number";
 import { flattenOperationalDeliverables } from "@/lib/campaigns/flatten-operational-deliverables";
 import { buildConsolidatedInvoiceQueueRows } from "@/lib/billing/consolidated-invoice-queue";
 import { OpenCampaignStudioLauncher } from "@/features/campaign-outputs/components/open-campaign-studio-launcher-lazy";
@@ -234,10 +231,10 @@ export function CampaignWorkspaceView({
         count: tabCounts.publications,
       },
       workflow: { value: "workflow", label: "Workflow", count: tabCounts.workflow },
-      billing: { value: "billing", label: "Billing", count: tabCounts.billing },
+      billing: { value: "billing", label: "Finance", count: tabCounts.billing },
       timeline: {
         value: "timeline",
-        label: "Timeline & activity",
+        label: "Timeline",
         count: tabCounts.timeline,
       },
     }),
@@ -286,37 +283,35 @@ export function CampaignWorkspaceView({
       >
         <CampaignWorkspaceScrollShell
           chrome={
-            <>
-              <div className="thinkway-campaign-header-inner">
-                <div className="mb-1 flex flex-wrap items-center gap-2">
-                  <PageBackButton
-                    fallbackHref="/campaigns"
-                    label="Back to campaigns"
-                    className="thinkway-campaign-back-btn size-[26px] rounded-[var(--camp-radius)] p-0 hover:bg-[var(--camp-surface)]"
-                  />
-                  <EntityPrevNext
-                    entity="campaigns"
-                    currentId={workspace.id}
-                    hrefForId={(id) => campaignDetailPath(id)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setDetailsOpen(true)}
-                    className="thinkway-campaign-title truncate text-left transition-colors hover:text-[var(--camp-blue)]"
-                    title="View campaign details"
-                  >
-                    {workspace.name}
-                  </button>
-                  <CampaignStatusBadge
-                    status={workspace.status}
-                    className="thinkway-campaign-status-chip"
-                  />
-                  <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+            <div className="thinkway-aurora-chrome">
+              <div className="thinkway-aurora-chrome-nav">
+                <PageBackButton
+                  fallbackHref="/campaigns"
+                  label="Back to campaigns"
+                  className="thinkway-campaign-back-btn size-[26px] rounded-[var(--camp-radius)] p-0 hover:bg-[var(--camp-surface)]"
+                />
+                <EntityPrevNext
+                  entity="campaigns"
+                  currentId={workspace.id}
+                  hrefForId={(id) => campaignDetailPath(id)}
+                />
+              </div>
+              <CampaignHero
+                workspace={workspace}
+                actions={
+                  <>
+                    <OpenCampaignStudioLauncher
+                      seed={campaignStudioSeed}
+                      workspace={campaignStudioWorkspace}
+                      tab="studio"
+                      variant="primary"
+                      buttonClassName="thinkway-campaign-btn thinkway-campaign-btn-primary h-[38px] px-[15px] text-[13px] font-semibold"
+                    />
                     <Button
                       asChild
                       variant="outline"
                       size="sm"
-                      className="thinkway-campaign-btn h-[30px] px-[11px] text-[11px] font-medium shadow-none"
+                      className="thinkway-campaign-btn"
                     >
                       <Link
                         href={campaignMediaPlanPath({
@@ -329,12 +324,6 @@ export function CampaignWorkspaceView({
                         Media Plans
                       </Link>
                     </Button>
-                    <OpenCampaignStudioLauncher
-                      seed={campaignStudioSeed}
-                      workspace={campaignStudioWorkspace}
-                      tab="studio"
-                      variant="primary"
-                    />
                     <ClientIoCampaignChrome io={workspace.client_io} campaignId={workspace.id} />
                     {workspace.status !== "cancelled" ? (
                       <CancelCampaignDialog
@@ -346,11 +335,11 @@ export function CampaignWorkspaceView({
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="outline"
-                          size="sm"
-                          className="thinkway-campaign-btn h-[30px] px-[11px] text-[11px] font-medium shadow-none"
+                          size="icon"
+                          className="thinkway-campaign-btn size-[38px] p-0"
+                          aria-label="Campaign actions"
                         >
-                          <MoreHorizontalIcon className="size-3.5" />
-                          Actions
+                          <MoreHorizontalIcon className="size-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
@@ -374,30 +363,16 @@ export function CampaignWorkspaceView({
                           <PencilIcon className="size-4" />
                           Edit header (Overview tab)
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setDetailsOpen(true)}>
+                          Campaign details
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  </div>
-                </div>
-                <p className="thinkway-campaign-meta">
-                  <DocumentNumber value={workspace.document_number} />
-                  {workspace.brand ? ` · ${workspace.brand.name}` : null}
-                  {workspace.platform
-                    ? ` · ${formatPlatformLabel(workspace.platform)}`
-                    : null}
-                </p>
-                <CampaignKpiStrip workspace={workspace} />
-              </div>
-              {workspace.financials.budget > 0 ? (
-                <PoConsumptionBanner
-                  variant="po-bar"
-                  consumed={workspace.financials.po_banner_consumed}
-                  po_amount={workspace.financials.budget}
-                  currency={workspace.currency_code}
-                  formatMoney={formatMoney}
-                  po_exceeded={workspace.financials.po_exceeded}
-                />
-              ) : null}
-            </>
+                  </>
+                }
+              />
+              <CampaignKpiCards workspace={workspace} />
+            </div>
           }
           tabs={
             <CampaignWorkspaceSortableTabsBar

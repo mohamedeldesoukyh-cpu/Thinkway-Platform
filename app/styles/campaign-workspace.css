@@ -1,41 +1,44 @@
 /* Extracted from globals.css — campaign / quotation / IO workspace design system */
-/* thinkway-campaign_2.html — campaign workspace design system */
+/* Release 2.3 — Aurora campaign workspace (campaign-redesign_4.html) */
 @layer components {
   .thinkway-campaign-workspace {
-    --camp-text: var(--text);
-    --camp-text-2: #475569;
-    --camp-text-3: #94a3b8;
-    --camp-border: var(--border);
-    --camp-surface: var(--surface);
+    --camp-text: #111726;
+    --camp-text-2: #4a5468;
+    --camp-text-3: #7b8598;
+    --camp-text-4: #a6afc1;
+    --camp-border: #e9ecf3;
+    --camp-border-2: #eef1f6;
+    --camp-hair: #eef0f5;
+    --camp-surface: #f4f6fa;
     --camp-white: #ffffff;
-    --camp-blue: var(--blue);
-    --camp-blue-hover: var(--blue-hover);
-    --camp-blue-light: var(--blue-light);
-    --camp-blue-text: var(--blue-text);
-    --camp-green: #10b981;
-    --camp-green-bg: #ecfdf5;
-    --camp-green-text: #065f46;
-    --camp-amber: #f59e0b;
-    --camp-amber-bg: #fffbeb;
-    --camp-amber-text: #92400e;
-    --camp-red: #ef4444;
-    --camp-red-bg: #fef2f2;
-    --camp-red-text: #991b1b;
-    --camp-purple: #a855f7;
-    --camp-purple-bg: #faf5ff;
-    --camp-purple-text: #6b21a8;
-    --camp-hover: #f8fafc;
-    --camp-row-open: #fafbff;
+    --camp-blue: #0057ff;
+    --camp-blue-hover: #0049dd;
+    --camp-blue-light: #eef3ff;
+    --camp-blue-text: #1a56e8;
+    --camp-green: #059669;
+    --camp-green-bg: #e9faf3;
+    --camp-green-text: #0a7a52;
+    --camp-amber: #c07f0a;
+    --camp-amber-bg: #fff6e6;
+    --camp-amber-text: #a5680a;
+    --camp-red: #e11d48;
+    --camp-red-bg: #fff0f2;
+    --camp-red-text: #be2a44;
+    --camp-purple: #7c3aed;
+    --camp-purple-bg: #f3f0ff;
+    --camp-purple-text: #7c3aed;
+    --camp-hover: #fafbfe;
+    --camp-row-open: #fafbfe;
     --camp-row-open-hover: #f0f4ff;
     --camp-child-hdr: #f4f6fb;
     --camp-child-accent: #c7d6fa;
     --camp-scrollbar: #cbd5e1;
-    --camp-progress-track: #e2e8f0;
-    --camp-danger-border: #fecaca;
-    --camp-danger-hover: #fee2e2;
-    --camp-po-border: #fde68a;
-    --camp-po-val: #78350f;
-    --camp-tab-badge-active-border: #bfdbfe;
+    --camp-progress-track: #eef0f4;
+    --camp-danger-border: #f3d6d9;
+    --camp-danger-hover: #ffe4e8;
+    --camp-po-border: #f3e0b5;
+    --camp-po-val: #a5680a;
+    --camp-tab-badge-active-border: #c9d7ff;
     --camp-plat-ig-bg: #fce7f3;
     --camp-plat-ig-text: #9d174d;
     --camp-plat-tt-bg: #f1f5f9;
@@ -43,10 +46,14 @@
     --camp-er-hi-bg: #dcfce7;
     --camp-er-hi-text: #166534;
     --camp-on-primary: #ffffff;
-    --camp-radius: 6px;
-    --camp-radius-lg: 12px;
-    --camp-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-    font-size: 13px;
+    --camp-shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 14px -6px rgba(16, 24, 40, 0.1);
+    --camp-shadow-hover: 0 2px 6px rgba(16, 24, 40, 0.06), 0 16px 34px -12px rgba(16, 24, 40, 0.18);
+    --camp-shadow-btn: 0 1px 2px rgba(16, 24, 40, 0.06);
+    --camp-radius: 10px;
+    --camp-radius-lg: 14px;
+    --camp-radius-xl: 18px;
+    --camp-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    font-size: 14px;
     line-height: 1.5;
     color: var(--camp-text);
     background: var(--camp-surface);
@@ -56,7 +63,10 @@
     --camp-text: var(--foreground);
     --camp-text-2: #a1a1aa;
     --camp-text-3: #71717a;
+    --camp-text-4: #52525b;
     --camp-border: var(--border);
+    --camp-border-2: rgba(255, 255, 255, 0.06);
+    --camp-hair: rgba(255, 255, 255, 0.08);
     --camp-surface: var(--muted);
     --camp-white: var(--card);
     --camp-blue: #3b82f6;
@@ -75,6 +85,9 @@
     --camp-purple: #c084fc;
     --camp-purple-bg: rgba(168, 85, 247, 0.14);
     --camp-purple-text: #d8b4fe;
+    --camp-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.2), 0 4px 14px -6px rgba(0, 0, 0, 0.35);
+    --camp-shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.25), 0 16px 34px -12px rgba(0, 0, 0, 0.45);
+    --camp-shadow-btn: 0 1px 2px rgba(0, 0, 0, 0.2);
     --camp-hover: rgba(255, 255, 255, 0.04);
     --camp-row-open: rgba(59, 130, 246, 0.08);
     --camp-row-open-hover: rgba(59, 130, 246, 0.14);
@@ -97,25 +110,483 @@
   }
 
   .thinkway-campaign-header {
-    background: var(--camp-white);
-    border-bottom: 1px solid var(--camp-border);
+    background: transparent;
+    border-bottom: none;
   }
 
   .thinkway-campaign-header-inner {
-    padding: 14px 20px 0;
+    padding: 14px 14px 0;
   }
 
   .thinkway-campaign-title {
-    font-size: 18px;
-    font-weight: 700;
-    letter-spacing: -0.3px;
+    font-size: 23px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
     color: var(--camp-text);
   }
 
   .thinkway-campaign-meta {
-    font-size: 11px;
+    font-size: 13px;
     color: var(--camp-text-3);
     margin-bottom: 10px;
+  }
+
+  /* ---------- Aurora chrome (R2.3) ---------- */
+  .thinkway-aurora-wrap {
+    padding: 14px 14px 40px;
+  }
+
+  .thinkway-aurora-chrome {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .thinkway-aurora-chrome-nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .thinkway-aurora-hero {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    overflow: hidden;
+    border: 1px solid var(--camp-border);
+    border-radius: var(--camp-radius-xl);
+    background: var(--camp-white);
+    padding: 24px 26px;
+    box-shadow: var(--camp-shadow-card);
+  }
+
+  .thinkway-aurora-hero::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--camp-blue), #3f7bff);
+  }
+
+  .thinkway-aurora-hero-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .thinkway-aurora-hero-line1 {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .thinkway-aurora-serial {
+    display: inline-flex;
+    align-items: center;
+    height: 23px;
+    flex-shrink: 0;
+    padding: 0 9px;
+    border-radius: 7px;
+    background: #f1f4f9;
+    color: var(--camp-text-3);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  .dark .thinkway-aurora-serial {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .thinkway-aurora-htitle {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 23px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    color: var(--camp-text);
+  }
+
+  .thinkway-aurora-hmeta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 9px;
+    margin-top: 9px;
+    font-size: 13px;
+    color: var(--camp-text-3);
+  }
+
+  .thinkway-aurora-hmeta b {
+    color: var(--camp-text-2);
+    font-weight: 600;
+  }
+
+  .thinkway-aurora-sep {
+    color: #d7dce6;
+  }
+
+  .thinkway-aurora-hactions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .thinkway-aurora-donut {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 15px;
+    padding-left: 26px;
+    border-left: 1px solid var(--camp-hair);
+  }
+
+  .thinkway-aurora-donut-num {
+    position: relative;
+    width: 96px;
+    height: 96px;
+  }
+
+  .thinkway-aurora-donut-ctr {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    text-align: center;
+  }
+
+  .thinkway-aurora-donut-ctr b {
+    display: block;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .thinkway-aurora-donut-ctr span {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--camp-text-4);
+  }
+
+  .thinkway-aurora-donut-dk {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--camp-text-4);
+  }
+
+  .thinkway-aurora-donut-dv {
+    margin-top: 3px;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .thinkway-aurora-donut-note {
+    margin-top: 8px;
+  }
+
+  .thinkway-aurora-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .thinkway-aurora-kpi {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 13px;
+    align-items: center;
+    border: 1px solid var(--camp-border);
+    border-radius: var(--camp-radius-lg);
+    background: var(--camp-white);
+    padding: 12px 16px;
+    box-shadow: var(--camp-shadow-card);
+    transition:
+      box-shadow 0.18s var(--camp-ease-out),
+      transform 0.18s var(--camp-ease-out);
+  }
+
+  .thinkway-aurora-kpi:hover {
+    box-shadow: var(--camp-shadow-hover);
+    transform: translateY(-1px);
+  }
+
+  .thinkway-aurora-kpi-ktop {
+    grid-column: 1;
+    grid-row: 1 / 4;
+    align-self: center;
+  }
+
+  .thinkway-aurora-kpi-ic {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border-radius: 10px;
+  }
+
+  .thinkway-aurora-kpi-ic svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .thinkway-aurora-kpi-ic.tint-blue {
+    background: var(--camp-blue-light);
+    color: var(--camp-blue);
+  }
+
+  .thinkway-aurora-kpi-ic.tint-slate {
+    background: #f1f4f9;
+    color: var(--camp-text-2);
+  }
+
+  .thinkway-aurora-kpi-ic.tint-emer {
+    background: var(--camp-green-bg);
+    color: var(--camp-green);
+  }
+
+  .thinkway-aurora-kpi-ic.tint-violet {
+    background: var(--camp-purple-bg);
+    color: var(--camp-purple);
+  }
+
+  .thinkway-aurora-kpi-klab {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--camp-text-3);
+  }
+
+  .thinkway-aurora-kpi-kval {
+    grid-column: 2;
+    grid-row: 2;
+    margin-top: 1px;
+    font-size: 21px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--camp-text);
+  }
+
+  .thinkway-aurora-kpi-ksub {
+    grid-column: 2;
+    grid-row: 3;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--camp-text-4);
+  }
+
+  .thinkway-aurora-chip-sm {
+    display: inline-flex;
+    align-items: center;
+    height: 19px;
+    padding: 0 7px;
+    border-radius: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+  }
+
+  .thinkway-aurora-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 24px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  .thinkway-aurora-pill-dot::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .thinkway-aurora-pill-green {
+    background: var(--camp-green-bg);
+    color: var(--camp-green-text);
+  }
+
+  .thinkway-aurora-pill-blue {
+    background: var(--camp-blue-light);
+    color: var(--camp-blue-text);
+  }
+
+  .thinkway-aurora-pill-amber {
+    background: var(--camp-amber-bg);
+    color: var(--camp-amber-text);
+  }
+
+  .thinkway-aurora-pill-rose {
+    background: var(--camp-red-bg);
+    color: var(--camp-red-text);
+  }
+
+  .thinkway-aurora-pill-mut {
+    background: #f1f4f9;
+    color: var(--camp-text-3);
+  }
+
+  .thinkway-aurora-panel {
+    margin-top: 18px;
+    overflow: hidden;
+    border: 1px solid var(--camp-border);
+    border-radius: var(--camp-radius-xl);
+    background: var(--camp-white);
+    box-shadow: var(--camp-shadow-card);
+  }
+
+  .thinkway-aurora-panel-tabs {
+    border-bottom: 1px solid var(--camp-hair);
+  }
+
+  .thinkway-aurora-panel-body {
+    min-width: 0;
+  }
+
+  .thinkway-aurora-sechead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 12px;
+    padding: 26px 0 16px;
+  }
+
+  .thinkway-aurora-sechead:first-child {
+    padding-top: 20px;
+  }
+
+  .thinkway-aurora-sechead-tt {
+    font-size: 15.5px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .thinkway-aurora-sechead-sub {
+    font-size: 12.5px;
+    color: var(--camp-text-4);
+  }
+
+  .thinkway-aurora-sechead-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 9px;
+    margin-left: auto;
+  }
+
+  .thinkway-aurora-ready {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 9px;
+  }
+
+  .thinkway-aurora-rchip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 32px;
+    padding: 0 13px;
+    border: 1px solid var(--camp-border);
+    border-radius: 999px;
+    background: var(--camp-white);
+    box-shadow: var(--camp-shadow-btn);
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--camp-text-2);
+  }
+
+  .thinkway-aurora-rchip svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .thinkway-aurora-rchip.ok {
+    border-color: #cdeede;
+    background: var(--camp-green-bg);
+    color: var(--camp-green-text);
+  }
+
+  .thinkway-aurora-rchip.ok svg {
+    color: var(--camp-green);
+  }
+
+  .thinkway-aurora-rchip.todo {
+    border-style: dashed;
+    box-shadow: none;
+    color: var(--camp-text-3);
+  }
+
+  .thinkway-aurora-dgrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .thinkway-aurora-dcol {
+    border: 1px solid var(--camp-hair);
+    border-radius: var(--camp-radius-lg);
+    background: var(--camp-surface);
+    padding: 16px 18px;
+  }
+
+  .thinkway-aurora-dcol-ct {
+    margin-bottom: 8px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--camp-text-4);
+  }
+
+  @media (max-width: 1100px) {
+    .thinkway-aurora-kpis {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .thinkway-aurora-donut {
+      display: none;
+    }
+
+    .thinkway-aurora-dgrid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .thinkway-aurora-kpis {
+      grid-template-columns: 1fr;
+    }
+
+    .thinkway-aurora-hero {
+      padding: 18px 16px;
+    }
+
+    .thinkway-aurora-htitle {
+      font-size: 18px;
+    }
   }
 
   .thinkway-campaign-back-btn {
@@ -148,38 +619,45 @@
 
   .thinkway-campaign-btn {
     display: inline-flex;
-    height: 30px;
+    height: 38px;
     align-items: center;
-    gap: 4px;
-    padding: 0 11px;
+    gap: 7px;
+    padding: 0 15px;
     border: 1px solid var(--camp-border);
     border-radius: var(--camp-radius);
     background: var(--camp-white);
-    font-size: 11px;
-    font-weight: 500;
+    box-shadow: var(--camp-shadow-btn);
+    font-size: 13px;
+    font-weight: 600;
     color: var(--camp-text-2);
-    transition:
-      background 120ms var(--camp-ease-out),
-      transform 100ms var(--camp-ease-out);
+    white-space: nowrap;
+    transition: all 0.15s var(--camp-ease-out);
   }
 
   .thinkway-campaign-btn:hover {
-    background: var(--camp-surface);
+    border-color: #dde1ea;
+    background: var(--camp-white);
+    color: var(--camp-text);
+    box-shadow: 0 2px 6px rgba(16, 24, 40, 0.09);
   }
 
   .thinkway-campaign-btn:active {
-    transform: scale(0.97);
+    transform: scale(0.98);
   }
 
   .thinkway-campaign-btn-primary {
     border-color: var(--camp-blue);
     background: var(--camp-blue);
     color: var(--camp-on-primary);
+    box-shadow:
+      0 1px 2px rgba(0, 87, 255, 0.3),
+      0 10px 22px -8px rgba(0, 87, 255, 0.6);
   }
 
   .thinkway-campaign-btn-primary:hover {
     border-color: var(--camp-blue-hover);
     background: var(--camp-blue-hover);
+    color: var(--camp-on-primary);
   }
 
   .thinkway-campaign-btn-danger {
@@ -277,11 +755,11 @@
 
   .thinkway-campaign-tabs-bar {
     display: flex;
-    gap: 0;
+    gap: 3px;
     overflow-x: auto;
-    border-bottom: 1px solid var(--camp-border);
-    background: var(--camp-white);
-    padding: 0 20px;
+    border-bottom: none;
+    background: transparent;
+    padding: 6px 12px 0;
     scrollbar-width: none;
   }
 
@@ -292,40 +770,46 @@
   .thinkway-campaign-tab {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    margin-right: 20px;
-    padding: 10px 0;
+    gap: 0;
+    margin-right: 0;
+    margin-bottom: -1px;
+    height: 46px;
+    padding: 0 14px;
     border-bottom: 2px solid transparent;
-    font-size: 12px;
-    font-weight: 500;
+    font-size: 13.5px;
+    font-weight: 600;
     color: var(--camp-text-3);
     white-space: nowrap;
-    transition:
-      color 150ms,
-      border-color 150ms;
+    transition: color 0.15s;
   }
 
   .thinkway-campaign-tab:hover {
-    color: var(--camp-text-2);
+    color: var(--camp-text);
   }
 
   .thinkway-campaign-tab[data-state="active"] {
     border-bottom-color: var(--camp-blue);
-    color: var(--camp-text);
+    color: var(--camp-blue);
   }
 
   .thinkway-campaign-tab-badge {
-    padding: 1px 5px;
-    border: 1px solid var(--camp-border);
-    border-radius: 10px;
-    background: var(--camp-surface);
-    font-size: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 19px;
+    margin-left: 8px;
+    padding: 0 6px;
+    border: none;
+    border-radius: 7px;
+    background: #f1f4f9;
+    font-size: 11px;
     font-weight: 700;
-    color: var(--camp-text-2);
+    color: var(--camp-text-4);
   }
 
   .thinkway-campaign-tab[data-state="active"] .thinkway-campaign-tab-badge {
-    border-color: var(--camp-tab-badge-active-border);
+    border-color: transparent;
     background: var(--camp-blue-light);
     color: var(--camp-blue-text);
   }
@@ -333,9 +817,10 @@
   .thinkway-campaign-content {
     min-width: 0;
     max-width: 100%;
-    min-height: calc(100vh - 280px);
-    padding: 16px 20px;
+    min-height: 0;
+    padding: 8px 26px 28px;
     overflow-x: hidden;
+    background: var(--camp-white);
   }
 
   .thinkway-campaign-workspace [data-campaign-workspace-scroll] {
@@ -393,25 +878,29 @@
   }
 
   .thinkway-campaign-info-card {
-    padding: 14px 16px;
-    border: 1px solid var(--camp-border);
+    padding: 16px 18px;
+    border: 1px solid var(--camp-hair);
     border-radius: var(--camp-radius-lg);
-    background: var(--camp-white);
+    background: var(--camp-surface);
   }
 
   .thinkway-campaign-info-card h3 {
-    margin-bottom: 10px;
-    font-size: 11px;
+    margin-bottom: 8px;
+    font-size: 10.5px;
     font-weight: 700;
-    color: var(--camp-text);
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--camp-text-4, var(--camp-text-3));
   }
 
   .thinkway-campaign-info-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 5px 0;
-    border-bottom: 1px solid var(--camp-border);
+    gap: 12px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--camp-hair);
+    font-size: 13.5px;
   }
 
   .thinkway-campaign-info-row:last-child {
@@ -419,24 +908,25 @@
   }
 
   .thinkway-campaign-info-lbl {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-    text-transform: uppercase;
+    font-size: 13.5px;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
     color: var(--camp-text-3);
   }
 
   .thinkway-campaign-info-val {
-    font-size: 11px;
-    font-weight: 500;
+    font-size: 13.5px;
+    font-weight: 600;
+    text-align: right;
     color: var(--camp-text);
   }
 
   .thinkway-campaign-overview-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 14px;
-    margin-bottom: 14px;
+    gap: 16px;
+    margin-bottom: 8px;
   }
 
   @media (min-width: 768px) {

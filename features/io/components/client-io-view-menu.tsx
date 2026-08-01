@@ -31,7 +31,11 @@ export function ClientIoViewMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant={variant} size={size} className="gap-1.5">
+        <Button
+          variant={variant}
+          size={size}
+          className="thinkway-campaign-btn h-[38px] gap-1.5 px-[15px] text-[13px]"
+        >
           {label}
           <ChevronDown className="size-3.5 opacity-70" aria-hidden />
         </Button>

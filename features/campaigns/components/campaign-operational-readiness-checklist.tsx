@@ -2,6 +2,7 @@
 
 import { CheckIcon, CircleIcon } from "lucide-react";
 
+import { CampaignSectionHead } from "@/features/campaigns/components/aurora/campaign-tab-layout";
 import { cn } from "@/lib/utils";
 import type { CampaignOperationalReadiness } from "@/lib/domains/commercial/campaign-operational-readiness";
 
@@ -27,57 +28,48 @@ export function CampaignOperationalReadinessChecklist({
   );
 
   return (
-    <div
-      className={cn(
-        "rounded-lg border border-border/70 bg-muted/20 px-3.5 py-3",
-        className
-      )}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-semibold text-foreground">Campaign Operational Readiness</p>
-          <p className="mt-0.5 text-[10px] text-muted-foreground">
-            Informational checklist — does not block campaign actions.
-          </p>
-        </div>
-        <span
-          className={cn(
-            "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
-            readiness.status === "operational_ready"
-              ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
-              : "bg-amber-500/15 text-amber-800 dark:text-amber-200"
-          )}
-        >
-          {readiness.statusLabel}
-        </span>
+    <div className={cn(className)}>
+      <CampaignSectionHead
+        title="Readiness"
+        subtitle="Informational — does not block actions"
+        tools={
+          <span
+            className={cn(
+              "thinkway-aurora-pill",
+              readiness.status === "operational_ready"
+                ? "thinkway-aurora-pill-green"
+                : "thinkway-aurora-pill-amber"
+            )}
+          >
+            {readiness.statusLabel}
+          </span>
+        }
+      />
+
+      <div className="thinkway-aurora-ready" role="list" aria-label="Operational readiness">
+        {highlightedMandatory.map((item) => (
+          <span
+            key={item.id}
+            role="listitem"
+            className={cn(
+              "thinkway-aurora-rchip",
+              item.satisfied ? "ok" : "todo"
+            )}
+          >
+            {item.satisfied ? (
+              <CheckIcon aria-hidden />
+            ) : (
+              <CircleIcon aria-hidden />
+            )}
+            {item.label}
+          </span>
+        ))}
       </div>
 
-      <ul className="mt-3 space-y-1">
-        {highlightedMandatory.map((item) => (
-          <li key={item.id} className="flex items-center gap-2 text-[11px]">
-            {item.satisfied ? (
-              <CheckIcon className="size-3 text-emerald-600" aria-hidden />
-            ) : (
-              <CircleIcon className="size-3 text-muted-foreground/60" aria-hidden />
-            )}
-            <span className={item.satisfied ? "text-foreground" : "text-muted-foreground"}>
-              {item.label}
-            </span>
-          </li>
-        ))}
-      </ul>
-
       {readiness.mandatoryMissing.length > 0 ? (
-        <p className="mt-2.5 text-[10px] text-amber-800 dark:text-amber-200">
+        <p className="mt-3 text-[12px] text-[var(--camp-amber-text)]">
           Still required:{" "}
           {readiness.mandatoryMissing.map((item) => item.label).join(" · ")}
-        </p>
-      ) : null}
-
-      {readiness.optionalRemaining > 0 ? (
-        <p className="mt-2 text-[10px] text-muted-foreground">
-          {readiness.optionalRemaining} optional recommendation
-          {readiness.optionalRemaining === 1 ? "" : "s"} remaining
         </p>
       ) : null}
     </div>

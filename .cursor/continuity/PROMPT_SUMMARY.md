@@ -89,6 +89,15 @@
 - Standing by: Prod email config → Product pre-authorized resume: E1–E7 → remaining smoke → evidence → `v2.2.0` → Production Complete → reopen **2.2a Planning Board** (pause + remediate if any E-check fails)
 - Suite: `npm run test:release-2-2` **17/17**
 
+## Release 2.3 — Campaign Workspace Aurora redesign (in progress on develop)
+
+- **Scope:** Presentation-only UI modernization from `campaign-redesign_4.html` — no DB/API/workflow changes
+- **Chrome:** `CampaignHero` + PO donut + `CampaignKpiCards` + Aurora panel/tabs (`features/campaigns/components/aurora/*`, `campaign-workspace.css`)
+- **Tab order (v2 storage key):** Overview → Assignments (`lines`) → Client IO → Vendor IO → Deliverables → Performance → Workflow → Finance (`billing`) → Timeline
+- **Note:** Dedicated **Campaign Lines** tab not split yet — `lines` remains the single lines/assignments operational surface (no duplicate page). Workflow kept for no feature loss.
+- Live data only; existing hooks/actions/tables preserved
+- **No Production deploy**
+
 ## IO approval email experience (Preview testing on develop)
 
 - Simplified Client/Vendor IO send emails: Campaign Name, Brand Name, Campaign Duration, Agreed Amount + blue **Approve** CTA + legal notice; PDF remains SSOT

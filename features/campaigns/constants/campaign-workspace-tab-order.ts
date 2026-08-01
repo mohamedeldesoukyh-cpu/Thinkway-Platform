@@ -4,10 +4,15 @@ import {
   reorderWorkspaceTabs,
 } from "@/lib/workspace/workspace-tab-order";
 
+/**
+ * R2.3 Aurora default order — operational flow:
+ * setup → execution → approvals → finance → history.
+ * Workflow retained (no feature loss); Billing labeled Finance in the UI.
+ */
 export const CAMPAIGN_WORKSPACE_DEFAULT_TAB_ORDER = [
   "overview",
-  "client-io",
   "lines",
+  "client-io",
   "vendor-io",
   "deliverables",
   "publications",
@@ -19,7 +24,7 @@ export const CAMPAIGN_WORKSPACE_DEFAULT_TAB_ORDER = [
 export type CampaignWorkspaceTabId = (typeof CAMPAIGN_WORKSPACE_DEFAULT_TAB_ORDER)[number];
 
 export const CAMPAIGN_WORKSPACE_TAB_ORDER_STORAGE_KEY =
-  "thinkway:campaign-workspace-tab-order:v1";
+  "thinkway:campaign-workspace-tab-order:v2";
 
 const ALLOWED_TAB_IDS = new Set<string>(CAMPAIGN_WORKSPACE_DEFAULT_TAB_ORDER);
 

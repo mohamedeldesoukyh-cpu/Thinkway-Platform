@@ -47,7 +47,7 @@ export function ClientIoHeaderControls({ io, campaignId }: Props) {
       <div
         className={cn(
           OPERATIONAL_CHROME_LABEL,
-          "inline-flex items-center gap-2 rounded-md border border-border px-2 py-1"
+          "thinkway-campaign-btn inline-flex h-[38px] items-center gap-2 px-[15px] text-[13px]"
         )}
       >
         <span>Client IO</span>
@@ -67,7 +67,7 @@ export function ClientIoHeaderControls({ io, campaignId }: Props) {
               ? "Regenerate is locked after send. Use an amendment."
               : undefined
           }
-          className={cn(OPERATIONAL_CHROME_LABEL, "h-7 px-2")}
+          className={cn(OPERATIONAL_CHROME_LABEL, "thinkway-campaign-btn h-[38px] px-[15px] text-[13px]")}
         >
           {generating
             ? "Generating…"

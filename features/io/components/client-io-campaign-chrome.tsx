@@ -49,7 +49,7 @@ export function ClientIoCampaignChrome({ io, campaignId }: Props) {
         variant="outline"
         type="submit"
         disabled={ensuring}
-        className={cn(OPERATIONAL_CHROME_LABEL, "h-7 px-2")}
+        className={cn(OPERATIONAL_CHROME_LABEL, "thinkway-campaign-btn h-[38px] px-[15px] text-[13px]")}
       >
         {ensuring ? "Setting up…" : "Set up Client IO"}
       </Button>

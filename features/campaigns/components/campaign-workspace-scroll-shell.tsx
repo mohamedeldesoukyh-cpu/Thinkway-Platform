@@ -19,7 +19,7 @@ type CampaignWorkspaceScrollShellProps = {
 };
 
 /**
- * Single scroll region: title/KPI scroll away; tab rail pins to the top of this container.
+ * Single scroll region: hero/KPIs scroll away; Aurora panel tab rail pins to the top.
  * Uses scroll listeners (not document sticky) so pinning works when dashboard main is locked.
  */
 export function CampaignWorkspaceScrollShell({
@@ -29,6 +29,7 @@ export function CampaignWorkspaceScrollShell({
 }: CampaignWorkspaceScrollShellProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
   const [tabsPinned, setTabsPinned] = useState(false);
   const [tabsHeight, setTabsHeight] = useState(0);
@@ -43,8 +44,9 @@ export function CampaignWorkspaceScrollShell({
   const updatePin = useCallback(() => {
     const scrollEl = scrollRef.current;
     const sentinel = sentinelRef.current;
+    const panelEl = panelRef.current;
     const tabsEl = tabsRef.current;
-    if (!scrollEl || !sentinel || !tabsEl) return;
+    if (!scrollEl || !sentinel || !panelEl || !tabsEl) return;
 
     measureTabs();
 
@@ -59,11 +61,12 @@ export function CampaignWorkspaceScrollShell({
       return;
     }
 
+    const panelRect = panelEl.getBoundingClientRect();
     setPinStyle({
       position: "fixed",
       top: scrollRect.top,
-      left: scrollRect.left,
-      width: scrollRect.width,
+      left: panelRect.left,
+      width: panelRect.width,
       zIndex: 40,
     });
   }, [measureTabs]);
@@ -101,24 +104,29 @@ export function CampaignWorkspaceScrollShell({
       className="h-0 min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain overscroll-x-none bg-[var(--camp-surface)]"
       data-campaign-workspace-scroll
     >
-      <div className="thinkway-campaign-header">{chrome}</div>
-      <div ref={sentinelRef} className="h-px w-full shrink-0" aria-hidden />
-      {tabsPinned && tabsHeight > 0 ? (
-        <div style={{ height: tabsHeight }} className="shrink-0" aria-hidden />
-      ) : null}
-      <div
-        ref={tabsRef}
-        style={tabsPinned ? pinStyle : undefined}
-        className={cn(
-          "thinkway-campaign-workspace-tabs-pinned z-40",
-          !tabsPinned && "relative"
-        )}
-        data-sticky="campaign-workspace-tabs"
-        data-pinned={tabsPinned ? "true" : "false"}
-      >
-        {tabs}
+      <div className="thinkway-aurora-wrap">
+        <div className="thinkway-campaign-header">{chrome}</div>
+        <div ref={panelRef} className="thinkway-aurora-panel">
+          <div ref={sentinelRef} className="h-px w-full shrink-0" aria-hidden />
+          {tabsPinned && tabsHeight > 0 ? (
+            <div style={{ height: tabsHeight }} className="shrink-0" aria-hidden />
+          ) : null}
+          <div
+            ref={tabsRef}
+            style={tabsPinned ? pinStyle : undefined}
+            className={cn(
+              "thinkway-aurora-panel-tabs thinkway-campaign-workspace-tabs-pinned z-40",
+              tabsPinned && "border-b border-[var(--camp-hair)] bg-[var(--camp-white)] shadow-sm",
+              !tabsPinned && "relative"
+            )}
+            data-sticky="campaign-workspace-tabs"
+            data-pinned={tabsPinned ? "true" : "false"}
+          >
+            {tabs}
+          </div>
+          <div className="thinkway-aurora-panel-body">{children}</div>
+        </div>
       </div>
-      {children}
     </div>
   );
 }
