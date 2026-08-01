@@ -1,20 +1,28 @@
 "use client";
 
+import { useState } from "react";
+
+import type { DecisionFocusQuery } from "@/features/campaigns/lifecycle/campaign-decision-center";
 import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
 import type { CampaignLifecycleView } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
 import { cn } from "@/lib/utils";
+
+const PREVIEW_LIMIT = 3;
 
 type Props = {
   lifecycle: CampaignLifecycleView;
   onPrimaryAction?: () => void;
   onOpenResolver?: () => void;
-  onNavigateToTab?: (tab: CampaignWorkspaceTabId) => void;
+  onNavigateToTab?: (
+    tab: CampaignWorkspaceTabId,
+    focus?: DecisionFocusQuery | null
+  ) => void;
   className?: string;
 };
 
 /**
- * Decision-first lifecycle header — answers where / why / who / what / unlocks.
- * Content is derived from lifecycle.decisionCenter (single SSOT).
+ * Operational inbox — answers what / why / who / since / waiting / impact / action / unlock.
+ * Many objects collapse into summary cards; never dump dozens of rows here.
  */
 export function CampaignDecisionCenterPanel({
   lifecycle,
@@ -24,13 +32,18 @@ export function CampaignDecisionCenterPanel({
   className,
 }: Props) {
   const dc = lifecycle.decisionCenter;
-  const preview = dc.blockers.slice(0, 2);
+  const [expanded, setExpanded] = useState(false);
   const hasBlockers = dc.blockers.length > 0;
+  const visible = expanded
+    ? dc.blockers
+    : dc.blockers.slice(0, PREVIEW_LIMIT);
+  const hiddenCount = Math.max(0, dc.blockers.length - PREVIEW_LIMIT);
 
   return (
     <section
       className={cn(
         "thinkway-lc-decision",
+        "thinkway-lc-decision-inbox",
         `is-${dc.severityMode}`,
         className
       )}
@@ -41,122 +54,102 @@ export function CampaignDecisionCenterPanel({
         <div className="min-w-0">
           <div className="thinkway-lc-decision-kicker">Decision Center</div>
           <div className="thinkway-lc-decision-headline">{dc.headline}</div>
-          <div className="thinkway-lc-decision-meta-row">
-            <span className="thinkway-lc-decision-severity" data-severity={dc.severityMode}>
-              {dc.severityMode === "hard"
-                ? "Hard Block"
-                : dc.severityMode === "attention"
-                  ? "Needs Attention"
-                  : dc.severityMode === "waiting"
-                    ? "Waiting"
-                    : dc.severityMode === "clear"
-                      ? "Clear"
-                      : "In Progress"}
-            </span>
-            <span className="thinkway-lc-decision-ssot">
-              Stage <b>{lifecycle.businessStageLabel}</b>
-              {" · "}
-              Owner <b>{lifecycle.owner}</b>
-              {lifecycle.waitingFor !== "None" ? (
-                <>
-                  {" · "}
-                  Waiting <b>{lifecycle.waitingFor}</b>
-                </>
-              ) : null}
-            </span>
-          </div>
         </div>
-        {onPrimaryAction ? (
+        {hasBlockers && onPrimaryAction ? (
           <button
             type="button"
             className="thinkway-lc-decision-cta"
             onClick={onPrimaryAction}
           >
-            <span className="thinkway-lc-decision-cta-kicker">Next action</span>
             <span className="thinkway-lc-decision-cta-label">{dc.primaryAction}</span>
           </button>
         ) : null}
       </div>
 
-      <div className="thinkway-lc-decision-grid">
-        <div>
-          <div className="thinkway-bp-label">
-            {hasBlockers ? "Why can't I continue?" : "Status"}
-          </div>
-          <p>{dc.continueReason}</p>
-          {dc.remainingBlockerLabels.length > 1 ? (
-            <ul className="thinkway-lc-decision-remaining">
-              {dc.remainingBlockerLabels.map((label) => (
-                <li key={label}>{label}</li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-        <div>
-          <div className="thinkway-bp-label">What will unlock?</div>
-          <p className="thinkway-lc-decision-unlock-head">{dc.unlockHeadline}</p>
-          <ul className="thinkway-lc-decision-unlocks">
-            {dc.unlocks.map((item) => (
-              <li key={item.id}>
-                <span aria-hidden>✓</span>
-                {item.label}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
       {hasBlockers ? (
         <div className="thinkway-lc-decision-cards">
-          {preview.map((blocker) => (
+          {visible.map((blocker) => (
             <article
               key={blocker.id}
               className="thinkway-lc-decision-card"
               data-severity={blocker.severity}
             >
-              <div className="thinkway-lc-decision-card-title">{blocker.title}</div>
-              <div className="thinkway-lc-decision-card-meta">
-                <span data-severity={blocker.severity}>
-                  {blocker.severity === "hard" ? "Hard Block" : "Needs Attention"}
-                </span>
-                <span>
-                  Owner <b>{blocker.owner}</b>
-                </span>
-                <span>
-                  Waiting <b>{blocker.waitingFor}</b>
-                </span>
-                <span>
-                  Since <b>{blocker.sinceLabel}</b>
-                </span>
-                {blocker.relatedLabel ? (
-                  <span>
-                    <b>{blocker.relatedLabel}</b>
-                  </span>
-                ) : null}
+              <div className="thinkway-lc-decision-card-kind">{blocker.objectLabel}</div>
+              <div className="thinkway-lc-decision-card-title">
+                {blocker.title}
               </div>
-              <p className="thinkway-lc-decision-card-why">{blocker.whyBlocks}</p>
+              <dl className="thinkway-lc-decision-card-facts">
+                <div>
+                  <dt>Waiting for</dt>
+                  <dd>{blocker.waitingLabel}</dd>
+                </div>
+                <div>
+                  <dt>{blocker.objectKind === "vendor_io" ? "Vendor IO" : "Object"}</dt>
+                  <dd>{blocker.objectRef}</dd>
+                </div>
+                <div>
+                  <dt>Owner</dt>
+                  <dd>{blocker.owner}</dd>
+                </div>
+                <div>
+                  <dt>Since</dt>
+                  <dd>{blocker.sinceLabel}</dd>
+                </div>
+                <div className="thinkway-lc-decision-card-span">
+                  <dt>Reason</dt>
+                  <dd>{blocker.reason}</dd>
+                </div>
+                <div className="thinkway-lc-decision-card-span">
+                  <dt>Impact</dt>
+                  <dd>{blocker.impact}</dd>
+                </div>
+                <div className="thinkway-lc-decision-card-span">
+                  <dt>Unlock</dt>
+                  <dd>{blocker.unlockLabel}</dd>
+                </div>
+              </dl>
               {onNavigateToTab ? (
                 <button
                   type="button"
                   className="thinkway-lc-decision-card-action is-button"
-                  onClick={() => onNavigateToTab(blocker.actionTab)}
+                  onClick={() =>
+                    onNavigateToTab(blocker.actionTab, blocker.focusQuery)
+                  }
                 >
                   {blocker.primaryAction}
                 </button>
               ) : (
-                <div className="thinkway-lc-decision-card-action">{blocker.primaryAction}</div>
+                <div className="thinkway-lc-decision-card-action">
+                  {blocker.primaryAction}
+                </div>
               )}
             </article>
           ))}
-          {dc.blockers.length > 0 && onOpenResolver ? (
+          {hiddenCount > 0 && !expanded ? (
             <button
               type="button"
               className="thinkway-lc-decision-more"
+              onClick={() => setExpanded(true)}
+            >
+              +{hiddenCount} additional issue{hiddenCount === 1 ? "" : "s"}
+            </button>
+          ) : null}
+          {expanded && hiddenCount > 0 ? (
+            <button
+              type="button"
+              className="thinkway-lc-decision-more"
+              onClick={() => setExpanded(false)}
+            >
+              Show fewer
+            </button>
+          ) : null}
+          {dc.blockers.length > 0 && onOpenResolver ? (
+            <button
+              type="button"
+              className="thinkway-lc-decision-more is-secondary"
               onClick={onOpenResolver}
             >
-              {dc.blockers.length > 2
-                ? `Open resolver · ${dc.blockers.length} blockers`
-                : "Open Smart Blocker Resolver"}
+              Open resolver
             </button>
           ) : null}
         </div>

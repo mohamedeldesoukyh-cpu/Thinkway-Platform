@@ -65,6 +65,8 @@ type CampaignAssignmentsTabProps = {
   assignmentHierarchy: AssignmentHierarchy;
   billingGroups: AssignmentBillingGroup[];
   operationalBilling: CampaignOperationalBillingDetail | null;
+  /** Deep-link from Decision Center (?line=). */
+  initialFocusLineId?: string | null;
 };
 
 export function CampaignAssignmentsTab(props: CampaignAssignmentsTabProps) {

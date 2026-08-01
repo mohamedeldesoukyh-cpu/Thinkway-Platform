@@ -9,30 +9,40 @@ import { cn } from "@/lib/utils";
 type Props = {
   lifecycle: CampaignLifecycleView;
   rows: VendorIoRow[];
-  onOpenClientIo?: () => void;
   className?: string;
 };
 
 /**
- * Separates prepared Vendor IO data from lifecycle send-readiness.
- * Drafts can exist while Client approval still blocks send.
+ * Compact Vendor IO readiness stats only.
+ * When Client approval blocks send, Decision Center owns the single narrative —
+ * this banner must not restate the same blocker.
  */
 export function CampaignVendorIoLifecycleBanner({
   lifecycle,
   rows,
-  onOpenClientIo,
   className,
 }: Props) {
   const stats = useMemo(() => {
     const prepared = rows.length;
-    const readyToSend = rows.filter((row) => {
+    const generated = rows.filter((row) => {
       const status = (row.status ?? "").toLowerCase();
-      return status === "draft" || status === "generated" || status === "ready";
+      return (
+        status === "draft" ||
+        status === "generated" ||
+        status === "ready" ||
+        Boolean(row.document_generated_at)
+      );
     }).length;
+    const sent = rows.filter(
+      (row) =>
+        row.status === "sent" ||
+        row.delivery_status === "sent" ||
+        row.delivery_status === "completed"
+    ).length;
     const approved = rows.filter((row) =>
       (row.status ?? "").toLowerCase().includes("approv")
     ).length;
-    return { prepared, readyToSend, approved };
+    return { prepared, generated, sent, approved };
   }, [rows]);
 
   const waitingClient =
@@ -42,46 +52,28 @@ export function CampaignVendorIoLifecycleBanner({
   return (
     <aside
       className={cn("thinkway-lc-vio-banner", waitingClient && "is-blocked", className)}
-      aria-label="Vendor IO lifecycle status"
+      aria-label="Vendor IO summary"
     >
       <div className="thinkway-lc-vio-stats">
         <div>
-          <span className="thinkway-bp-label">Prepared Drafts</span>
+          <span className="thinkway-bp-label">Vendor IOs</span>
           <strong>{stats.prepared}</strong>
         </div>
         <div>
-          <span className="thinkway-bp-label">Ready to Send</span>
-          <strong>{waitingClient ? 0 : stats.readyToSend}</strong>
+          <span className="thinkway-bp-label">Generated</span>
+          <strong>{stats.generated}</strong>
         </div>
         <div>
-          <span className="thinkway-bp-label">Approved</span>
-          <strong>{stats.approved}</strong>
+          <span className="thinkway-bp-label">Sent</span>
+          <strong>{waitingClient ? 0 : stats.sent}</strong>
+        </div>
+        <div>
+          <span className="thinkway-bp-label">
+            {waitingClient ? "Waiting Client Approval" : "Approved"}
+          </span>
+          <strong>{waitingClient ? stats.prepared : stats.approved}</strong>
         </div>
       </div>
-
-      {waitingClient ? (
-        <div className="thinkway-lc-vio-blocked">
-          <div className="thinkway-bp-label">Blocked</div>
-          <p>Complete Client IO to unlock Vendor IO send.</p>
-          <p className="thinkway-lc-muted">
-            Prepared drafts can exist now — send unlocks after Client approval.
-          </p>
-          {onOpenClientIo ? (
-            <button
-              type="button"
-              className="thinkway-bp-continue mt-2"
-              onClick={onOpenClientIo}
-            >
-              Open Client IO
-            </button>
-          ) : null}
-        </div>
-      ) : (
-        <div className="thinkway-lc-vio-blocked is-clear">
-          <div className="thinkway-bp-label">Ready</div>
-          <p>Client approval received. Issue and send Vendor IO.</p>
-        </div>
-      )}
     </aside>
   );
 }

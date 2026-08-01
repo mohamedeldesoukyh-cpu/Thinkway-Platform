@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ChevronDownIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -33,6 +33,18 @@ type CampaignWorkspaceFrameProps = {
   registerLabel?: string;
   /** When set, replaces children with a guided empty state */
   empty?: ReactNode;
+  /**
+   * Progressive disclosure for large registers — header + KPIs stay visible;
+   * table/body renders only after expand (lazy).
+   */
+  collapseRegister?: boolean;
+  /** Record count shown in the expand control — e.g. 32 */
+  registerCount?: number;
+  /** sessionStorage key suffix — defaults to title */
+  registerStorageKey?: string;
+  /** Force register open (deep-link to a row). */
+  forceRegisterOpen?: boolean;
+  defaultRegisterOpen?: boolean;
 };
 
 function toneClass(tone: WorkspaceSummaryStat["tone"]): string | undefined {
@@ -43,9 +55,25 @@ function toneClass(tone: WorkspaceSummaryStat["tone"]): string | undefined {
   return undefined;
 }
 
+function registerSessionKey(storageKey: string): string {
+  return `thinkway:ws-register:${storageKey}`;
+}
+
+function readRegisterOpen(storageKey: string, fallback: boolean): boolean {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.sessionStorage.getItem(registerSessionKey(storageKey));
+    if (raw === "1") return true;
+    if (raw === "0") return false;
+  } catch {
+    /* ignore */
+  }
+  return fallback;
+}
+
 /**
  * Shared Aurora workspace chrome — title → status → KPIs → actions → content.
- * Presentation only.
+ * Presentation only. Large registers collapse by default when requested.
  */
 export function CampaignWorkspaceFrame({
   title,
@@ -60,9 +88,49 @@ export function CampaignWorkspaceFrame({
   className,
   registerLabel,
   empty,
+  collapseRegister = false,
+  registerCount,
+  registerStorageKey,
+  forceRegisterOpen = false,
+  defaultRegisterOpen = false,
 }: CampaignWorkspaceFrameProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const storageKey = registerStorageKey ?? title.toLowerCase().replace(/\s+/g, "-");
+  const [registerOpen, setRegisterOpen] = useState(
+    () => forceRegisterOpen || defaultRegisterOpen
+  );
+  const [registerHydrated, setRegisterHydrated] = useState(false);
+
+  useEffect(() => {
+    if (!collapseRegister) return;
+    if (forceRegisterOpen) {
+      setRegisterOpen(true);
+      setRegisterHydrated(true);
+      return;
+    }
+    setRegisterOpen(readRegisterOpen(storageKey, defaultRegisterOpen));
+    setRegisterHydrated(true);
+  }, [collapseRegister, forceRegisterOpen, storageKey, defaultRegisterOpen]);
+
+  useEffect(() => {
+    if (!collapseRegister || !registerHydrated || typeof window === "undefined") {
+      return;
+    }
+    try {
+      window.sessionStorage.setItem(
+        registerSessionKey(storageKey),
+        registerOpen ? "1" : "0"
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [collapseRegister, registerHydrated, registerOpen, storageKey]);
+
   const showRegister = !empty && children != null;
+  const registerVisible =
+    showRegister && (!collapseRegister || registerOpen || forceRegisterOpen);
+  const countLabel =
+    registerCount != null ? `${registerCount} record${registerCount === 1 ? "" : "s"}` : null;
 
   return (
     <div className={cn("thinkway-aurora-ws", className)}>
@@ -126,9 +194,29 @@ export function CampaignWorkspaceFrame({
 
       {empty ? <div className="thinkway-aurora-ws-empty-slot">{empty}</div> : null}
 
-      {showRegister ? (
+      {showRegister && collapseRegister ? (
+        <div className="thinkway-aurora-ws-register-toggle">
+          <button
+            type="button"
+            className="thinkway-aurora-disclose thinkway-aurora-register-disclose"
+            aria-expanded={registerVisible}
+            onClick={() => setRegisterOpen((open) => !open)}
+          >
+            <span>
+              {registerVisible ? "▼" : "▶"}{" "}
+              {registerLabel ?? title}
+              {countLabel ? ` (${countLabel})` : null}
+            </span>
+            <span className="thinkway-aurora-register-disclose-hint">
+              {registerVisible ? "Collapse table" : "Expand table"}
+            </span>
+          </button>
+        </div>
+      ) : null}
+
+      {registerVisible ? (
         <div className="thinkway-aurora-ws-register">
-          {registerLabel ? (
+          {!collapseRegister && registerLabel ? (
             <div className="thinkway-aurora-ws-register-label">{registerLabel}</div>
           ) : null}
           <div className="thinkway-aurora-ws-register-body">{children}</div>

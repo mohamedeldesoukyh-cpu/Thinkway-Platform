@@ -97,6 +97,8 @@ type CampaignLinesTabInnerProps = {
   assignmentHierarchy: AssignmentHierarchy;
   billingGroups: AssignmentBillingGroup[];
   operationalBilling: CampaignOperationalBillingDetail | null;
+  /** Deep-link from Decision Center (?line=) — opens assignment detail sheet. */
+  initialFocusLineId?: string | null;
 };
 
 export function CampaignLinesTabInner({
@@ -106,6 +108,7 @@ export function CampaignLinesTabInner({
   assignmentHierarchy,
   billingGroups,
   operationalBilling,
+  initialFocusLineId = null,
 }: CampaignLinesTabInnerProps) {
   const refreshAfterOperationalMutation = useRefreshCampaignAfterOperationalMutation();
   const uiLayer = getAssignmentsUiLayer();
@@ -127,7 +130,16 @@ export function CampaignLinesTabInner({
   >();
   const [editing, setEditing] = useState<CampaignLineWorkspace | null>(null);
   const [audienceView, setAudienceView] = useState<AssignmentAudienceView>("internal");
-  const [detailLineId, setDetailLineId] = useState<string | null>(null);
+  const [detailLineId, setDetailLineId] = useState<string | null>(
+    () => initialFocusLineId
+  );
+
+  useEffect(() => {
+    if (!initialFocusLineId) return;
+    if (assignmentHierarchy.groups.some((g) => g.line.id === initialFocusLineId)) {
+      setDetailLineId(initialFocusLineId);
+    }
+  }, [initialFocusLineId, assignmentHierarchy.groups]);
 
   const detailTarget = useMemo(() => {
     if (!detailLineId) return null;
@@ -347,6 +359,10 @@ export function CampaignLinesTabInner({
           },
         ]}
         registerLabel="Creators"
+        collapseRegister
+        registerCount={workspace.lines.length}
+        registerStorageKey={`assignments-${workspace.id}`}
+        forceRegisterOpen={Boolean(initialFocusLineId)}
         tools={
           enableLineSheet && audienceView === "internal" ? (
             <Button

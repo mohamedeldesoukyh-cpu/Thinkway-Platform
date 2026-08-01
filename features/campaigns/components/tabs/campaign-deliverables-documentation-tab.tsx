@@ -60,6 +60,8 @@ type Props = {
   workspace: CampaignWorkspace;
   assignmentHierarchy: AssignmentHierarchy;
   initialCreatorFilter?: string | null;
+  /** Deep-link (?deliverable=) selects the documentation unit by assignment deliverable id. */
+  initialDeliverableId?: string | null;
 };
 
 const DEFAULT_ASSET_TYPE = "draft_video";
@@ -98,6 +100,7 @@ export function CampaignDeliverablesDocumentationTab({
   workspace,
   assignmentHierarchy,
   initialCreatorFilter = null,
+  initialDeliverableId = null,
 }: Props) {
   const campaignId = workspace.id;
   const [units, setUnits] = useState<DocumentationUnitSummary[]>([]);
@@ -122,6 +125,7 @@ export function CampaignDeliverablesDocumentationTab({
   const uploadSessionRef = useRef(0);
   const selectedKeyRef = useRef<string | null>(null);
   const detailRef = useRef<DocumentationUnitDetail | null>(null);
+  const deliverableFocusApplied = useRef(false);
   selectedKeyRef.current = selectedKey;
   detailRef.current = detail;
 
@@ -142,6 +146,19 @@ export function CampaignDeliverablesDocumentationTab({
   useEffect(() => {
     refreshList();
   }, [refreshList]);
+
+  useEffect(() => {
+    if (!initialDeliverableId || deliverableFocusApplied.current || units.length === 0) {
+      return;
+    }
+    const match = units.find(
+      (unit) => unit.assignmentDeliverableId === initialDeliverableId
+    );
+    if (!match) return;
+    deliverableFocusApplied.current = true;
+    setSelectedKey(match.unitKey);
+    if (match.creatorId) setCreatorFilter(match.creatorId);
+  }, [initialDeliverableId, units]);
 
   const loadDetailForKey = useCallback(
     (unitKey: string, unitsSnapshot: DocumentationUnitSummary[]) => {
@@ -402,6 +419,10 @@ export function CampaignDeliverablesDocumentationTab({
         },
       ]}
       registerLabel="Repository"
+      collapseRegister
+      registerCount={units.length}
+      registerStorageKey={`deliverables-${workspace.id}`}
+      forceRegisterOpen={Boolean(initialCreatorFilter || initialDeliverableId)}
     >
       <div className="space-y-4">
         <OperationalTableSection wide>
@@ -437,7 +458,7 @@ export function CampaignDeliverablesDocumentationTab({
               ) : filtered.length === 0 ? (
                 <AuroraEmptyState
                   title="No documentation units yet."
-                  description="Add deliverables under Assignments first, then return here to upload files, links, and captions."
+                  description="Deliverables unlock after Vendor IO acceptance. Add creators under Assignments first. Owner: Operations — Decision Center shows the clearance path."
                 />
               ) : (
                 <ul className="divide-y" role="listbox" aria-label="Documentation units">

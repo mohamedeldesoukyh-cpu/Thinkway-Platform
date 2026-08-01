@@ -85,17 +85,17 @@ describe("campaign lifecycle orchestrator", () => {
   it("explains Finance and Performance when ahead of business stage", () => {
     const lifecycle = deriveLifecycleForTest(base({ lineCount: 0 }));
     const finance = buildWorkspaceGuidance(lifecycle, "billing");
-    assert.match(finance.whatHappened, /Complete Client IO to unlock Billing/i);
+    assert.match(finance.whatHappened, /Invoice creation is disabled/i);
     assert.equal(finance.businessStageLabel, lifecycle.businessStageLabel);
     assert.equal(finance.outOfBand, true);
     assert.ok(finance.unlockHint);
 
     const performance = buildWorkspaceGuidance(lifecycle, "publications");
-    assert.match(performance.whatHappened, /unlock Performance/i);
+    assert.match(performance.whatHappened, /Performance metrics unlock/i);
     assert.equal(performance.outOfBand, true);
   });
 
-  it("explains Vendor IO while waiting on Client IO", () => {
+  it("explains Vendor IO while waiting on Client IO with object precision", () => {
     const lifecycle = deriveLifecycleForTest(
       base({
         lineCount: 2,
@@ -104,8 +104,9 @@ describe("campaign lifecycle orchestrator", () => {
       })
     );
     const guidance = buildWorkspaceGuidance(lifecycle, "vendor-io");
-    assert.match(guidance.whatHappened, /Complete Client IO to unlock Vendor IO/i);
-    assert.equal(guidance.nextAction, "Open Client IO");
+    assert.match(guidance.whatHappened, /Vendor IO drafts are ready/i);
+    assert.match(guidance.currentSituation, /Sending is disabled until/i);
+    assert.match(guidance.nextAction, /Client IO/i);
     assert.equal(guidance.businessStageLabel, "Client IO");
     assert.ok(lifecycle.decisionCenter.blockers.length > 0);
     assert.equal(lifecycle.decisionCenter.primaryActionTab, "client-io");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   OperationalConfigurableTable,
@@ -40,6 +40,8 @@ const SELECT_COLUMN_ID = "select";
 type Props = {
   campaignId: string;
   rows: VendorIoRow[];
+  /** Deep-link from Decision Center (?io=). */
+  initialSelectedId?: string | null;
 };
 
 type VendorIoSelectionHandlers = {
@@ -308,14 +310,23 @@ function VendorIoTableBody({
   );
 }
 
-export function VendorIoTab({ campaignId, rows }: Props) {
-  const [detailIoId, setDetailIoId] = useState<string | null>(null);
+export function VendorIoTab({ campaignId, rows, initialSelectedId = null }: Props) {
+  const [detailIoId, setDetailIoId] = useState<string | null>(
+    () => initialSelectedId
+  );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
   const sorted = useMemo(
     () => [...rows].sort((a, b) => (a.created_at < b.created_at ? 1 : -1)),
     [rows]
   );
+
+  useEffect(() => {
+    if (!initialSelectedId) return;
+    if (sorted.some((row) => row.id === initialSelectedId)) {
+      setDetailIoId(initialSelectedId);
+    }
+  }, [initialSelectedId, sorted]);
 
   const detailRow = useMemo(
     () => (detailIoId ? (sorted.find((row) => row.id === detailIoId) ?? null) : null),
@@ -439,6 +450,10 @@ export function VendorIoTab({ campaignId, rows }: Props) {
           },
         ]}
         registerLabel="Orders"
+        collapseRegister
+        registerCount={sorted.length}
+        registerStorageKey={`vendor-io-${campaignId}`}
+        forceRegisterOpen={Boolean(initialSelectedId)}
       >
       <OperationalTableSuiteProvider
         tableId={OPERATIONAL_TABLE_IDS.campaignVendorIos}

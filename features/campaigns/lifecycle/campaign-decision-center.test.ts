@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  applyDecisionFocusToSearch,
   buildDecisionCenter,
   DECISION_CLEAR_PATH_MESSAGE,
   isBillingInvoiceCreationUnlocked,
   refineGenericAction,
   unlocksForStage,
+  type DecisionCenterObjects,
 } from "@/features/campaigns/lifecycle/campaign-decision-center";
 import { deriveLifecycleForTest } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
 import type { CampaignProcessSignals } from "@/features/campaigns/lifecycle/campaign-process-presentation";
@@ -32,6 +34,22 @@ function signals(overrides: Partial<CampaignProcessSignals> = {}): CampaignProce
   };
 }
 
+function objects(overrides: Partial<DecisionCenterObjects> = {}): DecisionCenterObjects {
+  return {
+    clientIo: {
+      id: "cio-1",
+      document_number: "CIO-2026-0003",
+      status: "under_client_review",
+    },
+    vendorIos: [],
+    lines: [],
+    deliverables: [],
+    invoices: [],
+    campaignDocumentNumber: "TW-2026-0001",
+    ...overrides,
+  };
+}
+
 describe("campaign decision center", () => {
   it("never surfaces generic Resolve blockers as the primary CTA", () => {
     const refined = refineGenericAction(
@@ -43,7 +61,7 @@ describe("campaign decision center", () => {
     assert.equal(refined, "Open Client IO");
   });
 
-  it("lists Client approval as an attention blocker with unlocks", () => {
+  it("lists Client approval as an object-specific operational item", () => {
     const dc = buildDecisionCenter({
       stageId: "client-io",
       stageLabel: "Client IO",
@@ -59,16 +77,106 @@ describe("campaign decision center", () => {
       workspaceBlockers: [],
       signals: signals(),
       daysWaiting: 2,
+      objects: objects(),
     });
 
     assert.equal(dc.severityMode, "attention");
     assert.notEqual(dc.severityMode, "hard");
-    assert.ok(dc.blockers.some((b) => b.id === "cio_pending"));
-    assert.equal(dc.blockers[0]?.sinceLabel, "2 days");
-    assert.equal(dc.blockers[0]?.actionTab, "client-io");
+    const pending = dc.blockers.find((b) => b.id === "cio_pending");
+    assert.ok(pending);
+    assert.equal(pending?.objectKind, "client_io");
+    assert.equal(pending?.objectRef, "#CIO-2026-0003");
+    assert.equal(pending?.waitingLabel, "Client");
+    assert.equal(pending?.sinceLabel, "2 days");
+    assert.equal(pending?.actionTab, "client-io");
+    assert.deepEqual(pending?.focusQuery, { key: "io", value: "cio-1" });
+    assert.match(pending?.primaryAction ?? "", /CIO-2026-0003/);
+    assert.match(pending?.impact ?? "", /Vendor IO cannot be sent/i);
     assert.ok(dc.unlocks.some((u) => u.label === "Vendor IO"));
-    assert.match(dc.continueReason, /Vendor IO cannot be sent/i);
+    assert.match(dc.continueReason, /approved|Client/i);
     assert.notEqual(dc.primaryAction.toLowerCase(), "resolve blockers");
+    assert.match(dc.headline, /Operational Item/i);
+  });
+
+  it("aggregates many pending Vendor IOs into one summary card", () => {
+    const dc = buildDecisionCenter({
+      stageId: "vendor-io",
+      stageLabel: "Vendor IO",
+      businessState: "waiting",
+      enforcement: "soft",
+      owner: "Operations",
+      waitingFor: "Vendor",
+      nextAction: "Follow Up Vendor IO",
+      nextActionTab: "vendor-io",
+      expectedResult: "Vendor approvals unlock deliverables.",
+      missing: [],
+      hardBlockers: [],
+      workspaceBlockers: [],
+      signals: signals({
+        clientIoStatus: "approved",
+        vendorIoCount: 2,
+        approvedVendorIoCount: 0,
+        sentVendorIoCount: 2,
+      }),
+      daysWaiting: 1,
+      objects: objects({
+        clientIo: {
+          id: "cio-1",
+          document_number: "CIO-2026-0003",
+          status: "approved",
+        },
+        vendorIos: [
+          {
+            id: "vio-38",
+            document_number: "VIO-2026-38",
+            status: "sent",
+            influencer_name: "Ahmed Hassan",
+          },
+          {
+            id: "vio-39",
+            document_number: "VIO-2026-39",
+            status: "sent",
+            influencer_name: "Sara Ali",
+          },
+        ],
+      }),
+    });
+
+    const vioCards = dc.blockers.filter((b) => b.objectKind === "vendor_io");
+    assert.equal(vioCards.length, 1);
+    assert.equal(vioCards[0]?.objectLabel, "Vendor Approval");
+    assert.equal(vioCards[0]?.objectRef, "2 Vendor IOs");
+    assert.match(vioCards[0]?.waitingLabel ?? "", /Ahmed Hassan/);
+    assert.match(vioCards[0]?.impact ?? "", /Deliverables cannot start/i);
+    assert.match(vioCards[0]?.unlockLabel ?? "", /unlock/i);
+    assert.deepEqual(vioCards[0]?.focusQuery, { key: "io", value: "vio-38" });
+    assert.equal(vioCards[0]?.primaryAction, "Open Vendor IO");
+    assert.notEqual(dc.primaryAction.toLowerCase(), "follow up vendor io");
+  });
+
+  it("states Client approval as a single narrative with Vendor IO impact", () => {
+    const dc = buildDecisionCenter({
+      stageId: "client-io",
+      stageLabel: "Client IO",
+      businessState: "waiting",
+      enforcement: "soft",
+      owner: "Commercial",
+      waitingFor: "Client",
+      nextAction: "Open Client IO",
+      nextActionTab: "client-io",
+      expectedResult: "Client approval unlocks Vendor IO.",
+      missing: [],
+      hardBlockers: [],
+      workspaceBlockers: [],
+      signals: signals({ clientIoStatus: "under_client_review" }),
+      daysWaiting: 2,
+      objects: objects(),
+    });
+
+    assert.equal(dc.blockers.filter((b) => b.objectKind === "client_io").length, 1);
+    assert.equal(dc.blockers.filter((b) => b.objectKind === "vendor_io").length, 0);
+    assert.match(dc.blockers[0]?.impact ?? "", /Vendor IO cannot be sent/i);
+    assert.match(dc.headline, /Operational Item/i);
   });
 
   it("marks PO exceeded as a hard block", () => {
@@ -111,7 +219,7 @@ describe("campaign decision center", () => {
     assert.equal(lifecycle.decisionCenter.blockers.length, 0);
     assert.match(
       lifecycle.decisionCenter.continueReason,
-      /No blockers|progressing normally|complete/i
+      /No operational items|progressing normally|complete/i
     );
     assert.ok(lifecycle.decisionCenter.clearPathMessage.length > 0);
     assert.equal(
@@ -137,6 +245,70 @@ describe("campaign decision center", () => {
       }),
       true
     );
+  });
+
+  it("applies focus query params for exact-record CTAs", () => {
+    assert.equal(
+      applyDecisionFocusToSearch("?tab=vendor-io&docsCreator=x", {
+        key: "io",
+        value: "vio-38",
+      }),
+      "?tab=vendor-io&io=vio-38"
+    );
+    assert.equal(
+      applyDecisionFocusToSearch("?tab=deliverables", {
+        key: "deliverable",
+        value: "del-1",
+      }),
+      "?tab=deliverables&deliverable=del-1"
+    );
+    assert.equal(
+      applyDecisionFocusToSearch("?tab=workflow&approval=old", {
+        key: "approval",
+        value: "apr-9",
+      }),
+      "?tab=workflow&approval=apr-9"
+    );
+  });
+
+  it("keeps Decision Center compact for large vendor IO sets", () => {
+    const many = Array.from({ length: 40 }, (_, index) => ({
+      id: `vio-${index}`,
+      document_number: `VIO-2026-${index}`,
+      status: "sent",
+      influencer_name: `Creator ${index}`,
+    }));
+    const dc = buildDecisionCenter({
+      stageId: "vendor-io",
+      stageLabel: "Vendor IO",
+      businessState: "waiting",
+      enforcement: "soft",
+      owner: "Operations",
+      waitingFor: "Vendor",
+      nextAction: "Open Vendor IO",
+      nextActionTab: "vendor-io",
+      expectedResult: "Approvals unlock deliverables.",
+      missing: [],
+      hardBlockers: [],
+      workspaceBlockers: [],
+      signals: signals({
+        clientIoStatus: "approved",
+        vendorIoCount: 40,
+        approvedVendorIoCount: 0,
+        sentVendorIoCount: 40,
+      }),
+      daysWaiting: 3,
+      objects: objects({
+        clientIo: {
+          id: "cio-1",
+          document_number: "CIO-2026-0003",
+          status: "approved",
+        },
+        vendorIos: many,
+      }),
+    });
+    assert.equal(dc.blockers.filter((b) => b.objectKind === "vendor_io").length, 1);
+    assert.match(dc.blockers[0]?.objectRef ?? "", /40 Vendor IOs/);
   });
 
   it("derives distinct Decision Center content across lifecycle stages", () => {
@@ -242,6 +414,16 @@ describe("campaign decision center", () => {
         "resolve blockers",
         fixture.label
       );
+      assert.notEqual(
+        lifecycle.decisionCenter.primaryAction.toLowerCase(),
+        "open pending approval",
+        fixture.label
+      );
+      for (const blocker of lifecycle.decisionCenter.blockers) {
+        assert.ok(blocker.objectLabel.length > 0, fixture.label);
+        assert.ok(blocker.objectRef.length > 0, fixture.label);
+        assert.ok(blocker.waitingLabel.length > 0, fixture.label);
+      }
       const unlockKey = unlocksForStage(lifecycle.businessStageId)
         .unlocks.map((u) => u.id)
         .join("|");
@@ -254,7 +436,6 @@ describe("campaign decision center", () => {
       ].join("::");
       fingerprints.add(fp);
 
-      // Executable CTAs never dump the user on Overview unless that is the stage.
       if (lifecycle.businessStageId !== "overview") {
         assert.notEqual(
           lifecycle.decisionCenter.primaryActionTab,

@@ -1,5 +1,6 @@
 "use client";
 
+import type { DecisionFocusQuery } from "@/features/campaigns/lifecycle/campaign-decision-center";
 import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
 import type { CampaignLifecycleView } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
 import { CampaignDecisionCenterPanel } from "@/features/campaigns/lifecycle/components/campaign-decision-center-panel";
@@ -9,7 +10,10 @@ type Props = {
   lifecycle: CampaignLifecycleView;
   onContinue?: () => void;
   onOpenResolver?: () => void;
-  onNavigateToTab?: (tab: CampaignWorkspaceTabId) => void;
+  onNavigateToTab?: (
+    tab: CampaignWorkspaceTabId,
+    focus?: DecisionFocusQuery | null
+  ) => void;
   className?: string;
 };
 

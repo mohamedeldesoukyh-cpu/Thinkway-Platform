@@ -25,7 +25,10 @@ import {
 import {
   buildCampaignWorkspaceTabUrl,
 } from "@/features/campaigns/lifecycle/campaign-workspace-entry-routing";
-import { isBillingInvoiceCreationUnlocked } from "@/features/campaigns/lifecycle/campaign-decision-center";
+import {
+  isBillingInvoiceCreationUnlocked,
+  type DecisionFocusQuery,
+} from "@/features/campaigns/lifecycle/campaign-decision-center";
 import { CampaignBlockerResolverDrawer } from "@/features/campaigns/lifecycle/components/campaign-blocker-resolver-drawer";
 import { CampaignStateStrip } from "@/features/campaigns/lifecycle/components/campaign-state-strip";
 import { CampaignVendorIoLifecycleBanner } from "@/features/campaigns/lifecycle/components/campaign-vendor-io-lifecycle-banner";
@@ -131,7 +134,7 @@ export function CampaignWorkspaceView({
   }, []);
 
   const handleTabChange = useCallback(
-    (value: string) => {
+    (value: string, focus?: DecisionFocusQuery | null) => {
       if (!isCampaignWorkspaceTabId(value)) return;
       setActiveTab(value);
       // history.replaceState (not router.replace): keep ?tab= in the address bar
@@ -141,7 +144,8 @@ export function CampaignWorkspaceView({
       const url = buildCampaignWorkspaceTabUrl(
         pathname,
         window.location.search,
-        value
+        value,
+        focus
       );
       window.history.replaceState(window.history.state, "", url);
     },
@@ -251,11 +255,17 @@ export function CampaignWorkspaceView({
     () => campaignLifecycleFromWorkspace(workspace),
     [workspace]
   );
-  // Primary CTAs navigate to the exact workspace where the action is performed.
-  // Smart Blocker Resolver opens only from explicit "Open resolver" controls.
+  // Primary CTAs open the exact business object (tab + focus query).
   const continueToNextAction = useCallback(() => {
-    handleTabChange(lifecycle.decisionCenter.primaryActionTab);
-  }, [handleTabChange, lifecycle.decisionCenter.primaryActionTab]);
+    handleTabChange(
+      lifecycle.decisionCenter.primaryActionTab,
+      lifecycle.decisionCenter.primaryFocusQuery
+    );
+  }, [
+    handleTabChange,
+    lifecycle.decisionCenter.primaryActionTab,
+    lifecycle.decisionCenter.primaryFocusQuery,
+  ]);
 
   const invoiceCreationUnlocked = useMemo(
     () =>
@@ -452,7 +462,6 @@ export function CampaignWorkspaceView({
                 workspaceLabel={workspaceLabelForTab(activeTab)}
                 updatedAt={workspace.activity[0]?.created_at ?? workspace.start_date}
                 endDate={workspace.end_date}
-                onContinue={continueToNextAction}
               />
               <CampaignWorkspaceSortableTabsBar
                 tabOrder={tabOrder}
@@ -504,6 +513,11 @@ export function CampaignWorkspaceView({
                   }))}
                   versions={workspace.client_io_versions ?? []}
                   milestones={workspace.client_io_milestones ?? []}
+                  forceOpenRegister={
+                    Boolean(searchParams.get("io")) &&
+                    (!workspace.client_io ||
+                      searchParams.get("io") === workspace.client_io.id)
+                  }
                 />
               </TabErrorBoundary>
             )}
@@ -524,6 +538,7 @@ export function CampaignWorkspaceView({
                     assignmentHierarchy={assignmentHierarchy}
                     billingGroups={billingGroups}
                     operationalBilling={operationalBilling}
+                    initialFocusLineId={searchParams.get("line")}
                   />
                 </TabErrorBoundary>
               )
@@ -541,6 +556,7 @@ export function CampaignWorkspaceView({
                     workspace={workspace}
                     assignmentHierarchy={assignmentHierarchy}
                     initialCreatorFilter={searchParams.get("docsCreator")}
+                    initialDeliverableId={searchParams.get("deliverable")}
                   />
                 </TabErrorBoundary>
               )
@@ -555,9 +571,12 @@ export function CampaignWorkspaceView({
                 <CampaignVendorIoLifecycleBanner
                   lifecycle={lifecycle}
                   rows={workspace.vendor_ios}
-                  onOpenClientIo={() => handleTabChange("client-io")}
                 />
-                <VendorIoTab campaignId={workspace.id} rows={workspace.vendor_ios} />
+                <VendorIoTab
+                  campaignId={workspace.id}
+                  rows={workspace.vendor_ios}
+                  initialSelectedId={searchParams.get("io")}
+                />
               </TabErrorBoundary>
             )}
           </CampaignWorkspaceTabPanel>
@@ -577,6 +596,7 @@ export function CampaignWorkspaceView({
                     syncHealth={publicationsSyncHealth}
                     loadError={publicationsLoadError}
                     schemaWarnings={publicationsSchemaWarnings}
+                    initialDetailPublicationId={searchParams.get("publication")}
                   />
                 </TabErrorBoundary>
               )
@@ -588,7 +608,10 @@ export function CampaignWorkspaceView({
             {renderWithLifecycleGuidance(
               "workflow",
               <TabErrorBoundary tabName="Workflow">
-                <CampaignWorkflowTab workspace={workspace} />
+                <CampaignWorkflowTab
+                  workspace={workspace}
+                  initialDetailApprovalId={searchParams.get("approval")}
+                />
               </TabErrorBoundary>
             )}
           </CampaignWorkspaceTabPanel>
@@ -608,6 +631,8 @@ export function CampaignWorkspaceView({
                     campaignInvoiceRegister={campaignInvoiceRegister}
                     invoiceCreationUnlocked={invoiceCreationUnlocked}
                     onNavigateToLifecycleAction={continueToNextAction}
+                    initialDetailInvoiceId={searchParams.get("invoice")}
+                    initialDetailPaymentId={searchParams.get("payment")}
                   />
                 </TabErrorBoundary>
               )
@@ -626,6 +651,7 @@ export function CampaignWorkspaceView({
                     assignmentHierarchy={assignmentHierarchy}
                     financeAudit={financeAudit}
                     financeAuditStatus={bundleStatuses.financeAudit}
+                    initialDetailActivityId={searchParams.get("activity")}
                   />
                 </TabErrorBoundary>
               )

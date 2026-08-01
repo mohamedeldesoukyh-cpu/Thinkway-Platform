@@ -1,5 +1,6 @@
 "use client";
 
+import type { DecisionFocusQuery } from "@/features/campaigns/lifecycle/campaign-decision-center";
 import type { CampaignLifecycleView } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
 import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
 import {
@@ -13,12 +14,15 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   lifecycle: CampaignLifecycleView;
-  onResolveAction: (tab: CampaignWorkspaceTabId) => void;
+  onResolveAction: (
+    tab: CampaignWorkspaceTabId,
+    focus?: DecisionFocusQuery | null
+  ) => void;
 };
 
 /**
- * Smart Blocker Resolver — action console (OperationalDetailSheet).
- * Each blocker is an executable work item, not a text list.
+ * Smart Blocker Resolver — object drill-down console.
+ * Wrong → why → object → open → fix → continue.
  */
 export function CampaignBlockerResolverDrawer({
   open,
@@ -38,8 +42,8 @@ export function CampaignBlockerResolverDrawer({
     <OperationalDetailSheet
       open={open}
       onOpenChange={onOpenChange}
-      title="Smart Blocker Resolver"
-      description={`${dc.headline}. Resolve items without leaving this workspace.`}
+      title="Operational Items"
+      description={`${dc.headline}. Open the exact record to resolve.`}
     >
       <DetailPanelHeader
         breadcrumb={
@@ -50,28 +54,12 @@ export function CampaignBlockerResolverDrawer({
           </>
         }
         avatarInitials="DC"
-        title="Smart Blocker Resolver"
+        title="Operational Items"
         subtitle={dc.headline}
         badges={<DetailPill>{severityLabel}</DetailPill>}
       />
 
       <div className="thinkway-lc-resolver-body flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-6 pb-6">
-        <div className="thinkway-lc-resolver-banner" data-severity={dc.severityMode}>
-          <div className="thinkway-bp-label">Why can&apos;t I continue?</div>
-          <p>{dc.continueReason}</p>
-          <p className="thinkway-lc-muted mt-1">
-            Owner <b>{lifecycle.owner}</b>
-            {lifecycle.waitingFor !== "None" ? (
-              <>
-                {" "}
-                · Waiting <b>{lifecycle.waitingFor}</b>
-              </>
-            ) : null}
-            {" · "}
-            Next action <b>{dc.primaryAction}</b>
-          </p>
-        </div>
-
         {dc.blockers.length === 0 ? (
           <div className="thinkway-lc-decision-clear" role="status">
             {dc.clearPathMessage}
@@ -79,7 +67,7 @@ export function CampaignBlockerResolverDrawer({
               type="button"
               className="thinkway-lc-resolver-action mt-3"
               onClick={() => {
-                onResolveAction(dc.primaryActionTab);
+                onResolveAction(dc.primaryActionTab, dc.primaryFocusQuery);
                 onOpenChange(false);
               }}
             >
@@ -99,36 +87,29 @@ export function CampaignBlockerResolverDrawer({
                 <div className="thinkway-lc-resolver-item-top">
                   <div className="thinkway-lc-resolver-index">#{index + 1}</div>
                   <div>
-                    <div
-                      className="thinkway-lc-resolver-severity"
-                      data-severity={blocker.severity}
-                    >
-                      {blocker.severity === "hard" ? "Hard Block" : "Needs Attention"}
+                    <div className="thinkway-lc-resolver-title">
+                      {blocker.objectLabel} {blocker.objectRef}
                     </div>
-                    <div className="thinkway-lc-resolver-title">{blocker.title}</div>
+                    <div className="thinkway-lc-muted">{blocker.title}</div>
                   </div>
                 </div>
 
                 <dl className="thinkway-lc-resolver-meta">
                   <div>
-                    <dt>Status</dt>
-                    <dd>{blocker.severity === "hard" ? "Hard Block" : "Needs Attention"}</dd>
+                    <dt>Waiting for</dt>
+                    <dd>{blocker.waitingLabel}</dd>
                   </div>
                   <div>
                     <dt>Owner</dt>
                     <dd>{blocker.owner}</dd>
                   </div>
                   <div>
-                    <dt>Waiting for</dt>
-                    <dd>{blocker.waitingFor}</dd>
-                  </div>
-                  <div>
-                    <dt>Waiting time</dt>
+                    <dt>Since</dt>
                     <dd>{blocker.sinceLabel}</dd>
                   </div>
                   {blocker.relatedLabel ? (
                     <div>
-                      <dt>Related</dt>
+                      <dt>Creator</dt>
                       <dd>{blocker.relatedLabel}</dd>
                     </div>
                   ) : null}
@@ -136,18 +117,22 @@ export function CampaignBlockerResolverDrawer({
 
                 <p className="thinkway-lc-resolver-why">
                   <span className="thinkway-bp-label">Why</span>
-                  {blocker.whyBlocks}
+                  {blocker.reason}
                 </p>
                 <p className="thinkway-lc-resolver-why">
-                  <span className="thinkway-bp-label">Expected result</span>
-                  {blocker.expectedResult}
+                  <span className="thinkway-bp-label">Impact</span>
+                  {blocker.impact}
+                </p>
+                <p className="thinkway-lc-resolver-why">
+                  <span className="thinkway-bp-label">Unlock</span>
+                  {blocker.unlockLabel}
                 </p>
 
                 <button
                   type="button"
                   className="thinkway-lc-resolver-action"
                   onClick={() => {
-                    onResolveAction(blocker.actionTab);
+                    onResolveAction(blocker.actionTab, blocker.focusQuery);
                     onOpenChange(false);
                   }}
                 >
@@ -157,18 +142,6 @@ export function CampaignBlockerResolverDrawer({
             ))}
           </ul>
         )}
-
-        <div className="thinkway-lc-resolver-unlock">
-          <div className="thinkway-bp-label">{dc.unlockHeadline}</div>
-          <ul>
-            {dc.unlocks.map((item) => (
-              <li key={item.id}>
-                <span aria-hidden>✓</span>
-                {item.label}
-              </li>
-            ))}
-          </ul>
-        </div>
       </div>
     </OperationalDetailSheet>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   OperationalConfigurableTable,
@@ -37,6 +37,8 @@ type CampaignTimelineTabProps = {
   financeAudit?: FinanceAuditTimelineEntry[];
   /** Soft status for the Finance audit panel only — never gates Enterprise Timeline. */
   financeAuditStatus?: "idle" | "loading" | "loaded" | "error";
+  /** Deep-link (?activity=) opens the activity detail sheet. */
+  initialDetailActivityId?: string | null;
 };
 
 type VendorRow = CampaignWorkspace["vendors"][number];
@@ -98,12 +100,22 @@ export function CampaignTimelineTab({
   assignmentHierarchy,
   financeAudit = [],
   financeAuditStatus = "loaded",
+  initialDetailActivityId = null,
 }: CampaignTimelineTabProps) {
   const financeAuditPending =
     financeAuditStatus === "idle" || financeAuditStatus === "loading";
-  const [detailActivityId, setDetailActivityId] = useState<string | null>(null);
+  const [detailActivityId, setDetailActivityId] = useState<string | null>(
+    () => initialDetailActivityId
+  );
   const [detailAuditId, setDetailAuditId] = useState<string | null>(null);
   const [detailLineId, setDetailLineId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!initialDetailActivityId) return;
+    if (workspace.activity.some((row) => row.id === initialDetailActivityId)) {
+      setDetailActivityId(initialDetailActivityId);
+    }
+  }, [initialDetailActivityId, workspace.activity]);
 
   const columns = useMemo(() => buildTimelineVendorColumns(setDetailLineId), []);
   const vendorRows = useMemo(() => workspace.vendors.slice(0, 10), [workspace.vendors]);
@@ -138,8 +150,8 @@ export function CampaignTimelineTab({
     workspace.id,
   ]);
 
-  const recentActivity = workspace.activity.slice(0, 8);
-  const recentAudit = financeAudit.slice(0, 8);
+  const recentActivity = workspace.activity.slice(0, 5);
+  const recentAudit = financeAudit.slice(0, 5);
   const lifecycle = useMemo(
     () => campaignLifecycleFromWorkspace(workspace),
     [workspace]
@@ -151,6 +163,10 @@ export function CampaignTimelineTab({
       <CampaignWorkspaceFrame
         title="Business Timeline"
         subtitle="Campaign journey milestones — system activity remains secondary"
+        collapseRegister
+        registerCount={workspace.vendors.length}
+        registerStorageKey={`timeline-${workspace.id}`}
+        forceRegisterOpen={Boolean(initialDetailActivityId)}
         status={
           <AuroraStatusPill tone={occurredCount > 0 ? "blue" : "mut"}>
             {occurredCount}/{lifecycle.timeline.length} milestones

@@ -1,10 +1,11 @@
 # Campaign Workspace Baseline v1.1 (Lifecycle OS)
 
-**Status:** Protected implementation baseline — **canonical · frozen**  
+**Status:** **Superseded** by [`CAMPAIGN_WORKSPACE_BASELINE_V1.2.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.2.md) — retained as historical reference  
 **Milestone:** Release 2.2b — Lifecycle OS Refinement (Decision Center)  
 **Product Acceptance:** Passed · approved 2026-08-01  
-**Class:** Governance — **Campaign Workspace v1.1 is the canonical implementation baseline**  
-**Supersedes (presentation refinement):** [`CAMPAIGN_WORKSPACE_BASELINE_V1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.md) (v1.0 remains historical; v1.1 is authoritative)  
+**Class:** Historical implementation baseline (v1.2 is canonical)  
+**Supersedes (presentation refinement):** [`CAMPAIGN_WORKSPACE_BASELINE_V1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.md)  
+**Superseded by:** [`CAMPAIGN_WORKSPACE_BASELINE_V1.2.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.2.md)  
 **Parent baselines:**  
 [`THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md`](./THINKWAY_ENTERPRISE_PLATFORM_ARCHITECTURE_V1.md) ·  
 [`BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md`](./BUSINESS_PROCESS_NAVIGATION_FOUNDATION.md) ·  

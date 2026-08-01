@@ -35,6 +35,8 @@ type Props = {
   assignments?: ClientIoComposerAssignment[];
   versions?: ClientIoVersionSummary[];
   milestones?: ClientIoMilestoneDraft[];
+  /** Deep-link (?io=) expands the document workspace. */
+  forceOpenRegister?: boolean;
 };
 
 function statusTone(
@@ -58,6 +60,7 @@ export function ClientIoTab({
   assignments = [],
   versions = [],
   milestones = [],
+  forceOpenRegister = false,
 }: Props) {
   const [ensureState, ensureAction, ensuring] = useActionState(
     ensureClientIoForCampaignAction,
@@ -224,6 +227,10 @@ export function ClientIoTab({
         </div>
       }
       registerLabel="Document workspace"
+      collapseRegister
+      registerCount={1}
+      registerStorageKey={`client-io-${campaignId}`}
+      forceRegisterOpen={Boolean(forceOpenRegister)}
     >
       <ClientIoForm
         row={io}

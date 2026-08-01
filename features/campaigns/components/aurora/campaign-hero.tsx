@@ -6,8 +6,8 @@ import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-st
 import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
 import type { CampaignLifecycleView } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
 import { workspaceLabelForTab } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
+import type { DecisionFocusQuery } from "@/features/campaigns/lifecycle/campaign-decision-center";
 import { CampaignNextActionCard } from "@/features/campaigns/lifecycle/components/campaign-next-action-card";
-import { CampaignProcessRail } from "@/features/campaigns/lifecycle/components/campaign-process-rail";
 import type { CampaignProcessCue } from "@/features/campaigns/lifecycle/campaign-process-presentation";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { BusinessProcessStageSummary } from "@/components/workspace/business-process-stage-summary";
@@ -22,7 +22,10 @@ type CampaignHeroProps = {
   activeWorkspaceTab?: CampaignWorkspaceTabId;
   onNavigateToCurrentStage?: () => void;
   onOpenResolver?: () => void;
-  onSelectStage?: (tab: CampaignWorkspaceTabId) => void;
+  onSelectStage?: (
+    tab: CampaignWorkspaceTabId,
+    focus?: DecisionFocusQuery | null
+  ) => void;
   className?: string;
 };
 
@@ -74,33 +77,17 @@ export function CampaignHero({
         {identityMeta ? (
           <div className="thinkway-aurora-hmeta thinkway-aurora-hmeta-compact">
             <b>{identityMeta}</b>
-            {lifecycle && workspaceLabel ? (
-              <>
-                <span className="thinkway-aurora-sep">·</span>
-                <span>
-                  Viewing <b>{workspaceLabel}</b>
-                </span>
-              </>
-            ) : null}
           </div>
         ) : null}
 
         {lifecycle ? (
-          <>
-            <CampaignNextActionCard
-              className="mt-3"
-              lifecycle={lifecycle}
-              onContinue={onNavigateToCurrentStage}
-              onOpenResolver={onOpenResolver}
-              onNavigateToTab={onSelectStage}
-            />
-            <CampaignProcessRail
-              className="mt-3"
-              lifecycle={lifecycle}
-              onSelectStage={onSelectStage}
-              density="hero"
-            />
-          </>
+          <CampaignNextActionCard
+            className="mt-2"
+            lifecycle={lifecycle}
+            onContinue={onNavigateToCurrentStage}
+            onOpenResolver={onOpenResolver}
+            onNavigateToTab={onSelectStage}
+          />
         ) : cue ? (
           <BusinessProcessStageSummary
             progress={cue}

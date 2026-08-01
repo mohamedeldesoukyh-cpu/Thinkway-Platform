@@ -161,7 +161,7 @@ export function CampaignCommandCenter({
   );
 
   const recentActivity = (workspace.activity ?? []).slice(0, 5);
-  const recentAssignments = workspace.lines.slice(0, 6);
+  const recentAssignments = workspace.lines.slice(0, 5);
 
   return (
     <div className="thinkway-aurora-command">
@@ -201,16 +201,7 @@ export function CampaignCommandCenter({
               );
             })}
           </div>
-          {workspace.blockers.length > 0 ? (
-            <div className="mt-3 space-y-2">
-              {workspace.blockers.slice(0, 3).map((blocker) => (
-                <div key={blocker} className="thinkway-aurora-blocker">
-                  <span className="thinkway-aurora-blocker-dot" aria-hidden />
-                  {blocker}
-                </div>
-              ))}
-            </div>
-          ) : null}
+          {/* Decision Center owns blocker narrative — Overview never restates it. */}
         </>
       )}
 

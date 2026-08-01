@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   OperationalConfigurableTable,
@@ -28,6 +28,8 @@ import { cn } from "@/lib/utils";
 
 type CampaignWorkflowTabProps = {
   workspace: CampaignWorkspace;
+  /** Deep-link from Decision Center (?approval=). */
+  initialDetailApprovalId?: string | null;
 };
 
 type ApprovalRow = CampaignWorkspace["approvals"][number];
@@ -90,8 +92,21 @@ function buildApprovalsColumns(
   ];
 }
 
-export function CampaignWorkflowTab({ workspace }: CampaignWorkflowTabProps) {
-  const [detailApprovalId, setDetailApprovalId] = useState<string | null>(null);
+export function CampaignWorkflowTab({
+  workspace,
+  initialDetailApprovalId = null,
+}: CampaignWorkflowTabProps) {
+  const [detailApprovalId, setDetailApprovalId] = useState<string | null>(
+    () => initialDetailApprovalId
+  );
+
+  useEffect(() => {
+    if (!initialDetailApprovalId) return;
+    if (workspace.approvals.some((row) => row.id === initialDetailApprovalId)) {
+      setDetailApprovalId(initialDetailApprovalId);
+    }
+  }, [initialDetailApprovalId, workspace.approvals]);
+
   const detailApproval = useMemo(
     () =>
       detailApprovalId
@@ -125,7 +140,7 @@ export function CampaignWorkflowTab({ workspace }: CampaignWorkflowTabProps) {
         stats={[
           {
             key: "blockers",
-            label: "Blockers",
+            label: "Open issues",
             value: String(workspace.blockers.length),
             tone: workspace.blockers.length > 0 ? "amber" : "mut",
           },
@@ -142,42 +157,34 @@ export function CampaignWorkflowTab({ workspace }: CampaignWorkflowTabProps) {
           },
         ]}
         banner={
-          <div className="mb-1 space-y-3">
-            <div className="thinkway-aurora-flow" aria-label="Workflow stages">
-              {WORKFLOW_STAGE_OPTIONS.map((stage, index) => {
-                const done = stageIndex >= 0 && index < stageIndex;
-                const now = stageIndex === index;
-                return (
-                  <div key={stage.value} className="contents">
-                    {index > 0 ? (
-                      <span className="thinkway-aurora-farrow" aria-hidden />
-                    ) : null}
-                    <span
-                      className={cn(
-                        "thinkway-aurora-fstep",
-                        done && "done",
-                        now && "now"
-                      )}
-                    >
-                      {stage.label}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-            {workspace.blockers.length > 0 ? (
-              <div className="space-y-2">
-                {workspace.blockers.map((blocker) => (
-                  <div key={blocker} className="thinkway-aurora-blocker">
-                    <span className="thinkway-aurora-blocker-dot" aria-hidden />
-                    {blocker}
-                  </div>
-                ))}
-              </div>
-            ) : null}
+          <div className="thinkway-aurora-flow" aria-label="Workflow stages">
+            {WORKFLOW_STAGE_OPTIONS.map((stage, index) => {
+              const done = stageIndex >= 0 && index < stageIndex;
+              const now = stageIndex === index;
+              return (
+                <div key={stage.value} className="contents">
+                  {index > 0 ? (
+                    <span className="thinkway-aurora-farrow" aria-hidden />
+                  ) : null}
+                  <span
+                    className={cn(
+                      "thinkway-aurora-fstep",
+                      done && "done",
+                      now && "now"
+                    )}
+                  >
+                    {stage.label}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         }
         registerLabel="Approvals"
+        collapseRegister
+        registerCount={workspace.approvals.length}
+        registerStorageKey={`workflow-${workspace.id}`}
+        forceRegisterOpen={Boolean(initialDetailApprovalId)}
       >
         <div className={cn(OPERATIONAL_TABLE_FONT)}>
           <OperationalTableSuiteProvider
@@ -209,7 +216,7 @@ export function CampaignWorkflowTab({ workspace }: CampaignWorkflowTabProps) {
               {workspace.approvals.length === 0 ? (
                 <AuroraEmptyState
                   title="No approval records yet."
-                  description="Approvals appear here when Client IO, Vendor IO, or billing steps require sign-off."
+                  description="This register fills when Client IO, Vendor IO, or billing needs sign-off. Decision Center owns why work is waiting — open the next action there. Operations / Commercial own the clearance path."
                 />
               ) : (
                 <OperationalConfigurableTable

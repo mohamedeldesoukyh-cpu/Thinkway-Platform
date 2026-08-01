@@ -26,6 +26,7 @@ type AssignmentsRenderProps = {
   assignmentHierarchy: AssignmentHierarchy;
   billingGroups: AssignmentBillingGroup[];
   operationalBilling: CampaignOperationalBillingDetail | null;
+  initialFocusLineId?: string | null;
 };
 
 export function AssignmentsRender({
@@ -35,6 +36,7 @@ export function AssignmentsRender({
   assignmentHierarchy,
   billingGroups,
   operationalBilling,
+  initialFocusLineId = null,
 }: AssignmentsRenderProps) {
   useEffect(() => {
     logAssignmentsStage("assignments render", {
@@ -51,6 +53,7 @@ export function AssignmentsRender({
       assignmentHierarchy={assignmentHierarchy}
       billingGroups={billingGroups}
       operationalBilling={operationalBilling}
+      initialFocusLineId={initialFocusLineId}
     />
   );
 }

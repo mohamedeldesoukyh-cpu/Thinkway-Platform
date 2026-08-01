@@ -9,6 +9,7 @@
 import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
 import {
   buildDecisionCenter,
+  decisionObjectsFromWorkspace,
   refineGenericAction,
   type CampaignDecisionCenter,
 } from "@/features/campaigns/lifecycle/campaign-decision-center";
@@ -649,6 +650,12 @@ export function buildWorkspaceGuidance(
     });
   }
 
+  const primary = lifecycle.decisionCenter.blockers[0] ?? null;
+  const primaryRef = primary
+    ? `${primary.objectLabel} ${primary.objectRef}`
+    : lifecycle.businessStageLabel;
+  const primaryAction = lifecycle.decisionCenter.primaryAction;
+
   if (activeTab === "billing") {
     const billingReady =
       lifecycle.processCue.stageSignals.billing === "completed" ||
@@ -656,11 +663,13 @@ export function buildWorkspaceGuidance(
       lifecycle.businessStageId === "billing";
     if (!billingReady && lifecycle.businessStageId !== "billing") {
       return guidanceBase(lifecycle, activeTab, "Finance", {
-        whatHappened: "Complete Client IO to unlock Billing.",
-        currentSituation: "Create Invoice stays unavailable until Billing starts.",
-        nextAction: lifecycle.nextAction,
+        whatHappened: `Invoice creation is disabled until Billing starts.`,
+        currentSituation: primary
+          ? `${primaryRef} is blocking Finance. ${primary.reason}`
+          : "Complete the current stage before creating invoices.",
+        nextAction: primaryAction,
         owner: lifecycle.owner,
-        unlockHint: "Open the next action to progress toward Billing.",
+        unlockHint: `Sending / Create Invoice stays disabled until ${primaryRef} is cleared.`,
         outOfBand: true,
       });
     }
@@ -673,11 +682,15 @@ export function buildWorkspaceGuidance(
       (pubSignal === "upcoming" || pubSignal === "waiting_internal")
     ) {
       return guidanceBase(lifecycle, activeTab, "Performance", {
-        whatHappened: "Publish deliverables to unlock Performance metrics.",
-        currentSituation: "Metrics appear after publications go live.",
-        nextAction: lifecycle.nextAction,
+        whatHappened: "Performance metrics unlock after publications go live.",
+        currentSituation: primary
+          ? `${primaryRef} · ${primary.waitingLabel}.`
+          : "Advance delivery so creators can publish.",
+        nextAction: primaryAction,
         owner: lifecycle.owner,
-        unlockHint: "Advance delivery so creators can publish.",
+        unlockHint: primary
+          ? `Open ${primary.objectRef} to continue toward Performance.`
+          : "Open Deliverables to continue toward Performance.",
         outOfBand: true,
       });
     }
@@ -688,12 +701,18 @@ export function buildWorkspaceGuidance(
       lifecycle.processCue.stageSignals["client-io"] !== "completed" &&
       lifecycle.businessStageId === "client-io"
     ) {
+      const cioBlocker =
+        lifecycle.decisionCenter.blockers.find((b) => b.objectKind === "client_io") ??
+        primary;
+      const cioLabel = cioBlocker
+        ? `${cioBlocker.objectLabel} ${cioBlocker.objectRef}`
+        : "Client IO";
       return guidanceBase(lifecycle, activeTab, "Vendor IO", {
-        whatHappened: "Complete Client IO to unlock Vendor IO send.",
-        currentSituation: "Drafts may exist, but send stays blocked until Client approval.",
-        nextAction: "Open Client IO",
+        whatHappened: "Vendor IO drafts are ready.",
+        currentSituation: `Sending is disabled until ${cioLabel} is approved.`,
+        nextAction: cioBlocker?.primaryAction ?? "Open Client IO",
         owner: "Commercial",
-        unlockHint: "Open Client IO and secure approval.",
+        unlockHint: `Open ${cioLabel}`,
         outOfBand: true,
       });
     }
@@ -712,16 +731,19 @@ export function buildWorkspaceGuidance(
         lifecycle.businessStageId === "vendor-io" ||
         vioSignal === "waiting_vendor" ||
         vioSignal === "current";
+      const lockRef = primary
+        ? `${primary.objectLabel} ${primary.objectRef}`
+        : waitingVio
+          ? "Vendor IO"
+          : "Client IO";
       return guidanceBase(lifecycle, activeTab, "Deliverables", {
         whatHappened: waitingVio
-          ? "Complete Vendor IO to unlock Deliverables."
-          : "Complete commercial approvals to unlock Deliverables.",
-        currentSituation: waitingVio
-          ? "Creator uploads unlock after Vendor IO approval."
-          : "Finish Client IO, then Vendor IO, before delivery starts.",
-        nextAction: lifecycle.nextAction,
+          ? "Deliverable uploads are prepared."
+          : "Deliverables stay locked until commercial approvals finish.",
+        currentSituation: `Work is disabled until ${lockRef} clears.`,
+        nextAction: primaryAction,
         owner: lifecycle.owner,
-        unlockHint: "Open the next action to clear the approval path.",
+        unlockHint: `Open ${lockRef}`,
         outOfBand: true,
       });
     }
@@ -733,7 +755,7 @@ export function buildWorkspaceGuidance(
       return guidanceBase(lifecycle, activeTab, "Assignments", {
         whatHappened: "Assignments complete.",
         currentSituation: `Business stage has moved to ${lifecycle.businessStageLabel}.`,
-        nextAction: lifecycle.nextAction,
+        nextAction: primaryAction,
         owner: lifecycle.owner,
         unlockHint: null,
         outOfBand: true,
@@ -741,17 +763,27 @@ export function buildWorkspaceGuidance(
     }
   }
 
+  // In-band / non-locked views: no guidance banner (Decision Center owns the inbox).
+  if (!outOfBand) {
+    return guidanceBase(lifecycle, activeTab, policy.label, {
+      whatHappened: "",
+      currentSituation: "",
+      nextAction: primaryAction,
+      owner: lifecycle.owner,
+      unlockHint: null,
+      outOfBand: false,
+    });
+  }
+
   return guidanceBase(lifecycle, activeTab, policy.label, {
-    whatHappened: outOfBand
-      ? `Viewing ${policy.label} while business stage is ${lifecycle.businessStageLabel}.`
-      : `Working inside ${lifecycle.businessStageLabel}.`,
-    currentSituation: lifecycle.reason,
-    nextAction: lifecycle.nextAction,
+    whatHappened: `Viewing ${policy.label} while work is in ${lifecycle.businessStageLabel}.`,
+    currentSituation: primary
+      ? `${primaryRef} · Waiting: ${primary.waitingLabel}.`
+      : `Return to ${lifecycle.businessStageLabel} to advance.`,
+    nextAction: primaryAction,
     owner: lifecycle.owner,
-    unlockHint: outOfBand
-      ? `Return to ${lifecycle.businessStageLabel} to advance the campaign.`
-      : null,
-    outOfBand,
+    unlockHint: primary ? `Open ${primary.objectRef}` : `Open ${lifecycle.businessStageLabel}`,
+    outOfBand: true,
   });
 }
 
@@ -886,6 +918,7 @@ function deriveLifecycleFromSignals(
     workspaceBlockers: workspace?.blockers ?? [],
     signals,
     daysWaiting,
+    objects: workspace ? decisionObjectsFromWorkspace(workspace) : null,
   });
 
   return {

@@ -12,13 +12,12 @@ type Props = {
   workspaceLabel: string;
   updatedAt?: string | null;
   endDate?: string | null;
-  onContinue?: () => void;
   className?: string;
 };
 
 /**
- * Persistent campaign object strip — stays with process navigation when pinned.
- * Keeps Business Stage / State / Waiting / Next Action continuously visible.
+ * Persistent campaign object strip — stage / state / risk only.
+ * Decision Center owns Next Action CTAs (no duplicate actions here).
  */
 export function CampaignStateStrip({
   lifecycle,
@@ -27,7 +26,6 @@ export function CampaignStateStrip({
   workspaceLabel,
   updatedAt,
   endDate,
-  onContinue,
   className,
 }: Props) {
   const intel = portfolioIntelFromLifecycle(lifecycle, { updatedAt, endDate });
@@ -78,23 +76,6 @@ export function CampaignStateStrip({
           <strong className="thinkway-lc-state-strip-workspace">{workspaceLabel}</strong>
         </div>
       </div>
-
-      {onContinue ? (
-        <button
-          type="button"
-          className="thinkway-lc-state-strip-cta"
-          onClick={onContinue}
-          title={lifecycle.reason}
-        >
-          <span className="thinkway-lc-state-strip-cta-kicker">Next Action</span>
-          <span className="thinkway-lc-state-strip-cta-label">{lifecycle.nextAction}</span>
-        </button>
-      ) : (
-        <div className="thinkway-lc-state-strip-cta is-static">
-          <span className="thinkway-lc-state-strip-cta-kicker">Next Action</span>
-          <span className="thinkway-lc-state-strip-cta-label">{lifecycle.nextAction}</span>
-        </div>
-      )}
     </div>
   );
 }

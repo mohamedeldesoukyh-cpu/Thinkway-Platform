@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { SearchIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -62,6 +62,8 @@ type Props = {
   syncHealth: CampaignMetricsSyncHealth;
   loadError?: string | null;
   schemaWarnings?: string[];
+  /** Deep-link from Decision Center (?publication=). */
+  initialDetailPublicationId?: string | null;
 };
 
 export function CampaignPerformanceCenterTab({
@@ -72,12 +74,23 @@ export function CampaignPerformanceCenterTab({
   syncHealth,
   loadError,
   schemaWarnings = [],
+  initialDetailPublicationId = null,
 }: Props) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(ALL_STATUSES);
   const [platformFilter, setPlatformFilter] = useState(ALL_STATUSES);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [detailId, setDetailId] = useState<string | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(
+    () => initialDetailPublicationId
+  );
+
+  useEffect(() => {
+    if (!initialDetailPublicationId) return;
+    if (publications.some((row) => row.id === initialDetailPublicationId)) {
+      setDetailId(initialDetailPublicationId);
+    }
+  }, [initialDetailPublicationId, publications]);
+
   const [sheetOpen, setSheetOpen] = useState(false);
   const [chartsOpen, setChartsOpen] = useState(false);
   const [sortKey, setSortKey] = useState<
@@ -480,6 +493,10 @@ export function CampaignPerformanceCenterTab({
           </div>
         }
         registerLabel="Publications"
+        collapseRegister
+        registerCount={publications.length}
+        registerStorageKey={`performance-${workspace.id}`}
+        forceRegisterOpen={Boolean(initialDetailPublicationId)}
       >
       <OperationalTableColumnsProvider
         tableId={PERFORMANCE_GRID_TABLE_ID}

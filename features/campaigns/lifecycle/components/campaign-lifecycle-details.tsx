@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 
+import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
 import type { CampaignLifecycleView } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
 import { CampaignBusinessTimeline } from "@/features/campaigns/lifecycle/components/campaign-business-timeline";
 import { CampaignHealthStrip } from "@/features/campaigns/lifecycle/components/campaign-health-strip";
+import { CampaignProcessRail } from "@/features/campaigns/lifecycle/components/campaign-process-rail";
 import { CampaignReadinessStrip } from "@/features/campaigns/lifecycle/components/campaign-readiness-strip";
 import { CampaignRequirementsPanel } from "@/features/campaigns/lifecycle/components/campaign-requirements-panel";
 import { cn } from "@/lib/utils";
@@ -14,6 +16,7 @@ const DETAILS_OPEN_KEY = "thinkway:campaign-lifecycle-details-open";
 type Props = {
   lifecycle: CampaignLifecycleView;
   defaultOpen?: boolean;
+  onSelectStage?: (tab: CampaignWorkspaceTabId) => void;
   className?: string;
 };
 
@@ -31,15 +34,17 @@ function readSessionOpen(fallback: boolean): boolean {
 
 /**
  * Progressive disclosure for secondary lifecycle surfaces.
- * Open/closed preference persists for the browser session across tab changes.
+ * Journey / unlocks / health / requirements / timeline — collapsed by default.
  */
 export function CampaignLifecycleDetails({
   lifecycle,
   defaultOpen = false,
+  onSelectStage,
   className,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const [hydrated, setHydrated] = useState(false);
+  const dc = lifecycle.decisionCenter;
 
   useEffect(() => {
     setOpen(readSessionOpen(defaultOpen));
@@ -66,11 +71,27 @@ export function CampaignLifecycleDetails({
         <span aria-hidden>{open ? "▼" : "▶"}</span>
         Lifecycle Details
         <span className="thinkway-lc-details-hint">
-          Requirements · Expected Outcome · Timeline · Health
+          Journey · Unlock · Requirements · Health · Timeline
         </span>
       </button>
       {open ? (
         <div className="thinkway-lc-details-body">
+          <CampaignProcessRail
+            lifecycle={lifecycle}
+            onSelectStage={onSelectStage}
+            density="full"
+          />
+          <div className="thinkway-lc-details-unlock">
+            <div className="thinkway-bp-label">{dc.unlockHeadline}</div>
+            <ul className="thinkway-lc-decision-unlocks">
+              {dc.unlocks.map((item) => (
+                <li key={item.id}>
+                  <span aria-hidden>✓</span>
+                  {item.label}
+                </li>
+              ))}
+            </ul>
+          </div>
           <CampaignRequirementsPanel lifecycle={lifecycle} compact />
           <CampaignReadinessStrip lifecycle={lifecycle} />
           <CampaignHealthStrip lifecycle={lifecycle} />

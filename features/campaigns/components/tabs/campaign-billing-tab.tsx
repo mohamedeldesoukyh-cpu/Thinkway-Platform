@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { DetailClickableLabel } from "@/features/campaigns/components/detail-sheets/detail-clickable-label";
@@ -164,6 +164,10 @@ type CampaignBillingTabProps = {
   /** When false, Create Invoice is hidden and a lifecycle unlock message is shown. */
   invoiceCreationUnlocked?: boolean;
   onNavigateToLifecycleAction?: () => void;
+  /** Deep-link from Decision Center (?invoice=). */
+  initialDetailInvoiceId?: string | null;
+  /** Deep-link from Decision Center (?payment=). */
+  initialDetailPaymentId?: string | null;
 };
 
 export function CampaignBillingTab({
@@ -174,6 +178,8 @@ export function CampaignBillingTab({
   campaignInvoiceRegister,
   invoiceCreationUnlocked = true,
   onNavigateToLifecycleAction,
+  initialDetailInvoiceId = null,
+  initialDetailPaymentId = null,
 }: CampaignBillingTabProps) {
   const refreshAfterOperationalMutation = useRefreshCampaignAfterOperationalMutation();
   const { financials } = workspace;
@@ -196,8 +202,27 @@ export function CampaignBillingTab({
     useState<OperationalSelectionState>(createEmptySelection);
   const [drilldownPending, startDrilldownTransition] = useTransition();
   const [regenerateInvoiceOpen, setRegenerateInvoiceOpen] = useState(false);
-  const [detailInvoiceId, setDetailInvoiceId] = useState<string | null>(null);
-  const [detailPaymentId, setDetailPaymentId] = useState<string | null>(null);
+  const [detailInvoiceId, setDetailInvoiceId] = useState<string | null>(
+    () => initialDetailInvoiceId
+  );
+  const [detailPaymentId, setDetailPaymentId] = useState<string | null>(
+    () => initialDetailPaymentId
+  );
+
+  useEffect(() => {
+    if (!initialDetailInvoiceId) return;
+    const inRegister = campaignInvoiceRegister.some(
+      (row) => row.id === initialDetailInvoiceId
+    );
+    if (inRegister) setDetailInvoiceId(initialDetailInvoiceId);
+  }, [initialDetailInvoiceId, campaignInvoiceRegister]);
+
+  useEffect(() => {
+    if (!initialDetailPaymentId) return;
+    if (workspace.payments.some((row) => row.id === initialDetailPaymentId)) {
+      setDetailPaymentId(initialDetailPaymentId);
+    }
+  }, [initialDetailPaymentId, workspace.payments]);
 
   const campaignInvoiceColumnMetas = useMemo(
     () => getFinanceInvoiceRegisterColumnMetas(true, "campaign"),
@@ -392,6 +417,15 @@ export function CampaignBillingTab({
       <CampaignWorkspaceFrame
         title="Finance"
         subtitle="Commercial snapshot and billing registers"
+        collapseRegister
+        registerCount={
+          campaignInvoiceRegister.length + (workspace.payments?.length ?? 0)
+        }
+        registerStorageKey={`finance-${workspace.id}`}
+        forceRegisterOpen={Boolean(
+          initialDetailInvoiceId || initialDetailPaymentId
+        )}
+        registerLabel="Registers"
         status={
           <AuroraStatusPill
             tone={financials.billing_outstanding > 0 ? "amber" : "green"}
@@ -700,7 +734,7 @@ export function CampaignBillingTab({
           {workspace.payments.length === 0 ? (
             <AuroraEmptyState
               title="Payments are not available yet."
-              description="Finance unlocks after Client IO approval and invoicing. Payments appear once invoices are collected. Owner: Finance."
+              description="Collections unlock after invoices exist. Decision Center shows any finance blocker. Owner: Finance — open the invoice register action when Billing starts."
             />
           ) : (
             <OperationalConfigurableTable
