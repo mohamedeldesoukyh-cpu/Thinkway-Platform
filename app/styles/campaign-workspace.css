@@ -1376,65 +1376,9 @@
     color: var(--camp-red);
   }
 
-  .thinkway-campaign-tabs-bar {
-    display: flex;
-    gap: 3px;
-    overflow-x: auto;
-    border-bottom: none;
-    background: transparent;
-    padding: 6px 12px 0;
-    scrollbar-width: none;
-  }
-
-  .thinkway-campaign-tabs-bar::-webkit-scrollbar {
-    display: none;
-  }
-
-  .thinkway-campaign-tab {
-    display: inline-flex;
-    align-items: center;
-    gap: 0;
-    margin-right: 0;
-    margin-bottom: -1px;
-    height: 46px;
-    padding: 0 14px;
-    border-bottom: 2px solid transparent;
-    font-size: 13.5px;
-    font-weight: 600;
-    color: var(--camp-text-3);
-    white-space: nowrap;
-    transition: color 0.15s;
-  }
-
-  .thinkway-campaign-tab:hover {
-    color: var(--camp-text);
-  }
-
-  .thinkway-campaign-tab[data-state="active"] {
-    border-bottom-color: var(--camp-blue);
-    color: var(--camp-blue);
-  }
-
-  .thinkway-campaign-tab-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 20px;
-    height: 19px;
-    margin-left: 8px;
-    padding: 0 6px;
-    border: none;
-    border-radius: 7px;
-    background: #f1f4f9;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--camp-text-4);
-  }
-
-  .thinkway-campaign-tab[data-state="active"] .thinkway-campaign-tab-badge {
-    border-color: transparent;
-    background: var(--camp-blue-light);
-    color: var(--camp-blue-text);
+  /* Campaign tab sizing lives in enterprise-tabs.css (canonical). */
+  .thinkway-aurora-panel-tabs {
+    border-bottom: 1px solid var(--camp-hair);
   }
 
   .thinkway-campaign-content {

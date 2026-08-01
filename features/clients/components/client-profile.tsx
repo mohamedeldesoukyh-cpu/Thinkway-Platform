@@ -12,6 +12,10 @@ import {
   OperationalWorkspaceTabPanel,
   type OperationalWorkspaceTabDef,
 } from "@/components/workspace/operational-workspace-ui";
+import {
+  EnterpriseTabButton,
+  EnterpriseTabsRow,
+} from "@/components/workspace/enterprise-tabs";
 import { useWorkspaceTabOrder } from "@/hooks/use-workspace-tab-order";
 import {
   CLIENT_PROFILE_TAB_ORDER,
@@ -27,7 +31,6 @@ import type {
 } from "@/features/client-access/types";
 import type { ClientIoRow, ClientIoSendRecipient } from "@/features/io/types";
 import type { ClientDetail } from "@/types/database";
-import { cn } from "@/lib/utils";
 import { CLIENT_STATUS_OPTIONS } from "@/features/clients/constants";
 import {
   deriveOnboardingStatusFromCompletion,
@@ -297,25 +300,21 @@ export function ClientProfile({
             <span className="platform-v6-entity-title">{clientRecord.name}</span>            <span className={entityBadge.className}>{entityBadge.label}</span>
             <span className="platform-v6-also-view">Also View</span>
           </div>
-          <div className="platform-v6-entity-tabs-row" role="tablist">
+          <EnterpriseTabsRow variant="plain" overflow="scroll" className="px-1">
             {tabOrder.map((tabId) => {
               const tab = tabsById[tabId];
-              const isActive = activeTab === tabId;
               return (
-                <button
+                <EnterpriseTabButton
                   key={tabId}
-                  type="button"
-                  role="tab"
-                  aria-selected={isActive}
+                  value={tab.value}
+                  label={tab.label}
+                  count={tab.count != null && tab.count > 0 ? tab.count : undefined}
+                  active={activeTab === tabId}
                   onClick={() => setActiveTab(tabId)}
-                  className={cn("platform-v6-etab", isActive && "active")}
-                >
-                  {tab.label}
-                  {tab.count != null && tab.count > 0 ? ` (${tab.count})` : ""}
-                </button>
+                />
               );
             })}
-          </div>
+          </EnterpriseTabsRow>
         </div>
 
         <PlatformV6EntityBreadcrumb

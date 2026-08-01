@@ -1,0 +1,245 @@
+/**
+ * Canonical Enterprise Tabs — platform-wide workspace tab rail.
+ * Do not override sizing per page; use variants + tokens only.
+ */
+@layer components {
+  .enterprise-tabs {
+    --etab-gap: 4px;
+    --etab-min-w: 4.75rem;
+    --etab-max-w: 13.5rem;
+    --etab-height: 44px;
+    --etab-pad-x: 12px;
+    --etab-label-size: 13px;
+    --etab-label-weight: 600;
+    --etab-fg: var(--muted-foreground);
+    --etab-fg-hover: var(--foreground);
+    --etab-fg-active: var(--foreground);
+    --etab-indicator: var(--brand-product, #1d9e75);
+    --etab-badge-bg: var(--muted);
+    --etab-badge-fg: var(--muted-foreground);
+    --etab-badge-active-bg: color-mix(in srgb, var(--etab-indicator) 14%, transparent);
+    --etab-badge-active-fg: var(--etab-fg-active);
+    --etab-bg: transparent;
+    --etab-bg-hover: transparent;
+    --etab-bg-active: transparent;
+    --etab-border: transparent;
+    --etab-radius: 0;
+  }
+
+  .enterprise-tabs[data-variant="underline"] {
+    --etab-height: 46px;
+    --etab-fg: var(--camp-text-3, var(--muted-foreground));
+    --etab-fg-hover: var(--camp-text, var(--foreground));
+    --etab-fg-active: var(--camp-blue, var(--brand-product, #0057ff));
+    --etab-indicator: var(--camp-blue, var(--brand-product, #0057ff));
+    --etab-badge-bg: #f1f4f9;
+    --etab-badge-fg: var(--camp-text-4, var(--muted-foreground));
+    --etab-badge-active-bg: var(--camp-blue-light, color-mix(in srgb, var(--etab-indicator) 14%, transparent));
+    --etab-badge-active-fg: var(--camp-blue-text, var(--etab-fg-active));
+  }
+
+  .enterprise-tabs[data-variant="pill"] {
+    --etab-height: 40px;
+    --etab-pad-x: 12px;
+    --etab-radius: 0.5rem 0.5rem 0 0;
+    --etab-fg: var(--muted-foreground);
+    --etab-fg-hover: var(--foreground);
+    --etab-fg-active: var(--foreground);
+    --etab-indicator: var(--brand-product, #1d9e75);
+    --etab-bg: color-mix(in srgb, var(--muted) 50%, transparent);
+    --etab-bg-hover: color-mix(in srgb, var(--muted) 80%, transparent);
+    --etab-bg-active: var(--card);
+    --etab-border: color-mix(in srgb, var(--border) 80%, transparent);
+    --etab-badge-bg: color-mix(in srgb, var(--background) 80%, transparent);
+    --etab-badge-active-bg: var(--muted);
+  }
+
+  .enterprise-tabs[data-variant="plain"] {
+    --etab-height: 40px;
+    --etab-fg: var(--muted-foreground);
+    --etab-fg-active: var(--foreground);
+    --etab-indicator: var(--brand-product, #1d9e75);
+  }
+
+  .enterprise-tabs-list {
+    display: flex;
+    align-items: stretch;
+    gap: var(--etab-gap);
+    min-width: 0;
+    width: 100%;
+    scroll-smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .enterprise-tabs-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .enterprise-tabs-list[data-overflow="scroll"] {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .enterprise-tabs-list[data-overflow="wrap"] {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  .enterprise-tab {
+    position: relative;
+    display: inline-flex;
+    flex: 0 1 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-sizing: border-box;
+    min-width: var(--etab-min-w);
+    max-width: var(--etab-max-w);
+    width: max-content;
+    height: var(--etab-height);
+    padding: 0 var(--etab-pad-x);
+    border: 1px solid var(--etab-border);
+    border-radius: var(--etab-radius);
+    background: var(--etab-bg);
+    color: var(--etab-fg);
+    font-size: var(--etab-label-size);
+    font-weight: var(--etab-label-weight);
+    line-height: 1.2;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    transition:
+      color 0.15s ease,
+      background 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .enterprise-tab:hover {
+    color: var(--etab-fg-hover);
+    background: var(--etab-bg-hover);
+  }
+
+  .enterprise-tab:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--etab-indicator) 55%, transparent);
+    outline-offset: 2px;
+  }
+
+  .enterprise-tab[data-state="active"],
+  .enterprise-tab[aria-selected="true"],
+  .enterprise-tab.is-active {
+    color: var(--etab-fg-active);
+    background: var(--etab-bg-active);
+    z-index: 1;
+  }
+
+  .enterprise-tabs[data-variant="pill"] .enterprise-tab[data-state="active"],
+  .enterprise-tabs[data-variant="pill"] .enterprise-tab[aria-selected="true"],
+  .enterprise-tabs[data-variant="pill"] .enterprise-tab.is-active {
+    margin-bottom: -1px;
+    border-bottom-color: var(--etab-bg-active);
+  }
+
+  .enterprise-tab[disabled],
+  .enterprise-tab[aria-disabled="true"] {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .enterprise-tab-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .enterprise-tab-label {
+    display: block;
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: start;
+  }
+
+  .enterprise-tab-badge {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+    height: 1.1875rem;
+    padding: 0 6px;
+    border-radius: 7px;
+    background: var(--etab-badge-bg);
+    color: var(--etab-badge-fg);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .enterprise-tab[data-state="active"] .enterprise-tab-badge,
+  .enterprise-tab[aria-selected="true"] .enterprise-tab-badge,
+  .enterprise-tab.is-active .enterprise-tab-badge {
+    background: var(--etab-badge-active-bg);
+    color: var(--etab-badge-active-fg);
+  }
+
+  .enterprise-tab-indicator {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 0;
+    height: 2px;
+    border-radius: 999px;
+    background: transparent;
+    pointer-events: none;
+  }
+
+  .enterprise-tab[data-state="active"] .enterprise-tab-indicator,
+  .enterprise-tab[aria-selected="true"] .enterprise-tab-indicator,
+  .enterprise-tab.is-active .enterprise-tab-indicator {
+    background: var(--etab-indicator);
+  }
+
+  .enterprise-tabs[data-variant="pill"] .enterprise-tab-indicator {
+    top: 0;
+    bottom: auto;
+    left: 8px;
+    right: 8px;
+    height: 2px;
+  }
+
+  .enterprise-tab-grip {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    margin-inline-end: -2px;
+    padding: 2px;
+    border-radius: 4px;
+    color: inherit;
+    opacity: 0.55;
+    cursor: grab;
+  }
+
+  .enterprise-tab:hover .enterprise-tab-grip {
+    opacity: 1;
+  }
+
+  .enterprise-tab-grip:active {
+    cursor: grabbing;
+  }
+
+  .enterprise-tab.is-dragging {
+    opacity: 0.5;
+  }
+
+  .enterprise-tab.is-drag-over {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--etab-indicator) 40%, transparent);
+  }
+}

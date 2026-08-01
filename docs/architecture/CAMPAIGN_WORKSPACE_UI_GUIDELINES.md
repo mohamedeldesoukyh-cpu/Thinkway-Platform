@@ -21,6 +21,7 @@ These guidelines exist so new capabilities (Planning Board, Copilot, Reporting, 
 3. Prefer **functional** change: new data, actions, sheets, boards, and workflows that plug into existing Aurora patterns.
 4. Keep tables **secondary** — never start a workspace with a large table above KPIs.
 5. Presentation changes that accompany features must reuse existing CSS tokens in `app/styles/campaign-workspace.css`.
+6. **Enterprise Tabs is the only approved workspace tab component** — see below.
 
 ---
 
@@ -108,9 +109,32 @@ When adding a tab: preserve existing tab IDs where possible; do not reshuffle fr
 
 ---
 
+## Platform navigation standard — Enterprise Tabs
+
+**Enterprise Tabs is the platform navigation standard** for all workspace tab rails.
+
+| Item | Location |
+|------|----------|
+| Component | `components/workspace/enterprise-tabs.tsx` |
+| Styles | `app/styles/enterprise-tabs.css` |
+| Variants | `underline` (Campaign Aurora) · `pill` (Groups/Finance/Billing ops) · `plain` (Client/Vendor entity profiles) |
+
+**Rules**
+
+1. Future modules **must reuse** Enterprise Tabs (`EnterpriseSortableTabsBar`, `EnterpriseTabsList` + `EnterpriseTabTrigger`, or `EnterpriseTabsRow` + `EnterpriseTabButton`).
+2. **No page-specific tab implementations** — do not invent local tab buttons, badge-in-label hacks, or per-route tab CSS.
+3. **No page-specific overrides** of Enterprise Tab sizing, overflow, truncation, badge layout, or active indicator.
+4. Content sizing, min/max width, ellipsis labels, badge separation, equal gaps, and scroll-by-default (wrap only when `overflow="wrap"`) are owned by the shared component.
+5. Campaign / operational wrappers may only pass `variant`, `overflow`, reorder handlers, and skin-adjacent padding classes — not alternate layout systems.
+
+Secondary in-sheet tabs (detail drawers, dialogs) may continue to use shadcn `Tabs` for local panels; **workspace-level navigation rails must use Enterprise Tabs**.
+
+---
+
 ## Tokens & styling
 
 - Source of truth: `app/styles/campaign-workspace.css` (`--camp-*` tokens).
+- Workspace tabs: Enterprise Tabs only (see above).
 - Brand primary remains Thinkway green `#1D9E75` at product level; campaign Aurora blues/ambers are status accents within workspace chrome.
 - Respect `prefers-reduced-motion`.
 - Keep focus-visible rings on tools, discloses, and register interactive controls.

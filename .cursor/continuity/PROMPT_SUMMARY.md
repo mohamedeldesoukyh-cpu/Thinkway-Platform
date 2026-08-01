@@ -99,6 +99,11 @@
 - URLs/APIs/DB/business logic unchanged by freeze; no Campaign Lines tab this release
 - **No Production deploy** without explicit approval
 
+## Post-freeze (functional / platform)
+
+- **Enterprise Tabs = platform navigation standard:** `components/workspace/enterprise-tabs.tsx` + `app/styles/enterprise-tabs.css` — only approved workspace tab rail; documented in `CAMPAIGN_WORKSPACE_UI_GUIDELINES.md`
+- **Deliverables editor binding:** `assertDocumentationEditorBinding` on every write; selection lock during upload; persistent context header (avatar, creator, platform, deliverable, assignment ID, status); unsaved Save/Discard/Cancel
+
 ## IO approval email experience (Preview testing on develop)
 
 - Simplified Client/Vendor IO send emails: Campaign Name, Brand Name, Campaign Duration, Agreed Amount + blue **Approve** CTA + legal notice; PDF remains SSOT

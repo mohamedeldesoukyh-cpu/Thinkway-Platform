@@ -42,10 +42,12 @@ export function CampaignWorkspaceLoadingSkeleton() {
           </>
         }
         tabs={
-          <div className="thinkway-campaign-tabs-bar">
-            {Array.from({ length: 7 }).map((_, index) => (
-              <Skeleton key={index} className="my-2.5 mr-5 h-4 w-24" />
-            ))}
+          <div className="enterprise-tabs px-3 pt-1.5" data-variant="underline">
+            <div className="enterprise-tabs-list" data-overflow="scroll">
+              {Array.from({ length: 7 }).map((_, index) => (
+                <Skeleton key={index} className="my-2.5 h-4 w-24 shrink-0" />
+              ))}
+            </div>
           </div>
         }
       >

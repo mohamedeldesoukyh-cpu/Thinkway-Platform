@@ -47,6 +47,11 @@ Environment switch navigates between **hosts** — never switches DB inside one 
 - After 2026-08-01 freeze: **no visual redesigns** unless critical usability or approved release reopen.
 - New capabilities integrate into existing frame/ops patterns; do not invent a parallel style.
 
+## Platform navigation standard
+
+- **Enterprise Tabs** (`components/workspace/enterprise-tabs.tsx` + `app/styles/enterprise-tabs.css`) — only approved workspace tab rail.
+- Future modules must reuse it; no page-specific tab implementations or sizing overrides.
+
 ## Ops & workers
 
 - Redis + BullMQ for discovery/performance queues.

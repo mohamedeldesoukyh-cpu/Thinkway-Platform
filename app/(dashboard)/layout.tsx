@@ -12,6 +12,7 @@ import { NavigationLoadingProvider } from "@/components/layout/navigation-loadin
  * - campaign workspace: operational tables, campaign/quotation/IO chrome
  */
 import "@/app/thinkway-platform-v6.css";
+import "@/app/styles/enterprise-tabs.css";
 import "@/app/styles/campaign-workspace.css";
 
 export default function DashboardLayout({

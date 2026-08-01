@@ -26,6 +26,10 @@ import {
   OperationalWorkspaceTabContent,
   OperationalWorkspaceTabPanel,
 } from "@/components/workspace/operational-workspace-ui";
+import {
+  EnterpriseTabButton,
+  EnterpriseTabsRow,
+} from "@/components/workspace/enterprise-tabs";
 import { VENDOR_STATUS_OPTIONS } from "@/features/vendors/constants";
 import { VendorDependencyDialog } from "@/features/vendors/components/vendor-dependency-dialog";
 import { VendorKpiStrip } from "@/features/vendors/components/vendor-kpi-strip";
@@ -43,8 +47,6 @@ import { DocumentNumber } from "@/components/ui/document-number";
 import { formatCreatorCountryLabels } from "@/lib/creators/creator-display-utils";
 import type { VendorWorkspace } from "@/features/vendors/types";
 import type { InfluencerStatus } from "@/types/database";
-import { cn } from "@/lib/utils";
-
 type VendorWorkspaceViewProps = {
   workspace: VendorWorkspace;
   defaultTab?: string;
@@ -271,26 +273,24 @@ export function VendorWorkspaceView({
               />
             </div>
 
-            <div className="flex items-center px-5">
-              <span className="platform-v6-also-view">Also view</span>
-              <div className="platform-v6-entity-tabs-row flex-1" role="tablist">
-                {tabs.map((tab) => {
-                  const isActive = activeTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={isActive}
-                      onClick={() => handleTabChange(tab.id)}
-                      className={cn("platform-v6-etab", isActive && "active")}
-                    >
-                      {tab.label}
-                      {tab.count != null ? ` (${tab.count})` : ""}
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="flex min-w-0 items-center gap-2 px-5">
+              <span className="platform-v6-also-view shrink-0">Also view</span>
+              <EnterpriseTabsRow
+                variant="plain"
+                overflow="scroll"
+                className="min-w-0 flex-1"
+              >
+                {tabs.map((tab) => (
+                  <EnterpriseTabButton
+                    key={tab.id}
+                    value={tab.id}
+                    label={tab.label}
+                    count={tab.count}
+                    active={activeTab === tab.id}
+                    onClick={() => handleTabChange(tab.id)}
+                  />
+                ))}
+              </EnterpriseTabsRow>
             </div>
           </div>
 
