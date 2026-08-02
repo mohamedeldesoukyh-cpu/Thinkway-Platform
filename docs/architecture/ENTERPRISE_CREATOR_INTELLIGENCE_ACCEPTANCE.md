@@ -4,7 +4,7 @@
 **Release:** 2.3 Phase 1  
 **Review date:** 2026-08-02  
 **Verdict:** **ACCEPTED · FROZEN · MAINTENANCE MODE**  
-**Freeze tip:** *(set on freeze commit)*  
+**Freeze tip:** `d01f45f3` on `origin/develop`  
 **Package:** `lib/enterprise-creator-intelligence/`  
 **Spec:** [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md)  
 **Registry:** [`PLATFORM_CAPABILITY_REGISTRY.md`](./PLATFORM_CAPABILITY_REGISTRY.md)
