@@ -92,6 +92,35 @@ export async function persistSnapshot(
           ? input.auditMetadata.enrichment_run_id
           : null;
 
+      // Enterprise Creator Intelligence — append-only historical capture + monthly rollup.
+      if (input.influencerId) {
+        try {
+          const {
+            appendCreatorMetricsCapture,
+            captureInputFromNormalizedProfile,
+          } = await import("@/lib/enterprise-creator-intelligence/historical");
+          const capture = await appendCreatorMetricsCapture(
+            supabase,
+            captureInputFromNormalizedProfile({
+              influencerId: input.influencerId,
+              platform: input.platform,
+              normalized: input.normalizedSnapshot,
+              iplSnapshotId: row.id,
+              capturedAt: fetchedAt,
+              source: "ipl_snapshot",
+            })
+          );
+          if (!capture.ok) {
+            console.warn("[ipl] creator intelligence capture failed", capture.error);
+          }
+        } catch (captureError) {
+          console.warn(
+            "[ipl] creator intelligence capture threw",
+            captureError instanceof Error ? captureError.message : captureError
+          );
+        }
+      }
+
       if (input.awaitDnaBridge !== false) {
         const bridgeResult = await bridgeSnapshotToCreatorDna(supabase, row.id, {
           enrichmentRunId,

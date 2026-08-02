@@ -40,9 +40,10 @@ Environment switch navigates between **hosts** — never switches DB inside one 
 - `docs/architecture/PLATFORM_ARCHITECTURE_COMPLIANCE.md` — mandatory compliance (lifecycle · journeys · BPN reuse · Campaign Workspace v1.3 invariants · operational effort gate · no new nav)
 - `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.3.md` — canonical Campaign Workspace OS baseline (executive Decision Center · three severities · Vendor IO operational compliance)
 - `docs/architecture/PLATFORM_BULK_OPERATIONS_FRAMEWORK.md` — official bulk framework (`components/workspace/bulk-operations/`); Vendor IO first production consumer (R2.2d / 2.2d.1); gates: bulk · background · AI-ready · effort · idempotent
-- `docs/architecture/PLATFORM_CAPABILITY_REGISTRY.md` — permanent registry; Document Lifecycle + Change Impact in **Maintenance Mode** (initiative CLOSED; freeze tip `449fd5c0`)
+- `docs/architecture/PLATFORM_CAPABILITY_REGISTRY.md` — permanent registry; Document Lifecycle + Change Impact in **Maintenance Mode** (initiative CLOSED; freeze tip `449fd5c0`); Enterprise Creator Intelligence **Active** (R2.3 Phase 1)
 - `docs/architecture/ENTERPRISE_DOCUMENT_LIFECYCLE.md` — Document Lifecycle **Maintenance Mode** (`lib/document-lifecycle/`); state transitions only
 - `docs/architecture/ENTERPRISE_CHANGE_IMPACT_ENGINE.md` — Change Impact **Maintenance Mode** (`lib/change-impact/`); entry `applyBusinessChangeImpact` only; Quotation/PO/Invoice/Contract/Report must extend — never parallel
+- `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE.md` — **Active** R2.3 Phase 1 (`lib/enterprise-creator-intelligence/`); Sprint 1 Historical monthly time-series; Sprint 2+ not started
 - `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md` — **active** R2.3 Campaign Planning Workspace capability spec (review gate)
 - `docs/capabilities/PLANNING_BOARD_CAPABILITY_REVIEW.md` — **active** R2.3 functional capability review pack
 - `docs/architecture/platform-ux/` — Platform UX package (docs 01–12 frozen)  

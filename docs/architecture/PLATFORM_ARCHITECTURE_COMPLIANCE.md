@@ -6,7 +6,7 @@
 **Campaign Workspace baseline (canonical):** [`CAMPAIGN_WORKSPACE_BASELINE_V1.3.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.3.md)  
 **Historical:** [`CAMPAIGN_WORKSPACE_BASELINE_V1.2.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.2.md) · [`CAMPAIGN_WORKSPACE_BASELINE_V1.1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.1.md) · [`CAMPAIGN_WORKSPACE_BASELINE_V1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.md)  
 **Effective:** 2026-08-01 (Architecture v1.0 freeze)  
-**Updated:** 2026-08-02 — Enterprise Document Lifecycle + Change Impact **CLOSED** (Maintenance Mode); Platform Capability Registry mandatory
+**Updated:** 2026-08-02 — Release 2.3 Phase 1 · Enterprise Creator Intelligence Sprint 1 Active; Document Lifecycle + Change Impact remain Maintenance Mode
 
 ---
 
@@ -76,8 +76,11 @@ First production implementation: Release 2.2d Vendor IO; reliability + idempoten
 **Enterprise Document Lifecycle Engine** (Maintenance Mode · frozen · protected · mandatory): [`ENTERPRISE_DOCUMENT_LIFECYCLE.md`](./ENTERPRISE_DOCUMENT_LIFECYCLE.md) · `lib/document-lifecycle/`  
 Release 2.2d.2 — document state transitions only. Vendor IO / Client IO first. Business State ≠ Document State. Reason codes mandatory. Initiative **CLOSED**.
 
-**Enterprise Change Impact Engine** (Maintenance Mode · frozen · protected · mandatory): [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md) · [`ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md`](./ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md) · `lib/change-impact/`  
+**Enterprise Change Impact Engine** (Maintenance Mode · frozen · protected · mandatory): [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md) · [`ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md`](./ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md) · `lib/change-impact/`
 Release 2.2d.2b — intelligence layer above Document Lifecycle. Entry: `applyBusinessChangeImpact` only. Freeze tip `449fd5c0`. Quotation/PO/Invoice/Contract/Report **must extend** these engines — **never** parallel implementations. Initiative **CLOSED**. No Production deploy without approval.
+
+**Enterprise Creator Intelligence** (Active · Release 2.3 Phase 1 · Sprint 1 Historical): [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · `lib/enterprise-creator-intelligence/`
+Extends IPL / influencer metrics history. Monthly time-series SSOT. Planning / Client / Reporting / Mobile / AI-ready hooks. Do not start Sprint 2 until Sprint 1 validated. No Production deploy without approval.
 
 ---
 

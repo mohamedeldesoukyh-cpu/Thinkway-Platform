@@ -3,6 +3,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CreatorHistoricalMetrics } from "@/lib/creators/types";
 import { isMissingTableError } from "@/lib/platform/schema-validation";
 
+/**
+ * Legacy forecast-shaped historical series (followers / ER / posting frequency).
+ * For Enterprise Creator Intelligence monthly time-series (Sprint 1+), use:
+ * `loadCreatorMonthlyMetrics` from `@/lib/enterprise-creator-intelligence`.
+ */
+
 export async function loadDiscoveryHistoricalMetrics(
   supabase: SupabaseClient,
   discoveredProfileId: string

@@ -1,40 +1,34 @@
 # Prompt Summary — Current Sprint
 
-**Branch focus:** `develop` (synced with `origin/develop`).  
+**Branch focus:** `develop`.
 
-**Closed permanently:** **Enterprise Document & Change Impact** initiative (R2.2d.2 / 2.2d.2b) — both engines in **Maintenance Mode**. Freeze tip `449fd5c0`.
+**Active:** **Release 2.3 Phase 1 — Enterprise Creator Intelligence** (**ACTIVE**, not frozen)
 
-| Engine | Status | Spec |
-|--------|--------|------|
-| Enterprise Change Impact | Maintenance Mode · frozen · mandatory | `docs/architecture/ENTERPRISE_CHANGE_IMPACT_ENGINE.md` |
-| Enterprise Document Lifecycle | Maintenance Mode · frozen · mandatory | `docs/architecture/ENTERPRISE_DOCUMENT_LIFECYCLE.md` |
-| Platform Capability Registry | Canonical | `docs/architecture/PLATFORM_CAPABILITY_REGISTRY.md` |
+| Sprint | Scope | Status |
+|--------|-------|--------|
+| 1 | Historical Creator Intelligence | **Protected baseline** — approved, committed to `develop` |
+| 2 | Commercial Intelligence | Next — after Sprint 1 land |
+| 3–6 | Category / Brand / Campaign / Investment Score | Not started — gated |
 
-**Extension rule:** Quotation · PO · Invoice · Contract · Reports must **extend** these engines — never parallel implementations.  
-**Do not:** Production deploy · start Quotation/PO/Invoice/Contract/Reports · start Planning Workspace implementation without approved reviews.
+- Spec: `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE.md`
+- Code: `lib/enterprise-creator-intelligence/`
+- Registry: ACTIVE; only Sprint 1 is protected baseline
+- **No Production deploy**
+- Do **not** start Category Intelligence until Sprint 2 reviewed, approved, committed, pushed
 
-**Active initiative (reviews only):** Release 2.3 — Campaign Planning Workspace — Capability / UX / Spec / Compliance reviews · **no Campaign Workspace UX** · **no Planning implementation until approved**.  
-**Must inherit:** Campaign Workspace Baseline **v1.3** · Platform Bulk Operations Framework · Change Impact · Document Lifecycle · BPN · Architecture v1.0.
+**Closed permanently:** Enterprise Document & Change Impact — Maintenance Mode (`449fd5c0`).
 
-**Capability completeness gates:** Bulk · Background · AI-ready · Operational effort · Idempotent execution (all five required).
+| Capability | Status |
+|------------|--------|
+| Enterprise Creator Intelligence | **ACTIVE** · Sprint 1 protected baseline |
+| Change Impact / Document Lifecycle | Maintenance Mode · frozen · mandatory |
+| Platform Capability Registry | Canonical |
 
-**Platform Bulk Framework:** `docs/architecture/PLATFORM_BULK_OPERATIONS_FRAMEWORK.md` — Vendor IO (R2.2d / 2.2d.1).
-
-**Gate docs (Planning — retargeted as R2.3):**  
-- `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md`  
-- `docs/capabilities/PLANNING_BOARD_CAPABILITY_REVIEW.md`  
-
-## Media Planning v1 — RELEASED TO PRODUCTION
-
-- **Canonical SSOT:** `docs/architecture/MEDIA_PLANNING_V1_PRODUCTION_READINESS.md`
-- Feature freeze unless requirements approved
+**Must inherit:** Campaign Workspace Baseline v1.3 · Bulk Framework · Change Impact · Document Lifecycle · BPN · Architecture v1.0 · Financial Display Standard (Sprint 2+).
 
 ## Open / blocked
 
 1. GitHub branch protection (UI)
-2. Production `REDIS_URL` / dedicated Dev Redis / DNS as needed
-3. Do **not** merge to `main` or deploy Production without explicit approval
+2. Do **not** merge to `main` or deploy Production without explicit approval
 
 ## Campaign Workspace Baseline v1.3 — FROZEN (Maintenance Mode)
-
-- **Canonical:** `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.3.md`
