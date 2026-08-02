@@ -5,6 +5,26 @@ import type {
   ChangeImpactOwner,
   ChangeImpactSeverity,
 } from "@/lib/change-impact/types";
+import type {
+  BusinessProcessOwner,
+  BusinessProcessWaitingParty,
+} from "@/lib/business-process/types";
+
+function mapImpactOwnerToDecisionOwner(
+  owner: ChangeImpactOwner
+): BusinessProcessOwner {
+  if (owner === "Traffic") return "Operations";
+  return owner;
+}
+
+function mapImpactOwnerToWaiting(
+  owner: ChangeImpactOwner
+): BusinessProcessWaitingParty {
+  if (owner === "Executive" || owner === "Traffic") return "Operations";
+  if (owner === "Commercial") return "Commercial";
+  if (owner === "Finance") return "Finance";
+  return "Operations";
+}
 
 /**
  * Map Change Impact severity → Decision Center three-tier severity.
@@ -37,14 +57,7 @@ export function changeImpactSignalsToDecisionBlockers(
       signal.severity === "critical" ? "campaign_cancelled" : "creator_price_updated"
     );
 
-    const owner =
-      signal.responsibleOwner === "Executive"
-        ? "Account Manager"
-        : signal.responsibleOwner === "Commercial"
-          ? "Account Manager"
-          : signal.responsibleOwner === "Finance"
-            ? "Finance"
-            : "Operations";
+    const owner = mapImpactOwnerToDecisionOwner(signal.responsibleOwner);
 
     return {
       id: `change_impact_${signal.assessmentId}`,
@@ -55,7 +68,7 @@ export function changeImpactSignalsToDecisionBlockers(
       title: signal.title,
       severity,
       owner,
-      waitingFor: owner === "Finance" ? "Finance" : "Operations",
+      waitingFor: mapImpactOwnerToWaiting(signal.responsibleOwner),
       waitingLabel: `${signal.severityLabel} change impact`,
       sinceLabel: since,
       reason: signal.reason,
