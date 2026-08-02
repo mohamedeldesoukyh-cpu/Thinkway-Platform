@@ -6,10 +6,12 @@
  *
  * Sprint 1: Historical Creator Intelligence (protected baseline).
  * Sprint 2: Commercial Intelligence (protected baseline).
- * Sprint 3: Category & Brand Intelligence (ACTIVE extension → protected after land).
+ * Sprint 3: Category & Brand Intelligence (protected baseline).
+ * Sprint 4: Performance Intelligence (ACTIVE extension → protected after land).
  * Spec: docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE.md
  */
 
 export * from "@/lib/enterprise-creator-intelligence/historical";
 export * from "@/lib/enterprise-creator-intelligence/commercial";
 export * from "@/lib/enterprise-creator-intelligence/category-brand";
+export * from "@/lib/enterprise-creator-intelligence/performance";

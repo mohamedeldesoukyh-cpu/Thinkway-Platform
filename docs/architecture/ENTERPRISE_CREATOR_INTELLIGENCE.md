@@ -164,7 +164,7 @@ import {
 2. **Reuse taxonomy** — `inferCategoriesFromProfileSignals` + `resolveCanonicalCategories` / keyword map — no second vocabulary.  
 3. **Not Discovery** — enterprise behavioural intelligence for Planning/Client/AI/Reporting/Mobile.  
 4. **AI-ready only** — `buildCategoryBrandAiHints` — no AI execution.  
-5. **Do not start Sprint 4** until Product explicitly approves.
+5. Sprint 4 Performance Intelligence extends this baseline without redesign.
 
 ### Entry points
 
@@ -178,6 +178,48 @@ import {
 
 ---
 
+## Sprint 4 — Performance Intelligence (PROTECTED BASELINE)
+
+| Attribute | Value |
+|-----------|--------|
+| Status | **Protected Performance Intelligence baseline** (parent capability remains **ACTIVE**) |
+| Extends | Sprint 1–3 baselines (unchanged) |
+| Code | `lib/enterprise-creator-intelligence/performance/` |
+| Migration (Development) | `20260802150000_enterprise_creator_intelligence_performance.sql` |
+| Regression | `npm run test:enterprise-creator-intelligence:performance` |
+
+### Capabilities
+
+| Area | Output |
+|------|--------|
+| Performance history | Views · Reach · Engagement · Likes · Comments · Shares · Saves · Watch Time · Completion Rate (30d/90d/180d/Lifetime) |
+| Trends | Improving · Stable · Declining · Volatile · Recovering + what/why/implication |
+| Stability | Highly Stable → Highly Volatile |
+| Audience response | Engagement/View/Reach/Interaction/Save/Share trends (historical only) |
+| Publishing effectiveness | High/Medium consistency · Irregular · Dormant (+ posting↔performance correlation) |
+| Campaign performance | Views · Reach · Engagement · ROI · EMV · Completion · Success · Delivery (Thinkway data; reuses commercial formulas) |
+| Reliability | Highly Reliable → Low Confidence (performance reliability, not ops) |
+| Forecast readiness | Trend · Stability · Seasonality · Confidence — **no prediction** |
+
+### Entry points
+
+```ts
+import {
+  loadCreatorPerformanceIntelligence,
+  computeCreatorPerformanceIntelligence,
+  appendPerformanceIntelligenceCapture,
+} from "@/lib/enterprise-creator-intelligence";
+```
+
+### Rules
+
+1. Append-only → `creator_intelligence_performance_history`.  
+2. Reuse engagement-rate engine + commercial ROI/EMV + Sprint 1 posting frequency — no duplicated engines.  
+3. AI-ready only — `buildPerformanceAiHints`.  
+4. Do **not** start the next sprint until Product approval.
+
+---
+
 ## Sprint roadmap (do not start early)
 
 | Sprint | Scope | Status |
@@ -185,8 +227,8 @@ import {
 | 1 | Historical Creator Intelligence | **Protected baseline** (`c31da64e`) |
 | 2 | Commercial Intelligence | **Protected baseline** (`7c0f6984`) |
 | 3 | Category & Brand Intelligence | **Protected baseline** (`ad861c01`) |
-| 4 | *(reserved / next Product gate)* | Not started |
-| 5 | Internal Campaign Intelligence | Not started |
+| 4 | Performance Intelligence | **Protected baseline** (this release) |
+| 5 | Internal Campaign Intelligence | Not started — gated |
 | 6 | Creator Investment Score (explainable) | Not started |
 
 ---

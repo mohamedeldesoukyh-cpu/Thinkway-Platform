@@ -80,7 +80,7 @@ Release 2.2d.2 — document state transitions only. Vendor IO / Client IO first.
 Release 2.2d.2b — intelligence layer above Document Lifecycle. Entry: `applyBusinessChangeImpact` only. Freeze tip `449fd5c0`. Quotation/PO/Invoice/Contract/Report **must extend** these engines — **never** parallel implementations. Initiative **CLOSED**. No Production deploy without approval.
 
 **Enterprise Creator Intelligence** (**ACTIVE** · Release 2.3 Phase 1 · not frozen): [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · `lib/enterprise-creator-intelligence/`
-Sprint 1–3 protected baselines (Historical · Commercial · Category & Brand). Do not start Sprint 4 until Product approval. No Production deploy without approval.
+Sprint 1–4 protected baselines (Historical · Commercial · Category & Brand · Performance). Do not start Sprint 5 until Product approval. No Production deploy without approval.
 
 ---
 
