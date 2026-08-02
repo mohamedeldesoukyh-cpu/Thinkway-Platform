@@ -244,6 +244,7 @@ type VendorIoTableBodyProps = {
   onToggleSelectAll: (ids: string[]) => void;
   onSelectAll: (ids: string[]) => void;
   onClearSelection: () => void;
+  onRetainIds: (ids: string[]) => void;
   setDetailIoId: (ioId: string) => void;
 };
 
@@ -256,6 +257,7 @@ function VendorIoTableBody({
   onToggleSelectAll,
   onSelectAll,
   onClearSelection,
+  onRetainIds,
   setDetailIoId,
 }: VendorIoTableBodyProps) {
   const dataContext = useOperationalTableDataContextOptional<VendorIoRow>();
@@ -282,8 +284,8 @@ function VendorIoTableBody({
   if (sorted.length === 0) {
     return (
       <AuroraEmptyState
-        title="Vendor Orders are not available yet."
-        description="Vendor IO unlocks after Client Approval. Until then, Commercial/Operations should complete Client IO. Next expected event: generate Vendor IO for creators."
+        title="No Vendor IO documents yet."
+        description="After Client Approval, Operations issues Vendor IO documentation. Campaign may continue — Vendor IO compliance remains operational follow-up."
       />
     );
   }
@@ -305,16 +307,37 @@ function VendorIoTableBody({
         selectableCount={visibleIds.length}
         onSelectAll={onSelectAllVisible}
         onClearSelection={onClearSelection}
+        onRetainIds={onRetainIds}
+        onOpenDetail={setDetailIoId}
       />
     </>
   );
+}
+
+function selectionStorageKey(campaignId: string) {
+  return `thinkway:vendor-io-selection:${campaignId}`;
+}
+
+function readStoredSelection(campaignId: string): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.sessionStorage.getItem(selectionStorageKey(campaignId));
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.filter((id): id is string => typeof id === "string"));
+  } catch {
+    return new Set();
+  }
 }
 
 export function VendorIoTab({ campaignId, rows, initialSelectedId = null }: Props) {
   const [detailIoId, setDetailIoId] = useState<string | null>(
     () => initialSelectedId
   );
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(
+    () => readStoredSelection(campaignId)
+  );
 
   const sorted = useMemo(
     () => [...rows].sort((a, b) => (a.created_at < b.created_at ? 1 : -1)),
@@ -327,6 +350,34 @@ export function VendorIoTab({ campaignId, rows, initialSelectedId = null }: Prop
       setDetailIoId(initialSelectedId);
     }
   }, [initialSelectedId, sorted]);
+
+  // Selection persists across refresh / expand / sort / filter.
+  // Only drop IDs that no longer exist in the campaign dataset.
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const valid = new Set(sorted.map((row) => row.id));
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (valid.has(id)) next.add(id);
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [sorted]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.sessionStorage.setItem(
+        selectionStorageKey(campaignId),
+        JSON.stringify([...selectedIds])
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [campaignId, selectedIds]);
 
   const detailRow = useMemo(
     () => (detailIoId ? (sorted.find((row) => row.id === detailIoId) ?? null) : null),
@@ -364,6 +415,10 @@ export function VendorIoTab({ campaignId, rows, initialSelectedId = null }: Prop
 
   const onClearSelection = useCallback(() => {
     setSelectedIds(new Set());
+  }, []);
+
+  const onRetainIds = useCallback((ids: string[]) => {
+    setSelectedIds(new Set(ids));
   }, []);
 
   const selectedCount = selectedIds.size;
@@ -414,6 +469,7 @@ export function VendorIoTab({ campaignId, rows, initialSelectedId = null }: Prop
             <VendorIoHeaderSend
               selectedRows={selectedRows}
               onClearSelection={onClearSelection}
+              onRetainIds={onRetainIds}
             />
           </>
         }
@@ -497,6 +553,7 @@ export function VendorIoTab({ campaignId, rows, initialSelectedId = null }: Prop
               onToggleSelectAll={onToggleSelectAll}
               onSelectAll={onSelectAll}
               onClearSelection={onClearSelection}
+              onRetainIds={onRetainIds}
               setDetailIoId={setDetailIoId}
             />
           </OperationalTableSection>

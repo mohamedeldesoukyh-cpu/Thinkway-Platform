@@ -42,14 +42,23 @@ export function useCampaignPublicationsRefresh() {
   return useContext(CampaignOperationalRefreshContext)?.reloadPublications ?? null;
 }
 
-/** Refetch deferred billing bundles and refresh server props after IO / invoice mutations. */
+/**
+ * Refetch deferred billing bundles and refresh server props after IO / invoice mutations.
+ * Never throws into React render — callers that need diagnostics should wrap and toast.
+ */
 export function useRefreshCampaignAfterOperationalMutation() {
   const router = useRouter();
   const reloadOperationalBilling = useCampaignOperationalRefresh();
 
   return useCallback(() => {
-    void reloadOperationalBilling?.();
-    router.refresh();
+    try {
+      void reloadOperationalBilling?.().catch((error: unknown) => {
+        console.error("[campaign-operational-refresh] billing reload failed", error);
+      });
+      router.refresh();
+    } catch (error) {
+      console.error("[campaign-operational-refresh] refresh failed", error);
+    }
   }, [reloadOperationalBilling, router]);
 }
 

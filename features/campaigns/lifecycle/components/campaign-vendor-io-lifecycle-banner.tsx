@@ -51,7 +51,11 @@ export function CampaignVendorIoLifecycleBanner({
 
   return (
     <aside
-      className={cn("thinkway-lc-vio-banner", waitingClient && "is-blocked", className)}
+      className={cn(
+        "thinkway-lc-vio-banner",
+        waitingClient && "is-attention",
+        className
+      )}
       aria-label="Vendor IO summary"
     >
       <div className="thinkway-lc-vio-stats">
@@ -69,11 +73,21 @@ export function CampaignVendorIoLifecycleBanner({
         </div>
         <div>
           <span className="thinkway-bp-label">
-            {waitingClient ? "Waiting Client Approval" : "Approved"}
+            {waitingClient ? "Client approval pending" : "Approved"}
           </span>
           <strong>{waitingClient ? stats.prepared : stats.approved}</strong>
         </div>
       </div>
+      {waitingClient ? (
+        <p className="thinkway-lc-vio-banner-note">
+          Operational follow-up: Vendor IO send waits on Client Approval. Campaign
+          progression is owned by Decision Center.
+        </p>
+      ) : stats.approved < stats.prepared ? (
+        <p className="thinkway-lc-vio-banner-note">
+          Vendor IO compliance is still outstanding. Campaign may continue.
+        </p>
+      ) : null}
     </aside>
   );
 }

@@ -1,14 +1,31 @@
 "use client";
 
-import { ExternalLinkIcon, SendIcon } from "lucide-react";
-import { useTransition } from "react";
+import {
+  CheckCircle2Icon,
+  DownloadIcon,
+  ExternalLinkIcon,
+  FileUpIcon,
+  NotebookPenIcon,
+  SendIcon,
+  WalletCardsIcon,
+} from "lucide-react";
+import { useCallback, useMemo, useRef } from "react";
 import { toast } from "sonner";
 
+import { usePlatformBulkOperation } from "@/components/workspace/bulk-operations";
 import {
   PlatformFloatingActionBar,
   type PlatformFloatingBarAction,
 } from "@/components/shared/navigation/platform-floating-action-bar";
-import { sendVendorIoAction } from "@/features/io/actions";
+import {
+  describeVendorIoSendBulkLabel,
+  downloadTextFile,
+  exportVendorIoRowsCsv,
+  mutateVendorIoMarkAccepted,
+  mutateVendorIoPaymentTerms,
+  mutateVendorIoSend,
+  mutateVendorIoSignedUrl,
+} from "@/features/io/bulk/vendor-io-bulk-mutations";
 import type { VendorIoRow } from "@/features/io/types";
 import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 
@@ -18,6 +35,9 @@ type VendorIoSelectionFlyoutProps = {
   selectableCount: number;
   onSelectAll: () => void;
   onClearSelection: () => void;
+  /** Keep failed rows selected after partial success. */
+  onRetainIds: (ids: string[]) => void;
+  onOpenDetail?: (id: string) => void;
 };
 
 export function VendorIoSelectionFlyout({
@@ -26,45 +46,162 @@ export function VendorIoSelectionFlyout({
   selectableCount,
   onSelectAll,
   onClearSelection,
+  onRetainIds,
+  onOpenDetail,
 }: VendorIoSelectionFlyoutProps) {
-  const [pending, startTransition] = useTransition();
+  const { run, isRunning, activeJob } = usePlatformBulkOperation();
   const refreshAfterOperationalMutation = useRefreshCampaignAfterOperationalMutation();
   const selectedCount = selectedRows.length;
+  const rowsRef = useRef(selectedRows);
+  rowsRef.current = selectedRows;
+
+  const safeRefresh = useCallback(async () => {
+    try {
+      refreshAfterOperationalMutation();
+    } catch (error) {
+      throw error instanceof Error
+        ? error
+        : new Error("Unable to refresh the Vendor IO list.");
+    }
+  }, [refreshAfterOperationalMutation]);
+
+  const runOnRows = useCallback(
+    (
+      label: string,
+      rows: VendorIoRow[],
+      mutate: (row: VendorIoRow) => Promise<{
+        ok: boolean;
+        skipped?: boolean;
+        message?: string;
+        id?: string;
+      }>
+    ) => {
+      if (rows.length === 0) {
+        toast.message("No Vendor IOs selected.");
+        return;
+      }
+
+      void run({
+        label,
+        items: [...rows],
+        getId: (row) => row.id,
+        mutate,
+        entityLabel: "Vendor IO",
+        entityLabelPlural: "Vendor IOs",
+        refresh: safeRefresh,
+        onComplete: (summary) => {
+          if (summary.failedIds.length > 0) {
+            onRetainIds(summary.failedIds);
+            return;
+          }
+          if (summary.succeeded > 0) {
+            onClearSelection();
+          }
+        },
+        onRetryFailed: (failedIds, retryMutate) => {
+          const retryRows = rowsRef.current.filter((row) =>
+            failedIds.includes(row.id)
+          );
+          if (retryRows.length === 0) {
+            toast.message(
+              "Failed Vendor IOs are no longer in the current list. Adjust filters or reload, then retry."
+            );
+            return;
+          }
+          onRetainIds(failedIds);
+          void run({
+            label,
+            items: retryRows,
+            getId: (row) => row.id,
+            mutate: retryMutate,
+            entityLabel: "Vendor IO",
+            entityLabelPlural: "Vendor IOs",
+            refresh: safeRefresh,
+            onComplete: (summary) => {
+              if (summary.failedIds.length > 0) {
+                onRetainIds(summary.failedIds);
+                return;
+              }
+              if (summary.succeeded > 0) onClearSelection();
+            },
+          });
+        },
+      });
+    },
+    [onClearSelection, onRetainIds, run, safeRefresh]
+  );
+
+  const sendLabel = useMemo(
+    () => describeVendorIoSendBulkLabel(selectedRows),
+    [selectedRows]
+  );
 
   function sendSelected() {
-    startTransition(async () => {
-      let sent = 0;
-      let failed = 0;
-      let lastError: string | undefined;
+    runOnRows(sendLabel, selectedRows, mutateVendorIoSend);
+  }
 
-      for (const row of selectedRows) {
-        const formData = new FormData();
-        formData.set("id", row.id);
-        formData.set("campaign_header_id", row.campaign_header_id);
+  function markAccepted() {
+    runOnRows("Mark Accepted", selectedRows, mutateVendorIoMarkAccepted);
+  }
 
-        const result = await sendVendorIoAction({ ok: false }, formData);
-        if (result.ok) sent += 1;
-        else {
-          failed += 1;
-          lastError = result.message;
-        }
-      }
+  function uploadSignedDocuments() {
+    const url = window.prompt(
+      "Paste one https signed-document URL to apply to all selected Vendor IOs:"
+    );
+    if (url == null) return;
+    const trimmed = url.trim();
+    if (!trimmed) {
+      toast.error("A signed document URL is required.");
+      return;
+    }
+    runOnRows("Upload Signed Documents", selectedRows, (row) =>
+      mutateVendorIoSignedUrl(row, trimmed)
+    );
+  }
 
-      if (sent > 0) {
-        toast.success(
-          `Sent ${sent} vendor IO${sent === 1 ? "" : "s"}.` +
-            (failed > 0 ? ` ${failed} failed.` : "")
-        );
-        onClearSelection();
-        refreshAfterOperationalMutation();
-      } else {
-        toast.error(lastError ?? "No vendor IOs were sent.");
-      }
-    });
+  function changePaymentTerms() {
+    const terms = window.prompt(
+      "Special payment terms to apply to all selected Vendor IOs (leave blank to clear):",
+      ""
+    );
+    if (terms == null) return;
+    runOnRows("Change Payment Terms", selectedRows, (row) =>
+      mutateVendorIoPaymentTerms(row, terms)
+    );
+  }
+
+  function exportSelected() {
+    if (selectedRows.length === 0) return;
+    const csv = exportVendorIoRowsCsv(selectedRows);
+    downloadTextFile(
+      `vendor-ios-${campaignId.slice(0, 8)}-selected.csv`,
+      csv,
+      "text/csv;charset=utf-8"
+    );
+    toast.success(
+      `${selectedRows.length} Vendor IO${selectedRows.length === 1 ? "" : "s"} exported successfully.`
+    );
+  }
+
+  function addNote() {
+    const first = selectedRows[0];
+    if (!first) return;
+    onOpenDetail?.(first.id);
+    toast.message(
+      selectedRows.length === 1
+        ? "Opened Vendor IO detail — add the note there."
+        : "Opened the first selected Vendor IO. Add notes in the detail sheet."
+    );
   }
 
   function viewSelectedIos() {
     if (selectedRows.length === 0) return;
+    if (selectedRows.length > 8) {
+      const proceed = window.confirm(
+        `Open ${selectedRows.length} preview tabs? Large selections can be blocked by the browser.`
+      );
+      if (!proceed) return;
+    }
 
     selectedRows.forEach((row, index) => {
       window.setTimeout(() => {
@@ -74,26 +211,66 @@ export function VendorIoSelectionFlyout({
 
     toast.message(
       selectedRows.length === 1
-        ? "Opened vendor IO preview."
-        : `Opening ${selectedRows.length} vendor IO previews…`
+        ? "Opened Vendor IO preview."
+        : `Opening ${selectedRows.length} Vendor IO previews…`
     );
   }
 
   const primaryAction: PlatformFloatingBarAction = {
     id: "send",
-    label: pending ? "Sending…" : "Send selected",
+    label: isRunning
+      ? `Updating…`
+      : `${sendLabel} (${selectedCount})`,
     icon: SendIcon,
-    disabled: pending,
-    loading: pending,
+    disabled: isRunning,
+    loading: isRunning,
     onClick: sendSelected,
   };
 
   const secondaryActions: PlatformFloatingBarAction[] = [
     {
+      id: "accept",
+      label: "Mark Accepted",
+      icon: CheckCircle2Icon,
+      disabled: isRunning,
+      onClick: markAccepted,
+    },
+    {
+      id: "signed",
+      label: "Upload Signed",
+      icon: FileUpIcon,
+      disabled: isRunning,
+      onClick: uploadSignedDocuments,
+    },
+  ];
+
+  const overflowActions: PlatformFloatingBarAction[] = [
+    {
+      id: "export",
+      label: "Export Selected",
+      icon: DownloadIcon,
+      disabled: isRunning,
+      onClick: exportSelected,
+    },
+    {
+      id: "terms",
+      label: "Change Payment Terms",
+      icon: WalletCardsIcon,
+      disabled: isRunning,
+      onClick: changePaymentTerms,
+    },
+    {
+      id: "note",
+      label: "Add Note",
+      icon: NotebookPenIcon,
+      disabled: isRunning,
+      onClick: addNote,
+    },
+    {
       id: "view",
       label: "View IO",
       icon: ExternalLinkIcon,
-      disabled: pending,
+      disabled: isRunning,
       onClick: viewSelectedIos,
     },
   ];
@@ -105,10 +282,18 @@ export function VendorIoSelectionFlyout({
       selectionLabel="vendor IO"
       primaryAction={primaryAction}
       secondaryActions={secondaryActions}
-      onClearSelection={onClearSelection}
+      overflowActions={overflowActions}
+      onClearSelection={isRunning ? () => undefined : onClearSelection}
       onSelectAll={onSelectAll}
       selectableCount={selectableCount}
-      busy={pending}
+      busy={false}
+      messages={
+        isRunning && activeJob ? (
+          <span className="text-xs font-medium text-muted-foreground">
+            Updating {activeJob.entityLabelPlural} in the background — keep working.
+          </span>
+        ) : null
+      }
     />
   );
 }

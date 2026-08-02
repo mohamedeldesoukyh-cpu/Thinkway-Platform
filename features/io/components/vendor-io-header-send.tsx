@@ -1,11 +1,15 @@
 "use client";
 
 import { SendIcon } from "lucide-react";
-import { useTransition } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { sendVendorIoAction } from "@/features/io/actions";
+import { usePlatformBulkOperation } from "@/components/workspace/bulk-operations";
+import {
+  describeVendorIoSendBulkLabel,
+  mutateVendorIoSend,
+} from "@/features/io/bulk/vendor-io-bulk-mutations";
 import type { VendorIoRow } from "@/features/io/types";
 import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 import { OPERATIONAL_CHROME_LABEL } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
@@ -14,51 +18,93 @@ import { cn } from "@/lib/utils";
 type Props = {
   selectedRows: VendorIoRow[];
   onClearSelection: () => void;
+  onRetainIds: (ids: string[]) => void;
 };
 
-export function VendorIoHeaderSend({ selectedRows, onClearSelection }: Props) {
-  const [pending, startTransition] = useTransition();
+/**
+ * Header shortcut for the Platform Bulk Operations Framework (Vendor IO send / manual delivery).
+ */
+export function VendorIoHeaderSend({
+  selectedRows,
+  onClearSelection,
+  onRetainIds,
+}: Props) {
+  const { run, isRunning } = usePlatformBulkOperation();
   const refreshAfterOperationalMutation = useRefreshCampaignAfterOperationalMutation();
   const selectedCount = selectedRows.length;
+  const rowsRef = useRef(selectedRows);
+  rowsRef.current = selectedRows;
+
+  const sendLabel = useMemo(
+    () => describeVendorIoSendBulkLabel(selectedRows),
+    [selectedRows]
+  );
+
+  const safeRefresh = useCallback(async () => {
+    try {
+      refreshAfterOperationalMutation();
+    } catch (error) {
+      throw error instanceof Error
+        ? error
+        : new Error("Unable to refresh the Vendor IO list.");
+    }
+  }, [refreshAfterOperationalMutation]);
 
   function sendSelected() {
     if (selectedCount === 0) return;
+    const snapshot = [...selectedRows];
+    const label = describeVendorIoSendBulkLabel(snapshot);
 
-    startTransition(async () => {
-      let sent = 0;
-      let failed = 0;
-      let lastError: string | undefined;
-
-      for (const row of selectedRows) {
-        const formData = new FormData();
-        formData.set("id", row.id);
-        formData.set("campaign_header_id", row.campaign_header_id);
-
-        const result = await sendVendorIoAction({ ok: false }, formData);
-        if (result.ok) sent += 1;
-        else {
-          failed += 1;
-          lastError = result.message;
+    void run({
+      label,
+      items: snapshot,
+      getId: (row) => row.id,
+      mutate: mutateVendorIoSend,
+      entityLabel: "Vendor IO",
+      entityLabelPlural: "Vendor IOs",
+      refresh: safeRefresh,
+      onComplete: (summary) => {
+        if (summary.failedIds.length > 0) {
+          onRetainIds(summary.failedIds);
+          return;
         }
-      }
-
-      if (sent > 0) {
-        toast.success(
-          `Sent ${sent} vendor IO${sent === 1 ? "" : "s"}.` +
-            (failed > 0 ? ` ${failed} failed.` : "")
+        if (summary.succeeded > 0) onClearSelection();
+      },
+      onRetryFailed: (failedIds) => {
+        const retryRows = rowsRef.current.filter((row) =>
+          failedIds.includes(row.id)
         );
-        onClearSelection();
-        refreshAfterOperationalMutation();
-      } else {
-        toast.error(lastError ?? "No vendor IOs were sent.");
-      }
+        if (retryRows.length === 0) {
+          toast.message(
+            "Failed Vendor IOs are no longer in the current list. Adjust filters or reload, then retry."
+          );
+          return;
+        }
+        onRetainIds(failedIds);
+        void run({
+          label,
+          items: retryRows,
+          getId: (row) => row.id,
+          mutate: mutateVendorIoSend,
+          entityLabel: "Vendor IO",
+          entityLabelPlural: "Vendor IOs",
+          refresh: safeRefresh,
+          onComplete: (summary) => {
+            if (summary.failedIds.length > 0) {
+              onRetainIds(summary.failedIds);
+              return;
+            }
+            if (summary.succeeded > 0) onClearSelection();
+          },
+        });
+      },
     });
   }
 
   if (selectedCount === 0) {
     return (
       <span className="hidden text-[11px] text-muted-foreground lg:inline">
-        Select rows to send, or use Send in Actions
+        Select rows for bulk send, acceptance, signed docs, or export
       </span>
     );
   }
@@ -67,7 +113,7 @@ export function VendorIoHeaderSend({ selectedRows, onClearSelection }: Props) {
     <Button
       type="button"
       size="sm"
-      disabled={pending}
+      disabled={isRunning}
       onClick={sendSelected}
       className={cn(
         OPERATIONAL_CHROME_LABEL,
@@ -75,9 +121,7 @@ export function VendorIoHeaderSend({ selectedRows, onClearSelection }: Props) {
       )}
     >
       <SendIcon className="size-3.5" />
-      {pending
-        ? "Sending…"
-        : `Send selected (${selectedCount})`}
+      {isRunning ? "Updating…" : `${sendLabel} (${selectedCount})`}
     </Button>
   );
 }

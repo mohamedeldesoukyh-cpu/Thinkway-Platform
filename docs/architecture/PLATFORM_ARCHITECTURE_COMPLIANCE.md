@@ -6,7 +6,7 @@
 **Campaign Workspace baseline (canonical):** [`CAMPAIGN_WORKSPACE_BASELINE_V1.3.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.3.md)  
 **Historical:** [`CAMPAIGN_WORKSPACE_BASELINE_V1.2.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.2.md) · [`CAMPAIGN_WORKSPACE_BASELINE_V1.1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.1.md) · [`CAMPAIGN_WORKSPACE_BASELINE_V1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.md)  
 **Effective:** 2026-08-01 (Architecture v1.0 freeze)  
-**Updated:** 2026-08-01 (Campaign Workspace Baseline v1.3 — Business Narrative & Operational Compliance freeze)
+**Updated:** 2026-08-02 (Platform Bulk Operations Framework + capability completeness gates)
 
 ---
 
@@ -53,6 +53,22 @@ Every capability specification must explicitly identify:
 | Human decisions | Which judgments stay with people (relationships, exceptions, approvals)? |
 
 This keeps Thinkway an operating system for influencer marketing — time spent on decisions and relationships, not administration.
+
+---
+
+## Capability completeness gates (mandatory)
+
+Every new capability is incomplete until it answers **all four**:
+
+| # | Gate | Required answer |
+|---|------|-----------------|
+| 1 | **Bulk** | Can this process be done in bulk? Never design single-record-only operations for register work. |
+| 2 | **Background** | Can this process run in the background? Do not block users while work executes. |
+| 3 | **AI-ready** | Can this process eventually be automated by AI? Design so automation is possible later (AI need not ship yet). |
+| 4 | **Operational effort** | Does this reduce operational effort? If it adds clicks or manual work, redesign. |
+
+**Platform Bulk Operations Framework** (canonical): [`PLATFORM_BULK_OPERATIONS_FRAMEWORK.md`](./PLATFORM_BULK_OPERATIONS_FRAMEWORK.md)  
+First production implementation: Release 2.2d Vendor IO. Future registers must reuse it — no independent bulk runners.
 
 ---
 

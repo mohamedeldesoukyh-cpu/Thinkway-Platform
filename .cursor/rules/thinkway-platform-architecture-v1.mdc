@@ -53,9 +53,17 @@ Also preserve: shared lifecycle object · Hard Block ≠ Needs Attention · obje
 
 **Regression (protected):** `npm run test:campaign-workspace-lifecycle-os`.
 
-## Operational effort gate
+## Capability completeness gates (mandatory)
 
-No capability may be implemented until its specification answers how it reduces operational effort: tasks **eliminated**, **simplified**, and remaining **human decisions**.
+Every new capability must answer before it is complete:
+
+1. **Bulk** — Can this be done in bulk? (Never single-record-only register ops.)  
+2. **Background** — Can this run without blocking the user?  
+3. **AI-ready** — Can this eventually be automated by AI? (Design for it; AI need not ship yet.)  
+4. **Operational effort** — Does this reduce effort? (Eliminated / simplified / remains human.)
+
+**Bulk framework (canonical):** `docs/architecture/PLATFORM_BULK_OPERATIONS_FRAMEWORK.md` · `components/workspace/bulk-operations/`  
+Do not invent parallel bulk runners. Vendor IO (R2.2d) is the first production consumer.
 
 ## Mandatory for every ADR / capability spec / release architecture / implementation proposal
 
@@ -67,12 +75,14 @@ Include section **Platform Architecture Compliance** covering:
 4. Why no new navigation philosophy is introduced  
 5. Workspace(s) extended · baselines referenced (incl. Campaign Workspace v1.3) · no duplicate workflow · lifecycle extension paragraph  
 6. Operational effort reduction (eliminated / simplified / human)  
-7. Campaign Workspace invariants preserved when touching Campaign surfaces  
+7. Capability completeness gates (bulk · background · AI-ready · effort)  
+8. Campaign Workspace invariants preserved when touching Campaign surfaces  
 
 ## Implementation posture
 
 - Architecture-first work is **complete**. Prefer **capability specifications** then functional delivery.  
 - Extend BPN + Campaign Workspace Baseline **v1.3**; do not reinvent them.  
+- Reuse **Platform Bulk Operations Framework** for all register multi-select work.  
 - **Active initiative:** Release 2.3 — Campaign Planning Workspace — start with Business Capability Review → Product UX Review → Capability Spec approval → Architecture Compliance → Implementation. **No Campaign Workspace UX work.**  
 - Planning Workspace = Planning stage of Campaign Lifecycle; must inherit Campaign Workspace Lifecycle OS v1.3 (Decision Center briefing; three severities; progressive registers; no new nav/layouts/workflows/competing guidance).  
 - After 2.3: Media Plan Copilot → Client/Vendor/Creator journeys → Reporting → Notifications → Analytics.

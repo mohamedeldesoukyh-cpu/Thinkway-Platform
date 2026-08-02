@@ -2,9 +2,11 @@
 
 **Branch focus:** `develop` (synced with `origin/develop`).  
 **Active initiative:** **Release 2.3 — Campaign Planning Workspace** — start with Capability / UX / Spec / Compliance reviews · **no Campaign Workspace UX**  
-**Must inherit:** Campaign Workspace Baseline **v1.3** (Decision Center executive briefing · three severities · Vendor IO operational compliance) · BPN · Architecture v1.0.
+**Must inherit:** Campaign Workspace Baseline **v1.3** · Platform Bulk Operations Framework · BPN · Architecture v1.0.
 
-**Operational effort gate:** Every capability spec must state tasks eliminated · simplified · remaining human decisions.
+**Capability completeness gates:** Bulk · Background · AI-ready · Operational effort (all four required).
+
+**Platform Bulk Framework:** `docs/architecture/PLATFORM_BULK_OPERATIONS_FRAMEWORK.md` — first production consumer Vendor IO (R2.2d).
 
 **Gate docs (Planning — retargeted as R2.3):**  
 - `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md`  

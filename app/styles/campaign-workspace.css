@@ -1784,9 +1784,17 @@
   }
 
   .thinkway-lc-vio-banner.is-blocked,
+  .thinkway-lc-vio-banner.is-attention,
   .thinkway-lc-finance-lock {
     border-color: color-mix(in srgb, #b45309 34%, var(--camp-hair));
     background: color-mix(in srgb, #b45309 6%, var(--camp-surface));
+  }
+
+  .thinkway-lc-vio-banner-note {
+    margin: 8px 0 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--camp-text-2);
   }
 
   .thinkway-lc-vio-stats {

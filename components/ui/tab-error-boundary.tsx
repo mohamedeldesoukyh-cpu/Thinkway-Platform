@@ -42,17 +42,23 @@ export class TabErrorBoundary extends Component<
   render() {
     if (this.state.error) {
       if (this.props.fallback) return this.props.fallback;
+      const message = this.state.error.message || "";
+      const looksLikeRefresh =
+        /refresh|network|timeout|failed to fetch|load/i.test(message);
+      const headline = looksLikeRefresh
+        ? `Unable to refresh ${this.props.tabName} list`
+        : `${this.props.tabName} hit a display error`;
+      const guidance = looksLikeRefresh
+        ? "Bulk updates may already be saved. Retry refresh — completed work is not rolled back."
+        : message.includes("Server Components render")
+          ? "A rendering error occurred after data refresh. Completed mutations are kept — reload the page."
+          : message;
+
       return (
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-          <p className="text-sm font-medium text-destructive">
-            {this.props.tabName} could not load completely
-          </p>
+          <p className="text-sm font-medium text-destructive">{headline}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {process.env.NODE_ENV === "development"
-              ? this.state.error.message
-              : this.state.error.message.includes("Server Components render")
-                ? "A rendering error occurred. Refresh the page or redeploy the latest build. In development, the full error is logged to the console."
-                : this.state.error.message}
+            {process.env.NODE_ENV === "development" ? message : guidance}
           </p>
           {"digest" in this.state.error && this.state.error.digest ? (
             <p className="mt-1 font-mono text-[10px] text-muted-foreground">
