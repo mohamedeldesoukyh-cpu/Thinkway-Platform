@@ -184,7 +184,7 @@ import {
 |--------|-------|--------|
 | 1 | Historical Creator Intelligence | **Protected baseline** (`c31da64e`) |
 | 2 | Commercial Intelligence | **Protected baseline** (`7c0f6984`) |
-| 3 | Category & Brand Intelligence | **Protected baseline** (this release) |
+| 3 | Category & Brand Intelligence | **Protected baseline** (`ad861c01`) |
 | 4 | *(reserved / next Product gate)* | Not started |
 | 5 | Internal Campaign Intelligence | Not started |
 | 6 | Creator Investment Score (explainable) | Not started |

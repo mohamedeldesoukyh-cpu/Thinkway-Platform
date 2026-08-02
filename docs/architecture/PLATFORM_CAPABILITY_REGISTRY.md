@@ -150,6 +150,7 @@ Platform creator time-series and intelligence for Planning Workspace, Client Wor
 | Reuse | Taxonomy inference + canonical categories — no second vocabulary |
 | AI | `buildCategoryBrandAiHints` only — **no AI execution** |
 | Gate | Do **not** start Sprint 4 until Product explicitly approves |
+| Git baseline | `ad861c01` on `origin/develop` |
 
 ### Extension rules
 

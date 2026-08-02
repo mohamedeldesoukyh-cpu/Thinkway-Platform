@@ -8,7 +8,7 @@
 |--------|-------|--------|
 | 1 | Historical Creator Intelligence | **Protected baseline** (`c31da64e`) |
 | 2 | Commercial Intelligence | **Protected baseline** (`7c0f6984`) |
-| 3 | Category & Brand Intelligence | **Protected baseline** (landing on `develop`) |
+| 3 | Category & Brand Intelligence | **Protected baseline** (`ad861c01`) |
 | 4–6 | Next gates / Campaign Intel / Investment Score | Not started — gated on Product approval |
 
 - Spec: `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE.md`
