@@ -283,8 +283,25 @@ export function pushIssue(
   }
 }
 
+const CATEGORY_SYNONYMS: Record<string, (typeof QUICK_CATEGORIES)[number]> = {
+  skincare: "Beauty",
+  makeup: "Beauty",
+  beauty: "Beauty",
+  dermatology: "Beauty",
+  fashion: "Fashion",
+  fitness: "Fitness",
+  food: "Food",
+  travel: "Travel",
+  lifestyle: "Lifestyle",
+  tech: "Tech",
+  gaming: "Gaming",
+};
+
 export function canonicalizeCategory(value: string): string | null {
   if (!isValidCategory(value)) return null;
-  const match = QUICK_CATEGORIES.find((c) => c.toLowerCase() === value.trim().toLowerCase());
-  return match ?? value.trim();
+  const trimmed = value.trim();
+  const synonym = CATEGORY_SYNONYMS[trimmed.toLowerCase()];
+  if (synonym) return synonym;
+  const match = QUICK_CATEGORIES.find((c) => c.toLowerCase() === trimmed.toLowerCase());
+  return match ?? trimmed;
 }

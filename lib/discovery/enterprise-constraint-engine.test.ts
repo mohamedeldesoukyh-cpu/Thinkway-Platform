@@ -144,4 +144,25 @@ describe("enterprise-constraint-engine", () => {
     assert.ok(result.relaxations.some((r) => r.key === "category"));
     assert.ok(result.relaxations[0]?.businessImpact);
   });
+
+  it("does not hard-reject creators with missing language or authenticity metadata", () => {
+    const mapped = [
+      filter("creator_country", "EG", "Creator Country"),
+      filter("language", "ar", "Language"),
+      filter("brand_safety_min", "70", "Brand Safety"),
+    ];
+    const missingMeta = creator({
+      language_codes: [],
+      authenticity_score: null,
+      brand_fit_score: null,
+    });
+    const belowSafety = creator({
+      unified_id: "inf:low",
+      authenticity_score: 40,
+    });
+    const result = applyEnterpriseConstraints([missingMeta, belowSafety], mapped);
+    assert.equal(result.creators.length, 1);
+    assert.equal(result.creators[0]?.unified_id, "inf:1");
+    assert.equal(result.rejectedMandatoryCount, 1);
+  });
 });

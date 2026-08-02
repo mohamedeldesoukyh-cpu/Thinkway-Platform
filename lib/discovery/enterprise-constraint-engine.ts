@@ -134,7 +134,8 @@ function creatorMatchesLanguage(creator: UnifiedCreatorResult, language: string)
   const target = language.trim().toLowerCase();
   if (!target) return true;
   const codes = (creator.language_codes ?? []).map((c) => c.toLowerCase());
-  if (codes.length === 0) return false;
+  // Missing language metadata must not hard-reject — same spirit as relevance "unknown".
+  if (codes.length === 0) return true;
   return codes.some((c) => c === target || c.startsWith(target) || target.startsWith(c));
 }
 
@@ -144,8 +145,9 @@ function creatorMatchesBrandSafety(
 ): boolean {
   const min = Number(minRaw);
   if (!Number.isFinite(min)) return true;
-  const score = creator.authenticity_score;
-  if (score == null) return false;
+  const score = creator.authenticity_score ?? creator.brand_fit_score;
+  // Missing safety signals must not hard-reject; reject only when a score exists below min.
+  if (score == null) return true;
   return score >= min;
 }
 
