@@ -6,7 +6,6 @@ import type { VendorIoRow } from "@/features/io/types";
 import { hasValidVendorEmail } from "@/lib/io/vendor-io-delivery";
 
 export function vendorIoNeedsSend(row: VendorIoRow): boolean {
-  if (row.is_superseded) return false;
   if (row.status === "approved") return false;
   return ["draft", "generated", "sent", "rejected"].includes(
     (row.status ?? "").toLowerCase()

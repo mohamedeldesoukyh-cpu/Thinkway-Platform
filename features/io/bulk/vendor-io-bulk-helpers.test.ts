@@ -13,11 +13,11 @@ function row(overrides: Partial<VendorIoRow> = {}): VendorIoRow {
   return {
     id: "vio-1",
     campaign_header_id: "camp-1",
-    assignment_id: null,
-    assignment_document_number: null,
+    assignment_id: "asg-1",
+    campaign_name: "Campaign",
+    campaign_document_number: "TW-2026-0001",
+    assignment_document_number: "TW-2026-0001-A",
     document_number: "VIO-1",
-    revision_number: 1,
-    is_superseded: false,
     influencer_id: "inf-1",
     influencer_name: "Creator",
     influencer_email: null,
@@ -53,7 +53,7 @@ function row(overrides: Partial<VendorIoRow> = {}): VendorIoRow {
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     ...overrides,
-  } as VendorIoRow;
+  };
 }
 
 describe("vendor IO bulk helpers", () => {
