@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import {
   CheckIcon,
+  Columns2Icon,
   GitMergeIcon,
   ListRestartIcon,
   PlusIcon,
@@ -62,7 +63,6 @@ import {
   getCampaignFacts,
   resolveInfluencerEstimateCurrency,
 } from "@/features/campaign-director/facts/facts-display-bridge";
-import { DiscoveryCreatorDetailHost } from "@/features/discovery/components/discovery-creator-detail-host";
 import type { CreatorDrawerSelection } from "@/features/campaign-decision-workspace/components/creator-drawer";
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
 import { STUDIO_REF_CLASSES } from "../../constants/campaign-studio-ref-tokens";
@@ -71,7 +71,11 @@ import { ShowMoreButton } from "./shared/studio-ui-primitives";
 import { STUDIO_VENDOR_INITIAL_VISIBLE } from "../../constants/hydration-limits";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
+import type { StudioEciPlanningSignal } from "../../services/eci/project-studio-eci-signal";
 import { ShortlistSlatePickerDialog } from "./shortlist-slate-picker-dialog";
+import { StudioCreatorCompareDialog } from "./studio-creator-compare-dialog";
+import { StudioPlanningCreatorDetail } from "./studio-planning-creator-detail";
+import { StudioPlanningIntelligenceStrip } from "./shared/studio-planning-intelligence-strip";
 
 type VendorRecommendationsSectionProps = {
   campaignObject?: CampaignObject;
@@ -120,6 +124,9 @@ type DisplayVendor = {
   contentPillar?: string;
   expectedRole?: string;
   confidence?: number;
+  eciRecommendation?: string;
+  eciConfidencePercent?: number | null;
+  planningSignal?: StudioEciPlanningSignal;
 };
 
 function toDrawerSelection(vendor: DisplayVendor): CreatorDrawerSelection {
@@ -137,7 +144,9 @@ function toDrawerSelection(vendor: DisplayVendor): CreatorDrawerSelection {
     audienceSummary: vendor.audienceSummary,
     priceEstimate: vendor.priceEstimate,
     tier: vendor.tier,
-    reason: vendor.reason,
+    reason: vendor.planningSignal
+      ? vendor.planningSignal.why
+      : vendor.reason,
     matchPercent: vendor.matchPercent,
   };
 }
@@ -308,9 +317,14 @@ function VendorCardBlock({
       audienceSummary: vendor.audienceSummary,
       priceEstimate: vendor.priceEstimate,
       brandFit: vendor.fitScore,
-      campaignRelevanceScore: vendor.fitScore,
+      eciInvestmentScore: vendor.planningSignal?.investmentScore ?? vendor.fitScore,
+      eciRecommendation: vendor.planningSignal?.recommendation ?? vendor.eciRecommendation,
+      eciWhy: vendor.planningSignal?.why,
+      eciCommercialJustification: vendor.planningSignal?.commercialJustification,
+      eciEvidence: vendor.planningSignal?.evidence,
       rationale:
-        vendor.reason && !isEmptyGlobalRationale(vendor.reason) ? vendor.reason : undefined,
+        vendor.planningSignal?.why ||
+        (vendor.reason && !isEmptyGlobalRationale(vendor.reason) ? vendor.reason : undefined),
     },
     campaignObject,
     index
@@ -433,14 +447,9 @@ function VendorCardBlock({
                 {vendor.tier}
               </span>
             ) : null}
-            {vendor.fitScore != null ? (
+            {vendor.planningSignal ? null : vendor.fitScore != null ? (
               <span className={cn(STUDIO_REF_CLASSES.vbadge, STUDIO_REF_CLASSES.vbadgeFit)}>
-                Fit {Math.round(vendor.fitScore)}/100
-              </span>
-            ) : null}
-            {grounding.grounding.confidence != null ? (
-              <span className={cn(STUDIO_REF_CLASSES.vbadge, STUDIO_REF_CLASSES.vbadgeAi)}>
-                AI {grounding.grounding.confidence}%
+                Planning fit {Math.round(vendor.fitScore)}/100
               </span>
             ) : null}
           </div>
@@ -454,7 +463,7 @@ function VendorCardBlock({
         </div>
 
         <div className={STUDIO_REF_CLASSES.vendorWhy}>
-          <b>Why:</b> {grounding.whySelected}
+          <b>Why:</b> {vendor.planningSignal?.why ?? grounding.whySelected}
           {vendor.contentIdea ? (
             <>
               <br />
@@ -462,6 +471,8 @@ function VendorCardBlock({
             </>
           ) : null}
         </div>
+
+        <StudioPlanningIntelligenceStrip signal={vendor.planningSignal} />
 
         <div className={STUDIO_REF_CLASSES.vendorScores}>
           {grounding.factors.slice(0, 5).map((f) => (
@@ -538,11 +549,10 @@ function VendorCardBlock({
               {vendor.serviceType}
             </span>
           ) : null}
-          {vendor.fitScore != null ? (
-            <span className={STUDIO_CLASSES.pillFit}>Fit {Math.round(vendor.fitScore)}/100</span>
-          ) : null}
-          {grounding.grounding.confidence != null ? (
-            <span className={STUDIO_CLASSES.pillAi}>AI {grounding.grounding.confidence}%</span>
+          {vendor.planningSignal ? null : vendor.fitScore != null ? (
+            <span className={STUDIO_CLASSES.pillFit}>
+              Planning fit {Math.round(vendor.fitScore)}/100
+            </span>
           ) : null}
           {pendingRemoval ? (
             <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-extrabold text-amber-800">
@@ -578,7 +588,7 @@ function VendorCardBlock({
         ) : null}
 
         <p className="mt-1.5 text-xs text-foreground">
-          <b>Why:</b> {grounding.whySelected}
+          <b>Why:</b> {vendor.planningSignal?.why ?? grounding.whySelected}
         </p>
         {vendor.slateReason ? (
           <p className="mt-1 text-[11px] text-muted-foreground">
@@ -592,9 +602,16 @@ function VendorCardBlock({
           <p className="mt-1 text-xs font-semibold text-[#0057FF]">{vendor.contentIdea}</p>
         ) : null}
 
-        {vendor.confidence != null ? (
+        <StudioPlanningIntelligenceStrip signal={vendor.planningSignal} />
+
+        {vendor.confidence != null || vendor.eciConfidencePercent != null ? (
           <p className="mt-1 text-[10px] text-muted-foreground">
-            Confidence: {Math.round(vendor.confidence * 100)}%
+            Confidence:{" "}
+            {Math.round(
+              vendor.eciConfidencePercent ??
+                (vendor.confidence != null ? vendor.confidence * 100 : 0)
+            )}
+            %
           </p>
         ) : null}
 
@@ -653,6 +670,7 @@ export function VendorRecommendationsSection({
   const [drawerCreator, setDrawerCreator] = useState<CreatorDrawerSelection | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [shortlistPickerMode, setShortlistPickerMode] = useState<"replace" | "merge" | null>(null);
+  const [compareOpen, setCompareOpen] = useState(false);
   const confirmDelete = useConfirmDelete();
 
   const previewCreatorsData = useMemo(() => {
@@ -943,6 +961,9 @@ export function VendorRecommendationsSection({
                   thinkwayScore: v.thinkwayScore,
                   matchPercent: v.matchPercent,
                   tier: v.tier,
+                  eciRecommendation: v.eciRecommendation,
+                  eciConfidencePercent: v.eciConfidencePercent,
+                  planningSignal: v.planningSignal,
                   contentIdea: buildCreatorContentIdea(
                     { categories: [v.audienceSummary ?? ""] },
                     campaignFacts,
@@ -1148,6 +1169,16 @@ export function VendorRecommendationsSection({
               Ranked from {recommendationIds.length} search matches
             </p>
           ) : null}
+          {vendors.length >= 2 ? (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded-md border border-[#7C3AED]/40 bg-[#7C3AED]/5 px-2 py-1 text-[10px] font-semibold text-[#7C3AED] hover:bg-[#7C3AED]/10"
+              onClick={() => setCompareOpen(true)}
+            >
+              <Columns2Icon className="size-3" />
+              Compare
+            </button>
+          ) : null}
           {canAct ? (
             <>
               <button
@@ -1248,12 +1279,33 @@ export function VendorRecommendationsSection({
         />
       ) : null}
       {!onCreatorClick ? (
-        <DiscoveryCreatorDetailHost
+        <StudioPlanningCreatorDetail
           selection={drawerCreator}
           open={drawerOpen}
           onOpenChange={setDrawerOpen}
+          signal={
+            drawerCreator?.id
+              ? vendors.find((v) => v.id === drawerCreator.id)?.planningSignal
+              : undefined
+          }
         />
       ) : null}
+      <StudioCreatorCompareDialog
+        open={compareOpen}
+        onOpenChange={setCompareOpen}
+        creators={vendors
+          .filter((v): v is DisplayVendor & { id: string } => Boolean(v.id))
+          .map((v) => ({
+            id: v.id,
+            displayName: v.displayName,
+            handle: v.handle,
+            platform: v.platform,
+          }))}
+        onOpenCreator={(unifiedId) => {
+          const match = vendors.find((v) => v.id === unifiedId);
+          if (match) openCreatorDetails(match);
+        }}
+      />
     </div>
   );
 }

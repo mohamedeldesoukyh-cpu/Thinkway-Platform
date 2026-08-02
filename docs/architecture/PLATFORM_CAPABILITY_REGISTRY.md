@@ -1,9 +1,10 @@
 # Platform Capability Registry
 
 **Status:** Permanent governance registry — **canonical**  
-**Updated:** 2026-08-02 — Release 2.3 · Studio Governance FROZEN · ECI FROZEN · Maintenance Mode  
+**Updated:** 2026-08-02 — Release 2.3 Sprint 2 Studio Evolution **FROZEN · Maintenance Mode**; Decision Narrative registered as Enterprise Planning Standard (not a Platform Capability)  
 **Parent:** [`PLATFORM_ARCHITECTURE_COMPLIANCE.md`](./PLATFORM_ARCHITECTURE_COMPLIANCE.md)  
-**Studio Product Constitution:** [`STUDIO_CAPABILITY_CONTRACT.md`](./STUDIO_CAPABILITY_CONTRACT.md) — **FROZEN · Maintenance Mode · COMPLETE** (Mission · Success Criteria · Product Promise · capability categories · Golden Rules)
+**Studio Product Constitution:** [`STUDIO_CAPABILITY_CONTRACT.md`](./STUDIO_CAPABILITY_CONTRACT.md) — **FROZEN · Maintenance Mode · COMPLETE** (Mission · Success Criteria · Product Promise · capability categories · Golden Rules)  
+**Studio Evolution baseline:** Release 2.3 Sprint 2 — **FROZEN · Maintenance Mode · COMPLETE** (Studio × ECI + Product Excellence Pass + Decision Narrative)
 
 Every future enterprise module must **extend** registered capabilities. Parallel engines are forbidden.
 
@@ -18,6 +19,14 @@ Every future enterprise module must **extend** registered capabilities. Parallel
 | **Enterprise Change Impact Engine** | **Maintenance Mode · frozen · protected · mandatory** | `lib/change-impact/` | [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md) · [`ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md`](./ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md) | Every business-change interpretation |
 | **Enterprise Creator Intelligence** | **Maintenance Mode · frozen · protected · COMPLETE** | `lib/enterprise-creator-intelligence/` | [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) | Planning · Client · Campaign · Reporting · Analytics · AI hooks · Mobile |
 | **Studio Governance** | **Maintenance Mode · frozen · protected · COMPLETE** | `features/campaign-studio/strategy-engine/` · Studio UX | [`STUDIO_CAPABILITY_CONTRACT.md`](./STUDIO_CAPABILITY_CONTRACT.md) · Strategy Engine governance rule | All Studio / Enterprise Planning work |
+
+### Protected planning standards (not Platform Capabilities)
+
+| Standard | Status | Spec | Mandatory reuse intent |
+|----------|--------|------|-------------------------|
+| **Enterprise Planning Decision Narrative** | **Protected planning standard** — **not** a standalone Platform Capability | [`ENTERPRISE_PLANNING_DECISION_NARRATIVE.md`](./ENTERPRISE_PLANNING_DECISION_NARRATIVE.md) · Studio SSOT `features/campaign-studio/services/eci/recommendation-narrative.ts` | Studio (current) · Campaign Workspace · Client Workspace · Mobile · AI Copilot · Proposal Engine · Presentation Engine |
+
+Do **not** promote Decision Narrative to a Platform Capability without explicit Product approval. Parallel recommendation-narrative engines are forbidden — extend the standard.
 
 ---
 
@@ -112,7 +121,7 @@ Document state transitions and available actions from document state only (`reso
 Acceptance: [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) — all gates **PASS**.  
 **Canonical entry:** `loadCreatorIntelligenceBundle` / `loadCreatorIntelligenceBundles`  
 **Shared cache:** `createEciFactsCache` — compute once, reuse; never changes calculations.  
-**Active initiative:** Studio × Enterprise Creator Intelligence (Release 2.3 Sprint 2) — Studio must consume this package only via `loadCreatorIntelligenceBundle`.
+**Studio consumer baseline:** Release 2.3 Sprint 2 Studio Evolution — **FROZEN · Maintenance Mode · COMPLETE**. Studio must consume this package only via `loadCreatorIntelligenceBundle`.
 
 ### Maintenance Mode
 
@@ -245,10 +254,31 @@ Platform creator time-series and intelligence for Studio (Enterprise Planning), 
 - No parallel Planning Workspace product outside Studio  
 - Violation → Architecture Reopen + Product approval  
 
-### Active initiative
+### Studio Evolution — Release 2.3 Sprint 2 (FROZEN · Maintenance Mode · COMPLETE)
 
-**Release 2.3 Sprint 2 — Studio × Enterprise Creator Intelligence:** replace Studio legacy planning intelligence with ECI consumption only. Preserve Studio experience. Do not redesign Studio, Media Plan ownership, or Campaign Workspace.
+**Status:** **FROZEN · Maintenance Mode · protected Studio Evolution baseline · COMPLETE**  
+**Product approval:** 2026-08-02  
+**Freeze tip:** recorded on `origin/develop` after Sprint 2 push (see tip sync commit)  
+**Code:** `features/campaign-studio/services/eci/` · executive planning surfaces · proposal/presentation narrative wiring  
+**Standard:** [`ENTERPRISE_PLANNING_DECISION_NARRATIVE.md`](./ENTERPRISE_PLANNING_DECISION_NARRATIVE.md)
+
+#### Protected baseline includes
+
+- Studio consume-only adapter for Enterprise Creator Intelligence (`loadCreatorIntelligenceBundle`)  
+- Executive planning views (cards · detail · Strategy Compare · Executive Summary)  
+- Decision Impact (“what happens if this decision changes?” — planning explanation only)  
+- Enterprise Planning Decision Narrative (Recommendation → Why → Evidence → Business → Commercial → Risk → Alternative → Decision Impact → Confidence)  
+- Planning Alternatives (decision transparency — not scenario planning)  
+- Proposal / Presentation Creator Strategy Rationale using the same narrative  
+
+#### Maintenance Mode
+
+- Defect / type / build / continuity sync fixes allowed  
+- No redesign of Studio, Media Plan ownership, Planning Context, Strategy Engine, or Campaign Workspace  
+- No ECI architecture changes; no parallel intelligence  
+- No further Sprint 2 enhancements in this release  
+- Elevating Decision Narrative to a Platform Capability requires Product approval  
 
 ### Spec
 
-[`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · [`STUDIO_CAPABILITY_CONTRACT.md`](./STUDIO_CAPABILITY_CONTRACT.md)
+[`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · [`STUDIO_CAPABILITY_CONTRACT.md`](./STUDIO_CAPABILITY_CONTRACT.md) · [`ENTERPRISE_PLANNING_DECISION_NARRATIVE.md`](./ENTERPRISE_PLANNING_DECISION_NARRATIVE.md)

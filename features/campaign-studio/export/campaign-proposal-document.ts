@@ -48,8 +48,23 @@ export type ProposalVendor = {
   engagementRate?: number;
   avatarUrl?: string;
   tier?: string;
+  /** Full narrative chain (fallback when structured fields absent). */
   reason?: string;
   contentIdea?: string;
+  investmentRecommendation?: string;
+  /** Canonical decision narrative fields */
+  recommendationText?: string;
+  whyText?: string;
+  evidenceSummary?: string;
+  businessValue?: string;
+  commercialJustification?: string;
+  riskNote?: string;
+  alternativeNote?: string;
+  whyAlternativeNotSelected?: string;
+  tradeOffs?: string;
+  /** Planning explanation — what happens if this decision changes (not a forecast). */
+  decisionImpact?: string;
+  confidenceNote?: string;
 };
 
 export type ProposalBranding = {
@@ -675,39 +690,54 @@ export function buildCampaignProposalDocumentHtml(
   </div>`);
   }
 
-  // ---- Creators (8 rows per page) ----
+  // ---- Creator strategy rationale (why selected — not a metric dump) ----
   if (vendors.length > 0) {
     sectionNumber += 1;
-    const vendorPages = chunk(vendors, 8);
+    const vendorPages = chunk(vendors, 4);
     vendorPages.forEach((pageVendors, pageIndex) => {
-      const rows = pageVendors
-        .map((v, i) => {
-          const idea =
-            v.contentIdea ??
-            buildCreatorContentIdea({ categories: [v.reason ?? ""] }, facts, pageIndex * 8 + i);
+      const cards = pageVendors
+        .map((v) => {
+          const insufficient = "Insufficient evidence available.";
+          const reco = v.investmentRecommendation?.trim();
+          const recommendation = v.recommendationText?.trim() || v.reason?.trim() || insufficient;
+          const whyBody = v.whyText?.trim() || insufficient;
+          const evidence = v.evidenceSummary?.trim() || insufficient;
+          const business = v.businessValue?.trim() || insufficient;
+          const commercial = v.commercialJustification?.trim() || insufficient;
+          const risk = v.riskNote?.trim() || insufficient;
+          const alt = v.alternativeNote?.trim() || insufficient;
+          const whyNot = v.whyAlternativeNotSelected?.trim() || insufficient;
+          const tradeOffs = v.tradeOffs?.trim() || insufficient;
+          const impact = v.decisionImpact?.trim() || insufficient;
+          const confidence = v.confidenceNote?.trim() || insufficient;
           return `
-        <tr>
-          <td><div class="creator-name">${avatarHtml(v)}<span>${escapeHtml(v.displayName)}</span></div></td>
-          <td>${tierChip(v.tier)}</td>
-          <td>${escapeHtml(v.platform ?? "—")}</td>
-          <td class="num">${formatCompact(v.followers)}</td>
-          <td class="num">${v.engagementRate != null ? `${v.engagementRate.toFixed(1)}%` : "—"}</td>
-          <td class="concept">${escapeHtml(idea)}</td>
-        </tr>`;
+        <div class="rationale-card">
+          <div class="creator-name">${avatarHtml(v)}<span>${escapeHtml(v.displayName)}</span>${tierChip(v.tier)}</div>
+          ${reco ? `<div class="rationale-pill">${escapeHtml(reco)}</div>` : ""}
+          <p><strong>Recommendation:</strong> ${escapeHtml(recommendation)}</p>
+          <p><strong>Why:</strong> ${escapeHtml(whyBody)}</p>
+          <p><strong>Evidence:</strong> ${escapeHtml(evidence)}</p>
+          <p><strong>Business value:</strong> ${escapeHtml(business)}</p>
+          <p><strong>Commercial value:</strong> ${escapeHtml(commercial)}</p>
+          <p><strong>Risk:</strong> ${escapeHtml(risk)}</p>
+          <p><strong>Alternative:</strong> ${escapeHtml(alt)}</p>
+          <p><strong>Why not selected:</strong> ${escapeHtml(whyNot)}</p>
+          <p><strong>Trade-offs:</strong> ${escapeHtml(tradeOffs)}</p>
+          <p><strong>Decision impact:</strong> ${escapeHtml(impact)}</p>
+          <p><strong>Confidence:</strong> ${escapeHtml(confidence)}</p>
+        </div>`;
         })
         .join("");
       const title =
         vendorPages.length > 1
-          ? `Recommended Creators & Content Concepts (${pageIndex + 1}/${vendorPages.length})`
-          : "Recommended Creators & Content Concepts";
+          ? `Creator Strategy Rationale (${pageIndex + 1}/${vendorPages.length})`
+          : "Creator Strategy Rationale";
       pages.push(`
   <div class="page">
     ${deckBrandHeader(sectionNumber, client, logoSrcs)}
     ${deckEyebrow(deckIcon(ICONS.users), DECK.blue, "rgba(0,87,255,.1)", title)}
-    <table class="ctable">
-      <thead><tr><th>Creator</th><th>Tier</th><th>Platform</th><th>Followers</th><th>ER</th><th>Content concept</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
+    <p class="sec-sub">Decision transparency — recommendation, evidence, alternatives, trade-offs, and decision impact prepared for client presentation.</p>
+    <div class="rationale-grid">${cards}</div>
     ${deckFooter(pages.length + 1, client)}
   </div>`);
     });
@@ -950,6 +980,17 @@ export function buildCampaignProposalDocumentHtml(
   .t-item p{ font-size:12.5px; color:${DECK.muted}; margin-top:2px; }
 
   /* ================= CREATOR TABLE ================= */
+  .rationale-grid{ width:calc(100% - 112px); margin:18px 56px 0; display:grid; gap:14px; }
+  .rationale-card{
+    border:1px solid rgba(11,15,26,0.08); border-radius:14px; padding:14px 16px;
+    background:#fff;
+  }
+  .rationale-card .creator-name{ display:flex; align-items:center; gap:10px; font-weight:700; margin-bottom:8px; }
+  .rationale-card p{ margin:6px 0 0; font-size:12.5px; color:#374151; line-height:1.45; }
+  .rationale-pill{
+    display:inline-block; margin:0 0 6px; padding:3px 8px; border-radius:999px;
+    background:rgba(0,87,255,.1); color:#0057FF; font-size:11px; font-weight:700;
+  }
   .ctable{ width:calc(100% - 112px); margin:26px 56px 0; border-collapse:collapse; font-size:13px; }
   .ctable th{
     text-align:left; font-size:10.5px; font-weight:800; letter-spacing:.5px; text-transform:uppercase;

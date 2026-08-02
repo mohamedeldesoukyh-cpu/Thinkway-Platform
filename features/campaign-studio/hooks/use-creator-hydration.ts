@@ -12,16 +12,37 @@ import {
   STUDIO_CREATOR_HYDRATION_LIMIT,
   STUDIO_VENDOR_INITIAL_VISIBLE,
 } from "../constants/hydration-limits";
+import { loadStudioEciPlanningSignalsAction } from "../actions/studio-eci-actions";
 import {
   mapCreatorToHydratedVendor,
   type HydratedVendor,
   type HydrationMapperOptions,
 } from "../services/creator-hydration-mapper";
+import type { StudioEciPlanningSignal } from "../services/eci/project-studio-eci-signal";
 
 export type { HydratedVendor } from "../services/creator-hydration-mapper";
 export { mapCreatorToHydratedVendor } from "../services/creator-hydration-mapper";
 
 const hydrationResultCache = new Map<string, Promise<HydratedVendor[]>>();
+
+async function resolveEciMapperOptions(
+  ids: string[],
+  mapperOptions: HydrationMapperOptions | undefined
+): Promise<HydrationMapperOptions | undefined> {
+  if (mapperOptions?.eciSignalsByInfluencerId?.size) return mapperOptions;
+  try {
+    const record = await loadStudioEciPlanningSignalsAction(ids);
+    const map = new Map<string, StudioEciPlanningSignal>();
+    for (const [id, signal] of Object.entries(record)) {
+      map.set(id, signal);
+      map.set(`inf:${id}`, signal);
+    }
+    if (map.size === 0) return mapperOptions;
+    return { ...mapperOptions, eciSignalsByInfluencerId: map };
+  } catch {
+    return mapperOptions;
+  }
+}
 
 async function loadHydratedVendors(
   ids: string[],
@@ -34,17 +55,21 @@ async function loadHydratedVendors(
   if (cached) return cached;
 
   const promise = (async (): Promise<HydratedVendor[]> => {
+    // DNA hydration loads ECI on the server — do not pass Map across the action boundary.
+    const serializableOptions = mapperOptions
+      ? { ...mapperOptions, eciSignalsByInfluencerId: undefined }
+      : undefined;
     try {
       const dnaResult = await hydrateCreatorsFromDnaAction(
         ids,
         rationale,
         avgFitScore,
-        mapperOptions
+        serializableOptions
       );
       if (dnaResult.vendors.length > 0) {
         const deduped = dedupeByCreatorId(dnaResult.vendors, (v) => v.id).items;
         return orderVendorsByCreatorIds(
-          await backfillMissingAvatars(deduped, mapperOptions),
+          await backfillMissingAvatars(deduped, serializableOptions),
           ids
         );
       }
@@ -53,13 +78,14 @@ async function loadHydratedVendors(
     }
 
     try {
+      const withEci = await resolveEciMapperOptions(ids, mapperOptions);
       const creators = await getUnifiedCreatorsBatchAction(ids);
       const results: HydratedVendor[] = [];
       for (let index = 0; index < creators.length; index += 1) {
         const creator = creators[index];
         if (creator) {
           results.push(
-            mapCreatorToHydratedVendor(creator, index, rationale, avgFitScore, mapperOptions)
+            mapCreatorToHydratedVendor(creator, index, rationale, avgFitScore, withEci)
           );
         }
       }

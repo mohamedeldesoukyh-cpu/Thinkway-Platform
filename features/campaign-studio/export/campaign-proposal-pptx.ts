@@ -747,11 +747,12 @@ export async function buildCampaignProposalPptxBuffer(
     addPageFooter(waves, pageNumber, client);
   }
 
-  // ================= CREATORS =================
+  // ================= CREATOR STRATEGY RATIONALE =================
   if (model.vendors.length > 0) {
     sectionNumber += 1;
     const avatarDataByUrl = await resolveVendorAvatarData(model.vendors);
-    const vendorPages = chunk(model.vendors, 8);
+    const vendorPages = chunk(model.vendors, 5);
+    const rationaleColW = [2.2, 1.0, 9.073] as const;
     vendorPages.forEach((slideVendors, pageIndex) => {
       pageNumber += 1;
       const creators = pptx.addSlide();
@@ -760,57 +761,63 @@ export async function buildCampaignProposalPptxBuffer(
       addSectionEyebrow(
         creators,
         vendorPages.length > 1
-          ? `Recommended Creators & Content Concepts (${pageIndex + 1}/${vendorPages.length})`
-          : "Recommended Creators & Content Concepts",
+          ? `Creator Strategy Rationale (${pageIndex + 1}/${vendorPages.length})`
+          : "Creator Strategy Rationale",
         "DDEBFF"
       );
 
-      const header = ["Creator", "Tier", "Platform", "Followers", "ER", "Content Concept"].map(
-        (t) => ({
-          text: t,
-          options: { bold: true, color: MUTED, fontSize: 8.5, fill: { color: WHITE } },
-        })
-      );
-      const rows = slideVendors.map((v) => [
-        {
-          text: v.displayName,
-          options: {
-            bold: true,
-            color: INK,
-            fontSize: 10,
-            // Leave left inset for the circular avatar overlay.
-            margin: [0.05, 0.06, 0.05, 0.48] as [number, number, number, number],
+      const header = ["Creator", "Tier", "Decision narrative"].map((t) => ({
+        text: t,
+        options: { bold: true, color: MUTED, fontSize: 8.5, fill: { color: WHITE } },
+      }));
+      const rows = slideVendors.map((v) => {
+        const insufficient = "Insufficient evidence available.";
+        const why = [
+          `Recommendation: ${v.recommendationText || v.investmentRecommendation || insufficient}`,
+          `Why: ${v.whyText || insufficient}`,
+          `Evidence: ${v.evidenceSummary || insufficient}`,
+          `Business value: ${v.businessValue || insufficient}`,
+          `Commercial value: ${v.commercialJustification || insufficient}`,
+          `Risk: ${v.riskNote || insufficient}`,
+          `Alternative: ${v.alternativeNote || insufficient}`,
+          `Why not selected: ${v.whyAlternativeNotSelected || insufficient}`,
+          `Trade-offs: ${v.tradeOffs || insufficient}`,
+          `Decision impact: ${v.decisionImpact || insufficient}`,
+          `Confidence: ${v.confidenceNote || insufficient}`,
+        ].join(" → ");
+        return [
+          {
+            text: v.displayName,
+            options: {
+              bold: true,
+              color: INK,
+              fontSize: 10,
+              margin: [0.05, 0.06, 0.05, 0.48] as [number, number, number, number],
+            },
           },
-        },
-        { text: v.tier ?? "—", options: { color: tierFill(v.tier), bold: true, fontSize: 9.5 } },
-        { text: v.platform ?? "—", options: { color: INK, fontSize: 9.5 } },
-        {
-          text: formatFollowers(v.followers),
-          options: { color: INK, fontSize: 9.5 },
-        },
-        {
-          text: v.engagementRate != null ? `${v.engagementRate.toFixed(1)}%` : "—",
-          options: { color: INK, fontSize: 9.5 },
-        },
-        { text: v.contentIdea ?? v.reason ?? "", options: { color: "4B5563", fontSize: 9 } },
-      ]);
+          { text: v.tier ?? "—", options: { color: tierFill(v.tier), bold: true, fontSize: 9.5 } },
+          {
+            text: why || v.reason || v.contentIdea || insufficient,
+            options: { color: "4B5563", fontSize: 8 },
+          },
+        ];
+      });
       creators.addTable([header, ...rows] as never, {
         x: MARGIN_X,
         y: CREATOR_TABLE_Y,
         w: CONTENT_W,
-        colW: [...CREATOR_COL_W],
+        colW: [...rationaleColW],
         fontFace: FONT,
         border: { type: "solid", color: LINE, pt: 0.5 },
         autoPage: false,
         valign: "middle",
-        rowH: CREATOR_ROW_H,
+        rowH: CREATOR_ROW_H + 0.12,
       });
 
-      // Overlay circular avatars in the Creator column (tables cannot embed images).
       slideVendors.forEach((v, i) => {
-        const rowTop = CREATOR_TABLE_Y + CREATOR_ROW_H * (i + 1);
+        const rowTop = CREATOR_TABLE_Y + (CREATOR_ROW_H + 0.12) * (i + 1);
         const avatarX = MARGIN_X + 0.1;
-        const avatarY = rowTop + (CREATOR_ROW_H - CREATOR_AVATAR_SIZE) / 2;
+        const avatarY = rowTop + (CREATOR_ROW_H + 0.12 - CREATOR_AVATAR_SIZE) / 2;
         const url = v.avatarUrl?.trim();
         addCreatorAvatar(
           creators,

@@ -48,6 +48,12 @@ Before building, Product must answer:
 3. Is it **shared**? (use Platform services — no Studio fork)  
 4. Does it belong in **Campaign Workspace** instead? (if category 4 → yes)
 
+## Studio Evolution Sprint 2 (Maintenance Mode)
+
+Protected baseline: Studio × ECI consume-only · executive Decision Narrative · Decision Impact.  
+Planning standard (not a Platform Capability): `docs/architecture/ENTERPRISE_PLANNING_DECISION_NARRATIVE.md`.  
+No redesign / no further Sprint 2 enhancements without Architecture Reopen + Product approval.
+
 ## Related permanent rules
 
 - Strategy Engine / Planning Context: `.cursor/rules/thinkway-strategy-engine-governance.mdc`  

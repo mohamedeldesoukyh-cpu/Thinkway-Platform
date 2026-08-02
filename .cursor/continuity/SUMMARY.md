@@ -49,7 +49,7 @@ Environment switch navigates between **hosts** — never switches DB inside one 
 - `docs/architecture/PLATFORM_ARCHITECTURE_COMPLIANCE.md` — mandatory compliance (lifecycle · journeys · BPN reuse · Campaign Workspace v1.3 invariants · operational effort gate · no new nav)
 - `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.3.md` — canonical Campaign Workspace OS baseline (executive Decision Center · three severities · Vendor IO operational compliance)
 - `docs/architecture/PLATFORM_BULK_OPERATIONS_FRAMEWORK.md` — official bulk framework (`components/workspace/bulk-operations/`); Vendor IO first production consumer (R2.2d / 2.2d.1); gates: bulk · background · AI-ready · effort · idempotent
-- `docs/architecture/PLATFORM_CAPABILITY_REGISTRY.md` — permanent registry; Document Lifecycle + Change Impact + Enterprise Creator Intelligence in **Maintenance Mode** (ECI COMPLETE; Document/Change freeze tip `449fd5c0`)
+- `docs/architecture/PLATFORM_CAPABILITY_REGISTRY.md` — permanent registry; Document Lifecycle + Change Impact + ECI + Studio Governance + **Studio Evolution Sprint 2** in **Maintenance Mode**; Decision Narrative = planning standard (not a capability)
 - `docs/architecture/ENTERPRISE_DOCUMENT_LIFECYCLE.md` — Document Lifecycle **Maintenance Mode** (`lib/document-lifecycle/`); state transitions only
 - `docs/architecture/ENTERPRISE_CHANGE_IMPACT_ENGINE.md` — Change Impact **Maintenance Mode** (`lib/change-impact/`); entry `applyBusinessChangeImpact` only; Quotation/PO/Invoice/Contract/Report must extend — never parallel
 - `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE.md` — **FROZEN · Maintenance Mode · COMPLETE** (`lib/enterprise-creator-intelligence/`); SSOT `loadCreatorIntelligenceBundle`
@@ -59,7 +59,9 @@ Environment switch navigates between **hosts** — never switches DB inside one 
 - `docs/architecture/STUDIO_CAPABILITY_CONTRACT.md` — **Studio Product Constitution · FROZEN · Maintenance Mode · COMPLETE**: Mission · Success Criteria · Product Promise · Planning owns · Intelligence consume-only · Shared services · Execution = Campaign Workspace; Golden Rules; violation → Architecture Reopen + Product approval
 - `.cursor/rules/thinkway-studio-capability-contract.mdc` — Studio Capability Contract guardrail (alwaysApply · FROZEN)
 - `features/campaign-studio/strategy-engine/` — Strategy Engine Foundation (Planning Context orchestration only); persistence remains Campaign Object + Media Plan + Outputs
-- **Active initiative:** Release 2.3 Sprint 2 — Studio × ECI (consume `loadCreatorIntelligenceBundle` only). Parallel Planning Workspace product retired.
+- **Studio Evolution Sprint 2 (FROZEN · Maintenance Mode · COMPLETE):** Studio × ECI consume-only + executive Decision Narrative / Decision Impact — `features/campaign-studio/services/eci/`
+- `docs/architecture/ENTERPRISE_PLANNING_DECISION_NARRATIVE.md` — **protected Enterprise Planning Standard** (not a Platform Capability); reuse across Studio · Campaign Workspace · Client · Mobile · AI Copilot · Proposal · Presentation
+- Parallel Planning Workspace product retired.
 - `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md` — Planning Board = Campaign Media Plan **view** (not a parallel Studio)
 - `docs/architecture/platform-ux/` — Platform UX package (docs 01–12 frozen)  
 - `docs/architecture/CAMPAIGN_MODULE_BASELINE.md` — **protected Campaign baseline** (IA initiative CLOSED)  

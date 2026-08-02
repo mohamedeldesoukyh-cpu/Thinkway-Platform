@@ -29,7 +29,7 @@ function matchesBriefPlatform(card: SearchCreatorCardItem, platforms?: string[])
 export type CampaignScoreInput = {
   cards: SearchCreatorCardItem[];
   facts?: CampaignFacts;
-  /** Persisted CIP fit scores keyed by creator id. */
+  /** Planning fit scores keyed by creator id — ECI investment scores (Studio Sprint 2). */
   fitScores?: Record<string, number>;
   /** Strategy tier mix the slate should track. */
   tierMix?: Array<{ tier: string; percent: number }>;
@@ -48,7 +48,7 @@ export function computeCampaignScores(input: CampaignScoreInput): CampaignScoreS
   const forecast = computeStudioCampaignForecast({ cards, facts });
   const totalFollowers = forecast.audienceSize;
 
-  // Brand fit — persisted CIP relevance where available; unscored creators count neutral.
+  // Brand fit — Enterprise Creator Intelligence investment scores; unscored creators count neutral.
   const fitEntries = new Map(
     Object.entries(input.fitScores ?? {}).map(([id, score]) => [normalizeId(id), score])
   );
@@ -59,7 +59,7 @@ export function computeCampaignScores(input: CampaignScoreInput): CampaignScoreS
       ? 40
       : clamp(fitValues.reduce((a, b) => a + b, 0) / cards.length);
   basis.push(
-    `Brand fit: ${scoredCount}/${cards.length} creators carry persisted campaign fit scores (unscored count 60).`
+    `Brand fit: ${scoredCount}/${cards.length} creators carry Enterprise Creator Intelligence investment scores (unscored count 60).`
   );
 
   // Audience match — brief-platform compliance plus tier-mix adherence.

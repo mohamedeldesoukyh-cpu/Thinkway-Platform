@@ -3,7 +3,8 @@
 **Status:** **FROZEN · Maintenance Mode · COMPLETE** — Permanent Product Constitution for Studio  
 **Effective:** Product-approved 2026-08-02  
 **Scope:** Campaign Studio — Enterprise Planning Platform  
-**Protected baseline includes:** Strategy Engine Foundation · Planning Context Governance · Studio Capability Contract · Mission · Success Criteria · Product Promise  
+**Protected baseline includes:** Strategy Engine Foundation · Planning Context Governance · Studio Capability Contract · Mission · Success Criteria · Product Promise · **Release 2.3 Sprint 2 Studio Evolution** (ECI consume-only · Decision Narrative · Decision Impact)  
+**Studio Capability Registry note:** This contract + Platform Capability Registry Studio Governance section are the canonical Studio registry surfaces.  
 **Related:**  
 - Strategy Engine governance — `.cursor/rules/thinkway-strategy-engine-governance.mdc`  
 - Studio Capability Contract rule — `.cursor/rules/thinkway-studio-capability-contract.mdc`  
@@ -11,6 +12,7 @@
 - Platform Capability Registry — `PLATFORM_CAPABILITY_REGISTRY.md`  
 - Campaign Workspace Baseline v1.3 — `CAMPAIGN_WORKSPACE_BASELINE_V1.3.md`  
 - Enterprise Creator Intelligence — `ENTERPRISE_CREATOR_INTELLIGENCE.md`  
+- Enterprise Planning Decision Narrative (planning standard — not a Platform Capability) — `ENTERPRISE_PLANNING_DECISION_NARRATIVE.md`  
 
 **Violation of this contract — including Mission, Success Criteria, or Product Promise — requires Architecture Reopen and Product approval before implementation.**
 
@@ -221,11 +223,30 @@ Every Studio ADR, capability spec, sprint, or PR that adds Studio surface area m
 
 ---
 
+## Studio Evolution — Release 2.3 Sprint 2 (protected baseline)
+
+**Status:** **FROZEN · Maintenance Mode · COMPLETE** (Product-approved 2026-08-02)
+
+Sprint 2 is the protected Studio Evolution baseline for Studio × Enterprise Creator Intelligence:
+
+| Area | Baseline |
+|------|----------|
+| Intelligence | Consume ECI only via `loadCreatorIntelligenceBundle` — no parallel Studio intelligence |
+| Executive surfaces | Cards · Detail · Strategy Compare · Executive Summary — decision-first language |
+| Decision Narrative | [`ENTERPRISE_PLANNING_DECISION_NARRATIVE.md`](./ENTERPRISE_PLANNING_DECISION_NARRATIVE.md) — protected planning standard |
+| Decision Impact | Planning explanation only; insufficient evidence stated; no fabricated forecasts |
+| Proposal / Presentation | Same narrative order as Studio planning surfaces |
+
+**Maintenance Mode (Sprint 2):** defect / type / build / continuity sync only. No redesign. No further enhancements in this release. No Media Plan / Planning Context / Campaign Workspace / ECI architecture changes.
+
+---
+
 ## Approval
 
 | Role | Status |
 |------|--------|
 | Product | **Approved** 2026-08-02 — FROZEN · Maintenance Mode |
+| Product (Sprint 2 Studio Evolution) | **Approved** 2026-08-02 — FROZEN · Maintenance Mode · COMPLETE |
 | Architecture | Protected baseline |
 
-**Maintenance Mode:** Extend Studio via capability specs that comply with this contract. Do not redesign Mission, Success Criteria, Product Promise, capability categories, or Golden Rules without Architecture Reopen.
+**Maintenance Mode:** Extend Studio via capability specs that comply with this contract. Do not redesign Mission, Success Criteria, Product Promise, capability categories, Golden Rules, or the Sprint 2 Studio Evolution baseline without Architecture Reopen.

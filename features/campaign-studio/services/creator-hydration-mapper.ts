@@ -14,6 +14,11 @@ import {
 } from "./presentation-intelligence";
 import { detectIndustryFromBrief } from "./industry-intelligence";
 import type { CreatorQuotationPriceReference } from "@/lib/creators/quotation-price-reference";
+import {
+  formatStudioEciReason,
+  lookupStudioEciSignal,
+  type StudioEciPlanningSignal,
+} from "./eci/project-studio-eci-signal";
 
 export type HydratedVendor = {
   id: string;
@@ -28,11 +33,18 @@ export type HydratedVendor = {
   language?: string;
   audienceSummary?: string;
   priceEstimate?: string;
+  /** @deprecated Discovery Thinkway Score — not Studio planning SSOT. Prefer brandFit from ECI. */
   thinkwayScore?: number;
+  /** Planning fit — Enterprise Creator Intelligence investment score when available. */
   brandFit?: number;
   reason?: string;
   matchPercent?: number;
   tier?: CreatorTierLabel;
+  /** ECI investment recommendation label when loaded. */
+  eciRecommendation?: string;
+  eciConfidencePercent?: number | null;
+  /** Full planning signal for cards / detail / proposal (consume-only). */
+  planningSignal?: StudioEciPlanningSignal;
 };
 
 function extractHandleFromAccount(
@@ -114,8 +126,13 @@ export type HydrationMapperOptions = {
   preferredPlatforms?: string[];
   currency?: string;
   quotationPriceByInfluencerId?: Map<string, CreatorQuotationPriceReference>;
-  /** Workflow-persisted CIP fit scores (keyed by inf:/dis: or bare uuid). */
+  /**
+   * Legacy persisted scores — used only when ECI signal is unavailable.
+   * Sprint 2 planning SSOT is Enterprise Creator Intelligence.
+   */
   campaignFitScoresByCreatorId?: Record<string, number>;
+  /** ECI planning signals (consume-only). */
+  eciSignalsByInfluencerId?: Map<string, StudioEciPlanningSignal>;
 };
 
 function persistedCampaignFitScore(
@@ -156,12 +173,15 @@ function buildPerCreatorReason(
   const followers = extractFollowers(creator, preferredPlatforms);
   const engagementRate = extractEngagement(creator, preferredPlatforms);
   const account = extractPrimaryAccount(creator, preferredPlatforms);
+  const eci = lookupStudioEciSignal(
+    options?.eciSignalsByInfluencerId,
+    creator.influencer_id ?? creator.unified_id
+  );
+  if (eci) return formatStudioEciReason(eci);
+
   const fitScore =
     persistedCampaignFitScore(creator.unified_id, options?.campaignFitScoresByCreatorId) ??
-    creator.campaign_relevance_score ??
-    creator.brand_fit_score ??
-    creator.thinkway_score ??
-    70 + index * 3;
+    60 + index;
 
   const { whySelected } = deriveVendorRankingFactors(
     {
@@ -176,10 +196,6 @@ function buildPerCreatorReason(
         creator.categories?.slice(0, 2).join(", ") ??
         undefined,
       brandFit: fitScore,
-      campaignRelevanceScore:
-        persistedCampaignFitScore(creator.unified_id, options?.campaignFitScoresByCreatorId) ??
-        creator.campaign_relevance_score ??
-        undefined,
     },
     industry,
     index
@@ -204,17 +220,20 @@ export function mapCreatorToHydratedVendor(
   const account = extractPrimaryAccount(creator, preferredPlatforms);
   const platform = extractPlatform(creator, preferredPlatforms);
   const followers = extractFollowers(creator, preferredPlatforms);
+  const eci = lookupStudioEciSignal(
+    options?.eciSignalsByInfluencerId,
+    creator.influencer_id ?? creator.unified_id
+  );
   const persistedFit = persistedCampaignFitScore(
     creator.unified_id,
     options?.campaignFitScoresByCreatorId
   );
+  // Planning SSOT: ECI investment → persisted ECI-backed scores → neutral (never Thinkway/CIP).
   const fitScore =
+    eci?.investmentScore ??
     persistedFit ??
-    creator.campaign_relevance_score ??
-    creator.brand_fit_score ??
-    creator.thinkway_score ??
     avgFit ??
-    70 + index * 3;
+    60;
   const influencerId = creator.influencer_id ?? null;
   const quotationRef =
     influencerId != null
@@ -251,7 +270,7 @@ export function mapCreatorToHydratedVendor(
       creator.audience_interests?.slice(0, 2).join(", ") ??
       creator.categories?.slice(0, 2).join(", ") ??
       "Category audience",
-    thinkwayScore: creator.thinkway_score,
+    thinkwayScore: eci?.investmentScore ?? undefined,
     brandFit: fitScore,
     reason: buildPerCreatorReason(creator, index, rationale, preferredPlatforms, options),
     matchPercent: Math.min(98, fitScore + 5),
@@ -260,5 +279,8 @@ export function mapCreatorToHydratedVendor(
       followers,
       role: creator.role,
     }),
+    eciRecommendation: eci?.recommendation,
+    eciConfidencePercent: eci?.confidencePercent ?? null,
+    planningSignal: eci,
   };
 }

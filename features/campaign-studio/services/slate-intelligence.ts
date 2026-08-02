@@ -119,6 +119,9 @@ function scoreCreator(
   fitScores: Record<string, number> | undefined,
   currency: string
 ): { score: number; reasonCode?: SlateRecommendationReasonCode; reason?: string } {
+  // fitScores are ECI investment scores when Studio Sprint 2 wiring has run.
+  const hasEciFit =
+    fitScores?.[normalizeCreatorId(card.id)] != null || fitScores?.[card.id] != null;
   const fit = fitScores?.[normalizeCreatorId(card.id)] ?? fitScores?.[card.id] ?? 60;
   const er = card.engagementRate ?? 2;
   const erScore = Math.min(er / 5, 1) * 100;
@@ -150,6 +153,10 @@ function scoreCreator(
   if ((card.followers ?? 0) < 5_000 && !reasonCode) {
     reasonCode = "reach_risk";
     reason = "Reach may under-deliver for this tier target";
+  }
+
+  if (!reason && hasEciFit) {
+    reason = `Enterprise Creator Intelligence investment ${Math.round(fit)}/100`;
   }
 
   const score = fit * 0.45 + erScore * 0.35 + Math.max(0, 100 - pricePenalty) * 0.2;
@@ -341,7 +348,6 @@ export function buildRecommendationsFromShortlistCreators(
   }>
 ): CreatorsSectionData["recommendations"] {
   const creatorIds: string[] = [];
-  const creatorFitScores: Record<string, number> = {};
   const selectedReasoning: NonNullable<
     CreatorsSectionData["recommendations"]
   >["selectedReasoning"] = [];
@@ -355,16 +361,14 @@ export function buildRecommendationsFromShortlistCreators(
     const followers =
       creator.metrics?.followers?.value ?? platform?.follower_count ?? undefined;
     const tier = resolveCreatorTierLabel({ followers, role: creator.role });
-    if (creator.brand_fit_score != null) {
-      creatorFitScores[id] = Math.round(creator.brand_fit_score);
-    }
 
     selectedReasoning.push({
       creatorId: id,
       displayName: creator.display_name,
       platform: platform?.platform ?? undefined,
       handle: platform?.handle ?? undefined,
-      whySelected: "Imported from Discovery shortlist",
+      whySelected:
+        "Imported from Discovery shortlist — Enterprise Creator Intelligence applied on planning hydrate",
       expectedRole: tier,
       audienceMatch: "",
       risk: "",
@@ -377,7 +381,7 @@ export function buildRecommendationsFromShortlistCreators(
 
   return {
     creatorIds,
-    creatorFitScores: Object.keys(creatorFitScores).length ? creatorFitScores : undefined,
+    creatorFitScores: undefined,
     selectedReasoning,
     rationale: `${creatorIds.length} creator${creatorIds.length === 1 ? "" : "s"} from shortlist`,
   };

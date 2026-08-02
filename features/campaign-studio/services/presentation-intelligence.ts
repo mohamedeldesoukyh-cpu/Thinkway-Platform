@@ -1231,8 +1231,15 @@ export type VendorFactorInput = {
   audienceSummary?: string;
   priceEstimate?: string;
   brandFit?: number;
+  /** @deprecated CIP campaign relevance — not Studio planning SSOT after Sprint 2. */
   campaignRelevanceScore?: number;
   rationale?: string;
+  /** Enterprise Creator Intelligence investment (consume-only). */
+  eciInvestmentScore?: number | null;
+  eciRecommendation?: string;
+  eciWhy?: string;
+  eciCommercialJustification?: string;
+  eciEvidence?: string[];
 };
 
 export function deriveVendorRankingFactors(
@@ -1241,9 +1248,12 @@ export function deriveVendorRankingFactors(
   index: number
 ): { whySelected: string; factors: VendorRankingFactor[]; grounding: GroundedElement } {
   const er = vendor.engagementRate ?? 4.5;
-  const fit = vendor.campaignRelevanceScore ?? vendor.brandFit ?? 75 + index * 4;
+  const hasEci = vendor.eciInvestmentScore != null;
+  const fit =
+    vendor.eciInvestmentScore ??
+    vendor.brandFit ??
+    60 + index;
   const followers = vendor.followers ?? 100_000;
-  const hasCampaignScore = vendor.campaignRelevanceScore != null;
 
   const industryErBenchmark: Record<CampaignIndustry, number> = {
     luxury: 3.1,
@@ -1260,18 +1270,27 @@ export function deriveVendorRankingFactors(
 
   const factors: VendorRankingFactor[] = [
     {
-      factor: hasCampaignScore ? "Campaign Fit" : "Brand Fit",
+      factor: hasEci ? "Campaign decision" : "Planning readiness",
       score: fit,
-      reason: hasCampaignScore
-        ? `Brief criteria match ${fit}/100 — requirement → evidence from CIP ranking`
-        : `${fit}/100 category alignment from Thinkway creator DNA`,
+      reason: hasEci
+        ? `${vendor.eciRecommendation ?? "Recommended"} for this campaign — ${vendor.eciWhy ?? "supported by Enterprise Creator Intelligence"}`
+        : "Planning recommendation pending Enterprise Creator Intelligence",
     },
     {
-      factor: "Audience Fit",
+      factor: "Commercial value",
+      score: Math.min(95, fit + (hasEci ? 2 : 0)),
+      reason:
+        vendor.eciCommercialJustification ??
+        (vendor.audienceSummary
+          ? `Audience: ${vendor.audienceSummary}`
+          : "Commercial outlook awaits richer planning evidence"),
+    },
+    {
+      factor: "Audience value",
       score: Math.min(95, fit + 5),
       reason: vendor.audienceSummary
         ? `Audience: ${vendor.audienceSummary}`
-        : "Audience demographics match brief target",
+        : "Audience contribution to campaign targeting",
     },
     {
       factor: "Platform",
@@ -1292,21 +1311,30 @@ export function deriveVendorRankingFactors(
   ];
 
   const topFactors = factors.sort((a, b) => b.score - a.score).slice(0, 3);
-  const whySelected = vendor.rationale
-    ?? (hasCampaignScore
-      ? `Campaign fit ${fit}/100 — ${topFactors.map((f) => `${f.factor}: ${f.reason}`).join("; ")}`
+  const whySelected =
+    vendor.rationale ??
+    (hasEci
+      ? `${vendor.eciRecommendation ?? "Recommended"} · Investment ${fit}/100 — ${topFactors
+          .map((f) => `${f.factor}: ${f.reason}`)
+          .join("; ")}`
       : `Selected for ${topFactors.map((f) => `${f.factor} (${f.score}/100)`).join(", ")} — ${formatFollowers(followers)} ${vendor.platform} reach`);
+
+  const evidenceBits = [
+    `${vendor.displayName} · ${vendor.handle} · ER ${er}%`,
+    hasEci ? `ECI investment ${fit}/100` : null,
+    ...(vendor.eciEvidence?.slice(0, 2) ?? []),
+  ].filter(Boolean);
 
   return {
     whySelected,
     factors,
     grounding: {
-      source: hasCampaignScore ? "AI" : "Creator",
+      source: hasEci ? "Creator" : "Creator",
       confidence: Math.min(95, fit),
-      reason: hasCampaignScore
-        ? "Evidence-linked ranking from campaign brief criteria + creator profile"
-        : "Ranked from Thinkway creator intelligence and historical campaign performance",
-      evidence: `${vendor.displayName} · ${vendor.handle} · ER ${er}%${hasCampaignScore ? ` · campaign fit ${fit}/100` : ""}`,
+      reason: hasEci
+        ? "Evidence-linked ranking from Enterprise Creator Intelligence (investment + commercial layers)"
+        : "Ranked with provisional planning fit — load Enterprise Creator Intelligence for executive justification",
+      evidence: evidenceBits.join(" · "),
     },
   };
 }

@@ -6,7 +6,7 @@
 **Campaign Workspace baseline (canonical):** [`CAMPAIGN_WORKSPACE_BASELINE_V1.3.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.3.md)  
 **Historical:** [`CAMPAIGN_WORKSPACE_BASELINE_V1.2.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.2.md) · [`CAMPAIGN_WORKSPACE_BASELINE_V1.1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.1.md) · [`CAMPAIGN_WORKSPACE_BASELINE_V1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.md)  
 **Effective:** 2026-08-01 (Architecture v1.0 freeze)  
-**Updated:** 2026-08-02 — Release 2.3 Phase 1 · Enterprise Creator Intelligence FROZEN · Maintenance Mode · COMPLETE; Planning Workspace is the active initiative
+**Updated:** 2026-08-02 — Release 2.3 Sprint 2 Studio Evolution FROZEN · Maintenance Mode · COMPLETE; Enterprise Planning Decision Narrative registered as protected planning standard (not a Platform Capability)
 
 ---
 
@@ -80,7 +80,13 @@ Release 2.2d.2 — document state transitions only. Vendor IO / Client IO first.
 Release 2.2d.2b — intelligence layer above Document Lifecycle. Entry: `applyBusinessChangeImpact` only. Freeze tip `449fd5c0`. Quotation/PO/Invoice/Contract/Report **must extend** these engines — **never** parallel implementations. Initiative **CLOSED**. No Production deploy without approval.
 
 **Enterprise Creator Intelligence** (**Maintenance Mode · frozen · protected · COMPLETE**): [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) · `lib/enterprise-creator-intelligence/`  
-Sprint 1–6 protected baselines. Canonical entry: `loadCreatorIntelligenceBundle`. Planning · Client · Campaign · Reporting · Analytics · AI · Mobile must consume this package only. Discovery Thinkway Score is Discovery-only. **Active initiative:** Planning Workspace. No Production deploy without approval.
+Sprint 1–6 protected baselines. Canonical entry: `loadCreatorIntelligenceBundle`. Planning · Client · Campaign · Reporting · Analytics · AI · Mobile must consume this package only. Discovery Thinkway Score is Discovery-only. No Production deploy without approval.
+
+**Studio Governance + Studio Evolution Sprint 2** (**Maintenance Mode · frozen · protected · COMPLETE**): [`STUDIO_CAPABILITY_CONTRACT.md`](./STUDIO_CAPABILITY_CONTRACT.md) · [`PLATFORM_CAPABILITY_REGISTRY.md`](./PLATFORM_CAPABILITY_REGISTRY.md) · `features/campaign-studio/strategy-engine/` · `features/campaign-studio/services/eci/`  
+Studio is the Enterprise Planning Platform. Sprint 2 is the protected Studio Evolution baseline (ECI consume-only · executive decision surfaces · Decision Impact). No redesign of Studio / Media Plan / Planning Context / Campaign Workspace without Architecture Reopen.
+
+**Enterprise Planning Decision Narrative** (**protected planning standard — not a Platform Capability**): [`ENTERPRISE_PLANNING_DECISION_NARRATIVE.md`](./ENTERPRISE_PLANNING_DECISION_NARRATIVE.md)  
+Mandatory narrative order for planning recommendations. Future reuse across Studio · Campaign Workspace · Client Workspace · Mobile · AI Copilot · Proposal Engine · Presentation Engine. Do not fork. Do not promote to a Platform Capability without Product approval.
 
 ---
 

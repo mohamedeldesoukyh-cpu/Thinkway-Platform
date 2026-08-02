@@ -4,12 +4,11 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckIcon,
-  CopyIcon,
   FileTextIcon,
+  LinkIcon,
   MessageSquareWarningIcon,
   PresentationIcon,
   SendIcon,
-  ShareIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -24,9 +23,15 @@ import {
   type CampaignPlanApprovalContext,
 } from "@/features/campaign-plan/actions/campaign-plan-approval";
 import { CampaignPlanReadinessChecklist } from "@/features/campaign-plan/components/campaign-plan-readiness-checklist";
+import { GenerateCampaignLauncher } from "@/features/campaign-plan/components/generate-campaign-launcher";
 
+import { buildProposalExportHref } from "../campaign-proposal-export-actions";
 import { openCampaignProposalPreview } from "../../export/campaign-proposal-preview";
 import { useCreatorHydration } from "../../hooks/use-creator-hydration";
+import {
+  formatExecutiveProposalCreatorBlock,
+  toCampaignDecisionLabel,
+} from "../../services/eci/executive-planning-view";
 import { SectionSkeleton } from "./shared/section-skeleton";
 import {
   SectionFallbackContent,
@@ -110,14 +115,44 @@ export function PresentationStatusSection({
 
   const exportVendors = useMemo(
     () =>
-      hydrated.map((v) => ({
-        displayName: v.displayName,
-        handle: v.handle,
-        platform: v.platform,
-        followers: v.followers,
-        engagementRate: v.engagementRate,
-        reason: v.reason,
-      })),
+      hydrated.map((v) => {
+        const signal = v.planningSignal;
+        if (!signal) {
+          return {
+            displayName: v.displayName,
+            handle: v.handle,
+            platform: v.platform,
+            followers: v.followers,
+            engagementRate: v.engagementRate,
+            tier: v.tier,
+            reason: v.reason,
+          };
+        }
+        const block = formatExecutiveProposalCreatorBlock(signal, v.displayName);
+        const step = (key: string) =>
+          block.steps.find((s) => s.key === key)?.body ?? "Insufficient evidence available.";
+        return {
+          displayName: v.displayName,
+          handle: v.handle,
+          platform: v.platform,
+          followers: v.followers,
+          engagementRate: v.engagementRate,
+          tier: v.tier,
+          reason: block.narrative,
+          investmentRecommendation: toCampaignDecisionLabel(signal.recommendation),
+          recommendationText: step("recommendation"),
+          whyText: step("why"),
+          evidenceSummary: step("evidence"),
+          businessValue: step("businessValue"),
+          commercialJustification: step("commercialValue"),
+          riskNote: step("risk"),
+          alternativeNote: block.alternativeConsidered,
+          whyAlternativeNotSelected: block.reasonAlternativeNotSelected,
+          tradeOffs: block.tradeOffs,
+          decisionImpact: block.decisionImpact,
+          confidenceNote: block.confidence,
+        };
+      }),
     [hydrated]
   );
 
@@ -128,6 +163,37 @@ export function PresentationStatusSection({
     }
     openCampaignProposalPreview(campaignObject, exportVendors);
     toast.success("Client proposal opened — use Print → Save as PDF.");
+  }
+
+  function handleExportPpt() {
+    if (!resolvedCampaignObjectId) {
+      toast.error("Campaign data not ready for export.");
+      return;
+    }
+    window.location.href = buildProposalExportHref(
+      resolvedCampaignObjectId,
+      "pptx",
+      conversationId
+    );
+  }
+
+  async function handleCopyStudioLink() {
+    try {
+      const url =
+        typeof window !== "undefined"
+          ? window.location.href
+          : conversationId
+            ? `/ai/${conversationId}`
+            : "";
+      if (!url) {
+        toast.error("Studio link is not available.");
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      toast.success("Studio link copied.");
+    } catch {
+      toast.error("Could not copy Studio link.");
+    }
   }
 
   function runApprovalAction(
@@ -237,17 +303,22 @@ export function PresentationStatusSection({
         <FileTextIcon className="size-3" aria-hidden />
         Export PDF
       </button>
-      <button type="button" className={refMode ? STUDIO_REF_CLASSES.btn : STUDIO_CLASSES.actBtn} disabled>
+      <button
+        type="button"
+        className={refMode ? STUDIO_REF_CLASSES.btn : STUDIO_CLASSES.actBtn}
+        onClick={handleExportPpt}
+        disabled={!resolvedCampaignObjectId}
+      >
         <PresentationIcon className="size-3" aria-hidden />
         Export PPT
       </button>
-      <button type="button" className={refMode ? STUDIO_REF_CLASSES.btn : STUDIO_CLASSES.actBtn} disabled>
-        <ShareIcon className="size-3" aria-hidden />
-        Share
-      </button>
-      <button type="button" className={refMode ? STUDIO_REF_CLASSES.btn : STUDIO_CLASSES.actBtn} disabled>
-        <CopyIcon className="size-3" aria-hidden />
-        Duplicate
+      <button
+        type="button"
+        className={refMode ? STUDIO_REF_CLASSES.btn : STUDIO_CLASSES.actBtn}
+        onClick={() => void handleCopyStudioLink()}
+      >
+        <LinkIcon className="size-3" aria-hidden />
+        Copy link
       </button>
     </>
   );
@@ -308,6 +379,16 @@ export function PresentationStatusSection({
 
         <div className={STUDIO_REF_CLASSES.signoffActions}>{actionButtons}</div>
 
+        {campaignObject ? (
+          <div className="mt-3">
+            <GenerateCampaignLauncher
+              campaignObject={campaignObject}
+              conversationId={conversationId}
+              variant="compact"
+            />
+          </div>
+        ) : null}
+
         {loadingContext ? (
           <p className={STUDIO_REF_CLASSES.remainingNote}>Loading approval status…</p>
         ) : null}
@@ -362,6 +443,14 @@ export function PresentationStatusSection({
       <div className="flex flex-wrap gap-2 pt-1">
         {actionButtons}
       </div>
+
+      {campaignObject ? (
+        <GenerateCampaignLauncher
+          campaignObject={campaignObject}
+          conversationId={conversationId}
+          variant="compact"
+        />
+      ) : null}
 
       {loadingContext ? (
         <p className="text-[10px] text-muted-foreground">Loading approval status…</p>

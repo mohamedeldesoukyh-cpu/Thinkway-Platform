@@ -24,6 +24,11 @@ import { buildSocialProfileUrl } from "@/features/campaign-studio/services/creat
 import { estimateCreatorPostFee } from "@/features/campaign-studio/services/creator-fee-estimator";
 import { getQuotationPriceReferencesBatch } from "@/lib/creators/quotation-price-reference";
 import { STUDIO_CREATOR_HYDRATION_LIMIT } from "@/features/campaign-studio/constants/hydration-limits";
+import { loadStudioEciPlanningSignals } from "@/features/campaign-studio/services/eci/load-studio-eci-signals";
+import {
+  formatStudioEciReason,
+  lookupStudioEciSignal,
+} from "@/features/campaign-studio/services/eci/project-studio-eci-signal";
 
 type AnySupabase = SupabaseClient;
 
@@ -69,21 +74,18 @@ export function mapDnaToHydratedVendor(
   const unifiedId = record.influencerId.startsWith("inf:")
     ? record.influencerId
     : `inf:${record.influencerId}`;
+  const influencerId = record.influencerId.startsWith("inf:")
+    ? record.influencerId.slice(4)
+    : record.influencerId;
+  const eci = lookupStudioEciSignal(options?.eciSignalsByInfluencerId, influencerId);
   const persistedFit = persistedCampaignFitScore(
     unifiedId,
     options?.campaignFitScoresByCreatorId
   );
-  const fitScore =
-    persistedFit ??
-    doc.scores.brandFit.value ??
-    doc.scores.thinkwayScore.value ??
-    avgFit ??
-    70 + index * 3;
+  // Planning SSOT: ECI investment — never DNA Thinkway / brand-fit scores.
+  const fitScore = eci?.investmentScore ?? persistedFit ?? avgFit ?? 60;
   const followers = doc.metrics.followers.value ?? undefined;
   const rateCardAmount = doc.commercial.estimatedRate.value ?? null;
-  const influencerId = record.influencerId.startsWith("inf:")
-    ? record.influencerId.slice(4)
-    : record.influencerId;
   const quotationRef = options?.quotationPriceByInfluencerId?.get(influencerId);
   const displayCurrency = options?.currency ?? "EGP";
 
@@ -102,10 +104,13 @@ export function mapDnaToHydratedVendor(
       doc.audience.interests.value?.slice(0, 2).join(", ") ??
       doc.audience.categories.value?.slice(0, 2).join(", ") ??
       "Category audience",
-    thinkwayScore: doc.scores.thinkwayScore.value ?? undefined,
+    thinkwayScore: eci?.investmentScore ?? undefined,
     brandFit: fitScore,
-    reason: rationale,
+    reason: eci ? formatStudioEciReason(eci) : rationale,
     matchPercent: Math.min(98, fitScore + 5),
+    eciRecommendation: eci?.recommendation,
+    eciConfidencePercent: eci?.confidencePercent ?? null,
+    planningSignal: eci,
     priceEstimate: estimateCreatorPostFee({
       followers,
       platform,
@@ -192,14 +197,19 @@ export async function hydrateCreatorsFromDna(
   const influencerIds = ids.map((id) => normalizeInfluencerId(id));
   const service = new CreatorDNAService(supabase);
 
-  const [dnaByInfluencer, quotationPriceByInfluencerId] = await Promise.all([
-    service.getCreatorDNABatch(influencerIds),
-    getQuotationPriceReferencesBatch(supabase, influencerIds),
-  ]);
+  const [dnaByInfluencer, quotationPriceByInfluencerId, eciSignalsByInfluencerId] =
+    await Promise.all([
+      service.getCreatorDNABatch(influencerIds),
+      getQuotationPriceReferencesBatch(supabase, influencerIds),
+      loadStudioEciPlanningSignals(supabase, ids).catch(
+        () => new Map() as Awaited<ReturnType<typeof loadStudioEciPlanningSignals>>
+      ),
+    ]);
 
   const hydrationOptions: HydrationMapperOptions = {
     ...options,
     quotationPriceByInfluencerId,
+    eciSignalsByInfluencerId,
   };
 
   const unifiedFallbackIds: Array<{ id: string; index: number }> = [];

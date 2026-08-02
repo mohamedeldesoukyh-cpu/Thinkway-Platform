@@ -17,6 +17,12 @@ import { studioForecastArtifacts } from "./campaign-forecast-service";
 import { studioDecisionArtifacts } from "./campaign-decision-service";
 import { mapBrowseCreatorToSearchResult } from "./creator-platform-utils";
 import { composeCreatorSlate, creatorTierOf } from "./creator-slate";
+import {
+  formatStudioEciReason,
+  lookupStudioEciSignal,
+  studioEciFitScoreRecord,
+} from "./eci/project-studio-eci-signal";
+import { loadStudioEciPlanningSignals } from "./eci/load-studio-eci-signals";
 import { patchSlateIntelligence } from "./slate-intelligence";
 import { normalizeCreatorId } from "./studio-draft";
 
@@ -109,12 +115,36 @@ export async function reoptimizeCampaignAfterApply(
     if (existing) nextReasoning.push(existing);
   }
 
-  const fitScores = recommendations?.creatorFitScores;
+  const eciSignals = await loadStudioEciPlanningSignals(supabase, influencerIds, {
+    platform: facts?.platforms?.[0] ?? null,
+  }).catch(() => new Map());
+  const eciFitScores = studioEciFitScoreRecord(eciSignals);
+  const fitScores =
+    Object.keys(eciFitScores).length > 0
+      ? eciFitScores
+      : recommendations?.creatorFitScores;
   const fitValues = Object.values(fitScores ?? {});
   const avgFitScore =
     fitValues.length > 0
       ? Math.round(fitValues.reduce((a, b) => a + b, 0) / fitValues.length)
       : recommendations?.avgFitScore;
+
+  const nextReasoningWithEci = nextReasoning.map((entry) => {
+    const signal = lookupStudioEciSignal(eciSignals, entry.creatorId);
+    if (!signal) return entry;
+    return {
+      ...entry,
+      whySelected: formatStudioEciReason(signal),
+      audienceMatch: signal.commercialJustification,
+      risk: signal.risks[0] ?? entry.risk,
+      alternative: signal.alternatives[0] ?? entry.alternative,
+      confidence:
+        signal.confidencePercent != null
+          ? Math.min(1, signal.confidencePercent / 100)
+          : entry.confidence,
+      evidence: signal.evidence.slice(0, 3).join(" · ") || entry.evidence,
+    };
+  });
 
   const scores = computeCampaignScores({
     cards: finalCards,
@@ -163,7 +193,8 @@ export async function reoptimizeCampaignAfterApply(
           recommendations: {
             ...(recommendations ?? { creatorIds: [] }),
             creatorIds: [...orderedIds, ...unhydratedIds],
-            selectedReasoning: nextReasoning,
+            selectedReasoning: nextReasoningWithEci,
+            creatorFitScores: fitScores,
             avgFitScore,
           },
         } satisfies CreatorsSectionData,
