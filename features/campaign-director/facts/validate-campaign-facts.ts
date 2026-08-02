@@ -2,6 +2,12 @@ import {
   clampCampaignDurationWeeks,
   DEFAULT_CAMPAIGN_DURATION_WEEKS,
 } from "@/features/campaign-studio/services/timeline-duration";
+import {
+  countryLabel,
+  isValidBrandName,
+  resolveCountryCode,
+  sanitizeBrandName,
+} from "@/features/campaign-intelligence-profile/services/normalization/validators";
 
 import type { CampaignFacts } from "./campaign-facts-types";
 
@@ -42,11 +48,25 @@ export function validateCampaignFacts(facts: CampaignFacts): CampaignFacts {
     validated.sources.durationWeeks = validated.sources.durationWeeks ?? "default";
   }
 
+  if (validated.brandName) {
+    const cleaned = sanitizeBrandName(validated.brandName);
+    if (!isValidBrandName(cleaned)) {
+      delete validated.brandName;
+      delete validated.confidence.brandName;
+      delete validated.sources.brandName;
+    } else {
+      validated.brandName = cleaned;
+    }
+  }
+
   if (validated.geography) {
-    validated.geography = validated.geography
-      .map((g) => g.trim())
-      .filter(Boolean)
-      .slice(0, 5);
+    const cleanedGeo = validated.geography
+      .map((g) => {
+        const code = resolveCountryCode(g);
+        return code ? countryLabel(code) : null;
+      })
+      .filter((g): g is string => Boolean(g));
+    validated.geography = [...new Set(cleanedGeo)].slice(0, 5);
     if (validated.geography.length === 0) delete validated.geography;
   }
 

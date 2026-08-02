@@ -71,10 +71,11 @@ function extractBrandName(input: CampaignFactsExtractInput): {
   fromForAttribution?: boolean;
 } {
   if (input.brandName?.trim()) {
-    return { value: input.brandName.trim(), source: "brief", confidence: 0.95 };
+    const cleaned = cleanEntityCapture(input.brandName);
+    if (cleaned) return { value: cleaned, source: "brief", confidence: 0.95 };
   }
 
-  const parsed = parseBrandFromText(input.rawMessage);
+  const parsed = cleanEntityCapture(parseBrandFromText(input.rawMessage));
   if (parsed) return { value: parsed, source: "brief", confidence: 0.9 };
 
   const forAttribution = cleanEntityCapture(
@@ -129,10 +130,13 @@ function extractGeography(text: string): string[] {
   }
 
   // Canonical labels can duplicate parseMarketFromText output with different casing.
+  // Never keep free-text residue ("Egypt, budget… Please search…").
+  const allowed = new Set(KNOWN_GEO_ENTITIES.map((g) => g.label.toLowerCase()));
   const deduped = new Map<string, string>();
   for (const region of regions) {
     const key = region.trim().toLowerCase();
-    if (key && !deduped.has(key)) deduped.set(key, region.trim());
+    if (!key || !allowed.has(key)) continue;
+    if (!deduped.has(key)) deduped.set(key, region.trim());
   }
   return [...deduped.values()];
 }

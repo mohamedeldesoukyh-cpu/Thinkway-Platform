@@ -634,6 +634,7 @@ export function resolveVendorRecommendations(
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)
+    .filter((line) => /@[\w.]{2,}/.test(line) && !/\*\*Criteria/i.test(line))
     .map((line, index) => {
       const handleMatch = line.match(/@([\w.]+)/);
       const handle = handleMatch ? `@${handleMatch[1]}` : `@vendor-${index + 1}`;

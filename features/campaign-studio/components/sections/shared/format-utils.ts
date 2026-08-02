@@ -146,18 +146,21 @@ export function parseObjectiveFromText(text: string): string | undefined {
 
 export function parseBrandFromText(text: string): string | undefined {
   const clientBrand = text.match(
-    /(?:client\s*\/\s*)?brand\s*name\s*(?:->|[:：]|\s+)\s*(.+?)(?:\n|$)/i
+    /(?:client\s*\/\s*)?brand\s*name\s*(?:->|[:：]|\s+)\s*([A-Za-z0-9][\w&+.'’-]*(?:\s+[A-Za-z0-9][\w&+.'’-]*){0,3})(?=\s*[,;]|\s+(?:market|budget|platform|category|objective|instagram|tiktok)|$|\n)/i
   );
   if (clientBrand?.[1]) return stripMarkdown(clientBrand[1].trim());
 
   const knownBrand = text.match(
-    /\b(Coca-Cola|BabyJoy|Adidas|Emirates NBD|Visit Egypt|Rolex|Pepsi|L'Oréal(?:\s+Paris)?)\b/i
+    /\b(Coca-Cola|BabyJoy|Adidas|Emirates NBD|Visit Egypt|Rolex|Pepsi|L'Oréal(?:\s+Paris)?|e&)\b/i
   );
   if (knownBrand?.[1]) return knownBrand[1];
   if (/babyjoy/i.test(text)) return "BabyJoy";
   const launch = text.match(/\blaunch\s+([A-Za-z][\w-]*(?:\s+[A-Za-z][\w-]*)?)\s+premium/i);
   if (launch?.[1]) return stripMarkdown(launch[1].trim());
-  const brand = text.match(/\bbrand[:\s]+(.+?)(?:\n|$)/i);
+  // Stop at the next brief field so "Brand e&, market Egypt, budget…" does not swallow the line.
+  const brand = text.match(
+    /\bbrand[:\s]+([A-Za-z0-9][\w&+.'’-]*(?:\s+[A-Za-z0-9][\w&+.'’-]*){0,3})(?=\s*[,;]|\s+(?:market|budget|platform|category|objective|instagram|tiktok)|$|\n)/i
+  );
   if (brand?.[1]) return stripMarkdown(brand[1].replace(/^of\s+/i, ""));
   return undefined;
 }
@@ -173,8 +176,13 @@ export function parseProductFromText(text: string): string | undefined {
 export function parseMarketFromText(text: string): string | undefined {
   const inCountry = text.match(/\bin\s+(Egypt|Saudi Arabia|UAE|Jordan|Kuwait|Qatar|Bahrain|Oman|MENA)\b/i);
   if (inCountry?.[1]) return inCountry[1];
-  const market = text.match(/market[:\s]+(.+?)(?:\n|$)/i);
-  if (market?.[1]) return stripMarkdown(market[1]);
+  const market = text.match(
+    /market[:\s]+(Egypt|Saudi Arabia|UAE|United Arab Emirates|Jordan|Kuwait|Qatar|Bahrain|Oman|MENA|GCC)\b/i
+  );
+  if (market?.[1]) {
+    const label = stripMarkdown(market[1]);
+    return /^united arab emirates$/i.test(label) ? "UAE" : label;
+  }
   return undefined;
 }
 

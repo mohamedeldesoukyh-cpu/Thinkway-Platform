@@ -60,8 +60,22 @@ export function CampaignSummarySection({
     return refMode ? pending : <div className="min-w-0 space-y-3">{pending}</div>;
   }
 
+  const isPollutedLabel = (value?: string | null) =>
+    Boolean(
+      value &&
+        (/\bplease\s+(search|find|build)\b/i.test(value) ||
+          (value.length > 60 && /\bbudget\b/i.test(value)))
+    );
+  const cleanClient = isPollutedLabel(data.client) ? undefined : data.client;
+  const cleanBrand = isPollutedLabel(data.brand) ? undefined : data.brand;
+  const cleanMarket = isPollutedLabel(data.market)
+    ? data.market?.match(/\b(Egypt|UAE|Saudi Arabia|Jordan|Kuwait|Qatar|Bahrain|Oman|MENA|GCC)\b/i)?.[1]
+    : data.market;
   const clientBrand =
-    [data.client, data.brand].filter(Boolean).join(" · ") || data.brand || data.client || "";
+    [cleanClient, cleanBrand].filter(Boolean).join(" · ") ||
+    cleanBrand ||
+    cleanClient ||
+    "";
 
   const body = (
     <>
@@ -81,7 +95,7 @@ export function CampaignSummarySection({
         <DetailItem label="Creator Mix" value={data.creatorMix ?? ""} />
         <DetailItem label="Audience" value={data.targetAudience ?? ""} />
         <DetailItem label="Product" value={data.product ?? ""} />
-        <DetailItem label="Market" value={data.market ?? ""} />
+        <DetailItem label="Market" value={cleanMarket ?? ""} />
         <DetailItem label="Deliverables" value={data.deliverables ?? ""} />
       </DetailGrid>
     </>

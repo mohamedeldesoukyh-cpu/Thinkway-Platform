@@ -137,7 +137,18 @@ export function projectStudioEciPlanningSignal(
       ? `Strongest planning signal: ${topStrengths[0]}.`
       : "Supports campaign planning objectives via investment readiness signals.");
 
-  // Never surface internal scoreMeaning formula as boardroom expected outcome.
+  // Never surface internal scoreMeaning / machine shorthand as boardroom outcome.
+  const isBoardroomOutcome = (line: string | null | undefined): line is string => {
+    const trimmed = line?.trim() ?? "";
+    if (!trimmed || trimmed.length < 12) return false;
+    if (/weighted average of scored investment/i.test(trimmed)) return false;
+    if (/^consider\b/i.test(trimmed) && /reuse creator investment/i.test(trimmed)) {
+      return false;
+    }
+    if (/^ready$/i.test(trimmed)) return false;
+    return true;
+  };
+
   const expectedOutcomes = [
     inv.businessReadiness.campaignWorkspace,
     inv.businessReadiness.planningWorkspace,
@@ -145,7 +156,7 @@ export function projectStudioEciPlanningSignal(
       ? `Delivers ${topStrengths[0].toLowerCase()} support for the campaign objective.`
       : null,
     alternatives[0],
-  ].filter((line): line is string => Boolean(line?.trim()));
+  ].filter(isBoardroomOutcome);
 
   const expectedCampaignContribution =
     expectedOutcomes[0] ||

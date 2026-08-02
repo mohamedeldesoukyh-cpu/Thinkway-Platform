@@ -1,6 +1,12 @@
 import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-facts-types";
 import type { CampaignStrategyDocument } from "@/features/campaign-director/types";
 import { detectIndustryFromBrief } from "@/features/campaign-studio/services/industry-intelligence";
+import {
+  countryLabel,
+  isValidBrandName,
+  resolveCountryCode,
+  sanitizeBrandName,
+} from "@/features/campaign-intelligence-profile/services/normalization/validators";
 
 export type Is1CampaignContext = {
   brand: string;
@@ -17,6 +23,26 @@ export type Is1CampaignContext = {
   risks: string[];
 };
 
+function cleanBrandLabel(value: string | undefined | null): string | undefined {
+  if (!value?.trim()) return undefined;
+  if (/\bplease\s+(search|find|build)\b/i.test(value)) return undefined;
+  const sanitized = sanitizeBrandName(value);
+  return isValidBrandName(sanitized) ? sanitized : undefined;
+}
+
+function cleanGeographyLabel(value: string | undefined | null): string | undefined {
+  if (!value?.trim()) return undefined;
+  const parts = value
+    .split(",")
+    .map((part) => {
+      const code = resolveCountryCode(part.trim());
+      return code ? countryLabel(code) : null;
+    })
+    .filter((part): part is string => Boolean(part));
+  if (parts.length === 0) return undefined;
+  return [...new Set(parts)].join(", ");
+}
+
 export function buildIs1CampaignContext(
   facts: CampaignFacts,
   strategy: CampaignStrategyDocument
@@ -26,16 +52,24 @@ export function buildIs1CampaignContext(
     strategy.understanding.industry ??
     detectIndustryFromBrief(facts.rawBriefExcerpt ?? strategy.narrative);
 
+  const brand =
+    cleanBrandLabel(facts.brandName) ??
+    cleanBrandLabel(strategy.understanding.brand) ??
+    cleanBrandLabel(facts.clientName) ??
+    "the brand";
+
+  const geography =
+    cleanGeographyLabel(facts.geography?.join(", ")) ??
+    cleanGeographyLabel(strategy.understanding.geography) ??
+    "the primary market";
+
   return {
-    brand: facts.brandName ?? strategy.understanding.brand,
-    client: facts.clientName ?? strategy.understanding.client,
+    brand,
+    client: cleanBrandLabel(facts.clientName) ?? cleanBrandLabel(strategy.understanding.client),
     industry,
     objective: facts.objective ?? strategy.understanding.objective,
     audience: facts.audience ?? strategy.understanding.audience,
-    geography:
-      facts.geography?.join(", ") ??
-      strategy.understanding.geography ??
-      "Primary market per brief",
+    geography,
     platforms: facts.platforms ?? strategy.understanding.platforms,
     budgetAmount: facts.budget?.amount ?? strategy.understanding.budget?.amount,
     budgetCurrency:
