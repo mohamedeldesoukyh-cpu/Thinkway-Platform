@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { SectionSkeleton } from "./shared/section-skeleton";
 import { formatCurrency } from "./shared/format-utils";
 import {
@@ -8,8 +10,8 @@ import {
   shouldShowPendingPlaceholder,
 } from "./shared/section-status-utils";
 import { BudgetHero, BudgetRow, RationaleBar } from "./shared/studio-ui-primitives";
-import { STUDIO_CLASSES } from "../../constants/studio-tokens";
 import { resolveBudgetData } from "../../services/section-data-resolver";
+import { deriveEnterprisePlanningNarrative } from "../../services/planning-narrative";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
 
@@ -26,6 +28,10 @@ export function BudgetPlannerSection({
 }: BudgetPlannerSectionProps) {
   const isRunning = status === "running";
   const budget = resolveBudgetData(campaignObject);
+  const narrative = useMemo(
+    () => (campaignObject ? deriveEnterprisePlanningNarrative(campaignObject) : null),
+    [campaignObject]
+  );
 
   if (isRunning && !budget) {
     return <SectionSkeleton variant="chart" />;
@@ -44,10 +50,32 @@ export function BudgetPlannerSection({
   const percents = budget.allocations.map(
     (a) => a.percent ?? (total ? Math.round(((a.amount ?? 0) / total) * 100) : 0)
   );
-  const grounded = budget.groundedAllocations ?? [];
 
   return (
-    <div className="min-w-0 w-full">
+    <div className="min-w-0 w-full space-y-2.5">
+      {narrative ? (
+        <div className="rounded-lg border border-border/60 bg-muted/10 p-3 text-[12px] text-foreground">
+          <p className="text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground">
+            Commercial strategy
+          </p>
+          <p className="mt-1">
+            <b>What we should do:</b> {narrative.commercialStrategy}
+          </p>
+          <p className="mt-1 text-muted-foreground">
+            <b className="text-foreground">Allocation logic:</b>{" "}
+            {narrative.budgetNarrative.allocationLogic}
+          </p>
+          <p className="mt-1 text-muted-foreground">
+            <b className="text-foreground">Commercial impact:</b>{" "}
+            {narrative.budgetNarrative.commercialImpact}
+          </p>
+          <p className="mt-1 text-muted-foreground">
+            <b className="text-foreground">Trade-offs:</b>{" "}
+            {narrative.budgetNarrative.tradeOffs}
+          </p>
+        </div>
+      ) : null}
+
       {total > 0 ? (
         <BudgetHero
           amount={formatCurrency(total, budget.currency)}
@@ -55,25 +83,17 @@ export function BudgetPlannerSection({
         />
       ) : null}
 
-      {budget.allocations.map((line, index) => {
-        const g = grounded[index];
-        return (
-          <BudgetRow
-            key={line.category}
-            name={line.category}
-            amount={`${line.percent ?? percents[index]}% · ${line.amount ? formatCurrency(line.amount, budget.currency) : "—"}`}
-            trailing={
-              g?.confidence != null ? (
-                <span className={STUDIO_CLASSES.pillAi}>AI {g.confidence}%</span>
-              ) : null
-            }
-          />
-        );
-      })}
+      {budget.allocations.map((line, index) => (
+        <BudgetRow
+          key={line.category}
+          name={line.category}
+          amount={`${line.percent ?? percents[index]}% · ${line.amount ? formatCurrency(line.amount, budget.currency) : "—"}`}
+        />
+      ))}
 
       {budget.budgetPlannerReasoning ? (
         <RationaleBar>
-          <b>Director rationale:</b> {budget.budgetPlannerReasoning}
+          <b>Commercial rationale:</b> {budget.budgetPlannerReasoning}
         </RationaleBar>
       ) : null}
     </div>

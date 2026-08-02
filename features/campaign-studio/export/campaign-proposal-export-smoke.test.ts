@@ -140,7 +140,7 @@ test("proposal HTML includes client, vendors, budget, and understanding fields",
   assert.match(html, /Organic Mom/);
   assert.match(html, /165,?000|165K|AED/i);
   assert.match(html, /Campaign Understanding/);
-  assert.match(html, /Executive Summary/);
+  assert.match(html, /Executive Planning Brief/);
   assert.match(html, /@media screen/);
   assert.match(html, /transform:scale\(calc\(100vw/);
 });

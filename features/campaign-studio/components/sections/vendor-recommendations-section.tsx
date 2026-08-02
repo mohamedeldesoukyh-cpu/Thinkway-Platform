@@ -76,6 +76,7 @@ import { ShortlistSlatePickerDialog } from "./shortlist-slate-picker-dialog";
 import { StudioCreatorCompareDialog } from "./studio-creator-compare-dialog";
 import { StudioPlanningCreatorDetail } from "./studio-planning-creator-detail";
 import { StudioPlanningIntelligenceStrip } from "./shared/studio-planning-intelligence-strip";
+import { deriveEnterprisePlanningNarrative } from "../../services/planning-narrative";
 
 type VendorRecommendationsSectionProps = {
   campaignObject?: CampaignObject;
@@ -684,6 +685,10 @@ export function VendorRecommendationsSection({
   const slateIntelligence = previewCreatorsData.slateIntelligence;
   const previewVendorDecisions = previewCreatorsData.vendorDecisions ?? vendorDecisions;
   const creatorsPhase = previewCreatorsData.phase ?? creatorsData.phase;
+  const creatorPackageThesis = useMemo(() => {
+    if (!campaignObject) return null;
+    return deriveEnterprisePlanningNarrative(campaignObject).creatorPackageThesis;
+  }, [campaignObject]);
 
   const openCreatorDetails = useCallback(
     (vendor: DisplayVendor) => {
@@ -1105,6 +1110,14 @@ export function VendorRecommendationsSection({
 
   return (
     <div className="min-w-0 space-y-2">
+      {creatorPackageThesis ? (
+        <div className="rounded-lg border border-[#0057FF]/25 bg-[#0057FF]/5 px-3 py-2.5 text-[12px]">
+          <p className="text-[10px] font-extrabold uppercase tracking-wide text-[#0057FF]">
+            Creator strategy · Enterprise Planning Package
+          </p>
+          <p className="mt-1 text-foreground">{creatorPackageThesis}</p>
+        </div>
+      ) : null}
       {isRegeneratingProposal ? (
         <div className="rounded-lg border border-[#0057FF]/30 bg-[#0057FF]/5 px-3 py-2">
           <p className="text-[11px] font-semibold text-[#0057FF]">Regenerating creator slate…</p>

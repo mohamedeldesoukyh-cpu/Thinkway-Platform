@@ -22,7 +22,6 @@ import { SLIDE_DECK_PAGE } from "@/lib/io/slide-deck-page";
 import {
   resolveCampaignSummary,
   resolveExecutiveStrategy,
-  resolveExecutiveSummaryData,
   resolveBudgetData,
   resolveGroundedKpis,
   resolveKpiData,
@@ -31,6 +30,13 @@ import {
   resolveVendorRecommendations,
 } from "../services/section-data-resolver";
 import { buildCreatorContentIdea, isTrendCampaign } from "../services/creator-slate";
+import type { StudioEciPlanningSignal } from "../services/eci/project-studio-eci-signal";
+import {
+  deriveEnterprisePlanningNarrative,
+  formatExecutiveBriefLines,
+  formatExecutiveDecisionSummaryLines,
+  getCanonicalPlanningPackageFields,
+} from "../services/planning-narrative";
 
 function escapeHtml(value: string): string {
   return value
@@ -227,6 +233,35 @@ export type CampaignProposalModel = {
   executiveSummary: string;
   recommendedActions: string[];
   strategyText: string;
+  /** Single Planning Narrative — SSOT for Brief / Proposal / Presentation. */
+  packageOpening: string;
+  executiveRecommendation: string;
+  briefLines: Array<{ label: string; body: string }>;
+  strategyPillars: Array<{ label: string; body: string }>;
+  presentationBeats: Array<{ label: string; body: string }>;
+  assumptions: Array<{ category: string; statement: string }>;
+  openDecisions: Array<{ decision: string; ownerHint: string }>;
+  commercialStrategy: string;
+  executionStrategy: string;
+  creatorPackageThesis: string;
+  approvalAsk: string;
+  executiveObjections: Array<{ concern: string; observation: string }>;
+  criticalSuccessFactors: Array<{ factor: string; whyItMatters: string }>;
+  executiveDecisionSummary: {
+    decisionRequested: string;
+    whyApprovalRecommended: string;
+    businessImpact: string;
+    commercialImpact: string;
+    openDecisions: string;
+    immediateNextSteps: string[];
+  };
+  decisionSummaryLines: Array<{ label: string; body: string }>;
+  /** Canonical package fields — identical to Planning Narrative SSOT. */
+  canonicalFields: Record<string, string>;
+  businessChallenge: string;
+  strategicInsight: string;
+  recommendedBusinessDecision: string;
+  expectedBusinessOutcome: string;
   statTiles: Array<{ label: string; value: string; sub: string }>;
   understanding: Array<[string, string]>;
   vendors: ProposalVendor[];
@@ -263,7 +298,8 @@ function appendUnderstandingField(
 export function buildCampaignProposalModel(
   campaignObject: CampaignObject,
   hydratedVendors: ProposalVendor[] = [],
-  branding: ProposalBranding = {}
+  branding: ProposalBranding = {},
+  planningSignals: StudioEciPlanningSignal[] = []
 ): CampaignProposalModel {
   const generated = new Date().toLocaleDateString("en-GB", {
     day: "numeric",
@@ -277,12 +313,9 @@ export function buildCampaignProposalModel(
     : resolvedSummary ?? (facts ? applyFactsToSummaryData({}, facts) : null);
   const strategy = resolveExecutiveStrategy(campaignObject);
   const budget = resolveBudgetData(campaignObject);
-  const executive = resolveExecutiveSummaryData(campaignObject);
   const presentation = resolvePresentationData(campaignObject);
   const kpis = resolveKpiData(campaignObject);
   const presentationVersion = resolvePresentationCompletion(campaignObject).version;
-  const summaryText = readPlainSectionText(campaignObject.sections.summary.content);
-  const strategyTextContent = readPlainSectionText(campaignObject.sections.strategy.content);
 
   const client =
     summary?.client ??
@@ -358,28 +391,18 @@ export function buildCampaignProposalModel(
     appendUnderstandingField(understanding, "Campaign type", facts.campaignType);
   }
 
-  const executiveSummary =
-    executive?.summary?.trim() ||
-    summary?.objective?.trim() ||
-    strategy?.keyMessage?.trim() ||
-    strategy?.creatorStrategy?.trim() ||
-    summaryText ||
-    strategyTextContent ||
-    "Campaign proposal prepared by Thinkway.";
-
-  const strategyText =
-    strategy?.creatorStrategy?.trim() ||
-    strategy?.objective?.trim() ||
-    strategy?.keyMessage?.trim() ||
-    strategyTextContent ||
-    executiveSummary;
-
-  const recommendedFromExecutive =
-    executive?.recommendedActions?.filter((item) => item.trim()) ?? [];
+  const planningNarrative = deriveEnterprisePlanningNarrative(
+    campaignObject,
+    planningSignals.length > 0 ? planningSignals : undefined
+  );
+  const canonicalFields = getCanonicalPlanningPackageFields(planningNarrative);
+  // Planning Narrative is the only executive wording source — no parallel summaries.
+  const executiveSummary = planningNarrative.executiveRecommendation;
+  const strategyText = planningNarrative.campaignStrategy;
   const recommendedActions =
-    recommendedFromExecutive.length > 0
-      ? recommendedFromExecutive
-      : strategy?.successFactors?.filter((item) => item.trim()) ?? [];
+    planningNarrative.executiveDecisionSummary.immediateNextSteps.filter((item) =>
+      item.trim()
+    );
 
   const mixCounts = new Map<string, number>();
   for (const v of vendors) {
@@ -413,6 +436,14 @@ export function buildCampaignProposalModel(
             basis: k.benchmark ?? k.platform ?? k.calculationSource,
           }));
 
+  const waves = buildActivationWaves(campaignObject).map((wave, index) => ({
+    ...wave,
+    goal:
+      index === 0
+        ? planningNarrative.executionStrategy
+        : wave.goal,
+  }));
+
   return {
     campaignName,
     client,
@@ -426,11 +457,34 @@ export function buildCampaignProposalModel(
     executiveSummary,
     recommendedActions,
     strategyText,
+    packageOpening: planningNarrative.packageOpening,
+    executiveRecommendation: planningNarrative.executiveRecommendation,
+    briefLines: formatExecutiveBriefLines(planningNarrative),
+    strategyPillars: planningNarrative.strategyPillars.map((p) => ({
+      label: p.label,
+      body: p.body,
+    })),
+    presentationBeats: planningNarrative.presentationBeats,
+    assumptions: planningNarrative.assumptions,
+    openDecisions: planningNarrative.openDecisions,
+    commercialStrategy: planningNarrative.commercialStrategy,
+    executionStrategy: planningNarrative.executionStrategy,
+    creatorPackageThesis: planningNarrative.creatorPackageThesis,
+    approvalAsk: planningNarrative.executiveDecisionSummary.decisionRequested,
+    executiveObjections: planningNarrative.executiveObjections,
+    criticalSuccessFactors: planningNarrative.criticalSuccessFactors,
+    executiveDecisionSummary: planningNarrative.executiveDecisionSummary,
+    decisionSummaryLines: formatExecutiveDecisionSummaryLines(planningNarrative),
+    canonicalFields,
+    businessChallenge: planningNarrative.businessChallenge,
+    strategicInsight: planningNarrative.strategicInsight,
+    recommendedBusinessDecision: planningNarrative.recommendedBusinessDecision,
+    expectedBusinessOutcome: planningNarrative.expectedBusinessOutcome,
     statTiles,
     understanding,
     vendors,
     mixSource,
-    waves: buildActivationWaves(campaignObject),
+    waves,
     budget: budget
       ? {
           total: budget.total,
@@ -438,7 +492,9 @@ export function buildCampaignProposalModel(
           allocations: (budget.allocations ?? []).map((a) => ({
             category: a.category,
             percent: a.percent,
-            notes: clientFacingAllocationNote(a.notes),
+            notes:
+              clientFacingAllocationNote(a.notes) ||
+              planningNarrative.budgetNarrative.allocationLogic,
           })),
         }
       : null,
@@ -566,10 +622,16 @@ export function buildCampaignProposalDocumentHtml(
   campaignObject: CampaignObject,
   hydratedVendors: ProposalVendor[] = [],
   branding: ProposalBranding = {},
-  options: BuildCampaignProposalDocumentOptions = {}
+  options: BuildCampaignProposalDocumentOptions = {},
+  planningSignals: StudioEciPlanningSignal[] = []
 ): string {
   const { logoSrcs } = options;
-  const model = buildCampaignProposalModel(campaignObject, hydratedVendors, branding);
+  const model = buildCampaignProposalModel(
+    campaignObject,
+    hydratedVendors,
+    branding,
+    planningSignals
+  );
   const facts = getCampaignFacts(campaignObject);
   const {
     campaignName,
@@ -642,8 +704,66 @@ export function buildCampaignProposalDocumentHtml(
   </div>`);
   });
 
-  // ---- Executive Summary ----
+  // ---- Enterprise Planning Package · Executive Brief (single narrative) ----
   sectionNumber += 1;
+  const briefItems = model.briefLines
+    .map(
+      (line) =>
+        `<div class="detail-item"><div class="l">${escapeHtml(line.label)}</div><div class="v">${escapeHtml(line.body)}</div></div>`
+    )
+    .join("");
+  const assumptionItems = model.assumptions
+    .slice(0, 6)
+    .map(
+      (a) =>
+        `<p><strong>${escapeHtml(a.category)} (assumption):</strong> ${escapeHtml(a.statement)}</p>`
+    )
+    .join("");
+  const openDecisionItems = model.openDecisions
+    .slice(0, 6)
+    .map(
+      (d) =>
+        `<p><strong>${escapeHtml(d.decision)}</strong> — ${escapeHtml(d.ownerHint)}</p>`
+    )
+    .join("");
+  pages.push(`
+  <div class="page">
+    ${deckBrandHeader(sectionNumber, client, logoSrcs)}
+    ${deckEyebrow(deckIcon(ICONS.star), DECK.blue, "rgba(0,87,255,.1)", "Enterprise Planning Package")}
+    <p class="sec-sub">${escapeHtml(model.executiveRecommendation)}</p>
+    <div class="detail-grid">${briefItems}</div>
+    <p class="sec-sub" style="margin-top:12px"><strong>Assumptions</strong> (not facts)</p>
+    ${assumptionItems}
+    <p class="sec-sub" style="margin-top:10px"><strong>Open Decisions</strong></p>
+    ${openDecisionItems}
+    ${deckFooter(pages.length + 1, client)}
+  </div>`);
+
+  // ---- Campaign Strategy pillars ----
+  sectionNumber += 1;
+  const pillarCards = model.strategyPillars
+    .map(
+      (p) =>
+        `<div class="rationale-card"><p><strong>${escapeHtml(p.label)}:</strong> ${escapeHtml(p.body)}</p></div>`
+    )
+    .join("");
+  pages.push(`
+  <div class="page">
+    ${deckBrandHeader(sectionNumber, client, logoSrcs)}
+    ${deckEyebrow(deckIcon(ICONS.star), DECK.purple, "rgba(124,58,237,.1)", "Campaign Strategy")}
+    <p class="sec-sub">${escapeHtml(model.strategyText)}</p>
+    <div class="rationale-grid">${pillarCards}</div>
+    ${deckFooter(pages.length + 1, client)}
+  </div>`);
+
+  // ---- Executive Brief (same Planning Narrative lines — no parallel summary) ----
+  sectionNumber += 1;
+  const execBriefItems = model.briefLines
+    .map(
+      (line) =>
+        `<div class="detail-item"><div class="l">${escapeHtml(line.label)}</div><div class="v">${escapeHtml(line.body)}</div></div>`
+    )
+    .join("");
   const checkItems = model.recommendedActions
     .slice(0, 6)
     .map(
@@ -651,23 +771,13 @@ export function buildCampaignProposalDocumentHtml(
         `<div class="check-item"><span class="ck">${deckIcon(ICONS.check, 12)}</span>${escapeHtml(a)}</div>`
     )
     .join("");
-  const strategyTags = buildProposalStrategyTags(model.mixSource)
-    .map(
-      (t) =>
-        `<div class="strategy-tag"><div class="n">${escapeHtml(t.n)}</div><div class="l">${escapeHtml(t.l)}</div></div>`
-    )
-    .join("");
-  const strategyPara =
-    model.strategyText && model.strategyText !== model.executiveSummary
-      ? `<p class="summary-text" style="padding-top:14px;">${escapeHtml(model.strategyText)}</p>`
-      : "";
   pages.push(`
   <div class="page">
     ${deckBrandHeader(sectionNumber, client, logoSrcs)}
-    ${deckEyebrow(deckIcon(ICONS.star), DECK.pink, "rgba(214,51,108,.1)", "Executive Summary")}
-    <p class="summary-text">${escapeHtml(model.executiveSummary)}</p>
-    ${checkItems ? `<div class="check-grid">${checkItems}</div>` : strategyPara}
-    ${strategyTags ? `<div class="strategy-row">${strategyTags}</div>` : ""}
+    ${deckEyebrow(deckIcon(ICONS.star), DECK.pink, "rgba(214,51,108,.1)", "Executive Planning Brief")}
+    <p class="sec-sub">${escapeHtml(model.executiveRecommendation)}</p>
+    <div class="detail-grid">${execBriefItems}</div>
+    ${checkItems ? `<div class="check-grid" style="margin-top:14px">${checkItems}</div>` : ""}
     ${deckFooter(pages.length + 1, client)}
   </div>`);
 
@@ -736,7 +846,7 @@ export function buildCampaignProposalDocumentHtml(
   <div class="page">
     ${deckBrandHeader(sectionNumber, client, logoSrcs)}
     ${deckEyebrow(deckIcon(ICONS.users), DECK.blue, "rgba(0,87,255,.1)", title)}
-    <p class="sec-sub">Decision transparency — recommendation, evidence, alternatives, trade-offs, and decision impact prepared for client presentation.</p>
+    <p class="sec-sub">${escapeHtml(model.creatorPackageThesis)}</p>
     <div class="rationale-grid">${cards}</div>
     ${deckFooter(pages.length + 1, client)}
   </div>`);
@@ -776,7 +886,8 @@ export function buildCampaignProposalDocumentHtml(
   pages.push(`
   <div class="page">
     ${deckBrandHeader(sectionNumber, client, logoSrcs)}
-    ${deckEyebrow(deckIcon(ICONS.coin), DECK.amber, "rgba(217,119,6,.12)", "Budget & Amplification")}
+    ${deckEyebrow(deckIcon(ICONS.coin), DECK.amber, "rgba(217,119,6,.12)", "Commercial Strategy")}
+    <p class="sec-sub">${escapeHtml(model.commercialStrategy)}</p>
     ${budgetHero}
     <div class="amp-grid">${ampItems}</div>
     ${deckFooter(pages.length + 1, client)}
@@ -804,12 +915,69 @@ export function buildCampaignProposalDocumentHtml(
   </div>`);
   }
 
+  // ---- Executive Objections (observations, not blockers) ----
+  sectionNumber += 1;
+  const objectionCards = model.executiveObjections
+    .slice(0, 8)
+    .map(
+      (o) =>
+        `<div class="rationale-card"><p><strong>${escapeHtml(o.concern)}</strong></p><p>${escapeHtml(o.observation)}</p></div>`
+    )
+    .join("");
+  pages.push(`
+  <div class="page">
+    ${deckBrandHeader(sectionNumber, client, logoSrcs)}
+    ${deckEyebrow(deckIcon(ICONS.star), DECK.amber, "rgba(217,119,6,.12)", "Executive Objections")}
+    <p class="sec-sub">Planning observations executives may reasonably raise — not blockers. Transparency strengthens approval confidence.</p>
+    <div class="rationale-grid">${objectionCards}</div>
+    ${deckFooter(pages.length + 1, client)}
+  </div>`);
+
+  // ---- Critical Success Factors ----
+  sectionNumber += 1;
+  const csfCards = model.criticalSuccessFactors
+    .map(
+      (f) =>
+        `<div class="rationale-card"><p><strong>${escapeHtml(f.factor)}</strong></p><p>${escapeHtml(f.whyItMatters)}</p></div>`
+    )
+    .join("");
+  pages.push(`
+  <div class="page">
+    ${deckBrandHeader(sectionNumber, client, logoSrcs)}
+    ${deckEyebrow(deckIcon(ICONS.check), DECK.green, "rgba(12,157,87,.1)", "Critical Success Factors")}
+    <p class="sec-sub">What must happen for this strategy to succeed?</p>
+    <div class="rationale-grid">${csfCards}</div>
+    ${deckFooter(pages.length + 1, client)}
+  </div>`);
+
+  // ---- Executive Decision Summary (final approval page) ----
+  sectionNumber += 1;
+  const decisionItems = model.decisionSummaryLines
+    .map(
+      (line) =>
+        `<div class="detail-item"><div class="l">${escapeHtml(line.label)}</div><div class="v">${escapeHtml(line.body)}</div></div>`
+    )
+    .join("");
+  const nextSteps = model.executiveDecisionSummary.immediateNextSteps
+    .map((step) => `<div class="check-item"><span class="ck">${deckIcon(ICONS.check, 12)}</span>${escapeHtml(step)}</div>`)
+    .join("");
+  pages.push(`
+  <div class="page">
+    ${deckBrandHeader(sectionNumber, client, logoSrcs)}
+    ${deckEyebrow(deckIcon(ICONS.star), DECK.blue, "rgba(0,87,255,.1)", "Executive Decision Summary")}
+    <p class="sec-sub">${escapeHtml(model.executiveDecisionSummary.decisionRequested)}</p>
+    <div class="detail-grid">${decisionItems}</div>
+    <div class="check-grid" style="margin-top:14px">${nextSteps}</div>
+    ${deckFooter(pages.length + 1, client)}
+  </div>`);
+
   // ---- Close ----
   const closeHeadline = buildProposalCloseHeadline(model);
   pages.push(`
   <div class="page close">
     ${renderThinkwayReportLogoHtml({ variant: "closing", theme: "dark", ...logoSrcs })}
     <h2>${escapeHtml(closeHeadline)}</h2>
+    <p>${escapeHtml(model.approvalAsk)}</p>
     <p>Prepared by the Thinkway Campaign Intelligence team · ${escapeHtml(generated)}</p>
     <div class="contact">${escapeHtml(CONTACT_LINE)}</div>
   </div>`);

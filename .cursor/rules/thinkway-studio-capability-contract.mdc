@@ -54,6 +54,12 @@ Protected baseline: Studio × ECI consume-only · executive Decision Narrative �
 Planning standard (not a Platform Capability): `docs/architecture/ENTERPRISE_PLANNING_DECISION_NARRATIVE.md`.  
 No redesign / no further Sprint 2 enhancements without Architecture Reopen + Product approval.
 
+## Enterprise Planning Package Sprint 3 (Maintenance Mode)
+
+Protected Studio commercial baseline: one Enterprise Planning Package.  
+SSOT: `features/campaign-studio/services/planning-narrative.ts` — identical wording for Studio · Brief · Proposal · Presentation · Approval.  
+No parallel executive summaries. No further Release 2.3 Studio enhancements without Architecture Reopen + Product approval.
+
 ## Related permanent rules
 
 - Strategy Engine / Planning Context: `.cursor/rules/thinkway-strategy-engine-governance.mdc`  

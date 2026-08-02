@@ -1,10 +1,10 @@
 # Platform Capability Registry
 
 **Status:** Permanent governance registry — **canonical**  
-**Updated:** 2026-08-02 — Release 2.3 Sprint 2 Studio Evolution **FROZEN · Maintenance Mode**; Decision Narrative registered as Enterprise Planning Standard (not a Platform Capability)  
+**Updated:** 2026-08-02 — Release 2.3 Sprint 3 **Enterprise Planning Package FROZEN · Maintenance Mode** (protected Studio baseline)  
 **Parent:** [`PLATFORM_ARCHITECTURE_COMPLIANCE.md`](./PLATFORM_ARCHITECTURE_COMPLIANCE.md)  
 **Studio Product Constitution:** [`STUDIO_CAPABILITY_CONTRACT.md`](./STUDIO_CAPABILITY_CONTRACT.md) — **FROZEN · Maintenance Mode · COMPLETE** (Mission · Success Criteria · Product Promise · capability categories · Golden Rules)  
-**Studio Evolution baseline:** Release 2.3 Sprint 2 — **FROZEN · Maintenance Mode · COMPLETE** (Studio × ECI + Product Excellence Pass + Decision Narrative)
+**Studio protected baseline:** Release 2.3 Sprint 3 — **Enterprise Planning Package** (**FROZEN · Maintenance Mode · COMPLETE**)
 
 Every future enterprise module must **extend** registered capabilities. Parallel engines are forbidden.
 
@@ -25,8 +25,9 @@ Every future enterprise module must **extend** registered capabilities. Parallel
 | Standard | Status | Spec | Mandatory reuse intent |
 |----------|--------|------|-------------------------|
 | **Enterprise Planning Decision Narrative** | **Protected planning standard** — **not** a standalone Platform Capability | [`ENTERPRISE_PLANNING_DECISION_NARRATIVE.md`](./ENTERPRISE_PLANNING_DECISION_NARRATIVE.md) · Studio SSOT `features/campaign-studio/services/eci/recommendation-narrative.ts` | Studio (current) · Campaign Workspace · Client Workspace · Mobile · AI Copilot · Proposal Engine · Presentation Engine |
+| **Enterprise Planning Package Narrative** | **Protected Studio baseline / planning standard** — **not** a standalone Platform Capability | `features/campaign-studio/services/planning-narrative.ts` · Studio Capability Contract Sprint 3 | Studio · Proposal · Presentation · Approval Package (single wording SSOT) |
 
-Do **not** promote Decision Narrative to a Platform Capability without explicit Product approval. Parallel recommendation-narrative engines are forbidden — extend the standard.
+Do **not** promote Decision Narrative or Planning Package Narrative to Platform Capabilities without explicit Product approval. Parallel executive-summary / package-narrative engines are forbidden — extend these standards.
 
 ---
 
@@ -279,6 +280,33 @@ Platform creator time-series and intelligence for Studio (Enterprise Planning), 
 - No further Sprint 2 enhancements in this release  
 - Elevating Decision Narrative to a Platform Capability requires Product approval  
 
+### Enterprise Planning Package — Release 2.3 Sprint 3 (FROZEN · Maintenance Mode · COMPLETE)
+
+**Status:** **FROZEN · Maintenance Mode · protected Studio baseline · COMPLETE**  
+**Product approval:** 2026-08-02  
+**Freeze tip:** recorded on `origin/develop` after Sprint 3 push (see tip sync commit)  
+**Product:** Enterprise Planning Package (one commercial product — not nine capabilities)  
+**Code SSOT:** `features/campaign-studio/services/planning-narrative.ts`  
+**Consumers (identical wording):** Studio · Executive Planning Brief · Proposal · Presentation · Approval Package  
+
+#### Protected baseline includes
+
+- Single Planning Narrative spine (Challenge → Insight → Decision → Strategies → Outcome → Assumptions → Objections → CSFs → Open Decisions → Recommendation → Decision Requested)  
+- Executive Objections (planning observations, not blockers)  
+- Critical Success Factors  
+- Executive Decision Summary  
+- Brief completeness gate  
+- Budget / Timeline / Creator package as narrative consumers of the same SSOT  
+- No parallel executive summaries across deliverables  
+
+#### Maintenance Mode
+
+- Defect / type / build / continuity sync fixes allowed  
+- No redesign of Studio, Media Plan ownership, Planning Context, Strategy Engine, or Campaign Workspace  
+- No new planning capabilities in Release 2.3  
+- No Scenario Planning · Collaboration · Client Workspace in this freeze  
+- No further Sprint 3 enhancements in Release 2.3  
+
 ### Spec
 
-[`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · [`STUDIO_CAPABILITY_CONTRACT.md`](./STUDIO_CAPABILITY_CONTRACT.md) · [`ENTERPRISE_PLANNING_DECISION_NARRATIVE.md`](./ENTERPRISE_PLANNING_DECISION_NARRATIVE.md)
+[`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · [`STUDIO_CAPABILITY_CONTRACT.md`](./STUDIO_CAPABILITY_CONTRACT.md) · [`ENTERPRISE_PLANNING_DECISION_NARRATIVE.md`](./ENTERPRISE_PLANNING_DECISION_NARRATIVE.md) · `features/campaign-studio/services/planning-narrative.ts`

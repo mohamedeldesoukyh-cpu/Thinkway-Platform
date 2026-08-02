@@ -32,6 +32,8 @@ import {
   formatExecutiveProposalCreatorBlock,
   toCampaignDecisionLabel,
 } from "../../services/eci/executive-planning-view";
+import { deriveEnterprisePlanningNarrative } from "../../services/planning-narrative";
+import { StudioEnterprisePlanningBrief } from "./shared/studio-enterprise-planning-brief";
 import { SectionSkeleton } from "./shared/section-skeleton";
 import {
   SectionFallbackContent,
@@ -156,12 +158,25 @@ export function PresentationStatusSection({
     [hydrated]
   );
 
+  const exportPlanningSignals = useMemo(
+    () =>
+      hydrated
+        .map((v) => v.planningSignal)
+        .filter((signal): signal is NonNullable<typeof signal> => Boolean(signal)),
+    [hydrated]
+  );
+
   function handleExportPdf() {
     if (!campaignObject) {
       toast.error("Campaign data not ready for export.");
       return;
     }
-    openCampaignProposalPreview(campaignObject, exportVendors);
+    openCampaignProposalPreview(
+      campaignObject,
+      exportVendors,
+      {},
+      exportPlanningSignals
+    );
     toast.success("Client proposal opened — use Print → Save as PDF.");
   }
 
@@ -260,6 +275,11 @@ export function PresentationStatusSection({
       })
     : [];
 
+  const packageNarrative = useMemo(
+    () => (campaignObject ? deriveEnterprisePlanningNarrative(campaignObject) : null),
+    [campaignObject]
+  );
+
   const actionButtons = (
     <>
       {approvalContext?.canSubmitForReview ? (
@@ -325,12 +345,38 @@ export function PresentationStatusSection({
 
   if (refMode) {
     return (
-      <div className="min-w-0">
+      <div className="min-w-0 space-y-3">
+        {packageNarrative ? (
+          <>
+            <StudioEnterprisePlanningBrief
+              narrative={packageNarrative}
+              showTransparency={false}
+            />
+            <div className="rounded-lg border border-border/60 bg-muted/10 p-3 text-[12px]">
+              <p className="font-extrabold text-[#0057FF]">
+                {packageNarrative.approvalJourney.headline}
+              </p>
+              <ol className="mt-1.5 list-decimal space-y-0.5 pl-4 text-muted-foreground">
+                {packageNarrative.approvalJourney.steps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+              <p className="mt-2 text-[11px] text-foreground">
+                {packageNarrative.approvalJourney.freezeStatement}
+              </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                {packageNarrative.approvalJourney.handoffStatement}
+              </p>
+            </div>
+          </>
+        ) : null}
         <div className={STUDIO_REF_CLASSES.readinessHead}>
           <div>
-            <div className={STUDIO_REF_CLASSES.readinessTitle}>Campaign Plan Readiness</div>
+            <div className={STUDIO_REF_CLASSES.readinessTitle}>
+              Enterprise Planning Package · Readiness
+            </div>
             <div className={STUDIO_REF_CLASSES.readinessSub}>
-              Mandatory planning items — not a section completion percentage
+              Package → Approval → Freeze → Campaign Workspace
             </div>
           </div>
           <span className={STUDIO_REF_CLASSES.readyBadge}>
@@ -398,6 +444,27 @@ export function PresentationStatusSection({
 
   return (
     <div className="space-y-3.5">
+      {packageNarrative ? (
+        <>
+          <StudioEnterprisePlanningBrief narrative={packageNarrative} />
+          <div className="rounded-lg border border-border/60 bg-muted/10 p-3 text-[12px]">
+            <p className="font-extrabold text-[#0057FF]">
+              {packageNarrative.approvalJourney.headline}
+            </p>
+            <ol className="mt-1.5 list-decimal space-y-0.5 pl-4 text-muted-foreground">
+              {packageNarrative.approvalJourney.steps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+            <p className="mt-2 text-[11px] text-foreground">
+              {packageNarrative.approvalJourney.freezeStatement}
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {packageNarrative.approvalJourney.handoffStatement}
+            </p>
+          </div>
+        </>
+      ) : null}
       {approvalContext?.readiness ? (
         <CampaignPlanReadinessChecklist readiness={approvalContext.readiness} />
       ) : null}

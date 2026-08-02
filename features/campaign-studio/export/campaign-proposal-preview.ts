@@ -1,5 +1,6 @@
 import type { CampaignObject } from "@/features/campaign-intelligence";
 
+import type { StudioEciPlanningSignal } from "../services/eci/project-studio-eci-signal";
 import {
   buildCampaignProposalDocumentHtml,
   type ProposalBranding,
@@ -10,9 +11,16 @@ import {
 export function openCampaignProposalPreview(
   campaignObject: CampaignObject,
   hydratedVendors: ProposalVendor[] = [],
-  branding: ProposalBranding = {}
+  branding: ProposalBranding = {},
+  planningSignals: StudioEciPlanningSignal[] = []
 ): void {
-  const html = buildCampaignProposalDocumentHtml(campaignObject, hydratedVendors, branding);
+  const html = buildCampaignProposalDocumentHtml(
+    campaignObject,
+    hydratedVendors,
+    branding,
+    {},
+    planningSignals
+  );
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   window.open(url, "_blank", "noopener,noreferrer");

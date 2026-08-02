@@ -6,7 +6,7 @@
 **Campaign Workspace baseline (canonical):** [`CAMPAIGN_WORKSPACE_BASELINE_V1.3.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.3.md)  
 **Historical:** [`CAMPAIGN_WORKSPACE_BASELINE_V1.2.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.2.md) · [`CAMPAIGN_WORKSPACE_BASELINE_V1.1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.1.md) · [`CAMPAIGN_WORKSPACE_BASELINE_V1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.md)  
 **Effective:** 2026-08-01 (Architecture v1.0 freeze)  
-**Updated:** 2026-08-02 — Release 2.3 Sprint 2 Studio Evolution FROZEN · Maintenance Mode · COMPLETE; Enterprise Planning Decision Narrative registered as protected planning standard (not a Platform Capability)
+**Updated:** 2026-08-02 — Release 2.3 Sprint 3 Enterprise Planning Package FROZEN · Maintenance Mode · COMPLETE (protected Studio baseline); Decision Narrative + Package Narrative are planning standards (not Platform Capabilities)
 
 ---
 
@@ -82,11 +82,14 @@ Release 2.2d.2b — intelligence layer above Document Lifecycle. Entry: `applyBu
 **Enterprise Creator Intelligence** (**Maintenance Mode · frozen · protected · COMPLETE**): [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) · `lib/enterprise-creator-intelligence/`  
 Sprint 1–6 protected baselines. Canonical entry: `loadCreatorIntelligenceBundle`. Planning · Client · Campaign · Reporting · Analytics · AI · Mobile must consume this package only. Discovery Thinkway Score is Discovery-only. No Production deploy without approval.
 
-**Studio Governance + Studio Evolution Sprint 2** (**Maintenance Mode · frozen · protected · COMPLETE**): [`STUDIO_CAPABILITY_CONTRACT.md`](./STUDIO_CAPABILITY_CONTRACT.md) · [`PLATFORM_CAPABILITY_REGISTRY.md`](./PLATFORM_CAPABILITY_REGISTRY.md) · `features/campaign-studio/strategy-engine/` · `features/campaign-studio/services/eci/`  
-Studio is the Enterprise Planning Platform. Sprint 2 is the protected Studio Evolution baseline (ECI consume-only · executive decision surfaces · Decision Impact). No redesign of Studio / Media Plan / Planning Context / Campaign Workspace without Architecture Reopen.
+**Studio Governance + Studio Evolution Sprint 2 + Enterprise Planning Package Sprint 3** (**Maintenance Mode · frozen · protected · COMPLETE**): [`STUDIO_CAPABILITY_CONTRACT.md`](./STUDIO_CAPABILITY_CONTRACT.md) · [`PLATFORM_CAPABILITY_REGISTRY.md`](./PLATFORM_CAPABILITY_REGISTRY.md) · `features/campaign-studio/strategy-engine/` · `features/campaign-studio/services/eci/` · `features/campaign-studio/services/planning-narrative.ts`  
+Studio is the Enterprise Planning Platform. Sprint 3 freezes the Enterprise Planning Package as the protected Studio commercial baseline (single Planning Narrative SSOT for Studio · Proposal · Presentation · Approval). No redesign of Studio / Media Plan / Planning Context / Campaign Workspace without Architecture Reopen. No further Release 2.3 Studio enhancements.
 
 **Enterprise Planning Decision Narrative** (**protected planning standard — not a Platform Capability**): [`ENTERPRISE_PLANNING_DECISION_NARRATIVE.md`](./ENTERPRISE_PLANNING_DECISION_NARRATIVE.md)  
-Mandatory narrative order for planning recommendations. Future reuse across Studio · Campaign Workspace · Client Workspace · Mobile · AI Copilot · Proposal Engine · Presentation Engine. Do not fork. Do not promote to a Platform Capability without Product approval.
+Mandatory narrative order for creator planning recommendations. Future reuse across Studio · Campaign Workspace · Client Workspace · Mobile · AI Copilot · Proposal Engine · Presentation Engine. Do not fork. Do not promote to a Platform Capability without Product approval.
+
+**Enterprise Planning Package Narrative** (**protected Studio baseline / planning standard — not a Platform Capability**): `features/campaign-studio/services/planning-narrative.ts`  
+Single package wording SSOT. Parallel executive summaries are forbidden.
 
 ---
 

@@ -348,12 +348,14 @@ function addCreatorAvatar(
 export async function buildCampaignProposalPptxBuffer(
   campaignObject: CampaignObject,
   hydratedVendors: ProposalVendor[] = [],
-  branding: ProposalBranding = {}
+  branding: ProposalBranding = {},
+  planningSignals: import("../services/eci/project-studio-eci-signal").StudioEciPlanningSignal[] = []
 ): Promise<Buffer> {
   const model: CampaignProposalModel = buildCampaignProposalModel(
     campaignObject,
     hydratedVendors,
-    branding
+    branding,
+    planningSignals
   );
   const client = model.client;
 
@@ -552,19 +554,70 @@ export async function buildCampaignProposalPptxBuffer(
   });
   addPageFooter(understanding, pageNumber, client);
 
+  // ================= ENTERPRISE PLANNING PACKAGE (single narrative) =================
+  sectionNumber += 1;
+  pageNumber += 1;
+  const packageSlide = pptx.addSlide();
+  packageSlide.background = { color: WHITE };
+  addPageHeader(packageSlide, sectionNumber, client);
+  addSectionEyebrow(packageSlide, "Enterprise Planning Package", "DDEBFF");
+  packageSlide.addText(model.executiveRecommendation, {
+    x: MARGIN_X,
+    y: 1.55,
+    w: CONTENT_W,
+    h: 0.7,
+    fontFace: FONT,
+    fontSize: 13,
+    bold: true,
+    color: INK,
+    valign: "top",
+    shrinkText: true,
+  });
+  const beatLines = model.presentationBeats
+    .slice(0, 9)
+    .map((b) => `${b.label}: ${b.body}`)
+    .join("\n");
+  packageSlide.addText(beatLines, {
+    x: MARGIN_X,
+    y: 2.35,
+    w: CONTENT_W,
+    h: 3.6,
+    fontFace: FONT,
+    fontSize: 10,
+    color: "374151",
+    valign: "top",
+    shrinkText: true,
+  });
+  addPageFooter(packageSlide, pageNumber, client);
+
   // ================= EXECUTIVE SUMMARY =================
   sectionNumber += 1;
   pageNumber += 1;
   const summary = pptx.addSlide();
   summary.background = { color: WHITE };
   addPageHeader(summary, sectionNumber, client);
-  addSectionEyebrow(summary, "Executive Summary", "FFE0EC");
+  addSectionEyebrow(summary, "Executive Brief", "FFE0EC");
 
-  summary.addText(model.executiveSummary, {
+  summary.addText(model.executiveRecommendation, {
     x: MARGIN_X,
-    y: 1.62,
+    y: 1.52,
     w: CONTENT_W,
-    h: 1.15,
+    h: 0.4,
+    fontFace: FONT,
+    fontSize: 12,
+    bold: true,
+    color: INK,
+    valign: "top",
+    shrinkText: true,
+  });
+  const briefText = model.briefLines
+    .map((line) => `${line.label}: ${line.body}`)
+    .join("\n");
+  summary.addText(briefText, {
+    x: MARGIN_X,
+    y: 1.98,
+    w: CONTENT_W,
+    h: 0.85,
     fontFace: FONT,
     fontSize: 12.5,
     color: "374151",
@@ -761,10 +814,23 @@ export async function buildCampaignProposalPptxBuffer(
       addSectionEyebrow(
         creators,
         vendorPages.length > 1
-          ? `Creator Strategy Rationale (${pageIndex + 1}/${vendorPages.length})`
-          : "Creator Strategy Rationale",
+          ? `Creator Strategy (${pageIndex + 1}/${vendorPages.length})`
+          : "Creator Strategy",
         "DDEBFF"
       );
+      if (pageIndex === 0 && model.creatorPackageThesis) {
+        creators.addText(model.creatorPackageThesis, {
+          x: MARGIN_X,
+          y: 1.5,
+          w: CONTENT_W,
+          h: 0.45,
+          fontFace: FONT,
+          fontSize: 10,
+          color: "374151",
+          valign: "top",
+          shrinkText: true,
+        });
+      }
 
       const header = ["Creator", "Tier", "Decision narrative"].map((t) => ({
         text: t,
@@ -802,9 +868,13 @@ export async function buildCampaignProposalPptxBuffer(
           },
         ];
       });
+      const tableY =
+        pageIndex === 0 && model.creatorPackageThesis
+          ? CREATOR_TABLE_Y + 0.35
+          : CREATOR_TABLE_Y;
       creators.addTable([header, ...rows] as never, {
         x: MARGIN_X,
-        y: CREATOR_TABLE_Y,
+        y: tableY,
         w: CONTENT_W,
         colW: [...rationaleColW],
         fontFace: FONT,
@@ -815,7 +885,7 @@ export async function buildCampaignProposalPptxBuffer(
       });
 
       slideVendors.forEach((v, i) => {
-        const rowTop = CREATOR_TABLE_Y + (CREATOR_ROW_H + 0.12) * (i + 1);
+        const rowTop = tableY + (CREATOR_ROW_H + 0.12) * (i + 1);
         const avatarX = MARGIN_X + 0.1;
         const avatarY = rowTop + (CREATOR_ROW_H + 0.12 - CREATOR_AVATAR_SIZE) / 2;
         const url = v.avatarUrl?.trim();
@@ -838,7 +908,18 @@ export async function buildCampaignProposalPptxBuffer(
   const budget = pptx.addSlide();
   budget.background = { color: WHITE };
   addPageHeader(budget, sectionNumber, client);
-  addSectionEyebrow(budget, "Budget & Amplification", "FFE9CC");
+  addSectionEyebrow(budget, "Commercial Strategy", "FFE9CC");
+  budget.addText(model.commercialStrategy || model.executionStrategy, {
+    x: MARGIN_X,
+    y: 1.5,
+    w: CONTENT_W,
+    h: 0.5,
+    fontFace: FONT,
+    fontSize: 11,
+    color: "374151",
+    valign: "top",
+    shrinkText: true,
+  });
 
   if (model.budget) {
     const primary = model.budget.allocations[0];
@@ -848,28 +929,28 @@ export async function buildCampaignProposalPptxBuffer(
         : "To be confirmed";
     budget.addShape("roundRect", {
       x: MARGIN_X,
-      y: 1.6,
+      y: 2.1,
       w: CONTENT_W,
-      h: 1.5,
+      h: 1.35,
       fill: { color: BLUE },
       line: { type: "none" },
       rectRadius: 0.14,
     });
     budget.addText(`${primary?.percent ?? 100}%`, {
       x: MARGIN_X + 0.45,
-      y: 1.74,
+      y: 2.2,
       w: 3.4,
-      h: 0.85,
+      h: 0.7,
       fontFace: FONT,
-      fontSize: 40,
+      fontSize: 36,
       bold: true,
       color: WHITE,
     });
     budget.addText(`${primary?.category ?? "Creator fees"} — ${totalText}`, {
       x: MARGIN_X + 0.45,
-      y: 2.6,
+      y: 2.95,
       w: 5.4,
-      h: 0.34,
+      h: 0.3,
       fontFace: FONT,
       fontSize: 11,
       color: "D6E4FF",
@@ -879,7 +960,7 @@ export async function buildCampaignProposalPptxBuffer(
         "Influencer campaign model — production embedded in creator fees unless explicitly separated",
       {
         x: PAGE_W - MARGIN_X - 5.4,
-        y: 1.85,
+        y: 2.25,
         w: 5,
         h: 1.0,
         align: "right",
@@ -895,7 +976,7 @@ export async function buildCampaignProposalPptxBuffer(
   }
 
   const ampItems = model.amplification.slice(0, 6);
-  const ampTop = model.budget ? 3.42 : 1.7;
+  const ampTop = model.budget ? 3.6 : 2.15;
   const ampColW = (CONTENT_W - 0.24) / 2;
   const ampRowH = 0.82;
   ampItems.forEach(([, item], i) => {
@@ -978,15 +1059,110 @@ export async function buildCampaignProposalPptxBuffer(
     addPageFooter(metrics, pageNumber, client);
   }
 
+  // ================= EXECUTIVE OBJECTIONS =================
+  sectionNumber += 1;
+  pageNumber += 1;
+  const objections = pptx.addSlide();
+  objections.background = { color: WHITE };
+  addPageHeader(objections, sectionNumber, client);
+  addSectionEyebrow(objections, "Executive Objections", "FFE9CC");
+  objections.addText(
+    "Planning observations executives may reasonably raise — not blockers.",
+    {
+      x: MARGIN_X,
+      y: 1.5,
+      w: CONTENT_W,
+      h: 0.35,
+      fontFace: FONT,
+      fontSize: 11,
+      color: "374151",
+    }
+  );
+  objections.addText(
+    model.executiveObjections
+      .slice(0, 8)
+      .map((o) => `${o.concern}: ${o.observation}`)
+      .join("\n\n"),
+    {
+      x: MARGIN_X,
+      y: 1.95,
+      w: CONTENT_W,
+      h: 4.2,
+      fontFace: FONT,
+      fontSize: 10,
+      color: INK,
+      valign: "top",
+      shrinkText: true,
+    }
+  );
+  addPageFooter(objections, pageNumber, client);
+
+  // ================= CRITICAL SUCCESS FACTORS =================
+  sectionNumber += 1;
+  pageNumber += 1;
+  const csf = pptx.addSlide();
+  csf.background = { color: WHITE };
+  addPageHeader(csf, sectionNumber, client);
+  addSectionEyebrow(csf, "Critical Success Factors", "DDF7E8");
+  csf.addText("What must happen for this strategy to succeed?", {
+    x: MARGIN_X,
+    y: 1.5,
+    w: CONTENT_W,
+    h: 0.35,
+    fontFace: FONT,
+    fontSize: 11,
+    color: "374151",
+  });
+  csf.addText(
+    model.criticalSuccessFactors
+      .map((f) => `${f.factor}: ${f.whyItMatters}`)
+      .join("\n\n"),
+    {
+      x: MARGIN_X,
+      y: 1.95,
+      w: CONTENT_W,
+      h: 4.2,
+      fontFace: FONT,
+      fontSize: 11,
+      color: INK,
+      valign: "top",
+      shrinkText: true,
+    }
+  );
+  addPageFooter(csf, pageNumber, client);
+
+  // ================= EXECUTIVE DECISION SUMMARY =================
+  sectionNumber += 1;
+  pageNumber += 1;
+  const decision = pptx.addSlide();
+  decision.background = { color: WHITE };
+  addPageHeader(decision, sectionNumber, client);
+  addSectionEyebrow(decision, "Executive Decision Summary", "DDEBFF");
+  decision.addText(
+    model.decisionSummaryLines.map((l) => `${l.label}: ${l.body}`).join("\n\n"),
+    {
+      x: MARGIN_X,
+      y: 1.55,
+      w: CONTENT_W,
+      h: 4.6,
+      fontFace: FONT,
+      fontSize: 12,
+      color: INK,
+      valign: "top",
+      shrinkText: true,
+    }
+  );
+  addPageFooter(decision, pageNumber, client);
+
   // ================= CLOSE =================
   const close = pptx.addSlide();
   addDarkGlow(close);
   addLogoLockup(close, PAGE_W / 2 - 1.05, 1.1, 0.5, 20, "dark");
   close.addText(buildProposalCloseHeadline(model), {
     x: PAGE_W / 2 - 4.6,
-    y: 2.3,
+    y: 2.15,
     w: 9.2,
-    h: 1.5,
+    h: 1.2,
     align: "center",
     fontFace: FONT,
     fontSize: 27,
@@ -995,11 +1171,23 @@ export async function buildCampaignProposalPptxBuffer(
     lineSpacingMultiple: 1.2,
     valign: "middle",
   });
+  close.addText(model.approvalAsk, {
+    x: PAGE_W / 2 - 4.2,
+    y: 3.45,
+    w: 8.4,
+    h: 0.55,
+    align: "center",
+    fontFace: FONT,
+    fontSize: 12,
+    color: "D6E4FF",
+    valign: "top",
+    shrinkText: true,
+  });
   close.addText(
     `Prepared by the Thinkway Campaign Intelligence team · ${model.generated}`,
     {
       x: PAGE_W / 2 - 4,
-      y: 3.95,
+      y: 4.15,
       w: 8,
       h: 0.32,
       align: "center",

@@ -21,6 +21,8 @@ import { hasCampaignBriefText } from "@/features/campaign-outputs/brief-media-pl
 import { STUDIO_REF_CLASSES } from "../../constants/campaign-studio-ref-tokens";
 import { useStudioRefMode } from "../../hooks/use-studio-ref-mode";
 
+import { deriveEnterprisePlanningNarrative } from "../../services/planning-narrative";
+
 import { CampaignBriefDialog } from "./campaign-brief-dialog";
 
 import { CampaignBriefViewer } from "./campaign-brief-viewer";
@@ -115,6 +117,14 @@ export function CampaignBriefCard({
 
   const canEdit = Boolean(conversationId && messageId);
 
+  const completeness = useMemo(
+    () =>
+      campaignObject
+        ? deriveEnterprisePlanningNarrative(campaignObject).briefCompleteness
+        : null,
+    [campaignObject]
+  );
+
 
 
   if (refMode) {
@@ -123,8 +133,24 @@ export function CampaignBriefCard({
         {hasBrief ? <span className={STUDIO_REF_CLASSES.briefStatus}>Active</span> : null}
         <div className={cn(STUDIO_REF_CLASSES.briefText, className)}>
           {preview ??
-            "No brief yet — add the client brief to refine scheduling and strategy."}
+            "No planning request yet — add a marketing brief, objective, or planning input to start the Enterprise Planning Package."}
         </div>
+        {completeness ? (
+          <div className="mb-2 text-[11px] text-muted-foreground">
+            <b className="text-foreground">
+              Planning completeness {completeness.scorePercent}%
+            </b>
+            {" — "}
+            {completeness.summary}
+            {completeness.missingLabels.length > 0 ? (
+              <ul className="mt-1 list-disc pl-4">
+                {completeness.missingLabels.map((label) => (
+                  <li key={label}>{label}</li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
         <div className={STUDIO_REF_CLASSES.briefActions}>
           {hasBrief ? (
             <button type="button" onClick={() => setViewerOpen(true)}>
@@ -192,9 +218,27 @@ export function CampaignBriefCard({
 
           <p className="oc-ocard-desc">
 
-            {preview ?? "No brief yet — add the client brief to refine scheduling and strategy."}
+            {preview ??
+              "No planning request yet — add a marketing brief, objective, or planning input to start the Enterprise Planning Package."}
 
           </p>
+
+          {completeness ? (
+            <div className="mt-2 text-[11px] text-muted-foreground">
+              <b className="text-foreground">
+                Planning completeness {completeness.scorePercent}%
+              </b>
+              {" — "}
+              {completeness.summary}
+              {completeness.missingLabels.length > 0 ? (
+                <ul className="mt-1 list-disc pl-4">
+                  {completeness.missingLabels.map((label) => (
+                    <li key={label}>{label}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
 
         </div>
 

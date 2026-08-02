@@ -12,16 +12,17 @@ import type {
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 import {
   buildCampaignProposalDocumentHtml,
-  resolveCreatorIds,
   type ProposalVendor,
 } from "@/features/campaign-studio/export/campaign-proposal-document";
 import { embedProposalExportAssets } from "@/features/campaign-studio/export/campaign-proposal-export-embed";
 import { buildCampaignProposalPptxBuffer } from "@/features/campaign-studio/export/campaign-proposal-pptx";
+import { loadStudioEciPlanningSignals } from "@/features/campaign-studio/services/eci/load-studio-eci-signals";
 import {
   buildCreatorContentIdea,
   creatorTierOf,
 } from "@/features/campaign-studio/services/creator-slate";
 import { mapBrowseCreatorToSearchResult } from "@/features/campaign-studio/services/creator-platform-utils";
+import { resolveCreatorIds } from "@/features/campaign-studio/services/section-data-resolver";
 import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
 import { logAuditEvent } from "@/lib/audit/log-audit-event";
 import { requirePermission } from "@/lib/auth/permissions-server";
@@ -190,12 +191,18 @@ export async function GET(request: Request, context: RouteContext) {
         hydrateProposalVendors(supabase, campaignObject),
         resolveClientLogo(supabase, campaignObject),
       ]);
+      const creatorIds = resolveCreatorIds(campaignObject);
+      const signalMap = await loadStudioEciPlanningSignals(supabase, creatorIds.slice(0, 40));
+      const planningSignals = [...signalMap.values()];
       const baseName = proposalFileBaseName(campaignObject);
 
       if (format === "pptx") {
-        const buffer = await buildCampaignProposalPptxBuffer(campaignObject, vendors, {
-          clientLogoUrl,
-        });
+        const buffer = await buildCampaignProposalPptxBuffer(
+          campaignObject,
+          vendors,
+          { clientLogoUrl },
+          planningSignals
+        );
         return new NextResponse(buffer as unknown as BodyInit, {
           headers: {
             "Content-Type":
@@ -215,12 +222,17 @@ export async function GET(request: Request, context: RouteContext) {
           campaignObject,
           embeddedAssets.vendors,
           { clientLogoUrl: embeddedAssets.clientLogoUrl },
-          { logoSrcs }
+          { logoSrcs },
+          planningSignals
         );
       } else {
-        html = buildCampaignProposalDocumentHtml(campaignObject, vendors, {
-          clientLogoUrl,
-        });
+        html = buildCampaignProposalDocumentHtml(
+          campaignObject,
+          vendors,
+          { clientLogoUrl },
+          {},
+          planningSignals
+        );
       }
 
       if (format === "pdf") {

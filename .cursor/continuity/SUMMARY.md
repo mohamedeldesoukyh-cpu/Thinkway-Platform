@@ -60,8 +60,9 @@ Environment switch navigates between **hosts** — never switches DB inside one 
 - `.cursor/rules/thinkway-studio-capability-contract.mdc` — Studio Capability Contract guardrail (alwaysApply · FROZEN)
 - `features/campaign-studio/strategy-engine/` — Strategy Engine Foundation (Planning Context orchestration only); persistence remains Campaign Object + Media Plan + Outputs
 - **Studio Evolution Sprint 2 (FROZEN · Maintenance Mode · COMPLETE):** Studio × ECI consume-only + executive Decision Narrative / Decision Impact — `features/campaign-studio/services/eci/`
+- **Enterprise Planning Package Sprint 3 (FROZEN · Maintenance Mode · COMPLETE):** protected Studio commercial baseline — `features/campaign-studio/services/planning-narrative.ts` (single package wording SSOT)
 - `docs/architecture/ENTERPRISE_PLANNING_DECISION_NARRATIVE.md` — **protected Enterprise Planning Standard** (not a Platform Capability); reuse across Studio · Campaign Workspace · Client · Mobile · AI Copilot · Proposal · Presentation
-- Parallel Planning Workspace product retired.
+- Parallel Planning Workspace product retired. No further Release 2.3 Studio enhancements.
 - `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md` — Planning Board = Campaign Media Plan **view** (not a parallel Studio)
 - `docs/architecture/platform-ux/` — Platform UX package (docs 01–12 frozen)  
 - `docs/architecture/CAMPAIGN_MODULE_BASELINE.md` — **protected Campaign baseline** (IA initiative CLOSED)  

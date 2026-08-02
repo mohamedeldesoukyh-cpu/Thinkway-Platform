@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { sanitizeTimelineText } from "./shared/format-utils";
 import { SectionSkeleton } from "./shared/section-skeleton";
 import {
@@ -9,6 +11,7 @@ import {
 } from "./shared/section-status-utils";
 import { WeekCard, WeekGrid } from "./shared/studio-ui-primitives";
 import { resolveTimelineData } from "../../services/section-data-resolver";
+import { deriveEnterprisePlanningNarrative } from "../../services/planning-narrative";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
 
@@ -25,6 +28,10 @@ export function TimelineSection({
 }: TimelineSectionProps) {
   const isRunning = status === "running";
   const timeline = resolveTimelineData(campaignObject);
+  const narrative = useMemo(
+    () => (campaignObject ? deriveEnterprisePlanningNarrative(campaignObject) : null),
+    [campaignObject]
+  );
 
   if (isRunning && !timeline) {
     return <SectionSkeleton variant="timeline" />;
@@ -46,6 +53,20 @@ export function TimelineSection({
 
   return (
     <div className="min-w-0 space-y-2.5">
+      {narrative ? (
+        <div className="rounded-lg border border-border/60 bg-muted/10 p-3 text-[12px] text-foreground">
+          <p className="text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground">
+            Execution strategy
+          </p>
+          <p className="mt-1">
+            <b>What we should do:</b> {narrative.executionStrategy}
+          </p>
+          <p className="mt-1 text-muted-foreground">
+            <b className="text-foreground">Why timing supports the strategy:</b>{" "}
+            {narrative.timelineNarrative.whyTimingSupportsStrategy}
+          </p>
+        </div>
+      ) : null}
       <WeekGrid>
         {activationWeeks.map((week) => {
           const description =

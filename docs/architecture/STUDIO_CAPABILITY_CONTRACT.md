@@ -3,7 +3,7 @@
 **Status:** **FROZEN · Maintenance Mode · COMPLETE** — Permanent Product Constitution for Studio  
 **Effective:** Product-approved 2026-08-02  
 **Scope:** Campaign Studio — Enterprise Planning Platform  
-**Protected baseline includes:** Strategy Engine Foundation · Planning Context Governance · Studio Capability Contract · Mission · Success Criteria · Product Promise · **Release 2.3 Sprint 2 Studio Evolution** (ECI consume-only · Decision Narrative · Decision Impact)  
+**Protected baseline includes:** Strategy Engine Foundation · Planning Context Governance · Studio Capability Contract · Mission · Success Criteria · Product Promise · **Release 2.3 Sprint 2 Studio Evolution** · **Release 2.3 Sprint 3 Enterprise Planning Package** (single Planning Narrative SSOT)  
 **Studio Capability Registry note:** This contract + Platform Capability Registry Studio Governance section are the canonical Studio registry surfaces.  
 **Related:**  
 - Strategy Engine governance — `.cursor/rules/thinkway-strategy-engine-governance.mdc`  
@@ -242,12 +242,33 @@ Sprint 2 is the protected Studio Evolution baseline for Studio × Enterprise Cre
 
 ---
 
+## Enterprise Planning Package — Release 2.3 Sprint 3 (protected Studio baseline)
+
+**Status:** **FROZEN · Maintenance Mode · COMPLETE** (Product-approved 2026-08-02)  
+**Freeze tip:** recorded on `origin/develop` after Sprint 3 push  
+**Code SSOT:** `features/campaign-studio/services/planning-narrative.ts`
+
+Sprint 3 freezes the **Enterprise Planning Package** as the protected Studio commercial baseline:
+
+| Area | Baseline |
+|------|----------|
+| Product | One Enterprise Planning Package — capabilities are building blocks only |
+| Planning Narrative | Single SSOT for Studio · Brief · Proposal · Presentation · Approval |
+| Package fields | Challenge · Insight · Decision · Campaign/Creator/Commercial/Execution strategy · Outcome · Assumptions · Objections · CSFs · Open Decisions · Recommendation · Decision Requested |
+| Executive language | Consulting recommendation — no parallel summaries |
+| Out of scope | Scenario Planning · Collaboration · Client Workspace · redesign |
+
+**Maintenance Mode (Sprint 3):** defect / type / build / continuity sync only. No further enhancements in Release 2.3.
+
+---
+
 ## Approval
 
 | Role | Status |
 |------|--------|
 | Product | **Approved** 2026-08-02 — FROZEN · Maintenance Mode |
 | Product (Sprint 2 Studio Evolution) | **Approved** 2026-08-02 — FROZEN · Maintenance Mode · COMPLETE |
+| Product (Sprint 3 Enterprise Planning Package) | **Approved** 2026-08-02 — FROZEN · Maintenance Mode · COMPLETE |
 | Architecture | Protected baseline |
 
-**Maintenance Mode:** Extend Studio via capability specs that comply with this contract. Do not redesign Mission, Success Criteria, Product Promise, capability categories, Golden Rules, or the Sprint 2 Studio Evolution baseline without Architecture Reopen.
+**Maintenance Mode:** Extend Studio via capability specs that comply with this contract. Do not redesign Mission, Success Criteria, Product Promise, capability categories, Golden Rules, Sprint 2 Evolution, or the Sprint 3 Enterprise Planning Package baseline without Architecture Reopen.

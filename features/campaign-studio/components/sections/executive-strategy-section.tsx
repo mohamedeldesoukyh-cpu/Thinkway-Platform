@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import { SectionSkeleton } from "./shared/section-skeleton";
 import {
   SectionFallbackContent,
@@ -7,12 +9,13 @@ import {
   shouldShowPendingPlaceholder,
 } from "./shared/section-status-utils";
 import { InsightGrid, ReasonCard } from "./shared/studio-ui-primitives";
+import { loadStudioEciPlanningSignalsAction } from "../../actions/studio-eci-actions";
 import {
-  executiveStrategyReasoningToFields,
-  resolveExecutiveStrategyReasoning,
-  resolveGroundedStrategyFields,
-} from "../../services/section-data-resolver";
+  deriveEnterprisePlanningNarrative,
+  type EnterprisePlanningNarrative,
+} from "../../services/planning-narrative";
 import type { CampaignObject } from "@/features/campaign-intelligence";
+import type { CreatorsSectionData } from "@/features/campaign-intelligence/types/section-schemas";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
 
 type ExecutiveStrategySectionProps = {
@@ -21,20 +24,43 @@ type ExecutiveStrategySectionProps = {
   status: CampaignStudioSectionStatus;
 };
 
+/**
+ * Executive Strategy — consulting pillars from the single Planning Narrative.
+ * Same story as Executive Brief / Proposal / Presentation (no isolated strategy copy).
+ */
 export function ExecutiveStrategySection({
   campaignObject,
   fallbackText,
   status,
 }: ExecutiveStrategySectionProps) {
+  const [narrative, setNarrative] = useState<EnterprisePlanningNarrative | null>(null);
+
+  useEffect(() => {
+    if (!campaignObject) {
+      setNarrative(null);
+      return;
+    }
+    const creators = (campaignObject.sections.creators.data ?? {}) as CreatorsSectionData;
+    const ids = creators.recommendations?.creatorIds ?? [];
+    let cancelled = false;
+    setNarrative(deriveEnterprisePlanningNarrative(campaignObject));
+    if (ids.length === 0) return;
+    void loadStudioEciPlanningSignalsAction(ids.slice(0, 40)).then((record) => {
+      if (cancelled) return;
+      setNarrative(
+        deriveEnterprisePlanningNarrative(campaignObject, Object.values(record))
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [campaignObject]);
+
   if (status === "running" && !campaignObject) {
     return <SectionSkeleton variant="cards" />;
   }
 
-  const reasoning = resolveExecutiveStrategyReasoning(campaignObject);
-  const fields = reasoning
-    ? executiveStrategyReasoningToFields(reasoning)
-    : resolveGroundedStrategyFields(campaignObject);
-  if (fields.length === 0) {
+  if (!narrative) {
     if (shouldShowPendingPlaceholder(status, false)) {
       return <SectionPendingMessage label="Executive strategy pending…" />;
     }
@@ -42,19 +68,16 @@ export function ExecutiveStrategySection({
   }
 
   return (
-    <InsightGrid>
-      {fields.map((field) => (
-        <ReasonCard
-          key={field.label}
-          label={field.label}
-          value={field.value}
-          badge={
-            field.grounding.confidence != null
-              ? `${field.grounding.confidence}%`
-              : undefined
-          }
-        />
-      ))}
-    </InsightGrid>
+    <div className="min-w-0 space-y-3">
+      <p className="text-[12px] text-muted-foreground">
+        <span className="font-semibold text-foreground">Recommended business decision:</span>{" "}
+        {narrative.recommendedBusinessDecision}
+      </p>
+      <InsightGrid>
+        {narrative.strategyPillars.map((pillar) => (
+          <ReasonCard key={pillar.key} label={pillar.label} value={pillar.body} />
+        ))}
+      </InsightGrid>
+    </div>
   );
 }
