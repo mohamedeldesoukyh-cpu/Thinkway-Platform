@@ -819,22 +819,24 @@ export function buildCampaignProposalDocumentHtml(
       const cards = pageVendors
         .map((v) => {
           const reco = v.investmentRecommendation?.trim();
-          const rows: Array<[string, string]> = [
+          const rows = (
             [
-              "Recommendation",
-              v.recommendationText?.trim() || v.reason?.trim() || "",
-            ],
-            ["Why", v.whyText?.trim() || ""],
-            ["Evidence", v.evidenceSummary?.trim() || ""],
-            ["Business value", v.businessValue?.trim() || ""],
-            ["Commercial value", v.commercialJustification?.trim() || ""],
-            ["Risk", v.riskNote?.trim() || ""],
-            ["Alternative", v.alternativeNote?.trim() || ""],
-            ["Why not selected", v.whyAlternativeNotSelected?.trim() || ""],
-            ["Trade-offs", v.tradeOffs?.trim() || ""],
-            ["Decision impact", v.decisionImpact?.trim() || ""],
-            ["Confidence", v.confidenceNote?.trim() || ""],
-          ].filter(([, body]) => Boolean(body));
+              [
+                "Recommendation",
+                v.recommendationText?.trim() || v.reason?.trim() || "",
+              ],
+              ["Why", v.whyText?.trim() || ""],
+              ["Evidence", v.evidenceSummary?.trim() || ""],
+              ["Business value", v.businessValue?.trim() || ""],
+              ["Commercial value", v.commercialJustification?.trim() || ""],
+              ["Risk", v.riskNote?.trim() || ""],
+              ["Alternative", v.alternativeNote?.trim() || ""],
+              ["Why not selected", v.whyAlternativeNotSelected?.trim() || ""],
+              ["Trade-offs", v.tradeOffs?.trim() || ""],
+              ["Decision impact", v.decisionImpact?.trim() || ""],
+              ["Confidence", v.confidenceNote?.trim() || ""],
+            ] as Array<[string, string]>
+          ).filter((row): row is [string, string] => Boolean(row[1]));
           const rowHtml =
             rows.length > 0
               ? rows

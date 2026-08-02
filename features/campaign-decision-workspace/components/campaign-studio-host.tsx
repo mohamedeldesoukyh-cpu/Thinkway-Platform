@@ -56,9 +56,11 @@ function isWorkflowComplete(workflowStatus?: string): boolean {
 
 function sectionsReadyForDecision(campaignObject?: CampaignObject | null): boolean {
   const sections = campaignObject?.sections;
-  if (!sections || sections.length === 0) return false;
-  const complete = sections.filter((section) => section.status === "complete").length;
-  return complete >= sections.length;
+  if (!sections) return false;
+  const values = Object.values(sections);
+  if (values.length === 0) return false;
+  const complete = values.filter((section) => section.status === "complete").length;
+  return complete >= values.length;
 }
 
 export function CampaignStudioHost(props: CampaignStudioHostProps) {
