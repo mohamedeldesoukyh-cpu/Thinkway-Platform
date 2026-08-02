@@ -6,7 +6,7 @@
 - Studio Governance (`9a42a200`)
 - Enterprise Creator Intelligence (`d01f45f3`)
 - Release 2.3 Sprint 2 Studio Evolution (`7719affc`)
-- **Release 2.3 Sprint 3 — Enterprise Planning Package** (**CLOSED** · Product-approved · Maintenance Mode)
+- **Release 2.3 Sprint 3 — Enterprise Planning Package** (**CLOSED** · tip `007d70e1` · Product-approved · Maintenance Mode)
 
 **Sprint 3 protected baseline:**
 - Product: Enterprise Planning Package (one commercial product)

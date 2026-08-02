@@ -245,7 +245,7 @@ Sprint 2 is the protected Studio Evolution baseline for Studio × Enterprise Cre
 ## Enterprise Planning Package — Release 2.3 Sprint 3 (protected Studio baseline)
 
 **Status:** **FROZEN · Maintenance Mode · COMPLETE** (Product-approved 2026-08-02)  
-**Freeze tip:** recorded on `origin/develop` after Sprint 3 push  
+**Freeze tip:** `007d70e1` on `origin/develop`  
 **Code SSOT:** `features/campaign-studio/services/planning-narrative.ts`
 
 Sprint 3 freezes the **Enterprise Planning Package** as the protected Studio commercial baseline:

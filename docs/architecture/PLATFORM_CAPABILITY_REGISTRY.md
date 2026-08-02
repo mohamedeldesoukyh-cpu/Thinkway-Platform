@@ -284,7 +284,7 @@ Platform creator time-series and intelligence for Studio (Enterprise Planning), 
 
 **Status:** **FROZEN · Maintenance Mode · protected Studio baseline · COMPLETE**  
 **Product approval:** 2026-08-02  
-**Freeze tip:** recorded on `origin/develop` after Sprint 3 push (see tip sync commit)  
+**Freeze tip:** `007d70e1` on `origin/develop`  
 **Product:** Enterprise Planning Package (one commercial product — not nine capabilities)  
 **Code SSOT:** `features/campaign-studio/services/planning-narrative.ts`  
 **Consumers (identical wording):** Studio · Executive Planning Brief · Proposal · Presentation · Approval Package  
