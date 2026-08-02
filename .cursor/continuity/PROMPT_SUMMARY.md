@@ -11,13 +11,15 @@
 | 3 | Category & Brand Intelligence | **Protected baseline** (`ad861c01`) |
 | 4 | Performance Intelligence | **Protected baseline** (`54057bd5`) |
 | 5 | Audience Intelligence | **Protected baseline** (`51836e97`) |
-| 6 | Creator Investment Score | Not started — gated on Product approval |
+| 6 | Creator Investment Intelligence | **Protected baseline** (landing on `develop`) |
 
 - Spec: `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE.md`
-- Code: `lib/enterprise-creator-intelligence/` (+ `audience/`)
-- Sprint 5 migration (Dev): `20260802160000_enterprise_creator_intelligence_audience.sql`
-- Test: `npm run test:enterprise-creator-intelligence`
+- Acceptance: `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md` — **Product gate**
+- Code: `lib/enterprise-creator-intelligence/` (+ `investment/`)
+- Sprint 6 migration (Dev): `20260802170000_enterprise_creator_intelligence_investment.sql`
+- Test: `npm run test:enterprise-creator-intelligence` (30 tests)
 - **No Production deploy**
-- **Do not begin Creator Investment Score** until Product approval
+- **Do not freeze** Enterprise Creator Intelligence until Product Acceptance is approved
+- **Do not begin Planning Workspace** until Acceptance is approved
 
 **Closed permanently:** Enterprise Document & Change Impact — Maintenance Mode (`449fd5c0`).

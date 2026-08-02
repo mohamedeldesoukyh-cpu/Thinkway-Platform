@@ -1,7 +1,7 @@
 # Platform Capability Registry
 
 **Status:** Permanent governance registry — **canonical**  
-**Updated:** 2026-08-02 — Release 2.3 Phase 1 · Enterprise Creator Intelligence ACTIVE (Sprint 1–5 protected baselines)  
+**Updated:** 2026-08-02 — Release 2.3 Phase 1 · Enterprise Creator Intelligence ACTIVE (Sprint 1–6 protected baselines · Acceptance Review ready)  
 **Parent:** [`PLATFORM_ARCHITECTURE_COMPLIANCE.md`](./PLATFORM_ARCHITECTURE_COMPLIANCE.md)
 
 Every future enterprise module must **extend** registered capabilities. Parallel engines are forbidden.
@@ -15,7 +15,7 @@ Every future enterprise module must **extend** registered capabilities. Parallel
 | Platform Bulk Operations Framework | Frozen · mandatory | `components/workspace/bulk-operations/` | [`PLATFORM_BULK_OPERATIONS_FRAMEWORK.md`](./PLATFORM_BULK_OPERATIONS_FRAMEWORK.md) | All register multi-select work |
 | **Enterprise Document Lifecycle Engine** | **Maintenance Mode · frozen · protected · mandatory** | `lib/document-lifecycle/` | [`ENTERPRISE_DOCUMENT_LIFECYCLE.md`](./ENTERPRISE_DOCUMENT_LIFECYCLE.md) | Document state transitions only |
 | **Enterprise Change Impact Engine** | **Maintenance Mode · frozen · protected · mandatory** | `lib/change-impact/` | [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md) · [`ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md`](./ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md) | Every business-change interpretation |
-| **Enterprise Creator Intelligence** | **ACTIVE** (not frozen) · Sprint 1–5 protected baselines | `lib/enterprise-creator-intelligence/` | [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) | Planning · Client · Campaign · Reporting · Analytics · AI hooks · Mobile |
+| **Enterprise Creator Intelligence** | **ACTIVE** (not frozen) · Sprint 1–6 protected baselines · Acceptance Review pending | `lib/enterprise-creator-intelligence/` | [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) | Planning · Client · Campaign · Reporting · Analytics · AI hooks · Mobile |
 
 ---
 
@@ -105,8 +105,8 @@ Document state transitions and available actions from document state only (`reso
 
 ## Enterprise Creator Intelligence (ACTIVE — Release 2.3 Phase 1)
 
-**Capability status: ACTIVE — do not freeze.**  
-Only Sprint 1 Historical is a **protected implementation baseline** for later sprints to extend.
+**Capability status: ACTIVE — do not freeze until Product Acceptance is approved.**  
+Sprint 1–6 are **protected implementation baselines**. Parent capability stays ACTIVE until Product accepts [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md).
 
 ### Responsibility
 
@@ -177,18 +177,33 @@ Platform creator time-series and intelligence for Planning Workspace, Client Wor
 | Entry points | `loadCreatorAudienceIntelligence` / `computeCreatorAudienceIntelligence` |
 | Reuse | Influencer demos · Sprint 1 monthly followers · Sprint 4 audience response |
 | AI | `buildAudienceAiHints` only — **no AI execution** |
-| Gate | Do **not** begin Creator Investment Score until Product explicitly approves |
 | Git baseline | `51836e97` on `origin/develop` |
+
+### Sprint 6 — Creator Investment Intelligence (protected baseline)
+
+| Item | Detail |
+|------|--------|
+| Model | Weighted multi-dimensional investment score (13 explainable dimensions) |
+| Recommendation | Highly Recommended · Recommended · Consider · High Risk · Insufficient Data + why |
+| Confidence / risks / opportunities | Percent + based-on layers · severity/actions · explained opportunities |
+| Business readiness | Planning → Client → Campaign → Reporting → Analytics → AI → Mobile |
+| History table | Append-only → `creator_intelligence_investment_history` |
+| Entry points | `loadCreatorInvestmentIntelligence` / `computeCreatorInvestmentIntelligence` |
+| Reuse | Sprint 1–5 intelligence only — map classifications; never recalculate layer engines |
+| AI | `buildInvestmentAiHints` only — **no AI execution** |
+| Acceptance | [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) — Product gate before freeze / Planning Workspace |
+| Migration | `20260802170000_enterprise_creator_intelligence_investment.sql` (Dev applied) |
 
 ### Extension rules
 
-1. Reuse IPL + metrics history + campaign commercial/performance loaders + taxonomy inference + demographic columns — do not duplicate calculation engines.  
-2. Creator Investment Score → later sprint in this package only.  
+1. Reuse IPL + metrics history + campaign commercial/performance loaders + taxonomy inference + demographic columns + layer intelligence — do not duplicate calculation engines.  
+2. Creator Investment Intelligence is the final Phase 1 composition layer — consumers must call it rather than invent parallel scores.  
 3. Creator business changes that affect issued documents → Change Impact → Document Lifecycle.  
 4. Bulk refresh/backfill → Platform Bulk Operations Framework.  
 5. Money → Financial Display Standard.  
 6. No Production deploy without explicit approval.  
-7. Parent capability stays **ACTIVE** until Product freezes it after Phase 1 completion.
+7. Parent capability stays **ACTIVE** until Product Acceptance Review is approved — then freeze.  
+8. Do **not** begin Planning Workspace until Acceptance is approved.
 
 ### Spec
 

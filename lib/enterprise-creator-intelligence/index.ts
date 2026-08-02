@@ -8,7 +8,8 @@
  * Sprint 2: Commercial Intelligence (protected baseline).
  * Sprint 3: Category & Brand Intelligence (protected baseline).
  * Sprint 4: Performance Intelligence (protected baseline).
- * Sprint 5: Audience Intelligence (ACTIVE extension → protected after land).
+ * Sprint 5: Audience Intelligence (protected baseline).
+ * Sprint 6: Creator Investment Intelligence (ACTIVE extension → protected after land).
  * Spec: docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE.md
  */
 
@@ -17,3 +18,4 @@ export * from "@/lib/enterprise-creator-intelligence/commercial";
 export * from "@/lib/enterprise-creator-intelligence/category-brand";
 export * from "@/lib/enterprise-creator-intelligence/performance";
 export * from "@/lib/enterprise-creator-intelligence/audience";
+export * from "@/lib/enterprise-creator-intelligence/investment";

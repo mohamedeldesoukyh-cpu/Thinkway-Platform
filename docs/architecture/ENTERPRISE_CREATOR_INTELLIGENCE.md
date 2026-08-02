@@ -258,11 +258,56 @@ import {
 2. Reuse influencer demographic columns + Sprint 1 monthly followers + Sprint 4 audience response — no duplicated engines.  
 3. Never estimate fake followers.  
 4. AI-ready only — `buildAudienceAiHints`.  
-5. Do **not** begin Creator Investment Score until Product approval.
+5. Sprint 6 Creator Investment Intelligence extends this baseline without redesign.
 
 ---
 
-## Sprint roadmap (do not start early)
+## Sprint 6 — Creator Investment Intelligence (PROTECTED BASELINE)
+
+| Attribute | Value |
+|-----------|--------|
+| Status | **Protected Creator Investment Intelligence baseline** (parent capability remains **ACTIVE**) |
+| Extends | Sprint 1–5 baselines (unchanged — composition only) |
+| Code | `lib/enterprise-creator-intelligence/investment/` |
+| Migration (Development) | `20260802170000_enterprise_creator_intelligence_investment.sql` |
+| Regression | `npm run test:enterprise-creator-intelligence:investment` |
+| Acceptance | [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) |
+
+### Capabilities
+
+| Area | Output |
+|------|--------|
+| Investment Score | Weighted multi-dimensional score — **not** a single unexplained number |
+| Dimensions (13) | Commercial Efficiency · Performance Reliability · Audience Quality · Audience Stability · Growth Stability · Category Expertise · Brand Affinity · Campaign Success · Operational Reliability · Content Consistency · Pricing Stability · Commercial Confidence · Business Readiness |
+| Recommendation | Highly Recommended · Recommended · Consider · High Risk · Insufficient Data + why |
+| Confidence | Percent + based-on layers (Historical · Commercial · Audience · Performance · Category) |
+| Risk analysis | Severity · explanation · suggested action |
+| Opportunity analysis | Explained positive investment signals |
+| Business readiness | Reusable Planning → Client → Campaign → Reporting → Analytics → AI → Mobile outputs |
+
+### Rules
+
+1. Append-only → `creator_intelligence_investment_history`.  
+2. **Consume Sprint 1–5 only** — map existing classifications; never recalculate CPM/CPE/ROI/EMV/demographics/engines.  
+3. Every dimension independently explainable (score · confidence · weight · evidence · trend · source).  
+4. AI-ready only — `buildInvestmentAiHints` (why recommended · confidence drivers · score movement · business actions).  
+5. Parent capability stays **ACTIVE** until Product Acceptance Review is approved — do **not** freeze early.  
+6. Do **not** begin Planning Workspace until Enterprise Creator Intelligence passes final Product Acceptance.
+
+### Entry points
+
+```ts
+import {
+  loadCreatorInvestmentIntelligence,
+  computeCreatorInvestmentIntelligence,
+  appendInvestmentIntelligenceCapture,
+  buildInvestmentAiHints,
+} from "@/lib/enterprise-creator-intelligence";
+```
+
+---
+
+## Sprint roadmap
 
 | Sprint | Scope | Status |
 |--------|-------|--------|
@@ -271,7 +316,7 @@ import {
 | 3 | Category & Brand Intelligence | **Protected baseline** (`ad861c01`) |
 | 4 | Performance Intelligence | **Protected baseline** (`54057bd5`) |
 | 5 | Audience Intelligence | **Protected baseline** (`51836e97`) |
-| 6 | Creator Investment Score (explainable) | Not started — gated |
+| 6 | Creator Investment Intelligence | **Protected baseline** (this release) |
 
 ---
 
