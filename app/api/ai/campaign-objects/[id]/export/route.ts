@@ -191,7 +191,7 @@ export async function GET(request: Request, context: RouteContext) {
         hydrateProposalVendors(supabase, campaignObject),
         resolveClientLogo(supabase, campaignObject),
       ]);
-      const creatorIds = resolveCreatorIds(campaignObject);
+      const creatorIds = resolveCreatorIds(campaignObject).ids;
       const signalMap = await loadStudioEciPlanningSignals(supabase, creatorIds.slice(0, 40));
       const planningSignals = [...signalMap.values()];
       const baseName = proposalFileBaseName(campaignObject);
