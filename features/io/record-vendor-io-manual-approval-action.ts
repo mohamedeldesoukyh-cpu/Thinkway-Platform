@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { formDataDefersRevalidate } from "@/components/workspace/bulk-operations/bulk-defer-revalidate";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { emitEnterpriseTimelineEvent } from "@/lib/timeline/emit-enterprise-timeline-event";
 import { debugIo } from "@/features/io/queries";
@@ -164,6 +165,9 @@ export async function recordVendorIoManualApprovalAction(
   }
 
   debugIo("vendor-io", "manual approval recorded", { id });
-  revalidateVendorIoPaths(campaignHeaderId);
+  // Bulk runner owns a single refresh after the full selection finishes.
+  if (!formDataDefersRevalidate(formData)) {
+    revalidateVendorIoPaths(campaignHeaderId);
+  }
   return { ok: true, message: "Vendor IO marked as approved." };
 }

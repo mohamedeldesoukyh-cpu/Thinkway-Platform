@@ -4,9 +4,9 @@
 **Active initiative:** **Release 2.3 — Campaign Planning Workspace** — start with Capability / UX / Spec / Compliance reviews · **no Campaign Workspace UX**  
 **Must inherit:** Campaign Workspace Baseline **v1.3** · Platform Bulk Operations Framework · BPN · Architecture v1.0.
 
-**Capability completeness gates:** Bulk · Background · AI-ready · Operational effort (all four required).
+**Capability completeness gates:** Bulk · Background · AI-ready · Operational effort · **Idempotent execution** (all five required).
 
-**Platform Bulk Framework:** `docs/architecture/PLATFORM_BULK_OPERATIONS_FRAMEWORK.md` — first production consumer Vendor IO (R2.2d).
+**Platform Bulk Framework:** `docs/architecture/PLATFORM_BULK_OPERATIONS_FRAMEWORK.md` — Vendor IO consumer (R2.2d); reliability + single-refresh + idempotency (R2.2d.1).
 
 **Gate docs (Planning — retargeted as R2.3):**  
 - `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md`  

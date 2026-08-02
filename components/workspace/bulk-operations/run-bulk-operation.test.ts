@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { isBulkRefreshLocked } from "@/components/workspace/bulk-operations/bulk-refresh-gate";
 import {
   formatBulkOperationSummary,
   runBulkOperation,
@@ -138,5 +139,87 @@ describe("runBulkOperation", () => {
       mutate: async () => ({ ok: true }),
     });
     assert.equal(summary.succeeded, 3);
+  });
+
+  it("locks refresh during mutation and refreshes once after every item", async () => {
+    const events: string[] = [];
+    let refreshCalls = 0;
+    const summary = await runBulkOperation({
+      label: "Mark Accepted",
+      entityLabel: "Vendor IO",
+      entityLabelPlural: "Vendor IOs",
+      items: ["a", "b", "c"],
+      getId: (id) => id,
+      mutate: async (id) => {
+        assert.equal(isBulkRefreshLocked(), true, "refresh must stay locked mid-run");
+        events.push(`m:${id}`);
+        return { ok: true };
+      },
+      refresh: async () => {
+        assert.equal(isBulkRefreshLocked(), false, "refresh unlocks before single refresh");
+        refreshCalls += 1;
+        events.push("refresh");
+      },
+    });
+
+    assert.deepEqual(events, ["m:a", "m:b", "m:c", "refresh"]);
+    assert.equal(refreshCalls, 1);
+    assert.equal(summary.executionIncomplete, false);
+    assert.equal(summary.total, 3);
+    assert.equal(
+      summary.succeeded + summary.failed + summary.skipped,
+      summary.total
+    );
+    assert.equal(isBulkRefreshLocked(), false);
+  });
+
+  it("processes every selected record for 10 / 32 / 100 sizes", async () => {
+    for (const size of [10, 32, 100]) {
+      const items = Array.from({ length: size }, (_, i) => `id-${i}`);
+      let midRefreshAttempts = 0;
+      const summary = await runBulkOperation({
+        label: "Mark Accepted",
+        entityLabel: "Vendor IO",
+        entityLabelPlural: "Vendor IOs",
+        items,
+        getId: (id) => id,
+        mutate: async () => {
+          if (isBulkRefreshLocked()) {
+            // Simulated workspace refresh must be a no-op while locked.
+          } else {
+            midRefreshAttempts += 1;
+          }
+          return { ok: true };
+        },
+        refresh: async () => {
+          /* single end refresh */
+        },
+      });
+      assert.equal(summary.total, size);
+      assert.equal(summary.succeeded, size);
+      assert.equal(summary.executionIncomplete, false);
+      assert.equal(midRefreshAttempts, 0);
+    }
+  });
+
+  it("idempotent re-run counts already-complete as skipped, not failed", async () => {
+    const summary = await runBulkOperation({
+      label: "Mark Accepted",
+      entityLabel: "Vendor IO",
+      entityLabelPlural: "Vendor IOs",
+      items: Array.from({ length: 32 }, (_, i) => String(i)),
+      getId: (id) => id,
+      mutate: async (id) =>
+        Number(id) < 30
+          ? { ok: true, skipped: true, message: "Already accepted." }
+          : { ok: true },
+    });
+    assert.equal(summary.total, 32);
+    assert.equal(summary.skipped, 30);
+    assert.equal(summary.succeeded, 2);
+    assert.equal(summary.failed, 0);
+    assert.equal(summary.executionIncomplete, false);
+    const formatted = formatBulkOperationSummary(summary);
+    assert.match(formatted.description, /Already completed:\s*30/i);
   });
 });

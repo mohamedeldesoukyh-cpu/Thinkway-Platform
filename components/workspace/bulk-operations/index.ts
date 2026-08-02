@@ -25,3 +25,16 @@ export {
 } from "@/components/workspace/bulk-operations/bulk-operation-feedback";
 
 export { usePlatformBulkOperation } from "@/components/workspace/bulk-operations/use-platform-bulk-operation";
+
+export {
+  appendBulkDeferRevalidate,
+  BULK_DEFER_REVALIDATE_FIELD,
+  formDataDefersRevalidate,
+} from "@/components/workspace/bulk-operations/bulk-defer-revalidate";
+
+export {
+  beginBulkRefreshLock,
+  endBulkRefreshLock,
+  isBulkRefreshLocked,
+  subscribeBulkRefreshLock,
+} from "@/components/workspace/bulk-operations/bulk-refresh-gate";

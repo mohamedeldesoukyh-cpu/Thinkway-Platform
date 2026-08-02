@@ -4,6 +4,8 @@ import { describe, it } from "node:test";
 import {
   describeVendorIoSendBulkLabel,
   exportVendorIoRowsCsv,
+  vendorIoAlreadyAccepted,
+  vendorIoAlreadySentOrDelivered,
   vendorIoIsManualDeliveryCandidate,
   vendorIoNeedsSend,
 } from "@/features/io/bulk/vendor-io-bulk-helpers";
@@ -73,6 +75,23 @@ describe("vendor IO bulk helpers", () => {
 
   it("skips approved rows from send eligibility", () => {
     assert.equal(vendorIoNeedsSend(row({ status: "approved" })), false);
+    assert.equal(vendorIoNeedsSend(row({ status: "generated" })), true);
+  });
+
+  it("is idempotent for already sent / delivered / accepted", () => {
+    assert.equal(vendorIoAlreadyAccepted(row({ status: "approved" })), true);
+    assert.equal(vendorIoAlreadySentOrDelivered(row({ status: "sent" })), true);
+    assert.equal(
+      vendorIoAlreadySentOrDelivered(
+        row({ status: "generated", delivery_status: "completed" })
+      ),
+      true
+    );
+    assert.equal(vendorIoNeedsSend(row({ status: "sent" })), false);
+    assert.equal(
+      vendorIoNeedsSend(row({ status: "generated", delivery_status: "sent" })),
+      false
+    );
     assert.equal(vendorIoNeedsSend(row({ status: "generated" })), true);
   });
 

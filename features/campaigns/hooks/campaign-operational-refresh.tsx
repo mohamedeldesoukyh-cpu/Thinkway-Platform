@@ -8,6 +8,8 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 
+import { isBulkRefreshLocked } from "@/components/workspace/bulk-operations/bulk-refresh-gate";
+
 type CampaignOperationalRefreshContextValue = {
   reloadOperationalBilling: () => Promise<void>;
   reloadPublications: () => Promise<void>;
@@ -51,6 +53,11 @@ export function useRefreshCampaignAfterOperationalMutation() {
   const reloadOperationalBilling = useCampaignOperationalRefresh();
 
   return useCallback(() => {
+    // Platform Bulk Runner owns refresh during multi-select jobs.
+    // Mid-run router.refresh() remounts the workspace and aborts remaining items.
+    if (isBulkRefreshLocked()) {
+      return;
+    }
     try {
       void reloadOperationalBilling?.().catch((error: unknown) => {
         console.error("[campaign-operational-refresh] billing reload failed", error);

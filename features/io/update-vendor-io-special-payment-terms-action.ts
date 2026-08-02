@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { formDataDefersRevalidate } from "@/components/workspace/bulk-operations/bulk-defer-revalidate";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const schema = z.object({
@@ -54,9 +55,11 @@ export async function updateVendorIoSpecialPaymentTermsAction(
     return { ok: false, message: error.message };
   }
 
-  revalidatePath(`/campaigns/${parsed.data.campaign_header_id}`);
-  revalidatePath("/ios/vendor");
-  revalidatePath(`/ios/vendor/${parsed.data.id}/preview`);
+  if (!formDataDefersRevalidate(formData)) {
+    revalidatePath(`/campaigns/${parsed.data.campaign_header_id}`);
+    revalidatePath("/ios/vendor");
+    revalidatePath(`/ios/vendor/${parsed.data.id}/preview`);
+  }
 
   return {
     ok: true,

@@ -9,7 +9,15 @@
  * - Progress callbacks for live UI
  * - Mutation failures are separated from refresh failures
  * - Event-loop yields keep the workspace responsive on large selections
+ * - Refresh is locked until every selected item is processed, then runs once
+ * - Processed count must equal selected count (framework execution error otherwise)
+ * - Idempotent skips are first-class (already complete → skipped, not failed)
  */
+
+import {
+  beginBulkRefreshLock,
+  endBulkRefreshLock,
+} from "@/components/workspace/bulk-operations/bulk-refresh-gate";
 
 export type BulkItemResult<TId extends string = string> = {
   id: TId;
@@ -47,6 +55,11 @@ export type BulkOperationSummary<TId extends string = string> = {
   lastError?: string;
   /** Mutation phase finished without throwing. */
   mutationPhaseOk: boolean;
+  /**
+   * True when processed (succeeded+failed+skipped) !== selected total.
+   * Must never be silently ignored by consumers.
+   */
+  executionIncomplete: boolean;
   /** Refresh phase outcome (null if refresh was not attempted). */
   refreshPhase: "ok" | "failed" | "skipped" | null;
   refreshError?: string;
@@ -85,6 +98,7 @@ function yieldToBrowser(): Promise<void> {
 
 /**
  * Run a bulk operation sequentially with progress callbacks and UI yields.
+ * Owns the full lifecycle: lock refresh → execute all → unlock → refresh once.
  * Partial success is preserved — failures never undo earlier successes.
  */
 export async function runBulkOperation<TItem, TId extends string = string>(
@@ -123,38 +137,54 @@ export async function runBulkOperation<TItem, TId extends string = string>(
     });
   };
 
+  beginBulkRefreshLock();
   emit();
 
-  for (const item of items) {
-    const id = getId(item);
-    try {
-      const result = await mutate(item);
-      const resultId = (result.id ?? id) as TId;
-      if (result.skipped) {
-        skippedIds.push(resultId);
-      } else if (result.ok) {
-        succeededIds.push(resultId);
-      } else {
-        failedIds.push(resultId);
-        lastError = result.message ?? lastError;
+  try {
+    for (const item of items) {
+      const id = getId(item);
+      try {
+        const result = await mutate(item);
+        const resultId = (result.id ?? id) as TId;
+        if (result.skipped) {
+          skippedIds.push(resultId);
+        } else if (result.ok) {
+          succeededIds.push(resultId);
+        } else {
+          failedIds.push(resultId);
+          lastError = result.message ?? lastError;
+        }
+      } catch (error) {
+        failedIds.push(id);
+        lastError =
+          error instanceof Error ? error.message : "Unexpected update error.";
       }
-    } catch (error) {
-      failedIds.push(id);
-      lastError =
-        error instanceof Error ? error.message : "Unexpected update error.";
-    }
-    completed += 1;
-    emit();
+      completed += 1;
+      emit();
 
-    if (yieldEvery > 0 && completed % yieldEvery === 0 && completed < total) {
-      await yieldToBrowser();
+      if (yieldEvery > 0 && completed % yieldEvery === 0 && completed < total) {
+        await yieldToBrowser();
+      }
     }
+  } finally {
+    // Unlock before the single post-run refresh so that refresh is allowed.
+    endBulkRefreshLock();
+  }
+
+  const processed =
+    succeededIds.length + failedIds.length + skippedIds.length;
+  const executionIncomplete = processed !== total;
+  if (executionIncomplete) {
+    lastError =
+      lastError ??
+      `Bulk execution incomplete: selected ${total}, processed ${processed}.`;
   }
 
   let refreshPhase: BulkOperationSummary<TId>["refreshPhase"] = null;
   let refreshError: string | undefined;
 
-  if (succeededIds.length > 0 && refresh) {
+  // One refresh after every selected item has been attempted.
+  if ((succeededIds.length > 0 || skippedIds.length > 0) && refresh) {
     try {
       await Promise.resolve(refresh());
       refreshPhase = "ok";
@@ -165,7 +195,7 @@ export async function runBulkOperation<TItem, TId extends string = string>(
           ? error.message
           : `Unable to refresh the ${entityLabelPlural} list.`;
     }
-  } else if (succeededIds.length === 0) {
+  } else if (succeededIds.length === 0 && skippedIds.length === 0) {
     refreshPhase = "skipped";
   }
 
@@ -182,7 +212,8 @@ export async function runBulkOperation<TItem, TId extends string = string>(
     succeededIds,
     skippedIds,
     lastError,
-    mutationPhaseOk: true,
+    mutationPhaseOk: !executionIncomplete,
+    executionIncomplete,
     refreshPhase,
     refreshError,
   };
@@ -209,9 +240,18 @@ export function formatBulkOperationSummary(
     refreshPhase,
     refreshError,
     lastError,
+    executionIncomplete,
   } = summary;
 
-  const entity = noun(succeeded || failed || skipped || total, entityLabel, entityLabelPlural);
+  if (executionIncomplete) {
+    return {
+      title: `Bulk execution stopped early`,
+      description:
+        lastError ??
+        `Selected ${total}, but not every record was processed. Retry Failed — completed work was kept.`,
+      tone: "error",
+    };
+  }
 
   if (succeeded === 0 && failed === 0 && skipped === total) {
     return {
@@ -242,12 +282,16 @@ export function formatBulkOperationSummary(
   }
 
   if (failed === 0) {
+    const already =
+      skipped > 0
+        ? ` Already completed: ${skipped}.`
+        : "";
     return {
       title: `${succeeded} ${noun(succeeded, entityLabel, entityLabelPlural)} were updated successfully`,
       description:
-        skipped > 0
-          ? `${skipped} ${noun(skipped, entityLabel, entityLabelPlural)} skipped (already complete). No failures.`
-          : "No failures.",
+        skipped > 0 && succeeded === 0
+          ? `${skipped} ${noun(skipped, entityLabel, entityLabelPlural)} were already complete. No failures.`
+          : `Selected ${total}.${already} No failures.`,
       tone: "success",
     };
   }
@@ -255,7 +299,7 @@ export function formatBulkOperationSummary(
   return {
     title: `${succeeded} ${noun(succeeded, entityLabel, entityLabelPlural)} updated · ${failed} failed`,
     description: [
-      `Selected ${total}. Successful ${succeeded}. Failed ${failed}. Remaining ${failed}.`,
+      `Selected ${total}. Successful ${succeeded}. Failed ${failed}. Already completed ${skipped}.`,
       lastError ? `Last error: ${lastError}.` : null,
       refreshPhase === "failed"
         ? refreshError ??

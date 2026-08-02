@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { formDataDefersRevalidate } from "@/components/workspace/bulk-operations/bulk-defer-revalidate";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { httpsUrlSchema } from "@/lib/validation/schemas";
 
@@ -74,9 +75,11 @@ export async function updateVendorIoAttachmentUrlAction(
     return { ok: false, message: updateError.message };
   }
 
-  revalidatePath("/ios/vendor");
-  revalidatePath("/campaigns");
-  revalidatePath(`/campaigns/${campaignHeaderId}`);
+  if (!formDataDefersRevalidate(formData)) {
+    revalidatePath("/ios/vendor");
+    revalidatePath("/campaigns");
+    revalidatePath(`/campaigns/${campaignHeaderId}`);
+  }
   return {
     ok: true,
     message: attachmentUrl

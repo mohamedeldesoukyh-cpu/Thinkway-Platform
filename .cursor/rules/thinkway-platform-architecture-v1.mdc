@@ -60,10 +60,11 @@ Every new capability must answer before it is complete:
 1. **Bulk** — Can this be done in bulk? (Never single-record-only register ops.)  
 2. **Background** — Can this run without blocking the user?  
 3. **AI-ready** — Can this eventually be automated by AI? (Design for it; AI need not ship yet.)  
-4. **Operational effort** — Does this reduce effort? (Eliminated / simplified / remains human.)
+4. **Operational effort** — Does this reduce effort? (Eliminated / simplified / remains human.)  
+5. **Idempotent execution** — Retries / re-runs must skip already-complete records (never duplicate updates).
 
 **Bulk framework (canonical):** `docs/architecture/PLATFORM_BULK_OPERATIONS_FRAMEWORK.md` · `components/workspace/bulk-operations/`  
-Do not invent parallel bulk runners. Vendor IO (R2.2d) is the first production consumer.
+Do not invent parallel bulk runners. Vendor IO (R2.2d / 2.2d.1) is the first production consumer.
 
 ## Mandatory for every ADR / capability spec / release architecture / implementation proposal
 
@@ -75,7 +76,7 @@ Include section **Platform Architecture Compliance** covering:
 4. Why no new navigation philosophy is introduced  
 5. Workspace(s) extended · baselines referenced (incl. Campaign Workspace v1.3) · no duplicate workflow · lifecycle extension paragraph  
 6. Operational effort reduction (eliminated / simplified / human)  
-7. Capability completeness gates (bulk · background · AI-ready · effort)  
+7. Capability completeness gates (bulk · background · AI-ready · effort · idempotent)  
 8. Campaign Workspace invariants preserved when touching Campaign surfaces  
 
 ## Implementation posture

@@ -5,9 +5,25 @@
 import type { VendorIoRow } from "@/features/io/types";
 import { hasValidVendorEmail } from "@/lib/io/vendor-io-delivery";
 
+/** Already accepted — idempotent skip for Mark Accepted. */
+export function vendorIoAlreadyAccepted(row: VendorIoRow): boolean {
+  return (row.status ?? "").toLowerCase() === "approved";
+}
+
+/**
+ * Already sent or manually delivered — idempotent skip for Send / Mark Delivered.
+ * Re-running the same bulk action must never create duplicate deliveries.
+ */
+export function vendorIoAlreadySentOrDelivered(row: VendorIoRow): boolean {
+  const status = (row.status ?? "").toLowerCase();
+  if (status === "approved" || status === "sent") return true;
+  const delivery = (row.delivery_status ?? "").toLowerCase();
+  return delivery === "sent" || delivery === "completed";
+}
+
 export function vendorIoNeedsSend(row: VendorIoRow): boolean {
-  if (row.status === "approved") return false;
-  return ["draft", "generated", "sent", "rejected"].includes(
+  if (vendorIoAlreadySentOrDelivered(row)) return false;
+  return ["draft", "generated", "rejected"].includes(
     (row.status ?? "").toLowerCase()
   );
 }

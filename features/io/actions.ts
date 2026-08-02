@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { formDataDefersRevalidate } from "@/components/workspace/bulk-operations/bulk-defer-revalidate";
 import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { parseFormDataWithSchema } from "@/lib/validation/form";
@@ -861,7 +862,9 @@ export async function sendVendorIoAction(
     } as never);
 
     debugIo("io-email", "vendor io manual send", { id, approvalUrl });
-    revalidateIoPaths(campaignHeaderId);
+    if (!formDataDefersRevalidate(formData)) {
+      revalidateIoPaths(campaignHeaderId);
+    }
     return { ok: true, message: "Delivered Manually" };
   }
 
@@ -964,7 +967,9 @@ export async function sendVendorIoAction(
     recipients: [recipientEmail],
     gmailOk: emailResult.ok,
   });
-  revalidateIoPaths(campaignHeaderId);
+  if (!formDataDefersRevalidate(formData)) {
+    revalidateIoPaths(campaignHeaderId);
+  }
 
   if (!emailResult.ok) {
     return {
