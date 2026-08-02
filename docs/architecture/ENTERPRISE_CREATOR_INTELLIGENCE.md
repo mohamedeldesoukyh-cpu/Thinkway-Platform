@@ -104,8 +104,7 @@ Current Value · Previous Value · Trend · Trend Direction · Trend Label · Co
 2. **Reuse formulas** — CPM/CPE via `lib/campaigns/performance-calculations.ts`; views median/average via Sprint 1 compute; pricing via quotation price reference.  
 3. **Thinkway commercial data first** — assignments, publications, deliverable revenue, quotation history.  
 4. **Financial Display Standard** — money `currentDisplay` uses `formatMoneyDetail` (ISO codes, never symbols).  
-5. **AI-ready only** — `buildCommercialAiHints` / `aiHints` — no AI execution.  
-6. **Do not start Sprint 3** until Product explicitly approves Category Intelligence.
+5. **AI-ready only** — `buildCommercialAiHints` / `aiHints` — no AI execution.
 
 ### Entry points
 
@@ -134,14 +133,59 @@ import {
 
 ---
 
+## Sprint 3 — Category & Brand Intelligence (PROTECTED BASELINE)
+
+| Attribute | Value |
+|-----------|--------|
+| Status | **Protected Category & Brand Intelligence baseline** (parent capability remains **ACTIVE**) |
+| Extends | Sprint 1 Historical + Sprint 2 Commercial (unchanged) |
+| Code | `lib/enterprise-creator-intelligence/category-brand/` |
+| Migration (Development) | `20260802140000_enterprise_creator_intelligence_category_brand.sql` |
+| Regression | `npm run test:enterprise-creator-intelligence:category-brand` |
+
+### Capabilities
+
+| Area | Output |
+|------|--------|
+| Dynamic categories | Behavioural % for 30d / 90d / 180d / Lifetime (always total 100%) |
+| Category trends | Increasing / Stable / Declining / Emerging + what/why/implication |
+| Category confidence | Percent + based-on evidence (posts + window days) |
+| Content mix | Reels / Stories / Carousel / Images / Video / Short Form / Long Form |
+| Brand intelligence | Brand · industry · sponsored/organic · mentions · frequency · last collab · campaign type |
+| Industry intelligence | Rollup from behavioural categories with trends |
+| Brand affinity | Repeated / One-off / Long-term / Recent / Dormant (+ sentiment extension point only) |
+| Content consistency | Highly Consistent → Highly Volatile (not a quality score) |
+| Specialisation | Highly Specialised → Emerging Category Shift with why |
+| Business readiness | Primary/secondary/emerging categories · industries · affinity · specialisation · consistency · confidence |
+
+### Rules
+
+1. **Append-only history** — `creator_intelligence_category_brand_history` INSERT only.  
+2. **Reuse taxonomy** — `inferCategoriesFromProfileSignals` + `resolveCanonicalCategories` / keyword map — no second vocabulary.  
+3. **Not Discovery** — enterprise behavioural intelligence for Planning/Client/AI/Reporting/Mobile.  
+4. **AI-ready only** — `buildCategoryBrandAiHints` — no AI execution.  
+5. **Do not start Sprint 4** until Product explicitly approves.
+
+### Entry points
+
+```ts
+import {
+  loadCreatorCategoryBrandIntelligence,
+  computeCreatorCategoryBrandIntelligence,
+  appendCategoryBrandIntelligenceCapture,
+} from "@/lib/enterprise-creator-intelligence";
+```
+
+---
+
 ## Sprint roadmap (do not start early)
 
 | Sprint | Scope | Status |
 |--------|-------|--------|
 | 1 | Historical Creator Intelligence | **Protected baseline** (`c31da64e`) |
 | 2 | Commercial Intelligence | **Protected baseline** (`7c0f6984`) |
-| 3 | Category Intelligence (behaviour %) | Not started — gated on Product approval |
-| 4 | Brand Intelligence | Not started |
+| 3 | Category & Brand Intelligence | **Protected baseline** (this release) |
+| 4 | *(reserved / next Product gate)* | Not started |
 | 5 | Internal Campaign Intelligence | Not started |
 | 6 | Creator Investment Score (explainable) | Not started |
 

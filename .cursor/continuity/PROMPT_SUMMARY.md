@@ -8,23 +8,19 @@
 |--------|-------|--------|
 | 1 | Historical Creator Intelligence | **Protected baseline** (`c31da64e`) |
 | 2 | Commercial Intelligence | **Protected baseline** (`7c0f6984`) |
-| 3–6 | Category / Brand / Campaign / Investment Score | Not started — gated on Product approval |
+| 3 | Category & Brand Intelligence | **Protected baseline** (landing on `develop`) |
+| 4–6 | Next gates / Campaign Intel / Investment Score | Not started — gated on Product approval |
 
 - Spec: `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE.md`
-- Code: `lib/enterprise-creator-intelligence/` (`historical/` + `commercial/`)
-- Sprint 2 includes: standard metric object · trend labels · Commercial Health · Investment Readiness · comparison windows · benchmark slots · source verification · explainability
+- Code: `lib/enterprise-creator-intelligence/` (`historical/` · `commercial/` · `category-brand/`)
+- Sprint 3 migration (Dev): `20260802140000_enterprise_creator_intelligence_category_brand.sql`
 - Test: `npm run test:enterprise-creator-intelligence`
 - **No Production deploy**
-- **Do not start Category Intelligence** until Product approval
+- **Do not start Sprint 4** until Product approval
 
 **Closed permanently:** Enterprise Document & Change Impact — Maintenance Mode (`449fd5c0`).
 
 | Capability | Status |
 |------------|--------|
-| Enterprise Creator Intelligence | **ACTIVE** · Sprint 1 + Sprint 2 protected baselines |
+| Enterprise Creator Intelligence | **ACTIVE** · Sprint 1–3 protected baselines |
 | Change Impact / Document Lifecycle | Maintenance Mode · frozen · mandatory |
-
-## Open / blocked
-
-1. Do **not** merge to `main` or deploy Production without explicit approval
-2. Sprint 3 requires Product approval

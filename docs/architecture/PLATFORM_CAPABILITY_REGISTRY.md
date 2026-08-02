@@ -1,7 +1,7 @@
 # Platform Capability Registry
 
 **Status:** Permanent governance registry — **canonical**  
-**Updated:** 2026-08-02 — Release 2.3 Phase 1 · Enterprise Creator Intelligence ACTIVE (Sprint 1 + Sprint 2 Commercial protected baselines)  
+**Updated:** 2026-08-02 — Release 2.3 Phase 1 · Enterprise Creator Intelligence ACTIVE (Sprint 1–3 protected baselines)  
 **Parent:** [`PLATFORM_ARCHITECTURE_COMPLIANCE.md`](./PLATFORM_ARCHITECTURE_COMPLIANCE.md)
 
 Every future enterprise module must **extend** registered capabilities. Parallel engines are forbidden.
@@ -15,7 +15,7 @@ Every future enterprise module must **extend** registered capabilities. Parallel
 | Platform Bulk Operations Framework | Frozen · mandatory | `components/workspace/bulk-operations/` | [`PLATFORM_BULK_OPERATIONS_FRAMEWORK.md`](./PLATFORM_BULK_OPERATIONS_FRAMEWORK.md) | All register multi-select work |
 | **Enterprise Document Lifecycle Engine** | **Maintenance Mode · frozen · protected · mandatory** | `lib/document-lifecycle/` | [`ENTERPRISE_DOCUMENT_LIFECYCLE.md`](./ENTERPRISE_DOCUMENT_LIFECYCLE.md) | Document state transitions only |
 | **Enterprise Change Impact Engine** | **Maintenance Mode · frozen · protected · mandatory** | `lib/change-impact/` | [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md) · [`ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md`](./ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md) | Every business-change interpretation |
-| **Enterprise Creator Intelligence** | **ACTIVE** (not frozen) · Sprint 1 Historical + Sprint 2 Commercial = protected baselines | `lib/enterprise-creator-intelligence/` | [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) | Planning · Client · Campaign · Reporting · Analytics · AI hooks · Mobile |
+| **Enterprise Creator Intelligence** | **ACTIVE** (not frozen) · Sprint 1–3 = protected baselines (Historical · Commercial · Category & Brand) | `lib/enterprise-creator-intelligence/` | [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) | Planning · Client · Campaign · Reporting · Analytics · AI hooks · Mobile |
 
 ---
 
@@ -136,12 +136,25 @@ Platform creator time-series and intelligence for Planning Workspace, Client Wor
 | Entry points | `loadCreatorCommercialIntelligence` / `computeCreatorCommercialIntelligence` |
 | Reuse | `calculateCpm`/`calculateCpe` · quotation price reference · Sprint 1 monthly views · Financial Display Standard |
 | AI | `buildCommercialAiHints` only — **no AI execution** |
-| Gate | Do **not** start Sprint 3 (Category) until Product explicitly approves |
+
+### Sprint 3 — Category & Brand Intelligence (protected baseline)
+
+| Item | Detail |
+|------|--------|
+| Behavioural categories | 30d / 90d / 180d / Lifetime distributions (total 100%) + trends + confidence |
+| Content mix | Reels · Stories · Carousel · Images · Video · Short/Long Form |
+| Brands / industries | Mentions · sponsored/organic · affinity · industry rollup |
+| Behaviour | Content consistency · specialisation · Planning `businessReadiness` |
+| History | Append-only → `creator_intelligence_category_brand_history` |
+| Entry points | `loadCreatorCategoryBrandIntelligence` / `computeCreatorCategoryBrandIntelligence` |
+| Reuse | Taxonomy inference + canonical categories — no second vocabulary |
+| AI | `buildCategoryBrandAiHints` only — **no AI execution** |
+| Gate | Do **not** start Sprint 4 until Product explicitly approves |
 
 ### Extension rules
 
-1. Reuse IPL + metrics history + campaign commercial/performance loaders — do not duplicate calculation engines.  
-2. Category / brand / campaign / investment score → later sprints in this package only.  
+1. Reuse IPL + metrics history + campaign commercial/performance loaders + taxonomy inference — do not duplicate calculation engines.  
+2. Campaign intelligence / investment score → later sprints in this package only.  
 3. Creator business changes that affect issued documents → Change Impact → Document Lifecycle.  
 4. Bulk refresh/backfill → Platform Bulk Operations Framework.  
 5. Money → Financial Display Standard.  
