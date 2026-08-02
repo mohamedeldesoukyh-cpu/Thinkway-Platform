@@ -178,6 +178,7 @@ Platform creator time-series and intelligence for Planning Workspace, Client Wor
 | Reuse | Influencer demos · Sprint 1 monthly followers · Sprint 4 audience response |
 | AI | `buildAudienceAiHints` only — **no AI execution** |
 | Gate | Do **not** begin Creator Investment Score until Product explicitly approves |
+| Git baseline | `51836e97` on `origin/develop` |
 
 ### Extension rules
 
