@@ -163,6 +163,7 @@ export function StudioSectionCard({
   const { containerRef, mounted: bodyMounted } = useSectionBodyMount({
     forceMount:
       forceMountBody ||
+      section.status === "complete" ||
       section.status === "running" ||
       section.status === "blocked",
   });

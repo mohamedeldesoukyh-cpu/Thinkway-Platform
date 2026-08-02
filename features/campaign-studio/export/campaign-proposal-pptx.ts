@@ -448,6 +448,135 @@ export async function buildCampaignProposalPptxBuffer(
     });
   });
 
+  // ================= EXECUTIVE SUMMARY =================
+  sectionNumber += 1;
+  pageNumber += 1;
+  const summary = pptx.addSlide();
+  summary.background = { color: WHITE };
+  addPageHeader(summary, sectionNumber, client);
+  addSectionEyebrow(summary, "Executive Planning Brief", "FFE0EC");
+
+  summary.addText(model.executiveRecommendation, {
+    x: MARGIN_X,
+    y: 1.52,
+    w: CONTENT_W,
+    h: 0.4,
+    fontFace: FONT,
+    fontSize: 12,
+    bold: true,
+    color: INK,
+    valign: "top",
+    shrinkText: true,
+  });
+  const briefText = model.briefLines
+    .map((line) => `${line.label}: ${line.body}`)
+    .join("\n");
+  summary.addText(briefText, {
+    x: MARGIN_X,
+    y: 1.98,
+    w: CONTENT_W,
+    h: 0.85,
+    fontFace: FONT,
+    fontSize: 12.5,
+    color: "374151",
+    lineSpacingMultiple: 1.3,
+    valign: "top",
+    shrinkText: true,
+  });
+
+  const checks = model.recommendedActions.slice(0, 6);
+  const checkTop = 2.95;
+  const checkColW = (CONTENT_W - 0.24) / 2;
+  const checkRowH = 0.72;
+  checks.forEach((action, i) => {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    const x = MARGIN_X + col * (checkColW + 0.24);
+    const y = checkTop + row * checkRowH;
+    summary.addShape("roundRect", {
+      x,
+      y,
+      w: checkColW,
+      h: checkRowH - 0.14,
+      fill: { color: CARD_SOFT },
+      line: { color: LINE, width: 1 },
+      rectRadius: 0.09,
+    });
+    summary.addShape("roundRect", {
+      x: x + 0.16,
+      y: y + (checkRowH - 0.14) / 2 - 0.11,
+      w: 0.22,
+      h: 0.22,
+      fill: { color: "DDEBFF" },
+      line: { type: "none" },
+      rectRadius: 0.06,
+    });
+    summary.addText("✓", {
+      x: x + 0.16,
+      y: y + (checkRowH - 0.14) / 2 - 0.13,
+      w: 0.22,
+      h: 0.26,
+      align: "center",
+      fontFace: FONT,
+      fontSize: 9,
+      bold: true,
+      color: BLUE,
+      valign: "middle",
+    });
+    summary.addText(action, {
+      x: x + 0.5,
+      y,
+      w: checkColW - 0.66,
+      h: checkRowH - 0.14,
+      fontFace: FONT,
+      fontSize: 10,
+      color: INK,
+      valign: "middle",
+      shrinkText: true,
+    });
+  });
+
+  const strategyTags = buildProposalStrategyTags(model.mixSource).slice(0, 2);
+  if (strategyTags.length > 0) {
+    const tagTop = checkTop + Math.ceil(Math.max(checks.length, 1) / 2) * checkRowH + 0.16;
+    const tagW = (CONTENT_W - 0.24 * (strategyTags.length - 1)) / strategyTags.length;
+    strategyTags.forEach((tag, i) => {
+      const x = MARGIN_X + i * (tagW + 0.24);
+      summary.addShape("roundRect", {
+        x,
+        y: tagTop,
+        w: tagW,
+        h: 1.0,
+        fill: { color: INK },
+        line: { type: "none" },
+        rectRadius: 0.12,
+      });
+      summary.addText(tag.n, {
+        x,
+        y: tagTop + 0.18,
+        w: tagW,
+        h: 0.42,
+        align: "center",
+        fontFace: FONT,
+        fontSize: 16,
+        bold: true,
+        color: WHITE,
+        shrinkText: true,
+      });
+      summary.addText(tag.l, {
+        x,
+        y: tagTop + 0.58,
+        w: tagW,
+        h: 0.3,
+        align: "center",
+        fontFace: FONT,
+        fontSize: 9.5,
+        color: "9AA6C7",
+      });
+    });
+  }
+  addPageFooter(summary, pageNumber, client);
+
   // ================= CAMPAIGN UNDERSTANDING =================
   sectionNumber += 1;
   pageNumber += 1;
@@ -589,135 +718,6 @@ export async function buildCampaignProposalPptxBuffer(
     shrinkText: true,
   });
   addPageFooter(packageSlide, pageNumber, client);
-
-  // ================= EXECUTIVE SUMMARY =================
-  sectionNumber += 1;
-  pageNumber += 1;
-  const summary = pptx.addSlide();
-  summary.background = { color: WHITE };
-  addPageHeader(summary, sectionNumber, client);
-  addSectionEyebrow(summary, "Executive Brief", "FFE0EC");
-
-  summary.addText(model.executiveRecommendation, {
-    x: MARGIN_X,
-    y: 1.52,
-    w: CONTENT_W,
-    h: 0.4,
-    fontFace: FONT,
-    fontSize: 12,
-    bold: true,
-    color: INK,
-    valign: "top",
-    shrinkText: true,
-  });
-  const briefText = model.briefLines
-    .map((line) => `${line.label}: ${line.body}`)
-    .join("\n");
-  summary.addText(briefText, {
-    x: MARGIN_X,
-    y: 1.98,
-    w: CONTENT_W,
-    h: 0.85,
-    fontFace: FONT,
-    fontSize: 12.5,
-    color: "374151",
-    lineSpacingMultiple: 1.3,
-    valign: "top",
-    shrinkText: true,
-  });
-
-  const checks = model.recommendedActions.slice(0, 6);
-  const checkTop = 2.95;
-  const checkColW = (CONTENT_W - 0.24) / 2;
-  const checkRowH = 0.72;
-  checks.forEach((action, i) => {
-    const col = i % 2;
-    const row = Math.floor(i / 2);
-    const x = MARGIN_X + col * (checkColW + 0.24);
-    const y = checkTop + row * checkRowH;
-    summary.addShape("roundRect", {
-      x,
-      y,
-      w: checkColW,
-      h: checkRowH - 0.14,
-      fill: { color: CARD_SOFT },
-      line: { color: LINE, width: 1 },
-      rectRadius: 0.09,
-    });
-    summary.addShape("roundRect", {
-      x: x + 0.16,
-      y: y + (checkRowH - 0.14) / 2 - 0.11,
-      w: 0.22,
-      h: 0.22,
-      fill: { color: "DDEBFF" },
-      line: { type: "none" },
-      rectRadius: 0.06,
-    });
-    summary.addText("✓", {
-      x: x + 0.16,
-      y: y + (checkRowH - 0.14) / 2 - 0.13,
-      w: 0.22,
-      h: 0.26,
-      align: "center",
-      fontFace: FONT,
-      fontSize: 9,
-      bold: true,
-      color: BLUE,
-      valign: "middle",
-    });
-    summary.addText(action, {
-      x: x + 0.5,
-      y,
-      w: checkColW - 0.66,
-      h: checkRowH - 0.14,
-      fontFace: FONT,
-      fontSize: 10,
-      color: INK,
-      valign: "middle",
-      shrinkText: true,
-    });
-  });
-
-  const strategyTags = buildProposalStrategyTags(model.mixSource).slice(0, 2);
-  if (strategyTags.length > 0) {
-    const tagTop = checkTop + Math.ceil(Math.max(checks.length, 1) / 2) * checkRowH + 0.16;
-    const tagW = (CONTENT_W - 0.24 * (strategyTags.length - 1)) / strategyTags.length;
-    strategyTags.forEach((tag, i) => {
-      const x = MARGIN_X + i * (tagW + 0.24);
-      summary.addShape("roundRect", {
-        x,
-        y: tagTop,
-        w: tagW,
-        h: 1.0,
-        fill: { color: INK },
-        line: { type: "none" },
-        rectRadius: 0.12,
-      });
-      summary.addText(tag.n, {
-        x,
-        y: tagTop + 0.18,
-        w: tagW,
-        h: 0.42,
-        align: "center",
-        fontFace: FONT,
-        fontSize: 16,
-        bold: true,
-        color: WHITE,
-        shrinkText: true,
-      });
-      summary.addText(tag.l, {
-        x,
-        y: tagTop + 0.58,
-        w: tagW,
-        h: 0.3,
-        align: "center",
-        fontFace: FONT,
-        fontSize: 9.5,
-        color: "9AA6C7",
-      });
-    });
-  }
-  addPageFooter(summary, pageNumber, client);
 
   // ================= ACTIVATION PLAN =================
   if (model.waves.length > 0) {

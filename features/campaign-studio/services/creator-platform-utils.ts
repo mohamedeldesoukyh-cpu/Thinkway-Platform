@@ -108,7 +108,14 @@ export function mapBrowseCreatorToSearchResult(
     handle,
     displayName,
     platform,
-    followers: account?.follower_count ?? creator.metrics?.followers?.value ?? undefined,
+    followers: (() => {
+      const candidates = [
+        account?.follower_count,
+        creator.metrics?.followers?.value,
+        ...(creator.platforms ?? []).map((platform) => platform.follower_count),
+      ].filter((value): value is number => typeof value === "number" && value > 0);
+      return candidates.length > 0 ? Math.max(...candidates) : undefined;
+    })(),
     engagementRate:
       account?.engagement_rate ?? creator.metrics?.engagement_rate?.value ?? undefined,
     avatarUrl: avatarUrl || undefined,

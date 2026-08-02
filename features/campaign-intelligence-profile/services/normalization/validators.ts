@@ -200,8 +200,9 @@ export function resolveCountryCode(raw: string): string | null {
   for (const opt of COUNTRY_OPTIONS) {
     const label = opt.label.toLowerCase();
     if (lower.startsWith(label) && lower.length > label.length) {
-      const remainder = lower.slice(label.length);
-      if (/^campaign|^duration|^objective/i.test(remainder)) return null;
+      const remainder = lower.slice(label.length).trim();
+      // Country label followed by brief/instruction residue is not a market entity.
+      if (remainder && !/^\([a-z]{2}\)\s*$/i.test(remainder)) return null;
     }
   }
 

@@ -17,12 +17,15 @@ export function getSectionCardDescription(
 
   switch (sectionId) {
     case "creator-recommendations": {
-      const count = resolveVendorRecommendations(campaignObject).length;
+      const { recommendationCount } = resolveCreatorCounts(campaignObject);
+      const parsedCount = resolveVendorRecommendations(campaignObject).length;
+      // Prefer persisted recommendation IDs over free-text line parse (avoids stale counts).
+      const count = recommendationCount > 0 ? recommendationCount : parsedCount;
       const platforms = getCampaignFacts(campaignObject)?.platforms;
       if (count === 0 && !platforms?.length) return undefined;
       const parts: string[] = [];
       if (count > 0) parts.push(`${count} recommended`);
-      if (platforms?.[0]) parts.push(platforms[0]);
+      if (platforms?.length) parts.push(platforms.join(" + "));
       return parts.length > 0 ? parts.join(" · ") : undefined;
     }
     case "timeline": {

@@ -156,6 +156,9 @@ type CreatorTier = "mega" | "macro" | "mid" | "micro" | "nano" | "unknown";
 
 const BRIEF_COPY_PATTERNS: RegExp[] = [
   /\bplease find below\b/i,
+  /\bplease search creators\b/i,
+  /\bplease (search|find|build|create|review)\b/i,
+  /\bbuild the plan\b/i,
   /\bclient brief\b/i,
   /\bwe have an upcoming\b/i,
   /\bdear team\b/i,

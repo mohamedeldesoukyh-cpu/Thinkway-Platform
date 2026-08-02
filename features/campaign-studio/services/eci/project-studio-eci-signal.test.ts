@@ -208,10 +208,19 @@ test("projectStudioEciPlanningSignal maps investment to explainable Studio signa
   assert.ok(signal.whyNot.length > 0);
   assert.match(
     formatStudioProposalCreatorNarrative(signal, "Creator One"),
-    /Recommended: Creator One/i
+    /Creator One/i
+  );
+  assert.match(
+    formatStudioProposalCreatorNarrative(signal, "Creator One"),
+    /Recommendation:/i
   );
   assert.match(formatStudioPresentationRecommendation(signal), /Recommendation:/i);
-  assert.match(formatStudioPresentationRecommendation(signal), /Planning confidence:/i);
+  assert.match(formatStudioPresentationRecommendation(signal), /[Cc]onfidence/i);
+  assert.ok(signal.expectedCampaignContribution.trim().length > 0);
+  assert.doesNotMatch(
+    signal.expectedCampaignContribution,
+    /Weighted average of scored investment/i
+  );
 });
 
 test("studioEciFitScoreRecord exposes bare and inf keys", () => {

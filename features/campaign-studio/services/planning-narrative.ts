@@ -224,7 +224,10 @@ function buildBriefCompleteness(campaignObject: CampaignObject): BriefCompletene
       key: "market",
       label: "Market / geography",
       present: Boolean(
-        summary?.market?.trim() || (facts?.geography && facts.geography.length > 0)
+        (summary?.market?.trim() &&
+          !/\bplease\s+(search|find|build)\b/i.test(summary.market) &&
+          summary.market.trim().length <= 60) ||
+          (facts?.geography && facts.geography.length > 0)
       ),
       detail: "Required for market assumptions and media strategy.",
     },

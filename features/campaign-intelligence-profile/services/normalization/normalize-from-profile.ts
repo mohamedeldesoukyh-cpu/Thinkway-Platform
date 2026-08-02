@@ -8,7 +8,12 @@ import {
   validateNormalizedEvidence,
 } from "./validate-normalized-evidence";
 import type { ExtractionIssue, NormalizedCampaignEntities } from "./types";
-import { isValidBrandName, sanitizeBrandName } from "./validators";
+import {
+  countryLabel,
+  isValidBrandName,
+  resolveCountryCode,
+  sanitizeBrandName,
+} from "./validators";
 
 export type NormalizeFromProfileResult = {
   profile: CampaignIntelligenceProfile;
@@ -46,10 +51,33 @@ export function normalizeFromProfile(
       ? sanitizeBrandName(profileBrand)
       : undefined;
 
+  const marketCode = sanitized.market ? resolveCountryCode(sanitized.market) : null;
+  const cleanedMarket = marketCode ? countryLabel(marketCode) : undefined;
+  const cleanedGeography = (sanitized.geography ?? [])
+    .map((value) => {
+      const code = resolveCountryCode(value);
+      return code ? countryLabel(code) : null;
+    })
+    .filter((value): value is string => Boolean(value));
+  const uniqueGeography = [...new Set(cleanedGeography)];
+
   return {
     profile: {
       ...sanitized,
       brandName: cleanedBrandName,
+      market: cleanedMarket,
+      geography: uniqueGeography.length > 0 ? uniqueGeography : undefined,
+      audienceDetail: sanitized.audienceDetail
+        ? {
+            ...sanitized.audienceDetail,
+            countries: (sanitized.audienceDetail.countries ?? [])
+              .map((value) => {
+                const code = resolveCountryCode(value);
+                return code ? countryLabel(code) : null;
+              })
+              .filter((value): value is string => Boolean(value)),
+          }
+        : undefined,
       validatedIntelligence,
       normalizedEntities: validated.normalizedEntities,
       extractionIssues: validated.extractionIssues,

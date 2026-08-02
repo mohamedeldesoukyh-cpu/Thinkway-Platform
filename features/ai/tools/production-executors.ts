@@ -51,7 +51,11 @@ export async function executeSearchCreatorsProduction(
       profileId,
       input.limit ?? AI_SEARCH_CREATORS_PAGE_SIZE
     );
-    const output = { creators: result.creators, total: result.total };
+    const output = {
+      creators: result.creators,
+      total: result.total,
+      constraintReport: result.constraintReport,
+    };
     workflowTrace("2_executeSearchCreatorsProduction", output, "toolOutput");
     return output;
   }

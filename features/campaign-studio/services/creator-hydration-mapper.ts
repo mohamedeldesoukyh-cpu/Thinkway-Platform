@@ -77,9 +77,13 @@ function extractFollowers(
 ): number | undefined {
   const account = extractPrimaryAccount(creator, preferredPlatforms);
   const metrics = creator.metrics;
-  if (account?.follower_count) return account.follower_count;
-  if (metrics?.followers?.value) return metrics.followers.value;
-  return undefined;
+  const candidates = [
+    account?.follower_count,
+    metrics?.followers?.value,
+    ...(creator.platforms ?? []).map((platform) => platform.follower_count),
+  ].filter((value): value is number => typeof value === "number" && value > 0);
+  if (candidates.length === 0) return undefined;
+  return Math.max(...candidates);
 }
 
 function extractAvatarUrl(

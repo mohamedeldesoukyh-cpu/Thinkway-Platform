@@ -1021,7 +1021,9 @@ export function VendorRecommendationsSection({
         items: group.items.slice(0, STUDIO_VENDOR_INITIAL_VISIBLE),
       }));
   const hiddenCount = Math.max(0, vendors.length - STUDIO_VENDOR_INITIAL_VISIBLE);
-  const preferredPlatformLabel = mapperOptions.preferredPlatforms?.[0];
+  const preferredPlatformLabel = mapperOptions.preferredPlatforms?.length
+    ? mapperOptions.preferredPlatforms.join(" + ")
+    : undefined;
   const discoveryEngine = creatorsData.discoveryEngine;
   const fitScoreCount =
     creatorsData.fitScoreCount ??
@@ -1164,6 +1166,32 @@ export function VendorRecommendationsSection({
           ) : (
             <span> · fit scores pending — wait for shortlist step</span>
           )}
+        </p>
+      ) : null}
+      {creatorsData.constraintReport?.relaxations?.length ? (
+        <div className="rounded-md border border-amber-300/50 bg-amber-50/80 px-2.5 py-1.5 text-[10px] text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
+          <p className="font-semibold">Preferred constraints relaxed</p>
+          <ul className="mt-1 list-disc space-y-0.5 pl-4">
+            {creatorsData.constraintReport.relaxations.slice(0, 4).map((item) => (
+              <li key={`${item.key}:${item.value}`}>
+                {item.label}: {item.reason}
+                {item.businessImpact ? ` — ${item.businessImpact}` : ""}
+              </li>
+            ))}
+          </ul>
+          {creatorsData.constraintReport.rejectedMandatoryCount > 0 ? (
+            <p className="mt-1 text-muted-foreground">
+              {creatorsData.constraintReport.rejectedMandatoryCount} creator
+              {creatorsData.constraintReport.rejectedMandatoryCount === 1 ? "" : "s"}{" "}
+              removed for mandatory-constraint violations (never recommended).
+            </p>
+          ) : null}
+        </div>
+      ) : creatorsData.constraintReport?.rejectedMandatoryCount ? (
+        <p className="rounded-md border border-[#1D9E75]/30 bg-[#1D9E75]/5 px-2.5 py-1.5 text-[10px] text-muted-foreground">
+          Mandatory constraints enforced —{" "}
+          {creatorsData.constraintReport.rejectedMandatoryCount} off-constraint creator
+          {creatorsData.constraintReport.rejectedMandatoryCount === 1 ? "" : "s"} excluded.
         </p>
       ) : null}
       <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">

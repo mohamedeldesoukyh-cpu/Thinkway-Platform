@@ -262,7 +262,11 @@ export function mergeTaskResultIntoState(
   if (outputs?.length) {
     for (const entry of outputs) {
       if (entry.tool === "searchCreators" && entry.output) {
-        const search = entry.output as { creators?: unknown[]; total?: number };
+        const search = entry.output as {
+          creators?: unknown[];
+          total?: number;
+          constraintReport?: unknown;
+        };
         if (state.data.searchExecuted === true && !authoritativeSearch) {
           console.warn("[creator-integrity] Ignoring duplicate searchCreators tool output — search already executed");
           continue;
@@ -273,6 +277,9 @@ export function mergeTaskResultIntoState(
           );
         }
         storeDedupedSearchResults(state, search.creators, search.total);
+        if (search.constraintReport) {
+          state.data.constraintReport = search.constraintReport;
+        }
         state.data.searchExecuted = true;
       }
       if (entry.tool === "getCampaign" && entry.output) {

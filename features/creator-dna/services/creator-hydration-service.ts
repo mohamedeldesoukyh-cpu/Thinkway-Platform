@@ -84,7 +84,13 @@ export function mapDnaToHydratedVendor(
   );
   // Planning SSOT: ECI investment — never DNA Thinkway / brand-fit scores.
   const fitScore = eci?.investmentScore ?? persistedFit ?? avgFit ?? 60;
-  const followers = doc.metrics.followers.value ?? undefined;
+  const dnaFollowers = doc.metrics.followers.value;
+  const reachFollowers = doc.platforms.crossPlatformReach.value;
+  const followersCandidates = [dnaFollowers, reachFollowers].filter(
+    (value): value is number => typeof value === "number" && value > 0
+  );
+  const followers =
+    followersCandidates.length > 0 ? Math.max(...followersCandidates) : undefined;
   const rateCardAmount = doc.commercial.estimatedRate.value ?? null;
   const quotationRef = options?.quotationPriceByInfluencerId?.get(influencerId);
   const displayCurrency = options?.currency ?? "EGP";

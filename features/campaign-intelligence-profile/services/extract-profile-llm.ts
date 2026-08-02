@@ -10,6 +10,13 @@ import {
   type CampaignIntelligenceProfile,
 } from "../types/profile";
 import { attachLlmFieldProvenance } from "./normalization/field-provenance";
+import {
+  isValidBrandName,
+  isValidClientName,
+  resolveCountryCode,
+  sanitizeBrandName,
+  countryLabel,
+} from "./normalization/validators";
 
 export const CIP_EXTRACTION_MODEL = "gpt-4o-mini";
 const AI_MODEL = CIP_EXTRACTION_MODEL;
@@ -155,33 +162,58 @@ function heuristicExtract(briefText: string): CampaignIntelligenceProfile {
   return profile;
 }
 
+function cleanGeoEntities(values: string[] | null | undefined): string[] | undefined {
+  if (!values?.length) return undefined;
+  const labels: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of values) {
+    const code = resolveCountryCode(raw);
+    if (!code) continue;
+    const label = countryLabel(code);
+    const key = label.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    labels.push(label);
+  }
+  return labels.length > 0 ? labels : undefined;
+}
+
 function applyExtractedData(
   data: z.infer<typeof extractionSchema>,
   briefText: string
 ): CampaignIntelligenceProfile {
   const profile = createEmptyCampaignIntelligenceProfile();
 
-  profile.brandName = data.brandName ?? undefined;
-  profile.clientName = data.clientName ?? undefined;
+  const brandCandidate = data.brandName ? sanitizeBrandName(data.brandName) : "";
+  profile.brandName =
+    brandCandidate && isValidBrandName(brandCandidate) ? brandCandidate : undefined;
+  const clientCandidate = data.clientName ? sanitizeBrandName(data.clientName) : "";
+  profile.clientName =
+    clientCandidate && isValidClientName(clientCandidate) ? clientCandidate : undefined;
   profile.campaignName = data.campaignName ?? undefined;
-  profile.market = data.market ?? undefined;
+  const marketCode = data.market ? resolveCountryCode(data.market) : null;
+  profile.market = marketCode ? countryLabel(marketCode) : undefined;
   profile.campaignType = data.campaignType ?? undefined;
   profile.marketTier = data.marketTier ?? undefined;
   profile.objective = data.objective ?? undefined;
   profile.objectives = data.objectives ?? (data.objective ? [data.objective] : undefined);
   profile.products = data.products ?? undefined;
   profile.audience = data.audience ?? undefined;
+  const audienceCountries = cleanGeoEntities(data.audienceDetail?.countries);
   profile.audienceDetail = data.audienceDetail
     ? {
         gender: data.audienceDetail.gender ?? undefined,
         ageMin: data.audienceDetail.ageMin ?? undefined,
         ageMax: data.audienceDetail.ageMax ?? undefined,
-        countries: data.audienceDetail.countries ?? undefined,
+        countries: audienceCountries,
         cities: data.audienceDetail.cities ?? undefined,
         languages: data.audienceDetail.languages ?? undefined,
       }
     : undefined;
-  profile.geography = data.geography ?? data.audienceDetail?.countries ?? undefined;
+  profile.geography =
+    cleanGeoEntities(data.geography) ??
+    audienceCountries ??
+    (profile.market ? [profile.market] : undefined);
   profile.platforms = data.platforms ?? undefined;
   profile.creatorCategories = data.creatorCategories ?? undefined;
   profile.creatorNiches = data.creatorNiches ?? undefined;
@@ -239,7 +271,7 @@ function applyExtractedData(
     }
   }
 
-  if (data.market) {
+  if (profile.market) {
     setProfileFieldMeta(profile, "geography", "brief", fieldConfidence.market ?? 0.85);
   }
   if (data.audienceDetail) {

@@ -54,8 +54,27 @@ function isWorkflowComplete(workflowStatus?: string): boolean {
   return workflowStatus === "complete" || workflowStatus === "completed";
 }
 
+function sectionsReadyForDecision(campaignObject?: CampaignObject | null): boolean {
+  const sections = campaignObject?.sections;
+  if (!sections || sections.length === 0) return false;
+  const complete = sections.filter((section) => section.status === "complete").length;
+  return complete >= sections.length;
+}
+
 export function CampaignStudioHost(props: CampaignStudioHostProps) {
-  const decisionReady = Boolean(props.campaignObject && isWorkflowComplete(props.workflowStatus));
+  const metaStatus =
+    props.campaignObject &&
+    typeof (props.campaignObject as { meta?: { workflowStatus?: string } }).meta
+      ?.workflowStatus === "string"
+      ? (props.campaignObject as { meta?: { workflowStatus?: string } }).meta
+          ?.workflowStatus
+      : undefined;
+  const decisionReady = Boolean(
+    props.campaignObject &&
+      (isWorkflowComplete(props.workflowStatus) ||
+        isWorkflowComplete(metaStatus) ||
+        sectionsReadyForDecision(props.campaignObject))
+  );
   const [mode, setMode] = useState<StudioWorkspaceMode>("presentation");
 
   const modeToggle = (

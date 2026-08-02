@@ -393,6 +393,11 @@ function deriveSectionUpdatesFromTask(
             discoveryPipeline: funnel,
             discoveryEngine: cipProfileId ? "cip" : "keyword",
             cipProfileId,
+            constraintReport:
+              stateData.constraintReport &&
+              typeof stateData.constraintReport === "object"
+                ? (stateData.constraintReport as CreatorsSectionData["constraintReport"])
+                : existingData.constraintReport,
             lastDiscoveryAt: new Date().toISOString(),
           },
           status: hasResults ? "working" : "pending",
@@ -434,6 +439,11 @@ function deriveSectionUpdatesFromTask(
             recommendations: recommendationData,
             recommendationsDisplay,
             fitScoreCount,
+            constraintReport:
+              stateData.constraintReport &&
+              typeof stateData.constraintReport === "object"
+                ? (stateData.constraintReport as CreatorsSectionData["constraintReport"])
+                : existingData.constraintReport,
             lastShortlistAt: new Date().toISOString(),
           },
           status: groundedCreators.length > 0 ? "complete" : "pending",

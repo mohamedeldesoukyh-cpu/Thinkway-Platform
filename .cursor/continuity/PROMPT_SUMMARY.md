@@ -2,16 +2,19 @@
 
 **Branch focus:** `develop`
 
-**Active:** Release 2.3 Final Product Stabilization (no new capabilities)
+**Active:** Release 2.3 Final Product Excellence — Fix → Soak → Fix until readiness ≥ 95
 
-**Completed in this pass:**
-1. Discovery Consumer Migration — Card / Detail / Compare investment display via `loadCreatorIntelligenceBundles` (`features/discovery/services/eci/`)
-2. Enterprise Constraint Engine — mandatory country/platform/language/brand-safety never relaxed (`lib/discovery/enterprise-constraint-engine.ts`); preferred relaxations reported
-3. Validation doc — `docs/release/2.3/FINAL_STABILIZATION.md`
+**Iteration 1 shipped (pending deploy):**
+- Brief/fact hygiene (reject instruction text in brand/market/geography)
+- Proposal opens with Executive Planning Brief; omit empty insufficient fields
+- Expected outcome no longer leaks scoreMeaning formula
+- Followers hydration treats 0 as missing; multi-platform max
+- Brief platforms joined; Decision Mode unlocks on section completeness
+- Complete sections force-mount (no Complete+Loading skeleton trap)
+- Constraint report surfaced + persisted from CIP search
 
-**FROZEN · Maintenance Mode:**
-- Studio Governance · ECI · Studio Evolution Sprint 2 · Enterprise Planning Package (Sprint 3)
+**Still local (excluded):** Wave 1 Studio live-discovery wiring · Dev readiness checklist docs
 
-**Release process:** Development Deployment Readiness Checklist — `docs/infrastructure/DEVELOPMENT_DEPLOYMENT_READINESS_CHECKLIST.md`
+**FROZEN · Maintenance Mode:** Studio Governance · ECI · Sprint 2/3 packages
 
 **Constitution:** `docs/architecture/STUDIO_CAPABILITY_CONTRACT.md`

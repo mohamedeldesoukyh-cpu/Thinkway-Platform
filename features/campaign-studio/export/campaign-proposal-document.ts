@@ -283,13 +283,24 @@ function readPlainSectionText(content: string | Record<string, unknown>): string
   return trimmed;
 }
 
+function isPollutedFactText(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return true;
+  if (/\bplease\s+(search|find|build|create|review)\b/i.test(trimmed)) return true;
+  if (/\bbuild the plan\b/i.test(trimmed)) return true;
+  if (trimmed.length > 80 && /,/.test(trimmed) && /\bbudget\b/i.test(trimmed)) {
+    return true;
+  }
+  return false;
+}
+
 function appendUnderstandingField(
   rows: Array<[string, string]>,
   label: string,
   value?: string | null
 ): void {
   const text = value?.toString().trim();
-  if (!text) return;
+  if (!text || isPollutedFactText(text)) return;
   if (rows.some(([existing]) => existing === label)) return;
   rows.push([label, text]);
 }
@@ -670,6 +681,31 @@ export function buildCampaignProposalDocumentHtml(
     </div>
   </div>`);
 
+  // ---- Executive Planning Brief (boardroom opening after Cover) ----
+  sectionNumber += 1;
+  const execBriefItems = model.briefLines
+    .map(
+      (line) =>
+        `<div class="detail-item"><div class="l">${escapeHtml(line.label)}</div><div class="v">${escapeHtml(line.body)}</div></div>`
+    )
+    .join("");
+  const checkItems = model.recommendedActions
+    .slice(0, 6)
+    .map(
+      (a) =>
+        `<div class="check-item"><span class="ck">${deckIcon(ICONS.check, 12)}</span>${escapeHtml(a)}</div>`
+    )
+    .join("");
+  pages.push(`
+  <div class="page">
+    ${deckBrandHeader(sectionNumber, client, logoSrcs)}
+    ${deckEyebrow(deckIcon(ICONS.star), DECK.pink, "rgba(214,51,108,.1)", "Executive Planning Brief")}
+    <p class="sec-sub">${escapeHtml(model.executiveRecommendation)}</p>
+    <div class="detail-grid">${execBriefItems}</div>
+    ${checkItems ? `<div class="check-grid" style="margin-top:14px">${checkItems}</div>` : ""}
+    ${deckFooter(pages.length + 1, client)}
+  </div>`);
+
   // ---- Campaign Understanding ----
   sectionNumber += 1;
   const statBoxes = statTiles
@@ -756,31 +792,6 @@ export function buildCampaignProposalDocumentHtml(
     ${deckFooter(pages.length + 1, client)}
   </div>`);
 
-  // ---- Executive Brief (same Planning Narrative lines — no parallel summary) ----
-  sectionNumber += 1;
-  const execBriefItems = model.briefLines
-    .map(
-      (line) =>
-        `<div class="detail-item"><div class="l">${escapeHtml(line.label)}</div><div class="v">${escapeHtml(line.body)}</div></div>`
-    )
-    .join("");
-  const checkItems = model.recommendedActions
-    .slice(0, 6)
-    .map(
-      (a) =>
-        `<div class="check-item"><span class="ck">${deckIcon(ICONS.check, 12)}</span>${escapeHtml(a)}</div>`
-    )
-    .join("");
-  pages.push(`
-  <div class="page">
-    ${deckBrandHeader(sectionNumber, client, logoSrcs)}
-    ${deckEyebrow(deckIcon(ICONS.star), DECK.pink, "rgba(214,51,108,.1)", "Executive Planning Brief")}
-    <p class="sec-sub">${escapeHtml(model.executiveRecommendation)}</p>
-    <div class="detail-grid">${execBriefItems}</div>
-    ${checkItems ? `<div class="check-grid" style="margin-top:14px">${checkItems}</div>` : ""}
-    ${deckFooter(pages.length + 1, client)}
-  </div>`);
-
   // ---- Activation Plan ----
   if (waves.length > 0) {
     sectionNumber += 1;
@@ -807,34 +818,37 @@ export function buildCampaignProposalDocumentHtml(
     vendorPages.forEach((pageVendors, pageIndex) => {
       const cards = pageVendors
         .map((v) => {
-          const insufficient = "Insufficient evidence available.";
           const reco = v.investmentRecommendation?.trim();
-          const recommendation = v.recommendationText?.trim() || v.reason?.trim() || insufficient;
-          const whyBody = v.whyText?.trim() || insufficient;
-          const evidence = v.evidenceSummary?.trim() || insufficient;
-          const business = v.businessValue?.trim() || insufficient;
-          const commercial = v.commercialJustification?.trim() || insufficient;
-          const risk = v.riskNote?.trim() || insufficient;
-          const alt = v.alternativeNote?.trim() || insufficient;
-          const whyNot = v.whyAlternativeNotSelected?.trim() || insufficient;
-          const tradeOffs = v.tradeOffs?.trim() || insufficient;
-          const impact = v.decisionImpact?.trim() || insufficient;
-          const confidence = v.confidenceNote?.trim() || insufficient;
+          const rows: Array<[string, string]> = [
+            [
+              "Recommendation",
+              v.recommendationText?.trim() || v.reason?.trim() || "",
+            ],
+            ["Why", v.whyText?.trim() || ""],
+            ["Evidence", v.evidenceSummary?.trim() || ""],
+            ["Business value", v.businessValue?.trim() || ""],
+            ["Commercial value", v.commercialJustification?.trim() || ""],
+            ["Risk", v.riskNote?.trim() || ""],
+            ["Alternative", v.alternativeNote?.trim() || ""],
+            ["Why not selected", v.whyAlternativeNotSelected?.trim() || ""],
+            ["Trade-offs", v.tradeOffs?.trim() || ""],
+            ["Decision impact", v.decisionImpact?.trim() || ""],
+            ["Confidence", v.confidenceNote?.trim() || ""],
+          ].filter(([, body]) => Boolean(body));
+          const rowHtml =
+            rows.length > 0
+              ? rows
+                  .map(
+                    ([label, body]) =>
+                      `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(body)}</p>`
+                  )
+                  .join("")
+              : `<p><strong>Recommendation:</strong> Selected for this slate based on campaign fit and available investment signals.</p>`;
           return `
         <div class="rationale-card">
           <div class="creator-name">${avatarHtml(v)}<span>${escapeHtml(v.displayName)}</span>${tierChip(v.tier)}</div>
           ${reco ? `<div class="rationale-pill">${escapeHtml(reco)}</div>` : ""}
-          <p><strong>Recommendation:</strong> ${escapeHtml(recommendation)}</p>
-          <p><strong>Why:</strong> ${escapeHtml(whyBody)}</p>
-          <p><strong>Evidence:</strong> ${escapeHtml(evidence)}</p>
-          <p><strong>Business value:</strong> ${escapeHtml(business)}</p>
-          <p><strong>Commercial value:</strong> ${escapeHtml(commercial)}</p>
-          <p><strong>Risk:</strong> ${escapeHtml(risk)}</p>
-          <p><strong>Alternative:</strong> ${escapeHtml(alt)}</p>
-          <p><strong>Why not selected:</strong> ${escapeHtml(whyNot)}</p>
-          <p><strong>Trade-offs:</strong> ${escapeHtml(tradeOffs)}</p>
-          <p><strong>Decision impact:</strong> ${escapeHtml(impact)}</p>
-          <p><strong>Confidence:</strong> ${escapeHtml(confidence)}</p>
+          ${rowHtml}
         </div>`;
         })
         .join("");

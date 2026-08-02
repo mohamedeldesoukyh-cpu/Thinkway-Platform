@@ -102,7 +102,6 @@ export function projectStudioEciPlanningSignal(
     [
       `Commercial health: ${commercial.commercialHealth.level}`,
       `Investment readiness: ${commercial.investmentReadiness.status}`,
-      inv.recommendation.scoreMeaning,
     ]
       .filter(Boolean)
       .join(" · ");
@@ -133,17 +132,23 @@ export function projectStudioEciPlanningSignal(
 
   const businessObjectiveSupport =
     inv.businessReadiness.planningWorkspace?.trim() ||
-    inv.recommendation.scoreMeaning ||
-    "Supports campaign planning objectives via investment readiness signals.";
+    inv.businessReadiness.campaignWorkspace?.trim() ||
+    (topStrengths[0]
+      ? `Strongest planning signal: ${topStrengths[0]}.`
+      : "Supports campaign planning objectives via investment readiness signals.");
 
+  // Never surface internal scoreMeaning formula as boardroom expected outcome.
   const expectedOutcomes = [
-    inv.recommendation.scoreMeaning,
     inv.businessReadiness.campaignWorkspace,
+    inv.businessReadiness.planningWorkspace,
+    topStrengths[0]
+      ? `Delivers ${topStrengths[0].toLowerCase()} support for the campaign objective.`
+      : null,
+    alternatives[0],
   ].filter((line): line is string => Boolean(line?.trim()));
 
   const expectedCampaignContribution =
     expectedOutcomes[0] ||
-    alternatives[0] ||
     "Contributes reach and category-aligned content to the Planning Package.";
 
   const layers: StudioEciLayerSummary = {

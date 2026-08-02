@@ -2,6 +2,10 @@ import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-
 import { validateCampaignFacts } from "@/features/campaign-director/facts/validate-campaign-facts";
 
 import type { CampaignIntelligenceProfile } from "../types/profile";
+import {
+  countryLabel,
+  resolveCountryCode,
+} from "./normalization/validators";
 
 /**
  * Post-validation values win over raw extraction (the CIP contract: Studio and
@@ -16,20 +20,36 @@ function resolveBrandName(profile: CampaignIntelligenceProfile): string | undefi
   return profile.validatedIntelligence?.brand.brandName ?? profile.brandName;
 }
 
+function toCleanCountryLabels(values: string[] | undefined): string[] {
+  const labels: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of values ?? []) {
+    const code = resolveCountryCode(raw);
+    if (!code) continue;
+    const label = countryLabel(code);
+    const key = label.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    labels.push(label);
+  }
+  return labels;
+}
+
 /** Market/country: validated country label first, then raw extraction chain. */
 function resolveGeography(profile: CampaignIntelligenceProfile): string[] | undefined {
   const validatedLabel = profile.validatedIntelligence?.market.countryLabel?.trim();
-  const raw =
+  const raw = toCleanCountryLabels(
     profile.geography ??
-    profile.audienceDetail?.countries ??
-    (profile.market ? [profile.market] : undefined);
+      profile.audienceDetail?.countries ??
+      (profile.market ? [profile.market] : undefined)
+  );
 
-  if (!validatedLabel) return raw;
+  if (!validatedLabel) return raw.length > 0 ? raw : undefined;
 
   const merged = [validatedLabel];
-  for (const region of raw ?? []) {
-    if (region.trim() && region.trim().toLowerCase() !== validatedLabel.toLowerCase()) {
-      merged.push(region.trim());
+  for (const region of raw) {
+    if (region.toLowerCase() !== validatedLabel.toLowerCase()) {
+      merged.push(region);
     }
   }
   return merged;
