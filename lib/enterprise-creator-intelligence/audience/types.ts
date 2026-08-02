@@ -51,7 +51,8 @@ export type AudienceExplainability = {
   evidence: string[];
   historicalTrend: string;
   businessContext: string;
-  source: AudienceSource;
+  /** Provenance for this insight — aligned with Performance / Category-Brand explainability. */
+  dataSource: AudienceSource;
   lastUpdated: string | null;
   missingInputs: string[];
 };
