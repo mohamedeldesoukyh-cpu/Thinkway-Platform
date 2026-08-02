@@ -1,14 +1,21 @@
 # Enterprise Document Lifecycle Engine
 
-**Status:** Official platform foundation — **canonical**  
+**Status:** Official platform foundation — **FROZEN · PROTECTED · MANDATORY · MAINTENANCE MODE**  
+**Initiative:** Enterprise Document & Change Impact — **CLOSED permanently**  
 **Release:** 2.2d.2 (2026-08-02)  
+**Freeze tip:** `449fd5c0` on `origin/develop` (with Change Impact close-out)  
 **Code:** `lib/document-lifecycle/`  
 **Migrations (Development first):**  
 - `20260802010000_enterprise_document_lifecycle_enums.sql`  
 - `20260802011000_enterprise_document_lifecycle_engine.sql`  
 **Regression:** `npm run test:document-lifecycle`  
+**Registry:** [`PLATFORM_CAPABILITY_REGISTRY.md`](./PLATFORM_CAPABILITY_REGISTRY.md)  
 **Related:** Platform Bulk Operations Framework · Campaign Workspace Baseline v1.3  
 **Above this layer:** [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md) — interprets business changes, severity, recommendations, and feeds Decision Center / Notifications / Timeline / AI.
+
+## Maintenance Mode
+
+Defect fixes only. Document state transitions only. Future Quotation · PO · Invoice · Contract · Report lifecycles **must extend** this engine (+ Change Impact) — never introduce parallel document engines. **No Production deploy** without explicit approval.
 
 ---
 

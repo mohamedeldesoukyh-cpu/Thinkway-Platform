@@ -66,11 +66,11 @@ Every new capability must answer before it is complete:
 **Bulk framework (canonical):** `docs/architecture/PLATFORM_BULK_OPERATIONS_FRAMEWORK.md` · `components/workspace/bulk-operations/`  
 Do not invent parallel bulk runners. Vendor IO (R2.2d / 2.2d.1) is the first production consumer.
 
-**Document lifecycle (canonical):** `docs/architecture/ENTERPRISE_DOCUMENT_LIFECYCLE.md` · `lib/document-lifecycle/`  
-Document state transitions only. UI/bulk actions from `resolveDocumentLifecycle`. Reason codes required.
+**Document lifecycle (Maintenance Mode · frozen · mandatory):** `docs/architecture/ENTERPRISE_DOCUMENT_LIFECYCLE.md` · `lib/document-lifecycle/`  
+Document state transitions only. UI/bulk actions from `resolveDocumentLifecycle`. Reason codes required. Initiative CLOSED.
 
-**Change impact (frozen · mandatory):** `docs/architecture/ENTERPRISE_CHANGE_IMPACT_ENGINE.md` · `lib/change-impact/`  
-Intelligence layer above Document Lifecycle. **Only** `applyBusinessChangeImpact`. Registry: `docs/architecture/PLATFORM_CAPABILITY_REGISTRY.md`. Quotation/PO/Invoice/Contract/Report must extend this engine — no parallel impact logic.
+**Change impact (Maintenance Mode · frozen · mandatory):** `docs/architecture/ENTERPRISE_CHANGE_IMPACT_ENGINE.md` · `lib/change-impact/`  
+Intelligence layer above Document Lifecycle. **Only** `applyBusinessChangeImpact`. Registry: `docs/architecture/PLATFORM_CAPABILITY_REGISTRY.md`. Freeze tip `449fd5c0`. Quotation/PO/Invoice/Contract/Report **must extend** these engines — **never** parallel implementations. No Production deploy without approval.
 
 ## Mandatory for every ADR / capability spec / release architecture / implementation proposal
 

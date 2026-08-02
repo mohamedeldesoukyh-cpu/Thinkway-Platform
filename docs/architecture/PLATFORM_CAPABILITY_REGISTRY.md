@@ -1,7 +1,7 @@
 # Platform Capability Registry
 
 **Status:** Permanent governance registry — **canonical**  
-**Updated:** 2026-08-02  
+**Updated:** 2026-08-02 — Enterprise Document & Change Impact initiative **CLOSED**  
 **Parent:** [`PLATFORM_ARCHITECTURE_COMPLIANCE.md`](./PLATFORM_ARCHITECTURE_COMPLIANCE.md)
 
 Every future enterprise module must **extend** registered capabilities. Parallel engines are forbidden.
@@ -13,8 +13,21 @@ Every future enterprise module must **extend** registered capabilities. Parallel
 | Capability | Status | Code | Spec | Mandatory for |
 |------------|--------|------|------|----------------|
 | Platform Bulk Operations Framework | Frozen · mandatory | `components/workspace/bulk-operations/` | [`PLATFORM_BULK_OPERATIONS_FRAMEWORK.md`](./PLATFORM_BULK_OPERATIONS_FRAMEWORK.md) | All register multi-select work |
-| Enterprise Document Lifecycle Engine | Active · mandatory for docs | `lib/document-lifecycle/` | [`ENTERPRISE_DOCUMENT_LIFECYCLE.md`](./ENTERPRISE_DOCUMENT_LIFECYCLE.md) | Document state transitions only |
-| **Enterprise Change Impact Engine** | **Frozen · protected · mandatory** | `lib/change-impact/` | [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md) | Every business-change interpretation |
+| **Enterprise Document Lifecycle Engine** | **Maintenance Mode · frozen · protected · mandatory** | `lib/document-lifecycle/` | [`ENTERPRISE_DOCUMENT_LIFECYCLE.md`](./ENTERPRISE_DOCUMENT_LIFECYCLE.md) | Document state transitions only |
+| **Enterprise Change Impact Engine** | **Maintenance Mode · frozen · protected · mandatory** | `lib/change-impact/` | [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md) · [`ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md`](./ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md) | Every business-change interpretation |
+
+---
+
+## Maintenance Mode (Document & Change Impact)
+
+After freeze tip `449fd5c0` on `origin/develop`, both engines are in **Maintenance Mode**:
+
+- Defect / type / build fixes allowed  
+- No redesign of responsibility boundaries  
+- No parallel impact interpreters or document state machines  
+- Quotation · Purchase Orders · Invoices · Contracts · Reports · Approval documents **must extend** these engines — never invent new ones  
+- **No Production deploy** of related schema without explicit approval  
+- Initiative **Enterprise Document & Change Impact** is **CLOSED permanently**
 
 ---
 
@@ -69,6 +82,20 @@ No module may invent a second impact interpreter. Document Lifecycle may only pl
 
 ### Governance
 
-- Freeze tip: see [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md)  
+- Freeze tip: `449fd5c0` (`origin/develop`) · owner map fix after acceptance `2be8c2b1`  
 - Acceptance: [`ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md`](./ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md)  
 - Production DB changes require explicit approval (Development-first)
+
+---
+
+## Enterprise Document Lifecycle Engine (protected)
+
+### Responsibility
+
+Document state transitions and available actions from document state only (`resolveDocumentLifecycle`). Reason codes on transitions. No business-impact interpretation.
+
+### Extension rules
+
+1. New document kinds plug into `resolveDocumentLifecycle` + policies.  
+2. Business changes that invalidate documents must go through Change Impact first.  
+3. Never delete audit history (Cancelled / Superseded remain).

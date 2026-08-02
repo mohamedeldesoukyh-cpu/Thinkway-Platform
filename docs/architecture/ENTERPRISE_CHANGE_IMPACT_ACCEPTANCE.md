@@ -1,8 +1,9 @@
 # Enterprise Change Impact Engine — Final Product Acceptance
 
 **Date:** 2026-08-02  
-**Verdict:** **ACCEPTED & FROZEN** (with documented event backlog)  
-**Freeze tip:** `develop` after Change Impact acceptance commit  
+**Verdict:** **ACCEPTED · FROZEN · MAINTENANCE MODE** (with documented event backlog)  
+**Initiative:** Enterprise Document & Change Impact — **CLOSED permanently**  
+**Freeze tip:** `449fd5c0` on `origin/develop`  
 **Registry:** [`PLATFORM_CAPABILITY_REGISTRY.md`](./PLATFORM_CAPABILITY_REGISTRY.md)  
 **Spec:** [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md)
 

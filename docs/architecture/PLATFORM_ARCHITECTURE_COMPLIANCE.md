@@ -6,7 +6,7 @@
 **Campaign Workspace baseline (canonical):** [`CAMPAIGN_WORKSPACE_BASELINE_V1.3.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.3.md)  
 **Historical:** [`CAMPAIGN_WORKSPACE_BASELINE_V1.2.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.2.md) · [`CAMPAIGN_WORKSPACE_BASELINE_V1.1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.1.md) · [`CAMPAIGN_WORKSPACE_BASELINE_V1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.md)  
 **Effective:** 2026-08-01 (Architecture v1.0 freeze)  
-**Updated:** 2026-08-02 (Platform Bulk Operations Framework + capability completeness gates incl. idempotent execution)
+**Updated:** 2026-08-02 — Enterprise Document Lifecycle + Change Impact **CLOSED** (Maintenance Mode); Platform Capability Registry mandatory
 
 ---
 
@@ -71,11 +71,13 @@ Every new capability is incomplete until it answers **all five**:
 **Platform Bulk Operations Framework** (canonical): [`PLATFORM_BULK_OPERATIONS_FRAMEWORK.md`](./PLATFORM_BULK_OPERATIONS_FRAMEWORK.md)  
 First production implementation: Release 2.2d Vendor IO; reliability + idempotency invariant: Release 2.2d.1. Future registers must reuse it — no independent bulk runners.
 
-**Enterprise Document Lifecycle Engine** (canonical): [`ENTERPRISE_DOCUMENT_LIFECYCLE.md`](./ENTERPRISE_DOCUMENT_LIFECYCLE.md) · `lib/document-lifecycle/`  
-Release 2.2d.2 — document state transitions only. Vendor IO / Client IO first. Business State ≠ Document State. Reason codes mandatory.
+**Platform Capability Registry** (canonical): [`PLATFORM_CAPABILITY_REGISTRY.md`](./PLATFORM_CAPABILITY_REGISTRY.md)
 
-**Enterprise Change Impact Engine** (frozen · protected · mandatory): [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md) · [`ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md`](./ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md) · `lib/change-impact/`  
-Release 2.2d.2b — intelligence layer above Document Lifecycle. Entry: `applyBusinessChangeImpact` only. **Platform Capability Registry:** [`PLATFORM_CAPABILITY_REGISTRY.md`](./PLATFORM_CAPABILITY_REGISTRY.md). Quotation/PO/Invoice/Contract/Report must extend this engine — no parallel impact logic.
+**Enterprise Document Lifecycle Engine** (Maintenance Mode · frozen · protected · mandatory): [`ENTERPRISE_DOCUMENT_LIFECYCLE.md`](./ENTERPRISE_DOCUMENT_LIFECYCLE.md) · `lib/document-lifecycle/`  
+Release 2.2d.2 — document state transitions only. Vendor IO / Client IO first. Business State ≠ Document State. Reason codes mandatory. Initiative **CLOSED**.
+
+**Enterprise Change Impact Engine** (Maintenance Mode · frozen · protected · mandatory): [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md) · [`ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md`](./ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md) · `lib/change-impact/`  
+Release 2.2d.2b — intelligence layer above Document Lifecycle. Entry: `applyBusinessChangeImpact` only. Freeze tip `449fd5c0`. Quotation/PO/Invoice/Contract/Report **must extend** these engines — **never** parallel implementations. Initiative **CLOSED**. No Production deploy without approval.
 
 ---
 

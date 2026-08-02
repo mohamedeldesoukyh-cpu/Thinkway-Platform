@@ -2,7 +2,19 @@
 
 This document compares the **current Thinkway platform** (`thinkway-platform`) against the [System Reference](./THINKWAY_SYSTEM_REFERENCE.md). Use it before new modules: compare → detect gaps → recommend → avoid duplicate entities.
 
-**Last reviewed:** Aug 2026 (Thinkway Enterprise Platform Architecture v1.0 — Frozen Baseline)
+**Last reviewed:** Aug 2026 (Enterprise Document & Change Impact initiative CLOSED · Maintenance Mode)
+
+### Enterprise Document & Change Impact — CLOSED (Aug 2026)
+
+- **Initiative:** Enterprise Document Lifecycle + Enterprise Change Impact — **CLOSED permanently**
+- **Status:** Both engines in **Maintenance Mode** (defect fixes only; no redesign)
+- **Freeze tip:** `449fd5c0` on `origin/develop`
+- **Registry:** [`architecture/PLATFORM_CAPABILITY_REGISTRY.md`](./architecture/PLATFORM_CAPABILITY_REGISTRY.md)
+- **Document Lifecycle:** [`architecture/ENTERPRISE_DOCUMENT_LIFECYCLE.md`](./architecture/ENTERPRISE_DOCUMENT_LIFECYCLE.md) · `lib/document-lifecycle/` — state transitions only
+- **Change Impact:** [`architecture/ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./architecture/ENTERPRISE_CHANGE_IMPACT_ENGINE.md) · acceptance · `lib/change-impact/` — entry `applyBusinessChangeImpact` only
+- **Rule:** Future Quotation · Purchase Orders · Invoices · Contracts · Reports · Approval documents **must extend** these engines — **never** introduce parallel impact or document lifecycle implementations
+- **Not started / blocked until extension:** Quotation · PO · Invoice · Contract · Report document lifecycles · Planning Workspace implementation (separate R2.3 reviews)
+- **Production:** Do **not** deploy related schema/app changes to Production without explicit approval
 
 ### Thinkway Enterprise Platform Architecture v1.0 — FROZEN (Aug 2026)
 
@@ -279,12 +291,15 @@ Reference reports (§14) require these dimensions to be queryable:
 |---------|----------|
 | Product spec | `docs/THINKWAY_SYSTEM_REFERENCE.md` |
 | This gap analysis | `docs/ARCHITECTURE_ALIGNMENT.md` |
+| Platform Capability Registry | `docs/architecture/PLATFORM_CAPABILITY_REGISTRY.md` |
+| Document Lifecycle (Maintenance Mode) | `docs/architecture/ENTERPRISE_DOCUMENT_LIFECYCLE.md` · `lib/document-lifecycle/` |
+| Change Impact (Maintenance Mode) | `docs/architecture/ENTERPRISE_CHANGE_IMPACT_ENGINE.md` · `lib/change-impact/` |
 | DB schema | `supabase/schema.sql`, `supabase/migrations/` |
 | Hierarchy migration | `supabase/migrations/20260531140000_enterprise_hierarchy.sql` |
 | Group workspace pattern | `features/groups/` |
 | Campaign workspace pattern | `features/campaigns/` |
 | Master data | `lib/master-data/` |
-| Cursor rule | `.cursor/rules/thinkway-product-reference.mdc` |
+| Cursor rule | `.cursor/rules/thinkway-product-reference.mdc` · `.cursor/rules/thinkway-platform-architecture-v1.mdc` |
 
 ---
 

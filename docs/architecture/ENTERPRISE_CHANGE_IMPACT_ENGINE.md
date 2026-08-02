@@ -1,13 +1,19 @@
 # Enterprise Change Impact Engine
 
-**Status:** Official platform capability — **FROZEN · PROTECTED · MANDATORY**  
+**Status:** Official platform capability — **FROZEN · PROTECTED · MANDATORY · MAINTENANCE MODE**  
+**Initiative:** Enterprise Document & Change Impact — **CLOSED permanently**  
 **Release:** 2.2d.2b (2026-08-02)  
+**Freeze tip:** `449fd5c0` on `origin/develop`  
 **Acceptance:** [`ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md`](./ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md)  
 **Registry:** [`PLATFORM_CAPABILITY_REGISTRY.md`](./PLATFORM_CAPABILITY_REGISTRY.md)  
 **Code:** `lib/change-impact/`  
 **Migration (Development):** `20260802020000_enterprise_change_impact_engine.sql`  
 **Regression:** `npm run test:change-impact`  
 **Companion:** [`ENTERPRISE_DOCUMENT_LIFECYCLE.md`](./ENTERPRISE_DOCUMENT_LIFECYCLE.md)  
+
+## Maintenance Mode
+
+Defect fixes only. No redesign. Future Quotation · PO · Invoice · Contract · Report work **must extend** this engine — never create parallel impact logic. **No Production deploy** without explicit approval.  
 
 ---
 
