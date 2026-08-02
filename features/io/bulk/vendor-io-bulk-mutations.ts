@@ -13,9 +13,13 @@ import { updateVendorIoAttachmentUrlAction } from "@/features/io/update-vendor-i
 import { updateVendorIoSpecialPaymentTermsAction } from "@/features/io/update-vendor-io-special-payment-terms-action";
 import { canRecordVendorIoManualApproval } from "@/features/io/components/vendor-io-manual-approve-button";
 import {
-  vendorIoAlreadyAccepted,
+  vendorIoNeedsMarkAccepted,
   vendorIoNeedsSend,
 } from "@/features/io/bulk/vendor-io-bulk-helpers";
+import {
+  vendorIoBulkSkipReason,
+  vendorIoRowToLifecycleSnapshot,
+} from "@/lib/document-lifecycle";
 import type { VendorIoRow } from "@/features/io/types";
 
 export {
@@ -25,6 +29,7 @@ export {
   vendorIoAlreadyAccepted,
   vendorIoAlreadySentOrDelivered,
   vendorIoIsManualDeliveryCandidate,
+  vendorIoNeedsMarkAccepted,
   vendorIoNeedsSend,
 } from "@/features/io/bulk/vendor-io-bulk-helpers";
 
@@ -37,11 +42,15 @@ function bulkFormData(row: VendorIoRow): FormData {
 }
 
 export async function mutateVendorIoSend(row: VendorIoRow) {
-  if (!vendorIoNeedsSend(row)) {
+  const skip = vendorIoBulkSkipReason(
+    vendorIoRowToLifecycleSnapshot(row),
+    "send"
+  );
+  if (skip || !vendorIoNeedsSend(row)) {
     return {
       ok: true,
       skipped: true,
-      message: "Already sent, delivered, or approved.",
+      message: skip ?? "Already sent, delivered, or not sendable.",
       id: row.id,
     };
   }
@@ -50,11 +59,15 @@ export async function mutateVendorIoSend(row: VendorIoRow) {
 }
 
 export async function mutateVendorIoMarkAccepted(row: VendorIoRow) {
-  if (vendorIoAlreadyAccepted(row)) {
+  const skip = vendorIoBulkSkipReason(
+    vendorIoRowToLifecycleSnapshot(row),
+    "mark_accepted"
+  );
+  if (skip || !vendorIoNeedsMarkAccepted(row)) {
     return {
       ok: true,
       skipped: true,
-      message: "Already accepted.",
+      message: skip ?? "Already accepted.",
       id: row.id,
     };
   }

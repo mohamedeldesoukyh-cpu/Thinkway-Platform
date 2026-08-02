@@ -16,7 +16,8 @@ import { fetchClientIoRow, fetchClientIoRows } from "@/lib/io/client-io-query";
 const VENDOR_IO_LIST_SELECT = `
   id, document_number, assignment_id, campaign_header_id, influencer_id, amount, currency_code, status,
   delivery_method, delivery_status, delivery_error, delivered_at, delivery_recipient,
-  special_payment_terms,
+  special_payment_terms, is_superseded,
+  lifecycle_reason_code, lifecycle_reason_detail, lifecycle_changed_at,
   terms_html, terms_text, usage_rights, exclusivity, attachment_url,
   generated_html_url, generated_pdf_url, document_generated_at,
   sent_at, approved_at,

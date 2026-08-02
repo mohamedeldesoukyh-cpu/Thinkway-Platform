@@ -83,13 +83,18 @@ describe("vendor IO bulk helpers", () => {
     assert.equal(vendorIoAlreadySentOrDelivered(row({ status: "sent" })), true);
     assert.equal(
       vendorIoAlreadySentOrDelivered(
-        row({ status: "generated", delivery_status: "completed" })
+        row({
+          status: "sent",
+          delivery_method: "manual",
+          delivery_status: "completed",
+        })
       ),
       true
     );
     assert.equal(vendorIoNeedsSend(row({ status: "sent" })), false);
+    assert.equal(vendorIoNeedsSend(row({ status: "cancelled" })), false);
     assert.equal(
-      vendorIoNeedsSend(row({ status: "generated", delivery_status: "sent" })),
+      vendorIoNeedsSend(row({ status: "revision_required" })),
       false
     );
     assert.equal(vendorIoNeedsSend(row({ status: "generated" })), true);

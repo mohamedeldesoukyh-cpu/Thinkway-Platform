@@ -14,6 +14,9 @@ function formatIoStatusLabel(status: ClientIoStatus | VendorIoStatus): string {
   if (status === "under_client_review") return "Under client review";
   if (status === "cancelled") return "Cancelled";
   if (status === "rejected") return "Rejected";
+  if (status === "revision_required") return "Revision Required";
+  if (status === "approved") return "Accepted";
+  if (status === "generated") return "Pending Send";
   return status.replace(/_/g, " ");
 }
 

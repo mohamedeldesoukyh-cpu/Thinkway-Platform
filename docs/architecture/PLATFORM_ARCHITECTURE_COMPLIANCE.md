@@ -71,6 +71,9 @@ Every new capability is incomplete until it answers **all five**:
 **Platform Bulk Operations Framework** (canonical): [`PLATFORM_BULK_OPERATIONS_FRAMEWORK.md`](./PLATFORM_BULK_OPERATIONS_FRAMEWORK.md)  
 First production implementation: Release 2.2d Vendor IO; reliability + idempotency invariant: Release 2.2d.1. Future registers must reuse it — no independent bulk runners.
 
+**Enterprise Document Lifecycle Engine** (canonical): [`ENTERPRISE_DOCUMENT_LIFECYCLE.md`](./ENTERPRISE_DOCUMENT_LIFECYCLE.md) · `lib/document-lifecycle/`  
+Release 2.2d.2 — one engine for Vendor IO / Client IO / future Quotations · POs · Invoices · Contracts · Deliverables · Reports. Business State ≠ Document State. Reason codes + Business Change Events mandatory.
+
 ---
 
 ## Campaign Workspace invariants (mandatory)

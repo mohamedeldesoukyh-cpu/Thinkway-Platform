@@ -31,6 +31,10 @@ type VendorIoQueryRow = {
   approved_at: string | null;
   approved_by_name: string | null;
   rejection_reason: string | null;
+  is_superseded?: boolean | null;
+  lifecycle_reason_code?: string | null;
+  lifecycle_reason_detail?: string | null;
+  lifecycle_changed_at?: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -121,6 +125,10 @@ export function mapVendorIoQueryRow(row: VendorIoQueryRow): VendorIoRow {
     approved_at: row.approved_at,
     approved_by_name: row.approved_by_name,
     rejection_reason: row.rejection_reason,
+    is_superseded: Boolean(row.is_superseded),
+    lifecycle_reason_code: row.lifecycle_reason_code ?? null,
+    lifecycle_reason_detail: row.lifecycle_reason_detail ?? null,
+    lifecycle_changed_at: row.lifecycle_changed_at ?? null,
     vendor_payment_terms: vendorPaymentTerms,
     vendor_payment_terms_label: vendorPaymentTermsLabel,
     special_payment_terms: specialPaymentTerms,

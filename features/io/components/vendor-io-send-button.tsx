@@ -6,6 +6,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { sendVendorIoAction } from "@/features/io/actions";
 import type { VendorIoRow } from "@/features/io/types";
+import {
+  vendorIoAllowsAction,
+  vendorIoRowToLifecycleSnapshot,
+} from "@/lib/document-lifecycle";
 import { hasValidVendorEmail } from "@/lib/io/vendor-io-delivery";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +30,10 @@ export function VendorIoSendButton({
 }: VendorIoSendButtonProps) {
   const [state, action, pending] = useActionState(sendVendorIoAction, INITIAL_STATE);
   const canEmail = hasValidVendorEmail(row.influencer_email);
+  const snapshot = vendorIoRowToLifecycleSnapshot(row);
+  const canSend = vendorIoAllowsAction(snapshot, "send");
+  const canManual = vendorIoAllowsAction(snapshot, "mark_delivered_manually");
+  const canResend = vendorIoAllowsAction(snapshot, "resend");
 
   useEffect(() => {
     if (!state.message) return;
@@ -33,8 +41,17 @@ export function VendorIoSendButton({
     else toast.error(state.message);
   }, [state]);
 
-  const idleLabel = canEmail ? "Send by Email" : "Mark as Delivered Manually";
-  const pendingLabel = canEmail ? "Sending…" : "Marking…";
+  // Document Lifecycle Engine owns visibility — completed actions disappear.
+  if (!canSend && !canManual && !canResend) {
+    return null;
+  }
+
+  const idleLabel = canResend && !canSend
+    ? "Resend"
+    : canEmail
+      ? "Send by Email"
+      : "Mark as Delivered Manually";
+  const pendingLabel = canEmail || canResend ? "Sending…" : "Marking…";
 
   return (
     <form action={action} className="inline-flex">

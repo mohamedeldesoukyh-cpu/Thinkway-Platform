@@ -5,8 +5,16 @@ export type ClientIoStatus =
   | "under_client_review"
   | "approved"
   | "rejected"
+  | "cancelled"
+  | "revision_required";
+export type VendorIoStatus =
+  | "draft"
+  | "generated"
+  | "sent"
+  | "approved"
+  | "rejected"
+  | "revision_required"
   | "cancelled";
-export type VendorIoStatus = "draft" | "generated" | "sent" | "approved" | "rejected";
 
 export type ClientIoSendRecipient = {
   id: string;
@@ -60,6 +68,9 @@ export type ClientIoRow = {
   is_superseded: boolean;
   root_client_io_id: string | null;
   replaces_client_io_id: string | null;
+  lifecycle_reason_code?: string | null;
+  lifecycle_reason_detail?: string | null;
+  lifecycle_changed_at?: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -116,6 +127,12 @@ export type VendorIoRow = {
   approved_at: string | null;
   approved_by_name: string | null;
   rejection_reason: string | null;
+  /** Tip superseded by a newer revision — history only. */
+  is_superseded?: boolean;
+  /** Enterprise Document Lifecycle reason code (e.g. creator_price_changed). */
+  lifecycle_reason_code?: string | null;
+  lifecycle_reason_detail?: string | null;
+  lifecycle_changed_at?: string | null;
   vendor_payment_terms: string | null;
   vendor_payment_terms_label: string;
   special_payment_terms: string | null;

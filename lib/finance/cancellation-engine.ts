@@ -250,66 +250,67 @@ export async function cancelCampaign(
     .select("id, document_number, status")
     .eq("campaign_header_id", input.campaign_id);
 
-  for (const vio of vendorIoRows ?? []) {
-    const row = vio as {
-      id: string;
-      document_number: string;
-      status: string;
-    };
+  // Document Lifecycle: cancel outstanding Vendor/Client IOs only.
+  // Accepted documents remain Accepted (legal history). Campaign Business State is separate.
+  const { emitBusinessChangeEvent } = await import(
+    "@/lib/document-lifecycle/business-change/emit"
+  );
+  const lifecycleResult = await emitBusinessChangeEvent(supabase, {
+    eventType: "campaign_cancelled",
+    reasonCode: "campaign_cancelled",
+    reasonDetail: input.reason ?? "Campaign cancelled",
+    campaignHeaderId: input.campaign_id,
+    actorId: input.actor_id,
+    payload: { campaign_cancelled: true },
+  });
 
-    await supabase
-      .from("vendor_ios")
-      .update({
-        status: "rejected",
-        rejection_reason: input.reason ?? "Campaign cancelled",
-      } as never)
-      .eq("id", row.id);
-
-    await logFinanceAuditEvent(supabase, {
-      event: FINANCE_AUDIT_EVENTS.vendor_io_cancelled,
-      entity_type: "vendor_io",
-      entity_id: row.id,
-      actor_id: input.actor_id,
-      old_data: { status: row.status },
-      new_data: { status: "rejected", campaign_cancelled: true },
-      payload: {
-        document_number: row.document_number,
-        campaign_id: input.campaign_id,
-      },
-    });
+  if (!lifecycleResult.ok) {
+    return { ok: false, error: lifecycleResult.error };
   }
 
-  const { data: clientIoRows } = await supabase
-    .from("client_ios")
-    .select("id, document_number, status")
-    .eq("campaign_header_id", input.campaign_id);
+  const cancelledVendorCount = lifecycleResult.reactions.filter(
+    (r) => r.documentType === "vendor_io"
+  ).length;
+  const cancelledClientCount = lifecycleResult.reactions.filter(
+    (r) => r.documentType === "client_io"
+  ).length;
 
-  for (const cio of clientIoRows ?? []) {
-    const row = cio as {
-      id: string;
-      document_number?: string | null;
-      status: string;
-    };
+  for (const reaction of lifecycleResult.reactions) {
+    if (reaction.documentType === "vendor_io") {
+      const row = (vendorIoRows ?? []).find(
+        (v) => (v as { id: string }).id === reaction.documentId
+      ) as { id: string; document_number?: string } | undefined;
+      await logFinanceAuditEvent(supabase, {
+        event: FINANCE_AUDIT_EVENTS.vendor_io_cancelled,
+        entity_type: "vendor_io",
+        entity_id: reaction.documentId,
+        actor_id: input.actor_id,
+        old_data: { status: reaction.fromStatus },
+        new_data: { status: "cancelled", campaign_cancelled: true },
+        payload: {
+          document_number: row?.document_number ?? null,
+          campaign_id: input.campaign_id,
+          reason_code: reaction.reasonCode,
+        },
+      });
+      continue;
+    }
 
-    if (row.status === "cancelled") continue;
-
-    await supabase
-      .from("client_ios")
-      .update({ status: "cancelled" } as never)
-      .eq("id", row.id);
-
-    await logFinanceAuditEvent(supabase, {
-      event: FINANCE_AUDIT_EVENTS.client_io_cancelled,
-      entity_type: "client_io",
-      entity_id: row.id,
-      actor_id: input.actor_id,
-      old_data: { status: row.status },
-      new_data: { status: "cancelled", campaign_cancelled: true },
-      payload: {
-        document_number: row.document_number ?? null,
-        campaign_id: input.campaign_id,
-      },
-    });
+    if (reaction.documentType === "client_io") {
+      await logFinanceAuditEvent(supabase, {
+        event: FINANCE_AUDIT_EVENTS.client_io_cancelled,
+        entity_type: "client_io",
+        entity_id: reaction.documentId,
+        actor_id: input.actor_id,
+        old_data: { status: reaction.fromStatus },
+        new_data: { status: "cancelled", campaign_cancelled: true },
+        payload: {
+          document_number: null,
+          campaign_id: input.campaign_id,
+          reason_code: reaction.reasonCode,
+        },
+      });
+    }
   }
 
   const { data: lines } = await supabase
@@ -335,8 +336,8 @@ export async function cancelCampaign(
     payload: {
       document_number: (header as { document_number: string }).document_number,
       reason: input.reason ?? null,
-      vendor_io_count: vendorIos.length,
-      client_io_count: clientIos.length,
+      vendor_io_count: cancelledVendorCount,
+      client_io_count: cancelledClientCount,
       invoice_count: invoiceResult.count,
     },
   });
@@ -344,9 +345,9 @@ export async function cancelCampaign(
   return {
     ok: true,
     campaign_id: input.campaign_id,
-    vendor_io_count: vendorIoRows?.length ?? 0,
+    vendor_io_count: cancelledVendorCount,
     invoice_count: invoiceResult.count,
-    client_io_count: clientIoRows?.length ?? 0,
+    client_io_count: cancelledClientCount,
   };
 }
 

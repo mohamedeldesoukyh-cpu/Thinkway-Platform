@@ -716,39 +716,78 @@ export async function updateCampaignLine(
         ?.regeneration_status === "pending_regeneration";
   }
 
-  const shouldReviseVendorIo = Boolean(
+  // Enterprise Document Lifecycle: issued documents become Revision Required
+  // with a reason code. Never silently mutate or auto-create a new version.
+  const shouldMarkRevisionRequired = Boolean(
     existingLineMeta.vendor_io_id &&
       vendorIoRevisionAllowed &&
       (amountDrift || (financeOverrideActive && commercialChanged))
   );
 
-  if (shouldReviseVendorIo) {
-    const { reviseVendorIoBatch } = await import("@/lib/io/revise-vendor-io-batch");
-    const reviseResult = await reviseVendorIoBatch(supabase, {
-      campaignId: parsed.campaign_id,
-      lineIds: [parsed.line_id],
-      reason: amountDrift
-        ? "Creator cost sync to Vendor IO"
-        : "Commercial correction after invoice un-generate",
-      userId,
+  let markedRevisionRequired = false;
+  if (shouldMarkRevisionRequired) {
+    const { emitBusinessChangeEvent } = await import(
+      "@/lib/document-lifecycle/business-change/emit"
+    );
+    const costChanged =
+      Number(existingLineMeta.cost_before_vat ?? existingLineMeta.cost) !==
+      Number(costBeforeVat);
+    const reasonCode = costChanged
+      ? ("creator_price_changed" as const)
+      : ("commercial_correction" as const);
+    const reasonDetail = costChanged
+      ? "Creator price changed after document issuance."
+      : "Commercial correction after invoice un-generate.";
+
+    const lifecycleResult = await emitBusinessChangeEvent(supabase, {
+      eventType: costChanged
+        ? "creator_price_updated"
+        : "manual_mark_revision_required",
+      reasonCode,
+      reasonDetail,
+      campaignHeaderId: parsed.campaign_id,
+      entityType: "campaign_line",
+      entityId: parsed.line_id,
+      actorId: userId,
+      vendorIoIds: existingLineMeta.vendor_io_id
+        ? [existingLineMeta.vendor_io_id]
+        : undefined,
+      campaignLineIds: [parsed.line_id],
+      estimatedImpact: {
+        amountDelta:
+          Number(costBeforeVat) -
+          Number(existingLineMeta.cost_before_vat ?? existingLineMeta.cost ?? 0),
+        currencyCode: currency,
+        note: reasonDetail,
+      },
+      payload: {
+        line_id: parsed.line_id,
+        vendor_io_id: existingLineMeta.vendor_io_id,
+        amount_drift: amountDrift,
+      },
     });
 
-    if (!reviseResult.ok) {
+    if (!lifecycleResult.ok) {
       return {
         ok: false,
-        message: reviseResult.error ?? "Vendor IO revision failed after commercial update.",
+        message:
+          lifecycleResult.error ??
+          "Failed to mark Vendor IO as Revision Required after commercial update.",
       };
     }
 
-    await unlockCampaignLineFinanceFields(supabase, parsed.line_id);
+    markedRevisionRequired = lifecycleResult.reactions.length > 0;
+    if (markedRevisionRequired) {
+      await unlockCampaignLineFinanceFields(supabase, parsed.line_id);
+    }
   }
 
   return {
     ok: true,
-    message: shouldReviseVendorIo
-      ? "Assignment updated. Vendor IO revised with updated creator cost."
+    message: markedRevisionRequired
+      ? "Assignment updated. Vendor IO marked Revision Required — regenerate to create the next version."
       : "Influencer assignment updated.",
     clientId: header?.client_id as string | undefined,
-    reviseVendorIo: shouldReviseVendorIo,
+    reviseVendorIo: markedRevisionRequired,
   };
 }

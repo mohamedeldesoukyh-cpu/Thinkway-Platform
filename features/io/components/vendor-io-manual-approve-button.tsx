@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button";
 import { recordVendorIoManualApprovalAction } from "@/features/io/record-vendor-io-manual-approval-action";
 import type { VendorIoRow } from "@/features/io/types";
 import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
+import {
+  vendorIoAllowsAction,
+  vendorIoRowToLifecycleSnapshot,
+} from "@/lib/document-lifecycle";
 import { cn } from "@/lib/utils";
 
 const INITIAL_STATE = { ok: false } as const;
@@ -19,9 +23,10 @@ type Props = {
 };
 
 export function canRecordVendorIoManualApproval(row: VendorIoRow): boolean {
-  if (row.status === "approved") return false;
-  if (row.delivery_method === "manual") return true;
-  return row.status === "sent";
+  return vendorIoAllowsAction(
+    vendorIoRowToLifecycleSnapshot(row),
+    "mark_accepted"
+  );
 }
 
 export function VendorIoManualApproveButton({

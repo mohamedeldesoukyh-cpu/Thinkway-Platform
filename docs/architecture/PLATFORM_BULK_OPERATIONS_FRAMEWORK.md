@@ -6,6 +6,7 @@
 **Code:** `components/workspace/bulk-operations/`  
 **Regression:** `npm run test:vendor-io-bulk`  
 **Parent:** Campaign Workspace Baseline v1.3 · Architecture v1.0 · BPN Foundation  
+**Companion:** [`ENTERPRISE_DOCUMENT_LIFECYCLE.md`](./ENTERPRISE_DOCUMENT_LIFECYCLE.md) — bulk actions must respect document lifecycle state / reason codes (R2.2d.2)  
 
 ---
 

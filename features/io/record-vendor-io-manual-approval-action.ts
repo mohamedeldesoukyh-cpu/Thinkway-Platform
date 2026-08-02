@@ -76,6 +76,18 @@ export async function recordVendorIoManualApprovalAction(
     return { ok: true, message: "Vendor IO is already approved." };
   }
 
+  if (row.status === "cancelled") {
+    return { ok: false, message: "Cancelled Vendor IOs cannot be accepted." };
+  }
+
+  if (row.status === "revision_required") {
+    return {
+      ok: false,
+      message:
+        "This Vendor IO requires revision. Regenerate an updated version before recording acceptance.",
+    };
+  }
+
   if (!["draft", "generated", "sent", "rejected"].includes(row.status)) {
     return { ok: false, message: "This Vendor IO cannot be approved in its current status." };
   }

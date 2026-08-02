@@ -8,6 +8,8 @@
 
 **Platform Bulk Framework:** `docs/architecture/PLATFORM_BULK_OPERATIONS_FRAMEWORK.md` — Vendor IO consumer (R2.2d); reliability + single-refresh + idempotency (R2.2d.1).
 
+**Enterprise Document Lifecycle:** `docs/architecture/ENTERPRISE_DOCUMENT_LIFECYCLE.md` · `lib/document-lifecycle/` (R2.2d.2 Option D) — reason codes · business change events · Business State ≠ Document State · AI-ready.
+
 **Gate docs (Planning — retargeted as R2.3):**  
 - `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md`  
 - `docs/capabilities/PLANNING_BOARD_CAPABILITY_REVIEW.md`  

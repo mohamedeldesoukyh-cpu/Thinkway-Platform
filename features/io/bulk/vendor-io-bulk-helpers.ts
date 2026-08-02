@@ -1,7 +1,11 @@
 /**
- * Pure Vendor IO bulk helpers (no server actions) — safe for unit tests.
+ * Pure Vendor IO bulk helpers — delegate eligibility to Document Lifecycle Engine.
  */
 
+import {
+  vendorIoBulkSkipReason,
+  vendorIoRowToLifecycleSnapshot,
+} from "@/lib/document-lifecycle";
 import type { VendorIoRow } from "@/features/io/types";
 import { hasValidVendorEmail } from "@/lib/io/vendor-io-delivery";
 
@@ -12,19 +16,26 @@ export function vendorIoAlreadyAccepted(row: VendorIoRow): boolean {
 
 /**
  * Already sent or manually delivered — idempotent skip for Send / Mark Delivered.
- * Re-running the same bulk action must never create duplicate deliveries.
  */
 export function vendorIoAlreadySentOrDelivered(row: VendorIoRow): boolean {
-  const status = (row.status ?? "").toLowerCase();
-  if (status === "approved" || status === "sent") return true;
-  const delivery = (row.delivery_status ?? "").toLowerCase();
-  return delivery === "sent" || delivery === "completed";
+  const skip = vendorIoBulkSkipReason(
+    vendorIoRowToLifecycleSnapshot(row),
+    "send"
+  );
+  return Boolean(skip);
 }
 
 export function vendorIoNeedsSend(row: VendorIoRow): boolean {
-  if (vendorIoAlreadySentOrDelivered(row)) return false;
-  return ["draft", "generated", "rejected"].includes(
-    (row.status ?? "").toLowerCase()
+  return !vendorIoBulkSkipReason(
+    vendorIoRowToLifecycleSnapshot(row),
+    "send"
+  );
+}
+
+export function vendorIoNeedsMarkAccepted(row: VendorIoRow): boolean {
+  return !vendorIoBulkSkipReason(
+    vendorIoRowToLifecycleSnapshot(row),
+    "mark_accepted"
   );
 }
 
@@ -45,6 +56,7 @@ export function exportVendorIoRowsCsv(rows: VendorIoRow[]): string {
     "document_number",
     "influencer_name",
     "status",
+    "lifecycle_reason_code",
     "delivery_method",
     "delivery_status",
     "amount",
@@ -64,6 +76,7 @@ export function exportVendorIoRowsCsv(rows: VendorIoRow[]): string {
         row.document_number,
         row.influencer_name,
         row.status,
+        row.lifecycle_reason_code,
         row.delivery_method,
         row.delivery_status,
         row.amount,

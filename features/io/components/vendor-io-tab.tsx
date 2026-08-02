@@ -156,7 +156,7 @@ function buildCampaignVendorIoColumns(
       colWidth: "12%",
       renderCell: (row) => (
         <div className="flex min-w-0 flex-col gap-0.5">
-          <VendorIoStatusPill status={row.status} />
+          <VendorIoStatusPill row={row} showReason />
           <VendorIoDeliveryBadge
             deliveryMethod={row.delivery_method}
             deliveryStatus={row.delivery_status}

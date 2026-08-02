@@ -66,6 +66,9 @@ Every new capability must answer before it is complete:
 **Bulk framework (canonical):** `docs/architecture/PLATFORM_BULK_OPERATIONS_FRAMEWORK.md` · `components/workspace/bulk-operations/`  
 Do not invent parallel bulk runners. Vendor IO (R2.2d / 2.2d.1) is the first production consumer.
 
+**Document lifecycle (canonical):** `docs/architecture/ENTERPRISE_DOCUMENT_LIFECYCLE.md` · `lib/document-lifecycle/`  
+One engine for all enterprise documents. UI/bulk actions from `resolveDocumentLifecycle` only. Reason codes + business change events required.
+
 ## Mandatory for every ADR / capability spec / release architecture / implementation proposal
 
 Include section **Platform Architecture Compliance** covering:
