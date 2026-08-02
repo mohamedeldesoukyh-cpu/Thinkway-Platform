@@ -17,6 +17,7 @@ import type {
   InvestmentSource,
 } from "@/lib/enterprise-creator-intelligence/investment/types";
 import { INVESTMENT_CONSUMERS } from "@/lib/enterprise-creator-intelligence/investment/types";
+import { investmentEvidenceCoverage } from "@/lib/enterprise-creator-intelligence/shared/evidence-coverage";
 
 export type { InvestmentLayerBundle };
 
@@ -148,6 +149,12 @@ export function computeCreatorInvestmentIntelligence(
     confidence: null,
   };
 
+  const evidenceCoverage = investmentEvidenceCoverage({
+    layerFlags: layerCoverage,
+    scoredDimensionCount: dimensions.filter((d) => d.score != null).length,
+    totalDimensions: dimensions.length,
+  });
+
   const recommendation = buildRecommendationInsight({
     overallScore,
     dimensions,
@@ -155,6 +162,7 @@ export function computeCreatorInvestmentIntelligence(
     layerLabelsPresent: [...new Set(layerLabelsPresent)],
     source,
     computedAt,
+    evidenceCoveragePercent: evidenceCoverage.percent,
   });
 
   source.confidence = recommendation.confidence.percent;
@@ -168,6 +176,7 @@ export function computeCreatorInvestmentIntelligence(
     dimensions,
     risks,
     opportunities,
+    evidenceCoverage,
     source,
     layerCoverage,
   };

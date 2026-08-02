@@ -3,6 +3,8 @@
  * Product-hardened dashboard model: one standard metric object for all consumers.
  */
 
+import type { EvidenceCoverage } from "@/lib/enterprise-creator-intelligence/shared/types";
+
 export type CommercialMetricKey =
   | "cpm"
   | "cpe"
@@ -204,6 +206,8 @@ export type CreatorCommercialIntelligence = {
   metrics: CommercialMetric[];
   commercialHealth: CommercialHealth;
   investmentReadiness: InvestmentReadiness;
+  /** Completeness of commercial information — not Confidence. */
+  evidenceCoverage: EvidenceCoverage;
   /** AI-ready — no AI execution. */
   aiHints: CreatorCommercialAiHints;
   /** Declared platform consumers (reuse contract). */

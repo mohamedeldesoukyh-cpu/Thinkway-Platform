@@ -1,5 +1,11 @@
 /**
- * Thinkway Score — Budget 20, Creator Fit 25, Audience 20, Risk 15, Timeline 10, KPIs 10.
+ * Campaign Decision Workspace simulation score — Budget 20, Creator Fit 25, Audience 20, Risk 15, Timeline 10, KPIs 10.
+ *
+ * NOT Enterprise Creator Intelligence.
+ * NOT Creator Investment SSOT.
+ *
+ * Planning investment recommendations must use
+ * `loadCreatorIntelligenceBundle` from `@/lib/enterprise-creator-intelligence`.
  */
 
 import type {

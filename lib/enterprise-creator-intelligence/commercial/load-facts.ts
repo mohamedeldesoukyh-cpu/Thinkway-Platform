@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { listQuotationHistoryForInfluencer } from "@/lib/creators/quotation-price-reference";
 import { loadCreatorMonthlyMetrics } from "@/lib/enterprise-creator-intelligence/historical/load-monthly";
 import type { CreatorCommercialFacts } from "@/lib/enterprise-creator-intelligence/commercial/compute";
+import type { EciFactsCache } from "@/lib/enterprise-creator-intelligence/shared/facts-cache";
 import { isMissingTableError } from "@/lib/platform/schema-validation";
 
 /**
@@ -14,10 +15,13 @@ export async function loadCreatorCommercialFacts(
   input: {
     influencerId: string;
     platform?: string | null;
+    cache?: EciFactsCache;
   }
 ): Promise<CreatorCommercialFacts> {
   const influencerId = input.influencerId;
+  const platform = input.platform ?? null;
 
+  const load = async (): Promise<CreatorCommercialFacts> => {
   const [pubsResult, assignmentsResult, quotes, monthly] = await Promise.all([
     supabase
       .from("campaign_publications")
@@ -48,6 +52,7 @@ export async function loadCreatorCommercialFacts(
       influencerId,
       platform: input.platform,
       limitMonths: 36,
+      cache: input.cache,
     }),
   ]);
 
@@ -146,4 +151,13 @@ export async function loadCreatorCommercialFacts(
     })),
     historicalMonths,
   };
+  };
+
+  if (!input.cache) return load();
+  return input.cache.getOrCompute(
+    "commercial_facts",
+    influencerId,
+    platform,
+    load
+  );
 }

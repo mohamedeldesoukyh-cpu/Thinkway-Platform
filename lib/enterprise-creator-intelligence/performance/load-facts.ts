@@ -5,6 +5,7 @@ import type {
   CreatorPerformanceFacts,
   PerformancePublicationFact,
 } from "@/lib/enterprise-creator-intelligence/performance/compute";
+import type { EciFactsCache } from "@/lib/enterprise-creator-intelligence/shared/facts-cache";
 import { isMissingTableError } from "@/lib/platform/schema-validation";
 
 function num(value: unknown): number | null {
@@ -26,10 +27,13 @@ export async function loadCreatorPerformanceFacts(
   input: {
     influencerId: string;
     platform?: string | null;
+    cache?: EciFactsCache;
   }
 ): Promise<CreatorPerformanceFacts> {
   const influencerId = input.influencerId;
+  const platform = input.platform ?? null;
 
+  const load = async (): Promise<CreatorPerformanceFacts> => {
   let accountsQuery = supabase
     .from("influencer_platform_accounts")
     .select("platform, recent_publications")
@@ -159,4 +163,13 @@ export async function loadCreatorPerformanceFacts(
     attributedRevenue,
     avgQuotedCost,
   };
+  };
+
+  if (!input.cache) return load();
+  return input.cache.getOrCompute(
+    "performance_facts",
+    influencerId,
+    platform,
+    load
+  );
 }

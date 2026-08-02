@@ -37,6 +37,10 @@ import {
   PERFORMANCE_WINDOWS,
 } from "@/lib/enterprise-creator-intelligence/performance/types";
 import {
+  clampConfidenceToEvidence,
+  performanceEvidenceCoverage,
+} from "@/lib/enterprise-creator-intelligence/shared/evidence-coverage";
+import {
   computeEngagementRate,
   computeEngagements,
 } from "@/lib/performance/engagement-rate-engine";
@@ -653,10 +657,23 @@ export function computeCreatorPerformanceIntelligence(
     },
   };
 
+  const evidenceCoverage = performanceEvidenceCoverage({
+    publicationCount: pubs.length,
+    campaignPublicationCount: pubs.filter((p) => p.source === "campaign").length,
+    hasWatchOrCompletion: pubs.some(
+      (p) => p.watchTimeSeconds != null || p.completionRate != null
+    ),
+  });
+
+  const sourceConfidence = clampConfidenceToEvidence(
+    stabilityConfidence.percent,
+    evidenceCoverage.percent
+  );
+
   const source = buildSource({
     platform: facts.platform,
     refreshTime: computedAt,
-    confidence: stabilityConfidence.percent,
+    confidence: sourceConfidence,
   });
 
   return {
@@ -681,6 +698,7 @@ export function computeCreatorPerformanceIntelligence(
       audienceResponse,
       campaignPerformanceAvailable: campaignPerformance.sampleCampaignCount > 0,
     },
+    evidenceCoverage,
     source,
     aiHints: {
       available: pubs.length > 0,

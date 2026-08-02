@@ -1,3 +1,12 @@
+/**
+ * Discovery browse / acquisition score ONLY.
+ *
+ * NOT Enterprise Creator Intelligence.
+ * NOT Creator Investment SSOT.
+ *
+ * Planning · Client · Campaign · Reporting · Analytics · AI · Mobile must use
+ * `loadCreatorIntelligenceBundle` from `@/lib/enterprise-creator-intelligence`.
+ */
 import type { UnifiedCreatorMetrics } from "@/lib/creators/types";
 import { averageSourceConfidence } from "@/lib/creators/confidence";
 

@@ -8,6 +8,7 @@ import type {
 import { loadCreatorMonthlyMetrics } from "@/lib/enterprise-creator-intelligence/historical/load-monthly";
 import { computeCreatorPerformanceIntelligence } from "@/lib/enterprise-creator-intelligence/performance/compute";
 import { loadCreatorPerformanceFacts } from "@/lib/enterprise-creator-intelligence/performance/load-facts";
+import type { EciFactsCache } from "@/lib/enterprise-creator-intelligence/shared/facts-cache";
 import { isMissingTableError } from "@/lib/platform/schema-validation";
 
 function num(value: unknown): number | null {
@@ -28,10 +29,13 @@ export async function loadCreatorAudienceFacts(
   input: {
     influencerId: string;
     platform?: string | null;
+    cache?: EciFactsCache;
   }
 ): Promise<CreatorAudienceFacts> {
   const influencerId = input.influencerId;
+  const platform = input.platform ?? null;
 
+  const load = async (): Promise<CreatorAudienceFacts> => {
   const [influencerResult, dnaResult, monthly, performanceFacts] =
     await Promise.all([
       supabase
@@ -55,10 +59,12 @@ export async function loadCreatorAudienceFacts(
         influencerId,
         platform: input.platform,
         limitMonths: 36,
+        cache: input.cache,
       }),
       loadCreatorPerformanceFacts(supabase, {
         influencerId,
         platform: input.platform,
+        cache: input.cache,
       }).catch(() => null),
     ]);
 
@@ -138,4 +144,13 @@ export async function loadCreatorAudienceFacts(
     monthlyMetrics: monthly.months,
     engagement,
   };
+  };
+
+  if (!input.cache) return load();
+  return input.cache.getOrCompute(
+    "audience_facts",
+    influencerId,
+    platform,
+    load
+  );
 }

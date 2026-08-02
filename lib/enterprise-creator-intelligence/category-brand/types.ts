@@ -3,6 +3,8 @@
  * Behavioural content intelligence for Planning / Client / AI / Reporting / Mobile.
  */
 
+import type { EvidenceCoverage } from "@/lib/enterprise-creator-intelligence/shared/types";
+
 export type AnalysisWindowKey =
   | "last_30_days"
   | "last_90_days"
@@ -196,6 +198,8 @@ export type CreatorCategoryBrandIntelligence = {
   contentConsistency: ContentConsistencyInsight;
   specialisation: SpecialisationInsight;
   businessReadiness: CategoryBrandBusinessReadiness;
+  /** Completeness of category/brand information — not Confidence. */
+  evidenceCoverage: EvidenceCoverage;
   source: CategoryBrandSource;
   aiHints: CreatorCategoryBrandAiHints;
   consumers: readonly string[];

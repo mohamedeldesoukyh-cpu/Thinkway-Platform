@@ -1,9 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { loadCreatorAudienceIntelligence } from "@/lib/enterprise-creator-intelligence/audience/load";
-import { loadCreatorCategoryBrandIntelligence } from "@/lib/enterprise-creator-intelligence/category-brand/load";
-import { loadCreatorCommercialIntelligence } from "@/lib/enterprise-creator-intelligence/commercial/load-commercial";
-import { loadCreatorMonthlyMetrics } from "@/lib/enterprise-creator-intelligence/historical/load-monthly";
+import { loadCreatorIntelligenceBundle } from "@/lib/enterprise-creator-intelligence/consumer";
 import {
   computeCreatorInvestmentIntelligence,
   type CreatorInvestmentFacts,
@@ -13,10 +10,10 @@ import type {
   CreatorInvestmentAiHints,
   CreatorInvestmentIntelligence,
 } from "@/lib/enterprise-creator-intelligence/investment/types";
-import { loadCreatorPerformanceIntelligence } from "@/lib/enterprise-creator-intelligence/performance/load";
+import type { EciFactsCache } from "@/lib/enterprise-creator-intelligence/shared/facts-cache";
 
 /**
- * Load Sprint 1–5 layers (or accept overrides), compose Investment Intelligence.
+ * Load Creator Investment Intelligence via the platform SSOT facade (shared cache).
  * Never redesigns or recalculates prior layer engines.
  */
 export async function loadCreatorInvestmentIntelligence(
@@ -26,6 +23,7 @@ export async function loadCreatorInvestmentIntelligence(
     platform?: string | null;
     persistCapture?: boolean;
     factsOverride?: CreatorInvestmentFacts;
+    cache?: EciFactsCache;
   }
 ): Promise<CreatorInvestmentIntelligence> {
   if (input.factsOverride) {
@@ -36,69 +34,17 @@ export async function loadCreatorInvestmentIntelligence(
     return current;
   }
 
-  const platform = input.platform ?? null;
-
-  const [
-    historicalSeries,
-    commercialResult,
-    categoryBrandResult,
-    performance,
-    audience,
-  ] = await Promise.all([
-    loadCreatorMonthlyMetrics(supabase, {
-      influencerId: input.influencerId,
-      platform,
-    }).catch(() => ({
-      influencerId: input.influencerId,
-      platform,
-      months: [],
-    })),
-    loadCreatorCommercialIntelligence(supabase, {
-      influencerId: input.influencerId,
-      platform,
-    }).catch(() => null),
-    loadCreatorCategoryBrandIntelligence(supabase, {
-      influencerId: input.influencerId,
-      platform,
-    }).catch(() => null),
-    loadCreatorPerformanceIntelligence(supabase, {
-      influencerId: input.influencerId,
-      platform,
-    }).catch(() => null),
-    loadCreatorAudienceIntelligence(supabase, {
-      influencerId: input.influencerId,
-      platform,
-    }).catch(() => null),
-  ]);
-
-  const commercial = commercialResult?.current ?? null;
-  const categoryBrand = categoryBrandResult?.current ?? null;
-
-  const facts: CreatorInvestmentFacts = {
+  const bundle = await loadCreatorIntelligenceBundle(supabase, {
     influencerId: input.influencerId,
-    platform:
-      platform ??
-      commercial?.platform ??
-      performance?.platform ??
-      audience?.platform ??
-      categoryBrand?.platform ??
-      historicalSeries.platform ??
-      null,
-    computedAt: new Date().toISOString(),
-    historicalMonthly: historicalSeries.months,
-    commercial,
-    categoryBrand,
-    performance,
-    audience,
-  };
-
-  const current = computeCreatorInvestmentIntelligence(facts);
+    platform: input.platform,
+    cache: input.cache,
+  });
 
   if (input.persistCapture) {
-    await appendInvestmentIntelligenceCapture(supabase, current);
+    await appendInvestmentIntelligenceCapture(supabase, bundle.investment);
   }
 
-  return current;
+  return bundle.investment;
 }
 
 export function buildInvestmentAiHints(

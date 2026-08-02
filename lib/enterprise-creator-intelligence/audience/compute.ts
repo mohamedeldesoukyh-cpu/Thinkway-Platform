@@ -24,6 +24,10 @@ import {
 } from "@/lib/enterprise-creator-intelligence/audience/types";
 import type { CreatorMonthlyMetrics } from "@/lib/enterprise-creator-intelligence/historical/types";
 import { windowDaySpan } from "@/lib/enterprise-creator-intelligence/category-brand/windows";
+import {
+  audienceEvidenceCoverage,
+  clampConfidenceToEvidence,
+} from "@/lib/enterprise-creator-intelligence/shared/evidence-coverage";
 
 export type AudienceDemographicFact = {
   genderMale: number | null;
@@ -600,10 +604,29 @@ export function computeCreatorAudienceIntelligence(
     commercialAudienceReadiness = "Limited Confidence";
   }
 
+  const evidenceCoverage = audienceEvidenceCoverage({
+    hasDemographics:
+      facts.demographics.genderMale != null ||
+      facts.demographics.genderFemale != null ||
+      facts.demographics.age18_24 != null ||
+      facts.demographics.age25_34 != null,
+    hasGrowthHistory: followerSeries.length >= 3,
+    hasEngagementSignals:
+      facts.engagement.engagementTrend != null ||
+      facts.engagement.shareTrend != null ||
+      facts.engagement.saveTrend != null,
+    hasGeography: (facts.demographics.topCountries?.length ?? 0) > 0,
+  });
+
+  const guardedQualityConfidence = clampConfidenceToEvidence(
+    qualityConfidence.percent,
+    evidenceCoverage.percent
+  );
+
   const source = buildSource({
     platform: facts.platform,
     refreshTime: computedAt,
-    confidence: qualityConfidence.percent,
+    confidence: guardedQualityConfidence,
   });
 
   const businessReadiness = {
@@ -614,7 +637,7 @@ export function computeCreatorAudienceIntelligence(
           }`
         : "Audience fit limited — geography/language incomplete.",
     audienceStability: stability.level,
-    audienceConfidence: qualityConfidence.percent,
+    audienceConfidence: guardedQualityConfidence,
     commercialAudienceReadiness,
     geography,
     languages,
@@ -632,6 +655,7 @@ export function computeCreatorAudienceIntelligence(
     geography,
     languages,
     businessReadiness,
+    evidenceCoverage,
     source,
     aiHints: {
       available:

@@ -6,6 +6,7 @@ import type {
   InvestmentRisk,
   InvestmentSource,
 } from "@/lib/enterprise-creator-intelligence/investment/types";
+import { clampConfidenceToEvidence } from "@/lib/enterprise-creator-intelligence/shared/evidence-coverage";
 
 export function computeWeightedOverallScore(
   dimensions: InvestmentDimensionScore[]
@@ -26,6 +27,7 @@ export function computeInvestmentConfidence(input: {
   layerLabelsPresent: string[];
   riskCount: number;
   criticalRiskCount: number;
+  evidenceCoveragePercent?: number | null;
 }): InvestmentConfidence {
   const scored = input.dimensions.filter((d) => d.score != null);
   const coverage = scored.length / Math.max(input.dimensions.length, 1);
@@ -51,18 +53,33 @@ export function computeInvestmentConfidence(input: {
     );
   }
 
-  return {
+  const guarded = clampConfidenceToEvidence(
     percent,
+    input.evidenceCoveragePercent ?? null
+  );
+
+  return {
+    percent: guarded,
     reason:
-      percent == null
+      guarded == null
         ? "No scored investment dimensions available."
-        : `Based on ${scored.length}/${input.dimensions.length} dimensions, ${input.layerLabelsPresent.length} intelligence layers, and ${input.riskCount} risk(s).`,
+        : `Based on ${scored.length}/${input.dimensions.length} dimensions, ${input.layerLabelsPresent.length} intelligence layers, and ${input.riskCount} risk(s).` +
+          (percent != null &&
+          guarded != null &&
+          input.evidenceCoveragePercent != null &&
+          guarded < percent
+            ? ` Capped by Evidence Coverage ${input.evidenceCoveragePercent}%.`
+            : ""),
     basedOn: [
       { label: "Scored dimensions", value: scored.length },
       { label: "Dimension coverage", value: Number(coverage.toFixed(3)) },
       {
         label: "Average dimension confidence",
         value: avgDimConfidence == null ? "n/a" : Math.round(avgDimConfidence),
+      },
+      {
+        label: "Evidence coverage",
+        value: input.evidenceCoveragePercent ?? "n/a",
       },
       ...input.layerLabelsPresent.map((label) => ({
         label: "Layer",
@@ -137,12 +154,14 @@ export function buildRecommendationInsight(input: {
   layerLabelsPresent: string[];
   source: InvestmentSource;
   computedAt: string;
+  evidenceCoveragePercent?: number | null;
 }): InvestmentRecommendationInsight {
   const confidence = computeInvestmentConfidence({
     dimensions: input.dimensions,
     layerLabelsPresent: input.layerLabelsPresent,
     riskCount: input.risks.length,
     criticalRiskCount: input.risks.filter((r) => r.severity === "Critical").length,
+    evidenceCoveragePercent: input.evidenceCoveragePercent,
   });
 
   const { recommendation, why } = classifyInvestmentRecommendation({

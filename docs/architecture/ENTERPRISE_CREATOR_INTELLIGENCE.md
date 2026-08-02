@@ -1,11 +1,12 @@
 # Enterprise Creator Intelligence
 
-**Status:** **ACTIVE** platform capability — **Release 2.3 Phase 1** (not frozen)  
-**Acceptance:** [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) — **CONDITIONAL** (open gates G1–G3)  
+**Status:** **Maintenance Mode · frozen · protected · COMPLETE** — Release 2.3 Phase 1  
+**Acceptance:** [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) — **ACCEPTED**  
 **Code:** `lib/enterprise-creator-intelligence/`  
+**Canonical entry:** `loadCreatorIntelligenceBundle` / `loadCreatorIntelligenceBundles`  
 **Registry:** [`PLATFORM_CAPABILITY_REGISTRY.md`](./PLATFORM_CAPABILITY_REGISTRY.md)  
 **Production:** Not applied — requires explicit approval  
-**Planning Workspace:** Blocked until Acceptance freeze is approved  
+**Active initiative:** Planning Workspace (must consume this SSOT)  
 
 Extends frozen platform capabilities — does **not** redesign Architecture, Lifecycle OS, Document Lifecycle, Change Impact, Decision Center, or Bulk Framework.
 

@@ -1,38 +1,44 @@
 ---
-description: Enterprise Creator Intelligence SSOT — ACTIVE until Product freeze; no parallel investment/intelligence engines
+description: Enterprise Creator Intelligence — FROZEN Maintenance Mode SSOT; no parallel investment engines
 alwaysApply: true
 ---
 
-# Enterprise Creator Intelligence (Platform SSOT)
+# Enterprise Creator Intelligence (Frozen · Maintenance Mode)
 
-**Status:** **ACTIVE** — Sprint 1–6 protected baselines · **NOT FROZEN**  
-**Acceptance:** `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md` (CONDITIONAL — open gaps)  
+**Status:** **FROZEN · Maintenance Mode · COMPLETE** (Release 2.3 Phase 1)  
+**Acceptance:** `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`  
 **Spec:** `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE.md`  
 **Code:** `lib/enterprise-creator-intelligence/`  
-**Registry:** `docs/architecture/PLATFORM_CAPABILITY_REGISTRY.md`
+**Registry:** `docs/architecture/PLATFORM_CAPABILITY_REGISTRY.md`  
+**Canonical entry:** `loadCreatorIntelligenceBundle` / `loadCreatorIntelligenceBundles`
 
 ## Mandatory
 
-1. Creator commercial · audience · category/brand · performance · investment intelligence for Planning / Client / Campaign / Reporting / Analytics / AI / Mobile **must** come from `@/lib/enterprise-creator-intelligence`.
-2. Do **not** invent parallel creator investment scores, audience-quality investment signals, or commercial intelligence engines for those consumers.
-3. Do **not** freeze or mark Maintenance Mode until Product Acceptance gates pass (see acceptance doc).
-4. Do **not** begin Planning Workspace implementation until Acceptance freeze is approved.
-5. Later layers **consume** earlier layers — never redesign Sprint 1–6 protected baselines.
-6. Append-only history only — never overwrite prior intelligence captures.
-7. AI-ready hints only in Phase 1 — **no AI execution**.
-8. No Production deploy of ECI schema without explicit approval.
+1. Planning · Client · Campaign · Reporting · Analytics · AI · Mobile **must** consume Creator Intelligence **only** via `@/lib/enterprise-creator-intelligence` (`loadCreatorIntelligenceBundle`).
+2. Do **not** invent parallel creator investment scores, audience-quality investment signals, or commercial/performance/category intelligence engines for those consumers.
+3. Discovery Thinkway Score (`lib/creators/thinkway-score.ts`) and campaign-decision simulation scores are **not** Enterprise Creator Intelligence — Discovery/simulation only.
+4. Sprint 1–6 baselines are protected — extend, do not redesign.
+5. Append-only history only — never overwrite prior intelligence captures.
+6. Shared cache (`createEciFactsCache`) prevents recomputation — never changes calculations.
+7. Every layer exposes **Confidence** and **Evidence Coverage**; confidence must not exceed evidence coverage.
+8. AI-ready hints only — **no AI execution** unless a later approved initiative.
+9. No Production deploy of ECI schema without explicit approval.
 
-## Forbidden as Planning / investment SSOT
+## Maintenance Mode only
 
-- `lib/creators/thinkway-score.ts` (Discovery browse score)
-- Campaign decision simulators as enterprise investment recommendations
-- Independent CPM/CPE/ROI/EMV engines that bypass ECI commercial formulas for creator intelligence surfaces
+- Defect / type / build fixes  
+- Performance / caching improvements that do not change calculation semantics  
+- Sibling extensions (Brand Safety, Fraud, Pricing Prediction, etc.) that **extend** the package  
 
-## Allowed
+## Forbidden
 
-- Platform formula helpers reused **by** ECI (`lib/campaigns/performance-calculations.ts`)
-- Discovery acquisition tools (remain Discovery — not enterprise investment)
-- Sibling ECI extensions (Brand Safety, Fraud, Pricing Prediction) that **extend** the package without redesigning Sprint 1–6
+- Redesign of Historical / Commercial / Category / Performance / Audience / Investment layer contracts  
+- Parallel investment recommendation engines  
+- Using Discovery scores as Planning investment SSOT  
+
+## Active initiative after freeze
+
+**Planning Workspace** may begin — must consume `loadCreatorIntelligenceBundle`.
 
 ## Regression
 

@@ -30,3 +30,9 @@ export {
   buildHistoricalAiHints,
   loadCreatorMonthlyMetrics,
 } from "@/lib/enterprise-creator-intelligence/historical/load-monthly";
+
+export {
+  enrichHistoricalSeries,
+  wrapHistoricalSeriesExplainability,
+  type CreatorHistoricalExplainability,
+} from "@/lib/enterprise-creator-intelligence/historical/explainability";

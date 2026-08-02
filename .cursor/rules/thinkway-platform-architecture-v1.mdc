@@ -72,7 +72,7 @@ Document state transitions only. UI/bulk actions from `resolveDocumentLifecycle`
 **Change impact (Maintenance Mode · frozen · mandatory):** `docs/architecture/ENTERPRISE_CHANGE_IMPACT_ENGINE.md` · `lib/change-impact/`  
 Intelligence layer above Document Lifecycle. **Only** `applyBusinessChangeImpact`. Registry: `docs/architecture/PLATFORM_CAPABILITY_REGISTRY.md`. Freeze tip `449fd5c0`. Quotation/PO/Invoice/Contract/Report **must extend** these engines — **never** parallel implementations. No Production deploy without approval.
 
-**Enterprise Creator Intelligence (ACTIVE · not frozen):** `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE.md` · acceptance CONDITIONAL · `lib/enterprise-creator-intelligence/` · Cursor rule `thinkway-enterprise-creator-intelligence.mdc`. Sprint 1–6 protected baselines. Planning/Client/Campaign/Reporting/Analytics/AI/Mobile must consume this package only. **Do not begin Planning Workspace until Acceptance freeze.** No Production deploy without approval.
+**Enterprise Creator Intelligence (Maintenance Mode · frozen · COMPLETE):** `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE.md` · acceptance ACCEPTED · `lib/enterprise-creator-intelligence/` · Cursor rule `thinkway-enterprise-creator-intelligence.mdc`. Canonical entry `loadCreatorIntelligenceBundle`. Planning Workspace is the active initiative and must consume this SSOT. No Production deploy without approval.
 
 ## Mandatory for every ADR / capability spec / release architecture / implementation proposal
 
@@ -92,6 +92,6 @@ Include section **Platform Architecture Compliance** covering:
 - Architecture-first work is **complete**. Prefer **capability specifications** then functional delivery.  
 - Extend BPN + Campaign Workspace Baseline **v1.3**; do not reinvent them.  
 - Reuse **Platform Bulk Operations Framework** for all register multi-select work.  
-- **Active initiative:** Release 2.3 — Campaign Planning Workspace — start with Business Capability Review → Product UX Review → Capability Spec approval → Architecture Compliance → Implementation. **No Campaign Workspace UX work.**  
+- **Active initiative:** Planning Workspace — must consume Enterprise Creator Intelligence (`loadCreatorIntelligenceBundle`). **No Campaign Workspace UX redesign.**  
 - Planning Workspace = Planning stage of Campaign Lifecycle; must inherit Campaign Workspace Lifecycle OS v1.3 (Decision Center briefing; three severities; progressive registers; no new nav/layouts/workflows/competing guidance).  
 - After 2.3: Media Plan Copilot → Client/Vendor/Creator journeys → Reporting → Notifications → Analytics.

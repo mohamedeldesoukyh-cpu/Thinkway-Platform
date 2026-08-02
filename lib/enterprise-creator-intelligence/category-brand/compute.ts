@@ -28,6 +28,10 @@ import {
   ANALYSIS_WINDOWS,
   CATEGORY_BRAND_CONSUMERS,
 } from "@/lib/enterprise-creator-intelligence/category-brand/types";
+import {
+  categoryBrandEvidenceCoverage,
+  clampConfidenceToEvidence,
+} from "@/lib/enterprise-creator-intelligence/shared/evidence-coverage";
 import { isWithinWindow } from "@/lib/enterprise-creator-intelligence/category-brand/windows";
 
 export type CreatorCategoryBrandFacts = {
@@ -202,9 +206,16 @@ export function computeCreatorCategoryBrandIntelligence(
     analysedPostCount: lifetime.analysedPostCount,
   });
 
-  const categoryConfidence =
+  const evidenceCoverage = categoryBrandEvidenceCoverage({
+    postCount: lifetime.analysedPostCount,
+    brandCount: brands.length,
+  });
+
+  const categoryConfidence = clampConfidenceToEvidence(
     lifetime.categories[0]?.confidence.percent ??
-    (lifetime.analysedPostCount === 0 ? null : 0);
+      (lifetime.analysedPostCount === 0 ? null : 0),
+    evidenceCoverage.percent
+  );
 
   const source = buildBaseSource({
     platform: facts.platform,
@@ -234,6 +245,7 @@ export function computeCreatorCategoryBrandIntelligence(
     contentConsistency,
     specialisation,
     businessReadiness,
+    evidenceCoverage,
     source,
     aiHints: {
       available: lifetime.analysedPostCount > 0 || brands.length > 0,

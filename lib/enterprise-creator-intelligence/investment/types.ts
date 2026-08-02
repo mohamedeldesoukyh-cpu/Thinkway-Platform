@@ -5,6 +5,8 @@
  * Consumes Sprint 1–5 intelligence only; never duplicates layer calculations.
  */
 
+import type { EvidenceCoverage } from "@/lib/enterprise-creator-intelligence/shared/types";
+
 export type InvestmentRecommendation =
   | "Highly Recommended"
   | "Recommended"
@@ -139,6 +141,8 @@ export type CreatorInvestmentIntelligence = {
   risks: InvestmentRisk[];
   opportunities: InvestmentOpportunity[];
   businessReadiness: InvestmentBusinessReadiness;
+  /** Completeness of investment information — not Confidence. */
+  evidenceCoverage: EvidenceCoverage;
   source: InvestmentSource;
   aiHints: CreatorInvestmentAiHints;
   consumers: readonly string[];

@@ -370,6 +370,17 @@ describe("Enterprise Creator Intelligence — Investment Sprint 6", () => {
     assert.ok(result.aiHints.explainConfidenceDrivers.length > 0);
     assert.ok(result.aiHints.suggestBusinessActions.length > 0);
     assert.ok(result.source.collectionMethod.includes("Sprint 1–5"));
+    assert.ok(result.evidenceCoverage);
+    assert.ok(result.evidenceCoverage.percent != null);
+    if (
+      result.recommendation.confidence.percent != null &&
+      result.evidenceCoverage.percent != null
+    ) {
+      assert.ok(
+        result.recommendation.confidence.percent <=
+          result.evidenceCoverage.percent
+      );
+    }
   });
 
   it("returns Insufficient Data when layers are missing", () => {

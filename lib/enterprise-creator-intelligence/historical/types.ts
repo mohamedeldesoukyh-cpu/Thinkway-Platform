@@ -1,7 +1,11 @@
 /**
  * Enterprise Creator Intelligence — Historical (Sprint 1)
  * Monthly time-series primitives + derived growth.
+ * Canonical historical foundation — not a full insight engine.
  */
+
+import type { CreatorHistoricalExplainability } from "@/lib/enterprise-creator-intelligence/historical/explainability";
+import type { EvidenceCoverage } from "@/lib/enterprise-creator-intelligence/shared/types";
 
 export type CreatorIntelligencePlatform = string;
 
@@ -47,6 +51,10 @@ export type CreatorHistoricalMonthlySeries = {
   influencerId: string;
   platform: string | null;
   months: CreatorMonthlyMetrics[];
+  /** Completeness of historical information — not Confidence. */
+  evidenceCoverage: EvidenceCoverage;
+  /** Lightweight wrapper — Sprint 1 rows remain series primitives. */
+  explainability: CreatorHistoricalExplainability;
 };
 
 /** AI-ready hook — no AI execution in Sprint 1. */

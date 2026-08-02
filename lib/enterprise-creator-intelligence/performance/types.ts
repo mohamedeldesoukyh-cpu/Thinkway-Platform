@@ -4,6 +4,7 @@
  */
 
 import type { AnalysisWindowKey } from "@/lib/enterprise-creator-intelligence/category-brand/types";
+import type { EvidenceCoverage } from "@/lib/enterprise-creator-intelligence/shared/types";
 
 export type { AnalysisWindowKey };
 
@@ -206,6 +207,8 @@ export type CreatorPerformanceIntelligence = {
   reliability: PerformanceReliabilityInsight;
   forecastReadiness: ForecastReadiness;
   planningReadiness: PerformancePlanningReadiness;
+  /** Completeness of performance information — not Confidence. */
+  evidenceCoverage: EvidenceCoverage;
   source: PerformanceSource;
   aiHints: CreatorPerformanceAiHints;
   consumers: readonly string[];

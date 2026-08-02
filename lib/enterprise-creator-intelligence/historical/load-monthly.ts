@@ -1,11 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { deriveGrowthTrend } from "@/lib/enterprise-creator-intelligence/historical/compute";
+import { enrichHistoricalSeries } from "@/lib/enterprise-creator-intelligence/historical/explainability";
 import type {
   CreatorHistoricalAiHints,
   CreatorHistoricalMonthlySeries,
   CreatorMonthlyMetrics,
 } from "@/lib/enterprise-creator-intelligence/historical/types";
+import type { EciFactsCache } from "@/lib/enterprise-creator-intelligence/shared/facts-cache";
 import { isMissingTableError } from "@/lib/platform/schema-validation";
 
 function mapRow(row: Record<string, unknown>): CreatorMonthlyMetrics {
@@ -40,45 +42,57 @@ export async function loadCreatorMonthlyMetrics(
     influencerId: string;
     platform?: string | null;
     limitMonths?: number;
+    cache?: EciFactsCache;
   }
 ): Promise<CreatorHistoricalMonthlySeries> {
-  let query = supabase
-    .from("creator_intelligence_monthly_metrics")
-    .select(
-      `
+  const platform = input.platform ?? null;
+  const load = async () => {
+    let query = supabase
+      .from("creator_intelligence_monthly_metrics")
+      .select(
+        `
       influencer_id, platform, period_month,
       followers, following, posts_count,
       avg_views, median_views, engagement_rate, posting_frequency_per_week,
       monthly_growth_rate, follower_difference,
       sample_capture_count, source, computed_at, created_at
     `
-    )
-    .eq("influencer_id", input.influencerId)
-    .order("period_month", { ascending: true })
-    .limit(input.limitMonths ?? 36);
+      )
+      .eq("influencer_id", input.influencerId)
+      .order("period_month", { ascending: true })
+      .limit(input.limitMonths ?? 36);
 
-  if (input.platform) {
-    query = query.eq("platform", input.platform);
-  }
-
-  const { data, error } = await query;
-  if (error) {
-    if (isMissingTableError(error.message, error.code)) {
-      return {
-        influencerId: input.influencerId,
-        platform: input.platform ?? null,
-        months: [],
-      };
+    if (input.platform) {
+      query = query.eq("platform", input.platform);
     }
-    throw new Error(error.message);
-  }
 
-  const months = ((data ?? []) as Record<string, unknown>[]).map(mapRow);
-  return {
-    influencerId: input.influencerId,
-    platform: input.platform ?? months[0]?.platform ?? null,
-    months,
+    const { data, error } = await query;
+    if (error) {
+      if (isMissingTableError(error.message, error.code)) {
+        return enrichHistoricalSeries({
+          influencerId: input.influencerId,
+          platform,
+          months: [],
+        });
+      }
+      throw new Error(error.message);
+    }
+
+    const months = ((data ?? []) as Record<string, unknown>[]).map(mapRow);
+    return enrichHistoricalSeries({
+      influencerId: input.influencerId,
+      platform: input.platform ?? months[0]?.platform ?? null,
+      months,
+    });
   };
+
+  if (!input.cache) return load();
+  return input.cache.getOrCompute(
+    "monthly_metrics",
+    input.influencerId,
+    platform,
+    load
+  );
 }
 
 /** AI-ready hints — no AI execution. */

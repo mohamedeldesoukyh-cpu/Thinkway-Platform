@@ -1,7 +1,7 @@
 # Platform Capability Registry
 
 **Status:** Permanent governance registry — **canonical**  
-**Updated:** 2026-08-02 — Release 2.3 Phase 1 · Enterprise Creator Intelligence ACTIVE (Sprint 1–6 · Acceptance CONDITIONAL — not frozen)  
+**Updated:** 2026-08-02 — Release 2.3 Phase 1 · Enterprise Creator Intelligence FROZEN · Maintenance Mode · COMPLETE  
 **Parent:** [`PLATFORM_ARCHITECTURE_COMPLIANCE.md`](./PLATFORM_ARCHITECTURE_COMPLIANCE.md)
 
 Every future enterprise module must **extend** registered capabilities. Parallel engines are forbidden.
@@ -15,7 +15,7 @@ Every future enterprise module must **extend** registered capabilities. Parallel
 | Platform Bulk Operations Framework | Frozen · mandatory | `components/workspace/bulk-operations/` | [`PLATFORM_BULK_OPERATIONS_FRAMEWORK.md`](./PLATFORM_BULK_OPERATIONS_FRAMEWORK.md) | All register multi-select work |
 | **Enterprise Document Lifecycle Engine** | **Maintenance Mode · frozen · protected · mandatory** | `lib/document-lifecycle/` | [`ENTERPRISE_DOCUMENT_LIFECYCLE.md`](./ENTERPRISE_DOCUMENT_LIFECYCLE.md) | Document state transitions only |
 | **Enterprise Change Impact Engine** | **Maintenance Mode · frozen · protected · mandatory** | `lib/change-impact/` | [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md) · [`ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md`](./ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md) | Every business-change interpretation |
-| **Enterprise Creator Intelligence** | **ACTIVE** (not frozen) · Sprint 1–6 protected · Acceptance **CONDITIONAL** | `lib/enterprise-creator-intelligence/` | [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) | Planning · Client · Campaign · Reporting · Analytics · AI hooks · Mobile |
+| **Enterprise Creator Intelligence** | **Maintenance Mode · frozen · protected · COMPLETE** | `lib/enterprise-creator-intelligence/` | [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) | Planning · Client · Campaign · Reporting · Analytics · AI hooks · Mobile |
 
 ---
 
@@ -103,14 +103,25 @@ Document state transitions and available actions from document state only (`reso
 
 ---
 
-## Enterprise Creator Intelligence (ACTIVE — Release 2.3 Phase 1)
+## Enterprise Creator Intelligence (FROZEN — Maintenance Mode · COMPLETE)
 
-**Capability status: ACTIVE — Acceptance CONDITIONAL — do not freeze.**  
-Sprint 1–6 are **protected implementation baselines**. Open gates in [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) (G1 consumer SSOT wiring · G2 Historical series contract · G3 investment load caching). **Do not begin Planning Workspace** until freeze is approved.
+**Capability status: Maintenance Mode · frozen · protected · COMPLETE.**  
+Acceptance: [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) — all gates **PASS**.  
+**Canonical entry:** `loadCreatorIntelligenceBundle` / `loadCreatorIntelligenceBundles`  
+**Shared cache:** `createEciFactsCache` — compute once, reuse; never changes calculations.  
+**Active initiative:** Planning Workspace may begin — must consume this package only.
+
+### Maintenance Mode
+
+- Defect / type / build / cache-performance fixes allowed  
+- No redesign of Sprint 1–6 contracts  
+- No parallel creator investment / commercial / audience / performance / category engines  
+- Discovery Thinkway Score remains Discovery-only — never Planning investment SSOT  
+- No Production deploy without explicit approval  
 
 ### Responsibility
 
-Platform creator time-series and intelligence for Planning Workspace, Client Workspace, Reporting Hub, AI Copilot (hooks only), and Mobile. **Not** a Discovery feature.
+Platform creator time-series and intelligence for Planning Workspace, Client Workspace, Campaign Workspace, Reporting Hub, Enterprise Analytics, AI Copilot (hooks only), and Mobile. **Not** a Discovery feature.
 
 ### Sprint 1 — Historical Creator Intelligence (protected baseline)
 
@@ -191,20 +202,21 @@ Platform creator time-series and intelligence for Planning Workspace, Client Wor
 | Entry points | `loadCreatorInvestmentIntelligence` / `computeCreatorInvestmentIntelligence` |
 | Reuse | Sprint 1–5 intelligence only — map classifications; never recalculate layer engines |
 | AI | `buildInvestmentAiHints` only — **no AI execution** |
-| Acceptance | [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) — Product gate before freeze / Planning Workspace |
 | Migration | `20260802170000_enterprise_creator_intelligence_investment.sql` (Dev applied) |
 | Git baseline | `d4107623` on `origin/develop` |
+| Evidence Coverage | First-class on every layer; confidence capped by evidence coverage |
+| Platform SSOT | `loadCreatorIntelligenceBundle` — Planning → Mobile |
 
 ### Extension rules
 
 1. Reuse IPL + metrics history + campaign commercial/performance loaders + taxonomy inference + demographic columns + layer intelligence — do not duplicate calculation engines.  
-2. Creator Investment Intelligence is the final Phase 1 composition layer — consumers must call it rather than invent parallel scores.  
+2. Platform consumers must call `loadCreatorIntelligenceBundle` — never invent parallel scores.  
 3. Creator business changes that affect issued documents → Change Impact → Document Lifecycle.  
-4. Bulk refresh/backfill → Platform Bulk Operations Framework.  
+4. Bulk refresh/backfill → Platform Bulk Operations Framework + shared ECI cache.  
 5. Money → Financial Display Standard.  
 6. No Production deploy without explicit approval.  
-7. Parent capability stays **ACTIVE** until Product Acceptance Review is approved — then freeze.  
-8. Do **not** begin Planning Workspace until Acceptance is approved.
+7. Maintenance Mode — extend with sibling layers; do not redesign Sprint 1–6.  
+8. Planning Workspace is the active implementation initiative and must bind to this SSOT.
 
 ### Spec
 

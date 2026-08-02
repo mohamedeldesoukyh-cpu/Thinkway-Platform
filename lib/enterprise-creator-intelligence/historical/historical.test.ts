@@ -12,6 +12,7 @@ import {
   previousPeriodMonth,
   toPeriodMonth,
 } from "@/lib/enterprise-creator-intelligence/historical/period";
+import { enrichHistoricalSeries } from "@/lib/enterprise-creator-intelligence/historical/explainability";
 import { buildHistoricalAiHints } from "@/lib/enterprise-creator-intelligence/historical/load-monthly";
 
 describe("Enterprise Creator Intelligence — Historical Sprint 1", () => {
@@ -49,7 +50,7 @@ describe("Enterprise Creator Intelligence — Historical Sprint 1", () => {
   });
 
   it("exposes AI-ready growth hints without running AI", () => {
-    const hints = buildHistoricalAiHints({
+    const series = enrichHistoricalSeries({
       influencerId: "inf-1",
       platform: "instagram",
       months: [
@@ -89,10 +90,13 @@ describe("Enterprise Creator Intelligence — Historical Sprint 1", () => {
         },
       ],
     });
+    const hints = buildHistoricalAiHints(series);
     assert.equal(hints.seriesAvailable, true);
     assert.equal(hints.monthCount, 2);
     assert.equal(hints.growthTrend, "up");
     assert.equal(hints.recommendRefresh, false);
+    assert.ok(series.evidenceCoverage.percent != null);
+    assert.ok(series.explainability.meaning.length > 0);
     assert.equal(deriveGrowthTrend([{ monthlyGrowthRate: -0.05 }]), "down");
   });
 });

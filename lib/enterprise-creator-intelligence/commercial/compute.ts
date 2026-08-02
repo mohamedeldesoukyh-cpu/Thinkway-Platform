@@ -1,5 +1,9 @@
 import type { PerformanceMetricInput } from "@/lib/campaigns/performance-calculations";
 import { computeCommercialConfidence } from "@/lib/enterprise-creator-intelligence/commercial/confidence";
+import {
+  clampConfidenceToEvidence,
+  commercialEvidenceCoverage,
+} from "@/lib/enterprise-creator-intelligence/shared/evidence-coverage";
 import { buildCommercialMetric } from "@/lib/enterprise-creator-intelligence/commercial/build-metric";
 import {
   FORMULA_IDS,
@@ -542,9 +546,40 @@ export function computeCreatorCommercialIntelligence(
     }),
   ];
 
-  const commercialHealth = computeCommercialHealth(metrics);
+  const evidenceCoverage = commercialEvidenceCoverage({
+    campaignCount,
+    publicationCount: facts.publications.length,
+    quoteCount: facts.quotes.length,
+    monthCount: facts.historicalMonths.length,
+  });
+
+  const guardedMetrics = metrics.map((metric) => {
+    const percent = clampConfidenceToEvidence(
+      metric.confidence.percent,
+      evidenceCoverage.percent
+    );
+    return {
+      ...metric,
+      confidence: {
+        ...metric.confidence,
+        percent,
+        reason:
+          percent != null &&
+          metric.confidence.percent != null &&
+          percent < metric.confidence.percent
+            ? `${metric.confidence.reason} Capped by Evidence Coverage ${evidenceCoverage.percent}%.`
+            : metric.confidence.reason,
+      },
+      explainability: {
+        ...metric.explainability,
+        confidence: percent,
+      },
+    };
+  });
+
+  const commercialHealth = computeCommercialHealth(guardedMetrics);
   const investmentReadiness = computeInvestmentReadiness({
-    metrics,
+    metrics: guardedMetrics,
     campaignCount,
   });
 
@@ -553,11 +588,12 @@ export function computeCreatorCommercialIntelligence(
     platform: facts.platform,
     currencyCode,
     computedAt,
-    metrics,
+    metrics: guardedMetrics,
     commercialHealth,
     investmentReadiness,
+    evidenceCoverage,
     aiHints: buildAiHints(
-      metrics,
+      guardedMetrics,
       commercialHealth.level,
       investmentReadiness.status
     ),

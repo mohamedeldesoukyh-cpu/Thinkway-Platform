@@ -4,6 +4,7 @@
  */
 
 import type { AnalysisWindowKey } from "@/lib/enterprise-creator-intelligence/category-brand/types";
+import type { EvidenceCoverage } from "@/lib/enterprise-creator-intelligence/shared/types";
 
 export type { AnalysisWindowKey };
 
@@ -187,6 +188,8 @@ export type CreatorAudienceIntelligence = {
   geography: AudienceGeographyInsight;
   languages: AudienceLanguageInsight;
   businessReadiness: AudienceBusinessReadiness;
+  /** Completeness of audience information — not Confidence. */
+  evidenceCoverage: EvidenceCoverage;
   source: AudienceSource;
   aiHints: CreatorAudienceAiHints;
   consumers: readonly string[];
