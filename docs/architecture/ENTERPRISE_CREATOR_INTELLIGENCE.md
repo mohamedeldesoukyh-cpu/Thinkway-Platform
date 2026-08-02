@@ -139,7 +139,7 @@ import {
 | Sprint | Scope | Status |
 |--------|-------|--------|
 | 1 | Historical Creator Intelligence | **Protected baseline** (`c31da64e`) |
-| 2 | Commercial Intelligence | **Protected baseline** (Product hardening complete) |
+| 2 | Commercial Intelligence | **Protected baseline** (`7c0f6984`) |
 | 3 | Category Intelligence (behaviour %) | Not started — gated on Product approval |
 | 4 | Brand Intelligence | Not started |
 | 5 | Internal Campaign Intelligence | Not started |

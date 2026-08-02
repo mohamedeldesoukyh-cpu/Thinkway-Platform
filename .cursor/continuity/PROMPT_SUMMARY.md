@@ -7,7 +7,7 @@
 | Sprint | Scope | Status |
 |--------|-------|--------|
 | 1 | Historical Creator Intelligence | **Protected baseline** (`c31da64e`) |
-| 2 | Commercial Intelligence | **Protected baseline** — Product hardening complete; commit/push after this land |
+| 2 | Commercial Intelligence | **Protected baseline** (`7c0f6984`) |
 | 3–6 | Category / Brand / Campaign / Investment Score | Not started — gated on Product approval |
 
 - Spec: `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE.md`
