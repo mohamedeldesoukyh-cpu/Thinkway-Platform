@@ -41,8 +41,13 @@ export function audienceInterestList(creator: UnifiedCreatorResult): string[] {
     .map((lower) => parts.find((value) => value.toLowerCase() === lower) ?? lower);
 }
 
+/** @deprecated Investment display SSOT is ECI — use discoveryInvestmentScore. */
 export function thinkwayAiScore(creator: UnifiedCreatorResult): number | null {
-  return creator.thinkway_score ?? creator.brand_fit_score ?? null;
+  if (creator.eci_investment_score != null && Number.isFinite(creator.eci_investment_score)) {
+    return Math.min(100, Math.max(0, Math.round(creator.eci_investment_score)));
+  }
+  // Do not fall back to Thinkway / brand_fit as investment SSOT.
+  return null;
 }
 
 export function formatCreatorCount(value: number | null | undefined): string {

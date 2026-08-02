@@ -4,7 +4,8 @@ import { resolveCountryCode } from "@/lib/creators/country-code";
 import {
   resolveCreatorCountryCodes,
 } from "@/lib/creators/country-inference";
-import type { UnifiedCreatorBrowseFilters, UnifiedCreatorResult } from "@/lib/creators/types";import {
+import type { UnifiedCreatorBrowseFilters, UnifiedCreatorResult } from "@/lib/creators/types";
+import {
   audienceFilterFromSearchFields,
   hasAnyAudienceFilter,
   matchesAudienceFilter,

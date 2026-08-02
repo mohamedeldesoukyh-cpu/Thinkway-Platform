@@ -85,7 +85,7 @@ function buildRows(bundle: CreatorCompareBundle): CompareRow[] {
       nums: safety,
     },
     {
-      label: "AI Score",
+      label: "Investment Score",
       cells: aiScores.map((v) => (v != null ? String(Math.round(v)) : "—")),
       nums: aiScores,
     },

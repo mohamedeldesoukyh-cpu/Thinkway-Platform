@@ -623,7 +623,7 @@ function SimilarCreatorsList({
             displayName={item.display_name}
             avatarUrl={vm.avatarUrl}
             profileUrl={vm.profileUrl}
-            thinkwayStarLabel={formatThinkwayStarLabel(item.thinkway_score)}
+            thinkwayStarLabel={formatThinkwayStarLabel(item.eci_investment_score)}
             secondaryLine={secondaryLine}
             statusLabel={formatCreatorRecencyLabel(item.last_enriched_at, item.updated_at)}
             size={compact ? "rail" : "compact"}
@@ -685,7 +685,7 @@ function SimilarCreatorsMaximizeDialog({
                     displayName={item.display_name}
                     avatarUrl={vm.avatarUrl}
                     profileUrl={vm.profileUrl}
-                    thinkwayStarLabel={formatThinkwayStarLabel(item.thinkway_score)}
+                    thinkwayStarLabel={formatThinkwayStarLabel(item.eci_investment_score)}
                     secondaryLine={secondaryLine}
                     statusLabel={formatCreatorRecencyLabel(item.last_enriched_at, item.updated_at)}
                     size="compact"
@@ -848,9 +848,16 @@ export function CreatorDetailSheet({
   const canAssign = isAssignableCreator(identityCreator) && Boolean(onAssign);
   const latestFollowers = history?.followers.at(-1)?.value ?? null;
   const brandCategory = displayCreator.ai_niche ?? displayCreator.ai_category ?? "No niche tagged";
+  const investmentScore =
+    displayCreator.eci_investment_score != null &&
+    Number.isFinite(displayCreator.eci_investment_score)
+      ? Math.min(100, Math.max(0, Math.round(displayCreator.eci_investment_score)))
+      : null;
+  const investmentRecommendation =
+    displayCreator.eci_investment_recommendation?.trim() || null;
   const brandFitWidth =
-    displayCreator.brand_fit_score != null
-      ? `${Math.max(8, Math.round((displayCreator.brand_fit_score / 100) * 32))}px`
+    investmentScore != null
+      ? `${Math.max(8, Math.round((investmentScore / 100) * 32))}px`
       : "32px";
 
   function handleCreatorUpdated(
@@ -1116,24 +1123,25 @@ export function CreatorDetailSheet({
                   <DetailSection>
                     <div className="creator-detail-sheet-highlight-grid">
                       <div className="creator-detail-sheet-highlight-card creator-detail-sheet-highlight-card--score">
-                        <p className="creator-detail-sheet-highlight-card__label">Thinkway score</p>
+                        <p className="creator-detail-sheet-highlight-card__label">Investment score</p>
                         <p className="creator-detail-sheet-highlight-card__value">
-                          {Math.round(displayCreator.thinkway_score)}
+                          {investmentScore != null ? investmentScore : "—"}
                         </p>
                         <p className="creator-detail-sheet-highlight-card__meta">
-                          Source confidence {Math.round(displayCreator.source_confidence)}%
+                          {investmentRecommendation ??
+                            `Source confidence ${Math.round(displayCreator.source_confidence)}%`}
                         </p>
                       </div>
                       <div className="creator-detail-sheet-highlight-card">
-                        <p className="creator-detail-sheet-highlight-card__label">Brand fit</p>
+                        <p className="creator-detail-sheet-highlight-card__label">Category</p>
                         <div
                           className="creator-detail-sheet-highlight-card__bar"
                           style={{ width: brandFitWidth }}
                         />
                         <p className="creator-detail-sheet-highlight-card__category">{brandCategory}</p>
-                        {displayCreator.brand_fit_score != null ? (
+                        {investmentScore != null ? (
                           <p className="creator-detail-sheet-highlight-card__meta">
-                            Score {Math.round(displayCreator.brand_fit_score)}
+                            Investment {investmentScore}
                           </p>
                         ) : null}
                       </div>

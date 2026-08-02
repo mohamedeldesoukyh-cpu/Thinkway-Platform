@@ -20,6 +20,10 @@ import type {
 import { resolvePrimaryProfileUrl } from "@/lib/discovery/profile-url";
 import { resolveCreatorDiscoverySource } from "@/features/discovery/components/creator-search/creator-discovery-source";
 import { audienceCountryLabel, brandSafetyMeta, formatEngagementRate, normalizeCountryCode } from "@/features/discovery/components/creator-search/creator-search-utils";
+import {
+  discoveryInvestmentScore,
+  formatDiscoveryInvestmentStar,
+} from "@/features/discovery/services/eci/enrich-creators-with-eci";
 import { formatCreatorCountryLabels } from "@/lib/creators/creator-display-utils";
 import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
 import {
@@ -60,8 +64,15 @@ export type DiscoveryCreatorViewModel = {
   primaryPlatform: UnifiedCreatorPlatform | null;
   platformStats: PlatformBrowseStatRow[];
   feedPublications: CreatorRecentPublication[];
+  /**
+   * Star label (0–10) for Card/hover — sourced from ECI investment score only.
+   * Field name retained for Discovery UI contract compatibility.
+   */
   thinkwayStarLabel: string;
+  /** Investment score (0–100) from ECI — null when bundle unavailable. */
   thinkwayScore: number | null;
+  /** ECI investment recommendation label when available. */
+  investmentRecommendation: string | null;
   brandSafety: DiscoveryCreatorBrandSafety;
   enrichmentStatus: CreatorEnrichmentStatus;
   discoverySource: Extract<DataSource, "apify" | "imported">;
@@ -80,14 +91,9 @@ function truncateBio(bio: string | null | undefined, max: number): string | null
   return trimmed.length <= max ? trimmed : `${trimmed.slice(0, max - 1)}…`;
 }
 
-function formatThinkwayStar(score: number | null | undefined): string {
-  if (score == null || !Number.isFinite(score)) return "—";
-  return (Math.max(0, Math.min(100, score)) / 10).toFixed(1);
-}
-
-/** Star rating label (0–10) for profile summary and exact row. */
+/** Star rating label (0–10) — ECI investment score only (never Thinkway / brand_fit). */
 export function formatThinkwayStarLabel(score: number | null | undefined): string {
-  return formatThinkwayStar(score);
+  return formatDiscoveryInvestmentStar(score);
 }
 
 function resolveCountryFlagCodes(
@@ -258,8 +264,9 @@ export function buildDiscoveryCreatorViewModel(
       platforms: displayPlatforms,
     }),
     feedPublications: resolveFeedPublications(creator),
-    thinkwayStarLabel: formatThinkwayStar(creator.thinkway_score),
-    thinkwayScore: creator.thinkway_score ?? null,
+    thinkwayStarLabel: formatDiscoveryInvestmentStar(discoveryInvestmentScore(creator)),
+    thinkwayScore: discoveryInvestmentScore(creator),
+    investmentRecommendation: creator.eci_investment_recommendation ?? null,
     brandSafety: brandSafetyMeta(creator.authenticity_score),
     enrichmentStatus: resolveCreatorEnrichmentStatus(creator.enrichment_status),
     discoverySource: resolveCreatorDiscoverySource(creator, {

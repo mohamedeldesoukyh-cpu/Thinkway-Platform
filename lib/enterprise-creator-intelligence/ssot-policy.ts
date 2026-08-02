@@ -13,6 +13,8 @@ export const ECI_PLATFORM_CONSUMERS = [
   "Enterprise Analytics",
   "AI Copilot",
   "Mobile",
+  /** Discovery Card / Detail / Compare — investment display only via loadCreatorIntelligenceBundle(s). */
+  "Discovery Investment Display",
 ] as const;
 
 /**

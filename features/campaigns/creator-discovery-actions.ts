@@ -24,6 +24,7 @@ import {
   traceAcquisitionPollServer,
   traceBrowseInvocationServer,
 } from "@/lib/discovery/browse-invocation-trace";
+import { enrichCreatorsWithEciInvestment } from "@/features/discovery/services/eci/enrich-creators-with-eci";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   cancelAcquisitionSession,
@@ -196,16 +197,20 @@ export async function browseUnifiedCreatorsAction(
   searchTrace("3_unified_browse_filters", { browseFilters: filters }, { path: "discovery" });
   try {
     const result = await browseUnifiedCreatorsWithCoverageBackfill(supabase, filters, "discovery");
+    const creators = await enrichCreatorsWithEciInvestment(supabase, result.creators, {
+      platform: filters.platform ?? filters.platforms?.[0] ?? null,
+      concurrency: 6,
+    });
     searchTrace("9_final_creator_count", {
       total: result.total,
-      creatorCount: result.creators.length,
+      creatorCount: creators.length,
       internal_count: result.internal_count,
       discovery_count: result.discovery_count,
       coverage_level: result.coverage?.coverageLevel ?? null,
       backfill_queued: result.backfill?.queued ?? false,
       backfill_completed: result.backfill?.completed ?? false,
     }, { path: "discovery" });
-    return result;
+    return { ...result, creators };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Creator search failed";
     // Re-throw a stable, user-visible message so Production digests don't mask timeouts.
@@ -221,7 +226,12 @@ export async function browseUnifiedCreatorsAction(
 export async function getUnifiedCreatorDetailAction(unifiedId: string) {
   if (!unifiedId?.trim()) return null;
   const { supabase } = await requireUserId();
-  return getUnifiedCreatorById(supabase, unifiedId.trim());
+  const creator = await getUnifiedCreatorById(supabase, unifiedId.trim());
+  if (!creator) return null;
+  const [enriched] = await enrichCreatorsWithEciInvestment(supabase, [creator], {
+    concurrency: 1,
+  });
+  return enriched ?? creator;
 }
 
 /** Lightweight stats for discovery avatar hover card (2s delay). */

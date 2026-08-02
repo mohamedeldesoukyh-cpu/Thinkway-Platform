@@ -167,6 +167,14 @@ export type UnifiedCreatorResult = {
   };
   /** Campaign brief weighted relevance (0–100) — browse-only, set by AI search scoring. */
   campaign_relevance_score?: number | null;
+  /**
+   * Enterprise Creator Intelligence investment score (0–100) — browse-only overlay.
+   * Card / Detail / Compare investment display SSOT. Loaded via loadCreatorIntelligenceBundles.
+   * Never use thinkway_score / brand_fit_score as investment SSOT when this is present.
+   */
+  eci_investment_score?: number | null;
+  /** ECI investment recommendation label — browse-only overlay. */
+  eci_investment_recommendation?: string | null;
 };
 
 export type UnifiedCreatorBrowseFilters = {

@@ -239,6 +239,21 @@ export type CreatorsSectionData = {
   vendorDiscoveryFunnel?: DiscoveryPipelineStage[];
   /** Studio debug — cip vs keyword discovery path. */
   discoveryEngine?: "cip" | "keyword";
+  /**
+   * Enterprise Constraint Engine report — preferred relaxations only.
+   * Mandatory violators are never recommended.
+   */
+  constraintReport?: {
+    mandatory: Array<{ key: string; value: string; label: string }>;
+    rejectedMandatoryCount: number;
+    relaxations: Array<{
+      key: string;
+      value: string;
+      label: string;
+      reason: string;
+      businessImpact: string;
+    }>;
+  };
   cipProfileId?: string;
   fitScoreCount?: number;
   lastDiscoveryAt?: string;

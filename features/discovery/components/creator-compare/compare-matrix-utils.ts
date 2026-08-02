@@ -98,7 +98,7 @@ export function buildCompareMetricRows(bundle: CreatorCompareBundle): CompareMet
     },
     {
       id: "ai_score",
-      label: "AI Score",
+      label: "Investment Score",
       cells: entries.map((e) => {
         const score = thinkwayAiScore(e.creator);
         return score != null ? String(Math.round(score)) : "—";

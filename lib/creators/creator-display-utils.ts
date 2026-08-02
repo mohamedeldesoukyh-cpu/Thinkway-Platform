@@ -266,7 +266,11 @@ export function estimatedPricingLabel(_creator: UnifiedCreatorResult): string {
 }
 
 export function thinkwayAiScore(creator: UnifiedCreatorResult): number | null {
-  return creator.thinkway_score ?? creator.brand_fit_score ?? null;
+  if (creator.eci_investment_score != null && Number.isFinite(creator.eci_investment_score)) {
+    return Math.min(100, Math.max(0, Math.round(creator.eci_investment_score)));
+  }
+  // Investment display SSOT is ECI only — never Thinkway / brand_fit.
+  return null;
 }
 
 export function exportCreatorsCsv(creators: UnifiedCreatorResult[]): string {

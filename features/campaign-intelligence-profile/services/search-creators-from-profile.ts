@@ -4,6 +4,7 @@ import { browseUnifiedCreatorsWithCoverageBackfill } from "@/lib/discovery/cover
 import { rerankCreatorsByCampaignFit } from "@/lib/discovery/campaign-fit-rerank";
 import { rankBrowseCreatorsForCampaign } from "@/lib/discovery/rank-browse-for-campaign";
 import { mergeAiCandidatePools } from "@/lib/discovery/ai-candidate-pool";
+import { applyEnterpriseConstraints } from "@/lib/discovery/enterprise-constraint-engine";
 import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
 import { dedupeByCreatorId } from "@/lib/creators/dedupe-creators";
 import { searchTrace } from "@/lib/creators/search-trace";
@@ -101,14 +102,28 @@ export async function searchCreatorsFromProfileData(
     );
   }
 
-  const pool = mergeAiCandidatePools(result.creators, relaxedCreators);
+  const pooled = mergeAiCandidatePools(result.creators, relaxedCreators);
+
+  // Enterprise Constraint Engine — mandatory constraints never relax.
+  // Relaxed pool may fetch platform-wide creators for coverage, but violators
+  // of country / platform / language / brand safety are removed before ranking.
+  const constrained = applyEnterpriseConstraints(pooled, mappedFilters);
+  const pool = constrained.creators;
+
   searchTrace(
     "cip_search_candidate_pool",
     {
       profileId,
       strictCount: result.creators.length,
       relaxedCount: relaxedCreators.length,
-      pooledCount: pool.length,
+      pooledCount: pooled.length,
+      mandatoryCompliantCount: pool.length,
+      rejectedMandatoryCount: constrained.rejectedMandatoryCount,
+      preferredRelaxations: constrained.relaxations.map((r) => ({
+        key: r.key,
+        value: r.value,
+        reason: r.reason,
+      })),
     },
     { path: "ai" }
   );
@@ -184,6 +199,8 @@ export async function searchCreatorsFromProfileData(
   const slate = composeCreatorSlate(dedupedCreators, {
     platforms: preferredPlatforms,
     tierMix,
+    /** Platform is a mandatory enterprise constraint — never fall back to off-platform. */
+    strictPlatform: preferredPlatforms.length > 0,
   });
   const factsLite = {
     objective: profile.objective ?? profile.objectives?.join(" "),
@@ -210,10 +227,18 @@ export async function searchCreatorsFromProfileData(
 
   return {
     creators: slateCreators,
-    // Strict total can be 0 while the relaxed pool still yields a rankable
-    // slate — report the candidates actually available to the campaign.
-    total: Math.max(result.total, pool.length),
+    // Report mandatory-compliant candidates only — never inflate with violators.
+    total: pool.length,
     backfill: result.backfill,
     slate: slate.meta,
+    constraintReport: {
+      mandatory: constrained.mandatory.map((c) => ({
+        key: c.key,
+        value: c.value,
+        label: c.label,
+      })),
+      rejectedMandatoryCount: constrained.rejectedMandatoryCount,
+      relaxations: constrained.relaxations,
+    },
   };
 }

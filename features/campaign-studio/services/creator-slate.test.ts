@@ -48,6 +48,17 @@ test("platform filter falls back instead of returning an empty slate", () => {
   assert.equal(meta.platformFallback, true);
 });
 
+test("strictPlatform never falls back to off-platform creators", () => {
+  const pool = [creator("ig-1", "instagram", 100_000), creator("ig-2", "instagram", 50_000)];
+  const { creators, meta } = composeCreatorSlate(pool, {
+    platforms: ["TikTok"],
+    strictPlatform: true,
+  });
+  assert.equal(creators.length, 0);
+  assert.equal(meta.platformFiltered, true);
+  assert.equal(meta.platformFallback, false);
+});
+
 test("slate tier distribution tracks the strategy mix", () => {
   const pool = [
     // 6 macro (500k–1M per TIER_FILTER_RANGES; 1M+ would be Mega), 8 mid, 8 micro, 8 nano

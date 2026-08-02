@@ -29,6 +29,7 @@ describe("Enterprise Creator Intelligence — Freeze Closure (G1–G3 + Evidence
     assert.ok(ECI_PLATFORM_CONSUMERS.includes("Enterprise Analytics"));
     assert.ok(ECI_PLATFORM_CONSUMERS.includes("AI Copilot"));
     assert.ok(ECI_PLATFORM_CONSUMERS.includes("Mobile"));
+    assert.ok(ECI_PLATFORM_CONSUMERS.includes("Discovery Investment Display"));
     assert.ok(
       isForbiddenEnterpriseIntelligencePath("lib/creators/thinkway-score.ts")
     );

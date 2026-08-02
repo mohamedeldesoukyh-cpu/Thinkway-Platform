@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { suggestCostFromRateCard } from "@/lib/campaigns/line-assignment";
+import { enrichCreatorsWithEciInvestment } from "@/features/discovery/services/eci/enrich-creators-with-eci";
 import { loadCreatorHistoricalMetrics } from "@/lib/creators/historical-metrics";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { getUnifiedCreatorById } from "@/lib/creators/unified-browse";
@@ -149,9 +150,13 @@ export async function loadCreatorCompareBundle(
   unifiedIds: string[]
 ): Promise<CreatorCompareBundle> {
   const ids = [...new Set(unifiedIds)].slice(0, MAX_CREATOR_COMPARE);
-  const creators = (
+  const loaded = (
     await Promise.all(ids.map((id) => getUnifiedCreatorById(supabase, id)))
   ).filter((c): c is UnifiedCreatorResult => c != null);
+
+  const creators = await enrichCreatorsWithEciInvestment(supabase, loaded, {
+    concurrency: 4,
+  });
 
   const entries = await Promise.all(
     creators.map(async (creator) => ({

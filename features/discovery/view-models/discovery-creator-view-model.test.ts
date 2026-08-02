@@ -62,6 +62,8 @@ function creator(overrides: Partial<UnifiedCreatorResult> = {}): UnifiedCreatorR
     ai_niche: null,
     authenticity_score: 82,
     thinkway_score: 80,
+    eci_investment_score: 80,
+    eci_investment_recommendation: "Recommended",
     source_confidence: 0.9,
     brand_fit_score: null,
     is_platform_verified: false,

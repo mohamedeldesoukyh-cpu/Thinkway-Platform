@@ -142,15 +142,19 @@ function buildStageFilters(
         search: undefined,
       };
     case "B_category_only":
+      // Enterprise Constraint Engine: country remains mandatory when known.
+      // Only preferred category breadth may widen — never drop country.
       return {
         ...base,
         categories: categories.length > 0 ? categories : undefined,
+        country: country || undefined,
         search: undefined,
       };
     case "C_industry":
       return {
         ...base,
         categories: expandCategoriesForIndustry(input.intent.industryKey),
+        country: country || undefined,
         search: input.intent.industry.split(/\s+/)[0]?.toLowerCase(),
       };
     case "D_semantic_keywords": {

@@ -91,6 +91,11 @@ export function composeCreatorSlate(
     platforms?: string[];
     tierMix?: TierMixTarget[];
     targetCount?: number;
+    /**
+     * When true (enterprise mandatory platform), never fall back to off-platform
+     * creators — an empty/on-platform slate is required.
+     */
+    strictPlatform?: boolean;
   }
 ): { creators: SearchCreatorCardItem[]; meta: SlateCompositionMeta } {
   const targetCount = Math.min(options.targetCount ?? creators.length, creators.length);
@@ -100,7 +105,7 @@ export function composeCreatorSlate(
 
   // Hard platform constraint: an explicit brief platform excludes off-platform
   // creators entirely; fall back to the unfiltered pool only when the filter
-  // would leave the slate empty-handed.
+  // would leave the slate empty-handed — unless strictPlatform (mandatory).
   let pool = creators;
   let platformFiltered = false;
   let platformFallback = false;
@@ -108,7 +113,11 @@ export function composeCreatorSlate(
     const filtered = creators.filter((c) =>
       requestedPlatforms.includes(normalizePlatformKey(c.platform))
     );
-    if (filtered.length >= Math.min(3, targetCount)) {
+    if (options.strictPlatform) {
+      pool = filtered;
+      platformFiltered = true;
+      platformFallback = false;
+    } else if (filtered.length >= Math.min(3, targetCount)) {
       pool = filtered;
       platformFiltered = true;
     } else {
