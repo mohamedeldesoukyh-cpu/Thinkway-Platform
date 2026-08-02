@@ -106,6 +106,7 @@ Document state transitions and available actions from document state only (`reso
 ## Enterprise Creator Intelligence (FROZEN — Maintenance Mode · COMPLETE)
 
 **Capability status: Maintenance Mode · frozen · protected · COMPLETE.**  
+**Freeze tip:** `d01f45f3` on `origin/develop`  
 Acceptance: [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) — all gates **PASS**.  
 **Canonical entry:** `loadCreatorIntelligenceBundle` / `loadCreatorIntelligenceBundles`  
 **Shared cache:** `createEciFactsCache` — compute once, reuse; never changes calculations.  

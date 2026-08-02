@@ -2,7 +2,7 @@
 
 **Branch focus:** `develop`.
 
-**COMPLETE / FROZEN:** **Enterprise Creator Intelligence** — Maintenance Mode · protected platform capability
+**COMPLETE / FROZEN:** **Enterprise Creator Intelligence** — Maintenance Mode · protected platform capability (`d01f45f3`)
 
 | Sprint | Scope | Status |
 |--------|-------|--------|
