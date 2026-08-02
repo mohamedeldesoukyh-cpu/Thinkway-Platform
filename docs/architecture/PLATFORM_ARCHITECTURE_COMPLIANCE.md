@@ -79,8 +79,8 @@ Release 2.2d.2 — document state transitions only. Vendor IO / Client IO first.
 **Enterprise Change Impact Engine** (Maintenance Mode · frozen · protected · mandatory): [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md) · [`ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md`](./ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md) · `lib/change-impact/`
 Release 2.2d.2b — intelligence layer above Document Lifecycle. Entry: `applyBusinessChangeImpact` only. Freeze tip `449fd5c0`. Quotation/PO/Invoice/Contract/Report **must extend** these engines — **never** parallel implementations. Initiative **CLOSED**. No Production deploy without approval.
 
-**Enterprise Creator Intelligence** (Active · Release 2.3 Phase 1 · Sprint 1 Historical): [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · `lib/enterprise-creator-intelligence/`
-Extends IPL / influencer metrics history. Monthly time-series SSOT. Planning / Client / Reporting / Mobile / AI-ready hooks. Do not start Sprint 2 until Sprint 1 validated. No Production deploy without approval.
+**Enterprise Creator Intelligence** (**ACTIVE** · Release 2.3 Phase 1 · not frozen): [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · `lib/enterprise-creator-intelligence/`
+Sprint 1 Historical + Sprint 2 Commercial = protected baselines. Product-hardened dashboard model (health · readiness · comparisons · benchmarks · explainability). Do not start Sprint 3 until Product approval. No Production deploy without approval.
 
 ---
 

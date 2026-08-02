@@ -6,29 +6,25 @@
 
 | Sprint | Scope | Status |
 |--------|-------|--------|
-| 1 | Historical Creator Intelligence | **Protected baseline** — approved, committed to `develop` |
-| 2 | Commercial Intelligence | Next — after Sprint 1 land |
-| 3–6 | Category / Brand / Campaign / Investment Score | Not started — gated |
+| 1 | Historical Creator Intelligence | **Protected baseline** (`c31da64e`) |
+| 2 | Commercial Intelligence | **Protected baseline** — Product hardening complete; commit/push after this land |
+| 3–6 | Category / Brand / Campaign / Investment Score | Not started — gated on Product approval |
 
 - Spec: `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE.md`
-- Code: `lib/enterprise-creator-intelligence/`
-- Registry: ACTIVE; only Sprint 1 is protected baseline
+- Code: `lib/enterprise-creator-intelligence/` (`historical/` + `commercial/`)
+- Sprint 2 includes: standard metric object · trend labels · Commercial Health · Investment Readiness · comparison windows · benchmark slots · source verification · explainability
+- Test: `npm run test:enterprise-creator-intelligence`
 - **No Production deploy**
-- Do **not** start Category Intelligence until Sprint 2 reviewed, approved, committed, pushed
+- **Do not start Category Intelligence** until Product approval
 
 **Closed permanently:** Enterprise Document & Change Impact — Maintenance Mode (`449fd5c0`).
 
 | Capability | Status |
 |------------|--------|
-| Enterprise Creator Intelligence | **ACTIVE** · Sprint 1 protected baseline |
+| Enterprise Creator Intelligence | **ACTIVE** · Sprint 1 + Sprint 2 protected baselines |
 | Change Impact / Document Lifecycle | Maintenance Mode · frozen · mandatory |
-| Platform Capability Registry | Canonical |
-
-**Must inherit:** Campaign Workspace Baseline v1.3 · Bulk Framework · Change Impact · Document Lifecycle · BPN · Architecture v1.0 · Financial Display Standard (Sprint 2+).
 
 ## Open / blocked
 
-1. GitHub branch protection (UI)
-2. Do **not** merge to `main` or deploy Production without explicit approval
-
-## Campaign Workspace Baseline v1.3 — FROZEN (Maintenance Mode)
+1. Do **not** merge to `main` or deploy Production without explicit approval
+2. Sprint 3 requires Product approval
