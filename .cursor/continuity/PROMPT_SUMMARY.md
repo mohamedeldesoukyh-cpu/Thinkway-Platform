@@ -1,24 +1,12 @@
 # Prompt Summary — Current Sprint
 
-**Branch focus:** `develop`.
+**Branch focus:** `develop`
 
-**COMPLETE / FROZEN:** **Enterprise Creator Intelligence** — Maintenance Mode · protected platform capability (`d01f45f3`)
+**FROZEN · Maintenance Mode:** Studio Governance (Capability Contract · Mission · Success Criteria · Product Promise · Strategy Engine · Planning Context) + Enterprise Creator Intelligence
 
-| Sprint | Scope | Status |
-|--------|-------|--------|
-| 1 | Historical Creator Intelligence | Protected baseline (`c31da64e`) |
-| 2 | Commercial Intelligence | Protected baseline (`7c0f6984`) |
-| 3 | Category & Brand Intelligence | Protected baseline (`ad861c01`) |
-| 4 | Performance Intelligence | Protected baseline (`54057bd5`) |
-| 5 | Audience Intelligence | Protected baseline (`51836e97`) |
-| 6 | Creator Investment Intelligence | Protected baseline (`d4107623`) |
+**Active:** Release 2.3 Sprint 2 — **Studio × Enterprise Creator Intelligence** (implement · **no automatic commit** · wait for Product review)
 
-- Acceptance: `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md` — **ACCEPTED · FROZEN**
-- SSOT entry: `loadCreatorIntelligenceBundle` (+ batch + shared cache)
-- Evidence Coverage first-class on every layer; confidence capped by coverage
-- Test: `npm run test:enterprise-creator-intelligence` (35)
-- Cursor rule: `thinkway-enterprise-creator-intelligence.mdc`
+**Sprint 2 objective:** Replace Studio legacy planning intelligence with ECI via `loadCreatorIntelligenceBundle` / `loadCreatorIntelligenceBundles` only. Preserve Studio UX · no Media Plan ownership change · no Campaign Workspace change · no intelligence duplication. Recommendations must be explainable, evidence-based, commercially justified, executive-ready.
 
-**Active initiative:** **Planning Workspace** — must consume ECI SSOT only.
-
-**Closed permanently:** Enterprise Document & Change Impact — Maintenance Mode (`449fd5c0`).
+**Constitution:** `docs/architecture/STUDIO_CAPABILITY_CONTRACT.md`  
+**Standing rules:** Studio Capability Contract · Strategy Engine governance · ECI Maintenance Mode · Infrastructure classification

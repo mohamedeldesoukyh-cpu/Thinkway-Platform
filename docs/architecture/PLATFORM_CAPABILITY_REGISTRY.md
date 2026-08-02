@@ -1,8 +1,9 @@
 # Platform Capability Registry
 
 **Status:** Permanent governance registry — **canonical**  
-**Updated:** 2026-08-02 — Release 2.3 Phase 1 · Enterprise Creator Intelligence FROZEN · Maintenance Mode · COMPLETE  
-**Parent:** [`PLATFORM_ARCHITECTURE_COMPLIANCE.md`](./PLATFORM_ARCHITECTURE_COMPLIANCE.md)
+**Updated:** 2026-08-02 — Release 2.3 · Studio Governance FROZEN · ECI FROZEN · Maintenance Mode  
+**Parent:** [`PLATFORM_ARCHITECTURE_COMPLIANCE.md`](./PLATFORM_ARCHITECTURE_COMPLIANCE.md)  
+**Studio Product Constitution:** [`STUDIO_CAPABILITY_CONTRACT.md`](./STUDIO_CAPABILITY_CONTRACT.md) — **FROZEN · Maintenance Mode · COMPLETE** (Mission · Success Criteria · Product Promise · capability categories · Golden Rules)
 
 Every future enterprise module must **extend** registered capabilities. Parallel engines are forbidden.
 
@@ -16,6 +17,7 @@ Every future enterprise module must **extend** registered capabilities. Parallel
 | **Enterprise Document Lifecycle Engine** | **Maintenance Mode · frozen · protected · mandatory** | `lib/document-lifecycle/` | [`ENTERPRISE_DOCUMENT_LIFECYCLE.md`](./ENTERPRISE_DOCUMENT_LIFECYCLE.md) | Document state transitions only |
 | **Enterprise Change Impact Engine** | **Maintenance Mode · frozen · protected · mandatory** | `lib/change-impact/` | [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md) · [`ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md`](./ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md) | Every business-change interpretation |
 | **Enterprise Creator Intelligence** | **Maintenance Mode · frozen · protected · COMPLETE** | `lib/enterprise-creator-intelligence/` | [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) | Planning · Client · Campaign · Reporting · Analytics · AI hooks · Mobile |
+| **Studio Governance** | **Maintenance Mode · frozen · protected · COMPLETE** | `features/campaign-studio/strategy-engine/` · Studio UX | [`STUDIO_CAPABILITY_CONTRACT.md`](./STUDIO_CAPABILITY_CONTRACT.md) · Strategy Engine governance rule | All Studio / Enterprise Planning work |
 
 ---
 
@@ -110,7 +112,7 @@ Document state transitions and available actions from document state only (`reso
 Acceptance: [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) — all gates **PASS**.  
 **Canonical entry:** `loadCreatorIntelligenceBundle` / `loadCreatorIntelligenceBundles`  
 **Shared cache:** `createEciFactsCache` — compute once, reuse; never changes calculations.  
-**Active initiative:** Planning Workspace may begin — must consume this package only.
+**Active initiative:** Studio × Enterprise Creator Intelligence (Release 2.3 Sprint 2) — Studio must consume this package only via `loadCreatorIntelligenceBundle`.
 
 ### Maintenance Mode
 
@@ -122,7 +124,7 @@ Acceptance: [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREAT
 
 ### Responsibility
 
-Platform creator time-series and intelligence for Planning Workspace, Client Workspace, Campaign Workspace, Reporting Hub, Enterprise Analytics, AI Copilot (hooks only), and Mobile. **Not** a Discovery feature.
+Platform creator time-series and intelligence for Studio (Enterprise Planning), Client Workspace, Campaign Workspace, Reporting Hub, Enterprise Analytics, AI Copilot (hooks only), and Mobile. **Not** a Discovery feature.
 
 ### Sprint 1 — Historical Creator Intelligence (protected baseline)
 
@@ -217,8 +219,36 @@ Platform creator time-series and intelligence for Planning Workspace, Client Wor
 5. Money → Financial Display Standard.  
 6. No Production deploy without explicit approval.  
 7. Maintenance Mode — extend with sibling layers; do not redesign Sprint 1–6.  
-8. Planning Workspace is the active implementation initiative and must bind to this SSOT.
+8. Studio (Enterprise Planning) is the active consumer initiative and must bind to this SSOT via `loadCreatorIntelligenceBundle` only.
+
+---
+
+## Studio Governance (FROZEN — Maintenance Mode · COMPLETE)
+
+**Capability status: Maintenance Mode · frozen · protected · COMPLETE.**  
+**Constitution:** [`STUDIO_CAPABILITY_CONTRACT.md`](./STUDIO_CAPABILITY_CONTRACT.md)  
+**Code:** `features/campaign-studio/strategy-engine/` (Planning Context orchestration)  
+**Rules:** `.cursor/rules/thinkway-studio-capability-contract.mdc` · `.cursor/rules/thinkway-strategy-engine-governance.mdc`
+
+### Protected baseline
+
+- Studio Capability Contract (Mission · Success Criteria · Product Promise · categories · Golden Rules)  
+- Strategy Engine Foundation  
+- Planning Context Governance (runtime orchestration only — never a persisted business object)
+
+### Maintenance Mode
+
+- Defect / type / build fixes and compliant capability extensions allowed  
+- No redesign of Mission, Success Criteria, Product Promise, categories, or Golden Rules  
+- No Planning Context table / CRM object / Studio document / saved entity  
+- No Studio ownership of Intelligence or Execution capabilities  
+- No parallel Planning Workspace product outside Studio  
+- Violation → Architecture Reopen + Product approval  
+
+### Active initiative
+
+**Release 2.3 Sprint 2 — Studio × Enterprise Creator Intelligence:** replace Studio legacy planning intelligence with ECI consumption only. Preserve Studio experience. Do not redesign Studio, Media Plan ownership, or Campaign Workspace.
 
 ### Spec
 
-[`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md)
+[`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · [`STUDIO_CAPABILITY_CONTRACT.md`](./STUDIO_CAPABILITY_CONTRACT.md)

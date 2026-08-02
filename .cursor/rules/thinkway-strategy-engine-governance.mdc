@@ -1,0 +1,46 @@
+---
+description: Strategy Engine — Planning Context is runtime orchestration only; never a persisted business object
+alwaysApply: true
+---
+
+# Strategy Engine Governance (Permanent)
+
+**Status:** Permanent platform invariant · part of **Studio Governance FROZEN · Maintenance Mode**  
+**Constitution:** `docs/architecture/STUDIO_CAPABILITY_CONTRACT.md`  
+**Code:** `features/campaign-studio/strategy-engine/`  
+**Type SSOT:** `PlanningContext` (`types/planning-context.ts`)  
+**Product alias:** “Planning Session” = `PlanningContext` (same type; not a second entity)
+
+Planning Context is an **internal runtime orchestration layer**.
+
+## MUST NEVER
+
+Planning Context must **never**:
+
+- become a database table
+- become a CRM business object
+- become a Studio document
+- become a saved entity
+- own business state
+- duplicate business artifacts (Campaign, Media Plan, Proposal, Presentation, Outputs, Budget, Brief, Objectives, etc.)
+
+## MAY ONLY
+
+Planning Context may **only**:
+
+- orchestrate capabilities
+- maintain runtime state
+- coordinate planning entry points
+- coordinate capability interactions
+- project Planning Views (`derivePlanningView` — ephemeral, never persist)
+- apply validated changes back to canonical Platform objects (Campaign Object, Media Plan via `lib/media-plan`, Outputs registry, optional CRM Campaign Header pointer)
+
+## Persistence
+
+All persistent business data remains owned by existing Platform objects.  
+There is **no** Planning Context / Planning Session persistence vehicle.
+
+## Violation
+
+Violation of this rule requires **Architecture Reopen**.  
+Do not “evolve” Planning Context into a document, table, or parallel SSOT without that reopen.

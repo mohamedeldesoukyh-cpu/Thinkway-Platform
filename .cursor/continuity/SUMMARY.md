@@ -27,6 +27,15 @@ Group → Legal Entity (clients) → Brand → Campaign Header → Campaign Line
 
 Environment switch navigates between **hosts** — never switches DB inside one process.
 
+### Infrastructure classification (mandatory for audits)
+
+- **Development:** Railway services are **not fully operational** (resource/usage limits). Failures attributable to Railway on Dev are **Development infrastructure limitations**, not product defects.
+- **Production:** Reference environment where Railway-dependent functionality works correctly.
+- Every audit/review/acceptance must classify: Product/implementation · Infrastructure · Dev limitation · Missing feature · Intentional placeholder.
+- Required report section: **Infrastructure Assumptions**.
+- Never recommend redesign/replace until infrastructure causes are ruled out.
+- Cursor rule: `.cursor/rules/thinkway-infrastructure-classification.mdc` (alwaysApply).
+
 ## Canonical docs
 
 - `docs/THINKWAY_SYSTEM_REFERENCE.md` — product SSOT  
@@ -46,9 +55,12 @@ Environment switch navigates between **hosts** — never switches DB inside one 
 - `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE.md` — **FROZEN · Maintenance Mode · COMPLETE** (`lib/enterprise-creator-intelligence/`); SSOT `loadCreatorIntelligenceBundle`
 - `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md` — Final Product Acceptance **ACCEPTED · FROZEN**
 - `.cursor/rules/thinkway-enterprise-creator-intelligence.mdc` — ECI Maintenance Mode SSOT guardrail (alwaysApply)
-- **Active initiative:** Planning Workspace
-- `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md` — **active** R2.3 Campaign Planning Workspace capability spec (review gate)
-- `docs/capabilities/PLANNING_BOARD_CAPABILITY_REVIEW.md` — **active** R2.3 functional capability review pack
+- `.cursor/rules/thinkway-strategy-engine-governance.mdc` — **permanent:** Planning Context = runtime orchestration only; never a table/CRM/Studio document/saved entity; never owns or duplicates business state; violation → Architecture Reopen
+- `docs/architecture/STUDIO_CAPABILITY_CONTRACT.md` — **Studio Product Constitution · FROZEN · Maintenance Mode · COMPLETE**: Mission · Success Criteria · Product Promise · Planning owns · Intelligence consume-only · Shared services · Execution = Campaign Workspace; Golden Rules; violation → Architecture Reopen + Product approval
+- `.cursor/rules/thinkway-studio-capability-contract.mdc` — Studio Capability Contract guardrail (alwaysApply · FROZEN)
+- `features/campaign-studio/strategy-engine/` — Strategy Engine Foundation (Planning Context orchestration only); persistence remains Campaign Object + Media Plan + Outputs
+- **Active initiative:** Release 2.3 Sprint 2 — Studio × ECI (consume `loadCreatorIntelligenceBundle` only). Parallel Planning Workspace product retired.
+- `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md` — Planning Board = Campaign Media Plan **view** (not a parallel Studio)
 - `docs/architecture/platform-ux/` — Platform UX package (docs 01–12 frozen)  
 - `docs/architecture/CAMPAIGN_MODULE_BASELINE.md` — **protected Campaign baseline** (IA initiative CLOSED)  
 - `docs/architecture/PRODUCT_UX_STANDARDS.md` — platform UX standards (Campaign = canonical)  
@@ -90,7 +102,7 @@ Regression: `npm run test:campaign-workspace-lifecycle-os`.
 
 ## Next functional priority
 
-1. **Active:** Release 2.3 Campaign Planning Workspace — Capability / UX / Spec / Compliance reviews → implement (Planning stage; inherits Campaign Workspace Baseline **v1.3**; operational effort gate required)  
+1. **Active:** Release 2.3 Sprint 2 — Studio × Enterprise Creator Intelligence (consume `loadCreatorIntelligenceBundle` only; preserve Studio UX; no Media Plan / Campaign Workspace ownership change)  
 2. Media Plan Copilot (R2.2b)  
 3. Client Collaboration · Vendor · Creator journeys  
 4. Reporting Hub · Notifications · Enterprise Analytics  

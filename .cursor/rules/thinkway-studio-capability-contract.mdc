@@ -1,0 +1,55 @@
+---
+description: Studio Capability Contract — permanent Product Constitution; prevent Studio feature drift
+alwaysApply: true
+---
+
+# Studio Capability Contract (Permanent)
+
+**Constitution:** `docs/architecture/STUDIO_CAPABILITY_CONTRACT.md`  
+**Status:** **FROZEN · Maintenance Mode · COMPLETE** — Permanent Product Constitution for Studio  
+**Violation → Architecture Reopen + Product approval**
+
+## Maintenance Mode only
+
+- Defect / typo / continuity sync fixes  
+- Cross-links that do not change Mission, Success Criteria, Product Promise, categories, or Golden Rules  
+
+## Forbidden without Architecture Reopen
+
+- Redefining Studio as a campaign builder, creator search tool, or reporting tool  
+- Moving Execution capabilities into Studio  
+- Owning Intelligence engines inside Studio  
+- Forking Shared Platform Services  
+- Weakening Product Promise outcome gate
+
+**Mission (summary):** Transform any brief/objective/planning request into an explainable, evidence-based, boardroom-ready strategy by orchestrating Platform capabilities; reduce planning from days to minutes; produce one unified Planning Package.
+
+**Success Criteria (summary):** Any entry artifact · no fixed workflow · evidence-based commercially justified recommendations · explainable logic · executive-ready proposal/presentation · execution-ready Planning Package · consistent quality · independently licensable capabilities · client confidence in strategy and value.
+
+**Product Promise:** Studio is **not** a campaign builder, creator search tool, or reporting tool. It is the Enterprise Campaign Planning Platform. Every Studio capability must improve ≥1 of: better strategic decisions · client business value · less ops effort · faster enterprise plans · client confidence (logic/evidence/explainability/presentation) · Platform reuse (no duplication) · execution-ready Planning Packages. If none apply → do not implement in Studio.
+
+Studio is capability-driven, entry-point agnostic, and never enforces a workflow. Studio orchestrates planning; it never duplicates intelligence or execution. Studio produces Planning Packages; Campaign Workspace executes them. There is no separate Planning Workspace product outside Studio.
+
+## Categories (mandatory classification)
+
+| Category | Studio role | Examples |
+|----------|-------------|----------|
+| **1. Planning Capabilities** | **Owns** | Brief, Strategy, Media Mix, Scenario Planning, Proposal, Presentation, Executive Narrative, Planning Workflow, Planning Collaboration |
+| **2. Intelligence Capabilities** | **Never owns — consume only** | ECI, Commercial / Investment / Audience / Category / Performance Intelligence, Decision Center, Change Impact |
+| **3. Shared Platform Services** | Consume / extend — never fork | Media Plan, Campaign Object, Outputs, Workflow, Timeline, Financial Display, Notifications, Identity |
+| **4. Execution Capabilities** | **Never owns** — Campaign Workspace owns | Assignments, Client IO, Vendor IO, Deliverables, Performance, Finance |
+
+## Product gate (every future Studio feature)
+
+Before building, Product must answer:
+
+1. Does Studio **own** it? (only if category 1)  
+2. Does Studio **consume** it?  
+3. Is it **shared**? (use Platform services — no Studio fork)  
+4. Does it belong in **Campaign Workspace** instead? (if category 4 → yes)
+
+## Related permanent rules
+
+- Strategy Engine / Planning Context: `.cursor/rules/thinkway-strategy-engine-governance.mdc`  
+- Enterprise Creator Intelligence: `.cursor/rules/thinkway-enterprise-creator-intelligence.mdc`  
+- Platform Architecture v1.0 / Campaign Workspace: `.cursor/rules/thinkway-platform-architecture-v1.mdc`
