@@ -77,14 +77,17 @@ export async function searchCreatorsFromProfileData(
   // the database yields an empty slate even though rankable creators exist.
   let relaxedCreators: UnifiedCreatorResult[] = [];
   try {
+    // Platform-relaxed pool must still honor mandatory geography. Otherwise the
+    // first global page can contain zero on-market creators and the Enterprise
+    // Constraint Engine correctly empties the slate (seen on beauty briefs).
+    const creatorFilters = discoveryMappedFiltersToCreatorFilters(mappedFilters);
     const relaxed = await browseUnifiedCreators(
       supabase,
       {
-        ...filtersToRelaxedBrowseParams(
-          discoveryMappedFiltersToCreatorFilters(mappedFilters),
-          1,
-          pageSize
-        ),
+        ...filtersToRelaxedBrowseParams(creatorFilters, 1, pageSize),
+        country: creatorFilters.countries[0]?.trim().toUpperCase() || undefined,
+        creatorCountries:
+          creatorFilters.countries.length > 0 ? creatorFilters.countries : undefined,
         campaignIntelligenceProfileId: profileId,
         skipCoverageBackfill: true,
       },
