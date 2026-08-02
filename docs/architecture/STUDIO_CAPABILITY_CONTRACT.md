@@ -225,7 +225,8 @@ Every Studio ADR, capability spec, sprint, or PR that adds Studio surface area m
 
 ## Studio Evolution — Release 2.3 Sprint 2 (protected baseline)
 
-**Status:** **FROZEN · Maintenance Mode · COMPLETE** (Product-approved 2026-08-02)
+**Status:** **FROZEN · Maintenance Mode · COMPLETE** (Product-approved 2026-08-02)  
+**Freeze tip:** `7719affc` on `origin/develop`
 
 Sprint 2 is the protected Studio Evolution baseline for Studio × Enterprise Creator Intelligence:
 

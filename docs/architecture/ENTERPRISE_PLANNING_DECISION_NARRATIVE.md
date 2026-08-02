@@ -2,6 +2,7 @@
 
 **Status:** **Protected Enterprise Planning Standard** — **not** a standalone Platform Capability  
 **Product-approved:** 2026-08-02 (Release 2.3 Sprint 2 — Studio Evolution baseline)  
+**Freeze tip:** `7719affc` on `origin/develop`  
 **Origin:** Studio × Enterprise Creator Intelligence Product Excellence Pass  
 **Code SSOT (Studio consumer):** `features/campaign-studio/services/eci/recommendation-narrative.ts`
 

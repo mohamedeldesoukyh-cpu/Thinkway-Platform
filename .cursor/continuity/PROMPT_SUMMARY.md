@@ -5,7 +5,7 @@
 **FROZEN · Maintenance Mode:**
 - Studio Governance (Constitution tip `9a42a200`)
 - Enterprise Creator Intelligence (tip `d01f45f3`)
-- **Release 2.3 Sprint 2 — Studio Evolution** (**CLOSED** · Product-approved 2026-08-02 · Maintenance Mode)
+- **Release 2.3 Sprint 2 — Studio Evolution** (**CLOSED** · tip `7719affc` · Product-approved 2026-08-02 · Maintenance Mode)
 
 **Sprint 2 protected baseline:**
 - ECI consume-only via `loadCreatorIntelligenceBundle` (`features/campaign-studio/services/eci/`)

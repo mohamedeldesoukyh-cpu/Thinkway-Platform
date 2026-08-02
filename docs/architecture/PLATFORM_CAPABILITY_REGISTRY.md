@@ -258,7 +258,7 @@ Platform creator time-series and intelligence for Studio (Enterprise Planning), 
 
 **Status:** **FROZEN · Maintenance Mode · protected Studio Evolution baseline · COMPLETE**  
 **Product approval:** 2026-08-02  
-**Freeze tip:** recorded on `origin/develop` after Sprint 2 push (see tip sync commit)  
+**Freeze tip:** `7719affc` on `origin/develop`  
 **Code:** `features/campaign-studio/services/eci/` · executive planning surfaces · proposal/presentation narrative wiring  
 **Standard:** [`ENTERPRISE_PLANNING_DECISION_NARRATIVE.md`](./ENTERPRISE_PLANNING_DECISION_NARRATIVE.md)
 
