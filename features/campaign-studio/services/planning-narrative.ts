@@ -48,6 +48,7 @@ import {
   resolveExecutiveStrategyReasoning,
   resolveGroundedStrategyFields,
   resolveTimelineData,
+  resolveVendorRecommendations,
 } from "./section-data-resolver";
 
 export const PLANNING_NARRATIVE_LABEL = "Enterprise Planning Package";
@@ -598,11 +599,16 @@ export function deriveEnterprisePlanningNarrative(
   );
   const primary = recommended[0] ?? signals?.[0];
   const primaryNarrative = primary ? buildRecommendationNarrative(primary) : null;
-  const creatorIdsLen =
-    (campaignObject.sections.creators.data as CreatorsSectionData | undefined)?.recommendations
-      ?.creatorIds?.length ?? 0;
-  // Prefer persisted slate size — ECI signal count can include alternatives / duplicates.
-  const slateCount = creatorIdsLen > 0 ? creatorIdsLen : recommended.length;
+  const creatorsData = campaignObject.sections.creators.data as CreatorsSectionData | undefined;
+  const creatorIdsLen = creatorsData?.recommendations?.creatorIds?.length ?? 0;
+  const displaySlateLen = resolveVendorRecommendations(campaignObject).length;
+  // Prefer persisted ids; fall back to parsed recommendation display when ids failed to persist.
+  const slateCount =
+    creatorIdsLen > 0
+      ? creatorIdsLen
+      : displaySlateLen > 0
+        ? displaySlateLen
+        : recommended.length;
   const strategyMixLine =
     resolveCreatorMix(campaignObject)
       .map((t) => {

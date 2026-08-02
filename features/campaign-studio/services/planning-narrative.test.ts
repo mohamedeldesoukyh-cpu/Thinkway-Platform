@@ -100,6 +100,28 @@ test("creator strategy uses slate size and skips insufficient grounded placehold
   assert.equal(narrative.commercialStrategy.includes("EGP"), true);
 });
 
+test("creator strategy recovers slate size from recommendationsDisplay when ids are missing", () => {
+  const object = createEmptyCampaignObject({ id: "co_display_only" });
+  object.meta.campaignFacts = {
+    extractedAt: new Date().toISOString(),
+    confidence: {},
+    sources: {},
+    brandName: "e&",
+    objective: "Brand awareness and engagement",
+    platforms: ["instagram", "tiktok"],
+    budget: { amount: 500000, currency: "EGP" },
+    geography: ["Egypt"],
+  };
+  object.sections.creators.data = {
+    recommendationsDisplay:
+      "1. (@nourhanneeisa) · Macro · instagram · 767.6K · 0.77% engagement · fit 75/100\n2. (@islamfawzy_) · Celebrity · instagram · 10.0M · 1.22% engagement · fit 65/100",
+  };
+
+  const narrative = deriveEnterprisePlanningNarrative(object);
+  assert.match(narrative.creatorStrategy, /Advance 2 evidence-backed creators/i);
+  assert.match(narrative.creatorPackageThesis, /Advance 2/i);
+});
+
 test("proposal model copies Planning Narrative without parallel executive wording", () => {
   const object = createEmptyCampaignObject({ id: "co_sync" });
   object.meta.campaignFacts = {
