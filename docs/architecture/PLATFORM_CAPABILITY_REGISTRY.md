@@ -1,7 +1,7 @@
 # Platform Capability Registry
 
 **Status:** Permanent governance registry — **canonical**  
-**Updated:** 2026-08-02 — Release 2.3 Phase 1 · Enterprise Creator Intelligence ACTIVE (Sprint 1–4 protected baselines)  
+**Updated:** 2026-08-02 — Release 2.3 Phase 1 · Enterprise Creator Intelligence ACTIVE (Sprint 1–5 protected baselines)  
 **Parent:** [`PLATFORM_ARCHITECTURE_COMPLIANCE.md`](./PLATFORM_ARCHITECTURE_COMPLIANCE.md)
 
 Every future enterprise module must **extend** registered capabilities. Parallel engines are forbidden.
@@ -15,7 +15,7 @@ Every future enterprise module must **extend** registered capabilities. Parallel
 | Platform Bulk Operations Framework | Frozen · mandatory | `components/workspace/bulk-operations/` | [`PLATFORM_BULK_OPERATIONS_FRAMEWORK.md`](./PLATFORM_BULK_OPERATIONS_FRAMEWORK.md) | All register multi-select work |
 | **Enterprise Document Lifecycle Engine** | **Maintenance Mode · frozen · protected · mandatory** | `lib/document-lifecycle/` | [`ENTERPRISE_DOCUMENT_LIFECYCLE.md`](./ENTERPRISE_DOCUMENT_LIFECYCLE.md) | Document state transitions only |
 | **Enterprise Change Impact Engine** | **Maintenance Mode · frozen · protected · mandatory** | `lib/change-impact/` | [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md) · [`ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md`](./ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md) | Every business-change interpretation |
-| **Enterprise Creator Intelligence** | **ACTIVE** (not frozen) · Sprint 1–4 protected baselines | `lib/enterprise-creator-intelligence/` | [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) | Planning · Client · Campaign · Reporting · Analytics · AI hooks · Mobile |
+| **Enterprise Creator Intelligence** | **ACTIVE** (not frozen) · Sprint 1–5 protected baselines | `lib/enterprise-creator-intelligence/` | [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) | Planning · Client · Campaign · Reporting · Analytics · AI hooks · Mobile |
 
 ---
 
@@ -163,13 +163,26 @@ Platform creator time-series and intelligence for Planning Workspace, Client Wor
 | Entry points | `loadCreatorPerformanceIntelligence` / `computeCreatorPerformanceIntelligence` |
 | Reuse | Engagement-rate engine · commercial ROI/EMV · Sprint 1 posting frequency |
 | AI | `buildPerformanceAiHints` only — **no AI execution** |
-| Gate | Do **not** start Sprint 5 until Product explicitly approves |
 | Git baseline | `54057bd5` on `origin/develop` |
+
+### Sprint 5 — Audience Intelligence (protected baseline)
+
+| Item | Detail |
+|------|--------|
+| Demographics | Gender · age · country · city · language across analysis windows |
+| Growth / quality / stability | Follower growth trends · supported quality only · audience stability |
+| Behaviour / geo / language | Engagement behaviour · primary geo · language roles |
+| Business readiness | Audience fit · confidence · commercial audience readiness |
+| History table | Append-only → `creator_intelligence_audience_history` |
+| Entry points | `loadCreatorAudienceIntelligence` / `computeCreatorAudienceIntelligence` |
+| Reuse | Influencer demos · Sprint 1 monthly followers · Sprint 4 audience response |
+| AI | `buildAudienceAiHints` only — **no AI execution** |
+| Gate | Do **not** begin Creator Investment Score until Product explicitly approves |
 
 ### Extension rules
 
-1. Reuse IPL + metrics history + campaign commercial/performance loaders + taxonomy inference — do not duplicate calculation engines.  
-2. Internal campaign intelligence / investment score → later sprints in this package only.  
+1. Reuse IPL + metrics history + campaign commercial/performance loaders + taxonomy inference + demographic columns — do not duplicate calculation engines.  
+2. Creator Investment Score → later sprint in this package only.  
 3. Creator business changes that affect issued documents → Change Impact → Document Lifecycle.  
 4. Bulk refresh/backfill → Platform Bulk Operations Framework.  
 5. Money → Financial Display Standard.  

@@ -216,7 +216,49 @@ import {
 1. Append-only → `creator_intelligence_performance_history`.  
 2. Reuse engagement-rate engine + commercial ROI/EMV + Sprint 1 posting frequency — no duplicated engines.  
 3. AI-ready only — `buildPerformanceAiHints`.  
-4. Do **not** start the next sprint until Product approval.
+4. Sprint 5 Audience Intelligence extends this baseline without redesign.
+
+---
+
+## Sprint 5 — Audience Intelligence (PROTECTED BASELINE)
+
+| Attribute | Value |
+|-----------|--------|
+| Status | **Protected Audience Intelligence baseline** (parent capability remains **ACTIVE**) |
+| Extends | Sprint 1–4 baselines (unchanged) |
+| Code | `lib/enterprise-creator-intelligence/audience/` |
+| Migration (Development) | `20260802160000_enterprise_creator_intelligence_audience.sql` |
+| Regression | `npm run test:enterprise-creator-intelligence:audience` |
+
+### Capabilities
+
+| Area | Output |
+|------|--------|
+| Demographics | Gender · Age · Country · City · Language (30d/90d/180d/Lifetime windows) |
+| Growth | Follower growth · % · trend · organic proxy · spikes/drops + explanations |
+| Quality | High Quality → Unknown from supported indicators only (**no fake-follower estimation**) |
+| Stability | Highly Stable · Stable · Seasonal · Volatile · Recovering |
+| Engagement behaviour | Consistency · interaction/share/save trends (historical; returning engagement unavailable) |
+| Geography / language | Primary countries/cities · primary/secondary/emerging languages |
+| Business readiness | Audience fit · stability · confidence · commercial audience readiness |
+
+### Entry points
+
+```ts
+import {
+  loadCreatorAudienceIntelligence,
+  computeCreatorAudienceIntelligence,
+  appendAudienceIntelligenceCapture,
+} from "@/lib/enterprise-creator-intelligence";
+```
+
+### Rules
+
+1. Append-only → `creator_intelligence_audience_history`.  
+2. Reuse influencer demographic columns + Sprint 1 monthly followers + Sprint 4 audience response — no duplicated engines.  
+3. Never estimate fake followers.  
+4. AI-ready only — `buildAudienceAiHints`.  
+5. Do **not** begin Creator Investment Score until Product approval.
 
 ---
 
@@ -228,8 +270,8 @@ import {
 | 2 | Commercial Intelligence | **Protected baseline** (`7c0f6984`) |
 | 3 | Category & Brand Intelligence | **Protected baseline** (`ad861c01`) |
 | 4 | Performance Intelligence | **Protected baseline** (`54057bd5`) |
-| 5 | Internal Campaign Intelligence | Not started — gated |
-| 6 | Creator Investment Score (explainable) | Not started |
+| 5 | Audience Intelligence | **Protected baseline** (this release) |
+| 6 | Creator Investment Score (explainable) | Not started — gated |
 
 ---
 
