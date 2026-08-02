@@ -165,7 +165,11 @@ function genericReasoning(ctx: Is1CampaignContext, strategy: CampaignStrategyDoc
   return {
     businessChallenge: `${ctx.brand} must break through ${ctx.industry} category noise in ${ctx.geography} where consumers distrust brand-only messaging — ${ctx.objective} requires creator-mediated credibility within ${ctx.durationWeeks} weeks and ${formatBudgetRef(ctx)}.`,
     marketingChallenge: `${ctx.objective} must be achieved through creator trust transfer on ${ctx.platforms.join(", ")} — not paid media buying — within ${formatBudgetRef(ctx)} and ${ctx.durationWeeks}-week activation window.`,
-    audienceChallenge: `${ctx.audience} in ${ctx.geography} responds to creator authenticity over polished ads; reaching this cohort requires tier-sequenced voices aligned to the brief audience.`,
+    audienceChallenge: `${
+      ctx.audience.toLowerCase().includes(ctx.geography.toLowerCase())
+        ? ctx.audience
+        : `${ctx.audience} in ${ctx.geography}`
+    } responds to creator authenticity over polished ads; reaching this cohort requires tier-sequenced voices aligned to the brief audience.`,
     strategicInsight: `${ctx.audience} responds to creator authenticity over polished ads; Director tier mix (${tierMix}) balances reach and cost for ${ctx.platforms.join(", ")} consumption patterns.`,
     rejectedAlternatives: [
       `Paid media-only plan — rejected; the campaign objective (${ctx.objective}) requires creator trust transfer.`,

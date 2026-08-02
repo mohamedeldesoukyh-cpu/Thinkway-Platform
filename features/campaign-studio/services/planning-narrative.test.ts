@@ -64,6 +64,42 @@ test("brief completeness highlights missing planning information", () => {
   assert.match(narrative.briefCompleteness.summary, /Missing planning information/i);
 });
 
+test("creator strategy uses slate size and skips insufficient grounded placeholders", () => {
+  const object = createEmptyCampaignObject({ id: "co_slate" });
+  object.meta.campaignFacts = {
+    extractedAt: new Date().toISOString(),
+    confidence: {},
+    sources: {},
+    brandName: "e&",
+    objective: "Brand awareness and engagement",
+    audience: "Telecom consumers in Egypt",
+    platforms: ["instagram", "tiktok"],
+    budget: { amount: 500000, currency: "EGP" },
+    geography: ["Egypt"],
+    rawBriefExcerpt: "e& Egypt summer influencers lifestyle Instagram TikTok",
+  };
+  object.sections.creators.data = {
+    recommendations: {
+      creatorIds: ["a", "b"],
+      rationale: "fit",
+    },
+    recommendationsDisplay:
+      "1. (@nourhanneeisa) · Macro · instagram · 767.6K · 0.77% engagement · fit 75/100\n2. (@islamfawzy_) · Celebrity · instagram · 10.0M · 1.22% engagement · fit 65/100",
+  };
+  object.sections.strategy.data = {
+    groundedFields: [
+      { label: "Creator Strategy", value: "Insufficient evidence available." },
+    ],
+  };
+
+  const narrative = deriveEnterprisePlanningNarrative(object);
+  assert.match(narrative.creatorStrategy, /Advance 2 evidence-backed creators/i);
+  assert.equal(/Insufficient evidence available/i.test(narrative.creatorStrategy), false);
+  assert.match(narrative.creatorPackageThesis, /Advance 2 evidence-backed creators/i);
+  assert.equal(/SSOT|CampaignFacts/i.test(narrative.executiveRecommendation), false);
+  assert.equal(narrative.commercialStrategy.includes("EGP"), true);
+});
+
 test("proposal model copies Planning Narrative without parallel executive wording", () => {
   const object = createEmptyCampaignObject({ id: "co_sync" });
   object.meta.campaignFacts = {

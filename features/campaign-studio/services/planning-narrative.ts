@@ -17,6 +17,21 @@ import {
   buildRecommendationNarrative,
   INSUFFICIENT_EVIDENCE,
 } from "./eci/recommendation-narrative";
+
+function firstUsefulText(
+  ...values: Array<string | null | undefined>
+): string | undefined {
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (!trimmed) continue;
+    if (trimmed === INSUFFICIENT_EVIDENCE) continue;
+    if (/^n\/?a$/i.test(trimmed) || /^unknown$/i.test(trimmed) || /^—$/.test(trimmed)) {
+      continue;
+    }
+    return trimmed;
+  }
+  return undefined;
+}
 import {
   buildStudioExecutivePlanningSummary,
   toCampaignDecisionLabel,
@@ -583,11 +598,11 @@ export function deriveEnterprisePlanningNarrative(
   );
   const primary = recommended[0] ?? signals?.[0];
   const primaryNarrative = primary ? buildRecommendationNarrative(primary) : null;
-  const slateCount =
-    recommended.length > 0
-      ? recommended.length
-      : ((campaignObject.sections.creators.data as CreatorsSectionData | undefined)?.recommendations
-          ?.creatorIds?.length ?? 0);
+  const creatorIdsLen =
+    (campaignObject.sections.creators.data as CreatorsSectionData | undefined)?.recommendations
+      ?.creatorIds?.length ?? 0;
+  // Prefer persisted slate size — ECI signal count can include alternatives / duplicates.
+  const slateCount = creatorIdsLen > 0 ? creatorIdsLen : recommended.length;
   const strategyMixLine =
     resolveCreatorMix(campaignObject)
       .map((t) => {
@@ -638,47 +653,54 @@ export function deriveEnterprisePlanningNarrative(
 
   const creatorStrategy = toBoardroomLanguage(
     textOrInsufficient(
-      fieldByLabel(groundedPairs, "Creator Strategy") ||
-        strategy?.creatorStrategy ||
-        (slateCount > 0
+      firstUsefulText(
+        fieldByLabel(groundedPairs, "Creator Strategy"),
+        strategy?.creatorStrategy,
+        slateCount > 0
           ? `Advance ${slateCount} evidence-backed creator${slateCount === 1 ? "" : "s"} on the planning slate for this objective${
               strategyMixLine ? `, guided by the Director tier mix (${strategyMixLine})` : ""
             }.`
-          : undefined)
+          : undefined
+      )
     )
   );
 
   const contentStrategy = toBoardroomLanguage(
     textOrInsufficient(
-      fieldByLabel(groundedPairs, "Content Strategy", "Message", "Key Message") ||
-        strategy?.keyMessage ||
-        (facts?.platforms?.length && facts?.objective
+      firstUsefulText(
+        fieldByLabel(groundedPairs, "Content Strategy", "Message", "Key Message"),
+        strategy?.keyMessage,
+        facts?.platforms?.length && facts?.objective
           ? `Produce creator-native content on ${facts.platforms.join(" and ")} that advances ${facts.objective} through authentic storytelling rather than brand-only messaging.`
-          : undefined)
+          : undefined
+      )
     )
   );
 
   const mediaStrategy = toBoardroomLanguage(
     textOrInsufficient(
-      fieldByLabel(groundedPairs, "Platform Strategy", "Media Strategy") ||
-        (facts?.platforms?.length
+      firstUsefulText(
+        fieldByLabel(groundedPairs, "Platform Strategy", "Media Strategy"),
+        facts?.platforms?.length
           ? `Prioritize ${facts.platforms.join(", ")} to concentrate reach where the audience is most addressable.`
-          : undefined)
+          : undefined
+      )
     )
   );
 
   const commercialStrategy = toBoardroomLanguage(
     textOrInsufficient(
-      budget?.budgetPlannerReasoning ||
-        primaryNarrative?.commercialValue ||
-        (legacySummary.commercialOutlook !== INSUFFICIENT_EVIDENCE
-          ? legacySummary.commercialOutlook
-          : undefined) ||
-        (budget?.total
+      firstUsefulText(
+        budget?.budgetPlannerReasoning,
+        primaryNarrative?.commercialValue,
+        legacySummary.commercialOutlook,
+        budget?.total
           ? `Allocate the ${budget.currency ?? ""} ${budget.total.toLocaleString()} budget to maximize creator-driven business outcomes with clear fee vs amplification trade-offs.`
-          : facts?.budget?.amount
-            ? `Allocate ${facts.budget.currency} ${facts.budget.amount.toLocaleString()} across creator tiers to maximize delivery against the campaign objective.`
-            : undefined)
+          : undefined,
+        facts?.budget?.amount
+          ? `Allocate ${facts.budget.currency} ${facts.budget.amount.toLocaleString()} across creator tiers to maximize delivery against the campaign objective.`
+          : undefined
+      )
     )
   );
 
@@ -697,25 +719,25 @@ export function deriveEnterprisePlanningNarrative(
 
   const expectedBusinessOutcome = toBoardroomLanguage(
     textOrInsufficient(
-      (legacySummary.expectedBusinessResults !== INSUFFICIENT_EVIDENCE
-        ? legacySummary.expectedBusinessResults
-        : undefined) ||
-        facts?.kpis?.slice(0, 3).join(", ") ||
-        reasoning?.successConditions?.join("; ") ||
-        (facts?.objective
+      firstUsefulText(
+        legacySummary.expectedBusinessResults,
+        facts?.kpis?.slice(0, 3).join(", "),
+        reasoning?.successConditions?.join("; "),
+        facts?.objective
           ? `Progress against ${facts.objective} within the planned activation window on ${(facts.platforms ?? []).join(" + ") || "priority platforms"}.`
-          : undefined)
+          : undefined
+      )
     )
   );
 
   const risks = toBoardroomLanguage(
     textOrInsufficient(
-      (legacySummary.businessRisks !== INSUFFICIENT_EVIDENCE
-        ? legacySummary.businessRisks
-        : undefined) ||
-        reasoning?.risks?.join("; ") ||
-        primaryNarrative?.risks ||
+      firstUsefulText(
+        legacySummary.businessRisks,
+        reasoning?.risks?.join("; "),
+        primaryNarrative?.risks,
         "Creator availability, creative quality, and budget protection remain the primary planning risks to monitor through approval."
+      )
     )
   );
 
@@ -785,16 +807,25 @@ export function deriveEnterprisePlanningNarrative(
           .join(", ")}.`
       : INSUFFICIENT_EVIDENCE);
 
-  const commercialImpact = textOrInsufficient(
-    primaryNarrative?.commercialValue ||
-      legacySummary.commercialOutlook ||
-      "Commercial impact depends on confirmed fees and delivery against the planned budget."
+  const commercialImpact = toBoardroomLanguage(
+    textOrInsufficient(
+      firstUsefulText(
+        primaryNarrative?.commercialValue,
+        legacySummary.commercialOutlook,
+        commercialStrategy,
+        "Commercial impact depends on confirmed fees and delivery against the planned budget."
+      )
+    )
   );
 
-  const budgetTradeOffs = textOrInsufficient(
-    legacySummary.tradeOffs ||
-      reasoning?.expectedTradeoffs?.join("; ") ||
-      "Trade-off: concentrating budget on fewer high-fit creators versus spreading spend for broader coverage."
+  const budgetTradeOffs = toBoardroomLanguage(
+    textOrInsufficient(
+      firstUsefulText(
+        legacySummary.tradeOffs,
+        reasoning?.expectedTradeoffs?.join("; "),
+        "Trade-off: concentrating budget on fewer high-fit creators versus spreading spend for broader coverage."
+      )
+    )
   );
 
   const phasesStory = executionStrategy;
@@ -803,7 +834,7 @@ export function deriveEnterprisePlanningNarrative(
     : INSUFFICIENT_EVIDENCE;
 
   const creatorPackageThesis =
-    recommended.length > 0
+    slateCount > 0 && creatorStrategy !== INSUFFICIENT_EVIDENCE
       ? `Creator strategy thesis: ${creatorStrategy} This slate is the strongest recommendation because it best supports the campaign objective with available evidence, commercial outlook, and manageable risk (${legacySummary.planningConfidence.level} planning confidence).`
       : `Creator strategy thesis: ${creatorStrategy}`;
 

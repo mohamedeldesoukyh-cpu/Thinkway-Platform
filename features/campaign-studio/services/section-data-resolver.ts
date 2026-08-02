@@ -78,6 +78,7 @@ import {
 import {
   humanizeCreatorHandle,
   parseCompactFollowerCount,
+  toBoardroomLanguage,
 } from "./boardroom-language";
 import {
   applyFactsToSummaryData,
@@ -166,15 +167,16 @@ export function directorDecisionMinutesToInsights(
   minutes: DirectorDecisionMinute[]
 ): WhyAiInsight[] {
   return minutes.map((minute, index) => ({
-    category: minute.problem?.trim() || `Decision ${index + 1}`,
-    title: minute.decision,
-    rationale:
+    category: toBoardroomLanguage(minute.problem?.trim() || `Decision ${index + 1}`),
+    title: toBoardroomLanguage(minute.decision),
+    rationale: toBoardroomLanguage(
       minute.impact ||
-      minute.reason ||
-      minute.evidence ||
-      minute.finalApproval ||
-      "",
-    evidence: minute.evidence,
+        minute.reason ||
+        minute.evidence ||
+        minute.finalApproval ||
+        ""
+    ),
+    evidence: minute.evidence ? toBoardroomLanguage(minute.evidence) : minute.evidence,
     confidence: minute.confidence,
     source: "AI" as const,
   }));
