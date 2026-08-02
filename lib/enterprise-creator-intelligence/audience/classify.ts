@@ -90,7 +90,13 @@ export function classifyAudienceQuality(input: {
     };
   }
 
-  if (trustedSource && demoCoverage >= 2 && (input.authenticityScore ?? 70) >= 70) {
+  // Never default missing authenticity — silent guessing is forbidden.
+  if (
+    trustedSource &&
+    demoCoverage >= 2 &&
+    input.authenticityScore != null &&
+    input.authenticityScore >= 70
+  ) {
     return {
       level: "High Quality",
       indicators,
@@ -102,7 +108,10 @@ export function classifyAudienceQuality(input: {
     return {
       level: "Good",
       indicators,
-      why: "Supported demographic coverage is present.",
+      why:
+        input.authenticityScore == null
+          ? "Supported demographic coverage is present; authenticity score unavailable (not estimated)."
+          : "Supported demographic coverage is present.",
     };
   }
 

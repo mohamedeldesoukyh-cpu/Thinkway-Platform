@@ -43,8 +43,9 @@ Environment switch navigates between **hosts** — never switches DB inside one 
 - `docs/architecture/PLATFORM_CAPABILITY_REGISTRY.md` — permanent registry; Document Lifecycle + Change Impact in **Maintenance Mode** (initiative CLOSED; freeze tip `449fd5c0`); Enterprise Creator Intelligence **Active** (R2.3 Phase 1)
 - `docs/architecture/ENTERPRISE_DOCUMENT_LIFECYCLE.md` — Document Lifecycle **Maintenance Mode** (`lib/document-lifecycle/`); state transitions only
 - `docs/architecture/ENTERPRISE_CHANGE_IMPACT_ENGINE.md` — Change Impact **Maintenance Mode** (`lib/change-impact/`); entry `applyBusinessChangeImpact` only; Quotation/PO/Invoice/Contract/Report must extend — never parallel
-- `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE.md` — **ACTIVE** R2.3 Phase 1 (`lib/enterprise-creator-intelligence/`); Sprint 1–6 protected baselines (Historical · Commercial · Category & Brand · Performance · Audience · Investment); freeze gated on Product Acceptance Review
-- `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md` — Phase 1 Product Acceptance Review (gate before freeze / Planning Workspace)
+- `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE.md` — **ACTIVE** R2.3 Phase 1 (`lib/enterprise-creator-intelligence/`); Sprint 1–6 protected baselines; **not frozen**
+- `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md` — Final Product Acceptance = **CONDITIONAL** (G1–G3 open); Planning Workspace blocked until freeze
+- `.cursor/rules/thinkway-enterprise-creator-intelligence.mdc` — ECI SSOT guardrail (alwaysApply)
 - `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md` — **active** R2.3 Campaign Planning Workspace capability spec (review gate)
 - `docs/capabilities/PLANNING_BOARD_CAPABILITY_REVIEW.md` — **active** R2.3 functional capability review pack
 - `docs/architecture/platform-ux/` — Platform UX package (docs 01–12 frozen)  

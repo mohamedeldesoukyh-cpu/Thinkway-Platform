@@ -1,7 +1,7 @@
 # Platform Capability Registry
 
 **Status:** Permanent governance registry — **canonical**  
-**Updated:** 2026-08-02 — Release 2.3 Phase 1 · Enterprise Creator Intelligence ACTIVE (Sprint 1–6 protected baselines · Acceptance Review ready)  
+**Updated:** 2026-08-02 — Release 2.3 Phase 1 · Enterprise Creator Intelligence ACTIVE (Sprint 1–6 · Acceptance CONDITIONAL — not frozen)  
 **Parent:** [`PLATFORM_ARCHITECTURE_COMPLIANCE.md`](./PLATFORM_ARCHITECTURE_COMPLIANCE.md)
 
 Every future enterprise module must **extend** registered capabilities. Parallel engines are forbidden.
@@ -15,7 +15,7 @@ Every future enterprise module must **extend** registered capabilities. Parallel
 | Platform Bulk Operations Framework | Frozen · mandatory | `components/workspace/bulk-operations/` | [`PLATFORM_BULK_OPERATIONS_FRAMEWORK.md`](./PLATFORM_BULK_OPERATIONS_FRAMEWORK.md) | All register multi-select work |
 | **Enterprise Document Lifecycle Engine** | **Maintenance Mode · frozen · protected · mandatory** | `lib/document-lifecycle/` | [`ENTERPRISE_DOCUMENT_LIFECYCLE.md`](./ENTERPRISE_DOCUMENT_LIFECYCLE.md) | Document state transitions only |
 | **Enterprise Change Impact Engine** | **Maintenance Mode · frozen · protected · mandatory** | `lib/change-impact/` | [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md) · [`ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md`](./ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md) | Every business-change interpretation |
-| **Enterprise Creator Intelligence** | **ACTIVE** (not frozen) · Sprint 1–6 protected baselines · Acceptance Review pending | `lib/enterprise-creator-intelligence/` | [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) | Planning · Client · Campaign · Reporting · Analytics · AI hooks · Mobile |
+| **Enterprise Creator Intelligence** | **ACTIVE** (not frozen) · Sprint 1–6 protected · Acceptance **CONDITIONAL** | `lib/enterprise-creator-intelligence/` | [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) | Planning · Client · Campaign · Reporting · Analytics · AI hooks · Mobile |
 
 ---
 
@@ -105,8 +105,8 @@ Document state transitions and available actions from document state only (`reso
 
 ## Enterprise Creator Intelligence (ACTIVE — Release 2.3 Phase 1)
 
-**Capability status: ACTIVE — do not freeze until Product Acceptance is approved.**  
-Sprint 1–6 are **protected implementation baselines**. Parent capability stays ACTIVE until Product accepts [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md).
+**Capability status: ACTIVE — Acceptance CONDITIONAL — do not freeze.**  
+Sprint 1–6 are **protected implementation baselines**. Open gates in [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) (G1 consumer SSOT wiring · G2 Historical series contract · G3 investment load caching). **Do not begin Planning Workspace** until freeze is approved.
 
 ### Responsibility
 

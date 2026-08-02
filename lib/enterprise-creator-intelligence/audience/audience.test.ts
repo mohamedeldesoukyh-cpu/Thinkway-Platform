@@ -101,6 +101,16 @@ describe("Enterprise Creator Intelligence — Audience Sprint 5", () => {
     });
     assert.equal(quality.level, "High Quality");
 
+    const withoutAuth = classifyAudienceQuality({
+      demographicSource: "modash",
+      hasGender: true,
+      hasAge: true,
+      hasCountries: true,
+      authenticityScore: null,
+    });
+    assert.equal(withoutAuth.level, "Good");
+    assert.ok(withoutAuth.why.includes("authenticity score unavailable"));
+
     const { spikes, drops } = detectSpikesAndDrops([
       { at: "2026-05-01", growthRate: 0.165 },
       { at: "2026-06-01", growthRate: -0.2 },

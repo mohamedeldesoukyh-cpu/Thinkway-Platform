@@ -6,7 +6,7 @@
 **Campaign Workspace baseline (canonical):** [`CAMPAIGN_WORKSPACE_BASELINE_V1.3.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.3.md)  
 **Historical:** [`CAMPAIGN_WORKSPACE_BASELINE_V1.2.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.2.md) · [`CAMPAIGN_WORKSPACE_BASELINE_V1.1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.1.md) · [`CAMPAIGN_WORKSPACE_BASELINE_V1.md`](./CAMPAIGN_WORKSPACE_BASELINE_V1.md)  
 **Effective:** 2026-08-01 (Architecture v1.0 freeze)  
-**Updated:** 2026-08-02 — Release 2.3 Phase 1 · Enterprise Creator Intelligence Sprint 1 Active; Document Lifecycle + Change Impact remain Maintenance Mode
+**Updated:** 2026-08-02 — Release 2.3 Phase 1 · Enterprise Creator Intelligence Sprint 1–6 ACTIVE (Acceptance CONDITIONAL — not frozen); Document Lifecycle + Change Impact remain Maintenance Mode
 
 ---
 
@@ -79,8 +79,8 @@ Release 2.2d.2 — document state transitions only. Vendor IO / Client IO first.
 **Enterprise Change Impact Engine** (Maintenance Mode · frozen · protected · mandatory): [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md) · [`ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md`](./ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md) · `lib/change-impact/`
 Release 2.2d.2b — intelligence layer above Document Lifecycle. Entry: `applyBusinessChangeImpact` only. Freeze tip `449fd5c0`. Quotation/PO/Invoice/Contract/Report **must extend** these engines — **never** parallel implementations. Initiative **CLOSED**. No Production deploy without approval.
 
-**Enterprise Creator Intelligence** (**ACTIVE** · Release 2.3 Phase 1 · not frozen): [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · `lib/enterprise-creator-intelligence/`
-Sprint 1–5 protected baselines (Historical · Commercial · Category & Brand · Performance · Audience). Do not begin Creator Investment Score until Product approval. No Production deploy without approval.
+**Enterprise Creator Intelligence** (**ACTIVE** · Release 2.3 Phase 1 · **not frozen**): [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) · `lib/enterprise-creator-intelligence/`  
+Sprint 1–6 protected baselines (Historical · Commercial · Category & Brand · Performance · Audience · Investment). Final Product Acceptance = **CONDITIONAL** — do **not** freeze; do **not** begin Planning Workspace until open gates close. Planning/Client/Campaign/Reporting/Analytics/AI/Mobile must consume this package only for creator intelligence. No Production deploy without approval.
 
 ---
 

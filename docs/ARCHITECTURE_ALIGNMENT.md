@@ -2,7 +2,17 @@
 
 This document compares the **current Thinkway platform** (`thinkway-platform`) against the [System Reference](./THINKWAY_SYSTEM_REFERENCE.md). Use it before new modules: compare → detect gaps → recommend → avoid duplicate entities.
 
-**Last reviewed:** Aug 2026 (Enterprise Document & Change Impact initiative CLOSED · Maintenance Mode)
+**Last reviewed:** Aug 2026 (Enterprise Creator Intelligence Acceptance CONDITIONAL · Document & Change Impact CLOSED)
+
+### Enterprise Creator Intelligence — ACTIVE (Aug 2026)
+
+- **Initiative:** Release 2.3 Phase 1 — Enterprise Creator Intelligence — **ACTIVE** (not frozen)
+- **Code:** `lib/enterprise-creator-intelligence/` — Sprint 1–6 protected baselines (Historical · Commercial · Category & Brand · Performance · Audience · Investment)
+- **Acceptance:** [`architecture/ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./architecture/ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) — **CONDITIONAL**; open gates G1–G3
+- **Registry:** [`architecture/PLATFORM_CAPABILITY_REGISTRY.md`](./architecture/PLATFORM_CAPABILITY_REGISTRY.md)
+- **Rule:** Planning · Client · Campaign · Reporting · Analytics · AI · Mobile must consume this package for creator intelligence — **no parallel investment engines**
+- **Gate:** Do **not** begin Planning Workspace until Acceptance freeze is approved
+- **Production:** Do **not** deploy ECI schema/app to Production without explicit approval
 
 ### Enterprise Document & Change Impact — CLOSED (Aug 2026)
 

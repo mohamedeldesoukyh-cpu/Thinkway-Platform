@@ -1,0 +1,39 @@
+---
+description: Enterprise Creator Intelligence SSOT — ACTIVE until Product freeze; no parallel investment/intelligence engines
+alwaysApply: true
+---
+
+# Enterprise Creator Intelligence (Platform SSOT)
+
+**Status:** **ACTIVE** — Sprint 1–6 protected baselines · **NOT FROZEN**  
+**Acceptance:** `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md` (CONDITIONAL — open gaps)  
+**Spec:** `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE.md`  
+**Code:** `lib/enterprise-creator-intelligence/`  
+**Registry:** `docs/architecture/PLATFORM_CAPABILITY_REGISTRY.md`
+
+## Mandatory
+
+1. Creator commercial · audience · category/brand · performance · investment intelligence for Planning / Client / Campaign / Reporting / Analytics / AI / Mobile **must** come from `@/lib/enterprise-creator-intelligence`.
+2. Do **not** invent parallel creator investment scores, audience-quality investment signals, or commercial intelligence engines for those consumers.
+3. Do **not** freeze or mark Maintenance Mode until Product Acceptance gates pass (see acceptance doc).
+4. Do **not** begin Planning Workspace implementation until Acceptance freeze is approved.
+5. Later layers **consume** earlier layers — never redesign Sprint 1–6 protected baselines.
+6. Append-only history only — never overwrite prior intelligence captures.
+7. AI-ready hints only in Phase 1 — **no AI execution**.
+8. No Production deploy of ECI schema without explicit approval.
+
+## Forbidden as Planning / investment SSOT
+
+- `lib/creators/thinkway-score.ts` (Discovery browse score)
+- Campaign decision simulators as enterprise investment recommendations
+- Independent CPM/CPE/ROI/EMV engines that bypass ECI commercial formulas for creator intelligence surfaces
+
+## Allowed
+
+- Platform formula helpers reused **by** ECI (`lib/campaigns/performance-calculations.ts`)
+- Discovery acquisition tools (remain Discovery — not enterprise investment)
+- Sibling ECI extensions (Brand Safety, Fraud, Pricing Prediction) that **extend** the package without redesigning Sprint 1–6
+
+## Regression
+
+`npm run test:enterprise-creator-intelligence`
