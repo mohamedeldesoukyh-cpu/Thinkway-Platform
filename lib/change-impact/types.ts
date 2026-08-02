@@ -47,6 +47,13 @@ export type ChangeImpactDocumentImpact = {
   recommendedActions: string[];
 };
 
+export type ChangeImpactOwner =
+  | "Operations"
+  | "Commercial"
+  | "Finance"
+  | "Traffic"
+  | "Executive";
+
 export type ChangeImpactRecommendedAction = {
   id: string;
   label: string;
@@ -59,6 +66,20 @@ export type ChangeImpactRecommendedAction = {
     | "overview"
     | "deliverables";
   priority: number;
+  /** Responsible owner for this action. */
+  owner: ChangeImpactOwner;
+};
+
+/**
+ * Mandatory explainability — every assessment must answer these five questions.
+ * No generic status-only messages.
+ */
+export type ChangeImpactExplainability = {
+  whatChanged: string;
+  whyImportant: string;
+  whatAffected: string;
+  whatShouldHappenNext: string;
+  whoOwnsTheAction: ChangeImpactOwner;
 };
 
 export type ChangeImpactNotificationIntent = {
@@ -87,8 +108,12 @@ export type ChangeImpactAssessment = {
   reasonCode: DocumentLifecycleReasonCode;
   reasonDetail: string;
   severity: ChangeImpactSeverity;
+  /** Product label: Critical · Major · Moderate · Minor · Informational */
+  severityLabel: import("@/lib/change-impact/severity").ChangeImpactSeverityLabel;
   businessImpactSummary: string;
   businessImpactDetail: string;
+  explainability: ChangeImpactExplainability;
+  responsibleOwner: ChangeImpactOwner;
   affectedObjects: ChangeImpactAffectedObject[];
   documentImpacts: ChangeImpactDocumentImpact[];
   recommendedActions: ChangeImpactRecommendedAction[];
@@ -101,6 +126,7 @@ export type ChangeImpactAssessment = {
 export type ChangeImpactDecisionSignal = {
   assessmentId: string;
   severity: ChangeImpactSeverity;
+  severityLabel: import("@/lib/change-impact/severity").ChangeImpactSeverityLabel;
   title: string;
   reason: string;
   impact: string;
@@ -110,6 +136,7 @@ export type ChangeImpactDecisionSignal = {
   objectLabel: string;
   objectRef: string;
   recordId: string | null;
+  responsibleOwner: ChangeImpactOwner;
   createdAt: string;
 };
 

@@ -88,7 +88,12 @@ export async function applyBusinessChangeImpact(
       business_impact_detail: assessment.businessImpactDetail,
       recommended_actions: assessment.recommendedActions.map((a) => a.label),
       status: "open",
-      ai_context: assessment.aiRecommendation,
+      ai_context: {
+        ...assessment.aiRecommendation,
+        explainability: assessment.explainability,
+        responsible_owner: assessment.responsibleOwner,
+        severity_label: assessment.severityLabel,
+      },
       actor_id: input.actorId ?? null,
     } as never)
     .select("id")

@@ -19,7 +19,7 @@ export async function loadOpenChangeImpactSignals(
   const { data, error } = await supabase
     .from("change_impact_assessments")
     .select(
-      "id, severity, business_impact_summary, business_impact_detail, recommended_actions, event_type, created_at"
+      "id, severity, business_impact_summary, business_impact_detail, recommended_actions, event_type, created_at, ai_context"
     )
     .eq("campaign_header_id", campaignHeaderId)
     .eq("status", "open")
@@ -40,6 +40,10 @@ export async function loadOpenChangeImpactSignals(
     recommended_actions: string[] | null;
     event_type: string;
     created_at: string;
+    ai_context?: {
+      responsible_owner?: "Operations" | "Commercial" | "Finance" | "Traffic" | "Executive";
+      severity_label?: string;
+    } | null;
   }>;
 
   if (rows.length === 0) return [];

@@ -125,45 +125,21 @@ export async function applyDocumentLifecycleReactions(
 }
 
 /**
- * @deprecated Prefer `applyBusinessChangeImpact` from `@/lib/change-impact`.
- * Kept for compatibility — records event + applies document transitions only.
+ * Compatibility shim — NOT a second impact engine.
+ * Every business change must enter through Change Impact (`applyBusinessChangeImpact`).
  */
 export async function emitBusinessChangeEvent(
   supabase: SupabaseClient,
   input: EmitBusinessChangeInput
 ): Promise<EmitBusinessChangeResult> {
-  const { data: eventRow, error: eventError } = await supabase
-    .from("business_change_events")
-    .insert({
-      event_type: input.eventType,
-      reason_code: input.reasonCode,
-      reason_detail: input.reasonDetail,
-      campaign_header_id: input.campaignHeaderId,
-      entity_type: input.entityType ?? null,
-      entity_id: input.entityId ?? null,
-      payload: input.payload ?? {},
-      actor_id: input.actorId ?? null,
-    } as never)
-    .select("id")
-    .maybeSingle();
-
-  if (eventError || !eventRow) {
-    return {
-      ok: false,
-      error: eventError?.message ?? "Failed to record business change event.",
-    };
-  }
-
-  const eventId = (eventRow as { id: string }).id;
-  const reactions = await planDocumentLifecycleReactions(supabase, input);
-  const applied = await applyDocumentLifecycleReactions(supabase, {
-    eventId,
-    actorId: input.actorId,
-    estimatedImpact: input.estimatedImpact,
-    reactions,
-  });
-  if (!applied.ok) return applied;
-  return { ok: true, eventId, reactions };
+  const { applyBusinessChangeImpact } = await import("@/lib/change-impact/apply");
+  const result = await applyBusinessChangeImpact(supabase, input);
+  if (!result.ok) return result;
+  return {
+    ok: true,
+    eventId: result.eventId,
+    reactions: result.assessment.lifecycleReactions,
+  };
 }
 
 async function loadCampaignVendorIos(

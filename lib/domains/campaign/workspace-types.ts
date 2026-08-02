@@ -314,6 +314,7 @@ export type CampaignWorkspace = {
   change_impact_signals?: Array<{
     assessmentId: string;
     severity: "critical" | "high" | "medium" | "low" | "info";
+    severityLabel: "Critical" | "Major" | "Moderate" | "Minor" | "Informational";
     title: string;
     reason: string;
     impact: string;
@@ -329,6 +330,7 @@ export type CampaignWorkspace = {
     objectLabel: string;
     objectRef: string;
     recordId: string | null;
+    responsibleOwner: "Operations" | "Commercial" | "Finance" | "Traffic" | "Executive";
     createdAt: string;
   }>;
   /** Linked Campaign Intelligence Object — SSOT for brief requirements. */

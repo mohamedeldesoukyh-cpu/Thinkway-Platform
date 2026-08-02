@@ -1,11 +1,28 @@
-import { formatLifecycleReasonLabel } from "@/lib/document-lifecycle/reason-codes";
-import type { PlannedDocumentReaction } from "@/lib/document-lifecycle/types";
+import { formatChangeImpactSeverity } from "@/lib/change-impact/severity";
 import type {
   ApplyChangeImpactInput,
   ChangeImpactAssessment,
   ChangeImpactDocumentImpact,
+  ChangeImpactOwner,
   ChangeImpactSeverity,
 } from "@/lib/change-impact/types";
+import { formatLifecycleReasonLabel } from "@/lib/document-lifecycle/reason-codes";
+import type { PlannedDocumentReaction } from "@/lib/document-lifecycle/types";
+
+function resolveOwner(
+  input: ApplyChangeImpactInput,
+  needsRegenerate: boolean
+): ChangeImpactOwner {
+  if (input.eventType === "campaign_cancelled") return "Executive";
+  if (
+    input.eventType === "campaign_budget_changed" ||
+    input.eventType === "creator_price_updated"
+  ) {
+    return needsRegenerate ? "Operations" : "Commercial";
+  }
+  if (input.eventType === "payment_terms_changed") return "Finance";
+  return "Operations";
+}
 
 function docLabel(reaction: PlannedDocumentReaction): string {
   const num = reaction.aiContext?.document_number;
@@ -175,6 +192,14 @@ export function assessBusinessChangeImpact(
   const needsRegenerate = documentImpacts.some(
     (d) => d.plannedToStatus === "revision_required"
   );
+  const responsibleOwner = resolveOwner(input, needsRegenerate);
+  const severityLabel = formatChangeImpactSeverity(severity);
+  const reason =
+    formatLifecycleReasonLabel(input.reasonCode, input.reasonDetail) ??
+    input.reasonDetail;
+  const affectedLabels =
+    documentImpacts.map((d) => d.documentLabel).join(", ") ||
+    "No issued documents";
 
   const recommendedActions = needsRegenerate
     ? [
@@ -183,18 +208,21 @@ export function assessBusinessChangeImpact(
           label: "Regenerate impacted Vendor IOs",
           actionTab: "vendor-io" as const,
           priority: 1,
+          owner: "Operations" as const,
         },
         {
           id: "review_client_io",
           label: "Review Client IO commercial impact",
           actionTab: "client-io" as const,
           priority: 2,
+          owner: "Commercial" as const,
         },
         {
           id: "send_updated",
           label: "Send updated document versions",
           actionTab: "vendor-io" as const,
           priority: 3,
+          owner: "Operations" as const,
         },
       ]
     : input.eventType === "campaign_cancelled"
@@ -204,16 +232,42 @@ export function assessBusinessChangeImpact(
             label: "Review cancelled campaign history",
             actionTab: "overview" as const,
             priority: 1,
+            owner: "Executive" as const,
           },
         ]
       : [
           {
             id: "acknowledge",
-            label: "Acknowledge business change",
+            label: "Acknowledge business change in Decision Center",
             actionTab: "overview" as const,
             priority: 1,
+            owner: responsibleOwner,
           },
         ];
+
+  const whatNext = recommendedActions[0]?.label ?? "Review change impact";
+  const explainability = {
+    whatChanged: reason,
+    whyImportant:
+      severity === "critical"
+        ? "Campaign execution stopped for outstanding work; legal accepted history must stay intact."
+        : needsRegenerate
+          ? "Issued documents no longer match current commercial terms — continuing on outdated versions creates legal and billing risk."
+          : "The change was recorded so Ops can confirm no issued documents were invalidated.",
+    whatAffected: affectedLabels,
+    whatShouldHappenNext: whatNext,
+    whoOwnsTheAction: responsibleOwner,
+  };
+
+  const detailWithExplainability = [
+    detail,
+    `What changed: ${explainability.whatChanged}.`,
+    `Why it matters: ${explainability.whyImportant}`,
+    `Affected: ${explainability.whatAffected}.`,
+    `Next: ${explainability.whatShouldHappenNext}.`,
+    `Owner: ${explainability.whoOwnsTheAction}.`,
+    `Severity: ${severityLabel}.`,
+  ].join(" ");
 
   const notificationIntents =
     severity === "info" && lifecycleReactions.length === 0
@@ -223,12 +277,15 @@ export function assessBusinessChangeImpact(
             audience: "operations" as const,
             channel: "in_app" as const,
             title: summary,
-            body: detail,
+            body: detailWithExplainability,
             payload: {
               event_type: input.eventType,
               reason_code: input.reasonCode,
               severity,
+              severity_label: severityLabel,
               document_count: documentImpacts.length,
+              owner: responsibleOwner,
+              explainability,
             },
           },
           ...(severity === "critical" || severity === "high"
@@ -237,10 +294,13 @@ export function assessBusinessChangeImpact(
                   audience: "commercial" as const,
                   channel: "in_app" as const,
                   title: summary,
-                  body: detail,
+                  body: detailWithExplainability,
                   payload: {
                     event_type: input.eventType,
                     severity,
+                    severity_label: severityLabel,
+                    owner: responsibleOwner,
+                    explainability,
                   },
                 },
               ]
@@ -254,8 +314,11 @@ export function assessBusinessChangeImpact(
     reasonCode: input.reasonCode,
     reasonDetail: input.reasonDetail,
     severity,
+    severityLabel,
     businessImpactSummary: summary,
-    businessImpactDetail: detail,
+    businessImpactDetail: detailWithExplainability,
+    explainability,
+    responsibleOwner,
     affectedObjects,
     documentImpacts,
     recommendedActions,

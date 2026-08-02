@@ -1,6 +1,8 @@
 import type { DecisionBlocker } from "@/features/campaigns/lifecycle/campaign-decision-center";
+import { formatChangeImpactSeverity } from "@/lib/change-impact/severity";
 import type {
   ChangeImpactDecisionSignal,
+  ChangeImpactOwner,
   ChangeImpactSeverity,
 } from "@/lib/change-impact/types";
 
@@ -35,6 +37,15 @@ export function changeImpactSignalsToDecisionBlockers(
       signal.severity === "critical" ? "campaign_cancelled" : "creator_price_updated"
     );
 
+    const owner =
+      signal.responsibleOwner === "Executive"
+        ? "Account Manager"
+        : signal.responsibleOwner === "Commercial"
+          ? "Account Manager"
+          : signal.responsibleOwner === "Finance"
+            ? "Finance"
+            : "Operations";
+
     return {
       id: `change_impact_${signal.assessmentId}`,
       objectKind: signal.objectKind,
@@ -43,9 +54,9 @@ export function changeImpactSignalsToDecisionBlockers(
       recordId: signal.recordId,
       title: signal.title,
       severity,
-      owner: "Operations",
-      waitingFor: "Operations",
-      waitingLabel: "Change impact follow-up",
+      owner,
+      waitingFor: owner === "Finance" ? "Finance" : "Operations",
+      waitingLabel: `${signal.severityLabel} change impact`,
       sinceLabel: since,
       reason: signal.reason,
       whyBlocks: signal.reason,
@@ -75,6 +86,10 @@ export function assessmentRowToDecisionSignal(row: {
   recommended_actions: string[] | null;
   event_type: string;
   created_at: string;
+  ai_context?: {
+    responsible_owner?: ChangeImpactOwner;
+    severity_label?: string;
+  } | null;
   primary_document?: {
     document_type: string;
     document_id: string;
@@ -86,14 +101,16 @@ export function assessmentRowToDecisionSignal(row: {
   const doc = row.primary_document;
   const isVendor = doc?.document_type === "vendor_io";
   const isClient = doc?.document_type === "client_io";
+  const severityLabel = formatChangeImpactSeverity(row.severity);
 
   return {
     assessmentId: row.id,
     severity: row.severity,
+    severityLabel,
     title:
       row.severity === "critical"
         ? "Critical business change"
-        : "Business change requires follow-up",
+        : `${severityLabel} business change requires follow-up`,
     reason: row.business_impact_summary,
     impact:
       row.business_impact_detail?.trim() ||
@@ -118,6 +135,7 @@ export function assessmentRowToDecisionSignal(row: {
         : "Campaign",
     objectRef: doc?.document_label?.trim() || "Change impact",
     recordId: doc?.document_id ?? null,
+    responsibleOwner: row.ai_context?.responsible_owner ?? "Operations",
     createdAt: row.created_at,
   };
 }

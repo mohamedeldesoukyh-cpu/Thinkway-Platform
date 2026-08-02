@@ -69,8 +69,8 @@ Do not invent parallel bulk runners. Vendor IO (R2.2d / 2.2d.1) is the first pro
 **Document lifecycle (canonical):** `docs/architecture/ENTERPRISE_DOCUMENT_LIFECYCLE.md` · `lib/document-lifecycle/`  
 Document state transitions only. UI/bulk actions from `resolveDocumentLifecycle`. Reason codes required.
 
-**Change impact (canonical):** `docs/architecture/ENTERPRISE_CHANGE_IMPACT_ENGINE.md` · `lib/change-impact/`  
-Intelligence layer above Document Lifecycle. Business changes route through `applyBusinessChangeImpact`. Do not adopt Quotation/PO/Invoice document types until Change Impact is approved.
+**Change impact (frozen · mandatory):** `docs/architecture/ENTERPRISE_CHANGE_IMPACT_ENGINE.md` · `lib/change-impact/`  
+Intelligence layer above Document Lifecycle. **Only** `applyBusinessChangeImpact`. Registry: `docs/architecture/PLATFORM_CAPABILITY_REGISTRY.md`. Quotation/PO/Invoice/Contract/Report must extend this engine — no parallel impact logic.
 
 ## Mandatory for every ADR / capability spec / release architecture / implementation proposal
 

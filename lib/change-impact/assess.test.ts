@@ -42,10 +42,15 @@ describe("Enterprise Change Impact Engine", () => {
   it("assigns high severity when an Accepted document becomes Revision Required", () => {
     const assessment = assessBusinessChangeImpact(baseInput, [reaction()]);
     assert.equal(assessment.severity, "high");
+    assert.equal(assessment.severityLabel, "Major");
     assert.match(assessment.businessImpactSummary, /require revision/i);
     assert.equal(assessment.documentImpacts.length, 1);
     assert.equal(assessment.documentImpacts[0]?.plannedToStatus, "revision_required");
     assert.ok(assessment.recommendedActions.some((a) => /Regenerate/i.test(a.label)));
+    assert.equal(assessment.responsibleOwner, "Operations");
+    assert.match(assessment.explainability.whatChanged, /Creator price changed/i);
+    assert.match(assessment.explainability.whatShouldHappenNext, /Regenerate/i);
+    assert.equal(assessment.explainability.whoOwnsTheAction, "Operations");
     assert.equal(assessment.aiRecommendation.recommendBulkRegenerate, false);
     assert.equal(assessment.aiRecommendation.estimatedImpact?.amountDelta, 12500);
   });
@@ -96,6 +101,7 @@ describe("Enterprise Change Impact Engine", () => {
       {
         assessmentId: "a1",
         severity: "high",
+        severityLabel: "Major",
         title: "Business change requires follow-up",
         reason: "Creator price changed — 1 document requires revision.",
         impact: "Regenerate Vendor IO",
@@ -105,6 +111,7 @@ describe("Enterprise Change Impact Engine", () => {
         objectLabel: "Vendor IO",
         objectRef: "VIO-1",
         recordId: "vio-1",
+        responsibleOwner: "Operations",
         createdAt: "2026-08-02T00:00:00Z",
       },
     ]);

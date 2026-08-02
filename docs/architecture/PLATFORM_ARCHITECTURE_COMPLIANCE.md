@@ -74,8 +74,8 @@ First production implementation: Release 2.2d Vendor IO; reliability + idempoten
 **Enterprise Document Lifecycle Engine** (canonical): [`ENTERPRISE_DOCUMENT_LIFECYCLE.md`](./ENTERPRISE_DOCUMENT_LIFECYCLE.md) · `lib/document-lifecycle/`  
 Release 2.2d.2 — document state transitions only. Vendor IO / Client IO first. Business State ≠ Document State. Reason codes mandatory.
 
-**Enterprise Change Impact Engine** (canonical): [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md) · `lib/change-impact/`  
-Release 2.2d.2b — intelligence layer above Document Lifecycle. Severity · business explanation · recommended actions · Decision Center / Notifications / Timeline / AI-ready feeds. **No Quotation/PO/Invoice document adoption until this engine is approved.**
+**Enterprise Change Impact Engine** (frozen · protected · mandatory): [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md) · [`ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md`](./ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md) · `lib/change-impact/`  
+Release 2.2d.2b — intelligence layer above Document Lifecycle. Entry: `applyBusinessChangeImpact` only. **Platform Capability Registry:** [`PLATFORM_CAPABILITY_REGISTRY.md`](./PLATFORM_CAPABILITY_REGISTRY.md). Quotation/PO/Invoice/Contract/Report must extend this engine — no parallel impact logic.
 
 ---
 

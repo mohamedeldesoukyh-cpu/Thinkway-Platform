@@ -30,4 +30,12 @@ export {
   projectChangeImpactAiRecommendation,
   formatChangeImpactAiBrief,
 } from "@/lib/change-impact/feeds/ai-recommendations";
+export {
+  CHANGE_IMPACT_SEVERITY_LABEL,
+  formatChangeImpactSeverity,
+  type ChangeImpactSeverityLabel,
+} from "@/lib/change-impact/severity";
 export type * from "@/lib/change-impact/types";
+
+/** Canonical entry point alias — use this in all future modules. */
+export { applyBusinessChangeImpact as assessAndApplyBusinessChange } from "@/lib/change-impact/apply";

@@ -10,7 +10,7 @@
 
 **Enterprise Document Lifecycle:** `docs/architecture/ENTERPRISE_DOCUMENT_LIFECYCLE.md` · `lib/document-lifecycle/` (R2.2d.2) — document state transitions only.
 
-**Enterprise Change Impact Engine:** `docs/architecture/ENTERPRISE_CHANGE_IMPACT_ENGINE.md` · `lib/change-impact/` (R2.2d.2b) — sits above Document Lifecycle; feeds Decision Center / Notifications / Timeline / AI-ready. **No Quotation/PO/Invoice docs until approved.**
+**Enterprise Change Impact Engine:** **FROZEN** · `docs/architecture/ENTERPRISE_CHANGE_IMPACT_ENGINE.md` · acceptance + `PLATFORM_CAPABILITY_REGISTRY.md`. Entry: `applyBusinessChangeImpact` only. Quotation/PO/Invoice/Contract/Report must extend this engine.
 
 **Gate docs (Planning — retargeted as R2.3):**  
 - `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md`  

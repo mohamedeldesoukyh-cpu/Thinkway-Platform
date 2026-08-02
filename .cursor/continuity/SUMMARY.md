@@ -41,7 +41,7 @@ Environment switch navigates between **hosts** — never switches DB inside one 
 - `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.3.md` — canonical Campaign Workspace OS baseline (executive Decision Center · three severities · Vendor IO operational compliance)
 - `docs/architecture/PLATFORM_BULK_OPERATIONS_FRAMEWORK.md` — official bulk framework (`components/workspace/bulk-operations/`); Vendor IO first production consumer (R2.2d / 2.2d.1); gates: bulk · background · AI-ready · effort · idempotent
 - `docs/architecture/ENTERPRISE_DOCUMENT_LIFECYCLE.md` — Document Lifecycle (`lib/document-lifecycle/`); state transitions only; R2.2d.2
-- `docs/architecture/ENTERPRISE_CHANGE_IMPACT_ENGINE.md` — Change Impact Engine (`lib/change-impact/`); R2.2d.2b; severity + Decision Center/Timeline/Notification/AI feeds
+- `docs/architecture/ENTERPRISE_CHANGE_IMPACT_ENGINE.md` — Change Impact Engine **FROZEN** (`lib/change-impact/`); acceptance + `PLATFORM_CAPABILITY_REGISTRY.md`; mandatory for future modules
 - `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md` — **active** R2.3 Campaign Planning Workspace capability spec (review gate)
 - `docs/capabilities/PLANNING_BOARD_CAPABILITY_REVIEW.md` — **active** R2.3 functional capability review pack
 - `docs/architecture/platform-ux/` — Platform UX package (docs 01–12 frozen)  
