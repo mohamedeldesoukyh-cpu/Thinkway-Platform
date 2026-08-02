@@ -430,6 +430,20 @@ function deriveSectionUpdatesFromTask(
         const fitScoreCount = Object.keys(
           recommendationData.creatorFitScores ?? {}
         ).length;
+        const poolSize =
+          existingData.discovery?.total ??
+          (typeof stateData.searchTotal === "number" ? stateData.searchTotal : undefined) ??
+          groundedCreators.length;
+        const funnel =
+          campaignFacts && strategy
+            ? buildVendorDiscoveryFunnel(
+                campaignFacts,
+                strategy,
+                groundedCreators.length,
+                false,
+                { initialPoolCount: poolSize }
+              )
+            : existingData.vendorDiscoveryFunnel;
         updates.push({
           sectionKey: key,
           content: discoveryDisplay,
@@ -439,6 +453,8 @@ function deriveSectionUpdatesFromTask(
             recommendations: recommendationData,
             recommendationsDisplay,
             fitScoreCount,
+            vendorDiscoveryFunnel: funnel,
+            discoveryPipeline: funnel,
             constraintReport:
               stateData.constraintReport &&
               typeof stateData.constraintReport === "object"

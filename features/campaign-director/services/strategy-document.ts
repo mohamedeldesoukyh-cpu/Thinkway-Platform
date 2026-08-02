@@ -114,7 +114,7 @@ export function writeStrategyDocumentFromBrief(
       : ["Standard vendor availability and content approval timelines"];
 
   const budgetRationale = budgetTotal
-    ? `Facts SSOT: ${currency} ${budgetTotal.toLocaleString()} — allocated across creator tiers per influencer marketing model`
+    ? `${currency} ${budgetTotal.toLocaleString()} — allocated across creator tiers per influencer marketing model`
     : "Budget to be confirmed — allocation follows industry-weighted creator fee model";
 
   const timelineRationale = `${durationWeeks}-week client-facing execution window aligned to ${objective.toLowerCase()} objective`;
@@ -124,7 +124,7 @@ export function writeStrategyDocumentFromBrief(
     role: profile.platforms.includes(platform)
       ? "Primary channel for category audience"
       : "Supporting channel for reach extension",
-    why: `${platform} selected per campaign facts SSOT and ${profile.label} category benchmarks`,
+    why: `${platform} selected per the campaign brief and ${profile.label} category benchmarks`,
   }));
 
   const pillars: CampaignStrategyDocument["pillars"] = [

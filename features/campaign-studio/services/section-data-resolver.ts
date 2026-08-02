@@ -76,6 +76,10 @@ import {
   stripInternalSearchMetadata,
 } from "../components/sections/shared/format-utils";
 import {
+  humanizeCreatorHandle,
+  parseCompactFollowerCount,
+} from "./boardroom-language";
+import {
   applyFactsToSummaryData,
   buildBudgetSectionDataFromFacts,
   buildCreatorMixFromFacts,
@@ -637,16 +641,44 @@ export function resolveVendorRecommendations(
     .filter((line) => /@[\w.]{2,}/.test(line) && !/\*\*Criteria/i.test(line))
     .map((line, index) => {
       const handleMatch = line.match(/@([\w.]+)/);
-      const handle = handleMatch ? `@${handleMatch[1]}` : `@vendor-${index + 1}`;
-      const name = line.replace(/^[-*•\d.]+\s*/, "").split(/[@(]/)[0]?.trim() || `Vendor ${index + 1}`;
+      const bareHandle = handleMatch?.[1];
+      const handle = bareHandle ? `@${bareHandle}` : `@vendor-${index + 1}`;
+      const leadingName = line
+        .replace(/^[-*•\d.]+\s*/, "")
+        .split(/[@(]/)[0]
+        ?.trim();
+      const displayName =
+        leadingName && leadingName.length > 1 && !/^vendor[-\s]?\d+$/i.test(leadingName)
+          ? leadingName
+          : bareHandle
+            ? humanizeCreatorHandle(bareHandle)
+            : `Creator ${index + 1}`;
       const platform = parsePlatformFromRecommendationLine(line) ?? defaultPlatform;
+      const followerToken = line.match(/([\d,.]+)\s*([KMB])\b/i);
+      const followers = followerToken
+        ? parseCompactFollowerCount(`${followerToken[1]}${followerToken[2] ?? ""}`)
+        : undefined;
+      const engagementMatch = line.match(/([\d.]+)\s*%\s*engagement/i);
+      const engagementRate = engagementMatch?.[1]
+        ? Number.parseFloat(engagementMatch[1])
+        : undefined;
+      const fitMatch = line.match(/fit\s*(\d{1,3})\s*\/\s*100/i);
+      const fitScore = fitMatch?.[1] ? Number.parseInt(fitMatch[1], 10) : undefined;
       return {
         rank: index + 1,
-        displayName: name,
+        displayName,
         handle,
         platform,
+        followers,
+        engagementRate:
+          engagementRate != null && Number.isFinite(engagementRate) ? engagementRate : undefined,
+        fitScore,
         reason: line,
-        priceEstimate: estimateCreatorPostFee({ platform, currency }),
+        priceEstimate: estimateCreatorPostFee({
+          platform,
+          currency,
+          followers,
+        }),
       };
     });
 }

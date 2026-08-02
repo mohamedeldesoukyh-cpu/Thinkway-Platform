@@ -165,15 +165,15 @@ function genericReasoning(ctx: Is1CampaignContext, strategy: CampaignStrategyDoc
   return {
     businessChallenge: `${ctx.brand} must break through ${ctx.industry} category noise in ${ctx.geography} where consumers distrust brand-only messaging — ${ctx.objective} requires creator-mediated credibility within ${ctx.durationWeeks} weeks and ${formatBudgetRef(ctx)}.`,
     marketingChallenge: `${ctx.objective} must be achieved through creator trust transfer on ${ctx.platforms.join(", ")} — not paid media buying — within ${formatBudgetRef(ctx)} and ${ctx.durationWeeks}-week activation window.`,
-    audienceChallenge: `${ctx.audience} in ${ctx.geography} responds to creator authenticity over polished ads; reaching this cohort requires tier-sequenced voices aligned to CampaignFacts audience segment.`,
+    audienceChallenge: `${ctx.audience} in ${ctx.geography} responds to creator authenticity over polished ads; reaching this cohort requires tier-sequenced voices aligned to the brief audience.`,
     strategicInsight: `${ctx.audience} responds to creator authenticity over polished ads; Director tier mix (${tierMix}) balances reach and cost for ${ctx.platforms.join(", ")} consumption patterns.`,
     rejectedAlternatives: [
-      `Paid media-only plan — rejected; CampaignFacts objective (${ctx.objective}) requires creator trust transfer.`,
+      `Paid media-only plan — rejected; the campaign objective (${ctx.objective}) requires creator trust transfer.`,
       `Single-tier creator roster — rejected; ${formatBudgetRef(ctx)} cannot deliver reach + authenticity without tier waterfall.`,
       `Extended timeline without tier sequencing — rejected; ${ctx.durationWeeks}-week window requires front-loaded Macro/Mega activation per Director timeline.`,
     ],
     chosenStrategy: `Creator-led ${ctx.objective.toLowerCase()} on ${ctx.platforms.join(" + ")} using Director-approved ${tierMix} for ${ctx.geography}.`,
-    whyThisStrategyWins: `Aligns ${ctx.brand} spend to audience behavior on ${ctx.platforms.join("/")} while preserving budget efficiency — each tier rationale documented in DirectorStrategy.creatorTierStrategy.`,
+    whyThisStrategyWins: `Aligns ${ctx.brand} spend to audience behavior on ${ctx.platforms.join("/")} while preserving budget efficiency — each tier rationale is documented in the approved Director strategy.`,
     expectedTradeoffs: [
       "Reduced message control vs brand-owned creative",
       "Creator availability variance during activation window",
@@ -182,7 +182,7 @@ function genericReasoning(ctx: Is1CampaignContext, strategy: CampaignStrategyDoc
     risks: baseRisks(ctx, strategy),
     successConditions: successConditions(ctx, strategy),
     confidenceLevel: factsConfidence(ctx, 78),
-    directorConclusion: `Director approves creator-tier strategy for ${ctx.brand} — ${ctx.objective} in ${ctx.geography} via ${tierMix}, grounded in CampaignFacts and Director Strategy SSOT.`,
+    directorConclusion: `Director approves creator-tier strategy for ${ctx.brand} — ${ctx.objective} in ${ctx.geography} via ${tierMix}, grounded in the brief and approved strategy.`,
     evidence: [
       `CampaignFacts.brandName=${ctx.brand}`,
       `CampaignFacts.objective=${ctx.objective}`,

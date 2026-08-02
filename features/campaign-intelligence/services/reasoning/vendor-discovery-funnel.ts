@@ -12,82 +12,83 @@ export type VendorDiscoveryFunnelStage = {
   status: "complete" | "active" | "pending";
 };
 
+export type VendorDiscoveryFunnelOptions = {
+  /** Measured search / screened pool size when known. Never invent this. */
+  initialPoolCount?: number;
+};
+
 /** IS-2 funnel: Database → Country → Category → Audience → Brand Safety → Engagement → Availability → Director Review → Approved */
-const FUNNEL_STAGE_DEFS: Array<{ id: string; label: string; removalRatio: number }> = [
-  { id: "database", label: "Database", removalRatio: 0 },
-  { id: "country", label: "Country", removalRatio: 0.18 },
-  { id: "category", label: "Category", removalRatio: 0.15 },
-  { id: "audience", label: "Audience", removalRatio: 0.22 },
-  { id: "brand_safety", label: "Brand Safety", removalRatio: 0.12 },
-  { id: "engagement", label: "Engagement", removalRatio: 0.1 },
-  { id: "availability", label: "Availability", removalRatio: 0.08 },
-  { id: "director_review", label: "Director Review", removalRatio: 0.05 },
-  { id: "approved", label: "Approved", removalRatio: 0 },
+const FUNNEL_STAGE_DEFS: Array<{ id: string; label: string }> = [
+  { id: "database", label: "Database" },
+  { id: "country", label: "Country" },
+  { id: "category", label: "Category" },
+  { id: "audience", label: "Audience" },
+  { id: "brand_safety", label: "Brand Safety" },
+  { id: "engagement", label: "Engagement" },
+  { id: "availability", label: "Availability" },
+  { id: "director_review", label: "Director Review" },
+  { id: "approved", label: "Approved" },
 ];
 
 function removalWhyForStage(
   stageId: string,
   ctx: ReturnType<typeof buildIs1CampaignContext>,
-  strategy: CampaignStrategyDocument,
-  removed: number
+  removed: number,
+  hasMeasuredPool: boolean
 ): string {
   if (removed === 0) {
-    return stageId === "approved"
-      ? "Director-approved shortlist — creators passed all prior gates"
-      : stageId === "database"
-        ? "Thinkway database baseline — counts shown only when search results are available"
-        : "No removals at this gate — pool already qualified or count unknown pending search";
+    if (stageId === "approved") {
+      return "Director-approved shortlist — creators that remain after Campaign Intelligence filtering";
+    }
+    if (stageId === "database") {
+      return hasMeasuredPool
+        ? "Measured Campaign Intelligence search pool for this brief"
+        : "Approved shortlist size (stage-level pool sizes were not measured in this run)";
+    }
+    return hasMeasuredPool
+      ? "No measured removals persisted at this gate for this run"
+      : "Intermediate gate counts not instrumented — showing approved shortlist size only";
   }
 
-  const tierNote = strategy.creatorTierStrategy.map((t) => t.tier).join("/");
-
   switch (stageId) {
-    case "country":
-      return `Removed ${removed} creators outside ${ctx.geography} — CampaignFacts.geography requires on-market voices for ${ctx.brand} ${ctx.objective}.`;
-    case "category":
-      return `Removed ${removed} creators without ${ctx.industry} category credibility — ${ctx.brand} content must read native to category, not generic lifestyle.`;
-    case "audience":
-      return `Removed ${removed} creators whose audience skew misses ${ctx.audience} — Director Strategy requires demographic overlap, not reach-only profiles.`;
-    case "brand_safety":
-      return `Removed ${removed} creators with controversial content history or off-brand tone — ${ctx.brand} ${ctx.industry} requires brand-safe archives per Director constraints.`;
-    case "engagement":
-      return `Removed ${removed} profiles with engagement anomalies or below-tier ER thresholds — protects ${ctx.budgetAmount ? `${ctx.budgetCurrency} ${ctx.budgetAmount.toLocaleString()}` : "budget"} from low-quality audiences.`;
-    case "availability":
-      return `Removed ${removed} creators unavailable during ${ctx.durationWeeks}-week window or under competitor exclusivity — ${ctx.brand} activation cannot share voices with direct rivals.`;
     case "director_review":
-      return `Removed ${removed} creators below DNA fit threshold for ${tierNote} tier targets — DirectorStrategy.creatorTierStrategy requires tier-appropriate content style and ${ctx.platforms.join("/")} format match.`;
+      return `Narrowed ${removed} creator${removed === 1 ? "" : "s"} during Campaign Intelligence filtering for ${ctx.brand} in ${ctx.geography}`;
+    case "country":
+      return `Removed ${removed} creators outside ${ctx.geography}`;
     default:
-      return `Removed ${removed} creators failing ${stageId} gate per CampaignFacts + Director Strategy filters.`;
+      return `Narrowed ${removed} creator${removed === 1 ? "" : "s"} during ${stageId.replace(/_/g, " ")} filtering`;
   }
 }
 
 /**
  * Build vendor discovery funnel stages.
- * Unknown counts are NOT fabricated — when finalCandidateCount is 0 and search is pending, all counts stay 0 (UI shows "—").
+ * Unknown stage counts are NEVER fabricated from ratios.
+ * When only the approved count is known, every stage shows that count with zero invented removals.
+ * When an initial pool is measured and larger than approved, the reduction is attributed once to Director Review.
  */
 export function buildVendorDiscoveryFunnel(
   facts: CampaignFacts,
   strategy: CampaignStrategyDocument,
   finalCandidateCount: number,
-  isSearching = false
+  isSearching = false,
+  options?: VendorDiscoveryFunnelOptions
 ): VendorDiscoveryFunnelStage[] {
   const ctx = buildIs1CampaignContext(facts, strategy);
   const finalCount = Math.max(finalCandidateCount, 0);
   const hasKnownPool = finalCount > 0;
+  const measuredPool =
+    typeof options?.initialPoolCount === "number" && options.initialPoolCount > 0
+      ? Math.max(options.initialPoolCount, finalCount)
+      : null;
+  const hasMeasuredPool = measuredPool != null && measuredPool > finalCount;
+  const poolStart = measuredPool ?? finalCount;
 
-  let currentCount = hasKnownPool ? Math.round(finalCount / 0.05) : 0;
-  const stages: VendorDiscoveryFunnelStage[] = [];
-
-  for (let i = 0; i < FUNNEL_STAGE_DEFS.length; i++) {
-    const def = FUNNEL_STAGE_DEFS[i];
+  return FUNNEL_STAGE_DEFS.map((def, i) => {
     const isApproved = def.id === "approved";
+    const isDirector = def.id === "director_review";
+    const count = isApproved ? finalCount : hasKnownPool ? poolStart : 0;
     const removed =
-      hasKnownPool && !isApproved ? Math.round(currentCount * def.removalRatio) : 0;
-    const nextCount = isApproved
-      ? finalCount
-      : hasKnownPool
-        ? currentCount - removed
-        : 0;
+      hasMeasuredPool && isDirector ? Math.max(0, poolStart - finalCount) : 0;
 
     let status: VendorDiscoveryFunnelStage["status"] = "pending";
     if (hasKnownPool) {
@@ -98,17 +99,13 @@ export function buildVendorDiscoveryFunnel(
       else if (i === activeIndex) status = "active";
     }
 
-    stages.push({
+    return {
       id: def.id,
       label: def.label,
-      count: isApproved ? nextCount : hasKnownPool ? currentCount : 0,
+      count,
       removedCount: removed,
-      removalWhy: removalWhyForStage(def.id, ctx, strategy, removed),
+      removalWhy: removalWhyForStage(def.id, ctx, removed, hasMeasuredPool),
       status,
-    });
-
-    currentCount = nextCount;
-  }
-
-  return stages;
+    };
+  });
 }

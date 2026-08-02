@@ -85,7 +85,7 @@ export function buildIs1CampaignContext(
 }
 
 export function formatBudgetRef(ctx: Is1CampaignContext): string {
-  if (ctx.budgetAmount == null) return "budget TBD per CampaignFacts";
+  if (ctx.budgetAmount == null) return "budget TBD per the campaign brief";
   return `${ctx.budgetCurrency} ${ctx.budgetAmount.toLocaleString()}`;
 }
 

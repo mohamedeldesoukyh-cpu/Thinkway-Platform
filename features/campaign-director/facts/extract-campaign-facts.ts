@@ -328,12 +328,28 @@ export function extractCampaignFacts(input: CampaignFactsExtractInput): Campaign
       if (genZMatch) {
         setField(facts, "audience", genZMatch[0], "brief", 0.85);
       } else {
+        const marketLabel =
+          geography[0] ??
+          parseMarketFromText(text) ??
+          undefined;
+        const categoryLabel =
+          industryKey && industryKey !== "general"
+            ? industryKey.replace(/_/g, " ")
+            : /\blifestyle\b/i.test(text)
+              ? "lifestyle"
+              : undefined;
+        const synthesized =
+          marketLabel && categoryLabel
+            ? `${categoryLabel.charAt(0).toUpperCase()}${categoryLabel.slice(1)} consumers in ${marketLabel}`
+            : marketLabel
+              ? `Brand-relevant consumers in ${marketLabel}`
+              : "Brand-relevant consumers in primary market";
         setField(
           facts,
           "audience",
-          "Brand-relevant consumers in primary market",
-          "default",
-          0.4
+          synthesized,
+          marketLabel || categoryLabel ? "inferred" : "default",
+          marketLabel || categoryLabel ? 0.55 : 0.4
         );
       }
     }

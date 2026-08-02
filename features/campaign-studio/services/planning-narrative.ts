@@ -24,6 +24,7 @@ import {
   type StudioExecutivePlanningSummary,
 } from "./eci/executive-planning-view";
 import type { StudioEciPlanningSignal } from "./eci/project-studio-eci-signal";
+import { toBoardroomLanguage } from "./boardroom-language";
 import {
   resolveBudgetData,
   resolveCampaignSummary,
@@ -582,70 +583,103 @@ export function deriveEnterprisePlanningNarrative(
   );
   const primary = recommended[0] ?? signals?.[0];
   const primaryNarrative = primary ? buildRecommendationNarrative(primary) : null;
-  const mix = resolveCreatorMix(campaignObject);
-  const mixLine =
-    mix.length > 0
-      ? mix.map((t) => `${t.count ?? "—"} ${t.tier}`).join(", ")
-      : legacySummary.recommendedCreatorMix;
+  const slateCount =
+    recommended.length > 0
+      ? recommended.length
+      : ((campaignObject.sections.creators.data as CreatorsSectionData | undefined)?.recommendations
+          ?.creatorIds?.length ?? 0);
+  const strategyMixLine =
+    resolveCreatorMix(campaignObject)
+      .map((t) => {
+        if (t.percent != null) return `${t.tier} ${t.percent}%`;
+        if (t.count != null) return `${t.count} ${t.tier}`;
+        return t.tier;
+      })
+      .join(" · ") || legacySummary.recommendedCreatorMix;
 
-  const planningRequest = textOrInsufficient(
-    facts?.rawBriefExcerpt?.slice(0, 400) ||
-      (typeof campaignObject.sections.summary.content === "string"
-        ? campaignObject.sections.summary.content.slice(0, 400)
-        : undefined) ||
-      facts?.objective ||
-      summary?.objective
+  const planningRequest = toBoardroomLanguage(
+    textOrInsufficient(
+      facts?.rawBriefExcerpt?.slice(0, 400) ||
+        (typeof campaignObject.sections.summary.content === "string"
+          ? campaignObject.sections.summary.content.slice(0, 400)
+          : undefined) ||
+        facts?.objective ||
+        summary?.objective
+    )
   );
 
-  const businessChallenge = textOrInsufficient(
-    reasoning?.businessChallenge ||
-      fieldByLabel(groundedPairs, "Business Challenge") ||
-      (facts?.objective
-        ? `Deliver measurable business results against: ${facts.objective}`
-        : undefined)
+  const businessChallenge = toBoardroomLanguage(
+    textOrInsufficient(
+      reasoning?.businessChallenge ||
+        fieldByLabel(groundedPairs, "Business Challenge") ||
+        (facts?.objective
+          ? `Deliver measurable business results against: ${facts.objective}`
+          : undefined)
+    )
   );
 
-  const strategicInsight = textOrInsufficient(
-    reasoning?.strategicInsight ||
-      fieldByLabel(groundedPairs, "Strategic Insight") ||
-      reasoning?.whyThisStrategyWins ||
-      strategy?.keyMessage
+  const strategicInsight = toBoardroomLanguage(
+    textOrInsufficient(
+      reasoning?.strategicInsight ||
+        fieldByLabel(groundedPairs, "Strategic Insight") ||
+        reasoning?.whyThisStrategyWins ||
+        strategy?.keyMessage
+    )
   );
 
-  const campaignStrategy = textOrInsufficient(
-    reasoning?.chosenStrategy ||
-      fieldByLabel(groundedPairs, "Chosen Strategy", "Campaign Strategy", "Strategy") ||
-      strategy?.objective ||
-      legacySummary.recommendedStrategy
+  const campaignStrategy = toBoardroomLanguage(
+    textOrInsufficient(
+      reasoning?.chosenStrategy ||
+        fieldByLabel(groundedPairs, "Chosen Strategy", "Campaign Strategy", "Strategy") ||
+        strategy?.objective ||
+        legacySummary.recommendedStrategy
+    )
   );
 
-  const creatorStrategy = textOrInsufficient(
-    fieldByLabel(groundedPairs, "Creator Strategy") ||
-      strategy?.creatorStrategy ||
-      (recommended.length > 0
-        ? `Advance ${recommended.length} evidence-backed creator${recommended.length === 1 ? "" : "s"} (${mixLine}) as the primary creator strategy for this objective.`
-        : undefined)
+  const creatorStrategy = toBoardroomLanguage(
+    textOrInsufficient(
+      fieldByLabel(groundedPairs, "Creator Strategy") ||
+        strategy?.creatorStrategy ||
+        (slateCount > 0
+          ? `Advance ${slateCount} evidence-backed creator${slateCount === 1 ? "" : "s"} on the planning slate for this objective${
+              strategyMixLine ? `, guided by the Director tier mix (${strategyMixLine})` : ""
+            }.`
+          : undefined)
+    )
   );
 
-  const contentStrategy = textOrInsufficient(
-    fieldByLabel(groundedPairs, "Content Strategy", "Message", "Key Message") ||
-      strategy?.keyMessage
+  const contentStrategy = toBoardroomLanguage(
+    textOrInsufficient(
+      fieldByLabel(groundedPairs, "Content Strategy", "Message", "Key Message") ||
+        strategy?.keyMessage ||
+        (facts?.platforms?.length && facts?.objective
+          ? `Produce creator-native content on ${facts.platforms.join(" and ")} that advances ${facts.objective} through authentic storytelling rather than brand-only messaging.`
+          : undefined)
+    )
   );
 
-  const mediaStrategy = textOrInsufficient(
-    fieldByLabel(groundedPairs, "Platform Strategy", "Media Strategy") ||
-      (facts?.platforms?.length
-        ? `Prioritize ${facts.platforms.join(", ")} to concentrate reach where the audience is most addressable.`
-        : undefined)
+  const mediaStrategy = toBoardroomLanguage(
+    textOrInsufficient(
+      fieldByLabel(groundedPairs, "Platform Strategy", "Media Strategy") ||
+        (facts?.platforms?.length
+          ? `Prioritize ${facts.platforms.join(", ")} to concentrate reach where the audience is most addressable.`
+          : undefined)
+    )
   );
 
-  const commercialStrategy = textOrInsufficient(
-    budget?.budgetPlannerReasoning ||
-      primaryNarrative?.commercialValue ||
-      legacySummary.commercialOutlook ||
-      (budget?.total
-        ? `Allocate the ${budget.currency ?? ""} ${budget.total.toLocaleString()} budget to maximize creator-driven business outcomes with clear fee vs amplification trade-offs.`
-        : undefined)
+  const commercialStrategy = toBoardroomLanguage(
+    textOrInsufficient(
+      budget?.budgetPlannerReasoning ||
+        primaryNarrative?.commercialValue ||
+        (legacySummary.commercialOutlook !== INSUFFICIENT_EVIDENCE
+          ? legacySummary.commercialOutlook
+          : undefined) ||
+        (budget?.total
+          ? `Allocate the ${budget.currency ?? ""} ${budget.total.toLocaleString()} budget to maximize creator-driven business outcomes with clear fee vs amplification trade-offs.`
+          : facts?.budget?.amount
+            ? `Allocate ${facts.budget.currency} ${facts.budget.amount.toLocaleString()} across creator tiers to maximize delivery against the campaign objective.`
+            : undefined)
+    )
   );
 
   const executionStrategy = (() => {
@@ -661,39 +695,57 @@ export function deriveEnterprisePlanningNarrative(
     return `Execute in phased waves — ${phases}. Timing concentrates creator momentum to support the campaign objective rather than a one-day spike.`;
   })();
 
-  const expectedBusinessOutcome = textOrInsufficient(
-    legacySummary.expectedBusinessResults ||
-      facts?.kpis?.slice(0, 3).join(", ") ||
-      reasoning?.successConditions?.join("; ")
+  const expectedBusinessOutcome = toBoardroomLanguage(
+    textOrInsufficient(
+      (legacySummary.expectedBusinessResults !== INSUFFICIENT_EVIDENCE
+        ? legacySummary.expectedBusinessResults
+        : undefined) ||
+        facts?.kpis?.slice(0, 3).join(", ") ||
+        reasoning?.successConditions?.join("; ") ||
+        (facts?.objective
+          ? `Progress against ${facts.objective} within the planned activation window on ${(facts.platforms ?? []).join(" + ") || "priority platforms"}.`
+          : undefined)
+    )
   );
 
-  const risks = textOrInsufficient(
-    legacySummary.businessRisks ||
-      reasoning?.risks?.join("; ") ||
-      primaryNarrative?.risks
+  const risks = toBoardroomLanguage(
+    textOrInsufficient(
+      (legacySummary.businessRisks !== INSUFFICIENT_EVIDENCE
+        ? legacySummary.businessRisks
+        : undefined) ||
+        reasoning?.risks?.join("; ") ||
+        primaryNarrative?.risks ||
+        "Creator availability, creative quality, and budget protection remain the primary planning risks to monitor through approval."
+    )
   );
 
-  const recommendedBusinessDecision = textOrInsufficient(
-    reasoning?.directorConclusion ||
-      reasoning?.whyThisStrategyWins ||
-      `Recommend proceeding with the proposed creator-led campaign strategy to deliver: ${legacySummary.campaignObjective}`
+  const recommendedBusinessDecision = toBoardroomLanguage(
+    textOrInsufficient(
+      reasoning?.directorConclusion ||
+        reasoning?.whyThisStrategyWins ||
+        `Recommend proceeding with the proposed creator-led campaign strategy to deliver: ${legacySummary.campaignObjective}`
+    )
   );
 
-  const executiveRecommendation = [
-    `What we should do: ${recommendedBusinessDecision}`,
-    `Why: ${strategicInsight}`,
-    `Business value: ${expectedBusinessOutcome}`,
-    `Why this is strongest: ${campaignStrategy}`,
-  ].join(" ");
+  const executiveRecommendation = toBoardroomLanguage(
+    [
+      `What we should do: ${recommendedBusinessDecision}`,
+      `Why: ${strategicInsight}`,
+      `Business value: ${expectedBusinessOutcome}`,
+      `Why this is strongest: ${campaignStrategy}`,
+    ].join(" ")
+  );
 
   const assumptions = buildAssumptions(campaignObject, signals);
   const openDecisions = buildOpenDecisions(campaignObject, briefCompleteness, signals);
 
-  const audienceStrategy = textOrInsufficient(
-    fieldByLabel(groundedPairs, "Target Audience", "Audience Strategy", "Audience Challenge") ||
-      reasoning?.audienceChallenge ||
-      summary?.targetAudience ||
-      facts?.audience
+  const audienceStrategy = toBoardroomLanguage(
+    textOrInsufficient(
+      fieldByLabel(groundedPairs, "Target Audience", "Audience Strategy", "Audience Challenge") ||
+        reasoning?.audienceChallenge ||
+        summary?.targetAudience ||
+        facts?.audience
+    )
   );
 
   const successMeasurement = textOrInsufficient(

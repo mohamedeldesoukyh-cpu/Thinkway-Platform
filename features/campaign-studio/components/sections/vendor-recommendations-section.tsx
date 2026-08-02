@@ -935,6 +935,14 @@ export function VendorRecommendationsSection({
     return normalizeCreatorId(a) === normalizeCreatorId(b);
   }
 
+  const parsedByHandle = useMemo(() => {
+    const map = new Map<string, (typeof parsedVendors)[number]>();
+    for (const vendor of parsedVendors) {
+      map.set(vendor.handle.replace(/^@/, "").toLowerCase(), vendor);
+    }
+    return map;
+  }, [parsedVendors]);
+
   const vendors: DisplayVendor[] = useMemo(
     () =>
       hydrated.length > 0
@@ -946,26 +954,39 @@ export function VendorRecommendationsSection({
                   (previewVendorDecisions[v.id] !== "rejected" &&
                     !removedIdSet.has(normalizeCreatorId(v.id)))
               )
-              .map((v, i) =>
-                attachSlateMeta({
+              .map((v, i) => {
+                const parsed = parsedByHandle.get(v.handle.replace(/^@/, "").toLowerCase());
+                const followers = v.followers && v.followers > 0 ? v.followers : parsed?.followers;
+                const engagementRate =
+                  v.engagementRate && v.engagementRate > 0
+                    ? v.engagementRate
+                    : parsed?.engagementRate;
+                const displayName =
+                  v.displayName && !/^creator\s+\d+$/i.test(v.displayName)
+                    ? v.displayName
+                    : parsed?.displayName ?? v.displayName;
+                return attachSlateMeta({
                   id: v.id,
                   rank: i + 1,
-                  displayName: v.displayName,
+                  displayName,
                   handle: v.handle,
-                  platform: v.platform,
-                  followers: v.followers,
-                  engagementRate: v.engagementRate,
-                  fitScore: v.brandFit,
+                  platform: v.platform || parsed?.platform || "instagram",
+                  followers,
+                  engagementRate,
+                  fitScore: v.brandFit ?? parsed?.fitScore,
                   reason: v.reason,
                   avatarUrl: v.avatarUrl,
                   profileUrl: v.profileUrl,
                   country: v.country,
                   language: v.language,
                   audienceSummary: v.audienceSummary,
-                  priceEstimate: v.priceEstimate,
+                  priceEstimate: v.priceEstimate ?? parsed?.priceEstimate,
                   thinkwayScore: v.thinkwayScore,
                   matchPercent: v.matchPercent,
-                  tier: v.tier,
+                  tier: resolveCreatorTierLabel({
+                    followers,
+                    role: v.tier !== "Unknown" ? v.tier : undefined,
+                  }),
                   eciRecommendation: v.eciRecommendation,
                   eciConfidencePercent: v.eciConfidencePercent,
                   planningSignal: v.planningSignal,
@@ -974,8 +995,8 @@ export function VendorRecommendationsSection({
                     campaignFacts,
                     i
                   ),
-                })
-              ),
+                });
+              }),
             (v) => v.id ?? `${v.handle}:${v.displayName}`
           ).items
         : usingDraftPreview
@@ -1001,7 +1022,16 @@ export function VendorRecommendationsSection({
               ),
             (v) => v.id ?? `${v.handle}:${v.displayName}`
           ).items,
-    [hydrated, parsedVendors, previewVendorDecisions, campaignFacts, removedIdSet, attachSlateMeta, usingDraftPreview]
+    [
+      hydrated,
+      parsedVendors,
+      parsedByHandle,
+      previewVendorDecisions,
+      campaignFacts,
+      removedIdSet,
+      attachSlateMeta,
+      usingDraftPreview,
+    ]
   );
 
   const mainVendors = vendors.filter((v) => v.slateRole !== "maybe");
