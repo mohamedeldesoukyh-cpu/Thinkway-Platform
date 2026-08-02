@@ -1,20 +1,17 @@
 # Prompt Summary — Current Sprint
 
-**Branch focus:** `develop`
+**Branch focus:** `develop` · tip pending Iter 8
 
-**Active:** Release 2.3 Final Product Excellence — Fix → Soak → Fix until readiness ≥ 95
+**Active:** Release 2.3 Final Product Excellence — Fix → Soak → Fix (reject mode)
 
-**Iteration 1 shipped (pending deploy):**
-- Brief/fact hygiene (reject instruction text in brand/market/geography)
-- Proposal opens with Executive Planning Brief; omit empty insufficient fields
-- Expected outcome no longer leaks scoreMeaning formula
-- Followers hydration treats 0 as missing; multi-platform max
-- Brief platforms joined; Decision Mode unlocks on section completeness
-- Complete sections force-mount (no Complete+Loading skeleton trap)
-- Constraint report surfaced + persisted from CIP search
+**Root cause (L'Oréal Critical):** Workflow CIP ensure aborted when brand not in catalog → `discoveryEngine: keyword` query `Beauty, Lifestyle` → 0 creators. e& works because brand `E&` exists. Noon/Trendyol/F1/Liwa same risk.
 
-**Still local (excluded):** Wave 1 Studio live-discovery wiring · Dev readiness checklist docs
+**Iter 8:** Allow workflow CIP create with `allowMissingBrand` (null `brand_id`) so CIP dual-pool + enterprise constraints run for unmatched brands.
+
+**Prior shipped:** Iter 3–7 boardroom/funnel/followers/metadata/geo soft-pass
 
 **FROZEN · Maintenance Mode:** Studio Governance · ECI · Sprint 2/3 packages
+
+**Left local (do not mix):** Wave 1 Studio live-discovery · Dev readiness docs
 
 **Constitution:** `docs/architecture/STUDIO_CAPABILITY_CONTRACT.md`

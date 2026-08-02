@@ -180,15 +180,16 @@ export async function ensureWorkflowCampaignIntelligenceProfile(
   };
 
   const brandDetection = await detectBrandFromProfile(supabase, savedProfile);
-  const brandId = brandDetection.bestMatch?.brandId;
-  if (!brandId) {
-    return undefined;
-  }
+  const brandId = brandDetection.bestMatch?.brandId ?? null;
 
+  // Brand catalog match is preferred for hierarchy linking, but must not gate
+  // discovery. Unmatched demo brands (L'Oréal, Noon, Trendyol, …) still need a
+  // searchable CIP so CIP dual-pool + enterprise constraints can run.
   const row = await elevatedCreateCampaignIntelligenceProfile(supabase, {
     userId: input.userId,
     conversationId: input.conversationId,
     brandId,
+    allowMissingBrand: true,
     title: savedProfile.campaignName ?? savedProfile.brandName ?? "Campaign brief",
     profile: savedProfile,
   });
@@ -198,6 +199,7 @@ export async function ensureWorkflowCampaignIntelligenceProfile(
     profile: savedProfile,
     status: "saved",
     conversationId: input.conversationId,
+    brandId,
     title: savedProfile.campaignName ?? savedProfile.brandName ?? undefined,
   });
 

@@ -19,11 +19,18 @@ export async function elevatedCreateCampaignIntelligenceProfile(
   input: {
     userId: string;
     conversationId?: string | null;
-    brandId: string;
+    /**
+     * Optional for workflow-ensured discovery CIPs. Hierarchy brand link is
+     * preferred when matched, but missing catalog brands must not block
+     * enterprise creator search (Studio create-campaign path).
+     */
+    brandId?: string | null;
     campaignHeaderId?: string | null;
     title?: string;
     profile?: CampaignIntelligenceProfile;
     sourceDocumentId?: string | null;
+    /** When true, allow null brand_id for workflow discovery ensure. */
+    allowMissingBrand?: boolean;
   }
 ): Promise<CampaignIntelligenceProfileRow> {
   const {
@@ -35,13 +42,16 @@ export async function elevatedCreateCampaignIntelligenceProfile(
     throw new Error("You must be signed in to save campaign intelligence.");
   }
 
-  if (!input.brandId?.trim()) {
+  const brandId = input.brandId?.trim() || null;
+  if (!brandId && !input.allowMissingBrand) {
     throw new Error("Campaign Intelligence requires a brand.");
   }
 
-  const brandAccess = await assertAccessibleBrandId(userSupabase, input.brandId);
-  if (!brandAccess.ok) {
-    throw new Error(brandAccess.message);
+  if (brandId) {
+    const brandAccess = await assertAccessibleBrandId(userSupabase, brandId);
+    if (!brandAccess.ok) {
+      throw new Error(brandAccess.message);
+    }
   }
 
   const admin = createSupabaseAdminClient();
@@ -50,7 +60,7 @@ export async function elevatedCreateCampaignIntelligenceProfile(
     .insert({
       created_by: input.userId,
       conversation_id: input.conversationId ?? null,
-      brand_id: input.brandId,
+      brand_id: brandId,
       campaign_header_id: input.campaignHeaderId ?? null,
       title: input.title ?? null,
       status: "draft",
