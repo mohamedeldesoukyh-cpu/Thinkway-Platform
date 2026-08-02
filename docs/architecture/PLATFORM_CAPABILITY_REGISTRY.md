@@ -164,6 +164,7 @@ Platform creator time-series and intelligence for Planning Workspace, Client Wor
 | Reuse | Engagement-rate engine · commercial ROI/EMV · Sprint 1 posting frequency |
 | AI | `buildPerformanceAiHints` only — **no AI execution** |
 | Gate | Do **not** start Sprint 5 until Product explicitly approves |
+| Git baseline | `54057bd5` on `origin/develop` |
 
 ### Extension rules
 
