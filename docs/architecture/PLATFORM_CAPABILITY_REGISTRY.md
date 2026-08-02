@@ -193,6 +193,7 @@ Platform creator time-series and intelligence for Planning Workspace, Client Wor
 | AI | `buildInvestmentAiHints` only — **no AI execution** |
 | Acceptance | [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) — Product gate before freeze / Planning Workspace |
 | Migration | `20260802170000_enterprise_creator_intelligence_investment.sql` (Dev applied) |
+| Git baseline | `d4107623` on `origin/develop` |
 
 ### Extension rules
 

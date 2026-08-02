@@ -23,7 +23,7 @@ Enterprise Creator Intelligence operates as **one platform capability** composed
 | Category & Brand Intelligence | 3 | `ad861c01` | What categories/brands/industries define behaviour? |
 | Performance Intelligence | 4 | `54057bd5` | How reliable and effective is historical performance? |
 | Audience Intelligence | 5 | `51836e97` | Who is the audience and can Planning trust it? |
-| Creator Investment Intelligence | 6 | *(this land)* | If I invest today, how strong is the business case? |
+| Creator Investment Intelligence | 6 | `d4107623` | If I invest today, how strong is the business case? |
 
 ### Composition contract
 
