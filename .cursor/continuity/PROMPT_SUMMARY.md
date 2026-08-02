@@ -8,7 +8,9 @@
 
 **Platform Bulk Framework:** `docs/architecture/PLATFORM_BULK_OPERATIONS_FRAMEWORK.md` — Vendor IO consumer (R2.2d); reliability + single-refresh + idempotency (R2.2d.1).
 
-**Enterprise Document Lifecycle:** `docs/architecture/ENTERPRISE_DOCUMENT_LIFECYCLE.md` · `lib/document-lifecycle/` (R2.2d.2 Option D) — reason codes · business change events · Business State ≠ Document State · AI-ready.
+**Enterprise Document Lifecycle:** `docs/architecture/ENTERPRISE_DOCUMENT_LIFECYCLE.md` · `lib/document-lifecycle/` (R2.2d.2) — document state transitions only.
+
+**Enterprise Change Impact Engine:** `docs/architecture/ENTERPRISE_CHANGE_IMPACT_ENGINE.md` · `lib/change-impact/` (R2.2d.2b) — sits above Document Lifecycle; feeds Decision Center / Notifications / Timeline / AI-ready. **No Quotation/PO/Invoice docs until approved.**
 
 **Gate docs (Planning — retargeted as R2.3):**  
 - `docs/capabilities/PLANNING_BOARD_CAPABILITY_SPEC.md`  

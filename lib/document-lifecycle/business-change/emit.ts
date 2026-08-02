@@ -1,8 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import {
-  isVendorIoIssued,
-} from "@/lib/document-lifecycle/policies/vendor-io";
+import { isVendorIoIssued } from "@/lib/document-lifecycle/policies/vendor-io";
 import type {
   BusinessChangeEventType,
   DocumentLifecycleReasonCode,
@@ -18,13 +16,9 @@ export type EmitBusinessChangeInput = {
   entityId?: string | null;
   actorId?: string | null;
   payload?: Record<string, unknown>;
-  /** Optional: limit Vendor IO reactions to these tip IDs. */
   vendorIoIds?: string[];
-  /** Optional: limit to influencer's Vendor IOs on the campaign. */
   influencerId?: string | null;
-  /** Optional: campaign lines that changed (for lookup). */
   campaignLineIds?: string[];
-  /** Estimated commercial delta for AI-ready reaction context. */
   estimatedImpact?: {
     amountDelta?: number | null;
     currencyCode?: string | null;
@@ -41,62 +35,47 @@ export type EmitBusinessChangeResult =
   | { ok: false; error: string };
 
 /**
- * One business event → many document reactions.
- * Never mutates campaign Business State; only document lifecycle.
- *
- * Policy (approved Option D):
- * - Accepted + business change → Revision Required (never silent mutate)
- * - Campaign cancel → cancel outstanding only; Accepted remains Accepted
+ * Plan document state transitions only.
+ * Change Impact Engine owns interpretation / severity / recommendations.
  */
-export async function emitBusinessChangeEvent(
+export async function planDocumentLifecycleReactions(
   supabase: SupabaseClient,
   input: EmitBusinessChangeInput
-): Promise<EmitBusinessChangeResult> {
-  const { data: eventRow, error: eventError } = await supabase
-    .from("business_change_events")
-    .insert({
-      event_type: input.eventType,
-      reason_code: input.reasonCode,
-      reason_detail: input.reasonDetail,
-      campaign_header_id: input.campaignHeaderId,
-      entity_type: input.entityType ?? null,
-      entity_id: input.entityId ?? null,
-      payload: input.payload ?? {},
-      actor_id: input.actorId ?? null,
-    } as never)
-    .select("id")
-    .maybeSingle();
-
-  if (eventError || !eventRow) {
-    return {
-      ok: false,
-      error: eventError?.message ?? "Failed to record business change event.",
-    };
-  }
-
-  const eventId = (eventRow as { id: string }).id;
-  const reactions: PlannedDocumentReaction[] = [];
-
+): Promise<PlannedDocumentReaction[]> {
   if (input.eventType === "campaign_cancelled") {
-    reactions.push(
+    return [
       ...(await planCampaignCancelVendorIoReactions(supabase, input)),
-      ...(await planCampaignCancelClientIoReactions(supabase, input))
-    );
-  } else if (
+      ...(await planCampaignCancelClientIoReactions(supabase, input)),
+    ];
+  }
+  if (
     input.eventType === "creator_removed" ||
     input.eventType === "creator_replaced"
   ) {
-    reactions.push(...(await planCreatorRemovedVendorIoReactions(supabase, input)));
-  } else {
-    reactions.push(
-      ...(await planRevisionRequiredVendorIoReactions(supabase, input)),
-      ...(await planRevisionRequiredClientIoReactions(supabase, input))
-    );
+    return planCreatorRemovedVendorIoReactions(supabase, input);
   }
+  return [
+    ...(await planRevisionRequiredVendorIoReactions(supabase, input)),
+    ...(await planRevisionRequiredClientIoReactions(supabase, input)),
+  ];
+}
 
+/**
+ * Apply planned document transitions + reaction audit rows.
+ * Does not interpret business impact — Document Lifecycle only.
+ */
+export async function applyDocumentLifecycleReactions(
+  supabase: SupabaseClient,
+  input: {
+    eventId: string;
+    actorId?: string | null;
+    estimatedImpact?: EmitBusinessChangeInput["estimatedImpact"];
+    reactions: PlannedDocumentReaction[];
+  }
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const now = new Date().toISOString();
 
-  for (const reaction of reactions) {
+  for (const reaction of input.reactions) {
     const table =
       reaction.documentType === "vendor_io"
         ? "vendor_ios"
@@ -130,7 +109,7 @@ export async function emitBusinessChangeEvent(
     };
 
     await supabase.from("document_lifecycle_reactions").insert({
-      business_change_event_id: eventId,
+      business_change_event_id: input.eventId,
       document_type: reaction.documentType,
       document_id: reaction.documentId,
       from_status: reaction.fromStatus,
@@ -142,6 +121,48 @@ export async function emitBusinessChangeEvent(
     } as never);
   }
 
+  return { ok: true };
+}
+
+/**
+ * @deprecated Prefer `applyBusinessChangeImpact` from `@/lib/change-impact`.
+ * Kept for compatibility — records event + applies document transitions only.
+ */
+export async function emitBusinessChangeEvent(
+  supabase: SupabaseClient,
+  input: EmitBusinessChangeInput
+): Promise<EmitBusinessChangeResult> {
+  const { data: eventRow, error: eventError } = await supabase
+    .from("business_change_events")
+    .insert({
+      event_type: input.eventType,
+      reason_code: input.reasonCode,
+      reason_detail: input.reasonDetail,
+      campaign_header_id: input.campaignHeaderId,
+      entity_type: input.entityType ?? null,
+      entity_id: input.entityId ?? null,
+      payload: input.payload ?? {},
+      actor_id: input.actorId ?? null,
+    } as never)
+    .select("id")
+    .maybeSingle();
+
+  if (eventError || !eventRow) {
+    return {
+      ok: false,
+      error: eventError?.message ?? "Failed to record business change event.",
+    };
+  }
+
+  const eventId = (eventRow as { id: string }).id;
+  const reactions = await planDocumentLifecycleReactions(supabase, input);
+  const applied = await applyDocumentLifecycleReactions(supabase, {
+    eventId,
+    actorId: input.actorId,
+    estimatedImpact: input.estimatedImpact,
+    reactions,
+  });
+  if (!applied.ok) return applied;
   return { ok: true, eventId, reactions };
 }
 
@@ -152,7 +173,7 @@ async function loadCampaignVendorIos(
   let query = supabase
     .from("vendor_ios")
     .select(
-      "id, status, sent_at, delivery_status, delivery_method, is_superseded, influencer_id, amount, currency_code"
+      "id, status, sent_at, delivery_status, delivery_method, is_superseded, influencer_id, amount, currency_code, document_number"
     )
     .eq("campaign_header_id", input.campaignHeaderId)
     .eq("is_superseded", false);
@@ -176,6 +197,7 @@ async function loadCampaignVendorIos(
     influencer_id: string;
     amount: number | null;
     currency_code: string | null;
+    document_number: string | null;
   }>;
 }
 
@@ -217,6 +239,7 @@ async function planRevisionRequiredVendorIoReactions(
         previous_status: row.status,
         amount: row.amount,
         currency_code: row.currency_code,
+        document_number: row.document_number,
       },
     });
   }
@@ -228,8 +251,6 @@ async function planRevisionRequiredClientIoReactions(
   supabase: SupabaseClient,
   input: EmitBusinessChangeInput
 ): Promise<PlannedDocumentReaction[]> {
-  // Commercial / budget changes may require Client IO commercial review.
-  // Creator-only price changes still notify Client IO tip when issued.
   if (
     input.eventType !== "creator_price_updated" &&
     input.eventType !== "deliverables_changed" &&
@@ -242,7 +263,7 @@ async function planRevisionRequiredClientIoReactions(
 
   const { data, error } = await supabase
     .from("client_ios")
-    .select("id, status, is_superseded, sent_at")
+    .select("id, status, is_superseded, sent_at, document_number")
     .eq("campaign_header_id", input.campaignHeaderId)
     .eq("is_superseded", false);
 
@@ -255,6 +276,7 @@ async function planRevisionRequiredClientIoReactions(
       status: string;
       is_superseded: boolean;
       sent_at: string | null;
+      document_number: string | null;
     };
     if (row.is_superseded) continue;
     if (row.status === "cancelled" || row.status === "draft") continue;
@@ -276,7 +298,10 @@ async function planRevisionRequiredClientIoReactions(
       reasonCode: input.reasonCode,
       reasonDetail: input.reasonDetail,
       recommendedActions: ["preview_changes", "regenerate", "send_updated_version"],
-      aiContext: { commercial_review: true },
+      aiContext: {
+        commercial_review: true,
+        document_number: row.document_number,
+      },
     });
   }
   return out;
@@ -299,6 +324,7 @@ async function planCreatorRemovedVendorIoReactions(
       reasonCode: input.reasonCode,
       reasonDetail: input.reasonDetail,
       recommendedActions: ["view"],
+      aiContext: { document_number: row.document_number },
     });
   }
   return out;
@@ -312,7 +338,6 @@ async function planCampaignCancelVendorIoReactions(
   const out: PlannedDocumentReaction[] = [];
 
   for (const row of rows) {
-    // Accepted documents are legal history — never rewrite to Cancelled.
     if (row.status === "approved") continue;
     if (row.status === "cancelled") continue;
 
@@ -324,6 +349,7 @@ async function planCampaignCancelVendorIoReactions(
       reasonCode: "campaign_cancelled",
       reasonDetail: input.reasonDetail || "Campaign cancelled",
       recommendedActions: ["view"],
+      aiContext: { document_number: row.document_number },
     });
   }
   return out;
@@ -335,7 +361,7 @@ async function planCampaignCancelClientIoReactions(
 ): Promise<PlannedDocumentReaction[]> {
   const { data, error } = await supabase
     .from("client_ios")
-    .select("id, status, is_superseded")
+    .select("id, status, is_superseded, document_number")
     .eq("campaign_header_id", input.campaignHeaderId)
     .eq("is_superseded", false);
 
@@ -343,7 +369,12 @@ async function planCampaignCancelClientIoReactions(
 
   const out: PlannedDocumentReaction[] = [];
   for (const raw of data ?? []) {
-    const row = raw as { id: string; status: string; is_superseded: boolean };
+    const row = raw as {
+      id: string;
+      status: string;
+      is_superseded: boolean;
+      document_number: string | null;
+    };
     if (row.status === "approved") continue;
     if (row.status === "cancelled") continue;
 
@@ -355,6 +386,7 @@ async function planCampaignCancelClientIoReactions(
       reasonCode: "campaign_cancelled",
       reasonDetail: input.reasonDetail || "Campaign cancelled",
       recommendedActions: ["view"],
+      aiContext: { document_number: row.document_number },
     });
   }
   return out;

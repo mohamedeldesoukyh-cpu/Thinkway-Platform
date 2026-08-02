@@ -55,6 +55,7 @@ import {
 import { getCampaignIntelligenceForHeader } from "@/lib/domains/intelligence/campaign-intelligence-object";
 import { formatCampaignRequirements } from "@/features/campaign-intelligence-profile/services/format-campaign-requirements";
 import { normalizeCampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/services/normalize-profile";
+import { loadOpenChangeImpactSignals } from "@/lib/change-impact/load-open-assessments";
 
 type HeaderWithRelations = {
   id: string;
@@ -166,6 +167,7 @@ export async function getCampaignWorkspace(
     invoicesResult,
     clientIo,
     vendorIos,
+    changeImpactSignals,
   ] = await Promise.all([
     fetchCampaignLines(supabase, campaignId),
     fetchCampaignInfluencers(supabase, campaignId),
@@ -173,6 +175,7 @@ export async function getCampaignWorkspace(
     fetchCampaignInvoices(supabase, campaignId),
     getCampaignClientIo(campaignId),
     getCampaignVendorIos(campaignId),
+    loadOpenChangeImpactSignals(supabase, campaignId).catch(() => []),
   ]);
 
   const scopedLineIds = (linesResult.data ?? []).map((line) => (line as { id: string }).id);
@@ -787,6 +790,7 @@ export async function getCampaignWorkspace(
     client_io_sender_name: clientIoSenderName,
     campaign_intelligence: campaignIntelligence,
     vendor_ios: vendorIos ?? [],
+    change_impact_signals: changeImpactSignals,
     vat_context: {
       client_country_code: clientCountryCode,
       default_revenue_vat_percent: defaultRevenueVatPercent,

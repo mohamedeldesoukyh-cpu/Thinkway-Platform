@@ -72,7 +72,10 @@ Every new capability is incomplete until it answers **all five**:
 First production implementation: Release 2.2d Vendor IO; reliability + idempotency invariant: Release 2.2d.1. Future registers must reuse it — no independent bulk runners.
 
 **Enterprise Document Lifecycle Engine** (canonical): [`ENTERPRISE_DOCUMENT_LIFECYCLE.md`](./ENTERPRISE_DOCUMENT_LIFECYCLE.md) · `lib/document-lifecycle/`  
-Release 2.2d.2 — one engine for Vendor IO / Client IO / future Quotations · POs · Invoices · Contracts · Deliverables · Reports. Business State ≠ Document State. Reason codes + Business Change Events mandatory.
+Release 2.2d.2 — document state transitions only. Vendor IO / Client IO first. Business State ≠ Document State. Reason codes mandatory.
+
+**Enterprise Change Impact Engine** (canonical): [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md) · `lib/change-impact/`  
+Release 2.2d.2b — intelligence layer above Document Lifecycle. Severity · business explanation · recommended actions · Decision Center / Notifications / Timeline / AI-ready feeds. **No Quotation/PO/Invoice document adoption until this engine is approved.**
 
 ---
 

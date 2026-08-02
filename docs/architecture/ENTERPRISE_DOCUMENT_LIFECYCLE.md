@@ -8,12 +8,15 @@
 - `20260802011000_enterprise_document_lifecycle_engine.sql`  
 **Regression:** `npm run test:document-lifecycle`  
 **Related:** Platform Bulk Operations Framework · Campaign Workspace Baseline v1.3  
+**Above this layer:** [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md) — interprets business changes, severity, recommendations, and feeds Decision Center / Notifications / Timeline / AI.
 
 ---
 
 ## Purpose
 
 Business documents are **living objects**. They react to business changes with reason codes, never silently mutate after issuance, and never destroy audit history.
+
+**Scope boundary:** Document Lifecycle owns **document state transitions only**. Business interpretation (why / severity / next actions / Decision Center) belongs to the Change Impact Engine.
 
 One engine for:
 

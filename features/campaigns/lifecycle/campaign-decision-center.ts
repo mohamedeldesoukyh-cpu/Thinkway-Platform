@@ -11,6 +11,8 @@ import type {
   BusinessProcessOwner,
   BusinessProcessWaitingParty,
 } from "@/lib/business-process/types";
+import { changeImpactSignalsToDecisionBlockers } from "@/lib/change-impact/feeds/decision-center";
+import type { ChangeImpactDecisionSignal } from "@/lib/change-impact/types";
 
 /**
  * Three business severity levels (exactly one per issue):
@@ -160,6 +162,8 @@ export type DecisionCenterObjects = {
     status: string;
   }>;
   campaignDocumentNumber: string | null;
+  /** Open Change Impact Engine assessments (feed — not Lifecycle OS policy). */
+  changeImpactSignals?: ChangeImpactDecisionSignal[];
 };
 
 export const DECISION_SEVERITY_LABEL: Record<DecisionSeverity, string> = {
@@ -554,6 +558,15 @@ export function buildDecisionCenter(input: {
 
   const since = daysLabel(daysWaiting);
   const blockers: DecisionBlocker[] = [];
+
+  // Change Impact Engine feed — explains why documents/commercial state changed.
+  for (const item of changeImpactSignalsToDecisionBlockers(
+    objects?.changeImpactSignals ?? [],
+    { sinceLabel: since }
+  )) {
+    pushUnique(blockers, item);
+  }
+
   const cio = objects?.clientIo ?? null;
   const cioRef = hashRef(cio?.document_number, "Client IO");
   const cioFocus: DecisionFocusQuery | null = cio
@@ -1327,6 +1340,7 @@ export function decisionObjectsFromWorkspace(workspace: {
   }>;
   deliverables?: DecisionCenterObjects["deliverables"];
   invoices?: DecisionCenterObjects["invoices"];
+  change_impact_signals?: ChangeImpactDecisionSignal[];
 }): DecisionCenterObjects {
   return {
     clientIo: workspace.client_io
@@ -1370,6 +1384,7 @@ export function decisionObjectsFromWorkspace(workspace: {
       status: row.status,
     })),
     campaignDocumentNumber: workspace.document_number ?? null,
+    changeImpactSignals: workspace.change_impact_signals ?? [],
   };
 }
 

@@ -250,12 +250,10 @@ export async function cancelCampaign(
     .select("id, document_number, status")
     .eq("campaign_header_id", input.campaign_id);
 
-  // Document Lifecycle: cancel outstanding Vendor/Client IOs only.
+  // Change Impact Engine: assess cancel impact, then Document Lifecycle transitions.
   // Accepted documents remain Accepted (legal history). Campaign Business State is separate.
-  const { emitBusinessChangeEvent } = await import(
-    "@/lib/document-lifecycle/business-change/emit"
-  );
-  const lifecycleResult = await emitBusinessChangeEvent(supabase, {
+  const { applyBusinessChangeImpact } = await import("@/lib/change-impact/apply");
+  const impactResult = await applyBusinessChangeImpact(supabase, {
     eventType: "campaign_cancelled",
     reasonCode: "campaign_cancelled",
     reasonDetail: input.reason ?? "Campaign cancelled",
@@ -264,18 +262,19 @@ export async function cancelCampaign(
     payload: { campaign_cancelled: true },
   });
 
-  if (!lifecycleResult.ok) {
-    return { ok: false, error: lifecycleResult.error };
+  if (!impactResult.ok) {
+    return { ok: false, error: impactResult.error };
   }
 
-  const cancelledVendorCount = lifecycleResult.reactions.filter(
+  const lifecycleReactions = impactResult.assessment.lifecycleReactions;
+  const cancelledVendorCount = lifecycleReactions.filter(
     (r) => r.documentType === "vendor_io"
   ).length;
-  const cancelledClientCount = lifecycleResult.reactions.filter(
+  const cancelledClientCount = lifecycleReactions.filter(
     (r) => r.documentType === "client_io"
   ).length;
 
-  for (const reaction of lifecycleResult.reactions) {
+  for (const reaction of lifecycleReactions) {
     if (reaction.documentType === "vendor_io") {
       const row = (vendorIoRows ?? []).find(
         (v) => (v as { id: string }).id === reaction.documentId

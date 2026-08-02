@@ -67,7 +67,10 @@ Every new capability must answer before it is complete:
 Do not invent parallel bulk runners. Vendor IO (R2.2d / 2.2d.1) is the first production consumer.
 
 **Document lifecycle (canonical):** `docs/architecture/ENTERPRISE_DOCUMENT_LIFECYCLE.md` · `lib/document-lifecycle/`  
-One engine for all enterprise documents. UI/bulk actions from `resolveDocumentLifecycle` only. Reason codes + business change events required.
+Document state transitions only. UI/bulk actions from `resolveDocumentLifecycle`. Reason codes required.
+
+**Change impact (canonical):** `docs/architecture/ENTERPRISE_CHANGE_IMPACT_ENGINE.md` · `lib/change-impact/`  
+Intelligence layer above Document Lifecycle. Business changes route through `applyBusinessChangeImpact`. Do not adopt Quotation/PO/Invoice document types until Change Impact is approved.
 
 ## Mandatory for every ADR / capability spec / release architecture / implementation proposal
 

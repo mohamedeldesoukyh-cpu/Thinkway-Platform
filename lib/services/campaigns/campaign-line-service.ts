@@ -726,9 +726,7 @@ export async function updateCampaignLine(
 
   let markedRevisionRequired = false;
   if (shouldMarkRevisionRequired) {
-    const { emitBusinessChangeEvent } = await import(
-      "@/lib/document-lifecycle/business-change/emit"
-    );
+    const { applyBusinessChangeImpact } = await import("@/lib/change-impact/apply");
     const costChanged =
       Number(existingLineMeta.cost_before_vat ?? existingLineMeta.cost) !==
       Number(costBeforeVat);
@@ -739,7 +737,7 @@ export async function updateCampaignLine(
       ? "Creator price changed after document issuance."
       : "Commercial correction after invoice un-generate.";
 
-    const lifecycleResult = await emitBusinessChangeEvent(supabase, {
+    const impactResult = await applyBusinessChangeImpact(supabase, {
       eventType: costChanged
         ? "creator_price_updated"
         : "manual_mark_revision_required",
@@ -767,16 +765,17 @@ export async function updateCampaignLine(
       },
     });
 
-    if (!lifecycleResult.ok) {
+    if (!impactResult.ok) {
       return {
         ok: false,
         message:
-          lifecycleResult.error ??
-          "Failed to mark Vendor IO as Revision Required after commercial update.",
+          impactResult.error ??
+          "Failed to assess business change impact after commercial update.",
       };
     }
 
-    markedRevisionRequired = lifecycleResult.reactions.length > 0;
+    markedRevisionRequired =
+      impactResult.assessment.lifecycleReactions.length > 0;
     if (markedRevisionRequired) {
       await unlockCampaignLineFinanceFields(supabase, parsed.line_id);
     }

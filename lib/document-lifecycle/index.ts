@@ -28,6 +28,10 @@ export {
 export { vendorIoRowToLifecycleSnapshot } from "@/lib/document-lifecycle/adapters/vendor-io";
 export {
   emitBusinessChangeEvent,
+  planDocumentLifecycleReactions,
+  applyDocumentLifecycleReactions,
   type EmitBusinessChangeInput,
   type EmitBusinessChangeResult,
 } from "@/lib/document-lifecycle/business-change/emit";
+
+/** Prefer Change Impact Engine for business changes — see `@/lib/change-impact`. */

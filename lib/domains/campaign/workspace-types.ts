@@ -307,6 +307,30 @@ export type CampaignWorkspace = {
   client_io_send_history: ClientIoSendHistoryEntry[];
   client_io_sender_name: string | null;
   vendor_ios: VendorIoRow[];
+  /**
+   * Open Change Impact assessments for Decision Center feed.
+   * Produced by Enterprise Change Impact Engine — not Document Lifecycle.
+   */
+  change_impact_signals?: Array<{
+    assessmentId: string;
+    severity: "critical" | "high" | "medium" | "low" | "info";
+    title: string;
+    reason: string;
+    impact: string;
+    primaryAction: string;
+    actionTab:
+      | "vendor-io"
+      | "client-io"
+      | "lines"
+      | "billing"
+      | "overview"
+      | "deliverables";
+    objectKind: "vendor_io" | "client_io" | "campaign" | "assignment" | "creator";
+    objectLabel: string;
+    objectRef: string;
+    recordId: string | null;
+    createdAt: string;
+  }>;
   /** Linked Campaign Intelligence Object — SSOT for brief requirements. */
   campaign_intelligence: {
     profileId: string;

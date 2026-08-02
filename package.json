@@ -65,6 +65,7 @@
     "test:campaign-workspace-lifecycle-os": "npx tsx --test features/campaigns/lifecycle/campaign-workspace-lifecycle-os.regression.test.ts features/campaigns/lifecycle/campaign-lifecycle-orchestrator.test.ts features/campaigns/lifecycle/campaign-portfolio-intelligence.test.ts features/campaigns/lifecycle/campaign-process-presentation.test.ts features/campaigns/lifecycle/campaign-decision-center.test.ts",
     "test:vendor-io-bulk": "npx tsx --test components/workspace/bulk-operations/run-bulk-operation.test.ts features/io/bulk/vendor-io-bulk-helpers.test.ts",
     "test:document-lifecycle": "npx tsx --test lib/document-lifecycle/vendor-io-lifecycle.test.ts features/io/bulk/vendor-io-bulk-helpers.test.ts",
+    "test:change-impact": "npx tsx --test lib/change-impact/assess.test.ts",
     "test:impressions-forecast-engine": "npx tsx lib/performance/impressions-forecast-engine.test.ts",
     "test:engagement-rate-audit": "npx tsx lib/performance/engagement-rate-audit.test.ts",
     "test:extract-publication-date": "npx tsx lib/performance/metrics-collector/extract-publication-date.test.ts",
