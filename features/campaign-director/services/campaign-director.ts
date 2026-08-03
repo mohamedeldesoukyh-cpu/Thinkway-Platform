@@ -25,6 +25,7 @@ import {
   collectFailingGovernanceChecks,
   governanceMaxRepairAttempts,
   repairGovernanceArtifacts,
+  shouldAskUserForGovernanceCheck,
   type GovernanceRepairLogEntry,
   type GovernanceRepairSummary,
 } from "@/features/campaign-governance/governance-repair";
@@ -213,9 +214,33 @@ export function runCampaignDirectorPipeline(
     attempts += 1;
   }
 
-  const finalFailing = approvalGate.approved
+  let finalFailing = approvalGate.approved
     ? []
     : collectFailingGovernanceChecks(governanceResult);
+
+  // STAB-029: after repair exhaustion, polish-only residuals (medium/low
+  // auto-fixables) must not block Studio release or escalate to INPUT REQUIRED.
+  const governanceBlockerPattern =
+    /Campaign QA Manager|Compliance gate|Presentation validator|governance check|Quality score|warnings exceed/i;
+  const nonGovernanceBlockers = approvalGate.blockers.filter(
+    (b) => !governanceBlockerPattern.test(b)
+  );
+  const polishOnlyResiduals =
+    !approvalGate.approved &&
+    decisionIntelligenceGate.passed &&
+    finalFailing.length > 0 &&
+    finalFailing.every((check) => !shouldAskUserForGovernanceCheck(check)) &&
+    nonGovernanceBlockers.length === 0;
+  if (polishOnlyResiduals) {
+    console.log(
+      `[governance-repair] soft-approving polish residuals: ${finalFailing
+        .map((c) => c.id)
+        .join(", ")}`
+    );
+    approvalGate = { ...approvalGate, approved: true, blockers: [] };
+    finalFailing = [];
+  }
+
   const userQuestions = approvalGate.approved
     ? []
     : buildGovernanceUserQuestions(finalFailing, approvalGate.blockers);

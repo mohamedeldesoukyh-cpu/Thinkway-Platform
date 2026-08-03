@@ -1,19 +1,15 @@
 # Prompt Summary — Current Sprint
 
-**Branch focus:** `develop` · tip **`7037d311`** live · Enterprise Product Stabilization (no R2.4)  
+**Branch focus:** `develop` · Enterprise Product Stabilization (no R2.4)  
 **Optimize for:** enterprise trust — not readiness score
 
 **Live PASS:** STAB-012–022 · STAB-026–028 · STAB-016 Arab Bank **25% GP**
 
-**Arab Bank TW-2026-0007 (advanced):**
-- CIO+VIO accepted · Atkins Posted · publication added · Media Plan OK
-- Timeline: Deliverables Uploaded Done · Publication Live Done · **Invoice Generated** (`INV-2026-00003`)
-- DC: Finance ✓ · waiting outstanding balance / payment
-- Next: collect payment → Close; continue multi-brand
+**In flight:** STAB-029 — `qa_no_duplicate_facts` → WARNING; polish residuals never INPUT REQUIRED; soft-approve polish-only after repair. Regression: `campaign-qa-manager.test.ts` PASS. Await Preview tip + NBK `2904147f` / fresh CIP Generate (also proves STAB-021 PO=revenue).
 
-**STAB-028 tip `7037d311`:** Publication Live requires `campaign_publications` — live validated (Upcoming with Posted alone → Done after Add publication).
+**Arab Bank TW-2026-0007:** Invoice Generated (`INV-2026-00003`); collect → Close pending.
 
-**Open High:** STAB-021 fresh Generate · STAB-003 multi-brand journeys  
+**Open High:** STAB-029 live · STAB-021 fresh Generate · STAB-003 multi-brand  
 **Open Med:** STAB-023 · STAB-025 · negative suite · Discovery
 
 **R2.4:** blocked

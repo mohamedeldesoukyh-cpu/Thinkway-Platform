@@ -323,12 +323,16 @@ export function runCampaignQaManager(input: GovernanceValidationInput): Governan
       sentences.set(key, existing);
     }
   }
+  // STAB-029: cross-section sentence reuse is polish, not missing business info.
+  // Hard-FAIL previously exhausted auto-repair (same brief regenerates the same
+  // sentences) and escalated to INPUT REQUIRED — blocking Approve → Generate.
   let dupFacts = false;
   for (const [sentence, sects] of sentences) {
     if (sects.length > 1 && new Set(sects).size > 1) {
       dupFacts = true;
       checks.push(
         check("qa_no_duplicate_facts", "No duplicated facts across sections", false, {
+          warn: true,
           section: sects.join(", "),
           issue: `Repeated fact: "${sentence.slice(0, 60)}..."`,
           recommendation: "Each fact should appear once; cross-reference instead of copy",
