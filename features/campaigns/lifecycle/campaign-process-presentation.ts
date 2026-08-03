@@ -108,6 +108,8 @@ export type CampaignProcessSignals = {
   approvedVendorIoCount: number;
   sentVendorIoCount: number;
   deliverableCount: number;
+  /** Posted/approved deliverables only — not planned assignment units (STAB-019). */
+  uploadedDeliverableCount: number;
   overdueDeliverableCount: number;
   activePerformance: boolean;
   invoiceCount: number;
@@ -147,6 +149,8 @@ export function signalsFromCampaignListItem(campaign: CampaignListItem): Campaig
     approvedVendorIoCount: campaign.approved_vendor_io_count ?? 0,
     sentVendorIoCount: campaign.sent_vendor_io_count ?? 0,
     deliverableCount: campaign.deliverable_count ?? 0,
+    // List cards lack per-deliverable status — only treat performance_active as upload evidence.
+    uploadedDeliverableCount: campaign.performance_active ? Math.max(1, campaign.deliverable_count ?? 0) : 0,
     overdueDeliverableCount: 0,
     // Never infer performance from header status alone — that jumped Active+approved
     // CIO campaigns to Performance on the portfolio while Workspace stayed on Deliverables.
@@ -189,6 +193,8 @@ export function signalsFromCampaignWorkspace(workspace: CampaignWorkspace): Camp
       (io) => io.status === "sent" || io.status === "generated"
     ).length,
     deliverableCount,
+    // STAB-019: Uploaded ≠ planned assignment units counted for explorer (STAB-015).
+    uploadedDeliverableCount: postedOrApproved,
     overdueDeliverableCount,
     // STAB-017: Publication Live must not flip Done merely because assignment
     // deliverable units exist — require posted/approved legacy deliverable evidence.

@@ -21,6 +21,7 @@ function base(overrides: Partial<CampaignProcessSignals> = {}): CampaignProcessS
     approvedVendorIoCount: 0,
     sentVendorIoCount: 0,
     deliverableCount: 0,
+    uploadedDeliverableCount: 0,
     overdueDeliverableCount: 0,
     activePerformance: false,
     invoiceCount: 0,
@@ -312,6 +313,28 @@ describe("signalsFromCampaignWorkspace — STAB-015", () => {
 
     const signals = signalsFromCampaignWorkspace(workspace);
     assert.equal(signals.deliverableCount, 84);
+    assert.equal(signals.uploadedDeliverableCount, 0);
     assert.equal(signals.activePerformance, false);
+  });
+
+  it("counts posted/approved as uploaded evidence (STAB-019)", () => {
+    const workspace = {
+      status: "active",
+      lines: [{ id: "l1" }],
+      client_io: { status: "approved" },
+      vendor_ios: [{ status: "approved" }],
+      deliverables: [
+        { display_status: "posted", due_date: null },
+        { display_status: "draft", due_date: null },
+      ],
+      assignment_deliverable_count: 10,
+      invoices: [],
+      financials: { billing_outstanding: 0, po_exceeded: false },
+      blockers: [],
+    } as unknown as CampaignWorkspace;
+
+    const signals = signalsFromCampaignWorkspace(workspace);
+    assert.equal(signals.deliverableCount, 10);
+    assert.equal(signals.uploadedDeliverableCount, 1);
   });
 });

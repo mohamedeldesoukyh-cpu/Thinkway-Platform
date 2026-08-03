@@ -24,6 +24,7 @@ function signals(overrides: Partial<CampaignProcessSignals> = {}): CampaignProce
     approvedVendorIoCount: 0,
     sentVendorIoCount: 0,
     deliverableCount: 0,
+    uploadedDeliverableCount: 0,
     overdueDeliverableCount: 0,
     activePerformance: false,
     invoiceCount: 0,

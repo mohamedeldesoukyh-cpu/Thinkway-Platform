@@ -17,6 +17,7 @@ function base(overrides: Partial<CampaignProcessSignals> = {}): CampaignProcessS
     approvedVendorIoCount: 0,
     sentVendorIoCount: 0,
     deliverableCount: 0,
+    uploadedDeliverableCount: 0,
     overdueDeliverableCount: 0,
     activePerformance: false,
     invoiceCount: 0,
@@ -185,6 +186,38 @@ describe("campaign lifecycle orchestrator", () => {
     );
     assert.equal(
       afterVendors.timeline.find((e) => e.id === "assignments_completed")?.occurred,
+      true
+    );
+  });
+
+  it("STAB-019: Deliverables Uploaded is not Done from planned assignment units", () => {
+    const plannedOnly = deriveLifecycleForTest(
+      base({
+        lineCount: 10,
+        hasClientIo: true,
+        clientIoStatus: "draft",
+        deliverableCount: 16,
+        uploadedDeliverableCount: 0,
+      })
+    );
+    assert.equal(
+      plannedOnly.timeline.find((e) => e.id === "deliverables_uploaded")?.occurred,
+      false
+    );
+
+    const uploaded = deriveLifecycleForTest(
+      base({
+        lineCount: 10,
+        hasClientIo: true,
+        clientIoStatus: "approved",
+        vendorIoCount: 10,
+        approvedVendorIoCount: 10,
+        deliverableCount: 16,
+        uploadedDeliverableCount: 3,
+      })
+    );
+    assert.equal(
+      uploaded.timeline.find((e) => e.id === "deliverables_uploaded")?.occurred,
       true
     );
   });

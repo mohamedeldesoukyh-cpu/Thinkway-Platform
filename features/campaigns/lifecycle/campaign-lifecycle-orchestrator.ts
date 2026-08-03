@@ -581,7 +581,8 @@ function buildBusinessTimeline(
       id: "deliverables_uploaded",
       label: "Deliverables Uploaded",
       at: null,
-      occurred: signals.deliverableCount > 0,
+      // STAB-019: planned assignment units must not mark Uploaded Done.
+      occurred: signals.uploadedDeliverableCount > 0,
       owner: "Creator",
     },
     {
