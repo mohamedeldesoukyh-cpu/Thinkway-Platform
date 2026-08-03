@@ -116,6 +116,8 @@ export type CampaignLifecycleView = {
   /** Compatibility with Phase 1 BPN cue. */
   processCue: CampaignProcessCue;
   policy: CampaignStagePolicy;
+  /** Vendor IO document count — used for truthful out-of-band guidance (STAB-011). */
+  vendorIoCount: number;
 };
 
 /**
@@ -707,8 +709,12 @@ export function buildWorkspaceGuidance(
       const cioLabel = cioBlocker
         ? `${cioBlocker.objectLabel} ${cioBlocker.objectRef}`
         : "Client IO";
+      // STAB-011: do not claim drafts are ready when zero Vendor IO records exist.
+      const draftsExist = lifecycle.vendorIoCount > 0;
       return guidanceBase(lifecycle, activeTab, "Vendor IO", {
-        whatHappened: "Vendor IO drafts are ready.",
+        whatHappened: draftsExist
+          ? "Vendor IO drafts are ready."
+          : "Vendor IO will be issued after Client IO approval.",
         currentSituation: `Sending is disabled until ${cioLabel} is approved.`,
         nextAction: cioBlocker?.primaryAction ?? "Open Client IO",
         owner: "Commercial",
@@ -880,6 +886,7 @@ function deriveLifecycleFromSignals(
     timeline: buildBusinessTimeline(workspace, signals),
     processCue,
     policy,
+    vendorIoCount: signals.vendorIoCount,
   };
 
   // Days waiting uses latest activity as a movement proxy (presentation only).

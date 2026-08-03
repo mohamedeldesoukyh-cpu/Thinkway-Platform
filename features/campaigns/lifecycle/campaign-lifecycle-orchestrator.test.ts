@@ -104,7 +104,9 @@ describe("campaign lifecycle orchestrator", () => {
       })
     );
     const guidance = buildWorkspaceGuidance(lifecycle, "vendor-io");
-    assert.match(guidance.whatHappened, /Vendor IO drafts are ready/i);
+    // STAB-011: with 0 Vendor IOs, do not claim drafts are ready.
+    assert.match(guidance.whatHappened, /Vendor IO will be issued after Client IO approval/i);
+    assert.ok(!/drafts are ready/i.test(guidance.whatHappened));
     assert.match(guidance.currentSituation, /Sending is disabled until/i);
     assert.match(guidance.nextAction, /Client IO/i);
     assert.equal(guidance.businessStageLabel, "Client IO");
@@ -114,6 +116,23 @@ describe("campaign lifecycle orchestrator", () => {
       lifecycle.decisionCenter.primaryAction.toLowerCase(),
       "resolve blockers"
     );
+  });
+
+  it("says Vendor IO drafts are ready when records exist while Client IO pending (STAB-011)", () => {
+    const lifecycle = deriveLifecycleForTest(
+      base({
+        lineCount: 2,
+        hasClientIo: true,
+        clientIoStatus: "under_client_review",
+        vendorIoCount: 2,
+        sentVendorIoCount: 0,
+        approvedVendorIoCount: 0,
+      })
+    );
+    assert.equal(lifecycle.vendorIoCount, 2);
+    const guidance = buildWorkspaceGuidance(lifecycle, "vendor-io");
+    assert.match(guidance.whatHappened, /Vendor IO drafts are ready/i);
+    assert.match(guidance.currentSituation, /Sending is disabled until/i);
   });
 
   it("does not lock Vendor IO after Client IO is approved (TW-2026-0005 contradiction)", () => {
