@@ -199,9 +199,17 @@ export async function searchCreatorsFromProfileData(
     tier: t.tier,
     percent: t.percent,
   }));
+  const preferredCategories = [
+    ...mappedFilters.filter((f) => f.key === "category").map((f) => f.value),
+    ...(profile.creatorCategories ?? []),
+  ];
   const slate = composeCreatorSlate(dedupedCreators, {
     platforms: preferredPlatforms,
     tierMix,
+    preferredCategories,
+    /** Cap consulting slate size so tier mix stays decisive on a boardroom shortlist. */
+    targetCount:
+      dedupedCreators.length > 0 ? Math.min(12, dedupedCreators.length) : undefined,
     /** Platform is a mandatory enterprise constraint — never fall back to off-platform. */
     strictPlatform: preferredPlatforms.length > 0,
   });

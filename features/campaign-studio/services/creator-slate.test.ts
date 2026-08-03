@@ -83,6 +83,22 @@ test("slate tier distribution tracks the strategy mix", () => {
   assert.ok((counts["nano"] ?? 0) >= 4, `nano ${counts["nano"]}`);
 });
 
+test("preferred categories soft-bias the slate before off-category backfill", () => {
+  const pool = [
+    creator("food-1", "instagram", 400_000, ["Food"]),
+    creator("beauty-1", "instagram", 220_000, ["Beauty"]),
+    creator("travel-1", "instagram", 380_000, ["Travel"]),
+    creator("beauty-2", "instagram", 180_000, ["Beauty", "Fashion"]),
+    creator("beauty-3", "instagram", 90_000, ["Beauty"]),
+  ];
+  const { creators } = composeCreatorSlate(pool, {
+    preferredCategories: ["Beauty"],
+    targetCount: 3,
+  });
+  assert.equal(creators.length, 3);
+  assert.ok(creators.every((c) => (c.categories ?? []).includes("Beauty")));
+});
+
 test("largest-remainder allocation sums to the target count", () => {
   const counts = allocateTierCounts(
     [

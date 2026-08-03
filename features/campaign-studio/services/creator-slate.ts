@@ -85,12 +85,26 @@ export function allocateTierCounts(mix: TierMixTarget[], targetCount: number): M
   return counts;
 }
 
+function creatorMatchesPreferredCategories(
+  creator: Pick<SearchCreatorCardItem, "categories">,
+  preferredCategories: string[]
+): boolean {
+  if (preferredCategories.length === 0) return false;
+  const tags = (creator.categories ?? []).map((c) => c.trim().toLowerCase()).filter(Boolean);
+  if (tags.length === 0) return false;
+  return preferredCategories.some((preferred) =>
+    tags.some((tag) => tag === preferred || tag.includes(preferred) || preferred.includes(tag))
+  );
+}
+
 export function composeCreatorSlate(
   creators: SearchCreatorCardItem[],
   options: {
     platforms?: string[];
     tierMix?: TierMixTarget[];
     targetCount?: number;
+    /** Preferred CIP categories — soft bias; never hard-excludes when inventory is thin. */
+    preferredCategories?: string[];
     /**
      * When true (enterprise mandatory platform), never fall back to off-platform
      * creators — an empty/on-platform slate is required.
@@ -101,6 +115,9 @@ export function composeCreatorSlate(
   const targetCount = Math.min(options.targetCount ?? creators.length, creators.length);
   const requestedPlatforms = (options.platforms ?? [])
     .map(normalizePlatformKey)
+    .filter(Boolean);
+  const preferredCategories = (options.preferredCategories ?? [])
+    .map((c) => c.trim().toLowerCase())
     .filter(Boolean);
 
   // Hard platform constraint: an explicit brief platform excludes off-platform
@@ -125,11 +142,20 @@ export function composeCreatorSlate(
     }
   }
 
+  // Soft category bias: keep rank order inside each bucket, but fill slots from
+  // on-category creators first so beauty briefs do not pad with food/travel.
   const withTier = pool.map((c) => ({ ...c, tier: c.tier ?? creatorTierOf(c) }));
+  const orderedPool =
+    preferredCategories.length === 0
+      ? withTier
+      : [
+          ...withTier.filter((c) => creatorMatchesPreferredCategories(c, preferredCategories)),
+          ...withTier.filter((c) => !creatorMatchesPreferredCategories(c, preferredCategories)),
+        ];
 
   const mix = (options.tierMix ?? []).filter((m) => m.percent > 0);
   if (mix.length === 0) {
-    const slate = withTier.slice(0, targetCount);
+    const slate = orderedPool.slice(0, targetCount);
     return {
       creators: slate,
       meta: {
@@ -149,7 +175,7 @@ export function composeCreatorSlate(
     const tierKey = m.tier.toLowerCase();
     const accepted = TIER_ALIASES[tierKey] ?? [tierKey];
     let remaining = counts.get(tierKey) ?? 0;
-    for (const creator of withTier) {
+    for (const creator of orderedPool) {
       if (remaining <= 0) break;
       if (used.has(creator.id)) continue;
       if (!accepted.includes((creator.tier ?? "").toLowerCase())) continue;
@@ -159,8 +185,9 @@ export function composeCreatorSlate(
     }
   }
 
-  // Backfill under-supplied tiers with the best remaining creators by rank.
-  for (const creator of withTier) {
+  // Backfill under-supplied tiers with the best remaining creators by rank
+  // (still category-biased via orderedPool).
+  for (const creator of orderedPool) {
     if (slate.length >= targetCount) break;
     if (used.has(creator.id)) continue;
     slate.push(creator);
