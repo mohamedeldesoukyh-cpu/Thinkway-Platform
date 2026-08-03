@@ -12,6 +12,7 @@ export function isMissingIntelligenceTableError(message: string | undefined): bo
     message.includes("intelligence") &&
     (message.includes("does not exist") ||
       message.includes("Could not find the table") ||
-      message.includes("schema cache"))
+      message.includes("schema cache") ||
+      message.includes("Invalid schema"))
   );
 }

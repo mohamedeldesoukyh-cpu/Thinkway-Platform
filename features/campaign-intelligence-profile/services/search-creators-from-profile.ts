@@ -49,6 +49,20 @@ export async function searchCreatorsFromCampaignIntelligenceProfile(
   return searchCreatorsFromProfileData(supabase, profile, profileId, pageSize);
 }
 
+/**
+ * Prefer category/geo SQL filters over inferred product FTS tokens (e.g. "5G").
+ * Content keywords remain in coverageIntent for soft ranking / acquisition.
+ * Without this, telecom enrichment collapses Egypt category browse to rare
+ * FTS hits that then fail audience/hydration and yield an empty Studio slate.
+ */
+export function preferCategoryBrowseOverKeywordSearch<
+  T extends { search?: string; categories?: string[] },
+>(filters: T): T {
+  if ((filters.categories?.length ?? 0) === 0) return filters;
+  if (!filters.search?.trim()) return filters;
+  return { ...filters, search: undefined };
+}
+
 export async function searchCreatorsFromProfileData(
   supabase: SupabaseClient,
   profile: CampaignIntelligenceProfile,
@@ -56,10 +70,10 @@ export async function searchCreatorsFromProfileData(
   pageSize = 50
 ) {
   const { filters: mappedFilters } = mapCampaignIntelligenceToDiscoverySearch(profile);
-  const browseFilters = {
+  const browseFilters = preferCategoryBrowseOverKeywordSearch({
     ...discoveryMappedFiltersToBrowseFilters(mappedFilters, 1, pageSize),
     campaignIntelligenceProfileId: profileId,
-  };
+  });
 
   searchTrace("cip_search_filters", { profileId, browseFilters }, { path: "ai" });
 
@@ -77,11 +91,11 @@ export async function searchCreatorsFromProfileData(
   // SQL. Without this pool, a brief whose strict AND-filters match nothing in
   // the database yields an empty slate even though rankable creators exist.
   let relaxedCreators: UnifiedCreatorResult[] = [];
+  const creatorFilters = discoveryMappedFiltersToCreatorFilters(mappedFilters);
   try {
     // Platform-relaxed pool must still honor mandatory geography. Otherwise the
     // first global page can contain zero on-market creators and the Enterprise
     // Constraint Engine correctly empties the slate (seen on beauty briefs).
-    const creatorFilters = discoveryMappedFiltersToCreatorFilters(mappedFilters);
     const relaxed = await browseUnifiedCreators(
       supabase,
       {
@@ -106,7 +120,56 @@ export async function searchCreatorsFromProfileData(
     );
   }
 
-  const pooled = mergeAiCandidatePools(result.creators, relaxedCreators);
+  let pooled = mergeAiCandidatePools(result.creators, relaxedCreators);
+
+  // When keyword/age AND-filters empty the strict pool and the relaxed pool
+  // times out (Prod authenticator statement_timeout), recover with category +
+  // market + platform browse so Studio still gets a boardroom slate.
+  if (pooled.length === 0) {
+    try {
+      const fallback = await browseUnifiedCreators(
+        supabase,
+        {
+          country: creatorFilters.countries[0]?.trim().toUpperCase() || undefined,
+          creatorCountries:
+            creatorFilters.countries.length > 0 ? creatorFilters.countries : undefined,
+          categories:
+            creatorFilters.categories.length > 0 ? creatorFilters.categories : undefined,
+          platforms:
+            creatorFilters.platforms.length > 1 ? creatorFilters.platforms : undefined,
+          platform:
+            creatorFilters.platforms.length === 1
+              ? creatorFilters.platforms[0]
+              : undefined,
+          productionOnly: true as const,
+          page: 1,
+          pageSize,
+          campaignIntelligenceProfileId: profileId,
+          skipCoverageBackfill: true,
+        },
+        "ai"
+      );
+      pooled = mergeAiCandidatePools([], fallback.creators);
+      searchTrace(
+        "cip_search_empty_pool_fallback",
+        {
+          profileId,
+          fallbackCount: fallback.creators.length,
+          pooledCount: pooled.length,
+        },
+        { path: "ai" }
+      );
+    } catch (error) {
+      searchTrace(
+        "cip_search_empty_pool_fallback_error",
+        {
+          profileId,
+          message: error instanceof Error ? error.message : String(error),
+        },
+        { path: "ai" }
+      );
+    }
+  }
 
   // Enterprise Constraint Engine — mandatory constraints never relax.
   // Relaxed pool may fetch platform-wide creators for coverage, but violators

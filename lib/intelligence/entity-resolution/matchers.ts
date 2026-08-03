@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { isMissingIntelligenceTableError } from "@/lib/intelligence/client";
 import { bestFuzzyMatch } from "@/lib/intelligence/entity-resolution/fuzzy";
 import {
   normalizeCampaignDocumentNumber,
@@ -41,7 +42,7 @@ export async function loadLiveMasters(supabase: SupabaseClient): Promise<LiveMas
       supabase.schema("intelligence").from("entity_resolution_overrides").select("*"),
     ]);
 
-  const errors = [
+  const masterErrors = [
     groups.error,
     clients.error,
     brands.error,
@@ -49,10 +50,16 @@ export async function loadLiveMasters(supabase: SupabaseClient): Promise<LiveMas
     handles.error,
     headers.error,
     lines.error,
-    overrides.error,
   ].filter(Boolean);
-  if (errors.length > 0) {
-    throw new Error(errors.map((e) => e?.message).join("; "));
+  if (masterErrors.length > 0) {
+    throw new Error(masterErrors.map((e) => e?.message).join("; "));
+  }
+
+  // Overrides live in the intelligence schema — degrade to empty when the API
+  // schema is not exposed (PGRST106) so Studio brand matching still works.
+  const overridesUnavailable = isMissingIntelligenceTableError(overrides.error?.message);
+  if (overrides.error && !overridesUnavailable) {
+    throw new Error(overrides.error.message);
   }
 
   return {
@@ -66,7 +73,7 @@ export async function loadLiveMasters(supabase: SupabaseClient): Promise<LiveMas
     handles: handles.data ?? [],
     headers: headers.data ?? [],
     lines: lines.data ?? [],
-    overrides: overrides.data ?? [],
+    overrides: overridesUnavailable ? [] : (overrides.data ?? []),
   };
 }
 
