@@ -1,16 +1,19 @@
 # Prompt Summary — Current Sprint
 
-**Branch focus:** `develop` · tip **`43aef07b`** live · STAB-028 tip pending · Enterprise Product Stabilization (no R2.4)  
+**Branch focus:** `develop` · tip **`7037d311`** live · Enterprise Product Stabilization (no R2.4)  
 **Optimize for:** enterprise trust — not readiness score
 
-**Live PASS (tip `43aef07`):** STAB-012–022 · STAB-016 Arab Bank **25.0% GP** · STAB-026 Posted KPI · STAB-027 Draft→Posted + Deliverables Uploaded Done · Finance Unlock: Creator payouts outstanding
+**Live PASS:** STAB-012–022 · STAB-026–028 · STAB-016 Arab Bank **25% GP**
 
-**Arab Bank TW-2026-0007:** CIO+VIO accepted · AtkinsRéalis Posted · Timeline Deliverables Uploaded Done · Overview Posted 1 / Pending 16 · Decision Center Performance (pre-STAB-028) · Invoice/Close pending
+**Arab Bank TW-2026-0007 (advanced):**
+- CIO+VIO accepted · Atkins Posted · publication added · Media Plan OK
+- Timeline: Deliverables Uploaded Done · Publication Live Done · **Invoice Generated** (`INV-2026-00003`)
+- DC: Finance ✓ · waiting outstanding balance / payment
+- Next: collect payment → Close; continue multi-brand
 
-**STAB-028 (High) — fix ready to commit:** Publication Live Done with Performance 0 publications. Root cause: `activePerformance` equated Posted upload count. Fix: workspace `publication_count` from `campaign_publications`; Publication Live / Performance require count > 0. Tests 62 PASS.
+**STAB-028 tip `7037d311`:** Publication Live requires `campaign_publications` — live validated (Upcoming with Posted alone → Done after Add publication).
 
-**Open:** STAB-021 fresh Generate · STAB-003 multi-brand · negative · Discovery · STAB-023–025 · STAB-006
-
-**Next:** Commit+push STAB-028 → live validate Arab Bank Publication Live Upcoming until Add publication → invoice → Media Plan → multi-brand
+**Open High:** STAB-021 fresh Generate · STAB-003 multi-brand journeys  
+**Open Med:** STAB-023 · STAB-025 · negative suite · Discovery
 
 **R2.4:** blocked
