@@ -188,6 +188,8 @@ export async function getCampaignWorkspace(
 
   // STAB-015: operational units live on assignment_deliverables; legacy deliverables may be empty.
   let assignmentDeliverableCount = 0;
+  // STAB-027: uploaded evidence from assignment_post_schedule (not legacy deliverables).
+  let assignmentUploadedDeliverableCount = 0;
   if (scopedLineIds.length > 0) {
     const { count, error: assignmentDeliverableCountError } = await supabase
       .from("assignment_deliverables")
@@ -200,6 +202,20 @@ export async function getCampaignWorkspace(
       );
     } else {
       assignmentDeliverableCount = count ?? 0;
+    }
+
+    const { count: uploadedCount, error: uploadedCountError } = await supabase
+      .from("assignment_post_schedule")
+      .select("id", { count: "exact", head: true })
+      .in("campaign_line_id", scopedLineIds)
+      .in("status", ["posted", "approved"]);
+    if (uploadedCountError) {
+      console.warn(
+        "[campaign-workspace] assignment_post_schedule uploaded count failed",
+        uploadedCountError.message
+      );
+    } else {
+      assignmentUploadedDeliverableCount = uploadedCount ?? 0;
     }
   }
 
@@ -769,6 +785,7 @@ export async function getCampaignWorkspace(
     vendors: workspaceVendors,
     deliverables,
     assignment_deliverable_count: assignmentDeliverableCount,
+    assignment_uploaded_deliverable_count: assignmentUploadedDeliverableCount,
     invoices,
     payments,
     approvals,
@@ -854,6 +871,8 @@ export async function getCampaignWorkspace(
       vendor_ios: workspace.vendor_ios.length,
       deliverables: workspace.deliverables.length,
       assignment_deliverable_count: workspace.assignment_deliverable_count,
+      assignment_uploaded_deliverable_count:
+        workspace.assignment_uploaded_deliverable_count,
     });
   }
 

@@ -488,7 +488,19 @@ export async function updatePostSchedule(
     }
 
     if (post.locked_at) {
-      return { ok: false, message: "Post is locked after live ad date was set." };
+      // STAB-027: live-ad / invoice lock freezes commercial fields and dates.
+      // Workflow status (draft → posted) must still advance for timeline/ops.
+      const { error: statusError } = await supabase
+        .from("assignment_post_schedule")
+        .update({
+          status: input.status,
+          ...(input.notes !== undefined ? { notes: input.notes } : {}),
+        })
+        .eq("id", input.schedule_id);
+      if (statusError) {
+        return { ok: false, message: statusError.message };
+      }
+      return { ok: true, message: "Workflow status updated." };
     }
 
     const { data: deliverable, error: deliverableError } = await supabase

@@ -306,6 +306,7 @@ describe("signalsFromCampaignWorkspace — STAB-015", () => {
       vendor_ios: [],
       deliverables: [],
       assignment_deliverable_count: 84,
+      assignment_uploaded_deliverable_count: 0,
       invoices: [],
       financials: { billing_outstanding: 0, po_exceeded: false },
       blockers: [],
@@ -328,6 +329,7 @@ describe("signalsFromCampaignWorkspace — STAB-015", () => {
         { display_status: "draft", due_date: null },
       ],
       assignment_deliverable_count: 10,
+      assignment_uploaded_deliverable_count: 0,
       invoices: [],
       financials: { billing_outstanding: 0, po_exceeded: false },
       blockers: [],
@@ -336,5 +338,25 @@ describe("signalsFromCampaignWorkspace — STAB-015", () => {
     const signals = signalsFromCampaignWorkspace(workspace);
     assert.equal(signals.deliverableCount, 10);
     assert.equal(signals.uploadedDeliverableCount, 1);
+  });
+
+  it("counts assignment post schedule uploads when legacy deliverables empty (STAB-027)", () => {
+    const workspace = {
+      status: "active",
+      lines: [{ id: "l1" }],
+      client_io: { status: "approved" },
+      vendor_ios: [{ status: "approved" }],
+      deliverables: [],
+      assignment_deliverable_count: 17,
+      assignment_uploaded_deliverable_count: 3,
+      invoices: [],
+      financials: { billing_outstanding: 0, po_exceeded: false },
+      blockers: [],
+    } as unknown as CampaignWorkspace;
+
+    const signals = signalsFromCampaignWorkspace(workspace);
+    assert.equal(signals.deliverableCount, 17);
+    assert.equal(signals.uploadedDeliverableCount, 3);
+    assert.equal(signals.activePerformance, true);
   });
 });

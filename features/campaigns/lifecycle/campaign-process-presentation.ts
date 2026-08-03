@@ -182,6 +182,12 @@ export function signalsFromCampaignWorkspace(workspace: CampaignWorkspace): Camp
     workspace.assignment_deliverable_count ?? 0
   );
 
+  // STAB-027: assignment_post_schedule posted/approved is the operational upload SSOT.
+  const uploadedDeliverableCount = Math.max(
+    postedOrApproved,
+    workspace.assignment_uploaded_deliverable_count ?? 0
+  );
+
   return {
     status: workspace.status,
     lineCount: workspace.lines.length,
@@ -194,11 +200,11 @@ export function signalsFromCampaignWorkspace(workspace: CampaignWorkspace): Camp
     ).length,
     deliverableCount,
     // STAB-019: Uploaded ≠ planned assignment units counted for explorer (STAB-015).
-    uploadedDeliverableCount: postedOrApproved,
+    uploadedDeliverableCount,
     overdueDeliverableCount,
     // STAB-017: Publication Live must not flip Done merely because assignment
-    // deliverable units exist — require posted/approved legacy deliverable evidence.
-    activePerformance: workspace.status === "active" && postedOrApproved > 0,
+    // deliverable units exist — require posted/approved evidence.
+    activePerformance: workspace.status === "active" && uploadedDeliverableCount > 0,
     invoiceCount: workspace.invoices?.length ?? 0,
     billingOutstanding: workspace.financials.billing_outstanding ?? 0,
     // Soft finance/ops strings must not inflate progression blockerCount.

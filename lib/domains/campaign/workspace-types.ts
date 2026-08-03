@@ -300,6 +300,12 @@ export type CampaignWorkspace = {
    * Legacy `deliverables` table may be empty while assignment units exist (STAB-015).
    */
   assignment_deliverable_count: number;
+  /**
+   * Posted/approved assignment post schedules (SSOT for Deliverables Uploaded /
+   * Publication Live after STAB-019). Legacy `deliverables.display_status` alone
+   * stays empty when ops mark posts posted in Assignments (STAB-027).
+   */
+  assignment_uploaded_deliverable_count: number;
   invoices: CampaignInvoiceRow[];
   payments: CampaignPaymentRow[];
   approvals: CampaignApprovalRow[];

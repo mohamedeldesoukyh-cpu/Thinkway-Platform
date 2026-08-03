@@ -163,6 +163,11 @@ type CampaignBillingTabProps = {
   campaignInvoiceRegister: FinanceInvoiceRegisterRow[];
   /** When false, Create Invoice is hidden and a lifecycle unlock message is shown. */
   invoiceCreationUnlocked?: boolean;
+  /**
+   * Human-readable next step when invoice creation is locked.
+   * Prefer Decision Center waiting reason so Unlock does not contradict the blocker line.
+   */
+  invoiceUnlockHint?: string | null;
   onNavigateToLifecycleAction?: () => void;
   /** Deep-link from Decision Center (?invoice=). */
   initialDetailInvoiceId?: string | null;
@@ -177,6 +182,7 @@ export function CampaignBillingTab({
   operationalBilling,
   campaignInvoiceRegister,
   invoiceCreationUnlocked = true,
+  invoiceUnlockHint = null,
   onNavigateToLifecycleAction,
   initialDetailInvoiceId = null,
   initialDetailPaymentId = null,
@@ -398,7 +404,9 @@ export function CampaignBillingTab({
         <aside className="thinkway-lc-finance-lock mb-3" aria-label="Invoice availability">
           <div className="thinkway-bp-label">Create Invoice unavailable</div>
           <p>
-            <b>Unlock:</b> Complete Client IO to unlock Billing.
+            <b>Unlock:</b>{" "}
+            {invoiceUnlockHint?.trim() ||
+              "Advance the campaign to Billing to unlock invoice creation."}
           </p>
           <p className="thinkway-lc-muted">
             Invoices become available when the campaign reaches the Billing stage.
