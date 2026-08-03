@@ -46,12 +46,13 @@ function setField<T extends CampaignFactsField>(
  * "campaign for <X>" names the paying client/brand — the capture must accept
  * brand punctuation ("e&", "P&G", "L'Oréal") and never swallow article-led
  * phrases ("launch an influencer campaign" → "an influencer").
+ * Period is excluded so "for Dar Global. Brand:" does not become "Dar Global. Brand".
  */
 const FOR_ATTRIBUTION_PATTERN =
-  /(?:campaign|activation|launch)\s+for\s+([A-Za-z0-9][\w&+.'’-]*(?:\s+[A-Za-z0-9][\w&+.'’-]*){0,3})/i;
+  /(?:campaign|activation|launch)\s+for\s+([A-Za-z0-9][\w&+'’-]*(?:\s+[A-Za-z0-9][\w&+'’-]*){0,3})/i;
 
 const LAUNCH_PATTERN =
-  /(?:launch|create\s+(?:a\s+)?(?:new\s+)?campaign\s+for)\s+([A-Za-z0-9][\w&+.'’-]*(?:\s+[A-Za-z0-9][\w&+.'’-]*){0,3})/i;
+  /(?:launch|create\s+(?:a\s+)?(?:new\s+)?campaign\s+for)\s+([A-Za-z0-9][\w&+'’-]*(?:\s+[A-Za-z0-9][\w&+'’-]*){0,3})/i;
 
 const ARTICLE_LED = /^(?:a|an|the|our|your|their|this|that|new)\b/i;
 const GENERIC_CAMPAIGN_NOUN =

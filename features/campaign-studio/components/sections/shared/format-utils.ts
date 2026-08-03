@@ -137,18 +137,42 @@ export function parseDurationFromText(text: string): string | undefined {
   return duration?.[1];
 }
 
+/**
+ * Next labeled brief field (single-line briefs: "Brand: X. Client: Y. Market: Z").
+ * Also stops before imperative continuations ("Need 3 creators…").
+ */
+const BRIEF_FIELD_BOUNDARY =
+  String.raw`(?=\s*(?:[.,;]\s*)?(?:brand|client|market|budget|platforms?|category|objective|audience|duration|timeline|product|kpis?|instagram|tiktok)(?:\s*name)?\s*(?:->|[:：])|\s*(?:[.,;]\s*)?(?:need\s+\d|please\b)|\s*[,;]|$|\n)`;
+
+/** Parse an explicitly labeled brief value without swallowing adjacent fields. */
+export function parseLabeledBriefValue(
+  text: string,
+  label: string
+): string | undefined {
+  const pattern = new RegExp(
+    String.raw`\b${label}(?:\s*name)?\s*(?:->|[:：])\s*(.+?)${BRIEF_FIELD_BOUNDARY}`,
+    "i"
+  );
+  const match = text.match(pattern);
+  const raw = match?.[1]?.trim().replace(/[.,;:\s]+$/g, "").trim();
+  if (!raw) return undefined;
+  return stripMarkdown(raw);
+}
+
 export function parseObjectiveFromText(text: string): string | undefined {
-  const labeled = text.match(/objective[:\s]+(.+?)(?:\n|$)/i);
-  if (labeled?.[1]) return stripMarkdown(labeled[1]);
+  const labeled = parseLabeledBriefValue(text, "objective");
+  if (labeled) return labeled;
   if (/awareness/i.test(text) && /ugc/i.test(text)) return "Awareness and UGC";
   return undefined;
 }
 
+/** Entity token for brand capture — never include '.' (it starts the next labeled field). */
+const BRIEF_ENTITY_TOKEN = String.raw`[A-Za-z0-9][\w&+'’-]*`;
+const BRIEF_ENTITY_CAPTURE = String.raw`(${BRIEF_ENTITY_TOKEN}(?:\s+${BRIEF_ENTITY_TOKEN}){0,3})`;
+
 export function parseBrandFromText(text: string): string | undefined {
-  const clientBrand = text.match(
-    /(?:client\s*\/\s*)?brand\s*name\s*(?:->|[:：]|\s+)\s*([A-Za-z0-9][\w&+.'’-]*(?:\s+[A-Za-z0-9][\w&+.'’-]*){0,3})(?=\s*[,;]|\s+(?:market|budget|platform|category|objective|instagram|tiktok)|$|\n)/i
-  );
-  if (clientBrand?.[1]) return stripMarkdown(clientBrand[1].trim());
+  const labeled = parseLabeledBriefValue(text, "brand");
+  if (labeled) return labeled.replace(/^of\s+/i, "");
 
   const knownBrand = text.match(
     /\b(Coca-Cola|BabyJoy|Adidas|Emirates NBD|Visit Egypt|Rolex|Pepsi|L'Oréal(?:\s+Paris)?|e&)\b/i
@@ -159,7 +183,7 @@ export function parseBrandFromText(text: string): string | undefined {
   if (launch?.[1]) return stripMarkdown(launch[1].trim());
   // Stop at the next brief field so "Brand e&, market Egypt, budget…" does not swallow the line.
   const brand = text.match(
-    /\bbrand[:\s]+([A-Za-z0-9][\w&+.'’-]*(?:\s+[A-Za-z0-9][\w&+.'’-]*){0,3})(?=\s*[,;]|\s+(?:market|budget|platform|category|objective|instagram|tiktok)|$|\n)/i
+    new RegExp(String.raw`\bbrand[:\s]+${BRIEF_ENTITY_CAPTURE}${BRIEF_FIELD_BOUNDARY}`, "i")
   );
   if (brand?.[1]) return stripMarkdown(brand[1].replace(/^of\s+/i, ""));
   return undefined;

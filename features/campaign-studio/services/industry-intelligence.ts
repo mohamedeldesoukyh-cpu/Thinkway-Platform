@@ -2,6 +2,7 @@ import {
   detectCurrencyFromSources,
   parseBudgetTotalFromText,
   parseDurationFromText,
+  parseLabeledBriefValue,
   stripMarkdown,
 } from "../components/sections/shared/format-utils";
 import type {
@@ -208,15 +209,12 @@ export const KNOWN_COMPANY_PATTERN =
 export function resolveClientFromBrief(text: string): string {
   // Client resolution must never leak brand lines or product names into the
   // client field: only an explicit "Client:" label or a known company counts.
-  const patterns = [
-    /\bclient(?:\s*name)?\s*(?:->|[:：])\s*(.+?)(?:\n|$)/i,
-    KNOWN_COMPANY_PATTERN,
-  ];
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    const value = match?.[1] ?? match?.[0];
-    if (value?.trim()) return stripMarkdown(value.trim());
-  }
+  // Single-line briefs ("Client: X. Market: Y") must stop at the next field.
+  const labeled = parseLabeledBriefValue(text, "client");
+  if (labeled) return labeled;
+
+  const known = text.match(KNOWN_COMPANY_PATTERN);
+  if (known?.[0]?.trim()) return stripMarkdown(known[0].trim());
   return "Brand Client";
 }
 
