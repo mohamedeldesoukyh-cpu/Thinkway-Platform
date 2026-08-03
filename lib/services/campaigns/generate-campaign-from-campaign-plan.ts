@@ -471,6 +471,8 @@ export async function generateCampaignFromCampaignPlan(
       cost_before_vat: seed.cost,
       usage_rights_amount: 0,
       usage_rights_cost: 0,
+      // GP margin is baked into revenue via mapCampaignPlanToLineSeeds (STAB-016).
+      // Agency fee % is a separate commercial overlay — default 0 on Generate.
       agency_fee_percent: 0,
       revenue_vat_percent: 0,
       cost_vat_percent: 0,

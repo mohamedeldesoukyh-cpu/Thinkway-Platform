@@ -186,6 +186,23 @@ export async function getCampaignWorkspace(
     (deliverable) => (deliverable as { id: string }).id
   );
 
+  // STAB-015: operational units live on assignment_deliverables; legacy deliverables may be empty.
+  let assignmentDeliverableCount = 0;
+  if (scopedLineIds.length > 0) {
+    const { count, error: assignmentDeliverableCountError } = await supabase
+      .from("assignment_deliverables")
+      .select("id", { count: "exact", head: true })
+      .in("campaign_line_id", scopedLineIds);
+    if (assignmentDeliverableCountError) {
+      console.warn(
+        "[campaign-workspace] assignment_deliverables count failed",
+        assignmentDeliverableCountError.message
+      );
+    } else {
+      assignmentDeliverableCount = count ?? 0;
+    }
+  }
+
   const [approvalsResult, auditResult] = await Promise.all([
     fetchCampaignApprovals(supabase, campaignId, {
       vendorIds: scopedVendorIds,
@@ -751,6 +768,7 @@ export async function getCampaignWorkspace(
     lines: workspaceLines,
     vendors: workspaceVendors,
     deliverables,
+    assignment_deliverable_count: assignmentDeliverableCount,
     invoices,
     payments,
     approvals,
@@ -835,6 +853,7 @@ export async function getCampaignWorkspace(
       lines: workspace.lines.length,
       vendor_ios: workspace.vendor_ios.length,
       deliverables: workspace.deliverables.length,
+      assignment_deliverable_count: workspace.assignment_deliverable_count,
     });
   }
 

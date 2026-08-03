@@ -295,6 +295,11 @@ export type CampaignWorkspace = {
   /** @deprecated Derived from line-linked campaign_influencers for historical records only. */
   vendors: CampaignVendorAssignment[];
   deliverables: CampaignDeliverableRow[];
+  /**
+   * Assignment-deliverable unit count (SSOT for operational explorer / timeline).
+   * Legacy `deliverables` table may be empty while assignment units exist (STAB-015).
+   */
+  assignment_deliverable_count: number;
   invoices: CampaignInvoiceRow[];
   payments: CampaignPaymentRow[];
   approvals: CampaignApprovalRow[];

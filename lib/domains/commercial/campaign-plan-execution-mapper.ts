@@ -12,6 +12,8 @@ import {
   getDeliverableTypeCodesForPlatform,
 } from "@/lib/campaigns/deliverable-taxonomy";
 import type { LinePlatformSelection } from "@/lib/campaigns/line-assignment";
+import { computeCommercials } from "@/lib/commercial/commercial-engine";
+import { DEFAULT_GP_TARGET_PCT } from "@/lib/domains/commercial/quotation-constants";
 import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
 
 export type CampaignPlanLineSeed = {
@@ -22,6 +24,11 @@ export type CampaignPlanLineSeed = {
   platforms: LinePlatformSelection[];
   revenue: number;
   cost: number;
+  /**
+   * Target GP margin % when revenue was derived from creator fees (STAB-016).
+   * Optional on quotation seeds where revenue/cost are already commercial facts.
+   */
+  gpPct?: number;
   currencyCode: string;
 };
 
@@ -187,14 +194,22 @@ export function mapCampaignPlanToLineSeeds(
     if (platforms.length === 0) return [];
 
     const amount = perCreatorAmounts[index] ?? 0;
+    // Creator fee allocation is cost. Apply default GP% so Generate does not
+    // materialize zero-margin lines (STAB-016 / L'Oréal). Matches quotation mapper.
+    const commercials = computeCommercials({
+      mode: "cost_gp_pct",
+      cost: amount,
+      gpPct: DEFAULT_GP_TARGET_PCT,
+    });
     return [
       {
         influencerId,
         unifiedId: creator.unified_id,
         displayName: creator.display_name,
         platforms,
-        revenue: amount,
+        revenue: commercials.valid ? commercials.revenue : amount,
         cost: amount,
+        gpPct: DEFAULT_GP_TARGET_PCT,
         currencyCode,
       },
     ];

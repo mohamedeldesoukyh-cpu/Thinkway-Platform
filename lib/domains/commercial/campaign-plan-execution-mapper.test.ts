@@ -135,10 +135,17 @@ const seeds = mapCampaignPlanToLineSeeds({
 
 assert.equal(seeds.length, 2);
 assert.equal(
-  seeds.reduce((sum, seed) => sum + seed.revenue, 0),
+  seeds.reduce((sum, seed) => sum + seed.cost, 0),
   300_000,
-  "creator fees split across approved slate vendors"
+  "creator fees (cost) split across approved slate vendors"
 );
+assert.equal(
+  seeds.reduce((sum, seed) => sum + seed.revenue, 0),
+  400_000,
+  "STAB-016: default 25% GP applied so revenue exceeds cost"
+);
+assert.equal(seeds[0]?.gpPct, 25);
+assert.ok(seeds[0]!.revenue > seeds[0]!.cost);
 assert.equal(seeds[0]?.currencyCode, "EGP");
 assert.equal(resolveCampaignNameFromPlan(baseCampaignObject()), "Summer Launch");
 

@@ -172,6 +172,12 @@ export function signalsFromCampaignWorkspace(workspace: CampaignWorkspace): Camp
     (row) => row.display_status === "posted" || row.display_status === "approved"
   ).length;
 
+  // Prefer assignment-deliverable SSOT when legacy deliverables table is empty (STAB-015).
+  const deliverableCount = Math.max(
+    workspace.deliverables?.length ?? 0,
+    workspace.assignment_deliverable_count ?? 0
+  );
+
   return {
     status: workspace.status,
     lineCount: workspace.lines.length,
@@ -182,11 +188,11 @@ export function signalsFromCampaignWorkspace(workspace: CampaignWorkspace): Camp
     sentVendorIoCount: workspace.vendor_ios.filter(
       (io) => io.status === "sent" || io.status === "generated"
     ).length,
-    deliverableCount: workspace.deliverables?.length ?? 0,
+    deliverableCount,
     overdueDeliverableCount,
     activePerformance:
       workspace.status === "active" &&
-      (postedOrApproved > 0 || (workspace.deliverables?.length ?? 0) > 0),
+      (postedOrApproved > 0 || deliverableCount > 0),
     invoiceCount: workspace.invoices?.length ?? 0,
     billingOutstanding: workspace.financials.billing_outstanding ?? 0,
     // Soft finance/ops strings must not inflate progression blockerCount.

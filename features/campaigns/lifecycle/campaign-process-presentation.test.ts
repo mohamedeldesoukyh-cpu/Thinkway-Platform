@@ -6,8 +6,10 @@ import {
   processNavStateForTab,
   recommendCampaignProcessTab,
   signalsFromCampaignListItem,
+  signalsFromCampaignWorkspace,
   type CampaignProcessSignals,
 } from "@/features/campaigns/lifecycle/campaign-process-presentation";
+import type { CampaignWorkspace } from "@/features/campaigns/types";
 
 function base(overrides: Partial<CampaignProcessSignals> = {}): CampaignProcessSignals {
   return {
@@ -274,5 +276,24 @@ describe("processNavStateForTab", () => {
     assert.equal(processNavStateForTab("lines", cue), "completed");
     assert.equal(processNavStateForTab("client-io", cue), "waiting_client");
     assert.equal(processNavStateForTab("vendor-io", cue), "upcoming");
+  });
+});
+
+describe("signalsFromCampaignWorkspace — STAB-015", () => {
+  it("counts assignment deliverables when legacy deliverables table is empty", () => {
+    const workspace = {
+      status: "active",
+      lines: [{ id: "l1" }, { id: "l2" }],
+      client_io: { status: "approved" },
+      vendor_ios: [{ status: "approved" }, { status: "approved" }],
+      deliverables: [],
+      assignment_deliverable_count: 2,
+      invoices: [],
+      financials: { billing_outstanding: 0, po_exceeded: false },
+      blockers: [],
+    } as unknown as CampaignWorkspace;
+
+    const signals = signalsFromCampaignWorkspace(workspace);
+    assert.equal(signals.deliverableCount, 2);
   });
 });
