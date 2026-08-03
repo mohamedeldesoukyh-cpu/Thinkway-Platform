@@ -21,6 +21,7 @@ function base(overrides: Partial<CampaignProcessSignals> = {}): CampaignProcessS
     uploadedDeliverableCount: 0,
     overdueDeliverableCount: 0,
     activePerformance: false,
+    publicationCount: 0,
     invoiceCount: 0,
     billingOutstanding: 0,
     blockerCount: 0,

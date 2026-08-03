@@ -123,6 +123,8 @@ function baseWorkspace(overrides?: Partial<CampaignWorkspace>): CampaignWorkspac
     vendors: [],
     deliverables: [],
     assignment_deliverable_count: 0,
+    assignment_uploaded_deliverable_count: 0,
+    publication_count: 0,
     invoices: [],
     payments: [],
     approvals: [],

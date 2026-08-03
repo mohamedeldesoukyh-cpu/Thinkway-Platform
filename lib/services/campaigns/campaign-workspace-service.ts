@@ -190,6 +190,22 @@ export async function getCampaignWorkspace(
   let assignmentDeliverableCount = 0;
   // STAB-027: uploaded evidence from assignment_post_schedule (not legacy deliverables).
   let assignmentUploadedDeliverableCount = 0;
+  // STAB-028: Publication Live requires campaign_publications rows, not Posted alone.
+  let publicationCount = 0;
+  {
+    const { count: pubCount, error: publicationCountError } = await supabase
+      .from("campaign_publications")
+      .select("id", { count: "exact", head: true })
+      .eq("campaign_header_id", campaignId);
+    if (publicationCountError) {
+      console.warn(
+        "[campaign-workspace] campaign_publications count failed",
+        publicationCountError.message
+      );
+    } else {
+      publicationCount = pubCount ?? 0;
+    }
+  }
   if (scopedLineIds.length > 0) {
     const { count, error: assignmentDeliverableCountError } = await supabase
       .from("assignment_deliverables")
@@ -786,6 +802,7 @@ export async function getCampaignWorkspace(
     deliverables,
     assignment_deliverable_count: assignmentDeliverableCount,
     assignment_uploaded_deliverable_count: assignmentUploadedDeliverableCount,
+    publication_count: publicationCount,
     invoices,
     payments,
     approvals,
@@ -873,6 +890,7 @@ export async function getCampaignWorkspace(
       assignment_deliverable_count: workspace.assignment_deliverable_count,
       assignment_uploaded_deliverable_count:
         workspace.assignment_uploaded_deliverable_count,
+      publication_count: workspace.publication_count,
     });
   }
 

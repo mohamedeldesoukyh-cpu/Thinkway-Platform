@@ -301,11 +301,16 @@ export type CampaignWorkspace = {
    */
   assignment_deliverable_count: number;
   /**
-   * Posted/approved assignment post schedules (SSOT for Deliverables Uploaded /
-   * Publication Live after STAB-019). Legacy `deliverables.display_status` alone
-   * stays empty when ops mark posts posted in Assignments (STAB-027).
+   * Posted/approved assignment post schedules (SSOT for Deliverables Uploaded).
+   * Legacy `deliverables.display_status` alone stays empty when ops mark posts
+   * posted in Assignments (STAB-027). Does not imply Publication Live (STAB-028).
    */
   assignment_uploaded_deliverable_count: number;
+  /**
+   * Rows in `campaign_publications` (SSOT for Publication Live / Performance).
+   * Posted workflow status alone must not mark Publication Live Done (STAB-028).
+   */
+  publication_count: number;
   invoices: CampaignInvoiceRow[];
   payments: CampaignPaymentRow[];
   approvals: CampaignApprovalRow[];

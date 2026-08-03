@@ -589,7 +589,8 @@ function buildBusinessTimeline(
       id: "publication_live",
       label: "Publication Live",
       at: null,
-      occurred: signals.activePerformance,
+      // STAB-028: require campaign_publications — not Posted workflow alone.
+      occurred: signals.publicationCount > 0,
       owner: "Operations",
     },
     {

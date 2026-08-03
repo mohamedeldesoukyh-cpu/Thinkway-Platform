@@ -24,6 +24,7 @@ function base(overrides: Partial<CampaignProcessSignals> = {}): CampaignProcessS
     uploadedDeliverableCount: 0,
     overdueDeliverableCount: 0,
     activePerformance: false,
+    publicationCount: 0,
     invoiceCount: 0,
     billingOutstanding: 0,
     blockerCount: 0,
@@ -349,6 +350,7 @@ describe("signalsFromCampaignWorkspace — STAB-015", () => {
       deliverables: [],
       assignment_deliverable_count: 17,
       assignment_uploaded_deliverable_count: 3,
+      publication_count: 0,
       invoices: [],
       financials: { billing_outstanding: 0, po_exceeded: false },
       blockers: [],
@@ -357,6 +359,29 @@ describe("signalsFromCampaignWorkspace — STAB-015", () => {
     const signals = signalsFromCampaignWorkspace(workspace);
     assert.equal(signals.deliverableCount, 17);
     assert.equal(signals.uploadedDeliverableCount, 3);
+    // STAB-028: Posted alone must not activate Performance / Publication Live.
+    assert.equal(signals.activePerformance, false);
+    assert.equal(signals.publicationCount, 0);
+  });
+
+  it("activates Performance only when campaign_publications exist (STAB-028)", () => {
+    const workspace = {
+      status: "active",
+      lines: [{ id: "l1" }],
+      client_io: { status: "approved" },
+      vendor_ios: [{ status: "approved" }],
+      deliverables: [],
+      assignment_deliverable_count: 17,
+      assignment_uploaded_deliverable_count: 3,
+      publication_count: 1,
+      invoices: [],
+      financials: { billing_outstanding: 0, po_exceeded: false },
+      blockers: [],
+    } as unknown as CampaignWorkspace;
+
+    const signals = signalsFromCampaignWorkspace(workspace);
+    assert.equal(signals.uploadedDeliverableCount, 3);
+    assert.equal(signals.publicationCount, 1);
     assert.equal(signals.activePerformance, true);
   });
 });

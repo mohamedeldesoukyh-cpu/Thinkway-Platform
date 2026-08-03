@@ -111,7 +111,13 @@ export type CampaignProcessSignals = {
   /** Posted/approved deliverables only — not planned assignment units (STAB-019). */
   uploadedDeliverableCount: number;
   overdueDeliverableCount: number;
+  /**
+   * True when Performance / Publication Live should advance — requires
+   * `campaign_publications` rows (STAB-028), not Posted workflow alone.
+   */
   activePerformance: boolean;
+  /** Count of campaign_publications (SSOT for Publication Live). */
+  publicationCount: number;
   invoiceCount: number;
   billingOutstanding: number;
   blockerCount: number;
@@ -155,6 +161,7 @@ export function signalsFromCampaignListItem(campaign: CampaignListItem): Campaig
     // Never infer performance from header status alone — that jumped Active+approved
     // CIO campaigns to Performance on the portfolio while Workspace stayed on Deliverables.
     activePerformance: Boolean(campaign.performance_active),
+    publicationCount: campaign.performance_active ? Math.max(1, campaign.deliverable_count ?? 0) : 0,
     invoiceCount: 0,
     billingOutstanding: 0,
     blockerCount: 0,
@@ -188,6 +195,10 @@ export function signalsFromCampaignWorkspace(workspace: CampaignWorkspace): Camp
     workspace.assignment_uploaded_deliverable_count ?? 0
   );
 
+  // STAB-028: Publication Live / Performance require campaign_publications rows.
+  // Posted workflow advances Deliverables Uploaded only — not Publication Live.
+  const publicationCount = workspace.publication_count ?? 0;
+
   return {
     status: workspace.status,
     lineCount: workspace.lines.length,
@@ -202,9 +213,9 @@ export function signalsFromCampaignWorkspace(workspace: CampaignWorkspace): Camp
     // STAB-019: Uploaded ≠ planned assignment units counted for explorer (STAB-015).
     uploadedDeliverableCount,
     overdueDeliverableCount,
-    // STAB-017: Publication Live must not flip Done merely because assignment
-    // deliverable units exist — require posted/approved evidence.
-    activePerformance: workspace.status === "active" && uploadedDeliverableCount > 0,
+    // STAB-017 + STAB-028: units/Posted alone must not flip Publication Live.
+    activePerformance: workspace.status === "active" && publicationCount > 0,
+    publicationCount,
     invoiceCount: workspace.invoices?.length ?? 0,
     billingOutstanding: workspace.financials.billing_outstanding ?? 0,
     // Soft finance/ops strings must not inflate progression blockerCount.

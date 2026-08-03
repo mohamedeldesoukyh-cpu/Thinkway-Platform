@@ -20,6 +20,7 @@ function base(overrides: Partial<CampaignProcessSignals> = {}): CampaignProcessS
     uploadedDeliverableCount: 0,
     overdueDeliverableCount: 0,
     activePerformance: false,
+    publicationCount: 0,
     invoiceCount: 0,
     billingOutstanding: 0,
     blockerCount: 0,
@@ -220,5 +221,25 @@ describe("campaign lifecycle orchestrator", () => {
       uploaded.timeline.find((e) => e.id === "deliverables_uploaded")?.occurred,
       true
     );
+    // STAB-028: Posted/upload evidence alone must not mark Publication Live.
+    assert.equal(
+      uploaded.timeline.find((e) => e.id === "publication_live")?.occurred,
+      false
+    );
+
+    const live = deriveLifecycleForTest(
+      base({
+        lineCount: 10,
+        hasClientIo: true,
+        clientIoStatus: "approved",
+        vendorIoCount: 10,
+        approvedVendorIoCount: 10,
+        deliverableCount: 16,
+        uploadedDeliverableCount: 3,
+        publicationCount: 1,
+        activePerformance: true,
+      })
+    );
+    assert.equal(live.timeline.find((e) => e.id === "publication_live")?.occurred, true);
   });
 });
