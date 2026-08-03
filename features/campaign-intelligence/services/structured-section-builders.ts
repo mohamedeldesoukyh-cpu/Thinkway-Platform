@@ -388,8 +388,9 @@ export function buildCreatorRecommendationData(
       ? Math.round(ranked.reduce((sum, c) => sum + c.fitScore, 0) / ranked.length)
       : undefined;
 
-  // Facts alone are enough for why-selected — strategy may not be on the
-  // CampaignObject yet when CIP proposes the first slate.
+  // Always attach boardroom why-selected. Facts+strategy preferred; otherwise
+  // synthesize from fit/platform evidence so Director scaffolding cannot leave
+  // an empty selectedReasoning array on a proposed slate.
   const reasoning = facts
     ? buildVendorRecommendationReasoning(
         facts,
@@ -397,15 +398,35 @@ export function buildCreatorRecommendationData(
         ranked,
         poolCreators ?? []
       )
-    : null;
+    : {
+        selected: ranked.map((creator, index) => ({
+          creatorId: creator.id,
+          displayName: creator.displayName,
+          whySelected: `${creator.displayName} ranked #${index + 1} · fit ${creator.fitScore}/100 on ${creator.platform} — selected for brief match${query?.trim() ? ` (${query.trim()})` : ""}.`,
+          whyNotAnother:
+            "Adjacent creators ranked lower on campaign fit or platform alignment for this brief.",
+          contribution: `Tier slot ${index + 1} — deliver brief-aligned content on ${creator.platform}.`,
+          expectedRole: "Brief-aligned creator",
+          audienceMatch: `${creator.followers?.toLocaleString?.() ?? "—"} followers · ${creator.engagementRate != null ? `${creator.engagementRate}% ER` : "ER TBD"}`,
+          risk: "Verify audience geography and brand safety before booking",
+          alternative: "Next-ranked creator on the same platform",
+          confidence: Math.min(90, 55 + creator.fitScore / 4),
+          evidence: `Campaign fit ${creator.fitScore}/100 · ${creator.platform}`,
+          tradeoff: "Selected for fit quality over slate volume",
+          missingData: [],
+          manualVerification: "Confirm audience country and recent content fit before booking",
+          directorNotes: "Auto-proposed from discovery ranking — Director strategy may refine later",
+        })),
+        rejected: [],
+      };
 
   return {
     creatorIds: suggestion.creatorIds,
     rationale: suggestion.rationale,
     avgFitScore,
     creatorFitScores: Object.fromEntries(ranked.map((c) => [c.id, c.fitScore])),
-    selectedReasoning: reasoning?.selected,
-    rejectedReasoning: reasoning?.rejected,
+    selectedReasoning: reasoning.selected,
+    rejectedReasoning: reasoning.rejected,
   };
 }
 
