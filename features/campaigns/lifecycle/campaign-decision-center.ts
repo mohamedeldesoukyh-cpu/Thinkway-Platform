@@ -515,11 +515,14 @@ export function buildDecisionNarrative(input: {
           : primary.objectKind === "deliverable"
             ? "Performance"
             : primary.objectKind === "invoice"
-              ? // STAB-032: invoice attention before settlement is Collections, not Closed.
-                primary.id.includes("collection") ||
-                /payment|outstanding|collect/i.test(primary.reason)
-                ? "Collections"
-                : "Finance"
+              ? // STAB-034: vendor payout soft-alerts are Finance, not client Collections.
+                /payout/i.test(primary.reason) || /payout/i.test(primary.title)
+                ? "Finance"
+                : // STAB-032: invoice attention before settlement is Collections, not Closed.
+                  primary.id.includes("collection") ||
+                    /payment|outstanding|collect/i.test(primary.reason)
+                  ? "Collections"
+                  : "Finance"
               : null,
     dependencyKind: isBlocker
       ? "Business dependency"

@@ -290,6 +290,37 @@ describe("deriveCampaignProcessCue — business rules", () => {
     assert.match(cue.statusLabel, /complete/i);
   });
 
+  it("STAB-033: completed cue marks every process stage Completed (not Upcoming)", () => {
+    const cue = deriveCampaignProcessCue(
+      base({
+        status: "completed",
+        lineCount: 2,
+        hasClientIo: true,
+        clientIoStatus: "approved",
+        vendorIoCount: 1,
+        approvedVendorIoCount: 1,
+        invoiceCount: 1,
+        billingOutstanding: 0,
+      })
+    );
+    assert.equal(cue.lifecycleSignal, "completed");
+    for (const stageId of [
+      "overview",
+      "lines",
+      "client-io",
+      "vendor-io",
+      "deliverables",
+      "publications",
+      "billing",
+    ] as const) {
+      assert.equal(
+        cue.stageSignals[stageId],
+        "completed",
+        `${stageId} must be completed after campaign close-out`
+      );
+    }
+  });
+
   it("prioritizes incomplete assignments over later finance signals", () => {
     const cue = deriveCampaignProcessCue(
       base({

@@ -378,6 +378,8 @@ describe("campaign decision center", () => {
         vendorIoCount: 1,
         approvedVendorIoCount: 1,
         sentVendorIoCount: 1,
+        invoiceCount: 1,
+        billingOutstanding: 0,
       }),
       daysWaiting: 0,
       objects: objects({
@@ -387,6 +389,15 @@ describe("campaign decision center", () => {
           document_number: "CIO-2026-0005",
           status: "approved",
         },
+        invoices: [
+          {
+            id: "inv-1",
+            document_number: "INV-2026-00001",
+            status: "paid",
+            total: 1000,
+            outstanding: 0,
+          },
+        ],
         vendorIos: [
           {
             id: "vio-1",
@@ -402,6 +413,9 @@ describe("campaign decision center", () => {
     assert.equal(payout?.severity, "operational_attention");
     assert.equal(payout?.actionTab, "billing");
     assert.notEqual(payout?.objectKind, "po");
+    // STAB-034: vendor payout soft-alert must not narrate as client Collections.
+    assert.equal(dc.narrative.nextStageLabel, "Finance");
+    assert.notEqual(dc.narrative.nextStageLabel, "Collections");
   });
 
   it("never leaves Decision Center empty when there are no blockers", () => {

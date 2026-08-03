@@ -17,10 +17,19 @@ export function buildStageRailSignals<TStageId extends string>(
   const currentIndex = indexById.get(currentStageId) ?? 0;
   const signals: Partial<Record<TStageId, BusinessProcessLifecycleSignal>> = {};
 
+  // STAB-033: a completed journey must not pin "current" to an early stage
+  // (e.g. Overview close-out) and leave later stages as Upcoming.
+  if (currentSignal === "completed") {
+    for (const stage of stages) {
+      signals[stage.id] = "completed";
+    }
+    return signals;
+  }
+
   for (const stage of stages) {
     const index = indexById.get(stage.id) ?? 0;
     if (stage.id === currentStageId) {
-      signals[stage.id] = currentSignal === "completed" ? "current" : currentSignal;
+      signals[stage.id] = currentSignal;
       continue;
     }
     if (index < currentIndex) {
