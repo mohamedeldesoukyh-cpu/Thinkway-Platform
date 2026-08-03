@@ -121,6 +121,8 @@ describe("deriveCampaignProcessCue — business rules", () => {
         vendor_io_count: 32,
         approved_vendor_io_count: 32,
         sent_vendor_io_count: 32,
+        deliverable_count: 84,
+        performance_active: false,
         po_amount_campaign_currency: 1000,
         po_consumed_amount: 0,
       } as never)
@@ -128,6 +130,7 @@ describe("deriveCampaignProcessCue — business rules", () => {
     assert.notEqual(cue.entryStageId, "client-io");
     assert.ok(!/Generate Client IO/i.test(cue.nextActionLabel));
     assert.equal(cue.stageSignals["client-io"], "completed");
+    assert.equal(cue.entryStageId, "deliverables");
   });
 
   it("opens Deliverables when deliverables are overdue", () => {

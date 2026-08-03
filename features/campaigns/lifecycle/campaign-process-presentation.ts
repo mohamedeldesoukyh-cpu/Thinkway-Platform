@@ -129,9 +129,11 @@ export function signalsFromCampaignListItem(campaign: CampaignListItem): Campaig
     vendorIoCount: campaign.vendor_io_count ?? 0,
     approvedVendorIoCount: campaign.approved_vendor_io_count ?? 0,
     sentVendorIoCount: campaign.sent_vendor_io_count ?? 0,
-    deliverableCount: 0,
+    deliverableCount: campaign.deliverable_count ?? 0,
     overdueDeliverableCount: 0,
-    activePerformance: campaign.status === "active",
+    // Never infer performance from header status alone — that jumped Active+approved
+    // CIO campaigns to Performance on the portfolio while Workspace stayed on Deliverables.
+    activePerformance: Boolean(campaign.performance_active),
     invoiceCount: 0,
     billingOutstanding: 0,
     blockerCount: 0,
