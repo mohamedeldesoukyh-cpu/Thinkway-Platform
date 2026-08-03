@@ -7,7 +7,10 @@ import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { canGenerateFromCampaignPlan } from "@/lib/domains/commercial/campaign-plan-provenance";
 import { resolveCampaignObjectHead } from "@/lib/domains/commercial/resolve-campaign-object-head";
+import { resolveCampaignPlanBrandId } from "@/lib/domains/commercial/resolve-campaign-plan-brand";
 import { generateCampaignFromCampaignPlan } from "@/lib/services/campaigns/generate-campaign-from-campaign-plan";
+import { CampaignObjectPersistenceService } from "@/features/campaign-intelligence/services/campaign-object-persistence";
+import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 
 const generateCampaignSchema = z.object({
   campaignObjectId: z.string().uuid(),
@@ -78,45 +81,28 @@ export async function getCampaignPlanExecutionContext(input: {
     }
   }
 
-  let brandId: string | null = null;
   const conversationId = input.conversationId ?? head.conversation_id;
-  if (conversationId) {
-    const { data: conversation } = await supabase
-      .from("ai_conversations")
-      .select("workspace_type, workspace_id")
-      .eq("id", conversationId)
-      .maybeSingle();
-
-    const row = conversation as {
-      workspace_type?: string;
-      workspace_id?: string | null;
-    } | null;
-
-    if (row?.workspace_id) {
-      if (row.workspace_type === "quotation") {
-        const { data: quotation } = await supabase
-          .from("quotations")
-          .select("brand_id, temporary_brand_name")
-          .eq("id", row.workspace_id)
-          .maybeSingle();
-        brandId = (quotation as { brand_id?: string | null } | null)?.brand_id ?? null;
-      } else if (row.workspace_type === "shortlist") {
-        const { data: shortlist } = await supabase
-          .from("discovery_shortlists")
-          .select("brand_id")
-          .eq("id", row.workspace_id)
-          .maybeSingle();
-        brandId = (shortlist as { brand_id?: string | null } | null)?.brand_id ?? null;
-      }
-    }
+  let brandNameHint: string | null = null;
+  const tip = await CampaignObjectPersistenceService.loadVersion(
+    supabase,
+    head.id,
+    head.current_version
+  );
+  if (tip?.campaignObject) {
+    brandNameHint = getCampaignFacts(tip.campaignObject)?.brandName?.trim() || null;
   }
+
+  const brandId = await resolveCampaignPlanBrandId(supabase, {
+    conversationId,
+    brandNameHint,
+  });
 
   return {
     lifecycleStatus: head.lifecycle_status,
     canGenerate: canGenerateFromCampaignPlan(head.lifecycle_status),
     existingCampaign,
     brandId,
-    brandName: null,
+    brandName: brandNameHint,
   };
 }
 

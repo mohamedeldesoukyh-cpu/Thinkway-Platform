@@ -10,6 +10,7 @@ import {
   canGenerateFromCampaignPlan,
   parseCampaignPlanProvenance,
 } from "@/lib/domains/commercial/campaign-plan-provenance";
+import { resolveCampaignPlanBrandId } from "@/lib/domains/commercial/resolve-campaign-plan-brand";
 import {
   attachScheduleHintsToLineSeeds,
   type ExecutionLineSeed,
@@ -61,53 +62,6 @@ export type GenerateCampaignFromCampaignPlanResult =
       source: "quotation" | "campaign_plan";
     }
   | { ok: false; message: string };
-
-async function resolveBrandId(
-  supabase: SupabaseClient<Database>,
-  input: {
-    brandId?: string | null;
-    conversationId?: string | null;
-  }
-): Promise<string | null> {
-  if (input.brandId?.trim()) return input.brandId.trim();
-  if (!input.conversationId) return null;
-
-  const { data: conversation, error } = await supabase
-    .from("ai_conversations")
-    .select("workspace_type, workspace_id")
-    .eq("id", input.conversationId)
-    .maybeSingle();
-
-  const row = conversation as {
-    workspace_type?: string;
-    workspace_id?: string | null;
-  } | null;
-
-  if (error || !row?.workspace_id) return null;
-
-  const workspaceType = row.workspace_type;
-  const workspaceId = row.workspace_id;
-
-  if (workspaceType === "quotation") {
-    const { data: quotation } = await supabase
-      .from("quotations")
-      .select("brand_id")
-      .eq("id", workspaceId)
-      .maybeSingle();
-    return (quotation as { brand_id?: string | null } | null)?.brand_id ?? null;
-  }
-
-  if (workspaceType === "shortlist") {
-    const { data: shortlist } = await supabase
-      .from("discovery_shortlists")
-      .select("brand_id")
-      .eq("id", workspaceId)
-      .maybeSingle();
-    return (shortlist as { brand_id?: string | null } | null)?.brand_id ?? null;
-  }
-
-  return null;
-}
 
 async function resolveInfluencerIds(
   supabase: SupabaseClient<Database>,
@@ -344,9 +298,11 @@ export async function generateCampaignFromCampaignPlan(
     return { ok: false, message: "Failed to load the approved Campaign Plan version." };
   }
 
-  const brandId = await resolveBrandId(supabase, {
+  const facts = getCampaignFacts(version.campaignObject);
+  const brandId = await resolveCampaignPlanBrandId(supabase, {
     brandId: input.brandId,
     conversationId: input.conversationId ?? head.conversation_id,
+    brandNameHint: facts?.brandName,
   });
   if (!brandId) {
     return {
@@ -361,7 +317,6 @@ export async function generateCampaignFromCampaignPlan(
   }
 
   const quotationSource = await loadQuotationExecutionSource(supabase, campaignObjectId);
-  const facts = getCampaignFacts(version.campaignObject);
   const campaignName =
     input.campaignName?.trim() || resolveCampaignNameFromPlan(version.campaignObject);
   const { startDate, endDate } = resolvePlanDates(version.campaignObject);

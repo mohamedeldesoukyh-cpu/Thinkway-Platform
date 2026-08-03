@@ -28,6 +28,11 @@ import { proposeInitialCreatorSlate } from "@/features/campaign-studio/services/
 import { mergeBriefIntoCampaignObject } from "@/features/campaign-studio/services/merge-campaign-brief";
 import type { GroundedCreator } from "@/features/ai-workflows/formatters/creator-formatter";
 import {
+  generateCampaignOutput,
+  getCampaignOutput,
+} from "@/features/campaign-outputs/output-registry";
+import { resolveSlate } from "@/features/campaign-outputs/output-inputs";
+import {
   applyDirectorBudgetRules,
   applyDirectorTimelineRules,
 } from "@/features/campaign-director/integrations/section-builder-integration";
@@ -610,9 +615,28 @@ export function applyTaskResultToCampaignObject(
       poolCreators,
       query: typeof stateData.searchQuery === "string" ? stateData.searchQuery : undefined,
     });
+    // Boardroom handoff requires Campaign Outputs media_plan for readiness.
+    // Auto-generate once when Director has approved and a slate exists — do not
+    // leave Presentation "complete" while Submit for Review stays blocked.
+    updated = ensurePlanningOutputsForHandoff(updated);
   }
 
   return enrichCampaignObjectWithStudioData(updated);
+}
+
+/** Ensure mandatory planning outputs exist after Director finalize + slate propose. */
+function ensurePlanningOutputsForHandoff(campaignObject: CampaignObject): CampaignObject {
+  let next = campaignObject;
+  const slate = resolveSlate(next);
+  if (slate.length === 0) return next;
+
+  if (!getCampaignOutput(next, "media_plan")) {
+    next = generateCampaignOutput(next, "media_plan", { origin: "automatic" }).campaignObject;
+  }
+  if (!getCampaignOutput(next, "full_strategy")) {
+    next = generateCampaignOutput(next, "full_strategy", { origin: "automatic" }).campaignObject;
+  }
+  return next;
 }
 
 function markTaskWorking(
