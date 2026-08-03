@@ -190,9 +190,9 @@ export function signalsFromCampaignWorkspace(workspace: CampaignWorkspace): Camp
     ).length,
     deliverableCount,
     overdueDeliverableCount,
-    activePerformance:
-      workspace.status === "active" &&
-      (postedOrApproved > 0 || deliverableCount > 0),
+    // STAB-017: Publication Live must not flip Done merely because assignment
+    // deliverable units exist — require posted/approved legacy deliverable evidence.
+    activePerformance: workspace.status === "active" && postedOrApproved > 0,
     invoiceCount: workspace.invoices?.length ?? 0,
     billingOutstanding: workspace.financials.billing_outstanding ?? 0,
     // Soft finance/ops strings must not inflate progression blockerCount.

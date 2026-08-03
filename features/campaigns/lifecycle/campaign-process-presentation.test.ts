@@ -296,4 +296,22 @@ describe("signalsFromCampaignWorkspace — STAB-015", () => {
     const signals = signalsFromCampaignWorkspace(workspace);
     assert.equal(signals.deliverableCount, 2);
   });
+
+  it("does not mark Performance active from assignment units alone (STAB-017)", () => {
+    const workspace = {
+      status: "active",
+      lines: [{ id: "l1" }],
+      client_io: { status: "approved" },
+      vendor_ios: [],
+      deliverables: [],
+      assignment_deliverable_count: 84,
+      invoices: [],
+      financials: { billing_outstanding: 0, po_exceeded: false },
+      blockers: [],
+    } as unknown as CampaignWorkspace;
+
+    const signals = signalsFromCampaignWorkspace(workspace);
+    assert.equal(signals.deliverableCount, 84);
+    assert.equal(signals.activePerformance, false);
+  });
 });
