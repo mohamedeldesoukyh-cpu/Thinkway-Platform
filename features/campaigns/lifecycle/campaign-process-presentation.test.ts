@@ -72,6 +72,41 @@ describe("deriveCampaignProcessCue — business rules", () => {
     assert.notEqual(cue.lifecycleSignal, "blocked");
   });
 
+  it("does not lock Vendor IO after Client IO approval when soft finance alerts exist (TW-2026-0005)", () => {
+    // Soft alerts historically inflated blockerCount and short-circuited the cue
+    // to client-io + "Blocked by open issues", contradicting approved Client IO.
+    const cue = deriveCampaignProcessCue(
+      base({
+        lineCount: 5,
+        hasClientIo: true,
+        clientIoStatus: "approved",
+        vendorIoCount: 5,
+        approvedVendorIoCount: 0,
+        sentVendorIoCount: 5,
+        deliverableCount: 10,
+        blockerCount: 1, // e.g. leftover soft alert — must not derail
+      })
+    );
+    assert.notEqual(cue.entryStageId, "client-io");
+    assert.notEqual(cue.lifecycleSignal, "blocked");
+    assert.ok(!/Blocked by open issues/i.test(cue.statusLabel));
+    assert.equal(cue.stageSignals["client-io"], "completed");
+  });
+
+  it("still hard-blocks on PO exceeded", () => {
+    const cue = deriveCampaignProcessCue(
+      base({
+        lineCount: 2,
+        hasClientIo: true,
+        clientIoStatus: "approved",
+        poExceeded: true,
+      })
+    );
+    assert.equal(cue.entryStageId, "billing");
+    assert.equal(cue.lifecycleSignal, "blocked");
+    assert.match(cue.statusLabel, /PO limit/i);
+  });
+
   it("opens Deliverables when deliverables are overdue", () => {
     const cue = deriveCampaignProcessCue(
       base({

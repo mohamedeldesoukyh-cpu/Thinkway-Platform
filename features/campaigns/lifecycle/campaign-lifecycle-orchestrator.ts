@@ -791,9 +791,13 @@ function deriveLifecycleFromSignals(
   if (policy.enforcement === "hard") {
     if (signals.poExceeded) blockers.push("PO limit exceeded.");
     if (signals.blockerCount > 0) {
+      const hardOnly = (workspace?.blockers ?? []).filter((text) =>
+        // Prefer explicit hard progression strings; fall back to count signal.
+        /pending approvals|po limit|contract required|approval required/i.test(text)
+      );
       blockers.push(
-        ...(workspace?.blockers?.length
-          ? workspace.blockers
+        ...(hardOnly.length
+          ? hardOnly
           : ["Open operational blockers require resolution."])
       );
     }

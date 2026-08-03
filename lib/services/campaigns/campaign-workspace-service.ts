@@ -569,6 +569,10 @@ export async function getCampaignWorkspace(
     };
   });
 
+  // Hard progression blockers + soft ops/finance alerts.
+  // Soft alerts remain visible in Decision Center as operational_attention only —
+  // signalsFromCampaignWorkspace excludes them from blockerCount so they never
+  // short-circuit the process cue after Client IO approval.
   const blockers: string[] = [];
   if (approvals.some((a) => a.status === "pending" || a.status === "in_review")) {
     blockers.push("Pending approvals require action");

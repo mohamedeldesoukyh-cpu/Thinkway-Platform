@@ -167,9 +167,33 @@ export function signalsFromCampaignWorkspace(workspace: CampaignWorkspace): Camp
       (postedOrApproved > 0 || (workspace.deliverables?.length ?? 0) > 0),
     invoiceCount: workspace.invoices?.length ?? 0,
     billingOutstanding: workspace.financials.billing_outstanding ?? 0,
-    blockerCount: workspace.blockers?.length ?? 0,
+    // Soft finance/ops strings must not inflate progression blockerCount.
+    blockerCount: countHardProgressionBlockers(workspace.blockers ?? []),
     poExceeded: workspace.financials.po_exceeded,
   };
+}
+
+/** Blockers that may stop commercial progression — not routine finance/ops noise. */
+export function countHardProgressionBlockers(blockers: string[]): number {
+  return blockers.filter(isHardProgressionBlocker).length;
+}
+
+export function isHardProgressionBlocker(text: string): boolean {
+  const lower = text.toLowerCase();
+  if (
+    lower.includes("payout") ||
+    lower.includes("outstanding client billing") ||
+    lower.includes("content pending") ||
+    lower.includes("rejected deliverable")
+  ) {
+    return false;
+  }
+  return (
+    lower.includes("pending approvals") ||
+    /\bp\.?o\.?\b|purchase[\s-]?order|po limit/i.test(lower) ||
+    lower.includes("contract required") ||
+    lower.includes("approval required")
+  );
 }
 
 function stageById(id: CampaignWorkspaceTabId) {
@@ -289,29 +313,17 @@ export function deriveCampaignProcessCue(signals: CampaignProcessSignals): Campa
     });
   }
 
-  if (signals.blockerCount > 0 || signals.poExceeded) {
-    const stageId: CampaignWorkspaceTabId =
-      signals.lineCount === 0
-        ? "lines"
-        : waitingClient || clientStatus
-          ? "client-io"
-          : vendorOutstanding
-            ? "vendor-io"
-            : "overview";
+  // Only PO exceeded short-circuits the cue. Soft workspace alerts (payouts,
+  // content, billing) must not pin stage or invent "Blocked by open issues"
+  // after Client IO is already approved — that locks Vendor IO incorrectly.
+  if (signals.poExceeded) {
     return toCue({
-      currentStageId: stageId,
-      statusLabel: signals.poExceeded ? "PO limit exceeded" : "Blocked by open issues",
+      currentStageId: "billing",
+      statusLabel: "PO limit exceeded",
       lifecycleSignal: "blocked",
-      nextActionLabel: signals.poExceeded
-        ? "Review PO Limit"
-        : clientStatus === "rejected"
-          ? "Review Client Feedback"
-          : waitingClient
-            ? "Open Client IO"
-            : signals.lineCount === 0
-              ? "Complete Assignments"
-              : "Open Pending Approval",
-      waitingFor: "Operations",
+      nextActionLabel: "Review PO Limit",
+      waitingFor: "Finance",
+      owner: "Finance",
     });
   }
 

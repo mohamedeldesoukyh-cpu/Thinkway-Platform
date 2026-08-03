@@ -115,4 +115,28 @@ describe("campaign lifecycle orchestrator", () => {
       "resolve blockers"
     );
   });
+
+  it("does not lock Vendor IO after Client IO is approved (TW-2026-0005 contradiction)", () => {
+    const lifecycle = deriveLifecycleForTest(
+      base({
+        lineCount: 5,
+        hasClientIo: true,
+        clientIoStatus: "approved",
+        vendorIoCount: 5,
+        approvedVendorIoCount: 0,
+        sentVendorIoCount: 5,
+        deliverableCount: 8,
+        blockerCount: 1,
+      })
+    );
+    assert.notEqual(lifecycle.businessStageId, "client-io");
+    assert.notEqual(lifecycle.businessState, "blocked");
+    assert.equal(lifecycle.processCue.stageSignals["client-io"], "completed");
+    assert.equal(lifecycle.decisionCenter.narrative.progressionAllowed, true);
+
+    const guidance = buildWorkspaceGuidance(lifecycle, "vendor-io");
+    // May be out-of-band vs Deliverables stage, but must NOT invent a Client IO send lock.
+    assert.ok(!/Sending is disabled until/i.test(guidance.currentSituation ?? ""));
+    assert.ok(!/Client IO is approved/i.test(guidance.unlockHint ?? ""));
+  });
 });

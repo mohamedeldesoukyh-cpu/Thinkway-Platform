@@ -240,6 +240,107 @@ describe("campaign decision center", () => {
     );
   });
 
+  it("treats Creator payouts as Finance ops — never Campaign Issue business blocker (TW-2026-0005)", () => {
+    const dc = buildDecisionCenter({
+      stageId: "deliverables",
+      stageLabel: "Deliverables",
+      businessState: "needs_attention",
+      enforcement: "soft",
+      owner: "Operations",
+      waitingFor: "Operations",
+      nextAction: "Open Vendor IO Register",
+      nextActionTab: "vendor-io",
+      expectedResult: "Vendor follow-up complete.",
+      missing: [],
+      hardBlockers: ["Creator payouts outstanding"],
+      workspaceBlockers: ["Creator payouts outstanding"],
+      signals: signals({
+        clientIoStatus: "approved",
+        vendorIoCount: 5,
+        approvedVendorIoCount: 0,
+        sentVendorIoCount: 5,
+        deliverableCount: 10,
+        blockerCount: 1,
+      }),
+      daysWaiting: 2,
+      objects: objects({
+        clientIo: {
+          id: "cio-1",
+          document_number: "CIO-2026-0005",
+          status: "approved",
+        },
+        campaignDocumentNumber: "TW-2026-0005",
+        vendorIos: [
+          {
+            id: "vio-1",
+            document_number: "VIO-2026-0001",
+            status: "sent",
+            influencer_name: "Creator A",
+          },
+        ],
+      }),
+    });
+
+    assert.equal(
+      dc.blockers.every((b) => b.severity !== "business_blocker"),
+      true,
+      "payouts must not be a business blocker after Client IO approval"
+    );
+    assert.equal(
+      dc.blockers.some((b) => /Campaign issue/i.test(b.objectLabel)),
+      false
+    );
+    assert.equal(dc.narrative.progressionAllowed, true);
+    assert.match(dc.narrative.progressionLabel, /may continue/i);
+    // Executive story stays Vendor IO compliance — not a false Campaign Issue.
+    assert.ok(dc.blockers.some((b) => b.objectKind === "vendor_io"));
+  });
+
+  it("does not treat the substring po inside payouts as a Purchase Order hard blocker", () => {
+    const dc = buildDecisionCenter({
+      stageId: "billing",
+      stageLabel: "Finance",
+      businessState: "waiting",
+      enforcement: "soft",
+      owner: "Finance",
+      waitingFor: "Finance",
+      nextAction: "Open Finance",
+      nextActionTab: "billing",
+      expectedResult: "Payouts clear.",
+      missing: [],
+      hardBlockers: [],
+      workspaceBlockers: ["Creator payouts outstanding"],
+      signals: signals({
+        clientIoStatus: "approved",
+        vendorIoCount: 1,
+        approvedVendorIoCount: 1,
+        sentVendorIoCount: 1,
+      }),
+      daysWaiting: 0,
+      objects: objects({
+        campaignDocumentNumber: "TW-2026-0005",
+        clientIo: {
+          id: "cio-1",
+          document_number: "CIO-2026-0005",
+          status: "approved",
+        },
+        vendorIos: [
+          {
+            id: "vio-1",
+            document_number: "VIO-2026-0001",
+            status: "approved",
+            influencer_name: "Creator A",
+          },
+        ],
+      }),
+    });
+    const payout = dc.blockers.find((b) => /payout/i.test(b.title));
+    assert.ok(payout);
+    assert.equal(payout?.severity, "operational_attention");
+    assert.equal(payout?.actionTab, "billing");
+    assert.notEqual(payout?.objectKind, "po");
+  });
+
   it("never leaves Decision Center empty when there are no blockers", () => {
     const lifecycle = deriveLifecycleForTest(
       signals({
