@@ -2,12 +2,10 @@
 
 **Branch focus:** `develop` · Enterprise Product Stabilization Mode (no R2.4)
 
-**Status:** R2.3 CLOSED (`v2.3.0`) · Continuous soak · tip includes STAB-001/008/009 + STAB-010 (draft CIO cue)
+**Status:** R2.3 CLOSED · Continuous soak · STAB-001/008/009/010 **live PASS** · STAB-011 tip pending Preview
 
-**Latest find (STAB-010):** L'Oréal TW-2026-0006 has `#CIO-2026-0006` draft composer, but DC said **Generate Client IO**. Engine now distinguishes missing vs draft → **Complete Client IO** / Composition.
+**Latest:** STAB-011 — Vendor IO “drafts are ready” with 0 orders → gate on `vendorIoCount`; message becomes “will be issued after Client IO approval.”
 
-**Prior:** STAB-001 CIO/VIO soft-alert lock · STAB-008 list enrich · STAB-009 Active≠Performance
+**Prior:** STAB-010 draft CIO → Complete · STAB-009 Active≠Performance · STAB-008 list enrich · STAB-001 soft-alert CIO/VIO lock
 
-**Readiness:** 84/100 until STAB-010 Preview live PASS + multi-brand soaks
-
-**Do not:** ship Wave 1 live-discovery / `scripts/tmp-*` / start R2.4
+**Readiness:** 87/100 · Do not start R2.4 · Exclude Wave 1 discovery / tmp scripts
