@@ -192,25 +192,37 @@ function applyIs1ReasoningToSections(
   };
 
   const existingCreators = (sections.creators.data ?? {}) as CreatorsSectionData;
+  const existingRec = existingCreators.recommendations;
+  const is1Selected = reasoning.vendorRecommendations.selected;
+  const is1Rejected = reasoning.vendorRecommendations.rejected;
+  // Never wipe discovery/propose why-selected with empty IS-1 scaffolding.
+  const nextSelected =
+    is1Selected.length > 0
+      ? is1Selected
+      : existingRec?.selectedReasoning ?? [];
+  const nextRejected =
+    is1Rejected.length > 0
+      ? is1Rejected
+      : existingRec?.rejectedReasoning ?? [];
   sections.creators = {
     ...sections.creators,
     data: {
       ...existingCreators,
       vendorDiscoveryFunnel: reasoning.vendorDiscoveryFunnel,
       discoveryPipeline: reasoning.vendorDiscoveryFunnel,
-      recommendations: existingCreators.recommendations
+      recommendations: existingRec
         ? {
-            ...existingCreators.recommendations,
-            selectedReasoning: reasoning.vendorRecommendations.selected,
-            rejectedReasoning: reasoning.vendorRecommendations.rejected,
+            ...existingRec,
+            selectedReasoning: nextSelected,
+            rejectedReasoning: nextRejected,
           }
-        : reasoning.vendorRecommendations.selected.length > 0
+        : nextSelected.length > 0
           ? {
-              creatorIds: reasoning.vendorRecommendations.selected.map((s) => s.creatorId),
-              selectedReasoning: reasoning.vendorRecommendations.selected,
-              rejectedReasoning: reasoning.vendorRecommendations.rejected,
+              creatorIds: nextSelected.map((s) => s.creatorId),
+              selectedReasoning: nextSelected,
+              rejectedReasoning: nextRejected,
             }
-          : existingCreators.recommendations,
+          : existingRec,
     },
   };
 
