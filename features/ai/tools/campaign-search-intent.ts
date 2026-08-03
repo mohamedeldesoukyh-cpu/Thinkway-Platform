@@ -289,14 +289,61 @@ function extractPlatforms(text: string): string[] {
   return [...platforms];
 }
 
+/** True when every mention of a category keyword is inside a negation / exclusion clause. */
+function isNegatedCategoryMention(normalizedText: string, keyword: string): boolean {
+  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const global = new RegExp(`(?:^|\\s)(${escaped})(?=\\s|$)`, "gi");
+  let match: RegExpExecArray | null;
+  let sawMention = false;
+  let positive = 0;
+  while ((match = global.exec(normalizedText)) != null) {
+    sawMention = true;
+    const start = Math.max(0, match.index - 56);
+    const end = Math.min(normalizedText.length, match.index + match[0].length + 28);
+    const window = normalizedText.slice(start, end);
+    const negated =
+      /\b(?:do\s+not|don't|dont|never|without|exclude|excluding|avoid)\b/i.test(window) ||
+      new RegExp(`\\bno\\s+${escaped}\\b`, "i").test(window) ||
+      new RegExp(`\\b${escaped}\\b[^.!?]{0,24}\\b(?:unless|except)\\b`, "i").test(window);
+    if (!negated) positive += 1;
+  }
+  return sawMention && positive === 0;
+}
+
 function extractKeywordCategories(text: string): string[] {
   const categories = new Set<string>();
   const normalized = normalizePhrase(text);
   for (const [keyword, label] of Object.entries(CREATOR_CATEGORY_KEYWORDS)) {
     const pattern = new RegExp(`(?:^|\\s)${keyword}(?=\\s|$)`, "i");
-    if (pattern.test(normalized)) categories.add(label);
+    if (!pattern.test(normalized)) continue;
+    if (isNegatedCategoryMention(normalized, keyword)) continue;
+    categories.add(label);
   }
   return [...categories];
+}
+
+/** Drop categories mentioned in the brief only via exclusion / negation. */
+function filterNegatedCategoriesFromBrief(brief: string, categories: string[]): string[] {
+  const normalized = normalizePhrase(brief);
+  return categories.filter((category) => {
+    const label = category.trim().toLowerCase();
+    if (!label) return false;
+    const keywords = Object.entries(CREATOR_CATEGORY_KEYWORDS)
+      .filter(([, mapped]) => mapped.trim().toLowerCase() === label)
+      .map(([keyword]) => keyword);
+    const probes = keywords.length > 0 ? keywords : [label];
+    const mentioned = probes.some((keyword) => {
+      const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return new RegExp(`(?:^|\\s)${escaped}(?=\\s|$)`, "i").test(normalized);
+    });
+    if (!mentioned) return true;
+    return probes.some((keyword) => {
+      const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const pattern = new RegExp(`(?:^|\\s)${escaped}(?=\\s|$)`, "i");
+      if (!pattern.test(normalized)) return false;
+      return !isNegatedCategoryMention(normalized, keyword);
+    });
+  });
 }
 
 function extractBriefKeywords(text: string, industryKey: CampaignSearchIndustryKey): string[] {
@@ -378,10 +425,15 @@ export function buildCampaignSearchIntent(rawBrief: string): CampaignSearchInten
   const keywordCategories = extractKeywordCategories(preprocessed);
   // Prefer brief/keyword verticals first; industry expansion must not reintroduce
   // Lifestyle padding once Beauty/Fashion/Sports/Travel (etc.) are present.
-  const categories = mergeUniqueCategories(
-    parsed.categories,
-    keywordCategories,
-    expandedCategories.slice(0, 6)
+  // Also drop categories that appear in the brief only as exclusions
+  // ("do not pad with Food / Lifestyle").
+  const categories = filterNegatedCategoriesFromBrief(
+    preprocessed,
+    mergeUniqueCategories(
+      parsed.categories,
+      keywordCategories,
+      expandedCategories.slice(0, 6)
+    )
   );
 
   const country = parsed.country ?? extractCountryFromText(preprocessed);

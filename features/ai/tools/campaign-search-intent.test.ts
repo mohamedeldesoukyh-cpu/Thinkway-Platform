@@ -106,6 +106,24 @@ function testRetailKeepsLifestylePrimary(): void {
   );
 }
 
+function testNegatedFoodDoesNotBecomeCriteria(): void {
+  const intent = buildCampaignSearchIntent(
+    "Create a new campaign for e& Egypt. Brand e&, market Egypt, budget 2000000 EGP, Instagram and TikTok tech and telecom creators for brand awareness. Prefer Tech creators — do not pad with Lifestyle or Food unless inventory is thin."
+  );
+  assert.ok(
+    intent.categories.some((c) => /tech/i.test(c)),
+    `Expected Tech categories, got: ${intent.categories.join(", ")}`
+  );
+  assert.ok(
+    !intent.categories.some((c) => c.trim().toLowerCase() === "food"),
+    `Negated Food must not enter Criteria: ${intent.categories.join(", ")}`
+  );
+  assert.ok(
+    !intent.categories.some((c) => c.trim().toLowerCase() === "lifestyle"),
+    `Negated Lifestyle must not enter Criteria: ${intent.categories.join(", ")}`
+  );
+}
+
 function run(): void {
   testLooksLikeCampaignBrief();
   testBabyJoyIntent();
@@ -117,6 +135,7 @@ function run(): void {
   testFashionDoesNotPadLifestyle();
   testSportsFormulaOne();
   testRetailKeepsLifestylePrimary();
+  testNegatedFoodDoesNotBecomeCriteria();
   console.log("campaign-search-intent.test.ts: PASS");
 }
 
