@@ -1,15 +1,14 @@
 # Prompt Summary — Current Sprint
 
-**Branch focus:** `develop` · tip **`a96c927`** (STAB-029) · Enterprise Stabilization (no R2.4)
+**Branch focus:** `develop` · tip **`6f5c18a4`** · Enterprise Stabilization (no R2.4)
 
-**Live PASS:** STAB-012–022 · STAB-026–029 · STAB-016 Arab Bank **25% GP**  
-**STAB-029 live:** Noon CIP `cbae2928` — **no INPUT REQUIRED** after tip.
+**Live PASS:** STAB-012–022 · STAB-026–030 · STAB-016/021 on **Noon TW-2026-0008**  
+- CIP `cbae2928` → Approve → Generate → `/campaigns/noon-478c11f6`  
+- PO **666667** = Σ line revenue; cost **500000**; **25% GP**
 
-**In flight:** STAB-030 — brand-as-client when Client omitted; readiness accepts brandName. Unblocks Noon Submit→Approve→Generate (+ STAB-021 PO proof).
+**In flight:** Noon Client IO `CIO-2026-0008` → full lifecycle; Arab Bank collect→Close; remaining 11 brands; negative; STAB-031 (stale approval UI).
 
-**Arab Bank TW-2026-0007:** Invoice Generated; collect → Close pending.
-
-**Open High:** STAB-030 · STAB-021 · STAB-003 multi-brand  
-**Open Med:** STAB-023 · STAB-025 · negative · Discovery
+**Open High:** STAB-003 multi-brand Close coverage  
+**Open Med:** STAB-023 · STAB-025 · STAB-031 · negative · Discovery
 
 **R2.4:** blocked
