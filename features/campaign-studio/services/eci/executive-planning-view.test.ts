@@ -89,6 +89,44 @@ test("executive planning summary is always producible", () => {
   assert.ok(summary.tradeOffs.length > 0);
 });
 
+test("planning confidence floors at Moderate when slate intel exists without creatorIds", () => {
+  const object = createEmptyCampaignObject({ id: "co_slate_recover" });
+  object.meta.campaignFacts = {
+    extractedAt: new Date().toISOString(),
+    confidence: {},
+    sources: {},
+    objective: "F1 Abu Dhabi awareness",
+  };
+  object.sections.creators.data = {
+    recommendations: { creatorIds: [], selectedReasoning: [], rejectedReasoning: [] },
+    slateIntelligence: {
+      actualMix: [],
+      tierShortages: [],
+      updatedAt: new Date().toISOString(),
+      recommendations: Array.from({ length: 8 }, (_, i) => ({
+        creatorId: `inf:${i}`,
+        role: "main" as const,
+        tier: "Micro",
+        wave: 1,
+        score: 70,
+        priority: "high" as const,
+        serviceType: "1× IG Reel",
+        contentPillar: "Brand story",
+        suggestedTimelineSlot: "Week 1",
+      })),
+    },
+  };
+  const lowSignals = [
+    stubSignal({
+      confidencePercent: 20,
+      evidenceCoveragePercent: 15,
+      recommendation: "Monitor",
+    }),
+  ];
+  const summary = buildStudioExecutivePlanningSummary(object, lowSignals);
+  assert.equal(summary.planningConfidence.level, "Moderate");
+});
+
 test("card view includes canonical recommendation narrative", () => {
   const view = toExecutiveCreatorCardView(stubSignal(), "Creator A");
   assert.ok(view.narrative);

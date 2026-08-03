@@ -129,6 +129,46 @@ export function hasOpenAiApiKey(): boolean {
   return Boolean(process.env.OPENAI_API_KEY?.trim());
 }
 
+/**
+ * Coerce common LLM shape drift before Zod validation.
+ * Models often emit `brand` / numeric `budget` even when the prompt asks for
+ * `brandName` / `{ amount, currency }` — rejecting that discards explicit
+ * market/category evidence and falls back to a weaker heuristic.
+ */
+export function coerceLlmExtractionJson(
+  json: unknown,
+  briefText: string
+): unknown {
+  if (!json || typeof json !== "object" || Array.isArray(json)) return json;
+  const o = { ...(json as Record<string, unknown>) };
+
+  if (o.brandName == null && typeof o.brand === "string") {
+    o.brandName = o.brand;
+  }
+
+  if (typeof o.budget === "number" && Number.isFinite(o.budget)) {
+    const currencyMatch = briefText.match(/\b(AED|EGP|SAR|USD|EUR|GBP)\b/i);
+    o.budget = {
+      amount: o.budget,
+      currency: (currencyMatch?.[1] ?? "USD").toUpperCase(),
+    };
+  }
+
+  if (!Array.isArray(o.geography) && typeof o.market === "string" && o.market.trim()) {
+    o.geography = [o.market.trim()];
+  }
+
+  if (o.fieldConfidence && typeof o.fieldConfidence === "object" && !Array.isArray(o.fieldConfidence)) {
+    const fc = { ...(o.fieldConfidence as Record<string, number>) };
+    if (fc.brandName == null && typeof fc.brand === "number") {
+      fc.brandName = fc.brand;
+    }
+    o.fieldConfidence = fc;
+  }
+
+  return o;
+}
+
 function heuristicExtract(briefText: string): CampaignIntelligenceProfile {
   const facts = validateCampaignFacts(extractCampaignFacts({ rawMessage: briefText }));
   const profile = createEmptyCampaignIntelligenceProfile();
@@ -387,7 +427,8 @@ export async function extractCampaignIntelligenceProfileWithDebug(
       };
     }
 
-    const parsed = extractionSchema.safeParse(json);
+    const coerced = coerceLlmExtractionJson(json, trimmed);
+    const parsed = extractionSchema.safeParse(coerced);
     if (!parsed.success) {
       return {
         profile: heuristicExtract(trimmed),

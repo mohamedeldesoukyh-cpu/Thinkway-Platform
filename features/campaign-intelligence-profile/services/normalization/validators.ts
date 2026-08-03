@@ -1,3 +1,4 @@
+import { resolveCountryCode as resolveSharedCountryCode } from "@/lib/creators/country-code";
 import { COUNTRY_OPTIONS } from "@/lib/master-data/constants";
 import { DISCOVERY_PLATFORMS, type DiscoveryPlatform } from "@/lib/discovery/types";
 
@@ -182,6 +183,13 @@ export function isValidCity(value: string): boolean {
 export function resolveCountryCode(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed || isConcatenatedGarbage(trimmed)) return null;
+
+  // Shared alias registry (UAE, KSA, Dubai, Abu Dhabi, …) — must agree with Discovery.
+  const shared = resolveSharedCountryCode(trimmed);
+  if (/^[A-Z]{2}$/.test(shared) && COUNTRY_OPTIONS.some((o) => o.value === shared)) {
+    return shared;
+  }
+
   if (/^[A-Za-z]{2}$/.test(trimmed)) {
     const code = trimmed.toUpperCase();
     return COUNTRY_OPTIONS.some((o) => o.value === code) ? code : null;

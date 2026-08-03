@@ -277,7 +277,13 @@ export function resolveCreatorCounts(campaignObject: CampaignObject | undefined)
 } {
   const creatorsData = readCreatorsData(campaignObject);
   const discoveryIds = dedupeCreatorIds(creatorsData.discovery?.creatorIds ?? []);
-  const recommendationIds = dedupeCreatorIds(creatorsData.recommendations?.creatorIds ?? []);
+  const fromRecommendations = creatorsData.recommendations?.creatorIds ?? [];
+  const fromSlateIntel = (creatorsData.slateIntelligence?.recommendations ?? [])
+    .map((r) => r.creatorId)
+    .filter(Boolean);
+  const recommendationIds = dedupeCreatorIds(
+    fromRecommendations.length > 0 ? fromRecommendations : fromSlateIntel
+  );
   const discoveryTotal = creatorsData.discovery?.total;
   const profilesScreened =
     discoveryTotal != null && discoveryTotal > 0 ? discoveryTotal : null;

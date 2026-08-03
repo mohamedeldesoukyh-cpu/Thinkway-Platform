@@ -64,6 +64,52 @@ export function enrichWorkflowStateWithDirectorPipeline(
   return pipelineResult;
 }
 
+function mergeDirectorSectionData(
+  key: keyof CampaignObjectSections,
+  existingData: Record<string, unknown> | undefined,
+  approvedData: Record<string, unknown> | undefined
+): Record<string, unknown> {
+  const merged: Record<string, unknown> = {
+    ...(existingData ?? {}),
+    ...(approvedData ?? {}),
+  };
+
+  // Director IS1 scaffolding seeds empty recommendation IDs. Never let that
+  // wipe a slate already proposed/committed from Vendor Discovery.
+  if (key === "creators") {
+    const existingRec = (existingData?.recommendations ?? {}) as {
+      creatorIds?: string[];
+    };
+    const approvedRec = (approvedData?.recommendations ?? {}) as {
+      creatorIds?: string[];
+    };
+    const intelIds = (
+      (
+        (merged.slateIntelligence as { recommendations?: Array<{ creatorId?: string }> })
+          ?.recommendations ?? []
+      )
+        .map((r) => r.creatorId)
+        .filter((id): id is string => Boolean(id))
+    );
+    const preservedIds =
+      (existingRec.creatorIds?.length ?? 0) > 0
+        ? existingRec.creatorIds!
+        : intelIds;
+    if (
+      (approvedRec.creatorIds?.length ?? 0) === 0 &&
+      preservedIds.length > 0
+    ) {
+      merged.recommendations = {
+        ...existingRec,
+        ...approvedRec,
+        creatorIds: preservedIds,
+      };
+    }
+  }
+
+  return merged;
+}
+
 /** Apply Director-approved sections to CampaignObject sections with WHY rationale. */
 export function applyDirectorApprovedSections(
   sections: CampaignObjectSections,
@@ -80,8 +126,11 @@ export function applyDirectorApprovedSections(
       ...existing,
       content: approved.content,
       data: {
-        ...existing.data,
-        ...approved.data,
+        ...mergeDirectorSectionData(
+          key,
+          existing.data as Record<string, unknown> | undefined,
+          approved.data as Record<string, unknown> | undefined
+        ),
         directorRationale: approved.rationale,
         approvedBy: approved.approvedBy,
       },

@@ -5,6 +5,7 @@ import { parseBudgetTotalFromText } from "@/features/campaign-studio/components/
 import { resolveClientFromBrief } from "@/features/campaign-studio/services/industry-intelligence";
 
 import { extractCampaignFacts } from "./extract-campaign-facts";
+import { validateCampaignFacts } from "./validate-campaign-facts";
 
 test("budget magnitude suffixes parse to full amounts", () => {
   assert.equal(parseBudgetTotalFromText("Budget: EGP 1M"), 1_000_000);
@@ -40,6 +41,19 @@ test("geography only contains known markets, never free-text phrases", () => {
       `junk geography leaked: ${region}`
     );
   }
+});
+
+test("Abu Dhabi / UAE briefs keep market geography after validation", () => {
+  const facts = validateCampaignFacts(
+    extractCampaignFacts({
+      rawMessage:
+        "Create a new campaign for Formula 1 Abu Dhabi Grand Prix. Brand Formula 1, market United Arab Emirates, budget 900000 AED, Instagram and TikTok sports and lifestyle creators.",
+    })
+  );
+  assert.ok(
+    (facts.geography ?? []).some((g) => /united arab emirates|uae/i.test(g)),
+    `expected UAE geography, got ${JSON.stringify(facts.geography)}`
+  );
 });
 
 test("brand name never falls back to the 'Brand Client' placeholder", () => {

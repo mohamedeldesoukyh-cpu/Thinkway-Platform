@@ -22,6 +22,9 @@ assert.equal(isValidCategory("Audience"), false);
 assert.equal(isValidCategory("Beauty"), true);
 assert.equal(resolveCountryCode("Egypt"), "EG");
 assert.equal(resolveCountryCode("EG"), "EG");
+assert.equal(resolveCountryCode("UAE"), "AE");
+assert.equal(resolveCountryCode("United Arab Emirates"), "AE");
+assert.equal(resolveCountryCode("Abu Dhabi"), "AE");
 assert.equal(resolveCountryCode("EgyptCampaign Duration"), null);
 
 assert.equal(sanitizeBrandName("L'Oréal ParisMa"), "L'Oréal Paris");

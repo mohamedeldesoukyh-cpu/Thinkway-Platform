@@ -240,6 +240,22 @@ export function formatExecutivePresentationChain(signal: StudioEciPlanningSignal
   return n.steps.map((step) => `${step.label}: ${step.body}`).join(" → ");
 }
 
+/** Active slate size for confidence flooring — recover when IDs were wiped. */
+export function resolvePlanningSlateCount(creators: CreatorsSectionData): number {
+  const ids = creators.recommendations?.creatorIds?.length ?? 0;
+  if (ids > 0) return ids;
+
+  const fromIntel = creators.slateIntelligence?.recommendations?.length ?? 0;
+  if (fromIntel > 0) return fromIntel;
+
+  const display = creators.recommendationsDisplay?.trim() ?? "";
+  const listed = display.match(/^\d+\.\s+/gm)?.length ?? 0;
+  if (listed > 0) return listed;
+
+  const discoveryIds = creators.discovery?.creatorIds?.length ?? 0;
+  return discoveryIds;
+}
+
 /**
  * Studio Executive Summary — always producible from Campaign Object (+ optional ECI signals).
  * Does not change section order in Strategy Engine; enhances the existing Executive Summary surface.
@@ -280,7 +296,7 @@ export function buildStudioExecutivePlanningSummary(
   if (blended >= 85) level = "Very High";
   else if (blended >= 70) level = "High";
   else if (blended >= 50) level = "Moderate";
-  const slateCount = creators.recommendations?.creatorIds?.length ?? 0;
+  const slateCount = resolvePlanningSlateCount(creators);
   // CIP-backed slates should not read as boardroom "Low" solely because ECI
   // coverage is sparse — floor at Moderate when a real shortlist exists.
   if (!signals?.length) {
