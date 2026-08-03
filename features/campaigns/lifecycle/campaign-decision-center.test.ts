@@ -99,6 +99,67 @@ describe("campaign decision center", () => {
     assert.match(dc.headline, /Business Blocker/i);
   });
 
+  it("draft Client IO does not say Generate Client IO (STAB-010 / L'Oréal)", () => {
+    const dc = buildDecisionCenter({
+      stageId: "client-io",
+      stageLabel: "Client IO",
+      businessState: "waiting",
+      enforcement: "soft",
+      owner: "Commercial",
+      waitingFor: "Commercial",
+      nextAction: "Complete Client IO",
+      nextActionTab: "client-io",
+      expectedResult: "Client IO document generated and ready to send.",
+      missing: [],
+      hardBlockers: [],
+      workspaceBlockers: [],
+      signals: signals({
+        hasClientIo: true,
+        clientIoStatus: "draft",
+      }),
+      daysWaiting: 0,
+      objects: objects({
+        clientIo: {
+          id: "cio-6",
+          document_number: "CIO-2026-0006",
+          status: "draft",
+        },
+      }),
+    });
+    const draftBlocker = dc.blockers.find((b) => b.id === "cio_complete_draft");
+    assert.ok(draftBlocker, "expected cio_complete_draft blocker");
+    assert.equal(draftBlocker?.waitingLabel, "Composition");
+    assert.match(draftBlocker?.reason ?? "", /Complete #CIO-2026-0006/i);
+    assert.ok(!dc.blockers.some((b) => b.id === "cio_generate"));
+    assert.ok(!/Generate Client IO/i.test(dc.primaryAction));
+    assert.ok(!/Generate Client IO/i.test(draftBlocker?.reason ?? ""));
+  });
+
+  it("missing Client IO still surfaces Generate blocker", () => {
+    const dc = buildDecisionCenter({
+      stageId: "client-io",
+      stageLabel: "Client IO",
+      businessState: "waiting",
+      enforcement: "soft",
+      owner: "Commercial",
+      waitingFor: "Commercial",
+      nextAction: "Generate Client IO",
+      nextActionTab: "client-io",
+      expectedResult: "Client IO ready to send for approval.",
+      missing: [],
+      hardBlockers: [],
+      workspaceBlockers: [],
+      signals: signals({
+        hasClientIo: false,
+        clientIoStatus: null,
+      }),
+      daysWaiting: 0,
+      objects: objects({ clientIo: null }),
+    });
+    assert.ok(dc.blockers.some((b) => b.id === "cio_generate"));
+    assert.match(dc.primaryAction, /Generate Client IO/i);
+  });
+
   it("aggregates many pending Vendor IOs as Operational Attention", () => {
     const dc = buildDecisionCenter({
       stageId: "deliverables",

@@ -133,6 +133,43 @@ describe("deriveCampaignProcessCue — business rules", () => {
     assert.equal(cue.entryStageId, "deliverables");
   });
 
+  it("draft Client IO with existing record says Complete — not Generate (STAB-010)", () => {
+    const cue = deriveCampaignProcessCue(
+      base({
+        lineCount: 10,
+        hasClientIo: true,
+        clientIoStatus: "draft",
+      })
+    );
+    assert.equal(cue.entryStageId, "client-io");
+    assert.equal(cue.nextActionLabel, "Complete Client IO");
+    assert.equal(cue.statusLabel, "Draft in progress");
+    assert.ok(!/Generate Client IO/i.test(cue.nextActionLabel));
+  });
+
+  it("missing Client IO still says Generate Client IO", () => {
+    const cue = deriveCampaignProcessCue(
+      base({
+        lineCount: 2,
+        hasClientIo: false,
+        clientIoStatus: null,
+      })
+    );
+    assert.equal(cue.nextActionLabel, "Generate Client IO");
+  });
+
+  it("generated Client IO says Send Client IO", () => {
+    const cue = deriveCampaignProcessCue(
+      base({
+        lineCount: 2,
+        hasClientIo: true,
+        clientIoStatus: "generated",
+      })
+    );
+    assert.equal(cue.nextActionLabel, "Send Client IO");
+    assert.equal(cue.statusLabel, "Ready to send");
+  });
+
   it("opens Deliverables when deliverables are overdue", () => {
     const cue = deriveCampaignProcessCue(
       base({

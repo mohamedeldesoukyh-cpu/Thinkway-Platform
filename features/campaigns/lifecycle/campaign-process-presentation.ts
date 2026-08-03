@@ -369,14 +369,39 @@ export function deriveCampaignProcessCue(signals: CampaignProcessSignals): Campa
     });
   }
 
-  // Client IO needed / in prep after assignments
-  if (!signals.hasClientIo || !clientStatus || clientStatus === "draft" || clientStatus === "generated") {
+  // Client IO needed / in prep after assignments.
+  // Distinguish missing record vs existing draft composer (STAB-010):
+  // "Generate Client IO" only when no Client IO exists; draft → complete composition.
+  if (!signals.hasClientIo || !clientStatus) {
     return toCue({
       currentStageId: "client-io",
-      statusLabel: clientStatus === "generated" ? "Ready to send" : "In Progress",
+      statusLabel: "In Progress",
       lifecycleSignal: "waiting_internal",
-      nextActionLabel:
-        clientStatus === "generated" ? "Send Client IO" : "Generate Client IO",
+      nextActionLabel: "Generate Client IO",
+      waitingFor: "Commercial",
+      nextStageId: "vendor-io",
+      owner: "Commercial",
+    });
+  }
+
+  if (clientStatus === "draft") {
+    return toCue({
+      currentStageId: "client-io",
+      statusLabel: "Draft in progress",
+      lifecycleSignal: "waiting_internal",
+      nextActionLabel: "Complete Client IO",
+      waitingFor: "Commercial",
+      nextStageId: "vendor-io",
+      owner: "Commercial",
+    });
+  }
+
+  if (clientStatus === "generated") {
+    return toCue({
+      currentStageId: "client-io",
+      statusLabel: "Ready to send",
+      lifecycleSignal: "waiting_internal",
+      nextActionLabel: "Send Client IO",
       waitingFor: "Commercial",
       nextStageId: "vendor-io",
       owner: "Commercial",

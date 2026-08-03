@@ -1,14 +1,13 @@
 # Prompt Summary — Current Sprint
 
-**Branch focus:** `develop` · Enterprise Product Stabilization (lifecycle)
+**Branch focus:** `develop` · Enterprise Product Stabilization Mode (no R2.4)
 
-**Status:** Release 2.3 **CLOSED** (`v2.3.0`) · Stabilization **engine fix landed** for TW-2026-0005 CIO/VIO contradiction
+**Status:** R2.3 CLOSED (`v2.3.0`) · Continuous soak · tip includes STAB-001/008/009 + STAB-010 (draft CIO cue)
 
-**TW-2026-0005 root cause (fixed):**
-- Soft alert “Creator payouts outstanding” inflated `blockerCount` → cue `blocked` + pinned `client-io` even when CIO **approved**
-- `"payouts".includes("po")` false-positive → Campaign Issue **business_blocker**
-- Fix: PO-only cue short-circuit · hard vs soft blocker counting · Finance ops severity for payouts
-- Evidence: 44/44 lifecycle tests · `scripts/soak-lifecycle-consistency.mjs` · report `docs/architecture/ENTERPRISE_STABILIZATION_LIFECYCLE_SOAK.md`
-- **Readiness:** 88/100 — deploy tip to Dev/Preview and re-soak live TW-2026-0005 UI next
+**Latest find (STAB-010):** L'Oréal TW-2026-0006 has `#CIO-2026-0006` draft composer, but DC said **Generate Client IO**. Engine now distinguishes missing vs draft → **Complete Client IO** / Composition.
 
-**Do not:** ship Wave 1 live-discovery / `scripts/tmp-*` unless Product scopes into R2.4
+**Prior:** STAB-001 CIO/VIO soft-alert lock · STAB-008 list enrich · STAB-009 Active≠Performance
+
+**Readiness:** 84/100 until STAB-010 Preview live PASS + multi-brand soaks
+
+**Do not:** ship Wave 1 live-discovery / `scripts/tmp-*` / start R2.4

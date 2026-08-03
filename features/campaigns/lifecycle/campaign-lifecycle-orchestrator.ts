@@ -818,11 +818,15 @@ function deriveLifecycleFromSignals(
   if (signals.clientIoStatus === "rejected") {
     reasonHints.push("Client IO has been rejected.");
   }
+  if (processCue.entryStageId === "client-io" && !signals.hasClientIo) {
+    reasonHints.push("Client IO has not been generated.");
+  }
   if (
     processCue.entryStageId === "client-io" &&
-    (!signals.hasClientIo || signals.clientIoStatus === "draft")
+    signals.hasClientIo &&
+    signals.clientIoStatus === "draft"
   ) {
-    reasonHints.push("Client IO has not been generated.");
+    reasonHints.push("Client IO draft is incomplete — generate the document before send.");
   }
   if (
     processCue.entryStageId === "client-io" &&

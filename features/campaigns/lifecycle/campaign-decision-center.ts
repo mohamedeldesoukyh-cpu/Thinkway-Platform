@@ -675,12 +675,8 @@ export function buildDecisionCenter(input: {
     );
   }
 
-  if (
-    stageId === "client-io" &&
-    (!signals.hasClientIo ||
-      !signals.clientIoStatus ||
-      signals.clientIoStatus === "draft")
-  ) {
+  // Missing Client IO record — create/generate the commercial package.
+  if (stageId === "client-io" && (!signals.hasClientIo || !signals.clientIoStatus)) {
     pushUnique(
       blockers,
       makeBlocker({
@@ -697,11 +693,39 @@ export function buildDecisionCenter(input: {
         sinceLabel: since,
         reason: "Generate Client IO to package commercial terms for approval.",
         impact: "Campaign cannot advance past commercial packaging.",
-        primaryAction: cio ? `Open ${cioRef}` : "Generate Client IO",
+        primaryAction: "Generate Client IO",
         actionTab: "client-io",
         focusQuery: cioFocus,
         relatedLabel: null,
         expectedResult: "Client IO ready to send for approval.",
+      })
+    );
+  }
+
+  // Draft composer exists — complete composition / generate PDF (STAB-010).
+  // Do not say "Generate Client IO" when #CIO-* already exists.
+  if (stageId === "client-io" && signals.hasClientIo && signals.clientIoStatus === "draft") {
+    pushUnique(
+      blockers,
+      makeBlocker({
+        id: "cio_complete_draft",
+        objectKind: "client_io",
+        objectLabel: "Client IO",
+        objectRef: cioRef,
+        recordId: cio?.id ?? null,
+        title: "Client IO draft incomplete",
+        severity: "business_blocker",
+        owner: "Commercial",
+        waitingFor: "Commercial",
+        waitingLabel: "Composition",
+        sinceLabel: since,
+        reason: `Complete ${cioRef}: finish composition and generate the document before send.`,
+        impact: "Campaign cannot advance past commercial packaging.",
+        primaryAction: cio ? `Open ${cioRef}` : "Complete Client IO",
+        actionTab: "client-io",
+        focusQuery: cioFocus,
+        relatedLabel: null,
+        expectedResult: "Client IO document generated and ready to send.",
       })
     );
   }
@@ -1293,6 +1317,9 @@ function specificActionFromLabel(
     return "Open Client IO";
   }
   if (lower.includes("client io generated")) return "Generate Client IO";
+  if (lower.includes("client io draft") || lower.includes("complete client io")) {
+    return "Complete Client IO";
+  }
   if (lower.includes("client io sent")) return "Send Client IO";
   if (lower.includes("vendor")) return "Open Vendor IO";
   if (lower.includes("assignment")) return "Open Assignments";
