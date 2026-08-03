@@ -10,7 +10,7 @@
 
 | Score | As of | Justification |
 |---|---|---|
-| **88 / 100** | 2026-08-03 STAB-011 live; STAB-007 tip | STAB-001/008/009/010/011 live PASS. STAB-007 Deliverables badge vs empty docs repo fixed in tip (restore operational explorer). Remaining: STAB-006 labels, multi-brand full journeys. |
+| **90 / 100** | 2026-08-03 STAB-007 live PASS | STAB-001/007/008/009/010/011 live PASS on Preview. Remaining gaps: STAB-006 mild labels, STAB-003 multi-brand full journeys (enterprise stop condition). |
 
 Score changes only with explicit issues below.
 
@@ -20,7 +20,6 @@ Score changes only with explicit issues below.
 
 | ID | Severity | Title | Root cause | Business impact | Evidence | Status |
 |---|---|---|---|---|---|---|
-| STAB-007 | Medium | Deliverables tab badge **84** vs Documentation repository **0 records** | Tab wired to documentation-only surface while badge counts operational units | Misleading empty-state vs counter | TW-2026-0005 Deliverables | **Fixed in tip** `94e9c0c9` — awaiting Preview |
 | STAB-003 | High | Continuous multi-brand full journey soak incomplete | Incomplete session coverage | Enterprise confidence incomplete | Mandate | Open |
 | STAB-006 | Low | Breadcrumb Waiting Operations while Decision Center owner is Finance | waitingFor from process cue vs Decision Center primary | Mild label inconsistency | TW-2026-0005 | Open |
 | STAB-005 | Low | Soft finance alerts may be story-filtered behind Vendor IO | selectStoryBlockers one-family | Finance ops less visible mid-campaign | By design; monitor | Deferred |
@@ -37,6 +36,7 @@ Score changes only with explicit issues below.
 | STAB-009 | Medium | List Performance vs workspace Deliverables for Active | activePerformance status===active | 9a8aeccf | PASS TW-2026-5 Deliverables |
 | STAB-010 | High | Draft CIO labeled Generate Client IO | draft conflated with missing | e6f41b7a | PASS LOreal Complete CIO |
 | STAB-011 | High | Vendor IO drafts are ready with 0 orders | Hardcoded banner ignored count | 19ee1272 | PASS live |
+| STAB-007 | Medium | Deliverables badge 84 vs empty documentation repo | Tab wired to docs-only surface | 94e9c0c9 restore operational explorer | PASS live: Deliverables · 84 of 84 |
 | STAB-004 | Medium | Soak harness service-role denied on client_ios | Grants / RLS | Auth path for CIO probe | Noted; not product |
 
 ---
@@ -51,7 +51,7 @@ Score changes only with explicit issues below.
 | S4 | 9a8aeccf | TW-2026-5 list | Stage | PASS | STAB-009 |
 | S5 | e6f41b7a | LOreal TW-2026-0006 | CIO draft | PASS | STAB-010 |
 | S6 | 19ee1272 | LOreal Vendor IO | Banner vs 0 | PASS | STAB-011 |
-| S7 | 94e9c0c9 | TW-2026-0005 Deliverables | Badge vs table | FAIL to FIX | STAB-007 |
+| S7 | 94e9c0c9 | TW-2026-0005 Deliverables | Badge vs table | PASS | STAB-007 · 84 of 84 explorer |
 | S8+ | next | Multi-brand full journeys | Full spine | Pending | Continuous |
 
 ---
@@ -63,6 +63,6 @@ Score changes only with explicit issues below.
 - [x] STAB-009 list Performance lie Preview validated
 - [x] STAB-010 draft CIO messaging Preview validated
 - [x] STAB-011 Vendor IO drafts banner Preview validated
-- [ ] STAB-007 Deliverables counter Preview validated
-- [ ] Multi-brand full journeys PASS
+- [x] STAB-007 Deliverables counter Preview validated
+- [ ] Multi-brand full journeys PASS (STAB-003)
 - [ ] Product Readiness >= 95 with evidence
