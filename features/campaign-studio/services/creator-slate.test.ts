@@ -158,6 +158,37 @@ test("low campaign-fit celebrities are demoted when stronger fits exist", () => 
   assert.ok(!creators.some((c) => c.id === "celeb"));
 });
 
+test("near-zero engagement creators are demoted when stronger options exist", () => {
+  const pool = [
+    {
+      ...creator("dead", "instagram", 200_000, ["Beauty"]),
+      campaignRelevanceScore: 70,
+      engagementRate: 0.09,
+    },
+    {
+      ...creator("alive-a", "instagram", 180_000, ["Beauty"]),
+      campaignRelevanceScore: 72,
+      engagementRate: 3.1,
+    },
+    {
+      ...creator("alive-b", "instagram", 160_000, ["Beauty"]),
+      campaignRelevanceScore: 68,
+      engagementRate: 2.4,
+    },
+    {
+      ...creator("alive-c", "instagram", 140_000, ["Beauty"]),
+      campaignRelevanceScore: 65,
+      engagementRate: 1.8,
+    },
+  ];
+  const { creators } = composeCreatorSlate(pool, {
+    preferredCategories: ["Beauty"],
+    targetCount: 3,
+  });
+  assert.equal(creators.length, 3);
+  assert.ok(!creators.some((c) => c.id === "dead"));
+});
+
 test("largest-remainder allocation sums to the target count", () => {
   const counts = allocateTierCounts(
     [

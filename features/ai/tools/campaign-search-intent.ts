@@ -1,3 +1,4 @@
+import { sanitizePreferredCategories } from "@/features/campaign-studio/services/creator-slate";
 import { CREATOR_CATEGORY_KEYWORDS } from "@/lib/creators/category-keywords";
 // Single country taxonomy — the shared alias registry carries the name/city
 // aliases; this module must never hold its own copy.
@@ -13,6 +14,10 @@ import {
 
 export type CampaignSearchIndustryKey =
   | "baby"
+  | "beauty"
+  | "fashion"
+  | "entertainment"
+  | "retail"
   | "sports_fitness"
   | "luxury"
   | "travel"
@@ -48,14 +53,38 @@ const INDUSTRY_SIGNALS: Array<{ key: CampaignSearchIndustryKey; label: string; p
       patterns: [/babyjoy|diaper|diapers|baby care|infant|newborn|0.?3 years|toddler/i],
     },
     {
+      key: "beauty",
+      label: "Beauty",
+      patterns: [
+        /l['’]?or[eé]al|revitalift|skincare|makeup|cosmetics|dermatolog|beauty\s+launch|beauty\s+and\s+skincare|\bbeauty\b/i,
+      ],
+    },
+    {
+      key: "fashion",
+      label: "Fashion",
+      patterns: [/trendyol|fashion|apparel|streetwear|ootd|clothing|wardrobe/i],
+    },
+    {
+      key: "entertainment",
+      label: "Entertainment",
+      patterns: [/entertainment|comedy|comedian|music festival|concert|influencer\s+show/i],
+    },
+    {
+      key: "retail",
+      label: "Retail",
+      patterns: [/\bnoon\b|e-?commerce|marketplace|retail campaign|shopping campaign/i],
+    },
+    {
       key: "sports_fitness",
       label: "Sports & Fitness",
-      patterns: [/adidas|nike|sportswear|running|fitness|gym|workout|athlete|sneaker/i],
+      patterns: [
+        /adidas|nike|sportswear|running|fitness|gym|workout|athlete|sneaker|formula\s*1|\bf1\b|motorsport|grand prix/i,
+      ],
     },
     {
       key: "tourism",
       label: "Tourism",
-      patterns: [/visit egypt|tourism|destination marketing|tourist|sightseeing/i],
+      patterns: [/visit egypt|tourism|destination marketing|tourist|sightseeing|liwa\s+festival/i],
     },
     {
       key: "luxury",
@@ -88,37 +117,42 @@ export const INDUSTRY_CATEGORY_EXPANSION: Readonly<
     "Maternity",
     "Pregnancy",
     "Parent Life",
-    "Lifestyle",
   ],
-  sports_fitness: [
-    "Fitness",
-    "Sports",
-    "Running",
-    "Workout",
-    "Athlete",
-    "Lifestyle",
-    "Fashion",
-  ],
-  luxury: ["Luxury", "Travel", "Lifestyle", "Fashion", "Hospitality"],
-  travel: ["Travel", "Lifestyle", "Adventure", "Hospitality"],
-  tourism: ["Travel", "Tourism", "Lifestyle", "Adventure", "Hospitality"],
-  finance: ["Finance", "Business", "Lifestyle", "Tech"],
+  beauty: ["Beauty"],
+  fashion: ["Fashion"],
+  entertainment: ["Entertainment", "Music"],
+  // Marketplace/shopping briefs — Lifestyle is the primary commercial category,
+  // not a pad alongside a stronger vertical.
+  retail: ["Lifestyle"],
+  sports_fitness: ["Fitness", "Sports", "Running", "Workout", "Athlete"],
+  luxury: ["Luxury", "Travel", "Fashion", "Hospitality"],
+  travel: ["Travel", "Adventure", "Hospitality"],
+  tourism: ["Travel", "Tourism", "Adventure", "Hospitality"],
+  finance: ["Finance", "Business", "Tech"],
   general: ["Lifestyle"],
 };
 
 const INDUSTRY_SEMANTIC_KEYWORDS: Readonly<Record<CampaignSearchIndustryKey, readonly string[]>> =
   {
     baby: ["parenting", "motherhood", "baby", "family", "mom"],
-    sports_fitness: ["fitness", "sports", "running", "workout", "athlete"],
+    beauty: ["beauty", "skincare", "makeup", "cosmetics"],
+    fashion: ["fashion", "style", "ootd", "apparel"],
+    entertainment: ["entertainment", "comedy", "music"],
+    retail: ["shopping", "retail", "marketplace"],
+    sports_fitness: ["fitness", "sports", "running", "workout", "athlete", "motorsport"],
     luxury: ["luxury", "travel", "hotel", "resort", "hospitality"],
     travel: ["travel", "destination", "adventure"],
-    tourism: ["tourism", "travel", "destination", "egypt"],
+    tourism: ["tourism", "travel", "destination", "egypt", "festival"],
     finance: ["finance", "banking", "money", "investment"],
     general: ["creator", "influencer"],
   };
 
 const DEFAULT_INDUSTRY_PLATFORMS: Readonly<Record<CampaignSearchIndustryKey, readonly string[]>> = {
   baby: ["instagram", "tiktok"],
+  beauty: ["instagram", "tiktok"],
+  fashion: ["instagram", "tiktok"],
+  entertainment: ["instagram", "tiktok", "youtube"],
+  retail: ["instagram", "tiktok"],
   sports_fitness: ["instagram", "tiktok"],
   luxury: ["instagram"],
   travel: ["instagram", "tiktok"],
@@ -310,7 +344,15 @@ function mergeUniqueCategories(...lists: Array<string[] | undefined>): string[] 
       merged.push(value);
     }
   }
-  return merged;
+  // Drop generic Lifestyle when a commercial vertical is already present.
+  const allowed = new Set(sanitizePreferredCategories(merged));
+  return merged.filter((category) => allowed.has(category.trim().toLowerCase()));
+}
+
+/** Boardroom criteria label — never silently pad verticals with Lifestyle. */
+export function formatCampaignSearchCriteria(categories: string[], fallback = "Creators"): string {
+  const cleaned = mergeUniqueCategories(categories);
+  return cleaned.slice(0, 3).join(", ") || fallback;
 }
 
 /** True when input looks like a campaign brief rather than a direct creator search query. */
@@ -334,6 +376,8 @@ export function buildCampaignSearchIntent(rawBrief: string): CampaignSearchInten
   const { key: industryKey, label: industry } = detectIndustry(preprocessed);
   const expandedCategories = [...INDUSTRY_CATEGORY_EXPANSION[industryKey]];
   const keywordCategories = extractKeywordCategories(preprocessed);
+  // Prefer brief/keyword verticals first; industry expansion must not reintroduce
+  // Lifestyle padding once Beauty/Fashion/Sports/Travel (etc.) are present.
   const categories = mergeUniqueCategories(
     parsed.categories,
     keywordCategories,

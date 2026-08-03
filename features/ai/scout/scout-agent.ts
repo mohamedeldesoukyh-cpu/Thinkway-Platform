@@ -19,7 +19,11 @@ import type {
   AiRequest,
 } from "../types";
 import { parseCreatorSearchQuery } from "../tools/creator-search-parser";
-import { buildCampaignSearchIntent, looksLikeCampaignBrief } from "../tools/campaign-search-intent";
+import {
+  buildCampaignSearchIntent,
+  formatCampaignSearchCriteria,
+  looksLikeCampaignBrief,
+} from "../tools/campaign-search-intent";
 import { AI_SEARCH_CREATORS_PAGE_SIZE } from "../tools/search-creators-browse";
 import { workflowTrace } from "@/lib/creators/search-trace";
 import { dedupeGroundedCreators } from "@/lib/creators/dedupe-creators";
@@ -54,9 +58,12 @@ export function extractCreatorSearchQuery(input: AgentExecuteInput): string {
   const raw = getRawCreatorSearchMessage(input);
   if (looksLikeCampaignBrief(raw)) {
     const intent = buildCampaignSearchIntent(raw);
-    return intent.categories.slice(0, 3).join(", ") || intent.industry;
+    return formatCampaignSearchCriteria(intent.categories, intent.industry);
   }
   const parsed = parseCreatorSearchQuery(raw);
+  if (parsed.categories?.length) {
+    return formatCampaignSearchCriteria(parsed.categories, parsed.search || raw.slice(0, 200));
+  }
   return parsed.search || raw.slice(0, 200);
 }
 

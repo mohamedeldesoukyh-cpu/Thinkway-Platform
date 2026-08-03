@@ -64,6 +64,48 @@ function testTourismIntent(): void {
   assert.ok(intent.categories.some((c) => /travel|tourism/i.test(c)));
 }
 
+function testBeautyDoesNotPadLifestyle(): void {
+  const intent = buildCampaignSearchIntent(
+    "Create a new campaign for L'Oréal Paris Beauty Launch. Brand L'Oréal Paris, market Egypt, budget 1500000 EGP, Instagram and TikTok beauty and skincare creators."
+  );
+  assert.equal(intent.industryKey, "beauty");
+  assert.ok(intent.categories.some((c) => /beauty/i.test(c)));
+  assert.ok(
+    !intent.categories.some((c) => c.trim().toLowerCase() === "lifestyle"),
+    `Beauty intent must not pad Lifestyle: ${intent.categories.join(", ")}`
+  );
+}
+
+function testFashionDoesNotPadLifestyle(): void {
+  const intent = buildCampaignSearchIntent(
+    "Create a new campaign for Trendyol Fashion Campaign. Brand Trendyol, market Egypt, budget 2000000 EGP, Instagram fashion creators."
+  );
+  assert.equal(intent.industryKey, "fashion");
+  assert.ok(intent.categories.some((c) => /fashion/i.test(c)));
+  assert.ok(!intent.categories.some((c) => c.trim().toLowerCase() === "lifestyle"));
+}
+
+function testSportsFormulaOne(): void {
+  const intent = buildCampaignSearchIntent(
+    "Create a new campaign for Formula 1 Abu Dhabi Grand Prix. Brand Formula 1, market UAE, budget 500000 AED, sports and motorsport creators."
+  );
+  assert.equal(intent.industryKey, "sports_fitness");
+  assert.ok(intent.categories.some((c) => /sport|fitness|automotive/i.test(c)));
+  assert.ok(!intent.categories.some((c) => c.trim().toLowerCase() === "lifestyle"));
+}
+
+function testRetailKeepsLifestylePrimary(): void {
+  const intent = buildCampaignSearchIntent(
+    "Create a new campaign for Noon Retail Campaign. Brand Noon, market Egypt, budget 1800000 EGP, Instagram and TikTok shopping creators."
+  );
+  assert.equal(intent.industryKey, "retail");
+  assert.ok(intent.categories.some((c) => c.trim().toLowerCase() === "lifestyle"));
+  assert.ok(
+    !intent.categories.some((c) => c.trim().toLowerCase() === "fashion"),
+    "Retail must not collapse to Fashion via Lifestyle sanitization"
+  );
+}
+
 function run(): void {
   testLooksLikeCampaignBrief();
   testBabyJoyIntent();
@@ -71,6 +113,10 @@ function run(): void {
   testLuxuryHotelIntent();
   testFinanceIntent();
   testTourismIntent();
+  testBeautyDoesNotPadLifestyle();
+  testFashionDoesNotPadLifestyle();
+  testSportsFormulaOne();
+  testRetailKeepsLifestylePrimary();
   console.log("campaign-search-intent.test.ts: PASS");
 }
 

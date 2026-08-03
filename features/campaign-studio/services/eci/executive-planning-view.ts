@@ -303,9 +303,9 @@ export function buildStudioExecutivePlanningSummary(
   );
   // Floor only when the slate is both sized and commercially credible —
   // never inflate Moderate over thin fit or unexplained category padding.
-  const credibleSlate = slateCount >= 5 && avgFit >= 55 && !categoryPadded;
+  const credibleSlate = slateCount >= 5 && avgFit >= 60 && !categoryPadded;
   if (!signals?.length) {
-    level = credibleSlate ? "Moderate" : slateCount > 0 && avgFit >= 55 ? "Moderate" : "Low";
+    level = credibleSlate ? "Moderate" : slateCount > 0 && avgFit >= 60 ? "Moderate" : "Low";
   } else if (level === "Low" && credibleSlate) {
     level = "Moderate";
   }

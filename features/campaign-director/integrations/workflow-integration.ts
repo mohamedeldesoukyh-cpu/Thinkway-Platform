@@ -74,14 +74,18 @@ function mergeDirectorSectionData(
     ...(approvedData ?? {}),
   };
 
-  // Director IS1 scaffolding seeds empty recommendation IDs. Never let that
-  // wipe a slate already proposed/committed from Vendor Discovery.
+  // Director IS1 scaffolding seeds empty recommendation IDs / empty why-selected
+  // rows. Never let that wipe a slate already proposed from Vendor Discovery.
   if (key === "creators") {
     const existingRec = (existingData?.recommendations ?? {}) as {
       creatorIds?: string[];
+      selectedReasoning?: unknown[];
+      rejectedReasoning?: unknown[];
     };
     const approvedRec = (approvedData?.recommendations ?? {}) as {
       creatorIds?: string[];
+      selectedReasoning?: unknown[];
+      rejectedReasoning?: unknown[];
     };
     const intelIds = (
       (
@@ -95,14 +99,31 @@ function mergeDirectorSectionData(
       (existingRec.creatorIds?.length ?? 0) > 0
         ? existingRec.creatorIds!
         : intelIds;
-    if (
-      (approvedRec.creatorIds?.length ?? 0) === 0 &&
-      preservedIds.length > 0
-    ) {
+    const approvedIdsEmpty = (approvedRec.creatorIds?.length ?? 0) === 0;
+    const approvedReasoningEmpty = (approvedRec.selectedReasoning?.length ?? 0) === 0;
+    const existingReasoning = existingRec.selectedReasoning ?? [];
+    if (approvedIdsEmpty && preservedIds.length > 0) {
       merged.recommendations = {
         ...existingRec,
         ...approvedRec,
         creatorIds: preservedIds,
+        // Keep boardroom why-selected when Director scaffolding has none.
+        selectedReasoning: approvedReasoningEmpty
+          ? existingReasoning
+          : approvedRec.selectedReasoning,
+        rejectedReasoning:
+          (approvedRec.rejectedReasoning?.length ?? 0) > 0
+            ? approvedRec.rejectedReasoning
+            : existingRec.rejectedReasoning,
+      };
+    } else if (
+      !approvedIdsEmpty &&
+      approvedReasoningEmpty &&
+      existingReasoning.length > 0
+    ) {
+      merged.recommendations = {
+        ...(merged.recommendations as Record<string, unknown>),
+        selectedReasoning: existingReasoning,
       };
     }
   }

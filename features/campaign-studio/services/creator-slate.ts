@@ -70,7 +70,9 @@ const VERTICAL_CATEGORY_TOKENS = [
   "comedy",
 ] as const;
 
-const FIT_FLOOR = 55;
+const FIT_FLOOR = 60;
+/** Drop near-zero engagement when stronger commercial options exist. */
+const ENGAGEMENT_FLOOR = 0.5;
 const MIN_VERTICAL_SLATE = 5;
 const MAX_QUALITY_SLATE = 10;
 
@@ -204,12 +206,20 @@ export function composeCreatorSlate(
 
   const withTier = pool.map((c) => ({ ...c, tier: c.tier ?? creatorTierOf(c) }));
 
-  // Demote / drop weak campaign fit when enough stronger fits exist.
+  // Demote / drop weak campaign fit and near-zero engagement when stronger
+  // commercial options exist — prefer fewer excellent creators.
   const strongFit = withTier.filter((c) => fitScoreOf(c) >= FIT_FLOOR);
-  const fitBiased =
+  const fitPool =
     strongFit.length >= Math.min(3, options.targetCount ?? (strongFit.length || 1))
       ? strongFit
       : withTier;
+  const engaged = fitPool.filter(
+    (c) => c.engagementRate == null || c.engagementRate >= ENGAGEMENT_FLOOR
+  );
+  const fitBiased =
+    engaged.length >= Math.min(3, options.targetCount ?? (engaged.length || 1))
+      ? engaged
+      : fitPool;
 
   let orderedPool = fitBiased;
   let categoryFallback = false;
