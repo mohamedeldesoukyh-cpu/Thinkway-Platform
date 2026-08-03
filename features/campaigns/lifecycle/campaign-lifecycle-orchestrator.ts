@@ -167,7 +167,7 @@ function buildRequirements(
     signals.clientIoStatus === "sent" ||
     signals.clientIoStatus === "under_client_review" ||
     clientApproved;
-  const assignmentsDone = signals.lineCount > 0;
+  const assignmentsCreated = signals.lineCount > 0;
   const vendorIssued = signals.vendorIoCount > 0;
   const vendorApproved =
     signals.vendorIoCount > 0 &&
@@ -178,14 +178,14 @@ function buildRequirements(
 
   const common: RequirementItem[] = [
     { id: "campaign", label: "Campaign created", met: true },
-    { id: "assignments", label: "Assignments completed", met: assignmentsDone },
+    { id: "assignments", label: "Assignments created", met: assignmentsCreated },
   ];
 
   switch (stageId) {
     case "lines":
       return [
         { id: "campaign", label: "Campaign created", met: true },
-        { id: "assignments", label: "Assignments created", met: assignmentsDone },
+        { id: "assignments", label: "Assignments created", met: assignmentsCreated },
       ];
     case "client-io":
       return [
@@ -530,7 +530,11 @@ function buildBusinessTimeline(
       id: "assignments_completed",
       label: "Assignments Completed",
       at: null,
-      occurred: signals.lineCount > 0,
+      // STAB-018: do not mark Done merely because lines exist (same as Created).
+      occurred:
+        signals.lineCount > 0 &&
+        signals.vendorIoCount > 0 &&
+        signals.approvedVendorIoCount >= signals.vendorIoCount,
       owner: "Operations",
     },
     {

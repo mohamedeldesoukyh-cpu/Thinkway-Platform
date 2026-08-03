@@ -1,13 +1,16 @@
 # Prompt Summary — Current Sprint
 
-**Branch focus:** `develop` · Enterprise Product Stabilization (no R2.4)
+**Branch focus:** `develop` · Enterprise Product Stabilization (no R2.4)  
+**Optimize for:** enterprise trust — not readiness score
 
-**Tip:** `68df94e5` — STAB-015 timeline assignment deliverables + STAB-016 Generate 25% GP
+**Tip (pending push):** STAB-018 Assignments Completed requires vendor approvals
 
-**Live PASS:** STAB-012/014 on TW-2026-0002 (list Finance/Review PO Limit; VIO banner blocked)
+**Live PASS:** STAB-012/014/015/017 · brands inventory via `/brands` UI (13)
 
-**Awaiting Preview:** STAB-015 Timeline Deliverables Uploaded; STAB-016 fresh Generate margin
+**STAB-016:** tip + unit test PASS. L'Oréal Finance live still **0.0% GP**. Fresh Generate blocked on linked plans — Noon Studio soak open (`20436518-…`).
 
-**Open:** STAB-003 multi-brand soaks · STAB-006 low label
+**STAB-018:** tip fix — timeline Assigned Completed ≠ Created. Awaiting Preview soak.
 
-**Readiness:** evidence-based · Do not start R2.4
+**Open:** STAB-016 live Generate · STAB-018 live · STAB-003 journeys · STAB-006 · negative/cross-workspace · Discovery Mode
+
+**R2.4:** blocked

@@ -158,4 +158,34 @@ describe("campaign lifecycle orchestrator", () => {
     assert.ok(!/Sending is disabled until/i.test(guidance.currentSituation ?? ""));
     assert.ok(!/Client IO is approved/i.test(guidance.unlockHint ?? ""));
   });
+
+  it("STAB-018: Assignments Completed is not Done merely because lines exist", () => {
+    const early = deriveLifecycleForTest(
+      base({
+        lineCount: 10,
+        hasClientIo: true,
+        clientIoStatus: "draft",
+        vendorIoCount: 0,
+        deliverableCount: 16,
+      })
+    );
+    const created = early.timeline.find((e) => e.id === "assignments_created");
+    const completed = early.timeline.find((e) => e.id === "assignments_completed");
+    assert.equal(created?.occurred, true);
+    assert.equal(completed?.occurred, false);
+
+    const afterVendors = deriveLifecycleForTest(
+      base({
+        lineCount: 10,
+        hasClientIo: true,
+        clientIoStatus: "approved",
+        vendorIoCount: 10,
+        approvedVendorIoCount: 10,
+      })
+    );
+    assert.equal(
+      afterVendors.timeline.find((e) => e.id === "assignments_completed")?.occurred,
+      true
+    );
+  });
 });
