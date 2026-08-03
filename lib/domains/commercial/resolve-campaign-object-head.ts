@@ -6,6 +6,7 @@ import type { Database } from "@/types/database";
 export type CampaignObjectHeadRow = {
   id: string;
   lifecycle_status: string;
+  current_version: number;
   conversation_id: string | null;
   campaign_header_id: string | null;
 };
@@ -24,7 +25,7 @@ export async function resolveCampaignObjectHead(
   input: { campaignObjectId: string; conversationId?: string }
 ): Promise<ResolveResult> {
   const select =
-    "id, lifecycle_status, conversation_id, campaign_header_id" as const;
+    "id, lifecycle_status, current_version, conversation_id, campaign_header_id" as const;
 
   if (isUuid(input.campaignObjectId)) {
     const { data, error } = await supabase

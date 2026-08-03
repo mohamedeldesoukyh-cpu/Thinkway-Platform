@@ -252,6 +252,8 @@ export async function searchCreatorsFromProfileData(
             reason:
               slate.meta.categoryFallbackReason ??
               "Preferred category inventory was thin — adjacent creators added.",
+            businessImpact:
+              "Category adjacency may dilute brief fit; mandatory country/platform gates still apply.",
           },
         ]
       : [];
