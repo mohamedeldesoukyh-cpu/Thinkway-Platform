@@ -87,6 +87,7 @@ export function enrichBriefSearchSignals(
       text
     ) || isTelecomOrYouthBrief(text, profile);
 
+  // Dual-platform briefs must keep every requested network (not else-if).
   if (wantsTikTok && !hasFilter(filters, "platform", "tiktok")) {
     addFilter(filters, {
       key: "platform",
@@ -94,19 +95,21 @@ export function enrichBriefSearchSignals(
       value: "tiktok",
       weight: 100,
     });
-  } else if (wantsYouTube && !hasFilter(filters, "platform", "youtube")) {
-    addFilter(filters, {
-      key: "platform",
-      label: "Social Platform",
-      value: "youtube",
-      weight: 95,
-    });
-  } else if (wantsInstagram && !hasFilter(filters, "platform", "instagram")) {
+  }
+  if (wantsInstagram && !hasFilter(filters, "platform", "instagram")) {
     addFilter(filters, {
       key: "platform",
       label: "Social Platform",
       value: "instagram",
       weight: 90,
+    });
+  }
+  if (wantsYouTube && !hasFilter(filters, "platform", "youtube")) {
+    addFilter(filters, {
+      key: "platform",
+      label: "Social Platform",
+      value: "youtube",
+      weight: 95,
     });
   }
 

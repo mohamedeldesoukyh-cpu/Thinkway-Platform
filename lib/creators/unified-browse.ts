@@ -563,6 +563,29 @@ function resolveInternalSourceType(account: {
   return "internal";
 }
 
+/**
+ * Platform-database browse (`source: "internal"`) must include every vendor
+ * row already in the influencers table — including discovery-linked / import
+ * provenance (`imported`) and OAuth-verified accounts. Only unlinked
+ * `public_discovery` profiles are excluded. Matching the includeInternal gate
+ * in browseUnifiedCreators; otherwise DB-only safety mode collapses Egypt
+ * inventory to a handful of unlinked rows.
+ */
+export function matchesUnifiedBrowseSourceFilter(
+  sourceType: CreatorSourceType,
+  sourceFilter: string | undefined
+): boolean {
+  if (!sourceFilter || sourceFilter === "all") return true;
+  if (sourceFilter === "internal") {
+    return (
+      sourceType === "internal" ||
+      sourceType === "imported" ||
+      sourceType === "oauth_verified"
+    );
+  }
+  return sourceType === sourceFilter;
+}
+
 function buildInternalMetrics(
   account: {
     follower_count?: number | null;
@@ -1014,7 +1037,7 @@ async function fetchInternalCreators(
           ? resolveInternalSourceType(metricsAccount)
           : "internal";
 
-    if (filters.source && filters.source !== "all" && filters.source !== sourceType) {
+    if (!matchesUnifiedBrowseSourceFilter(sourceType, filters.source)) {
       continue;
     }
     if (filters.verifiedOnly && !platformRows.some((p) => p.is_verified)) {
@@ -1295,7 +1318,7 @@ function mapDiscoveryProfileToUnifiedResults(
     if (profile.influencer_id) continue;
 
     const sourceType: CreatorSourceType = "public_discovery";
-    if (filters.source && filters.source !== "all" && filters.source !== sourceType) {
+    if (!matchesUnifiedBrowseSourceFilter(sourceType, filters.source)) {
       continue;
     }
 

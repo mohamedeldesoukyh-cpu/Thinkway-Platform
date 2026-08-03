@@ -77,6 +77,9 @@ export function applyPolicyToBrowse(
   settings: DiscoveryControlSettings = getCachedDiscoveryControlSettings()
 ): UnifiedCreatorBrowseFilters {
   if (isPlatformDatabaseOnly(settings)) {
+    // DB-only / auto-acquisition-off: stay on influencers inventory (internal +
+    // imported + oauth). Do not pull unlinked public_discovery or call Apify.
+    // Hydration treats source "internal" as all platform-DB provenance types.
     return {
       ...filters,
       source: filters.source && filters.source !== "all" ? filters.source : "internal",
