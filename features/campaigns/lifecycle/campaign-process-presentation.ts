@@ -120,6 +120,11 @@ export type CampaignProcessSignals = {
   publicationCount: number;
   invoiceCount: number;
   billingOutstanding: number;
+  /**
+   * True when every active line is terminal-invoiced (invoiced/paid/closed).
+   * STAB-035: Invoice Paid must not Done while unbilled lines remain.
+   */
+  fullyInvoiced: boolean;
   blockerCount: number;
   poExceeded: boolean;
 };
@@ -164,6 +169,8 @@ export function signalsFromCampaignListItem(campaign: CampaignListItem): Campaig
     publicationCount: campaign.performance_active ? Math.max(1, campaign.deliverable_count ?? 0) : 0,
     invoiceCount: 0,
     billingOutstanding: 0,
+    // List cards lack line billing — treat header completed as fully invoiced.
+    fullyInvoiced: campaign.status === "completed",
     blockerCount: 0,
     poExceeded: operationalPo.po_exceeded,
   };
@@ -218,10 +225,30 @@ export function signalsFromCampaignWorkspace(workspace: CampaignWorkspace): Camp
     publicationCount,
     invoiceCount: workspace.invoices?.length ?? 0,
     billingOutstanding: workspace.financials.billing_outstanding ?? 0,
+    fullyInvoiced: isWorkspaceFullyInvoiced(workspace.lines ?? []),
     // Soft finance/ops strings must not inflate progression blockerCount.
     blockerCount: countHardProgressionBlockers(workspace.blockers ?? []),
     poExceeded: workspace.financials.po_exceeded,
   };
+}
+
+const TERMINAL_LINE_BILLING = new Set(["invoiced", "paid", "closed"]);
+
+/** Campaign-level invoice completeness — mirrors header sync terminal billing. */
+export function isWorkspaceFullyInvoiced(
+  lines: Array<{ billing_status?: string | null; revenue?: number | null }>
+): boolean {
+  const active = lines.filter(
+    (line) => String(line.billing_status ?? "").toLowerCase() !== "cancelled"
+  );
+  if (active.length === 0) return false;
+  let invoicedRevenue = 0;
+  for (const line of active) {
+    const status = String(line.billing_status ?? "").toLowerCase();
+    if (!TERMINAL_LINE_BILLING.has(status)) return false;
+    invoicedRevenue += Number(line.revenue ?? 0);
+  }
+  return invoicedRevenue > 0;
 }
 
 /** Blockers that may stop commercial progression — not routine finance/ops noise. */

@@ -27,6 +27,7 @@ function base(overrides: Partial<CampaignProcessSignals> = {}): CampaignProcessS
     publicationCount: 0,
     invoiceCount: 0,
     billingOutstanding: 0,
+    fullyInvoiced: false,
     blockerCount: 0,
     poExceeded: false,
     ...overrides,
@@ -265,6 +266,7 @@ describe("deriveCampaignProcessCue — business rules", () => {
         approvedVendorIoCount: 1,
         invoiceCount: 1,
         billingOutstanding: 760000,
+        fullyInvoiced: true,
       })
     );
     assert.equal(cue.entryStageId, "billing");
@@ -284,6 +286,7 @@ describe("deriveCampaignProcessCue — business rules", () => {
         approvedVendorIoCount: 1,
         invoiceCount: 1,
         billingOutstanding: 0,
+        fullyInvoiced: true,
       })
     );
     assert.equal(cue.lifecycleSignal, "completed");
@@ -301,6 +304,7 @@ describe("deriveCampaignProcessCue — business rules", () => {
         approvedVendorIoCount: 1,
         invoiceCount: 1,
         billingOutstanding: 0,
+        fullyInvoiced: true,
       })
     );
     assert.equal(cue.lifecycleSignal, "completed");

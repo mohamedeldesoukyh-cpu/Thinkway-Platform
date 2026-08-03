@@ -603,8 +603,12 @@ function buildBusinessTimeline(
       id: "invoice_paid",
       label: "Invoice Paid",
       at: null,
+      // STAB-035: settlement of a partial invoice must not mark campaign Invoice Paid.
       // Prefer outstanding SSOT — partial amount_paid alone is not full settlement.
-      occurred: signals.invoiceCount > 0 && signals.billingOutstanding <= 0,
+      occurred:
+        signals.fullyInvoiced &&
+        signals.invoiceCount > 0 &&
+        signals.billingOutstanding <= 0,
       owner: "Finance",
     },
     {
@@ -616,6 +620,7 @@ function buildBusinessTimeline(
       occurred:
         signals.status === "cancelled" ||
         (signals.status === "completed" &&
+          signals.fullyInvoiced &&
           signals.invoiceCount > 0 &&
           signals.billingOutstanding <= 0),
       owner: "Executive",

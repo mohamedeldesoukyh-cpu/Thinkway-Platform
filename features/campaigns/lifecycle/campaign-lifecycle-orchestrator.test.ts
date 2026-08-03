@@ -23,6 +23,7 @@ function base(overrides: Partial<CampaignProcessSignals> = {}): CampaignProcessS
     publicationCount: 0,
     invoiceCount: 0,
     billingOutstanding: 0,
+    fullyInvoiced: false,
     blockerCount: 0,
     poExceeded: false,
     ...overrides,
@@ -95,6 +96,7 @@ describe("campaign lifecycle orchestrator", () => {
         approvedVendorIoCount: 1,
         invoiceCount: 1,
         billingOutstanding: 760000,
+        fullyInvoiced: true,
       })
     );
     const closedUnpaid = unpaid.timeline.find((e) => e.id === "campaign_closed");
@@ -112,6 +114,7 @@ describe("campaign lifecycle orchestrator", () => {
         approvedVendorIoCount: 1,
         invoiceCount: 1,
         billingOutstanding: 0,
+        fullyInvoiced: true,
       })
     );
     assert.equal(
@@ -120,6 +123,38 @@ describe("campaign lifecycle orchestrator", () => {
     );
     assert.equal(
       settled.timeline.find((e) => e.id === "campaign_closed")?.occurred,
+      true
+    );
+  });
+
+  it("STAB-035: Invoice Paid stays Upcoming while unbilled lines remain", () => {
+    const partial = deriveLifecycleForTest(
+      base({
+        status: "active",
+        lineCount: 10,
+        hasClientIo: true,
+        clientIoStatus: "approved",
+        vendorIoCount: 10,
+        approvedVendorIoCount: 10,
+        invoiceCount: 1,
+        billingOutstanding: 0,
+        fullyInvoiced: false,
+        publicationCount: 1,
+        activePerformance: true,
+        uploadedDeliverableCount: 10,
+        deliverableCount: 10,
+      })
+    );
+    assert.equal(
+      partial.timeline.find((e) => e.id === "invoice_paid")?.occurred,
+      false
+    );
+    assert.equal(
+      partial.timeline.find((e) => e.id === "campaign_closed")?.occurred,
+      false
+    );
+    assert.equal(
+      partial.timeline.find((e) => e.id === "invoice_generated")?.occurred,
       true
     );
   });

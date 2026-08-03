@@ -30,6 +30,7 @@ function signals(overrides: Partial<CampaignProcessSignals> = {}): CampaignProce
     publicationCount: 0,
     invoiceCount: 0,
     billingOutstanding: 0,
+    fullyInvoiced: false,
     blockerCount: 0,
     poExceeded: false,
     ...overrides,

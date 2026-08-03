@@ -24,6 +24,7 @@ function base(overrides: Partial<CampaignProcessSignals> = {}): CampaignProcessS
     publicationCount: 0,
     invoiceCount: 0,
     billingOutstanding: 0,
+    fullyInvoiced: false,
     blockerCount: 0,
     poExceeded: false,
     ...overrides,
