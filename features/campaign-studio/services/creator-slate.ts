@@ -142,15 +142,29 @@ export function composeCreatorSlate(
     }
   }
 
-  // Soft category bias: keep rank order inside each bucket, but fill slots from
-  // on-category creators first so beauty briefs do not pad with food/travel.
+  // Soft category + fit bias: keep rank order inside each bucket, but fill
+  // slots from on-category / stronger-fit creators first so beauty briefs do
+  // not pad with food/travel and celebrity reach does not outrank weak fit.
   const withTier = pool.map((c) => ({ ...c, tier: c.tier ?? creatorTierOf(c) }));
+  const FIT_FLOOR = 50;
+  const strongFitIds = new Set(
+    withTier
+      .filter((c) => (c.campaignRelevanceScore ?? 100) >= FIT_FLOOR)
+      .map((c) => c.id)
+  );
+  const fitBiased =
+    strongFitIds.size >= Math.min(3, targetCount)
+      ? [
+          ...withTier.filter((c) => strongFitIds.has(c.id)),
+          ...withTier.filter((c) => !strongFitIds.has(c.id)),
+        ]
+      : withTier;
   const orderedPool =
     preferredCategories.length === 0
-      ? withTier
+      ? fitBiased
       : [
-          ...withTier.filter((c) => creatorMatchesPreferredCategories(c, preferredCategories)),
-          ...withTier.filter((c) => !creatorMatchesPreferredCategories(c, preferredCategories)),
+          ...fitBiased.filter((c) => creatorMatchesPreferredCategories(c, preferredCategories)),
+          ...fitBiased.filter((c) => !creatorMatchesPreferredCategories(c, preferredCategories)),
         ];
 
   const mix = (options.tierMix ?? []).filter((m) => m.percent > 0);

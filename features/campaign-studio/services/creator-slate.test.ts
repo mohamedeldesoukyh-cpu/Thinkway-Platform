@@ -99,6 +99,18 @@ test("preferred categories soft-bias the slate before off-category backfill", ()
   assert.ok(creators.every((c) => (c.categories ?? []).includes("Beauty")));
 });
 
+test("low campaign-fit celebrities are demoted when stronger fits exist", () => {
+  const pool = [
+    { ...creator("celeb", "instagram", 10_000_000, ["Lifestyle"]), campaignRelevanceScore: 30 },
+    { ...creator("fit-a", "instagram", 700_000, ["Lifestyle"]), campaignRelevanceScore: 75 },
+    { ...creator("fit-b", "instagram", 600_000, ["Lifestyle"]), campaignRelevanceScore: 70 },
+    { ...creator("fit-c", "instagram", 500_000, ["Lifestyle"]), campaignRelevanceScore: 65 },
+  ];
+  const { creators } = composeCreatorSlate(pool, { targetCount: 3 });
+  assert.equal(creators.length, 3);
+  assert.ok(!creators.some((c) => c.id === "celeb"));
+});
+
 test("largest-remainder allocation sums to the target count", () => {
   const counts = allocateTierCounts(
     [

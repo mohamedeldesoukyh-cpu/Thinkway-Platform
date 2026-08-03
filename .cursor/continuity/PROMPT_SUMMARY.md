@@ -1,19 +1,22 @@
 # Prompt Summary — Current Sprint
 
-**Branch focus:** `develop` · tip pending Iter 10
+**Branch focus:** `develop` · tip `94b778eb`
 
 **Active:** Release 2.3 Final Product Excellence — Fix → Soak → Fix (reject mode)
 
 **Shipped:**
-- Iter 8 (`a04fdd21`): Workflow CIP without brand catalog match
-- Iter 9 (`46f4dfd4`): Brief category enrich + strip `CampaignFacts[...]` evidence
-- Iter 10 (pending push): DB-only browse was dropping discovery-linked `imported` vendors → Egypt page collapsed to 2 creators; `matchesUnifiedBrowseSourceFilter` treats internal/imported/oauth as platform DB; dual-platform enrich no longer else-if
+- Iter 10 (`e521aa1a`): DB-only browse includes imported/oauth vendors — Egypt CIP pool 2→50–60
+- Iter 11 (`136ef52b`): Soft-prefer brief categories in slate composition; CIP slate cap 12
+- Iter 12 (`94b778eb`): Floor planning confidence at Moderate when CIP slate ≥5
 
-**Root cause (High→Critical):** `DISABLE_AUTOMATIC_ENRICHMENT_AND_ACQUISITION` defaults true → `source=internal` → 115/120 EG IDs classified `imported` and discarded
+**Soak on e521 (pre–11/12):**
+- L'Oréal `fc574f92` — CIP, total 60, Advance 10, Beauty-led but some Food/Travel padding
+- e& `2cbfa547` — CIP, total 50, Advance 10
+- Noon — in flight
 
-**In flight:** Deploy Iter 10 → re-soak all 6 campaigns
+**Pending soaks on tip 94b778:** L'Oréal re-soak · Trendyol · F1 Abu Dhabi · Liwa · handoff E2E
 
-**Stop condition:** Not met until post–Iter 10 soak ≥95 / no Critical/High
+**Stop condition:** Not met (readiness ~92–94 after pool fix; re-validate category + confidence on tip)
 
 **FROZEN:** Studio Governance · ECI · Sprint 2/3 packages
 
