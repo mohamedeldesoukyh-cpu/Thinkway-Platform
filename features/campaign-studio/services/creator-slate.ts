@@ -206,13 +206,22 @@ export function composeCreatorSlate(
 
   const withTier = pool.map((c) => ({ ...c, tier: c.tier ?? creatorTierOf(c) }));
 
-  // Demote / drop weak campaign fit and near-zero engagement when stronger
-  // commercial options exist — prefer fewer excellent creators.
-  const strongFit = withTier.filter((c) => fitScoreOf(c) >= FIT_FLOOR);
+  // Prefer fewer excellent creators. Creators below FIT_FLOOR never pad a slate
+  // when campaign-relevance scores are present — an empty/short slate is better
+  // than boardroom-weak recommendations (seen on thin Tech inventory).
+  const scored = withTier.filter((c) => c.campaignRelevanceScore != null);
+  const unscored = withTier.filter((c) => c.campaignRelevanceScore == null);
+  const strongFit = (scored.length > 0 ? scored : withTier).filter(
+    (c) => fitScoreOf(c) >= FIT_FLOOR
+  );
   const fitPool =
-    strongFit.length >= Math.min(3, options.targetCount ?? (strongFit.length || 1))
-      ? strongFit
-      : withTier;
+    scored.length > 0
+      ? strongFit.length > 0
+        ? strongFit
+        : []
+      : withTier.length > 0
+        ? withTier
+        : unscored;
   const engaged = fitPool.filter(
     (c) => c.engagementRate == null || c.engagementRate >= ENGAGEMENT_FLOOR
   );

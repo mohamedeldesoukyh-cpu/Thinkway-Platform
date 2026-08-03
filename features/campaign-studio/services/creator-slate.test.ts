@@ -158,6 +158,19 @@ test("low campaign-fit celebrities are demoted when stronger fits exist", () => 
   assert.ok(!creators.some((c) => c.id === "celeb"));
 });
 
+test("when all scored creators are below fit floor, slate stays empty rather than padding weak", () => {
+  const pool = [
+    { ...creator("weak-a", "instagram", 200_000, ["Tech"]), campaignRelevanceScore: 40 },
+    { ...creator("weak-b", "instagram", 180_000, ["Tech"]), campaignRelevanceScore: 35 },
+    { ...creator("weak-c", "instagram", 160_000, ["Tech"]), campaignRelevanceScore: 30 },
+  ];
+  const { creators } = composeCreatorSlate(pool, {
+    preferredCategories: ["Tech"],
+    targetCount: 5,
+  });
+  assert.equal(creators.length, 0);
+});
+
 test("near-zero engagement creators are demoted when stronger options exist", () => {
   const pool = [
     {
