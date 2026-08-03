@@ -378,7 +378,7 @@ export function deriveCampaignProcessCue(signals: CampaignProcessSignals): Campa
       currentStageId: "billing",
       statusLabel:
         signals.billingOutstanding > 0 ? "Collections outstanding" : "Awaiting invoice",
-      lifecycleSignal: "waiting",
+      lifecycleSignal: "waiting_internal",
       nextActionLabel: "Open Finance",
       waitingFor: "Finance",
       nextStageId: null,
