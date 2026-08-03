@@ -133,6 +133,37 @@ describe("deriveCampaignProcessCue — business rules", () => {
     assert.equal(cue.entryStageId, "deliverables");
   });
 
+  it("list PO exceeded uses legacy line budget when governance PO is unset (STAB-012)", () => {
+    // TW-2026-0002: header po_amount_campaign_currency=0 but line PO totals exceeded.
+    const cue = deriveCampaignProcessCue(
+      signalsFromCampaignListItem({
+        id: "h2",
+        document_number: "TW-2026-0002",
+        name: "Test Client",
+        status: "active",
+        lines: [
+          { id: "l1", po_amount: 5714 } as never,
+          { id: "l2", po_amount: 1429 } as never,
+        ],
+        client_io_status: "approved",
+        has_client_io: true,
+        vendor_io_count: 1,
+        approved_vendor_io_count: 0,
+        sent_vendor_io_count: 1,
+        deliverable_count: 2,
+        performance_active: false,
+        po_amount_campaign_currency: 0,
+        po_consumed_amount: 7857.3,
+        po_remaining_amount: -7857.3,
+        po_status: "draft",
+      } as never)
+    );
+    assert.equal(cue.entryStageId, "billing");
+    assert.equal(cue.lifecycleSignal, "blocked");
+    assert.equal(cue.nextActionLabel, "Review PO Limit");
+    assert.ok(!/Open Vendor IO/i.test(cue.nextActionLabel));
+  });
+
   it("draft Client IO with existing record says Complete — not Generate (STAB-010)", () => {
     const cue = deriveCampaignProcessCue(
       base({

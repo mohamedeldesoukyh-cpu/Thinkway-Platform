@@ -10,9 +10,9 @@
 
 | Score | As of | Justification |
 |---|---|---|
-| **90 / 100** | 2026-08-03 STAB-007 live PASS | STAB-001/007/008/009/010/011 live PASS on Preview. Remaining gaps: STAB-006 mild labels, STAB-003 multi-brand full journeys (enterprise stop condition). |
+| **86 / 100** | 2026-08-03 STAB-012/014/015/016 found | Score dipped after portfolio PO lie (TW-2026-0002) and commercial 0% margin on L'Oréal. Prior lifecycle fixes remain live PASS. Score rises only after STAB-012 Preview live + progress on multi-brand soaks. |
 
-Score changes only with explicit issues below.
+Score is evidence-based — not optimized.
 
 ---
 
@@ -20,9 +20,13 @@ Score changes only with explicit issues below.
 
 | ID | Severity | Title | Root cause | Business impact | Evidence | Status |
 |---|---|---|---|---|---|---|
-| STAB-003 | High | Continuous multi-brand full journey soak incomplete | Incomplete session coverage | Enterprise confidence incomplete | Mandate | Open |
-| STAB-006 | Low | Breadcrumb Waiting Operations while Decision Center owner is Finance | waitingFor from process cue vs Decision Center primary | Mild label inconsistency | TW-2026-0005 | Open |
-| STAB-005 | Low | Soft finance alerts may be story-filtered behind Vendor IO | selectStoryBlockers one-family | Finance ops less visible mid-campaign | By design; monitor | Deferred |
+| STAB-012 | **High** | Portfolio shows Deliverables/Vendor IO while workspace DC is Finance PO exceeded | List `poExceeded` required governance budget>0; ignored legacy line PO fallback | Operators miss hard finance blocker | TW-2026-0002 list vs workspace | **Fixed in tip** — awaiting Preview |
+| STAB-014 | Medium | Vendor IO banner says “Campaign may continue” while DC Cannot advance | Banner ignored `progressionAllowed` | Contradictory guidance | TW-2026-0002 Vendor IO | **Fixed in tip** — awaiting Preview |
+| STAB-015 | Medium | Timeline “Deliverables Uploaded” Upcoming while operational explorer has rows | Timeline uses `workspace.deliverables` (legacy fetch) not assignment deliverables | Misleading journey progress | TW-2026-0002 Timeline | Open |
+| STAB-016 | High | L'Oréal Generate produced revenue=cost, 0% margin, agency_fee=0 | Generate path hardcodes agency_fee_percent:0; seeds may omit markup/VR | Unsellable commercial package | TW-2026-0006 lines | Open |
+| STAB-003 | High | Multi-brand full journey soak incomplete | Brands Noon/Trendyol/F1/Liwa/Alshaya/FirstCry/Dar missing; service_role cannot INSERT brands | Enterprise coverage incomplete | Dev brand inventory = 6 | Open |
+| STAB-006 | Low | Breadcrumb Waiting Operations vs Finance owner | waitingFor vs DC primary | Mild label inconsistency | TW-2026-0005 | Open |
+| STAB-005 | Low | Soft finance alerts story-filtered | selectStoryBlockers | Monitor | By design | Deferred |
 
 ---
 
@@ -30,14 +34,13 @@ Score changes only with explicit issues below.
 
 | ID | Severity | Title | Root cause | Fix | Validated |
 |---|---|---|---|---|---|
-| STAB-001 | Critical | TW-2026-0005 CIO Approved but Vendor IO locked / Campaign Issue payouts | Soft alerts → blockerCount + po in payouts | efb1c3b3 | PASS Preview |
-| STAB-002 | High | Live Preview re-validate TW-2026-0005 | Deploy lag | Preview @ develop | PASS |
-| STAB-008 | High | Portfolio list Generate Client IO despite CIO Approved | List signals hardcoded no CIO | 6f87093e | PASS live list |
-| STAB-009 | Medium | List Performance vs workspace Deliverables for Active | activePerformance status===active | 9a8aeccf | PASS TW-2026-5 Deliverables |
-| STAB-010 | High | Draft CIO labeled Generate Client IO | draft conflated with missing | e6f41b7a | PASS LOreal Complete CIO |
-| STAB-011 | High | Vendor IO drafts are ready with 0 orders | Hardcoded banner ignored count | 19ee1272 | PASS live |
-| STAB-007 | Medium | Deliverables badge 84 vs empty documentation repo | Tab wired to docs-only surface | 94e9c0c9 restore operational explorer | PASS live: Deliverables · 84 of 84 |
-| STAB-004 | Medium | Soak harness service-role denied on client_ios | Grants / RLS | Auth path for CIO probe | Noted; not product |
+| STAB-001 | Critical | CIO Approved but Vendor IO locked / payouts Campaign Issue | Soft alerts + po-in-payouts | efb1c3b3 | PASS Preview |
+| STAB-008 | High | List Generate Client IO despite CIO Approved | Hardcoded list signals | 6f87093e | PASS |
+| STAB-009 | Medium | List Performance for Active | status===active | 9a8aeccf | PASS |
+| STAB-010 | High | Draft CIO labeled Generate | draft conflated with missing | e6f41b7a | PASS |
+| STAB-011 | High | Vendor IO drafts ready with 0 | Hardcoded banner | 19ee1272 | PASS |
+| STAB-007 | Medium | Deliverables 84 vs empty docs repo | Wrong tab surface | 94e9c0c9 | PASS |
+| STAB-004 | Medium | Soak harness client_ios denied | RLS | Auth path | Noted |
 
 ---
 
@@ -45,24 +48,21 @@ Score changes only with explicit issues below.
 
 | Cycle | Tip | Campaigns | Journey | Result | Notes |
 |---|---|---|---|---|---|
-| S0 | c23a3a0e | e& TW-2026-0002 Prod | Full to VIO | PASS | R2.3 close |
-| S1-S2 | efb1c3b3 | TW-2026-0005 | Workspace | PASS | STAB-001 |
-| S3 | 6f87093e | /campaigns | Portfolio | PASS | STAB-008 |
-| S4 | 9a8aeccf | TW-2026-5 list | Stage | PASS | STAB-009 |
-| S5 | e6f41b7a | LOreal TW-2026-0006 | CIO draft | PASS | STAB-010 |
-| S6 | 19ee1272 | LOreal Vendor IO | Banner vs 0 | PASS | STAB-011 |
-| S7 | 94e9c0c9 | TW-2026-0005 Deliverables | Badge vs table | PASS | STAB-007 · 84 of 84 explorer |
-| S8+ | next | Multi-brand full journeys | Full spine | Pending | Continuous |
+| S0–S7 | prior | TW-2026-0005/6 + list | Lifecycle | PASS | STAB-001..011 |
+| S8 | tip | TW-2026-0002 | List vs DC PO | FAIL→FIX | STAB-012 |
+| S8 | tip | TW-2026-0002 | VIO banner | FAIL→FIX | STAB-014 |
+| S8 | tip | TW-2026-0006 | Commercial GP | FAIL | STAB-016 0% margin |
+| S8 | tip | Commercial probe | All headers | PASS | GP arithmetic OK |
+| S9+ | next | e& Intelligence + missing brands | Full spine | Pending | Continuous |
 
 ---
 
 ## Stop condition checklist
 
-- [x] STAB-001 workspace contradiction closed (live)
-- [x] Portfolio list matches workspace for approved CIO (STAB-008 live)
-- [x] STAB-009 list Performance lie Preview validated
-- [x] STAB-010 draft CIO messaging Preview validated
-- [x] STAB-011 Vendor IO drafts banner Preview validated
-- [x] STAB-007 Deliverables counter Preview validated
+- [x] Prior STAB-001/007–011 live PASS
+- [ ] STAB-012 Preview live validated
+- [ ] STAB-014 Preview live validated
+- [ ] STAB-015 timeline deliverables fixed + live
+- [ ] STAB-016 commercial margin Generate fixed + live
 - [ ] Multi-brand full journeys PASS (STAB-003)
-- [ ] Product Readiness >= 95 with evidence
+- [ ] Enterprise CTO Acceptance Review

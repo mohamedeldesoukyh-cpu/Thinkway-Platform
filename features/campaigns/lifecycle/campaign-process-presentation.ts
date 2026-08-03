@@ -20,6 +20,7 @@ import type {
   BusinessProcessWaitingParty,
 } from "@/lib/business-process/types";
 import { lifecycleSignalLabel } from "@/lib/business-process/types";
+import { resolveOperationalPo } from "@/lib/finance/po/operational-budget";
 import type { CampaignListItem, CampaignStatus } from "@/types/database";
 
 /** Practical process-rail stages (doc 12 clusters). Cross-cutting tabs stay navigable. */
@@ -116,11 +117,27 @@ export type CampaignProcessSignals = {
 };
 
 export function signalsFromCampaignListItem(campaign: CampaignListItem): CampaignProcessSignals {
-  const budget = Number(campaign.po_amount_campaign_currency ?? 0);
-  const consumed = Number(campaign.po_consumed_amount ?? 0);
   const clientIoStatus = campaign.client_io_status ?? null;
   const hasClientIo =
     campaign.has_client_io ?? Boolean(clientIoStatus);
+  // Match workspace PO resolution (STAB-012): when header governance PO is unset (0),
+  // fall back to line po_amount totals — never treat budget=0 as "not exceeded" while
+  // consumed remains positive against legacy line PO.
+  const legacyBudget = (campaign.lines ?? []).reduce(
+    (sum, line) => sum + Number(line.po_amount ?? 0),
+    0
+  );
+  const headerConsumed = Number(campaign.po_consumed_amount ?? 0);
+  const operationalPo = resolveOperationalPo({
+    po_amount_campaign_currency: campaign.po_amount_campaign_currency,
+    po_consumed_amount: campaign.po_consumed_amount,
+    po_remaining_amount: campaign.po_remaining_amount,
+    po_remaining_percent: campaign.po_remaining_percent,
+    po_status: campaign.po_status,
+    po_expiry_date: campaign.po_expiry_date,
+    legacy_budget: legacyBudget,
+    legacy_consumed: headerConsumed,
+  });
   return {
     status: campaign.status,
     lineCount: campaign.lines?.length ?? 0,
@@ -137,7 +154,7 @@ export function signalsFromCampaignListItem(campaign: CampaignListItem): Campaig
     invoiceCount: 0,
     billingOutstanding: 0,
     blockerCount: 0,
-    poExceeded: budget > 0 && consumed > budget,
+    poExceeded: operationalPo.po_exceeded,
   };
 }
 
