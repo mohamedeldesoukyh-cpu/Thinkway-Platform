@@ -175,7 +175,7 @@ test("low campaign-fit celebrities are demoted when stronger fits exist", () => 
   assert.ok(!creators.some((c) => c.id === "celeb"));
 });
 
-test("when all scored creators are below fit floor, slate stays empty rather than padding weak", () => {
+test("when all scored creators are below fit floor, keep best-scored rather than empty slate", () => {
   const pool = [
     { ...creator("weak-a", "instagram", 200_000, ["Tech"]), campaignRelevanceScore: 40 },
     { ...creator("weak-b", "instagram", 180_000, ["Tech"]), campaignRelevanceScore: 35 },
@@ -185,7 +185,8 @@ test("when all scored creators are below fit floor, slate stays empty rather tha
     preferredCategories: ["Tech"],
     targetCount: 5,
   });
-  assert.equal(creators.length, 0);
+  assert.equal(creators.length, 3);
+  assert.equal(creators[0]?.id, "weak-a");
 });
 
 test("near-zero engagement creators are demoted when stronger options exist", () => {

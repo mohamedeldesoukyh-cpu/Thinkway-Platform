@@ -206,19 +206,24 @@ export function composeCreatorSlate(
 
   const withTier = pool.map((c) => ({ ...c, tier: c.tier ?? creatorTierOf(c) }));
 
-  // Prefer fewer excellent creators. Creators below FIT_FLOOR never pad a slate
-  // when campaign-relevance scores are present — an empty/short slate is better
-  // than boardroom-weak recommendations (seen on thin Tech inventory).
+  // Prefer fewer excellent creators. Creators below FIT_FLOOR should not pad a
+  // slate when stronger fits exist. When *no* creator meets the floor but the
+  // pool is non-empty, keep the best-scored creators — an empty slate blocks
+  // Approve → Generate and is worse than a conservative near-floor shortlist.
   const scored = withTier.filter((c) => c.campaignRelevanceScore != null);
   const unscored = withTier.filter((c) => c.campaignRelevanceScore == null);
   const strongFit = (scored.length > 0 ? scored : withTier).filter(
     (c) => fitScoreOf(c) >= FIT_FLOOR
   );
+  const bestAvailable =
+    scored.length > 0
+      ? [...scored].sort((a, b) => fitScoreOf(b) - fitScoreOf(a))
+      : withTier;
   const fitPool =
     scored.length > 0
       ? strongFit.length > 0
         ? strongFit
-        : []
+        : bestAvailable
       : withTier.length > 0
         ? withTier
         : unscored;
