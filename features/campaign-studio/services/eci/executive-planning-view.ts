@@ -280,7 +280,14 @@ export function buildStudioExecutivePlanningSummary(
   if (blended >= 85) level = "Very High";
   else if (blended >= 70) level = "High";
   else if (blended >= 50) level = "Moderate";
-  if (!signals?.length) level = creators.recommendations?.creatorIds?.length ? "Moderate" : "Low";
+  const slateCount = creators.recommendations?.creatorIds?.length ?? 0;
+  // CIP-backed slates should not read as boardroom "Low" solely because ECI
+  // coverage is sparse — floor at Moderate when a real shortlist exists.
+  if (!signals?.length) {
+    level = slateCount > 0 ? "Moderate" : "Low";
+  } else if (level === "Low" && slateCount >= 5) {
+    level = "Moderate";
+  }
 
   const strategyText =
     typeof campaignObject.sections.strategy.content === "string"
