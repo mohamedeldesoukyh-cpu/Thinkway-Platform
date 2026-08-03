@@ -25,6 +25,7 @@ import { mapBrowseCreatorToSearchResult } from "@/features/campaign-studio/servi
 import {
   buildCreatorContentIdea,
   composeCreatorSlate,
+  sanitizePreferredCategories,
 } from "@/features/campaign-studio/services/creator-slate";
 import { detectIndustryFromBrief } from "@/features/campaign-studio/services/industry-intelligence";
 import { getIndustryCreatorMix } from "@/features/campaign-studio/services/presentation-intelligence";
@@ -199,17 +200,17 @@ export async function searchCreatorsFromProfileData(
     tier: t.tier,
     percent: t.percent,
   }));
-  const preferredCategories = [
+  const preferredCategories = sanitizePreferredCategories([
     ...mappedFilters.filter((f) => f.key === "category").map((f) => f.value),
     ...(profile.creatorCategories ?? []),
-  ];
+  ]);
   const slate = composeCreatorSlate(dedupedCreators, {
     platforms: preferredPlatforms,
     tierMix,
     preferredCategories,
     /** Cap consulting slate size so tier mix stays decisive on a boardroom shortlist. */
     targetCount:
-      dedupedCreators.length > 0 ? Math.min(12, dedupedCreators.length) : undefined,
+      dedupedCreators.length > 0 ? Math.min(10, dedupedCreators.length) : undefined,
     /** Platform is a mandatory enterprise constraint — never fall back to off-platform. */
     strictPlatform: preferredPlatforms.length > 0,
   });
@@ -228,6 +229,9 @@ export async function searchCreatorsFromProfileData(
     {
       profileId,
       industry,
+      preferredCategories: slate.meta.preferredCategories,
+      categoryFallback: slate.meta.categoryFallback,
+      offCategoryPadCount: slate.meta.offCategoryPadCount,
       requestedMix: slate.meta.requestedMix,
       achievedMix: slate.meta.achievedMix,
       platformFiltered: slate.meta.platformFiltered,
@@ -235,6 +239,22 @@ export async function searchCreatorsFromProfileData(
     },
     { path: "ai" }
   );
+
+  const categoryRelaxation =
+    slate.meta.categoryFallback && preferredCategories.length > 0
+      ? [
+          {
+            key: "category",
+            value: preferredCategories.join(", "),
+            label: preferredCategories
+              .map((c) => c.charAt(0).toUpperCase() + c.slice(1))
+              .join(", "),
+            reason:
+              slate.meta.categoryFallbackReason ??
+              "Preferred category inventory was thin — adjacent creators added.",
+          },
+        ]
+      : [];
 
   return {
     creators: slateCreators,
@@ -249,7 +269,7 @@ export async function searchCreatorsFromProfileData(
         label: c.label,
       })),
       rejectedMandatoryCount: constrained.rejectedMandatoryCount,
-      relaxations: constrained.relaxations,
+      relaxations: [...constrained.relaxations, ...categoryRelaxation],
     },
   };
 }

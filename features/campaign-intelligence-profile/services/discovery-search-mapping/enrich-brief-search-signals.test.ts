@@ -66,4 +66,35 @@ assert.ok(
   "thin beauty briefs must enrich preferred Beauty category"
 );
 
+const beautyWithLifestyle = enrichBriefSearchSignals(beautyProfile, {
+  filters: [
+    {
+      id: "cat-b",
+      key: "category",
+      label: "Category",
+      value: "Beauty",
+      confidence: 0.9,
+      weight: 100,
+    },
+    {
+      id: "cat-l",
+      key: "category",
+      label: "Category",
+      value: "Lifestyle",
+      confidence: 0.7,
+      weight: 90,
+    },
+  ],
+  skipped: [],
+});
+assert.ok(
+  beautyWithLifestyle.filters.some((f) => f.key === "category" && f.value === "Beauty")
+);
+assert.ok(
+  !beautyWithLifestyle.filters.some(
+    (f) => f.key === "category" && f.value.toLowerCase() === "lifestyle"
+  ),
+  "Lifestyle must not remain a preferred category alongside Beauty"
+);
+
 console.log("enrich-brief-search-signals tests passed");

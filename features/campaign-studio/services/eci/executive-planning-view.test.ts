@@ -98,7 +98,12 @@ test("planning confidence floors at Moderate when slate intel exists without cre
     objective: "F1 Abu Dhabi awareness",
   };
   object.sections.creators.data = {
-    recommendations: { creatorIds: [], selectedReasoning: [], rejectedReasoning: [] },
+    recommendations: {
+      creatorIds: [],
+      selectedReasoning: [],
+      rejectedReasoning: [],
+      avgFitScore: 72,
+    },
     slateIntelligence: {
       actualMix: [],
       tierShortages: [],

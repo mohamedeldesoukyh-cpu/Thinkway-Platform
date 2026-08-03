@@ -7,6 +7,7 @@ import {
   buildCreatorContentIdea,
   composeCreatorSlate,
   isTrendCampaign,
+  sanitizePreferredCategories,
 } from "./creator-slate";
 
 function creator(
@@ -97,6 +98,52 @@ test("preferred categories soft-bias the slate before off-category backfill", ()
   });
   assert.equal(creators.length, 3);
   assert.ok(creators.every((c) => (c.categories ?? []).includes("Beauty")));
+});
+
+test("sanitizePreferredCategories drops Lifestyle when a vertical is present", () => {
+  assert.deepEqual(sanitizePreferredCategories(["Beauty", "Lifestyle", "Skincare"]), [
+    "beauty",
+    "skincare",
+  ]);
+  assert.deepEqual(sanitizePreferredCategories(["Lifestyle"]), ["lifestyle"]);
+});
+
+test("beauty briefs do not pad with Lifestyle when enough Beauty creators exist", () => {
+  const pool = [
+    ...Array.from({ length: 6 }, (_, i) =>
+      creator(`beauty-${i}`, "instagram", 200_000 - i * 10_000, ["Beauty"])
+    ),
+    ...Array.from({ length: 8 }, (_, i) =>
+      creator(`life-${i}`, "instagram", 500_000 - i * 10_000, ["Lifestyle"])
+    ),
+  ];
+  const { creators, meta } = composeCreatorSlate(pool, {
+    preferredCategories: ["Beauty", "Lifestyle"],
+    targetCount: 10,
+  });
+  assert.ok(creators.length >= 5);
+  assert.ok(creators.every((c) => (c.categories ?? []).includes("Beauty")));
+  assert.equal(meta.categoryFallback, false);
+  assert.ok(!creators.some((c) => c.id.startsWith("life-")));
+});
+
+test("thin beauty inventory pads with adjacent categories and explains it", () => {
+  const pool = [
+    creator("beauty-1", "instagram", 220_000, ["Beauty"]),
+    creator("beauty-2", "instagram", 180_000, ["Beauty"]),
+    creator("life-1", "instagram", 400_000, ["Lifestyle"]),
+    creator("life-2", "instagram", 350_000, ["Lifestyle"]),
+    creator("life-3", "instagram", 300_000, ["Lifestyle"]),
+    creator("food-1", "instagram", 280_000, ["Food"]),
+  ];
+  const { creators, meta } = composeCreatorSlate(pool, {
+    preferredCategories: ["Beauty"],
+    targetCount: 10,
+  });
+  assert.equal(meta.categoryFallback, true);
+  assert.ok((meta.offCategoryPadCount ?? 0) >= 1);
+  assert.match(meta.categoryFallbackReason ?? "", /padded|adjacent/i);
+  assert.ok(creators.some((c) => (c.categories ?? []).includes("Beauty")));
 });
 
 test("low campaign-fit celebrities are demoted when stronger fits exist", () => {

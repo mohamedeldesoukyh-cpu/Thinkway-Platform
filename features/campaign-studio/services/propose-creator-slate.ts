@@ -80,7 +80,7 @@ export function proposeInitialCreatorSlateWithStatus(
   const cards = pool.map(groundedCreatorToSearchCard);
   const tierMix = facts ? buildCreatorMixFromFacts(facts) : [];
   const targetCount =
-    tierMix.reduce((s, t) => s + (t.count ?? 0), 0) || Math.min(cards.length, 12);
+    tierMix.reduce((s, t) => s + (t.count ?? 0), 0) || Math.min(cards.length, 10);
   const { creators: ranked } = composeCreatorSlate(cards, {
     platforms: facts?.platforms,
     tierMix,

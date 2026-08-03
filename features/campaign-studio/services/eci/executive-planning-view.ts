@@ -297,11 +297,16 @@ export function buildStudioExecutivePlanningSummary(
   else if (blended >= 70) level = "High";
   else if (blended >= 50) level = "Moderate";
   const slateCount = resolvePlanningSlateCount(creators);
-  // CIP-backed slates should not read as boardroom "Low" solely because ECI
-  // coverage is sparse — floor at Moderate when a real shortlist exists.
+  const avgFit = creators.recommendations?.avgFitScore ?? 0;
+  const categoryPadded = (creators.constraintReport?.relaxations ?? []).some(
+    (r) => r.key === "category"
+  );
+  // Floor only when the slate is both sized and commercially credible —
+  // never inflate Moderate over thin fit or unexplained category padding.
+  const credibleSlate = slateCount >= 5 && avgFit >= 55 && !categoryPadded;
   if (!signals?.length) {
-    level = slateCount > 0 ? "Moderate" : "Low";
-  } else if (level === "Low" && slateCount >= 5) {
+    level = credibleSlate ? "Moderate" : slateCount > 0 && avgFit >= 55 ? "Moderate" : "Low";
+  } else if (level === "Low" && credibleSlate) {
     level = "Moderate";
   }
 

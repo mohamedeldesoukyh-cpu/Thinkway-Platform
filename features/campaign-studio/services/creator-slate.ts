@@ -25,6 +25,12 @@ export type SlateCompositionMeta = {
   achievedMix: Array<{ tier: string; count: number; percent: number }>;
   platformFiltered: boolean;
   platformFallback: boolean;
+  /** Preferred categories after Lifestyle hygiene. */
+  preferredCategories?: string[];
+  /** True when off-category creators were required to reach a workable slate. */
+  categoryFallback?: boolean;
+  offCategoryPadCount?: number;
+  categoryFallbackReason?: string;
 };
 
 /** Lowercased tier labels accepted per strategy-mix tier name. */
@@ -37,6 +43,36 @@ const TIER_ALIASES: Record<string, string[]> = {
   micro: ["micro"],
   nano: ["nano"],
 };
+
+/**
+ * Commercial verticals — when any of these are preferred, generic Lifestyle
+ * must not count as an on-brief category match (padding only, with explanation).
+ */
+const VERTICAL_CATEGORY_TOKENS = [
+  "beauty",
+  "skincare",
+  "fashion",
+  "sports",
+  "sport",
+  "fitness",
+  "travel",
+  "adventure",
+  "entertainment",
+  "music",
+  "gaming",
+  "food",
+  "tech",
+  "technology",
+  "parenting",
+  "family",
+  "automotive",
+  "culture",
+  "comedy",
+] as const;
+
+const FIT_FLOOR = 55;
+const MIN_VERTICAL_SLATE = 5;
+const MAX_QUALITY_SLATE = 10;
 
 /** Canonical platform slug via the shared taxonomy (no local alias table). */
 function normalizePlatformKey(platform: string): string {
@@ -85,6 +121,26 @@ export function allocateTierCounts(mix: TierMixTarget[], targetCount: number): M
   return counts;
 }
 
+function isVerticalCategory(token: string): boolean {
+  const t = token.trim().toLowerCase();
+  if (!t) return false;
+  return VERTICAL_CATEGORY_TOKENS.some(
+    (vertical) => t === vertical || t.includes(vertical) || vertical.includes(t)
+  );
+}
+
+/**
+ * Drop generic Lifestyle from preferred categories when a commercial vertical
+ * is already stated — Lifestyle must not silently qualify as on-brief.
+ */
+export function sanitizePreferredCategories(categories: string[]): string[] {
+  const normalized = [
+    ...new Set(categories.map((c) => c.trim().toLowerCase()).filter(Boolean)),
+  ];
+  if (!normalized.some(isVerticalCategory)) return normalized;
+  return normalized.filter((c) => c !== "lifestyle");
+}
+
 function creatorMatchesPreferredCategories(
   creator: Pick<SearchCreatorCardItem, "categories">,
   preferredCategories: string[]
@@ -97,13 +153,17 @@ function creatorMatchesPreferredCategories(
   );
 }
 
+function fitScoreOf(creator: SearchCreatorCardItem): number {
+  return creator.campaignRelevanceScore ?? 100;
+}
+
 export function composeCreatorSlate(
   creators: SearchCreatorCardItem[],
   options: {
     platforms?: string[];
     tierMix?: TierMixTarget[];
     targetCount?: number;
-    /** Preferred CIP categories — soft bias; never hard-excludes when inventory is thin. */
+    /** Preferred CIP categories — soft bias; pad off-category only when justified. */
     preferredCategories?: string[];
     /**
      * When true (enterprise mandatory platform), never fall back to off-platform
@@ -112,12 +172,9 @@ export function composeCreatorSlate(
     strictPlatform?: boolean;
   }
 ): { creators: SearchCreatorCardItem[]; meta: SlateCompositionMeta } {
-  const targetCount = Math.min(options.targetCount ?? creators.length, creators.length);
+  const preferredCategories = sanitizePreferredCategories(options.preferredCategories ?? []);
   const requestedPlatforms = (options.platforms ?? [])
     .map(normalizePlatformKey)
-    .filter(Boolean);
-  const preferredCategories = (options.preferredCategories ?? [])
-    .map((c) => c.trim().toLowerCase())
     .filter(Boolean);
 
   // Hard platform constraint: an explicit brief platform excludes off-platform
@@ -134,7 +191,10 @@ export function composeCreatorSlate(
       pool = filtered;
       platformFiltered = true;
       platformFallback = false;
-    } else if (filtered.length >= Math.min(3, targetCount)) {
+    } else if (
+      filtered.length > 0 &&
+      filtered.length >= Math.min(3, options.targetCount ?? creators.length)
+    ) {
       pool = filtered;
       platformFiltered = true;
     } else {
@@ -142,34 +202,73 @@ export function composeCreatorSlate(
     }
   }
 
-  // Soft category + fit bias: keep rank order inside each bucket, but fill
-  // slots from on-category / stronger-fit creators first so beauty briefs do
-  // not pad with food/travel and celebrity reach does not outrank weak fit.
   const withTier = pool.map((c) => ({ ...c, tier: c.tier ?? creatorTierOf(c) }));
-  const FIT_FLOOR = 50;
-  const strongFitIds = new Set(
-    withTier
-      .filter((c) => (c.campaignRelevanceScore ?? 100) >= FIT_FLOOR)
-      .map((c) => c.id)
-  );
-  const fitBiased =
-    strongFitIds.size >= Math.min(3, targetCount)
-      ? [
-          ...withTier.filter((c) => strongFitIds.has(c.id)),
-          ...withTier.filter((c) => !strongFitIds.has(c.id)),
-        ]
-      : withTier;
-  const orderedPool =
-    preferredCategories.length === 0
-      ? fitBiased
-      : [
-          ...fitBiased.filter((c) => creatorMatchesPreferredCategories(c, preferredCategories)),
-          ...fitBiased.filter((c) => !creatorMatchesPreferredCategories(c, preferredCategories)),
-        ];
 
+  // Demote / drop weak campaign fit when enough stronger fits exist.
+  const strongFit = withTier.filter((c) => fitScoreOf(c) >= FIT_FLOOR);
+  const fitBiased =
+    strongFit.length >= Math.min(3, options.targetCount ?? (strongFit.length || 1))
+      ? strongFit
+      : withTier;
+
+  let orderedPool = fitBiased;
+  let categoryFallback = false;
+  let offCategoryPadCount = 0;
+  let categoryFallbackReason: string | undefined;
+  const requestedTarget = options.targetCount ?? fitBiased.length;
+  let effectiveTarget = Math.min(requestedTarget, fitBiased.length);
+
+  if (preferredCategories.length > 0) {
+    // Vertical briefs: prefer quality over filling a long generic slate.
+    effectiveTarget = Math.min(effectiveTarget, MAX_QUALITY_SLATE);
+    const onCategory = fitBiased.filter((c) =>
+      creatorMatchesPreferredCategories(c, preferredCategories)
+    );
+    const offCategory = fitBiased.filter(
+      (c) => !creatorMatchesPreferredCategories(c, preferredCategories)
+    );
+    const verticalLabel = preferredCategories
+      .map((c) => c.charAt(0).toUpperCase() + c.slice(1))
+      .join(", ");
+
+    if (onCategory.length >= MIN_VERTICAL_SLATE) {
+      // Prefer fewer excellent on-category creators over Lifestyle padding.
+      orderedPool = onCategory;
+      effectiveTarget = Math.min(effectiveTarget, onCategory.length, MAX_QUALITY_SLATE);
+    } else if (onCategory.length > 0 && onCategory.length >= requestedTarget) {
+      // Requested slate is small enough to stay fully on-category.
+      orderedPool = onCategory;
+      effectiveTarget = Math.min(effectiveTarget, onCategory.length);
+    } else if (onCategory.length > 0) {
+      // Inventory thin — pad with adjacent creators and explain.
+      orderedPool = [...onCategory, ...offCategory];
+      categoryFallback = true;
+      const padTarget = Math.min(MIN_VERTICAL_SLATE, orderedPool.length, MAX_QUALITY_SLATE);
+      offCategoryPadCount = Math.max(0, padTarget - onCategory.length);
+      effectiveTarget = Math.min(padTarget, orderedPool.length);
+      categoryFallbackReason =
+        `Only ${onCategory.length} ${verticalLabel} creator${onCategory.length === 1 ? "" : "s"} matched inventory — ` +
+        `padded with adjacent categories to reach a workable slate of ${effectiveTarget}.`;
+    } else if (offCategory.length > 0) {
+      orderedPool = offCategory;
+      categoryFallback = true;
+      offCategoryPadCount = Math.min(MIN_VERTICAL_SLATE, offCategory.length);
+      effectiveTarget = Math.min(MIN_VERTICAL_SLATE, offCategory.length, MAX_QUALITY_SLATE);
+      categoryFallbackReason =
+        `No ${verticalLabel} creators matched inventory — recommending adjacent-category creators ` +
+        `while mandatory country/platform gates still apply.`;
+    }
+  }
+
+  const targetCount = Math.min(effectiveTarget, orderedPool.length);
   const mix = (options.tierMix ?? []).filter((m) => m.percent > 0);
   if (mix.length === 0) {
     const slate = orderedPool.slice(0, targetCount);
+    const padded = slate.filter(
+      (c) =>
+        preferredCategories.length > 0 &&
+        !creatorMatchesPreferredCategories(c, preferredCategories)
+    ).length;
     return {
       creators: slate,
       meta: {
@@ -177,6 +276,10 @@ export function composeCreatorSlate(
         achievedMix: summarizeMix(slate),
         platformFiltered,
         platformFallback,
+        preferredCategories,
+        categoryFallback: categoryFallback || padded > 0,
+        offCategoryPadCount: categoryFallback ? Math.max(offCategoryPadCount, padded) : padded,
+        categoryFallbackReason,
       },
     };
   }
@@ -199,14 +302,19 @@ export function composeCreatorSlate(
     }
   }
 
-  // Backfill under-supplied tiers with the best remaining creators by rank
-  // (still category-biased via orderedPool).
+  // Backfill under-supplied tiers from the (already category-gated) pool.
   for (const creator of orderedPool) {
     if (slate.length >= targetCount) break;
     if (used.has(creator.id)) continue;
     slate.push(creator);
     used.add(creator.id);
   }
+
+  const padded = slate.filter(
+    (c) =>
+      preferredCategories.length > 0 &&
+      !creatorMatchesPreferredCategories(c, preferredCategories)
+  ).length;
 
   return {
     creators: slate,
@@ -215,6 +323,10 @@ export function composeCreatorSlate(
       achievedMix: summarizeMix(slate),
       platformFiltered,
       platformFallback,
+      preferredCategories,
+      categoryFallback: categoryFallback || padded > 0,
+      offCategoryPadCount: categoryFallback ? Math.max(offCategoryPadCount, padded) : padded,
+      categoryFallbackReason,
     },
   };
 }

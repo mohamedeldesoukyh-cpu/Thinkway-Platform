@@ -1,3 +1,5 @@
+import { sanitizePreferredCategories } from "@/features/campaign-studio/services/creator-slate";
+
 import { brandMatchesAlias } from "../brand-resolution";
 import type { CampaignIntelligenceProfile } from "../../types/profile";
 import type { DiscoveryMappedFilter, DiscoverySearchMappingResult } from "./types";
@@ -77,7 +79,7 @@ export function enrichBriefSearchSignals(
   result: DiscoverySearchMappingResult
 ): DiscoverySearchMappingResult {
   const text = collectBriefText(profile);
-  const filters = [...result.filters];
+  let filters = [...result.filters];
 
   const wantsTikTok = /\btiktok\b/i.test(text);
   const wantsInstagram = /\binstagram\b|\big\b/i.test(text);
@@ -241,6 +243,19 @@ export function enrichBriefSearchSignals(
         weight,
       });
     }
+  }
+
+  // When Beauty/Fashion/Sports/Travel (etc.) is already preferred, drop generic
+  // Lifestyle as a category filter so discovery criteria and slates stay vertical.
+  const categoryValues = filters
+    .filter((f) => f.key === "category")
+    .map((f) => f.value);
+  const keptCategories = new Set(sanitizePreferredCategories(categoryValues));
+  if (keptCategories.size < categoryValues.length) {
+    filters = filters.filter(
+      (f) =>
+        f.key !== "category" || keptCategories.has(f.value.trim().toLowerCase())
+    );
   }
 
   return { filters, skipped: result.skipped };
