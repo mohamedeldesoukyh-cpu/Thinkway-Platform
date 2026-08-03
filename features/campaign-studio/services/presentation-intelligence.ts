@@ -1167,10 +1167,24 @@ export function deriveOpportunities(
   return byIndustry[industry];
 }
 
+/** Cap AI template confidence so it never outruns slate fit evidence. */
+export function evidenceAwareGroundingConfidence(
+  avgFitScore: number | null | undefined,
+  templateConfidence: number
+): number {
+  if (avgFitScore == null || !Number.isFinite(avgFitScore)) {
+    return Math.min(templateConfidence, 75);
+  }
+  // Never present package confidence materially above demonstrated campaign fit.
+  const evidenceCap = Math.round(Math.min(92, Math.max(35, avgFitScore + 5)));
+  return Math.min(templateConfidence, evidenceCap);
+}
+
 export function deriveExecutiveSummary(
   strategyText: string,
   audienceText: string,
-  summaryText: string
+  summaryText: string,
+  options?: { avgFitScore?: number | null }
 ): ExecutiveSummaryData {
   const combined = [strategyText, audienceText, summaryText].filter(Boolean).join("\n");
   const industry = detectIndustryFromBrief(combined);
@@ -1178,6 +1192,10 @@ export function deriveExecutiveSummary(
   const client = resolveClientFromBrief(combined);
   const weeks = parseDurationWeeks(combined);
   const fields = deriveExecutiveStrategyFields(strategyText, audienceText, summaryText);
+  const groundingConfidence = evidenceAwareGroundingConfidence(
+    options?.avgFitScore,
+    91
+  );
 
   const summaries: Record<CampaignIndustry, string> = {
     luxury: `${client} requires a prestige-building campaign targeting affluent professionals through curated macro and celebrity creators on Instagram and YouTube. The ${weeks}-week plan prioritizes editorial-quality production and selective paid amplification to HNW audiences.`,
@@ -1214,8 +1232,11 @@ export function deriveExecutiveSummary(
       : `${profile.campaignType} — ${profile.estimatedReach} over ${weeks} weeks`,
     grounding: {
       source: "AI",
-      confidence: 91,
-      reason: "Synthesized from brief, industry intelligence, and historical campaign data",
+      confidence: groundingConfidence,
+      reason:
+        options?.avgFitScore != null
+          ? `Synthesized from brief and slate evidence (avg campaign fit ${Math.round(options.avgFitScore)}/100)`
+          : "Synthesized from brief, industry intelligence, and historical campaign data",
       evidence: `${client} · ${profile.label} · ${weeks} weeks · Thinkway campaign database`,
     },
   };

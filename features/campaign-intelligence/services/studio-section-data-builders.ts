@@ -423,8 +423,15 @@ export function buildPresentationSectionExtras(
     (s) => s.status === "complete"
   ).length;
 
+  const creatorsData = campaignObject.sections.creators.data as
+    | { recommendations?: { avgFitScore?: number | null } }
+    | undefined;
+  const avgFitScore = creatorsData?.recommendations?.avgFitScore ?? null;
+
   return {
-    executiveSummary: deriveExecutiveSummary(strategyText, audienceText, summaryText),
+    executiveSummary: deriveExecutiveSummary(strategyText, audienceText, summaryText, {
+      avgFitScore,
+    }),
     completion: {
       sectionsComplete,
       totalSections,

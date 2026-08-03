@@ -146,6 +146,23 @@ test("thin beauty inventory pads with adjacent categories and explains it", () =
   assert.ok(creators.some((c) => (c.categories ?? []).includes("Beauty")));
 });
 
+test("tech briefs with ≥3 on-category creators do not pad with food/lifestyle", () => {
+  const pool = [
+    { ...creator("tech-1", "instagram", 90_000, ["Tech"]), campaignRelevanceScore: 85 },
+    { ...creator("tech-2", "instagram", 80_000, ["Tech"]), campaignRelevanceScore: 80 },
+    { ...creator("tech-3", "instagram", 70_000, ["Tech"]), campaignRelevanceScore: 75 },
+    { ...creator("tech-4", "instagram", 60_000, ["Tech"]), campaignRelevanceScore: 75 },
+    { ...creator("food-1", "instagram", 400_000, ["Food"]), campaignRelevanceScore: 65 },
+  ];
+  const { creators, meta } = composeCreatorSlate(pool, {
+    preferredCategories: ["Tech"],
+    targetCount: 5,
+  });
+  assert.ok(creators.every((c) => (c.categories ?? []).includes("Tech")));
+  assert.equal(meta.categoryFallback, false);
+  assert.ok(!creators.some((c) => c.id === "food-1"));
+});
+
 test("low campaign-fit celebrities are demoted when stronger fits exist", () => {
   const pool = [
     { ...creator("celeb", "instagram", 10_000_000, ["Lifestyle"]), campaignRelevanceScore: 30 },

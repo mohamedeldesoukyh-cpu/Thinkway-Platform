@@ -250,8 +250,10 @@ export function composeCreatorSlate(
       .map((c) => c.charAt(0).toUpperCase() + c.slice(1))
       .join(", ");
 
-    if (onCategory.length >= MIN_VERTICAL_SLATE) {
-      // Prefer fewer excellent on-category creators over Lifestyle padding.
+    // Prefer a short on-category slate (≥3) over padding with off-brief creators
+    // just to hit a longer count — boardroom quality over completeness.
+    const MIN_ON_CATEGORY_NO_PAD = 3;
+    if (onCategory.length >= MIN_ON_CATEGORY_NO_PAD) {
       orderedPool = onCategory;
       effectiveTarget = Math.min(effectiveTarget, onCategory.length, MAX_QUALITY_SLATE);
     } else if (onCategory.length > 0 && onCategory.length >= requestedTarget) {
@@ -259,7 +261,7 @@ export function composeCreatorSlate(
       orderedPool = onCategory;
       effectiveTarget = Math.min(effectiveTarget, onCategory.length);
     } else if (onCategory.length > 0) {
-      // Inventory thin — pad with adjacent creators and explain.
+      // Truly thin inventory (<3 on-category) — pad with adjacent creators and explain.
       orderedPool = [...onCategory, ...offCategory];
       categoryFallback = true;
       const padTarget = Math.min(MIN_VERTICAL_SLATE, orderedPool.length, MAX_QUALITY_SLATE);
