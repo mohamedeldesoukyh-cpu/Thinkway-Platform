@@ -40,12 +40,12 @@ export type VendorRejectedReasoning = {
 function inferTier(
   creator: GroundedCreator,
   index: number,
-  strategy: CampaignStrategyDocument
+  strategy?: CampaignStrategyDocument | null
 ): string {
   const followers = creator.followers ?? 0;
   if (followers > 0) return getInfluencerTier(followers);
-  const tiers = strategy.creatorTierStrategy.map((t) => t.tier);
-  return tiers[index % tiers.length] ?? "Micro";
+  const tiers = (strategy?.creatorTierStrategy ?? []).map((t) => t.tier);
+  return tiers[index % Math.max(tiers.length, 1)] ?? "Micro";
 }
 
 function creatorFitScore(creator: GroundedCreator): number {
@@ -172,12 +172,14 @@ function buildRejection(
 
 export function buildVendorRecommendationReasoning(
   facts: CampaignFacts,
-  strategy: CampaignStrategyDocument,
+  strategy: CampaignStrategyDocument | null | undefined,
   selectedCreators: GroundedCreator[],
   poolCreators: GroundedCreator[] = [],
   debateResult?: DebateResult
 ): VendorRecommendationReasoning {
-  const ctx = buildIs1CampaignContext(facts, strategy);
+  // Facts alone are enough for boardroom why-selected — strategy may arrive later
+  // in the Director pipeline after the slate is first proposed.
+  const ctx = buildIs1CampaignContext(facts, strategy ?? undefined);
   const brandLower = ctx.brand.toLowerCase();
   const isBaby = /babyjoy|baby/i.test(brandLower);
   const isCoke = /coca/i.test(brandLower);
@@ -242,7 +244,9 @@ export function buildVendorRecommendationReasoning(
   }
 
   const debateTierNote = debateResult
-    ? ` IS-3 debate: ${debateResult.meeting.winnerLabel} tier mix (${strategy.creatorTierStrategy.map((t) => `${t.tier} ${t.allocationPercent}%`).join(" · ")}) survived agency leadership review — creators aligned to winning Option ${debateResult.meeting.winnerId}.`
+    ? ` IS-3 debate: ${debateResult.meeting.winnerLabel} tier mix (${(strategy?.creatorTierStrategy ?? [])
+        .map((t) => `${t.tier} ${t.allocationPercent}%`)
+        .join(" · ")}) survived agency leadership review — creators aligned to winning Option ${debateResult.meeting.winnerId}.`
     : "";
 
   const selectedWithDebate = selected.map((s) =>

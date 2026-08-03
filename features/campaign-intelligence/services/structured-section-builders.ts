@@ -388,10 +388,16 @@ export function buildCreatorRecommendationData(
       ? Math.round(ranked.reduce((sum, c) => sum + c.fitScore, 0) / ranked.length)
       : undefined;
 
-  const reasoning =
-    facts && strategy
-      ? buildVendorRecommendationReasoning(facts, strategy, ranked, poolCreators ?? [])
-      : null;
+  // Facts alone are enough for why-selected — strategy may not be on the
+  // CampaignObject yet when CIP proposes the first slate.
+  const reasoning = facts
+    ? buildVendorRecommendationReasoning(
+        facts,
+        strategy,
+        ranked,
+        poolCreators ?? []
+      )
+    : null;
 
   return {
     creatorIds: suggestion.creatorIds,

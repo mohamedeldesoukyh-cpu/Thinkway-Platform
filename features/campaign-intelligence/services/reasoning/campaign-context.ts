@@ -45,42 +45,42 @@ function cleanGeographyLabel(value: string | undefined | null): string | undefin
 
 export function buildIs1CampaignContext(
   facts: CampaignFacts,
-  strategy: CampaignStrategyDocument
+  strategy?: CampaignStrategyDocument | null
 ): Is1CampaignContext {
+  const understanding = strategy?.understanding;
   const industry =
     facts.industry ??
-    strategy.understanding.industry ??
-    detectIndustryFromBrief(facts.rawBriefExcerpt ?? strategy.narrative);
+    understanding?.industry ??
+    detectIndustryFromBrief(facts.rawBriefExcerpt ?? strategy?.narrative);
 
   const brand =
     cleanBrandLabel(facts.brandName) ??
-    cleanBrandLabel(strategy.understanding.brand) ??
+    cleanBrandLabel(understanding?.brand) ??
     cleanBrandLabel(facts.clientName) ??
     "the brand";
 
   const geography =
     cleanGeographyLabel(facts.geography?.join(", ")) ??
-    cleanGeographyLabel(strategy.understanding.geography) ??
+    cleanGeographyLabel(understanding?.geography) ??
     "the primary market";
 
   return {
     brand,
-    client: cleanBrandLabel(facts.clientName) ?? cleanBrandLabel(strategy.understanding.client),
+    client: cleanBrandLabel(facts.clientName) ?? cleanBrandLabel(understanding?.client),
     industry,
-    objective: facts.objective ?? strategy.understanding.objective,
-    audience: facts.audience ?? strategy.understanding.audience,
+    objective: facts.objective ?? understanding?.objective ?? "campaign objectives",
+    audience: facts.audience ?? understanding?.audience ?? "brand-relevant consumers",
     geography,
-    platforms: facts.platforms ?? strategy.understanding.platforms,
-    budgetAmount: facts.budget?.amount ?? strategy.understanding.budget?.amount,
+    platforms: facts.platforms ?? understanding?.platforms ?? [],
+    budgetAmount: facts.budget?.amount ?? understanding?.budget?.amount,
     budgetCurrency:
-      facts.budget?.currency ?? strategy.understanding.budget?.currency ?? "USD",
+      facts.budget?.currency ?? understanding?.budget?.currency ?? "USD",
     durationWeeks:
-      facts.durationWeeks ?? strategy.understanding.timeline?.durationWeeks ?? 6,
-    constraints:
-      facts.constraints?.length
-        ? facts.constraints
-        : strategy.understanding.constraints,
-    risks: facts.risks?.length ? facts.risks : strategy.understanding.risks,
+      facts.durationWeeks ?? understanding?.timeline?.durationWeeks ?? 6,
+    constraints: facts.constraints?.length
+      ? facts.constraints
+      : understanding?.constraints ?? [],
+    risks: facts.risks?.length ? facts.risks : understanding?.risks ?? [],
   };
 }
 
