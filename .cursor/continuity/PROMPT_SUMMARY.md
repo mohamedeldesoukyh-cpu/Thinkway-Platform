@@ -1,17 +1,19 @@
 # Prompt Summary — Current Sprint
 
-**Branch focus:** `develop` · tip pending Iter 15
+**Branch focus:** `main`/`develop` tip `c23a3a0e` · tag **`v2.3.0`**
 
-**Active:** Release 2.3 Final Product Excellence — Fix → Soak → Fix (reject mode)
+**Status:** Release 2.3 **CLOSED** · Production Acceptance **PASS** · Release 2.4 **kickoff prepared**
 
-**Shipped:**
-- Iter 10–14: pool, categories soft-bias, confidence floor, low-fit demote, UAE/CIP coerce, slate ID preserve
-- Iter 15 (pending push): Category differentiation — drop Lifestyle when vertical preferred; on-category slate gate; explain category padding; prefer ≤10 excellent creators; confidence floor requires avgFit≥55 and no category pad
+**Production:**
+- Deploy `dpl_2TzvSBDFLPs6tb6ite7FfaeTg3sj` · `app.thinkwaymedia.com`
+- Supabase `ienowhwfyxoqtzbgltno` aligned · 13 migrations applied
+- Tip includes CIP empty-slate + Studio fit-floor Critical hotfixes
 
-**Soak next on Iter 15 tip:** L'Oréal · Trendyol · F1 · Liwa · e& · Noon · handoff E2E
+**Fresh e& Egypt Prod acceptance (PASS):**
+- Conversation `a5820035-…` · CO `1945651c-…` **approved v11**
+- Generate → **TW-2026-0002** · 10 lines · 10 assignments · Media Plan · provenance v11
+- Decision Center linked · Client IO generated · **10 Vendor IOs** generated
+- Report: `docs/architecture/RELEASE_2_3_PRODUCTION_VALIDATION_REPORT.md`
+- R2.4 kickoff: `docs/release/2.4/README.md`
 
-**Stop condition:** Not met — readiness ~94; Acceptance blocked on category differentiation soak proof + handoff
-
-**FROZEN:** Studio Governance · ECI · Sprint 2/3 packages
-
-**Left local:** Wave 1 Studio live-discovery · Dev readiness docs · tmp inspect scripts
+**Left local (exclude unless Product scopes into R2.4):** Wave 1 live-discovery · `scripts/tmp-*` · dirty readiness docs
