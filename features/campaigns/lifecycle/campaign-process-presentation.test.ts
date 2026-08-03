@@ -5,6 +5,7 @@ import {
   deriveCampaignProcessCue,
   processNavStateForTab,
   recommendCampaignProcessTab,
+  signalsFromCampaignListItem,
   type CampaignProcessSignals,
 } from "@/features/campaigns/lifecycle/campaign-process-presentation";
 
@@ -105,6 +106,28 @@ describe("deriveCampaignProcessCue — business rules", () => {
     assert.equal(cue.entryStageId, "billing");
     assert.equal(cue.lifecycleSignal, "blocked");
     assert.match(cue.statusLabel, /PO limit/i);
+  });
+
+  it("list-item signals honor enriched Client IO status (STAB-008)", () => {
+    const cue = deriveCampaignProcessCue(
+      signalsFromCampaignListItem({
+        id: "h1",
+        document_number: "TW-2026-0005",
+        name: "Tuna",
+        status: "active",
+        lines: [{ id: "l1" } as never, { id: "l2" } as never],
+        client_io_status: "approved",
+        has_client_io: true,
+        vendor_io_count: 32,
+        approved_vendor_io_count: 32,
+        sent_vendor_io_count: 32,
+        po_amount_campaign_currency: 1000,
+        po_consumed_amount: 0,
+      } as never)
+    );
+    assert.notEqual(cue.entryStageId, "client-io");
+    assert.ok(!/Generate Client IO/i.test(cue.nextActionLabel));
+    assert.equal(cue.stageSignals["client-io"], "completed");
   });
 
   it("opens Deliverables when deliverables are overdue", () => {

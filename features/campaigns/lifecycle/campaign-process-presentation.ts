@@ -118,14 +118,17 @@ export type CampaignProcessSignals = {
 export function signalsFromCampaignListItem(campaign: CampaignListItem): CampaignProcessSignals {
   const budget = Number(campaign.po_amount_campaign_currency ?? 0);
   const consumed = Number(campaign.po_consumed_amount ?? 0);
+  const clientIoStatus = campaign.client_io_status ?? null;
+  const hasClientIo =
+    campaign.has_client_io ?? Boolean(clientIoStatus);
   return {
     status: campaign.status,
     lineCount: campaign.lines?.length ?? 0,
-    hasClientIo: false,
-    clientIoStatus: null,
-    vendorIoCount: 0,
-    approvedVendorIoCount: 0,
-    sentVendorIoCount: 0,
+    hasClientIo,
+    clientIoStatus,
+    vendorIoCount: campaign.vendor_io_count ?? 0,
+    approvedVendorIoCount: campaign.approved_vendor_io_count ?? 0,
+    sentVendorIoCount: campaign.sent_vendor_io_count ?? 0,
     deliverableCount: 0,
     overdueDeliverableCount: 0,
     activePerformance: campaign.status === "active",
