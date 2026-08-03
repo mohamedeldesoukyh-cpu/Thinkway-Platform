@@ -147,6 +147,14 @@ assert.equal(
 assert.equal(seeds[0]?.gpPct, 25);
 assert.ok(seeds[0]!.revenue > seeds[0]!.cost);
 assert.equal(seeds[0]?.currencyCode, "EGP");
+
+// STAB-021: header PO for Generate must use revenue total (not brief cost budget).
+const headerPoFromSeeds = seeds.reduce((sum, seed) => sum + Math.max(0, seed.revenue), 0);
+assert.equal(headerPoFromSeeds, 400_000);
+assert.ok(
+  headerPoFromSeeds > seeds.reduce((sum, seed) => sum + seed.cost, 0),
+  "PO sized to revenue prevents immediate PO-exceeded after Generate"
+);
 assert.equal(resolveCampaignNameFromPlan(baseCampaignObject()), "Summer Launch");
 
 console.log("campaign-plan-execution-mapper.test.ts — all tests passed");

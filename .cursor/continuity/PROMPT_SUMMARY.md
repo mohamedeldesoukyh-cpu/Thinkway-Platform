@@ -3,12 +3,10 @@
 **Branch focus:** `develop` · Enterprise Product Stabilization (no R2.4)  
 **Optimize for:** enterprise trust — not readiness score
 
-**Live PASS:** STAB-012/014/015/017/018/019 · brands inventory via `/brands` UI (13)
+**Live PASS:** STAB-012–020 · STAB-016 Arab Bank TW-2026-0007 **25.0% GP** (EGP 1M / 750k)
 
-**STAB-020 (High):** Discovery — Studio tip missing `campaignFacts` while message metadata had them (task autosave race). Also single-line labeled briefs polluted brand/client/objective. Fix tip pending push/Preview.
+**STAB-021 (High):** Generate PO sized to brief cost while lines consume revenue → immediate PO exceeded. Fix tip pending push. Dev Arab Bank PO repaired to revenue total for soak continue.
 
-**STAB-016:** tip + unit test PASS. Needs fresh Intelligence→Approve→Generate after STAB-020 live (do not reuse L'Oréal linked plan).
-
-**Open:** STAB-020 live · STAB-016 live Generate · STAB-003 journeys · STAB-006 · negative/cross-workspace · Discovery Mode
+**Open:** STAB-021 live · STAB-003 multi-brand journeys · negative/cross-workspace · Discovery Mode · STAB-006 Low
 
 **R2.4:** blocked

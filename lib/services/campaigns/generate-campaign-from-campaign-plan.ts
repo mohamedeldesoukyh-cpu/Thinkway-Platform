@@ -321,7 +321,7 @@ export async function generateCampaignFromCampaignPlan(
     input.campaignName?.trim() || resolveCampaignNameFromPlan(version.campaignObject);
   const { startDate, endDate } = resolvePlanDates(version.campaignObject);
   const currencyCode = facts?.budget?.currency ?? brand.currency_code;
-  const poAmount = Math.round(facts?.budget?.amount ?? 0);
+  const briefBudgetAmount = Math.round(facts?.budget?.amount ?? 0);
   const platform = facts?.platforms?.[0] ?? null;
   const metadata = platform ? { [METADATA_PLATFORM_KEY]: platform } : {};
 
@@ -356,6 +356,11 @@ export async function generateCampaignFromCampaignPlan(
         } as never)
         .eq("id", converted.campaignId);
 
+      // Header PO must cover client revenue (what lines consume), not brief cost alone.
+      const quotationPo = Math.round(
+        quotationSource.items.reduce((sum, item) => sum + Math.max(0, Number(item.revenue ?? 0)), 0)
+      );
+      const poAmount = quotationPo > 0 ? quotationPo : briefBudgetAmount;
       if (poAmount > 0) {
         await updateCampaignPoFields(supabase, converted.campaignId, {
           currency: currencyCode,
@@ -423,6 +428,14 @@ export async function generateCampaignFromCampaignPlan(
         : "No approved slate creators could be resolved to campaign lines.",
     };
   }
+
+  // STAB-021: PO ceiling must cover line revenue (client commercial), not brief cost.
+  // With DEFAULT_GP_TARGET_PCT, revenue > brief budget-as-cost; consuming revenue against
+  // a cost-sized PO immediately exceeds capacity and blocks Decision Center.
+  const seededRevenuePo = Math.round(
+    lineSeeds.reduce((sum, seed) => sum + Math.max(0, seed.revenue), 0)
+  );
+  const poAmount = seededRevenuePo > 0 ? seededRevenuePo : briefBudgetAmount;
 
   const { data: header, error: headerError } = await insertCampaignHeader(supabase, {
     name: campaignName,
