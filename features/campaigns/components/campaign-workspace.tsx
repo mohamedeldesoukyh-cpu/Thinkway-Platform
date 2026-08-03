@@ -50,6 +50,7 @@ import { CampaignHeroActions } from "@/features/campaigns/components/aurora/camp
 import { CampaignKpiCards } from "@/features/campaigns/components/aurora/campaign-kpi-cards";
 import { DuplicateCampaignDialog } from "@/features/campaigns/components/duplicate-campaign-dialog";
 import { CampaignBillingTab } from "@/features/campaigns/components/tabs/campaign-billing-tab";
+import { CampaignDeliverablesTab } from "@/features/campaigns/components/tabs/campaign-deliverables-tab";
 import { CampaignDeliverablesDocumentationTab } from "@/features/campaigns/components/tabs/campaign-deliverables-documentation-tab";
 import { CampaignAssignmentsTab } from "@/features/campaigns/components/tabs/campaign-assignments-tab";
 import { CampaignPerformanceCenterTab } from "@/features/campaigns/components/performance/campaign-performance-center-tab";
@@ -552,12 +553,25 @@ export function CampaignWorkspaceView({
               renderWithLifecycleGuidance(
                 "deliverables",
                 <TabErrorBoundary tabName="Deliverables">
-                  <CampaignDeliverablesDocumentationTab
-                    workspace={workspace}
-                    assignmentHierarchy={assignmentHierarchy}
-                    initialCreatorFilter={searchParams.get("docsCreator")}
-                    initialDeliverableId={searchParams.get("deliverable")}
-                  />
+                  {/*
+                    STAB-007: tab badge counts operational deliverable units.
+                    Default surface must be the operational explorer (not empty documentation repo).
+                    Documentation remains available via deep-link (?docsCreator= / ?deliverable=).
+                  */}
+                  {searchParams.get("docsCreator") || searchParams.get("deliverable") ? (
+                    <CampaignDeliverablesDocumentationTab
+                      workspace={workspace}
+                      assignmentHierarchy={assignmentHierarchy}
+                      initialCreatorFilter={searchParams.get("docsCreator")}
+                      initialDeliverableId={searchParams.get("deliverable")}
+                    />
+                  ) : (
+                    <CampaignDeliverablesTab
+                      workspace={workspace}
+                      assignmentHierarchy={assignmentHierarchy}
+                      publications={publications}
+                    />
+                  )}
                 </TabErrorBoundary>
               )
             )}
