@@ -94,5 +94,7 @@ export function factsEvidenceRef(facts: CampaignFacts): string {
     facts.budget?.amount != null
       ? `${facts.budget.currency} ${facts.budget.amount.toLocaleString()}`
       : "TBD";
-  return `CampaignFacts[brand=${facts.brandName}, objective=${facts.objective ?? "n/a"}, budget=${budget}]`;
+  const brand = facts.brandName?.trim() || "the brand";
+  const objective = facts.objective?.trim() || "the stated objective";
+  return `Brief evidence — ${brand}; objective ${objective}; budget ${budget}`;
 }

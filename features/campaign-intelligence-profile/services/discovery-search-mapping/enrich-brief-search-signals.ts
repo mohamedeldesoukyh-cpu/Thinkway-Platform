@@ -165,8 +165,65 @@ export function enrichBriefSearchSignals(
     }
   }
 
+  // Category signals from thin briefs (preferred — never mandatory). Without this,
+  // unmatched-brand CIP maps often ship platform+country only and every Egypt
+  // campaign collapses to the same lifestyle slate.
+  if (!filters.some((f) => f.key === "category")) {
+    if (/\b(beauty|skincare|makeup|cosmetics|dermatolog)\b/i.test(text)) {
+      addFilter(filters, {
+        key: "category",
+        label: "Category",
+        value: "Beauty",
+        weight: 88,
+        confidence: 0.82,
+      });
+      keywordCandidates.push(
+        { value: "skincare", weight: 80 },
+        { value: "beauty", weight: 78 }
+      );
+    } else if (/\b(fashion|apparel|clothing|streetwear)\b/i.test(text)) {
+      addFilter(filters, {
+        key: "category",
+        label: "Category",
+        value: "Fashion",
+        weight: 88,
+        confidence: 0.82,
+      });
+    } else if (/\b(retail|e-?commerce|shopping|marketplace)\b/i.test(text)) {
+      addFilter(filters, {
+        key: "category",
+        label: "Category",
+        value: "Lifestyle",
+        weight: 82,
+        confidence: 0.78,
+      });
+      keywordCandidates.push(
+        { value: "shopping", weight: 78 },
+        { value: "retail", weight: 76 }
+      );
+    } else if (/\b(formula\s*1|f1|motorsport|racing|grand prix)\b/i.test(text)) {
+      addFilter(filters, {
+        key: "category",
+        label: "Category",
+        value: "Sports",
+        weight: 88,
+        confidence: 0.82,
+      });
+      keywordCandidates.push({ value: "motorsport", weight: 80 });
+    } else if (/\b(festival|liwa|cultural|heritage|tourism)\b/i.test(text)) {
+      addFilter(filters, {
+        key: "category",
+        label: "Category",
+        value: "Travel",
+        weight: 82,
+        confidence: 0.78,
+      });
+      keywordCandidates.push({ value: "festival", weight: 78 });
+    }
+  }
+
   const explicitKeywords = text.match(
-    /\b(5g|gaming|tech|technology|telecom|mobile|esports|lifestyle|entertainment|comedy|music)\b/gi
+    /\b(5g|gaming|tech|technology|telecom|mobile|esports|lifestyle|entertainment|comedy|music|skincare|beauty|fashion|retail|shopping)\b/gi
   );
   for (const match of explicitKeywords ?? []) {
     keywordCandidates.push({ value: match, weight: 75 });

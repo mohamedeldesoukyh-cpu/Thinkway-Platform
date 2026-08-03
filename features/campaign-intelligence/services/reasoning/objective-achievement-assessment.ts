@@ -32,7 +32,7 @@ function objectiveEvidence(
   const tierMix = strategy.creatorTierStrategy
     .map((t) => `${t.tier} ${t.allocationPercent}%`)
     .join(", ");
-  return `CampaignFacts[brand=${ctx.brand}, objective=${objective}, budget=${formatBudgetRef(ctx)}]; tier mix: ${tierMix || VERIFICATION}; ${ctx.durationWeeks} weeks on ${ctx.platforms.join("/") || "platforms TBD"}`;
+  return `Brief evidence — ${ctx.brand}; objective ${objective}; budget ${formatBudgetRef(ctx)}; tier mix: ${tierMix || VERIFICATION}; ${ctx.durationWeeks} weeks on ${ctx.platforms.join("/") || "platforms TBD"}`;
 }
 
 function objectiveRisks(

@@ -15,6 +15,14 @@ test("toBoardroomLanguage strips SSOT and CampaignFacts jargon", () => {
   assert.match(out, /brief|approved strategy|EGP 500,000/i);
 });
 
+test("toBoardroomLanguage strips CampaignFacts bracket evidence refs", () => {
+  const input =
+    "Brand awareness: 90% confidence — CampaignFacts[brand=L'Oréal Paris, objective=Brand awareness, budget=EGP 750,000]";
+  const out = toBoardroomLanguage(input);
+  assert.equal(/CampaignFacts/i.test(out), false);
+  assert.match(out, /brief evidence/i);
+});
+
 test("parseCompactFollowerCount handles K/M suffixes", () => {
   assert.equal(parseCompactFollowerCount("767.6K"), 767_600);
   assert.equal(parseCompactFollowerCount("10.0M"), 10_000_000);

@@ -1213,7 +1213,21 @@ export function resolveIndustryBenchmark(
 export function resolveSuccessProbability(
   campaignObject: CampaignObject | undefined
 ): SuccessProbabilityData | null {
-  return readPerformanceData(campaignObject)?.successProbability ?? null;
+  const data = readPerformanceData(campaignObject)?.successProbability ?? null;
+  if (!data) return null;
+  return {
+    ...data,
+    strengths: data.strengths.map((s) => toBoardroomLanguage(s)),
+    weaknesses: data.weaknesses.map((s) => toBoardroomLanguage(s)),
+    risks: data.risks.map((s) => toBoardroomLanguage(s)),
+    improvements: data.improvements.map((s) => toBoardroomLanguage(s)),
+    objectiveAssessments: data.objectiveAssessments?.map((entry) => ({
+      ...entry,
+      supportingEvidence: toBoardroomLanguage(entry.supportingEvidence),
+      risks: entry.risks.map((r) => toBoardroomLanguage(r)),
+      recommendations: entry.recommendations.map((r) => toBoardroomLanguage(r)),
+    })),
+  };
 }
 
 export function resolveOpportunities(

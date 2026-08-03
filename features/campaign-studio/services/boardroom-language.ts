@@ -6,9 +6,10 @@
 const INTERNAL_PHRASES: Array<[RegExp, string]> = [
   [/\bDirector Strategy SSOT\b/gi, "the approved Director strategy"],
   [/\bDirectorStrategy\b/g, "Director strategy"],
+  [/CampaignFacts\[[^\]]*\]/g, "brief evidence"],
+  [/\bCampaignFacts SSOT\b/gi, "the campaign brief"],
   [/\bCampaignFacts\b/g, "the campaign brief"],
   [/\bFacts SSOT:\s*/gi, ""],
-  [/\bCampaignFacts SSOT\b/gi, "the campaign brief"],
   [/\bSSOT\b/g, "source of truth"],
   [/\bper CampaignFacts\b/gi, "per the campaign brief"],
   [/\bgrounded in the campaign brief and the approved Director strategy\b/gi, "grounded in the brief and approved strategy"],
