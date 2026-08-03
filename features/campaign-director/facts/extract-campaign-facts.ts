@@ -273,9 +273,18 @@ export function extractCampaignFacts(input: CampaignFactsExtractInput): Campaign
     const client = resolveClientFromBrief(text);
     if (client && client !== "Brand Client") {
       setField(facts, "clientName", client, "inferred", 0.7);
-    } else if (brand.fromForAttribution && brand.value) {
-      // "campaign for e&" — the named company is the paying client.
-      setField(facts, "clientName", brand.value, "brief", 0.85);
+    } else if (brand.value) {
+      // STAB-030: labeled "Brand: Noon" (and "campaign for e&") — when no separate
+      // legal entity is stated, the brand is the paying client for readiness /
+      // Approve → Generate. Restricting to fromForAttribution left Client empty
+      // and permanently blocked Campaign Plan submit.
+      setField(
+        facts,
+        "clientName",
+        brand.value,
+        brand.fromForAttribution ? "brief" : "inferred",
+        brand.fromForAttribution ? 0.85 : 0.75
+      );
     }
   }
 

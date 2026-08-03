@@ -1,7 +1,7 @@
 ﻿# Release 2.3 — Enterprise Stabilization Backlog
 
 **Living document** — update on every investigate → fix → soak cycle.  
-**Tip under soak:** STAB-029 fix pending Preview · prior tip **`7037d311`** (STAB-028)  
+**Tip under soak:** STAB-029 live **`a96c927`** · STAB-030 fix pending Preview  
 **Do not start Release 2.4 until stop condition met.**  
 **Do not optimize for readiness score — optimize for enterprise trust.**
 
@@ -11,7 +11,7 @@
 
 | Score | As of | Justification |
 |---|---|---|
-| **92 / 100** | 2026-08-03 soak | Arab Bank through Invoice Generated. STAB-029 code fix ready (await Preview). STAB-021 fresh Generate + multi-brand + negative still open. |
+| **93 / 100** | 2026-08-03 soak | STAB-029 live PASS (Noon CIP no INPUT REQUIRED). STAB-030 blocks Approve→Generate (missing client). Multi-brand + negative still open. |
 
 Score is evidence-based — not optimized.
 
@@ -21,12 +21,12 @@ Score is evidence-based — not optimized.
 
 | ID | Severity | Title | Root cause | Business impact | Evidence | Status |
 |---|---|---|---|---|---|---|
-| STAB-021 | High | Generate sets PO = brief cost while lines consume revenue | `poAmount = facts.budget.amount` after STAB-016 GP markup | Immediate PO exceeded on fresh Generate | Arab Bank TW-2026-0007 repaired to 1M | **Fixed tip** `0ab3d8aa` — await fresh Generate after STAB-029 |
-| STAB-029 | **High** | Fresh CIP Generate blocked by INPUT REQUIRED from soak/process text in brief | `qa_no_duplicate_facts` hard-FAIL → unrepairable regen loop → INPUT REQUIRED | Cannot complete Intelligence→Generate for new brands | NBK conv `2904147f` | **Fixed code** — WARNING + no polish pause; await Preview live |
+| STAB-021 | High | Generate sets PO = brief cost while lines consume revenue | `poAmount = facts.budget.amount` after STAB-016 GP markup | Immediate PO exceeded on fresh Generate | Arab Bank TW-2026-0007 repaired to 1M | **Fixed tip** `0ab3d8aa` — await Noon Generate after STAB-030 |
+| STAB-030 | **High** | Brand-only briefs leave Client readiness unsatisfied | `clientName` only filled on `fromForAttribution`; readiness requires client | Cannot Submit/Approve/Generate | Noon `cbae2928` / obj `c70e216c` — Not Ready, no Submit | **Fixed code** — brand-as-client; await Preview |
 | STAB-023 | Medium | CIO send to `@example.com` fails Resend | Provider rejects example.com | Soak friction; status still advances via token | Send history failed; approval still PASS | Open — use thinkway test inbox |
 | STAB-024 | Low | Email preview Agreed Amount EGP 0.00 | Preview vs document rollup | Mild commercial confusion | Arab Bank CIO preview | Open |
 | STAB-025 | Medium | “Viewing Client/Vendor IO while work is in Deliverables/Performance/Finance” | process guidance vs stage | Mild lifecycle contradiction | Arab Bank post-CIO | Open |
-| STAB-003 | High | Multi-brand full journey soak incomplete | Journeys not run | Coverage gap | Arab Bank advanced through Invoice; 12 brands pending full path | In progress |
+| STAB-003 | High | Multi-brand full journey soak incomplete | Journeys not run | Coverage gap | Arab Bank invoice; Noon CIP in flight; others pending | In progress |
 | STAB-006 | Low | Breadcrumb Waiting Operations vs Finance owner | waitingFor vs DC | Mild | TW-2026-0005 | Open |
 | STAB-005 | Low | Soft finance alerts story-filtered | selectStoryBlockers | Monitor | By design | Deferred |
 

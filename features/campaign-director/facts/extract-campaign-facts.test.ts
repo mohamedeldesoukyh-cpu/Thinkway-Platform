@@ -144,3 +144,12 @@ test("labeled deliverables are extracted as a list", () => {
   assert.deepEqual(facts.deliverables, ["2 reels", "4 stories", "1 static post"]);
   assert.equal(facts.budget?.amount, 500_000);
 });
+
+test("STAB-030: labeled Brand without Client defaults clientName to brand", () => {
+  const facts = extractCampaignFacts({
+    rawMessage:
+      "Create a new campaign for Noon. Brand: Noon. Market: Egypt. Budget: EGP 500,000. Objective: brand awareness.",
+  });
+  assert.equal(facts.brandName, "Noon");
+  assert.equal(facts.clientName, "Noon");
+});

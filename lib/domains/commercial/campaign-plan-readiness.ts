@@ -110,7 +110,9 @@ function evaluateMandatoryItem(
 
   switch (id) {
     case "client":
-      return Boolean(facts?.clientName?.trim());
+      // STAB-030: brand-as-client briefs (Brand: Noon with no separate legal
+      // entity) must not block Approve → Generate when brand is present.
+      return Boolean(facts?.clientName?.trim() || facts?.brandName?.trim());
     case "brand":
       return Boolean(facts?.brandName?.trim());
     case "objective":

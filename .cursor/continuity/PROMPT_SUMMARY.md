@@ -1,15 +1,15 @@
 # Prompt Summary — Current Sprint
 
-**Branch focus:** `develop` · Enterprise Product Stabilization (no R2.4)  
-**Optimize for:** enterprise trust — not readiness score
+**Branch focus:** `develop` · tip **`a96c927`** (STAB-029) · Enterprise Stabilization (no R2.4)
 
-**Live PASS:** STAB-012–022 · STAB-026–028 · STAB-016 Arab Bank **25% GP**
+**Live PASS:** STAB-012–022 · STAB-026–029 · STAB-016 Arab Bank **25% GP**  
+**STAB-029 live:** Noon CIP `cbae2928` — **no INPUT REQUIRED** after tip.
 
-**In flight:** STAB-029 — `qa_no_duplicate_facts` → WARNING; polish residuals never INPUT REQUIRED; soft-approve polish-only after repair. Regression: `campaign-qa-manager.test.ts` PASS. Await Preview tip + NBK `2904147f` / fresh CIP Generate (also proves STAB-021 PO=revenue).
+**In flight:** STAB-030 — brand-as-client when Client omitted; readiness accepts brandName. Unblocks Noon Submit→Approve→Generate (+ STAB-021 PO proof).
 
-**Arab Bank TW-2026-0007:** Invoice Generated (`INV-2026-00003`); collect → Close pending.
+**Arab Bank TW-2026-0007:** Invoice Generated; collect → Close pending.
 
-**Open High:** STAB-029 live · STAB-021 fresh Generate · STAB-003 multi-brand  
-**Open Med:** STAB-023 · STAB-025 · negative suite · Discovery
+**Open High:** STAB-030 · STAB-021 · STAB-003 multi-brand  
+**Open Med:** STAB-023 · STAB-025 · negative · Discovery
 
 **R2.4:** blocked
