@@ -509,7 +509,6 @@ function buildBusinessTimeline(
 ): BusinessTimelineEvent[] {
   const clientIo = workspace?.client_io ?? null;
   const firstInvoice = workspace?.invoices?.[0] ?? null;
-  const paidInvoice = workspace?.invoices?.find((inv) => Number(inv.amount_paid) > 0);
 
   return [
     {
@@ -604,14 +603,21 @@ function buildBusinessTimeline(
       id: "invoice_paid",
       label: "Invoice Paid",
       at: null,
-      occurred: Boolean(paidInvoice),
+      // Prefer outstanding SSOT — partial amount_paid alone is not full settlement.
+      occurred: signals.invoiceCount > 0 && signals.billingOutstanding <= 0,
       owner: "Finance",
     },
     {
       id: "campaign_closed",
       label: "Campaign Closed",
       at: null,
-      occurred: signals.status === "completed" || signals.status === "cancelled",
+      // STAB-032: header status "completed" means fully invoiced (commercial),
+      // not executive close. Closed requires settlement (or cancel).
+      occurred:
+        signals.status === "cancelled" ||
+        (signals.status === "completed" &&
+          signals.invoiceCount > 0 &&
+          signals.billingOutstanding <= 0),
       owner: "Executive",
     },
   ];

@@ -352,7 +352,13 @@ export function deriveCampaignProcessCue(signals: CampaignProcessSignals): Campa
     });
   }
 
-  if (signals.status === "completed") {
+  // Header status "completed" = fully invoiced (see sync-campaign-header-status).
+  // STAB-032: do not treat that as executive Campaign Closed while balances remain.
+  if (
+    signals.status === "completed" &&
+    signals.invoiceCount > 0 &&
+    signals.billingOutstanding <= 0
+  ) {
     return toCue({
       currentStageId: "overview",
       statusLabel: "Campaign complete",
@@ -361,6 +367,22 @@ export function deriveCampaignProcessCue(signals: CampaignProcessSignals): Campa
       waitingFor: "None",
       nextStageId: null,
       owner: "Executive",
+    });
+  }
+
+  if (
+    signals.status === "completed" &&
+    (signals.billingOutstanding > 0 || signals.invoiceCount === 0)
+  ) {
+    return toCue({
+      currentStageId: "billing",
+      statusLabel:
+        signals.billingOutstanding > 0 ? "Collections outstanding" : "Awaiting invoice",
+      lifecycleSignal: "waiting",
+      nextActionLabel: "Open Finance",
+      waitingFor: "Finance",
+      nextStageId: null,
+      owner: "Finance",
     });
   }
 

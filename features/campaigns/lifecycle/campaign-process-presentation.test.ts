@@ -254,6 +254,42 @@ describe("deriveCampaignProcessCue — business rules", () => {
     assert.equal(cue.owner, "Finance");
   });
 
+  it("STAB-032: header completed + unpaid invoice stays Finance, not Campaign complete", () => {
+    const cue = deriveCampaignProcessCue(
+      base({
+        status: "completed",
+        lineCount: 2,
+        hasClientIo: true,
+        clientIoStatus: "approved",
+        vendorIoCount: 1,
+        approvedVendorIoCount: 1,
+        invoiceCount: 1,
+        billingOutstanding: 760000,
+      })
+    );
+    assert.equal(cue.entryStageId, "billing");
+    assert.equal(cue.owner, "Finance");
+    assert.match(cue.statusLabel, /Collections|Finance|outstanding/i);
+    assert.notEqual(cue.lifecycleSignal, "completed");
+  });
+
+  it("STAB-032: header completed + settled invoices is Campaign complete", () => {
+    const cue = deriveCampaignProcessCue(
+      base({
+        status: "completed",
+        lineCount: 2,
+        hasClientIo: true,
+        clientIoStatus: "approved",
+        vendorIoCount: 1,
+        approvedVendorIoCount: 1,
+        invoiceCount: 1,
+        billingOutstanding: 0,
+      })
+    );
+    assert.equal(cue.lifecycleSignal, "completed");
+    assert.match(cue.statusLabel, /complete/i);
+  });
+
   it("prioritizes incomplete assignments over later finance signals", () => {
     const cue = deriveCampaignProcessCue(
       base({

@@ -84,6 +84,46 @@ describe("campaign lifecycle orchestrator", () => {
     assert.ok(lifecycle.timeline.some((event) => event.id === "created"));
   });
 
+  it("STAB-032: Campaign Closed stays Upcoming until invoices are settled", () => {
+    const unpaid = deriveLifecycleForTest(
+      base({
+        status: "completed",
+        lineCount: 2,
+        hasClientIo: true,
+        clientIoStatus: "approved",
+        vendorIoCount: 1,
+        approvedVendorIoCount: 1,
+        invoiceCount: 1,
+        billingOutstanding: 760000,
+      })
+    );
+    const closedUnpaid = unpaid.timeline.find((e) => e.id === "campaign_closed");
+    const paidUnpaid = unpaid.timeline.find((e) => e.id === "invoice_paid");
+    assert.equal(closedUnpaid?.occurred, false);
+    assert.equal(paidUnpaid?.occurred, false);
+
+    const settled = deriveLifecycleForTest(
+      base({
+        status: "completed",
+        lineCount: 2,
+        hasClientIo: true,
+        clientIoStatus: "approved",
+        vendorIoCount: 1,
+        approvedVendorIoCount: 1,
+        invoiceCount: 1,
+        billingOutstanding: 0,
+      })
+    );
+    assert.equal(
+      settled.timeline.find((e) => e.id === "invoice_paid")?.occurred,
+      true
+    );
+    assert.equal(
+      settled.timeline.find((e) => e.id === "campaign_closed")?.occurred,
+      true
+    );
+  });
+
   it("explains Finance and Performance when ahead of business stage", () => {
     const lifecycle = deriveLifecycleForTest(base({ lineCount: 0 }));
     const finance = buildWorkspaceGuidance(lifecycle, "billing");
