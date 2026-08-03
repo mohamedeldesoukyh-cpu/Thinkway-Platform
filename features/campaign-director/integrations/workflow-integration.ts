@@ -102,6 +102,11 @@ function mergeDirectorSectionData(
     const approvedIdsEmpty = (approvedRec.creatorIds?.length ?? 0) === 0;
     const approvedReasoningEmpty = (approvedRec.selectedReasoning?.length ?? 0) === 0;
     const existingReasoning = existingRec.selectedReasoning ?? [];
+    const mergedRec = (merged.recommendations ?? {}) as {
+      creatorIds?: string[];
+      selectedReasoning?: unknown[];
+      rejectedReasoning?: unknown[];
+    };
     if (approvedIdsEmpty && preservedIds.length > 0) {
       merged.recommendations = {
         ...existingRec,
@@ -122,7 +127,24 @@ function mergeDirectorSectionData(
       existingReasoning.length > 0
     ) {
       merged.recommendations = {
-        ...(merged.recommendations as Record<string, unknown>),
+        ...mergedRec,
+        selectedReasoning: existingReasoning,
+      };
+    }
+
+    // Final guard: never leave a non-empty slate with empty why-selected after
+    // Director merge when discovery already produced reasoning.
+    const finalRec = (merged.recommendations ?? {}) as {
+      creatorIds?: string[];
+      selectedReasoning?: unknown[];
+    };
+    if (
+      (finalRec.creatorIds?.length ?? 0) > 0 &&
+      (finalRec.selectedReasoning?.length ?? 0) === 0 &&
+      existingReasoning.length > 0
+    ) {
+      merged.recommendations = {
+        ...finalRec,
         selectedReasoning: existingReasoning,
       };
     }
