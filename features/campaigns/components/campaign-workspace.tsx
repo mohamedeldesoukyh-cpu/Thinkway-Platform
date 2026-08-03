@@ -644,7 +644,11 @@ export function CampaignWorkspaceView({
                     operationalBilling={operationalBilling}
                     campaignInvoiceRegister={campaignInvoiceRegister}
                     invoiceCreationUnlocked={invoiceCreationUnlocked}
-                    invoiceUnlockHint={lifecycle.decisionCenter.reason || null}
+                    invoiceUnlockHint={
+                      lifecycle.decisionCenter.blockers[0]?.reason ||
+                      lifecycle.decisionCenter.continueReason ||
+                      null
+                    }
                     onNavigateToLifecycleAction={continueToNextAction}
                     initialDetailInvoiceId={searchParams.get("invoice")}
                     initialDetailPaymentId={searchParams.get("payment")}
