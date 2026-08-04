@@ -270,6 +270,11 @@ function QuotationWorkspaceContent({
 
   useEffect(() => {
     setDrafts((prev) => {
+      // After Save (no pending), rebuild from line Master so remount/refresh
+      // cannot keep stale in-memory drafts that disagree with persisted SSOT.
+      if (!manualSave.hasUnsavedChanges) {
+        return draftsFromItems(detail.items);
+      }
       const next = { ...prev };
       for (const item of detail.items) {
         if (!next[item.id]) next[item.id] = draftFromQuotationItem(item);
@@ -290,7 +295,7 @@ function QuotationWorkspaceContent({
       );
       return next.size === prev.size ? prev : next;
     });
-  }, [detail.items]);
+  }, [detail.items, manualSave.hasUnsavedChanges]);
 
   const visibleItems = useMemo(
     () => detail.items.filter((item) => !optimisticRemovedIds.has(item.id)),

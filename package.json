@@ -145,7 +145,7 @@
     "test:commercial-ssot-phase2": "npm run test:commercial-ssot-phase1 && npx tsx --test lib/services/commercial/confirmation-copy.test.ts",
     "test:commercial-ssot-phase3": "npm run test:commercial-ssot-phase2 && npx tsx --test lib/services/commercial/dirty-sync.test.ts lib/finance/campaign-finance-lock.test.ts",
     "test:commercial-ssot-phase4": "npm run test:commercial-ssot-phase3 && npx tsx --test lib/services/commercial/commercial-revision-service.test.ts",
-    "test:commercial-workspace": "npx tsx --test lib/quotations/commercial-workspace/feature-flag.test.ts lib/quotations/commercial-workspace/profitability-thresholds.test.ts lib/quotations/commercial-workspace/filters.test.ts lib/quotations/commercial-workspace/draft-history.test.ts lib/quotations/commercial-workspace/bulk-transforms.test.ts",
+    "test:commercial-workspace": "npx tsx --test lib/quotations/commercial-workspace/feature-flag.test.ts lib/quotations/commercial-workspace/profitability-thresholds.test.ts lib/quotations/commercial-workspace/filters.test.ts lib/quotations/commercial-workspace/draft-history.test.ts lib/quotations/commercial-workspace/bulk-transforms.test.ts lib/quotations/quotation-line-commercial-ssot.test.ts lib/quotations/quotation-line-pending-diff.test.ts lib/quotations/quotation-commercial-ssot-save-regression.test.ts && npx tsx lib/quotations/quotation-deliverable-rollup.test.ts",
     "test:deliverable-docs": "npx tsx --test lib/services/deliverables/documentation-units.test.ts",
     "test:quotation-engine": "npx tsx features/quotations/quotation-engine.test.ts",
     "test:quotation-serial": "npx tsx features/quotations/serial.test.ts",

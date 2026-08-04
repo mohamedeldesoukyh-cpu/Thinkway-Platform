@@ -76,11 +76,14 @@ export function linePendingDiffersFromItem(
   ) {
     return true;
   }
-  if (payload.deliverables !== undefined) {
-    return (
-      normalizeDeliverablesForCompare(payload.deliverables) !==
+  // Deliverables may be present alongside Master commercial edits — never early-return
+  // solely on deliverable equality (that dropped cost/revenue diffs → skipped Save).
+  if (
+    payload.deliverables !== undefined &&
+    normalizeDeliverablesForCompare(payload.deliverables) !==
       normalizeDeliverablesForCompare(item.deliverables ?? [])
-    );
+  ) {
+    return true;
   }
   if (payload.cost !== undefined && numOrNull(payload.cost) !== numOrNull(item.cost)) {
     return true;

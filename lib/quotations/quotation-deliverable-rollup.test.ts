@@ -10,7 +10,6 @@ import {
   draftFromQuotationItem,
   resolveQuotationRowDraft,
 } from "@/features/quotations/quotation-row-math";
-import { computeLiveQuotationTotals } from "@/features/quotations/quotation-row-math";
 import type { QuotationItemRow } from "@/features/quotations/types";
 
 function deliverable(overrides: Partial<QuotationDeliverable> = {}): QuotationDeliverable {
@@ -66,7 +65,7 @@ function deliverable(overrides: Partial<QuotationDeliverable> = {}): QuotationDe
   assert.ok(rolled.totalClientCost > rolled.revenue);
 }
 
-// Item draft rolls up priced deliverables (not stale item cost_gp_pct)
+// Item draft uses line Master SSOT — priced deliverables do not override remount
 {
   const item = {
     id: "item-1",
@@ -82,15 +81,9 @@ function deliverable(overrides: Partial<QuotationDeliverable> = {}): QuotationDe
   } as QuotationItemRow;
 
   const draft = draftFromQuotationItem(item);
-  assert.equal(draft.mode, "cost_revenue");
-  assert.equal(draft.cost, 10000);
-  assert.ok(draft.revenue > 13333);
-  assert.ok(draft.gpPct > 0);
-  assert.ok(draft.gpValue > 0);
-
-  const totals = computeLiveQuotationTotals([draft]);
-  assert.ok(totals.totalGpValueEgp > 0);
-  assert.ok(totals.totalRevenueEgp > totals.totalCostEgp);
+  assert.equal(draft.mode, "cost_gp_pct");
+  assert.equal(draft.cost, 560000);
+  assert.equal(draft.revenue, 560000);
 }
 
 // resolveQuotationRowDraft prefers live draft edits

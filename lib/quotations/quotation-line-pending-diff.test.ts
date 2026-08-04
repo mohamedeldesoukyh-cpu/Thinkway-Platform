@@ -45,6 +45,19 @@ test("linePendingDiffersFromItem returns false for identical deliverables", () =
   );
 });
 
+test("linePendingDiffersFromItem detects Master cost change when deliverables unchanged", () => {
+  assert.equal(
+    linePendingDiffersFromItem(baseItem, {
+      deliverables: baseItem.deliverables,
+      cost: 21000,
+      revenue: 150,
+      gp_pct: 33,
+      gp_value: 50,
+    }),
+    true
+  );
+});
+
 test("linePendingDiffersFromItem detects service description edits", () => {
   assert.equal(
     linePendingDiffersFromItem(baseItem, { service_description: "Updated" }),

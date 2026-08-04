@@ -20,6 +20,13 @@
 - Smoke: local showcase with FB/YT — `svg_count=0`, PowerPoint **OPENED slides=6**
 - Re-export any previously downloaded showcase PPTX (old Downloads files stay broken)
 
+## Hotfix — Commercial Workspace Save reverts (priced deliverables) — SHIPPING
+
+- **SSOT:** Quotation **line** Master columns (`cost` / `revenue` / GP / AF) are authoritative (`COMMERCIAL_SSOT_QUOTE_CAMPAIGN.md`)
+- **Cause:** Line Save omitted deliverable sync; `draftFromQuotationItem` re-rolled stale priced deliverables on remount
+- **Fix:** Prefer line Master on remount · strip deliverable commercials on line-Master Save (same UPDATE) · pending-diff no longer early-returns on deliverable equality · rebuild drafts from server when no unsaved changes
+- Regression: `lib/quotations/quotation-commercial-ssot-save-regression.test.ts` (edit → save → remount → Preview/Generate)
+
 ## Prior closed
 
 **Apify Manual Refresh:** CLOSED · Enterprise Ready · Production PASS (`937dd503`)  

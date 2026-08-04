@@ -15,6 +15,7 @@ import {
   updateQuotationHeaderRecord,
 } from "./repositories/quotation-repository";
 import { rollupDeliverableCommercials } from "@/lib/quotations/quotation-deliverable-rollup";
+import { deliverablesPatchForLineMasterSave } from "@/lib/quotations/quotation-line-commercial-ssot";
 
 export async function recomputeQuotationTotals(
   supabase: SupabaseClient<Database>,
@@ -139,7 +140,25 @@ export async function updateQuotationItemCommercials(
         gp_value_egp: line.gp_value_egp,
         af_value_egp: line.af_value_egp,
       };
-  if (input.deliverables) patch.deliverables = input.deliverables;
+
+  // Cost Detail path: persist deliverables + rolled Master in one UPDATE.
+  // Line-Master path (Commercial Workspace / bulk): strip deliverable commercial
+  // amounts in the same UPDATE so remount cannot rebuild from stale Cost Detail.
+  if (input.deliverables !== undefined) {
+    patch.deliverables = input.deliverables;
+  } else {
+    const { data: existingRow, error: existingError } = await supabase
+      .from("quotation_items")
+      .select("deliverables")
+      .eq("id", input.item_id)
+      .maybeSingle();
+    if (existingError) return { ok: false as const, message: existingError.message };
+    const cleared = deliverablesPatchForLineMasterSave(
+      (existingRow?.deliverables ?? []) as QuotationDeliverable[]
+    );
+    if (cleared) patch.deliverables = cleared;
+  }
+
   if (input.option_number !== undefined) {
     patch.option_number =
       input.option_number == null
