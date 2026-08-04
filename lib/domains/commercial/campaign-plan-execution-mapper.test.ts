@@ -112,6 +112,27 @@ assert.deepEqual(
   "rejected creators are excluded from execution"
 );
 
+// STAB-039: hydrateSlateCreators / Generate must share this discovery fallback.
+assert.deepEqual(
+  filterExecutionCreatorIds(
+    baseCampaignObject({
+      sections: {
+        ...baseCampaignObject().sections,
+        creators: {
+          content: "",
+          data: {
+            recommendations: { creatorIds: [] },
+            discovery: { creatorIds: ["inf:d1", "inf:d2"] },
+          },
+          status: "complete",
+        },
+      },
+    })
+  ),
+  ["inf:d1", "inf:d2"],
+  "STAB-039: empty recommendations fall back to discovery ids"
+);
+
 const selections = buildPlatformSelectionsForCreator(
   mockCreator("inf:a", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"),
   ["Instagram"],
