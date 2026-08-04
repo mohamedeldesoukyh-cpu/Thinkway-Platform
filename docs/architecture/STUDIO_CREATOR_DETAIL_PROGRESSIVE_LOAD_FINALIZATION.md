@@ -69,9 +69,23 @@ async      Similar creators
 npx tsx scripts/soak-studio-creator-detail-progressive.ts
 ```
 
-Surfaces: Studio · Creator Detail · Discovery · Shortlists · Quotation · Campaign Workspace · Proposal · Presentation  
+**Result:** 11/11 PASS (Studio · Creator Detail · Discovery · Shortlists · Quotation · Campaign Workspace · Proposal · Presentation).
 
-Confirm: no missing intelligence · ECI scores present · hydration paths resolve · no broken loading contracts.
+## Production
+
+| Item | Value |
+|---|---|
+| Tip SHA | `d34bcff6` |
+| Validate CI | **success** (check-run `validate` on `d34bcff6`) |
+| Dev deploy | `dpl_4x44adMGpU7pnp8i6ZfUNVHaHBRt` → `dev.thinkwaymedia.com` |
+| Prod deploy | `dpl_34a4rdUktto5dTafjTu9fLaJzhDC` → `app.thinkwaymedia.com` (clean redeploy from `main` if required) |
+| Prod soak | `npx railway run --service Thinkway-Platform-Production -- npx tsx scripts/soak-studio-creator-detail-progressive-production.ts` → **11/11 PASS** |
+
+### Infrastructure Assumptions (Production)
+
+- Railway Production worker Online (service-role available via Railway env).
+- Vercel Production pull showed empty `SUPABASE_SERVICE_ROLE_KEY` locally — soak used Railway Production env (not a product defect).
+- Railway **Development** deploy status may fail (resource limits) — classified as Dev infrastructure, not Validate CI.
 
 ---
 
