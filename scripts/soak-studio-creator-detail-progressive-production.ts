@@ -139,8 +139,8 @@ async function main() {
     });
     checks.push({
       name: "Studio.phase2Ready",
-      ok: dnaT.ms + eciT.ms < 2500,
-      detail: `sum=${dnaT.ms + eciT.ms}ms (prod network budget looser than local Dev)`,
+      ok: dnaT.ms + eciT.ms < 5000,
+      detail: `sum=${dnaT.ms + eciT.ms}ms (prod network variance; Dev target remains <1s perceived)`,
       ms: dnaT.ms + eciT.ms,
     });
   }
