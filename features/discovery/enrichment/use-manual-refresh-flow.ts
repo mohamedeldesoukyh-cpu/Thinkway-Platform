@@ -6,9 +6,9 @@ import { toast } from "sonner";
 import type { EnrichmentScope } from "@/lib/creator-enrichment/enabled";
 import type { ManualRefreshCacheAssessment } from "@/lib/creator-enrichment/manual-refresh-cache-assessment";
 import type { ManualRefreshDataSource } from "@/lib/creator-enrichment/manual-refresh-policy";
-import type { UnifiedCreatorResult } from "@/lib/creators/types";
-
 import { logManualRefreshTrace } from "@/lib/creator-enrichment/manual-refresh-trace";
+import { resolveManualRefreshToast } from "@/lib/creator-enrichment/refresh-failure-stage";
+import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
 import {
   getManualRefreshCacheAssessmentAction,
@@ -116,50 +116,54 @@ export function useManualRefreshFlow(options: UseManualRefreshFlowOptions = {}) 
                 notifyUpdated?.(creator);
                 notifyStatus?.(resolveCreatorEnrichmentStatus(creator.enrichment_status));
               },
-              onComplete: (syncStatus, creator) => {
+              onComplete: (syncStatus, creator, poll) => {
                 logManualRefreshTrace("ui_poll_complete", {
                   influencerId: request.influencerId,
                   syncStatus,
-                  enrichmentStatus: creator?.enrichment_status ?? null,
-                  enrichmentSource: creator?.enrichment_source ?? null,
+                  enrichmentStatus: creator?.enrichment_status ?? poll?.enrichmentStatus ?? null,
+                  enrichmentSource: creator?.enrichment_source ?? poll?.enrichmentSource ?? null,
+                  failureStage: poll?.failureStage ?? null,
+                  refreshId: poll?.refreshId ?? null,
                 });
                 const next = syncStatusToEnrichmentStatus(syncStatus);
                 notifyStatus?.(next);
-                if (syncStatus === "completed") {
-                  const liveFromApify =
-                    result.refreshSource === "live_apify" &&
-                    creator?.enrichment_source === "apify" &&
-                    (creator.enrichment_status === "enriched" ||
-                      creator.enrichment_status === "partial");
-                  const toastText = liveFromApify
-                    ? "Creator refreshed live from Apify"
-                    : result.refreshSource === "live_apify"
-                      ? "Refresh finished without new Apify data"
-                      : "Creator metrics updated";
+                if (syncStatus === "completed" || syncStatus === "failed") {
+                  const toastContent = resolveManualRefreshToast({
+                    syncStatus,
+                    refreshSource: result.refreshSource,
+                    enrichmentSource:
+                      creator?.enrichment_source ?? poll?.enrichmentSource ?? null,
+                    enrichmentStatus:
+                      creator?.enrichment_status ?? poll?.enrichmentStatus ?? null,
+                    failureStage: poll?.failureStage ?? null,
+                    failureReason: poll?.failureReason ?? null,
+                  });
                   logManualRefreshTrace("ui_success_toast", {
                     influencerId: request.influencerId,
-                    toast: toastText,
+                    toast: toastContent.title,
+                    tone: toastContent.tone,
                     refreshSourceIntent: result.refreshSource ?? null,
-                    enrichmentStatus: creator?.enrichment_status ?? null,
-                    enrichmentSource: creator?.enrichment_source ?? null,
+                    enrichmentStatus:
+                      creator?.enrichment_status ?? poll?.enrichmentStatus ?? null,
+                    enrichmentSource:
+                      creator?.enrichment_source ?? poll?.enrichmentSource ?? null,
                     syncStatus,
-                    liveFromApify,
+                    failureStage: poll?.failureStage ?? null,
+                    refreshId: poll?.refreshId ?? null,
                   });
-                  if (liveFromApify) {
-                    toast.success(toastText);
-                  } else if (result.refreshSource === "live_apify") {
-                    toast.message(toastText, {
-                      description:
-                        "Check Apify daily budgets (DISCOVERY_APIFY_MAX_*) on Vercel and Railway, then try again.",
+                  if (toastContent.tone === "success") {
+                    toast.success(toastContent.title, {
+                      description: toastContent.description,
+                    });
+                  } else if (toastContent.tone === "error") {
+                    toast.error(toastContent.title, {
+                      description: toastContent.description,
                     });
                   } else {
-                    toast.success(toastText);
+                    toast.message(toastContent.title, {
+                      description: toastContent.description,
+                    });
                   }
-                } else if (syncStatus === "failed") {
-                  toast.error("Creator refresh failed", {
-                    description:
-                      "Apify did not complete this refresh. Confirm discovery-worker is running and Apify daily budgets are set above 0.",
-                  });
                 }
               },
             }

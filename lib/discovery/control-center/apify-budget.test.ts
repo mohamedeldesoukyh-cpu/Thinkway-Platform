@@ -105,10 +105,14 @@ async function testAssertWithoutSupabaseFailsClosed() {
     const decision = await assertApifyAcquisitionBudget(null, {
       settings: settingsWithBudget(100, 25),
       source: "unit_test_unverified",
+      meta: {
+        clientResolutionReason: "SUPABASE_SERVICE_ROLE_KEY is required for service-role operations.",
+      },
     });
     assert.equal(decision.allowed, false);
     assert.equal(decision.code, "usage_unverified");
-    assert.equal(decision.reason, APIFY_BUDGET_UNVERIFIED_REASON);
+    assert.ok(decision.reason.startsWith(APIFY_BUDGET_UNVERIFIED_REASON));
+    assert.match(decision.reason, /SUPABASE_SERVICE_ROLE_KEY/);
     assert.equal(warnings.length, 1);
     assert.match(warnings[0]!, /\[apify-budget\] rejected/);
     assert.match(warnings[0]!, /usage_unverified/);

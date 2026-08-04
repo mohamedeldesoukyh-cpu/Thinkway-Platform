@@ -1,6 +1,7 @@
 export {
   executeCreatorMetricsRefresh,
   getCreatorMetricsSyncStatus,
+  getCreatorRefreshPollStatus,
   mapEnrichmentStatusToSyncStatus,
   refreshCreatorMetrics,
   refreshCreatorMetricsBatch,
@@ -11,6 +12,7 @@ export {
 } from "./creator-enrichment-service";
 export type {
   CreatorMetricsSyncStatus,
+  CreatorRefreshPollStatus,
   RefreshCreatorMetricsBatchResult,
   RefreshCreatorMetricsOptions,
   RefreshCreatorMetricsResult,

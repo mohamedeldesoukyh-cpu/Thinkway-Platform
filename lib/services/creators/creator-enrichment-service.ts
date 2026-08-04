@@ -29,6 +29,7 @@ import type { Database } from "@/types/database";
 import { getBatchProfileAcquisitionJob } from "./creator-enrichment-service-impl";
 import {
   getCreatorMetricsSyncStatus,
+  getCreatorRefreshPollStatus,
   mapEnrichmentStatusToSyncStatus,
   resolveCreatorInfluencerId,
   type CreatorMetricsSyncStatus,
@@ -39,20 +40,22 @@ import {
   type StopCreatorMetricsRefreshResult,
 } from "./creator-enrichment-service-shared";
 
+export {
+  getCreatorMetricsSyncStatus,
+  mapEnrichmentStatusToSyncStatus,
+  resolveCreatorInfluencerId,
+  getCreatorRefreshPollStatus,
+} from "./creator-enrichment-service-shared";
+
 export type {
   CreatorMetricsSyncStatus,
+  CreatorRefreshPollStatus,
   RefreshCreatorMetricsBatchResult,
   RefreshCreatorMetricsOptions,
   RefreshCreatorMetricsResult,
   StopCreatorMetricsRefreshBatchResult,
   StopCreatorMetricsRefreshResult,
 } from "./creator-enrichment-service-shared";
-
-export {
-  getCreatorMetricsSyncStatus,
-  mapEnrichmentStatusToSyncStatus,
-  resolveCreatorInfluencerId,
-};
 
 type AnySupabase = SupabaseClient<Database>;
 

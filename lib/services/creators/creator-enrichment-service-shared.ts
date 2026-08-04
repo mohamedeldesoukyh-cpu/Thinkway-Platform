@@ -185,34 +185,109 @@ export async function getCreatorMetricsSyncStatus(
   supabase: AnySupabase,
   influencerId: string
 ): Promise<CreatorMetricsSyncStatus> {
-  const [{ data, error }, { data: platformRows, error: platformError }] = await Promise.all([
+  const poll = await getCreatorRefreshPollStatus(supabase, influencerId);
+  return poll.syncStatus;
+}
+
+export type CreatorRefreshPollStatus = {
+  syncStatus: CreatorMetricsSyncStatus;
+  enrichmentStatus: CreatorEnrichmentStatus | null;
+  enrichmentSource: string | null;
+  refreshId: string | null;
+  failureStage: string | null;
+  failureReason: string | null;
+};
+
+/** Latest refresh outcome + aggregated sync status for UI poll / toasts. */
+export async function getCreatorRefreshPollStatus(
+  supabase: AnySupabase,
+  influencerId: string
+): Promise<CreatorRefreshPollStatus> {
+  const [
+    { data, error },
+    { data: platformRows, error: platformError },
+    { data: latestRun },
+  ] = await Promise.all([
     supabase
       .from("influencers")
-      .select("enrichment_status")
+      .select("enrichment_status, enrichment_source, metadata")
       .eq("id", influencerId)
       .maybeSingle(),
     supabase
       .from("influencer_platform_accounts")
       .select("enrichment_status")
       .eq("influencer_id", influencerId),
+    supabase
+      .from("creator_enrichment_runs")
+      .select(
+        "refresh_id, failure_stage, error_message, status, execution_trace, created_at"
+      )
+      .eq("influencer_id", influencerId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
 
-  if (error || !data) return "pending";
-  if (platformError) {
-    return mapEnrichmentStatusToSyncStatus(
-      (data as { enrichment_status: CreatorEnrichmentStatus }).enrichment_status
-    );
+  if (error || !data) {
+    return {
+      syncStatus: "pending",
+      enrichmentStatus: null,
+      enrichmentSource: null,
+      refreshId: null,
+      failureStage: null,
+      failureReason: null,
+    };
   }
 
-  const hasInflightJob = await creatorHasInflightEnrichmentJob(influencerId);
-  const resolved = resolveAggregatedCreatorEnrichmentStatus({
-    creatorId: influencerId,
-    storedStatus: (data as { enrichment_status: CreatorEnrichmentStatus }).enrichment_status,
-    platformStatuses: (platformRows ?? []).map(
-      (row) => (row as { enrichment_status: CreatorEnrichmentStatus }).enrichment_status
-    ),
-    hasInflightJob,
-  });
+  const row = data as {
+    enrichment_status: CreatorEnrichmentStatus;
+    enrichment_source: string | null;
+    metadata: Record<string, unknown> | null;
+  };
 
-  return mapEnrichmentStatusToSyncStatus(resolved);
+  let resolved: CreatorEnrichmentStatus = row.enrichment_status;
+  if (!platformError) {
+    const hasInflightJob = await creatorHasInflightEnrichmentJob(influencerId);
+    resolved = resolveAggregatedCreatorEnrichmentStatus({
+      creatorId: influencerId,
+      storedStatus: row.enrichment_status,
+      platformStatuses: (platformRows ?? []).map(
+        (platformRow) =>
+          (platformRow as { enrichment_status: CreatorEnrichmentStatus })
+            .enrichment_status
+      ),
+      hasInflightJob,
+    });
+  }
+
+  const metaRefresh = (row.metadata?.last_manual_refresh ?? null) as {
+    refreshId?: string;
+    failureStage?: string | null;
+    failureReason?: string | null;
+  } | null;
+
+  const run = latestRun as {
+    refresh_id?: string | null;
+    failure_stage?: string | null;
+    error_message?: string | null;
+    status?: string | null;
+    execution_trace?: { failureStage?: string | null; failureReason?: string | null } | null;
+  } | null;
+
+  return {
+    syncStatus: mapEnrichmentStatusToSyncStatus(resolved),
+    enrichmentStatus: resolved,
+    enrichmentSource: row.enrichment_source ?? null,
+    refreshId: run?.refresh_id ?? metaRefresh?.refreshId ?? null,
+    failureStage:
+      run?.failure_stage ??
+      run?.execution_trace?.failureStage ??
+      metaRefresh?.failureStage ??
+      null,
+    failureReason:
+      run?.error_message ??
+      run?.execution_trace?.failureReason ??
+      metaRefresh?.failureReason ??
+      null,
+  };
 }

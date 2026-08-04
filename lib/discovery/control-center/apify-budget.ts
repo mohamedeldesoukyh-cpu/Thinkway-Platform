@@ -215,27 +215,43 @@ export async function assertApifyAcquisitionBudget(
   }
 
   if (!supabase) {
+    const detail =
+      typeof options?.meta?.clientResolutionReason === "string" &&
+      options.meta.clientResolutionReason.trim()
+        ? options.meta.clientResolutionReason.trim()
+        : "Supabase client was null (service-role client unavailable).";
     const unverified: ApifyBudgetDecision = {
       allowed: false,
-      reason: APIFY_BUDGET_UNVERIFIED_REASON,
+      reason: `${APIFY_BUDGET_UNVERIFIED_REASON} ${detail}`,
       code: "usage_unverified",
       caps: configured.caps,
     };
-    logApifyBudgetRejection(source, unverified, options?.meta);
+    logApifyBudgetRejection(source, unverified, {
+      ...(options?.meta ?? {}),
+      verificationFailure: "supabase_client_null",
+    });
     return unverified;
   }
 
   let usage: { requestCount: number; creditsUsed: number };
   try {
     usage = await readDailyUsageOrThrow(supabase);
-  } catch {
+  } catch (error) {
+    const detail =
+      error instanceof Error && error.message.trim()
+        ? error.message.trim()
+        : "discovery_apify_usage query failed";
     const unverified: ApifyBudgetDecision = {
       allowed: false,
-      reason: APIFY_BUDGET_UNVERIFIED_REASON,
+      reason: `${APIFY_BUDGET_UNVERIFIED_REASON} ${detail}`,
       code: "usage_unverified",
       caps: configured.caps,
     };
-    logApifyBudgetRejection(source, unverified, options?.meta);
+    logApifyBudgetRejection(source, unverified, {
+      ...(options?.meta ?? {}),
+      verificationFailure: "usage_query_failed",
+      usageQueryError: detail,
+    });
     return unverified;
   }
 

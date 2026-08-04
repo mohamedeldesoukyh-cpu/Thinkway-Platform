@@ -14,13 +14,21 @@ import {
 } from "@/lib/performance/apify-run-gate";
 import type { SocialPlatform } from "@/lib/social/platforms";
 
-async function resolveBudgetSupabase() {
-  try {
-    const { createSupabaseAdminClient } = await import("@/lib/supabase/admin");
-    return createSupabaseAdminClient();
-  } catch {
-    return null;
+async function resolveBudgetSupabase(preferred?: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client?: any | null;
+}): Promise<{
+  client: import("@supabase/supabase-js").SupabaseClient | null;
+  reason: string | null;
+}> {
+  if (preferred?.client) {
+    return { client: preferred.client, reason: null };
   }
+  // Worker-safe: never import `@/lib/supabase/admin` (server-only throws outside Next).
+  const { tryCreateServiceRoleClient } = await import(
+    "@/lib/supabase/service-role-client"
+  );
+  return tryCreateServiceRoleClient();
 }
 
 export type BatchApifyFetchResult = {
@@ -109,6 +117,9 @@ export async function runBatchApifyActor(input: {
   label: string;
   timeoutMs: number;
   actorBody: Record<string, unknown>;
+  /** Preferred Supabase client for budget usage reads (worker / orchestrator). */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase?: any | null;
 }): Promise<BatchApifyFetchResult> {
   const env = getMetricsCollectorEnv();
   const token = env.apifyToken;
@@ -137,13 +148,14 @@ export async function runBatchApifyActor(input: {
     };
   }
 
-  const budgetClient = await resolveBudgetSupabase();
-  const budget = await assertApifyAcquisitionBudget(budgetClient, {
+  const resolved = await resolveBudgetSupabase({ client: input.supabase ?? null });
+  const budget = await assertApifyAcquisitionBudget(resolved.client, {
     source: "batch_profile_apify_fetch",
     meta: {
       platform: platformKey,
       label: input.label,
       profileCount: input.profileUrls.length,
+      clientResolutionReason: resolved.reason,
     },
   });
   if (!budget.allowed) {
@@ -230,6 +242,9 @@ export async function fetchBatchProfileRowsFromApify(input: {
   usernames: string[];
   timeoutMs: number;
   scope?: EnrichmentScope;
+  /** Preferred Supabase client for budget usage reads. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase?: any | null;
 }): Promise<{
   ok: boolean;
   profileRows: Record<string, unknown>[];
@@ -250,6 +265,7 @@ export async function fetchBatchProfileRowsFromApify(input: {
     label: "batch-profile-details",
     timeoutMs: input.timeoutMs,
     actorBody: detailsInput,
+    supabase: input.supabase ?? null,
   });
 
   if (!detailsRun.ok) {
@@ -276,6 +292,7 @@ export async function fetchBatchProfileRowsFromApify(input: {
       label: "batch-profile-posts",
       timeoutMs: input.timeoutMs,
       actorBody: postsInput,
+      supabase: input.supabase ?? null,
     });
     if (postsRun.ok) {
       postRows = postsRun.rows;
@@ -307,6 +324,8 @@ export async function fetchBatchProfileRowsWithRetry(input: {
   maxRetries: number;
   retryBackoffMs: number;
   scope?: EnrichmentScope;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase?: any | null;
 }): Promise<{
   ok: boolean;
   profileRows: Record<string, unknown>[];
@@ -324,6 +343,7 @@ export async function fetchBatchProfileRowsWithRetry(input: {
         usernames: input.usernames,
         timeoutMs: input.timeoutMs,
         scope: input.scope,
+        supabase: input.supabase ?? null,
       });
       if (result.ok) {
         return { ...result, attempts: attempt };

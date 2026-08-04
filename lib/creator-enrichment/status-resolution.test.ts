@@ -65,6 +65,18 @@ assert.equal(
 );
 
 assert.equal(
+  resolve("failed", ["enriched", "never"], false),
+  "failed",
+  "latest refresh failed beats historical platform enriched (no false completed)"
+);
+
+assert.equal(
+  resolve("failed", ["enriched", "enriched"], true),
+  "queued",
+  "in-flight job still shows queued even when stored failed briefly"
+);
+
+assert.equal(
   resolve("queued", ["never", "never"], false),
   "never",
   "orphaned queued with no completions → never"

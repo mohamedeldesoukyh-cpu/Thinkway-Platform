@@ -149,6 +149,9 @@ export async function fetchProfileWithIpl(
     username: context.username,
     profileUrl: context.profileUrl,
     includePosts: context.includePosts,
+    // Pass worker/IPL Supabase so budget usage reads never depend on
+    // `server-only` admin imports (Railway discovery-worker).
+    supabase,
   });
 
   if (!rawResult.ok) {

@@ -3,6 +3,10 @@
  *
  * Prevents incorrect downgrades (e.g. IG enriched + TikTok never → Queued) and
  * reconciles orphaned queued/running rows when no BullMQ job is in flight.
+ *
+ * Latest refresh SSOT: when the influencer orchestration row is terminal `failed`
+ * and no job is in flight, historical platform `enriched` rows must not map the
+ * creator to completed / Updated.
  */
 
 import type { CreatorEnrichmentStatus } from "./types";
@@ -35,6 +39,7 @@ function isCompleted(status: CreatorEnrichmentStatus): boolean {
  * Rules:
  * - Any in-flight job or active processing → queued/running (Updating in UI)
  * - Orphaned queued/running without a job → fall through (never stick on Queued)
+ * - Stored terminal `failed` (latest refresh) beats historical platform enriched
  * - All platforms never → never
  * - Any failure with some success → partial
  * - Any failure with no success → failed
@@ -58,6 +63,10 @@ export function resolveAggregatedCreatorEnrichmentStatus(
     } else {
       resolved = "queued";
     }
+  } else if (stored === "failed") {
+    // Latest refresh wrote failed on the influencer row — never let historical
+    // platform "enriched" rows mask that as completed in the UI poll.
+    resolved = "failed";
   } else if (isProcessing(stored)) {
     // Orphaned orchestration row — reconcile from platform terminal states.
     resolved = resolveTerminalFromPlatforms(platformStatuses, stored);

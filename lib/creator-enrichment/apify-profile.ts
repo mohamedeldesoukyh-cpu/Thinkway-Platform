@@ -45,13 +45,18 @@ import { isCreatorEnrichmentWorkerEnabled } from "./enabled";
 import { logManualRefreshTrace } from "./manual-refresh-trace";
 import type { ApifyProfileData, RecentPublication } from "./types";
 
-async function resolveBudgetSupabase() {
-  try {
-    const { createSupabaseAdminClient } = await import("@/lib/supabase/admin");
-    return createSupabaseAdminClient();
-  } catch {
-    return null;
+async function resolveBudgetSupabase(preferred?: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client?: any | null;
+}): Promise<{ client: import("@supabase/supabase-js").SupabaseClient | null; reason: string | null }> {
+  if (preferred?.client) {
+    return { client: preferred.client, reason: null };
   }
+  // Worker-safe: never import `@/lib/supabase/admin` (server-only throws outside Next).
+  const { tryCreateServiceRoleClient } = await import(
+    "@/lib/supabase/service-role-client"
+  );
+  return tryCreateServiceRoleClient();
 }
 
 export type ApifyProfileFetchResult =
@@ -598,7 +603,15 @@ export type ApifyRawFetchSuccess = {
 
 export type ApifyRawFetchResult =
   | ({ ok: true } & ApifyRawFetchSuccess)
-  | { ok: false; reason: string; available: boolean; durationMs: number; apifyRunId?: string | null };
+  | {
+      ok: false;
+      reason: string;
+      available: boolean;
+      durationMs: number;
+      apifyRunId?: string | null;
+      /** Stage that blocked acquisition (budget gate, actor, dataset, …). */
+      failureStage?: string;
+    };
 
 /**
  * Fetch raw Apify actor output without normalization.
@@ -611,6 +624,12 @@ export async function fetchApifyProfileRaw(input: {
   timeoutMs?: number;
   /** When false, skip Instagram posts actor (details.latestPosts still used). */
   includePosts?: boolean;
+  /**
+   * Preferred Supabase client for budget usage reads (worker / IPL pass this).
+   * Avoids `server-only` admin import failures on Railway.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase?: any | null;
 }): Promise<ApifyRawFetchResult> {
   const started = Date.now();
 
@@ -623,12 +642,13 @@ export async function fetchApifyProfileRaw(input: {
     };
   }
 
-  const budgetClient = await resolveBudgetSupabase();
-  const budget = await assertApifyAcquisitionBudget(budgetClient, {
+  const resolved = await resolveBudgetSupabase({ client: input.supabase ?? null });
+  const budget = await assertApifyAcquisitionBudget(resolved.client, {
     source: "creator_enrichment_apify_profile",
     meta: {
       platform: input.platform,
       username: input.username,
+      clientResolutionReason: resolved.reason,
     },
   });
   if (!budget.allowed) {
@@ -638,12 +658,14 @@ export async function fetchApifyProfileRaw(input: {
       reason: budget.reason,
       code: budget.code,
       stage: "apify_budget",
+      clientResolutionReason: resolved.reason,
     });
     return {
       ok: false,
       available: false,
       reason: budget.reason,
       durationMs: Date.now() - started,
+      failureStage: "budget_verification",
     };
   }
 

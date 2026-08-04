@@ -5,6 +5,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { ManualRefreshExecutionTrace } from "./manual-refresh-execution-trace";
 import type { EnrichmentPriority, EnrichmentTrigger } from "./types";
 
 export type EnrichmentRunStatus =
@@ -34,6 +35,9 @@ export type EnrichmentRunInput = {
   requestedBy?: string | null;
   startedAt?: string | null;
   completedAt?: string | null;
+  refreshId?: string | null;
+  failureStage?: string | null;
+  executionTrace?: ManualRefreshExecutionTrace | Record<string, unknown> | null;
 };
 
 export async function writeEnrichmentRun(
@@ -59,6 +63,9 @@ export async function writeEnrichmentRun(
       requested_by: input.requestedBy ?? null,
       started_at: input.startedAt ?? null,
       completed_at: input.completedAt ?? null,
+      refresh_id: input.refreshId ?? null,
+      failure_stage: input.failureStage ?? null,
+      execution_trace: input.executionTrace ?? {},
     } as never);
     if (error) {
       console.error("[creator-enrichment] audit insert failed", error.message);

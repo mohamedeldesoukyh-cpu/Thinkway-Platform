@@ -47,9 +47,12 @@ import { writeEnrichmentRun } from "./audit";
 import {
   canEnqueueCreatorEnrichment,
   creatorEnrichmentDisabledMessage,
-  isCreatorEnrichmentWorkerEnabled,
   type EnrichmentScope,
 } from "./enabled";
+import {
+  createEmptyManualRefreshTrace,
+  type ManualRefreshExecutionTrace,
+} from "./manual-refresh-execution-trace";
 import { logManualRefreshTrace } from "./manual-refresh-trace";
 import { decideEnrichment, computeNextRefreshAt } from "./policy";
 import { shouldIncludeApifyProfilePosts } from "./apify-fetch-policy";
@@ -59,8 +62,15 @@ import { mergeSourcedFields, type IncomingField } from "./merge";
 import { enrichmentUpdatedMeaningfulFields } from "./enrichment-metrics";
 import { accountsHaveUsableBaselineData, accountHasUsableBaselineData } from "./preview-baseline";
 import {
+  classifyRefreshFailureStage,
+  type RefreshFailureStage,
+} from "./refresh-failure-stage";
+import {
   recentPublicationsLackThumbnails,
 } from "@/lib/creators/recent-publication-thumb";
+import { loadCreatorIntelligenceBundle } from "@/lib/enterprise-creator-intelligence";
+import { getMetricsCollectorEnv } from "@/lib/performance/metrics-collector/config";
+import { apifyProfileActorIdForPlatform } from "@/lib/performance/metrics-collector/providers/apify-input";
 import type {
   CreatorEnrichmentJobPayload,
   CreatorEnrichmentResult,
@@ -68,6 +78,7 @@ import type {
   FieldSourceMap,
   ApifyProfileData,
 } from "./types";
+import { randomUUID } from "node:crypto";
 
 type AnySupabase = SupabaseClient;
 
@@ -243,7 +254,14 @@ export async function runCreatorEnrichment(
   options?: { attempt?: number; jobId?: string | null }
 ): Promise<CreatorEnrichmentResult> {
   const startedAt = new Date().toISOString();
+  const startedMs = Date.now();
   const attempt = options?.attempt ?? 1;
+  const refreshId = randomUUID();
+  const executionTrace: ManualRefreshExecutionTrace = createEmptyManualRefreshTrace({
+    refreshId,
+    creatorId: payload.influencerId,
+    startedAt,
+  });
 
   const { data: creator, error: creatorError } = await supabase
     .from("influencers")
@@ -314,6 +332,10 @@ export async function runCreatorEnrichment(
       scope,
       restoredStatus,
     });
+    executionTrace.finalStatus = "skipped";
+    executionTrace.failureReason = skippedReason;
+    executionTrace.completedAt = new Date().toISOString();
+    executionTrace.durationMs = Date.now() - startedMs;
     await writeEnrichmentRun(supabase, {
       influencerId: payload.influencerId,
       discoveredProfileId: payload.discoveredProfileId,
@@ -326,7 +348,9 @@ export async function runCreatorEnrichment(
       jobId: options?.jobId ?? null,
       requestedBy: payload.requestedBy,
       startedAt,
-      completedAt: new Date().toISOString(),
+      completedAt: executionTrace.completedAt,
+      refreshId,
+      executionTrace,
     });
     return {
       ok: true,
@@ -376,6 +400,10 @@ export async function runCreatorEnrichment(
         reason: decision.reason,
         note: "Freshness skip sets enrichment_status restored; UI maps skipped→completed",
       });
+      executionTrace.finalStatus = "skipped";
+      executionTrace.failureReason = decision.reason;
+      executionTrace.completedAt = new Date().toISOString();
+      executionTrace.durationMs = Date.now() - startedMs;
       await writeEnrichmentRun(supabase, {
         influencerId: payload.influencerId,
         discoveredProfileId: payload.discoveredProfileId,
@@ -388,7 +416,9 @@ export async function runCreatorEnrichment(
         jobId: options?.jobId ?? null,
         requestedBy: payload.requestedBy,
         startedAt,
-        completedAt: new Date().toISOString(),
+        completedAt: executionTrace.completedAt,
+        refreshId,
+        executionTrace,
       });
       return {
         ok: true,
@@ -417,6 +447,7 @@ export async function runCreatorEnrichment(
     jobId: options?.jobId ?? null,
     requestedBy: payload.requestedBy,
     startedAt,
+    refreshId,
   });
 
   const { data: accountsData, error: accountsError } = await supabase
@@ -558,6 +589,26 @@ export async function runCreatorEnrichment(
         available: fetched.available,
         cacheHit: false,
       });
+      const stage = classifyRefreshFailureStage(fetched.reason);
+      if (stage === "budget_verification") {
+        executionTrace.budgetVerification = {
+          allowed: false,
+          code: "usage_unverified_or_exhausted",
+          reason: fetched.reason,
+        };
+      }
+      executionTrace.platforms = [
+        ...(executionTrace.platforms ?? []),
+        {
+          platform: platformKey,
+          ok: false,
+          reason: fetched.reason,
+        },
+      ];
+      if (!executionTrace.failureStage) {
+        executionTrace.failureStage = stage;
+        executionTrace.failureReason = fetched.reason;
+      }
       const avatarSource = normalizeAvatarSource(account.avatar_source);
       if (
         avatarSource === "uploaded" &&
@@ -592,9 +643,39 @@ export async function runCreatorEnrichment(
         source: fetched.source,
         force: iplForce,
       });
+      executionTrace.snapshotId = fetched.snapshotId ?? executionTrace.snapshotId;
+      executionTrace.platforms = [
+        ...(executionTrace.platforms ?? []),
+        {
+          platform: platformKey,
+          ok: true,
+          snapshotId: fetched.snapshotId ?? null,
+          reason: "cache_hit",
+        },
+      ];
     } else if (fetched.ok) {
       apifyActorStarted = true;
       apifyActorCompleted = true;
+      executionTrace.budgetVerification = {
+        allowed: true,
+        code: "ok",
+        reason: "Apify daily budgets verified.",
+      };
+      executionTrace.actorId =
+        apifyProfileActorIdForPlatform(platformKey, getMetricsCollectorEnv()) ??
+        executionTrace.actorId;
+      executionTrace.externalRunId =
+        fetched.data.apifyRunId ?? executionTrace.externalRunId;
+      executionTrace.snapshotId = fetched.snapshotId ?? executionTrace.snapshotId;
+      executionTrace.platforms = [
+        ...(executionTrace.platforms ?? []),
+        {
+          platform: platformKey,
+          ok: true,
+          snapshotId: fetched.snapshotId ?? null,
+          externalRunId: fetched.data.apifyRunId ?? null,
+        },
+      ];
       logManualRefreshTrace("apify_actor_completed", {
         influencerId: payload.influencerId,
         platform: platformKey,
@@ -881,6 +962,12 @@ export async function runCreatorEnrichment(
         avatarUrlOverride,
       });
 
+      executionTrace.dnaUpdate = {
+        attempted: true,
+        ok: bridgeResult.ok,
+        message: bridgeResult.message,
+      };
+
       if (bridgeResult.ok) {
         logCreatorEnrichment("DNA bridge completed", {
           influencerId: payload.influencerId,
@@ -888,6 +975,36 @@ export async function runCreatorEnrichment(
           snapshotId: fetched.snapshotId,
           avatarUrlOverride: avatarUrlOverride ? "set" : "none",
         });
+
+        // Verify ECI can load from post-DNA facts (regeneration / freshness check).
+        executionTrace.eciUpdate = {
+          attempted: true,
+          ok: null,
+          message: null,
+        };
+        try {
+          const eci = await loadCreatorIntelligenceBundle(supabase, {
+            influencerId: payload.influencerId,
+          });
+          executionTrace.eciUpdate = {
+            attempted: true,
+            ok: Boolean(eci),
+            message: eci ? "loadCreatorIntelligenceBundle ok" : "empty bundle",
+          };
+        } catch (eciError) {
+          const message =
+            eciError instanceof Error ? eciError.message : "ECI load failed";
+          executionTrace.eciUpdate = {
+            attempted: true,
+            ok: false,
+            message,
+          };
+          errors.push(`${platformKey}: ECI — ${message}`);
+          if (!executionTrace.failureStage) {
+            executionTrace.failureStage = "eci_generation";
+            executionTrace.failureReason = message;
+          }
+        }
       } else {
         logCreatorEnrichment("DNA bridge failed", {
           influencerId: payload.influencerId,
@@ -896,6 +1013,10 @@ export async function runCreatorEnrichment(
           message: bridgeResult.message,
         });
         errors.push(`${platformKey}: DNA bridge — ${bridgeResult.message}`);
+        if (!executionTrace.failureStage) {
+          executionTrace.failureStage = "dna_enrichment";
+          executionTrace.failureReason = bridgeResult.message;
+        }
       }
     }
   }
@@ -932,6 +1053,39 @@ export async function runCreatorEnrichment(
   ) {
     finalStatus = "failed";
   }
+
+  // No meaningful field updates after a live Apify pass that completed.
+  if (
+    !preferCachedSnapshot &&
+    apifyActorCompleted &&
+    finalStatus !== "failed" &&
+    !enrichmentUpdatedMeaningfulFields(allFieldsUpdated)
+  ) {
+    if (!executionTrace.failureStage) {
+      executionTrace.failureStage = "no_profile_changes";
+      executionTrace.failureReason = "Live Apify refresh completed without meaningful field updates.";
+    }
+  }
+
+  const failureStage: RefreshFailureStage | null =
+    finalStatus === "failed" || executionTrace.failureStage
+      ? classifyRefreshFailureStage(
+          errors.join("; ") || executionTrace.failureReason,
+          executionTrace.failureStage
+        )
+      : null;
+
+  if (failureStage) {
+    executionTrace.failureStage = failureStage;
+    executionTrace.failureReason =
+      executionTrace.failureReason ??
+      (errors.length > 0 ? errors.join("; ") : null);
+  }
+
+  executionTrace.finalStatus = finalStatus;
+  executionTrace.externalRunId = lastApifyRunId ?? executionTrace.externalRunId;
+  executionTrace.completedAt = completedAt;
+  executionTrace.durationMs = Date.now() - startedMs;
 
   const influencerCategoriesChanged =
     JSON.stringify(rollupInfluencerCategories) !==
@@ -981,6 +1135,7 @@ export async function runCreatorEnrichment(
   if (finalStatus === "enriched" && !identityReady) {
     finalStatus = "awaiting_profile_details";
   }
+  executionTrace.finalStatus = finalStatus;
 
   logManualRefreshTrace("enrichment_outcome", {
     influencerId: payload.influencerId,
@@ -996,12 +1151,28 @@ export async function runCreatorEnrichment(
     lastApifyRunId,
     fieldsUpdatedCount: allFieldsUpdated.length,
     errorCount: errors.length,
+    refreshId,
+    failureStage: executionTrace.failureStage,
     note: "UI maps enriched|partial|skipped → syncStatus completed; toast uses request dataSource intent",
   });
 
   const nextMetadata = {
     ...(creatorRow.metadata ?? {}),
     country_availability: countryAvailability,
+    last_manual_refresh: {
+      refreshId,
+      status: finalStatus,
+      failureStage: executionTrace.failureStage,
+      failureReason: executionTrace.failureReason,
+      enrichmentSource:
+        effectiveSuccess && enrichmentUpdatedMeaningfulFields(allFieldsUpdated)
+          ? preferCachedSnapshot
+            ? "cache"
+            : "apify"
+          : null,
+      at: completedAt,
+      durationMs: executionTrace.durationMs,
+    },
   };
 
   const { error: influencerUpdateError } = await supabase
@@ -1072,6 +1243,9 @@ export async function runCreatorEnrichment(
     requestedBy: payload.requestedBy,
     startedAt,
     completedAt,
+    refreshId,
+    failureStage: executionTrace.failureStage,
+    executionTrace,
   });
 
   if (!anyApifyAvailable && !anySuccess) {

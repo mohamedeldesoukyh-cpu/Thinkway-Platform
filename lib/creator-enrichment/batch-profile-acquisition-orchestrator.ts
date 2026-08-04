@@ -274,6 +274,7 @@ export async function runBatchProfileAcquisition(
         maxRetries,
         retryBackoffMs: config.retryBackoffMs,
         scope: input.scope,
+        supabase,
       });
 
       apifyRunIds.push(...fetchResult.apifyRunIds);

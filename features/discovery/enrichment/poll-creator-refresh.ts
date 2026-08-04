@@ -1,9 +1,11 @@
 import { logManualRefreshTrace } from "@/lib/creator-enrichment/manual-refresh-trace";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import type { CreatorMetricsSyncStatus } from "@/lib/services/creators/creator-enrichment-service";
+import type { CreatorRefreshPollStatus } from "@/lib/services/creators/creator-enrichment-service-shared";
 
 import {
   getCreatorEnrichmentStatusAction,
+  getCreatorRefreshPollStatusAction,
   getUnifiedCreatorAfterRefreshAction,
 } from "./actions";
 
@@ -30,7 +32,8 @@ export type CreatorRefreshPollCallbacks = {
   onStatusChange?: (status: CreatorMetricsSyncStatus) => void;
   onComplete?: (
     status: CreatorMetricsSyncStatus,
-    creator?: UnifiedCreatorResult | null
+    creator?: UnifiedCreatorResult | null,
+    poll?: CreatorRefreshPollStatus | null
   ) => void;
 };
 
@@ -58,15 +61,20 @@ export async function pollCreatorAfterRefresh(
 ): Promise<CreatorMetricsSyncStatus | "timeout"> {
   let lastStatus: CreatorMetricsSyncStatus | null = null;
   let pendingStreak = 0;
+  let lastPoll: CreatorRefreshPollStatus | null = null;
 
   for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt += 1) {
     await sleep(POLL_INTERVAL_MS);
-    const status = await getCreatorEnrichmentStatusAction(input.influencerId);
+    const poll = await getCreatorRefreshPollStatusAction(input.influencerId);
+    lastPoll = poll;
+    const status = poll.syncStatus;
     logManualRefreshTrace("ui_poll_status", {
       influencerId: input.influencerId,
       unifiedId: input.unifiedId,
       attempt: attempt + 1,
       syncStatus: status,
+      failureStage: poll.failureStage,
+      refreshId: poll.refreshId,
     });
     if (status === "pending") {
       pendingStreak += 1;
@@ -76,7 +84,7 @@ export async function pollCreatorAfterRefresh(
           syncStatus: "failed",
           reason: "pending_streak",
         });
-        callbacks.onComplete?.("failed");
+        callbacks.onComplete?.("failed", null, lastPoll);
         return "timeout";
       }
     } else {
@@ -91,13 +99,15 @@ export async function pollCreatorAfterRefresh(
         influencerId: input.influencerId,
         syncStatus: status,
         attempt: attempt + 1,
+        failureStage: poll.failureStage,
+        refreshId: poll.refreshId,
       });
       let creator: UnifiedCreatorResult | null = null;
       if (status === "completed" || status === "failed") {
         creator = await getUnifiedCreatorAfterRefreshAction(input.unifiedId);
         if (creator) callbacks.onUpdated(creator);
       }
-      callbacks.onComplete?.(status, creator);
+      callbacks.onComplete?.(status, creator, lastPoll);
       return status;
     }
     // "pending" or unknown non-active statuses should not spin forever.
@@ -107,7 +117,7 @@ export async function pollCreatorAfterRefresh(
         syncStatus: status,
         reason: "non_active",
       });
-      callbacks.onComplete?.(status === "failed" ? "failed" : "completed");
+      callbacks.onComplete?.(status === "failed" ? "failed" : "completed", null, lastPoll);
       return status;
     }
   }
@@ -117,7 +127,7 @@ export async function pollCreatorAfterRefresh(
     syncStatus: "failed",
     reason: "max_attempts",
   });
-  callbacks.onComplete?.("failed");
+  callbacks.onComplete?.("failed", null, lastPoll);
   return "timeout";
 }
 

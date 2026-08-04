@@ -20,6 +20,10 @@ import {
   stopCreatorMetricsRefreshByUnifiedId,
   stopCreatorMetricsRefreshBatchByUnifiedIds,
 } from "@/lib/services/creators/creator-enrichment-service";
+import {
+  getCreatorRefreshPollStatus,
+  type CreatorRefreshPollStatus,
+} from "@/lib/services/creators/creator-enrichment-service-shared";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type EnrichmentActionResult = {
@@ -367,6 +371,26 @@ export async function getCreatorEnrichmentStatusAction(influencerId: string) {
   if ("error" in auth) return "pending" as const;
 
   return getCreatorMetricsSyncStatus(supabase, influencerId);
+}
+
+export async function getCreatorRefreshPollStatusAction(
+  influencerId: string
+): Promise<CreatorRefreshPollStatus> {
+  const empty: CreatorRefreshPollStatus = {
+    syncStatus: "pending",
+    enrichmentStatus: null,
+    enrichmentSource: null,
+    refreshId: null,
+    failureStage: null,
+    failureReason: null,
+  };
+  if (!influencerId) return empty;
+
+  const supabase = await createSupabaseServerClient();
+  const auth = await requirePermission(supabase, CREATOR_ENRICHMENT_PERMISSION);
+  if ("error" in auth) return empty;
+
+  return getCreatorRefreshPollStatus(supabase, influencerId);
 }
 
 export async function getCreatorEnrichmentQueueHealthAction() {
