@@ -122,17 +122,16 @@ async function loadHydratedVendors(
   if (cached) return cached;
 
   const promise = (async (): Promise<HydratedVendor[]> => {
-    const serializableOptions = mapperOptions
-      ? {
-          ...mapperOptions,
-          eciSignalsByInfluencerId: undefined,
-          includeEci: wave.includeEci,
-          includeQuotationPrices: wave.includeQuotationPrices,
-        }
-      : {
-          includeEci: wave.includeEci,
-          includeQuotationPrices: wave.includeQuotationPrices,
-        };
+    type WaveHydrationOptions = HydrationMapperOptions & {
+      includeEci?: boolean;
+      includeQuotationPrices?: boolean;
+    };
+    const serializableOptions: WaveHydrationOptions = {
+      ...(mapperOptions ?? {}),
+      eciSignalsByInfluencerId: undefined,
+      includeEci: wave.includeEci,
+      includeQuotationPrices: wave.includeQuotationPrices,
+    };
     try {
       const dnaResult = await hydrateCreatorsFromDnaAction(
         ids,
