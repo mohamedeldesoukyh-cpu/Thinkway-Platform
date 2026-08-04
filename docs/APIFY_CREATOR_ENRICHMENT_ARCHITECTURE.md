@@ -238,12 +238,99 @@ UI:
 6. Poll creator rows: `enrichment_status` transitions `queued → running → enriched`
 7. Verify `influencer_platform_accounts.follower_count`, `engagement_rate`, `recent_publications`
 
+## Manual refresh stabilization (Release 2.4 candidate)
+
+Stabilization commit: worker-safe budget verification, latest-refresh status SSOT, stage-specific toasts, and persisted execution traces.
+
+### Budget verification flow
+
+```mermaid
+flowchart TD
+  A[fetchApifyProfileRaw / batch Apify] --> B{Preferred Supabase client?}
+  B -->|yes worker/IPL| C[Use passed client]
+  B -->|no| D[tryCreateServiceRoleClient]
+  D -->|null| E[usage_unverified fail-closed]
+  C --> F[assertApifyAcquisitionBudget]
+  D -->|ok| F
+  F --> G{Caps configured?}
+  G -->|no 0/unset| H[budget_not_configured]
+  G -->|yes| I[Read discovery_apify_usage]
+  I -->|query error| E
+  I -->|ok| J{Within daily caps?}
+  J -->|no| K[requests_exhausted / credits_exhausted]
+  J -->|yes| L[Launch Apify actor]
+```
+
+**Worker-safe client:** `lib/supabase/service-role-client.ts` — never import `@/lib/supabase/admin` from discovery-worker (that module uses `server-only` and throws outside Next.js, which previously caused `usage_unverified`).
+
+**Required runtime env (Vercel Preview/Development + Railway discovery-worker):**
+
+| Variable | Role |
+|---|---|
+| `DISCOVERY_APIFY_MAX_REQUESTS_PER_DAY` | Positive daily request cap (DB `costProtection` may be 0/0) |
+| `DISCOVERY_APIFY_MAX_CREDITS_PER_DAY` | Positive daily credit cap |
+| `SUPABASE_SERVICE_ROLE_KEY` | Usage table reads + enrichment writes |
+| `APIFY_TOKEN` | Actor launch |
+
+Do **not** bypass the gate. If verification fails, UI must show **Budget verification failed** — never “Refresh finished without new Apify data”.
+
+### Status precedence rules
+
+`resolveAggregatedCreatorEnrichmentStatus` (`lib/creator-enrichment/status-resolution.ts`):
+
+1. In-flight BullMQ job → `queued` / `running`
+2. Influencer stored status **`failed`** (no job) → **`failed`** (latest refresh SSOT — historical platform `enriched` must not map to completed)
+3. Otherwise reconcile from platform terminal states (`partial` / `enriched` / `awaiting_profile_details` / `never`)
+
+Poll API: `getCreatorRefreshPollStatus` / `getCreatorRefreshPollStatusAction` returns `syncStatus` plus `failureStage`, `failureReason`, `refreshId`.
+
+### Failure stages + toasts
+
+`lib/creator-enrichment/refresh-failure-stage.ts`
+
+| Stage | Toast title |
+|---|---|
+| `budget_verification` | Budget verification failed |
+| `actor_launch` | Actor launch failed |
+| `dataset_retrieval` | Dataset retrieval failed |
+| `snapshot_import` | Snapshot import failed |
+| `dna_enrichment` | DNA enrichment failed |
+| `eci_generation` | ECI generation failed |
+| `no_profile_changes` | No profile changes detected |
+| `unknown` | Creator refresh failed |
+
+Never reuse budget copy for unrelated failures.
+
+### Refresh execution trace
+
+Migration: `supabase/migrations/20260804120000_creator_refresh_execution_trace.sql`
+
+Columns on `creator_enrichment_runs`:
+
+- `refresh_id` — stable id for one attempt (shared across running + terminal rows)
+- `failure_stage` — stage enum above
+- `execution_trace` jsonb — budget verification, actorId, externalRunId, datasetId, snapshotId, DNA update, ECI update, final status, failure reason, duration
+
+Also mirrored under `influencers.metadata.last_manual_refresh` for UI convenience.
+
+### Support troubleshooting flow
+
+1. Locate creator → latest `creator_enrichment_runs` where `status != running` ordered by `created_at desc`
+2. Read `refresh_id`, `failure_stage`, `error_message`, `execution_trace`
+3. If `failure_stage = budget_verification` → check service-role client on worker, `DISCOVERY_APIFY_MAX_*`, `discovery_apify_usage`
+4. If actor/dataset → Apify console using `execution_trace.externalRunId`
+5. If DNA/ECI → snapshot id + DNA bridge / `loadCreatorIntelligenceBundle`
+6. Confirm UI toast matches `failure_stage` (poll must be `failed` when orchestration failed)
+
+Soak tooling: `npx tsx scripts/soak-apify-refresh-pipeline.ts` · `npx tsx scripts/soak-apify-refresh-matrix.ts`
+
 ## Related modules (not duplicated)
 
 | Module | Scope |
 |---|---|
 | `lib/creator-enrichment/service.ts` | Apify merge engine (worker execution) |
 | `lib/creator-enrichment/apify-profile.ts` | Actor input + field normalization |
+| `lib/supabase/service-role-client.ts` | Worker-safe service-role Supabase client |
 | `lib/performance/metrics-collector/` | **Publication** post metrics (campaign performance) |
 | `services/discovery-worker/src/enrichment/pipeline.ts` | Discovery profile crawler (pre-commercial) |
 
@@ -252,4 +339,6 @@ UI:
 - Discovery-only detail sheet: batch refresh promotes profiles; inline detail refresh for `dis:` without prior promotion requires `influencer_id` or batch action
 - Demographics remain `demographic_source = unavailable` until Modash/HypeAuditor/CreatorIQ integration
 - Facebook / Snapchat profile enrichment uses same actor registry but is not in the demo platform set (IG/TT/YT)
+- Dev Railway worker may crash under Redis/log rate limits — classify as Development infrastructure limitation; product path validated via service-role soak + Production worker remains separate
+
 - Import Center UI does not yet expose per-file Refresh Metrics; use Discovery Search bulk action after import completes
