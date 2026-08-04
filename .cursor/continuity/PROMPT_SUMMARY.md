@@ -1,13 +1,10 @@
 # Prompt Summary — Current Sprint
 
-**Branch focus:** `develop` · Release 2.3 CLOSED · R2.4 baseline only  
+**Branch focus:** `develop` @ `e66af79b`  
 **Tag:** **`v2.3.1`**
 
-**Production:** https://app.thinkwaymedia.com · Supabase `ienowhwfyxoqtzbgltno`  
-**Reports:** R2.3 Production · Performance Baseline R2.3
+**Apify Refresh stabilization:** `7a90b5f0` + docs `e66af79b` · CI green on tip push · Dev Preview https://dev.thinkwaymedia.com · budget env set · soak + ECI regression PASS · report `docs/architecture/APIFY_REFRESH_STABILIZATION_ENTERPRISE_RELEASE.md`. Railway Dev worker crash = infra limitation. Ready for R2.4 planning; Production promote needs explicit approval.
 
-**In progress / ready to ship:** Apify Manual Refresh stabilization (budget gate + status SSOT + stage toasts + execution_trace). Dev migration `20260804120000_creator_refresh_execution_trace` applied. Dev soak PASS (`waalhamadi` / `dfc3fe5b-…`). Needs commit + develop deploy (Vercel + Railway worker) + `DISCOVERY_APIFY_MAX_*` on workers (DB costProtection still 0/0).
-
-**Open Med:** STAB-023 · STAB-025 · STAB-031 · Alshaya KWD→USD soft  
-**Open Low:** STAB-024 · STAB-006 · STAB-005  
-**R2.4:** baseline only — **no implementation**
+**Production:** https://app.thinkwaymedia.com · untouched this release  
+**Open Med/Low:** STAB-023/025/031 · 024/006/005  
+**R2.4:** baseline only until Product schedules
