@@ -110,6 +110,7 @@ Full CIP Intelligence→Generate re-soak not required for this maintenance tip (
 |---|---|
 | Production Stabilization Release | ✅ COMPLETE / GO |
 | Tag `v2.3.1` | ✅ |
+| Performance baseline (R2.3 floor) | ✅ `8eebce9c` · report [`PERFORMANCE_BASELINE_REPORT_R2_3.md`](../PERFORMANCE_BASELINE_REPORT_R2_3.md) · CI Validate green |
 | Release 2.3 Feature Freeze / Maintenance Mode | ✅ Remains in force for R2.3 surfaces |
 | Release 2.4 | ✅ Baseline branch / kickoff docs only — **no R2.4 implementation** |
 
