@@ -11,7 +11,8 @@ This program does **not** change product functionality. It adds budgets, gates, 
 ## 1. Performance budgets
 
 Canonical config: [`performance/budgets.json`](../performance/budgets.json)  
-Frozen comparison baseline: [`performance/baseline.json`](../performance/baseline.json)
+Frozen comparison baseline: [`performance/baseline.json`](../performance/baseline.json)  
+**Current floor:** Release 2.3 Stabilization (`8eebce9c`) — see [`PERFORMANCE_BASELINE_REPORT_R2_3.md`](./PERFORMANCE_BASELINE_REPORT_R2_3.md)
 
 | Category | Metrics | Soft / hard |
 |---|---|---|
