@@ -20,8 +20,9 @@ Governance (budgets, CI, dashboard, standards) is in place. The items below are 
 | Item | Notes |
 |---|---|
 | **Campaign + platform-v6 CSS on all dashboard routes** | Shared operational table classes still pull large CSS into the dashboard shell. Further split needs careful class inventory. |
-| **Creator search workspace size** | Largest client source (~72 KB) — candidate for further island splits when budgets approach soft limits. |
-| **Duplicate dependency audit** | Manual rule today; add lockfile duplicate detector for heavy packages (charts, PDF, date libs) as a soft CI warn. |
+| **Creator search workspace size** | Largest client source (~77 KB post–R2.3 baseline) — candidate for further island splits when budgets approach soft limits. |
+| **Post–R2.3 soft budget pressure** | Soft warns on total JS (~14.2 MB / soft 13 MB), assets ≥100KB (26/20), client modules (807/780), largest JS (568.6/560). Hard ceilings still hold. Prefer route-level dynamic imports (Studio sections, CIO/VIO chrome) before raising soft floors. |
+| **Duplicate dependency audit** | Manual rule today; add lockfile duplicate detector for heavy packages (charts, PDF, date libs) as a soft CI warn. `date-fns` appears across multiple large chunks — worth a share-chunk / import hygiene pass. |
 | **Optional CI secrets** | Discovery RPC measure runs only when Supabase secrets are configured on the GitHub repo. |
 
 ---

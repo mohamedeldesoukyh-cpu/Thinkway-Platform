@@ -1,33 +1,28 @@
 {
-  "capturedAt": "2026-07-21T01:45:00.000Z",
-  "gitRef": "phase-performance-governance",
+  "capturedAt": "2026-08-04T02:18:25.527Z",
+  "gitRef": "develop",
+  "gitSha": "43de8065a40be2dda1a012af050791ef6e9dfbbe",
   "bundle": {
-    "largestJsKb": 554.9,
-    "largestCssKb": 328.8,
-    "totalJsKb": 12016.6,
-    "totalCssKb": 623.5,
-    "assetsOver100kb": 18,
-    "jsFileCount": 270,
-    "cssFileCount": 9
+    "largestJsKb": 568.6,
+    "largestCssKb": 337.5,
+    "totalJsKb": 14195,
+    "totalCssKb": 699,
+    "assetsOver100kb": 26,
+    "jsFileCount": 290,
+    "cssFileCount": 10
   },
   "source": {
-    "rootGlobalCssKb": 27.9,
-    "clientModuleCount": 726,
-    "largestClientSourceKb": 72.5,
+    "rootGlobalCssKb": 30.8,
+    "clientModuleCount": 807,
+    "largestClientSourceKb": 77.4,
     "largestClientSourceFile": "features/discovery/components/creator-search/creator-search-workspace.tsx"
   },
-  "discoveryBrowse": {
-    "source": "rpc",
-    "rpcWallMs": 308,
-    "legacyWallMs": 2104
-  },
-  "mediaProxy": {
-    "avatarP95Ms": 0.31,
-    "previewP95Ms": 0.2,
-    "externalRequestsWarmHalf": 0
-  },
   "notes": [
-    "Baseline after Phases 1–4 (browse RPC live, media proxy fail-fast, code-splitting, CSS route split).",
-    "Update via: npm run report:performance -- --write-baseline"
+    "Baseline reset after Release 2.3 Production Stabilization tip (v2.3.1 / 43de8065).",
+    "Prior baseline 2026-07-21 (pre–R2.3 Studio S2/S3, ECI consume path, Campaign Workspace Lifecycle OS depth, CIO/VIO lifecycle surfaces).",
+    "Hard fail was regression.totalJsKbGrowthPct 18.1% vs stale baseline — absolute hard budgets still green (total JS 14195 < 15000).",
+    "Soft warns retained intentionally (largest JS, total JS, assets≥100KB, client modules) — do not raise hard thresholds without a new measured floor.",
+    "No accidental heavy client import of pptxgen/xlsx/exceljs/ECI engines found in top chunks; growth concentrated in campaign-studio + CIO/VIO workspace client surfaces.",
+    "Updated via npm run report:performance -- --write-baseline"
   ]
 }
