@@ -178,8 +178,7 @@ export function createSupabaseCommercialSyncPorts(
       af_value_egp: normalized.af_value_egp,
     };
     const cleared = deliverablesPatchForLineMasterSave(
-      ((existing as { deliverables?: QuotationDeliverable[] }).deliverables ??
-        []) as QuotationDeliverable[]
+      (existing.deliverables as unknown as QuotationDeliverable[] | null) ?? []
     );
     if (cleared) patch.deliverables = cleared;
 

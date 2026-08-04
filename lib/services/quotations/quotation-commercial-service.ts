@@ -154,7 +154,7 @@ export async function updateQuotationItemCommercials(
       .maybeSingle();
     if (existingError) return { ok: false as const, message: existingError.message };
     const cleared = deliverablesPatchForLineMasterSave(
-      (existingRow?.deliverables ?? []) as QuotationDeliverable[]
+      (existingRow?.deliverables as unknown as QuotationDeliverable[] | null) ?? []
     );
     if (cleared) patch.deliverables = cleared;
   }
