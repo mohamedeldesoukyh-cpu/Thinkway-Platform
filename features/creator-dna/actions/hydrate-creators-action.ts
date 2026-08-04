@@ -9,13 +9,19 @@ export async function hydrateCreatorsFromDnaAction(
   creatorIds: string[],
   rationale?: string,
   avgFitScore?: number,
-  options?: HydrationMapperOptions
+  options?: HydrationMapperOptions & {
+    includeEci?: boolean;
+    includeQuotationPrices?: boolean;
+  }
 ): Promise<{ vendors: HydratedVendor[]; loading: false }> {
+  const { startServerLoadTimer } = await import("@/lib/performance/progressive-load");
+  const timer = startServerLoadTimer("studio.hydrate-dna");
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
+    timer.end({ ok: false, reason: "unauthenticated" });
     return { vendors: [], loading: false };
   }
 
@@ -23,6 +29,13 @@ export async function hydrateCreatorsFromDnaAction(
     rationale,
     avgFitScore,
     ...options,
+  });
+
+  timer.end({
+    ok: true,
+    count: vendors.length,
+    includeEci: options?.includeEci !== false,
+    includeQuotationPrices: options?.includeQuotationPrices !== false,
   });
 
   return { vendors, loading: false };

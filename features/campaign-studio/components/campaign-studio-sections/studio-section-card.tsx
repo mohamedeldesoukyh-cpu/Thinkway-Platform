@@ -1,9 +1,13 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
+import {
+  STUDIO_PHASE2_MOUNT_DELAY_MS,
+  studioSectionProgressivePhase,
+} from "@/lib/performance/progressive-load";
 
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { StudioDraftState } from "@/features/campaign-intelligence/types/section-schemas";
@@ -160,12 +164,38 @@ export function StudioSectionCard({
   const isLoading = section.status === "pending";
   const hasRenderableContent =
     section.status !== "pending" || campaignObject != null;
+  const progressivePhase = studioSectionProgressivePhase(section.id);
+  const [phase2Ready, setPhase2Ready] = useState(progressivePhase === 1);
+
+  useEffect(() => {
+    if (progressivePhase === 1) {
+      setPhase2Ready(true);
+      return;
+    }
+    if (progressivePhase !== 2) {
+      setPhase2Ready(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setPhase2Ready(true), STUDIO_PHASE2_MOUNT_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [progressivePhase, section.id]);
+
+  /**
+   * Progressive body mount (complete packages):
+   * Phase 1 — force critical sections immediately
+   * Phase 2 — force recommendation/strategy after short delay
+   * Phase 3 — viewport / IO only (no complete-status force-mount storm)
+   * Running/blocked always force so live generation stays visible.
+   */
+  const forceMountBodyProgressive =
+    forceMountBody ||
+    section.status === "running" ||
+    section.status === "blocked" ||
+    (section.status === "complete" &&
+      (progressivePhase === 1 || (progressivePhase === 2 && phase2Ready)));
+
   const { containerRef, mounted: bodyMounted } = useSectionBodyMount({
-    forceMount:
-      forceMountBody ||
-      section.status === "complete" ||
-      section.status === "running" ||
-      section.status === "blocked",
+    forceMount: forceMountBodyProgressive,
   });
 
   const statusId = `studio-section-${section.id}-status`;

@@ -189,7 +189,14 @@ function hasPopulatedDna(record: CreatorDNARecord): boolean {
 export async function hydrateCreatorsFromDna(
   supabase: AnySupabase,
   creatorIds: string[],
-  options?: { rationale?: string; avgFitScore?: number } & HydrationMapperOptions
+  options?: {
+    rationale?: string;
+    avgFitScore?: number;
+    /** When false, skip ECI for this wave (phase-1 perceived slate). Default true. */
+    includeEci?: boolean;
+    /** When false, skip quotation price batch (phase-1). Default true. */
+    includeQuotationPrices?: boolean;
+  } & HydrationMapperOptions
 ): Promise<{ vendors: HydratedVendor[]; dnaCount: number; unifiedFallbackCount: number }> {
   const vendors: HydratedVendor[] = [];
   let dnaCount = 0;
@@ -200,21 +207,36 @@ export async function hydrateCreatorsFromDna(
     return { vendors, dnaCount, unifiedFallbackCount };
   }
 
+  const includeEci = options?.includeEci !== false;
+  const includeQuotationPrices = options?.includeQuotationPrices !== false;
   const influencerIds = ids.map((id) => normalizeInfluencerId(id));
   const service = new CreatorDNAService(supabase);
 
+  const emptyEci = new Map() as Awaited<ReturnType<typeof loadStudioEciPlanningSignals>>;
   const [dnaByInfluencer, quotationPriceByInfluencerId, eciSignalsByInfluencerId] =
     await Promise.all([
       service.getCreatorDNABatch(influencerIds),
-      getQuotationPriceReferencesBatch(supabase, influencerIds),
-      loadStudioEciPlanningSignals(supabase, ids).catch(
-        () => new Map() as Awaited<ReturnType<typeof loadStudioEciPlanningSignals>>
-      ),
+      includeQuotationPrices
+        ? getQuotationPriceReferencesBatch(supabase, influencerIds)
+        : Promise.resolve(undefined),
+      includeEci
+        ? loadStudioEciPlanningSignals(supabase, ids).catch(() => emptyEci)
+        : Promise.resolve(emptyEci),
     ]);
 
+  const {
+    includeEci: _includeEci,
+    includeQuotationPrices: _includeQuotationPrices,
+    rationale: _rationale,
+    avgFitScore: _avgFitScore,
+    ...mapperRest
+  } = options ?? {};
+
   const hydrationOptions: HydrationMapperOptions = {
-    ...options,
-    quotationPriceByInfluencerId,
+    ...mapperRest,
+    ...(quotationPriceByInfluencerId
+      ? { quotationPriceByInfluencerId }
+      : {}),
     eciSignalsByInfluencerId,
   };
 

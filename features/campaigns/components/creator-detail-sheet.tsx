@@ -52,10 +52,12 @@ import {
 } from "@/features/discovery/enrichment/status";
 import {
   addCreatorToCampaignShortlistAction,
+  enrichUnifiedCreatorWithEciAction,
   getCreatorHistoricalMetricsAction,
   getSimilarCreatorsAction,
-  getUnifiedCreatorDetailAction,
+  getUnifiedCreatorCoreDetailAction,
 } from "@/features/campaigns/creator-discovery-actions";
+import { startLoadTimer } from "@/lib/performance/progressive-load";
 import { getInfluencerQuotationPriceReferenceAction } from "@/features/quotations/actions";
 import { CreatorQuotationPriceReferencePanel } from "@/components/creator/creator-quotation-price-reference-panel";
 import {
@@ -740,6 +742,8 @@ export function CreatorDetailSheet({
     UnifiedCreatorResult & { similarity_score: number }
   > | null>(null);
   const [maximizedSimilarLoading, setMaximizedSimilarLoading] = useState(false);
+  /** True while ECI overlay is in flight — identity shell stays instant. */
+  const [eciLoading, setEciLoading] = useState(false);
 
   useEffect(() => {
     if (!open || !creator) return;
@@ -769,55 +773,104 @@ export function CreatorDetailSheet({
   useEffect(() => {
     if (!open || !creator) return;
     const unifiedId = creator.unified_id;
+    const influencerId = creator.influencer_id;
     const fetchGeneration = detailFetchGenerationRef.current + 1;
     detailFetchGenerationRef.current = fetchGeneration;
     let active = true;
+    // Instant shell: keep list-row identity; clear only progressive panels.
     setDetail(null);
     setSimilar([]);
-    setSimilarLoading(true);
+    setSimilarLoading(false);
+    setEciLoading(true);
 
-    // Critical path: open the sheet as soon as detail + secondary panels are ready.
-    void Promise.all([
-      getUnifiedCreatorDetailAction(unifiedId),
-      getCreatorHistoricalMetricsAction(unifiedId),
-      creator.influencer_id
-        ? getInfluencerQuotationPriceReferenceAction(creator.influencer_id).then((res) =>
-            res.ok ? (res.data?.reference ?? null) : null
-          )
-        : Promise.resolve(null),
-    ]).then(([fullCreator, hist, quotationPriceReference]) => {
+    const sessionTimer = startLoadTimer("creator-detail.sheet.session");
+    let raf1 = 0;
+    let raf2 = 0;
+
+    /**
+     * Progressive Creator Detail (post-paint):
+     * FMP — list-row: image, name, handle, followers, country, categories, recommendation
+     * Phase 1 — core DNA refresh
+     * Phase 2 — ECI / Investment / Audience overlay
+     * Phase 3 — History, quotation, Similar
+     */
+    const startProgressiveIntel = () => {
       if (!active || detailFetchGenerationRef.current !== fetchGeneration) return;
-      if (fullCreator) {
-        setBaseCreator(fullCreator);
+
+      void (async () => {
+        const phase1 = startLoadTimer("creator-detail.sheet.phase1-core");
+        const coreCreator = await getUnifiedCreatorCoreDetailAction(unifiedId);
+        phase1.end({ ok: Boolean(coreCreator) });
+        if (!active || detailFetchGenerationRef.current !== fetchGeneration) return;
+
+        const seed = coreCreator ?? creator;
+        setBaseCreator(seed);
         setSelectedPlatformAccountId((current) => {
-          if (current && fullCreator.platforms.some((p) => p.id === current)) return current;
+          if (current && seed.platforms.some((p) => p.id === current)) return current;
           return (
-            fullCreator.default_metrics_platform_account_id ??
-            fullCreator.platforms[0]?.id ??
-            null
+            seed.default_metrics_platform_account_id ?? seed.platforms[0]?.id ?? null
           );
         });
-      }
-      setDetail({ unifiedId, history: hist, quotationPriceReference });
-    });
 
-    // Heavy similar-creators browse must not block the sheet chrome.
-    void getSimilarCreatorsAction(unifiedId, SIMILAR_CREATORS_RAIL_LIMIT)
-      .then((sim) => {
+        const phase2 = startLoadTimer("creator-detail.sheet.phase2-eci");
+        const eciPromise = enrichUnifiedCreatorWithEciAction(seed).then((withEci) => {
+          phase2.end({
+            ok: Boolean(withEci),
+            hasScore: withEci?.eci_investment_score != null,
+          });
+          if (!active || detailFetchGenerationRef.current !== fetchGeneration) return;
+          if (withEci) setBaseCreator(withEci);
+          setEciLoading(false);
+        });
+
+        const phase3 = startLoadTimer("creator-detail.sheet.phase3-panels");
+        const panelsPromise = Promise.all([
+          getCreatorHistoricalMetricsAction(unifiedId),
+          influencerId
+            ? getInfluencerQuotationPriceReferenceAction(influencerId).then((res) =>
+                res.ok ? (res.data?.reference ?? null) : null
+              )
+            : Promise.resolve(null),
+        ]).then(([hist, quotationPriceReference]) => {
+          phase3.end({
+            historyPoints: hist?.followers?.length ?? 0,
+            hasQuotation: quotationPriceReference != null,
+          });
+          if (!active || detailFetchGenerationRef.current !== fetchGeneration) return;
+          setDetail({ unifiedId, history: hist, quotationPriceReference });
+        });
+
+        setSimilarLoading(true);
+        void getSimilarCreatorsAction(unifiedId, SIMILAR_CREATORS_RAIL_LIMIT)
+          .then((sim) => {
+            if (!active || detailFetchGenerationRef.current !== fetchGeneration) return;
+            setSimilar(sim);
+          })
+          .catch(() => {
+            if (!active || detailFetchGenerationRef.current !== fetchGeneration) return;
+            setSimilar([]);
+          })
+          .finally(() => {
+            if (!active || detailFetchGenerationRef.current !== fetchGeneration) return;
+            setSimilarLoading(false);
+          });
+
+        await Promise.all([eciPromise, panelsPromise]);
         if (!active || detailFetchGenerationRef.current !== fetchGeneration) return;
-        setSimilar(sim);
-      })
-      .catch(() => {
-        if (!active || detailFetchGenerationRef.current !== fetchGeneration) return;
-        setSimilar([]);
-      })
-      .finally(() => {
-        if (!active || detailFetchGenerationRef.current !== fetchGeneration) return;
-        setSimilarLoading(false);
-      });
+        setEciLoading(false);
+        sessionTimer.end({ unifiedId });
+      })();
+    };
+
+    // Two rAFs: let the drawer paint the list-row shell first.
+    raf1 = window.requestAnimationFrame(() => {
+      raf2 = window.requestAnimationFrame(startProgressiveIntel);
+    });
 
     return () => {
       active = false;
+      window.cancelAnimationFrame(raf1);
+      window.cancelAnimationFrame(raf2);
     };
   }, [open, creator?.unified_id]);
 
@@ -1125,11 +1178,19 @@ export function CreatorDetailSheet({
                       <div className="creator-detail-sheet-highlight-card creator-detail-sheet-highlight-card--score">
                         <p className="creator-detail-sheet-highlight-card__label">Investment score</p>
                         <p className="creator-detail-sheet-highlight-card__value">
-                          {investmentScore != null ? investmentScore : "—"}
+                          {investmentScore != null ? (
+                            investmentScore
+                          ) : eciLoading ? (
+                            <Loader2Icon className="size-5 animate-spin text-muted-foreground" />
+                          ) : (
+                            "—"
+                          )}
                         </p>
                         <p className="creator-detail-sheet-highlight-card__meta">
                           {investmentRecommendation ??
-                            `Source confidence ${Math.round(displayCreator.source_confidence)}%`}
+                            (eciLoading
+                              ? "Loading Enterprise Creator Intelligence…"
+                              : `Source confidence ${Math.round(displayCreator.source_confidence)}%`)}
                         </p>
                       </div>
                       <div className="creator-detail-sheet-highlight-card">

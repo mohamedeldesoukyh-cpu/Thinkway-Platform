@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CheckIcon,
   Columns2Icon,
@@ -58,6 +58,7 @@ import {
   type CreatorTierLabel,
 } from "@/lib/creators/creator-tier";
 import { useCreatorHydration } from "../../hooks/use-creator-hydration";
+import { useViewportCreatorIds } from "../../hooks/use-viewport-creator-ids";
 import { buildCreatorContentIdea } from "../../services/creator-slate";
 import {
   getCampaignFacts,
@@ -279,6 +280,7 @@ function VendorCardBlock({
   applyDecision,
   stageRoleChange,
   openCreatorDetails,
+  observeCreator,
 }: {
   vendor: DisplayVendor;
   index: number;
@@ -297,6 +299,7 @@ function VendorCardBlock({
   ) => Promise<void>;
   stageRoleChange: (creatorId: string, role: "main" | "alternative", displayName?: string) => Promise<void>;
   openCreatorDetails: (vendor: DisplayVendor) => void;
+  observeCreator: (creatorId: string | null | undefined) => (node: HTMLElement | null) => void;
 }) {
   const refMode = useStudioRefMode();
   const decision = vendor.id ? vendorDecisions[vendor.id] : undefined;
@@ -421,6 +424,7 @@ function VendorCardBlock({
   if (refMode) {
     return (
       <div
+        ref={observeCreator(vendor.id)}
         key={vendor.id ?? `${vendor.handle}-${index}`}
         className={cn(STUDIO_REF_CLASSES.vendorCard, pendingRemoval && "opacity-75")}
       >
@@ -495,6 +499,7 @@ function VendorCardBlock({
 
   return (
     <div
+      ref={observeCreator(vendor.id)}
       key={vendor.id ?? `${vendor.handle}-${index}`}
       className={pendingRemoval ? "mb-2.5 opacity-75" : "mb-2.5"}
     >
@@ -886,11 +891,20 @@ export function VendorRecommendationsSection({
     };
   }, [campaignObject, creatorFitScores]);
 
+  const { visibleCreatorIds, observeCreator, reset: resetViewportHydration } =
+    useViewportCreatorIds();
+  const idsIdentityKey = ids.join(",");
+
+  useEffect(() => {
+    resetViewportHydration();
+  }, [idsIdentityKey, resetViewportHydration]);
+
   const { vendors: hydrated, loading } = useCreatorHydration(
     ids,
     safeRationale,
     avgFitScore,
-    mapperOptions
+    mapperOptions,
+    { visibleCreatorIds }
   );
 
   const campaignFacts = getCampaignFacts(campaignObject);
@@ -1317,6 +1331,7 @@ export function VendorRecommendationsSection({
               applyDecision={applyDecision}
               stageRoleChange={stageRoleChange}
               openCreatorDetails={openCreatorDetails}
+              observeCreator={observeCreator}
             />
           ))}
         </div>

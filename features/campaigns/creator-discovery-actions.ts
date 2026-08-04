@@ -223,14 +223,53 @@ export async function browseUnifiedCreatorsAction(
   }
 }
 
-export async function getUnifiedCreatorDetailAction(unifiedId: string) {
+/**
+ * Phase 1 Creator Detail — identity / DNA / platforms only (no ECI).
+ * Keeps first paint off the ECI critical path; ECI quality unchanged via phase 2.
+ */
+export async function getUnifiedCreatorCoreDetailAction(unifiedId: string) {
   if (!unifiedId?.trim()) return null;
+  const timer = (await import("@/lib/performance/progressive-load")).startServerLoadTimer(
+    "creator-detail.core"
+  );
   const { supabase } = await requireUserId();
   const creator = await getUnifiedCreatorById(supabase, unifiedId.trim());
-  if (!creator) return null;
+  timer.end({ ok: Boolean(creator), unifiedId: unifiedId.trim() });
+  return creator;
+}
+
+/** Phase 2 Creator Detail — full ECI investment overlay (same SSOT as before). */
+export async function enrichUnifiedCreatorWithEciAction(creator: UnifiedCreatorResult) {
+  if (!creator?.unified_id) return creator;
+  const timer = (await import("@/lib/performance/progressive-load")).startServerLoadTimer(
+    "creator-detail.eci"
+  );
+  const { supabase } = await requireUserId();
   const [enriched] = await enrichCreatorsWithEciInvestment(supabase, [creator], {
     concurrency: 1,
   });
+  timer.end({
+    ok: Boolean(enriched),
+    influencerId: creator.influencer_id ?? null,
+  });
+  return enriched ?? creator;
+}
+
+export async function getUnifiedCreatorDetailAction(unifiedId: string) {
+  if (!unifiedId?.trim()) return null;
+  const timer = (await import("@/lib/performance/progressive-load")).startServerLoadTimer(
+    "creator-detail.full"
+  );
+  const { supabase } = await requireUserId();
+  const creator = await getUnifiedCreatorById(supabase, unifiedId.trim());
+  if (!creator) {
+    timer.end({ ok: false });
+    return null;
+  }
+  const [enriched] = await enrichCreatorsWithEciInvestment(supabase, [creator], {
+    concurrency: 1,
+  });
+  timer.end({ ok: true, withEci: Boolean(enriched) });
   return enriched ?? creator;
 }
 
