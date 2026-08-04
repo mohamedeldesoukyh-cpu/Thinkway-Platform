@@ -36,6 +36,7 @@ Score is evidence-based — not optimized.
 
 | ID | Severity | Title | Fix | Validated |
 |---|---|---|---|---|
+| STAB-041 | High | Apify Manual Refresh false completed / usage_unverified | `7a90b5f0` — service-role budget client · status SSOT · stage toasts · execution_trace | Enterprise soak PASS · **CLOSED · Enterprise Ready** |
 | STAB-001 | Critical | CIO/VIO soft-alert lock | efb1c3b3 | PASS |
 | STAB-007–017 | Med/High | List/cue/timeline contradictions | various | PASS |
 | STAB-018–022 | Med/High | Lifecycle / Finance / Posted | various | PASS live |

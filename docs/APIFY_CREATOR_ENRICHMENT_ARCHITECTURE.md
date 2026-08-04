@@ -238,9 +238,13 @@ UI:
 6. Poll creator rows: `enrichment_status` transitions `queued → running → enriched`
 7. Verify `influencer_platform_accounts.follower_count`, `engagement_rate`, `recent_publications`
 
-## Manual refresh stabilization (Release 2.4 candidate)
+## Manual refresh stabilization — **Enterprise Ready** (CLOSED)
 
-Stabilization commit: worker-safe budget verification, latest-refresh status SSOT, stage-specific toasts, and persisted execution traces.
+**Status:** **CLOSED · Enterprise Ready** (product path) · tip `7a90b5f0` · evidence `docs/architecture/APIFY_REFRESH_STABILIZATION_ENTERPRISE_RELEASE.md`  
+**R2.4:** Carry-in baseline (architecture / diagnostics) — Production promote only with explicit approval.  
+**Not product:** Dev Railway worker crash → `docs/infrastructure/BACKLOG_DEV_RAILWAY_WORKER_REDIS_LOG_RATE_LIMITS.md`
+
+Stabilization: worker-safe budget verification, latest-refresh status SSOT, stage-specific toasts, and persisted execution traces.
 
 ### Budget verification flow
 

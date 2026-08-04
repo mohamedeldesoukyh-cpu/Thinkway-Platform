@@ -1,10 +1,11 @@
 # Prompt Summary — Current Sprint
 
-**Branch focus:** `develop` @ `e66af79b`  
+**Branch focus:** `develop` @ tip (Apify Refresh closed)  
 **Tag:** **`v2.3.1`**
 
-**Apify Refresh stabilization:** `7a90b5f0` + docs `e66af79b` · CI green on tip push · Dev Preview https://dev.thinkwaymedia.com · budget env set · soak + ECI regression PASS · report `docs/architecture/APIFY_REFRESH_STABILIZATION_ENTERPRISE_RELEASE.md`. Railway Dev worker crash = infra limitation. Ready for R2.4 planning; Production promote needs explicit approval.
+**Apify Manual Refresh:** **CLOSED · Enterprise Ready** (`7a90b5f0`) · R2.4 carry-in · Production **unchanged** until explicit Prod deploy.  
+**Dev infra (separate):** Railway worker crash / Redis log rate limits — `docs/infrastructure/BACKLOG_DEV_RAILWAY_WORKER_REDIS_LOG_RATE_LIMITS.md`  
+**R2.4:** `docs/release/2.4/README.md` updated — ready for product scope (not Feature Freeze).
 
-**Production:** https://app.thinkwaymedia.com · untouched this release  
-**Open Med/Low:** STAB-023/025/031 · 024/006/005  
-**R2.4:** baseline only until Product schedules
+**Production:** https://app.thinkwaymedia.com · do not touch without approval  
+**Focus next:** Release 2.4 product work (after Product themes)

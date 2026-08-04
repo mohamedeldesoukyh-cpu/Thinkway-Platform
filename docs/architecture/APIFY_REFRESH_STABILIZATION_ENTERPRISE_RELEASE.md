@@ -73,10 +73,13 @@ Tooling: `scripts/soak-apify-refresh-pipeline.ts`, `scripts/soak-apify-refresh-m
 | Traceability | 9/10 | Full trace; datasetId still optional null |
 | Dev worker availability | 4/10 | Railway Dev crash / rate limits |
 | Preview deploy | 9/10 | Ready + aliased; tip redeployed with env |
-| **Overall Apify Refresh (product)** | **9.2 / 10** | Production-ready pending stable worker runtime on target env |
+| **Overall Apify Refresh (product)** | **9.2 / 10** | **Enterprise Ready** — Prod promote gated; Dev worker infra separate |
 
-**Verdict:** Product path is enterprise-grade and suitable for Release 2.4 planning. Promote Production only after explicit approval (migration + Railway Prod worker already has budget env; still apply migration to Prod).
+**Verdict:** **Enterprise Ready** (product path). Closed for R2.4 planning as carry-in baseline. **Production remains unchanged** until an explicit Production deployment is scheduled (migration + worker verify). Dev Railway worker crash tracked separately as Dev infrastructure only.
 
 ### Classification reminder
 
 Railway Dev crash ≠ product defect. Do not redesign refresh UX due to Dev worker instability.
+
+**Closure:** Product approved 2026-08-04 — item **CLOSED · Enterprise Ready**. Production left unchanged. Dev Railway tracked as separate infra backlog. R2.4 planning updated (`docs/release/2.4/README.md`).
+

@@ -38,13 +38,17 @@ Set on the **Railway worker service** (Vercel does not inject these into the wor
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role JWT |
 | `REDIS_URL` | Managed Redis (`rediss://…`). **Not** `localhost` |
 
-Recommended Safe Mode (match Vercel Production):
+Recommended Safe Mode (match Vercel Production when acquisition must stay off):
 
 - `DISABLE_AUTOMATIC_ENRICHMENT_AND_ACQUISITION=true`
-- `DISCOVERY_APIFY_MAX_REQUESTS_PER_DAY=0`
-- `DISCOVERY_APIFY_MAX_CREDITS_PER_DAY=0`
+- For **live Manual Refresh**, set positive daily caps (DB `costProtection` may be 0/0):
+  - `DISCOVERY_APIFY_MAX_REQUESTS_PER_DAY=500` (example)
+  - `DISCOVERY_APIFY_MAX_CREDITS_PER_DAY=500` (example)
+- `0` / unset caps **fail-close** Apify acquisition (intentional)
 
 Template: `services/discovery-worker/.env.example`
+
+**Dev Railway worker crash (Redis / log rate limits):** tracked separately as Dev infrastructure — `docs/infrastructure/BACKLOG_DEV_RAILWAY_WORKER_REDIS_LOG_RATE_LIMITS.md`. Do not classify as Apify Refresh product failure.
 
 ### Railway deploy (canonical)
 
@@ -82,4 +86,5 @@ Handles `SIGINT` / `SIGTERM`: closes workers, browser pool, exits.
 | Backlog growing | `/api/admin/queues` failed/waiting counts |
 | Enrichment off | `DISABLE_CREATOR_ENRICHMENT`, enrichment flags |
 | Auto enrich/acquire off (runaway brake) | `DISABLE_AUTOMATIC_ENRICHMENT_AND_ACQUISITION` (default **true**): DB-only browse, no coverage/AI acquisition, legacy discovery-enrich scheduler paused; manual refresh still allowed. Set `false` to re-enable automatic paths. Blocks log as `[operational-safety] blocked …` |
-| Apify budget fail-closed | `costProtection.maxRequestsPerDay` / `maxCreditsPerDay` must both be **> 0** (CCC or `DISCOVERY_APIFY_MAX_REQUESTS_PER_DAY` / `DISCOVERY_APIFY_MAX_CREDITS_PER_DAY`). `0`/unset rejects all Apify acquisition. Logs: `[apify-budget] rejected` |
+| Apify budget fail-closed | Caps must both be **> 0** (CCC or `DISCOVERY_APIFY_MAX_*`). Logs: `[apify-budget] rejected`. Worker must use service-role client (`lib/supabase/service-role-client.ts`), not `server-only` admin. |
+| Dev worker Crashed / Railway log rate limit | Infra backlog `BACKLOG_DEV_RAILWAY_WORKER_REDIS_LOG_RATE_LIMITS.md` — not a Refresh product defect |

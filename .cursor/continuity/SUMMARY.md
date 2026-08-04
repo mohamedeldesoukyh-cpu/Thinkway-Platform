@@ -105,11 +105,12 @@ Regression: `npm run test:campaign-workspace-lifecycle-os`.
 
 ## Next functional priority
 
-1. **Active:** Release 2.3 Sprint 2 — Studio × Enterprise Creator Intelligence (consume `loadCreatorIntelligenceBundle` only; preserve Studio UX; no Media Plan / Campaign Workspace ownership change)  
-2. Media Plan Copilot (R2.2b)  
+1. **Release 2.4** — next active initiative (`docs/release/2.4/README.md`); Apify Refresh **Enterprise Ready** carry-in (`7a90b5f0`)  
+2. Media Plan Copilot (R2.2b) / queued roadmap items per Product  
 3. Client Collaboration · Vendor · Creator journeys  
 4. Reporting Hub · Notifications · Enterprise Analytics  
-5. Migration Phase 2+ only if Product authorizes (no new architecture by default)  
+5. Migration Phase 2+ / Apify Refresh **Production** promote only if Product authorizes  
+6. Dev infra: Railway worker Redis/log rate limits (`docs/infrastructure/BACKLOG_DEV_RAILWAY_WORKER_REDIS_LOG_RATE_LIMITS.md`) — not product  
 
 ## Platform navigation standard
 
