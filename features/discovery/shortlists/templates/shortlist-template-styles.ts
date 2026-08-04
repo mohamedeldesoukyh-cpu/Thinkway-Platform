@@ -50,10 +50,17 @@ export const SHORTLIST_TEMPLATE_EXTRA_STYLES = `
     font-size: 13px; font-weight: 600; color: var(--navy); margin: 0;
   }
   .roster-note {
-    font-size: 13px; color: var(--muted); max-width: 72ch; margin: 0 0 18px; line-height: 1.5;
+    font-size: 13px; color: var(--muted); max-width: none; margin: 0 0 18px; line-height: 1.55;
+    white-space: pre-wrap; overflow-wrap: break-word; word-break: normal;
   }
-  .categories-cell { max-width: 180px; }
-  .notes-cell { max-width: 200px; font-size: 12px; color: var(--muted); }
+  .categories-cell { max-width: 220px; white-space: normal; overflow-wrap: break-word; }
+  .notes-cell {
+    max-width: none; min-width: 140px; font-size: 12px; color: var(--muted);
+    white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; line-height: 1.45;
+  }
+  .sl-context-card .v {
+    white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; line-height: 1.45;
+  }
 
   /* Measurement host — same content width as a real page pad. */
   #sl-measure-root{

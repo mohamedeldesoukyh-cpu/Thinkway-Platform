@@ -34,7 +34,12 @@ export async function renderShortlistPreviewHtml(
     itemIds?: string[];
     siteOrigin?: string;
   }
-): Promise<{ html: string; serial: string; template: ShortlistTemplateVariant }> {
+): Promise<{
+  html: string;
+  serial: string;
+  template: ShortlistTemplateVariant;
+  creatorCount: number;
+}> {
   const template = resolveShortlistTemplate(options?.template ?? null);
   const detail = await getShortlistDetail(shortlistId);
   if (!detail) {
@@ -68,5 +73,6 @@ export async function renderShortlistPreviewHtml(
     html,
     serial: detail.serial_number ?? "SL-PENDING",
     template,
+    creatorCount: doc.summary.creatorCount,
   };
 }

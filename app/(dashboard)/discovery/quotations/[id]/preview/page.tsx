@@ -4,6 +4,7 @@ import { Suspense } from "react";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageBackButton } from "@/components/navigation/page-back-button";
+import { DocumentPreviewClient } from "@/features/discovery/document-preview/document-preview-client";
 import { QuotationPreviewDownloads } from "@/features/quotations/components/quotation-preview-downloads";
 import { QuotationPreviewTemplateToggle } from "@/features/quotations/components/quotation-preview-template-toggle";
 import {
@@ -24,7 +25,7 @@ export const dynamic = "force-dynamic";
 
 type QuotationPreviewPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ template?: string }>;
+  searchParams: Promise<{ template?: string; items?: string }>;
 };
 
 export async function generateMetadata({
@@ -68,6 +69,9 @@ export default async function QuotationPreviewPage({
   const { id: routeKey } = await params;
   const query = await searchParams;
   const template = resolveQuotationTemplate(query.template);
+  const itemIds = query.items
+    ? query.items.split(",").map((value) => value.trim()).filter(Boolean)
+    : undefined;
 
   const supabase = await createSupabaseServerClient();
   const {
@@ -82,8 +86,10 @@ export default async function QuotationPreviewPage({
   if (!quotationId) notFound();
 
   const routeSummary = await fetchQuotationRouteSummary(quotationId);
-  const previewQuery =
-    template !== "detailed" ? `template=${encodeURIComponent(template)}` : undefined;
+  const previewParams = new URLSearchParams();
+  if (template !== "detailed") previewParams.set("template", template);
+  if (itemIds?.length) previewParams.set("items", itemIds.join(","));
+  const previewQuery = previewParams.toString() || undefined;
   const canonicalPath = routeSummary
     ? quotationPreviewPath(
         {
@@ -108,7 +114,10 @@ export default async function QuotationPreviewPage({
         canonicalPath,
       },
       undefined,
-      previewQuery ? { template } : undefined
+      {
+        ...(template !== "detailed" ? { template } : {}),
+        ...(itemIds?.length ? { items: itemIds.join(",") } : {}),
+      }
     );
   }
 
@@ -121,10 +130,15 @@ export default async function QuotationPreviewPage({
   const serial = detail.serial_number ?? "QT-PENDING";
 
   let html = "";
+  let creatorCount = 0;
   let errorMessage: string | null = null;
   try {
-    const rendered = await renderQuotationPreviewHtml(supabase, detail.id, { template });
+    const rendered = await renderQuotationPreviewHtml(supabase, detail.id, {
+      template,
+      itemIds,
+    });
     html = rendered.html;
+    creatorCount = rendered.creatorCount;
   } catch (error) {
     errorMessage =
       error instanceof Error ? error.message : "Failed to render quotation preview.";
@@ -136,8 +150,8 @@ export default async function QuotationPreviewPage({
       description={`${serial} — ${templateLabel.toLowerCase()} client quotation`}
       hidePageHeader
     >
-      <div className="sticky top-0 z-20 -mx-4 mb-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:-mx-8 md:px-8 print:hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      {errorMessage ? (
+        <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <PageBackButton
               fallbackHref={quotationDetailPath({
@@ -148,33 +162,44 @@ export default async function QuotationPreviewPage({
               label="Back to quotation"
               variant="text"
             />
-            <Suspense fallback={null}>
-              <QuotationPreviewTemplateToggle
-                quotationId={detail.id}
-                serialNumber={detail.serial_number}
-                activeTemplate={template}
-              />
-            </Suspense>
           </div>
-          {!errorMessage ? (
+          <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {errorMessage}
+          </div>
+        </div>
+      ) : (
+        <DocumentPreviewClient
+          html={html}
+          title={`${templateLabel} quotation ${serial}`}
+          creatorCount={creatorCount}
+          toolbarLeft={
+            <>
+              <PageBackButton
+                fallbackHref={quotationDetailPath({
+                  id: detail.id,
+                  name: detail.name,
+                  serial_number: detail.serial_number,
+                })}
+                label="Back to quotation"
+                variant="text"
+              />
+              <Suspense fallback={null}>
+                <QuotationPreviewTemplateToggle
+                  quotationId={detail.id}
+                  serialNumber={detail.serial_number}
+                  activeTemplate={template}
+                />
+              </Suspense>
+            </>
+          }
+          toolbarRight={
             <QuotationPreviewDownloads
               quotationId={detail.id}
               template={template}
+              itemIds={itemIds}
               exportRevision={detail.updated_at}
             />
-          ) : null}
-        </div>
-      </div>
-
-      {errorMessage ? (
-        <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {errorMessage}
-        </div>
-      ) : (
-        <iframe
-          title={`${templateLabel} quotation ${serial}`}
-          srcDoc={html}
-          className="min-h-[1200px] w-full rounded-xl border border-border bg-card"
+          }
         />
       )}
     </DashboardShell>

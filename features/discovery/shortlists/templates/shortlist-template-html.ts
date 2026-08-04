@@ -236,6 +236,32 @@ function renderShowcaseCreatorFlows(
               .join("")
           : `<div class="pub-empty">No publication screenshots available for this creator.</div>`;
 
+      const notesText = creator.notes?.trim() && creator.notes.trim() !== "—" ? creator.notes.trim() : "";
+      const noteParagraphs = notesText
+        ? notesText.split(/\n+/).map((part) => part.trim()).filter(Boolean)
+        : [];
+      // Keep each notes paragraph atomic so long descriptions continue cleanly.
+      const notesBlocks =
+        noteParagraphs.length === 0
+          ? [
+              block(`<p class="sc-sub">Shortlist context</p>
+    <div class="sl-context-grid">
+      <div class="sl-context-card"><p class="l">Review status</p><p class="v">${esc(creator.status)}</p></div>
+      <div class="sl-context-card"><p class="l">Notes</p><p class="v">—</p></div>
+    </div>`),
+            ]
+          : [
+              block(`<p class="sc-sub">Shortlist context</p>
+    <div class="sl-context-grid">
+      <div class="sl-context-card"><p class="l">Review status</p><p class="v">${esc(creator.status)}</p></div>
+      <div class="sl-context-card"><p class="l">Notes</p><p class="v">${esc(noteParagraphs[0]!)}</p></div>
+    </div>`),
+              ...noteParagraphs.slice(1).map((paragraph) =>
+                block(`<p class="sc-sub">Notes (continued)</p>
+    <p class="roster-note">${esc(paragraph)}</p>`)
+              ),
+            ];
+
       // Atomic blocks — never mid-split. Publication grid moves as one unit.
       const blocksHtml = [
         block(`<div class="sec-row"><span class="sec-badge">${esc(creator.sectionNo)}</span><span class="lbl">Creator ${creator.index} of ${esc(payload.totals.creatorCount)}</span></div>
@@ -254,11 +280,7 @@ function renderShowcaseCreatorFlows(
     </div>`),
         block(`<p class="sc-sub showcase-pubs-title">Recent publications</p>
     <div class="pubs showcase-pubs-grid">${pubsHtml}</div>`),
-        block(`<p class="sc-sub">Shortlist context</p>
-    <div class="sl-context-grid">
-      <div class="sl-context-card"><p class="l">Review status</p><p class="v">${esc(creator.status)}</p></div>
-      <div class="sl-context-card"><p class="l">Notes</p><p class="v">${esc(creator.notes)}</p></div>
-    </div>`),
+        ...notesBlocks,
       ].join("\n");
 
       return renderFlow({

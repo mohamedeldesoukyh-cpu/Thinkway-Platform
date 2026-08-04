@@ -72,7 +72,8 @@ function mockDetail(overrides: Partial<ShortlistDetail> = {}): ShortlistDetail {
   const html = buildShortlistHtml(doc);
   assert.ok(html.includes("Creator mix"));
   assert.ok(html.includes("Summary roster"));
-  assert.ok(!html.includes("shortlist-showcase"));
+  // Body must not use the showcase class (CSS selectors may still mention it).
+  assert.ok(!/body class="[^"]*\bshortlist-showcase\b/.test(html));
 }
 
 console.log("shortlist-document.test.ts: ok");

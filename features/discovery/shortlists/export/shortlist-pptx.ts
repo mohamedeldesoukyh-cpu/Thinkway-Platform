@@ -666,27 +666,97 @@ async function addCreatorSlide(
     pitch ? 1.05 : TW_PUB_THUMB_SIZE
   );
 
-  if (group.notes?.trim()) {
+  const notesText = group.notes?.trim() && group.notes.trim() !== "—" ? group.notes.trim() : "";
+  if (notesText) {
+    const { estimatePptxWrappedTextHeight, chunkPptxWrappedText } = await import(
+      "@/lib/export/pptx-text-layout"
+    );
+    const labelH = 0.16;
+    const available = Math.max(0.34, TW_CONTENT_BOTTOM - (pubsY + 0.22));
+    const chunks = chunkPptxWrappedText(notesText, TW_CONTENT_W, 10, available);
+    const first = chunks[0] ?? notesText;
+    const firstH = estimatePptxWrappedTextHeight({
+      text: first,
+      widthInches: TW_CONTENT_W,
+      fontSizePt: 10,
+      minHeightInches: 0.28,
+      maxHeightInches: available,
+    });
+
     slide.addText("NOTES", {
       x: TW_MARGIN_X,
-      y: Math.min(pubsY + 0.05, TW_CONTENT_BOTTOM - 0.55),
+      y: pubsY + 0.05,
       w: TW_CONTENT_W,
-      h: 0.16,
+      h: labelH,
       fontFace: TW_FONT_UI,
       fontSize: 9,
       bold: true,
       color: TW_BLUE,
       charSpacing: 1.2,
     });
-    slide.addText(group.notes.trim(), {
+    slide.addText(first, {
       x: TW_MARGIN_X,
-      y: Math.min(pubsY + 0.22, TW_CONTENT_BOTTOM - 0.38),
+      y: pubsY + 0.22,
       w: TW_CONTENT_W,
-      h: 0.34,
+      h: firstH,
       fontFace: TW_FONT_BODY,
       fontSize: 10,
       color: TW_MUTED,
+      valign: "top",
     });
+
+    for (let noteIndex = 1; noteIndex < chunks.length; noteIndex++) {
+      const noteSlide = pptx.addSlide();
+      applyThinkwayContentBackground(noteSlide);
+      const notePageNo = nextThinkwaySlideNo(counter);
+      addThinkwayBrandLockup(noteSlide, "dark", 0.42, 0.37);
+      noteSlide.addText(
+        `SECTION 02 · CREATOR ${index + 1} OF ${doc.creatorGroups.length} (NOTES CONTINUED)`,
+        {
+          x: TW_MARGIN_X,
+          y: 1.02,
+          w: 11,
+          h: 0.24,
+          fontFace: TW_FONT_UI,
+          fontSize: 10.5,
+          bold: true,
+          color: TW_BLUE,
+          charSpacing: 1.6,
+        }
+      );
+      noteSlide.addText(group.creator, {
+        x: TW_MARGIN_X,
+        y: 1.35,
+        w: TW_CONTENT_W,
+        h: 0.3,
+        fontFace: TW_FONT_UI,
+        fontSize: 18,
+        bold: true,
+        color: TW_TITLE_INK,
+      });
+      const continuedH = estimatePptxWrappedTextHeight({
+        text: chunks[noteIndex]!,
+        widthInches: TW_CONTENT_W,
+        fontSizePt: 11,
+        minHeightInches: 0.4,
+        maxHeightInches: TW_CONTENT_BOTTOM - 1.9,
+      });
+      noteSlide.addText(chunks[noteIndex]!, {
+        x: TW_MARGIN_X,
+        y: 1.8,
+        w: TW_CONTENT_W,
+        h: continuedH,
+        fontFace: TW_FONT_BODY,
+        fontSize: 11,
+        color: TW_MUTED,
+        valign: "top",
+      });
+      addThinkwaySlideFooter(
+        noteSlide,
+        `${doc.serial} · ${group.handle} · notes ${noteIndex + 1}`,
+        notePageNo
+      );
+    }
   }
 
   addThinkwaySlideFooter(slide, `${doc.serial} · ${group.handle}`, pageNo);

@@ -70,6 +70,15 @@ export const QUOTATION_TEMPLATE_STYLES = `
     display:flex;
     flex-direction:column;
   }
+  /* Adaptive creator sheets: content is pre-chunked; never shrink/clip text. */
+  body.quotation-export-print.quotation-showcase .showcase-creator-slide .pad{
+    overflow:hidden;
+  }
+  body.quotation-export-print.quotation-showcase .showcase-deliverables-table td{
+    white-space:normal !important;
+    overflow-wrap:break-word;
+    word-break:normal;
+  }
   body.quotation-export-print.quotation-showcase .page.summary-overview-page + .showcase-slide,
   body.quotation-export-print.quotation-showcase .showcase-slide + .showcase-slide,
   body.quotation-export-print.quotation-showcase .showcase-slide + .page.roster-page{
@@ -257,9 +266,24 @@ export const QUOTATION_TEMPLATE_STYLES = `
   .fees table{background:#fff; border:1px solid var(--hair); border-radius:14px; overflow:hidden;}
   .fees thead th{font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:#fff; font-weight:600; text-align:left; padding:11px 18px; background:var(--navy);}
   .fees thead th.r{text-align:right;}
-  .fees tbody td{font-size:12.5px; padding:8px 18px; border-top:1px solid #f1f4fa; vertical-align:middle;}
+  .fees tbody td{
+    font-size:12.5px; padding:8px 18px; border-top:1px solid #f1f4fa; vertical-align:top;
+    white-space:normal; overflow-wrap:break-word; word-break:normal; line-height:1.45;
+  }
   .fees tbody td.name{font-weight:600; color:var(--navy);}
-  .fees tbody td.r{text-align:right; font-family:"Geist Mono",monospace; font-weight:500; color:var(--navy);}
+  .fees tbody td.r{text-align:right; font-family:"Geist Mono",monospace; font-weight:500; color:var(--navy); vertical-align:middle;}
+  .categories-cell{white-space:normal; overflow-wrap:break-word; word-break:normal;}
+  .showcase-deliverables-table table{table-layout:fixed; width:100%;}
+  .showcase-deliverables-table th:nth-child(1),
+  .showcase-deliverables-table td:nth-child(1){width:10%;}
+  .showcase-deliverables-table th:nth-child(2),
+  .showcase-deliverables-table td:nth-child(2){width:42%;}
+  .showcase-deliverables-table th:nth-child(3),
+  .showcase-deliverables-table td:nth-child(3){width:16%;}
+  .showcase-deliverables-table th:nth-child(4),
+  .showcase-deliverables-table td:nth-child(4){width:16%;}
+  .showcase-deliverables-table th:nth-child(5),
+  .showcase-deliverables-table td:nth-child(5){width:16%;}
   .fees .pill{font-size:9.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:3px 9px; border-radius:5px; background:var(--lav); color:#274690;}
   .creator-name-cell{display:flex; align-items:center; gap:10px;}
   .fee-avatar{width:28px; height:28px; border-radius:8px; object-fit:cover; flex:none; display:block; background:var(--lav);}
@@ -350,7 +374,13 @@ export const QUOTATION_TEMPLATE_STYLES = `
   .collap-package-field{display:flex; flex-direction:column; gap:4px; min-width:0;}
   .collap-package-field--wide{grid-column:1/-1;}
   .collap-field-label{font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted);}
-  .collap-field-value{font-size:12.5px; line-height:1.45; color:var(--navy); font-weight:500;}
+  .collap-field-value{
+    font-size:12.5px; line-height:1.5; color:var(--navy); font-weight:500;
+    white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word;
+  }
+  .quotation-notes-block,.commercial-notes-block{
+    white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word; line-height:1.55;
+  }
   .collap-creator-section{padding:16px 22px 20px; background:#fbfcff;}
   .collap-creator-section-title{margin:0 0 12px; font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted);}
   .collap-creator-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;}

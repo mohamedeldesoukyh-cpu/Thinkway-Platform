@@ -92,27 +92,33 @@ function showcaseFeeColumnLabel(showFees: boolean): string {
 
 /** One landscape row of publication thumbs per creator slide in PDF. */
 const SHOWCASE_PDF_PUBLICATION_SHOT_LIMIT = 4;
+/** Deliverables kept with identity on first creator page; remainder continues cleanly. */
+const SHOWCASE_CREATOR_DELIVERABLES_FIRST_PAGE = 4;
+const SHOWCASE_CREATOR_DELIVERABLES_CONTINUATION = 7;
 
-/** Uniform PDF slide scale — applied on the section so layout height matches the page. */
+/** Kept for collapse packages that still need a light fit on fixed A4 landscape. */
 function showcasePdfSlideStyle(scale: number): string {
   if (scale >= 0.999) return "";
   return ` style="zoom:${scale.toFixed(2)}"`;
 }
 
-function showcaseCreatorSlideScale(deliverableCount: number): number {
-  const base = 0.94;
-  if (deliverableCount <= 4) return base;
-  if (deliverableCount <= 6) return base * 0.92;
-  if (deliverableCount <= 8) return base * 0.84;
-  return base * 0.76;
+function showcaseCollapSlideScale(creatorCount: number, showBundleIntro: boolean): number {
+  // Prefer continuation over aggressive shrink — keep text readable.
+  let scale = 0.96;
+  if (creatorCount > 3) scale -= 0.03;
+  if (creatorCount > 5) scale -= 0.03;
+  if (showBundleIntro) scale -= 0.02;
+  return Math.max(0.9, scale);
 }
 
-function showcaseCollapSlideScale(creatorCount: number, showBundleIntro: boolean): number {
-  let scale = 0.92;
-  if (creatorCount > 2) scale -= 0.05;
-  if (creatorCount > 4) scale -= 0.05;
-  if (showBundleIntro) scale -= 0.04;
-  return Math.max(0.78, scale);
+function chunkArray<T>(items: T[], firstSize: number, nextSize: number): T[][] {
+  if (items.length === 0) return [[]];
+  const chunks: T[][] = [];
+  chunks.push(items.slice(0, firstSize));
+  for (let i = firstSize; i < items.length; i += nextSize) {
+    chunks.push(items.slice(i, i + nextSize));
+  }
+  return chunks;
 }
 
 function renderLogo(variant: "cover" | "footer"): string {
@@ -218,6 +224,25 @@ function renderShowcaseCreatorPages(
   const pitch = payload.flags.pitchCreators;
   const avatarVariant = pitch ? "pitch" : "showcase";
   const pitchPageClass = pitch ? " pitch-creator-page" : "";
+  const feeHead = payload.flags.showFees
+    ? `<th class="r">${esc(showcaseFeeColumnLabel(true))}</th>`
+    : "";
+  const colSpan = payload.flags.showFees ? 5 : 4;
+
+  const renderDeliverableRows = (
+    rows: (typeof payload.showcaseCreators)[number]["deliverables"]
+  ) =>
+    rows
+      .map((row) => {
+        const feeCell = payload.flags.showFees
+          ? `<td class="r">${esc(row.grossFee ?? "—")}</td>`
+          : "";
+        const platformCell = row.platformIcons.length
+          ? `<td class="platform-cell">${renderQuotationPlatformIconsHtml(row.platformIcons)}<span class="platform-cell-label">${esc(row.platform)}</span></td>`
+          : `<td class="platform-cell">${esc(row.platform)}</td>`;
+        return `<tr><td class="name">${esc(row.option)}</td><td>${esc(row.service)}</td>${platformCell}<td>${esc(row.type)}</td>${feeCell}</tr>`;
+      })
+      .join("");
 
   return payload.showcaseCreators
     .map((creator, index) => {
@@ -244,25 +269,6 @@ function renderShowcaseCreatorPages(
         "No publication screenshots available for this creator."
       );
 
-      const deliverableRows = creator.deliverables
-        .map((row) => {
-          const feeCell = payload.flags.showFees
-            ? `<td class="r">${esc(row.grossFee ?? "—")}</td>`
-            : "";
-          const platformCell = row.platformIcons.length
-            ? `<td class="platform-cell">${renderQuotationPlatformIconsHtml(row.platformIcons)}<span class="platform-cell-label">${esc(row.platform)}</span></td>`
-            : `<td class="platform-cell">${esc(row.platform)}</td>`;
-          return `<tr><td class="name">${esc(row.option)}</td><td>${esc(row.service)}</td>${platformCell}<td>${esc(row.type)}</td>${feeCell}</tr>`;
-        })
-        .join("");
-
-      const feeHead = payload.flags.showFees
-        ? `<th class="r">${esc(showcaseFeeColumnLabel(true))}</th>`
-        : "";
-
-      const denseTableClass =
-        forPdf && creator.deliverables.length > 4 ? " showcase-deliverables-table--dense" : "";
-      const slideScale = forPdf ? showcaseCreatorSlideScale(creator.deliverables.length) : 1;
       const pageClass = forPdf
         ? `page showcase-creator-page showcase-creator-slide showcase-slide avoid-break${pitchPageClass}`
         : `page showcase-creator-page${pitchPageClass}`;
@@ -272,12 +278,12 @@ function renderShowcaseCreatorPages(
         creator.platformMetrics.length > 0
           ? creator.platformMetrics
               .map(
-                (row, index) => `<tr>
+                (row, metricIndex) => `<tr>
           <td class="r">${esc(row.followers)}</td>
           <td class="r">${esc(row.engagement)}</td>
           <td class="r">${esc(row.views)}</td>
-          <td>${index === 0 ? `<span class="pill">${esc(creator.tier)}</span>` : ""}</td>
-          <td class="categories-cell">${index === 0 ? esc(creator.categories) : ""}</td>
+          <td>${metricIndex === 0 ? `<span class="pill">${esc(creator.tier)}</span>` : ""}</td>
+          <td class="categories-cell">${metricIndex === 0 ? esc(creator.categories) : ""}</td>
           <td class="platform-cell">${renderQuotationPlatformIconsHtml([row.platform]) || esc(row.platform)}</td>
         </tr>`
               )
@@ -305,7 +311,41 @@ function renderShowcaseCreatorPages(
       <div class="sc-stat showcase-kpi"><p class="l">Categories</p><p class="v" style="font-size:13px;">${esc(creator.categories)}</p></div>
     </div>`;
 
-      return `<section class="${pageClass}"${forPdf ? showcasePdfSlideStyle(slideScale) : ""}>
+      // Adaptive pagination: keep creator identity together; continue deliverables cleanly.
+      // Preview and PDF share the same chunking so layouts match exactly.
+      const deliverableChunks = chunkArray(
+        creator.deliverables,
+        SHOWCASE_CREATOR_DELIVERABLES_FIRST_PAGE,
+        SHOWCASE_CREATOR_DELIVERABLES_CONTINUATION
+      );
+
+      return deliverableChunks
+        .map((chunk, chunkIndex) => {
+          const continued = chunkIndex > 0;
+          const deliverableRows = renderDeliverableRows(chunk);
+          const bodyRows =
+            deliverableRows ||
+            `<tr><td colspan="${colSpan}" class="pub-empty">No deliverables listed.</td></tr>`;
+
+          if (continued) {
+            return `<section class="${pageClass}">
+  <div class="pad showcase-creator-sheet">
+    <div class="sec-row"><span class="sec-badge">${esc(creator.sectionNo)}</span><span class="lbl">Creator ${creator.index} of ${esc(payload.totals.creatorCount)} · Continued</span></div>
+    <p class="sc-name showcase-name" style="font-size:20px;margin:0 0 4px;">${esc(creator.name)}</p>
+    <p class="sc-handle showcase-handle" style="margin:0 0 16px;">${esc(creator.handle)}</p>
+    <p class="sc-sub showcase-deliverables-title">Proposed deliverables (continued)</p>
+    <div class="fees showcase-deliverables-table">
+      <table class="data-table">
+        <thead><tr><th>Option</th><th>Service description</th><th>Platform</th><th>Type</th>${feeHead}</tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>
+  </div>
+  <div class="foot"><span>${esc(payload.footer.left)}</span><span class="mono">${esc(payload.quotation.number)} · ${esc(creator.handle)} · ${chunkIndex + 1}</span></div>
+</section>`;
+          }
+
+          return `<section class="${pageClass}">
   <div class="pad showcase-creator-sheet">
     <div class="sec-row"><span class="sec-badge">${esc(creator.sectionNo)}</span><span class="lbl">Creator ${creator.index} of ${esc(payload.totals.creatorCount)}</span></div>
     <div class="sc-top">
@@ -320,15 +360,17 @@ function renderShowcaseCreatorPages(
     <p class="sc-sub showcase-pubs-title">Recent publications</p>
     ${pubsHtml}
     <p class="sc-sub showcase-deliverables-title">Proposed deliverables</p>
-    <div class="fees showcase-deliverables-table${denseTableClass}">
+    <div class="fees showcase-deliverables-table">
       <table class="data-table">
         <thead><tr><th>Option</th><th>Service description</th><th>Platform</th><th>Type</th>${feeHead}</tr></thead>
-        <tbody>${deliverableRows || `<tr><td colspan="${payload.flags.showFees ? 5 : 4}" class="pub-empty">No deliverables listed.</td></tr>`}</tbody>
+        <tbody>${bodyRows}</tbody>
       </table>
     </div>
   </div>
   <div class="foot"><span>${esc(payload.footer.left)}</span><span class="mono">${esc(payload.quotation.number)} · ${esc(creator.handle)}</span></div>
 </section>`;
+        })
+        .join("");
     })
     .join("");
 }
@@ -453,9 +495,28 @@ function renderCommercialPage(
 </section>`;
 }
 
+function renderNotesPage(doc: QuotationDocument, payload: QuotationTemplatePayload): string {
+  const notes = doc.notes?.trim();
+  if (!notes) return "";
+  // Keep notes as one continuous block — wrap fully; never truncate commercial explanations.
+  return `<section class="page commercial-notes-page avoid-break" id="section-notes">
+  <div class="pad">
+    <div class="sec-row"><span class="sec-badge">NT</span><span class="lbl">Commercial notes</span></div>
+    <h2 class="sec-title">Notes &amp; recommendations</h2>
+    <div class="quotation-notes-block insight" style="margin-top:8px;">
+      <p style="margin:0; white-space:pre-wrap; overflow-wrap:break-word; word-break:normal; line-height:1.55;">${esc(notes)}</p>
+    </div>
+  </div>
+  <div class="foot"><span>${esc(payload.footer.left)}</span><span class="mono">${esc(payload.quotation.number)} · Notes</span></div>
+</section>`;
+}
+
 function renderTermsPage(payload: QuotationTemplatePayload): string {
   const items = payload.terms.items
-    .map((term) => `<div class="term"><h4>${esc(term.heading)}</h4><p>${esc(term.body)}</p></div>`)
+    .map(
+      (term) =>
+        `<div class="term"><h4>${esc(term.heading)}</h4><p style="white-space:pre-wrap; overflow-wrap:break-word; word-break:normal;">${esc(term.body)}</p></div>`
+    )
     .join("");
   return `<section class="page" id="section-terms">
   <div class="pad">
@@ -686,6 +747,7 @@ export function buildQuotationTemplateHtml(
     ...(payload.flags.showCommercialSummary
       ? [renderCommercialPage(payload, doc, siteOrigin)]
       : []),
+    renderNotesPage(doc, payload),
     ...(payload.flags.includeTerms ? [renderTermsPage(payload)] : []),
     ...(payload.flags.includeAcceptance ? [renderAcceptancePage(payload)] : []),
   ].join("");

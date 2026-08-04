@@ -58,4 +58,11 @@ import {
   assert.ok(href.includes("template=pitch"));
 }
 
+{
+  const href = buildShortlistExportHref("sl-1", "pdf", "showcase", {
+    itemIds: ["a", "b"],
+  });
+  assert.ok(href.includes("items=a%2Cb") || href.includes("items=a,b"));
+}
+
 console.log("shortlist-preview-downloads.test.ts: ok");

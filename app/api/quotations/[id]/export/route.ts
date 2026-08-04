@@ -57,6 +57,13 @@ export async function GET(request: Request, context: RouteContext) {
   const format = searchParams.get("format") ?? "preview";
   const download = searchParams.get("download") === "1";
   const template = resolveQuotationTemplate(searchParams.get("template"));
+  const itemIds = searchParams.get("items")
+    ? searchParams
+        .get("items")!
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean)
+    : undefined;
 
   const supabase = await createSupabaseServerClient();
   const auth = await requireApiPermission(supabase, QUOTATION_PERMISSIONS.read);
@@ -73,7 +80,12 @@ export async function GET(request: Request, context: RouteContext) {
       action: "export",
       entityType: "quotation",
       entityId: id,
-      metadata: { format, download, template },
+      metadata: {
+        format,
+        download,
+        template,
+        itemCount: itemIds?.length ?? null,
+      },
       ip: getClientIp(request),
     });
 
@@ -85,6 +97,7 @@ export async function GET(request: Request, context: RouteContext) {
     const displayFxRateToEgp = await resolveRateToEgp(supabase, enriched.currency || "EGP");
     let doc = buildQuotationDocument(enriched, {
       template,
+      itemIds,
       publicationShotsByCreatorKey,
       displayFxRateToEgp,
     });

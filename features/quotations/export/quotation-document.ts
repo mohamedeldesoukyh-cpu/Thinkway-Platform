@@ -867,6 +867,8 @@ export function buildQuotationDocument(
   options?: {
     audience?: QuotationDocumentAudience;
     template?: QuotationTemplateVariant;
+    /** Filter to specific quotation item IDs (Preview / PDF / PPTX share this selection). */
+    itemIds?: string[];
     /** Showcase: preloaded publication screenshot map keyed by creator duplicate key. */
     publicationShotsByCreatorKey?: Map<string, QuotationDocPublicationShot[]>;
     /** FX rate for `detail.currency` → EGP (used to format client-facing totals). */
@@ -884,7 +886,31 @@ export function buildQuotationDocument(
   const publicationShotsByCreatorKey = isCreatorDeckTemplate(template)
     ? options?.publicationShotsByCreatorKey
     : undefined;
-  const items = detail.items as QuotationExportItem[];
+  const itemIdSet =
+    options?.itemIds && options.itemIds.length > 0 ? new Set(options.itemIds) : null;
+  const items = (
+    itemIdSet
+      ? detail.items.filter((item) => itemIdSet.has(item.id))
+      : detail.items
+  ) as QuotationExportItem[];
+  const selectionActive = Boolean(itemIdSet);
+  const selectedCostEgp = selectionActive
+    ? items.reduce((sum, item) => sum + (Number(item.cost_egp) || 0), 0)
+    : detail.total_cost_egp;
+  const selectedRevenueEgp = selectionActive
+    ? items.reduce((sum, item) => sum + (Number(item.revenue_egp) || 0), 0)
+    : detail.total_revenue_egp;
+  const selectedAfEgp = selectionActive
+    ? items.reduce((sum, item) => sum + (Number(item.af_value_egp) || 0), 0)
+    : detail.total_af_egp;
+  const selectedGpValueEgp = selectionActive
+    ? items.reduce((sum, item) => sum + (Number(item.gp_value_egp) || 0), 0)
+    : detail.total_gp_value_egp;
+  const selectedGpPct =
+    selectedRevenueEgp > 0 ? (selectedGpValueEgp / selectedRevenueEgp) * 100 : 0;
+  const selectedAgencyMarginEgp = selectionActive
+    ? selectedAfEgp
+    : detail.total_agency_margin_egp;
   const expired = detail.is_expired || isQuotationExpired(detail.validity_date);
   const statusLabel = resolveQuotationStatusLabel({
     status: detail.status,
@@ -936,35 +962,37 @@ export function buildQuotationDocument(
     preferDisplayCategories: isPitchTemplate(template),
   });
   const rosterForecast = computeCampaignForecastFromProfiles(
-    quotationItemsToForecastProfiles(detail.items)
+    quotationItemsToForecastProfiles(items as QuotationItemRow[])
   );
-  const optimization = optimizeQuotationCampaign(detail.items, {
-    budgetAmount: detail.total_revenue_egp + detail.total_af_egp,
+  const optimization = optimizeQuotationCampaign(items as QuotationItemRow[], {
+    budgetAmount: selectedRevenueEgp + selectedAfEgp,
     currency: REPORTING_CURRENCY,
-    campaignPlatform: detail.items[0]?.platform ?? null,
+    campaignPlatform: items[0]?.platform ?? null,
   });
-  const decision = evaluateQuotationDecision(detail.items, {
+  const decision = evaluateQuotationDecision(items as QuotationItemRow[], {
     commercial: {
-      budget: { amount: detail.total_revenue_egp + detail.total_af_egp, currency: REPORTING_CURRENCY },
+      budget: { amount: selectedRevenueEgp + selectedAfEgp, currency: REPORTING_CURRENCY },
     },
-    platforms: detail.items[0]?.platform ? [detail.items[0].platform] : [],
+    platforms: items[0]?.platform ? [items[0].platform] : [],
   });
 
   const gpColor = gpHealthExportColor({
-    gpValueEgp: detail.total_gp_value_egp,
-    gpPct: detail.total_gp_pct,
+    gpValueEgp: selectedGpValueEgp,
+    gpPct: selectionActive ? selectedGpPct : detail.total_gp_pct,
     targetPct: detail.gp_target_pct,
   });
 
   const avgEr =
-    detail.estimated_engagement_rate != null
+    !selectionActive && detail.estimated_engagement_rate != null
       ? `${num(detail.estimated_engagement_rate, 2)}%`
-      : "—";
+      : rosterForecast.averageEngagementRate != null
+        ? `${num(rosterForecast.averageEngagementRate, 2)}%`
+        : "—";
 
-  const totalClientCost = formatDisplayMoney(detail.total_revenue_egp);
-  const totalAf = formatDisplayMoney(detail.total_af_egp);
-  const totalAgencyMargin = formatDisplayMoney(detail.total_agency_margin_egp);
-  const grandTotal = formatDisplayMoney(detail.total_revenue_egp + detail.total_af_egp);
+  const totalClientCost = formatDisplayMoney(selectedRevenueEgp);
+  const totalAf = formatDisplayMoney(selectedAfEgp);
+  const totalAgencyMargin = formatDisplayMoney(selectedAgencyMarginEgp);
+  const grandTotal = formatDisplayMoney(selectedRevenueEgp + selectedAfEgp);
   const insightBullets = buildSummaryInsightBullets({
     creatorCount: uniqueCreatorCount,
     categoryBreakdown,
@@ -987,16 +1015,17 @@ export function buildQuotationDocument(
         : [{ label: QUOTATION_CLIENT_LABELS.totalAgencyFee, value: totalAf }]),
   ];
 
+  const gpPctForDisplay = selectionActive ? selectedGpPct : detail.total_gp_pct;
   const internalKpis: QuotationDocumentKpi[] = [
     ...clientKpis.slice(0, 3),
-    { label: "Total Cost", value: formatDisplayMoney(detail.total_cost_egp) },
+    { label: "Total Cost", value: formatDisplayMoney(selectedCostEgp) },
     ...clientKpis.slice(3),
     {
       label: "Gross Profit",
-      value: formatDisplayMoney(detail.total_gp_value_egp),
+      value: formatDisplayMoney(selectedGpValueEgp),
       valueColor: gpColor,
     },
-    { label: "GP %", value: `${num(detail.total_gp_pct, 1)}%`, valueColor: gpColor },
+    { label: "GP %", value: `${num(gpPctForDisplay, 1)}%`, valueColor: gpColor },
   ];
 
   return {
@@ -1032,9 +1061,9 @@ export function buildQuotationDocument(
     summary: {
       ...(audience === "internal"
         ? {
-            totalCost: formatDisplayMoney(detail.total_cost_egp),
-            totalGpValue: formatDisplayMoney(detail.total_gp_value_egp),
-            totalGpPct: `${num(detail.total_gp_pct, 1)}%`,
+            totalCost: formatDisplayMoney(selectedCostEgp),
+            totalGpValue: formatDisplayMoney(selectedGpValueEgp),
+            totalGpPct: `${num(gpPctForDisplay, 1)}%`,
             gpColor,
           }
         : {}),

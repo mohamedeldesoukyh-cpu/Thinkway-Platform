@@ -32,9 +32,15 @@ export async function renderQuotationPreviewHtml(
   quotationId: string,
   options?: {
     template?: QuotationTemplateVariant | string | null;
+    itemIds?: string[];
     siteOrigin?: string;
   }
-): Promise<{ html: string; serial: string; template: QuotationTemplateVariant }> {
+): Promise<{
+  html: string;
+  serial: string;
+  template: QuotationTemplateVariant;
+  creatorCount: number;
+}> {
   const template = resolveQuotationTemplate(options?.template ?? null);
   const detail = await getQuotationDetail(quotationId);
   if (!detail) {
@@ -48,6 +54,7 @@ export async function renderQuotationPreviewHtml(
   const displayFxRateToEgp = await resolveRateToEgp(supabase, enriched.currency || "EGP");
   let doc = buildQuotationDocument(enriched, {
     template,
+    itemIds: options?.itemIds,
     publicationShotsByCreatorKey,
     displayFxRateToEgp,
   });
@@ -63,5 +70,6 @@ export async function renderQuotationPreviewHtml(
     html,
     serial: doc.serial,
     template,
+    creatorCount: doc.summary.creatorCount,
   };
 }

@@ -1,11 +1,10 @@
 "use client";
 
-import Link from "next/link";
+import { useCallback, useMemo, useState } from "react";
 import {
   CheckIcon,
   ChevronDownIcon,
   DownloadIcon,
-  ExternalLinkIcon,
   EyeIcon,
   FileSpreadsheetIcon,
   FileTextIcon,
@@ -20,6 +19,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DocumentCreatorSelectionDialog } from "@/features/discovery/document-preview/document-creator-selection-dialog";
+import { buildQuotationCreatorOptions } from "@/features/discovery/document-preview/build-creator-options";
+import { summarizeQuotationSelection } from "@/features/discovery/document-preview/document-selection-summary";
 import { buildExportHref } from "@/features/quotations/components/quotation-preview-downloads";
 import { QuotationToolbarButton } from "@/features/quotations/components/quotation-detail-primitives";
 import { quotationPreviewPath } from "@/features/quotations/constants";
@@ -29,13 +31,18 @@ import {
   appendQuotationTemplateParam,
   type QuotationTemplateVariant,
 } from "@/features/quotations/export/quotation-template";
+import type { QuotationItemRow } from "@/features/quotations/types";
 import { cn } from "@/lib/utils";
 
 type Props = {
   quotationId: string;
   serialNumber?: string | null;
+  items: QuotationItemRow[];
+  currency?: string | null;
   exportTemplate: QuotationTemplateVariant;
   onExportTemplateChange: (template: QuotationTemplateVariant) => void;
+  selectedItemIds?: string[];
+  onSelectedItemIdsChange?: (itemIds: string[]) => void;
   exportRevision?: string | null;
   busy?: boolean;
 };
@@ -47,15 +54,22 @@ const EXPORT_FORMATS = [
   { format: "pptx" as const, label: "PPTX", icon: PresentationIcon },
 ];
 
+type PendingAction =
+  | { type: "preview"; template: QuotationTemplateVariant }
+  | { type: "export"; format: (typeof EXPORT_FORMATS)[number]["format"]; template: QuotationTemplateVariant };
+
 function quotationPreviewHref(
   quotationId: string,
   serialNumber: string | null | undefined,
   template: QuotationTemplateVariant,
-  exportRevision?: string | null
+  options?: { exportRevision?: string | null; itemIds?: string[] }
 ): string {
   const params = new URLSearchParams();
   appendQuotationTemplateParam(params, template);
-  appendQuotationExportRevision(params, exportRevision);
+  appendQuotationExportRevision(params, options?.exportRevision);
+  if (options?.itemIds?.length) {
+    params.set("items", options.itemIds.join(","));
+  }
   const query = params.toString();
   return quotationPreviewPath(quotationId, serialNumber, query || undefined);
 }
@@ -63,92 +77,137 @@ function quotationPreviewHref(
 export function QuotationPreviewToolbarActions({
   quotationId,
   serialNumber,
+  items,
+  currency,
   exportTemplate,
   onExportTemplateChange,
+  selectedItemIds,
+  onSelectedItemIdsChange,
   exportRevision,
   busy,
 }: Props) {
-  const previewHref = quotationPreviewHref(
-    quotationId,
-    serialNumber,
-    exportTemplate,
-    exportRevision
+  const [selectionOpen, setSelectionOpen] = useState(false);
+  const [pending, setPending] = useState<PendingAction | null>(null);
+
+  const creatorOptions = useMemo(() => buildQuotationCreatorOptions(items), [items]);
+
+  const summarizeSelection = useCallback(
+    (itemIds: string[]) => summarizeQuotationSelection(items, itemIds, currency ?? "EGP"),
+    [items, currency]
   );
+
   const activeTemplate =
     QUOTATION_TEMPLATE_OPTIONS.find((option) => option.id === exportTemplate) ??
     QUOTATION_TEMPLATE_OPTIONS[0];
 
+  function openSelection(action: PendingAction) {
+    setPending(action);
+    setSelectionOpen(true);
+  }
+
+  function handleConfirm(itemIds: string[]) {
+    if (!pending) return;
+    const ids = itemIds.length > 0 ? itemIds : undefined;
+
+    if (pending.type === "preview") {
+      const href = quotationPreviewHref(quotationId, serialNumber, pending.template, {
+        exportRevision,
+        itemIds: ids,
+      });
+      window.open(href, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    const href = buildExportHref(quotationId, pending.format, pending.template, {
+      download: true,
+      exportRevision,
+      itemIds: ids,
+    });
+    window.location.assign(href);
+  }
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <QuotationToolbarButton variant="outline" size="sm" disabled={busy} className="btn">
-          <EyeIcon className="size-3.5" />
-          Preview
-          <span className="spill spill-compact">{activeTemplate.label}</span>
-          <ChevronDownIcon className="size-3 text-[var(--text-4)]" />
-        </QuotationToolbarButton>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[220px]">
-        <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
-          Template
-        </DropdownMenuLabel>
-        {QUOTATION_TEMPLATE_OPTIONS.map((option) => (
-          <DropdownMenuItem
-            key={option.id}
-            onSelect={() => onExportTemplateChange(option.id)}
-            className="flex items-center justify-between gap-3 py-2"
-          >
-            <span className="min-w-0">
-              <span
-                className={cn(
-                  "block text-[13px] font-medium",
-                  exportTemplate === option.id && "font-semibold text-foreground"
-                )}
-              >
-                {option.label}
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <QuotationToolbarButton variant="outline" size="sm" disabled={busy} className="btn">
+            <EyeIcon className="size-3.5" />
+            Preview
+            <span className="spill spill-compact">{activeTemplate.label}</span>
+            <ChevronDownIcon className="size-3 text-[var(--text-4)]" />
+          </QuotationToolbarButton>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-[220px]">
+          <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
+            Template
+          </DropdownMenuLabel>
+          {QUOTATION_TEMPLATE_OPTIONS.map((option) => (
+            <DropdownMenuItem
+              key={option.id}
+              onSelect={() => onExportTemplateChange(option.id)}
+              className="flex items-center justify-between gap-3 py-2"
+            >
+              <span className="min-w-0">
+                <span
+                  className={cn(
+                    "block text-[13px] font-medium",
+                    exportTemplate === option.id && "font-semibold text-foreground"
+                  )}
+                >
+                  {option.label}
+                </span>
+                <span className="block text-[11px] text-muted-foreground">{option.hint}</span>
               </span>
-              <span className="block text-[11px] text-muted-foreground">{option.hint}</span>
-            </span>
-            <CheckIcon
-              className={cn(
-                "size-3.5 shrink-0 text-primary",
-                exportTemplate === option.id ? "opacity-100" : "opacity-0"
-              )}
-            />
-          </DropdownMenuItem>
-        ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
-          Export
-        </DropdownMenuLabel>
-        {EXPORT_FORMATS.map(({ format, label, icon: Icon }) => (
-          <DropdownMenuItem key={format} asChild>
-            <a
-              href={buildExportHref(quotationId, format, exportTemplate, {
-                download: true,
-                exportRevision,
-              })}
-              download
+              <CheckIcon
+                className={cn(
+                  "size-3.5 shrink-0 text-primary",
+                  exportTemplate === option.id ? "opacity-100" : "opacity-0"
+                )}
+              />
+            </DropdownMenuItem>
+          ))}
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
+            Export
+          </DropdownMenuLabel>
+          {EXPORT_FORMATS.map(({ format, label, icon: Icon }) => (
+            <DropdownMenuItem
+              key={format}
+              onSelect={(event) => {
+                event.preventDefault();
+                openSelection({ type: "export", format, template: exportTemplate });
+              }}
               className="flex cursor-pointer items-center gap-2"
             >
               <Icon className="size-3.5" />
               {label}
-            </a>
-          </DropdownMenuItem>
-        ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link
-            href={previewHref}
-            target="_blank"
-            rel="noreferrer"
+            </DropdownMenuItem>
+          ))}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onSelect={(event) => {
+              event.preventDefault();
+              openSelection({ type: "preview", template: exportTemplate });
+            }}
             className="flex items-center justify-between gap-2"
           >
-            <span>Open preview</span>
-            <ExternalLinkIcon className="size-3.5 text-muted-foreground" />
-          </Link>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+            <span>Choose creators &amp; open preview</span>
+            <EyeIcon className="size-3.5 text-muted-foreground" />
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <DocumentCreatorSelectionDialog
+        open={selectionOpen}
+        onOpenChange={setSelectionOpen}
+        creators={creatorOptions}
+        workspaceItemIds={selectedItemIds}
+        onWorkspaceSelectionChange={onSelectedItemIdsChange}
+        summarizeSelection={summarizeSelection}
+        title="Select creators for quotation"
+        confirmLabel={pending?.type === "export" ? "Export" : "Open preview"}
+        onConfirm={handleConfirm}
+      />
+    </>
   );
 }

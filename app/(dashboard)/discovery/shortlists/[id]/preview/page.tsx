@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageBackButton } from "@/components/navigation/page-back-button";
+import { DocumentPreviewClient } from "@/features/discovery/document-preview/document-preview-client";
 import { ShortlistPreviewDownloads } from "@/features/discovery/shortlists/components/shortlist-preview-downloads";
 import { ShortlistPreviewTemplateToggle } from "@/features/discovery/shortlists/components/shortlist-preview-template-toggle";
 import {
@@ -120,6 +121,7 @@ export default async function ShortlistPreviewPage({
   const serial = detail.serial_number ?? "SL-PENDING";
 
   let html = "";
+  let creatorCount = 0;
   let errorMessage: string | null = null;
   try {
     const rendered = await renderShortlistPreviewHtml(supabase, shortlistId, {
@@ -127,6 +129,7 @@ export default async function ShortlistPreviewPage({
       itemIds,
     });
     html = rendered.html;
+    creatorCount = rendered.creatorCount;
   } catch (error) {
     errorMessage =
       error instanceof Error ? error.message : "Failed to render shortlist preview.";
@@ -138,8 +141,8 @@ export default async function ShortlistPreviewPage({
       description={`${serial} — ${templateLabel.toLowerCase()} creator roster`}
       hidePageHeader
     >
-      <div className="sticky top-0 z-20 -mx-4 mb-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:-mx-8 md:px-8 print:hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      {errorMessage ? (
+        <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <PageBackButton
               fallbackHref={shortlistDetailPath({
@@ -151,34 +154,45 @@ export default async function ShortlistPreviewPage({
               label="Back to shortlist"
               variant="text"
             />
-            <Suspense fallback={null}>
-              <ShortlistPreviewTemplateToggle
-                shortlistId={shortlistId}
-                activeTemplate={template}
-                itemIds={itemIds}
-              />
-            </Suspense>
           </div>
-          {!errorMessage ? (
+          <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {errorMessage}
+          </div>
+        </div>
+      ) : (
+        <DocumentPreviewClient
+          html={html}
+          title={`${templateLabel} shortlist ${serial}`}
+          creatorCount={creatorCount}
+          toolbarLeft={
+            <>
+              <PageBackButton
+                fallbackHref={shortlistDetailPath({
+                  id: detail.id,
+                  slug: detail.slug ?? null,
+                  name: detail.name,
+                  serial_number: detail.serial_number,
+                })}
+                label="Back to shortlist"
+                variant="text"
+              />
+              <Suspense fallback={null}>
+                <ShortlistPreviewTemplateToggle
+                  shortlistId={shortlistId}
+                  activeTemplate={template}
+                  itemIds={itemIds}
+                />
+              </Suspense>
+            </>
+          }
+          toolbarRight={
             <ShortlistPreviewDownloads
               shortlistId={shortlistId}
               template={template}
               itemIds={itemIds}
               exportRevision={detail.updated_at}
             />
-          ) : null}
-        </div>
-      </div>
-
-      {errorMessage ? (
-        <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {errorMessage}
-        </div>
-      ) : (
-        <iframe
-          title={`${templateLabel} shortlist ${serial}`}
-          srcDoc={html}
-          className="min-h-[1200px] w-full rounded-xl border border-border bg-card"
+          }
         />
       )}
     </DashboardShell>

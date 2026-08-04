@@ -80,4 +80,11 @@ import {
   assert.ok(href.includes("template=pitch"));
 }
 
+{
+  const href = buildExportHref("q-1", "pdf", "showcase", {
+    itemIds: ["item-a", "item-b"],
+  });
+  assert.ok(href.includes("items=item-a%2Citem-b") || href.includes("items=item-a,item-b"));
+}
+
 console.log("quotation-preview-downloads.test.ts: ok");

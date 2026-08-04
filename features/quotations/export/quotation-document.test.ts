@@ -287,10 +287,10 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     status: "sent",
     version: "v2.0",
     serial_number: "QT-2026-0009-V2",
-    issue_date: "2026-07-01",
-    validity_date: "2026-07-24",
+    issue_date: "2026-08-01",
+    validity_date: "2026-12-31",
     is_expired: false,
-    valid_days_remaining: 13,
+    valid_days_remaining: 149,
   });
   const doc = buildQuotationDocument(sentDetail);
   assert.equal(doc.status, "sent");
@@ -1263,6 +1263,28 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   });
   const doc = buildQuotationDocument(detail);
   assert.equal(doc.collapseContentGroups[0]?.packages[0]?.platforms, "TikTok");
+}
+
+{
+  const detail = mockDetail({
+    items: [
+      mockItem({ id: "keep-1", creator_name: "Keep Me", handle: "@keep", revenue_egp: 1000, af_value_egp: 100 }),
+      mockItem({
+        id: "drop-1",
+        creator_name: "Drop Me",
+        handle: "@drop",
+        unified_id: "u-drop",
+        revenue_egp: 5000,
+        af_value_egp: 500,
+      }),
+    ],
+  });
+  const filtered = buildQuotationDocument(detail, { itemIds: ["keep-1"] });
+  assert.equal(filtered.summary.creatorCount, 1);
+  assert.equal(filtered.creatorGroups.length, 1);
+  assert.equal(filtered.creatorGroups[0]?.handle, "@keep");
+  assert.ok(filtered.summary.totalClientCost.includes("1,000"));
+  assert.ok(!filtered.rows.some((row) => row.handle === "@drop"));
 }
 
 console.log("quotation-document.test.ts passed");

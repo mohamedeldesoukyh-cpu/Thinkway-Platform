@@ -41,6 +41,8 @@ type Props = {
   onSave: () => void;
   exportTemplate: QuotationTemplateVariant;
   onExportTemplateChange: (template: QuotationTemplateVariant) => void;
+  selectedItemIds?: string[];
+  onSelectedItemIdsChange?: (itemIds: string[]) => void;
 };
 
 export function QuotationWorkspaceHeader({
@@ -51,6 +53,8 @@ export function QuotationWorkspaceHeader({
   onSave,
   exportTemplate,
   onExportTemplateChange,
+  selectedItemIds,
+  onSelectedItemIdsChange,
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -172,8 +176,12 @@ export function QuotationWorkspaceHeader({
           <QuotationPreviewToolbarActions
             quotationId={detail.id}
             serialNumber={detail.serial_number}
+            items={detail.items}
+            currency={detail.currency}
             exportTemplate={exportTemplate}
             onExportTemplateChange={onExportTemplateChange}
+            selectedItemIds={selectedItemIds}
+            onSelectedItemIdsChange={onSelectedItemIdsChange}
             exportRevision={detail.updated_at}
             busy={pending}
           />

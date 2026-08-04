@@ -1,20 +1,24 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `develop` / `main` @ `937dd503`  
-**Tag:** **`v2.3.1`** (+ Apify Refresh Production promote)
+**Branch:** `develop`  
+**Focus:** Product Excellence — Shortlist & Quotation templates (not Release 2.4)
 
-**Apify Manual Refresh:** **CLOSED · Enterprise Ready · Production PASS**  
-- Fix tip `7a90b5f0` · close `937dd503`  
-- Prod deploy `dpl_z5vHnQz6fM7PoazgCeEP7UfYWhPn` · https://app.thinkwaymedia.com  
-- Migration applied on `ienowhwfyxoqtzbgltno`  
-- Report: `docs/architecture/APIFY_REFRESH_PRODUCTION_VALIDATION_REPORT.md`
+## Shortlist / Quotation export quality (ready to ship)
 
-**Dev infra (separate):** Railway Dev worker crash — `BACKLOG_DEV_RAILWAY_WORKER_REDIS_LOG_RATE_LIMITS.md`
+- Creator selection before Preview/Export; SSOT = workspace table selection (no sessionStorage)
+- Selection summary before confirm: creator count · commercial totals · est. reach/ER
+- Quotation `items` filter parity for Preview · PDF · PPTX (totals recalculate)
+- Preview chrome: thumbnails · zoom · prev/next · creator/page counts
+- Adaptive layout: full descriptions/notes · no zoom-scale shrink · PPTX measured text heights
+- Commercial notes section on Quotation HTML + PPTX
+- Validation: `npx tsx scripts/validate-shortlist-quotation-export-quality.ts` → **75/75 PASS** (incl. 50 creators)
+- Report: `docs/architecture/SHORTLIST_QUOTATION_EXPORT_QUALITY_REPORT.md`
 
-**Studio + Creator Detail progressive load:** Finalized (viewport hydration)  
-- Reports: `STUDIO_CREATOR_DETAIL_PROGRESSIVE_LOAD_REPORT.md` · `…_FINALIZATION.md`  
-- Measure: `npx tsx scripts/measure-studio-creator-detail-load.ts`  
-- Soak: `npx tsx scripts/soak-studio-creator-detail-progressive.ts`  
-- Dev: Phase1 ~488ms / Phase2 ~953ms; Creator Detail FMP instant; enterprise soak 11/11 PASS  
+## Prior closed
 
-**Focus next:** Release 2.4 product work
+**Apify Manual Refresh:** CLOSED · Enterprise Ready · Production PASS (`937dd503`)  
+**Studio + Creator Detail progressive load:** on `develop`
+
+## Dev infra (separate)
+
+Railway Dev worker crash — `BACKLOG_DEV_RAILWAY_WORKER_REDIS_LOG_RATE_LIMITS.md`

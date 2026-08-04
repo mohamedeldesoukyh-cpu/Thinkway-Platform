@@ -758,9 +758,11 @@ export function ShortlistWorkspace({
             {detail.creators.length > 0 ? (
               <ShortlistCreatorToolbarActions
                 shortlistId={detail.id}
+                creators={detail.creators}
                 exportTemplate={exportTemplate}
                 onExportTemplateChange={setExportTemplate}
                 selectedItemIds={selectedItemIdList}
+                onSelectedItemIdsChange={(itemIds) => setSelectedIds(new Set(itemIds))}
                 exportRevision={detail.updated_at}
                 busy={isPending}
               />

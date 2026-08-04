@@ -49,6 +49,9 @@ import {
   QUOTATION_CLIENT_LABELS,
   quotationPreviewPath,
 } from "@/features/quotations/constants";
+import { DocumentCreatorSelectionDialog } from "@/features/discovery/document-preview/document-creator-selection-dialog";
+import { buildQuotationCreatorOptions } from "@/features/discovery/document-preview/build-creator-options";
+import { summarizeQuotationSelection } from "@/features/discovery/document-preview/document-selection-summary";
 import { AddCreatorsToQuotationButton } from "@/features/quotations/components/add-creators-to-quotation-modal";
 import type { QuotationCreatorsAddedResult } from "@/features/quotations/components/add-creators-to-quotation-modal";
 import { useQuotationWorkspaceShortcuts } from "@/features/quotations/components/use-quotation-workspace-shortcuts";
@@ -581,17 +584,7 @@ function QuotationWorkspaceContent({
     });
   }, [confirmDelete, detail.id, selectedIds, router]);
 
-  const previewHref = useMemo(() => {
-    const params = new URLSearchParams();
-    appendQuotationTemplateParam(params, exportTemplate);
-    appendQuotationExportRevision(params, detail.updated_at);
-    const query = params.toString();
-    return quotationPreviewPath(
-      detail.id,
-      detail.serial_number,
-      query || undefined
-    );
-  }, [detail.id, detail.serial_number, detail.updated_at, exportTemplate]);
+  const [previewSelectionOpen, setPreviewSelectionOpen] = useState(false);
 
   const focusCreatorSearch = useCallback(() => {
     const el =
@@ -606,8 +599,37 @@ function QuotationWorkspaceContent({
   }, []);
 
   const openPreview = useCallback(() => {
-    window.open(previewHref, "_blank", "noopener,noreferrer");
-  }, [previewHref]);
+    setPreviewSelectionOpen(true);
+  }, []);
+
+  const previewCreatorOptions = useMemo(
+    () => buildQuotationCreatorOptions(detail.items),
+    [detail.items]
+  );
+
+  const summarizePreviewSelection = useCallback(
+    (itemIds: string[]) =>
+      summarizeQuotationSelection(detail.items, itemIds, detail.currency ?? "EGP"),
+    [detail.items, detail.currency]
+  );
+
+  const handlePreviewSelectionConfirm = useCallback(
+    (itemIds: string[]) => {
+      setSelectedIds(new Set(itemIds));
+      const params = new URLSearchParams();
+      appendQuotationTemplateParam(params, exportTemplate);
+      appendQuotationExportRevision(params, detail.updated_at);
+      if (itemIds.length) params.set("items", itemIds.join(","));
+      const query = params.toString();
+      const href = quotationPreviewPath(
+        detail.id,
+        detail.serial_number,
+        query || undefined
+      );
+      window.open(href, "_blank", "noopener,noreferrer");
+    },
+    [detail.id, detail.serial_number, detail.updated_at, exportTemplate]
+  );
 
   useQuotationWorkspaceShortcuts({
     canManage: detail.canManage,
@@ -638,6 +660,8 @@ function QuotationWorkspaceContent({
         }}
         exportTemplate={exportTemplate}
         onExportTemplateChange={setExportTemplate}
+        selectedItemIds={[...selectedIds]}
+        onSelectedItemIdsChange={(itemIds) => setSelectedIds(new Set(itemIds))}
       />
 
       <div className="scroll flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain">
@@ -934,6 +958,17 @@ function QuotationWorkspaceContent({
         </section>
       </div>
       {detailSheet}
+      <DocumentCreatorSelectionDialog
+        open={previewSelectionOpen}
+        onOpenChange={setPreviewSelectionOpen}
+        creators={previewCreatorOptions}
+        workspaceItemIds={[...selectedIds]}
+        onWorkspaceSelectionChange={(itemIds) => setSelectedIds(new Set(itemIds))}
+        summarizeSelection={summarizePreviewSelection}
+        title="Select creators for quotation"
+        confirmLabel="Open preview"
+        onConfirm={handlePreviewSelectionConfirm}
+      />
     </div>
   );
 }

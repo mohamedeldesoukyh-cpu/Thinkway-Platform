@@ -15,6 +15,10 @@ import {
   addThinkwayCreatorAvatar,
   configureThinkwayPptxLayout,
 } from "@/lib/export/thinkway-deck-pptx";
+import {
+  chunkPptxWrappedText,
+  estimatePptxWrappedTextHeight,
+} from "@/lib/export/pptx-text-layout";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
 import {
   getReportPlatformIconDataUri,
@@ -76,8 +80,9 @@ const PUB_THUMB_SIZE = 1.22;
 const SHOWCASE_PUB_LIMIT = 4;
 const MIX_FEED_COLS = 6;
 const MIX_FEED_THUMB_SIZE = 0.74;
-const CREATOR_DELIVERABLES_PER_SLIDE = 7;
-const PITCH_DELIVERABLES_PER_SLIDE = 5;
+/** Fewer rows per slide so long service descriptions can wrap without overlap. */
+const CREATOR_DELIVERABLES_PER_SLIDE = 5;
+const PITCH_DELIVERABLES_PER_SLIDE = 4;
 /** Match RFQ_5 creator hero avatar (frameless circle). */
 const PITCH_AVATAR_SIZE = 1.67;
 /** Match RFQ_5 publication thumbs (rounded image, no white card). */
@@ -254,9 +259,16 @@ function creatorTableFontSize(rowCount: number): number {
 }
 
 function creatorTableRowHeight(rowCount: number): number {
-  if (rowCount <= 4) return 0.26;
-  if (rowCount <= 6) return 0.23;
-  return 0.21;
+  if (rowCount <= 4) return 0.28;
+  if (rowCount <= 6) return 0.26;
+  return 0.24;
+}
+
+function estimateDeliverableRowHeight(service: string, colWidthInches: number, fontSize: number): number {
+  const text = service?.trim() || "—";
+  const charsPerLine = Math.max(18, Math.floor(colWidthInches * (11.5 * (11 / fontSize))));
+  const lines = Math.max(1, Math.ceil(text.length / charsPerLine));
+  return Math.min(0.72, Math.max(0.26, lines * 0.16 + 0.08));
 }
 
 function addLogoMark(
@@ -1142,6 +1154,11 @@ function addCreatorDeliverablesTable(
 
   const tableFontSize = creatorTableFontSize(deliverables.length);
   const colW = showFees ? [1.1, 4.5, 2.0, 1.9, 2.43] : [1.2, 5.3, 2.4, 2.93];
+  const serviceColW = colW[1]!;
+  const baseRowH = creatorTableRowHeight(deliverables.length);
+  const bodyRowHeights = deliverables.map((row) =>
+    Math.max(baseRowH, estimateDeliverableRowHeight(row.service, serviceColW, tableFontSize))
+  );
   const tableRows: Array<Array<{ text: string; options?: Record<string, unknown> }>> = [
     header.map((cell) => ({
       text: cell,
@@ -1153,18 +1170,21 @@ function addCreatorDeliverablesTable(
         : row.platform;
       const cells = [row.option, row.service, platformText, row.type];
       if (showFees) cells.push(row.grossFee ?? "-");
-      return cells.map((cell) => ({
+      return cells.map((cell, cellIndex) => ({
         text: cell,
         options: {
           fontSize: tableFontSize,
           color: TITLE_INK,
-          valign: "middle",
+          valign: cellIndex === 1 ? "top" : "middle",
         },
       }));
     }),
   ];
 
-  const rowH = creatorTableRowHeight(deliverables.length);
+  const headerH = 0.26;
+  // pptxgenjs accepts a single rowH; use the tallest body row so wrapped
+  // service descriptions are never clipped.
+  const rowH = Math.max(baseRowH, ...bodyRowHeights, headerH);
   slide.addTable(tableRows, {
     x: MARGIN_X,
     y,
@@ -1177,15 +1197,17 @@ function addCreatorDeliverablesTable(
   });
 
   const platformColX = MARGIN_X + colW[0]! + colW[1]! + 0.08;
-  const headerH = 0.26;
-  deliverables.forEach((row, index) => {
-    if (!row.platformIcons.length) return;
-    addPlatformIconBadges(
-      slide,
-      row.platformIcons,
-      platformColX,
-      y + headerH + index * rowH + Math.max((rowH - 0.18) / 2, 0.04)
-    );
+  let rowOffset = headerH;
+  deliverables.forEach((row) => {
+    if (row.platformIcons.length) {
+      addPlatformIconBadges(
+        slide,
+        row.platformIcons,
+        platformColX,
+        y + rowOffset + Math.max((rowH - 0.18) / 2, 0.04)
+      );
+    }
+    rowOffset += rowH;
   });
 
   return y + headerH + deliverables.length * rowH + 0.2;
@@ -1641,7 +1663,10 @@ function addCollabPackageCard(
     ["DELIVERABLES", pkg.deliverables],
   ] as const;
   let fieldY = y + 0.95;
+  const fieldBottom = y + h - 0.2 - Math.min(pkg.creators.length, 4) * 0.42 - 0.35;
   for (const [label, value] of fields) {
+    const valueH = estimateDeliverableRowHeight(String(value ?? "—"), innerW, 11);
+    if (fieldY + 0.16 + valueH > fieldBottom) break;
     slide.addText(label, {
       x: x + pad,
       y: fieldY,
@@ -1653,16 +1678,17 @@ function addCollabPackageCard(
       color: FIELD_MUTED,
       charSpacing: 1,
     });
-    slide.addText(value, {
+    slide.addText(String(value ?? "—"), {
       x: x + pad,
       y: fieldY + 0.15,
       w: innerW,
-      h: 0.26,
+      h: valueH,
       fontFace: FONT_BODY,
       fontSize: 11,
       color: TITLE_INK,
+      valign: "top",
     });
-    fieldY += 0.47;
+    fieldY += 0.2 + valueH;
   }
 
   slide.addText("CREATORS IN THIS PACKAGE", {
@@ -2120,6 +2146,51 @@ function addCommercialSlides(
   });
 }
 
+function addNotesSlides(
+  pptx: PptxGen,
+  doc: QuotationDocument,
+  counter: SlideCounter
+): void {
+  const notes = doc.notes?.trim();
+  if (!notes) return;
+
+  const maxHeight = CONTENT_BOTTOM - 2.1;
+  const chunks = chunkPptxWrappedText(notes, CONTENT_W, 12, maxHeight);
+
+  chunks.forEach((chunk, index) => {
+    const slide = pptx.addSlide();
+    applyContentBackground(slide);
+    const pageNo = nextSlideNo(counter);
+    addSectionHeader(
+      slide,
+      index === 0 ? "SECTION · COMMERCIAL NOTES" : "SECTION · COMMERCIAL NOTES (CONTINUED)",
+      index === 0 ? "Notes & recommendations" : "Notes continued"
+    );
+    const height = estimatePptxWrappedTextHeight({
+      text: chunk,
+      widthInches: CONTENT_W,
+      fontSizePt: 12,
+      minHeightInches: 0.5,
+      maxHeightInches: maxHeight,
+    });
+    slide.addText(chunk, {
+      x: MARGIN_X,
+      y: 2.1,
+      w: CONTENT_W,
+      h: height,
+      fontFace: FONT_BODY,
+      fontSize: 12,
+      color: TITLE_INK,
+      valign: "top",
+    });
+    addSlideFooter(
+      slide,
+      `${doc.serial} · Notes${chunks.length > 1 ? ` · ${index + 1}` : ""}`,
+      pageNo
+    );
+  });
+}
+
 function addTermsSlide(
   pptx: PptxGen,
   doc: QuotationDocument,
@@ -2152,11 +2223,18 @@ function addTermsSlide(
       bold: true,
       color: TITLE_INK,
     });
+    const bodyH = estimatePptxWrappedTextHeight({
+      text: term.body,
+      widthInches: colW,
+      fontSizePt: 10,
+      minHeightInches: 0.4,
+      maxHeightInches: 0.95,
+    });
     slide.addText(term.body, {
       x,
       y: y + 0.28,
       w: colW,
-      h: 0.9,
+      h: bodyH,
       fontFace: FONT_BODY,
       fontSize: 10,
       color: MUTED,
@@ -2425,6 +2503,7 @@ async function buildShowcasePptx(pptx: PptxGen, doc: QuotationDocument): Promise
   if (payload.flags.showCommercialSummary) {
     addCommercialSlides(pptx, doc, counter);
   }
+  addNotesSlides(pptx, doc, counter);
 
   addClosingSlide(pptx, doc, counter);
 }
@@ -2440,6 +2519,7 @@ async function buildDetailedPptx(pptx: PptxGen, doc: QuotationDocument): Promise
   if (payload.flags.showCommercialSummary) {
     addCommercialSlides(pptx, doc, counter);
   }
+  addNotesSlides(pptx, doc, counter);
   if (payload.flags.includeTerms) {
     addTermsSlide(pptx, doc, counter);
   }
