@@ -1,9 +1,10 @@
 # Release 2.4 — Kickoff
 
 **Status:** 🌱 **Prepared** (not yet scoped / not Feature Freeze)  
-**Opened after:** Release 2.3 Production Acceptance **PASS** + tag `v2.3.0` (`c23a3a0e`)  
-**Date:** 2026-08-03  
-**Baseline:** `main` / `develop` @ `c23a3a0e` · Production `https://app.thinkwaymedia.com`
+**Opened after:** Release 2.3 Production Acceptance **PASS** + tag `v2.3.0` (`c23a3a0e`) + Stabilization Production **GO** `v2.3.1` (`e51d16a7` / `ffd31694`)  
+**Date:** 2026-08-04 (baseline refreshed)  
+**Baseline:** `main` / `develop` @ `ffd31694` (includes `e51d16a7`) · Production `https://app.thinkwaymedia.com` · deploy `dpl_9YTfXFj2gDDZFs85NGhgknEHj3dd`  
+**Branch:** `release/2.4` (baseline only — **no implementation**)
 
 ---
 

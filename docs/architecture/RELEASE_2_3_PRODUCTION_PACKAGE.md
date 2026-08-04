@@ -1,14 +1,16 @@
 # Release 2.3 — Production Release Package
 
-**Status:** ✅ **CLOSED** · Production Acceptance **PASS** · Tag **`v2.3.0`**  
+**Status:** ✅ **CLOSED** · Production Acceptance **PASS** · Tags **`v2.3.0`** + Stabilization **`v2.3.1`**  
 **Validation report:** [`RELEASE_2_3_PRODUCTION_VALIDATION_REPORT.md`](./RELEASE_2_3_PRODUCTION_VALIDATION_REPORT.md)  
-**Product Acceptance (Dev):** ✅ Accepted 2026-08-03 · Score **≥96/100**  
+**Stabilization Production report:** [`RELEASE_2_3_STABILIZATION_PRODUCTION_REPORT.md`](./RELEASE_2_3_STABILIZATION_PRODUCTION_REPORT.md)  
+**Product Acceptance (Dev):** ✅ Accepted 2026-08-03 · Score **≥96/100** · Stabilization Product BUY **YES** 2026-08-04  
 **Fresh Prod acceptance:** ✅ TW-2026-0002 enterprise journey PASS (2026-08-03)  
 **Feature Freeze / Maintenance Mode:** Released with closure — see Release 2.4 kickoff  
-**Release tip (closure):** `c23a3a0e` on `main` + `develop` (includes CIP/Studio Critical hotfixes)  
-**Production deploy:** `dpl_2TzvSBDFLPs6tb6ite7FfaeTg3sj` · `https://app.thinkwaymedia.com`  
+**Release tip (initial close):** `c23a3a0e` · **Stabilization tip:** `e51d16a7` (`main` merge `ffd31694`)  
+**Production deploy (stabilization):** `dpl_9YTfXFj2gDDZFs85NGhgknEHj3dd` · `https://app.thinkwaymedia.com`  
+**Prior deploy:** `dpl_2TzvSBDFLPs6tb6ite7FfaeTg3sj`  
 **Production Supabase:** `ienowhwfyxoqtzbgltno` (aligned)  
-**Migrations:** ✅ 13/13 applied 2026-08-03  
+**Migrations:** ✅ 13/13 (2026-08-03) + STAB-038/040 (2026-08-04)  
 **Next:** [`docs/release/2.4/README.md`](../release/2.4/README.md)  
 
 ### Pre-authorization conditions
