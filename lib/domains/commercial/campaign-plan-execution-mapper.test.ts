@@ -155,6 +155,15 @@ assert.ok(
   headerPoFromSeeds > seeds.reduce((sum, seed) => sum + seed.cost, 0),
   "PO sized to revenue prevents immediate PO-exceeded after Generate"
 );
+
+// STAB-037: ceil PO so fractional line revenues cannot exceed the header ceiling.
+const fractionalLineRevenues = Array.from({ length: 10 }, () => 53333.33);
+const fractionalSum = fractionalLineRevenues.reduce((sum, n) => sum + n, 0);
+const ceilPo = Math.ceil(fractionalSum - 1e-9);
+assert.ok(fractionalSum > Math.round(fractionalSum), "fixture must be a round-down trap");
+assert.ok(ceilPo >= fractionalSum, "STAB-037: PO must cover exact Σ line revenue");
+assert.equal(ceilPo, 533334);
+
 assert.equal(resolveCampaignNameFromPlan(baseCampaignObject()), "Summer Launch");
 
 console.log("campaign-plan-execution-mapper.test.ts — all tests passed");

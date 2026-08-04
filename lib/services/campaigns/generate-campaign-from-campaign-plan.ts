@@ -432,9 +432,14 @@ export async function generateCampaignFromCampaignPlan(
   // STAB-021: PO ceiling must cover line revenue (client commercial), not brief cost.
   // With DEFAULT_GP_TARGET_PCT, revenue > brief budget-as-cost; consuming revenue against
   // a cost-sized PO immediately exceeds capacity and blocks Decision Center.
-  const seededRevenuePo = Math.round(
-    lineSeeds.reduce((sum, seed) => sum + Math.max(0, seed.revenue), 0)
+  // STAB-037: never Math.round down below the sum of line revenues — per-line
+  // cents (e.g. 10 × 53333.33) can leave PO short by <1 and hard-block the campaign.
+  const seededRevenueSum = lineSeeds.reduce(
+    (sum, seed) => sum + Math.max(0, seed.revenue),
+    0
   );
+  const seededRevenuePo =
+    seededRevenueSum > 0 ? Math.ceil(seededRevenueSum - 1e-9) : 0;
   const poAmount = seededRevenuePo > 0 ? seededRevenuePo : briefBudgetAmount;
 
   const { data: header, error: headerError } = await insertCampaignHeader(supabase, {
