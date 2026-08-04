@@ -150,7 +150,9 @@ function addPlatformIconBadges(
   unique.forEach((platform, index) => {
     const iconX = x + index * step;
     const dataUri = getReportPlatformIconDataUri(platform);
-    if (dataUri?.startsWith("data:")) {
+    // Never embed SVG — pptxgenjs writes SVG bytes as a fake .png and PowerPoint
+    // refuses to open the file ("can't read" / corrupted).
+    if (dataUri?.startsWith("data:image/") && !dataUri.startsWith("data:image/svg")) {
       const payload = dataUri.slice("data:".length);
       const marker = ";base64,";
       const markerIndex = payload.indexOf(marker);

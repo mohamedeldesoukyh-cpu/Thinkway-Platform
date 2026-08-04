@@ -2,11 +2,15 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 /** Platforms that render as circular logo images in HTML/PDF reports. */
+/**
+ * Prefer PNG for all platforms. SVG icons corrupt PowerPoint when pptxgenjs
+ * embeds them (writes SVG bytes as a .png fallback). HTML/PDF still work with PNG.
+ */
 const REPORT_PLATFORM_IMAGE_FILES: Record<string, string> = {
   instagram: "instagram.png",
   tiktok: "tiktok.png",
-  facebook: "facebook.svg",
-  youtube: "youtube.svg",
+  facebook: "facebook.png",
+  youtube: "youtube.png",
 };
 
 const dataUriCache = new Map<string, string>();
