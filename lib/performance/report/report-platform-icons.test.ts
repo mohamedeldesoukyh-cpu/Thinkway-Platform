@@ -124,8 +124,8 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   const ytType = getReportPlatformIconDataUri("yt_short");
 
   assert.ok(ig?.startsWith("data:image/png;base64,"), "Instagram icon is PNG data URI");
-  assert.ok(fb?.startsWith("data:image/svg+xml;base64,"), "Facebook icon is SVG data URI");
-  assert.ok(yt?.startsWith("data:image/svg+xml;base64,"), "YouTube icon is SVG data URI");
+  assert.ok(fb?.startsWith("data:image/png;base64,"), "Facebook icon is PNG data URI");
+  assert.ok(yt?.startsWith("data:image/png;base64,"), "YouTube icon is PNG data URI");
   assert.equal(fb, fbAlias, "fb alias resolves to facebook icon");
   assert.equal(yt, ytAlias, "yt alias resolves to youtube icon");
   assert.equal(yt, ytType, "yt_short post type resolves to youtube icon");

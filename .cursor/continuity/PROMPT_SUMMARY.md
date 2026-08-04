@@ -16,16 +16,20 @@
 - Prod: `dpl_Cd1hS4C7F81z6cRCV6nGkxb8wy1j` → https://app.thinkwaymedia.com
 - Dev: pushed to `develop` (auto Preview)
 
-## Shortlist / Quotation export quality (ready to ship)
+## Shortlist / Quotation export quality — SHIPPED
 
-- Creator selection before Preview/Export; SSOT = workspace table selection (no sessionStorage)
-- Selection summary before confirm: creator count · commercial totals · est. reach/ER
-- Quotation `items` filter parity for Preview · PDF · PPTX (totals recalculate)
-- Preview chrome: thumbnails · zoom · prev/next · creator/page counts
-- Adaptive layout: full descriptions/notes · no zoom-scale shrink · PPTX measured text heights
-- Commercial notes section on Quotation HTML + PPTX
-- Validation: `npx tsx scripts/validate-shortlist-quotation-export-quality.ts` → **75/75 PASS** (incl. 50 creators)
-- Report: `docs/architecture/SHORTLIST_QUOTATION_EXPORT_QUALITY_REPORT.md`
+- Commit: `f33bef57` — workspace selection SSOT (no sessionStorage) · pre-preview summary · Preview chrome · PDF/PPTX layout · 50-creator validation **75/75**
+- CI: Validate Run 346 **green** on `f33bef57`
+- Dev Preview: `https://dev.thinkwaymedia.com` (develop auto-deploy)
+- Production: `dpl_3zTJ1PorFfVVWKXKgb57uD2JxRMs` → `https://app.thinkwaymedia.com` (CLI deploy + alias)
+- Live smoke (Liwa SL-2026-0017 / QT-2026-0018): Selection · Preview · PDF · PPTX · counts · totals · no ellipsis/clamp — **PASS**
+
+## Hotfix (local, not shipped) — Quotation PPTX won't open in PowerPoint
+
+- **Symptom:** `Sorry, PowerPoint can't read …-showcase.pptx` (e.g. QT-2026-0013-V2)
+- **Cause:** Facebook/YouTube icons were SVG; pptxgenjs embeds SVG bytes as a fake `.png` → corrupt OOXML
+- **Fix:** `public/platform-icons/{facebook,youtube}.png` · `report-platform-icons.ts` uses PNG · PPTX skips SVG embeds
+- Verified: new icon PPTX opens; surgically patched broken file opens (9 slides). Needs commit → develop → Dev/Prod redeploy
 
 ## Prior closed
 
