@@ -5,6 +5,8 @@ import {
 import {
   countryLabel,
   isValidBrandName,
+  isValidClientName,
+  recoverLabeledEntityFromText,
   resolveCountryCode,
   sanitizeBrandName,
 } from "@/features/campaign-intelligence-profile/services/normalization/validators";
@@ -57,6 +59,44 @@ export function validateCampaignFacts(facts: CampaignFacts): CampaignFacts {
     } else {
       validated.brandName = cleaned;
     }
+  }
+
+  if (!validated.brandName && validated.rawBriefExcerpt) {
+    const recovered = recoverLabeledEntityFromText(validated.rawBriefExcerpt, "brand");
+    if (recovered) {
+      validated.brandName = recovered;
+      validated.confidence.brandName = 0.9;
+      validated.sources.brandName = "brief";
+    }
+  }
+
+  if (validated.clientName) {
+    const cleaned = sanitizeBrandName(validated.clientName);
+    if (!isValidClientName(cleaned)) {
+      delete validated.clientName;
+      delete validated.confidence.clientName;
+      delete validated.sources.clientName;
+    } else {
+      validated.clientName = cleaned;
+    }
+  }
+
+  if (!validated.clientName && validated.rawBriefExcerpt) {
+    const recovered = recoverLabeledEntityFromText(validated.rawBriefExcerpt, "client");
+    if (recovered) {
+      validated.clientName = recovered;
+      validated.confidence.clientName = 0.9;
+      validated.sources.clientName = "brief";
+    }
+  }
+
+  if (validated.objective) {
+    // Single-line briefs often append "Need N creators…" after the objective clause.
+    const truncated = validated.objective
+      .split(/(?<=\.)\s+(?=Need\b|Please\b)/i)[0]
+      ?.trim()
+      .replace(/[.,;:\s]+$/g, "");
+    if (truncated) validated.objective = truncated;
   }
 
   if (validated.geography) {

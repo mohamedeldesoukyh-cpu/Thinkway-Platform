@@ -46,12 +46,13 @@ function setField<T extends CampaignFactsField>(
  * "campaign for <X>" names the paying client/brand — the capture must accept
  * brand punctuation ("e&", "P&G", "L'Oréal") and never swallow article-led
  * phrases ("launch an influencer campaign" → "an influencer").
+ * Period is excluded so "for Dar Global. Brand:" does not become "Dar Global. Brand".
  */
 const FOR_ATTRIBUTION_PATTERN =
-  /(?:campaign|activation|launch)\s+for\s+([A-Za-z0-9][\w&+.'’-]*(?:\s+[A-Za-z0-9][\w&+.'’-]*){0,3})/i;
+  /(?:campaign|activation|launch)\s+for\s+([A-Za-z0-9][\w&+'’-]*(?:\s+[A-Za-z0-9][\w&+'’-]*){0,3})/i;
 
 const LAUNCH_PATTERN =
-  /(?:launch|create\s+(?:a\s+)?(?:new\s+)?campaign\s+for)\s+([A-Za-z0-9][\w&+.'’-]*(?:\s+[A-Za-z0-9][\w&+.'’-]*){0,3})/i;
+  /(?:launch|create\s+(?:a\s+)?(?:new\s+)?campaign\s+for)\s+([A-Za-z0-9][\w&+'’-]*(?:\s+[A-Za-z0-9][\w&+'’-]*){0,3})/i;
 
 const ARTICLE_LED = /^(?:a|an|the|our|your|their|this|that|new)\b/i;
 const GENERIC_CAMPAIGN_NOUN =
@@ -272,9 +273,18 @@ export function extractCampaignFacts(input: CampaignFactsExtractInput): Campaign
     const client = resolveClientFromBrief(text);
     if (client && client !== "Brand Client") {
       setField(facts, "clientName", client, "inferred", 0.7);
-    } else if (brand.fromForAttribution && brand.value) {
-      // "campaign for e&" — the named company is the paying client.
-      setField(facts, "clientName", brand.value, "brief", 0.85);
+    } else if (brand.value) {
+      // STAB-030: labeled "Brand: Noon" (and "campaign for e&") — when no separate
+      // legal entity is stated, the brand is the paying client for readiness /
+      // Approve → Generate. Restricting to fromForAttribution left Client empty
+      // and permanently blocked Campaign Plan submit.
+      setField(
+        facts,
+        "clientName",
+        brand.value,
+        brand.fromForAttribution ? "brief" : "inferred",
+        brand.fromForAttribution ? 0.85 : 0.75
+      );
     }
   }
 

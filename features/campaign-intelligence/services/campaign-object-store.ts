@@ -121,8 +121,17 @@ export async function loadCampaignObjectFromPersistence(
     conversationId,
     contextSnapshot
   );
-  if (restored) return restored;
-  return getCampaignObjectFromSnapshot(contextSnapshot);
+  if (restored) {
+    // STAB-036: refresh process cache so subsequent reads don't resurrect a
+    // mid-build object that was cached before the workflow finished.
+    memoryStore.set(conversationId, restored);
+    return restored;
+  }
+  const fromSnapshot = getCampaignObjectFromSnapshot(contextSnapshot);
+  if (fromSnapshot) {
+    memoryStore.set(conversationId, fromSnapshot);
+  }
+  return fromSnapshot;
 }
 
 export function getOrCreateCampaignObject(input: {

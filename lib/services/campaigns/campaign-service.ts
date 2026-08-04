@@ -34,6 +34,7 @@ import {
   listCampaignHeaderIdsForNav,
   listCampaignHeaders,
   syncListCampaignStatuses,
+  enrichCampaignListLifecycleSignals,
   updateCampaignHeaderFields,
   updateCampaignPoFields,
   fetchCampaignHeaderForUpdate,
@@ -463,12 +464,13 @@ export async function getCampaignsList(
 
   const campaigns = (data ?? []) as unknown as CampaignListItem[];
   await syncListCampaignStatuses(supabase, campaigns);
+  const enriched = await enrichCampaignListLifecycleSignals(supabase, campaigns);
 
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / CAMPAIGNS_PAGE_SIZE));
 
   return {
-    campaigns,
+    campaigns: enriched,
     total,
     page,
     pageSize: CAMPAIGNS_PAGE_SIZE,

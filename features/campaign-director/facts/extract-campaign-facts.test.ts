@@ -80,6 +80,24 @@ test("client comes from an explicit Client label — brand lines never leak into
   assert.equal(facts.brandName, "Nido");
 });
 
+test("single-line labeled brief does not swallow adjacent fields (STAB-020)", () => {
+  const brief =
+    "Create a new campaign for Dar Global. Brand: Dar Global. Client: Bundle Plus Communication. Market: Egypt / UAE. Budget: EGP 400000. Platforms: Instagram and TikTok. Objective: brand awareness and luxury engagement. Need 3 approved creators, media plan, timeline, and prepare the Enterprise Planning Package for director approval then Generate Campaign.";
+
+  assert.equal(resolveClientFromBrief(brief), "Bundle Plus Communication");
+
+  const facts = validateCampaignFacts(extractCampaignFacts({ rawMessage: brief }));
+  assert.equal(facts.brandName, "Dar Global");
+  assert.equal(facts.clientName, "Bundle Plus Communication");
+  assert.equal(facts.objective, "brand awareness and luxury engagement");
+  assert.deepEqual(facts.budget, { amount: 400000, currency: "EGP" });
+  assert.ok(facts.geography?.includes("Egypt"));
+  assert.ok(facts.platforms?.includes("Instagram"));
+  assert.ok(facts.platforms?.includes("TikTok"));
+  assert.ok(!/Need 3 approved/i.test(facts.objective ?? ""));
+  assert.ok(!/\. Brand$/i.test(facts.brandName ?? ""));
+});
+
 test("e& trend brief: client, brand, industry, and multi-line deliverables resolve", () => {
   const brief = [
     "We have an upcoming summer campaign for e&, we're planning to launch an influencer campaign across TikTok to encourage audiences to engage with the campaign song and generate maximum buzz.",
@@ -125,4 +143,13 @@ test("labeled deliverables are extracted as a list", () => {
   });
   assert.deepEqual(facts.deliverables, ["2 reels", "4 stories", "1 static post"]);
   assert.equal(facts.budget?.amount, 500_000);
+});
+
+test("STAB-030: labeled Brand without Client defaults clientName to brand", () => {
+  const facts = extractCampaignFacts({
+    rawMessage:
+      "Create a new campaign for Noon. Brand: Noon. Market: Egypt. Budget: EGP 500,000. Objective: brand awareness.",
+  });
+  assert.equal(facts.brandName, "Noon");
+  assert.equal(facts.clientName, "Noon");
 });

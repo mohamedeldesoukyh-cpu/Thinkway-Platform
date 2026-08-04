@@ -163,6 +163,9 @@ async function enrichCampaignWorkflowMetadata(
     return { metadata };
   }
 
+  // Drain/cancel task autosaves before the authoritative tip write (STAB-020).
+  await director.beginAutosaveFinalization();
+
   for (const result of Object.values(execution.state.taskResults)) {
     director.applyTaskResult(result, execution.state.data);
   }
@@ -240,14 +243,11 @@ export async function tryExecuteWorkflow(
         if (campaignDirector && isCampaignWorkflow(event.workflowId)) {
           campaignDirector.applyProgressEvent(event);
           if (conversationId) {
-            void campaignDirector
-              .persist(conversationId, buildPersistenceOptions(options, "task_complete", event))
-              .catch((err) => {
-                console.error(
-                  "[workflow-adapter] task autosave failed:",
-                  err instanceof Error ? err.message : err
-                );
-              });
+            const director = campaignDirector;
+            const persistOpts = buildPersistenceOptions(options, "task_complete", event);
+            director.queueTaskAutosave(async () => {
+              await director.persist(conversationId, persistOpts);
+            });
           }
         }
         options.onProgress?.(event);

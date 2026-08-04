@@ -49,6 +49,9 @@ export type CampaignDirectorPersistOptions = SaveCampaignObjectOptions & {
  */
 export class CampaignDirector {
   private campaignObject: CampaignObject;
+  /** When true, in-flight task autosaves must not write — workflow_complete owns the tip. */
+  private autosaveFinalized = false;
+  private autosaveChain: Promise<void> = Promise.resolve();
 
   constructor(campaignObject: CampaignObject) {
     this.campaignObject = campaignObject;
@@ -148,7 +151,10 @@ export class CampaignDirector {
     if (directorPipeline) {
       this.campaignObject = applyDirectorPipelineToCampaignObject(
         this.campaignObject,
-        directorPipeline
+        directorPipeline,
+        state.data.campaignFacts as
+          | import("@/features/campaign-director/facts/campaign-facts-types").CampaignFacts
+          | undefined
       );
     }
 
@@ -207,10 +213,47 @@ export class CampaignDirector {
     return this.campaignObject;
   }
 
+  /**
+   * Queue a fire-and-forget task autosave on a serial chain so workflow_complete
+   * can drain in-flight writes before the authoritative tip persist.
+   */
+  queueTaskAutosave(work: () => Promise<void>): void {
+    this.autosaveChain = this.autosaveChain
+      .then(async () => {
+        if (this.autosaveFinalized) return;
+        await work();
+      })
+      .catch((err) => {
+        console.error(
+          "[workflow-adapter] task autosave failed:",
+          err instanceof Error ? err.message : err
+        );
+      });
+  }
+
+  /**
+   * Block further task autosaves and wait for any that already started so they
+   * cannot overwrite the workflow_complete tip (STAB-020).
+   */
+  async beginAutosaveFinalization(): Promise<void> {
+    this.autosaveFinalized = true;
+    await this.autosaveChain;
+  }
+
   async persist(
     conversationId: string,
     options?: CampaignDirectorPersistOptions
   ): Promise<CampaignObject> {
+    const isTaskAutosave =
+      options?.saveReason === "task_complete" ||
+      Boolean(
+        options?.autosaveFromTask && isAutosaveTaskStatus(options.autosaveFromTask.status)
+      );
+
+    if (isTaskAutosave && this.autosaveFinalized) {
+      return this.campaignObject;
+    }
+
     const shouldPersist = Boolean(
       options?.persistToDb &&
         options.supabase &&

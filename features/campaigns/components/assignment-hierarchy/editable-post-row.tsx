@@ -426,9 +426,44 @@ export function EditablePostRow({
 
   function saveMeta() {
     if (!canEdit) return;
-    if (deliverableScoped) {
+    // Virtual deliverable rows have no post schedule — commercial-only save.
+    if (deliverableScoped && isVirtualPost) {
       persistCommercial();
       setEditing(false);
+      return;
+    }
+    // STAB-027: single-post deliverables are deliverableScoped, but workflow
+    // status lives on assignment_post_schedule. Commercial-only save discarded
+    // Draft→Posted (and timeline never advanced).
+    if (deliverableScoped && !isVirtualPost) {
+      startTransition(async () => {
+        const commercialResult = await updateAssignmentDeliverableAction({
+          campaign_id: campaignId,
+          campaign_line_id: campaignLineId,
+          deliverable_id: deliverable.id,
+          platform: meta.platform,
+          deliverable_type: meta.deliverable_type,
+          quantity: commercial.draft.qty,
+          unit_revenue: commercial.draft.revPerAd,
+          unit_cost: commercial.draft.costPerAd,
+          revenue_vat_percent: meta.revenue_vat_percent,
+          live_date: meta.live_date || null,
+          notes: meta.notes || null,
+          billing_status: meta.billing_status as typeof post.billing_status,
+        });
+        if (!commercialResult.ok) {
+          setError(commercialResult.message ?? "Failed to save.");
+          return;
+        }
+        const statusResult = await updatePostScheduleAction(buildSchedulePayload());
+        if (!statusResult.ok) {
+          setError(statusResult.message ?? "Failed to save workflow status.");
+          return;
+        }
+        setEditing(false);
+        setError(null);
+        router.refresh();
+      });
       return;
     }
     persistMetaPatch({}, { closeEdit: true });

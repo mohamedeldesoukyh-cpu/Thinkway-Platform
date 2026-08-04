@@ -213,7 +213,7 @@ export function applyDirectorPipelineToCampaignObject(
       ...campaignObject,
       meta: {
         ...campaignObject.meta,
-        campaignFacts: facts,
+        ...(facts ? { campaignFacts: facts } : {}),
         governance: governanceMeta,
         directorPipeline: {
           approved: pipeline.approvalGate.approved,
@@ -232,7 +232,7 @@ export function applyDirectorPipelineToCampaignObject(
     sections: applyDirectorApprovedSections(campaignObject.sections, pipeline.approvedSections),
     meta: {
       ...campaignObject.meta,
-      campaignFacts: facts,
+      ...(facts ? { campaignFacts: facts } : {}),
       governance: governanceMeta,
       directorPipeline: {
         approved: true,

@@ -116,6 +116,8 @@ export type CampaignLifecycleView = {
   /** Compatibility with Phase 1 BPN cue. */
   processCue: CampaignProcessCue;
   policy: CampaignStagePolicy;
+  /** Vendor IO document count — used for truthful out-of-band guidance (STAB-011). */
+  vendorIoCount: number;
 };
 
 /**
@@ -165,7 +167,7 @@ function buildRequirements(
     signals.clientIoStatus === "sent" ||
     signals.clientIoStatus === "under_client_review" ||
     clientApproved;
-  const assignmentsDone = signals.lineCount > 0;
+  const assignmentsCreated = signals.lineCount > 0;
   const vendorIssued = signals.vendorIoCount > 0;
   const vendorApproved =
     signals.vendorIoCount > 0 &&
@@ -176,14 +178,14 @@ function buildRequirements(
 
   const common: RequirementItem[] = [
     { id: "campaign", label: "Campaign created", met: true },
-    { id: "assignments", label: "Assignments completed", met: assignmentsDone },
+    { id: "assignments", label: "Assignments created", met: assignmentsCreated },
   ];
 
   switch (stageId) {
     case "lines":
       return [
         { id: "campaign", label: "Campaign created", met: true },
-        { id: "assignments", label: "Assignments created", met: assignmentsDone },
+        { id: "assignments", label: "Assignments created", met: assignmentsCreated },
       ];
     case "client-io":
       return [
@@ -507,7 +509,6 @@ function buildBusinessTimeline(
 ): BusinessTimelineEvent[] {
   const clientIo = workspace?.client_io ?? null;
   const firstInvoice = workspace?.invoices?.[0] ?? null;
-  const paidInvoice = workspace?.invoices?.find((inv) => Number(inv.amount_paid) > 0);
 
   return [
     {
@@ -528,7 +529,11 @@ function buildBusinessTimeline(
       id: "assignments_completed",
       label: "Assignments Completed",
       at: null,
-      occurred: signals.lineCount > 0,
+      // STAB-018: do not mark Done merely because lines exist (same as Created).
+      occurred:
+        signals.lineCount > 0 &&
+        signals.vendorIoCount > 0 &&
+        signals.approvedVendorIoCount >= signals.vendorIoCount,
       owner: "Operations",
     },
     {
@@ -575,14 +580,16 @@ function buildBusinessTimeline(
       id: "deliverables_uploaded",
       label: "Deliverables Uploaded",
       at: null,
-      occurred: signals.deliverableCount > 0,
+      // STAB-019: planned assignment units must not mark Uploaded Done.
+      occurred: signals.uploadedDeliverableCount > 0,
       owner: "Creator",
     },
     {
       id: "publication_live",
       label: "Publication Live",
       at: null,
-      occurred: signals.activePerformance,
+      // STAB-028: require campaign_publications — not Posted workflow alone.
+      occurred: signals.publicationCount > 0,
       owner: "Operations",
     },
     {
@@ -596,14 +603,26 @@ function buildBusinessTimeline(
       id: "invoice_paid",
       label: "Invoice Paid",
       at: null,
-      occurred: Boolean(paidInvoice),
+      // STAB-035: settlement of a partial invoice must not mark campaign Invoice Paid.
+      // Prefer outstanding SSOT — partial amount_paid alone is not full settlement.
+      occurred:
+        signals.fullyInvoiced &&
+        signals.invoiceCount > 0 &&
+        signals.billingOutstanding <= 0,
       owner: "Finance",
     },
     {
       id: "campaign_closed",
       label: "Campaign Closed",
       at: null,
-      occurred: signals.status === "completed" || signals.status === "cancelled",
+      // STAB-032: header status "completed" means fully invoiced (commercial),
+      // not executive close. Closed requires settlement (or cancel).
+      occurred:
+        signals.status === "cancelled" ||
+        (signals.status === "completed" &&
+          signals.fullyInvoiced &&
+          signals.invoiceCount > 0 &&
+          signals.billingOutstanding <= 0),
       owner: "Executive",
     },
   ];
@@ -707,8 +726,12 @@ export function buildWorkspaceGuidance(
       const cioLabel = cioBlocker
         ? `${cioBlocker.objectLabel} ${cioBlocker.objectRef}`
         : "Client IO";
+      // STAB-011: do not claim drafts are ready when zero Vendor IO records exist.
+      const draftsExist = lifecycle.vendorIoCount > 0;
       return guidanceBase(lifecycle, activeTab, "Vendor IO", {
-        whatHappened: "Vendor IO drafts are ready.",
+        whatHappened: draftsExist
+          ? "Vendor IO drafts are ready."
+          : "Vendor IO will be issued after Client IO approval.",
         currentSituation: `Sending is disabled until ${cioLabel} is approved.`,
         nextAction: cioBlocker?.primaryAction ?? "Open Client IO",
         owner: "Commercial",
@@ -791,9 +814,13 @@ function deriveLifecycleFromSignals(
   if (policy.enforcement === "hard") {
     if (signals.poExceeded) blockers.push("PO limit exceeded.");
     if (signals.blockerCount > 0) {
+      const hardOnly = (workspace?.blockers ?? []).filter((text) =>
+        // Prefer explicit hard progression strings; fall back to count signal.
+        /pending approvals|po limit|contract required|approval required/i.test(text)
+      );
       blockers.push(
-        ...(workspace?.blockers?.length
-          ? workspace.blockers
+        ...(hardOnly.length
+          ? hardOnly
           : ["Open operational blockers require resolution."])
       );
     }
@@ -814,11 +841,15 @@ function deriveLifecycleFromSignals(
   if (signals.clientIoStatus === "rejected") {
     reasonHints.push("Client IO has been rejected.");
   }
+  if (processCue.entryStageId === "client-io" && !signals.hasClientIo) {
+    reasonHints.push("Client IO has not been generated.");
+  }
   if (
     processCue.entryStageId === "client-io" &&
-    (!signals.hasClientIo || signals.clientIoStatus === "draft")
+    signals.hasClientIo &&
+    signals.clientIoStatus === "draft"
   ) {
-    reasonHints.push("Client IO has not been generated.");
+    reasonHints.push("Client IO draft is incomplete — generate the document before send.");
   }
   if (
     processCue.entryStageId === "client-io" &&
@@ -872,6 +903,7 @@ function deriveLifecycleFromSignals(
     timeline: buildBusinessTimeline(workspace, signals),
     processCue,
     policy,
+    vendorIoCount: signals.vendorIoCount,
   };
 
   // Days waiting uses latest activity as a movement proxy (presentation only).

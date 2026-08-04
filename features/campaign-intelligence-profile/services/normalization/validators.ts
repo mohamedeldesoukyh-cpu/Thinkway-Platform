@@ -48,6 +48,12 @@ export function sanitizeBrandName(value: string): string {
     v = stripped;
   }
 
+  // Spaced trailing field labels from single-line briefs: "Dar Global. Brand" → "Dar Global".
+  v = v.replace(
+    /\s*[.]?\s*\b(?:Brand|Client|Market|Budget|Objective|Platforms?|Audience|Category)\b\.?$/i,
+    ""
+  );
+
   return v.trim();
 }
 
@@ -101,12 +107,22 @@ export function recoverLabeledEntityFromText(
   label: "client" | "brand" | "product"
 ): string | undefined {
   if (!text.trim()) return undefined;
-  const pattern = new RegExp(
+  // Prefer line-anchored labels (docx rows), then fall back to single-line briefs.
+  const linePattern = new RegExp(
     String.raw`^[\s>*•|-]*${label}(?:\s*name)?\s*(?:->|[:：\-–|])\s*(.+?)\s*$`,
     "im"
   );
-  const match = text.match(pattern);
-  const raw = match?.[1]?.trim().replace(/[|•*\s]+$/, "");
+  const lineMatch = text.match(linePattern);
+  let raw = lineMatch?.[1]?.trim().replace(/[|•*\s]+$/, "");
+  if (!raw) {
+    const inlineBoundary =
+      String.raw`(?=\s*(?:[.,;]\s*)?(?:brand|client|market|budget|platforms?|category|objective|audience|duration|timeline|product|kpis?)(?:\s*name)?\s*(?:->|[:：])|\s*[,;]|$|\n)`;
+    const inlinePattern = new RegExp(
+      String.raw`\b${label}(?:\s*name)?\s*(?:->|[:：\-–|])\s*(.+?)${inlineBoundary}`,
+      "i"
+    );
+    raw = text.match(inlinePattern)?.[1]?.trim().replace(/[.,;|•*\s]+$/g, "");
+  }
   if (!raw) return undefined;
 
   const sanitized = sanitizeBrandName(raw);

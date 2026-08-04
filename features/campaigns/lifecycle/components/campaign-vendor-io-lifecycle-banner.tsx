@@ -85,7 +85,10 @@ export function CampaignVendorIoLifecycleBanner({
         </p>
       ) : stats.approved < stats.prepared ? (
         <p className="thinkway-lc-vio-banner-note">
-          Vendor IO compliance is still outstanding. Campaign may continue.
+          Vendor IO compliance is still outstanding.
+          {lifecycle.decisionCenter.narrative.progressionAllowed
+            ? " Campaign may continue."
+            : " Campaign progression is blocked — resolve Decision Center first."}
         </p>
       ) : null}
     </aside>

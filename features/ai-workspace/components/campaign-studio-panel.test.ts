@@ -29,6 +29,37 @@ test("finds the most recent campaign-studio message (copilot-edit shape)", () =>
   assert.equal(found?.id, "a2");
 });
 
+test("STAB-036: prefers a completed studio package over a later mid-build chip reply", () => {
+  const completeMeta = {
+    workflow: true,
+    workflowId: "create-campaign",
+    workflowStatus: "completed",
+    campaignObject: {
+      id: "co-complete",
+      sections: { summary: { status: "complete" } },
+      meta: { status: "complete", progressPercent: 100 },
+    },
+  };
+  const buildingMeta = {
+    workflow: true,
+    workflowId: "create-campaign",
+    workflowStatus: "building",
+    campaignObject: {
+      id: "co-building",
+      sections: { summary: { status: "working" } },
+      meta: { status: "building", progressPercent: 88 },
+    },
+  };
+  const messages = [
+    msg("u1", "user", {}),
+    msg("a1", "assistant", completeMeta),
+    msg("u2", "user", {}),
+    msg("a2", "assistant", buildingMeta),
+  ];
+  const found = findLatestStudioMessage(messages);
+  assert.equal(found?.id, "a1");
+});
+
 test("ignores plain chat messages and returns null when no studio exists", () => {
   const messages = [
     msg("u1", "user", {}),

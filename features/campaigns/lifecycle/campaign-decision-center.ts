@@ -318,11 +318,27 @@ function resolveWaitingFor(
   return waitingFor === "None" ? waitingPartyFromOwner(owner) : waitingFor;
 }
 
+/** True purchase-order mention — never match the "po" inside "payouts". */
+function mentionsPurchaseOrder(text: string): boolean {
+  return /\bp\.?o\.?\b|purchase[\s-]?order|po limit/i.test(text);
+}
+
+function isSoftOperationalWorkspaceAlert(lower: string): boolean {
+  return (
+    lower.includes("payout") ||
+    lower.includes("outstanding client billing") ||
+    lower.includes("billing outstanding") ||
+    lower.includes("content pending") ||
+    lower.includes("rejected deliverable")
+  );
+}
+
 function actionTabFromLabel(
   label: string,
   stageId: CampaignWorkspaceTabId
 ): CampaignWorkspaceTabId {
   const lower = label.toLowerCase();
+  if (lower.includes("payout") || lower.includes("payment")) return "billing";
   if (lower.includes("client")) return "client-io";
   if (lower.includes("vendor")) return "vendor-io";
   if (lower.includes("assignment")) return "lines";
@@ -499,7 +515,14 @@ export function buildDecisionNarrative(input: {
           : primary.objectKind === "deliverable"
             ? "Performance"
             : primary.objectKind === "invoice"
-              ? "Close-out"
+              ? // STAB-034: vendor payout soft-alerts are Finance, not client Collections.
+                /payout/i.test(primary.reason) || /payout/i.test(primary.title)
+                ? "Finance"
+                : // STAB-032: invoice attention before settlement is Collections, not Closed.
+                  primary.id.includes("collection") ||
+                    /payment|outstanding|collect/i.test(primary.reason)
+                  ? "Collections"
+                  : "Finance"
               : null,
     dependencyKind: isBlocker
       ? "Business dependency"
@@ -549,12 +572,13 @@ export function buildDecisionCenter(input: {
     nextActionTab,
     expectedResult,
     missing,
-    hardBlockers,
+    hardBlockers: _hardBlockers,
     workspaceBlockers,
     signals,
     daysWaiting,
     objects = null,
   } = input;
+  void _hardBlockers;
 
   const since = daysLabel(daysWaiting);
   const blockers: DecisionBlocker[] = [];
@@ -658,12 +682,8 @@ export function buildDecisionCenter(input: {
     );
   }
 
-  if (
-    stageId === "client-io" &&
-    (!signals.hasClientIo ||
-      !signals.clientIoStatus ||
-      signals.clientIoStatus === "draft")
-  ) {
+  // Missing Client IO record — create/generate the commercial package.
+  if (stageId === "client-io" && (!signals.hasClientIo || !signals.clientIoStatus)) {
     pushUnique(
       blockers,
       makeBlocker({
@@ -680,11 +700,39 @@ export function buildDecisionCenter(input: {
         sinceLabel: since,
         reason: "Generate Client IO to package commercial terms for approval.",
         impact: "Campaign cannot advance past commercial packaging.",
-        primaryAction: cio ? `Open ${cioRef}` : "Generate Client IO",
+        primaryAction: "Generate Client IO",
         actionTab: "client-io",
         focusQuery: cioFocus,
         relatedLabel: null,
         expectedResult: "Client IO ready to send for approval.",
+      })
+    );
+  }
+
+  // Draft composer exists — complete composition / generate PDF (STAB-010).
+  // Do not say "Generate Client IO" when #CIO-* already exists.
+  if (stageId === "client-io" && signals.hasClientIo && signals.clientIoStatus === "draft") {
+    pushUnique(
+      blockers,
+      makeBlocker({
+        id: "cio_complete_draft",
+        objectKind: "client_io",
+        objectLabel: "Client IO",
+        objectRef: cioRef,
+        recordId: cio?.id ?? null,
+        title: "Client IO draft incomplete",
+        severity: "business_blocker",
+        owner: "Commercial",
+        waitingFor: "Commercial",
+        waitingLabel: "Composition",
+        sinceLabel: since,
+        reason: `Complete ${cioRef}: finish composition and generate the document before send.`,
+        impact: "Campaign cannot advance past commercial packaging.",
+        primaryAction: cio ? `Open ${cioRef}` : "Complete Client IO",
+        actionTab: "client-io",
+        focusQuery: cioFocus,
+        relatedLabel: null,
+        expectedResult: "Client IO document generated and ready to send.",
       })
     );
   }
@@ -1036,19 +1084,50 @@ export function buildDecisionCenter(input: {
         (b) =>
           (lower.includes("client") && b.objectKind === "client_io") ||
           (lower.includes("vendor") && b.objectKind === "vendor_io") ||
-          (lower.includes("po") && b.objectKind === "po") ||
+          (mentionsPurchaseOrder(lower) && b.objectKind === "po") ||
           (lower.includes("deliverable") && b.objectKind === "deliverable") ||
           (lower.includes("invoice") && b.objectKind === "invoice")
       )
     ) {
       continue;
     }
+    // Soft finance/ops alerts never become Campaign Issue business blockers —
+    // that incorrectly locks Vendor IO after Client IO approval (TW-2026-0005).
+    if (isSoftOperationalWorkspaceAlert(lower)) {
+      const tab = actionTabFromLabel(trimmed, "billing");
+      pushUnique(
+        blockers,
+        makeBlocker({
+          id: `workspace_alert_${index}`,
+          objectKind: tab === "billing" ? "invoice" : "campaign",
+          objectLabel: tab === "billing" ? "Finance" : "Campaign",
+          objectRef: hashRef(objects?.campaignDocumentNumber, "Campaign"),
+          recordId: null,
+          title: trimmed.replace(/\.$/, ""),
+          severity: "operational_attention",
+          owner: tab === "billing" ? "Finance" : owner,
+          waitingFor: tab === "billing" ? "Finance" : resolveWaitingFor(waitingFor, owner),
+          waitingLabel: tab === "billing" ? "Payouts" : "Resolution",
+          sinceLabel: since,
+          reason: trimmed,
+          impact: "Ops/Finance follow-up only — campaign progression may continue.",
+          unlockLabel: "Clears when payouts/collections catch up.",
+          primaryAction:
+            tab === "billing" ? "Open Finance" : specificActionFromLabel(trimmed, tab),
+          actionTab: tab,
+          focusQuery: null,
+          relatedLabel: null,
+          expectedResult: "Finance follow-up complete.",
+        })
+      );
+      continue;
+    }
     const tab = actionTabFromLabel(trimmed, nextActionTab);
     const isHardWorkspace =
-      hardBlockers.length > 0 ||
-      lower.includes("po") ||
+      mentionsPurchaseOrder(lower) ||
       lower.includes("approval required") ||
-      lower.includes("contract required");
+      lower.includes("contract required") ||
+      lower.includes("pending approvals");
     pushUnique(
       blockers,
       makeBlocker({
@@ -1238,10 +1317,16 @@ function specificActionFromLabel(
   stageId: CampaignWorkspaceTabId
 ): string {
   const lower = label.toLowerCase();
+  if (lower.includes("payout") || lower.includes("billing outstanding")) {
+    return "Open Finance";
+  }
   if (lower.includes("client approval") || lower.includes("client io approved")) {
     return "Open Client IO";
   }
   if (lower.includes("client io generated")) return "Generate Client IO";
+  if (lower.includes("client io draft") || lower.includes("complete client io")) {
+    return "Complete Client IO";
+  }
   if (lower.includes("client io sent")) return "Send Client IO";
   if (lower.includes("vendor")) return "Open Vendor IO";
   if (lower.includes("assignment")) return "Open Assignments";

@@ -70,3 +70,39 @@ test("reports no error and returns the object when the DB write is skipped (memo
   assert.equal(result.dbPersistError, undefined);
   clearCampaignObjectMemory(conversationId);
 });
+
+test("task autosave after beginAutosaveFinalization is skipped (STAB-020)", async () => {
+  const conversationId = "conv-autosave-race";
+  const director = newDirector(conversationId);
+  let postFinalizeRuns = 0;
+
+  await director.beginAutosaveFinalization();
+
+  director.queueTaskAutosave(async () => {
+    postFinalizeRuns += 1;
+  });
+
+  await director.beginAutosaveFinalization();
+  assert.equal(postFinalizeRuns, 0, "autosaves queued after finalization must not run");
+
+  const before = director.getObject().updatedAt;
+  await director.persist(conversationId, {
+    persistToDb: false,
+    saveReason: "task_complete",
+    autosaveFromTask: {
+      workflowId: "create-campaign",
+      step: 1,
+      totalSteps: 5,
+      taskId: "analyze-request",
+      taskTitle: "Analyze",
+      status: "running",
+      progress: 10,
+    },
+  });
+  assert.equal(
+    director.getObject().updatedAt,
+    before,
+    "direct task_complete persist must no-op after finalization"
+  );
+  clearCampaignObjectMemory(conversationId);
+});

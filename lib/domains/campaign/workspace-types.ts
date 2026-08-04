@@ -295,6 +295,22 @@ export type CampaignWorkspace = {
   /** @deprecated Derived from line-linked campaign_influencers for historical records only. */
   vendors: CampaignVendorAssignment[];
   deliverables: CampaignDeliverableRow[];
+  /**
+   * Assignment-deliverable unit count (SSOT for operational explorer / timeline).
+   * Legacy `deliverables` table may be empty while assignment units exist (STAB-015).
+   */
+  assignment_deliverable_count: number;
+  /**
+   * Posted/approved assignment post schedules (SSOT for Deliverables Uploaded).
+   * Legacy `deliverables.display_status` alone stays empty when ops mark posts
+   * posted in Assignments (STAB-027). Does not imply Publication Live (STAB-028).
+   */
+  assignment_uploaded_deliverable_count: number;
+  /**
+   * Rows in `campaign_publications` (SSOT for Publication Live / Performance).
+   * Posted workflow status alone must not mark Publication Live Done (STAB-028).
+   */
+  publication_count: number;
   invoices: CampaignInvoiceRow[];
   payments: CampaignPaymentRow[];
   approvals: CampaignApprovalRow[];

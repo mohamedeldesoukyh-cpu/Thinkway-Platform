@@ -106,6 +106,25 @@ const missingMediaPlan = evaluateCampaignPlanReadiness(
 assert.equal(missingMediaPlan.status, "not_ready");
 assert.ok(missingMediaPlan.mandatoryMissing.some((item) => item.id === "media_plan"));
 
+const brandAsClient = evaluateCampaignPlanReadiness(
+  baseObject({
+    meta: {
+      ...baseObject().meta,
+      campaignFacts: {
+        ...baseObject().meta.campaignFacts!,
+        clientName: undefined,
+        brandName: "Noon",
+      },
+    },
+  })
+);
+assert.equal(
+  brandAsClient.status,
+  "ready_for_review",
+  "STAB-030: brand-as-client must satisfy Client readiness"
+);
+assert.equal(brandAsClient.mandatoryMissing.length, 0);
+
 assert.ok(ready.optionalRemaining >= 1, "optional items may remain while still ready");
 
 console.log("campaign-plan-readiness.test.ts — all tests passed");

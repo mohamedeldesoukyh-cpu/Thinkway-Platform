@@ -419,6 +419,15 @@ export type CampaignListItem = CampaignHeaderRow & {
     email: string;
   } | null;
   lines: Pick<CampaignLineRow, "id" | "document_number" | "name" | "po_amount" | "revenue" | "cost" | "profit">[];
+  /** Latest Client IO status for portfolio lifecycle (enriched on list load). */
+  client_io_status?: string | null;
+  has_client_io?: boolean;
+  vendor_io_count?: number;
+  approved_vendor_io_count?: number;
+  sent_vendor_io_count?: number;
+  deliverable_count?: number;
+  /** True only when enriched evidence shows live/posted performance activity. */
+  performance_active?: boolean;
 };
 
 /** Legacy campaigns view row shape */

@@ -186,6 +186,55 @@ export async function getCampaignWorkspace(
     (deliverable) => (deliverable as { id: string }).id
   );
 
+  // STAB-015: operational units live on assignment_deliverables; legacy deliverables may be empty.
+  let assignmentDeliverableCount = 0;
+  // STAB-027: uploaded evidence from assignment_post_schedule (not legacy deliverables).
+  let assignmentUploadedDeliverableCount = 0;
+  // STAB-028: Publication Live requires campaign_publications rows, not Posted alone.
+  let publicationCount = 0;
+  {
+    const { count: pubCount, error: publicationCountError } = await supabase
+      .from("campaign_publications")
+      .select("id", { count: "exact", head: true })
+      .eq("campaign_header_id", campaignId);
+    if (publicationCountError) {
+      console.warn(
+        "[campaign-workspace] campaign_publications count failed",
+        publicationCountError.message
+      );
+    } else {
+      publicationCount = pubCount ?? 0;
+    }
+  }
+  if (scopedLineIds.length > 0) {
+    const { count, error: assignmentDeliverableCountError } = await supabase
+      .from("assignment_deliverables")
+      .select("id", { count: "exact", head: true })
+      .in("campaign_line_id", scopedLineIds);
+    if (assignmentDeliverableCountError) {
+      console.warn(
+        "[campaign-workspace] assignment_deliverables count failed",
+        assignmentDeliverableCountError.message
+      );
+    } else {
+      assignmentDeliverableCount = count ?? 0;
+    }
+
+    const { count: uploadedCount, error: uploadedCountError } = await supabase
+      .from("assignment_post_schedule")
+      .select("id", { count: "exact", head: true })
+      .in("campaign_line_id", scopedLineIds)
+      .in("status", ["posted", "approved"]);
+    if (uploadedCountError) {
+      console.warn(
+        "[campaign-workspace] assignment_post_schedule uploaded count failed",
+        uploadedCountError.message
+      );
+    } else {
+      assignmentUploadedDeliverableCount = uploadedCount ?? 0;
+    }
+  }
+
   const [approvalsResult, auditResult] = await Promise.all([
     fetchCampaignApprovals(supabase, campaignId, {
       vendorIds: scopedVendorIds,
@@ -569,6 +618,10 @@ export async function getCampaignWorkspace(
     };
   });
 
+  // Hard progression blockers + soft ops/finance alerts.
+  // Soft alerts remain visible in Decision Center as operational_attention only —
+  // signalsFromCampaignWorkspace excludes them from blockerCount so they never
+  // short-circuit the process cue after Client IO approval.
   const blockers: string[] = [];
   if (approvals.some((a) => a.status === "pending" || a.status === "in_review")) {
     blockers.push("Pending approvals require action");
@@ -747,6 +800,9 @@ export async function getCampaignWorkspace(
     lines: workspaceLines,
     vendors: workspaceVendors,
     deliverables,
+    assignment_deliverable_count: assignmentDeliverableCount,
+    assignment_uploaded_deliverable_count: assignmentUploadedDeliverableCount,
+    publication_count: publicationCount,
     invoices,
     payments,
     approvals,
@@ -831,6 +887,10 @@ export async function getCampaignWorkspace(
       lines: workspace.lines.length,
       vendor_ios: workspace.vendor_ios.length,
       deliverables: workspace.deliverables.length,
+      assignment_deliverable_count: workspace.assignment_deliverable_count,
+      assignment_uploaded_deliverable_count:
+        workspace.assignment_uploaded_deliverable_count,
+      publication_count: workspace.publication_count,
     });
   }
 

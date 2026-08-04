@@ -14,13 +14,43 @@ export function isStudioMessage(message: AiMessage): boolean {
   );
 }
 
-/** The most recent message that carries a campaign studio object, if any. */
+function studioMessageReadinessScore(message: AiMessage): number {
+  const campaignObject = message.metadata?.campaignObject as
+    | { meta?: { status?: string; progressPercent?: number } }
+    | undefined;
+  const status = String(campaignObject?.meta?.status ?? "").toLowerCase();
+  const progress = Number(campaignObject?.meta?.progressPercent ?? 0);
+  if (status === "complete" || status === "completed" || status === "approved") {
+    return 1000 + progress;
+  }
+  if (status === "building" || status === "working" || status === "in_progress") {
+    return progress;
+  }
+  return progress;
+}
+
+/**
+ * Prefer the most recent *finished* studio package.
+ * STAB-036: a later Copilot/chip reply can carry a regressive mid-build object
+ * and must not hide the completed Enterprise Planning Package.
+ */
 export function findLatestStudioMessage(messages: AiMessage[]): AiMessage | null {
+  let latestStudio: AiMessage | null = null;
+  let bestComplete: AiMessage | null = null;
+  let bestCompleteScore = -1;
+
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     const message = messages[i]!;
-    if (isStudioMessage(message)) return message;
+    if (!isStudioMessage(message)) continue;
+    if (!latestStudio) latestStudio = message;
+    const score = studioMessageReadinessScore(message);
+    if (score >= 1000 && score > bestCompleteScore) {
+      bestComplete = message;
+      bestCompleteScore = score;
+    }
   }
-  return null;
+
+  return bestComplete ?? latestStudio;
 }
 
 /**

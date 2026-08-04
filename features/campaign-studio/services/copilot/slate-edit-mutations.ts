@@ -10,6 +10,8 @@ import { getCampaignFacts } from "@/features/campaign-director/facts/facts-displ
 import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
 import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
 
+import { filterExecutionCreatorIds } from "@/lib/domains/commercial/campaign-plan-execution-mapper";
+
 import { normalizeCreatorId } from "../studio-draft";
 import { tierFollowerRange } from "./slate-edit-filters";
 
@@ -19,15 +21,20 @@ export function slateCreatorIdSet(campaignObject: CampaignObject): Set<string> {
   return new Set((data.recommendations?.creatorIds ?? []).map(normalizeCreatorId));
 }
 
-/** Hydrate the current slate as raw creator records (location, engagement, etc.). */
+/**
+ * Hydrate execution slate creators (location, engagement, etc.).
+ * STAB-039: must use the same id set as Generate readiness
+ * (`filterExecutionCreatorIds` — recommendations, else discovery fallback).
+ * Previously only `recommendations.creatorIds` was read, so plans that were
+ * ready via discovery slate could Approve but Generate zero lines.
+ */
 export async function hydrateSlateCreators(
   supabase: SupabaseClient,
   campaignObject: CampaignObject
 ): Promise<UnifiedCreatorResult[]> {
-  const data = (campaignObject.sections.creators.data ?? {}) as CreatorsSectionData;
   const influencerIds = [
     ...new Set(
-      (data.recommendations?.creatorIds ?? [])
+      filterExecutionCreatorIds(campaignObject)
         .map((id) => id.trim())
         .filter((id) => Boolean(id) && !id.startsWith("dp:") && !id.startsWith("dis:"))
         .map(normalizeCreatorId)

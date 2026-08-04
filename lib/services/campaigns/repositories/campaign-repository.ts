@@ -234,6 +234,79 @@ export async function syncListCampaignStatuses(
   }
 }
 
+/**
+ * Attach Client IO / Vendor IO aggregates so portfolio Decision Center matches workspace.
+ * Without this, list cues always show "Generate Client IO" (STAB-008).
+ */
+export async function enrichCampaignListLifecycleSignals(
+  supabase: SupabaseClient,
+  campaigns: CampaignListItem[]
+): Promise<CampaignListItem[]> {
+  if (campaigns.length === 0) return campaigns;
+  const ids = campaigns.map((c) => c.id);
+
+  const [cioResult, vioResult] = await Promise.all([
+    supabase
+      .from("client_ios")
+      .select("campaign_header_id, status, created_at")
+      .in("campaign_header_id", ids)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("vendor_ios")
+      .select("campaign_header_id, status")
+      .in("campaign_header_id", ids),
+  ]);
+
+  if (cioResult.error) {
+    console.warn("[campaigns-list] client_ios enrich failed", cioResult.error.message);
+  }
+  if (vioResult.error) {
+    console.warn("[campaigns-list] vendor_ios enrich failed", vioResult.error.message);
+  }
+
+  const latestCio = new Map<string, string>();
+  for (const row of (cioResult.data ?? []) as Array<{
+    campaign_header_id: string;
+    status: string;
+  }>) {
+    if (!latestCio.has(row.campaign_header_id)) {
+      latestCio.set(row.campaign_header_id, row.status);
+    }
+  }
+
+  const vioStats = new Map<
+    string,
+    { total: number; approved: number; sent: number }
+  >();
+  for (const row of (vioResult.data ?? []) as Array<{
+    campaign_header_id: string;
+    status: string;
+  }>) {
+    const cur = vioStats.get(row.campaign_header_id) ?? {
+      total: 0,
+      approved: 0,
+      sent: 0,
+    };
+    cur.total += 1;
+    if (row.status === "approved") cur.approved += 1;
+    if (row.status === "sent" || row.status === "generated") cur.sent += 1;
+    vioStats.set(row.campaign_header_id, cur);
+  }
+
+  return campaigns.map((campaign) => {
+    const status = latestCio.get(campaign.id) ?? null;
+    const vio = vioStats.get(campaign.id);
+    return {
+      ...campaign,
+      client_io_status: status,
+      has_client_io: status != null,
+      vendor_io_count: vio?.total ?? 0,
+      approved_vendor_io_count: vio?.approved ?? 0,
+      sent_vendor_io_count: vio?.sent ?? 0,
+    };
+  });
+}
+
 export async function fetchCampaignKpiSourceData(supabase: SupabaseClient) {
   return Promise.all([
     supabase.from("campaign_headers").select("id, status, currency_code").limit(2000),

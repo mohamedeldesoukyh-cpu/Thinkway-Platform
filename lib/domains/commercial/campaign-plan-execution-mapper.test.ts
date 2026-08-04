@@ -112,6 +112,27 @@ assert.deepEqual(
   "rejected creators are excluded from execution"
 );
 
+// STAB-039: hydrateSlateCreators / Generate must share this discovery fallback.
+assert.deepEqual(
+  filterExecutionCreatorIds(
+    baseCampaignObject({
+      sections: {
+        ...baseCampaignObject().sections,
+        creators: {
+          content: "",
+          data: {
+            recommendations: { creatorIds: [] },
+            discovery: { creatorIds: ["inf:d1", "inf:d2"] },
+          },
+          status: "complete",
+        },
+      },
+    })
+  ),
+  ["inf:d1", "inf:d2"],
+  "STAB-039: empty recommendations fall back to discovery ids"
+);
+
 const selections = buildPlatformSelectionsForCreator(
   mockCreator("inf:a", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"),
   ["Instagram"],
@@ -135,11 +156,35 @@ const seeds = mapCampaignPlanToLineSeeds({
 
 assert.equal(seeds.length, 2);
 assert.equal(
-  seeds.reduce((sum, seed) => sum + seed.revenue, 0),
+  seeds.reduce((sum, seed) => sum + seed.cost, 0),
   300_000,
-  "creator fees split across approved slate vendors"
+  "creator fees (cost) split across approved slate vendors"
 );
+assert.equal(
+  seeds.reduce((sum, seed) => sum + seed.revenue, 0),
+  400_000,
+  "STAB-016: default 25% GP applied so revenue exceeds cost"
+);
+assert.equal(seeds[0]?.gpPct, 25);
+assert.ok(seeds[0]!.revenue > seeds[0]!.cost);
 assert.equal(seeds[0]?.currencyCode, "EGP");
+
+// STAB-021: header PO for Generate must use revenue total (not brief cost budget).
+const headerPoFromSeeds = seeds.reduce((sum, seed) => sum + Math.max(0, seed.revenue), 0);
+assert.equal(headerPoFromSeeds, 400_000);
+assert.ok(
+  headerPoFromSeeds > seeds.reduce((sum, seed) => sum + seed.cost, 0),
+  "PO sized to revenue prevents immediate PO-exceeded after Generate"
+);
+
+// STAB-037: ceil PO so fractional line revenues cannot exceed the header ceiling.
+const fractionalLineRevenues = Array.from({ length: 10 }, () => 53333.33);
+const fractionalSum = fractionalLineRevenues.reduce((sum, n) => sum + n, 0);
+const ceilPo = Math.ceil(fractionalSum - 1e-9);
+assert.ok(fractionalSum > Math.round(fractionalSum), "fixture must be a round-down trap");
+assert.ok(ceilPo >= fractionalSum, "STAB-037: PO must cover exact Σ line revenue");
+assert.equal(ceilPo, 533334);
+
 assert.equal(resolveCampaignNameFromPlan(baseCampaignObject()), "Summer Launch");
 
 console.log("campaign-plan-execution-mapper.test.ts — all tests passed");

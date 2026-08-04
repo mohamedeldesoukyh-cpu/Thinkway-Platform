@@ -111,6 +111,12 @@ export function collectFailingGovernanceChecks(
   ].filter((check) => check.status === "FAIL");
 }
 
+/** Hard-pause only for missing business facts or high-severity fails — never polish. */
+export function shouldAskUserForGovernanceCheck(check: GovernanceCheck): boolean {
+  if (classifyGovernanceCheck(check) === "user_required") return true;
+  return check.severity === "high";
+}
+
 export function buildGovernanceUserQuestions(
   failing: GovernanceCheck[],
   gateBlockers: string[]
@@ -118,18 +124,28 @@ export function buildGovernanceUserQuestions(
   const questions: GovernanceUserQuestion[] = [];
   const seen = new Set<string>();
   for (const check of failing) {
+    // STAB-029: medium auto-fixable residuals (e.g. duplicate narrative) must not
+    // become INPUT REQUIRED and block Generate Campaign.
+    if (!shouldAskUserForGovernanceCheck(check)) continue;
     const question = questionForGovernanceCheck(check);
     if (seen.has(question)) continue;
     seen.add(question);
     questions.push({ checkId: check.id, section: check.section, question });
   }
-  if (questions.length === 0 && gateBlockers.length > 0) {
-    questions.push({
-      checkId: "governance_quality_threshold",
-      question:
-        `The campaign draft did not reach the release quality bar (${gateBlockers.join("; ")}). ` +
-        "Please add more specific details to the brief — budget, target audience, KPIs, or timeline — and I will regenerate the affected sections.",
-    });
+  const hardFails = failing.filter(shouldAskUserForGovernanceCheck);
+  if (questions.length === 0 && hardFails.length === 0 && gateBlockers.length > 0) {
+    // Gate blockers alone (quality threshold) still need a path — but only when
+    // there is no hard FAIL check left that was intentionally soft-filtered.
+    const polishOnly =
+      failing.length > 0 && failing.every((check) => !shouldAskUserForGovernanceCheck(check));
+    if (!polishOnly) {
+      questions.push({
+        checkId: "governance_quality_threshold",
+        question:
+          `The campaign draft did not reach the release quality bar (${gateBlockers.join("; ")}). ` +
+          "Please add more specific details to the brief — budget, target audience, KPIs, or timeline — and I will regenerate the affected sections.",
+      });
+    }
   }
   return questions;
 }

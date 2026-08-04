@@ -20,6 +20,7 @@ import type {
   BusinessProcessWaitingParty,
 } from "@/lib/business-process/types";
 import { lifecycleSignalLabel } from "@/lib/business-process/types";
+import { resolveOperationalPo } from "@/lib/finance/po/operational-budget";
 import type { CampaignListItem, CampaignStatus } from "@/types/database";
 
 /** Practical process-rail stages (doc 12 clusters). Cross-cutting tabs stay navigable. */
@@ -107,32 +108,71 @@ export type CampaignProcessSignals = {
   approvedVendorIoCount: number;
   sentVendorIoCount: number;
   deliverableCount: number;
+  /** Posted/approved deliverables only — not planned assignment units (STAB-019). */
+  uploadedDeliverableCount: number;
   overdueDeliverableCount: number;
+  /**
+   * True when Performance / Publication Live should advance — requires
+   * `campaign_publications` rows (STAB-028), not Posted workflow alone.
+   */
   activePerformance: boolean;
+  /** Count of campaign_publications (SSOT for Publication Live). */
+  publicationCount: number;
   invoiceCount: number;
   billingOutstanding: number;
+  /**
+   * True when every active line is terminal-invoiced (invoiced/paid/closed).
+   * STAB-035: Invoice Paid must not Done while unbilled lines remain.
+   */
+  fullyInvoiced: boolean;
   blockerCount: number;
   poExceeded: boolean;
 };
 
 export function signalsFromCampaignListItem(campaign: CampaignListItem): CampaignProcessSignals {
-  const budget = Number(campaign.po_amount_campaign_currency ?? 0);
-  const consumed = Number(campaign.po_consumed_amount ?? 0);
+  const clientIoStatus = campaign.client_io_status ?? null;
+  const hasClientIo =
+    campaign.has_client_io ?? Boolean(clientIoStatus);
+  // Match workspace PO resolution (STAB-012): when header governance PO is unset (0),
+  // fall back to line po_amount totals — never treat budget=0 as "not exceeded" while
+  // consumed remains positive against legacy line PO.
+  const legacyBudget = (campaign.lines ?? []).reduce(
+    (sum, line) => sum + Number(line.po_amount ?? 0),
+    0
+  );
+  const headerConsumed = Number(campaign.po_consumed_amount ?? 0);
+  const operationalPo = resolveOperationalPo({
+    po_amount_campaign_currency: campaign.po_amount_campaign_currency,
+    po_consumed_amount: campaign.po_consumed_amount,
+    po_remaining_amount: campaign.po_remaining_amount,
+    po_remaining_percent: campaign.po_remaining_percent,
+    po_status: campaign.po_status,
+    po_expiry_date: campaign.po_expiry_date,
+    legacy_budget: legacyBudget,
+    legacy_consumed: headerConsumed,
+  });
   return {
     status: campaign.status,
     lineCount: campaign.lines?.length ?? 0,
-    hasClientIo: false,
-    clientIoStatus: null,
-    vendorIoCount: 0,
-    approvedVendorIoCount: 0,
-    sentVendorIoCount: 0,
-    deliverableCount: 0,
+    hasClientIo,
+    clientIoStatus,
+    vendorIoCount: campaign.vendor_io_count ?? 0,
+    approvedVendorIoCount: campaign.approved_vendor_io_count ?? 0,
+    sentVendorIoCount: campaign.sent_vendor_io_count ?? 0,
+    deliverableCount: campaign.deliverable_count ?? 0,
+    // List cards lack per-deliverable status — only treat performance_active as upload evidence.
+    uploadedDeliverableCount: campaign.performance_active ? Math.max(1, campaign.deliverable_count ?? 0) : 0,
     overdueDeliverableCount: 0,
-    activePerformance: campaign.status === "active",
+    // Never infer performance from header status alone — that jumped Active+approved
+    // CIO campaigns to Performance on the portfolio while Workspace stayed on Deliverables.
+    activePerformance: Boolean(campaign.performance_active),
+    publicationCount: campaign.performance_active ? Math.max(1, campaign.deliverable_count ?? 0) : 0,
     invoiceCount: 0,
     billingOutstanding: 0,
+    // List cards lack line billing — treat header completed as fully invoiced.
+    fullyInvoiced: campaign.status === "completed",
     blockerCount: 0,
-    poExceeded: budget > 0 && consumed > budget,
+    poExceeded: operationalPo.po_exceeded,
   };
 }
 
@@ -150,6 +190,22 @@ export function signalsFromCampaignWorkspace(workspace: CampaignWorkspace): Camp
     (row) => row.display_status === "posted" || row.display_status === "approved"
   ).length;
 
+  // Prefer assignment-deliverable SSOT when legacy deliverables table is empty (STAB-015).
+  const deliverableCount = Math.max(
+    workspace.deliverables?.length ?? 0,
+    workspace.assignment_deliverable_count ?? 0
+  );
+
+  // STAB-027: assignment_post_schedule posted/approved is the operational upload SSOT.
+  const uploadedDeliverableCount = Math.max(
+    postedOrApproved,
+    workspace.assignment_uploaded_deliverable_count ?? 0
+  );
+
+  // STAB-028: Publication Live / Performance require campaign_publications rows.
+  // Posted workflow advances Deliverables Uploaded only — not Publication Live.
+  const publicationCount = workspace.publication_count ?? 0;
+
   return {
     status: workspace.status,
     lineCount: workspace.lines.length,
@@ -160,16 +216,62 @@ export function signalsFromCampaignWorkspace(workspace: CampaignWorkspace): Camp
     sentVendorIoCount: workspace.vendor_ios.filter(
       (io) => io.status === "sent" || io.status === "generated"
     ).length,
-    deliverableCount: workspace.deliverables?.length ?? 0,
+    deliverableCount,
+    // STAB-019: Uploaded ≠ planned assignment units counted for explorer (STAB-015).
+    uploadedDeliverableCount,
     overdueDeliverableCount,
-    activePerformance:
-      workspace.status === "active" &&
-      (postedOrApproved > 0 || (workspace.deliverables?.length ?? 0) > 0),
+    // STAB-017 + STAB-028: units/Posted alone must not flip Publication Live.
+    activePerformance: workspace.status === "active" && publicationCount > 0,
+    publicationCount,
     invoiceCount: workspace.invoices?.length ?? 0,
     billingOutstanding: workspace.financials.billing_outstanding ?? 0,
-    blockerCount: workspace.blockers?.length ?? 0,
+    fullyInvoiced: isWorkspaceFullyInvoiced(workspace.lines ?? []),
+    // Soft finance/ops strings must not inflate progression blockerCount.
+    blockerCount: countHardProgressionBlockers(workspace.blockers ?? []),
     poExceeded: workspace.financials.po_exceeded,
   };
+}
+
+const TERMINAL_LINE_BILLING = new Set(["invoiced", "paid", "closed"]);
+
+/** Campaign-level invoice completeness — mirrors header sync terminal billing. */
+export function isWorkspaceFullyInvoiced(
+  lines: Array<{ billing_status?: string | null; revenue?: number | null }>
+): boolean {
+  const active = lines.filter(
+    (line) => String(line.billing_status ?? "").toLowerCase() !== "cancelled"
+  );
+  if (active.length === 0) return false;
+  let invoicedRevenue = 0;
+  for (const line of active) {
+    const status = String(line.billing_status ?? "").toLowerCase();
+    if (!TERMINAL_LINE_BILLING.has(status)) return false;
+    invoicedRevenue += Number(line.revenue ?? 0);
+  }
+  return invoicedRevenue > 0;
+}
+
+/** Blockers that may stop commercial progression — not routine finance/ops noise. */
+export function countHardProgressionBlockers(blockers: string[]): number {
+  return blockers.filter(isHardProgressionBlocker).length;
+}
+
+export function isHardProgressionBlocker(text: string): boolean {
+  const lower = text.toLowerCase();
+  if (
+    lower.includes("payout") ||
+    lower.includes("outstanding client billing") ||
+    lower.includes("content pending") ||
+    lower.includes("rejected deliverable")
+  ) {
+    return false;
+  }
+  return (
+    lower.includes("pending approvals") ||
+    /\bp\.?o\.?\b|purchase[\s-]?order|po limit/i.test(lower) ||
+    lower.includes("contract required") ||
+    lower.includes("approval required")
+  );
 }
 
 function stageById(id: CampaignWorkspaceTabId) {
@@ -277,7 +379,13 @@ export function deriveCampaignProcessCue(signals: CampaignProcessSignals): Campa
     });
   }
 
-  if (signals.status === "completed") {
+  // Header status "completed" = fully invoiced (see sync-campaign-header-status).
+  // STAB-032: do not treat that as executive Campaign Closed while balances remain.
+  if (
+    signals.status === "completed" &&
+    signals.invoiceCount > 0 &&
+    signals.billingOutstanding <= 0
+  ) {
     return toCue({
       currentStageId: "overview",
       statusLabel: "Campaign complete",
@@ -289,29 +397,33 @@ export function deriveCampaignProcessCue(signals: CampaignProcessSignals): Campa
     });
   }
 
-  if (signals.blockerCount > 0 || signals.poExceeded) {
-    const stageId: CampaignWorkspaceTabId =
-      signals.lineCount === 0
-        ? "lines"
-        : waitingClient || clientStatus
-          ? "client-io"
-          : vendorOutstanding
-            ? "vendor-io"
-            : "overview";
+  if (
+    signals.status === "completed" &&
+    (signals.billingOutstanding > 0 || signals.invoiceCount === 0)
+  ) {
     return toCue({
-      currentStageId: stageId,
-      statusLabel: signals.poExceeded ? "PO limit exceeded" : "Blocked by open issues",
+      currentStageId: "billing",
+      statusLabel:
+        signals.billingOutstanding > 0 ? "Collections outstanding" : "Awaiting invoice",
+      lifecycleSignal: "waiting_internal",
+      nextActionLabel: "Open Finance",
+      waitingFor: "Finance",
+      nextStageId: null,
+      owner: "Finance",
+    });
+  }
+
+  // Only PO exceeded short-circuits the cue. Soft workspace alerts (payouts,
+  // content, billing) must not pin stage or invent "Blocked by open issues"
+  // after Client IO is already approved — that locks Vendor IO incorrectly.
+  if (signals.poExceeded) {
+    return toCue({
+      currentStageId: "billing",
+      statusLabel: "PO limit exceeded",
       lifecycleSignal: "blocked",
-      nextActionLabel: signals.poExceeded
-        ? "Review PO Limit"
-        : clientStatus === "rejected"
-          ? "Review Client Feedback"
-          : waitingClient
-            ? "Open Client IO"
-            : signals.lineCount === 0
-              ? "Complete Assignments"
-              : "Open Pending Approval",
-      waitingFor: "Operations",
+      nextActionLabel: "Review PO Limit",
+      waitingFor: "Finance",
+      owner: "Finance",
     });
   }
 
@@ -352,14 +464,39 @@ export function deriveCampaignProcessCue(signals: CampaignProcessSignals): Campa
     });
   }
 
-  // Client IO needed / in prep after assignments
-  if (!signals.hasClientIo || !clientStatus || clientStatus === "draft" || clientStatus === "generated") {
+  // Client IO needed / in prep after assignments.
+  // Distinguish missing record vs existing draft composer (STAB-010):
+  // "Generate Client IO" only when no Client IO exists; draft → complete composition.
+  if (!signals.hasClientIo || !clientStatus) {
     return toCue({
       currentStageId: "client-io",
-      statusLabel: clientStatus === "generated" ? "Ready to send" : "In Progress",
+      statusLabel: "In Progress",
       lifecycleSignal: "waiting_internal",
-      nextActionLabel:
-        clientStatus === "generated" ? "Send Client IO" : "Generate Client IO",
+      nextActionLabel: "Generate Client IO",
+      waitingFor: "Commercial",
+      nextStageId: "vendor-io",
+      owner: "Commercial",
+    });
+  }
+
+  if (clientStatus === "draft") {
+    return toCue({
+      currentStageId: "client-io",
+      statusLabel: "Draft in progress",
+      lifecycleSignal: "waiting_internal",
+      nextActionLabel: "Complete Client IO",
+      waitingFor: "Commercial",
+      nextStageId: "vendor-io",
+      owner: "Commercial",
+    });
+  }
+
+  if (clientStatus === "generated") {
+    return toCue({
+      currentStageId: "client-io",
+      statusLabel: "Ready to send",
+      lifecycleSignal: "waiting_internal",
+      nextActionLabel: "Send Client IO",
       waitingFor: "Commercial",
       nextStageId: "vendor-io",
       owner: "Commercial",

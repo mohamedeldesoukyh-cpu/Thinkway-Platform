@@ -1,19 +1,22 @@
 # Prompt Summary — Current Sprint
 
-**Branch focus:** `main`/`develop` tip `c23a3a0e` · tag **`v2.3.0`**
+**Branch focus:** `develop` · Enterprise Stabilization (no R2.4)  
+**Tip:** `74a5943f` + local STAB-038/039/040 (uncommitted code; Dev SQL applied for 038/040)
 
-**Status:** Release 2.3 **CLOSED** · Production Acceptance **PASS** · Release 2.4 **kickoff prepared**
+**Closed journeys (Intelligence→Close where package existed / CIP+exec):**
+Noon 0008 · Arab Bank 0007 · e& 0009 · NBK 0010 · L'Oréal 0006 · Tuna 0005 · Coca 0004/0003 · F1 0011 · Liwa 0012 · Trendyol 0013 · Alshaya 0014 · FirstCry 0015 · Dar 0016
 
-**Production:**
-- Deploy `dpl_2TzvSBDFLPs6tb6ite7FfaeTg3sj` · `app.thinkwaymedia.com`
-- Supabase `ienowhwfyxoqtzbgltno` aligned · 13 migrations applied
-- Tip includes CIP empty-slate + Studio fit-floor Critical hotfixes
+**STAB-003:** multi-brand matrix PASS (preferred list complete)
 
-**Fresh e& Egypt Prod acceptance (PASS):**
-- Conversation `a5820035-…` · CO `1945651c-…` **approved v11**
-- Generate → **TW-2026-0002** · 10 lines · 10 assignments · Media Plan · provenance v11
-- Decision Center linked · Client IO generated · **10 Vendor IOs** generated
-- Report: `docs/architecture/RELEASE_2_3_PRODUCTION_VALIDATION_REPORT.md`
-- R2.4 kickoff: `docs/release/2.4/README.md`
+**Fixed this session:**
+- **STAB-038** VIO upsert ON CONFLICT — Dev SQL applied
+- **STAB-039** hydrateSlateCreators discovery fallback — code local (needs commit/push for Dev preview)
+- **STAB-040** line suffix Excel AA+ — Dev SQL applied; Tuna repaired
 
-**Left local (exclude unless Product scopes into R2.4):** Wave 1 live-discovery · `scripts/tmp-*` · dirty readiness docs
+**Open High:** none (STAB-003 closed)  
+**Open Med:** STAB-023 · STAB-025 · STAB-031 · Alshaya KWD→USD fact soft  
+**No open Critical**
+
+**Next:** Enterprise negative testing → commit STAB-038/039/040 → Enterprise QA Report
+
+**R2.4:** blocked

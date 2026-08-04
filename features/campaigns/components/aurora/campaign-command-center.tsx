@@ -139,11 +139,14 @@ export function CampaignCommandCenter({
       for (const group of assignmentHierarchy.groups) {
         for (const deliverable of group.deliverables ?? []) {
           total += 1;
+          // STAB-026: planned live_date ≠ posted — align with timeline/signals (posted|approved).
           const posts = deliverable.posts ?? [];
           const isPosted =
-            Boolean(deliverable.live_date) ||
             deliverable.workflow_status === "posted" ||
-            posts.some((p) => p.live_date || p.workflow_status === "posted");
+            deliverable.workflow_status === "approved" ||
+            posts.some(
+              (p) => p.workflow_status === "posted" || p.workflow_status === "approved"
+            );
           if (isPosted) posted += 1;
         }
       }
@@ -152,7 +155,9 @@ export function CampaignCommandCenter({
 
     const fromWorkspace = workspace.deliverables ?? [];
     const total = fromWorkspace.length;
-    const posted = fromWorkspace.filter((d) => d.display_status === "posted").length;
+    const posted = fromWorkspace.filter(
+      (d) => d.display_status === "posted" || d.display_status === "approved"
+    ).length;
     return { total, posted, pending: Math.max(0, total - posted) };
   }, [workspace.deliverables, assignmentHierarchy.groups]);
 
