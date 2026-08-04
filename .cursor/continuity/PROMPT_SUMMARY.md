@@ -11,12 +11,14 @@
 - Production: `dpl_3zTJ1PorFfVVWKXKgb57uD2JxRMs` → `https://app.thinkwaymedia.com` (CLI deploy + alias)
 - Live smoke (Liwa SL-2026-0017 / QT-2026-0018): Selection · Preview · PDF · PPTX · counts · totals · no ellipsis/clamp — **PASS**
 
-## Hotfix (local, not shipped) — Quotation PPTX won't open in PowerPoint
+## Hotfix — Quotation PPTX won't open in PowerPoint — SHIPPED
 
-- **Symptom:** `Sorry, PowerPoint can't read …-showcase.pptx` (e.g. QT-2026-0013-V2)
-- **Cause:** Facebook/YouTube icons were SVG; pptxgenjs embeds SVG bytes as a fake `.png` → corrupt OOXML
-- **Fix:** `public/platform-icons/{facebook,youtube}.png` · `report-platform-icons.ts` uses PNG · PPTX skips SVG embeds
-- Verified: new icon PPTX opens; surgically patched broken file opens (9 slides). Needs commit → develop → Dev/Prod redeploy
+- **Cause:** Facebook/YouTube SVG icons → pptxgenjs fake `.png` → PowerPoint "can't read"
+- **Fix commit:** `b95b72fd` — PNG icons + SVG guard in quotation PPTX
+- Dev: `dpl_k17MppXEuuwK7pxVb5T6p28Y4AGH` → https://dev.thinkwaymedia.com
+- Prod: `dpl_AQ8e6AzRv5E81fJwiimjXibARDqZ` → https://app.thinkwaymedia.com
+- Smoke: local showcase with FB/YT — `svg_count=0`, PowerPoint **OPENED slides=6**
+- Re-export any previously downloaded showcase PPTX (old Downloads files stay broken)
 
 ## Prior closed
 
