@@ -93,6 +93,8 @@ type Props = {
   packageSiblingCount?: number;
   /** All member ids across sibling packages — used to remove every option. */
   siblingPackageMemberIds?: string[];
+  displayCurrency?: string;
+  displayFxRateToEgp?: number;
 };
 
 function resolveDeliverableDisplayPlatforms(
@@ -131,6 +133,8 @@ export function QuotationCollapsePackagePricingRow({
   showPackageOptionLabel = false,
   packageSiblingCount = 1,
   siblingPackageMemberIds,
+  displayCurrency,
+  displayFxRateToEgp,
 }: Props) {
   const [pending, startTransition] = useTransition();
   const manualSave = useQuotationManualSave();
@@ -511,6 +515,14 @@ export function QuotationCollapsePackagePricingRow({
                   fxRateToEgp: draft?.fxRateToEgp ?? leader.fx_rate_to_egp ?? 1,
                   fallbackAfPct: draft?.afPct ?? leader.af_pct,
                   allowLineMasterFallback: isFirst,
+                  preferLineMaster: isFirst && displayRows.length === 1,
+                  displayCurrency:
+                    displayCurrency ?? deliverable.cost_currency ?? costCurrency,
+                  displayFxRateToEgp:
+                    displayFxRateToEgp ??
+                    draft?.fxRateToEgp ??
+                    leader.fx_rate_to_egp ??
+                    1,
                 })}
                 gpPctLabel={formatDeliverableGpPct(
                   deliverable,

@@ -6,6 +6,9 @@
  * projected onto the first pricing row (others cleared) so Price + Cost Detail
  * show the same numbers. When Cost Detail rolls up, Master draft is updated by
  * the existing deliverable rollup path.
+ *
+ * Quotation display currency (header CCY) is used for Price labels and the
+ * creators footer so they match the metrics band.
  */
 
 import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-types";
@@ -13,15 +16,51 @@ import type { QuotationRowDraft } from "@/features/quotations/quotation-row-math
 import {
   formatDeliverablePrice,
   formatDeliverableTotalClientPrice,
+  computeDeliverableTotalClientCost,
+  isDeliverableFreeForClient,
 } from "@/lib/quotations/quotation-deliverable-commercial";
 import {
   hasPricedDeliverables,
   rollupDeliverableCommercials,
 } from "@/lib/quotations/quotation-deliverable-rollup";
 import { stripDeliverableCommercialAmounts } from "@/lib/quotations/quotation-line-commercial-ssot";
+import { fromEgp, toEgp } from "@/lib/commercial/fx-aggregation";
 
 function nearlyEqual(a: number, b: number): boolean {
   return Math.abs(a - b) < 0.005;
+}
+
+function formatAmount(amount: number, currency: string): string {
+  return formatDeliverablePrice(amount, currency);
+}
+
+/** Convert a line-currency amount into the quotation display currency via EGP. */
+export function formatAmountInDisplayCurrency(
+  amountInLineCurrency: number,
+  lineFxRateToEgp: number,
+  displayCurrency: string,
+  displayFxRateToEgp: number
+): string {
+  const amountEgp = toEgp(amountInLineCurrency, lineFxRateToEgp);
+  const displayAmount = fromEgp(amountEgp, displayCurrency, displayFxRateToEgp);
+  return formatAmount(displayAmount, displayCurrency || "EGP");
+}
+
+/** Format an EGP total in the quotation display currency (header/footer parity). */
+export function formatEgpTotalInDisplayCurrency(
+  amountEgp: number,
+  displayCurrency: string,
+  displayFxRateToEgp: number
+): string {
+  const displayAmount = fromEgp(amountEgp, displayCurrency, displayFxRateToEgp);
+  return formatAmount(displayAmount, displayCurrency || "EGP");
+}
+
+/** Line Master client cost (base revenue + AF%) in line currency. */
+export function lineDraftClientCost(draft: QuotationRowDraft): number {
+  if (draft.revenue <= 0) return 0;
+  const afPct = draft.afPct > 0 ? draft.afPct : 0;
+  return draft.revenue + (draft.revenue * afPct) / 100;
 }
 
 /** True when deliverable rollup already matches the line Master draft. */
@@ -90,7 +129,11 @@ export function projectLineDraftOntoDeliverables(
   });
 }
 
-/** Client price label for a creator pricing row (deliverable, else line Master). */
+/**
+ * Client price label for a creator pricing row.
+ * Prefer line Master when this is the sole pricing row (matches header totals SSOT).
+ * Always render in the quotation display currency.
+ */
 export function resolveCreatorLinePriceLabel(
   deliverable: QuotationDeliverable,
   draft: QuotationRowDraft | undefined,
@@ -100,23 +143,64 @@ export function resolveCreatorLinePriceLabel(
     fallbackAfPct?: number | null;
     /** When true, this row may show the full line Master total as fallback. */
     allowLineMasterFallback?: boolean;
+    /** Prefer Master over deliverable breakdown (single pricing row). */
+    preferLineMaster?: boolean;
+    displayCurrency?: string;
+    displayFxRateToEgp?: number;
   }
 ): string {
-  const currency =
+  const lineCurrency =
     options?.currency ||
     deliverable.cost_currency ||
     draft?.costCurrency ||
     "EGP";
-  const fx = options?.fxRateToEgp ?? draft?.fxRateToEgp ?? 1;
-  const fromDeliverable = formatDeliverableTotalClientPrice(deliverable, currency, fx, {
+  const lineFx = options?.fxRateToEgp ?? draft?.fxRateToEgp ?? 1;
+  const displayCurrency = (options?.displayCurrency || lineCurrency || "EGP").toUpperCase();
+  const displayFx =
+    options?.displayFxRateToEgp ??
+    (displayCurrency === "EGP" ? 1 : lineFx);
+
+  if (isDeliverableFreeForClient(deliverable)) return "Free";
+
+  const preferMaster =
+    Boolean(options?.preferLineMaster || options?.allowLineMasterFallback) &&
+    draft != null &&
+    (draft.revenue > 0 || draft.cost > 0) &&
+    (options?.preferLineMaster === true ||
+      !hasPricedDeliverables([deliverable]) ||
+      (draft != null && !deliverablesMatchLineDraft([deliverable], draft)));
+
+  if (preferMaster && draft) {
+    const clientCost = lineDraftClientCost(draft);
+    if (clientCost <= 0) return "—";
+    return formatAmountInDisplayCurrency(
+      clientCost,
+      draft.fxRateToEgp > 0 ? draft.fxRateToEgp : lineFx,
+      displayCurrency,
+      displayFx
+    );
+  }
+
+  const fromDeliverable = formatDeliverableTotalClientPrice(deliverable, lineCurrency, lineFx, {
     freeForClient: deliverable.free_for_client === true,
     fallbackAfPct: options?.fallbackAfPct ?? draft?.afPct,
   });
-  if (fromDeliverable !== "—") return fromDeliverable;
+  if (fromDeliverable === "—") {
+    if (!options?.allowLineMasterFallback || !draft) return "—";
+    const clientCost = lineDraftClientCost(draft);
+    if (clientCost <= 0) return "—";
+    return formatAmountInDisplayCurrency(
+      clientCost,
+      draft.fxRateToEgp > 0 ? draft.fxRateToEgp : lineFx,
+      displayCurrency,
+      displayFx
+    );
+  }
 
-  if (!options?.allowLineMasterFallback || !draft) return "—";
-  if (draft.revenue <= 0) return "—";
-  const afPct = draft.afPct > 0 ? draft.afPct : 0;
-  const total = draft.revenue + (draft.revenue * afPct) / 100;
-  return formatDeliverablePrice(total, currency);
+  const clientCost = computeDeliverableTotalClientCost(
+    deliverable,
+    lineFx,
+    options?.fallbackAfPct ?? draft?.afPct
+  );
+  return formatAmountInDisplayCurrency(clientCost, lineFx, displayCurrency, displayFx);
 }
