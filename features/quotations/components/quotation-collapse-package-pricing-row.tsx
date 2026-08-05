@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useTransition } from "react";
 import { MoreHorizontalIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   duplicateQuotationItems,
   removeQuotationItem,
@@ -24,6 +24,7 @@ import { QuotationDeliverableTypeLinesEditor } from "@/features/quotations/compo
 import { QuotationDeliverableCostDetails } from "@/features/quotations/components/quotation-deliverable-cost-details";
 import { QuotationDeliverablePlatformIcons } from "@/features/quotations/components/quotation-deliverable-platform-icons";
 import {
+  fromDeliverableDrafts,
   useQuotationLineFields,
   type DeliverableDraft,
 } from "@/features/quotations/components/quotation-line-fields";
@@ -46,10 +47,12 @@ import {
   typeLinesIncludeAllPlatforms,
   optionNumberLabel,
 } from "@/lib/quotations/quotation-deliverable-types";
+import { formatDeliverableGpPct } from "@/lib/quotations/quotation-deliverable-commercial";
 import {
-  formatDeliverableGpPct,
-  formatDeliverableTotalClientPrice,
-} from "@/lib/quotations/quotation-deliverable-commercial";
+  deliverablesMatchLineDraft,
+  projectLineDraftOntoDeliverables,
+  resolveCreatorLinePriceLabel,
+} from "@/lib/quotations/quotation-line-creator-commercial-sync";
 import type { AutosaveStatus } from "@/lib/hooks/use-debounced-autosave";
 import { cn } from "@/lib/utils";
 import type { QuotationLinePendingPayload } from "@/features/quotations/components/quotation-manual-save";
@@ -222,6 +225,44 @@ export function QuotationCollapsePackagePricingRow({
       return { ...d, ...synced };
     });
   }, [lineFields.deliverableDrafts, leader.platform, allowedCreatorPlatforms]);
+
+  const lastMasterSyncKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!draft) return;
+    const current = fromDeliverableDrafts(lineFields.deliverableDrafts);
+    if (deliverablesMatchLineDraft(current, draft)) {
+      lastMasterSyncKeyRef.current = [
+        draft.cost,
+        draft.revenue,
+        draft.gpPct,
+        draft.afPct,
+        draft.mode,
+        draft.costCurrency,
+      ].join("|");
+      return;
+    }
+    const syncKey = [
+      draft.cost,
+      draft.revenue,
+      draft.gpPct,
+      draft.afPct,
+      draft.mode,
+      draft.costCurrency,
+    ].join("|");
+    if (lastMasterSyncKeyRef.current === syncKey) return;
+    lastMasterSyncKeyRef.current = syncKey;
+
+    const projected = projectLineDraftOntoDeliverables(current, draft);
+    const keys = lineFields.deliverableDrafts.map((d) => d.key);
+    lineFields.saveDeliverables(
+      projected.map((deliverable, index) => ({
+        ...deliverable,
+        key: keys[index] ?? `sync-${leader.id}-${index}`,
+        type_lines: deliverableTypeLines(deliverable),
+      }))
+    );
+  }, [draft, leader.id, lineFields.deliverableDrafts, lineFields.saveDeliverables]);
 
   function applyDeliverable(key: string, next: QuotationDeliverable) {
     lineFields.saveDeliverables(
@@ -412,8 +453,9 @@ export function QuotationCollapsePackagePricingRow({
             )}
 
             <span className="co-svc">
-              <Input
-                className="svc-input h-[34px] text-[12.5px]"
+              <Textarea
+                rows={1}
+                className="svc-input svc-input--wrap min-h-[34px] resize-none text-[12.5px] leading-snug"
                 placeholder="Package service description…"
                 value={deliverable.service_description ?? ""}
                 onChange={(e) => {
@@ -464,15 +506,12 @@ export function QuotationCollapsePackagePricingRow({
                 deliverable={deliverable}
                 item={leader}
                 draft={draft}
-                priceLabel={formatDeliverableTotalClientPrice(
-                  deliverable,
-                  deliverable.cost_currency ?? costCurrency,
-                  draft?.fxRateToEgp ?? leader.fx_rate_to_egp ?? 1,
-                  {
-                    freeForClient: deliverable.free_for_client === true,
-                    fallbackAfPct: leader.af_pct,
-                  }
-                )}
+                priceLabel={resolveCreatorLinePriceLabel(deliverable, draft, {
+                  currency: deliverable.cost_currency ?? costCurrency,
+                  fxRateToEgp: draft?.fxRateToEgp ?? leader.fx_rate_to_egp ?? 1,
+                  fallbackAfPct: draft?.afPct ?? leader.af_pct,
+                  allowLineMasterFallback: isFirst,
+                })}
                 gpPctLabel={formatDeliverableGpPct(
                   deliverable,
                   draft?.fxRateToEgp ?? leader.fx_rate_to_egp ?? 1

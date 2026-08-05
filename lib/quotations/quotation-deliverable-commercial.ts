@@ -11,19 +11,43 @@ import { deliverableLineCost } from "@/lib/quotations/quotation-deliverable-roll
 export const QUOTATION_DELIVERABLE_DEFAULT_COMMERCIAL_MODE: CommercialInputMode =
   "cost_markup_pct";
 
+function itemHasPricedDeliverables(
+  deliverables: QuotationItemRow["deliverables"] | null | undefined
+): boolean {
+  if (!deliverables?.length) return false;
+  return deliverables.some((d) => {
+    if (d.free_for_client === true) return true;
+    if ((Number(d.cost) || 0) > 0) return true;
+    return (Number(d.revenue) || 0) > 0;
+  });
+}
+
 export function deliverableCommercialDefaults(
   item: QuotationItemRow
 ): Pick<
   QuotationDeliverable,
-  "commercial_input_mode" | "cost_currency" | "gp_pct" | "af_pct" | "cost" | "gp_value"
+  | "commercial_input_mode"
+  | "cost_currency"
+  | "gp_pct"
+  | "af_pct"
+  | "cost"
+  | "gp_value"
+  | "revenue"
 > {
+  const hasMaster =
+    (Number(item.cost) > 0 || Number(item.revenue) > 0) &&
+    !itemHasPricedDeliverables(item.deliverables);
   return {
-    commercial_input_mode: QUOTATION_DELIVERABLE_DEFAULT_COMMERCIAL_MODE,
+    commercial_input_mode: hasMaster
+      ? item.commercial_input_mode || QUOTATION_DELIVERABLE_DEFAULT_COMMERCIAL_MODE
+      : QUOTATION_DELIVERABLE_DEFAULT_COMMERCIAL_MODE,
     cost_currency: item.cost_currency || "EGP",
     gp_pct: item.gp_pct,
     af_pct: item.af_pct,
-    cost: 0,
-    gp_value: 0,
+    // Seed Cost Detail from line Master when deliverables were cleared by CW save.
+    cost: hasMaster ? Number(item.cost) || 0 : 0,
+    revenue: hasMaster ? Number(item.revenue) || 0 : undefined,
+    gp_value: hasMaster ? Number(item.gp_value) || 0 : 0,
   };
 }
 
