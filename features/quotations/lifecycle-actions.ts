@@ -261,10 +261,80 @@ export async function previewConvertQuotationToCampaign(input: {
     "@/lib/release/release-2-0-feature-flag"
   );
 
+  // When the R2.0 flag is off, convert falls back to legacy header create.
+  // Preview must not hard-fail — match that fallback so Convert stays usable.
   if (!isRelease20AssignmentConvertEnabled()) {
+    const { loadQuotationRow } = await import(
+      "@/lib/services/quotations/repositories/quotation-repository"
+    );
+    const { canCreateCampaignFromQuotation } = await import(
+      "@/lib/commercial-sync/rules"
+    );
+
+    const row = await loadQuotationRow(actor.supabase, input.quotationId);
+    if (!row) return { ok: false, message: "Quotation not found." };
+
+    const status = row.status as Database["public"]["Tables"]["quotations"]["Row"]["status"];
+    if (!canCreateCampaignFromQuotation(status)) {
+      return { ok: false, message: "Only approved quotations can create a campaign." };
+    }
+
+    if (row.is_temporary_client || row.is_temporary_brand || !row.brand_id) {
+      return {
+        ok: false,
+        message: "Promote temporary client/brand to master data before creating a campaign.",
+      };
+    }
+
+    const existingCampaignId = (row.campaign_header_id as string | null) ?? "";
+    let documentNumber = "";
+    if (existingCampaignId) {
+      const { data: header } = await actor.supabase
+        .from("campaign_headers")
+        .select("document_number")
+        .eq("id", existingCampaignId)
+        .maybeSingle();
+      documentNumber =
+        (header as { document_number?: string } | null)?.document_number ?? "";
+    }
+
+    const { data: items } = await actor.supabase
+      .from("quotation_items")
+      .select("id")
+      .eq("quotation_id", input.quotationId);
+
+    const itemCount = items?.length ?? 0;
+
     return {
-      ok: false,
-      message: "Release 2.0 Assignment convert is not enabled in this environment.",
+      ok: true,
+      data: {
+        alreadyExists: Boolean(existingCampaignId),
+        dryRun: true,
+        campaignId: existingCampaignId,
+        documentNumber,
+        linesCreated: 0,
+        skippedAlternatives: 0,
+        warnings: [
+          "Release 2.0 Assignment convert is disabled in this environment; Convert will use legacy header + vendor-link create.",
+        ],
+        preview: {
+          snapshotHash: "",
+          headerStatus: "planning",
+          copied: ["Brand linkage", "Campaign header", "Vendor assignments"],
+          remainsOnQuotation: [
+            "Commercial baseline",
+            "Quotation document",
+            "Pricing & terms",
+          ],
+          assignments: [],
+          packageCount: 0,
+          itemCount,
+          quotationSerial: (row.serial_number as string | null) ?? null,
+          versionNumber: Number(row.version_number ?? 1),
+        },
+        snapshotHash: "",
+      },
+      message: "Legacy convert preview (Assignment convert flag off).",
     };
   }
 
