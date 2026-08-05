@@ -67,7 +67,7 @@ export type CommercialSyncGateSkipped = {
 };
 
 const QUOTATION_MASTER_SELECT =
-  "cost, revenue, cost_currency, fx_rate_to_egp, af_pct, commercial_input_mode, gp_pct, gp_value, usage_rights_amount, usage_rights_cost, revenue_vat_percent, cost_vat_percent, revenue_vat_exempt, cost_vat_exempt";
+  "cost, revenue, cost_currency, fx_rate_to_egp, af_pct, commercial_input_mode, gp_pct, gp_value";
 
 const CAMPAIGN_MASTER_SELECT =
   "cost, revenue, cost_before_vat, revenue_before_vat, currency_code, fx_rate, agency_fee_percent, pricing_mode, markup_margin, profit, usage_rights_amount, usage_rights_cost, revenue_vat_percent, cost_vat_percent, revenue_vat_exempt, cost_vat_exempt";
