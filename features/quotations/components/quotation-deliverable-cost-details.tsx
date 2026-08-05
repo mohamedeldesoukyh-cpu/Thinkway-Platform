@@ -429,13 +429,15 @@ export function QuotationDeliverableCostDetails({
         !(Number(deliverable.cost) > 0) &&
         !(Number(deliverable.revenue) > 0) &&
         deliverable.free_for_client !== true;
+      const defaultCost = Number(defaults.cost) || 0;
+      const defaultRevenue = Number(defaults.revenue) || 0;
       const seeded =
-        seedEmpty && (defaults.cost > 0 || Number(defaults.revenue) > 0)
+        seedEmpty && (defaultCost > 0 || defaultRevenue > 0)
           ? {
               ...deliverable,
               commercial_input_mode: defaults.commercial_input_mode,
-              cost: defaults.cost,
-              revenue: defaults.revenue ?? null,
+              cost: defaultCost,
+              revenue: defaultRevenue > 0 ? defaultRevenue : null,
               gp_pct: defaults.gp_pct,
               gp_value: defaults.gp_value,
               af_pct: defaults.af_pct,
