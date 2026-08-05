@@ -247,6 +247,11 @@ export function QuotationCommercialWorkspaceDialog({
   const allFilteredSelected =
     filtered.length > 0 && filtered.every((row) => selectedIds.has(row.itemId));
 
+  const itemsById = useMemo(
+    () => new Map(items.map((item) => [item.id, item])),
+    [items]
+  );
+
   const stageDraft = useCallback(
     (id: string, next: QuotationRowDraft, recordHistory = true) => {
       if (recordHistory) {
@@ -255,9 +260,12 @@ export function QuotationCommercialWorkspaceDialog({
         );
       }
       onDraftChange(id, next);
-      manualSave.registerLinePending(id, draftToLinePending(next));
+      manualSave.registerLinePending(
+        id,
+        draftToLinePending(next, itemsById.get(id)?.deliverables)
+      );
     },
-    [drafts, manualSave, onDraftChange]
+    [drafts, itemsById, manualSave, onDraftChange]
   );
 
   const stageMany = useCallback(
@@ -266,10 +274,13 @@ export function QuotationCommercialWorkspaceDialog({
       setHistory((prev) => pushCommercialDraftHistory(prev, merged));
       onDraftsMerge(patched);
       for (const [id, draft] of Object.entries(patched)) {
-        manualSave.registerLinePending(id, draftToLinePending(draft));
+        manualSave.registerLinePending(
+          id,
+          draftToLinePending(draft, itemsById.get(id)?.deliverables)
+        );
       }
     },
-    [drafts, manualSave, onDraftsMerge]
+    [drafts, itemsById, manualSave, onDraftsMerge]
   );
 
   const handleUndo = () => {
@@ -278,7 +289,10 @@ export function QuotationCommercialWorkspaceDialog({
     setHistory(next);
     onDraftsMerge(next.present);
     for (const [id, draft] of Object.entries(next.present)) {
-      manualSave.registerLinePending(id, draftToLinePending(draft));
+      manualSave.registerLinePending(
+        id,
+        draftToLinePending(draft, itemsById.get(id)?.deliverables)
+      );
     }
   };
 
@@ -288,7 +302,10 @@ export function QuotationCommercialWorkspaceDialog({
     setHistory(next);
     onDraftsMerge(next.present);
     for (const [id, draft] of Object.entries(next.present)) {
-      manualSave.registerLinePending(id, draftToLinePending(draft));
+      manualSave.registerLinePending(
+        id,
+        draftToLinePending(draft, itemsById.get(id)?.deliverables)
+      );
     }
   };
 
@@ -299,7 +316,10 @@ export function QuotationCommercialWorkspaceDialog({
     onDraftsMerge(baseline);
     setHistory(resetCommercialDraftHistory(baseline));
     for (const item of items) {
-      manualSave.registerLinePending(item.id, draftToLinePending(baseline[item.id]!));
+      manualSave.registerLinePending(
+        item.id,
+        draftToLinePending(baseline[item.id]!, item.deliverables)
+      );
     }
     toast.message("Workspace drafts reset to last saved quotation values.");
   };

@@ -362,7 +362,26 @@ export function QuotationDeliverableCostDetails({
     setOpen(true);
   }, [defaultOpen, deliverable, fxRate]);
 
-  const defaults = useMemo(() => deliverableCommercialDefaults(item), [item]);
+  const defaults = useMemo(() => {
+    const base = deliverableCommercialDefaults(item);
+    if (!draft) return base;
+    const deliverableEmpty =
+      !(Number(deliverable.cost) > 0) &&
+      !(Number(deliverable.revenue) > 0) &&
+      deliverable.free_for_client !== true;
+    if (!deliverableEmpty) return base;
+    if (draft.cost <= 0 && draft.revenue <= 0) return base;
+    return {
+      ...base,
+      commercial_input_mode: draft.mode,
+      cost_currency: draft.costCurrency || base.cost_currency,
+      cost: draft.cost,
+      revenue: draft.revenue,
+      gp_pct: draft.gpPct,
+      gp_value: draft.gpValue,
+      af_pct: draft.afPct,
+    };
+  }, [item, draft, deliverable.cost, deliverable.revenue, deliverable.free_for_client]);
 
   const freeForClient = isDeliverableFreeForClient(localDeliverable);
   const mode =
@@ -406,7 +425,24 @@ export function QuotationDeliverableCostDetails({
 
   function handleOpenChange(next: boolean) {
     if (next) {
-      const normalized = withDeliverableCommercialPatch(deliverable, {}, fxRate);
+      const seedEmpty =
+        !(Number(deliverable.cost) > 0) &&
+        !(Number(deliverable.revenue) > 0) &&
+        deliverable.free_for_client !== true;
+      const seeded =
+        seedEmpty && (defaults.cost > 0 || Number(defaults.revenue) > 0)
+          ? {
+              ...deliverable,
+              commercial_input_mode: defaults.commercial_input_mode,
+              cost: defaults.cost,
+              revenue: defaults.revenue ?? null,
+              gp_pct: defaults.gp_pct,
+              gp_value: defaults.gp_value,
+              af_pct: defaults.af_pct,
+              cost_currency: defaults.cost_currency,
+            }
+          : deliverable;
+      const normalized = withDeliverableCommercialPatch(seeded, {}, fxRate);
       setLocalDeliverable(normalized);
       localDeliverableRef.current = normalized;
       openSnapshotRef.current = deliverableSnapshot(normalized);
@@ -565,7 +601,7 @@ export function QuotationDeliverableCostDetails({
               inputMode="decimal"
               blankWhenZero
               placeholder="00.0"
-              value={localDeliverable.revenue ?? 0}
+              value={localDeliverable.revenue ?? defaults.revenue ?? 0}
               onCommit={(next) => patchLocal({ revenue: next })}
             />
           </Field>

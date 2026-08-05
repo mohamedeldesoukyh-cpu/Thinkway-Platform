@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useTransition } from "react";
 import {
   CopyIcon,
   MoreHorizontalIcon,
@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { CreatorLinkedPlatformIcons } from "@/components/creator/creator-linked-platform-icons";
 import { CreatorIdentityCell } from "@/components/creator/creator-profile-link";
 import { CreatorTierBadge } from "@/components/creator/creator-tier-badge";
@@ -56,10 +56,12 @@ import {
   syncServiceDescriptionWithTypeLines,
   typeLinesIncludeAllPlatforms,
 } from "@/lib/quotations/quotation-deliverable-types";
+import { formatDeliverableGpPct } from "@/lib/quotations/quotation-deliverable-commercial";
 import {
-  formatDeliverableGpPct,
-  formatDeliverableTotalClientPrice,
-} from "@/lib/quotations/quotation-deliverable-commercial";
+  deliverablesMatchLineDraft,
+  projectLineDraftOntoDeliverables,
+  resolveCreatorLinePriceLabel,
+} from "@/lib/quotations/quotation-line-creator-commercial-sync";
 import type { AutosaveStatus } from "@/lib/hooks/use-debounced-autosave";
 import { cn } from "@/lib/utils";
 import { isManualQuotationCreator } from "@/lib/quotations/quotation-creator-platform-options";
@@ -251,6 +253,51 @@ export function QuotationCreatorDeliverableRows({
       return { ...d, ...synced };
     });
   }, [lineFields.deliverableDrafts, item.platform, allowedCreatorPlatforms]);
+
+  const lastMasterSyncKeyRef = useRef<string | null>(null);
+
+  // Commercial Workspace → creator Cost Detail / Price: keep deliverables aligned
+  // with line Master whenever Master diverges from the current rollup.
+  useEffect(() => {
+    if (!draft) return;
+    const current = fromDeliverableDrafts(lineFields.deliverableDrafts);
+    if (deliverablesMatchLineDraft(current, draft)) {
+      lastMasterSyncKeyRef.current = [
+        draft.cost,
+        draft.revenue,
+        draft.gpPct,
+        draft.afPct,
+        draft.mode,
+        draft.costCurrency,
+      ].join("|");
+      return;
+    }
+    const syncKey = [
+      draft.cost,
+      draft.revenue,
+      draft.gpPct,
+      draft.afPct,
+      draft.mode,
+      draft.costCurrency,
+    ].join("|");
+    if (lastMasterSyncKeyRef.current === syncKey) return;
+    lastMasterSyncKeyRef.current = syncKey;
+
+    const projected = projectLineDraftOntoDeliverables(current, draft);
+    const keys = lineFields.deliverableDrafts.map((d) => d.key);
+    lineFields.saveDeliverables(
+      projected.map((deliverable, index) => ({
+        ...deliverable,
+        key: keys[index] ?? `sync-${item.id}-${index}`,
+        type_lines: deliverableTypeLines(deliverable),
+      }))
+    );
+  }, [
+    draft,
+    item.id,
+    lineFields.deliverableDrafts,
+    lineFields.saveDeliverables,
+  ]);
 
   const usedPlatforms = useMemo(() => {
     const found = new Set<string>();
@@ -523,8 +570,9 @@ export function QuotationCreatorDeliverableRows({
             )}
 
             <span className="co-svc">
-              <Input
-                className="svc-input h-[34px] text-[12.5px]"
+              <Textarea
+                rows={1}
+                className="svc-input svc-input--wrap min-h-[34px] resize-none text-[12.5px] leading-snug"
                 placeholder="Service description…"
                 value={deliverable.service_description ?? ""}
                 onChange={(e) => {
@@ -586,13 +634,14 @@ export function QuotationCreatorDeliverableRows({
                 deliverable={deliverable}
                 item={item}
                 draft={draft}
-                priceLabel={formatDeliverableTotalClientPrice(
+                priceLabel={resolveCreatorLinePriceLabel(
                   deliverable,
-                  deliverable.cost_currency ?? costCurrency,
-                  draft?.fxRateToEgp ?? item.fx_rate_to_egp ?? 1,
+                  draft,
                   {
-                    freeForClient: deliverable.free_for_client === true,
-                    fallbackAfPct: item.af_pct,
+                    currency: deliverable.cost_currency ?? costCurrency,
+                    fxRateToEgp: draft?.fxRateToEgp ?? item.fx_rate_to_egp ?? 1,
+                    fallbackAfPct: draft?.afPct ?? item.af_pct,
+                    allowLineMasterFallback: isFirst,
                   }
                 )}
                 gpPctLabel={formatDeliverableGpPct(

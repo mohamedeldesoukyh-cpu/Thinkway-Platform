@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { COMMERCIAL_INPUT_MODE_LABELS } from "@/lib/domains/commercial/quotation-constants";
 import type { CommercialInputMode } from "@/lib/commercial/commercial-engine";
+import { COMMERCIAL_CURRENCIES } from "@/lib/commercial/fx-aggregation";
 import { applyCommercialWorkspaceBulkOp } from "@/lib/quotations/commercial-workspace/bulk-transforms";
 import { commercialWorkspaceCreatorCardClass } from "@/lib/quotations/commercial-workspace/creator-card-class";
 import {
@@ -322,9 +323,10 @@ export function QuotationCommercialWorkspaceRowCard({
             <div className="cw-field">
               <span className="cw-field-label">Currency</span>
               {canManage ? (
-                <Input
-                  className="h-8 w-[72px] text-right text-xs uppercase"
-                  value={row.draft.costCurrency}
+                <select
+                  className="h-8 w-[84px] rounded-[9px] border border-[#e3e8f2] bg-white px-1.5 text-[11px] font-semibold uppercase"
+                  value={(row.draft.costCurrency || "EGP").toUpperCase()}
+                  aria-label="Currency"
                   onChange={(e) => {
                     onStageDraft(
                       applyCommercialWorkspaceBulkOp(row.draft, {
@@ -333,7 +335,13 @@ export function QuotationCommercialWorkspaceRowCard({
                       })
                     );
                   }}
-                />
+                >
+                  {COMMERCIAL_CURRENCIES.map((code) => (
+                    <option key={code} value={code}>
+                      {code}
+                    </option>
+                  ))}
+                </select>
               ) : (
                 <span className="text-[12px] font-semibold text-[#0d1220]">
                   {row.draft.costCurrency}

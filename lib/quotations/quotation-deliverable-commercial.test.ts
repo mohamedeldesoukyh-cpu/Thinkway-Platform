@@ -19,6 +19,10 @@ const baseItem = {
   cost_currency: "USD",
   gp_pct: 25,
   af_pct: 10,
+  cost: 0,
+  revenue: 0,
+  gp_value: 0,
+  deliverables: [],
 } as unknown as QuotationItemRow;
 
 const pricedDeliverable = {

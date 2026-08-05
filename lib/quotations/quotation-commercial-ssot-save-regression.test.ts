@@ -118,8 +118,9 @@ test("edit → save → remount keeps Master; deliverables cannot override", () 
     gpValue: 6300,
     gpPct: 23.08,
   };
-  const pending = draftToLinePending(edited);
+  const pending = draftToLinePending(edited, before.deliverables);
   assert.equal(linePendingDiffersFromItem(before, pending), true);
+  assert.equal(hasPricedDeliverables(pending.deliverables), false);
 
   const afterSave = persistLineMasterSave(before, edited);
   assert.equal(afterSave.cost, 21000);
