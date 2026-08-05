@@ -10,6 +10,14 @@ import { resolveRateLimitCategory } from "./rate-limit-policy";
 
 test("resolveRateLimitCategory maps endpoint families", () => {
   assert.equal(resolveRateLimitCategory({ pathname: "/login", method: "POST" }), "auth");
+  assert.equal(
+    resolveRateLimitCategory({ pathname: "/auth/mfa", method: "POST", isServerAction: true }),
+    "auth"
+  );
+  // Login / MFA page GETs must not share the tight auth mutation budget.
+  assert.equal(resolveRateLimitCategory({ pathname: "/login", method: "GET" }), "default");
+  assert.equal(resolveRateLimitCategory({ pathname: "/auth/mfa", method: "GET" }), "default");
+  assert.equal(resolveRateLimitCategory({ pathname: "/auth/mfa/enroll", method: "GET" }), "default");
   assert.equal(resolveRateLimitCategory({ pathname: "/api/ai/chat", method: "POST" }), "ai");
   // Conversation reads and Studio page navigations must not share the AI mutation budget.
   assert.equal(

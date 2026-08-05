@@ -12,16 +12,17 @@ export function resolveRateLimitCategory(input: {
   const method = input.method.toUpperCase();
   const mutating = !["GET", "HEAD", "OPTIONS"].includes(method);
 
-  if (
+  // Tight auth budget applies only to mutating sign-in / MFA / invite posts.
+  // GET navigations (login page, MFA challenge after redirect, RSC prefetches)
+  // must NOT share that 5/min bucket — otherwise post-login MFA renders as a
+  // JSON 429 and the browser shows "This page couldn't load".
+  const authSurface =
     pathname === "/login" ||
     pathname.startsWith("/login/") ||
     pathname.startsWith("/auth/") ||
-    pathname.startsWith("/api/auth/")
-  ) {
-    return "auth";
-  }
-
-  if (pathname.startsWith("/io-approval/")) {
+    pathname.startsWith("/api/auth/") ||
+    pathname.startsWith("/io-approval/");
+  if (authSurface && (mutating || input.isServerAction)) {
     return "auth";
   }
 

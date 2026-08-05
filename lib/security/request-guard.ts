@@ -85,12 +85,31 @@ export function preAuthRequestGuard(
         },
       })
     );
+
+    const rateHeaders = {
+      "Retry-After": String(rate.retryAfterSec),
+      "Cache-Control": "no-store",
+    };
+
+    // Document navigations cannot render JSON 429 — return a recoverable HTML page.
+    const accept = request.headers.get("accept") ?? "";
+    const wantsHtml =
+      !isApiPath(pathname) &&
+      !serverAction &&
+      (accept.includes("text/html") || accept === "" || accept.includes("*/*"));
+
+    if (wantsHtml) {
+      const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Too many requests</title><style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#fff;color:#111}main{max-width:28rem;padding:1.5rem;text-align:center}p{color:#555;line-height:1.5}a,button{margin:.5rem;padding:.6rem 1rem;border-radius:.5rem;border:1px solid #ccc;background:#111;color:#fff;text-decoration:none;font:inherit;cursor:pointer}a.secondary{background:#fff;color:#111}</style></head><body><main><h1>Too many requests</h1><p>${body.message}</p><p><button type="button" onclick="location.reload()">Reload</button> <a class="secondary" href="/login">Back to sign in</a></p></main></body></html>`;
+      const limited = new NextResponse(html, {
+        status: 429,
+        headers: { ...rateHeaders, "Content-Type": "text/html; charset=utf-8" },
+      });
+      return withGuardHeaders(limited, pathname, rate);
+    }
+
     const limited = NextResponse.json(body, {
       status: 429,
-      headers: {
-        "Retry-After": String(rate.retryAfterSec),
-        "Cache-Control": "no-store",
-      },
+      headers: rateHeaders,
     });
     return withGuardHeaders(limited, pathname, rate);
   }
