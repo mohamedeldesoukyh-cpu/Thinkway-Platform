@@ -9,7 +9,15 @@ import {
 } from "./client-io-milestones";
 
 test("templates total 100%", () => {
-  for (const templateId of ["approval_100", "fifty_fifty", "monthly_3", "completion_100"] as const) {
+  for (const templateId of [
+    "approval_100",
+    "net_30",
+    "net_60",
+    "net_90",
+    "fifty_fifty",
+    "monthly_3",
+    "completion_100",
+  ] as const) {
     const rows = buildClientIoMilestoneTemplate(templateId);
     const result = validateClientIoMilestones(rows);
     assert.equal(result.ok, true, templateId);

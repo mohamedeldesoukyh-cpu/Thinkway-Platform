@@ -29,6 +29,8 @@ type Props = {
   status: ClientIoStatus;
   isSuperseded?: boolean;
   milestones: ClientIoMilestoneDraft[];
+  /** Fired when a ready template (incl. Custom / Net days) is selected. */
+  onTemplateApplied?: (templateId: ClientIoMilestoneTemplateId) => void;
 };
 
 const DUE_TRIGGERS = Object.keys(
@@ -41,9 +43,11 @@ export function ClientIoMilestonesEditor({
   status,
   isSuperseded = false,
   milestones: initialMilestones,
+  onTemplateApplied,
 }: Props) {
   const editable = isClientIoMilestoneEditable(status, isSuperseded);
   const [rows, setRows] = useState<ClientIoMilestoneDraft[]>(initialMilestones);
+  const [baseline, setBaseline] = useState(() => JSON.stringify(initialMilestones));
   const [saveState, saveAction, saving] = useActionState(
     saveClientIoMilestonesAction,
     INITIAL_STATE
@@ -51,13 +55,16 @@ export function ClientIoMilestonesEditor({
 
   useEffect(() => {
     setRows(initialMilestones);
+    setBaseline(JSON.stringify(initialMilestones));
   }, [initialMilestones]);
 
   useEffect(() => {
     if (!saveState.message) return;
-    if (saveState.ok) toast.success(saveState.message);
-    else toast.error(saveState.message);
-  }, [saveState]);
+    if (saveState.ok) {
+      toast.success(saveState.message);
+      setBaseline(JSON.stringify(rows));
+    } else toast.error(saveState.message);
+  }, [saveState, rows]);
 
   const totalPercent = useMemo(
     () => rows.reduce((sum, row) => sum + Number(row.percent || 0), 0),
@@ -65,9 +72,11 @@ export function ClientIoMilestonesEditor({
   );
 
   const payload = useMemo(() => JSON.stringify(rows), [rows]);
+  const dirty = payload !== baseline;
 
   function applyTemplate(templateId: ClientIoMilestoneTemplateId) {
     setRows(buildClientIoMilestoneTemplate(templateId));
+    onTemplateApplied?.(templateId);
   }
 
   function updateRow(index: number, patch: Partial<ClientIoMilestoneDraft>) {
@@ -100,8 +109,9 @@ export function ClientIoMilestonesEditor({
     <DetailFormSection label="Billing milestones" className="py-3.5">
       <div className="space-y-3">
         <p className="text-xs text-muted-foreground">
-          Configure the payment schedule for this Client IO. This is schedule ownership only —
-          invoices are created in Release 2.3. Percentages must total 100%.
+          Choose a ready payment schedule (including 30 / 60 / 90 days). Selecting a preset also
+          updates the Payment Terms clause used in preview, export, and send. Custom edits require
+          Save before they apply. Percentages must total 100%.
         </p>
 
         {editable ? (
@@ -111,7 +121,7 @@ export function ClientIoMilestonesEditor({
                 key={option.id}
                 type="button"
                 size="sm"
-                variant="outline"
+                variant={option.id === "custom" ? "secondary" : "outline"}
                 title={option.description}
                 onClick={() => applyTemplate(option.id)}
               >
@@ -264,18 +274,22 @@ export function ClientIoMilestonesEditor({
                 : " · must equal 100%"}
           </p>
           {editable ? (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button type="button" size="sm" variant="ghost" onClick={addRow}>
                 Add milestone
               </Button>
-              <form action={saveAction}>
-                <input type="hidden" name="id" value={clientIoId} />
-                <input type="hidden" name="campaign_header_id" value={campaignHeaderId} />
-                <input type="hidden" name="milestones" value={payload} />
-                <Button type="submit" size="sm" variant="outline" disabled={saving}>
-                  {saving ? "Saving…" : "Save milestones"}
-                </Button>
-              </form>
+              {dirty ? (
+                <form action={saveAction}>
+                  <input type="hidden" name="id" value={clientIoId} />
+                  <input type="hidden" name="campaign_header_id" value={campaignHeaderId} />
+                  <input type="hidden" name="milestones" value={payload} />
+                  <Button type="submit" size="sm" disabled={saving}>
+                    {saving ? "Saving…" : "Save payment schedule"}
+                  </Button>
+                </form>
+              ) : (
+                <p className="text-xs text-muted-foreground">Schedule saved</p>
+              )}
             </div>
           ) : null}
         </div>

@@ -10,12 +10,24 @@ import { updateVendorIoSchema } from "@/lib/validation/schemas";
 import {
   ensureClientIoAssignmentsSeeded,
   isClientIoComposerEditable,
+  isClientIoRegenerateAllowed,
   replaceClientIoAssignments,
 } from "@/lib/io/client-io-assignments";
 import { createClientIoAmendment } from "@/lib/io/create-client-io-amendment";
 import { fetchClientIoRow } from "@/lib/io/client-io-query";
 import { replaceClientIoMilestones } from "@/lib/io/client-io-milestones-service";
-import type { ClientIoMilestoneDraft } from "@/lib/io/client-io-milestones";
+import {
+  buildClientIoMilestoneTemplate,
+  type ClientIoMilestoneDraft,
+  type ClientIoMilestoneTemplateId,
+} from "@/lib/io/client-io-milestones";
+import { generateClientIoDocument } from "@/lib/io/client-io-document-service";
+import { CLIENT_IO_DEFAULT_TERMS } from "@/lib/io/client-io-default-terms";
+import {
+  applyPaymentTermsClause,
+  getClientIoPaymentTermsPreset,
+  type ClientIoPaymentTermsPresetId,
+} from "@/lib/io/client-io-payment-terms";
 import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
 import { emitEnterpriseTimelineEvent } from "@/lib/timeline/emit-enterprise-timeline-event";
 import {
@@ -210,6 +222,116 @@ export async function saveClientIoAssignmentsAction(
   }
 }
 
+const PAYMENT_PRESET_TO_MILESTONE: Record<
+  Exclude<ClientIoPaymentTermsPresetId, "custom">,
+  ClientIoMilestoneTemplateId
+> = {
+  advance: "approval_100",
+  net_30: "net_30",
+  net_60: "net_60",
+  net_90: "net_90",
+};
+
+/**
+ * One-click ready payment terms: milestones + billing_terms + Payment Terms clause,
+ * then regenerate document so preview / export / send stay in sync.
+ */
+export async function applyClientIoPaymentTermsPresetAction(
+  _prev: IoActionState,
+  formData: FormData
+): Promise<IoActionState> {
+  const id = String(formData.get("id") ?? "").trim();
+  const campaignHeaderId = String(formData.get("campaign_header_id") ?? "").trim();
+  const presetId = String(formData.get("preset_id") ?? "").trim() as ClientIoPaymentTermsPresetId;
+
+  if (!id || !campaignHeaderId) {
+    return { ok: false, message: "Missing Client IO context." };
+  }
+  if (presetId === "custom" || !(presetId in PAYMENT_PRESET_TO_MILESTONE)) {
+    return { ok: false, message: "Choose Advance, 30, 60, or 90 days — Custom is edited manually." };
+  }
+
+  const { supabase, user, error } = await requireAuthUser();
+  if (error || !user) {
+    return { ok: false, message: error ?? "Unauthorized" };
+  }
+
+  const clientIo = await fetchClientIoRow(supabase, id);
+  if (!clientIo) {
+    return { ok: false, message: "Client IO not found." };
+  }
+  if (clientIo.is_superseded) {
+    return {
+      ok: false,
+      message: "This Client IO version is superseded and immutable. Edit the current tip.",
+    };
+  }
+
+  const preset = getClientIoPaymentTermsPreset(presetId);
+  const milestoneTemplate = PAYMENT_PRESET_TO_MILESTONE[presetId];
+  const milestones = buildClientIoMilestoneTemplate(milestoneTemplate);
+
+  const existingTerms =
+    parseTermsText(clientIo.terms_text) ??
+    parseTermsText(clientIo.client_io_terms_text) ??
+    CLIENT_IO_DEFAULT_TERMS;
+  const nextTerms = applyPaymentTermsClause(existingTerms, preset.clauseBody);
+
+  try {
+    await replaceClientIoMilestones(supabase, {
+      clientIoId: id,
+      campaignHeaderId,
+      actorId: user.id,
+      status: clientIo.status,
+      isSuperseded: clientIo.is_superseded,
+      milestones,
+    });
+
+    const { error: updateError } = await supabase
+      .from("client_ios")
+      .update({
+        billing_terms: preset.billingTerms,
+        terms_text: serializeTermsText(nextTerms),
+        updated_by: user.id,
+      } as never)
+      .eq("id", id);
+
+    if (updateError) {
+      return { ok: false, message: updateError.message };
+    }
+
+    let regenerated = false;
+    if (
+      isClientIoRegenerateAllowed(clientIo.status) &&
+      (clientIo.document_generated_at ||
+        clientIo.generated_html_url ||
+        clientIo.terms_html)
+    ) {
+      await generateClientIoDocument(supabase, id, user.id);
+      regenerated = true;
+    }
+
+    debugIo("client-io", "applied payment terms preset", { id, presetId, regenerated });
+    revalidateIoPaths(campaignHeaderId);
+    revalidatePath(`/ios/client/${id}/preview`);
+
+    return {
+      ok: true,
+      message: regenerated
+        ? `${preset.label} payment terms saved and document refreshed.`
+        : `${preset.label} payment terms saved. Generate the document to refresh preview.`,
+    };
+  } catch (applyError) {
+    return {
+      ok: false,
+      message:
+        applyError instanceof Error
+          ? applyError.message
+          : "Could not apply payment terms preset.",
+    };
+  }
+}
+
 export async function saveClientIoMilestonesAction(
   _prev: IoActionState,
   formData: FormData
@@ -254,15 +376,31 @@ export async function saveClientIoMilestonesAction(
       isSuperseded: clientIo.is_superseded,
       milestones,
     });
-    debugIo("client-io", "saved milestones", { id, count: saved.length });
+
+    let regenerated = false;
+    if (
+      isClientIoRegenerateAllowed(clientIo.status) &&
+      (clientIo.document_generated_at ||
+        clientIo.generated_html_url ||
+        clientIo.terms_html)
+    ) {
+      await generateClientIoDocument(supabase, id, user.id);
+      regenerated = true;
+    }
+
+    debugIo("client-io", "saved milestones", { id, count: saved.length, regenerated });
     revalidateIoPaths(campaignHeaderId);
     revalidatePath(`/ios/client/${id}/preview`);
     return {
       ok: true,
       message:
         saved.length === 0
-          ? "Billing milestones cleared."
-          : `Saved ${saved.length} billing milestone${saved.length === 1 ? "" : "s"}.`,
+          ? regenerated
+            ? "Billing milestones cleared and document refreshed."
+            : "Billing milestones cleared."
+          : regenerated
+            ? `Saved ${saved.length} billing milestone${saved.length === 1 ? "" : "s"} and refreshed the document.`
+            : `Saved ${saved.length} billing milestone${saved.length === 1 ? "" : "s"}.`,
     };
   } catch (saveError) {
     return {
