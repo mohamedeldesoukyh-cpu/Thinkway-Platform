@@ -15,7 +15,8 @@ export type RateLimitRule = {
 
 /** Per-category limits (identity = user id or IP). */
 export const RATE_LIMIT_RULES: Record<RateLimitCategory, RateLimitRule> = {
-  auth: { windowMs: 60_000, max: 5 },
+  /** Mutating auth only (sign-in / MFA verify). GETs use `default`. */
+  auth: { windowMs: 60_000, max: 20 },
   ai: { windowMs: 60_000, max: 10 },
   upload: { windowMs: 3_600_000, max: 20 },
   discovery: { windowMs: 60_000, max: 60 },
