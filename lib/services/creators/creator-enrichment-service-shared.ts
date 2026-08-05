@@ -198,6 +198,26 @@ export type CreatorRefreshPollStatus = {
   failureReason: string | null;
 };
 
+/**
+ * Recent queued/running enrichment runs are SSOT for "still working" even when
+ * BullMQ inflight checks miss (serverless Redis blips). Without this, a brand-new
+ * creator (platforms still `never`) reconciles to `pending` and the add-creator
+ * poll aborts after ~12s with a false "Apify enrichment unavailable" toast.
+ */
+const RECENT_INFLIGHT_RUN_GRACE_MS = 3 * 60 * 1000;
+
+function latestEnrichmentRunImpliesInflight(run: {
+  status?: string | null;
+  created_at?: string | null;
+} | null): boolean {
+  if (!run) return false;
+  if (run.status !== "queued" && run.status !== "running") return false;
+  if (!run.created_at) return true;
+  const createdAt = Date.parse(run.created_at);
+  if (!Number.isFinite(createdAt)) return true;
+  return Date.now() - createdAt < RECENT_INFLIGHT_RUN_GRACE_MS;
+}
+
 /** Latest refresh outcome + aggregated sync status for UI poll / toasts. */
 export async function getCreatorRefreshPollStatus(
   supabase: AnySupabase,
@@ -245,9 +265,20 @@ export async function getCreatorRefreshPollStatus(
     metadata: Record<string, unknown> | null;
   };
 
+  const run = latestRun as {
+    refresh_id?: string | null;
+    failure_stage?: string | null;
+    error_message?: string | null;
+    status?: string | null;
+    created_at?: string | null;
+    execution_trace?: { failureStage?: string | null; failureReason?: string | null } | null;
+  } | null;
+
   let resolved: CreatorEnrichmentStatus = row.enrichment_status;
   if (!platformError) {
-    const hasInflightJob = await creatorHasInflightEnrichmentJob(influencerId);
+    const hasInflightJob =
+      (await creatorHasInflightEnrichmentJob(influencerId)) ||
+      latestEnrichmentRunImpliesInflight(run);
     resolved = resolveAggregatedCreatorEnrichmentStatus({
       creatorId: influencerId,
       storedStatus: row.enrichment_status,
@@ -264,14 +295,6 @@ export async function getCreatorRefreshPollStatus(
     refreshId?: string;
     failureStage?: string | null;
     failureReason?: string | null;
-  } | null;
-
-  const run = latestRun as {
-    refresh_id?: string | null;
-    failure_stage?: string | null;
-    error_message?: string | null;
-    status?: string | null;
-    execution_trace?: { failureStage?: string | null; failureReason?: string | null } | null;
   } | null;
 
   return {

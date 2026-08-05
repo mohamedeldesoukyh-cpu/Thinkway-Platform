@@ -210,8 +210,11 @@ export async function addCreatorByProfileUrl(
     };
   }
 
+  // Match Refresh metrics (live Apify): force=true bypasses freshness/IPL soft paths
+  // and uses the same producer semantics as manual refresh. force=false caused
+  // add-creator polls to false-fail while a later Refresh succeeded.
   const refresh = await refreshCreatorMetrics(supabase, influencerId, {
-    force: false,
+    force: true,
     trigger: "manual",
     scope: "all",
     requestedBy: input.actorId,
