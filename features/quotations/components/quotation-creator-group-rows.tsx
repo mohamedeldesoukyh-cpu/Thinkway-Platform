@@ -26,6 +26,8 @@ type Props = {
   focusItemId?: string | null;
   /** Collap bundles: identity headers only — package row holds pricing. */
   collapsePackageMode?: boolean;
+  displayCurrency?: string;
+  displayFxRateToEgp?: number;
 };
 
 /** One influencer block: header row (avatar + name), then Option 1 / 2 / 3… lines. */
@@ -44,6 +46,8 @@ export function QuotationCreatorGroupRows({
   onOpenCreator,
   focusItemId,
   collapsePackageMode = false,
+  displayCurrency,
+  displayFxRateToEgp,
 }: Props) {
   const sortedItems = useMemo(
     () => [...items].sort((a, b) => a.sort_order - b.sort_order),
@@ -124,6 +128,8 @@ export function QuotationCreatorGroupRows({
                 autoOpenEditors={item.id === focusItemId}
                 onUsedPlatformsChange={handleUsedPlatformsChange}
                 creatorOptionItemIds={creatorOptionItemIds}
+                displayCurrency={displayCurrency}
+                displayFxRateToEgp={displayFxRateToEgp}
               />
             );
           })}

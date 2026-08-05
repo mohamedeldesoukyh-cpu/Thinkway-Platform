@@ -5,6 +5,7 @@ import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-ty
 import type { QuotationRowDraft } from "@/features/quotations/quotation-row-math";
 import {
   deliverablesMatchLineDraft,
+  formatEgpTotalInDisplayCurrency,
   projectLineDraftOntoDeliverables,
   resolveCreatorLinePriceLabel,
 } from "@/lib/quotations/quotation-line-creator-commercial-sync";
@@ -51,17 +52,46 @@ test("projectLineDraftOntoDeliverables puts Master on first row and clears other
   assert.equal(deliverablesMatchLineDraft(projected, draft), true);
 });
 
-test("resolveCreatorLinePriceLabel falls back to line Master when deliverable unpriced", () => {
+test("resolveCreatorLinePriceLabel prefers Master and display currency", () => {
   assert.equal(
     resolveCreatorLinePriceLabel(emptyDeliverable, draft, {
       allowLineMasterFallback: true,
+      preferLineMaster: true,
+      displayCurrency: "EGP",
+      displayFxRateToEgp: 1,
     }),
     "11,200 EGP"
   );
+
+  // Stale deliverable amounts must not win over Master when preferLineMaster.
+  const stale: QuotationDeliverable = {
+    ...emptyDeliverable,
+    cost: 50_000,
+    revenue: 60_000,
+    commercial_input_mode: "cost_revenue",
+    cost_currency: "EGP",
+  };
+  assert.equal(
+    resolveCreatorLinePriceLabel(stale, draft, {
+      preferLineMaster: true,
+      displayCurrency: "EGP",
+      displayFxRateToEgp: 1,
+    }),
+    "11,200 EGP"
+  );
+
+  // EGP master → USD display (fx 52).
   assert.equal(
     resolveCreatorLinePriceLabel(emptyDeliverable, draft, {
-      allowLineMasterFallback: false,
+      preferLineMaster: true,
+      displayCurrency: "USD",
+      displayFxRateToEgp: 52,
     }),
-    "—"
+    "215 USD"
   );
+});
+
+test("formatEgpTotalInDisplayCurrency matches header conversion", () => {
+  assert.equal(formatEgpTotalInDisplayCurrency(589_648, "EGP", 1), "589,648 EGP");
+  assert.equal(formatEgpTotalInDisplayCurrency(589_648, "USD", 52), "11,339 USD");
 });

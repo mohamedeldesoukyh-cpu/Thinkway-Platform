@@ -133,6 +133,9 @@ type Props = {
   onUsedPlatformsChange?: (itemId: string, platforms: string[]) => void;
   /** All option line ids for this creator (enables remove-option vs remove-creator). */
   creatorOptionItemIds?: string[];
+  /** Quotation header display currency (Price labels match metrics band). */
+  displayCurrency?: string;
+  displayFxRateToEgp?: number;
 };
 
 function resolveDeliverableDisplayPlatforms(
@@ -176,6 +179,8 @@ export function QuotationCreatorDeliverableRows({
   autoOpenEditors = false,
   onUsedPlatformsChange,
   creatorOptionItemIds,
+  displayCurrency,
+  displayFxRateToEgp,
 }: Props) {
   const [pending, startTransition] = useTransition();
   const manualSave = useQuotationManualSave();
@@ -642,6 +647,14 @@ export function QuotationCreatorDeliverableRows({
                     fxRateToEgp: draft?.fxRateToEgp ?? item.fx_rate_to_egp ?? 1,
                     fallbackAfPct: draft?.afPct ?? item.af_pct,
                     allowLineMasterFallback: isFirst,
+                    preferLineMaster: isFirst && displayRows.length === 1,
+                    displayCurrency:
+                      displayCurrency ?? deliverable.cost_currency ?? costCurrency,
+                    displayFxRateToEgp:
+                      displayFxRateToEgp ??
+                      draft?.fxRateToEgp ??
+                      item.fx_rate_to_egp ??
+                      1,
                   }
                 )}
                 gpPctLabel={formatDeliverableGpPct(

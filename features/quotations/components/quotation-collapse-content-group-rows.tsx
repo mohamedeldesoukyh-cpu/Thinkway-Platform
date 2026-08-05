@@ -32,6 +32,8 @@ type Props = {
   onLineChanged: () => void;
   onOpenCreator?: (item: QuotationItemRow) => void;
   focusItemId?: string | null;
+  displayCurrency?: string;
+  displayFxRateToEgp?: number;
 };
 
 /** Collapse content block: shared Collap header + one line group per creator. */
@@ -51,6 +53,8 @@ export function QuotationCollapseContentGroupRows({
   onLineChanged,
   onOpenCreator,
   focusItemId,
+  displayCurrency,
+  displayFxRateToEgp,
 }: Props) {
   const groupItems = useMemo(
     () => creatorGroups.flatMap((group) => group.items),
@@ -110,6 +114,8 @@ export function QuotationCollapseContentGroupRows({
         showPackageOptionLabel={showPackageOptionLabel}
         packageSiblingCount={packageSiblingCount}
         siblingPackageMemberIds={allSiblingPackageMemberIds}
+        displayCurrency={displayCurrency}
+        displayFxRateToEgp={displayFxRateToEgp}
       />
       {creatorGroups.map((group, nestedIndex) => (
         <QuotationCreatorGroupRows
@@ -128,6 +134,8 @@ export function QuotationCollapseContentGroupRows({
           onOpenCreator={onOpenCreator}
           focusItemId={focusItemId}
           collapsePackageMode
+          displayCurrency={displayCurrency}
+          displayFxRateToEgp={displayFxRateToEgp}
         />
       ))}
     </>

@@ -89,6 +89,7 @@ import {
   type QuotationRowDraft,
 } from "@/features/quotations/quotation-row-math";
 import { resolveLiveTotalsDraft } from "@/features/quotations/quotation-pending-live-totals";
+import { formatEgpTotalInDisplayCurrency } from "@/lib/quotations/quotation-line-creator-commercial-sync";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
 import {
   buildQuotationItemOptionContext,
@@ -890,6 +891,8 @@ function QuotationWorkspaceContent({
                       onLineChanged={refreshQuotationLines}
                       onOpenCreator={openCreatorFromItem}
                       focusItemId={focusNewItemId}
+                      displayCurrency={displayCurrency}
+                      displayFxRateToEgp={displayFxRateToEgp}
                     />
                   ) : (
                     <QuotationCreatorGroupRows
@@ -906,6 +909,8 @@ function QuotationWorkspaceContent({
                       onLineChanged={refreshQuotationLines}
                       onOpenCreator={openCreatorFromItem}
                       focusItemId={focusNewItemId}
+                      displayCurrency={displayCurrency}
+                      displayFxRateToEgp={displayFxRateToEgp}
                     />
                   )}
                 </div>
@@ -916,7 +921,13 @@ function QuotationWorkspaceContent({
                 <span className="lbl">
                   Totals · {uniqueCreatorCount} creators · {totalsDraftList.length} option lines
                 </span>
-                <span className="amt">{egp(totals.totalClientCostEgp)}</span>
+                <span className="amt">
+                  {formatEgpTotalInDisplayCurrency(
+                    totals.totalClientCostEgp,
+                    displayCurrency,
+                    displayFxRateToEgp
+                  )}
+                </span>
               </div>
             </div>
             {detail.canManage ? (
