@@ -129,7 +129,11 @@ export function CommercialRevisionDialog({
           <div className="rounded-md border bg-muted/30 p-3 text-sm">
             <p className="mb-2 font-medium">Proposed Master changes</p>
             {fieldChanges.length === 0 ? (
-              <p className="text-muted-foreground">No dirty Master fields.</p>
+              <p className="text-muted-foreground">
+                No dirty Master fields. Issue/validity dates are document metadata
+                and are not revised here — change cost, revenue, GP, fees, or
+                currency to create a Commercial Revision.
+              </p>
             ) : (
               <ul className="space-y-1.5">
                 {fieldChanges.map((change, index) => (

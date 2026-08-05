@@ -36,6 +36,7 @@ import type { AutosaveStatus } from "@/lib/hooks/use-debounced-autosave";
 import type { CommercialInputMode, QuotationStatus } from "@/types/database";
 import { linePendingDiffersFromItem } from "@/lib/quotations/quotation-line-pending-diff";
 import { rollupDeliverableCommercials } from "@/lib/quotations/quotation-deliverable-rollup";
+import { diffMasterChanges } from "@/lib/services/commercial/field-registry";
 
 export type QuotationLinePendingPayload = {
   service_description?: string | null;
@@ -331,6 +332,10 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
           toast.error(
             "Cannot start Commercial Revision — missing Campaign linkage."
           );
+          setSavePending(false);
+          savePendingRef.current = false;
+          setSaveStatus("pending");
+          return false;
         } else {
           const lines: CommercialRevisionDialogLine[] = [];
           for (const [itemId, payload] of pendingEntries) {
@@ -343,44 +348,63 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
                   lineAfPct: payload.af_pct ?? item.af_pct,
                 })
               : null;
+            const current = {
+              creator_cost: item.cost,
+              client_revenue: item.revenue,
+              cost_currency: item.cost_currency,
+              exchange_rate: item.fx_rate_to_egp,
+              agency_fee_percent: item.af_pct,
+              commercial_input_mode: item.commercial_input_mode,
+              gp_pct_input: item.gp_pct,
+              gp_value_input: item.gp_value,
+            };
+            const proposed = {
+              creator_cost: rolled?.cost ?? payload.cost ?? item.cost,
+              client_revenue:
+                rolled?.revenue ?? payload.revenue ?? item.revenue,
+              cost_currency: item.cost_currency,
+              exchange_rate: item.fx_rate_to_egp,
+              agency_fee_percent:
+                rolled?.afPct ?? payload.af_pct ?? item.af_pct,
+              commercial_input_mode: (rolled
+                ? "cost_revenue"
+                : item.commercial_input_mode) as CommercialInputMode,
+              gp_pct_input: rolled?.gpPct ?? payload.gp_pct ?? item.gp_pct,
+              gp_value_input:
+                rolled?.gpValue ?? payload.gp_value ?? item.gp_value,
+            };
+            const { fieldChanges } = diffMasterChanges(current, proposed);
+            if (fieldChanges.length === 0) continue;
             lines.push({
               commercialLineId: itemId,
-              current: {
-                creator_cost: item.cost,
-                client_revenue: item.revenue,
-                cost_currency: item.cost_currency,
-                exchange_rate: item.fx_rate_to_egp,
-                agency_fee_percent: item.af_pct,
-                commercial_input_mode: item.commercial_input_mode,
-                gp_pct_input: item.gp_pct,
-                gp_value_input: item.gp_value,
-              },
-              proposed: {
-                creator_cost: rolled?.cost ?? payload.cost ?? item.cost,
-                client_revenue:
-                  rolled?.revenue ?? payload.revenue ?? item.revenue,
-                cost_currency: item.cost_currency,
-                exchange_rate: item.fx_rate_to_egp,
-                agency_fee_percent:
-                  rolled?.afPct ?? payload.af_pct ?? item.af_pct,
-                commercial_input_mode: (rolled
-                  ? "cost_revenue"
-                  : item.commercial_input_mode) as CommercialInputMode,
-                gp_pct_input: rolled?.gpPct ?? payload.gp_pct ?? item.gp_pct,
-                gp_value_input:
-                  rolled?.gpValue ?? payload.gp_value ?? item.gp_value,
-              },
+              current,
+              proposed,
             });
           }
-          setRevisionCampaignHeaderId(campaignHeaderId);
-          setRevisionLines(lines);
-          setRevisionOpen(true);
+          if (lines.length === 0) {
+            toast.message("No Master commercial changes to revise", {
+              description:
+                "Issue/validity dates and other document fields are not Commercial Revision Masters. Save them without opening a revision — only cost, revenue, GP, fees, and currency require approval after finance lock.",
+            });
+            // Fall through: lines had no Master deltas (e.g. date-only save).
+            // Retry line path is unnecessary; continue to header meta save below.
+            lineResults = pendingEntries.map(() => ({ ok: true as const }));
+          } else {
+            setRevisionCampaignHeaderId(campaignHeaderId);
+            setRevisionLines(lines);
+            setRevisionOpen(true);
+            setSavePending(false);
+            savePendingRef.current = false;
+            setSaveStatus("pending");
+            return false;
+          }
         }
+      } else {
+        setSavePending(false);
+        savePendingRef.current = false;
+        setSaveStatus("pending");
+        return false;
       }
-      setSavePending(false);
-      savePendingRef.current = false;
-      setSaveStatus("pending");
-      return false;
     }
 
     const syncGate = lineResults.find(

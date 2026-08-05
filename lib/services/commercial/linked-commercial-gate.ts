@@ -19,6 +19,11 @@ import {
 } from "./confirmation-copy";
 import { createCommercialSynchronizationService } from "./commercial-synchronization-service";
 import {
+  diffMasterChanges,
+  fromCampaignRow,
+  fromQuotationRow,
+} from "./field-registry";
+import {
   probeCommercialLinkByAssignment,
   probeCommercialLinkByQuotationItem,
 } from "./probe-commercial-link";
@@ -58,8 +63,50 @@ export type CommercialSyncGateApplied = {
 export type CommercialSyncGateSkipped = {
   ok: true;
   synced: false;
-  reason: "not_linked";
+  reason: "not_linked" | "no_dirty_masters";
 };
+
+const QUOTATION_MASTER_SELECT =
+  "cost, revenue, cost_currency, fx_rate_to_egp, af_pct, commercial_input_mode, gp_pct, gp_value, usage_rights_amount, usage_rights_cost, revenue_vat_percent, cost_vat_percent, revenue_vat_exempt, cost_vat_exempt";
+
+const CAMPAIGN_MASTER_SELECT =
+  "cost, revenue, cost_before_vat, revenue_before_vat, currency_code, fx_rate, agency_fee_percent, pricing_mode, markup_margin, profit, usage_rights_amount, usage_rights_cost, revenue_vat_percent, cost_vat_percent, revenue_vat_exempt, cost_vat_exempt";
+
+async function quotationHasDirtyMasterChanges(
+  supabase: Supabase,
+  quotationItemId: string,
+  changes: MasterCommercialValues
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("quotation_items")
+    .select(QUOTATION_MASTER_SELECT)
+    .eq("id", quotationItemId)
+    .maybeSingle();
+  if (!data) return Object.keys(changes).length > 0;
+  const { fieldChanges } = diffMasterChanges(
+    fromQuotationRow(data as Record<string, unknown>),
+    changes
+  );
+  return fieldChanges.length > 0;
+}
+
+async function assignmentHasDirtyMasterChanges(
+  supabase: Supabase,
+  assignmentId: string,
+  changes: MasterCommercialValues
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("campaign_lines")
+    .select(CAMPAIGN_MASTER_SELECT)
+    .eq("id", assignmentId)
+    .maybeSingle();
+  if (!data) return Object.keys(changes).length > 0;
+  const { fieldChanges } = diffMasterChanges(
+    fromCampaignRow(data as Record<string, unknown>),
+    changes
+  );
+  return fieldChanges.length > 0;
+}
 
 export async function applyQuotationMasterSyncIfLinked(
   supabase: Supabase,
@@ -78,6 +125,22 @@ export async function applyQuotationMasterSyncIfLinked(
   );
   if (!probe.linked) {
     return { ok: true, synced: false, reason: "not_linked" };
+  }
+
+  // Document dates / notes / identical re-saves are not Master commercial edits.
+  // Skip lock + sync confirmation when nothing Master actually changed.
+  const dirty = await quotationHasDirtyMasterChanges(
+    supabase,
+    input.quotationItemId,
+    input.changes
+  );
+  if (!dirty) {
+    return {
+      ok: true,
+      synced: true,
+      probe,
+      concurrencyToken: probe.concurrencyToken,
+    };
   }
 
   if (probe.campaignHeaderId) {
@@ -172,6 +235,51 @@ export async function applyCampaignMasterSyncIfLinked(
         .maybeSingle()
     ).data?.campaign_header_id;
 
+  if (!probe.linked) {
+    // Still respect campaign finance lock for unlinked assignment Master edits.
+    if (campaignHeaderId) {
+      const dirtyUnlinked = await assignmentHasDirtyMasterChanges(
+        supabase,
+        input.assignmentId,
+        input.changes
+      );
+      if (!dirtyUnlinked) {
+        return { ok: true, synced: false, reason: "no_dirty_masters" };
+      }
+      const lock = await Campaign.isFinanceLocked(supabase, campaignHeaderId);
+      if (lock.locked) {
+        const copy = financeLockConfirmationCopy();
+        return {
+          ok: false,
+          code: "FINANCE_LOCKED",
+          message: copy.description,
+          financeLock: lock,
+          commercialSync: {
+            ...probe,
+            campaignHeaderId,
+            confirmationTitle: copy.title,
+            confirmationDescription: copy.description,
+          },
+        };
+      }
+    }
+    return { ok: true, synced: false, reason: "not_linked" };
+  }
+
+  const dirty = await assignmentHasDirtyMasterChanges(
+    supabase,
+    input.assignmentId,
+    input.changes
+  );
+  if (!dirty) {
+    return {
+      ok: true,
+      synced: true,
+      probe,
+      concurrencyToken: probe.concurrencyToken,
+    };
+  }
+
   if (campaignHeaderId) {
     const lock = await Campaign.isFinanceLocked(supabase, campaignHeaderId);
     if (lock.locked) {
@@ -189,10 +297,6 @@ export async function applyCampaignMasterSyncIfLinked(
         },
       };
     }
-  }
-
-  if (!probe.linked) {
-    return { ok: true, synced: false, reason: "not_linked" };
   }
 
   if (!input.options?.confirmCommercialSync) {
