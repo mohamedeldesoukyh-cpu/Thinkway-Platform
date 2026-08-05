@@ -28,6 +28,9 @@ export type ClientIoMilestoneDraft = {
 
 export type ClientIoMilestoneTemplateId =
   | "approval_100"
+  | "net_30"
+  | "net_60"
+  | "net_90"
   | "fifty_fifty"
   | "monthly_3"
   | "completion_100"
@@ -42,6 +45,21 @@ export const CLIENT_IO_MILESTONE_TEMPLATE_OPTIONS: Array<{
     id: "approval_100",
     label: "100% on approval",
     description: "Full amount due when the Client IO is approved.",
+  },
+  {
+    id: "net_30",
+    label: "30 days",
+    description: "100% due Net 30 from Client IO approval / invoice.",
+  },
+  {
+    id: "net_60",
+    label: "60 days",
+    description: "100% due Net 60 from Client IO approval / invoice.",
+  },
+  {
+    id: "net_90",
+    label: "90 days",
+    description: "100% due Net 90 from Client IO approval / invoice.",
   },
   {
     id: "fifty_fifty",
@@ -110,6 +128,51 @@ export function buildClientIoMilestoneTemplate(
             dueOffsetDays: 0,
             dueDate: null,
             notes: null,
+          },
+          0
+        ),
+      ];
+    case "net_30":
+      return [
+        row(
+          {
+            label: "100% — Net 30 Days",
+            milestoneKind: "upfront",
+            percent: 100,
+            dueTrigger: "on_approval",
+            dueOffsetDays: 30,
+            dueDate: null,
+            notes: "Payment due within 30 days of Client IO approval / invoice.",
+          },
+          0
+        ),
+      ];
+    case "net_60":
+      return [
+        row(
+          {
+            label: "100% — Net 60 Days",
+            milestoneKind: "upfront",
+            percent: 100,
+            dueTrigger: "on_approval",
+            dueOffsetDays: 60,
+            dueDate: null,
+            notes: "Payment due within 60 days of Client IO approval / invoice.",
+          },
+          0
+        ),
+      ];
+    case "net_90":
+      return [
+        row(
+          {
+            label: "100% — Net 90 Days",
+            milestoneKind: "upfront",
+            percent: 100,
+            dueTrigger: "on_approval",
+            dueOffsetDays: 90,
+            dueDate: null,
+            notes: "Payment due within 90 days of Client IO approval / invoice.",
           },
           0
         ),

@@ -11,8 +11,12 @@ import {
   DetailFormSection,
   DetailSheetFooter,
 } from "@/features/campaigns/components/operational-detail-panel";
-import { updateClientIoAction } from "@/features/io/actions";
+import {
+  applyClientIoPaymentTermsPresetAction,
+  updateClientIoAction,
+} from "@/features/io/actions";
 import { generateClientIoDocumentAction } from "@/features/io/generate-client-io-document-action";
+import { useRouter } from "next/navigation";
 import { ClientIoAmendmentHistory } from "@/features/io/components/client-io-amendment-history";
 import {
   ClientIoAssignmentComposer,
@@ -33,7 +37,14 @@ import type {
   ClientIoSendRecipient,
   ClientIoVersionSummary,
 } from "@/features/io/types";
-import type { ClientIoMilestoneDraft } from "@/lib/io/client-io-milestones";
+import type {
+  ClientIoMilestoneDraft,
+  ClientIoMilestoneTemplateId,
+} from "@/lib/io/client-io-milestones";
+import {
+  getClientIoPaymentTermsPreset,
+  type ClientIoPaymentTermsPresetId,
+} from "@/lib/io/client-io-payment-terms";
 import {
   parseSendRecipientsJson,
   seedRecipientsFromContacts,
@@ -47,6 +58,16 @@ import {
   termsAreEqual,
   type ClientIoTerm,
 } from "@/lib/io/client-io-terms";
+
+const MILESTONE_TO_PAYMENT_PRESET: Partial<
+  Record<ClientIoMilestoneTemplateId, ClientIoPaymentTermsPresetId>
+> = {
+  approval_100: "advance",
+  net_30: "net_30",
+  net_60: "net_60",
+  net_90: "net_90",
+  custom: "custom",
+};
 
 const INITIAL_STATE = { ok: false } as const;
 
@@ -105,26 +126,88 @@ export function ClientIoForm({
       recipients.map((r) => ({ label: r.label, email: r.email }))
     )
   );
+  const [draftBaseline, setDraftBaseline] = useState(() =>
+    JSON.stringify({
+      terms: initialTerms,
+      useDefaultTerms: !parseTermsText(row.terms_text),
+      billingTerms: row.billing_terms ?? "",
+      attachmentUrl: row.attachment_url ?? "",
+      sendRecipients: seedRecipientsFromContacts(
+        parseSendRecipientsJson(row.send_recipients),
+        recipients.map((r) => ({ label: r.label, email: r.email }))
+      ),
+    })
+  );
 
+  const router = useRouter();
   const [saveState, saveAction, saving] = useActionState(updateClientIoAction, INITIAL_STATE);
+  const [presetState, presetAction, applyingPreset] = useActionState(
+    applyClientIoPaymentTermsPresetAction,
+    INITIAL_STATE
+  );
   const [generateState, generateAction, generating] = useActionState(
     generateClientIoDocumentAction,
     INITIAL_STATE
   );
 
   useEffect(() => {
-    setTerms(parseTermsText(row.terms_text) ?? defaultTerms);
-    setUseDefaultTerms(!parseTermsText(row.terms_text));
-    setBillingTerms(row.billing_terms ?? "");
-    setAttachmentUrl(row.attachment_url ?? "");
-    setSendRecipients(parseSendRecipientsJson(row.send_recipients));
-  }, [row, defaultTerms]);
+    const nextTerms = parseTermsText(row.terms_text) ?? defaultTerms;
+    const nextUseDefault = !parseTermsText(row.terms_text);
+    const nextBilling = row.billing_terms ?? "";
+    const nextAttachment = row.attachment_url ?? "";
+    const nextRecipients = seedRecipientsFromContacts(
+      parseSendRecipientsJson(row.send_recipients),
+      recipients.map((r) => ({ label: r.label, email: r.email }))
+    );
+    setTerms(nextTerms);
+    setUseDefaultTerms(nextUseDefault);
+    setBillingTerms(nextBilling);
+    setAttachmentUrl(nextAttachment);
+    setSendRecipients(nextRecipients);
+    setDraftBaseline(
+      JSON.stringify({
+        terms: nextTerms,
+        useDefaultTerms: nextUseDefault,
+        billingTerms: nextBilling,
+        attachmentUrl: nextAttachment,
+        sendRecipients: nextRecipients,
+      })
+    );
+  }, [row, defaultTerms, recipients]);
 
   useEffect(() => {
     if (!saveState.message) return;
-    if (saveState.ok) toast.success(saveState.message);
-    else toast.error(saveState.message);
+    if (saveState.ok) {
+      toast.success(saveState.message);
+      setDraftBaseline(
+        JSON.stringify({
+          terms,
+          useDefaultTerms,
+          billingTerms,
+          attachmentUrl,
+          sendRecipients,
+        })
+      );
+      // Keep preview / export / send HTML aligned with the saved commercial terms.
+      if (
+        Boolean(row.document_generated_at || row.generated_html_url || row.terms_html) &&
+        isClientIoRegenerateAllowed(row.status)
+      ) {
+        const form = document.getElementById("client-io-generate") as HTMLFormElement | null;
+        form?.requestSubmit();
+      }
+    } else toast.error(saveState.message);
+    // Intentionally depend on saveState only — capture draft values at success time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- save completion snapshot
   }, [saveState]);
+
+  useEffect(() => {
+    if (!presetState.message) return;
+    if (presetState.ok) {
+      toast.success(presetState.message);
+      router.refresh();
+    } else toast.error(presetState.message);
+  }, [presetState, router]);
 
   useEffect(() => {
     if (!generateState.message) return;
@@ -149,6 +232,62 @@ export function ClientIoForm({
     }
     return serializeTermsText(terms);
   }, [terms, defaultTerms, useDefaultTerms]);
+
+  const draftDirty = useMemo(() => {
+    return (
+      JSON.stringify({
+        terms,
+        useDefaultTerms,
+        billingTerms,
+        attachmentUrl,
+        sendRecipients,
+      }) !== draftBaseline
+    );
+  }, [
+    terms,
+    useDefaultTerms,
+    billingTerms,
+    attachmentUrl,
+    sendRecipients,
+    draftBaseline,
+  ]);
+
+  function beginCustomPaymentTerms() {
+    setUseDefaultTerms(false);
+    toast.message(
+      "Custom payment terms — edit the schedule and Payment Terms clause, then Save."
+    );
+  }
+
+  function handleMilestoneTemplateApplied(templateId: ClientIoMilestoneTemplateId) {
+    const presetId = MILESTONE_TO_PAYMENT_PRESET[templateId];
+    if (presetId === "custom") {
+      beginCustomPaymentTerms();
+      return;
+    }
+    if (presetId) {
+      // Ready Net / Advance templates are applied via the payment-preset form buttons.
+      const button = document.querySelector(
+        `button[form="client-io-payment-preset"][value="${presetId}"]`
+      ) as HTMLButtonElement | null;
+      button?.click();
+      return;
+    }
+    if (
+      templateId === "fifty_fifty" ||
+      templateId === "monthly_3" ||
+      templateId === "completion_100"
+    ) {
+      setUseDefaultTerms(false);
+      const label =
+        templateId === "fifty_fifty"
+          ? "50% / 50%"
+          : templateId === "monthly_3"
+            ? "Monthly (3 installments)"
+            : "100% on completion";
+      setBillingTerms(label);
+    }
+  }
 
   function handleTermsChange(nextTerms: ClientIoTerm[]) {
     setTerms(nextTerms);
@@ -211,9 +350,15 @@ export function ClientIoForm({
             status={row.status}
             isSuperseded={row.is_superseded}
             milestones={milestones}
+            onTemplateApplied={handleMilestoneTemplateApplied}
           />
 
           <ClientIoAmendmentHistory tip={row} versions={versions} />
+
+          <form id="client-io-payment-preset" action={presetAction} className="hidden">
+            <input type="hidden" name="id" value={row.id} />
+            <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
+          </form>
 
           <form id="client-io-save" action={saveAction} className="flex flex-col">
             <input type="hidden" name="id" value={row.id} />
@@ -235,24 +380,80 @@ export function ClientIoForm({
               hasDocument={hasDocument}
             />
 
+            <DetailFormSection label="Payment terms" className="py-3.5">
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Ready options update billing terms and the Payment Terms clause used in CIO
+                  preview, export, and send. Use Custom to edit the clause manually, then Save.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      "advance",
+                      "net_30",
+                      "net_60",
+                      "net_90",
+                    ] as Exclude<ClientIoPaymentTermsPresetId, "custom">[]
+                  ).map((id) => {
+                    const preset = getClientIoPaymentTermsPreset(id);
+                    return (
+                      <Button
+                        key={id}
+                        type="submit"
+                        form="client-io-payment-preset"
+                        name="preset_id"
+                        value={id}
+                        size="sm"
+                        variant="outline"
+                        title={preset.description}
+                        disabled={saving || applyingPreset}
+                      >
+                        {applyingPreset ? "Applying…" : preset.label}
+                      </Button>
+                    );
+                  })}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    title={getClientIoPaymentTermsPreset("custom").description}
+                    disabled={saving || applyingPreset}
+                    onClick={beginCustomPaymentTerms}
+                  >
+                    Custom
+                  </Button>
+                </div>
+                <Input
+                  id="billing_terms"
+                  name="billing_terms"
+                  value={billingTerms}
+                  onChange={(e) => {
+                    setBillingTerms(e.target.value);
+                    setUseDefaultTerms(false);
+                  }}
+                  placeholder="Payment schedule label (e.g. Net 30 Days)"
+                  className={DETAIL_FORM_INPUT_CLASS}
+                />
+                {draftDirty ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button type="submit" size="sm" disabled={saving}>
+                      {saving ? "Saving…" : "Save payment terms & clause"}
+                    </Button>
+                    <p className="text-xs text-amber-800 dark:text-amber-200">
+                      Unsaved edits — save to refresh preview / export / send.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            </DetailFormSection>
+
             <ClientIoTermsEditorField
               label="Terms & conditions"
               terms={terms}
               onChange={handleTermsChange}
               onRecover={handleRecoverTerms}
-              description="Structured terms injected into Section 8 of the Client IO template. Leave as default or customize per IO."
+              description="Structured terms injected into Section 8 of the Client IO template. Payment Terms clause updates automatically when you pick a ready payment option above."
             />
-
-            <DetailFormSection label="Billing terms" className="py-3.5">
-              <Input
-                id="billing_terms"
-                name="billing_terms"
-                value={billingTerms}
-                onChange={(e) => setBillingTerms(e.target.value)}
-                placeholder="Net 30, invoicing notes..."
-                className={DETAIL_FORM_INPUT_CLASS}
-              />
-            </DetailFormSection>
 
             <DetailFormSection label="Attachment URL (PO/SOW/PDF)" className="py-3.5">
               <Input
@@ -309,11 +510,11 @@ export function ClientIoForm({
           <Button
             form="client-io-save"
             type="submit"
-            variant="outline"
+            variant={draftDirty ? "default" : "outline"}
             size="sm"
-            disabled={saving}
+            disabled={saving || !draftDirty}
           >
-            {saving ? "Saving…" : "Save draft"}
+            {saving ? "Saving…" : draftDirty ? "Save draft" : "Saved"}
           </Button>
         </div>
       </DetailSheetFooter>
