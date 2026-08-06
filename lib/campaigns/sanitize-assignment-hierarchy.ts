@@ -298,6 +298,8 @@ function sanitizeLine(
       ...line,
       id: String(line.id),
       name: safeName,
+      description: line.description ?? null,
+      usage_period: line.usage_period ?? null,
       document_number: line.document_number ?? null,
       operational_status,
       billing_status: normalizeLineBillingForHierarchy(line, deliverables),

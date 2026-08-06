@@ -31,6 +31,7 @@ const sample: ClientIoDocumentData = {
     address: "Cairo",
     contactPerson: "Jane Doe",
     email: "billing@client.com",
+    agencyOrDirect: "agency",
   },
   campaign: {
     id: "camp-1",
@@ -41,9 +42,14 @@ const sample: ClientIoDocumentData = {
     brandName: "Brand X",
     channels: "Instagram, TikTok",
     targetMarket: "Egypt",
-    businessObjective: "Awareness",
-    usagePeriod: "90 days",
   },
+  influencerNotes: [
+    {
+      influencerName: "Creator A",
+      fullDescription: "1x Reel + 2x Story",
+      usagePeriod: "90 days",
+    },
+  ],
   deliverables: [
     {
       influencerName: "Creator A",

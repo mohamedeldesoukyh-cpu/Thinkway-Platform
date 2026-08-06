@@ -1167,6 +1167,7 @@ export type Database = {
           document_number?: string;
           campaign_header_id: string;
           name: string;
+          description?: string | null;
           status?: CampaignStatus;
           platform?: string | null;
           revenue?: number;

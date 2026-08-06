@@ -140,6 +140,8 @@ export type CampaignLineMutationInput = {
   end_date: string | null;
   assignment_status: string;
   title_user_edited?: boolean;
+  /** Full Description (quotation service description). */
+  description?: string | null;
   /** Release 2.0 provenance — optional. */
   source_quotation_id?: string | null;
   source_quotation_item_id?: string | null;
@@ -249,6 +251,7 @@ export async function createCampaignLine(
   const { data: line, error: lineError } = await insertCampaignLine(supabase, {
     campaign_header_id: parsed.campaign_id,
     name: lineTitle,
+    description: emptyToNull(parsed.description ?? null),
     status: "draft",
     assignment_status: parsed.assignment_status,
     platform: platformField,

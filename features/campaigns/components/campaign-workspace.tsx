@@ -511,6 +511,8 @@ export function CampaignWorkspaceView({
                     influencer_name: line.influencer_name,
                     revenue_before_vat: line.revenue_before_vat,
                     currency_code: workspace.currency_code,
+                    description: line.description,
+                    usage_period: line.usage_period,
                   }))}
                   versions={workspace.client_io_versions ?? []}
                   milestones={workspace.client_io_milestones ?? []}

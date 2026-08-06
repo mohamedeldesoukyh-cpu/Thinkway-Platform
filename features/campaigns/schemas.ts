@@ -72,6 +72,8 @@ export const updateCampaignHeaderSchema = z
     currency_code: currencyCodeSchema,
     start_date: optionalDate,
     end_date: optionalDate,
+    /** Campaign flight / CIO Target Market (ISO country code); independent of legal entity. */
+    target_market: z.string().trim().max(80).optional().or(z.literal("")),
     account_manager_id: z.string().uuid().optional().or(z.literal("")),
     team_id: z.string().uuid().optional().or(z.literal("")),
     group_id: z.string().uuid().optional().or(z.literal("")),

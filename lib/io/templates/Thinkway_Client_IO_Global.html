@@ -240,8 +240,8 @@
       <div class="fields">
         <div class="field-row cols-2">
           <div class="field shade">
-            <div class="flabel">Client / Advertiser</div>
-            <div class="fvalue empty">——</div>
+            <div class="flabel" data-party-left-label>Client / Advertiser</div>
+            <div class="fvalue empty" data-party-left-name>——</div>
           </div>
           <div class="field">
             <div class="flabel">Agency</div>
@@ -297,46 +297,30 @@
       <div class="fields">
         <div class="field-row cols-2">
           <div class="field shade">
-            <div class="flabel">Client</div>
-            <div class="fvalue empty">——</div>
-          </div>
-          <div class="field">
             <div class="flabel">Brand</div>
             <div class="fvalue empty">——</div>
           </div>
-        </div>
-        <div class="field-row cols-2">
-          <div class="field shade">
+          <div class="field">
             <div class="flabel">Campaign Name</div>
             <div class="fvalue empty">——</div>
           </div>
-          <div class="field">
+        </div>
+        <div class="field-row cols-2">
+          <div class="field shade">
             <div class="flabel">Campaign Duration</div>
             <div class="fvalue">From: [DATE] &nbsp;&nbsp; To: [DATE]</div>
           </div>
-        </div>
-        <div class="field-row cols-2">
-          <div class="field shade">
+          <div class="field">
             <div class="flabel">Channel(s)</div>
             <div class="fvalue empty">——</div>
           </div>
-          <div class="field">
-            <div class="flabel">Target Market</div>
-            <div class="fvalue">Egypt</div>
-          </div>
         </div>
         <div class="field-row cols-2">
           <div class="field shade">
-            <div class="flabel">Business Objective</div>
-            <div class="fvalue empty">——</div>
+            <div class="flabel">Target Market</div>
+            <div class="fvalue">Egypt</div>
           </div>
           <div class="field">
-            <div class="flabel">Usage Period (from date of posting)</div>
-            <div class="fvalue empty">——</div>
-          </div>
-        </div>
-        <div class="field-row cols-1">
-          <div class="field shade">
             <div class="flabel">Scope of Services</div>
             <div class="fvalue">Influencer identification, contracting, briefing, content review, posting coordination, and performance reporting.</div>
           </div>
@@ -366,6 +350,22 @@
             <td>[●]</td>
             <td class="muted">[@handle]</td>
             <td class="muted">[DATE]</td>
+          </tr>
+        </tbody>
+      </table>
+      <table class="deliv-table influencer-notes-table" style="margin-top:14px">
+        <thead>
+          <tr>
+            <th>Influencer</th>
+            <th>Full Description</th>
+            <th>Usage Period (from date of posting)</th>
+          </tr>
+        </thead>
+        <tbody data-influencer-notes>
+          <tr>
+            <td><span class="platform">[Influencer Name]</span></td>
+            <td class="muted">——</td>
+            <td class="muted">——</td>
           </tr>
         </tbody>
       </table>

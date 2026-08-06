@@ -15,6 +15,7 @@ import {
   createCampaignLine,
   updateCampaignLine,
 } from "@/lib/services/campaigns/campaign-line-service";
+import { updateAssignmentCommercialNotes } from "@/lib/services/campaigns/assignment-commercial-notes-service";
 import { updateLegacyDeliverableStatus } from "@/lib/services/campaigns/campaign-workflow-service";
 
 import {
@@ -189,6 +190,39 @@ export async function updateCampaignLineAction(
   // Also refresh linked quotation when commercials synced.
   revalidatePath("/quotations");
   return { ok: true, message: result.message };
+}
+
+export async function updateAssignmentCommercialNotesAction(input: {
+  campaign_id: string;
+  line_id: string;
+  description?: string | null;
+  usage_period?: string | null;
+}): Promise<FormActionState> {
+  const campaignId = input.campaign_id?.trim();
+  const lineId = input.line_id?.trim();
+  if (!campaignId || !lineId) {
+    return { ok: false, message: "Missing Assignment context." };
+  }
+
+  const { supabase, user, error: authError } = await requireAuthUser();
+  if (authError || !user) {
+    return { ok: false, message: authError ?? "Unauthorized" };
+  }
+
+  const result = await updateAssignmentCommercialNotes(supabase, {
+    campaignId,
+    lineId,
+    description: input.description,
+    usagePeriod: input.usage_period,
+  });
+  if (!result.ok) {
+    return { ok: false, message: result.message };
+  }
+
+  revalidateCampaign(campaignId);
+  revalidatePath("/quotations");
+  revalidatePath("/ios/client");
+  return { ok: true, message: "Saved." };
 }
 
 export async function assignCampaignVendorAction(

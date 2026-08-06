@@ -1,6 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { METADATA_PLATFORM_KEY } from "@/lib/campaigns/constants";
+import {
+  METADATA_PLATFORM_KEY,
+  METADATA_TARGET_MARKET_KEY,
+} from "@/lib/campaigns/constants";
 import type {
   BrandFormOption,
   ClientFormOption,
@@ -174,6 +177,7 @@ export type UpdateCampaignHeaderInput = {
   currency_code: string;
   start_date: string | null;
   end_date: string | null;
+  target_market?: string;
   account_manager_id?: string;
   team_id?: string;
   group_id?: string;
@@ -197,10 +201,18 @@ export async function updateCampaignHeader(
     return { ok: false, message: existingError.message };
   }
 
-  const metadata = {
+  const metadata: Record<string, unknown> = {
     ...((existing?.metadata as Record<string, unknown>) ?? {}),
     ...(platform ? { [METADATA_PLATFORM_KEY]: platform } : {}),
   };
+  if (input.target_market !== undefined) {
+    const targetMarket = emptyToNull(input.target_market);
+    if (targetMarket) {
+      metadata[METADATA_TARGET_MARKET_KEY] = targetMarket;
+    } else {
+      delete metadata[METADATA_TARGET_MARKET_KEY];
+    }
+  }
 
   const previousGroupId = (existing?.group_id as string | null) ?? null;
 

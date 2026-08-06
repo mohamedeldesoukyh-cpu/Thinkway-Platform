@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { AssignmentCreatorCell } from "@/features/campaigns/components/assignment-hierarchy/assignment-creator-cell";
+import { AssignmentFullDescriptionCell } from "@/features/campaigns/components/assignment-hierarchy/assignment-full-description-cell";
 import { AssignmentPlatformPills } from "@/features/campaigns/components/assignment-hierarchy/assignment-platform-pills";
 import { AssignmentExpandToggle } from "@/features/campaigns/components/assignment-hierarchy/assignment-expand-toggle";
 import { AssignmentsEmptyState } from "@/features/campaigns/components/assignments-empty-state";
@@ -432,6 +433,14 @@ export function AssignmentSafeGrid({
               {col("deliverables") ? (
                 <th {...assignmentParentColDataAttr("deliverables")} className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.deliverables}</th>
               ) : null}
+              {col("fullDescription") ? (
+                <th
+                  {...assignmentParentColDataAttr("fullDescription")}
+                  className={cn(SAFE_GRID_TH, "min-w-[160px] max-w-[220px]")}
+                >
+                  {HIERARCHY_COLUMN_LABELS.fullDescription}
+                </th>
+              ) : null}
               {col("postingDates") ? (
                 <th {...assignmentParentColDataAttr("postingDates")} className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.postingDates}</th>
               ) : null}
@@ -620,6 +629,19 @@ export function AssignmentSafeGrid({
                         {col("deliverables") ? (
                           <td {...assignmentParentColDataAttr("deliverables")} className={cn(SAFE_GRID_TD, SAFE_GRID_AMOUNT)}>
                             {row.rollups.deliverable_count}
+                          </td>
+                        ) : null}
+                        {col("fullDescription") ? (
+                          <td
+                            {...assignmentParentColDataAttr("fullDescription")}
+                            className={cn(SAFE_GRID_TD, "min-w-[160px] max-w-[220px] align-top")}
+                          >
+                            <AssignmentFullDescriptionCell
+                              campaignId={campaignId}
+                              lineId={line.id}
+                              value={line.description}
+                              readOnly={!gates.enableEditActions}
+                            />
                           </td>
                         ) : null}
                         {col("postingDates") ? (

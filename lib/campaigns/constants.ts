@@ -28,6 +28,12 @@ export const PLATFORM_OPTIONS = [
 
 export const METADATA_PLATFORM_KEY = "platform";
 
+/** Campaign flight / CIO Target Market — independent of legal-entity country. */
+export const METADATA_TARGET_MARKET_KEY = "target_market";
+
+/** Per-Assignment usage period (CIO commercial notes; independent of billing terms). */
+export const METADATA_USAGE_PERIOD_KEY = "usage_period";
+
 export const WORKFLOW_STAGE_OPTIONS = [
   { value: "planning", label: "Planning" },
   { value: "negotiation", label: "Negotiation" },

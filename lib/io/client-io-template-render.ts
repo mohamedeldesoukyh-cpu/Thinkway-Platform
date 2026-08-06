@@ -89,6 +89,30 @@ function renderDeliverableRows(
     .join("");
 }
 
+function partyLeftLabel(
+  agencyOrDirect: ClientIoDocumentData["client"]["agencyOrDirect"]
+): string {
+  if (agencyOrDirect === "direct") return "Client / Advertiser";
+  return "Agency / Advertiser";
+}
+
+function renderInfluencerNoteRows(data: ClientIoDocumentData): string {
+  const rows = data.influencerNotes ?? [];
+  if (rows.length === 0) {
+    return `<tr><td colspan="3" class="muted">No influencer notes on selected Assignments.</td></tr>`;
+  }
+  return rows
+    .map(
+      (row) => `
+          <tr>
+            <td><span class="platform">${display(row.influencerName)}</span></td>
+            <td class="muted" style="white-space:pre-wrap;word-break:break-word">${display(row.fullDescription)}</td>
+            <td class="muted" style="white-space:pre-wrap;word-break:break-word">${display(row.usagePeriod)}</td>
+          </tr>`
+    )
+    .join("");
+}
+
 function renderPricingRow(row: ClientIoPricingRow, currency: string): string {
   const variantClass =
     row.variant === "header"
@@ -138,8 +162,10 @@ export function renderClientIoHtml(
 
   // Section 1 — Parties
   html = html.replace(
-    /<div class="flabel">Client \/ Advertiser<\/div>\s*<div class="fvalue empty">——<\/div>/,
-    `<div class="flabel">Client / Advertiser</div><div class="fvalue">${clientName}</div>`
+    /<div class="flabel" data-party-left-label>[\s\S]*?<\/div>\s*<div class="fvalue empty" data-party-left-name>——<\/div>/,
+    `<div class="flabel" data-party-left-label>${partyLeftLabel(
+      data.client.agencyOrDirect
+    )}</div><div class="fvalue" data-party-left-name>${clientName}</div>`
   );
   html = html.replace(
     /<div class="flabel">Client Trade License \/ CR<\/div>\s*<div class="fvalue empty">——<\/div>/,
@@ -164,10 +190,6 @@ export function renderClientIoHtml(
 
   // Section 2 — Campaign
   html = html.replace(
-    /<div class="flabel">Client<\/div>\s*<div class="fvalue empty">——<\/div>/,
-    `<div class="flabel">Client</div><div class="fvalue">${clientName}</div>`
-  );
-  html = html.replace(
     /<div class="flabel">Brand<\/div>\s*<div class="fvalue empty">——<\/div>/,
     `<div class="flabel">Brand</div><div class="fvalue">${display(data.campaign.brandName)}</div>`
   );
@@ -187,23 +209,15 @@ export function renderClientIoHtml(
     /<div class="flabel">Target Market<\/div>\s*<div class="fvalue">Egypt<\/div>/,
     `<div class="flabel">Target Market</div><div class="fvalue">${display(data.campaign.targetMarket)}</div>`
   );
-  html = html.replace(
-    /<div class="flabel">Business Objective<\/div>\s*<div class="fvalue empty">——<\/div>/,
-    `<div class="flabel">Business Objective</div><div class="fvalue">${display(data.campaign.businessObjective)}</div>`
-  );
-  html = html.replace(
-    /<div class="flabel">Usage Period \(from date of posting\)<\/div>\s*<div class="fvalue empty">——<\/div>/,
-    `<div class="flabel">Usage Period (from date of posting)</div><div class="fvalue">${display(data.campaign.usagePeriod)}</div>`
-  );
 
-  // Section 3 — Deliverables
+  // Section 3 — Deliverables + influencer notes
   html = html.replace(
-    /<table class="deliv-table">[\s\S]*?<tbody>[\s\S]*?<\/tbody>/,
-    (table) =>
-      table.replace(
-        /<tbody>[\s\S]*?<\/tbody>/,
-        `<tbody>${renderDeliverableRows(data, layout)}</tbody>`
-      )
+    /(<table class="deliv-table">\s*<thead>[\s\S]*?Scheduled Date\(s\)[\s\S]*?<\/thead>\s*)<tbody>[\s\S]*?<\/tbody>/,
+    `$1<tbody>${renderDeliverableRows(data, layout)}</tbody>`
+  );
+  html = html.replace(
+    /<tbody data-influencer-notes>[\s\S]*?<\/tbody>/,
+    `<tbody data-influencer-notes>${renderInfluencerNoteRows(data)}</tbody>`
   );
 
   // Section 4 — Pricing
