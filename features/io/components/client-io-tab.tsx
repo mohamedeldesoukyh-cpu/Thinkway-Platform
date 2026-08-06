@@ -32,6 +32,8 @@ type Props = {
   sendHistory?: ClientIoSendHistoryEntry[];
   senderName?: string | null;
   currencyCode?: string;
+  campaignStartDate?: string | null;
+  campaignEndDate?: string | null;
   assignments?: ClientIoComposerAssignment[];
   versions?: ClientIoVersionSummary[];
   milestones?: ClientIoMilestoneDraft[];
@@ -57,6 +59,8 @@ export function ClientIoTab({
   sendHistory = [],
   senderName = null,
   currencyCode = "EGP",
+  campaignStartDate = null,
+  campaignEndDate = null,
   assignments = [],
   versions = [],
   milestones = [],
@@ -240,6 +244,8 @@ export function ClientIoTab({
         clientDefaultTermsText={io.client_io_terms_text}
         brandName={io.brand_name}
         currencyCode={currencyCode}
+        campaignStartDate={campaignStartDate}
+        campaignEndDate={campaignEndDate}
         assignments={assignments}
         versions={versions}
         milestones={milestones}

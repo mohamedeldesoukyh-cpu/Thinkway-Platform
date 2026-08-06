@@ -14,6 +14,7 @@ import {
 import {
   formatIoAgreedAmount,
   formatIoCampaignDuration,
+  sumClientIoComposerAgreedAmount,
   sumClientIoSnapshotAgreedAmount,
 } from "@/lib/email/io-email-summary";
 import { renderEmailApprovalCta } from "@/lib/email/layout";
@@ -29,6 +30,21 @@ describe("io approval email experience", () => {
       "01 Jul 2026 – 31 Jul 2026"
     );
     assert.match(formatIoAgreedAmount(1500, "USD"), /1,500/);
+    assert.equal(formatIoAgreedAmount(null, "EGP"), "—");
+    assert.equal(formatIoAgreedAmount(undefined, "EGP"), "—");
+  });
+
+  it("sums selected composer assignments for draft email preview", () => {
+    const sum = sumClientIoComposerAgreedAmount(
+      [
+        { id: "a", revenue_before_vat: 10000, currency_code: "EGP" },
+        { id: "b", revenue_before_vat: 8448, currency_code: "EGP" },
+        { id: "c", revenue_before_vat: 999, currency_code: "EGP" },
+      ],
+      ["a", "b"],
+      "EGP"
+    );
+    assert.deepEqual(sum, { amount: 18448, currencyCode: "EGP" });
   });
 
   it("sums Client IO snapshot revenue as agreed amount", () => {

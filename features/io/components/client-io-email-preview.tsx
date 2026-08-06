@@ -10,6 +10,7 @@ import type { ClientIoRow } from "@/features/io/types";
 import {
   buildClientIoEmailPreview,
   type ClientIoEmailPreview as EmailPreview,
+  type ClientIoEmailSummaryFields,
 } from "@/lib/email/client-io-email";
 import type { ClientIoRecipientEntry } from "@/lib/io/client-io-send-recipients";
 
@@ -18,6 +19,8 @@ type Props = {
   senderName: string | null;
   recipients: ClientIoRecipientEntry[];
   hasDocument: boolean;
+  /** Commercial summary for draft preview (amount / dates / currency). */
+  emailSummary?: Partial<ClientIoEmailSummaryFields> | null;
 };
 
 function formatRecipients(recipients: ClientIoRecipientEntry[]): string {
@@ -28,17 +31,29 @@ function formatRecipients(recipients: ClientIoRecipientEntry[]): string {
     .join(", ");
 }
 
-export function ClientIoEmailPreviewSection({ io, senderName, recipients, hasDocument }: Props) {
+export function ClientIoEmailPreviewSection({
+  io,
+  senderName,
+  recipients,
+  hasDocument,
+  emailSummary = null,
+}: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const preview = useMemo<EmailPreview>(
     () =>
       buildClientIoEmailPreview({
-        io,
+        io: {
+          ...io,
+          campaign_start_date: emailSummary?.campaign_start_date ?? null,
+          campaign_end_date: emailSummary?.campaign_end_date ?? null,
+          agreed_amount: emailSummary?.agreed_amount ?? null,
+          currency_code: emailSummary?.currency_code ?? null,
+        },
         senderName,
         isDraftPreview: true,
       }),
-    [io, senderName]
+    [io, senderName, emailSummary]
   );
 
   const validRecipients = recipients.filter((r) => r.email.trim());

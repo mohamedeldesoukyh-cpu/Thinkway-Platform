@@ -504,6 +504,8 @@ export function CampaignWorkspaceView({
                   sendHistory={workspace.client_io_send_history}
                   senderName={workspace.client_io_sender_name}
                   currencyCode={workspace.currency_code}
+                  campaignStartDate={workspace.start_date}
+                  campaignEndDate={workspace.end_date}
                   assignments={workspace.lines.map((line) => ({
                     id: line.id,
                     document_number: line.document_number,
