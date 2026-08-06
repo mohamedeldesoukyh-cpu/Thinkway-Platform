@@ -251,7 +251,7 @@ export async function createCampaignLine(
   const { data: line, error: lineError } = await insertCampaignLine(supabase, {
     campaign_header_id: parsed.campaign_id,
     name: lineTitle,
-    description: emptyToNull(parsed.description ?? null),
+    description: emptyToNull(parsed.description ?? undefined),
     status: "draft",
     assignment_status: parsed.assignment_status,
     platform: platformField,
