@@ -13,8 +13,9 @@ import type { CampaignLifecycleView } from "@/features/campaigns/lifecycle/campa
 import { cn } from "@/lib/utils";
 
 const PREVIEW_LIMIT = 3;
-const DECISION_OPEN_KEY = "thinkway:campaign-decision-center-open";
-const DECISION_SEEN_KEY = "thinkway:campaign-decision-center-seen";
+/** v2 — reset prior “first visit expanded” preference so Decision Center starts closed. */
+const DECISION_OPEN_KEY = "thinkway:campaign-decision-center-open-v2";
+const DECISION_SEEN_KEY = "thinkway:campaign-decision-center-seen-v2";
 const FOCUS_PARAM_KEYS = [
   "io",
   "docsCreator",
@@ -39,20 +40,19 @@ type Props = {
 };
 
 /**
- * First visit → expanded (teach the briefing).
- * After first visit → collapsed by default unless user preference was saved.
+ * Always collapsed by default across tabs.
+ * Opens only when the user expands it, or when a deep-link focus param is present.
+ * Preference (open/closed) is remembered for the browser session.
  */
 function readInitialOpen(): boolean {
-  if (typeof window === "undefined") return true;
+  if (typeof window === "undefined") return false;
   try {
     const preferred = window.sessionStorage.getItem(DECISION_OPEN_KEY);
     if (preferred === "1") return true;
     if (preferred === "0") return false;
-    const seen = window.sessionStorage.getItem(DECISION_SEEN_KEY);
-    if (seen === "1") return false;
-    return true;
+    return false;
   } catch {
-    return true;
+    return false;
   }
 }
 
@@ -79,7 +79,7 @@ export function CampaignDecisionCenterPanel({
   const narrative = dc.narrative;
   const searchParams = useSearchParams();
   const hasDeepLink = FOCUS_PARAM_KEYS.some((key) => Boolean(searchParams.get(key)));
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [cardsExpanded, setCardsExpanded] = useState(false);
   const hasBlockers = dc.blockers.length > 0;
