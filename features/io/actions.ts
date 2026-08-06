@@ -553,11 +553,18 @@ export async function sendClientIoAction(
   if (recipients.length === 0) {
     recipients = clientIo.send_recipients ?? [];
   }
+  // Final normalize — expand any multi-email cells and drop invalids.
+  recipients = parseSendRecipientsJson(recipients);
   if (recipients.length === 0) {
     return { ok: false, message: "Add at least one recipient with a valid email address." };
   }
 
-  // Persist recipients used for this send (e.g. contact-seeded, not yet saved as draft).
+  const emailReady = assertOutboundEmailReady();
+  if (!emailReady.ok) {
+    return { ok: false, message: emailReady.message };
+  }
+
+  // Persist recipients used for this send (e.g. contact-seeded / live form, not yet draft-saved).
   const { error: recipientsPersistError } = await supabase
     .from("client_ios")
     .update({
@@ -569,10 +576,8 @@ export async function sendClientIoAction(
     return { ok: false, message: recipientsPersistError.message };
   }
 
-  const emailReady = assertOutboundEmailReady();
-  if (!emailReady.ok) {
-    return { ok: false, message: emailReady.message };
-  }
+  const previousStatus = clientIo.status;
+  const previousSentAt = clientIo.sent_at ?? null;
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -581,6 +586,8 @@ export async function sendClientIoAction(
     .maybeSingle();
   const senderName = (profile as { full_name?: string | null } | null)?.full_name ?? null;
 
+  // Token + status transition first (needed for approval links). If every email
+  // fails we revert status so the IO is not stuck in "Waiting Client".
   const { data, error: rpcError } = await (supabase as any).rpc("send_client_io", {
     p_client_io_id: id,
     p_actor_id: user.id,
@@ -639,8 +646,8 @@ export async function sendClientIoAction(
   const senderEmail = getEmailFromAddress();
   const sentAt = new Date().toISOString();
 
-  let anyEmailOk = false;
-  let lastEmailError: string | null = null;
+  const succeeded: string[] = [];
+  const failed: Array<{ email: string; error: string }> = [];
 
   for (const recipient of recipients) {
     const approvalUrl = token
@@ -657,15 +664,15 @@ export async function sendClientIoAction(
       approvalUrl,
     });
     const emailResult = await sendEmail({
-      to: [recipient],
+      to: [{ email: recipient.email, name: recipient.name || undefined }],
       subject,
       html,
       text: emailText,
       attachments: pdfAttachment ? [pdfAttachment] : undefined,
     });
 
-    if (emailResult.ok) anyEmailOk = true;
-    else lastEmailError = emailResult.error;
+    if (emailResult.ok) succeeded.push(recipient.email);
+    else failed.push({ email: recipient.email, error: emailResult.error });
 
     const clientDeliveryStatus = emailResult.ok ? "sent" : "failed";
     const deliveryMeta = buildIoDeliveryNotificationMeta({
@@ -706,9 +713,27 @@ export async function sendClientIoAction(
   debugIo("io-email", "client io send", {
     id,
     recipients: recipients.map((r) => r.email),
-    gmailOk: anyEmailOk,
-    lastEmailError,
+    succeeded,
+    failed,
   });
+
+  if (succeeded.length === 0) {
+    // Revert lifecycle so operators can fix recipients / email config and retry.
+    const { error: revertError } = await supabase
+      .from("client_ios")
+      .update({
+        status: previousStatus,
+        sent_at: previousSentAt,
+        updated_by: user.id,
+      } as never)
+      .eq("id", id);
+    revalidateIoPaths(campaignHeaderId);
+    const detail = failed.map((f) => `${f.email}: ${f.error}`).join("; ");
+    return {
+      ok: false,
+      message: `Email delivery failed for all ${failed.length} recipient${failed.length === 1 ? "" : "s"}${revertError ? ` (status revert also failed: ${revertError.message})` : ""}. ${detail}`,
+    };
+  }
 
   try {
     await emitEnterpriseTimelineEvent(supabase, {
@@ -719,11 +744,15 @@ export async function sendClientIoAction(
       action: "update",
       metadata: {
         event: "client_io.sent",
-        summary: `Client IO ${clientIo.document_number ?? id} sent to ${recipients.length} recipient${recipients.length === 1 ? "" : "s"}`,
+        summary: `Client IO ${clientIo.document_number ?? id} sent to ${succeeded.length} recipient${succeeded.length === 1 ? "" : "s"}`,
         module: "client_io",
         client_io_id: id,
       },
-      newData: { status: "sent", recipient_count: recipients.length },
+      newData: {
+        status: "sent",
+        recipient_count: succeeded.length,
+        failed_count: failed.length,
+      },
     });
     await emitEnterpriseTimelineEvent(supabase, {
       campaignHeaderId,
@@ -751,17 +780,17 @@ export async function sendClientIoAction(
 
   revalidateIoPaths(campaignHeaderId);
 
-  if (!anyEmailOk) {
+  if (failed.length > 0) {
+    const failDetail = failed.map((f) => f.email).join(", ");
     return {
-      ok: false,
-      message: `IO marked under client review but email delivery failed: ${lastEmailError ?? "unknown error"}`,
+      ok: true,
+      message: `Client IO sent to ${succeeded.length} of ${recipients.length} recipients. Failed: ${failDetail}. Check Send history for errors.`,
     };
   }
 
-  const recipientCount = recipients.length;
   return {
     ok: true,
-    message: `Client IO sent to ${recipientCount} recipient${recipientCount === 1 ? "" : "s"} and is now under client review.`,
+    message: `Client IO sent to ${succeeded.length} recipient${succeeded.length === 1 ? "" : "s"} and is now under client review.`,
   };
 }
 

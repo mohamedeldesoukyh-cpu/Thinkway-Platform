@@ -11,7 +11,10 @@ import {
   DetailFormSection,
 } from "@/features/campaigns/components/operational-detail-panel";
 import { getEmailFromAddress } from "@/lib/email/provider";
-import type { ClientIoRecipientEntry } from "@/lib/io/client-io-send-recipients";
+import {
+  applyRecipientEmailEdit,
+  type ClientIoRecipientEntry,
+} from "@/lib/io/client-io-send-recipients";
 
 type Props = {
   recipients: ClientIoRecipientEntry[];
@@ -51,10 +54,11 @@ export function ClientIoRecipientsEditor({
     <DetailFormSection label="IO recipients" className="py-3.5">
       <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
         Add one or more client contacts who will receive this Client IO from{" "}
-        <strong className="font-medium text-foreground">{fromEmail}</strong>.{" "}
+        <strong className="font-medium text-foreground">{fromEmail}</strong>. Each
+        address gets its own email. Paste several emails separated by commas if needed.{" "}
         {unsavedHint
-          ? "Save draft to store recipients before sending from the toolbar."
-          : "Save draft before sending."}
+          ? "Send uses this list immediately; Save draft stores it for next time."
+          : "Send delivers to everyone listed below."}
       </p>
       <div className="space-y-2">
         {recipients.length === 0 ? (
@@ -75,10 +79,14 @@ export function ClientIoRecipientsEditor({
                 disabled={disabled}
               />
               <Input
-                type="email"
+                type="text"
+                inputMode="email"
+                autoComplete="email"
                 value={recipient.email}
-                onChange={(e) => updateRecipient(index, { email: e.target.value })}
-                placeholder="email@client.com"
+                onChange={(e) =>
+                  onChange(applyRecipientEmailEdit(recipients, index, e.target.value))
+                }
+                placeholder="email@client.com (or paste several)"
                 className={DETAIL_FORM_INPUT_CLASS}
                 disabled={disabled}
               />

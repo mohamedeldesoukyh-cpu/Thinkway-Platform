@@ -79,16 +79,16 @@ export function ClientIoSendControls({
       ) : recipientCount === 0 ? (
         <span className="text-[11px] text-muted-foreground">
           {compact
-            ? "Open Client IO tab → add recipients → Save draft"
-            : "Add recipients above, then Save draft"}
+            ? "Open Client IO tab → add recipients"
+            : "Add at least one recipient email above"}
         </span>
-      ) : recipientsNeedSave ? (
+      ) : (
         <span className="text-[11px] text-muted-foreground">
-          {compact
-            ? "Contacts ready — Send now, or Save draft in Client IO tab"
-            : "Save draft to store recipients (Send still works)"}
+          {recipientsNeedSave
+            ? `Ready to send to ${recipientCount}`
+            : `Sends to ${recipientCount} recipient${recipientCount === 1 ? "" : "s"}`}
         </span>
-      ) : null}
+      )}
     </form>
   );
 }
