@@ -44,14 +44,6 @@ function formatDuration(start: string | null, end: string | null): string {
   return from || to || "——";
 }
 
-function formatIssuedMeta(issuedAt: string, country: string): string {
-  const parsed = new Date(issuedAt);
-  const monthYear = Number.isNaN(parsed.getTime())
-    ? "—"
-    : parsed.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
-  return `Issued ${monthYear} · ${escapeHtml(country)}`;
-}
-
 function platformLabel(platform: string): string {
   const map: Record<string, string> = {
     twitter: "X (Twitter)",
@@ -125,10 +117,10 @@ export function renderVendorIoHtml(data: VendorIoDocumentData): string {
       .join(" — ") || null
   );
 
-  const hero = `<div class="hero-c"><div class="top">
-   <div><div class="mkw"><span class="mk"></span><div class="logo-text">THINK<span>WAY</span></div></div><div class="subttl">Influencer Marketing Agency · Cairo, EG</div></div>
-   <div><div class="doctype">Vendor Insertion Order</div><div style="text-align:right"><span class="ciopill">${docNum}</span></div><div class="issue">${formatIssuedMeta(data.issuedAt, data.issuedCountry || agency.country)} · ${escapeHtml(currency)}</div></div>
- </div></div>`;
+  const duration = formatDuration(data.campaign.startDate, data.campaign.endDate);
+  const hero = `<div class="hero"><div class="mkw"><span class="mk"></span><div class="logo-text">THINKWAY</div></div>
+  <div class="htype"><div class="lbl">Vendor Insertion Order · ${docNum}</div><h1>${display(data.campaign.name)}</h1>
+  <div class="hpills"><span class="hp">Brand · ${display(data.campaign.brandName)}</span><span class="hp">${display(data.campaign.clientName)}</span><span class="hp">${duration}</span><span class="hp">${display(data.campaign.channels)}</span></div></div></div>`;
 
   const parties = sec(
     "1",
@@ -164,7 +156,7 @@ export function renderVendorIoHtml(data: VendorIoDocumentData): string {
      fld("Client", display(data.campaign.clientName)) +
        fld("Brand", display(data.campaign.brandName)) +
        fld("Campaign", display(data.campaign.name)) +
-       fld("Duration", formatDuration(data.campaign.startDate, data.campaign.endDate))
+       fld("Duration", duration)
    )}
    ${card(
      "Engagement",
@@ -231,12 +223,6 @@ export function renderVendorIoHtml(data: VendorIoDocumentData): string {
        fld("SWIFT", display(paymentDetail(data, "swift"))) +
        fld("IBAN", display(paymentDetail(data, "iban")))
    )}
- </div>
- <div class="terms-pills">
-   <span class="pill"><span class="dot"></span>${paymentSchedule}</span>
-   <span class="pill"><span class="dot"></span>${paymentMethod}</span>
-   <span class="pill"><span class="dot"></span>VAT ${data.pricing.vatPercent}% Applicable</span>
-   <span class="pill"><span class="dot"></span>${escapeHtml(currency)} Currency</span>
  </div>`
   );
 
@@ -264,19 +250,22 @@ export function renderVendorIoHtml(data: VendorIoDocumentData): string {
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Insertion Order — ${docNum} — Thinkway</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Thinkway · Vendor Insertion Order · ${docNum}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 ${IO_CLASSIC_DOCUMENT_STYLES}
 </style>
 </head>
 <body>
-<div class="stage"><div class="paper"><div class="doc">
+<div class="paper"><div class="doc">
 ${hero}
 ${parties}${campaign}${profile}${deliverables}${pricing}${payment}${signature}${terms}
 ${foot}
-</div></div></div>
+</div></div>
 </body>
 </html>`;
 
