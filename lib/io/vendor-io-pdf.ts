@@ -15,6 +15,17 @@ const PDF_OPTIONS = {
   margin: { top: "12mm", right: "12mm", bottom: "12mm", left: "12mm" },
 };
 
+/**
+ * Client / Vendor Insertion Order PDFs — CSS @page controls margins.
+ * Avoid stacking Puppeteer margins on top of template padding (whitespace).
+ */
+export const INSERTION_ORDER_PDF_OPTIONS: HtmlToPdfOptions = {
+  format: "A4",
+  printBackground: true,
+  preferCSSPageSize: true,
+  margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
+};
+
 /** A4 portrait with CSS @page margins (performance reports). */
 export const PERFORMANCE_REPORT_PDF_OPTIONS = {
   format: "A4" as const,

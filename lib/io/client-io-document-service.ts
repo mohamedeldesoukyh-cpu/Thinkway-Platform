@@ -7,7 +7,7 @@ import {
 import { buildClientIoAssignmentSnapshot } from "@/lib/io/client-io-assignment-snapshot";
 import { buildIoDocumentStoragePath } from "@/lib/io/io-document-storage";
 import { loadClientIoDocumentData } from "@/lib/io/client-io-document-data";
-import { renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
+import { renderHtmlToPdf, INSERTION_ORDER_PDF_OPTIONS } from "@/lib/io/vendor-io-pdf";
 import { renderClientIoHtml } from "@/lib/io/client-io-template-render";
 import type { ClientIoDocumentLayout } from "@/lib/io/client-io-document-layout";
 import { emitEnterpriseTimelineEvent } from "@/lib/timeline/emit-enterprise-timeline-event";
@@ -223,7 +223,7 @@ export async function generateClientIoDocument(
     console.warn("[client-io-document] HTML storage failed", error);
   }
 
-  const pdfResult = await renderHtmlToPdf(html);
+  const pdfResult = await renderHtmlToPdf(html, INSERTION_ORDER_PDF_OPTIONS);
   if (pdfResult.ok) {
     try {
       pdfUrl = await uploadDocument(

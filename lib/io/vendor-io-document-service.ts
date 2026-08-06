@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { buildIoDocumentStoragePath } from "@/lib/io/io-document-storage";
 import { loadVendorIoDocumentData } from "@/lib/io/vendor-io-document-data";
-import { renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
+import { renderHtmlToPdf, INSERTION_ORDER_PDF_OPTIONS } from "@/lib/io/vendor-io-pdf";
 import { renderVendorIoHtml } from "@/lib/io/vendor-io-template-render";
 
 export const VENDOR_IO_DOCUMENTS_BUCKET = "vendor-io-documents";
@@ -57,7 +57,7 @@ export async function generateVendorIoDocument(
     console.warn("[vendor-io-document] HTML storage failed", error);
   }
 
-  const pdfResult = await renderHtmlToPdf(html);
+  const pdfResult = await renderHtmlToPdf(html, INSERTION_ORDER_PDF_OPTIONS);
   if (pdfResult.ok) {
     try {
       pdfUrl = await uploadDocument(
