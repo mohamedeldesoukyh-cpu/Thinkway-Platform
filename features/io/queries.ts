@@ -12,6 +12,7 @@ import { mapVendorIoQueryRow } from "@/features/io/vendor-io-row-map";
 import { attachVendorIoUngenerateEligibility } from "@/features/io/vendor-io-query-helpers";
 import { attachInfluencerAvatarsToVendorIoRows } from "@/lib/creators/influencer-avatar-meta";
 import { fetchClientIoRow, fetchClientIoRows } from "@/lib/io/client-io-query";
+import { resolveIoPublicAppOrigin } from "@/lib/io/io-public-app-url";
 
 const VENDOR_IO_LIST_SELECT = `
   id, document_number, assignment_id, campaign_header_id, influencer_id, amount, currency_code, status,
@@ -341,7 +342,7 @@ export function buildIoEmailLink(
   token: string,
   options?: { email?: string | null }
 ): string {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const base = resolveIoPublicAppOrigin();
   const params = new URLSearchParams({ token });
   const email = options?.email?.trim().toLowerCase();
   if (email) params.set("email", email);

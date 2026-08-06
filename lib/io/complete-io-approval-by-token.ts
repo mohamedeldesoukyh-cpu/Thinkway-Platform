@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { sendIoApprovalConfirmationEmails } from "@/lib/email/io-approval-emails";
 import { buildClientIoPdfAttachmentFromBuffer } from "@/lib/email/client-io-email";
 import { buildVendorIoPdfAttachmentFromBuffer } from "@/lib/email/vendor-io-email";
+import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
 import { CLIENT_IO_DOCUMENTS_BUCKET } from "@/lib/io/client-io-document-service";
 import { VENDOR_IO_DOCUMENTS_BUCKET } from "@/lib/io/vendor-io-document-service";
 import { downloadIoDocumentBuffer } from "@/lib/io/io-document-storage";
@@ -11,6 +12,7 @@ import {
   type IoApprovalFailureCode,
 } from "@/lib/io/io-approval-outcomes";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
 import { emitEnterpriseTimelineEvent } from "@/lib/timeline/emit-enterprise-timeline-event";
 import { debugIo } from "@/features/io/queries";
 
@@ -47,7 +49,10 @@ function normalizeApproverEmail(email: string | null | undefined): string | null
   return trimmed;
 }
 
-function parseApproveRpcPayload(data: unknown): ApproveRpcPayload | null {
+export function parseApproveRpcPayload(data: unknown): ApproveRpcPayload | null {
+  if (typeof data === "string" && /^[0-9a-f-]{36}$/i.test(data.trim())) {
+    return { io_id: data.trim(), already_approved: false };
+  }
   if (!data || typeof data !== "object") return null;
   const row = data as Record<string, unknown>;
   const ioId = typeof row.io_id === "string" ? row.io_id : null;
@@ -56,6 +61,14 @@ function parseApproveRpcPayload(data: unknown): ApproveRpcPayload | null {
     io_id: ioId,
     already_approved: Boolean(row.already_approved),
   };
+}
+
+function approvalDbClient() {
+  const { client, reason } = tryCreateServiceRoleClient();
+  if (!client) {
+    debugIo("io-approval", "service role unavailable; falling back to anon", reason);
+  }
+  return client;
 }
 
 export async function completeClientIoApprovalByToken(input: {
@@ -67,12 +80,13 @@ export async function completeClientIoApprovalByToken(input: {
     return { ok: false, outcome: "invalid" };
   }
 
-  const supabase = await createSupabaseServerClient();
+  // Anonymous visitors hit this page — RPC is granted to anon (SECURITY DEFINER).
+  const anon = await createSupabaseServerClient();
   const ip = await resolveRequestIp();
   const approverEmail = normalizeApproverEmail(input.approverEmail);
   const approvedByName = approverEmail || "Email approver";
 
-  const { data, error } = await (supabase as any).rpc("approve_client_io_by_token", {
+  const { data, error } = await (anon as any).rpc("approve_client_io_by_token", {
     p_token: token,
     p_approved_by_name: approvedByName,
     p_approval_ip: ip,
@@ -92,13 +106,20 @@ export async function completeClientIoApprovalByToken(input: {
     return { ok: false, outcome: "invalid" };
   }
 
-  const { data: cio } = await supabase
+  // Post-approve reads/writes must bypass RLS (anon has no client_ios SELECT).
+  const db = approvalDbClient() ?? anon;
+
+  const { data: cio, error: cioError } = await db
     .from("client_ios")
     .select(
-      "id, campaign_header_id, document_number, revision_number, approved_at, generated_pdf_url, campaign:campaign_header_id(name)"
+      "id, campaign_header_id, document_number, revision_number, approved_at, generated_pdf_url, campaign:campaign_headers!client_ios_campaign_header_id_fkey(name)"
     )
     .eq("id", payload.io_id)
     .maybeSingle();
+
+  if (cioError) {
+    debugIo("io-approval", "client io load after approve failed", cioError.message);
+  }
 
   const typed = cio as {
     id: string;
@@ -118,7 +139,6 @@ export async function completeClientIoApprovalByToken(input: {
     };
   }
 
-  // Idempotent replay: never re-emit timeline, notifications, or confirmation emails.
   if (payload.already_approved) {
     return {
       ok: true,
@@ -132,14 +152,14 @@ export async function completeClientIoApprovalByToken(input: {
     : typed.campaign;
 
   if (approverEmail) {
-    await supabase
+    await db
       .from("client_ios")
       .update({ approved_by_email: approverEmail } as never)
       .eq("id", typed.id);
   }
 
   try {
-    await emitEnterpriseTimelineEvent(supabase, {
+    await emitEnterpriseTimelineEvent(db, {
       campaignHeaderId: typed.campaign_header_id,
       entityType: "client_ios",
       entityId: typed.id,
@@ -165,20 +185,27 @@ export async function completeClientIoApprovalByToken(input: {
     // Non-blocking
   }
 
+  try {
+    await syncCampaignHeaderStatus(db, typed.campaign_header_id);
+  } catch (syncError) {
+    debugIo("io-approval", "campaign status sync after client approve failed", syncError);
+  }
+
+  // Always attempt confirmation when we have an email (from the approval link).
   if (approverEmail) {
     const pdfBuffer = await downloadIoDocumentBuffer(
-      supabase,
+      db,
       CLIENT_IO_DOCUMENTS_BUCKET,
       typed.generated_pdf_url
     );
     try {
       await sendIoApprovalConfirmationEmails({
-        supabase,
+        supabase: db,
         kind: "client",
         ioId: typed.id,
         documentNumber: typed.document_number,
         campaignName: campaign?.name ?? null,
-        approvedAt: typed.approved_at,
+        approvedAt: typed.approved_at ?? new Date().toISOString(),
         approvedByEmail: approverEmail,
         approvedByName,
         pdfAttachment: buildClientIoPdfAttachmentFromBuffer(pdfBuffer),
@@ -186,6 +213,8 @@ export async function completeClientIoApprovalByToken(input: {
     } catch (emailError) {
       debugIo("io-approval", "client confirmation email failed", emailError);
     }
+  } else {
+    debugIo("io-approval", "client confirmation skipped — no approver email on link");
   }
 
   return {
@@ -204,12 +233,12 @@ export async function completeVendorIoApprovalByToken(input: {
     return { ok: false, outcome: "invalid" };
   }
 
-  const supabase = await createSupabaseServerClient();
+  const anon = await createSupabaseServerClient();
   const ip = await resolveRequestIp();
   const approverEmail = normalizeApproverEmail(input.approverEmail);
   const approvedByName = approverEmail || "Email approver";
 
-  const { data, error } = await (supabase as any).rpc("approve_vendor_io_by_token", {
+  const { data, error } = await (anon as any).rpc("approve_vendor_io_by_token", {
     p_token: token,
     p_approved_by_name: approvedByName,
     p_approval_ip: ip,
@@ -229,13 +258,19 @@ export async function completeVendorIoApprovalByToken(input: {
     return { ok: false, outcome: "invalid" };
   }
 
-  const { data: vio } = await supabase
+  const db = approvalDbClient() ?? anon;
+
+  const { data: vio, error: vioError } = await db
     .from("vendor_ios")
     .select(
-      "id, campaign_header_id, document_number, revision_number, approved_at, generated_pdf_url, influencer_id, campaign:campaign_header_id(name), influencers:influencer_id(email, display_name)"
+      "id, campaign_header_id, document_number, revision_number, approved_at, generated_pdf_url, influencer_id, campaign:campaign_headers!vendor_ios_campaign_header_id_fkey(name), influencers:influencers!vendor_ios_influencer_id_fkey(email, display_name)"
     )
     .eq("id", payload.io_id)
     .maybeSingle();
+
+  if (vioError) {
+    debugIo("io-approval", "vendor io load after approve failed", vioError.message);
+  }
 
   const typed = vio as {
     id: string;
@@ -277,14 +312,14 @@ export async function completeVendorIoApprovalByToken(input: {
     approverEmail || normalizeApproverEmail(influencer?.email) || null;
 
   if (resolvedEmail) {
-    await supabase
+    await db
       .from("vendor_ios")
       .update({ approved_by_email: resolvedEmail } as never)
       .eq("id", typed.id);
   }
 
   try {
-    await emitEnterpriseTimelineEvent(supabase, {
+    await emitEnterpriseTimelineEvent(db, {
       campaignHeaderId: typed.campaign_header_id,
       entityType: "vendor_ios",
       entityId: typed.id,
@@ -310,20 +345,26 @@ export async function completeVendorIoApprovalByToken(input: {
     // Non-blocking
   }
 
+  try {
+    await syncCampaignHeaderStatus(db, typed.campaign_header_id);
+  } catch (syncError) {
+    debugIo("io-approval", "campaign status sync after vendor approve failed", syncError);
+  }
+
   if (resolvedEmail) {
     const pdfBuffer = await downloadIoDocumentBuffer(
-      supabase,
+      db,
       VENDOR_IO_DOCUMENTS_BUCKET,
       typed.generated_pdf_url
     );
     try {
       await sendIoApprovalConfirmationEmails({
-        supabase,
+        supabase: db,
         kind: "vendor",
         ioId: typed.id,
         documentNumber: typed.document_number,
         campaignName: campaign?.name ?? null,
-        approvedAt: typed.approved_at,
+        approvedAt: typed.approved_at ?? new Date().toISOString(),
         approvedByEmail: resolvedEmail,
         approvedByName: influencer?.display_name ?? approvedByName,
         pdfAttachment: buildVendorIoPdfAttachmentFromBuffer(pdfBuffer),

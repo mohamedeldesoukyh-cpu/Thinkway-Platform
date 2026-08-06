@@ -97,6 +97,8 @@ describe("io approval email experience", () => {
     );
     assert.match(html, /background:#0057FF/);
     assert.match(html, /Approve Client IO/);
+    assert.match(html, /href="https:\/\/app\.example\/io-approval\/client\?token=abc"/);
+    assert.match(html, /Or open this link if the button is not clickable/);
     assert.match(html, /electronic approval will be securely recorded/);
   });
 
