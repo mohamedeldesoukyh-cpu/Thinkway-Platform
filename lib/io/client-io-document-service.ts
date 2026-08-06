@@ -56,7 +56,7 @@ async function captureAssignmentSnapshot(
   const { data: lines, error: linesError } = await supabase
     .from("campaign_lines")
     .select(
-      "id, document_number, name, metadata, revenue_before_vat, revenue, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, currency_code, sort_order"
+      "id, document_number, name, description, metadata, revenue_before_vat, revenue, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, currency_code, sort_order"
     )
     .eq("campaign_header_id", campaignHeaderId)
     .in("id", selectedCampaignLineIds)
@@ -70,6 +70,7 @@ async function captureAssignmentSnapshot(
     id: string;
     document_number: string | null;
     name: string;
+    description: string | null;
     metadata: Record<string, unknown> | null;
     revenue_before_vat: number | null;
     revenue: number | null;
@@ -103,6 +104,7 @@ async function captureAssignmentSnapshot(
       id: line.id,
       document_number: line.document_number,
       name: line.name,
+      description: line.description ?? null,
       metadata: line.metadata,
       revenue_before_vat: line.revenue_before_vat,
       revenue: line.revenue,

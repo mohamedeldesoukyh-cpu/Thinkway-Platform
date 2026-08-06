@@ -18,6 +18,7 @@ import {
   resolveCampaignDisplayGroup,
   resolveCampaignDisplayPlatform,
 } from "@/lib/campaigns/campaign-workspace-presenters";
+import { formatCampaignTargetMarketLabel } from "@/lib/campaigns/target-market";
 import {
   PO_STATUS_LABELS,
   PO_STATUS_VARIANT,
@@ -131,6 +132,13 @@ export function CampaignOverviewDetails({
         <InfoRow
           label="Dates"
           value={`${formatDate(displayDates.start)} – ${formatDate(displayDates.end)}`}
+        />
+        <InfoRow
+          label="Target market"
+          value={
+            formatCampaignTargetMarketLabel(workspace.target_market) ??
+            "Legal entity country (default)"
+          }
         />
         <InfoRow
           label="Budget (PO)"

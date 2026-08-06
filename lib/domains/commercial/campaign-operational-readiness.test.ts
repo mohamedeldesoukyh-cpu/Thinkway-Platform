@@ -65,6 +65,8 @@ function baseWorkspace(overrides?: Partial<CampaignWorkspace>): CampaignWorkspac
         id: "line-a",
         document_number: "TW-2026-0001-A",
         name: "Creator A",
+        description: null,
+        usage_period: null,
         status: "active",
         assignment_status: "assigned",
         platform: "instagram",

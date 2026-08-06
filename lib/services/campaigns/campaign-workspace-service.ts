@@ -22,6 +22,10 @@ import { buildActiveVendorIoDocumentMap } from "@/lib/io/vendor-io-document-map"
 import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
 import type { CampaignLineBillingStatus } from "@/lib/domains/billing/types";
 import { METADATA_PLATFORM_KEY } from "@/lib/campaigns/constants";
+import { readAssignmentUsagePeriod } from "@/lib/campaigns/assignment-usage-period";
+import { resolveQuotationServiceDescription } from "@/lib/campaigns/quotation-service-description";
+import { readCampaignTargetMarket } from "@/lib/campaigns/target-market";
+import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-types";
 import {
   deriveLinePaymentStatus,
   deriveWorkflowStage,
@@ -85,6 +89,8 @@ type LineRow = {
   id: string;
   document_number: string;
   name: string;
+  description: string | null;
+  source_quotation_item_id?: string | null;
   status: CampaignWorkspace["status"];
   platform: string | null;
   metadata: Record<string, unknown>;
@@ -255,6 +261,7 @@ export async function getCampaignWorkspace(
   }
 
   const lines = (linesResult.data ?? []) as unknown as LineRow[];
+  await hydrateMissingLineDescriptionsFromQuotation(supabase, lines);
   const lineIds = new Set(lines.map((l) => l.id));
   const lineDocMap = new Map(lines.map((l) => [l.id, l.document_number]));
   const vendorIoDocById = new Map(
@@ -464,6 +471,8 @@ export async function getCampaignWorkspace(
       id: line.id,
       document_number: line.document_number,
       name: line.name,
+      description: line.description?.trim() || null,
+      usage_period: readAssignmentUsagePeriod(line.metadata),
       status: line.status,
       assignment_status:
         (line.assignment_status as CampaignLineWorkspace["assignment_status"]) ??
@@ -671,6 +680,9 @@ export async function getCampaignWorkspace(
     typeof headerRow.metadata?.[METADATA_PLATFORM_KEY] === "string"
       ? headerRow.metadata[METADATA_PLATFORM_KEY]
       : null;
+  const targetMarket = readCampaignTargetMarket(
+    (headerRow.metadata as Record<string, unknown> | null) ?? null
+  );
 
   const workspaceVendors = vendors;
   const workflowStage = deriveWorkflowStage({
@@ -744,6 +756,7 @@ export async function getCampaignWorkspace(
     currency_code: headerRow.currency_code,
     start_date: headerRow.start_date,
     end_date: headerRow.end_date,
+    target_market: targetMarket,
     platform,
     group:
       headerRow.group ??
@@ -895,5 +908,64 @@ export async function getCampaignWorkspace(
   }
 
   return workspace;
+}
+
+/** One-time hydrate: copy quotation service description onto lines still missing it. */
+async function hydrateMissingLineDescriptionsFromQuotation(
+  supabase: SupabaseClient,
+  lines: LineRow[]
+): Promise<void> {
+  const missing = lines.filter(
+    (line) =>
+      !(line.description?.trim()) &&
+      typeof line.source_quotation_item_id === "string" &&
+      line.source_quotation_item_id.length > 0
+  );
+  if (missing.length === 0) return;
+
+  const itemIds = [
+    ...new Set(missing.map((line) => line.source_quotation_item_id!).filter(Boolean)),
+  ];
+  const { data, error } = await supabase
+    .from("quotation_items")
+    .select("id, service_description, deliverables")
+    .in("id", itemIds);
+  if (error || !data?.length) return;
+
+  const byId = new Map(
+    data.map((row) => {
+      const typed = row as {
+        id: string;
+        service_description: string | null;
+        deliverables: QuotationDeliverable[] | null;
+      };
+      return [
+        typed.id,
+        resolveQuotationServiceDescription({
+          service_description: typed.service_description,
+          deliverables: typed.deliverables,
+        }),
+      ] as const;
+    })
+  );
+
+  await Promise.all(
+    missing.map(async (line) => {
+      const description = byId.get(line.source_quotation_item_id!);
+      if (!description) return;
+      line.description = description;
+      const { error: updateError } = await supabase
+        .from("campaign_lines")
+        .update({ description } as never)
+        .eq("id", line.id);
+      if (updateError) {
+        console.warn(
+          "[campaign-workspace] hydrate description failed",
+          line.id,
+          updateError.message
+        );
+      }
+    })
+  );
 }
 

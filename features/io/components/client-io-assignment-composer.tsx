@@ -1,14 +1,17 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   DETAIL_FORM_INPUT_CLASS,
   DetailFormSection,
 } from "@/features/campaigns/components/operational-detail-panel";
+import { updateAssignmentCommercialNotesAction } from "@/features/campaigns/actions";
 import { saveClientIoAssignmentsAction } from "@/features/io/actions";
 import { formatMoney } from "@/lib/campaigns/utils";
 import { isClientIoComposerEditable } from "@/lib/io/client-io-assignments";
@@ -23,6 +26,8 @@ export type ClientIoComposerAssignment = {
   influencer_name: string | null;
   revenue_before_vat: number;
   currency_code?: string;
+  description?: string | null;
+  usage_period?: string | null;
 };
 
 type Props = {
@@ -46,14 +51,42 @@ export function ClientIoAssignmentComposer({
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(selectedAssignmentIds)
   );
+  const [notesById, setNotesById] = useState<
+    Record<string, { description: string; usagePeriod: string }>
+  >(() =>
+    Object.fromEntries(
+      assignments.map((row) => [
+        row.id,
+        {
+          description: row.description ?? "",
+          usagePeriod: row.usage_period ?? "",
+        },
+      ])
+    )
+  );
   const [saveState, saveAction, saving] = useActionState(
     saveClientIoAssignmentsAction,
     INITIAL_STATE
   );
+  const [notesPending, startNotesTransition] = useTransition();
 
   useEffect(() => {
     setSelected(new Set(selectedAssignmentIds));
   }, [selectedAssignmentIds]);
+
+  useEffect(() => {
+    setNotesById(
+      Object.fromEntries(
+        assignments.map((row) => [
+          row.id,
+          {
+            description: row.description ?? "",
+            usagePeriod: row.usage_period ?? "",
+          },
+        ])
+      )
+    );
+  }, [assignments]);
 
   useEffect(() => {
     if (!saveState.message) return;
@@ -89,6 +122,30 @@ export function ClientIoAssignmentComposer({
     setSelected(new Set());
   }
 
+  function persistNotes(lineId: string) {
+    const draft = notesById[lineId];
+    const source = assignments.find((row) => row.id === lineId);
+    if (!draft || !source) return;
+    const nextDescription = draft.description.trim();
+    const nextUsage = draft.usagePeriod.trim();
+    const prevDescription = (source.description ?? "").trim();
+    const prevUsage = (source.usage_period ?? "").trim();
+    if (nextDescription === prevDescription && nextUsage === prevUsage) return;
+
+    startNotesTransition(async () => {
+      const result = await updateAssignmentCommercialNotesAction({
+        campaign_id: campaignHeaderId,
+        line_id: lineId,
+        description: nextDescription || null,
+        usage_period: nextUsage || null,
+      });
+      if (!result.ok) {
+        toast.error(result.message ?? "Could not save influencer notes.");
+        return;
+      }
+    });
+  }
+
   if (assignments.length === 0) {
     return (
       <DetailFormSection label="Assignments" className="py-3.5">
@@ -106,8 +163,8 @@ export function ClientIoAssignmentComposer({
       <div className="space-y-3">
         <p className="text-xs text-muted-foreground">
           Select the Assignments included in this Client IO. Document commercial totals use the
-          selection only. Issued documents freeze an Assignment snapshot so later schedule edits
-          do not change history.
+          selection only. Full Description and Usage Period edit here or on Assignments — both sync
+          to preview/export (and Description syncs to the linked quotation).
         </p>
 
         {editable ? (
@@ -133,27 +190,78 @@ export function ClientIoAssignmentComposer({
               row.name?.trim() ||
               row.document_number ||
               "Assignment";
+            const notes = notesById[row.id] ?? {
+              description: "",
+              usagePeriod: "",
+            };
             return (
-              <li key={row.id} className="flex items-start gap-3 px-3 py-2.5">
-                <Checkbox
-                  checked={checked}
-                  disabled={!editable || saving}
-                  onCheckedChange={(value) => toggle(row.id, value === true)}
-                  className="mt-0.5"
-                  aria-label={`Include ${label}`}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <p className="text-sm font-medium text-foreground">{label}</p>
-                    <p className="text-xs tabular-nums text-muted-foreground">
-                      {formatMoney(Number(row.revenue_before_vat ?? 0), currencyCode)}
+              <li key={row.id} className="space-y-2 px-3 py-2.5">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    checked={checked}
+                    disabled={!editable || saving}
+                    onCheckedChange={(value) => toggle(row.id, value === true)}
+                    className="mt-0.5"
+                    aria-label={`Include ${label}`}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <p className="text-sm font-medium text-foreground">{label}</p>
+                      <p className="text-xs tabular-nums text-muted-foreground">
+                        {formatMoney(Number(row.revenue_before_vat ?? 0), currencyCode)}
+                      </p>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      {row.document_number}
+                      <span className="mx-1.5 text-border">·</span>
+                      <span className="font-mono text-[10px]">{row.id.slice(0, 8)}</span>
                     </p>
                   </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    {row.document_number}
-                    <span className="mx-1.5 text-border">·</span>
-                    <span className="font-mono text-[10px]">{row.id.slice(0, 8)}</span>
-                  </p>
+                </div>
+                <div className="ml-7 grid gap-2 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                      Full Description
+                    </p>
+                    <Textarea
+                      value={notes.description}
+                      onChange={(event) =>
+                        setNotesById((prev) => ({
+                          ...prev,
+                          [row.id]: {
+                            ...notes,
+                            description: event.target.value,
+                          },
+                        }))
+                      }
+                      onBlur={() => persistNotes(row.id)}
+                      rows={2}
+                      disabled={!editable || notesPending}
+                      placeholder="Full description…"
+                      className="min-h-[3rem] resize-y text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                      Usage Period
+                    </p>
+                    <Input
+                      value={notes.usagePeriod}
+                      onChange={(event) =>
+                        setNotesById((prev) => ({
+                          ...prev,
+                          [row.id]: {
+                            ...notes,
+                            usagePeriod: event.target.value,
+                          },
+                        }))
+                      }
+                      onBlur={() => persistNotes(row.id)}
+                      disabled={!editable || notesPending}
+                      placeholder="e.g. 30 days / Organic only"
+                      className="h-9 text-xs"
+                    />
+                  </div>
                 </div>
               </li>
             );

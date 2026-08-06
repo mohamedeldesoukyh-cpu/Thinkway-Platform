@@ -5,6 +5,8 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { resolveCampaignDisplayName } from "@/lib/campaigns/campaign-display-name";
+import { resolveQuotationServiceDescription } from "@/lib/campaigns/quotation-service-description";
 import { isQuotationExpired } from "@/lib/commercial/quotation-validity";
 import { logQuotationLifecycleEvent } from "@/lib/commercial-sync/audit";
 import { canCreateCampaignFromQuotation } from "@/lib/commercial-sync/rules";
@@ -497,7 +499,10 @@ export async function convertQuotationToAssignments(
 
   const campaignName =
     input.campaignName?.trim() ||
-    `Campaign — ${String(row.name ?? row.serial_number ?? "Quotation")}`;
+    resolveCampaignDisplayName(
+      String(row.name ?? row.serial_number ?? "Quotation")
+    ) ||
+    String(row.name ?? row.serial_number ?? "Quotation");
 
   let campaignId = existingHeaderId;
   let documentNumber = "";
@@ -671,12 +676,18 @@ export async function convertQuotationToAssignments(
       continue;
     }
 
+    const serviceDescription = resolveQuotationServiceDescription({
+      service_description: unit.primaryItem.service_description,
+      deliverables: mergeUnitDeliverables(unit),
+    });
+
     const result = await createCampaignLine(supabase, userId, {
       campaign_id: campaignId,
       influencer_id: seed.influencerId,
       assignment_json: JSON.stringify({ platforms: seed.platforms }),
       pricing_mode: "package",
       name: seed.displayName,
+      description: serviceDescription,
       po_amount: seed.revenue,
       revenue: seed.revenue,
       cost: seed.cost,

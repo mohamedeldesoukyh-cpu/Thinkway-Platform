@@ -4,6 +4,9 @@ import {
   computeAgencyFeeAmount,
   resolveClientTaxableBase,
 } from "@/lib/assignments/client-billing-commercial";
+import { readAssignmentUsagePeriod } from "@/lib/campaigns/assignment-usage-period";
+import { resolveCampaignDisplayName } from "@/lib/campaigns/campaign-display-name";
+import { formatScheduleMonthYearRange } from "@/lib/campaigns/format-schedule-month-year";
 import {
   buildLineTitle,
   deliverableLabel,
@@ -23,12 +26,14 @@ import {
   parseTermsText,
   resolveEffectiveTerms,
 } from "@/lib/io/client-io-terms";
+import { resolveCampaignTargetMarketDisplay } from "@/lib/campaigns/target-market";
 import { THINKWAY_AGENCY_DEFAULTS } from "@/lib/io/thinkway-agency-defaults";
 import type {
   ClientIoAssignmentPricing,
   ClientIoCampaignPricing,
   ClientIoDeliverableRow,
   ClientIoDocumentData,
+  ClientIoInfluencerNoteRow,
 } from "@/lib/io/client-io-document-types";
 import { computeVatLine, roundMoney } from "@/lib/vat/calculations";
 
@@ -93,17 +98,6 @@ function platformLabel(platform: string): string {
   const key = platform.toLowerCase();
   if (map[key]) return map[key];
   return platform.charAt(0).toUpperCase() + platform.slice(1);
-}
-
-function formatObjectives(value: unknown): string | null {
-  if (Array.isArray(value)) {
-    const items = value
-      .map((item) => (typeof item === "string" ? item.trim() : null))
-      .filter(Boolean);
-    return items.length > 0 ? items.join("; ") : null;
-  }
-  if (typeof value === "string" && value.trim()) return value.trim();
-  return null;
 }
 
 function resolveLineAgencyFeeAmount(input: {
@@ -231,14 +225,14 @@ export async function loadClientIoDocumentData(
     supabase
       .from("campaign_headers")
       .select(
-        "id, document_number, name, description, brief, start_date, end_date, objectives, currency_code, brands:brand_id(name), clients:client_id(name, legal_name, country)"
+        "id, document_number, name, description, brief, start_date, end_date, objectives, currency_code, metadata, brands:brand_id(name), clients:client_id(name, legal_name, country)"
       )
       .eq("id", typedCio.campaign_header_id)
       .single(),
     supabase
       .from("clients")
       .select(
-        "id, name, legal_name, trade_license_number, billing_email, billing_phone, legal_address, billing_address, city, country, payment_terms, metadata, client_io_terms_text"
+        "id, name, legal_name, trade_license_number, billing_email, billing_phone, legal_address, billing_address, city, country, payment_terms, metadata, client_io_terms_text, agency_or_direct"
       )
       .eq("id", typedCio.client_id)
       .single(),
@@ -247,7 +241,7 @@ export async function loadClientIoDocumentData(
       : supabase
           .from("campaign_lines")
           .select(
-            "id, document_number, name, metadata, revenue_before_vat, revenue, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, currency_code, sort_order"
+            "id, document_number, name, description, metadata, revenue_before_vat, revenue, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, currency_code, sort_order"
           )
           .eq("campaign_header_id", typedCio.campaign_header_id)
           .order("sort_order", { ascending: true }),
@@ -268,6 +262,7 @@ export async function loadClientIoDocumentData(
     end_date: string | null;
     objectives: unknown;
     currency_code: string;
+    metadata?: Record<string, unknown> | null;
     brands: { name: string } | Array<{ name: string }> | null;
     clients:
       | { name: string; legal_name: string | null; country: string | null }
@@ -295,12 +290,14 @@ export async function loadClientIoDocumentData(
     payment_terms: string | null;
     metadata: Record<string, unknown>;
     client_io_terms_text: string | null;
+    agency_or_direct?: "agency" | "direct" | "hybrid" | null;
   };
 
   type LineRow = {
     id: string;
     document_number: string | null;
     name: string;
+    description: string | null;
     metadata: Record<string, unknown> | null;
     revenue_before_vat: number | null;
     revenue: number | null;
@@ -329,6 +326,7 @@ export async function loadClientIoDocumentData(
       id: line.id,
       document_number: line.document_number,
       name: line.name,
+      description: line.description ?? null,
       metadata: line.metadata,
       revenue_before_vat: line.revenue_before_vat,
       revenue: line.revenue,
@@ -410,9 +408,7 @@ export async function loadClientIoDocumentData(
       deliverableType: deliverableLabel(typed.deliverable_type),
       quantity: typed.quantity,
       handle,
-      scheduledDates: typed.live_date
-        ? new Date(`${typed.live_date}T00:00:00`).toLocaleDateString("en-GB")
-        : "—",
+      scheduledDates: formatScheduleMonthYearRange([typed.live_date]),
     };
   });
 
@@ -431,16 +427,7 @@ export async function loadClientIoDocumentData(
       .filter((value): value is string => Boolean(value))
       .sort();
 
-    let scheduledDates = "—";
-    if (liveDates.length === 1) {
-      scheduledDates = new Date(`${liveDates[0]}T00:00:00`).toLocaleDateString("en-GB");
-    } else if (liveDates.length > 1) {
-      const first = new Date(`${liveDates[0]}T00:00:00`).toLocaleDateString("en-GB");
-      const last = new Date(`${liveDates[liveDates.length - 1]}T00:00:00`).toLocaleDateString(
-        "en-GB"
-      );
-      scheduledDates = `${first} – ${last}`;
-    }
+    const scheduledDates = formatScheduleMonthYearRange(liveDates);
 
     const platformsLabel =
       platforms.length > 1
@@ -466,6 +453,15 @@ export async function loadClientIoDocumentData(
       quantity: 1,
       handle: primaryHandle,
       scheduledDates,
+    };
+  });
+
+  const influencerNotes: ClientIoInfluencerNoteRow[] = typedLines.map((line) => {
+    const assignment = parseLineAssignment(line.metadata);
+    return {
+      influencerName: assignment?.influencer_name ?? line.name,
+      fullDescription: line.description?.trim() || null,
+      usagePeriod: readAssignmentUsagePeriod(line.metadata),
     };
   });
 
@@ -571,24 +567,25 @@ export async function loadClientIoDocumentData(
       }),
       contactPerson,
       email: typedClient.billing_email,
+      agencyOrDirect: typedClient.agency_or_direct ?? null,
     },
     campaign: {
       id: typedCampaign.id,
       documentNumber: typedCampaign.document_number,
-      name: typedCampaign.name,
+      name: resolveCampaignDisplayName(typedCampaign.name) || typedCampaign.name,
       startDate: typedCampaign.start_date,
       endDate: typedCampaign.end_date,
       brandName: typedCampaign.brands?.name ?? "—",
       channels: platforms.map(platformLabel).join(", ") || "—",
-      targetMarket: typedClient.country ?? typedCampaign.clients?.country ?? THINKWAY_AGENCY_DEFAULTS.country,
-      businessObjective:
-        typedCampaign.description?.trim() ||
-        typedCampaign.brief?.trim() ||
-        formatObjectives(typedCampaign.objectives),
-      usagePeriod: typedCio.billing_terms?.trim() || null,
+      targetMarket: resolveCampaignTargetMarketDisplay({
+        campaignMetadata: typedCampaign.metadata,
+        clientCountry: typedClient.country ?? typedCampaign.clients?.country,
+        fallback: THINKWAY_AGENCY_DEFAULTS.country,
+      }),
     },
     deliverables: deliverableRows,
     mainAssignmentDeliverables,
+    influencerNotes,
     pricing,
   };
 }

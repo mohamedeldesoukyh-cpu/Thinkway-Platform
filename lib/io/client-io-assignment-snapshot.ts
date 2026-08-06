@@ -2,6 +2,7 @@ export type ClientIoAssignmentSnapshotLine = {
   id: string;
   document_number: string | null;
   name: string;
+  description: string | null;
   metadata: Record<string, unknown> | null;
   revenue_before_vat: number | null;
   revenue: number | null;

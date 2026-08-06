@@ -16,6 +16,13 @@ export type ClientIoDeliverableRow = {
   scheduledDates: string;
 };
 
+/** Per-influencer commercial notes shown below the roster table. */
+export type ClientIoInfluencerNoteRow = {
+  influencerName: string;
+  fullDescription: string | null;
+  usagePeriod: string | null;
+};
+
 export type ClientIoAssignmentPricing = {
   lineId: string;
   lineDocumentNumber: string | null;
@@ -59,6 +66,8 @@ export type ClientIoDocumentData = {
     address: string | null;
     contactPerson: string | null;
     email: string | null;
+    /** Legal-entity commercial relationship — drives Parties left header. */
+    agencyOrDirect: "agency" | "direct" | "hybrid" | null;
   };
   campaign: {
     id: string;
@@ -69,12 +78,12 @@ export type ClientIoDocumentData = {
     brandName: string;
     channels: string;
     targetMarket: string;
-    businessObjective: string | null;
-    usagePeriod: string | null;
   };
   /** Per-platform / per-deliverable rows (child level). */
   deliverables: ClientIoDeliverableRow[];
   /** One row per campaign assignment line (main line only). */
   mainAssignmentDeliverables: ClientIoDeliverableRow[];
+  /** Full Description + usage period by influencer (below roster). */
+  influencerNotes: ClientIoInfluencerNoteRow[];
   pricing: ClientIoCampaignPricing;
 };

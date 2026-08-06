@@ -11,6 +11,7 @@ export const ASSIGNMENT_GRID_COLUMN_METAS: OperationalTableColumnMeta[] = [
   { id: "creator", label: "Creator" },
   { id: "platforms", label: "Platforms" },
   { id: "deliverables", label: "Deliverables" },
+  { id: "fullDescription", label: "Full Description" },
   { id: "postingDates", label: "Dates" },
   { id: "costCurrency", label: "CCY" },
   { id: "revenue", label: "Revenue" },

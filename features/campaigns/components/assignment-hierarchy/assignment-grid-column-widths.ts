@@ -14,6 +14,7 @@ export const ASSIGNMENT_GRID_COLUMN_WIDTH_PX = {
   creator: 108,
   platforms: 72,
   deliverables: 56,
+  fullDescription: 180,
   postingDates: 84,
   costCurrency: 56,
   revenue: 76,
@@ -35,7 +36,7 @@ export const ASSIGNMENT_GRID_COLUMN_WIDTH_PX = {
 export type AssignmentGridColumnWidthId = keyof typeof ASSIGNMENT_GRID_COLUMN_WIDTH_PX;
 
 /** Child leading cols — widths come from parent measurement (select … Rev). */
-export const CHILD_GRID_LEADING_COLUMN_COUNT = 8;
+export const CHILD_GRID_LEADING_COLUMN_COUNT = 9;
 
 /** Width from colgroup; padding matches parent SAFE_GRID_TD. */
 export const CHILD_GRID_LEADING_CELL =

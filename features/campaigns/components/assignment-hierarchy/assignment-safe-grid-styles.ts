@@ -6,7 +6,7 @@ import {
 import { cn } from "@/lib/utils";
 
 /** Parent column count — keep in sync with AssignmentSafeGrid header cells. */
-export const ASSIGNMENT_SAFE_GRID_COL_SPAN = 18;
+export const ASSIGNMENT_SAFE_GRID_COL_SPAN = 19;
 
 export const SAFE_GRID_SHELL = cn(
   "thinkway-campaign-asgn-table-root min-w-0 border-0 bg-transparent shadow-none"

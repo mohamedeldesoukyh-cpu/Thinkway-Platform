@@ -34,6 +34,7 @@ import {
   OperationalEditPanelHeader,
 } from "@/features/campaigns/components/operational-detail-panel";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
+import { COUNTRY_OPTIONS } from "@/lib/master-data/constants";
 import type { CampaignStatus } from "@/types/database";
 import { formatGroupDisplayName } from "@/lib/groups/group-display";
 
@@ -59,6 +60,7 @@ export function CampaignEditSheet({
   const [status, setStatus] = useState<CampaignStatus>(workspace.status);
   const [platform, setPlatform] = useState(workspace.platform ?? "");
   const [currency, setCurrency] = useState(workspace.currency_code);
+  const [targetMarket, setTargetMarket] = useState(workspace.target_market ?? "");
   const [accountManagerId, setAccountManagerId] = useState(
     workspace.account_manager?.id ?? ""
   );
@@ -85,6 +87,7 @@ export function CampaignEditSheet({
     setStatus(workspace.status);
     setPlatform(workspace.platform ?? "");
     setCurrency(workspace.currency_code);
+    setTargetMarket(workspace.target_market ?? "");
     setAccountManagerId(workspace.account_manager?.id ?? "");
     setTeamId(workspace.team?.id ?? "");
     setGroupId(workspace.group?.id ?? "");
@@ -110,6 +113,7 @@ export function CampaignEditSheet({
           <input type="hidden" name="status" value={status} />
           <input type="hidden" name="platform" value={platform} />
           <input type="hidden" name="currency_code" value={currency} />
+          <input type="hidden" name="target_market" value={targetMarket} />
           <input type="hidden" name="account_manager_id" value={accountManagerId} />
           <input type="hidden" name="team_id" value={teamId} />
           <input type="hidden" name="group_id" value={groupId} />
@@ -196,6 +200,35 @@ export function CampaignEditSheet({
                 disabled={isPending}
               />
             </DetailFormSection>
+            <DetailFormSection
+              label="Target market"
+              hint="Used on Client IO. Independent of legal entity country."
+            >
+              <Select
+                value={targetMarket || "__inherit__"}
+                onValueChange={(value) =>
+                  setTargetMarket(value === "__inherit__" ? "" : value)
+                }
+                disabled={isPending}
+              >
+                <SelectTrigger className={DETAIL_FORM_SELECT_TRIGGER_CLASS}>
+                  <SelectValue placeholder="Select target market" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__inherit__">
+                    Use legal entity country (default)
+                  </SelectItem>
+                  {COUNTRY_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </DetailFormSection>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
             <DetailFormSection label="Account manager">
               <SearchableSelect
                 value={accountManagerId}
@@ -208,17 +241,16 @@ export function CampaignEditSheet({
                 disabled={isPending}
               />
             </DetailFormSection>
+            <DetailFormSection label="Team">
+              <SearchableSelect
+                value={teamId}
+                onValueChange={setTeamId}
+                options={teams.map((t) => ({ value: t.id, label: t.name }))}
+                placeholder="Select team"
+                disabled={isPending}
+              />
+            </DetailFormSection>
           </div>
-
-          <DetailFormSection label="Team">
-            <SearchableSelect
-              value={teamId}
-              onValueChange={setTeamId}
-              options={teams.map((t) => ({ value: t.id, label: t.name }))}
-              placeholder="Select team"
-              disabled={isPending}
-            />
-          </DetailFormSection>
 
           <DetailFormSection
             label="Holding group"

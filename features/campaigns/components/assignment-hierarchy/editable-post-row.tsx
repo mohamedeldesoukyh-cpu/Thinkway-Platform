@@ -498,7 +498,15 @@ export function EditablePostRow({
 
   function renderLeadingBodyCell(parentColumnId: string) {
     const childColumnId = assignmentParentToChildLeadingColumnId(parentColumnId);
-    if (!childColumnId) return null;
+    if (!childColumnId) {
+      return (
+        <td
+          key={parentColumnId}
+          className={GRID_CELL.leadingRev}
+          aria-hidden
+        />
+      );
+    }
 
     const cellClass =
       childColumnId === "rev"
@@ -522,6 +530,7 @@ export function EditablePostRow({
                         : GRID_CELL.leadingRev;
 
     if (
+      childColumnId === "fullDescriptionSpacer" ||
       !col(childColumnId) ||
       childColumnId === "expand" ||
       childColumnId === "select"
@@ -529,7 +538,9 @@ export function EditablePostRow({
       return (
         <td
           key={parentColumnId}
-          {...assignmentChildColDataAttr(childColumnId)}
+          {...(childColumnId === "fullDescriptionSpacer"
+            ? {}
+            : assignmentChildColDataAttr(childColumnId))}
           className={cellClass}
           aria-hidden
         />
@@ -969,11 +980,20 @@ export function OperationalGridHeader({
 
   function renderLeadingHeaderCell(parentColumnId: string) {
     const childColumnId = assignmentParentToChildLeadingColumnId(parentColumnId);
-    if (!childColumnId) return null;
+    if (!childColumnId) {
+      return (
+        <th
+          key={parentColumnId}
+          className={cn(GRID_CELL.leadingRev, OPERATIONAL_TABLE_HEADER_CELL)}
+          aria-hidden
+        />
+      );
+    }
 
     const cellClass = cn(childLeadingHeaderClass(childColumnId), OPERATIONAL_TABLE_HEADER_CELL);
 
     if (
+      childColumnId === "fullDescriptionSpacer" ||
       !col(childColumnId) ||
       childColumnId === "expand" ||
       childColumnId === "select"
@@ -981,7 +1001,9 @@ export function OperationalGridHeader({
       return (
         <th
           key={parentColumnId}
-          {...assignmentChildColDataAttr(childColumnId)}
+          {...(childColumnId === "fullDescriptionSpacer"
+            ? {}
+            : assignmentChildColDataAttr(childColumnId))}
           className={cellClass}
           aria-hidden
         />

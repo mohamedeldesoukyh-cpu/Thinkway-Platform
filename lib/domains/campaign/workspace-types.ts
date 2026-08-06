@@ -120,6 +120,10 @@ export type CampaignLineWorkspace = {
   id: string;
   document_number: string;
   name: string;
+  /** Full Description (linked to quotation service description). */
+  description: string | null;
+  /** Per-creator usage period for Client IO (line metadata). */
+  usage_period: string | null;
   status: CampaignStatus;
   assignment_status: CampaignLineAssignmentStatus;
   platform: string | null;
@@ -273,6 +277,11 @@ export type CampaignWorkspace = {
   currency_code: string;
   start_date: string | null;
   end_date: string | null;
+  /**
+   * Campaign flight / CIO Target Market (ISO country code or label).
+   * Independent of legal-entity country (e.g. client Egypt, market UAE).
+   */
+  target_market: string | null;
   platform: string | null;
   group: { id: string; name: string; document_number: string } | null;
   client: {

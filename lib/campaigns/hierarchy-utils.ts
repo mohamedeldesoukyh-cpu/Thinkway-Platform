@@ -60,6 +60,7 @@ export const HIERARCHY_COLUMN_LABELS = {
   creator: "Creator",
   platforms: "Platforms",
   deliverables: "Deliv.",
+  fullDescription: "Full Description",
   postingDates: "Dates",
   costCurrency: "CCY",
   revenue: "Rev",
@@ -120,6 +121,7 @@ export const ASSIGNMENT_CHILD_LEADING_PARENT_COLUMN_IDS = [
   "creator",
   "platforms",
   "deliverables",
+  "fullDescription",
   "postingDates",
   "costCurrency",
   "revenue",
@@ -135,6 +137,7 @@ const PARENT_TO_CHILD_LEADING_COLUMN_ID: Record<
   creator: "platform",
   platforms: "qty",
   deliverables: "revPerAd",
+  fullDescription: "fullDescriptionSpacer",
   postingDates: "costPerAd",
   costCurrency: "ccy",
   revenue: "rev",
@@ -157,8 +160,8 @@ export const ASSIGNMENT_CHILD_TRAILING_PARENT_FINANCIAL_COLUMN_IDS = [
   "totalBilling",
 ] as const;
 
-export const ASSIGNMENT_CHILD_ROW_COL_COUNT_WITH_EXPAND = 24;
-export const ASSIGNMENT_CHILD_ROW_COL_COUNT = 23;
+export const ASSIGNMENT_CHILD_ROW_COL_COUNT_WITH_EXPAND = 25;
+export const ASSIGNMENT_CHILD_ROW_COL_COUNT = 24;
 
 export function assignmentChildLeadingParentColumnIds(
   showExpandColumn: boolean
@@ -175,7 +178,7 @@ export function assignmentChildRowColSpan(showExpandColumn: boolean): number {
 }
 
 export function childGridLeadingColumnCount(showExpandColumn: boolean): number {
-  return showExpandColumn ? 9 : 8;
+  return showExpandColumn ? 10 : 9;
 }
 
 /** `data-assignment-col` value for parent grid cells (width measurement). */

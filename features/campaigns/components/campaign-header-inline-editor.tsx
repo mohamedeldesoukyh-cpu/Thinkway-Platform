@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { updateCampaignHeaderAction } from "@/features/campaigns/actions";
 import { CAMPAIGN_STATUS_OPTIONS } from "@/features/campaigns/constants";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
+import { COUNTRY_OPTIONS } from "@/lib/master-data/constants";
 import type { CampaignStatus } from "@/types/database";
 
 type Draft = {
@@ -25,6 +26,7 @@ type Draft = {
   status: CampaignStatus;
   start_date: string;
   end_date: string;
+  target_market: string;
   description: string;
   brief: string;
   account_manager_id: string;
@@ -40,6 +42,7 @@ function draftFromWorkspace(workspace: CampaignWorkspace): Draft {
     status: workspace.status,
     start_date: workspace.start_date ?? "",
     end_date: workspace.end_date ?? "",
+    target_market: workspace.target_market ?? "",
     description: workspace.description ?? "",
     brief: workspace.brief ?? "",
     account_manager_id: workspace.account_manager?.id ?? "",
@@ -100,6 +103,7 @@ export function CampaignHeaderInlineEditor({
       formData.set("status", draft.status);
       formData.set("start_date", draft.start_date);
       formData.set("end_date", draft.end_date);
+      formData.set("target_market", draft.target_market);
       formData.set("description", draft.description);
       formData.set("brief", draft.brief);
       formData.set("account_manager_id", draft.account_manager_id);
@@ -206,6 +210,37 @@ export function CampaignHeaderInlineEditor({
             value={draft.end_date}
             onChange={(e) => setDraft((d) => ({ ...d, end_date: e.target.value }))}
           />
+        </div>
+
+        <div className="space-y-1.5 md:col-span-2">
+          <Label>Target market</Label>
+          <Select
+            value={draft.target_market || "__inherit__"}
+            onValueChange={(value) =>
+              setDraft((d) => ({
+                ...d,
+                target_market: value === "__inherit__" ? "" : value,
+              }))
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select target market" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__inherit__">
+                Use legal entity country (default)
+              </SelectItem>
+              {COUNTRY_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-[11px] text-muted-foreground">
+            Used on Client IO as Target Market. Independent of legal entity country
+            (e.g. client Egypt, market UAE).
+          </p>
         </div>
 
         <div className="space-y-1.5 md:col-span-2">
