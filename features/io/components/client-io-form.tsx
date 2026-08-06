@@ -46,6 +46,7 @@ import {
   type ClientIoPaymentTermsPresetId,
 } from "@/lib/io/client-io-payment-terms";
 import { sumClientIoComposerAgreedAmount } from "@/lib/email/io-email-summary";
+import { publishClientIoLiveRecipients } from "@/lib/io/client-io-live-recipients";
 import {
   parseSendRecipientsJson,
   seedRecipientsFromContacts,
@@ -218,6 +219,11 @@ export function ClientIoForm({
     if (generateState.ok) toast.success(generateState.message);
     else toast.error(generateState.message);
   }, [generateState]);
+
+  // Keep hero toolbar Send in sync with live recipient edits (including multi-add).
+  useEffect(() => {
+    publishClientIoLiveRecipients(row.id, sendRecipients);
+  }, [row.id, sendRecipients]);
 
   const hasDocument = Boolean(
     row.document_generated_at || row.generated_html_url || row.terms_html

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,14 @@ import {
 import type { ClientIoRow } from "@/features/io/types";
 import { isClientIoRegenerateAllowed } from "@/lib/io/client-io-assignments";
 import {
+  readClientIoLiveRecipients,
+  subscribeClientIoLiveRecipients,
+} from "@/lib/io/client-io-live-recipients";
+import {
+  parseSendRecipientsJson,
   seedRecipientsFromContacts,
   serializeSendRecipients,
+  type ClientIoRecipientEntry,
 } from "@/lib/io/client-io-send-recipients";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +44,9 @@ export function ClientIoHeaderControls({
     generateClientIoDocumentAction,
     INITIAL_STATE
   );
+  const [liveRecipients, setLiveRecipients] = useState<ClientIoRecipientEntry[] | null>(
+    null
+  );
 
   useEffect(() => {
     if (!generateState.message) return;
@@ -45,18 +54,35 @@ export function ClientIoHeaderControls({
     else toast.error(generateState.message);
   }, [generateState]);
 
+  useEffect(() => {
+    setLiveRecipients(readClientIoLiveRecipients(io.id));
+    return subscribeClientIoLiveRecipients(io.id, setLiveRecipients);
+  }, [io.id]);
+
+  const seededRecipients = useMemo(
+    () =>
+      seedRecipientsFromContacts(
+        parseSendRecipientsJson(io.send_recipients),
+        contactRecipients
+      ),
+    [io.send_recipients, contactRecipients]
+  );
+
+  const effectiveRecipients = useMemo(() => {
+    const live = liveRecipients ? parseSendRecipientsJson(liveRecipients) : [];
+    if (live.length > 0) return live;
+    return seededRecipients;
+  }, [liveRecipients, seededRecipients]);
+
+  const sendRecipientsJson = serializeSendRecipients(effectiveRecipients);
+  const recipientCount = effectiveRecipients.filter((r) => r.email.trim()).length;
+  const recipientsNeedSave =
+    recipientCount > 0 && parseSendRecipientsJson(io.send_recipients).length === 0;
+
   const hasDocument = Boolean(
     io.document_generated_at || io.generated_html_url || io.generated_pdf_url
   );
   const canRegenerate = isClientIoRegenerateAllowed(io.status);
-  const effectiveRecipients = seedRecipientsFromContacts(
-    io.send_recipients ?? [],
-    contactRecipients
-  );
-  const sendRecipientsJson = serializeSendRecipients(effectiveRecipients);
-  const recipientCount = effectiveRecipients.filter((r) => r.email.trim()).length;
-  const recipientsNeedSave =
-    recipientCount > 0 && (io.send_recipients ?? []).filter((r) => r.email.trim()).length === 0;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
