@@ -43,7 +43,11 @@ import {
   buildVendorIoPdfAttachmentFromBuffer,
 } from "@/lib/email/vendor-io-email";
 import { buildIoDeliveryNotificationMeta } from "@/lib/email/delivery-notification";
-import { getEmailFromAddress, sendEmail } from "@/lib/email/provider";
+import {
+  assertOutboundEmailReady,
+  getEmailFromAddress,
+  sendEmail,
+} from "@/lib/email/provider";
 import { CLIENT_IO_DOCUMENTS_BUCKET } from "@/lib/io/client-io-document-service";
 import {
   hasValidVendorEmail,
@@ -565,6 +569,11 @@ export async function sendClientIoAction(
     return { ok: false, message: recipientsPersistError.message };
   }
 
+  const emailReady = assertOutboundEmailReady();
+  if (!emailReady.ok) {
+    return { ok: false, message: emailReady.message };
+  }
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("full_name")
@@ -938,6 +947,13 @@ export async function sendVendorIoAction(
 
   const recipientEmail = influencer?.email?.trim() ?? "";
   const sendByEmail = hasValidVendorEmail(recipientEmail);
+
+  if (sendByEmail) {
+    const emailReady = assertOutboundEmailReady();
+    if (!emailReady.ok) {
+      return { ok: false, message: emailReady.message };
+    }
+  }
 
   const { data: profile } = await supabase
     .from("profiles")
