@@ -128,7 +128,8 @@ export async function createCampaign(
     name: input.name,
     brand,
     status: input.status,
-    currency_code: input.currency_code || brand.currency_code,
+    // Brand owns currency — never let a stale form default override brand SSOT.
+    currency_code: brand.currency_code || input.currency_code,
     start_date: input.start_date,
     end_date: input.end_date,
     account_manager_id: emptyToNull(input.account_manager_id),
@@ -140,7 +141,7 @@ export async function createCampaign(
     return { ok: false, message: headerError.message };
   }
 
-  const currency = input.currency_code || brand.currency_code;
+  const currency = brand.currency_code || input.currency_code;
   const fxRate = Number(input.fx_rate) || 1;
 
   const { error: poError } = await updateCampaignPoFields(supabase, header.id, {

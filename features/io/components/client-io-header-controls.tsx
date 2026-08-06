@@ -93,13 +93,7 @@ export function ClientIoHeaderControls({
         </Button>
       </form>
 
-      {hasDocument ? (
-        <ClientIoViewMenu
-          clientIoId={io.id}
-          size="sm"
-          variant="outline"
-        />
-      ) : null}
+      {hasDocument ? <ClientIoViewMenu clientIoId={io.id} size="sm" /> : null}
 
       <ClientIoSendControls
         io={io}

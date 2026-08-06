@@ -107,9 +107,8 @@ export function ClientIoEmailPreviewSection({
 
           <Button
             type="button"
-            variant="outline"
             size="sm"
-            className="h-8"
+            className="thinkway-campaign-btn thinkway-campaign-btn-primary h-8"
             onClick={() => setDialogOpen(true)}
           >
             <EyeIcon className="mr-1.5 size-3.5" />

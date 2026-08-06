@@ -73,7 +73,12 @@ type HeaderWithRelations = {
   start_date: string | null;
   end_date: string | null;
   metadata: Record<string, unknown>;
-  brand: { id: string; name: string; document_number: string } | null;
+  brand: {
+    id: string;
+    name: string;
+    document_number: string;
+    currency_code?: string | null;
+  } | null;
   client: {
     id: string;
     name: string;
@@ -746,6 +751,12 @@ export async function getCampaignWorkspace(
       }
     : null;
 
+  // Brand owns commercial currency; workspace display must stay synced even if
+  // the header row was written with a stale/default code (e.g. EGP).
+  const brandCurrency = headerRow.brand?.currency_code?.trim().toUpperCase() || null;
+  const workspaceCurrency =
+    brandCurrency || headerRow.currency_code?.trim().toUpperCase() || "USD";
+
   const workspace = {
     id: headerRow.id,
     document_number: headerRow.document_number,
@@ -753,7 +764,7 @@ export async function getCampaignWorkspace(
     description: headerRow.description,
     brief: campaignIntelligence?.requirementsSummary ?? headerRow.brief,
     status: headerRow.status,
-    currency_code: headerRow.currency_code,
+    currency_code: workspaceCurrency,
     start_date: headerRow.start_date,
     end_date: headerRow.end_date,
     target_market: targetMarket,
@@ -772,7 +783,7 @@ export async function getCampaignWorkspace(
     account_manager: headerRow.account_manager,
     po: {
       po_number: headerRow.po_number ?? null,
-      po_currency: headerRow.po_currency ?? headerRow.currency_code,
+      po_currency: headerRow.po_currency ?? workspaceCurrency,
       po_exchange_rate:
         headerRow.po_exchange_rate != null
           ? Number(headerRow.po_exchange_rate)
