@@ -19,6 +19,8 @@ type ClientIoSendControlsProps = {
   hasDocument: boolean;
   compact?: boolean;
   buttonVariant?: "default" | "outline";
+  /** Recipients are available (e.g. from contacts) but not yet saved on the IO. */
+  recipientsNeedSave?: boolean;
 };
 
 export function ClientIoSendControls({
@@ -29,6 +31,7 @@ export function ClientIoSendControls({
   hasDocument,
   compact = false,
   buttonVariant = "default",
+  recipientsNeedSave = false,
 }: ClientIoSendControlsProps) {
   const [sendState, sendAction, sending] = useActionState(sendClientIoAction, INITIAL_STATE);
 
@@ -78,6 +81,12 @@ export function ClientIoSendControls({
           {compact
             ? "Open Client IO tab → add recipients → Save draft"
             : "Add recipients above, then Save draft"}
+        </span>
+      ) : recipientsNeedSave ? (
+        <span className="text-[11px] text-muted-foreground">
+          {compact
+            ? "Contacts ready — Send now, or Save draft in Client IO tab"
+            : "Save draft to store recipients (Send still works)"}
         </span>
       ) : null}
     </form>

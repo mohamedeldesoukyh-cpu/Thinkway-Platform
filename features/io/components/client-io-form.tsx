@@ -116,15 +116,19 @@ export function ClientIoForm({
     return parseTermsText(row.terms_text) ?? defaultTerms;
   }, [row.terms_text, defaultTerms]);
 
+  const contactSeeds = useMemo(
+    () => recipients.map((r) => ({ label: r.label, email: r.email })),
+    [recipients]
+  );
+
   const [terms, setTerms] = useState<ClientIoTerm[]>(initialTerms);
   const [useDefaultTerms, setUseDefaultTerms] = useState(() => !parseTermsText(row.terms_text));
   const [billingTerms, setBillingTerms] = useState(row.billing_terms ?? "");
   const [attachmentUrl, setAttachmentUrl] = useState(row.attachment_url ?? "");
+  // UI may seed contacts for convenience, but dirty-check against persisted IO recipients
+  // so "Save draft" stays enabled until those seeds are stored.
   const [sendRecipients, setSendRecipients] = useState<ClientIoRecipientEntry[]>(() =>
-    seedRecipientsFromContacts(
-      parseSendRecipientsJson(row.send_recipients),
-      recipients.map((r) => ({ label: r.label, email: r.email }))
-    )
+    seedRecipientsFromContacts(parseSendRecipientsJson(row.send_recipients), contactSeeds)
   );
   const [draftBaseline, setDraftBaseline] = useState(() =>
     JSON.stringify({
@@ -132,10 +136,7 @@ export function ClientIoForm({
       useDefaultTerms: !parseTermsText(row.terms_text),
       billingTerms: row.billing_terms ?? "",
       attachmentUrl: row.attachment_url ?? "",
-      sendRecipients: seedRecipientsFromContacts(
-        parseSendRecipientsJson(row.send_recipients),
-        recipients.map((r) => ({ label: r.label, email: r.email }))
-      ),
+      sendRecipients: parseSendRecipientsJson(row.send_recipients),
     })
   );
 
@@ -155,10 +156,8 @@ export function ClientIoForm({
     const nextUseDefault = !parseTermsText(row.terms_text);
     const nextBilling = row.billing_terms ?? "";
     const nextAttachment = row.attachment_url ?? "";
-    const nextRecipients = seedRecipientsFromContacts(
-      parseSendRecipientsJson(row.send_recipients),
-      recipients.map((r) => ({ label: r.label, email: r.email }))
-    );
+    const nextPersistedRecipients = parseSendRecipientsJson(row.send_recipients);
+    const nextRecipients = seedRecipientsFromContacts(nextPersistedRecipients, contactSeeds);
     setTerms(nextTerms);
     setUseDefaultTerms(nextUseDefault);
     setBillingTerms(nextBilling);
@@ -170,10 +169,10 @@ export function ClientIoForm({
         useDefaultTerms: nextUseDefault,
         billingTerms: nextBilling,
         attachmentUrl: nextAttachment,
-        sendRecipients: nextRecipients,
+        sendRecipients: nextPersistedRecipients,
       })
     );
-  }, [row, defaultTerms, recipients]);
+  }, [row, defaultTerms, contactSeeds]);
 
   useEffect(() => {
     if (!saveState.message) return;
@@ -371,6 +370,11 @@ export function ClientIoForm({
               recipients={sendRecipients}
               onChange={setSendRecipients}
               disabled={saving}
+              unsavedHint={
+                draftDirty &&
+                parseSendRecipientsJson(row.send_recipients).length === 0 &&
+                sendRecipients.some((r) => r.email.trim())
+              }
             />
 
             <ClientIoEmailPreviewSection
@@ -505,6 +509,11 @@ export function ClientIoForm({
               sendRecipientsJson={sendRecipientsPayload}
               recipientCount={sendRecipients.filter((r) => r.email.trim()).length}
               hasDocument={hasDocument}
+              recipientsNeedSave={
+                draftDirty &&
+                parseSendRecipientsJson(row.send_recipients).length === 0 &&
+                sendRecipients.some((r) => r.email.trim())
+              }
             />
           </div>
           <Button

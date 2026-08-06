@@ -72,7 +72,14 @@ export function CampaignHeroActions({
           Media Plans
         </Link>
       </Button>
-      <ClientIoCampaignChrome io={workspace.client_io} campaignId={workspace.id} />
+      <ClientIoCampaignChrome
+        io={workspace.client_io}
+        campaignId={workspace.id}
+        contactRecipients={workspace.client_io_send_recipients.map((r) => ({
+          label: r.label,
+          email: r.email,
+        }))}
+      />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button

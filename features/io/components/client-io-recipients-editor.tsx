@@ -10,16 +10,25 @@ import {
   DETAIL_FORM_INPUT_CLASS,
   DetailFormSection,
 } from "@/features/campaigns/components/operational-detail-panel";
+import { getEmailFromAddress } from "@/lib/email/provider";
 import type { ClientIoRecipientEntry } from "@/lib/io/client-io-send-recipients";
 
 type Props = {
   recipients: ClientIoRecipientEntry[];
   onChange: (recipients: ClientIoRecipientEntry[]) => void;
   disabled?: boolean;
+  /** When true, recipients are shown but not yet stored — Save draft is required. */
+  unsavedHint?: boolean;
 };
 
-export function ClientIoRecipientsEditor({ recipients, onChange, disabled }: Props) {
+export function ClientIoRecipientsEditor({
+  recipients,
+  onChange,
+  disabled,
+  unsavedHint = false,
+}: Props) {
   const confirmDelete = useConfirmDelete();
+  const fromEmail = getEmailFromAddress();
 
   function updateRecipient(index: number, patch: Partial<ClientIoRecipientEntry>) {
     onChange(recipients.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -42,8 +51,10 @@ export function ClientIoRecipientsEditor({ recipients, onChange, disabled }: Pro
     <DetailFormSection label="IO recipients" className="py-3.5">
       <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
         Add one or more client contacts who will receive this Client IO from{" "}
-        <strong className="font-medium text-foreground">hello@thinkwaymedia.com</strong>. Save draft
-        before sending.
+        <strong className="font-medium text-foreground">{fromEmail}</strong>.{" "}
+        {unsavedHint
+          ? "Save draft to store recipients before sending from the toolbar."
+          : "Save draft before sending."}
       </p>
       <div className="space-y-2">
         {recipients.length === 0 ? (
