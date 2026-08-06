@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DocumentNumber } from "@/components/ui/document-number";
 import {
   DetailField,
+  DetailFieldGroup,
   DetailPanelHeader,
   DetailPill,
   DetailTabList,
@@ -92,44 +93,48 @@ export function InvoiceDetailSheet({ open, onOpenChange, row }: InvoiceDetailShe
 
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
               <TabsContent value="general" className="mt-0 outline-none">
-                <div className="px-1">
-                  <DetailField label="Invoice #">
-                    <DocumentNumber value={row.document_number} />
-                  </DetailField>
-                  <DetailField label="Client">{row.client_name}</DetailField>
-                  <DetailField label="Brand">{row.brand_name ?? "—"}</DetailField>
-                  <DetailField label="Campaign">
-                    {row.campaign_name ? (
-                      <div>
-                        <p>{row.campaign_name}</p>
-                        {row.campaign_document_number ? (
-                          <DocumentNumber
-                            value={row.campaign_document_number}
-                            className="text-[11px] text-muted-foreground"
-                          />
-                        ) : null}
-                      </div>
-                    ) : (
-                      "—"
-                    )}
-                  </DetailField>
-                  <DetailField label="Created">{formatInvoiceDate(row.created_date)}</DetailField>
-                  <DetailField label="Currency">
-                    <DetailPill>{row.currency}</DetailPill>
-                  </DetailField>
+                <div className="space-y-3 px-0.5">
+                  <DetailFieldGroup title="Invoice">
+                    <DetailField label="Invoice #">
+                      <DocumentNumber value={row.document_number} />
+                    </DetailField>
+                    <DetailField label="Client">{row.client_name}</DetailField>
+                    <DetailField label="Brand">{row.brand_name ?? "—"}</DetailField>
+                    <DetailField label="Campaign">
+                      {row.campaign_name ? (
+                        <div className="min-w-0">
+                          <p className="break-words leading-snug">{row.campaign_name}</p>
+                          {row.campaign_document_number ? (
+                            <DocumentNumber
+                              value={row.campaign_document_number}
+                              className="text-[11px] text-muted-foreground"
+                            />
+                          ) : null}
+                        </div>
+                      ) : (
+                        "—"
+                      )}
+                    </DetailField>
+                    <DetailField label="Created">{formatInvoiceDate(row.created_date)}</DetailField>
+                    <DetailField label="Currency">
+                      <DetailPill>{row.currency}</DetailPill>
+                    </DetailField>
+                  </DetailFieldGroup>
                 </div>
               </TabsContent>
               <TabsContent value="amounts" className="mt-0 outline-none">
-                <div className="px-1">
-                  <DetailField label="Revenue before VAT">
-                    {formatMoney(row.revenue_before_vat, row.currency)}
-                  </DetailField>
-                  <DetailField label="VAT">
-                    {formatMoney(row.vat_amount, row.currency)}
-                  </DetailField>
-                  <DetailField label="Revenue after VAT">
-                    {formatMoney(row.revenue_after_vat, row.currency)}
-                  </DetailField>
+                <div className="space-y-3 px-0.5">
+                  <DetailFieldGroup title="Amounts">
+                    <DetailField label="Revenue before VAT">
+                      {formatMoney(row.revenue_before_vat, row.currency)}
+                    </DetailField>
+                    <DetailField label="VAT">
+                      {formatMoney(row.vat_amount, row.currency)}
+                    </DetailField>
+                    <DetailField label="Revenue after VAT">
+                      {formatMoney(row.revenue_after_vat, row.currency)}
+                    </DetailField>
+                  </DetailFieldGroup>
                 </div>
               </TabsContent>
             </div>

@@ -71,11 +71,23 @@ test("milestones editable only on draft/generated tip", () => {
   assert.equal(isClientIoMilestoneEditable("approved", true), false);
 });
 
-test("payment schedule formatter includes sequence and percent", () => {
+test("payment schedule formatter is client-safe for net days", () => {
+  const text = formatClientIoMilestonesPaymentSchedule(
+    buildClientIoMilestoneTemplate("net_60")
+  );
+  assert.equal(
+    text,
+    "Net 60 Days — Payment due within 60 days of Client IO approval / invoice."
+  );
+  assert.ok(!text?.includes("1."));
+  assert.ok(!text?.startsWith("100%"));
+});
+
+test("payment schedule formatter includes split percent for multi-milestone", () => {
   const text = formatClientIoMilestonesPaymentSchedule(
     buildClientIoMilestoneTemplate("fifty_fifty")
   );
-  assert.ok(text?.includes("1."));
   assert.ok(text?.includes("50%"));
   assert.ok(text?.includes("On kickoff"));
+  assert.ok(!text?.includes("1."));
 });

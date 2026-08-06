@@ -100,12 +100,13 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
     id: "name",
     label: "Campaign",
     colWidth: "13%",
+    cellClassName: "min-w-0 whitespace-normal",
     renderCell: (campaign) => {
       const intel = campaignPortfolioIntel(campaign);
       return (
         <Link
           href={campaignDetailPathWithTab(campaign, intel.nextActionTab)}
-          className="text-xs font-semibold text-[var(--tw-text)] no-underline hover:text-[var(--tw-blue)]"
+          className="block min-w-0 break-words text-xs font-semibold leading-snug text-[var(--tw-text)] no-underline hover:text-[var(--tw-blue)]"
           title={`${intel.businessStageLabel} · ${intel.businessStateLabel}`}
         >
           {campaign.name}
@@ -124,12 +125,13 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
     id: "stage",
     label: "Business Stage",
     colWidth: "9%",
+    cellClassName: "min-w-0 whitespace-normal",
     renderCell: (campaign) => {
       const intel = campaignPortfolioIntel(campaign);
       return (
         <Link
           href={campaignDetailPathWithTab(campaign, intel.nextActionTab)}
-          className="text-xs font-medium text-[var(--tw-text)] no-underline hover:text-[var(--tw-blue)] hover:underline"
+          className="block min-w-0 break-words text-xs font-medium leading-snug text-[var(--tw-text)] no-underline hover:text-[var(--tw-blue)] hover:underline"
           title={`${intel.businessStateLabel} · Owner: ${intel.owner}`}
         >
           {intel.businessStageLabel}
@@ -145,14 +147,14 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
       const intel = campaignPortfolioIntel(campaign);
       return (
         <span
-          className="text-xs text-[var(--tw-text)]"
+          className="block min-w-0 break-words text-xs leading-snug text-[var(--tw-text)]"
           title={intel.reason}
         >
           {intel.waitingFor}
         </span>
       );
     },
-    cellClassName: "text-muted-foreground",
+    cellClassName: "min-w-0 whitespace-normal text-muted-foreground",
   },
   {
     id: "days_waiting",
@@ -203,12 +205,13 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
     id: "next_action",
     label: "Next Action",
     colWidth: "12%",
+    cellClassName: "min-w-0 whitespace-normal",
     renderCell: (campaign) => {
       const intel = campaignPortfolioIntel(campaign);
       return (
         <Link
           href={campaignDetailPathWithTab(campaign, intel.nextActionTab)}
-          className="text-xs font-semibold text-[var(--tw-blue)] no-underline hover:underline"
+          className="block min-w-0 break-words text-xs font-semibold leading-snug text-[var(--tw-blue)] no-underline hover:underline"
           title={`${intel.nextAction} · Owner: ${intel.owner} · ${intel.reason}`}
         >
           {intel.nextAction}
@@ -221,14 +224,14 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
     label: "Group · Legal entity",
     colWidth: "10%",
     renderCell: (campaign) => (
-      <>
+      <span className="block min-w-0 break-words leading-snug">
         {formatGroupDisplayName(campaign.group?.name)}
         {campaign.client?.legal_name || campaign.client?.name
           ? ` · ${campaign.client.legal_name ?? campaign.client.name}`
           : ""}
-      </>
+      </span>
     ),
-    cellClassName: "text-muted-foreground",
+    cellClassName: "min-w-0 whitespace-normal text-muted-foreground",
   },
   {
     id: "lines",

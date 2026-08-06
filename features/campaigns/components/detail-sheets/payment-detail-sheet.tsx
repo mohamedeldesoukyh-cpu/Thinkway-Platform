@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { DocumentNumber } from "@/components/ui/document-number";
 import {
   DetailField,
+  DetailFieldGroup,
   DetailPanelHeader,
   DetailPill,
   OperationalDetailSheet,
@@ -69,23 +70,25 @@ export function PaymentDetailSheet({
           />
 
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-            <div className="px-1">
-              <DetailField label="Payment #">
-                <DocumentNumber value={row.document_number} />
-              </DetailField>
-              <DetailField label="Invoice #">
-                <DocumentNumber value={row.invoice_document_number} />
-              </DetailField>
-              <DetailField label="Amount">
-                {formatMoney(row.amount, row.currency)}
-              </DetailField>
-              <DetailField label="Currency">
-                <DetailPill>{row.currency}</DetailPill>
-              </DetailField>
-              <DetailField label="Status" valueClassName="capitalize">
-                {row.status}
-              </DetailField>
-              <DetailField label="Paid at">{formatPaymentDate(row.paid_at)}</DetailField>
+            <div className="space-y-3 px-0.5">
+              <DetailFieldGroup title="Payment">
+                <DetailField label="Payment #">
+                  <DocumentNumber value={row.document_number} />
+                </DetailField>
+                <DetailField label="Invoice #">
+                  <DocumentNumber value={row.invoice_document_number} />
+                </DetailField>
+                <DetailField label="Amount">
+                  {formatMoney(row.amount, row.currency)}
+                </DetailField>
+                <DetailField label="Currency">
+                  <DetailPill>{row.currency}</DetailPill>
+                </DetailField>
+                <DetailField label="Status" valueClassName="capitalize">
+                  {row.status}
+                </DetailField>
+                <DetailField label="Paid at">{formatPaymentDate(row.paid_at)}</DetailField>
+              </DetailFieldGroup>
             </div>
           </div>
         </>
