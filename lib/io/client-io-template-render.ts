@@ -9,7 +9,7 @@ import {
 } from "@/lib/io/client-io-document-layout";
 import type { ClientIoDocumentData } from "@/lib/io/client-io-document-types";
 import { formatClientIoMilestoneTrigger } from "@/lib/io/client-io-milestones";
-import { renderTermsListHtml } from "@/lib/io/client-io-terms";
+import type { ClientIoTerm } from "@/lib/io/client-io-terms";
 import { IO_CLASSIC_DOCUMENT_STYLES } from "@/lib/io/io-classic-document-styles";
 import { THINKWAY_AGENCY_DEFAULTS } from "@/lib/io/thinkway-agency-defaults";
 import { formatMoneyDetail } from "@/lib/finance/currency-format";
@@ -49,14 +49,6 @@ function formatDuration(start: string | null, end: string | null): string {
   const to = fmt(end);
   if (from && to) return `${from} – ${to}`;
   return from || to || "——";
-}
-
-function formatIssuedMeta(issuedAt: string, country: string): string {
-  const parsed = new Date(issuedAt);
-  const monthYear = Number.isNaN(parsed.getTime())
-    ? "—"
-    : parsed.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
-  return `Issued ${monthYear} · ${escapeHtml(country)}`;
 }
 
 function platformLabel(platform: string): string {
@@ -203,6 +195,40 @@ function paymentTriggerLabel(data: ClientIoDocumentData): string {
   return formatClientIoMilestoneTrigger(first);
 }
 
+/** Compact Schedule cell — matches quotation-thinkway.html (not the long notes line). */
+function scheduleCardLabel(data: ClientIoDocumentData): string {
+  const milestones = data.billingMilestones ?? [];
+  if (milestones.length === 1) {
+    const only = milestones[0]!;
+    if (
+      only.percent === 100 &&
+      only.dueTrigger === "on_approval" &&
+      only.dueOffsetDays != null &&
+      only.dueOffsetDays > 0
+    ) {
+      return `100% — Net ${only.dueOffsetDays} days`;
+    }
+    const label = only.label
+      .replace(/^\d+\.\s*/, "")
+      .replace(/^100%\s*[—–-]\s*/i, "100% — ")
+      .trim();
+    if (label) return label;
+  }
+  const raw = data.paymentSchedule?.trim();
+  if (!raw) return "——";
+  return raw.split(/\s+[—–-]\s+Payment due/i)[0]!.trim() || raw;
+}
+
+/** Terms markup matches quotation-thinkway.html `.full-term` blocks. */
+function renderFullTermsHtml(terms: ClientIoTerm[]): string {
+  return terms
+    .map((term, index) => {
+      const title = term.title.replace(/\.\s*$/, "");
+      return `<div class="full-term"><span class="ftn">${index + 1}</span><div><span class="ftt">${escapeHtml(title)}.</span> <p>${escapeHtml(term.body)}</p></div></div>`;
+    })
+    .join("");
+}
+
 /** Shell kept for PDF print-CSS contract tests. */
 export function loadClientIoTemplate(): string {
   return readFileSync(TEMPLATE_PATH, "utf8");
@@ -217,17 +243,14 @@ export function renderClientIoHtml(
   const currency = data.currencyCode;
   const clientName = display(data.client.legalName ?? data.client.name);
   const { pricingRows } = applyClientIoDocumentLayout(data, layout);
-  const paymentSchedule = display(data.paymentSchedule);
-  const vatPill = data.pricing.vatExempt
-    ? "VAT Exempt"
-    : `VAT ${data.pricing.vatPercent}% Included`;
+  const scheduleLabel = escapeHtml(scheduleCardLabel(data));
+  const duration = formatDuration(data.campaign.startDate, data.campaign.endDate);
   const scope =
     "Influencer identification, contracting, briefing, content review, posting coordination, and performance reporting.";
 
-  const hero = `<div class="hero-c"><div class="top">
-   <div><div class="mkw"><span class="mk"></span><div class="logo-text">THINK<span>WAY</span></div></div><div class="subttl">Influencer Marketing Agency · Cairo, EG</div></div>
-   <div><div class="doctype">Client Insertion Order</div><div style="text-align:right"><span class="ciopill">${docNum}</span></div><div class="issue">${formatIssuedMeta(data.issuedAt, data.issuedCountry || agency.country)} · ${escapeHtml(currency)}</div></div>
- </div></div>`;
+  const hero = `<div class="hero"><div class="mkw"><span class="mk"></span><div class="logo-text">THINKWAY</div></div>
+  <div class="htype"><div class="lbl">Client Insertion Order · ${docNum}</div><h1>${display(data.campaign.name)}</h1>
+  <div class="hpills"><span class="hp">Brand · ${display(data.campaign.brandName)}</span><span class="hp">${display(data.campaign.targetMarket)}</span><span class="hp">${duration}</span><span class="hp">${display(data.campaign.channels)}</span></div></div></div>`;
 
   const parties = sec(
     "1",
@@ -264,7 +287,7 @@ export function renderClientIoHtml(
      "Brief",
      fld("Brand", display(data.campaign.brandName)) +
        fld("Campaign", display(data.campaign.name)) +
-       fld("Duration", formatDuration(data.campaign.startDate, data.campaign.endDate))
+       fld("Duration", duration)
    )}
    ${card(
      "Targeting",
@@ -290,10 +313,15 @@ export function renderClientIoHtml(
     `<div class="qgrid2">
    ${card(
      "Schedule & Method",
-     fld("Schedule", paymentSchedule) +
+     fld("Schedule", scheduleLabel) +
        fld("Trigger", escapeHtml(paymentTriggerLabel(data))) +
        fld("Method", escapeHtml(agency.paymentMethod)) +
-       fld("VAT", escapeHtml(data.pricing.vatExempt ? "Exempt" : `${data.pricing.vatPercent}% included`))
+       fld(
+         "VAT",
+         escapeHtml(
+           data.pricing.vatExempt ? "Exempt" : `${data.pricing.vatPercent}% included`
+         )
+       )
    )}
    ${card(
      "Beneficiary Bank",
@@ -303,12 +331,6 @@ export function renderClientIoHtml(
        fld("SWIFT", escapeHtml(agency.swift)) +
        fld("IBAN", escapeHtml(agency.iban))
    )}
- </div>
- <div class="terms-pills">
-   <span class="pill"><span class="dot"></span>${paymentSchedule}</span>
-   <span class="pill"><span class="dot"></span>${escapeHtml(agency.paymentMethod)}</span>
-   <span class="pill"><span class="dot"></span>${escapeHtml(vatPill)}</span>
-   <span class="pill"><span class="dot"></span>${escapeHtml(currency)} Currency</span>
  </div>`
   );
 
@@ -330,26 +352,29 @@ export function renderClientIoHtml(
    <p>This Client Insertion Order (Ref: <strong>${docNum}</strong>) has been issued by Thinkway to the Client named above. If the Client does not submit a written request for amendment or raise any objection within three (3) business days of receipt of this IO, the Client shall be deemed to have reviewed, accepted, and agreed to all terms, campaign details, deliverables, and pricing set forth herein. Thinkway will proceed with campaign execution accordingly.</p></div>`
   );
 
-  const terms = `<section class="qsec section" style="page-break-before:always;break-before:page"><div class="qh"><span class="qnum">8</span><h3 class="section-title">Terms &amp; Conditions</h3></div><ul class="terms-list">${renderTermsListHtml(data.terms)}</ul></section>`;
+  const terms = `<section class="qsec section" style="page-break-before:always;break-before:page"><div class="qh"><span class="qnum">8</span><h3 class="section-title">Terms &amp; Conditions</h3></div>${renderFullTermsHtml(data.terms)}</section>`;
 
   const foot = `<div class="qfoot">Thinkway (ثينكواي) · CR ${escapeHtml(agency.commercialRegister)} · VAT ${escapeHtml(agency.vatNumber)} · Tax Reg. ${escapeHtml(agency.taxRegistration)} · ${escapeHtml(agency.registeredAddress)} · ${escapeHtml(agency.email)}<br>CONFIDENTIAL &amp; PROPRIETARY — THINKWAY 2026 · ${docNum}</div>`;
 
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Client Insertion Order — ${docNum} — Thinkway</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Thinkway · Client Insertion Order · ${docNum}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 ${IO_CLASSIC_DOCUMENT_STYLES}
 </style>
 </head>
 <body>
-<div class="stage"><div class="paper"><div class="doc">
+<div class="paper"><div class="doc">
 ${hero}
 ${parties}${campaign}${roster}${pricing}${payment}${approve}${ack}${terms}
 ${foot}
-</div></div></div>
+</div></div>
 </body>
 </html>`;
 
