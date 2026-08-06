@@ -197,11 +197,75 @@
   .confidential { text-align: center; padding: 8px; font-size: 10.5px; font-weight: 600; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; background: var(--bg); }
 
   /* ── PRINT ───────────────────────────────────────── */
+  @page {
+    size: A4;
+    margin: 10mm 11mm;
+  }
+
   @media print {
     body { background: white; }
-    .page { margin: 0; box-shadow: none; border-radius: 0; }
-    .section { page-break-inside: avoid; }
-    .ack-grid { page-break-inside: avoid; }
+    .page {
+      margin: 0;
+      max-width: none;
+      box-shadow: none;
+      border-radius: 0;
+    }
+    .doc-body { padding: 20px 0 24px; }
+    .doc-header { padding: 22px 24px 18px; }
+    .doc-footer { padding: 12px 24px; }
+    .section { margin-bottom: 18px; break-inside: auto; page-break-inside: auto; }
+    /* Avoid orphaning section titles / compact blocks — not whole sections */
+    .section-label {
+      break-after: avoid;
+      page-break-after: avoid;
+    }
+    .field-row,
+    .pricing-row,
+    .process-box,
+    .ack-box,
+    .ack-grid,
+    .terms-pills,
+    .terms-list li {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .deliv-table {
+      break-inside: auto;
+      page-break-inside: auto;
+    }
+    .deliv-table thead {
+      display: table-header-group;
+    }
+    .deliv-table tr {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    /* Long commercial notes may need to split; keep header with first lines */
+    .influencer-notes-table tr {
+      break-inside: auto;
+      page-break-inside: auto;
+    }
+    .influencer-notes-table td {
+      orphans: 3;
+      widows: 3;
+    }
+    .page-break-note {
+      margin: 10px 0;
+      padding: 8px 0;
+      break-before: auto;
+      page-break-before: auto;
+      break-after: avoid;
+      page-break-after: avoid;
+    }
+    .doc-footer,
+    .confidential {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .confidential {
+      break-before: avoid;
+      page-break-before: avoid;
+    }
   }
 
   @media (max-width: 600px) {
