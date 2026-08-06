@@ -63,6 +63,7 @@ import {
 } from "@/lib/io/client-io-terms";
 import {
   parseSendRecipientsField,
+  parseSendRecipientsJson,
   serializeSendRecipients,
   type ClientIoRecipientEntry,
 } from "@/lib/io/client-io-send-recipients";
