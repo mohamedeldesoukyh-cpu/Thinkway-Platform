@@ -73,7 +73,7 @@ export function DetailField({
   onLabelClick?: () => void;
 }) {
   return (
-    <div className="flex items-start justify-between gap-6 border-b border-border/40 py-3.5 last:border-b-0">
+    <div className="flex items-start justify-between gap-4 border-b border-border/40 py-3 last:border-b-0 sm:gap-6">
       {onLabelClick ? (
         <button
           type="button"
@@ -88,9 +88,41 @@ export function DetailField({
       ) : (
         <span className={DETAIL_FIELD_LABEL_CLASS}>{label}</span>
       )}
-      <div className={cn("min-w-0 text-right text-sm text-foreground", valueClassName)}>
+      <div
+        className={cn(
+          "min-w-0 max-w-[65%] text-right text-sm text-foreground break-words whitespace-normal",
+          valueClassName
+        )}
+      >
         {children}
       </div>
+    </div>
+  );
+}
+
+/** System-card chrome for operational detail drawers (VIO / Finance / etc.). */
+export function DetailFieldGroup({
+  title,
+  children,
+  className,
+}: {
+  title?: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-xl border border-border/60 bg-card px-4 py-1 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_24px_-12px_rgba(16,24,40,0.12)]",
+        className
+      )}
+    >
+      {title ? (
+        <p className="border-b border-border/40 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          {title}
+        </p>
+      ) : null}
+      {children}
     </div>
   );
 }

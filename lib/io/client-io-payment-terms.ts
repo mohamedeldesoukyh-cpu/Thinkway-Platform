@@ -104,7 +104,7 @@ export function applyPaymentTermsClause(
 export function buildNetDaysMilestone(days: 30 | 60 | 90): ClientIoMilestoneDraft[] {
   return [
     {
-      label: `100% — Net ${days} Days`,
+      label: `Net ${days} Days`,
       milestoneKind: "upfront",
       percent: 100,
       dueTrigger: "on_approval",

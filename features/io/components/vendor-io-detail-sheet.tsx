@@ -14,6 +14,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DetailField,
+  DetailFieldGroup,
   DetailPill,
   DetailPanelHeader,
   DetailTabList,
@@ -57,64 +58,72 @@ function formatIoDateTime(value: string | null | undefined): string {
 
 function VendorIoGeneralTab({ row }: { row: VendorIoRow }) {
   return (
-    <div className="px-1">
-      <DetailField label="IO #">
-        <DocumentNumber value={row.document_number} />
-      </DetailField>
-      <DetailField label="Assignment">
-        <DocumentNumber value={row.assignment_document_number} />
-      </DetailField>
-      <DetailField label="Influencer">
-        <span className="inline-flex items-center justify-end gap-1.5">
-          <BriefcaseIcon className="size-3.5 text-muted-foreground" aria-hidden />
-          {row.influencer_id ? (
-            <Link
-              href={`/vendors/${row.influencer_id}`}
-              className="hover:text-primary hover:underline"
-            >
-              {row.influencer_name}
-            </Link>
-          ) : (
-            row.influencer_name
-          )}
-        </span>
-      </DetailField>
-      <DetailField label="Campaign">
-        <div>
-          <DocumentNumber value={row.campaign_document_number} />
-          <p className="mt-0.5 text-[11px] text-muted-foreground">{row.campaign_name}</p>
-        </div>
-      </DetailField>
-      <DetailField label="Amount">
-        {formatMoney(row.amount, row.currency_code)}
-      </DetailField>
-      <DetailField label="Currency">
-        <DetailPill>{row.currency_code}</DetailPill>
-      </DetailField>
-      <DetailField label="Workflow Status">
-        <IoStatusBadge status={row.status} />
-      </DetailField>
-      <DetailField label="Delivery">
-        {formatVendorIoDeliveryLabel(row.delivery_method, row.delivery_status) ? (
-          <VendorIoDeliveryBadge
-            deliveryMethod={row.delivery_method}
-            deliveryStatus={row.delivery_status}
-          />
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        )}
-      </DetailField>
-      <DetailField label="Ungenerate">
-        {row.ungenerate_eligible ? (
-          <DetailPill className="border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200">
-            Eligible
-          </DetailPill>
-        ) : (
-          <span className="text-muted-foreground">
-            {row.ungenerate_ineligible_reason ?? "Not eligible"}
+    <div className="space-y-3 px-0.5">
+      <DetailFieldGroup title="Order">
+        <DetailField label="IO #">
+          <DocumentNumber value={row.document_number} />
+        </DetailField>
+        <DetailField label="Assignment">
+          <DocumentNumber value={row.assignment_document_number} />
+        </DetailField>
+        <DetailField label="Influencer">
+          <span className="inline-flex items-center justify-end gap-1.5">
+            <BriefcaseIcon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+            {row.influencer_id ? (
+              <Link
+                href={`/vendors/${row.influencer_id}`}
+                className="hover:text-primary hover:underline"
+              >
+                {row.influencer_name}
+              </Link>
+            ) : (
+              row.influencer_name
+            )}
           </span>
-        )}
-      </DetailField>
+        </DetailField>
+        <DetailField label="Campaign">
+          <div className="min-w-0">
+            <DocumentNumber value={row.campaign_document_number} />
+            <p className="mt-0.5 break-words text-[11px] leading-snug text-muted-foreground">
+              {row.campaign_name}
+            </p>
+          </div>
+        </DetailField>
+      </DetailFieldGroup>
+      <DetailFieldGroup title="Commercial">
+        <DetailField label="Amount">
+          {formatMoney(row.amount, row.currency_code)}
+        </DetailField>
+        <DetailField label="Currency">
+          <DetailPill>{row.currency_code}</DetailPill>
+        </DetailField>
+        <DetailField label="Workflow Status">
+          <IoStatusBadge status={row.status} />
+        </DetailField>
+        <DetailField label="Delivery">
+          {formatVendorIoDeliveryLabel(row.delivery_method, row.delivery_status) ? (
+            <VendorIoDeliveryBadge
+              deliveryMethod={row.delivery_method}
+              deliveryStatus={row.delivery_status}
+            />
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
+        </DetailField>
+      </DetailFieldGroup>
+      <DetailFieldGroup title="Lifecycle">
+        <DetailField label="Ungenerate" valueClassName="max-w-[70%]">
+          {row.ungenerate_eligible ? (
+            <DetailPill className="border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200">
+              Eligible
+            </DetailPill>
+          ) : (
+            <span className="text-muted-foreground">
+              {row.ungenerate_ineligible_reason ?? "Not eligible"}
+            </span>
+          )}
+        </DetailField>
+      </DetailFieldGroup>
     </div>
   );
 }
@@ -130,73 +139,76 @@ function VendorIoTermsTab({ row }: { row: VendorIoRow }) {
   const source = resolveIoTermsSource(vendorTerms, ioTerms);
 
   return (
-    <div className="px-1">
-      <DetailField label="Usage rights" valueClassName="max-w-[60%]">
-        {row.usage_rights?.trim() || "—"}
-      </DetailField>
-      <DetailField label="Exclusivity" valueClassName="max-w-[60%]">
-        {row.exclusivity?.trim() || "—"}
-      </DetailField>
-      <DetailField label="Vendor payment terms" valueClassName="max-w-[60%]">
-        {row.vendor_payment_terms_label || "—"}
-      </DetailField>
-      <DetailField label="Special payment terms" valueClassName="max-w-[60%]">
-        {row.special_payment_terms?.trim() || "—"}
-      </DetailField>
-      <DetailField label="IO payment schedule" valueClassName="max-w-[60%]">
-        {row.effective_payment_terms_label || "—"}
-      </DetailField>
-      <VendorIoSignedAttachmentField row={row} />
-      <div className="border-b border-border/40 py-3.5 last:border-b-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Terms &amp; conditions
-          </p>
-          <IoTermsSourceBadge source={source} />
+    <div className="space-y-3 px-0.5">
+      <DetailFieldGroup title="Commercial terms">
+        <DetailField label="Usage rights" valueClassName="max-w-[70%]">
+          {row.usage_rights?.trim() || "—"}
+        </DetailField>
+        <DetailField label="Exclusivity" valueClassName="max-w-[70%]">
+          {row.exclusivity?.trim() || "—"}
+        </DetailField>
+        <DetailField label="Vendor payment terms" valueClassName="max-w-[70%]">
+          {row.vendor_payment_terms_label || "—"}
+        </DetailField>
+        <DetailField label="Special payment terms" valueClassName="max-w-[70%]">
+          {row.special_payment_terms?.trim() || "—"}
+        </DetailField>
+        <DetailField label="IO payment schedule" valueClassName="max-w-[70%]">
+          {row.effective_payment_terms_label || "—"}
+        </DetailField>
+        <VendorIoSignedAttachmentField row={row} />
+      </DetailFieldGroup>
+      <DetailFieldGroup title="Terms & conditions">
+        <div className="py-3">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <IoTermsSourceBadge source={source} />
+          </div>
+          <ul className="space-y-2 text-sm text-foreground">
+            {effective.map((term, index) => (
+              <li key={index} className="break-words">
+                <span className="font-medium">{index + 1}. {term.title}</span>{" "}
+                <span className="text-muted-foreground">{term.body}</span>
+              </li>
+            ))}
+          </ul>
         </div>
-        <ul className="mt-2 space-y-2 text-sm text-foreground">
-          {effective.map((term, index) => (
-            <li key={index}>
-              <span className="font-medium">{index + 1}. {term.title}</span>{" "}
-              <span className="text-muted-foreground">{term.body}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-      {termsHtml ? (
-        <div className="border-b border-border/40 py-3.5 last:border-b-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-            Generated document HTML
-          </p>
-          <p className="mt-2 line-clamp-6 whitespace-pre-wrap text-xs text-muted-foreground">
-            {termsHtml}
-          </p>
-        </div>
-      ) : null}
+        {termsHtml ? (
+          <div className="border-t border-border/40 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Generated document HTML
+            </p>
+            <p className="mt-2 line-clamp-6 whitespace-pre-wrap break-words text-xs text-muted-foreground">
+              {termsHtml}
+            </p>
+          </div>
+        ) : null}
+      </DetailFieldGroup>
     </div>
   );
 }
 
 function VendorIoActivityTab({ row }: { row: VendorIoRow }) {
   return (
-    <div className="px-1">
-      <DetailField label="Document generated">
-        {formatIoDateTime(row.document_generated_at)}
-      </DetailField>
-      <DetailField label="Sent">{formatIoDateTime(row.sent_at)}</DetailField>
-      <DetailField label="Approved">{formatIoDateTime(row.approved_at)}</DetailField>
-      <DetailField label="Approved by">{row.approved_by_name?.trim() || "—"}</DetailField>
-      {row.status === "rejected" ? (
-        <DetailField label="Rejection reason" valueClassName="max-w-[60%]">
-          {row.rejection_reason?.trim() || "—"}
+    <div className="space-y-3 px-0.5">
+      <DetailFieldGroup title="Timeline">
+        <DetailField label="Document generated">
+          {formatIoDateTime(row.document_generated_at)}
         </DetailField>
-      ) : null}
-      <DetailField label="Created">
-        {formatAssignmentDetailDate(row.created_at)}
-      </DetailField>
-      <DetailField label="Updated">
-        {formatAssignmentDetailDate(row.updated_at)}
-      </DetailField>
+        <DetailField label="Sent">{formatIoDateTime(row.sent_at)}</DetailField>
+        <DetailField label="Approved">{formatIoDateTime(row.approved_at)}</DetailField>
+        <DetailField label="Approved by">{row.approved_by_name?.trim() || "—"}</DetailField>
+        {row.status === "rejected" ? (
+          <DetailField label="Rejection reason" valueClassName="max-w-[70%]">
+            {row.rejection_reason?.trim() || "—"}
+          </DetailField>
+        ) : null}
+        <DetailField label="Created">
+          {formatAssignmentDetailDate(row.created_at)}
+        </DetailField>
+        <DetailField label="Updated">
+          {formatAssignmentDetailDate(row.updated_at)}
+        </DetailField>
+      </DetailFieldGroup>
     </div>
   );
 }

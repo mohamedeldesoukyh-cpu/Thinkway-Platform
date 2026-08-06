@@ -136,7 +136,7 @@ export function buildClientIoMilestoneTemplate(
       return [
         row(
           {
-            label: "100% — Net 30 Days",
+            label: "Net 30 Days",
             milestoneKind: "upfront",
             percent: 100,
             dueTrigger: "on_approval",
@@ -151,7 +151,7 @@ export function buildClientIoMilestoneTemplate(
       return [
         row(
           {
-            label: "100% — Net 60 Days",
+            label: "Net 60 Days",
             milestoneKind: "upfront",
             percent: 100,
             dueTrigger: "on_approval",
@@ -166,7 +166,7 @@ export function buildClientIoMilestoneTemplate(
       return [
         row(
           {
-            label: "100% — Net 90 Days",
+            label: "Net 90 Days",
             milestoneKind: "upfront",
             percent: 100,
             dueTrigger: "on_approval",
@@ -327,15 +327,37 @@ export function formatClientIoMilestoneTrigger(
   return base;
 }
 
+/** Client-facing label — never expose internal “1. 100%” sequencing. */
+function clientFacingMilestoneLabel(milestone: ClientIoMilestoneDraft): string {
+  return milestone.label
+    .replace(/^\d+\.\s*/, "")
+    .replace(/^100%\s*[—–-]\s*/i, "")
+    .trim() || milestone.label;
+}
+
+/**
+ * Client-facing payment schedule line for CIO preview / PDF.
+ * Single-milestone (e.g. Net 60): one clean sentence — no “1. 100%” / margin cues.
+ */
 export function formatClientIoMilestonesPaymentSchedule(
   milestones: ClientIoMilestoneDraft[]
 ): string | null {
   if (milestones.length === 0) return null;
+
+  if (milestones.length === 1) {
+    const milestone = milestones[0]!;
+    const label = clientFacingMilestoneLabel(milestone);
+    const notes = milestone.notes?.trim();
+    if (notes) return `${label} — ${notes}`;
+    return `${label} — ${formatClientIoMilestoneTrigger(milestone)}`;
+  }
+
   return milestones
-    .map((milestone, index) => {
+    .map((milestone) => {
+      const label = clientFacingMilestoneLabel(milestone);
       const trigger = formatClientIoMilestoneTrigger(milestone);
       const notes = milestone.notes ? ` — ${milestone.notes}` : "";
-      return `${index + 1}. ${milestone.label} — ${formatPercent(milestone.percent)} (${trigger})${notes}`;
+      return `${label} — ${formatPercent(milestone.percent)} (${trigger})${notes}`;
     })
     .join("; ");
 }

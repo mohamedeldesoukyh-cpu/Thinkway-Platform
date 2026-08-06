@@ -33,7 +33,8 @@ export function VendorIoRowActions({ row, onViewDetail }: Props) {
         row={row}
         variant="default"
         size="sm"
-        className="h-7 max-w-[7.25rem] truncate px-2 text-[11px] font-semibold"
+        compact
+        className="h-7 shrink-0 whitespace-nowrap px-2.5 text-[11px] font-semibold"
       />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

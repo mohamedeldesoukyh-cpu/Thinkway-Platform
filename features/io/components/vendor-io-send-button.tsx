@@ -20,6 +20,8 @@ type VendorIoSendButtonProps = {
   size?: "sm" | "default";
   variant?: "default" | "outline" | "link";
   className?: string;
+  /** Compact table label — avoids clipping “Mark as Delivered Manually”. */
+  compact?: boolean;
 };
 
 export function VendorIoSendButton({
@@ -27,6 +29,7 @@ export function VendorIoSendButton({
   size = "sm",
   variant = "default",
   className,
+  compact = false,
 }: VendorIoSendButtonProps) {
   const [state, action, pending] = useActionState(sendVendorIoAction, INITIAL_STATE);
   const canEmail = hasValidVendorEmail(row.influencer_email);
@@ -50,7 +53,9 @@ export function VendorIoSendButton({
     ? "Resend"
     : canEmail
       ? "Send by Email"
-      : "Mark as Delivered Manually";
+      : compact
+        ? "Mark Delivered"
+        : "Mark as Delivered Manually";
   const pendingLabel = canEmail || canResend ? "Sending…" : "Marking…";
 
   return (
