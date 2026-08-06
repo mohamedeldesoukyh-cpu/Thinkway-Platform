@@ -31,6 +31,8 @@ export function formatIoAgreedAmount(
   amount: number | null | undefined,
   currencyCode: string | null | undefined
 ): string {
+  // null/undefined must not coerce via Number(null) === 0.
+  if (amount == null) return "—";
   const value = Number(amount);
   if (!Number.isFinite(value)) return "—";
   return formatMoneyDetail(value, currencyCode);
@@ -49,7 +51,34 @@ export function sumClientIoLinesAgreedAmount(
   if (!snapshot.lines.length) return null;
   const currencyCode = snapshot.lines[0]?.currency_code?.trim() || "USD";
   const amount = snapshot.lines.reduce(
-    (sum, line) => sum + (Number(line.revenue) || 0),
+    (sum, line) =>
+      sum + (Number(line.revenue_before_vat ?? line.revenue) || 0),
+    0
+  );
+  return { amount, currencyCode };
+}
+
+/** Live preview total from selected composer assignments (before snapshot hydrate). */
+export function sumClientIoComposerAgreedAmount(
+  assignments: Array<{
+    id: string;
+    revenue_before_vat?: number | null;
+    currency_code?: string | null;
+  }>,
+  selectedAssignmentIds: string[] | null | undefined,
+  fallbackCurrencyCode?: string | null
+): { amount: number; currencyCode: string } | null {
+  const selected =
+    selectedAssignmentIds && selectedAssignmentIds.length > 0
+      ? assignments.filter((row) => selectedAssignmentIds.includes(row.id))
+      : assignments;
+  if (!selected.length) return null;
+  const currencyCode =
+    selected[0]?.currency_code?.trim() ||
+    fallbackCurrencyCode?.trim() ||
+    "USD";
+  const amount = selected.reduce(
+    (sum, row) => sum + (Number(row.revenue_before_vat) || 0),
     0
   );
   return { amount, currencyCode };

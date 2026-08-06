@@ -45,6 +45,7 @@ import {
   getClientIoPaymentTermsPreset,
   type ClientIoPaymentTermsPresetId,
 } from "@/lib/io/client-io-payment-terms";
+import { sumClientIoComposerAgreedAmount } from "@/lib/email/io-email-summary";
 import {
   parseSendRecipientsJson,
   seedRecipientsFromContacts,
@@ -79,6 +80,8 @@ type Props = {
   clientDefaultTermsText?: string | null;
   brandName?: string | null;
   currencyCode?: string;
+  campaignStartDate?: string | null;
+  campaignEndDate?: string | null;
   assignments?: ClientIoComposerAssignment[];
   versions?: ClientIoVersionSummary[];
   milestones?: ClientIoMilestoneDraft[];
@@ -103,6 +106,8 @@ export function ClientIoForm({
   clientDefaultTermsText = null,
   brandName = null,
   currencyCode = "EGP",
+  campaignStartDate = null,
+  campaignEndDate = null,
   assignments = [],
   versions = [],
   milestones = [],
@@ -224,6 +229,26 @@ export function ClientIoForm({
     () => serializeSendRecipients(sendRecipients),
     [sendRecipients]
   );
+
+  const emailSummary = useMemo(() => {
+    const agreed = sumClientIoComposerAgreedAmount(
+      assignments,
+      row.selected_assignment_ids,
+      currencyCode
+    );
+    return {
+      campaign_start_date: campaignStartDate,
+      campaign_end_date: campaignEndDate,
+      agreed_amount: agreed?.amount ?? null,
+      currency_code: agreed?.currencyCode ?? currencyCode,
+    };
+  }, [
+    assignments,
+    row.selected_assignment_ids,
+    currencyCode,
+    campaignStartDate,
+    campaignEndDate,
+  ]);
 
   const termsTextPayload = useMemo(() => {
     if (useDefaultTerms || termsAreEqual(terms, defaultTerms)) {
@@ -382,6 +407,7 @@ export function ClientIoForm({
               senderName={senderName}
               recipients={sendRecipients}
               hasDocument={hasDocument}
+              emailSummary={emailSummary}
             />
 
             <DetailFormSection label="Payment terms" className="py-3.5">
