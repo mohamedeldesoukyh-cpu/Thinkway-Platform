@@ -49,11 +49,24 @@ ${body}
 
 /** Prominent blue approval CTA + legal notice (platform IO emails). */
 export function renderEmailApprovalCta(url: string, label: string): string {
-  return `<p style="margin:8px 0 16px;text-align:center;">
-  <a href="${escapeEmailHtml(url)}"
-     style="display:inline-block;background:#0057FF;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:700;font-size:15px;letter-spacing:0.01em;">
-    ${escapeEmailHtml(label)}
-  </a>
+  const safeUrl = escapeEmailHtml(url);
+  const safeLabel = escapeEmailHtml(label);
+  // Table + bulletproof button pattern — Outlook/Gmail keep the link clickable.
+  return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:8px auto 16px;">
+  <tr>
+    <td align="center" bgcolor="#0057FF" style="border-radius:8px;background:#0057FF;">
+      <a href="${safeUrl}"
+         target="_blank"
+         rel="noopener noreferrer"
+         style="display:inline-block;background:#0057FF;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:8px;font-weight:700;font-size:15px;letter-spacing:0.01em;font-family:Arial,Helvetica,sans-serif;">
+        ${safeLabel}
+      </a>
+    </td>
+  </tr>
+</table>
+<p style="margin:0 0 12px;font-size:13px;line-height:1.55;color:#374151;text-align:center;">
+  Or open this link if the button is not clickable:<br>
+  <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="color:#0057FF;word-break:break-all;">${safeUrl}</a>
 </p>
 <p style="margin:0 0 24px;font-size:12px;line-height:1.55;color:#6B7280;text-align:left;">
   By selecting Approve, you confirm that you have reviewed the attached document and agree to its contents, terms and conditions. Your electronic approval will be securely recorded for audit purposes.
