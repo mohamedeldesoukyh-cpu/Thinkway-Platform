@@ -101,7 +101,7 @@ export const THINKWAY_REPORT_LOGO_STYLES = `
   }
 
   .thinkway-report-logo--header .thinkway-report-logo-img {
-    height: 22px;
+    height: 28px;
   }
 
   .thinkway-report-logo--cover .thinkway-report-logo-img {
@@ -168,10 +168,12 @@ export function applyThinkwayLogoToDocumentHtml(
     result = result.replace("</style>", `${THINKWAY_REPORT_LOGO_STYLES}</style>`);
   }
 
+  // Document headers (CIO / VIO / invoice) use navy backgrounds — use the
+  // dark-theme logo (white wordmark). Light-theme PNG makes "THINK" invisible.
   result = result
     .replace(
       LOGO_TEXT_PATTERN,
-      renderThinkwayReportLogoHtml({ variant: "header", theme: "light", ...logoSrcs })
+      renderThinkwayReportLogoHtml({ variant: "header", theme: "dark", ...logoSrcs })
     )
     .replace(
       COVER_BRAND_PATTERN,
