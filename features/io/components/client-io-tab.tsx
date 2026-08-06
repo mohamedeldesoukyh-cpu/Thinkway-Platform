@@ -58,7 +58,7 @@ export function ClientIoTab({
   recipients,
   sendHistory = [],
   senderName = null,
-  currencyCode = "EGP",
+  currencyCode = "USD",
   campaignStartDate = null,
   campaignEndDate = null,
   assignments = [],
@@ -234,6 +234,8 @@ export function ClientIoTab({
       collapseRegister
       registerCount={1}
       registerStorageKey={`client-io-${campaignId}`}
+      defaultRegisterOpen={false}
+      persistRegisterOpen={false}
       forceRegisterOpen={Boolean(forceOpenRegister)}
     >
       <ClientIoForm

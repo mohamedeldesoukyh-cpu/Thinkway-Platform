@@ -73,9 +73,10 @@ export function sumClientIoComposerAgreedAmount(
       ? assignments.filter((row) => selectedAssignmentIds.includes(row.id))
       : assignments;
   if (!selected.length) return null;
+  // Campaign/workspace currency wins — line codes may be stale defaults.
   const currencyCode =
-    selected[0]?.currency_code?.trim() ||
     fallbackCurrencyCode?.trim() ||
+    selected[0]?.currency_code?.trim() ||
     "USD";
   const amount = selected.reduce(
     (sum, row) => sum + (Number(row.revenue_before_vat) || 0),

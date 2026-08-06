@@ -11,7 +11,7 @@ export async function fetchCampaignHeaderWithRelations(
     .select(
       `
       *,
-      brand:brands(id, name, document_number),
+      brand:brands(id, name, document_number, currency_code),
       client:clients(
         id, name, document_number, legal_name, country,
         group:groups(id, name, document_number)

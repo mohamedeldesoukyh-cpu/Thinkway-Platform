@@ -24,7 +24,7 @@ export function ClientIoViewMenu({
   clientIoId,
   label = "View Client IO",
   size = "sm",
-  variant = "outline",
+  variant = "default",
 }: ClientIoViewMenuProps) {
   const base = `/ios/client/${clientIoId}/preview`;
 
@@ -34,10 +34,10 @@ export function ClientIoViewMenu({
         <Button
           variant={variant}
           size={size}
-          className="thinkway-campaign-btn h-[38px] gap-1.5 px-[15px] text-[13px]"
+          className="thinkway-campaign-btn thinkway-campaign-btn-primary h-[38px] gap-1.5 px-[15px] text-[13px]"
         >
           {label}
-          <ChevronDown className="size-3.5 opacity-70" aria-hidden />
+          <ChevronDown className="size-3.5 opacity-80" aria-hidden />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">

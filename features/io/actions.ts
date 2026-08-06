@@ -592,7 +592,7 @@ export async function sendClientIoAction(
   const [{ data: campaignDates }, { data: cioExtras }] = await Promise.all([
     supabase
       .from("campaign_headers")
-      .select("start_date, end_date, currency_code")
+      .select("start_date, end_date, currency_code, brand:brands(currency_code)")
       .eq("id", campaignHeaderId)
       .maybeSingle(),
     supabase
@@ -606,10 +606,16 @@ export async function sendClientIoAction(
     start_date: string | null;
     end_date: string | null;
     currency_code: string | null;
+    brand?: { currency_code?: string | null } | null;
   } | null;
   const agreed = sumClientIoSnapshotAgreedAmount(
     (cioExtras as { assignment_snapshot?: unknown } | null)?.assignment_snapshot
   );
+  const syncedCurrency =
+    campaignMeta?.brand?.currency_code?.trim() ||
+    campaignMeta?.currency_code?.trim() ||
+    agreed?.currencyCode ||
+    null;
 
   const emailSummary = {
     campaign_name: clientIo.campaign_name,
@@ -617,7 +623,7 @@ export async function sendClientIoAction(
     campaign_start_date: campaignMeta?.start_date ?? null,
     campaign_end_date: campaignMeta?.end_date ?? null,
     agreed_amount: agreed?.amount ?? null,
-    currency_code: agreed?.currencyCode ?? campaignMeta?.currency_code ?? null,
+    currency_code: syncedCurrency,
     document_number: clientIo.document_number,
   };
 

@@ -45,6 +45,8 @@ type CampaignWorkspaceFrameProps = {
   /** Force register open (deep-link to a row). */
   forceRegisterOpen?: boolean;
   defaultRegisterOpen?: boolean;
+  /** When false, do not remember expand state in sessionStorage. */
+  persistRegisterOpen?: boolean;
 };
 
 function toneClass(tone: WorkspaceSummaryStat["tone"]): string | undefined {
@@ -93,6 +95,7 @@ export function CampaignWorkspaceFrame({
   registerStorageKey,
   forceRegisterOpen = false,
   defaultRegisterOpen = false,
+  persistRegisterOpen = true,
 }: CampaignWorkspaceFrameProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const storageKey = registerStorageKey ?? title.toLowerCase().replace(/\s+/g, "-");
@@ -108,12 +111,28 @@ export function CampaignWorkspaceFrame({
       setRegisterHydrated(true);
       return;
     }
+    if (!persistRegisterOpen) {
+      setRegisterOpen(defaultRegisterOpen);
+      setRegisterHydrated(true);
+      return;
+    }
     setRegisterOpen(readRegisterOpen(storageKey, defaultRegisterOpen));
     setRegisterHydrated(true);
-  }, [collapseRegister, forceRegisterOpen, storageKey, defaultRegisterOpen]);
+  }, [
+    collapseRegister,
+    forceRegisterOpen,
+    storageKey,
+    defaultRegisterOpen,
+    persistRegisterOpen,
+  ]);
 
   useEffect(() => {
-    if (!collapseRegister || !registerHydrated || typeof window === "undefined") {
+    if (
+      !collapseRegister ||
+      !persistRegisterOpen ||
+      !registerHydrated ||
+      typeof window === "undefined"
+    ) {
       return;
     }
     try {
@@ -124,7 +143,13 @@ export function CampaignWorkspaceFrame({
     } catch {
       /* ignore */
     }
-  }, [collapseRegister, registerHydrated, registerOpen, storageKey]);
+  }, [
+    collapseRegister,
+    persistRegisterOpen,
+    registerHydrated,
+    registerOpen,
+    storageKey,
+  ]);
 
   const showRegister = !empty && children != null;
   const registerVisible =

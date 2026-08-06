@@ -105,7 +105,7 @@ export function ClientIoForm({
   senderName = null,
   clientDefaultTermsText = null,
   brandName = null,
-  currencyCode = "EGP",
+  currencyCode = "USD",
   campaignStartDate = null,
   campaignEndDate = null,
   assignments = [],
@@ -240,7 +240,8 @@ export function ClientIoForm({
       campaign_start_date: campaignStartDate,
       campaign_end_date: campaignEndDate,
       agreed_amount: agreed?.amount ?? null,
-      currency_code: agreed?.currencyCode ?? currencyCode,
+      // Always sync to campaign/workspace currency (brand SSOT upstream).
+      currency_code: currencyCode,
     };
   }, [
     assignments,

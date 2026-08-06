@@ -290,7 +290,12 @@ export type CampaignWorkspace = {
     document_number: string;
     legal_name: string | null;
   } | null;
-  brand: { id: string; name: string; document_number: string } | null;
+  brand: {
+    id: string;
+    name: string;
+    document_number: string;
+    currency_code?: string | null;
+  } | null;
   team: { id: string; name: string } | null;
   account_manager: {
     id: string;

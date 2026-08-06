@@ -42,9 +42,10 @@ describe("io approval email experience", () => {
         { id: "c", revenue_before_vat: 999, currency_code: "EGP" },
       ],
       ["a", "b"],
-      "EGP"
+      "USD"
     );
-    assert.deepEqual(sum, { amount: 18448, currencyCode: "EGP" });
+    // Campaign/workspace currency wins over stale line codes.
+    assert.deepEqual(sum, { amount: 18448, currencyCode: "USD" });
   });
 
   it("sums Client IO snapshot revenue as agreed amount", () => {
