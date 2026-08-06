@@ -14,7 +14,10 @@ import {
 } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import type { ClientIoRow } from "@/features/io/types";
 import { isClientIoRegenerateAllowed } from "@/lib/io/client-io-assignments";
-import { serializeSendRecipients } from "@/lib/io/client-io-send-recipients";
+import {
+  seedRecipientsFromContacts,
+  serializeSendRecipients,
+} from "@/lib/io/client-io-send-recipients";
 import { cn } from "@/lib/utils";
 
 const INITIAL_STATE = { ok: false } as const;
@@ -22,9 +25,15 @@ const INITIAL_STATE = { ok: false } as const;
 type Props = {
   io: ClientIoRow;
   campaignId: string;
+  /** Legal-entity contacts used to seed recipients when IO send list is empty. */
+  contactRecipients?: Array<{ label: string; email: string }>;
 };
 
-export function ClientIoHeaderControls({ io, campaignId }: Props) {
+export function ClientIoHeaderControls({
+  io,
+  campaignId,
+  contactRecipients = [],
+}: Props) {
   const [generateState, generateAction, generating] = useActionState(
     generateClientIoDocumentAction,
     INITIAL_STATE
@@ -40,7 +49,14 @@ export function ClientIoHeaderControls({ io, campaignId }: Props) {
     io.document_generated_at || io.generated_html_url || io.generated_pdf_url
   );
   const canRegenerate = isClientIoRegenerateAllowed(io.status);
-  const sendRecipientsJson = serializeSendRecipients(io.send_recipients ?? []);
+  const effectiveRecipients = seedRecipientsFromContacts(
+    io.send_recipients ?? [],
+    contactRecipients
+  );
+  const sendRecipientsJson = serializeSendRecipients(effectiveRecipients);
+  const recipientCount = effectiveRecipients.filter((r) => r.email.trim()).length;
+  const recipientsNeedSave =
+    recipientCount > 0 && (io.send_recipients ?? []).filter((r) => r.email.trim()).length === 0;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -89,9 +105,10 @@ export function ClientIoHeaderControls({ io, campaignId }: Props) {
         io={io}
         campaignId={campaignId}
         sendRecipientsJson={sendRecipientsJson}
-        recipientCount={(io.send_recipients ?? []).filter((r) => r.email.trim()).length}
+        recipientCount={recipientCount}
         hasDocument={hasDocument}
         compact
+        recipientsNeedSave={recipientsNeedSave}
       />
     </div>
   );

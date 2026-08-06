@@ -553,6 +553,18 @@ export async function sendClientIoAction(
     return { ok: false, message: "Add at least one recipient with a valid email address." };
   }
 
+  // Persist recipients used for this send (e.g. contact-seeded, not yet saved as draft).
+  const { error: recipientsPersistError } = await supabase
+    .from("client_ios")
+    .update({
+      send_recipients: recipients,
+      updated_by: user.id,
+    } as never)
+    .eq("id", id);
+  if (recipientsPersistError) {
+    return { ok: false, message: recipientsPersistError.message };
+  }
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("full_name")

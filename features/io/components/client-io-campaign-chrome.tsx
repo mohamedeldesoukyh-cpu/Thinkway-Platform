@@ -18,9 +18,14 @@ const INITIAL_STATE = { ok: false } as const;
 type Props = {
   io: ClientIoRow | null;
   campaignId: string;
+  contactRecipients?: Array<{ label: string; email: string }>;
 };
 
-export function ClientIoCampaignChrome({ io, campaignId }: Props) {
+export function ClientIoCampaignChrome({
+  io,
+  campaignId,
+  contactRecipients = [],
+}: Props) {
   const router = useRouter();
   const [ensureState, ensureAction, ensuring] = useActionState(
     ensureClientIoForCampaignAction,
@@ -37,7 +42,11 @@ export function ClientIoCampaignChrome({ io, campaignId }: Props) {
 
   if (io) {
     return (
-      <ClientIoHeaderControls io={io} campaignId={campaignId} />
+      <ClientIoHeaderControls
+        io={io}
+        campaignId={campaignId}
+        contactRecipients={contactRecipients}
+      />
     );
   }
 
