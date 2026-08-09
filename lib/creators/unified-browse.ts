@@ -62,7 +62,10 @@ import {
   type CreatorSearchHit,
 } from "@/lib/creators/fts-search";
 import { resolveBrowseCreatorProfileImageUrl } from "@/lib/performance/creator-avatar";
-import { normalizeDiscoverySearchQuery } from "@/lib/discovery/creator-search-query";
+import {
+  isExactCreatorLookupSearch,
+  normalizeDiscoverySearchQuery,
+} from "@/lib/discovery/creator-search-query";
 import { formatCreatorBio, formatCreatorDisplayName } from "@/lib/text/decode-html-entities";
 import {
   searchTrace,
@@ -1240,11 +1243,23 @@ async function resolveCreatorSearchHits(
   offset: number,
   tracePath: SearchTracePath = "unknown"
 ): Promise<CreatorSearchHitsResult> {
-  let response = await searchCreators(supabase, search, pageSize, offset, tracePath);
+  const normalizedQuery = normalizeDiscoverySearchQuery(search);
+  const exactLookup = isExactCreatorLookupSearch(search);
+  // Exact URL/@handle: small page + prefer normalized handle for the RPC.
+  const effectiveQuery =
+    exactLookup && normalizedQuery ? normalizedQuery : search;
+  const effectiveLimit = exactLookup ? Math.min(pageSize, 12) : pageSize;
+
+  let response = await searchCreators(
+    supabase,
+    effectiveQuery,
+    effectiveLimit,
+    offset,
+    tracePath
+  );
   if (response.hits.length > 0 || !search) return response;
 
-  const normalizedQuery = normalizeDiscoverySearchQuery(search);
-  if (normalizedQuery && normalizedQuery !== search.trim()) {
+  if (normalizedQuery && normalizedQuery !== search.trim() && !exactLookup) {
     response = await searchCreators(supabase, normalizedQuery, pageSize, offset, tracePath);
     if (response.hits.length > 0) return response;
   }
@@ -1252,7 +1267,7 @@ async function resolveCreatorSearchHits(
   const fallbackIds = await searchInfluencerIdsByHandleFallback(
     supabase,
     normalizedQuery || search,
-    pageSize
+    exactLookup ? Math.min(pageSize, 12) : pageSize
   );
   if (fallbackIds.length === 0) return { hits: [], totalCount: 0 };
 

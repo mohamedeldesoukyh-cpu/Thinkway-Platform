@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { searchTrace, type SearchTracePath } from "@/lib/creators/search-trace";
+import { isExactCreatorLookupSearch } from "@/lib/discovery/creator-search-query";
 
 export type FtsRankHit = {
   id: string;
@@ -166,19 +167,74 @@ function escapeIlikePattern(value: string): string {
 
 /**
  * Fallback handle/display-name match when search_vector is stale.
- * Unified search_creators covers most cases; this remains for edge post-import gaps.
+ * Exact URL/@handle lookups use equality / prefix — never `%needle%` substring noise.
  */
 export async function searchInfluencerIdsByHandleFallback(
   supabase: SupabaseClient,
   query: string,
   limit = 100
 ): Promise<FtsRankHit[]> {
-  const needle = query.trim().replace(/^@+/, "");
+  const trimmed = query.trim();
+  const needle = trimmed.replace(/^@+/, "");
   if (!needle) return [];
 
-  const pattern = `%${escapeIlikePattern(needle)}%`;
+  const exactLookup = isExactCreatorLookupSearch(trimmed);
+  const escaped = escapeIlikePattern(needle);
   const hits: FtsRankHit[] = [];
   const seen = new Set<string>();
+
+  if (exactLookup) {
+    const { data: exactAccounts, error: exactError } = await supabase
+      .from("influencer_platform_accounts")
+      .select("influencer_id")
+      .or(
+        [
+          `normalized_username.eq."${escaped}"`,
+          `username.eq."${escaped}"`,
+          `handle.eq."${escaped}"`,
+          `handle.eq."@${escaped}"`,
+        ].join(",")
+      )
+      .limit(limit);
+
+    if (exactError) throw new Error(exactError.message);
+
+    for (const row of exactAccounts ?? []) {
+      const id = row.influencer_id as string;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      hits.push({ id, rank: 1 });
+    }
+
+    if (hits.length > 0) return hits;
+
+    // Case-insensitive exact when normalized columns differ in casing.
+    const { data: ilikeExact, error: ilikeError } = await supabase
+      .from("influencer_platform_accounts")
+      .select("influencer_id")
+      .or(
+        [
+          `normalized_username.ilike."${escaped}"`,
+          `username.ilike."${escaped}"`,
+          `handle.ilike."${escaped}"`,
+          `handle.ilike."@${escaped}"`,
+        ].join(",")
+      )
+      .limit(limit);
+
+    if (ilikeError) throw new Error(ilikeError.message);
+
+    for (const row of ilikeExact ?? []) {
+      const id = row.influencer_id as string;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      hits.push({ id, rank: 0.9 });
+    }
+
+    return hits;
+  }
+
+  const pattern = `%${escaped}%`;
 
   const { data: accountMatches, error: accountError } = await supabase
     .from("influencer_platform_accounts")

@@ -654,7 +654,18 @@ export type BulkAddCreatorsToShortlistsInput = {
 
 export async function addCreatorsToShortlistsV2(
   input: BulkAddCreatorsToShortlistsInput
-): Promise<ActionResult & { added?: number; alreadyOnList?: number; failed?: number }> {
+): Promise<
+  ActionResult & {
+    added?: number;
+    alreadyOnList?: number;
+    failed?: number;
+    addedUnifiedIds?: string[];
+    alreadyUnifiedIds?: string[];
+  }
+> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+
   const shortlistIds = [...new Set((input.shortlistIds ?? []).filter(Boolean))];
   if (shortlistIds.length === 0) {
     return { ok: false, message: "Select at least one shortlist." };
@@ -663,38 +674,198 @@ export async function addCreatorsToShortlistsV2(
     return { ok: false, message: "Select at least one creator." };
   }
 
+  const resolvedCreators = input.creators.map((creator) =>
+    resolveAddCreatorRefs({
+      shortlistId: shortlistIds[0]!,
+      unifiedId: creator.unifiedId,
+      discoveredProfileId: creator.discoveredProfileId,
+      influencerId: creator.influencerId,
+      platformAccountIds: creator.platformAccountIds,
+      notes: creator.notes,
+      matchScore: creator.matchScore,
+    })
+  );
+
   let added = 0;
   let alreadyOnList = 0;
   let failed = 0;
   let firstError: string | null = null;
+  const addedUnifiedIds = new Set<string>();
+  const alreadyUnifiedIds = new Set<string>();
+  const INSERT_CHUNK = 40;
 
   for (const shortlistId of shortlistIds) {
-    for (const creator of input.creators) {
-      const result = await addCreatorToShortlistV2({
-        shortlistId,
-        unifiedId: creator.unifiedId,
-        discoveredProfileId: creator.discoveredProfileId,
-        influencerId: creator.influencerId,
-        platformAccountIds: creator.platformAccountIds,
-        notes: creator.notes,
-        matchScore: creator.matchScore,
+    const row = await loadShortlistRow(actor.supabase, shortlistId);
+    if (!row) {
+      failed += resolvedCreators.length;
+      firstError = firstError ?? "Shortlist not found.";
+      continue;
+    }
+    if (!canEditCreators(row.status)) {
+      failed += resolvedCreators.length;
+      firstError =
+        firstError ??
+        "Creators can only be added while the shortlist is a Draft or Under Review.";
+      continue;
+    }
+
+    const { data: existingRows, error: existingError } = await actor.supabase
+      .from("discovery_shortlist_items")
+      .select("id, profile_id, influencer_id, unified_id, collapse_group_id")
+      .eq("shortlist_id", shortlistId)
+      .is("collapse_group_id", null);
+
+    if (existingError) {
+      failed += resolvedCreators.length;
+      firstError = firstError ?? existingError.message;
+      continue;
+    }
+
+    const existingInfluencerIds = new Set<string>();
+    const existingProfileIds = new Set<string>();
+    const existingUnifiedIds = new Set<string>();
+    for (const item of existingRows ?? []) {
+      if (item.influencer_id) existingInfluencerIds.add(item.influencer_id);
+      if (item.profile_id) existingProfileIds.add(item.profile_id);
+      if (item.unified_id) existingUnifiedIds.add(item.unified_id);
+    }
+
+    const toInsert: Array<Record<string, unknown>> = [];
+    const allInsertedRows: Array<{
+      id: string;
+      influencer_id: string | null;
+      profile_id: string | null;
+      unified_id: string | null;
+    }> = [];
+
+    for (const resolved of resolvedCreators) {
+      if (!resolved.discoveredProfileId && !resolved.influencerId) {
+        failed += 1;
+        firstError = firstError ?? "A creator reference is required.";
+        continue;
+      }
+
+      const already =
+        (resolved.discoveredProfileId &&
+          existingProfileIds.has(resolved.discoveredProfileId)) ||
+        (resolved.influencerId && existingInfluencerIds.has(resolved.influencerId)) ||
+        (resolved.unifiedId && existingUnifiedIds.has(resolved.unifiedId));
+
+      if (already) {
+        alreadyOnList += 1;
+        if (resolved.unifiedId) alreadyUnifiedIds.add(resolved.unifiedId);
+        continue;
+      }
+
+      toInsert.push({
+        shortlist_id: shortlistId,
+        profile_id: resolved.discoveredProfileId || null,
+        influencer_id: resolved.influencerId || null,
+        unified_id: resolved.unifiedId || null,
+        platform_account_ids: resolved.platformAccountIds ?? [],
+        notes: resolved.notes?.trim() || null,
+        match_score: resolved.matchScore ?? null,
+        added_by: actor.userId,
       });
 
-      if (result.ok) {
-        if (result.message?.toLowerCase().includes("already")) {
-          alreadyOnList += 1;
-        } else {
-          added += 1;
-        }
-      } else {
-        failed += 1;
-        firstError = firstError ?? result.message ?? "Add failed";
+      if (resolved.influencerId) existingInfluencerIds.add(resolved.influencerId);
+      if (resolved.discoveredProfileId) {
+        existingProfileIds.add(resolved.discoveredProfileId);
+      }
+      if (resolved.unifiedId) existingUnifiedIds.add(resolved.unifiedId);
+    }
+
+    for (let i = 0; i < toInsert.length; i += INSERT_CHUNK) {
+      const chunk = toInsert.slice(i, i + INSERT_CHUNK);
+      const { data: inserted, error: insertError } = await actor.supabase
+        .from("discovery_shortlist_items")
+        .insert(chunk)
+        .select("id, influencer_id, profile_id, unified_id");
+
+      if (insertError) {
+        failed += chunk.length;
+        firstError = firstError ?? insertError.message;
+        continue;
+      }
+
+      const insertedRows = (inserted ?? []) as Array<{
+        id: string;
+        influencer_id: string | null;
+        profile_id: string | null;
+        unified_id: string | null;
+      }>;
+      added += insertedRows.length;
+      allInsertedRows.push(...insertedRows);
+      for (const item of insertedRows) {
+        if (item.unified_id) addedUnifiedIds.add(item.unified_id);
       }
     }
+
+    if (allInsertedRows.length > 0) {
+      // Persist first, then follow-ups. Inserts must not depend on quotation sync.
+      await Promise.all([
+        ...allInsertedRows.map((item) =>
+          logCreatorMovement(actor.supabase, {
+            action: "discovery_to_shortlist",
+            sourceType: "discovery",
+            sourceId: item.profile_id || item.influencer_id || null,
+            destinationType: "shortlist",
+            destinationId: shortlistId,
+            performedBy: actor.userId,
+            influencerId: item.influencer_id,
+            discoveredProfileId: item.profile_id,
+            unifiedId: item.unified_id,
+          })
+        ),
+        ...allInsertedRows.map((item) =>
+          item.influencer_id
+            ? ensureDiscoveryCreatorBrowsable(actor.supabase, item.influencer_id)
+            : item.profile_id
+              ? ensureDiscoveredProfileBrowsable(actor.supabase, item.profile_id)
+              : Promise.resolve()
+        ),
+      ]);
+
+      // Sequential — commercial sync uses a per-quotation lock.
+      for (const item of allInsertedRows) {
+        await syncShortlistChangeToQuotation(actor.supabase, {
+          shortlistId,
+          actorId: actor.userId,
+          shortlistItemId: item.id,
+        });
+      }
+
+      const controlSettings = await getDiscoveryControlSettings(actor.supabase);
+      if (shouldAutoEnrichForTrigger("shortlist", controlSettings)) {
+        for (const item of allInsertedRows) {
+          if (!item.influencer_id) continue;
+          enqueueCreatorEnrichmentBestEffort(
+            {
+              influencerId: item.influencer_id,
+              trigger: "shortlist",
+              scope: "all",
+              priority: priorityForTrigger("shortlist"),
+              force: false,
+            },
+            { feature: "shortlist" }
+          );
+        }
+      }
+    }
+
+    revalidateShortlist(shortlistId);
   }
 
   if (added === 0 && failed > 0) {
-    return { ok: false, message: firstError ?? "Failed to add creators.", added, alreadyOnList, failed };
+    return {
+      ok: false,
+      message: firstError ?? "Failed to add creators.",
+      added,
+      alreadyOnList,
+      failed,
+      addedUnifiedIds: [...addedUnifiedIds],
+      alreadyUnifiedIds: [...alreadyUnifiedIds],
+    };
   }
 
   const parts: string[] = [];
@@ -708,6 +879,8 @@ export async function addCreatorsToShortlistsV2(
     added,
     alreadyOnList,
     failed,
+    addedUnifiedIds: [...addedUnifiedIds],
+    alreadyUnifiedIds: [...alreadyUnifiedIds],
   };
 }
 

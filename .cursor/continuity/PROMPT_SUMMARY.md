@@ -1,7 +1,17 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `develop`  
-**Focus:** Product Excellence — Shortlist & Quotation templates (not Release 2.4)
+**Branch:** `feature/discovery-search-shortlist-fix` (from `develop`)  
+**Focus:** Discovery creator search accuracy/speed + bulk shortlist add
+
+## In progress — Creator search + shortlist bulk add
+
+- Paste profile URL → extract `@handle`, exact match only (no fuzzy wrong creators)
+- Name-only search stays hybrid (suggestions OK)
+- Fixed `parseProfileInput` treating bare words (`travel`, `reem`) as Instagram profiles
+- Search debounce 700→280ms; exact lookup uses equality + smaller page
+- Bulk shortlist: one server action + chunked insert (fixes 24 selected → ~12 saved)
+- Tests: intent engine + parse-profile-url — PASS
+- Not committed / not shipped yet
 
 ## Shortlist / Quotation export quality — SHIPPED
 
