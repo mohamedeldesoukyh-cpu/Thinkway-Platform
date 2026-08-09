@@ -580,7 +580,7 @@ function expandRosterRows(
         rows.push({
           handle: metricIndex === 0 ? row.handle : "",
           initials: row.initials,
-          avatarUrl: metricIndex === 0 ? row.avatarUrl : null,
+          avatarUrl: metricIndex === 0 ? row.avatarUrl ?? null : null,
           followers: metric.followers,
           er: metric.engagement,
           tier: metricIndex === 0 ? row.tier : "",
@@ -595,7 +595,7 @@ function expandRosterRows(
     rows.push({
       handle: row.handle,
       initials: row.initials,
-      avatarUrl: row.avatarUrl,
+      avatarUrl: row.avatarUrl ?? null,
       followers: row.followers,
       er: row.er,
       tier: row.tier,
