@@ -1530,16 +1530,16 @@ function drawShowcaseMetricCards(
       x,
       y,
       w: cardW,
-      h: 0.92,
+      h: 0.7,
       fill: { color: WHITE },
       line: { color: HAIR, width: 1 },
-      rectRadius: 0.12,
+      rectRadius: 0.1,
     });
     slide.addText(card.label, {
-      x: x + 0.14,
-      y: y + 0.14,
-      w: cardW - 0.28,
-      h: 0.2,
+      x: x + 0.12,
+      y: y + 0.08,
+      w: cardW - 0.24,
+      h: 0.18,
       fontFace: FONT_UI,
       fontSize: 9,
       bold: true,
@@ -1547,17 +1547,17 @@ function drawShowcaseMetricCards(
       charSpacing: 1,
     });
     slide.addText(card.value, {
-      x: x + 0.14,
-      y: y + 0.4,
-      w: cardW - 0.28,
-      h: 0.36,
+      x: x + 0.12,
+      y: y + 0.3,
+      w: cardW - 0.24,
+      h: 0.3,
       fontFace: FONT_UI,
-      fontSize: 22,
+      fontSize: 18,
       bold: true,
       color: card.accent ? BLUE : TITLE_INK,
     });
   });
-  return y + 1.08;
+  return y + 0.82;
 }
 
 async function addCreatorSlide(
@@ -1573,9 +1573,9 @@ async function addCreatorSlide(
 
   const pitch = isPitchTemplate(doc.template);
   const showFees = payload.flags.showFees;
-  const pubThumbSize = pitch ? Math.min(PITCH_PUB_THUMB_SIZE, 1.35) : 1.2;
   const pubCols = 4;
   const pubLimit = 4;
+  const pubGap = 0.14;
 
   const handleForUrl = creator.handle.replace(/^@/, "").trim();
   const synthesizedProfileUrl =
@@ -1591,37 +1591,54 @@ async function addCreatorSlide(
     ...group.platformMetrics.map((row) => row.profileUrl),
     synthesizedProfileUrl,
   ]);
+  const handleKey = creator.handle.replace(/^@/, "").trim().toLowerCase();
+  const rawName = (creator.name || "").trim();
+  const nameKey = rawName.replace(/^@/, "").trim().toLowerCase();
+  const displayName =
+    rawName && rawName !== "Creator" && nameKey !== handleKey
+      ? rawName
+      : rawName || creator.handle.replace(/^@/, "");
 
   const slide = pptx.addSlide();
   applyContentBackground(slide);
   const pageNo = nextSlideNo(counter);
-  addBrandLockup(slide, "dark", 0.42, 0.32);
+  addBrandLockup(slide, "dark", 0.42, 0.28);
 
   slide.addText(`CREATOR ${creator.index} OF ${payload.totals.creatorCount}`, {
     x: MARGIN_X,
-    y: 0.95,
+    y: 0.88,
     w: 10,
-    h: 0.22,
+    h: 0.2,
     fontFace: FONT_UI,
     fontSize: 11,
     bold: true,
     color: BLUE,
     charSpacing: 1.4,
   });
-  slide.addText(creator.handle, {
+  slide.addText(displayName, {
     x: MARGIN_X,
-    y: 1.2,
+    y: 1.1,
     w: CONTENT_W,
-    h: 0.42,
+    h: 0.36,
     fontFace: FONT_UI,
-    fontSize: 30,
+    fontSize: 28,
     bold: true,
     color: TITLE_INK,
     ...(profileLink ? { hyperlink: profileLink } : {}),
   });
+  slide.addText(creator.handle, {
+    x: MARGIN_X,
+    y: 1.44,
+    w: CONTENT_W,
+    h: 0.24,
+    fontFace: FONT_BODY,
+    fontSize: 14,
+    color: MUTED,
+    ...(profileLink ? { hyperlink: profileLink } : {}),
+  });
 
-  const avatarSize = pitch ? Math.min(PITCH_AVATAR_SIZE, 1.35) : 1.05;
-  const avatarY = 1.75;
+  const avatarSize = pitch ? Math.min(PITCH_AVATAR_SIZE, 1.1) : 0.82;
+  const avatarY = 1.72;
   await addThinkwayCreatorAvatar(slide, {
     avatarUrl: group.avatarUrl,
     initials: creator.initials,
@@ -1632,22 +1649,22 @@ async function addCreatorSlide(
     profileHref: profileLink?.url ?? creator.profileUrl ?? group.profileUrl,
   });
 
-  const nameX = MARGIN_X + avatarSize + 0.28;
+  const nameX = MARGIN_X + avatarSize + 0.24;
   // Tier pill
   slide.addShape("roundRect", {
     x: nameX,
-    y: avatarY + 0.06,
+    y: avatarY + 0.02,
     w: Math.min(1.15, 0.55 + creator.tier.length * 0.1),
-    h: 0.28,
+    h: 0.26,
     fill: { color: "EEF3FF" },
     line: { type: "none" },
     rectRadius: 0.14,
   });
   slide.addText(creator.tier.toUpperCase(), {
     x: nameX,
-    y: avatarY + 0.06,
+    y: avatarY + 0.02,
     w: Math.min(1.15, 0.55 + creator.tier.length * 0.1),
-    h: 0.28,
+    h: 0.26,
     fontFace: FONT_UI,
     fontSize: 10,
     bold: true,
@@ -1657,23 +1674,33 @@ async function addCreatorSlide(
   });
   slide.addText(creator.categories, {
     x: nameX + Math.min(1.15, 0.55 + creator.tier.length * 0.1) + 0.12,
-    y: avatarY + 0.08,
+    y: avatarY + 0.04,
     w: 4,
-    h: 0.24,
+    h: 0.22,
     fontFace: FONT_BODY,
     fontSize: 13,
     color: MUTED,
     valign: "middle",
   });
-  slide.addText(creator.handle, {
+  slide.addText(displayName, {
     x: nameX,
-    y: avatarY + 0.42,
+    y: avatarY + 0.34,
     w: 6,
-    h: 0.26,
+    h: 0.22,
     fontFace: FONT_UI,
     fontSize: 14,
     bold: true,
     color: TITLE_INK,
+    ...(profileLink ? { hyperlink: profileLink } : {}),
+  });
+  slide.addText(creator.handle, {
+    x: nameX,
+    y: avatarY + 0.56,
+    w: 6,
+    h: 0.2,
+    fontFace: FONT_BODY,
+    fontSize: 12,
+    color: MUTED,
     ...(profileLink ? { hyperlink: profileLink } : {}),
   });
   const platformLabel = creator.platformIcons
@@ -1683,43 +1710,47 @@ async function addCreatorSlide(
     slide,
     creator.platformIcons,
     nameX,
-    avatarY + 0.72,
+    avatarY + 0.8,
     6,
     profileLink?.url ?? creator.profileUrl ?? group.profileUrl,
-    0.2,
+    0.18,
     { overlap: true }
   );
   slide.addText(platformLabel || creator.platforms, {
-    x: nameX + creator.platformIcons.length * 0.22 + 0.08,
-    y: avatarY + 0.7,
+    x: nameX + creator.platformIcons.length * 0.2 + 0.08,
+    y: avatarY + 0.78,
     w: 5,
-    h: 0.24,
+    h: 0.22,
     fontFace: FONT_BODY,
     fontSize: 12,
     color: MUTED,
     valign: "middle",
   });
 
-  let contentY = drawShowcaseMetricCards(slide, creator, avatarY + avatarSize + 0.18);
+  let contentY = drawShowcaseMetricCards(slide, creator, avatarY + avatarSize + 0.12);
+
+  const { summary, feeLabel } = creatorDeliverableSummary(creator);
+  const barY = CONTENT_BOTTOM - 0.78;
+  // Full-width publication row (match reference Redesign) — size by width, clamp by height.
+  const widthThumb = (CONTENT_W - pubGap * (pubCols - 1)) / pubCols;
+  const heightThumb = Math.max(1.25, barY - contentY - 0.4);
+  const pubThumbSize = Math.min(widthThumb, heightThumb);
 
   if (group.publicationShots.length > 0) {
     contentY = await addPublicationThumbs(
       slide,
       group.publicationShots.slice(0, pubLimit),
-      contentY + 0.04,
+      contentY + 0.02,
       "Recent publications",
       pubCols,
       pubThumbSize,
       {
         centered: false,
-        gap: pitch ? 0.16 : PUB_GAP,
-        frameless: Boolean(pitch),
+        gap: pubGap,
+        frameless: true,
       }
     );
   }
-
-  const { summary, feeLabel } = creatorDeliverableSummary(creator);
-  const barY = Math.min(contentY + 0.12, CONTENT_BOTTOM - 0.85);
   slide.addShape("roundRect", {
     x: MARGIN_X,
     y: barY,

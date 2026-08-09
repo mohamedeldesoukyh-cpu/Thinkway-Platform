@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 
-import { decodeHtmlEntities, formatCreatorBio, formatCreatorDisplayName } from "./decode-html-entities";
+import {
+  decodeHtmlEntities,
+  formatCreatorBio,
+  formatCreatorDisplayName,
+  isUsernameLikeCreatorName,
+  pickCreatorDisplayName,
+} from "./decode-html-entities";
 
 assert.equal(decodeHtmlEntities("&amp; &quot; &lt;"), '& " <');
 assert.equal(decodeHtmlEntities("&#39;"), "'");
@@ -30,5 +36,15 @@ assert.equal(formatCreatorDisplayName("TikTok"), "");
 assert.equal(formatCreatorDisplayName("Instagram photos and videos"), "");
 assert.equal(formatCreatorBio("Beauty &amp; lifestyle"), "Beauty & lifestyle");
 assert.equal(formatCreatorBio(null), null);
+assert.equal(isUsernameLikeCreatorName("salehelnawawy", "@salehelnawawy"), true);
+assert.equal(isUsernameLikeCreatorName("Saleh El Nawawy", "@salehelnawawy"), false);
+assert.equal(
+  pickCreatorDisplayName(["salehelnawawy", "Saleh El Nawawy"], "@salehelnawawy"),
+  "Saleh El Nawawy"
+);
+assert.equal(
+  pickCreatorDisplayName(["salehelnawawy", null], "salehelnawawy"),
+  "salehelnawawy"
+);
 
 console.log("decode-html-entities tests passed");

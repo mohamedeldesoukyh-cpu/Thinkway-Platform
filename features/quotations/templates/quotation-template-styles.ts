@@ -269,7 +269,10 @@ export const QUOTATION_TEMPLATE_STYLES = `
     color:var(--blue); margin:0 0 6px;
   }
   .sc-title{
-    font-size:34px; font-weight:800; letter-spacing:-.8px; color:var(--navy); margin:0 0 16px;
+    font-size:34px; font-weight:800; letter-spacing:-.8px; color:var(--navy); margin:0 0 4px;
+  }
+  .sc-title-handle{
+    font-size:15px; font-weight:600; color:var(--muted); margin:0 0 14px;
   }
   .sc-top{display:flex; align-items:flex-start; gap:18px; margin-bottom:16px;}
   .sc-avatar{width:88px; height:88px; border-radius:999px; background:var(--grad); color:#fff; display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:800; flex:none; overflow:hidden; box-shadow:0 0 0 3px #eaf1ff, 0 0 0 5px var(--blue);}
@@ -297,20 +300,29 @@ export const QUOTATION_TEMPLATE_STYLES = `
   .sc-platforms .quotation-platform-icon{width:16px; height:16px;}
   .sc-profile-link{color:inherit; text-decoration:none;}
   .sc-metric-grid{
-    display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:0 0 16px;
+    display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:0 0 10px;
   }
   .sc-metric{
-    background:#fff; border:1px solid var(--border); border-radius:14px; padding:14px 16px;
+    background:#fff; border:1px solid var(--border); border-radius:12px; padding:10px 12px;
     box-shadow:0 1px 2px rgba(16,24,40,.04);
   }
-  .sc-metric .ml{font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin:0 0 8px;}
-  .sc-metric .mv{font-size:22px; font-weight:800; letter-spacing:-.4px; color:var(--navy); margin:0; font-variant-numeric:tabular-nums;}
+  .sc-metric .ml{font-size:9.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin:0 0 6px;}
+  .sc-metric .mv{font-size:20px; font-weight:800; letter-spacing:-.4px; color:var(--navy); margin:0; font-variant-numeric:tabular-nums;}
   .sc-metric .mv.accent{color:var(--blue);}
   .sc-sub{font-size:10.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--blue); margin:0 0 8px;}
-  .pubs, .showcase-pubs-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px;}
+  .pubs, .showcase-pubs-grid{
+    display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:0 0 12px;
+    flex:1 1 auto; align-content:stretch; min-height:148px;
+  }
   .pub, .showcase-pub-card{
-    aspect-ratio:1/1; border-radius:10px; background:var(--tint); border:1px solid var(--border);
-    overflow:hidden; position:relative; height:96px;
+    border-radius:12px; background:var(--tint); border:1px solid var(--border);
+    overflow:hidden; position:relative; width:100%; height:100%; min-height:148px;
+  }
+  .showcase-creator-page .showcase-pubs-grid{
+    min-height:168px;
+  }
+  .showcase-creator-page .showcase-pubs-grid .showcase-pub-card{
+    min-height:168px;
   }
   .pub img, .showcase-pub-thumb{width:100%; height:100%; object-fit:cover; display:block;}
   .pub-play{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none;}
@@ -320,7 +332,7 @@ export const QUOTATION_TEMPLATE_STYLES = `
   .sc-deliverable-bar{
     display:flex; align-items:center; justify-content:space-between; gap:16px;
     background:var(--tint); border:1px solid var(--border); border-radius:14px; padding:14px 18px;
-    margin-top:auto;
+    margin-top:auto; flex:none;
   }
   .sc-deliverable-bar .dl{font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin:0 0 4px;}
   .sc-deliverable-bar .dv{font-size:13px; font-weight:600; color:var(--navy); margin:0; line-height:1.4;}

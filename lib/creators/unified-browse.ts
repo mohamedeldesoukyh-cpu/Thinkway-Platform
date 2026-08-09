@@ -66,7 +66,11 @@ import {
   isExactCreatorLookupSearch,
   normalizeDiscoverySearchQuery,
 } from "@/lib/discovery/creator-search-query";
-import { formatCreatorBio, formatCreatorDisplayName } from "@/lib/text/decode-html-entities";
+import {
+  formatCreatorBio,
+  formatCreatorDisplayName,
+  pickCreatorDisplayName,
+} from "@/lib/text/decode-html-entities";
 import {
   searchTrace,
   traceCountDrop,
@@ -918,8 +922,8 @@ async function fetchInternalCreators(
   // slimRecentPublicationsForBrowse keeps ≤3 creator-level display rows and strips
   // platform JSONB. Do not pull bio/contacts/hashtags on the list path.
   const accountSelect = omitHeavyFields
-    ? "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, avg_likes, avg_comments, avg_views, audience_country, is_verified, is_primary, profile_picture_url, recent_publications, metrics_source, sync_status, sync_source, sync_error, metrics_is_manual_override, metadata, avatar_source, interest_categories, enrichment_status"
-    : "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, avg_likes, avg_comments, avg_views, audience_country, is_verified, is_primary, profile_picture_url, profile_bio, hashtags, mentions, recent_publications, contact_email, contact_phone, contact_links, metrics_source, sync_status, sync_source, sync_error, metrics_is_manual_override, metadata, avatar_source, interest_categories, enrichment_status";
+    ? "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, avg_likes, avg_comments, avg_views, audience_country, is_verified, is_primary, profile_picture_url, profile_display_name, recent_publications, metrics_source, sync_status, sync_source, sync_error, metrics_is_manual_override, metadata, avatar_source, interest_categories, enrichment_status"
+    : "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, avg_likes, avg_comments, avg_views, audience_country, is_verified, is_primary, profile_picture_url, profile_display_name, profile_bio, hashtags, mentions, recent_publications, contact_email, contact_phone, contact_links, metrics_source, sync_status, sync_source, sync_error, metrics_is_manual_override, metadata, avatar_source, interest_categories, enrichment_status";
 
   type PlatformAccountHydrationRow = MetricsPlatformAccount & {
     influencer_id: string;
@@ -1084,16 +1088,23 @@ async function fetchInternalCreators(
       influencer_id: r.id,
       discovered_profile_id: discoveryByInfluencer.get(r.id) ?? null,
       document_number: r.document_number,
-      display_name:
-        formatCreatorDisplayName(r.display_name) ||
-        formatCreatorDisplayName(
+      display_name: pickCreatorDisplayName(
+        [
+          // Prefer platform full names first when influencer.display_name is just the handle.
           (metricsAccount as { profile_display_name?: string | null } | undefined)
-            ?.profile_display_name
-        ) ||
-        metricsAccount?.handle?.replace(/^@+/, "").trim() ||
-        (metricsAccount as { username?: string | null } | undefined)?.username?.trim() ||
-        r.document_number ||
-        "Creator",
+            ?.profile_display_name,
+          ...platformRows.map(
+            (row) =>
+              (row as { profile_display_name?: string | null }).profile_display_name
+          ),
+          r.display_name,
+          metricsAccount?.handle?.replace(/^@+/, "").trim(),
+          (metricsAccount as { username?: string | null } | undefined)?.username?.trim(),
+          r.document_number,
+        ],
+        metricsAccount?.handle ??
+          (metricsAccount as { username?: string | null } | undefined)?.username
+      ),
       status: r.status,
       country_code: r.country_code,
       country_codes: resolveCreatorCountryCodes({
@@ -1384,11 +1395,10 @@ function mapDiscoveryProfileToUnifiedResults(
       influencer_id: null,
       discovered_profile_id: profile.id,
       document_number: null,
-      display_name:
-        formatCreatorDisplayName(profile.display_name) ||
-        formatCreatorDisplayName(profile.username) ||
-        profile.username?.trim() ||
-        "Creator",
+      display_name: pickCreatorDisplayName(
+        [profile.display_name, profile.username],
+        profile.username
+      ),
       status: profile.stage,
       country_code: profile.country_code,
       estimated_country: profile.country_code,

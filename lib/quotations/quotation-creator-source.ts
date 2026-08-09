@@ -10,7 +10,7 @@ import {
   normalizeThinkwayStoredAvatarUrl,
 } from "@/lib/performance/creator-avatar";
 import { isDisplayableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
-import { formatCreatorDisplayName } from "@/lib/text/decode-html-entities";
+import { pickCreatorDisplayName } from "@/lib/text/decode-html-entities";
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 
 function resolveItemProfileUrl(item: QuotationItemRow): string | null {
@@ -92,11 +92,10 @@ export function mergeQuotationItemIntoProfileSource(
 
   return {
     ...source,
-    displayName:
-      source.displayName?.trim() ||
-      formatCreatorDisplayName(item.creator_name) ||
-      formatCreatorDisplayName(item.handle) ||
-      "Creator",
+    displayName: pickCreatorDisplayName(
+      [source.displayName, item.creator_name, item.handle],
+      source.handle ?? item.handle
+    ),
     avatarUrl: resolveQuotationDisplayAvatarUrl(source, item),
     handle: source.handle?.trim() || item.handle?.trim() || null,
     profile_url: profileUrl,
@@ -111,11 +110,10 @@ export function buildQuotationCreatorProfileSource(item: QuotationItemRow) {
     const avatarUrl = resolveQuotationAvatarFromItem(item) ?? enriched.avatarUrl ?? null;
     return {
       ...enriched,
-      displayName:
-        enriched.displayName?.trim() ||
-        formatCreatorDisplayName(item.creator_name) ||
-        formatCreatorDisplayName(item.handle) ||
-        "Creator",
+      displayName: pickCreatorDisplayName(
+        [enriched.displayName, item.creator_name, item.handle],
+        enriched.handle ?? item.handle
+      ),
       avatarUrl,
       handle: enriched.handle?.trim() || item.handle?.trim() || null,
       profile_url:
@@ -143,7 +141,7 @@ export function buildQuotationCreatorProfileSource(item: QuotationItemRow) {
         : null;
 
   const source = creatorProfileSourceFromPlatformAccount(
-    item.creator_name ?? item.handle ?? "Creator",
+    pickCreatorDisplayName([item.creator_name, item.handle], item.handle),
     platformAccount,
     {
       avatarUrl: quotationItemSnapshotAvatar(item) ?? item.profile_image_url,

@@ -98,6 +98,42 @@ export function formatCreatorDisplayName(name: string | null | undefined): strin
   return cleaned;
 }
 
+function normalizeCreatorNameKey(value: string | null | undefined): string {
+  return (value ?? "").replace(/^@+/, "").trim().toLowerCase();
+}
+
+/** True when a label is just a handle/username (not a human display name). */
+export function isUsernameLikeCreatorName(
+  name: string | null | undefined,
+  handle?: string | null
+): boolean {
+  const formatted = formatCreatorDisplayName(name);
+  if (!formatted) return true;
+  const nameKey = normalizeCreatorNameKey(formatted);
+  const handleKey = normalizeCreatorNameKey(handle);
+  if (handleKey && nameKey === handleKey) return true;
+  // Single token of handle characters → username-like (e.g. salehelnawawy).
+  return !/\s/.test(formatted) && /^[a-z0-9._]+$/i.test(formatted);
+}
+
+/**
+ * Prefer a human display name over username-like fallbacks.
+ * Use across Discovery / Shortlist / Quotation so name and @handle stay distinct.
+ */
+export function pickCreatorDisplayName(
+  candidates: Array<string | null | undefined>,
+  handle?: string | null
+): string {
+  const formatted = candidates
+    .map((candidate) => formatCreatorDisplayName(candidate))
+    .filter((value): value is string => Boolean(value));
+  const human = formatted.find((value) => !isUsernameLikeCreatorName(value, handle));
+  if (human) return human;
+  if (formatted[0]) return formatted[0];
+  const handleLabel = formatCreatorDisplayName(handle);
+  return handleLabel || "Creator";
+}
+
 /** Normalize creator bios for UI (decode HTML entities from scraped metadata). */
 export function formatCreatorBio(bio: string | null | undefined): string | null {
   if (bio == null) return null;
