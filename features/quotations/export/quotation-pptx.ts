@@ -2099,8 +2099,8 @@ function expandRosterPptxRows(
         rows.push({
           handle: metricIndex === 0 ? row.handle : "",
           initials: row.initials,
-          avatarUrl: metricIndex === 0 ? row.avatarUrl : null,
-          profileUrl: metric.profileUrl ?? row.profileUrl,
+          avatarUrl: metricIndex === 0 ? row.avatarUrl ?? null : null,
+          profileUrl: metric.profileUrl ?? row.profileUrl ?? null,
           followers: metric.followers,
           er: metric.engagement,
           tier: metricIndex === 0 ? row.tier : "",
@@ -2114,8 +2114,8 @@ function expandRosterPptxRows(
     rows.push({
       handle: row.handle,
       initials: row.initials,
-      avatarUrl: row.avatarUrl,
-      profileUrl: row.profileUrl,
+      avatarUrl: row.avatarUrl ?? null,
+      profileUrl: row.profileUrl ?? null,
       followers: row.followers,
       er: row.er,
       tier: row.tier,
