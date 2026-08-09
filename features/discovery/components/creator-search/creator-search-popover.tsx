@@ -14,6 +14,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+import { normalizeDiscoverySearchQuery } from "@/lib/discovery/creator-search-query";
+
 import {
   clearDiscoverySearchDraft,
   readDiscoverySearchDraft,
@@ -27,7 +29,12 @@ import {
 import { shouldPropagateDebouncedSearchDraft } from "./creator-search-popover-sync";
 
 /** Typing is instant; browse/URL update after this pause while the popover is open. */
-const APPLY_SEARCH_DEBOUNCE_MS = 700;
+const APPLY_SEARCH_DEBOUNCE_MS = 280;
+
+function normalizeSearchDraft(value: string): string {
+  const normalized = normalizeDiscoverySearchQuery(value);
+  return normalized || value;
+}
 
 type Props = {
   /** External query (URL, clear filters, programmatic sync). */
@@ -134,8 +141,10 @@ export function CreatorSearchPopover({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            writeDiscoverySearchDraft(draftSearch);
-            onSearchSubmit(draftSearch);
+            const next = normalizeSearchDraft(draftSearch);
+            setDraftSearch(next);
+            writeDiscoverySearchDraft(next);
+            onSearchSubmit(next);
             setOpen(false);
           }}
         >
@@ -151,11 +160,20 @@ export function CreatorSearchPopover({
               ref={inputRef}
               value={draftSearch}
               onChange={(e) => {
-                const next = e.target.value;
+                const next = normalizeSearchDraft(e.target.value);
                 setDraftSearch(next);
                 writeDiscoverySearchDraft(next);
               }}
-              placeholder="Type to search"
+              onPaste={(e) => {
+                const pasted = e.clipboardData.getData("text");
+                if (!pasted?.trim()) return;
+                const next = normalizeSearchDraft(pasted);
+                if (next === pasted.trim()) return;
+                e.preventDefault();
+                setDraftSearch(next);
+                writeDiscoverySearchDraft(next);
+              }}
+              placeholder="Name, @handle, or profile link"
               className="h-8 border-border bg-background pl-8 pr-8 text-[12px] focus-visible:border-primary"
               autoComplete="off"
               spellCheck={false}

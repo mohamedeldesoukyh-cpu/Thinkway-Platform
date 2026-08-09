@@ -71,17 +71,25 @@ test("scoreCreatorSearchIntent routes taxonomy terms to discovery via DB taxonom
   }
 });
 
-test("scoreCreatorSearchIntent detects exact creator handles and names", () => {
+test("scoreCreatorSearchIntent detects exact creator handles and profile URLs", () => {
   for (const query of [
     "reemalmasryyy",
     "@reemalmasryyy",
     "maryammoustafaa.1",
-    "Mohamed Ahmed Mostafa",
-    "Ahmed El Sayed",
+    "https://www.instagram.com/reemalmasryyy/",
+    "https://www.tiktok.com/@maryammoustafaa.1",
   ]) {
     const result = scoreCreatorSearchIntent(query, TEST_TAXONOMY);
     assert.equal(result.mode, "exact", `${query} should be exact`);
     assert.ok(result.confidence >= 95, `${query} confidence should be >= 95`);
+  }
+});
+
+test("scoreCreatorSearchIntent keeps person-name queries hybrid for suggestions", () => {
+  for (const query of ["Mohamed Ahmed Mostafa", "Ahmed El Sayed"]) {
+    const result = scoreCreatorSearchIntent(query, TEST_TAXONOMY);
+    assert.equal(result.mode, "hybrid", `${query} should be hybrid`);
+    assert.ok(result.confidence >= 60 && result.confidence < 95);
   }
 });
 

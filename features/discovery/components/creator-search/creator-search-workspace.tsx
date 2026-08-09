@@ -1262,12 +1262,16 @@ export function CreatorSearchWorkspace({
     startTransition(async () => {
       try {
         const outcome = await addUnifiedCreatorsToShortlists(shortlistIds, targets, selections);
-        if (outcome.added > 0 || outcome.alreadyOnList > 0) {
+        const membershipIds = new Set([
+          ...(outcome.addedUnifiedIds ?? []),
+          ...(outcome.alreadyUnifiedIds ?? []),
+        ]);
+        if (membershipIds.size > 0) {
           setShortlistMembership((prev) => {
             const next = new Map(prev);
-            for (const creator of targets) {
-              const existing = next.get(creator.unified_id) ?? [];
-              next.set(creator.unified_id, [...new Set([...existing, ...shortlistIds])]);
+            for (const unifiedId of membershipIds) {
+              const existing = next.get(unifiedId) ?? [];
+              next.set(unifiedId, [...new Set([...existing, ...shortlistIds])]);
             }
             return next;
           });
