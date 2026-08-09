@@ -507,6 +507,13 @@ function renderShowcaseCreatorPages(
         payload.flags.showFees && fee
           ? `<div class="sc-fee-pill">${esc(fee)}</div>`
           : "";
+      const handleKey = creator.handle.replace(/^@/, "").trim().toLowerCase();
+      const rawName = (creator.name || "").trim();
+      const nameKey = rawName.replace(/^@/, "").trim().toLowerCase();
+      const displayName =
+        rawName && rawName !== "Creator" && nameKey !== handleKey
+          ? rawName
+          : rawName || creator.handle.replace(/^@/, "");
 
       // Preview and PDF share one creator card page (reference Redesign revised).
       void forPdf;
@@ -515,7 +522,8 @@ function renderShowcaseCreatorPages(
     <div class="page-head">
       <div class="page-head-copy sc-hero">
         <p class="sc-kicker">Creator ${creator.index} of ${esc(payload.totals.creatorCount)}</p>
-        <h2 class="sc-title">${esc(creator.handle)}</h2>
+        <h2 class="sc-title">${esc(displayName)}</h2>
+        <p class="sc-title-handle">${esc(creator.handle)}</p>
       </div>
       ${renderLogo("footer")}
     </div>
@@ -523,7 +531,8 @@ function renderShowcaseCreatorPages(
       ${profileLinkStart}${avatarHtml}${profileLinkEnd}
       <div class="sc-identity">
         <div class="sc-meta-row"><span class="pill">${esc(creator.tier)}</span><span class="sc-category">${esc(creator.categories)}</span></div>
-        ${profileLinkStart}<p class="sc-handle">${esc(creator.handle)}</p>${profileLinkEnd}
+        ${profileLinkStart}<p class="sc-handle" style="font-size:15px;font-weight:700;color:var(--navy);">${esc(displayName)}</p>
+        <p class="sc-handle">${esc(creator.handle)}</p>${profileLinkEnd}
         <p class="sc-platforms">${creatorPlatformIcons}${creatorPlatformIcons ? " " : ""}${esc(platformLabel)}</p>
       </div>
     </div>
