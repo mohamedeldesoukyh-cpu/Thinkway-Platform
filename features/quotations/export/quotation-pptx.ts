@@ -28,6 +28,7 @@ import {
   detectImageContentType,
   fetchImageBuffer,
 } from "@/lib/performance/screenshot-capture/storage";
+import { pickCreatorDisplayName } from "@/lib/text/decode-html-entities";
 
 /**
  * Design tokens — matched to reference deck Thinkway_QT-2026-0013.pptx.
@@ -1591,13 +1592,8 @@ async function addCreatorSlide(
     ...group.platformMetrics.map((row) => row.profileUrl),
     synthesizedProfileUrl,
   ]);
-  const handleKey = creator.handle.replace(/^@/, "").trim().toLowerCase();
-  const rawName = (creator.name || "").trim();
-  const nameKey = rawName.replace(/^@/, "").trim().toLowerCase();
-  const displayName =
-    rawName && rawName !== "Creator" && nameKey !== handleKey
-      ? rawName
-      : rawName || creator.handle.replace(/^@/, "");
+  // Never show INF-xxxx; fall back to username when no real creator name exists.
+  const displayName = pickCreatorDisplayName([creator.name, creator.handle], creator.handle);
 
   const slide = pptx.addSlide();
   applyContentBackground(slide);

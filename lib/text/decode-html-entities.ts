@@ -88,13 +88,24 @@ export function isBarePlatformDisplayName(name: string | null | undefined): bool
   return normalized.length > 0 && BARE_PLATFORM_DISPLAY_NAMES.has(normalized);
 }
 
+/** Internal creator document numbers must never appear as a display name (e.g. INF-008286). */
+export function isCreatorDocumentNumber(name: string | null | undefined): boolean {
+  if (name == null) return false;
+  return /^(INF|DIS|CRT|VEN|TW)-\d+$/i.test(name.trim());
+}
+
 /** Normalize creator display names for UI (decode entities, strip bidi marks). */
 export function formatCreatorDisplayName(name: string | null | undefined): string {
   if (name == null) return "";
   const trimmed = name.trim();
   if (!trimmed) return "";
-  const cleaned = stripPlatformPageTitleSuffix(decodeHtmlEntities(trimmed));
-  if (!cleaned || isBarePlatformDisplayName(cleaned)) return "";
+  // Handles belong on the secondary line — never keep a leading @ in the name field.
+  const withoutAt = trimmed.replace(/^@+/, "").trim();
+  if (!withoutAt) return "";
+  const cleaned = stripPlatformPageTitleSuffix(decodeHtmlEntities(withoutAt));
+  if (!cleaned || isBarePlatformDisplayName(cleaned) || isCreatorDocumentNumber(cleaned)) {
+    return "";
+  }
   return cleaned;
 }
 
@@ -109,6 +120,7 @@ export function isUsernameLikeCreatorName(
 ): boolean {
   const formatted = formatCreatorDisplayName(name);
   if (!formatted) return true;
+  if (isCreatorDocumentNumber(formatted)) return true;
   const nameKey = normalizeCreatorNameKey(formatted);
   const handleKey = normalizeCreatorNameKey(handle);
   if (handleKey && nameKey === handleKey) return true;
@@ -117,8 +129,8 @@ export function isUsernameLikeCreatorName(
 }
 
 /**
- * Prefer a human display name over username-like fallbacks.
- * Use across Discovery / Shortlist / Quotation so name and @handle stay distinct.
+ * Prefer a human display name over username-like / document-number fallbacks.
+ * If no real name exists, returns the username (without @). Never returns INF-xxxx.
  */
 export function pickCreatorDisplayName(
   candidates: Array<string | null | undefined>,
@@ -129,9 +141,12 @@ export function pickCreatorDisplayName(
     .filter((value): value is string => Boolean(value));
   const human = formatted.find((value) => !isUsernameLikeCreatorName(value, handle));
   if (human) return human;
-  if (formatted[0]) return formatted[0];
   const handleLabel = formatCreatorDisplayName(handle);
-  return handleLabel || "Creator";
+  if (handleLabel) return handleLabel;
+  // Last resort: first non-document candidate, else plain handle key.
+  if (formatted[0]) return formatted[0];
+  const handleKey = normalizeCreatorNameKey(handle);
+  return handleKey || "Creator";
 }
 
 /** Normalize creator bios for UI (decode HTML entities from scraped metadata). */

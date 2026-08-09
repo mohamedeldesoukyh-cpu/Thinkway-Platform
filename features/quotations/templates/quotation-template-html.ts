@@ -28,6 +28,7 @@ import {
 } from "./quotation-template-styles";
 import type { QuotationTemplatePayload } from "./quotation-template-types";
 import { getReportPlatformIconTitle } from "@/lib/performance/report/report-platform-icons";
+import { pickCreatorDisplayName } from "@/lib/text/decode-html-entities";
 
 export type BuildQuotationTemplateHtmlOptions = {
   siteOrigin?: string;
@@ -507,13 +508,11 @@ function renderShowcaseCreatorPages(
         payload.flags.showFees && fee
           ? `<div class="sc-fee-pill">${esc(fee)}</div>`
           : "";
-      const handleKey = creator.handle.replace(/^@/, "").trim().toLowerCase();
-      const rawName = (creator.name || "").trim();
-      const nameKey = rawName.replace(/^@/, "").trim().toLowerCase();
-      const displayName =
-        rawName && rawName !== "Creator" && nameKey !== handleKey
-          ? rawName
-          : rawName || creator.handle.replace(/^@/, "");
+      // Never show INF-xxxx; fall back to username when no real creator name exists.
+      const displayName = pickCreatorDisplayName(
+        [creator.name, creator.handle],
+        creator.handle
+      );
 
       // Preview and PDF share one creator card page (reference Redesign revised).
       void forPdf;

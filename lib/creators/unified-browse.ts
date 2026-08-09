@@ -1091,6 +1091,7 @@ async function fetchInternalCreators(
       display_name: pickCreatorDisplayName(
         [
           // Prefer platform full names first when influencer.display_name is just the handle.
+          // Never fall back to document_number (INF-xxxx) — that is not a creator name.
           (metricsAccount as { profile_display_name?: string | null } | undefined)
             ?.profile_display_name,
           ...platformRows.map(
@@ -1100,7 +1101,6 @@ async function fetchInternalCreators(
           r.display_name,
           metricsAccount?.handle?.replace(/^@+/, "").trim(),
           (metricsAccount as { username?: string | null } | undefined)?.username?.trim(),
-          r.document_number,
         ],
         metricsAccount?.handle ??
           (metricsAccount as { username?: string | null } | undefined)?.username
