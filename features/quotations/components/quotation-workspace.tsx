@@ -88,6 +88,7 @@ import {
   type CalculationModePreference,
   type QuotationRowDraft,
 } from "@/features/quotations/quotation-row-math";
+import { applyCommercialWorkspaceBulkOp } from "@/lib/quotations/commercial-workspace/bulk-transforms";
 import { resolveLiveTotalsDraft } from "@/features/quotations/quotation-pending-live-totals";
 import { formatEgpTotalInDisplayCurrency } from "@/lib/quotations/quotation-line-creator-commercial-sync";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
@@ -485,16 +486,23 @@ function QuotationWorkspaceContent({
         for (const id of selectedIds) {
           const draft = drafts[id];
           if (!draft) continue;
-          updateDraft(id, { mode, gpPct: pct });
+          const next = applyCommercialWorkspaceBulkOp(
+            draft,
+            mode === "cost_markup_pct"
+              ? { kind: "apply_markup_pct", pct }
+              : { kind: "set_gp_pct", pct }
+          );
+          updateDraft(id, next);
           const res = await updateQuotationItemCommercials({
             item_id: id,
             quotation_id: detail.id,
-            mode,
-            cost: draft.cost,
-            cost_currency: draft.costCurrency,
-            gp_pct: pct,
-            revenue: draft.revenue,
-            gp_value: draft.gpValue,
+            mode: next.mode,
+            cost: next.cost,
+            cost_currency: next.costCurrency,
+            gp_pct: next.gpPct,
+            revenue: next.revenue,
+            gp_value: next.gpValue,
+            af_pct: next.afPct,
           });
           if (!res.ok) {
             toast.error(res.message);
@@ -511,23 +519,38 @@ function QuotationWorkspaceContent({
   const applyBulkCurrency = useCallback(
     (currency: string) => {
       startBulkTransition(async () => {
+        const rateRes = await resolveCommercialRateToEgp(currency);
+        if (!rateRes.ok || !rateRes.data) {
+          toast.error(rateRes.ok ? "Could not resolve FX rate." : rateRes.message);
+          return;
+        }
+        const fxRateToEgp = rateRes.data.rate;
         for (const id of selectedIds) {
           const draft = drafts[id];
           if (!draft) continue;
-          updateDraft(id, { costCurrency: currency, fxRateToEgp: 1 });
+          const next = applyCommercialWorkspaceBulkOp(draft, {
+            kind: "set_currency",
+            currency,
+            fxRateToEgp,
+          });
+          updateDraft(id, next);
           const res = await updateQuotationItemCommercials({
             item_id: id,
             quotation_id: detail.id,
-            mode: draft.mode,
-            cost: draft.cost,
-            cost_currency: currency,
-            gp_pct: draft.gpPct,
-            revenue: draft.revenue,
-            gp_value: draft.gpValue,
+            mode: next.mode,
+            cost: next.cost,
+            cost_currency: next.costCurrency,
+            gp_pct: next.gpPct,
+            revenue: next.revenue,
+            gp_value: next.gpValue,
+            af_pct: next.afPct,
           });
           if (!res.ok) {
             toast.error(res.message);
             return;
+          }
+          if (res.ok && res.data?.fx_rate_to_egp != null) {
+            updateDraft(id, { fxRateToEgp: res.data.fx_rate_to_egp });
           }
         }
         toast.success(`Currency updated for ${selectedIds.size} creator(s).`);
@@ -742,6 +765,8 @@ function QuotationWorkspaceContent({
                   onDraftsMerge={mergeDrafts}
                   canManage={detail.canManage}
                   triggerClassName="btn sm"
+                  displayCurrency={displayCurrency}
+                  displayFxRateToEgp={displayFxRateToEgp}
                 />
                 {detail.canManage ? (
                   <AddCreatorsToQuotationButton

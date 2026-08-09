@@ -15,7 +15,11 @@ import {
   updateQuotationHeaderRecord,
 } from "./repositories/quotation-repository";
 import { rollupDeliverableCommercials } from "@/lib/quotations/quotation-deliverable-rollup";
-import { deliverablesPatchForLineMasterSave } from "@/lib/quotations/quotation-line-commercial-ssot";
+import {
+  deliverablesPatchForLineMasterSave,
+  shouldPreferDeliverableRollup,
+  stripDeliverableCommercialAmounts,
+} from "@/lib/quotations/quotation-line-commercial-ssot";
 
 export async function recomputeQuotationTotals(
   supabase: SupabaseClient<Database>,
@@ -79,14 +83,18 @@ export async function updateQuotationItemCommercials(
         fxRateToEgp: rate,
       })
     : null;
+  const useRolled = shouldPreferDeliverableRollup({
+    rolled,
+    masterRevenue: input.revenue,
+  });
 
   const line = normalizeCommercialLine({
-    mode: rolled ? "cost_revenue" : input.mode,
-    cost: rolled?.cost ?? input.cost,
+    mode: useRolled ? "cost_revenue" : input.mode,
+    cost: useRolled ? rolled!.cost : input.cost,
     costCurrency: input.cost_currency,
-    gpPct: rolled ? null : input.gp_pct,
-    revenue: rolled?.revenue ?? input.revenue,
-    gpValue: rolled ? null : input.gp_value,
+    gpPct: useRolled ? null : input.gp_pct,
+    revenue: useRolled ? rolled!.revenue : input.revenue,
+    gpValue: useRolled ? null : input.gp_value,
     afPct: input.af_pct,
     fxRateToEgp: rate,
   });
@@ -145,7 +153,9 @@ export async function updateQuotationItemCommercials(
   // Line-Master path (Commercial Workspace / bulk): strip deliverable commercial
   // amounts in the same UPDATE so remount cannot rebuild from stale Cost Detail.
   if (input.deliverables !== undefined) {
-    patch.deliverables = input.deliverables;
+    patch.deliverables = useRolled
+      ? input.deliverables
+      : stripDeliverableCommercialAmounts(input.deliverables);
   } else {
     const { data: existingRow, error: existingError } = await supabase
       .from("quotation_items")

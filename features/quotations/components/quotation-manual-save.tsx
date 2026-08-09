@@ -36,6 +36,7 @@ import type { AutosaveStatus } from "@/lib/hooks/use-debounced-autosave";
 import type { CommercialInputMode, QuotationStatus } from "@/types/database";
 import { linePendingDiffersFromItem } from "@/lib/quotations/quotation-line-pending-diff";
 import { rollupDeliverableCommercials } from "@/lib/quotations/quotation-deliverable-rollup";
+import { shouldPreferDeliverableRollup } from "@/lib/quotations/quotation-line-commercial-ssot";
 import { diffMasterChanges } from "@/lib/services/commercial/field-registry";
 
 export type QuotationLinePendingPayload = {
@@ -177,7 +178,33 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
     (itemId: string, payload: QuotationLinePendingPayload) => {
       const item = itemsByIdRef.current.get(itemId);
       const prev = linePendingRef.current.get(itemId) ?? {};
-      const merged = { ...prev, ...payload };
+      // Omit undefined keys so a deliverable-only flush cannot wipe staged Master fields.
+      const merged: QuotationLinePendingPayload = { ...prev };
+      for (const [key, value] of Object.entries(payload) as Array<
+        [keyof QuotationLinePendingPayload, QuotationLinePendingPayload[keyof QuotationLinePendingPayload]]
+      >) {
+        if (value !== undefined) {
+          (merged as Record<string, unknown>)[key as string] = value;
+        }
+      }
+
+      // Cost-only deliverable flush must not zero Master revenue after markup / CW edits.
+      const prevRevenue = Number(prev.revenue ?? item?.revenue ?? 0);
+      const incomingRevenue = payload.revenue;
+      if (
+        prevRevenue > 0 &&
+        incomingRevenue != null &&
+        Number(incomingRevenue) <= 0 &&
+        payload.deliverables != null &&
+        (payload.cost != null || payload.mode === "cost_revenue")
+      ) {
+        merged.revenue = prev.revenue ?? item?.revenue;
+        merged.cost = prev.cost ?? payload.cost ?? item?.cost;
+        merged.gp_pct = prev.gp_pct ?? item?.gp_pct;
+        merged.gp_value = prev.gp_value ?? item?.gp_value;
+        merged.af_pct = prev.af_pct ?? payload.af_pct ?? item?.af_pct;
+        merged.mode = prev.mode ?? payload.mode ?? item?.commercial_input_mode;
+      }
 
       if (item && !linePendingDiffersFromItem(item, merged)) {
         if (linePendingRef.current.has(itemId)) {
@@ -280,26 +307,31 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
 
           const rolled = payload.deliverables?.length
             ? rollupDeliverableCommercials(payload.deliverables, {
-                lineCurrency: item.cost_currency || "EGP",
+                lineCurrency: payload.cost_currency || item.cost_currency || "EGP",
                 fxRateToEgp: item.fx_rate_to_egp ?? 1,
                 lineAfPct: payload.af_pct ?? item.af_pct,
               })
             : null;
+          const masterRevenue = payload.revenue ?? item.revenue;
+          const useRolled = shouldPreferDeliverableRollup({
+            rolled,
+            masterRevenue,
+          });
 
           return updateQuotationItemCommercials(
             {
               item_id: itemId,
               quotation_id: quotationId,
               ...payload,
-              mode: (rolled
+              mode: (useRolled
                 ? "cost_revenue"
                 : payload.mode ?? item.commercial_input_mode) as CommercialInputMode,
-              cost: rolled?.cost ?? payload.cost ?? item.cost,
+              cost: useRolled ? rolled!.cost : (payload.cost ?? item.cost),
               cost_currency: payload.cost_currency ?? item.cost_currency,
-              gp_pct: rolled?.gpPct ?? payload.gp_pct ?? item.gp_pct,
-              revenue: rolled?.revenue ?? payload.revenue ?? item.revenue,
-              gp_value: rolled?.gpValue ?? payload.gp_value ?? item.gp_value,
-              af_pct: rolled?.afPct ?? payload.af_pct ?? item.af_pct,
+              gp_pct: useRolled ? rolled!.gpPct : (payload.gp_pct ?? item.gp_pct),
+              revenue: useRolled ? rolled!.revenue : (payload.revenue ?? item.revenue),
+              gp_value: useRolled ? rolled!.gpValue : (payload.gp_value ?? item.gp_value),
+              af_pct: useRolled ? rolled!.afPct : (payload.af_pct ?? item.af_pct),
             },
             {
               ...saveOptions,

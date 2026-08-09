@@ -985,6 +985,13 @@
   display: none;
 }
 
+.quotation-editor-rd4 .creators-list .price-cell .price-fx-sub {
+  display: block;
+  line-height: 1.2;
+  color: var(--text-4, #8b93a7);
+  font-weight: 500;
+}
+
 .quotation-editor-rd4 .creators-list .totals {
   display: flex;
   align-items: center;

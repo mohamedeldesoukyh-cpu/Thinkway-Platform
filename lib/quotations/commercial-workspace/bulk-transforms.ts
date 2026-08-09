@@ -49,13 +49,21 @@ function recomputeFromMode(draft: QuotationRowDraft): QuotationRowDraft {
   };
 }
 
-/** Markup % → cost_markup_pct mode with given markup. */
+/**
+ * Markup % → compute revenue from cost, then persist as cost_revenue.
+ * Storing margin GP% under cost_markup_pct causes the next normalize to treat
+ * margin as markup and rewrite revenue incorrectly.
+ */
 function withMarkup(draft: QuotationRowDraft, markupPct: number): QuotationRowDraft {
-  return recomputeFromMode({
+  const computed = recomputeFromMode({
     ...draft,
     mode: "cost_markup_pct" satisfies CommercialInputMode,
     gpPct: clampPct(markupPct),
   });
+  return {
+    ...computed,
+    mode: "cost_revenue",
+  };
 }
 
 /** Discount on revenue: reduce revenue by pct, keep cost, switch to cost_revenue. */
