@@ -232,7 +232,8 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(!pitchHtml.includes("Pitch Presentation"));
   assert.ok(!pitchHtml.includes("Quotation No."));
   assert.ok(pitchHtml.includes("showcase-metrics-table"));
-  assert.ok(pitchHtml.includes(">Views<"));
+  assert.ok(!pitchHtml.includes(">Views<"));
+  assert.ok(!pitchHtml.includes("Avg views"));
   assert.ok(!pitchHtml.includes("Acceptance"));
   assert.equal(pitchPayload.quotation.title.includes("Pitch Presentation"), false);
 }

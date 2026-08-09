@@ -1040,8 +1040,11 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(html.includes("MID"));
   assert.ok(html.includes("MICRO"));
   assert.ok(html.includes("dr.fitn3ss"));
-  assert.ok(html.includes("Total Investment · 4 creators"));
+  assert.ok(html.includes("TOTAL INVESTMENT · 4 CREATORS"));
   assert.ok(html.includes("tier-breakdown-grand-total"));
+  assert.ok(!html.includes(">Views<"), "Views column removed from all templates");
+  assert.ok(!html.includes("Avg views"), "Avg views column removed from all templates");
+  assert.ok(html.includes("cat-bar"), "Line-item categories use full-width bars");
 }
 
 {

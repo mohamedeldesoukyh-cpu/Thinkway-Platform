@@ -93,14 +93,27 @@ function resolveCreatorFee(
 
 function mixColumnFlags(payload: QuotationTemplatePayload): {
   showFees: boolean;
-  showViews: boolean;
 } {
-  // Showcase investment summary: fees, no views. Line-item mix: views, no fees.
-  const showcaseMix = payload.flags.showcaseCreators;
+  // Views / Avg views removed from all quotation templates (preview + export).
   return {
-    showFees: showcaseMix && payload.flags.showFees,
-    showViews: !showcaseMix,
+    showFees: payload.flags.showcaseCreators && payload.flags.showFees,
   };
+}
+
+function splitMoneyParts(full: string): { currency: string; amount: string } {
+  const match = full.trim().match(/^([A-Z]{3})\s+(.+)$/);
+  if (match) return { currency: match[1]!, amount: match[2]! };
+  return { currency: "EGP", amount: full.trim() };
+}
+
+function renderPageHead(sectionLabel: string, title: string, continued = false): string {
+  return `<div class="page-head">
+    <div class="page-head-copy">
+      <div class="sec-tick">${esc(sectionLabel)}</div>
+      <h2 class="sec-title${continued ? " cont" : ""}">${esc(title)}</h2>
+    </div>
+    ${renderLogo("footer")}
+  </div>`;
 }
 
 function buildMixTier(
@@ -158,19 +171,16 @@ function buildMixTier(
 
 function renderMixTableRows(
   creators: MixCreatorUnit[],
-  options: { showViews: boolean; showFees: boolean }
+  options: { showFees: boolean }
 ): string {
   return creators
     .flatMap((creator) =>
       creator.platforms.map((platform, index) => {
-        const lead = index === 0 ? " lead" : "";
-        const viewsCell = options.showViews
-          ? `<td class="r">${esc(platform.views)}</td>`
-          : "";
+        const leadClass = index === 0 ? "lead" : "";
         const feeCell = options.showFees
           ? `<td class="r fee">${index === 0 ? esc(creator.fee ?? "—") : ""}</td>`
           : "";
-        return `<tr class="${lead.trim()}"><td class="h">${index === 0 ? esc(creator.handle) : ""}</td><td>${platformBadgeHtml(platform.platform)}</td><td class="r">${esc(platform.followers)}</td>${viewsCell}<td>${index === 0 ? esc(creator.category) : ""}</td><td class="r">${esc(platform.engagement)}</td>${feeCell}</tr>`;
+        return `<tr class="${leadClass}"><td class="h">${index === 0 ? esc(creator.handle) : ""}</td><td>${platformBadgeHtml(platform.platform)}</td><td class="r">${esc(platform.followers)}</td><td>${index === 0 ? esc(creator.category) : ""}</td><td class="r">${esc(platform.engagement)}</td>${feeCell}</tr>`;
       })
     )
     .join("");
@@ -184,14 +194,12 @@ function renderMixTierSlice(
     continued: boolean;
     creators: MixCreatorUnit[];
   },
-  options: { showViews: boolean; showFees: boolean }
+  options: { showFees: boolean }
 ): string {
   const headLabel = slice.continued ? `${slice.name} (cont.)` : slice.name;
   const cols = options.showFees
     ? `<th>Creator</th><th>Platform</th><th class="r">Followers</th><th>Category</th><th class="r">ER %</th><th class="r">Fees (EGP)</th>`
-    : options.showViews
-      ? `<th>Creator</th><th>Platform</th><th class="r">Followers</th><th class="r">Views</th><th>Category</th><th class="r">ER %</th>`
-      : `<th>Creator</th><th>Platform</th><th class="r">Followers</th><th>Category</th><th class="r">ER %</th>`;
+    : `<th>Creator</th><th>Platform</th><th class="r">Followers</th><th>Category</th><th class="r">ER %</th>`;
   return `<div class="tier tier-breakdown-block">
       <div class="tier-head tier-breakdown-header">
         <span class="tier-tag">${esc(headLabel)}</span>
@@ -342,17 +350,15 @@ function renderCategoryTierPages(
     includeBanner: true,
   });
 
+  // Line-item: full-width category bars (matches Thinkway LineItem reference).
   const categories = payload.categories
     .map(
       (cat) =>
-        `<div class="cat"><p class="cn">${esc(cat.name)}</p><p class="cv">${esc(cat.count)}</p><p class="cs">${esc(cat.countLabel)} · ${esc(cat.share)}</p></div>`
+        `<div class="cat-bar"><span class="cn">${esc(cat.name)}</span><b>${esc(cat.count)}</b><span class="cs">${esc(cat.countLabel)} · ${esc(cat.share)}</span></div>`
     )
     .join("");
 
-  const totalLabel = payload.commercial.headlineValue || payload.totals.followers;
-  const bannerValue = payload.flags.showFees || !showcase
-    ? payload.commercial.headlineValue
-    : payload.commercial.headlineValue;
+  const money = splitMoneyParts(payload.commercial.headlineValue || "EGP —");
 
   return pages
     .map((page) => {
@@ -369,16 +375,15 @@ function renderCategoryTierPages(
         : `${payload.quotation.number} · Creator mix`;
       const categoryBlock =
         page.showCategories && !showcase
-          ? `<div class="cat-grid">${categories || `<div class="cat"><p class="cn">—</p><p class="cv">0</p><p class="cs">No categories</p></div>`}</div>`
+          ? `<div class="cat-bars">${categories || `<div class="cat-bar"><span class="cn">—</span><b>0</b><span class="cs">No categories</span></div>`}</div>`
           : "";
       const banner = page.showBanner
-        ? `<div class="banner tier-breakdown-grand-total"><div class="gl">Total Investment · ${esc(payload.totals.creatorCount)} creators</div><div class="gv">${esc(bannerValue || totalLabel)}</div></div>`
+        ? `<div class="banner tier-breakdown-grand-total"><div class="gl">TOTAL INVESTMENT · ${esc(payload.totals.creatorCount)} CREATORS · ${esc(money.currency)}</div><div class="gv">${esc(money.amount)}</div></div>`
         : "";
 
       return `<section class="cpage page summary-overview-page">
   <div class="cwrap pad">
-    <div class="sec-tick">${esc(sectionLabel)}</div>
-    <h2 class="sec-title${page.continued ? " cont" : ""}">${esc(title)}</h2>
+    ${renderPageHead(sectionLabel, title, page.continued)}
     ${categoryBlock}
     ${page.tiers.map((slice) => renderMixTierSlice(slice, cols)).join("")}
     ${banner}
@@ -481,7 +486,6 @@ function renderShowcaseCreatorPages(
                 (row, metricIndex) => `<tr>
           <td class="r">${esc(row.followers)}</td>
           <td class="r">${esc(row.engagement)}</td>
-          <td class="r">${esc(row.views)}</td>
           <td>${metricIndex === 0 ? `<span class="pill">${esc(creator.tier)}</span>` : ""}</td>
           <td class="categories-cell">${metricIndex === 0 ? esc(creator.categories) : ""}</td>
           <td class="platform-cell">${renderQuotationPlatformIconsHtml([row.platform]) || esc(row.platform)}</td>
@@ -491,15 +495,14 @@ function renderShowcaseCreatorPages(
           : `<tr>
           <td class="r">${esc(creator.followers)}</td>
           <td class="r">${esc(creator.engagement)}</td>
-          <td class="r">${esc(creator.views)}</td>
           <td><span class="pill">${esc(creator.tier)}</span></td>
           <td class="categories-cell">${esc(creator.categories)}</td>
           <td class="platform-cell">${creatorPlatformIcons || esc(creator.platforms)}</td>
         </tr>`;
-      // Showcase + pitch both show one metrics row per linked platform (followers / ER / views).
+      // One metrics row per linked platform — Followers / ER only (no Views).
       const metricsTable = `<div class="fees showcase-metrics-table">
       <table class="data-table">
-        <thead><tr><th class="r">Followers</th><th class="r">Engagement</th><th class="r">Views</th><th>Tier</th><th>Category</th><th>Platforms</th></tr></thead>
+        <thead><tr><th class="r">Followers</th><th class="r">Engagement</th><th>Tier</th><th>Category</th><th>Platforms</th></tr></thead>
         <tbody>${metricRowsHtml}</tbody>
       </table>
     </div>`;
@@ -526,10 +529,9 @@ function renderShowcaseCreatorPages(
 
           if (continued) {
             return `<section class="${pageClass}">
-  <div class="pad showcase-creator-sheet">
-    <div class="sec-row"><span class="sec-badge">${esc(creator.sectionNo)}</span><span class="lbl">Creator ${creator.index} of ${esc(payload.totals.creatorCount)} · Continued</span></div>
-    <p class="sc-name showcase-name" style="font-size:20px;margin:0 0 4px;">${esc(creator.name)}</p>
-    <p class="sc-handle showcase-handle" style="margin:0 0 16px;">${esc(creator.handle)}</p>
+  <div class="cwrap pad showcase-creator-sheet">
+    ${renderPageHead(`${creator.sectionNo} · Creator ${creator.index} of ${payload.totals.creatorCount}`, `${creator.name} (continued)`)}
+    <p class="sc-handle showcase-handle" style="margin:-6px 0 14px;">${esc(creator.handle)}</p>
     <p class="sc-sub showcase-deliverables-title">Proposed deliverables (continued)</p>
     <div class="fees showcase-deliverables-table">
       <table class="data-table">
@@ -543,13 +545,12 @@ function renderShowcaseCreatorPages(
           }
 
           return `<section class="${pageClass}">
-  <div class="pad showcase-creator-sheet">
-    <div class="sec-row"><span class="sec-badge">${esc(creator.sectionNo)}</span><span class="lbl">Creator ${creator.index} of ${esc(payload.totals.creatorCount)}</span></div>
+  <div class="cwrap pad showcase-creator-sheet">
+    ${renderPageHead(`${creator.sectionNo} · Creator ${creator.index} of ${payload.totals.creatorCount}`, creator.name)}
     <div class="sc-top">
       ${profileLinkStart}${avatarHtml}${profileLinkEnd}
       <div class="sc-identity">
-        ${profileLinkStart}<p class="sc-name showcase-name">${esc(creator.name)}</p>
-        <p class="sc-handle showcase-handle">${esc(creator.handle)}${creatorPlatformIcons ? ` <span class="sc-platform-icons">${creatorPlatformIcons}</span>` : ""}</p>${profileLinkEnd}
+        ${profileLinkStart}<p class="sc-handle showcase-handle">${esc(creator.handle)}${creatorPlatformIcons ? ` <span class="sc-platform-icons">${creatorPlatformIcons}</span>` : ""}</p>${profileLinkEnd}
         ${metricsTable}
       </div>
     </div>
@@ -580,17 +581,16 @@ function renderRosterPage(payload: QuotationTemplatePayload): string {
       const avatar = row.avatarUrl
         ? `<img class="roster-avatar" src="${esc(row.avatarUrl)}" alt="" width="22" height="22" />`
         : `<span class="roster-avatar roster-avatar--fallback">${esc(row.initials)}</span>`;
-      return `<tr><td class="name roster-creator">${avatar}<span>${esc(row.handle)}</span></td><td class="r">${esc(row.followers)}</td><td class="r">${esc(row.er)}</td><td class="r">${esc(row.views)}</td><td><span class="pill">${esc(row.tier)}</span></td><td class="categories-cell">${esc(row.categories)}</td><td class="platform-cell">${platformCell}</td></tr>`;
+      return `<tr><td class="name roster-creator">${avatar}<span>${esc(row.handle)}</span></td><td class="r">${esc(row.followers)}</td><td class="r">${esc(row.er)}</td><td><span class="pill">${esc(row.tier)}</span></td><td class="categories-cell">${esc(row.categories)}</td><td class="platform-cell">${platformCell}</td></tr>`;
     })
     .join("");
 
   return `<section class="cpage page roster-page">
   <div class="cwrap pad">
-    <div class="sec-tick">${esc(payload.roster.sectionNo)} · Creator roster (${esc(payload.totals.creatorCount)})</div>
-    <h2 class="sec-title">At a glance</h2>
+    ${renderPageHead(`${payload.roster.sectionNo} · Creator roster (${payload.totals.creatorCount})`, "At a glance")}
     <div class="fees">
       <table class="data-table">
-        <thead><tr><th>Creator</th><th class="r">Followers</th><th class="r">Eng %</th><th class="r">Avg views</th><th>Tier</th><th>Category</th><th>Platforms</th></tr></thead>
+        <thead><tr><th>Creator</th><th class="r">Followers</th><th class="r">Eng %</th><th>Tier</th><th>Category</th><th>Platforms</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
@@ -657,8 +657,10 @@ function renderCommercialPage(
     </div>`
     : "";
 
-  const commercialHeader = `<div class="sec-tick">${esc(c.sectionNo)} · Commercial summary</div>
-    <h2 class="sec-title">Investment &amp; deliverables</h2>`;
+  const commercialHeader = renderPageHead(
+    `${c.sectionNo} · Commercial summary`,
+    "Investment & deliverables"
+  );
 
   const footLeft = payload.footer.left;
   const footRight = `${payload.quotation.number} · Commercial`;
@@ -697,8 +699,7 @@ function renderNotesPage(doc: QuotationDocument, payload: QuotationTemplatePaylo
   // Keep notes as one continuous block — wrap fully; never truncate commercial explanations.
   return `<section class="cpage page commercial-notes-page" id="section-notes">
   <div class="cwrap pad">
-    <div class="sec-tick">Notes · Commercial notes</div>
-    <h2 class="sec-title">Notes &amp; recommendations</h2>
+    ${renderPageHead("Notes · Commercial notes", "Notes & recommendations")}
     <div class="quotation-notes-block insight" style="margin-top:8px;">
       <p style="margin:0; white-space:pre-wrap; overflow-wrap:break-word; word-break:normal; line-height:1.55;">${esc(notes)}</p>
     </div>
@@ -716,8 +717,7 @@ function renderTermsPage(payload: QuotationTemplatePayload): string {
     .join("");
   return `<section class="cpage page" id="section-terms">
   <div class="cwrap pad">
-    <div class="sec-tick">${esc(payload.terms.sectionNo)} · Terms &amp; conditions</div>
-    <h2 class="sec-title">The agreement</h2>
+    ${renderPageHead(`${payload.terms.sectionNo} · Terms & conditions`, "The agreement")}
     <div class="terms-grid">${items}</div>
   </div>
   <div class="foot"><span>${esc(payload.footer.left)}</span><span class="mono">${esc(payload.quotation.number)} · Terms</span></div>
@@ -728,8 +728,7 @@ function renderAcceptancePage(payload: QuotationTemplatePayload): string {
   const q = payload.quotation;
   return `<section class="cpage page" id="section-acceptance">
   <div class="cwrap pad">
-    <div class="sec-tick">${esc(payload.acceptance.sectionNo)} · Acceptance</div>
-    <h2 class="sec-title">Sign &amp; approve</h2>
+    ${renderPageHead(`${payload.acceptance.sectionNo} · Acceptance`, "Sign & approve")}
     <p style="font-size:14px; color:var(--muted); max-width:72ch; margin:0 0 8px;">By signing below, both parties agree to the scope, pricing, and terms set out in this quotation.</p>
     <div class="accept-grid">
       <div class="sigbox">
