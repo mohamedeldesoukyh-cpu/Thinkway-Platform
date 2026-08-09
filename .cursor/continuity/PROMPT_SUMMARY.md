@@ -1,30 +1,26 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `develop` / `main` @ `925da7f8`  
-**Focus:** Creator metric definitions + quotation whole-number display — SHIPPED
+**Branch:** `develop` / `main` @ `7cee99fb`  
+**Focus:** Showcase PPTX redesign parity + ER decimals — SHIPPED
+
+## SHIPPED — Showcase PPTX redesign + ER decimals
+
+- Commit: `7cee99fb`
+- Prod: `dpl_FJCLLxbq7L2U3nyS3cLtdBqgdR8s` → https://app.thinkwaymedia.com
+- Showcase / Showcase Lump Sum PPTX match HTML redesign (cover + TOTAL INVESTMENT)
+- Engagement rates: **2 decimals** in Preview/exports
+- Showcase Engagement card: `IG x.xx% · TT x.xx%` (all platforms)
+- Smoke: valid PPTX ZIP · no SVG media · redesign markers present
 
 ## SHIPPED — Creator metrics + quotation whole numbers
 
-- Commits: `45f9deae` · `925da7f8` (typing fix)
-- Release: `1793a9be` → main · Prod `dpl_xz1By3M7i4NMTCcEah8dyjSboxit` → https://app.thinkwaymedia.com
-- Keep: Avg. Engagements · Avg. Likes · Avg. Reels Plays (creator detail only)
-- Quotation Preview/export: whole-number display rounding only
-- No Credibility Score · no Discovery/quotation metric placement expansion
-
-## SHIPPED — Combine creators search + crash
-
-- Slow picker: lightweight `browseUnifiedCreatorsForPickerAction` (no backfill/ECI)
-- Crash after combine: try/catch + DNA cleanup + safer reassign; remove duplicate from list
-
-## SHIPPED — Creator search + shortlist bulk add
-
-- Commits: `3388b4df` / `77e0f821` on `develop` · `f5662b15` / `896a94af` on `main`
-- Paste profile URL → `@handle` exact match only; name search keeps suggestions
+- Commits: `45f9deae` · `925da7f8`
+- Avg. Engagements · Avg. Likes · Avg. Reels Plays (creator detail only)
+- Quotation money/counts: whole-number display (ER exception above)
 
 ## Prior closed
 
-**Apify Manual Refresh:** CLOSED · Production PASS (`937dd503`)  
-**Studio + Creator Detail progressive load:** on `develop`
+**Apify Manual Refresh:** CLOSED · Production PASS (`937dd503`)
 
 ## Dev infra (separate)
 
