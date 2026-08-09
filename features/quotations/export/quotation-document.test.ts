@@ -438,8 +438,9 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(showcaseHtml.includes("sc-avatar"));
   assert.ok(showcaseHtml.includes("showcase-creator-page"));
   assert.ok(showcaseHtml.includes("Creator roster (1)"));
-  assert.ok(showcaseHtml.includes("Proposed deliverables"));
-  assert.ok(showcaseHtml.includes("Creator A"));
+  assert.ok(showcaseHtml.includes("Proposed deliverable"));
+  assert.ok(showcaseHtml.includes("sc-metric"));
+  assert.ok(showcaseHtml.includes("Creator A") || showcaseHtml.includes("@creator"));
   assert.ok(showcaseHtml.includes("Recent publications"));
   assert.ok(
     showcaseHtml.includes("No publication screenshots available for this creator."),
@@ -489,7 +490,7 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(showcaseLumpHtml.includes("showcase-creator-sheet"));
   assert.ok(showcaseLumpHtml.includes('class="quotation-export-preview quotation-showcase quotation-report"'));
   assert.ok(showcaseLumpHtml.includes("Creator roster (1)"));
-  assert.ok(showcaseLumpHtml.includes("Proposed deliverables"));
+  assert.ok(showcaseLumpHtml.includes("Proposed deliverable"));
   assert.ok(showcaseLumpHtml.includes("Commercial summary"));
   assert.ok(showcaseLumpHtml.includes(QUOTATION_CLIENT_LABELS.lumpSumCost));
   assert.ok(showcaseLumpHtml.includes(QUOTATION_CLIENT_LABELS.totalCost));

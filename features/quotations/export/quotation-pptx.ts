@@ -238,10 +238,32 @@ function applyCoverBackground(slide: Slide): void {
 
 function applyContentBackground(slide: Slide): void {
   slide.background = { data: pptxBackgroundData("pptx-content-bg.png") };
+  applyContentCurveAccent(slide);
 }
 
 function applyClosingBackground(slide: Slide): void {
-  slide.background = { data: pptxBackgroundData("pptx-closing-bg.png") };
+  // Match cover blue gradient (reference Redesign revised) — not black/navy.
+  applyCoverBackground(slide);
+}
+
+function applyContentCurveAccent(slide: Slide): void {
+  // Soft top-right curve so white slides match the reference deck background.
+  slide.addShape("ellipse", {
+    x: 8.2,
+    y: -3.4,
+    w: 8.6,
+    h: 8.6,
+    fill: { color: "C9DBFF", transparency: 62 },
+    line: { type: "none" },
+  });
+  slide.addShape("ellipse", {
+    x: -3.8,
+    y: 4.8,
+    w: 7.2,
+    h: 7.2,
+    fill: { color: "E8F0FF", transparency: 70 },
+    line: { type: "none" },
+  });
 }
 
 function nextSlideNo(counter: SlideCounter): string {
@@ -1463,6 +1485,81 @@ function addCreatorMetricsTable(
   return y + rowH * (metricRows.length + 1) + 0.12;
 }
 
+function creatorDeliverableSummary(
+  creator: ReturnType<typeof buildQuotationTemplatePayload>["showcaseCreators"][number]
+): { summary: string; feeLabel: string | null } {
+  const summary = creator.deliverables
+    .map((row) => row.service.trim())
+    .filter(Boolean)
+    .join(" + ") || "—";
+  const fees = creator.deliverables
+    .map((row) => {
+      const raw = row.grossFee?.replace(/[^\d.]/g, "") ?? "";
+      const n = Number(raw);
+      return Number.isFinite(n) ? n : null;
+    })
+    .filter((n): n is number => n != null);
+  const total = fees.reduce((a, b) => a + b, 0);
+  if (!fees.length) return { summary, feeLabel: null };
+  return {
+    summary,
+    feeLabel: `EGP ${Math.round(total).toLocaleString("en-US")}`,
+  };
+}
+
+function drawShowcaseMetricCards(
+  slide: Slide,
+  creator: ReturnType<typeof buildQuotationTemplatePayload>["showcaseCreators"][number],
+  y: number
+): number {
+  const cards: Array<{ label: string; value: string; accent?: boolean }> = [
+    { label: "FOLLOWERS", value: creator.followers, accent: true },
+    { label: "ENGAGEMENT", value: creator.engagement },
+  ];
+  for (const metric of creator.platformMetrics) {
+    if (cards.length >= 4) break;
+    const label = getReportPlatformIconTitle(metric.platform).toUpperCase();
+    if (cards.some((card) => card.label === label)) continue;
+    cards.push({ label, value: metric.followers });
+  }
+  const gap = 0.14;
+  const cardW = (CONTENT_W - gap * (cards.length - 1)) / cards.length;
+  cards.forEach((card, index) => {
+    const x = MARGIN_X + index * (cardW + gap);
+    slide.addShape("roundRect", {
+      x,
+      y,
+      w: cardW,
+      h: 0.92,
+      fill: { color: WHITE },
+      line: { color: HAIR, width: 1 },
+      rectRadius: 0.12,
+    });
+    slide.addText(card.label, {
+      x: x + 0.14,
+      y: y + 0.14,
+      w: cardW - 0.28,
+      h: 0.2,
+      fontFace: FONT_UI,
+      fontSize: 9,
+      bold: true,
+      color: MUTED,
+      charSpacing: 1,
+    });
+    slide.addText(card.value, {
+      x: x + 0.14,
+      y: y + 0.4,
+      w: cardW - 0.28,
+      h: 0.36,
+      fontFace: FONT_UI,
+      fontSize: 22,
+      bold: true,
+      color: card.accent ? BLUE : TITLE_INK,
+    });
+  });
+  return y + 1.08;
+}
+
 async function addCreatorSlide(
   pptx: PptxGen,
   doc: QuotationDocument,
@@ -1476,13 +1573,9 @@ async function addCreatorSlide(
 
   const pitch = isPitchTemplate(doc.template);
   const showFees = payload.flags.showFees;
-  const metricCount = creatorPlatformMetricRows(creator).length;
-  const perSlide = pitch ? PITCH_DELIVERABLES_PER_SLIDE : CREATOR_DELIVERABLES_PER_SLIDE;
-  const pubThumbSize = pitch
-    ? Math.min(PITCH_PUB_THUMB_SIZE, metricCount > 2 ? 1.35 : 1.5)
-    : Math.min(PUB_THUMB_SIZE, 1.15);
-  const pubCols = pitch ? Math.min(PITCH_PUB_COLS, 3) : Math.min(PUB_COLS, 4);
-  const pubLimit = pubCols;
+  const pubThumbSize = pitch ? Math.min(PITCH_PUB_THUMB_SIZE, 1.35) : 1.2;
+  const pubCols = 4;
+  const pubLimit = 4;
 
   const handleForUrl = creator.handle.replace(/^@/, "").trim();
   const synthesizedProfileUrl =
@@ -1499,162 +1592,190 @@ async function addCreatorSlide(
     synthesizedProfileUrl,
   ]);
 
-  // Slide 1 — identity, platform metrics, publications (no deliverables crowding).
-  {
-    const slide = pptx.addSlide();
-    applyContentBackground(slide);
-    const pageNo = nextSlideNo(counter);
-    addBrandLockup(slide, "dark", 0.42, 0.37);
-    slide.addText(
-      `SECTION 01 · CREATOR ${creator.index} OF ${payload.totals.creatorCount}`,
-      {
-        x: MARGIN_X,
-        y: 1.02,
-        w: 11,
-        h: 0.22,
-        fontFace: FONT_UI,
-        fontSize: 10.5,
-        bold: true,
-        color: BLUE,
-        charSpacing: 1.6,
-      }
-    );
+  const slide = pptx.addSlide();
+  applyContentBackground(slide);
+  const pageNo = nextSlideNo(counter);
+  addBrandLockup(slide, "dark", 0.42, 0.32);
 
-    const avatarSize = pitch ? Math.min(PITCH_AVATAR_SIZE, 1.4) : 0.7;
-    const avatarY = 1.3;
-    await addThinkwayCreatorAvatar(slide, {
-      avatarUrl: group.avatarUrl,
-      initials: creator.initials,
-      x: MARGIN_X,
-      y: avatarY,
-      size: avatarSize,
-      pitch,
-      profileHref: profileLink?.url ?? creator.profileUrl ?? group.profileUrl,
-    });
+  slide.addText(`CREATOR ${creator.index} OF ${payload.totals.creatorCount}`, {
+    x: MARGIN_X,
+    y: 0.95,
+    w: 10,
+    h: 0.22,
+    fontFace: FONT_UI,
+    fontSize: 11,
+    bold: true,
+    color: BLUE,
+    charSpacing: 1.4,
+  });
+  slide.addText(creator.handle, {
+    x: MARGIN_X,
+    y: 1.2,
+    w: CONTENT_W,
+    h: 0.42,
+    fontFace: FONT_UI,
+    fontSize: 30,
+    bold: true,
+    color: TITLE_INK,
+    ...(profileLink ? { hyperlink: profileLink } : {}),
+  });
 
-    const nameX = MARGIN_X + avatarSize + 0.22;
-    const identityW = CONTENT_W - avatarSize - 0.22;
-    const displayName =
-      creator.name.trim() && creator.name.trim() !== creator.handle.trim()
-        ? creator.name
-        : creator.handle;
-    slide.addText(displayName, {
-      x: nameX,
-      y: avatarY,
-      w: identityW,
-      h: 0.32,
-      fontFace: FONT_UI,
-      fontSize: 20,
-      bold: true,
-      color: TITLE_INK,
-      ...(profileLink ? { hyperlink: profileLink } : {}),
-    });
-    if (displayName !== creator.handle) {
-      slide.addText(creator.handle, {
-        x: nameX,
-        y: avatarY + 0.32,
-        w: identityW,
-        h: 0.2,
-        fontFace: FONT_BODY,
-        fontSize: 12,
-        color: MUTED,
-        ...(profileLink ? { hyperlink: profileLink } : {}),
-      });
-    }
+  const avatarSize = pitch ? Math.min(PITCH_AVATAR_SIZE, 1.35) : 1.05;
+  const avatarY = 1.75;
+  await addThinkwayCreatorAvatar(slide, {
+    avatarUrl: group.avatarUrl,
+    initials: creator.initials,
+    x: MARGIN_X,
+    y: avatarY,
+    size: avatarSize,
+    pitch,
+    profileHref: profileLink?.url ?? creator.profileUrl ?? group.profileUrl,
+  });
 
-    let metricsY = avatarY + (displayName !== creator.handle ? 0.58 : 0.4);
-    if (creator.platformIcons.length) {
-      addPlatformIconBadges(
-        slide,
-        creator.platformIcons,
-        nameX,
-        metricsY,
-        6,
-        profileLink?.url ?? creator.profileUrl ?? group.profileUrl,
-        0.2,
-        { overlap: true }
-      );
-      metricsY += 0.28;
-    }
+  const nameX = MARGIN_X + avatarSize + 0.28;
+  // Tier pill
+  slide.addShape("roundRect", {
+    x: nameX,
+    y: avatarY + 0.06,
+    w: Math.min(1.15, 0.55 + creator.tier.length * 0.1),
+    h: 0.28,
+    fill: { color: "EEF3FF" },
+    line: { type: "none" },
+    rectRadius: 0.14,
+  });
+  slide.addText(creator.tier.toUpperCase(), {
+    x: nameX,
+    y: avatarY + 0.06,
+    w: Math.min(1.15, 0.55 + creator.tier.length * 0.1),
+    h: 0.28,
+    fontFace: FONT_UI,
+    fontSize: 10,
+    bold: true,
+    color: BLUE,
+    align: "center",
+    valign: "middle",
+  });
+  slide.addText(creator.categories, {
+    x: nameX + Math.min(1.15, 0.55 + creator.tier.length * 0.1) + 0.12,
+    y: avatarY + 0.08,
+    w: 4,
+    h: 0.24,
+    fontFace: FONT_BODY,
+    fontSize: 13,
+    color: MUTED,
+    valign: "middle",
+  });
+  slide.addText(creator.handle, {
+    x: nameX,
+    y: avatarY + 0.42,
+    w: 6,
+    h: 0.26,
+    fontFace: FONT_UI,
+    fontSize: 14,
+    bold: true,
+    color: TITLE_INK,
+    ...(profileLink ? { hyperlink: profileLink } : {}),
+  });
+  const platformLabel = creator.platformIcons
+    .map((platform) => getReportPlatformIconTitle(platform))
+    .join(" · ");
+  addPlatformIconBadges(
+    slide,
+    creator.platformIcons,
+    nameX,
+    avatarY + 0.72,
+    6,
+    profileLink?.url ?? creator.profileUrl ?? group.profileUrl,
+    0.2,
+    { overlap: true }
+  );
+  slide.addText(platformLabel || creator.platforms, {
+    x: nameX + creator.platformIcons.length * 0.22 + 0.08,
+    y: avatarY + 0.7,
+    w: 5,
+    h: 0.24,
+    fontFace: FONT_BODY,
+    fontSize: 12,
+    color: MUTED,
+    valign: "middle",
+  });
 
-    let contentY = addCreatorMetricsTable(slide, creator, nameX, metricsY, identityW);
-    contentY = Math.max(contentY, avatarY + avatarSize + GAP_MD) + 0.08;
+  let contentY = drawShowcaseMetricCards(slide, creator, avatarY + avatarSize + 0.18);
 
-    if (group.publicationShots.length > 0 && contentY + pubThumbSize + 0.5 < CONTENT_BOTTOM) {
-      contentY = await addPublicationThumbs(
-        slide,
-        group.publicationShots.slice(0, pubLimit),
-        contentY,
-        "Recent publications",
-        pubCols,
-        pubThumbSize,
-        {
-          centered: false,
-          gap: pitch ? 0.16 : PUB_GAP,
-          frameless: Boolean(pitch),
-        }
-      );
-    }
-
-    addSlideFooter(slide, `${doc.serial} · ${creator.handle}`, pageNo);
-  }
-
-  // Follow-on slides — proposed deliverables only.
-  const deliverables = creator.deliverables;
-  if (!deliverables.length) return;
-
-  for (let offset = 0; offset < deliverables.length; offset += perSlide) {
-    const chunk = deliverables.slice(offset, offset + perSlide);
-    const continued = offset > 0;
-    const slide = pptx.addSlide();
-    applyContentBackground(slide);
-    const pageNo = nextSlideNo(counter);
-    addBrandLockup(slide, "dark", 0.42, 0.37);
-    slide.addText(
-      `SECTION 01 · CREATOR ${creator.index} OF ${payload.totals.creatorCount}${continued ? " (CONTINUED)" : ""}`,
-      {
-        x: MARGIN_X,
-        y: 1.02,
-        w: 11,
-        h: 0.22,
-        fontFace: FONT_UI,
-        fontSize: 10.5,
-        bold: true,
-        color: BLUE,
-        charSpacing: 1.6,
-      }
-    );
-    slide.addText(creator.handle, {
-      x: MARGIN_X,
-      y: 1.32,
-      w: CONTENT_W,
-      h: 0.28,
-      fontFace: FONT_UI,
-      fontSize: 16,
-      bold: true,
-      color: TITLE_INK,
-    });
-    slide.addText(
-      (continued ? "Proposed deliverables (continued)" : "Proposed deliverables").toUpperCase(),
-      {
-        x: MARGIN_X,
-        y: 1.7,
-        w: CONTENT_W,
-        h: 0.2,
-        fontFace: FONT_UI,
-        fontSize: 9,
-        bold: true,
-        color: BLUE,
-        charSpacing: 1.2,
-      }
-    );
-    addCreatorDeliverablesTable(slide, chunk, showFees, 1.98);
-    addSlideFooter(
+  if (group.publicationShots.length > 0) {
+    contentY = await addPublicationThumbs(
       slide,
-      `${doc.serial} · ${creator.handle}${continued ? ` · ${Math.floor(offset / perSlide) + 1}` : ""}`,
-      pageNo
+      group.publicationShots.slice(0, pubLimit),
+      contentY + 0.04,
+      "Recent publications",
+      pubCols,
+      pubThumbSize,
+      {
+        centered: false,
+        gap: pitch ? 0.16 : PUB_GAP,
+        frameless: Boolean(pitch),
+      }
     );
   }
+
+  const { summary, feeLabel } = creatorDeliverableSummary(creator);
+  const barY = Math.min(contentY + 0.12, CONTENT_BOTTOM - 0.85);
+  slide.addShape("roundRect", {
+    x: MARGIN_X,
+    y: barY,
+    w: CONTENT_W,
+    h: 0.72,
+    fill: { color: "F6F8FF" },
+    line: { color: HAIR, width: 1 },
+    rectRadius: 0.12,
+  });
+  slide.addText("PROPOSED DELIVERABLE", {
+    x: MARGIN_X + 0.22,
+    y: barY + 0.1,
+    w: showFees && feeLabel ? 8.2 : CONTENT_W - 0.44,
+    h: 0.18,
+    fontFace: FONT_UI,
+    fontSize: 9,
+    bold: true,
+    color: MUTED,
+    charSpacing: 1,
+  });
+  slide.addText(summary, {
+    x: MARGIN_X + 0.22,
+    y: barY + 0.32,
+    w: showFees && feeLabel ? 8.2 : CONTENT_W - 0.44,
+    h: 0.3,
+    fontFace: FONT_BODY,
+    fontSize: 12,
+    bold: true,
+    color: TITLE_INK,
+  });
+  if (showFees && feeLabel) {
+    const pillW = Math.min(2.4, 1.2 + feeLabel.length * 0.09);
+    slide.addShape("roundRect", {
+      x: MARGIN_X + CONTENT_W - pillW - 0.18,
+      y: barY + 0.14,
+      w: pillW,
+      h: 0.44,
+      fill: { color: BLUE },
+      line: { type: "none" },
+      rectRadius: 0.22,
+    });
+    slide.addText(feeLabel, {
+      x: MARGIN_X + CONTENT_W - pillW - 0.18,
+      y: barY + 0.14,
+      w: pillW,
+      h: 0.44,
+      fontFace: FONT_UI,
+      fontSize: 13,
+      bold: true,
+      color: WHITE,
+      align: "center",
+      valign: "middle",
+    });
+  }
+
+  addSlideFooter(slide, `${doc.serial} · ${creator.handle}`, pageNo);
 }
 
 function collabCreatorDisplayName(creator: QuotationDocCollapsePackageCreator): string {
@@ -1947,8 +2068,64 @@ async function addCollabSlides(
   }
 }
 
-const ROSTER_ROWS_PER_SLIDE = 11;
+/** Per-platform roster rows — keep clear of footer. */
+const ROSTER_ROWS_PER_SLIDE = 9;
+const ROSTER_ROWS_FIRST_SLIDE = 7;
 const ROSTER_ROW_H = 0.34;
+
+type RosterPptxRow = {
+  handle: string;
+  initials: string;
+  avatarUrl: string | null;
+  profileUrl: string | null;
+  followers: string;
+  er: string;
+  tier: string;
+  categories: string;
+  platformIcons: string[];
+  lead: boolean;
+};
+
+function expandRosterPptxRows(
+  doc: QuotationDocument,
+  payload: ReturnType<typeof buildQuotationTemplatePayload>
+): RosterPptxRow[] {
+  const rows: RosterPptxRow[] = [];
+  payload.roster.rows.forEach((row, index) => {
+    const group = doc.creatorGroups[index];
+    const metrics = group?.platformMetrics ?? [];
+    if (metrics.length > 0) {
+      metrics.forEach((metric, metricIndex) => {
+        rows.push({
+          handle: metricIndex === 0 ? row.handle : "",
+          initials: row.initials,
+          avatarUrl: metricIndex === 0 ? row.avatarUrl : null,
+          profileUrl: metric.profileUrl ?? row.profileUrl,
+          followers: metric.followers,
+          er: metric.engagement,
+          tier: metricIndex === 0 ? row.tier : "",
+          categories: metricIndex === 0 ? row.categories : "",
+          platformIcons: [metric.platform],
+          lead: metricIndex === 0,
+        });
+      });
+      return;
+    }
+    rows.push({
+      handle: row.handle,
+      initials: row.initials,
+      avatarUrl: row.avatarUrl,
+      profileUrl: row.profileUrl,
+      followers: row.followers,
+      er: row.er,
+      tier: row.tier,
+      categories: row.categories,
+      platformIcons: row.platformIcons,
+      lead: true,
+    });
+  });
+  return rows;
+}
 
 function drawRosterKpiStrip(
   slide: Slide,
@@ -2003,14 +2180,17 @@ async function addRosterSlides(
   counter: SlideCounter
 ): Promise<void> {
   const payload = buildQuotationTemplatePayload(doc);
-  const allRows = payload.roster.rows;
+  const allRows = expandRosterPptxRows(doc, payload);
   if (!allRows.length) return;
 
   const avatarSize = 0.22;
   const colW = [2.55, 1.45, 1.15, 1.2, 2.65, 3.13];
-  const chunks: (typeof allRows)[] = [];
-  for (let offset = 0; offset < allRows.length; offset += ROSTER_ROWS_PER_SLIDE) {
-    chunks.push(allRows.slice(offset, offset + ROSTER_ROWS_PER_SLIDE));
+  const chunks: RosterPptxRow[][] = [];
+  let offset = 0;
+  while (offset < allRows.length) {
+    const size = chunks.length === 0 ? ROSTER_ROWS_FIRST_SLIDE : ROSTER_ROWS_PER_SLIDE;
+    chunks.push(allRows.slice(offset, offset + size));
+    offset += size;
   }
 
   for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
@@ -2043,13 +2223,13 @@ async function addRosterSlides(
         { text: "Platforms", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
       ],
       ...chunk.map((row) => {
-        const handleLink = resolveCreatorProfileHref(row.profileUrl);
+        const handleLink = row.lead ? resolveCreatorProfileHref(row.profileUrl) : undefined;
         return [
           {
             text: row.handle,
             options: {
               fontSize: 9,
-              bold: true,
+              bold: Boolean(row.handle),
               color: TITLE_INK,
               margin: [0.04, 0.04, 0.04, 0.34] as [number, number, number, number],
               ...(handleLink ? { hyperlink: handleLink } : {}),
@@ -2081,22 +2261,24 @@ async function addRosterSlides(
       const row = chunk[index]!;
       const rowTop = tableY + ROSTER_ROW_H * (index + 1);
       const rosterLink = resolveCreatorProfileHref(row.profileUrl);
-      await addThinkwayCreatorAvatar(slide, {
-        avatarUrl: row.avatarUrl ?? null,
-        initials: row.initials,
-        x: MARGIN_X + 0.08,
-        y: rowTop + (ROSTER_ROW_H - avatarSize) / 2,
-        size: avatarSize,
-        pitch: false,
-        profileHref: rosterLink?.url ?? row.profileUrl,
-      });
+      if (row.lead) {
+        await addThinkwayCreatorAvatar(slide, {
+          avatarUrl: row.avatarUrl ?? null,
+          initials: row.initials,
+          x: MARGIN_X + 0.08,
+          y: rowTop + (ROSTER_ROW_H - avatarSize) / 2,
+          size: avatarSize,
+          pitch: false,
+          profileHref: rosterLink?.url ?? row.profileUrl,
+        });
+      }
       if (row.platformIcons.length) {
         addPlatformIconBadges(
           slide,
           row.platformIcons,
           platformColX,
           rowTop + (ROSTER_ROW_H - 0.2) / 2,
-          5,
+          1,
           rosterLink?.url ?? row.profileUrl,
           0.2,
           { overlap: true }

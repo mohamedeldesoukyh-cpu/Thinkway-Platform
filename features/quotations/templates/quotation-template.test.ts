@@ -157,7 +157,9 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(showcaseHtml.includes("sc-avatar"));
   assert.ok(showcaseHtml.includes("showcase-creator-page"));
   assert.ok(showcaseHtml.includes("Recent publications"));
-  assert.ok(showcaseHtml.includes("Influencer price (EGP)"));
+  assert.ok(showcaseHtml.includes("Proposed deliverable"));
+  assert.ok(showcaseHtml.includes("sc-metric"));
+  assert.ok(showcaseHtml.includes("sc-fee-pill") || showcaseHtml.includes("EGP"));
   assert.ok(!showcaseHtml.includes("Terms &amp; conditions"));
   assert.ok(!showcaseHtml.includes('id="section-commercial"'));
   assert.ok(
@@ -231,7 +233,8 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   const pitchHtml = buildQuotationTemplateHtml(pitchDoc);
   assert.ok(!pitchHtml.includes("Pitch Presentation"));
   assert.ok(!pitchHtml.includes("Quotation No."));
-  assert.ok(pitchHtml.includes("showcase-metrics-table"));
+  assert.ok(pitchHtml.includes("sc-metric"));
+  assert.ok(pitchHtml.includes("Proposed deliverable"));
   assert.ok(!pitchHtml.includes(">Views<"));
   assert.ok(!pitchHtml.includes("Avg views"));
   assert.ok(!pitchHtml.includes("Acceptance"));
