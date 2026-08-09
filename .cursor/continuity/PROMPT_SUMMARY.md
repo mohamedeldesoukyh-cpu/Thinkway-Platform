@@ -1,7 +1,15 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `feature/discovery-search-shortlist-fix` (from `develop`)  
-**Focus:** Discovery creator search accuracy/speed + bulk shortlist add
+**Branch:** `develop`  
+**Focus:** Creator metric definitions (closed for now)
+
+## CLOSED — Creator metric definitions (leave as-is)
+
+- Keep only: **Avg. Engagements** · **Avg. Likes** · **Avg. Reels Plays** (creator detail + enrichment SSOT)
+- SSOT: `lib/creators/creator-metric-definitions.ts`
+- **Do not** implement/estimate Credibility Score
+- **Do not** extend these metrics to Discovery rows, quotation decks, or other surfaces until Product revisits
+- Credibility Score / audience types / reachability / city / audience brand affinity — revisit later with audience provider
 
 ## SHIPPED — Combine creators search + crash
 

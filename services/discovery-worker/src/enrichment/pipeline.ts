@@ -121,6 +121,15 @@ export async function runEnrichmentPipeline(profileId: string): Promise<void> {
     posts.length > 0
       ? posts.reduce((sum, p) => sum + (p.comments ?? 0), 0) / posts.length
       : null;
+  const videoPosts = posts.filter((p) => (p.views ?? null) != null && (p.views ?? 0) > 0);
+  const reelsViewsAvg =
+    videoPosts.length > 0
+      ? videoPosts.reduce((sum, p) => sum + (p.views ?? 0), 0) / videoPosts.length
+      : null;
+  const avgViews =
+    posts.length > 0
+      ? posts.reduce((sum, p) => sum + (p.views ?? 0), 0) / posts.length
+      : null;
   const followers = crawl.profile.followers ?? 0;
   const following = crawl.profile.following ?? 0;
   const engagementRate =
@@ -135,7 +144,9 @@ export async function runEnrichmentPipeline(profileId: string): Promise<void> {
     postsCount: posts.length,
     avgLikes: avgLikes ?? undefined,
     avgComments: avgComments ?? undefined,
+    avgViews: avgViews ?? undefined,
     engagementRate: engagementRate ?? undefined,
+    reelsViewsAvg: reelsViewsAvg ?? undefined,
   });
   await saveRelationships(profileId, profile.platform as string, crawl.relationships);
 

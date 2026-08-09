@@ -1,22 +1,23 @@
 import { formatCreatorCount } from "@/features/discovery/components/creator-search/creator-search-utils";
 import { formatCurrencyAmount } from "@/lib/finance/currency-format";
 
-/** Full number with thousands separators (e.g. 15,791,000). */
+/** Full number with thousands separators (e.g. 15,791,000). Display-only whole numbers. */
 export function formatQuotationFullNumber(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return "—";
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
 }
 
-/** Short reach/follower label (e.g. 15.79M, 541.4K). */
+/** Short reach/follower label (e.g. 16M, 541K) — whole numbers only. */
 export function formatQuotationShortNumber(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return "—";
   if (value >= 1_000_000) {
-    const scaled = value / 1_000_000;
-    return scaled >= 10 ? `${scaled.toFixed(1)}M` : `${scaled.toFixed(2)}M`;
+    return `${Math.round(value / 1_000_000)}M`;
   }
   if (value >= 1_000) {
-    const scaled = value / 1_000;
-    return scaled >= 100 ? `${Math.round(scaled)}K` : `${scaled.toFixed(1)}K`;
+    return `${Math.round(value / 1_000)}K`;
   }
   return String(Math.round(value));
 }
@@ -60,23 +61,23 @@ export function parseQuotationMoneyString(value: string): {
   return null;
 }
 
-/** Detailed quotation money — ISO code (Financial Display Standard). */
+/** Detailed quotation money — ISO code; Preview/export use whole numbers only. */
 export function formatQuotationCurrencySymbolFirst(
   amount: number,
   currency = "EGP",
-  decimals = 2
+  decimals = 0
 ): string {
   return formatCurrencyAmount(amount, currency, { decimals });
 }
 
-/** Abbreviated currency for cover stats (EGP 3.50M / AED 268.33K). */
+/** Abbreviated currency for cover stats (EGP 4M / AED 268K) — whole numbers only. */
 export function formatQuotationCurrencyShort(amount: number, currency = "EGP"): string {
   const code = (currency || "EGP").trim().toUpperCase() || "EGP";
   if (amount >= 1_000_000) {
-    return `${code} ${(amount / 1_000_000).toFixed(2)}M`;
+    return `${code} ${Math.round(amount / 1_000_000)}M`;
   }
   if (amount >= 1_000) {
-    return `${code} ${(amount / 1_000).toFixed(2)}K`;
+    return `${code} ${Math.round(amount / 1_000)}K`;
   }
   return formatQuotationCurrencySymbolFirst(amount, currency);
 }
