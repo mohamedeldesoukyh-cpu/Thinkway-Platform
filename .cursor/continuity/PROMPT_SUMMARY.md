@@ -1,15 +1,15 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `develop`  
-**Focus:** Creator metric definitions (closed for now)
+**Branch:** `develop` / `main` @ `925da7f8`  
+**Focus:** Creator metric definitions + quotation whole-number display — SHIPPED
 
-## CLOSED — Creator metric definitions (leave as-is)
+## SHIPPED — Creator metrics + quotation whole numbers
 
-- Keep only: **Avg. Engagements** · **Avg. Likes** · **Avg. Reels Plays** (creator detail + enrichment SSOT)
-- SSOT: `lib/creators/creator-metric-definitions.ts`
-- **Do not** implement/estimate Credibility Score
-- **Do not** extend these metrics to Discovery rows, quotation decks, or other surfaces until Product revisits
-- Credibility Score / audience types / reachability / city / audience brand affinity — revisit later with audience provider
+- Commits: `45f9deae` · `925da7f8` (typing fix)
+- Release: `1793a9be` → main · Prod `dpl_xz1By3M7i4NMTCcEah8dyjSboxit` → https://app.thinkwaymedia.com
+- Keep: Avg. Engagements · Avg. Likes · Avg. Reels Plays (creator detail only)
+- Quotation Preview/export: whole-number display rounding only
+- No Credibility Score · no Discovery/quotation metric placement expansion
 
 ## SHIPPED — Combine creators search + crash
 
@@ -20,30 +20,6 @@
 
 - Commits: `3388b4df` / `77e0f821` on `develop` · `f5662b15` / `896a94af` on `main`
 - Paste profile URL → `@handle` exact match only; name search keeps suggestions
-- Fixed bare-word false Instagram parse; faster debounce; bulk shortlist insert
-- Prod: `dpl_Cd1hS4C7F81z6cRCV6nGkxb8wy1j` → https://app.thinkwaymedia.com
-- Dev: pushed to `develop` (auto Preview)
-
-## Shortlist / Quotation export quality — SHIPPED
-
-- Commit: `f33bef57` — workspace selection SSOT · Preview chrome · PDF/PPTX layout
-- Live smoke (Liwa): Selection · Preview · PDF · PPTX — **PASS**
-
-## Hotfix — Quotation PPTX won't open in PowerPoint — SHIPPED
-
-- Fix: `b95b72fd` — PNG icons + SVG guard
-- Prod: aliased to https://app.thinkwaymedia.com
-
-## Hotfix — Commercial Workspace Save reverts (priced deliverables) — SHIPPED
-
-- **SSOT:** Quotation **line** Master columns are authoritative (`COMMERCIAL_SSOT_QUOTE_CAMPAIGN.md`)
-- **Cause:** Line Save left stale priced deliverables; remount preferred deliverable rollup over saved line
-- **Fix commits:** `0e74e6b7` · `dffa31de` (Json cast)
-- Prefer line Master on remount · strip deliverable commercials in same UPDATE · pending-diff cost/revenue always checked · rebuild drafts when no unsaved changes
-- Regression: `lib/quotations/quotation-commercial-ssot-save-regression.test.ts`
-- Preview: `dpl_BxySjuxkLi3SrUfStgN2JRTJCd8f` → https://dev.thinkwaymedia.com — Dev DB smoke **PASS**
-- Production: `dpl_52DcUDavbMQnK4wCTfTnbPHfhnAe` → https://app.thinkwaymedia.com
-- Prod UI smoke `QT-2026-0009-V2`: edit cost 21000→21111 · Save · hard remount · BASE COST **972,311** · CW shows **21111** — **PASS**
 
 ## Prior closed
 
