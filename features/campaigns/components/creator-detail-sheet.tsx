@@ -82,6 +82,10 @@ import { creatorStoredCategoriesForDisplay } from "@/lib/creators/category-filte
 import { creatorHasAnyContact, resolveCreatorContactSections, type CreatorContactFields } from "@/lib/creators/contact-info";
 import { creatorListRowEquivalent } from "@/lib/creators/creator-list-row-equivalent";
 import { shouldPreventCreatorDetailSheetOutsideDismiss } from "@/lib/creators/creator-detail-sheet-open-policy";
+import {
+  CREATOR_METRIC_DEFINITIONS,
+  resolveCreatorEngagementMetricBundle,
+} from "@/lib/creators/creator-metric-definitions";
 import type {
   CreatorHistoricalMetrics,
   MetricConfidenceLevel,
@@ -233,13 +237,15 @@ function KpiCard({
   label,
   metric,
   suffix = "",
+  description,
 }: {
   label: string;
   metric: MetricWithConfidence;
   suffix?: string;
+  description?: string;
 }) {
   return (
-    <div className="creator-detail-sheet-kpi-card">
+    <div className="creator-detail-sheet-kpi-card" title={description}>
       <div className="creator-detail-sheet-kpi-card__label-row">
         <span
           className={cn("creator-detail-sheet-kpi-card__confidence", CONFIDENCE_DOT[metric.confidence])}
@@ -885,6 +891,33 @@ export function CreatorDetailSheet({
   const platforms = sortPlatformsStable(identityCreator.platforms);
   const selectedPlatform =
     platforms.find((p) => p.id === selectedPlatformAccountId) ?? platforms[0] ?? null;
+  const selectedMetadata = (selectedPlatform?.metadata ?? null) as Record<string, unknown> | null;
+  const metadataReelsPlays =
+    typeof selectedMetadata?.avg_reels_plays === "number" ? selectedMetadata.avg_reels_plays : null;
+  const engagementMetricBundle = resolveCreatorEngagementMetricBundle({
+    publications: displayCreator.recent_publications,
+    avgLikes: displayCreator.metrics.avg_likes.value,
+    avgComments: displayCreator.metrics.avg_comments.value,
+    reelsViewsAvg: metadataReelsPlays,
+  });
+  const avgEngagementsMetric: MetricWithConfidence = {
+    value: engagementMetricBundle.avgEngagements,
+    confidence:
+      engagementMetricBundle.avgEngagements != null
+        ? displayCreator.metrics.avg_likes.confidence
+        : "estimated",
+  };
+  const avgLikesMetric: MetricWithConfidence = {
+    value: engagementMetricBundle.avgLikes,
+    confidence: displayCreator.metrics.avg_likes.confidence,
+  };
+  const avgReelsPlaysMetric: MetricWithConfidence = {
+    value: engagementMetricBundle.avgReelsPlays,
+    confidence:
+      engagementMetricBundle.avgReelsPlays != null
+        ? displayCreator.metrics.avg_views.confidence
+        : "estimated",
+  };
 
   const matchedDetail = detail?.unifiedId === identityCreator.unified_id ? detail : null;
   const loading = matchedDetail == null;
@@ -1322,11 +1355,23 @@ export function CreatorDetailSheet({
                         metric={displayCreator.metrics.engagement_rate}
                         suffix="%"
                       />
-                      <KpiCard label="Avg likes" metric={displayCreator.metrics.avg_likes} />
+                      <KpiCard
+                        label="Avg. Engagements"
+                        metric={avgEngagementsMetric}
+                        description={CREATOR_METRIC_DEFINITIONS.avg_engagements}
+                      />
                     </div>
                     <div className="creator-detail-sheet-kpi-grid mt-2.5">
-                      <KpiCard label="Avg comments" metric={displayCreator.metrics.avg_comments} />
-                      <KpiCard label="Avg views" metric={displayCreator.metrics.avg_views} />
+                      <KpiCard
+                        label="Avg. Likes"
+                        metric={avgLikesMetric}
+                        description={CREATOR_METRIC_DEFINITIONS.avg_likes}
+                      />
+                      <KpiCard
+                        label="Avg. Reels Plays"
+                        metric={avgReelsPlaysMetric}
+                        description={CREATOR_METRIC_DEFINITIONS.avg_reels_plays}
+                      />
                       <KpiCard
                         label="Posts / week"
                         metric={displayCreator.metrics.posting_frequency_per_week}

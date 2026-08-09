@@ -296,10 +296,11 @@ export type QuotationDocument = {
   revisionLine: string | null;
 };
 
-const num = (n: number, decimals = 0) =>
+/** Preview/export display only — round to whole numbers (underlying values unchanged). */
+const num = (n: number, _decimals = 0) =>
   new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(Number.isFinite(n) ? n : 0);
 
 const TIER_SECTION_ORDER: CreatorTierLabel[] = [
@@ -495,7 +496,7 @@ function buildQuotationFullTierBreakdown(input: {
           reachSharePct:
             totalEstimatedReach > 0
               ? `${num((sectionReach / totalEstimatedReach) * 100, 1)}%`
-              : "0.0%",
+              : "0%",
           avgEngagementRate: exportEngagementRateLabel(avgEr),
           creators: creators.map((entry) => ({
             handle: entry.handle,
@@ -554,7 +555,7 @@ function buildBreakdown(
     .map(([label, count]) => ({
       label,
       count,
-      sharePct: totalCreators > 0 ? `${num((count / totalCreators) * 100, 1)}%` : "0.0%",
+      sharePct: totalCreators > 0 ? `${num((count / totalCreators) * 100, 1)}%` : "0%",
     }))
     .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 }
@@ -947,7 +948,7 @@ export function buildQuotationDocument(
   const exportGroups = groupQuotationExportItems(items);
   const uniqueCreatorCount = countUniqueQuotationCreators(items);
   const formatSharePct = (count: number, total: number) =>
-    total > 0 ? `${num((count / total) * 100, 1)}%` : "0.0%";
+    total > 0 ? `${num((count / total) * 100, 1)}%` : "0%";
   const categoryBreakdown = isPitchTemplate(template)
     ? buildQuotationDisplayCategoryBreakdown({
         creatorGroups,

@@ -1,7 +1,15 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `feature/discovery-search-shortlist-fix` (from `develop`)  
-**Focus:** Discovery creator search accuracy/speed + bulk shortlist add
+**Branch:** `develop`  
+**Focus:** Creator metric definitions (closed for now)
+
+## CLOSED — Creator metric definitions (leave as-is)
+
+- Keep only: **Avg. Engagements** · **Avg. Likes** · **Avg. Reels Plays** (creator detail + enrichment SSOT)
+- SSOT: `lib/creators/creator-metric-definitions.ts`
+- **Do not** implement/estimate Credibility Score
+- **Do not** extend these metrics to Discovery rows, quotation decks, or other surfaces until Product revisits
+- Credibility Score / audience types / reachability / city / audience brand affinity — revisit later with audience provider
 
 ## SHIPPED — Combine creators search + crash
 
@@ -18,22 +26,28 @@
 
 ## Shortlist / Quotation export quality — SHIPPED
 
-- Commit: `f33bef57` — workspace selection SSOT (no sessionStorage) · pre-preview summary · Preview chrome · PDF/PPTX layout · 50-creator validation **75/75**
-- CI: Validate Run 346 **green** on `f33bef57`
-- Dev Preview: `https://dev.thinkwaymedia.com` (develop auto-deploy)
-- Production: `dpl_3zTJ1PorFfVVWKXKgb57uD2JxRMs` → `https://app.thinkwaymedia.com` (CLI deploy + alias)
-- Live smoke (Liwa SL-2026-0017 / QT-2026-0018): Selection · Preview · PDF · PPTX · counts · totals · no ellipsis/clamp — **PASS**
+- Commit: `f33bef57` — workspace selection SSOT · Preview chrome · PDF/PPTX layout
+- Live smoke (Liwa): Selection · Preview · PDF · PPTX — **PASS**
 
-## Hotfix (local, not shipped) — Quotation PPTX won't open in PowerPoint
+## Hotfix — Quotation PPTX won't open in PowerPoint — SHIPPED
 
-- **Symptom:** `Sorry, PowerPoint can't read …-showcase.pptx` (e.g. QT-2026-0013-V2)
-- **Cause:** Facebook/YouTube icons were SVG; pptxgenjs embeds SVG bytes as a fake `.png` → corrupt OOXML
-- **Fix:** `public/platform-icons/{facebook,youtube}.png` · `report-platform-icons.ts` uses PNG · PPTX skips SVG embeds
-- Verified: new icon PPTX opens; surgically patched broken file opens (9 slides). Needs commit → develop → Dev/Prod redeploy
+- Fix: `b95b72fd` — PNG icons + SVG guard
+- Prod: aliased to https://app.thinkwaymedia.com
+
+## Hotfix — Commercial Workspace Save reverts (priced deliverables) — SHIPPED
+
+- **SSOT:** Quotation **line** Master columns are authoritative (`COMMERCIAL_SSOT_QUOTE_CAMPAIGN.md`)
+- **Cause:** Line Save left stale priced deliverables; remount preferred deliverable rollup over saved line
+- **Fix commits:** `0e74e6b7` · `dffa31de` (Json cast)
+- Prefer line Master on remount · strip deliverable commercials in same UPDATE · pending-diff cost/revenue always checked · rebuild drafts when no unsaved changes
+- Regression: `lib/quotations/quotation-commercial-ssot-save-regression.test.ts`
+- Preview: `dpl_BxySjuxkLi3SrUfStgN2JRTJCd8f` → https://dev.thinkwaymedia.com — Dev DB smoke **PASS**
+- Production: `dpl_52DcUDavbMQnK4wCTfTnbPHfhnAe` → https://app.thinkwaymedia.com
+- Prod UI smoke `QT-2026-0009-V2`: edit cost 21000→21111 · Save · hard remount · BASE COST **972,311** · CW shows **21111** — **PASS**
 
 ## Prior closed
 
-**Apify Manual Refresh:** CLOSED · Enterprise Ready · Production PASS (`937dd503`)  
+**Apify Manual Refresh:** CLOSED · Production PASS (`937dd503`)  
 **Studio + Creator Detail progressive load:** on `develop`
 
 ## Dev infra (separate)

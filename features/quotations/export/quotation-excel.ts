@@ -140,7 +140,7 @@ export async function buildQuotationExcel(
     ...breakdownRows("Creators by Tier", doc.summary.tierBreakdown),
     {
       kind: "total",
-      values: ["Total unique creators", doc.summary.creatorCount, "100.0%"],
+      values: ["Total unique creators", doc.summary.creatorCount, "100%"],
     },
   ];
 

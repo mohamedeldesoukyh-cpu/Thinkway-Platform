@@ -789,6 +789,12 @@ export async function runCreatorEnrichment(
         delete merged.updates[field];
       }
     }
+    if (data.avgEngagements != null) {
+      metadataPatch.avg_engagements = data.avgEngagements;
+    }
+    if (data.avgReelsPlays != null) {
+      metadataPatch.avg_reels_plays = data.avgReelsPlays;
+    }
     if (Object.keys(metadataPatch).length > 0) {
       merged.updates.metadata = { ...metadataBase, ...metadataPatch };
       if (!merged.fieldsUpdated.includes("metadata")) {

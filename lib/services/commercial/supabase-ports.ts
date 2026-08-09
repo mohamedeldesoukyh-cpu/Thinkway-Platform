@@ -14,6 +14,8 @@ import {
   fetchQuotationItemEgpTotals,
   updateQuotationHeaderRecord,
 } from "@/lib/services/quotations/repositories/quotation-repository";
+import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-types";
+import { deliverablesPatchForLineMasterSave } from "@/lib/quotations/quotation-line-commercial-ssot";
 import type { CommercialInputMode, Database } from "@/types/database";
 
 import { isCampaignFinanceLocked } from "@/lib/finance/campaign-finance-lock";
@@ -118,7 +120,7 @@ export function createSupabaseCommercialSyncPorts(
     const { data: existing } = await supabase
       .from("quotation_items")
       .select(
-        "commercial_input_mode, cost, cost_currency, revenue, gp_pct, gp_value, af_pct"
+        "commercial_input_mode, cost, cost_currency, revenue, gp_pct, gp_value, af_pct, deliverables"
       )
       .eq("id", quotationItemId)
       .maybeSingle();
@@ -160,23 +162,29 @@ export function createSupabaseCommercialSyncPorts(
       fxRateToEgp: rate,
     });
 
+    const patch: Record<string, unknown> = {
+      commercial_input_mode: normalized.commercial_input_mode,
+      cost: normalized.cost,
+      cost_currency: normalized.cost_currency,
+      revenue: normalized.revenue,
+      gp_pct: normalized.gp_pct,
+      gp_value: normalized.gp_value,
+      af_pct: normalized.af_pct,
+      af_value: normalized.af_value,
+      fx_rate_to_egp: normalized.fx_rate_to_egp,
+      cost_egp: normalized.cost_egp,
+      revenue_egp: normalized.revenue_egp,
+      gp_value_egp: normalized.gp_value_egp,
+      af_value_egp: normalized.af_value_egp,
+    };
+    const cleared = deliverablesPatchForLineMasterSave(
+      (existing.deliverables as unknown as QuotationDeliverable[] | null) ?? []
+    );
+    if (cleared) patch.deliverables = cleared;
+
     const { error } = await supabase
       .from("quotation_items")
-      .update({
-        commercial_input_mode: normalized.commercial_input_mode,
-        cost: normalized.cost,
-        cost_currency: normalized.cost_currency,
-        revenue: normalized.revenue,
-        gp_pct: normalized.gp_pct,
-        gp_value: normalized.gp_value,
-        af_pct: normalized.af_pct,
-        af_value: normalized.af_value,
-        fx_rate_to_egp: normalized.fx_rate_to_egp,
-        cost_egp: normalized.cost_egp,
-        revenue_egp: normalized.revenue_egp,
-        gp_value_egp: normalized.gp_value_egp,
-        af_value_egp: normalized.af_value_egp,
-      } as never)
+      .update(patch as never)
       .eq("id", quotationItemId);
     if (error) throw new Error(error.message);
   };

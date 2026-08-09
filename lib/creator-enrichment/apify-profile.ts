@@ -23,6 +23,12 @@ import {
   isCreatorRecentPublicationVideo,
   resolveCreatorRecentPublicationThumbnail,
 } from "@/lib/creators/recent-publication-thumb";
+import {
+  CREATOR_METRIC_SAMPLE_LIMIT,
+  resolveAvgEngagements,
+  resolveAvgLikes,
+  resolveAvgReelsPlays,
+} from "@/lib/creators/creator-metric-definitions";
 import { computeProfileEngagementRate } from "@/lib/creators/profile-engagement-rate";
 import { resolveCountryCode } from "@/lib/creators/country-code";
 import {
@@ -191,7 +197,7 @@ function extractLatestPostRows(head: Record<string, unknown>): Record<string, un
 
 function toRecentPublications(rows: Record<string, unknown>[]): RecentPublication[] {
   return rows
-    .slice(0, 6)
+    .slice(0, CREATOR_METRIC_SAMPLE_LIMIT)
     .map((row) => ({
       url: str(row.url) ?? str(row.postPage) ?? str(row.webVideoUrl) ?? null,
       thumbnail: resolveCreatorRecentPublicationThumbnail(row),
@@ -203,12 +209,6 @@ function toRecentPublications(rows: Record<string, unknown>[]): RecentPublicatio
       isVideo: isCreatorRecentPublicationVideo(row),
     }))
     .filter((pub) => pub.url || pub.caption || pub.likes != null || pub.comments != null);
-}
-
-function averageOf(values: Array<number | null>): number | null {
-  const nums = values.filter((v): v is number => v != null);
-  if (nums.length === 0) return null;
-  return Number((nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(2));
 }
 
 function identitiesFromApifyBody(body: Record<string, unknown>): string[] {
@@ -505,9 +505,33 @@ export function normalizeApifyProfileData(input: {
 
   const recent = toRecentPublications(publicationRows);
   const hashtags = extractHashtags(publicationRows);
-  const avgLikes = averageOf(recent.map((p) => p.likes));
-  const avgComments = averageOf(recent.map((p) => p.comments));
-  const avgViews = averageOf(recent.map((p) => p.views));
+  const avgLikes = resolveAvgLikes({ publications: recent });
+  const avgCommentsValues = recent
+    .map((p) => p.comments)
+    .filter((value): value is number => value != null && Number.isFinite(value) && value >= 0);
+  const avgComments =
+    avgCommentsValues.length > 0
+      ? Number(
+          (
+            avgCommentsValues.reduce((sum, value) => sum + value, 0) / avgCommentsValues.length
+          ).toFixed(2)
+        )
+      : null;
+  const avgViewsValues = recent
+    .map((p) => p.views)
+    .filter((value): value is number => value != null && Number.isFinite(value) && value >= 0);
+  const avgViews =
+    avgViewsValues.length > 0
+      ? Math.round(
+          avgViewsValues.reduce((sum, value) => sum + value, 0) / avgViewsValues.length
+        )
+      : null;
+  const avgEngagements = resolveAvgEngagements({
+    publications: recent,
+    avgLikes,
+    avgComments,
+  });
+  const avgReelsPlays = resolveAvgReelsPlays({ publications: recent });
   const engagementRate = computeProfileEngagementRate({
     avgLikes,
     avgComments,
@@ -546,9 +570,11 @@ export function normalizeApifyProfileData(input: {
     followers,
     following,
     postsCount,
-    avgViews: avgViews != null ? Math.round(avgViews) : null,
+    avgViews,
     avgLikes,
     avgComments,
+    avgEngagements,
+    avgReelsPlays,
     engagementRate,
     isVerified:
       typeof head.verified === "boolean"

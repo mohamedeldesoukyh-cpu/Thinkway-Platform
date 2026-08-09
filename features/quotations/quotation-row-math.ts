@@ -12,9 +12,6 @@ import type { CommercialTotals } from "@/lib/commercial/fx-aggregation";
 import { toEgp } from "@/lib/commercial/fx-aggregation";
 import { computeQuotationTotals } from "@/features/quotations/quotation-engine";
 import type { QuotationItemRow } from "@/features/quotations/types";
-import {
-  rollupDeliverableCommercials,
-} from "@/lib/quotations/quotation-deliverable-rollup";
 
 export type QuotationRowDraft = {
   id: string;
@@ -52,42 +49,31 @@ export function calcModeToCommercialMode(
   return pref === "markup" ? "cost_markup_pct" : "cost_gp_pct";
 }
 
+/**
+ * Build a row draft from persisted quotation line Master columns.
+ *
+ * Commercial SSOT (COMMERCIAL_SSOT_QUOTE_CAMPAIGN.md): Master facts live on the
+ * line (`cost` / `revenue` / GP / AF). Do not rebuild from deliverable rollups —
+ * Cost Detail must roll up into the line on save; line Save clears stale
+ * deliverable commercials so remount cannot resurrect old totals.
+ */
 export function draftFromQuotationItem(item: QuotationItemRow): QuotationRowDraft {
-  const costCurrency = item.cost_currency || "EGP";
-  const base: QuotationRowDraft = {
+  return {
     id: item.id,
     mode: item.commercial_input_mode,
     cost: item.cost,
-    costCurrency,
+    costCurrency: item.cost_currency || "EGP",
     gpPct: item.gp_pct,
     revenue: item.revenue,
     gpValue: item.gp_value,
     afPct: item.af_pct,
     fxRateToEgp: item.fx_rate_to_egp,
   };
-
-  const rolled = rollupDeliverableCommercials(item.deliverables ?? [], {
-    lineCurrency: costCurrency,
-    fxRateToEgp: item.fx_rate_to_egp,
-    lineAfPct: item.af_pct,
-  });
-  if (!rolled) return base;
-
-  return {
-    ...base,
-    mode: "cost_revenue",
-    cost: rolled.cost,
-    revenue: rolled.revenue,
-    gpPct: rolled.gpPct,
-    gpValue: rolled.gpValue,
-    afPct: rolled.afPct,
-  };
 }
 
 /**
- * Prefer live draft edits, then deliverable rollup, then stored item commercials.
- * When a draft is present it is authoritative — do not re-rollup deliverables over it
- * (Creators grid / Commercial Workspace keep drafts in sync when deliverables change).
+ * Prefer live draft edits; otherwise line Master from the persisted item.
+ * Deliverable rollups must never override Master on remount.
  */
 export function resolveQuotationRowDraft(
   item: QuotationItemRow,

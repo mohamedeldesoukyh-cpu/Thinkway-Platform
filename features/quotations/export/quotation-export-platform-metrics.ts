@@ -3,7 +3,7 @@
  */
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { sortPlatformsStable } from "@/lib/creators/creator-centric";
-import { formatCreatorCount } from "@/features/discovery/components/creator-search/creator-search-utils";
+import { formatQuotationFullNumber } from "@/features/quotations/templates/quotation-template-format";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
 import { unionQuotationCreatorGroupPlatforms } from "@/lib/quotations/quotation-creator-platform-utils";
 
@@ -23,21 +23,16 @@ export type QuotationExportPlatformMetricRow = {
 };
 
 function formatFollowersLabel(value: number | null | undefined): string {
-  if (value == null || !Number.isFinite(value)) return "—";
-  return formatCreatorCount(value);
+  return formatQuotationFullNumber(value);
 }
 
 function formatErLabel(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return "—";
-  return `${new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)}%`;
+  return `${formatQuotationFullNumber(value)}%`;
 }
 
 function formatViewsLabel(value: number | null | undefined): string {
-  if (value == null || !Number.isFinite(value)) return "—";
-  return formatCreatorCount(value);
+  return formatQuotationFullNumber(value);
 }
 
 /** Union deliverable platforms + linked accounts + export_platforms. */
