@@ -97,6 +97,10 @@ export function CreatorPickerDialog({
 }: ExtendedProps) {
   const [search, setSearch] = useState("");
   const [platform, setPlatform] = useState("all");
+
+  function handleSearchChange(value: string) {
+    setSearch(normalizeDiscoverySearchQuery(value) || value);
+  }
   const [selectedCreatorMap, setSelectedCreatorMap] = useState<
     Map<string, UnifiedCreatorResult>
   >(() => new Map());
@@ -289,7 +293,7 @@ export function CreatorPickerDialog({
     <>
       <CreatorSearchPanel
         search={search}
-        onSearchChange={setSearch}
+        onSearchChange={handleSearchChange}
         platform={platform}
         onPlatformChange={setPlatform}
         autoFocus
@@ -343,7 +347,7 @@ export function CreatorPickerDialog({
     <>
       <CreatorSearchPanel
         search={search}
-        onSearchChange={setSearch}
+        onSearchChange={handleSearchChange}
         platform={platform}
         onPlatformChange={setPlatform}
         autoFocus={container === "sheet"}

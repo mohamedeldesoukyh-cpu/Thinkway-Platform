@@ -118,24 +118,31 @@ export function CombineCreatorsDialog({
 
     setError(null);
     startTransition(async () => {
-      const result = await mergeCreatorsAction({
-        targetInfluencerId,
-        sourceInfluencerId: sourceCreator.influencer_id!,
-        targetUnifiedId: targetCreator.unified_id,
-      });
+      try {
+        const result = await mergeCreatorsAction({
+          targetInfluencerId,
+          sourceInfluencerId: sourceCreator.influencer_id!,
+          targetUnifiedId: targetCreator.unified_id,
+        });
 
-      if (!result.ok) {
-        setError(result.message);
-        toast.error(result.message);
-        return;
+        if (!result.ok) {
+          setError(result.message);
+          toast.error(result.message);
+          return;
+        }
+
+        toast.success(result.message);
+        onMerged?.(result.creator, {
+          removedUnifiedId: sourceCreator.unified_id,
+          removedInfluencerId: sourceCreator.influencer_id,
+        });
+        onOpenChange(false);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Could not combine creators. Please try again.";
+        setError(message);
+        toast.error(message);
       }
-
-      toast.success(result.message);
-      onMerged?.(result.creator, {
-        removedUnifiedId: sourceCreator.unified_id,
-        removedInfluencerId: sourceCreator.influencer_id,
-      });
-      onOpenChange(false);
     });
   }
 
@@ -214,13 +221,13 @@ export function CombineCreatorsDialog({
                 <p>{serverMessage ?? localEligibility.message}</p>
                 {localEligibility.platformsToMove.length > 0 ? (
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    {localEligibility.platformsToMove.map((label) => (
+                    {localEligibility.platformsToMove.map((platform) => (
                       <span
-                        key={label}
+                        key={platform}
                         className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-medium dark:bg-black/20"
                       >
-                        <PlatformIcon platform={label.toLowerCase()} size="xs" className="size-3" />
-                        {label}
+                        <PlatformIcon platform={platform} size="xs" className="size-3" />
+                        {platformLabel(platform)}
                       </span>
                     ))}
                   </div>
@@ -261,6 +268,13 @@ export function CombineCreatorsDialog({
         selectionMode="single"
         confirmLabel="Use this creator"
         productionOnly={false}
+        pageSize={16}
+        browseFilters={{
+          skipCoverageBackfill: true,
+          // Vendor-linked profiles only (internal / imported / oauth).
+          source: "internal",
+        }}
+        showAddMissingCreator={false}
         isRowDisabled={(creator) =>
           creator.unified_id === targetCreator.unified_id ||
           !creator.influencer_id

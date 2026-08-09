@@ -10,7 +10,7 @@ test("evaluateMergeCreatorsEligibility allows complementary platforms", () => {
   });
 
   assert.equal(result.canMerge, true);
-  assert.deepEqual(result.platformsToMove, ["TikTok"]);
+  assert.deepEqual(result.platformsToMove, ["tiktok"]);
   assert.deepEqual(result.platformConflicts, []);
 });
 
@@ -22,7 +22,7 @@ test("evaluateMergeCreatorsEligibility blocks overlapping platforms", () => {
 
   assert.equal(result.canMerge, false);
   assert.deepEqual(result.platformConflicts, ["TikTok"]);
-  assert.deepEqual(result.platformsToMove, ["YouTube"]);
+  assert.deepEqual(result.platformsToMove, ["youtube"]);
 });
 
 test("evaluateMergeCreatorsEligibility blocks when no new platforms move", () => {
@@ -48,5 +48,5 @@ test("evaluateMergeCreatorsEligibility treats mixed-case platforms as the same",
     sourcePlatforms: [{ platform: "Snapchat" }],
   });
   assert.equal(complementary.canMerge, true);
-  assert.deepEqual(complementary.platformsToMove, ["Snapchat"]);
+  assert.deepEqual(complementary.platformsToMove, ["snapchat"]);
 });

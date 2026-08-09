@@ -210,6 +210,7 @@ export function CreatorSearchWorkspace({
     openCreator,
     onOpenChange: onDetailOpenChange,
     closeIfShowing,
+    patchOpenCreator,
     setCreator: setDetailCreator,
   } = useCreatorDetailSheetState();
   const [filtersDrawerOpen, setFiltersDrawerOpen] = useState(false);
@@ -1472,8 +1473,23 @@ export function CreatorSearchWorkspace({
     setTotal((prev) => Math.max(prev, 1));
   }
 
-  function patchCreatorInList(next: UnifiedCreatorResult) {
+  function patchCreatorInList(
+    next: UnifiedCreatorResult,
+    meta?: { removedUnifiedId?: string; removedInfluencerId?: string | null }
+  ) {
     upsertCreatorInList(next);
+    patchOpenCreator(next);
+    if (meta?.removedUnifiedId) {
+      const removedId = meta.removedUnifiedId;
+      setCreators((prev) => prev.filter((row) => row.unified_id !== removedId));
+      setSelectedIds((prev) => {
+        if (!prev.has(removedId)) return prev;
+        const copy = new Set(prev);
+        copy.delete(removedId);
+        return copy;
+      });
+      closeIfShowing(removedId);
+    }
   }
 
   function handleMissingCreatorAdded(creator: UnifiedCreatorResult) {
