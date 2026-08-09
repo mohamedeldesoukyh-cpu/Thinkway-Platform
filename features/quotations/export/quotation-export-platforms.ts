@@ -14,6 +14,7 @@ import {
   resolveUnifiedCreatorsByRefs,
 } from "@/lib/creators/unified-browse";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
+import { pickBestQuotationSeedAvatarUrl } from "@/lib/commercial-sync/shortlist-seeds";
 import { isUsableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
 import type { Database } from "@/types/database";
 
@@ -146,6 +147,12 @@ export async function attachExportPlatformAccounts(
     ).map((entry) => entry.platform);
 
     const platformAvatar = pickBestPlatformAvatar(export_platforms);
+    // Keep shortlist/workspace avatar when present — matches Discovery shortlist face.
+    const resolvedAvatar = pickBestQuotationSeedAvatarUrl(
+      item.creator_profile_source?.avatarUrl,
+      item.profile_image_url,
+      platformAvatar
+    );
     const primaryPlatform =
       (item.platform ? canonicalPlatformKey(item.platform) : null) ??
       linkedPlatforms[0] ??
@@ -161,8 +168,7 @@ export async function attachExportPlatformAccounts(
       engagement_rate: primaryAccount.engagement_rate ?? item.engagement_rate,
       followers: primaryAccount.followers ?? item.followers,
       avg_views: primaryAccount.avg_views ?? item.avg_views ?? null,
-      // Prefer live platform CDN avatar over stale Thinkway-stored snapshots.
-      profile_image_url: platformAvatar ?? item.profile_image_url ?? null,
+      profile_image_url: resolvedAvatar ?? item.profile_image_url ?? null,
       // Ensure creator avatar/name hyperlinks always have a resolvable profile URL.
       profile_url:
         primaryAccount.profile_url ??
@@ -181,7 +187,7 @@ export async function attachExportPlatformAccounts(
               linkedPlatforms.length > 0
                 ? linkedPlatforms
                 : item.creator_profile_source.linkedPlatforms,
-            avatarUrl: platformAvatar ?? item.creator_profile_source.avatarUrl,
+            avatarUrl: resolvedAvatar ?? item.creator_profile_source.avatarUrl,
             profile_url:
               primaryAccount.profile_url ??
               resolveAccountProfileUrl({

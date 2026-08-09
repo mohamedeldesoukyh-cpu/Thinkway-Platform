@@ -49,8 +49,25 @@ export type QuotationPostType = (typeof QUOTATION_POST_TYPES)[number]["value"];
 
 const LABEL_INDEX = new Map(QUOTATION_POST_TYPES.map((t) => [t.value, t.label]));
 
+/** Legacy campaign/forecast codes → quotation post-type values (so Type can be cleared). */
+const LEGACY_QUOTATION_POST_TYPE_ALIASES: Record<string, QuotationPostType> = {
+  ig_reel: "instagram_reel",
+  reel: "instagram_reel",
+  ig_story: "instagram_story",
+  ig_post: "instagram_post",
+  tt_video: "tiktok_video",
+  tiktok: "tiktok_video",
+};
+
+export function normalizeQuotationPostType(code: string): string {
+  const trimmed = code.trim();
+  if (!trimmed) return "";
+  return LEGACY_QUOTATION_POST_TYPE_ALIASES[trimmed] ?? trimmed;
+}
+
 export function quotationPostTypeLabel(code: string): string {
-  return LABEL_INDEX.get(code as QuotationPostType) ?? code.replace(/_/g, " ");
+  const normalized = normalizeQuotationPostType(code);
+  return LABEL_INDEX.get(normalized as QuotationPostType) ?? normalized.replace(/_/g, " ");
 }
 
 export function normalizeTypeLineQuantity(value: unknown): number {
@@ -73,12 +90,12 @@ export function deliverableTypeLines(
         Boolean(line && typeof line.type === "string")
     )
     .map((line) => ({
-      type: line.type.trim(),
+      type: normalizeQuotationPostType(line.type),
       quantity: normalizeTypeLineQuantity(line.quantity),
     }));
 
   const filledLines = normalizedLines.filter((line) => line.type);
-  const typeValues = deliverableTypeValues(deliverable);
+  const typeValues = deliverableTypeValues(deliverable).map(normalizeQuotationPostType);
 
   // Prefer child type_lines, but merge in every selected `types` entry when the
   // stored lines are incomplete (common when only the total cell was persisted).
@@ -199,9 +216,11 @@ export function syncDeliverableFromTypeLines(
 export function deliverableTypeValues(
   deliverable: { type?: string | null; types?: string[] | null }
 ): string[] {
-  const fromTypes = (deliverable.types ?? []).filter((t) => t.trim());
+  const fromTypes = (deliverable.types ?? [])
+    .map(normalizeQuotationPostType)
+    .filter(Boolean);
   if (fromTypes.length > 0) return fromTypes;
-  const single = deliverable.type?.trim();
+  const single = normalizeQuotationPostType(deliverable.type ?? "");
   return single ? [single] : [];
 }
 

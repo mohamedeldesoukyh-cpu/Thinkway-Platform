@@ -649,6 +649,42 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
 }
 
 {
+  // Creator group face must follow shortlist/line avatar, not a different platform photo.
+  const shortlistAvatar =
+    "https://example.supabase.co/storage/v1/object/public/creator-avatars/enrichment/abc/instagram/farahroushdy.jpg";
+  const otherPlatformAvatar =
+    "https://scontent.cdninstagram.com/v/t51.2885-19/other-creator.jpg?oe=FFFFFFFF";
+  const detail = mockDetail({
+    items: [
+      mockItem({
+        creator_name: "Farah Roushdy",
+        handle: "farahroushdy",
+        profile_image_url: shortlistAvatar,
+        creator_profile_source: {
+          displayName: "Farah Roushdy",
+          avatarUrl: shortlistAvatar,
+          platform: "instagram",
+          handle: "farahroushdy",
+        },
+        export_platforms: [
+          {
+            platform: "tiktok",
+            handle: "farahroushdy",
+            followers: 1000,
+            engagement_rate: 1,
+            avg_views: 100,
+            profile_url: "https://www.tiktok.com/@farahroushdy",
+            avatar_url: otherPlatformAvatar,
+          },
+        ],
+      } as Partial<QuotationItemRow>),
+    ],
+  });
+  const doc = buildQuotationDocument(detail);
+  assert.equal(doc.creatorGroups[0]?.avatarUrl, shortlistAvatar);
+}
+
+{
   const item = mockItem({
     creator_categories: ["Beauty", "Lifestyle"],
   });

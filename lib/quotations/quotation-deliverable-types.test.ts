@@ -26,6 +26,14 @@ import {
 }
 
 {
+  // Legacy forecast code must map to a selectable quotation type (clearable in UI).
+  const lines = deliverableTypeLines({ type: "ig_reel", quantity: 1 });
+  assert.equal(lines.length, 1);
+  assert.equal(lines[0]?.type, "instagram_reel");
+  assert.equal(formatTypeLinesSummary(lines), "1× IG Reel");
+}
+
+{
   const lines = deliverableTypeLines({
     type_lines: [
       { type: "instagram_reel", quantity: 1 },
