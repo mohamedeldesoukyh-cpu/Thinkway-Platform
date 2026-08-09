@@ -142,6 +142,8 @@ function buildNormalized(
     avgViews: null,
     avgLikes: 4200,
     avgComments: 180,
+    avgEngagements: 4380,
+    avgReelsPlays: null,
     engagementRate: profile.engagementRate,
     isVerified: true,
     audienceCountry: profile.audienceCountry,

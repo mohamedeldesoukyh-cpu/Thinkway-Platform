@@ -106,9 +106,9 @@ export type ApifyProfileData = {
   avgLikes: number | null;
   avgComments: number | null;
   /** Mean interactions per post (likes+comments+shares+saves when present). */
-  avgEngagements: number | null;
+  avgEngagements?: number | null;
   /** Mean reel/video plays across reel posts in the last 30 publications. */
-  avgReelsPlays: number | null;
+  avgReelsPlays?: number | null;
   engagementRate: number | null;
   isVerified: boolean | null;
   audienceCountry: string | null;
