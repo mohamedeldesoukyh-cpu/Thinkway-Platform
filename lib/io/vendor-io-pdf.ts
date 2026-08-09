@@ -393,6 +393,141 @@ export async function renderHtmlToPdf(
   }
 }
 
+export type HtmlPageImage = {
+  buffer: Buffer;
+  contentType: "png" | "jpeg";
+};
+
+export type HtmlPagesToImagesOptions = HtmlToPdfOptions & {
+  pageSelector?: string;
+  imageType?: "png" | "jpeg";
+  quality?: number;
+  deviceScaleFactor?: number;
+};
+
+export type HtmlPagesRenderResult =
+  | { ok: true; pages: HtmlPageImage[] }
+  | { ok: false; error: string };
+
+/**
+ * Capture each quotation slide page as an image (Preview/PDF visual parity for PPTX).
+ * Selector defaults to `.cpage, .cover, .page`.
+ */
+export async function renderHtmlPagesToImages(
+  html: string,
+  options: HtmlPagesToImagesOptions = PDF_OPTIONS
+): Promise<HtmlPagesRenderResult> {
+  let browser: Awaited<ReturnType<typeof launchBrowser>> | null = null;
+  const pageSelector = options.pageSelector ?? ".cpage, .cover, .page";
+  const imageType = options.imageType ?? "jpeg";
+  const quality = options.quality ?? 88;
+  const deviceScaleFactor =
+    options.deviceScaleFactor ?? options.viewport?.deviceScaleFactor ?? 1.5;
+
+  try {
+    const { inlineRemoteImagesInHtml } = await import("@/lib/io/pdf-inline-remote-images");
+    const captureHtml = await inlineRemoteImagesInHtml(html);
+
+    browser = await launchBrowser();
+    const page = await browser.newPage();
+    if (options.viewport) {
+      await page.setViewport({
+        width: options.viewport.width,
+        height: options.viewport.height,
+        deviceScaleFactor,
+      });
+    }
+    await page.setRequestInterception(true);
+    page.on("request", (request) => {
+      const url = request.url();
+      const resourceType = request.resourceType();
+      if (
+        (resourceType === "image" || resourceType === "media") &&
+        (url.startsWith("http://") || url.startsWith("https://")) &&
+        !isAllowedPdfImageUrl(url)
+      ) {
+        void request.abort();
+        return;
+      }
+      if (
+        resourceType === "font" &&
+        (url.startsWith("http://") || url.startsWith("https://")) &&
+        !isAllowedPdfFontUrl(url)
+      ) {
+        void request.abort();
+        return;
+      }
+      void request.continue();
+    });
+    await page.setContent(captureHtml, {
+      waitUntil: "domcontentloaded",
+      timeout: PDF_SET_CONTENT_TIMEOUT_MS,
+    });
+    try {
+      await page.waitForNetworkIdle({
+        idleTime: 500,
+        timeout: PDF_NETWORK_IDLE_TIMEOUT_MS,
+      });
+    } catch {
+      // Non-fatal
+    }
+    await waitForPdfAssetsReady(page);
+    if (options.waitForDocumentAttribute) {
+      const { name, value, timeoutMs = 30_000 } = options.waitForDocumentAttribute;
+      await page.waitForFunction(
+        (attrName: string, attrValue: string) =>
+          document.documentElement.getAttribute(attrName) === attrValue,
+        { timeout: timeoutMs },
+        name,
+        value
+      );
+    }
+
+    await page.addStyleTag({
+      content: `
+        html, body { background: #fff !important; }
+        ${pageSelector} {
+          break-after: auto !important;
+          page-break-after: auto !important;
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          position: relative !important;
+          margin: 0 auto 16px !important;
+        }
+      `,
+    });
+
+    const handles = await page.$$(pageSelector);
+    if (!handles.length) {
+      return { ok: false, error: `No pages matched selector ${pageSelector}` };
+    }
+
+    const pages: HtmlPageImage[] = [];
+    for (const handle of handles) {
+      await handle.evaluate((el) => {
+        el.scrollIntoView({ block: "start", inline: "nearest" });
+      });
+      const buffer = Buffer.from(
+        await handle.screenshot({
+          type: imageType,
+          ...(imageType === "jpeg" ? { quality } : {}),
+        })
+      );
+      pages.push({ buffer, contentType: imageType });
+    }
+    return { ok: true, pages };
+  } catch (error) {
+    const message = formatError(error);
+    console.error("[vendor-io-pdf] HTML page screenshots failed:", error);
+    return { ok: false, error: message };
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
+}
+
 export function pdfUnavailableMessage(detail: string): string {
   if (process.env.NODE_ENV === "development") {
     return detail;

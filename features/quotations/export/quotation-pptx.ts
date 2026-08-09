@@ -3130,17 +3130,34 @@ function pptxDeckTitle(doc: QuotationDocument): string {
   return `${doc.serial} — ${doc.name} — Quotation`;
 }
 
-export async function buildQuotationPptxBuffer(doc: QuotationDocument): Promise<Buffer> {
+export async function buildQuotationPptxBuffer(
+  doc: QuotationDocument,
+  options?: {
+    siteOrigin?: string;
+    logoSrcs?: import("@/lib/reports/document/thinkway-report-logo").ThinkwayReportLogoSrcs;
+  }
+): Promise<Buffer> {
+  // Creator decks (Showcase / Pitch / lump-sum variants): pixel-parity with Preview + PDF.
+  // Rebuild slides from the same HTML pages so PPTX cannot drift from the redesign.
+  if (isCreatorDeckTemplate(doc.template)) {
+    const { buildQuotationHtmlParityPptxBuffer } = await import(
+      "@/features/quotations/export/quotation-pptx-from-html"
+    );
+    const result = await buildQuotationHtmlParityPptxBuffer(doc, {
+      siteOrigin: options?.siteOrigin,
+      logoSrcs: options?.logoSrcs,
+      title: pptxDeckTitle(doc),
+    });
+    if (!result.ok) {
+      throw new Error(result.error);
+    }
+    return result.buffer;
+  }
+
   const PptxGenJS = (await import("pptxgenjs")).default;
   const pptx = new PptxGenJS();
   configureThinkwayPptxLayout(pptx);
   pptx.title = pptxDeckTitle(doc);
-
-  if (isCreatorDeckTemplate(doc.template)) {
-    await buildShowcasePptx(pptx, doc);
-  } else {
-    await buildDetailedPptx(pptx, doc);
-  }
-
+  await buildDetailedPptx(pptx, doc);
   return (await pptx.write({ outputType: "nodebuffer" })) as Buffer;
 }

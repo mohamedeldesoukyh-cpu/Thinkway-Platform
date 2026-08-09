@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { buildQuotationDocument } from "@/features/quotations/export/quotation-document";
 import { buildQuotationPptxBuffer } from "@/features/quotations/export/quotation-pptx";
+import { QUOTATION_A4_LANDSCAPE } from "@/features/quotations/export/quotation-pptx-from-html";
 import { buildQuotationTemplatePayload } from "@/features/quotations/templates/quotation-template-payload";
 import type { QuotationDetail, QuotationItemRow } from "@/features/quotations/types";
 
@@ -120,6 +121,24 @@ async function assertWidescreenLayout(buffer: Buffer): Promise<void> {
   assert.match(presentation, /sldSz[^>]*cx="1219\d+"/);
 }
 
+async function assertA4LandscapeHtmlParityLayout(buffer: Buffer): Promise<void> {
+  const { default: JSZip } = await import("jszip");
+  const zip = await JSZip.loadAsync(buffer);
+  const presentation = await zip.file("ppt/presentation.xml")?.async("string");
+  assert.ok(presentation, "PPTX should include presentation.xml");
+  // 297mm × 210mm → inches × 914400 EMU
+  const cx = Math.round(QUOTATION_A4_LANDSCAPE.widthIn * 914400);
+  const cy = Math.round(QUOTATION_A4_LANDSCAPE.heightIn * 914400);
+  assert.match(presentation, new RegExp(`sldSz[^>]*cx="${cx}"`));
+  assert.match(presentation, new RegExp(`sldSz[^>]*cy="${cy}"`));
+  const media = Object.keys(zip.files).filter((path) => path.startsWith("ppt/media/"));
+  assert.ok(media.length >= 1, "HTML-parity Showcase PPTX embeds page screenshot media");
+  assert.ok(
+    !media.some((path) => path.toLowerCase().endsWith(".svg")),
+    "PPTX must not embed SVG media"
+  );
+}
+
 async function main() {
   {
     const doc = buildQuotationDocument(mockDetail(), { template: "detailed" });
@@ -130,87 +149,18 @@ async function main() {
   }
 
   {
-    const doc = buildQuotationDocument(
-      mockDetail({
-        items: [
-          mockItem({
-            id: "ig-1",
-            platform: "instagram",
-            followers: 226_845,
-            engagement_rate: 6.36,
-            deliverables: [{ platform: "instagram", type: "instagram_reel", quantity: 1 }],
-          }),
-          mockItem({
-            id: "tt-1",
-            influencer_id: "inf-2",
-            platform: "tiktok",
-            handle: "@creator",
-            followers: 501_400,
-            engagement_rate: 33.76,
-            deliverables: [{ platform: "tiktok", type: "tiktok_video", quantity: 1 }],
-          }),
-        ],
-      }),
-      { template: "showcase" }
-    );
+    const doc = buildQuotationDocument(mockDetail(), { template: "showcase" });
     const buffer = await buildQuotationPptxBuffer(doc);
     assert.ok(buffer.length > 5_000, "Showcase PPTX buffer should be non-trivial");
-    const { default: JSZip } = await import("jszip");
-    const zip = await JSZip.loadAsync(buffer);
-    const joined = (
-      await Promise.all(
-        Object.keys(zip.files)
-          .filter((path) => /ppt\/slides\/slide\d+\.xml/.test(path))
-          .map(async (path) => zip.file(path)?.async("string") ?? "")
-      )
-    ).join("\n");
-    assert.match(joined, /ISSUE · VALID/, "Showcase cover uses compact Issue · Valid meta");
-    assert.match(joined, /TOTAL INVESTMENT/, "Showcase includes redesign TOTAL INVESTMENT banner");
-    assert.match(joined, /226\.8K/, "Showcase metric cards use compact K followers");
-    assert.match(joined, /501\.4K/, "Showcase platform follower cards use compact K");
-    assert.match(joined, /6\.36%/, "Showcase engagement keeps two decimals");
-    assert.doesNotMatch(
-      joined,
-      />IG 6\.36%/,
-      "Showcase engagement must use platform icons, not IG text labels"
-    );
-    assert.doesNotMatch(
-      joined,
-      /Campaign mix insight/,
-      "Showcase PPTX must not use legacy mix-insight slide"
-    );
-    assert.doesNotMatch(joined, /Mix summary/, "Showcase PPTX must not use legacy Mix summary title");
-    assert.doesNotMatch(
-      joined,
-      /PREPARED BY/,
-      "Showcase cover must omit Prepared By (HTML redesign parity)"
-    );
-    const mediaFiles = Object.keys(zip.files).filter((path) => path.startsWith("ppt/media/"));
-    assert.ok(
-      !mediaFiles.some((path) => path.toLowerCase().endsWith(".svg")),
-      "PPTX must not embed SVG media (PowerPoint corruption)"
-    );
+    assert.equal(buffer.subarray(0, 2).toString("ascii"), "PK");
+    await assertA4LandscapeHtmlParityLayout(buffer);
   }
 
   {
     const doc = buildQuotationDocument(mockDetail(), { template: "showcase-lump-sum" });
     const buffer = await buildQuotationPptxBuffer(doc);
     assert.ok(buffer.length > 5_000, "Showcase Lump Sum PPTX buffer should be non-trivial");
-    const { default: JSZip } = await import("jszip");
-    const zip = await JSZip.loadAsync(buffer);
-    const joined = (
-      await Promise.all(
-        Object.keys(zip.files)
-          .filter((path) => /ppt\/slides\/slide\d+\.xml/.test(path))
-          .map(async (path) => zip.file(path)?.async("string") ?? "")
-      )
-    ).join("\n");
-    assert.match(joined, /TOTAL INVESTMENT/, "Showcase Lump Sum includes TOTAL INVESTMENT banner");
-    assert.doesNotMatch(
-      joined,
-      /Campaign mix insight/,
-      "Showcase Lump Sum must not use legacy mix-insight slide"
-    );
+    await assertA4LandscapeHtmlParityLayout(buffer);
   }
 
   {
@@ -323,6 +273,7 @@ async function main() {
     assert.equal(leaderPayload?.deliverables[0]?.grossFee, "250,000");
     const buffer = await buildQuotationPptxBuffer(doc);
     assert.ok(buffer.length > 5_000);
+    await assertA4LandscapeHtmlParityLayout(buffer);
   }
 
   console.log("quotation-pptx.test.ts passed");

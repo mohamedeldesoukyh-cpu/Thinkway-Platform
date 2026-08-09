@@ -28,8 +28,8 @@ import { EMBEDDABLE_DOCUMENT_FRAME_HEADERS } from "@/lib/security/embeddable-doc
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { parsePlatformsQueryParam } from "@/features/discovery/document-preview/document-export-selection";
 
-/** Showcase embed + Chromium PDF can exceed 60s with many publication shots. */
-export const maxDuration = 120;
+/** Showcase embed + Chromium PDF/PPTX can exceed 60s with many publication shots. */
+export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 const EXPORT_CACHE_HEADERS = {
@@ -162,14 +162,22 @@ export async function GET(request: Request, context: RouteContext) {
       const { buildQuotationPptxBuffer } = await import(
         "@/features/quotations/export/quotation-pptx"
       );
-      const buffer = await buildQuotationPptxBuffer(doc);
-      return new NextResponse(buffer as unknown as BodyInit, {
-        headers: withExportCacheHeaders({
-          "Content-Type":
-            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-          "Content-Disposition": `${disposition}; filename="${baseName}${templateSuffix}.pptx"`,
-        }),
-      });
+      try {
+        const buffer = await buildQuotationPptxBuffer(doc, { siteOrigin, logoSrcs });
+        return new NextResponse(buffer as unknown as BodyInit, {
+          headers: withExportCacheHeaders({
+            "Content-Type":
+              "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "Content-Disposition": `${disposition}; filename="${baseName}${templateSuffix}.pptx"`,
+          }),
+        });
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : "PPTX generation failed";
+        return NextResponse.json(
+          { error: pdfUnavailableMessage(detail) },
+          { status: 503 }
+        );
+      }
     }
 
     // Inline HTML only — SAMEORIGIN/frame-ancestors self for same-origin embeds.
