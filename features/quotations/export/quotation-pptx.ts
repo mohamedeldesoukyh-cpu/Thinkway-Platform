@@ -779,8 +779,57 @@ function addCreatorMixSlides(
 
     for (const tier of tierChunk) {
       const creators = tier.creators.slice(0, 8);
-      const rowH = 0.24;
-      const tableH = 0.26 + creators.length * rowH;
+      const pitchMix = isPitchTemplate(doc.template) || isShowcaseTemplate(doc.template);
+
+      type MixRow = {
+        handle: string;
+        platformLabel: string;
+        platformIcons: string[];
+        followers: string;
+        views: string;
+        category: string;
+        er: string;
+        profileUrl: string | null;
+      };
+
+      const mixRows: MixRow[] = [];
+      for (const creator of creators) {
+        const group = doc.creatorGroups.find(
+          (entry) =>
+            entry.handle === creator.handle ||
+            entry.handle.replace(/^@/, "") === creator.handle.replace(/^@/, "")
+        );
+        const metrics = group?.platformMetrics ?? [];
+        if (pitchMix && metrics.length > 0) {
+          metrics.forEach((metric, metricIndex) => {
+            mixRows.push({
+              handle: metricIndex === 0 ? creator.handle : "",
+              platformLabel: getReportPlatformIconTitle(metric.platform),
+              platformIcons: [metric.platform],
+              followers: metric.followers,
+              views: metric.views,
+              category: metricIndex === 0 ? creator.category : "",
+              er: metric.engagement,
+              profileUrl: metric.profileUrl ?? creator.profileUrl,
+            });
+          });
+        } else {
+          mixRows.push({
+            handle: creator.handle,
+            platformLabel: creator.platform,
+            platformIcons: creator.platformIcons,
+            followers: creator.followers,
+            views: creator.views,
+            category: creator.category,
+            er: creator.er,
+            profileUrl: creator.profileUrl,
+          });
+        }
+      }
+
+      const visibleRows = mixRows.slice(0, pitchMix ? 12 : 8);
+      const rowH = visibleRows.length > 8 ? 0.22 : 0.24;
+      const tableH = 0.26 + visibleRows.length * rowH;
 
       const tagW = Math.min(1.15, 0.55 + tier.name.length * 0.07);
       slide.addShape("roundRect", {
@@ -818,15 +867,14 @@ function addCreatorMixSlides(
         }
       );
 
-      const pitchMix = isPitchTemplate(doc.template);
       const colW = pitchMix
-        ? [2.2, 1.7, 1.5, 1.4, 3.6, 1.73]
+        ? [2.2, 1.5, 1.6, 1.5, 3.6, 1.73]
         : [2.6, 2.0, 1.8, 3.9, 1.83];
       const rows: Array<Array<{ text: string; options?: Record<string, unknown> }>> = [
         pitchMix
           ? [
               { text: "Handle", options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE } } },
-              { text: "Platforms", options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE } } },
+              { text: "Platform", options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE } } },
               {
                 text: "Followers",
                 options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE }, align: "right" },
@@ -854,50 +902,46 @@ function addCreatorMixSlides(
                 options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE }, align: "right" },
               },
             ],
-        ...creators.map((creator) => {
-          const handleLink = profileHyperlink(creator.profileUrl);
+        ...visibleRows.map((row) => {
+          const handleLink = profileHyperlink(row.profileUrl);
           if (pitchMix) {
             return [
               {
-                text: creator.handle,
+                text: row.handle,
                 options: {
                   fontSize: 10,
-                  bold: true,
+                  bold: Boolean(row.handle),
                   color: TITLE_INK,
-                  ...(handleLink ? { hyperlink: handleLink } : {}),
+                  ...(handleLink && row.handle ? { hyperlink: handleLink } : {}),
                 },
               },
+              // Icon drawn separately — keep text empty to avoid overlap.
+              { text: "", options: { fontSize: 10, color: TITLE_INK } },
               {
-                text: creator.platformIcons.length
-                  ? `     ${platformIconsLabel(creator.platformIcons)}`
-                  : creator.platform,
-                options: { fontSize: 10, color: TITLE_INK },
-              },
-              {
-                text: creator.followers,
+                text: row.followers,
                 options: { fontSize: 10, color: TITLE_INK, align: "right" },
               },
               {
-                text: creator.views,
+                text: row.views,
                 options: { fontSize: 10, color: TITLE_INK, align: "right" },
               },
-              { text: creator.category, options: { fontSize: 9, color: TITLE_INK } },
+              { text: row.category, options: { fontSize: 9, color: TITLE_INK } },
               {
-                text: creator.er,
+                text: row.er,
                 options: { fontSize: 10, color: TITLE_INK, align: "right" },
               },
             ];
           }
           return [
-            { text: creator.handle, options: { fontSize: 10, bold: true, color: TITLE_INK } },
-            { text: creator.platform, options: { fontSize: 10, color: TITLE_INK } },
+            { text: row.handle, options: { fontSize: 10, bold: true, color: TITLE_INK } },
+            { text: row.platformLabel, options: { fontSize: 10, color: TITLE_INK } },
             {
-              text: creator.followers,
+              text: row.followers,
               options: { fontSize: 10, color: TITLE_INK, align: "right" },
             },
-            { text: creator.category, options: { fontSize: 10, color: TITLE_INK } },
+            { text: row.category, options: { fontSize: 10, color: TITLE_INK } },
             {
-              text: creator.er,
+              text: row.er,
               options: { fontSize: 10, color: TITLE_INK, align: "right" },
             },
           ];
@@ -920,18 +964,17 @@ function addCreatorMixSlides(
       });
 
       if (pitchMix) {
-        const platformsColX = MARGIN_X + colW[0]! + 0.08;
-        creators.forEach((creator, index) => {
-          if (!creator.platformIcons.length) return;
+        const platformsColX = MARGIN_X + colW[0]! + 0.1;
+        visibleRows.forEach((row, index) => {
+          if (!row.platformIcons.length) return;
           addPlatformIconBadges(
             slide,
-            creator.platformIcons,
+            row.platformIcons,
             platformsColX,
-            tableY + 0.26 + index * rowH + 0.03,
-            4,
-            creator.profileUrl,
-            0.2,
-            { overlap: true }
+            tableY + 0.26 + index * rowH + Math.max((rowH - 0.18) / 2, 0.02),
+            1,
+            row.profileUrl,
+            0.18
           );
         });
       }
@@ -1165,9 +1208,8 @@ function addCreatorDeliverablesTable(
       options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } },
     })),
     ...deliverables.map((row) => {
-      const platformText = row.platformIcons.length
-        ? `     ${platformIconsLabel(row.platformIcons)}`
-        : row.platform;
+      // Icon badges are drawn into the Platform cell — keep cell text empty when icons exist.
+      const platformText = row.platformIcons.length ? "" : row.platform;
       const cells = [row.option, row.service, platformText, row.type];
       if (showFees) cells.push(row.grossFee ?? "-");
       return cells.map((cell, cellIndex) => ({
@@ -1196,7 +1238,7 @@ function addCreatorDeliverablesTable(
     rowH,
   });
 
-  const platformColX = MARGIN_X + colW[0]! + colW[1]! + 0.08;
+  const platformColX = MARGIN_X + colW[0]! + colW[1]! + 0.1;
   let rowOffset = headerH;
   deliverables.forEach((row) => {
     if (row.platformIcons.length) {
@@ -1213,30 +1255,33 @@ function addCreatorDeliverablesTable(
   return y + headerH + deliverables.length * rowH + 0.2;
 }
 
-function addPitchCreatorMetricsTable(
+function creatorPlatformMetricRows(
+  creator: ReturnType<typeof buildQuotationTemplatePayload>["showcaseCreators"][number]
+) {
+  if (creator.platformMetrics.length > 0) return creator.platformMetrics;
+  return [
+    {
+      platform: creator.platformIcons[0] ?? "instagram",
+      followers: creator.followers,
+      engagement: creator.engagement,
+      views: creator.views,
+      profileUrl: creator.profileUrl ?? null,
+      avatarUrl: creator.avatarUrl ?? null,
+    },
+  ];
+}
+
+/** One metrics row per linked platform — icon-only Platforms column (no overlapping labels). */
+function addCreatorMetricsTable(
   slide: Slide,
   creator: ReturnType<typeof buildQuotationTemplatePayload>["showcaseCreators"][number],
   x: number,
   y: number,
   w: number
 ): number {
-  // RFQ reference: one metrics row per linked platform; Tier and Category stay split columns.
-  const metricRows =
-    creator.platformMetrics.length > 0
-      ? creator.platformMetrics
-      : [
-          {
-            platform: creator.platformIcons[0] ?? "instagram",
-            followers: creator.followers,
-            engagement: creator.engagement,
-            views: creator.views,
-            profileUrl: creator.profileUrl ?? null,
-            avatarUrl: creator.avatarUrl ?? null,
-          },
-        ];
-
-  const rowH = 0.28;
-  const colW = [w * 0.16, w * 0.15, w * 0.14, w * 0.12, w * 0.23, w * 0.2];
+  const metricRows = creatorPlatformMetricRows(creator);
+  const rowH = metricRows.length > 3 ? 0.26 : 0.3;
+  const colW = [w * 0.16, w * 0.15, w * 0.14, w * 0.12, w * 0.25, w * 0.18];
   const bodyRows = metricRows.map((row, index) => [
     {
       text: row.followers,
@@ -1255,10 +1300,8 @@ function addPitchCreatorMetricsTable(
       text: index === 0 ? creator.categories : "",
       options: { fontSize: 9, color: TITLE_INK },
     },
-    {
-      text: `     ${getReportPlatformIconTitle(row.platform)}`,
-      options: { fontSize: 9, color: TITLE_INK },
-    },
+    // Leave blank — platform icon badge is drawn in this cell.
+    { text: "", options: { fontSize: 9, color: TITLE_INK } },
   ]);
 
   slide.addTable(
@@ -1269,7 +1312,7 @@ function addPitchCreatorMetricsTable(
         { text: "Views", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
         { text: "Tier", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
         { text: "Category", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
-        { text: "Platforms", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
+        { text: "Platform", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
       ],
       ...bodyRows,
     ],
@@ -1285,13 +1328,13 @@ function addPitchCreatorMetricsTable(
     }
   );
 
-  const platformsColX = x + colW.slice(0, 5).reduce((sum, value) => sum + value, 0) + 0.06;
+  const platformsColX = x + colW.slice(0, 5).reduce((sum, value) => sum + value, 0) + 0.08;
   metricRows.forEach((row, index) => {
     addPlatformIconBadges(
       slide,
       [row.platform],
       platformsColX,
-      y + rowH * (index + 1) + 0.05,
+      y + rowH * (index + 1) + (rowH - 0.18) / 2,
       1,
       row.profileUrl ?? creator.profileUrl
     );
@@ -1313,18 +1356,49 @@ async function addCreatorSlide(
 
   const pitch = isPitchTemplate(doc.template);
   const showFees = payload.flags.showFees;
-  const perSlide = pitch ? PITCH_DELIVERABLES_PER_SLIDE : CREATOR_DELIVERABLES_PER_SLIDE;
-  const deliverableChunks: (typeof creator.deliverables)[] = [];
-  for (let offset = 0; offset < creator.deliverables.length; offset += perSlide) {
-    deliverableChunks.push(creator.deliverables.slice(offset, offset + perSlide));
-  }
-  if (!deliverableChunks.length) deliverableChunks.push([]);
+  const metricCount = creatorPlatformMetricRows(creator).length;
+  const basePerSlide = pitch ? PITCH_DELIVERABLES_PER_SLIDE : CREATOR_DELIVERABLES_PER_SLIDE;
+  const firstSlideDeliverables = Math.max(
+    1,
+    metricCount > 2 ? Math.min(2, basePerSlide) : basePerSlide
+  );
 
+  const deliverableChunks: (typeof creator.deliverables)[] = [];
+  if (creator.deliverables.length === 0) {
+    deliverableChunks.push([]);
+  } else {
+    deliverableChunks.push(creator.deliverables.slice(0, firstSlideDeliverables));
+    for (
+      let offset = firstSlideDeliverables;
+      offset < creator.deliverables.length;
+      offset += basePerSlide
+    ) {
+      deliverableChunks.push(creator.deliverables.slice(offset, offset + basePerSlide));
+    }
+  }
+
+  const compactPubs = metricCount > 2 || creator.deliverables.length > firstSlideDeliverables;
   const pubThumbSize = pitch
-    ? PITCH_PUB_THUMB_SIZE
-    : creator.deliverables.length > 5
-      ? Math.min(PUB_THUMB_SIZE, 1.1)
-      : PUB_THUMB_SIZE;
+    ? compactPubs
+      ? Math.min(PITCH_PUB_THUMB_SIZE, 1.28)
+      : PITCH_PUB_THUMB_SIZE
+    : compactPubs
+      ? Math.min(PUB_THUMB_SIZE, 1.0)
+      : creator.deliverables.length > 5
+        ? Math.min(PUB_THUMB_SIZE, 1.1)
+        : PUB_THUMB_SIZE;
+  const pubCols = pitch
+    ? compactPubs
+      ? 2
+      : PITCH_PUB_COLS
+    : compactPubs
+      ? 3
+      : PUB_COLS;
+  const pubLimit = pitch
+    ? pubCols
+    : compactPubs
+      ? Math.min(3, SHOWCASE_PUB_LIMIT)
+      : SHOWCASE_PUB_LIMIT;
   const handleForUrl = creator.handle.replace(/^@/, "").trim();
   const synthesizedProfileUrl =
     handleForUrl && handleForUrl !== "—"
@@ -1365,8 +1439,8 @@ async function addCreatorSlide(
 
     let contentY = 1.9;
     if (!continued) {
-      const avatarSize = pitch ? PITCH_AVATAR_SIZE : 0.64;
-      const avatarY = 1.3;
+      const avatarSize = pitch ? Math.min(PITCH_AVATAR_SIZE, compactPubs ? 1.35 : PITCH_AVATAR_SIZE) : 0.64;
+      const avatarY = 1.28;
 
       await addThinkwayCreatorAvatar(slide, {
         avatarUrl: group.avatarUrl,
@@ -1388,7 +1462,7 @@ async function addCreatorSlide(
               bold: true,
               color: TITLE_INK,
               fontFace: FONT_UI,
-              fontSize: pitch ? 22 : 22,
+              fontSize: pitch ? 20 : 20,
               ...(profileLink ? { hyperlink: profileLink } : {}),
             },
           },
@@ -1397,7 +1471,7 @@ async function addCreatorSlide(
           x: nameX,
           y: avatarY,
           w: identityW,
-          h: 0.34,
+          h: 0.3,
         }
       );
       slide.addText(
@@ -1407,108 +1481,65 @@ async function addCreatorSlide(
             options: {
               color: MUTED,
               fontFace: FONT_BODY,
-              fontSize: pitch ? 11 : 11,
+              fontSize: 11,
               ...(profileLink ? { hyperlink: profileLink } : {}),
             },
           },
         ],
         {
           x: nameX,
-          y: avatarY + 0.34,
-          w: identityW * 0.55,
+          y: avatarY + 0.3,
+          w: identityW,
           h: 0.18,
         }
       );
 
-      // Shortlist-style overlapping platform logos near creator identity (frameless).
-      // Metrics table still shows a plain per-row icon in the Platforms column.
+      // Platform logos on their own band under the handle (never overlapping handle text).
+      let metricsY = avatarY + 0.52;
       if (creator.platformIcons.length) {
         addPlatformIconBadges(
           slide,
           creator.platformIcons,
-          nameX + identityW * 0.55,
-          avatarY + 0.34,
+          nameX,
+          avatarY + 0.5,
           6,
           profileLink?.url ?? creator.profileUrl ?? group.profileUrl,
-          pitch ? 0.22 : 0.18,
+          pitch ? 0.2 : 0.18,
           { overlap: true }
         );
+        metricsY = avatarY + 0.74;
       }
 
-      if (pitch) {
-        contentY = addPitchCreatorMetricsTable(
+      contentY = addCreatorMetricsTable(slide, creator, nameX, metricsY, identityW);
+      contentY = Math.max(contentY, avatarY + avatarSize + GAP_MD);
+
+      const pubsBudget = CONTENT_BOTTOM - contentY - 0.55;
+      const minDeliverablesBlock = 0.18 + 0.2 + 0.26 + 0.32;
+      const canFitPubs = pubsBudget > pubThumbSize + 0.55 + minDeliverablesBlock;
+      if (canFitPubs && group.publicationShots.length > 0) {
+        contentY = await addPublicationThumbs(
           slide,
-          creator,
-          nameX,
-          avatarY + 0.58,
-          identityW
+          group.publicationShots.slice(0, pubLimit),
+          contentY,
+          "Recent publications",
+          pubCols,
+          pubThumbSize,
+          pitch
+            ? { centered: true, gap: compactPubs ? 0.14 : PITCH_PUB_GAP, frameless: true }
+            : undefined
         );
-        contentY = Math.max(contentY, avatarY + avatarSize + GAP_MD);
-      } else {
-        const metrics = [
-          ["Followers", creator.followers],
-          ["Engagement", creator.engagement],
-          ["Views", creator.views],
-          ["Tier", creator.tier],
-          ["Categories", creator.categories],
-        ];
-        const metricW = CONTENT_W / 5 - 0.08;
-        const metricY = 2.15;
-        metrics.forEach(([label, value], metricIndex) => {
-          const x = MARGIN_X + metricIndex * (metricW + GAP_SM);
-          slide.addShape("roundRect", {
-            x,
-            y: metricY,
-            w: metricW,
-            h: 0.64,
-            fill: { color: LAVENDER },
-            line: { color: LAV_LINE, width: 1 },
-            rectRadius: 0.08,
-          });
-          slide.addText(label.toUpperCase(), {
-            x: x + 0.08,
-            y: metricY + 0.08,
-            w: metricW - 0.16,
-            h: 0.14,
-            fontFace: FONT_UI,
-            fontSize: 8,
-            color: MUTED,
-            charSpacing: 0.8,
-          });
-          slide.addText(value, {
-            x: x + 0.08,
-            y: metricY + 0.26,
-            w: metricW - 0.16,
-            h: 0.3,
-            fontFace: FONT_BODY,
-            fontSize: 11,
-            bold: true,
-            color: TITLE_INK,
-          });
-        });
-        contentY = metricY + 0.74;
       }
-
-      contentY = await addPublicationThumbs(
-        slide,
-        group.publicationShots.slice(0, pitch ? PITCH_PUB_COLS : SHOWCASE_PUB_LIMIT),
-        contentY,
-        "Recent publications",
-        pitch ? PITCH_PUB_COLS : PUB_COLS,
-        pubThumbSize,
-        pitch
-          ? { centered: true, gap: PITCH_PUB_GAP, frameless: true }
-          : undefined
-      );
     } else {
       contentY = 1.55;
     }
 
+    // Keep deliverables inside the slide footer band.
+    const deliverablesTitleY = Math.min(contentY, CONTENT_BOTTOM - 1.2);
     slide.addText(
       (continued ? "Proposed deliverables (continued)" : "Proposed deliverables").toUpperCase(),
       {
         x: MARGIN_X,
-        y: contentY,
+        y: deliverablesTitleY,
         w: CONTENT_W,
         h: 0.18,
         fontFace: FONT_UI,
@@ -1519,7 +1550,7 @@ async function addCreatorSlide(
       }
     );
 
-    addCreatorDeliverablesTable(slide, deliverables, showFees, contentY + 0.2);
+    addCreatorDeliverablesTable(slide, deliverables, showFees, deliverablesTitleY + 0.2);
 
     addSlideFooter(
       slide,
