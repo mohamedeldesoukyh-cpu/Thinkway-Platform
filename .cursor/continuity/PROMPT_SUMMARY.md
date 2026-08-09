@@ -1,16 +1,22 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `develop` / `main` @ `7cee99fb`  
-**Focus:** Showcase PPTX redesign parity + ER decimals — SHIPPED
+**Branch:** `develop` / `main` @ `c321844d`  
+**Focus:** Showcase metric cards Preview/PDF/PPTX parity — SHIPPED
+
+## SHIPPED — Showcase metric cards (icons + K/M)
+
+- Commit: `c321844d`
+- Prod: `dpl_G9qdNNbDNp6pe9cGstozrLaMFoJn` → https://app.thinkwaymedia.com
+- Engagement card: platform **avatars** + ER% (no IG/TT text)
+- Platform follower cards: **Followers** header + platform avatar + **K/M** counts
+- Preview · PDF · PPTX share the same card semantics
+- Smoke: valid PPTX ZIP · no SVG media
 
 ## SHIPPED — Showcase PPTX redesign + ER decimals
 
 - Commit: `7cee99fb`
-- Prod: `dpl_FJCLLxbq7L2U3nyS3cLtdBqgdR8s` → https://app.thinkwaymedia.com
 - Showcase / Showcase Lump Sum PPTX match HTML redesign (cover + TOTAL INVESTMENT)
 - Engagement rates: **2 decimals** in Preview/exports
-- Showcase Engagement card: `IG x.xx% · TT x.xx%` (all platforms)
-- Smoke: valid PPTX ZIP · no SVG media · redesign markers present
 
 ## SHIPPED — Creator metrics + quotation whole numbers
 
