@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { browseUnifiedCreatorsAction } from "@/features/campaigns/creator-discovery-actions";
+import { browseUnifiedCreatorsForPickerAction } from "@/features/campaigns/creator-discovery-actions";
 import { filterExactCreatorMatches } from "@/features/discovery/components/creator-search/creator-search-exact-match";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { upsertCreatorInResults } from "@/lib/discovery/creator-search-query";
@@ -171,8 +171,9 @@ export function useCreatorBrowse({
 
       try {
         const parsedFilters = JSON.parse(debouncedFiltersKey) as CreatorBrowseFilters;
-        const result = await browseUnifiedCreatorsAction({
+        const result = await browseUnifiedCreatorsForPickerAction({
           ...parsedFilters,
+          skipCoverageBackfill: true,
           page,
           pageSize,
         });

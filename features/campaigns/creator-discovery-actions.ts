@@ -224,6 +224,49 @@ export async function browseUnifiedCreatorsAction(
 }
 
 /**
+ * Lightweight picker browse — no coverage backfill and no ECI enrichment.
+ * Used by Combine Creators / shortlist pickers where identity match speed matters.
+ */
+export async function browseUnifiedCreatorsForPickerAction(
+  filters: UnifiedCreatorBrowseFilters
+) {
+  const { supabase } = await requireUserId();
+  const pickerFilters: UnifiedCreatorBrowseFilters = {
+    ...filters,
+    skipCoverageBackfill: true,
+    pageSize: Math.min(filters.pageSize ?? 20, 20),
+  };
+  searchTrace(
+    "3_unified_browse_filters",
+    { browseFilters: pickerFilters, picker: true },
+    { path: "discovery" }
+  );
+  try {
+    const result = await browseUnifiedCreators(supabase, pickerFilters, "discovery");
+    searchTrace(
+      "9_final_creator_count",
+      {
+        total: result.total,
+        creatorCount: result.creators.length,
+        internal_count: result.internal_count,
+        discovery_count: result.discovery_count,
+        picker: true,
+      },
+      { path: "discovery" }
+    );
+    return result;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Creator search failed";
+    if (/statement timeout|canceling statement|timed out/i.test(message)) {
+      throw new Error(
+        "Creator search timed out. Try a more specific name or handle."
+      );
+    }
+    throw error instanceof Error ? error : new Error(message);
+  }
+}
+
+/**
  * Phase 1 Creator Detail — identity / DNA / platforms only (no ECI).
  * Keeps first paint off the ECI critical path; ECI quality unchanged via phase 2.
  */

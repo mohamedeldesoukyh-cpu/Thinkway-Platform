@@ -308,7 +308,10 @@ export type DiscoveryCreatorActionsMenuProps = {
   onRefreshMetrics?: (platformAccountId?: string | null) => void;
   onStopRefresh?: () => void;
   onCreatorDeleted?: () => void;
-  onCreatorUpdated?: (creator: UnifiedCreatorResult) => void;
+  onCreatorUpdated?: (
+    creator: UnifiedCreatorResult,
+    meta?: { removedUnifiedId?: string; removedInfluencerId?: string | null }
+  ) => void;
   addLabel?: string;
 };
 
@@ -612,7 +615,12 @@ export function DiscoveryCreatorActionsMenu({
           open={combineOpen}
           onOpenChange={setCombineOpen}
           targetCreator={creator}
-          onMerged={(next) => onCreatorUpdated?.(next)}
+          onMerged={(next, meta) =>
+            onCreatorUpdated?.(next, {
+              removedUnifiedId: meta.removedUnifiedId,
+              removedInfluencerId: meta.removedInfluencerId,
+            })
+          }
         />
       ) : null}
     </div>

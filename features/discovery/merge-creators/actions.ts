@@ -35,24 +35,34 @@ export async function mergeCreatorsAction(input: {
   sourceInfluencerId: string;
   targetUnifiedId: string;
 }): Promise<MergeCreatorsResult> {
-  const supabase = await createSupabaseServerClient();
-  const auth = await requirePermission(supabase, CREATOR_ENRICHMENT_PERMISSION);
-  if ("error" in auth) {
-    return { ok: false, message: auth.error };
+  try {
+    const supabase = await createSupabaseServerClient();
+    const auth = await requirePermission(supabase, CREATOR_ENRICHMENT_PERMISSION);
+    if ("error" in auth) {
+      return { ok: false, message: auth.error };
+    }
+
+    const result = await mergeCreators(supabase, {
+      ...input,
+      actorId: auth.userId,
+    });
+
+    if (result.ok) {
+      // One layout invalidation per surface — multiple revalidatePath calls stack
+      // client refreshes and make shortlist pages look like they are "re-rendering"
+      // with no useful UI change.
+      revalidatePath("/discovery/shortlists", "layout");
+      revalidatePath("/vendors", "layout");
+    }
+
+    return result;
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Could not combine creators. Please try again.",
+    };
   }
-
-  const result = await mergeCreators(supabase, {
-    ...input,
-    actorId: auth.userId,
-  });
-
-  if (result.ok) {
-    // One layout invalidation per surface — multiple revalidatePath calls stack
-    // client refreshes and make shortlist pages look like they are "re-rendering"
-    // with no useful UI change.
-    revalidatePath("/discovery/shortlists", "layout");
-    revalidatePath("/vendors", "layout");
-  }
-
-  return result;
 }

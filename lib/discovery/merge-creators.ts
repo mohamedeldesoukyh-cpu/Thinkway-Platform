@@ -98,16 +98,19 @@ function buildMergeEligibility(
   );
   const platformConflicts = sourcePlatforms
     .filter((row) => targetPlatformKeys.has(platformKey(row.platform)))
-    .map((row) => platformLabel(row.platform));
+    .map((row) => platformKey(row.platform));
   const platformsToMove = sourcePlatforms
     .filter((row) => !targetPlatformKeys.has(platformKey(row.platform)))
-    .map((row) => platformLabel(row.platform));
+    .map((row) => platformKey(row.platform));
+
+  const conflictLabels = platformConflicts.map((p) => platformLabel(p));
+  const moveLabels = platformsToMove.map((p) => platformLabel(p));
 
   if (platformConflicts.length > 0) {
     return {
       canMerge: false,
-      message: `Both creators already have ${platformConflicts.join(", ")} linked. Remove the duplicate platform from one profile first.`,
-      platformConflicts,
+      message: `Both creators already have ${conflictLabels.join(", ")} linked. Remove the duplicate platform from one profile first.`,
+      platformConflicts: conflictLabels,
       platformsToMove,
     };
   }
@@ -116,15 +119,15 @@ function buildMergeEligibility(
     return {
       canMerge: false,
       message: "The selected creator has no new platforms to combine.",
-      platformConflicts,
+      platformConflicts: conflictLabels,
       platformsToMove,
     };
   }
 
   return {
     canMerge: true,
-    message: `Combine ${platformsToMove.join(", ")} into this creator profile.`,
-    platformConflicts,
+    message: `Combine ${moveLabels.join(", ")} into this creator profile.`,
+    platformConflicts: conflictLabels,
     platformsToMove,
   };
 }
@@ -306,13 +309,29 @@ async function dedupeVendorIos(
   }
 }
 
+async function reassignColumnReferences(
+  supabase: SupabaseClient<Database>,
+  input: {
+    table: string;
+    column: string;
+    targetInfluencerId: string;
+    sourceInfluencerId: string;
+  }
+): Promise<void> {
+  const db = supabase as AnySupabase;
+  const { error } = await db
+    .from(input.table)
+    .update({ [input.column]: input.targetInfluencerId })
+    .eq(input.column, input.sourceInfluencerId);
+  if (error) throw new Error(`${input.table}.${input.column}: ${error.message}`);
+}
+
 async function reassignInfluencerReferences(
   supabase: SupabaseClient<Database>,
   targetInfluencerId: string,
   sourceInfluencerId: string
 ): Promise<void> {
-  const db = supabase as AnySupabase;
-  const tables = [
+  const influencerIdTables = [
     "discovery_shortlist_items",
     "quotation_items",
     "campaign_influencers",
@@ -327,12 +346,35 @@ async function reassignInfluencerReferences(
     "ipl_snapshots",
   ] as const;
 
-  for (const table of tables) {
-    const { error } = await db
-      .from(table)
-      .update({ influencer_id: targetInfluencerId })
-      .eq("influencer_id", sourceInfluencerId);
-    if (error) throw new Error(`${table}: ${error.message}`);
+  for (const table of influencerIdTables) {
+    await reassignColumnReferences(supabase, {
+      table,
+      column: "influencer_id",
+      targetInfluencerId,
+      sourceInfluencerId,
+    });
+  }
+
+  // Finance / IO tables use vendor_id (ON DELETE RESTRICT) — must move before source delete.
+  for (const table of [
+    "vendor_payments",
+    "vendor_invoices",
+    "vendor_statements",
+    "vendor_credit_notes",
+  ] as const) {
+    try {
+      await reassignColumnReferences(supabase, {
+        table,
+        column: "vendor_id",
+        targetInfluencerId,
+        sourceInfluencerId,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      // Table may not exist in every environment — only fail on real constraint errors.
+      if (/schema cache|does not exist|could not find/i.test(message)) continue;
+      throw error;
+    }
   }
 }
 
@@ -347,7 +389,16 @@ async function moveCreatorDnaIfNeeded(
     db.from("creator_dna").select("influencer_id").eq("influencer_id", sourceInfluencerId).maybeSingle(),
   ]);
 
-  if (targetDna || !sourceDna) return;
+  if (!sourceDna) return;
+
+  // Target already owns DNA — drop duplicate source DNA so the source profile can be removed.
+  if (targetDna) {
+    for (const table of ["creator_dna_lineage_events", "creator_dna_versions", "creator_dna"] as const) {
+      const { error } = await db.from(table).delete().eq("influencer_id", sourceInfluencerId);
+      if (error) throw new Error(`${table}: ${error.message}`);
+    }
+    return;
+  }
 
   const { error: dnaError } = await db
     .from("creator_dna")
@@ -401,24 +452,27 @@ export async function mergeCreators(
     actorId: string;
   }
 ): Promise<MergeCreatorsResult> {
-  const targetInfluencerId = input.targetInfluencerId.trim();
-  const sourceInfluencerId = input.sourceInfluencerId.trim();
-  const targetUnifiedId = input.targetUnifiedId.trim();
+  try {
+    const targetInfluencerId = input.targetInfluencerId.trim();
+    const sourceInfluencerId = input.sourceInfluencerId.trim();
+    const targetUnifiedId = input.targetUnifiedId.trim();
 
-  const eligibility = await getMergeCreatorsEligibility(supabase, {
-    targetInfluencerId,
-    sourceInfluencerId,
-  });
-  if (!eligibility.canMerge) {
-    return {
-      ok: false,
-      message: eligibility.message,
-      platformConflicts: eligibility.platformConflicts,
-    };
-  }
+    const eligibility = await getMergeCreatorsEligibility(supabase, {
+      targetInfluencerId,
+      sourceInfluencerId,
+    });
+    if (!eligibility.canMerge) {
+      return {
+        ok: false,
+        message: eligibility.message,
+        platformConflicts: eligibility.platformConflicts,
+      };
+    }
 
-  const [{ data: targetInfluencer, error: targetError }, { data: sourceInfluencer, error: sourceError }] =
-    await Promise.all([
+    const [
+      { data: targetInfluencer, error: targetError },
+      { data: sourceInfluencer, error: sourceError },
+    ] = await Promise.all([
       supabase
         .from("influencers")
         .select(
@@ -435,100 +489,113 @@ export async function mergeCreators(
         .maybeSingle(),
     ]);
 
-  if (targetError) return { ok: false, message: targetError.message };
-  if (sourceError) return { ok: false, message: sourceError.message };
-  if (!targetInfluencer || !sourceInfluencer) {
-    return { ok: false, message: "One or both creators could not be found." };
-  }
+    if (targetError) return { ok: false, message: targetError.message };
+    if (sourceError) return { ok: false, message: sourceError.message };
+    if (!targetInfluencer || !sourceInfluencer) {
+      return { ok: false, message: "One or both creators could not be found." };
+    }
 
-  const { data: sourcePlatforms, error: sourcePlatformsError } = await supabase
-    .from("influencer_platform_accounts")
-    .select("id, platform, is_primary")
-    .eq("influencer_id", sourceInfluencerId);
-
-  if (sourcePlatformsError) {
-    return { ok: false, message: sourcePlatformsError.message };
-  }
-
-  const sourcePlatformRows = (sourcePlatforms ?? []) as PlatformAccountRow[];
-  const targetHasPrimary = Boolean(
-    (
-      await supabase
-        .from("influencer_platform_accounts")
-        .select("id")
-        .eq("influencer_id", targetInfluencerId)
-        .eq("is_primary", true)
-        .limit(1)
-    ).data?.length
-  );
-
-  await dedupeShortlistItems(supabase, targetInfluencerId, sourceInfluencerId);
-  await dedupeCampaignAssignments(supabase, targetInfluencerId, sourceInfluencerId);
-  await dedupeVendorIos(supabase, targetInfluencerId, sourceInfluencerId);
-
-  for (const account of sourcePlatformRows) {
-    const { error: moveError } = await supabase
+    const { data: sourcePlatforms, error: sourcePlatformsError } = await supabase
       .from("influencer_platform_accounts")
-      .update({
-        influencer_id: targetInfluencerId,
-        is_primary: targetHasPrimary ? false : account.is_primary ?? false,
-      })
-      .eq("id", account.id)
+      .select("id, platform, is_primary")
       .eq("influencer_id", sourceInfluencerId);
 
-    if (moveError) {
-      return { ok: false, message: moveError.message };
+    if (sourcePlatformsError) {
+      return { ok: false, message: sourcePlatformsError.message };
     }
-  }
 
-  await reassignInfluencerReferences(supabase, targetInfluencerId, sourceInfluencerId);
-  await moveCreatorDnaIfNeeded(supabase, targetInfluencerId, sourceInfluencerId);
+    const sourcePlatformRows = (sourcePlatforms ?? []) as PlatformAccountRow[];
+    const targetHasPrimary = Boolean(
+      (
+        await supabase
+          .from("influencer_platform_accounts")
+          .select("id")
+          .eq("influencer_id", targetInfluencerId)
+          .eq("is_primary", true)
+          .limit(1)
+      ).data?.length
+    );
 
-  const mergedPatch = buildMergedInfluencerPatch(
-    targetInfluencer as InfluencerMergeRow,
-    sourceInfluencer as InfluencerMergeRow
-  );
+    await dedupeShortlistItems(supabase, targetInfluencerId, sourceInfluencerId);
+    await dedupeCampaignAssignments(supabase, targetInfluencerId, sourceInfluencerId);
+    await dedupeVendorIos(supabase, targetInfluencerId, sourceInfluencerId);
 
-  const { error: targetUpdateError } = await supabase
-    .from("influencers")
-    .update(mergedPatch as Database["public"]["Tables"]["influencers"]["Update"])
-    .eq("id", targetInfluencerId);
+    for (const account of sourcePlatformRows) {
+      const { error: moveError } = await supabase
+        .from("influencer_platform_accounts")
+        .update({
+          influencer_id: targetInfluencerId,
+          is_primary: targetHasPrimary ? false : account.is_primary ?? false,
+        })
+        .eq("id", account.id)
+        .eq("influencer_id", sourceInfluencerId);
 
-  if (targetUpdateError) {
-    return { ok: false, message: targetUpdateError.message };
-  }
+      if (moveError) {
+        return { ok: false, message: moveError.message };
+      }
+    }
 
-  const { error: deleteError } = await supabase
-    .from("influencers")
-    .delete()
-    .eq("id", sourceInfluencerId);
+    await reassignInfluencerReferences(supabase, targetInfluencerId, sourceInfluencerId);
+    await moveCreatorDnaIfNeeded(supabase, targetInfluencerId, sourceInfluencerId);
 
-  if (deleteError) {
+    const mergedPatch = buildMergedInfluencerPatch(
+      targetInfluencer as InfluencerMergeRow,
+      sourceInfluencer as InfluencerMergeRow
+    );
+
+    const { error: targetUpdateError } = await supabase
+      .from("influencers")
+      .update(mergedPatch as Database["public"]["Tables"]["influencers"]["Update"])
+      .eq("id", targetInfluencerId);
+
+    if (targetUpdateError) {
+      return { ok: false, message: targetUpdateError.message };
+    }
+
+    const { error: deleteError } = await supabase
+      .from("influencers")
+      .delete()
+      .eq("id", sourceInfluencerId);
+
+    if (deleteError) {
+      return {
+        ok: false,
+        message:
+          deleteError.message ||
+          "Platforms were combined but the duplicate creator profile could not be removed.",
+      };
+    }
+
+    try {
+      await persistCreatorPrimaryIdentity(supabase, targetInfluencerId);
+    } catch {
+      // Identity refresh is best-effort after a successful merge.
+    }
+
+    const creator = await getUnifiedCreatorById(supabase, targetUnifiedId, { skipDna: true });
+    if (!creator) {
+      return {
+        ok: false,
+        message: "Creators combined but the updated profile could not be reloaded.",
+      };
+    }
+
+    const movedLabels = eligibility.platformsToMove.map((p) => platformLabel(p)).join(", ");
+    const sourceName = sourceInfluencer.display_name?.trim() || "Duplicate creator";
+
+    return {
+      ok: true,
+      creator,
+      platformsMoved: sourcePlatformRows.length,
+      message: `Combined ${sourceName} — ${movedLabels} now linked to ${creator.display_name}.`,
+    };
+  } catch (error) {
     return {
       ok: false,
       message:
-        deleteError.message ||
-        "Platforms were combined but the duplicate creator profile could not be removed.",
+        error instanceof Error
+          ? error.message
+          : "Could not combine creators. Please try again.",
     };
   }
-
-  await persistCreatorPrimaryIdentity(supabase, targetInfluencerId);
-
-  const creator = await getUnifiedCreatorById(supabase, targetUnifiedId);
-  if (!creator) {
-    return {
-      ok: false,
-      message: "Creators combined but the updated profile could not be reloaded.",
-    };
-  }
-
-  const movedLabels = eligibility.platformsToMove.join(", ");
-  const sourceName = sourceInfluencer.display_name?.trim() || "Duplicate creator";
-
-  return {
-    ok: true,
-    creator,
-    platformsMoved: sourcePlatformRows.length,
-    message: `Combined ${sourceName} — ${movedLabels} now linked to ${creator.display_name}.`,
-  };
 }
