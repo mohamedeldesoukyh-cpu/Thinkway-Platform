@@ -1219,6 +1219,16 @@
   overflow: visible;
 }
 
+/* Clip the photo itself — wrap stays overflow:visible for flag/star badges. */
+.quotation-editor-rd4 .cg-head .quotation-cg-avatar-block .discovery-search-exact-photo-wrap > a,
+.quotation-editor-rd4 .cg-head .quotation-cg-avatar-block .discovery-search-exact-photo-wrap > div.overflow-hidden {
+  display: block;
+  width: 84px;
+  height: 84px;
+  overflow: hidden;
+  border-radius: 50%;
+}
+
 .quotation-editor-rd4 .cg-head .quotation-cg-avatar-block .discovery-search-exact-star {
   z-index: 3;
 }

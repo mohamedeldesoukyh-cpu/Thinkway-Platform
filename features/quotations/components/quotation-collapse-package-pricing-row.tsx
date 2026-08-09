@@ -188,7 +188,10 @@ export function QuotationCollapsePackagePricingRow({
     (currency: string) => {
       const next = (currency || "EGP").toUpperCase();
       const current = (draft?.costCurrency || leader.cost_currency || "EGP").toUpperCase();
-      if (next === current && (next === "EGP" || (draft?.fxRateToEgp ?? 0) > 0)) {
+      const liveFx = draft?.fxRateToEgp ?? leader.fx_rate_to_egp ?? 0;
+      // Identity (1) on a non-EGP line means the rate never resolved — refresh it.
+      const hasRealFx = next === "EGP" || liveFx > 1;
+      if (next === current && hasRealFx) {
         return;
       }
       if (next === "EGP") {
@@ -203,7 +206,14 @@ export function QuotationCollapsePackagePricingRow({
         });
       });
     },
-    [draft?.costCurrency, draft?.fxRateToEgp, leader.cost_currency, leader.id, onDraftChange]
+    [
+      draft?.costCurrency,
+      draft?.fxRateToEgp,
+      leader.cost_currency,
+      leader.fx_rate_to_egp,
+      leader.id,
+      onDraftChange,
+    ]
   );
 
   const handleDeliverableCommercialsDerived = useCallback(

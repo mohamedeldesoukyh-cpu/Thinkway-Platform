@@ -76,7 +76,14 @@ export async function updateQuotationItemCommercials(
     expectedConcurrencyToken?: string;
   }
 ) {
-  const rate = await resolveRateToEgp(supabase, input.cost_currency);
+  const { data: quotationMeta } = await supabase
+    .from("quotations")
+    .select("issue_date")
+    .eq("id", input.quotation_id)
+    .maybeSingle();
+  const issueDate =
+    (quotationMeta as { issue_date?: string | null } | null)?.issue_date ?? null;
+  const rate = await resolveRateToEgp(supabase, input.cost_currency, issueDate);
   const rolled = input.deliverables?.length
     ? rollupDeliverableCommercials(input.deliverables, {
         lineCurrency: input.cost_currency,
