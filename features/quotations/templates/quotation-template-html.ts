@@ -31,6 +31,20 @@ import { formatQuotationCardFollowers } from "./quotation-template-format";
 import { getReportPlatformIconTitle } from "@/lib/performance/report/report-platform-icons";
 import { pickCreatorDisplayName } from "@/lib/text/decode-html-entities";
 
+function resolveShowcaseProfileHref(
+  primary: string | null | undefined,
+  fallbacks: Array<string | null | undefined> = []
+): string | null {
+  for (const candidate of [primary, ...fallbacks]) {
+    const trimmed = candidate?.trim();
+    if (!trimmed) continue;
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+    if (/^\/\//.test(trimmed)) return `https:${trimmed}`;
+    if (/^[\w.-]+\.[a-z]{2,}([/?#]|$)/i.test(trimmed)) return `https://${trimmed}`;
+  }
+  return null;
+}
+
 export type BuildQuotationTemplateHtmlOptions = {
   siteOrigin?: string;
   logoSrcs?: ThinkwayReportLogoSrcs;
@@ -525,9 +539,13 @@ function renderShowcaseCreatorPages(
           ? `<span class="pitch-avatar pitch-avatar--initials">${esc(creator.initials)}</span>`
           : `<span class="sc-avatar sc-avatar--initials">${esc(creator.initials)}</span>`;
 
+      const profileHref = resolveShowcaseProfileHref(creator.profileUrl, [
+        ...(group?.platformMetrics.map((row) => row.profileUrl) ?? []),
+        group?.profileUrl ?? null,
+      ]);
       const profileLinkStart =
-        creator.profileUrl && /^https?:\/\//i.test(creator.profileUrl)
-          ? `<a class="sc-profile-link" href="${esc(creator.profileUrl)}" target="_blank" rel="noopener noreferrer">`
+        profileHref
+          ? `<a class="sc-profile-link" href="${esc(profileHref)}" target="_blank" rel="noopener noreferrer">`
           : "";
       const profileLinkEnd = profileLinkStart ? "</a>" : "";
 
@@ -1078,7 +1096,7 @@ ${baseTag}
 <title>${esc(doc.serial)} — ${esc(payload.quotation.title)} — Thinkway</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+Arabic:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>${QUOTATION_TEMPLATE_STYLES}</style>
 </head>
 <body class="${bodyClass}">

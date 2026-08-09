@@ -1,6 +1,7 @@
 /**
  * Quotation Showcase / Pitch PPTX — built from the same HTML pages as Preview + PDF.
  * One full-bleed slide image per `.cpage` / `.cover` so PPTX cannot drift from Preview.
+ * Invisible hyperlink hotspots restore avatar + publication click-through.
  */
 import type { QuotationDocument } from "@/features/quotations/export/quotation-document";
 import { buildQuotationHtml } from "@/features/quotations/export/quotation-html";
@@ -44,15 +45,36 @@ async function buildPptxFromPageImages(
   pptx.company = "Thinkway";
   pptx.title = title;
 
+  const pageW = QUOTATION_A4_LANDSCAPE.widthIn;
+  const pageH = QUOTATION_A4_LANDSCAPE.heightIn;
+
   for (const page of pages) {
     const slide = pptx.addSlide();
     slide.addImage({
       data: `image/${page.contentType};base64,${page.buffer.toString("base64")}`,
       x: 0,
       y: 0,
-      w: QUOTATION_A4_LANDSCAPE.widthIn,
-      h: QUOTATION_A4_LANDSCAPE.heightIn,
+      w: pageW,
+      h: pageH,
     });
+
+    // Transparent hit targets on top of the screenshot (avatar, pubs, handles…).
+    for (const link of page.links ?? []) {
+      const x = Math.max(0, link.x) * pageW;
+      const y = Math.max(0, link.y) * pageH;
+      const w = Math.min(link.w, 1 - Math.max(0, link.x)) * pageW;
+      const h = Math.min(link.h, 1 - Math.max(0, link.y)) * pageH;
+      if (w < 0.05 || h < 0.05) continue;
+      slide.addShape("rect", {
+        x,
+        y,
+        w,
+        h,
+        fill: { color: "FFFFFF", transparency: 100 },
+        line: { type: "none" },
+        hyperlink: { url: link.href },
+      });
+    }
   }
 
   return (await pptx.write({ outputType: "nodebuffer" })) as Buffer;

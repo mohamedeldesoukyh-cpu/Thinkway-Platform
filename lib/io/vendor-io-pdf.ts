@@ -393,9 +393,21 @@ export async function renderHtmlToPdf(
   }
 }
 
+export type HtmlPageLinkHotspot = {
+  href: string;
+  /** Relative to page width (0–1). */
+  x: number;
+  /** Relative to page height (0–1). */
+  y: number;
+  w: number;
+  h: number;
+};
+
 export type HtmlPageImage = {
   buffer: Buffer;
   contentType: "png" | "jpeg";
+  /** Clickable `<a href>` regions in page-relative coordinates. */
+  links: HtmlPageLinkHotspot[];
 };
 
 export type HtmlPagesToImagesOptions = HtmlToPdfOptions & {
@@ -472,6 +484,17 @@ export async function renderHtmlPagesToImages(
       // Non-fatal
     }
     await waitForPdfAssetsReady(page);
+    // Arabic creator names need Noto Sans Arabic glyphs (Inter has none).
+    try {
+      await page.waitForFunction(
+        () =>
+          document.fonts.check('16px "Noto Sans Arabic"') ||
+          document.fonts.check("16px Noto Sans Arabic"),
+        { timeout: 8_000 }
+      );
+    } catch {
+      // Non-fatal when offline — system Arabic fonts may still render.
+    }
     if (options.waitForDocumentAttribute) {
       const { name, value, timeoutMs = 30_000 } = options.waitForDocumentAttribute;
       await page.waitForFunction(
@@ -508,13 +531,42 @@ export async function renderHtmlPagesToImages(
       await handle.evaluate((el) => {
         el.scrollIntoView({ block: "start", inline: "nearest" });
       });
+      const links = (await handle.evaluate((el) => {
+        const pageRect = el.getBoundingClientRect();
+        if (pageRect.width <= 0 || pageRect.height <= 0) return [];
+        const anchors = Array.from(el.querySelectorAll("a[href]"));
+        return anchors
+          .map((anchor) => {
+            const href = (anchor as HTMLAnchorElement).href?.trim() ?? "";
+            if (!/^https?:\/\//i.test(href)) return null;
+            const rect = anchor.getBoundingClientRect();
+            if (rect.width <= 2 || rect.height <= 2) return null;
+            return {
+              href,
+              x: (rect.left - pageRect.left) / pageRect.width,
+              y: (rect.top - pageRect.top) / pageRect.height,
+              w: rect.width / pageRect.width,
+              h: rect.height / pageRect.height,
+            };
+          })
+          .filter((row): row is NonNullable<typeof row> => row != null)
+          .filter(
+            (row) =>
+              row.x < 1 &&
+              row.y < 1 &&
+              row.x + row.w > 0 &&
+              row.y + row.h > 0 &&
+              row.w > 0 &&
+              row.h > 0
+          );
+      })) as HtmlPageLinkHotspot[];
       const buffer = Buffer.from(
         await handle.screenshot({
           type: imageType,
           ...(imageType === "jpeg" ? { quality } : {}),
         })
       );
-      pages.push({ buffer, contentType: imageType });
+      pages.push({ buffer, contentType: imageType, links });
     }
     return { ok: true, pages };
   } catch (error) {

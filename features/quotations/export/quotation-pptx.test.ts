@@ -137,6 +137,18 @@ async function assertA4LandscapeHtmlParityLayout(buffer: Buffer): Promise<void> 
     !media.some((path) => path.toLowerCase().endsWith(".svg")),
     "PPTX must not embed SVG media"
   );
+  const slideXml = await Promise.all(
+    Object.keys(zip.files)
+      .filter((path) => /ppt\/slides\/slide\d+\.xml$/.test(path))
+      .map(async (path) => zip.file(path)?.async("string") ?? "")
+  );
+  const joined = slideXml.join("\n");
+  // Creator slides should restore clickable hotspots from HTML <a href>.
+  assert.match(
+    joined,
+    /a:hlinkClick|hyperlink/,
+    "Showcase HTML-parity PPTX should embed hyperlink hotspots"
+  );
 }
 
 async function main() {

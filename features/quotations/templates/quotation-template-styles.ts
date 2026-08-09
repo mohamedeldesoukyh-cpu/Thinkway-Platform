@@ -17,7 +17,7 @@ export const QUOTATION_TEMPLATE_STYLES = `
   html,body{margin:0;padding:0;}
   body{
     color:var(--ink);
-    font-family:"Inter",system-ui,-apple-system,sans-serif;
+    font-family:"Inter","Noto Sans Arabic",system-ui,-apple-system,"Segoe UI",sans-serif;
     -webkit-font-smoothing:antialiased;
     -webkit-print-color-adjust:exact;
     print-color-adjust:exact;
@@ -85,7 +85,7 @@ export const QUOTATION_TEMPLATE_STYLES = `
     background:radial-gradient(circle,rgba(230,238,255,.55) 0%,rgba(246,248,255,0) 68%);
   }
 
-  .mono{font-family:"Inter",system-ui,sans-serif; font-variant-numeric:tabular-nums;}
+  .mono{font-family:"Inter","Noto Sans Arabic",system-ui,sans-serif; font-variant-numeric:tabular-nums;}
   .sec-tick{
     display:inline-flex; align-items:center; gap:10px;
     font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--blue);
