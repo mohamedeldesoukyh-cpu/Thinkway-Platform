@@ -27,7 +27,6 @@ import {
   QUOTATION_TEMPLATE_STYLES,
 } from "./quotation-template-styles";
 import type { QuotationTemplatePayload } from "./quotation-template-types";
-import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { getReportPlatformIconTitle } from "@/lib/performance/report/report-platform-icons";
 
 export type BuildQuotationTemplateHtmlOptions = {
@@ -46,9 +45,10 @@ function esc(value: string | null | undefined): string {
 }
 
 function platformBadgeHtml(platform: string): string {
-  const key = canonicalPlatformKey(platform) || "other";
   const label = getReportPlatformIconTitle(platform);
-  return `<span class="pf"><span class="pf-ico ${esc(key)}"></span>${esc(label)}</span>`;
+  const icons = renderQuotationPlatformIconsHtml([platform]);
+  if (!icons) return `<span class="pf">${esc(label)}</span>`;
+  return `<span class="pf">${icons}<span class="pf-label">${esc(label)}</span></span>`;
 }
 
 function normalizeHandleKey(handle: string): string {
@@ -242,15 +242,13 @@ function renderPublicationShotsGrid(
   return `<div class="${gridClass}">${cards || `<div class="pub-empty">${esc(emptyLabel)}</div>`}</div>`;
 }
 
-function showcaseFeeColumnLabel(showFees: boolean): string {
-  return showFees ? "Influencer price (EGP)" : "";
-}
-
 /** One landscape row of publication thumbs per creator slide in PDF. */
 const SHOWCASE_PDF_PUBLICATION_SHOT_LIMIT = 4;
-/** Deliverables kept with identity on first creator page; remainder continues cleanly. */
-const SHOWCASE_CREATOR_DELIVERABLES_FIRST_PAGE = 4;
-const SHOWCASE_CREATOR_DELIVERABLES_CONTINUATION = 7;
+/** Commercial fee rows — first page also has KPI strip + totals reserve. */
+const COMMERCIAL_ROWS_FIRST_PAGE = 8;
+const COMMERCIAL_ROWS_CONTINUATION = 11;
+/** Roster / At a glance — keep clear of footer on fixed A4 landscape. */
+const ROSTER_ROWS_PER_PAGE = 9;
 
 /** Kept for collapse packages that still need a light fit on fixed A4 landscape. */
 function showcasePdfSlideStyle(scale: number): string {
@@ -415,6 +413,55 @@ function renderClosingPage(payload: QuotationTemplatePayload): string {
 </section>`;
 }
 
+function showcaseMetricCardsHtml(
+  creator: QuotationTemplatePayload["showcaseCreators"][number]
+): string {
+  // Followers + Engagement + per-platform follower cards. Views intentionally omitted.
+  type MetricCard = { label: string; value: string; accent?: boolean };
+  const cards: MetricCard[] = [
+    { label: "Followers", value: creator.followers, accent: true },
+    { label: "Engagement", value: creator.engagement },
+  ];
+  for (const metric of creator.platformMetrics) {
+    if (cards.length >= 4) break;
+    const label = getReportPlatformIconTitle(metric.platform).toUpperCase();
+    if (cards.some((card) => card.label.toUpperCase() === label)) continue;
+    cards.push({ label, value: metric.followers });
+  }
+  while (cards.length < 3) {
+    cards.push({ label: "—", value: "—" });
+  }
+  const colClass =
+    cards.length <= 3 ? "sc-metric-grid" : "sc-metric-grid";
+  return `<div class="${colClass}" style="grid-template-columns:repeat(${Math.min(4, cards.length)},minmax(0,1fr));">
+    ${cards
+      .map(
+        (card) => `<div class="sc-metric"><p class="ml">${esc(card.label)}</p><p class="mv${card.accent ? " accent" : ""}">${esc(card.value)}</p></div>`
+      )
+      .join("")}
+  </div>`;
+}
+
+function showcaseDeliverableSummary(
+  creator: QuotationTemplatePayload["showcaseCreators"][number]
+): { summary: string; fee: string | null } {
+  const services = creator.deliverables
+    .map((row) => row.service.trim())
+    .filter(Boolean);
+  const summary = services.length ? services.join(" + ") : "—";
+  if (!creator.deliverables.some((row) => row.grossFee)) {
+    return { summary, fee: null };
+  }
+  const total = creator.deliverables
+    .map((row) => parseFeeNumber(row.grossFee))
+    .filter((n): n is number => n != null)
+    .reduce((a, b) => a + b, 0);
+  return {
+    summary,
+    fee: total > 0 ? `EGP ${formatFeeDisplay(total)}` : creator.deliverables[0]?.grossFee ?? null,
+  };
+}
+
 function renderShowcaseCreatorPages(
   payload: QuotationTemplatePayload,
   doc: QuotationDocument,
@@ -424,25 +471,6 @@ function renderShowcaseCreatorPages(
   const pitch = payload.flags.pitchCreators;
   const avatarVariant = pitch ? "pitch" : "showcase";
   const pitchPageClass = pitch ? " pitch-creator-page" : "";
-  const feeHead = payload.flags.showFees
-    ? `<th class="r">${esc(showcaseFeeColumnLabel(true))}</th>`
-    : "";
-  const colSpan = payload.flags.showFees ? 5 : 4;
-
-  const renderDeliverableRows = (
-    rows: (typeof payload.showcaseCreators)[number]["deliverables"]
-  ) =>
-    rows
-      .map((row) => {
-        const feeCell = payload.flags.showFees
-          ? `<td class="r">${esc(row.grossFee ?? "—")}</td>`
-          : "";
-        const platformCell = row.platformIcons.length
-          ? `<td class="platform-cell">${renderQuotationPlatformIconsHtml(row.platformIcons)}<span class="platform-cell-label">${esc(row.platform)}</span></td>`
-          : `<td class="platform-cell">${esc(row.platform)}</td>`;
-        return `<tr><td class="name">${esc(row.option)}</td><td>${esc(row.service)}</td>${platformCell}<td>${esc(row.type)}</td>${feeCell}</tr>`;
-      })
-      .join("");
 
   return payload.showcaseCreators
     .map((creator, index) => {
@@ -459,15 +487,9 @@ function renderShowcaseCreatorPages(
           : "";
       const profileLinkEnd = profileLinkStart ? "</a>" : "";
 
-      const platformMetricCount = creator.platformMetrics.length;
-      const publicationLimit = forPdf
-        ? platformMetricCount > 2
-          ? Math.min(3, SHOWCASE_PDF_PUBLICATION_SHOT_LIMIT)
-          : SHOWCASE_PDF_PUBLICATION_SHOT_LIMIT
-        : undefined;
       const publicationShots = (group?.publicationShots ?? []).slice(
         0,
-        publicationLimit
+        SHOWCASE_PDF_PUBLICATION_SHOT_LIMIT
       );
       const pubsHtml = renderPublicationShotsGrid(
         publicationShots,
@@ -475,128 +497,160 @@ function renderShowcaseCreatorPages(
         "No publication screenshots available for this creator."
       );
 
-      // Preview and PDF share the same fixed cpage box (scale only for screen chrome).
       const pageClass = `cpage page showcase-creator-page showcase-creator-slide showcase-slide${pitchPageClass}`;
-
       const creatorPlatformIcons = renderQuotationPlatformIconsHtml(creator.platformIcons);
-      const metricRowsHtml =
-        creator.platformMetrics.length > 0
-          ? creator.platformMetrics
-              .map(
-                (row, metricIndex) => `<tr>
-          <td class="r">${esc(row.followers)}</td>
-          <td class="r">${esc(row.engagement)}</td>
-          <td>${metricIndex === 0 ? `<span class="pill">${esc(creator.tier)}</span>` : ""}</td>
-          <td class="categories-cell">${metricIndex === 0 ? esc(creator.categories) : ""}</td>
-          <td class="platform-cell">${renderQuotationPlatformIconsHtml([row.platform]) || esc(row.platform)}</td>
-        </tr>`
-              )
-              .join("")
-          : `<tr>
-          <td class="r">${esc(creator.followers)}</td>
-          <td class="r">${esc(creator.engagement)}</td>
-          <td><span class="pill">${esc(creator.tier)}</span></td>
-          <td class="categories-cell">${esc(creator.categories)}</td>
-          <td class="platform-cell">${creatorPlatformIcons || esc(creator.platforms)}</td>
-        </tr>`;
-      // One metrics row per linked platform — Followers / ER only (no Views).
-      const metricsTable = `<div class="fees showcase-metrics-table">
-      <table class="data-table">
-        <thead><tr><th class="r">Followers</th><th class="r">Engagement</th><th>Tier</th><th>Category</th><th>Platforms</th></tr></thead>
-        <tbody>${metricRowsHtml}</tbody>
-      </table>
-    </div>`;
+      const platformLabel = creator.platformIcons.length
+        ? creator.platformIcons.map((p) => getReportPlatformIconTitle(p)).join(" · ")
+        : creator.platforms.replace(/,\s*/g, " · ");
+      const { summary, fee } = showcaseDeliverableSummary(creator);
+      const feePill =
+        payload.flags.showFees && fee
+          ? `<div class="sc-fee-pill">${esc(fee)}</div>`
+          : "";
 
-      // Adaptive pagination: keep creator identity together; continue deliverables cleanly.
-      // Preview and PDF share the same chunking so layouts match exactly.
-      const firstPageDeliverables =
-        platformMetricCount > 2
-          ? Math.min(2, SHOWCASE_CREATOR_DELIVERABLES_FIRST_PAGE)
-          : SHOWCASE_CREATOR_DELIVERABLES_FIRST_PAGE;
-      const deliverableChunks = chunkArray(
-        creator.deliverables,
-        firstPageDeliverables,
-        SHOWCASE_CREATOR_DELIVERABLES_CONTINUATION
-      );
-
-      return deliverableChunks
-        .map((chunk, chunkIndex) => {
-          const continued = chunkIndex > 0;
-          const deliverableRows = renderDeliverableRows(chunk);
-          const bodyRows =
-            deliverableRows ||
-            `<tr><td colspan="${colSpan}" class="pub-empty">No deliverables listed.</td></tr>`;
-
-          if (continued) {
-            return `<section class="${pageClass}">
+      // Preview and PDF share one creator card page (reference Redesign revised).
+      void forPdf;
+      return `<section class="${pageClass}">
   <div class="cwrap pad showcase-creator-sheet">
-    ${renderPageHead(`${creator.sectionNo} · Creator ${creator.index} of ${payload.totals.creatorCount}`, `${creator.name} (continued)`)}
-    <p class="sc-handle showcase-handle" style="margin:-6px 0 14px;">${esc(creator.handle)}</p>
-    <p class="sc-sub showcase-deliverables-title">Proposed deliverables (continued)</p>
-    <div class="fees showcase-deliverables-table">
-      <table class="data-table">
-        <thead><tr><th>Option</th><th>Service description</th><th>Platform</th><th>Type</th>${feeHead}</tr></thead>
-        <tbody>${bodyRows}</tbody>
-      </table>
+    <div class="page-head">
+      <div class="page-head-copy sc-hero">
+        <p class="sc-kicker">Creator ${creator.index} of ${esc(payload.totals.creatorCount)}</p>
+        <h2 class="sc-title">${esc(creator.handle)}</h2>
+      </div>
+      ${renderLogo("footer")}
     </div>
-  </div>
-  <div class="foot"><span>${esc(payload.footer.left)}</span><span class="mono">${esc(payload.quotation.number)} · ${esc(creator.handle)} · ${chunkIndex + 1}</span></div>
-</section>`;
-          }
-
-          return `<section class="${pageClass}">
-  <div class="cwrap pad showcase-creator-sheet">
-    ${renderPageHead(`${creator.sectionNo} · Creator ${creator.index} of ${payload.totals.creatorCount}`, creator.name)}
     <div class="sc-top">
       ${profileLinkStart}${avatarHtml}${profileLinkEnd}
       <div class="sc-identity">
-        ${profileLinkStart}<p class="sc-handle showcase-handle">${esc(creator.handle)}${creatorPlatformIcons ? ` <span class="sc-platform-icons">${creatorPlatformIcons}</span>` : ""}</p>${profileLinkEnd}
-        ${metricsTable}
+        <div class="sc-meta-row"><span class="pill">${esc(creator.tier)}</span><span class="sc-category">${esc(creator.categories)}</span></div>
+        ${profileLinkStart}<p class="sc-handle">${esc(creator.handle)}</p>${profileLinkEnd}
+        <p class="sc-platforms">${creatorPlatformIcons}${creatorPlatformIcons ? " " : ""}${esc(platformLabel)}</p>
       </div>
     </div>
+    ${showcaseMetricCardsHtml(creator)}
     <p class="sc-sub showcase-pubs-title">Recent publications</p>
     ${pubsHtml}
-    <p class="sc-sub showcase-deliverables-title">Proposed deliverables</p>
-    <div class="fees showcase-deliverables-table">
-      <table class="data-table">
-        <thead><tr><th>Option</th><th>Service description</th><th>Platform</th><th>Type</th>${feeHead}</tr></thead>
-        <tbody>${bodyRows}</tbody>
-      </table>
+    <div class="sc-deliverable-bar">
+      <div>
+        <p class="dl">Proposed deliverable</p>
+        <p class="dv">${esc(summary)}</p>
+      </div>
+      ${feePill}
     </div>
   </div>
   <div class="foot"><span>${esc(payload.footer.left)}</span><span class="mono">${esc(payload.quotation.number)} · ${esc(creator.handle)}</span></div>
 </section>`;
-        })
-        .join("");
     })
     .join("");
 }
 
-function renderRosterPage(payload: QuotationTemplatePayload): string {
-  const rows = payload.roster.rows
-    .map((row) => {
-      const platformCell = row.platformIcons.length
-        ? `${renderQuotationPlatformIconsHtml(row.platformIcons)}<span class="platform-cell-label">${esc(row.platforms)}</span>`
-        : esc(row.platforms);
-      const avatar = row.avatarUrl
-        ? `<img class="roster-avatar" src="${esc(row.avatarUrl)}" alt="" width="22" height="22" />`
-        : `<span class="roster-avatar roster-avatar--fallback">${esc(row.initials)}</span>`;
-      return `<tr><td class="name roster-creator">${avatar}<span>${esc(row.handle)}</span></td><td class="r">${esc(row.followers)}</td><td class="r">${esc(row.er)}</td><td><span class="pill">${esc(row.tier)}</span></td><td class="categories-cell">${esc(row.categories)}</td><td class="platform-cell">${platformCell}</td></tr>`;
-    })
-    .join("");
+function expandRosterRows(
+  payload: QuotationTemplatePayload,
+  doc: QuotationDocument
+): Array<{
+  handle: string;
+  initials: string;
+  avatarUrl: string | null;
+  followers: string;
+  er: string;
+  tier: string;
+  categories: string;
+  platformIcons: string[];
+  platformLabel: string;
+  lead: boolean;
+}> {
+  const rows: Array<{
+    handle: string;
+    initials: string;
+    avatarUrl: string | null;
+    followers: string;
+    er: string;
+    tier: string;
+    categories: string;
+    platformIcons: string[];
+    platformLabel: string;
+    lead: boolean;
+  }> = [];
 
-  return `<section class="cpage page roster-page">
+  payload.roster.rows.forEach((row, index) => {
+    const group = doc.creatorGroups[index];
+    const metrics = group?.platformMetrics ?? [];
+    if (metrics.length > 0) {
+      metrics.forEach((metric, metricIndex) => {
+        rows.push({
+          handle: metricIndex === 0 ? row.handle : "",
+          initials: row.initials,
+          avatarUrl: metricIndex === 0 ? row.avatarUrl : null,
+          followers: metric.followers,
+          er: metric.engagement,
+          tier: metricIndex === 0 ? row.tier : "",
+          categories: metricIndex === 0 ? row.categories : "",
+          platformIcons: [metric.platform],
+          platformLabel: getReportPlatformIconTitle(metric.platform),
+          lead: metricIndex === 0,
+        });
+      });
+      return;
+    }
+    rows.push({
+      handle: row.handle,
+      initials: row.initials,
+      avatarUrl: row.avatarUrl,
+      followers: row.followers,
+      er: row.er,
+      tier: row.tier,
+      categories: row.categories,
+      platformIcons: row.platformIcons,
+      platformLabel: row.platforms,
+      lead: true,
+    });
+  });
+  return rows;
+}
+
+function renderRosterPage(
+  payload: QuotationTemplatePayload,
+  doc: QuotationDocument
+): string {
+  const allRows = expandRosterRows(payload, doc);
+  const chunks = chunkArray(allRows, ROSTER_ROWS_PER_PAGE, ROSTER_ROWS_PER_PAGE);
+
+  return chunks
+    .map((chunk, chunkIndex) => {
+      const continued = chunkIndex > 0;
+      const rowsHtml = chunk
+        .map((row) => {
+          const platformCell = row.platformIcons.length
+            ? `${renderQuotationPlatformIconsHtml(row.platformIcons)}<span class="platform-cell-label">${esc(row.platformLabel)}</span>`
+            : esc(row.platformLabel);
+          const avatar =
+            row.lead && row.avatarUrl
+              ? `<img class="roster-avatar" src="${esc(row.avatarUrl)}" alt="" width="22" height="22" />`
+              : row.lead
+                ? `<span class="roster-avatar roster-avatar--fallback">${esc(row.initials)}</span>`
+                : `<span class="roster-avatar" style="visibility:hidden"></span>`;
+          const leadClass = row.lead ? "lead" : "";
+          return `<tr class="${leadClass}"><td class="name roster-creator">${avatar}<span>${esc(row.handle)}</span></td><td class="r">${esc(row.followers)}</td><td class="r">${esc(row.er)}</td><td>${row.tier ? `<span class="pill">${esc(row.tier)}</span>` : ""}</td><td class="categories-cell">${esc(row.categories)}</td><td class="platform-cell">${platformCell}</td></tr>`;
+        })
+        .join("");
+
+      return `<section class="cpage page roster-page">
   <div class="cwrap pad">
-    ${renderPageHead(`${payload.roster.sectionNo} · Creator roster (${payload.totals.creatorCount})`, "At a glance")}
+    ${renderPageHead(
+      `${payload.roster.sectionNo} · Creator roster (${payload.totals.creatorCount})`,
+      continued ? "At a glance (continued)" : "At a glance"
+    )}
     <div class="fees">
       <table class="data-table">
         <thead><tr><th>Creator</th><th class="r">Followers</th><th class="r">Eng %</th><th>Tier</th><th>Category</th><th>Platforms</th></tr></thead>
-        <tbody>${rows}</tbody>
+        <tbody>${rowsHtml}</tbody>
       </table>
     </div>
   </div>
-  <div class="foot"><span>${esc(payload.footer.left)}</span><span class="mono">${esc(payload.quotation.number)} · Roster</span></div>
+  <div class="foot"><span>${esc(payload.footer.left)}</span><span class="mono">${esc(payload.quotation.number)} · Roster${continued ? ` · ${chunkIndex + 1}` : ""}</span></div>
 </section>`;
+    })
+    .join("");
 }
 
 function renderCommercialPage(
@@ -626,10 +680,18 @@ function renderCommercialPage(
     const feeCell = payload.flags.itemizedPricing
       ? `<td class="r">${esc(line.grossFee ?? "—")}</td>`
       : "";
+    const platformCell = line.platform
+      ? (() => {
+          // Prefer icon+label when a single known platform; otherwise keep text.
+          const parts = line.platform.split(/\s*\+\s*|\s*,\s*/).map((p) => p.trim()).filter(Boolean);
+          if (parts.length === 1) return platformBadgeHtml(parts[0]!);
+          return parts.map((part) => platformBadgeHtml(part)).join(" ");
+        })()
+      : "—";
     return `<tr>
         <td class="name"><div class="creator-name-cell">${avatarHtml}<span class="creator-name">${esc(line.creator)}</span></div></td>
         <td><span class="pill">${esc(line.tier)}</span></td>
-        <td class="platform-cell">${esc(line.platform)}</td>
+        <td class="platform-cell">${platformCell}</td>
         <td>${esc(line.deliverable)}</td>
         ${feeCell}
       </tr>`;
@@ -657,40 +719,41 @@ function renderCommercialPage(
     </div>`
     : "";
 
-  const commercialHeader = renderPageHead(
-    `${c.sectionNo} · Commercial summary`,
-    "Investment & deliverables"
-  );
-
   const footLeft = payload.footer.left;
   const footRight = `${payload.quotation.number} · Commercial`;
+  const chunks = chunkArray(
+    payload.feeLines,
+    COMMERCIAL_ROWS_FIRST_PAGE,
+    COMMERCIAL_ROWS_CONTINUATION
+  );
 
-  const feeRows = payload.feeLines.map((line) => renderFeeRow(line)).join("");
-
-  const itemizedTable = payload.flags.itemizedPricing
-    ? `<div class="fees">
-      <table class="data-table commercial-fee-table">
-        ${feeTableHead}
-        <tbody>${feeRows}</tbody>
-      </table>
-    </div>`
-    : `${lumpSumNote}
-    <div class="fees" style="margin-top:16px;">
+  return chunks
+    .map((chunk, chunkIndex) => {
+      const continued = chunkIndex > 0;
+      const isLast = chunkIndex === chunks.length - 1;
+      const feeRows = chunk.map((line) => renderFeeRow(line)).join("");
+      const table = `<div class="fees">
       <table class="data-table commercial-fee-table">
         ${feeTableHead}
         <tbody>${feeRows}</tbody>
       </table>
     </div>`;
 
-  return `<section class="cpage page commercial-page" id="section-commercial">
+      return `<section class="cpage page commercial-page"${chunkIndex === 0 ? ' id="section-commercial"' : ""}>
   <div class="cwrap pad">
-    ${commercialHeader}
-    ${commTop}
-    ${itemizedTable}
-    ${totalsBlock}
+    ${renderPageHead(
+      `${c.sectionNo} · Commercial summary`,
+      continued ? "Investment & deliverables (continued)" : "Investment & deliverables"
+    )}
+    ${continued ? "" : commTop}
+    ${continued || payload.flags.itemizedPricing ? "" : lumpSumNote}
+    ${table}
+    ${isLast ? totalsBlock : ""}
   </div>
-  <div class="foot"><span>${esc(footLeft)}</span><span class="mono">${esc(footRight)}</span></div>
+  <div class="foot"><span>${esc(footLeft)}</span><span class="mono">${esc(footRight)}${continued ? ` · ${chunkIndex + 1}` : ""}</span></div>
 </section>`;
+    })
+    .join("");
 }
 
 function renderNotesPage(doc: QuotationDocument, payload: QuotationTemplatePayload): string {
@@ -944,7 +1007,7 @@ export function buildQuotationTemplateHtml(
     renderCategoryTierPages(payload, doc.creatorGroups),
     renderCollapseContentPages(doc, siteOrigin, forPdf),
     ...(payload.flags.showcaseCreators
-      ? [renderShowcaseCreatorPages(payload, doc, siteOrigin, forPdf), renderRosterPage(payload)]
+      ? [renderShowcaseCreatorPages(payload, doc, siteOrigin, forPdf), renderRosterPage(payload, doc)]
       : []),
     ...(payload.flags.showCommercialSummary
       ? [renderCommercialPage(payload, doc, siteOrigin)]
