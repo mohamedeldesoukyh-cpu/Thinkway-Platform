@@ -142,10 +142,11 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(html.includes("creator-name-cell"));
   assert.ok(html.includes("Gross fees (EGP)"));
   assert.ok(html.includes("Total cost incl. AF"));
-  assert.ok(html.includes("tier-breakdown-header"));
+  assert.ok(html.includes("tier-tag"));
   assert.ok(html.includes("summary-overview-page"));
-  assert.ok(html.includes("@page{size:A4 landscape"));
-  assert.ok(html.includes("--blue:#0057FF"));
+  assert.ok(html.includes("@page{ size:297mm 210mm"));
+  assert.ok(html.includes("--blue:#0057ff"));
+  assert.ok(html.includes('class="cpage') || html.includes("cpage page"));
 }
 
 {
@@ -194,13 +195,14 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     { forPdf: true }
   );
   assert.ok(showcasePdfHtml.includes('body class="quotation-export-print quotation-showcase quotation-report"'));
-  assert.ok(showcasePdfHtml.includes("quotation-export-print.quotation-showcase .showcase-slide"));
+  assert.ok(showcasePdfHtml.includes("@page{ size:297mm 210mm"));
   assert.ok(showcasePdfHtml.includes("showcase-creator-slide"));
   assert.ok(showcasePdfHtml.includes("collapse-content-slide"));
   assert.ok(
-    (showcasePdfHtml.match(/collapse-content-slide showcase-slide/g) ?? []).length >= 1,
+    (showcasePdfHtml.match(/collapse-content-slide/g) ?? []).length >= 1,
     "Each Collap option should render as its own PDF slide"
   );
+  assert.ok(showcasePdfHtml.includes('class="cpage') || showcasePdfHtml.includes("cpage page"));
 }
 
 {
