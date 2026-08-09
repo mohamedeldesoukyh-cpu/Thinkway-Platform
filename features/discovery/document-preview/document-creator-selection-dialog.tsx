@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckIcon, UsersIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -128,14 +128,19 @@ export function DocumentCreatorSelectionDialog({
   const [selectedPlatforms, setSelectedPlatforms] = useState<Set<string>>(
     () => new Set()
   );
+  const platformsTouchedRef = useRef(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      platformsTouchedRef.current = false;
+      return;
+    }
     // Workspace selection is the only seed — never sessionStorage.
     const nextKeys = creatorKeysFromItemIds(creators, workspaceItemIds);
     setSelectedKeys(nextKeys);
     setSelectedPlatforms(new Set(platformsForCreators(creators, nextKeys)));
-  }, [open, creators, workspaceItemIds]);
+    platformsTouchedRef.current = false;
+  }, [open, workspaceItemIds]);
 
   const selectedCount = selectedKeys.size;
   const allSelected = creators.length > 0 && selectedCount === creators.length;
@@ -154,11 +159,13 @@ export function DocumentCreatorSelectionDialog({
   useEffect(() => {
     if (!open) return;
     setSelectedPlatforms((prev) => {
-      const next = new Set<string>();
-      for (const platform of availablePlatforms) {
-        if (prev.size === 0 || prev.has(platform)) next.add(platform);
+      if (!platformsTouchedRef.current) {
+        // Default: keep every available platform selected (incl. late-loaded links).
+        return new Set(availablePlatforms);
       }
-      // If pruning removed everything, default back to all available.
+      const next = new Set(
+        availablePlatforms.filter((platform) => prev.has(platform))
+      );
       if (next.size === 0 && availablePlatforms.length > 0) {
         return new Set(availablePlatforms);
       }
@@ -187,6 +194,7 @@ export function DocumentCreatorSelectionDialog({
   }
 
   function togglePlatform(platform: string) {
+    platformsTouchedRef.current = true;
     setSelectedPlatforms((prev) => {
       const next = new Set(prev);
       if (next.has(platform)) next.delete(platform);
@@ -204,6 +212,7 @@ export function DocumentCreatorSelectionDialog({
   }
 
   function selectAllPlatforms() {
+    platformsTouchedRef.current = true;
     setSelectedPlatforms(new Set(availablePlatforms));
   }
 

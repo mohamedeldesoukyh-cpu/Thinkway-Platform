@@ -5,6 +5,10 @@ import { platformLabel } from "@/features/campaigns/line-assignment";
 import type { ShortlistCreatorItem } from "@/features/discovery/shortlists/types";
 import type { QuotationItemRow } from "@/features/quotations/types";
 import { quotationCreatorDuplicateKey } from "@/features/quotations/export/quotation-export-utils";
+import {
+  loadCreatorPlatformOptions,
+  unionQuotationCreatorGroupPlatforms,
+} from "@/lib/quotations/quotation-creator-platform-options";
 import type { DocumentCreatorOption } from "./document-creator-selection-dialog";
 
 function normalizePlatformList(platforms: Array<string | null | undefined>): string[] {
@@ -53,40 +57,69 @@ export function buildQuotationCreatorOptions(
   items: QuotationItemRow[]
 ): DocumentCreatorOption[] {
   const byKey = new Map<string, DocumentCreatorOption>();
+  const itemsByKey = new Map<string, QuotationItemRow[]>();
 
   for (const item of items) {
     const key = quotationCreatorDuplicateKey(item);
+    const group = itemsByKey.get(key) ?? [];
+    group.push(item);
+    itemsByKey.set(key, group);
+  }
+
+  for (const [key, groupItems] of itemsByKey) {
+    const item = groupItems[0]!;
     const handle = item.handle?.trim()
       ? item.handle.startsWith("@")
         ? item.handle
         : `@${item.handle}`
       : "—";
-    const itemPlatforms = normalizePlatformList([
-      item.platform,
-      ...(item.creator_profile_source?.linkedPlatforms ?? []),
-    ]);
-    const existing = byKey.get(key);
-    if (existing) {
-      if (!existing.itemIds.includes(item.id)) {
-        existing.itemIds.push(item.id);
-      }
-      existing.platforms = normalizePlatformList([
-        ...(existing.platforms ?? []),
-        ...itemPlatforms,
-      ]);
-      existing.meta = platformMeta(existing.platforms);
-      continue;
-    }
+    const platforms = unionQuotationCreatorGroupPlatforms(groupItems);
     byKey.set(key, {
       creatorKey: key,
-      itemIds: [item.id],
+      itemIds: groupItems.map((row) => row.id),
       name: item.creator_name?.trim() || handle,
       handle,
       avatarUrl: item.profile_image_url ?? null,
-      platforms: itemPlatforms,
-      meta: platformMeta(itemPlatforms),
+      platforms,
+      meta: platformMeta(platforms),
     });
   }
 
   return Array.from(byKey.values());
+}
+
+/**
+ * Load linked platform accounts (same source as quotation creator headers)
+ * so Preview/Export can offer every network, not only deliverable platforms.
+ */
+export async function enrichQuotationCreatorOptionsWithLinkedPlatforms(
+  items: QuotationItemRow[],
+  options: DocumentCreatorOption[]
+): Promise<DocumentCreatorOption[]> {
+  if (options.length === 0) return options;
+
+  return Promise.all(
+    options.map(async (option) => {
+      const groupItems = items.filter((item) => option.itemIds.includes(item.id));
+      const sample = groupItems[0];
+      if (!sample) return option;
+
+      const fetched = await loadCreatorPlatformOptions(sample);
+      const platforms = unionQuotationCreatorGroupPlatforms(
+        groupItems,
+        fetched.map((entry) => entry.platform)
+      );
+      if (
+        platforms.length === (option.platforms?.length ?? 0) &&
+        platforms.every((platform) => option.platforms?.includes(platform))
+      ) {
+        return option;
+      }
+      return {
+        ...option,
+        platforms,
+        meta: platformMeta(platforms),
+      };
+    })
+  );
 }
