@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  formatNumDisplay,
   mergePastedNumericText,
   parseDecimalInput,
   sanitizeNumericInput,
@@ -24,4 +25,11 @@ test("parseDecimalInput parses sanitized currency strings", () => {
 
 test("mergePastedNumericText replaces selection with sanitized paste", () => {
   assert.equal(mergePastedNumericText("100", "EGP 2,500", 0, 3), "2500");
+});
+
+test("formatNumDisplay groups thousands for finance inputs", () => {
+  assert.equal(formatNumDisplay(500000), "500,000");
+  assert.equal(formatNumDisplay(666666.6), "666,666.6");
+  assert.equal(formatNumDisplay(0), "0");
+  assert.equal(formatNumDisplay(null), "");
 });
