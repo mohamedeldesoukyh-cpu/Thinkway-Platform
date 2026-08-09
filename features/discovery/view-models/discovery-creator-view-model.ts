@@ -31,6 +31,7 @@ import {
   type CreatorEnrichmentStatus,
 } from "@/features/discovery/enrichment/status";
 import type { DataSource } from "@/features/discovery/enrichment/components/data-source-badge";
+import { pickCreatorDisplayName } from "@/lib/text/decode-html-entities";
 
 export type DiscoveryCreatorViewModelOptions = {
   platformFilter?: string[];
@@ -244,7 +245,11 @@ export function buildDiscoveryCreatorViewModel(
   const countryFlagCode = countryFlagCodes[0] ?? null;
 
   return {
-    displayName: creator.display_name,
+    // Name on top — never INF-xxxx; username fallback when no real name.
+    displayName: pickCreatorDisplayName(
+      [creator.display_name],
+      primaryPlatform?.handle ?? null
+    ),
     handleLabel: resolveDiscoveryCreatorHandleLabel(primaryPlatform),
     avatarUrl: profileSource.avatarUrl ?? null,
     profileUrl: profileUrl ?? profileSource.profile_url ?? null,

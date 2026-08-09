@@ -18,6 +18,7 @@ import {
 } from "@/lib/quotations/quotation-creator-platform-options";
 import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
+import { pickCreatorDisplayName } from "@/lib/text/decode-html-entities";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -81,11 +82,11 @@ export function QuotationCreatorGroupHeaderRow({
   });
   const profileUrl = resolveCreatorProfileUrl(creatorProfileSource);
   const handleLabel = formatHandle(creatorProfileSource.handle ?? item.handle);
-  const displayName =
-    creatorProfileSource.displayName?.trim() ||
-    item.creator_name?.trim() ||
-    handleLabel?.replace(/^@/, "") ||
-    "Creator";
+  // Name on top, @handle under — never INF-xxxx; fall back to username when no real name.
+  const displayName = pickCreatorDisplayName(
+    [creatorProfileSource.displayName, item.creator_name, handleLabel],
+    creatorProfileSource.handle ?? item.handle
+  );
   const thinkwayScore = creatorProfileSource.thinkwayScore;
   const starLabel = formatThinkwayStarLabel(thinkwayScore);
   const avatarSyncClass = shortlistCreatorSyncBorderClass(

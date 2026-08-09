@@ -8,6 +8,7 @@ import {
   type QuotationTemplateVariant,
 } from "@/features/quotations/export/quotation-template";
 import { getReportPlatformIconTitle } from "@/lib/performance/report/report-platform-icons";
+import { pickCreatorDisplayName } from "@/lib/text/decode-html-entities";
 import {
   creatorCountLabel,
   formatQuotationMoneyDisplay,
@@ -290,13 +291,13 @@ export function buildQuotationTemplatePayload(doc: QuotationDocument): Quotation
       sectionNo: String(index + 2).padStart(2, "0"),
       index: index + 1,
       initials: showcaseInitialsFromHandle(group.handle || group.creator),
-      name: group.creator,
+      name: pickCreatorDisplayName([group.creator, group.handle], group.handle),
       handle:
         group.handle !== "—"
           ? group.handle.startsWith("@")
             ? group.handle
             : `@${group.handle}`
-          : group.creator,
+          : `@${pickCreatorDisplayName([group.creator], group.handle)}`,
       profileUrl: group.profileUrl,
       avatarUrl: group.avatarUrl,
       followers: group.followers,

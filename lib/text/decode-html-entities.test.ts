@@ -4,6 +4,7 @@ import {
   decodeHtmlEntities,
   formatCreatorBio,
   formatCreatorDisplayName,
+  isCreatorDocumentNumber,
   isUsernameLikeCreatorName,
   pickCreatorDisplayName,
 } from "./decode-html-entities";
@@ -38,6 +39,9 @@ assert.equal(formatCreatorBio("Beauty &amp; lifestyle"), "Beauty & lifestyle");
 assert.equal(formatCreatorBio(null), null);
 assert.equal(isUsernameLikeCreatorName("salehelnawawy", "@salehelnawawy"), true);
 assert.equal(isUsernameLikeCreatorName("Saleh El Nawawy", "@salehelnawawy"), false);
+assert.equal(isCreatorDocumentNumber("INF-008286"), true);
+assert.equal(formatCreatorDisplayName("INF-008286"), "");
+assert.equal(formatCreatorDisplayName("@byasmaahesham"), "byasmaahesham");
 assert.equal(
   pickCreatorDisplayName(["salehelnawawy", "Saleh El Nawawy"], "@salehelnawawy"),
   "Saleh El Nawawy"
@@ -45,6 +49,14 @@ assert.equal(
 assert.equal(
   pickCreatorDisplayName(["salehelnawawy", null], "salehelnawawy"),
   "salehelnawawy"
+);
+assert.equal(
+  pickCreatorDisplayName(["INF-008286", null], "@byasmaahesham"),
+  "byasmaahesham"
+);
+assert.equal(
+  pickCreatorDisplayName(["INF-008286", "@byasmaahesham"], "@byasmaahesham"),
+  "byasmaahesham"
 );
 
 console.log("decode-html-entities tests passed");
