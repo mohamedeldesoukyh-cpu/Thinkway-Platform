@@ -898,16 +898,13 @@ export function buildQuotationDocument(
           .filter(Boolean)
       )
     : null;
+  // Platform selection filters icons/metrics only — never drops commercial lines.
   const items = (
     itemIdSet
       ? detail.items.filter((item) => itemIdSet.has(item.id))
       : detail.items
-  )
-    .filter((item) => {
-      if (!platformFilterKeys) return true;
-      return platformFilterKeys.has(canonicalPlatformKey(item.platform));
-    }) as QuotationExportItem[];
-  const selectionActive = Boolean(itemIdSet) || Boolean(platformFilterKeys);
+  ) as QuotationExportItem[];
+  const selectionActive = Boolean(itemIdSet);
   const selectedCostEgp = selectionActive
     ? items.reduce((sum, item) => sum + (Number(item.cost_egp) || 0), 0)
     : detail.total_cost_egp;
@@ -1044,9 +1041,6 @@ export function buildQuotationDocument(
   const filteredCreatorGroups = platformFilterKeys
     ? creatorGroups.map((group) => ({
         ...group,
-        rows: group.rows.filter((row) =>
-          platformFilterKeys.has(canonicalPlatformKey(row.platform))
-        ),
         platformIcons: group.platformIcons.filter((platform) =>
           platformFilterKeys.has(canonicalPlatformKey(platform))
         ),

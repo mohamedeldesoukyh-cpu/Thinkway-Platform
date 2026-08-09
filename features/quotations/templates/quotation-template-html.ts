@@ -37,12 +37,32 @@ function esc(value: string | null | undefined): string {
     .replace(/"/g, "&quot;");
 }
 
-function renderTierBlock(tier: QuotationTemplatePayload["tiers"][number]): string {
+function renderTierBlock(
+  tier: QuotationTemplatePayload["tiers"][number],
+  creatorGroups: QuotationDocument["creatorGroups"]
+): string {
   const rows = tier.creators
-    .map(
-      (creator) =>
-        `<tr><td class="h">${esc(creator.handle)}</td><td>${esc(creator.platform)}</td><td class="r">${esc(creator.followers)}</td><td>${esc(creator.category)}</td><td class="r">${esc(creator.er)}</td></tr>`
-    )
+    .flatMap((creator) => {
+      const group = creatorGroups.find(
+        (entry) =>
+          entry.handle === creator.handle ||
+          entry.handle.replace(/^@/, "") === creator.handle.replace(/^@/, "")
+      );
+      const metrics = group?.platformMetrics ?? [];
+      if (metrics.length > 0) {
+        return metrics.map((metric, metricIndex) => {
+          const platformCell =
+            renderQuotationPlatformIconsHtml([metric.platform]) || esc(metric.platform);
+          return `<tr><td class="h">${metricIndex === 0 ? esc(creator.handle) : ""}</td><td class="platform-cell">${platformCell}</td><td class="r">${esc(metric.followers)}</td><td class="r">${esc(metric.views)}</td><td>${metricIndex === 0 ? esc(creator.category) : ""}</td><td class="r">${esc(metric.engagement)}</td></tr>`;
+        });
+      }
+      const platformCell = creator.platformIcons.length
+        ? `${renderQuotationPlatformIconsHtml(creator.platformIcons)}<span class="platform-cell-label">${esc(creator.platform)}</span>`
+        : esc(creator.platform);
+      return [
+        `<tr><td class="h">${esc(creator.handle)}</td><td class="platform-cell">${platformCell}</td><td class="r">${esc(creator.followers)}</td><td class="r">${esc(creator.views)}</td><td>${esc(creator.category)}</td><td class="r">${esc(creator.er)}</td></tr>`,
+      ];
+    })
     .join("");
   return `<div class="tier tier-breakdown-block">
       <div class="tier-head tier-breakdown-header">
@@ -50,7 +70,7 @@ function renderTierBlock(tier: QuotationTemplatePayload["tiers"][number]): strin
         <span class="tier-meta"><b>${esc(tier.profileCount)}</b> · ${esc(tier.followers)} followers · Avg ER <b>${esc(tier.avgER)}</b></span>
       </div>
       <table>
-        <thead class="tr tier-breakdown-table"><tr><th>Handle</th><th>Platform</th><th class="r">Followers</th><th>Category</th><th class="r">ER %</th></tr></thead>
+        <thead class="tr tier-breakdown-table"><tr><th>Handle</th><th>Platform</th><th class="r">Followers</th><th class="r">Views</th><th>Category</th><th class="r">ER %</th></tr></thead>
         <tbody class="tb">${rows}</tbody>
       </table>
     </div>`;
@@ -171,7 +191,10 @@ function renderCoverPage(payload: QuotationTemplatePayload): string {
 </section>`;
 }
 
-function renderCategoryTierPage(payload: QuotationTemplatePayload): string {
+function renderCategoryTierPage(
+  payload: QuotationTemplatePayload,
+  creatorGroups: QuotationDocument["creatorGroups"]
+): string {
   const categories = payload.categories
     .map(
       (cat) =>
@@ -179,7 +202,7 @@ function renderCategoryTierPage(payload: QuotationTemplatePayload): string {
     )
     .join("");
 
-  const tierBlocks = payload.tiers.map((tier) => renderTierBlock(tier));
+  const tierBlocks = payload.tiers.map((tier) => renderTierBlock(tier, creatorGroups));
 
   const insightParts = [payload.insight.categoryMix, payload.insight.tierMix, payload.insight.scale]
     .filter(Boolean)
@@ -259,9 +282,15 @@ function renderShowcaseCreatorPages(
           : "";
       const profileLinkEnd = profileLinkStart ? "</a>" : "";
 
+      const platformMetricCount = creator.platformMetrics.length;
+      const publicationLimit = forPdf
+        ? platformMetricCount > 2
+          ? Math.min(3, SHOWCASE_PDF_PUBLICATION_SHOT_LIMIT)
+          : SHOWCASE_PDF_PUBLICATION_SHOT_LIMIT
+        : undefined;
       const publicationShots = (group?.publicationShots ?? []).slice(
         0,
-        forPdf ? SHOWCASE_PDF_PUBLICATION_SHOT_LIMIT : undefined
+        publicationLimit
       );
       const pubsHtml = renderPublicationShotsGrid(
         publicationShots,
@@ -274,7 +303,7 @@ function renderShowcaseCreatorPages(
         : `page showcase-creator-page${pitchPageClass}`;
 
       const creatorPlatformIcons = renderQuotationPlatformIconsHtml(creator.platformIcons);
-      const pitchMetricRows =
+      const metricRowsHtml =
         creator.platformMetrics.length > 0
           ? creator.platformMetrics
               .map(
@@ -296,26 +325,23 @@ function renderShowcaseCreatorPages(
           <td class="categories-cell">${esc(creator.categories)}</td>
           <td class="platform-cell">${creatorPlatformIcons || esc(creator.platforms)}</td>
         </tr>`;
-      const metricsTable = pitch
-        ? `<div class="fees showcase-metrics-table">
+      // Showcase + pitch both show one metrics row per linked platform (followers / ER / views).
+      const metricsTable = `<div class="fees showcase-metrics-table">
       <table class="data-table">
         <thead><tr><th class="r">Followers</th><th class="r">Engagement</th><th class="r">Views</th><th>Tier</th><th>Category</th><th>Platforms</th></tr></thead>
-        <tbody>${pitchMetricRows}</tbody>
+        <tbody>${metricRowsHtml}</tbody>
       </table>
-    </div>`
-        : `<div class="sc-stats showcase-kpi-row">
-      <div class="sc-stat showcase-kpi"><p class="l">Followers</p><p class="v">${esc(creator.followers)}</p></div>
-      <div class="sc-stat showcase-kpi"><p class="l">Engagement</p><p class="v">${esc(creator.engagement)}</p></div>
-      <div class="sc-stat showcase-kpi"><p class="l">Views</p><p class="v">${esc(creator.views)}</p></div>
-      <div class="sc-stat showcase-kpi"><p class="l">Tier</p><p class="v">${esc(creator.tier)}</p></div>
-      <div class="sc-stat showcase-kpi"><p class="l">Categories</p><p class="v" style="font-size:13px;">${esc(creator.categories)}</p></div>
     </div>`;
 
       // Adaptive pagination: keep creator identity together; continue deliverables cleanly.
       // Preview and PDF share the same chunking so layouts match exactly.
+      const firstPageDeliverables =
+        platformMetricCount > 2
+          ? Math.min(2, SHOWCASE_CREATOR_DELIVERABLES_FIRST_PAGE)
+          : SHOWCASE_CREATOR_DELIVERABLES_FIRST_PAGE;
       const deliverableChunks = chunkArray(
         creator.deliverables,
-        SHOWCASE_CREATOR_DELIVERABLES_FIRST_PAGE,
+        firstPageDeliverables,
         SHOWCASE_CREATOR_DELIVERABLES_CONTINUATION
       );
 
@@ -352,11 +378,10 @@ function renderShowcaseCreatorPages(
       ${profileLinkStart}${avatarHtml}${profileLinkEnd}
       <div class="sc-identity">
         ${profileLinkStart}<p class="sc-name showcase-name">${esc(creator.name)}</p>
-        <p class="sc-handle showcase-handle">${esc(creator.handle)}</p>${profileLinkEnd}
-        ${pitch ? metricsTable : ""}
+        <p class="sc-handle showcase-handle">${esc(creator.handle)}${creatorPlatformIcons ? ` <span class="sc-platform-icons">${creatorPlatformIcons}</span>` : ""}</p>${profileLinkEnd}
+        ${metricsTable}
       </div>
     </div>
-    ${pitch ? "" : metricsTable}
     <p class="sc-sub showcase-pubs-title">Recent publications</p>
     ${pubsHtml}
     <p class="sc-sub showcase-deliverables-title">Proposed deliverables</p>
@@ -739,7 +764,7 @@ export function buildQuotationTemplateHtml(
 
   const sections = [
     renderCoverPage(payload),
-    renderCategoryTierPage(payload),
+    renderCategoryTierPage(payload, doc.creatorGroups),
     renderCollapseContentPages(doc, siteOrigin, forPdf),
     ...(payload.flags.showcaseCreators
       ? [renderShowcaseCreatorPages(payload, doc, siteOrigin, forPdf), renderRosterPage(payload)]

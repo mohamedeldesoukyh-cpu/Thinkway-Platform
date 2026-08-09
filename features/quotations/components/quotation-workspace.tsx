@@ -687,19 +687,26 @@ function QuotationWorkspaceContent({
   const [previewCreatorOptions, setPreviewCreatorOptions] = useState(
     basePreviewCreatorOptions
   );
+  const [previewPlatformsLoading, setPreviewPlatformsLoading] = useState(false);
 
   useEffect(() => {
     setPreviewCreatorOptions(basePreviewCreatorOptions);
   }, [basePreviewCreatorOptions]);
 
   useEffect(() => {
-    if (!previewSelectionOpen) return;
+    if (!previewSelectionOpen) {
+      setPreviewPlatformsLoading(false);
+      return;
+    }
     let cancelled = false;
+    setPreviewPlatformsLoading(true);
     void enrichQuotationCreatorOptionsWithLinkedPlatforms(
       detail.items,
       basePreviewCreatorOptions
     ).then((enriched) => {
-      if (!cancelled) setPreviewCreatorOptions(enriched);
+      if (cancelled) return;
+      setPreviewCreatorOptions(enriched);
+      setPreviewPlatformsLoading(false);
     });
     return () => {
       cancelled = true;
@@ -1082,6 +1089,7 @@ function QuotationWorkspaceContent({
         summarizeSelection={summarizePreviewSelection}
         title="Select creators for quotation"
         confirmLabel="Open preview"
+        confirmDisabled={previewPlatformsLoading}
         onConfirm={handlePreviewSelectionConfirm}
       />
     </div>

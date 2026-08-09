@@ -52,6 +52,8 @@ type Props = {
   title?: string;
   description?: string;
   confirmLabel?: string;
+  /** When true, confirm stays disabled (e.g. linked platforms still loading). */
+  confirmDisabled?: boolean;
   onConfirm: (selection: DocumentExportSelection) => void;
 };
 
@@ -122,6 +124,7 @@ export function DocumentCreatorSelectionDialog({
   title = "Select creators for preview",
   description = "Preview and exports include only the creators and platforms you select. Totals and numbering update automatically.",
   confirmLabel = "Open preview",
+  confirmDisabled = false,
   onConfirm,
 }: Props) {
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
@@ -405,10 +408,10 @@ export function DocumentCreatorSelectionDialog({
             <Button
               type="button"
               onClick={handleConfirm}
-              disabled={noneSelected || noPlatformsSelected}
+              disabled={confirmDisabled || noneSelected || noPlatformsSelected}
             >
-              {confirmLabel}
-              {selectedCount > 0 ? ` (${selectedCount})` : ""}
+              {confirmDisabled ? "Loading platforms…" : confirmLabel}
+              {!confirmDisabled && selectedCount > 0 ? ` (${selectedCount})` : ""}
             </Button>
           </div>
         </DialogFooter>

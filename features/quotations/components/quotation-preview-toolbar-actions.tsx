@@ -101,6 +101,7 @@ export function QuotationPreviewToolbarActions({
 }: Props) {
   const [selectionOpen, setSelectionOpen] = useState(false);
   const [pending, setPending] = useState<PendingAction | null>(null);
+  const [platformsLoading, setPlatformsLoading] = useState(false);
 
   const baseCreatorOptions = useMemo(
     () => buildQuotationCreatorOptions(items),
@@ -113,11 +114,17 @@ export function QuotationPreviewToolbarActions({
   }, [baseCreatorOptions]);
 
   useEffect(() => {
-    if (!selectionOpen) return;
+    if (!selectionOpen) {
+      setPlatformsLoading(false);
+      return;
+    }
     let cancelled = false;
+    setPlatformsLoading(true);
     void enrichQuotationCreatorOptionsWithLinkedPlatforms(items, baseCreatorOptions).then(
       (enriched) => {
-        if (!cancelled) setCreatorOptions(enriched);
+        if (cancelled) return;
+        setCreatorOptions(enriched);
+        setPlatformsLoading(false);
       }
     );
     return () => {
@@ -243,6 +250,7 @@ export function QuotationPreviewToolbarActions({
         summarizeSelection={summarizeSelection}
         title="Select creators for quotation"
         confirmLabel={pending?.type === "export" ? "Export" : "Open preview"}
+        confirmDisabled={platformsLoading}
         onConfirm={handleConfirm}
       />
     </>

@@ -330,6 +330,8 @@ export const QUOTATION_TEMPLATE_STYLES = `
   }
   .sc-name{font-size:24px; font-weight:800; letter-spacing:-.6px; color:var(--navy); margin:0;}
   .sc-handle{font-size:13px; color:var(--muted); margin:2px 0 0; font-family:"Geist Mono",monospace;}
+  .sc-handle .sc-platform-icons{display:inline-flex; vertical-align:middle; margin-left:8px;}
+  .sc-handle .quotation-platform-icons{vertical-align:middle;}
   .sc-profile-link{color:inherit; text-decoration:none;}
   .sc-stats{display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-bottom:22px;}
   .sc-stat{background:var(--lav); border:1px solid var(--lav-line); border-radius:12px; padding:14px 16px;}
@@ -405,8 +407,9 @@ export const QUOTATION_TEMPLATE_STYLES = `
   .platform-cell{white-space:nowrap;}
   .platform-cell .quotation-platform-icons{vertical-align:middle; margin-right:6px;}
   .platform-cell-label{font-size:11px; color:var(--muted); vertical-align:middle;}
-  .showcase-metrics-table{margin-bottom:18px;}
-  .showcase-metrics-table table td,.showcase-metrics-table table th{padding:10px 12px;}
+  .showcase-metrics-table{margin-bottom:14px;}
+  .showcase-metrics-table table td,.showcase-metrics-table table th{padding:8px 10px;}
+  .showcase-metrics-table .platform-cell .platform-cell-label{display:none;}
 
   @media print{
     body{background:#fff;}
