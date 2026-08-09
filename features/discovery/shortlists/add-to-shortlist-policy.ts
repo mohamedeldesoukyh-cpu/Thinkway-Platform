@@ -49,10 +49,20 @@ export type AddToShortlistOutcome = {
   ineligible: number;
   failed: number;
   firstError: string | null;
+  addedUnifiedIds?: string[];
+  alreadyUnifiedIds?: string[];
 };
 
 export function emptyOutcome(): AddToShortlistOutcome {
-  return { added: 0, alreadyOnList: 0, ineligible: 0, failed: 0, firstError: null };
+  return {
+    added: 0,
+    alreadyOnList: 0,
+    ineligible: 0,
+    failed: 0,
+    firstError: null,
+    addedUnifiedIds: [],
+    alreadyUnifiedIds: [],
+  };
 }
 
 /**

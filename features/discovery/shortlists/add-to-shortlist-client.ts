@@ -1,9 +1,8 @@
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
 import { defaultPlatformAccountIds } from "./components/select-platform-accounts-dialog";
-import { addCreatorToShortlistV2 } from "./actions";
+import { addCreatorsToShortlistsV2 } from "./actions";
 import {
-  applyAddResult,
   describeAddOutcome,
   emptyOutcome,
   isAddableCreator,
@@ -26,6 +25,10 @@ export async function addUnifiedCreatorsToShortlist(
   return addUnifiedCreatorsToShortlists([shortlistId], creators, selections);
 }
 
+/**
+ * One server round-trip for the full selection (avoids N sequential actions that
+ * timed out mid-batch and dropped creators — e.g. 24 selected → only 12 saved).
+ */
 export async function addUnifiedCreatorsToShortlists(
   shortlistIds: string[],
   creators: UnifiedCreatorResult[],
@@ -40,33 +43,53 @@ export async function addUnifiedCreatorsToShortlists(
     };
   }
 
-  let outcome = emptyOutcome();
   const selectionByUnifiedId = new Map(
     (selections ?? []).map((entry) => [entry.creator.unified_id, entry.platformAccountIds])
   );
 
-  for (const shortlistId of uniqueShortlistIds) {
-    for (const creator of creators) {
-      if (!isAddableCreator(creator)) {
-        outcome = { ...outcome, ineligible: outcome.ineligible + 1 };
-        continue;
-      }
+  let ineligible = 0;
+  const payload: Array<{
+    unifiedId?: string | null;
+    discoveredProfileId?: string | null;
+    influencerId?: string | null;
+    platformAccountIds?: string[];
+  }> = [];
 
-      const platformAccountIds =
-        selectionByUnifiedId.get(creator.unified_id) ?? defaultPlatformAccountIds(creator);
-
-      // Sequential to keep the per-item dedup check race-free.
-      const result = await addCreatorToShortlistV2({
-        shortlistId,
-        unifiedId: creator.unified_id,
-        discoveredProfileId: creator.discovered_profile_id,
-        influencerId: creator.influencer_id,
-        platformAccountIds,
-      });
-
-      outcome = applyAddResult(outcome, result);
+  for (const creator of creators) {
+    if (!isAddableCreator(creator)) {
+      ineligible += 1;
+      continue;
     }
+    payload.push({
+      unifiedId: creator.unified_id,
+      discoveredProfileId: creator.discovered_profile_id,
+      influencerId: creator.influencer_id,
+      platformAccountIds:
+        selectionByUnifiedId.get(creator.unified_id) ?? defaultPlatformAccountIds(creator),
+    });
   }
 
-  return outcome;
+  if (payload.length === 0) {
+    return {
+      ...emptyOutcome(),
+      ineligible,
+      firstError:
+        ineligible > 0 ? "Selected creators cannot be added to discovery lists." : null,
+    };
+  }
+
+  const result = await addCreatorsToShortlistsV2({
+    shortlistIds: uniqueShortlistIds,
+    creators: payload,
+  });
+
+  return {
+    added: result.added ?? 0,
+    alreadyOnList: result.alreadyOnList ?? 0,
+    ineligible,
+    failed: result.failed ?? 0,
+    firstError: result.ok ? null : (result.message ?? "Failed to add to list"),
+    addedUnifiedIds: result.addedUnifiedIds ?? [],
+    alreadyUnifiedIds: result.alreadyUnifiedIds ?? [],
+  };
 }

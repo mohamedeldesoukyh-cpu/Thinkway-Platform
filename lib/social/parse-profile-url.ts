@@ -196,8 +196,15 @@ function parseFromHandle(raw: string, platformHint?: SocialPlatform): ParsedProf
     return null;
   }
 
+  // Bare tokens without @ are ambiguous (taxonomy, person names). Only treat as a
+  // handle when the user typed @… or when a platform is explicitly known.
+  if (!trimmed.startsWith("@") && !platformHint) {
+    return null;
+  }
+
   const username = trimmed.replace(/^@+/, "").trim();
   if (!username || username.includes(" ")) return null;
+  if (username.startsWith("#")) return null;
 
   const platform = platformHint ?? "instagram";
   if (!isSocialPlatform(platform)) return null;

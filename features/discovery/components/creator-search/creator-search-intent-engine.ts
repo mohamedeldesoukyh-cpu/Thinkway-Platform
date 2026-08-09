@@ -1,4 +1,8 @@
-import { normalizeDiscoverySearchQuery } from "@/lib/discovery/creator-search-query";
+import {
+  isExactCreatorLookupSearch,
+  normalizeDiscoverySearchQuery,
+} from "@/lib/discovery/creator-search-query";
+import { parseProfileInput } from "@/lib/social/parse-profile-url";
 
 import {
   matchQueryAgainstTaxonomy,
@@ -171,7 +175,11 @@ export function scoreCreatorSearchIntent(
   }
 
   const normalizedQuery = normalizeDiscoverySearchQuery(rawQuery).trim();
-  const scoringQuery = rawTrimmed;
+  const parsedProfile = parseProfileInput(rawTrimmed);
+  // Score pasted profile URLs against the extracted @handle — never against the raw URL.
+  const scoringQuery = parsedProfile
+    ? `@${parsedProfile.normalized_username}`
+    : normalizedQuery || rawTrimmed;
   const comparable = stripAtPrefix(scoringQuery);
   let taxonomyMatch = matchQueryAgainstTaxonomy(scoringQuery, taxonomy);
   if (!taxonomyMatch.matchedTerms.length && normalizedQuery !== scoringQuery) {
@@ -179,6 +187,32 @@ export function scoreCreatorSearchIntent(
     if (normalizedMatch.level !== "none") {
       taxonomyMatch = normalizedMatch;
     }
+  }
+
+  // Profile URL / bare @handle → exact creator lookup only (no fuzzy suggestions).
+  if (parsedProfile || isExactCreatorLookupSearch(rawTrimmed)) {
+    const handleScore = scoreHandlePattern(scoringQuery);
+    return {
+      mode: "exact",
+      confidence: 100,
+      signals: {
+        rawQuery,
+        normalizedQuery: scoringQuery.startsWith("@")
+          ? scoringQuery
+          : normalizedQuery || scoringQuery,
+        tokenCount: 1,
+        queryLength: comparable.length,
+        hasAtPrefix: true,
+        hasHashtagPrefix: false,
+        handlePatternScore: Math.max(handleScore, 72),
+        personNameScore: 0,
+        taxonomyMatch,
+        taxonomyPenalty: 0,
+        genericTermPenalty: 0,
+        shortQueryPenalty: 0,
+        multiWordDiscoveryBoost: 0,
+      },
+    };
   }
 
   const hasAtPrefix = scoringQuery.startsWith("@");
@@ -211,12 +245,14 @@ export function scoreCreatorSearchIntent(
     confidence = Math.min(confidence, 58);
   }
 
+  // Short bare tokens stay hybrid so name suggestions can appear.
   if (handlePatternScore > 0 && !hasAtPrefix && comparable.length < 8) {
     confidence = Math.min(confidence, 94);
   }
 
-  if (hasAtPrefix && comparable.length < 8) {
-    confidence = Math.min(confidence, 94);
+  // Display-name search stays hybrid — users often type partial / inexact names.
+  if (personNameScore > 0 && handlePatternScore === 0) {
+    confidence = Math.min(confidence, 88);
   }
 
   confidence = clampConfidence(confidence);
@@ -226,7 +262,9 @@ export function scoreCreatorSearchIntent(
     confidence,
     signals: {
       rawQuery,
-      normalizedQuery,
+      normalizedQuery: scoringQuery.startsWith("@")
+        ? scoringQuery
+        : normalizedQuery || scoringQuery,
       tokenCount,
       queryLength,
       hasAtPrefix,

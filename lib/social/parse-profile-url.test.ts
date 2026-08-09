@@ -48,4 +48,19 @@ assert.equal(facebookPeople.normalized_username, "id:987654321");
 
 assert.equal(parseProfileInput("https://www.facebook.com/watch/?v=123"), null);
 
+// Bare words are not Instagram profiles — discovery search must keep them thematic.
+assert.equal(parseProfileInput("travel"), null);
+assert.equal(parseProfileInput("reem"), null);
+assert.equal(parseProfileInput("#foodie"), null);
+
+const atHandle = parseProfileInput("@reemalmasryyy");
+assert.ok(atHandle);
+assert.equal(atHandle.platform, "instagram");
+assert.equal(atHandle.normalized_username, "reemalmasryyy");
+
+const hinted = parseProfileInput("reemalmasryyy", "tiktok");
+assert.ok(hinted);
+assert.equal(hinted.platform, "tiktok");
+assert.equal(hinted.normalized_username, "reemalmasryyy");
+
 console.log("lib/social/parse-profile-url.test.ts — all tests passed");
