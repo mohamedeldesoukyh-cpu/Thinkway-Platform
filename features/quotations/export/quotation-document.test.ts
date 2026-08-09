@@ -326,7 +326,7 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     !showcaseDoc.commercialKpis.some((k) => k.label === QUOTATION_CLIENT_LABELS.totalAgencyFee),
     "Showcase KPIs must not include pricing"
   );
-  assert.equal(showcaseDoc.creatorGroups[0]?.engagementRate, "3%");
+  assert.equal(showcaseDoc.creatorGroups[0]?.engagementRate, "3.00%");
   assert.deepEqual(showcaseDoc.creatorGroups[0]?.publicationShots, []);
 }
 
@@ -613,10 +613,10 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   const doc = buildQuotationDocument(detail, { audience: "internal" });
   assert.equal(
     doc.commercialKpis.find((k) => k.label === "Est. Engagement")?.value,
-    "3%"
+    "3.00%"
   );
-  assert.equal(doc.rows[0]?.engagementRate, "4%");
-  assert.equal(doc.rows[2]?.engagementRate, "2%");
+  assert.equal(doc.rows[0]?.engagementRate, "4.00%");
+  assert.equal(doc.rows[2]?.engagementRate, "2.00%");
 }
 
 {

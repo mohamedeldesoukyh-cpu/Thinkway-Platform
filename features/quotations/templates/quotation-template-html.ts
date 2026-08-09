@@ -27,6 +27,7 @@ import {
   QUOTATION_TEMPLATE_STYLES,
 } from "./quotation-template-styles";
 import type { QuotationTemplatePayload } from "./quotation-template-types";
+import { formatShowcaseEngagementCardValue } from "./quotation-template-format";
 import { getReportPlatformIconTitle } from "@/lib/performance/report/report-platform-icons";
 import { pickCreatorDisplayName } from "@/lib/text/decode-html-entities";
 
@@ -417,11 +418,19 @@ function renderClosingPage(payload: QuotationTemplatePayload): string {
 function showcaseMetricCardsHtml(
   creator: QuotationTemplatePayload["showcaseCreators"][number]
 ): string {
-  // Followers + Engagement + per-platform follower cards. Views intentionally omitted.
-  type MetricCard = { label: string; value: string; accent?: boolean };
+  // Followers + one Engagement card (all platforms) + per-platform follower cards.
+  type MetricCard = { label: string; value: string; accent?: boolean; compact?: boolean };
+  const engagementValue = formatShowcaseEngagementCardValue({
+    engagement: creator.engagement,
+    platformMetrics: creator.platformMetrics,
+  });
   const cards: MetricCard[] = [
     { label: "Followers", value: creator.followers, accent: true },
-    { label: "Engagement", value: creator.engagement },
+    {
+      label: "Engagement",
+      value: engagementValue,
+      compact: engagementValue.includes(" · "),
+    },
   ];
   for (const metric of creator.platformMetrics) {
     if (cards.length >= 4) break;
@@ -432,12 +441,11 @@ function showcaseMetricCardsHtml(
   while (cards.length < 3) {
     cards.push({ label: "—", value: "—" });
   }
-  const colClass =
-    cards.length <= 3 ? "sc-metric-grid" : "sc-metric-grid";
-  return `<div class="${colClass}" style="grid-template-columns:repeat(${Math.min(4, cards.length)},minmax(0,1fr));">
+  return `<div class="sc-metric-grid" style="grid-template-columns:repeat(${Math.min(4, cards.length)},minmax(0,1fr));">
     ${cards
       .map(
-        (card) => `<div class="sc-metric"><p class="ml">${esc(card.label)}</p><p class="mv${card.accent ? " accent" : ""}">${esc(card.value)}</p></div>`
+        (card) =>
+          `<div class="sc-metric"><p class="ml">${esc(card.label)}</p><p class="mv${card.accent ? " accent" : ""}${card.compact ? " compact" : ""}">${esc(card.value)}</p></div>`
       )
       .join("")}
   </div>`;

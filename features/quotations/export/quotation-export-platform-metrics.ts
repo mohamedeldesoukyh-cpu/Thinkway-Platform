@@ -3,7 +3,7 @@
  */
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { sortPlatformsStable } from "@/lib/creators/creator-centric";
-import { formatQuotationFullNumber } from "@/features/quotations/templates/quotation-template-format";
+import { formatQuotationEngagementRate, formatQuotationFullNumber } from "@/features/quotations/templates/quotation-template-format";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
 import { unionQuotationCreatorGroupPlatforms } from "@/lib/quotations/quotation-creator-platform-utils";
 
@@ -27,8 +27,7 @@ function formatFollowersLabel(value: number | null | undefined): string {
 }
 
 function formatErLabel(value: number | null | undefined): string {
-  if (value == null || !Number.isFinite(value)) return "—";
-  return `${formatQuotationFullNumber(value)}%`;
+  return formatQuotationEngagementRate(value);
 }
 
 function formatViewsLabel(value: number | null | undefined): string {

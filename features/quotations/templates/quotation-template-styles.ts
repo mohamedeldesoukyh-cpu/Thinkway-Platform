@@ -309,6 +309,7 @@ export const QUOTATION_TEMPLATE_STYLES = `
   .sc-metric .ml{font-size:9.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin:0 0 6px;}
   .sc-metric .mv{font-size:20px; font-weight:800; letter-spacing:-.4px; color:var(--navy); margin:0; font-variant-numeric:tabular-nums;}
   .sc-metric .mv.accent{color:var(--blue);}
+  .sc-metric .mv.compact{font-size:13px; letter-spacing:-.2px; line-height:1.25;}
   .sc-sub{font-size:10.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--blue); margin:0 0 8px;}
   .pubs, .showcase-pubs-grid{
     display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:0 0 12px;

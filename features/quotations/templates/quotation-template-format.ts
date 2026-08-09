@@ -10,6 +10,49 @@ export function formatQuotationFullNumber(value: number | null | undefined): str
   }).format(value);
 }
 
+/** Engagement rate for Preview/export — always two decimal places (e.g. 3.51%). */
+export function formatQuotationEngagementRate(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return "—";
+  return `${new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)}%`;
+}
+
+/** Short platform label for showcase metric cards (IG · TT · YT …). */
+export function quotationPlatformShortLabel(platform: string): string {
+  const key = platform.trim().toLowerCase();
+  if (key === "instagram" || key === "ig") return "IG";
+  if (key === "tiktok" || key === "tt") return "TT";
+  if (key === "youtube" || key === "yt") return "YT";
+  if (key === "facebook" || key === "fb") return "FB";
+  if (key === "snapchat" || key === "sc") return "SC";
+  if (key.startsWith("instagram") || key.startsWith("ig_")) return "IG";
+  if (key.startsWith("tiktok") || key.startsWith("tt_")) return "TT";
+  if (key.startsWith("youtube") || key.startsWith("yt_")) return "YT";
+  if (key.startsWith("facebook") || key.startsWith("fb_")) return "FB";
+  if (key.startsWith("snapchat")) return "SC";
+  return key.slice(0, 2).toUpperCase() || "—";
+}
+
+/**
+ * One Engagement card value listing every platform ER
+ * (e.g. "IG 3.20% · TT 5.10%"). Falls back to combined ER.
+ */
+export function formatShowcaseEngagementCardValue(input: {
+  engagement: string;
+  platformMetrics: Array<{ platform: string; engagement: string }>;
+}): string {
+  const parts = input.platformMetrics
+    .filter((row) => row.engagement.trim() && row.engagement.trim() !== "—")
+    .map(
+      (row) =>
+        `${quotationPlatformShortLabel(row.platform)} ${row.engagement.trim()}`
+    );
+  if (parts.length > 0) return parts.join(" · ");
+  return input.engagement.trim() || "—";
+}
+
 /** Short reach/follower label (e.g. 16M, 541K) — whole numbers only. */
 export function formatQuotationShortNumber(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return "—";

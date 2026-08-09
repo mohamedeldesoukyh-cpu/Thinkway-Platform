@@ -133,6 +133,49 @@ async function main() {
     const doc = buildQuotationDocument(mockDetail(), { template: "showcase" });
     const buffer = await buildQuotationPptxBuffer(doc);
     assert.ok(buffer.length > 5_000, "Showcase PPTX buffer should be non-trivial");
+    const { default: JSZip } = await import("jszip");
+    const zip = await JSZip.loadAsync(buffer);
+    const joined = (
+      await Promise.all(
+        Object.keys(zip.files)
+          .filter((path) => /ppt\/slides\/slide\d+\.xml/.test(path))
+          .map(async (path) => zip.file(path)?.async("string") ?? "")
+      )
+    ).join("\n");
+    assert.match(joined, /ISSUE · VALID/, "Showcase cover uses compact Issue · Valid meta");
+    assert.match(joined, /TOTAL INVESTMENT/, "Showcase includes redesign TOTAL INVESTMENT banner");
+    assert.doesNotMatch(
+      joined,
+      /Campaign mix insight/,
+      "Showcase PPTX must not use legacy mix-insight slide"
+    );
+    assert.doesNotMatch(joined, /Mix summary/, "Showcase PPTX must not use legacy Mix summary title");
+    assert.doesNotMatch(
+      joined,
+      /PREPARED BY/,
+      "Showcase cover must omit Prepared By (HTML redesign parity)"
+    );
+  }
+
+  {
+    const doc = buildQuotationDocument(mockDetail(), { template: "showcase-lump-sum" });
+    const buffer = await buildQuotationPptxBuffer(doc);
+    assert.ok(buffer.length > 5_000, "Showcase Lump Sum PPTX buffer should be non-trivial");
+    const { default: JSZip } = await import("jszip");
+    const zip = await JSZip.loadAsync(buffer);
+    const joined = (
+      await Promise.all(
+        Object.keys(zip.files)
+          .filter((path) => /ppt\/slides\/slide\d+\.xml/.test(path))
+          .map(async (path) => zip.file(path)?.async("string") ?? "")
+      )
+    ).join("\n");
+    assert.match(joined, /TOTAL INVESTMENT/, "Showcase Lump Sum includes TOTAL INVESTMENT banner");
+    assert.doesNotMatch(
+      joined,
+      /Campaign mix insight/,
+      "Showcase Lump Sum must not use legacy mix-insight slide"
+    );
   }
 
   {

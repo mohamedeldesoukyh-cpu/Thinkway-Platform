@@ -26,6 +26,7 @@ import type { QuotationDetail, QuotationItemRow } from "../types";
 import type { CreatorTierLabel } from "@/lib/creators/creator-tier";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
 import { formatCreatorCount } from "@/features/discovery/components/creator-search/creator-search-utils";
+import { formatQuotationEngagementRate } from "@/features/quotations/templates/quotation-template-format";
 import { deliverableTypeLines } from "@/lib/quotations/quotation-deliverable-types";
 import { optimizeQuotationCampaign } from "@/lib/quotations/quotation-optimization";
 import { evaluateQuotationDecision } from "@/lib/quotations/quotation-decision";
@@ -296,11 +297,11 @@ export type QuotationDocument = {
   revisionLine: string | null;
 };
 
-/** Preview/export display only — round to whole numbers (underlying values unchanged). */
-const num = (n: number, _decimals = 0) =>
+/** Preview/export display — whole numbers by default; pass decimals for ER. */
+const num = (n: number, decimals = 0) =>
   new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   }).format(Number.isFinite(n) ? n : 0);
 
 const TIER_SECTION_ORDER: CreatorTierLabel[] = [
@@ -341,8 +342,7 @@ function exportPlatformLabel(platform: string | null | undefined): string {
 }
 
 function exportEngagementRateLabel(rate: number | null | undefined): string {
-  if (rate == null || !Number.isFinite(rate)) return "—";
-  return `${num(rate, 2)}%`;
+  return formatQuotationEngagementRate(rate);
 }
 
 function deliverablesFromExportItems(
@@ -495,7 +495,7 @@ function buildQuotationFullTierBreakdown(input: {
           estimatedReachLabel: formatCreatorCount(sectionReach),
           reachSharePct:
             totalEstimatedReach > 0
-              ? `${num((sectionReach / totalEstimatedReach) * 100, 1)}%`
+              ? `${num((sectionReach / totalEstimatedReach) * 100)}%`
               : "0%",
           avgEngagementRate: exportEngagementRateLabel(avgEr),
           creators: creators.map((entry) => ({
@@ -555,7 +555,7 @@ function buildBreakdown(
     .map(([label, count]) => ({
       label,
       count,
-      sharePct: totalCreators > 0 ? `${num((count / totalCreators) * 100, 1)}%` : "0%",
+      sharePct: totalCreators > 0 ? `${num((count / totalCreators) * 100)}%` : "0%",
     }))
     .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 }
@@ -648,8 +648,7 @@ function buildDocRow(
     platformIcons: platformFields.platformIcons,
     allPlatforms: platformFields.allPlatforms,
     followers: item.followers != null ? num(item.followers) : "—",
-    engagementRate:
-      item.engagement_rate != null ? `${num(item.engagement_rate, 2)}%` : "—",
+    engagementRate: exportEngagementRateLabel(item.engagement_rate),
     country: item.country_code ?? "—",
     deliverables: deliverablesLabel(item),
     serviceDescription: exportItemServiceDescription(item),
@@ -668,7 +667,7 @@ function buildDocRow(
       currency: item.cost_currency,
       egpAmount: item.af_value_egp,
     }),
-    afPct: `${num(item.af_pct, 1)}%`,
+    afPct: `${num(item.af_pct)}%`,
     currency: item.cost_currency,
   };
 
@@ -678,8 +677,8 @@ function buildDocRow(
       currency: item.cost_currency,
       egpAmount: item.cost_egp,
     });
-    row.gp = `${num(item.gp_value_egp, 2)} ${REPORTING_CURRENCY}`;
-    row.gpPct = `${num(item.gp_pct, 1)}%`;
+    row.gp = `${num(item.gp_value_egp)} ${REPORTING_CURRENCY}`;
+    row.gpPct = `${num(item.gp_pct)}%`;
     row.gpColor = rowGpColor;
   }
 
@@ -743,7 +742,7 @@ function buildCreatorGroup(
     platformIcons,
     platformMetrics,
     followers: groupFollowers != null ? num(groupFollowers) : "—",
-    engagementRate: groupEr != null ? `${num(groupEr, 2)}%` : "—",
+    engagementRate: exportEngagementRateLabel(groupEr),
     views: groupViews != null ? num(groupViews) : "—",
     country: headerItem.country_code ?? "—",
     categories: mergeCreatorGroupCategories(group.items),
@@ -766,8 +765,7 @@ function buildCollapsePackageCreator(item: QuotationExportItem): QuotationDocCol
     avatarProxyUrl: resolveExportAvatarProxyUrl(item, profile.profileUrl, profile.avatarUrl),
     profileUrl: profile.profileUrl,
     followers: item.followers != null ? num(item.followers) : "—",
-    engagementRate:
-      item.engagement_rate != null ? `${num(item.engagement_rate, 2)}%` : "—",
+    engagementRate: exportEngagementRateLabel(item.engagement_rate),
     tier: exportItemTierLabel(item),
   };
 }
@@ -886,7 +884,7 @@ export function buildQuotationDocument(
   const displayFxRateToEgp = options?.displayFxRateToEgp ?? 1;
   const formatDisplayMoney = (amountEgp: number) => {
     const amount = fromEgp(amountEgp, displayCurrency, displayFxRateToEgp);
-    return `${num(amount, 2)} ${displayCurrency}`;
+    return `${num(amount)} ${displayCurrency}`;
   };
   const publicationShotsByCreatorKey = isCreatorDeckTemplate(template)
     ? options?.publicationShotsByCreatorKey
@@ -948,7 +946,7 @@ export function buildQuotationDocument(
   const exportGroups = groupQuotationExportItems(items);
   const uniqueCreatorCount = countUniqueQuotationCreators(items);
   const formatSharePct = (count: number, total: number) =>
-    total > 0 ? `${num((count / total) * 100, 1)}%` : "0%";
+    total > 0 ? `${num((count / total) * 100)}%` : "0%";
   const categoryBreakdown = isPitchTemplate(template)
     ? buildQuotationDisplayCategoryBreakdown({
         creatorGroups,
@@ -996,9 +994,9 @@ export function buildQuotationDocument(
 
   const avgEr =
     !selectionActive && detail.estimated_engagement_rate != null
-      ? `${num(detail.estimated_engagement_rate, 2)}%`
+      ? exportEngagementRateLabel(detail.estimated_engagement_rate)
       : rosterForecast.averageEngagementRate != null
-        ? `${num(rosterForecast.averageEngagementRate, 2)}%`
+        ? exportEngagementRateLabel(rosterForecast.averageEngagementRate)
         : "—";
 
   const totalClientCost = formatDisplayMoney(selectedRevenueEgp);
@@ -1037,7 +1035,7 @@ export function buildQuotationDocument(
       value: formatDisplayMoney(selectedGpValueEgp),
       valueColor: gpColor,
     },
-    { label: "GP %", value: `${num(gpPctForDisplay, 1)}%`, valueColor: gpColor },
+    { label: "GP %", value: `${num(gpPctForDisplay)}%`, valueColor: gpColor },
   ];
 
   const filteredCreatorGroups = platformFilterKeys
@@ -1087,7 +1085,7 @@ export function buildQuotationDocument(
         ? {
             totalCost: formatDisplayMoney(selectedCostEgp),
             totalGpValue: formatDisplayMoney(selectedGpValueEgp),
-            totalGpPct: `${num(gpPctForDisplay, 1)}%`,
+            totalGpPct: `${num(gpPctForDisplay)}%`,
             gpColor,
           }
         : {}),

@@ -8,7 +8,10 @@ import type {
   QuotationDocument,
 } from "@/features/quotations/export/quotation-document";
 import { isCreatorDeckTemplate, isLumpSumPricingTemplate, isPitchTemplate, isShowcaseTemplate } from "@/features/quotations/export/quotation-template";
-import { showcaseInitialsFromHandle } from "@/features/quotations/templates/quotation-template-format";
+import {
+  formatShowcaseEngagementCardValue,
+  showcaseInitialsFromHandle,
+} from "@/features/quotations/templates/quotation-template-format";
 import { buildQuotationTemplatePayload } from "@/features/quotations/templates/quotation-template-payload";
 import { cropExportImageBufferCover } from "@/lib/io/compress-export-image";
 import {
@@ -31,7 +34,8 @@ import {
 import { pickCreatorDisplayName } from "@/lib/text/decode-html-entities";
 
 /**
- * Design tokens — matched to reference deck Thinkway_QT-2026-0013.pptx.
+ * Design tokens — Thinkway Quotation decks.
+ * Showcase/Lump Sum PPTX must track the QT Redesign HTML preview (cover + investment summary).
  * Cover uses bright blue gradient image; content uses soft lav bokeh; closing uses navy glow.
  */
 const BLUE = "0057FF";
@@ -554,32 +558,36 @@ function addCoverSlide(pptx: PptxGen, doc: QuotationDocument, counter: SlideCoun
   const payload = buildQuotationTemplatePayload(doc);
   const slide = pptx.addSlide();
   applyCoverBackground(slide);
+  const showcase = isShowcaseTemplate(doc.template);
+  const pitch = isPitchTemplate(doc.template);
 
   addBrandLockup(slide, "light", 0.5, 0.45);
 
-  const chipLabel = `${payload.quotation.version} · ${payload.quotation.status}`.toUpperCase();
-  const chipW = Math.min(2.2, 1.0 + chipLabel.length * 0.09);
-  slide.addShape("roundRect", {
-    x: PAGE_W - MARGIN_X - chipW,
-    y: 0.52,
-    w: chipW,
-    h: 0.34,
-    fill: { color: WHITE, transparency: COVER_CHIP_TRANSPARENCY },
-    line: { color: WHITE, width: 1 },
-    rectRadius: 0.17,
-  });
-  slide.addText(chipLabel, {
-    x: PAGE_W - MARGIN_X - chipW,
-    y: 0.58,
-    w: chipW,
-    h: 0.22,
-    fontFace: FONT_UI,
-    fontSize: 9,
-    bold: true,
-    color: COVER_KICKER,
-    align: "center",
-    charSpacing: 1.2,
-  });
+  if (!showcase) {
+    const chipLabel = `${payload.quotation.version} · ${payload.quotation.status}`.toUpperCase();
+    const chipW = Math.min(2.2, 1.0 + chipLabel.length * 0.09);
+    slide.addShape("roundRect", {
+      x: PAGE_W - MARGIN_X - chipW,
+      y: 0.52,
+      w: chipW,
+      h: 0.34,
+      fill: { color: WHITE, transparency: COVER_CHIP_TRANSPARENCY },
+      line: { color: WHITE, width: 1 },
+      rectRadius: 0.17,
+    });
+    slide.addText(chipLabel, {
+      x: PAGE_W - MARGIN_X - chipW,
+      y: 0.58,
+      w: chipW,
+      h: 0.22,
+      fontFace: FONT_UI,
+      fontSize: 9,
+      bold: true,
+      color: COVER_KICKER,
+      align: "center",
+      charSpacing: 1.2,
+    });
+  }
 
   slide.addText(payload.cover.kicker.toUpperCase(), {
     x: MARGIN_X,
@@ -615,20 +623,29 @@ function addCoverSlide(pptx: PptxGen, doc: QuotationDocument, counter: SlideCoun
     color: COVER_KICKER,
   });
 
-  const metaCells = [
-    ...(isPitchTemplate(doc.template)
-      ? []
-      : [["Quotation No.", payload.quotation.number] as [string, string]]),
-    ["Client", payload.quotation.client],
-    ["Brand", payload.quotation.brand],
-    ...(isPitchTemplate(doc.template)
-      ? []
-      : [["Prepared By", payload.quotation.preparedBy] as [string, string]]),
-    ["Issue Date", payload.quotation.issueDate],
-    ["Valid Until", payload.quotation.validUntil],
-    ["Version", payload.quotation.version],
-    ["Status", payload.quotation.status],
-  ];
+  // Showcase cover matches HTML redesign: 4 compact meta fields, no version/status chip.
+  const metaCells: Array<[string, string]> = showcase
+    ? [
+        ["Quotation No.", payload.quotation.number],
+        ["Client", payload.quotation.client],
+        ["Brand", payload.quotation.brand],
+        [
+          "Issue · Valid",
+          `${payload.quotation.issueDate} · ${payload.quotation.validUntil}`,
+        ],
+      ]
+    : [
+        ...(pitch ? [] : [["Quotation No.", payload.quotation.number] as [string, string]]),
+        ["Client", payload.quotation.client],
+        ["Brand", payload.quotation.brand],
+        ...(pitch
+          ? []
+          : [["Prepared By", payload.quotation.preparedBy] as [string, string]]),
+        ["Issue Date", payload.quotation.issueDate],
+        ["Valid Until", payload.quotation.validUntil],
+        ["Version", payload.quotation.version],
+        ["Status", payload.quotation.status],
+      ];
   const metaCellW = 2.85;
   const metaGap = 0.18;
   metaCells.forEach(([label, value], index) => {
@@ -664,14 +681,16 @@ function addCoverSlide(pptx: PptxGen, doc: QuotationDocument, counter: SlideCoun
   const stats = [
     {
       label: "Campaign Creators",
-      value: payload.campaign.creatorCount,
-      sub: payload.campaign.tierSummary,
+      value: showcase
+        ? `${payload.campaign.creatorCount} · ${payload.campaign.tierSummary}`
+        : payload.campaign.creatorCount,
+      sub: showcase ? "" : payload.campaign.tierSummary,
     },
     {
       label: payload.cover.stat3.label,
       // Full total cost as the hero figure (not abbreviated …K).
       value: payload.cover.stat3.value,
-      sub: payload.cover.stat3.valueShort,
+      sub: showcase ? "" : payload.cover.stat3.valueShort,
     },
   ];
   stats.forEach((stat, index) => {
@@ -701,19 +720,21 @@ function addCoverSlide(pptx: PptxGen, doc: QuotationDocument, counter: SlideCoun
       w: statW - 0.5,
       h: 0.5,
       fontFace: FONT_UI,
-      fontSize: 28,
+      fontSize: showcase ? 22 : 28,
       bold: true,
       color: WHITE,
     });
-    slide.addText(stat.sub, {
-      x: x + 0.28,
-      y: statY + 0.82,
-      w: statW - 0.5,
-      h: 0.24,
-      fontFace: FONT_UI,
-      fontSize: 11,
-      color: COVER_KICKER,
-    });
+    if (stat.sub) {
+      slide.addText(stat.sub, {
+        x: x + 0.28,
+        y: statY + 0.82,
+        w: statW - 0.5,
+        h: 0.24,
+        fontFace: FONT_UI,
+        fontSize: 11,
+        color: COVER_KICKER,
+      });
+    }
   });
 
   nextSlideNo(counter);
@@ -1018,11 +1039,74 @@ function drawMixTierTable(
   return tableY + tableH + 0.22;
 }
 
+const INVESTMENT_BANNER_H = 0.95;
+
+function splitCommercialMoneyParts(full: string): { currency: string; amount: string } {
+  const match = full.trim().match(/^([A-Z]{3})\s+(.+)$/);
+  if (match) return { currency: match[1]!, amount: match[2]! };
+  return { currency: "EGP", amount: full.trim() || "—" };
+}
+
+/** Redesign HTML banner — TOTAL INVESTMENT · N CREATORS · CURRENCY + amount. */
+function drawTotalInvestmentBanner(
+  slide: Slide,
+  doc: QuotationDocument,
+  y: number
+): number {
+  const payload = buildQuotationTemplatePayload(doc);
+  const money = splitCommercialMoneyParts(payload.commercial.headlineValue || "EGP —");
+  slide.addShape("roundRect", {
+    x: MARGIN_X,
+    y,
+    w: CONTENT_W,
+    h: INVESTMENT_BANNER_H,
+    fill: { color: BLUE },
+    line: { type: "none" },
+    rectRadius: 0.12,
+  });
+  slide.addText(
+    `TOTAL INVESTMENT · ${payload.totals.creatorCount} CREATORS · ${money.currency}`,
+    {
+      x: MARGIN_X + 0.28,
+      y: y + 0.16,
+      w: CONTENT_W - 0.56,
+      h: 0.26,
+      fontFace: FONT_UI,
+      fontSize: 11,
+      bold: true,
+      color: WHITE,
+      charSpacing: 1.0,
+    }
+  );
+  slide.addText(money.amount, {
+    x: MARGIN_X + 0.28,
+    y: y + 0.42,
+    w: CONTENT_W - 0.56,
+    h: 0.42,
+    fontFace: FONT_UI,
+    fontSize: 26,
+    bold: true,
+    color: WHITE,
+  });
+  return y + INVESTMENT_BANNER_H + 0.1;
+}
+
 function addCreatorMixSummarySlide(
   pptx: PptxGen,
   doc: QuotationDocument,
   counter: SlideCounter
 ): void {
+  // Showcase / Showcase Lump Sum use the redesign TOTAL INVESTMENT banner instead.
+  if (isShowcaseTemplate(doc.template)) {
+    const slide = pptx.addSlide();
+    applyContentBackground(slide);
+    const pageNo = nextSlideNo(counter);
+    let cursorY = addSectionHeader(slide, "01 · INVESTMENT SUMMARY", "Creators & fees");
+    cursorY = drawTotalInvestmentBanner(slide, doc, cursorY + 0.2);
+    addSlideFooter(slide, `${doc.serial} · Summary`, pageNo);
+    return;
+  }
+
   const payload = buildQuotationTemplatePayload(doc);
   const slide = pptx.addSlide();
   applyContentBackground(slide);
@@ -1171,8 +1255,17 @@ function addCreatorMixSlides(
     const slide = pptx.addSlide();
     applyContentBackground(slide);
     const pageNo = nextSlideNo(counter);
-    let cursorY = addSectionHeader(slide, "SECTION 01 · CREATOR MIX", "Creator mix");
+    let cursorY = addSectionHeader(
+      slide,
+      showcaseMix ? "01 · INVESTMENT SUMMARY" : "SECTION 01 · CREATOR MIX",
+      showcaseMix ? "Creators & fees" : "Creator mix"
+    );
     cursorY = drawMixCategoryCards(slide, categoryCards, cursorY + 0.1);
+    if (isShowcaseTemplate(doc.template)) {
+      drawTotalInvestmentBanner(slide, doc, Math.max(cursorY + 0.2, 4.2));
+      addSlideFooter(slide, `${doc.serial} · Summary`, pageNo);
+      return;
+    }
     addSlideFooter(slide, `${doc.serial} · Creator mix`, pageNo);
     addCreatorMixSummarySlide(pptx, doc, counter);
     return;
@@ -1182,6 +1275,9 @@ function addCreatorMixSlides(
   let slide: Slide | null = null;
   let cursorY = 0;
   let pageNo = "00";
+  const mixFooterLabel = isShowcaseTemplate(doc.template)
+    ? `${doc.serial} · Summary`
+    : `${doc.serial} · Creator mix`;
 
   const startSlide = (continued: boolean) => {
     slide = pptx.addSlide();
@@ -1211,7 +1307,7 @@ function addCreatorMixSlides(
     if (cursorY + blockH > CONTENT_BOTTOM) {
       addSlideFooter(
         slide!,
-        `${doc.serial} · Creator mix${slideIndex > 1 ? ` · ${slideIndex}` : ""}`,
+        `${mixFooterLabel}${slideIndex > 1 ? ` · ${slideIndex}` : ""}`,
         pageNo
       );
       startSlide(true);
@@ -1222,12 +1318,32 @@ function addCreatorMixSlides(
     });
   }
 
+  if (isShowcaseTemplate(doc.template)) {
+    // Prefer redesign TOTAL INVESTMENT banner on the last mix slide when it fits.
+    if (cursorY + INVESTMENT_BANNER_H + 0.12 <= CONTENT_BOTTOM) {
+      drawTotalInvestmentBanner(slide!, doc, cursorY + 0.12);
+      addSlideFooter(
+        slide!,
+        `${mixFooterLabel}${slideIndex > 1 ? ` · ${slideIndex}` : ""}`,
+        pageNo
+      );
+      return;
+    }
+    addSlideFooter(
+      slide!,
+      `${mixFooterLabel}${slideIndex > 1 ? ` · ${slideIndex}` : ""}`,
+      pageNo
+    );
+    addCreatorMixSummarySlide(pptx, doc, counter);
+    return;
+  }
+
   addSlideFooter(
     slide!,
-    `${doc.serial} · Creator mix${slideIndex > 1 ? ` · ${slideIndex}` : ""}`,
+    `${mixFooterLabel}${slideIndex > 1 ? ` · ${slideIndex}` : ""}`,
     pageNo
   );
-  // Always put totals/insight on a dedicated slide — never over a table.
+  // Detailed decks keep totals/insight on a dedicated slide — never over a table.
   addCreatorMixSummarySlide(pptx, doc, counter);
 }
 
@@ -1513,9 +1629,17 @@ function drawShowcaseMetricCards(
   creator: ReturnType<typeof buildQuotationTemplatePayload>["showcaseCreators"][number],
   y: number
 ): number {
-  const cards: Array<{ label: string; value: string; accent?: boolean }> = [
+  const engagementValue = formatShowcaseEngagementCardValue({
+    engagement: creator.engagement,
+    platformMetrics: creator.platformMetrics,
+  });
+  const cards: Array<{ label: string; value: string; accent?: boolean; compact?: boolean }> = [
     { label: "FOLLOWERS", value: creator.followers, accent: true },
-    { label: "ENGAGEMENT", value: creator.engagement },
+    {
+      label: "ENGAGEMENT",
+      value: engagementValue,
+      compact: engagementValue.includes(" · "),
+    },
   ];
   for (const metric of creator.platformMetrics) {
     if (cards.length >= 4) break;
@@ -1549,13 +1673,14 @@ function drawShowcaseMetricCards(
     });
     slide.addText(card.value, {
       x: x + 0.12,
-      y: y + 0.3,
+      y: y + 0.28,
       w: cardW - 0.24,
-      h: 0.3,
+      h: 0.34,
       fontFace: FONT_UI,
-      fontSize: 18,
+      fontSize: card.compact ? 12 : 18,
       bold: true,
       color: card.accent ? BLUE : TITLE_INK,
+      valign: "middle",
     });
   });
   return y + 0.82;
