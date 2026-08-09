@@ -18,6 +18,7 @@ type Props = {
   /** Quotation header currency for KPI / dual-cost display. */
   displayCurrency?: string;
   displayFxRateToEgp?: number;
+  issueDate?: string | null;
 };
 
 /**
@@ -36,6 +37,7 @@ export function QuotationCommercialEntry(props: Props) {
         triggerClassName={props.triggerClassName}
         displayCurrency={props.displayCurrency}
         displayFxRateToEgp={props.displayFxRateToEgp}
+        issueDate={props.issueDate}
       />
     );
   }

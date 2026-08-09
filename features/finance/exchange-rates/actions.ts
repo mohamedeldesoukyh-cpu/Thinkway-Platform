@@ -149,12 +149,13 @@ export async function upsertExchangeRateAction(
   } as never);
 
   revalidatePath("/finance/exchange-rates");
+  revalidatePath("/discovery/quotations");
   return {
     ok: true,
     message:
       parsed.data.apply_mode === "override_historical"
-        ? "Rate saved. Historical override logged — recalculation requires finance approval."
-        : "Exchange rate saved for future effective date.",
+        ? "Rate saved and override logged. Open draft quotations to refresh identity FX snapshots, then Save. Finance-locked documents keep frozen rates."
+        : "Exchange rate saved. New resolves (and draft quotations with identity FX) use this effective date going forward.",
   };
 }
 

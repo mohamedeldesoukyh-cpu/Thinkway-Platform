@@ -77,6 +77,7 @@ import {
   updateQuotationHeader,
   updateQuotationItemCommercials,
 } from "@/features/quotations/actions";
+import { draftToLinePending } from "@/lib/quotations/commercial-workspace/stage-pending";
 import {
   calcModeToCommercialMode,
   computeLiveQuotationTotals,
@@ -261,14 +262,14 @@ function QuotationWorkspaceContent({
 
   useEffect(() => {
     let cancelled = false;
-    void resolveCommercialRateToEgp(displayCurrency).then((res) => {
+    void resolveCommercialRateToEgp(displayCurrency, detail.issue_date).then((res) => {
       if (cancelled || !res.ok || !res.data) return;
       setDisplayFxRateToEgp(res.data.rate);
     });
     return () => {
       cancelled = true;
     };
-  }, [displayCurrency]);
+  }, [displayCurrency, detail.issue_date]);
 
   useEffect(() => {
     setDrafts((prev) => {
@@ -410,6 +411,51 @@ function QuotationWorkspaceContent({
     });
   }, []);
 
+  // Non-EGP lines stuck at identity FX (1) never resolved — refresh from md_exchange_rates.
+  useEffect(() => {
+    if (manualSave.hasUnsavedChanges) return;
+    let cancelled = false;
+    const stale = detail.items.filter((item) => {
+      const currency = (item.cost_currency || "EGP").toUpperCase();
+      const fx = item.fx_rate_to_egp ?? 1;
+      return currency !== "EGP" && !(fx > 1);
+    });
+    if (stale.length === 0) return;
+
+    void (async () => {
+      const rateByCurrency = new Map<string, number>();
+      let refreshed = 0;
+      for (const item of stale) {
+        if (cancelled) return;
+        const currency = (item.cost_currency || "EGP").toUpperCase();
+        let rate = rateByCurrency.get(currency);
+        if (rate == null) {
+          const res = await resolveCommercialRateToEgp(currency, detail.issue_date);
+          if (!res.ok || !res.data || !(res.data.rate > 1)) continue;
+          rate = res.data.rate;
+          rateByCurrency.set(currency, rate);
+        }
+        const draft = draftFromQuotationItem(item);
+        const next = { ...draft, costCurrency: currency, fxRateToEgp: rate };
+        updateDraft(item.id, next);
+        manualSave.registerLinePending(
+          item.id,
+          draftToLinePending(next, item.deliverables)
+        );
+        refreshed += 1;
+      }
+      if (!cancelled && refreshed > 0) {
+        toast.message("FX rates refreshed from master data — Save to apply.");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // Only re-run when the quotation document / line FX snapshots change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: avoid loops on draft edits
+  }, [detail.id, detail.issue_date, detail.items, manualSave.hasUnsavedChanges, updateDraft]);
+
   const mergeDrafts = useCallback((next: Record<string, QuotationRowDraft>) => {
     setDrafts((prev) => {
       const merged = { ...prev };
@@ -514,7 +560,7 @@ function QuotationWorkspaceContent({
   const applyBulkCurrency = useCallback(
     (currency: string) => {
       startBulkTransition(async () => {
-        const rateRes = await resolveCommercialRateToEgp(currency);
+        const rateRes = await resolveCommercialRateToEgp(currency, detail.issue_date);
         if (!rateRes.ok || !rateRes.data) {
           toast.error(rateRes.ok ? "Could not resolve FX rate." : rateRes.message);
           return;
@@ -552,7 +598,7 @@ function QuotationWorkspaceContent({
         router.refresh();
       });
     },
-    [selectedIds, drafts, detail.id, updateDraft, router]
+    [selectedIds, drafts, detail.id, detail.issue_date, updateDraft, router]
   );
 
   const handleDuplicateSelected = useCallback(() => {
@@ -762,6 +808,7 @@ function QuotationWorkspaceContent({
                   triggerClassName="btn sm"
                   displayCurrency={displayCurrency}
                   displayFxRateToEgp={displayFxRateToEgp}
+                  issueDate={detail.issue_date}
                 />
                 {detail.canManage ? (
                   <AddCreatorsToQuotationButton
