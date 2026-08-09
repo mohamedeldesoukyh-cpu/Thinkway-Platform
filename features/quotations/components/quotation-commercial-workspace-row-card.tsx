@@ -15,6 +15,7 @@ import {
 } from "@/lib/quotations/commercial-workspace/profitability-thresholds";
 import type { CommercialWorkspaceColumnId } from "@/lib/quotations/commercial-workspace/column-preferences";
 import { resolveQuotationCreatorProfileSource } from "@/lib/quotations/quotation-creator-source";
+import { resolveCreatorLineCostDualLabel } from "@/lib/quotations/quotation-line-creator-commercial-sync";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
 import { cn } from "@/lib/utils";
 import type { QuotationRowDraft } from "@/features/quotations/quotation-row-math";
@@ -60,6 +61,8 @@ type Props = {
   show: (id: CommercialWorkspaceColumnId) => boolean;
   onToggleSelected: () => void;
   onStageDraft: (next: QuotationRowDraft) => void;
+  displayCurrency?: string;
+  displayFxRateToEgp?: number;
 };
 
 export function QuotationCommercialWorkspaceRowCard({
@@ -69,6 +72,8 @@ export function QuotationCommercialWorkspaceRowCard({
   show,
   onToggleSelected,
   onStageDraft,
+  displayCurrency = "EGP",
+  displayFxRateToEgp = 1,
 }: Props) {
   const band = resolveProfitabilityBand(row.gpPct);
   const profile = resolveQuotationCreatorProfileSource(
@@ -83,6 +88,10 @@ export function QuotationCommercialWorkspaceRowCard({
     handleLabel?.replace(/^@/, "") ||
     row.influencerName;
   const categories = row.item.creator_categories ?? [];
+  const costDual = resolveCreatorLineCostDualLabel(row.draft, {
+    displayCurrency,
+    displayFxRateToEgp,
+  });
 
   return (
     <div
@@ -197,28 +206,47 @@ export function QuotationCommercialWorkspaceRowCard({
             <div className="cw-field">
               <span className="cw-field-label">Cost</span>
               {canManage ? (
-                <Input
-                  type="number"
-                  className="h-8 w-[96px] text-right text-xs"
-                  value={row.draft.cost}
-                  onChange={(e) => {
-                    const cost = Number.isFinite(Number(e.target.value))
-                      ? Number(e.target.value)
-                      : 0;
-                    const revenue = row.draft.revenue;
-                    onStageDraft({
-                      ...row.draft,
-                      mode: "cost_revenue",
-                      cost,
-                      gpValue: revenue - cost,
-                      gpPct: revenue > 0 ? ((revenue - cost) / revenue) * 100 : 0,
-                    });
-                  }}
-                />
+                <div className="flex flex-col items-end gap-0.5">
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      className="h-8 w-[96px] text-right text-xs"
+                      value={row.draft.cost}
+                      onChange={(e) => {
+                        const cost = Number.isFinite(Number(e.target.value))
+                          ? Number(e.target.value)
+                          : 0;
+                        const revenue = row.draft.revenue;
+                        onStageDraft({
+                          ...row.draft,
+                          mode: "cost_revenue",
+                          cost,
+                          gpValue: revenue - cost,
+                          gpPct: revenue > 0 ? ((revenue - cost) / revenue) * 100 : 0,
+                        });
+                      }}
+                    />
+                    <span className="text-[10px] font-semibold uppercase text-[#727d92]">
+                      {row.draft.costCurrency || "EGP"}
+                    </span>
+                  </div>
+                  {costDual.secondary ? (
+                    <span className="text-[10.5px] tabular-nums text-[#8b93a7]">
+                      {costDual.secondary}
+                    </span>
+                  ) : null}
+                </div>
               ) : (
-                <span className="text-[12px] font-semibold tabular-nums text-[#0d1220]">
-                  {fmtCell(row.costEgp)}
-                </span>
+                <div className="flex flex-col items-end gap-0.5">
+                  <span className="text-[12px] font-semibold tabular-nums text-[#0d1220]">
+                    {costDual.primary}
+                  </span>
+                  {costDual.secondary ? (
+                    <span className="text-[10.5px] tabular-nums text-[#8b93a7]">
+                      {costDual.secondary}
+                    </span>
+                  ) : null}
+                </div>
               )}
             </div>
           ) : null}

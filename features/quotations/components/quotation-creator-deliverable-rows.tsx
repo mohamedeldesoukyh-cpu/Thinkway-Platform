@@ -32,6 +32,7 @@ import {
   addQuotationItemOption,
   duplicateQuotationItems,
   removeQuotationItem,
+  resolveCommercialRateToEgp,
   returnQuotationItemToShortlist,
 } from "@/features/quotations/actions";
 import { useQuotationManualSave } from "@/features/quotations/components/quotation-manual-save";
@@ -60,7 +61,7 @@ import { formatDeliverableGpPct } from "@/lib/quotations/quotation-deliverable-c
 import {
   deliverablesMatchLineDraft,
   projectLineDraftOntoDeliverables,
-  resolveCreatorLinePriceLabel,
+  resolveCreatorLinePriceDualLabel,
 } from "@/lib/quotations/quotation-line-creator-commercial-sync";
 import type { AutosaveStatus } from "@/lib/hooks/use-debounced-autosave";
 import { cn } from "@/lib/utils";
@@ -197,6 +198,28 @@ export function QuotationCreatorDeliverableRows({
     return Array.from({ length: upper }, (_, i) => i + 1);
   }, [creatorDuplicateCount, displayOptionNumber]);
 
+  const syncEntryCurrency = useCallback(
+    (currency: string) => {
+      const next = (currency || "EGP").toUpperCase();
+      const current = (draft?.costCurrency || item.cost_currency || "EGP").toUpperCase();
+      if (next === current && (next === "EGP" || (draft?.fxRateToEgp ?? 0) > 0)) {
+        return;
+      }
+      if (next === "EGP") {
+        onDraftChange(item.id, { costCurrency: "EGP", fxRateToEgp: 1 });
+        return;
+      }
+      void resolveCommercialRateToEgp(next).then((res) => {
+        if (!res.ok || !res.data) return;
+        onDraftChange(item.id, {
+          costCurrency: next,
+          fxRateToEgp: res.data.rate,
+        });
+      });
+    },
+    [draft?.costCurrency, draft?.fxRateToEgp, item.cost_currency, item.id, onDraftChange]
+  );
+
   const handleDeliverableCommercialsDerived = useCallback(
     (commercials: {
       cost: number;
@@ -204,6 +227,7 @@ export function QuotationCreatorDeliverableRows({
       gpValue: number;
       gpPct: number;
       afPct: number;
+      costCurrency: string;
     }) => {
       onDraftChange(item.id, {
         mode: "cost_revenue",
@@ -212,9 +236,11 @@ export function QuotationCreatorDeliverableRows({
         gpPct: commercials.gpPct,
         gpValue: commercials.gpValue,
         afPct: commercials.afPct,
+        costCurrency: commercials.costCurrency,
       });
+      syncEntryCurrency(commercials.costCurrency);
     },
-    [item.id, onDraftChange]
+    [item.id, onDraftChange, syncEntryCurrency]
   );
 
   const lineFields = useQuotationLineFields(
@@ -223,7 +249,11 @@ export function QuotationCreatorDeliverableRows({
     (payload) => manualSave.registerLinePending(item.id, payload),
     manualSave.isLinePending(item.id) ? "pending" : "idle",
     manualSave.isLinePending(item.id),
-    manualSave.registerSaveFlush
+    manualSave.registerSaveFlush,
+    {
+      costCurrency: draft?.costCurrency ?? item.cost_currency,
+      fxRateToEgp: draft?.fxRateToEgp ?? item.fx_rate_to_egp,
+    }
   );
 
   const allowedCreatorPlatforms = useMemo(
@@ -334,6 +364,9 @@ export function QuotationCreatorDeliverableRows({
   }
 
   function applyDeliverable(key: string, next: QuotationDeliverable) {
+    if (next.cost_currency) {
+      syncEntryCurrency(next.cost_currency);
+    }
     lineFields.saveDeliverables(
       lineFields.deliverableDrafts.map((d) => (d.key === key ? { ...d, ...next } : d))
     );
@@ -635,37 +668,42 @@ export function QuotationCreatorDeliverableRows({
             </span>
 
             <span className="co-price">
-              <QuotationDeliverableCostDetails
-                deliverable={deliverable}
-                item={item}
-                draft={draft}
-                priceLabel={resolveCreatorLinePriceLabel(
-                  deliverable,
-                  draft,
-                  {
-                    currency: deliverable.cost_currency ?? costCurrency,
-                    fxRateToEgp: draft?.fxRateToEgp ?? item.fx_rate_to_egp ?? 1,
-                    fallbackAfPct: draft?.afPct ?? item.af_pct,
-                    allowLineMasterFallback: isFirst,
-                    preferLineMaster: isFirst && displayRows.length === 1,
-                    displayCurrency:
-                      displayCurrency ?? deliverable.cost_currency ?? costCurrency,
-                    displayFxRateToEgp:
-                      displayFxRateToEgp ??
-                      draft?.fxRateToEgp ??
-                      item.fx_rate_to_egp ??
-                      1,
-                  }
-                )}
-                gpPctLabel={formatDeliverableGpPct(
-                  deliverable,
-                  draft?.fxRateToEgp ?? item.fx_rate_to_egp ?? 1
-                )}
-                onApply={(next) => applyDeliverable(deliverable.key, next)}
-                onLiveChange={(next) => applyDeliverable(deliverable.key, next)}
-                defaultOpen={autoOpenEditors && isFirst}
-                priceLayout="stacked"
-              />
+              {(() => {
+                const entryCurrency = (
+                  deliverable.cost_currency ||
+                  draft?.costCurrency ||
+                  costCurrency ||
+                  "EGP"
+                ).toUpperCase();
+                const quotationCurrency = (displayCurrency || "EGP").toUpperCase();
+                // Entry currency on top; quotation CCY equivalent underneath.
+                const price = resolveCreatorLinePriceDualLabel(deliverable, draft, {
+                  currency: entryCurrency,
+                  fxRateToEgp: draft?.fxRateToEgp ?? item.fx_rate_to_egp ?? 1,
+                  fallbackAfPct: draft?.afPct ?? item.af_pct,
+                  allowLineMasterFallback: isFirst,
+                  preferLineMaster: isFirst && displayRows.length === 1,
+                  displayCurrency: quotationCurrency,
+                  displayFxRateToEgp: displayFxRateToEgp ?? 1,
+                });
+                return (
+                  <QuotationDeliverableCostDetails
+                    deliverable={deliverable}
+                    item={item}
+                    draft={draft}
+                    priceLabel={price.primary}
+                    priceSecondaryLabel={price.secondary}
+                    gpPctLabel={formatDeliverableGpPct(
+                      deliverable,
+                      draft?.fxRateToEgp ?? item.fx_rate_to_egp ?? 1
+                    )}
+                    onApply={(next) => applyDeliverable(deliverable.key, next)}
+                    onLiveChange={(next) => applyDeliverable(deliverable.key, next)}
+                    defaultOpen={autoOpenEditors && isFirst}
+                    priceLayout="stacked"
+                  />
+                );
+              })()}
             </span>
 
             {isFirst ? (

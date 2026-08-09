@@ -314,6 +314,8 @@ type Props = {
   onLiveChange?: (next: QuotationDeliverable) => void;
   /** When set, price and trigger render on one line (price first, then Cost details). */
   priceLabel?: string;
+  /** Quotation-currency equivalent under the entry-currency price. */
+  priceSecondaryLabel?: string | null;
   gpPctLabel?: string | null;
   /** Open cost details on mount (e.g. after adding a manual row). */
   defaultOpen?: boolean;
@@ -328,6 +330,7 @@ export function QuotationDeliverableCostDetails({
   onApply,
   onLiveChange,
   priceLabel,
+  priceSecondaryLabel,
   gpPctLabel,
   defaultOpen,
   priceLayout = "inline",
@@ -703,6 +706,11 @@ export function QuotationDeliverableCostDetails({
             ) : (
               <span className="dash text-[12.5px] text-[var(--text-4)]">—</span>
             )}
+            {priceSecondaryLabel ? (
+              <span className="price-fx-sub text-[10.5px] tabular-nums text-[var(--text-4,#8b93a7)]">
+                {priceSecondaryLabel}
+              </span>
+            ) : null}
             {trigger}
             {gpPctLabel ? (
               <span className="price-gp-sub text-[11px] tabular-nums text-[var(--text-4)]">
@@ -713,11 +721,20 @@ export function QuotationDeliverableCostDetails({
         ) : (
           <div className="inline-flex max-w-none flex-col items-end gap-0.5 whitespace-nowrap py-0.5">
             <div className="inline-flex items-center justify-end gap-2.5">
-              {priceLabel !== "—" ? (
-                <span className="text-sm font-semibold tabular-nums text-foreground">{priceLabel}</span>
-              ) : (
-                <span className="text-sm text-muted-foreground">—</span>
-              )}
+              <div className="inline-flex flex-col items-end gap-0.5">
+                {priceLabel !== "—" ? (
+                  <span className="text-sm font-semibold tabular-nums text-foreground">
+                    {priceLabel}
+                  </span>
+                ) : (
+                  <span className="text-sm text-muted-foreground">—</span>
+                )}
+                {priceSecondaryLabel ? (
+                  <span className="text-[10.5px] tabular-nums text-muted-foreground">
+                    {priceSecondaryLabel}
+                  </span>
+                ) : null}
+              </div>
               {trigger}
             </div>
             {gpPctLabel ? (

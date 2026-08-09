@@ -15,6 +15,11 @@ import {
   updateQuotationHeaderRecord,
 } from "./repositories/quotation-repository";
 import { rollupDeliverableCommercials } from "@/lib/quotations/quotation-deliverable-rollup";
+import {
+  deliverablesPatchForLineMasterSave,
+  shouldPreferDeliverableRollup,
+  stripDeliverableCommercialAmounts,
+} from "@/lib/quotations/quotation-line-commercial-ssot";
 
 export async function recomputeQuotationTotals(
   supabase: SupabaseClient<Database>,
@@ -78,14 +83,18 @@ export async function updateQuotationItemCommercials(
         fxRateToEgp: rate,
       })
     : null;
+  const useRolled = shouldPreferDeliverableRollup({
+    rolled,
+    masterRevenue: input.revenue,
+  });
 
   const line = normalizeCommercialLine({
-    mode: rolled ? "cost_revenue" : input.mode,
-    cost: rolled?.cost ?? input.cost,
+    mode: useRolled ? "cost_revenue" : input.mode,
+    cost: useRolled ? rolled!.cost : input.cost,
     costCurrency: input.cost_currency,
-    gpPct: rolled ? null : input.gp_pct,
-    revenue: rolled?.revenue ?? input.revenue,
-    gpValue: rolled ? null : input.gp_value,
+    gpPct: useRolled ? null : input.gp_pct,
+    revenue: useRolled ? rolled!.revenue : input.revenue,
+    gpValue: useRolled ? null : input.gp_value,
     afPct: input.af_pct,
     fxRateToEgp: rate,
   });
@@ -139,7 +148,27 @@ export async function updateQuotationItemCommercials(
         gp_value_egp: line.gp_value_egp,
         af_value_egp: line.af_value_egp,
       };
-  if (input.deliverables) patch.deliverables = input.deliverables;
+
+  // Cost Detail path: persist deliverables + rolled Master in one UPDATE.
+  // Line-Master path (Commercial Workspace / bulk): strip deliverable commercial
+  // amounts in the same UPDATE so remount cannot rebuild from stale Cost Detail.
+  if (input.deliverables !== undefined) {
+    patch.deliverables = useRolled
+      ? input.deliverables
+      : stripDeliverableCommercialAmounts(input.deliverables);
+  } else {
+    const { data: existingRow, error: existingError } = await supabase
+      .from("quotation_items")
+      .select("deliverables")
+      .eq("id", input.item_id)
+      .maybeSingle();
+    if (existingError) return { ok: false as const, message: existingError.message };
+    const cleared = deliverablesPatchForLineMasterSave(
+      (existingRow?.deliverables as unknown as QuotationDeliverable[] | null) ?? []
+    );
+    if (cleared) patch.deliverables = cleared;
+  }
+
   if (input.option_number !== undefined) {
     patch.option_number =
       input.option_number == null

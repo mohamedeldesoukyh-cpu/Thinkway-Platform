@@ -46,6 +46,46 @@ export function formatAmountInDisplayCurrency(
   return formatAmount(displayAmount, displayCurrency || "EGP");
 }
 
+export type DualCurrencyAmountLabel = {
+  /** Amount in the selected entry / line currency. */
+  primary: string;
+  /** Equivalent in quotation currency when it differs from the entry currency. */
+  secondary: string | null;
+};
+
+/**
+ * Creator line dual money:
+ * - primary = original entry currency (what was typed in Cost Detail)
+ * - secondary = quotation currency equivalent (header CCY), when different
+ *
+ * Examples:
+ * - Quote EGP, cost USD → "100 USD" / "5,000 EGP"
+ * - Quote USD, cost AED → "100 AED" / "27 USD"
+ */
+export function formatDualCurrencyAmountLabel(
+  amountInLineCurrency: number,
+  lineCurrency: string,
+  lineFxRateToEgp: number,
+  quotationCurrency: string,
+  quotationFxRateToEgp: number
+): DualCurrencyAmountLabel {
+  const entry = (lineCurrency || "EGP").toUpperCase();
+  const quote = (quotationCurrency || "EGP").toUpperCase();
+  const primary = formatAmount(amountInLineCurrency, entry);
+  if (entry === quote) {
+    return { primary, secondary: null };
+  }
+  return {
+    primary,
+    secondary: formatAmountInDisplayCurrency(
+      amountInLineCurrency,
+      lineFxRateToEgp,
+      quote,
+      quotationFxRateToEgp
+    ),
+  };
+}
+
 /** Format an EGP total in the quotation display currency (header/footer parity). */
 export function formatEgpTotalInDisplayCurrency(
   amountEgp: number,
@@ -129,36 +169,30 @@ export function projectLineDraftOntoDeliverables(
   });
 }
 
-/**
- * Client price label for a creator pricing row.
- * Prefer line Master when this is the sole pricing row (matches header totals SSOT).
- * Always render in the quotation display currency.
- */
-export function resolveCreatorLinePriceLabel(
+type CreatorLinePriceOptions = {
+  currency?: string;
+  fxRateToEgp?: number;
+  fallbackAfPct?: number | null;
+  /** When true, this row may show the full line Master total as fallback. */
+  allowLineMasterFallback?: boolean;
+  /** Prefer Master over deliverable breakdown (single pricing row). */
+  preferLineMaster?: boolean;
+  /** Quotation currency (header CCY) for secondary equivalent. */
+  displayCurrency?: string;
+  displayFxRateToEgp?: number;
+};
+
+function resolveCreatorLineClientAmount(
   deliverable: QuotationDeliverable,
   draft: QuotationRowDraft | undefined,
-  options?: {
-    currency?: string;
-    fxRateToEgp?: number;
-    fallbackAfPct?: number | null;
-    /** When true, this row may show the full line Master total as fallback. */
-    allowLineMasterFallback?: boolean;
-    /** Prefer Master over deliverable breakdown (single pricing row). */
-    preferLineMaster?: boolean;
-    displayCurrency?: string;
-    displayFxRateToEgp?: number;
-  }
-): string {
+  options?: CreatorLinePriceOptions
+): { amount: number; lineCurrency: string; lineFx: number } | "Free" | null {
   const lineCurrency =
     options?.currency ||
     deliverable.cost_currency ||
     draft?.costCurrency ||
     "EGP";
   const lineFx = options?.fxRateToEgp ?? draft?.fxRateToEgp ?? 1;
-  const displayCurrency = (options?.displayCurrency || lineCurrency || "EGP").toUpperCase();
-  const displayFx =
-    options?.displayFxRateToEgp ??
-    (displayCurrency === "EGP" ? 1 : lineFx);
 
   if (isDeliverableFreeForClient(deliverable)) return "Free";
 
@@ -172,13 +206,13 @@ export function resolveCreatorLinePriceLabel(
 
   if (preferMaster && draft) {
     const clientCost = lineDraftClientCost(draft);
-    if (clientCost <= 0) return "—";
-    return formatAmountInDisplayCurrency(
-      clientCost,
-      draft.fxRateToEgp > 0 ? draft.fxRateToEgp : lineFx,
-      displayCurrency,
-      displayFx
-    );
+    if (clientCost <= 0) return null;
+    // Prefer explicit Cost Detail / options currency so dual-label keeps entry CCY.
+    return {
+      amount: clientCost,
+      lineCurrency,
+      lineFx: draft.fxRateToEgp > 0 ? draft.fxRateToEgp : lineFx,
+    };
   }
 
   const fromDeliverable = formatDeliverableTotalClientPrice(deliverable, lineCurrency, lineFx, {
@@ -186,21 +220,99 @@ export function resolveCreatorLinePriceLabel(
     fallbackAfPct: options?.fallbackAfPct ?? draft?.afPct,
   });
   if (fromDeliverable === "—") {
-    if (!options?.allowLineMasterFallback || !draft) return "—";
+    if (!options?.allowLineMasterFallback || !draft) return null;
     const clientCost = lineDraftClientCost(draft);
-    if (clientCost <= 0) return "—";
-    return formatAmountInDisplayCurrency(
-      clientCost,
-      draft.fxRateToEgp > 0 ? draft.fxRateToEgp : lineFx,
-      displayCurrency,
-      displayFx
-    );
+    if (clientCost <= 0) return null;
+    return {
+      amount: clientCost,
+      lineCurrency,
+      lineFx: draft.fxRateToEgp > 0 ? draft.fxRateToEgp : lineFx,
+    };
   }
 
-  const clientCost = computeDeliverableTotalClientCost(
-    deliverable,
+  return {
+    amount: computeDeliverableTotalClientCost(
+      deliverable,
+      lineFx,
+      options?.fallbackAfPct ?? draft?.afPct
+    ),
+    lineCurrency,
     lineFx,
-    options?.fallbackAfPct ?? draft?.afPct
+  };
+}
+
+/**
+ * Client price for a creator pricing row.
+ * Primary = selected entry currency; secondary = quotation currency equivalent.
+ */
+export function resolveCreatorLinePriceDualLabel(
+  deliverable: QuotationDeliverable,
+  draft: QuotationRowDraft | undefined,
+  options?: CreatorLinePriceOptions
+): DualCurrencyAmountLabel {
+  const resolved = resolveCreatorLineClientAmount(deliverable, draft, options);
+  if (resolved === "Free") return { primary: "Free", secondary: null };
+  if (!resolved) return { primary: "—", secondary: null };
+
+  const quotationCurrency = (
+    options?.displayCurrency ||
+    resolved.lineCurrency ||
+    "EGP"
+  ).toUpperCase();
+  const quotationFx =
+    options?.displayFxRateToEgp ??
+    (quotationCurrency === "EGP" ? 1 : resolved.lineFx);
+
+  return formatDualCurrencyAmountLabel(
+    resolved.amount,
+    resolved.lineCurrency,
+    resolved.lineFx,
+    quotationCurrency,
+    quotationFx
   );
-  return formatAmountInDisplayCurrency(clientCost, lineFx, displayCurrency, displayFx);
+}
+
+/**
+ * Client price label for a creator pricing row (primary entry-currency string).
+ * Prefer line Master when this is the sole pricing row (matches header totals SSOT).
+ */
+export function resolveCreatorLinePriceLabel(
+  deliverable: QuotationDeliverable,
+  draft: QuotationRowDraft | undefined,
+  options?: CreatorLinePriceOptions
+): string {
+  return resolveCreatorLinePriceDualLabel(deliverable, draft, options).primary;
+}
+
+/** Vendor cost dual label (entry currency + quotation equivalent). */
+export function resolveCreatorLineCostDualLabel(
+  draft: QuotationRowDraft | undefined,
+  options?: {
+    cost?: number | null;
+    currency?: string;
+    fxRateToEgp?: number;
+    displayCurrency?: string;
+    displayFxRateToEgp?: number;
+  }
+): DualCurrencyAmountLabel {
+  const amount = Number(options?.cost ?? draft?.cost ?? 0);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { primary: "—", secondary: null };
+  }
+  const lineCurrency = (
+    options?.currency ||
+    draft?.costCurrency ||
+    "EGP"
+  ).toUpperCase();
+  const lineFx = options?.fxRateToEgp ?? draft?.fxRateToEgp ?? 1;
+  const quotationCurrency = (options?.displayCurrency || lineCurrency).toUpperCase();
+  const quotationFx =
+    options?.displayFxRateToEgp ?? (quotationCurrency === "EGP" ? 1 : lineFx);
+  return formatDualCurrencyAmountLabel(
+    amount,
+    lineCurrency,
+    lineFx,
+    quotationCurrency,
+    quotationFx
+  );
 }

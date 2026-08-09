@@ -14,8 +14,11 @@ import { draftToLinePending } from "@/lib/quotations/commercial-workspace/stage-
 import { hasPricedDeliverables } from "@/lib/quotations/quotation-deliverable-rollup";
 import {
   deliverablesPatchForLineMasterSave,
+  shouldPreferDeliverableRollup,
   stripDeliverableCommercialAmounts,
 } from "@/lib/quotations/quotation-line-commercial-ssot";
+import { applyCommercialWorkspaceBulkOp } from "@/lib/quotations/commercial-workspace/bulk-transforms";
+import { rollupDeliverableCommercials } from "@/lib/quotations/quotation-deliverable-rollup";
 import { linePendingDiffersFromItem } from "@/lib/quotations/quotation-line-pending-diff";
 import {
   computeLiveQuotationTotals,
@@ -242,4 +245,65 @@ test("downstream Preview document + Campaign Generate match saved Master", () =>
   assert.equal(seeds.length, 1);
   assert.equal(seeds[0]!.cost, 21000);
   assert.equal(seeds[0]!.revenue, 27300);
+});
+
+test("markup then cost-only deliverable flush must not wipe Master revenue", () => {
+  const before = itemWithStaleDeliverables({
+    cost: 1000,
+    revenue: 0,
+    gp_pct: 0,
+    gp_value: 0,
+    cost_currency: "USD",
+    fx_rate_to_egp: 50,
+    cost_egp: 50_000,
+    revenue_egp: 0,
+    gp_value_egp: 0,
+    deliverables: [
+      {
+        platform: "instagram",
+        type: "ig_reel",
+        quantity: 1,
+        cost: 1000,
+        revenue: null,
+        gp_pct: null,
+        gp_value: null,
+        af_pct: null,
+        commercial_input_mode: "cost_revenue",
+        cost_currency: "USD",
+      },
+    ],
+  });
+
+  const markedUp = applyCommercialWorkspaceBulkOp(draftFromQuotationItem(before), {
+    kind: "apply_markup_pct",
+    pct: 25,
+  });
+  assert.equal(markedUp.mode, "cost_revenue");
+  assert.equal(markedUp.revenue, 1250);
+
+  const costOnlyRollup = rollupDeliverableCommercials(before.deliverables, {
+    lineCurrency: "USD",
+    fxRateToEgp: 50,
+  });
+  assert.ok(costOnlyRollup);
+  assert.equal(costOnlyRollup!.cost, 1000);
+  assert.equal(costOnlyRollup!.revenue, 0);
+
+  assert.equal(
+    shouldPreferDeliverableRollup({
+      rolled: costOnlyRollup,
+      masterRevenue: markedUp.revenue,
+    }),
+    false
+  );
+
+  const afterSave = persistLineMasterSave(before, markedUp);
+  assert.equal(afterSave.cost, 1000);
+  assert.equal(afterSave.revenue, 1250);
+  assert.equal(afterSave.cost_egp, 50_000);
+  assert.equal(afterSave.revenue_egp, 62_500);
+
+  const live = computeLiveQuotationTotals([draftFromQuotationItem(afterSave)]);
+  assert.equal(live.totalCostEgp, 50_000);
+  assert.equal(live.totalRevenueEgp, 62_500);
 });

@@ -43,3 +43,19 @@ export function deliverablesPatchForLineMasterSave(
   if (!hasPricedDeliverables(list)) return null;
   return stripDeliverableCommercialAmounts(list);
 }
+
+/**
+ * Cost-only deliverable rows (cost entered, client price still 0) must not
+ * overwrite Master revenue after Commercial Workspace / markup edits.
+ */
+export function shouldPreferDeliverableRollup(input: {
+  rolled: { cost: number; revenue: number } | null;
+  masterRevenue?: number | null;
+}): boolean {
+  if (!input.rolled) return false;
+  const masterRevenue = Number(input.masterRevenue ?? 0);
+  if (Number.isFinite(masterRevenue) && masterRevenue > 0 && input.rolled.revenue <= 0) {
+    return false;
+  }
+  return true;
+}

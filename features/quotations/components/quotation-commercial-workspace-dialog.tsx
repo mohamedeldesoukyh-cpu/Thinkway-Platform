@@ -58,7 +58,10 @@ import {
 import { draftToLinePending } from "@/lib/quotations/commercial-workspace/stage-pending";
 import { cn } from "@/lib/utils";
 
-import { recordCommercialWorkspaceSaveAudit } from "@/features/quotations/actions";
+import {
+  recordCommercialWorkspaceSaveAudit,
+  resolveCommercialRateToEgp,
+} from "@/features/quotations/actions";
 import { useQuotationManualSave } from "@/features/quotations/components/quotation-manual-save";
 import { QuotationCommercialWorkspaceRowCard } from "@/features/quotations/components/quotation-commercial-workspace-row-card";
 import {
@@ -67,6 +70,7 @@ import {
   type QuotationRowDraft,
 } from "@/features/quotations/quotation-row-math";
 import type { QuotationItemRow } from "@/features/quotations/types";
+import { fromEgp } from "@/lib/commercial/fx-aggregation";
 import {
   sortQuotationCommercialSummaryRows,
   type QuotationCommercialSummarySortState,
@@ -85,10 +89,15 @@ const CS = {
   critical: "#DC2626",
 } as const;
 
-function fmtStat(n: number): string {
+function fmtStat(
+  amountEgp: number,
+  displayCurrency: string,
+  displayFxRateToEgp: number
+): string {
+  const amount = fromEgp(amountEgp, displayCurrency, displayFxRateToEgp);
   return `${new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 0,
-  }).format(Number.isFinite(n) ? n : 0)} EGP`;
+  }).format(Number.isFinite(amount) ? amount : 0)} ${(displayCurrency || "EGP").toUpperCase()}`;
 }
 
 function fmtGpPct(gp: number, revenue: number, rowGpPct: number): string {
@@ -192,6 +201,8 @@ export type QuotationCommercialWorkspaceDialogProps = {
   onDraftsMerge: (next: Record<string, QuotationRowDraft>) => void;
   canManage: boolean;
   triggerClassName?: string;
+  displayCurrency?: string;
+  displayFxRateToEgp?: number;
 };
 
 export function QuotationCommercialWorkspaceDialog({
@@ -202,6 +213,8 @@ export function QuotationCommercialWorkspaceDialog({
   onDraftsMerge,
   canManage,
   triggerClassName,
+  displayCurrency = "EGP",
+  displayFxRateToEgp = 1,
 }: QuotationCommercialWorkspaceDialogProps) {
   const manualSave = useQuotationManualSave();
   const [open, setOpen] = useState(false);
@@ -252,35 +265,65 @@ export function QuotationCommercialWorkspaceDialog({
     [items]
   );
 
+  const withResolvedFx = useCallback(async (draft: QuotationRowDraft) => {
+    const currency = (draft.costCurrency || "EGP").toUpperCase();
+    if (currency === "EGP") {
+      return { ...draft, costCurrency: "EGP", fxRateToEgp: 1 };
+    }
+    const rateRes = await resolveCommercialRateToEgp(currency);
+    if (!rateRes.ok || !rateRes.data) return draft;
+    return { ...draft, costCurrency: currency, fxRateToEgp: rateRes.data.rate };
+  }, []);
+
   const stageDraft = useCallback(
     (id: string, next: QuotationRowDraft, recordHistory = true) => {
-      if (recordHistory) {
-        setHistory((prev) =>
-          pushCommercialDraftHistory(prev, { ...drafts, [id]: next })
+      const prevCurrency = (drafts[id]?.costCurrency || "EGP").toUpperCase();
+      const nextCurrency = (next.costCurrency || "EGP").toUpperCase();
+      const apply = (resolved: QuotationRowDraft) => {
+        if (recordHistory) {
+          setHistory((prev) =>
+            pushCommercialDraftHistory(prev, { ...drafts, [id]: resolved })
+          );
+        }
+        onDraftChange(id, resolved);
+        manualSave.registerLinePending(
+          id,
+          draftToLinePending(resolved, itemsById.get(id)?.deliverables)
         );
+      };
+      if (prevCurrency !== nextCurrency) {
+        void withResolvedFx(next).then(apply);
+        return;
       }
-      onDraftChange(id, next);
-      manualSave.registerLinePending(
-        id,
-        draftToLinePending(next, itemsById.get(id)?.deliverables)
-      );
+      apply(next);
     },
-    [drafts, itemsById, manualSave, onDraftChange]
+    [drafts, itemsById, manualSave, onDraftChange, withResolvedFx]
   );
 
   const stageMany = useCallback(
     (patched: Record<string, QuotationRowDraft>) => {
-      const merged = { ...drafts, ...patched };
-      setHistory((prev) => pushCommercialDraftHistory(prev, merged));
-      onDraftsMerge(patched);
-      for (const [id, draft] of Object.entries(patched)) {
-        manualSave.registerLinePending(
-          id,
-          draftToLinePending(draft, itemsById.get(id)?.deliverables)
+      void (async () => {
+        const resolvedEntries = await Promise.all(
+          Object.entries(patched).map(async ([id, draft]) => {
+            const prevCurrency = (drafts[id]?.costCurrency || "EGP").toUpperCase();
+            const nextCurrency = (draft.costCurrency || "EGP").toUpperCase();
+            if (prevCurrency === nextCurrency) return [id, draft] as const;
+            return [id, await withResolvedFx(draft)] as const;
+          })
         );
-      }
+        const resolved = Object.fromEntries(resolvedEntries);
+        const merged = { ...drafts, ...resolved };
+        setHistory((prev) => pushCommercialDraftHistory(prev, merged));
+        onDraftsMerge(resolved);
+        for (const [id, draft] of Object.entries(resolved)) {
+          manualSave.registerLinePending(
+            id,
+            draftToLinePending(draft, itemsById.get(id)?.deliverables)
+          );
+        }
+      })();
     },
-    [drafts, itemsById, manualSave, onDraftsMerge]
+    [drafts, itemsById, manualSave, onDraftsMerge, withResolvedFx]
   );
 
   const handleUndo = () => {
@@ -425,9 +468,31 @@ export function QuotationCommercialWorkspaceDialog({
               <div className="cw-kpi-inner">
                 <p className="cw-kpi-title">Selection · {selectionRows.length}</p>
                 <div className="cw-stat-grid">
-                  <StatCard label="Revenue" value={fmtStat(selectionTotals.revenue)} />
-                  <StatCard label="Cost" value={fmtStat(selectionTotals.cost)} />
-                  <StatCard label="GP" value={fmtStat(selectionTotals.gp)} tone="green" />
+                  <StatCard
+                    label="Revenue"
+                    value={fmtStat(
+                      selectionTotals.revenue,
+                      displayCurrency,
+                      displayFxRateToEgp
+                    )}
+                  />
+                  <StatCard
+                    label="Cost"
+                    value={fmtStat(
+                      selectionTotals.cost,
+                      displayCurrency,
+                      displayFxRateToEgp
+                    )}
+                  />
+                  <StatCard
+                    label="GP"
+                    value={fmtStat(
+                      selectionTotals.gp,
+                      displayCurrency,
+                      displayFxRateToEgp
+                    )}
+                    tone="green"
+                  />
                   <StatCard
                     label="GP %"
                     value={fmtGpPct(selectionTotals.gp, selectionTotals.revenue, 0)}
@@ -440,9 +505,31 @@ export function QuotationCommercialWorkspaceDialog({
               <div className="cw-kpi-inner">
                 <p className="cw-kpi-title">Quotation · {rows.length}</p>
                 <div className="cw-stat-grid">
-                  <StatCard label="Revenue" value={fmtStat(quotationTotals.revenue)} />
-                  <StatCard label="Cost" value={fmtStat(quotationTotals.cost)} />
-                  <StatCard label="GP" value={fmtStat(quotationTotals.gp)} tone="green" />
+                  <StatCard
+                    label="Revenue"
+                    value={fmtStat(
+                      quotationTotals.revenue,
+                      displayCurrency,
+                      displayFxRateToEgp
+                    )}
+                  />
+                  <StatCard
+                    label="Cost"
+                    value={fmtStat(
+                      quotationTotals.cost,
+                      displayCurrency,
+                      displayFxRateToEgp
+                    )}
+                  />
+                  <StatCard
+                    label="GP"
+                    value={fmtStat(
+                      quotationTotals.gp,
+                      displayCurrency,
+                      displayFxRateToEgp
+                    )}
+                    tone="green"
+                  />
                   <StatCard
                     label="GP %"
                     value={fmtGpPct(quotationTotals.gp, quotationTotals.revenue, 0)}
@@ -685,6 +772,8 @@ export function QuotationCommercialWorkspaceDialog({
                   selected={selectedIds.has(row.itemId)}
                   canManage={canManage}
                   show={show}
+                  displayCurrency={displayCurrency}
+                  displayFxRateToEgp={displayFxRateToEgp}
                   onToggleSelected={() => {
                     setSelectedIds((prev) => {
                       const next = new Set(prev);
