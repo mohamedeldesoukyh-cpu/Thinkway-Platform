@@ -138,8 +138,10 @@ export function projectLineDraftOntoDeliverables(
       ? deliverables
       : [
           {
-            platform: "instagram",
-            type: "ig_reel",
+            platform: "",
+            type: "",
+            types: [],
+            type_lines: [{ type: "", quantity: 1 }],
             quantity: 1,
             cost: null,
             revenue: null,

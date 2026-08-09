@@ -27,7 +27,7 @@ const draft: QuotationRowDraft = {
 
 const emptyDeliverable: QuotationDeliverable = {
   platform: "instagram",
-  type: "ig_reel",
+  type: "instagram_reel",
   quantity: 1,
   cost: null,
   revenue: null,
@@ -37,11 +37,21 @@ const emptyDeliverable: QuotationDeliverable = {
   cost_currency: "EGP",
 };
 
+test("projectLineDraftOntoDeliverables leaves type empty when no deliverables yet", () => {
+  const projected = projectLineDraftOntoDeliverables([], draft);
+  assert.equal(projected.length, 1);
+  assert.equal(projected[0]!.type, "");
+  assert.deepEqual(projected[0]!.types, []);
+  assert.deepEqual(projected[0]!.type_lines, [{ type: "", quantity: 1 }]);
+  assert.equal(projected[0]!.cost, 10_000);
+  assert.equal(projected[0]!.revenue, 11_200);
+});
+
 test("projectLineDraftOntoDeliverables puts Master on first row and clears others", () => {
   const projected = projectLineDraftOntoDeliverables(
     [
       emptyDeliverable,
-      { ...emptyDeliverable, type: "ig_story", cost: 5000, revenue: 6000 },
+      { ...emptyDeliverable, type: "instagram_story", cost: 5000, revenue: 6000 },
     ],
     draft
   );

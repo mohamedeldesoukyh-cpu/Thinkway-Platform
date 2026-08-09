@@ -710,7 +710,8 @@ function buildCreatorGroup(
   const groupViews = resolveExportGroupAvgViews(group.items);
   const platformIcons = resolveExportGroupAllPlatforms(group.items);
   const platformMetrics = buildExportPlatformMetricRows(group.items);
-  // Prefer live platform CDN avatar (same source Discovery uses for platform photos).
+  // Prefer shortlist/workspace line avatar (same face as Discovery shortlist).
+  // Platform CDN is fallback only — first-platform photos often diverge.
   const platformAvatar =
     platformMetrics.find((row) => row.avatarUrl?.trim())?.avatarUrl?.trim() ||
     group.items
@@ -718,7 +719,7 @@ function buildCreatorGroup(
       .map((account) => account.avatar_url?.trim())
       .find((url) => Boolean(url)) ||
     null;
-  const avatarUrl = platformAvatar || profile.avatarUrl;
+  const avatarUrl = profile.avatarUrl || platformAvatar || null;
   const profileUrl =
     profile.profileUrl ||
     platformMetrics.find((row) => row.profileUrl?.trim())?.profileUrl?.trim() ||

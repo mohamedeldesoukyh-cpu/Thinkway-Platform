@@ -94,22 +94,21 @@ function resolveQuotationLineAvatarUrl(
   dnaDocument: CreatorDNADocument | undefined
 ): string | null {
   const dnaAvatar = resolveDnaCanonicalAvatarUrl(dnaDocument);
-
-  // Creator DNA is canonical for quotations — durable storage always wins.
-  if (dnaAvatar && (isUsableAvatarUrl(dnaAvatar) || isDurableStoredAvatarUrl(dnaAvatar))) {
-    return dnaAvatar;
-  }
-
   const enriched =
     creator?.enrichment_status === "enriched" || creator?.enrichment_status === "partial";
+  // Same ranking shortlist/unified browse uses (primary + platform + line).
+  // Do not let a stale DNA envelope replace the shortlist face.
   const primary = pickBestDisplayableAvatarUrl(...candidates);
+  if (primary && (isUsableAvatarUrl(primary) || isDurableStoredAvatarUrl(primary))) {
+    return primary;
+  }
 
   return (
     resolveCreatorAvatarWithDnaFallback({
       primaryAvatarUrl: primary,
       dnaAvatarUrl: dnaAvatar,
       preferEnrichedDna: Boolean(dnaAvatar) && (enriched || Boolean(primary && !isUsableAvatarUrl(primary))),
-    }) ?? dnaAvatar ?? null
+    }) ?? dnaAvatar ?? primary ?? null
   );
 }
 
@@ -606,23 +605,23 @@ export async function enrichQuotationItemsForWorkspace(
                 ? "enriched"
                 : "never";
 
-    // Same path as export: DNA durable storage wins, then ranked platform/line URLs.
+    // Align with shortlist/unified browse: influencer primary, then line/source, then platforms.
     const resolvedAvatar =
       resolveQuotationLineAvatarUrl(
         null,
         [
           meta?.primary_avatar_url,
-          ...(meta?.platform_avatar_urls ?? []),
           creatorProfileSource.avatarUrl,
           item.profile_image_url,
+          ...(meta?.platform_avatar_urls ?? []),
         ],
         dnaDocument
       ) ??
       pickBestDisplayableAvatarUrl(
         meta?.primary_avatar_url,
-        ...(meta?.platform_avatar_urls ?? []),
         creatorProfileSource.avatarUrl,
-        item.profile_image_url
+        item.profile_image_url,
+        ...(meta?.platform_avatar_urls ?? [])
       );
 
     const enrichedProfileSource = {
