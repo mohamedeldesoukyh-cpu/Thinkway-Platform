@@ -730,7 +730,9 @@ export async function addCreatorsToShortlistsV2(
       if (item.unified_id) existingUnifiedIds.add(item.unified_id);
     }
 
-    const toInsert: Array<Record<string, unknown>> = [];
+    type ShortlistItemInsert =
+      Database["public"]["Tables"]["discovery_shortlist_items"]["Insert"];
+    const toInsert: ShortlistItemInsert[] = [];
     const allInsertedRows: Array<{
       id: string;
       influencer_id: string | null;
