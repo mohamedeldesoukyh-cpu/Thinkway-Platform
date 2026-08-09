@@ -1941,39 +1941,30 @@
 }
 
 /*
- * CW avatars are 64px. Do not inherit shortlist 84px photo rules
- * (.shortlist-creator-exact-root … img { width/height: 84px }) — that clips
- * faces and can leave broken-img alt text (handles) peeking in the circle.
+ * CW avatars are a fixed 64px circle (inline size on the wrap).
+ * Fill the circle — never inherit shortlist 84px photo rules.
  */
-.commercial-workspace-dialog .cw-avatar-wrap {
-  position: relative;
-  flex-shrink: 0;
-  width: 64px;
-  height: 64px;
-  overflow: hidden;
-  border-radius: 50%;
-}
-
+.commercial-workspace-dialog .cw-avatar-wrap,
 .commercial-workspace-dialog .cw-avatar-wrap > a,
-.commercial-workspace-dialog .cw-avatar-wrap > div.overflow-hidden,
-.commercial-workspace-dialog .cw-avatar-wrap .size-\[64px\] {
-  display: block;
+.commercial-workspace-dialog .cw-avatar-wrap > div {
   width: 64px !important;
   height: 64px !important;
-  max-width: 64px;
-  max-height: 64px;
-  border-radius: 50%;
-  overflow: hidden;
+  max-width: 64px !important;
+  max-height: 64px !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  box-sizing: border-box;
 }
 
 .commercial-workspace-dialog .cw-avatar-wrap img {
-  width: 100% !important;
-  height: 100% !important;
-  max-width: 100%;
-  max-height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-  object-position: center;
+  width: 64px !important;
+  height: 64px !important;
+  max-width: none !important;
+  max-height: none !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  display: block;
 }
 
 .quotation-editor-rd4 .cg-head .quotation-cg-avatar-block .discovery-search-exact-photo-wrap > a img,

@@ -105,22 +105,25 @@ export function QuotationCommercialWorkspaceRowCard({
       <div className="cw-card-row">
         <Checkbox checked={selected} onCheckedChange={onToggleSelected} aria-label={`Select ${displayName}`} />
 
-        <div className="cw-avatar-wrap shrink-0">
+        <div
+          className="cw-avatar-wrap relative shrink-0 overflow-hidden rounded-full"
+          style={{ width: 64, height: 64 }}
+        >
           {profileUrl ? (
             <a
               href={profileUrl}
               target="_blank"
               rel="noopener noreferrer"
               aria-label={`Open ${displayName} profile`}
-              className="block rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0057FF]/40"
+              className="block size-full overflow-hidden rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0057FF]/40"
               onClick={(event) => event.stopPropagation()}
             >
               <CreatorAvatarImage
                 avatarUrl={profile.avatarUrl}
                 profileUrl={profileUrl}
                 alt={displayName}
-                sizeClassName="size-[64px]"
-                className="border-0 bg-[var(--surface,#f3f6fc)]"
+                sizeClassName="!size-full"
+                className="!size-full border-0 bg-[var(--surface,#f3f6fc)] [&_img]:!size-full [&_img]:object-cover [&_img]:object-center"
               />
             </a>
           ) : (
@@ -128,8 +131,8 @@ export function QuotationCommercialWorkspaceRowCard({
               avatarUrl={profile.avatarUrl}
               profileUrl={null}
               alt={displayName}
-              sizeClassName="size-[64px]"
-              className="border-0 bg-[var(--surface,#f3f6fc)]"
+              sizeClassName="!size-full"
+              className="!size-full border-0 bg-[var(--surface,#f3f6fc)] [&_img]:!size-full [&_img]:object-cover [&_img]:object-center"
             />
           )}
         </div>
