@@ -48,3 +48,18 @@ export function isPlatformSubset(
   if (selectedKeys.length !== availableKeys.size) return true;
   return selectedKeys.some((key) => !availableKeys.has(key));
 }
+
+/**
+ * Start a file download without navigating the current page.
+ * Avoids `beforeunload` / “Leave app?” when the workspace has unsaved edits.
+ */
+export function triggerBrowserDownload(href: string) {
+  if (typeof document === "undefined") return;
+  const anchor = document.createElement("a");
+  anchor.href = href;
+  anchor.download = "";
+  anchor.rel = "noopener";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+}

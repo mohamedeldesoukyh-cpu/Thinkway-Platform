@@ -50,7 +50,10 @@ import {
   quotationPreviewPath,
 } from "@/features/quotations/constants";
 import { DocumentCreatorSelectionDialog } from "@/features/discovery/document-preview/document-creator-selection-dialog";
-import { buildQuotationCreatorOptions } from "@/features/discovery/document-preview/build-creator-options";
+import {
+  buildQuotationCreatorOptions,
+  enrichQuotationCreatorOptionsWithLinkedPlatforms,
+} from "@/features/discovery/document-preview/build-creator-options";
 import { summarizeQuotationSelection } from "@/features/discovery/document-preview/document-selection-summary";
 import { AddCreatorsToQuotationButton } from "@/features/quotations/components/add-creators-to-quotation-modal";
 import type { QuotationCreatorsAddedResult } from "@/features/quotations/components/add-creators-to-quotation-modal";
@@ -672,10 +675,31 @@ function QuotationWorkspaceContent({
     setPreviewSelectionOpen(true);
   }, []);
 
-  const previewCreatorOptions = useMemo(
+  const basePreviewCreatorOptions = useMemo(
     () => buildQuotationCreatorOptions(detail.items),
     [detail.items]
   );
+  const [previewCreatorOptions, setPreviewCreatorOptions] = useState(
+    basePreviewCreatorOptions
+  );
+
+  useEffect(() => {
+    setPreviewCreatorOptions(basePreviewCreatorOptions);
+  }, [basePreviewCreatorOptions]);
+
+  useEffect(() => {
+    if (!previewSelectionOpen) return;
+    let cancelled = false;
+    void enrichQuotationCreatorOptionsWithLinkedPlatforms(
+      detail.items,
+      basePreviewCreatorOptions
+    ).then((enriched) => {
+      if (!cancelled) setPreviewCreatorOptions(enriched);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [previewSelectionOpen, detail.items, basePreviewCreatorOptions]);
 
   const summarizePreviewSelection = useCallback(
     (itemIds: string[]) =>

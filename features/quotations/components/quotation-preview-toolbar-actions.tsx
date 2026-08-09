@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -20,9 +20,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DocumentCreatorSelectionDialog } from "@/features/discovery/document-preview/document-creator-selection-dialog";
-import { buildQuotationCreatorOptions } from "@/features/discovery/document-preview/build-creator-options";
+import {
+  buildQuotationCreatorOptions,
+  enrichQuotationCreatorOptionsWithLinkedPlatforms,
+} from "@/features/discovery/document-preview/build-creator-options";
 import type { DocumentExportSelection } from "@/features/discovery/document-preview/document-export-selection";
-import { appendPlatformsQueryParam } from "@/features/discovery/document-preview/document-export-selection";
+import {
+  appendPlatformsQueryParam,
+  triggerBrowserDownload,
+} from "@/features/discovery/document-preview/document-export-selection";
 import { summarizeQuotationSelection } from "@/features/discovery/document-preview/document-selection-summary";
 import { buildExportHref } from "@/features/quotations/components/quotation-preview-downloads";
 import { QuotationToolbarButton } from "@/features/quotations/components/quotation-detail-primitives";
@@ -96,7 +102,28 @@ export function QuotationPreviewToolbarActions({
   const [selectionOpen, setSelectionOpen] = useState(false);
   const [pending, setPending] = useState<PendingAction | null>(null);
 
-  const creatorOptions = useMemo(() => buildQuotationCreatorOptions(items), [items]);
+  const baseCreatorOptions = useMemo(
+    () => buildQuotationCreatorOptions(items),
+    [items]
+  );
+  const [creatorOptions, setCreatorOptions] = useState(baseCreatorOptions);
+
+  useEffect(() => {
+    setCreatorOptions(baseCreatorOptions);
+  }, [baseCreatorOptions]);
+
+  useEffect(() => {
+    if (!selectionOpen) return;
+    let cancelled = false;
+    void enrichQuotationCreatorOptionsWithLinkedPlatforms(items, baseCreatorOptions).then(
+      (enriched) => {
+        if (!cancelled) setCreatorOptions(enriched);
+      }
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [selectionOpen, items, baseCreatorOptions]);
 
   const summarizeSelection = useCallback(
     (itemIds: string[]) => summarizeQuotationSelection(items, itemIds, currency ?? "EGP"),
@@ -133,7 +160,7 @@ export function QuotationPreviewToolbarActions({
       itemIds: ids,
       platforms,
     });
-    window.location.assign(href);
+    triggerBrowserDownload(href);
   }
 
   return (

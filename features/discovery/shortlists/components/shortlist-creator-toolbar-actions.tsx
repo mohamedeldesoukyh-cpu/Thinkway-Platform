@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { DocumentCreatorSelectionDialog } from "@/features/discovery/document-preview/document-creator-selection-dialog";
 import { buildShortlistCreatorOptions } from "@/features/discovery/document-preview/build-creator-options";
 import type { DocumentExportSelection } from "@/features/discovery/document-preview/document-export-selection";
+import { triggerBrowserDownload } from "@/features/discovery/document-preview/document-export-selection";
 import { summarizeShortlistSelection } from "@/features/discovery/document-preview/document-selection-summary";
 import { buildShortlistExportHref } from "@/features/discovery/shortlists/components/shortlist-preview-downloads";
 import { shortlistPreviewPath } from "@/features/discovery/shortlists/constants";
@@ -109,7 +110,7 @@ export function ShortlistCreatorToolbarActions({
       platforms,
       exportRevision,
     });
-    window.location.assign(href);
+    triggerBrowserDownload(href);
   }
 
   return (
