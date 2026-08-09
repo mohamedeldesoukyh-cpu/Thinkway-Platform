@@ -57,6 +57,26 @@ export function hasPricedDeliverables(
   });
 }
 
+/** Entry currency from the first priced deliverable row (Cost Detail selection). */
+export function resolvePricedEntryCurrency(
+  deliverables: QuotationDeliverable[] | null | undefined,
+  fallback = "EGP"
+): string {
+  for (const deliverable of deliverables ?? []) {
+    if (deliverable.free_for_client === true) {
+      return (deliverable.cost_currency || fallback || "EGP").toUpperCase();
+    }
+    if (deliverableLineCost(deliverable) > 0) {
+      return (deliverable.cost_currency || fallback || "EGP").toUpperCase();
+    }
+    const clientPrice = Number(deliverable.revenue ?? 0);
+    if (Number.isFinite(clientPrice) && clientPrice > 0) {
+      return (deliverable.cost_currency || fallback || "EGP").toUpperCase();
+    }
+  }
+  return (fallback || "EGP").toUpperCase();
+}
+
 /** Sum deliverable cost, client price, and blended GP% in the quotation line currency. */
 export function rollupDeliverableCommercials(
   deliverables: QuotationDeliverable[],

@@ -7,6 +7,8 @@ import {
   deliverablesMatchLineDraft,
   formatEgpTotalInDisplayCurrency,
   projectLineDraftOntoDeliverables,
+  resolveCreatorLineCostDualLabel,
+  resolveCreatorLinePriceDualLabel,
   resolveCreatorLinePriceLabel,
 } from "@/lib/quotations/quotation-line-creator-commercial-sync";
 import { hasPricedDeliverables } from "@/lib/quotations/quotation-deliverable-rollup";
@@ -52,7 +54,7 @@ test("projectLineDraftOntoDeliverables puts Master on first row and clears other
   assert.equal(deliverablesMatchLineDraft(projected, draft), true);
 });
 
-test("resolveCreatorLinePriceLabel prefers Master and display currency", () => {
+test("resolveCreatorLinePriceLabel prefers Master; dual shows quotation equivalent", () => {
   assert.equal(
     resolveCreatorLinePriceLabel(emptyDeliverable, draft, {
       allowLineMasterFallback: true,
@@ -80,15 +82,33 @@ test("resolveCreatorLinePriceLabel prefers Master and display currency", () => {
     "11,200 EGP"
   );
 
-  // EGP master → USD display (fx 52).
-  assert.equal(
-    resolveCreatorLinePriceLabel(emptyDeliverable, draft, {
-      preferLineMaster: true,
-      displayCurrency: "USD",
-      displayFxRateToEgp: 52,
-    }),
-    "215 USD"
-  );
+  // Entry EGP + quotation USD → primary entry, secondary quotation.
+  const dual = resolveCreatorLinePriceDualLabel(emptyDeliverable, draft, {
+    preferLineMaster: true,
+    displayCurrency: "USD",
+    displayFxRateToEgp: 52,
+  });
+  assert.equal(dual.primary, "11,200 EGP");
+  assert.equal(dual.secondary, "215 USD");
+});
+
+test("resolveCreatorLineCostDualLabel shows entry + quotation equivalent", () => {
+  const usdDraft = { ...draft, cost: 100, costCurrency: "USD", fxRateToEgp: 50 };
+  const dual = resolveCreatorLineCostDualLabel(usdDraft, {
+    displayCurrency: "EGP",
+    displayFxRateToEgp: 1,
+  });
+  assert.equal(dual.primary, "100 USD");
+  assert.equal(dual.secondary, "5,000 EGP");
+
+  // Quote USD, entry AED → AED on top, USD equivalent below.
+  const aedDraft = { ...draft, cost: 367, costCurrency: "AED", fxRateToEgp: 13.6 };
+  const dualQuoteUsd = resolveCreatorLineCostDualLabel(aedDraft, {
+    displayCurrency: "USD",
+    displayFxRateToEgp: 50,
+  });
+  assert.equal(dualQuoteUsd.primary, "367 AED");
+  assert.equal(dualQuoteUsd.secondary, "100 USD");
 });
 
 test("formatEgpTotalInDisplayCurrency matches header conversion", () => {

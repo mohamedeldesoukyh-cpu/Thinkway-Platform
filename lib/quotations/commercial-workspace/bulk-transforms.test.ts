@@ -45,13 +45,15 @@ describe("applyCommercialWorkspaceBulkOp", () => {
     assert.ok(next.revenue > next.cost);
   });
 
-  it("applies markup %", () => {
+  it("applies markup % then persists as cost_revenue", () => {
     const next = applyCommercialWorkspaceBulkOp(draft({ cost: 100 }), {
       kind: "apply_markup_pct",
       pct: 30,
     });
-    assert.equal(next.mode, "cost_markup_pct");
+    // Persist as cost_revenue so margin GP% is not re-read as markup later.
+    assert.equal(next.mode, "cost_revenue");
     assert.equal(next.revenue, 130);
+    assert.ok(next.gpPct > 0 && next.gpPct < 30);
   });
 
   it("applies discount % on revenue", () => {

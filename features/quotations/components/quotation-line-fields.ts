@@ -20,7 +20,10 @@ import {
   syncDeliverableFromTypeLines,
 } from "@/lib/quotations/quotation-deliverable-types";
 import type { DeliverableCommercialRollup } from "@/lib/quotations/quotation-deliverable-rollup";
-import { rollupDeliverableCommercials } from "@/lib/quotations/quotation-deliverable-rollup";
+import {
+  resolvePricedEntryCurrency,
+  rollupDeliverableCommercials,
+} from "@/lib/quotations/quotation-deliverable-rollup";
 import {
   createEmptyDeliverableDraft,
   ensureAtLeastOneDraft,
@@ -42,11 +45,15 @@ function hasServerLinkedPlatforms(item: QuotationItemRow): boolean {
 
 export function useQuotationLineFields(
   item: QuotationItemRow,
-  onDeliverableCommercialsDerived?: (commercials: DeliverableCommercialRollup) => void,
+  onDeliverableCommercialsDerived?: (
+    commercials: DeliverableCommercialRollup & { costCurrency: string }
+  ) => void,
   onLinePendingChange?: (payload: QuotationLinePendingPayload) => void,
   lineSaveStatus: AutosaveStatus = "idle",
   hasPendingChanges = false,
-  registerSaveFlush?: (flush: () => void) => () => void
+  registerSaveFlush?: (flush: () => void) => () => void,
+  /** Live line FX from shared draft (Cost Detail may change currency before remount). */
+  liveLineFx?: { costCurrency?: string; fxRateToEgp?: number }
 ) {
   const cacheKey = quotationCreatorPlatformCacheKey(item);
   const linkedPlatformsKey = (item.creator_profile_source?.linkedPlatforms ?? []).join(",");
@@ -191,14 +198,32 @@ export function useQuotationLineFields(
     hasPendingChanges,
   ]);
 
+  const lineCurrency = (
+    liveLineFx?.costCurrency ||
+    item.cost_currency ||
+    "EGP"
+  ).toUpperCase();
+  const lineFxRateToEgp =
+    lineCurrency === "EGP"
+      ? 1
+      : liveLineFx?.fxRateToEgp ?? item.fx_rate_to_egp ?? 1;
+
   const derivedCommercials = useMemo(() => {
     const deliverables = fromDeliverableDrafts(deliverableDrafts);
-    return rollupDeliverableCommercials(deliverables, {
-      lineCurrency: item.cost_currency || "EGP",
-      fxRateToEgp: item.fx_rate_to_egp ?? 1,
+    const entryCurrency = resolvePricedEntryCurrency(deliverables, lineCurrency);
+    const rolled = rollupDeliverableCommercials(deliverables, {
+      lineCurrency: entryCurrency,
+      fxRateToEgp:
+        entryCurrency === "EGP"
+          ? 1
+          : entryCurrency === lineCurrency
+            ? lineFxRateToEgp
+            : lineFxRateToEgp,
       lineAfPct: item.af_pct,
     });
-  }, [deliverableDrafts, item.cost_currency, item.fx_rate_to_egp, item.af_pct]);
+    if (!rolled) return null;
+    return { ...rolled, costCurrency: entryCurrency };
+  }, [deliverableDrafts, lineCurrency, lineFxRateToEgp, item.af_pct]);
 
   const onDeliverableCommercialsDerivedRef = useRef(onDeliverableCommercialsDerived);
   onDeliverableCommercialsDerivedRef.current = onDeliverableCommercialsDerived;
@@ -217,6 +242,7 @@ export function useQuotationLineFields(
       derivedCommercials.gpPct,
       derivedCommercials.afValue,
       derivedCommercials.afPct,
+      derivedCommercials.costCurrency,
     ].join("|");
     if (lastDerivedCommercialsKeyRef.current === key) return;
     lastDerivedCommercialsKeyRef.current = key;
@@ -240,20 +266,32 @@ export function useQuotationLineFields(
       const withMinimum = ensureAtLeastOneDraft(sanitized, item, allowed);
       setDeliverableDrafts(withMinimum);
       const deliverables = fromDeliverableDrafts(withMinimum);
+      const entryCurrency = resolvePricedEntryCurrency(deliverables, lineCurrency);
+      const entryFx =
+        entryCurrency === "EGP"
+          ? 1
+          : entryCurrency === lineCurrency
+            ? lineFxRateToEgp
+            : lineFxRateToEgp;
       const rolled = rollupDeliverableCommercials(deliverables, {
-        lineCurrency: item.cost_currency || "EGP",
-        fxRateToEgp: item.fx_rate_to_egp ?? 1,
+        lineCurrency: entryCurrency,
+        fxRateToEgp: entryFx,
         lineAfPct: item.af_pct,
       });
-      const payload: QuotationLinePendingPayload = {
-        deliverables,
-        revenue: rolled?.revenue ?? item.revenue,
-        cost: rolled?.cost ?? item.cost,
-        gp_pct: rolled?.gpPct ?? item.gp_pct,
-        gp_value: rolled?.gpValue ?? item.gp_value,
-        af_pct: rolled?.afPct ?? item.af_pct,
-        mode: rolled ? ("cost_revenue" as const) : undefined,
-      };
+      // When deliverables are unpriced, only stage deliverable JSON.
+      // Never overwrite staged Master cost/revenue with persisted zeros (Save wipe bug).
+      const payload: QuotationLinePendingPayload = rolled
+        ? {
+            deliverables,
+            revenue: rolled.revenue,
+            cost: rolled.cost,
+            cost_currency: entryCurrency,
+            gp_pct: rolled.gpPct,
+            gp_value: rolled.gpValue,
+            af_pct: rolled.afPct,
+            mode: "cost_revenue",
+          }
+        : { deliverables };
 
       localDraftDirtyRef.current = false;
 
@@ -262,10 +300,24 @@ export function useQuotationLineFields(
       }
 
       onLinePendingChange?.(payload);
-      if (rolled) onDeliverableCommercialsDerived?.(rolled);
+      if (rolled) {
+        onDeliverableCommercialsDerived?.({ ...rolled, costCurrency: entryCurrency });
+      }
       return withMinimum;
     },
-    [onLinePendingChange, onDeliverableCommercialsDerived, item.revenue, item.cost, item.gp_pct, item.gp_value, item.af_pct, item.cost_currency, item.fx_rate_to_egp, item.platform, platformSelectOptions]
+    [
+      onLinePendingChange,
+      onDeliverableCommercialsDerived,
+      item.revenue,
+      item.cost,
+      item.gp_pct,
+      item.gp_value,
+      item.af_pct,
+      item.platform,
+      platformSelectOptions,
+      lineCurrency,
+      lineFxRateToEgp,
+    ]
   );
 
   const flushScheduledCommit = useCallback(() => {

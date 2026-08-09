@@ -15,6 +15,9 @@ type Props = {
   onDraftsMerge: (next: Record<string, QuotationRowDraft>) => void;
   canManage: boolean;
   triggerClassName?: string;
+  /** Quotation header currency for KPI / dual-cost display. */
+  displayCurrency?: string;
+  displayFxRateToEgp?: number;
 };
 
 /**
@@ -31,6 +34,8 @@ export function QuotationCommercialEntry(props: Props) {
         onDraftsMerge={props.onDraftsMerge}
         canManage={props.canManage}
         triggerClassName={props.triggerClassName}
+        displayCurrency={props.displayCurrency}
+        displayFxRateToEgp={props.displayFxRateToEgp}
       />
     );
   }
