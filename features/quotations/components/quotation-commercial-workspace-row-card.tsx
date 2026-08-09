@@ -4,6 +4,7 @@ import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
 import { InterestChips } from "@/features/discovery/components/discovery-interest-chips";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { QuotationDecimalInput } from "@/features/quotations/components/quotation-decimal-input";
 import { COMMERCIAL_INPUT_MODE_LABELS } from "@/lib/domains/commercial/quotation-constants";
 import type { CommercialInputMode } from "@/lib/commercial/commercial-engine";
 import { COMMERCIAL_CURRENCIES } from "@/lib/commercial/fx-aggregation";
@@ -104,35 +105,33 @@ export function QuotationCommercialWorkspaceRowCard({
       <div className="cw-card-row">
         <Checkbox checked={selected} onCheckedChange={onToggleSelected} aria-label={`Select ${displayName}`} />
 
-        <div className="shortlist-creator-exact-root shrink-0">
-          <div className="discovery-search-exact-photo-wrap">
-            {profileUrl ? (
-              <a
-                href={profileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`Open ${displayName} profile`}
-                className="block rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0057FF]/40"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <CreatorAvatarImage
-                  avatarUrl={profile.avatarUrl}
-                  profileUrl={profileUrl}
-                  alt={displayName}
-                  sizeClassName="size-[64px]"
-                  className="border-0 bg-[var(--surface,#f3f6fc)]"
-                />
-              </a>
-            ) : (
+        <div className="cw-avatar-wrap shrink-0">
+          {profileUrl ? (
+            <a
+              href={profileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Open ${displayName} profile`}
+              className="block rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0057FF]/40"
+              onClick={(event) => event.stopPropagation()}
+            >
               <CreatorAvatarImage
                 avatarUrl={profile.avatarUrl}
-                profileUrl={null}
+                profileUrl={profileUrl}
                 alt={displayName}
                 sizeClassName="size-[64px]"
                 className="border-0 bg-[var(--surface,#f3f6fc)]"
               />
-            )}
-          </div>
+            </a>
+          ) : (
+            <CreatorAvatarImage
+              avatarUrl={profile.avatarUrl}
+              profileUrl={null}
+              alt={displayName}
+              sizeClassName="size-[64px]"
+              className="border-0 bg-[var(--surface,#f3f6fc)]"
+            />
+          )}
         </div>
 
         <div className="cg-id min-w-[140px] max-w-[220px] shrink-0 self-center">
@@ -208,14 +207,10 @@ export function QuotationCommercialWorkspaceRowCard({
               {canManage ? (
                 <div className="flex flex-col items-end gap-0.5">
                   <div className="flex items-center gap-1">
-                    <Input
-                      type="number"
-                      className="h-8 w-[96px] text-right text-xs"
+                    <QuotationDecimalInput
+                      className="h-8 w-[120px] text-right text-xs tabular-nums"
                       value={row.draft.cost}
-                      onChange={(e) => {
-                        const cost = Number.isFinite(Number(e.target.value))
-                          ? Number(e.target.value)
-                          : 0;
+                      onCommit={(cost) => {
                         const revenue = row.draft.revenue;
                         onStageDraft({
                           ...row.draft,
@@ -255,17 +250,15 @@ export function QuotationCommercialWorkspaceRowCard({
             <div className="cw-field">
               <span className="cw-field-label">Revenue</span>
               {canManage ? (
-                <Input
-                  type="number"
-                  className="h-8 w-[96px] text-right text-xs"
+                <QuotationDecimalInput
+                  className="h-8 w-[120px] text-right text-xs tabular-nums"
                   value={row.draft.revenue}
-                  onChange={(e) => {
-                    const revenue = Number(e.target.value);
+                  onCommit={(revenue) => {
                     onStageDraft({
                       ...row.draft,
                       mode: "cost_revenue",
-                      revenue: Number.isFinite(revenue) ? revenue : 0,
-                      gpValue: (Number.isFinite(revenue) ? revenue : 0) - row.draft.cost,
+                      revenue,
+                      gpValue: revenue - row.draft.cost,
                       gpPct:
                         revenue > 0
                           ? ((revenue - row.draft.cost) / revenue) * 100

@@ -125,7 +125,7 @@ test("buildQuotationCreatorProfileSource keeps profile-source country over empty
   assert.deepEqual(built.countryCodes, ["EG"]);
 });
 
-test("mergeQuotationItemIntoProfileSource does not resurrect expired line snapshot when enriched avatar is null", () => {
+test("mergeQuotationItemIntoProfileSource keeps expired line snapshot for avatar proxy when enriched avatar is null", () => {
   const merged = mergeQuotationItemIntoProfileSource(
     {
       displayName: "abeer_kittchen",
@@ -135,5 +135,6 @@ test("mergeQuotationItemIntoProfileSource does not resurrect expired line snapsh
     },
     item({ profile_image_url: expiredCdn })
   );
-  assert.equal(merged.avatarUrl, null);
+  // Browser proxy still tries CDN src + OpenGraph; dropping caused silhouettes.
+  assert.equal(merged.avatarUrl, expiredCdn);
 });

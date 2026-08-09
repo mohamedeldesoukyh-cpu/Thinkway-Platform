@@ -9,11 +9,7 @@ import {
   creatorAvatarBrowserDisplayUrl,
   normalizeThinkwayStoredAvatarUrl,
 } from "@/lib/performance/creator-avatar";
-import {
-  isUsableAvatarUrl,
-  isDisplayableAvatarUrl,
-} from "@/lib/performance/avatar-sync-policy";
-import { isDurableStoredAvatarUrl } from "@/lib/creators/dna-avatar";
+import { isDisplayableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
 import { formatCreatorDisplayName } from "@/lib/text/decode-html-entities";
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 
@@ -78,9 +74,10 @@ function resolveQuotationDisplayAvatarUrl(
 
 function quotationItemSnapshotAvatar(item: QuotationItemRow): string | null {
   const url = normalizeThinkwayStoredAvatarUrl(item.profile_image_url);
-  if (!url) return null;
-  if (isDurableStoredAvatarUrl(url) || isUsableAvatarUrl(url)) return url;
-  return null;
+  // Keep expired social CDN URLs — `/api/creators/avatar` retries src then OpenGraph.
+  // Usable-only filtering dropped them and caused first-paint silhouettes.
+  if (!url || !isDisplayableAvatarUrl(url)) return null;
+  return url;
 }
 
 /** Fill gaps from quotation line snapshot without overriding enriched unified fields. */
