@@ -1,20 +1,14 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `develop` / `main` @ `f016d8d7`  
-**Focus:** Showcase PPTX = Preview HTML (pixel parity) — SHIPPED
+**Branch:** `develop` / `main` @ `7d079ff6`  
+**Focus:** Showcase PPTX Arabic fonts + clickable hotspots — shipping
 
-## SHIPPED — Showcase PPTX HTML parity
+## SHIPPED — Showcase PPTX HTML parity + Arabic/links
 
-- Commit: `f016d8d7`
-- Prod: `dpl_CYP2PQgMPk2ZKiVCPzZvyC2QZobm` → https://app.thinkwaymedia.com
-- Showcase/Pitch PPTX now screenshots the **same HTML pages** as Preview/PDF (no pptxgen drift)
-- Detailed PPTX unchanged (widescreen pptxgen)
+- `f016d8d7` — PPTX from Preview HTML screenshots
+- `7d079ff6` — Noto Sans Arabic + transparent hyperlink hotspots (avatar, pubs)
+- Detailed PPTX unchanged
 
-## SHIPPED — Showcase metric cards (icons + K/M)
+## Prior
 
-- Commit: `c321844d`
-- Engagement: platform avatars + ER%; Followers cards: header + icon + K/M
-
-## Prior closed
-
-**Apify Manual Refresh:** CLOSED · Production PASS (`937dd503`)
+Metric cards K/M + icons (`c321844d`)
