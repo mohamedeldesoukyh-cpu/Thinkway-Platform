@@ -1,13 +1,13 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `develop`  
-**Focus:** Showcase PPTX = Preview HTML (pixel parity) — shipping
+**Branch:** `develop` / `main` @ `f016d8d7`  
+**Focus:** Showcase PPTX = Preview HTML (pixel parity) — SHIPPED
 
-## IN PROGRESS — Showcase PPTX HTML parity
+## SHIPPED — Showcase PPTX HTML parity
 
-- Root cause: pptxgenjs rebuild always drifted from Preview/PDF HTML
-- Fix: Showcase/Pitch PPTX now screenshots the same HTML pages as Preview/PDF
-- Files: `quotation-pptx-from-html.ts` · `renderHtmlPagesToImages` in `vendor-io-pdf.ts`
+- Commit: `f016d8d7`
+- Prod: `dpl_CYP2PQgMPk2ZKiVCPzZvyC2QZobm` → https://app.thinkwaymedia.com
+- Showcase/Pitch PPTX now screenshots the **same HTML pages** as Preview/PDF (no pptxgen drift)
 - Detailed PPTX unchanged (widescreen pptxgen)
 
 ## SHIPPED — Showcase metric cards (icons + K/M)
