@@ -1940,11 +1940,46 @@
   margin-top: 5px;
 }
 
-.commercial-workspace-dialog .discovery-search-exact-photo-wrap > a img,
-.commercial-workspace-dialog .discovery-search-exact-photo-wrap > div.overflow-hidden img {
+/*
+ * CW avatars are 64px. Do not inherit shortlist 84px photo rules
+ * (.shortlist-creator-exact-root … img { width/height: 84px }) — that clips
+ * faces and can leave broken-img alt text (handles) peeking in the circle.
+ */
+.commercial-workspace-dialog .cw-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
   width: 64px;
   height: 64px;
+  overflow: hidden;
   border-radius: 50%;
+}
+
+.commercial-workspace-dialog .cw-avatar-wrap > a,
+.commercial-workspace-dialog .cw-avatar-wrap > div.overflow-hidden,
+.commercial-workspace-dialog .cw-avatar-wrap .size-\[64px\] {
+  display: block;
+  width: 64px !important;
+  height: 64px !important;
+  max-width: 64px;
+  max-height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.commercial-workspace-dialog .cw-avatar-wrap img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.quotation-editor-rd4 .cg-head .quotation-cg-avatar-block .discovery-search-exact-photo-wrap > a img,
+.quotation-editor-rd4 .cg-head .quotation-cg-avatar-block .discovery-search-exact-photo-wrap > div.overflow-hidden img {
+  object-fit: cover;
+  object-position: center;
 }
 
 .commercial-workspace-dialog .cw-card-row--dimmed {

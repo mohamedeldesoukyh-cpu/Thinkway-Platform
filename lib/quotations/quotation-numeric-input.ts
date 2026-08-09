@@ -31,9 +31,12 @@ export function parseUnitsInput(value: string): number {
   return Number.isFinite(n) && n > 0 ? n : 1;
 }
 
+/** Grouped finance display for editable amount fields (e.g. `666,666.6`). */
 export function formatNumDisplay(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return "";
-  return String(value);
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 6,
+  }).format(value);
 }
 
 /** Insert sanitized paste text at the current caret/selection. */
