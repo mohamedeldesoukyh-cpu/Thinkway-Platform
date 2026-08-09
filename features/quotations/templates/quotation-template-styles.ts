@@ -307,9 +307,17 @@ export const QUOTATION_TEMPLATE_STYLES = `
     box-shadow:0 1px 2px rgba(16,24,40,.04);
   }
   .sc-metric .ml{font-size:9.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin:0 0 6px;}
+  .sc-metric .ml-with-icon{display:inline-flex; align-items:center; gap:6px;}
+  .sc-metric .ml-with-icon .quotation-platform-icon,
+  .sc-metric .ml-with-icon .quotation-platform-icon-fallback{width:14px; height:14px;}
   .sc-metric .mv{font-size:20px; font-weight:800; letter-spacing:-.4px; color:var(--navy); margin:0; font-variant-numeric:tabular-nums;}
   .sc-metric .mv.accent{color:var(--blue);}
-  .sc-metric .mv.compact{font-size:13px; letter-spacing:-.2px; line-height:1.25;}
+  .sc-metric .mv.engagement{font-size:14px; letter-spacing:-.2px; line-height:1.35;}
+  .sc-er-list{display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px;}
+  .sc-er-item{display:inline-flex; align-items:center; gap:5px; white-space:nowrap;}
+  .sc-er-item .quotation-platform-icon,
+  .sc-er-item .quotation-platform-icon-fallback{width:16px; height:16px;}
+  .sc-er-pct{font-weight:800; color:var(--navy); font-variant-numeric:tabular-nums;}
   .sc-sub{font-size:10.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--blue); margin:0 0 8px;}
   .pubs, .showcase-pubs-grid{
     display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:0 0 12px;

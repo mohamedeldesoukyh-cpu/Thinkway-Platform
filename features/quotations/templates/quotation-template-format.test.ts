@@ -4,6 +4,7 @@ import { test } from "node:test";
 import {
   formatQuotationCurrencyShort,
   formatQuotationCurrencySymbolFirst,
+  formatQuotationCardFollowers,
   formatQuotationEngagementRate,
   formatQuotationFullNumber,
   formatQuotationMoneyDisplay,
@@ -32,4 +33,15 @@ test("quotation display numbers round to whole values", () => {
     }),
     "IG 3.20% · TT 5.10%"
   );
+});
+
+test("showcase metric card followers use compact K/M", () => {
+  assert.equal(formatQuotationCardFollowers(226_845), "226.8K");
+  assert.equal(formatQuotationCardFollowers("226,845"), "226.8K");
+  assert.equal(formatQuotationCardFollowers(501_400), "501.4K");
+  assert.equal(formatQuotationCardFollowers(1_500_000), "1.5M");
+  assert.equal(formatQuotationCardFollowers(12_000_000), "12M");
+  assert.equal(formatQuotationCardFollowers(10_000), "10K");
+  assert.equal(formatQuotationCardFollowers(850), "850");
+  assert.equal(formatQuotationCardFollowers("—"), "—");
 });

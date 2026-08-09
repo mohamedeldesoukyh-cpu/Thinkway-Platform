@@ -159,6 +159,9 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(showcaseHtml.includes("Recent publications"));
   assert.ok(showcaseHtml.includes("Proposed deliverable"));
   assert.ok(showcaseHtml.includes("sc-metric"));
+  assert.ok(showcaseHtml.includes("sc-er-list"));
+  assert.ok(showcaseHtml.includes(">10K<"));
+  assert.ok(showcaseHtml.includes("ml-with-icon"));
   assert.ok(showcaseHtml.includes("sc-fee-pill") || showcaseHtml.includes("EGP"));
   assert.ok(!showcaseHtml.includes("Terms &amp; conditions"));
   assert.ok(!showcaseHtml.includes('id="section-commercial"'));

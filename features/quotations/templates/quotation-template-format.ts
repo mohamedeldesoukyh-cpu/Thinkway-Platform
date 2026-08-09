@@ -36,8 +36,8 @@ export function quotationPlatformShortLabel(platform: string): string {
 }
 
 /**
- * One Engagement card value listing every platform ER
- * (e.g. "IG 3.20% · TT 5.10%"). Falls back to combined ER.
+ * One Engagement card value listing every platform ER as plain text
+ * (e.g. "IG 3.20% · TT 5.10%"). Prefer icon rendering in HTML/PPTX cards.
  */
 export function formatShowcaseEngagementCardValue(input: {
   engagement: string;
@@ -51,6 +51,28 @@ export function formatShowcaseEngagementCardValue(input: {
     );
   if (parts.length > 0) return parts.join(" · ");
   return input.engagement.trim() || "—";
+}
+
+/** Showcase metric-card followers — compact K/M (e.g. 226.8K, 1.5M). */
+export function formatQuotationCardFollowers(
+  value: number | string | null | undefined
+): string {
+  if (value == null) return "—";
+  if (typeof value === "string") {
+    const raw = value.trim();
+    if (!raw || raw === "—") return "—";
+    const n = Number(raw.replace(/,/g, "").replace(/[^\d.-]/g, ""));
+    if (!Number.isFinite(n) || n < 0) return "—";
+    return formatQuotationCardFollowers(n);
+  }
+  if (!Number.isFinite(value) || value < 0) return "—";
+  if (value >= 1_000_000) {
+    return `${(value / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  }
+  if (value >= 1_000) {
+    return `${(value / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
+  }
+  return String(Math.round(value));
 }
 
 /** Short reach/follower label (e.g. 16M, 541K) — whole numbers only. */

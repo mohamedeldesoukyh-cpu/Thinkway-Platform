@@ -9,7 +9,7 @@ import type {
 } from "@/features/quotations/export/quotation-document";
 import { isCreatorDeckTemplate, isLumpSumPricingTemplate, isPitchTemplate, isShowcaseTemplate } from "@/features/quotations/export/quotation-template";
 import {
-  formatShowcaseEngagementCardValue,
+  formatQuotationCardFollowers,
   showcaseInitialsFromHandle,
 } from "@/features/quotations/templates/quotation-template-format";
 import { buildQuotationTemplatePayload } from "@/features/quotations/templates/quotation-template-payload";
@@ -1629,38 +1629,126 @@ function drawShowcaseMetricCards(
   creator: ReturnType<typeof buildQuotationTemplatePayload>["showcaseCreators"][number],
   y: number
 ): number {
-  const engagementValue = formatShowcaseEngagementCardValue({
-    engagement: creator.engagement,
-    platformMetrics: creator.platformMetrics,
-  });
-  const cards: Array<{ label: string; value: string; accent?: boolean; compact?: boolean }> = [
-    { label: "FOLLOWERS", value: creator.followers, accent: true },
+  type MetricCard =
+    | { kind: "followers"; value: string; accent?: boolean }
+    | {
+        kind: "engagement";
+        rows: Array<{ platform: string; engagement: string }>;
+        fallback: string;
+      }
+    | { kind: "platformFollowers"; platform: string; value: string };
+
+  const engagementRows = creator.platformMetrics.filter(
+    (row) => row.engagement.trim() && row.engagement.trim() !== "—"
+  );
+  const cards: MetricCard[] = [
     {
-      label: "ENGAGEMENT",
-      value: engagementValue,
-      compact: engagementValue.includes(" · "),
+      kind: "followers",
+      value: formatQuotationCardFollowers(creator.followers),
+      accent: true,
+    },
+    {
+      kind: "engagement",
+      rows: engagementRows.map((row) => ({
+        platform: row.platform,
+        engagement: row.engagement.trim(),
+      })),
+      fallback: creator.engagement.trim() || "—",
     },
   ];
+  const seenPlatforms = new Set<string>();
   for (const metric of creator.platformMetrics) {
     if (cards.length >= 4) break;
-    const label = getReportPlatformIconTitle(metric.platform).toUpperCase();
-    if (cards.some((card) => card.label === label)) continue;
-    cards.push({ label, value: metric.followers });
+    const key = metric.platform.trim().toLowerCase();
+    if (!key || seenPlatforms.has(key)) continue;
+    seenPlatforms.add(key);
+    cards.push({
+      kind: "platformFollowers",
+      platform: metric.platform,
+      value: formatQuotationCardFollowers(metric.followers),
+    });
   }
+
   const gap = 0.14;
+  const cardH = 0.78;
   const cardW = (CONTENT_W - gap * (cards.length - 1)) / cards.length;
+  const iconSize = 0.16;
+
   cards.forEach((card, index) => {
     const x = MARGIN_X + index * (cardW + gap);
     slide.addShape("roundRect", {
       x,
       y,
       w: cardW,
-      h: 0.7,
+      h: cardH,
       fill: { color: WHITE },
       line: { color: HAIR, width: 1 },
       rectRadius: 0.1,
     });
-    slide.addText(card.label, {
+
+    if (card.kind === "followers") {
+      slide.addText("FOLLOWERS", {
+        x: x + 0.12,
+        y: y + 0.08,
+        w: cardW - 0.24,
+        h: 0.18,
+        fontFace: FONT_UI,
+        fontSize: 9,
+        bold: true,
+        color: MUTED,
+        charSpacing: 1,
+      });
+      slide.addText(card.value, {
+        x: x + 0.12,
+        y: y + 0.3,
+        w: cardW - 0.24,
+        h: 0.38,
+        fontFace: FONT_UI,
+        fontSize: 18,
+        bold: true,
+        color: card.accent ? BLUE : TITLE_INK,
+        valign: "middle",
+      });
+      return;
+    }
+
+    if (card.kind === "platformFollowers") {
+      slide.addText("FOLLOWERS", {
+        x: x + 0.12,
+        y: y + 0.08,
+        w: cardW - 0.36,
+        h: 0.18,
+        fontFace: FONT_UI,
+        fontSize: 9,
+        bold: true,
+        color: MUTED,
+        charSpacing: 1,
+      });
+      addPlatformIconBadges(
+        slide,
+        [card.platform],
+        x + cardW - 0.12 - iconSize,
+        y + 0.08,
+        1,
+        null,
+        iconSize
+      );
+      slide.addText(card.value, {
+        x: x + 0.12,
+        y: y + 0.3,
+        w: cardW - 0.24,
+        h: 0.38,
+        fontFace: FONT_UI,
+        fontSize: 18,
+        bold: true,
+        color: TITLE_INK,
+        valign: "middle",
+      });
+      return;
+    }
+
+    // Engagement — platform avatars + ER% (no IG/TT text labels).
+    slide.addText("ENGAGEMENT", {
       x: x + 0.12,
       y: y + 0.08,
       w: cardW - 0.24,
@@ -1671,19 +1759,43 @@ function drawShowcaseMetricCards(
       color: MUTED,
       charSpacing: 1,
     });
-    slide.addText(card.value, {
-      x: x + 0.12,
-      y: y + 0.28,
-      w: cardW - 0.24,
-      h: 0.34,
-      fontFace: FONT_UI,
-      fontSize: card.compact ? 12 : 18,
-      bold: true,
-      color: card.accent ? BLUE : TITLE_INK,
-      valign: "middle",
-    });
+    if (!card.rows.length) {
+      slide.addText(card.fallback, {
+        x: x + 0.12,
+        y: y + 0.3,
+        w: cardW - 0.24,
+        h: 0.38,
+        fontFace: FONT_UI,
+        fontSize: 14,
+        bold: true,
+        color: TITLE_INK,
+        valign: "middle",
+      });
+      return;
+    }
+    let cursorX = x + 0.12;
+    const rowY = y + 0.34;
+    const erIcon = 0.15;
+    for (const row of card.rows) {
+      addPlatformIconBadges(slide, [row.platform], cursorX, rowY, 1, null, erIcon);
+      cursorX += erIcon + 0.04;
+      const erW = Math.min(0.72, cardW - (cursorX - x) - 0.08);
+      slide.addText(row.engagement, {
+        x: cursorX,
+        y: rowY - 0.02,
+        w: erW,
+        h: 0.2,
+        fontFace: FONT_UI,
+        fontSize: 12,
+        bold: true,
+        color: TITLE_INK,
+        valign: "middle",
+      });
+      cursorX += erW + 0.1;
+      if (cursorX > x + cardW - 0.35) break;
+    }
   });
-  return y + 0.82;
+  return y + cardH + 0.12;
 }
 
 async function addCreatorSlide(

@@ -130,7 +130,29 @@ async function main() {
   }
 
   {
-    const doc = buildQuotationDocument(mockDetail(), { template: "showcase" });
+    const doc = buildQuotationDocument(
+      mockDetail({
+        items: [
+          mockItem({
+            id: "ig-1",
+            platform: "instagram",
+            followers: 226_845,
+            engagement_rate: 6.36,
+            deliverables: [{ platform: "instagram", type: "instagram_reel", quantity: 1 }],
+          }),
+          mockItem({
+            id: "tt-1",
+            influencer_id: "inf-2",
+            platform: "tiktok",
+            handle: "@creator",
+            followers: 501_400,
+            engagement_rate: 33.76,
+            deliverables: [{ platform: "tiktok", type: "tiktok_video", quantity: 1 }],
+          }),
+        ],
+      }),
+      { template: "showcase" }
+    );
     const buffer = await buildQuotationPptxBuffer(doc);
     assert.ok(buffer.length > 5_000, "Showcase PPTX buffer should be non-trivial");
     const { default: JSZip } = await import("jszip");
@@ -144,6 +166,14 @@ async function main() {
     ).join("\n");
     assert.match(joined, /ISSUE · VALID/, "Showcase cover uses compact Issue · Valid meta");
     assert.match(joined, /TOTAL INVESTMENT/, "Showcase includes redesign TOTAL INVESTMENT banner");
+    assert.match(joined, /226\.8K/, "Showcase metric cards use compact K followers");
+    assert.match(joined, /501\.4K/, "Showcase platform follower cards use compact K");
+    assert.match(joined, /6\.36%/, "Showcase engagement keeps two decimals");
+    assert.doesNotMatch(
+      joined,
+      />IG 6\.36%/,
+      "Showcase engagement must use platform icons, not IG text labels"
+    );
     assert.doesNotMatch(
       joined,
       /Campaign mix insight/,
@@ -154,6 +184,11 @@ async function main() {
       joined,
       /PREPARED BY/,
       "Showcase cover must omit Prepared By (HTML redesign parity)"
+    );
+    const mediaFiles = Object.keys(zip.files).filter((path) => path.startsWith("ppt/media/"));
+    assert.ok(
+      !mediaFiles.some((path) => path.toLowerCase().endsWith(".svg")),
+      "PPTX must not embed SVG media (PowerPoint corruption)"
     );
   }
 

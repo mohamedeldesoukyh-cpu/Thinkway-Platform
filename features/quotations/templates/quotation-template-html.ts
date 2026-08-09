@@ -27,7 +27,7 @@ import {
   QUOTATION_TEMPLATE_STYLES,
 } from "./quotation-template-styles";
 import type { QuotationTemplatePayload } from "./quotation-template-types";
-import { formatShowcaseEngagementCardValue } from "./quotation-template-format";
+import { formatQuotationCardFollowers } from "./quotation-template-format";
 import { getReportPlatformIconTitle } from "@/lib/performance/report/report-platform-icons";
 import { pickCreatorDisplayName } from "@/lib/text/decode-html-entities";
 
@@ -418,34 +418,69 @@ function renderClosingPage(payload: QuotationTemplatePayload): string {
 function showcaseMetricCardsHtml(
   creator: QuotationTemplatePayload["showcaseCreators"][number]
 ): string {
-  // Followers + one Engagement card (all platforms) + per-platform follower cards.
-  type MetricCard = { label: string; value: string; accent?: boolean; compact?: boolean };
-  const engagementValue = formatShowcaseEngagementCardValue({
-    engagement: creator.engagement,
-    platformMetrics: creator.platformMetrics,
-  });
+  // Total followers · Engagement (icons + ER) · per-platform Followers (header + icon + K/M).
+  type MetricCard = {
+    labelHtml: string;
+    valueHtml: string;
+    accent?: boolean;
+    engagement?: boolean;
+  };
+
+  const engagementRows = creator.platformMetrics.filter(
+    (row) => row.engagement.trim() && row.engagement.trim() !== "—"
+  );
+  const engagementValueHtml = engagementRows.length
+    ? `<span class="sc-er-list">${engagementRows
+        .map(
+          (row) =>
+            `<span class="sc-er-item">${renderQuotationPlatformIconsHtml([
+              row.platform,
+            ])}<span class="sc-er-pct">${esc(row.engagement.trim())}</span></span>`
+        )
+        .join("")}</span>`
+    : esc(creator.engagement);
+
   const cards: MetricCard[] = [
-    { label: "Followers", value: creator.followers, accent: true },
     {
-      label: "Engagement",
-      value: engagementValue,
-      compact: engagementValue.includes(" · "),
+      labelHtml: "Followers",
+      valueHtml: esc(formatQuotationCardFollowers(creator.followers)),
+      accent: true,
+    },
+    {
+      labelHtml: "Engagement",
+      valueHtml: engagementValueHtml,
+      engagement: true,
     },
   ];
+
+  const seenPlatforms = new Set<string>();
   for (const metric of creator.platformMetrics) {
     if (cards.length >= 4) break;
-    const label = getReportPlatformIconTitle(metric.platform).toUpperCase();
-    if (cards.some((card) => card.label.toUpperCase() === label)) continue;
-    cards.push({ label, value: metric.followers });
+    const key = metric.platform.trim().toLowerCase();
+    if (!key || seenPlatforms.has(key)) continue;
+    seenPlatforms.add(key);
+    cards.push({
+      labelHtml: `Followers ${renderQuotationPlatformIconsHtml([metric.platform])}`,
+      valueHtml: esc(formatQuotationCardFollowers(metric.followers)),
+    });
   }
+
   while (cards.length < 3) {
-    cards.push({ label: "—", value: "—" });
+    cards.push({ labelHtml: "—", valueHtml: "—" });
   }
+
   return `<div class="sc-metric-grid" style="grid-template-columns:repeat(${Math.min(4, cards.length)},minmax(0,1fr));">
     ${cards
       .map(
         (card) =>
-          `<div class="sc-metric"><p class="ml">${esc(card.label)}</p><p class="mv${card.accent ? " accent" : ""}${card.compact ? " compact" : ""}">${esc(card.value)}</p></div>`
+          `<div class="sc-metric"><p class="ml${
+            card.labelHtml.includes("quotation-platform-icon") ||
+            card.labelHtml.includes("quotation-platform-icon-fallback")
+              ? " ml-with-icon"
+              : ""
+          }">${card.labelHtml}</p><div class="mv${card.accent ? " accent" : ""}${
+            card.engagement ? " engagement" : ""
+          }">${card.valueHtml}</div></div>`
       )
       .join("")}
   </div>`;
