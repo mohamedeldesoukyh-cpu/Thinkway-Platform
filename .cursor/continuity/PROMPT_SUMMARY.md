@@ -3,15 +3,18 @@
 **Branch:** `feature/discovery-search-shortlist-fix` (from `develop`)  
 **Focus:** Discovery creator search accuracy/speed + bulk shortlist add
 
-## In progress — Creator search + shortlist bulk add
+## SHIPPED — Combine creators search + crash
 
-- Paste profile URL → extract `@handle`, exact match only (no fuzzy wrong creators)
-- Name-only search stays hybrid (suggestions OK)
-- Fixed `parseProfileInput` treating bare words (`travel`, `reem`) as Instagram profiles
-- Search debounce 700→280ms; exact lookup uses equality + smaller page
-- Bulk shortlist: one server action + chunked insert (fixes 24 selected → ~12 saved)
-- Tests: intent engine + parse-profile-url — PASS
-- Not committed / not shipped yet
+- Slow picker: lightweight `browseUnifiedCreatorsForPickerAction` (no backfill/ECI)
+- Crash after combine: try/catch + DNA cleanup + safer reassign; remove duplicate from list
+
+## SHIPPED — Creator search + shortlist bulk add
+
+- Commits: `3388b4df` / `77e0f821` on `develop` · `f5662b15` / `896a94af` on `main`
+- Paste profile URL → `@handle` exact match only; name search keeps suggestions
+- Fixed bare-word false Instagram parse; faster debounce; bulk shortlist insert
+- Prod: `dpl_Cd1hS4C7F81z6cRCV6nGkxb8wy1j` → https://app.thinkwaymedia.com
+- Dev: pushed to `develop` (auto Preview)
 
 ## Shortlist / Quotation export quality (ready to ship)
 

@@ -92,5 +92,5 @@ export const DEFAULT_PLATFORM_OPTIONS = [
   { value: "x", label: "X / Twitter" },
 ] as const;
 
-export const CREATOR_PICKER_DEFAULT_PAGE_SIZE = 30;
-export const CREATOR_PICKER_DEBOUNCE_MS = 300;
+export const CREATOR_PICKER_DEFAULT_PAGE_SIZE = 20;
+export const CREATOR_PICKER_DEBOUNCE_MS = 220;
