@@ -1,6 +1,7 @@
 /**
  * Pure quotation document model (no DB, no rendering deps).
  */
+import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import {
   formatDualCurrency,
   fromEgp,
@@ -869,6 +870,8 @@ export function buildQuotationDocument(
     template?: QuotationTemplateVariant;
     /** Filter to specific quotation item IDs (Preview / PDF / PPTX share this selection). */
     itemIds?: string[];
+    /** Optional platform subset for icons / metrics (linked platforms). */
+    platforms?: string[] | null;
     /** Showcase: preloaded publication screenshot map keyed by creator duplicate key. */
     publicationShotsByCreatorKey?: Map<string, QuotationDocPublicationShot[]>;
     /** FX rate for `detail.currency` → EGP (used to format client-facing totals). */
@@ -888,12 +891,23 @@ export function buildQuotationDocument(
     : undefined;
   const itemIdSet =
     options?.itemIds && options.itemIds.length > 0 ? new Set(options.itemIds) : null;
+  const platformFilterKeys = options?.platforms?.length
+    ? new Set(
+        options.platforms
+          .map((platform) => canonicalPlatformKey(platform))
+          .filter(Boolean)
+      )
+    : null;
   const items = (
     itemIdSet
       ? detail.items.filter((item) => itemIdSet.has(item.id))
       : detail.items
-  ) as QuotationExportItem[];
-  const selectionActive = Boolean(itemIdSet);
+  )
+    .filter((item) => {
+      if (!platformFilterKeys) return true;
+      return platformFilterKeys.has(canonicalPlatformKey(item.platform));
+    }) as QuotationExportItem[];
+  const selectionActive = Boolean(itemIdSet) || Boolean(platformFilterKeys);
   const selectedCostEgp = selectionActive
     ? items.reduce((sum, item) => sum + (Number(item.cost_egp) || 0), 0)
     : detail.total_cost_egp;
@@ -933,7 +947,6 @@ export function buildQuotationDocument(
     detail.gp_target_pct
   );
   const exportGroups = groupQuotationExportItems(items);
-  const rows = creatorGroups.flatMap((group) => group.rows);
   const uniqueCreatorCount = countUniqueQuotationCreators(items);
   const formatSharePct = (count: number, total: number) =>
     total > 0 ? `${num((count / total) * 100, 1)}%` : "0.0%";
@@ -1028,6 +1041,21 @@ export function buildQuotationDocument(
     { label: "GP %", value: `${num(gpPctForDisplay, 1)}%`, valueColor: gpColor },
   ];
 
+  const filteredCreatorGroups = platformFilterKeys
+    ? creatorGroups.map((group) => ({
+        ...group,
+        rows: group.rows.filter((row) =>
+          platformFilterKeys.has(canonicalPlatformKey(row.platform))
+        ),
+        platformIcons: group.platformIcons.filter((platform) =>
+          platformFilterKeys.has(canonicalPlatformKey(platform))
+        ),
+        platformMetrics: group.platformMetrics.filter((row) =>
+          platformFilterKeys.has(canonicalPlatformKey(row.platform))
+        ),
+      }))
+    : creatorGroups;
+
   return {
     audience,
     template,
@@ -1054,8 +1082,8 @@ export function buildQuotationDocument(
       ? `Prepared exclusively for ${detail.client_name}`
       : "Prepared exclusively for the named Client",
     dateLabel: formatDateLabel(detail.issue_date),
-    rows,
-    creatorGroups,
+    rows: filteredCreatorGroups.flatMap((group) => group.rows),
+    creatorGroups: filteredCreatorGroups,
     collapseContentGroups,
     commercialKpis: audience === "internal" ? internalKpis : clientKpis,
     summary: {

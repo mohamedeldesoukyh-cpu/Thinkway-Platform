@@ -29,6 +29,7 @@ import { getClientIp, requireApiPermission } from "@/lib/auth/api-auth";
 import { logAuditEvent } from "@/lib/audit/log-audit-event";
 import { EMBEDDABLE_DOCUMENT_FRAME_HEADERS } from "@/lib/security/embeddable-document-headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { parsePlatformsQueryParam } from "@/features/discovery/document-preview/document-export-selection";
 
 /** Showcase embed + Chromium PDF can exceed 60s with many publication shots. */
 export const maxDuration = 120;
@@ -75,6 +76,7 @@ export async function GET(request: Request, context: RouteContext) {
   const download = searchParams.get("download") === "1";
   const template = resolveShortlistTemplate(searchParams.get("template"));
   const itemIds = parseItemIds(searchParams.get("items"));
+  const platforms = parsePlatformsQueryParam(searchParams.get("platforms"));
 
   const supabase = await createSupabaseServerClient();
   const auth = await requireApiPermission(supabase, "discovery.read");
@@ -91,7 +93,13 @@ export async function GET(request: Request, context: RouteContext) {
       action: "export",
       entityType: "shortlist",
       entityId: id,
-      metadata: { format, download, template },
+      metadata: {
+        format,
+        download,
+        template,
+        itemCount: itemIds?.length ?? null,
+        platformCount: platforms?.length ?? null,
+      },
       ip: getClientIp(request),
     });
 
@@ -108,6 +116,7 @@ export async function GET(request: Request, context: RouteContext) {
     let doc = buildShortlistDocument(detail, {
       template,
       itemIds,
+      platforms,
       publicationShotsByCreatorKey,
     });
 

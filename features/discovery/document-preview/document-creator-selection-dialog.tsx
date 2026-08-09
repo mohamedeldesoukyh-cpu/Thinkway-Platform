@@ -13,6 +13,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { platformLabel } from "@/features/campaigns/line-assignment";
+import {
+  type DocumentExportSelection,
+} from "@/features/discovery/document-preview/document-export-selection";
+import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+import { sortPlatformsStable } from "@/lib/creators/creator-centric";
+import { PlatformIcon } from "@/lib/performance/platform-icon";
 import { cn } from "@/lib/utils";
 import type { DocumentSelectionSummary } from "./document-selection-summary";
 
@@ -25,6 +32,8 @@ export type DocumentCreatorOption = {
   handle: string;
   avatarUrl?: string | null;
   meta?: string | null;
+  /** Linked / deliverable platforms for this creator (export filter chips). */
+  platforms?: string[];
 };
 
 type Props = {
@@ -43,7 +52,7 @@ type Props = {
   title?: string;
   description?: string;
   confirmLabel?: string;
-  onConfirm: (itemIds: string[]) => void;
+  onConfirm: (selection: DocumentExportSelection) => void;
 };
 
 function itemIdsForCreators(
@@ -77,6 +86,23 @@ function creatorKeysFromItemIds(
   return keys.size > 0 ? keys : new Set(creators.map((c) => c.creatorKey));
 }
 
+function platformsForCreators(
+  creators: DocumentCreatorOption[],
+  selectedCreatorKeys: Set<string>
+): string[] {
+  const keys = new Set<string>();
+  for (const creator of creators) {
+    if (!selectedCreatorKeys.has(creator.creatorKey)) continue;
+    for (const platform of creator.platforms ?? []) {
+      const key = canonicalPlatformKey(platform);
+      if (key) keys.add(key);
+    }
+  }
+  return sortPlatformsStable([...keys].map((platform) => ({ platform }))).map(
+    (entry) => entry.platform
+  );
+}
+
 function initials(name: string, handle: string): string {
   const source = name.trim() || handle.replace(/^@/, "").trim() || "?";
   const parts = source.split(/\s+/).filter(Boolean);
@@ -94,16 +120,21 @@ export function DocumentCreatorSelectionDialog({
   onWorkspaceSelectionChange,
   summarizeSelection,
   title = "Select creators for preview",
-  description = "Preview, PDF, and PPTX will include only the creators you select. Totals and numbering update automatically.",
+  description = "Preview and exports include only the creators and platforms you select. Totals and numbering update automatically.",
   confirmLabel = "Open preview",
   onConfirm,
 }: Props) {
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
+  const [selectedPlatforms, setSelectedPlatforms] = useState<Set<string>>(
+    () => new Set()
+  );
 
   useEffect(() => {
     if (!open) return;
     // Workspace selection is the only seed — never sessionStorage.
-    setSelectedKeys(creatorKeysFromItemIds(creators, workspaceItemIds));
+    const nextKeys = creatorKeysFromItemIds(creators, workspaceItemIds);
+    setSelectedKeys(nextKeys);
+    setSelectedPlatforms(new Set(platformsForCreators(creators, nextKeys)));
   }, [open, creators, workspaceItemIds]);
 
   const selectedCount = selectedKeys.size;
@@ -115,16 +146,51 @@ export function DocumentCreatorSelectionDialog({
     [creators, selectedKeys]
   );
 
+  const availablePlatforms = useMemo(
+    () => platformsForCreators(creators, selectedKeys),
+    [creators, selectedKeys]
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    setSelectedPlatforms((prev) => {
+      const next = new Set<string>();
+      for (const platform of availablePlatforms) {
+        if (prev.size === 0 || prev.has(platform)) next.add(platform);
+      }
+      // If pruning removed everything, default back to all available.
+      if (next.size === 0 && availablePlatforms.length > 0) {
+        return new Set(availablePlatforms);
+      }
+      return next;
+    });
+  }, [availablePlatforms, open]);
+
   const summary = useMemo(
     () => summarizeSelection(selectedItemIds),
     [summarizeSelection, selectedItemIds]
   );
+
+  const allPlatformsSelected =
+    availablePlatforms.length > 0 &&
+    selectedPlatforms.size === availablePlatforms.length;
+  const noPlatformsSelected =
+    availablePlatforms.length > 0 && selectedPlatforms.size === 0;
 
   function toggleCreator(creatorKey: string) {
     setSelectedKeys((prev) => {
       const next = new Set(prev);
       if (next.has(creatorKey)) next.delete(creatorKey);
       else next.add(creatorKey);
+      return next;
+    });
+  }
+
+  function togglePlatform(platform: string) {
+    setSelectedPlatforms((prev) => {
+      const next = new Set(prev);
+      if (next.has(platform)) next.delete(platform);
+      else next.add(platform);
       return next;
     });
   }
@@ -137,16 +203,24 @@ export function DocumentCreatorSelectionDialog({
     setSelectedKeys(new Set());
   }
 
+  function selectAllPlatforms() {
+    setSelectedPlatforms(new Set(availablePlatforms));
+  }
+
   function handleConfirm() {
-    if (noneSelected) return;
+    if (noneSelected || noPlatformsSelected) return;
     onWorkspaceSelectionChange?.(selectedItemIds);
-    onConfirm(selectedItemIds);
+    const platforms =
+      allPlatformsSelected || availablePlatforms.length === 0
+        ? null
+        : [...selectedPlatforms];
+    onConfirm({ itemIds: selectedItemIds, platforms });
     onOpenChange(false);
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[min(780px,92vh)] w-full max-w-lg flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
+      <DialogContent className="flex max-h-[min(820px,92vh)] w-full max-w-lg flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
         <DialogHeader className="shrink-0 border-b border-border px-5 py-4 text-left">
           <DialogTitle className="flex items-center gap-2 text-[15px]">
             <UsersIcon className="size-4 text-muted-foreground" />
@@ -201,6 +275,56 @@ export function DocumentCreatorSelectionDialog({
             </dl>
           ) : null}
         </div>
+
+        {availablePlatforms.length > 0 ? (
+          <div className="shrink-0 border-b border-border/70 px-5 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[12.5px] font-semibold text-foreground">
+                Platforms to include
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-[12px]"
+                onClick={selectAllPlatforms}
+                disabled={allPlatformsSelected}
+              >
+                All platforms
+              </Button>
+            </div>
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
+              {availablePlatforms.map((platform) => {
+                const checked = selectedPlatforms.has(platform);
+                return (
+                  <button
+                    key={platform}
+                    type="button"
+                    onClick={() => togglePlatform(platform)}
+                    className={cn(
+                      "inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-[11.5px] font-semibold transition-colors",
+                      checked
+                        ? "border-primary/40 bg-primary/10 text-foreground"
+                        : "border-border bg-background text-muted-foreground hover:bg-muted/40"
+                    )}
+                    aria-pressed={checked}
+                  >
+                    <PlatformIcon
+                      platform={platform}
+                      size="xs"
+                      variant="logo"
+                      className="size-4 shrink-0"
+                    />
+                    {platformLabel(platform)}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Default includes every linked platform on the selected creators.
+            </p>
+          </div>
+        ) : null}
 
         <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
           {creators.length === 0 ? (
@@ -263,13 +387,17 @@ export function DocumentCreatorSelectionDialog({
 
         <DialogFooter className="shrink-0 border-t border-border px-5 py-3 sm:justify-between">
           <p className="hidden text-[11.5px] text-muted-foreground sm:block">
-            Same selection for Preview, PDF, and PPTX
+            Same selection for Preview, PDF, PPTX, Excel, and Word
           </p>
           <div className="flex w-full justify-end gap-2 sm:w-auto">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="button" onClick={handleConfirm} disabled={noneSelected}>
+            <Button
+              type="button"
+              onClick={handleConfirm}
+              disabled={noneSelected || noPlatformsSelected}
+            >
               {confirmLabel}
               {selectedCount > 0 ? ` (${selectedCount})` : ""}
             </Button>

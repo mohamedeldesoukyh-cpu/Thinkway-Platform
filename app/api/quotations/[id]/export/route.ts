@@ -26,6 +26,7 @@ import { getClientIp, requireApiPermission } from "@/lib/auth/api-auth";
 import { logAuditEvent } from "@/lib/audit/log-audit-event";
 import { EMBEDDABLE_DOCUMENT_FRAME_HEADERS } from "@/lib/security/embeddable-document-headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { parsePlatformsQueryParam } from "@/features/discovery/document-preview/document-export-selection";
 
 /** Showcase embed + Chromium PDF can exceed 60s with many publication shots. */
 export const maxDuration = 120;
@@ -64,6 +65,7 @@ export async function GET(request: Request, context: RouteContext) {
         .map((value) => value.trim())
         .filter(Boolean)
     : undefined;
+  const platforms = parsePlatformsQueryParam(searchParams.get("platforms"));
 
   const supabase = await createSupabaseServerClient();
   const auth = await requireApiPermission(supabase, QUOTATION_PERMISSIONS.read);
@@ -85,6 +87,7 @@ export async function GET(request: Request, context: RouteContext) {
         download,
         template,
         itemCount: itemIds?.length ?? null,
+        platformCount: platforms?.length ?? null,
       },
       ip: getClientIp(request),
     });
@@ -98,6 +101,7 @@ export async function GET(request: Request, context: RouteContext) {
     let doc = buildQuotationDocument(enriched, {
       template,
       itemIds,
+      platforms,
       publicationShotsByCreatorKey,
       displayFxRateToEgp,
     });
@@ -114,7 +118,7 @@ export async function GET(request: Request, context: RouteContext) {
     );
 
     if (format === "excel") {
-      const buffer = await buildQuotationExcel(enriched);
+      const buffer = await buildQuotationExcel(enriched, { itemIds, platforms });
       return new NextResponse(buffer as unknown as BodyInit, {
         headers: withExportCacheHeaders({
           "Content-Type":

@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { appendPlatformsQueryParam } from "@/features/discovery/document-preview/document-export-selection";
 import {
   appendShortlistExportRevision,
   appendShortlistTemplateParam,
@@ -17,6 +18,7 @@ type ShortlistPreviewDownloadsProps = {
   shortlistId: string;
   template: ShortlistTemplateVariant;
   itemIds?: string[];
+  platforms?: string[] | null;
   exportRevision?: string | null;
 };
 
@@ -24,7 +26,12 @@ export function buildShortlistExportHref(
   shortlistId: string,
   format: string,
   template: ShortlistTemplateVariant,
-  options?: { download?: boolean; itemIds?: string[]; exportRevision?: string | null }
+  options?: {
+    download?: boolean;
+    itemIds?: string[];
+    platforms?: string[] | null;
+    exportRevision?: string | null;
+  }
 ) {
   const params = new URLSearchParams({ format });
   if (options?.download !== false) {
@@ -35,6 +42,7 @@ export function buildShortlistExportHref(
   if (options?.itemIds?.length) {
     params.set("items", options.itemIds.join(","));
   }
+  appendPlatformsQueryParam(params, options?.platforms);
   return `/api/shortlists/${shortlistId}/export?${params.toString()}`;
 }
 
@@ -42,9 +50,10 @@ export function ShortlistPreviewDownloads({
   shortlistId,
   template,
   itemIds,
+  platforms,
   exportRevision,
 }: ShortlistPreviewDownloadsProps) {
-  const exportOptions = { itemIds, exportRevision };
+  const exportOptions = { itemIds, platforms, exportRevision };
 
   return (
     <div className="flex flex-wrap items-center gap-2">

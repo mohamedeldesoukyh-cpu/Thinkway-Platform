@@ -32,6 +32,7 @@ export async function renderShortlistPreviewHtml(
   options?: {
     template?: ShortlistTemplateVariant | string | null;
     itemIds?: string[];
+    platforms?: string[] | null;
     siteOrigin?: string;
   }
 ): Promise<{
@@ -59,6 +60,7 @@ export async function renderShortlistPreviewHtml(
   let doc = buildShortlistDocument(detail, {
     template,
     itemIds,
+    platforms: options?.platforms,
     publicationShotsByCreatorKey,
   });
   doc = await embedShortlistDocumentAvatars(doc);

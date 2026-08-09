@@ -33,6 +33,7 @@ export async function renderQuotationPreviewHtml(
   options?: {
     template?: QuotationTemplateVariant | string | null;
     itemIds?: string[];
+    platforms?: string[] | null;
     siteOrigin?: string;
   }
 ): Promise<{
@@ -55,6 +56,7 @@ export async function renderQuotationPreviewHtml(
   let doc = buildQuotationDocument(enriched, {
     template,
     itemIds: options?.itemIds,
+    platforms: options?.platforms,
     publicationShotsByCreatorKey,
     displayFxRateToEgp,
   });

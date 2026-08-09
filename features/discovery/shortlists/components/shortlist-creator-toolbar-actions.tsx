@@ -22,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { DocumentCreatorSelectionDialog } from "@/features/discovery/document-preview/document-creator-selection-dialog";
 import { buildShortlistCreatorOptions } from "@/features/discovery/document-preview/build-creator-options";
+import type { DocumentExportSelection } from "@/features/discovery/document-preview/document-export-selection";
 import { summarizeShortlistSelection } from "@/features/discovery/document-preview/document-selection-summary";
 import { buildShortlistExportHref } from "@/features/discovery/shortlists/components/shortlist-preview-downloads";
 import { shortlistPreviewPath } from "@/features/discovery/shortlists/constants";
@@ -88,14 +89,16 @@ export function ShortlistCreatorToolbarActions({
     setSelectionOpen(true);
   }
 
-  function handleConfirm(itemIds: string[]) {
+  function handleConfirm(selection: DocumentExportSelection) {
     if (!pending) return;
-    const ids = itemIds.length > 0 ? itemIds : undefined;
+    const ids = selection.itemIds.length > 0 ? selection.itemIds : undefined;
+    const platforms = selection.platforms?.length ? selection.platforms : undefined;
 
     if (pending.type === "preview") {
       const href = shortlistPreviewPath(shortlistId, {
         template: pending.template,
         itemIds: ids,
+        platforms,
       });
       window.open(href, "_blank", "noopener,noreferrer");
       return;
@@ -103,6 +106,7 @@ export function ShortlistCreatorToolbarActions({
 
     const href = buildShortlistExportHref(shortlistId, pending.format, pending.template, {
       itemIds: ids,
+      platforms,
       exportRevision,
     });
     window.location.assign(href);

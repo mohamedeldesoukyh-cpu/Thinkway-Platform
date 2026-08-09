@@ -24,9 +24,14 @@ function breakdownRows(
 }
 
 export async function buildQuotationExcel(
-  detail: import("../types").QuotationDetail
+  detail: import("../types").QuotationDetail,
+  options?: { itemIds?: string[]; platforms?: string[] | null }
 ): Promise<Buffer> {
-  const doc = buildQuotationDocument(detail, { audience: "internal" });
+  const doc = buildQuotationDocument(detail, {
+    audience: "internal",
+    itemIds: options?.itemIds,
+    platforms: options?.platforms,
+  });
 
   const rows: StyledDataRow[] = doc.rows.map((r) => ({
     kind: "data",
