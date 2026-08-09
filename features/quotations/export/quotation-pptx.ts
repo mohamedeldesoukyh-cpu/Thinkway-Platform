@@ -720,9 +720,9 @@ type MixTableRow = {
   platformLabel: string;
   platformIcons: string[];
   followers: string;
-  views: string;
   category: string;
   er: string;
+  fee: string;
   profileUrl: string | null;
 };
 
@@ -731,10 +731,25 @@ const MIX_ROWS_PER_SLIDE = 8;
 const MIX_ROW_H = 0.24;
 const MIX_HEADER_H = 0.26;
 
+function resolveMixCreatorFee(
+  handle: string,
+  feeLines: ReturnType<typeof buildQuotationTemplatePayload>["feeLines"],
+  showFees: boolean
+): string {
+  if (!showFees) return "";
+  const key = handle.replace(/^@/, "").toLowerCase();
+  const match = feeLines.find((line) => {
+    const creatorKey = line.creator.replace(/^@/, "").toLowerCase();
+    const avatarKey = (line.avatarGroupKey ?? "").replace(/^@/, "").toLowerCase();
+    return creatorKey === key || avatarKey === key;
+  });
+  return match?.grossFee ?? "—";
+}
+
 function buildMixRowsForTier(
   tier: ReturnType<typeof buildQuotationTemplatePayload>["tiers"][number],
   doc: QuotationDocument,
-  perPlatform: boolean
+  options: { perPlatform: boolean; showFees: boolean; feeLines: ReturnType<typeof buildQuotationTemplatePayload>["feeLines"] }
 ): MixTableRow[] {
   const mixRows: MixTableRow[] = [];
   for (const creator of tier.creators) {
@@ -744,16 +759,17 @@ function buildMixRowsForTier(
         entry.handle.replace(/^@/, "") === creator.handle.replace(/^@/, "")
     );
     const metrics = group?.platformMetrics ?? [];
-    if (perPlatform && metrics.length > 0) {
+    const fee = resolveMixCreatorFee(creator.handle, options.feeLines, options.showFees);
+    if (options.perPlatform && metrics.length > 0) {
       metrics.forEach((metric, metricIndex) => {
         mixRows.push({
           handle: metricIndex === 0 ? creator.handle : "",
           platformLabel: getReportPlatformIconTitle(metric.platform),
           platformIcons: [metric.platform],
           followers: metric.followers,
-          views: metric.views,
           category: metricIndex === 0 ? creator.category : "",
           er: metric.engagement,
+          fee: metricIndex === 0 ? fee : "",
           profileUrl: metric.profileUrl ?? creator.profileUrl,
         });
       });
@@ -763,9 +779,9 @@ function buildMixRowsForTier(
         platformLabel: creator.platform,
         platformIcons: creator.platformIcons,
         followers: creator.followers,
-        views: creator.views,
         category: creator.category,
         er: creator.er,
+        fee,
         profileUrl: creator.profileUrl,
       });
     }
@@ -773,57 +789,61 @@ function buildMixRowsForTier(
   return mixRows;
 }
 
+/** Full-width category bars — matches LineItem reference (not a 4-up card grid). */
 function drawMixCategoryCards(
   slide: Slide,
   categories: ReturnType<typeof buildQuotationTemplatePayload>["categories"],
   y: number
 ): number {
   if (!categories.length) return y;
-  const gap = 0.14;
-  const catW = (CONTENT_W - gap * (categories.length - 1)) / categories.length;
+  const barH = 0.48;
+  const gap = 0.1;
   categories.forEach((cat, index) => {
-    const x = MARGIN_X + index * (catW + gap);
+    const barY = y + index * (barH + gap);
     slide.addShape("roundRect", {
-      x,
-      y,
-      w: catW,
-      h: 0.92,
+      x: MARGIN_X,
+      y: barY,
+      w: CONTENT_W,
+      h: barH,
       fill: { color: WHITE, transparency: GLASS_CARD_TRANSPARENCY },
       line: { color: HAIR, width: 1 },
-      rectRadius: 0.1,
+      rectRadius: 0.08,
     });
     slide.addText(cat.name.toUpperCase(), {
-      x: x + 0.12,
-      y: y + 0.1,
-      w: catW - 0.24,
-      h: 0.18,
+      x: MARGIN_X + 0.18,
+      y: barY + 0.1,
+      w: CONTENT_W * 0.45,
+      h: 0.28,
       fontFace: FONT_UI,
-      fontSize: categories.length > 4 ? 8 : 10,
+      fontSize: 12,
       bold: true,
-      color: MUTED_SOFT,
-      charSpacing: 1,
+      color: TITLE_INK,
+      valign: "middle",
     });
     slide.addText(cat.count, {
-      x: x + 0.12,
-      y: y + 0.3,
-      w: catW - 0.24,
-      h: 0.34,
+      x: MARGIN_X + CONTENT_W * 0.5,
+      y: barY + 0.08,
+      w: 1.2,
+      h: 0.32,
       fontFace: FONT_UI,
-      fontSize: categories.length > 4 ? 20 : 26,
+      fontSize: 20,
       bold: true,
-      color: BLUE,
+      color: TITLE_INK,
+      align: "right",
+      valign: "middle",
     });
     slide.addText(`${cat.countLabel} · ${cat.share}`, {
-      x: x + 0.12,
-      y: y + 0.66,
-      w: catW - 0.24,
-      h: 0.18,
+      x: MARGIN_X + CONTENT_W * 0.5 + 1.35,
+      y: barY + 0.1,
+      w: CONTENT_W * 0.5 - 1.55,
+      h: 0.28,
       fontFace: FONT_BODY,
-      fontSize: categories.length > 4 ? 9 : 11,
+      fontSize: 12,
       color: MUTED,
+      valign: "middle",
     });
   });
-  return y + 1.08;
+  return y + categories.length * (barH + gap) + 0.08;
 }
 
 function drawMixTierTable(
@@ -831,8 +851,9 @@ function drawMixTierTable(
   tier: ReturnType<typeof buildQuotationTemplatePayload>["tiers"][number],
   visibleRows: MixTableRow[],
   cursorY: number,
-  perPlatform: boolean
+  options: { perPlatform: boolean; showFees: boolean }
 ): number {
+  const { perPlatform, showFees } = options;
   const tagW = Math.min(1.15, 0.55 + tier.name.length * 0.07);
   slide.addShape("roundRect", {
     x: MARGIN_X,
@@ -869,82 +890,72 @@ function drawMixTierTable(
     }
   );
 
-  const colW = perPlatform
-    ? [2.2, 1.5, 1.6, 1.5, 3.6, 1.73]
-    : [2.6, 2.0, 1.8, 3.9, 1.83];
-  const rows: Array<Array<{ text: string; options?: Record<string, unknown> }>> = [
-    perPlatform
+  // No Views column on any template. Showcase/pitch add Fees (EGP).
+  const colW = showFees
+    ? [2.1, 1.45, 1.55, 3.2, 1.35, 2.48]
+    : [2.4, 1.6, 1.7, 3.8, 1.63];
+  const header = [
+    { text: "Creator", options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE } } },
+    { text: "Platform", options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE } } },
+    {
+      text: "Followers",
+      options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE }, align: "right" },
+    },
+    { text: "Category", options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE } } },
+    {
+      text: "ER %",
+      options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE }, align: "right" },
+    },
+    ...(showFees
       ? [
-          { text: "Handle", options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE } } },
-          { text: "Platform", options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE } } },
           {
-            text: "Followers",
-            options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE }, align: "right" },
-          },
-          {
-            text: "Views",
-            options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE }, align: "right" },
-          },
-          { text: "Category", options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE } } },
-          {
-            text: "ER %",
-            options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE }, align: "right" },
-          },
-        ]
-      : [
-          { text: "Handle", options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE } } },
-          { text: "Platform", options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE } } },
-          {
-            text: "Followers",
-            options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE }, align: "right" },
-          },
-          { text: "Category", options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE } } },
-          {
-            text: "ER %",
-            options: { bold: true, color: MUTED, fontSize: 9, fill: { color: WHITE }, align: "right" },
-          },
-        ],
-    ...visibleRows.map((row) => {
-      const handleLink = profileHyperlink(row.profileUrl);
-      if (perPlatform) {
-        return [
-          {
-            text: row.handle,
+            text: "Fees (EGP)",
             options: {
-              fontSize: 10,
-              bold: Boolean(row.handle),
-              color: TITLE_INK,
-              ...(handleLink && row.handle ? { hyperlink: handleLink } : {}),
+              bold: true,
+              color: MUTED,
+              fontSize: 9,
+              fill: { color: WHITE },
+              align: "right" as const,
             },
           },
-          { text: "", options: { fontSize: 10, color: TITLE_INK } },
-          {
-            text: row.followers,
-            options: { fontSize: 10, color: TITLE_INK, align: "right" },
-          },
-          {
-            text: row.views,
-            options: { fontSize: 10, color: TITLE_INK, align: "right" },
-          },
-          { text: row.category, options: { fontSize: 9, color: TITLE_INK } },
-          {
-            text: row.er,
-            options: { fontSize: 10, color: TITLE_INK, align: "right" },
-          },
-        ];
-      }
+        ]
+      : []),
+  ];
+  const rows: Array<Array<{ text: string; options?: Record<string, unknown> }>> = [
+    header,
+    ...visibleRows.map((row) => {
+      const handleLink = profileHyperlink(row.profileUrl);
       return [
-        { text: row.handle, options: { fontSize: 10, bold: true, color: TITLE_INK } },
-        { text: row.platformLabel, options: { fontSize: 10, color: TITLE_INK } },
+        {
+          text: row.handle,
+          options: {
+            fontSize: 10,
+            bold: Boolean(row.handle),
+            color: TITLE_INK,
+            ...(handleLink && row.handle ? { hyperlink: handleLink } : {}),
+          },
+        },
+        {
+          text: perPlatform ? "" : row.platformLabel,
+          options: { fontSize: 10, color: TITLE_INK },
+        },
         {
           text: row.followers,
           options: { fontSize: 10, color: TITLE_INK, align: "right" },
         },
-        { text: row.category, options: { fontSize: 10, color: TITLE_INK } },
+        { text: row.category, options: { fontSize: 9, color: TITLE_INK } },
         {
           text: row.er,
           options: { fontSize: 10, color: TITLE_INK, align: "right" },
         },
+        ...(showFees
+          ? [
+              {
+                text: row.fee,
+                options: { fontSize: 10, bold: Boolean(row.fee), color: BLUE, align: "right" as const },
+              },
+            ]
+          : []),
       ];
     }),
   ];
@@ -1107,6 +1118,7 @@ function addCreatorMixSlides(
   // One row per platform for every template (lead handle / blank continuations).
   const perPlatform = true;
   const showcaseMix = isShowcaseTemplate(doc.template) || isPitchTemplate(doc.template);
+  const showFees = showcaseMix && payload.flags.showFees;
   const maxCats = isPitchTemplate(doc.template) ? 6 : 4;
   const categoryCards = showcaseMix ? [] : payload.categories.slice(0, maxCats);
 
@@ -1117,7 +1129,11 @@ function addCreatorMixSlides(
   };
   const chunks: MixChunk[] = [];
   for (const tier of payload.tiers) {
-    const allRows = buildMixRowsForTier(tier, doc, perPlatform);
+    const allRows = buildMixRowsForTier(tier, doc, {
+      perPlatform,
+      showFees,
+      feeLines: payload.feeLines,
+    });
     if (!allRows.length) continue;
     for (let offset = 0; offset < allRows.length; offset += MIX_ROWS_PER_SLIDE) {
       chunks.push({
@@ -1177,7 +1193,10 @@ function addCreatorMixSlides(
       );
       startSlide(true);
     }
-    cursorY = drawMixTierTable(slide!, chunk.tier, chunk.rows, cursorY, perPlatform);
+    cursorY = drawMixTierTable(slide!, chunk.tier, chunk.rows, cursorY, {
+      perPlatform,
+      showFees,
+    });
   }
 
   addSlideFooter(
@@ -1374,7 +1393,7 @@ function creatorPlatformMetricRows(
   ];
 }
 
-/** One metrics row per linked platform — icon-only Platforms column (no overlapping labels). */
+/** One metrics row per linked platform — Followers / ER only (Views removed). */
 function addCreatorMetricsTable(
   slide: Slide,
   creator: ReturnType<typeof buildQuotationTemplatePayload>["showcaseCreators"][number],
@@ -1384,7 +1403,7 @@ function addCreatorMetricsTable(
 ): number {
   const metricRows = creatorPlatformMetricRows(creator);
   const rowH = metricRows.length > 3 ? 0.26 : 0.3;
-  const colW = [w * 0.16, w * 0.15, w * 0.14, w * 0.12, w * 0.25, w * 0.18];
+  const colW = [w * 0.18, w * 0.17, w * 0.14, w * 0.28, w * 0.23];
   const bodyRows = metricRows.map((row, index) => [
     {
       text: row.followers,
@@ -1394,7 +1413,6 @@ function addCreatorMetricsTable(
       text: row.engagement,
       options: { fontSize: 10, bold: index === 0, color: TITLE_INK },
     },
-    { text: row.views, options: { fontSize: 10, color: TITLE_INK } },
     {
       text: index === 0 ? creator.tier : "",
       options: { fontSize: 10, color: TITLE_INK },
@@ -1412,7 +1430,6 @@ function addCreatorMetricsTable(
       [
         { text: "Followers", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
         { text: "Engagement", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
-        { text: "Views", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
         { text: "Tier", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
         { text: "Category", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
         { text: "Platform", options: { bold: true, color: WHITE, fontSize: 8, fill: { color: NAVY } } },
@@ -1431,7 +1448,7 @@ function addCreatorMetricsTable(
     }
   );
 
-  const platformsColX = x + colW.slice(0, 5).reduce((sum, value) => sum + value, 0) + 0.08;
+  const platformsColX = x + colW.slice(0, 4).reduce((sum, value) => sum + value, 0) + 0.08;
   metricRows.forEach((row, index) => {
     addPlatformIconBadges(
       slide,
@@ -1990,7 +2007,7 @@ async function addRosterSlides(
   if (!allRows.length) return;
 
   const avatarSize = 0.22;
-  const colW = [2.35, 1.25, 1.0, 1.2, 1.05, 2.45, 2.83];
+  const colW = [2.55, 1.45, 1.15, 1.2, 2.65, 3.13];
   const chunks: (typeof allRows)[] = [];
   for (let offset = 0; offset < allRows.length; offset += ROSTER_ROWS_PER_SLIDE) {
     chunks.push(allRows.slice(offset, offset + ROSTER_ROWS_PER_SLIDE));
@@ -2021,7 +2038,6 @@ async function addRosterSlides(
         { text: "Creator", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
         { text: "Followers", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
         { text: "Eng %", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
-        { text: "Avg views", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
         { text: "Tier", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
         { text: "Category", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
         { text: "Platforms", options: { bold: true, color: WHITE, fontSize: 9, fill: { color: NAVY } } },
@@ -2041,7 +2057,6 @@ async function addRosterSlides(
           },
           { text: row.followers, options: { fontSize: 9, color: TITLE_INK } },
           { text: row.er, options: { fontSize: 9, color: TITLE_INK } },
-          { text: row.views, options: { fontSize: 9, color: TITLE_INK } },
           { text: row.tier, options: { fontSize: 9, color: TITLE_INK } },
           { text: row.categories, options: { fontSize: 9, color: TITLE_INK } },
           { text: "", options: { fontSize: 9, color: TITLE_INK } },
@@ -2061,7 +2076,7 @@ async function addRosterSlides(
       h: 0.26 + chunk.length * ROSTER_ROW_H,
     });
 
-    const platformColX = MARGIN_X + colW.slice(0, 6).reduce((sum, value) => sum + value, 0) + 0.08;
+    const platformColX = MARGIN_X + colW.slice(0, 5).reduce((sum, value) => sum + value, 0) + 0.08;
     for (let index = 0; index < chunk.length; index++) {
       const row = chunk[index]!;
       const rowTop = tableY + ROSTER_ROW_H * (index + 1);

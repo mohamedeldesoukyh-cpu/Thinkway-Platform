@@ -93,6 +93,13 @@ export const QUOTATION_TEMPLATE_STYLES = `
   .sec-tick::before{content:""; width:18px; height:2px; background:var(--blue); border-radius:2px;}
   .sec-title{font-size:28px; font-weight:800; letter-spacing:-.6px; color:var(--navy); margin:0 0 14px;}
   .sec-title.cont{font-size:26px;}
+  .page-head{
+    display:flex; justify-content:space-between; align-items:flex-start; gap:16px;
+    margin:0 0 4px;
+  }
+  .page-head-copy{min-width:0; flex:1;}
+  .page-head .logo{flex:none; margin-top:2px;}
+  .page-head .sec-title{margin-bottom:12px;}
 
   /* —— Cover / closing full-bleed gradient —— */
   .cover, .cpage.grad{
@@ -153,15 +160,22 @@ export const QUOTATION_TEMPLATE_STYLES = `
   .logo .wm b{color:var(--blue); font-weight:800;}
   .logo.rev .wm{color:#fff;} .logo.rev .wm b{color:#fff;}
 
-  /* Category cards (line-item mix) */
-  .cat-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px;}
-  .cat{
+  /* Category bars — full-width strip (LineItem reference) */
+  .cat-bars{display:flex; flex-direction:column; gap:10px; margin:0 0 16px;}
+  .cat-bar{
+    display:flex; align-items:baseline; gap:12px;
     background:var(--tint); border:1px solid var(--border); border-radius:12px;
-    padding:14px 16px; box-shadow:0 1px 2px rgba(16,24,40,.04);
+    padding:12px 18px; box-shadow:0 1px 2px rgba(16,24,40,.04);
   }
-  .cat .cn{font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--navy); margin:0;}
-  .cat .cv{font-size:28px; font-weight:800; letter-spacing:-.8px; color:var(--navy); margin:6px 0 2px;}
-  .cat .cs{font-size:11px; color:var(--muted); margin:0;}
+  .cat-bar .cn{
+    font-size:12px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--navy); flex:1; min-width:0;
+  }
+  .cat-bar b{
+    font-size:22px; font-weight:800; letter-spacing:-.5px; color:var(--navy);
+    font-variant-numeric:tabular-nums;
+  }
+  .cat-bar .cs{font-size:12px; color:var(--muted); white-space:nowrap;}
 
   /* Tier + mix table */
   .tier{margin-bottom:12px;}
@@ -206,8 +220,8 @@ export const QUOTATION_TEMPLATE_STYLES = `
     margin-top:14px; padding:14px 20px; border-radius:14px; color:#fff;
     background:linear-gradient(120deg,#0d1836 0%,#0057ff 100%);
   }
-  .banner .gl{font-size:13px; font-weight:700; letter-spacing:.02em;}
-  .banner .gv{font-size:22px; font-weight:800; letter-spacing:-.4px; font-variant-numeric:tabular-nums;}
+  .banner .gl{font-size:12px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;}
+  .banner .gv{font-size:26px; font-weight:800; letter-spacing:-.6px; font-variant-numeric:tabular-nums;}
 
   .insight{
     background:var(--tint); border:1px solid var(--border); border-left:4px solid var(--blue);
