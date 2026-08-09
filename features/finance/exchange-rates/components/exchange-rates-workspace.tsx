@@ -299,6 +299,12 @@ function ExchangeRateForm({
 }: {
   currencies: ExchangeRatesWorkspaceData["currencies"];
 }) {
+  const activeCodes = useMemo(
+    () => currencies.filter((c) => c.is_active).map((c) => c.code),
+    [currencies]
+  );
+  const [fromCurrency, setFromCurrency] = useState("USD");
+  const [toCurrency, setToCurrency] = useState("EGP");
   const [applyMode, setApplyMode] = useState<"future" | "override_historical">("future");
   const [state, action, pending] = useActionState(upsertExchangeRateAction, {
     ok: false,
@@ -308,6 +314,14 @@ function ExchangeRateForm({
     if (!state.message) return;
     toast[state.ok ? "success" : "error"](state.message);
   }, [state]);
+
+  useEffect(() => {
+    if (activeCodes.length === 0) return;
+    if (!activeCodes.includes(fromCurrency)) setFromCurrency(activeCodes[0]!);
+    if (!activeCodes.includes(toCurrency)) {
+      setToCurrency(activeCodes.includes("EGP") ? "EGP" : activeCodes[0]!);
+    }
+  }, [activeCodes, fromCurrency, toCurrency]);
 
   return (
     <OperationalFormSection
@@ -320,24 +334,27 @@ function ExchangeRateForm({
     >
       <form id="exchange-rate-form" action={action} className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <input type="hidden" name="apply_mode" value={applyMode} />
+          {/* Radix Select does not submit `name` — keep hidden fields as the form values. */}
+          <input type="hidden" name="from_currency" value={fromCurrency} />
+          <input type="hidden" name="to_currency" value={toCurrency} />
           <div className="grid gap-2">
             <Label>From</Label>
-            <Select name="from_currency" defaultValue="USD">
+            <Select value={fromCurrency} onValueChange={setFromCurrency}>
               <SelectTrigger className={DETAIL_FORM_SELECT_TRIGGER_CLASS}><SelectValue /></SelectTrigger>
               <SelectContent>
-                {currencies.filter((c) => c.is_active).map((c) => (
-                  <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>
+                {activeCodes.map((code) => (
+                  <SelectItem key={code} value={code}>{code}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="grid gap-2">
             <Label>To</Label>
-            <Select name="to_currency" defaultValue="EGP">
+            <Select value={toCurrency} onValueChange={setToCurrency}>
               <SelectTrigger className={DETAIL_FORM_SELECT_TRIGGER_CLASS}><SelectValue /></SelectTrigger>
               <SelectContent>
-                {currencies.filter((c) => c.is_active).map((c) => (
-                  <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>
+                {activeCodes.map((code) => (
+                  <SelectItem key={code} value={code}>{code}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -375,7 +392,8 @@ function ExchangeRateForm({
           ) : null}
         </form>
       <p className="text-xs text-muted-foreground">
-        Historical campaigns preserve FX snapshots. New effective-dated rates apply forward without recalculating frozen records.
+        Enter From→To as the multiplier (e.g. AED→EGP ≈ 14.16). Missing pairs can also resolve via USD triangulation.
+        Draft quotations refresh identity FX snapshots on open; finance-locked documents keep their frozen rates.
       </p>
     </OperationalFormSection>
   );

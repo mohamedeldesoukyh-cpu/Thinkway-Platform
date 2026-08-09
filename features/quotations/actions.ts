@@ -317,7 +317,8 @@ export async function updateQuotationHeader(input: {
 
 /** Resolve currency → EGP rate from md_exchange_rates for live header display. */
 export async function resolveCommercialRateToEgp(
-  currency: string
+  currency: string,
+  asOf?: string | null
 ): Promise<ActionResult<{ rate: number; currency: string }>> {
   const actor = await getActor();
   if (!actor.ok) return actor;
@@ -325,7 +326,7 @@ export async function resolveCommercialRateToEgp(
   if (!isCommercialCurrency(code)) {
     return { ok: false, message: "Unsupported currency." };
   }
-  const rate = await resolveRateToEgp(actor.supabase, code);
+  const rate = await resolveRateToEgp(actor.supabase, code, asOf);
   return { ok: true, data: { rate, currency: code } };
 }
 

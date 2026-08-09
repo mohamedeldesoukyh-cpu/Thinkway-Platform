@@ -203,6 +203,8 @@ export type QuotationCommercialWorkspaceDialogProps = {
   triggerClassName?: string;
   displayCurrency?: string;
   displayFxRateToEgp?: number;
+  /** Quotation issue date — used as FX as-of when resolving master rates. */
+  issueDate?: string | null;
 };
 
 export function QuotationCommercialWorkspaceDialog({
@@ -215,6 +217,7 @@ export function QuotationCommercialWorkspaceDialog({
   triggerClassName,
   displayCurrency = "EGP",
   displayFxRateToEgp = 1,
+  issueDate = null,
 }: QuotationCommercialWorkspaceDialogProps) {
   const manualSave = useQuotationManualSave();
   const [open, setOpen] = useState(false);
@@ -270,10 +273,10 @@ export function QuotationCommercialWorkspaceDialog({
     if (currency === "EGP") {
       return { ...draft, costCurrency: "EGP", fxRateToEgp: 1 };
     }
-    const rateRes = await resolveCommercialRateToEgp(currency);
+    const rateRes = await resolveCommercialRateToEgp(currency, issueDate);
     if (!rateRes.ok || !rateRes.data) return draft;
     return { ...draft, costCurrency: currency, fxRateToEgp: rateRes.data.rate };
-  }, []);
+  }, [issueDate]);
 
   const stageDraft = useCallback(
     (id: string, next: QuotationRowDraft, recordHistory = true) => {
@@ -307,7 +310,11 @@ export function QuotationCommercialWorkspaceDialog({
           Object.entries(patched).map(async ([id, draft]) => {
             const prevCurrency = (drafts[id]?.costCurrency || "EGP").toUpperCase();
             const nextCurrency = (draft.costCurrency || "EGP").toUpperCase();
-            if (prevCurrency === nextCurrency) return [id, draft] as const;
+            const hasRealFx =
+              nextCurrency === "EGP" || (draft.fxRateToEgp ?? 0) > 1;
+            if (prevCurrency === nextCurrency && hasRealFx) {
+              return [id, draft] as const;
+            }
             return [id, await withResolvedFx(draft)] as const;
           })
         );
@@ -390,13 +397,45 @@ export function QuotationCommercialWorkspaceDialog({
     if (!canManage || selectedIds.size === 0) return;
     const pct = Number(bulkValue);
     const currency = bulkValue.trim().toUpperCase();
+
+    if (bulkKind === "set_fx") {
+      void (async () => {
+        const resolvedEntries = await Promise.all(
+          [...selectedIds].map(async (id) => {
+            const draft = drafts[id];
+            if (!draft) return null;
+            return [id, await withResolvedFx(draft)] as const;
+          })
+        );
+        const resolved = Object.fromEntries(
+          resolvedEntries.filter((entry): entry is readonly [string, QuotationRowDraft] =>
+            Boolean(entry)
+          )
+        );
+        if (Object.keys(resolved).length === 0) {
+          toast.error("No lines selected to refresh FX.");
+          return;
+        }
+        const merged = { ...drafts, ...resolved };
+        setHistory((prev) => pushCommercialDraftHistory(prev, merged));
+        onDraftsMerge(resolved);
+        for (const [id, draft] of Object.entries(resolved)) {
+          manualSave.registerLinePending(
+            id,
+            draftToLinePending(draft, itemsById.get(id)?.deliverables)
+          );
+        }
+        toast.success(
+          `Staged FX refresh on ${Object.keys(resolved).length} line(s) from master rates. Save to apply.`
+        );
+      })();
+      return;
+    }
+
     let op: CommercialWorkspaceBulkOp;
     switch (bulkKind) {
       case "set_currency":
         op = { kind: "set_currency", currency: currency || "EGP" };
-        break;
-      case "set_fx":
-        op = { kind: "set_fx", fxRateToEgp: Number.isFinite(pct) ? pct : 1 };
         break;
       default:
         if (!Number.isFinite(pct)) {
