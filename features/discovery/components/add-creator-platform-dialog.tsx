@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2Icon } from "lucide-react";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -65,6 +65,8 @@ export function AddCreatorPlatformDialog({
   const [profileUrl, setProfileUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const requestIdRef = useRef(0);
+  const openRef = useRef(open);
 
   const parsed = useMemo(() => {
     const trimmed = profileUrl.trim();
@@ -80,11 +82,17 @@ export function AddCreatorPlatformDialog({
       : null;
 
   useEffect(() => {
+    openRef.current = open;
     if (!open) {
       setProfileUrl("");
       setError(null);
     }
   }, [open]);
+
+  function handleOpenChange(next: boolean) {
+    // Always allow dismiss — enrichment continues in the background after link.
+    onOpenChange(next);
+  }
 
   function handleConfirm() {
     const trimmed = profileUrl.trim();
@@ -94,58 +102,73 @@ export function AddCreatorPlatformDialog({
     }
 
     setError(null);
+    const requestId = ++requestIdRef.current;
     startTransition(async () => {
-      const result = await addPlatformToCreatorAction({
-        profileUrl: trimmed,
-        unifiedId,
-        influencerId,
-        discoveredProfileId,
-      });
+      try {
+        const result = await addPlatformToCreatorAction({
+          profileUrl: trimmed,
+          unifiedId,
+          influencerId,
+          discoveredProfileId,
+        });
 
-      if (!result.ok) {
-        setError(result.message);
-        toast.error(result.message);
-        return;
-      }
+        if (requestId !== requestIdRef.current) return;
 
-      toast.success(result.message);
-      onSuccess?.(result.creator, result.platformAccountId);
-      onCreatorUpdated?.(result.creator);
-      onOpenChange(false);
-
-      const resolvedInfluencerId = result.creator.influencer_id;
-      if (result.enrichmentQueued && resolvedInfluencerId) {
-        const resolvedUnifiedId = result.creator.unified_id;
-        onEnrichmentStatusChange?.(resolvedUnifiedId, "queued");
-        void pollCreatorAfterRefresh(
-          { unifiedId: resolvedUnifiedId, influencerId: resolvedInfluencerId },
-          {
-            onUpdated: (creator) => {
-              onCreatorUpdated?.(creator);
-            },
-            onStatusChange: (syncStatus) => {
-              onEnrichmentStatusChange?.(
-                resolvedUnifiedId,
-                syncStatusToEnrichmentStatus(syncStatus)
-              );
-            },
-            onComplete: (syncStatus) => {
-              if (syncStatus === "completed") {
-                toast.success("Platform profile enriched");
-              } else if (syncStatus === "failed") {
-                toast.error("Enrichment failed", {
-                  description: "Apify enrichment did not complete successfully.",
-                });
-              }
-            },
+        if (!result.ok) {
+          if (openRef.current) {
+            setError(result.message);
           }
-        );
+          toast.error(result.message);
+          return;
+        }
+
+        toast.success(result.message);
+        onSuccess?.(result.creator, result.platformAccountId);
+        onCreatorUpdated?.(result.creator);
+        if (openRef.current) {
+          onOpenChange(false);
+        }
+
+        const resolvedInfluencerId = result.creator.influencer_id;
+        if (result.enrichmentQueued && resolvedInfluencerId) {
+          const resolvedUnifiedId = result.creator.unified_id;
+          onEnrichmentStatusChange?.(resolvedUnifiedId, "queued");
+          void pollCreatorAfterRefresh(
+            { unifiedId: resolvedUnifiedId, influencerId: resolvedInfluencerId },
+            {
+              onUpdated: (creator) => {
+                onCreatorUpdated?.(creator);
+              },
+              onStatusChange: (syncStatus) => {
+                onEnrichmentStatusChange?.(
+                  resolvedUnifiedId,
+                  syncStatusToEnrichmentStatus(syncStatus)
+                );
+              },
+              onComplete: (syncStatus) => {
+                if (syncStatus === "completed") {
+                  toast.success("Platform profile enriched");
+                } else if (syncStatus === "failed") {
+                  toast.error("Enrichment failed", {
+                    description: "Apify enrichment did not complete successfully.",
+                  });
+                }
+              },
+            }
+          );
+        }
+      } catch (err) {
+        if (requestId !== requestIdRef.current) return;
+        const message =
+          err instanceof Error ? err.message : "Could not link platform. Please try again.";
+        if (openRef.current) setError(message);
+        toast.error(message);
       }
     });
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className={DISCOVERY_DIALOG_CONTENT_CLASS}>
         <DialogHeader className={DISCOVERY_DIALOG_HEADER_WRAP_CLASS}>
           <div className={DISCOVERY_DIALOG_HEADER_BAR_CLASS}>
@@ -156,8 +179,8 @@ export function AddCreatorPlatformDialog({
               Add platform
             </DialogTitle>
             <DialogDescription className={DISCOVERY_DIALOG_DESC_CLASS}>
-              Link another social profile to {creatorName}. We&apos;ll enrich the account and
-              update this creator automatically.
+              Link another social profile to {creatorName}. Enrichment runs in the background —
+              you can close this and keep working.
               {linkedSummary ? (
                 <span className="mt-1 block text-xs">
                   Already linked: {linkedSummary}
@@ -193,7 +216,7 @@ export function AddCreatorPlatformDialog({
           ) : isPending ? (
             <p className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2Icon className="size-3.5 animate-spin" />
-              Linking profile and queuing enrichment…
+              Linking profile… enrichment will continue in the background.
             </p>
           ) : parsed ? (
             <p className="text-xs text-emerald-600 dark:text-emerald-400">
@@ -211,10 +234,9 @@ export function AddCreatorPlatformDialog({
           <Button
             type="button"
             variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isPending}
+            onClick={() => handleOpenChange(false)}
           >
-            Cancel
+            {isPending ? "Close" : "Cancel"}
           </Button>
           <Button type="button" onClick={handleConfirm} disabled={!canConfirm}>
             {isPending ? <Loader2Icon className="size-4 animate-spin" /> : null}

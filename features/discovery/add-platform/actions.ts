@@ -36,11 +36,8 @@ export async function addPlatformToCreatorAction(input: {
   });
 
   if (result.ok) {
-    revalidatePath("/discovery");
+    // Client already patches the open creator row; one light revalidation is enough.
     revalidatePath("/discovery/search");
-    revalidatePath("/discovery/shortlists", "layout");
-    revalidatePath("/discovery/quotations", "layout");
-    revalidatePath("/vendors");
   }
 
   return result;
