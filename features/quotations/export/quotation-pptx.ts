@@ -128,6 +128,24 @@ function resolveCreatorProfileHref(
   return undefined;
 }
 
+/** True when a data-URI / pptxgen payload is SVG markup (even if mime says png). */
+function isSvgBase64Payload(data: string): boolean {
+  if (!data) return false;
+  if (data.startsWith("data:image/svg") || data.startsWith("image/svg")) return true;
+  const marker = ";base64,";
+  const markerIndex = data.indexOf(marker);
+  if (markerIndex < 0) return false;
+  try {
+    const head = Buffer.from(data.slice(markerIndex + marker.length, markerIndex + marker.length + 48), "base64")
+      .toString("utf8")
+      .trimStart()
+      .toLowerCase();
+    return head.startsWith("<svg") || head.startsWith("<?xml");
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Platform logos — frameless circular icons.
  * `overlap: true` stacks them like shortlist CreatorLinkedPlatformIcons (~40% cross).
@@ -151,8 +169,13 @@ function addPlatformIconBadges(
     const iconX = x + index * step;
     const dataUri = getReportPlatformIconDataUri(platform);
     // Never embed SVG — pptxgenjs writes SVG bytes as a fake .png and PowerPoint
-    // refuses to open the file ("can't read" / corrupted).
-    if (dataUri?.startsWith("data:image/") && !dataUri.startsWith("data:image/svg")) {
+    // refuses to open the file ("can't read" / corrupted). Also reject PNG/JPEG
+    // mime types whose payload is actually SVG markup.
+    if (
+      dataUri?.startsWith("data:image/") &&
+      !dataUri.startsWith("data:image/svg") &&
+      !isSvgBase64Payload(dataUri)
+    ) {
       const payload = dataUri.slice("data:".length);
       const marker = ";base64,";
       const markerIndex = payload.indexOf(marker);
@@ -453,7 +476,13 @@ async function imageDataForPptxCoverCrop(
     maxEdge,
   });
   const finalBuffer = cropped?.buffer ?? buffer;
+  const head = finalBuffer.slice(0, 5).toString("utf8").trimStart().toLowerCase();
+  if (head.startsWith("<svg") || head.startsWith("<?xml")) {
+    // SVG bytes break PowerPoint when pptxgenjs stores them as .png.
+    return null;
+  }
   const contentType = cropped?.contentType ?? detectImageContentType(finalBuffer);
+  if (contentType.includes("svg")) return null;
   return `${contentType};base64,${finalBuffer.toString("base64")}`;
 }
 
