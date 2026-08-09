@@ -21,6 +21,11 @@ const releaseEnv = {
     process.env.GITHUB_SHA?.trim() ||
     process.env.GIT_SHA?.trim() ||
     "",
+  // CLI `vercel deploy` sets VERCEL_DEPLOYMENT_ID even when git SHA is absent.
+  NEXT_PUBLIC_VERCEL_DEPLOYMENT_ID:
+    process.env.VERCEL_DEPLOYMENT_ID?.trim() ||
+    process.env.NEXT_PUBLIC_VERCEL_DEPLOYMENT_ID?.trim() ||
+    "",
   NEXT_PUBLIC_BUILD_TIMESTAMP:
     process.env.BUILD_TIMESTAMP?.trim() ||
     process.env.NEXT_PUBLIC_BUILD_TIMESTAMP?.trim() ||

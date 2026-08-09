@@ -62,7 +62,7 @@ export async function GET() {
   }
   if (!build.gitSha) {
     hints.push(
-      "gitSha is null — deploy via Vercel git integration so VERCEL_GIT_COMMIT_SHA is set for commit verification."
+      "gitSha is null — CLI Production deploys omit VERCEL_GIT_COMMIT_SHA. PWA updates use VERCEL_DEPLOYMENT_ID / build timestamp; prefer Vercel git integration when commit verification is required."
     );
   }
 
