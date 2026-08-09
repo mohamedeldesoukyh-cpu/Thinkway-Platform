@@ -7,28 +7,32 @@ import {
   fetchImageBuffer,
 } from "@/lib/performance/screenshot-capture/storage";
 
-/** Design tokens — matched to Thinkway QT-2026-0013 reference deck. */
+/** Design tokens — matched to Thinkway QT-2026-0020 Redesign deck. */
 export const TW_BLUE = "0057FF";
-export const TW_NAVY = "0B0F1A";
+export const TW_NAVY = "0D1836";
 export const TW_TITLE_INK = "0D1220";
-export const TW_MUTED = "6B7280";
-export const TW_MUTED_SOFT = "8A93A6";
+export const TW_MUTED = "7C88A4";
+export const TW_MUTED_SOFT = "9AA3B5";
 export const TW_FOOTER_MUTED = "9AA3B5";
 export const TW_COVER_FOOTER = "8FA3D0";
-export const TW_COVER_KICKER = "C9DBFF";
+export const TW_COVER_KICKER = "CBDCFF";
 export const TW_COVER_META = "9FB6E8";
 export const TW_COVER_STAT_LABEL = "BFD2FF";
-export const TW_HAIR = "E7ECF5";
-export const TW_ROW_HAIR = "EDF1F7";
-export const TW_INSIGHT_BG = "F3F7FF";
-export const TW_LAVENDER = "E8EFFE";
-export const TW_LAV_LINE = "D5E2FB";
+export const TW_HAIR = "EEF1F9";
+export const TW_ROW_HAIR = "EEF1F9";
+export const TW_INSIGHT_BG = "F6F8FF";
+export const TW_LAVENDER = "F6F8FF";
+export const TW_LAV_LINE = "E6ECFB";
 export const TW_WHITE = "FFFFFF";
 export const TW_GREEN = "1D9E75";
+export const TW_PILL = "EEF3FF";
+export const TW_TINT = "F6F8FF";
+export const TW_BORDER = "E6ECFB";
 
-export const TW_FONT_UI = "Arial";
-export const TW_FONT_BODY = "Calibri";
+export const TW_FONT_UI = "Segoe UI";
+export const TW_FONT_BODY = "Segoe UI";
 
+/** Standard 16:9 presentation (mirrors Redesign_3.pptx proportions). */
 export const TW_PAGE_W = 13.333;
 export const TW_PAGE_H = 7.5;
 export const TW_MARGIN_X = 0.6;

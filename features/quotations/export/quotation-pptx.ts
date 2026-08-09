@@ -726,7 +726,8 @@ type MixTableRow = {
   profileUrl: string | null;
 };
 
-const MIX_ROWS_PER_SLIDE = 9;
+/** Keep mix tables short so wrapped platform rows never collide with the footer. */
+const MIX_ROWS_PER_SLIDE = 8;
 const MIX_ROW_H = 0.24;
 const MIX_HEADER_H = 0.26;
 
@@ -1103,9 +1104,11 @@ function addCreatorMixSlides(
   counter: SlideCounter
 ): void {
   const payload = buildQuotationTemplatePayload(doc);
-  const perPlatform = isPitchTemplate(doc.template) || isShowcaseTemplate(doc.template);
+  // One row per platform for every template (lead handle / blank continuations).
+  const perPlatform = true;
+  const showcaseMix = isShowcaseTemplate(doc.template) || isPitchTemplate(doc.template);
   const maxCats = isPitchTemplate(doc.template) ? 6 : 4;
-  const categoryCards = payload.categories.slice(0, maxCats);
+  const categoryCards = showcaseMix ? [] : payload.categories.slice(0, maxCats);
 
   type MixChunk = {
     tier: (typeof payload.tiers)[number];
@@ -1148,23 +1151,17 @@ function addCreatorMixSlides(
     slideIndex += 1;
     cursorY = addSectionHeader(
       slide,
-      "SECTION 01 · CREATOR MIX",
-      continued || slideIndex > 1 ? "Creator mix (continued)" : "Creator mix"
+      showcaseMix ? "01 · INVESTMENT SUMMARY" : "01 · CREATORS BY CATEGORY",
+      showcaseMix
+        ? continued || slideIndex > 1
+          ? "Creators & fees (continued)"
+          : "Creators & fees"
+        : continued || slideIndex > 1
+          ? "Creator mix (continued)"
+          : "Creator mix"
     );
     if (slideIndex === 1 && categoryCards.length) {
       cursorY = drawMixCategoryCards(slide, categoryCards, cursorY + 0.08);
-      slide.addText("FULL INFLUENCER BREAKDOWN BY TIER", {
-        x: MARGIN_X,
-        y: cursorY,
-        w: 11,
-        h: 0.22,
-        fontFace: FONT_UI,
-        fontSize: 10,
-        bold: true,
-        color: MUTED_SOFT,
-        charSpacing: 1.2,
-      });
-      cursorY += 0.3;
     }
   };
 

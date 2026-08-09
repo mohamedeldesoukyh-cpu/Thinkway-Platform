@@ -225,7 +225,7 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(html.includes("Terms &amp; conditions"));
   assert.ok(html.includes("Influencer marketing proposal prepared exclusively for Acme Corp"));
   assert.ok(html.includes("page-break"));
-  assert.ok(html.includes("avoid-break"));
+  assert.ok(html.includes("cpage") || html.includes("page-break-after"));
   assert.ok(html.includes("Client investment"));
   assert.ok(html.includes("Gross fees (EGP)"));
   assert.ok(html.includes(QUOTATION_CLIENT_LABELS.totalClientCost));
@@ -234,24 +234,24 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(html.includes(">Platform<"));
   assert.ok(html.includes("fee-avatar"));
   assert.ok(html.includes("creator-name"));
-  assert.ok(html.includes("Campaign mix insight"));
   assert.ok(html.includes("Creators by category"));
   assert.ok(html.includes("summary-overview-page"), "Summary overview uses dedicated page-2 class");
-  assert.ok(html.includes("Full influencer breakdown by tier"), "Tier breakdown title present");
+  assert.ok(html.includes("Creator mix"), "Tier mix title present");
   assert.ok(html.includes("tier-breakdown-table"), "Tier breakdown table rendered");
-  assert.ok(html.includes(">Handle<"), "Tier breakdown includes Handle column");
+  assert.ok(html.includes(">Creator<"), "Tier breakdown includes Creator column");
   assert.ok(!html.includes(">EG Audience %<"), "Tier breakdown must not include EG Audience column");
   assert.ok(html.includes("tier-breakdown-grand-total"), "Tier breakdown grand total rendered");
+  assert.ok(html.includes("cpage"), "Fixed full-bleed page boxes");
   const coverEnd = html.indexOf("</section>");
   const categoryPos = html.indexOf("Creators by category");
-  const tierPos = html.indexOf("Full influencer breakdown by tier");
+  const tierPos = html.indexOf("Creator mix");
   const commercialPos = html.indexOf("Commercial summary");
   const termsPos = html.indexOf("Terms &amp; conditions");
   assert.ok(categoryPos > coverEnd, "Category summary appears after cover page");
-  assert.ok(tierPos > categoryPos, "Tier breakdown appears after category summary table");
+  assert.ok(tierPos > coverEnd, "Tier mix appears after cover page");
   assert.ok(
     commercialPos < 0 || tierPos < commercialPos,
-    "Tier breakdown appears before commercial section"
+    "Tier mix appears before commercial section"
   );
   assert.ok(categoryPos < termsPos, "Category summary appears before terms");
   assert.ok(html.includes("platform-cell"), "Platform column appears in client fee table");
@@ -725,7 +725,8 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   const showcaseHtml = buildQuotationHtml(
     buildQuotationDocument(detail, { template: "showcase" })
   );
-  assert.ok(showcaseHtml.includes("Categories</p>"));
+  assert.ok(showcaseHtml.includes("Investment summary"));
+  assert.ok(showcaseHtml.includes("Creators &amp; fees") || showcaseHtml.includes("Creators & fees"));
   assert.ok(showcaseHtml.includes("Beauty, Lifestyle"));
   assert.ok(
     showcaseHtml.includes("<th>Category</th>"),
@@ -735,6 +736,8 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     showcaseHtml.includes('class="categories-cell"'),
     "Showcase creator roster renders categories per creator"
   );
+  assert.ok(showcaseHtml.includes("cpage"), "Showcase uses fixed full-bleed pages");
+  assert.ok(showcaseHtml.includes("Let's build something worth watching"));
 
   const showcaseLumpHtml = buildQuotationHtml(
     buildQuotationDocument(detail, { template: "showcase-lump-sum" })
@@ -1032,12 +1035,12 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
 
   const html = buildQuotationHtml(doc);
   assert.ok(html.includes("tier-breakdown-header"));
-  assert.ok(html.includes("Celebrity"));
-  assert.ok(html.includes("Mega"));
-  assert.ok(html.includes("Mid"));
-  assert.ok(html.includes("Micro"));
+  assert.ok(html.includes("CELEBRITY"));
+  assert.ok(html.includes("MEGA"));
+  assert.ok(html.includes("MID"));
+  assert.ok(html.includes("MICRO"));
   assert.ok(html.includes("dr.fitn3ss"));
-  assert.ok(html.includes("Grand total · 4 influencers"));
+  assert.ok(html.includes("Total Investment · 4 creators"));
   assert.ok(html.includes("tier-breakdown-grand-total"));
 }
 

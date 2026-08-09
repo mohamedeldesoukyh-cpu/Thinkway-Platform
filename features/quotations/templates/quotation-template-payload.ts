@@ -121,14 +121,16 @@ function coverKicker(template: QuotationTemplateVariant): string {
 }
 
 function coverStat3(doc: QuotationDocument): QuotationTemplatePayload["cover"]["stat3"] {
-  if (
-    (isShowcaseTemplate(doc.template) || isPitchTemplate(doc.template)) &&
-    !isLumpSumPricingTemplate(doc.template)
-  ) {
+  // Showcase / pitch covers lead with Total Investment (matches Thinkway deck).
+  if (isShowcaseTemplate(doc.template) || isPitchTemplate(doc.template)) {
+    const raw = isLumpSumPricingTemplate(doc.template)
+      ? doc.summary.grandTotal
+      : doc.summary.totalClientCost;
+    const formatted = formatQuotationMoneyDisplay(raw);
     return {
-      label: "Est. Engagement",
-      value: doc.summary.estimatedEngagement,
-      valueShort: doc.summary.estimatedEngagement,
+      label: "Total Investment",
+      value: formatted.full,
+      valueShort: formatted.short,
     };
   }
   const label = isLumpSumPricingTemplate(doc.template)
@@ -138,7 +140,6 @@ function coverStat3(doc: QuotationDocument): QuotationTemplatePayload["cover"]["
     ? doc.summary.grandTotal
     : doc.summary.totalClientCost;
   const formatted = formatQuotationMoneyDisplay(raw);
-  // Cover primary = full total (e.g. AED 268,333.34); short is the subtitle.
   return {
     label,
     value: formatted.full,
@@ -268,7 +269,7 @@ export function buildQuotationTemplatePayload(doc: QuotationDocument): Quotation
         deliverable: row.isCollapsePackageLeader
           ? `Collap package · ${deliverableLabel(row)}`
           : deliverableLabel(row),
-        ...(flags.itemizedPricing ? { grossFee: grossFeeAmount(row) } : {}),
+        ...(flags.showFees ? { grossFee: grossFeeAmount(row) } : {}),
         avatarInitials: showcaseInitialsFromHandle(group.handle || group.creator),
       }))
   );
@@ -448,7 +449,7 @@ export function buildQuotationTemplatePayload(doc: QuotationDocument): Quotation
     },
     company: { ...COMPANY },
     footer: {
-      left: `Confidential · Thinkway Platform · ${doc.issueDateLabel}`,
+      left: "Thinkway · hello@thinkwaymedia.com",
     },
   };
 }

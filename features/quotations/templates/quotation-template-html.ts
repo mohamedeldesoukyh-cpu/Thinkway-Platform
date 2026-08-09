@@ -13,14 +13,22 @@ import {
 } from "./quotation-template-avatars";
 import { renderQuotationPlatformIconsHtml } from "./quotation-template-platform-icons";
 import { buildCollapsePackageMixFeed } from "@/features/quotations/export/quotation-export-mix-feed";
-import { isCreatorDeckTemplate, isLumpSumPricingTemplate, isShowcaseTemplate } from "@/features/quotations/export/quotation-template";
+import { isCreatorDeckTemplate, isLumpSumPricingTemplate } from "@/features/quotations/export/quotation-template";
 import { buildQuotationTemplatePayload } from "./quotation-template-payload";
+import {
+  MIX_CATEGORY_BLOCK_MM,
+  paginateMixTiers,
+  type MixCreatorUnit,
+  type MixTierInput,
+} from "./quotation-template-pagination";
 import {
   QUOTATION_TEMPLATE_LOGO_SVG,
   QUOTATION_TEMPLATE_LOGO_SVG_DARK,
   QUOTATION_TEMPLATE_STYLES,
 } from "./quotation-template-styles";
 import type { QuotationTemplatePayload } from "./quotation-template-types";
+import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+import { getReportPlatformIconTitle } from "@/lib/performance/report/report-platform-icons";
 
 export type BuildQuotationTemplateHtmlOptions = {
   siteOrigin?: string;
@@ -37,41 +45,161 @@ function esc(value: string | null | undefined): string {
     .replace(/"/g, "&quot;");
 }
 
-function renderTierBlock(
-  tier: QuotationTemplatePayload["tiers"][number],
+function platformBadgeHtml(platform: string): string {
+  const key = canonicalPlatformKey(platform) || "other";
+  const label = getReportPlatformIconTitle(platform);
+  return `<span class="pf"><span class="pf-ico ${esc(key)}"></span>${esc(label)}</span>`;
+}
+
+function normalizeHandleKey(handle: string): string {
+  return handle.replace(/^@/, "").trim().toLowerCase();
+}
+
+function parseFeeNumber(raw: string | null | undefined): number | null {
+  if (!raw) return null;
+  const cleaned = raw.replace(/[^\d.]/g, "");
+  if (!cleaned) return null;
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
+function formatFeeDisplay(amount: number): string {
+  return Math.round(amount).toLocaleString("en-US");
+}
+
+function resolveCreatorFee(
+  handle: string,
+  feeLines: QuotationTemplatePayload["feeLines"],
+  group: QuotationDocument["creatorGroups"][number] | undefined,
+  showFees: boolean
+): string | null {
+  if (!showFees) return null;
+  const key = normalizeHandleKey(handle);
+  const fromLines = feeLines
+    .filter((line) => normalizeHandleKey(line.avatarGroupKey) === key)
+    .map((line) => parseFeeNumber(line.grossFee ?? null))
+    .filter((n): n is number => n != null);
+  if (fromLines.length > 0) {
+    return formatFeeDisplay(fromLines.reduce((a, b) => a + b, 0));
+  }
+  if (!group) return null;
+  const fromRows = group.rows
+    .filter((row) => !row.isCollapsePackageFollower)
+    .map((row) => parseFeeNumber(row.clientCost.match(/([\d,.\s]+)/)?.[1] ?? null))
+    .filter((n): n is number => n != null);
+  if (fromRows.length === 0) return null;
+  return formatFeeDisplay(fromRows.reduce((a, b) => a + b, 0));
+}
+
+function mixColumnFlags(payload: QuotationTemplatePayload): {
+  showFees: boolean;
+  showViews: boolean;
+} {
+  // Showcase investment summary: fees, no views. Line-item mix: views, no fees.
+  const showcaseMix = payload.flags.showcaseCreators;
+  return {
+    showFees: showcaseMix && payload.flags.showFees,
+    showViews: !showcaseMix,
+  };
+}
+
+function buildMixTier(
+  payload: QuotationTemplatePayload,
   creatorGroups: QuotationDocument["creatorGroups"]
-): string {
-  const rows = tier.creators
-    .flatMap((creator) => {
+): MixTierInput[] {
+  const { showFees } = mixColumnFlags(payload);
+
+  return payload.tiers.map((tier) => {
+    const creators: MixCreatorUnit[] = tier.creators.map((creator) => {
       const group = creatorGroups.find(
         (entry) =>
-          entry.handle === creator.handle ||
-          entry.handle.replace(/^@/, "") === creator.handle.replace(/^@/, "")
+          normalizeHandleKey(entry.handle) === normalizeHandleKey(creator.handle)
       );
       const metrics = group?.platformMetrics ?? [];
-      if (metrics.length > 0) {
-        return metrics.map((metric, metricIndex) => {
-          const platformCell =
-            renderQuotationPlatformIconsHtml([metric.platform]) || esc(metric.platform);
-          return `<tr><td class="h">${metricIndex === 0 ? esc(creator.handle) : ""}</td><td class="platform-cell">${platformCell}</td><td class="r">${esc(metric.followers)}</td><td class="r">${esc(metric.views)}</td><td>${metricIndex === 0 ? esc(creator.category) : ""}</td><td class="r">${esc(metric.engagement)}</td></tr>`;
-        });
-      }
-      const platformCell = creator.platformIcons.length
-        ? `${renderQuotationPlatformIconsHtml(creator.platformIcons)}<span class="platform-cell-label">${esc(creator.platform)}</span>`
-        : esc(creator.platform);
-      return [
-        `<tr><td class="h">${esc(creator.handle)}</td><td class="platform-cell">${platformCell}</td><td class="r">${esc(creator.followers)}</td><td class="r">${esc(creator.views)}</td><td>${esc(creator.category)}</td><td class="r">${esc(creator.er)}</td></tr>`,
-      ];
-    })
+      const platforms =
+        metrics.length > 0
+          ? metrics.map((metric) => ({
+              platform: metric.platform,
+              followers: metric.followers,
+              views: metric.views,
+              engagement: metric.engagement,
+            }))
+          : [
+              {
+                platform: creator.platformIcons[0] || creator.platform || "instagram",
+                followers: creator.followers,
+                views: creator.views,
+                engagement: creator.er,
+              },
+            ];
+      return {
+        handle: creator.handle.startsWith("@") ? creator.handle : `@${creator.handle}`,
+        category: creator.category,
+        fee: resolveCreatorFee(creator.handle, payload.feeLines, group, showFees),
+        platforms,
+      };
+    });
+
+    const feeSum = creators
+      .map((c) => parseFeeNumber(c.fee))
+      .filter((n): n is number => n != null)
+      .reduce((a, b) => a + b, 0);
+    const feeMeta = showFees && feeSum > 0 ? ` · EGP ${formatFeeDisplay(feeSum)}` : "";
+    const creatorCount = `${tier.creators.length} creator${tier.creators.length === 1 ? "" : "s"}`;
+
+    return {
+      name: tier.name.toUpperCase(),
+      slug: tier.slug,
+      meta: `${creatorCount} · ${tier.followers} followers · Avg ER ${tier.avgER}${feeMeta}`,
+      creators,
+    };
+  });
+}
+
+function renderMixTableRows(
+  creators: MixCreatorUnit[],
+  options: { showViews: boolean; showFees: boolean }
+): string {
+  return creators
+    .flatMap((creator) =>
+      creator.platforms.map((platform, index) => {
+        const lead = index === 0 ? " lead" : "";
+        const viewsCell = options.showViews
+          ? `<td class="r">${esc(platform.views)}</td>`
+          : "";
+        const feeCell = options.showFees
+          ? `<td class="r fee">${index === 0 ? esc(creator.fee ?? "—") : ""}</td>`
+          : "";
+        return `<tr class="${lead.trim()}"><td class="h">${index === 0 ? esc(creator.handle) : ""}</td><td>${platformBadgeHtml(platform.platform)}</td><td class="r">${esc(platform.followers)}</td>${viewsCell}<td>${index === 0 ? esc(creator.category) : ""}</td><td class="r">${esc(platform.engagement)}</td>${feeCell}</tr>`;
+      })
+    )
     .join("");
+}
+
+function renderMixTierSlice(
+  slice: {
+    name: string;
+    slug: string;
+    meta: string;
+    continued: boolean;
+    creators: MixCreatorUnit[];
+  },
+  options: { showViews: boolean; showFees: boolean }
+): string {
+  const headLabel = slice.continued ? `${slice.name} (cont.)` : slice.name;
+  const cols = options.showFees
+    ? `<th>Creator</th><th>Platform</th><th class="r">Followers</th><th>Category</th><th class="r">ER %</th><th class="r">Fees (EGP)</th>`
+    : options.showViews
+      ? `<th>Creator</th><th>Platform</th><th class="r">Followers</th><th class="r">Views</th><th>Category</th><th class="r">ER %</th>`
+      : `<th>Creator</th><th>Platform</th><th class="r">Followers</th><th>Category</th><th class="r">ER %</th>`;
   return `<div class="tier tier-breakdown-block">
       <div class="tier-head tier-breakdown-header">
-        <span class="tier-tag ${esc(tier.slug)}">${esc(tier.name)}</span>
-        <span class="tier-meta"><b>${esc(tier.profileCount)}</b> · ${esc(tier.followers)} followers · Avg ER <b>${esc(tier.avgER)}</b></span>
+        <span class="tier-tag">${esc(headLabel)}</span>
+        <span class="tier-meta">${esc(slice.meta)}</span>
       </div>
-      <table>
-        <thead class="tr tier-breakdown-table"><tr><th>Handle</th><th>Platform</th><th class="r">Followers</th><th class="r">Views</th><th>Category</th><th class="r">ER %</th></tr></thead>
-        <tbody class="tb">${rows}</tbody>
+      <table class="tbl tier-breakdown-table">
+        <thead><tr>${cols}</tr></thead>
+        <tbody>${renderMixTableRows(slice.creators, options)}</tbody>
       </table>
     </div>`;
 }
@@ -152,49 +280,68 @@ function renderCoverPage(payload: QuotationTemplatePayload): string {
   const q = payload.quotation;
   const c = payload.cover;
   const camp = payload.campaign;
-  return `<section class="page cover">
-  <div class="pad">
-    <div class="cbar">
-      ${renderLogo("cover")}
-      <div class="chip">${esc(q.version)} · ${esc(q.status)}</div>
-    </div>
-    <div class="kicker">${esc(c.kicker)}</div>
-    <h1>${esc(q.title)}</h1>
-    <div class="accentbar"></div>
-    <p class="sub">${esc(c.subtitle)}</p>
-    <div class="metagrid">
-      ${
-        payload.flags.pitchCreators
-          ? ""
-          : `<div class="m"><p class="l">Quotation No.</p><p class="v mono">${esc(q.number)}</p></div>`
-      }
+  const showcase = payload.flags.showcaseCreators;
+  const pitch = payload.flags.pitchCreators;
+  const meta = pitch
+    ? `<div class="metagrid">
       <div class="m"><p class="l">Client</p><p class="v">${esc(q.client)}</p></div>
       <div class="m"><p class="l">Brand</p><p class="v">${esc(q.brand)}</p></div>
-      ${
-        payload.flags.pitchCreators
-          ? ""
-          : `<div class="m"><p class="l">Prepared By</p><p class="v">${esc(q.preparedBy)}</p></div>`
-      }
+      <div class="m"><p class="l">Issue Date</p><p class="v mono">${esc(q.issueDate)}</p></div>
+      <div class="m"><p class="l">Valid Until</p><p class="v mono">${esc(q.validUntil)}</p></div>
+    </div>`
+    : showcase
+      ? `<div class="metagrid">
+      <div class="m"><p class="l">Quotation No.</p><p class="v mono">${esc(q.number)}</p></div>
+      <div class="m"><p class="l">Client</p><p class="v">${esc(q.client)}</p></div>
+      <div class="m"><p class="l">Brand</p><p class="v">${esc(q.brand)}</p></div>
+      <div class="m"><p class="l">Issue · Valid</p><p class="v mono">${esc(q.issueDate)} · ${esc(q.validUntil)}</p></div>
+    </div>`
+      : `<div class="metagrid">
+      <div class="m"><p class="l">Quotation No.</p><p class="v mono">${esc(q.number)}</p></div>
+      <div class="m"><p class="l">Client</p><p class="v">${esc(q.client)}</p></div>
+      <div class="m"><p class="l">Brand</p><p class="v">${esc(q.brand)}</p></div>
+      <div class="m"><p class="l">Prepared By</p><p class="v">${esc(q.preparedBy)}</p></div>
       <div class="m"><p class="l">Issue Date</p><p class="v mono">${esc(q.issueDate)}</p></div>
       <div class="m"><p class="l">Valid Until</p><p class="v mono">${esc(q.validUntil)}</p></div>
       <div class="m"><p class="l">Version</p><p class="v mono">${esc(q.version)}</p></div>
       <div class="m"><p class="l">Status</p><p class="v">${esc(q.status)}</p></div>
+    </div>`;
+
+  return `<section class="cover cpage">
+  <div class="glow glow-a"></div><div class="glow glow-b"></div>
+  <div class="pad">
+    <div class="cbar">
+      ${renderLogo("cover")}
+      ${showcase ? "" : `<div class="chip">${esc(q.version)} · ${esc(q.status)}</div>`}
     </div>
+    <div class="kicker">${esc(c.kicker)}</div>
+    <h1>${esc(q.title)}</h1>
+    <p class="sub">${esc(c.subtitle)}</p>
+    ${meta}
     <div class="statrow">
-      <div class="stat"><p class="sl">Campaign Creators</p><p class="sv">${esc(camp.creatorCount)}</p><p class="su">${esc(camp.tierSummary)}</p></div>
-      <div class="stat"><p class="sl">${esc(c.stat3.label)}</p><p class="sv">${esc(c.stat3.value)}</p><p class="su">${esc(c.stat3.valueShort)}</p></div>
+      <div class="stat"><p class="sl">Campaign Creators</p><p class="sv">${esc(camp.creatorCount)}${showcase ? ` <span style="font-size:16px;font-weight:600;opacity:.85">· ${esc(camp.tierSummary)}</span>` : ""}</p>${showcase ? "" : `<p class="su">${esc(camp.tierSummary)}</p>`}</div>
+      <div class="stat"><p class="sl">${esc(c.stat3.label)}</p><p class="sv">${esc(c.stat3.value)}</p></div>
     </div>
   </div>
-  <div class="foot" style="border-top-color:rgba(205,216,245,.18); color:#7f8bb0;">
-    <span>${esc(payload.footer.left)}</span><span>Issued ${esc(q.issueDate)}</span>
+  <div class="foot">
+    <span>Confidential · Thinkway Platform · ${esc(q.issueDate)}</span><span>Issued ${esc(q.issueDate)}</span>
   </div>
 </section>`;
 }
 
-function renderCategoryTierPage(
+function renderCategoryTierPages(
   payload: QuotationTemplatePayload,
   creatorGroups: QuotationDocument["creatorGroups"]
 ): string {
+  const cols = mixColumnFlags(payload);
+  const tiers = buildMixTier(payload, creatorGroups);
+  const showcase = payload.flags.showcaseCreators;
+  const firstPageExtraMm = showcase ? 0 : MIX_CATEGORY_BLOCK_MM;
+  const pages = paginateMixTiers(tiers, {
+    firstPageExtraMm,
+    includeBanner: true,
+  });
+
   const categories = payload.categories
     .map(
       (cat) =>
@@ -202,39 +349,64 @@ function renderCategoryTierPage(
     )
     .join("");
 
-  const tierBlocks = payload.tiers.map((tier) => renderTierBlock(tier, creatorGroups));
+  const totalLabel = payload.commercial.headlineValue || payload.totals.followers;
+  const bannerValue = payload.flags.showFees || !showcase
+    ? payload.commercial.headlineValue
+    : payload.commercial.headlineValue;
 
-  const insightParts = [payload.insight.categoryMix, payload.insight.tierMix, payload.insight.scale]
-    .filter(Boolean)
-    .join(" ");
+  return pages
+    .map((page) => {
+      const sectionLabel = showcase ? "01 · Investment summary" : "01 · Creators by category";
+      const title = showcase
+        ? page.continued
+          ? "Creators & fees (continued)"
+          : "Creators & fees"
+        : page.continued
+          ? "Creator mix (continued)"
+          : "Creator mix";
+      const footRight = showcase
+        ? `${payload.quotation.number} · Summary`
+        : `${payload.quotation.number} · Creator mix`;
+      const categoryBlock =
+        page.showCategories && !showcase
+          ? `<div class="cat-grid">${categories || `<div class="cat"><p class="cn">—</p><p class="cv">0</p><p class="cs">No categories</p></div>`}</div>`
+          : "";
+      const banner = page.showBanner
+        ? `<div class="banner tier-breakdown-grand-total"><div class="gl">Total Investment · ${esc(payload.totals.creatorCount)} creators</div><div class="gv">${esc(bannerValue || totalLabel)}</div></div>`
+        : "";
 
-  const grandTotalBlock = `<div class="grand tier-breakdown-grand-total">
-      <div class="gl">Grand total · ${esc(payload.totals.creatorCount)} influencers</div>
-      <div class="gm">
-        <span>Followers<b>${esc(payload.totals.followers)}</b></span>
-        <span>Avg ER<b>${esc(payload.totals.avgER)}</b></span>
-      </div>
-    </div>`;
-
-  const insightBlock = insightParts
-    ? `<div class="insight"><p><b>Campaign mix insight.</b> ${esc(insightParts)}</p></div>`
-    : "";
-
-  const footLeft = payload.footer.left;
-  const footRight = `${payload.quotation.number} · Creator mix`;
-
-  return `<section class="page summary-overview-page">
-  <div class="pad">
-    <div class="sec-row"><span class="sec-badge">01</span><span class="lbl">Creators by category</span></div>
-    <h2 class="sec-title">Creator mix</h2>
-    <div class="cat-grid">${categories || `<div class="cat"><p class="cn">—</p><p class="cv">0</p><p class="cs">No categories</p></div>`}</div>
-    <div class="kicker" style="color:var(--muted);">Full influencer breakdown by tier</div>
-    <div style="height:12px;"></div>
-    ${tierBlocks.join("")}
-    ${grandTotalBlock}
-    ${insightBlock}
+      return `<section class="cpage page summary-overview-page">
+  <div class="cwrap pad">
+    <div class="sec-tick">${esc(sectionLabel)}</div>
+    <h2 class="sec-title${page.continued ? " cont" : ""}">${esc(title)}</h2>
+    ${categoryBlock}
+    ${page.tiers.map((slice) => renderMixTierSlice(slice, cols)).join("")}
+    ${banner}
   </div>
-  <div class="foot"><span>${esc(footLeft)}</span><span class="mono">${esc(footRight)}</span></div>
+  <div class="foot"><span>${esc(payload.footer.left)}</span><span class="mono">${esc(footRight)}</span></div>
+</section>`;
+    })
+    .join("");
+}
+
+function renderClosingPage(payload: QuotationTemplatePayload): string {
+  const q = payload.quotation;
+  return `<section class="cpage grad closing">
+  <div class="glow glow-a"></div><div class="glow glow-b"></div>
+  <div class="pad">
+    ${renderLogo("cover")}
+    <div class="closing-rule"></div>
+    <h1>Let's build something worth watching.</h1>
+    <p class="sub">Thank you for reviewing this quotation. We're ready to bring the ${esc(q.client)} × ${esc(q.brand)} campaign to life.</p>
+    <div class="closing-meta">
+      <div>
+        <p class="el">Email</p>
+        <p class="ev">hello@thinkwaymedia.com</p>
+        <p class="legal">${esc(payload.company.legalLine)}<br>${esc(payload.company.address)}</p>
+      </div>
+      <div class="mono" style="opacity:.75">${esc(q.number)}</div>
+    </div>
+  </div>
 </section>`;
 }
 
@@ -298,9 +470,8 @@ function renderShowcaseCreatorPages(
         "No publication screenshots available for this creator."
       );
 
-      const pageClass = forPdf
-        ? `page showcase-creator-page showcase-creator-slide showcase-slide avoid-break${pitchPageClass}`
-        : `page showcase-creator-page${pitchPageClass}`;
+      // Preview and PDF share the same fixed cpage box (scale only for screen chrome).
+      const pageClass = `cpage page showcase-creator-page showcase-creator-slide showcase-slide${pitchPageClass}`;
 
       const creatorPlatformIcons = renderQuotationPlatformIconsHtml(creator.platformIcons);
       const metricRowsHtml =
@@ -413,9 +584,9 @@ function renderRosterPage(payload: QuotationTemplatePayload): string {
     })
     .join("");
 
-  return `<section class="page roster-page">
-  <div class="pad">
-    <div class="sec-row"><span class="sec-badge">${esc(payload.roster.sectionNo)}</span><span class="lbl">Creator roster (${esc(payload.totals.creatorCount)})</span></div>
+  return `<section class="cpage page roster-page">
+  <div class="cwrap pad">
+    <div class="sec-tick">${esc(payload.roster.sectionNo)} · Creator roster (${esc(payload.totals.creatorCount)})</div>
     <h2 class="sec-title">At a glance</h2>
     <div class="fees">
       <table class="data-table">
@@ -486,7 +657,7 @@ function renderCommercialPage(
     </div>`
     : "";
 
-  const commercialHeader = `<div class="sec-row"><span class="sec-badge">${esc(c.sectionNo)}</span><span class="lbl">Commercial summary</span></div>
+  const commercialHeader = `<div class="sec-tick">${esc(c.sectionNo)} · Commercial summary</div>
     <h2 class="sec-title">Investment &amp; deliverables</h2>`;
 
   const footLeft = payload.footer.left;
@@ -509,8 +680,8 @@ function renderCommercialPage(
       </table>
     </div>`;
 
-  return `<section class="page commercial-page" id="section-commercial">
-  <div class="pad">
+  return `<section class="cpage page commercial-page" id="section-commercial">
+  <div class="cwrap pad">
     ${commercialHeader}
     ${commTop}
     ${itemizedTable}
@@ -524,9 +695,9 @@ function renderNotesPage(doc: QuotationDocument, payload: QuotationTemplatePaylo
   const notes = doc.notes?.trim();
   if (!notes) return "";
   // Keep notes as one continuous block — wrap fully; never truncate commercial explanations.
-  return `<section class="page commercial-notes-page avoid-break" id="section-notes">
-  <div class="pad">
-    <div class="sec-row"><span class="sec-badge">NT</span><span class="lbl">Commercial notes</span></div>
+  return `<section class="cpage page commercial-notes-page" id="section-notes">
+  <div class="cwrap pad">
+    <div class="sec-tick">Notes · Commercial notes</div>
     <h2 class="sec-title">Notes &amp; recommendations</h2>
     <div class="quotation-notes-block insight" style="margin-top:8px;">
       <p style="margin:0; white-space:pre-wrap; overflow-wrap:break-word; word-break:normal; line-height:1.55;">${esc(notes)}</p>
@@ -543,9 +714,9 @@ function renderTermsPage(payload: QuotationTemplatePayload): string {
         `<div class="term"><h4>${esc(term.heading)}</h4><p style="white-space:pre-wrap; overflow-wrap:break-word; word-break:normal;">${esc(term.body)}</p></div>`
     )
     .join("");
-  return `<section class="page" id="section-terms">
-  <div class="pad">
-    <div class="sec-row"><span class="sec-badge">${esc(payload.terms.sectionNo)}</span><span class="lbl">Terms &amp; conditions</span></div>
+  return `<section class="cpage page" id="section-terms">
+  <div class="cwrap pad">
+    <div class="sec-tick">${esc(payload.terms.sectionNo)} · Terms &amp; conditions</div>
     <h2 class="sec-title">The agreement</h2>
     <div class="terms-grid">${items}</div>
   </div>
@@ -555,9 +726,9 @@ function renderTermsPage(payload: QuotationTemplatePayload): string {
 
 function renderAcceptancePage(payload: QuotationTemplatePayload): string {
   const q = payload.quotation;
-  return `<section class="page avoid-break" id="section-acceptance">
-  <div class="pad">
-    <div class="sec-row"><span class="sec-badge">${esc(payload.acceptance.sectionNo)}</span><span class="lbl">Acceptance</span></div>
+  return `<section class="cpage page" id="section-acceptance">
+  <div class="cwrap pad">
+    <div class="sec-tick">${esc(payload.acceptance.sectionNo)} · Acceptance</div>
     <h2 class="sec-title">Sign &amp; approve</h2>
     <p style="font-size:14px; color:var(--muted); max-width:72ch; margin:0 0 8px;">By signing below, both parties agree to the scope, pricing, and terms set out in this quotation.</p>
     <div class="accept-grid">
@@ -702,9 +873,9 @@ function renderCollapseContentPages(
         return bundle.packages.map((pkg, packageIndex) => {
           const showBundleIntro = packageIndex === 0;
           const slideScale = showcaseCollapSlideScale(pkg.creators.length, showBundleIntro);
-          return `<section class="page collapse-content-page collapse-content-slide showcase-slide avoid-break"${showcasePdfSlideStyle(slideScale)}>
-  <div class="pad">
-    <div class="sec-row"><span class="sec-badge">CC</span><span class="lbl">${esc(bundle.previewLabel)}</span></div>
+          return `<section class="cpage page collapse-content-page collapse-content-slide showcase-slide"${showcasePdfSlideStyle(slideScale)}>
+  <div class="cwrap pad">
+    <div class="sec-tick">CC · ${esc(bundle.previewLabel)}</div>
     <h2 class="sec-title">${esc(bundle.label)}</h2>
     ${
       showBundleIntro
@@ -727,17 +898,24 @@ function renderCollapseContentPages(
           ? `${bundle.optionCount} package options`
           : "Single package option";
 
-      return `<section class="page collapse-content-page">
-  <div class="pad">
-    <div class="sec-row"><span class="sec-badge">CC</span><span class="lbl">${esc(bundle.previewLabel)}</span></div>
-    <h2 class="sec-title">${esc(bundle.label)}</h2>
-    <p class="collap-bundle-intro">${esc(bundle.previewLabel)} — ${esc(optionSummary)} with shared creator bundles and independent pricing per option.</p>
-    <div class="collap-package-stack">${bundle.packages
-      .map((pkg) => renderCollapsePackageCard(bundle, pkg, doc, siteOrigin))
-      .join("")}</div>
+      return bundle.packages
+        .map((pkg, packageIndex) => {
+          const showBundleIntro = packageIndex === 0;
+          return `<section class="cpage page collapse-content-page">
+  <div class="cwrap pad">
+    <div class="sec-tick">CC · ${esc(bundle.previewLabel)}</div>
+    <h2 class="sec-title">${esc(bundle.label)}${showBundleIntro ? "" : " (continued)"}</h2>
+    ${
+      showBundleIntro
+        ? `<p class="collap-bundle-intro">${esc(bundle.previewLabel)} — ${esc(optionSummary)} with shared creator bundles and independent pricing per option.</p>`
+        : ""
+    }
+    ${renderCollapsePackageCard(bundle, pkg, doc, siteOrigin)}
   </div>
-  <div class="foot"><span>Confidential · Thinkway Platform</span><span class="mono">${esc(bundle.label)} · ${esc(doc.serial)}</span></div>
+  <div class="foot"><span>Thinkway · hello@thinkwaymedia.com</span><span class="mono">${esc(bundle.label)} · ${esc(doc.serial)}</span></div>
 </section>`;
+        })
+        .join("");
     })
     .join("");
 }
@@ -764,7 +942,7 @@ export function buildQuotationTemplateHtml(
 
   const sections = [
     renderCoverPage(payload),
-    renderCategoryTierPage(payload, doc.creatorGroups),
+    renderCategoryTierPages(payload, doc.creatorGroups),
     renderCollapseContentPages(doc, siteOrigin, forPdf),
     ...(payload.flags.showcaseCreators
       ? [renderShowcaseCreatorPages(payload, doc, siteOrigin, forPdf), renderRosterPage(payload)]
@@ -775,6 +953,7 @@ export function buildQuotationTemplateHtml(
     renderNotesPage(doc, payload),
     ...(payload.flags.includeTerms ? [renderTermsPage(payload)] : []),
     ...(payload.flags.includeAcceptance ? [renderAcceptancePage(payload)] : []),
+    ...(payload.flags.showcaseCreators ? [renderClosingPage(payload)] : []),
   ].join("");
 
   return `<!DOCTYPE html>
@@ -786,7 +965,7 @@ ${baseTag}
 <title>${esc(doc.serial)} — ${esc(payload.quotation.title)} — Thinkway</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>${QUOTATION_TEMPLATE_STYLES}</style>
 </head>
 <body class="${bodyClass}">
