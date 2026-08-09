@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageBackButton } from "@/components/navigation/page-back-button";
 import { DocumentPreviewClient } from "@/features/discovery/document-preview/document-preview-client";
+import { parsePlatformsQueryParam } from "@/features/discovery/document-preview/document-export-selection";
 import { ShortlistPreviewDownloads } from "@/features/discovery/shortlists/components/shortlist-preview-downloads";
 import { ShortlistPreviewTemplateToggle } from "@/features/discovery/shortlists/components/shortlist-preview-template-toggle";
 import {
@@ -25,7 +26,7 @@ export const dynamic = "force-dynamic";
 
 type ShortlistPreviewPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ template?: string; items?: string }>;
+  searchParams: Promise<{ template?: string; items?: string; platforms?: string }>;
 };
 
 export async function generateMetadata({
@@ -68,6 +69,7 @@ export default async function ShortlistPreviewPage({
   const itemIds = query.items
     ? query.items.split(",").map((value) => value.trim()).filter(Boolean)
     : undefined;
+  const platforms = parsePlatformsQueryParam(query.platforms);
 
   const shortlistId = await resolveShortlistIdByRouteKey(routeKey);
   if (!shortlistId) notFound();
@@ -81,9 +83,9 @@ export default async function ShortlistPreviewPage({
           name: routeSummary.name,
           serial_number: routeSummary.serial_number ?? null,
         },
-        { template, itemIds }
+        { template, itemIds, platforms }
       )
-    : shortlistPreviewPath(shortlistId, { template, itemIds });
+    : shortlistPreviewPath(shortlistId, { template, itemIds, platforms });
 
   if (routeSummary) {
     redirectToCanonicalEntityRoute(
@@ -99,6 +101,7 @@ export default async function ShortlistPreviewPage({
       {
         ...(template !== "summary" ? { template } : {}),
         ...(itemIds?.length ? { items: itemIds.join(",") } : {}),
+        ...(platforms?.length ? { platforms: platforms.join(",") } : {}),
       }
     );
   }
@@ -127,6 +130,7 @@ export default async function ShortlistPreviewPage({
     const rendered = await renderShortlistPreviewHtml(supabase, shortlistId, {
       template,
       itemIds,
+      platforms,
     });
     html = rendered.html;
     creatorCount = rendered.creatorCount;
@@ -190,6 +194,7 @@ export default async function ShortlistPreviewPage({
               shortlistId={shortlistId}
               template={template}
               itemIds={itemIds}
+              platforms={platforms}
               exportRevision={detail.updated_at}
             />
           }

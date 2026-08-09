@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DocumentCreatorSelectionDialog } from "@/features/discovery/document-preview/document-creator-selection-dialog";
 import { buildQuotationCreatorOptions } from "@/features/discovery/document-preview/build-creator-options";
+import type { DocumentExportSelection } from "@/features/discovery/document-preview/document-export-selection";
+import { appendPlatformsQueryParam } from "@/features/discovery/document-preview/document-export-selection";
 import { summarizeQuotationSelection } from "@/features/discovery/document-preview/document-selection-summary";
 import { buildExportHref } from "@/features/quotations/components/quotation-preview-downloads";
 import { QuotationToolbarButton } from "@/features/quotations/components/quotation-detail-primitives";
@@ -62,7 +64,11 @@ function quotationPreviewHref(
   quotationId: string,
   serialNumber: string | null | undefined,
   template: QuotationTemplateVariant,
-  options?: { exportRevision?: string | null; itemIds?: string[] }
+  options?: {
+    exportRevision?: string | null;
+    itemIds?: string[];
+    platforms?: string[] | null;
+  }
 ): string {
   const params = new URLSearchParams();
   appendQuotationTemplateParam(params, template);
@@ -70,6 +76,7 @@ function quotationPreviewHref(
   if (options?.itemIds?.length) {
     params.set("items", options.itemIds.join(","));
   }
+  appendPlatformsQueryParam(params, options?.platforms);
   const query = params.toString();
   return quotationPreviewPath(quotationId, serialNumber, query || undefined);
 }
@@ -105,14 +112,16 @@ export function QuotationPreviewToolbarActions({
     setSelectionOpen(true);
   }
 
-  function handleConfirm(itemIds: string[]) {
+  function handleConfirm(selection: DocumentExportSelection) {
     if (!pending) return;
-    const ids = itemIds.length > 0 ? itemIds : undefined;
+    const ids = selection.itemIds.length > 0 ? selection.itemIds : undefined;
+    const platforms = selection.platforms?.length ? selection.platforms : undefined;
 
     if (pending.type === "preview") {
       const href = quotationPreviewHref(quotationId, serialNumber, pending.template, {
         exportRevision,
         itemIds: ids,
+        platforms,
       });
       window.open(href, "_blank", "noopener,noreferrer");
       return;
@@ -122,6 +131,7 @@ export function QuotationPreviewToolbarActions({
       download: true,
       exportRevision,
       itemIds: ids,
+      platforms,
     });
     window.location.assign(href);
   }
@@ -191,7 +201,7 @@ export function QuotationPreviewToolbarActions({
             }}
             className="flex items-center justify-between gap-2"
           >
-            <span>Choose creators &amp; open preview</span>
+            <span>Choose creators &amp; platforms</span>
             <EyeIcon className="size-3.5 text-muted-foreground" />
           </DropdownMenuItem>
         </DropdownMenuContent>

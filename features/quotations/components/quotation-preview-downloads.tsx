@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { appendPlatformsQueryParam } from "@/features/discovery/document-preview/document-export-selection";
 import {
   appendQuotationExportRevision,
   appendQuotationTemplateParam,
@@ -16,6 +17,7 @@ type QuotationPreviewDownloadsProps = {
   quotationId: string;
   template: QuotationTemplateVariant;
   itemIds?: string[];
+  platforms?: string[] | null;
   exportRevision?: string | null;
 };
 
@@ -27,6 +29,7 @@ export function buildExportHref(
     download?: boolean;
     exportRevision?: string | null;
     itemIds?: string[];
+    platforms?: string[] | null;
   }
 ) {
   const params = new URLSearchParams({ format });
@@ -38,6 +41,7 @@ export function buildExportHref(
   if (options?.itemIds?.length) {
     params.set("items", options.itemIds.join(","));
   }
+  appendPlatformsQueryParam(params, options?.platforms);
   return `/api/quotations/${quotationId}/export?${params.toString()}`;
 }
 
@@ -45,9 +49,10 @@ export function QuotationPreviewDownloads({
   quotationId,
   template,
   itemIds,
+  platforms,
   exportRevision,
 }: QuotationPreviewDownloadsProps) {
-  const exportOptions = { itemIds, exportRevision };
+  const exportOptions = { itemIds, platforms, exportRevision };
 
   return (
     <div className="flex flex-wrap items-center gap-2">

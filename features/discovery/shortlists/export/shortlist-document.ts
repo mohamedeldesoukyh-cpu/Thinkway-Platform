@@ -7,6 +7,7 @@ import {
 } from "@/features/discovery/components/creator-search/creator-search-utils";
 import { formatCreatorCountryLabels } from "@/lib/creators/creator-display-utils";
 import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
+import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { filterPlatformsForDisplay, sortPlatformsStable } from "@/lib/creators/creator-centric";
 import { creatorStoredCategoriesForDisplay } from "@/lib/creators/category-filter";
 import {
@@ -457,8 +458,30 @@ function buildRow(item: ShortlistCreatorItem, rank: number): ShortlistDocRow | n
 export type BuildShortlistDocumentOptions = {
   template?: ShortlistTemplateVariant;
   itemIds?: string[];
+  /** Optional platform subset for icons / profile links. */
+  platforms?: string[] | null;
   publicationShotsByCreatorKey?: Map<string, ShortlistDocPublicationShot[]>;
 };
+
+function applyShortlistPlatformFilter<T extends {
+  platformLinks: ShortlistPlatformLink[];
+  platform: string;
+}>(
+  entry: T,
+  platformFilterKeys: Set<string> | null
+): T {
+  if (!platformFilterKeys) return entry;
+  const platformLinks = entry.platformLinks.filter((link) =>
+    platformFilterKeys.has(canonicalPlatformKey(link.platform))
+  );
+  const platform =
+    platformLinks.length === 0
+      ? "—"
+      : platformLinks.length === 1
+        ? platformLinks[0]!.label
+        : platformLinks.map((link) => link.label).join(", ");
+  return { ...entry, platformLinks, platform };
+}
 
 export function buildShortlistDocument(
   detail: ShortlistDetail,
@@ -537,6 +560,26 @@ export function buildShortlistDocument(
     topOptimizationRecommendation: optimization.recommendations[0]?.action ?? null,
   };
 
+  const platformFilterKeys = options.platforms?.length
+    ? new Set(
+        options.platforms
+          .map((platform) => canonicalPlatformKey(platform))
+          .filter(Boolean)
+      )
+    : null;
+  const filteredRows = rows.map((row) =>
+    applyShortlistPlatformFilter(row, platformFilterKeys)
+  );
+  const filteredCreatorGroups = creatorGroups.map((group) =>
+    applyShortlistPlatformFilter(group, platformFilterKeys)
+  );
+  const filteredCollapseGroups = collapseContentGroups.map((group) => ({
+    ...group,
+    creators: group.creators.map((creator) =>
+      applyShortlistPlatformFilter(creator, platformFilterKeys)
+    ),
+  }));
+
   return {
     template,
     serial: detail.serial_number ?? "SL-PENDING",
@@ -547,13 +590,13 @@ export function buildShortlistDocument(
     ownerName: detail.owner_name ?? "—",
     brandName: detail.brand_name ?? "—",
     clientName: detail.client_name ?? "—",
-    creatorCount: rows.length,
+    creatorCount: filteredRows.length,
     generatedAt,
     generatedDateLabel: formatShortlistDateLabel(generatedAt),
     summary,
-    rows,
-    creatorGroups,
-    collapseContentGroups,
+    rows: filteredRows,
+    creatorGroups: filteredCreatorGroups,
+    collapseContentGroups: filteredCollapseGroups,
   };
 }
 

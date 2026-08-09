@@ -121,7 +121,11 @@ export function shortlistDetailPath(entity: EntityRouteInput | string): string {
 
 export function shortlistPreviewPath(
   entity: EntityRouteInput | string,
-  options?: { template?: ShortlistTemplateVariant; itemIds?: string[] }
+  options?: {
+    template?: ShortlistTemplateVariant;
+    itemIds?: string[];
+    platforms?: string[] | null;
+  }
 ): string {
   const base = `${shortlistDetailPath(entity)}/preview`;
   const params = new URLSearchParams();
@@ -130,6 +134,9 @@ export function shortlistPreviewPath(
   }
   if (options?.itemIds?.length) {
     params.set("items", options.itemIds.join(","));
+  }
+  if (options?.platforms?.length) {
+    params.set("platforms", options.platforms.join(","));
   }
   const query = params.toString();
   return query ? `${base}?${query}` : base;

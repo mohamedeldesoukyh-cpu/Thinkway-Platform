@@ -689,12 +689,15 @@ function QuotationWorkspaceContent({
   );
 
   const handlePreviewSelectionConfirm = useCallback(
-    (itemIds: string[]) => {
-      setSelectedIds(new Set(itemIds));
+    (selection: { itemIds: string[]; platforms?: string[] | null }) => {
+      setSelectedIds(new Set(selection.itemIds));
       const params = new URLSearchParams();
       appendQuotationTemplateParam(params, exportTemplate);
       appendQuotationExportRevision(params, detail.updated_at);
-      if (itemIds.length) params.set("items", itemIds.join(","));
+      if (selection.itemIds.length) params.set("items", selection.itemIds.join(","));
+      if (selection.platforms?.length) {
+        params.set("platforms", selection.platforms.join(","));
+      }
       const query = params.toString();
       const href = quotationPreviewPath(
         detail.id,

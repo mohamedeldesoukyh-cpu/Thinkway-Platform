@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { PageBackButton } from "@/components/navigation/page-back-button";
 import { DocumentPreviewClient } from "@/features/discovery/document-preview/document-preview-client";
+import { parsePlatformsQueryParam } from "@/features/discovery/document-preview/document-export-selection";
 import { QuotationPreviewDownloads } from "@/features/quotations/components/quotation-preview-downloads";
 import { QuotationPreviewTemplateToggle } from "@/features/quotations/components/quotation-preview-template-toggle";
 import {
@@ -25,7 +26,7 @@ export const dynamic = "force-dynamic";
 
 type QuotationPreviewPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ template?: string; items?: string }>;
+  searchParams: Promise<{ template?: string; items?: string; platforms?: string }>;
 };
 
 export async function generateMetadata({
@@ -72,6 +73,7 @@ export default async function QuotationPreviewPage({
   const itemIds = query.items
     ? query.items.split(",").map((value) => value.trim()).filter(Boolean)
     : undefined;
+  const platforms = parsePlatformsQueryParam(query.platforms);
 
   const supabase = await createSupabaseServerClient();
   const {
@@ -89,6 +91,7 @@ export default async function QuotationPreviewPage({
   const previewParams = new URLSearchParams();
   if (template !== "detailed") previewParams.set("template", template);
   if (itemIds?.length) previewParams.set("items", itemIds.join(","));
+  if (platforms?.length) previewParams.set("platforms", platforms.join(","));
   const previewQuery = previewParams.toString() || undefined;
   const canonicalPath = routeSummary
     ? quotationPreviewPath(
@@ -117,6 +120,7 @@ export default async function QuotationPreviewPage({
       {
         ...(template !== "detailed" ? { template } : {}),
         ...(itemIds?.length ? { items: itemIds.join(",") } : {}),
+        ...(platforms?.length ? { platforms: platforms.join(",") } : {}),
       }
     );
   }
@@ -136,6 +140,7 @@ export default async function QuotationPreviewPage({
     const rendered = await renderQuotationPreviewHtml(supabase, detail.id, {
       template,
       itemIds,
+      platforms,
     });
     html = rendered.html;
     creatorCount = rendered.creatorCount;
@@ -197,6 +202,7 @@ export default async function QuotationPreviewPage({
               quotationId={detail.id}
               template={template}
               itemIds={itemIds}
+              platforms={platforms}
               exportRevision={detail.updated_at}
             />
           }
