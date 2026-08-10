@@ -29,8 +29,10 @@ export function getMetricsCollectorEnv(): MetricsCollectorEnv {
       process.env.APIFY_INSTAGRAM_ACTOR_ID?.trim() || "apify/instagram-scraper",
     apifyTikTokActorId:
       process.env.APIFY_TIKTOK_ACTOR_ID?.trim() || "clockworks/tiktok-scraper",
+    // Publication post/reel metrics — must accept direct permalinks (not page startUrls).
     apifyFacebookActorId:
-      process.env.APIFY_FACEBOOK_ACTOR_ID?.trim() || "apify/facebook-posts-scraper",
+      process.env.APIFY_FACEBOOK_ACTOR_ID?.trim() ||
+      "clappi/facebook-posts-reels-scraper",
     apifyFacebookProfileActorId:
       process.env.APIFY_FACEBOOK_PROFILE_ACTOR_ID?.trim() ||
       "apify/facebook-pages-scraper",

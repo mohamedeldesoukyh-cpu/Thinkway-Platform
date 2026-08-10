@@ -25,6 +25,7 @@ import {
   confidenceForCollectedMetrics,
   confidenceForProvider,
 } from "@/lib/performance/metrics-collector/confidence";
+import { isSoftPublicationMetricsFailure } from "@/lib/performance/metrics-collector/publication-metrics-failure-stage";
 import { computeNextRefreshAt } from "@/lib/performance/metrics-collector/schedule-next-refresh";
 import {
   computeEngagements,
@@ -1274,7 +1275,7 @@ export function outcomeFromAttempts(
   const refreshStatus = metricsRefreshStatusFor(merged, context);
 
   let status: MetricsRefreshStatus = "manual_required";
-  let message = "No automated provider returned metrics — use manual import.";
+  let message = "Automatic metrics unavailable — manual metrics required.";
 
   if (hasMetrics && winningSource) {
     status = refreshStatus;
@@ -1282,9 +1283,16 @@ export function outcomeFromAttempts(
       refreshStatus === "completed"
         ? `Metrics collected via ${winningSource}.`
         : `Partial metrics from ${winningSource} — views, likes, and comments unavailable.`;
-  } else if (attempts.some((a) => a.available && a.error)) {
-    status = "failed";
-    message = "All configured providers failed — manual import required for client report.";
+  } else {
+    const errored = attempts.filter((a) => a.available && a.error);
+    const hardFailure = errored.some((a) => !isSoftPublicationMetricsFailure(a.errorCode));
+    if (hardFailure) {
+      status = "failed";
+      message = "Metrics collection failed — check provider execution trace, then retry or import manually.";
+    } else {
+      status = "manual_required";
+      message = "Automatic metrics unavailable — manual metrics required.";
+    }
   }
 
   const confidence =
