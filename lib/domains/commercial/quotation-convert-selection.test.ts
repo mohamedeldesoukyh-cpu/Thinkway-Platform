@@ -95,3 +95,54 @@ test("summarizeQuotationConvertSelection counts skipped alternatives", () => {
   assert.equal(summary.unitCount, 1);
   assert.equal(summary.skippedAlternativeCount, 1);
 });
+
+test("buildQuotationConvertUnits uses workspace Option 1 when stored option_number is stale", () => {
+  // Option 1 was removed; remaining line still has option_number=2 in DB,
+  // but the workspace shows it as Option 1 (only line for that creator).
+  const units = buildQuotationConvertUnits([
+    item({ id: "only", option_number: 2, sort_order: 1, unified_id: "u1" }),
+  ]);
+  assert.equal(units.length, 1);
+  assert.equal(units[0]?.primaryItem.id, "only");
+});
+
+test("buildQuotationConvertUnits keeps alternatives and converts display Option 1 package", () => {
+  const units = buildQuotationConvertUnits([
+    item({
+      id: "p1-a",
+      collapse_group_id: "pkg-1",
+      option_number: 1,
+      sort_order: 1,
+      influencer_id: "inf-a",
+      unified_id: "ua",
+    }),
+    item({
+      id: "p1-b",
+      collapse_group_id: "pkg-1",
+      option_number: 1,
+      sort_order: 2,
+      influencer_id: "inf-b",
+      unified_id: "ub",
+    }),
+    item({
+      id: "p2-a",
+      collapse_group_id: "pkg-2",
+      option_number: 2,
+      sort_order: 3,
+      influencer_id: "inf-a",
+      unified_id: "ua",
+    }),
+    item({
+      id: "p2-b",
+      collapse_group_id: "pkg-2",
+      option_number: 2,
+      sort_order: 4,
+      influencer_id: "inf-b",
+      unified_id: "ub",
+    }),
+  ]);
+  assert.equal(units.length, 1);
+  assert.equal(units[0]?.kind, "package");
+  assert.equal(units[0]?.primaryItem.id, "p1-a");
+  assert.equal(units[0]?.memberItems.length, 2);
+});

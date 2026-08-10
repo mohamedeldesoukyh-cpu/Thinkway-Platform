@@ -395,9 +395,12 @@ export async function convertQuotationToAssignments(
   let units = buildQuotationConvertUnits(items);
 
   if (units.length === 0) {
+    const hasLines = items.length > 0;
     return {
       ok: false,
-      message: "No selected quotation lines available to convert into Assignments.",
+      message: hasLines
+        ? "No Option 1 quotation lines are available to convert. Keep Option 2+ as alternatives, and ensure each creator/package has an Option 1 line (the first option shown in the quotation)."
+        : "This quotation has no creator lines. Add creators (Option 1) before converting to a campaign.",
     };
   }
 
