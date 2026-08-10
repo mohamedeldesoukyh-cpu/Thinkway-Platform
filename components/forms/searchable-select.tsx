@@ -85,7 +85,18 @@ export function SearchableSelect({
             disabled={disabled}
             className={cn(DROPDOWN_TRIGGER_CLASS, className)}
           >
-            <span className="min-w-0 flex-1 truncate text-left">{selectedLabel}</span>
+            <span className="min-w-0 flex-1 truncate text-left">
+              {hasValue && selected?.description ? (
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span className="truncate">{selected.label}</span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {selected.description}
+                  </span>
+                </span>
+              ) : (
+                selectedLabel
+              )}
+            </span>
             <ChevronsUpDownIcon className="thinkway-dropdown-trigger__icon size-4 shrink-0" />
           </button>
         </DropdownMenuTrigger>
