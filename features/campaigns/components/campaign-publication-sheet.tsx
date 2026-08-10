@@ -39,6 +39,46 @@ import {
 } from "@/lib/campaigns/deliverable-taxonomy";
 import { SOCIAL_PLATFORM_OPTIONS } from "@/lib/master-data/constants";
 import { detectSocialPlatformFromContentUrl } from "@/lib/social/platforms";
+import { pickCreatorDisplayName } from "@/lib/text/decode-html-entities";
+
+function resolveAssignmentHandle(line: CampaignLineWorkspace): string | null {
+  const fromAccounts = line.creator_platform_accounts
+    ?.map((account) => account.handle?.trim().replace(/^@+/, ""))
+    .find((handle) => Boolean(handle));
+  if (fromAccounts) return fromAccounts;
+
+  const fromAssignment = line.assignment?.platforms
+    ?.map((platform) => platform.handle?.trim().replace(/^@+/, ""))
+    .find((handle) => Boolean(handle));
+  if (fromAssignment) return fromAssignment;
+
+  // Fallback: extract (@handle) embedded in a messy influencer_name string.
+  const embedded = line.influencer_name?.match(/@([a-zA-Z0-9._]+)/)?.[1];
+  return embedded?.trim() || null;
+}
+
+function buildPublicationAssignmentOption(line: CampaignLineWorkspace) {
+  const handle = resolveAssignmentHandle(line);
+  const creatorName = pickCreatorDisplayName(
+    [line.influencer_name, line.assignment?.influencer_name, handle],
+    handle
+  );
+  const handleLabel = handle ? `@${handle}` : null;
+  const lineLabel = line.name?.trim() || null;
+  const descriptionParts = [
+    handleLabel,
+    lineLabel && lineLabel !== creatorName ? lineLabel : null,
+  ].filter(Boolean);
+
+  return {
+    value: line.id,
+    label: creatorName,
+    description: descriptionParts.length > 0 ? descriptionParts.join(" · ") : undefined,
+    keywords: [creatorName, handle, handleLabel, lineLabel, line.document_number].filter(
+      (value): value is string => Boolean(value)
+    ),
+  };
+}
 
 const PUBLICATION_STATUS_OPTIONS = [
   { value: "draft", label: "Draft" },
@@ -148,10 +188,7 @@ export function CampaignPublicationSheet({
     }
   }, [platform, publicationType, contentUrl]);
 
-  const assignmentOptions = assignmentLines.map((a) => ({
-    value: a.id,
-    label: `${a.influencer_name ?? "Creator"} — ${a.name}`,
-  }));
+  const assignmentOptions = assignmentLines.map(buildPublicationAssignmentOption);
 
   function onContentUrlChange(nextUrl: string) {
     setContentUrl(nextUrl);
