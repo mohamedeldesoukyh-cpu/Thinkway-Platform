@@ -125,7 +125,8 @@ Actions:
 | `APIFY_INSTAGRAM_ACTOR_ID` | Instagram post scraper (default: `apify/instagram-scraper`) |
 | `APIFY_INSTAGRAM_ACTOR_ID` | Instagram post scraper (default: `apify/instagram-scraper`) |
 | `APIFY_TIKTOK_ACTOR_ID` | TikTok scraper (default: `clockworks/tiktok-scraper`) |
-| `APIFY_FACEBOOK_ACTOR_ID` | Facebook post scraper (default: `apify/facebook-posts-scraper`) |
+| `APIFY_FACEBOOK_ACTOR_ID` | Facebook post/reel scraper for direct permalinks (default: `clappi/facebook-posts-reels-scraper`, input `postUrls`) |
+| `APIFY_FACEBOOK_PROFILE_ACTOR_ID` | Facebook page/profile scraper (default: `apify/facebook-pages-scraper`, input `startUrls`) |
 | `APIFY_YOUTUBE_ACTOR_ID` | YouTube scraper fallback (default: `streamers/youtube-scraper`) |
 | `APIFY_SNAPCHAT_ACTOR_ID` | Snapchat profile scraper (default: `automation-lab/snapchat-scraper`) |
 | `FACEBOOK_GRAPH_ACCESS_TOKEN` | Facebook Graph (falls back to `META_GRAPH_ACCESS_TOKEN`) |

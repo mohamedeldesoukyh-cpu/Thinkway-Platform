@@ -35,6 +35,7 @@ import {
   writeSyncLog,
 } from "@/lib/performance/metrics-collector/persist";
 import { runProvider } from "@/lib/performance/metrics-collector/providers/registry";
+import { assertApifyAcquisitionBudget } from "@/lib/discovery/control-center/apify-budget";
 import { enqueuePublicationScreenshotJob } from "@/lib/performance/screenshot-capture/queue";
 import type {
   CollectionOutcome,
@@ -290,6 +291,48 @@ export async function metricsCollector(
 
   for (let i = 0; i < chain.length; i += 1) {
     const providerId = chain[i]!;
+
+    if (providerId === "apify") {
+      const budget = await assertApifyAcquisitionBudget(supabase, {
+        source: "publication_metrics_apify",
+        meta: {
+          publicationId: publication.id,
+          platform: resolvedPlatform,
+          contentUrl,
+        },
+      });
+      if (!budget.allowed) {
+        const budgetAttempt: ProviderAttemptResult = {
+          provider: "apify",
+          available: false,
+          skippedReason: budget.reason,
+          errorCode:
+            budget.code === "usage_unverified" ? "budget_unverified" : "budget_blocked",
+          responseSummary: {
+            failure_stage: "budget_verification",
+            actor_invoked: false,
+            metrics_found: false,
+            budget_code: budget.code,
+          },
+        };
+        attempts.push(budgetAttempt);
+        await writeSyncLog(supabase, {
+          publicationId: publication.id,
+          campaignHeaderId: publication.campaign_header_id,
+          provider: "apify",
+          attemptOrder: i + 1,
+          status: "skipped",
+          message: budget.reason,
+          errorCode: budgetAttempt.errorCode,
+          error: null,
+          triggeredBy: options.triggeredBy,
+          completed: true,
+          responseSummary: budgetAttempt.responseSummary,
+        });
+        continue;
+      }
+    }
+
     const attempt = await runProvider(providerId, {
       publication,
       platform: resolvedPlatform === "unknown" ? publication.platform : resolvedPlatform,

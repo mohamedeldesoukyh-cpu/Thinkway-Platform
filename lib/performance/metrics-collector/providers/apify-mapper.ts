@@ -43,14 +43,50 @@ export function mapApifyPayloadToMetrics(
   }
 
   if (platform === "facebook") {
-    return {
-      views: num(row.videoViewCount ?? row.viewCount ?? row.views ?? row.playCount),
-      likes: num(row.likesCount ?? row.likes ?? row.reactionCount ?? row.reactions),
-      comments: num(row.commentsCount ?? row.comments ?? row.commentCount),
-      shares: num(row.sharesCount ?? row.shares ?? row.shareCount),
+    // clappi/facebook-posts-reels-scraper marks unavailable posts explicitly.
+    if (typeof row.status === "string" && row.status.toLowerCase() === "unavailable") {
+      return null;
+    }
+
+    const likesFromNested =
+      num((row.likers as { count?: unknown } | undefined)?.count) ??
+      num((row.unified_reactors as { count?: unknown } | undefined)?.count);
+
+    const mapped = {
+      views: num(
+        row.videoViewCount ??
+          row.viewCount ??
+          row.views ??
+          row.playCount ??
+          row.video_view_count ??
+          row.play_count
+      ),
+      likes: num(
+        row.likesCount ??
+          row.likes ??
+          row.reactionCount ??
+          row.reactions ??
+          likesFromNested
+      ),
+      comments: num(
+        row.commentsCount ??
+          row.comments ??
+          row.commentCount ??
+          row.total_comment_count
+      ),
+      shares: num(
+        row.sharesCount ??
+          row.shares ??
+          row.shareCount ??
+          row.share_count_reduced ??
+          row.share_count
+      ),
       impressions: num(row.impressions),
       reach: num(row.reach),
     };
+
+    const hasValue = Object.values(mapped).some((v) => v != null);
+    return hasValue ? mapped : null;
   }
 
   if (platform === "snapchat") {

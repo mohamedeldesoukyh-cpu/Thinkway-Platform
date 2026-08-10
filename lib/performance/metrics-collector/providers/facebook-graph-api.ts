@@ -13,6 +13,12 @@ export async function tryFacebookGraphProvider(ctx: Ctx): Promise<ProviderAttemp
       provider: "facebook_graph_api",
       available: false,
       skippedReason: "FACEBOOK_GRAPH_ACCESS_TOKEN not configured.",
+      errorCode: "provider_unavailable",
+      responseSummary: {
+        failure_stage: "provider_unavailable",
+        actor_invoked: false,
+        metrics_found: false,
+      },
     };
   }
 
@@ -22,12 +28,35 @@ export async function tryFacebookGraphProvider(ctx: Ctx): Promise<ProviderAttemp
       available: true,
       error: "Could not resolve Facebook post id from URL.",
       errorCode: "missing_media_id",
+      responseSummary: {
+        failure_stage: "provider_permission",
+        actor_invoked: false,
+        metrics_found: false,
+      },
     };
   }
 
-  return tryMetaGraphProvider({
+  const result = await tryMetaGraphProvider({
     contentUrl: ctx.contentUrl,
     mediaId: ctx.mediaId,
     env: { metaGraphAccessToken: ctx.env.facebookGraphAccessToken },
-  }).then((result) => ({ ...result, provider: "facebook_graph_api" as const }));
+  });
+
+  return {
+    ...result,
+    provider: "facebook_graph_api" as const,
+    errorCode:
+      result.errorCode === "meta_graph_error"
+        ? "provider_permission"
+        : result.errorCode,
+    responseSummary: {
+      ...(result.responseSummary ?? {}),
+      failure_stage: result.error
+        ? result.errorCode === "missing_media_id"
+          ? "provider_permission"
+          : "provider_permission"
+        : null,
+      metrics_found: Boolean(result.metrics && Object.values(result.metrics).some((v) => v != null)),
+    },
+  };
 }

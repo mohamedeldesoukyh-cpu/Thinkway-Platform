@@ -46,6 +46,8 @@ const DATE_FIELD_KEYS = [
   "created_time",
   "uploadDate",
   "upload_date",
+  "datePosted",
+  "date_posted",
   "date",
   "taken_at_timestamp",
   "takenAtTimestamp",

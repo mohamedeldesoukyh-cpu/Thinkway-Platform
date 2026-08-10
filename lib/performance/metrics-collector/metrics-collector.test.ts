@@ -122,13 +122,13 @@ assert.deepEqual(providerChainForPlatform("snapchat"), [
   const env = {
     apifyInstagramActorId: "apify/instagram-scraper",
     apifyTikTokActorId: "clockworks/tiktok-scraper",
-    apifyFacebookActorId: "apify/facebook-posts-scraper",
+    apifyFacebookActorId: "clappi/facebook-posts-reels-scraper",
     apifyFacebookProfileActorId: "apify/facebook-pages-scraper",
     apifyYouTubeActorId: "streamers/youtube-scraper",
     apifySnapchatActorId: "automation-lab/snapchat-scraper",
   };
   assert.equal(apifyActorIdForPlatform("tiktok", env), "clockworks/tiktok-scraper");
-  assert.equal(apifyActorIdForPlatform("facebook", env), "apify/facebook-posts-scraper");
+  assert.equal(apifyActorIdForPlatform("facebook", env), "clappi/facebook-posts-reels-scraper");
   assert.equal(
     apifyProfileActorIdForPlatform("facebook", env),
     "apify/facebook-pages-scraper"
@@ -138,7 +138,14 @@ assert.deepEqual(providerChainForPlatform("snapchat"), [
     "automation-lab/snapchat-scraper"
   );
   assert.ok("postURLs" in buildApifyRunInput("tiktok", "https://tiktok.com/@x/video/1"));
-  assert.ok("startUrls" in buildApifyRunInput("facebook", "https://facebook.com/p/1"));
+  assert.ok(
+    "postUrls" in
+      buildApifyRunInput(
+        "facebook",
+        "https://www.facebook.com/reel/123",
+        "clappi/facebook-posts-reels-scraper"
+      )
+  );
   assert.ok(
     "startUrls" in buildApifyProfileDetailsInput(
       "facebook",
@@ -194,6 +201,71 @@ assert.deepEqual(providerChainForPlatform("snapchat"), [
   });
   assert.equal(facebook?.views, 800);
   assert.equal(facebook?.likes, 40);
+}
+
+{
+  const clappi = mapApifyPayloadToMetrics("facebook", {
+    status: "available",
+    views: 9743,
+    likes: 56,
+    comments: 4,
+    shares: 0,
+  });
+  assert.equal(clappi?.views, 9743);
+  assert.equal(clappi?.likes, 56);
+  assert.equal(clappi?.comments, 4);
+}
+
+{
+  const unavailable = mapApifyPayloadToMetrics("facebook", {
+    status: "unavailable",
+    views: 0,
+    likes: 0,
+  });
+  assert.equal(unavailable, null);
+}
+
+{
+  const soft = outcomeFromAttempts(
+    "pub-soft",
+    {},
+    [
+      {
+        provider: "facebook_graph_api",
+        available: true,
+        error: "Permission denied",
+        errorCode: "provider_permission",
+      },
+      {
+        provider: "apify",
+        available: true,
+        error: "empty",
+        errorCode: "empty_dataset",
+      },
+    ],
+    null,
+    null
+  );
+  assert.equal(soft.status, "manual_required");
+  assert.match(soft.message, /Automatic metrics unavailable/);
+}
+
+{
+  const hard = outcomeFromAttempts(
+    "pub-hard",
+    {},
+    [
+      {
+        provider: "apify",
+        available: true,
+        error: "Apify HTTP 500",
+        errorCode: "actor_launch_failed",
+      },
+    ],
+    null,
+    null
+  );
+  assert.equal(hard.status, "failed");
 }
 
 assert.equal(
