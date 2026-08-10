@@ -84,6 +84,39 @@ export function resolveDiscoveryPlatform(value?: string | null): SocialPlatform 
   return PLATFORM_ALIASES[key];
 }
 
+/** Infer platform from a publication/content URL host (IG / TT / YT / …). */
+export function detectSocialPlatformFromContentUrl(
+  contentUrl: string | null | undefined
+): SocialPlatform | null {
+  const raw = contentUrl?.trim();
+  if (!raw) return null;
+  try {
+    const url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    if (host === "tiktok.com" || host.endsWith(".tiktok.com")) return "tiktok";
+    if (host === "instagram.com" || host.endsWith(".instagram.com")) return "instagram";
+    if (host === "youtube.com" || host.endsWith(".youtube.com") || host === "youtu.be") {
+      return "youtube";
+    }
+    if (
+      host === "facebook.com" ||
+      host.endsWith(".facebook.com") ||
+      host === "fb.watch" ||
+      host.endsWith(".fb.watch")
+    ) {
+      return "facebook";
+    }
+    if (host === "snapchat.com" || host.endsWith(".snapchat.com")) return "snapchat";
+    if (host === "x.com" || host === "twitter.com" || host.endsWith(".twitter.com")) {
+      return "twitter";
+    }
+    if (host === "linkedin.com" || host.endsWith(".linkedin.com")) return "linkedin";
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function buildCanonicalProfileUrl(
   platform: SocialPlatform,
   username: string

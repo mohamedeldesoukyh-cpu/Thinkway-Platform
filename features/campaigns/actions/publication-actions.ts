@@ -4,9 +4,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import type { FormActionState } from "@/features/campaigns/form-action-state";
-import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+import { canonicalPlatformKey, getDeliverableTypeCodesForPlatform } from "@/lib/campaigns/deliverable-taxonomy";
 import { requestMetricsCollection } from "@/lib/performance/metrics-collector";
 import { validateInstagramPublicationUrl } from "@/lib/performance/metrics-collector/instagram-content-url";
+import { detectSocialPlatformFromContentUrl } from "@/lib/social/platforms";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const publicationSchema = z.object({
@@ -57,9 +58,22 @@ export async function createCampaignPublicationAction(
     return { ok: false, message: authError?.message ?? "Unauthorized" };
   }
 
-  if (parsed.data.content_url && canonicalPlatformKey(parsed.data.platform) === "instagram") {
+  const urlPlatform = detectSocialPlatformFromContentUrl(parsed.data.content_url);
+  let platform = canonicalPlatformKey(parsed.data.platform) || parsed.data.platform;
+  let publicationType = parsed.data.publication_type;
+
+  // Prefer URL-detected platform so a TikTok link is never validated as Instagram.
+  if (urlPlatform && urlPlatform !== platform) {
+    platform = urlPlatform;
+    const types = getDeliverableTypeCodesForPlatform(platform);
+    if (!types.includes(publicationType)) {
+      publicationType = types[0] ?? "other";
+    }
+  }
+
+  if (parsed.data.content_url && platform === "instagram") {
     const urlError = validateInstagramPublicationUrl(
-      parsed.data.publication_type,
+      publicationType,
       parsed.data.content_url
     );
     if (urlError) {
@@ -77,8 +91,8 @@ export async function createCampaignPublicationAction(
       campaign_header_id: parsed.data.campaign_id,
       campaign_line_id: parsed.data.campaign_line_id || null,
       influencer_id: parsed.data.influencer_id || null,
-      platform: parsed.data.platform,
-      publication_type: parsed.data.publication_type,
+      platform,
+      publication_type: publicationType,
       content_url: parsed.data.content_url,
       publication_date: parsed.data.publication_date || null,
       status: parsed.data.status,

@@ -35,6 +35,8 @@ import {
   getCreatorConnectedPlatformOptions,
   getDeliverableTypeCodesForPlatform,
 } from "@/lib/campaigns/deliverable-taxonomy";
+import { SOCIAL_PLATFORM_OPTIONS } from "@/lib/master-data/constants";
+import { detectSocialPlatformFromContentUrl } from "@/lib/social/platforms";
 
 const PUBLICATION_STATUS_OPTIONS = [
   { value: "draft", label: "Draft" },
@@ -70,14 +72,25 @@ export function CampaignPublicationSheet({
 
   const selectedLine = assignmentLines.find((l) => l.id === lineId) ?? null;
 
-  const platformOptions = useMemo(
-    () =>
-      getCreatorConnectedPlatformOptions({
-        creatorPlatformAccounts: selectedLine?.creator_platform_accounts,
-        assignment: selectedLine?.assignment,
-      }),
-    [selectedLine]
-  );
+  // Manual publications may be on any platform — connected accounts first, then full list.
+  const platformOptions = useMemo(() => {
+    const connected = getCreatorConnectedPlatformOptions({
+      creatorPlatformAccounts: selectedLine?.creator_platform_accounts,
+      assignment: selectedLine?.assignment,
+    });
+    const seen = new Set(connected.map((o) => o.value));
+    const rest = SOCIAL_PLATFORM_OPTIONS.filter((o) => !seen.has(o.value)).map((o) => ({
+      value: o.value,
+      label: o.label,
+    }));
+    return [...connected, ...rest];
+  }, [selectedLine]);
+
+  const applyPlatform = (next: string) => {
+    setPlatform(next);
+    const types = getDeliverableTypeCodesForPlatform(next);
+    setPublicationType(types[0] ?? "other");
+  };
 
   const [state, formAction, isPending] = useActionState(createCampaignPublicationAction, {
     ok: false,
@@ -119,6 +132,14 @@ export function CampaignPublicationSheet({
     value: a.id,
     label: `${a.influencer_name ?? "Creator"} — ${a.name}`,
   }));
+
+  function onContentUrlChange(nextUrl: string) {
+    setContentUrl(nextUrl);
+    const detected = detectSocialPlatformFromContentUrl(nextUrl);
+    if (detected && detected !== platform) {
+      applyPlatform(detected);
+    }
+  }
 
   return (
     <OperationalDetailSheet
@@ -164,11 +185,7 @@ export function CampaignPublicationSheet({
                 platformOptions={platformOptions}
                 disabled={isPending || !selectedLine}
                 className={DETAIL_FORM_SELECT_TRIGGER_CLASS}
-                onPlatformChange={(next) => {
-                  setPlatform(next);
-                  const types = getDeliverableTypeCodesForPlatform(next);
-                  setPublicationType(types[0] ?? "other");
-                }}
+                onPlatformChange={applyPlatform}
               />
             </DetailFormSection>
             <DetailFormSection label="Publication type">
@@ -188,7 +205,7 @@ export function CampaignPublicationSheet({
               type="url"
               className={DETAIL_FORM_INPUT_CLASS}
               value={contentUrl}
-              onChange={(e) => setContentUrl(e.target.value)}
+              onChange={(e) => onContentUrlChange(e.target.value)}
               placeholder="https://…"
               disabled={isPending}
             />

@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 
-import { normalizeProfileUrl } from "@/lib/social/platforms";
+import {
+  detectSocialPlatformFromContentUrl,
+  normalizeProfileUrl,
+} from "@/lib/social/platforms";
 
 assert.equal(
   normalizeProfileUrl("https://www.facebook.com/profile.php?id=123456789"),
@@ -24,8 +27,24 @@ assert.equal(
 );
 
 assert.equal(
-  normalizeProfileUrl("https://www.instagram.com/jane.doe/?utm_source=foo"),
+  normalizeProfileUrl("https://www.instagram.com/jane.doe/?utm_source=share"),
   "https://www.instagram.com/jane.doe"
 );
+
+assert.equal(
+  detectSocialPlatformFromContentUrl(
+    "https://www.tiktok.com/@ramysoli/video/7668365507552103700"
+  ),
+  "tiktok"
+);
+assert.equal(
+  detectSocialPlatformFromContentUrl("https://www.instagram.com/p/AbCdEf/"),
+  "instagram"
+);
+assert.equal(
+  detectSocialPlatformFromContentUrl("https://vm.tiktok.com/ZMabcdef/"),
+  "tiktok"
+);
+assert.equal(detectSocialPlatformFromContentUrl("not-a-url"), null);
 
 console.log("lib/social/platforms.test.ts — all tests passed");
