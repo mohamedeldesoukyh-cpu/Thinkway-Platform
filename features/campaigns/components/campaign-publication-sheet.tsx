@@ -32,8 +32,10 @@ import {
 } from "@/features/campaigns/components/operational-detail-panel";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import {
+  coerceDeliverableTypeForPlatform,
   getCreatorConnectedPlatformOptions,
   getDeliverableTypeCodesForPlatform,
+  inferDeliverableTypeFromContentUrl,
 } from "@/lib/campaigns/deliverable-taxonomy";
 import { SOCIAL_PLATFORM_OPTIONS } from "@/lib/master-data/constants";
 import { detectSocialPlatformFromContentUrl } from "@/lib/social/platforms";
@@ -86,10 +88,14 @@ export function CampaignPublicationSheet({
     return [...connected, ...rest];
   }, [selectedLine]);
 
-  const applyPlatform = (next: string) => {
+  const applyPlatform = (next: string, preferredType?: string | null) => {
     setPlatform(next);
     const types = getDeliverableTypeCodesForPlatform(next);
-    setPublicationType(types[0] ?? "other");
+    const nextType =
+      preferredType && types.includes(preferredType)
+        ? preferredType
+        : (types[0] ?? "other");
+    setPublicationType(nextType);
   };
 
   const [state, formAction, isPending] = useActionState(createCampaignPublicationAction, {
@@ -120,13 +126,27 @@ export function CampaignPublicationSheet({
     setNotes("");
   }, [open]);
 
+  // Seed platform only when the assignment changes — not on every platformOptions identity churn
+  // (that previously flipped Facebook back to Instagram after a failed submit).
   useEffect(() => {
-    if (!selectedLine) return;
-    const firstPlatform = platformOptions[0]?.value ?? "instagram";
-    setPlatform(firstPlatform);
-    const types = getDeliverableTypeCodesForPlatform(firstPlatform);
-    setPublicationType(types[0] ?? "other");
-  }, [selectedLine, platformOptions]);
+    if (!lineId) return;
+    const line = assignmentLines.find((l) => l.id === lineId) ?? null;
+    const connected = getCreatorConnectedPlatformOptions({
+      creatorPlatformAccounts: line?.creator_platform_accounts,
+      assignment: line?.assignment,
+    });
+    const firstPlatform = connected[0]?.value ?? "instagram";
+    applyPlatform(firstPlatform);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-seed when assignment id changes
+  }, [lineId]);
+
+  // Keep type inside the active platform taxonomy (fixes empty FB type when IG code lingered).
+  useEffect(() => {
+    const coerced = coerceDeliverableTypeForPlatform(platform, publicationType, contentUrl);
+    if (coerced !== publicationType) {
+      setPublicationType(coerced);
+    }
+  }, [platform, publicationType, contentUrl]);
 
   const assignmentOptions = assignmentLines.map((a) => ({
     value: a.id,
@@ -136,9 +156,9 @@ export function CampaignPublicationSheet({
   function onContentUrlChange(nextUrl: string) {
     setContentUrl(nextUrl);
     const detected = detectSocialPlatformFromContentUrl(nextUrl);
-    if (detected && detected !== platform) {
-      applyPlatform(detected);
-    }
+    if (!detected) return;
+    const inferred = inferDeliverableTypeFromContentUrl(nextUrl);
+    applyPlatform(detected, inferred);
   }
 
   return (
@@ -185,7 +205,7 @@ export function CampaignPublicationSheet({
                 platformOptions={platformOptions}
                 disabled={isPending || !selectedLine}
                 className={DETAIL_FORM_SELECT_TRIGGER_CLASS}
-                onPlatformChange={applyPlatform}
+                onPlatformChange={(next) => applyPlatform(next)}
               />
             </DetailFormSection>
             <DetailFormSection label="Publication type">

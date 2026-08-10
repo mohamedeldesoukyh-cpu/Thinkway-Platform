@@ -1051,6 +1051,34 @@ export async function persistCollectedMetrics(
 
   if (error) throw new Error(error.message);
 
+  if (input.publicationDate) {
+    try {
+      const { data: pubRow } = await supabase
+        .from("campaign_publications")
+        .select("campaign_line_id, platform")
+        .eq("id", input.publicationId)
+        .eq("campaign_header_id", input.campaignHeaderId)
+        .maybeSingle();
+      if (pubRow?.campaign_line_id && pubRow.platform) {
+        const { syncLiveDateFromPublication } = await import(
+          "@/lib/campaigns/sync-live-date-from-publication"
+        );
+        await syncLiveDateFromPublication(supabase, {
+          campaignHeaderId: input.campaignHeaderId,
+          campaignLineId: pubRow.campaign_line_id,
+          platform: pubRow.platform,
+          publicationDate: input.publicationDate,
+          publicationId: input.publicationId,
+        });
+      }
+    } catch (syncError) {
+      console.warn(
+        "[metrics-collector] live date sync from publication failed",
+        syncError
+      );
+    }
+  }
+
   if (input.publicationContent) {
     await persistPublicationContent(supabase, {
       publicationId: input.publicationId,

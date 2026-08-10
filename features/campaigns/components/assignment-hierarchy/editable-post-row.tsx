@@ -5,6 +5,7 @@ import {
   CheckIcon,
   PencilIcon,
   PlusIcon,
+  RotateCcwIcon,
   Trash2Icon,
   XIcon,
 } from "lucide-react";
@@ -26,6 +27,7 @@ import {
 import {
   addPostToDeliverableAction,
   deleteAssignmentDeliverableAction,
+  resetLiveDateToPublicationAction,
   updateAssignmentDeliverableAction,
   updatePostScheduleAction,
 } from "@/features/campaigns/actions/assignment-deliverable-actions";
@@ -305,6 +307,23 @@ export function EditablePostRow({
           return;
         }
       } else {
+        return;
+      }
+      setError(null);
+      router.refresh();
+    });
+  }
+
+  function resetLiveDateToPublication() {
+    if (!canEditLiveDateField) return;
+    startTransition(async () => {
+      const result = await resetLiveDateToPublicationAction({
+        campaign_id: campaignId,
+        campaign_line_id: campaignLineId,
+        platform: meta.platform,
+      });
+      if (!result.ok) {
+        setError(result.message ?? "Failed to reset live ad date.");
         return;
       }
       setError(null);
@@ -762,7 +781,7 @@ export function EditablePostRow({
         {col("postDate") ? (
         <td className={GRID_CELL.postDate}>
           {canEditLiveDateField ? (
-            <div className="flex items-center justify-center gap-0.5">
+            <div className="flex min-w-0 items-center justify-center gap-0.5 px-0.5">
               <Input
                 type="date"
                 value={meta.live_date}
@@ -775,23 +794,47 @@ export function EditablePostRow({
                   }
                 }}
                 disabled={pending}
-                className="h-6 min-w-0 flex-1 text-[10px]"
+                className="h-7 min-w-[8.75rem] flex-1 basis-[8.75rem] px-1 text-[11px] leading-none"
                 aria-label="Live ad date"
+                title={
+                  post.live_date_source === "publication"
+                    ? "From publication (you can overwrite)"
+                    : post.publication_live_date
+                      ? `Manual overwrite · publication default ${post.publication_live_date}`
+                      : "Live ad date"
+                }
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="size-6 shrink-0"
+                className="size-7 shrink-0"
                 disabled={pending}
                 title="Save live ad date"
                 onClick={() => persistLiveDate(meta.live_date)}
               >
-                <CheckIcon className="size-3" />
+                <CheckIcon className="size-3.5" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-7 shrink-0"
+                disabled={pending}
+                title={
+                  post.publication_live_date
+                    ? `Reset to publication (${post.publication_live_date})`
+                    : "Reset to publication date"
+                }
+                onClick={resetLiveDateToPublication}
+              >
+                <RotateCcwIcon className="size-3.5" />
               </Button>
             </div>
           ) : (
-            <span className="text-muted-foreground">{post.live_date ?? "—"}</span>
+            <span className="whitespace-nowrap text-[11px] text-muted-foreground">
+              {post.live_date ?? "—"}
+            </span>
           )}
         </td>
         ) : null}

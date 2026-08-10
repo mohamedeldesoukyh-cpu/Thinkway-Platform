@@ -1,6 +1,9 @@
 import { SOCIAL_PLATFORM_OPTIONS } from "@/lib/master-data/constants";
 import type { LineInfluencerAssignment } from "@/lib/campaigns/line-assignment";
-import { isSocialPlatform, resolveDiscoveryPlatform } from "@/lib/social/platforms";
+import {
+  detectSocialPlatformFromContentUrl,
+  resolveDiscoveryPlatform,
+} from "@/lib/social/platforms";
 
 /** Master-data deliverable taxonomy keyed by social platform. */
 export const DELIVERABLE_TYPES_BY_PLATFORM: Record<
@@ -29,7 +32,13 @@ export const DELIVERABLE_TYPES_BY_PLATFORM: Record<
   ],
   twitter: [{ value: "other", label: "Other", shortLabel: "Other" }],
   linkedin: [{ value: "other", label: "Other", shortLabel: "Other" }],
-  facebook: [{ value: "other", label: "Other", shortLabel: "Other" }],
+  facebook: [
+    { value: "facebook_post", label: "Facebook post", shortLabel: "FB Post" },
+    { value: "facebook_reel", label: "Facebook reel", shortLabel: "FB Reel" },
+    { value: "facebook_story", label: "Facebook story", shortLabel: "FB Story" },
+    { value: "facebook_live", label: "Facebook live", shortLabel: "FB Live" },
+    { value: "facebook_group_post", label: "Facebook group post", shortLabel: "FB Group" },
+  ],
   other: [{ value: "other", label: "Other", shortLabel: "Other" }],
 };
 
@@ -71,6 +80,80 @@ export function getDeliverableTypesForPlatform(platform: string) {
 
 export function getDeliverableTypeCodesForPlatform(platform: string): string[] {
   return getDeliverableTypesForPlatform(platform).map((t) => t.value);
+}
+
+/**
+ * Prefer a platform-specific deliverable code when the content URL path is unambiguous
+ * (e.g. `/reel/` → facebook_reel / instagram_reel). Returns null when unknown.
+ */
+export function inferDeliverableTypeFromContentUrl(
+  contentUrl: string | null | undefined
+): string | null {
+  const platform = detectSocialPlatformFromContentUrl(contentUrl);
+  if (!platform || !contentUrl?.trim()) return null;
+
+  let pathname = "";
+  try {
+    const parsed = new URL(
+      /^https?:\/\//i.test(contentUrl.trim()) ? contentUrl.trim() : `https://${contentUrl.trim()}`
+    );
+    pathname = parsed.pathname.toLowerCase();
+  } catch {
+    return null;
+  }
+
+  const codes = getDeliverableTypeCodesForPlatform(platform);
+
+  const pick = (...candidates: string[]) =>
+    candidates.find((code) => codes.includes(code)) ?? null;
+
+  if (platform === "facebook") {
+    if (pathname.includes("/reel")) return pick("facebook_reel");
+    if (pathname.includes("/stories") || pathname.includes("/story")) {
+      return pick("facebook_story");
+    }
+    if (pathname.includes("/groups/")) return pick("facebook_group_post");
+    if (pathname.includes("/watch") || pathname.includes("/videos")) {
+      return pick("facebook_post");
+    }
+    return pick("facebook_post");
+  }
+
+  if (platform === "instagram") {
+    if (pathname.includes("/reel") || pathname.includes("/tv/")) {
+      return pick("instagram_reel");
+    }
+    if (pathname.includes("/stories")) return pick("instagram_story");
+    if (pathname.includes("/p/")) return pick("instagram_post");
+    return null;
+  }
+
+  if (platform === "tiktok") {
+    if (pathname.includes("/video/") || pathname.includes("/photo/")) {
+      return pick("tiktok_video");
+    }
+    return pick("tiktok_video");
+  }
+
+  if (platform === "youtube") {
+    if (pathname.includes("/shorts/")) return pick("youtube_short");
+    return pick("youtube_video");
+  }
+
+  return null;
+}
+
+/** Keep publication/deliverable type inside the platform taxonomy. */
+export function coerceDeliverableTypeForPlatform(
+  platform: string,
+  publicationType: string,
+  contentUrl?: string | null
+): string {
+  const types = getDeliverableTypeCodesForPlatform(platform);
+  if (types.includes(publicationType)) return publicationType;
+  const inferred = inferDeliverableTypeFromContentUrl(contentUrl);
+  if (inferred && types.includes(inferred)) return inferred;
+  return types[0] ?? "other";
 }
 
 export function deliverableTypeLabel(code: string): string {

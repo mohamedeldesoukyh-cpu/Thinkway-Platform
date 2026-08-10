@@ -20,6 +20,7 @@ export function platformBadgeClass(platform: string): string {
     tiktok: "bg-slate-900/10 text-slate-900 dark:bg-slate-100/10 dark:text-slate-100",
     snapchat: "bg-yellow-400/20 text-yellow-900 dark:text-yellow-200",
     youtube: "bg-red-500/15 text-red-700 dark:text-red-300",
+    facebook: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
   };
   return colors[platform] ?? "bg-muted text-muted-foreground";
 }
@@ -106,11 +107,14 @@ export function DeliverableTypeSelect({
   className?: string;
 }) {
   const typeOptions = getDeliverableTypesForPlatform(platform);
+  const resolvedValue = typeOptions.some((o) => o.value === deliverableType)
+    ? deliverableType
+    : (typeOptions[0]?.value ?? deliverableType);
 
   return (
-    <Select value={deliverableType} onValueChange={onDeliverableTypeChange} disabled={disabled}>
-      <SelectTrigger className={cn("h-6 min-w-[88px] max-w-[112px] text-[10px]", className)}>
-        <SelectValue />
+    <Select value={resolvedValue} onValueChange={onDeliverableTypeChange} disabled={disabled}>
+      <SelectTrigger className={cn("h-6 min-w-[88px] max-w-[140px] text-[10px]", className)}>
+        <SelectValue placeholder="Type…" />
       </SelectTrigger>
       <SelectContent>
         {typeOptions.map((opt) => (

@@ -45,7 +45,8 @@ export const CHILD_GRID_LEADING_CELL =
 export const CHILD_GRID_MONTH_COL =
   "w-[84px] min-w-[84px] max-w-[84px] text-center";
 
-export const CHILD_GRID_LIVE_DATE_COL = "w-[100px] min-w-[100px] max-w-[100px]";
+export const CHILD_GRID_LIVE_DATE_COL =
+  "w-[200px] min-w-[200px] max-w-[200px] text-center";
 
 /** Child cols 10+ (after Rev) — UR Rev, AF %, AF, Cost, then child-only cols. */
 export const CHILD_GRID_TRAILING_COLUMNS = [
@@ -56,7 +57,7 @@ export const CHILD_GRID_TRAILING_COLUMNS = [
   { id: "usageRightsCost", width: 76 },
   { id: "vat", width: 56 },
   { id: "totalBilling", width: 76 },
-  { id: "postDate", width: 100 },
+  { id: "postDate", width: 200 },
   { id: "liveAdMonth", width: 84 },
   { id: "invoice", width: 64 },
   { id: "billing", width: 72 },

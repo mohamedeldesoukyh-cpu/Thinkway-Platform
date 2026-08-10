@@ -45,6 +45,10 @@ assert.equal(
   detectSocialPlatformFromContentUrl("https://vm.tiktok.com/ZMabcdef/"),
   "tiktok"
 );
+assert.equal(
+  detectSocialPlatformFromContentUrl("https://www.facebook.com/reel/1849794332663999"),
+  "facebook"
+);
 assert.equal(detectSocialPlatformFromContentUrl("not-a-url"), null);
 
 console.log("lib/social/platforms.test.ts — all tests passed");

@@ -4,9 +4,13 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import type { FormActionState } from "@/features/campaigns/form-action-state";
-import { canonicalPlatformKey, getDeliverableTypeCodesForPlatform } from "@/lib/campaigns/deliverable-taxonomy";
+import {
+  canonicalPlatformKey,
+  coerceDeliverableTypeForPlatform,
+} from "@/lib/campaigns/deliverable-taxonomy";
 import { requestMetricsCollection } from "@/lib/performance/metrics-collector";
 import { validateInstagramPublicationUrl } from "@/lib/performance/metrics-collector/instagram-content-url";
+import { syncLiveDateFromPublication } from "@/lib/campaigns/sync-live-date-from-publication";
 import { detectSocialPlatformFromContentUrl } from "@/lib/social/platforms";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -62,14 +66,16 @@ export async function createCampaignPublicationAction(
   let platform = canonicalPlatformKey(parsed.data.platform) || parsed.data.platform;
   let publicationType = parsed.data.publication_type;
 
-  // Prefer URL-detected platform so a TikTok link is never validated as Instagram.
-  if (urlPlatform && urlPlatform !== platform) {
+  // Prefer URL-detected platform so a Facebook/TikTok link is never validated as Instagram.
+  if (urlPlatform) {
     platform = urlPlatform;
-    const types = getDeliverableTypeCodesForPlatform(platform);
-    if (!types.includes(publicationType)) {
-      publicationType = types[0] ?? "other";
-    }
   }
+
+  publicationType = coerceDeliverableTypeForPlatform(
+    platform,
+    publicationType,
+    parsed.data.content_url
+  );
 
   if (parsed.data.content_url && platform === "instagram") {
     const urlError = validateInstagramPublicationUrl(
@@ -110,6 +116,20 @@ export async function createCampaignPublicationAction(
   if (error) {
     console.error("[publications] create failed", { message: error.message });
     return { ok: false, message: error.message };
+  }
+
+  if (inserted?.id && parsed.data.publication_date) {
+    try {
+      await syncLiveDateFromPublication(supabase, {
+        campaignHeaderId: parsed.data.campaign_id,
+        campaignLineId: parsed.data.campaign_line_id || null,
+        platform,
+        publicationDate: parsed.data.publication_date,
+        publicationId: inserted.id,
+      });
+    } catch (syncError) {
+      console.warn("[publications] live date sync failed", syncError);
+    }
   }
 
   if (inserted?.id && parsed.data.content_url) {

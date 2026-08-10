@@ -19,6 +19,10 @@ export type AssignmentPostOperationalRow = {
   live_date: string | null;
   workflow_status: string;
   notes: string | null;
+  /** publication = from Performance publication; manual = user overwrite. */
+  live_date_source?: "publication" | "manual" | null;
+  /** Last known publication date default for reset. */
+  publication_live_date?: string | null;
   revenue_per_post: number;
   cost_per_post: number;
   revenue_vat_percent: number;

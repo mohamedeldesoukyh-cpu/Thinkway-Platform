@@ -9,6 +9,7 @@ import { syncLineCommercialRollupsFromDeliverables } from "@/lib/assignments/syn
 import { applyLiveAdDateLockAfterDateInsert } from "@/lib/billing/apply-live-ad-date-lock";
 import { syncAssignmentLineTitleFromDeliverables } from "@/lib/campaigns/sync-assignment-line-title";
 import { canEditLiveAdDate } from "@/lib/campaigns/live-ad-date";
+import { withManualLiveDateSource } from "@/lib/campaigns/sync-live-date-from-publication";
 import { computeClientBilling } from "@/lib/assignments/client-billing-commercial";
 import { computeVatLine } from "@/lib/vat/calculations";
 
@@ -274,7 +275,7 @@ export async function updateAssignmentDeliverable(
     const { data: existing, error: fetchError } = await supabase
       .from("assignment_deliverables")
       .select(
-        "id, locked_at, invoiced_amount, billing_status, invoice_line_item_id, live_date"
+        "id, locked_at, invoiced_amount, billing_status, invoice_line_item_id, live_date, metadata"
       )
       .eq("id", input.deliverable_id)
       .eq("campaign_line_id", line.id)
@@ -295,19 +296,37 @@ export async function updateAssignmentDeliverable(
       canEditLiveAdDate(existing.live_date, existing.locked_at)
     ) {
       const nextLiveDate = input.live_date ?? null;
+      const nextMeta = withManualLiveDateSource(
+        (existing.metadata as Record<string, unknown> | null) ?? null
+      );
       const { error: dateError } = await supabase
         .from("assignment_deliverables")
-        .update({ live_date: nextLiveDate })
+        .update({
+          live_date: nextLiveDate,
+          metadata: nextMeta as never,
+        })
         .eq("id", input.deliverable_id);
 
       if (dateError) {
         return { ok: false, message: dateError.message };
       }
 
-      await supabase
+      const { data: scheduleRows } = await supabase
         .from("assignment_post_schedule")
-        .update({ live_date: nextLiveDate })
+        .select("id, metadata")
         .eq("assignment_deliverable_id", input.deliverable_id);
+
+      for (const schedule of scheduleRows ?? []) {
+        await supabase
+          .from("assignment_post_schedule")
+          .update({
+            live_date: nextLiveDate,
+            metadata: withManualLiveDateSource(
+              (schedule.metadata as Record<string, unknown> | null) ?? null
+            ) as never,
+          })
+          .eq("id", schedule.id);
+      }
 
       if (nextLiveDate) {
         const lockResult = await applyLiveAdDateLockAfterDateInsert(
@@ -348,6 +367,13 @@ export async function updateAssignmentDeliverable(
 
     const invoicedAmount = Number(existing.invoiced_amount ?? 0);
     const remainingAmount = Math.max(0, commercial.billable_amount - invoicedAmount);
+    const nextLiveDate = input.live_date ?? null;
+    const existingMeta =
+      (existing.metadata as Record<string, unknown> | null) ?? null;
+    const nextMeta =
+      nextLiveDate !== (existing.live_date ?? null)
+        ? withManualLiveDateSource(existingMeta)
+        : existingMeta;
 
     const { error } = await supabase
       .from("assignment_deliverables")
@@ -371,10 +397,11 @@ export async function updateAssignmentDeliverable(
         cost_vat_amount: commercial.cost_vat_amount,
         cost_after_vat: commercial.cost_after_vat,
         cost_vat_exempt: commercial.cost_vat_exempt,
-        live_date: input.live_date ?? null,
+        live_date: nextLiveDate,
         notes: input.notes ?? null,
         billable_amount: commercial.billable_amount,
         remaining_amount: remainingAmount,
+        ...(nextMeta ? { metadata: nextMeta as never } : {}),
         ...(input.billing_status
           ? { billing_status: input.billing_status }
           : {}),
@@ -505,7 +532,7 @@ export async function updatePostSchedule(
 
     const { data: deliverable, error: deliverableError } = await supabase
       .from("assignment_deliverables")
-      .select("id, locked_at, invoice_line_item_id, live_date, billing_status")
+      .select("id, locked_at, invoice_line_item_id, live_date, billing_status, metadata")
       .eq("id", post.assignment_deliverable_id)
       .maybeSingle();
 
@@ -527,9 +554,15 @@ export async function updatePostSchedule(
       canEditLiveAdDate(post.live_date ?? deliverable.live_date, deliverable.locked_at)
     ) {
       const nextLiveDate = input.live_date;
+      const nextPostMeta = withManualLiveDateSource(
+        (post.metadata as Record<string, unknown> | null) ?? null
+      );
       const { error: dateError } = await supabase
         .from("assignment_post_schedule")
-        .update({ live_date: nextLiveDate })
+        .update({
+          live_date: nextLiveDate,
+          metadata: nextPostMeta as never,
+        })
         .eq("id", input.schedule_id);
 
       if (dateError) {
@@ -538,7 +571,12 @@ export async function updatePostSchedule(
 
       await supabase
         .from("assignment_deliverables")
-        .update({ live_date: nextLiveDate })
+        .update({
+          live_date: nextLiveDate,
+          metadata: withManualLiveDateSource(
+            (deliverable.metadata as Record<string, unknown> | null) ?? null
+          ) as never,
+        })
         .eq("id", deliverable.id);
 
       if (nextLiveDate) {
@@ -579,13 +617,18 @@ export async function updatePostSchedule(
       exempt: lineVat.cost_vat_exempt,
     });
 
-    const metadata = {
+    const metadataBase = {
       ...((post.metadata as Record<string, unknown>) ?? {}),
       ...(input.platform ? { platform: input.platform } : {}),
       ...(input.deliverable_type
         ? { deliverable_type: input.deliverable_type }
         : {}),
     };
+    const nextLiveDate = input.live_date ?? null;
+    const metadata =
+      nextLiveDate !== (post.live_date ?? null)
+        ? withManualLiveDateSource(metadataBase)
+        : metadataBase;
 
     const { error } = await supabase
       .from("assignment_post_schedule")

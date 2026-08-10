@@ -33,6 +33,7 @@ import {
   alignPackageLineCommercialToDeliverables,
   buildAssignmentHierarchyRollups,
 } from "@/lib/campaigns/assignment-hierarchy-rollups";
+import { readLiveDateMetadata } from "@/lib/campaigns/sync-live-date-from-publication";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 
 function lineAllowsDeliverableInvoice(line: CampaignLineWorkspace): boolean {
@@ -151,6 +152,8 @@ function buildVirtualPosts(input: {
   revenueVatPerPost: number;
   costVatPerPost: number;
   liveDate: string | null;
+  liveDateSource?: AssignmentPostOperationalRow["live_date_source"];
+  publicationLiveDate?: string | null;
   notes: string | null;
   billingStatus: AssignmentDeliverableBillingStatus;
   collectionStatus: DeliverableCollectionStatus;
@@ -173,6 +176,8 @@ function buildVirtualPosts(input: {
     deliverable_type: input.deliverableType,
     deliverable_type_label: deliverableTypeLabel(input.deliverableType),
     live_date: input.liveDate,
+    live_date_source: input.liveDateSource ?? null,
+    publication_live_date: input.publicationLiveDate ?? null,
     workflow_status: "draft",
     notes: input.notes,
     revenue_per_post: input.unitRevenue,
@@ -260,10 +265,11 @@ async function loadCampaignAssignmentHierarchy(
       notes: string | null;
       locked_at: string | null;
       revenue_vat_exempt?: boolean | null;
+      metadata?: Record<string, unknown> | null;
     }>(async (select, _includeVatExempt) => {
       const result = await supabase
         .from("assignment_deliverables")
-        .select(select)
+        .select(`${select}, metadata`)
         .in("campaign_line_id", lineIds)
         .order("sort_order");
       return {
@@ -291,6 +297,7 @@ async function loadCampaignAssignmentHierarchy(
           revenue_vat_amount: number;
           revenue_after_vat: number;
           revenue_vat_exempt?: boolean | null;
+          metadata?: Record<string, unknown> | null;
         }> | null,
         error: result.error,
       };
@@ -367,6 +374,7 @@ async function loadCampaignAssignmentHierarchy(
   for (const row of (schedulesResult.data ?? []) as ScheduleRow[]) {
     const list = postsByDeliverable.get(row.assignment_deliverable_id) ?? [];
     const meta = (row.metadata ?? {}) as { platform?: string; deliverable_type?: string };
+    const liveMeta = readLiveDateMetadata(row.metadata);
     list.push({
       id: row.id,
       assignment_deliverable_id: row.assignment_deliverable_id,
@@ -376,6 +384,8 @@ async function loadCampaignAssignmentHierarchy(
       deliverable_type: meta.deliverable_type ?? "other",
       deliverable_type_label: deliverableTypeLabel(meta.deliverable_type ?? "other"),
       live_date: row.live_date,
+      live_date_source: liveMeta.live_date_source ?? null,
+      publication_live_date: liveMeta.publication_live_date ?? null,
       workflow_status: row.status ?? "draft",
       notes: row.notes,
       revenue_per_post: Number(
@@ -446,6 +456,7 @@ async function loadCampaignAssignmentHierarchy(
     );
 
     if (posts.length === 0) {
+      const deliverableLiveMeta = readLiveDateMetadata(row.metadata);
       posts = buildVirtualPosts({
         deliverableId: row.id,
         quantity: qty,
@@ -457,6 +468,8 @@ async function loadCampaignAssignmentHierarchy(
         revenueVatPerPost: vatPerPost,
         costVatPerPost: costVatPerPost,
         liveDate: row.live_date,
+        liveDateSource: deliverableLiveMeta.live_date_source ?? null,
+        publicationLiveDate: deliverableLiveMeta.publication_live_date ?? null,
         notes: row.notes ?? null,
         billingStatus,
         collectionStatus: deriveCollectionStatus(billingStatus),
@@ -466,6 +479,7 @@ async function loadCampaignAssignmentHierarchy(
         isLocked: lockState.commercialLocked,
       });
     } else {
+      const deliverableLiveMeta = readLiveDateMetadata(row.metadata);
       posts = posts.map((post) => {
         const scheduleRow = (schedulesResult.data ?? []).find(
           (s) => s.id === post.id
@@ -481,6 +495,12 @@ async function loadCampaignAssignmentHierarchy(
           platform,
           deliverable_type: deliverableType,
           deliverable_type_label: deliverableTypeLabel(deliverableType),
+          live_date_source:
+            post.live_date_source ?? deliverableLiveMeta.live_date_source ?? null,
+          publication_live_date:
+            post.publication_live_date ??
+            deliverableLiveMeta.publication_live_date ??
+            null,
           label: formatDeliverableHierarchyLabel({
             platform,
             deliverable_type: deliverableType,

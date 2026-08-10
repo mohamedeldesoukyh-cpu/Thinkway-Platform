@@ -13,6 +13,11 @@ import {
   updateDeliverablePlatformType,
   updatePostSchedule,
 } from "@/lib/services/campaigns/campaign-deliverable-service";
+import {
+  loadLatestPublicationLiveDate,
+  syncLiveDateFromPublication,
+} from "@/lib/campaigns/sync-live-date-from-publication";
+import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 
 const platformSchema = z.string().trim().min(1).max(64);
 const deliverableTypeSchema = z.string().trim().min(1).max(64);
@@ -228,6 +233,57 @@ export async function updateDeliverablePlatformTypeAction(
     return {
       ok: false,
       message: err instanceof Error ? err.message : "Failed to update platform.",
+    };
+  }
+}
+
+const resetLiveDateSchema = z.object({
+  campaign_id: z.string().uuid(),
+  campaign_line_id: z.string().uuid(),
+  platform: platformSchema,
+});
+
+/** Reset Live ad date to the latest publication date for this line + platform. */
+export async function resetLiveDateToPublicationAction(
+  input: z.infer<typeof resetLiveDateSchema>
+): Promise<FormActionState> {
+  const parsed = resetLiveDateSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, message: "Invalid reset request." };
+  }
+
+  try {
+    const supabase = await requireAuth();
+    const platform = canonicalPlatformKey(parsed.data.platform) || parsed.data.platform;
+    const latest = await loadLatestPublicationLiveDate(supabase, {
+      campaignHeaderId: parsed.data.campaign_id,
+      campaignLineId: parsed.data.campaign_line_id,
+      platform,
+    });
+
+    if (!latest.publicationDate) {
+      return {
+        ok: false,
+        message: "No publication date found for this platform.",
+      };
+    }
+
+    await syncLiveDateFromPublication(supabase, {
+      campaignHeaderId: parsed.data.campaign_id,
+      campaignLineId: parsed.data.campaign_line_id,
+      platform,
+      publicationDate: latest.publicationDate,
+      publicationId: latest.publicationId,
+      force: true,
+    });
+
+    revalidateCampaign(parsed.data.campaign_id);
+    return { ok: true, message: "Live ad date reset to publication." };
+  } catch (err) {
+    return {
+      ok: false,
+      message:
+        err instanceof Error ? err.message : "Failed to reset live ad date.",
     };
   }
 }
