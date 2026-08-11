@@ -56,7 +56,10 @@ import type { ReachSource } from "@/lib/performance/reach-forecast-engine";
 import type { ImpressionsSource } from "@/lib/performance/impressions-forecast-engine";
 import { PublicationCreatorName } from "@/lib/performance/publication-creator-identity";
 import { PublicationCreatorAvatar } from "@/lib/performance/publication-creator-identity";
-import { resolvePublicationContentPreviewUrl } from "@/lib/performance/publication-preview";
+import {
+  resolveCampaignPublicationDisplayPreviewUrl,
+  resolvePublicationContentPreviewUrl,
+} from "@/lib/performance/publication-preview";
 import {
   isInstagramHiddenLikes,
   isInstagramPhotoOrCarousel,
@@ -258,7 +261,9 @@ export function PublicationWorkspace({
 
   const publicationRow = row;
 
-  const previewUrl = resolvePublicationContentPreviewUrl(row);
+  const storedPreviewUrl = resolvePublicationContentPreviewUrl(row);
+  const previewUrl = resolveCampaignPublicationDisplayPreviewUrl(row);
+  const livePostUrl = row.content_url?.trim() || null;
   const provider = row.metrics_provider ?? row.metrics_collection_source ?? "—";
   const lastSync = row.last_synced_at ?? row.metrics_refresh_attempted_at;
   const sourceBadge = metricsSourceBadge(row.metrics_provider, row.engagement_rate_method as EngagementRateMethod | null);
@@ -439,9 +444,9 @@ export function PublicationWorkspace({
                 </a>
               </Button>
             ) : null}
-            {previewUrl ? (
+            {storedPreviewUrl ? (
               <Button size="sm" variant="outline" className="h-8" asChild>
-                <a href={previewUrl} download target="_blank" rel="noopener noreferrer">
+                <a href={storedPreviewUrl} download target="_blank" rel="noopener noreferrer">
                   <DownloadIcon className="mr-1 size-3.5" />
                   Download screenshot
                 </a>
@@ -527,18 +532,60 @@ export function PublicationWorkspace({
                 <div className="overflow-hidden rounded-xl border border-border bg-muted">
                   <div className="relative aspect-video">
                     {previewUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={previewUrl} alt="" className="size-full object-cover" />
+                      livePostUrl ? (
+                        <a
+                          href={livePostUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group relative block size-full"
+                          title="Open live post"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={previewUrl}
+                            alt=""
+                            className="size-full object-cover transition-opacity group-hover:opacity-90"
+                          />
+                          <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1.5 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8 text-xs font-medium text-white opacity-90 group-hover:opacity-100">
+                            <ExternalLinkIcon className="size-3.5" />
+                            Open live post
+                          </span>
+                        </a>
+                      ) : (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={previewUrl} alt="" className="size-full object-cover" />
+                      )
+                    ) : livePostUrl ? (
+                      <a
+                        href={livePostUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex size-full flex-col items-center justify-center gap-2 text-foreground transition-colors hover:bg-muted/80"
+                        title="Open live post"
+                      >
+                        <ExternalLinkIcon className="size-8 text-muted-foreground" />
+                        <p className="text-sm font-medium">Open live post</p>
+                        <p className="max-w-[85%] truncate text-center text-[11px] text-muted-foreground">
+                          {livePostUrl}
+                        </p>
+                      </a>
                     ) : (
                       <div className="flex size-full flex-col items-center justify-center gap-2 text-muted-foreground">
                         <ImageIcon className="size-8 opacity-40" />
-                        <p className="text-xs">No screenshot captured yet</p>
-                        <Button size="sm" variant="outline" className="h-8" onClick={requeueScreenshot}>
-                          Capture screenshot
-                        </Button>
+                        <p className="text-xs">No media URL available</p>
                       </div>
                     )}
                   </div>
+                  {!storedPreviewUrl && livePostUrl ? (
+                    <div className="flex items-center justify-between gap-2 border-t border-border bg-card px-3 py-2">
+                      <p className="text-[11px] text-muted-foreground">
+                        Showing live-post preview. Capture a screenshot to store one in Thinkway.
+                      </p>
+                      <Button size="sm" variant="outline" className="h-7 shrink-0" onClick={requeueScreenshot}>
+                        Capture screenshot
+                      </Button>
+                    </div>
+                  ) : null}
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl border border-border bg-card p-3 sm:col-span-2">
@@ -866,13 +913,13 @@ export function PublicationWorkspace({
           </TabsContent>
 
           <TabsContent value="media" className="mt-0 px-6 py-4 outline-none">
-            {previewUrl || row.thumbnail_url ? (
+            {storedPreviewUrl || row.thumbnail_url ? (
               <div className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {previewUrl ? (
+                  {storedPreviewUrl ? (
                     <div className="overflow-hidden rounded-xl border border-border">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={previewUrl} alt="" className="aspect-video w-full object-cover" />
+                      <img src={storedPreviewUrl} alt="" className="aspect-video w-full object-cover" />
                       <div className="border-t border-border px-3 py-2 text-xs">
                         Screenshot · {row.screenshot_source ?? "unknown"} ·{" "}
                         {row.screenshot_captured_at
@@ -890,9 +937,9 @@ export function PublicationWorkspace({
                   ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {previewUrl ? (
+                  {storedPreviewUrl ? (
                     <Button size="sm" variant="outline" className="h-8" asChild>
-                      <a href={previewUrl} download target="_blank" rel="noopener noreferrer">
+                      <a href={storedPreviewUrl} download target="_blank" rel="noopener noreferrer">
                         <DownloadIcon className="mr-1 size-3.5" />
                         Download
                       </a>
