@@ -7,7 +7,6 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { CREATE_CAMPAIGN_WORKFLOW_ID } from "@/features/campaign-studio/constants/workflow-ids";
 import {
   attachCampaignObjectToSnapshot,
-  loadCampaignObjectForConversation,
   type CampaignObject,
 } from "@/features/campaign-intelligence";
 import { saveCampaignObject } from "@/features/campaign-intelligence/services/campaign-object-store";
@@ -23,8 +22,7 @@ import { seedCreatorsFromAssignmentHierarchy } from "../hydration/seed-from-assi
 import { seedFromQuotation } from "../hydration/seed-adapters";
 import { getCampaignAssignmentHierarchy } from "@/features/campaigns/queries/assignment-hierarchy";
 import { getQuotationDetail } from "@/lib/services/quotations/quotation-document-service";
-import { generateCampaignOutput, getCampaignOutput, markStaleCampaignOutputs, regenerateStaleCampaignOutputs } from "../output-registry";
-import type { CampaignOutputKind } from "../output-types";
+import { generateCampaignOutput } from "../output-registry";
 import { buildStudioMessageMetadata, workspaceHref, type StudioTab } from "./campaign-workspace-message";
 
 export type StartCampaignOutputsInput = {
@@ -74,86 +72,6 @@ async function resolveLaunchSeed(
   return input.seed;
 }
 
-async function syncSeedIntoConversation(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  conversationId: string,
-  seed: CampaignSeed,
-  userId: string,
-  options?: { quotationId?: string; campaignHeaderId?: string }
-) {
-  const existing = await loadCampaignObjectForConversation(supabase, conversationId);
-  const hydrated = hydrateCampaignObject(seed, existing ?? undefined, {
-    quotationId: options?.quotationId,
-  });
-  const campaignObject = {
-    ...hydrated.campaignObject,
-    conversationId,
-    workflowId: existing?.workflowId ?? CREATE_CAMPAIGN_WORKFLOW_ID,
-    id: existing?.id ?? hydrated.campaignObject.id,
-  };
-
-  const saved = await saveCampaignObject(conversationId, campaignObject, {
-    supabase,
-    userId,
-    persistToDb: true,
-    saveReason: "manual",
-    campaignHeaderId: options?.campaignHeaderId,
-  });
-
-  let objectForStudio = regenerateStaleCampaignOutputs(markStaleCampaignOutputs(saved), {
-    origin: "automatic",
-  });
-
-  const regenKinds: CampaignOutputKind[] =
-    seed.source === "quotation" || seed.creators.length > 0
-      ? ["media_plan"]
-      : (["media_plan", "budget_allocation"] as const).filter((kind) =>
-          Boolean(getCampaignOutput(objectForStudio, kind))
-        );
-
-  for (const kind of regenKinds) {
-    // Output generators consume the Media Plan schedule — they must never mutate it.
-    ({ campaignObject: objectForStudio } = generateCampaignOutput(objectForStudio, kind, {
-      origin: "automatic",
-    }));
-  }
-
-  if (objectForStudio !== saved) {
-    objectForStudio = await saveCampaignObject(conversationId, objectForStudio, {
-      supabase,
-      userId,
-      persistToDb: true,
-      saveReason: "manual",
-      campaignHeaderId: options?.campaignHeaderId,
-    });
-  }
-
-  const syncMessage =
-    seed.source === "quotation"
-      ? "Campaign workspace synced from your quotation — creator avatars, ad types, and fees are up to date. The Media Plan calendar has been refreshed from quotation lines."
-      : seed.creators.length > 0
-        ? `Campaign workspace synced from Assignments — ${seed.creators.length} creator${seed.creators.length === 1 ? "" : "s"} loaded into the slate. The Media Plan calendar has been refreshed.`
-        : "Campaign workspace synced. Generate the Media Plan once creators are assigned.";
-
-  await appendMessage(supabase, {
-    conversationId,
-    role: "assistant",
-    content: syncMessage,
-    metadata: buildStudioMessageMetadata(objectForStudio),
-  });
-
-  try {
-    await updateConversationContextSnapshot(
-      supabase,
-      conversationId,
-      userId,
-      attachCampaignObjectToSnapshot({}, objectForStudio)
-    );
-  } catch {
-    /* studio message carries the object */
-  }
-}
-
 /**
  * Open the Campaign Outputs workspace from a business page.
  *
@@ -184,15 +102,8 @@ export async function startCampaignOutputsFromSeed(
       };
     }
 
-    const seed = await resolveLaunchSeed(supabase, input);
-    const quotationId =
-      input.workspace?.type === "quotation" ? input.workspace.id : undefined;
-    const campaignHeaderId =
-      input.workspace?.type === "campaign" ? input.workspace.id : undefined;
-    const syncOptions = { quotationId, campaignHeaderId };
-
-    // Reuse an existing workspace conversation for this source, if one exists —
-    // never create a second Campaign workspace for the same business object.
+    // Reuse an existing workspace conversation before any hierarchy/media-plan work —
+    // Campaign hero "Open Studio" previously timed out on syncSeedIntoConversation.
     if (input.workspace?.id) {
       const { data: existing } = await supabase
         .from("ai_conversations")
@@ -206,10 +117,16 @@ export async function startCampaignOutputsFromSeed(
         .maybeSingle();
       const existingId = (existing as { id?: string } | null)?.id;
       if (existingId) {
-        await syncSeedIntoConversation(supabase, existingId, seed, auth.userId, syncOptions);
         return { ok: true, href: workspaceHref(existingId, tab), reused: true };
       }
     }
+
+    const seed = await resolveLaunchSeed(supabase, input);
+    const quotationId =
+      input.workspace?.type === "quotation" ? input.workspace.id : undefined;
+    const campaignHeaderId =
+      input.workspace?.type === "campaign" ? input.workspace.id : undefined;
+    const syncOptions = { quotationId, campaignHeaderId };
 
     const conversation = await createConversation(supabase, auth.userId, {
       workspaceType: input.workspace?.type ?? "general",
@@ -232,7 +149,9 @@ export async function startCampaignOutputsFromSeed(
       campaignHeaderId,
     });
 
-    if (seed.source === "quotation" || seed.creators.length > 0) {
+    // Quotation → refresh Media Plan from lines. CRM campaign → hydrate creators only;
+    // regenerating Media Plan for large assignment sets blocks Open Studio.
+    if (seed.source === "quotation") {
       ({ campaignObject } = generateCampaignOutput(campaignObject, "media_plan", {
         origin: "automatic",
       }));
