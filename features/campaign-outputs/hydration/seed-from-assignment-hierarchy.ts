@@ -69,7 +69,10 @@ export function seedCreatorsFromAssignmentHierarchy(
         "Creator"
       ),
       platform,
-      avatarUrl: group.line.influencer_avatar_url?.trim() || undefined,
+      avatarUrl:
+        group.line.influencer_avatar_url?.trim() ||
+        group.line.creator_avatar_url?.trim() ||
+        undefined,
       serviceTypes: serviceTypes.length ? serviceTypes : undefined,
       serviceLabel: serviceTypes.length ? serviceTypes.join(" + ") : undefined,
       campaignLineId,
@@ -83,7 +86,7 @@ export function seedCreatorsFromAssignmentHierarchy(
 
 /**
  * Fill `sections.creators` from campaign assignments when the slate is empty.
- * Does not overwrite an existing Studio / quotation slate.
+ * Always patches missing avatar URLs from Assignments (Remaining/Original cards).
  * Always binds Assignment IDs onto existing slate rows when missing (R2.1).
  */
 export function ensureCreatorsFromAssignmentHierarchy(
@@ -100,7 +103,75 @@ export function ensureCreatorsFromAssignmentHierarchy(
         next
       ).campaignObject;
     }
+  } else {
+    next = patchMissingSlateAvatarsFromHierarchy(next, hierarchy);
   }
 
   return bindAssignmentRefsOntoCampaignObject(next, hierarchy);
+}
+
+/** Patch blank slate avatars from Assignment line avatar fields (in-memory only). */
+export function patchMissingSlateAvatarsFromHierarchy(
+  campaignObject: CampaignObject,
+  hierarchy: AssignmentHierarchy
+): CampaignObject {
+  const avatarByKey = new Map<string, string>();
+  for (const group of hierarchy.groups) {
+    const url =
+      group.line.influencer_avatar_url?.trim() ||
+      group.line.creator_avatar_url?.trim() ||
+      "";
+    if (!url) continue;
+    const lineId = group.line.id?.trim();
+    const influencerId = group.line.influencer_id?.trim();
+    if (lineId) avatarByKey.set(lineId.toLowerCase(), url);
+    if (influencerId) avatarByKey.set(influencerId.toLowerCase(), url);
+  }
+  if (!avatarByKey.size) return campaignObject;
+
+  const creatorsSection = campaignObject.sections.creators;
+  const data = (creatorsSection?.data ?? {}) as {
+    recommendations?: {
+      creatorIds?: string[];
+      selectedReasoning?: Array<{
+        creatorId: string;
+        avatarUrl?: string;
+        campaignLineId?: string | null;
+        [key: string]: unknown;
+      }>;
+    };
+  };
+  const reasoning = data.recommendations?.selectedReasoning ?? [];
+  if (!reasoning.length) return campaignObject;
+
+  let changed = false;
+  const patchedReasoning = reasoning.map((entry) => {
+    if (typeof entry.avatarUrl === "string" && entry.avatarUrl.trim()) return entry;
+    const keys = [
+      entry.campaignLineId?.trim().toLowerCase(),
+      entry.creatorId?.trim().toLowerCase(),
+    ].filter(Boolean) as string[];
+    const avatarUrl = keys.map((key) => avatarByKey.get(key)).find(Boolean);
+    if (!avatarUrl) return entry;
+    changed = true;
+    return { ...entry, avatarUrl };
+  });
+  if (!changed) return campaignObject;
+
+  return {
+    ...campaignObject,
+    sections: {
+      ...campaignObject.sections,
+      creators: {
+        ...creatorsSection,
+        data: {
+          ...data,
+          recommendations: {
+            ...data.recommendations,
+            selectedReasoning: patchedReasoning,
+          },
+        },
+      },
+    },
+  };
 }

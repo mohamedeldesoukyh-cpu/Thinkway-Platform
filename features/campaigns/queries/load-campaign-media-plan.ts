@@ -4,6 +4,7 @@ import type { CampaignObject } from "@/features/campaign-intelligence";
 import { CampaignObjectPersistenceService } from "@/features/campaign-intelligence/services/campaign-object-persistence";
 import {
   generateMediaPlan,
+  enrichMediaPlanFromSlate,
   type MediaPlanData,
 } from "@/features/campaign-outputs/generators/media-plan";
 import { ensureCreatorsFromAssignmentHierarchy } from "@/features/campaign-outputs/hydration";
@@ -280,31 +281,41 @@ export async function loadCampaignMediaPlanWorkspace(
   const durationWeeks = original.durationWeeks || original.calendarWeeks || 4;
 
   // Same Live/Partial/Not-live card colors as Studio — Performance live_date overlay.
-  const originalAnnotated = annotateMediaPlanExecutionStatus(original, performance);
+  // Enrich avatars/handles from the Assignment-backed slate (Remaining/Actual adapters omit them).
+  const originalAnnotated = enrichMediaPlanFromSlate(
+    annotateMediaPlanExecutionStatus(original, performance),
+    slate
+  );
 
   const actualWindow = actualCalendarWindow(execution.actual.items, start, durationWeeks);
   const actual = execution.actual.items.length
-    ? annotateMediaPlanExecutionStatus(
-        itemsToMediaPlanData(execution.actual.items, {
-          campaignStartDate: actualWindow.campaignStartDate,
-          durationWeeks: actualWindow.durationWeeks,
-          viewKind: "actual",
-          dateField: "actualLiveDate",
-        }),
-        performance
+    ? enrichMediaPlanFromSlate(
+        annotateMediaPlanExecutionStatus(
+          itemsToMediaPlanData(execution.actual.items, {
+            campaignStartDate: actualWindow.campaignStartDate,
+            durationWeeks: actualWindow.durationWeeks,
+            viewKind: "actual",
+            dateField: "actualLiveDate",
+          }),
+          performance
+        ),
+        slate
       )
     : emptyMediaPlanData(start, durationWeeks);
 
   const remaining =
     execution.baselineVersion != null
-      ? annotateMediaPlanExecutionStatus(
-          itemsToMediaPlanData(execution.remaining.items, {
-            campaignStartDate: start,
-            durationWeeks,
-            viewKind: "remaining",
-            dateField: "plannedDate",
-          }),
-          performance
+      ? enrichMediaPlanFromSlate(
+          annotateMediaPlanExecutionStatus(
+            itemsToMediaPlanData(execution.remaining.items, {
+              campaignStartDate: start,
+              durationWeeks,
+              viewKind: "remaining",
+              dateField: "plannedDate",
+            }),
+            performance
+          ),
+          slate
         )
       : emptyMediaPlanData(start, durationWeeks);
 
