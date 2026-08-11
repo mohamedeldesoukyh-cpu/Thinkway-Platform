@@ -27,11 +27,12 @@ import {
   DETAIL_FORM_SELECT_TRIGGER_CLASS,
   DetailFormScrollBody,
   DetailFormSection,
-  DetailSheetFooter,
   DETAIL_SHEET_SELECT_CONTENT_PROPS,
+  OperationalDetailCommandBar,
+  OperationalDetailFooter,
   OperationalDetailSheet,
-  OperationalEditPanelHeader,
 } from "@/features/campaigns/components/operational-detail-panel";
+import { resolveCreatorIdentity } from "@/lib/text/decode-html-entities";
 import {
   createCampaignLineAction,
   updateCampaignLineAction,
@@ -780,6 +781,7 @@ export function CampaignLineSheet({
   ]);
 
   const sheetTitle = isEdit ? "Edit influencer assignment" : "Assign influencer";
+  const selectedIdentity = resolveCreatorIdentity(influencerLabel, null);
 
   return (
     <OperationalDetailSheet
@@ -812,12 +814,28 @@ export function CampaignLineSheet({
             ioRevisionAckRef.current = false;
           }}
       >
-        <OperationalEditPanelHeader
-          title={sheetTitle}
-          description="Select a creator, choose platform accounts and deliverables, then set commercial terms. Line title is generated automatically."
+        <OperationalDetailCommandBar
+          contextLabel="Assignment"
+          contextHandle={
+            influencerLabel
+              ? selectedIdentity.handle
+                ? `@${selectedIdentity.handle}`
+                : "Selected"
+              : "New"
+          }
+          title={
+            influencerLabel ? selectedIdentity.name : sheetTitle
+          }
+          subtitle={
+            influencerLabel
+              ? selectedIdentity.handle
+                ? `@${selectedIdentity.handle} · choose platforms and commercial terms`
+                : "Choose platforms and commercial terms"
+              : "Select a creator, platforms, deliverables, and commercial terms."
+          }
         />
 
-        <DetailFormScrollBody>
+        <DetailFormScrollBody className="bg-[#f8fafc] px-4">
           <input type="hidden" name="campaign_id" value={campaignId} />
           {isEdit ? <input type="hidden" name="line_id" value={line.id} /> : null}
           {confirmCommercialSync ? (
@@ -853,21 +871,31 @@ export function CampaignLineSheet({
           <FieldError messages={state.fieldErrors?.influencer_id} />
 
           {profile ? (
-            <div className="rounded-2xl border bg-muted/20 p-3 text-sm">
-              <p className="font-medium">{profile.display_name}</p>
-              <p className="text-xs text-muted-foreground">
-                {profile.country_code ?? "—"}
-                {profile.vat_registered ? " · VAT registered" : " · Non-VAT creator"}
-                {profile.notes ? ` · ${profile.notes}` : ""}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-1">
-                {profile.platforms.map((p) => (
-                  <Badge key={p.id} variant="secondary" className="text-[10px]">
-                    {p.platform} · {p.follower_count?.toLocaleString() ?? "—"} followers
-                  </Badge>
-                ))}
-              </div>
-            </div>
+            (() => {
+              const profileIdentity = resolveCreatorIdentity(profile.display_name, null);
+              return (
+                <div className="rounded-[12px] border border-[#eaedf4] bg-white p-3 text-sm">
+                  <p className="text-[13px] font-semibold text-[#0f172a]">{profileIdentity.name}</p>
+                  <p className="text-[11px] text-[#64748b]">
+                    {profileIdentity.handle ? `@${profileIdentity.handle} · ` : ""}
+                    {profile.country_code ?? "—"}
+                    {profile.vat_registered ? " · VAT registered" : " · Non-VAT creator"}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {profile.platforms.map((p) => (
+                      <span
+                        key={p.id}
+                        className="creator-detail-sheet-platform-pill creator-detail-sheet-platform-pill--active"
+                      >
+                        <span className="creator-detail-sheet-platform-pill__select">
+                          {p.platform} · {p.follower_count?.toLocaleString() ?? "—"}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()
           ) : null}
 
           <DetailFormSection
@@ -1215,15 +1243,20 @@ export function CampaignLineSheet({
           costVatAmount={costVatAmount}
         />
 
-        <DetailSheetFooter>
-          <Button size="sm" type="submit" disabled={isPending || !canSubmit}>
+        <OperationalDetailFooter>
+          <Button
+            size="sm"
+            type="submit"
+            className="creator-detail-sheet-action-btn creator-detail-sheet-action-btn--primary"
+            disabled={isPending || !canSubmit}
+          >
             {isPending
               ? "Saving…"
               : isEdit
                 ? "Save assignment"
                 : "Create assignment"}
           </Button>
-        </DetailSheetFooter>
+        </OperationalDetailFooter>
       </form>
 
       <AssignmentIoRevisionDialog
