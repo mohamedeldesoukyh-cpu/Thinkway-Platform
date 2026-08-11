@@ -262,6 +262,107 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
 }
 
 {
+  // Prefer workspace service description over reconstructed type labels (no extra IG Reel).
+  const detail = mockDetail({
+    items: [
+      mockItem({
+        service_description: null,
+        deliverables: [
+          {
+            platform: "instagram",
+            type: "instagram_reel",
+            types: ["instagram_reel", "instagram_story", "mirrored_tt"],
+            type_lines: [
+              { type: "instagram_reel", quantity: 1 },
+              { type: "instagram_story", quantity: 1 },
+              { type: "mirrored_tt", quantity: 1 },
+            ],
+            quantity: 1,
+            service_description: "1× IG Reel + 1× IG Story + 1× Mirrored TT",
+          },
+          {
+            platform: "tiktok",
+            type: "instagram_reel",
+            types: ["instagram_reel"],
+            type_lines: [{ type: "instagram_reel", quantity: 1 }],
+            quantity: 1,
+            service_description: null,
+          },
+        ],
+      }),
+    ],
+  });
+  const payload = buildQuotationTemplatePayload(buildQuotationDocument(detail));
+  assert.equal(
+    payload.feeLines[0]?.deliverable,
+    "1× IG Reel + 1× IG Story + 1× Mirrored TT"
+  );
+  const html = buildQuotationTemplateHtml(buildQuotationDocument(detail));
+  assert.ok(html.includes("1× IG Reel + 1× IG Story + 1× Mirrored TT"));
+  assert.ok(!html.includes("1× IG Reel + 1× IG Story + 1× Mirrored TT + 1× IG Reel"));
+}
+
+{
+  // Detailed cover shows Fees + Total Client Investment after Fees.
+  const payload = buildQuotationTemplatePayload(buildQuotationDocument(mockDetail()));
+  assert.equal(payload.cover.feeStat?.label, "Fees");
+  assert.ok(payload.cover.feeStat?.value);
+  assert.equal(
+    payload.cover.totalAfterFeesStat?.label,
+    "Total Client Investment after Fees"
+  );
+  assert.ok(payload.cover.totalAfterFeesStat?.value);
+  const html = buildQuotationTemplateHtml(buildQuotationDocument(mockDetail()));
+  assert.ok(html.includes(">Fees<"));
+  assert.ok(html.includes("Total Client Investment after Fees"));
+  assert.ok(html.includes("statrow--4") || html.includes("statrow--3"));
+}
+
+{
+  // Est. engagement KPI lists each platform with icon + rate (not a single blended %).
+  const detail = mockDetail({
+    items: [
+      mockItem({
+        platform: "instagram",
+        engagement_rate: 2.5,
+        export_platforms: [
+          {
+            platform: "instagram",
+            handle: "creator",
+            followers: 10000,
+            engagement_rate: 2.5,
+            avg_views: 1000,
+            profile_url: "https://instagram.com/creator",
+            avatar_url: "https://cdn.example/ig.jpg",
+          },
+          {
+            platform: "tiktok",
+            handle: "creator",
+            followers: 8000,
+            engagement_rate: 4.1,
+            avg_views: 2000,
+            profile_url: "https://tiktok.com/@creator",
+            avatar_url: "https://cdn.example/tt.jpg",
+          },
+        ],
+      }),
+    ],
+  });
+  const payload = buildQuotationTemplatePayload(buildQuotationDocument(detail));
+  assert.ok(payload.campaign.estEngagementPlatforms.length >= 2);
+  const platforms = payload.campaign.estEngagementPlatforms.map((row) =>
+    row.platform.toLowerCase()
+  );
+  assert.ok(platforms.includes("instagram"));
+  assert.ok(platforms.includes("tiktok"));
+  const html = buildQuotationTemplateHtml(buildQuotationDocument(detail));
+  assert.ok(html.includes("camp-er-list"));
+  assert.ok(html.includes("sc-er-pct"));
+  assert.ok(html.includes("2.50%") || html.includes("2.5%"));
+  assert.ok(html.includes("4.10%") || html.includes("4.1%"));
+}
+
+{
   assert.equal(sampleFixture.quotation.number, "QT-2026-0012");
   assert.equal(sampleFixture.flags.itemizedPricing, true);
   assert.equal(sampleFixture.commercial.sectionNo, "02");

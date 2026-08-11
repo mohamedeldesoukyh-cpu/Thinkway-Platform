@@ -146,6 +146,11 @@ export const QUOTATION_TEMPLATE_STYLES = `
   .metagrid .l{font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:#b7c9f0; margin:0 0 5px;}
   .metagrid .v{font-size:13px; font-weight:600; color:#fff; margin:0;}
   .statrow{display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-top:auto; padding-bottom:10mm;}
+  .statrow.statrow--3{grid-template-columns:repeat(3,1fr); gap:12px;}
+  .statrow.statrow--4{grid-template-columns:repeat(2,1fr); gap:12px;}
+  .statrow.statrow--4 .stat{padding:14px 16px;}
+  .statrow.statrow--4 .stat .sv{font-size:20px; letter-spacing:-.5px;}
+  .statrow.statrow--4 .stat .sl{font-size:9px; margin-bottom:6px;}
   .stat{
     background:rgba(255,255,255,.13); border:1px solid rgba(255,255,255,.18);
     border-radius:14px; padding:18px 20px;
@@ -231,6 +236,11 @@ export const QUOTATION_TEMPLATE_STYLES = `
   }
   .kpi .kl{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin:0 0 6px;}
   .kpi .kv{font-size:20px; font-weight:800; letter-spacing:-.4px; color:var(--navy); margin:0; font-variant-numeric:tabular-nums;}
+  .kpi .kv.kv-er{font-size:15px; font-weight:700; line-height:1.35;}
+  .kpi .camp-er-list{gap:10px 14px;}
+  .kpi .camp-er-avatar{
+    width:18px; height:18px; border-radius:999px; object-fit:cover; flex:none; display:block; background:var(--tint);
+  }
   .kpi.invest{background:var(--navy); border-color:var(--navy);}
   .kpi.invest .kl{color:#8b96ba;} .kpi.invest .kv{color:#fff;}
 

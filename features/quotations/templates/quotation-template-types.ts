@@ -28,11 +28,20 @@ export type QuotationTemplatePayload = {
     kicker: string;
     subtitle: string;
     stat3: { label: string; value: string; valueShort: string };
+    /** Detailed cover: Fees + Total after fees (itemized templates). */
+    feeStat?: { label: string; value: string; valueShort: string } | null;
+    totalAfterFeesStat?: { label: string; value: string; valueShort: string } | null;
   };
   campaign: {
     creatorCount: string;
     tierSummary: string;
     estEngagement: string;
+    /** Per-platform ER for commercial summary KPI (icons + rates). */
+    estEngagementPlatforms: Array<{
+      platform: string;
+      engagement: string;
+      avatarUrl: string | null;
+    }>;
   };
   categories: Array<{
     name: string;

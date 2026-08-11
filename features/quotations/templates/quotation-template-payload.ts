@@ -148,6 +148,74 @@ function coverStat3(doc: QuotationDocument): QuotationTemplatePayload["cover"]["
   };
 }
 
+function coverFeeAndTotalStats(
+  doc: QuotationDocument
+): Pick<QuotationTemplatePayload["cover"], "feeStat" | "totalAfterFeesStat"> {
+  // Detailed / itemized cover: show Fees + Total Client Investment after Fees.
+  if (
+    isShowcaseTemplate(doc.template) ||
+    isPitchTemplate(doc.template) ||
+    isLumpSumPricingTemplate(doc.template)
+  ) {
+    return { feeStat: null, totalAfterFeesStat: null };
+  }
+  const fee = formatQuotationMoneyDisplay(doc.summary.totalAf);
+  const total = formatQuotationMoneyDisplay(doc.summary.grandTotal);
+  return {
+    feeStat: {
+      label: "Fees",
+      value: fee.full,
+      valueShort: fee.short,
+    },
+    totalAfterFeesStat: {
+      label: "Total Client Investment after Fees",
+      value: total.full,
+      valueShort: total.short,
+    },
+  };
+}
+
+/** Average engagement rate per platform across creator groups (for commercial KPI). */
+function campaignEngagementByPlatform(
+  doc: QuotationDocument
+): QuotationTemplatePayload["campaign"]["estEngagementPlatforms"] {
+  const buckets = new Map<
+    string,
+    { sum: number; count: number; avatarUrl: string | null }
+  >();
+
+  for (const group of doc.creatorGroups) {
+    for (const metric of group.platformMetrics ?? []) {
+      const platform = metric.platform?.trim();
+      if (!platform) continue;
+      const raw = metric.engagement?.replace(/%/g, "").trim();
+      const rate = raw && raw !== "—" ? Number(raw) : NaN;
+      if (!Number.isFinite(rate)) continue;
+      const key = platform.toLowerCase();
+      const existing = buckets.get(key);
+      if (existing) {
+        existing.sum += rate;
+        existing.count += 1;
+        if (!existing.avatarUrl && metric.avatarUrl) {
+          existing.avatarUrl = metric.avatarUrl;
+        }
+      } else {
+        buckets.set(key, {
+          sum: rate,
+          count: 1,
+          avatarUrl: metric.avatarUrl?.trim() || null,
+        });
+      }
+    }
+  }
+
+  return [...buckets.entries()].map(([platform, bucket]) => ({
+    platform,
+    engagement: `${(bucket.sum / bucket.count).toFixed(2)}%`,
+    avatarUrl: bucket.avatarUrl,
+  }));
+}
+
 function insightFromBullets(bullets: string[]): QuotationTemplatePayload["insight"] {
   const normalize = (prefix: string, fallback: string) => {
     const match = bullets.find((bullet) =>
@@ -186,8 +254,12 @@ function deliverableLabel(row: {
   serviceDescription: string;
   type: string;
 }): string {
+  // Prefer workspace service description (user-facing SSOT) over reconstructed
+  // type labels — type aggregation can duplicate posts across deliverable rows.
+  if (row.serviceDescription && row.serviceDescription !== "—") {
+    return row.serviceDescription;
+  }
   if (row.deliverables && row.deliverables !== "—") return row.deliverables;
-  if (row.serviceDescription && row.serviceDescription !== "—") return row.serviceDescription;
   return row.type !== "—" ? row.type : "—";
 }
 
@@ -385,11 +457,13 @@ export function buildQuotationTemplatePayload(doc: QuotationDocument): Quotation
             "Influencer marketing proposal prepared exclusively for "
           ) + ".",
       stat3: coverStat3(doc),
+      ...coverFeeAndTotalStats(doc),
     },
     campaign: {
       creatorCount: String(doc.summary.creatorCount),
       tierSummary: tierSummaryLabel(doc.summary.tierBreakdown),
       estEngagement: doc.summary.estimatedEngagement,
+      estEngagementPlatforms: campaignEngagementByPlatform(doc),
     },
     categories: doc.summary.categoryBreakdown.map((row) => ({
       name: row.label,
