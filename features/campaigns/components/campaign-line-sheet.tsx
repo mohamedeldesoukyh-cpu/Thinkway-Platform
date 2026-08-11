@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { useConfirmAction } from "@/components/shared/confirm-action-provider";
 import { InfluencerTypeahead } from "@/components/forms/influencer-typeahead";
+import { assignmentCommercialMastersChanged } from "@/lib/assignments/assignment-commercial-masters";
 import {
   COMMERCIAL_SYNC_CONFIRMATION_REQUIRED,
   financeLockConfirmationCopy,
@@ -98,6 +99,8 @@ type CampaignLineSheetProps = {
   line: CampaignLineWorkspace | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** When true, commercial master edits require IO revision acknowledgement. */
+  hasIssuedClientIo?: boolean;
 };
 
 export function CampaignLineSheet({
@@ -110,6 +113,7 @@ export function CampaignLineSheet({
   line,
   open,
   onOpenChange,
+  hasIssuedClientIo = false,
 }: CampaignLineSheetProps) {
   const router = useRouter();
   const { confirm } = useConfirmAction();
@@ -700,15 +704,33 @@ export function CampaignLineSheet({
 
   const commercialChanged =
     isEdit && line
-      ? Math.abs(revenue - Number(line.revenue_before_vat ?? line.revenue)) > 0.009 ||
-        Math.abs(cost - Number(line.cost_before_vat ?? line.cost)) > 0.009
+      ? assignmentCommercialMastersChanged(
+          {
+            revenue_before_vat: line.revenue_before_vat,
+            revenue: line.revenue,
+            cost_before_vat: line.cost_before_vat,
+            cost: line.cost,
+            agency_fee_percent: line.agency_fee_percent,
+            usage_rights_amount: line.usage_rights_amount,
+            usage_rights_cost: line.usage_rights_cost,
+          },
+          {
+            revenue_before_vat: revenue,
+            cost_before_vat: cost,
+            agency_fee_percent: agencyFeePercent,
+            usage_rights_amount: usageRightsAmount,
+            usage_rights_cost: usageRightsCost,
+          }
+        )
       : false;
 
+  // After CIO/VIO issuance, commercial master edits (Rev / Cost / AF% / UR) need
+  // the same revision acknowledgement — fees are not exempt from client amount rules.
   const needsIoRevisionAck =
     isEdit &&
-    Boolean(line?.vendor_io_id) &&
-    financeOverrideActive &&
-    commercialChanged;
+    Boolean(line?.vendor_io_id || hasIssuedClientIo) &&
+    commercialChanged &&
+    (financeOverrideActive || !line?.invoice_id);
 
   const storedDeliverableUnits = useMemo(() => {
     if (!isEdit || !line) return 0;

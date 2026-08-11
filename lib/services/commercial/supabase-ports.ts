@@ -211,6 +211,28 @@ export function createSupabaseCommercialSyncPorts(
           : 0;
     }
 
+    // AF amount is derived — always refresh from % × (Rev + UR) when masters write.
+    const current = await loadAssignmentMaster(assignmentId);
+    const nextRevenue =
+      numberOrUndef(columns.revenue_before_vat ?? columns.revenue) ??
+      numberOrUndef(current?.client_revenue);
+    const nextUr =
+      numberOrUndef(columns.usage_rights_amount) ??
+      numberOrUndef(current?.usage_rights_amount);
+    const nextAfPercent =
+      numberOrUndef(columns.agency_fee_percent) ??
+      numberOrUndef(current?.agency_fee_percent);
+    if (nextRevenue != null && nextAfPercent != null) {
+      const { recomputeAgencyFeeAmount } = await import(
+        "@/lib/assignments/assignment-commercial-masters"
+      );
+      columns.agency_fee_amount = recomputeAgencyFeeAmount({
+        revenueBeforeVat: nextRevenue,
+        usageRightsAmount: nextUr ?? 0,
+        agencyFeePercent: nextAfPercent,
+      });
+    }
+
     const { error } = await supabase
       .from("campaign_lines")
       .update(columns as never)

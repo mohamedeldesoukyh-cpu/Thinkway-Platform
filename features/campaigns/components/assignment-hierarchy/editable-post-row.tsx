@@ -38,6 +38,7 @@ import {
   OperationalQtyField,
 } from "@/features/campaigns/components/assignment-hierarchy/operational-amount-field";
 import { formatOperationalAmount, roundOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
+import { computeAgencyFeeAmount } from "@/lib/assignments/client-billing-commercial";
 import {
   OPERATIONAL_AMOUNT_CLASS,
   OPERATIONAL_TABLE_HEADER_CELL,
@@ -251,6 +252,20 @@ export function EditablePostRow({
   const showDeliverableCommercial =
     deliverableScoped || isFirstPost;
 
+  const liveAgencyFeeAmount = useMemo(() => {
+    if (!showDeliverableCommercial) return 0;
+    return computeAgencyFeeAmount(
+      commercial.draft.rev,
+      Number(deliverable.usage_rights_amount ?? 0),
+      Number(deliverable.agency_fee_percent ?? 0)
+    );
+  }, [
+    showDeliverableCommercial,
+    commercial.draft.rev,
+    deliverable.usage_rights_amount,
+    deliverable.agency_fee_percent,
+  ]);
+
   const computedTotalBilling = useMemo(() => {
     if (showDeliverableCommercial) {
       return deliverable.revenue_after_vat;
@@ -344,6 +359,9 @@ export function EditablePostRow({
           quantity: commercial.draft.qty,
           unit_revenue: commercial.draft.revPerAd,
           unit_cost: commercial.draft.costPerAd,
+          usage_rights_amount: Number(deliverable.usage_rights_amount ?? 0),
+          usage_rights_cost: Number(deliverable.usage_rights_cost ?? 0),
+          agency_fee_percent: Number(deliverable.agency_fee_percent ?? 0),
           revenue_vat_percent: meta.revenue_vat_percent,
           live_date: meta.live_date || null,
           notes: meta.notes || null,
@@ -724,7 +742,7 @@ export function EditablePostRow({
         {col("agencyFee") ? (
         <td className={cn(GRID_CELL.agencyFee, OPERATIONAL_AMOUNT_CLASS)}>
           {showDeliverableCommercial
-            ? formatOperationalAmount(deliverable.agency_fee_amount)
+            ? formatOperationalAmount(liveAgencyFeeAmount)
             : "—"}
         </td>
         ) : null}

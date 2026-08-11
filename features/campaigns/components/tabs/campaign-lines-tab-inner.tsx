@@ -480,6 +480,12 @@ export function CampaignLinesTabInner({
           line={editing}
           open={sheetOpen}
           onOpenChange={setSheetOpen}
+          hasIssuedClientIo={Boolean(
+            workspace.client_io &&
+              ["sent", "under_client_review", "approved", "rejected"].includes(
+                workspace.client_io.status
+              )
+          )}
         />
       ) : null}
 

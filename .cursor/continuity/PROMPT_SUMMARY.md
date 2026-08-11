@@ -1,16 +1,14 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `develop` (shipping)  
-**Focus:** Campaign workspace creator identity + CIO collapsibles + detail-panel sheets
+**Branch:** `develop`  
+**Focus:** Assignment AF auto-calc + commercial revision parity
 
-## In flight / shipping
+## In flight
 
-- Add publications + Edit assignment sheets → Discovery detail chrome (`variant="detail"`)
-- Creator name over @username across Assignments / CIO / VIO / Deliverables
-- Client IO sections collapsible (default closed)
-- Assignments Creators register default open
-- Deliverables: remove duplicate subtitle; platform icon-only
+- Client amount change → agency fee amount auto-recomputes from AF%
+- AF% / UR changes treated like client amount for CIO/VIO Revision Required
+- Hierarchy Rev edits preserve AF% and live-preview fee amount
 
-## Prior
+## Shipped prior
 
-- Multi-URL Add publications (`2ec28b26` / prod `fc121185`)
+- Client IO PDF preview parity + page breaks (`fb8b1c60` / prod `e04f1dfa`)

@@ -399,7 +399,7 @@ export async function fetchCampaignLineById(
   return supabase
     .from("campaign_lines")
     .select(
-      "revenue_locked, cost_locked, revenue, cost, revenue_before_vat, cost_before_vat, vat_locked, document_number, finance_override_until, vendor_io_id, vendor_assignment_locked, metadata, operational_status, invoice_id"
+      "revenue_locked, cost_locked, revenue, cost, revenue_before_vat, cost_before_vat, vat_locked, document_number, finance_override_until, vendor_io_id, vendor_assignment_locked, metadata, operational_status, invoice_id, source_quotation_item_id, agency_fee_percent, agency_fee_amount, usage_rights_amount, usage_rights_cost, currency_code, fx_rate, revenue_vat_percent, cost_vat_percent, revenue_vat_exempt, cost_vat_exempt"
     )
     .eq("id", lineId)
     .eq("campaign_header_id", campaignId)

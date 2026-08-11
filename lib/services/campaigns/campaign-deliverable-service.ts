@@ -6,6 +6,10 @@ import {
   syncPostSchedulesForDeliverable,
 } from "@/lib/assignments/sync-post-schedules";
 import { syncLineCommercialRollupsFromDeliverables } from "@/lib/assignments/sync-line-rollups";
+import {
+  loadLineCommercialGateSnapshot,
+  markIssuedIoRevisionAfterAssignmentCommercialChange,
+} from "@/lib/assignments/mark-issued-io-revision-after-commercial-change";
 import { applyLiveAdDateLockAfterDateInsert } from "@/lib/billing/apply-live-ad-date-lock";
 import { syncAssignmentLineTitleFromDeliverables } from "@/lib/campaigns/sync-assignment-line-title";
 import { canEditLiveAdDate } from "@/lib/campaigns/live-ad-date";
@@ -275,7 +279,7 @@ export async function updateAssignmentDeliverable(
     const { data: existing, error: fetchError } = await supabase
       .from("assignment_deliverables")
       .select(
-        "id, locked_at, invoiced_amount, billing_status, invoice_line_item_id, live_date, metadata"
+        "id, locked_at, invoiced_amount, billing_status, invoice_line_item_id, live_date, metadata, usage_rights_amount, usage_rights_cost, agency_fee_percent"
       )
       .eq("id", input.deliverable_id)
       .eq("campaign_line_id", line.id)
@@ -284,6 +288,12 @@ export async function updateAssignmentDeliverable(
     if (fetchError || !existing) {
       return { ok: false, message: fetchError?.message ?? "Deliverable not found." };
     }
+
+    const existingCommercial = existing as {
+      usage_rights_amount?: number | null;
+      usage_rights_cost?: number | null;
+      agency_fee_percent?: number | null;
+    };
 
     const invoicedOpenForLiveDate =
       Boolean(existing.invoice_line_item_id) ||
@@ -350,13 +360,20 @@ export async function updateAssignmentDeliverable(
       return { ok: false, message: "Deliverable is invoiced and locked." };
     }
 
+    const beforeCommercial = await loadLineCommercialGateSnapshot(supabase, line.id);
+
+    // Preserve AF% / UR when hierarchy Rev/Cost edits omit them so AF amount
+    // recalculates from the existing fee percentage of the new client amount.
     const commercial = computeDeliverableCommercial({
       quantity: input.quantity,
       unit_cost: input.unit_cost,
       unit_revenue: input.unit_revenue,
-      usage_rights_amount: input.usage_rights_amount,
-      usage_rights_cost: input.usage_rights_cost,
-      agency_fee_percent: input.agency_fee_percent,
+      usage_rights_amount:
+        input.usage_rights_amount ?? Number(existingCommercial.usage_rights_amount ?? 0),
+      usage_rights_cost:
+        input.usage_rights_cost ?? Number(existingCommercial.usage_rights_cost ?? 0),
+      agency_fee_percent:
+        input.agency_fee_percent ?? Number(existingCommercial.agency_fee_percent ?? 0),
       revenue_vat_percent:
         input.revenue_vat_percent ?? Number(line.revenue_vat_percent ?? 0),
       revenue_vat_exempt: line.revenue_vat_exempt ?? false,
@@ -438,6 +455,21 @@ export async function updateAssignmentDeliverable(
 
     await syncLineCommercialRollupsFromDeliverables(supabase, line.id);
     await syncAssignmentLineTitleFromDeliverables(supabase, line.id);
+
+    if (beforeCommercial) {
+      const revision = await markIssuedIoRevisionAfterAssignmentCommercialChange(
+        supabase,
+        { lineId: line.id, before: beforeCommercial }
+      );
+      if (revision.marked) {
+        return {
+          ok: true,
+          message:
+            "Deliverable updated. Issued Client/Vendor IO marked Revision Required — regenerate and resend for commercial re-approval.",
+        };
+      }
+    }
+
     return { ok: true, message: "Deliverable updated." };
   } catch (error) {
     return {
@@ -598,6 +630,11 @@ export async function updatePostSchedule(
       return { ok: false, message: "Assignment is locked and cannot be edited." };
     }
 
+    const beforeCommercial = await loadLineCommercialGateSnapshot(
+      supabase,
+      post.campaign_line_id
+    );
+
     const lineVat = await loadLineVatForDeliverable(supabase, post.campaign_line_id);
 
     const revenuePerPost =
@@ -659,6 +696,21 @@ export async function updatePostSchedule(
       lineVat
     );
     await syncAssignmentLineTitleFromDeliverables(supabase, post.campaign_line_id);
+
+    if (beforeCommercial) {
+      const revision = await markIssuedIoRevisionAfterAssignmentCommercialChange(
+        supabase,
+        { lineId: post.campaign_line_id, before: beforeCommercial }
+      );
+      if (revision.marked) {
+        return {
+          ok: true,
+          message:
+            "Post updated. Issued Client/Vendor IO marked Revision Required — regenerate and resend for commercial re-approval.",
+        };
+      }
+    }
+
     return { ok: true, message: "Post updated." };
   } catch (error) {
     return {

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { assignmentCommercialMastersChanged } from "@/lib/assignments/assignment-commercial-masters";
 import { syncCampaignInfluencerForLine } from "@/lib/campaigns/campaign-influencer-sync";
 import { hasActiveFinanceOverride } from "@/lib/campaigns/finance-override";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
@@ -693,9 +694,24 @@ export async function updateCampaignLine(
     });
   }
 
-  const commercialChanged =
-    revenueBeforeVat !== Number(existingLineMeta.revenue_before_vat ?? existingLineMeta.revenue) ||
-    costBeforeVat !== Number(existingLineMeta.cost_before_vat ?? existingLineMeta.cost);
+  const commercialChanged = assignmentCommercialMastersChanged(
+    {
+      revenue_before_vat: existingLineMeta.revenue_before_vat,
+      revenue: existingLineMeta.revenue,
+      cost_before_vat: existingLineMeta.cost_before_vat,
+      cost: existingLineMeta.cost,
+      agency_fee_percent: existingLineMeta.agency_fee_percent,
+      usage_rights_amount: existingLineMeta.usage_rights_amount,
+      usage_rights_cost: existingLineMeta.usage_rights_cost,
+    },
+    {
+      revenue_before_vat: revenueBeforeVat,
+      cost_before_vat: costBeforeVat,
+      agency_fee_percent: commercialBilling.agency_fee_percent,
+      usage_rights_amount: commercialBilling.usage_rights_amount,
+      usage_rights_cost: commercialBilling.usage_rights_cost,
+    }
+  );
 
   const { findVendorIoAmountDriftForCampaign } = await import(
     "@/lib/io/vendor-io-amount-drift"
@@ -719,12 +735,34 @@ export async function updateCampaignLine(
         ?.regeneration_status === "pending_regeneration";
   }
 
+  const { data: issuedClientIos } = await supabase
+    .from("client_ios")
+    .select("id, status, sent_at")
+    .eq("campaign_header_id", parsed.campaign_id)
+    .eq("is_superseded", false)
+    .in("status", ["sent", "under_client_review", "approved", "rejected"]);
+
+  const hasIssuedClientIo = (issuedClientIos ?? []).some((row) => {
+    const typed = row as { status: string; sent_at: string | null };
+    return (
+      typed.status === "sent" ||
+      typed.status === "under_client_review" ||
+      typed.status === "approved" ||
+      typed.status === "rejected" ||
+      Boolean(typed.sent_at)
+    );
+  });
+
   // Enterprise Document Lifecycle: issued documents become Revision Required
   // with a reason code. Never silently mutate or auto-create a new version.
+  // AF% / UR changes are treated the same as client amount (revenue) changes.
   const shouldMarkRevisionRequired = Boolean(
-    existingLineMeta.vendor_io_id &&
+    (existingLineMeta.vendor_io_id &&
       vendorIoRevisionAllowed &&
-      (amountDrift || (financeOverrideActive && commercialChanged))
+      (amountDrift ||
+        (commercialChanged &&
+          (financeOverrideActive || !existingLineMeta.invoice_id)))) ||
+      (hasIssuedClientIo && commercialChanged)
   );
 
   let markedRevisionRequired = false;
@@ -787,7 +825,7 @@ export async function updateCampaignLine(
   return {
     ok: true,
     message: markedRevisionRequired
-      ? "Assignment updated. Vendor IO marked Revision Required — regenerate to create the next version."
+      ? "Assignment updated. Issued Client/Vendor IO marked Revision Required — regenerate and resend for commercial re-approval."
       : "Influencer assignment updated.",
     clientId: header?.client_id as string | undefined,
     reviseVendorIo: markedRevisionRequired,
