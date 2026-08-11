@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import type { FormActionState } from "@/features/campaigns/form-action-state";
@@ -66,11 +65,6 @@ const batchSchema = z.object({
   campaign_id: z.string().uuid(),
   items: z.array(publicationItemSchema).min(1).max(40),
 });
-
-function revalidateCampaign(campaignId: string) {
-  revalidatePath("/campaigns");
-  revalidatePath(`/campaigns/${campaignId}`);
-}
 
 function formatZodIssues(error: z.ZodError): string {
   const issue = error.issues[0];
@@ -201,7 +195,8 @@ export async function createCampaignPublicationAction(
     return { ok: false, message: result.message };
   }
 
-  revalidateCampaign(campaign_id);
+  // Skip revalidatePath — it remounts the open Campaign Workspace before the
+  // client can toast/close the sheet. Callers refresh the publications bundle.
   return { ok: true, message: "Publication added." };
 }
 
@@ -254,9 +249,9 @@ export async function createCampaignPublicationsBatchAction(
     }
   }
 
-  if (created > 0) {
-    revalidateCampaign(campaign_id);
-  }
+  // Skip revalidatePath here — remounts the workspace and makes “Add” feel like
+  // a full page refresh before the success toast. The sheet soft-reloads the
+  // publications client bundle instead.
 
   if (failures.length === 0) {
     return {
