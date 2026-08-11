@@ -3,7 +3,7 @@
 import { useState, type SyntheticEvent } from "react";
 
 import type { CampaignPublicationRow } from "@/lib/domains/campaign/types";
-import { resolvePublicationContentPreviewUrl } from "@/lib/performance/publication-preview";
+import { resolveCampaignPublicationDisplayPreviewUrl } from "@/lib/performance/publication-preview";
 import { PlatformIcon } from "@/lib/performance/platform-icon";
 import { resolvePlatformThumbDisplay } from "@/lib/performance/publication-grid-visual-resolvers";
 
@@ -19,15 +19,15 @@ export function PublicationPlatformThumb({
   return <PlatformIcon platform={platform} size="sm" className={className} />;
 }
 
-/** PREVIEW — post screenshot/thumbnail only (never creator avatars or platform icons). */
+/** PREVIEW — post screenshot/thumbnail/live-post proxy (never creator avatars or platform icons). */
 export function PublicationContentPreviewThumb({
   row,
   className,
 }: {
-  row: Pick<CampaignPublicationRow, "screenshot_url" | "thumbnail_url">;
+  row: Pick<CampaignPublicationRow, "screenshot_url" | "thumbnail_url" | "content_url">;
   className?: string;
 }) {
-  const previewUrl = resolvePublicationContentPreviewUrl(row);
+  const previewUrl = resolveCampaignPublicationDisplayPreviewUrl(row);
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
 
   if (!previewUrl || failedUrl === previewUrl) {
