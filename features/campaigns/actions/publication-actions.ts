@@ -45,7 +45,8 @@ const publicationItemSchema = z.object({
       const trimmed = typeof v === "string" ? v.trim() : "";
       return trimmed.length > 0 ? trimmed : "draft";
     }),
-  assignee_id: optionalUuid,
+  // Zod v4: missing object keys fail as "nonoptional" unless the field itself is `.optional()`.
+  assignee_id: optionalUuid.optional(),
   caption: z
     .union([z.string(), z.null(), z.undefined()])
     .transform((v) => (typeof v === "string" ? v : "")),

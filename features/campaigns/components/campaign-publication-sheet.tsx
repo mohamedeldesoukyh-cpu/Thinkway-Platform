@@ -188,6 +188,7 @@ function buildBatchItems(
       return {
         campaign_line_id: row.lineId,
         influencer_id: line?.influencer_id ?? "",
+        assignee_id: "",
         platform,
         publication_type: publicationType,
         content_url: url,
