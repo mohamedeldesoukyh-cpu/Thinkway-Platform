@@ -2,12 +2,15 @@
 
 import { labelForDeliverableBillingStatus } from "@/features/billing/constants";
 import type { AssignmentDeliverableBillingStatus } from "@/features/billing/types";
+import { CreatorNameStack } from "@/components/creator/creator-name-stack";
 import { CreatorThumbAvatar } from "@/components/creator/creator-thumb-cell";
 import {
   canonicalPlatformKey,
   deliverableTypeShortLabel,
   getPlatformOptionLabel,
 } from "@/lib/campaigns/deliverable-taxonomy";
+import { PlatformIcon } from "@/lib/performance/platform-icon";
+import { resolveCreatorIdentity } from "@/lib/text/decode-html-entities";
 import { cn } from "@/lib/utils";
 
 function explorerTypeLabel(code: string): string {
@@ -63,29 +66,37 @@ function PlatformGlyph({ platform }: { platform: string }) {
 
 type DeliverableExplorerCreatorCellProps = {
   name: string | null | undefined;
+  handle?: string | null;
   avatarUrl?: string | null;
   className?: string;
 };
 
-/** Creator column — 22px circle avatar + name (panel-deliverables). */
+/** Creator column — avatar + name over @username. */
 export function DeliverableExplorerCreatorCell({
   name,
+  handle,
   avatarUrl,
   className,
 }: DeliverableExplorerCreatorCellProps) {
-  if (!name?.trim()) {
+  const identity = resolveCreatorIdentity(name, handle);
+  if (!identity.name && !identity.handle) {
     return <span className="thinkway-campaign-c-gray">—</span>;
   }
 
   return (
     <div className={cn("thinkway-campaign-cr-cell gap-[5px]", className)}>
       <CreatorThumbAvatar
-        name={name}
+        name={identity.name}
         avatarUrl={avatarUrl}
         size={22}
         className="border-0"
       />
-      <span className="truncate text-[11px] text-[var(--camp-text)]">{name}</span>
+      <CreatorNameStack
+        name={identity.name}
+        handle={identity.handle}
+        nameClassName="text-[11px] font-medium text-[var(--camp-text)]"
+        handleClassName="text-[10px] text-[var(--camp-text-3)]"
+      />
     </div>
   );
 }
@@ -120,12 +131,18 @@ export function DeliverableExplorerPlatformPill({
   platform,
   className,
 }: DeliverableExplorerPlatformPillProps) {
-  const key = canonicalPlatformKey(platform);
+  const label = getPlatformOptionLabel(platform);
 
   return (
-    <span className={cn("thinkway-campaign-deliv-pill", platformToneClass(platform), className)}>
-      {(key === "instagram" || key === "tiktok") && <PlatformGlyph platform={platform} />}
-      {getPlatformOptionLabel(platform)}
+    <span
+      title={label}
+      aria-label={label}
+      className={cn(
+        "inline-flex size-7 items-center justify-center rounded-full border border-border/60 bg-background shadow-sm",
+        className
+      )}
+    >
+      <PlatformIcon platform={platform} size="sm" className="size-4 rounded-full" />
     </span>
   );
 }

@@ -12,7 +12,7 @@ describe("sanitizeAssignmentCreatorName", () => {
       sanitizeAssignmentCreatorName(
         "&#x200e;Ali Mahgoub | &#x639;&#x644;&#x649; &#x645;&#x62d;&#x62c;&#x648;&#x628; (@ali.mahgub) • Instagram photos and videos"
       ),
-      "Ali Mahgoub | على محجوب (@ali.mahgub)"
+      "Ali Mahgoub | على محجوب"
     );
   });
 });
@@ -27,7 +27,7 @@ describe("buildAssignmentDisplayName", () => {
           { platform: "tiktok", deliverable_type: "mirrored_tt", posts_count: 1 },
         ]
       ),
-      "Ali Mahgoub | على محجوب (@ali.mahgub) — Multi-platform package"
+      "Ali Mahgoub | على محجوب — Multi-platform package"
     );
   });
 });

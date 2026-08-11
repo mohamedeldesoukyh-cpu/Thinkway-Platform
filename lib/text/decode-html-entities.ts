@@ -94,6 +94,67 @@ export function isCreatorDocumentNumber(name: string | null | undefined): boolea
   return /^(INF|DIS|CRT|VEN|TW)-\d+$/i.test(name.trim());
 }
 
+/** Extract `@handle` embedded in scraped titles like `Name (@handle)`. */
+export function extractEmbeddedCreatorHandle(
+  value: string | null | undefined
+): string | null {
+  if (value == null) return null;
+  const decoded = decodeHtmlEntities(value.trim());
+  if (!decoded) return null;
+  const match = decoded.match(/@([a-zA-Z0-9._]{2,})/);
+  return match?.[1]?.toLowerCase() ?? null;
+}
+
+function stripOptionSuffix(name: string): string {
+  return name.replace(/\s*[-–—]\s*Option\s+\d+\s*$/i, "").trim();
+}
+
+/** Remove `(@handle)` / bare `@handle` tokens — handles render on the secondary line. */
+function stripEmbeddedCreatorHandles(name: string): string {
+  return name
+    .replace(/\s*[(\[]\s*@[a-zA-Z0-9._]+\s*[)\]]/g, "")
+    .replace(/(^|[\s|·•/])@[a-zA-Z0-9._]+(?=$|[\s|·•/\-–—])/g, "$1")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s*[|·•]\s*$/g, "")
+    .trim();
+}
+
+/** Collapse duplicated title segments (`Name — Name — Option 1` → `Name`). */
+function dedupeRepeatedNameSegments(name: string): string {
+  // Only split on spaced dashes so document numbers like INF-008286 stay intact.
+  const parts = name
+    .split(/\s+[-–—]\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length < 2) return name.trim();
+
+  const unique: string[] = [];
+  const seen = new Set<string>();
+  for (const part of parts) {
+    const key = part.toLowerCase().replace(/\s+/g, " ");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(part);
+  }
+  if (unique.length === 1) return unique[0]!;
+  return unique.join(" — ");
+}
+
+/**
+ * Name + @handle for two-line creator identity (Discovery detail bar pattern).
+ * Prefers an explicit platform handle; falls back to a handle embedded in the label.
+ */
+export function resolveCreatorIdentity(
+  rawName: string | null | undefined,
+  explicitHandle?: string | null
+): { name: string; handle: string | null } {
+  const embedded = extractEmbeddedCreatorHandle(rawName);
+  const explicit = explicitHandle?.trim().replace(/^@+/, "").toLowerCase() || null;
+  const handle = explicit || embedded;
+  const name = pickCreatorDisplayName([rawName], handle);
+  return { name, handle };
+}
+
 /** Normalize creator display names for UI (decode entities, strip bidi marks). */
 export function formatCreatorDisplayName(name: string | null | undefined): string {
   if (name == null) return "";
@@ -102,7 +163,11 @@ export function formatCreatorDisplayName(name: string | null | undefined): strin
   // Handles belong on the secondary line — never keep a leading @ in the name field.
   const withoutAt = trimmed.replace(/^@+/, "").trim();
   if (!withoutAt) return "";
-  const cleaned = stripPlatformPageTitleSuffix(decodeHtmlEntities(withoutAt));
+  const cleaned = dedupeRepeatedNameSegments(
+    stripEmbeddedCreatorHandles(
+      stripOptionSuffix(stripPlatformPageTitleSuffix(decodeHtmlEntities(withoutAt)))
+    )
+  );
   if (!cleaned || isBarePlatformDisplayName(cleaned) || isCreatorDocumentNumber(cleaned)) {
     return "";
   }

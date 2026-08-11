@@ -3,18 +3,18 @@
 import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
+import { CreatorNameStack } from "@/components/creator/creator-name-stack";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import {
-  DETAIL_FORM_INPUT_CLASS,
-  DetailFormSection,
-} from "@/features/campaigns/components/operational-detail-panel";
+import { CollapsibleWorkspaceSection } from "@/components/workspace/collapsible-workspace-section";
+import { DETAIL_FORM_INPUT_CLASS } from "@/features/campaigns/components/operational-detail-panel";
 import { updateAssignmentCommercialNotesAction } from "@/features/campaigns/actions";
 import { saveClientIoAssignmentsAction } from "@/features/io/actions";
 import { formatMoney } from "@/lib/campaigns/utils";
 import { isClientIoComposerEditable } from "@/lib/io/client-io-assignments";
+import { resolveCreatorIdentity } from "@/lib/text/decode-html-entities";
 import type { ClientIoStatus } from "@/features/io/types";
 
 const INITIAL_STATE = { ok: false } as const;
@@ -148,18 +148,33 @@ export function ClientIoAssignmentComposer({
 
   if (assignments.length === 0) {
     return (
-      <DetailFormSection label="Assignments" className="py-3.5">
+      <CollapsibleWorkspaceSection
+        title="Assignments"
+        summary="No campaign assignments available to compose yet"
+        defaultOpen={false}
+      >
         <p className="text-sm text-muted-foreground">
           {selectedAssignmentIds.length > 0
             ? `${selectedAssignmentIds.length} Assignment${selectedAssignmentIds.length === 1 ? "" : "s"} selected. Open the campaign Client IO tab to review composition.`
             : "Compose Assignments from the campaign Client IO tab (or add Assignments to the campaign first)."}
         </p>
-      </DetailFormSection>
+      </CollapsibleWorkspaceSection>
     );
   }
 
+  const selectedCount = selectedAssignmentIds.length;
+
   return (
-    <DetailFormSection label="Assignments" className="py-3.5">
+    <CollapsibleWorkspaceSection
+      title="Assignments"
+      summary={`${selectedCount} of ${assignments.length} selected for this Client IO`}
+      badge={
+        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+          {assignments.length}
+        </span>
+      }
+      defaultOpen={false}
+    >
       <div className="space-y-3">
         <p className="text-xs text-muted-foreground">
           Select the Assignments included in this Client IO. Document commercial totals use the
@@ -185,11 +200,11 @@ export function ClientIoAssignmentComposer({
         <ul className="divide-y divide-border/60 rounded-md border border-border/70">
           {assignments.map((row) => {
             const checked = selected.has(row.id);
-            const label =
-              row.influencer_name?.trim() ||
-              row.name?.trim() ||
-              row.document_number ||
-              "Assignment";
+            const identity = resolveCreatorIdentity(
+              row.influencer_name || row.name,
+              null
+            );
+            const ariaLabel = identity.name || row.document_number || "Assignment";
             const notes = notesById[row.id] ?? {
               description: "",
               usagePeriod: "",
@@ -202,11 +217,15 @@ export function ClientIoAssignmentComposer({
                     disabled={!editable || saving}
                     onCheckedChange={(value) => toggle(row.id, value === true)}
                     className="mt-0.5"
-                    aria-label={`Include ${label}`}
+                    aria-label={`Include ${ariaLabel}`}
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <p className="text-sm font-medium text-foreground">{label}</p>
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <CreatorNameStack
+                        name={identity.name}
+                        handle={identity.handle}
+                        nameClassName="text-sm font-medium"
+                      />
                       <p className="text-xs tabular-nums text-muted-foreground">
                         {formatMoney(Number(row.revenue_before_vat ?? 0), currencyCode)}
                       </p>
@@ -293,6 +312,6 @@ export function ClientIoAssignmentComposer({
           ) : null}
         </div>
       </div>
-    </DetailFormSection>
+    </CollapsibleWorkspaceSection>
   );
 }

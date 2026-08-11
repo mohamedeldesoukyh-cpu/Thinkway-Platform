@@ -291,6 +291,7 @@ export function CampaignPublicationSheet({
       onOpenChange={onOpenChange}
       title="Add publications"
       description="Paste one or many live URLs"
+      variant="detail"
     >
       <form action={formAction} className="flex min-h-0 flex-1 flex-col">
         <OperationalEditPanelHeader

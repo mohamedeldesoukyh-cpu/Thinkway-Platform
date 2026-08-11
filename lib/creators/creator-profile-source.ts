@@ -5,7 +5,10 @@ import {
 } from "@/lib/creators/creator-centric";
 import { creatorRecentPublicationDisplayUrl } from "@/lib/creators/recent-publication-thumb";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
-import { formatCreatorDisplayName } from "@/lib/text/decode-html-entities";
+import {
+  extractEmbeddedCreatorHandle,
+  formatCreatorDisplayName,
+} from "@/lib/text/decode-html-entities";
 import { pickPrimaryPlatformAccount } from "@/lib/discovery/profile-url";
 import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
 import {
@@ -158,11 +161,16 @@ export function creatorProfileSourceFromPlatformAccount(
   } | null | undefined,
   options?: { avatarUrl?: string | null; isVerified?: boolean }
 ): CreatorProfileSource {
+  const cleanedName = formatCreatorDisplayName(displayName);
+  const handle =
+    account?.handle?.trim().replace(/^@+/, "") ||
+    extractEmbeddedCreatorHandle(displayName) ||
+    null;
   return {
-    displayName: formatCreatorDisplayName(displayName),
+    displayName: cleanedName || handle || "Creator",
     avatarUrl: options?.avatarUrl ?? account?.profile_picture_url ?? null,
     platform: account?.platform,
-    handle: account?.handle,
+    handle,
     profile_url: account?.profile_url,
     isVerified: options?.isVerified,
   };

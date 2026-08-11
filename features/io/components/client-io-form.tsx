@@ -6,9 +6,9 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
+import { CollapsibleWorkspaceSection } from "@/components/workspace/collapsible-workspace-section";
 import {
   DETAIL_FORM_INPUT_CLASS,
-  DetailFormSection,
   DetailSheetFooter,
 } from "@/features/campaigns/components/operational-detail-panel";
 import {
@@ -350,8 +350,12 @@ export function ClientIoForm({
       }
     >
       <div className="px-6 py-4">
-        <div className="space-y-1">
-          <DetailFormSection label="Document details" className="py-3.5">
+        <div className="space-y-3">
+          <CollapsibleWorkspaceSection
+            title="Document details"
+            summary={`${row.document_number ?? "Draft"} · ${row.status} · ${row.client_name ?? "Client"}`}
+            defaultOpen={false}
+          >
             <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <SummaryItem label="Document number" value={row.document_number} />
               <SummaryItem label="Campaign" value={row.campaign_name} />
@@ -360,7 +364,7 @@ export function ClientIoForm({
               <SummaryItem label="Status" value={row.status} />
               <SummaryItem label="Billing terms" value={billingTerms || row.billing_terms} />
             </dl>
-          </DetailFormSection>
+          </CollapsibleWorkspaceSection>
 
           {/*
             Assignment / milestones / amendment each own a <form>. Keep them
@@ -417,7 +421,11 @@ export function ClientIoForm({
               emailSummary={emailSummary}
             />
 
-            <DetailFormSection label="Payment terms" className="py-3.5">
+            <CollapsibleWorkspaceSection
+              title="Payment terms"
+              summary={billingTerms || row.billing_terms || "Set billing schedule"}
+              defaultOpen={false}
+            >
               <div className="space-y-3">
                 <p className="text-xs text-muted-foreground">
                   Ready options update billing terms and the Payment Terms clause used in CIO
@@ -482,17 +490,27 @@ export function ClientIoForm({
                   </div>
                 ) : null}
               </div>
-            </DetailFormSection>
+            </CollapsibleWorkspaceSection>
 
-            <ClientIoTermsEditorField
-              label="Terms & conditions"
-              terms={terms}
-              onChange={handleTermsChange}
-              onRecover={handleRecoverTerms}
-              description="Structured terms injected into Section 8 of the Client IO template. Payment Terms clause updates automatically when you pick a ready payment option above."
-            />
+            <CollapsibleWorkspaceSection
+              title="Terms & conditions"
+              summary={`${terms.length} clause${terms.length === 1 ? "" : "s"} in document Section 8`}
+              defaultOpen={false}
+            >
+              <ClientIoTermsEditorField
+                label="Terms & conditions"
+                terms={terms}
+                onChange={handleTermsChange}
+                onRecover={handleRecoverTerms}
+                description="Structured terms injected into Section 8 of the Client IO template. Payment Terms clause updates automatically when you pick a ready payment option above."
+              />
+            </CollapsibleWorkspaceSection>
 
-            <DetailFormSection label="Attachment URL (PO/SOW/PDF)" className="py-3.5">
+            <CollapsibleWorkspaceSection
+              title="Attachment URL"
+              summary={attachmentUrl?.trim() ? attachmentUrl : "No PO/SOW/PDF link"}
+              defaultOpen={false}
+            >
               <Input
                 id="attachment_url"
                 name="attachment_url"
@@ -501,7 +519,7 @@ export function ClientIoForm({
                 placeholder="https://..."
                 className={DETAIL_FORM_INPUT_CLASS}
               />
-            </DetailFormSection>
+            </CollapsibleWorkspaceSection>
 
             <ClientIoSendHistory history={sendHistory} />
           </form>

@@ -1,6 +1,8 @@
 "use client";
 
+import { CreatorNameStack } from "@/components/creator/creator-name-stack";
 import { CreatorThumbAvatar } from "@/components/creator/creator-thumb-cell";
+import { resolveCreatorIdentity } from "@/lib/text/decode-html-entities";
 import { cn } from "@/lib/utils";
 
 const INSTAGRAM_ICON_PATH =
@@ -13,6 +15,7 @@ type PlatformBadge = "instagram" | "tiktok";
 
 type Props = {
   name: string;
+  handle?: string | null;
   avatarUrl?: string | null;
   platform?: PlatformBadge | null;
   className?: string;
@@ -36,18 +39,21 @@ function PlatformThumbBadge({ platform }: { platform: PlatformBadge }) {
   );
 }
 
-/** Influencer column — 28px thumb + name (thinkway-campaign_2.html Vendor IO). */
+/** Influencer column — avatar + name over @username. */
 export function VendorIoInfluencerCell({
   name,
+  handle,
   avatarUrl,
   platform = "instagram",
   className,
 }: Props) {
+  const identity = resolveCreatorIdentity(name, handle);
+
   return (
     <div className={cn("thinkway-campaign-cr-cell", className)}>
       <div className="thinkway-campaign-cr-thumb-wrap thinkway-campaign-cr-thumb-wrap--vio">
         <CreatorThumbAvatar
-          name={name}
+          name={identity.name}
           avatarUrl={avatarUrl}
           platform={platform}
           size={28}
@@ -55,7 +61,12 @@ export function VendorIoInfluencerCell({
         />
         {platform ? <PlatformThumbBadge platform={platform} /> : null}
       </div>
-      <span className="thinkway-campaign-cr-name">{name}</span>
+      <CreatorNameStack
+        name={identity.name}
+        handle={identity.handle}
+        nameClassName="thinkway-campaign-cr-name text-[11px] font-medium"
+        handleClassName="text-[10px] text-muted-foreground"
+      />
     </div>
   );
 }

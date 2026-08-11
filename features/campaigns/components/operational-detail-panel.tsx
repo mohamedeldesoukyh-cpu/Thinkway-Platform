@@ -10,6 +10,10 @@ import {
   SheetDescription,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  DISCOVERY_WORKSPACE_SHEET_CLASS,
+  DISCOVERY_WORKSPACE_SHEET_STYLE,
+} from "@/features/discovery/components/design-system/discovery-sheet-chrome";
 import { APP_MAIN_HALF_PANEL_WIDTH } from "@/lib/layout/app-sidebar-width";
 import { initialsFromName } from "@/lib/campaigns/assignment-detail-presenters";
 import { cn } from "@/lib/utils";
@@ -26,12 +30,21 @@ export const OPERATIONAL_DETAIL_SHEET_CLASS = cn(
   "rounded-none rounded-l-[1.75rem] rounded-r-none shadow-[-12px_0_40px_-8px_rgba(0,0,0,0.12)]"
 );
 
+/** Discovery Creator Details chrome — used by Add publications / Edit assignment. */
+export const OPERATIONAL_DETAIL_SHEET_DETAIL_STYLE: CSSProperties = {
+  ...DISCOVERY_WORKSPACE_SHEET_STYLE,
+};
+
+export const OPERATIONAL_DETAIL_SHEET_DETAIL_CLASS = DISCOVERY_WORKSPACE_SHEET_CLASS;
+
 type OperationalDetailSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   description?: string;
   children: ReactNode;
+  /** `detail` matches Discovery Creator Details drawer chrome. */
+  variant?: "operational" | "detail";
 };
 
 export function OperationalDetailSheet({
@@ -40,15 +53,17 @@ export function OperationalDetailSheet({
   title,
   description,
   children,
+  variant = "operational",
 }: OperationalDetailSheetProps) {
+  const isDetail = variant === "detail";
   return (
     <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
       <SheetContent
         side="right"
         showCloseButton
         showOverlay={false}
-        style={OPERATIONAL_DETAIL_SHEET_STYLE}
-        className={OPERATIONAL_DETAIL_SHEET_CLASS}
+        style={isDetail ? OPERATIONAL_DETAIL_SHEET_DETAIL_STYLE : OPERATIONAL_DETAIL_SHEET_STYLE}
+        className={isDetail ? OPERATIONAL_DETAIL_SHEET_DETAIL_CLASS : OPERATIONAL_DETAIL_SHEET_CLASS}
       >
         <SheetTitle className="sr-only">{title}</SheetTitle>
         {description ? (
@@ -305,13 +320,11 @@ export function OperationalEditPanelHeader({
   badges?: ReactNode;
 }) {
   return (
-    <div className="shrink-0 border-b border-border/60 px-6 pb-4 pt-5">
+    <div className="shrink-0 border-b border-border bg-background/80 px-5 pb-4 pt-5 dark:bg-background">
       <div className="pr-10">
-        <h2 className="text-lg font-semibold tracking-tight text-foreground">{title}</h2>
+        <h2 className="text-[18px] font-extrabold tracking-[-0.3px] text-foreground">{title}</h2>
         {description ? (
-          <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
-            {description}
-          </p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{description}</p>
         ) : null}
         {badges ? (
           <div className="mt-2 flex flex-wrap items-center gap-1.5">{badges}</div>
