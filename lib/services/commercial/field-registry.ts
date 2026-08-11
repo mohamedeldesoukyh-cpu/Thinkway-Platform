@@ -460,6 +460,8 @@ const MASTER_DERIVED_DEPS: Record<
   usage_rights_amount: [
     "total_revenue",
     "gross_profit",
+    "agency_fee_amount",
+    "af_value_egp",
     "quotation_totals",
     "campaign_financial_summary",
   ],

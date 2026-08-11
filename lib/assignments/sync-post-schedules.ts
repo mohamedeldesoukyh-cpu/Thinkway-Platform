@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { computeClientBilling } from "@/lib/assignments/client-billing-commercial";
+import { recomputeAgencyFeeAmount } from "@/lib/assignments/assignment-commercial-masters";
 import { syncLineCommercialRollupsFromDeliverables } from "@/lib/assignments/sync-line-rollups";
 import {
   allocateAmountByRevenueShare,
@@ -145,12 +146,19 @@ export async function syncDeliverableRollupFromPosts(
   const revenueBeforeVat = roundMoney(
     rows.reduce((sum, row) => sum + Number(row.revenue_before_vat), 0)
   );
+  const usageRightsAmount = Number(deliverableMeta?.usage_rights_amount ?? 0);
+  const agencyFeePercent = Number(deliverableMeta?.agency_fee_percent ?? 0);
+  // Always recompute AF amount from % × (Rev + UR) when client amount rolls up.
+  const agencyFeeAmount = recomputeAgencyFeeAmount({
+    revenueBeforeVat,
+    usageRightsAmount,
+    agencyFeePercent,
+  });
   const deliverableBillable = resolveClientBillableAmount({
     revenue_before_vat: revenueBeforeVat,
-    usage_rights_amount: Number(deliverableMeta?.usage_rights_amount ?? 0),
-    agency_fee_amount: deliverableMeta?.agency_fee_amount,
-    agency_fee_percent: Number(deliverableMeta?.agency_fee_percent ?? 0),
-    billable_amount: deliverableMeta?.billable_amount,
+    usage_rights_amount: usageRightsAmount,
+    agency_fee_amount: agencyFeeAmount,
+    agency_fee_percent: agencyFeePercent,
   });
   const postBillableShares = allocateAmountByRevenueShare(deliverableBillable, rows);
 
@@ -195,7 +203,9 @@ export async function syncDeliverableRollupFromPosts(
   );
 
   const billing = computeClientBilling({
-    revenueBeforeVat: deliverableBillable,
+    revenueBeforeVat,
+    usageRightsAmount,
+    agencyFeePercent,
     vatPercent: line.revenue_vat_exempt ? 0 : line.revenue_vat_percent,
     vatExempt: line.revenue_vat_exempt,
   });
@@ -211,9 +221,9 @@ export async function syncDeliverableRollupFromPosts(
   const invoicedAmount = Number(deliverableMeta?.invoiced_amount ?? 0);
   const remainingAmount = resolveClientRemainingAmount({
     revenue_before_vat: revenueBeforeVat,
-    usage_rights_amount: Number(deliverableMeta?.usage_rights_amount ?? 0),
-    agency_fee_amount: deliverableMeta?.agency_fee_amount,
-    agency_fee_percent: Number(deliverableMeta?.agency_fee_percent ?? 0),
+    usage_rights_amount: usageRightsAmount,
+    agency_fee_amount: agencyFeeAmount,
+    agency_fee_percent: agencyFeePercent,
     billable_amount: deliverableBillable,
     invoiced_amount: invoicedAmount,
     locked_at: deliverableMeta?.locked_at,
@@ -241,6 +251,9 @@ export async function syncDeliverableRollupFromPosts(
       cost_vat_amount: costVatAmount,
       cost_after_vat: cost.afterVat,
       revenue_before_vat: revenueBeforeVat,
+      usage_rights_amount: usageRightsAmount,
+      agency_fee_percent: agencyFeePercent,
+      agency_fee_amount: agencyFeeAmount,
       revenue_vat_amount: billing.vatAmount,
       revenue_after_vat: billing.totalBilling,
       billable_amount: deliverableBillable,
