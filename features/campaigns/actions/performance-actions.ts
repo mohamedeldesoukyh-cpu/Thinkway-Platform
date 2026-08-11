@@ -111,7 +111,8 @@ export async function deleteCampaignPublicationAction(input: {
   try {
     const supabase = await requireAuth();
     const result = await deleteCampaignPublication(supabase, input);
-    if (result.ok) revalidateCampaign(input.campaignId);
+    // Skip revalidatePath — remounts Campaign Workspace via loading.tsx.
+    // Callers soft-reload the publications client bundle instead.
     return result;
   } catch {
     return { ok: false, message: "Unauthorized" };

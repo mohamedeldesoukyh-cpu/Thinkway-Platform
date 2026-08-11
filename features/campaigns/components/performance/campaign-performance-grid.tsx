@@ -440,10 +440,14 @@ export function CampaignPerformanceGrid({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
-                  onSelect={() => onRemovePublication(row.id)}
+                  onSelect={(event) => {
+                    // Keep the menu from restoring focus before the confirm dialog opens.
+                    event.preventDefault();
+                    window.setTimeout(() => onRemovePublication(row.id), 0);
+                  }}
                 >
                   <Trash2Icon className="mr-1 inline size-3" />
-                  Remove line
+                  Delete publication
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

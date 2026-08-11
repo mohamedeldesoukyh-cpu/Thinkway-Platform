@@ -468,8 +468,10 @@ export function PublicationWorkspace({
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="text-destructive focus:text-destructive"
-                      onSelect={(e) => e.preventDefault()}
-                      onClick={() => onRemovePublication(row.id)}
+                      onSelect={(event) => {
+                        event.preventDefault();
+                        window.setTimeout(() => onRemovePublication(row.id), 0);
+                      }}
                     >
                       <Trash2Icon className="mr-1 inline size-3" />
                       Delete publication
