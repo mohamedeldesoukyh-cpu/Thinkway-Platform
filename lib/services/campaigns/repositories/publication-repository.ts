@@ -434,7 +434,8 @@ export async function deleteCampaignPublicationRow(
     .from("campaign_publications")
     .delete()
     .eq("id", publicationId)
-    .eq("campaign_header_id", campaignId);
+    .eq("campaign_header_id", campaignId)
+    .select("id");
 }
 
 export async function findCampaignPublicationIdByContentUrl(

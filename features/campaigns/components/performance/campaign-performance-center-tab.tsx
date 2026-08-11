@@ -326,7 +326,7 @@ export function CampaignPerformanceCenterTab({
     const label = row?.influencer_name ?? row?.publication_type_label ?? "this publication";
     const ok = await confirmDelete(
       `Remove ${label} from the campaign? This cannot be undone.`,
-      "Remove publication?"
+      "Delete publication?"
     );
     if (!ok) return;
 
@@ -337,14 +337,17 @@ export function CampaignPerformanceCenterTab({
       });
       if (result.ok) {
         toast.success(result.message);
-        refreshAfterPublicationMutation();
         setSelectedIds((prev) => {
           if (!prev.has(publicationId)) return prev;
           const next = new Set(prev);
           next.delete(publicationId);
           return next;
         });
-        if (detailId === publicationId) setDetailId(null);
+        if (detailId === publicationId) {
+          setDetailId(null);
+          detailSnapshotRef.current = null;
+        }
+        refreshAfterPublicationMutation();
       } else {
         toast.error(result.message);
       }

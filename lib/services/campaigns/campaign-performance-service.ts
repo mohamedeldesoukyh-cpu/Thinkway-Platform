@@ -228,9 +228,19 @@ export async function deleteCampaignPublication(
   campaignId: string;
   publicationId: string;
 }): Promise<{ ok: boolean; message: string }> {
-const { error } = await deleteCampaignPublicationRow(supabase, input.campaignId, input.publicationId);
+  const { data, error } = await deleteCampaignPublicationRow(
+    supabase,
+    input.campaignId,
+    input.publicationId
+  );
 
   if (error) return { ok: false, message: error.message };
+  if (!data?.length) {
+    return {
+      ok: false,
+      message: "Publication was not deleted. It may already be gone or access was denied.",
+    };
+  }
 
   invalidateCampaignPublicationsSchemaCache();
   return { ok: true, message: "Publication removed." };
