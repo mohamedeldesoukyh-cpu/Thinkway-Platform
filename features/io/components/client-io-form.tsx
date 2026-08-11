@@ -246,7 +246,7 @@ export function ClientIoForm({
       campaign_start_date: campaignStartDate,
       campaign_end_date: campaignEndDate,
       agreed_amount: agreed?.amount ?? null,
-      // Always sync to campaign/workspace currency (brand SSOT upstream).
+      // Sync to campaign header invoice / view CCY (editable on workspace KPIs).
       currency_code: currencyCode,
     };
   }, [

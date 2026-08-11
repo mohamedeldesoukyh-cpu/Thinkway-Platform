@@ -517,6 +517,7 @@ export async function convertQuotationToAssignments(
       quotationId: input.quotationId,
       shortlistId: shortlistResult.shortlistId,
       status: "planning",
+      currencyCode: String(row.currency ?? "").trim() || null,
       acceptedQuotationId: input.quotationId,
       acceptedQuotationVersion: Number(row.version_number ?? 1),
     });

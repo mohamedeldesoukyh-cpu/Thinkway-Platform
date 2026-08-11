@@ -1,15 +1,21 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
 import {
   WalletIcon,
   ReceiptIcon,
   TrendingUpIcon,
   PercentIcon,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import type { CampaignWorkspace } from "@/features/campaigns/types";
+import { updateCampaignDisplayCurrencyAction } from "@/features/campaigns/actions";
+import { CommercialCurrencySelect } from "@/features/commercial/components/commercial-currency-select";
 import { formatMoneyCompact, formatPercent } from "@/features/campaigns/utils";
+import { fromEgp } from "@/lib/commercial/fx-aggregation";
+import { resolveCommercialRateToEgp } from "@/features/quotations/actions";
 import { cn } from "@/lib/utils";
 
 type CampaignKpiCardsProps = {
@@ -29,16 +35,76 @@ type KpiCardDef = {
 
 /** Aurora KPI cards — live financials; ISO currency, KPI precision (no decimals). */
 export function CampaignKpiCards({ workspace, className }: CampaignKpiCardsProps) {
+  const router = useRouter();
   const { financials, lines } = workspace;
-  const currency = workspace.currency_code;
-  const marginHealthy = financials.margin_percent >= 20;
-  const marginWeak = financials.margin_percent < 10;
+  const [displayCurrency, setDisplayCurrency] = useState(
+    (workspace.currency_code || "EGP").toUpperCase()
+  );
+  const [displayFxRateToEgp, setDisplayFxRateToEgp] = useState(
+    Number(financials.display_fx_rate_to_egp) > 0
+      ? Number(financials.display_fx_rate_to_egp)
+      : 1
+  );
+  const [currencyPending, startCurrencyTransition] = useTransition();
+
+  useEffect(() => {
+    setDisplayCurrency((workspace.currency_code || "EGP").toUpperCase());
+    setDisplayFxRateToEgp(
+      Number(financials.display_fx_rate_to_egp) > 0
+        ? Number(financials.display_fx_rate_to_egp)
+        : 1
+    );
+  }, [workspace.currency_code, financials.display_fx_rate_to_egp]);
+
+  const revenue = fromEgp(
+    Number(financials.revenue_egp ?? financials.revenue ?? 0),
+    displayCurrency,
+    displayFxRateToEgp
+  );
+  const cost = fromEgp(
+    Number(financials.cost_egp ?? financials.cost ?? 0),
+    displayCurrency,
+    displayFxRateToEgp
+  );
+  const gp = fromEgp(
+    Number(financials.gp_egp ?? financials.gp ?? 0),
+    displayCurrency,
+    displayFxRateToEgp
+  );
+  const marginPercent =
+    revenue > 0 ? Math.round((gp / revenue) * 10000) / 100 : financials.margin_percent;
+  const marginHealthy = marginPercent >= 20;
+  const marginWeak = marginPercent < 10;
+
+  const handleCurrencyChange = (currency: string) => {
+    const next = currency.toUpperCase();
+    const previous = displayCurrency;
+    setDisplayCurrency(next);
+    startCurrencyTransition(async () => {
+      const [rateRes, saveRes] = await Promise.all([
+        resolveCommercialRateToEgp(next),
+        updateCampaignDisplayCurrencyAction({
+          campaignId: workspace.id,
+          currency: next,
+        }),
+      ]);
+      if (rateRes.ok && rateRes.data) {
+        setDisplayFxRateToEgp(rateRes.data.rate);
+      }
+      if (!saveRes.ok) {
+        toast.error(saveRes.message ?? "Failed to update currency.");
+        setDisplayCurrency(previous);
+        return;
+      }
+      router.refresh();
+    });
+  };
 
   const cards: KpiCardDef[] = [
     {
       id: "revenue",
       label: "Revenue",
-      value: formatMoneyCompact(financials.revenue, currency),
+      value: formatMoneyCompact(revenue, displayCurrency),
       sub: "Billable campaign value",
       tint: "blue",
       icon: <WalletIcon aria-hidden />,
@@ -46,7 +112,7 @@ export function CampaignKpiCards({ workspace, className }: CampaignKpiCardsProps
     {
       id: "cost",
       label: "Cost",
-      value: formatMoneyCompact(financials.cost, currency),
+      value: formatMoneyCompact(cost, displayCurrency),
       sub: "Committed vendor cost",
       tint: "slate",
       icon: <ReceiptIcon aria-hidden />,
@@ -54,19 +120,17 @@ export function CampaignKpiCards({ workspace, className }: CampaignKpiCardsProps
     {
       id: "gp",
       label: "Gross Profit",
-      value: formatMoneyCompact(financials.gp, currency),
+      value: formatMoneyCompact(gp, displayCurrency),
       valueClassName:
-        financials.gp < 0
-          ? "text-[var(--camp-red-text)]"
-          : "text-[var(--camp-green-text)]",
-      sub: `${formatPercent(financials.margin_percent)} GP`,
+        gp < 0 ? "text-[var(--camp-red-text)]" : "text-[var(--camp-green-text)]",
+      sub: `${formatPercent(marginPercent)} GP`,
       tint: "emer",
       icon: <TrendingUpIcon aria-hidden />,
     },
     {
       id: "margin",
       label: "Margin",
-      value: formatPercent(financials.margin_percent),
+      value: formatPercent(marginPercent),
       sub: (
         <>
           <span
@@ -91,6 +155,19 @@ export function CampaignKpiCards({ workspace, className }: CampaignKpiCardsProps
 
   return (
     <div className={cn("thinkway-aurora-kpis", className)} role="group" aria-label="Campaign KPIs">
+      <article className="thinkway-aurora-kpi thinkway-aurora-kpi--currency">
+        <div className="thinkway-aurora-kpi-klab">CCY</div>
+        <div className="thinkway-aurora-kpi-kval">
+          <CommercialCurrencySelect
+            label={null}
+            layout="inline"
+            value={displayCurrency}
+            onChange={handleCurrencyChange}
+            disabled={currencyPending}
+          />
+        </div>
+        <div className="thinkway-aurora-kpi-ksub">Invoice and view currency</div>
+      </article>
       {cards.map((card) => (
         <article key={card.id} className="thinkway-aurora-kpi">
           <div className="thinkway-aurora-kpi-ktop">

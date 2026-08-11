@@ -29,7 +29,6 @@ import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-ty
 import {
   deriveLinePaymentStatus,
   deriveWorkflowStage,
-  formatMarginPercent,
   mapDeliverableDisplayStatus,
   type CampaignLineWorkspace,
   type CampaignWorkspace,
@@ -40,6 +39,8 @@ import {
   platformLabel,
 } from "@/lib/campaigns/line-assignment";
 import { rollupLineClientCommercial } from "@/lib/assignments/client-billing-commercial";
+import { aggregateCampaignDisplayFinancials } from "@/lib/campaigns/campaign-display-financials";
+import { resolveRateToEgp } from "@/lib/commercial/fx-server";
 import {
   fetchCampaignApprovals,
   fetchCampaignAuditLogs,
@@ -419,7 +420,40 @@ export async function getCampaignWorkspace(
 
   let campaignBillableBase = 0;
   let campaignCost = 0;
-  let campaignGp = 0;
+
+  // Invoice / view CCY is the campaign header currency (editable like quotation CCY).
+  // Brand currency remains the create-time default only — it must not override display.
+  const workspaceCurrency =
+    headerRow.currency_code?.trim().toUpperCase() ||
+    headerRow.brand?.currency_code?.trim().toUpperCase() ||
+    "EGP";
+
+  const currenciesNeeded = new Set<string>([workspaceCurrency]);
+  for (const line of lines) {
+    const lineCcy = (line.currency_code || workspaceCurrency).trim().toUpperCase();
+    currenciesNeeded.add(lineCcy || workspaceCurrency);
+    const costCcy = (
+      line.cost_received_currency ||
+      line.currency_code ||
+      workspaceCurrency
+    )
+      .trim()
+      .toUpperCase();
+    currenciesNeeded.add(costCcy || workspaceCurrency);
+  }
+  const rateToEgpByCurrency = new Map<string, number>();
+  await Promise.all(
+    [...currenciesNeeded].map(async (code) => {
+      rateToEgpByCurrency.set(code, await resolveRateToEgp(supabase, code));
+    })
+  );
+  const displayFinancials = aggregateCampaignDisplayFinancials({
+    lines,
+    displayCurrency: workspaceCurrency,
+    rateToEgpByCurrency,
+  });
+  campaignBillableBase = displayFinancials.native_billable_base;
+  campaignCost = displayFinancials.native_cost;
 
   const workspaceLines = lines.map((line) => {
     const revenue = Number(line.revenue);
@@ -439,9 +473,6 @@ export async function getCampaignWorkspace(
       costBeforeVat,
     });
     const gp = commercial.gp;
-    campaignBillableBase += commercial.billableBase;
-    campaignCost += costBeforeVat;
-    campaignGp += gp;
     const poAmount = Number(line.po_amount);
     const poConsumed = commercial.billableBase;
     const vendorFees = vendorFeesByLine.get(line.id) ?? 0;
@@ -552,9 +583,9 @@ export async function getCampaignWorkspace(
   });
 
   const legacyBudget = workspaceLines.reduce((s, l) => s + l.po_amount, 0);
-  const revenue = campaignBillableBase;
-  const cost = campaignCost;
-  const gp = campaignGp;
+  const revenue = displayFinancials.revenue;
+  const cost = displayFinancials.cost;
+  const gp = displayFinancials.gp;
   const billingOutstanding = invoices.reduce((s, i) => s + i.outstanding, 0);
   const collected = invoices.reduce((s, i) => s + i.amount_paid, 0);
 
@@ -751,12 +782,6 @@ export async function getCampaignWorkspace(
       }
     : null;
 
-  // Brand owns commercial currency; workspace display must stay synced even if
-  // the header row was written with a stale/default code (e.g. EGP).
-  const brandCurrency = headerRow.brand?.currency_code?.trim().toUpperCase() || null;
-  const workspaceCurrency =
-    brandCurrency || headerRow.currency_code?.trim().toUpperCase() || "USD";
-
   const workspace = {
     id: headerRow.id,
     document_number: headerRow.document_number,
@@ -808,7 +833,11 @@ export async function getCampaignWorkspace(
       revenue,
       cost,
       gp,
-      margin_percent: formatMarginPercent(revenue, gp),
+      margin_percent: displayFinancials.margin_percent,
+      revenue_egp: displayFinancials.revenue_egp,
+      cost_egp: displayFinancials.cost_egp,
+      gp_egp: displayFinancials.gp_egp,
+      display_fx_rate_to_egp: displayFinancials.display_fx_rate_to_egp,
       po_total: operationalPo.po_amount,
       remaining_po: operationalPo.po_remaining,
       po_consumed: operationalPo.po_consumed,

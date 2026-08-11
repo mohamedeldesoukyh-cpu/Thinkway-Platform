@@ -10,7 +10,10 @@ import {
 } from "@/lib/supabase/storage";
 import type { Database } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { PersistClientDocumentUploadResult } from "@/lib/domains/document/types";
+import type {
+  PersistClientDocumentUploadResult,
+  ClientDocumentUploadPayload,
+} from "@/lib/domains/document/types";
 
 export type { PersistClientDocumentUploadResult } from "@/lib/domains/document/types";
 
@@ -137,5 +140,9 @@ export async function persistClientDocumentUpload(params: {
     });
   }
 
-  return { ok: true, message: "Document uploaded." };
+  return {
+    ok: true,
+    message: "Document uploaded.",
+    document: insertedDoc as ClientDocumentUploadPayload,
+  };
 }

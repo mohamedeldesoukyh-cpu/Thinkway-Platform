@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ClientCreditLimitCheck } from "@/lib/finance/client-credit-exposure";
+import { isCommercialCurrency } from "@/lib/commercial/fx-aggregation";
 import {
   createCampaign,
   duplicateCampaign,
@@ -122,6 +123,59 @@ export async function updateCampaignHeaderAction(
 
   revalidateCampaign(parsed.data.campaign_id, result.clientId);
   return { ok: true, message: "Campaign updated." };
+}
+
+/** Quotation-style invoice / view CCY — persists header currency and refreshes KPIs. */
+export async function updateCampaignDisplayCurrencyAction(input: {
+  campaignId: string;
+  currency: string;
+}): Promise<{ ok: true } | { ok: false; message: string }> {
+  const currency = input.currency.trim().toUpperCase();
+  if (!input.campaignId || !currency) {
+    return { ok: false, message: "Campaign and currency are required." };
+  }
+  if (!isCommercialCurrency(currency)) {
+    return { ok: false, message: "Unsupported currency." };
+  }
+
+  const { supabase, user, error: authError } = await requireAuthUser();
+  if (authError || !user) {
+    return { ok: false, message: authError ?? "Unauthorized" };
+  }
+
+  const { data: existing, error: existingError } = await supabase
+    .from("campaign_headers")
+    .select("id, client_id, name, status, currency_code")
+    .eq("id", input.campaignId)
+    .maybeSingle();
+
+  if (existingError || !existing) {
+    return { ok: false, message: existingError?.message ?? "Campaign not found." };
+  }
+
+  const row = existing as {
+    id: string;
+    client_id: string | null;
+    name: string;
+    status: string;
+    currency_code: string | null;
+  };
+
+  if ((row.currency_code || "").toUpperCase() === currency) {
+    return { ok: true };
+  }
+
+  const { error } = await supabase
+    .from("campaign_headers")
+    .update({ currency_code: currency } as never)
+    .eq("id", input.campaignId);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  revalidateCampaign(input.campaignId, row.client_id ?? undefined);
+  return { ok: true };
 }
 
 export async function createCampaignLineAction(

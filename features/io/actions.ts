@@ -620,8 +620,8 @@ export async function sendClientIoAction(
     (cioExtras as { assignment_snapshot?: unknown } | null)?.assignment_snapshot
   );
   const syncedCurrency =
-    campaignMeta?.brand?.currency_code?.trim() ||
     campaignMeta?.currency_code?.trim() ||
+    campaignMeta?.brand?.currency_code?.trim() ||
     agreed?.currencyCode ||
     null;
 

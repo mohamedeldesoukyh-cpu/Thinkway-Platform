@@ -264,6 +264,7 @@ export async function createCampaignFromQuotation(
     brandId: row.brand_id as string,
     quotationId: input.quotationId,
     shortlistId,
+    currencyCode: String(row.currency ?? "").trim() || null,
   });
 
   if (!created.ok) return created;

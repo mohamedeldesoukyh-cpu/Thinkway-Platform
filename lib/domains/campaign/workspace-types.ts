@@ -89,10 +89,17 @@ export type CampaignPoSummary = {
 export type CampaignFinancialSummary = {
   /** Operational PO budget (po_amount_campaign_currency or legacy fallback). */
   budget: number;
+  /** Invoice / view currency KPIs (converted from line entry currencies via FX). */
   revenue: number;
   cost: number;
   gp: number;
   margin_percent: number;
+  /** Reporting-currency (EGP) totals — used for live CCY switching like quotations. */
+  revenue_egp: number;
+  cost_egp: number;
+  gp_egp: number;
+  /** FX rate for workspace `currency_code` → EGP. */
+  display_fx_rate_to_egp: number;
   /** Same as budget — operational PO total in campaign currency. */
   po_total: number;
   /** Operational PO remaining (po_remaining_amount or computed). */
