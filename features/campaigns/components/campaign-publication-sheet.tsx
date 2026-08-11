@@ -1,6 +1,6 @@
 "use client";
 
-import { PlusIcon, Trash2Icon } from "lucide-react";
+import { CalendarIcon, HashIcon, Link2Icon, StickyNoteIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useActionState, useEffect, useId, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -27,11 +27,11 @@ import {
 import {
   DETAIL_FORM_INPUT_CLASS,
   DETAIL_FORM_SELECT_TRIGGER_CLASS,
-  DetailFormScrollBody,
-  DetailFormSection,
-  DetailSheetFooter,
+  OperationalDetailCommandBar,
+  OperationalDetailFooter,
+  OperationalDetailScrollBody,
+  OperationalDetailSection,
   OperationalDetailSheet,
-  OperationalEditPanelHeader,
 } from "@/features/campaigns/components/operational-detail-panel";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import { matchAssignmentLineFromContentUrl } from "@/lib/campaigns/match-assignment-from-content-url";
@@ -294,12 +294,27 @@ export function CampaignPublicationSheet({
       variant="detail"
     >
       <form action={formAction} className="flex min-h-0 flex-1 flex-col">
-        <OperationalEditPanelHeader
+        <OperationalDetailCommandBar
+          contextLabel="Publications"
+          contextHandle={readyCount > 0 ? `${readyCount} ready` : "New"}
           title="Add publications"
-          description="Paste URLs — creators auto-assign when the handle matches. Override any row."
+          subtitle="Paste URLs — creators auto-assign when the handle matches. Override any row."
+          actions={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="creator-detail-sheet-action-btn"
+              disabled={isPending}
+              onClick={() => setRows((prev) => [...prev, newRow()])}
+            >
+              <PlusIcon aria-hidden />
+              Add URL
+            </Button>
+          }
         />
 
-        <DetailFormScrollBody>
+        <OperationalDetailScrollBody>
           <input type="hidden" name="campaign_id" value={campaignId} />
           <input
             id={itemsFieldId}
@@ -308,30 +323,8 @@ export function CampaignPublicationSheet({
             value={JSON.stringify(itemsPayload)}
           />
 
-          <div className="overflow-hidden rounded-2xl border border-sidebar-border bg-sidebar">
-            <div className="flex items-center justify-between border-b border-sidebar-border px-4 py-3">
-              <div>
-                <p className="text-sm font-medium text-sidebar-accent-foreground">
-                  Publication URLs
-                </p>
-                <p className="text-xs text-sidebar-foreground/60">
-                  One row per URL · creator beside each link
-                </p>
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="h-8 gap-1.5 rounded-2xl text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                disabled={isPending}
-                onClick={() => setRows((prev) => [...prev, newRow()])}
-              >
-                <PlusIcon className="size-3.5" />
-                Add URL
-              </Button>
-            </div>
-
-            <div className="flex flex-col gap-1 p-3">
+          <OperationalDetailSection icon={<Link2Icon className="size-3.5" />} title="Publication URLs">
+            <div className="flex flex-col gap-2">
               {rows.map((row, index) => {
                 const extracted = extractHandleFromContentUrl(row.contentUrl);
                 const needsCreator = Boolean(row.contentUrl.trim()) && !row.lineId;
@@ -339,29 +332,20 @@ export function CampaignPublicationSheet({
                   <div
                     key={row.key}
                     className={cn(
-                      "flex flex-col gap-2 rounded-3xl px-3 py-2.5 transition-colors",
-                      row.contentUrl.trim()
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                        : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60"
+                      "rounded-[12px] border border-[#eaedf4] bg-white p-3 transition-colors",
+                      row.contentUrl.trim() && "border-[rgba(0,87,255,0.22)] bg-[rgba(0,87,255,0.03)]"
                     )}
                   >
                     <div className="flex items-start gap-2">
                       <div className="mt-1.5 flex w-8 shrink-0 flex-col items-center gap-1">
-                        <span className="text-[10px] font-medium text-sidebar-foreground/50">
-                          {index + 1}
-                        </span>
-                        {row.contentUrl.trim() ? (
-                          <PlatformBadge platform={row.platform} />
-                        ) : null}
+                        <span className="text-[10px] font-semibold text-[#94a3b8]">{index + 1}</span>
+                        {row.contentUrl.trim() ? <PlatformBadge platform={row.platform} /> : null}
                       </div>
 
                       <div className="min-w-0 flex-1 space-y-2">
                         <Input
                           type="url"
-                          className={cn(
-                            DETAIL_FORM_INPUT_CLASS,
-                            "border-sidebar-border/80 bg-background/80"
-                          )}
+                          className={cn(DETAIL_FORM_INPUT_CLASS, "bg-white")}
                           value={row.contentUrl}
                           onChange={(e) => onRowUrlChange(row.key, e.target.value)}
                           onPaste={(e) => {
@@ -392,7 +376,7 @@ export function CampaignPublicationSheet({
                               disabled={isPending}
                             />
                             {row.autoMatched ? (
-                              <p className="mt-1 text-[10px] text-sidebar-foreground/55">
+                              <p className="mt-1 text-[10px] text-[#64748b]">
                                 Auto-assigned from URL
                                 {extracted ? ` · @${extracted.handle}` : ""}
                               </p>
@@ -441,7 +425,7 @@ export function CampaignPublicationSheet({
                         type="button"
                         size="icon"
                         variant="ghost"
-                        className="mt-0.5 size-8 shrink-0 rounded-2xl text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        className="mt-0.5 size-8 shrink-0 text-[#94a3b8] hover:text-[#dc2626]"
                         disabled={isPending || rows.length <= 1}
                         onClick={() =>
                           setRows((prev) =>
@@ -457,76 +441,89 @@ export function CampaignPublicationSheet({
                 );
               })}
             </div>
-          </div>
+          </OperationalDetailSection>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <DetailFormSection label="Publication date">
-              <Input
-                type="date"
-                className={DETAIL_FORM_INPUT_CLASS}
-                value={publicationDate}
-                onChange={(e) => setPublicationDate(e.target.value)}
-                disabled={isPending}
-              />
-            </DetailFormSection>
-            <DetailFormSection label="Status">
-              <Select value={status} onValueChange={setStatus} disabled={isPending}>
-                <SelectTrigger className={DETAIL_FORM_SELECT_TRIGGER_CLASS}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PUBLICATION_STATUS_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </DetailFormSection>
-          </div>
+          <OperationalDetailSection icon={<CalendarIcon className="size-3.5" />} title="Schedule">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#94a3b8]">
+                  Publication date
+                </p>
+                <Input
+                  type="date"
+                  className={cn(DETAIL_FORM_INPUT_CLASS, "bg-white")}
+                  value={publicationDate}
+                  onChange={(e) => setPublicationDate(e.target.value)}
+                  disabled={isPending}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#94a3b8]">
+                  Status
+                </p>
+                <Select value={status} onValueChange={setStatus} disabled={isPending}>
+                  <SelectTrigger className={cn(DETAIL_FORM_SELECT_TRIGGER_CLASS, "bg-white")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PUBLICATION_STATUS_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </OperationalDetailSection>
 
-          <DetailFormSection label="Caption (optional, all rows)">
+          <OperationalDetailSection icon={<StickyNoteIcon className="size-3.5" />} title="Caption">
             <Textarea
               rows={2}
-              className="min-h-[4rem] resize-y border-border/60 bg-muted/20 text-sm shadow-none focus-visible:ring-1"
+              className="min-h-[4rem] resize-y border-[#eaedf4] bg-white text-sm shadow-none focus-visible:ring-1"
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               disabled={isPending}
+              placeholder="Optional — applied to all rows"
             />
-          </DetailFormSection>
+          </OperationalDetailSection>
 
-          <DetailFormSection label="Hashtags">
-            <Input
-              className={DETAIL_FORM_INPUT_CLASS}
-              value={hashtags}
-              onChange={(e) => setHashtags(e.target.value)}
-              placeholder="#brand #campaign"
-              disabled={isPending}
-            />
-          </DetailFormSection>
-
-          <DetailFormSection label="Notes">
-            <Textarea
-              rows={2}
-              className="min-h-[4rem] resize-y border-border/60 bg-muted/20 text-sm shadow-none focus-visible:ring-1"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              disabled={isPending}
-            />
-          </DetailFormSection>
+          <OperationalDetailSection icon={<HashIcon className="size-3.5" />} title="Hashtags & notes">
+            <div className="space-y-3">
+              <Input
+                className={cn(DETAIL_FORM_INPUT_CLASS, "bg-white")}
+                value={hashtags}
+                onChange={(e) => setHashtags(e.target.value)}
+                placeholder="#brand #campaign"
+                disabled={isPending}
+              />
+              <Textarea
+                rows={2}
+                className="min-h-[4rem] resize-y border-[#eaedf4] bg-white text-sm shadow-none focus-visible:ring-1"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                disabled={isPending}
+              />
+            </div>
+          </OperationalDetailSection>
 
           <FieldError messages={state.fieldErrors?.items} />
-        </DetailFormScrollBody>
+        </OperationalDetailScrollBody>
 
-        <DetailSheetFooter>
-          <Button size="sm" type="submit" disabled={isPending || readyCount === 0}>
+        <OperationalDetailFooter>
+          <Button
+            type="submit"
+            size="sm"
+            className="creator-detail-sheet-action-btn creator-detail-sheet-action-btn--primary"
+            disabled={isPending || readyCount === 0}
+          >
             {isPending
               ? "Saving…"
               : readyCount <= 1
                 ? "Add publication"
                 : `Add ${readyCount} publications`}
           </Button>
-        </DetailSheetFooter>
+        </OperationalDetailFooter>
       </form>
     </OperationalDetailSheet>
   );

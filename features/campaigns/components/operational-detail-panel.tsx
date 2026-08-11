@@ -1,19 +1,18 @@
 "use client";
 
+import { PanelLeftIcon, XIcon } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
 
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetDescription,
   SheetTitle,
 } from "@/components/ui/sheet";
-import {
-  DISCOVERY_WORKSPACE_SHEET_CLASS,
-  DISCOVERY_WORKSPACE_SHEET_STYLE,
-} from "@/features/discovery/components/design-system/discovery-sheet-chrome";
+import { CREATOR_DETAIL_SHEET_MAX_WIDTH_PX } from "@/features/discovery/components/design-system/discovery-design-tokens";
 import { APP_MAIN_HALF_PANEL_WIDTH } from "@/lib/layout/app-sidebar-width";
 import { initialsFromName } from "@/lib/campaigns/assignment-detail-presenters";
 import { cn } from "@/lib/utils";
@@ -30,12 +29,17 @@ export const OPERATIONAL_DETAIL_SHEET_CLASS = cn(
   "rounded-none rounded-l-[1.75rem] rounded-r-none shadow-[-12px_0_40px_-8px_rgba(0,0,0,0.12)]"
 );
 
-/** Discovery Creator Details chrome — used by Add publications / Edit assignment. */
+/** Exact Discovery Creator Details drawer chrome. */
 export const OPERATIONAL_DETAIL_SHEET_DETAIL_STYLE: CSSProperties = {
-  ...DISCOVERY_WORKSPACE_SHEET_STYLE,
+  width: `min(${CREATOR_DETAIL_SHEET_MAX_WIDTH_PX}px, 100vw)`,
+  maxWidth: `${CREATOR_DETAIL_SHEET_MAX_WIDTH_PX}px`,
 };
 
-export const OPERATIONAL_DETAIL_SHEET_DETAIL_CLASS = DISCOVERY_WORKSPACE_SHEET_CLASS;
+export const OPERATIONAL_DETAIL_SHEET_DETAIL_CLASS = cn(
+  "creator-detail-sheet flex flex-col gap-0 overflow-hidden border-l border-border bg-[#f8fafc] p-0",
+  "!inset-y-0 !right-0 !left-auto !h-full !max-h-none",
+  "rounded-none shadow-[-8px_0_40px_rgba(15,23,42,0.1)] dark:shadow-[-8px_0_40px_rgba(0,0,0,0.35)]"
+);
 
 type OperationalDetailSheetProps = {
   open: boolean;
@@ -60,7 +64,7 @@ export function OperationalDetailSheet({
     <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
       <SheetContent
         side="right"
-        showCloseButton
+        showCloseButton={!isDetail}
         showOverlay={false}
         style={isDetail ? OPERATIONAL_DETAIL_SHEET_DETAIL_STYLE : OPERATIONAL_DETAIL_SHEET_STYLE}
         className={isDetail ? OPERATIONAL_DETAIL_SHEET_DETAIL_CLASS : OPERATIONAL_DETAIL_SHEET_CLASS}
@@ -72,6 +76,129 @@ export function OperationalDetailSheet({
         {children}
       </SheetContent>
     </Sheet>
+  );
+}
+
+/**
+ * Discovery Creator Details command bar — context row, actions, identity title, optional body.
+ */
+export function OperationalDetailCommandBar({
+  contextLabel,
+  contextHandle,
+  title,
+  subtitle,
+  actions,
+  children,
+}: {
+  contextLabel: string;
+  contextHandle?: string | null;
+  title: ReactNode;
+  subtitle?: ReactNode;
+  actions?: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="creator-detail-sheet-command-bar-wrap shrink-0">
+      <div className="creator-detail-sheet-command-bar">
+        <div className="creator-detail-sheet-command-bar__actions">
+          <div className="creator-detail-sheet-command-bar__context">
+            <PanelLeftIcon className="creator-detail-sheet-command-bar__context-icon" aria-hidden />
+            <span className="truncate">
+              {contextLabel}
+              {contextHandle ? (
+                <>
+                  <span> · </span>
+                  <span className="creator-detail-sheet-command-bar__context-handle">
+                    {contextHandle}
+                  </span>
+                </>
+              ) : null}
+            </span>
+          </div>
+          <div className="creator-detail-sheet-command-bar__action-group">
+            {actions}
+            <SheetClose asChild>
+              <button
+                type="button"
+                className="creator-detail-sheet-action-btn creator-detail-sheet-action-btn--icon"
+                aria-label="Close"
+              >
+                <XIcon aria-hidden />
+              </button>
+            </SheetClose>
+          </div>
+        </div>
+
+        <div className="creator-detail-sheet-command-bar__body">
+          <div className="discovery-creator-details-hover-card discovery-creator-details-hover-card--sheet creator-detail-sheet-identity-card">
+            <div className="discovery-creator-details-hover-card__body">
+              <div className="discovery-creator-details-hover-card__title-row">
+                <span className="discovery-creator-details-hover-card__name">{title}</span>
+              </div>
+              {subtitle ? (
+                <p className="discovery-creator-details-hover-card__collabs">{subtitle}</p>
+              ) : null}
+            </div>
+          </div>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function OperationalDetailSection({
+  icon,
+  title,
+  action,
+  children,
+  className,
+}: {
+  icon: ReactNode;
+  title: string;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={cn("creator-detail-sheet-section", className)}>
+      <div className="creator-detail-sheet-section-title">
+        <span className="creator-detail-sheet-section-title__icon" aria-hidden>
+          {icon}
+        </span>
+        <h3 className="creator-detail-sheet-section-title__text">{title}</h3>
+        {action ? <div className="ml-auto shrink-0">{action}</div> : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+export function OperationalDetailScrollBody({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("min-h-0 flex-1 overflow-y-auto px-4 py-3", className)}>
+      <div className="flex flex-col gap-3">{children}</div>
+    </div>
+  );
+}
+
+export function OperationalDetailFooter({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("creator-detail-sheet-footer shrink-0", className)}>
+      <div className="creator-detail-sheet-footer__actions">{children}</div>
+    </div>
   );
 }
 
