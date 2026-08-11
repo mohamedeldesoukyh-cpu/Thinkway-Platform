@@ -28,8 +28,14 @@ import {
 import { CampaignPublicationSheet } from "@/features/campaigns/components/campaign-publication-sheet";
 import { DetailClickableLabel } from "@/features/campaigns/components/detail-sheets/detail-clickable-label";
 import { PublicationDetailSheet } from "@/features/campaigns/components/detail-sheets/publication-detail-sheet";
+import { PublicationDuplicateBadge } from "@/features/campaigns/components/performance/performance-explorer-cells";
 import type { CampaignPublicationRow } from "@/features/campaigns/queries/publications";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
+import {
+  duplicateNormalizedUrlSet,
+  notesHaveDuplicateMarker,
+  normalizePublicationContentUrl,
+} from "@/lib/campaigns/publication-content-url";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 
 const ALL_STATUSES = "all";
@@ -52,23 +58,33 @@ function safeFormatDate(value: string | null | undefined): string {
 }
 
 function buildPublicationsColumns(
-  onOpenDetail: (id: string) => void
+  onOpenDetail: (id: string) => void,
+  duplicateUrlKeys: ReadonlySet<string>
 ): OperationalConfigurableColumnDef<CampaignPublicationRow>[] {
   return [
     {
       id: "type",
       label: "Type",
-      renderCell: (row) => (
-        <div className="space-y-0.5">
-          <DetailClickableLabel
-            onClick={() => onOpenDetail(row.id)}
-            title={`View ${row.publication_type_label} details`}
-          >
-            {row.publication_type_label}
-          </DetailClickableLabel>
-          <p className="text-[11px] text-muted-foreground">{row.platform_label}</p>
-        </div>
-      ),
+      renderCell: (row) => {
+        const normalized = normalizePublicationContentUrl(row.content_url);
+        const showDuplicate =
+          notesHaveDuplicateMarker(row.notes) ||
+          (Boolean(normalized) && duplicateUrlKeys.has(normalized!));
+        return (
+          <div className="space-y-0.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <DetailClickableLabel
+                onClick={() => onOpenDetail(row.id)}
+                title={`View ${row.publication_type_label} details`}
+              >
+                {row.publication_type_label}
+              </DetailClickableLabel>
+              {showDuplicate ? <PublicationDuplicateBadge /> : null}
+            </div>
+            <p className="text-[11px] text-muted-foreground">{row.platform_label}</p>
+          </div>
+        );
+      },
     },
     {
       id: "content",
@@ -159,9 +175,14 @@ export function CampaignPublicationsTab({
     });
   }, [rows, search, statusFilter]);
 
+  const duplicateUrlKeys = useMemo(
+    () => duplicateNormalizedUrlSet(rows.map((row) => row.content_url)),
+    [rows]
+  );
+
   const columns = useMemo(
-    () => buildPublicationsColumns(setDetailPublicationId),
-    []
+    () => buildPublicationsColumns(setDetailPublicationId, duplicateUrlKeys),
+    [duplicateUrlKeys]
   );
   const columnMetas = useMemo(() => getOperationalTableColumnMetas(columns), [columns]);
 
@@ -310,6 +331,7 @@ export function CampaignPublicationsTab({
       <CampaignPublicationSheet
         campaignId={workspace.id}
         assignmentLines={lines}
+        existingContentUrls={rows.map((row) => row.content_url)}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
       />
