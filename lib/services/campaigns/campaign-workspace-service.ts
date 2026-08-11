@@ -423,9 +423,10 @@ export async function getCampaignWorkspace(
 
   // Invoice / view CCY is the campaign header currency (editable like quotation CCY).
   // Brand currency remains the create-time default only — it must not override display.
+  const headerCurrency = header as unknown as HeaderWithRelations;
   const workspaceCurrency =
-    headerRow.currency_code?.trim().toUpperCase() ||
-    headerRow.brand?.currency_code?.trim().toUpperCase() ||
+    headerCurrency.currency_code?.trim().toUpperCase() ||
+    headerCurrency.brand?.currency_code?.trim().toUpperCase() ||
     "EGP";
 
   const currenciesNeeded = new Set<string>([workspaceCurrency]);
