@@ -61,7 +61,9 @@ export function ClientInlineDocumentAttach({
 
   if (document !== previousDocument) {
     setPreviousDocument(document);
-    setLocalDocument(document ?? null);
+    if (document) {
+      setLocalDocument(document);
+    }
   }
 
   const busy = isUploading || isDeleting || isDownloading;
@@ -97,6 +99,28 @@ export function ClientInlineDocumentAttach({
       try {
         const result = await uploadClientDocumentViaApi(clientId, formData);
         if (result.ok) {
+          if (result.document) {
+            setLocalDocument({
+              ...result.document,
+              document_type: result.document.document_type as ClientDocumentType,
+            });
+          } else {
+            // Fallback chip until refresh returns the row.
+            setLocalDocument({
+              id: `local-${documentType}`,
+              client_id: clientId,
+              document_type: documentType,
+              file_name: file.name,
+              storage_path: "",
+              mime_type: file.type || null,
+              file_size: file.size,
+              expires_at: null,
+              notes: null,
+              uploaded_by: null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            });
+          }
           toast.success(result.message ?? "Document uploaded.");
           refreshClientProfileSafely();
           return;
@@ -110,8 +134,41 @@ export function ClientInlineDocumentAttach({
     });
   }
 
+  function handlePreview() {
+    if (!localDocument || localDocument.id.startsWith("local-")) {
+      toast.message("Preview will be available after the page refreshes.");
+      refreshClientProfileSafely();
+      return;
+    }
+
+    startDownload(async () => {
+      try {
+        const result = await getClientDocumentDownloadUrlAction(
+          localDocument.id,
+          clientId
+        );
+        if (result.error) {
+          toast.error(result.error);
+          return;
+        }
+        if (result.url) {
+          window.open(result.url, "_blank", "noopener,noreferrer");
+        }
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Could not open document."
+        );
+      }
+    });
+  }
+
   function handleDelete() {
     if (!localDocument) {
+      return;
+    }
+
+    if (localDocument.id.startsWith("local-")) {
+      setLocalDocument(null);
       return;
     }
 
@@ -141,20 +198,18 @@ export function ClientInlineDocumentAttach({
   }
 
   return (
-    <div className={cn("shrink-0", className)}>
+    <div className={cn("min-w-0", className)}>
       {localDocument ? (
         <div
           className={cn(
-            "flex h-9 items-center gap-0.5 rounded-3xl border border-primary/30 bg-primary/10 px-1",
+            "flex h-9 min-w-0 items-center gap-1 rounded-lg border border-primary/35 bg-primary/10 px-1.5",
             busy && "opacity-70"
           )}
           title={localDocument.file_name}
         >
-          <span className="flex items-center gap-1 pl-1.5 pr-0.5">
-            <FileCheck2Icon className="h-3.5 w-3.5 shrink-0 text-primary" />
-            <span className="hidden max-w-[4.5rem] truncate text-[10px] font-medium text-primary sm:inline">
-              {localDocument.file_name}
-            </span>
+          <FileCheck2Icon className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
+          <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-primary">
+            {localDocument.file_name}
           </span>
           <Button
             type="button"
@@ -162,30 +217,9 @@ export function ClientInlineDocumentAttach({
             size="icon"
             className="h-7 w-7 shrink-0 text-primary hover:bg-primary/15 hover:text-primary"
             disabled={busy}
-            title="View attachment"
-            onClick={() => {
-              startDownload(async () => {
-                try {
-                  const result = await getClientDocumentDownloadUrlAction(
-                    localDocument.id,
-                    clientId
-                  );
-                  if (result.error) {
-                    toast.error(result.error);
-                    return;
-                  }
-                  if (result.url) {
-                    window.open(result.url, "_blank", "noopener,noreferrer");
-                  }
-                } catch (error) {
-                  toast.error(
-                    error instanceof Error
-                      ? error.message
-                      : "Could not open document."
-                  );
-                }
-              });
-            }}
+            title="Preview attachment"
+            aria-label={`Preview ${localDocument.file_name}`}
+            onClick={handlePreview}
           >
             {isDownloading ? (
               <Loader2Icon className="h-3.5 w-3.5 animate-spin" />
@@ -200,6 +234,7 @@ export function ClientInlineDocumentAttach({
             className="h-7 w-7 shrink-0 text-primary hover:bg-primary/15 hover:text-primary"
             disabled={busy}
             title="Replace attachment"
+            aria-label={`Replace ${localDocument.file_name}`}
             onClick={openFilePicker}
           >
             <PaperclipIcon className="h-3.5 w-3.5" />
@@ -211,6 +246,7 @@ export function ClientInlineDocumentAttach({
             className="h-7 w-7 shrink-0 text-destructive/80 hover:bg-destructive/10 hover:text-destructive"
             disabled={busy}
             title="Remove attachment"
+            aria-label={`Remove ${localDocument.file_name}`}
             onClick={handleDelete}
           >
             {isDeleting ? (
@@ -224,9 +260,9 @@ export function ClientInlineDocumentAttach({
         <Button
           type="button"
           variant="outline"
-          size="icon"
+          size="sm"
           className={cn(
-            "h-9 w-9 shrink-0 rounded-3xl border-primary/30 bg-primary/10 text-primary shadow-none",
+            "h-9 w-full justify-start gap-2 rounded-lg border-primary/30 bg-primary/10 px-3 text-primary shadow-none",
             "hover:border-primary/45 hover:bg-primary/15 hover:text-primary"
           )}
           disabled={busy}
@@ -238,6 +274,9 @@ export function ClientInlineDocumentAttach({
           ) : (
             <PaperclipIcon className="h-4 w-4" />
           )}
+          <span className="text-xs font-medium">
+            {isUploading ? "Uploading…" : "Attach file"}
+          </span>
         </Button>
       )}
 

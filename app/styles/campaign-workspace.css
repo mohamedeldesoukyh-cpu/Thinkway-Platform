@@ -2078,8 +2078,35 @@
 
   .thinkway-aurora-kpis {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 16px;
+  }
+
+  .thinkway-aurora-kpi--currency {
+    grid-template-columns: 1fr;
+    align-content: center;
+    row-gap: 4px;
+  }
+
+  .thinkway-aurora-kpi--currency .thinkway-aurora-kpi-klab,
+  .thinkway-aurora-kpi--currency .thinkway-aurora-kpi-kval,
+  .thinkway-aurora-kpi--currency .thinkway-aurora-kpi-ksub {
+    grid-column: 1;
+  }
+
+  .thinkway-aurora-kpi--currency .thinkway-aurora-kpi-klab {
+    grid-row: 1;
+  }
+
+  .thinkway-aurora-kpi--currency .thinkway-aurora-kpi-kval {
+    grid-row: 2;
+    margin-top: 0;
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
+  .thinkway-aurora-kpi--currency .thinkway-aurora-kpi-ksub {
+    grid-row: 3;
   }
 
   .thinkway-aurora-kpi {

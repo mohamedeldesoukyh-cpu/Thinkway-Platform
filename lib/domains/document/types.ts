@@ -11,17 +11,39 @@ export type DocumentBucket =
   | "influencer-documents"
   | "group-documents";
 
-export type EntityDocumentUploadResult = {
-  ok: boolean;
-  message?: string;
-  fieldErrors?: Record<string, string[]>;
+export type ClientDocumentUploadPayload = {
+  id: string;
+  client_id: string;
+  document_type: string;
+  file_name: string;
+  storage_path: string;
+  mime_type: string | null;
+  file_size: number | null;
+  expires_at: string | null;
+  notes: string | null;
+  uploaded_by: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type PersistClientDocumentUploadResult =
-  | { ok: true; message: string }
+  | { ok: true; message: string; document: ClientDocumentUploadPayload }
   | {
       ok: false;
       message: string;
+      fieldErrors?: Record<string, string[]>;
+    };
+
+export type EntityDocumentUploadResult =
+  | {
+      ok: true;
+      message?: string;
+      document?: ClientDocumentUploadPayload;
+      fieldErrors?: Record<string, string[]>;
+    }
+  | {
+      ok: false;
+      message?: string;
       fieldErrors?: Record<string, string[]>;
     };
 

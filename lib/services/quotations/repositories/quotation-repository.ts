@@ -809,6 +809,8 @@ export async function createCampaignHeaderFromBrand(
     brandId: string;
     quotationId: string;
     shortlistId: string | null;
+    /** Override brand currency — quotation invoice/display CCY when converting. */
+    currencyCode?: string | null;
     /** Release 2.0 D4 — default `planning` for Assignment convert. */
     status?: Database["public"]["Tables"]["campaign_headers"]["Row"]["status"];
     acceptedQuotationId?: string | null;
@@ -838,6 +840,9 @@ export async function createCampaignHeaderFromBrand(
     client: { agency_or_direct: string | null } | null;
   };
 
+  const currencyCode =
+    input.currencyCode?.trim().toUpperCase() || brandRow.currency_code;
+
   const { data: header, error: headerError } = await supabase
     .from("campaign_headers")
     .insert({
@@ -847,7 +852,7 @@ export async function createCampaignHeaderFromBrand(
       group_id: brandRow.group_id,
       // Release 2.0 convert passes `planning` (D4). Legacy callers may omit → draft.
       status: input.status ?? "draft",
-      currency_code: brandRow.currency_code,
+      currency_code: currencyCode,
       category_id: brandRow.category_id,
       subcategory_id: brandRow.subcategory_id,
       agency_or_direct: brandRow.client?.agency_or_direct ?? null,
