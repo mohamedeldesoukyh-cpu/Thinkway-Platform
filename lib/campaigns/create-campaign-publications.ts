@@ -19,8 +19,8 @@ const optionalUuid = z
   .transform((value) => (typeof value === "string" && value.length > 0 ? value : ""));
 
 export const publicationItemSchema = z.object({
-  campaign_line_id: optionalUuid,
-  influencer_id: optionalUuid,
+  campaign_line_id: z.string().uuid(),
+  influencer_id: optionalUuid.optional(),
   platform: z.string().trim().min(1).max(64),
   publication_type: z.string().trim().min(1).max(64),
   content_url: z
@@ -44,13 +44,16 @@ export const publicationItemSchema = z.object({
   assignee_id: optionalUuid.optional(),
   caption: z
     .union([z.string(), z.null(), z.undefined()])
-    .transform((v) => (typeof v === "string" ? v : "")),
+    .transform((v) => (typeof v === "string" ? v : ""))
+    .optional(),
   hashtags: z
     .union([z.string(), z.null(), z.undefined()])
-    .transform((v) => (typeof v === "string" ? v : "")),
+    .transform((v) => (typeof v === "string" ? v : ""))
+    .optional(),
   notes: z
     .union([z.string(), z.null(), z.undefined()])
-    .transform((v) => (typeof v === "string" ? v : "")),
+    .transform((v) => (typeof v === "string" ? v : ""))
+    .optional(),
 });
 
 export const publicationBatchSchema = z.object({

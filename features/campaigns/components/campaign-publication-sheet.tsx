@@ -1,7 +1,7 @@
 "use client";
 
 import { CalendarIcon, HashIcon, Link2Icon, StickyNoteIcon, PlusIcon, Trash2Icon } from "lucide-react";
-import { useEffect, useMemo, useState, useTransition, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { SearchableSelect } from "@/components/forms/searchable-select";
@@ -218,7 +218,7 @@ export function CampaignPublicationSheet({
   const [caption, setCaption] = useState("");
   const [hashtags, setHashtags] = useState("");
   const [notes, setNotes] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
 
   const assignmentOptions = useMemo(
     () => assignmentLines.map(buildPublicationAssignmentOption),
@@ -227,6 +227,7 @@ export function CampaignPublicationSheet({
 
   useEffect(() => {
     if (!open) return;
+    setIsPending(false);
     setRows([newRow()]);
     setStatus("published");
     setPublicationDate("");
@@ -329,7 +330,8 @@ export function CampaignPublicationSheet({
     );
 
     // HTTP create avoids Server Action → route loading.tsx (Thinkway logo) flash.
-    startTransition(async () => {
+    setIsPending(true);
+    void (async () => {
       try {
         const response = await fetch(`/api/campaigns/${campaignId}/publications`, {
           method: "POST",
@@ -339,9 +341,12 @@ export function CampaignPublicationSheet({
         const payload = (await response.json().catch(() => null)) as {
           ok?: boolean;
           message?: string;
+          error?: string;
         } | null;
         if (!response.ok || !payload?.ok) {
-          toast.error(payload?.message ?? "Failed to add publications.");
+          toast.error(
+            payload?.message ?? payload?.error ?? "Failed to add publications."
+          );
           return;
         }
         onOpenChange(false);
@@ -349,8 +354,10 @@ export function CampaignPublicationSheet({
         refreshAfterPublicationMutation();
       } catch {
         toast.error("Failed to add publications.");
+      } finally {
+        setIsPending(false);
       }
-    });
+    })();
   }
 
   function platformOptionsForRow(row: PublicationRow) {
