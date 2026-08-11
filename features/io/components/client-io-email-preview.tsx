@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { EyeIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { DetailFormSection } from "@/features/campaigns/components/operational-detail-panel";
+import { CollapsibleWorkspaceSection } from "@/components/workspace/collapsible-workspace-section";
 import { ClientIoEmailViewDialog } from "@/features/io/components/client-io-email-view-dialog";
 import type { ClientIoRow } from "@/features/io/types";
 import {
@@ -60,7 +60,11 @@ export function ClientIoEmailPreviewSection({
 
   return (
     <>
-      <DetailFormSection label="Email preview" className="py-3.5">
+      <CollapsibleWorkspaceSection
+        title="Email preview"
+        summary={preview.subject || "Auto-generated send message"}
+        defaultOpen={false}
+      >
         <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
           This is the automatic message sent from{" "}
           <strong className="font-medium text-foreground">{preview.fromEmail}</strong> when you click{" "}
@@ -115,7 +119,7 @@ export function ClientIoEmailPreviewSection({
             View full email
           </Button>
         </div>
-      </DetailFormSection>
+      </CollapsibleWorkspaceSection>
 
       <ClientIoEmailViewDialog
         open={dialogOpen}

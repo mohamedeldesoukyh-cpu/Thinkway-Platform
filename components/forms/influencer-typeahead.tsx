@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LayoutGridIcon, Loader2Icon, SearchIcon, UserIcon } from "lucide-react";
 
+import { CreatorNameStack } from "@/components/creator/creator-name-stack";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CreatorBrowserDialog } from "@/features/campaigns/components/creator-browser-dialog";
 import { DocumentNumber } from "@/components/ui/document-number";
+import { resolveCreatorIdentity } from "@/lib/text/decode-html-entities";
 import { cn } from "@/lib/utils";
 import type { InfluencerSearchResult } from "@/features/campaigns/types";
 
@@ -131,7 +133,16 @@ export function InfluencerTypeahead({
         <div className="flex items-center gap-2 rounded-2xl border border-primary/30 bg-primary/5 px-3 py-2">
           <UserIcon className="size-4 shrink-0 text-primary" />
           <div className="min-w-0 flex-1">
-            <p className="truncate font-medium">{selectedLabel}</p>
+            {(() => {
+              const identity = resolveCreatorIdentity(selectedLabel, null);
+              return (
+                <CreatorNameStack
+                  name={identity.name}
+                  handle={identity.handle}
+                  nameClassName="font-medium"
+                />
+              );
+            })()}
             <p className="text-xs text-muted-foreground">Selected — search below to change</p>
           </div>
         </div>

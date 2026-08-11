@@ -1,14 +1,16 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `develop` / `main` @ `7d079ff6`  
-**Focus:** Showcase PPTX Arabic fonts + clickable hotspots — shipping
+**Branch:** `develop` (shipping)  
+**Focus:** Campaign workspace creator identity + CIO collapsibles + detail-panel sheets
 
-## SHIPPED — Showcase PPTX HTML parity + Arabic/links
+## In flight / shipping
 
-- `f016d8d7` — PPTX from Preview HTML screenshots
-- `7d079ff6` — Noto Sans Arabic + transparent hyperlink hotspots (avatar, pubs)
-- Detailed PPTX unchanged
+- Add publications + Edit assignment sheets → Discovery detail chrome (`variant="detail"`)
+- Creator name over @username across Assignments / CIO / VIO / Deliverables
+- Client IO sections collapsible (default closed)
+- Assignments Creators register default open
+- Deliverables: remove duplicate subtitle; platform icon-only
 
 ## Prior
 
-Metric cards K/M + icons (`c321844d`)
+- Multi-URL Add publications (`2ec28b26` / prod `fc121185`)

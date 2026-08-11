@@ -787,6 +787,7 @@ export function CampaignLineSheet({
       onOpenChange={onOpenChange}
       title={sheetTitle}
       description="Influencer assignment commercial planning"
+      variant="detail"
     >
       <form
         ref={formRef}

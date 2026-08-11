@@ -5,10 +5,8 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  DETAIL_FORM_INPUT_CLASS,
-  DetailFormSection,
-} from "@/features/campaigns/components/operational-detail-panel";
+import { CollapsibleWorkspaceSection } from "@/components/workspace/collapsible-workspace-section";
+import { DETAIL_FORM_INPUT_CLASS } from "@/features/campaigns/components/operational-detail-panel";
 import { createClientIoAmendmentAction } from "@/features/io/actions";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
 import {
@@ -45,7 +43,11 @@ export function ClientIoAmendmentHistory({ tip, versions }: Props) {
   const ordered = [...versions].sort((a, b) => a.revision_number - b.revision_number);
 
   return (
-    <DetailFormSection label="Version history" className="py-3.5">
+    <CollapsibleWorkspaceSection
+      title="Version history"
+      summary={`${ordered.length} version${ordered.length === 1 ? "" : "s"} · append-only amendments`}
+      defaultOpen={false}
+    >
       <div className="space-y-3">
         <p className="text-xs text-muted-foreground">
           Client IO versions are append-only. Creating an amendment freezes the current tip and
@@ -120,6 +122,6 @@ export function ClientIoAmendmentHistory({ tip, versions }: Props) {
           </p>
         )}
       </div>
-    </DetailFormSection>
+    </CollapsibleWorkspaceSection>
   );
 }

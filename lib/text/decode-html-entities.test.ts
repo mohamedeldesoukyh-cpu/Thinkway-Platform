@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 
 import {
   decodeHtmlEntities,
+  extractEmbeddedCreatorHandle,
   formatCreatorBio,
   formatCreatorDisplayName,
   isCreatorDocumentNumber,
   isUsernameLikeCreatorName,
   pickCreatorDisplayName,
+  resolveCreatorIdentity,
 } from "./decode-html-entities";
 
 assert.equal(decodeHtmlEntities("&amp; &quot; &lt;"), '& " <');
@@ -24,7 +26,13 @@ assert.equal(
   formatCreatorDisplayName(
     "Ali Mahgoub | علي محجوب (@ali.mahgub) • Instagram photos and videos"
   ),
-  "Ali Mahgoub | علي محجوب (@ali.mahgub)"
+  "Ali Mahgoub | علي محجوب"
+);
+assert.equal(
+  formatCreatorDisplayName(
+    "Ali Mahgoub | علي محجوب (@ali.mahgub) - Ali Mahgoub | علي محجوب (@ali.mahgub) - Option 1"
+  ),
+  "Ali Mahgoub | علي محجوب"
 );
 assert.equal(formatCreatorDisplayName("Jane Creator - YouTube"), "Jane Creator");
 assert.equal(formatCreatorDisplayName("Jane Creator | TikTok"), "Jane Creator");
@@ -57,6 +65,19 @@ assert.equal(
 assert.equal(
   pickCreatorDisplayName(["INF-008286", "@byasmaahesham"], "@byasmaahesham"),
   "byasmaahesham"
+);
+assert.equal(
+  extractEmbeddedCreatorHandle(
+    "Ali Mahgoub | علي محجوب (@ali.mahgub) • Instagram photos and videos"
+  ),
+  "ali.mahgub"
+);
+assert.deepEqual(
+  resolveCreatorIdentity(
+    "Ali Mahgoub | علي محجوب (@ali.mahgub) • Instagram photos and videos",
+    null
+  ),
+  { name: "Ali Mahgoub | علي محجوب", handle: "ali.mahgub" }
 );
 
 console.log("decode-html-entities tests passed");

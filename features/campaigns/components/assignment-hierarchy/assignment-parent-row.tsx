@@ -153,7 +153,7 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
             )}
             size="xs"
             showAvatar={false}
-            showHandle={false}
+            showHandle
             stopPropagation
           />
         ) : (

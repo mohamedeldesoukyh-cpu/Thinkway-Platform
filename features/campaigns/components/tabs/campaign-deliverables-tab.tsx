@@ -68,20 +68,14 @@ function buildDeliverablesColumns(
       id: "deliverable",
       label: "Deliverable",
       renderCell: (row) => (
-        <div className="space-y-0.5">
-          <button
-            type="button"
-            onClick={() => onOpenDetail(row.id)}
-            title={`View ${row.label} details`}
-            className="text-left text-[11px] font-semibold text-[var(--camp-text)] transition-colors hover:text-[var(--camp-blue)]"
-          >
-            {row.label}
-          </button>
-          <p className="text-[10px] text-[var(--camp-text-3)]">
-            {row.creator_name ?? "Unknown creator"}
-            {row.assignment_title ? ` — ${row.assignment_title}` : null}
-          </p>
-        </div>
+        <button
+          type="button"
+          onClick={() => onOpenDetail(row.id)}
+          title={`View ${row.label} details`}
+          className="text-left text-[11px] font-semibold text-[var(--camp-text)] transition-colors hover:text-[var(--camp-blue)]"
+        >
+          {row.label}
+        </button>
       ),
     },
     {

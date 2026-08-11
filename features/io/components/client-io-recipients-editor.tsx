@@ -6,10 +6,8 @@ import { Button } from "@/components/ui/button";
 import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
 import { TooltipIconButton } from "@/components/shared/tooltip-icon-button";
 import { Input } from "@/components/ui/input";
-import {
-  DETAIL_FORM_INPUT_CLASS,
-  DetailFormSection,
-} from "@/features/campaigns/components/operational-detail-panel";
+import { CollapsibleWorkspaceSection } from "@/components/workspace/collapsible-workspace-section";
+import { DETAIL_FORM_INPUT_CLASS } from "@/features/campaigns/components/operational-detail-panel";
 import { getEmailFromAddress } from "@/lib/email/provider";
 import {
   applyRecipientEmailEdit,
@@ -50,8 +48,18 @@ export function ClientIoRecipientsEditor({
     onChange([...recipients, { name: "", email: "" }]);
   }
 
+  const recipientCount = recipients.filter((r) => r.email.trim()).length;
+
   return (
-    <DetailFormSection label="IO recipients" className="py-3.5">
+    <CollapsibleWorkspaceSection
+      title="IO recipients"
+      summary={
+        recipientCount > 0
+          ? `${recipientCount} recipient${recipientCount === 1 ? "" : "s"} · from ${fromEmail}`
+          : `Add contacts · from ${fromEmail}`
+      }
+      defaultOpen={false}
+    >
       <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
         Add one or more client contacts who will receive this Client IO from{" "}
         <strong className="font-medium text-foreground">{fromEmail}</strong>. Each
@@ -116,6 +124,6 @@ export function ClientIoRecipientsEditor({
           Add recipient
         </Button>
       </div>
-    </DetailFormSection>
+    </CollapsibleWorkspaceSection>
   );
 }

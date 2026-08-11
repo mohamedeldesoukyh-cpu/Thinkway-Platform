@@ -5,10 +5,8 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  DETAIL_FORM_INPUT_CLASS,
-  DetailFormSection,
-} from "@/features/campaigns/components/operational-detail-panel";
+import { CollapsibleWorkspaceSection } from "@/components/workspace/collapsible-workspace-section";
+import { DETAIL_FORM_INPUT_CLASS } from "@/features/campaigns/components/operational-detail-panel";
 import { saveClientIoMilestonesAction } from "@/features/io/actions";
 import type { ClientIoStatus } from "@/features/io/types";
 import {
@@ -106,7 +104,11 @@ export function ClientIoMilestonesEditor({
   }
 
   return (
-    <DetailFormSection label="Billing milestones" className="py-3.5">
+    <CollapsibleWorkspaceSection
+      title="Billing milestones"
+      summary={`${rows.length} milestone${rows.length === 1 ? "" : "s"} · percentages must total 100%`}
+      defaultOpen={false}
+    >
       <div className="space-y-3">
         <p className="text-xs text-muted-foreground">
           Choose a ready payment schedule (including 30 / 60 / 90 days). Selecting a preset also
@@ -294,6 +296,6 @@ export function ClientIoMilestonesEditor({
           ) : null}
         </div>
       </div>
-    </DetailFormSection>
+    </CollapsibleWorkspaceSection>
   );
 }
