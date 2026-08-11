@@ -13,9 +13,12 @@ import { validateInstagramPublicationUrl } from "@/lib/performance/metrics-colle
 import { syncLiveDateFromPublication } from "@/lib/campaigns/sync-live-date-from-publication";
 import { detectSocialPlatformFromContentUrl } from "@/lib/social/platforms";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { Database } from "@/types/database";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-const publicationSchema = z.object({
-  campaign_id: z.string().uuid(),
+type Supabase = SupabaseClient<Database>;
+
+const publicationItemSchema = z.object({
   campaign_line_id: z.string().uuid().optional().or(z.literal("")),
   influencer_id: z.string().uuid().optional().or(z.literal("")),
   platform: z.string().trim().min(1).max(64),
@@ -34,9 +37,106 @@ const publicationSchema = z.object({
   notes: z.string().max(2000).optional().or(z.literal("")),
 });
 
+const publicationSchema = publicationItemSchema.extend({
+  campaign_id: z.string().uuid(),
+});
+
+const batchSchema = z.object({
+  campaign_id: z.string().uuid(),
+  items: z.array(publicationItemSchema).min(1).max(40),
+});
+
 function revalidateCampaign(campaignId: string) {
   revalidatePath("/campaigns");
   revalidatePath(`/campaigns/${campaignId}`);
+}
+
+type PublicationItem = z.infer<typeof publicationItemSchema>;
+
+async function insertOnePublication(
+  supabase: Supabase,
+  campaignId: string,
+  item: PublicationItem
+): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
+  const urlPlatform = detectSocialPlatformFromContentUrl(item.content_url);
+  let platform = canonicalPlatformKey(item.platform) || item.platform;
+  let publicationType = item.publication_type;
+
+  if (urlPlatform) {
+    platform = urlPlatform;
+  }
+
+  publicationType = coerceDeliverableTypeForPlatform(
+    platform,
+    publicationType,
+    item.content_url
+  );
+
+  if (item.content_url && platform === "instagram") {
+    const urlError = validateInstagramPublicationUrl(publicationType, item.content_url);
+    if (urlError) {
+      return { ok: false, message: urlError };
+    }
+  }
+
+  if (!item.campaign_line_id) {
+    return { ok: false, message: "Select a creator for each URL." };
+  }
+
+  const { data: inserted, error } = await supabase
+    .from("campaign_publications")
+    .insert({
+      campaign_header_id: campaignId,
+      campaign_line_id: item.campaign_line_id || null,
+      influencer_id: item.influencer_id || null,
+      platform,
+      publication_type: publicationType,
+      content_url: item.content_url,
+      publication_date: item.publication_date || null,
+      status: item.status,
+      assignee_id: item.assignee_id || null,
+      caption: item.caption || null,
+      hashtags: item.hashtags || null,
+      notes: item.notes || null,
+      auto_detected: false,
+      detected_by: "manual",
+      metrics_refresh_status: "pending",
+    })
+    .select("id")
+    .single();
+
+  if (error || !inserted?.id) {
+    console.error("[publications] create failed", { message: error?.message });
+    return { ok: false, message: error?.message ?? "Failed to create publication." };
+  }
+
+  if (item.publication_date) {
+    try {
+      await syncLiveDateFromPublication(supabase, {
+        campaignHeaderId: campaignId,
+        campaignLineId: item.campaign_line_id || null,
+        platform,
+        publicationDate: item.publication_date,
+        publicationId: inserted.id,
+      });
+    } catch (syncError) {
+      console.warn("[publications] live date sync failed", syncError);
+    }
+  }
+
+  if (item.content_url) {
+    try {
+      await requestMetricsCollection(supabase, {
+        publicationId: inserted.id,
+        campaignHeaderId: campaignId,
+        triggeredBy: "auto_create",
+      });
+    } catch (collectError) {
+      console.warn("[publications] auto metrics collection failed", collectError);
+    }
+  }
+
+  return { ok: true, id: inserted.id };
 }
 
 export async function createCampaignPublicationAction(
@@ -62,88 +162,85 @@ export async function createCampaignPublicationAction(
     return { ok: false, message: authError?.message ?? "Unauthorized" };
   }
 
-  const urlPlatform = detectSocialPlatformFromContentUrl(parsed.data.content_url);
-  let platform = canonicalPlatformKey(parsed.data.platform) || parsed.data.platform;
-  let publicationType = parsed.data.publication_type;
-
-  // Prefer URL-detected platform so a Facebook/TikTok link is never validated as Instagram.
-  if (urlPlatform) {
-    platform = urlPlatform;
+  const { campaign_id, ...item } = parsed.data;
+  const result = await insertOnePublication(supabase, campaign_id, item);
+  if (!result.ok) {
+    return { ok: false, message: result.message };
   }
 
-  publicationType = coerceDeliverableTypeForPlatform(
-    platform,
-    publicationType,
-    parsed.data.content_url
-  );
-
-  if (parsed.data.content_url && platform === "instagram") {
-    const urlError = validateInstagramPublicationUrl(
-      publicationType,
-      parsed.data.content_url
-    );
-    if (urlError) {
-      return {
-        ok: false,
-        message: urlError,
-        fieldErrors: { content_url: [urlError] },
-      };
-    }
-  }
-
-  const { data: inserted, error } = await supabase
-    .from("campaign_publications")
-    .insert({
-      campaign_header_id: parsed.data.campaign_id,
-      campaign_line_id: parsed.data.campaign_line_id || null,
-      influencer_id: parsed.data.influencer_id || null,
-      platform,
-      publication_type: publicationType,
-      content_url: parsed.data.content_url,
-      publication_date: parsed.data.publication_date || null,
-      status: parsed.data.status,
-      assignee_id: parsed.data.assignee_id || null,
-      caption: parsed.data.caption || null,
-      hashtags: parsed.data.hashtags || null,
-      notes: parsed.data.notes || null,
-      auto_detected: false,
-      detected_by: "manual",
-      metrics_refresh_status: "pending",
-    })
-    .select("id")
-    .single();
-
-  if (error) {
-    console.error("[publications] create failed", { message: error.message });
-    return { ok: false, message: error.message };
-  }
-
-  if (inserted?.id && parsed.data.publication_date) {
-    try {
-      await syncLiveDateFromPublication(supabase, {
-        campaignHeaderId: parsed.data.campaign_id,
-        campaignLineId: parsed.data.campaign_line_id || null,
-        platform,
-        publicationDate: parsed.data.publication_date,
-        publicationId: inserted.id,
-      });
-    } catch (syncError) {
-      console.warn("[publications] live date sync failed", syncError);
-    }
-  }
-
-  if (inserted?.id && parsed.data.content_url) {
-    try {
-      await requestMetricsCollection(supabase, {
-        publicationId: inserted.id,
-        campaignHeaderId: parsed.data.campaign_id,
-        triggeredBy: "auto_create",
-      });
-    } catch (collectError) {
-      console.warn("[publications] auto metrics collection failed", collectError);
-    }
-  }
-
-  revalidateCampaign(parsed.data.campaign_id);
+  revalidateCampaign(campaign_id);
   return { ok: true, message: "Publication added." };
+}
+
+export async function createCampaignPublicationsBatchAction(
+  _prev: FormActionState,
+  formData: FormData
+): Promise<FormActionState> {
+  let itemsRaw: unknown;
+  try {
+    itemsRaw = JSON.parse(String(formData.get("items") ?? "[]"));
+  } catch {
+    return { ok: false, message: "Invalid publication list." };
+  }
+
+  const parsed = batchSchema.safeParse({
+    campaign_id: formData.get("campaign_id"),
+    items: itemsRaw,
+  });
+
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: "Invalid publication input.",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { ok: false, message: authError?.message ?? "Unauthorized" };
+  }
+
+  const { campaign_id, items } = parsed.data;
+  let created = 0;
+  const failures: string[] = [];
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i]!;
+    const label = item.content_url?.trim() || `Row ${i + 1}`;
+    const result = await insertOnePublication(supabase, campaign_id, item);
+    if (result.ok) {
+      created += 1;
+    } else {
+      failures.push(`${label}: ${result.message}`);
+    }
+  }
+
+  if (created > 0) {
+    revalidateCampaign(campaign_id);
+  }
+
+  if (failures.length === 0) {
+    return {
+      ok: true,
+      message: created === 1 ? "Publication added." : `${created} publications added.`,
+    };
+  }
+
+  if (created === 0) {
+    return {
+      ok: false,
+      message: failures[0] ?? "Failed to add publications.",
+    };
+  }
+
+  return {
+    ok: true,
+    message: `Added ${created} of ${items.length}. ${failures[0]}`,
+  };
 }

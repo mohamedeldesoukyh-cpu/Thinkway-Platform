@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { PlusIcon, Trash2Icon } from "lucide-react";
+import { useActionState, useEffect, useId, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
@@ -15,12 +16,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  createCampaignPublicationAction,
-} from "@/features/campaigns/actions/publication-actions";
+import { createCampaignPublicationsBatchAction } from "@/features/campaigns/actions/publication-actions";
 import type { FormActionState } from "@/features/campaigns/actions";
 import { useRefreshCampaignAfterPublicationMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
-import { DeliverableTypeSelect, PlatformSelect } from "@/features/campaigns/components/assignment-hierarchy/platform-deliverable-selects";
+import {
+  DeliverableTypeSelect,
+  PlatformBadge,
+  PlatformSelect,
+} from "@/features/campaigns/components/assignment-hierarchy/platform-deliverable-selects";
 import {
   DETAIL_FORM_INPUT_CLASS,
   DETAIL_FORM_SELECT_TRIGGER_CLASS,
@@ -31,6 +34,7 @@ import {
   OperationalEditPanelHeader,
 } from "@/features/campaigns/components/operational-detail-panel";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
+import { matchAssignmentLineFromContentUrl } from "@/lib/campaigns/match-assignment-from-content-url";
 import {
   coerceDeliverableTypeForPlatform,
   getCreatorConnectedPlatformOptions,
@@ -38,8 +42,10 @@ import {
   inferDeliverableTypeFromContentUrl,
 } from "@/lib/campaigns/deliverable-taxonomy";
 import { SOCIAL_PLATFORM_OPTIONS } from "@/lib/master-data/constants";
+import { extractHandleFromContentUrl } from "@/lib/social/extract-handle-from-content-url";
 import { detectSocialPlatformFromContentUrl } from "@/lib/social/platforms";
 import { pickCreatorDisplayName } from "@/lib/text/decode-html-entities";
+import { cn } from "@/lib/utils";
 
 function resolveAssignmentHandle(line: CampaignLineWorkspace): string | null {
   const fromAccounts = line.creator_platform_accounts
@@ -52,7 +58,6 @@ function resolveAssignmentHandle(line: CampaignLineWorkspace): string | null {
     .find((handle) => Boolean(handle));
   if (fromAssignment) return fromAssignment;
 
-  // Fallback: extract (@handle) embedded in a messy influencer_name string.
   const embedded = line.influencer_name?.match(/@([a-zA-Z0-9._]+)/)?.[1];
   return embedded?.trim() || null;
 }
@@ -88,6 +93,63 @@ const PUBLICATION_STATUS_OPTIONS = [
   { value: "archived", label: "Archived" },
 ] as const;
 
+type PublicationRow = {
+  key: string;
+  contentUrl: string;
+  lineId: string;
+  platform: string;
+  publicationType: string;
+  /** Creator was set by URL auto-match (user can still override). */
+  autoMatched: boolean;
+};
+
+function newRow(partial?: Partial<PublicationRow>): PublicationRow {
+  return {
+    key: crypto.randomUUID(),
+    contentUrl: "",
+    lineId: "",
+    platform: "instagram",
+    publicationType: "instagram_post",
+    autoMatched: false,
+    ...partial,
+  };
+}
+
+function splitPastedUrls(raw: string): string[] {
+  return raw
+    .split(/[\n\r\t,;]+|\s{2,}/)
+    .map((part) => part.trim())
+    .filter((part) => /^https?:\/\//i.test(part) || /\w+\.\w+\//.test(part));
+}
+
+function deriveRowFromUrl(
+  url: string,
+  lines: CampaignLineWorkspace[],
+  previous: PublicationRow
+): PublicationRow {
+  const detected = detectSocialPlatformFromContentUrl(url);
+  const platform = detected ?? previous.platform;
+  const inferred = inferDeliverableTypeFromContentUrl(url);
+  const types = getDeliverableTypeCodesForPlatform(platform);
+  const publicationType =
+    inferred && types.includes(inferred)
+      ? inferred
+      : coerceDeliverableTypeForPlatform(platform, previous.publicationType, url);
+
+  const matched = matchAssignmentLineFromContentUrl(url, lines);
+  const shouldApplyMatch =
+    Boolean(matched) && (!previous.lineId || previous.autoMatched);
+
+  return {
+    ...previous,
+    contentUrl: url,
+    platform,
+    publicationType,
+    lineId: shouldApplyMatch ? matched!.id : previous.lineId,
+    autoMatched: shouldApplyMatch ? true : previous.lineId ? previous.autoMatched : false,
+  };
+}
+
 type CampaignPublicationSheetProps = {
   campaignId: string;
   assignmentLines: CampaignLineWorkspace[];
@@ -102,45 +164,23 @@ export function CampaignPublicationSheet({
   onOpenChange,
 }: CampaignPublicationSheetProps) {
   const refreshAfterPublicationMutation = useRefreshCampaignAfterPublicationMutation();
-  const [lineId, setLineId] = useState("");
-  const [platform, setPlatform] = useState("instagram");
-  const [publicationType, setPublicationType] = useState("instagram_post");
-  const [status, setStatus] = useState("draft");
-  const [contentUrl, setContentUrl] = useState("");
+  const itemsFieldId = useId();
+  const [rows, setRows] = useState<PublicationRow[]>([newRow()]);
+  const [status, setStatus] = useState("published");
   const [publicationDate, setPublicationDate] = useState("");
   const [caption, setCaption] = useState("");
   const [hashtags, setHashtags] = useState("");
   const [notes, setNotes] = useState("");
 
-  const selectedLine = assignmentLines.find((l) => l.id === lineId) ?? null;
+  const assignmentOptions = useMemo(
+    () => assignmentLines.map(buildPublicationAssignmentOption),
+    [assignmentLines]
+  );
 
-  // Manual publications may be on any platform — connected accounts first, then full list.
-  const platformOptions = useMemo(() => {
-    const connected = getCreatorConnectedPlatformOptions({
-      creatorPlatformAccounts: selectedLine?.creator_platform_accounts,
-      assignment: selectedLine?.assignment,
-    });
-    const seen = new Set(connected.map((o) => o.value));
-    const rest = SOCIAL_PLATFORM_OPTIONS.filter((o) => !seen.has(o.value)).map((o) => ({
-      value: o.value,
-      label: o.label,
-    }));
-    return [...connected, ...rest];
-  }, [selectedLine]);
-
-  const applyPlatform = (next: string, preferredType?: string | null) => {
-    setPlatform(next);
-    const types = getDeliverableTypeCodesForPlatform(next);
-    const nextType =
-      preferredType && types.includes(preferredType)
-        ? preferredType
-        : (types[0] ?? "other");
-    setPublicationType(nextType);
-  };
-
-  const [state, formAction, isPending] = useActionState(createCampaignPublicationAction, {
-    ok: false,
-  } satisfies FormActionState);
+  const [state, formAction, isPending] = useActionState(
+    createCampaignPublicationsBatchAction,
+    { ok: false } satisfies FormActionState
+  );
 
   useEffect(() => {
     if (!state.message) return;
@@ -155,123 +195,272 @@ export function CampaignPublicationSheet({
 
   useEffect(() => {
     if (!open) return;
-    setLineId("");
-    setPlatform("instagram");
-    setPublicationType("instagram_post");
-    setStatus("draft");
-    setContentUrl("");
+    setRows([newRow()]);
+    setStatus("published");
     setPublicationDate("");
     setCaption("");
     setHashtags("");
     setNotes("");
   }, [open]);
 
-  // Seed platform only when the assignment changes — not on every platformOptions identity churn
-  // (that previously flipped Facebook back to Instagram after a failed submit).
-  useEffect(() => {
-    if (!lineId) return;
-    const line = assignmentLines.find((l) => l.id === lineId) ?? null;
+  function updateRow(key: string, updater: (row: PublicationRow) => PublicationRow) {
+    setRows((prev) => prev.map((row) => (row.key === key ? updater(row) : row)));
+  }
+
+  function onRowUrlChange(key: string, nextUrl: string) {
+    const pasted = splitPastedUrls(nextUrl);
+    if (pasted.length > 1) {
+      setRows((prev) => {
+        const index = prev.findIndex((r) => r.key === key);
+        if (index < 0) return prev;
+        const base = prev[index]!;
+        const derived = pasted.map((url, i) =>
+          deriveRowFromUrl(url, assignmentLines, i === 0 ? { ...base, contentUrl: url } : newRow())
+        );
+        return [...prev.slice(0, index), ...derived, ...prev.slice(index + 1)];
+      });
+      return;
+    }
+
+    updateRow(key, (row) => deriveRowFromUrl(nextUrl, assignmentLines, row));
+  }
+
+  function onRowCreatorChange(key: string, lineId: string) {
+    updateRow(key, (row) => {
+      const line = assignmentLines.find((l) => l.id === lineId) ?? null;
+      const connected = getCreatorConnectedPlatformOptions({
+        creatorPlatformAccounts: line?.creator_platform_accounts,
+        assignment: line?.assignment,
+      });
+      const urlPlatform = detectSocialPlatformFromContentUrl(row.contentUrl);
+      const nextPlatform = urlPlatform ?? connected[0]?.value ?? row.platform;
+      const types = getDeliverableTypeCodesForPlatform(nextPlatform);
+      const nextType = types.includes(row.publicationType)
+        ? row.publicationType
+        : (types[0] ?? "other");
+      return {
+        ...row,
+        lineId,
+        autoMatched: false,
+        platform: nextPlatform,
+        publicationType: coerceDeliverableTypeForPlatform(
+          nextPlatform,
+          nextType,
+          row.contentUrl
+        ),
+      };
+    });
+  }
+
+  function platformOptionsForRow(row: PublicationRow) {
+    const line = assignmentLines.find((l) => l.id === row.lineId) ?? null;
     const connected = getCreatorConnectedPlatformOptions({
       creatorPlatformAccounts: line?.creator_platform_accounts,
       assignment: line?.assignment,
     });
-    const firstPlatform = connected[0]?.value ?? "instagram";
-    applyPlatform(firstPlatform);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-seed when assignment id changes
-  }, [lineId]);
-
-  // Keep type inside the active platform taxonomy (fixes empty FB type when IG code lingered).
-  useEffect(() => {
-    const coerced = coerceDeliverableTypeForPlatform(platform, publicationType, contentUrl);
-    if (coerced !== publicationType) {
-      setPublicationType(coerced);
-    }
-  }, [platform, publicationType, contentUrl]);
-
-  const assignmentOptions = assignmentLines.map(buildPublicationAssignmentOption);
-
-  function onContentUrlChange(nextUrl: string) {
-    setContentUrl(nextUrl);
-    const detected = detectSocialPlatformFromContentUrl(nextUrl);
-    if (!detected) return;
-    const inferred = inferDeliverableTypeFromContentUrl(nextUrl);
-    applyPlatform(detected, inferred);
+    const seen = new Set(connected.map((o) => o.value));
+    const rest = SOCIAL_PLATFORM_OPTIONS.filter((o) => !seen.has(o.value)).map((o) => ({
+      value: o.value,
+      label: o.label,
+    }));
+    return [...connected, ...rest];
   }
+
+  const readyCount = rows.filter((r) => r.contentUrl.trim() && r.lineId).length;
+  const itemsPayload = rows
+    .filter((r) => r.contentUrl.trim())
+    .map((row) => {
+      const line = assignmentLines.find((l) => l.id === row.lineId);
+      return {
+        campaign_line_id: row.lineId,
+        influencer_id: line?.influencer_id ?? "",
+        platform: row.platform,
+        publication_type: row.publicationType,
+        content_url: row.contentUrl.trim(),
+        publication_date: publicationDate,
+        status,
+        caption,
+        hashtags,
+        notes,
+      };
+    });
 
   return (
     <OperationalDetailSheet
       open={open}
       onOpenChange={onOpenChange}
-      title="Add publication"
-      description="Manual publication tracking"
+      title="Add publications"
+      description="Paste one or many live URLs"
     >
       <form action={formAction} className="flex min-h-0 flex-1 flex-col">
         <OperationalEditPanelHeader
-          title="Add publication"
-          description="Track a live influencer URL manually. API auto-detection can be added later."
+          title="Add publications"
+          description="Paste URLs — creators auto-assign when the handle matches. Override any row."
         />
 
         <DetailFormScrollBody>
           <input type="hidden" name="campaign_id" value={campaignId} />
-          <input type="hidden" name="campaign_line_id" value={lineId || ""} />
-          <input type="hidden" name="influencer_id" value={selectedLine?.influencer_id ?? ""} />
-          <input type="hidden" name="platform" value={platform} />
-          <input type="hidden" name="publication_type" value={publicationType} />
-          <input type="hidden" name="status" value={status} />
-          <input type="hidden" name="content_url" value={contentUrl} />
-          <input type="hidden" name="publication_date" value={publicationDate} />
-          <input type="hidden" name="caption" value={caption} />
-          <input type="hidden" name="hashtags" value={hashtags} />
-          <input type="hidden" name="notes" value={notes} />
+          <input
+            id={itemsFieldId}
+            type="hidden"
+            name="items"
+            value={JSON.stringify(itemsPayload)}
+          />
 
-          <DetailFormSection label="Creator / assignment">
-            <SearchableSelect
-              options={assignmentOptions}
-              value={lineId}
-              onValueChange={setLineId}
-              placeholder="Select assignment…"
-              disabled={isPending}
-            />
-            <FieldError messages={state.fieldErrors?.campaign_line_id} />
-          </DetailFormSection>
+          <div className="overflow-hidden rounded-2xl border border-sidebar-border bg-sidebar">
+            <div className="flex items-center justify-between border-b border-sidebar-border px-4 py-3">
+              <div>
+                <p className="text-sm font-medium text-sidebar-accent-foreground">
+                  Publication URLs
+                </p>
+                <p className="text-xs text-sidebar-foreground/60">
+                  One row per URL · creator beside each link
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-8 gap-1.5 rounded-2xl text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                disabled={isPending}
+                onClick={() => setRows((prev) => [...prev, newRow()])}
+              >
+                <PlusIcon className="size-3.5" />
+                Add URL
+              </Button>
+            </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <DetailFormSection label="Platform">
-              <PlatformSelect
-                platform={platform}
-                platformOptions={platformOptions}
-                disabled={isPending || !selectedLine}
-                className={DETAIL_FORM_SELECT_TRIGGER_CLASS}
-                onPlatformChange={(next) => applyPlatform(next)}
-              />
-            </DetailFormSection>
-            <DetailFormSection label="Publication type">
-              <DeliverableTypeSelect
-                platform={platform}
-                deliverableType={publicationType}
-                disabled={isPending || !selectedLine}
-                className={DETAIL_FORM_SELECT_TRIGGER_CLASS}
-                onDeliverableTypeChange={setPublicationType}
-              />
-            </DetailFormSection>
+            <div className="flex flex-col gap-1 p-3">
+              {rows.map((row, index) => {
+                const extracted = extractHandleFromContentUrl(row.contentUrl);
+                const needsCreator = Boolean(row.contentUrl.trim()) && !row.lineId;
+                return (
+                  <div
+                    key={row.key}
+                    className={cn(
+                      "flex flex-col gap-2 rounded-3xl px-3 py-2.5 transition-colors",
+                      row.contentUrl.trim()
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                        : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60"
+                    )}
+                  >
+                    <div className="flex items-start gap-2">
+                      <div className="mt-1.5 flex w-8 shrink-0 flex-col items-center gap-1">
+                        <span className="text-[10px] font-medium text-sidebar-foreground/50">
+                          {index + 1}
+                        </span>
+                        {row.contentUrl.trim() ? (
+                          <PlatformBadge platform={row.platform} />
+                        ) : null}
+                      </div>
+
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <Input
+                          type="url"
+                          className={cn(
+                            DETAIL_FORM_INPUT_CLASS,
+                            "border-sidebar-border/80 bg-background/80"
+                          )}
+                          value={row.contentUrl}
+                          onChange={(e) => onRowUrlChange(row.key, e.target.value)}
+                          onPaste={(e) => {
+                            const text = e.clipboardData.getData("text");
+                            const urls = splitPastedUrls(text);
+                            if (urls.length > 1) {
+                              e.preventDefault();
+                              onRowUrlChange(row.key, urls.join("\n"));
+                            }
+                          }}
+                          placeholder="https://… (paste several to split)"
+                          disabled={isPending}
+                        />
+
+                        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+                          <div className="min-w-0">
+                            <SearchableSelect
+                              options={assignmentOptions}
+                              value={row.lineId}
+                              onValueChange={(value) => onRowCreatorChange(row.key, value)}
+                              placeholder={
+                                needsCreator
+                                  ? extracted
+                                    ? `Match @${extracted.handle}…`
+                                    : "Select creator…"
+                                  : "Select creator…"
+                              }
+                              disabled={isPending}
+                            />
+                            {row.autoMatched ? (
+                              <p className="mt-1 text-[10px] text-sidebar-foreground/55">
+                                Auto-assigned from URL
+                                {extracted ? ` · @${extracted.handle}` : ""}
+                              </p>
+                            ) : needsCreator ? (
+                              <p className="mt-1 text-[10px] text-amber-700 dark:text-amber-300">
+                                Choose the creator for this URL
+                              </p>
+                            ) : null}
+                          </div>
+
+                          <PlatformSelect
+                            platform={row.platform}
+                            platformOptions={platformOptionsForRow(row)}
+                            disabled={isPending}
+                            className={DETAIL_FORM_SELECT_TRIGGER_CLASS}
+                            onPlatformChange={(next) =>
+                              updateRow(row.key, (current) => {
+                                const types = getDeliverableTypeCodesForPlatform(next);
+                                return {
+                                  ...current,
+                                  platform: next,
+                                  publicationType: types.includes(current.publicationType)
+                                    ? current.publicationType
+                                    : (types[0] ?? "other"),
+                                };
+                              })
+                            }
+                          />
+
+                          <DeliverableTypeSelect
+                            platform={row.platform}
+                            deliverableType={row.publicationType}
+                            disabled={isPending}
+                            className={DETAIL_FORM_SELECT_TRIGGER_CLASS}
+                            onDeliverableTypeChange={(next) =>
+                              updateRow(row.key, (current) => ({
+                                ...current,
+                                publicationType: next,
+                              }))
+                            }
+                          />
+                        </div>
+                      </div>
+
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="mt-0.5 size-8 shrink-0 rounded-2xl text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        disabled={isPending || rows.length <= 1}
+                        onClick={() =>
+                          setRows((prev) =>
+                            prev.length <= 1 ? prev : prev.filter((r) => r.key !== row.key)
+                          )
+                        }
+                        aria-label="Remove URL"
+                      >
+                        <Trash2Icon className="size-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-
-          <DetailFormSection label="Publication URL">
-            <Input
-              id="pub_url"
-              type="url"
-              className={DETAIL_FORM_INPUT_CLASS}
-              value={contentUrl}
-              onChange={(e) => onContentUrlChange(e.target.value)}
-              placeholder="https://…"
-              disabled={isPending}
-            />
-          </DetailFormSection>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <DetailFormSection label="Publication date">
               <Input
-                id="pub_date"
                 type="date"
                 className={DETAIL_FORM_INPUT_CLASS}
                 value={publicationDate}
@@ -295,9 +484,8 @@ export function CampaignPublicationSheet({
             </DetailFormSection>
           </div>
 
-          <DetailFormSection label="Caption">
+          <DetailFormSection label="Caption (optional, all rows)">
             <Textarea
-              id="pub_caption"
               rows={2}
               className="min-h-[4rem] resize-y border-border/60 bg-muted/20 text-sm shadow-none focus-visible:ring-1"
               value={caption}
@@ -308,7 +496,6 @@ export function CampaignPublicationSheet({
 
           <DetailFormSection label="Hashtags">
             <Input
-              id="pub_hashtags"
               className={DETAIL_FORM_INPUT_CLASS}
               value={hashtags}
               onChange={(e) => setHashtags(e.target.value)}
@@ -319,7 +506,6 @@ export function CampaignPublicationSheet({
 
           <DetailFormSection label="Notes">
             <Textarea
-              id="pub_notes"
               rows={2}
               className="min-h-[4rem] resize-y border-border/60 bg-muted/20 text-sm shadow-none focus-visible:ring-1"
               value={notes}
@@ -327,11 +513,17 @@ export function CampaignPublicationSheet({
               disabled={isPending}
             />
           </DetailFormSection>
+
+          <FieldError messages={state.fieldErrors?.items} />
         </DetailFormScrollBody>
 
         <DetailSheetFooter>
-          <Button size="sm" type="submit" disabled={isPending || !lineId}>
-            {isPending ? "Saving…" : "Add publication"}
+          <Button size="sm" type="submit" disabled={isPending || readyCount === 0}>
+            {isPending
+              ? "Saving…"
+              : readyCount <= 1
+                ? "Add publication"
+                : `Add ${readyCount} publications`}
           </Button>
         </DetailSheetFooter>
       </form>
