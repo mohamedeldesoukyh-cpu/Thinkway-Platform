@@ -193,6 +193,8 @@ test("grain lock guard blocks live and billing-locked grains", () => {
         liveDate: null,
         completed: false,
         campaignLineId: "line-2",
+        isLocked: true,
+        billingLocked: false,
       },
     ],
     { campaignLineIds: ["line-2"] }

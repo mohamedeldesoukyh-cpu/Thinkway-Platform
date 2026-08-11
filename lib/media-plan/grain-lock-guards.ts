@@ -22,7 +22,9 @@ function norm(value: string | null | undefined): string {
 }
 
 /**
- * Reject schedule moves that target Assignment grains already live / locked / billed.
+ * Reject schedule moves that target Assignment grains already live or billing-locked.
+ * Commercial lock (`isLocked`) alone must not block unpublished Remaining reschedule —
+ * campaigns under Client IO / commercial freeze still need to move not-live cards.
  */
 export function assertScheduleMoveAllowedByAssignmentGrain(
   facts: MediaPlanPerformanceFact[],
@@ -41,7 +43,7 @@ export function assertScheduleMoveAllowedByAssignmentGrain(
       Boolean(fact.creatorId?.trim()) && creatorIds.has(norm(fact.creatorId));
     if (!matchesLine && !matchesCreator) return false;
 
-    if (fact.billingLocked || fact.isLocked) return true;
+    if (fact.billingLocked) return true;
     if (fact.completed && fact.liveDate) return true;
     return false;
   });
@@ -55,10 +57,10 @@ export function assertScheduleMoveAllowedByAssignmentGrain(
     sample.campaignLineId ||
     "Assignment";
 
-  if (sample.billingLocked || sample.isLocked) {
+  if (sample.billingLocked) {
     return {
       ok: false,
-      message: `Cannot reschedule ${label}: this Assignment grain is locked or billing-locked.`,
+      message: `Cannot reschedule ${label}: this Assignment grain is billing-locked.`,
     };
   }
 

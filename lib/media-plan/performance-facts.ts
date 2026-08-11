@@ -4,11 +4,12 @@ import type { MediaPlanPerformanceFact } from "./types";
 
 function isBillingLockedStatus(status: string | null | undefined): boolean {
   const value = (status ?? "").trim().toLowerCase();
+  // Commercial Assignment "locked" is not a billing lock — only invoice/paid states.
   return (
     value.includes("invoice") ||
     value === "billed" ||
     value === "paid" ||
-    value === "locked"
+    value === "billing_locked"
   );
 }
 
@@ -45,7 +46,6 @@ export function performanceFactsFromAssignmentHierarchy(
             assignmentPostScheduleId: post.id,
             isLocked: Boolean(post.is_locked || deliverable.is_locked),
             billingLocked:
-              Boolean(post.is_locked || deliverable.is_locked) ||
               isBillingLockedStatus(post.billing_status) ||
               isBillingLockedStatus(deliverable.billing_status),
           });
@@ -64,9 +64,7 @@ export function performanceFactsFromAssignmentHierarchy(
         assignmentDeliverableId: deliverable.id,
         assignmentPostScheduleId: null,
         isLocked: Boolean(deliverable.is_locked),
-        billingLocked:
-          Boolean(deliverable.is_locked) ||
-          isBillingLockedStatus(deliverable.billing_status),
+        billingLocked: isBillingLockedStatus(deliverable.billing_status),
       });
     }
   }
