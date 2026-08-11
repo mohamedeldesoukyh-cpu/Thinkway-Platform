@@ -46,8 +46,37 @@ assert.equal(
 );
 
 assert.equal(
-  matchAssignmentLineFromContentUrl("https://www.instagram.com/reel/xyz/", lines),
-  null
+  matchAssignmentLineFromContentUrl("https://www.instagram.com/reel/xyz/", lines)?.id,
+  "line-b",
+  "bare IG reel auto-assigns the only Instagram assignee"
+);
+
+assert.equal(
+  matchAssignmentLineFromContentUrl(
+    "https://www.instagram.com/reel/xyz/",
+    [
+      ...lines,
+      {
+        id: "line-c",
+        creator_platform_accounts: [{ platform: "instagram", handle: "second" }],
+      },
+    ]
+  ),
+  null,
+  "bare IG reel stays unmatched when multiple IG assignees exist"
+);
+
+assert.equal(
+  matchAssignmentLineFromContentUrl("https://www.tiktok.com/@ghost/video/1", [
+    {
+      id: "line-name",
+      influencer_name: "Ghost Creator (@ghost)",
+      platform: "tiktok",
+      creator_platform_accounts: [],
+    },
+  ])?.id,
+  "line-name",
+  "matches @handle embedded in influencer_name"
 );
 
 console.log("extract-handle + assignment match — all tests passed");

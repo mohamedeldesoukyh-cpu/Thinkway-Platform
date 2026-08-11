@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckIcon, ChevronsUpDownIcon, SearchIcon } from "lucide-react";
 
 import {
@@ -48,6 +48,7 @@ export function SearchableSelect({
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -64,6 +65,17 @@ export function SearchableSelect({
   const selected = options.find((o) => o.value === value);
   const selectedLabel = selected?.label ?? placeholder;
   const hasValue = Boolean(value && selected);
+
+  useEffect(() => {
+    if (!open) return;
+    const focusSearch = () => searchInputRef.current?.focus();
+    // Wait for the portal content to mount, then focus so typing searches immediately.
+    const raf = requestAnimationFrame(() => {
+      focusSearch();
+      window.setTimeout(focusSearch, 0);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [open]);
 
   return (
     <>
@@ -104,16 +116,28 @@ export function SearchableSelect({
           className="z-[130] w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]"
           align="start"
           sideOffset={6}
+          onCloseAutoFocus={(event) => event.preventDefault()}
+          onKeyDown={(event) => {
+            // Keep Radix menu typeahead from stealing keystrokes meant for search.
+            if (event.target === searchInputRef.current) {
+              event.stopPropagation();
+            }
+          }}
         >
-          <div className={DROPDOWN_SEARCH_CLASS}>
+          <div
+            className={DROPDOWN_SEARCH_CLASS}
+            onPointerDown={(event) => event.preventDefault()}
+          >
             <SearchIcon className="thinkway-dropdown-search__icon size-3.5" aria-hidden />
             <input
+              ref={searchInputRef}
               type="text"
               className="thinkway-dropdown-search__input"
               placeholder="Search…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
               autoComplete="off"
               spellCheck={false}
             />
