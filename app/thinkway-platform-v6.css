@@ -5975,8 +5975,9 @@
 
 .thinkway-platform-v6 .campaigns-module-register {
   border-radius: 14px;
-  overflow-x: auto;
-  overflow-y: hidden;
+  /* Override section-wrap overflow:hidden so Status/PO/Dates are not clipped */
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
 }
 
 .thinkway-platform-v6 .campaigns-module-register .thinkway-campaign-data-table {
@@ -5987,4 +5988,8 @@
 .thinkway-platform-v6 .campaigns-module-register .thinkway-campaign-op-table-head {
   overflow: hidden;
   vertical-align: top;
+}
+
+.thinkway-platform-v6 .campaigns-module-register [data-slot="table-container"] {
+  overflow-x: visible;
 }
