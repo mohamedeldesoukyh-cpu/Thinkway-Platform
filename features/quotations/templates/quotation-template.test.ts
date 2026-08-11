@@ -358,8 +358,21 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   const html = buildQuotationTemplateHtml(buildQuotationDocument(detail));
   assert.ok(html.includes("camp-er-list"));
   assert.ok(html.includes("sc-er-pct"));
+  assert.ok(!html.includes("camp-er-avatar"), "Est. engagement uses platform icons only");
   assert.ok(html.includes("2.50%") || html.includes("2.5%"));
   assert.ok(html.includes("4.10%") || html.includes("4.1%"));
+}
+
+{
+  // Detailed creator mix has no TOTAL INVESTMENT price strip (commercial owns money).
+  const detailedHtml = buildQuotationTemplateHtml(buildQuotationDocument(mockDetail()));
+  assert.ok(!detailedHtml.includes("TOTAL INVESTMENT"));
+  assert.ok(!detailedHtml.includes("tier-breakdown-grand-total"));
+  const showcaseHtml = buildQuotationTemplateHtml(
+    buildQuotationDocument(mockDetail(), { template: "showcase" })
+  );
+  assert.ok(showcaseHtml.includes("TOTAL INVESTMENT"));
+  assert.ok(showcaseHtml.includes("tier-breakdown-grand-total"));
 }
 
 {

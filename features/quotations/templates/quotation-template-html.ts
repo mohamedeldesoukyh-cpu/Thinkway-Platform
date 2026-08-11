@@ -376,9 +376,11 @@ function renderCategoryTierPages(
   const tiers = buildMixTier(payload, creatorGroups);
   const showcase = payload.flags.showcaseCreators;
   const firstPageExtraMm = showcase ? 0 : MIX_CATEGORY_BLOCK_MM;
+  // Detailed creator mix has no investment price banner — fees live on Commercial.
+  // Showcase / pitch investment summary keeps the TOTAL INVESTMENT banner.
   const pages = paginateMixTiers(tiers, {
     firstPageExtraMm,
-    includeBanner: true,
+    includeBanner: showcase,
   });
 
   // Line-item: full-width category bars (matches Thinkway LineItem reference).
@@ -791,14 +793,12 @@ function renderCommercialPage(
   const engagementKpiValue =
     engagementPlatforms.length > 0
       ? `<span class="sc-er-list camp-er-list">${engagementPlatforms
-          .map((row) => {
-            const avatar = row.avatarUrl?.trim()
-              ? `<img class="camp-er-avatar" src="${esc(row.avatarUrl)}" alt="" />`
-              : "";
-            return `<span class="sc-er-item">${avatar}${renderQuotationPlatformIconsHtml([
-              row.platform,
-            ])}<span class="sc-er-pct">${esc(row.engagement)}</span></span>`;
-          })
+          .map(
+            (row) =>
+              `<span class="sc-er-item">${renderQuotationPlatformIconsHtml([
+                row.platform,
+              ])}<span class="sc-er-pct">${esc(row.engagement)}</span></span>`
+          )
           .join("")}</span>`
       : esc(camp.estEngagement);
 

@@ -170,7 +170,9 @@ export function tierSlugFromLabel(label: string): string {
   if (key === "celebrity") return "celebrity";
   if (key === "mega") return "mega";
   if (key === "macro") return "macro";
-  if (key === "mid" || key === "micro" || key === "nano") return "mid";
+  if (key === "mid") return "mid";
+  if (key === "micro") return "micro";
+  if (key === "nano") return "nano";
   return "unknown";
 }
 
