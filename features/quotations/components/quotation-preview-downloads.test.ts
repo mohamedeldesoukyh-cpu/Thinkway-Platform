@@ -10,10 +10,10 @@ import {
   const href = buildExportHref("e182c6c2-4e66-43d9-ad0f-4ff06f549271", "pdf", "showcase", {
     download: true,
   });
-  assert.equal(
-    href,
-    "/api/quotations/e182c6c2-4e66-43d9-ad0f-4ff06f549271/export?format=pdf&download=1&template=showcase"
-  );
+  assert.ok(href.includes("format=pdf"));
+  assert.ok(href.includes("download=1"));
+  assert.ok(href.includes("template=showcase"));
+  assert.ok(href.includes("v="), "export URLs always include a revision stamp");
 }
 
 {
@@ -34,6 +34,7 @@ import {
   assert.ok(href.includes("format=pdf"));
   assert.ok(href.includes("download=1"));
   assert.ok(!href.includes("template="), "detailed omits template param (default)");
+  assert.ok(href.includes("v="));
 }
 
 {
@@ -83,8 +84,11 @@ import {
 {
   const href = buildExportHref("q-1", "pdf", "showcase", {
     itemIds: ["item-a", "item-b"],
+    exportRevision: "2026-08-11T12:00:00.000Z",
   });
   assert.ok(href.includes("items=item-a%2Citem-b") || href.includes("items=item-a,item-b"));
+  assert.ok(href.includes("v="));
+  assert.ok(href.includes("2026-08-11"));
 }
 
 console.log("quotation-preview-downloads.test.ts: ok");

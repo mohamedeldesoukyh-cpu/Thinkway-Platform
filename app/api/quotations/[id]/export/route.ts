@@ -15,6 +15,7 @@ import { buildQuotationHtml } from "@/features/quotations/export/quotation-html"
 import { QUOTATION_PDF_OPTIONS } from "@/features/quotations/export/quotation-pdf";
 import {
   isCreatorDeckTemplate,
+  quotationExportFilenameRevision,
   resolveQuotationTemplate,
 } from "@/features/quotations/export/quotation-template";
 import { resolveThinkwayReportLogoSrcsForExport } from "@/lib/reports/document/thinkway-report-logo-embed";
@@ -112,6 +113,9 @@ export async function GET(request: Request, context: RouteContext) {
     const baseName = doc.serial;
     const disposition = download ? "attachment" : "inline";
     const templateSuffix = template === "detailed" ? "" : `-${template}`;
+    const revisionSuffix = `-${quotationExportFilenameRevision(
+      detail.updated_at ?? searchParams.get("v")
+    )}`;
     const siteOrigin = resolveQuotationExportSiteOrigin(
       request.headers.get("x-forwarded-host") ?? request.headers.get("host"),
       request.headers.get("x-forwarded-proto")
@@ -123,7 +127,7 @@ export async function GET(request: Request, context: RouteContext) {
         headers: withExportCacheHeaders({
           "Content-Type":
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          "Content-Disposition": `attachment; filename="${baseName}.xlsx"`,
+          "Content-Disposition": `attachment; filename="${baseName}${revisionSuffix}.xlsx"`,
         }),
       });
     }
@@ -136,7 +140,7 @@ export async function GET(request: Request, context: RouteContext) {
       return new NextResponse(html, {
         headers: withExportCacheHeaders({
           "Content-Type": "application/msword",
-          "Content-Disposition": `attachment; filename="${baseName}${templateSuffix}.doc"`,
+          "Content-Disposition": `attachment; filename="${baseName}${templateSuffix}${revisionSuffix}.doc"`,
         }),
       });
     }
@@ -153,7 +157,7 @@ export async function GET(request: Request, context: RouteContext) {
       return new NextResponse(pdfResult.buffer as unknown as BodyInit, {
         headers: withExportCacheHeaders({
           "Content-Type": "application/pdf",
-          "Content-Disposition": `${disposition}; filename="${baseName}${templateSuffix}.pdf"`,
+          "Content-Disposition": `${disposition}; filename="${baseName}${templateSuffix}${revisionSuffix}.pdf"`,
         }),
       });
     }
@@ -168,7 +172,7 @@ export async function GET(request: Request, context: RouteContext) {
           headers: withExportCacheHeaders({
             "Content-Type":
               "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            "Content-Disposition": `${disposition}; filename="${baseName}${templateSuffix}.pptx"`,
+            "Content-Disposition": `${disposition}; filename="${baseName}${templateSuffix}${revisionSuffix}.pptx"`,
           }),
         });
       } catch (error) {
@@ -188,7 +192,7 @@ export async function GET(request: Request, context: RouteContext) {
       headers: withExportCacheHeaders(
         {
           "Content-Type": "text/html; charset=utf-8",
-          "Content-Disposition": `${disposition}; filename="${baseName}${templateSuffix}.html"`,
+          "Content-Disposition": `${disposition}; filename="${baseName}${templateSuffix}${revisionSuffix}.html"`,
         },
         { embeddable: isInlineHtmlPreview }
       ),
