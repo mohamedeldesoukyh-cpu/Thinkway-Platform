@@ -615,6 +615,7 @@ export function CampaignPerformanceCenterTab({
         <div className="thinkway-campaign-section-card mb-0 overflow-hidden">
         <CampaignPerformanceGrid
           rows={filtered}
+          allRows={publications}
           selectedIds={selectedIds}
           onToggleSelect={toggleSelect}
           onToggleSelectAll={toggleSelectAll}
@@ -642,6 +643,7 @@ export function CampaignPerformanceCenterTab({
       <CampaignPublicationSheet
         campaignId={workspace.id}
         assignmentLines={lines}
+        existingContentUrls={publications.map((row) => row.content_url)}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
       />

@@ -29,7 +29,13 @@ import { EngagementRateDisplay } from "@/features/campaigns/components/performan
 import {
   PerformanceExplorerCreatorCell,
   PerformanceMetricsStatusBadge,
+  PublicationDuplicateBadge,
 } from "@/features/campaigns/components/performance/performance-explorer-cells";
+import {
+  duplicateNormalizedUrlSet,
+  notesHaveDuplicateMarker,
+  normalizePublicationContentUrl,
+} from "@/lib/campaigns/publication-content-url";
 import {
   schedulePublicationWorkspaceOpen,
 } from "@/features/campaigns/components/performance/publication-workspace/publication-workspace-open-policy";
@@ -99,6 +105,8 @@ const HEADER_LABELS: Partial<Record<PerformanceGridColumnId, string>> = {
 
 type Props = {
   rows: CampaignPublicationRow[];
+  /** Full campaign publication set for duplicate URL detection (defaults to `rows`). */
+  allRows?: CampaignPublicationRow[];
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onToggleSelectAll: (ids: string[]) => void;
@@ -158,6 +166,7 @@ function sortRows(
 
 export function CampaignPerformanceGrid({
   rows,
+  allRows,
   selectedIds,
   onToggleSelect,
   onToggleSelectAll,
@@ -171,6 +180,12 @@ export function CampaignPerformanceGrid({
   const [page, setPage] = useState(1);
   const col = useOperationalColumnVisibleChecker();
   const { visibleOrderedColumnIds } = useOperationalTableColumnsContext();
+
+  const duplicateUrlKeys = useMemo(
+    () =>
+      duplicateNormalizedUrlSet((allRows ?? rows).map((row) => row.content_url)),
+    [allRows, rows]
+  );
 
   const sorted = useMemo(() => sortRows(rows, sortKey, sortDir), [rows, sortKey, sortDir]);
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
@@ -270,12 +285,20 @@ export function CampaignPerformanceGrid({
             <DeliverableExplorerPlatformPill platform={row.platform} />
           </div>
         );
-      case "type":
+      case "type": {
+        const normalized = normalizePublicationContentUrl(row.content_url);
+        const showDuplicate =
+          notesHaveDuplicateMarker(row.notes) ||
+          (Boolean(normalized) && duplicateUrlKeys.has(normalized!));
         return (
-          <div key={columnId} className="truncate px-2 text-[10px] text-[var(--camp-text-3)]">
-            {row.publication_type_label}
+          <div key={columnId} className="flex min-w-0 items-center gap-1 px-2">
+            <span className="truncate text-[10px] text-[var(--camp-text-3)]">
+              {row.publication_type_label}
+            </span>
+            {showDuplicate ? <PublicationDuplicateBadge className="shrink-0" /> : null}
           </div>
         );
+      }
       case "published":
         return (
           <div key={columnId} className="px-2 text-[11px] text-[var(--camp-text-3)]">

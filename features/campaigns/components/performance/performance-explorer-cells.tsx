@@ -224,3 +224,17 @@ export function PerformanceMetricsStatusBadge({
     </span>
   );
 }
+
+export function PublicationDuplicateBadge({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        "thinkway-campaign-badge thinkway-campaign-badge-amber",
+        className
+      )}
+      title="This content URL appears more than once on the campaign"
+    >
+      Duplicate
+    </span>
+  );
+}

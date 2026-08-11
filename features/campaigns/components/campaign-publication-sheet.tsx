@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { SearchableSelect } from "@/components/forms/searchable-select";
+import { useConfirmAction } from "@/components/shared/confirm-action-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -38,6 +39,11 @@ import {
   getDeliverableTypeCodesForPlatform,
   inferDeliverableTypeFromContentUrl,
 } from "@/lib/campaigns/deliverable-taxonomy";
+import {
+  appendDuplicateNoteMarker,
+  findDuplicatePublicationUrls,
+  normalizePublicationContentUrl,
+} from "@/lib/campaigns/publication-content-url";
 import { SOCIAL_PLATFORM_OPTIONS } from "@/lib/master-data/constants";
 import { extractHandleFromContentUrl } from "@/lib/social/extract-handle-from-content-url";
 import { detectSocialPlatformFromContentUrl } from "@/lib/social/platforms";
@@ -169,6 +175,7 @@ function buildBatchItems(
     caption: string;
     hashtags: string;
     notes: string;
+    duplicateNormalizedUrls?: ReadonlySet<string>;
   }
 ) {
   return rows
@@ -182,6 +189,9 @@ function buildBatchItems(
         row.platform,
         row.publicationType
       );
+      const normalized = normalizePublicationContentUrl(url);
+      const isDuplicate =
+        Boolean(normalized) && Boolean(shared.duplicateNormalizedUrls?.has(normalized!));
       return {
         campaign_line_id: row.lineId,
         influencer_id: line?.influencer_id ?? "",
@@ -193,7 +203,7 @@ function buildBatchItems(
         status: shared.status,
         caption: shared.caption,
         hashtags: shared.hashtags,
-        notes: shared.notes,
+        notes: isDuplicate ? appendDuplicateNoteMarker(shared.notes) : shared.notes,
       };
     });
 }
@@ -201,6 +211,8 @@ function buildBatchItems(
 type CampaignPublicationSheetProps = {
   campaignId: string;
   assignmentLines: CampaignLineWorkspace[];
+  /** Existing campaign publication URLs used for duplicate warnings. */
+  existingContentUrls?: readonly (string | null | undefined)[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
@@ -208,10 +220,12 @@ type CampaignPublicationSheetProps = {
 export function CampaignPublicationSheet({
   campaignId,
   assignmentLines,
+  existingContentUrls = [],
   open,
   onOpenChange,
 }: CampaignPublicationSheetProps) {
   const refreshAfterPublicationMutation = useRefreshCampaignAfterPublicationMutation();
+  const { confirm } = useConfirmAction();
   const [rows, setRows] = useState<PublicationRow[]>([newRow()]);
   const [status, setStatus] = useState("published");
   const [publicationDate, setPublicationDate] = useState("");
@@ -224,6 +238,25 @@ export function CampaignPublicationSheet({
     () => assignmentLines.map(buildPublicationAssignmentOption),
     [assignmentLines]
   );
+
+  const existingNormalizedUrls = useMemo(() => {
+    const set = new Set<string>();
+    for (const url of existingContentUrls) {
+      const key = normalizePublicationContentUrl(url);
+      if (key) set.add(key);
+    }
+    return set;
+  }, [existingContentUrls]);
+
+  const batchNormalizedCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const row of rows) {
+      const key = normalizePublicationContentUrl(row.contentUrl);
+      if (!key) continue;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return counts;
+  }, [rows]);
 
   useEffect(() => {
     if (!open) return;
@@ -309,14 +342,10 @@ export function CampaignPublicationSheet({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const items = buildBatchItems(rows, assignmentLines, {
-      publicationDate,
-      status,
-      caption,
-      hashtags,
-      notes,
-    });
-    if (items.length === 0) {
+    const candidateUrls = rows
+      .filter((r) => r.contentUrl.trim() && r.lineId)
+      .map((r) => r.contentUrl.trim());
+    if (candidateUrls.length === 0) {
       toast.error("Add at least one URL with a selected creator.");
       return;
     }
@@ -333,6 +362,43 @@ export function CampaignPublicationSheet({
     setIsPending(true);
     void (async () => {
       try {
+        const duplicateHits = findDuplicatePublicationUrls({
+          candidateUrls,
+          existingUrls: existingContentUrls,
+        });
+        const duplicateNormalizedUrls = new Set(duplicateHits.map((hit) => hit.normalized));
+
+        if (duplicateHits.length > 0) {
+          const sample = duplicateHits
+            .slice(0, 3)
+            .map((hit) => hit.url)
+            .join("\n");
+          const more =
+            duplicateHits.length > 3 ? `\n(+${duplicateHits.length - 3} more)` : "";
+          const accepted = await confirm({
+            title:
+              duplicateHits.length === 1
+                ? "Duplicate publication link"
+                : "Duplicate publication links",
+            description: `This campaign already has ${
+              duplicateHits.length === 1 ? "this link" : "these links"
+            }, or the same link appears more than once in this form:\n\n${sample}${more}\n\nAccept to add anyway and label as Duplicate, or Cancel to go back.`,
+            confirmLabel: "Add anyway",
+            cancelLabel: "Cancel",
+            variant: "default",
+          });
+          if (!accepted) return;
+        }
+
+        const items = buildBatchItems(rows, assignmentLines, {
+          publicationDate,
+          status,
+          caption,
+          hashtags,
+          notes,
+          duplicateNormalizedUrls,
+        });
+
         const response = await fetch(`/api/campaigns/${campaignId}/publications`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -418,12 +484,18 @@ export function CampaignPublicationSheet({
                 );
                 const displayPlatform = resolved.platform;
                 const displayType = resolved.publicationType;
+                const normalizedUrl = normalizePublicationContentUrl(row.contentUrl);
+                const isDuplicateUrl =
+                  Boolean(normalizedUrl) &&
+                  (existingNormalizedUrls.has(normalizedUrl!) ||
+                    (batchNormalizedCounts.get(normalizedUrl!) ?? 0) > 1);
                 return (
                   <div
                     key={row.key}
                     className={cn(
                       "rounded-[12px] border border-[#eaedf4] bg-white p-3 transition-colors",
-                      row.contentUrl.trim() && "border-[rgba(0,87,255,0.22)] bg-[rgba(0,87,255,0.03)]"
+                      row.contentUrl.trim() && "border-[rgba(0,87,255,0.22)] bg-[rgba(0,87,255,0.03)]",
+                      isDuplicateUrl && "border-amber-300 bg-amber-50/60"
                     )}
                   >
                     <div className="flex items-start gap-2">
@@ -452,6 +524,11 @@ export function CampaignPublicationSheet({
                           placeholder="https://… (paste several to split)"
                           disabled={isPending}
                         />
+                        {isDuplicateUrl ? (
+                          <p className="text-[10px] font-medium text-amber-700">
+                            Duplicate link — you can still add it; it will be labeled Duplicate.
+                          </p>
+                        ) : null}
 
                         <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
                           <div className="min-w-0">
