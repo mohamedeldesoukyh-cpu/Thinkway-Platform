@@ -28,7 +28,7 @@ import {
   resolveApprovedBaselineData,
   resolveOriginalData,
 } from "@/lib/media-plan/resolve-calendar-data";
-import { mediaPlanEngine } from "@/lib/media-plan";
+import { mediaPlanEngine, isApprovedStatus } from "@/lib/media-plan";
 import type {
   MediaPlanDiffEntry,
   MediaPlanItem,
@@ -74,6 +74,8 @@ export type CampaignMediaPlanWorkspacePayload = {
   status: MediaPlanStatus;
   versionLabel: string;
   canEditOriginal: boolean;
+  /** Remaining view: unpublished cards may be rescheduled (auto-forks draft when approved). */
+  canEditRemaining: boolean;
   campaignStartDate: string;
   durationWeeks: number;
   views: Record<MediaPlanViewKind, MediaPlanData>;
@@ -128,6 +130,7 @@ export async function loadCampaignMediaPlanWorkspace(
       status: "draft",
       versionLabel: "No Media Plan",
       canEditOriginal: false,
+      canEditRemaining: false,
       campaignStartDate: start,
       durationWeeks: 4,
       views: { original: empty, actual: empty, remaining: empty },
@@ -165,6 +168,7 @@ export async function loadCampaignMediaPlanWorkspace(
       status: "draft",
       versionLabel: "Unavailable",
       canEditOriginal: false,
+      canEditRemaining: false,
       campaignStartDate: start,
       durationWeeks: 4,
       views: { original: empty, actual: empty, remaining: empty },
@@ -217,6 +221,7 @@ export async function loadCampaignMediaPlanWorkspace(
       status: "draft",
       versionLabel: "Empty",
       canEditOriginal: false,
+      canEditRemaining: false,
       campaignStartDate: start,
       durationWeeks: 4,
       views: { original: empty, actual: empty, remaining: empty },
@@ -322,6 +327,9 @@ export async function loadCampaignMediaPlanWorkspace(
     status: lifecycle.status,
     versionLabel: tipVersionLabel ?? `Version ${versionNumber}`,
     canEditOriginal: lifecycle.status === "draft",
+    canEditRemaining:
+      execution.baselineVersion != null &&
+      (lifecycle.status === "draft" || isApprovedStatus(lifecycle.status)),
     campaignStartDate: start,
     durationWeeks,
     views: {

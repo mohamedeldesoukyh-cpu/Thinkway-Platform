@@ -69,7 +69,13 @@ export function CampaignMediaPlanWorkspace({
   const [pending, startTransition] = useTransition();
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollByView = useRef<Partial<Record<MediaPlanViewKind, number>>>({});
-  const editable = view === "original" && payload.canEditOriginal;
+  const editable =
+    (view === "original" && payload.canEditOriginal) ||
+    (view === "remaining" && payload.canEditRemaining);
+  const scheduleEditHint =
+    view === "remaining" && payload.canEditRemaining
+      ? "Drag unpublished creator cards to reschedule. Live / partial cards stay fixed."
+      : null;
 
   const latestEditNumber = useMemo(() => {
     const nums = payload.editHistory.map((e) => e.editNumber);
@@ -365,6 +371,14 @@ export function CampaignMediaPlanWorkspace({
           <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
             Actual and Remaining are generated from the Current Approved Baseline. Approve the
             Original Media Plan to enable these views.
+          </p>
+        ) : null}
+        {scheduleEditHint ? (
+          <p className="mt-2 text-xs text-muted-foreground">{scheduleEditHint}</p>
+        ) : null}
+        {view === "remaining" && payload.hasApprovedBaseline && !payload.canEditRemaining ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Unlock or open a working draft to reschedule unpublished Remaining cards.
           </p>
         ) : null}
         {view === "remaining" && payload.unscheduledRemainingCount > 0 ? (

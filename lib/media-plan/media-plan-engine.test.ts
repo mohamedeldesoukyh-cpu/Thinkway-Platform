@@ -175,7 +175,7 @@ test("prepareRegenerate never mutates approved baseline; continues existing draf
   assert.equal(again.state.versions.filter((v) => v.kind === "draft").length, 1);
 });
 
-test("Actual and Remaining use approved baseline, not in-progress draft", () => {
+test("Remaining uses working draft tip when open so unpublished reschedules stick", () => {
   const { state } = createPlan();
   const approved = approveDraft(state);
   assert.equal(approved.ok, true);
@@ -186,7 +186,7 @@ test("Actual and Remaining use approved baseline, not in-progress draft", () => 
   if (!forked.ok) throw new Error(forked.error);
 
   const draftItems = sampleItems().map((item) =>
-    item.id === "i1" ? { ...item, plannedDate: "2026-12-01" } : item
+    item.id === "i2" ? { ...item, plannedDate: "2026-12-01" } : item
   );
   const edited = mediaPlanEngine.applyScheduleItems(forked.state, draftItems, {
     at: AT,
@@ -209,11 +209,10 @@ test("Actual and Remaining use approved baseline, not in-progress draft", () => 
   assert.equal(views.baselineVersion, 1);
   assert.equal(views.actual.items.length, 1);
   assert.equal(views.actual.items[0]!.actualLiveDate, "2026-08-10");
-  // Remaining excludes completed IG Reel; still based on baseline planned dates
+  // Remaining excludes completed IG Reel; tip draft dates apply to unpublished items
   assert.equal(views.remaining.items.length, 2);
   assert.ok(views.remaining.items.every((item) => item.id !== "i1"));
-  // Draft date change must not appear in remaining projection dates for i1
-  assert.ok(!views.remaining.items.some((item) => item.plannedDate === "2026-12-01"));
+  assert.ok(views.remaining.items.some((item) => item.plannedDate === "2026-12-01"));
 });
 
 test("same-day actual deliverables group onto one calendar day card", () => {
