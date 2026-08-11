@@ -5975,5 +5975,16 @@
 
 .thinkway-platform-v6 .campaigns-module-register {
   border-radius: 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.thinkway-platform-v6 .campaigns-module-register .thinkway-campaign-data-table {
+  min-width: 1360px;
+}
+
+.thinkway-platform-v6 .campaigns-module-register .thinkway-campaign-op-table-cell,
+.thinkway-platform-v6 .campaigns-module-register .thinkway-campaign-op-table-head {
   overflow: hidden;
+  vertical-align: top;
 }

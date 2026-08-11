@@ -55,7 +55,12 @@ function formatDateRange(start: string | null, end: string | null) {
   if (!end || start === end) {
     return formatDate(start);
   }
-  return `${formatDate(start)} – ${formatDate(end)}`;
+  return (
+    <span className="flex min-w-0 flex-col gap-0.5 leading-tight" title={`${formatDate(start)} – ${formatDate(end)}`}>
+      <span className="truncate">{formatDate(start)}</span>
+      <span className="truncate">– {formatDate(end)}</span>
+    </span>
+  );
 }
 
 function campaignPoBudget(campaign: CampaignListItem) {
@@ -88,18 +93,18 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "document_number",
     label: "Campaign #",
-    colWidth: "8%",
+    colWidth: "7%",
     renderCell: (campaign) => (
       <Link href={campaignOpenHref(campaign)} className="platform-v6-link">
         <DocumentNumber value={campaign.document_number} />
       </Link>
     ),
-    cellClassName: "text-muted-foreground",
+    cellClassName: "min-w-0 text-muted-foreground",
   },
   {
     id: "name",
     label: "Campaign",
-    colWidth: "13%",
+    colWidth: "12%",
     cellClassName: "min-w-0 whitespace-normal",
     renderCell: (campaign) => {
       const intel = campaignPortfolioIntel(campaign);
@@ -117,14 +122,18 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "brand",
     label: "Brand",
-    colWidth: "8%",
-    renderCell: (campaign) => campaign.brand?.name ?? "—",
-    cellClassName: "text-muted-foreground",
+    colWidth: "7%",
+    renderCell: (campaign) => (
+      <span className="block min-w-0 truncate" title={campaign.brand?.name ?? undefined}>
+        {campaign.brand?.name ?? "—"}
+      </span>
+    ),
+    cellClassName: "min-w-0 text-muted-foreground",
   },
   {
     id: "stage",
     label: "Business Stage",
-    colWidth: "9%",
+    colWidth: "8%",
     cellClassName: "min-w-0 whitespace-normal",
     renderCell: (campaign) => {
       const intel = campaignPortfolioIntel(campaign);
@@ -142,7 +151,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "waiting_for",
     label: "Waiting For",
-    colWidth: "8%",
+    colWidth: "7%",
     renderCell: (campaign) => {
       const intel = campaignPortfolioIntel(campaign);
       return (
@@ -159,7 +168,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "days_waiting",
     label: "Days Waiting",
-    colWidth: "7%",
+    colWidth: "5%",
     renderCell: (campaign) => {
       const intel = campaignPortfolioIntel(campaign);
       return (
@@ -179,11 +188,12 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
         </span>
       );
     },
+    cellClassName: "min-w-0",
   },
   {
     id: "risk",
     label: "Risk",
-    colWidth: "8%",
+    colWidth: "6%",
     renderCell: (campaign) => {
       const intel = campaignPortfolioIntel(campaign);
       return (
@@ -191,7 +201,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
           variant="outline"
           className={cn(
             OPERATIONAL_CHROME_STATUS_BADGE,
-            "font-normal",
+            "max-w-full truncate font-normal",
             riskBadgeClass(intel.risk)
           )}
           title={`${intel.businessStateLabel} · ${intel.reason}`}
@@ -200,11 +210,12 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
         </Badge>
       );
     },
+    cellClassName: "min-w-0",
   },
   {
     id: "next_action",
     label: "Next Action",
-    colWidth: "12%",
+    colWidth: "11%",
     cellClassName: "min-w-0 whitespace-normal",
     renderCell: (campaign) => {
       const intel = campaignPortfolioIntel(campaign);
@@ -222,21 +233,28 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "group_client",
     label: "Group · Legal entity",
-    colWidth: "10%",
-    renderCell: (campaign) => (
-      <span className="block min-w-0 break-words leading-snug">
-        {formatGroupDisplayName(campaign.group?.name)}
-        {campaign.client?.legal_name || campaign.client?.name
-          ? ` · ${campaign.client.legal_name ?? campaign.client.name}`
-          : ""}
-      </span>
-    ),
+    colWidth: "9%",
+    renderCell: (campaign) => {
+      const label = [
+        formatGroupDisplayName(campaign.group?.name),
+        campaign.client?.legal_name || campaign.client?.name
+          ? campaign.client.legal_name ?? campaign.client.name
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      return (
+        <span className="block min-w-0 break-words leading-snug" title={label || undefined}>
+          {label || "—"}
+        </span>
+      );
+    },
     cellClassName: "min-w-0 whitespace-normal text-muted-foreground",
   },
   {
     id: "lines",
     label: "Lines",
-    colWidth: "5%",
+    colWidth: "4%",
     renderCell: (campaign) =>
       campaign.lines.length > 0 ? (
         <Badge
@@ -251,45 +269,53 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
       ) : (
         "—"
       ),
+    cellClassName: "min-w-0",
   },
   {
     id: "status",
     label: "Status",
     colWidth: "6%",
     renderCell: (campaign) => (
-      <CampaignStatusBadge
-        status={campaign.status}
-        className={OPERATIONAL_CHROME_STATUS_BADGE}
-      />
+      <div className="min-w-0 max-w-full overflow-hidden">
+        <CampaignStatusBadge
+          status={campaign.status}
+          className={cn(OPERATIONAL_CHROME_STATUS_BADGE, "max-w-full truncate")}
+        />
+      </div>
     ),
+    cellClassName: "min-w-0",
   },
   {
     id: "po_total",
     label: "PO total",
     headerClassName: "text-right",
-    colWidth: "8%",
+    colWidth: "9%",
     amountCell: true,
     renderCell: (campaign) => {
       const poAlertStatus = listPoAlertStatus(campaign);
+      const amount = formatMoney(campaignPoBudget(campaign), campaign.currency_code);
       return (
-        <div className="flex flex-col items-end gap-1">
+        <div className="flex w-full min-w-0 flex-col items-end gap-1 overflow-hidden">
           <span
             className={cn(
-              "platform-v6-num font-semibold",
+              "platform-v6-num max-w-full truncate font-semibold",
               poAlertStatus === "exceeded" && "platform-v6-c-red",
               poAlertStatus === "near_limit" && "platform-v6-c-amber"
             )}
+            title={amount}
           >
-            {formatMoney(campaignPoBudget(campaign), campaign.currency_code)}
+            {amount}
           </span>
           {poAlertStatus === "near_limit" ? (
-            <span className={platformV6BadgeClass("outline-amber")}>Near limit</span>
+            <span className={cn(platformV6BadgeClass("outline-amber"), "max-w-full truncate")}>
+              Near limit
+            </span>
           ) : campaign.po_status && campaign.po_status !== "draft" ? (
             <Badge
               variant={PO_STATUS_VARIANT[campaign.po_status]}
               className={cn(
                 OPERATIONAL_CHROME_STATUS_BADGE,
-                "font-normal",
+                "max-w-full truncate font-normal",
                 poAlertStatus && "border-2",
                 poAlertStatus && PO_ALERT_FRAME[poAlertStatus]
               )}
@@ -300,14 +326,15 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
         </div>
       );
     },
+    cellClassName: "min-w-0",
   },
   {
     id: "dates",
     label: "Dates",
-    colWidth: "7%",
+    colWidth: "9%",
     renderCell: (campaign) =>
       formatDateRange(campaign.start_date, campaign.end_date),
-    cellClassName: "whitespace-nowrap text-muted-foreground",
+    cellClassName: "min-w-0 pr-4 text-muted-foreground",
   },
 ];
 
