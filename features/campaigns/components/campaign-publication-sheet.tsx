@@ -1,10 +1,9 @@
 "use client";
 
 import { CalendarIcon, HashIcon, Link2Icon, StickyNoteIcon, PlusIcon, Trash2Icon } from "lucide-react";
-import { useActionState, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, useTransition, type FormEvent } from "react";
 import { toast } from "sonner";
 
-import { FieldError } from "@/components/forms/field-error";
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,8 +15,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { createCampaignPublicationsBatchAction } from "@/features/campaigns/actions/publication-actions";
-import type { FormActionState } from "@/features/campaigns/actions";
 import { useRefreshCampaignAfterPublicationMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 import {
   DeliverableTypeSelect,
@@ -221,36 +218,15 @@ export function CampaignPublicationSheet({
   const [caption, setCaption] = useState("");
   const [hashtags, setHashtags] = useState("");
   const [notes, setNotes] = useState("");
+  const [isPending, startTransition] = useTransition();
 
   const assignmentOptions = useMemo(
     () => assignmentLines.map(buildPublicationAssignmentOption),
     [assignmentLines]
   );
 
-  const [state, formAction, isPending] = useActionState(
-    createCampaignPublicationsBatchAction,
-    { ok: false } satisfies FormActionState
-  );
-  const handledSuccessKeyRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!state.message) return;
-    if (state.ok) {
-      const successKey = state.message;
-      if (handledSuccessKeyRef.current === successKey) return;
-      handledSuccessKeyRef.current = successKey;
-      // Close + toast first so success is visible before the list soft-reloads.
-      onOpenChange(false);
-      toast.success(state.message);
-      refreshAfterPublicationMutation();
-      return;
-    }
-    toast.error(state.message);
-  }, [state, onOpenChange, refreshAfterPublicationMutation]);
-
   useEffect(() => {
     if (!open) return;
-    handledSuccessKeyRef.current = null;
     setRows([newRow()]);
     setStatus("published");
     setPublicationDate("");
@@ -352,10 +328,29 @@ export function CampaignPublicationSheet({
       })
     );
 
-    const formData = new FormData();
-    formData.set("campaign_id", campaignId);
-    formData.set("items", JSON.stringify(items));
-    formAction(formData);
+    // HTTP create avoids Server Action → route loading.tsx (Thinkway logo) flash.
+    startTransition(async () => {
+      try {
+        const response = await fetch(`/api/campaigns/${campaignId}/publications`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items }),
+        });
+        const payload = (await response.json().catch(() => null)) as {
+          ok?: boolean;
+          message?: string;
+        } | null;
+        if (!response.ok || !payload?.ok) {
+          toast.error(payload?.message ?? "Failed to add publications.");
+          return;
+        }
+        onOpenChange(false);
+        toast.success(payload.message ?? "Publication added.");
+        refreshAfterPublicationMutation();
+      } catch {
+        toast.error("Failed to add publications.");
+      }
+    });
   }
 
   function platformOptionsForRow(row: PublicationRow) {
@@ -600,8 +595,6 @@ export function CampaignPublicationSheet({
               />
             </div>
           </OperationalDetailSection>
-
-          <FieldError messages={state.fieldErrors?.items} />
         </OperationalDetailScrollBody>
 
         <OperationalDetailFooter>
