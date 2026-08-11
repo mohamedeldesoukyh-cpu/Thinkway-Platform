@@ -14,6 +14,7 @@ import type {
   PersistClientDocumentUploadResult,
   ClientDocumentUploadPayload,
 } from "@/lib/domains/document/types";
+import type { ClientDocumentType } from "@/types/database";
 
 export type { PersistClientDocumentUploadResult } from "@/lib/domains/document/types";
 
@@ -143,6 +144,9 @@ export async function persistClientDocumentUpload(params: {
   return {
     ok: true,
     message: "Document uploaded.",
-    document: insertedDoc as ClientDocumentUploadPayload,
+    document: {
+      ...(insertedDoc as ClientDocumentUploadPayload),
+      document_type: insertedDoc.document_type as ClientDocumentType,
+    },
   };
 }
