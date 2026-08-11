@@ -14,7 +14,7 @@ export type DocumentBucket =
 export type ClientDocumentUploadPayload = {
   id: string;
   client_id: string;
-  document_type: string;
+  document_type: import("@/types/database").ClientDocumentType;
   file_name: string;
   storage_path: string;
   mime_type: string | null;
