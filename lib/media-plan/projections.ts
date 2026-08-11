@@ -6,7 +6,7 @@ import type {
   MediaPlanState,
   MediaPlanVersionRecord,
 } from "./types";
-import { getCurrentApprovedBaseline } from "./versioning";
+import { getCurrentApprovedBaseline, getWorkingDraft } from "./versioning";
 
 function matchForItem(
   item: Pick<
@@ -109,8 +109,11 @@ export function projectActualMediaPlan(
 }
 
 /**
- * Remaining Media Plan — Current Approved Baseline minus completed deliverables.
- * Never uses the Working Draft.
+ * Remaining Media Plan — tip schedule minus completed deliverables.
+ *
+ * Uses the Working Draft when open (so Remaining reschedules stick), otherwise
+ * the Current Approved Baseline. Completed Performance grains are always excluded.
+ * Actual still matches against the approved baseline separately.
  *
  * Release 2.1: ID-first matching (Assignment / Deliverable / Post).
  */
@@ -124,7 +127,8 @@ export function projectRemainingMediaPlan(
   unscheduled: MediaPlanItem[];
 } {
   const baseline = getCurrentApprovedBaseline(state);
-  if (!baseline) {
+  const tip = getWorkingDraft(state) ?? baseline;
+  if (!tip) {
     return { baselineVersion: null, days: [], items: [], unscheduled: [] };
   }
 
@@ -134,7 +138,7 @@ export function projectRemainingMediaPlan(
       .map((fact) => matchForFact(fact).key)
   );
 
-  const remaining = baseline.items
+  const remaining = tip.items
     .filter((item) => !completedKeys.has(matchForItem(item).key))
     .map((item) => ({
       ...item,
@@ -147,7 +151,7 @@ export function projectRemainingMediaPlan(
   const unscheduled = remaining.filter((item) => !item.plannedDate);
 
   return {
-    baselineVersion: baseline.version,
+    baselineVersion: baseline?.version ?? null,
     days: groupItemsByDate(scheduled, "plannedDate"),
     items: remaining,
     unscheduled,

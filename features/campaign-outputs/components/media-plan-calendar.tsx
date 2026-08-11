@@ -223,6 +223,7 @@ const CreatorCard = memo(function CreatorCard({
 }) {
   const published = executionStatus === "published";
   const partial = executionStatus === "partial";
+  const canMove = Boolean(editable && draggable);
   const statusTitle = published
     ? actualLiveDate
       ? `Published · live ${actualLiveDate}`
@@ -235,10 +236,10 @@ const CreatorCard = memo(function CreatorCard({
 
   return (
     <div
-      draggable={Boolean(draggable && editable)}
+      draggable={canMove}
       title={statusTitle}
       onDragStart={(event) => {
-        if (!editable || !draggable) return;
+        if (!canMove) return;
         event.dataTransfer.effectAllowed = "move";
         event.dataTransfer.setData("text/plain", name);
         event.stopPropagation();
@@ -246,7 +247,7 @@ const CreatorCard = memo(function CreatorCard({
       }}
       onDragEnd={() => onDragEnd?.()}
       onClick={() => {
-        if (editable && onClickMove) onClickMove();
+        if (canMove && onClickMove) onClickMove();
       }}
       className={cn(
         "rounded-lg border p-1.5 transition-[opacity,transform,box-shadow,background-color,border-color]",
@@ -257,17 +258,15 @@ const CreatorCard = memo(function CreatorCard({
         !published &&
           !partial &&
           "border-[#0B0F1A]/6 bg-[#fafbff]",
-        editable &&
-          draggable &&
-          "cursor-grab active:cursor-grabbing hover:shadow-sm",
-        editable && draggable && !published && !partial && "hover:border-[#0057FF]/25",
+        canMove && "cursor-grab active:cursor-grabbing hover:shadow-sm",
+        canMove && !published && !partial && "hover:border-[#0057FF]/25",
         isDragging && !isDragGhost && "scale-[0.97] opacity-35",
         isDragGhost && "pointer-events-none border-[#0057FF]/40 shadow-lg ring-2 ring-[#0057FF]/25",
-        editable && "group/card"
+        canMove && "group/card"
       )}
     >
       <div className="mb-1 flex items-center gap-1.5">
-        {editable ? (
+        {canMove ? (
           <GripVerticalIcon
             className="size-3 shrink-0 text-[#0B0F1A]/25 group-hover/card:text-[#0057FF]/60"
             aria-hidden
@@ -661,6 +660,8 @@ const DayColumn = memo(function DayColumn({
       week: weekNum,
       dayIndex,
     };
+    const cardMovable =
+      entry.executionStatus !== "published" && entry.executionStatus !== "partial";
 
     return (
       <div key={key} className="relative">
@@ -682,7 +683,7 @@ const DayColumn = memo(function DayColumn({
           }
           actualLiveDate={entry.actualLiveDate}
           editable={editable}
-          draggable
+          draggable={cardMovable}
           isDragging={draggingCreatorId === creator.creatorId}
           onDragStart={(event) =>
             onBeginDrag?.({ ...creator, week: weekNum, dayIndex }, event)
@@ -690,7 +691,7 @@ const DayColumn = memo(function DayColumn({
           onDragEnd={() => onEndDrag?.()}
           onClickMove={() => onOpenMovePopover?.({ ...creator, week: weekNum, dayIndex })}
         />
-        {movePopoverCreatorId === creator.creatorId && onMoveCreator ? (
+        {cardMovable && movePopoverCreatorId === creator.creatorId && onMoveCreator ? (
           <MoveCreatorPopover
             creator={{ ...creator, week: weekNum, dayIndex }}
             durationWeeks={durationWeeks}
