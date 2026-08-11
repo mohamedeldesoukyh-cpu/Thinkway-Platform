@@ -18,23 +18,43 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 type Supabase = SupabaseClient<Database>;
 
+/** Zod v4-safe optional UUID (accepts "", null, undefined). */
+const optionalUuid = z
+  .union([z.string().uuid(), z.literal(""), z.null(), z.undefined()])
+  .transform((value) => (typeof value === "string" && value.length > 0 ? value : ""));
+
 const publicationItemSchema = z.object({
-  campaign_line_id: z.string().uuid().optional().or(z.literal("")),
-  influencer_id: z.string().uuid().optional().or(z.literal("")),
+  campaign_line_id: optionalUuid,
+  influencer_id: optionalUuid,
   platform: z.string().trim().min(1).max(64),
   publication_type: z.string().trim().min(1).max(64),
   content_url: z
-    .string()
-    .trim()
-    .optional()
-    .transform((v) => (v && v.length > 0 ? v : null))
-    .pipe(z.string().url().nullable()),
-  publication_date: z.string().optional().or(z.literal("")),
-  status: z.string().trim().min(1).max(64).default("draft"),
-  assignee_id: z.string().uuid().optional().or(z.literal("")),
-  caption: z.string().max(4000).optional().or(z.literal("")),
-  hashtags: z.string().max(1000).optional().or(z.literal("")),
-  notes: z.string().max(2000).optional().or(z.literal("")),
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((v) => {
+      if (v == null) return null;
+      const trimmed = String(v).trim();
+      return trimmed.length > 0 ? trimmed : null;
+    })
+    .pipe(z.union([z.string().url(), z.null()])),
+  publication_date: z
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((v) => (typeof v === "string" ? v : "")),
+  status: z
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((v) => {
+      const trimmed = typeof v === "string" ? v.trim() : "";
+      return trimmed.length > 0 ? trimmed : "draft";
+    }),
+  assignee_id: optionalUuid,
+  caption: z
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((v) => (typeof v === "string" ? v : "")),
+  hashtags: z
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((v) => (typeof v === "string" ? v : "")),
+  notes: z
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((v) => (typeof v === "string" ? v : "")),
 });
 
 const publicationSchema = publicationItemSchema.extend({
@@ -51,6 +71,13 @@ function revalidateCampaign(campaignId: string) {
   revalidatePath(`/campaigns/${campaignId}`);
 }
 
+function formatZodIssues(error: z.ZodError): string {
+  const issue = error.issues[0];
+  if (!issue) return "Invalid publication input.";
+  const path = issue.path.length > 0 ? `${issue.path.join(".")}: ` : "";
+  return `${path}${issue.message}`;
+}
+
 type PublicationItem = z.infer<typeof publicationItemSchema>;
 
 async function insertOnePublication(
@@ -62,6 +89,7 @@ async function insertOnePublication(
   let platform = canonicalPlatformKey(item.platform) || item.platform;
   let publicationType = item.publication_type;
 
+  // URL host always wins — prevents IG taxonomy validation on TikTok/Facebook links.
   if (urlPlatform) {
     platform = urlPlatform;
   }
@@ -81,6 +109,10 @@ async function insertOnePublication(
 
   if (!item.campaign_line_id) {
     return { ok: false, message: "Select a creator for each URL." };
+  }
+
+  if (!item.content_url) {
+    return { ok: false, message: "Each publication needs a content URL." };
   }
 
   const { data: inserted, error } = await supabase
@@ -147,8 +179,8 @@ export async function createCampaignPublicationAction(
   if (!parsed.success) {
     return {
       ok: false,
-      message: "Invalid publication input.",
-      fieldErrors: parsed.error.flatten().fieldErrors,
+      message: formatZodIssues(parsed.error),
+      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
     };
   }
 
@@ -191,8 +223,8 @@ export async function createCampaignPublicationsBatchAction(
   if (!parsed.success) {
     return {
       ok: false,
-      message: "Invalid publication input.",
-      fieldErrors: parsed.error.flatten().fieldErrors,
+      message: formatZodIssues(parsed.error),
+      fieldErrors: parsed.error.flatten().fieldErrors as Record<string, string[]>,
     };
   }
 

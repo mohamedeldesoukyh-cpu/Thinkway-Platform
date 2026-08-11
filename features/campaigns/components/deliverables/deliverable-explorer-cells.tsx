@@ -137,12 +137,14 @@ export function DeliverableExplorerPlatformPill({
     <span
       title={label}
       aria-label={label}
-      className={cn(
-        "inline-flex size-7 items-center justify-center rounded-full border border-border/60 bg-background shadow-sm",
-        className
-      )}
+      className={cn("inline-flex items-center justify-center", className)}
     >
-      <PlatformIcon platform={platform} size="sm" className="size-4 rounded-full" />
+      <PlatformIcon
+        platform={platform}
+        size="md"
+        variant="logo"
+        className="size-9 rounded-full shadow-sm ring-1 ring-border/50"
+      />
     </span>
   );
 }

@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 
+import { CreatorNameStack } from "@/components/creator/creator-name-stack";
 import { CreatorThumbAvatar } from "@/components/creator/creator-thumb-cell";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+import { resolveCreatorIdentity } from "@/lib/text/decode-html-entities";
 import { cn } from "@/lib/utils";
 
 const INSTAGRAM_ICON_PATH =
@@ -120,7 +122,8 @@ export function PerformanceExplorerCreatorCell({
   }
 
   const badgePlatform = platformBadgeKey(platform);
-  const displayName = name.trim();
+  const identity = resolveCreatorIdentity(name, null);
+  const displayName = identity.name;
 
   return (
     <div className={cn("thinkway-campaign-cr-cell", className)}>
@@ -149,40 +152,28 @@ export function PerformanceExplorerCreatorCell({
           {badgePlatform ? <PlatformThumbBadge platform={badgePlatform} /> : null}
         </div>
       )}
-      <div className="flex min-w-0 items-center gap-[5px]">
-        {influencerId ? (
-          <CreatorVendorAvatarLink
-            influencerId={influencerId}
-            name={displayName}
-            avatarUrl={avatarUrl}
-            profileUrl={profileUrl}
-            platform={platform}
-            size={20}
-            className="thinkway-campaign-cr-av-circle border-0"
+      {onOpenPublication ? (
+        <button
+          type="button"
+          onClick={onOpenPublication}
+          className="min-w-0 truncate text-left transition-colors hover:text-primary focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
+          title={`View ${displayName} publication details`}
+        >
+          <CreatorNameStack
+            name={identity.name}
+            handle={identity.handle}
+            nameClassName="thinkway-campaign-cr-name text-[11px]"
+            handleClassName="text-[10px] text-[var(--camp-text-3)]"
           />
-        ) : (
-          <CreatorThumbAvatar
-            name={displayName}
-            avatarUrl={avatarUrl}
-            profileUrl={profileUrl}
-            platform={platform}
-            size={20}
-            className="thinkway-campaign-cr-av-circle border-0"
-          />
-        )}
-        {onOpenPublication ? (
-          <button
-            type="button"
-            onClick={onOpenPublication}
-            className="min-w-0 truncate text-left transition-colors hover:text-primary focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
-            title={`View ${displayName} publication details`}
-          >
-            <span className="thinkway-campaign-cr-name">{displayName}</span>
-          </button>
-        ) : (
-          <span className="thinkway-campaign-cr-name">{displayName}</span>
-        )}
-      </div>
+        </button>
+      ) : (
+        <CreatorNameStack
+          name={identity.name}
+          handle={identity.handle}
+          nameClassName="thinkway-campaign-cr-name text-[11px]"
+          handleClassName="text-[10px] text-[var(--camp-text-3)]"
+        />
+      )}
     </div>
   );
 }
