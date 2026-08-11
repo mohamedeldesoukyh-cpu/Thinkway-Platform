@@ -40,6 +40,10 @@ test("classifyApiPath resolves dynamic segments", () => {
     classifyApiPath("/api/quotations/uuid-here/export"),
     "internal_workspace",
   );
+  assert.equal(
+    classifyApiPath("/api/campaigns/11111111-1111-4111-8111-111111111111/publications"),
+    "internal_workspace",
+  );
   assert.equal(classifyApiPath("/api/admin/queues"), "admin_only");
   assert.equal(classifyApiPath("/api/cron/publication-metrics"), "service_only");
   assert.equal(classifyApiPath("/api/health"), "public");

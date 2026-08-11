@@ -57,6 +57,7 @@ export const API_ROUTE_CLASSIFICATIONS: Record<string, WorkspaceClass> = {
   "/api/admin/queues": "admin_only",
   "/api/admin/campaign-performance/dashboard": "admin_only",
   "/api/admin/campaign-performance/health": "admin_only",
+  "/api/admin/creators/repair-avatars": "admin_only",
   "/api/operations-center/snapshot": "admin_only",
 
   "/api/ai/chat": "internal_workspace",
@@ -83,12 +84,14 @@ export const API_ROUTE_CLASSIFICATIONS: Record<string, WorkspaceClass> = {
 
   "/api/campaigns/influencers": "internal_workspace",
   "/api/campaigns/[id]/performance/document": "internal_workspace",
+  "/api/campaigns/[id]/publications": "internal_workspace",
   "/api/campaigns/[id]/publications-bundle": "internal_workspace",
 
   "/api/clients/[clientId]/documents": "internal_workspace",
   "/api/creators/avatar": "internal_workspace",
   "/api/creators/publication-preview": "internal_workspace",
   "/api/vendors/platform-accounts/enrich": "internal_workspace",
+  "/api/vendors/crm-import-search": "internal_workspace",
 
   "/api/quotations/[id]/export": "internal_workspace",
   "/api/shortlists/[id]/export": "internal_workspace",
