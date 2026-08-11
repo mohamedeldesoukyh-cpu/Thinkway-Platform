@@ -84,15 +84,46 @@ export function appendQuotationTemplateParam(
   }
 }
 
-/** Bust browser/CDN caches when quotation header fields (e.g. status) change. */
+/**
+ * Bump when quotation Preview/PDF/PPTX layout changes must invalidate downloads.
+ * Preview HTML is always live; PDF/PPTX URLs previously only changed with
+ * quotation `updated_at`, so browsers often reopened an older Downloads file.
+ */
+export const QUOTATION_EXPORT_LAYOUT_VERSION = "r2-detailed-20260811b";
+
+function deployExportStamp(): string {
+  const deployment = process.env.NEXT_PUBLIC_VERCEL_DEPLOYMENT_ID?.trim();
+  if (deployment) return deployment.slice(0, 10);
+  const sha = process.env.NEXT_PUBLIC_GIT_SHA?.trim();
+  if (sha) return sha.slice(0, 8);
+  const built = process.env.NEXT_PUBLIC_BUILD_TIMESTAMP?.trim();
+  if (built) return built.slice(0, 10);
+  return "local";
+}
+
+/** Combine quotation data revision + layout/deploy stamp for cache busting. */
+export function resolveQuotationExportRevision(
+  dataRevision: string | null | undefined
+): string {
+  const data = dataRevision?.trim() || "0";
+  return `${data}__${QUOTATION_EXPORT_LAYOUT_VERSION}__${deployExportStamp()}`;
+}
+
+/** Safe fragment for Content-Disposition filenames. */
+export function quotationExportFilenameRevision(
+  dataRevision: string | null | undefined
+): string {
+  return resolveQuotationExportRevision(dataRevision)
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 48);
+}
+
+/** Bust browser/CDN caches when quotation data or export layout/deploy changes. */
 export function appendQuotationExportRevision(
   params: URLSearchParams,
   revision: string | null | undefined
 ): void {
-  const trimmed = revision?.trim();
-  if (trimmed) {
-    params.set("v", trimmed);
-  } else {
-    params.delete("v");
-  }
+  params.set("v", resolveQuotationExportRevision(revision));
 }
