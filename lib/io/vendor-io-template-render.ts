@@ -243,7 +243,7 @@ export function renderVendorIoHtml(data: VendorIoDocumentData): string {
     </div>`
   );
 
-  const terms = `<section class="qsec section" style="page-break-before:always;break-before:page"><div class="qh"><span class="qnum">8</span><h3 class="section-title">Terms &amp; Conditions</h3></div><ul class="terms-list">${renderTermsListHtml(data.terms)}</ul></section>`;
+  const terms = `<section class="qsec section terms-section"><div class="qh"><span class="qnum">8</span><h3 class="section-title">Terms &amp; Conditions</h3></div><ul class="terms-list">${renderTermsListHtml(data.terms)}</ul></section>`;
 
   const foot = `<div class="qfoot">Thinkway (ثينكواي) · CR ${escapeHtml(agency.commercialRegister)} · VAT ${escapeHtml(agency.vatNumber)} · Tax Reg. ${escapeHtml(agency.taxRegistration)} · ${escapeHtml(agency.registeredAddress)} · ${escapeHtml(agency.email)}<br>CONFIDENTIAL &amp; PROPRIETARY — THINKWAY 2026 · ${docNum}</div>`;
 

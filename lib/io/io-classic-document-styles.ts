@@ -65,7 +65,8 @@ body{
 .qtable td,.deliv-table td{padding:12px;border-bottom:1px solid var(--q-line);font-size:12.5px;color:var(--q-ink)}
 .qtable td.r,.deliv-table td.r{text-align:right}
 .qtable .hh{font-weight:700}
-.deliv-table thead{display:table-header-group}
+.qtable thead,.deliv-table thead{display:table-header-group}
+.qtable tbody,.deliv-table tbody{display:table-row-group}
 .dlv-item{padding:13px 0;border-bottom:1px solid var(--q-line)}
 .dlv-item:last-child{border-bottom:0}
 .dlv-item h4{font-size:13px;font-weight:700;display:flex;justify-content:space-between;gap:14px;margin-bottom:7px;color:var(--q-ink)}
@@ -124,8 +125,18 @@ body{
 @page{size:A4;margin:14mm}
 @media print{
   body{background:#fff;padding:0}
-  .paper{width:100%;box-shadow:none;border-radius:0;overflow:visible}
+  .paper{width:100%;max-width:none;box-shadow:none;border-radius:0;overflow:visible}
   .qsec,.section{break-inside:auto;page-break-inside:auto}
-  .full-term,.dlv-item,.fee-block,.qgrand,.qtbox,.qtotals,.hero{break-inside:avoid;page-break-inside:avoid}
+  .qh{break-after:avoid;page-break-after:avoid;break-inside:avoid;page-break-inside:avoid}
+  /* Compact cards only — tall scope/roster cards may split across pages */
+  .qgrid2 > .qcard,.qack,.approve-item,.sig-box,.hpills,
+  .full-term,.dlv-item,.fee-block,.qgrand,.qtbox,.qtotals,.hero,.qfoot{
+    break-inside:avoid;page-break-inside:avoid
+  }
+  .qtable,.deliv-table{break-inside:auto}
+  .qtable thead,.deliv-table thead{display:table-header-group}
+  .qtable tbody,.deliv-table tbody{display:table-row-group}
+  .qtable tr,.deliv-table tr{break-inside:avoid;page-break-inside:avoid}
+  p,li{orphans:3;widows:3}
 }
 `.trim();

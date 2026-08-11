@@ -352,7 +352,7 @@ export function renderClientIoHtml(
    <p>This Client Insertion Order (Ref: <strong>${docNum}</strong>) has been issued by Thinkway to the Client named above. If the Client does not submit a written request for amendment or raise any objection within three (3) business days of receipt of this IO, the Client shall be deemed to have reviewed, accepted, and agreed to all terms, campaign details, deliverables, and pricing set forth herein. Thinkway will proceed with campaign execution accordingly.</p></div>`
   );
 
-  const terms = `<section class="qsec section" style="page-break-before:always;break-before:page"><div class="qh"><span class="qnum">8</span><h3 class="section-title">Terms &amp; Conditions</h3></div>${renderFullTermsHtml(data.terms)}</section>`;
+  const terms = `<section class="qsec section terms-section"><div class="qh"><span class="qnum">8</span><h3 class="section-title">Terms &amp; Conditions</h3></div>${renderFullTermsHtml(data.terms)}</section>`;
 
   const foot = `<div class="qfoot">Thinkway (ثينكواي) · CR ${escapeHtml(agency.commercialRegister)} · VAT ${escapeHtml(agency.vatNumber)} · Tax Reg. ${escapeHtml(agency.taxRegistration)} · ${escapeHtml(agency.registeredAddress)} · ${escapeHtml(agency.email)}<br>CONFIDENTIAL &amp; PROPRIETARY — THINKWAY 2026 · ${docNum}</div>`;
 
