@@ -74,7 +74,7 @@ export function OpenCampaignStudioLauncher({
           new Promise<never>((_, reject) => {
             window.setTimeout(() => {
               reject(new Error("Timed out opening Studio. Please try again."));
-            }, 25_000);
+            }, 45_000);
           }),
         ]);
         if (result.ok) router.push(result.href);
