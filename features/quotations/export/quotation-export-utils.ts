@@ -227,6 +227,7 @@ export function exportItemTypeLabel(item: QuotationExportItem): string {
 }
 
 export function exportItemServiceDescription(item: QuotationExportItem): string {
+  // Workspace "Service description" column is per-deliverable; prefer that first.
   const deliverables = (item.deliverables ?? []) as DeliverableJson[];
   const fromDeliverables = deliverables
     .map((deliverable) => deliverable.service_description?.trim())
@@ -234,6 +235,9 @@ export function exportItemServiceDescription(item: QuotationExportItem): string 
   if (fromDeliverables.length > 0) {
     return [...new Set(fromDeliverables)].join(" · ");
   }
+  // Line-level service description is the fallback SSOT when deliverables omit it.
+  const lineLevel = item.service_description?.trim();
+  if (lineLevel) return lineLevel;
   return "—";
 }
 

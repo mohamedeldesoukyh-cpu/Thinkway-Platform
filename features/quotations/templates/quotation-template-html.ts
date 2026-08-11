@@ -329,6 +329,13 @@ function renderCoverPage(payload: QuotationTemplatePayload): string {
       <div class="m"><p class="l">Status</p><p class="v">${esc(q.status)}</p></div>
     </div>`;
 
+  const feeStat = payload.cover.feeStat;
+  const totalAfterFeesStat = payload.cover.totalAfterFeesStat;
+  const coverStatCount =
+    1 + 1 + (feeStat ? 1 : 0) + (totalAfterFeesStat ? 1 : 0);
+  const coverStatsClass =
+    coverStatCount >= 4 ? "statrow statrow--4" : coverStatCount === 3 ? "statrow statrow--3" : "statrow";
+
   return `<section class="cover cpage">
   <div class="glow glow-a"></div><div class="glow glow-b"></div>
   <div class="pad">
@@ -340,9 +347,19 @@ function renderCoverPage(payload: QuotationTemplatePayload): string {
     <h1>${esc(q.title)}</h1>
     <p class="sub">${esc(c.subtitle)}</p>
     ${meta}
-    <div class="statrow">
+    <div class="${coverStatsClass}">
       <div class="stat"><p class="sl">Campaign Creators</p><p class="sv">${esc(camp.creatorCount)}${showcase ? ` <span style="font-size:16px;font-weight:600;opacity:.85">· ${esc(camp.tierSummary)}</span>` : ""}</p>${showcase ? "" : `<p class="su">${esc(camp.tierSummary)}</p>`}</div>
       <div class="stat"><p class="sl">${esc(c.stat3.label)}</p><p class="sv">${esc(c.stat3.value)}</p></div>
+      ${
+        feeStat
+          ? `<div class="stat"><p class="sl">${esc(feeStat.label)}</p><p class="sv">${esc(feeStat.value)}</p></div>`
+          : ""
+      }
+      ${
+        totalAfterFeesStat
+          ? `<div class="stat"><p class="sl">${esc(totalAfterFeesStat.label)}</p><p class="sv">${esc(totalAfterFeesStat.value)}</p></div>`
+          : ""
+      }
     </div>
   </div>
   <div class="foot">
@@ -770,9 +787,24 @@ function renderCommercialPage(
     ? `<thead><tr><th style="width:22%;">Creator</th><th>Tier</th><th>Platform</th><th>Deliverable</th><th class="r">${esc("Gross fees (EGP)")}</th></tr></thead>`
     : `<thead><tr><th style="width:26%;">Creator</th><th>Tier</th><th>Platform</th><th>Deliverable</th></tr></thead>`;
 
+  const engagementPlatforms = camp.estEngagementPlatforms ?? [];
+  const engagementKpiValue =
+    engagementPlatforms.length > 0
+      ? `<span class="sc-er-list camp-er-list">${engagementPlatforms
+          .map((row) => {
+            const avatar = row.avatarUrl?.trim()
+              ? `<img class="camp-er-avatar" src="${esc(row.avatarUrl)}" alt="" />`
+              : "";
+            return `<span class="sc-er-item">${avatar}${renderQuotationPlatformIconsHtml([
+              row.platform,
+            ])}<span class="sc-er-pct">${esc(row.engagement)}</span></span>`;
+          })
+          .join("")}</span>`
+      : esc(camp.estEngagement);
+
   const commTop = `<div class="comm-top">
       <div class="kpi"><p class="kl">Creators</p><p class="kv">${esc(camp.creatorCount)}</p></div>
-      <div class="kpi"><p class="kl">Est. engagement</p><p class="kv">${esc(camp.estEngagement)}</p></div>
+      <div class="kpi"><p class="kl">Est. engagement</p><div class="kv kv-er">${engagementKpiValue}</div></div>
       <div class="kpi invest"><p class="kl">${esc(c.headlineLabel)}</p><p class="kv">${esc(c.headlineValue)}</p></div>
     </div>`;
 

@@ -675,9 +675,8 @@ function addCoverSlide(pptx: PptxGen, doc: QuotationDocument, counter: SlideCoun
     });
   });
 
-  const statW = 5.9;
-  const statH = 1.12;
-  const statY = 5.78;
+  const feeStat = payload.cover.feeStat;
+  const totalAfterFeesStat = payload.cover.totalAfterFeesStat;
   const stats = [
     {
       label: "Campaign Creators",
@@ -692,12 +691,38 @@ function addCoverSlide(pptx: PptxGen, doc: QuotationDocument, counter: SlideCoun
       value: payload.cover.stat3.value,
       sub: showcase ? "" : payload.cover.stat3.valueShort,
     },
+    ...(feeStat
+      ? [
+          {
+            label: feeStat.label,
+            value: feeStat.value,
+            sub: feeStat.valueShort,
+          },
+        ]
+      : []),
+    ...(totalAfterFeesStat
+      ? [
+          {
+            label: totalAfterFeesStat.label,
+            value: totalAfterFeesStat.value,
+            sub: totalAfterFeesStat.valueShort,
+          },
+        ]
+      : []),
   ];
+  const statCols = Math.min(2, stats.length);
+  const statW = stats.length > 2 ? 5.9 : 5.9;
+  const statH = stats.length > 2 ? 0.98 : 1.12;
+  const statY = stats.length > 2 ? 5.55 : 5.78;
+  const statGap = 0.33;
   stats.forEach((stat, index) => {
-    const x = MARGIN_X + index * (statW + 0.33);
+    const col = index % statCols;
+    const row = Math.floor(index / statCols);
+    const x = MARGIN_X + col * (statW + statGap);
+    const y = statY + row * (statH + 0.14);
     slide.addShape("roundRect", {
       x,
-      y: statY,
+      y,
       w: statW,
       h: statH,
       fill: { color: WHITE, transparency: COVER_STAT_TRANSPARENCY },
@@ -706,33 +731,33 @@ function addCoverSlide(pptx: PptxGen, doc: QuotationDocument, counter: SlideCoun
     });
     slide.addText(stat.label.toUpperCase(), {
       x: x + 0.28,
-      y: statY + 0.15,
+      y: y + 0.12,
       w: statW - 0.5,
-      h: 0.22,
+      h: 0.2,
       fontFace: FONT_UI,
-      fontSize: 10,
+      fontSize: stats.length > 2 ? 9 : 10,
       color: COVER_STAT_LABEL,
       charSpacing: 1.2,
     });
     slide.addText(stat.value, {
       x: x + 0.26,
-      y: statY + 0.36,
+      y: y + 0.32,
       w: statW - 0.5,
-      h: 0.5,
+      h: stats.length > 2 ? 0.42 : 0.5,
       fontFace: FONT_UI,
-      fontSize: showcase ? 22 : 28,
+      fontSize: showcase ? 22 : stats.length > 2 ? 20 : 28,
       bold: true,
       color: WHITE,
     });
-    if (stat.sub) {
+    if (stat.sub && stats.length <= 2) {
       slide.addText(stat.sub, {
         x: x + 0.28,
-        y: statY + 0.82,
+        y: y + 0.82,
         w: statW - 0.5,
-        h: 0.24,
+        h: 0.2,
         fontFace: FONT_UI,
         fontSize: 11,
-        color: COVER_KICKER,
+        color: COVER_STAT_LABEL,
       });
     }
   });
