@@ -240,7 +240,10 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(html.includes("tier-breakdown-table"), "Tier breakdown table rendered");
   assert.ok(html.includes(">Creator<"), "Tier breakdown includes Creator column");
   assert.ok(!html.includes(">EG Audience %<"), "Tier breakdown must not include EG Audience column");
-  assert.ok(html.includes("tier-breakdown-grand-total"), "Tier breakdown grand total rendered");
+  assert.ok(
+    !html.includes("tier-breakdown-grand-total"),
+    "Detailed creator mix must not show TOTAL INVESTMENT price banner"
+  );
   assert.ok(html.includes("cpage"), "Fixed full-bleed page boxes");
   const coverEnd = html.indexOf("</section>");
   const categoryPos = html.indexOf("Creators by category");
@@ -1041,8 +1044,11 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(html.includes("MID"));
   assert.ok(html.includes("MICRO"));
   assert.ok(html.includes("dr.fitn3ss"));
-  assert.ok(html.includes("TOTAL INVESTMENT · 4 CREATORS"));
-  assert.ok(html.includes("tier-breakdown-grand-total"));
+  assert.ok(
+    !html.includes("TOTAL INVESTMENT · 4 CREATORS"),
+    "Detailed creator mix must not show TOTAL INVESTMENT price banner"
+  );
+  assert.ok(!html.includes("tier-breakdown-grand-total"));
   assert.ok(!html.includes(">Views<"), "Views column removed from all templates");
   assert.ok(!html.includes("Avg views"), "Avg views column removed from all templates");
   assert.ok(html.includes("cat-bar"), "Line-item categories use full-width bars");

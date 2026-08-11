@@ -238,9 +238,6 @@ export const QUOTATION_TEMPLATE_STYLES = `
   .kpi .kv{font-size:20px; font-weight:800; letter-spacing:-.4px; color:var(--navy); margin:0; font-variant-numeric:tabular-nums;}
   .kpi .kv.kv-er{font-size:15px; font-weight:700; line-height:1.35;}
   .kpi .camp-er-list{gap:10px 14px;}
-  .kpi .camp-er-avatar{
-    width:18px; height:18px; border-radius:999px; object-fit:cover; flex:none; display:block; background:var(--tint);
-  }
   .kpi.invest{background:var(--navy); border-color:var(--navy);}
   .kpi.invest .kl{color:#8b96ba;} .kpi.invest .kv{color:#fff;}
 
