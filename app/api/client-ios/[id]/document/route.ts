@@ -3,12 +3,13 @@ import { NextResponse } from "next/server";
 import { createPdfDocumentResponse } from "@/lib/documents/pdf-response";
 import { resolveClientIoDocumentLayout } from "@/lib/io/client-io-document-layout";
 import { CLIENT_IO_DOCUMENTS_BUCKET } from "@/lib/io/client-io-document-service";
-import {
-  createIoDocumentSignedUrl,
-  downloadIoDocumentBuffer,
-} from "@/lib/io/io-document-storage";
+import { createIoDocumentSignedUrl } from "@/lib/io/io-document-storage";
 import { renderLiveClientIoHtml } from "@/lib/io/render-live-client-io-html";
-import { pdfUnavailableMessage, renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
+import {
+  INSERTION_ORDER_PDF_OPTIONS,
+  pdfUnavailableMessage,
+  renderHtmlToPdf,
+} from "@/lib/io/vendor-io-pdf";
 import { requireApiPermission } from "@/lib/auth/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -52,6 +53,8 @@ export async function GET(request: Request, context: RouteContext) {
     const baseName = typed.document_number ?? id;
 
     if (format === "pdf") {
+      // Inline view may use the stored generated PDF for speed.
+      // Download always re-renders from live HTML so PDF matches Preview.
       if (typed.generated_pdf_url && !download && layout === "detailed") {
         const signedUrl = await createIoDocumentSignedUrl(
           supabase,
@@ -63,19 +66,8 @@ export async function GET(request: Request, context: RouteContext) {
         }
       }
 
-      if (typed.generated_pdf_url && download && layout === "detailed") {
-        const pdfBuffer = await downloadIoDocumentBuffer(
-          supabase,
-          CLIENT_IO_DOCUMENTS_BUCKET,
-          typed.generated_pdf_url
-        );
-        if (pdfBuffer) {
-          return createPdfDocumentResponse(pdfBuffer, baseName, download);
-        }
-      }
-
       const html = await renderLiveClientIoHtml(supabase, id, layout, auth.userId);
-      const pdfResult = await renderHtmlToPdf(html);
+      const pdfResult = await renderHtmlToPdf(html, INSERTION_ORDER_PDF_OPTIONS);
       if (!pdfResult.ok) {
         return NextResponse.json(
           { error: pdfUnavailableMessage(pdfResult.error) },

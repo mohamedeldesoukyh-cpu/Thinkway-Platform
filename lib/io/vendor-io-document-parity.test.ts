@@ -15,7 +15,7 @@ import {
   pdfContainsTermsInOrder,
 } from "./extract-vendor-io-terms";
 import { renderVendorIoHtml } from "./vendor-io-template-render";
-import { renderHtmlToPdf } from "./vendor-io-pdf";
+import { INSERTION_ORDER_PDF_OPTIONS, renderHtmlToPdf } from "./vendor-io-pdf";
 import { extractPdfText } from "@/lib/discovery-import/parsers/pdf-text";
 import { VENDOR_IO_DEFAULT_TERMS } from "./vendor-io-default-terms";
 import type { VendorIoDocumentData } from "./vendor-io-document-types";
@@ -121,7 +121,7 @@ async function assertHtmlPdfParity(name: string, terms: ClientIoTerm[]) {
     assert.ok(listHtml.includes(`class="tnum">${i + 1}</span>`), `${name}: missing number ${i + 1}`);
   }
 
-  const pdfResult = await renderHtmlToPdf(html);
+  const pdfResult = await renderHtmlToPdf(html, INSERTION_ORDER_PDF_OPTIONS);
   assert.equal(pdfResult.ok, true, `${name}: PDF render failed (${pdfResult.ok ? "" : pdfResult.error})`);
   if (!pdfResult.ok) return;
 

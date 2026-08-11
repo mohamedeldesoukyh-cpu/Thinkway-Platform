@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 
 import { createPdfDocumentResponse } from "@/lib/documents/pdf-response";
-import {
-  createIoDocumentSignedUrl,
-  downloadIoDocumentBuffer,
-} from "@/lib/io/io-document-storage";
+import { createIoDocumentSignedUrl } from "@/lib/io/io-document-storage";
 import { renderLiveVendorIoHtml } from "@/lib/io/render-live-vendor-io-html";
 import { VENDOR_IO_DOCUMENTS_BUCKET } from "@/lib/io/vendor-io-document-service";
-import { pdfUnavailableMessage, renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
+import {
+  INSERTION_ORDER_PDF_OPTIONS,
+  pdfUnavailableMessage,
+  renderHtmlToPdf,
+} from "@/lib/io/vendor-io-pdf";
 import { requireApiPermission } from "@/lib/auth/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -50,6 +51,8 @@ export async function GET(request: Request, context: RouteContext) {
     const baseName = typed.document_number ?? id;
 
     if (format === "pdf") {
+      // Inline view may use the stored generated PDF for speed.
+      // Download always re-renders from live HTML so PDF matches Preview.
       if (typed.generated_pdf_url && !download) {
         const signedUrl = await createIoDocumentSignedUrl(
           supabase,
@@ -61,19 +64,8 @@ export async function GET(request: Request, context: RouteContext) {
         }
       }
 
-      if (typed.generated_pdf_url && download) {
-        const pdfBuffer = await downloadIoDocumentBuffer(
-          supabase,
-          VENDOR_IO_DOCUMENTS_BUCKET,
-          typed.generated_pdf_url
-        );
-        if (pdfBuffer) {
-          return createPdfDocumentResponse(pdfBuffer, baseName, download);
-        }
-      }
-
       const html = await renderLiveVendorIoHtml(supabase, id);
-      const pdfResult = await renderHtmlToPdf(html);
+      const pdfResult = await renderHtmlToPdf(html, INSERTION_ORDER_PDF_OPTIONS);
       if (!pdfResult.ok) {
         return NextResponse.json(
           { error: pdfUnavailableMessage(pdfResult.error) },
