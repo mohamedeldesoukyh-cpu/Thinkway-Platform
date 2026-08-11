@@ -1,7 +1,7 @@
 "use client";
 
 import { CalendarIcon, HashIcon, Link2Icon, StickyNoteIcon, PlusIcon, Trash2Icon } from "lucide-react";
-import { useActionState, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
@@ -231,13 +231,18 @@ export function CampaignPublicationSheet({
     createCampaignPublicationsBatchAction,
     { ok: false } satisfies FormActionState
   );
+  const handledSuccessKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!state.message) return;
     if (state.ok) {
+      const successKey = state.message;
+      if (handledSuccessKeyRef.current === successKey) return;
+      handledSuccessKeyRef.current = successKey;
+      // Close + toast first so success is visible before the list soft-reloads.
+      onOpenChange(false);
       toast.success(state.message);
       refreshAfterPublicationMutation();
-      onOpenChange(false);
       return;
     }
     toast.error(state.message);
@@ -245,6 +250,7 @@ export function CampaignPublicationSheet({
 
   useEffect(() => {
     if (!open) return;
+    handledSuccessKeyRef.current = null;
     setRows([newRow()]);
     setStatus("published");
     setPublicationDate("");
