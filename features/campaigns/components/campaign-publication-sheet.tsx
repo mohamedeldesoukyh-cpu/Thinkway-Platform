@@ -1,7 +1,7 @@
 "use client";
 
 import { CalendarIcon, HashIcon, Link2Icon, StickyNoteIcon, PlusIcon, Trash2Icon } from "lucide-react";
-import { useActionState, useEffect, useId, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { FieldError } from "@/components/forms/field-error";
@@ -122,19 +122,32 @@ function splitPastedUrls(raw: string): string[] {
     .filter((part) => /^https?:\/\//i.test(part) || /\w+\.\w+\//.test(part));
 }
 
-function deriveRowFromUrl(
+function resolvePlatformAndType(
   url: string,
-  lines: CampaignLineWorkspace[],
-  previous: PublicationRow
-): PublicationRow {
+  fallbackPlatform: string,
+  fallbackType: string
+): { platform: string; publicationType: string } {
   const detected = detectSocialPlatformFromContentUrl(url);
-  const platform = detected ?? previous.platform;
+  const platform = detected ?? fallbackPlatform;
   const inferred = inferDeliverableTypeFromContentUrl(url);
   const types = getDeliverableTypeCodesForPlatform(platform);
   const publicationType =
     inferred && types.includes(inferred)
       ? inferred
-      : coerceDeliverableTypeForPlatform(platform, previous.publicationType, url);
+      : coerceDeliverableTypeForPlatform(platform, fallbackType, url);
+  return { platform, publicationType };
+}
+
+function deriveRowFromUrl(
+  url: string,
+  lines: CampaignLineWorkspace[],
+  previous: PublicationRow
+): PublicationRow {
+  const { platform, publicationType } = resolvePlatformAndType(
+    url,
+    previous.platform,
+    previous.publicationType
+  );
 
   const matched = matchAssignmentLineFromContentUrl(url, lines);
   const shouldApplyMatch =
@@ -148,6 +161,43 @@ function deriveRowFromUrl(
     lineId: shouldApplyMatch ? matched!.id : previous.lineId,
     autoMatched: shouldApplyMatch ? true : previous.lineId ? previous.autoMatched : false,
   };
+}
+
+function buildBatchItems(
+  rows: PublicationRow[],
+  assignmentLines: CampaignLineWorkspace[],
+  shared: {
+    publicationDate: string;
+    status: string;
+    caption: string;
+    hashtags: string;
+    notes: string;
+  }
+) {
+  return rows
+    .filter((r) => r.contentUrl.trim() && r.lineId)
+    .map((row) => {
+      const line = assignmentLines.find((l) => l.id === row.lineId);
+      const url = row.contentUrl.trim();
+      // Always prefer host detection so a stale IG row cannot poison TikTok/Facebook submits.
+      const { platform, publicationType } = resolvePlatformAndType(
+        url,
+        row.platform,
+        row.publicationType
+      );
+      return {
+        campaign_line_id: row.lineId,
+        influencer_id: line?.influencer_id ?? "",
+        platform,
+        publication_type: publicationType,
+        content_url: url,
+        publication_date: shared.publicationDate,
+        status: shared.status,
+        caption: shared.caption,
+        hashtags: shared.hashtags,
+        notes: shared.notes,
+      };
+    });
 }
 
 type CampaignPublicationSheetProps = {
@@ -164,7 +214,6 @@ export function CampaignPublicationSheet({
   onOpenChange,
 }: CampaignPublicationSheetProps) {
   const refreshAfterPublicationMutation = useRefreshCampaignAfterPublicationMutation();
-  const itemsFieldId = useId();
   const [rows, setRows] = useState<PublicationRow[]>([newRow()]);
   const [status, setStatus] = useState("published");
   const [publicationDate, setPublicationDate] = useState("");
@@ -203,6 +252,32 @@ export function CampaignPublicationSheet({
     setNotes("");
   }, [open]);
 
+  const rowUrlSignature = rows.map((row) => `${row.key}:${row.contentUrl}`).join("|");
+
+  // Keep platform/type aligned with URL hosts even if a select remount resets local state.
+  useEffect(() => {
+    setRows((prev) => {
+      let changed = false;
+      const next = prev.map((row) => {
+        if (!row.contentUrl.trim()) return row;
+        const resolved = resolvePlatformAndType(
+          row.contentUrl,
+          row.platform,
+          row.publicationType
+        );
+        if (
+          resolved.platform === row.platform &&
+          resolved.publicationType === row.publicationType
+        ) {
+          return row;
+        }
+        changed = true;
+        return { ...row, ...resolved };
+      });
+      return changed ? next : prev;
+    });
+  }, [rowUrlSignature]);
+
   function updateRow(key: string, updater: (row: PublicationRow) => PublicationRow) {
     setRows((prev) => prev.map((row) => (row.key === key ? updater(row) : row)));
   }
@@ -232,24 +307,48 @@ export function CampaignPublicationSheet({
         creatorPlatformAccounts: line?.creator_platform_accounts,
         assignment: line?.assignment,
       });
-      const urlPlatform = detectSocialPlatformFromContentUrl(row.contentUrl);
-      const nextPlatform = urlPlatform ?? connected[0]?.value ?? row.platform;
-      const types = getDeliverableTypeCodesForPlatform(nextPlatform);
-      const nextType = types.includes(row.publicationType)
-        ? row.publicationType
-        : (types[0] ?? "other");
+      // URL platform always wins over the creator's first connected account.
+      const resolved = resolvePlatformAndType(
+        row.contentUrl,
+        connected[0]?.value ?? row.platform,
+        row.publicationType
+      );
       return {
         ...row,
         lineId,
         autoMatched: false,
-        platform: nextPlatform,
-        publicationType: coerceDeliverableTypeForPlatform(
-          nextPlatform,
-          nextType,
-          row.contentUrl
-        ),
+        platform: resolved.platform,
+        publicationType: resolved.publicationType,
       };
     });
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const items = buildBatchItems(rows, assignmentLines, {
+      publicationDate,
+      status,
+      caption,
+      hashtags,
+      notes,
+    });
+    if (items.length === 0) {
+      toast.error("Add at least one URL with a selected creator.");
+      return;
+    }
+
+    // Sync visible row platform/type before submit so the UI matches what we send.
+    setRows((prev) =>
+      prev.map((row) => {
+        if (!row.contentUrl.trim()) return row;
+        return { ...row, ...resolvePlatformAndType(row.contentUrl, row.platform, row.publicationType) };
+      })
+    );
+
+    const formData = new FormData();
+    formData.set("campaign_id", campaignId);
+    formData.set("items", JSON.stringify(items));
+    formAction(formData);
   }
 
   function platformOptionsForRow(row: PublicationRow) {
@@ -267,23 +366,6 @@ export function CampaignPublicationSheet({
   }
 
   const readyCount = rows.filter((r) => r.contentUrl.trim() && r.lineId).length;
-  const itemsPayload = rows
-    .filter((r) => r.contentUrl.trim())
-    .map((row) => {
-      const line = assignmentLines.find((l) => l.id === row.lineId);
-      return {
-        campaign_line_id: row.lineId,
-        influencer_id: line?.influencer_id ?? "",
-        platform: row.platform,
-        publication_type: row.publicationType,
-        content_url: row.contentUrl.trim(),
-        publication_date: publicationDate,
-        status,
-        caption,
-        hashtags,
-        notes,
-      };
-    });
 
   return (
     <OperationalDetailSheet
@@ -293,7 +375,7 @@ export function CampaignPublicationSheet({
       description="Paste one or many live URLs"
       variant="detail"
     >
-      <form action={formAction} className="flex min-h-0 flex-1 flex-col">
+      <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
         <OperationalDetailCommandBar
           contextLabel="Publications"
           contextHandle={readyCount > 0 ? `${readyCount} ready` : "New"}
@@ -315,19 +397,18 @@ export function CampaignPublicationSheet({
         />
 
         <OperationalDetailScrollBody>
-          <input type="hidden" name="campaign_id" value={campaignId} />
-          <input
-            id={itemsFieldId}
-            type="hidden"
-            name="items"
-            value={JSON.stringify(itemsPayload)}
-          />
-
           <OperationalDetailSection icon={<Link2Icon className="size-3.5" />} title="Publication URLs">
             <div className="flex flex-col gap-2">
               {rows.map((row, index) => {
                 const extracted = extractHandleFromContentUrl(row.contentUrl);
                 const needsCreator = Boolean(row.contentUrl.trim()) && !row.lineId;
+                const resolved = resolvePlatformAndType(
+                  row.contentUrl,
+                  row.platform,
+                  row.publicationType
+                );
+                const displayPlatform = resolved.platform;
+                const displayType = resolved.publicationType;
                 return (
                   <div
                     key={row.key}
@@ -339,7 +420,9 @@ export function CampaignPublicationSheet({
                     <div className="flex items-start gap-2">
                       <div className="mt-1.5 flex w-8 shrink-0 flex-col items-center gap-1">
                         <span className="text-[10px] font-semibold text-[#94a3b8]">{index + 1}</span>
-                        {row.contentUrl.trim() ? <PlatformBadge platform={row.platform} /> : null}
+                        {row.contentUrl.trim() ? (
+                          <PlatformBadge platform={displayPlatform} />
+                        ) : null}
                       </div>
 
                       <div className="min-w-0 flex-1 space-y-2">
@@ -348,6 +431,7 @@ export function CampaignPublicationSheet({
                           className={cn(DETAIL_FORM_INPUT_CLASS, "bg-white")}
                           value={row.contentUrl}
                           onChange={(e) => onRowUrlChange(row.key, e.target.value)}
+                          onBlur={(e) => onRowUrlChange(row.key, e.target.value)}
                           onPaste={(e) => {
                             const text = e.clipboardData.getData("text");
                             const urls = splitPastedUrls(text);
@@ -388,10 +472,13 @@ export function CampaignPublicationSheet({
                           </div>
 
                           <PlatformSelect
-                            platform={row.platform}
-                            platformOptions={platformOptionsForRow(row)}
+                            key={`${row.key}-platform-${displayPlatform}`}
+                            platform={displayPlatform}
+                            platformOptions={platformOptionsForRow({
+                              ...row,
+                              platform: displayPlatform,
+                            })}
                             disabled={isPending}
-                            className={DETAIL_FORM_SELECT_TRIGGER_CLASS}
                             onPlatformChange={(next) =>
                               updateRow(row.key, (current) => {
                                 const types = getDeliverableTypeCodesForPlatform(next);
@@ -407,10 +494,10 @@ export function CampaignPublicationSheet({
                           />
 
                           <DeliverableTypeSelect
-                            platform={row.platform}
-                            deliverableType={row.publicationType}
+                            key={`${row.key}-type-${displayPlatform}-${displayType}`}
+                            platform={displayPlatform}
+                            deliverableType={displayType}
                             disabled={isPending}
-                            className={DETAIL_FORM_SELECT_TRIGGER_CLASS}
                             onDeliverableTypeChange={(next) =>
                               updateRow(row.key, (current) => ({
                                 ...current,

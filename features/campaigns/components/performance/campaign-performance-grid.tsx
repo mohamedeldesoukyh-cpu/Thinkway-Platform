@@ -266,11 +266,8 @@ export function CampaignPerformanceGrid({
         );
       case "platform":
         return (
-          <div key={columnId} className="px-2">
-            <DeliverableExplorerPlatformPill
-              platform={row.platform}
-              className="thinkway-campaign-deliv-pill--perf"
-            />
+          <div key={columnId} className="flex items-center justify-center px-2">
+            <DeliverableExplorerPlatformPill platform={row.platform} />
           </div>
         );
       case "type":
