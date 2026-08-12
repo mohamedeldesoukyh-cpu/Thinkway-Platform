@@ -1,8 +1,10 @@
 # Invoice Template — Field Mapping
 
-**Master template:** `lib/billing/templates/Thinkway_Invoice_Template.html` (from `Thinkway_Invoice_Template_1.html` — structured UR/AF line examples)  
+**Master template:** `lib/billing/invoice-template-html.ts` (design parity with INV Detailed / Summary HTML)  
+**Legacy static shell:** `lib/billing/templates/Thinkway_Invoice_Template.html` (superseded)  
 **Data loader:** `lib/billing/invoice-document-data.ts`  
-**Renderer:** `lib/billing/invoice-template-render.ts`
+**Renderer:** `lib/billing/invoice-template-render.ts` → `buildInvoiceTemplateHtml`  
+**Layouts:** `detailed` (per deliverable) · `by_creator` (campaign line rollup) · `package` (lump-sum + AF)
 
 Maps dynamic regions in the invoice HTML template to platform data.
 
