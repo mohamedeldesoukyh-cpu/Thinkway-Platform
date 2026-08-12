@@ -107,6 +107,84 @@ function findSlateCreatorByName(slate: SlateCreator[], name: string): SlateCreat
   });
 }
 
+/**
+ * Schedule week bound must cover the visible calendar, not only brief facts.
+ * Facts `durationWeeks` can be shorter than `calendarWeeks` / tip week rows.
+ */
+export function resolveScheduleDurationWeeks(
+  campaignObject: CampaignObject,
+  existing?: MediaPlanScheduleMeta
+): number {
+  const facts = getCampaignFacts(campaignObject);
+  const factsWeeks = Math.max(1, facts?.durationWeeks ?? 4);
+
+  let planWeeks = 0;
+  const planData = campaignObject.meta?.campaignOutputs?.media_plan?.content?.data;
+  if (planData && typeof planData === "object") {
+    const data = planData as {
+      calendarWeeks?: unknown;
+      durationWeeks?: unknown;
+      weeks?: unknown;
+    };
+    if (typeof data.calendarWeeks === "number" && Number.isFinite(data.calendarWeeks)) {
+      planWeeks = Math.max(planWeeks, data.calendarWeeks);
+    }
+    if (typeof data.durationWeeks === "number" && Number.isFinite(data.durationWeeks)) {
+      planWeeks = Math.max(planWeeks, data.durationWeeks);
+    }
+    if (Array.isArray(data.weeks)) {
+      planWeeks = Math.max(planWeeks, data.weeks.length);
+    }
+  }
+
+  const assignmentMax = Math.max(
+    0,
+    ...((existing ?? mediaPlanScheduleFromMeta(campaignObject.meta))?.assignments ?? []).map(
+      (assignment) => assignment.week
+    )
+  );
+
+  return Math.max(1, Math.min(52, Math.max(factsWeeks, planWeeks, assignmentMax)));
+}
+
+/**
+ * Resolve move targets against the slate.
+ * Remaining cards often carry Assignment influencer IDs while the slate still
+ * uses quotation / Studio creator IDs — fall back to display name, then synthesize.
+ */
+function resolveCreatorsForMove(
+  slate: SlateCreator[],
+  move: NonNullable<RescheduleMediaPlanInput["moveCreators"]>[number]
+): SlateCreator[] {
+  const resolved = new Map<string, SlateCreator>();
+
+  for (const creatorId of move.creatorIds ?? []) {
+    const creator = slate.find(
+      (entry) => normalizeCreatorId(entry.creatorId) === normalizeCreatorId(creatorId)
+    );
+    if (creator) resolved.set(normalizeCreatorId(creator.creatorId), creator);
+  }
+
+  for (const name of move.names ?? []) {
+    const creator = findSlateCreatorByName(slate, name);
+    if (creator) resolved.set(normalizeCreatorId(creator.creatorId), creator);
+  }
+
+  if (resolved.size > 0) return [...resolved.values()];
+
+  const fallbackId = move.creatorIds?.[0]?.trim();
+  const fallbackName = move.names?.find((name) => name.trim())?.trim();
+  if (!fallbackId && !fallbackName) return [];
+
+  const syntheticId = fallbackId || fallbackName!;
+  return [
+    {
+      creatorId: syntheticId,
+      displayName: fallbackName || fallbackId || syntheticId,
+    },
+  ];
+}
+
 export type RescheduleMediaPlanInput = {
   weekWeights?: number[];
   moveCreators?: Array<{
@@ -174,10 +252,9 @@ export function applyMediaPlanScheduleChangeUnchecked(
   campaignObject: CampaignObject,
   input: RescheduleMediaPlanInput
 ): RescheduleMediaPlanResult {
-  const facts = getCampaignFacts(campaignObject);
-  const durationWeeks = Math.max(1, facts?.durationWeeks ?? 4);
-  const slate = resolveSlate(campaignObject);
   const existing = mediaPlanScheduleFromMeta(campaignObject.meta) ?? {};
+  const durationWeeks = resolveScheduleDurationWeeks(campaignObject, existing);
+  const slate = resolveSlate(campaignObject);
   const next = cloneMediaPlanScheduleMeta(existing);
   const changes: string[] = [];
 
@@ -228,9 +305,15 @@ export function applyMediaPlanScheduleChangeUnchecked(
 
       const applyCreatorMove = (creator: SlateCreator) => {
         const creatorPrefix = `${creator.creatorId.trim().toLowerCase()}::`;
+        // Also clear pins left under a prior identity (e.g. influencer UUID vs Studio id).
+        const aliasPrefixes = new Set<string>([creatorPrefix]);
+        for (const aliasId of move.creatorIds ?? []) {
+          const normalized = aliasId.trim().toLowerCase();
+          if (normalized) aliasPrefixes.add(`${normalized}::`);
+        }
         const clearCreatorAssignments = (onlyStar = false) => {
           for (const key of [...assignments.keys()]) {
-            if (!key.startsWith(creatorPrefix)) continue;
+            if (![...aliasPrefixes].some((prefix) => key.startsWith(prefix))) continue;
             if (onlyStar && !key.endsWith("::*")) continue;
             if (!onlyStar || key.endsWith("::*")) assignments.delete(key);
           }
@@ -302,17 +385,7 @@ export function applyMediaPlanScheduleChangeUnchecked(
         changes.push(`moved ${creator.displayName} to Week ${toWeek}`);
       };
 
-      for (const creatorId of move.creatorIds ?? []) {
-        const creator = slate.find(
-          (entry) => normalizeCreatorId(entry.creatorId) === normalizeCreatorId(creatorId)
-        );
-        if (!creator) continue;
-        applyCreatorMove(creator);
-      }
-
-      for (const name of move.names ?? []) {
-        const creator = findSlateCreatorByName(slate, name);
-        if (!creator) continue;
+      for (const creator of resolveCreatorsForMove(slate, move)) {
         applyCreatorMove(creator);
       }
     }

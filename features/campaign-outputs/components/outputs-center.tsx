@@ -385,6 +385,7 @@ export function OutputsCenter({
         conversationId,
         move: {
           creatorId: target.creatorId,
+          creatorName: target.creatorName,
           fromWeek: target.fromWeek,
           fromDayIndex: target.fromDayIndex,
           toWeek: target.toWeek,

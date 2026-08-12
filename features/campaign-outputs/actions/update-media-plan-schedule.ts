@@ -29,6 +29,8 @@ import { mutateMediaPlanSchedule } from "../media-plan-mutations";
 
 const moveSchema = z.object({
   creatorId: z.string().min(1),
+  /** Display name — resolves Remaining cards when calendar ID ≠ slate ID. */
+  creatorName: z.string().min(1).optional(),
   fromWeek: z.number().int().min(1).max(52),
   fromDayIndex: z.number().int().min(0).max(6),
   toWeek: z.number().int().min(1).max(52),
@@ -124,6 +126,7 @@ export async function updateMediaPlanScheduleAction(
       moveCreators: [
         {
           creatorIds: [move.creatorId],
+          names: move.creatorName ? [move.creatorName] : undefined,
           fromWeek: move.fromWeek,
           fromDayIndex: move.fromDayIndex,
           toWeek: move.toWeek,
@@ -145,7 +148,11 @@ export async function updateMediaPlanScheduleAction(
   }
 
   if (!scheduleResult.change) {
-    return { ok: false, message: "Could not move creator — check the target week." };
+    return {
+      ok: false,
+      message:
+        "Could not move creator — the target week is outside the plan calendar, or the creator could not be matched on the slate.",
+    };
   }
 
   let next = scheduleResult.campaignObject;

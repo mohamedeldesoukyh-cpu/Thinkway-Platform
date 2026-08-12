@@ -224,6 +224,7 @@ export function CampaignMediaPlanWorkspace({
         campaignId: workspace.id,
         move: {
           creatorId: target.creatorId,
+          creatorName: target.creatorName,
           fromWeek: target.fromWeek,
           fromDayIndex: target.fromDayIndex,
           toWeek: target.toWeek,

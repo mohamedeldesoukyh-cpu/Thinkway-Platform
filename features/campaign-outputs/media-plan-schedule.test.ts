@@ -57,6 +57,79 @@ test("applyMediaPlanScheduleChange merges marketIntelligence overrides", () => {
   assert.equal(mi?.toggles?.weather, true);
 });
 
+test("applyMediaPlanScheduleChange accepts calendar weeks beyond facts durationWeeks", () => {
+  const object = buildCampaignObjectFixture({
+    facts: { durationWeeks: 4 },
+  });
+  object.meta.campaignOutputs = {
+    media_plan: {
+      content: {
+        data: {
+          durationWeeks: 4,
+          calendarWeeks: 6,
+          weeks: [{ week: 1 }, { week: 2 }, { week: 3 }, { week: 4 }, { week: 5 }, { week: 6 }],
+        },
+      },
+    },
+  } as typeof object.meta.campaignOutputs;
+
+  const result = applyMediaPlanScheduleChange(object, {
+    moveCreators: [{ creatorIds: ["cr_star"], toWeek: 6, toDayIndex: 1 }],
+  });
+
+  assert.ok(result.change, "move onto calendar week 6 should apply");
+  const pin = result.campaignObject.meta.mediaPlanSchedule?.assignments?.find(
+    (assignment) => assignment.creatorId === "cr_star"
+  );
+  assert.equal(pin?.week, 6);
+  assert.equal(pin?.dayIndex, 1);
+});
+
+test("applyMediaPlanScheduleChange resolves Remaining influencer ids via creator name", () => {
+  const object = buildCampaignObjectFixture();
+  const result = applyMediaPlanScheduleChange(object, {
+    moveCreators: [
+      {
+        creatorIds: ["inf-uuid-not-on-slate"],
+        names: ["Nour Star"],
+        toWeek: 2,
+        toDayIndex: 3,
+        deliverableTypes: ["1× IG Reel"],
+      },
+    ],
+  });
+
+  assert.ok(result.change, "name fallback should pin the slate creator");
+  const pin = result.campaignObject.meta.mediaPlanSchedule?.assignments?.find(
+    (assignment) => assignment.creatorId === "cr_star"
+  );
+  assert.ok(pin);
+  assert.equal(pin?.week, 2);
+  assert.equal(pin?.dayIndex, 3);
+  assert.equal(pin?.serviceType, "1× IG Reel");
+});
+
+test("applyMediaPlanScheduleChange synthesizes a pin when creator is absent from slate", () => {
+  const object = buildCampaignObjectFixture({ creators: [] });
+  const result = applyMediaPlanScheduleChange(object, {
+    moveCreators: [
+      {
+        creatorIds: ["inf-orphan"],
+        names: ["Orphan Creator"],
+        toWeek: 1,
+        toDayIndex: 0,
+      },
+    ],
+  });
+
+  assert.ok(result.change);
+  const pin = result.campaignObject.meta.mediaPlanSchedule?.assignments?.find(
+    (assignment) => assignment.creatorId === "inf-orphan"
+  );
+  assert.ok(pin);
+  assert.equal(pin?.week, 1);
+});
+
 test("mergeMediaPlanMarketIntelligenceMeta applies partial toggle patches", () => {
   const merged = mergeMediaPlanMarketIntelligenceMeta(
     { enabled: true, toggles: { salaryCycle: true, ramadan: false } },
