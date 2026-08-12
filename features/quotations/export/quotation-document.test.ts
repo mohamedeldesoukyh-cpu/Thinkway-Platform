@@ -450,8 +450,12 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     "Showcase shows empty-state when no publication screenshots"
   );
   assert.ok(!showcaseHtml.includes("Terms &amp; conditions"), "Showcase deck omits terms");
-  assert.ok(!showcaseHtml.includes("Client investment"), "Showcase cover omits investment");
-  assert.ok(!showcaseHtml.includes("Gross fees (EGP)"), "Showcase omits pricing");
+  assert.ok(
+    showcaseHtml.includes("Client Investment") || showcaseHtml.includes("Client investment"),
+    "Showcase cover/summary includes client investment"
+  );
+  assert.ok(showcaseHtml.includes("Total after Fees"), "Showcase shows total after fees");
+  assert.ok(showcaseHtml.includes("Creator category"), "Showcase metric leads with category");
   assert.ok(!showcaseHtml.includes('id="section-commercial"'), "Showcase omits commercial summary");
 }
 
@@ -498,18 +502,18 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(showcaseLumpHtml.includes(QUOTATION_CLIENT_LABELS.lumpSumCost));
   assert.ok(showcaseLumpHtml.includes(QUOTATION_CLIENT_LABELS.totalCost));
   assert.ok(
-    showcaseLumpHtml.includes(QUOTATION_CLIENT_LABELS.totalCost),
-    "Cover shows total cost investment KPI"
+    showcaseLumpHtml.includes("Client Investment") ||
+      showcaseLumpHtml.includes("Client investment"),
+    "Showcase lump sum cover/summary includes client investment before fees"
   );
+  assert.ok(showcaseLumpHtml.includes("Total after Fees"));
   assert.ok(
     !showcaseLumpHtml.includes("Gross fees (EGP)"),
     "Showcase lump sum must not show per-creator pricing"
   );
+  assert.ok(!showcaseLumpHtml.includes("Fees (EGP)"), "Showcase lump sum hides fees column");
+  assert.ok(!showcaseLumpHtml.includes('class="sc-fee-pill"'));
   assert.ok(!showcaseLumpHtml.includes("Terms &amp; conditions"), "Showcase lump sum omits terms");
-  assert.ok(
-    !showcaseLumpHtml.includes("Client investment"),
-    "Showcase lump sum cover uses total cost, not client investment"
-  );
 }
 
 {

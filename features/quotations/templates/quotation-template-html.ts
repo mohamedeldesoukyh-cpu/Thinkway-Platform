@@ -101,7 +101,11 @@ function resolveCreatorFee(
   if (!group) return null;
   const fromRows = group.rows
     .filter((row) => !row.isCollapsePackageFollower)
-    .map((row) => parseFeeNumber(row.clientCost.match(/([\d,.\s]+)/)?.[1] ?? null))
+    .map((row) => {
+      const client = parseFeeNumber(row.clientCost.match(/([\d,.\s]+)/)?.[1] ?? null);
+      const af = parseFeeNumber(row.af.match(/([\d,.\s]+)/)?.[1] ?? null) ?? 0;
+      return client == null ? null : client + af;
+    })
     .filter((n): n is number => n != null);
   if (fromRows.length === 0) return null;
   return formatFeeDisplay(fromRows.reduce((a, b) => a + b, 0));
@@ -392,6 +396,8 @@ function renderCategoryTierPages(
     .join("");
 
   const money = splitMoneyParts(payload.commercial.headlineValue || "EGP —");
+  const feeMoney = splitMoneyParts(payload.commercial.agencyFee || "EGP —");
+  const totalAfterMoney = splitMoneyParts(payload.commercial.totalInclAF || "EGP —");
 
   return pages
     .map((page) => {
@@ -411,7 +417,13 @@ function renderCategoryTierPages(
           ? `<div class="cat-bars">${categories || `<div class="cat-bar"><span class="cn">—</span><b>0</b><span class="cs">No categories</span></div>`}</div>`
           : "";
       const banner = page.showBanner
-        ? `<div class="banner tier-breakdown-grand-total"><div class="gl">TOTAL INVESTMENT · ${esc(payload.totals.creatorCount)} CREATORS · ${esc(money.currency)}</div><div class="gv">${esc(money.amount)}</div></div>`
+        ? showcase
+          ? `<div class="totals showcase-invest-totals summary-box">
+      <div class="tot"><p class="tl">Client investment</p><p class="tv">${esc(money.currency)} ${esc(money.amount)}</p></div>
+      <div class="tot"><p class="tl">Fees</p><p class="tv">${esc(feeMoney.currency)} ${esc(feeMoney.amount)}</p></div>
+      <div class="tot final"><p class="tl">Total after Fees</p><p class="tv">${esc(totalAfterMoney.currency)} ${esc(totalAfterMoney.amount)}</p></div>
+    </div>`
+          : `<div class="banner tier-breakdown-grand-total"><div class="gl">TOTAL INVESTMENT · ${esc(payload.totals.creatorCount)} CREATORS · ${esc(money.currency)}</div><div class="gv">${esc(money.amount)}</div></div>`
         : "";
 
       return `<section class="cpage page summary-overview-page">
@@ -475,8 +487,8 @@ function showcaseMetricCardsHtml(
 
   const cards: MetricCard[] = [
     {
-      labelHtml: "Followers",
-      valueHtml: esc(formatQuotationCardFollowers(creator.followers)),
+      labelHtml: "Creator category",
+      valueHtml: esc(creator.categories?.trim() || "—"),
       accent: true,
     },
     {

@@ -1065,6 +1065,7 @@ function drawMixTierTable(
 }
 
 const INVESTMENT_BANNER_H = 0.95;
+const SHOWCASE_INVEST_TOTALS_H = 0.78;
 
 function splitCommercialMoneyParts(full: string): { currency: string; amount: string } {
   const match = full.trim().match(/^([A-Z]{3})\s+(.+)$/);
@@ -1079,6 +1080,9 @@ function drawTotalInvestmentBanner(
   y: number
 ): number {
   const payload = buildQuotationTemplatePayload(doc);
+  if (isShowcaseTemplate(doc.template)) {
+    return drawShowcaseInvestmentTotals(slide, payload, y);
+  }
   const money = splitCommercialMoneyParts(payload.commercial.headlineValue || "EGP —");
   slide.addShape("roundRect", {
     x: MARGIN_X,
@@ -1114,6 +1118,66 @@ function drawTotalInvestmentBanner(
     color: WHITE,
   });
   return y + INVESTMENT_BANNER_H + 0.1;
+}
+
+/** Showcase Creators & fees footer — Client investment · Fees · Total after Fees. */
+function drawShowcaseInvestmentTotals(
+  slide: Slide,
+  payload: ReturnType<typeof buildQuotationTemplatePayload>,
+  y: number
+): number {
+  const cards = [
+    {
+      label: "Client investment",
+      value: payload.commercial.headlineValue,
+      final: false,
+    },
+    {
+      label: "Fees",
+      value: payload.commercial.agencyFee,
+      final: false,
+    },
+    {
+      label: "Total after Fees",
+      value: payload.commercial.totalInclAF,
+      final: true,
+    },
+  ] as const;
+  const gap = 0.14;
+  const cardW = (CONTENT_W - gap * 2) / 3;
+  cards.forEach((card, index) => {
+    const x = MARGIN_X + index * (cardW + gap);
+    slide.addShape("roundRect", {
+      x,
+      y,
+      w: cardW,
+      h: SHOWCASE_INVEST_TOTALS_H,
+      fill: { color: card.final ? BLUE : WHITE },
+      line: { color: card.final ? BLUE : HAIR, width: 1 },
+      rectRadius: 0.1,
+    });
+    slide.addText(card.label.toUpperCase(), {
+      x: x + 0.18,
+      y: y + 0.1,
+      w: cardW - 0.36,
+      h: 0.2,
+      fontFace: FONT_UI,
+      fontSize: 9,
+      color: card.final ? COVER_META : MUTED_SOFT,
+      charSpacing: 0.8,
+    });
+    slide.addText(card.value, {
+      x: x + 0.16,
+      y: y + 0.34,
+      w: cardW - 0.32,
+      h: 0.34,
+      fontFace: FONT_UI,
+      fontSize: 14,
+      bold: true,
+      color: card.final ? WHITE : TITLE_INK,
+    });
+  });
+  return y + SHOWCASE_INVEST_TOTALS_H + 0.1;
 }
 
 function addCreatorMixSummarySlide(
@@ -1344,8 +1408,8 @@ function addCreatorMixSlides(
   }
 
   if (isShowcaseTemplate(doc.template)) {
-    // Prefer redesign TOTAL INVESTMENT banner on the last mix slide when it fits.
-    if (cursorY + INVESTMENT_BANNER_H + 0.12 <= CONTENT_BOTTOM) {
+    // Prefer redesign investment totals on the last mix slide when it fits.
+    if (cursorY + SHOWCASE_INVEST_TOTALS_H + 0.12 <= CONTENT_BOTTOM) {
       drawTotalInvestmentBanner(slide!, doc, cursorY + 0.12);
       addSlideFooter(
         slide!,
@@ -1655,7 +1719,7 @@ function drawShowcaseMetricCards(
   y: number
 ): number {
   type MetricCard =
-    | { kind: "followers"; value: string; accent?: boolean }
+    | { kind: "category"; value: string; accent?: boolean }
     | {
         kind: "engagement";
         rows: Array<{ platform: string; engagement: string }>;
@@ -1668,8 +1732,8 @@ function drawShowcaseMetricCards(
   );
   const cards: MetricCard[] = [
     {
-      kind: "followers",
-      value: formatQuotationCardFollowers(creator.followers),
+      kind: "category",
+      value: creator.categories?.trim() || "—",
       accent: true,
     },
     {
@@ -1711,8 +1775,8 @@ function drawShowcaseMetricCards(
       rectRadius: 0.1,
     });
 
-    if (card.kind === "followers") {
-      slide.addText("FOLLOWERS", {
+    if (card.kind === "category") {
+      slide.addText("CREATOR CATEGORY", {
         x: x + 0.12,
         y: y + 0.08,
         w: cardW - 0.24,
@@ -1729,7 +1793,7 @@ function drawShowcaseMetricCards(
         w: cardW - 0.24,
         h: 0.38,
         fontFace: FONT_UI,
-        fontSize: 18,
+        fontSize: card.value.length > 18 ? 14 : 18,
         bold: true,
         color: card.accent ? BLUE : TITLE_INK,
         valign: "middle",

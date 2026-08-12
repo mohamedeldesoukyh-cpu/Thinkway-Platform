@@ -383,7 +383,7 @@ export function HomePage({ snapshot }: HomePageProps) {
                     </div>
                     <div>
                       <div className="platform-v6-hs-pr-val">
-                        {formatMoney(campaign.revenue)}
+                        {formatMoneyCompact(campaign.revenue, campaign.currency_code)}
                       </div>
                       <div className="platform-v6-hs-pr-sub">
                         {formatPercent(campaign.margin_percent)} margin
