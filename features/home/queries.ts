@@ -1,10 +1,13 @@
-import type { CampaignLineBillingStatus } from "@/features/billing/types";
 import {
   isActiveCampaignStatus,
   isCancelledCampaignStatus,
 } from "@/features/groups/types";
-import { resolveLineCommercialMetrics } from "@/lib/analytics/metrics/financial";
+import {
+  aggregateCampaignDisplayFinancials,
+  type CampaignLineCommercialFxInput,
+} from "@/lib/campaigns/campaign-display-financials";
 import { CAMPAIGN_STATUS_OPTIONS } from "@/lib/campaigns/constants";
+import { resolveRateToEgp } from "@/lib/commercial/fx-server";
 import { formatCountryCodeLabel } from "@/lib/creators/creator-display-utils";
 import { mergeCountryCodes } from "@/lib/creators/country-inference";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
@@ -18,7 +21,7 @@ export type HomeRecentCampaign = {
   status: CampaignStatus;
   status_label: string;
   revenue: number;
-  /** Campaign header currency — never the dashboard majority currency. */
+  /** Invoice/display CCY from campaign header (same as workspace KPIs after FX). */
   currency_code: string;
   margin_percent: number;
   client_initials: string;
@@ -133,7 +136,7 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
     supabase
       .from("campaign_lines")
       .select(
-        "campaign_header_id, revenue, cost, profit, billing_status, revenue_before_vat, usage_rights_amount, usage_rights_cost, agency_fee_percent, agency_fee_amount, cost_before_vat"
+        "campaign_header_id, revenue, cost, revenue_before_vat, usage_rights_amount, usage_rights_cost, agency_fee_percent, agency_fee_amount, cost_before_vat, currency_code, cost_received, cost_received_currency"
       )
       .limit(6000),
     supabase
@@ -190,35 +193,103 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
 
   const headers = headersResult.data ?? [];
   const activeCampaigns = headers.filter((h) => isActiveCampaignStatus(h.status)).length;
-  const operationalHeaderIds = new Set(
-    headers.filter((h) => !isCancelledCampaignStatus(h.status)).map((h) => h.id)
+  const operationalHeaders = headers.filter((h) => !isCancelledCampaignStatus(h.status));
+  const operationalHeaderIds = new Set(operationalHeaders.map((h) => h.id));
+  const headerCurrencyById = new Map(
+    headers.map((h) => [
+      h.id,
+      (h.currency_code ?? DEFAULT_PLATFORM_CURRENCY).trim().toUpperCase() ||
+        DEFAULT_PLATFORM_CURRENCY,
+    ])
   );
 
-  let totalRevenue = 0;
-  let grossProfit = 0;
-  const revenueByHeader = new Map<string, { revenue: number; gp: number }>();
-
+  const linesByHeader = new Map<string, CampaignLineCommercialFxInput[]>();
   for (const line of linesResult.data ?? []) {
     if (!operationalHeaderIds.has(line.campaign_header_id)) continue;
-    const metrics = resolveLineCommercialMetrics({
-      revenue: Number(line.revenue ?? 0),
-      cost: Number(line.cost ?? 0),
-      profit: Number(line.profit ?? 0),
-      billing_status: line.billing_status as CampaignLineBillingStatus,
+    const bucket = linesByHeader.get(line.campaign_header_id) ?? [];
+    bucket.push({
+      revenue: line.revenue,
+      cost: line.cost,
       revenue_before_vat: line.revenue_before_vat,
       usage_rights_amount: line.usage_rights_amount,
       usage_rights_cost: line.usage_rights_cost,
       agency_fee_percent: line.agency_fee_percent,
       agency_fee_amount: line.agency_fee_amount,
       cost_before_vat: line.cost_before_vat,
+      currency_code: line.currency_code,
+      cost_received: line.cost_received,
+      cost_received_currency: line.cost_received_currency,
     });
-    totalRevenue += metrics.revenue;
-    grossProfit += metrics.gp;
+    linesByHeader.set(line.campaign_header_id, bucket);
+  }
 
-    const existing = revenueByHeader.get(line.campaign_header_id) ?? { revenue: 0, gp: 0 };
-    existing.revenue += metrics.revenue;
-    existing.gp += metrics.gp;
-    revenueByHeader.set(line.campaign_header_id, existing);
+  const currencyCounts = new Map<string, number>();
+  for (const header of operationalHeaders) {
+    const code = headerCurrencyById.get(header.id) ?? DEFAULT_PLATFORM_CURRENCY;
+    currencyCounts.set(code, (currencyCounts.get(code) ?? 0) + 1);
+  }
+  const currency_code =
+    [...currencyCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ??
+    DEFAULT_PLATFORM_CURRENCY;
+
+  // Same FX path as Campaign Workspace KPIs: line CCY → EGP → invoice/display CCY.
+  const currenciesNeeded = new Set<string>([currency_code]);
+  for (const header of operationalHeaders) {
+    const displayCcy = headerCurrencyById.get(header.id) ?? DEFAULT_PLATFORM_CURRENCY;
+    currenciesNeeded.add(displayCcy);
+    for (const line of linesByHeader.get(header.id) ?? []) {
+      const revCcy = (line.currency_code || displayCcy).trim().toUpperCase() || displayCcy;
+      const costCcy =
+        (line.cost_received_currency || line.currency_code || displayCcy)
+          .trim()
+          .toUpperCase() || displayCcy;
+      currenciesNeeded.add(revCcy);
+      currenciesNeeded.add(costCcy);
+    }
+  }
+  for (const row of recentCampaignsResult.data ?? []) {
+    const displayCcy =
+      (row.currency_code ?? DEFAULT_PLATFORM_CURRENCY).trim().toUpperCase() ||
+      DEFAULT_PLATFORM_CURRENCY;
+    currenciesNeeded.add(displayCcy);
+  }
+  const rateToEgpByCurrency = new Map<string, number>();
+  await Promise.all(
+    [...currenciesNeeded].map(async (code) => {
+      rateToEgpByCurrency.set(code, await resolveRateToEgp(supabase, code));
+    })
+  );
+
+  let totalRevenue = 0;
+  let grossProfit = 0;
+  const displayByHeader = new Map<
+    string,
+    { revenue: number; gp: number; currency_code: string; margin_percent: number }
+  >();
+
+  for (const header of operationalHeaders) {
+    const displayCurrency = headerCurrencyById.get(header.id) ?? DEFAULT_PLATFORM_CURRENCY;
+    const lines = linesByHeader.get(header.id) ?? [];
+    const headerDisplay = aggregateCampaignDisplayFinancials({
+      lines,
+      displayCurrency,
+      rateToEgpByCurrency,
+    });
+    displayByHeader.set(header.id, {
+      revenue: headerDisplay.revenue,
+      gp: headerDisplay.gp,
+      currency_code: headerDisplay.currency_code,
+      margin_percent: headerDisplay.margin_percent,
+    });
+
+    // Dashboard KPI strip uses majority currency (status bar); convert via EGP pivot.
+    const majorityDisplay = aggregateCampaignDisplayFinancials({
+      lines,
+      displayCurrency: currency_code,
+      rateToEgpByCurrency,
+    });
+    totalRevenue += majorityDisplay.revenue;
+    grossProfit += majorityDisplay.gp;
   }
 
   const vendorIds = new Set<string>();
@@ -255,23 +326,28 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
   const marginPercent =
     totalRevenue > 0 ? Math.round((grossProfit / totalRevenue) * 1000) / 10 : 0;
 
-  const currencyCounts = new Map<string, number>();
-  for (const header of headers.filter((h) => !isCancelledCampaignStatus(h.status))) {
-    const code = header.currency_code ?? DEFAULT_PLATFORM_CURRENCY;
-    currencyCounts.set(code, (currencyCounts.get(code) ?? 0) + 1);
-  }
-  const currency_code =
-    [...currencyCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ??
-    DEFAULT_PLATFORM_CURRENCY;
-
   const recent_campaigns: HomeRecentCampaign[] = (recentCampaignsResult.data ?? [])
     .slice(0, 3)
     .map((row) => {
-      const metrics = revenueByHeader.get(row.id) ?? { revenue: 0, gp: 0 };
-      const margin =
-        metrics.revenue > 0
-          ? Math.round((metrics.gp / metrics.revenue) * 1000) / 10
-          : 0;
+      let metrics = displayByHeader.get(row.id);
+      if (!metrics) {
+        // Cancelled / non-operational headers are excluded from KPI rollups but may still
+        // appear in Recent — project with the same workspace display path.
+        const displayCurrency =
+          (row.currency_code ?? DEFAULT_PLATFORM_CURRENCY).trim().toUpperCase() ||
+          DEFAULT_PLATFORM_CURRENCY;
+        const headerDisplay = aggregateCampaignDisplayFinancials({
+          lines: linesByHeader.get(row.id) ?? [],
+          displayCurrency,
+          rateToEgpByCurrency,
+        });
+        metrics = {
+          revenue: headerDisplay.revenue,
+          gp: headerDisplay.gp,
+          currency_code: headerDisplay.currency_code,
+          margin_percent: headerDisplay.margin_percent,
+        };
+      }
 
       return {
         id: row.id,
@@ -280,8 +356,8 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
         status: row.status as CampaignStatus,
         status_label: campaignStatusLabel(row.status as CampaignStatus),
         revenue: metrics.revenue,
-        currency_code: row.currency_code ?? DEFAULT_PLATFORM_CURRENCY,
-        margin_percent: margin,
+        currency_code: metrics.currency_code,
+        margin_percent: metrics.margin_percent,
         client_initials: resolveInitials(row.name),
       };
     });
