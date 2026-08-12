@@ -80,7 +80,9 @@ function resolveTemplateFlags(template: QuotationTemplateVariant): QuotationTemp
         showCommercialSummary: true,
         pricing: "lump_sum",
         itemizedPricing: false,
-        showFees: true,
+        // Lump-sum decks show Fees / Total after Fees on cover + summary only —
+        // never per-creator pricing.
+        showFees: false,
         includeTerms: false,
         includeAcceptance: false,
       };
@@ -122,8 +124,17 @@ function coverKicker(template: QuotationTemplateVariant): string {
 }
 
 function coverStat3(doc: QuotationDocument): QuotationTemplatePayload["cover"]["stat3"] {
-  // Showcase / pitch covers lead with Total Investment (matches Thinkway deck).
-  if (isShowcaseTemplate(doc.template) || isPitchTemplate(doc.template)) {
+  // Showcase covers pair Client Investment with Fees + Total after Fees.
+  if (isShowcaseTemplate(doc.template)) {
+    const formatted = formatQuotationMoneyDisplay(doc.summary.totalClientCost);
+    return {
+      label: "Client Investment",
+      value: formatted.full,
+      valueShort: formatted.short,
+    };
+  }
+  // Pitch covers lead with Total Investment (matches Thinkway deck).
+  if (isPitchTemplate(doc.template)) {
     const raw = isLumpSumPricingTemplate(doc.template)
       ? doc.summary.grandTotal
       : doc.summary.totalClientCost;
@@ -151,12 +162,12 @@ function coverStat3(doc: QuotationDocument): QuotationTemplatePayload["cover"]["
 function coverFeeAndTotalStats(
   doc: QuotationDocument
 ): Pick<QuotationTemplatePayload["cover"], "feeStat" | "totalAfterFeesStat"> {
-  // Detailed / itemized cover: show Fees + Total Client Investment after Fees.
-  if (
-    isShowcaseTemplate(doc.template) ||
-    isPitchTemplate(doc.template) ||
-    isLumpSumPricingTemplate(doc.template)
-  ) {
+  // Pitch decks keep a compact cover. Detailed + Showcase (+ Showcase Lump Sum)
+  // show Fees and Total Client Investment after Fees.
+  if (isPitchTemplate(doc.template)) {
+    return { feeStat: null, totalAfterFeesStat: null };
+  }
+  if (isLumpSumPricingTemplate(doc.template) && !isShowcaseTemplate(doc.template)) {
     return { feeStat: null, totalAfterFeesStat: null };
   }
   const fee = formatQuotationMoneyDisplay(doc.summary.totalAf);
@@ -270,6 +281,37 @@ function grossFeeAmount(row: { clientCost: string }): string | undefined {
   return parsed?.[1]?.trim();
 }
 
+function parseMoneyLeadingAmount(raw: string): number | null {
+  const egpTail = raw.match(/([\d,.\s]+)\s*EGP\s*$/i);
+  const text = (egpTail?.[1] ?? raw.match(/^([\d,.\s]+)/)?.[1] ?? "").replace(/,/g, "").trim();
+  if (!text) return null;
+  const n = Number(text);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Client investment + agency fee (showcase creator pricing after fees). */
+function amountAfterFeesDisplay(row: { clientCost: string; af: string }): string | undefined {
+  const client = parseMoneyLeadingAmount(row.clientCost);
+  if (client == null) return undefined;
+  const af = parseMoneyLeadingAmount(row.af) ?? 0;
+  return (client + af).toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+}
+
+function resolveDisplayedGrossFee(
+  row: { clientCost: string; af: string },
+  flags: QuotationTemplateFlags
+): string | undefined {
+  if (!flags.showFees) return undefined;
+  // Showcase itemized decks show creator price after AF; Detailed keeps client cost.
+  if (flags.showcaseCreators) {
+    return amountAfterFeesDisplay(row) ?? grossFeeAmount(row);
+  }
+  return grossFeeAmount(row);
+}
+
 function resolveSectionNumbers(input: {
   template: QuotationTemplateVariant;
   creatorCount: number;
@@ -342,7 +384,9 @@ export function buildQuotationTemplatePayload(doc: QuotationDocument): Quotation
         deliverable: row.isCollapsePackageLeader
           ? `Collap package · ${deliverableLabel(row)}`
           : deliverableLabel(row),
-        ...(flags.showFees ? { grossFee: grossFeeAmount(row) } : {}),
+        ...(flags.showFees
+          ? { grossFee: resolveDisplayedGrossFee(row, flags) }
+          : {}),
         avatarInitials: showcaseInitialsFromHandle(group.handle || group.creator),
       }))
   );
@@ -396,7 +440,9 @@ export function buildQuotationTemplatePayload(doc: QuotationDocument): Quotation
           platform: platformLabelFromRow(row),
           platformIcons: row.allPlatforms ? [] : row.platformIcons,
           type: row.type,
-          ...(flags.showFees ? { grossFee: grossFeeAmount(row) } : {}),
+          ...(flags.showFees
+            ? { grossFee: resolveDisplayedGrossFee(row, flags) }
+            : {}),
         })),
     };
   });

@@ -371,8 +371,34 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   const showcaseHtml = buildQuotationTemplateHtml(
     buildQuotationDocument(mockDetail(), { template: "showcase" })
   );
-  assert.ok(showcaseHtml.includes("TOTAL INVESTMENT"));
-  assert.ok(showcaseHtml.includes("tier-breakdown-grand-total"));
+  assert.ok(showcaseHtml.includes("showcase-invest-totals"));
+  assert.ok(showcaseHtml.includes("Total after Fees"));
+  assert.ok(showcaseHtml.includes(">Fees<"));
+  assert.ok(!showcaseHtml.includes("TOTAL INVESTMENT ·"));
+  assert.ok(showcaseHtml.includes("Creator category"));
+}
+
+{
+  // Showcase cover includes Fees + Total after Fees; lump-sum hides per-creator fees.
+  const showcaseDoc = buildQuotationDocument(mockDetail(), { template: "showcase" });
+  const showcasePayload = buildQuotationTemplatePayload(showcaseDoc);
+  assert.equal(showcasePayload.cover.feeStat?.label, "Fees");
+  assert.equal(
+    showcasePayload.cover.totalAfterFeesStat?.label,
+    "Total Client Investment after Fees"
+  );
+  assert.equal(showcasePayload.flags.showFees, true);
+  const showcaseLumpPayload = buildQuotationTemplatePayload(
+    buildQuotationDocument(mockDetail(), { template: "showcase-lump-sum" })
+  );
+  assert.equal(showcaseLumpPayload.flags.showFees, false);
+  assert.equal(showcaseLumpPayload.cover.feeStat?.label, "Fees");
+  const showcaseLumpHtml = buildQuotationTemplateHtml(
+    buildQuotationDocument(mockDetail(), { template: "showcase-lump-sum" })
+  );
+  assert.ok(showcaseLumpHtml.includes("showcase-invest-totals"));
+  assert.ok(!showcaseLumpHtml.includes("Fees (EGP)"));
+  assert.ok(!showcaseLumpHtml.includes('class="sc-fee-pill"'));
 }
 
 {

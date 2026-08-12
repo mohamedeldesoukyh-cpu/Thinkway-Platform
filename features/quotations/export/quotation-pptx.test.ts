@@ -282,7 +282,8 @@ async function main() {
     );
     const leaderPayload = payload.showcaseCreators.find((creator) => creator.name === "Creator A");
     assert.match(leaderPayload?.deliverables[0]?.service ?? "", /Collap package/);
-    assert.equal(leaderPayload?.deliverables[0]?.grossFee, "250,000");
+    // Showcase creator pricing is client cost + agency fee.
+    assert.equal(leaderPayload?.deliverables[0]?.grossFee, "250,133.33");
     const buffer = await buildQuotationPptxBuffer(doc);
     assert.ok(buffer.length > 5_000);
     await assertA4LandscapeHtmlParityLayout(buffer);

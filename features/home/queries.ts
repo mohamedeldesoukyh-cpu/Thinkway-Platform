@@ -18,6 +18,8 @@ export type HomeRecentCampaign = {
   status: CampaignStatus;
   status_label: string;
   revenue: number;
+  /** Campaign header currency — never the dashboard majority currency. */
+  currency_code: string;
   margin_percent: number;
   client_initials: string;
 };
@@ -141,7 +143,7 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
     supabase.from("invoices").select("total, amount_paid").limit(3000),
     supabase
       .from("campaign_headers")
-      .select("id, name, document_number, status")
+      .select("id, name, document_number, status, currency_code")
       .order("updated_at", { ascending: false })
       .limit(5),
     // Embed platform accounts to avoid a second round-trip for the top-vendors strip.
@@ -278,6 +280,7 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
         status: row.status as CampaignStatus,
         status_label: campaignStatusLabel(row.status as CampaignStatus),
         revenue: metrics.revenue,
+        currency_code: row.currency_code ?? DEFAULT_PLATFORM_CURRENCY,
         margin_percent: margin,
         client_initials: resolveInitials(row.name),
       };

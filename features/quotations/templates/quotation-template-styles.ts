@@ -262,6 +262,7 @@ export const QUOTATION_TEMPLATE_STYLES = `
   .fee-avatar{width:28px; height:28px; border-radius:999px; object-fit:cover; flex:none; display:block; background:var(--tint);}
   .fee-avatar--initials{display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:var(--tw-green); background:#E8F5F0;}
   .totals{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:14px;}
+  .showcase-invest-totals{margin-top:16px;}
   .tot{border-radius:12px; padding:14px 16px; border:1px solid var(--border); background:#fff;}
   .tot.final{background:var(--blue); border-color:var(--blue);}
   .tot .tl{font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:0 0 6px;}
