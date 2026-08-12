@@ -1,14 +1,13 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop`  
-**Focus:** Invoice template redesign (Detailed / By creator / Summary) + VAT totals
+**Focus:** Remaining Media Plan drag lock (sibling live grains)
 
-## In progress
+## Shipped
 
-- Invoice HTML rebuilt to match INV Detailed/Summary reference design
-- VAT totals always rendered (fallback from line VAT if header tax missing)
-- New layout `by_creator` — one row per campaign line (not child posts)
-- Layouts: `detailed` · `by_creator` · `package` (Summary / lump sum)
+- Remaining cards no longer inherit sibling Live/Partial status — unpublished types stay draggable
+- Annotate execution status matches card deliverable types only
+- Invoice template redesign (Detailed / By creator / Summary) + VAT · `18052200`
 
 ## Shipped prior
 
