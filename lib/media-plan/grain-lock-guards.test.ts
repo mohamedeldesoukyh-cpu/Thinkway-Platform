@@ -32,6 +32,25 @@ test("true billing lock still blocks reschedule", () => {
   assert.match(result.message, /billing-locked|locked/i);
 });
 
+test("sibling billing-locked grain does not block other deliverable types", () => {
+  const result = assertScheduleMoveAllowedByAssignmentGrain(
+    [
+      {
+        ...baseFact,
+        deliverable: "TikTok video",
+        billingLocked: true,
+      },
+      {
+        ...baseFact,
+        deliverable: "IG Reel",
+        billingLocked: false,
+      },
+    ],
+    { creatorIds: ["mirna"], deliverableTypes: ["IG Reel"] }
+  );
+  assert.equal(result.ok, true);
+});
+
 test("published live date blocks reschedule", () => {
   const result = assertScheduleMoveAllowedByAssignmentGrain(
     [

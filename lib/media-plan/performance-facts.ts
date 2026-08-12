@@ -4,11 +4,16 @@ import type { MediaPlanPerformanceFact } from "./types";
 
 function isBillingLockedStatus(status: string | null | undefined): boolean {
   const value = (status ?? "").trim().toLowerCase();
-  // Commercial Assignment "locked" is not a billing lock — only invoice/paid states.
+  // Only true invoice / collection states. Do NOT match `ready_to_invoice`
+  // (substring "invoice" previously false-locked Remaining reschedules).
   return (
-    value.includes("invoice") ||
-    value === "billed" ||
+    value === "invoiced" ||
+    value === "partially_invoiced" ||
+    value === "collected" ||
+    value === "partially_collected" ||
     value === "paid" ||
+    value === "partially_paid" ||
+    value === "billed" ||
     value === "billing_locked"
   );
 }

@@ -108,6 +108,7 @@ export async function updateMediaPlanScheduleAction(
         campaignLineIds: slateCreator?.campaignLineId
           ? [slateCreator.campaignLineId]
           : undefined,
+        deliverableTypes: move.deliverableTypes,
       });
       if (!guard.ok) {
         return { ok: false, message: guard.message };

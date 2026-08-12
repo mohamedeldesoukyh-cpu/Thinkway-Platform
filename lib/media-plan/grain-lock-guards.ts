@@ -11,6 +11,8 @@ export type GrainLockGuardInput = {
   creatorIds?: string[];
   /** Optional Assignment ids when the UI/slate already knows them. */
   campaignLineIds?: string[];
+  /** When set, only these deliverable labels are considered for locking. */
+  deliverableTypes?: string[];
 };
 
 export type GrainLockGuardResult =
@@ -21,10 +23,23 @@ function norm(value: string | null | undefined): string {
   return (value ?? "").trim().toLowerCase();
 }
 
+function baseDeliverableLabel(label: string): string {
+  const match = label.trim().match(/^(\d+)\s*×\s*(.+)$/i);
+  return norm(match?.[2] ?? label).replace(/\s+/g, " ");
+}
+
+function deliverableLabelsMatch(cardType: string, factDeliverable: string): boolean {
+  const card = norm(cardType).replace(/\s+/g, " ");
+  const fact = norm(factDeliverable).replace(/\s+/g, " ");
+  if (card === fact) return true;
+  return baseDeliverableLabel(cardType) === baseDeliverableLabel(factDeliverable);
+}
+
 /**
  * Reject schedule moves that target Assignment grains already live or billing-locked.
  * Commercial lock (`isLocked`) alone must not block unpublished Remaining reschedule —
  * campaigns under Client IO / commercial freeze still need to move not-live cards.
+ * `ready_to_invoice` is not a billing lock.
  */
 export function assertScheduleMoveAllowedByAssignmentGrain(
   facts: MediaPlanPerformanceFact[],
@@ -34,6 +49,9 @@ export function assertScheduleMoveAllowedByAssignmentGrain(
 
   const creatorIds = new Set((input.creatorIds ?? []).map(norm).filter(Boolean));
   const lineIds = new Set((input.campaignLineIds ?? []).map(norm).filter(Boolean));
+  const deliverableTypes = (input.deliverableTypes ?? [])
+    .map((type) => type.trim())
+    .filter(Boolean);
   if (!creatorIds.size && !lineIds.size) return { ok: true };
 
   const blocked = facts.filter((fact) => {
@@ -42,6 +60,13 @@ export function assertScheduleMoveAllowedByAssignmentGrain(
     const matchesCreator =
       Boolean(fact.creatorId?.trim()) && creatorIds.has(norm(fact.creatorId));
     if (!matchesLine && !matchesCreator) return false;
+
+    if (deliverableTypes.length) {
+      const matchesType = deliverableTypes.some((type) =>
+        deliverableLabelsMatch(type, fact.deliverable)
+      );
+      if (!matchesType) return false;
+    }
 
     if (fact.billingLocked) return true;
     if (fact.completed && fact.liveDate) return true;
