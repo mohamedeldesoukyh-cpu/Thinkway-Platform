@@ -1,5 +1,6 @@
 import type { CampaignLineWorkspace } from "@/lib/domains/campaign/workspace-types";
 import {
+  formatCreatorDisplayName,
   pickCreatorDisplayName,
   resolveCreatorIdentity,
 } from "@/lib/text/decode-html-entities";
@@ -31,7 +32,7 @@ function extractEmbeddedAtHandle(value: string | null | undefined): string | nul
 
 /**
  * Display identity for Assignment creator lines.
- * Ignores placeholder "Creator" / INF-* labels and falls back to platform handles.
+ * Ignores placeholder "Creator" / INF-* / platform·Option titles; prefers handles.
  */
 export function resolveAssignmentCreatorIdentity(
   line: Pick<
@@ -44,10 +45,16 @@ export function resolveAssignmentCreatorIdentity(
   >
 ): { name: string; handle: string | null } {
   const handle = resolveAssignmentCreatorHandle(line);
-  const name = pickCreatorDisplayName(
-    [line.influencer_name, line.assignment?.influencer_name, line.name, handle],
+  // Do not prefer line.name early — quotation option titles like
+  // "Instagram · Option 1" are not creator identities.
+  let name = pickCreatorDisplayName(
+    [line.influencer_name, line.assignment?.influencer_name, handle],
     handle
   );
+  if (!name || name === "Creator") {
+    const fromLineTitle = formatCreatorDisplayName(line.name);
+    if (fromLineTitle) name = fromLineTitle;
+  }
   const identity = resolveCreatorIdentity(name === "Creator" ? null : name, handle);
   if (identity.name && identity.name !== "Creator") {
     return identity;

@@ -113,7 +113,10 @@ export function extractEmbeddedCreatorHandle(
 }
 
 function stripOptionSuffix(name: string): string {
-  return name.replace(/\s*[-–—]\s*Option\s+\d+\s*$/i, "").trim();
+  return name
+    .replace(/\s*[-–—·•|/]\s*Option\s+\d+\s*$/i, "")
+    .replace(/\s+Option\s+\d+\s*$/i, "")
+    .trim();
 }
 
 /** Remove `(@handle)` / bare `@handle` tokens — handles render on the secondary line. */

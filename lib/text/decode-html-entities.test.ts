@@ -88,5 +88,12 @@ assert.deepEqual(resolveCreatorIdentity("INF-008286", "mark.sedhom"), {
   handle: "mark.sedhom",
 });
 assert.equal(formatCreatorDisplayName("Creator"), "");
+assert.equal(formatCreatorDisplayName("Instagram · Option 1"), "");
+assert.equal(formatCreatorDisplayName("Instagram - Option 2"), "");
+assert.equal(formatCreatorDisplayName("TikTok · Option 1"), "");
+assert.equal(
+  pickCreatorDisplayName(["Creator", "Instagram · Option 1"], "dr_mai.diaa"),
+  "dr_mai.diaa"
+);
 
 console.log("decode-html-entities tests passed");

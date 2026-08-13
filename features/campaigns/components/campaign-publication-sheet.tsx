@@ -54,7 +54,7 @@ import { cn } from "@/lib/utils";
 function buildPublicationAssignmentOption(line: CampaignLineWorkspace) {
   const handle = resolveAssignmentCreatorHandle(line);
   const creatorName = pickCreatorDisplayName(
-    [line.influencer_name, line.assignment?.influencer_name, line.name, handle],
+    [line.influencer_name, line.assignment?.influencer_name, handle],
     handle
   );
   const handleLabel = handle ? `@${handle}` : null;
