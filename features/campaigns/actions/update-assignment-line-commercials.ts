@@ -47,7 +47,6 @@ type AssignmentLineRow = {
   revenue_vat_exempt: boolean | null;
   cost_vat_exempt: boolean | null;
   document_number: string | null;
-  title_user_edited?: boolean | null;
   fx_rate?: number | null;
   cost_received?: number | null;
   cost_received_currency?: string | null;
@@ -114,7 +113,7 @@ export async function updateAssignmentLineCommercialsAction(
     const { data: existing, error } = await supabase
       .from("campaign_lines")
       .select(
-        "id, name, platform, po_amount, currency_code, start_date, end_date, assignment_status, metadata, revenue_vat_percent, cost_vat_percent, revenue_vat_exempt, cost_vat_exempt, document_number, title_user_edited, fx_rate, cost_received, cost_received_currency, revenue_locked, cost_locked"
+        "id, name, platform, po_amount, currency_code, start_date, end_date, assignment_status, metadata, revenue_vat_percent, cost_vat_percent, revenue_vat_exempt, cost_vat_exempt, document_number, fx_rate, cost_received, cost_received_currency, revenue_locked, cost_locked"
       )
       .eq("id", patch.lineId)
       .eq("campaign_header_id", campaignId)
@@ -217,7 +216,7 @@ export async function updateAssignmentLineCommercialsAction(
       start_date: row.start_date,
       end_date: row.end_date,
       assignment_status: row.assignment_status ?? "assigned",
-      title_user_edited: Boolean(row.title_user_edited),
+      title_user_edited: Boolean(assignment?.title_user_edited),
       confirm_commercial_sync: true,
       commercial_sync_idempotency_key: `assignment-cw:${patch.lineId}:${campaignId}`,
     };

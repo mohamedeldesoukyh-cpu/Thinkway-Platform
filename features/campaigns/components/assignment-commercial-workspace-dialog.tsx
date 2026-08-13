@@ -263,27 +263,35 @@ export function AssignmentCommercialWorkspaceDialog({
   function handleSave() {
     if (!canManage || dirtyLines.length === 0) return;
     startTransition(async () => {
-      const result = await updateAssignmentLineCommercialsAction({
-        campaignId,
-        lines: dirtyLines.map((line) => {
-          const draft = drafts[line.id]!;
-          return {
-            lineId: line.id,
-            revenue_before_vat: draft.revenue_before_vat,
-            cost_before_vat: draft.cost_before_vat,
-            usage_rights_amount: draft.usage_rights_amount,
-            usage_rights_cost: draft.usage_rights_cost,
-            agency_fee_percent: draft.agency_fee_percent,
-          };
-        }),
-      });
-      if (!result.ok) {
-        toast.error(result.message);
-        return;
+      try {
+        const result = await updateAssignmentLineCommercialsAction({
+          campaignId,
+          lines: dirtyLines.map((line) => {
+            const draft = drafts[line.id]!;
+            return {
+              lineId: line.id,
+              revenue_before_vat: draft.revenue_before_vat,
+              cost_before_vat: draft.cost_before_vat,
+              usage_rights_amount: draft.usage_rights_amount,
+              usage_rights_cost: draft.usage_rights_cost,
+              agency_fee_percent: draft.agency_fee_percent,
+            };
+          }),
+        });
+        if (!result.ok) {
+          toast.error(result.message);
+          return;
+        }
+        toast.success(result.message);
+        refreshAfterOperationalMutation();
+        setOpen(false);
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to save assignment commercials."
+        );
       }
-      toast.success(result.message);
-      refreshAfterOperationalMutation();
-      setOpen(false);
     });
   }
 
