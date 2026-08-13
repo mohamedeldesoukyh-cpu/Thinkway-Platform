@@ -5,11 +5,16 @@ import { z } from "zod";
 
 import { applyAssignmentCommercialToCommercialRows } from "@/lib/assignments/commercial-calculations";
 import { packagePlatformsToCommercialRows } from "@/lib/assignments/sync-package-deliverables";
-import { parseLineAssignment } from "@/lib/campaigns/line-assignment";
+import { lineAssignmentPayloadSchema } from "@/lib/campaigns/schemas";
+import {
+  parseLineAssignment,
+  type LinePlatformSelection,
+} from "@/lib/campaigns/line-assignment";
 import {
   updateCampaignLine,
   type UpdateCampaignLineInput,
 } from "@/lib/services/campaigns/campaign-line-service";
+import { fetchCampaignLineById } from "@/lib/services/campaigns/repositories/campaign-repository";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const linePatchSchema = z.object({
@@ -30,7 +35,7 @@ export type AssignmentCommercialPatchLine = z.infer<typeof linePatchSchema>;
 
 export type UpdateAssignmentLineCommercialsResult =
   | { ok: true; updated: number; message: string }
-  | { ok: false; message: string };
+  | { ok: false; message: string; code?: string };
 
 type AssignmentLineRow = {
   id: string;
@@ -42,16 +47,9 @@ type AssignmentLineRow = {
   end_date: string | null;
   assignment_status: string | null;
   metadata: Record<string, unknown> | null;
-  revenue_vat_percent: number | null;
-  cost_vat_percent: number | null;
-  revenue_vat_exempt: boolean | null;
-  cost_vat_exempt: boolean | null;
   document_number: string | null;
-  fx_rate?: number | null;
   cost_received?: number | null;
   cost_received_currency?: string | null;
-  revenue_locked?: boolean | null;
-  cost_locked?: boolean | null;
 };
 
 async function requireAuthUser() {
@@ -87,10 +85,29 @@ async function resolveLineInfluencerId(
   return (link as { influencer_id?: string | null } | null)?.influencer_id ?? null;
 }
 
+/** Ensure platforms satisfy lineAssignmentPayloadSchema for package updates. */
+function normalizePlatformsForMutation(
+  platforms: LinePlatformSelection[]
+): LinePlatformSelection[] {
+  return platforms
+    .filter(
+      (platform) =>
+        Boolean(platform.account_id?.trim()) &&
+        Boolean(platform.platform?.trim()) &&
+        Boolean(platform.handle?.trim())
+    )
+    .map((platform) => ({
+      ...platform,
+      deliverables:
+        Array.isArray(platform.deliverables) && platform.deliverables.length > 0
+          ? platform.deliverables
+          : ["other"],
+    }));
+}
+
 /**
  * Batch-save Assignment commercial masters from the Commercial Workspace.
- * Preserves each line's platforms / pricing_mode and reuses updateCampaignLine
- * so deliverable sync + commercial SSOT gates stay on the one write path.
+ * Reuses updateCampaignLine so deliverable sync + commercial SSOT gates stay on one write path.
  */
 export async function updateAssignmentLineCommercialsAction(
   input: z.infer<typeof inputSchema>
@@ -107,126 +124,184 @@ export async function updateAssignmentLineCommercialsAction(
 
   const { campaignId, lines } = parsed.data;
   let updated = 0;
+  const successNotes: string[] = [];
   const errors: string[] = [];
+  let lastCode: string | undefined;
 
   for (const patch of lines) {
-    const { data: existing, error } = await supabase
-      .from("campaign_lines")
-      .select(
-        "id, name, platform, po_amount, currency_code, start_date, end_date, assignment_status, metadata, revenue_vat_percent, cost_vat_percent, revenue_vat_exempt, cost_vat_exempt, document_number, fx_rate, cost_received, cost_received_currency, revenue_locked, cost_locked"
-      )
-      .eq("id", patch.lineId)
-      .eq("campaign_header_id", campaignId)
-      .maybeSingle();
+    try {
+      // Proven select used by updateCampaignLine (locks / VAT / commercial masters).
+      const { data: existingMeta, error: metaError } = await fetchCampaignLineById(
+        supabase,
+        patch.lineId,
+        campaignId
+      );
+      if (metaError || !existingMeta) {
+        errors.push(metaError?.message ?? `Line ${patch.lineId} not found.`);
+        continue;
+      }
 
-    if (error || !existing) {
-      errors.push(error?.message ?? `Line ${patch.lineId} not found.`);
-      continue;
-    }
+      // Operational fields only — never invent columns (no influencer_id / title_user_edited).
+      const { data: existingOps, error: opsError } = await supabase
+        .from("campaign_lines")
+        .select(
+          "id, name, platform, po_amount, currency_code, start_date, end_date, assignment_status, metadata, document_number, cost_received, cost_received_currency"
+        )
+        .eq("id", patch.lineId)
+        .eq("campaign_header_id", campaignId)
+        .maybeSingle();
 
-    const row = existing as unknown as AssignmentLineRow;
-    const assignment = parseLineAssignment(row.metadata);
-    const influencerId = await resolveLineInfluencerId(
-      supabase,
-      patch.lineId,
-      campaignId,
-      row.metadata
-    );
+      if (opsError || !existingOps) {
+        errors.push(opsError?.message ?? `Line ${patch.lineId} not found.`);
+        continue;
+      }
 
-    if (!influencerId) {
-      errors.push(`${row.document_number ?? patch.lineId}: missing creator.`);
-      continue;
-    }
+      const row = existingOps as unknown as AssignmentLineRow;
+      const meta = existingMeta as {
+        metadata?: Record<string, unknown> | null;
+        revenue_vat_percent?: number | null;
+        cost_vat_percent?: number | null;
+        revenue_vat_exempt?: boolean | null;
+        cost_vat_exempt?: boolean | null;
+        fx_rate?: number | null;
+        currency_code?: string | null;
+        document_number?: string | null;
+      };
 
-    const pricingMode = assignment?.pricing_mode ?? "package";
-    const platforms = assignment?.platforms ?? [];
-    if (platforms.length === 0 && pricingMode !== "per_deliverable") {
+      const metadata = (row.metadata ?? meta.metadata ?? null) as Record<
+        string,
+        unknown
+      > | null;
+      const assignment = parseLineAssignment(metadata);
+      const influencerId = await resolveLineInfluencerId(
+        supabase,
+        patch.lineId,
+        campaignId,
+        metadata
+      );
+
+      if (!influencerId) {
+        errors.push(
+          `${row.document_number ?? meta.document_number ?? patch.lineId}: missing creator.`
+        );
+        continue;
+      }
+
+      const pricingMode = assignment?.pricing_mode ?? "package";
+      const platforms = normalizePlatformsForMutation(assignment?.platforms ?? []);
+
+      if (pricingMode !== "per_deliverable") {
+        const platformsOk = lineAssignmentPayloadSchema.safeParse({ platforms });
+        if (!platformsOk.success) {
+          errors.push(
+            `${row.document_number ?? patch.lineId}: open the line sheet and confirm platforms/deliverables before Commercial Workspace save.`
+          );
+          continue;
+        }
+      }
+
+      let commercialRows =
+        pricingMode === "per_deliverable" && (assignment?.commercial_rows?.length ?? 0) > 0
+          ? applyAssignmentCommercialToCommercialRows(
+              assignment!.commercial_rows!,
+              patch.revenue_before_vat,
+              patch.cost_before_vat,
+              patch.usage_rights_amount,
+              patch.agency_fee_percent,
+              patch.usage_rights_cost
+            )
+          : [];
+
+      if (
+        pricingMode === "per_deliverable" &&
+        commercialRows.length === 0 &&
+        platforms.length > 0
+      ) {
+        commercialRows = applyAssignmentCommercialToCommercialRows(
+          packagePlatformsToCommercialRows(platforms, {
+            totalRevenueBeforeVat: patch.revenue_before_vat,
+            totalCostBeforeVat: patch.cost_before_vat,
+            dueDate: row.end_date ?? row.start_date ?? null,
+          }),
+          patch.revenue_before_vat,
+          patch.cost_before_vat,
+          patch.usage_rights_amount,
+          patch.agency_fee_percent,
+          patch.usage_rights_cost
+        );
+      }
+
+      if (pricingMode === "per_deliverable" && commercialRows.length === 0) {
+        errors.push(
+          `${row.document_number ?? patch.lineId}: no deliverable rows to update.`
+        );
+        continue;
+      }
+
+      // Unique per save — static keys cause stale commercial-sync idempotency / false success.
+      const idempotencyKey = `assignment-cw:${patch.lineId}:${campaignId}:${patch.cost_before_vat}:${patch.revenue_before_vat}:${patch.agency_fee_percent}:${patch.usage_rights_amount}:${patch.usage_rights_cost}:${crypto.randomUUID()}`;
+
+      const mutation: UpdateCampaignLineInput = {
+        campaign_id: campaignId,
+        line_id: patch.lineId,
+        influencer_id: influencerId,
+        assignment_json: JSON.stringify({ platforms }),
+        pricing_mode: pricingMode,
+        commercial_json:
+          pricingMode === "per_deliverable" && commercialRows.length > 0
+            ? JSON.stringify(commercialRows)
+            : "",
+        name: row.name ?? undefined,
+        platform: row.platform ?? undefined,
+        po_amount: Number(row.po_amount ?? 0),
+        revenue: patch.revenue_before_vat,
+        cost: patch.cost_before_vat,
+        revenue_before_vat: patch.revenue_before_vat,
+        cost_before_vat: patch.cost_before_vat,
+        usage_rights_amount: patch.usage_rights_amount,
+        usage_rights_cost: patch.usage_rights_cost,
+        agency_fee_percent: patch.agency_fee_percent,
+        revenue_vat_percent: Number(meta.revenue_vat_percent ?? 0),
+        cost_vat_percent: Number(meta.cost_vat_percent ?? 0),
+        revenue_vat_exempt: Boolean(meta.revenue_vat_exempt),
+        cost_vat_exempt: meta.cost_vat_exempt ?? true,
+        cost_received: row.cost_received ?? undefined,
+        cost_received_currency: row.cost_received_currency ?? undefined,
+        fx_rate: meta.fx_rate ?? undefined,
+        currency_code: row.currency_code ?? meta.currency_code ?? undefined,
+        start_date: row.start_date,
+        end_date: row.end_date,
+        assignment_status: row.assignment_status ?? "assigned",
+        title_user_edited: Boolean(assignment?.title_user_edited),
+        confirm_commercial_sync: true,
+        commercial_sync_idempotency_key: idempotencyKey,
+      };
+
+      const result = await updateCampaignLine(supabase, user.id, mutation);
+      if (!result.ok) {
+        lastCode = result.code;
+        const detail =
+          result.commercialSync?.confirmationDescription ?? result.message;
+        errors.push(
+          `${row.document_number ?? meta.document_number ?? patch.lineId}: ${detail}`
+        );
+        continue;
+      }
+
+      updated += 1;
+      if (
+        result.message.toLowerCase().includes("revision required") ||
+        result.message.toLowerCase().includes("re-approval")
+      ) {
+        successNotes.push(result.message);
+      }
+    } catch (error) {
       errors.push(
-        `${row.document_number ?? patch.lineId}: no platforms on assignment — open the line sheet first.`
-      );
-      continue;
-    }
-
-    let commercialRows =
-      pricingMode === "per_deliverable" && (assignment?.commercial_rows?.length ?? 0) > 0
-        ? applyAssignmentCommercialToCommercialRows(
-            assignment!.commercial_rows!,
-            patch.revenue_before_vat,
-            patch.cost_before_vat,
-            patch.usage_rights_amount,
-            patch.agency_fee_percent,
-            patch.usage_rights_cost
-          )
-        : [];
-
-    if (
-      pricingMode === "per_deliverable" &&
-      commercialRows.length === 0 &&
-      platforms.length > 0
-    ) {
-      commercialRows = applyAssignmentCommercialToCommercialRows(
-        packagePlatformsToCommercialRows(platforms, {
-          totalRevenueBeforeVat: patch.revenue_before_vat,
-          totalCostBeforeVat: patch.cost_before_vat,
-          dueDate: row.end_date ?? row.start_date ?? null,
-        }),
-        patch.revenue_before_vat,
-        patch.cost_before_vat,
-        patch.usage_rights_amount,
-        patch.agency_fee_percent,
-        patch.usage_rights_cost
+        error instanceof Error
+          ? error.message
+          : `Line ${patch.lineId}: unexpected save failure.`
       );
     }
-
-    if (pricingMode === "per_deliverable" && commercialRows.length === 0) {
-      errors.push(
-        `${row.document_number ?? patch.lineId}: no deliverable rows to update.`
-      );
-      continue;
-    }
-
-    const mutation: UpdateCampaignLineInput = {
-      campaign_id: campaignId,
-      line_id: patch.lineId,
-      influencer_id: influencerId,
-      assignment_json: JSON.stringify({ platforms }),
-      pricing_mode: pricingMode,
-      commercial_json:
-        pricingMode === "per_deliverable" && commercialRows.length > 0
-          ? JSON.stringify(commercialRows)
-          : "",
-      name: row.name ?? undefined,
-      platform: row.platform ?? undefined,
-      po_amount: Number(row.po_amount ?? 0),
-      revenue: patch.revenue_before_vat,
-      cost: patch.cost_before_vat,
-      revenue_before_vat: patch.revenue_before_vat,
-      cost_before_vat: patch.cost_before_vat,
-      usage_rights_amount: patch.usage_rights_amount,
-      usage_rights_cost: patch.usage_rights_cost,
-      agency_fee_percent: patch.agency_fee_percent,
-      revenue_vat_percent: Number(row.revenue_vat_percent ?? 0),
-      cost_vat_percent: Number(row.cost_vat_percent ?? 0),
-      revenue_vat_exempt: Boolean(row.revenue_vat_exempt),
-      cost_vat_exempt: row.cost_vat_exempt ?? true,
-      cost_received: row.cost_received ?? undefined,
-      cost_received_currency: row.cost_received_currency ?? undefined,
-      fx_rate: row.fx_rate ?? undefined,
-      currency_code: row.currency_code ?? undefined,
-      start_date: row.start_date,
-      end_date: row.end_date,
-      assignment_status: row.assignment_status ?? "assigned",
-      title_user_edited: Boolean(assignment?.title_user_edited),
-      confirm_commercial_sync: true,
-      commercial_sync_idempotency_key: `assignment-cw:${patch.lineId}:${campaignId}`,
-    };
-
-    const result = await updateCampaignLine(supabase, user.id, mutation);
-    if (!result.ok) {
-      errors.push(`${row.document_number ?? patch.lineId}: ${result.message}`);
-      continue;
-    }
-    updated += 1;
   }
 
   if (updated > 0) {
@@ -240,15 +315,18 @@ export async function updateAssignmentLineCommercialsAction(
     return {
       ok: false,
       message: errors[0] ?? "No assignment commercials were updated.",
+      code: lastCode,
     };
   }
+
+  const base =
+    errors.length > 0
+      ? `Updated ${updated} line(s). Some failed: ${errors.slice(0, 2).join(" · ")}`
+      : `Updated commercials for ${updated} assignment line(s).`;
 
   return {
     ok: true,
     updated,
-    message:
-      errors.length > 0
-        ? `Updated ${updated} line(s). Some failed: ${errors.slice(0, 2).join(" · ")}`
-        : `Updated commercials for ${updated} assignment line(s).`,
+    message: successNotes[0] ? `${base} ${successNotes[0]}` : base,
   };
 }

@@ -279,10 +279,23 @@ export function AssignmentCommercialWorkspaceDialog({
           }),
         });
         if (!result.ok) {
-          toast.error(result.message);
+          const isFinanceOrSync =
+            result.code === "FINANCE_LOCKED" ||
+            result.code === "COMMERCIAL_SYNC_CONFIRMATION_REQUIRED" ||
+            result.code === "DUPLICATE_IN_FLIGHT";
+          toast.error(result.message, {
+            duration: isFinanceOrSync ? 10_000 : 6_000,
+          });
           return;
         }
-        toast.success(result.message);
+        const needsIoFollowUp =
+          result.message.toLowerCase().includes("revision required") ||
+          result.message.toLowerCase().includes("re-approval");
+        if (needsIoFollowUp) {
+          toast.success(result.message, { duration: 10_000 });
+        } else {
+          toast.success(result.message);
+        }
         refreshAfterOperationalMutation();
         setOpen(false);
       } catch (error) {
