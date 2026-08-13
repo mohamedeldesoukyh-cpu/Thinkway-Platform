@@ -34,7 +34,6 @@ export type UpdateAssignmentLineCommercialsResult =
 
 type AssignmentLineRow = {
   id: string;
-  influencer_id: string | null;
   name: string | null;
   platform: string | null;
   po_amount: number | null;
@@ -68,6 +67,27 @@ async function requireAuthUser() {
   return { supabase, user, error: null };
 }
 
+async function resolveLineInfluencerId(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  lineId: string,
+  campaignId: string,
+  metadata: Record<string, unknown> | null
+): Promise<string | null> {
+  const fromMeta = parseLineAssignment(metadata)?.influencer_id ?? null;
+  if (fromMeta) return fromMeta;
+
+  const { data: link } = await supabase
+    .from("campaign_influencers")
+    .select("influencer_id")
+    .eq("campaign_line_id", lineId)
+    .eq("campaign_header_id", campaignId)
+    .not("influencer_id", "is", null)
+    .limit(1)
+    .maybeSingle();
+
+  return (link as { influencer_id?: string | null } | null)?.influencer_id ?? null;
+}
+
 /**
  * Batch-save Assignment commercial masters from the Commercial Workspace.
  * Preserves each line's platforms / pricing_mode and reuses updateCampaignLine
@@ -94,7 +114,7 @@ export async function updateAssignmentLineCommercialsAction(
     const { data: existing, error } = await supabase
       .from("campaign_lines")
       .select(
-        "id, influencer_id, name, platform, po_amount, currency_code, start_date, end_date, assignment_status, metadata, revenue_vat_percent, cost_vat_percent, revenue_vat_exempt, cost_vat_exempt, document_number, title_user_edited, fx_rate, cost_received, cost_received_currency, revenue_locked, cost_locked"
+        "id, name, platform, po_amount, currency_code, start_date, end_date, assignment_status, metadata, revenue_vat_percent, cost_vat_percent, revenue_vat_exempt, cost_vat_exempt, document_number, title_user_edited, fx_rate, cost_received, cost_received_currency, revenue_locked, cost_locked"
       )
       .eq("id", patch.lineId)
       .eq("campaign_header_id", campaignId)
@@ -106,13 +126,19 @@ export async function updateAssignmentLineCommercialsAction(
     }
 
     const row = existing as unknown as AssignmentLineRow;
+    const assignment = parseLineAssignment(row.metadata);
+    const influencerId = await resolveLineInfluencerId(
+      supabase,
+      patch.lineId,
+      campaignId,
+      row.metadata
+    );
 
-    if (!row.influencer_id) {
+    if (!influencerId) {
       errors.push(`${row.document_number ?? patch.lineId}: missing creator.`);
       continue;
     }
 
-    const assignment = parseLineAssignment(row.metadata);
     const pricingMode = assignment?.pricing_mode ?? "package";
     const platforms = assignment?.platforms ?? [];
     if (platforms.length === 0 && pricingMode !== "per_deliverable") {
@@ -163,7 +189,7 @@ export async function updateAssignmentLineCommercialsAction(
     const mutation: UpdateCampaignLineInput = {
       campaign_id: campaignId,
       line_id: patch.lineId,
-      influencer_id: row.influencer_id,
+      influencer_id: influencerId,
       assignment_json: JSON.stringify({ platforms }),
       pricing_mode: pricingMode,
       commercial_json:
