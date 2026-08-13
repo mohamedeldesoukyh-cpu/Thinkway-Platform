@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
 import { UnsavedChangesBar } from "@/components/forms/unsaved-changes-bar";
+import { useConfirmAction } from "@/components/shared/confirm-action-provider";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -18,6 +19,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { updateAssignmentLineCommercialsAction } from "@/features/campaigns/actions/update-assignment-line-commercials";
+import {
+  CommercialRevisionDialog,
+  type CommercialRevisionDialogLine,
+} from "@/features/campaigns/components/commercial-revision-dialog";
 import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
@@ -165,12 +170,20 @@ export function AssignmentCommercialWorkspaceDialog({
   className,
 }: AssignmentCommercialWorkspaceDialogProps) {
   const refreshAfterOperationalMutation = useRefreshCampaignAfterOperationalMutation();
+  const { confirm } = useConfirmAction();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [drafts, setDrafts] = useState<Record<string, CommercialDraft>>({});
   const [search, setSearch] = useState("");
   const [healthFilter, setHealthFilter] = useState<HealthFilter>("all");
+  const [revisionOpen, setRevisionOpen] = useState(false);
+  const [revisionQuotationId, setRevisionQuotationId] = useState<string | null>(
+    null
+  );
+  const [revisionLines, setRevisionLines] = useState<CommercialRevisionDialogLine[]>(
+    []
+  );
 
   const lines = useMemo(
     () => hierarchy.groups.map((group) => group.line),
@@ -279,6 +292,35 @@ export function AssignmentCommercialWorkspaceDialog({
           }),
         });
         if (!result.ok) {
+          if (
+            result.code === "FINANCE_LOCKED" &&
+            result.revisionLines &&
+            result.revisionLines.length > 0 &&
+            result.quotationId
+          ) {
+            const accepted = await confirm({
+              title: result.confirmationTitle ?? "Commercial Revision required",
+              description:
+                result.confirmationDescription ?? result.message,
+              confirmLabel: result.confirmLabel ?? "Create Commercial Revision",
+            });
+            if (!accepted) return;
+            setRevisionQuotationId(result.quotationId);
+            setRevisionLines(result.revisionLines);
+            setRevisionOpen(true);
+            return;
+          }
+
+          if (
+            result.code === "FINANCE_LOCKED" &&
+            (!result.revisionLines?.length || !result.quotationId)
+          ) {
+            toast.error(
+              "Cannot start Commercial Revision — missing Quotation / Commercial Line linkage."
+            );
+            return;
+          }
+
           const isFinanceOrSync =
             result.code === "FINANCE_LOCKED" ||
             result.code === "COMMERCIAL_SYNC_CONFIRMATION_REQUIRED" ||
@@ -319,6 +361,7 @@ export function AssignmentCommercialWorkspaceDialog({
       : 0;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
@@ -705,5 +748,20 @@ export function AssignmentCommercialWorkspaceDialog({
         ) : null}
       </DialogContent>
     </Dialog>
+    {revisionQuotationId ? (
+      <CommercialRevisionDialog
+        open={revisionOpen}
+        onOpenChange={setRevisionOpen}
+        campaignHeaderId={campaignId}
+        quotationId={revisionQuotationId}
+        lines={revisionLines}
+        onSubmitted={() => {
+          setDrafts(baseline);
+          refreshAfterOperationalMutation();
+          setOpen(false);
+        }}
+      />
+    ) : null}
+    </>
   );
 }

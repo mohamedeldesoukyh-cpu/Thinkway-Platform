@@ -15,6 +15,9 @@ import {
   type UpdateCampaignLineInput,
 } from "@/lib/services/campaigns/campaign-line-service";
 import { fetchCampaignLineById } from "@/lib/services/campaigns/repositories/campaign-repository";
+import { financeLockConfirmationCopy } from "@/lib/services/commercial/confirmation-copy";
+import { probeCommercialLinkByAssignment } from "@/lib/services/commercial/probe-commercial-link";
+import type { MasterCommercialValues } from "@/lib/services/commercial/types";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const linePatchSchema = z.object({
@@ -33,9 +36,26 @@ const inputSchema = z.object({
 
 export type AssignmentCommercialPatchLine = z.infer<typeof linePatchSchema>;
 
+export type AssignmentCommercialRevisionLine = {
+  commercialLineId: string;
+  assignmentIds: string[];
+  concurrencyToken: string | null;
+  current: MasterCommercialValues;
+  proposed: MasterCommercialValues;
+};
+
 export type UpdateAssignmentLineCommercialsResult =
   | { ok: true; updated: number; message: string }
-  | { ok: false; message: string; code?: string };
+  | {
+      ok: false;
+      message: string;
+      code?: string;
+      quotationId?: string | null;
+      revisionLines?: AssignmentCommercialRevisionLine[];
+      confirmationTitle?: string;
+      confirmationDescription?: string;
+      confirmLabel?: string;
+    };
 
 type AssignmentLineRow = {
   id: string;
@@ -280,6 +300,97 @@ export async function updateAssignmentLineCommercialsAction(
       const result = await updateCampaignLine(supabase, user.id, mutation);
       if (!result.ok) {
         lastCode = result.code;
+
+        if (result.code === "FINANCE_LOCKED") {
+          const copy = financeLockConfirmationCopy();
+          const revisionLines: AssignmentCommercialRevisionLine[] = [];
+          let quotationId: string | null = null;
+
+          for (const lockedPatch of lines) {
+            const probe = await probeCommercialLinkByAssignment(
+              supabase,
+              lockedPatch.lineId
+            );
+            if (!probe.linked || !probe.commercialLineId) continue;
+            quotationId = quotationId ?? probe.quotationId;
+
+            const { data: lockedMeta } = await fetchCampaignLineById(
+              supabase,
+              lockedPatch.lineId,
+              campaignId
+            );
+            const currentRow = lockedMeta as {
+              cost_before_vat?: number | null;
+              cost?: number | null;
+              revenue_before_vat?: number | null;
+              revenue?: number | null;
+              currency_code?: string | null;
+              agency_fee_percent?: number | null;
+              usage_rights_amount?: number | null;
+              usage_rights_cost?: number | null;
+              revenue_vat_percent?: number | null;
+              cost_vat_percent?: number | null;
+              revenue_vat_exempt?: boolean | null;
+              cost_vat_exempt?: boolean | null;
+              fx_rate?: number | null;
+            } | null;
+
+            revisionLines.push({
+              commercialLineId: probe.commercialLineId,
+              assignmentIds: probe.assignmentIds.length
+                ? probe.assignmentIds
+                : [lockedPatch.lineId],
+              concurrencyToken: probe.concurrencyToken,
+              current: {
+                creator_cost: Number(
+                  currentRow?.cost_before_vat ?? currentRow?.cost ?? 0
+                ),
+                client_revenue: Number(
+                  currentRow?.revenue_before_vat ?? currentRow?.revenue ?? 0
+                ),
+                cost_currency: currentRow?.currency_code ?? "EGP",
+                agency_fee_percent: Number(currentRow?.agency_fee_percent ?? 0),
+                usage_rights_amount: Number(currentRow?.usage_rights_amount ?? 0),
+                usage_rights_cost: Number(currentRow?.usage_rights_cost ?? 0),
+                revenue_vat_percent: Number(currentRow?.revenue_vat_percent ?? 0),
+                cost_vat_percent: Number(currentRow?.cost_vat_percent ?? 0),
+                revenue_vat_exempt: Boolean(currentRow?.revenue_vat_exempt),
+                cost_vat_exempt: currentRow?.cost_vat_exempt ?? true,
+                exchange_rate: currentRow?.fx_rate ?? undefined,
+              },
+              proposed: {
+                creator_cost: lockedPatch.cost_before_vat,
+                client_revenue: lockedPatch.revenue_before_vat,
+                cost_currency: currentRow?.currency_code ?? "EGP",
+                agency_fee_percent: lockedPatch.agency_fee_percent,
+                usage_rights_amount: lockedPatch.usage_rights_amount,
+                usage_rights_cost: lockedPatch.usage_rights_cost,
+                revenue_vat_percent: Number(currentRow?.revenue_vat_percent ?? 0),
+                cost_vat_percent: Number(currentRow?.cost_vat_percent ?? 0),
+                revenue_vat_exempt: Boolean(currentRow?.revenue_vat_exempt),
+                cost_vat_exempt: currentRow?.cost_vat_exempt ?? true,
+                exchange_rate: currentRow?.fx_rate ?? undefined,
+              },
+            });
+          }
+
+          return {
+            ok: false,
+            code: "FINANCE_LOCKED",
+            message:
+              result.commercialSync?.confirmationDescription ??
+              result.message ??
+              copy.description,
+            confirmationTitle:
+              result.commercialSync?.confirmationTitle ?? copy.title,
+            confirmationDescription:
+              result.commercialSync?.confirmationDescription ?? copy.description,
+            confirmLabel: copy.confirmLabel,
+            quotationId,
+            revisionLines,
+          };
+        }
+
         const detail =
           result.commercialSync?.confirmationDescription ?? result.message;
         errors.push(
