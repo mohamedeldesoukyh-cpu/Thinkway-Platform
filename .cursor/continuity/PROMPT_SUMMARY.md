@@ -1,17 +1,14 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop`  
-**Focus:** Assignments Commercial Workspace (Quotation-matched UI)
+**Focus:** Assignments Commercial Workspace creator name placeholder fix
 
-## In progress (local, not committed)
+## Shipping
 
-- Assignments CW dialog redesigned to Quotation layout (KPI cards, health, creator cards)
-- Both Assignments + Quotation **Commercial Workspace** triggers: red fill / white label
-- Shared trigger: `lib/commercial/commercial-workspace-trigger.ts`
-- Shared CW CSS: `app/commercial-workspace.css`
+- CW shows platform handle instead of placeholder `Creator`
+- Shared `resolveAssignmentCreatorIdentity` / `resolveAssignmentCreatorHandle`
 
 ## Shipped prior
 
-- Performance Refresh Metrics remount crash fix
-- Home Recent campaigns FX parity
-- Showcase fees / quotation template polish
+- Assignments CW + red/white trigger (`f5d5bb34`) · Dev + Prod
+- Performance Creator placeholder fix (`e0e84701`)

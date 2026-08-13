@@ -22,13 +22,13 @@ import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import { computeAgencyFeeAmount } from "@/lib/assignments/client-billing-commercial";
+import { resolveAssignmentCreatorIdentity } from "@/lib/campaigns/resolve-assignment-creator-label";
 import { COMMERCIAL_WORKSPACE_TRIGGER_CLASS } from "@/lib/commercial/commercial-workspace-trigger";
 import { commercialWorkspaceCreatorCardClass } from "@/lib/quotations/commercial-workspace/creator-card-class";
 import {
   profitabilityBandLabel,
   resolveProfitabilityBand,
 } from "@/lib/quotations/commercial-workspace/profitability-thresholds";
-import { resolveCreatorIdentity } from "@/lib/text/decode-html-entities";
 import { cn } from "@/lib/utils";
 
 const CS = {
@@ -226,8 +226,9 @@ export function AssignmentCommercialWorkspaceDialog({
     return enriched.filter((row) => {
       if (healthFilter !== "all" && row.band !== healthFilter) return false;
       if (!q) return true;
-      const identity = resolveCreatorIdentity(row.line.influencer_name, null);
-      const hay = `${identity.name} ${row.line.document_number}`.toLowerCase();
+      const identity = resolveAssignmentCreatorIdentity(row.line);
+      const hay =
+        `${identity.name} ${identity.handle ?? ""} ${row.line.document_number}`.toLowerCase();
       return hay.includes(q);
     });
   }, [enriched, search, healthFilter]);
@@ -473,7 +474,7 @@ export function AssignmentCommercialWorkspaceDialog({
               </div>
             ) : (
               filtered.map(({ line, draft, gp, gpPct, band }) => {
-                const identity = resolveCreatorIdentity(line.influencer_name, null);
+                const identity = resolveAssignmentCreatorIdentity(line);
                 const locked = line.revenue_locked || line.cost_locked;
                 const isSelected = selected.has(line.id);
                 const avatarUrl =
@@ -524,6 +525,7 @@ export function AssignmentCommercialWorkspaceDialog({
                           </span>
                         </div>
                         <div className="cg-handle truncate">
+                          {identity.handle ? `@${identity.handle} · ` : ""}
                           {line.document_number}
                           {line.assignment?.pricing_mode === "per_deliverable"
                             ? " · Per deliverable"

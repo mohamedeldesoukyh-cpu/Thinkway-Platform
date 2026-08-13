@@ -44,31 +44,17 @@ import {
   findDuplicatePublicationUrls,
   normalizePublicationContentUrl,
 } from "@/lib/campaigns/publication-content-url";
+import { resolveAssignmentCreatorHandle } from "@/lib/campaigns/resolve-assignment-creator-label";
 import { SOCIAL_PLATFORM_OPTIONS } from "@/lib/master-data/constants";
 import { extractHandleFromContentUrl } from "@/lib/social/extract-handle-from-content-url";
 import { detectSocialPlatformFromContentUrl } from "@/lib/social/platforms";
 import { pickCreatorDisplayName } from "@/lib/text/decode-html-entities";
 import { cn } from "@/lib/utils";
 
-function resolveAssignmentHandle(line: CampaignLineWorkspace): string | null {
-  const fromAccounts = line.creator_platform_accounts
-    ?.map((account) => account.handle?.trim().replace(/^@+/, ""))
-    .find((handle) => Boolean(handle));
-  if (fromAccounts) return fromAccounts;
-
-  const fromAssignment = line.assignment?.platforms
-    ?.map((platform) => platform.handle?.trim().replace(/^@+/, ""))
-    .find((handle) => Boolean(handle));
-  if (fromAssignment) return fromAssignment;
-
-  const embedded = line.influencer_name?.match(/@([a-zA-Z0-9._]+)/)?.[1];
-  return embedded?.trim() || null;
-}
-
 function buildPublicationAssignmentOption(line: CampaignLineWorkspace) {
-  const handle = resolveAssignmentHandle(line);
+  const handle = resolveAssignmentCreatorHandle(line);
   const creatorName = pickCreatorDisplayName(
-    [line.influencer_name, line.assignment?.influencer_name, handle],
+    [line.influencer_name, line.assignment?.influencer_name, line.name, handle],
     handle
   );
   const handleLabel = handle ? `@${handle}` : null;
