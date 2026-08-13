@@ -437,7 +437,11 @@ export function CampaignWorkspaceView({
                     currentId={workspace.id}
                     hrefForId={(id) => campaignDetailPath(id)}
                   />
-                  <CampaignWorkspaceJumpSelect currentId={workspace.id} />
+                  <CampaignWorkspaceJumpSelect
+                    currentId={workspace.id}
+                    currentDocumentNumber={workspace.document_number}
+                    currentName={workspace.name}
+                  />
                   <span className="thinkway-aurora-crumb-path">
                     <Link href="/campaigns" className="hover:text-[var(--camp-blue-text)]">
                       Campaigns

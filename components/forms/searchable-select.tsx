@@ -34,6 +34,10 @@ type SearchableSelectProps = {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  /** Optional wider/taller menu surface (e.g. campaign jump with code + name). */
+  contentClassName?: string;
+  emptyMessage?: string;
+  onOpenChange?: (open: boolean) => void;
 };
 
 export function SearchableSelect({
@@ -45,6 +49,9 @@ export function SearchableSelect({
   placeholder = "Select…",
   disabled,
   className,
+  contentClassName,
+  emptyMessage = "No matches",
+  onOpenChange,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -85,6 +92,7 @@ export function SearchableSelect({
         open={open}
         onOpenChange={(next) => {
           setOpen(next);
+          onOpenChange?.(next);
           if (!next) setQuery("");
         }}
       >
@@ -99,9 +107,9 @@ export function SearchableSelect({
           >
             <span className="min-w-0 flex-1 truncate text-left">
               {hasValue && selected?.description ? (
-                <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="flex min-w-0 flex-col gap-0.5 leading-tight">
                   <span className="truncate">{selected.label}</span>
-                  <span className="truncate text-xs text-muted-foreground">
+                  <span className="truncate text-[10px] text-muted-foreground">
                     {selected.description}
                   </span>
                 </span>
@@ -113,7 +121,10 @@ export function SearchableSelect({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          className="z-[130] w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]"
+          className={cn(
+            "z-[130] w-[var(--radix-dropdown-menu-trigger-width)] min-w-[var(--radix-dropdown-menu-trigger-width)]",
+            contentClassName
+          )}
           align="start"
           sideOffset={6}
           onCloseAutoFocus={(event) => event.preventDefault()}
@@ -133,7 +144,7 @@ export function SearchableSelect({
               ref={searchInputRef}
               type="text"
               className="thinkway-dropdown-search__input"
-              placeholder="Search…"
+              placeholder="Search camp code or name…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.stopPropagation()}
@@ -144,7 +155,7 @@ export function SearchableSelect({
           </div>
           <div className={DROPDOWN_SURFACE_LIST_CLASS}>
             {filtered.length === 0 ? (
-              <p className={DROPDOWN_EMPTY_CLASS}>No matches</p>
+              <p className={DROPDOWN_EMPTY_CLASS}>{emptyMessage}</p>
             ) : (
               filtered.map((option) => {
                 const isSelected = value === option.value;
@@ -162,7 +173,7 @@ export function SearchableSelect({
                     )}
                   >
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="truncate">{option.label}</span>
+                      <span className="truncate font-medium">{option.label}</span>
                       {option.description ? (
                         <span className="thinkway-dropdown-item__description truncate">
                           {option.description}
