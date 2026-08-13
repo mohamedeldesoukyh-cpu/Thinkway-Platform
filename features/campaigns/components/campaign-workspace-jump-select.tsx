@@ -2,8 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { CheckIcon, ChevronsUpDownIcon, SearchIcon } from "lucide-react";
 
-import { SearchableSelect } from "@/components/forms/searchable-select";
+import {
+  DROPDOWN_EMPTY_CLASS,
+  DROPDOWN_SEARCH_CLASS,
+  DROPDOWN_SURFACE_LIST_CLASS,
+  dropdownItemClass,
+} from "@/components/ui/dropdown-surface";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   loadCampaignJumpOptionsAction,
   type CampaignJumpOption,
@@ -32,8 +44,9 @@ function mergeOptions(
 }
 
 /**
- * Compact Camp Code + Name jump control beside Prev/Next in the aurora crumb.
- * Loads campaigns for scroll/search selection (code on first line, name on second).
+ * Always-visible Camp Code + Name jump control beside Prev/Next.
+ * Dedicated crumb trigger (not SearchableSelect) so `width: 100%` dropdown styles
+ * cannot collapse/hide the control in the aurora topbar flex row.
  */
 export function CampaignWorkspaceJumpSelect({
   currentId,
@@ -42,20 +55,25 @@ export function CampaignWorkspaceJumpSelect({
   className,
 }: CampaignWorkspaceJumpSelectProps) {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const [options, setOptions] = useState<CampaignJumpOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const loadedRef = useRef(false);
   const inFlightRef = useRef(false);
+  const currentOptionRef = useRef<CampaignJumpOption>({
+    id: currentId,
+    document_number: currentDocumentNumber?.trim() || null,
+    name: currentName?.trim() || "Current campaign",
+  });
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const currentOption = useMemo<CampaignJumpOption>(
-    () => ({
-      id: currentId,
-      document_number: currentDocumentNumber?.trim() || null,
-      name: currentName?.trim() || "Current campaign",
-    }),
-    [currentId, currentDocumentNumber, currentName]
-  );
+  currentOptionRef.current = {
+    id: currentId,
+    document_number: currentDocumentNumber?.trim() || null,
+    name: currentName?.trim() || "Current campaign",
+  };
 
   const ensureLoaded = useCallback(async (force = false) => {
     if (!force && (loadedRef.current || inFlightRef.current)) return;
@@ -63,34 +81,28 @@ export function CampaignWorkspaceJumpSelect({
     setLoading(true);
     setError(null);
     try {
+      const current = currentOptionRef.current;
       const listNavIds = readListNavContext("campaigns")?.ids ?? [];
       const result = await loadCampaignJumpOptionsAction();
       if (result.ok && result.options.length > 0) {
-        setOptions(mergeOptions(result.options, [currentOption]));
+        setOptions(mergeOptions(result.options, [current]));
         loadedRef.current = true;
         return;
       }
 
-      // Fallback: enrich the Prev/Next filtered set so the dropdown is never empty
-      // when the operator already has list-nav context (e.g. 1/4).
       if (listNavIds.length > 0) {
         const scoped = await loadCampaignJumpOptionsAction({ ids: listNavIds });
         if (scoped.ok && scoped.options.length > 0) {
-          setOptions(mergeOptions(scoped.options, [currentOption]));
+          setOptions(mergeOptions(scoped.options, [current]));
           loadedRef.current = true;
-          if (!result.ok) setError(result.message);
           return;
         }
       }
 
-      setOptions([currentOption]);
-      if (!result.ok) {
-        setError(result.message);
-      } else {
-        setError("No campaigns available to jump to.");
-      }
+      setOptions([current]);
+      setError(result.ok ? "No campaigns available." : result.message);
     } catch (loadError) {
-      setOptions([currentOption]);
+      setOptions([currentOptionRef.current]);
       setError(
         loadError instanceof Error ? loadError.message : "Failed to load campaigns."
       );
@@ -98,27 +110,38 @@ export function CampaignWorkspaceJumpSelect({
       inFlightRef.current = false;
       setLoading(false);
     }
-  }, [currentOption]);
+  }, []);
 
   useEffect(() => {
     loadedRef.current = false;
     void ensureLoaded(true);
   }, [currentId, ensureLoaded]);
 
-  const selectOptions = useMemo(
-    () =>
-      mergeOptions(options, [currentOption]).map((option) => {
-        const code = option.document_number?.trim() || "—";
-        const name = option.name?.trim() || "Untitled campaign";
-        return {
-          value: option.id,
-          label: code,
-          description: name,
-          keywords: [code, name, option.document_number ?? "", option.name ?? ""],
-        };
-      }),
-    [options, currentOption]
-  );
+  useEffect(() => {
+    if (!open) return;
+    const focusSearch = () => searchInputRef.current?.focus();
+    const raf = requestAnimationFrame(() => {
+      focusSearch();
+      window.setTimeout(focusSearch, 0);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [open]);
+
+  const visibleOptions = useMemo(() => {
+    const merged = mergeOptions(options, [currentOptionRef.current]);
+    const q = query.trim().toLowerCase();
+    if (!q) return merged;
+    return merged.filter((option) => {
+      const code = option.document_number?.toLowerCase() ?? "";
+      const name = option.name?.toLowerCase() ?? "";
+      return code.includes(q) || name.includes(q) || option.id.toLowerCase().includes(q);
+    });
+  }, [options, query, currentId, currentDocumentNumber, currentName]);
+
+  const triggerCode =
+    currentDocumentNumber?.trim() ||
+    options.find((row) => row.id === currentId)?.document_number?.trim() ||
+    "Jump";
 
   const emptyMessage = loading
     ? "Loading campaigns…"
@@ -127,30 +150,97 @@ export function CampaignWorkspaceJumpSelect({
       : "No campaigns found";
 
   return (
-    <SearchableSelect
-      value={currentId}
-      onValueChange={(id) => {
-        if (!id || id === currentId) return;
-        const option = mergeOptions(options, [currentOption]).find((row) => row.id === id);
-        router.push(
-          campaignDetailPath({
-            id,
-            document_number: option?.document_number,
-            name: option?.name,
-          })
-        );
+    <DropdownMenu
+      modal={false}
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next) void ensureLoaded();
+        if (!next) setQuery("");
       }}
-      options={selectOptions}
-      placeholder={loading ? "Loading campaigns…" : "Jump to campaign…"}
-      emptyMessage={emptyMessage}
-      onOpenChange={(open) => {
-        if (open) void ensureLoaded();
-      }}
-      contentClassName="min-w-[22rem] w-[22rem]"
-      className={cn(
-        "h-8 min-w-[12rem] max-w-[16rem] border-border/70 bg-background px-2 text-xs shadow-none",
-        className
-      )}
-    />
+    >
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="Jump to campaign"
+          title="Search and jump to another campaign"
+          className={cn(
+            "inline-flex h-8 w-[13.5rem] shrink-0 items-center justify-between gap-1.5 rounded-md border border-border/80 bg-background px-2 text-left text-xs font-medium text-foreground shadow-none hover:bg-muted/40",
+            className
+          )}
+        >
+          <span className="min-w-0 flex-1 truncate">{triggerCode}</span>
+          <ChevronsUpDownIcon className="size-3.5 shrink-0 text-muted-foreground" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        sideOffset={6}
+        className="z-[130] w-[22rem] min-w-[22rem]"
+        onCloseAutoFocus={(event) => event.preventDefault()}
+        onKeyDown={(event) => {
+          if (event.target === searchInputRef.current) event.stopPropagation();
+        }}
+      >
+        <div
+          className={DROPDOWN_SEARCH_CLASS}
+          onPointerDown={(event) => event.preventDefault()}
+        >
+          <SearchIcon className="thinkway-dropdown-search__icon size-3.5" aria-hidden />
+          <input
+            ref={searchInputRef}
+            type="text"
+            className="thinkway-dropdown-search__input"
+            placeholder="Search camp code or name…"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </div>
+        <div className={DROPDOWN_SURFACE_LIST_CLASS}>
+          {visibleOptions.length === 0 ? (
+            <p className={DROPDOWN_EMPTY_CLASS}>{emptyMessage}</p>
+          ) : (
+            visibleOptions.map((option) => {
+              const code = option.document_number?.trim() || "—";
+              const name = option.name?.trim() || "Untitled campaign";
+              const selected = option.id === currentId;
+              return (
+                <DropdownMenuItem
+                  key={option.id}
+                  onSelect={() => {
+                    setOpen(false);
+                    setQuery("");
+                    if (option.id === currentId) return;
+                    router.push(
+                      campaignDetailPath({
+                        id: option.id,
+                        document_number: option.document_number,
+                        name: option.name,
+                      })
+                    );
+                  }}
+                  className={cn(
+                    dropdownItemClass(selected),
+                    "flex items-center justify-between gap-2"
+                  )}
+                >
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="truncate font-medium">{code}</span>
+                    <span className="thinkway-dropdown-item__description truncate">
+                      {name}
+                    </span>
+                  </span>
+                  {selected ? <CheckIcon className="size-4 shrink-0" /> : null}
+                </DropdownMenuItem>
+              );
+            })
+          )}
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
