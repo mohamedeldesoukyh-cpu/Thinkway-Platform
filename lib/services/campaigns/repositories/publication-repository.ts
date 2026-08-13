@@ -7,6 +7,19 @@ import {
   isUsableAvatarUrl,
 } from "@/lib/performance/avatar-sync-policy";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
+import {
+  formatCreatorDisplayName,
+  isCreatorDocumentNumber,
+  isPlaceholderCreatorLabel,
+} from "@/lib/text/decode-html-entities";
+
+function usableInfluencerDisplayName(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  if (isPlaceholderCreatorLabel(trimmed) || isCreatorDocumentNumber(trimmed)) return null;
+  const formatted = formatCreatorDisplayName(trimmed);
+  return formatted || null;
+}
 
 function metadataAvatarUrl(
   metadata: Record<string, unknown> | null | undefined
@@ -186,7 +199,8 @@ export async function fetchInfluencerMetaForPublications(
     console.warn("[performance] influencer names query failed", influencerError.message);
   } else {
     for (const row of influencers ?? []) {
-      names.set(row.id, row.display_name);
+      const usableName = usableInfluencerDisplayName(row.display_name);
+      if (usableName) names.set(row.id, usableName);
       const metadata = row.metadata as Record<string, unknown> | null;
       const metadataProfileImage =
         typeof metadata?.profile_image_url === "string" ? metadata.profile_image_url : null;
@@ -335,10 +349,24 @@ export async function fetchInfluencerMetaForPublications(
 
     const base = avatars.get(`${account.influencer_id}:`);
     if (base) {
+      const handle = base.handle?.trim() || account.handle?.trim() || null;
       avatars.set(`${account.influencer_id}:`, {
         ...base,
         followerCount: base.followerCount ?? account.follower_count ?? null,
+        handle,
+        profileUrl:
+          base.profileUrl ??
+          resolveCreatorProfileUrl({
+            platform: platformKey,
+            handle: account.handle,
+            profile_url: account.profile_url,
+          }),
       });
+    }
+
+    if (!names.has(account.influencer_id)) {
+      const handleLabel = account.handle?.trim().replace(/^@+/, "");
+      if (handleLabel) names.set(account.influencer_id, handleLabel);
     }
   }
 

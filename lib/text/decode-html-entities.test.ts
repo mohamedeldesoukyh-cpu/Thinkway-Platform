@@ -79,5 +79,14 @@ assert.deepEqual(
   ),
   { name: "Ali Mahgoub | علي محجوب", handle: "ali.mahgub" }
 );
+assert.deepEqual(resolveCreatorIdentity("Creator", "nourellah.a"), {
+  name: "nourellah.a",
+  handle: "nourellah.a",
+});
+assert.deepEqual(resolveCreatorIdentity("INF-008286", "mark.sedhom"), {
+  name: "mark.sedhom",
+  handle: "mark.sedhom",
+});
+assert.equal(formatCreatorDisplayName("Creator"), "");
 
 console.log("decode-html-entities tests passed");

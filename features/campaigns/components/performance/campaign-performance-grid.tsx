@@ -271,6 +271,7 @@ export function CampaignPerformanceGrid({
           <div key={columnId} className="min-w-0 px-2 text-left">
             <PerformanceExplorerCreatorCell
               name={row.influencer_name}
+              handle={row.influencer_handle}
               platform={row.platform}
               avatarUrl={resolvePublicationRowCreatorAvatar(row)}
               profileUrl={row.influencer_profile_url}

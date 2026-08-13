@@ -94,6 +94,13 @@ export function isCreatorDocumentNumber(name: string | null | undefined): boolea
   return /^(INF|DIS|CRT|VEN|TW)-\d+$/i.test(name.trim());
 }
 
+/** Placeholder labels stored when a real display name was never captured. */
+export function isPlaceholderCreatorLabel(name: string | null | undefined): boolean {
+  if (name == null) return false;
+  const normalized = name.trim().toLowerCase();
+  return normalized === "creator" || normalized === "unknown" || normalized === "unknown creator";
+}
+
 /** Extract `@handle` embedded in scraped titles like `Name (@handle)`. */
 export function extractEmbeddedCreatorHandle(
   value: string | null | undefined
@@ -168,7 +175,12 @@ export function formatCreatorDisplayName(name: string | null | undefined): strin
       stripOptionSuffix(stripPlatformPageTitleSuffix(decodeHtmlEntities(withoutAt)))
     )
   );
-  if (!cleaned || isBarePlatformDisplayName(cleaned) || isCreatorDocumentNumber(cleaned)) {
+  if (
+    !cleaned ||
+    isBarePlatformDisplayName(cleaned) ||
+    isCreatorDocumentNumber(cleaned) ||
+    isPlaceholderCreatorLabel(cleaned)
+  ) {
     return "";
   }
   return cleaned;

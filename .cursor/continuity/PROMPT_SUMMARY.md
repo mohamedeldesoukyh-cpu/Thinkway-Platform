@@ -1,14 +1,14 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop`  
-**Focus:** Campaign Workspace Vendor IO refresh + campaign jump dropdown
-
-## Ready to ship (local)
-
-- After Vendor IO generate: client reload of Vendor IO register (no manual page refresh)
-- Aurora crumb: searchable jump dropdown (Camp Code + Name) beside Prev/Next
+**Focus:** Performance Refresh Metrics workspace remount crash
 
 ## Shipped
 
-- Remaining creator moves · `c63ac9a8` · Prod aliased
-- `ready_to_invoice` unlock · Remaining drag lock · Invoice VAT layouts
+- Skip `revalidatePath` on metrics refresh / sync actions; soft-reload publications bundle
+- Dev `3216afec` · Prod `40373dcc` (`vercel deploy --prod`)
+
+## Shipped prior
+
+- Home Recent campaigns FX parity (`637ee93e` / `6b034c1d`)
+- Showcase fees / quotation template polish

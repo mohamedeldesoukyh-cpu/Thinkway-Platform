@@ -3,6 +3,19 @@ import { resolveVendorIoPaymentSchedule } from "@/lib/io/vendor-io-payment-terms
 import { formatPaymentTermsLabel } from "@/lib/vendors/format-utils";
 import type { VendorIoRow } from "@/lib/domains/io/types";
 import type { PaymentTerms } from "@/types/database";
+import {
+  formatCreatorDisplayName,
+  isCreatorDocumentNumber,
+  isPlaceholderCreatorLabel,
+} from "@/lib/text/decode-html-entities";
+
+function usableInfluencerDisplayName(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  if (isPlaceholderCreatorLabel(trimmed) || isCreatorDocumentNumber(trimmed)) return null;
+  const formatted = formatCreatorDisplayName(trimmed);
+  return formatted || null;
+}
 
 type VendorIoQueryRow = {
   id: string;
@@ -101,7 +114,7 @@ export function mapVendorIoQueryRow(row: VendorIoQueryRow): VendorIoRow {
     campaign_document_number: row.campaign?.document_number ?? "—",
     assignment_document_number: line?.document_number ?? null,
     influencer_id: row.influencer_id,
-    influencer_name: influencer?.display_name ?? "—",
+    influencer_name: usableInfluencerDisplayName(influencer?.display_name) ?? "—",
     influencer_email: influencer?.email?.trim() || null,
     creator_avatar_url: null,
     vendor_io_terms_text: influencer?.vendor_io_terms_text ?? null,

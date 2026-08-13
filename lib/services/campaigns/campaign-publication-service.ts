@@ -212,8 +212,12 @@ function mapPublicationRecord(
     assignment_post_schedule_id: r.assignment_post_schedule_id ?? null,
     influencer_id: r.influencer_id ?? null,
     influencer_name: r.influencer_id ? (influencerNames.get(r.influencer_id) ?? null) : null,
-    influencer_handle: platformAvatarMeta?.handle ?? null,
-    influencer_profile_url: platformAvatarMeta?.profileUrl ?? null,
+    influencer_handle:
+      platformAvatarMeta?.handle?.trim() ||
+      genericAvatarMeta?.handle?.trim() ||
+      null,
+    influencer_profile_url:
+      platformAvatarMeta?.profileUrl ?? genericAvatarMeta?.profileUrl ?? null,
     creator_profile_image_url: creatorProfileImage,
     influencer_avatar_url: influencerAvatar,
     social_profile_picture_url: socialProfilePicture,
