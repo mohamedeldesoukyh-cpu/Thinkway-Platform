@@ -126,7 +126,9 @@ export async function refreshPublicationMetricsAction(input: {
   try {
     const supabase = await requireAuth();
     const result = await refreshPublicationMetrics(supabase, input);
-    if (result.ok) revalidateCampaign(input.campaignId);
+    // Skip revalidatePath — remounts Campaign Workspace and can throw a
+    // Server Components render error into TabErrorBoundary after refresh.
+    // Callers soft-reload the publications client bundle instead.
     return result;
   } catch (error) {
     return {
@@ -143,7 +145,8 @@ export async function refreshCampaignMetricsAction(input: {
   try {
     const supabase = await requireAuth();
     const result = await refreshCampaignMetrics(supabase, input);
-    if (result.ok) revalidateCampaign(input.campaignId);
+    // Skip revalidatePath — same workspace remount risk as single-row refresh.
+    // Selection flyout soft-reloads the publications client bundle instead.
     return result;
   } catch (error) {
     return {
@@ -218,7 +221,7 @@ export async function requestPublicationMetricsSyncAction(input: {
   try {
     const supabase = await requireAuth();
     const result = await requestPublicationMetricsSyncService(supabase, input);
-    if (result.ok) revalidateCampaign(input.campaignId);
+    // Skip revalidatePath — callers soft-reload publications; remount crashes Performance.
     return result;
   } catch {
     return { ok: false, message: "Unauthorized" };
