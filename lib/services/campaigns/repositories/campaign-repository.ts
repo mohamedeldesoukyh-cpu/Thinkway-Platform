@@ -195,15 +195,31 @@ export async function listCampaignHeaders(
   return query.range(from, to);
 }
 
+export type CampaignNavOption = {
+  id: string;
+  document_number: string | null;
+  name: string;
+};
+
 /** Ordered campaign ids for filtered Previous/Next (full result set, not page-local). */
 export async function listCampaignHeaderIdsForNav(
   supabase: SupabaseClient,
   params: { search?: string; limit?: number }
 ): Promise<{ ids: string[]; error: { message: string } | null }> {
+  const { options, error } = await listCampaignHeadersForNav(supabase, params);
+  if (error) return { ids: [], error };
+  return { ids: options.map((row) => row.id), error: null };
+}
+
+/** Camp Code + Name options for workspace jump dropdown (scrollable searchable list). */
+export async function listCampaignHeadersForNav(
+  supabase: SupabaseClient,
+  params: { search?: string; limit?: number } = {}
+): Promise<{ options: CampaignNavOption[]; error: { message: string } | null }> {
   const limit = Math.min(Math.max(params.limit ?? 5000, 1), 5000);
   let query = supabase
     .from("campaign_headers")
-    .select("id")
+    .select("id, document_number, name")
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -216,9 +232,13 @@ export async function listCampaignHeaderIdsForNav(
   }
 
   const { data, error } = await query;
-  if (error) return { ids: [], error };
+  if (error) return { options: [], error };
   return {
-    ids: (data ?? []).map((row) => (row as { id: string }).id),
+    options: ((data ?? []) as CampaignNavOption[]).map((row) => ({
+      id: row.id,
+      document_number: row.document_number?.trim() || null,
+      name: row.name?.trim() || "Untitled campaign",
+    })),
     error: null,
   };
 }

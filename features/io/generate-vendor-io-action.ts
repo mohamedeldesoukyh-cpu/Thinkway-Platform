@@ -309,8 +309,7 @@ export async function generateVendorIosFromLinesAction(
   await syncCampaignHeaderStatus(supabase, campaignId);
 
   revalidatePath(`/campaigns/${campaignId}`);
-  revalidatePath("/ios/vendor");
-  revalidatePath("/campaigns");
+  revalidatePath("/campaigns", "layout");
   revalidatePath("/ios/vendor");
   revalidatePath("/vendors");
 

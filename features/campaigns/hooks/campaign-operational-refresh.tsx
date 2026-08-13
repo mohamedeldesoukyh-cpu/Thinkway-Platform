@@ -13,6 +13,7 @@ import { isBulkRefreshLocked } from "@/components/workspace/bulk-operations/bulk
 type CampaignOperationalRefreshContextValue = {
   reloadOperationalBilling: () => Promise<void>;
   reloadPublications: () => Promise<void>;
+  reloadVendorIos: () => Promise<void>;
 };
 
 const CampaignOperationalRefreshContext =
@@ -21,15 +22,17 @@ const CampaignOperationalRefreshContext =
 export function CampaignOperationalRefreshProvider({
   reloadOperationalBilling,
   reloadPublications,
+  reloadVendorIos,
   children,
 }: {
   reloadOperationalBilling: () => Promise<void>;
   reloadPublications: () => Promise<void>;
+  reloadVendorIos: () => Promise<void>;
   children: ReactNode;
 }) {
   return (
     <CampaignOperationalRefreshContext.Provider
-      value={{ reloadOperationalBilling, reloadPublications }}
+      value={{ reloadOperationalBilling, reloadPublications, reloadVendorIos }}
     >
       {children}
     </CampaignOperationalRefreshContext.Provider>
@@ -44,13 +47,18 @@ export function useCampaignPublicationsRefresh() {
   return useContext(CampaignOperationalRefreshContext)?.reloadPublications ?? null;
 }
 
+export function useCampaignVendorIosRefresh() {
+  return useContext(CampaignOperationalRefreshContext)?.reloadVendorIos ?? null;
+}
+
 /**
- * Refetch deferred billing bundles and refresh server props after IO / invoice mutations.
+ * Refetch deferred billing + Vendor IO register and refresh server props after IO / invoice mutations.
  * Never throws into React render — callers that need diagnostics should wrap and toast.
  */
 export function useRefreshCampaignAfterOperationalMutation() {
   const router = useRouter();
   const reloadOperationalBilling = useCampaignOperationalRefresh();
+  const reloadVendorIos = useCampaignVendorIosRefresh();
 
   return useCallback(() => {
     // Platform Bulk Runner owns refresh during multi-select jobs.
@@ -62,11 +70,21 @@ export function useRefreshCampaignAfterOperationalMutation() {
       void reloadOperationalBilling?.().catch((error: unknown) => {
         console.error("[campaign-operational-refresh] billing reload failed", error);
       });
-      router.refresh();
+      void reloadVendorIos?.().catch((error: unknown) => {
+        console.error("[campaign-operational-refresh] vendor IO reload failed", error);
+      });
+      // Defer outside the calling startTransition so RSC props actually remount.
+      queueMicrotask(() => {
+        try {
+          router.refresh();
+        } catch (error) {
+          console.error("[campaign-operational-refresh] refresh failed", error);
+        }
+      });
     } catch (error) {
       console.error("[campaign-operational-refresh] refresh failed", error);
     }
-  }, [reloadOperationalBilling, router]);
+  }, [reloadOperationalBilling, reloadVendorIos, router]);
 }
 
 /** Refetch publications bundle (grid, KPIs, sync health) after publication mutations. */
