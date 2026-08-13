@@ -56,6 +56,7 @@ import {
   type CommercialWorkspaceQuickFilter,
 } from "@/lib/quotations/commercial-workspace/filters";
 import { draftToLinePending } from "@/lib/quotations/commercial-workspace/stage-pending";
+import { COMMERCIAL_WORKSPACE_TRIGGER_CLASS } from "@/lib/commercial/commercial-workspace-trigger";
 import { cn } from "@/lib/utils";
 
 import {
@@ -470,10 +471,7 @@ export function QuotationCommercialWorkspaceDialog({
           type="button"
           variant="outline"
           size="sm"
-          className={cn(
-            "h-8 gap-1.5 rounded-[9px] border-[var(--q-line-2,#e3e8f2)] text-[12.5px] font-semibold shadow-none",
-            triggerClassName
-          )}
+          className={cn(triggerClassName, COMMERCIAL_WORKSPACE_TRIGGER_CLASS)}
         >
           <Table2Icon className="size-3.5" />
           Commercial Workspace

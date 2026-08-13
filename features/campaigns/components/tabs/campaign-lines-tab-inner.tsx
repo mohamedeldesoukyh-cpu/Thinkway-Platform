@@ -52,6 +52,7 @@ import {
 } from "@/features/campaigns/components/aurora/campaign-workspace-frame";
 import { AssignmentAudienceViewProvider } from "@/features/campaigns/components/assignment-hierarchy/assignment-audience-view-context";
 import { AssignmentAudienceViewToggle } from "@/features/campaigns/components/assignment-hierarchy/assignment-audience-view-toggle";
+import { AssignmentCommercialWorkspaceDialog } from "@/features/campaigns/components/assignment-commercial-workspace-dialog";
 import { AssignmentInfluencerDetailSheet } from "@/features/campaigns/components/assignment-hierarchy/assignment-influencer-detail-sheet";
 import { AssignmentSafeGrid } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-grid";
 import type { AssignmentHierarchyGroup } from "@/features/campaigns/types/assignment-hierarchy";
@@ -404,6 +405,12 @@ export function CampaignLinesTabInner({
                     <AssignmentAudienceViewToggle
                       value={audienceView}
                       onChange={setAudienceView}
+                    />
+                    <AssignmentCommercialWorkspaceDialog
+                      campaignId={workspace.id}
+                      currencyCode={workspace.currency_code}
+                      hierarchy={assignmentHierarchy}
+                      canManage={enableLineSheet}
                     />
                     <OperationalTableSettingsSlot
                       contextLabel="Assignments"

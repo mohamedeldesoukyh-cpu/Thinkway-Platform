@@ -1,14 +1,17 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop`  
-**Focus:** Performance Refresh Metrics workspace remount crash
+**Focus:** Assignments Commercial Workspace (Quotation-matched UI)
 
-## Shipped
+## In progress (local, not committed)
 
-- Skip `revalidatePath` on metrics refresh / sync actions; soft-reload publications bundle
-- Dev `3216afec` · Prod `40373dcc` (`vercel deploy --prod`)
+- Assignments CW dialog redesigned to Quotation layout (KPI cards, health, creator cards)
+- Both Assignments + Quotation **Commercial Workspace** triggers: red fill / white label
+- Shared trigger: `lib/commercial/commercial-workspace-trigger.ts`
+- Shared CW CSS: `app/commercial-workspace.css`
 
 ## Shipped prior
 
-- Home Recent campaigns FX parity (`637ee93e` / `6b034c1d`)
+- Performance Refresh Metrics remount crash fix
+- Home Recent campaigns FX parity
 - Showcase fees / quotation template polish
