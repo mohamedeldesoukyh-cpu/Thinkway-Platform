@@ -643,6 +643,7 @@ export function CampaignWorkspaceView({
                   <CampaignPerformanceCenterTab
                     workspace={workspace}
                     publications={publications}
+                    assignmentHierarchy={assignmentHierarchy}
                     summary={performanceSummary}
                     charts={performanceCharts}
                     syncHealth={publicationsSyncHealth}

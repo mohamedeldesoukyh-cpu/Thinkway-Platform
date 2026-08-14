@@ -1,14 +1,16 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop`  
-**Focus:** Assignments Commercial Workspace creator name placeholder fix
+**Focus:** Campaign Performance agreed vs added-value publications
 
-## Shipping
+## In progress
 
-- CW shows platform handle instead of placeholder `Creator`
-- Shared `resolveAssignmentCreatorIdentity` / `resolveAssignmentCreatorHandle`
+- Performance tab splits **Publications** (assignment platforms) vs **Added value** (extra platforms)
+- Same split in report preview / PDF / Excel / PPT
+- Classification follows live Assignments: add a platform → moves to Publications; remove it → moves to Added value
 
 ## Shipped prior
 
+- Assignments CW creator name placeholder
 - Assignments CW + red/white trigger (`f5d5bb34`) · Dev + Prod
 - Performance Creator placeholder fix (`e0e84701`)

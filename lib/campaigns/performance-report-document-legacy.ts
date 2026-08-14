@@ -32,7 +32,8 @@ export function renderCampaignPerformanceReportHtml(
   const { summary, publications } = bundle;
 
   const kpiRows = [
-    ["Total Publications", String(summary.total_publications)],
+    ["Publications", String(summary.agreed_publications)],
+    ["Added value", String(summary.added_value_publications)],
     ["Total Reach", formatCompactCount(summary.total_reach)],
     ["Total Impressions", formatCompactCount(summary.total_impressions)],
     ["Total Views", formatCompactCount(summary.total_views)],
@@ -184,7 +185,8 @@ export async function buildCampaignPerformanceExcelBuffer(
       title: "Thinkway — Campaign Performance Report",
       entityLine: `${documentNumber} — ${campaignName}`,
       meta: [
-        { label: "Publications", value: String(bundle.summary.total_publications) },
+        { label: "Publications", value: String(bundle.summary.agreed_publications) },
+        { label: "Added value", value: String(bundle.summary.added_value_publications) },
         { label: "Total views", value: formatCompactCount(bundle.summary.total_views) },
         { label: "Avg ER", value: formatPercent(bundle.summary.average_engagement_rate) },
       ],

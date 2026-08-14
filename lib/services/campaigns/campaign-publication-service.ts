@@ -31,6 +31,11 @@ import {
   formatCompactCount,
   type PerformanceMetricInput,
 } from "@/lib/campaigns/performance-calculations";
+import { loadAssignmentAgreedPlatformIndex } from "@/lib/performance/load-assignment-agreed-platforms";
+import {
+  applyPublicationValueScopes,
+  resolvePublicationValueScope,
+} from "@/lib/performance/publication-value-scope";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import {
@@ -57,6 +62,8 @@ function emptyCharts(): CampaignPerformanceCharts {
 function emptySummary(): CampaignPerformanceSummary {
   return {
     total_publications: 0,
+    agreed_publications: 0,
+    added_value_publications: 0,
     total_reach: 0,
     total_actual_reach: 0,
     total_forecast_reach: 0,
@@ -304,6 +311,7 @@ function mapPublicationRecord(
     cost,
     currency: r.currency ?? "USD",
     total_engagements: num(r.engagements) ?? engagements,
+    value_scope: "agreed",
   };
 }
 
@@ -359,6 +367,12 @@ function buildSummary(publications: CampaignPublicationRow[]): CampaignPerforman
 
   return {
     total_publications: publications.length,
+    agreed_publications: publications.filter(
+      (p) => resolvePublicationValueScope(p) === "agreed"
+    ).length,
+    added_value_publications: publications.filter(
+      (p) => resolvePublicationValueScope(p) === "added_value"
+    ).length,
     total_reach,
     total_actual_reach,
     total_forecast_reach,
@@ -554,7 +568,7 @@ export async function getCampaignPerformanceBundle(
   const publicationsRaw = rows.map((r) =>
     mapPublicationRecord(r, influencerMeta.names, influencerMeta.avatars, apifyAuthorAvatars)
   );
-  const publications = await Promise.all(
+  const publicationsSigned = await Promise.all(
     publicationsRaw.map(async (row) => {
       const [thumbnail_url, screenshot_url] = await Promise.all([
         createPublicationMediaSignedUrl(supabase, row.thumbnail_url),
@@ -566,6 +580,14 @@ export async function getCampaignPerformanceBundle(
         screenshot_url: resolvePublicationMediaDisplayUrl(screenshot_url, row.screenshot_url),
       };
     })
+  );
+  const agreedPlatformIndex = await loadAssignmentAgreedPlatformIndex(
+    supabase,
+    campaignHeaderId
+  );
+  const publications = applyPublicationValueScopes(
+    publicationsSigned,
+    agreedPlatformIndex
   );
 
   traceCampaignRoute("performance:bundle:ok", {

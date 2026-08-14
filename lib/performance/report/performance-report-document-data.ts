@@ -5,7 +5,7 @@ import type {
   CampaignPublicationRow,
 } from "@/lib/domains/campaign/types";
 import { getCampaignPerformanceBundle } from "@/lib/services/campaigns/campaign-publication-service";
-import { getPlatformOptionLabel } from "@/lib/campaigns/deliverable-taxonomy";
+import { partitionPublicationsByValueScope } from "@/lib/performance/publication-value-scope";
 import { resolvePublicationRowCreatorAvatar } from "@/lib/performance/creator-avatar";
 import { createPublicationMediaSignedUrl } from "@/lib/performance/screenshot-capture/storage";
 import { embedReportImageDataUri } from "@/lib/performance/report/report-embed-images";
@@ -125,6 +125,12 @@ function buildRecommendations(
     );
   }
 
+  if (summary.added_value_publications > 0) {
+    recs.push(
+      `${summary.added_value_publications} added-value publication(s) were delivered beyond the agreed assignment mix.`
+    );
+  }
+
   if (summary.average_engagement_rate != null && summary.average_engagement_rate > 3) {
     recs.push("Campaign average ER exceeds 3% — strong audience resonance relative to industry benchmarks.");
   }
@@ -161,6 +167,15 @@ function buildInfluencerInsights(
   if (totalComments > 0) {
     insights.push(
       `${name} generated ${totalComments.toLocaleString()} total comments across ${publications.length} publication(s).`
+    );
+  }
+
+  const addedValueCount = publications.filter(
+    (publication) => publication.value_scope === "added_value"
+  ).length;
+  if (addedValueCount > 0) {
+    insights.push(
+      `${addedValueCount} added-value publication(s) were delivered beyond the agreed assignment platforms.`
     );
   }
 
@@ -295,6 +310,8 @@ async function buildInfluencerSections(
         profile?.avatarUrl ??
         null;
 
+      const { agreed: agreedPublications, addedValue: addedValuePublications } =
+        partitionPublicationsByValueScope(publications);
       const views = publications.reduce((s, p) => s + (p.views ?? 0), 0);
       const reach = publications.reduce((s, p) => s + (p.reach ?? 0), 0);
       const impressions = publications.reduce((s, p) => s + (p.impressions ?? 0), 0);
@@ -326,6 +343,8 @@ async function buildInfluencerSections(
         insights: buildInfluencerInsights(publications, name),
         summary: {
           publications: publications.length,
+          agreedPublications: agreedPublications.length,
+          addedValuePublications: addedValuePublications.length,
           views,
           reach,
           impressions,

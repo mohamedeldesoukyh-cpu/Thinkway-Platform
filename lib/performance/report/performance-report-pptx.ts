@@ -11,6 +11,10 @@ import {
   type ImpressionsSource,
 } from "@/lib/performance/impressions-forecast-engine";
 import type { PerformanceReportDocumentData } from "@/lib/performance/report/performance-report-types";
+import {
+  partitionPublicationsByValueScope,
+  publicationValueScopeLabel,
+} from "@/lib/performance/publication-value-scope";
 
 const NAVY = "0A0F1E";
 const BLUE = "0057FF";
@@ -84,7 +88,8 @@ export async function buildPerformanceReportPptxBuffer(
 
   const summaryRows = [
     ["Creators", String(data.uniqueCreatorCount)],
-    ["Publications", String(data.bundle.summary.total_publications)],
+    ["Publications", String(data.bundle.summary.agreed_publications)],
+    ["Added value", String(data.bundle.summary.added_value_publications)],
     ["Reach", formatCompactCount(data.bundle.summary.total_reach)],
     [
       "Reach breakdown",
@@ -179,7 +184,34 @@ export async function buildPerformanceReportPptxBuffer(
     );
   }
 
-  for (const pub of data.bundle.publications.slice(0, 12)) {
+  const { agreed: agreedPublications, addedValue: addedValuePublications } =
+    partitionPublicationsByValueScope(data.bundle.publications);
+  const publicationSlides = [...agreedPublications, ...addedValuePublications].slice(0, 12);
+  let addedValueHeadingInserted = false;
+
+  for (const pub of publicationSlides) {
+    if (
+      !addedValueHeadingInserted &&
+      pub.value_scope === "added_value" &&
+      addedValuePublications.length > 0
+    ) {
+      const divider = pptx.addSlide();
+      divider.addText("Added Value", {
+        x: 0.5,
+        y: 2.2,
+        w: 9,
+        h: 0.6,
+        fontSize: 28,
+        bold: true,
+        color: GREEN,
+      });
+      divider.addText(
+        "Extra publications beyond the agreed assignment mix.",
+        { x: 0.5, y: 2.9, w: 9, h: 0.4, fontSize: 14, color: "6B7280" }
+      );
+      addedValueHeadingInserted = true;
+    }
+
     const slide = pptx.addSlide();
     slide.addText(pub.influencer_name ?? "Creator", {
       x: 0.5,
@@ -191,7 +223,7 @@ export async function buildPerformanceReportPptxBuffer(
       color: NAVY,
     });
     slide.addText(
-      `${pub.platform_label} · ${pub.publication_type_label} · ${pub.publication_date ?? "—"}`,
+      `${publicationValueScopeLabel(pub.value_scope)} · ${pub.platform_label} · ${pub.publication_type_label} · ${pub.publication_date ?? "—"}`,
       { x: 0.5, y: 0.75, w: 9, h: 0.3, fontSize: 10, color: "6B7280" }
     );
     const imageUrl = resolvePublicationContentPreviewUrl(pub);
@@ -267,7 +299,7 @@ export async function buildPerformanceReportPptxBuffer(
         color: NAVY,
       });
       slide.addText(
-        `${section.summary.publications} publications · ${formatCompactCount(section.summary.views)} views · ${formatCompactCount(section.summary.reach)} reach · ${formatCompactCount(section.summary.impressions)} impressions · ${formatCompactCount(section.summary.engagements)} engagements`,
+        `${section.summary.agreedPublications} publications · ${section.summary.addedValuePublications} added value · ${formatCompactCount(section.summary.views)} views · ${formatCompactCount(section.summary.reach)} reach · ${formatCompactCount(section.summary.impressions)} impressions · ${formatCompactCount(section.summary.engagements)} engagements`,
         { x: 0.5, y: 1.0, w: 9, h: 0.4, fontSize: 12, color: "6B7280" }
       );
       const gallery = section.publications.slice(0, 4);

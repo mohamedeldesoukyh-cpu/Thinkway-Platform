@@ -116,6 +116,8 @@ type Props = {
   sortKey: SortKey;
   sortDir: "asc" | "desc";
   onSort: (key: SortKey) => void;
+  emptyTitle?: string;
+  emptyDescription?: string;
 };
 
 function refreshStatusLabel(status: string | null | undefined): string {
@@ -176,6 +178,8 @@ export function CampaignPerformanceGrid({
   sortKey,
   sortDir,
   onSort,
+  emptyTitle,
+  emptyDescription,
 }: Props) {
   const [page, setPage] = useState(1);
   const col = useOperationalColumnVisibleChecker();
@@ -477,12 +481,14 @@ export function CampaignPerformanceGrid({
               <div className="thinkway-campaign-empty-state">
                 <p className="font-medium text-[var(--camp-text-2)]">
                   {rows.length === 0
-                    ? "Performance unlocks after creators publish. Metrics appear once the campaign enters Publication stage."
+                    ? emptyTitle ??
+                      "Performance unlocks after creators publish. Metrics appear once the campaign enters Publication stage."
                     : "No publications match your filters."}
                 </p>
                 <p className="mt-1 text-[12px] text-[var(--camp-text-3)]">
                   {rows.length === 0
-                    ? "Use Add publication to start tracking live posts and metrics."
+                    ? emptyDescription ??
+                      "Use Add publication to start tracking live posts and metrics."
                     : "Clear filters or adjust search to see more rows."}
                 </p>
               </div>
