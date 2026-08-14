@@ -544,8 +544,9 @@ export function CampaignPerformanceCenterTab({
         }
         registerLabel="Publication registers"
         collapseRegister
+        defaultRegisterOpen
         registerCount={publications.length}
-        registerStorageKey={`performance-${workspace.id}`}
+        registerStorageKey={`performance-agreed-added-${workspace.id}`}
         forceRegisterOpen={Boolean(initialDetailPublicationId)}
       >
       <OperationalTableColumnsProvider

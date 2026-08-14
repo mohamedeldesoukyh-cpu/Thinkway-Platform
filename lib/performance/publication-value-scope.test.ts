@@ -203,4 +203,19 @@ function indexWithInstagram() {
   assert.equal(afterRemove[1]?.value_scope, "added_value");
 }
 
+{
+  const classified = applyPublicationValueScopes(
+    [{ campaign_line_id: lineId, influencer_id: influencerId, platform: "youtube" }],
+    buildAssignmentAgreedPlatformIndexFromAssignments({
+      hierarchyGroups: [
+        {
+          line: { id: lineId, influencer_id: influencerId },
+          deliverables: [{ platform: "instagram", posts: [{ platform: "youtube" }] }],
+        },
+      ],
+    })
+  );
+  assert.equal(classified[0]?.value_scope, "agreed");
+}
+
 console.log("publication-value-scope tests passed");

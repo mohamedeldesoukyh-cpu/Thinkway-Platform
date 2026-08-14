@@ -58,7 +58,10 @@ type AssignmentPlatformSourceLine = {
 
 type AssignmentPlatformSourceGroup = {
   line: { id: string; influencer_id?: string | null };
-  deliverables: readonly { platform: string }[];
+  deliverables: readonly {
+    platform: string;
+    posts?: readonly { platform: string }[] | null;
+  }[];
 };
 
 function addPlatformToLineMap(
@@ -104,6 +107,9 @@ export function buildAssignmentAgreedPlatformIndexFromAssignments(input: {
     if (influencerId) influencerByLineId.set(group.line.id, influencerId);
     for (const deliverable of group.deliverables) {
       addPlatformToLineMap(deliverablePlatformsByLine, group.line.id, deliverable.platform);
+      for (const post of deliverable.posts ?? []) {
+        addPlatformToLineMap(deliverablePlatformsByLine, group.line.id, post.platform);
+      }
     }
   }
 
