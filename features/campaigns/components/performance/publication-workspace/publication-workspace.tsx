@@ -69,6 +69,7 @@ import {
   type EngagementRateMethod,
 } from "@/lib/performance/engagement-rate-engine";
 import { cn } from "@/lib/utils";
+import { useMediaProxyImageRecovery } from "@/hooks/use-media-proxy-image-recovery";
 
 type Props = {
   open: boolean;
@@ -104,6 +105,96 @@ function ContentSection({
         ) : null}
       </div>
       <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">{text || "—"}</p>
+    </div>
+  );
+}
+
+function PublicationWorkspacePreview({
+  row,
+  onCaptureScreenshot,
+}: {
+  row: CampaignPublicationRow;
+  onCaptureScreenshot: () => void;
+}) {
+  const storedPreviewUrl = resolvePublicationContentPreviewUrl(row);
+  const previewUrl = resolveCampaignPublicationDisplayPreviewUrl(row);
+  const livePostUrl = row.content_url?.trim() || null;
+  const recovery = useMediaProxyImageRecovery(previewUrl);
+  const showImage = Boolean(previewUrl) && !recovery.exhausted;
+  const imageSrc = recovery.displaySrc ?? previewUrl;
+
+  const livePostFallback = livePostUrl ? (
+    <a
+      href={livePostUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex size-full flex-col items-center justify-center gap-2 text-foreground transition-colors hover:bg-muted/80"
+      title="Open live post"
+    >
+      <ExternalLinkIcon className="size-8 text-muted-foreground" />
+      <p className="text-sm font-medium">Open live post</p>
+      <p className="max-w-[85%] truncate text-center text-[11px] text-muted-foreground">
+        {livePostUrl}
+      </p>
+    </a>
+  ) : (
+    <div className="flex size-full flex-col items-center justify-center gap-2 text-muted-foreground">
+      <ImageIcon className="size-8 opacity-40" />
+      <p className="text-xs">No media URL available</p>
+    </div>
+  );
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-muted">
+      <div className="relative aspect-video">
+        {showImage && imageSrc ? (
+          livePostUrl ? (
+            <a
+              href={livePostUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative block size-full"
+              title="Open live post"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                key={imageSrc}
+                src={imageSrc}
+                alt=""
+                referrerPolicy="no-referrer"
+                className="size-full object-cover transition-opacity group-hover:opacity-90"
+                onError={recovery.onError}
+              />
+              <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1.5 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8 text-xs font-medium text-white opacity-90 group-hover:opacity-100">
+                <ExternalLinkIcon className="size-3.5" />
+                Open live post
+              </span>
+            </a>
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={imageSrc}
+              src={imageSrc}
+              alt=""
+              referrerPolicy="no-referrer"
+              className="size-full object-cover"
+              onError={recovery.onError}
+            />
+          )
+        ) : (
+          livePostFallback
+        )}
+      </div>
+      {!storedPreviewUrl && livePostUrl ? (
+        <div className="flex items-center justify-between gap-2 border-t border-border bg-card px-3 py-2">
+          <p className="text-[11px] text-muted-foreground">
+            Showing live-post preview. Capture a screenshot to store one in Thinkway.
+          </p>
+          <Button size="sm" variant="outline" className="h-7 shrink-0" onClick={onCaptureScreenshot}>
+            Capture screenshot
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -262,8 +353,6 @@ export function PublicationWorkspace({
   const publicationRow = row;
 
   const storedPreviewUrl = resolvePublicationContentPreviewUrl(row);
-  const previewUrl = resolveCampaignPublicationDisplayPreviewUrl(row);
-  const livePostUrl = row.content_url?.trim() || null;
   const provider = row.metrics_provider ?? row.metrics_collection_source ?? "—";
   const lastSync = row.last_synced_at ?? row.metrics_refresh_attempted_at;
   const sourceBadge = metricsSourceBadge(row.metrics_provider, row.engagement_rate_method as EngagementRateMethod | null);
@@ -529,64 +618,10 @@ export function PublicationWorkspace({
             )}
             <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
               <div className="space-y-4">
-                <div className="overflow-hidden rounded-xl border border-border bg-muted">
-                  <div className="relative aspect-video">
-                    {previewUrl ? (
-                      livePostUrl ? (
-                        <a
-                          href={livePostUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group relative block size-full"
-                          title="Open live post"
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={previewUrl}
-                            alt=""
-                            className="size-full object-cover transition-opacity group-hover:opacity-90"
-                          />
-                          <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1.5 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-8 text-xs font-medium text-white opacity-90 group-hover:opacity-100">
-                            <ExternalLinkIcon className="size-3.5" />
-                            Open live post
-                          </span>
-                        </a>
-                      ) : (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={previewUrl} alt="" className="size-full object-cover" />
-                      )
-                    ) : livePostUrl ? (
-                      <a
-                        href={livePostUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex size-full flex-col items-center justify-center gap-2 text-foreground transition-colors hover:bg-muted/80"
-                        title="Open live post"
-                      >
-                        <ExternalLinkIcon className="size-8 text-muted-foreground" />
-                        <p className="text-sm font-medium">Open live post</p>
-                        <p className="max-w-[85%] truncate text-center text-[11px] text-muted-foreground">
-                          {livePostUrl}
-                        </p>
-                      </a>
-                    ) : (
-                      <div className="flex size-full flex-col items-center justify-center gap-2 text-muted-foreground">
-                        <ImageIcon className="size-8 opacity-40" />
-                        <p className="text-xs">No media URL available</p>
-                      </div>
-                    )}
-                  </div>
-                  {!storedPreviewUrl && livePostUrl ? (
-                    <div className="flex items-center justify-between gap-2 border-t border-border bg-card px-3 py-2">
-                      <p className="text-[11px] text-muted-foreground">
-                        Showing live-post preview. Capture a screenshot to store one in Thinkway.
-                      </p>
-                      <Button size="sm" variant="outline" className="h-7 shrink-0" onClick={requeueScreenshot}>
-                        Capture screenshot
-                      </Button>
-                    </div>
-                  ) : null}
-                </div>
+                <PublicationWorkspacePreview
+                  row={row}
+                  onCaptureScreenshot={requeueScreenshot}
+                />
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl border border-border bg-card p-3 sm:col-span-2">
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">

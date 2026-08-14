@@ -7,6 +7,7 @@ export const SCREENSHOT_SOURCES = [
   "playwright",
   "youtube_thumbnail_api",
   "tiktok_oembed",
+  "facebook_oembed",
 ] as const;
 
 export type ScreenshotSource = (typeof SCREENSHOT_SOURCES)[number];

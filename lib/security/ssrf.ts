@@ -223,11 +223,11 @@ export const SOCIAL_MEDIA_SRC_ALLOWLIST: HostAllowlist = {
 };
 
 export const SOCIAL_POST_ALLOWLIST: HostAllowlist = {
-  exact: ["youtu.be"],
-  suffixes: ["instagram.com", "tiktok.com", "youtube.com"],
+  exact: ["youtu.be", "fb.watch"],
+  suffixes: ["instagram.com", "tiktok.com", "youtube.com", "facebook.com", "fb.com"],
 };
 
 export const SOCIAL_PROFILE_ALLOWLIST: HostAllowlist = {
-  exact: ["youtu.be"],
-  suffixes: ["instagram.com", "tiktok.com", "youtube.com"],
+  exact: ["youtu.be", "fb.watch"],
+  suffixes: ["instagram.com", "tiktok.com", "youtube.com", "facebook.com", "fb.com"],
 };

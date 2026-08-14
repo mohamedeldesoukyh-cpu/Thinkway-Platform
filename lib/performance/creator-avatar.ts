@@ -505,5 +505,7 @@ export type PublicationContentPreviewInput = {
 export function resolvePublicationContentPreviewUrl(
   row: PublicationContentPreviewInput
 ): string | null {
-  return row.screenshot_url ?? row.thumbnail_url ?? null;
+  const screenshot = row.screenshot_url?.trim() || null;
+  const thumbnail = row.thumbnail_url?.trim() || null;
+  return screenshot ?? thumbnail;
 }

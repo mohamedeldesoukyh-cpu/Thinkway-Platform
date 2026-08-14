@@ -7,6 +7,7 @@ import {
   resolvePublicationPreviewForHttpRequest,
 } from "./publication-preview-proxy";
 import { instagramShortcodeFromUrl } from "@/lib/performance/screenshot-capture/providers/instagram-media-redirect";
+import { youtubeVideoIdFromUrl } from "@/lib/performance/screenshot-capture/providers/youtube-thumbnail";
 import {
   getMediaProxyMetrics,
   mediaProxyCacheKey,
@@ -27,6 +28,18 @@ async function main() {
     isAllowedPublicationPreviewSrcUrl("https://scontent.cdninstagram.com/v/t51.jpg"),
     true
   );
+  assert.equal(
+    isAllowedPublicationPreviewSrcUrl("https://img.youtube.com/vi/dQw4w9wgGcQ/hqdefault.jpg"),
+    true
+  );
+  assert.equal(
+    isAllowedPublicationPreviewSrcUrl("https://p16-sign-va.tiktokcdn.com/tos/cover.jpeg"),
+    true
+  );
+  assert.equal(
+    isAllowedPublicationPreviewSrcUrl("https://scontent.xx.fbcdn.net/v/t15/fb.jpg"),
+    true
+  );
 
   assert.equal(
     isAllowedPublicationPreviewSrcUrl("https://notinstagram.com/v/t51.jpg"),
@@ -42,8 +55,56 @@ async function main() {
     false
   );
 
+  assert.equal(
+    isAllowedPublicationPreviewPostUrl("https://www.tiktok.com/@creator/video/123"),
+    true
+  );
+  assert.equal(
+    isAllowedPublicationPreviewPostUrl("https://www.youtube.com/watch?v=dQw4w9wgGcQ"),
+    true
+  );
+  assert.equal(
+    isAllowedPublicationPreviewPostUrl("https://www.facebook.com/reel/1234567890123456"),
+    true
+  );
+  assert.equal(
+    isAllowedPublicationPreviewPostUrl("https://fb.watch/abc123/"),
+    true
+  );
+
+  const fbMiss = await resolvePublicationPreviewForHttpRequest({
+    src: null,
+    postUrl: "https://www.facebook.com/reel/1234567890123456",
+  });
+  assert.equal(fbMiss.ok, false);
+  if (!fbMiss.ok) {
+    assert.equal(fbMiss.source, "miss");
+    assert.equal(fbMiss.needsRefresh, true, "Facebook posts must schedule background preview refresh");
+  }
+
+  const ytMiss = await resolvePublicationPreviewForHttpRequest({
+    src: null,
+    postUrl: "https://www.youtube.com/watch?v=dQw4w9wgGcQ",
+  });
+  assert.equal(ytMiss.ok, false);
+  if (!ytMiss.ok) {
+    assert.equal(ytMiss.needsRefresh, true, "YouTube posts must schedule background preview refresh");
+  }
+
+  const ttMiss = await resolvePublicationPreviewForHttpRequest({
+    src: null,
+    postUrl: "https://www.tiktok.com/@creator/video/123",
+  });
+  assert.equal(ttMiss.ok, false);
+  if (!ttMiss.ok) {
+    assert.equal(ttMiss.needsRefresh, true, "TikTok posts must schedule background preview refresh");
+  }
+
   assert.equal(instagramShortcodeFromUrl("https://www.instagram.com/p/DaIquJuMyax/"), "DaIquJuMyax");
   assert.equal(instagramShortcodeFromUrl("https://www.instagram.com/reel/DaIquJuMyax/"), "DaIquJuMyax");
+  assert.equal(youtubeVideoIdFromUrl("https://www.youtube.com/watch?v=dQw4w9wgGcQ"), "dQw4w9wgGcQ");
+  assert.equal(youtubeVideoIdFromUrl("https://youtu.be/dQw4w9wgGcQ"), "dQw4w9wgGcQ");
+  assert.equal(youtubeVideoIdFromUrl("https://www.youtube.com/shorts/abc123xyz"), "abc123xyz");
 
   resetMediaProxyMetricsForTests();
   const src = "https://scontent.cdninstagram.com/v/cached-preview.jpg";

@@ -10,6 +10,7 @@ import {
 } from "@/lib/performance/screenshot-capture/persist";
 import { tryApifyThumbnail } from "@/lib/performance/screenshot-capture/providers/apify-thumbnail";
 import { tryMetaGraphThumbnail } from "@/lib/performance/screenshot-capture/providers/meta-graph-thumbnail";
+import { tryFacebookOembedThumbnail } from "@/lib/performance/screenshot-capture/providers/facebook-oembed";
 import { tryOpenGraphThumbnail } from "@/lib/performance/screenshot-capture/providers/opengraph";
 import { tryPlaywrightScreenshot } from "@/lib/performance/screenshot-capture/providers/playwright-screenshot";
 import { tryTikTokOembedThumbnail } from "@/lib/performance/screenshot-capture/providers/tiktok-oembed";
@@ -43,6 +44,9 @@ function providerChainForPlatform(platform: string): ScreenshotSource[] {
   if (platform === "youtube") {
     return ["youtube_thumbnail_api", "opengraph", "playwright"];
   }
+  if (platform === "facebook") {
+    return ["facebook_oembed", "opengraph", "playwright"];
+  }
   return ["opengraph", "playwright"];
 }
 
@@ -66,7 +70,13 @@ async function runAttempt(
     case "tiktok_oembed":
       return tryTikTokOembedThumbnail({ contentUrl: ctx.contentUrl });
     case "youtube_thumbnail_api":
-      return tryYouTubeThumbnail({ mediaId: ctx.mediaId, env: ctx.env });
+      return tryYouTubeThumbnail({
+        mediaId: ctx.mediaId,
+        contentUrl: ctx.contentUrl,
+        env: ctx.env,
+      });
+    case "facebook_oembed":
+      return tryFacebookOembedThumbnail({ contentUrl: ctx.contentUrl });
     case "playwright":
       return tryPlaywrightScreenshot({
         contentUrl: ctx.contentUrl,
@@ -166,7 +176,7 @@ export async function capturePublicationScreenshot(
         winningSource = source;
         break;
       }
-      if (attempt.imageUrl && (source === "apify" || source === "opengraph" || source === "meta_graph_thumbnail" || source === "tiktok_oembed" || source === "youtube_thumbnail_api")) {
+      if (attempt.imageUrl && (source === "apify" || source === "opengraph" || source === "meta_graph_thumbnail" || source === "tiktok_oembed" || source === "youtube_thumbnail_api" || source === "facebook_oembed")) {
         winningSource = source;
         winningImageUrl = attempt.imageUrl;
         break;

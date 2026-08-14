@@ -45,14 +45,26 @@ export async function tryOpenGraphThumbnail(ctx: Ctx): Promise<ScreenshotCapture
     };
   }
 
+  const isFacebook =
+    /(?:^|\.)(?:facebook\.com|fb\.com|fb\.watch)$/i.test(
+      (() => {
+        try {
+          return new URL(ctx.contentUrl).hostname;
+        } catch {
+          return "";
+        }
+      })()
+    );
+
   try {
     const response = await fetchWithStrictRedirects(ctx.contentUrl, {
       allowlist: SOCIAL_POST_ALLOWLIST,
       maxRedirects: 3,
       timeoutMs: 30_000,
       headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "User-Agent": isFacebook
+          ? "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
+          : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         Accept: "text/html",
       },
     });
