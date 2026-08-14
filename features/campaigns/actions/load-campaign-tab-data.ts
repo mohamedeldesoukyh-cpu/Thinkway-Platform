@@ -137,6 +137,30 @@ export async function loadCampaignAssignmentsBillingBundle(
   }
 }
 
+export async function loadCampaignAssignmentHierarchyBundle(
+  campaignId: string
+): Promise<
+  BundleResult<{ hierarchy: import("@/features/campaigns/types/assignment-hierarchy").AssignmentHierarchy }>
+> {
+  if (!isUuid(campaignId)) return invalidCampaignResult();
+
+  try {
+    const { getCampaignAssignmentHierarchy } = await import(
+      "@/features/campaigns/queries/assignment-hierarchy"
+    );
+    const hierarchy = await getCampaignAssignmentHierarchy(campaignId);
+    return { ok: true, data: { hierarchy } };
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to load assignment hierarchy.",
+    };
+  }
+}
+
 export async function loadCampaignBillingBundle(
   campaignId: string
 ): Promise<BundleResult<CampaignBillingPayload>> {

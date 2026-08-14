@@ -116,6 +116,7 @@ export function CampaignWorkspaceView({
     bundleStatuses,
     reloadOperationalBilling,
     reloadPublications,
+    reloadAssignmentHierarchy,
   } = tabData;
 
   const reloadVendorIos = useCallback(async () => {
@@ -414,6 +415,7 @@ export function CampaignWorkspaceView({
     <CampaignOperationalRefreshProvider
       reloadOperationalBilling={reloadOperationalBilling}
       reloadPublications={reloadPublications}
+      reloadAssignmentHierarchy={reloadAssignmentHierarchy}
       reloadVendorIos={reloadVendorIos}
     >
     <div className="thinkway-campaign-workspace flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">

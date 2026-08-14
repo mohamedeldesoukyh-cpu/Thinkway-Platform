@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  loadCampaignAssignmentHierarchyBundle,
   loadCampaignAssignmentsBillingBundle,
   loadCampaignBillingBundle,
   loadCampaignFinanceAuditBundle,
@@ -104,6 +105,7 @@ export type CampaignTabDataState = {
   tabLoadError: (tabId: CampaignWorkspaceTabId) => string | null;
   reloadOperationalBilling: () => Promise<void>;
   reloadPublications: () => Promise<void>;
+  reloadAssignmentHierarchy: () => Promise<void>;
 };
 
 export function useCampaignTabData(
@@ -273,6 +275,18 @@ export function useCampaignTabData(
     await loadBundle("publications", { force: true });
   }, [loadBundle]);
 
+  const reloadAssignmentHierarchy = useCallback(async () => {
+    const result = await loadCampaignAssignmentHierarchyBundle(campaignId);
+    if (!result.ok) {
+      console.error(
+        "[campaign-tab-data] assignment hierarchy reload failed",
+        result.error
+      );
+      return;
+    }
+    setAssignmentHierarchy(result.data.hierarchy);
+  }, [campaignId]);
+
   const prevHierarchyKeyRef = useRef<string | null>(null);
   useEffect(() => {
     const hierarchyKey = assignmentHierarchyBoundaryKey(initialAssignmentHierarchy);
@@ -378,5 +392,6 @@ export function useCampaignTabData(
     tabLoadError,
     reloadOperationalBilling,
     reloadPublications,
+    reloadAssignmentHierarchy,
   };
 }

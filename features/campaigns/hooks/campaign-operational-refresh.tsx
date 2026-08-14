@@ -13,6 +13,7 @@ import { isBulkRefreshLocked } from "@/components/workspace/bulk-operations/bulk
 type CampaignOperationalRefreshContextValue = {
   reloadOperationalBilling: () => Promise<void>;
   reloadPublications: () => Promise<void>;
+  reloadAssignmentHierarchy: () => Promise<void>;
   reloadVendorIos: () => Promise<void>;
 };
 
@@ -22,17 +23,24 @@ const CampaignOperationalRefreshContext =
 export function CampaignOperationalRefreshProvider({
   reloadOperationalBilling,
   reloadPublications,
+  reloadAssignmentHierarchy,
   reloadVendorIos,
   children,
 }: {
   reloadOperationalBilling: () => Promise<void>;
   reloadPublications: () => Promise<void>;
+  reloadAssignmentHierarchy: () => Promise<void>;
   reloadVendorIos: () => Promise<void>;
   children: ReactNode;
 }) {
   return (
     <CampaignOperationalRefreshContext.Provider
-      value={{ reloadOperationalBilling, reloadPublications, reloadVendorIos }}
+      value={{
+        reloadOperationalBilling,
+        reloadPublications,
+        reloadAssignmentHierarchy,
+        reloadVendorIos,
+      }}
     >
       {children}
     </CampaignOperationalRefreshContext.Provider>
@@ -45,6 +53,12 @@ export function useCampaignOperationalRefresh() {
 
 export function useCampaignPublicationsRefresh() {
   return useContext(CampaignOperationalRefreshContext)?.reloadPublications ?? null;
+}
+
+export function useCampaignAssignmentHierarchyRefresh() {
+  return (
+    useContext(CampaignOperationalRefreshContext)?.reloadAssignmentHierarchy ?? null
+  );
 }
 
 export function useCampaignVendorIosRefresh() {
@@ -87,11 +101,34 @@ export function useRefreshCampaignAfterOperationalMutation() {
   }, [reloadOperationalBilling, reloadVendorIos, router]);
 }
 
-/** Refetch publications bundle (grid, KPIs, sync health) after publication mutations. */
+/**
+ * Refetch publications + Assignments hierarchy after publication create/edit.
+ * Live dates sync into assignment posts on create — hierarchy must reload or Assignments stays stale.
+ */
 export function useRefreshCampaignAfterPublicationMutation() {
+  const router = useRouter();
   const reloadPublications = useCampaignPublicationsRefresh();
+  const reloadAssignmentHierarchy = useCampaignAssignmentHierarchyRefresh();
 
   return useCallback(() => {
-    void reloadPublications?.();
-  }, [reloadPublications]);
+    if (isBulkRefreshLocked()) {
+      return;
+    }
+    void reloadPublications?.().catch((error: unknown) => {
+      console.error("[campaign-publication-refresh] publications reload failed", error);
+    });
+    void reloadAssignmentHierarchy?.().catch((error: unknown) => {
+      console.error(
+        "[campaign-publication-refresh] assignment hierarchy reload failed",
+        error
+      );
+    });
+    queueMicrotask(() => {
+      try {
+        router.refresh();
+      } catch (error) {
+        console.error("[campaign-publication-refresh] refresh failed", error);
+      }
+    });
+  }, [reloadPublications, reloadAssignmentHierarchy, router]);
 }
