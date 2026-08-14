@@ -5,6 +5,7 @@ import type {
   CampaignPublicationRow,
 } from "@/lib/domains/campaign/types";
 import { getCampaignPerformanceBundle } from "@/lib/services/campaigns/campaign-publication-service";
+import { getPlatformOptionLabel } from "@/lib/campaigns/deliverable-taxonomy";
 import { partitionPublicationsByValueScope } from "@/lib/performance/publication-value-scope";
 import { resolvePublicationRowCreatorAvatar } from "@/lib/performance/creator-avatar";
 import { createPublicationMediaSignedUrl } from "@/lib/performance/screenshot-capture/storage";
