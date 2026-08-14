@@ -35,6 +35,10 @@ import {
   THINKWAY_REPORT_LOGO_STYLES,
 } from "@/lib/reports/document/thinkway-report-logo";
 import { THINKWAY_REPORT_STYLES } from "@/lib/reports/document/thinkway-report-styles";
+import {
+  partitionPublicationsByValueScope,
+  resolvePublicationValueScope,
+} from "@/lib/performance/publication-value-scope";
 
 /** IO-aligned document palette (Client/Vendor IO / Invoice). */
 const PALETTE = {
@@ -153,6 +157,8 @@ function buildPerformanceReportStyles(generatedLabel: string): string {
   .kpi-card { border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px; background: ${PALETTE.card}; min-height: 58px; display: flex; flex-direction: column; justify-content: center; }
   .kpi-card label { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); margin-bottom: 4px; }
   .kpi-card strong { font-size: 16px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .kpi-card--added { border-color: #1D9E75; background: #F0FDF4; }
+  .kpi-card--added label { color: #047857; }
 
   .highlights-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
   .highlight-card { background: ${PALETTE.card}; border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; }
@@ -180,6 +186,7 @@ function buildPerformanceReportStyles(generatedLabel: string): string {
   .pub-grid--gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .pub-card { border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: #fff; display: flex; flex-direction: column; break-inside: avoid; page-break-inside: avoid; }
   .pub-card--full .pub-preview { aspect-ratio: 16 / 7; }
+  .pub-scope-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 999px; font-size: 8px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; background: #ECFDF3; color: #047857; vertical-align: middle; }
   .pub-preview { width: 100%; aspect-ratio: 16 / 9; background: #F3F4F6; overflow: hidden; }
   .pub-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .pub-body { padding: 12px 14px 14px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
@@ -373,12 +380,16 @@ function renderPublicationCard(
     : `<div class="pub-preview" style="display:flex;align-items:center;justify-content:center;background:${PALETTE.card};"><span style="font-size:10px;color:${PALETTE.muted};">Preview unavailable</span></div>`;
 
   const excerpt = captionExcerpt(pub.caption);
+  const addedValueBadge =
+    resolvePublicationValueScope(pub) === "added_value"
+      ? `<span class="pub-scope-badge">Added value</span>`
+      : "";
 
   return `<article class="pub-card${fullWidth ? " pub-card--full" : ""}">
     ${preview}
     <div class="pub-body">
       ${renderCreatorNameWithAvatar(pub)}
-      <div class="pub-meta">${esc(pub.platform_label)} · ${esc(pub.publication_type_label)} · ${esc(pub.publication_date ?? "—")}</div>
+      <div class="pub-meta">${esc(pub.platform_label)} · ${esc(pub.publication_type_label)} · ${esc(pub.publication_date ?? "—")}${addedValueBadge}</div>
       ${excerpt ? `<p class="pub-caption">${esc(excerpt)}</p>` : ""}
       ${pub.hashtags?.trim() ? `<p class="pub-meta"><strong>Hashtags:</strong> ${esc(pub.hashtags)}</p>` : ""}
       ${pub.mentions?.trim() ? `<p class="pub-meta"><strong>Mentions:</strong> ${esc(pub.mentions)}</p>` : ""}
@@ -499,6 +510,7 @@ function buildTocEntries(data: PerformanceReportDocumentData): TocEntry[] {
     { num: "04", label: "Platform Breakdown", href: "#section-platform-breakdown" },
     { num: "05", label: "Performance Charts", href: "#section-performance-charts" },
     { num: "06", label: "Campaign Publications", href: "#section-publications" },
+    { num: "07", label: "Added Value", href: "#section-added-value" },
     { num: "—", label: "Thank You", href: "#section-thank-you" },
   ];
 }
@@ -513,7 +525,8 @@ function renderExecutiveSummary(data: PerformanceReportDocumentData): string {
 
   const kpis = [
     ["Creators", String(data.uniqueCreatorCount)],
-    ["Publications", String(summary.total_publications)],
+    ["Publications", String(summary.agreed_publications)],
+    ["Added value", String(summary.added_value_publications)],
     ["Reach", formatCompactCount(summary.total_reach)],
     ["Impressions", formatCompactCount(summary.total_impressions)],
     ["Views", formatCompactCount(summary.total_views)],
@@ -529,7 +542,10 @@ function renderExecutiveSummary(data: PerformanceReportDocumentData): string {
   return `<div class="section section--compact" id="section-executive-summary">
     <div class="section-label"><div class="num">1</div><div class="title">Executive Summary</div></div>
     <div class="kpi-grid">${kpis
-      .map(([label, value]) => `<div class="kpi-card"><label>${esc(label)}</label><strong>${esc(value)}</strong></div>`)
+      .map(
+        ([label, value]) =>
+          `<div class="kpi-card${label === "Added value" ? " kpi-card--added" : ""}"><label>${esc(label)}</label><strong>${esc(value)}</strong></div>`
+      )
       .join("")}</div>
     <p class="reach-disclaimer" style="margin-top:12px;font-size:10px;color:${PALETTE.muted};line-height:1.45;">${esc(REACH_FORECAST_DISCLAIMER)} Actual reach: ${esc(formatCompactCount(summary.total_actual_reach))} · Forecasted: ${esc(formatCompactCount(summary.total_forecast_reach))}.</p>
     <p class="impressions-disclaimer" style="margin-top:8px;font-size:10px;color:${PALETTE.muted};line-height:1.45;">${esc(IMPRESSIONS_FORECAST_DISCLAIMER)} Actual impressions: ${esc(formatCompactCount(summary.total_actual_impressions))} · Forecasted: ${esc(formatCompactCount(summary.total_forecast_impressions))}.</p>
@@ -559,7 +575,7 @@ function renderCampaignHighlights(data: PerformanceReportDocumentData): string {
       <div class="highlight-card">
         <label>Total Engagements</label>
         <strong>${esc(formatCompactCount(highlights.totalEngagements))}</strong>
-        <span>Across ${data.bundle.summary.total_publications} publication(s)</span>
+        <span>Across ${data.bundle.summary.agreed_publications} agreed and ${data.bundle.summary.added_value_publications} added-value publication(s)</span>
       </div>
     </div>
   </div>`;
@@ -646,6 +662,8 @@ function renderAudienceSnapshot(section: InfluencerReportSection): string {
 }
 
 function renderInfluencerSection(section: InfluencerReportSection): string {
+  const { agreed: agreedPublications, addedValue: addedValuePublications } =
+    partitionPublicationsByValueScope(section.publications);
   const avatar = section.avatarUrl
     ? `<div class="influencer-avatar"><img src="${esc(section.avatarUrl)}" alt="" /></div>`
     : `<div class="influencer-avatar">${esc(initials(section.name))}</div>`;
@@ -674,7 +692,12 @@ function renderInfluencerSection(section: InfluencerReportSection): string {
         </div>
       </div>
       <div class="influencer-kpi-row">
-        <div class="influencer-kpi"><label>Posts</label><strong>${section.summary.publications}</strong></div>
+        <div class="influencer-kpi"><label>Posts</label><strong>${section.summary.agreedPublications}</strong></div>
+        ${
+          section.summary.addedValuePublications > 0
+            ? `<div class="influencer-kpi"><label>Added value</label><strong>${section.summary.addedValuePublications}</strong></div>`
+            : ""
+        }
         <div class="influencer-kpi"><label>Views</label><strong>${esc(formatCompactCount(section.summary.views))}</strong></div>
         <div class="influencer-kpi"><label>Reach</label><strong>${esc(formatCompactCount(section.summary.reach))}</strong></div>
         <div class="influencer-kpi"><label>Impressions</label><strong>${esc(formatCompactCount(section.summary.impressions))}</strong></div>
@@ -691,8 +714,17 @@ function renderInfluencerSection(section: InfluencerReportSection): string {
 
     <div class="section">
       <div class="section-label"><div class="num">▸</div><div class="title">Publications</div></div>
-      <div class="pub-grid">${section.publications.map((pub) => renderPublicationCard(pub, true)).join("")}</div>
+      <div class="pub-grid">${agreedPublications.map((pub) => renderPublicationCard(pub, true)).join("") || `<p class="report-note">No agreed publications for this creator.</p>`}</div>
     </div>
+    ${
+      addedValuePublications.length > 0
+        ? `<div class="section">
+      <div class="section-label"><div class="num">▸</div><div class="title">Added Value</div></div>
+      <p class="report-note" style="margin-bottom:10px;">Extra publications beyond the assignment platforms.</p>
+      <div class="pub-grid">${addedValuePublications.map((pub) => renderPublicationCard(pub, true)).join("")}</div>
+    </div>`
+        : ""
+    }
 
     <div class="section section--compact">
       <div class="section-label"><div class="num">▸</div><div class="title">Insights</div></div>
@@ -710,11 +742,18 @@ function renderInfluencerSections(data: PerformanceReportDocumentData): string {
   return data.influencerSections.map((section) => renderInfluencerSection(section)).join("");
 }
 
-function renderPublicationsGallery(data: PerformanceReportDocumentData): string {
-  const num = "6";
-  return `<div class="section" id="section-publications">
-    <div class="section-label"><div class="num">${num}</div><div class="title">Campaign Publications</div></div>
-    <div class="pub-grid pub-grid--gallery">${data.bundle.publications.map((pub) => renderPublicationCard(pub)).join("")}</div>
+function renderPublicationsGallery(
+  publications: CampaignPublicationRow[],
+  options: { id: string; num: string; title: string; subtitle?: string }
+): string {
+  return `<div class="section" id="${esc(options.id)}">
+    <div class="section-label"><div class="num">${esc(options.num)}</div><div class="title">${esc(options.title)}</div></div>
+    ${options.subtitle ? `<p class="report-note" style="margin-bottom:10px;">${esc(options.subtitle)}</p>` : ""}
+    <div class="pub-grid pub-grid--gallery">${
+      publications.length > 0
+        ? publications.map((pub) => renderPublicationCard(pub)).join("")
+        : `<p class="report-note">No publications in this group.</p>`
+    }</div>
   </div>`;
 }
 
@@ -727,6 +766,9 @@ export function renderPerformanceReportHtml(data: PerformanceReportDocumentData)
   const generatedLabel = formatGeneratedDate(data.generatedAt);
   const toc = renderTableOfContents(buildTocEntries(data));
 
+  const { agreed: agreedPublications, addedValue: addedValuePublications } =
+    partitionPublicationsByValueScope(data.bundle.publications);
+
   const reportSections =
     data.variant === "influencers"
       ? [renderExecutiveSummary(data), renderInfluencerSections(data)].join("")
@@ -736,7 +778,19 @@ export function renderPerformanceReportHtml(data: PerformanceReportDocumentData)
           renderBenchmarkSection(data),
           renderPlatformBreakdown(data),
           renderPerformanceCharts(data),
-          renderPublicationsGallery(data),
+          renderPublicationsGallery(agreedPublications, {
+            id: "section-publications",
+            num: "6",
+            title: "Campaign Publications",
+            subtitle: "Posts matching the agreed assignment platforms.",
+          }),
+          renderPublicationsGallery(addedValuePublications, {
+            id: "section-added-value",
+            num: "7",
+            title: "Added Value",
+            subtitle:
+              "Extra publications beyond the assignment — additional value delivered to the client.",
+          }),
         ].join("");
 
   return `<!DOCTYPE html>

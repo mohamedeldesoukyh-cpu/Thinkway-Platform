@@ -103,6 +103,13 @@ function factsForCard(
     }
   };
 
+  const matchingTypes = (facts: CompletedFact[]) => {
+    if (!types.length) return facts;
+    return facts.filter((fact) =>
+      types.some((type) => deliverableLabelsMatch(type, fact.deliverable))
+    );
+  };
+
   // 1) Exact operational key per typed deliverable when Assignment refs exist.
   if (entry.campaignLineId?.trim() && types.length) {
     for (const type of types) {
@@ -119,18 +126,19 @@ function factsForCard(
     if (out.length) return out;
   }
 
-  // 2) All completed facts on the Assignment line.
+  // 2) Completed facts on the Assignment line that match this card's types.
+  // Never inherit sibling live deliverables — Remaining cards would lock incorrectly.
   if (entry.campaignLineId?.trim()) {
-    pushUnique(index.byLineId.get(normId(entry.campaignLineId)) ?? []);
+    pushUnique(matchingTypes(index.byLineId.get(normId(entry.campaignLineId)) ?? []));
     if (out.length) return out;
   }
 
   // 3) Legacy creator fallback (pre-2.1 plans without Assignment IDs).
   if (entry.creatorId?.trim()) {
-    pushUnique(index.byCreator.get(`id:${normId(entry.creatorId)}`) ?? []);
+    pushUnique(matchingTypes(index.byCreator.get(`id:${normId(entry.creatorId)}`) ?? []));
   }
   if (entry.creator?.trim()) {
-    pushUnique(index.byCreator.get(`name:${normLabel(entry.creator)}`) ?? []);
+    pushUnique(matchingTypes(index.byCreator.get(`name:${normLabel(entry.creator)}`) ?? []));
   }
   return out;
 }
@@ -157,9 +165,9 @@ function resolveCardExecution(
     }
   }
 
+  // No overlapping types ⇒ this card is still unpublished (sibling live grains do not lock it).
   if (matched <= 0) {
-    // Creator/Assignment went live even if type labels differ — keep published overlay.
-    return { executionStatus: "published", actualLiveDate: earliest };
+    return { executionStatus: "planned", actualLiveDate: null };
   }
   if (matched >= types.length) {
     return { executionStatus: "published", actualLiveDate: earliest };

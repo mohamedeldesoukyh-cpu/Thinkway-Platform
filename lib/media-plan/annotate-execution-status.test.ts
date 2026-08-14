@@ -117,3 +117,50 @@ test("annotateMediaPlanExecutionStatus leaves cards planned without live facts",
   ]);
   assert.equal(annotated.weeks[0]!.days[0]!.executionStatus, "planned");
 });
+
+test("sibling live deliverables do not lock Remaining unpublished types", () => {
+  const facts: MediaPlanPerformanceFact[] = [
+    {
+      creatorId: "inf-1",
+      creatorName: "Coach A",
+      campaignLineId: "line-1",
+      platform: "Instagram",
+      deliverable: "1× IG Reel",
+      liveDate: "2026-08-02",
+      completed: true,
+    },
+  ];
+  // Remaining view already dropped the live IG Reel; only TT remains on the card.
+  const annotated = annotateMediaPlanExecutionStatus(
+    {
+      ...planWithCreator(["1× TT Video"]),
+      weeks: planWithCreator(["1× TT Video"]).weeks.map((week) => ({
+        ...week,
+        days: week.days.map((day, index) =>
+          index === 0 ? { ...day, campaignLineId: "line-1" } : day
+        ),
+      })),
+    },
+    facts
+  );
+  assert.equal(annotated.weeks[0]!.days[0]!.executionStatus, "planned");
+  assert.equal(annotated.weeks[0]!.days[0]!.actualLiveDate, null);
+});
+
+test("unrelated live type on same creator does not publish a different card type", () => {
+  const facts: MediaPlanPerformanceFact[] = [
+    {
+      creatorId: "inf-1",
+      creatorName: "Coach A",
+      platform: "Instagram",
+      deliverable: "1× IG Reel",
+      liveDate: "2026-08-02",
+      completed: true,
+    },
+  ];
+  const annotated = annotateMediaPlanExecutionStatus(
+    planWithCreator(["1× TT Video"]),
+    facts
+  );
+  assert.equal(annotated.weeks[0]!.days[0]!.executionStatus, "planned");
+});

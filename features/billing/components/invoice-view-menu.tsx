@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronDown, FileText, Layers } from "lucide-react";
+import { ChevronDown, FileText, Layers, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -36,7 +36,7 @@ export function InvoiceViewMenu({
           <ChevronDown className="size-3.5 opacity-70" aria-hidden />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel>Invoice layout</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
@@ -45,7 +45,18 @@ export function InvoiceViewMenu({
             <span>
               <span className="block font-medium">Detailed</span>
               <span className="block text-xs text-muted-foreground">
-                One line per assignment / deliverable
+                One line per deliverable / post
+              </span>
+            </span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href={`${base}?layout=by_creator`} className="flex cursor-pointer items-start gap-2">
+            <Users className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            <span>
+              <span className="block font-medium">By creator</span>
+              <span className="block text-xs text-muted-foreground">
+                Amounts rolled up by campaign line
               </span>
             </span>
           </Link>
@@ -54,9 +65,9 @@ export function InvoiceViewMenu({
           <Link href={`${base}?layout=package`} className="flex cursor-pointer items-start gap-2">
             <Layers className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
             <span>
-              <span className="block font-medium">Package</span>
+              <span className="block font-medium">Summary</span>
               <span className="block text-xs text-muted-foreground">
-                Single campaign line with total billing
+                Lump-sum campaign + agency fees
               </span>
             </span>
           </Link>

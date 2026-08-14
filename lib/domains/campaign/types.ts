@@ -182,10 +182,19 @@ export type CampaignPublicationRow = {
   cost: number | null;
   currency: string | null;
   total_engagements: number;
+  /**
+   * Agreed = publication platform is on the creator's assignment.
+   * Added value = extra platform beyond the assignment. Recomputed from live assignments.
+   */
+  value_scope?: "agreed" | "added_value";
 };
 
 export type CampaignPerformanceSummary = {
   total_publications: number;
+  /** Publications whose platform is on the creator's assignment. */
+  agreed_publications: number;
+  /** Publications on platforms not included in the assignment. */
+  added_value_publications: number;
   total_reach: number;
   total_actual_reach: number;
   total_forecast_reach: number;

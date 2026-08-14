@@ -16,6 +16,10 @@ import {
 } from "@/lib/performance/impressions-forecast-engine";
 import type { PerformanceReportDocumentData } from "@/lib/performance/report/performance-report-types";
 import {
+  partitionPublicationsByValueScope,
+  publicationValueScopeLabel,
+} from "@/lib/performance/publication-value-scope";
+import {
   buildStyledExcelBuffer,
   type StyledDataRow,
   type StyledSheetConfig,
@@ -35,6 +39,7 @@ export function buildPerformanceReportExcelBuffer(
     "Creator",
     "Platform",
     "Type",
+    "Value type",
     "URL",
     "Date",
     "Status",
@@ -59,11 +64,18 @@ export function buildPerformanceReportExcelBuffer(
     ...costMetricColumns.map((key) => costMetricHeaderLabels[key]),
   ];
 
-  const rows: StyledDataRow[] = data.bundle.publications.map((p) => {
+  const { agreed: agreedPublications, addedValue: addedValuePublications } =
+    partitionPublicationsByValueScope(data.bundle.publications);
+
+  const mapPublicationRows = (
+    publications: PerformanceReportDocumentData["bundle"]["publications"]
+  ): StyledDataRow[] =>
+    publications.map((p) => {
     const baseValues = [
       p.influencer_name ?? "",
       p.platform_label,
       p.publication_type_label,
+      publicationValueScopeLabel(p.value_scope),
       p.content_url ?? "",
       p.publication_date ?? "",
       p.status,
@@ -99,6 +111,9 @@ export function buildPerformanceReportExcelBuffer(
     };
   });
 
+  const agreedRows = mapPublicationRows(agreedPublications);
+  const addedValueRows = mapPublicationRows(addedValuePublications);
+
   const cpeValues = data.bundle.publications
     .map((p) => p.cpe)
     .filter((v): v is number => v != null);
@@ -132,7 +147,8 @@ export function buildPerformanceReportExcelBuffer(
         { label: "Client", value: data.campaign.clientName },
         { label: "Brand", value: data.campaign.brandName ?? "—" },
         { label: "Creators", value: String(data.uniqueCreatorCount) },
-        { label: "Publications", value: String(data.bundle.summary.total_publications) },
+        { label: "Publications", value: String(data.bundle.summary.agreed_publications) },
+        { label: "Added value", value: String(data.bundle.summary.added_value_publications) },
         { label: "Total reach", value: formatCompactCount(data.bundle.summary.total_reach) },
         { label: "Total impressions", value: formatCompactCount(data.bundle.summary.total_impressions) },
         { label: "Total views", value: formatCompactCount(data.bundle.summary.total_views) },
@@ -142,6 +158,8 @@ export function buildPerformanceReportExcelBuffer(
     },
     columnHeaders: [["Metric", "Value"]],
     rows: [
+      { values: ["Publications (agreed)", String(data.bundle.summary.agreed_publications)] },
+      { values: ["Added value", String(data.bundle.summary.added_value_publications)] },
       { values: ["Total reach", formatCompactCount(data.bundle.summary.total_reach)] },
       {
         values: [
@@ -167,16 +185,30 @@ export function buildPerformanceReportExcelBuffer(
   const publicationsSheet: StyledSheetConfig = {
     name: "Publications",
     header: {
-      title: "Publication performance",
+      title: "Agreed publication performance",
       entityLine: data.campaign.name,
       generatedAt: data.generatedAt,
     },
     columnHeaders: [headers],
-    rows,
+    rows: agreedRows,
     columnFormats: headers.map((h) =>
       h === "ER %" ? "percent" : ["Cost", "CPV", "CPE", "CPM"].includes(h) ? "money" : "text"
     ),
   };
 
-  return buildStyledExcelBuffer([summarySheet, publicationsSheet]);
+  const addedValueSheet: StyledSheetConfig = {
+    name: "Added Value",
+    header: {
+      title: "Added-value publication performance",
+      entityLine: data.campaign.name,
+      generatedAt: data.generatedAt,
+    },
+    columnHeaders: [headers],
+    rows: addedValueRows,
+    columnFormats: headers.map((h) =>
+      h === "ER %" ? "percent" : ["Cost", "CPV", "CPE", "CPM"].includes(h) ? "money" : "text"
+    ),
+  };
+
+  return buildStyledExcelBuffer([summarySheet, publicationsSheet, addedValueSheet]);
 }

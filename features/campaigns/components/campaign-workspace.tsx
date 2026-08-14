@@ -42,6 +42,9 @@ import { useCampaignWorkspaceTabOrder } from "@/features/campaigns/hooks/use-cam
 import { useCampaignTabData } from "@/features/campaigns/hooks/use-campaign-tab-data";
 import { CampaignOperationalRefreshProvider } from "@/features/campaigns/hooks/campaign-operational-refresh";
 import { useMetricsSyncCompletionToasts } from "@/features/campaigns/hooks/use-metrics-sync-toasts";
+import { CampaignWorkspaceJumpSelect } from "@/features/campaigns/components/campaign-workspace-jump-select";
+import { loadCampaignVendorIosAction } from "@/features/campaigns/actions/load-campaign-vendor-ios";
+import type { VendorIoRow } from "@/features/io/types";
 import { OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS } from "@/components/workspace/operational-workspace-ui";
 import { TabErrorBoundary } from "@/components/ui/tab-error-boundary";
 import { CampaignDetailsSheet } from "@/features/campaigns/components/campaign-details-sheet";
@@ -86,6 +89,7 @@ export function CampaignWorkspaceView({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [resolverOpen, setResolverOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<CampaignWorkspaceTabId>(defaultTab);
+  const [vendorIos, setVendorIos] = useState<VendorIoRow[]>(workspace.vendor_ios);
   const campaignIdRef = useRef(workspace.id);
   const { tabOrder, moveTab } = useCampaignWorkspaceTabOrder();
 
@@ -112,7 +116,29 @@ export function CampaignWorkspaceView({
     bundleStatuses,
     reloadOperationalBilling,
     reloadPublications,
+    reloadAssignmentHierarchy,
   } = tabData;
+
+  const reloadVendorIos = useCallback(async () => {
+    const result = await loadCampaignVendorIosAction(workspace.id);
+    if (result.ok) setVendorIos(result.rows);
+  }, [workspace.id]);
+
+  useEffect(() => {
+    setVendorIos(workspace.vendor_ios);
+  }, [workspace.id]);
+
+  useEffect(() => {
+    // Adopt RSC refresh when it includes newly created IOs (or any growth).
+    setVendorIos((current) => {
+      if (workspace.vendor_ios.length >= current.length) return workspace.vendor_ios;
+      const currentIds = new Set(current.map((row) => row.id));
+      if (workspace.vendor_ios.some((row) => !currentIds.has(row.id))) {
+        return workspace.vendor_ios;
+      }
+      return current;
+    });
+  }, [workspace.vendor_ios]);
 
   useMetricsSyncCompletionToasts(publications);
 
@@ -221,7 +247,7 @@ export function CampaignWorkspaceView({
     () => ({
       lines: workspace.lines.length,
       clientIo: workspace.client_io ? 1 : 0,
-      vendorIo: workspace.vendor_ios.length,
+      vendorIo: vendorIos.length,
       deliverables: operationalDeliverableCount,
       publications:
         bundleStatuses.publications === "loaded"
@@ -234,7 +260,7 @@ export function CampaignWorkspaceView({
     [
       workspace.lines,
       workspace.client_io,
-      workspace.vendor_ios.length,
+      vendorIos.length,
       workspace.approvals.length,
       workspace.vendors.length,
       operationalDeliverableCount,
@@ -389,6 +415,8 @@ export function CampaignWorkspaceView({
     <CampaignOperationalRefreshProvider
       reloadOperationalBilling={reloadOperationalBilling}
       reloadPublications={reloadPublications}
+      reloadAssignmentHierarchy={reloadAssignmentHierarchy}
+      reloadVendorIos={reloadVendorIos}
     >
     <div className="thinkway-campaign-workspace flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <Tabs
@@ -410,8 +438,14 @@ export function CampaignWorkspaceView({
                     entity="campaigns"
                     currentId={workspace.id}
                     hrefForId={(id) => campaignDetailPath(id)}
+                    className="shrink-0"
                   />
-                  <span className="thinkway-aurora-crumb-path">
+                  <CampaignWorkspaceJumpSelect
+                    currentId={workspace.id}
+                    currentDocumentNumber={workspace.document_number}
+                    currentName={workspace.name}
+                  />
+                  <span className="thinkway-aurora-crumb-path min-w-0">
                     <Link href="/campaigns" className="hover:text-[var(--camp-blue-text)]">
                       Campaigns
                     </Link>
@@ -588,11 +622,11 @@ export function CampaignWorkspaceView({
               <TabErrorBoundary tabName="Vendor IO">
                 <CampaignVendorIoLifecycleBanner
                   lifecycle={lifecycle}
-                  rows={workspace.vendor_ios}
+                  rows={vendorIos}
                 />
                 <VendorIoTab
                   campaignId={workspace.id}
-                  rows={workspace.vendor_ios}
+                  rows={vendorIos}
                   initialSelectedId={searchParams.get("io")}
                 />
               </TabErrorBoundary>
@@ -609,6 +643,7 @@ export function CampaignWorkspaceView({
                   <CampaignPerformanceCenterTab
                     workspace={workspace}
                     publications={publications}
+                    assignmentHierarchy={assignmentHierarchy}
                     summary={performanceSummary}
                     charts={performanceCharts}
                     syncHealth={publicationsSyncHealth}

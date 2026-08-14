@@ -35,6 +35,8 @@ import {
   fetchSourceDeliverables,
   insertCampaignHeader,
   listCampaignHeaderIdsForNav,
+  listCampaignHeadersForNav,
+  type CampaignNavOption,
   listCampaignHeaders,
   syncListCampaignStatuses,
   enrichCampaignListLifecycleSignals,
@@ -43,6 +45,8 @@ import {
   fetchCampaignHeaderForUpdate,
   type SourceCampaignHeader,
 } from "./repositories/campaign-repository";
+
+export type { CampaignNavOption };
 
 export type CreateCampaignInput = {
   brand_id: string;
@@ -501,6 +505,18 @@ export async function getCampaignListNavIds(
   });
   if (error) throw new Error(error.message);
   return ids;
+}
+
+/** Camp Code + Name options for workspace jump dropdown. */
+export async function getCampaignListNavOptions(
+  supabase: SupabaseClient,
+  params: { search?: string } = {}
+): Promise<CampaignNavOption[]> {
+  const { options, error } = await listCampaignHeadersForNav(supabase, {
+    search: params.search,
+  });
+  if (error) throw new Error(error.message);
+  return options;
 }
 
 export type CampaignsKpis = {

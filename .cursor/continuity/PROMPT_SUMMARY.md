@@ -1,14 +1,16 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop`  
-**Focus:** Assignment AF auto-calc + commercial revision parity
+**Focus:** Campaign Performance agreed vs added-value publications
 
-## In flight
+## In progress
 
-- Client amount change → agency fee amount auto-recomputes from AF%
-- AF% / UR changes treated like client amount for CIO/VIO Revision Required
-- Hierarchy Rev edits preserve AF% and live-preview fee amount
+- Performance tab splits **Publications** (assignment platforms) vs **Added value** (extra platforms)
+- Same split in report preview / PDF / Excel / PPT
+- Classification follows live Assignments: add a platform → moves to Publications; remove it → moves to Added value
 
 ## Shipped prior
 
-- Client IO PDF preview parity + page breaks (`fb8b1c60` / prod `e04f1dfa`)
+- Assignments CW creator name placeholder
+- Assignments CW + red/white trigger (`f5d5bb34`) · Dev + Prod
+- Performance Creator placeholder fix (`e0e84701`)

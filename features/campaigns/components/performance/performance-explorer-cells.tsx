@@ -41,6 +41,7 @@ function PlatformThumbBadge({ platform }: { platform: "instagram" | "tiktok" }) 
 
 type PerformanceExplorerCreatorCellProps = {
   name: string | null | undefined;
+  handle?: string | null;
   platform: string;
   avatarUrl?: string | null;
   profileUrl?: string | null;
@@ -110,6 +111,7 @@ function CreatorVendorAvatarLink({
 /** Creator column — 38px thumb + platform overlay + circle avatar + name (panel-performance). */
 export function PerformanceExplorerCreatorCell({
   name,
+  handle,
   platform,
   avatarUrl,
   profileUrl,
@@ -117,13 +119,13 @@ export function PerformanceExplorerCreatorCell({
   onOpenPublication,
   className,
 }: PerformanceExplorerCreatorCellProps) {
-  if (!name?.trim()) {
+  const identity = resolveCreatorIdentity(name, handle);
+  const displayName = identity.name?.trim();
+  if (!displayName) {
     return <span className="thinkway-campaign-c-gray">—</span>;
   }
 
   const badgePlatform = platformBadgeKey(platform);
-  const identity = resolveCreatorIdentity(name, null);
-  const displayName = identity.name;
 
   return (
     <div className={cn("thinkway-campaign-cr-cell", className)}>

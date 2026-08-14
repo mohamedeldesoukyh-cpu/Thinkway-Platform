@@ -15,12 +15,17 @@ const OPTIONS: Array<{ id: InvoiceDocumentLayout; label: string; hint: string }>
   {
     id: "detailed",
     label: "Detailed",
-    hint: "Per assignment",
+    hint: "Per deliverable",
+  },
+  {
+    id: "by_creator",
+    label: "By creator",
+    hint: "Line totals",
   },
   {
     id: "package",
-    label: "Package",
-    hint: "Campaign total",
+    label: "Summary",
+    hint: "Lump sum",
   },
 ];
 

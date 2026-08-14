@@ -25,7 +25,7 @@ import {
 import { CampaignPerformanceCharts as PerformanceChartsSection, countPerformanceChartSeries } from "@/features/campaigns/components/performance/campaign-performance-charts";
 import { OperationalDetailSheet } from "@/features/campaigns/components/operational-detail-panel";
 import { PublicationWorkspace } from "@/features/campaigns/components/performance/publication-workspace/publication-workspace";
-import { CampaignPerformanceGrid } from "@/features/campaigns/components/performance/campaign-performance-grid";
+import { PerformancePublicationValueCard } from "@/features/campaigns/components/performance/performance-publication-value-card";
 import { PerformanceSelectionFlyout } from "@/features/campaigns/components/performance/performance-selection-flyout";
 import {
   bulkImportPublicationsAction,
@@ -44,8 +44,17 @@ import type {
   CampaignPerformanceSummary,
   CampaignPublicationRow,
 } from "@/features/campaigns/queries/publications";
-import type { CampaignMetricsSyncHealth } from "@/lib/performance/metrics-collector/types";
+import {
+  applyPublicationValueScopes,
+  assignmentIndexHasAgreedPlatforms,
+  buildAssignmentAgreedPlatformIndexFromAssignments,
+  partitionPublicationsByValueScope,
+  publicationValueScopeLabel,
+  summarizePublicationValueGroup,
+} from "@/lib/performance/publication-value-scope";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
+import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
+import type { CampaignMetricsSyncHealth } from "@/lib/performance/metrics-collector/types";
 import { cn } from "@/lib/utils";
 import {
   PERFORMANCE_GRID_COLUMN_METAS,
@@ -57,6 +66,7 @@ const ALL_STATUSES = "all";
 type Props = {
   workspace: CampaignWorkspace;
   publications: CampaignPublicationRow[];
+  assignmentHierarchy?: AssignmentHierarchy | null;
   summary: CampaignPerformanceSummary;
   charts: CampaignPerformanceCharts;
   syncHealth: CampaignMetricsSyncHealth;
@@ -69,6 +79,7 @@ type Props = {
 export function CampaignPerformanceCenterTab({
   workspace,
   publications,
+  assignmentHierarchy = null,
   summary,
   charts,
   syncHealth,
@@ -112,9 +123,20 @@ export function CampaignPerformanceCenterTab({
 
   const lines = (workspace.lines ?? []).filter((l) => l.influencer_id);
 
+  const classifiedPublications = useMemo(() => {
+    const index = buildAssignmentAgreedPlatformIndexFromAssignments({
+      lines: workspace.lines,
+      hierarchyGroups: assignmentHierarchy?.groups,
+    });
+    if (!assignmentIndexHasAgreedPlatforms(index)) {
+      return publications;
+    }
+    return applyPublicationValueScopes(publications, index);
+  }, [assignmentHierarchy?.groups, publications, workspace.lines]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return publications.filter((row) => {
+    return classifiedPublications.filter((row) => {
       if (statusFilter !== ALL_STATUSES && row.status !== statusFilter) return false;
       if (platformFilter !== ALL_STATUSES && row.platform !== platformFilter) return false;
       if (!q) return true;
@@ -127,7 +149,24 @@ export function CampaignPerformanceCenterTab({
         (row.mentions ?? "").toLowerCase().includes(q)
       );
     });
-  }, [publications, search, statusFilter, platformFilter]);
+  }, [classifiedPublications, search, statusFilter, platformFilter]);
+
+  const { agreed: agreedFiltered, addedValue: addedValueFiltered } = useMemo(
+    () => partitionPublicationsByValueScope(filtered),
+    [filtered]
+  );
+  const classifiedSplit = useMemo(
+    () => partitionPublicationsByValueScope(classifiedPublications),
+    [classifiedPublications]
+  );
+  const agreedSummary = useMemo(
+    () => summarizePublicationValueGroup(agreedFiltered),
+    [agreedFiltered]
+  );
+  const addedValueSummary = useMemo(
+    () => summarizePublicationValueGroup(addedValueFiltered),
+    [addedValueFiltered]
+  );
 
   const detailSnapshotRef = useRef<CampaignPublicationRow | null>(null);
 
@@ -182,6 +221,7 @@ export function CampaignPerformanceCenterTab({
       "Creator",
       "Platform",
       "Type",
+      "Value type",
       "URL",
       "Date",
       "Status",
@@ -200,6 +240,7 @@ export function CampaignPerformanceCenterTab({
       r.influencer_name ?? "",
       r.platform_label,
       r.publication_type_label,
+      publicationValueScopeLabel(r.value_scope),
       r.content_url ?? "",
       r.publication_date ?? "",
       r.status,
@@ -371,7 +412,7 @@ export function CampaignPerformanceCenterTab({
     >
       <CampaignWorkspaceFrame
         title="Performance"
-        subtitle="Metrics unlock after Publication — lifecycle context stays above"
+        subtitle="Agreed assignment posts vs added-value posts beyond the contracted mix"
         status={
           <AuroraStatusPill
             tone={summary.total_publications > 0 ? "green" : "mut"}
@@ -427,7 +468,13 @@ export function CampaignPerformanceCenterTab({
           {
             key: "pubs",
             label: "Publications",
-            value: String(summary.total_publications),
+            value: String(classifiedSplit.agreed.length),
+          },
+          {
+            key: "added-value",
+            label: "Added value",
+            value: String(classifiedSplit.addedValue.length),
+            tone: classifiedSplit.addedValue.length > 0 ? "pos" : "mut",
           },
           {
             key: "reach",
@@ -495,7 +542,7 @@ export function CampaignPerformanceCenterTab({
             <PerformanceChartsSection charts={charts} />
           </div>
         }
-        registerLabel="Publications"
+        registerLabel="Publication registers"
         collapseRegister
         registerCount={publications.length}
         registerStorageKey={`performance-${workspace.id}`}
@@ -615,20 +662,43 @@ export function CampaignPerformanceCenterTab({
           </span>
         </div>
 
-        <div className="thinkway-campaign-section-card mb-0 overflow-hidden">
-        <CampaignPerformanceGrid
-          rows={filtered}
-          allRows={publications}
-          selectedIds={selectedIds}
-          onToggleSelect={toggleSelect}
-          onToggleSelectAll={toggleSelectAll}
-          onOpenDetail={setDetailId}
-          onRemovePublication={handleRemovePublication}
-          onRefreshMetrics={handleRefreshPublication}
-          sortKey={sortKey}
-          sortDir={sortDir}
-          onSort={handleSort}
-        />
+        <div className="space-y-3.5">
+          <PerformancePublicationValueCard
+            title="Publications"
+            description="Matching the assignment platforms."
+            summary={agreedSummary}
+            rows={agreedFiltered}
+            allRows={publications}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
+            onToggleSelectAll={toggleSelectAll}
+            onOpenDetail={setDetailId}
+            onRemovePublication={handleRemovePublication}
+            onRefreshMetrics={handleRefreshPublication}
+            sortKey={sortKey}
+            sortDir={sortDir}
+            onSort={handleSort}
+            emptyTitle="No agreed publications in this view."
+            emptyDescription="Posts on assignment platforms appear here. Extra platforms are listed under Added value."
+          />
+          <PerformancePublicationValueCard
+            title="Added value"
+            description="Extra publications beyond the assignment mix."
+            summary={addedValueSummary}
+            rows={addedValueFiltered}
+            allRows={publications}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
+            onToggleSelectAll={toggleSelectAll}
+            onOpenDetail={setDetailId}
+            onRemovePublication={handleRemovePublication}
+            onRefreshMetrics={handleRefreshPublication}
+            sortKey={sortKey}
+            sortDir={sortDir}
+            onSort={handleSort}
+            emptyTitle="No added-value publications."
+            emptyDescription="When a creator posts on a platform that is not on their assignment, it appears here. Adding that platform to the assignment moves it to Publications."
+          />
         </div>
       </OperationalTableColumnsProvider>
       </CampaignWorkspaceFrame>

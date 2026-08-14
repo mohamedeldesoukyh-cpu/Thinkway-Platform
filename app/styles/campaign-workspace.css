@@ -151,12 +151,20 @@
 
   .thinkway-aurora-crumb {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 8px;
+    min-width: 0;
     font-size: 13px;
     font-weight: 500;
     color: var(--camp-text-3);
+  }
+
+  .thinkway-aurora-crumb-path {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .thinkway-aurora-crumb-path b {

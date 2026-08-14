@@ -3,6 +3,8 @@ import type { CampaignPerformanceSummary } from "@/features/campaigns/queries/pu
 export function emptyCampaignPerformanceSummary(): CampaignPerformanceSummary {
   return {
     total_publications: 0,
+    agreed_publications: 0,
+    added_value_publications: 0,
     total_reach: 0,
     total_actual_reach: 0,
     total_forecast_reach: 0,

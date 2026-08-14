@@ -55,6 +55,8 @@ export type InfluencerReportSection = {
   insights: string[];
   summary: {
     publications: number;
+    agreedPublications: number;
+    addedValuePublications: number;
     views: number;
     reach: number;
     impressions: number;
