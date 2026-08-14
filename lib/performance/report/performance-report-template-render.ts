@@ -717,13 +717,11 @@ function renderInfluencerSection(section: InfluencerReportSection): string {
       <div class="pub-grid">${agreedPublications.map((pub) => renderPublicationCard(pub, true)).join("") || `<p class="report-note">No agreed publications for this creator.</p>`}</div>
     </div>
     ${
-      addedValuePublications.length > 0
-        ? `<div class="section">
+      `<div class="section">
       <div class="section-label"><div class="num">▸</div><div class="title">Added Value</div></div>
       <p class="report-note" style="margin-bottom:10px;">Extra publications beyond the assignment platforms.</p>
-      <div class="pub-grid">${addedValuePublications.map((pub) => renderPublicationCard(pub, true)).join("")}</div>
+      <div class="pub-grid">${addedValuePublications.map((pub) => renderPublicationCard(pub, true)).join("") || `<p class="report-note">No added-value publications for this creator.</p>`}</div>
     </div>`
-        : ""
     }
 
     <div class="section section--compact">
