@@ -76,6 +76,26 @@ test("social allowlists accept real CDNs and reject lookalikes", () => {
     true
   );
   assert.equal(
+    isUrlAllowedByHostlist("https://www.tiktok.com/@creator/video/123", SOCIAL_POST_ALLOWLIST),
+    true
+  );
+  assert.equal(
+    isUrlAllowedByHostlist("https://www.youtube.com/watch?v=dQw4w9wgGcQ", SOCIAL_POST_ALLOWLIST),
+    true
+  );
+  assert.equal(
+    isUrlAllowedByHostlist("https://youtu.be/dQw4w9wgGcQ", SOCIAL_POST_ALLOWLIST),
+    true
+  );
+  assert.equal(
+    isUrlAllowedByHostlist("https://www.facebook.com/reel/1234567890123456", SOCIAL_POST_ALLOWLIST),
+    true
+  );
+  assert.equal(
+    isUrlAllowedByHostlist("https://fb.watch/abc123/", SOCIAL_POST_ALLOWLIST),
+    true
+  );
+  assert.equal(
     isUrlAllowedByHostlist("https://www.tiktok.com/@creator", SOCIAL_PROFILE_ALLOWLIST),
     true
   );

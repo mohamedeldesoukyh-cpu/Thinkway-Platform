@@ -136,10 +136,28 @@ assert.match(
 
 assert.match(
   creatorRecentPublicationDisplayUrl({
-    url: "https://www.tiktok.com/@with.fatimma/video/7123456789012345678",
+    url: "https://www.youtube.com/watch?v=dQw4w9wgGcQ",
   }) ?? "",
   /postUrl=/,
-  "TikTok post URL alone uses proxy for oEmbed fallback"
+  "YouTube post URL alone uses proxy for thumbnail fallback"
+);
+
+assert.match(
+  creatorRecentPublicationDisplayUrl({
+    url: "https://www.facebook.com/reel/1234567890123456",
+  }) ?? "",
+  /postUrl=/,
+  "Facebook post URL alone uses proxy for oEmbed fallback"
+);
+
+assert.equal(
+  shouldProxyPublicationMediaUrl("https://img.youtube.com/vi/dQw4w9wgGcQ/hqdefault.jpg"),
+  true
+);
+
+assert.equal(
+  shouldProxyPublicationMediaUrl("https://scontent.xx.fbcdn.net/v/t15.5256-10/fb.jpg"),
+  true
 );
 
 const tiktokNormalized = normalizeCreatorRecentPublications([

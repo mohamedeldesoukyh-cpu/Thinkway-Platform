@@ -9,6 +9,7 @@ import { getPlatformOptionLabel } from "@/lib/campaigns/deliverable-taxonomy";
 import { partitionPublicationsByValueScope } from "@/lib/performance/publication-value-scope";
 import { resolvePublicationRowCreatorAvatar } from "@/lib/performance/creator-avatar";
 import { createPublicationMediaSignedUrl } from "@/lib/performance/screenshot-capture/storage";
+import { embedCampaignPublicationPreview } from "@/lib/performance/report/embed-publication-previews";
 import { embedReportImageDataUri } from "@/lib/performance/report/report-embed-images";
 import type {
   CampaignHighlights,
@@ -193,12 +194,11 @@ async function signPublicationMedia(
 ): Promise<CampaignPerformanceBundle> {
   const publications = await Promise.all(
     bundle.publications.map(async (row) => {
-      const [thumbnail_url, screenshot_url, creator_avatar_url] = await Promise.all([
-        createPublicationMediaSignedUrl(supabase, row.thumbnail_url, 60 * 60 * 24),
-        createPublicationMediaSignedUrl(supabase, row.screenshot_url, 60 * 60 * 24),
+      const [creator_avatar_url, preview] = await Promise.all([
         row.creator_avatar_url?.startsWith("http")
           ? Promise.resolve(row.creator_avatar_url)
           : createPublicationMediaSignedUrl(supabase, row.creator_avatar_url, 60 * 60 * 24),
+        embedCampaignPublicationPreview(row),
       ]);
 
       const resolvedAvatar =
@@ -218,8 +218,8 @@ async function signPublicationMedia(
 
       return {
         ...row,
-        thumbnail_url: thumbnail_url ?? row.thumbnail_url,
-        screenshot_url: screenshot_url ?? row.screenshot_url,
+        thumbnail_url: preview,
+        screenshot_url: preview,
         creator_avatar_url: embeddedAvatar ?? resolvedAvatar ?? row.creator_avatar_url,
       };
     })

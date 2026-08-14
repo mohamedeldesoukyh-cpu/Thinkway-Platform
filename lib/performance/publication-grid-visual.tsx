@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, type SyntheticEvent } from "react";
+import type { ReactNode } from "react";
+
+import { useMediaProxyImageRecovery } from "@/hooks/use-media-proxy-image-recovery";
 
 import type { CampaignPublicationRow } from "@/lib/domains/campaign/types";
 import { resolveCampaignPublicationDisplayPreviewUrl } from "@/lib/performance/publication-preview";
@@ -19,34 +21,52 @@ export function PublicationPlatformThumb({
   return <PlatformIcon platform={platform} size="sm" className={className} />;
 }
 
+type PublicationPreviewRow = Pick<
+  CampaignPublicationRow,
+  "screenshot_url" | "thumbnail_url" | "content_url"
+>;
+
+/** Post snapshot with media-proxy retry after the fail-fast 404 + background warm. */
+export function PublicationContentPreviewImage({
+  row,
+  className,
+  fallback = null,
+}: {
+  row: PublicationPreviewRow;
+  className?: string;
+  fallback?: ReactNode;
+}) {
+  const previewUrl = resolveCampaignPublicationDisplayPreviewUrl(row);
+  const recovery = useMediaProxyImageRecovery(previewUrl);
+
+  if (!previewUrl || recovery.exhausted) return fallback;
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      key={recovery.displaySrc ?? previewUrl}
+      src={recovery.displaySrc ?? previewUrl}
+      alt=""
+      referrerPolicy="no-referrer"
+      className={className}
+      onError={recovery.onError}
+    />
+  );
+}
+
 /** PREVIEW — post screenshot/thumbnail/live-post proxy (never creator avatars or platform icons). */
 export function PublicationContentPreviewThumb({
   row,
   className,
 }: {
-  row: Pick<CampaignPublicationRow, "screenshot_url" | "thumbnail_url" | "content_url">;
+  row: PublicationPreviewRow;
   className?: string;
 }) {
-  const previewUrl = resolveCampaignPublicationDisplayPreviewUrl(row);
-  const [failedUrl, setFailedUrl] = useState<string | null>(null);
-
-  if (!previewUrl || failedUrl === previewUrl) {
-    return <span className="text-[10px] text-[#C4CAD4]">—</span>;
-  }
-
-  const handleError = (event: SyntheticEvent<HTMLImageElement>) => {
-    event.currentTarget.onerror = null;
-    setFailedUrl(previewUrl);
-  };
-
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      key={previewUrl}
-      src={previewUrl}
-      alt=""
+    <PublicationContentPreviewImage
+      row={row}
       className={className ?? "size-9 rounded border border-border object-cover"}
-      onError={handleError}
+      fallback={<span className="text-[10px] text-[#C4CAD4]">—</span>}
     />
   );
 }

@@ -75,6 +75,13 @@ assert.equal(
   }),
   null
 );
+assert.equal(
+  resolvePublicationContentPreviewUrl({
+    screenshot_url: "  ",
+    thumbnail_url: "",
+  }),
+  null
+);
 
 // --- CREATOR: full fallback chain, no platform icons ---
 {

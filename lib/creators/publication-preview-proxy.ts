@@ -12,10 +12,12 @@ import {
   setMediaProxyCachePositive,
   withMediaProxyInflight,
 } from "@/lib/creators/media-proxy-cache";
+import { tryFacebookOembedThumbnail } from "@/lib/performance/screenshot-capture/providers/facebook-oembed";
 import { tryInstagramMediaRedirectThumbnail } from "@/lib/performance/screenshot-capture/providers/instagram-media-redirect";
 import { tryInstagramOembedThumbnail } from "@/lib/performance/screenshot-capture/providers/instagram-oembed";
 import { tryOpenGraphThumbnail } from "@/lib/performance/screenshot-capture/providers/opengraph";
 import { tryTikTokOembedThumbnail } from "@/lib/performance/screenshot-capture/providers/tiktok-oembed";
+import { tryYouTubeThumbnail } from "@/lib/performance/screenshot-capture/providers/youtube-thumbnail";
 import {
   SOCIAL_MEDIA_SRC_ALLOWLIST,
   SOCIAL_POST_ALLOWLIST,
@@ -60,11 +62,27 @@ function refererForImageUrl(url: string): string | undefined {
   }
   if (
     isExactHostOrSuffix(host, {
+      exact: ["youtu.be", "i.ytimg.com", "img.youtube.com"],
+      suffixes: ["ytimg.com", "youtube.com"],
+    })
+  ) {
+    return "https://www.youtube.com/";
+  }
+  if (
+    isExactHostOrSuffix(host, {
       exact: [],
-      suffixes: ["cdninstagram.com", "fbcdn.net", "instagram.com", "fbsbx.com", "facebook.com"],
+      suffixes: ["cdninstagram.com", "instagram.com", "fbsbx.com"],
     })
   ) {
     return "https://www.instagram.com/";
+  }
+  if (
+    isExactHostOrSuffix(host, {
+      exact: ["fb.watch"],
+      suffixes: ["fbcdn.net", "facebook.com", "fb.com"],
+    })
+  ) {
+    return "https://www.facebook.com/";
   }
   return undefined;
 }
@@ -74,9 +92,21 @@ function isTikTokPostUrl(url: string): boolean {
   return host ? isExactHostOrSuffix(host, { exact: [], suffixes: ["tiktok.com"] }) : false;
 }
 
-function isInstagramPostUrl(url: string): boolean {
+function isYouTubePostUrl(url: string): boolean {
   const host = hostFromUrl(url);
-  return host ? isExactHostOrSuffix(host, { exact: [], suffixes: ["instagram.com"] }) : false;
+  return host
+    ? isExactHostOrSuffix(host, { exact: ["youtu.be"], suffixes: ["youtube.com"] })
+    : false;
+}
+
+function isFacebookPostUrl(url: string): boolean {
+  const host = hostFromUrl(url);
+  return host
+    ? isExactHostOrSuffix(host, {
+        exact: ["fb.watch"],
+        suffixes: ["facebook.com", "fb.com"],
+      })
+    : false;
 }
 
 export async function fetchImageBuffer(
@@ -180,6 +210,24 @@ async function resolvePublicationPreviewExternal(input: {
 
       recordMediaProxyExternalRequest();
       const oembed = await tryInstagramOembedThumbnail({ contentUrl: postUrl });
+      if (oembed.imageUrl) {
+        const fromOembed = await fetchImageBuffer(oembed.imageUrl);
+        if (fromOembed.ok) return fromOembed;
+      }
+    }
+
+    if (isYouTubePostUrl(postUrl)) {
+      recordMediaProxyExternalRequest();
+      const youtube = await tryYouTubeThumbnail({ contentUrl: postUrl });
+      if (youtube.imageUrl) {
+        const fromYoutube = await fetchImageBuffer(youtube.imageUrl);
+        if (fromYoutube.ok) return fromYoutube;
+      }
+    }
+
+    if (isFacebookPostUrl(postUrl)) {
+      recordMediaProxyExternalRequest();
+      const oembed = await tryFacebookOembedThumbnail({ contentUrl: postUrl });
       if (oembed.imageUrl) {
         const fromOembed = await fetchImageBuffer(oembed.imageUrl);
         if (fromOembed.ok) return fromOembed;
