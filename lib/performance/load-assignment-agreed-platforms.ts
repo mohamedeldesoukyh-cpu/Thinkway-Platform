@@ -20,7 +20,7 @@ type DeliverableRow = {
 
 function addPlatform(target: Map<string, Set<string>>, lineId: string, platform: string | null | undefined) {
   const key = canonicalPlatformKey(platform);
-  if (!key) return;
+  if (!key || key === "multi") return;
   const set = target.get(lineId) ?? new Set<string>();
   set.add(key);
   target.set(lineId, set);
@@ -62,6 +62,7 @@ export async function loadAssignmentAgreedPlatformIndex(
       if (influencerId) influencerByLineId.set(line.id, influencerId);
 
       for (const platform of assignment?.platforms ?? []) {
+        if ((platform.deliverables?.length ?? 0) === 0) continue;
         addPlatform(metadataPlatformsByLine, line.id, platform.platform);
       }
       for (const row of assignment?.commercial_rows ?? []) {

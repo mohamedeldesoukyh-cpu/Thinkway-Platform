@@ -51,7 +51,10 @@ type AssignmentPlatformSourceLine = {
   influencer_id?: string | null;
   assignment?: {
     influencer_id?: string | null;
-    platforms?: readonly { platform: string }[] | null;
+    platforms?: readonly {
+      platform: string;
+      deliverables?: readonly string[] | null;
+    }[] | null;
     commercial_rows?: readonly { platform: string }[] | null;
   } | null;
 };
@@ -60,6 +63,7 @@ type AssignmentPlatformSourceGroup = {
   line: { id: string; influencer_id?: string | null };
   deliverables: readonly {
     platform: string;
+    is_synthetic?: boolean;
     posts?: readonly { platform: string }[] | null;
   }[];
 };
@@ -94,6 +98,8 @@ export function buildAssignmentAgreedPlatformIndexFromAssignments(input: {
     const influencerId = line.influencer_id ?? line.assignment?.influencer_id ?? null;
     if (influencerId) influencerByLineId.set(line.id, influencerId);
     for (const platform of line.assignment?.platforms ?? []) {
+      // Connected social accounts without contracted deliverables are not agreed.
+      if ((platform.deliverables?.length ?? 0) === 0) continue;
       addPlatformToLineMap(metadataPlatformsByLine, line.id, platform.platform);
     }
     for (const row of line.assignment?.commercial_rows ?? []) {
@@ -106,6 +112,7 @@ export function buildAssignmentAgreedPlatformIndexFromAssignments(input: {
       group.line.influencer_id ?? influencerByLineId.get(group.line.id) ?? null;
     if (influencerId) influencerByLineId.set(group.line.id, influencerId);
     for (const deliverable of group.deliverables) {
+      if (deliverable.is_synthetic) continue;
       addPlatformToLineMap(deliverablePlatformsByLine, group.line.id, deliverable.platform);
       for (const post of deliverable.posts ?? []) {
         addPlatformToLineMap(deliverablePlatformsByLine, group.line.id, post.platform);

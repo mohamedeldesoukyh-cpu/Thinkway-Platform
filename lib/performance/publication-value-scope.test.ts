@@ -218,4 +218,61 @@ function indexWithInstagram() {
   assert.equal(classified[0]?.value_scope, "agreed");
 }
 
+{
+  const classified = applyPublicationValueScopes(
+    [{ campaign_line_id: lineId, influencer_id: influencerId, platform: "tiktok" }],
+    buildAssignmentAgreedPlatformIndexFromAssignments({
+      hierarchyGroups: [
+        {
+          line: { id: lineId, influencer_id: influencerId },
+          deliverables: [{ platform: "tiktok", is_synthetic: true }],
+        },
+      ],
+      lines: [
+        {
+          id: lineId,
+          influencer_id: influencerId,
+          assignment: {
+            influencer_id: influencerId,
+            platforms: [{ platform: "instagram", deliverables: ["instagram_reel"] }],
+          },
+        },
+      ],
+    })
+  );
+  assert.equal(classified[0]?.value_scope, "added_value");
+}
+
+{
+  const classified = applyPublicationValueScopes(
+    [
+      { campaign_line_id: lineId, influencer_id: influencerId, platform: "instagram" },
+      { campaign_line_id: lineId, influencer_id: influencerId, platform: "tiktok" },
+      { campaign_line_id: lineId, influencer_id: influencerId, platform: "youtube" },
+      { campaign_line_id: lineId, influencer_id: influencerId, platform: "facebook" },
+    ],
+    buildAssignmentAgreedPlatformIndexFromAssignments({
+      lines: [
+        {
+          id: lineId,
+          influencer_id: influencerId,
+          assignment: {
+            influencer_id: influencerId,
+            platforms: [
+              { platform: "instagram", deliverables: ["instagram_reel"] },
+              { platform: "tiktok", deliverables: [] },
+              { platform: "youtube", deliverables: [] },
+              { platform: "facebook", deliverables: [] },
+            ],
+          },
+        },
+      ],
+    })
+  );
+  assert.equal(classified[0]?.value_scope, "agreed");
+  assert.equal(classified[1]?.value_scope, "added_value");
+  assert.equal(classified[2]?.value_scope, "added_value");
+  assert.equal(classified[3]?.value_scope, "added_value");
+}
+
 console.log("publication-value-scope tests passed");

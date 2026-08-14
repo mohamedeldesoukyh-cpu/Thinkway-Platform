@@ -474,7 +474,7 @@ export function CampaignPerformanceCenterTab({
             key: "added-value",
             label: "Added value",
             value: String(classifiedSplit.addedValue.length),
-            tone: classifiedSplit.addedValue.length > 0 ? "pos" : "mut",
+            tone: "amber",
           },
           {
             key: "reach",
@@ -543,8 +543,6 @@ export function CampaignPerformanceCenterTab({
           </div>
         }
         registerLabel="Publication registers"
-        collapseRegister
-        defaultRegisterOpen
         registerCount={publications.length}
         registerStorageKey={`performance-agreed-added-${workspace.id}`}
         forceRegisterOpen={Boolean(initialDetailPublicationId)}
@@ -684,7 +682,7 @@ export function CampaignPerformanceCenterTab({
           />
           <PerformancePublicationValueCard
             title="Added value"
-            description="Extra publications beyond the assignment mix."
+            description="Posted on platforms that are not contracted on the assignment."
             summary={addedValueSummary}
             rows={addedValueFiltered}
             allRows={publications}
