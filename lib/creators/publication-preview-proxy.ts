@@ -92,6 +92,11 @@ function isTikTokPostUrl(url: string): boolean {
   return host ? isExactHostOrSuffix(host, { exact: [], suffixes: ["tiktok.com"] }) : false;
 }
 
+function isInstagramPostUrl(url: string): boolean {
+  const host = hostFromUrl(url);
+  return host ? isExactHostOrSuffix(host, { exact: [], suffixes: ["instagram.com"] }) : false;
+}
+
 function isYouTubePostUrl(url: string): boolean {
   const host = hostFromUrl(url);
   return host
