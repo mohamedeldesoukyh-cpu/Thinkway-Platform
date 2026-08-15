@@ -533,6 +533,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
         Keep below copilot dock (~200) and dialogs (~110).
       */}
       <div
+        data-app-sidebar-root
         className={cn(
           "relative hidden shrink-0 self-stretch transition-all duration-300 ease-in-out md:sticky md:top-0 md:block md:h-full md:max-h-full",
           displayExpanded ? "z-[60]" : "z-20"

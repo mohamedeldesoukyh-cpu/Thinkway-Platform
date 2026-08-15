@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { CalendarRangeIcon, Loader2Icon } from "lucide-react";
+import { CalendarRangeIcon, Loader2Icon, XIcon } from "lucide-react";
 
 import { PageBackButton } from "@/components/navigation/page-back-button";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { mediaPlanStatusLabel, type MediaPlanViewKind } from "@/lib/media-plan";
 import type { DocumentationCompleteness } from "@/lib/services/deliverables/documentation-types";
 import { campaignDetailPath } from "@/lib/routing/entity-paths";
+import { closeCompanionWindow } from "@/lib/routing/open-companion-window";
 import { cn } from "@/lib/utils";
 
 const VIEW_TABS: Array<{ id: MediaPlanViewKind; label: string }> = [
@@ -34,6 +35,8 @@ type CampaignMediaPlanWorkspaceProps = {
   workspace: CampaignWorkspace;
   payload: CampaignMediaPlanWorkspacePayload;
   initialView?: MediaPlanViewKind;
+  /** Opened beside Assignments in a separate full-size window. */
+  companionWindow?: boolean;
 };
 
 function isViewKind(value: string | null | undefined): value is MediaPlanViewKind {
@@ -44,6 +47,7 @@ export function CampaignMediaPlanWorkspace({
   workspace,
   payload,
   initialView = "original",
+  companionWindow = false,
 }: CampaignMediaPlanWorkspaceProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -69,6 +73,14 @@ export function CampaignMediaPlanWorkspace({
   const [pending, startTransition] = useTransition();
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollByView = useRef<Partial<Record<MediaPlanViewKind, number>>>({});
+
+  useLayoutEffect(() => {
+    if (!companionWindow) return;
+    document.documentElement.dataset.companionWindow = "1";
+    return () => {
+      delete document.documentElement.dataset.companionWindow;
+    };
+  }, [companionWindow]);
   const editable =
     (view === "original" && payload.canEditOriginal) ||
     (view === "remaining" && payload.canEditRemaining);
@@ -250,15 +262,33 @@ export function CampaignMediaPlanWorkspace({
     name: workspace.name,
   });
 
+  function handleCloseCompanion() {
+    closeCompanionWindow();
+  }
+
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--background)]">
       <header className="shrink-0 border-b border-border/80 bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:px-6">
         <div className="flex flex-wrap items-center gap-2">
-          <PageBackButton
-            fallbackHref={backHref}
-            label="Back to campaign"
-            className="size-8 rounded-lg p-0"
-          />
+          {companionWindow ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-8 rounded-lg p-0"
+              title="Close Media Plan window"
+              aria-label="Close Media Plan window"
+              onClick={handleCloseCompanion}
+            >
+              <XIcon className="size-4" />
+            </Button>
+          ) : (
+            <PageBackButton
+              fallbackHref={backHref}
+              label="Back to campaign"
+              className="size-8 rounded-lg p-0"
+            />
+          )}
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <CalendarRangeIcon className="size-4 text-[var(--tw-primary,#1D9E75)]" />
@@ -424,9 +454,19 @@ export function CampaignMediaPlanWorkspace({
               label="Open Studio Media Plan"
               variant="primary"
             />
-            <Link href={backHref} className="text-xs text-muted-foreground underline-offset-2 hover:underline">
-              Return to campaign
-            </Link>
+            {companionWindow ? (
+              <button
+                type="button"
+                className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                onClick={handleCloseCompanion}
+              >
+                Close window
+              </button>
+            ) : (
+              <Link href={backHref} className="text-xs text-muted-foreground underline-offset-2 hover:underline">
+                Return to campaign
+              </Link>
+            )}
           </div>
         ) : (
           <MediaPlanCalendar

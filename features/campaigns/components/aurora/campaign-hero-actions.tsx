@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import Link from "next/link";
+import { useState, type MouseEvent, type ReactNode } from "react";
 import {
   CalendarRangeIcon,
   CopyIcon,
@@ -25,6 +24,7 @@ import { ClientIoCampaignChrome } from "@/features/io/components/client-io-campa
 import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { campaignMediaPlanPath } from "@/lib/routing/entity-paths";
+import { openCompanionWindow } from "@/lib/routing/open-companion-window";
 
 type CampaignHeroActionsProps = {
   workspace: CampaignWorkspace;
@@ -50,6 +50,25 @@ export function CampaignHeroActions({
   onOpenDetails,
 }: CampaignHeroActionsProps) {
   const [cancelOpen, setCancelOpen] = useState(false);
+  const mediaPlanHref = campaignMediaPlanPath(
+    {
+      id: workspace.id,
+      document_number: workspace.document_number,
+      name: workspace.name,
+    },
+    undefined,
+    { popup: true }
+  );
+  const mediaPlanWindowName = `thinkway-media-plan-${workspace.id}`;
+
+  function openMediaPlanCompanion(event: MouseEvent<HTMLAnchorElement>) {
+    if (event.defaultPrevented) return;
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+      return;
+    }
+    event.preventDefault();
+    openCompanionWindow(mediaPlanHref, mediaPlanWindowName);
+  }
 
   return (
     <>
@@ -61,16 +80,15 @@ export function CampaignHeroActions({
         buttonClassName="thinkway-campaign-btn thinkway-campaign-btn-primary h-[38px] px-[15px] text-[13px] font-semibold"
       />
       <Button asChild variant="outline" size="sm" className="thinkway-campaign-btn">
-        <Link
-          href={campaignMediaPlanPath({
-            id: workspace.id,
-            document_number: workspace.document_number,
-            name: workspace.name,
-          })}
+        <a
+          href={mediaPlanHref}
+          target={mediaPlanWindowName}
+          title="Open Media Plan in a new window beside this campaign"
+          onClick={openMediaPlanCompanion}
         >
           <CalendarRangeIcon className="size-3.5" />
           Media Plans
-        </Link>
+        </a>
       </Button>
       <ClientIoCampaignChrome
         io={workspace.client_io}
