@@ -94,6 +94,22 @@ test("campaignName fills product when products array is empty", () => {
   assert.equal(facts.product, "Credit Card Instant Issuance");
 });
 
+test("campaignName wins over a keyword-soup products list", () => {
+  const facts = profileToCampaignFacts(
+    profileWith({
+      campaignName: "Credit Card Instant Issuance",
+      products: [
+        "credit card",
+        "instant issuance",
+        "Arabi Mobile",
+        "approval",
+        "customer experience",
+      ],
+    })
+  );
+  assert.equal(facts.product, "Credit Card Instant Issuance");
+});
+
 test("brand fills client when no separate client is extracted", () => {
   const facts = profileToCampaignFacts(profileWith({ brandName: "Arab Bank" }));
   assert.equal(facts.brandName, "Arab Bank");

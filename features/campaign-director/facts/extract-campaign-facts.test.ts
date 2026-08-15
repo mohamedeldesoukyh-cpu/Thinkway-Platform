@@ -166,3 +166,27 @@ test("Duration: 1 month extracts as 4 weeks and missing duration is not invented
   assert.equal(missing.durationWeeks, undefined);
   assert.equal(validateCampaignFacts(missing).durationWeeks, undefined);
 });
+
+test("chat brief does not invent budget, country, platforms, or a default audience", () => {
+  const brief = [
+    "Hi Team,",
+    "Hope all is well.",
+    "We have an upcoming campaign for Arab Bank new credit card instant issuance feature and would appreciate your support in sharing an Influencers proposal.",
+    "Campaign: Credit Card Instant Issuance",
+    "Duration: 1 month (TBA)",
+    "The campaign is targeting a mass audience, with the objective of driving awareness of the new Credit Card Instant Issuance feature.",
+    "Objective:",
+    "Arab Bank will provide a credit card instant issuance service.",
+    "At this stage, the client has not shared a specific budget. However, appreciate receiving cost-efficient recommendations given her budgets.",
+  ].join("\n");
+
+  const facts = extractCampaignFacts({ rawMessage: brief });
+  assert.equal(facts.brandName, "Arab Bank");
+  assert.equal(facts.clientName, "Arab Bank");
+  assert.match(facts.product ?? "", /credit card instant issuance/i);
+  assert.equal(facts.budget, undefined);
+  assert.equal(facts.geography, undefined);
+  assert.equal(facts.platforms, undefined);
+  assert.match(facts.audience ?? "", /mass audience/i);
+  assert.equal(facts.durationWeeks, 4);
+});

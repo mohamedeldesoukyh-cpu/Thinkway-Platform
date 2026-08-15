@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useDropzone } from "react-dropzone";
 import {
   CheckCircle2Icon,
@@ -37,6 +37,8 @@ export type CampaignIntelligencePanelProps = {
   /** Intake supplies CONFIRM CAMPAIGN — hide the panel footer. */
   actions?: "default" | "none";
   conversationId?: string;
+  /** Chat-pasted brief is still being extracted. */
+  isAnalyzing?: boolean;
 };
 
 type UploadPhase = "idle" | "uploading" | "analyzing" | "ready" | "error";
@@ -70,6 +72,7 @@ export function CampaignIntelligencePanel({
   variant,
   actions = "default",
   conversationId,
+  isAnalyzing = false,
 }: CampaignIntelligencePanelProps) {
   const layout = variant ?? (compact ? "sidebar" : "page");
   const isInline = layout === "inline";
@@ -90,7 +93,17 @@ export function CampaignIntelligencePanel({
   const [parsedTextLength, setParsedTextLength] = useState(initialState?.parsedTextLength ?? 0);
   const [isPending, startTransition] = useTransition();
 
-  const processing = uploadPhase === "uploading" || uploadPhase === "analyzing";
+  const processing = uploadPhase === "uploading" || uploadPhase === "analyzing" || (isAnalyzing && !profileId);
+
+  useEffect(() => {
+    if (!initialState?.profileId) return;
+    setProfileId(initialState.profileId);
+    setProfile(initialState.profile);
+    setUploadedFileName(initialState.fileName);
+    setUploadedFileSize(initialState.fileSizeBytes);
+    setParsedTextLength(initialState.parsedTextLength);
+    setUploadPhase("ready");
+  }, [initialState?.profileId]);
 
   const applyLoaded = useCallback(
     (state: CampaignIntelligenceWorkspaceState) => {
@@ -218,8 +231,8 @@ export function CampaignIntelligencePanel({
   const phaseLabel =
     uploadPhase === "uploading"
       ? "Uploading…"
-      : uploadPhase === "analyzing"
-        ? "Analyzing brief…"
+      : uploadPhase === "analyzing" || (isAnalyzing && !profileId)
+        ? "Reading your brief…"
         : uploadPhase === "ready"
           ? "Ready"
           : uploadPhase === "error"
@@ -338,12 +351,18 @@ export function CampaignIntelligencePanel({
                 ? "Saved"
                 : profileId
                   ? "Draft"
-                  : "Pending"}
+                  : isAnalyzing
+                    ? "Reading"
+                    : "Pending"}
           </Badge>
         </div>
 
         {!showFields ? (
-          <p className="text-sm text-muted-foreground">Upload a brief to see extracted campaign fields here.</p>
+          <p className="text-sm text-muted-foreground">
+            {isAnalyzing
+              ? "Reading the brief from chat and extracting campaign fields…"
+              : "Paste a brief in chat or upload a file to see extracted campaign fields here."}
+          </p>
         ) : null}
 
         {sparseHint ? (

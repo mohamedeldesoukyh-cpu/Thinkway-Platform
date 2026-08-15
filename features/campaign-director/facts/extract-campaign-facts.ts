@@ -50,6 +50,20 @@ function setField<T extends CampaignFactsField>(
 const FOR_ATTRIBUTION_PATTERN =
   /(?:campaign|activation|launch)\s+for\s+([A-Za-z0-9][\w&+'’-]*(?:\s+[A-Za-z0-9][\w&+'’-]*){0,3})/i;
 
+/** Stop "campaign for Arab Bank new credit card…" from swallowing the product. */
+const FOR_ATTRIBUTION_STOP =
+  /^(?:new|credit|card|instant|issuance|feature|mobile|app|and|would|in|targeting|across|on|to)\b/i;
+
+function captureAttributedEntity(raw: string | undefined): string | undefined {
+  if (!raw?.trim()) return undefined;
+  const kept: string[] = [];
+  for (const token of raw.trim().split(/\s+/)) {
+    if (FOR_ATTRIBUTION_STOP.test(token)) break;
+    kept.push(token);
+  }
+  return cleanEntityCapture(kept.join(" "));
+}
+
 const LAUNCH_PATTERN =
   /(?:launch|create\s+(?:a\s+)?(?:new\s+)?campaign\s+for)\s+([A-Za-z0-9][\w&+'’-]*(?:\s+[A-Za-z0-9][\w&+'’-]*){0,3})/i;
 
@@ -78,7 +92,7 @@ function extractBrandName(input: CampaignFactsExtractInput): {
   const parsed = cleanEntityCapture(parseBrandFromText(input.rawMessage));
   if (parsed) return { value: parsed, source: "brief", confidence: 0.9 };
 
-  const forAttribution = cleanEntityCapture(
+  const forAttribution = captureAttributedEntity(
     input.rawMessage.match(FOR_ATTRIBUTION_PATTERN)?.[1]
   );
   if (forAttribution) {
@@ -180,7 +194,7 @@ function extractDeliverables(text: string): string[] {
     .slice(0, 12);
 }
 
-function extractPlatforms(text: string, industry: ReturnType<typeof detectIndustryFromBrief>): string[] {
+function extractPlatforms(text: string): string[] {
   const found: string[] = [];
   const patterns: Array<{ pattern: RegExp; platform: string }> = [
     { pattern: /\binstagram\b/i, platform: "Instagram" },
@@ -195,10 +209,7 @@ function extractPlatforms(text: string, industry: ReturnType<typeof detectIndust
     if (pattern.test(text)) found.push(platform);
   }
 
-  if (found.length > 0) return found;
-
-  const profile = getIndustryProfile(industry, text);
-  return profile.platforms.slice(0, 3);
+  return found;
 }
 
 function extractKpis(text: string, objective: string): string[] {
@@ -331,41 +342,14 @@ export function extractCampaignFacts(input: CampaignFactsExtractInput): Campaign
       const genZMatch = text.match(/gen\s*z[^.]+/i);
       if (genZMatch) {
         setField(facts, "audience", genZMatch[0], "brief", 0.85);
-      } else {
-        const marketLabel =
-          geography[0] ??
-          parseMarketFromText(text) ??
-          undefined;
-        const categoryLabel =
-          industryKey && industryKey !== "general"
-            ? industryKey.replace(/_/g, " ")
-            : /\blifestyle\b/i.test(text)
-              ? "lifestyle"
-              : undefined;
-        const synthesized =
-          marketLabel && categoryLabel
-            ? `${categoryLabel.charAt(0).toUpperCase()}${categoryLabel.slice(1)} consumers in ${marketLabel}`
-            : marketLabel
-              ? `Brand-relevant consumers in ${marketLabel}`
-              : "Brand-relevant consumers in primary market";
-        setField(
-          facts,
-          "audience",
-          synthesized,
-          marketLabel || categoryLabel ? "inferred" : "default",
-          marketLabel || categoryLabel ? 0.55 : 0.4
-        );
       }
     }
   }
 
-  const platforms = extractPlatforms(text, industryKey);
-  const platformSource: CampaignFactsSource = /\b(?:instagram|tiktok|youtube|snapchat|facebook|linkedin)\b/i.test(
-    text
-  )
-    ? "brief"
-    : "inferred";
-  setField(facts, "platforms", platforms, platformSource, platformSource === "brief" ? 0.9 : 0.65);
+  const platforms = extractPlatforms(text);
+  if (platforms.length > 0) {
+    setField(facts, "platforms", platforms, "brief", 0.9);
+  }
 
   const kpis = extractKpis(text, objective);
   if (kpis.length > 0) {

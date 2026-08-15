@@ -38,8 +38,8 @@ export function isStudioIntakeConfirmed(
 ): boolean {
   if (!campaignObject) return false;
   if (campaignObject.meta.factsConfirmedAt?.trim()) return true;
-  // Legacy objects already storing Campaign Facts keep working without a stamp.
-  return Boolean(getCampaignFacts(campaignObject));
+  // Legacy campaigns that already finished Studio without an Intake stamp.
+  return campaignObject.meta.status === "complete" && Boolean(getCampaignFacts(campaignObject));
 }
 
 export function outdatedWorkspaceSteps(

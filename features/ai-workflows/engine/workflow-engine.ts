@@ -42,10 +42,8 @@ import {
   injectDirectorStrategyIntoWorkflowState,
 } from "@/features/campaign-director/integrations/workflow-integration";
 import { initializeDirectorPipelineState, getCampaignFactsFromWorkflowData } from "@/features/campaign-director/services/campaign-director";
-import {
-  ensureWorkflowCampaignIntelligenceProfile,
-  resolveWorkflowCampaignIntelligenceProfile,
-} from "@/features/campaign-intelligence-profile/services/ensure-workflow-campaign-intelligence";
+import { ensureWorkflowCampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/services/ensure-workflow-campaign-intelligence";
+import { getCampaignIntelligenceProfileById } from "@/features/campaign-intelligence-profile/services/profile-repository";
 import { isCampaignIntelligenceConfirmed } from "@/features/campaign-intelligence-profile/services/campaign-facts-spine";
 import { normalizeCampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/services/normalize-profile";
 import { profileToCampaignFacts } from "@/features/campaign-intelligence-profile/services/profile-to-facts";
@@ -275,24 +273,31 @@ export async function executeWorkflow(
 
     if (!intelligenceProfileId && request.conversationId && options.supabase && aiContext.user?.id) {
       const brandHint = initializeDirectorPipelineState(request.message).campaignFacts.brandName;
-      const resolved = await resolveWorkflowCampaignIntelligenceProfile(options.supabase, {
+      intelligenceProfileId = await ensureWorkflowCampaignIntelligenceProfile(options.supabase, {
         conversationId: request.conversationId,
         userId: aiContext.user.id,
+        briefText: request.message,
+        existingProfileId: state.data.campaignIntelligenceProfileId as string | undefined,
         brandName: brandHint,
       });
-      if (resolved) {
-        const profile = normalizeCampaignIntelligenceProfile(resolved.profile);
-        if (isCampaignIntelligenceConfirmed(profile)) {
-          intelligenceProfileId = resolved.id;
-          campaignFacts = profileToCampaignFacts(profile);
-          strategyDocument = writeStrategyDocumentFromBrief(
-            {
-              rawMessage: profile.rawBriefExcerpt ?? request.message,
-              brandName: campaignFacts.brandName,
-              campaignFacts,
-            },
-            campaignFacts
-          );
+      if (intelligenceProfileId) {
+        const ensured = await getCampaignIntelligenceProfileById(
+          options.supabase,
+          intelligenceProfileId
+        );
+        if (ensured) {
+          const profile = normalizeCampaignIntelligenceProfile(ensured.profile);
+          if (isCampaignIntelligenceConfirmed(profile)) {
+            campaignFacts = profileToCampaignFacts(profile);
+            strategyDocument = writeStrategyDocumentFromBrief(
+              {
+                rawMessage: profile.rawBriefExcerpt ?? request.message,
+                brandName: campaignFacts.brandName,
+                campaignFacts,
+              },
+              campaignFacts
+            );
+          }
         }
       }
     }

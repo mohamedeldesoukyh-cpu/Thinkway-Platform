@@ -88,9 +88,9 @@ export function profileToCampaignFacts(
     brandName: resolveBrandName(profile) ?? resolveClientName(profile),
     industry: profile.industry,
     campaignType: profile.campaignType ?? profile.campaignName,
-    product: profile.products?.length
-      ? profile.products.join(", ")
-      : profile.campaignName?.trim() || undefined,
+    product:
+      profile.campaignName?.trim() ||
+      (profile.products?.length === 1 ? profile.products[0] : undefined),
     objective:
       profile.objective ??
       (profile.objectives?.length ? profile.objectives.join(" · ") : undefined) ??

@@ -41,6 +41,8 @@ type StudioWorkspaceScreenProps = {
   layoutMode?: CampaignStudioLayoutMode;
   viewportMode?: CampaignStudioViewportMode;
   budgetFooter?: ReactNode;
+  workflowStatus?: string;
+  workflowProgressPercent?: number;
 };
 
 function renderSection(
@@ -84,6 +86,9 @@ export function StudioWorkspaceScreen(props: StudioWorkspaceScreenProps) {
           conversationId={props.conversationId}
           messageId={props.messageId}
           onCampaignObjectUpdated={props.onSlateUpdated}
+          onNavigateStep={props.onNavigateStep}
+          workflowStatus={props.workflowStatus}
+          workflowProgressPercent={props.workflowProgressPercent}
         />
       </StudioStepShell>
     );
