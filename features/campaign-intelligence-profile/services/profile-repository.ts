@@ -90,7 +90,7 @@ export async function getCampaignIntelligenceProfileForConversation(
     .from("campaign_intelligence_profiles")
     .select(PROFILE_SELECT)
     .eq("conversation_id", conversationId)
-    .eq("status", "saved")
+    .in("status", ["draft", "saved"])
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();

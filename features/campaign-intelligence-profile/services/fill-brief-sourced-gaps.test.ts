@@ -30,3 +30,19 @@ test("Arab Bank t1: fill brief-sourced gaps, never invent budget or platforms", 
   assert.equal(filled.budget, undefined);
   assert.equal(filled.platforms, undefined);
 });
+
+test("chat brief Campaign: line fills campaignName without inventing platforms", () => {
+  const brief = [
+    "We have an upcoming campaign for Arab Bank new credit card instant issuance feature.",
+    "Campaign: Credit Card Instant Issuance",
+    "Duration: 1 month (TBA)",
+    "The campaign is targeting a mass audience.",
+    "The client has not shared a specific budget.",
+  ].join("\n");
+
+  const filled = fillBriefSourcedHeuristicGaps(createEmptyCampaignIntelligenceProfile(), brief);
+  assert.equal(filled.brandName, "Arab Bank");
+  assert.match(filled.campaignName ?? "", /credit card instant issuance/i);
+  assert.equal(filled.budget, undefined);
+  assert.equal(filled.platforms, undefined);
+});

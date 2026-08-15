@@ -1,27 +1,27 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `develop` (`21c80112`)  
-**Focus:** Studio Intake CIP → facts wiring + left-rail status (promoted to Dev and Production)
+**Branch:** `develop`  
+**Focus:** Studio chat-brief Intake — progress, CIP wiring, Confirm → Strategy
 
-## Shipped
+## In progress (local on develop, not deployed)
 
-- Wave 3 Package readiness (prior)
-- Intake now copies Campaign Intelligence into “What Thinkway understood”
-- Confirm uses CIP + typed facts; no invented budget
-- Left rail: Intake In progress while working; later steps stay Blocked until Confirm
-- Brief-sourced gaps (objective/market) filled; invented platforms stripped
+Chat-pasted briefs jumped to Intake with no loading, invented audience/platforms, left Campaign Intelligence Pending, kept asking for budget after it was filled, and Confirm did not advance to Strategy.
 
-Client Workspace is **not** started.
+Fixes in this session:
 
-## Shipped this session (local, uncommitted unless later requested)
+- Confirm campaign advances to Strategy; confirmed Intake shows Continue to Strategy
+- Progress meter while the brief is being read / Studio is still working
+- CIP is created at workflow start from chat text; Intake polls and syncs the panel
+- Stale “INPUT REQUIRED: budget” hides once budget is on Campaign Facts
+- Do not invent audience, platforms, country, or budget; `Campaign:` fills the campaign name; “Arab Bank new credit” no longer becomes the client
+- Duration helper shows `1 month / 4 weeks`
+- Later steps stay Blocked until Confirm, even when required facts are already typed
 
-- One package-level readiness resolver over existing Facts / CIP / Wave 1 fingerprints / Wave 2 Discovery / quantity / content / Commercial / Timeline / output registry
-- Package screen: dimension checklist, Fix issues navigation, Regenerate affected (existing outputs action), Create Client Review blocked unless ready
-- Wave 3 false-ready tests (A–J), duration 4→6, budget 5M→3M, slate change, missing budget
+Client Workspace is **not** started. Facebook inspect scripts remain untracked and should stay out of commits.
 
 ## Shipped prior
 
-- Studio UX/IA: Intake → Strategy → Creators → Content → Commercial → Package
-- Wave 2 Strategy / Discovery / quantity / per-creator content
-- Wave 1 Freshness spine
-- Wave 0 Facts spine
+- Wave 3 Package readiness
+- Intake CIP → facts merge + Confirm
+- Left rail: Intake In progress; later steps Blocked until Confirm
+- Studio UX: Intake → Strategy → Creators → Content → Commercial → Package

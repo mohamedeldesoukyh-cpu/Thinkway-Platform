@@ -7,6 +7,7 @@ import {
   getCampaignFacts,
   resolveInfluencerEstimateCurrency,
 } from "@/features/campaign-director/facts/facts-display-bridge";
+import { shouldShowIntakeClarification } from "../services/studio-intake-facts";
 import { CAMPAIGN_STUDIO_COPY } from "../constants/copy";
 import { STUDIO_REF_CLASSES } from "../constants/campaign-studio-ref-tokens";
 import { STUDIO_CLASSES } from "../constants/studio-tokens";
@@ -177,7 +178,10 @@ export function CampaignStudio({
         />
       ) : null}
 
-      {studio.clarificationQuestion ? (
+      {shouldShowIntakeClarification(
+        studio.clarificationQuestion,
+        getCampaignFacts(studio.campaignObject)
+      ) ? (
         <div
           className={cn(
             "rounded-lg border border-amber-300 bg-amber-50/80 p-3 dark:border-amber-800 dark:bg-amber-950/30",
@@ -209,6 +213,8 @@ export function CampaignStudio({
         appliedRemovedCreatorIds={appliedRemovedCreatorIds}
         layoutMode={layoutMode}
         viewportMode={viewportMode}
+        workflowStatus={studio.workflowStatus}
+        workflowProgressPercent={studio.progressPercent}
       />
 
       {studio.actionCards?.length && conversationId && messageId ? (

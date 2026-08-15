@@ -215,6 +215,13 @@ export function fillBriefSourcedHeuristicGaps(
   take("platforms", "platforms");
   take("deliverables", "deliverables");
 
+  if (!next.campaignName?.trim() && heuristic.campaignName?.trim()) {
+    next.campaignName = heuristic.campaignName;
+  }
+  if ((!next.products || next.products.length === 0) && heuristic.products?.length) {
+    next.products = heuristic.products;
+  }
+
   if (!next.market?.trim() && next.geography?.[0] && heuristic.sources?.geography === "brief") {
     next.market = next.geography[0];
   }
@@ -243,6 +250,8 @@ function heuristicExtract(briefText: string): CampaignIntelligenceProfile {
 
   profile.brandName = facts.brandName;
   profile.clientName = facts.clientName;
+  profile.campaignName = facts.product;
+  profile.products = facts.product ? [facts.product] : undefined;
   profile.industry = facts.industry ?? detectIndustryFromBrief(briefText);
   profile.campaignType = facts.campaignType;
   profile.objective = facts.objective;

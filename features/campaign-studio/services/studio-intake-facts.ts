@@ -26,7 +26,7 @@ function present(value: string | null | undefined): string | null {
   return trimmed ? trimmed : null;
 }
 
-function formatDurationWeeks(weeks: number | undefined): string | null {
+export function formatDurationWeeks(weeks: number | undefined): string | null {
   if (weeks == null || !Number.isFinite(weeks) || weeks <= 0) return null;
   const rounded = Math.round(weeks);
   if (rounded === 4) return "1 month / 4 weeks";
@@ -114,9 +114,26 @@ export function confirmStudioIntakeOnCampaignObject(
     meta: {
       ...withFacts.meta,
       factsConfirmedAt: new Date().toISOString(),
+      clarificationQuestion: undefined,
     },
     updatedAt: new Date().toISOString(),
   };
+}
+
+/** Hide stale copilot questions that the operator already answered on Intake. */
+export function shouldShowIntakeClarification(
+  question: string | undefined,
+  facts: CampaignFacts | undefined
+): boolean {
+  const text = question?.trim();
+  if (!text) return false;
+  if (/budget/i.test(text) && facts?.budget?.amount && facts.budget.amount > 0) {
+    return false;
+  }
+  if (/(country|market|geograph)/i.test(text) && (facts?.geography?.length ?? 0) > 0) {
+    return false;
+  }
+  return true;
 }
 
 function presentValue<T>(value: T | undefined | null): T | undefined {

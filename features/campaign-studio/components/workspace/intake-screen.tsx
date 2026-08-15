@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { CheckCircle2Icon, Loader2Icon } from "lucide-react";
+import { CheckCircle2Icon, Loader2Icon, ArrowRightIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -26,11 +26,13 @@ import {
 } from "../../actions/confirm-studio-intake-action";
 import {
   campaignFactsFromIntakeEdit,
+  formatDurationWeeks,
   mergeIntakeDisplayFacts,
   requiredIntakeFacts,
   type IntakeFactsEdit,
 } from "../../services/studio-intake-facts";
 import { isStudioIntakeConfirmed } from "../../services/studio-workspace-status";
+import type { StudioWorkspaceStepId } from "../../constants/studio-workspace";
 import { CampaignBriefCard } from "../sections/campaign-brief-card";
 
 type IntakeScreenProps = {
@@ -38,6 +40,9 @@ type IntakeScreenProps = {
   conversationId?: string;
   messageId?: string;
   onCampaignObjectUpdated?: (campaignObject: Record<string, unknown>) => void;
+  onNavigateStep?: (stepId: StudioWorkspaceStepId) => void;
+  workflowStatus?: string;
+  workflowProgressPercent?: number;
 };
 
 function splitList(value: string): string[] {
@@ -52,6 +57,9 @@ export function IntakeScreen({
   conversationId,
   messageId,
   onCampaignObjectUpdated,
+  onNavigateStep,
+  workflowStatus,
+  workflowProgressPercent,
 }: IntakeScreenProps) {
   const facts = getCampaignFacts(campaignObject);
   const confirmed = isStudioIntakeConfirmed(campaignObject);
@@ -122,24 +130,42 @@ export function IntakeScreen({
   useEffect(() => {
     if (!conversationId) return;
     let cancelled = false;
-    void getConversationCampaignIntelligenceAction(conversationId).then((row) => {
-      if (cancelled || !row) return;
+    let attempts = 0;
+
+    async function loadCip() {
+      const row = await getConversationCampaignIntelligenceAction(conversationId!);
+      if (cancelled || !row) return false;
       setCipState({
         profileId: row.id,
         profile: row.profile,
         fileName: row.title ?? null,
         fileSizeBytes: null,
         hasExtractedData: true,
-        parsedTextLength: 0,
+        parsedTextLength: row.profile.rawBriefExcerpt?.length ?? 0,
       });
-    });
+      return true;
+    }
+
+    void loadCip();
+    const timer = window.setInterval(() => {
+      attempts += 1;
+      void loadCip().then((found) => {
+        if (found || attempts >= 20) window.clearInterval(timer);
+      });
+    }, 2500);
+
     return () => {
       cancelled = true;
+      window.clearInterval(timer);
     };
   }, [conversationId]);
 
   const creatorsData = (campaignObject?.sections.creators.data ?? {}) as CreatorsSectionData;
   const profileId = cipState?.profileId ?? creatorsData.cipProfileId;
+  const workflowBusy =
+    workflowStatus === "running" || campaignObject?.meta.status === "building";
+  const awaitingFacts = !displayFacts?.brandName && !displayFacts?.clientName && !displayFacts?.product;
+  const isExtracting = workflowBusy && awaitingFacts;
 
   function editFromDraft(): IntakeFactsEdit {
     const amount = Number(draft.budget.replace(/,/g, ""));
@@ -177,11 +203,43 @@ export function IntakeScreen({
       }
       onCampaignObjectUpdated?.(result.campaignObject);
       toast.success(result.message);
+      onNavigateStep?.("strategy");
     });
   }
 
   return (
     <div className="min-w-0 space-y-5">
+      {workflowBusy ? (
+        <div className="flex items-start gap-3 rounded-2xl border border-[#0057FF]/25 bg-[#0057FF]/5 px-4 py-3">
+          <Loader2Icon className="mt-0.5 size-5 shrink-0 animate-spin text-[#0057FF]" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-extrabold text-foreground">
+              {awaitingFacts ? "Reading your brief" : "Studio is still working"}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {awaitingFacts
+                ? "Extracting campaign facts. Missing values stay missing — they are never invented."
+                : "Strategy and creator matches continue in the background. Review and confirm facts below."}
+            </p>
+            <div
+              className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#0057FF]/15"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={workflowProgressPercent ?? 0}
+              aria-label="Studio progress"
+            >
+              <div
+                className="h-full rounded-full bg-[#0057FF] transition-[width]"
+                style={{
+                  width: `${Math.max(8, Math.min(100, workflowProgressPercent ?? 8))}%`,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <CampaignBriefCard
         campaignObject={campaignObject}
         conversationId={conversationId}
@@ -195,6 +253,7 @@ export function IntakeScreen({
           actions="none"
           initialState={cipState}
           conversationId={conversationId}
+          isAnalyzing={isExtracting && !cipState?.profileId}
           onWorkspaceChange={setCipState}
         />
       ) : null}
@@ -240,15 +299,22 @@ export function IntakeScreen({
                     />
                   </div>
                 ) : row.key === "duration" ? (
-                  <Input
-                    className="h-8 text-sm"
-                    value={draft.durationWeeks}
-                    onChange={(event) =>
-                      setDraft((prev) => ({ ...prev, durationWeeks: event.target.value }))
-                    }
-                    aria-label="Duration in weeks"
-                    placeholder="Weeks — do not invent"
-                  />
+                  <div>
+                    <Input
+                      className="h-8 text-sm"
+                      value={draft.durationWeeks}
+                      onChange={(event) =>
+                        setDraft((prev) => ({ ...prev, durationWeeks: event.target.value }))
+                      }
+                      aria-label="Duration in weeks"
+                      placeholder="Weeks — do not invent"
+                    />
+                    {formatDurationWeeks(Number(draft.durationWeeks)) ? (
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        {formatDurationWeeks(Number(draft.durationWeeks))}
+                      </p>
+                    ) : null}
+                  </div>
                 ) : (
                   <Input
                     className="h-8 text-sm"
@@ -305,20 +371,32 @@ export function IntakeScreen({
         ) : (
           <p className="text-sm text-muted-foreground">
             {confirmed
-              ? "Campaign Facts are the source of truth for every later step."
+              ? "Campaign Facts are confirmed. Next: Strategy."
               : "Required facts are present. Confirm before Strategy."}
           </p>
         )}
-        <Button
-          type="button"
-          size="lg"
-          disabled={pending || !conversationId || !intake.canConfirm}
-          onClick={confirmCampaign}
-          className="bg-[#0057FF] hover:bg-[#0040CC]"
-        >
-          {pending ? <Loader2Icon className="size-4 animate-spin" /> : <CheckCircle2Icon className="size-4" />}
-          Confirm campaign
-        </Button>
+        {confirmed ? (
+          <Button
+            type="button"
+            size="lg"
+            onClick={() => onNavigateStep?.("strategy")}
+            className="bg-[#0057FF] hover:bg-[#0040CC]"
+          >
+            <ArrowRightIcon className="size-4" />
+            Continue to Strategy
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            size="lg"
+            disabled={pending || !conversationId || !intake.canConfirm}
+            onClick={confirmCampaign}
+            className="bg-[#0057FF] hover:bg-[#0040CC]"
+          >
+            {pending ? <Loader2Icon className="size-4 animate-spin" /> : <CheckCircle2Icon className="size-4" />}
+            Confirm campaign
+          </Button>
+        )}
       </div>
       {cipState?.profile && isCampaignIntelligenceConfirmed(cipState.profile) ? (
         <p className="text-xs text-muted-foreground">Campaign Intelligence is already confirmed.</p>

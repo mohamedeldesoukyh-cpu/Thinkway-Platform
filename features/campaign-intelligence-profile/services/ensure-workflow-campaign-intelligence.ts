@@ -168,7 +168,16 @@ export async function ensureWorkflowCampaignIntelligenceProfile(
     briefTextSource: "upload",
   });
 
-  if (!hasValidatedIntelligence(extracted)) {
+  const persistable =
+    hasValidatedIntelligence(extracted) ||
+    Boolean(
+      extracted.brandName?.trim() ||
+        extracted.campaignName?.trim() ||
+        extracted.objective?.trim() ||
+        extracted.clientName?.trim()
+    );
+
+  if (!persistable) {
     return undefined;
   }
 

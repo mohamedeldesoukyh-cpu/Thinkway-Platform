@@ -22,10 +22,12 @@ import {
   confirmStudioIntakeOnCampaignObject,
   mergeIntakeDisplayFacts,
   requiredIntakeFacts,
+  shouldShowIntakeClarification,
 } from "./studio-intake-facts";
 import { resolveStudioPackageReadiness } from "./studio-package-readiness";
 import {
   defaultStudioWorkspaceStep,
+  isStudioIntakeConfirmed,
   outdatedWorkspaceSteps,
   resolveStudioWorkspaceSteps,
 } from "./studio-workspace-status";
@@ -163,6 +165,63 @@ test("left rail keeps later steps Blocked until Intake is confirmed, even if Dis
   assert.equal(steps.find((step) => step.id === "commercial")?.status, "blocked");
   assert.equal(steps.find((step) => step.id === "package")?.status, "blocked");
   assert.equal(defaultStudioWorkspaceStep(steps), "intake");
+});
+
+test("left rail stays Blocked after required facts are filled until Confirm campaign", () => {
+  const object = buildCampaignObjectFixture({
+    facts: {
+      clientName: "Arab Bank",
+      brandName: "Arab Bank",
+      product: "Credit Card Instant Issuance",
+      objective: "Awareness and acquisition",
+      geography: ["Egypt"],
+      budget: { amount: 3_000_000, currency: "EGP" },
+      durationWeeks: 4,
+    },
+  });
+  object.meta.status = "paused";
+  assert.equal(isStudioIntakeConfirmed(object), false);
+  assert.equal(requiredIntakeFacts(getCampaignFacts(object)).canConfirm, true);
+
+  const steps = resolveStudioWorkspaceSteps({
+    campaignObject: object,
+    sections: COMPLETE_SECTIONS,
+    outdatedSections: new Set(),
+  });
+  assert.equal(steps.find((step) => step.id === "intake")?.status, "in_progress");
+  assert.equal(steps.find((step) => step.id === "strategy")?.status, "blocked");
+  assert.equal(steps.find((step) => step.id === "creators")?.status, "blocked");
+});
+
+test("stale budget INPUT REQUIRED hides once budget is on Campaign Facts", () => {
+  const question =
+    "To finalize your campaign, I need one more detail: What is the total campaign budget (amount and currency)?";
+  assert.equal(
+    shouldShowIntakeClarification(question, {
+      extractedAt: new Date().toISOString(),
+      confidence: {},
+      sources: {},
+      budget: { amount: 3_000_000, currency: "EGP" },
+    }),
+    false
+  );
+  assert.equal(
+    shouldShowIntakeClarification(question, {
+      extractedAt: new Date().toISOString(),
+      confidence: {},
+      sources: {},
+    }),
+    true
+  );
+});
+
+test("Confirm campaign clears the stale copilot budget question", () => {
+  const object = buildCampaignObjectFixture();
+  object.meta.clarificationQuestion =
+    "What is the total campaign budget (amount and currency)?";
+  const confirmed = confirmStudioIntakeOnCampaignObject(object, getCampaignFacts(object)!);
+  assert.equal(confirmed.meta.clarificationQuestion, undefined);
+  assert.ok(confirmed.meta.factsConfirmedAt);
 });
 
 test("workspace steps map engines to Intake → Package without KPI cards", () => {

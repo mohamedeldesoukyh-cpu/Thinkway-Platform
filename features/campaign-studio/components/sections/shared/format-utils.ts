@@ -205,8 +205,10 @@ export function parseBrandFromText(text: string): string | undefined {
 export function parseProductFromText(text: string): string | undefined {
   const product = text.match(/(?:premium\s+)?([A-Za-z][\w\s-]*?\s+diapers?)/i);
   if (product?.[1]) return stripMarkdown(product[1].trim());
-  const labeled = text.match(/product[:\s]+(.+?)(?:\n|$)/i);
-  if (labeled?.[1]) return stripMarkdown(labeled[1]);
+  const labeledProduct = text.match(/\bproduct:\s*([^.\n]+)/i);
+  if (labeledProduct?.[1]) return stripMarkdown(labeledProduct[1]);
+  const labeledCampaign = text.match(/\bcampaign:\s*(?!overview\b)([^.\n]+)/i);
+  if (labeledCampaign?.[1]) return stripMarkdown(labeledCampaign[1]);
   return undefined;
 }
 
@@ -228,6 +230,8 @@ export function parseAudienceFromText(text: string): string | undefined {
   if (primary?.[1]) return stripMarkdown(primary[1]);
   const target = text.match(/target[:\s]+(.+?)(?:\n|$)/i);
   if (target?.[1]) return stripMarkdown(target[1]);
+  const mass = text.match(/\btargeting\s+(?:a\s+)?(mass audience)\b/i);
+  if (mass?.[1]) return stripMarkdown(mass[1]);
   const mothers = text.match(/mothers?\s+with\s+babies?\s+[\d–-]+\s+years?/i);
   if (mothers?.[0]) return stripMarkdown(mothers[0]);
   return undefined;
