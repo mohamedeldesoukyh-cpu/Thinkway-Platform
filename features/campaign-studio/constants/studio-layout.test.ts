@@ -4,10 +4,16 @@ import test from "node:test";
 import type { CampaignStudioSectionId } from "../types/campaign-studio";
 
 import {
-  STUDIO_STORY_ARC,
   STUDIO_LAYOUT,
+  STUDIO_STORY_ARC,
   groupSectionsByStoryPhase,
 } from "./studio-layout";
+import {
+  STUDIO_WORKSPACE_FOLDED_SECTIONS,
+  STUDIO_WORKSPACE_STEPS,
+  isPrimaryWorkspaceSection,
+  workspaceStepForSection,
+} from "./studio-workspace";
 
 const ALL_SECTION_IDS: CampaignStudioSectionId[] = [
   "campaign-summary",
@@ -29,39 +35,74 @@ const ALL_SECTION_IDS: CampaignStudioSectionId[] = [
   "presentation-status",
 ];
 
-test("every known section id is mapped to exactly one story phase", () => {
-  const mapped = STUDIO_STORY_ARC.flatMap((p) => p.sections);
-  assert.deepEqual([...mapped].sort(), [...ALL_SECTION_IDS].sort());
-  assert.equal(new Set(mapped).size, mapped.length);
+test("primary workspace is six planning steps", () => {
+  assert.deepEqual(
+    STUDIO_WORKSPACE_STEPS.map((step) => step.id),
+    ["intake", "strategy", "creators", "content", "commercial", "package"]
+  );
+  assert.deepEqual(
+    STUDIO_STORY_ARC.map((phase) => phase.id),
+    ["intake", "strategy", "creators", "content", "commercial", "package"]
+  );
 });
 
-test("story arc covers the same ids as the layout lookup", () => {
+test("every layout section is either primary or explicitly folded", () => {
   const layoutIds = Object.values(STUDIO_LAYOUT).flat();
-  const arcIds = STUDIO_STORY_ARC.flatMap((p) => p.sections);
-  assert.deepEqual([...layoutIds].sort(), [...arcIds].sort());
+  assert.deepEqual([...layoutIds].sort(), [...ALL_SECTION_IDS].sort());
+
+  const folded = new Set(STUDIO_WORKSPACE_FOLDED_SECTIONS.map((item) => item.id));
+  const primary = new Set(STUDIO_WORKSPACE_STEPS.flatMap((step) => step.sections));
+
+  for (const id of ALL_SECTION_IDS) {
+    assert.ok(
+      primary.has(id) || folded.has(id),
+      `${id} must be a primary workspace section or an explicit fold`
+    );
+    assert.equal(primary.has(id) && folded.has(id), false, `${id} cannot be both primary and folded`);
+  }
 });
 
-test("grouping preserves every section, orders by arc, and skips empty phases", () => {
+test("folded cards are not dumped into Package", () => {
+  const primaryIds = STUDIO_STORY_ARC.flatMap((phase) => phase.sections);
+  assert.ok(!primaryIds.includes("executive-summary"));
+  assert.ok(!primaryIds.includes("kpi-forecast"));
+  assert.ok(!primaryIds.includes("why-ai"));
+  assert.ok(!primaryIds.includes("creator-mix"));
+  assert.equal(workspaceStepForSection("executive-strategy"), "strategy");
+  assert.equal(workspaceStepForSection("creator-recommendations"), "creators");
+  assert.equal(workspaceStepForSection("content-plan"), "content");
+  assert.equal(workspaceStepForSection("budget-planner"), "commercial");
+  assert.equal(workspaceStepForSection("timeline"), "package");
+  assert.equal(workspaceStepForSection("kpi-forecast"), null);
+});
+
+test("grouping renders only primary sections and skips empty steps", () => {
   const incoming = ALL_SECTION_IDS.map((id) => ({ id }));
   const phases = groupSectionsByStoryPhase(incoming);
-
   const rendered = phases.flatMap((p) => p.sections.map((s) => s.id));
-  assert.equal(rendered.length, ALL_SECTION_IDS.length);
-  assert.equal(phases[0]?.sections[0]?.id, "campaign-summary");
-  assert.equal(phases[0]?.label, "The Brief");
 
-  // Partial section lists (streaming) never produce empty phase headers.
+  assert.equal(phases[0]?.id, "intake");
+  assert.equal(phases[0]?.label, "Intake");
+  assert.deepEqual(
+    rendered,
+    STUDIO_WORKSPACE_STEPS.flatMap((step) => [...step.sections])
+  );
+  assert.ok(!rendered.includes("kpi-forecast"));
+  assert.ok(!rendered.includes("executive-summary"));
+
   const partial = groupSectionsByStoryPhase([{ id: "budget-planner" as const }]);
   assert.equal(partial.length, 1);
-  assert.equal(partial[0]?.label, "The Plan");
+  assert.equal(partial[0]?.id, "commercial");
 });
 
-test("unmapped section ids append to the final phase instead of being dropped", () => {
+test("unmapped section ids are omitted from the primary rail", () => {
   const phases = groupSectionsByStoryPhase([
     { id: "campaign-summary" as CampaignStudioSectionId },
     { id: "future-section" as CampaignStudioSectionId },
   ]);
   const rendered = phases.flatMap((p) => p.sections.map((s) => s.id));
-  assert.ok(rendered.includes("future-section" as CampaignStudioSectionId));
-  assert.equal(phases[phases.length - 1]?.sections.at(-1)?.id, "future-section");
+  assert.ok(rendered.includes("campaign-summary"));
+  assert.ok(!rendered.includes("future-section" as CampaignStudioSectionId));
+  assert.equal(isPrimaryWorkspaceSection("campaign-summary"), true);
+  assert.equal(isPrimaryWorkspaceSection("opportunity-finder"), false);
 });

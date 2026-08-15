@@ -82,6 +82,11 @@ export type CampaignIntelligenceProfile = CampaignFacts & {
   extractionIssues?: ExtractionIssue[];
   /** Per-field evidence levels for extraction review. */
   fieldProvenance?: Record<string, FieldProvenance>;
+  /**
+   * Operator confirmation timestamp. Only confirmed CIP may become Campaign Facts SSOT.
+   * Stored on profile JSON — DB row status remains `saved`.
+   */
+  confirmedAt?: string;
   /** Structured brief text + blocks — preferred over flattened parsed_text on re-analysis. */
   structuredBrief?: {
     llmBriefText: string;

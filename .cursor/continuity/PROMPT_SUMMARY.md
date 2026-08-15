@@ -1,15 +1,22 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop`  
-**Focus:** Open Media Plan beside Assignments (companion window)
+**Focus:** Studio Wave 3 — Package readiness / consistency gate (Development only)
 
 ## In progress
 
-- Media Plans from the campaign hero opens a full-size companion window (`?popup=1`) so Assignments stays on the main screen
-- Companion chrome hides the app sidebar; closing the window returns to the campaign
+- Wave 3 Package readiness is implemented. Client Workspace is **not** started.
+- Create Client Review is gated on `READY_FOR_CLIENT` only. No Production deploy.
+
+## Shipped this session (local, uncommitted unless later requested)
+
+- One package-level readiness resolver over existing Facts / CIP / Wave 1 fingerprints / Wave 2 Discovery / quantity / content / Commercial / Timeline / output registry
+- Package screen: dimension checklist, Fix issues navigation, Regenerate affected (existing outputs action), Create Client Review blocked unless ready
+- Wave 3 false-ready tests (A–J), duration 4→6, budget 5M→3M, slate change, missing budget
 
 ## Shipped prior
 
-- Publication / report snapshots: media-proxy retry + data-URI embeds in reports
-- Classify only contracted platforms as agreed (`0123f1bb` / `67ded82e`)
-- Split Publications vs Added value (`49171f90`) · cards default-open (`b46ff891`) · report import fix (`4cf20a6d`)
+- Studio UX/IA: Intake → Strategy → Creators → Content → Commercial → Package
+- Wave 2 Strategy / Discovery / quantity / per-creator content
+- Wave 1 Freshness spine
+- Wave 0 Facts spine

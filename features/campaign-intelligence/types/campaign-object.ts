@@ -71,6 +71,8 @@ export type CampaignObjectMeta = {
   pendingTasks?: string[];
   /** Structured campaign facts SSOT — internal metadata, not rendered in UI. */
   campaignFacts?: import("@/features/campaign-director/facts/campaign-facts-types").CampaignFacts;
+  /** Studio Intake confirm — operator accepted Campaign Facts as SSOT. */
+  factsConfirmedAt?: string;
   directorPipeline?: CampaignDirectorPipelineMeta;
   /** IS-3 debate result — metadata only, rejected options never in sections. */
   directorDebate?: import("@/features/campaign-director/debate/debate-types").DebateMetadata;

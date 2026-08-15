@@ -14,6 +14,7 @@ import {
   deriveEnterprisePlanningNarrative,
   type EnterprisePlanningNarrative,
 } from "../../services/planning-narrative";
+import { deriveInfluencerStrategyView } from "../../services/influencer-strategy-view";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CreatorsSectionData } from "@/features/campaign-intelligence/types/section-schemas";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
@@ -25,8 +26,8 @@ type ExecutiveStrategySectionProps = {
 };
 
 /**
- * Executive Strategy — consulting pillars from the single Planning Narrative.
- * Same story as Executive Brief / Proposal / Presentation (no isolated strategy copy).
+ * Executive Strategy — influencer-marketing checklist projected from the
+ * single Planning Narrative + Campaign Facts (no second executive SSOT).
  */
 export function ExecutiveStrategySection({
   campaignObject,
@@ -74,9 +75,11 @@ export function ExecutiveStrategySection({
         {narrative.recommendedBusinessDecision}
       </p>
       <InsightGrid>
-        {narrative.strategyPillars.map((pillar) => (
-          <ReasonCard key={pillar.key} label={pillar.label} value={pillar.body} />
-        ))}
+        {campaignObject
+          ? deriveInfluencerStrategyView(campaignObject, narrative).map((answer) => (
+              <ReasonCard key={answer.key} label={answer.label} value={answer.body} />
+            ))
+          : null}
       </InsightGrid>
     </div>
   );

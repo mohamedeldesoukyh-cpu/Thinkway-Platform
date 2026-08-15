@@ -1,4 +1,4 @@
-import { parseDurationWeeks } from "@/features/campaign-studio/services/timeline-duration";
+import { parseOptionalDurationWeeks } from "@/features/campaign-studio/services/timeline-duration";
 
 import {
   parseFollowerRange,
@@ -152,7 +152,7 @@ export function extractProfileFieldsFromStructuredBrief(
     }
 
     if (labelMatches(label, [/^campaign\s*duration$/i, /^duration$/i])) {
-      const weeks = parseDurationWeeks(value);
+      const weeks = parseOptionalDurationWeeks(value);
       if (weeks != null) patch.durationWeeks = weeks;
       continue;
     }

@@ -280,6 +280,13 @@ export type CreatorsSectionData = {
   };
   /** Temporary proposal during campaign re-run — discarded or committed atomically. */
   pendingProposal?: PendingCreatorProposal;
+  /** Evidence-based recommended slate size — never a silent default of 10. */
+  quantityRecommendation?: {
+    recommended: number | null;
+    confidence: number;
+    rationale: string;
+    evidence: string[];
+  };
 };
 
 export type ExecutiveStrategyReasoning = {
@@ -524,6 +531,15 @@ export type ContentPlanItem = {
   quantity: number;
   postingDate: string;
   objective: string;
+  creatorId?: string;
+  creatorName?: string;
+  creatorRole?: string;
+  contentConcept?: string;
+  hook?: string;
+  keyMessage?: string;
+  cta?: string;
+  expectedKpi?: string;
+  strategyTrace?: string;
 };
 
 export type CreatorMixTier = {

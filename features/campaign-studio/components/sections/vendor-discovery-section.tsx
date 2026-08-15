@@ -9,6 +9,7 @@ import { STUDIO_REF_CLASSES } from "../../constants/campaign-studio-ref-tokens";
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
 import { useStudioRefMode } from "../../hooks/use-studio-ref-mode";
 import { resolveVendorDiscovery, resolveCreatorCounts } from "../../services/section-data-resolver";
+import { resolveStudioDiscoverySufficiency } from "../../services/studio-discovery-sufficiency";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
 
@@ -30,6 +31,7 @@ export function VendorDiscoverySection({
   const isRunning = status === "running";
   const discovery = resolveVendorDiscovery(campaignObject, isRunning);
   const { discoveryIds, recommendationCount } = resolveCreatorCounts(campaignObject);
+  const sufficiency = resolveStudioDiscoverySufficiency(campaignObject, isRunning);
   const hasCandidates =
     discovery.total > 0 || discoveryIds.length > 0 || recommendationCount > 0;
 
@@ -63,6 +65,28 @@ export function VendorDiscoverySection({
 
   return (
     <div className="min-w-0 space-y-3">
+      <div className="rounded-xl border border-[#0057FF]/20 bg-[#0057FF]/5 px-3 py-2.5">
+        <p className="text-[10px] font-extrabold uppercase tracking-wide text-[#0057FF]">
+          {sufficiency.title}
+        </p>
+        <p className="mt-1 text-[12px] text-foreground">{sufficiency.detail}</p>
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          Inventory {sufficiency.inventoryCount} · Qualified {sufficiency.qualifiedCount}
+          {sufficiency.recommendedQuantity != null
+            ? ` · Recommended quantity ${sufficiency.recommendedQuantity}`
+            : ""}
+          {sufficiency.factsConfirmed ? " · Driven by confirmed Campaign Facts" : ""}
+        </p>
+        {sufficiency.missingIntelligence.length > 0 ? (
+          <p className="mt-1 text-[11px] text-amber-800 dark:text-amber-200">
+            Missing intelligence: {sufficiency.missingIntelligence.slice(0, 4).join("; ")}
+          </p>
+        ) : null}
+        <p className="mt-1 text-[11px] font-semibold text-foreground">
+          Next: {sufficiency.nextAction}
+        </p>
+      </div>
+
       <div className={refMode ? STUDIO_REF_CLASSES.funnelRow : "flex min-w-0 flex-wrap items-center gap-2"}>
         {discovery.pipeline.map((stage, index) => (
           <div key={stage.id} className={refMode ? "contents" : "flex min-w-0 items-center gap-2"}>
@@ -83,22 +107,18 @@ export function VendorDiscoverySection({
         <div className={refMode ? STUDIO_REF_CLASSES.funnelResult : STUDIO_CLASSES.funnelResult}>
           {summaryText}
         </div>
-      ) : status === "pending" ? (
+      ) : sufficiency.state === "acquisition_running" ? (
+        <p className="text-sm text-muted-foreground">Acquisition in progress…</p>
+      ) : (
         <div className="rounded-xl border border-dashed border-[#0B0F1A]/8 bg-[#F5F8FF]/50 px-4 py-5 text-center dark:border-border">
           <SearchIcon className="mx-auto mb-2 size-5 text-[#6B7280]/60" />
-          <p className="text-sm font-bold text-foreground">Discovery pipeline ready</p>
-          <p className="mt-1 text-xs text-[#6B7280]">
-            Run live discovery to populate vendor candidates
-          </p>
-          <Button
-            type="button"
-            size="sm"
-            className="mt-3 bg-[#0C9D57] hover:bg-[#0a8a4c]"
-          >
-            Run Live Discovery
+          <p className="text-sm font-bold text-foreground">{sufficiency.title}</p>
+          <p className="mt-1 text-xs text-[#6B7280]">{sufficiency.nextAction}</p>
+          <Button type="button" size="sm" className="mt-3 bg-[#0C9D57] hover:bg-[#0a8a4c]">
+            {sufficiency.state === "no_inventory" ? "Broaden Discovery" : "Run Discovery"}
           </Button>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }

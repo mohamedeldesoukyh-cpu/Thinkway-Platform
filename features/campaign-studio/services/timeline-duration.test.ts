@@ -13,6 +13,7 @@ import {
   countGoLivePhases,
   MAX_CAMPAIGN_DURATION_WEEKS,
   MIN_CAMPAIGN_DURATION_WEEKS,
+  parseOptionalDurationWeeks,
   resolveCampaignDurationWeeks,
   resolveGoLiveWeek,
 } from "@/features/campaign-studio/services/timeline-duration";
@@ -152,14 +153,54 @@ function testMilestoneTrimming(): void {
   assert.equal(countGoLivePhases(merged), 1);
 }
 
+function testOptionalDurationParsing(): void {
+  assert.equal(parseOptionalDurationWeeks("Duration: 1 month"), 4);
+  assert.equal(parseOptionalDurationWeeks("6 weeks"), 6);
+  assert.equal(parseOptionalDurationWeeks("no duration here"), undefined);
+}
+
+function testFactsWinOverStaleActivation(): void {
+  const object = buildCampaignObject(4);
+  object.meta.campaignFacts = {
+    brandName: "BabyJoy",
+    durationWeeks: 6,
+    extractedAt: new Date().toISOString(),
+    confidence: {},
+    sources: {},
+  };
+  object.sections.timeline.data = {
+    ...(object.sections.timeline.data as object),
+    creatorActivationTimeline: {
+      durationWeeks: 4,
+      activationWeeks: [1, 2, 3, 4].map((week) => ({
+        week,
+        tier: "Macro",
+        objective: `Week ${week}`,
+        reason: "stale",
+        evidence: "stored",
+        tradeoff: "none",
+        confidence: 0.5,
+      })),
+      reportingPhase: { label: "Reporting", reason: "end", evidence: "stored" },
+    },
+  };
+
+  const resolved = resolveTimelineData(object);
+  assert.ok(resolved);
+  assert.equal(resolved!.durationWeeks, 6, "facts duration wins over stored 4-week activation");
+  assert.equal(resolved!.weeks.length, 6, "week count follows facts duration");
+}
+
 function run(): void {
   testDurationClamping();
   testDurationResolution();
+  testOptionalDurationParsing();
   testOneWeekCampaign();
   for (const weeks of TEST_DURATIONS) {
     testTimelineGeneration(weeks);
   }
   testMilestoneTrimming();
+  testFactsWinOverStaleActivation();
   console.log(`timeline-duration.test.ts: PASS (${TEST_DURATIONS.join("/")} weeks validated)`);
 }
 

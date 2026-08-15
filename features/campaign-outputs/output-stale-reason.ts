@@ -36,3 +36,26 @@ export function describeInputsChanged(inputs: CampaignOutputInputKey[]): string 
   const tail = lowerFirst(phrases[phrases.length - 1]!);
   return `${head.join(", ")} and ${tail}.`;
 }
+
+/** Banner clause for a set of stale outputs — shared by Outputs Center and Studio. */
+export function summarizeStaleCause(
+  outputs: Array<{ status: string; staleReason?: string }>
+): string {
+  const stale = outputs.filter((output) => output.status === "needs_update");
+  const reasons = stale
+    .map((output) => output.staleReason?.replace(/\.$/, "").trim())
+    .filter((reason): reason is string => Boolean(reason));
+
+  if (reasons.length === 0) return "after campaign inputs changed";
+
+  const normalized = reasons.map((reason) => reason.toLowerCase());
+  const allBrief = normalized.every((reason) => reason.includes("campaign brief changed"));
+  if (allBrief) return "after the campaign brief changed";
+
+  const first = reasons[0]!;
+  if (reasons.every((reason) => reason === first)) {
+    return `after ${first.charAt(0).toLowerCase()}${first.slice(1)}`;
+  }
+
+  return "after campaign inputs changed";
+}

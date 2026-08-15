@@ -1,14 +1,14 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  CalendarIcon,
   CheckSquareIcon,
   CompassIcon,
   FileTextIcon,
-  LineChartIcon,
+  LayoutGridIcon,
   UsersIcon,
+  WalletIcon,
 } from "lucide-react";
 
-/** Visual config for story-arc phases in the section sidebar rail. */
+/** Visual config for the six-step Studio workspace rail. */
 export const STUDIO_PHASE_NAV: Record<
   string,
   {
@@ -17,7 +17,7 @@ export const STUDIO_PHASE_NAV: Record<
     iconTextClass: string;
   }
 > = {
-  brief: {
+  intake: {
     icon: FileTextIcon,
     iconBgClass: "bg-[#0057FF]/20",
     iconTextClass: "text-[#7FA8FF]",
@@ -32,17 +32,17 @@ export const STUDIO_PHASE_NAV: Record<
     iconBgClass: "bg-[#0057FF]/20",
     iconTextClass: "text-[#7FA8FF]",
   },
-  plan: {
-    icon: CalendarIcon,
+  content: {
+    icon: LayoutGridIcon,
     iconBgClass: "bg-[#D97706]/20",
     iconTextClass: "text-[#FFC98A]",
   },
-  forecast: {
-    icon: LineChartIcon,
+  commercial: {
+    icon: WalletIcon,
     iconBgClass: "bg-[#0C9D57]/20",
     iconTextClass: "text-[#8FE3B5]",
   },
-  signoff: {
+  package: {
     icon: CheckSquareIcon,
     iconBgClass: "bg-[#D6336C]/20",
     iconTextClass: "text-[#FFB3CB]",

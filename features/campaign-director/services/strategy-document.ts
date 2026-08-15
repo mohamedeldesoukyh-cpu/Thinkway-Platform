@@ -4,7 +4,6 @@ import {
 } from "@/features/campaign-studio/services/industry-intelligence";
 
 import type { CampaignFacts } from "../facts/campaign-facts-types";
-import { extractCampaignFacts } from "../facts/extract-campaign-facts";
 import { listPopulatedFactsFields } from "../facts/facts-to-context";
 import { validateCampaignFacts } from "../facts/validate-campaign-facts";
 import type { CampaignBriefInput, CampaignStrategyDocument } from "../types";
@@ -48,13 +47,14 @@ function defaultCreatorTierStrategy(
 
 function resolveFacts(brief: CampaignBriefInput): CampaignFacts {
   if (brief.campaignFacts) return validateCampaignFacts(brief.campaignFacts);
-  return validateCampaignFacts(
-    extractCampaignFacts({
-      rawMessage: brief.rawMessage,
-      brandName: brief.brandName,
-      clientName: brief.clientName,
-    })
-  );
+  return validateCampaignFacts({
+    extractedAt: new Date().toISOString(),
+    confidence: {},
+    sources: {},
+    brandName: brief.brandName,
+    clientName: brief.clientName,
+    rawBriefExcerpt: brief.rawMessage.slice(0, 1500),
+  });
 }
 
 function factsToStrategyKpis(
@@ -98,7 +98,7 @@ export function writeStrategyDocumentFromBrief(
   const objective = facts.objective ?? "Brand awareness and engagement";
   const currency = facts.budget?.currency ?? "USD";
   const budgetTotal = facts.budget?.amount;
-  const durationWeeks = facts.durationWeeks ?? 6;
+  const durationWeeks = facts.durationWeeks;
   const audience = facts.audience ?? "Brand-relevant consumers in primary market";
   const platforms = facts.platforms ?? profile.platforms.slice(0, 3);
   const geography = facts.geography?.join(", ");
@@ -117,7 +117,10 @@ export function writeStrategyDocumentFromBrief(
     ? `${currency} ${budgetTotal.toLocaleString()} — allocated across creator tiers per influencer marketing model`
     : "Budget to be confirmed — allocation follows industry-weighted creator fee model";
 
-  const timelineRationale = `${durationWeeks}-week client-facing execution window aligned to ${objective.toLowerCase()} objective`;
+  const timelineRationale =
+    durationWeeks != null
+      ? `${durationWeeks}-week client-facing execution window aligned to ${objective.toLowerCase()} objective`
+      : "Campaign duration to be confirmed — do not invent a default window";
 
   const platformMix = platforms.map((platform) => ({
     platform,
@@ -161,7 +164,7 @@ export function writeStrategyDocumentFromBrief(
     `**Audience:** ${audience}`,
     geography ? `**Geography:** ${geography}` : null,
     budgetTotal ? `**Budget:** ${currency} ${budgetTotal.toLocaleString()}` : null,
-    `**Duration:** ${durationWeeks} weeks`,
+    durationWeeks != null ? `**Duration:** ${durationWeeks} weeks` : null,
     `**Platforms:** ${platforms.join(", ")}`,
     "",
     "## Strategic Direction",
@@ -198,7 +201,10 @@ export function writeStrategyDocumentFromBrief(
       budget: budgetTotal
         ? { amount: budgetTotal, currency, rationale: budgetRationale }
         : { currency, rationale: budgetRationale },
-      timeline: { durationWeeks, rationale: timelineRationale },
+      timeline:
+        durationWeeks != null
+          ? { durationWeeks, rationale: timelineRationale }
+          : undefined,
       geography,
       audience,
       platforms,

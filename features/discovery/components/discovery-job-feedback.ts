@@ -30,7 +30,7 @@ export function jobOutcomeLabel(outcome: DiscoveryJobOutcome | undefined): strin
     case "crawl_blocked":
       return "Crawl blocked";
     case "empty":
-      return "No creators found";
+      return "Inventory empty for this crawl — broaden filters, enrich existing profiles, or run capped acquisition.";
     default:
       return "Processing";
   }

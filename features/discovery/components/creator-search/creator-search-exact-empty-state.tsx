@@ -31,7 +31,7 @@ export function CreatorSearchExactEmptyState({
 }: Props) {
   return (
     <DiscoveryEmptyState
-      title={`No creators found matching '${query}'.`}
+      title={`No matching inventory for '${query}'.`}
       description="We looked for an exact handle or name match and did not find this creator in Thinkway."
     >
       <AddMissingCreatorEmptyState

@@ -153,3 +153,16 @@ test("STAB-030: labeled Brand without Client defaults clientName to brand", () =
   assert.equal(facts.brandName, "Noon");
   assert.equal(facts.clientName, "Noon");
 });
+
+test("Duration: 1 month extracts as 4 weeks and missing duration is not invented", () => {
+  const month = extractCampaignFacts({
+    rawMessage: "Brand: Arab Bank. Duration: 1 month. Budget: EGP 5,000,000.",
+  });
+  assert.equal(month.durationWeeks, 4);
+
+  const missing = extractCampaignFacts({
+    rawMessage: "Brand: Arab Bank. Budget: EGP 5,000,000. Market: Egypt.",
+  });
+  assert.equal(missing.durationWeeks, undefined);
+  assert.equal(validateCampaignFacts(missing).durationWeeks, undefined);
+});

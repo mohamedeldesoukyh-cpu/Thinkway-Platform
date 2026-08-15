@@ -15,6 +15,7 @@ import { getStrategyFromWorkflowData } from "@/features/campaign-director/servic
 import { composeCreatorSlate } from "./creator-slate";
 import { computeSlateIntelligence } from "./slate-intelligence";
 import { groundedCreatorToSearchCard } from "./plan-section-regeneration";
+import { deriveCreatorQuantityRecommendation } from "./creator-quantity";
 
 export type ProposeCreatorSlateOptions = {
   poolCreators?: GroundedCreator[];
@@ -78,9 +79,10 @@ export function proposeInitialCreatorSlateWithStatus(
   );
 
   const cards = pool.map(groundedCreatorToSearchCard);
-  const tierMix = facts ? buildCreatorMixFromFacts(facts) : [];
-  const targetCount =
-    tierMix.reduce((s, t) => s + (t.count ?? 0), 0) || Math.min(cards.length, 10);
+  const quantity = deriveCreatorQuantityRecommendation(facts, { poolSize: cards.length });
+  const tierMix =
+    quantity.mix.length > 0 ? quantity.mix : facts ? buildCreatorMixFromFacts(facts) : [];
+  const targetCount = quantity.recommended ?? cards.length;
   const { creators: ranked } = composeCreatorSlate(cards, {
     platforms: facts?.platforms,
     tierMix,
@@ -135,6 +137,12 @@ export function proposeInitialCreatorSlateWithStatus(
     ranked,
     poolSource: poolSourceLabel(options.poolCreators, creatorsData),
     isRerun,
+    quantityRecommendation: {
+      recommended: quantity.recommended,
+      confidence: quantity.confidence,
+      rationale: quantity.rationale,
+      evidence: quantity.evidence,
+    },
   });
 
   return { campaignObject: withRecommendations, proposed: true };
@@ -148,6 +156,7 @@ function commitCreatorProposal(
     ranked: ReturnType<typeof composeCreatorSlate>["creators"];
     poolSource: string;
     isRerun: boolean;
+    quantityRecommendation: NonNullable<CreatorsSectionData["quantityRecommendation"]>;
   }
 ): CampaignObject {
   const creatorsData = (campaignObject.sections.creators.data ?? {}) as CreatorsSectionData;
@@ -164,6 +173,7 @@ function commitCreatorProposal(
     vendorGrounding: undefined,
     lastShortlistAt: now,
     slateIntelligence,
+    quantityRecommendation: input.quantityRecommendation,
     slateProposalStatus: {
       status: "proposed",
       message: `Auto-proposed ${input.recommendationData.creatorIds.length} creators from ${input.poolSource}.`,

@@ -1,7 +1,4 @@
-import {
-  clampCampaignDurationWeeks,
-  DEFAULT_CAMPAIGN_DURATION_WEEKS,
-} from "@/features/campaign-studio/services/timeline-duration";
+import { clampCampaignDurationWeeks } from "@/features/campaign-studio/services/timeline-duration";
 import {
   countryLabel,
   isValidBrandName,
@@ -44,10 +41,6 @@ export function validateCampaignFacts(facts: CampaignFacts): CampaignFacts {
 
   if (validated.durationWeeks !== undefined) {
     validated.durationWeeks = clampCampaignDurationWeeks(validated.durationWeeks);
-  } else {
-    validated.durationWeeks = DEFAULT_CAMPAIGN_DURATION_WEEKS;
-    validated.confidence.durationWeeks = validated.confidence.durationWeeks ?? 0.4;
-    validated.sources.durationWeeks = validated.sources.durationWeeks ?? "default";
   }
 
   if (validated.brandName) {
