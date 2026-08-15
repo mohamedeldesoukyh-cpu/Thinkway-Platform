@@ -103,6 +103,12 @@ export function CreatorBrowserDialog({
         page,
         pageSize: 12,
       });
+      if (result.error) {
+        setStatusMessage(result.error);
+        setCreators([]);
+        setTotal(0);
+        return;
+      }
       setCreators(result.creators);
       setTotal(result.total);
       setInternalCount(result.internal_count);

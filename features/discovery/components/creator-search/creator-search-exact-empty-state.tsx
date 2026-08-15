@@ -19,6 +19,7 @@ type Props = {
     status: CreatorEnrichmentStatus
   ) => void;
   onMissingCreatorUpdated?: (creator: UnifiedCreatorResult) => void;
+  onOpenAddMissingCreator?: () => void;
 };
 
 export function CreatorSearchExactEmptyState({
@@ -28,6 +29,7 @@ export function CreatorSearchExactEmptyState({
   onMissingCreatorAdded,
   onMissingCreatorEnrichmentStatusChange,
   onMissingCreatorUpdated,
+  onOpenAddMissingCreator,
 }: Props) {
   return (
     <DiscoveryEmptyState
@@ -36,6 +38,7 @@ export function CreatorSearchExactEmptyState({
     >
       <AddMissingCreatorEmptyState
         visible
+        onOpen={onOpenAddMissingCreator}
         onSuccess={onMissingCreatorAdded}
         onEnrichmentStatusChange={onMissingCreatorEnrichmentStatusChange}
         onCreatorUpdated={onMissingCreatorUpdated}

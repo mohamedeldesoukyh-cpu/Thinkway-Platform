@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { MAX_CREATOR_COMPARE } from "@/lib/creators/creator-compare-bundle";
 import { CREATOR_IMPORT_COMPLETED_EVENT } from "@/lib/discovery-import/constants";
 
+import { AddMissingCreatorDialog } from "@/features/discovery/components/add-missing-creator-dialog";
 import { DiscoveryFilterSheet } from "@/features/discovery/components/design-system";
 import { discoverySelectionFlyoutContentClass } from "@/features/discovery/components/design-system/discovery-selection-flyout";
 import { cn } from "@/lib/utils";
@@ -48,6 +49,7 @@ import type { ShortlistCampaignOption } from "@/features/discovery/queries";
 import { createQuotationFromSelection } from "@/features/quotations/actions";
 import { quotationDetailPath } from "@/features/quotations/constants";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { mapDiscoverySearchError } from "@/lib/creators/discovery-search-error";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
 import { CREATOR_SEARCH_QUERY_PARAM } from "@/lib/creators/category-filter";
 import {
@@ -97,7 +99,7 @@ import {
   scoreCreatorSearchIntent,
   simplifyCreatorSearchQuery,
 } from "./creator-search-intent-engine";
-import type { DiscoverySearchTaxonomy } from "./creator-search-taxonomy";
+import { buildDiscoverySearchTaxonomyIndex } from "./creator-search-taxonomy";
 import {
   createDiscoverySearchAnalyticsTracker,
   type DiscoverySearchAnalyticsTracker,
@@ -129,6 +131,16 @@ const PAGE_SIZE = 50;
 const AI_CAMPAIGN_PAGE_SIZE = 200;
 /** Relaxed pool size for zero-results recommendations (manual filter mode). */
 const ZERO_RESULTS_RECOMMENDATION_PAGE_SIZE = 200;
+
+function requireBrowseResult(
+  result: Awaited<ReturnType<typeof browseUnifiedCreatorsAction>>
+) {
+  if (result.error) {
+    throw new Error(result.error);
+  }
+  return result;
+}
+
 const SAVED_SEARCH_KEY = "thinkway:creator-search-saved:v1";
 /** Temporary pagination diagnostics — remove after Search infinite-scroll validation. */
 const DEBUG_DISCOVERY_SEARCH_PAGINATION =
@@ -146,14 +158,14 @@ function debugDiscoverySearchPagination(
 type Props = {
   shortlists: Array<{ id: string; name: string }>;
   campaigns: ShortlistCampaignOption[];
-  searchTaxonomy: DiscoverySearchTaxonomy;
+  searchTaxonomyTerms: string[];
   initialBriefState?: CampaignIntelligenceWorkspaceState | null;
 };
 
 export function CreatorSearchWorkspace({
   shortlists: initialShortlists,
   campaigns,
-  searchTaxonomy,
+  searchTaxonomyTerms,
   initialBriefState = null,
 }: Props) {
   const router = useRouter();
@@ -174,6 +186,11 @@ export function CreatorSearchWorkspace({
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [addMissingOpen, setAddMissingOpen] = useState(false);
+  const searchTaxonomy = useMemo(
+    () => buildDiscoverySearchTaxonomyIndex(searchTaxonomyTerms),
+    [searchTaxonomyTerms]
+  );
   const [backfillStatus, setBackfillStatus] = useState<string | null>(null);
   const [acquisitionPolling, setAcquisitionPolling] = useState(false);
   const acquisitionPollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -723,21 +740,23 @@ export function CreatorSearchWorkspace({
       setRecommendedCreators([]);
 
       try {
-        const relaxed = await browseUnifiedCreatorsAction(
-          {
-            ...filtersToRelaxedBrowseParams(
-              filtersSnapshot,
-              1,
-              ZERO_RESULTS_RECOMMENDATION_PAGE_SIZE
-            ),
-            searchSessionId: acquisitionSessionRef.current.getSessionId(),
-            skipCoverageBackfill: true,
-          },
-          {
-            caller: "zero_results_recommendations",
-            requestId,
-            acquisitionJobId: acquisitionPollJobRef.current[0] ?? null,
-          }
+        const relaxed = requireBrowseResult(
+          await browseUnifiedCreatorsAction(
+            {
+              ...filtersToRelaxedBrowseParams(
+                filtersSnapshot,
+                1,
+                ZERO_RESULTS_RECOMMENDATION_PAGE_SIZE
+              ),
+              searchSessionId: acquisitionSessionRef.current.getSessionId(),
+              skipCoverageBackfill: true,
+            },
+            {
+              caller: "zero_results_recommendations",
+              requestId,
+              acquisitionJobId: acquisitionPollJobRef.current[0] ?? null,
+            }
+          )
         );
 
         if (
@@ -877,17 +896,27 @@ export function CreatorSearchWorkspace({
           ),
         ]);
         if (controller.signal.aborted || requestId !== reqIdRef.current) return;
-        if (strictSettled.status === "rejected" && relaxedSettled.status === "rejected") {
-          throw relaxedSettled.reason;
-        }
-        const strictCreators =
-          strictSettled.status === "fulfilled" ? strictSettled.value.creators : [];
-        const baseResult =
-          relaxedSettled.status === "fulfilled"
+        const strictResult =
+          strictSettled.status === "fulfilled" && !strictSettled.value.error
+            ? strictSettled.value
+            : null;
+        const relaxedResult =
+          relaxedSettled.status === "fulfilled" && !relaxedSettled.value.error
             ? relaxedSettled.value
-            : (strictSettled as PromiseFulfilledResult<
-                Awaited<ReturnType<typeof browseUnifiedCreatorsAction>>
-              >).value;
+            : null;
+        if (!strictResult && !relaxedResult) {
+          throw new Error(
+            relaxedSettled.status === "fulfilled"
+              ? relaxedSettled.value.error ?? "Creator search failed"
+              : mapDiscoverySearchError(
+                  relaxedSettled.status === "rejected"
+                    ? relaxedSettled.reason
+                    : "Creator search failed"
+                )
+          );
+        }
+        const strictCreators = strictResult?.creators ?? [];
+        const baseResult = relaxedResult ?? strictResult!;
         pool = mergeAiCandidatePools(strictCreators, baseResult.creators);
         result = {
           ...baseResult,
@@ -897,17 +926,19 @@ export function CreatorSearchWorkspace({
         };
       } else {
         setApifySourceUnifiedIds(new Set());
-        result = await browseUnifiedCreatorsAction(
-          {
-            ...filtersToBrowseParams(mergedFilters, pageNum, PAGE_SIZE),
-            searchSessionId: acquisitionSessionRef.current.getSessionId(),
-            ...(options?.skipCoverageBackfill ? { skipCoverageBackfill: true } : {}),
-          },
-          {
-            caller,
-            requestId,
-            acquisitionJobId: acquisitionPollJobRef.current[0] ?? null,
-          }
+        result = requireBrowseResult(
+          await browseUnifiedCreatorsAction(
+            {
+              ...filtersToBrowseParams(mergedFilters, pageNum, PAGE_SIZE),
+              searchSessionId: acquisitionSessionRef.current.getSessionId(),
+              ...(options?.skipCoverageBackfill ? { skipCoverageBackfill: true } : {}),
+            },
+            {
+              caller,
+              requestId,
+              acquisitionJobId: acquisitionPollJobRef.current[0] ?? null,
+            }
+          )
         );
         if (controller.signal.aborted || requestId !== reqIdRef.current) return;
         pool = result.creators;
@@ -1044,7 +1075,7 @@ export function CreatorSearchWorkspace({
       }
     } catch (err) {
       if (controller.signal.aborted || requestId !== reqIdRef.current) return;
-      const message = err instanceof Error ? err.message : "Search failed";
+      const message = mapDiscoverySearchError(err);
       startTransition(() => {
         if (!append) setError(message);
       });
@@ -2059,9 +2090,8 @@ export function CreatorSearchWorkspace({
           inFlightCount={inFlightCreators.length}
           onRetry={() => runSearch()}
           onLoadMore={handleLoadMore}
-          showAddMissingCreator={
-            debouncedSearch.trim().length > 0 && !exactCreatorZeroMatch
-          }
+          showAddMissingCreator
+          onOpenAddMissingCreator={() => setAddMissingOpen(true)}
           exactCreatorEmptyState={exactCreatorZeroMatch}
           searchQuery={debouncedSearch}
           canSimplifyExactQuery={canSimplifyExactQuery}
@@ -2084,6 +2114,7 @@ export function CreatorSearchWorkspace({
             onFiltersChange: setFilters,
             onOpenFilters: () => setFiltersDrawerOpen(true),
             showCampaignRelevance,
+            onAddMissingCreator: () => setAddMissingOpen(true),
           }}
         />
       </div>
@@ -2106,6 +2137,14 @@ export function CreatorSearchWorkspace({
         open={detailOpen}
         onOpenChange={onDetailOpenChange}
         onCreatorUpdated={patchCreatorInList}
+      />
+
+      <AddMissingCreatorDialog
+        open={addMissingOpen}
+        onOpenChange={setAddMissingOpen}
+        onSuccess={handleMissingCreatorAdded}
+        onEnrichmentStatusChange={patchCreatorEnrichmentStatus}
+        onCreatorUpdated={handleMissingCreatorUpdated}
       />
 
       {createListOpen ? (

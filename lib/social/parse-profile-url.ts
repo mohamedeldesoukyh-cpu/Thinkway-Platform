@@ -225,13 +225,59 @@ export function parseProfileInput(
   input: string,
   platformHint?: SocialPlatform
 ): ParsedProfile | null {
-  const trimmed = input.trim();
+  const trimmed = stripTrailingPastePunctuation(input.trim());
   if (!trimmed) return null;
 
   const fromUrl = parseFromUrl(trimmed);
   if (fromUrl) return fromUrl;
 
   return parseFromHandle(trimmed, platformHint);
+}
+
+/** Split pasted creator links / handles (newlines, commas, semicolons, whitespace). */
+export function splitProfileInputTokens(raw: string): string[] {
+  return raw
+    .split(/[\s,;]+/)
+    .map((token) => stripTrailingPastePunctuation(token.trim()))
+    .filter((token) => token.length > 0);
+}
+
+export type ParsedProfileListItem = ParsedProfile & { raw: string };
+
+export type ParsedProfileInputList = {
+  parsed: ParsedProfileListItem[];
+  invalid: string[];
+};
+
+/**
+ * Parse many pasted profile URLs or @handles. Duplicate platform+username
+ * pairs in the same paste are collapsed (first wins).
+ */
+export function parseProfileInputList(
+  raw: string,
+  platformHint?: SocialPlatform
+): ParsedProfileInputList {
+  const parsed: ParsedProfileListItem[] = [];
+  const invalid: string[] = [];
+  const seen = new Set<string>();
+
+  for (const token of splitProfileInputTokens(raw)) {
+    const result = parseProfileInput(token, platformHint);
+    if (!result) {
+      invalid.push(token);
+      continue;
+    }
+    const key = `${result.platform}:${result.normalized_username}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    parsed.push({ ...result, raw: token });
+  }
+
+  return { parsed, invalid };
+}
+
+function stripTrailingPastePunctuation(value: string): string {
+  return value.replace(/[)\].,]+$/g, "");
 }
 
 export function resolvePlatformAccountFields(input: {

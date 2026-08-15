@@ -235,6 +235,10 @@ export function AddCreatorPanel({
         { search: q, page: 1, pageSize: 6 },
         { caller: "studio_add_creator" }
       );
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
       setResults(result.creators);
       if (result.creators.length === 0) {
         toast.info("No Discovery creators matched — try a broader search.");
@@ -254,6 +258,10 @@ export function AddCreatorPanel({
       const result = await addCreatorByProfileUrlAction(url);
       if (!result.ok) {
         toast.error(result.message);
+        return;
+      }
+      if (!result.creator) {
+        toast.info(result.message);
         return;
       }
       // Status must mirror the backend: only a confirmed queue insert may show

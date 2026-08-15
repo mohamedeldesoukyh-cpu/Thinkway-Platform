@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { persistCreatorPrimaryIdentity } from "@/lib/creators/persist-primary-avatar";
+import { MAX_ADD_MISSING_CREATORS } from "@/lib/discovery/add-creator-constants";
 import {
   extractEmailFromText,
   mergeContactLinks,
@@ -19,19 +20,29 @@ import { findDuplicatePlatformAccounts } from "@/lib/social/duplicate-check";
 import { enrichCreatorProfile } from "@/lib/social/enrichment/providers/open-graph";
 import { resolveMetricsSourceForEnrichment } from "@/lib/social/enrichment/metrics-status";
 import { buildNormalizedPlatformAccount } from "@/lib/social/normalize-account";
-import { parseProfileInput } from "@/lib/social/parse-profile-url";
+import { parseProfileInput, parseProfileInputList } from "@/lib/social/parse-profile-url";
 import { isSocialPlatform } from "@/lib/social/platforms";
 import type { Database } from "@/types/database";
 
 export type AddCreatorByProfileUrlResult =
   | {
       ok: true;
-      creator: UnifiedCreatorResult;
+      creator: UnifiedCreatorResult | null;
       created: boolean;
+      skippedExisting: boolean;
       enrichmentQueued: boolean;
       message: string;
     }
   | { ok: false; message: string };
+
+export type AddCreatorByProfileUrlInput = {
+  profileUrl: string;
+  actorId: string;
+  /** When true, existing Discovery creators are left unchanged (no re-enrich). */
+  skipIfExists?: boolean;
+  /** When true, skip Open Graph preview so batch adds stay off the timeout path. */
+  skipPreviewEnrichment?: boolean;
+};
 
 /**
  * Parse a social profile URL, upsert a minimal influencer + platform account when
@@ -39,7 +50,7 @@ export type AddCreatorByProfileUrlResult =
  */
 export async function addCreatorByProfileUrl(
   supabase: SupabaseClient<Database>,
-  input: { profileUrl: string; actorId: string }
+  input: AddCreatorByProfileUrlInput
 ): Promise<AddCreatorByProfileUrlResult> {
   const trimmed = input.profileUrl.trim();
   const parsed = parseProfileInput(trimmed);
@@ -66,16 +77,28 @@ export async function addCreatorByProfileUrl(
 
   if (duplicates.length > 0) {
     influencerId = duplicates[0]!.influencer_id;
+    if (input.skipIfExists) {
+      return {
+        ok: true,
+        creator: null,
+        created: false,
+        skippedExisting: true,
+        enrichmentQueued: false,
+        message: `Already in Discovery — skipped @${parsed.normalized_username}.`,
+      };
+    }
   } else {
     let enrichment = null;
-    try {
-      enrichment = await enrichCreatorProfile({
-        platform: parsed.platform,
-        username: parsed.username,
-        profile_url: parsed.profile_url,
-      });
-    } catch {
-      // Open-graph enrichment must not block creator creation.
+    if (!input.skipPreviewEnrichment) {
+      try {
+        enrichment = await enrichCreatorProfile({
+          platform: parsed.platform,
+          username: parsed.username,
+          profile_url: parsed.profile_url,
+        });
+      } catch {
+        // Open-graph enrichment must not block creator creation.
+      }
     }
 
     const displayName =
@@ -239,7 +262,59 @@ export async function addCreatorByProfileUrl(
     ok: true,
     creator,
     created,
+    skippedExisting: false,
     enrichmentQueued: refresh.queued,
     message,
   };
+}
+
+export type AddCreatorsByProfileUrlsResult = {
+  ok: true;
+  added: UnifiedCreatorResult[];
+  skipped: Array<{ username: string; platform: string }>;
+  failed: Array<{ raw: string; message: string }>;
+  invalid: string[];
+};
+
+export async function addCreatorsByProfileUrls(
+  supabase: SupabaseClient<Database>,
+  input: { raw: string; actorId: string }
+): Promise<AddCreatorsByProfileUrlsResult> {
+  const { parsed, invalid } = parseProfileInputList(input.raw);
+  const limited = parsed.slice(0, MAX_ADD_MISSING_CREATORS);
+  const overflow = parsed.slice(MAX_ADD_MISSING_CREATORS);
+  const batch = limited.length > 1;
+  const added: UnifiedCreatorResult[] = [];
+  const skipped: AddCreatorsByProfileUrlsResult["skipped"] = [];
+  const failed: AddCreatorsByProfileUrlsResult["failed"] = [
+    ...overflow.map((item) => ({
+      raw: item.raw,
+      message: `Limit is ${MAX_ADD_MISSING_CREATORS} creators per batch.`,
+    })),
+  ];
+
+  for (const item of limited) {
+    const result = await addCreatorByProfileUrl(supabase, {
+      profileUrl: item.profile_url,
+      actorId: input.actorId,
+      skipIfExists: true,
+      skipPreviewEnrichment: batch,
+    });
+    if (!result.ok) {
+      failed.push({ raw: item.raw, message: result.message });
+      continue;
+    }
+    if (result.skippedExisting) {
+      skipped.push({
+        username: item.normalized_username,
+        platform: item.platform,
+      });
+      continue;
+    }
+    if (result.creator) {
+      added.push(result.creator);
+    }
+  }
+
+  return { ok: true, added, skipped, failed, invalid };
 }
