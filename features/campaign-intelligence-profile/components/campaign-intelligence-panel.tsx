@@ -36,6 +36,7 @@ export type CampaignIntelligencePanelProps = {
   variant?: "page" | "sidebar" | "inline";
   /** Intake supplies CONFIRM CAMPAIGN — hide the panel footer. */
   actions?: "default" | "none";
+  conversationId?: string;
 };
 
 type UploadPhase = "idle" | "uploading" | "analyzing" | "ready" | "error";
@@ -68,6 +69,7 @@ export function CampaignIntelligencePanel({
   compact,
   variant,
   actions = "default",
+  conversationId,
 }: CampaignIntelligencePanelProps) {
   const layout = variant ?? (compact ? "sidebar" : "page");
   const isInline = layout === "inline";
@@ -115,6 +117,7 @@ export function CampaignIntelligencePanel({
       try {
         const formData = new FormData();
         formData.append("file", file);
+        if (conversationId) formData.append("conversationId", conversationId);
         setUploadPhase("analyzing");
 
         const result = await uploadCampaignBriefAction(formData);
@@ -143,7 +146,7 @@ export function CampaignIntelligencePanel({
         toast.error(message);
       }
     },
-    [applyLoaded]
+    [applyLoaded, conversationId]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

@@ -15,11 +15,12 @@ import {
   getCampaignIntelligenceProfileForConversation,
   updateCampaignIntelligenceProfile,
 } from "@/features/campaign-intelligence-profile/services/profile-repository";
-import { normalizeCampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/services/normalize-profile";
+import { profileToCampaignFacts } from "@/features/campaign-intelligence-profile/services/profile-to-facts";
 import { syncLatestStudioMessageCampaignObject } from "@/features/ai-workspace/services/conversation-campaign-hydration";
 import { getConversationWithMessages } from "@/features/ai-workspace/services/conversation-service";
 
 import {
+  applyIntakeEditToProfile,
   applyIntakeFactsEdit,
   confirmStudioIntakeOnCampaignObject,
   requiredIntakeFacts,
@@ -31,6 +32,7 @@ import { requireStudioUser } from "./persist-campaign-object-on-message";
 export type ConfirmStudioIntakeInput = {
   conversationId: string;
   profileId?: string;
+  edit?: IntakeFactsEdit;
 };
 
 export type ConfirmStudioIntakeResult =
@@ -71,9 +73,18 @@ export async function confirmStudioIntakeAction(
     if (profileId) {
       const row = await getCampaignIntelligenceProfileById(supabase, profileId);
       if (row) {
-        const confirmed = confirmCampaignIntelligenceProfile(
-          normalizeCampaignIntelligenceProfile(row.profile)
-        );
+        let profile = normalizeCampaignIntelligenceProfile(row.profile);
+        if (input.edit) {
+          profile = applyIntakeEditToProfile(profile, input.edit);
+        }
+        const extracted = profileToCampaignFacts(profile);
+        const intakePreview = requiredIntakeFacts(extracted);
+        if (!intakePreview.canConfirm) {
+          const missing =
+            intakePreview.missing.map((row) => row.label).join(", ") || "required campaign facts";
+          return { ok: false, message: `Confirm is blocked until these facts are present: ${missing}.` };
+        }
+        const confirmed = confirmCampaignIntelligenceProfile(profile);
         const projected = projectConfirmedCampaignFacts(confirmed);
         if (!projected) {
           return { ok: false, message: "Campaign intelligence could not be confirmed." };
@@ -86,6 +97,9 @@ export async function confirmStudioIntakeAction(
         });
         facts = projected;
       }
+    } else if (input.edit && facts) {
+      const patched = applyIntakeFactsEdit(canonical, input.edit);
+      facts = getCampaignFacts(patched) ?? facts;
     }
 
     const intake = requiredIntakeFacts(facts);

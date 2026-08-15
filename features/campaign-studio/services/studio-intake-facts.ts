@@ -119,6 +119,135 @@ export function confirmStudioIntakeOnCampaignObject(
   };
 }
 
+function presentValue<T>(value: T | undefined | null): T | undefined {
+  if (value == null) return undefined;
+  if (typeof value === "string") return value.trim() ? value : undefined;
+  if (Array.isArray(value)) return value.length > 0 ? value : undefined;
+  return value;
+}
+
+/**
+ * Show extracted CIP beside Campaign Facts without inventing values.
+ * Confirmed object facts win when present; CIP fills empty slots.
+ */
+export function mergeIntakeDisplayFacts(
+  objectFacts?: CampaignFacts,
+  cipFacts?: CampaignFacts
+): CampaignFacts | undefined {
+  if (!objectFacts && !cipFacts) return undefined;
+  if (!objectFacts) return cipFacts;
+  if (!cipFacts) return objectFacts;
+
+  const pick = <T>(fromObject: T | undefined, fromCip: T | undefined): T | undefined =>
+    presentValue(fromObject) ?? presentValue(fromCip);
+
+  return {
+    ...cipFacts,
+    ...objectFacts,
+    clientName: pick(objectFacts.clientName, cipFacts.clientName),
+    brandName: pick(objectFacts.brandName, cipFacts.brandName),
+    product: pick(objectFacts.product, cipFacts.product),
+    industry: pick(objectFacts.industry, cipFacts.industry),
+    campaignType: pick(objectFacts.campaignType, cipFacts.campaignType),
+    objective: pick(objectFacts.objective, cipFacts.objective),
+    audience: pick(objectFacts.audience, cipFacts.audience),
+    geography: pick(objectFacts.geography, cipFacts.geography),
+    platforms: pick(objectFacts.platforms, cipFacts.platforms),
+    deliverables: pick(objectFacts.deliverables, cipFacts.deliverables),
+    kpis: pick(objectFacts.kpis, cipFacts.kpis),
+    budget: objectFacts.budget?.amount ? objectFacts.budget : cipFacts.budget,
+    durationWeeks: objectFacts.durationWeeks ?? cipFacts.durationWeeks,
+    rawBriefExcerpt: pick(objectFacts.rawBriefExcerpt, cipFacts.rawBriefExcerpt),
+    extractedAt: objectFacts.extractedAt ?? cipFacts.extractedAt,
+    confidence: { ...cipFacts.confidence, ...objectFacts.confidence },
+    sources: { ...cipFacts.sources, ...objectFacts.sources },
+  };
+}
+
+export function campaignFactsFromIntakeEdit(
+  edit: IntakeFactsEdit,
+  base?: CampaignFacts
+): CampaignFacts {
+  const amount = edit.budgetAmount;
+  const currency = edit.budgetCurrency?.trim();
+  return {
+    extractedAt: base?.extractedAt ?? new Date().toISOString(),
+    confidence: { ...(base?.confidence ?? {}) },
+    sources: { ...(base?.sources ?? {}) },
+    clientName: edit.clientName?.trim() || base?.clientName,
+    brandName: edit.brandName?.trim() || base?.brandName,
+    product: edit.product?.trim() || base?.product,
+    industry: edit.industry?.trim() || base?.industry,
+    objective: edit.objective?.trim() || base?.objective,
+    audience: edit.audience?.trim() || base?.audience,
+    geography: edit.geography?.filter((value) => value.trim()) ?? base?.geography,
+    platforms: edit.platforms?.filter((value) => value.trim()) ?? base?.platforms,
+    deliverables: edit.deliverables?.filter((value) => value.trim()) ?? base?.deliverables,
+    durationWeeks:
+      edit.durationWeeks != null && Number.isFinite(edit.durationWeeks) && edit.durationWeeks > 0
+        ? Math.round(edit.durationWeeks)
+        : base?.durationWeeks,
+    budget:
+      amount != null && Number.isFinite(amount) && amount > 0 && currency
+        ? { amount: Math.round(amount), currency }
+        : base?.budget,
+    rawBriefExcerpt: base?.rawBriefExcerpt,
+  };
+}
+
+export function applyIntakeEditToProfile(
+  profile: import("@/features/campaign-intelligence-profile/types/profile").CampaignIntelligenceProfile,
+  edit: IntakeFactsEdit
+): import("@/features/campaign-intelligence-profile/types/profile").CampaignIntelligenceProfile {
+  const clientName = edit.clientName?.trim() || profile.clientName;
+  const brandName = edit.brandName?.trim() || profile.brandName;
+  const campaignName = edit.product?.trim() || profile.campaignName;
+  const objective = edit.objective?.trim() || profile.objective;
+  const audience = edit.audience?.trim() || profile.audience;
+  const industry = edit.industry?.trim() || profile.industry;
+  const geography =
+    edit.geography && edit.geography.some((value) => value.trim())
+      ? edit.geography.map((value) => value.trim()).filter(Boolean)
+      : profile.geography;
+  const platforms =
+    edit.platforms && edit.platforms.some((value) => value.trim())
+      ? edit.platforms.map((value) => value.trim()).filter(Boolean)
+      : profile.platforms;
+  const deliverables =
+    edit.deliverables && edit.deliverables.some((value) => value.trim())
+      ? edit.deliverables.map((value) => value.trim()).filter(Boolean)
+      : profile.deliverables;
+  const durationWeeks =
+    edit.durationWeeks != null && Number.isFinite(edit.durationWeeks) && edit.durationWeeks > 0
+      ? Math.round(edit.durationWeeks)
+      : profile.durationWeeks;
+  const budget =
+    edit.budgetAmount != null && Number.isFinite(edit.budgetAmount) && edit.budgetAmount > 0
+      ? {
+          amount: Math.round(edit.budgetAmount),
+          currency: (edit.budgetCurrency ?? profile.budget?.currency ?? "EGP").trim(),
+        }
+      : profile.budget;
+
+  return {
+    ...profile,
+    clientName,
+    brandName,
+    campaignName,
+    products: campaignName ? [campaignName] : profile.products,
+    industry,
+    objective,
+    objectives: objective ? [objective] : profile.objectives,
+    audience,
+    geography,
+    market: geography?.[0] ?? profile.market,
+    platforms,
+    deliverables,
+    durationWeeks,
+    budget,
+  };
+}
+
 export type IntakeFactsEdit = {
   clientName?: string;
   brandName?: string;

@@ -100,16 +100,16 @@ export function resolveStudioWorkspaceSteps(input: {
       if (sectionStatus === "running") {
         return { ...step, status: "in_progress", complete: false };
       }
-      if (intake.missing.length > 0) {
-        return { ...step, status: "blocked", complete: false };
-      }
-      if (intakeConfirmed) {
+      if (intakeConfirmed && intake.missing.length === 0) {
         return { ...step, status: "current", complete: true };
+      }
+      if (input.campaignObject) {
+        return { ...step, status: "in_progress", complete: false };
       }
       return { ...step, status: "blocked", complete: false };
     }
 
-    if (intakeBlocked && sectionStatus !== "running") {
+    if (intakeBlocked) {
       return { ...step, status: "blocked", complete: false };
     }
 
