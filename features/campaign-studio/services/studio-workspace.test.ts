@@ -18,7 +18,9 @@ import { applyBudgetChange, applyTimelineChange } from "./copilot/campaign-facts
 import { outdatedStudioSections, studioFreshnessSummary } from "./studio-facts-freshness";
 import {
   applyIntakeFactsEdit,
+  campaignFactsFromIntakeEdit,
   confirmStudioIntakeOnCampaignObject,
+  mergeIntakeDisplayFacts,
   requiredIntakeFacts,
 } from "./studio-intake-facts";
 import { resolveStudioPackageReadiness } from "./studio-package-readiness";
@@ -136,6 +138,31 @@ test("Intake missing required facts stay Missing and cannot confirm", () => {
   assert.ok(missingKeys.includes("objective"));
   assert.equal(intake.rows.find((row) => row.key === "budget")?.state, "missing");
   assert.equal(intake.rows.find((row) => row.key === "country")?.state, "confirmed");
+});
+
+test("left rail keeps later steps Blocked until Intake is confirmed, even if Discovery is running", () => {
+  const object = buildCampaignObjectFixture({
+    facts: {
+      clientName: "Arab Bank",
+      brandName: "Arab Bank",
+    },
+  });
+  const runningDiscovery = COMPLETE_SECTIONS.map((section) => ({
+    ...section,
+    status: section.id === "creator-discovery" ? ("running" as const) : ("pending" as const),
+  }));
+  const steps = resolveStudioWorkspaceSteps({
+    campaignObject: object,
+    sections: runningDiscovery,
+    outdatedSections: new Set(),
+  });
+  assert.equal(steps.find((step) => step.id === "intake")?.status, "in_progress");
+  assert.equal(steps.find((step) => step.id === "strategy")?.status, "blocked");
+  assert.equal(steps.find((step) => step.id === "creators")?.status, "blocked");
+  assert.equal(steps.find((step) => step.id === "content")?.status, "blocked");
+  assert.equal(steps.find((step) => step.id === "commercial")?.status, "blocked");
+  assert.equal(steps.find((step) => step.id === "package")?.status, "blocked");
+  assert.equal(defaultStudioWorkspaceStep(steps), "intake");
 });
 
 test("workspace steps map engines to Intake → Package without KPI cards", () => {
@@ -263,4 +290,45 @@ test("Intake fact edits write Campaign Facts SSOT and do not invent duration", (
   assert.equal(getCampaignFacts(next)?.durationWeeks, 6);
   assert.equal(getCampaignFacts(next)?.budget?.amount, 3_000_000);
   assert.equal(getCampaignFacts(object)?.durationWeeks, 4);
+});
+
+test("CIP brand/platforms appear in What Thinkway understood before Confirm", () => {
+  const cipFacts = {
+    extractedAt: new Date().toISOString(),
+    confidence: {},
+    sources: {},
+    brandName: "Arab Bank",
+    clientName: "Arab Bank",
+    platforms: ["instagram", "tiktok"],
+  };
+  const merged = mergeIntakeDisplayFacts(undefined, cipFacts);
+  const intake = requiredIntakeFacts(merged);
+  assert.equal(intake.rows.find((row) => row.key === "brand")?.state, "confirmed");
+  assert.equal(intake.rows.find((row) => row.key === "platforms")?.state, "confirmed");
+  assert.equal(intake.rows.find((row) => row.key === "budget")?.state, "missing");
+  assert.equal(intake.canConfirm, false);
+});
+
+test("typing missing required facts in Intake enables Confirm without inventing budget", () => {
+  const cipFacts = {
+    extractedAt: new Date().toISOString(),
+    confidence: {},
+    sources: {},
+    brandName: "Arab Bank",
+    clientName: "Arab Bank",
+    objective: "Open Arab Bank accounts from Dubai",
+    geography: ["United Arab Emirates", "Egypt"],
+  };
+  const live = campaignFactsFromIntakeEdit(
+    {
+      product: "Cross-border account opening",
+      budgetAmount: 5_000_000,
+      budgetCurrency: "EGP",
+      durationWeeks: 8,
+    },
+    cipFacts
+  );
+  const intake = requiredIntakeFacts(mergeIntakeDisplayFacts(cipFacts, live));
+  assert.equal(intake.canConfirm, true);
+  assert.equal(intake.rows.find((row) => row.key === "budget")?.value, "EGP 5,000,000");
 });

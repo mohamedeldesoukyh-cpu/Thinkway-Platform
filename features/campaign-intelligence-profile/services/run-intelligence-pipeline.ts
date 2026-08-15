@@ -1,5 +1,8 @@
 import { mapCampaignIntelligenceToDiscoverySearch } from "./discovery-search-mapping/map-campaign-intelligence";
-import { extractCampaignIntelligenceProfileWithDebug } from "./extract-profile-llm";
+import {
+  extractCampaignIntelligenceProfileWithDebug,
+  fillBriefSourcedHeuristicGaps,
+} from "./extract-profile-llm";
 import {
   buildEvidenceReviewRows,
   normalizeFromProfile,
@@ -50,7 +53,8 @@ export async function runCampaignIntelligencePipeline(
   const { profile: extracted, debug: llmDebug } =
     await extractCampaignIntelligenceProfileWithDebug(briefText);
 
-  const enriched = applyStructuredBriefFields(extracted, input.structuredParserOutput);
+  const withBriefGaps = fillBriefSourcedHeuristicGaps(extracted, briefText);
+  const enriched = applyStructuredBriefFields(withBriefGaps, input.structuredParserOutput);
 
   const { profile: normalizedProfile, validatedIntelligence, normalizedEntities, extractionIssues } =
     normalizeFromProfile(enriched);

@@ -169,6 +169,74 @@ export function coerceLlmExtractionJson(
   return o;
 }
 
+function hasProfileValue(value: unknown): boolean {
+  if (value == null) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "object") return Object.keys(value as object).length > 0;
+  return true;
+}
+
+/**
+ * Copy heuristic fields that were taken from the brief itself onto an LLM
+ * profile that left them empty. Never copies inferred/default values
+ * (invented platforms, synthesized audience, default objective).
+ */
+export function fillBriefSourcedHeuristicGaps(
+  profile: CampaignIntelligenceProfile,
+  briefText: string
+): CampaignIntelligenceProfile {
+  const heuristic = heuristicExtract(briefText);
+  const next: CampaignIntelligenceProfile = { ...profile };
+
+  const take = (
+    key: keyof CampaignIntelligenceProfile,
+    sourceKey: keyof NonNullable<CampaignIntelligenceProfile["sources"]>
+  ) => {
+    if (hasProfileValue(next[key])) return;
+    if (heuristic.sources?.[sourceKey] !== "brief") return;
+    if (!hasProfileValue(heuristic[key])) return;
+    (next as Record<string, unknown>)[key as string] = heuristic[key];
+    setProfileFieldMeta(
+      next,
+      sourceKey,
+      "brief",
+      heuristic.confidence?.[sourceKey] ?? 0.85
+    );
+  };
+
+  take("brandName", "brandName");
+  take("clientName", "clientName");
+  take("objective", "objective");
+  take("audience", "audience");
+  take("geography", "geography");
+  take("budget", "budget");
+  take("durationWeeks", "durationWeeks");
+  take("platforms", "platforms");
+  take("deliverables", "deliverables");
+
+  if (!next.market?.trim() && next.geography?.[0] && heuristic.sources?.geography === "brief") {
+    next.market = next.geography[0];
+  }
+  if ((!next.objectives || next.objectives.length === 0) && next.objective?.trim()) {
+    next.objectives = [next.objective];
+  }
+
+  if (next.platforms?.length) {
+    const mentioned = next.platforms.filter((platform) =>
+      new RegExp(`\\b${platform.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(briefText)
+    );
+    if (mentioned.length === 0) {
+      delete next.platforms;
+      if (next.sources) delete next.sources.platforms;
+    } else {
+      next.platforms = mentioned;
+    }
+  }
+
+  return next;
+}
+
 function heuristicExtract(briefText: string): CampaignIntelligenceProfile {
   const facts = validateCampaignFacts(extractCampaignFacts({ rawMessage: briefText }));
   const profile = createEmptyCampaignIntelligenceProfile();

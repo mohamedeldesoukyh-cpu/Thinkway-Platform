@@ -14,15 +14,19 @@ import {
   getConversationCampaignIntelligenceAction,
   type CampaignIntelligenceWorkspaceState,
 } from "@/features/campaign-intelligence-profile/actions/profile-actions";
-import { isCampaignIntelligenceConfirmed } from "@/features/campaign-intelligence-profile/services/campaign-facts-spine";
+import {
+  isCampaignIntelligenceConfirmed,
+} from "@/features/campaign-intelligence-profile/services/campaign-facts-spine";
+import { profileToCampaignFacts } from "@/features/campaign-intelligence-profile/services/profile-to-facts";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CreatorsSectionData } from "@/features/campaign-intelligence/types/section-schemas";
 
 import {
   confirmStudioIntakeAction,
-  patchStudioIntakeFactsAction,
 } from "../../actions/confirm-studio-intake-action";
 import {
+  campaignFactsFromIntakeEdit,
+  mergeIntakeDisplayFacts,
   requiredIntakeFacts,
   type IntakeFactsEdit,
 } from "../../services/studio-intake-facts";
@@ -50,41 +54,70 @@ export function IntakeScreen({
   onCampaignObjectUpdated,
 }: IntakeScreenProps) {
   const facts = getCampaignFacts(campaignObject);
-  const intake = useMemo(() => requiredIntakeFacts(facts), [facts]);
   const confirmed = isStudioIntakeConfirmed(campaignObject);
   const [pending, startTransition] = useTransition();
   const [cipState, setCipState] = useState<CampaignIntelligenceWorkspaceState | null>(null);
   const [draft, setDraft] = useState({
-    client: facts?.clientName ?? "",
-    campaign: facts?.product ?? "",
-    brand: facts?.brandName ?? "",
-    country: (facts?.geography ?? []).join(", "),
-    budget: facts?.budget?.amount?.toString() ?? "",
-    currency: facts?.budget?.currency ?? "EGP",
-    durationWeeks: facts?.durationWeeks?.toString() ?? "",
-    objective: facts?.objective ?? "",
-    audience: facts?.audience ?? "",
-    category: facts?.industry ?? "",
-    platforms: (facts?.platforms ?? []).join(", "),
-    deliverables: (facts?.deliverables ?? []).join(", "),
+    client: "",
+    campaign: "",
+    brand: "",
+    country: "",
+    budget: "",
+    currency: "EGP",
+    durationWeeks: "",
+    objective: "",
+    audience: "",
+    category: "",
+    platforms: "",
+    deliverables: "",
   });
+  const displayFacts = useMemo(
+    () =>
+      mergeIntakeDisplayFacts(
+        facts,
+        cipState?.profile ? profileToCampaignFacts(cipState.profile) : undefined
+      ),
+    [facts, cipState]
+  );
+  const intake = useMemo(() => {
+    const amount = Number(draft.budget.replace(/,/g, ""));
+    const weeks = Number(draft.durationWeeks);
+    const fromDraft = campaignFactsFromIntakeEdit(
+      {
+        clientName: draft.client,
+        brandName: draft.brand,
+        product: draft.campaign,
+        industry: draft.category,
+        objective: draft.objective,
+        audience: draft.audience,
+        geography: splitList(draft.country),
+        platforms: splitList(draft.platforms),
+        deliverables: splitList(draft.deliverables),
+        budgetAmount: Number.isFinite(amount) && amount > 0 ? amount : undefined,
+        budgetCurrency: draft.currency,
+        durationWeeks: Number.isFinite(weeks) && weeks > 0 ? weeks : undefined,
+      },
+      displayFacts
+    );
+    return requiredIntakeFacts(mergeIntakeDisplayFacts(displayFacts, fromDraft));
+  }, [displayFacts, draft]);
 
   useEffect(() => {
     setDraft({
-      client: facts?.clientName ?? "",
-      campaign: facts?.product ?? "",
-      brand: facts?.brandName ?? "",
-      country: (facts?.geography ?? []).join(", "),
-      budget: facts?.budget?.amount?.toString() ?? "",
-      currency: facts?.budget?.currency ?? "EGP",
-      durationWeeks: facts?.durationWeeks?.toString() ?? "",
-      objective: facts?.objective ?? "",
-      audience: facts?.audience ?? "",
-      category: facts?.industry ?? "",
-      platforms: (facts?.platforms ?? []).join(", "),
-      deliverables: (facts?.deliverables ?? []).join(", "),
+      client: displayFacts?.clientName ?? "",
+      campaign: displayFacts?.product ?? "",
+      brand: displayFacts?.brandName ?? "",
+      country: (displayFacts?.geography ?? []).join(", "),
+      budget: displayFacts?.budget?.amount?.toString() ?? "",
+      currency: displayFacts?.budget?.currency ?? "EGP",
+      durationWeeks: displayFacts?.durationWeeks?.toString() ?? "",
+      objective: displayFacts?.objective ?? "",
+      audience: displayFacts?.audience ?? "",
+      category: displayFacts?.industry ?? "",
+      platforms: (displayFacts?.platforms ?? []).join(", "),
+      deliverables: (displayFacts?.deliverables ?? []).join(", "),
     });
-  }, [facts]);
+  }, [displayFacts]);
 
   useEffect(() => {
     if (!conversationId) return;
@@ -133,20 +166,10 @@ export function IntakeScreen({
       return;
     }
     startTransition(async () => {
-      if (facts) {
-        const patched = await patchStudioIntakeFactsAction({
-          conversationId,
-          edit: editFromDraft(),
-        });
-        if (!patched.ok) {
-          toast.error(patched.message);
-          return;
-        }
-        onCampaignObjectUpdated?.(patched.campaignObject);
-      }
       const result = await confirmStudioIntakeAction({
         conversationId,
         profileId,
+        edit: editFromDraft(),
       });
       if (!result.ok) {
         toast.error(result.message);
@@ -168,10 +191,10 @@ export function IntakeScreen({
 
       {conversationId ? (
         <CampaignIntelligencePanel
-          key={cipState?.profileId ?? "cip-empty"}
           variant="inline"
           actions="none"
           initialState={cipState}
+          conversationId={conversationId}
           onWorkspaceChange={setCipState}
         />
       ) : null}
@@ -289,7 +312,7 @@ export function IntakeScreen({
         <Button
           type="button"
           size="lg"
-          disabled={pending || (!intake.canConfirm && !facts)}
+          disabled={pending || !conversationId || !intake.canConfirm}
           onClick={confirmCampaign}
           className="bg-[#0057FF] hover:bg-[#0040CC]"
         >

@@ -87,11 +87,17 @@ test("audience composes from structured detail when prose audience is missing", 
   assert.equal(prose.audience, "Young mothers in Cairo");
 });
 
-test("products map into the facts product field", () => {
+test("campaignName fills product when products array is empty", () => {
   const facts = profileToCampaignFacts(
-    profileWith({ products: ["Vitamin C Serum", "Night Cream"] })
+    profileWith({ campaignName: "Credit Card Instant Issuance" })
   );
-  assert.equal(facts.product, "Vitamin C Serum, Night Cream");
+  assert.equal(facts.product, "Credit Card Instant Issuance");
+});
+
+test("brand fills client when no separate client is extracted", () => {
+  const facts = profileToCampaignFacts(profileWith({ brandName: "Arab Bank" }));
+  assert.equal(facts.brandName, "Arab Bank");
+  assert.equal(facts.clientName, "Arab Bank");
 });
 
 test("deliverables, multiple objectives, and budget flow through to facts", () => {

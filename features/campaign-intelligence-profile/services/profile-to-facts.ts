@@ -84,11 +84,13 @@ export function profileToCampaignFacts(
   profile: CampaignIntelligenceProfile
 ): CampaignFacts {
   const facts: CampaignFacts = {
-    clientName: resolveClientName(profile),
-    brandName: resolveBrandName(profile),
+    clientName: resolveClientName(profile) ?? resolveBrandName(profile),
+    brandName: resolveBrandName(profile) ?? resolveClientName(profile),
     industry: profile.industry,
     campaignType: profile.campaignType ?? profile.campaignName,
-    product: profile.products?.length ? profile.products.join(", ") : undefined,
+    product: profile.products?.length
+      ? profile.products.join(", ")
+      : profile.campaignName?.trim() || undefined,
     objective:
       profile.objective ??
       (profile.objectives?.length ? profile.objectives.join(" · ") : undefined) ??
