@@ -51,9 +51,8 @@ import {
   buildTimelineWeeksForCampaign,
   type VendorFactorInput,
 } from "./presentation-intelligence";
-import {
-  detectIndustryFromBrief,
-} from "./industry-intelligence";
+import { detectIndustryFromBrief } from "./industry-intelligence";
+import { deriveInfluencerContentPlan } from "./influencer-content-plan";
 import {
   normalizeBudgetAllocationPercents,
 } from "./budget-allocation";
@@ -820,9 +819,15 @@ export function resolveTimelineData(
   const timelineExtras = readTimelineExtras(campaignObject);
   const approvedTimeline = timelineExtras?.creatorActivationTimeline;
   const isComplete = isCampaignTimelineComplete(campaignObject);
+  const durationFromFacts = facts ? resolveFactsDurationWeeks(facts) : undefined;
 
-  if (approvedTimeline?.activationWeeks?.length) {
-    const durationWeeks = approvedTimeline.durationWeeks;
+  const activationMatchesFacts =
+    Boolean(approvedTimeline?.activationWeeks?.length) &&
+    durationFromFacts != null &&
+    approvedTimeline!.durationWeeks === durationFromFacts;
+
+  if (activationMatchesFacts && approvedTimeline) {
+    const durationWeeks = durationFromFacts!;
     const weeks = activationTimelineToWeeks(approvedTimeline, isComplete);
     return {
       durationWeeks,
@@ -831,14 +836,19 @@ export function resolveTimelineData(
     };
   }
 
-  const durationFromFacts = facts ? resolveFactsDurationWeeks(facts) : undefined;
-  const durationFromSummaryCards = summaryCards?.duration
-    ? clampCampaignDurationWeeks(parseInt(summaryCards.duration, 10))
-    : undefined;
+  const durationFromSummaryCards =
+    !facts && summaryCards?.duration
+      ? clampCampaignDurationWeeks(parseInt(summaryCards.duration, 10))
+      : undefined;
   const durationWeeks =
     durationFromFacts ??
     durationFromSummaryCards ??
-    resolveCampaignDurationWeeks(summaryText, strategyText, timelineText, facts);
+    (facts
+      ? undefined
+      : resolveCampaignDurationWeeks(summaryText, strategyText, timelineText));
+
+  if (durationWeeks == null) return null;
+
   const industry = detectIndustryFromBrief([summaryText, strategyText].filter(Boolean).join("\n"));
   const goLiveWeek = resolveGoLiveWeek(durationWeeks);
   const milestones = isTimelineSectionData(section.content) ? section.content.milestones : [];
@@ -855,13 +865,13 @@ export function resolveTimelineData(
   }
 
   const combined = [timelineText, strategyText, summaryText].filter(Boolean).join("\n");
-  if (combined.trim()) {
+  if (combined.trim() && !facts) {
     const fallbackDuration = resolveCampaignDurationWeeks(
       summaryText,
       strategyText,
-      timelineText,
-      facts
+      timelineText
     );
+    if (fallbackDuration == null) return null;
     const fallbackWeeks = buildTimelineWeeksForCampaign(
       fallbackDuration,
       detectIndustryFromBrief(combined),
@@ -986,7 +996,10 @@ export function resolveCreativeConcepts(
 export function resolveContentPlan(
   campaignObject: CampaignObject | undefined
 ): ContentPlanItem[] {
-  return readTimelineExtras(campaignObject)?.contentPlan ?? [];
+  const influencerPlan = deriveInfluencerContentPlan(campaignObject);
+  if (influencerPlan.length > 0) return influencerPlan;
+  const stored = readTimelineExtras(campaignObject)?.contentPlan ?? [];
+  return stored.filter((item) => Boolean(item.creatorId));
 }
 
 export function resolveCreatorMix(

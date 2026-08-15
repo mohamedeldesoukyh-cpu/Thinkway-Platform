@@ -78,6 +78,7 @@ import { StudioCreatorCompareDialog } from "./studio-creator-compare-dialog";
 import { StudioPlanningCreatorDetail } from "./studio-planning-creator-detail";
 import { StudioPlanningIntelligenceStrip } from "./shared/studio-planning-intelligence-strip";
 import { deriveEnterprisePlanningNarrative } from "../../services/planning-narrative";
+import { deriveCreatorQuantityRecommendation } from "../../services/creator-quantity";
 
 type VendorRecommendationsSectionProps = {
   campaignObject?: CampaignObject;
@@ -694,6 +695,11 @@ export function VendorRecommendationsSection({
     if (!campaignObject) return null;
     return deriveEnterprisePlanningNarrative(campaignObject).creatorPackageThesis;
   }, [campaignObject]);
+  const quantityRecommendation = useMemo(() => {
+    if (previewCreatorsData.quantityRecommendation) return previewCreatorsData.quantityRecommendation;
+    if (!campaignObject) return null;
+    return deriveCreatorQuantityRecommendation(getCampaignFacts(campaignObject));
+  }, [campaignObject, previewCreatorsData.quantityRecommendation]);
 
   const openCreatorDetails = useCallback(
     (vendor: DisplayVendor) => {
@@ -1156,6 +1162,20 @@ export function VendorRecommendationsSection({
 
   return (
     <div className="min-w-0 space-y-2">
+      {quantityRecommendation ? (
+        <div className="rounded-lg border border-[#1D9E75]/25 bg-[#1D9E75]/5 px-3 py-2.5 text-[12px]">
+          <p className="text-[10px] font-extrabold uppercase tracking-wide text-[#1D9E75]">
+            Recommended quantity
+            {quantityRecommendation.recommended != null
+              ? ` · ${quantityRecommendation.recommended} creators`
+              : ""}
+            {quantityRecommendation.confidence > 0
+              ? ` · ${Math.round(quantityRecommendation.confidence * 100)}% confidence`
+              : ""}
+          </p>
+          <p className="mt-1 text-foreground">{quantityRecommendation.rationale}</p>
+        </div>
+      ) : null}
       {creatorPackageThesis ? (
         <div className="rounded-lg border border-[#0057FF]/25 bg-[#0057FF]/5 px-3 py-2.5 text-[12px]">
           <p className="text-[10px] font-extrabold uppercase tracking-wide text-[#0057FF]">

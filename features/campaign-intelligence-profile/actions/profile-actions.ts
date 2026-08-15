@@ -8,6 +8,8 @@ import {
 } from "@/lib/domains/intelligence/campaign-intelligence-object";
 import { requireRequestUser, type RequestUser } from "@/lib/supabase/server";
 
+import type { StructuredBriefDocument } from "../services/structured-brief-parser/types";
+
 import {
   extractStructuredBrief,
   isSupportedBriefFile,
@@ -37,7 +39,12 @@ import {
 } from "../services/profile-repository-elevated";
 import { resolveBriefTextForExtraction } from "../services/resolve-brief-text";
 import { runCampaignIntelligencePipeline } from "../services/run-intelligence-pipeline";
-import type { StructuredBriefDocument } from "../services/structured-brief-parser/types";
+import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-facts-types";
+import {
+  confirmCampaignIntelligenceProfile,
+  projectConfirmedCampaignFacts,
+  unconfirmCampaignIntelligenceProfile,
+} from "../services/campaign-facts-spine";
 import {
   normalizeCampaignIntelligenceProfile,
   profileHasExtractedData,
@@ -708,12 +715,12 @@ export async function saveCampaignIntelligenceProfileAction(
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   try {
     const { supabase, userId } = await requireRequestUser();
-    const saved: CampaignIntelligenceProfile = {
+    const saved: CampaignIntelligenceProfile = unconfirmCampaignIntelligenceProfile({
       ...profile,
       schemaVersion: 1,
       status: "saved",
       extractedAt: profile.extractedAt ?? new Date().toISOString(),
-    };
+    });
 
     await updateCampaignIntelligenceProfile(supabase, profileId, {
       userId,
@@ -729,6 +736,43 @@ export async function saveCampaignIntelligenceProfileAction(
     return {
       ok: false,
       message: error instanceof Error ? error.message : "Save failed",
+    };
+  }
+}
+
+export async function confirmCampaignIntelligenceProfileAction(
+  profileId: string,
+  profile: CampaignIntelligenceProfile
+): Promise<
+  { ok: true; profile: CampaignIntelligenceProfile; facts: CampaignFacts } | { ok: false; message: string }
+> {
+  try {
+    const { supabase, userId } = await requireRequestUser();
+    const confirmed = confirmCampaignIntelligenceProfile({
+      ...profile,
+      schemaVersion: 1,
+      status: "saved",
+      extractedAt: profile.extractedAt ?? new Date().toISOString(),
+    });
+    const facts = projectConfirmedCampaignFacts(confirmed);
+    if (!facts) {
+      return { ok: false, message: "Campaign intelligence could not be confirmed." };
+    }
+
+    await updateCampaignIntelligenceProfile(supabase, profileId, {
+      userId,
+      profile: confirmed,
+      status: "saved",
+      title: confirmed.campaignName ?? confirmed.brandName ?? undefined,
+    });
+
+    revalidatePath("/discovery/intelligence/library");
+    revalidatePath("/discovery/search");
+    return { ok: true, profile: confirmed, facts };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Confirm failed",
     };
   }
 }

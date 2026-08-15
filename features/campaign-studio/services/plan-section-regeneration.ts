@@ -12,10 +12,10 @@ import type {
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 import { buildRiskAnalysisFromBudget } from "@/features/campaign-intelligence/services/structured-section-builders";
 import {
-  deriveContentPlan,
   deriveCreativeConcepts,
   deriveWhyAiInsights,
 } from "@/features/campaign-studio/services/presentation-intelligence";
+import { deriveInfluencerContentPlan } from "./influencer-content-plan";
 
 import type { SearchCreatorCardItem } from "./creator-platform-utils";
 import { estimateCreatorPostFee } from "./creator-fee-estimator";
@@ -222,15 +222,9 @@ function patchKpiForecastFromSlate(
 }
 
 function patchContentPlanFromSlate(campaignObject: CampaignObject): CampaignObject {
-  const strategyText =
-    typeof campaignObject.sections.strategy.content === "string"
-      ? campaignObject.sections.strategy.content
-      : "";
-  const summaryText =
-    typeof campaignObject.sections.summary.content === "string"
-      ? campaignObject.sections.summary.content
-      : "";
   const timelineData = (campaignObject.sections.timeline.data ?? {}) as TimelineSectionExtras;
+  const contentPlan = deriveInfluencerContentPlan(campaignObject);
+  if (contentPlan.length === 0) return campaignObject;
 
   return {
     ...campaignObject,
@@ -240,7 +234,7 @@ function patchContentPlanFromSlate(campaignObject: CampaignObject): CampaignObje
         ...campaignObject.sections.timeline,
         data: {
           ...timelineData,
-          contentPlan: deriveContentPlan(strategyText, summaryText),
+          contentPlan,
         },
       },
     },

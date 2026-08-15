@@ -133,8 +133,21 @@ export function parseBudgetTotalFromText(text: string): number | undefined {
 export function parseDurationFromText(text: string): string | undefined {
   const weeks = text.match(/(\d+)\s*weeks?/i);
   if (weeks?.[1]) return `${weeks[1]} weeks`;
-  const duration = text.match(/duration[:\s]+(\d+\s*weeks?)/i);
-  return duration?.[1];
+  const months = text.match(/(\d+)\s*months?/i);
+  if (months?.[1]) {
+    const weeksFromMonths = Math.round(Number(months[1]) * 4);
+    if (Number.isFinite(weeksFromMonths) && weeksFromMonths > 0) {
+      return `${weeksFromMonths} weeks`;
+    }
+  }
+  const labeledWeeks = text.match(/duration[:\s]+(\d+\s*weeks?)/i);
+  if (labeledWeeks?.[1]) return labeledWeeks[1];
+  const labeledMonths = text.match(/duration[:\s]+(\d+\s*months?)/i);
+  if (labeledMonths?.[1]) {
+    const count = parseInt(labeledMonths[1], 10);
+    if (Number.isFinite(count) && count > 0) return `${count * 4} weeks`;
+  }
+  return undefined;
 }
 
 /**

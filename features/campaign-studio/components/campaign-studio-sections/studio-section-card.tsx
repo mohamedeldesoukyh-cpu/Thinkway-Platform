@@ -51,6 +51,8 @@ type StudioSectionCardProps = {
   viewportMode?: CampaignStudioViewportMode;
   /** Prefetch/mount body when this section is the active nav target. */
   forceMountBody?: boolean;
+  /** Workspace steps already have a heading — skip the 17-card chrome. */
+  chrome?: "card" | "plain";
 };
 
 const STATUS_STYLES = {
@@ -156,6 +158,7 @@ export function StudioSectionCard({
   layoutMode = "panel",
   viewportMode = "default",
   forceMountBody = false,
+  chrome = "card",
 }: StudioSectionCardProps) {
   const isChatLayout = layoutMode === "chat";
   const isDesktopViewport = viewportMode === "desktop" && !isChatLayout;
@@ -232,6 +235,26 @@ export function StudioSectionCard({
       )}
     </div>
   );
+
+  if (chrome === "plain") {
+    return (
+      <section
+        id={studioSectionDomId(section.id, refMode ? "ref" : "default")}
+        className={cn("min-w-0", className)}
+        aria-labelledby={`studio-section-${section.id}-title`}
+        aria-describedby={statusId}
+      >
+        <h3 id={`studio-section-${section.id}-title`} className="sr-only">
+          {section.title}
+        </h3>
+        <span id={statusId} className="sr-only">
+          {badgeLabel}
+        </span>
+        {body}
+        {sectionFooter}
+      </section>
+    );
+  }
 
   if (refMode) {
     const iconColors = REF_SECTION_ICON_COLORS[section.id] ?? DEFAULT_REF_ICON;

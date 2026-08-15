@@ -96,8 +96,14 @@ function hasApprovedBudgetReasoning(data?: BudgetSectionExtras): boolean {
   );
 }
 
-function hasApprovedActivationTimeline(data?: TimelineSectionExtras): boolean {
-  return (data?.creatorActivationTimeline?.activationWeeks?.length ?? 0) > 0;
+function hasApprovedActivationTimeline(
+  data?: TimelineSectionExtras,
+  factsDurationWeeks?: number
+): boolean {
+  const activation = data?.creatorActivationTimeline;
+  if ((activation?.activationWeeks?.length ?? 0) === 0) return false;
+  if (factsDurationWeeks == null) return false;
+  return activation!.durationWeeks === factsDurationWeeks;
 }
 
 function hasApprovedVendorFunnel(data?: CreatorsSectionData): boolean {
@@ -399,6 +405,12 @@ export function buildTimelineSectionExtras(
   const durationWeeks = options?.campaignFacts
     ? resolveFactsDurationWeeks(options.campaignFacts)
     : resolveCampaignDurationWeeks(summaryText, strategyText);
+  if (durationWeeks == null) {
+    return {
+      weekDetails: [],
+      contentPlan: deriveContentPlan(strategyText, summaryText),
+    };
+  }
   const { weeks } = buildTimelineWeeksForCampaign(
     durationWeeks,
     industry,
@@ -595,13 +607,15 @@ export function enrichCampaignObjectWithStudioData(
       campaignObject.meta.workflowStatus === "complete" ||
       campaignObject.meta.status === "complete" ||
       sections.timeline.status === "complete";
-    const { goLiveWeek } = buildTimelineWeeksForCampaign(
-      durationWeeks,
-      detectIndustryFromBrief([summaryText, strategyText].filter(Boolean).join("\n")),
-      timelineContent.milestones,
-      { isComplete: timelineComplete }
-    );
-    const timelineExtras = hasApprovedActivationTimeline(existingTimelineData)
+    const { goLiveWeek } = durationWeeks != null
+      ? buildTimelineWeeksForCampaign(
+          durationWeeks,
+          detectIndustryFromBrief([summaryText, strategyText].filter(Boolean).join("\n")),
+          timelineContent.milestones,
+          { isComplete: timelineComplete }
+        )
+      : { goLiveWeek: undefined };
+    const timelineExtras = hasApprovedActivationTimeline(existingTimelineData, durationWeeks)
       ? {
           weekDetails: existingTimelineData.weekDetails,
           contentPlan: existingTimelineData.contentPlan ?? deriveContentPlan(strategyText, summaryText),
@@ -618,7 +632,10 @@ export function enrichCampaignObjectWithStudioData(
         ...timelineContent,
         durationWeeks,
         goLiveWeek,
-        milestones: timelineContent.milestones.filter((milestone) => milestone.week <= durationWeeks),
+        milestones:
+          durationWeeks != null
+            ? timelineContent.milestones.filter((milestone) => milestone.week <= durationWeeks)
+            : timelineContent.milestones,
       },
       data: {
         ...existingTimelineData,

@@ -38,12 +38,14 @@ export function normalizeCampaignIntelligenceProfile(
     fieldProvenance: obj.fieldProvenance,
     structuredBrief: obj.structuredBrief,
     pipelineDebug: obj.pipelineDebug,
+    confirmedAt: obj.confirmedAt,
   };
 
   if (profileHasExtractedData(profile)) {
     const normalized = normalizeFromProfile(profile).profile;
     return {
       ...normalized,
+      confirmedAt: obj.confirmedAt ?? profile.confirmedAt,
       structuredBrief: obj.structuredBrief ?? profile.structuredBrief,
       pipelineDebug: obj.pipelineDebug ?? profile.pipelineDebug,
     };

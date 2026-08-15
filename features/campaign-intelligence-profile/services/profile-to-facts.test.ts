@@ -51,7 +51,7 @@ test("validated market country label leads geography", () => {
   );
 
   assert.equal(facts.geography?.[0], "Egypt");
-  assert.ok(facts.geography?.includes("MENA region focus"));
+  assert.equal(facts.geography?.length, 1);
 });
 
 test("market falls back through raw chain when no validation exists", () => {
@@ -105,4 +105,5 @@ test("deliverables, multiple objectives, and budget flow through to facts", () =
   assert.deepEqual(facts.deliverables, ["2 reels", "4 stories"]);
   assert.equal(facts.objective, "Awareness · UGC volume");
   assert.deepEqual(facts.budget, { amount: 1_000_000, currency: "EGP" });
+  assert.equal(facts.durationWeeks, undefined);
 });

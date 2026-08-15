@@ -3,7 +3,6 @@ import {
   parseAudienceFromText,
   parseBrandFromText,
   parseBudgetTotalFromText,
-  parseDurationFromText,
   parseMarketFromText,
   parseObjectiveFromText,
   parseProductFromText,
@@ -13,7 +12,7 @@ import {
   getIndustryProfile,
   resolveClientFromBrief,
 } from "@/features/campaign-studio/services/industry-intelligence";
-import { parseDurationWeeks } from "@/features/campaign-studio/services/timeline-duration";
+import { parseOptionalDurationWeeks } from "@/features/campaign-studio/services/timeline-duration";
 import {
   isValidBrandName,
   sanitizeBrandName,
@@ -311,15 +310,10 @@ export function extractCampaignFacts(input: CampaignFactsExtractInput): Campaign
     setField(facts, "budget", { amount: budgetAmount, currency }, "brief", 0.92);
   }
 
-  const durationText = parseDurationFromText(text);
-  const durationWeeks = durationText ? parseDurationWeeks(durationText) : parseDurationWeeks(text);
-  setField(
-    facts,
-    "durationWeeks",
-    durationWeeks,
-    durationText ? "brief" : "default",
-    durationText ? 0.9 : 0.5
-  );
+  const durationWeeks = parseOptionalDurationWeeks(text);
+  if (durationWeeks != null) {
+    setField(facts, "durationWeeks", durationWeeks, "brief", 0.9);
+  }
 
   const geography = extractGeography(text);
   if (geography.length > 0) {

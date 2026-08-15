@@ -18,18 +18,24 @@ import { Badge } from "@/components/ui/badge";
 
 import {
   type CampaignIntelligenceWorkspaceState,
+  confirmCampaignIntelligenceProfileAction,
   saveCampaignIntelligenceProfileAction,
   uploadCampaignBriefAction,
 } from "../actions/profile-actions";
 import type { CampaignIntelligenceProfile } from "../types/profile";
 import { createEmptyCampaignIntelligenceProfile } from "../types/profile";
+import { isCampaignIntelligenceConfirmed } from "../services/campaign-facts-spine";
 
 export type CampaignIntelligencePanelProps = {
   initialState?: CampaignIntelligenceWorkspaceState | null;
   onWorkspaceChange?: (state: CampaignIntelligenceWorkspaceState) => void;
+  /** Called after Confirm with projected Campaign Facts. */
+  onConfirmed?: (facts: import("@/features/campaign-director/facts/campaign-facts-types").CampaignFacts) => void;
   /** @deprecated Use variant="inline" */
   compact?: boolean;
   variant?: "page" | "sidebar" | "inline";
+  /** Intake supplies CONFIRM CAMPAIGN — hide the panel footer. */
+  actions?: "default" | "none";
 };
 
 type UploadPhase = "idle" | "uploading" | "analyzing" | "ready" | "error";
@@ -58,8 +64,10 @@ function shouldShowSparseHint(state: CampaignIntelligenceWorkspaceState): boolea
 export function CampaignIntelligencePanel({
   initialState,
   onWorkspaceChange,
+  onConfirmed,
   compact,
   variant,
+  actions = "default",
 }: CampaignIntelligencePanelProps) {
   const layout = variant ?? (compact ? "sidebar" : "page");
   const isInline = layout === "inline";
@@ -165,6 +173,7 @@ export function CampaignIntelligencePanel({
         return;
       }
       const saved = { ...profile, status: "saved" as const };
+      delete saved.confirmedAt;
       setProfile(saved);
       onWorkspaceChange?.({
         profileId,
@@ -174,7 +183,32 @@ export function CampaignIntelligencePanel({
         hasExtractedData: true,
         parsedTextLength,
       });
-      toast.success("Campaign intelligence saved.");
+      toast.success("Campaign intelligence saved. Confirm to make it Campaign Facts.");
+    });
+  }
+
+  function runConfirm() {
+    if (!profileId) {
+      toast.error("Upload a brief first.");
+      return;
+    }
+    startTransition(async () => {
+      const result = await confirmCampaignIntelligenceProfileAction(profileId, profile);
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
+      setProfile(result.profile);
+      onWorkspaceChange?.({
+        profileId,
+        profile: result.profile,
+        fileName: uploadedFileName,
+        fileSizeBytes: uploadedFileSize,
+        hasExtractedData: true,
+        parsedTextLength,
+      });
+      onConfirmed?.(result.facts);
+      toast.success("Campaign facts confirmed.");
     });
   }
 
@@ -286,8 +320,22 @@ export function CampaignIntelligencePanel({
       >
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold">Campaign intelligence</h2>
-          <Badge variant={profile.status === "saved" ? "default" : "secondary"}>
-            {profile.status === "saved" ? "Saved" : profileId ? "Draft" : "Pending"}
+          <Badge
+            variant={
+              isCampaignIntelligenceConfirmed(profile)
+                ? "default"
+                : profile.status === "saved"
+                  ? "secondary"
+                  : "secondary"
+            }
+          >
+            {isCampaignIntelligenceConfirmed(profile)
+              ? "Confirmed"
+              : profile.status === "saved"
+                ? "Saved"
+                : profileId
+                  ? "Draft"
+                  : "Pending"}
           </Badge>
         </div>
 
@@ -349,6 +397,59 @@ export function CampaignIntelligencePanel({
                 className="mt-1 min-h-[52px] text-sm"
                 value={profile.audience ?? ""}
                 onChange={(e) => setProfile({ ...profile, audience: e.target.value })}
+                disabled={processing}
+              />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <Field
+                label="Duration (weeks)"
+                value={profile.durationWeeks?.toString() ?? ""}
+                onChange={(v) =>
+                  setProfile({
+                    ...profile,
+                    durationWeeks:
+                      v.trim() === "" || !Number.isFinite(Number(v)) ? undefined : Number(v),
+                  })
+                }
+                disabled={processing}
+              />
+              <Field
+                label="Budget amount"
+                value={profile.budget?.amount?.toString() ?? ""}
+                onChange={(v) => {
+                  const amount = Number(v.replace(/,/g, ""));
+                  if (!v.trim() || !Number.isFinite(amount)) {
+                    setProfile({ ...profile, budget: undefined });
+                    return;
+                  }
+                  setProfile({
+                    ...profile,
+                    budget: {
+                      amount,
+                      currency: profile.budget?.currency ?? "EGP",
+                    },
+                  });
+                }}
+                disabled={processing}
+              />
+              <Field
+                label="Currency"
+                value={profile.budget?.currency ?? ""}
+                onChange={(v) => {
+                  const currency = v.trim().toUpperCase();
+                  if (!currency) {
+                    setProfile({ ...profile, budget: undefined });
+                    return;
+                  }
+                  setProfile({
+                    ...profile,
+                    budget: {
+                      amount: profile.budget?.amount ?? 0,
+                      currency,
+                    },
+                  });
+                }}
                 disabled={processing}
               />
             </div>
@@ -445,9 +546,11 @@ export function CampaignIntelligencePanel({
         ) : null}
       </section>
 
-      <div className={isInline ? "flex flex-wrap items-center gap-2" : undefined}>
+      {actions === "none" ? null : (
+      <div className={isInline ? "flex flex-wrap items-center gap-2" : "flex flex-col gap-2"}>
         <Button
           type="button"
+          variant="outline"
           onClick={runSave}
           disabled={!profileId || processing || isPending}
           className={isInline ? undefined : "w-full"}
@@ -460,7 +563,22 @@ export function CampaignIntelligencePanel({
         )}
         Save campaign intelligence
         </Button>
+        <Button
+          type="button"
+          onClick={runConfirm}
+          disabled={!profileId || processing || isPending}
+          className={isInline ? undefined : "w-full"}
+          size={isInline ? "default" : "sm"}
+        >
+        {isPending ? (
+          <Loader2Icon className="size-4 animate-spin" />
+        ) : (
+          <CheckCircle2Icon className="size-4" />
+        )}
+        Confirm campaign facts
+        </Button>
       </div>
+      )}
     </div>
   );
 }

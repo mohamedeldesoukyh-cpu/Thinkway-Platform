@@ -46,7 +46,7 @@ import {
   ensureWorkflowCampaignIntelligenceProfile,
   resolveWorkflowCampaignIntelligenceProfile,
 } from "@/features/campaign-intelligence-profile/services/ensure-workflow-campaign-intelligence";
-import { hasValidatedIntelligence } from "@/features/campaign-intelligence-profile/services/get-validated-intelligence";
+import { isCampaignIntelligenceConfirmed } from "@/features/campaign-intelligence-profile/services/campaign-facts-spine";
 import { normalizeCampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/services/normalize-profile";
 import { profileToCampaignFacts } from "@/features/campaign-intelligence-profile/services/profile-to-facts";
 import { writeStrategyDocumentFromBrief } from "@/features/campaign-director/services/strategy-document";
@@ -270,7 +270,7 @@ export async function executeWorkflow(
 
   if (definition.id === "create-campaign" && !state.data.campaignStrategyDocument) {
     let intelligenceProfileId = state.data.campaignIntelligenceProfileId as string | undefined;
-    let campaignFacts: CampaignFacts | undefined;
+    let campaignFacts = state.data.campaignFacts as CampaignFacts | undefined;
     let strategyDocument;
 
     if (!intelligenceProfileId && request.conversationId && options.supabase && aiContext.user?.id) {
@@ -282,7 +282,7 @@ export async function executeWorkflow(
       });
       if (resolved) {
         const profile = normalizeCampaignIntelligenceProfile(resolved.profile);
-        if (hasValidatedIntelligence(profile)) {
+        if (isCampaignIntelligenceConfirmed(profile)) {
           intelligenceProfileId = resolved.id;
           campaignFacts = profileToCampaignFacts(profile);
           strategyDocument = writeStrategyDocumentFromBrief(
@@ -300,28 +300,30 @@ export async function executeWorkflow(
     if (!strategyDocument) {
       const initialized = initializeDirectorPipelineState(request.message);
       strategyDocument = initialized.strategyDocument;
-      campaignFacts = initialized.campaignFacts;
     }
-
-    const facts = campaignFacts!;
 
     if (intelligenceProfileId) {
       state.data.campaignIntelligenceProfileId = intelligenceProfileId;
     }
 
     injectDirectorStrategyIntoWorkflowState(state, strategyDocument);
-    state.data.campaignFacts = facts;
-    state.data.brandName =
-      state.data.brandName ?? facts.brandName ?? strategyDocument.understanding.brand;
-    if (facts.budget?.currency) {
-      state.data.currency = facts.budget.currency;
-    } else if (strategyDocument.understanding.budget?.currency) {
-      state.data.currency = strategyDocument.understanding.budget.currency;
-    }
-    if (facts.budget?.amount) {
-      state.data.budgetTotal = facts.budget.amount;
-    } else if (strategyDocument.understanding.budget?.amount) {
-      state.data.budgetTotal = strategyDocument.understanding.budget.amount;
+    if (campaignFacts) {
+      state.data.campaignFacts = campaignFacts;
+      state.data.brandName =
+        state.data.brandName ?? campaignFacts.brandName ?? strategyDocument.understanding.brand;
+      if (campaignFacts.budget?.currency) {
+        state.data.currency = campaignFacts.budget.currency;
+      } else if (strategyDocument.understanding.budget?.currency) {
+        state.data.currency = strategyDocument.understanding.budget.currency;
+      }
+      if (campaignFacts.budget?.amount) {
+        state.data.budgetTotal = campaignFacts.budget.amount;
+      } else if (strategyDocument.understanding.budget?.amount) {
+        state.data.budgetTotal = strategyDocument.understanding.budget.amount;
+      }
+    } else {
+      state.data.brandName =
+        state.data.brandName ?? strategyDocument.understanding.brand;
     }
   }
 

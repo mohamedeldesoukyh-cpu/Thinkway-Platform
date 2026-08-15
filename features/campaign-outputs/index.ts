@@ -27,7 +27,11 @@ export {
   computeInputFingerprint,
   computeInputFingerprints,
 } from "./output-fingerprint";
-export { describeInputsChanged, INPUT_CHANGE_PHRASES } from "./output-stale-reason";
+export {
+  describeInputsChanged,
+  INPUT_CHANGE_PHRASES,
+  summarizeStaleCause,
+} from "./output-stale-reason";
 export { resolveSlate, resolveInputValue, overallScore, type SlateCreator } from "./output-inputs";
 export {
   getCampaignOutputState,

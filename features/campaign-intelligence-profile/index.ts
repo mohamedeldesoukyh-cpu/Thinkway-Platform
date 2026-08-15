@@ -5,6 +5,15 @@ export type {
 } from "./types/profile";
 export { profileToCampaignFacts } from "./services/profile-to-facts";
 export {
+  applyConfirmedCampaignFactsToCampaignObject,
+  confirmCampaignIntelligenceProfile,
+  isCampaignIntelligenceConfirmed,
+  projectConfirmedCampaignFacts,
+  resolveCampaignFactsSSot,
+  syncStoredTimelineToFacts,
+  unconfirmCampaignIntelligenceProfile,
+} from "./services/campaign-facts-spine";
+export {
   buildBrowseFiltersFromProfile,
   buildCreatorFiltersFromProfile,
   buildSearchStrategyFromProfile,

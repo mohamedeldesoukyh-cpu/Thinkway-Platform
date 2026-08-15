@@ -34,6 +34,7 @@ import type { CampaignOutputContent, CampaignOutputGroup, CampaignOutputKind } f
 import type { OutputView } from "../output-registry";
 import { OUTPUT_GROUPS } from "../output-catalog";
 import { getOutputContentForDisplay } from "../output-registry";
+import { summarizeStaleCause } from "../output-stale-reason";
 import { OutputCard, type OutputCardActions } from "./output-card";
 import { CampaignBriefCard } from "@/features/campaign-studio/components/sections/campaign-brief-card";
 import { OutputViewer } from "./output-viewer";
@@ -111,25 +112,6 @@ export type OutputsCenterProps = {
   navigateOutputKind?: OutputView["kind"] | string;
 };
 
-function summarizeStaleCause(outputs: OutputView[]): string {
-  const stale = outputs.filter((output) => output.status === "needs_update");
-  const reasons = stale
-    .map((output) => output.staleReason?.replace(/\.$/, "").trim())
-    .filter((reason): reason is string => Boolean(reason));
-
-  if (reasons.length === 0) return "after campaign inputs changed";
-
-  const normalized = reasons.map((reason) => reason.toLowerCase());
-  const allBrief = normalized.every((reason) => reason.includes("campaign brief changed"));
-  if (allBrief) return "after the campaign brief changed";
-
-  const first = reasons[0]!;
-  if (reasons.every((reason) => reason === first)) {
-    return `after ${first.charAt(0).toLowerCase()}${first.slice(1)}`;
-  }
-
-  return "after campaign inputs changed";
-}
 
 type PanelState = {
   kind: OutputView["kind"];

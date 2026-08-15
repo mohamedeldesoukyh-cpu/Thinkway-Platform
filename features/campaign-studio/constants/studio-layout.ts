@@ -1,4 +1,5 @@
 import type { CampaignStudioSectionId } from "../types/campaign-studio";
+import { STUDIO_WORKSPACE_STEPS } from "./studio-workspace";
 
 /** Campaign Studio section layout types — three only. */
 export const STUDIO_LAYOUT = {
@@ -44,59 +45,21 @@ export function isFullWidthSection(sectionId: CampaignStudioSectionId): boolean 
 }
 
 /**
- * Narrative story arc — Studio reads like a strategy deck, not a card dump:
- * brief → strategy → creators → plan → forecast → sign-off. Presentation
- * only: every section still renders; unmapped ids append to the final phase.
+ * Primary Studio navigation — six planning steps.
+ * Folded section engines still exist on the Campaign Object; they are not
+ * dumped into Package. Unknown future ids are omitted from the primary rail.
  */
 export const STUDIO_STORY_ARC: ReadonlyArray<{
   id: string;
   label: string;
   description: string;
   sections: CampaignStudioSectionId[];
-}> = [
-  {
-    id: "brief",
-    label: "The Brief",
-    description: "What the client asked for",
-    sections: ["campaign-summary"],
-  },
-  {
-    id: "strategy",
-    label: "The Strategy",
-    description: "How we win this campaign",
-    sections: ["executive-strategy", "creative-concepts", "why-ai"],
-  },
-  {
-    id: "creators",
-    label: "The Creators",
-    description: "Who tells the story — with evidence",
-    sections: ["creator-discovery", "creator-recommendations", "creator-mix"],
-  },
-  {
-    id: "plan",
-    label: "The Plan",
-    description: "Budget, content, and timing",
-    sections: ["budget-planner", "content-plan", "timeline"],
-  },
-  {
-    id: "forecast",
-    label: "The Forecast",
-    description: "Expected results and risks",
-    sections: [
-      "kpi-forecast",
-      "success-probability",
-      "industry-benchmark",
-      "risk-analysis",
-      "opportunity-finder",
-    ],
-  },
-  {
-    id: "signoff",
-    label: "Sign-off",
-    description: "Executive view and presentation readiness",
-    sections: ["executive-summary", "presentation-status"],
-  },
-] as const;
+}> = STUDIO_WORKSPACE_STEPS.map((step) => ({
+  id: step.id,
+  label: step.label,
+  description: step.question,
+  sections: [...step.sections],
+}));
 
 export type StudioStoryPhase<TSection extends { id: CampaignStudioSectionId }> = {
   id: string;
@@ -106,33 +69,23 @@ export type StudioStoryPhase<TSection extends { id: CampaignStudioSectionId }> =
 };
 
 /**
- * Group sections into story-arc phases, preserving arc order within a phase
- * and appending unmapped sections to the final phase so nothing is dropped.
+ * Group sections into the six workspace steps.
+ * Folded / unmapped engines stay on the Campaign Object and are not appended
+ * to Package — that would recreate the 17-card dump.
  */
 export function groupSectionsByStoryPhase<TSection extends { id: CampaignStudioSectionId }>(
   sections: TSection[]
 ): Array<StudioStoryPhase<TSection>> {
   const byId = new Map(sections.map((s) => [s.id, s]));
-  const assigned = new Set<CampaignStudioSectionId>();
 
-  const phases = STUDIO_STORY_ARC.map((phase) => {
+  return STUDIO_STORY_ARC.map((phase) => {
     const phaseSections: TSection[] = [];
     for (const id of phase.sections) {
       const section = byId.get(id);
-      if (section) {
-        phaseSections.push(section);
-        assigned.add(id);
-      }
+      if (section) phaseSections.push(section);
     }
     return { id: phase.id, label: phase.label, description: phase.description, sections: phaseSections };
-  });
-
-  const unmapped = sections.filter((s) => !assigned.has(s.id));
-  if (unmapped.length > 0) {
-    phases[phases.length - 1]!.sections.push(...unmapped);
-  }
-
-  return phases.filter((phase) => phase.sections.length > 0);
+  }).filter((phase) => phase.sections.length > 0);
 }
 
 /** Shared inner grid for KPI Forecast + Risk Analysis half-pair sections. */

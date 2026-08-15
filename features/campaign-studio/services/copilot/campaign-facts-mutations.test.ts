@@ -11,6 +11,11 @@ import {
   applyTimelineChange,
   patchCampaignFacts,
 } from "./campaign-facts-mutations";
+import {
+  generateCampaignOutput,
+  getCampaignOutput,
+} from "@/features/campaign-outputs/output-registry";
+import { buildCampaignObjectFixture } from "@/features/campaign-outputs/output-test-fixture";
 
 const NOW = new Date().toISOString();
 
@@ -79,6 +84,29 @@ test("timeline change clamps and updates duration weeks", () => {
 
   const clamped = applyTimelineChange(campaignObject(), { durationWeeks: 999 });
   assert.equal(getCampaignFacts(clamped.campaignObject)?.durationWeeks, 52);
+});
+
+test("timeline duration change clears stale activation weeks", () => {
+  const obj = campaignObject();
+  obj.sections.timeline.data = {
+    creatorActivationTimeline: {
+      durationWeeks: 6,
+      activationWeeks: [1, 2, 3, 4, 5, 6].map((week) => ({
+        week,
+        tier: "Macro",
+        objective: `Week ${week}`,
+        reason: "stale",
+        evidence: "stored",
+        tradeoff: "none",
+        confidence: 0.5,
+      })),
+      reportingPhase: { label: "Reporting", reason: "end", evidence: "stored" },
+    },
+  };
+  const { campaignObject: next } = applyTimelineChange(obj, { durationWeeks: 4 });
+  assert.equal(getCampaignFacts(next)?.durationWeeks, 4);
+  const extras = next.sections.timeline.data as { creatorActivationTimeline?: unknown };
+  assert.equal(extras.creatorActivationTimeline, undefined);
 });
 
 test("mid-week start stores requested + Saturday grid start and explains alignment", () => {
@@ -174,4 +202,17 @@ test("patchCampaignFacts on an object without facts is a safe no-op", () => {
   delete obj.meta.campaignFacts;
   const next = patchCampaignFacts(obj, { durationWeeks: 3 });
   assert.equal(next, obj);
+});
+
+test("timeline fact change persists needs_update on generated outputs", () => {
+  const generated = generateCampaignOutput(
+    buildCampaignObjectFixture({ facts: { durationWeeks: 4 } }),
+    "full_strategy"
+  ).campaignObject;
+  assert.equal(getCampaignOutput(generated, "full_strategy")?.status, "generated");
+
+  const { campaignObject: next } = applyTimelineChange(generated, { durationWeeks: 6 });
+  assert.equal(getCampaignFacts(next)?.durationWeeks, 6);
+  assert.equal(next.meta.campaignOutputs?.full_strategy?.status, "needs_update");
+  assert.equal(getCampaignOutput(next, "full_strategy")?.status, "needs_update");
 });

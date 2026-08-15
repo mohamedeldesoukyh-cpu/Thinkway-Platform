@@ -61,11 +61,31 @@ async function run(): Promise<void> {
   );
 
   // 2) User-required blocker (no budget) → workflow pauses with a specific question.
+  // Wave 0: regex extract is not Campaign Facts SSOT. Seed facts as a confirmed CIP would.
   const briefWithoutBudget =
     "Create a campaign for Nova Skincare in Egypt. Target women 25-34 on Instagram. Objective: brand awareness. Duration 6 weeks.";
+  const seededFacts: CampaignFacts = {
+    brandName: "Nova Skincare",
+    objective: "brand awareness",
+    durationWeeks: 6,
+    geography: ["Egypt"],
+    audience: "women 25-34",
+    platforms: ["Instagram"],
+    extractedAt: new Date().toISOString(),
+    confidence: {},
+    sources: {},
+  };
   const first = await executeWorkflow(createCampaignWorkflow, request(briefWithoutBudget), baseContext, {
     orchestrator: dummyOrchestrator,
     dryRun: true,
+    initialState: {
+      workflowId: createCampaignWorkflow.id,
+      workflowName: createCampaignWorkflow.name,
+      currentTaskIndex: 0,
+      taskResults: {},
+      data: { campaignFacts: seededFacts },
+      status: "running",
+    },
   });
   assert.equal(first.state.status, "paused", "missing budget must pause, not fail silently");
   assert.equal(first.state.pauseReason, "missing_info");

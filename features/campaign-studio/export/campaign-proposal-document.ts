@@ -180,6 +180,8 @@ function buildActivationWaves(
   if (!facts) return [];
 
   const weeks = resolveFactsDurationWeeks(facts);
+  if (weeks == null) return [];
+
   const mix = buildCreatorMixFromFacts(facts);
   const trend = isTrendCampaign(facts);
 
@@ -362,7 +364,9 @@ export function buildCampaignProposalModel(
       label: "Duration",
       value:
         summary?.duration ??
-        (facts ? `${resolveFactsDurationWeeks(facts)} weeks` : undefined) ??
+        (facts && resolveFactsDurationWeeks(facts) != null
+          ? `${resolveFactsDurationWeeks(facts)} weeks`
+          : undefined) ??
         "—",
       sub: "client-facing window",
     },

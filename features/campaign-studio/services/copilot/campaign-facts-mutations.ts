@@ -13,9 +13,11 @@ import {
   resolveScheduledStartDate,
 } from "@/features/campaign-outputs/media-plan-week-start";
 
+import { syncStoredTimelineToFacts } from "@/features/campaign-intelligence-profile/services/campaign-facts-spine";
+import { markStaleCampaignOutputs } from "@/features/campaign-outputs/output-registry";
 import { clampCampaignDurationWeeks } from "../timeline-duration";
 
-/** Facts fields the Copilot can edit conversationally. */
+/** Facts fields the Copilot and Studio Intake can edit. */
 export type EditableFactsPatch = Partial<
   Pick<
     CampaignFacts,
@@ -29,6 +31,12 @@ export type EditableFactsPatch = Partial<
     | "objective"
     | "audience"
     | "geography"
+    | "clientName"
+    | "brandName"
+    | "product"
+    | "industry"
+    | "campaignType"
+    | "deliverables"
   >
 >;
 
@@ -109,7 +117,7 @@ export function patchCampaignFacts(
   const currentCards = (summaryData.summaryCards ?? {}) as SummarySectionData;
   const nextCards = applyFactsToSummaryData(currentCards, nextFacts);
 
-  return {
+  const next: CampaignObject = {
     ...campaignObject,
     sections: {
       ...campaignObject.sections,
@@ -121,6 +129,8 @@ export function patchCampaignFacts(
     meta: { ...campaignObject.meta, campaignFacts: nextFacts },
     updatedAt: new Date().toISOString(),
   };
+
+  return markStaleCampaignOutputs(next);
 }
 
 export type FactsEditResult = {
@@ -211,7 +221,7 @@ export function applyTimelineChange(
     };
   }
 
-  const next = patchCampaignFacts(campaignObject, patch);
+  const next = syncStoredTimelineToFacts(patchCampaignFacts(campaignObject, patch));
   // Alignment note is a full sentence — keep it outside the "Updated X." wrapper.
   const alignmentNote = changes.find(
     (line) =>

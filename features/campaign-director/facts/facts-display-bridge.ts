@@ -13,7 +13,6 @@ import {
 import { detectIndustryFromBrief } from "@/features/campaign-studio/services/industry-intelligence";
 import {
   clampCampaignDurationWeeks,
-  DEFAULT_CAMPAIGN_DURATION_WEEKS,
   resolveGoLiveWeek,
 } from "@/features/campaign-studio/services/timeline-duration";
 
@@ -92,8 +91,9 @@ export function resolveInfluencerEstimateCurrency(
   return "EGP";
 }
 
-export function resolveFactsDurationWeeks(facts: CampaignFacts): number {
-  return clampCampaignDurationWeeks(facts.durationWeeks ?? DEFAULT_CAMPAIGN_DURATION_WEEKS);
+export function resolveFactsDurationWeeks(facts: CampaignFacts): number | undefined {
+  if (facts.durationWeeks == null) return undefined;
+  return clampCampaignDurationWeeks(facts.durationWeeks);
 }
 
 export function resolveFactsBrandName(facts: CampaignFacts): string | undefined {
@@ -114,8 +114,10 @@ export function formatFactsBudgetDisplay(facts: CampaignFacts): string | undefin
   return `${amount.toLocaleString()} ${resolveFactsCurrency(facts)}`;
 }
 
-export function formatFactsDurationDisplay(facts: CampaignFacts): string {
-  return `${resolveFactsDurationWeeks(facts)} weeks`;
+export function formatFactsDurationDisplay(facts: CampaignFacts): string | undefined {
+  const weeks = resolveFactsDurationWeeks(facts);
+  if (weeks == null) return undefined;
+  return `${weeks} weeks`;
 }
 
 function normalizeCreatorTier(tier: string): CreatorMixTier["tier"] {
@@ -279,9 +281,10 @@ export function buildTimelineSectionDataFromFacts(
   facts: CampaignFacts,
   strategy?: CampaignStrategyDocument
 ): TimelineSectionData {
-  const durationWeeks = strategy
-    ? clampCampaignDurationWeeks(strategy.understanding.timeline?.durationWeeks ?? resolveFactsDurationWeeks(facts))
-    : resolveFactsDurationWeeks(facts);
+  const durationWeeks = resolveFactsDurationWeeks(facts);
+  if (durationWeeks == null) {
+    return { milestones: [] };
+  }
 
   const minimalStrategy = {
     understanding: { timeline: { durationWeeks } },
@@ -324,7 +327,9 @@ export function applyFactsToSummaryData(
   const budgetDisplay = formatFactsBudgetDisplay(facts);
   if (budgetDisplay) result.budget = budgetDisplay;
 
-  result.duration = formatFactsDurationDisplay(facts);
+  const durationDisplay = formatFactsDurationDisplay(facts);
+  if (durationDisplay) result.duration = durationDisplay;
+  else delete result.duration;
 
   const startIso =
     facts.requestedStartDate?.trim() || facts.campaignStartDate?.trim() || "";
@@ -335,7 +340,8 @@ export function applyFactsToSummaryData(
     result.campaignStartDate = formatCampaignDateLabel(startIso);
     // Prefer explicit Campaign End Date when present; otherwise derive from duration.
     const resolvedEnd =
-      explicitEndIso || resolveCampaignEndDate(startIso, durationWeeks);
+      explicitEndIso ||
+      (durationWeeks != null ? resolveCampaignEndDate(startIso, durationWeeks) : null);
     if (resolvedEnd) {
       result.campaignEndDate = formatCampaignDateLabel(resolvedEnd);
     } else {
