@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
 
 type CampaignMediaPlanPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ view?: string; planId?: string }>;
+  searchParams: Promise<{ view?: string; planId?: string; popup?: string }>;
 };
 
 function resolveView(raw: string | undefined): MediaPlanViewKind {
@@ -52,6 +52,7 @@ export default async function CampaignMediaPlanPage({
   const query = await searchParams;
   const view = resolveView(query.view);
   const selectedPlanId = query.planId?.trim() || null;
+  const companionWindow = query.popup === "1";
 
   const campaignId = await resolveCampaignIdByRouteKey(routeKey);
   if (!campaignId) notFound();
@@ -65,7 +66,11 @@ export default async function CampaignMediaPlanPage({
         canonicalPath: campaignMediaPlanPath(routeSummary),
       },
       undefined,
-      view !== "original" ? { view } : undefined
+      {
+        view: view !== "original" ? view : undefined,
+        planId: selectedPlanId ?? undefined,
+        popup: companionWindow ? "1" : undefined,
+      }
     );
   }
 
@@ -87,11 +92,14 @@ export default async function CampaignMediaPlanPage({
       title="Media Plan"
       description={`${workspace.document_number ?? workspace.name} — Original, Actual, Remaining`}
       hidePageHeader
+      immersiveLayout={companionWindow}
+      containedMain={companionWindow}
     >
       <CampaignMediaPlanWorkspace
         workspace={workspace}
         payload={payload}
         initialView={view}
+        companionWindow={companionWindow}
       />
     </DashboardShell>
   );

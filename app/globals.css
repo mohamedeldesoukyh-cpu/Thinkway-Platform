@@ -355,6 +355,18 @@
     box-shadow: inset 0 0 0 1px rgba(0, 87, 255, 0.08);
   }
 
+  /* Companion Media Plan window — hide app chrome so Assignments can sit beside it. */
+  html[data-companion-window="1"] [data-app-sidebar-root],
+  html[data-companion-window="1"] .thinkway-app-sidebar {
+    display: none !important;
+    width: 0 !important;
+    min-width: 0 !important;
+  }
+
+  html[data-companion-window="1"] {
+    --app-sidebar-width: 0px;
+  }
+
   /* Sidebar logo — readable on dark elevated rail */
   .dark .login-v2-logo-text {
     color: #fafafa;
