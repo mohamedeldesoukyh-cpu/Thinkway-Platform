@@ -1,12 +1,17 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `develop`  
-**Focus:** Studio Wave 3 — Package readiness / consistency gate (Development only)
+**Branch:** `develop` (`21c80112`)  
+**Focus:** Studio Intake CIP → facts wiring + left-rail status (promoted to Dev and Production)
 
-## In progress
+## Shipped
 
-- Wave 3 Package readiness is implemented. Client Workspace is **not** started.
-- Create Client Review is gated on `READY_FOR_CLIENT` only. No Production deploy.
+- Wave 3 Package readiness (prior)
+- Intake now copies Campaign Intelligence into “What Thinkway understood”
+- Confirm uses CIP + typed facts; no invented budget
+- Left rail: Intake In progress while working; later steps stay Blocked until Confirm
+- Brief-sourced gaps (objective/market) filled; invented platforms stripped
+
+Client Workspace is **not** started.
 
 ## Shipped this session (local, uncommitted unless later requested)
 

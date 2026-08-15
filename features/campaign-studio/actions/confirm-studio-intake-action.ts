@@ -16,6 +16,7 @@ import {
   updateCampaignIntelligenceProfile,
 } from "@/features/campaign-intelligence-profile/services/profile-repository";
 import { profileToCampaignFacts } from "@/features/campaign-intelligence-profile/services/profile-to-facts";
+import { normalizeCampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/services/normalize-profile";
 import { syncLatestStudioMessageCampaignObject } from "@/features/ai-workspace/services/conversation-campaign-hydration";
 import { getConversationWithMessages } from "@/features/ai-workspace/services/conversation-service";
 
