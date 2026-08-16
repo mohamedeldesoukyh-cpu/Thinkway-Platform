@@ -102,12 +102,12 @@ export function buildAssignmentAgreedPlatformIndexFromAssignments(input: {
       if ((platform.deliverables?.length ?? 0) === 0) continue;
       addPlatformToLineMap(metadataPlatformsByLine, line.id, platform.platform);
     }
-    for (const row of line.assignment?.commercial_rows ?? []) {
-      addPlatformToLineMap(metadataPlatformsByLine, line.id, row.platform);
-    }
+    // commercial_rows are pricing only — never treat them as agreed scope.
   }
 
+  const hierarchyLineIds = new Set<string>();
   for (const group of input.hierarchyGroups ?? []) {
+    hierarchyLineIds.add(group.line.id);
     const influencerId =
       group.line.influencer_id ?? influencerByLineId.get(group.line.id) ?? null;
     if (influencerId) influencerByLineId.set(group.line.id, influencerId);
@@ -123,12 +123,16 @@ export function buildAssignmentAgreedPlatformIndexFromAssignments(input: {
   const lineIds = new Set<string>([
     ...metadataPlatformsByLine.keys(),
     ...deliverablePlatformsByLine.keys(),
+    ...hierarchyLineIds,
   ]);
 
   for (const lineId of lineIds) {
     const deliverablePlatforms = deliverablePlatformsByLine.get(lineId);
-    const platforms =
-      deliverablePlatforms && deliverablePlatforms.size > 0
+    // Assignments grid is SSOT when hierarchy is present for the line: empty
+    // deliverables ⇒ no agreed platforms (do not fall back to stale metadata).
+    const platforms = hierarchyLineIds.has(lineId)
+      ? (deliverablePlatforms ?? new Set<string>())
+      : deliverablePlatforms && deliverablePlatforms.size > 0
         ? deliverablePlatforms
         : (metadataPlatformsByLine.get(lineId) ?? new Set<string>());
     const influencerId = influencerByLineId.get(lineId) ?? null;

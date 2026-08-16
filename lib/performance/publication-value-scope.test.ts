@@ -219,6 +219,9 @@ function indexWithInstagram() {
 }
 
 {
+  // Synthetic deliverables are ignored. With hierarchy present and no real
+  // deliverables on the line, do not fall back to metadata — posts are AV
+  // when the campaign still has other agreed platforms.
   const classified = applyPublicationValueScopes(
     [{ campaign_line_id: lineId, influencer_id: influencerId, platform: "tiktok" }],
     buildAssignmentAgreedPlatformIndexFromAssignments({
@@ -226,6 +229,10 @@ function indexWithInstagram() {
         {
           line: { id: lineId, influencer_id: influencerId },
           deliverables: [{ platform: "tiktok", is_synthetic: true }],
+        },
+        {
+          line: { id: "line-other", influencer_id: "inf-other" },
+          deliverables: [{ platform: "instagram" }],
         },
       ],
       lines: [
@@ -273,6 +280,45 @@ function indexWithInstagram() {
   assert.equal(classified[1]?.value_scope, "added_value");
   assert.equal(classified[2]?.value_scope, "added_value");
   assert.equal(classified[3]?.value_scope, "added_value");
+}
+
+{
+  // Removing all Assignments-grid deliverables must not fall back to stale
+  // metadata platforms / commercial_rows — posts become Added value.
+  const classified = applyPublicationValueScopes(
+    [
+      { campaign_line_id: lineId, influencer_id: influencerId, platform: "instagram" },
+      { campaign_line_id: lineId, influencer_id: influencerId, platform: "tiktok" },
+    ],
+    buildAssignmentAgreedPlatformIndexFromAssignments({
+      hierarchyGroups: [
+        {
+          line: { id: lineId, influencer_id: influencerId },
+          deliverables: [],
+        },
+        {
+          line: { id: "line-other", influencer_id: "inf-other" },
+          deliverables: [{ platform: "instagram" }],
+        },
+      ],
+      lines: [
+        {
+          id: lineId,
+          influencer_id: influencerId,
+          assignment: {
+            influencer_id: influencerId,
+            platforms: [
+              { platform: "instagram", deliverables: ["instagram_reel"] },
+              { platform: "tiktok", deliverables: ["tiktok_video"] },
+            ],
+            commercial_rows: [{ platform: "instagram" }, { platform: "tiktok" }],
+          },
+        },
+      ],
+    })
+  );
+  assert.equal(classified[0]?.value_scope, "added_value");
+  assert.equal(classified[1]?.value_scope, "added_value");
 }
 
 console.log("publication-value-scope tests passed");
