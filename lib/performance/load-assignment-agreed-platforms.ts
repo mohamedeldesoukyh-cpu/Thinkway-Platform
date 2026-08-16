@@ -28,9 +28,9 @@ function addPlatform(target: Map<string, Set<string>>, lineId: string, platform:
 
 /**
  * Live assignment platform index for a campaign.
- * Prefers assignment_deliverables (the Assignments grid) when the line has rows,
- * otherwise falls back to line metadata platforms. Adding or removing a platform
- * in Assignments therefore reclassifies publications on the next Performance load.
+ * `assignment_deliverables` is the Assignments-grid SSOT when the query succeeds:
+ * removing all deliverables for a creator clears their agreed platforms (Added value).
+ * Metadata platforms are only used if the deliverables query fails.
  */
 export async function loadAssignmentAgreedPlatformIndex(
   supabase: SupabaseClient,
@@ -65,13 +65,12 @@ export async function loadAssignmentAgreedPlatformIndex(
         if ((platform.deliverables?.length ?? 0) === 0) continue;
         addPlatform(metadataPlatformsByLine, line.id, platform.platform);
       }
-      for (const row of assignment?.commercial_rows ?? []) {
-        addPlatform(metadataPlatformsByLine, line.id, row.platform);
-      }
+      // commercial_rows are pricing only — never treat them as agreed scope.
     }
 
     const lineIds = lineRows.map((line) => line.id);
     const deliverablePlatformsByLine = new Map<string, Set<string>>();
+    let deliverablesQueryOk = false;
 
     if (lineIds.length > 0) {
       const { data: deliverables, error: deliverablesError } = await supabase
@@ -85,6 +84,7 @@ export async function loadAssignmentAgreedPlatformIndex(
           message: deliverablesError.message,
         });
       } else {
+        deliverablesQueryOk = true;
         for (const row of (deliverables ?? []) as DeliverableRow[]) {
           addPlatform(deliverablePlatformsByLine, row.campaign_line_id, row.platform);
         }
@@ -92,11 +92,12 @@ export async function loadAssignmentAgreedPlatformIndex(
     }
 
     for (const line of lineRows) {
-      const deliverablePlatforms = deliverablePlatformsByLine.get(line.id);
-      const platforms =
-        deliverablePlatforms && deliverablePlatforms.size > 0
-          ? deliverablePlatforms
-          : (metadataPlatformsByLine.get(line.id) ?? new Set<string>());
+      // assignment_deliverables is SSOT when the query succeeds: empty rows for a
+      // line mean no agreed platforms (do not fall back to stale metadata after deletes).
+      // Metadata is only used when the deliverables query fails (legacy / outage).
+      const platforms = deliverablesQueryOk
+        ? (deliverablePlatformsByLine.get(line.id) ?? new Set<string>())
+        : (metadataPlatformsByLine.get(line.id) ?? new Set<string>());
       const influencerId = influencerByLineId.get(line.id) ?? null;
 
       for (const platform of platforms) {
