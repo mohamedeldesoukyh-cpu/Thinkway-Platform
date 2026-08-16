@@ -201,7 +201,7 @@ function renderCombinedSheets(data: PerformanceReportDocumentData): string[] {
       ? Math.max(1, Math.ceil(addedValue.length / CARDS_PER_PAGE))
       : 0;
   const totalPages =
-    1 + 1 + 1 + 1 + 1 + 1 + 2 + 1 + pubPages + (addedValue.length > 0 ? 1 + addedPages : 0) + 1;
+    1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + pubPages + (addedValue.length > 0 ? 1 + addedPages : 0) + 1;
 
   const sheets: string[] = [];
   let page = 1;
@@ -215,10 +215,10 @@ function renderCombinedSheets(data: PerformanceReportDocumentData): string[] {
     { num: "03", label: "Benchmark & Key Insights", page: 5 },
     { num: "04", label: "Platform Breakdown", page: 6 },
     { num: "05", label: "Performance Charts", page: 7 },
-    { num: "06", label: "Campaign Publications", page: 9 },
+    { num: "06", label: "Campaign Publications", page: 8 },
   ];
   if (addedValue.length > 0) {
-    tocEntries.push({ num: "07", label: "Added Value", page: 9 + pubPages + 1 });
+    tocEntries.push({ num: "07", label: "Added Value", page: 8 + pubPages + 1 });
   }
   tocEntries.push({ num: "—", label: "Thank You", page: totalPages });
 
@@ -430,37 +430,22 @@ ${
   );
   page += 1;
 
-  const viewsItems = charts.views_by_publication.slice(0, 14).map((p) => ({
+  const viewsItems = charts.views_by_publication.slice(0, 10).map((p) => ({
     label: p.label.length > 28 ? `${p.label.slice(0, 28)}…` : p.label,
     value: p.views,
+  }));
+  const creatorItems = charts.top_creators_by_engagement.slice(0, 8).map((c) => ({
+    label: c.name.length > 28 ? `${c.name.slice(0, 28)}…` : c.name,
+    value: c.engagements,
   }));
   sheets.push(
     renderSheet({
       id: "section-performance-charts",
       headLeft: "05 · Performance Charts",
-      headRight: "Views by publication",
-      body: `${renderSectionHeader("05", "Performance Charts", "Relative delivery across the highest-reach publications.")}
-<div class="chart"><div class="chart__h"><span class="chart__t">Views by publication</span><span class="chart__u">Top ${viewsItems.length}</span></div>${renderBars(viewsItems, true)}</div>`,
-      footLeft: foot,
-      pageLabel: pageLabel(page, totalPages),
-    })
-  );
-  page += 1;
-
-  const creatorItems = charts.top_creators_by_engagement.slice(0, 10).map((c) => ({
-    label: c.name,
-    value: c.engagements,
-  }));
-  const timeItems = charts.performance_over_time.slice(-12).map((row) => ({
-    label: row.date,
-    value: row.engagements,
-  }));
-  sheets.push(
-    renderSheet({
-      headLeft: "05 · Performance Charts",
-      headRight: "Timeline & creators",
-      body: `<div class="chart"><div class="chart__h"><span class="chart__t">Top creators by engagement</span><span class="chart__u">Campaign</span></div>${renderBars(creatorItems, true)}</div>
-<div class="chart" style="margin-top:8mm"><div class="chart__h"><span class="chart__t">Engagement over time</span><span class="chart__u">Recent window</span></div>${renderBars(timeItems)}</div>`,
+      headRight: "Views & creators",
+      body: `${renderSectionHeader("05", "Performance Charts", "Relative delivery across top publications and creators.")}
+<div class="chart"><div class="chart__h"><span class="chart__t">Views by publication</span><span class="chart__u">Top ${viewsItems.length}</span></div>${renderBars(viewsItems)}</div>
+<div class="chart"><div class="chart__h"><span class="chart__t">Top creators by engagement</span><span class="chart__u">Campaign</span></div>${renderBars(creatorItems)}</div>`,
       footLeft: foot,
       pageLabel: pageLabel(page, totalPages),
     })
