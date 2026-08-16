@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import {
   getCampaignFacts,
@@ -36,6 +36,8 @@ import {
 } from "../services/studio-workspace-status";
 import type { StudioWorkspaceStepId } from "../constants/studio-workspace";
 import { useCampaignStudio } from "../hooks/use-campaign-studio";
+import { ingestSearchPoolIfNeeded } from "../services/studio-search-pool";
+import { proposeInitialCreatorSlate } from "../services/propose-creator-slate";
 import type {
   CampaignStudioInput,
   CampaignStudioLayoutMode,
@@ -85,6 +87,20 @@ export function CampaignStudio({
   ...input
 }: CampaignStudioProps) {
   const studio = useCampaignStudio(input);
+  const persistedSearchPoolKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (!onSlateUpdated || !input.campaignObject) return;
+    const result = ingestSearchPoolIfNeeded(input.campaignObject, input.actionCards);
+    if (!result.ingested) return;
+    const key = `${input.campaignObject.id}:${result.pool.creatorIds.join(",")}`;
+    if (persistedSearchPoolKey.current === key) return;
+    persistedSearchPoolKey.current = key;
+    onSlateUpdated(
+      proposeInitialCreatorSlate(result.campaignObject, {
+        poolCreators: result.pool.creators,
+      })
+    );
+  }, [input.campaignObject, input.actionCards, onSlateUpdated]);
   const [navOpen, setNavOpen] = useState(false);
   const [scrollRoot, setScrollRoot] = useState<HTMLDivElement | null>(null);
   const isChatLayout = layoutMode === "chat";

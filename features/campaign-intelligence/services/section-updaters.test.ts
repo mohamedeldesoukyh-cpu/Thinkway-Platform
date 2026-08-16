@@ -88,3 +88,25 @@ test("search-creators running does not strip committed recommendations", () => {
   assert.equal(data.vendorDecisions?.["inf:keep-1"], "shortlisted");
   assert.equal(data.pendingProposal?.status, "generating");
 });
+
+test("search-creators with empty extract does not wipe an existing discovery pool", () => {
+  const campaignObject = baseCampaignObject({
+    phase: "discovery",
+    discovery: { creatorIds: ["inf:rooh", "inf:zeina"], total: 82 },
+    lastDiscoveryAt: NOW,
+  });
+
+  const updated = applyTaskResultToCampaignObject(
+    campaignObject,
+    {
+      taskId: "search-creators",
+      status: "completed",
+      content: "No creators extracted",
+    },
+    {}
+  );
+
+  const data = updated.sections.creators.data as CreatorsSectionData;
+  assert.deepEqual(data.discovery?.creatorIds, ["inf:rooh", "inf:zeina"]);
+  assert.equal(data.discovery?.total, 82);
+});

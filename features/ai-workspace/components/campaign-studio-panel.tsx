@@ -38,6 +38,7 @@ import {
   findLatestStudioMessage,
   studioCampaignObjectBindKey,
 } from "./campaign-studio-panel-utils";
+import { mergeActionCards } from "@/features/campaign-studio/services/studio-search-pool";
 import { StudioConversationControls } from "./studio-conversation-controls";
 import { toWorkflowDisplayMetadata } from "./workflow-dashboard-panel";
 import { resolvePresentationCompletion } from "@/features/campaign-studio/services/section-data-resolver";
@@ -57,6 +58,8 @@ type CampaignStudioPanelProps = {
   /** Live workflow input while the studio object is still being generated. */
   streamingInput?: CampaignStudioInput;
   conversationId?: string;
+  /** Creator Match cards from earlier turns — Copilot replies often omit them. */
+  threadActionCards?: AiActionCard[];
   onCardUpdated?: (messageId: string, cardId: string, status: string) => void;
   onVendorDecisionsUpdated?: (
     messageId: string,
@@ -103,6 +106,7 @@ export function CampaignStudioPanel({
   message,
   streamingInput,
   conversationId,
+  threadActionCards,
   onCardUpdated,
   onVendorDecisionsUpdated,
   onSlateUpdated,
@@ -196,7 +200,10 @@ export function CampaignStudioPanel({
         completedTasks: display!.completedTasks,
         pendingTasks: display!.pendingTasks,
         inferredFields: message?.metadata.inferredFields as string[] | undefined,
-        actionCards: message?.metadata.actionCards as AiActionCard[] | undefined,
+        actionCards: mergeActionCards(
+          threadActionCards,
+          message?.metadata.actionCards as AiActionCard[] | undefined
+        ),
         conversationId,
         messageId: message?.id,
       }

@@ -375,8 +375,24 @@ function deriveSectionUpdatesFromTask(
       if (taskId === "search-creators") {
         const campaignFacts = getCampaignFactsFromState(stateData);
         const strategy = getStrategyFromWorkflowData(stateData);
-        const discoveryDisplay = formatDiscoveryDisplay(creators, total, query);
+        const existingIds = existingData.discovery?.creatorIds ?? [];
         const hasResults = creators.length > 0;
+        if (!hasResults && existingIds.length > 0) {
+          const discoveryData = beginPendingCreatorProposal(existingData);
+          updates.push({
+            sectionKey: key,
+            content:
+              existingData.discoveryDisplay ??
+              (typeof sections.creators.content === "string" ? sections.creators.content : ""),
+            data: {
+              ...discoveryData,
+              discovery: existingData.discovery,
+            },
+            status: "working",
+          });
+          continue;
+        }
+        const discoveryDisplay = formatDiscoveryDisplay(creators, total, query);
         const funnel =
           campaignFacts && strategy
             ? buildVendorDiscoveryFunnel(campaignFacts, strategy, total, !hasResults)

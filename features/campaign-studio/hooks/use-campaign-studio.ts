@@ -4,6 +4,7 @@ import { enrichCampaignObjectWithStudioData } from "@/features/campaign-intellig
 import { stripConversationalFiller } from "@/features/ai-workflows/formatters/creator-formatter";
 import type { WorkflowSummarySection } from "@/features/ai-workflows";
 import { campaignObjectToStudioState } from "@/features/campaign-intelligence/services/studio-renderer";
+import { ingestSearchPoolIfNeeded } from "../services/studio-search-pool";
 
 import {
   CAMPAIGN_STUDIO_SECTION_DEFS,
@@ -171,7 +172,11 @@ export function buildCampaignStudioState(
   }
 
   if (input.campaignObject) {
-    const enrichedObject = enrichCampaignObjectWithStudioData(input.campaignObject);
+    const ingestedObject = ingestSearchPoolIfNeeded(
+      input.campaignObject,
+      input.actionCards
+    ).campaignObject;
+    const enrichedObject = enrichCampaignObjectWithStudioData(ingestedObject);
     const fromObject = campaignObjectToStudioState(enrichedObject, {
       actionCards: input.actionCards,
       activeTaskId: input.taskId,

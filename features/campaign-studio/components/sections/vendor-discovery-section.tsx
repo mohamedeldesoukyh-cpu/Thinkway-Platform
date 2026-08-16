@@ -2,8 +2,6 @@
 
 import { SearchIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-
 import { SectionSkeleton } from "./shared/section-skeleton";
 import { STUDIO_REF_CLASSES } from "../../constants/campaign-studio-ref-tokens";
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
@@ -120,9 +118,6 @@ export function VendorDiscoverySection({
           <SearchIcon className="mx-auto mb-2 size-5 text-[#6B7280]/60" />
           <p className="text-sm font-bold text-foreground">{sufficiency.title}</p>
           <p className="mt-1 text-xs text-[#6B7280]">{sufficiency.nextAction}</p>
-          <Button type="button" size="sm" className="mt-3 bg-[#0C9D57] hover:bg-[#0a8a4c]">
-            {sufficiency.state === "no_inventory" ? "Broaden Discovery" : "Run Discovery"}
-          </Button>
         </div>
       )}
     </div>

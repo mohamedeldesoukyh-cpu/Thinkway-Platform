@@ -32,6 +32,7 @@ import { CampaignStudioPanel, findLatestStudioMessage } from "./campaign-studio-
 import { CampaignCopilotDock } from "./campaign-copilot-dock";
 import { ConversationList } from "./conversation-list";
 import { SuggestedActionsBar } from "./suggested-actions-bar";
+import { creatorSearchActionCardsFromMessages } from "@/features/campaign-studio/services/studio-search-pool";
 import "../styles/studio-chat-ref.css";
 import "./ai-workspace.css";
 
@@ -814,6 +815,10 @@ export function IntelligenceWorkspace({
     () => findLatestStudioMessage(messages),
     [messages]
   );
+  const threadActionCards = useMemo(
+    () => creatorSearchActionCardsFromMessages(messages),
+    [messages]
+  );
 
   const createCampaignStreamingInput = useMemo((): CampaignStudioInput | null => {
     if (!isStreaming) return null;
@@ -1024,6 +1029,7 @@ export function IntelligenceWorkspace({
       >
         <CampaignStudioPanel
           message={latestStudioMessage ?? undefined}
+          threadActionCards={threadActionCards}
           streamingInput={
             isCreateCampaignStreaming && !latestStudioMessage
               ? (createCampaignStreamingInput ?? undefined)
