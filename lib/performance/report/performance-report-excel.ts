@@ -148,7 +148,7 @@ export function buildPerformanceReportExcelBuffer(
         { label: "Brand", value: data.campaign.brandName ?? "—" },
         { label: "Creators", value: String(data.uniqueCreatorCount) },
         { label: "Publications", value: String(data.bundle.summary.agreed_publications) },
-        { label: "Added value", value: String(data.bundle.summary.added_value_publications) },
+        { label: "Added value", value: String(data.addedValueCreatorCount) },
         { label: "Total reach", value: formatCompactCount(data.bundle.summary.total_reach) },
         { label: "Total impressions", value: formatCompactCount(data.bundle.summary.total_impressions) },
         { label: "Total views", value: formatCompactCount(data.bundle.summary.total_views) },
@@ -163,7 +163,8 @@ export function buildPerformanceReportExcelBuffer(
     columnHeaders: [["Metric", "Value"]],
     rows: [
       { values: ["Publications (agreed)", String(data.bundle.summary.agreed_publications)] },
-      { values: ["Added value", String(data.bundle.summary.added_value_publications)] },
+      { values: ["Added value (creators)", String(data.addedValueCreatorCount)] },
+      { values: ["Added value (publications)", String(data.bundle.summary.added_value_publications)] },
       { values: ["Total reach", formatCompactCount(data.bundle.summary.total_reach)] },
       {
         values: [

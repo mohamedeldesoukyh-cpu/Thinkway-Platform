@@ -77,6 +77,8 @@ export type PerformanceReportDocumentData = {
   variant: PerformanceReportVariant;
   influencerSections: InfluencerReportSection[];
   uniqueCreatorCount: number;
+  /** Creators with ≥1 added-value publication (report presentation). */
+  addedValueCreatorCount: number;
   highlights: CampaignHighlights;
   platformBenchmarks: PlatformBenchmark[];
   recommendations: string[];
