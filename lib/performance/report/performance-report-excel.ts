@@ -153,6 +153,10 @@ export function buildPerformanceReportExcelBuffer(
         { label: "Total impressions", value: formatCompactCount(data.bundle.summary.total_impressions) },
         { label: "Total views", value: formatCompactCount(data.bundle.summary.total_views) },
         { label: "Avg ER", value: formatPercent(data.bundle.summary.average_engagement_rate) },
+        ...data.platformBenchmarks.map((b) => ({
+          label: `Avg ER · ${b.label}`,
+          value: `${b.publicationCount} agreed · ${formatPercent(b.averageEr)}`,
+        })),
       ],
       generatedAt: data.generatedAt,
     },
@@ -177,6 +181,13 @@ export function buildPerformanceReportExcelBuffer(
       },
       { values: ["Impressions disclaimer", IMPRESSIONS_FORECAST_DISCLAIMER] },
       { values: ["Total engagements", formatCompactCount(data.bundle.summary.total_engagements)] },
+      { values: ["Avg ER", formatPercent(data.bundle.summary.average_engagement_rate)] },
+      ...data.platformBenchmarks.map((b) => ({
+        values: [
+          `Avg ER · ${b.label}`,
+          `${b.publicationCount} agreed · ${formatPercent(b.averageEr)}`,
+        ],
+      })),
       ...optionalSummaryCostRows,
     ],
     columnFormats: ["text", "text"],
