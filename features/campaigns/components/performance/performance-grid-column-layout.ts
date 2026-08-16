@@ -14,6 +14,7 @@ const PERFORMANCE_GRID_COLUMN_WIDTHS: Record<PerformanceGridColumnId, string> = 
   platform: "105px",
   type: "70px",
   published: "88px",
+  lastUpdated: "108px",
   views: "70px",
   reach: "68px",
   impressions: "68px",

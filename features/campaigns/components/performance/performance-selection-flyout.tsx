@@ -26,6 +26,7 @@ type PerformanceSelectionFlyoutProps = {
   selectableCount: number;
   onSelectAll: () => void;
   onClearSelection: () => void;
+  onEnrichmentBatchStarted?: (publicationIds: string[]) => void;
 };
 
 function sanitizeFilenamePart(value: string): string {
@@ -61,6 +62,7 @@ export function PerformanceSelectionFlyout({
   selectableCount,
   onSelectAll,
   onClearSelection,
+  onEnrichmentBatchStarted,
 }: PerformanceSelectionFlyoutProps) {
   const [pending, startTransition] = useTransition();
   const refreshAfterPublicationMutation = useRefreshCampaignAfterPublicationMutation();
@@ -75,9 +77,12 @@ export function PerformanceSelectionFlyout({
       });
       if (result.ok) {
         if (result.message.toLowerCase().includes("queued")) {
-          for (const id of selectedIds) {
-            const row = selectedRows.find((r) => r.id === id);
-            notifyMetricsSyncQueued(id, row?.influencer_name);
+          onEnrichmentBatchStarted?.(selectedIds);
+          if (!onEnrichmentBatchStarted) {
+            for (const id of selectedIds) {
+              const row = selectedRows.find((r) => r.id === id);
+              notifyMetricsSyncQueued(id, row?.influencer_name);
+            }
           }
         } else {
           toast.success(result.message);
