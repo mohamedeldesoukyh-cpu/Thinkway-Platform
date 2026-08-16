@@ -1,14 +1,13 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop`  
-**Focus:** Performance report Added value % by creators
+**Focus:** Performance report AV creators vs AV posts
 
 ## Shipped
 
-- Report Delivery vs. scope % = added-value creators ÷ total creators (e.g. 3/30 → +10%)
-- Exec summary Added value KPI = creator count (“Creators beyond scope”)
-- Platform scope table still post-based; Avg ER unchanged
-- Dev `7cda28c2` · Prod `1e0e4a25` (`vercel deploy --prod`)
+- AV creators = no assignment deliverables (count · roster % · names)
+- AV posts = beyond-scope publication counts (no posts-vs-agreed %)
+- Dev `f1989cd2` · Prod `3ffb9ff5` (`vercel deploy --prod`)
 
 ## Shipped prior
 

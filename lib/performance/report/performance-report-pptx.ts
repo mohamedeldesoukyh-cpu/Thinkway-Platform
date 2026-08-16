@@ -271,14 +271,28 @@ export async function buildPerformanceReportPptxBuffer(
       { x: 5.2, y: 1.2, w: 4.3, h: 2.5, fontSize: 11 }
     );
     if (pub.content_url) {
-      slide.addText(pub.content_url, {
-        x: 0.5,
-        y: 4.0,
-        w: 9,
-        h: 0.4,
-        fontSize: 9,
-        color: BLUE,
-      });
+      slide.addText(
+        [
+          {
+            text: "Open post → ",
+            options: { bold: true, color: BLUE },
+          },
+          {
+            text: pub.content_url,
+            options: {
+              color: BLUE,
+              hyperlink: { url: pub.content_url },
+            },
+          },
+        ],
+        {
+          x: 0.5,
+          y: 4.0,
+          w: 9,
+          h: 0.4,
+          fontSize: 9,
+        }
+      );
     }
     const captionExcerpt = pub.caption?.trim()
       ? pub.caption.trim().length > 140
