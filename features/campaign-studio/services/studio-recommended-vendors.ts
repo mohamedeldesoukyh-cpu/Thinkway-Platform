@@ -23,13 +23,22 @@ export function selectStudioRecommendedVendors<T>(
     markets?: string[];
     locationOf: (vendor: T) => StudioCreatorLocation;
     recommendationOf: (vendor: T) => string | null | undefined;
+    /** When set, off-brief specialists are dropped — not merely sorted lower. */
+    fitsBriefMix?: (vendor: T) => boolean;
   }
 ): T[] {
-  return vendors.filter(
-    (vendor) =>
-      vendorMatchesCampaignMarket(options.locationOf(vendor), options.markets) &&
-      vendorPassesStudioRecommendationGate(options.recommendationOf(vendor))
-  );
+  return vendors.filter((vendor) => {
+    if (!vendorMatchesCampaignMarket(options.locationOf(vendor), options.markets)) {
+      return false;
+    }
+    if (!vendorPassesStudioRecommendationGate(options.recommendationOf(vendor))) {
+      return false;
+    }
+    if (options.fitsBriefMix && !options.fitsBriefMix(vendor)) {
+      return false;
+    }
+    return true;
+  });
 }
 
 export function recommendationFromVendor(input: {

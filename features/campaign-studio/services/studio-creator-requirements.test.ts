@@ -7,6 +7,7 @@ import {
   compareStudioRequirementScores,
   sortByStudioRequirements,
   studioCreatorRequirementScore,
+  vendorFitsStudioBriefMix,
 } from "./studio-creator-requirements";
 
 const egyptFacts: CampaignFacts = {
@@ -88,4 +89,22 @@ test("kitchen / Food creators do not get the brief-mix requirement on a LaLiga-s
     (item) => studioCreatorRequirementScore(item, egyptFacts)
   );
   assert.equal(ranked[0]?.name, "sports-fit");
+});
+
+test("Abeer Kitchen Beauty/Fashion/Fitness is excluded from the Arab Bank recommended mix", () => {
+  assert.equal(
+    vendorFitsStudioBriefMix(
+      {
+        displayName: "Abeer Kitchen",
+        handle: "abeer_kittchen",
+        categories: ["Beauty", "Fashion", "Fitness"],
+      },
+      egyptFacts
+    ),
+    false
+  );
+  assert.equal(
+    vendorFitsStudioBriefMix({ categories: ["Sports"] }, egyptFacts),
+    true
+  );
 });

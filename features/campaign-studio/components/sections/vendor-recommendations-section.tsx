@@ -73,6 +73,7 @@ import {
   sortByStudioRequirements,
   studioCreatorRequirementScore,
   studioRequirementBadgeLabel,
+  vendorFitsStudioBriefMix,
   type StudioRequirementScore,
 } from "../../services/studio-creator-requirements";
 import type { CreatorDrawerSelection } from "@/features/campaign-decision-workspace/components/creator-drawer";
@@ -1132,6 +1133,16 @@ export function VendorRecommendationsSection({
         countryCode: vendor.countryCode,
       }),
       recommendationOf: (vendor) => recommendationFromVendor(vendor),
+      fitsBriefMix: (vendor) =>
+        vendorFitsStudioBriefMix(
+          {
+            audienceSummary: vendor.audienceSummary,
+            categories: vendor.categories,
+            handle: vendor.handle,
+            displayName: vendor.displayName,
+          },
+          campaignFacts
+        ),
     });
     return sortByStudioRequirements(recommended, (vendor) =>
       studioCreatorRequirementScore(

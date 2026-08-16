@@ -50,3 +50,22 @@ test("ECI Not Recommended / High Risk / Insufficient Data are excluded from the 
     ["yes", "pending"]
   );
 });
+
+test("off-brief Beauty/Fashion/Fitness specialists are dropped from the recommended list", () => {
+  const selected = selectStudioRecommendedVendors(
+    [
+      { id: "sport", country: "Egypt", recommendation: "Recommended", mix: true },
+      { id: "abeer", country: "Egypt", recommendation: "Recommended", mix: false },
+    ],
+    {
+      markets: ["Egypt"],
+      locationOf: (vendor) => ({ country: vendor.country }),
+      recommendationOf: (vendor) => vendor.recommendation,
+      fitsBriefMix: (vendor) => vendor.mix,
+    }
+  );
+  assert.deepEqual(
+    selected.map((vendor) => vendor.id),
+    ["sport"]
+  );
+});

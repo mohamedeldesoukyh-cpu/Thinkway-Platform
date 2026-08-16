@@ -22,6 +22,9 @@ export const SPECIALIST_CREATOR_VERTICALS = [
   "Tech",
 ] as const;
 
+/** Mass-reach pad — not enough to keep a Food/Beauty specialist on a Sports mix. */
+const MASS_PAD_CATEGORIES = new Set(["Lifestyle", "Entertainment"]);
+
 export type StudioCreatorCategoryInput = {
   categories?: ReadonlyArray<string | null | undefined> | null;
   audienceSummary?: string | null;
@@ -48,8 +51,10 @@ export function resolveStudioCreatorCategories(input: StudioCreatorCategoryInput
 }
 
 /**
- * True when the creator's mix overlaps preferred Discovery categories, without
- * counting Lifestyle as a match for an unrequested specialist vertical.
+ * True when the creator's mix overlaps preferred Discovery categories.
+ * Unrequested specialists (Beauty, Fashion, Fitness, Food, …) cannot ride
+ * Lifestyle or Entertainment on a mass Sports mix — only a specific preferred
+ * vertical such as Sports keeps them on-brief.
  */
 export function creatorFitsPreferredCategories(
   input: StudioCreatorCategoryInput,
@@ -64,12 +69,10 @@ export function creatorFitsPreferredCategories(
       (SPECIALIST_CREATOR_VERTICALS as readonly string[]).includes(category) &&
       !preferred.includes(category)
   );
-  const matchable =
-    unrequestedSpecialists.length > 0
-      ? creator.filter(
-          (category) => category !== "Lifestyle" && !unrequestedSpecialists.includes(category)
-        )
-      : creator;
+  if (unrequestedSpecialists.length === 0) {
+    return categoriesIntersect(creator, preferred);
+  }
 
-  return categoriesIntersect(matchable, preferred);
+  const specificPreferred = preferred.filter((category) => !MASS_PAD_CATEGORIES.has(category));
+  return categoriesIntersect(creator, specificPreferred);
 }

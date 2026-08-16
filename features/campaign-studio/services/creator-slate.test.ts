@@ -117,7 +117,7 @@ test("mass Sports/Entertainment mix keeps Lifestyle on-brief", () => {
 
 test("mass mix does not treat Food/kitchen creators as Lifestyle fits", () => {
   const pool = [
-    creator("abeer_kittchen", "instagram", 900_000, ["Lifestyle"]),
+    creator("abeer_kittchen", "instagram", 900_000, ["Beauty", "Fashion", "Fitness"]),
     creator("food-1", "instagram", 800_000, ["Food", "Lifestyle"]),
     creator("sport-1", "instagram", 400_000, ["Sports"]),
     creator("sport-2", "instagram", 350_000, ["Sports"]),

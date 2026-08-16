@@ -2,7 +2,10 @@ import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
 import { deriveCreatorCategoriesFromBrief } from "./derive-creator-categories";
-import { creatorFitsPreferredCategories } from "./studio-creator-category-fit";
+import {
+  creatorFitsPreferredCategories,
+  resolveStudioCreatorCategories,
+} from "./studio-creator-category-fit";
 import {
   vendorMatchesCampaignMarket,
   type StudioCreatorLocation,
@@ -122,6 +125,43 @@ export function studioCreatorRequirementScore(
     total,
     ratio: total > 0 ? met / total : 1,
   };
+}
+
+/** Recommended list gate: skip when the brief has no mix; otherwise require a real fit. */
+export function vendorFitsStudioBriefMix(
+  input: {
+    audienceSummary?: string;
+    category?: string;
+    categories?: string[];
+    handle?: string;
+    displayName?: string;
+  },
+  facts: CampaignFacts | undefined
+): boolean {
+  const preferredCategories = deriveCreatorCategoriesFromBrief({
+    briefText: facts?.rawBriefExcerpt,
+    objective: facts?.objective,
+    audience: facts?.audience,
+    campaignName: facts?.product,
+    products: facts?.product ? [facts.product] : undefined,
+  });
+  if (preferredCategories.length === 0) return true;
+  const resolved = resolveStudioCreatorCategories({
+    categories: [...(input.categories ?? []), input.category, input.audienceSummary],
+    audienceSummary: input.audienceSummary,
+    handle: input.handle,
+    displayName: input.displayName,
+  });
+  if (resolved.length === 0) return true;
+  return creatorFitsPreferredCategories(
+    {
+      categories: resolved,
+      audienceSummary: input.audienceSummary,
+      handle: input.handle,
+      displayName: input.displayName,
+    },
+    preferredCategories
+  );
 }
 
 export function compareStudioRequirementScores(

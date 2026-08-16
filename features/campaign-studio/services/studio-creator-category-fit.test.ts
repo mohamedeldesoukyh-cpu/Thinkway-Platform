@@ -18,6 +18,23 @@ test("abeer_kittchen infers Food from the kitchen handle", () => {
   );
 });
 
+test("Beauty / Fashion / Fitness specialists do not count as a mass Sports mix", () => {
+  assert.equal(
+    creatorFitsPreferredCategories(
+      { displayName: "Abeer Kitchen", categories: ["Beauty", "Fashion", "Fitness"] },
+      MASS_MIX
+    ),
+    false
+  );
+  assert.equal(
+    creatorFitsPreferredCategories(
+      { categories: ["Beauty", "Fashion", "Fitness", "Entertainment"] },
+      MASS_MIX
+    ),
+    false
+  );
+});
+
 test("Food / kitchen creators do not count as Lifestyle on a mass Sports mix", () => {
   assert.equal(
     creatorFitsPreferredCategories(
