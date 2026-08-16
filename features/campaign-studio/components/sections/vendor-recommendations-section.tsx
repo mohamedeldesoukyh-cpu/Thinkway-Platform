@@ -1499,14 +1499,18 @@ export function VendorRecommendationsSection({
       <StudioCreatorCompareDialog
         open={compareOpen}
         onOpenChange={setCompareOpen}
-        creators={marketVendors
-          .filter((v): v is DisplayVendor & { id: string } => Boolean(v.id))
-          .map((v) => ({
-            id: v.id,
-            displayName: v.displayName,
-            handle: v.handle,
-            platform: v.platform,
-          }))}
+        creators={marketVendors.flatMap((vendor) =>
+          vendor.id
+            ? [
+                {
+                  id: vendor.id,
+                  displayName: vendor.displayName,
+                  handle: vendor.handle,
+                  platform: vendor.platform,
+                },
+              ]
+            : []
+        )}
         onOpenCreator={(unifiedId) => {
           const match = marketVendors.find((v) => v.id === unifiedId);
           if (match) openCreatorDetails(match);
