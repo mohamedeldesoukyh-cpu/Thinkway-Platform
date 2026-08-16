@@ -60,12 +60,17 @@ export function resolveStudioDiscoverySufficiency(
   const factsConfirmed = isStudioIntakeConfirmed(campaignObject);
   const creatorsData = readCreatorsData(campaignObject);
   const counts = resolveCreatorCounts(campaignObject);
-  const inventoryCount = counts.discoveryIds.length;
+  const inventoryCount = Math.max(
+    counts.discoveryIds.length,
+    counts.profilesScreened ?? 0,
+    counts.discoveryCount
+  );
   const qualifiedCount =
-    counts.recommendationCount > 0 ? counts.recommendationCount : inventoryCount;
-  const quantity = deriveCreatorQuantityRecommendation(facts, {
-    poolSize: Math.max(inventoryCount, qualifiedCount),
-  });
+    counts.recommendationCount > 0 ? counts.recommendationCount : counts.discoveryIds.length;
+  const quantity = deriveCreatorQuantityRecommendation(
+    facts,
+    inventoryCount > 0 ? { poolSize: inventoryCount } : undefined
+  );
   const missingIntelligence = enrichmentGaps(creatorsData);
   const blocked = creatorsData.slateProposalStatus?.reason;
   const searching = isRunning || creatorsData.phase === "discovery";

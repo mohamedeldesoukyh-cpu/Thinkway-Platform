@@ -168,10 +168,30 @@ test("Studio Discovery never uses a No creators found dead end", () => {
   assert.equal(running.state, "acquisition_running");
 
   const sufficient = resolveStudioDiscoverySufficiency(withSlate(arabBankObject()), false);
-  assert.equal(sufficient.state, "discovery_sufficient");
+  assert.notEqual(sufficient.state, "no_inventory");
+  assert.doesNotMatch(`${sufficient.title} ${sufficient.detail}`, /No creators found/i);
 
   assert.notEqual(jobOutcomeLabel("empty"), "No creators found");
   assert.match(jobOutcomeLabel("empty"), /Inventory empty|broaden|acquisition/i);
+});
+
+test("51 screened with a 1-creator slate is not Discovery sufficient", () => {
+  const object = withSlate(arabBankObject());
+  object.sections.creators.data = {
+    ...(object.sections.creators.data as CreatorsSectionData),
+    discovery: { creatorIds: ["cr_nour"], total: 51 },
+    recommendations: {
+      creatorIds: ["cr_nour"],
+      selectedReasoning: (
+        object.sections.creators.data as CreatorsSectionData
+      ).recommendations?.selectedReasoning?.slice(0, 1),
+    },
+  } as unknown as Record<string, unknown>;
+  const sufficiency = resolveStudioDiscoverySufficiency(object, false);
+  assert.equal(sufficiency.inventoryCount, 51);
+  assert.equal(sufficiency.qualifiedCount, 1);
+  assert.equal(sufficiency.state, "insufficient_intelligence");
+  assert.match(sufficiency.detail, /1 qualified creator/i);
 });
 
 test("content plan is per-creator and traces to Strategy, not a generic platform table", () => {

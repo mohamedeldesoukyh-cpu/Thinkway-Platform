@@ -104,6 +104,18 @@ function hasApprovedVendorFunnel(creatorsData: CreatorsSectionData): boolean {
   return (creatorsData.vendorDiscoveryFunnel?.length ?? 0) > 0;
 }
 
+/** Stored funnels that copy the same count to every stage hide the real slate size. */
+function isUninformativeVendorFunnel(
+  pipeline: CreatorsSectionData["vendorDiscoveryFunnel"],
+  recommendationCount: number
+): boolean {
+  if (!pipeline?.length || recommendationCount <= 0) return false;
+  const counts = pipeline.map((stage) => stage.count).filter((count) => count > 0);
+  if (counts.length < 2) return false;
+  const first = counts[0];
+  return counts.every((count) => count === first) && first !== recommendationCount;
+}
+
 function directorGrounding(
   confidence: number,
   reason: string
@@ -333,13 +345,15 @@ export function resolveDiscoveryPipeline(
   isSearching: boolean
 ): DiscoveryPipelineStage[] {
   const creatorsData = readCreatorsData(campaignObject);
-
-  if (hasApprovedVendorFunnel(creatorsData)) {
-    return creatorsData.vendorDiscoveryFunnel!;
-  }
-
   const { discoveryIds, recommendationCount, profilesScreened } =
     resolveCreatorCounts(campaignObject);
+
+  if (
+    hasApprovedVendorFunnel(creatorsData) &&
+    !isUninformativeVendorFunnel(creatorsData.vendorDiscoveryFunnel, recommendationCount)
+  ) {
+    return creatorsData.vendorDiscoveryFunnel!;
+  }
 
   const stored = creatorsData.discoveryPipeline ?? [];
   const finalCount = recommendationCount > 0 ? recommendationCount : discoveryIds.length;
@@ -614,12 +628,12 @@ export function resolveVendorDiscovery(
   const { discoveryIds, recommendationCount, profilesScreened } =
     resolveCreatorCounts(campaignObject);
   const isSearching = isRunning || creatorsData.phase === "discovery";
-  const finalCount =
+  const recommendedCount =
     recommendationCount > 0 ? recommendationCount : discoveryIds.length;
 
   return {
     phase: creatorsData.phase,
-    total: finalCount,
+    total: recommendedCount,
     candidateCount: discoveryIds.length,
     profilesScreened,
     isSearching,

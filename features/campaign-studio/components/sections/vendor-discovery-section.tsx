@@ -30,7 +30,8 @@ export function VendorDiscoverySection({
   const refMode = useStudioRefMode();
   const isRunning = status === "running";
   const discovery = resolveVendorDiscovery(campaignObject, isRunning);
-  const { discoveryIds, recommendationCount } = resolveCreatorCounts(campaignObject);
+  const { discoveryIds, recommendationCount, profilesScreened } =
+    resolveCreatorCounts(campaignObject);
   const sufficiency = resolveStudioDiscoverySufficiency(campaignObject, isRunning);
   const hasCandidates =
     discovery.total > 0 || discoveryIds.length > 0 || recommendationCount > 0;
@@ -40,28 +41,33 @@ export function VendorDiscoverySection({
   }
 
   const screenedLabel =
-    discovery.profilesScreened != null && discovery.profilesScreened > 0
+    (profilesScreened != null && profilesScreened > 0
+      ? profilesScreened.toLocaleString()
+      : null) ??
+    (discovery.profilesScreened != null && discovery.profilesScreened > 0
       ? discovery.profilesScreened.toLocaleString()
       : formatPipelineCount(
           discovery.pipeline.find((s) => s.id === "screened")?.count ??
             discovery.pipeline.find((s) => s.id === "database")?.count ??
             discovery.pipeline.find((s) => s.id === "db")?.count ??
             0
-        );
+        ));
 
-  const finalLabel =
-    discovery.total > 0
-      ? discovery.total.toLocaleString()
-      : recommendationCount > 0
-        ? recommendationCount.toLocaleString()
+  const recommendedLabel =
+    recommendationCount > 0
+      ? recommendationCount.toLocaleString()
+      : discovery.total > 0
+        ? discovery.total.toLocaleString()
         : "—";
 
   const summaryText =
-    discovery.total > 0 && screenedLabel !== "—"
-      ? `${finalLabel} final candidates from ${screenedLabel} profiles screened`
-      : discovery.total > 0
-        ? `${finalLabel} recommended creators`
-        : null;
+    recommendationCount > 0 && screenedLabel !== "—"
+      ? `${recommendedLabel} recommended from ${screenedLabel} profiles screened`
+      : discovery.total > 0 && screenedLabel !== "—"
+        ? `${recommendedLabel} final candidates from ${screenedLabel} profiles screened`
+        : discovery.total > 0
+          ? `${recommendedLabel} recommended creators`
+          : null;
 
   return (
     <div className="min-w-0 space-y-3">
