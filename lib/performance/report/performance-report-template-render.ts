@@ -280,7 +280,7 @@ function renderCombinedSheets(data: PerformanceReportDocumentData): string[] {
   <div class="s"><div class="sk">Publications</div><div class="sv num">${summary.agreed_publications}</div><div class="ss">Agreed scope</div></div>
   <div class="s s--green"><div class="sk">Added value</div><div class="sv num">${summary.added_value_publications}</div><div class="ss">Beyond scope</div></div>
   <div class="s"><div class="sk">Engagements</div><div class="sv num">${esc(formatCompactCount(summary.total_engagements))}</div><div class="ss">Likes, comments, shares, saves</div></div>
-  <div class="s s--accent"><div class="sk">Avg. ER</div><div class="sv num">${esc(formatPercent(summary.average_engagement_rate))}</div><div class="ss">Against reach</div></div>
+  <div class="s s--accent"><div class="sk">Avg. ER</div><div class="sv num">${esc(formatPercent(summary.average_engagement_rate))}</div><div class="ss">All posts ÷ agreed</div></div>
 </div>
 ${
   summary.added_value_publications > 0 && addedPct != null
@@ -581,7 +581,7 @@ function renderInfluencerSheets(data: PerformanceReportDocumentData): string[] {
   <div class="s"><div class="sk">Publications</div><div class="sv num">${summary.total_publications}</div><div class="ss">All scopes</div></div>
   <div class="s s--green"><div class="sk">Added value</div><div class="sv num">${summary.added_value_publications}</div><div class="ss">Beyond scope</div></div>
   <div class="s"><div class="sk">Impressions</div><div class="sv num">${esc(formatCompactCount(summary.total_impressions))}</div><div class="ss">Served</div></div>
-  <div class="s s--accent"><div class="sk">Avg. ER</div><div class="sv num">${esc(formatPercent(summary.average_engagement_rate))}</div><div class="ss">Against reach</div></div>
+  <div class="s s--accent"><div class="sk">Avg. ER</div><div class="sv num">${esc(formatPercent(summary.average_engagement_rate))}</div><div class="ss">All posts ÷ agreed</div></div>
 </div>`,
       footLeft: foot,
       pageLabel: pageLabel(page, totalPages),

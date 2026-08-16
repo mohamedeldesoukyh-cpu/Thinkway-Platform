@@ -345,6 +345,14 @@ function buildSummary(publications: CampaignPublicationRow[]): CampaignPerforman
   const total_views = publications.reduce((s, p) => s + (p.views ?? 0), 0);
   const total_engagements = publications.reduce((s, p) => s + p.total_engagements, 0);
 
+  const agreed_publications = publications.filter(
+    (p) => resolvePublicationValueScope(p) === "agreed"
+  ).length;
+  const added_value_publications = publications.filter(
+    (p) => resolvePublicationValueScope(p) === "added_value"
+  ).length;
+
+  // Campaign Avg ER: sum ER across all posts (agreed + added value), divide by agreed count only.
   const erValues = publications
     .map((p) => p.engagement_rate)
     .filter((v): v is number => v != null);
@@ -367,12 +375,8 @@ function buildSummary(publications: CampaignPublicationRow[]): CampaignPerforman
 
   return {
     total_publications: publications.length,
-    agreed_publications: publications.filter(
-      (p) => resolvePublicationValueScope(p) === "agreed"
-    ).length,
-    added_value_publications: publications.filter(
-      (p) => resolvePublicationValueScope(p) === "added_value"
-    ).length,
+    agreed_publications,
+    added_value_publications,
     total_reach,
     total_actual_reach,
     total_forecast_reach,
@@ -384,7 +388,9 @@ function buildSummary(publications: CampaignPublicationRow[]): CampaignPerforman
     total_views,
     total_engagements,
     average_engagement_rate:
-      erValues.length > 0 ? erValues.reduce((a, b) => a + b, 0) / erValues.length : null,
+      erValues.length > 0 && agreed_publications > 0
+        ? erValues.reduce((a, b) => a + b, 0) / agreed_publications
+        : null,
     average_cpm: cpmValues.length > 0 ? cpmValues.reduce((a, b) => a + b, 0) / cpmValues.length : null,
     average_cpv: cpvValues.length > 0 ? cpvValues.reduce((a, b) => a + b, 0) / cpvValues.length : null,
     top_creator_name,
