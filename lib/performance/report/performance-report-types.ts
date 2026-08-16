@@ -16,6 +16,8 @@ export type PerformanceReportCampaignMeta = {
   brandName: string | null;
   brandLogoUrl: string | null;
   coverImageUrl: string | null;
+  /** Embedded QR data URI (or remote fallback) for cover “Scan for live dashboard”. */
+  qrCodeImageUrl: string | null;
   currency: string;
   dashboardUrl: string;
 };

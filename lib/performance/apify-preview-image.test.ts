@@ -52,4 +52,21 @@ assert.equal(
   "Instagram displayUrl unchanged"
 );
 
+assert.equal(
+  pickApifyPreviewImageUrl({
+    thumbnailUrl: "https://scontent.xx.fbcdn.net/v/t15/fb-thumb.jpg",
+    status: "available",
+  }),
+  "https://scontent.xx.fbcdn.net/v/t15/fb-thumb.jpg",
+  "Facebook thumbnailUrl"
+);
+
+assert.equal(
+  pickApifyPreviewImageUrl({
+    full_picture: "https://scontent.xx.fbcdn.net/v/t1/full.jpg",
+  }),
+  "https://scontent.xx.fbcdn.net/v/t1/full.jpg",
+  "Facebook full_picture"
+);
+
 console.log("apify-preview-image tests passed");

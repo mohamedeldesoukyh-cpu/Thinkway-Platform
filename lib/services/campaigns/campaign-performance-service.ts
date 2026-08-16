@@ -9,6 +9,7 @@ import {
   invalidateCampaignPublicationsSchemaCache,
 } from "@/lib/campaigns/campaign-publications-schema-runtime";
 import { deriveCalculatedMetrics } from "@/lib/campaigns/performance-calculations";
+import { optionalMetricNumberSchema } from "@/lib/performance/manual-metric-number";
 import {
   parseMetricsImportRow,
   requestCampaignMetricsCollection,
@@ -459,13 +460,13 @@ const { data, error } = await fetchPublicationMetricSyncLogs(supabase, input.cam
 }
 
 const manualMetricsSchema = z.object({
-  views: z.coerce.number().min(0).optional().nullable(),
-  reach: z.coerce.number().min(0).optional().nullable(),
-  impressions: z.coerce.number().min(0).optional().nullable(),
-  likes: z.coerce.number().min(0).optional().nullable(),
-  comments: z.coerce.number().min(0).optional().nullable(),
-  shares: z.coerce.number().min(0).optional().nullable(),
-  saves: z.coerce.number().min(0).optional().nullable(),
+  views: optionalMetricNumberSchema,
+  reach: optionalMetricNumberSchema,
+  impressions: optionalMetricNumberSchema,
+  likes: optionalMetricNumberSchema,
+  comments: optionalMetricNumberSchema,
+  shares: optionalMetricNumberSchema,
+  saves: optionalMetricNumberSchema,
 });
 
 const publicationDetailsSchema = z.object({

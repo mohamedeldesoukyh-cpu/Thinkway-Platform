@@ -10,6 +10,9 @@ export function getScreenshotCaptureEnv() {
       process.env.APIFY_INSTAGRAM_ACTOR_ID?.trim() || "apify/instagram-scraper",
     apifyTikTokActorId:
       process.env.APIFY_TIKTOK_ACTOR_ID?.trim() || "clockworks/tiktok-scraper",
+    apifyFacebookActorId:
+      process.env.APIFY_FACEBOOK_ACTOR_ID?.trim() ||
+      "clappi/facebook-posts-reels-scraper",
     youtubeApiKey: process.env.YOUTUBE_API_KEY?.trim() || null,
     playwrightEnabled: process.env.METRICS_PLAYWRIGHT_ENABLED === "true",
   };

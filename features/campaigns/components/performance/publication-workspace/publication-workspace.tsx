@@ -48,6 +48,7 @@ import {
   formatMoneyValue,
   formatPercent,
 } from "@/lib/campaigns/performance-calculations";
+import { coerceOptionalMetricNumber } from "@/lib/performance/manual-metric-number";
 import { countStorageTags } from "@/lib/performance/content-normalizer";
 import { formatAssignmentDetailDate } from "@/lib/campaigns/assignment-detail-presenters";
 import { ReachDisplay } from "@/features/campaigns/components/performance/reach-display";
@@ -398,18 +399,17 @@ export function PublicationWorkspace({
 
   function saveManualMetrics() {
     startTransition(async () => {
-      const parseNum = (v: string) => (v.trim() === "" ? null : Number(v.replace(/,/g, "")));
       const result = await saveManualPublicationMetricsAction({
         campaignId,
         publicationId: publicationRow.id,
         metrics: {
-          views: parseNum(manualMetrics.views),
-          reach: parseNum(manualMetrics.reach),
-          impressions: parseNum(manualMetrics.impressions),
-          likes: parseNum(manualMetrics.likes),
-          comments: parseNum(manualMetrics.comments),
-          shares: parseNum(manualMetrics.shares),
-          saves: parseNum(manualMetrics.saves),
+          views: coerceOptionalMetricNumber(manualMetrics.views),
+          reach: coerceOptionalMetricNumber(manualMetrics.reach),
+          impressions: coerceOptionalMetricNumber(manualMetrics.impressions),
+          likes: coerceOptionalMetricNumber(manualMetrics.likes),
+          comments: coerceOptionalMetricNumber(manualMetrics.comments),
+          shares: coerceOptionalMetricNumber(manualMetrics.shares),
+          saves: coerceOptionalMetricNumber(manualMetrics.saves),
         },
       });
       if (result.ok) {

@@ -249,6 +249,52 @@ function buildPerformanceReportStyles(generatedLabel: string): string {
   .closing-contact a { color: ${PALETTE.accent}; text-decoration: none; }
   .closing-footer { margin-top: auto; padding-top: 32px; font-size: 10px; color: #8899BB; letter-spacing: 0.5px; }
 
+  .added-value-separator-page {
+    min-height: 297mm;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: linear-gradient(160deg, #042f1e 0%, #0b3d2c 45%, ${PALETTE.primary} 100%);
+    color: ${PALETTE.text};
+    page-break-before: always;
+    break-before: page;
+    page-break-after: always;
+    break-after: page;
+    padding: 48px 32px;
+    margin: 0 -32px 22px;
+    width: calc(100% + 64px);
+    box-sizing: border-box;
+  }
+  .added-value-separator-kicker {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #86efac;
+    margin-bottom: 18px;
+  }
+  .added-value-separator-title {
+    font-size: 42px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin: 0 0 14px;
+  }
+  .added-value-separator-text {
+    font-size: 13px;
+    color: #bbf7d0;
+    max-width: 420px;
+    line-height: 1.6;
+    margin: 0;
+  }
+  .added-value-separator-count {
+    margin-top: 22px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 0.4px;
+  }
+
   .screen-footer { display: none; }
   @media screen {
     body.perf-report { background: var(--bg); }
@@ -256,11 +302,17 @@ function buildPerformanceReportStyles(generatedLabel: string): string {
     .screen-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; background: var(--bg); border-top: 1px solid var(--rule); padding: 12px 32px; font-size: 10px; color: var(--muted); }
     .screen-footer .badge { color: ${PALETTE.accent}; font-weight: 600; }
     .toc-item a::after { content: none; }
+    .added-value-separator-page { min-height: 70vh; border-radius: 0; }
   }
   @media print {
     body.perf-report { background: white; }
     body.perf-report .page { margin: 0; max-width: none; }
     .cover-page { min-height: 100vh; }
+    .added-value-separator-page {
+      min-height: 100vh;
+      margin: 0;
+      width: 100%;
+    }
     .report-body { padding: 20px 0 8px; }
     .pub-grid--gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .kpi-grid { grid-template-columns: repeat(5, 1fr); }
@@ -421,7 +473,15 @@ function renderCoverPage(data: PerformanceReportDocumentData): string {
   const brandLogo = campaign.brandLogoUrl
     ? `<img class="cover-brand-logo" src="${esc(campaign.brandLogoUrl)}" alt="${esc(campaign.brandName ?? "Brand")}" />`
     : "";
-  const qrUrl = buildQrCodeImageUrl(campaign.dashboardUrl, 120);
+  const qrUrl =
+    campaign.qrCodeImageUrl?.trim() ||
+    buildQrCodeImageUrl(campaign.dashboardUrl, 120);
+  const qrBlock = qrUrl
+    ? `<div>
+          <div class="cover-qr"><img src="${esc(qrUrl)}" alt="Campaign dashboard QR code" /></div>
+          <div class="cover-qr-label">Scan for live dashboard</div>
+        </div>`
+    : "";
 
   return `<section class="cover-page">
     ${hero}
@@ -442,10 +502,7 @@ function renderCoverPage(data: PerformanceReportDocumentData): string {
         ${renderPlatformIcons(highlights.platforms)}
       </div>
       <div class="cover-side">
-        <div>
-          <div class="cover-qr"><img src="${esc(qrUrl)}" alt="Campaign dashboard QR code" /></div>
-          <div class="cover-qr-label">Scan for live dashboard</div>
-        </div>
+        ${qrBlock}
       </div>
       <div class="cover-footer">
         <span>Confidential · Thinkway Platform</span>
@@ -465,6 +522,23 @@ function renderClosingPage(): string {
       <div><a href="https://www.thinkwaymedia.com">www.thinkwaymedia.com</a></div>
     </div>
     <div class="closing-footer">Confidential · Thinkway Platform</div>
+  </section>`;
+}
+
+/** Full-page divider before Added Value publications in preview/PDF. */
+function renderAddedValueSeparatorPage(publicationCount: number): string {
+  const countLabel =
+    publicationCount === 1
+      ? "1 added-value publication"
+      : `${publicationCount} added-value publications`;
+
+  return `<section class="added-value-separator-page" id="section-added-value-divider" aria-label="Added Value">
+    <div class="added-value-separator-kicker">Beyond the assignment</div>
+    <h2 class="added-value-separator-title">Added Value</h2>
+    <p class="added-value-separator-text">
+      Extra publications delivered on platforms outside the contracted assignment mix.
+    </p>
+    <div class="added-value-separator-count">${esc(countLabel)}</div>
   </section>`;
 }
 
@@ -503,16 +577,20 @@ function buildTocEntries(data: PerformanceReportDocumentData): TocEntry[] {
     return entries;
   }
 
-  return [
+  const { addedValue } = partitionPublicationsByValueScope(data.bundle.publications);
+  const entries: TocEntry[] = [
     { num: "01", label: "Executive Summary", href: "#section-executive-summary" },
     { num: "02", label: "Campaign Highlights", href: "#section-highlights" },
     { num: "03", label: "Benchmark & Insights", href: "#section-benchmark" },
     { num: "04", label: "Platform Breakdown", href: "#section-platform-breakdown" },
     { num: "05", label: "Performance Charts", href: "#section-performance-charts" },
     { num: "06", label: "Campaign Publications", href: "#section-publications" },
-    { num: "07", label: "Added Value", href: "#section-added-value" },
-    { num: "—", label: "Thank You", href: "#section-thank-you" },
   ];
+  if (addedValue.length > 0) {
+    entries.push({ num: "07", label: "Added Value", href: "#section-added-value-divider" });
+  }
+  entries.push({ num: "—", label: "Thank You", href: "#section-thank-you" });
+  return entries;
 }
 
 function renderExecutiveSummary(data: PerformanceReportDocumentData): string {
@@ -717,11 +795,14 @@ function renderInfluencerSection(section: InfluencerReportSection): string {
       <div class="pub-grid">${agreedPublications.map((pub) => renderPublicationCard(pub, true)).join("") || `<p class="report-note">No agreed publications for this creator.</p>`}</div>
     </div>
     ${
-      `<div class="section">
+      addedValuePublications.length > 0
+        ? `${renderAddedValueSeparatorPage(addedValuePublications.length)}
+    <div class="section" id="influencer-${esc(section.influencerId)}-added-value">
       <div class="section-label"><div class="num">▸</div><div class="title">Added Value</div></div>
       <p class="report-note" style="margin-bottom:10px;">Extra publications beyond the assignment platforms.</p>
-      <div class="pub-grid">${addedValuePublications.map((pub) => renderPublicationCard(pub, true)).join("") || `<p class="report-note">No added-value publications for this creator.</p>`}</div>
+      <div class="pub-grid">${addedValuePublications.map((pub) => renderPublicationCard(pub, true)).join("")}</div>
     </div>`
+        : ""
     }
 
     <div class="section section--compact">
@@ -782,13 +863,18 @@ export function renderPerformanceReportHtml(data: PerformanceReportDocumentData)
             title: "Campaign Publications",
             subtitle: "Posts matching the agreed assignment platforms.",
           }),
-          renderPublicationsGallery(addedValuePublications, {
-            id: "section-added-value",
-            num: "7",
-            title: "Added Value",
-            subtitle:
-              "Extra publications beyond the assignment — additional value delivered to the client.",
-          }),
+          ...(addedValuePublications.length > 0
+            ? [
+                renderAddedValueSeparatorPage(addedValuePublications.length),
+                renderPublicationsGallery(addedValuePublications, {
+                  id: "section-added-value",
+                  num: "7",
+                  title: "Added Value Publications",
+                  subtitle:
+                    "Extra publications beyond the assignment — additional value delivered to the client.",
+                }),
+              ]
+            : []),
         ].join("");
 
   return `<!DOCTYPE html>

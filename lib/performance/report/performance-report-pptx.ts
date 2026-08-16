@@ -201,13 +201,17 @@ export async function buildPerformanceReportPptxBuffer(
         y: 2.2,
         w: 9,
         h: 0.6,
-        fontSize: 28,
+        fontSize: 32,
         bold: true,
         color: GREEN,
       });
       divider.addText(
         "Extra publications beyond the agreed assignment mix.",
         { x: 0.5, y: 2.9, w: 9, h: 0.4, fontSize: 14, color: "6B7280" }
+      );
+      divider.addText(
+        `${addedValuePublications.length} publication${addedValuePublications.length === 1 ? "" : "s"}`,
+        { x: 0.5, y: 3.4, w: 9, h: 0.35, fontSize: 12, color: GREEN }
       );
       addedValueHeadingInserted = true;
     }

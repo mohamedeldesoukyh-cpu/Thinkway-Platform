@@ -54,6 +54,11 @@ export function pickApifyPreviewImageUrl(payload: unknown): string | null {
 
   const displayResource = record(row.displayResource);
 
+  const media = record(row.media);
+  const mediaImage = media ? record(media.image) : null;
+  const photoImage = record(row.photo_image);
+  const imageObj = record(row.image);
+
   const directCandidates = [
     row.thumbnailSrc,
     row.displayUrl,
@@ -61,6 +66,8 @@ export function pickApifyPreviewImageUrl(payload: unknown): string | null {
     row.thumbnailUrl,
     row.thumbnail_url,
     row.thumbnail,
+    row.fullPicture,
+    row.full_picture,
     row.cover,
     row.coverUrl,
     row.imageUrl,
@@ -68,6 +75,12 @@ export function pickApifyPreviewImageUrl(payload: unknown): string | null {
     row.previewUrl,
     row.preview_url,
     displayResource?.src,
+    mediaImage?.uri,
+    mediaImage?.url,
+    photoImage?.uri,
+    photoImage?.url,
+    imageObj?.uri,
+    imageObj?.url,
   ];
 
   for (const value of directCandidates) {

@@ -1,5 +1,8 @@
 import { pickApifyPreviewImageUrl } from "@/lib/performance/apify-preview-image";
-import { buildApifyRunInput } from "@/lib/performance/metrics-collector/providers/apify-input";
+import {
+  apifyActorIdForPlatform,
+  resolveApifyRunInput,
+} from "@/lib/performance/metrics-collector/providers/apify-input";
 import { getScreenshotCaptureEnv } from "@/lib/performance/screenshot-capture/config";
 import type { ScreenshotCaptureAttempt } from "@/lib/performance/screenshot-capture/types";
 
@@ -30,10 +33,13 @@ export async function tryApifyThumbnail(ctx: Ctx): Promise<ScreenshotCaptureAtte
     };
   }
 
-  const actorId =
-    ctx.platform === "tiktok"
-      ? ctx.env.apifyTikTokActorId
-      : ctx.env.apifyInstagramActorId;
+  const actorId = apifyActorIdForPlatform(ctx.platform, {
+    apifyInstagramActorId: ctx.env.apifyInstagramActorId,
+    apifyTikTokActorId: ctx.env.apifyTikTokActorId,
+    apifyFacebookActorId: ctx.env.apifyFacebookActorId,
+    apifyYouTubeActorId: null,
+    apifySnapchatActorId: null,
+  });
 
   if (!actorId) {
     return {
@@ -44,12 +50,23 @@ export async function tryApifyThumbnail(ctx: Ctx): Promise<ScreenshotCaptureAtte
     };
   }
 
+  const resolved = resolveApifyRunInput(ctx.platform, ctx.contentUrl, actorId);
+  if (!resolved.ok) {
+    return {
+      source: "apify",
+      available: true,
+      error: resolved.error,
+      errorCode: resolved.errorCode,
+      durationMs: Date.now() - started,
+    };
+  }
+
   const runResponse = await fetch(
     `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items?token=${ctx.env.apifyToken}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(buildApifyRunInput(ctx.platform, ctx.contentUrl)),
+      body: JSON.stringify(resolved.input),
       signal: AbortSignal.timeout(120_000),
     }
   );

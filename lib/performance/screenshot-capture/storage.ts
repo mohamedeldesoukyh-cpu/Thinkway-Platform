@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { PUBLICATION_MEDIA_BUCKET } from "@/lib/performance/screenshot-capture/config";
+import { decodeHtmlEntities } from "@/lib/text/decode-html-entities";
 
 const SIGNED_URL_SECONDS = 60 * 60;
 
@@ -84,8 +85,9 @@ export async function fetchImageBuffer(
   url: string,
   options?: { referer?: string | null }
 ): Promise<Buffer | null> {
+  const normalizedUrl = decodeHtmlEntities(url.trim());
   try {
-    const response = await fetch(url, {
+    const response = await fetch(normalizedUrl, {
       signal: AbortSignal.timeout(30_000),
       headers: {
         Accept: "image/*,*/*",
