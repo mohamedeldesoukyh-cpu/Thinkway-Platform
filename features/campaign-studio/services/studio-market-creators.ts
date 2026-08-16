@@ -48,23 +48,68 @@ function homeCountryLabel(country: string | undefined): string | undefined {
     .find(Boolean);
 }
 
+function canonicalCode(value: string | null | undefined): string | undefined {
+  const code = resolveCountryCode(value);
+  return code ? code.toUpperCase() : undefined;
+}
+
+export type StudioCreatorLocation = {
+  country?: string | null;
+  countryCode?: string | null;
+  countryCodes?: string[] | null;
+  estimatedCountry?: string | null;
+  audienceCountries?: Array<string | null | undefined>;
+};
+
+/**
+ * Creator home country for Studio market filtering. Audience countries
+ * (platform `audience_country`, blended `estimated_country`) are never home.
+ */
+export function studioCreatorHomeCountryLabel(
+  input: StudioCreatorLocation
+): string | undefined {
+  const primary = canonicalCode(input.countryCode);
+  if (primary) return labelForCode(primary) ?? primary;
+
+  const notHome = new Set<string>();
+  for (const raw of [...(input.audienceCountries ?? []), input.estimatedCountry]) {
+    const code = canonicalCode(raw);
+    if (code) notHome.add(code);
+  }
+
+  const stored = (input.countryCodes ?? [])
+    .map((value) => canonicalCode(value))
+    .filter((code): code is string => Boolean(code));
+  const homeCode = stored.find((code) => !notHome.has(code));
+  if (homeCode) return labelForCode(homeCode) ?? homeCode;
+
+  return homeCountryLabel(input.country ?? undefined);
+}
+
 /**
  * Keep a recommended creator when the campaign market is known and the
- * creator's home country overlaps that market. Audience-only countries in
- * the display label (for example "UAE · Egypt") do not count. Unknown
- * location stays visible.
+ * creator's home country overlaps that market. Audience-only countries do
+ * not count. Unknown location is excluded once a market is set so UAE
+ * audience flags cannot leak into an Egypt campaign.
  */
-export function vendorCountryMatchesCampaignMarkets(
-  country: string | undefined,
+export function vendorMatchesCampaignMarket(
+  input: StudioCreatorLocation,
   markets: string[] | undefined
 ): boolean {
   const targets = marketTokens(markets);
   if (targets.size === 0) return true;
-  const home = homeCountryLabel(country);
+  const home = studioCreatorHomeCountryLabel(input);
   const location = countryTokens(home);
-  if (location.size === 0) return true;
+  if (location.size === 0) return false;
   for (const token of location) {
     if (targets.has(token)) return true;
   }
   return false;
+}
+
+export function vendorCountryMatchesCampaignMarkets(
+  country: string | undefined,
+  markets: string[] | undefined
+): boolean {
+  return vendorMatchesCampaignMarket({ country }, markets);
 }

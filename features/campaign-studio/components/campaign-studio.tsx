@@ -109,6 +109,9 @@ export function CampaignStudio({
     return {
       preferredPlatforms: facts.platforms,
       currency: resolveInfluencerEstimateCurrency(facts),
+      campaignMarkets: facts.geography,
+      campaignIndustry: facts.industry,
+      campaignType: facts.campaignType,
     };
   }, [studio?.campaignObject?.meta.campaignFacts]);
 

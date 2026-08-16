@@ -95,7 +95,9 @@ export const STUDIO_CLASSES = {
   execBox:
     "rounded-xl border border-[#0C9D57]/18 bg-[#0C9D57]/6 px-[18px] py-4",
   creatorCard:
-    "rounded-[14px] border border-[#0B0F1A]/8 p-4 dark:border-border",
+    "rounded-[16px] border border-[#0B0F1A]/10 bg-white p-4 shadow-[0_1px_2px_rgba(6,8,16,0.04),0_8px_24px_rgba(0,87,255,0.07)] transition-shadow hover:shadow-[0_2px_6px_rgba(6,8,16,0.06),0_12px_28px_rgba(0,87,255,0.1)] dark:border-border dark:bg-background dark:shadow-none",
+  vendorList:
+    "space-y-3 rounded-2xl border border-[#0B0F1A]/8 bg-[#F5F8FF] p-3 dark:border-border dark:bg-muted/20",
   funnelStep:
     "inline-flex items-center gap-1.5 rounded-full border border-[#0C9D57]/20 bg-[#0C9D57]/8 px-3 py-1.5 text-[11.5px] font-bold text-[#0C9D57]",
   funnelResult:

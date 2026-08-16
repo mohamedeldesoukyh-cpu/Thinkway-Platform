@@ -67,6 +67,7 @@ function readCardHydrationOptions(
 
   if (!preferredPlatforms?.length && !currency) return fallback;
   return {
+    ...fallback,
     preferredPlatforms: preferredPlatforms ?? fallback?.preferredPlatforms,
     currency: currency ?? fallback?.currency,
   };

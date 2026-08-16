@@ -1,6 +1,6 @@
 import { resolveCreatorTierLabel, type CreatorTierLabel } from "@/lib/creators/creator-tier";
-import { formatCreatorCountryLabels } from "@/lib/creators/creator-display-utils";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { studioCreatorHomeCountryLabel } from "./studio-market-creators";
 import { resolveBrowseCreatorProfileImageUrl } from "@/lib/performance/creator-avatar";
 
 import { estimateCreatorPostFee } from "./creator-fee-estimator";
@@ -30,6 +30,8 @@ export type HydratedVendor = {
   followers?: number;
   engagementRate?: number;
   country?: string;
+  /** ISO-2 home country — not audience. */
+  countryCode?: string | null;
   language?: string;
   audienceSummary?: string;
   priceEstimate?: string;
@@ -129,6 +131,9 @@ function extractEngagement(
 export type HydrationMapperOptions = {
   preferredPlatforms?: string[];
   currency?: string;
+  campaignMarkets?: string[];
+  campaignIndustry?: string;
+  campaignType?: string;
   quotationPriceByInfluencerId?: Map<string, CreatorQuotationPriceReference>;
   /**
    * Legacy persisted scores — used only when ECI signal is unavailable.
@@ -209,8 +214,12 @@ function buildPerCreatorReason(
 }
 
 function resolveHydratedVendorCountry(creator: UnifiedCreatorResult): string | undefined {
-  const label = formatCreatorCountryLabels(creator);
-  return label !== "—" ? label : undefined;
+  return studioCreatorHomeCountryLabel({
+    countryCode: creator.country_code,
+    countryCodes: creator.country_codes,
+    estimatedCountry: creator.estimated_country,
+    audienceCountries: creator.platforms.map((platform) => platform.audience_country),
+  });
 }
 
 export function mapCreatorToHydratedVendor(
@@ -269,6 +278,7 @@ export function mapCreatorToHydratedVendor(
     followers,
     engagementRate: extractEngagement(creator, preferredPlatforms),
     country: resolveHydratedVendorCountry(creator),
+    countryCode: creator.country_code,
     language: creator.language_codes?.slice(0, 2).join(" / ") || "Arabic / English",
     audienceSummary:
       creator.audience_interests?.slice(0, 2).join(", ") ??

@@ -1,15 +1,16 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop`  
-**Focus:** Studio Creators — Egypt market, requirements sort, separated creator cards
+**Focus:** Performance select-all (incl. Added value) · last update column · enrichment progress/summary
 
-## Shipping (this session)
+## Shipped
 
-- Home-country market filter (drop UAE / audience-only / unknown on Egypt)
-- Creators sorted by completed campaign requirements, then fewer
-- Recommended creators rendered as separated modern cards (not melted into the section)
+- Select all / selector count includes Publications + Added value
+- On-screen `Last update` column (not in reports)
+- Enrichment progress meter + completion dialog (Synced / Partial / Failed / Manual required / Queued / Collecting)
+- Dev `33cff267` · Prod `084a8f4a` (`vercel deploy --prod`)
 
-Dev: https://dev.thinkwaymedia.com  
-Prod: https://app.thinkwaymedia.com  
+## Shipped prior
 
-Client Workspace is **not** started.
+- Skip `revalidatePath` on metrics refresh
+- Home FX display parity
