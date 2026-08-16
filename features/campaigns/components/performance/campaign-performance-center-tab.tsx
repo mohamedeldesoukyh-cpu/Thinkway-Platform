@@ -28,6 +28,10 @@ import { PublicationWorkspace } from "@/features/campaigns/components/performanc
 import { PerformancePublicationValueCard } from "@/features/campaigns/components/performance/performance-publication-value-card";
 import { PerformanceSelectionFlyout } from "@/features/campaigns/components/performance/performance-selection-flyout";
 import {
+  MetricsEnrichmentProgressBanner,
+  MetricsEnrichmentSummaryDialog,
+} from "@/features/campaigns/components/performance/metrics-enrichment-progress";
+import {
   bulkImportPublicationsAction,
   deleteCampaignPublicationAction,
   importPublicationMetricsAction,
@@ -35,6 +39,7 @@ import {
   refreshPublicationMetricsAction,
 } from "@/features/campaigns/actions/performance-actions";
 import { useRefreshCampaignAfterPublicationMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
+import { useMetricsEnrichmentBatch } from "@/features/campaigns/hooks/use-metrics-enrichment-batch";
 import {
   notifyMetricsSyncQueued,
 } from "@/features/campaigns/hooks/use-metrics-sync-toasts";
@@ -120,6 +125,7 @@ export function CampaignPerformanceCenterTab({
   const importRef = useRef<HTMLInputElement>(null);
   const metricsImportRef = useRef<HTMLInputElement>(null);
   const refreshAfterPublicationMutation = useRefreshCampaignAfterPublicationMutation();
+  const enrichmentBatch = useMetricsEnrichmentBatch(publications);
 
   const lines = (workspace.lines ?? []).filter((l) => l.influencer_id);
 
@@ -272,12 +278,17 @@ export function CampaignPerformanceCenterTab({
     }
   }
 
+  function beginEnrichmentBatch(publicationIds: string[]) {
+    enrichmentBatch.startBatch(publicationIds);
+    queueMetricsSyncToasts(publicationIds);
+  }
+
   function refreshAllCampaignMetrics() {
     startTransition(async () => {
       const result = await refreshCampaignMetricsAction({ campaignId: workspace.id });
       if (result.ok) {
         if (result.message.toLowerCase().includes("queued")) {
-          queueMetricsSyncToasts(publications.map((p) => p.id));
+          beginEnrichmentBatch(classifiedPublications.map((p) => p.id));
         } else {
           toast.success(result.message);
         }
@@ -323,8 +334,7 @@ export function CampaignPerformanceCenterTab({
       });
       if (result.ok) {
         if (result.status === "queued") {
-          const row = publications.find((p) => p.id === publicationId);
-          notifyMetricsSyncQueued(publicationId, row?.influencer_name);
+          beginEnrichmentBatch([publicationId]);
         } else {
           toast.success(result.message);
         }
@@ -398,9 +408,17 @@ export function CampaignPerformanceCenterTab({
   const selectedCount = selectedIds.size;
   const chartSeriesCount = countPerformanceChartSeries(charts);
   const reportBase = `/api/campaigns/${workspace.id}/performance/document`;
+  const filteredSelectIds = useMemo(
+    () => filtered.map((row) => row.id),
+    [filtered]
+  );
+  const addedValueSelectIds = useMemo(
+    () => addedValueFiltered.map((row) => row.id),
+    [addedValueFiltered]
+  );
   const selectedRows = useMemo(
-    () => publications.filter((row) => selectedIds.has(row.id)),
-    [publications, selectedIds]
+    () => classifiedPublications.filter((row) => selectedIds.has(row.id)),
+    [classifiedPublications, selectedIds]
   );
 
   return (
@@ -520,6 +538,13 @@ export function CampaignPerformanceCenterTab({
               </div>
             ) : null}
             <CampaignPerformanceSyncHealth health={syncHealth} />
+            <MetricsEnrichmentProgressBanner
+              className="mt-3"
+              active={enrichmentBatch.active}
+              health={enrichmentBatch.health}
+              progressPercent={enrichmentBatch.progressPercent}
+              creatorCount={enrichmentBatch.creatorCount}
+            />
           </>
         }
         detailsLabel={
@@ -668,6 +693,7 @@ export function CampaignPerformanceCenterTab({
             summary={agreedSummary}
             rows={agreedFiltered}
             allRows={publications}
+            selectScopeIds={filteredSelectIds}
             selectedIds={selectedIds}
             onToggleSelect={toggleSelect}
             onToggleSelectAll={toggleSelectAll}
@@ -686,6 +712,7 @@ export function CampaignPerformanceCenterTab({
             summary={addedValueSummary}
             rows={addedValueFiltered}
             allRows={publications}
+            selectScopeIds={addedValueSelectIds}
             selectedIds={selectedIds}
             onToggleSelect={toggleSelect}
             onToggleSelectAll={toggleSelectAll}
@@ -710,6 +737,16 @@ export function CampaignPerformanceCenterTab({
         selectableCount={filtered.length}
         onSelectAll={selectAllFiltered}
         onClearSelection={() => setSelectedIds(new Set())}
+        onEnrichmentBatchStarted={beginEnrichmentBatch}
+      />
+
+      <MetricsEnrichmentSummaryDialog
+        open={enrichmentBatch.summaryOpen}
+        health={enrichmentBatch.summaryHealth}
+        creatorCount={enrichmentBatch.summaryCreatorCount}
+        onOpenChange={(open) => {
+          if (!open) enrichmentBatch.dismissSummary();
+        }}
       />
 
       <CampaignPublicationSheet

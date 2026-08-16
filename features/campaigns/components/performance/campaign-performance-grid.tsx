@@ -88,6 +88,7 @@ const HEADER_LABELS: Partial<Record<PerformanceGridColumnId, string>> = {
   platform: "Platform",
   type: "Type",
   published: "Published",
+  lastUpdated: "Last update",
   views: "Views",
   reach: "Reach",
   impressions: "Impr.",
@@ -107,6 +108,11 @@ type Props = {
   rows: CampaignPublicationRow[];
   /** Full campaign publication set for duplicate URL detection (defaults to `rows`). */
   allRows?: CampaignPublicationRow[];
+  /**
+   * IDs controlled by the header checkbox. Defaults to all `rows` (every page).
+   * Pass the full filtered set from Publications so Select all includes Added value.
+   */
+  selectScopeIds?: string[];
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onToggleSelectAll: (ids: string[]) => void;
@@ -149,6 +155,17 @@ function safeDate(value: string | null): string {
   return format(parsed, "MMM d, yyyy");
 }
 
+function safeDateTime(value: string | null | undefined): string {
+  if (!value) return "—";
+  const parsed = parseISO(value);
+  if (!isValid(parsed)) return "—";
+  return format(parsed, "MMM d, HH:mm");
+}
+
+function publicationLastUpdatedAt(row: CampaignPublicationRow): string | null {
+  return row.last_synced_at ?? row.metrics_refresh_attempted_at ?? row.updated_at;
+}
+
 function sortRows(
   rows: CampaignPublicationRow[],
   key: SortKey,
@@ -169,6 +186,7 @@ function sortRows(
 export function CampaignPerformanceGrid({
   rows,
   allRows,
+  selectScopeIds,
   selectedIds,
   onToggleSelect,
   onToggleSelectAll,
@@ -194,9 +212,10 @@ export function CampaignPerformanceGrid({
   const sorted = useMemo(() => sortRows(rows, sortKey, sortDir), [rows, sortKey, sortDir]);
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const pageRows = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const pageIds = pageRows.map((r) => r.id);
-  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
-  const somePageSelected = pageIds.some((id) => selectedIds.has(id));
+  const scopeIds = selectScopeIds ?? sorted.map((row) => row.id);
+  const allScopeSelected =
+    scopeIds.length > 0 && scopeIds.every((id) => selectedIds.has(id));
+  const someScopeSelected = scopeIds.some((id) => selectedIds.has(id));
 
   const visibleColumns = useMemo(
     () => visibleOrderedColumnIds.filter((id) => col(id)),
@@ -213,9 +232,9 @@ export function CampaignPerformanceGrid({
       return (
         <div key={columnId} className="flex items-center justify-center px-2 py-2">
           <Checkbox
-            checked={allPageSelected ? true : somePageSelected ? "indeterminate" : false}
-            onCheckedChange={() => onToggleSelectAll(pageIds)}
-            aria-label="Select page"
+            checked={allScopeSelected ? true : someScopeSelected ? "indeterminate" : false}
+            onCheckedChange={() => onToggleSelectAll(scopeIds)}
+            aria-label="Select all publications in scope"
           />
         </div>
       );
@@ -308,6 +327,16 @@ export function CampaignPerformanceGrid({
         return (
           <div key={columnId} className="px-2 text-[11px] text-[var(--camp-text-3)]">
             {safeDate(row.publication_date)}
+          </div>
+        );
+      case "lastUpdated":
+        return (
+          <div
+            key={columnId}
+            className="px-2 text-[11px] tabular-nums text-[var(--camp-text-3)]"
+            title={publicationLastUpdatedAt(row) ?? undefined}
+          >
+            {safeDateTime(publicationLastUpdatedAt(row))}
           </div>
         );
       case "views":

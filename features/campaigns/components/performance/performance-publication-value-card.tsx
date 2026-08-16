@@ -22,6 +22,8 @@ type Props = {
   summary: PublicationValueSummary;
   rows: CampaignPublicationRow[];
   allRows: CampaignPublicationRow[];
+  /** Header checkbox scope — Publications passes full filtered set (incl. Added value). */
+  selectScopeIds?: string[];
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onToggleSelectAll: (ids: string[]) => void;
@@ -41,6 +43,7 @@ export function PerformancePublicationValueCard({
   summary,
   rows,
   allRows,
+  selectScopeIds,
   selectedIds,
   onToggleSelect,
   onToggleSelectAll,
@@ -63,6 +66,7 @@ export function PerformancePublicationValueCard({
       <CampaignPerformanceGrid
         rows={rows}
         allRows={allRows}
+        selectScopeIds={selectScopeIds}
         selectedIds={selectedIds}
         onToggleSelect={onToggleSelect}
         onToggleSelectAll={onToggleSelectAll}

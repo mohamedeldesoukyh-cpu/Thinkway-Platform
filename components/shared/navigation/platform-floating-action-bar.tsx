@@ -197,7 +197,13 @@ export function PlatformFloatingBarSelection({
   return (
     <div className={cn("flex shrink-0 items-center gap-2 pr-3", className)}>
       <p className="shrink-0 whitespace-nowrap text-sm text-foreground">
-        <span className="font-semibold tabular-nums">{selectedCount}</span>{" "}
+        <span className="font-semibold tabular-nums">{selectedCount}</span>
+        {selectableCount != null && selectableCount > 0 ? (
+          <>
+            <span className="text-muted-foreground"> of </span>
+            <span className="font-semibold tabular-nums">{selectableCount}</span>
+          </>
+        ) : null}{" "}
         {pluralize(selectedCount, selectionLabel)} selected
       </p>
       {showClearButton ? (
@@ -222,7 +228,7 @@ export function PlatformFloatingBarSelection({
           onClick={onSelectAll}
           disabled={busy}
         >
-          Select all
+          Select all {selectableCount}
         </Button>
       ) : null}
     </div>
