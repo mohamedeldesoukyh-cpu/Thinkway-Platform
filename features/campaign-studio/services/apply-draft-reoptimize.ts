@@ -17,6 +17,7 @@ import { studioForecastArtifacts } from "./campaign-forecast-service";
 import { studioDecisionArtifacts } from "./campaign-decision-service";
 import { mapBrowseCreatorToSearchResult } from "./creator-platform-utils";
 import { composeCreatorSlate, creatorTierOf } from "./creator-slate";
+import { deriveCreatorCategoriesFromBrief } from "./derive-creator-categories";
 import {
   formatStudioEciReason,
   lookupStudioEciSignal,
@@ -78,6 +79,13 @@ export async function reoptimizeCampaignAfterApply(
     platforms: facts?.platforms,
     tierMix,
     targetCount: cards.length,
+    preferredCategories: deriveCreatorCategoriesFromBrief({
+      briefText: facts?.rawBriefExcerpt,
+      objective: facts?.objective,
+      audience: facts?.audience,
+      campaignName: facts?.product,
+      products: facts?.product ? [facts.product] : undefined,
+    }),
   });
   const rankedIds = new Set(ranked.map((c) => normalizeCreatorId(c.id)));
   const finalCards = [

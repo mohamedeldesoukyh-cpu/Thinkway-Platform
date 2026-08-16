@@ -12,6 +12,8 @@ export interface GroundedCreator {
   profileUrl?: string;
   /** Campaign relevance % from CIP search (Discovery AI parity). */
   campaignRelevanceScore?: number;
+  /** Discovery content verticals when the search tool provided them. */
+  categories?: string[];
 }
 
 export interface RankedCreator extends GroundedCreator {
@@ -98,6 +100,9 @@ export function normalizeCreators(
           : typeof obj.campaign_relevance_score === "number"
             ? obj.campaign_relevance_score
             : undefined,
+      categories: Array.isArray(obj.categories)
+        ? obj.categories.filter((value): value is string => typeof value === "string" && Boolean(value.trim()))
+        : undefined,
     });
   }
   return dedupeGroundedCreators(creators, stage).creators;

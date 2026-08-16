@@ -2,6 +2,7 @@ import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
 import { deriveCreatorCategoriesFromBrief } from "./derive-creator-categories";
+import { creatorFitsPreferredCategories } from "./studio-creator-category-fit";
 import {
   vendorMatchesCampaignMarket,
   type StudioCreatorLocation,
@@ -31,13 +32,6 @@ function platformMatches(platform: string | undefined, required: string[]): bool
     if (!needle) return false;
     return value.includes(needle) || needle.includes(value);
   });
-}
-
-function categoryMatches(haystack: string | undefined, industry: string): boolean {
-  const hay = haystack?.trim().toLowerCase() ?? "";
-  const needle = industry.trim().toLowerCase();
-  if (!hay || !needle) return false;
-  return hay.includes(needle) || needle.includes(hay);
 }
 
 export function studioFactsFromHydrationOptions(
@@ -81,6 +75,9 @@ export function studioCreatorRequirementScore(
     platform?: string;
     audienceSummary?: string;
     category?: string;
+    categories?: string[];
+    handle?: string;
+    displayName?: string;
   },
   facts: CampaignFacts | undefined
 ): StudioRequirementScore {
@@ -101,8 +98,21 @@ export function studioCreatorRequirementScore(
     products: facts?.product ? [facts.product] : undefined,
   });
   if (preferredCategories.length > 0) {
-    const haystack = `${input.audienceSummary ?? ""} ${input.category ?? ""}`;
-    checks.push(preferredCategories.some((category) => categoryMatches(haystack, category)));
+    checks.push(
+      creatorFitsPreferredCategories(
+        {
+          categories: [
+            ...(input.categories ?? []),
+            input.category,
+            input.audienceSummary,
+          ],
+          audienceSummary: input.audienceSummary,
+          handle: input.handle,
+          displayName: input.displayName,
+        },
+        preferredCategories
+      )
+    );
   }
 
   const total = checks.length;
@@ -144,9 +154,14 @@ export function unifiedCreatorRequirementScore(
       audienceCountries: creator.platforms.map((platform) => platform.audience_country),
       platform: creator.platforms.map((platform) => platform.platform).join(" "),
       audienceSummary: creator.audience_interests?.slice(0, 3).join(" "),
-      category: [creator.ai_category, creator.ai_niche, ...(creator.categories ?? [])]
-        .filter(Boolean)
-        .join(" "),
+      categories: [
+        creator.ai_category,
+        creator.ai_niche,
+        ...(creator.categories ?? []),
+        ...(creator.browse_category_tags ?? []),
+      ].filter((value): value is string => Boolean(value)),
+      handle: creator.platforms[0]?.handle ?? creator.display_name,
+      displayName: creator.display_name,
     },
     facts
   );

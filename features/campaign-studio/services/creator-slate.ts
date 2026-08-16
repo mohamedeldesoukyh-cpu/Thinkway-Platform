@@ -9,6 +9,7 @@ import { resolveDiscoveryPlatform } from "@/lib/social/platforms";
 
 import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-facts-types";
 import type { SearchCreatorCardItem } from "./creator-platform-utils";
+import { creatorFitsPreferredCategories } from "./studio-creator-category-fit";
 
 /**
  * Strategy-coherent slate composition: the recommended creator list must
@@ -149,14 +150,16 @@ export function allocateTierCounts(mix: TierMixTarget[], targetCount: number): M
 }
 
 function creatorMatchesPreferredCategories(
-  creator: Pick<SearchCreatorCardItem, "categories">,
+  creator: Pick<SearchCreatorCardItem, "categories" | "handle" | "displayName">,
   preferredCategories: string[]
 ): boolean {
-  if (preferredCategories.length === 0) return false;
-  const tags = (creator.categories ?? []).map((c) => c.trim().toLowerCase()).filter(Boolean);
-  if (tags.length === 0) return false;
-  return preferredCategories.some((preferred) =>
-    tags.some((tag) => tag === preferred || tag.includes(preferred) || preferred.includes(tag))
+  return creatorFitsPreferredCategories(
+    {
+      categories: creator.categories,
+      handle: creator.handle,
+      displayName: creator.displayName,
+    },
+    preferredCategories
   );
 }
 

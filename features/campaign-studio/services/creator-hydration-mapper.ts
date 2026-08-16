@@ -1,6 +1,7 @@
 import { resolveCreatorTierLabel, type CreatorTierLabel } from "@/lib/creators/creator-tier";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { studioCreatorHomeCountryLabel } from "./studio-market-creators";
+import { resolveStudioCreatorCategories } from "./studio-creator-category-fit";
 import { resolveBrowseCreatorProfileImageUrl } from "@/lib/performance/creator-avatar";
 
 import { estimateCreatorPostFee } from "./creator-fee-estimator";
@@ -34,6 +35,8 @@ export type HydratedVendor = {
   countryCode?: string | null;
   language?: string;
   audienceSummary?: string;
+  /** Canonical Discovery categories used for brief-fit ranking. */
+  categories?: string[];
   priceEstimate?: string;
   /** @deprecated Discovery Thinkway Score — not Studio planning SSOT. Prefer brandFit from ECI. */
   thinkwayScore?: number;
@@ -287,6 +290,17 @@ export function mapCreatorToHydratedVendor(
       creator.audience_interests?.slice(0, 2).join(", ") ??
       creator.categories?.slice(0, 2).join(", ") ??
       "Category audience",
+    categories: resolveStudioCreatorCategories({
+      categories: [
+        ...(creator.browse_category_tags ?? []),
+        ...(creator.categories ?? []),
+        creator.ai_category,
+        creator.ai_niche,
+      ],
+      audienceSummary: creator.audience_interests?.slice(0, 3).join(", "),
+      handle: extractHandleFromAccount(account, creator),
+      displayName: creator.display_name,
+    }),
     thinkwayScore: eci?.investmentScore ?? undefined,
     brandFit: fitScore,
     reason: buildPerCreatorReason(creator, index, rationale, preferredPlatforms, options),

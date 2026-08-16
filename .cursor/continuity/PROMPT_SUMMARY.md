@@ -1,13 +1,16 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop`  
-**Focus:** Studio recommended list = Egypt-home + ECI Recommended (not Not Recommended / blank country)
+**Focus:** Studio recommended list must not treat Food/kitchen specialists as Lifestyle fits for the Arab Bank mass mix
 
-## Shipped this session (Dev + Production)
+## Why `abeer_kittchen` appeared
 
-- Creator categories from brief/strategy mix, not client industry
-- Recommended cards exclude blank country and ECI Not Recommended / High Risk / Insufficient Data
-- Hydrate the Discovery pool before choosing the visible 10
+Creator Match is the broader Egypt Discovery pool. Recommended was Egypt-home + ECI Recommended, then a loose Lifestyle match — Food/kitchen creators tagged Lifestyle (or inferred only from audience text) scored the same as Sports/Entertainment.
+
+## Fix (Dev + Production)
+
+- Kitchen/Food specialists are off-brief for Sports / Lifestyle / Entertainment unless Food is requested
+- Rank recommended cards from real creator categories + handle inference (`kittchen` → Food)
 
 After ship: hard-refresh and **re-run Discovery**.
 

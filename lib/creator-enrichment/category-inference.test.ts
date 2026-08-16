@@ -77,6 +77,14 @@ assert.deepEqual(
 
 assert.deepEqual(
   inferCategoriesFromProfileSignals({
+    handle: "abeer_kittchen",
+    displayName: "Abeer Kitchen",
+  }),
+  ["Food"]
+);
+
+assert.deepEqual(
+  inferCategoriesFromProfileSignals({
     bio: "صانعة محتوى رياضي · نصائح يومية للياقة",
     hashtags: [],
     mentions: [],

@@ -346,5 +346,6 @@ export function groundedCreatorToSearchCard(
     avatarUrl: creator.avatarUrl,
     profileUrl: creator.profileUrl,
     campaignRelevanceScore: creator.campaignRelevanceScore,
+    categories: creator.categories,
   };
 }

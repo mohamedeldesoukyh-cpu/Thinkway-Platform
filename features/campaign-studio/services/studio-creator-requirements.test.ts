@@ -60,3 +60,32 @@ test("sorts complete requirements ahead of partial matches", () => {
     ["complete", "partial", "weak"]
   );
 });
+
+test("kitchen / Food creators do not get the brief-mix requirement on a LaLiga-style slate", () => {
+  const sports = studioCreatorRequirementScore(
+    { countryCode: "EG", platform: "Instagram", categories: ["Sports"] },
+    egyptFacts
+  );
+  const kitchen = studioCreatorRequirementScore(
+    {
+      countryCode: "EG",
+      platform: "Instagram",
+      handle: "abeer_kittchen",
+      categories: ["Lifestyle"],
+    },
+    egyptFacts
+  );
+
+  assert.equal(sports.met, 3);
+  assert.equal(kitchen.met, 2);
+  assert.ok(compareStudioRequirementScores(sports, kitchen) < 0);
+
+  const ranked = sortByStudioRequirements(
+    [
+      { name: "abeer_kittchen", countryCode: "EG", platform: "Instagram", handle: "abeer_kittchen" },
+      { name: "sports-fit", countryCode: "EG", platform: "Instagram", categories: ["Sports"] },
+    ],
+    (item) => studioCreatorRequirementScore(item, egyptFacts)
+  );
+  assert.equal(ranked[0]?.name, "sports-fit");
+});

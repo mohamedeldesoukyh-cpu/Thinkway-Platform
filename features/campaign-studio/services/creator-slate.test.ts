@@ -115,6 +115,23 @@ test("mass Sports/Entertainment mix keeps Lifestyle on-brief", () => {
   );
 });
 
+test("mass mix does not treat Food/kitchen creators as Lifestyle fits", () => {
+  const pool = [
+    creator("abeer_kittchen", "instagram", 900_000, ["Lifestyle"]),
+    creator("food-1", "instagram", 800_000, ["Food", "Lifestyle"]),
+    creator("sport-1", "instagram", 400_000, ["Sports"]),
+    creator("sport-2", "instagram", 350_000, ["Sports"]),
+    creator("ent-1", "instagram", 300_000, ["Entertainment"]),
+    creator("life-1", "instagram", 280_000, ["Lifestyle"]),
+  ];
+  const { creators } = composeCreatorSlate(pool, {
+    preferredCategories: ["Sports", "Lifestyle", "Entertainment"],
+    targetCount: 4,
+  });
+  assert.ok(!creators.some((c) => c.id === "abeer_kittchen" || c.id === "food-1"));
+  assert.ok(creators.some((c) => c.id.startsWith("sport-") || c.id === "ent-1" || c.id === "life-1"));
+});
+
 test("beauty briefs do not pad with Lifestyle when enough Beauty creators exist", () => {
   const pool = [
     ...Array.from({ length: 6 }, (_, i) =>

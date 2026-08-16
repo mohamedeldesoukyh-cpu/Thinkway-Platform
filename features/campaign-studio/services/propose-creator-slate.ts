@@ -13,6 +13,7 @@ import {
 import { getStrategyFromWorkflowData } from "@/features/campaign-director/services/campaign-director";
 
 import { composeCreatorSlate } from "./creator-slate";
+import { deriveCreatorCategoriesFromBrief } from "./derive-creator-categories";
 import { computeSlateIntelligence } from "./slate-intelligence";
 import { groundedCreatorToSearchCard } from "./plan-section-regeneration";
 import { deriveCreatorQuantityRecommendation } from "./creator-quantity";
@@ -87,6 +88,13 @@ export function proposeInitialCreatorSlateWithStatus(
     platforms: facts?.platforms,
     tierMix,
     targetCount,
+    preferredCategories: deriveCreatorCategoriesFromBrief({
+      briefText: facts?.rawBriefExcerpt,
+      objective: facts?.objective,
+      audience: facts?.audience,
+      campaignName: facts?.product,
+      products: facts?.product ? [facts.product] : undefined,
+    }),
   });
 
   const recommendationData = buildCreatorRecommendationData(

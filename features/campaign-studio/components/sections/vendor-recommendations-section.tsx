@@ -124,6 +124,7 @@ type DisplayVendor = {
   countryCode?: string | null;
   language?: string;
   audienceSummary?: string;
+  categories?: string[];
   priceEstimate?: string;
   thinkwayScore?: number;
   matchPercent?: number;
@@ -290,7 +291,9 @@ function vendorCampaignRequirementScore(
       countryCode: vendor.countryCode,
       platform: vendor.platform,
       audienceSummary: vendor.audienceSummary,
-      category: vendor.audienceSummary,
+      categories: vendor.categories,
+      handle: vendor.handle,
+      displayName: vendor.displayName,
     },
     getCampaignFacts(campaignObject)
   );
@@ -1066,6 +1069,7 @@ export function VendorRecommendationsSection({
                   countryCode: v.countryCode,
                   language: v.language,
                   audienceSummary: v.audienceSummary,
+                  categories: v.categories,
                   priceEstimate: v.priceEstimate ?? parsed?.priceEstimate,
                   thinkwayScore: v.thinkwayScore,
                   matchPercent: v.matchPercent,
@@ -1077,7 +1081,7 @@ export function VendorRecommendationsSection({
                   eciConfidencePercent: v.eciConfidencePercent,
                   planningSignal: v.planningSignal,
                   contentIdea: buildCreatorContentIdea(
-                    { categories: [v.audienceSummary ?? ""] },
+                    { categories: v.categories ?? [v.audienceSummary ?? ""] },
                     campaignFacts,
                     i
                   ),
@@ -1136,7 +1140,9 @@ export function VendorRecommendationsSection({
           countryCode: vendor.countryCode,
           platform: vendor.platform,
           audienceSummary: vendor.audienceSummary,
-          category: vendor.audienceSummary,
+          categories: vendor.categories,
+          handle: vendor.handle,
+          displayName: vendor.displayName,
         },
         campaignFacts
       )
