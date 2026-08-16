@@ -9,6 +9,9 @@
 export const DISCOVERY_SEARCH_TIMEOUT_MESSAGE =
   "Creator search timed out. Try a more specific name or handle.";
 
+export const DISCOVERY_BROWSE_TIMEOUT_MESSAGE =
+  "Creator catalog took too long to load. Try again, or search by name or handle.";
+
 export const DISCOVERY_SEARCH_MASKED_MESSAGE =
   "Creator search took too long to load. Refresh the page, or try a more specific name or handle.";
 
@@ -20,7 +23,10 @@ export function isDiscoverySearchTimeoutError(message: string): boolean {
   return /statement timeout|canceling statement|timed out/i.test(message);
 }
 
-export function mapDiscoverySearchError(error: unknown): string {
+export function mapDiscoverySearchError(
+  error: unknown,
+  options?: { hasSearchQuery?: boolean }
+): string {
   const message =
     error instanceof Error
       ? error.message
@@ -32,7 +38,9 @@ export function mapDiscoverySearchError(error: unknown): string {
     return DISCOVERY_SEARCH_MASKED_MESSAGE;
   }
   if (isDiscoverySearchTimeoutError(message)) {
-    return DISCOVERY_SEARCH_TIMEOUT_MESSAGE;
+    return options?.hasSearchQuery === false
+      ? DISCOVERY_BROWSE_TIMEOUT_MESSAGE
+      : DISCOVERY_SEARCH_TIMEOUT_MESSAGE;
   }
   return message.trim() || "Creator search failed";
 }

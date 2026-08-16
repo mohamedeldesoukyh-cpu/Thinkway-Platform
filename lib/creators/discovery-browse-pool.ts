@@ -199,6 +199,39 @@ function isMissingRpcError(message: string): boolean {
   );
 }
 
+/**
+ * Indexed first-page / paginated ID lookup. Avoids `browse_influencer_ids_by_recency`,
+ * whose `count(*) OVER ()` scans the full active catalog and hits statement_timeout
+ * (~8s) on Production unfiltered Creator Search.
+ */
+export async function queryActiveInfluencerIdsByRecencyFast(
+  supabase: SupabaseClient,
+  filters: UnifiedCreatorBrowseFilters,
+  page: number,
+  pageSize: number
+): Promise<{ ids: string[]; hasMore: boolean }> {
+  const limit = Math.max(pageSize, 0);
+  if (limit === 0) return { ids: [], hasMore: false };
+
+  const offset = (Math.max(page, 1) - 1) * limit;
+  const fetchCount = limit + 1;
+
+  let query = supabase.from("influencers").select("id").eq("status", "active");
+  query = applyInfluencerBrowseFilters(query, filters);
+
+  const { data, error } = await query
+    .order("last_enriched_at", { ascending: false, nullsFirst: false })
+    .range(offset, offset + fetchCount - 1);
+
+  if (error) throw new Error(error.message);
+
+  const rows = (data ?? []) as Array<{ id: string }>;
+  return {
+    ids: rows.slice(0, limit).map((row) => row.id).filter(Boolean),
+    hasMore: rows.length > limit,
+  };
+}
+
 async function queryBrowsableInfluencerIdsByRecencyRpc(
   supabase: SupabaseClient,
   filters: UnifiedCreatorBrowseFilters,

@@ -5,6 +5,7 @@ import path from "node:path";
 import {
   buildDiscoveryBrowseVisibilityPatch,
 } from "@/lib/creators/discovery-browse-eligibility";
+import { queryActiveInfluencerIdsByRecencyFast } from "@/lib/creators/discovery-browse-pool";
 
 assert.deepEqual(
   buildDiscoveryBrowseVisibilityPatch({ status: "prospect" }, { nowIso: "2026-07-18T00:00:00.000Z" }),
@@ -26,4 +27,17 @@ assert.match(
   "discovery browse pool must chunk large .in() filters"
 );
 
-console.log("lib/creators/discovery-browse-pool.test.ts — all tests passed");
+assert.match(
+  poolSource,
+  /queryActiveInfluencerIdsByRecencyFast/,
+  "unfiltered browse must have an indexed ID path that skips count(*) OVER ()"
+);
+
+async function main() {
+  const empty = await queryActiveInfluencerIdsByRecencyFast({} as never, {}, 1, 0);
+  assert.deepEqual(empty, { ids: [], hasMore: false });
+
+  console.log("lib/creators/discovery-browse-pool.test.ts — all tests passed");
+}
+
+void main();

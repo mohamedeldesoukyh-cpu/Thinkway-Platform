@@ -230,7 +230,9 @@ export async function browseUnifiedCreatorsAction(
     }, { path: "discovery" });
     return result;
   } catch (error) {
-    const message = mapDiscoverySearchError(error);
+    const message = mapDiscoverySearchError(error, {
+      hasSearchQuery: Boolean(filters.search?.trim()),
+    });
     captureException(error, {
       route: "browseUnifiedCreatorsAction",
       service: "discovery-search",

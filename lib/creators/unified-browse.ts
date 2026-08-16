@@ -92,14 +92,11 @@ import { extractDnaAvatarUrl } from "@/lib/creators/dna-avatar";
 import { compareBrowseRecencyDesc } from "@/lib/creators/last-enriched-sort";
 import {
   BROWSE_PIN_PRIORITY_COUNTRY,
-  BROWSE_PIN_PRIORITY_POOL_SIZE,
-  browseSortedPoolHasMore,
-  paginateBrowseCreators,
-  resolveBrowseSortPoolSize,
   sortBrowseCreatorsInDefaultOrder,
 } from "@/lib/creators/browse-pin-tier";
 import {
   countBrowsableInfluencers,
+  queryActiveInfluencerIdsByRecencyFast,
   queryBrowsableInfluencerIdsByRecency,
 } from "@/lib/creators/discovery-browse-pool";
 import {
@@ -243,13 +240,23 @@ async function fetchInternalCreatorsBrowsePage(
   filters: UnifiedCreatorBrowseFilters,
   page: number,
   pageSize: number,
-  tracePath: SearchTracePath = "unknown"
+  tracePath: SearchTracePath = "unknown",
+  options?: { skipDna?: boolean; fastIds?: boolean }
 ): Promise<UnifiedCreatorResult[]> {
   const categories = resolveBrowseCategories(filters);
+  const skipDna = options?.skipDna ?? false;
   let ids: string[] = [];
 
   if (categories.length > 0) {
     const browse = await queryInfluencerIdsForCategoryBrowse(supabase, filters, page, pageSize);
+    ids = browse.ids;
+  } else if (options?.fastIds) {
+    const browse = await queryActiveInfluencerIdsByRecencyFast(
+      supabase,
+      filters,
+      page,
+      pageSize
+    );
     ids = browse.ids;
   } else {
     const browse = await queryBrowsableInfluencerIdsByRecency(
@@ -268,7 +275,7 @@ async function fetchInternalCreatorsBrowsePage(
     { ...filters, search: undefined, page: undefined, pageSize: undefined },
     ids,
     null,
-    { omitHeavyFields: true, tracePath }
+    { omitHeavyFields: true, skipDna, tracePath }
   );
 
   const order = new Map(ids.map((id, index) => [id, index]));
@@ -1778,87 +1785,97 @@ export async function browseUnifiedCreators(
     }
 
     if (includeInternal || includeDiscovery) {
-      perf?.span("pin_sorted_browse_pool");
-      const poolSize = resolveBrowseSortPoolSize(page, pageSize);
+      // Production statement_timeout is ~8s. The recency RPC's count(*) OVER () plus
+      // sequential Egypt-60 then global-120 hydration regularly cancels unfiltered
+      // Creator Search. First paint: one page of IDs, skip DNA, skip catalog counts.
+      perf?.span("fast_unfiltered_browse");
+      if (!includeInternal && includeDiscovery) {
+        const discovery = await fetchDiscoveryCreators(
+          supabase,
+          { ...filters, search: undefined, page, pageSize },
+          undefined,
+          tracePath
+        );
+        const pageCreators = applyPostBrowseFilters(discovery, filters, tracePath).slice(
+          0,
+          pageSize
+        );
+        perf?.end();
+        return traceBrowseUnifiedResult(
+          {
+            creators: slimRecentPublicationsForBrowse(pageCreators),
+            total: pageCreators.length,
+            has_more: discovery.length >= pageSize,
+            page,
+            pageSize,
+            internal_count: 0,
+            discovery_count: pageCreators.length,
+          },
+          tracePath,
+          filters,
+          settings
+        );
+      }
       const pinEgyptPool =
-        page === 1 && !resolveCountryCode(filters.country ?? undefined);
+        page === 1 &&
+        includeInternal &&
+        !resolveCountryCode(filters.country ?? undefined);
+      const browsePageOptions = { skipDna: true, fastIds: true } as const;
 
-      perf?.span("fetchInternalCreators");
-      let priorityInternal: UnifiedCreatorResult[] = [];
-      let priorityDiscovery: UnifiedCreatorResult[] = [];
-      if (pinEgyptPool) {
-        if (includeInternal) {
-          priorityInternal = await fetchInternalCreatorsBrowsePage(
+      const egyptPromise = pinEgyptPool
+        ? fetchInternalCreatorsBrowsePage(
             supabase,
             { ...filters, country: BROWSE_PIN_PRIORITY_COUNTRY },
             1,
-            BROWSE_PIN_PRIORITY_POOL_SIZE,
-            tracePath
-          );
-        }
-        if (includeDiscovery) {
-          priorityDiscovery = await fetchDiscoveryCreators(
-            supabase,
-            {
-              ...filters,
-              search: undefined,
-              country: BROWSE_PIN_PRIORITY_COUNTRY,
-              page: 1,
-              pageSize: BROWSE_PIN_PRIORITY_POOL_SIZE,
-            },
-            undefined,
-            tracePath
-          );
-        }
-      }
-
-      const internalMainPromise = includeInternal
-        ? fetchInternalCreatorsBrowsePage(supabase, filters, 1, poolSize, tracePath)
+            pageSize,
+            tracePath,
+            browsePageOptions
+          )
         : Promise.resolve<UnifiedCreatorResult[]>([]);
-      const discoveryMainPromise = includeDiscovery
-        ? fetchDiscoveryCreators(
+      const internalPromise = includeInternal
+        ? fetchInternalCreatorsBrowsePage(
             supabase,
-            { ...filters, search: undefined, page: 1, pageSize: poolSize },
-            undefined,
-            tracePath
+            filters,
+            page,
+            pageSize + 1,
+            tracePath,
+            browsePageOptions
           )
         : Promise.resolve<UnifiedCreatorResult[]>([]);
 
-      perf?.span("search_creators_count");
-      const [internalMain, discoveryMain, internalTotal, discoveryTotal] = await Promise.all([
-        internalMainPromise,
-        discoveryMainPromise,
-        includeInternal ? countInternalCreatorsBrowse(supabase, filters) : Promise.resolve(0),
-        includeDiscovery
-          ? searchDiscoveredProfiles(supabase, {
-              page: 1,
-              pageSize: 1,
-            }).then((result) => result.total)
-          : Promise.resolve(0),
+      const [egyptSettled, internalSettled] = await Promise.allSettled([
+        egyptPromise,
+        internalPromise,
       ]);
+      if (egyptSettled.status === "rejected" && internalSettled.status === "rejected") {
+        throw internalSettled.reason;
+      }
+      const priorityInternal =
+        egyptSettled.status === "fulfilled" ? egyptSettled.value : [];
+      const internalMain =
+        internalSettled.status === "fulfilled" ? internalSettled.value : [];
 
       perf?.span("merge");
+      const hasMoreFromProbe = includeInternal && internalMain.length > pageSize;
+      const internalForPage = internalMain.slice(0, pageSize);
       let merged = dedupeUnifiedCreatorsById(
-        [...priorityInternal, ...priorityDiscovery, ...internalMain, ...discoveryMain],
+        [...priorityInternal, ...internalForPage],
         tracePath
       );
       merged = applyPostBrowseFilters(merged, filters, tracePath);
       merged = sortBrowseCreatorsInDefaultOrder(merged);
-      const catalogTotal = internalTotal + discoveryTotal;
+      const pageCreators = merged.slice(0, pageSize);
       const offset = (page - 1) * pageSize;
-      const pageCreators = paginateBrowseCreators(merged, page, pageSize);
 
       perf?.span("serialization");
       const result = {
         creators: slimRecentPublicationsForBrowse(pageCreators),
-        // Authoritative catalog size for the header badge; pagination stops at the
-        // sorted pool (capped), not when catalogTotal is exhausted.
-        total: Math.max(catalogTotal, offset + pageCreators.length),
-        has_more: browseSortedPoolHasMore(offset, pageCreators.length, merged.length),
+        total: offset + pageCreators.length + (hasMoreFromProbe ? 1 : 0),
+        has_more: hasMoreFromProbe,
         page,
         pageSize,
         internal_count: pageCreators.filter((creator) => creator.influencer_id).length,
-        discovery_count: pageCreators.filter((creator) => !creator.influencer_id).length,
+        discovery_count: 0,
       };
       perf?.end();
       return traceBrowseUnifiedResult(result, tracePath, filters, settings);

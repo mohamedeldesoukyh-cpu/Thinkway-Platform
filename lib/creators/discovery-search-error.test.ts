@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import {
+  DISCOVERY_BROWSE_TIMEOUT_MESSAGE,
   DISCOVERY_SEARCH_MASKED_MESSAGE,
   DISCOVERY_SEARCH_TIMEOUT_MESSAGE,
   mapDiscoverySearchError,
@@ -18,6 +19,13 @@ assert.equal(
 assert.equal(
   mapDiscoverySearchError(new Error("canceling statement due to statement timeout")),
   DISCOVERY_SEARCH_TIMEOUT_MESSAGE
+);
+
+assert.equal(
+  mapDiscoverySearchError(new Error("canceling statement due to statement timeout"), {
+    hasSearchQuery: false,
+  }),
+  DISCOVERY_BROWSE_TIMEOUT_MESSAGE
 );
 
 assert.equal(mapDiscoverySearchError(new Error("Creator search failed")), "Creator search failed");
