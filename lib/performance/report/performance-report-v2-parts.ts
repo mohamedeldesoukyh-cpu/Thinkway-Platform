@@ -196,7 +196,8 @@ export function renderPcard(pub: CampaignPublicationRow): string {
   const addedBadge = isAdded ? `<span class="pcard__av">Added value</span>` : "";
   const excerpt = captionExcerpt(pub.caption);
   const tags = [pub.hashtags?.trim(), pub.mentions?.trim()].filter(Boolean).join(" ");
-  const urlLabel = shortUrl(pub.content_url);
+  const postUrl = pub.content_url?.trim() || null;
+  const urlLabel = shortUrl(postUrl);
 
   const reachSource = pub.reach_source
     ? REACH_SOURCE_LABELS[(pub.reach_source as ReachSource) ?? "actual"] ?? pub.reach_source
@@ -210,19 +211,23 @@ export function renderPcard(pub: CampaignPublicationRow): string {
     impressionsSource ? `Impr.: ${impressionsSource}` : null,
   ].filter(Boolean);
 
-  return `<article class="pcard">
-  <div class="pcard__media">${media}
+  const mediaChrome = `${media}
     <span class="pcard__chip" style="background:${color}">${chipIcon}${esc(chipLabel)}</span>
-    ${addedBadge}
-  </div>
+    ${addedBadge}`;
+  const mediaBlock = postUrl
+    ? `<a class="pcard__media pcard__media--link" href="${esc(postUrl)}" target="_blank" rel="noopener noreferrer" title="Open post">${mediaChrome}</a>`
+    : `<div class="pcard__media">${mediaChrome}</div>`;
+
+  return `<article class="pcard">
+  ${mediaBlock}
   <div class="pcard__b">
     <div class="pcard__hd">${renderCreatorAvatar(pub)}<span class="pcard__nm bidi">${esc(pub.influencer_name ?? "Creator")}</span></div>
     <div class="pcard__mt">${esc(pub.platform_label)} · ${esc(formatShortDate(pub.publication_date))}</div>
     ${excerpt ? `<p class="pcard__cap bidi">${esc(excerpt)}</p>` : ""}
     ${tags ? `<p class="pcard__tg bidi">${esc(tags)}</p>` : ""}
     ${
-      pub.content_url
-        ? `<div class="pcard__url"><a href="${esc(pub.content_url)}">${esc(urlLabel)}</a></div>`
+      postUrl
+        ? `<div class="pcard__url"><a href="${esc(postUrl)}" target="_blank" rel="noopener noreferrer">Open post · ${esc(urlLabel || postUrl)}</a></div>`
         : ""
     }
     <div class="grow"></div>
