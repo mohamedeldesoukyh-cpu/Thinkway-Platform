@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 
 import {
   addAgreedPlatform,
+  addedValueCreatorPercent,
   applyPublicationValueScopes,
   buildAssignmentAgreedPlatformIndexFromAssignments,
   classifyPublicationValueScope,
+  countAddedValueCreators,
   createEmptyAssignmentAgreedPlatformIndex,
   partitionPublicationsByValueScope,
   publicationValueScopeLabel,
@@ -319,6 +321,22 @@ function indexWithInstagram() {
   );
   assert.equal(classified[0]?.value_scope, "added_value");
   assert.equal(classified[1]?.value_scope, "added_value");
+}
+
+{
+  assert.equal(
+    countAddedValueCreators([
+      { value_scope: "agreed", influencer_id: "a" },
+      { value_scope: "added_value", influencer_id: "b" },
+      { value_scope: "added_value", influencer_id: "b" },
+      { value_scope: "added_value", influencer_id: "c" },
+      { value_scope: "agreed", influencer_id: "d" },
+    ]),
+    2
+  );
+  assert.equal(addedValueCreatorPercent(3, 30), 10);
+  assert.equal(addedValueCreatorPercent(0, 30), null);
+  assert.equal(addedValueCreatorPercent(1, 0), null);
 }
 
 console.log("publication-value-scope tests passed");

@@ -215,6 +215,38 @@ export function publicationValueScopeLabel(
   return scope === "added_value" ? "Added value" : "Agreed";
 }
 
+/** Unique creators with at least one added-value publication. */
+export function countAddedValueCreators<
+  T extends Pick<PublicationValueScopeInput, "value_scope" | "influencer_id"> & {
+    influencer_name?: string | null;
+    id?: string;
+  },
+>(publications: readonly T[]): number {
+  const keys = new Set<string>();
+  for (const publication of publications) {
+    if (resolvePublicationValueScope(publication) !== "added_value") continue;
+    const key =
+      publication.influencer_id ??
+      publication.influencer_name ??
+      publication.id ??
+      null;
+    if (key) keys.add(key);
+  }
+  return keys.size;
+}
+
+/**
+ * Added-value share of the roster: added-value creators ÷ total creators.
+ * Example: 3 added of 30 creators → 10%.
+ */
+export function addedValueCreatorPercent(
+  addedValueCreatorCount: number,
+  totalCreatorCount: number
+): number | null {
+  if (totalCreatorCount <= 0 || addedValueCreatorCount <= 0) return null;
+  return Math.round((addedValueCreatorCount / totalCreatorCount) * 100);
+}
+
 export function partitionPublicationsByValueScope<
   T extends Pick<PublicationValueScopeInput, "value_scope">,
 >(publications: readonly T[]): { agreed: T[]; addedValue: T[] } {

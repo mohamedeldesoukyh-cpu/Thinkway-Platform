@@ -16,7 +16,7 @@ import {
 import {
   IMPRESSIONS_FORECAST_DISCLAIMER,
 } from "@/lib/performance/impressions-forecast-engine";
-import { partitionPublicationsByValueScope, resolvePublicationValueScope } from "@/lib/performance/publication-value-scope";
+import { partitionPublicationsByValueScope, resolvePublicationValueScope, addedValueCreatorPercent } from "@/lib/performance/publication-value-scope";
 import {
   CARDS_PER_PAGE,
   chunk,
@@ -259,10 +259,8 @@ function renderCombinedSheets(data: PerformanceReportDocumentData): string[] {
   );
   page += 1;
 
-  const addedPct =
-    summary.agreed_publications > 0
-      ? Math.round((summary.added_value_publications / summary.agreed_publications) * 100)
-      : null;
+  const addedCreators = data.addedValueCreatorCount;
+  const addedPct = addedValueCreatorPercent(addedCreators, data.uniqueCreatorCount);
 
   sheets.push(
     renderSheet({
@@ -278,13 +276,13 @@ function renderCombinedSheets(data: PerformanceReportDocumentData): string[] {
 <div class="stats">
   <div class="s"><div class="sk">Creators</div><div class="sv num">${data.uniqueCreatorCount}</div><div class="ss">Activated</div></div>
   <div class="s"><div class="sk">Publications</div><div class="sv num">${summary.agreed_publications}</div><div class="ss">Agreed scope</div></div>
-  <div class="s s--green"><div class="sk">Added value</div><div class="sv num">${summary.added_value_publications}</div><div class="ss">Beyond scope</div></div>
+  <div class="s s--green"><div class="sk">Added value</div><div class="sv num">${addedCreators}</div><div class="ss">Creators beyond scope</div></div>
   <div class="s"><div class="sk">Engagements</div><div class="sv num">${esc(formatCompactCount(summary.total_engagements))}</div><div class="ss">Likes, comments, shares, saves</div></div>
   <div class="s s--accent"><div class="sk">Avg. ER</div><div class="sv num">${esc(formatPercent(summary.average_engagement_rate))}</div><div class="ss">All posts ÷ agreed</div></div>
 </div>
 ${
-  summary.added_value_publications > 0 && addedPct != null
-    ? `<div class="callout" style="margin-top:6mm"><div><div class="ck">Delivery vs. scope</div><div class="cv">${summary.added_value_publications} publication${summary.added_value_publications === 1 ? "" : "s"} delivered beyond the contracted assignment mix</div></div><div class="cn">+${addedPct}%</div></div>`
+  addedCreators > 0 && addedPct != null
+    ? `<div class="callout" style="margin-top:6mm"><div><div class="ck">Delivery vs. scope</div><div class="cv">${addedCreators} creator${addedCreators === 1 ? "" : "s"} delivered beyond the contracted assignment mix</div></div><div class="cn">+${addedPct}%</div></div>`
     : ""
 }
 <div class="chart__h" style="margin-top:7mm"><span class="chart__t">Scope delivered by platform</span><span class="chart__u">${esc(formatDateRange(data.campaign.startDate, data.campaign.endDate))}</span></div>
@@ -564,7 +562,7 @@ function renderInfluencerSheets(data: PerformanceReportDocumentData): string[] {
 <div class="stats">
   <div class="s"><div class="sk">Creators</div><div class="sv num">${data.influencerSections.length}</div><div class="ss">In this report</div></div>
   <div class="s"><div class="sk">Publications</div><div class="sv num">${summary.total_publications}</div><div class="ss">All scopes</div></div>
-  <div class="s s--green"><div class="sk">Added value</div><div class="sv num">${summary.added_value_publications}</div><div class="ss">Beyond scope</div></div>
+  <div class="s s--green"><div class="sk">Added value</div><div class="sv num">${data.addedValueCreatorCount}</div><div class="ss">Creators beyond scope</div></div>
   <div class="s"><div class="sk">Impressions</div><div class="sv num">${esc(formatCompactCount(summary.total_impressions))}</div><div class="ss">Served</div></div>
   <div class="s s--accent"><div class="sk">Avg. ER</div><div class="sv num">${esc(formatPercent(summary.average_engagement_rate))}</div><div class="ss">All posts ÷ agreed</div></div>
 </div>`,

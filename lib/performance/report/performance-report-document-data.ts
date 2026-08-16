@@ -6,7 +6,7 @@ import type {
 } from "@/lib/domains/campaign/types";
 import { getCampaignPerformanceBundle } from "@/lib/services/campaigns/campaign-publication-service";
 import { getPlatformOptionLabel } from "@/lib/campaigns/deliverable-taxonomy";
-import { partitionPublicationsByValueScope, resolvePublicationValueScope } from "@/lib/performance/publication-value-scope";
+import { partitionPublicationsByValueScope, resolvePublicationValueScope, countAddedValueCreators } from "@/lib/performance/publication-value-scope";
 import { averageEngagementRateAgainstAgreed } from "@/lib/performance/engagement-rate-engine";
 import { resolvePublicationRowCreatorAvatar } from "@/lib/performance/creator-avatar";
 import { createPublicationMediaSignedUrl } from "@/lib/performance/screenshot-capture/storage";
@@ -136,9 +136,12 @@ function buildRecommendations(
   }
 
   if (summary.added_value_publications > 0) {
-    recs.push(
-      `${summary.added_value_publications} added-value publication(s) were delivered beyond the agreed assignment mix.`
-    );
+    const addedCreators = countAddedValueCreators(publications);
+    if (addedCreators > 0) {
+      recs.push(
+        `${addedCreators} creator${addedCreators === 1 ? "" : "s"} delivered added-value content beyond the agreed assignment mix.`
+      );
+    }
   }
 
   if (summary.average_engagement_rate != null && summary.average_engagement_rate > 3) {
@@ -512,6 +515,7 @@ export async function loadPerformanceReportDocumentData(
     variant,
     influencerSections,
     uniqueCreatorCount,
+    addedValueCreatorCount: countAddedValueCreators(bundle.publications),
     highlights,
     platformBenchmarks,
     recommendations,

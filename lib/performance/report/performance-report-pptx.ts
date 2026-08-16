@@ -89,7 +89,7 @@ export async function buildPerformanceReportPptxBuffer(
   const summaryRows = [
     ["Creators", String(data.uniqueCreatorCount)],
     ["Publications", String(data.bundle.summary.agreed_publications)],
-    ["Added value", String(data.bundle.summary.added_value_publications)],
+    ["Added value", String(data.addedValueCreatorCount)],
     ["Reach", formatCompactCount(data.bundle.summary.total_reach)],
     [
       "Reach breakdown",
