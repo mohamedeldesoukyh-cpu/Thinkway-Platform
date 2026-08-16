@@ -6,6 +6,7 @@ import {
   resolveDiscoveryPlatform,
   type SocialPlatform,
 } from "./platforms";
+import { isFacebookReservedPathSegment } from "@/lib/social/facebook-reserved-segments";
 
 export type ParsedProfile = {
   platform: SocialPlatform;
@@ -94,39 +95,6 @@ const PLATFORM_PATTERNS: PlatformPattern[] = [
   },
 ];
 
-const FACEBOOK_RESERVED_SEGMENTS = new Set([
-  "watch",
-  "reel",
-  "reels",
-  "video",
-  "videos",
-  "photo",
-  "photos",
-  "story",
-  "stories",
-  "share",
-  "sharer",
-  "groups",
-  "events",
-  "marketplace",
-  "gaming",
-  "login",
-  "help",
-  "privacy",
-  "policies",
-  "ads",
-  "business",
-  "lite",
-  "dialog",
-  "plugins",
-  "hashtag",
-  "live",
-  "media",
-  "pg",
-  "notes",
-  "recover",
-]);
-
 function extractFacebookUsername(
   pathname: string,
   segments: string[],
@@ -144,11 +112,11 @@ function extractFacebookUsername(
 
   if (segments[0] === "pages" && segments.length >= 2) {
     const slug = segments[1]?.trim();
-    return slug && !FACEBOOK_RESERVED_SEGMENTS.has(slug.toLowerCase()) ? slug : null;
+    return slug && !isFacebookReservedPathSegment(slug) ? slug : null;
   }
 
   const user = segments[0];
-  if (!user || FACEBOOK_RESERVED_SEGMENTS.has(user.toLowerCase())) return null;
+  if (!user || isFacebookReservedPathSegment(user)) return null;
   if (user.endsWith(".php")) return null;
   if (pathname.includes("/posts/") || pathname.includes("/videos/")) return null;
   return user;

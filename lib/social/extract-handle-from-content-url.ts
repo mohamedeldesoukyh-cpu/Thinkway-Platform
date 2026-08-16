@@ -3,6 +3,7 @@ import {
   normalizeUsername,
   type SocialPlatform,
 } from "@/lib/social/platforms";
+import { isFacebookReservedPathSegment } from "@/lib/social/facebook-reserved-segments";
 
 const INSTAGRAM_RESERVED = new Set([
   "p",
@@ -14,27 +15,6 @@ const INSTAGRAM_RESERVED = new Set([
   "direct",
   "tv",
   "share",
-]);
-
-const FACEBOOK_RESERVED = new Set([
-  "watch",
-  "reel",
-  "reels",
-  "share",
-  "photo",
-  "photos",
-  "video",
-  "videos",
-  "groups",
-  "events",
-  "marketplace",
-  "gaming",
-  "stories",
-  "story.php",
-  "profile.php",
-  "permalink.php",
-  "pages",
-  "people",
 ]);
 
 const TWITTER_RESERVED = new Set([
@@ -91,8 +71,8 @@ export function extractHandleFromContentUrl(
       break;
     }
     case "facebook": {
-      const first = segments[0]?.toLowerCase() ?? "";
-      if (!FACEBOOK_RESERVED.has(first) && first !== "profile.php") {
+      const first = segments[0] ?? "";
+      if (!isFacebookReservedPathSegment(first) && !first.toLowerCase().endsWith(".php")) {
         raw = segments[0] ?? null;
       }
       break;
