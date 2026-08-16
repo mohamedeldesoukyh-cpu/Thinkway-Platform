@@ -77,8 +77,14 @@ export type PerformanceReportDocumentData = {
   variant: PerformanceReportVariant;
   influencerSections: InfluencerReportSection[];
   uniqueCreatorCount: number;
-  /** Creators with ≥1 added-value publication (report presentation). */
+  /**
+   * Creators with no assignment deliverables (full added-value creators).
+   * Percentage = count ÷ assignedCreatorCount.
+   */
+  addedValueCreators: Array<{ id: string; name: string }>;
   addedValueCreatorCount: number;
+  /** Unique assigned influencers on campaign lines (denominator for creator AV %). */
+  assignedCreatorCount: number;
   highlights: CampaignHighlights;
   platformBenchmarks: PlatformBenchmark[];
   recommendations: string[];

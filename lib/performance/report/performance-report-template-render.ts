@@ -260,7 +260,10 @@ function renderCombinedSheets(data: PerformanceReportDocumentData): string[] {
   page += 1;
 
   const addedCreators = data.addedValueCreatorCount;
-  const addedPct = addedValueCreatorPercent(addedCreators, data.uniqueCreatorCount);
+  const creatorRoster = data.assignedCreatorCount || data.uniqueCreatorCount;
+  const addedPct = addedValueCreatorPercent(addedCreators, creatorRoster);
+  const addedCreatorNames = data.addedValueCreators.map((c) => c.name);
+  const addedPosts = summary.added_value_publications;
 
   sheets.push(
     renderSheet({
@@ -275,14 +278,23 @@ function renderCombinedSheets(data: PerformanceReportDocumentData): string[] {
 </div>
 <div class="stats">
   <div class="s"><div class="sk">Creators</div><div class="sv num">${data.uniqueCreatorCount}</div><div class="ss">Activated</div></div>
-  <div class="s"><div class="sk">Publications</div><div class="sv num">${summary.agreed_publications}</div><div class="ss">Agreed scope</div></div>
-  <div class="s s--green"><div class="sk">Added value</div><div class="sv num">${addedCreators}</div><div class="ss">Creators beyond scope</div></div>
-  <div class="s"><div class="sk">Engagements</div><div class="sv num">${esc(formatCompactCount(summary.total_engagements))}</div><div class="ss">Likes, comments, shares, saves</div></div>
+  <div class="s"><div class="sk">Agreed posts</div><div class="sv num">${summary.agreed_publications}</div><div class="ss">Contracted scope</div></div>
+  <div class="s s--green"><div class="sk">AV creators</div><div class="sv num">${addedCreators}</div><div class="ss">No deliverables</div></div>
+  <div class="s s--green"><div class="sk">AV posts</div><div class="sv num">${addedPosts}</div><div class="ss">Beyond scope</div></div>
   <div class="s s--accent"><div class="sk">Avg. ER</div><div class="sv num">${esc(formatPercent(summary.average_engagement_rate))}</div><div class="ss">All posts ÷ agreed</div></div>
 </div>
 ${
   addedCreators > 0 && addedPct != null
-    ? `<div class="callout" style="margin-top:6mm"><div><div class="ck">Delivery vs. scope</div><div class="cv">${addedCreators} creator${addedCreators === 1 ? "" : "s"} delivered beyond the contracted assignment mix</div></div><div class="cn">+${addedPct}%</div></div>`
+    ? `<div class="callout" style="margin-top:6mm"><div><div class="ck">Added value by creator</div><div class="cv">${addedCreators} creator${addedCreators === 1 ? "" : "s"} with no contracted deliverables${
+        addedCreatorNames.length
+          ? ` — ${esc(addedCreatorNames.join(", "))}`
+          : ""
+      }</div></div><div class="cn">+${addedPct}%</div></div>`
+    : ""
+}
+${
+  addedPosts > 0
+    ? `<div class="callout" style="margin-top:3mm"><div><div class="ck">Added value by posts</div><div class="cv">${addedPosts} publication${addedPosts === 1 ? "" : "s"} delivered beyond the contracted assignment mix</div></div></div>`
     : ""
 }
 <div class="chart__h" style="margin-top:7mm"><span class="chart__t">Scope delivered by platform</span><span class="chart__u">${esc(formatDateRange(data.campaign.startDate, data.campaign.endDate))}</span></div>
@@ -562,7 +574,8 @@ function renderInfluencerSheets(data: PerformanceReportDocumentData): string[] {
 <div class="stats">
   <div class="s"><div class="sk">Creators</div><div class="sv num">${data.influencerSections.length}</div><div class="ss">In this report</div></div>
   <div class="s"><div class="sk">Publications</div><div class="sv num">${summary.total_publications}</div><div class="ss">All scopes</div></div>
-  <div class="s s--green"><div class="sk">Added value</div><div class="sv num">${data.addedValueCreatorCount}</div><div class="ss">Creators beyond scope</div></div>
+  <div class="s s--green"><div class="sk">AV creators</div><div class="sv num">${data.addedValueCreatorCount}</div><div class="ss">No deliverables</div></div>
+  <div class="s s--green"><div class="sk">AV posts</div><div class="sv num">${summary.added_value_publications}</div><div class="ss">Beyond scope</div></div>
   <div class="s"><div class="sk">Impressions</div><div class="sv num">${esc(formatCompactCount(summary.total_impressions))}</div><div class="ss">Served</div></div>
   <div class="s s--accent"><div class="sk">Avg. ER</div><div class="sv num">${esc(formatPercent(summary.average_engagement_rate))}</div><div class="ss">All posts ÷ agreed</div></div>
 </div>`,

@@ -1,14 +1,17 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop`  
-**Focus:** Added value classification after deliverable removal
+**Focus:** Performance report Added value % by creators
 
 ## Shipped
 
-- Empty Assignments deliverables ⇒ Added value (no stale metadata/commercial_rows fallback)
-- Dev `b0675a34` · Prod `bdcac445` (`vercel deploy --prod` + `app.thinkwaymedia.com`)
-- Prior: Avg ER = all post ERs ÷ agreed · Dev `ee022164` · Prod `d9a26459`
+- Report Delivery vs. scope % = added-value creators ÷ total creators (e.g. 3/30 → +10%)
+- Exec summary Added value KPI = creator count (“Creators beyond scope”)
+- Platform scope table still post-based; Avg ER unchanged
+- Dev `7cda28c2` · Prod `1e0e4a25` (`vercel deploy --prod`)
 
 ## Shipped prior
 
-- Performance report Design System v2 · FB search-name / snapshots polish
+- Avg ER = all post ERs ÷ agreed publications
+- Empty Assignments deliverables → Added value classification
+- Engagement over time removed from report charts
