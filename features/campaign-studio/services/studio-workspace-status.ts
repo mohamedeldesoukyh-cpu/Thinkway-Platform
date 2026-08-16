@@ -42,6 +42,14 @@ export function isStudioIntakeConfirmed(
   return campaignObject.meta.status === "complete" && Boolean(getCampaignFacts(campaignObject));
 }
 
+export function nextStudioWorkspaceStep(
+  stepId: StudioWorkspaceStepId
+): StudioWorkspaceStepId | null {
+  const index = STUDIO_WORKSPACE_STEPS.findIndex((step) => step.id === stepId);
+  if (index < 0 || index >= STUDIO_WORKSPACE_STEPS.length - 1) return null;
+  return STUDIO_WORKSPACE_STEPS[index + 1]?.id ?? null;
+}
+
 export function outdatedWorkspaceSteps(
   outdatedSections: ReadonlySet<CampaignStudioSectionId>
 ): Set<StudioWorkspaceStepId> {

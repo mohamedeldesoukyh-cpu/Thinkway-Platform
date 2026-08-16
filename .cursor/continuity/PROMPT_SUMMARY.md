@@ -1,26 +1,25 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `feature/discovery-search-add-missing-creator` (from `develop`)  
-**Focus:** Discovery Search reliability + batch Add missing creator
+**Branch:** `develop`  
+**Focus:** Studio Intake — market-filtered creators, missing-field dropdowns, visible Next
 
-## In progress (this session, local)
+## Shipping (Dev + Production, this session)
 
-- Creator Search first-load timeouts no longer crash as a Production digest error
-- SSR taxonomy wait is budgeted; browse errors are returned (not thrown)
-- ECI overlay is fail-open with a time budget so the creator list can still render
-- Always-visible **Add missing creator** — paste multiple profile URLs, extract usernames, skip duplicates already in Discovery
+- Country / platforms / deliverables / KPIs are dropdowns or chips
+- Visible process: Intake → Strategy → Creators → Content → Commercial → Package, plus **Next: Strategy**
+- Recommended creators filtered to campaign market (Egypt keeps Egypt / Egypt · Italy; drops UAE-only)
+- Creator matches action card hidden on Intake (belongs on Creators)
+- Discovery waits for Confirm even when facts already exist
+- Invented audience / inferred platforms stay Missing on Intake
 
-## Shipped prior (Dev + Production)
+## Already on Dev + Production
 
-- Confirm campaign advances to Strategy; confirmed Intake shows Continue to Strategy
-- Progress meter while the brief is being read / Studio is still working
-- CIP is created at workflow start from chat text; Intake polls and syncs the panel
+- Confirm campaign advances to Strategy
+- Progress meter while the brief is being read
+- CIP is created at workflow start from chat text
 - Stale “INPUT REQUIRED: budget” hides once budget is on Campaign Facts
-- Do not invent audience, platforms, country, or budget
-- `Campaign:` fills the campaign name; “Arab Bank new credit” is not the client
 - Duration helper shows `1 month / 4 weeks`
 - Later steps stay Blocked until Confirm
-- Wave 3 Package readiness · Intake CIP → facts · Studio UX IA
 
 Dev: https://dev.thinkwaymedia.com  
 Prod: https://app.thinkwaymedia.com  

@@ -149,6 +149,12 @@ export function CampaignStudio({
     scrollRoot?.scrollTo({ top: 0 });
   }
 
+  const canvasActionCards = useMemo(() => {
+    const cards = studio?.actionCards ?? [];
+    if (activeStep?.id === "creators") return cards;
+    return cards.filter((card) => card.type !== "creator_search");
+  }, [studio?.actionCards, activeStep?.id]);
+
   if (!studio || !activeStep) return null;
 
   const renderCanvasBody = () => (
@@ -217,10 +223,10 @@ export function CampaignStudio({
         workflowProgressPercent={studio.progressPercent}
       />
 
-      {studio.actionCards?.length && conversationId && messageId ? (
+      {canvasActionCards.length > 0 && conversationId && messageId ? (
         <div className="border-t border-[#0B0F1A]/8 pt-4 dark:border-border">
           <ActionCardRenderer
-            cards={studio.actionCards}
+            cards={canvasActionCards}
             conversationId={conversationId}
             messageId={messageId}
             onCardUpdated={onCardUpdated}

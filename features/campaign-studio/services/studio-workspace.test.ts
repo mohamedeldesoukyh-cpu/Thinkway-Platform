@@ -28,9 +28,11 @@ import { resolveStudioPackageReadiness } from "./studio-package-readiness";
 import {
   defaultStudioWorkspaceStep,
   isStudioIntakeConfirmed,
+  nextStudioWorkspaceStep,
   outdatedWorkspaceSteps,
   resolveStudioWorkspaceSteps,
 } from "./studio-workspace-status";
+import { resolveStudioDiscoverySufficiency } from "./studio-discovery-sufficiency";
 
 const ARAB_BANK_BRIEF = [
   "Client: Arab Bank.",
@@ -390,4 +392,53 @@ test("typing missing required facts in Intake enables Confirm without inventing 
   const intake = requiredIntakeFacts(mergeIntakeDisplayFacts(cipFacts, live));
   assert.equal(intake.canConfirm, true);
   assert.equal(intake.rows.find((row) => row.key === "budget")?.value, "EGP 5,000,000");
+});
+
+test("inferred audience and platforms stay Missing on Intake", () => {
+  const intake = requiredIntakeFacts({
+    extractedAt: new Date().toISOString(),
+    confidence: {},
+    sources: { audience: "inferred", platforms: "default" },
+    clientName: "Arab Bank",
+    brandName: "Arab Bank",
+    product: "Credit Card Instant Issuance",
+    audience: "audience: brand-relevant consumers in primary market",
+    platforms: ["IG", "TT"],
+    geography: ["Egypt"],
+    budget: { amount: 3_000_000, currency: "EGP" },
+    durationWeeks: 4,
+    objective: "Awareness",
+  });
+  assert.equal(intake.rows.find((row) => row.key === "audience")?.state, "missing");
+  assert.equal(intake.rows.find((row) => row.key === "platforms")?.state, "missing");
+  assert.equal(intake.rows.find((row) => row.key === "kpis")?.state, "missing");
+  assert.equal(intake.rows.find((row) => row.key === "deliverables")?.state, "missing");
+  assert.equal(intake.canConfirm, true);
+});
+
+test("workspace Next helper walks Intake → Package", () => {
+  assert.equal(nextStudioWorkspaceStep("intake"), "strategy");
+  assert.equal(nextStudioWorkspaceStep("strategy"), "creators");
+  assert.equal(nextStudioWorkspaceStep("creators"), "content");
+  assert.equal(nextStudioWorkspaceStep("content"), "commercial");
+  assert.equal(nextStudioWorkspaceStep("commercial"), "package");
+  assert.equal(nextStudioWorkspaceStep("package"), null);
+});
+
+test("Discovery waits for Confirm even when Campaign Facts exist", () => {
+  const object = buildCampaignObjectFixture({
+    facts: {
+      clientName: "Arab Bank",
+      brandName: "Arab Bank",
+      product: "Credit Card Instant Issuance",
+      objective: "Awareness",
+      geography: ["Egypt"],
+      budget: { amount: 3_000_000, currency: "EGP" },
+      durationWeeks: 4,
+    },
+  });
+  object.meta.status = "paused";
+  const sufficiency = resolveStudioDiscoverySufficiency(object, false);
+  assert.equal(sufficiency.factsConfirmed, false);
+  assert.match(sufficiency.title, /Confirm campaign intelligence first/i);
 });

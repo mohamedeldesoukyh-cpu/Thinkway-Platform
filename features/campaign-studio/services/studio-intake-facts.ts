@@ -66,6 +66,23 @@ function row(
   };
 }
 
+function inventedAudience(value: string | null | undefined): boolean {
+  return /brand-relevant consumers/i.test(value ?? "");
+}
+
+function presentAudience(facts: CampaignFacts | undefined): string | null {
+  const source = facts?.sources?.audience;
+  if (source === "inferred" || source === "default") return null;
+  if (inventedAudience(facts?.audience)) return null;
+  return present(facts?.audience);
+}
+
+function presentPlatforms(facts: CampaignFacts | undefined): string | null {
+  const source = facts?.sources?.platforms;
+  if (source === "inferred" || source === "default") return null;
+  return joinList(facts?.platforms);
+}
+
 /**
  * "What Thinkway understood" — Campaign Facts only. Never invent missing values.
  */
@@ -78,7 +95,7 @@ export function requiredIntakeFacts(facts: CampaignFacts | undefined): IntakeFac
     row("budget", "Budget", formatBudget(facts), true),
     row("duration", "Duration", formatDurationWeeks(facts?.durationWeeks), true),
     row("objective", "Objective", present(facts?.objective), true),
-    row("audience", "Audience", present(facts?.audience), false),
+    row("audience", "Audience", presentAudience(facts), false),
     row("category", "Category", present(facts?.industry) ?? present(facts?.campaignType), false),
     row(
       "creatorCategories",
@@ -86,8 +103,9 @@ export function requiredIntakeFacts(facts: CampaignFacts | undefined): IntakeFac
       present(facts?.industry) ?? present(facts?.campaignType),
       false
     ),
-    row("platforms", "Platforms", joinList(facts?.platforms), false),
+    row("platforms", "Platforms", presentPlatforms(facts), false),
     row("deliverables", "Deliverables", joinList(facts?.deliverables), false),
+    row("kpis", "Success measurement / KPIs", joinList(facts?.kpis), false),
   ];
 
   const missing = rows.filter((item) => item.required && item.state === "missing");
@@ -200,6 +218,7 @@ export function campaignFactsFromIntakeEdit(
     geography: edit.geography?.filter((value) => value.trim()) ?? base?.geography,
     platforms: edit.platforms?.filter((value) => value.trim()) ?? base?.platforms,
     deliverables: edit.deliverables?.filter((value) => value.trim()) ?? base?.deliverables,
+    kpis: edit.kpis?.filter((value) => value.trim()) ?? base?.kpis,
     durationWeeks:
       edit.durationWeeks != null && Number.isFinite(edit.durationWeeks) && edit.durationWeeks > 0
         ? Math.round(edit.durationWeeks)
@@ -234,6 +253,10 @@ export function applyIntakeEditToProfile(
     edit.deliverables && edit.deliverables.some((value) => value.trim())
       ? edit.deliverables.map((value) => value.trim()).filter(Boolean)
       : profile.deliverables;
+  const kpis =
+    edit.kpis && edit.kpis.some((value) => value.trim())
+      ? edit.kpis.map((value) => value.trim()).filter(Boolean)
+      : profile.kpis;
   const durationWeeks =
     edit.durationWeeks != null && Number.isFinite(edit.durationWeeks) && edit.durationWeeks > 0
       ? Math.round(edit.durationWeeks)
@@ -260,6 +283,7 @@ export function applyIntakeEditToProfile(
     market: geography?.[0] ?? profile.market,
     platforms,
     deliverables,
+    kpis,
     durationWeeks,
     budget,
   };
@@ -275,6 +299,7 @@ export type IntakeFactsEdit = {
   geography?: string[];
   platforms?: string[];
   deliverables?: string[];
+  kpis?: string[];
   budgetAmount?: number;
   budgetCurrency?: string;
   durationWeeks?: number;
@@ -290,6 +315,7 @@ export function applyIntakeFactsEdit(
   const geography = edit.geography?.map((value) => value.trim()).filter(Boolean);
   const platforms = edit.platforms?.map((value) => value.trim()).filter(Boolean);
   const deliverables = edit.deliverables?.map((value) => value.trim()).filter(Boolean);
+  const kpis = edit.kpis?.map((value) => value.trim()).filter(Boolean);
 
   return patchCampaignFacts(campaignObject, {
     ...(edit.clientName !== undefined ? { clientName: edit.clientName.trim() || undefined } : {}),
@@ -301,6 +327,7 @@ export function applyIntakeFactsEdit(
     ...(geography ? { geography } : {}),
     ...(platforms ? { platforms } : {}),
     ...(deliverables ? { deliverables } : {}),
+    ...(kpis ? { kpis } : {}),
     ...(edit.durationWeeks != null && Number.isFinite(edit.durationWeeks)
       ? { durationWeeks: Math.round(edit.durationWeeks) }
       : {}),

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { FileSpreadsheetIcon } from "lucide-react";
+import { ArrowRightIcon, FileSpreadsheetIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,11 @@ import type {
   CampaignStudioViewportMode,
 } from "../../types/campaign-studio";
 import type { StudioWorkspaceStepView } from "../../services/studio-workspace-status";
+import {
+  isStudioIntakeConfirmed,
+  nextStudioWorkspaceStep,
+} from "../../services/studio-workspace-status";
+import { STUDIO_WORKSPACE_STEPS } from "../../constants/studio-workspace";
 import { StudioSectionCard } from "../campaign-studio-sections";
 import { IntakeScreen } from "./intake-screen";
 import { CreatorsMixHeader } from "./creators-mix-header";
@@ -77,10 +82,29 @@ function renderSection(
 export function StudioWorkspaceScreen(props: StudioWorkspaceScreenProps) {
   const { step, sections } = props;
   const byId = new Map(sections.map((section) => [section.id, section]));
+  const nextStepId = nextStudioWorkspaceStep(step.id);
+  const nextStep = STUDIO_WORKSPACE_STEPS.find((item) => item.id === nextStepId);
+  const intakeConfirmed = isStudioIntakeConfirmed(props.campaignObject);
+  const nextDisabled = Boolean(nextStepId) && step.id === "intake" && !intakeConfirmed;
+  const nextAction = nextStep ? (
+    <Button
+      type="button"
+      className="bg-[#0057FF] hover:bg-[#0040CC]"
+      disabled={nextDisabled}
+      title={nextDisabled ? "Confirm campaign facts first" : undefined}
+      onClick={() => {
+        if (!nextStepId || nextDisabled) return;
+        props.onNavigateStep?.(nextStepId);
+      }}
+    >
+      <ArrowRightIcon className="size-4" />
+      Next: {nextStep.label}
+    </Button>
+  ) : null;
 
   if (step.id === "intake") {
     return (
-      <StudioStepShell step={step}>
+      <StudioStepShell step={step} actions={nextAction}>
         <IntakeScreen
           campaignObject={props.campaignObject}
           conversationId={props.conversationId}
@@ -96,7 +120,7 @@ export function StudioWorkspaceScreen(props: StudioWorkspaceScreenProps) {
 
   if (step.id === "creators") {
     return (
-      <StudioStepShell step={step}>
+      <StudioStepShell step={step} actions={nextAction}>
         <CreatorsMixHeader
           campaignObject={props.campaignObject}
           discoveryStatus={byId.get("creator-discovery")?.status ?? "pending"}
@@ -112,19 +136,22 @@ export function StudioWorkspaceScreen(props: StudioWorkspaceScreenProps) {
       <StudioStepShell
         step={step}
         actions={
-          <Button
-            type="button"
-            className="bg-[#0057FF] hover:bg-[#0040CC]"
-            onClick={() =>
-              toast.message("Build quotation continues after Package.", {
-                description:
-                  "Commercial stays on the existing engine. Create Client Review is the next product bridge.",
-              })
-            }
-          >
-            <FileSpreadsheetIcon className="size-4" />
-            Build quotation
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {nextAction}
+            <Button
+              type="button"
+              className="bg-[#0057FF] hover:bg-[#0040CC]"
+              onClick={() =>
+                toast.message("Build quotation continues after Package.", {
+                  description:
+                    "Commercial stays on the existing engine. Create Client Review is the next product bridge.",
+                })
+              }
+            >
+              <FileSpreadsheetIcon className="size-4" />
+              Build quotation
+            </Button>
+          </div>
         }
       >
         {renderSection(byId.get("budget-planner"), props)}
@@ -157,7 +184,7 @@ export function StudioWorkspaceScreen(props: StudioWorkspaceScreenProps) {
         : null;
 
   return (
-    <StudioStepShell step={step}>
+    <StudioStepShell step={step} actions={nextAction}>
       {sectionId ? renderSection(byId.get(sectionId), props) : null}
     </StudioStepShell>
   );
