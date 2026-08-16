@@ -1,16 +1,15 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop`  
-**Focus:** Performance select-all (incl. Added value) · last update column · enrichment progress/summary
+**Focus:** FB snapshot fix · Manual metrics · QR embed · Added Value separator
 
-## Shipped
+## Shipping
 
-- Select all / selector count includes Publications + Added value
-- On-screen `Last update` column (not in reports)
-- Enrichment progress meter + completion dialog (Synced / Partial / Failed / Manual required / Queued / Collecting)
-- Dev `33cff267` · Prod `084a8f4a` (`vercel deploy --prod`)
+- **FB snapshot:** decode HTML entities in `og:image` (`&amp;` broke CDN fetch); Apify in Facebook screenshot chain; proxy/storage decode on fetch
+- Manual metrics accept compact counts (`1.1K`)
+- Report cover QR as embedded PNG data URI
+- Preview/PDF: full-page **Added Value** separator before added-value posts
 
 ## Shipped prior
 
-- Skip `revalidatePath` on metrics refresh
-- Home FX display parity
+- Performance select-all / last update / enrichment summary (`33cff267` / `084a8f4a`)

@@ -11,6 +11,7 @@ import { resolvePublicationRowCreatorAvatar } from "@/lib/performance/creator-av
 import { createPublicationMediaSignedUrl } from "@/lib/performance/screenshot-capture/storage";
 import { embedCampaignPublicationPreview } from "@/lib/performance/report/embed-publication-previews";
 import { embedReportImageDataUri } from "@/lib/performance/report/report-embed-images";
+import { buildQrCodeDataUri, buildQrCodeImageUrl } from "@/lib/performance/report/qr-code";
 import type {
   CampaignHighlights,
   InfluencerReportSection,
@@ -463,6 +464,10 @@ export async function loadPerformanceReportDocumentData(
   const brandMetadata = (brand as { metadata?: Record<string, unknown> } | null)?.metadata ?? null;
   const coverImageUrl = resolveCoverImage(typed.metadata, brandMetadata, bundle.publications);
   const brandLogoUrl = resolveBrandLogo(brandMetadata);
+  const dashboardUrl = `${appUrl.replace(/\/$/, "")}/campaigns/${typed.id}`;
+  const qrCodeImageUrl =
+    (await buildQrCodeDataUri(dashboardUrl, 160)) ??
+    (await embedReportImageDataUri(buildQrCodeImageUrl(dashboardUrl, 160)));
   const platformBenchmarks = buildPlatformBenchmarks(bundle);
   const highlights = buildHighlights(bundle);
   const recommendations = buildRecommendations(bundle, platformBenchmarks);
@@ -491,8 +496,9 @@ export async function loadPerformanceReportDocumentData(
       brandName: brand?.name ?? null,
       brandLogoUrl,
       coverImageUrl,
+      qrCodeImageUrl,
       currency: typed.currency_code ?? bundle.summary.currency,
-      dashboardUrl: `${appUrl.replace(/\/$/, "")}/campaigns/${typed.id}`,
+      dashboardUrl,
     },
     bundle,
     generatedAt: new Date(),

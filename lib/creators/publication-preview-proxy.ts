@@ -26,6 +26,7 @@ import {
   isUrlAllowedByHostlist,
   parseSafeOutboundUrl,
 } from "@/lib/security/ssrf";
+import { decodeHtmlEntities } from "@/lib/text/decode-html-entities";
 
 function hostFromUrl(url: string): string | null {
   const parsed = parseSafeOutboundUrl(url);
@@ -118,17 +119,19 @@ export async function fetchImageBuffer(
   url: string,
   options?: { referer?: string | null; timeoutMs?: number; countExternal?: boolean }
 ): Promise<{ ok: true; buffer: ArrayBuffer; contentType: string } | { ok: false }> {
-  if (!isAllowedPublicationPreviewSrcUrl(url)) {
+  // Facebook og:image / CDN links often arrive HTML-encoded (`&amp;`).
+  const normalizedUrl = decodeHtmlEntities(url.trim());
+  if (!isAllowedPublicationPreviewSrcUrl(normalizedUrl)) {
     return { ok: false };
   }
 
-  const referer = options?.referer ?? refererForImageUrl(url);
+  const referer = options?.referer ?? refererForImageUrl(normalizedUrl);
   const timeoutMs = options?.timeoutMs ?? MEDIA_PROXY_REFRESH_TIMEOUT_MS;
   if (options?.countExternal !== false) {
     recordMediaProxyExternalRequest();
   }
   try {
-    const response = await fetchWithStrictRedirects(url, {
+    const response = await fetchWithStrictRedirects(normalizedUrl, {
       allowlist: SOCIAL_MEDIA_SRC_ALLOWLIST,
       maxRedirects: 3,
       timeoutMs,

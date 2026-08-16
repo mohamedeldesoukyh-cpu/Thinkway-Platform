@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import type { FormActionState } from "@/features/campaigns/form-action-state";
 import type { PublicationMetricSyncLogRow } from "@/lib/domains/campaign/types";
+import { optionalMetricNumberSchema } from "@/lib/performance/manual-metric-number";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   bulkImportPublications,
@@ -255,13 +256,13 @@ export async function loadPublicationSyncLogsAction(input: {
 }
 
 const manualMetricsSchema = z.object({
-  views: z.coerce.number().min(0).optional().nullable(),
-  reach: z.coerce.number().min(0).optional().nullable(),
-  impressions: z.coerce.number().min(0).optional().nullable(),
-  likes: z.coerce.number().min(0).optional().nullable(),
-  comments: z.coerce.number().min(0).optional().nullable(),
-  shares: z.coerce.number().min(0).optional().nullable(),
-  saves: z.coerce.number().min(0).optional().nullable(),
+  views: optionalMetricNumberSchema,
+  reach: optionalMetricNumberSchema,
+  impressions: optionalMetricNumberSchema,
+  likes: optionalMetricNumberSchema,
+  comments: optionalMetricNumberSchema,
+  shares: optionalMetricNumberSchema,
+  saves: optionalMetricNumberSchema,
 });
 
 const publicationDetailsSchema = z.object({
@@ -316,7 +317,7 @@ export async function saveManualPublicationMetricsAction(input: {
       publicationId: input.publicationId,
       metrics: parsed.data,
     });
-    if (result.ok) revalidateCampaign(input.campaignId);
+    // Skip revalidatePath — workspace soft-reloads publications; remount crashes Performance.
     return result;
   } catch {
     return { ok: false, message: "Unauthorized" };

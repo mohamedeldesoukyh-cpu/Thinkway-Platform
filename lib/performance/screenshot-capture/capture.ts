@@ -45,7 +45,8 @@ function providerChainForPlatform(platform: string): ScreenshotSource[] {
     return ["youtube_thumbnail_api", "opengraph", "playwright"];
   }
   if (platform === "facebook") {
-    return ["facebook_oembed", "opengraph", "playwright"];
+    // oEmbed often empty for reels; OG works when entities are decoded; Apify as durable fallback.
+    return ["facebook_oembed", "opengraph", "apify", "playwright"];
   }
   return ["opengraph", "playwright"];
 }

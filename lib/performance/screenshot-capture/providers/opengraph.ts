@@ -5,12 +5,14 @@ import {
   fetchWithStrictRedirects,
   isUrlAllowedByHostlist,
 } from "@/lib/security/ssrf";
+import { decodeHtmlEntities } from "@/lib/text/decode-html-entities";
 
 type Ctx = {
   contentUrl: string | null;
 };
 
-function extractOgImage(html: string): string | null {
+/** Decode HTML entities in og:image (Facebook emits `&amp;` in query strings). */
+export function extractOgImage(html: string): string | null {
   const patterns = [
     /<meta[^>]+property=["']og:image(?::url)?["'][^>]+content=["']([^"']+)["']/i,
     /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image(?::url)?["']/i,
@@ -18,7 +20,9 @@ function extractOgImage(html: string): string | null {
   ];
   for (const pattern of patterns) {
     const match = html.match(pattern);
-    if (match?.[1]?.startsWith("http")) return match[1];
+    if (!match?.[1]) continue;
+    const decoded = decodeHtmlEntities(match[1].trim());
+    if (decoded.startsWith("http")) return decoded;
   }
   return null;
 }
