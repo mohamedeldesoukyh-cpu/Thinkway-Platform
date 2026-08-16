@@ -3,9 +3,10 @@
 **Branch:** `develop`  
 **Focus:** Campaign Avg ER formula (all posts ÷ agreed)
 
-## In progress
+## Shipped
 
-- Campaign `average_engagement_rate` = sum(ER of all pubs incl. added value) ÷ agreed publication count (not mean of ER count)
+- Campaign `average_engagement_rate` = sum(ER of all pubs incl. added value) ÷ agreed publication count
+- Dev `ee022164` · Prod `d9a26459` (`vercel deploy --prod` + `app.thinkwaymedia.com`)
 
 ## Shipped prior
 
