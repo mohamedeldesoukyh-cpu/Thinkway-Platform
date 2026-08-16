@@ -80,6 +80,9 @@ export function studioCreatorHomeCountryLabel(
   const stored = (input.countryCodes ?? [])
     .map((value) => canonicalCode(value))
     .filter((code): code is string => Boolean(code));
+  if (stored.length === 1) {
+    return labelForCode(stored[0]!) ?? stored[0];
+  }
   const homeCode = stored.find((code) => !notHome.has(code));
   if (homeCode) return labelForCode(homeCode) ?? homeCode;
 
@@ -89,8 +92,8 @@ export function studioCreatorHomeCountryLabel(
 /**
  * Keep a recommended creator when the campaign market is known and the
  * creator's home country overlaps that market. Audience-only countries do
- * not count as home. Unknown location stays visible so Discovery's Egypt
- * pool is not reduced to the few rows with a filled country_code.
+ * not count as home. Unknown / blank home country is not "in Egypt" — those
+ * rows belong in the broader match pool only after a country is proven.
  */
 export function vendorMatchesCampaignMarket(
   input: StudioCreatorLocation,
@@ -100,7 +103,7 @@ export function vendorMatchesCampaignMarket(
   if (targets.size === 0) return true;
   const home = studioCreatorHomeCountryLabel(input);
   const location = countryTokens(home);
-  if (location.size === 0) return true;
+  if (location.size === 0) return false;
   for (const token of location) {
     if (targets.has(token)) return true;
   }

@@ -13,8 +13,8 @@ test("Egypt market keeps Egypt creators and drops UAE-only creators", () => {
   assert.equal(vendorCountryMatchesCampaignMarkets("UAE", ["Egypt"]), false);
   assert.equal(vendorCountryMatchesCampaignMarkets("United Arab Emirates", ["Egypt"]), false);
   assert.equal(vendorCountryMatchesCampaignMarkets("UAE · Egypt", ["Egypt"]), false);
-  assert.equal(vendorCountryMatchesCampaignMarkets("—", ["Egypt"]), true);
-  assert.equal(vendorCountryMatchesCampaignMarkets(undefined, ["Egypt"]), true);
+  assert.equal(vendorCountryMatchesCampaignMarkets("—", ["Egypt"]), false);
+  assert.equal(vendorCountryMatchesCampaignMarkets(undefined, ["Egypt"]), false);
 });
 
 test("UAE market keeps UAE creators", () => {

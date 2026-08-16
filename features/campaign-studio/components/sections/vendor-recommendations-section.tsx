@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   CheckIcon,
   Columns2Icon,
@@ -65,6 +65,10 @@ import {
   resolveInfluencerEstimateCurrency,
 } from "@/features/campaign-director/facts/facts-display-bridge";
 import { vendorMatchesCampaignMarket } from "../../services/studio-market-creators";
+import {
+  recommendationFromVendor,
+  selectStudioRecommendedVendors,
+} from "../../services/studio-recommended-vendors";
 import {
   sortByStudioRequirements,
   studioCreatorRequirementScore,
@@ -966,20 +970,12 @@ export function VendorRecommendationsSection({
     };
   }, [campaignObject, creatorFitScores]);
 
-  const { visibleCreatorIds, observeCreator, reset: resetViewportHydration } =
-    useViewportCreatorIds();
-  const idsIdentityKey = ids.join(",");
-
-  useEffect(() => {
-    resetViewportHydration();
-  }, [idsIdentityKey, resetViewportHydration]);
-
+  const { observeCreator } = useViewportCreatorIds();
   const { vendors: hydrated, loading } = useCreatorHydration(
     ids,
     safeRationale,
     avgFitScore,
-    mapperOptions,
-    { visibleCreatorIds }
+    mapperOptions
   );
 
   const campaignFacts = getCampaignFacts(campaignObject);
@@ -1125,13 +1121,15 @@ export function VendorRecommendationsSection({
   );
 
   const marketVendors = useMemo(() => {
-    const inMarket = vendors.filter((vendor) =>
-      vendorMatchesCampaignMarket(
-        { country: vendor.country, countryCode: vendor.countryCode },
-        campaignFacts?.geography
-      )
-    );
-    return sortByStudioRequirements(inMarket, (vendor) =>
+    const recommended = selectStudioRecommendedVendors(vendors, {
+      markets: campaignFacts?.geography,
+      locationOf: (vendor) => ({
+        country: vendor.country,
+        countryCode: vendor.countryCode,
+      }),
+      recommendationOf: (vendor) => recommendationFromVendor(vendor),
+    });
+    return sortByStudioRequirements(recommended, (vendor) =>
       studioCreatorRequirementScore(
         {
           country: vendor.country,
@@ -1144,7 +1142,16 @@ export function VendorRecommendationsSection({
       )
     ).map((vendor, index) => ({ ...vendor, rank: index + 1 }));
   }, [vendors, campaignFacts]);
-  const excludedByMarket = Math.max(0, vendors.length - marketVendors.length);
+  const excludedByMarket = Math.max(
+    0,
+    vendors.filter(
+      (vendor) =>
+        !vendorMatchesCampaignMarket(
+          { country: vendor.country, countryCode: vendor.countryCode },
+          campaignFacts?.geography
+        )
+    ).length
+  );
   const marketLabel = campaignFacts?.geography?.filter((value) => value.trim()).join(", ") || null;
 
   const mainVendors = marketVendors.filter((v) => v.slateRole !== "maybe");

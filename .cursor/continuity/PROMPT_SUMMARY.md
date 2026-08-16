@@ -1,13 +1,15 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `develop` (`2da8a87a`) · **Production:** this release `[deploy-production]`  
-**Focus:** Studio creator categories must follow the brief/strategy mix, not client industry
+**Branch:** `develop`  
+**Focus:** Studio recommended list = Egypt-home + ECI Recommended (not Not Recommended / blank country)
 
 ## Shipped this session (Dev + Production)
 
-- CIP / keyword search returns the ranked pool (not the 2-name composed slate)
-- Creator categories: do not copy Finance/Banking from the client. Mass-awareness + LaLiga analog → Sports / Lifestyle / Entertainment
-- After ship: hard-refresh and **re-run Discovery** so stored categories and creator IDs refresh
+- Creator categories from brief/strategy mix, not client industry
+- Recommended cards exclude blank country and ECI Not Recommended / High Risk / Insufficient Data
+- Hydrate the Discovery pool before choosing the visible 10
+
+After ship: hard-refresh and **re-run Discovery**.
 
 Dev: https://dev.thinkwaymedia.com  
 Prod: https://app.thinkwaymedia.com  
