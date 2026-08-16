@@ -1174,11 +1174,34 @@
 }
 
 /* Vendor cards */
-.campaign-studio-ref .cs-vendor-card {
+.campaign-studio-ref .cs-vendor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--cs-lavender) 65%, var(--cs-white));
   border: 1px solid var(--cs-border);
-  border-radius: var(--cs-radius);
-  padding: 14px 16px;
-  margin-bottom: 10px;
+  border-radius: var(--cs-radius-lg);
+}
+
+.campaign-studio-ref .cs-vendor-card {
+  background: var(--cs-white);
+  border: 1px solid color-mix(in srgb, var(--cs-border) 78%, var(--cs-blue) 22%);
+  border-radius: 16px;
+  padding: 16px 18px;
+  box-shadow:
+    0 1px 2px rgba(6, 8, 16, 0.04),
+    0 8px 24px rgba(0, 87, 255, 0.07);
+  transition:
+    border-color 0.15s var(--cs-ease-out),
+    box-shadow 0.15s var(--cs-ease-out);
+}
+
+.campaign-studio-ref .cs-vendor-card:hover {
+  border-color: color-mix(in srgb, var(--cs-blue) 36%, var(--cs-border));
+  box-shadow:
+    0 2px 6px rgba(6, 8, 16, 0.06),
+    0 12px 28px rgba(0, 87, 255, 0.1);
 }
 
 .campaign-studio-ref .cs-vendor-top {

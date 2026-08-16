@@ -64,7 +64,13 @@ import {
   getCampaignFacts,
   resolveInfluencerEstimateCurrency,
 } from "@/features/campaign-director/facts/facts-display-bridge";
-import { vendorCountryMatchesCampaignMarkets } from "../../services/studio-market-creators";
+import { vendorMatchesCampaignMarket } from "../../services/studio-market-creators";
+import {
+  sortByStudioRequirements,
+  studioCreatorRequirementScore,
+  studioRequirementBadgeLabel,
+  type StudioRequirementScore,
+} from "../../services/studio-creator-requirements";
 import type { CreatorDrawerSelection } from "@/features/campaign-decision-workspace/components/creator-drawer";
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
 import { STUDIO_REF_CLASSES } from "../../constants/campaign-studio-ref-tokens";
@@ -111,6 +117,7 @@ type DisplayVendor = {
   avatarUrl?: string;
   profileUrl?: string;
   country?: string;
+  countryCode?: string | null;
   language?: string;
   audienceSummary?: string;
   priceEstimate?: string;
@@ -268,6 +275,55 @@ const REASON_CODE_LABELS: Record<
   client_choice: "Client choice",
   alternate: "Alternate",
 };
+
+function vendorCampaignRequirementScore(
+  vendor: DisplayVendor,
+  campaignObject?: CampaignObject
+): StudioRequirementScore {
+  return studioCreatorRequirementScore(
+    {
+      country: vendor.country,
+      countryCode: vendor.countryCode,
+      platform: vendor.platform,
+      audienceSummary: vendor.audienceSummary,
+      category: vendor.audienceSummary,
+    },
+    getCampaignFacts(campaignObject)
+  );
+}
+
+function RequirementsMetBadge({
+  vendor,
+  campaignObject,
+  refMode,
+}: {
+  vendor: DisplayVendor;
+  campaignObject?: CampaignObject;
+  refMode: boolean;
+}) {
+  const score = vendorCampaignRequirementScore(vendor, campaignObject);
+  const label = studioRequirementBadgeLabel(score);
+  if (!label) return null;
+  const complete = score.met === score.total;
+  if (refMode) {
+    return (
+      <span className={cn(STUDIO_REF_CLASSES.vbadge, complete ? STUDIO_REF_CLASSES.vbadgeFit : undefined)}>
+        {label}
+      </span>
+    );
+  }
+  return (
+    <span
+      className={
+        complete
+          ? STUDIO_CLASSES.pillFit
+          : "rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-extrabold text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+      }
+    >
+      {label}
+    </span>
+  );
+}
 
 function VendorCardBlock({
   vendor,
@@ -428,7 +484,10 @@ function VendorCardBlock({
       <div
         ref={observeCreator(vendor.id)}
         key={vendor.id ?? `${vendor.handle}-${index}`}
-        className={cn(STUDIO_REF_CLASSES.vendorCard, pendingRemoval && "opacity-75")}
+        className={cn(
+          STUDIO_REF_CLASSES.vendorCard,
+          pendingRemoval && "opacity-75"
+        )}
       >
         <div className={STUDIO_REF_CLASSES.vendorTop}>
           {vendor.rank != null ? (
@@ -454,6 +513,7 @@ function VendorCardBlock({
                 {vendor.tier}
               </span>
             ) : null}
+            <RequirementsMetBadge vendor={vendor} campaignObject={campaignObject} refMode />
             {vendor.planningSignal ? null : vendor.fitScore != null ? (
               <span className={cn(STUDIO_REF_CLASSES.vbadge, STUDIO_REF_CLASSES.vbadgeFit)}>
                 Planning fit {Math.round(vendor.fitScore)}/100
@@ -503,7 +563,7 @@ function VendorCardBlock({
     <div
       ref={observeCreator(vendor.id)}
       key={vendor.id ?? `${vendor.handle}-${index}`}
-      className={pendingRemoval ? "mb-2.5 opacity-75" : "mb-2.5"}
+      className={pendingRemoval ? "opacity-75" : undefined}
     >
       <div
         className={
@@ -537,6 +597,7 @@ function VendorCardBlock({
             </span>
           ) : null}
           {vendor.tier ? <span className={STUDIO_CLASSES.pillTier}>{vendor.tier}</span> : null}
+          <RequirementsMetBadge vendor={vendor} campaignObject={campaignObject} refMode={false} />
           {vendor.expectedRole ? (
             <span className="rounded-full bg-muted px-2 py-0.5 text-[9px] font-semibold text-muted-foreground">
               {vendor.expectedRole}
@@ -680,6 +741,7 @@ export function VendorRecommendationsSection({
   const [shortlistPickerMode, setShortlistPickerMode] = useState<"replace" | "merge" | null>(null);
   const [compareOpen, setCompareOpen] = useState(false);
   const confirmDelete = useConfirmDelete();
+  const refMode = useStudioRefMode();
 
   const previewCreatorsData = useMemo(() => {
     if (!campaignObject) return {} as CreatorsSectionData;
@@ -895,6 +957,9 @@ export function VendorRecommendationsSection({
       preferredPlatforms: facts?.platforms,
       currency: resolveInfluencerEstimateCurrency(facts),
       campaignFitScoresByCreatorId: creatorFitScores,
+      campaignMarkets: facts?.geography,
+      campaignIndustry: facts?.industry,
+      campaignType: facts?.campaignType,
     };
   }, [campaignObject, creatorFitScores]);
 
@@ -999,6 +1064,7 @@ export function VendorRecommendationsSection({
                   avatarUrl: v.avatarUrl,
                   profileUrl: v.profileUrl,
                   country: v.country,
+                  countryCode: v.countryCode,
                   language: v.language,
                   audienceSummary: v.audienceSummary,
                   priceEstimate: v.priceEstimate ?? parsed?.priceEstimate,
@@ -1055,13 +1121,26 @@ export function VendorRecommendationsSection({
     ]
   );
 
-  const marketVendors = useMemo(
-    () =>
-      vendors.filter((vendor) =>
-        vendorCountryMatchesCampaignMarkets(vendor.country, campaignFacts?.geography)
-      ),
-    [vendors, campaignFacts?.geography]
-  );
+  const marketVendors = useMemo(() => {
+    const inMarket = vendors.filter((vendor) =>
+      vendorMatchesCampaignMarket(
+        { country: vendor.country, countryCode: vendor.countryCode },
+        campaignFacts?.geography
+      )
+    );
+    return sortByStudioRequirements(inMarket, (vendor) =>
+      studioCreatorRequirementScore(
+        {
+          country: vendor.country,
+          countryCode: vendor.countryCode,
+          platform: vendor.platform,
+          audienceSummary: vendor.audienceSummary,
+          category: vendor.audienceSummary,
+        },
+        campaignFacts
+      )
+    ).map((vendor, index) => ({ ...vendor, rank: index + 1 }));
+  }, [vendors, campaignFacts]);
   const excludedByMarket = Math.max(0, vendors.length - marketVendors.length);
   const marketLabel = campaignFacts?.geography?.filter((value) => value.trim()).join(", ") || null;
 
@@ -1348,7 +1427,10 @@ export function VendorRecommendationsSection({
         </p>
       ) : null}
       {visibleGroupItems.map((group) => (
-        <div key={group.title ?? "all"} className="space-y-2">
+        <div
+          key={group.title ?? "all"}
+          className={refMode ? STUDIO_REF_CLASSES.vendorList : STUDIO_CLASSES.vendorList}
+        >
           {group.title ? (
             <p className="px-0.5 text-[10px] font-extrabold tracking-wide text-muted-foreground uppercase">
               {group.title}

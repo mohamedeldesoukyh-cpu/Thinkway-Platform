@@ -8,6 +8,12 @@ import type { CreatorDrawerSelection } from "@/features/campaign-decision-worksp
 import { STUDIO_VENDOR_INITIAL_VISIBLE, STUDIO_CREATOR_HYDRATION_LIMIT } from "@/features/campaign-studio/constants/hydration-limits";
 import { useCreatorHydration } from "@/features/campaign-studio/hooks/use-creator-hydration";
 import type { HydrationMapperOptions } from "@/features/campaign-studio/services/creator-hydration-mapper";
+import {
+  sortByStudioRequirements,
+  studioFactsFromHydrationOptions,
+  unifiedCreatorRequirementScore,
+} from "@/features/campaign-studio/services/studio-creator-requirements";
+import { vendorMatchesCampaignMarket } from "@/features/campaign-studio/services/studio-market-creators";
 import { DiscoveryCreatorDetailHost } from "@/features/discovery/components/discovery-creator-detail-host";
 import { DiscoveryCreatorExactRow } from "@/features/discovery/components/discovery-creator-exact-row";
 import { DiscoveryLoadingState } from "@/features/discovery/components/design-system";
@@ -91,12 +97,30 @@ export function ActionCardCreatorPreview({
         const rows = await getUnifiedCreatorsBatchAction(
           displayIds.slice(0, STUDIO_CREATOR_HYDRATION_LIMIT)
         );
-        setUnifiedCreators(rows.filter(Boolean));
+        const facts = studioFactsFromHydrationOptions(hydrationOptions);
+        const inMarket = rows.filter(
+          (creator): creator is UnifiedCreatorResult =>
+            Boolean(creator) &&
+            vendorMatchesCampaignMarket(
+              {
+                countryCode: creator.country_code,
+                countryCodes: creator.country_codes,
+                estimatedCountry: creator.estimated_country,
+                audienceCountries: creator.platforms.map((platform) => platform.audience_country),
+              },
+              facts?.geography ?? hydrationOptions?.campaignMarkets
+            )
+        );
+        setUnifiedCreators(
+          sortByStudioRequirements(inMarket, (creator) =>
+            unifiedCreatorRequirementScore(creator, facts)
+          )
+        );
       } catch {
         setUnifiedCreators([]);
       }
     });
-  }, [displayIds]);
+  }, [displayIds, hydrationOptions]);
 
   const visibleCreators = showAll
     ? unifiedCreators

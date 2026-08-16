@@ -120,6 +120,7 @@ export const STUDIO_REF_CLASSES = {
   funnelArrow: "cs-funnel-arrow",
   funnelResult: "cs-funnel-result",
   vendorCard: "cs-vendor-card",
+  vendorList: "cs-vendor-list",
   vendorTop: "cs-vendor-top",
   vendorRank: "cs-vendor-rank",
   vendorAv: "cs-vendor-av",
