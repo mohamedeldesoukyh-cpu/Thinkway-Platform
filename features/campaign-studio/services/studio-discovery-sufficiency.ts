@@ -4,6 +4,7 @@ import { getCampaignFacts } from "@/features/campaign-director/facts/facts-displ
 
 import { deriveCreatorQuantityRecommendation } from "./creator-quantity";
 import { resolveCreatorCounts } from "./section-data-resolver";
+import { isStudioIntakeConfirmed } from "./studio-workspace-status";
 
 export type StudioDiscoveryState =
   | "discovery_ready"
@@ -56,7 +57,7 @@ export function resolveStudioDiscoverySufficiency(
   isRunning: boolean
 ): StudioDiscoverySufficiency {
   const facts = getCampaignFacts(campaignObject);
-  const factsConfirmed = Boolean(facts);
+  const factsConfirmed = isStudioIntakeConfirmed(campaignObject);
   const creatorsData = readCreatorsData(campaignObject);
   const counts = resolveCreatorCounts(campaignObject);
   const inventoryCount = counts.discoveryIds.length;

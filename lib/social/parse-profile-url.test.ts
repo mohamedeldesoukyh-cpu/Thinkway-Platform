@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { parseProfileInput } from "@/lib/social/parse-profile-url";
+import { parseProfileInput, parseProfileInputList } from "@/lib/social/parse-profile-url";
 
 const tiktok = parseProfileInput("https://www.tiktok.com/@with.fatimma");
 assert.ok(tiktok);
@@ -62,5 +62,31 @@ const hinted = parseProfileInput("reemalmasryyy", "tiktok");
 assert.ok(hinted);
 assert.equal(hinted.platform, "tiktok");
 assert.equal(hinted.normalized_username, "reemalmasryyy");
+
+const instagramWithQuery = parseProfileInput(
+  "https://www.instagram.com/jane.doe/?igsh=abc123"
+);
+assert.ok(instagramWithQuery);
+assert.equal(instagramWithQuery.normalized_username, "jane.doe");
+
+const tiktokVideo = parseProfileInput("https://www.tiktok.com/@with.fatimma/video/123");
+assert.ok(tiktokVideo);
+assert.equal(tiktokVideo.normalized_username, "with.fatimma");
+
+const batch = parseProfileInputList(`
+https://www.instagram.com/jane.doe/
+https://www.tiktok.com/@with.fatimma
+https://www.instagram.com/jane.doe/
+not-a-url
+`);
+assert.equal(batch.parsed.length, 2);
+assert.equal(batch.parsed[0]?.normalized_username, "jane.doe");
+assert.equal(batch.parsed[1]?.normalized_username, "with.fatimma");
+assert.deepEqual(batch.invalid, ["not-a-url"]);
+
+const commaSeparated = parseProfileInputList(
+  "https://www.instagram.com/jane.doe/, https://www.tiktok.com/@with.fatimma"
+);
+assert.equal(commaSeparated.parsed.length, 2);
 
 console.log("lib/social/parse-profile-url.test.ts — all tests passed");

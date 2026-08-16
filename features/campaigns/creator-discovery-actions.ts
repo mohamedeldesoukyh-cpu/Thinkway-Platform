@@ -15,8 +15,10 @@ import { loadCreatorHoverDetails } from "@/lib/creators/creator-hover-details";
 import { browseUnifiedCreators, getUnifiedCreatorById, resolveCreatorFromRefLookup, resolveUnifiedCreatorsByRefs } from "@/lib/creators/unified-browse";
 import { dedupeCreatorIds } from "@/lib/creators/dedupe-creators";
 import { STUDIO_CREATOR_HYDRATION_LIMIT } from "@/features/campaign-studio/constants/hydration-limits";
-import type { UnifiedCreatorBrowseFilters, UnifiedCreatorResult } from "@/lib/creators/types";
+import type { UnifiedCreatorBrowseFilters, UnifiedCreatorBrowseResult, UnifiedCreatorResult } from "@/lib/creators/types";
 import { createDiscoverySearchPerf } from "@/lib/creators/discovery-search-perf";
+import { mapDiscoverySearchError } from "@/lib/creators/discovery-search-error";
+import { withTimeBudget } from "@/lib/creators/with-time-budget";
 import { searchTrace } from "@/lib/creators/search-trace";
 import { browseUnifiedCreatorsWithCoverageBackfill } from "@/lib/discovery/coverage-backfill-orchestrator";
 import type { BrowseInvocationTrace } from "@/lib/discovery/browse-invocation-trace";
@@ -25,6 +27,7 @@ import {
   traceBrowseInvocationServer,
 } from "@/lib/discovery/browse-invocation-trace";
 import { enrichCreatorsWithEciInvestment } from "@/features/discovery/services/eci/enrich-creators-with-eci";
+import { captureException } from "@/lib/observability/error-reporter";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   cancelAcquisitionSession,
@@ -165,6 +168,28 @@ export async function cancelAcquisitionSessionAction(searchSessionId: string) {
   });
 }
 
+export type BrowseUnifiedCreatorsActionResult = UnifiedCreatorBrowseResult & {
+  error?: string;
+};
+
+const DISCOVERY_ECI_BUDGET_MS = 2500;
+
+function emptyBrowseResult(
+  filters: UnifiedCreatorBrowseFilters,
+  error: string
+): BrowseUnifiedCreatorsActionResult {
+  return {
+    creators: [],
+    total: 0,
+    has_more: false,
+    page: Math.max(1, filters.page ?? 1),
+    pageSize: Math.min(50, filters.pageSize ?? 20),
+    internal_count: 0,
+    discovery_count: 0,
+    error,
+  };
+}
+
 export async function browseCreatorsByInfluencerIdsAction(
   influencerIds: string[]
 ): Promise<UnifiedCreatorResult[]> {
@@ -188,7 +213,7 @@ export async function browseCreatorsByInfluencerIdsAction(
 export async function browseUnifiedCreatorsAction(
   filters: UnifiedCreatorBrowseFilters,
   invocation?: BrowseInvocationTrace
-) {
+): Promise<BrowseUnifiedCreatorsActionResult> {
   traceBrowseInvocationServer(invocation ?? { caller: "unknown" }, {
     skipCoverageBackfill: filters.skipCoverageBackfill ?? false,
     page: filters.page ?? 1,
@@ -197,10 +222,21 @@ export async function browseUnifiedCreatorsAction(
   searchTrace("3_unified_browse_filters", { browseFilters: filters }, { path: "discovery" });
   try {
     const result = await browseUnifiedCreatorsWithCoverageBackfill(supabase, filters, "discovery");
-    const creators = await enrichCreatorsWithEciInvestment(supabase, result.creators, {
-      platform: filters.platform ?? filters.platforms?.[0] ?? null,
-      concurrency: 6,
-    });
+    const creators = await withTimeBudget(
+      enrichCreatorsWithEciInvestment(supabase, result.creators, {
+        platform: filters.platform ?? filters.platforms?.[0] ?? null,
+        concurrency: 6,
+      }).catch((error) => {
+        captureException(error, {
+          route: "browseUnifiedCreatorsAction",
+          service: "discovery-search",
+          extra: { stage: "eci" },
+        });
+        return result.creators;
+      }),
+      DISCOVERY_ECI_BUDGET_MS,
+      result.creators
+    );
     searchTrace("9_final_creator_count", {
       total: result.total,
       creatorCount: creators.length,
@@ -212,14 +248,12 @@ export async function browseUnifiedCreatorsAction(
     }, { path: "discovery" });
     return { ...result, creators };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Creator search failed";
-    // Re-throw a stable, user-visible message so Production digests don't mask timeouts.
-    if (/statement timeout|canceling statement|timed out/i.test(message)) {
-      throw new Error(
-        "Creator search timed out. Try a more specific name or handle."
-      );
-    }
-    throw error instanceof Error ? error : new Error(message);
+    const message = mapDiscoverySearchError(error);
+    captureException(error, {
+      route: "browseUnifiedCreatorsAction",
+      service: "discovery-search",
+    });
+    return emptyBrowseResult(filters, message);
   }
 }
 
@@ -229,7 +263,7 @@ export async function browseUnifiedCreatorsAction(
  */
 export async function browseUnifiedCreatorsForPickerAction(
   filters: UnifiedCreatorBrowseFilters
-) {
+): Promise<BrowseUnifiedCreatorsActionResult> {
   const { supabase } = await requireUserId();
   const pickerFilters: UnifiedCreatorBrowseFilters = {
     ...filters,
@@ -256,13 +290,12 @@ export async function browseUnifiedCreatorsForPickerAction(
     );
     return result;
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Creator search failed";
-    if (/statement timeout|canceling statement|timed out/i.test(message)) {
-      throw new Error(
-        "Creator search timed out. Try a more specific name or handle."
-      );
-    }
-    throw error instanceof Error ? error : new Error(message);
+    const message = mapDiscoverySearchError(error);
+    captureException(error, {
+      route: "browseUnifiedCreatorsForPickerAction",
+      service: "discovery-search",
+    });
+    return emptyBrowseResult(pickerFilters, message);
   }
 }
 

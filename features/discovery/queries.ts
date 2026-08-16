@@ -9,6 +9,7 @@ import type {
   DiscoveryJobStats,
   DiscoverySearchFilters,
 } from "@/lib/discovery/types";
+import { captureException } from "@/lib/observability/error-reporter";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const JOB_SELECT =
@@ -20,14 +21,30 @@ export async function getDiscoverySearch(filters: DiscoverySearchFilters) {
 }
 
 export async function getDiscoveryShortlists() {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("discovery_shortlists")
-    .select("id, name, description, created_at, updated_at")
-    .order("updated_at", { ascending: false });
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("discovery_shortlists")
+      .select("id, name, description, created_at, updated_at")
+      .order("updated_at", { ascending: false });
 
-  if (error) throw new Error(error.message);
-  return data ?? [];
+    if (error) {
+      captureException(error, {
+        route: "/discovery/search",
+        service: "discovery-search",
+        extra: { query: "getDiscoveryShortlists" },
+      });
+      return [];
+    }
+    return data ?? [];
+  } catch (error) {
+    captureException(error, {
+      route: "/discovery/search",
+      service: "discovery-search",
+      extra: { query: "getDiscoveryShortlists" },
+    });
+    return [];
+  }
 }
 
 export type ShortlistCampaignOption = {
@@ -37,15 +54,31 @@ export type ShortlistCampaignOption = {
 };
 
 export async function getCampaignOptionsForShortlist(): Promise<ShortlistCampaignOption[]> {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("campaign_headers")
-    .select("id, name, document_number")
-    .order("created_at", { ascending: false })
-    .limit(200);
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("campaign_headers")
+      .select("id, name, document_number")
+      .order("created_at", { ascending: false })
+      .limit(200);
 
-  if (error) throw new Error(error.message);
-  return (data as ShortlistCampaignOption[]) ?? [];
+    if (error) {
+      captureException(error, {
+        route: "/discovery/search",
+        service: "discovery-search",
+        extra: { query: "getCampaignOptionsForShortlist" },
+      });
+      return [];
+    }
+    return (data as ShortlistCampaignOption[]) ?? [];
+  } catch (error) {
+    captureException(error, {
+      route: "/discovery/search",
+      service: "discovery-search",
+      extra: { query: "getCampaignOptionsForShortlist" },
+    });
+    return [];
+  }
 }
 
 export async function getDiscoveryStats(): Promise<DiscoveryJobStats> {

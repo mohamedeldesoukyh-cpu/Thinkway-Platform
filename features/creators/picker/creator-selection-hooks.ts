@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { browseUnifiedCreatorsForPickerAction } from "@/features/campaigns/creator-discovery-actions";
 import { filterExactCreatorMatches } from "@/features/discovery/components/creator-search/creator-search-exact-match";
+import { mapDiscoverySearchError } from "@/lib/creators/discovery-search-error";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { upsertCreatorInResults } from "@/lib/discovery/creator-search-query";
 
@@ -178,6 +179,9 @@ export function useCreatorBrowse({
           pageSize,
         });
         if (id !== reqId.current) return;
+        if (result.error) {
+          throw new Error(result.error);
+        }
 
         setState((prev) => {
           for (const creator of result.creators) {
@@ -213,7 +217,7 @@ export function useCreatorBrowse({
           ...prev,
           loading: false,
           loadingMore: false,
-          error: err instanceof Error ? err.message : "Search failed",
+          error: mapDiscoverySearchError(err),
         }));
       }
     },

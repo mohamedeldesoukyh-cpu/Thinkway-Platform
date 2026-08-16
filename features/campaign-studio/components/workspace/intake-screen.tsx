@@ -33,7 +33,15 @@ import {
 } from "../../services/studio-intake-facts";
 import { isStudioIntakeConfirmed } from "../../services/studio-workspace-status";
 import type { StudioWorkspaceStepId } from "../../constants/studio-workspace";
+import { STUDIO_WORKSPACE_STEPS } from "../../constants/studio-workspace";
+import {
+  INTAKE_COUNTRY_OPTIONS,
+  INTAKE_DELIVERABLE_OPTIONS,
+  INTAKE_KPI_OPTIONS,
+  INTAKE_PLATFORM_OPTIONS,
+} from "../../constants/intake-field-options";
 import { CampaignBriefCard } from "../sections/campaign-brief-card";
+import { IntakeOptionChips } from "./intake-option-chips";
 
 type IntakeScreenProps = {
   campaignObject?: CampaignObject;
@@ -50,6 +58,17 @@ function splitList(value: string): string[] {
     .split(/[,;\n]/)
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function countrySelectValue(raw: string): string {
+  const parts = splitList(raw);
+  for (const part of parts) {
+    const match = INTAKE_COUNTRY_OPTIONS.find(
+      (option) => option.value.toLowerCase() === part.toLowerCase()
+    );
+    if (match) return match.value;
+  }
+  return parts[0] ?? "";
 }
 
 export function IntakeScreen({
@@ -78,6 +97,7 @@ export function IntakeScreen({
     category: "",
     platforms: "",
     deliverables: "",
+    kpis: "",
   });
   const displayFacts = useMemo(
     () =>
@@ -101,6 +121,7 @@ export function IntakeScreen({
         geography: splitList(draft.country),
         platforms: splitList(draft.platforms),
         deliverables: splitList(draft.deliverables),
+        kpis: splitList(draft.kpis),
         budgetAmount: Number.isFinite(amount) && amount > 0 ? amount : undefined,
         budgetCurrency: draft.currency,
         durationWeeks: Number.isFinite(weeks) && weeks > 0 ? weeks : undefined,
@@ -124,6 +145,7 @@ export function IntakeScreen({
       category: displayFacts?.industry ?? "",
       platforms: (displayFacts?.platforms ?? []).join(", "),
       deliverables: (displayFacts?.deliverables ?? []).join(", "),
+      kpis: (displayFacts?.kpis ?? []).join(", "),
     });
   }, [displayFacts]);
 
@@ -180,6 +202,7 @@ export function IntakeScreen({
       geography: splitList(draft.country),
       platforms: splitList(draft.platforms),
       deliverables: splitList(draft.deliverables),
+      kpis: splitList(draft.kpis),
       budgetAmount: Number.isFinite(amount) && amount > 0 ? amount : undefined,
       budgetCurrency: draft.currency,
       durationWeeks: Number.isFinite(weeks) && weeks > 0 ? weeks : undefined,
@@ -258,6 +281,30 @@ export function IntakeScreen({
         />
       ) : null}
 
+      <section className="rounded-2xl border border-[#0057FF]/20 bg-[#0057FF]/5 p-4">
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#0057FF]">
+          What happens next
+        </p>
+        <ol className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-foreground">
+          {STUDIO_WORKSPACE_STEPS.map((item, index) => (
+            <li key={item.id} className="flex items-center gap-2">
+              <span className={item.id === "intake" ? "text-[#0057FF]" : "text-muted-foreground"}>
+                {index + 1}. {item.label}
+              </span>
+              {index < STUDIO_WORKSPACE_STEPS.length - 1 ? (
+                <span className="text-muted-foreground" aria-hidden>
+                  →
+                </span>
+              ) : null}
+            </li>
+          ))}
+        </ol>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Confirm the facts on this screen, then Strategy. After that: Creators, Content, Commercial,
+          and Package.
+        </p>
+      </section>
+
       <section className="rounded-2xl border border-border/70 bg-card p-4 sm:p-5">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div>
@@ -315,6 +362,53 @@ export function IntakeScreen({
                       </p>
                     ) : null}
                   </div>
+                ) : row.key === "country" ? (
+                  <select
+                    className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+                    value={countrySelectValue(draft.country)}
+                    onChange={(event) => {
+                      setDraft((prev) => ({ ...prev, country: event.target.value }));
+                    }}
+                    aria-label="Country"
+                  >
+                    <option value="">Select country</option>
+                    {countrySelectValue(draft.country) &&
+                    !INTAKE_COUNTRY_OPTIONS.some(
+                      (option) => option.value === countrySelectValue(draft.country)
+                    ) ? (
+                      <option value={countrySelectValue(draft.country)}>
+                        {countrySelectValue(draft.country)}
+                      </option>
+                    ) : null}
+                    {INTAKE_COUNTRY_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : row.key === "platforms" ? (
+                  <IntakeOptionChips
+                    options={INTAKE_PLATFORM_OPTIONS}
+                    selected={splitList(draft.platforms)}
+                    onChange={(next) => setDraft((prev) => ({ ...prev, platforms: next.join(", ") }))}
+                    ariaLabel="Platforms"
+                  />
+                ) : row.key === "deliverables" ? (
+                  <IntakeOptionChips
+                    options={INTAKE_DELIVERABLE_OPTIONS}
+                    selected={splitList(draft.deliverables)}
+                    onChange={(next) =>
+                      setDraft((prev) => ({ ...prev, deliverables: next.join(", ") }))
+                    }
+                    ariaLabel="Deliverables"
+                  />
+                ) : row.key === "kpis" ? (
+                  <IntakeOptionChips
+                    options={INTAKE_KPI_OPTIONS}
+                    selected={splitList(draft.kpis)}
+                    onChange={(next) => setDraft((prev) => ({ ...prev, kpis: next.join(", ") }))}
+                    ariaLabel="Success measurement / KPIs"
+                  />
                 ) : (
                   <Input
                     className="h-8 text-sm"
@@ -383,19 +477,31 @@ export function IntakeScreen({
             className="bg-[#0057FF] hover:bg-[#0040CC]"
           >
             <ArrowRightIcon className="size-4" />
-            Continue to Strategy
+            Next: Strategy
           </Button>
         ) : (
-          <Button
-            type="button"
-            size="lg"
-            disabled={pending || !conversationId || !intake.canConfirm}
-            onClick={confirmCampaign}
-            className="bg-[#0057FF] hover:bg-[#0040CC]"
-          >
-            {pending ? <Loader2Icon className="size-4 animate-spin" /> : <CheckCircle2Icon className="size-4" />}
-            Confirm campaign
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="lg"
+              disabled={pending || !conversationId || !intake.canConfirm}
+              onClick={confirmCampaign}
+              className="bg-[#0057FF] hover:bg-[#0040CC]"
+            >
+              {pending ? <Loader2Icon className="size-4 animate-spin" /> : <CheckCircle2Icon className="size-4" />}
+              Confirm campaign
+            </Button>
+            <Button
+              type="button"
+              size="lg"
+              variant="outline"
+              disabled
+              title="Confirm campaign facts first"
+            >
+              <ArrowRightIcon className="size-4" />
+              Next: Strategy
+            </Button>
+          </div>
         )}
       </div>
       {cipState?.profile && isCampaignIntelligenceConfirmed(cipState.profile) ? (

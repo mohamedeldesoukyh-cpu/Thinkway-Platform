@@ -1,7 +1,7 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Loader2Icon, RotateCwIcon, SearchXIcon } from "lucide-react";
+import { Loader2Icon, RotateCwIcon, SearchXIcon, UserPlusIcon } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -66,6 +66,7 @@ type Props = {
   onLoadMore: () => void;
   platformFilter?: string[];
   showAddMissingCreator?: boolean;
+  onOpenAddMissingCreator?: () => void;
   exactCreatorEmptyState?: boolean;
   searchQuery?: string;
   canSimplifyExactQuery?: boolean;
@@ -166,6 +167,7 @@ export function CreatorSearchResultList({
   onLoadMore,
   platformFilter,
   showAddMissingCreator = false,
+  onOpenAddMissingCreator,
   exactCreatorEmptyState = false,
   searchQuery = "",
   canSimplifyExactQuery = false,
@@ -273,17 +275,31 @@ export function CreatorSearchResultList({
           toolbar={headerToolbar}
           countLabel={exactMatchesCountLabel}
         />
-        {inFlightCount > 0 && onStopAllRefresh ? (
-          <div className="flex justify-end pb-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              className="h-7 shrink-0 rounded-full text-xs"
-              onClick={onStopAllRefresh}
-            >
-              Stop all refresh ({inFlightCount})
-            </Button>
+        {(inFlightCount > 0 && onStopAllRefresh) || onOpenAddMissingCreator ? (
+          <div className="flex justify-end gap-2 pb-2">
+            {inFlightCount > 0 && onStopAllRefresh ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                className="h-7 shrink-0 rounded-full text-xs"
+                onClick={onStopAllRefresh}
+              >
+                Stop all refresh ({inFlightCount})
+              </Button>
+            ) : null}
+            {onOpenAddMissingCreator ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                className="h-7 shrink-0 gap-1 rounded-full text-xs"
+                onClick={onOpenAddMissingCreator}
+              >
+                <UserPlusIcon className="size-3.5" />
+                Add missing creator
+              </Button>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -300,6 +316,14 @@ export function CreatorSearchResultList({
               <RotateCwIcon className="size-3.5" />
               Try again
             </Button>
+            <AddMissingCreatorEmptyState
+              visible={Boolean(onOpenAddMissingCreator) || showAddMissingCreator}
+              className="mt-1"
+              onOpen={onOpenAddMissingCreator}
+              onSuccess={onMissingCreatorAdded}
+              onEnrichmentStatusChange={onMissingCreatorEnrichmentStatusChange}
+              onCreatorUpdated={onMissingCreatorUpdated}
+            />
           </DiscoveryEmptyState>
         ) : loading && !hasCreators ? (
           <DiscoverySearchExactListSkeleton />
@@ -313,6 +337,7 @@ export function CreatorSearchResultList({
                 onMissingCreatorAdded={onMissingCreatorAdded}
                 onMissingCreatorEnrichmentStatusChange={onMissingCreatorEnrichmentStatusChange}
                 onMissingCreatorUpdated={onMissingCreatorUpdated}
+                onOpenAddMissingCreator={onOpenAddMissingCreator}
               />
             ) : (
               <DiscoveryEmptyState
@@ -333,8 +358,9 @@ export function CreatorSearchResultList({
                 icon={SearchXIcon}
               >
                 <AddMissingCreatorEmptyState
-                  visible={showAddMissingCreator}
+                  visible={Boolean(onOpenAddMissingCreator) || showAddMissingCreator}
                   className="mt-1"
+                  onOpen={onOpenAddMissingCreator}
                   onSuccess={onMissingCreatorAdded}
                   onEnrichmentStatusChange={onMissingCreatorEnrichmentStatusChange}
                   onCreatorUpdated={onMissingCreatorUpdated}

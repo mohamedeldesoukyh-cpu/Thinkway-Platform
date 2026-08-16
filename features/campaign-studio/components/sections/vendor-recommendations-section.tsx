@@ -64,6 +64,7 @@ import {
   getCampaignFacts,
   resolveInfluencerEstimateCurrency,
 } from "@/features/campaign-director/facts/facts-display-bridge";
+import { vendorCountryMatchesCampaignMarkets } from "../../services/studio-market-creators";
 import type { CreatorDrawerSelection } from "@/features/campaign-decision-workspace/components/creator-drawer";
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
 import { STUDIO_REF_CLASSES } from "../../constants/campaign-studio-ref-tokens";
@@ -1054,15 +1055,25 @@ export function VendorRecommendationsSection({
     ]
   );
 
-  const mainVendors = vendors.filter((v) => v.slateRole !== "maybe");
-  const maybeVendors = vendors.filter((v) => v.slateRole === "maybe");
+  const marketVendors = useMemo(
+    () =>
+      vendors.filter((vendor) =>
+        vendorCountryMatchesCampaignMarkets(vendor.country, campaignFacts?.geography)
+      ),
+    [vendors, campaignFacts?.geography]
+  );
+  const excludedByMarket = Math.max(0, vendors.length - marketVendors.length);
+  const marketLabel = campaignFacts?.geography?.filter((value) => value.trim()).join(", ") || null;
+
+  const mainVendors = marketVendors.filter((v) => v.slateRole !== "maybe");
+  const maybeVendors = marketVendors.filter((v) => v.slateRole === "maybe");
   const displayGroups =
     maybeVendors.length > 0
       ? [
-          { title: "Main picks", items: mainVendors.length > 0 ? mainVendors : vendors },
+          { title: "Main picks", items: mainVendors.length > 0 ? mainVendors : marketVendors },
           { title: "Maybe / replacements", items: maybeVendors },
         ]
-      : [{ title: null as string | null, items: vendors }];
+      : [{ title: null as string | null, items: marketVendors }];
 
   const visibleGroupItems = showAllVendors
     ? displayGroups
@@ -1070,7 +1081,7 @@ export function VendorRecommendationsSection({
         ...group,
         items: group.items.slice(0, STUDIO_VENDOR_INITIAL_VISIBLE),
       }));
-  const hiddenCount = Math.max(0, vendors.length - STUDIO_VENDOR_INITIAL_VISIBLE);
+  const hiddenCount = Math.max(0, marketVendors.length - STUDIO_VENDOR_INITIAL_VISIBLE);
   const preferredPlatformLabel = mapperOptions.preferredPlatforms?.length
     ? mapperOptions.preferredPlatforms.join(" + ")
     : undefined;
@@ -1260,7 +1271,14 @@ export function VendorRecommendationsSection({
       ) : null}
       <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
         <p className="text-[11px] text-muted-foreground">
-          {vendors.length} recommended creator{vendors.length === 1 ? "" : "s"}
+          {marketVendors.length} recommended creator{marketVendors.length === 1 ? "" : "s"}
+          {marketLabel ? ` in ${marketLabel}` : ""}
+          {excludedByMarket > 0 ? (
+            <span>
+              {" "}
+              · {excludedByMarket} outside this market hidden
+            </span>
+          ) : null}
           {preferredPlatformLabel ? (
             <span className="text-foreground/80">
               {" "}
@@ -1274,7 +1292,7 @@ export function VendorRecommendationsSection({
               Ranked from {recommendationIds.length} search matches
             </p>
           ) : null}
-          {vendors.length >= 2 ? (
+          {marketVendors.length >= 2 ? (
             <button
               type="button"
               className="inline-flex items-center gap-1 rounded-md border border-[#7C3AED]/40 bg-[#7C3AED]/5 px-2 py-1 text-[10px] font-semibold text-[#7C3AED] hover:bg-[#7C3AED]/10"
@@ -1358,7 +1376,7 @@ export function VendorRecommendationsSection({
       ))}
       {hiddenCount > 0 && !showAllVendors ? (
         <ShowMoreButton onClick={() => setShowAllVendors(true)}>
-          + {hiddenCount} more recommended creators · Show all {vendors.length}
+          + {hiddenCount} more recommended creators · Show all {marketVendors.length}
         </ShowMoreButton>
       ) : null}
       {conversationId && messageId ? (
@@ -1399,7 +1417,7 @@ export function VendorRecommendationsSection({
       <StudioCreatorCompareDialog
         open={compareOpen}
         onOpenChange={setCompareOpen}
-        creators={vendors
+        creators={marketVendors
           .filter((v): v is DisplayVendor & { id: string } => Boolean(v.id))
           .map((v) => ({
             id: v.id,
@@ -1408,7 +1426,7 @@ export function VendorRecommendationsSection({
             platform: v.platform,
           }))}
         onOpenCreator={(unifiedId) => {
-          const match = vendors.find((v) => v.id === unifiedId);
+          const match = marketVendors.find((v) => v.id === unifiedId);
           if (match) openCreatorDetails(match);
         }}
       />

@@ -37,6 +37,7 @@ export type EditableFactsPatch = Partial<
     | "industry"
     | "campaignType"
     | "deliverables"
+    | "kpis"
   >
 >;
 
