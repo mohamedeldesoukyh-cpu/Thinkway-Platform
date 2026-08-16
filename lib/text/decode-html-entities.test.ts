@@ -87,6 +87,12 @@ assert.deepEqual(resolveCreatorIdentity("INF-008286", "mark.sedhom"), {
   name: "mark.sedhom",
   handle: "mark.sedhom",
 });
+assert.deepEqual(
+  resolveCreatorIdentity(null, "search"),
+  { name: "Creator", handle: null },
+  "Facebook shell handle 'search' must not become the display name"
+);
+assert.equal(formatCreatorDisplayName("search"), "");
 assert.equal(formatCreatorDisplayName("Creator"), "");
 assert.equal(formatCreatorDisplayName("Instagram · Option 1"), "");
 assert.equal(formatCreatorDisplayName("Instagram - Option 2"), "");

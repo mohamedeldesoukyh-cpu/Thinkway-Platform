@@ -97,8 +97,14 @@ export function isCreatorDocumentNumber(name: string | null | undefined): boolea
 /** Placeholder labels stored when a real display name was never captured. */
 export function isPlaceholderCreatorLabel(name: string | null | undefined): boolean {
   if (name == null) return false;
-  const normalized = name.trim().toLowerCase();
-  return normalized === "creator" || normalized === "unknown" || normalized === "unknown creator";
+  const normalized = name.trim().toLowerCase().replace(/^@+/, "");
+  return (
+    normalized === "creator" ||
+    normalized === "unknown" ||
+    normalized === "unknown creator" ||
+    // Facebook shell path mistakenly stored as username/handle
+    normalized === "search"
+  );
 }
 
 /** Extract `@handle` embedded in scraped titles like `Name (@handle)`. */
@@ -159,7 +165,9 @@ export function resolveCreatorIdentity(
   explicitHandle?: string | null
 ): { name: string; handle: string | null } {
   const embedded = extractEmbeddedCreatorHandle(rawName);
-  const explicit = explicitHandle?.trim().replace(/^@+/, "").toLowerCase() || null;
+  const explicitRaw = explicitHandle?.trim().replace(/^@+/, "").toLowerCase() || null;
+  const explicit =
+    explicitRaw && !isPlaceholderCreatorLabel(explicitRaw) ? explicitRaw : null;
   const handle = explicit || embedded;
   const name = pickCreatorDisplayName([rawName], handle);
   return { name, handle };
@@ -223,10 +231,11 @@ export function pickCreatorDisplayName(
   if (human) return human;
   const handleLabel = formatCreatorDisplayName(handle);
   if (handleLabel) return handleLabel;
-  // Last resort: first non-document candidate, else plain handle key.
+  // Last resort: first non-document candidate, else plain handle key (never placeholders).
   if (formatted[0]) return formatted[0];
   const handleKey = normalizeCreatorNameKey(handle);
-  return handleKey || "Creator";
+  if (handleKey && !isPlaceholderCreatorLabel(handleKey)) return handleKey;
+  return "Creator";
 }
 
 /** Normalize creator bios for UI (decode HTML entities from scraped metadata). */

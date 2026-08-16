@@ -47,6 +47,12 @@ assert.ok(facebookPeople);
 assert.equal(facebookPeople.normalized_username, "id:987654321");
 
 assert.equal(parseProfileInput("https://www.facebook.com/watch/?v=123"), null);
+assert.equal(
+  parseProfileInput("https://www.facebook.com/search/top?q=menna"),
+  null,
+  "Facebook search URLs must not become username 'search'"
+);
+assert.equal(parseProfileInput("https://www.facebook.com/search"), null);
 
 // Bare words are not Instagram profiles — discovery search must keep them thematic.
 assert.equal(parseProfileInput("travel"), null);

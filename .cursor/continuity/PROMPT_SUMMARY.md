@@ -1,15 +1,15 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop`  
-**Focus:** FB snapshot fix · Manual metrics · QR embed · Added Value separator
+**Focus:** FB creator name "search" fix · FB snapshots
 
 ## Shipping
 
-- **FB snapshot:** decode HTML entities in `og:image` (`&amp;` broke CDN fetch); Apify in Facebook screenshot chain; proxy/storage decode on fetch
-- Manual metrics accept compact counts (`1.1K`)
-- Report cover QR as embedded PNG data URI
-- Preview/PDF: full-page **Added Value** separator before added-value posts
+- Facebook `/search` URLs no longer become handle/name `search`
+- Reserved FB shell paths shared; Performance hides shell/placeholder handles
+- Prior: FB og:image entity decode · Apify FB chain · compact metrics · QR · Added Value separator
 
 ## Shipped prior
 
-- Performance select-all / last update / enrichment summary (`33cff267` / `084a8f4a`)
+- FB snapshots / report polish (`e8438522` / prod `68236d25`)
+- Performance select-all / last update / enrichment summary

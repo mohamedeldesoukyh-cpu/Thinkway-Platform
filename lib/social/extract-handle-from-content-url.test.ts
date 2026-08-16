@@ -26,6 +26,12 @@ assert.deepEqual(
   { platform: "facebook", handle: "nasaearth" }
 );
 
+assert.equal(
+  extractHandleFromContentUrl("https://www.facebook.com/search/top?q=x"),
+  null,
+  "Facebook /search path is not a creator handle"
+);
+
 const lines = [
   {
     id: "line-a",

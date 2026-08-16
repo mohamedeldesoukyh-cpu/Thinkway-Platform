@@ -7,6 +7,7 @@ import {
   isUsableAvatarUrl,
 } from "@/lib/performance/avatar-sync-policy";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
+import { isFacebookShellHandle } from "@/lib/social/facebook-reserved-segments";
 import {
   formatCreatorDisplayName,
   isCreatorDocumentNumber,
@@ -19,6 +20,17 @@ function usableInfluencerDisplayName(value: string | null | undefined): string |
   if (isPlaceholderCreatorLabel(trimmed) || isCreatorDocumentNumber(trimmed)) return null;
   const formatted = formatCreatorDisplayName(trimmed);
   return formatted || null;
+}
+
+function usablePlatformHandle(
+  platform: string,
+  handle: string | null | undefined
+): string | null {
+  const trimmed = handle?.trim().replace(/^@+/, "") || null;
+  if (!trimmed) return null;
+  if (isPlaceholderCreatorLabel(trimmed)) return null;
+  if (platform === "facebook" && isFacebookShellHandle(trimmed)) return null;
+  return trimmed;
 }
 
 function metadataAvatarUrl(
@@ -334,39 +346,41 @@ export async function fetchInfluencerMetaForPublications(
       metadataAvatarUrl(accountMetadata),
       discoveryPictureByInfluencerPlatform.get(key)
     );
+    const accountHandle = usablePlatformHandle(platformKey, account.handle);
     avatars.set(key, {
       creatorProfileImage: null,
       influencerAvatar: null,
       platformPicture,
       followerCount: account.follower_count ?? null,
-      handle: account.handle ?? null,
+      handle: accountHandle,
       profileUrl: resolveCreatorProfileUrl({
         platform: platformKey,
-        handle: account.handle,
-        profile_url: account.profile_url,
+        handle: accountHandle,
+        profile_url: accountHandle ? account.profile_url : null,
       }),
     });
 
     const base = avatars.get(`${account.influencer_id}:`);
     if (base) {
-      const handle = base.handle?.trim() || account.handle?.trim() || null;
+      const handle = base.handle?.trim() || accountHandle;
       avatars.set(`${account.influencer_id}:`, {
         ...base,
         followerCount: base.followerCount ?? account.follower_count ?? null,
         handle,
         profileUrl:
           base.profileUrl ??
-          resolveCreatorProfileUrl({
-            platform: platformKey,
-            handle: account.handle,
-            profile_url: account.profile_url,
-          }),
+          (accountHandle
+            ? resolveCreatorProfileUrl({
+                platform: platformKey,
+                handle: accountHandle,
+                profile_url: account.profile_url,
+              })
+            : null),
       });
     }
 
-    if (!names.has(account.influencer_id)) {
-      const handleLabel = account.handle?.trim().replace(/^@+/, "");
-      if (handleLabel) names.set(account.influencer_id, handleLabel);
+    if (!names.has(account.influencer_id) && accountHandle) {
+      names.set(account.influencer_id, accountHandle);
     }
   }
 
