@@ -108,6 +108,13 @@ test("sanitizePreferredCategories drops Lifestyle when a vertical is present", (
   assert.deepEqual(sanitizePreferredCategories(["Lifestyle"]), ["lifestyle"]);
 });
 
+test("mass Sports/Entertainment mix keeps Lifestyle on-brief", () => {
+  assert.deepEqual(
+    sanitizePreferredCategories(["Sports", "Lifestyle", "Entertainment"]),
+    ["sports", "lifestyle", "entertainment"]
+  );
+});
+
 test("beauty briefs do not pad with Lifestyle when enough Beauty creators exist", () => {
   const pool = [
     ...Array.from({ length: 6 }, (_, i) =>

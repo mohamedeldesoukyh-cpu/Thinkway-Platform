@@ -134,6 +134,9 @@ export type HydrationMapperOptions = {
   campaignMarkets?: string[];
   campaignIndustry?: string;
   campaignType?: string;
+  briefText?: string;
+  objective?: string;
+  audience?: string;
   quotationPriceByInfluencerId?: Map<string, CreatorQuotationPriceReference>;
   /**
    * Legacy persisted scores — used only when ECI signal is unavailable.

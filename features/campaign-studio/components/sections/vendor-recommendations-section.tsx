@@ -960,6 +960,9 @@ export function VendorRecommendationsSection({
       campaignMarkets: facts?.geography,
       campaignIndustry: facts?.industry,
       campaignType: facts?.campaignType,
+      briefText: facts?.rawBriefExcerpt,
+      objective: facts?.objective,
+      audience: facts?.audience,
     };
   }, [campaignObject, creatorFitScores]);
 

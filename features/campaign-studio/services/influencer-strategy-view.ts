@@ -4,6 +4,7 @@ import {
   deriveEnterprisePlanningNarrative,
   type EnterprisePlanningNarrative,
 } from "./planning-narrative";
+import { deriveCreatorCategoriesFromBrief } from "./derive-creator-categories";
 import { deriveCreatorQuantityRecommendation } from "./creator-quantity";
 
 export type InfluencerStrategyAnswer = {
@@ -32,12 +33,13 @@ export function deriveInfluencerStrategyView(
   const facts = getCampaignFacts(campaignObject);
   const quantity = deriveCreatorQuantityRecommendation(facts);
   const mix = quantity.mix;
-  const categories = [
-    facts?.industry,
-    facts?.product,
-    facts?.campaignType,
-    ...(facts?.geography ?? []),
-  ].filter((value): value is string => Boolean(value?.trim()));
+  const categories = deriveCreatorCategoriesFromBrief({
+    briefText: facts?.rawBriefExcerpt,
+    objective: facts?.objective,
+    audience: facts?.audience,
+    campaignName: facts?.product,
+    products: facts?.product ? [facts.product] : undefined,
+  });
 
   const pillar = (key: string) => story.strategyPillars.find((item) => item.key === key)?.body;
 

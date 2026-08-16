@@ -4,6 +4,7 @@ import { DISCOVERY_PLATFORMS, type DiscoveryPlatform } from "@/lib/discovery/typ
 
 import {
   BAD_CATEGORY_TOKENS,
+  CLIENT_INDUSTRY_AS_CATEGORY_PATTERN,
   FIELD_LABEL_FRAGMENTS,
   NICHE_PATTERNS,
   QUICK_CATEGORIES,
@@ -172,6 +173,7 @@ export function isValidCategory(value: string): boolean {
   if (!v || v.length < 2 || v.length > 50) return false;
   if (isConcatenatedGarbage(v)) return false;
   if (isBadCategoryToken(v)) return false;
+  if (CLIENT_INDUSTRY_AS_CATEGORY_PATTERN.test(v)) return false;
   if (QUICK_CATEGORIES.some((c) => c.toLowerCase() === v.toLowerCase())) return true;
   if (NICHE_PATTERNS.some((p) => p.test(v))) return true;
   if (/^\d+$/.test(v)) return false;

@@ -27,6 +27,7 @@ import {
   composeCreatorSlate,
   sanitizePreferredCategories,
 } from "@/features/campaign-studio/services/creator-slate";
+import { deriveCreatorCategoriesFromBrief } from "@/features/campaign-studio/services/derive-creator-categories";
 import { detectIndustryFromBrief } from "@/features/campaign-studio/services/industry-intelligence";
 import { getIndustryCreatorMix } from "@/features/campaign-studio/services/presentation-intelligence";
 
@@ -259,14 +260,26 @@ export async function searchCreatorsFromProfileData(
     profile.rawBriefExcerpt,
     profile.objective
   );
-  const tierMix = getIndustryCreatorMix(industry).map((t) => ({
+  const briefContext = [profile.rawBriefExcerpt, profile.objective, profile.audience]
+    .filter(Boolean)
+    .join("\n");
+  const tierMix = getIndustryCreatorMix(industry, briefContext).map((t) => ({
     tier: t.tier,
     percent: t.percent,
   }));
-  const preferredCategories = sanitizePreferredCategories([
-    ...mappedFilters.filter((f) => f.key === "category").map((f) => f.value),
-    ...(profile.creatorCategories ?? []),
-  ]);
+  const preferredCategories = sanitizePreferredCategories(
+    deriveCreatorCategoriesFromBrief({
+      briefText: profile.rawBriefExcerpt,
+      objective: profile.objective ?? profile.objectives?.join(" "),
+      audience: profile.audience,
+      campaignName: profile.campaignName,
+      products: profile.products,
+      existingCategories: [
+        ...mappedFilters.filter((f) => f.key === "category").map((f) => f.value),
+        ...(profile.creatorCategories ?? []),
+      ],
+    })
+  );
   const slate = composeCreatorSlate(dedupedCreators, {
     platforms: preferredPlatforms,
     tierMix,
@@ -281,7 +294,7 @@ export async function searchCreatorsFromProfileData(
     objective: profile.objective ?? profile.objectives?.join(" "),
     rawBriefExcerpt: profile.rawBriefExcerpt,
   };
-  const slateCreators = slate.creators.map((creator, index) => ({
+  const poolCreators = dedupedCreators.map((creator, index) => ({
     ...creator,
     contentIdea:
       creator.contentIdea ?? buildCreatorContentIdea(creator, factsLite, index),
@@ -322,8 +335,9 @@ export async function searchCreatorsFromProfileData(
       : [];
 
   return {
-    creators: slateCreators,
-    // Report mandatory-compliant candidates only — never inflate with violators.
+    creators: poolCreators,
+    // Ranked mandatory-compliant inventory — Studio displays this pool.
+    // composeCreatorSlate still runs for mix/meta; it must not hide the pool.
     total: pool.length,
     backfill: result.backfill,
     slate: slate.meta,

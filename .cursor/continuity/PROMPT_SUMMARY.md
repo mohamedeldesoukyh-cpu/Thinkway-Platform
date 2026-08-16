@@ -1,16 +1,15 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop`  
-**Focus:** Performance report AV creators vs AV posts
+**Focus:** Studio creator categories must follow the brief/strategy mix, not client industry
 
-## Shipped
+## In progress
 
-- AV creators = no assignment deliverables (count · roster % · names)
-- AV posts = beyond-scope publication counts (no posts-vs-agreed %)
-- Dev `f1989cd2` · Prod `3ffb9ff5` (`vercel deploy --prod`)
+- CIP / keyword search returns the ranked pool (not the 2-name composed slate)
+- Creator categories: do not copy Finance/Banking from the client. Arab Bank instant-issuance + LaLiga analog → Sports / Lifestyle / Entertainment
+- After ship: hard-refresh and **re-run Discovery** so stored categories and creator IDs refresh
 
-## Shipped prior
+Dev: https://dev.thinkwaymedia.com  
+Prod: https://app.thinkwaymedia.com  
 
-- Avg ER = all post ERs ÷ agreed publications
-- Empty Assignments deliverables → Added value classification
-- Engagement over time removed from report charts
+Client Workspace is **not** started.

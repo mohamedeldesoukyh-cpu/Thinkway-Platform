@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { detectIndustryFromBrief } from "@/features/campaign-studio/services/industry-intelligence";
+import { deriveCreatorCategoriesFromBrief } from "@/features/campaign-studio/services/derive-creator-categories";
 import { extractCampaignFacts } from "@/features/campaign-director/facts/extract-campaign-facts";
 import { validateCampaignFacts } from "@/features/campaign-director/facts/validate-campaign-facts";
 
@@ -95,7 +96,8 @@ Rules:
 - Do NOT infer countries from industry, brand, or language. Only extract countries named in the brief.
 - Do NOT merge adjacent table cells — each field is separate (e.g. brand "L'Oréal Paris" is NOT "L'Oréal ParisMarket").
 - Platforms: instagram, tiktok, youtube, twitter (lowercase).
-- creatorCategories: searchable creator categories only (Beauty, Fashion, etc.) — NOT field labels like "Audience".
+- creatorCategories: Discovery content verticals only (Beauty, Fashion, Sports, Lifestyle, Entertainment, Tech). NEVER copy the client's industry (Finance, Banking, Telecom, Insurance). A bank or credit-card brief that asks for mass awareness or a sports-event mix (e.g. LaLiga) is Sports / Lifestyle / Entertainment, not Finance.
+- Only treat creators as finance/education specialists when the brief explicitly asks for finance educators or personal-finance influencers.
 - Put follower ranges in followerRange, not creatorCategories.
 - Put content keywords in keywords array.
 - fieldConfidence: per-field extraction confidence 0–1 (how certain you are the value appears in the brief).
@@ -270,6 +272,17 @@ function heuristicExtract(briefText: string): CampaignIntelligenceProfile {
   profile.confidence = { ...facts.confidence };
   profile.sources = { ...facts.sources };
 
+  const derivedCategories = deriveCreatorCategoriesFromBrief({
+    briefText,
+    objective: facts.objective,
+    audience: facts.audience,
+    campaignName: facts.product,
+    products: facts.product ? [facts.product] : undefined,
+  });
+  if (derivedCategories.length > 0) {
+    profile.creatorCategories = derivedCategories;
+  }
+
   if (facts.audience) {
     profile.audienceDetail = {
       countries: facts.geography ?? [],
@@ -332,7 +345,15 @@ function applyExtractedData(
     audienceCountries ??
     (profile.market ? [profile.market] : undefined);
   profile.platforms = data.platforms ?? undefined;
-  profile.creatorCategories = data.creatorCategories ?? undefined;
+  profile.creatorCategories = deriveCreatorCategoriesFromBrief({
+    briefText,
+    objective: data.objective ?? data.objectives?.join(" "),
+    audience: data.audience ?? undefined,
+    campaignName: data.campaignName ?? undefined,
+    products: data.products ?? undefined,
+    existingCategories: data.creatorCategories ?? undefined,
+  });
+  if (profile.creatorCategories.length === 0) profile.creatorCategories = undefined;
   profile.creatorNiches = data.creatorNiches ?? undefined;
   profile.budget = data.budget ?? undefined;
   profile.durationWeeks = data.durationWeeks ?? undefined;

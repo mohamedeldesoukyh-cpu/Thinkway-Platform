@@ -97,4 +97,46 @@ assert.ok(
   "Lifestyle must not remain a preferred category alongside Beauty"
 );
 
+const arabBankProfile: CampaignIntelligenceProfile = {
+  schemaVersion: 1,
+  status: "saved",
+  extractedAt: new Date().toISOString(),
+  confidence: {},
+  sources: {},
+  brandName: "Arab Bank",
+  clientName: "Arab Bank",
+  campaignName: "Credit Card Instant Issuance",
+  industry: "Finance & Banking",
+  market: "Egypt",
+  audience: "mass audience",
+  objectives: [
+    "Drive awareness of Credit Card Instant Issuance and acquire new bank customers",
+  ],
+  creatorCategories: ["Finance"],
+  rawBriefExcerpt:
+    "Arab Bank new credit card instant issuance. Targeting a mass audience. Follow a similar approach and utilize as strong mix as the previous LaLiga event.",
+  geography: ["EG"],
+};
+
+const arabBankEnriched = enrichBriefSearchSignals(arabBankProfile, {
+  filters: [
+    {
+      id: "cat-finance",
+      key: "category",
+      label: "Category",
+      value: "Finance",
+      confidence: 0.9,
+      weight: 100,
+    },
+  ],
+  skipped: [],
+});
+const arabBankCategories = arabBankEnriched.filters
+  .filter((filter) => filter.key === "category")
+  .map((filter) => filter.value);
+assert.ok(arabBankCategories.includes("Sports"), `got ${arabBankCategories.join(", ")}`);
+assert.ok(arabBankCategories.includes("Lifestyle"), `got ${arabBankCategories.join(", ")}`);
+assert.ok(arabBankCategories.includes("Entertainment"), `got ${arabBankCategories.join(", ")}`);
+assert.ok(!arabBankCategories.some((value) => /finance|bank/i.test(value)));
+
 console.log("enrich-brief-search-signals tests passed");

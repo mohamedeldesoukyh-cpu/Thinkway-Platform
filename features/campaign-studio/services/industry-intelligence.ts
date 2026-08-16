@@ -1,3 +1,4 @@
+import { isMassAwarenessCreatorBrief } from "./derive-creator-categories";
 import {
   detectCurrencyFromSources,
   parseBudgetTotalFromText,
@@ -198,6 +199,20 @@ export function getIndustryProfile(
   let reach = base.estimatedReach;
   if (weeks >= 12) reach = reach.replace(/\d+M/g, (m) => `${parseInt(m) * 2}M`);
   else if (weeks <= 4) reach = reach.replace(/(\d+)M/g, (_, n) => `${Math.max(1, Math.round(parseInt(n) * 0.6))}M`);
+
+  if (industry === "finance" && contextText && isMassAwarenessCreatorBrief(contextText)) {
+    return {
+      industry,
+      label: base.label,
+      campaignType: "Mass awareness & acquisition",
+      platforms: ["Instagram", "TikTok"],
+      creatorMixSummary: "Mega + Macro anchors · Sports, Lifestyle, Entertainment mix",
+      estimatedReach: reach,
+      budgetWeights: base.budgetWeights,
+      cpmAssumption: base.cpmAssumption,
+      cpeAssumption: base.cpeAssumption,
+    };
+  }
 
   return { industry, ...base, estimatedReach: reach };
 }

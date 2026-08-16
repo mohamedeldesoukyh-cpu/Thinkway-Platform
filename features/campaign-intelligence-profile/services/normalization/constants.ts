@@ -9,7 +9,15 @@ export const QUICK_CATEGORIES = [
   "Health & Wellness",
   "Tech",
   "Gaming",
+  "Sports",
+  "Entertainment",
+  "Automotive",
+  "Parenting",
 ] as const;
+
+/** Client/brand industry labels — never Discovery creator categories. */
+export const CLIENT_INDUSTRY_AS_CATEGORY_PATTERN =
+  /^(finance(\s*&\s*banking)?|banking|bank|fintech|insurance|wealth|telecom(munications)?)$/i;
 
 /** Tokens that must never become Discovery category filters. */
 export const BAD_CATEGORY_TOKENS = [

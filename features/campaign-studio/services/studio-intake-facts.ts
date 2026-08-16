@@ -4,6 +4,7 @@ import { getCampaignFacts } from "@/features/campaign-director/facts/facts-displ
 import { applyConfirmedCampaignFactsToCampaignObject } from "@/features/campaign-intelligence-profile/services/campaign-facts-spine";
 
 import { patchCampaignFacts } from "./copilot/campaign-facts-mutations";
+import { deriveCreatorCategoriesFromBrief } from "./derive-creator-categories";
 
 export type IntakeFactState = "confirmed" | "missing";
 
@@ -83,6 +84,17 @@ function presentPlatforms(facts: CampaignFacts | undefined): string | null {
   return joinList(facts?.platforms);
 }
 
+function presentCreatorCategories(facts: CampaignFacts | undefined): string | null {
+  const categories = deriveCreatorCategoriesFromBrief({
+    briefText: facts?.rawBriefExcerpt,
+    objective: facts?.objective,
+    audience: facts?.audience,
+    campaignName: facts?.product,
+    products: facts?.product ? [facts.product] : undefined,
+  });
+  return categories.length > 0 ? categories.join(", ") : null;
+}
+
 /**
  * "What Thinkway understood" — Campaign Facts only. Never invent missing values.
  */
@@ -97,12 +109,7 @@ export function requiredIntakeFacts(facts: CampaignFacts | undefined): IntakeFac
     row("objective", "Objective", present(facts?.objective), true),
     row("audience", "Audience", presentAudience(facts), false),
     row("category", "Category", present(facts?.industry) ?? present(facts?.campaignType), false),
-    row(
-      "creatorCategories",
-      "Creator categories",
-      present(facts?.industry) ?? present(facts?.campaignType),
-      false
-    ),
+    row("creatorCategories", "Creator categories", presentCreatorCategories(facts), false),
     row("platforms", "Platforms", presentPlatforms(facts), false),
     row("deliverables", "Deliverables", joinList(facts?.deliverables), false),
     row("kpis", "Success measurement / KPIs", joinList(facts?.kpis), false),
@@ -257,6 +264,24 @@ export function applyIntakeEditToProfile(
     edit.kpis && edit.kpis.some((value) => value.trim())
       ? edit.kpis.map((value) => value.trim()).filter(Boolean)
       : profile.kpis;
+  const creatorCategories =
+    edit.creatorCategories && edit.creatorCategories.some((value) => value.trim())
+      ? deriveCreatorCategoriesFromBrief({
+          briefText: profile.rawBriefExcerpt,
+          objective,
+          audience,
+          campaignName,
+          products: campaignName ? [campaignName] : profile.products,
+          existingCategories: edit.creatorCategories,
+        })
+      : deriveCreatorCategoriesFromBrief({
+          briefText: profile.rawBriefExcerpt,
+          objective,
+          audience,
+          campaignName,
+          products: campaignName ? [campaignName] : profile.products,
+          existingCategories: profile.creatorCategories,
+        });
   const durationWeeks =
     edit.durationWeeks != null && Number.isFinite(edit.durationWeeks) && edit.durationWeeks > 0
       ? Math.round(edit.durationWeeks)
@@ -284,6 +309,7 @@ export function applyIntakeEditToProfile(
     platforms,
     deliverables,
     kpis,
+    creatorCategories: creatorCategories.length > 0 ? creatorCategories : undefined,
     durationWeeks,
     budget,
   };
@@ -300,6 +326,7 @@ export type IntakeFactsEdit = {
   platforms?: string[];
   deliverables?: string[];
   kpis?: string[];
+  creatorCategories?: string[];
   budgetAmount?: number;
   budgetCurrency?: string;
   durationWeeks?: number;
