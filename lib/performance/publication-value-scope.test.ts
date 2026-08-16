@@ -331,6 +331,9 @@ function indexWithInstagram() {
       { value_scope: "added_value", influencer_id: "b" },
       { value_scope: "added_value", influencer_id: "c" },
       { value_scope: "agreed", influencer_id: "d" },
+      // Missing creator identity must not inflate the count via publication id
+      { value_scope: "added_value", influencer_id: null, id: "pub-1" },
+      { value_scope: "added_value", influencer_id: null, id: "pub-2" },
     ]),
     2
   );

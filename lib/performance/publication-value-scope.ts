@@ -225,11 +225,10 @@ export function countAddedValueCreators<
   const keys = new Set<string>();
   for (const publication of publications) {
     if (resolvePublicationValueScope(publication) !== "added_value") continue;
-    const key =
-      publication.influencer_id ??
-      publication.influencer_name ??
-      publication.id ??
-      null;
+    const id = publication.influencer_id?.trim();
+    const name = publication.influencer_name?.trim();
+    const key = id || (name ? name.toLowerCase() : null);
+    // Never fall back to publication id — that would count posts as creators.
     if (key) keys.add(key);
   }
   return keys.size;

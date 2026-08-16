@@ -148,7 +148,12 @@ export function buildPerformanceReportExcelBuffer(
         { label: "Brand", value: data.campaign.brandName ?? "—" },
         { label: "Creators", value: String(data.uniqueCreatorCount) },
         { label: "Publications", value: String(data.bundle.summary.agreed_publications) },
-        { label: "Added value", value: String(data.addedValueCreatorCount) },
+        { label: "AV creators", value: String(data.addedValueCreatorCount) },
+        {
+          label: "AV creator names",
+          value: data.addedValueCreators.map((c) => c.name).join(", ") || "—",
+        },
+        { label: "AV posts", value: String(data.bundle.summary.added_value_publications) },
         { label: "Total reach", value: formatCompactCount(data.bundle.summary.total_reach) },
         { label: "Total impressions", value: formatCompactCount(data.bundle.summary.total_impressions) },
         { label: "Total views", value: formatCompactCount(data.bundle.summary.total_views) },
@@ -163,8 +168,14 @@ export function buildPerformanceReportExcelBuffer(
     columnHeaders: [["Metric", "Value"]],
     rows: [
       { values: ["Publications (agreed)", String(data.bundle.summary.agreed_publications)] },
-      { values: ["Added value (creators)", String(data.addedValueCreatorCount)] },
-      { values: ["Added value (publications)", String(data.bundle.summary.added_value_publications)] },
+      { values: ["AV creators (no deliverables)", String(data.addedValueCreatorCount)] },
+      {
+        values: [
+          "AV creator names",
+          data.addedValueCreators.map((c) => c.name).join(", ") || "—",
+        ],
+      },
+      { values: ["AV posts", String(data.bundle.summary.added_value_publications)] },
       { values: ["Total reach", formatCompactCount(data.bundle.summary.total_reach)] },
       {
         values: [

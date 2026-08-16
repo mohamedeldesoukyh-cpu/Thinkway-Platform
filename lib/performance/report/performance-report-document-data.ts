@@ -6,7 +6,12 @@ import type {
 } from "@/lib/domains/campaign/types";
 import { getCampaignPerformanceBundle } from "@/lib/services/campaigns/campaign-publication-service";
 import { getPlatformOptionLabel } from "@/lib/campaigns/deliverable-taxonomy";
-import { partitionPublicationsByValueScope, resolvePublicationValueScope, countAddedValueCreators } from "@/lib/performance/publication-value-scope";
+import {
+  addedValueCreatorPercent,
+  partitionPublicationsByValueScope,
+  resolvePublicationValueScope,
+} from "@/lib/performance/publication-value-scope";
+import { loadAddedValueCreatorsWithoutDeliverables } from "@/lib/performance/load-assignment-agreed-platforms";
 import { averageEngagementRateAgainstAgreed } from "@/lib/performance/engagement-rate-engine";
 import { resolvePublicationRowCreatorAvatar } from "@/lib/performance/creator-avatar";
 import { createPublicationMediaSignedUrl } from "@/lib/performance/screenshot-capture/storage";
@@ -136,12 +141,9 @@ function buildRecommendations(
   }
 
   if (summary.added_value_publications > 0) {
-    const addedCreators = countAddedValueCreators(publications);
-    if (addedCreators > 0) {
-      recs.push(
-        `${addedCreators} creator${addedCreators === 1 ? "" : "s"} delivered added-value content beyond the agreed assignment mix.`
-      );
-    }
+    recs.push(
+      `${summary.added_value_publications} added-value publication(s) were delivered beyond the agreed assignment mix.`
+    );
   }
 
   if (summary.average_engagement_rate != null && summary.average_engagement_rate > 3) {
@@ -455,8 +457,34 @@ export async function loadPerformanceReportDocumentData(
 
   const influencerSections = await buildInfluencerSections(supabase, bundle);
   const uniqueCreatorCount = new Set(
-    bundle.publications.map((p) => p.influencer_id ?? p.influencer_name ?? p.id)
+    bundle.publications
+      .map((p) => {
+        const id = p.influencer_id?.trim();
+        if (id) return id;
+        const name = p.influencer_name?.trim();
+        return name ? name.toLowerCase() : null;
+      })
+      .filter((k): k is string => Boolean(k))
   ).size;
+
+  const nameByInfluencerId = new Map<string, string>();
+  for (const pub of bundle.publications) {
+    const id = pub.influencer_id?.trim();
+    const name = pub.influencer_name?.trim();
+    if (id && name && !nameByInfluencerId.has(id)) nameByInfluencerId.set(id, name);
+  }
+  for (const section of influencerSections) {
+    if (section.influencerId && section.name && !nameByInfluencerId.has(section.influencerId)) {
+      nameByInfluencerId.set(section.influencerId, section.name);
+    }
+  }
+
+  const { assignedCreatorCount, addedValueCreators } =
+    await loadAddedValueCreatorsWithoutDeliverables(
+      supabase,
+      campaignHeaderId,
+      nameByInfluencerId
+    );
 
   const typed = campaign as {
     id: string;
@@ -481,6 +509,19 @@ export async function loadPerformanceReportDocumentData(
   const platformBenchmarks = buildPlatformBenchmarks(bundle);
   const highlights = buildHighlights(bundle);
   const recommendations = buildRecommendations(bundle, platformBenchmarks);
+  if (addedValueCreators.length > 0) {
+    const names = addedValueCreators.map((c) => c.name).join(", ");
+    const pct = addedValueCreatorPercent(
+      addedValueCreators.length,
+      assignedCreatorCount || uniqueCreatorCount
+    );
+    recommendations.unshift(
+      pct != null
+        ? `Added-value creators (${pct}% of roster): ${names}.`
+        : `Added-value creators (no contracted deliverables): ${names}.`
+    );
+    if (recommendations.length > 5) recommendations.length = 5;
+  }
 
   const bestCreatorSection = influencerSections.reduce<InfluencerReportSection | null>(
     (best, section) => {
@@ -515,7 +556,9 @@ export async function loadPerformanceReportDocumentData(
     variant,
     influencerSections,
     uniqueCreatorCount,
-    addedValueCreatorCount: countAddedValueCreators(bundle.publications),
+    addedValueCreators,
+    addedValueCreatorCount: addedValueCreators.length,
+    assignedCreatorCount: assignedCreatorCount || uniqueCreatorCount,
     highlights,
     platformBenchmarks,
     recommendations,
