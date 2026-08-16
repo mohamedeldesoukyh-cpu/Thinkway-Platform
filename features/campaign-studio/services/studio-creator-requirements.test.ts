@@ -12,19 +12,24 @@ import {
 const egyptFacts: CampaignFacts = {
   geography: ["Egypt"],
   platforms: ["Instagram"],
-  industry: "Banking",
+  industry: "Finance & Banking",
+  product: "Credit Card Instant Issuance",
+  objective: "Drive awareness of Credit Card Instant Issuance and acquire new bank customers",
+  audience: "mass audience",
+  rawBriefExcerpt:
+    "Arab Bank credit card instant issuance. Targeting a mass audience. Similar approach and strong mix as the previous LaLiga event.",
   extractedAt: "",
   confidence: {},
   sources: {},
 };
 
-test("requirement score prefers creators who meet every campaign fact", () => {
+test("requirement score prefers creators who meet market, platform, and brief mix — not client industry", () => {
   const complete = studioCreatorRequirementScore(
-    { countryCode: "EG", platform: "Instagram", category: "Banking" },
+    { countryCode: "EG", platform: "Instagram", category: "Sports" },
     egyptFacts
   );
-  const missingCategory = studioCreatorRequirementScore(
-    { countryCode: "EG", platform: "Instagram", category: "Beauty" },
+  const financeOnly = studioCreatorRequirementScore(
+    { countryCode: "EG", platform: "Instagram", category: "Banking" },
     egyptFacts
   );
   const missingMost = studioCreatorRequirementScore(
@@ -34,16 +39,18 @@ test("requirement score prefers creators who meet every campaign fact", () => {
 
   assert.equal(complete.met, 3);
   assert.equal(complete.total, 3);
-  assert.ok(compareStudioRequirementScores(complete, missingCategory) < 0);
-  assert.ok(compareStudioRequirementScores(missingCategory, missingMost) < 0);
+  assert.equal(financeOnly.met, 2);
+  assert.equal(financeOnly.total, 3);
+  assert.ok(compareStudioRequirementScores(complete, financeOnly) < 0);
+  assert.ok(compareStudioRequirementScores(financeOnly, missingMost) < 0);
 });
 
 test("sorts complete requirements ahead of partial matches", () => {
   const ranked = sortByStudioRequirements(
     [
-      { name: "partial", countryCode: "EG", platform: "TikTok", category: "Banking" },
-      { name: "complete", countryCode: "EG", platform: "Instagram", category: "Banking" },
-      { name: "weak", countryCode: "EG", platform: "TikTok", category: "Beauty" },
+      { name: "partial", countryCode: "EG", platform: "TikTok", category: "Sports" },
+      { name: "complete", countryCode: "EG", platform: "Instagram", category: "Sports" },
+      { name: "weak", countryCode: "AE", platform: "TikTok", category: "Banking" },
     ],
     (item) => studioCreatorRequirementScore(item, egyptFacts)
   );

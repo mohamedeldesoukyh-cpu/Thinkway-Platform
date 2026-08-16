@@ -20,6 +20,9 @@ assert.equal(isConcatenatedGarbage("Egypt"), false);
 assert.equal(isBadCategoryToken("Audience"), true);
 assert.equal(isValidCategory("Audience"), false);
 assert.equal(isValidCategory("Beauty"), true);
+assert.equal(isValidCategory("Finance"), false);
+assert.equal(isValidCategory("Finance & Banking"), false);
+assert.equal(isValidCategory("Sports"), true);
 assert.equal(resolveCountryCode("Egypt"), "EG");
 assert.equal(resolveCountryCode("EG"), "EG");
 assert.equal(resolveCountryCode("UAE"), "AE");
@@ -150,6 +153,17 @@ const beautyInference = normalizeCampaignIntelligence({
   confidence: { geography: 0.85 },
 });
 assert.ok(!beautyInference.normalizedEntities.categories.includes("Beauty"));
+
+const financeInference = normalizeCampaignIntelligence({
+  ...createEmptyCampaignIntelligenceProfile(),
+  industry: "Finance & Banking",
+  creatorCategories: ["Finance"],
+  geography: ["Egypt"],
+  sources: { geography: "brief" },
+  confidence: { geography: 0.85 },
+});
+assert.ok(!financeInference.normalizedEntities.categories.includes("Finance"));
+assert.ok(!financeInference.normalizedEntities.categories.includes("Finance & Banking"));
 
 console.log("normalize-campaign-intelligence.test.ts — passed", {
   country: validatedIntelligence.market.countryCode,

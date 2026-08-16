@@ -45,30 +45,55 @@ const TIER_ALIASES: Record<string, string[]> = {
 };
 
 /**
- * Commercial verticals — when any of these are preferred, generic Lifestyle
- * must not count as an on-brief category match (padding only, with explanation).
+ * Product verticals — when these are preferred without a mass mix, generic
+ * Lifestyle must not count as an on-brief category match.
  */
-const VERTICAL_CATEGORY_TOKENS = [
+const PRODUCT_VERTICAL_TOKENS = [
   "beauty",
   "skincare",
   "fashion",
-  "sports",
-  "sport",
   "fitness",
   "travel",
   "adventure",
-  "entertainment",
-  "music",
-  "gaming",
   "food",
   "tech",
   "technology",
+  "gaming",
   "parenting",
   "family",
   "automotive",
-  "culture",
-  "comedy",
 ] as const;
+
+/** Mass-reach mix — Lifestyle stays on-brief alongside Sports / Entertainment. */
+const MASS_MIX_TOKENS = ["sports", "sport", "entertainment", "comedy", "music"] as const;
+
+function tokenMatches(haystack: string, tokens: readonly string[]): boolean {
+  return tokens.some((token) => haystack === token || haystack.includes(token) || token.includes(haystack));
+}
+
+function isProductVertical(token: string): boolean {
+  return tokenMatches(token.trim().toLowerCase(), PRODUCT_VERTICAL_TOKENS);
+}
+
+function isMassMixCategory(token: string): boolean {
+  return tokenMatches(token.trim().toLowerCase(), MASS_MIX_TOKENS);
+}
+
+/**
+ * Drop generic Lifestyle from preferred categories when a commercial product
+ * vertical is already stated — unless the brief is a mass Sports/Entertainment mix.
+ */
+export function sanitizePreferredCategories(categories: string[]): string[] {
+  const normalized = [
+    ...new Set(categories.map((c) => c.trim().toLowerCase()).filter(Boolean)),
+  ];
+  const hasProductVertical = normalized.some(isProductVertical);
+  const hasMassMix = normalized.some(isMassMixCategory);
+  if (hasProductVertical && !hasMassMix) {
+    return normalized.filter((c) => c !== "lifestyle");
+  }
+  return normalized;
+}
 
 const FIT_FLOOR = 60;
 /** Drop near-zero engagement when stronger commercial options exist. */
@@ -121,26 +146,6 @@ export function allocateTierCounts(mix: TierMixTarget[], targetCount: number): M
     assigned += 1;
   }
   return counts;
-}
-
-function isVerticalCategory(token: string): boolean {
-  const t = token.trim().toLowerCase();
-  if (!t) return false;
-  return VERTICAL_CATEGORY_TOKENS.some(
-    (vertical) => t === vertical || t.includes(vertical) || vertical.includes(t)
-  );
-}
-
-/**
- * Drop generic Lifestyle from preferred categories when a commercial vertical
- * is already stated — Lifestyle must not silently qualify as on-brief.
- */
-export function sanitizePreferredCategories(categories: string[]): string[] {
-  const normalized = [
-    ...new Set(categories.map((c) => c.trim().toLowerCase()).filter(Boolean)),
-  ];
-  if (!normalized.some(isVerticalCategory)) return normalized;
-  return normalized.filter((c) => c !== "lifestyle");
 }
 
 function creatorMatchesPreferredCategories(

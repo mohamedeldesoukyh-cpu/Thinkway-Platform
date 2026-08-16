@@ -31,11 +31,13 @@ import {
   requiredIntakeFacts,
   type IntakeFactsEdit,
 } from "../../services/studio-intake-facts";
+import { deriveCreatorCategoriesFromBrief } from "../../services/derive-creator-categories";
 import { isStudioIntakeConfirmed } from "../../services/studio-workspace-status";
 import type { StudioWorkspaceStepId } from "../../constants/studio-workspace";
 import { STUDIO_WORKSPACE_STEPS } from "../../constants/studio-workspace";
 import {
   INTAKE_COUNTRY_OPTIONS,
+  INTAKE_CREATOR_CATEGORY_OPTIONS,
   INTAKE_DELIVERABLE_OPTIONS,
   INTAKE_KPI_OPTIONS,
   INTAKE_PLATFORM_OPTIONS,
@@ -95,6 +97,7 @@ export function IntakeScreen({
     objective: "",
     audience: "",
     category: "",
+    creatorCategories: "",
     platforms: "",
     deliverables: "",
     kpis: "",
@@ -143,6 +146,13 @@ export function IntakeScreen({
       objective: displayFacts?.objective ?? "",
       audience: displayFacts?.audience ?? "",
       category: displayFacts?.industry ?? "",
+      creatorCategories: deriveCreatorCategoriesFromBrief({
+        briefText: displayFacts?.rawBriefExcerpt,
+        objective: displayFacts?.objective,
+        audience: displayFacts?.audience,
+        campaignName: displayFacts?.product,
+        products: displayFacts?.product ? [displayFacts.product] : undefined,
+      }).join(", "),
       platforms: (displayFacts?.platforms ?? []).join(", "),
       deliverables: (displayFacts?.deliverables ?? []).join(", "),
       kpis: (displayFacts?.kpis ?? []).join(", "),
@@ -203,6 +213,7 @@ export function IntakeScreen({
       platforms: splitList(draft.platforms),
       deliverables: splitList(draft.deliverables),
       kpis: splitList(draft.kpis),
+      creatorCategories: splitList(draft.creatorCategories),
       budgetAmount: Number.isFinite(amount) && amount > 0 ? amount : undefined,
       budgetCurrency: draft.currency,
       durationWeeks: Number.isFinite(weeks) && weeks > 0 ? weeks : undefined,
@@ -402,6 +413,15 @@ export function IntakeScreen({
                     }
                     ariaLabel="Deliverables"
                   />
+                ) : row.key === "creatorCategories" ? (
+                  <IntakeOptionChips
+                    options={INTAKE_CREATOR_CATEGORY_OPTIONS}
+                    selected={splitList(draft.creatorCategories)}
+                    onChange={(next) =>
+                      setDraft((prev) => ({ ...prev, creatorCategories: next.join(", ") }))
+                    }
+                    ariaLabel="Creator categories"
+                  />
                 ) : row.key === "kpis" ? (
                   <IntakeOptionChips
                     options={INTAKE_KPI_OPTIONS}
@@ -425,7 +445,7 @@ export function IntakeScreen({
                                 ? draft.objective
                                 : row.key === "audience"
                                   ? draft.audience
-                                  : row.key === "category" || row.key === "creatorCategories"
+                                  : row.key === "category"
                                     ? draft.category
                                     : row.key === "platforms"
                                       ? draft.platforms
@@ -440,7 +460,7 @@ export function IntakeScreen({
                         if (row.key === "country") return { ...prev, country: value };
                         if (row.key === "objective") return { ...prev, objective: value };
                         if (row.key === "audience") return { ...prev, audience: value };
-                        if (row.key === "category" || row.key === "creatorCategories") {
+                        if (row.key === "category") {
                           return { ...prev, category: value };
                         }
                         if (row.key === "platforms") return { ...prev, platforms: value };

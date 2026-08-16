@@ -89,8 +89,8 @@ export function studioCreatorHomeCountryLabel(
 /**
  * Keep a recommended creator when the campaign market is known and the
  * creator's home country overlaps that market. Audience-only countries do
- * not count. Unknown location is excluded once a market is set so UAE
- * audience flags cannot leak into an Egypt campaign.
+ * not count as home. Unknown location stays visible so Discovery's Egypt
+ * pool is not reduced to the few rows with a filled country_code.
  */
 export function vendorMatchesCampaignMarket(
   input: StudioCreatorLocation,
@@ -100,7 +100,7 @@ export function vendorMatchesCampaignMarket(
   if (targets.size === 0) return true;
   const home = studioCreatorHomeCountryLabel(input);
   const location = countryTokens(home);
-  if (location.size === 0) return false;
+  if (location.size === 0) return true;
   for (const token of location) {
     if (targets.has(token)) return true;
   }

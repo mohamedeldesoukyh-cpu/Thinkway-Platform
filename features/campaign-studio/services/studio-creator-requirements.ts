@@ -1,6 +1,7 @@
 import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-facts-types";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
+import { deriveCreatorCategoriesFromBrief } from "./derive-creator-categories";
 import {
   vendorMatchesCampaignMarket,
   type StudioCreatorLocation,
@@ -17,6 +18,9 @@ export type StudioRequirementHydration = {
   preferredPlatforms?: string[];
   campaignIndustry?: string;
   campaignType?: string;
+  briefText?: string;
+  objective?: string;
+  audience?: string;
 };
 
 function platformMatches(platform: string | undefined, required: string[]): boolean {
@@ -44,7 +48,17 @@ export function studioFactsFromHydrationOptions(
   const platforms = options.preferredPlatforms?.map((item) => item.trim()).filter(Boolean) ?? [];
   const industry = options.campaignIndustry?.trim();
   const campaignType = options.campaignType?.trim();
-  if (geography.length === 0 && platforms.length === 0 && !industry && !campaignType) {
+  const briefText = options.briefText?.trim();
+  const objective = options.objective?.trim();
+  const audience = options.audience?.trim();
+  if (
+    geography.length === 0 &&
+    platforms.length === 0 &&
+    !industry &&
+    !campaignType &&
+    !briefText &&
+    !objective
+  ) {
     return undefined;
   }
   return {
@@ -52,6 +66,9 @@ export function studioFactsFromHydrationOptions(
     platforms: platforms.length > 0 ? platforms : undefined,
     industry: industry || undefined,
     campaignType: campaignType || undefined,
+    rawBriefExcerpt: briefText || undefined,
+    objective: objective || undefined,
+    audience: audience || undefined,
     extractedAt: "",
     confidence: {},
     sources: {},
@@ -76,9 +93,16 @@ export function studioCreatorRequirementScore(
   if (platforms.length > 0) {
     checks.push(platformMatches(input.platform, platforms));
   }
-  const industry = facts?.industry?.trim() || facts?.campaignType?.trim();
-  if (industry) {
-    checks.push(categoryMatches(`${input.audienceSummary ?? ""} ${input.category ?? ""}`, industry));
+  const preferredCategories = deriveCreatorCategoriesFromBrief({
+    briefText: facts?.rawBriefExcerpt,
+    objective: facts?.objective,
+    audience: facts?.audience,
+    campaignName: facts?.product,
+    products: facts?.product ? [facts.product] : undefined,
+  });
+  if (preferredCategories.length > 0) {
+    const haystack = `${input.audienceSummary ?? ""} ${input.category ?? ""}`;
+    checks.push(preferredCategories.some((category) => categoryMatches(haystack, category)));
   }
 
   const total = checks.length;

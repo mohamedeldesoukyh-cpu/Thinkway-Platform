@@ -1,15 +1,15 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `develop`  
-**Focus:** Performance report clickable posts + AV creators/posts
+**Branch:** `develop` (`2da8a87a`) · **Production:** this release `[deploy-production]`  
+**Focus:** Studio creator categories must follow the brief/strategy mix, not client industry
 
-## Shipped
+## Shipped this session (Dev + Production)
 
-- Report publication cards: preview + “Open post” link to `content_url` (HTML/PDF); PPTX hyperlinks
-- AV creators = no deliverables (count · % · names); AV posts = counts without posts-vs-agreed %
-- Dev `53232647` · Prod (this release)
+- CIP / keyword search returns the ranked pool (not the 2-name composed slate)
+- Creator categories: do not copy Finance/Banking from the client. Mass-awareness + LaLiga analog → Sports / Lifestyle / Entertainment
+- After ship: hard-refresh and **re-run Discovery** so stored categories and creator IDs refresh
 
-## Shipped prior
+Dev: https://dev.thinkwaymedia.com  
+Prod: https://app.thinkwaymedia.com  
 
-- Avg ER = all post ERs ÷ agreed publications
-- Empty Assignments deliverables → Added value classification
+Client Workspace is **not** started.

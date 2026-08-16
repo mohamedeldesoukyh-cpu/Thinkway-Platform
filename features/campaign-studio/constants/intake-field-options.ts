@@ -1,4 +1,5 @@
 import { COUNTRY_OPTIONS, SOCIAL_PLATFORM_OPTIONS } from "@/lib/master-data/constants";
+import { CREATOR_CATEGORY_LABELS } from "@/lib/creators/category-keywords";
 
 export const INTAKE_COUNTRY_OPTIONS = COUNTRY_OPTIONS.map((option) => ({
   value: option.label,
@@ -28,3 +29,8 @@ export const INTAKE_KPI_OPTIONS = [
   { value: "Account applications", label: "Account applications" },
   { value: "New customers", label: "New customers" },
 ] as const;
+
+export const INTAKE_CREATOR_CATEGORY_OPTIONS = CREATOR_CATEGORY_LABELS.map((label) => ({
+  value: label,
+  label,
+}));

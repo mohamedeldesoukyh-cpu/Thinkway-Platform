@@ -1,5 +1,7 @@
 import { COUNTRY_OPTIONS } from "@/lib/master-data/constants";
 
+import { isClientIndustryCategory } from "@/features/campaign-studio/services/derive-creator-categories";
+
 import type { CampaignIntelligenceProfile } from "../../types/profile";
 import { getValidatedIntelligence } from "../get-validated-intelligence";
 import type { ValidatedCampaignIntelligence } from "../../types/validated-intelligence";
@@ -163,6 +165,7 @@ function mapFromValidatedIntelligence(
   }
 
   for (const category of v.categories) {
+    if (isClientIndustryCategory(category)) continue;
     pushFilter(filters, {
       key: "category",
       label: "Category",
@@ -417,6 +420,7 @@ function mapFromLegacyProfile(profile: CampaignIntelligenceProfile): DiscoverySe
     const value = category.trim();
     if (!value || value.length < 2) continue;
     if (parseFollowerRange(value)) continue;
+    if (isClientIndustryCategory(value)) continue;
     pushFilter(filters, {
       key: "category",
       label: "Category",

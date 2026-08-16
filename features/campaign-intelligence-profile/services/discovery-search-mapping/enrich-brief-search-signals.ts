@@ -1,4 +1,8 @@
 import { sanitizePreferredCategories } from "@/features/campaign-studio/services/creator-slate";
+import {
+  deriveCreatorCategoriesFromBrief,
+  isClientIndustryCategory,
+} from "@/features/campaign-studio/services/derive-creator-categories";
 
 import { brandMatchesAlias } from "../brand-resolution";
 import type { CampaignIntelligenceProfile } from "../../types/profile";
@@ -168,6 +172,32 @@ export function enrichBriefSearchSignals(
         confidence: 0.75,
       });
     }
+  }
+
+  // Client industry is not a creator vertical. Strip Finance/Banking/Telecom
+  // labels, then prefer brief + analog strategy (LaLiga → Sports mix).
+  filters = filters.filter(
+    (filter) => filter.key !== "category" || !isClientIndustryCategory(filter.value)
+  );
+  const derivedCategories = deriveCreatorCategoriesFromBrief({
+    briefText: text,
+    objective: profile.objective ?? profile.objectives?.join(" "),
+    audience: profile.audience,
+    campaignName: profile.campaignName,
+    products: profile.products,
+    existingCategories: [
+      ...filters.filter((filter) => filter.key === "category").map((filter) => filter.value),
+      ...(profile.creatorCategories ?? []),
+    ],
+  });
+  for (const category of derivedCategories) {
+    addFilter(filters, {
+      key: "category",
+      label: "Category",
+      value: category,
+      weight: 88,
+      confidence: 0.84,
+    });
   }
 
   // Category signals from thin briefs (preferred — never mandatory). Without this,

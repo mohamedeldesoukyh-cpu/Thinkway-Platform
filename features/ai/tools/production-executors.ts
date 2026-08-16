@@ -34,6 +34,7 @@ import {
   buildCreatorContentIdea,
   composeCreatorSlate,
 } from "@/features/campaign-studio/services/creator-slate";
+import { deriveCreatorCategoriesFromBrief } from "@/features/campaign-studio/services/derive-creator-categories";
 import { detectIndustryFromBrief } from "@/features/campaign-studio/services/industry-intelligence";
 import { getIndustryCreatorMix } from "@/features/campaign-studio/services/presentation-intelligence";
 
@@ -144,13 +145,17 @@ export async function executeSearchCreatorsProduction(
   const industry = detectIndustryFromBrief(rawQuery);
   const slate = composeCreatorSlate(dedupedCreators, {
     platforms: input.platforms ?? resolved.merged.platforms,
-    tierMix: getIndustryCreatorMix(industry).map((t) => ({
+    tierMix: getIndustryCreatorMix(industry, rawQuery).map((t) => ({
       tier: t.tier,
       percent: t.percent,
     })),
+    preferredCategories: deriveCreatorCategoriesFromBrief({
+      briefText: rawQuery,
+      objective: rawQuery,
+    }),
   });
   const factsLite = { objective: rawQuery, rawBriefExcerpt: rawQuery };
-  const slateCreators = slate.creators.map((creator, index) => ({
+  const poolCreators = dedupedCreators.map((creator, index) => ({
     ...creator,
     contentIdea:
       creator.contentIdea ?? buildCreatorContentIdea(creator, factsLite, index),
@@ -165,7 +170,7 @@ export async function executeSearchCreatorsProduction(
   }, { path: "ai" });
 
   const output = {
-    creators: slateCreators,
+    creators: poolCreators,
     total: result.total,
   };
 

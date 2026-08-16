@@ -13,8 +13,8 @@ test("Egypt market keeps Egypt creators and drops UAE-only creators", () => {
   assert.equal(vendorCountryMatchesCampaignMarkets("UAE", ["Egypt"]), false);
   assert.equal(vendorCountryMatchesCampaignMarkets("United Arab Emirates", ["Egypt"]), false);
   assert.equal(vendorCountryMatchesCampaignMarkets("UAE · Egypt", ["Egypt"]), false);
-  assert.equal(vendorCountryMatchesCampaignMarkets("—", ["Egypt"]), false);
-  assert.equal(vendorCountryMatchesCampaignMarkets(undefined, ["Egypt"]), false);
+  assert.equal(vendorCountryMatchesCampaignMarkets("—", ["Egypt"]), true);
+  assert.equal(vendorCountryMatchesCampaignMarkets(undefined, ["Egypt"]), true);
 });
 
 test("UAE market keeps UAE creators", () => {
@@ -70,6 +70,6 @@ test("audience-only country codes are not treated as home", () => {
       { countryCodes: ["EG"], audienceCountries: ["EG"] },
       ["Egypt"]
     ),
-    false
+    true
   );
 });

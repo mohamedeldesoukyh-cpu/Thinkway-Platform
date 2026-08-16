@@ -1,3 +1,4 @@
+import { isMassAwarenessCreatorBrief } from "./derive-creator-categories";
 import {
   detectIndustryFromBrief,
   getIndustryProfile,
@@ -441,7 +442,13 @@ export function deriveCreatorMix(
 }
 
 /** Strategy tier mix per industry — the SSOT the creator slate must track. */
-export function getIndustryCreatorMix(industry: CampaignIndustry): CreatorMixTier[] {
+export function getIndustryCreatorMix(
+  industry: CampaignIndustry,
+  contextText?: string
+): CreatorMixTier[] {
+  if (industry === "finance" && contextText && isMassAwarenessCreatorBrief(contextText)) {
+    return MIX_BY_INDUSTRY.telecom.filter((tier) => tier.percent > 0 || tier.count > 0);
+  }
   return MIX_BY_INDUSTRY[industry] ?? MIX_BY_INDUSTRY.general;
 }
 
