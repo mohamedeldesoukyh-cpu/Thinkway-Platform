@@ -1,15 +1,14 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop`  
-**Focus:** FB creator name "search" fix · FB snapshots
+**Focus:** Performance report Design System v2 (HTML/PDF)
 
 ## Shipping
 
-- Facebook `/search` URLs no longer become handle/name `search`
-- Reserved FB shell paths shared; Performance hides shell/placeholder handles
-- Prior: FB og:image entity decode · Apify FB chain · compact metrics · QR · Added Value separator
+- Thinkway Report Design System v2 applied to performance report preview + PDF
+- Shared `renderPerformanceReportHtml` (sheets, cover, TOC, pcard grid, dividers)
 
 ## Shipped prior
 
-- FB snapshots / report polish (`e8438522` / prod `68236d25`)
-- Performance select-all / last update / enrichment summary
+- FB creator name “search” fix (`54205b1c` / `403ceba8`)
+- FB snapshots / report polish (`e8438522` / `68236d25`)
