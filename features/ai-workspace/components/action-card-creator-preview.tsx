@@ -5,13 +5,12 @@ import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 import { Button } from "@/components/ui/button";
 import { getUnifiedCreatorsBatchAction } from "@/features/campaigns/creator-discovery-actions";
 import type { CreatorDrawerSelection } from "@/features/campaign-decision-workspace/components/creator-drawer";
-import { STUDIO_VENDOR_INITIAL_VISIBLE } from "@/features/campaign-studio/constants/hydration-limits";
+import { STUDIO_VENDOR_INITIAL_VISIBLE, STUDIO_CREATOR_HYDRATION_LIMIT } from "@/features/campaign-studio/constants/hydration-limits";
 import { useCreatorHydration } from "@/features/campaign-studio/hooks/use-creator-hydration";
 import type { HydrationMapperOptions } from "@/features/campaign-studio/services/creator-hydration-mapper";
 import { DiscoveryCreatorDetailHost } from "@/features/discovery/components/discovery-creator-detail-host";
 import { DiscoveryCreatorExactRow } from "@/features/discovery/components/discovery-creator-exact-row";
 import { DiscoveryLoadingState } from "@/features/discovery/components/design-system";
-import { dedupeByCreatorId } from "@/lib/creators/dedupe-creators";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
 import { AI_TERMINOLOGY } from "../constants/ai-copy";
@@ -72,22 +71,14 @@ export function ActionCardCreatorPreview({
     return ids.slice(0, STUDIO_VENDOR_INITIAL_VISIBLE);
   }, [creators, ids]);
 
-  const { vendors: hydrated, loading } = useCreatorHydration(
+  const { loading } = useCreatorHydration(
     hydrationIds,
     undefined,
     undefined,
     hydrationOptions
   );
 
-  const displayIds = useMemo(() => {
-    if (hydrated.length > 0) {
-      return dedupeByCreatorId(
-        hydrated.map((v) => ({ id: v.id })),
-        (c) => c.id
-      ).items.map((c) => c.id);
-    }
-    return ids;
-  }, [hydrated, ids]);
+  const displayIds = useMemo(() => ids, [ids]);
 
   useEffect(() => {
     if (displayIds.length === 0) {
@@ -97,7 +88,9 @@ export function ActionCardCreatorPreview({
 
     startTransition(async () => {
       try {
-        const rows = await getUnifiedCreatorsBatchAction(displayIds);
+        const rows = await getUnifiedCreatorsBatchAction(
+          displayIds.slice(0, STUDIO_CREATOR_HYDRATION_LIMIT)
+        );
         setUnifiedCreators(rows.filter(Boolean));
       } catch {
         setUnifiedCreators([]);

@@ -1,25 +1,20 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop`  
-**Focus:** Studio Intake — market-filtered creators, missing-field dropdowns, visible Next
+**Focus:** Studio Creators — 51 screened vs 1-name slate is incomplete, not Discovery sufficient
 
 ## Shipping (Dev + Production, this session)
 
-- Country / platforms / deliverables / KPIs are dropdowns or chips
-- Visible process: Intake → Strategy → Creators → Content → Commercial → Package, plus **Next: Strategy**
-- Recommended creators filtered to campaign market (Egypt keeps Egypt / Egypt · Italy; drops UAE-only)
-- Creator matches action card hidden on Intake (belongs on Creators)
-- Discovery waits for Confirm even when facts already exist
-- Invented audience / inferred platforms stay Missing on Intake
+- Inventory uses screened profile count, not the locked slate size
+- 1 recommended vs 11 required is Insufficient, not Discovery sufficient
+- Creator matches no longer collapse to the first hydrated row
+- Recommendations can show the discovery pool when it is larger than the locked slate
 
 ## Already on Dev + Production
 
+- Intake market filter, missing-field chips, Next: Strategy
 - Confirm campaign advances to Strategy
-- Progress meter while the brief is being read
-- CIP is created at workflow start from chat text
-- Stale “INPUT REQUIRED: budget” hides once budget is on Campaign Facts
-- Duration helper shows `1 month / 4 weeks`
-- Later steps stay Blocked until Confirm
+- CIP from chat brief; later steps Blocked until Confirm
 
 Dev: https://dev.thinkwaymedia.com  
 Prod: https://app.thinkwaymedia.com  

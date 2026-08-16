@@ -867,17 +867,17 @@ export function VendorRecommendationsSection({
   );
 
   const parsedVendors = resolveVendorRecommendations(campaignObject);
-  const {
-    ids: persistedIds,
-    rationale,
-    avgFitScore,
-    creatorFitScores,
-  } = resolveCreatorIds(campaignObject, { recommendationsOnly: true });
+  const { ids: persistedIds, rationale, avgFitScore, creatorFitScores } = resolveCreatorIds(
+    campaignObject,
+    { recommendationsOnly: true }
+  );
   const previewIds = previewCreatorsData.recommendations?.creatorIds ?? [];
   const usingDraftPreview = draft.changes.length > 0 && previewIds.length > 0;
-  const ids = usingDraftPreview ? previewIds : persistedIds;
+  const { recommendationIds, discoveryIds } = resolveCreatorCounts(campaignObject);
+  const slateIds = usingDraftPreview ? previewIds : persistedIds;
+  const ids =
+    !usingDraftPreview && discoveryIds.length > slateIds.length ? discoveryIds : slateIds;
   const safeRationale = isEmptyGlobalRationale(rationale) ? undefined : rationale;
-  const { recommendationIds } = resolveCreatorCounts(campaignObject);
   const hasCommittedRecommendations = recommendationIds.length > 0;
   const pendingProposal = creatorsData.pendingProposal;
   const isRegeneratingProposal = pendingProposal?.status === "generating";
