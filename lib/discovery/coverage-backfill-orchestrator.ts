@@ -28,7 +28,7 @@ import {
   isApifyLiveOnly,
   shouldSkipDatabaseBrowse,
 } from "@/lib/discovery/control-center/discovery-control-policy";
-import { getDiscoveryControlSettings } from "@/lib/discovery/control-center/discovery-control-service";
+import { getDiscoveryControlSettings, getCachedDiscoveryControlSettings } from "@/lib/discovery/control-center/discovery-control-service";
 import {
   browseFiltersHaveBackfillIntent,
   maybeTriggerBrowseCoverageBackfill,
@@ -56,7 +56,9 @@ export async function browseUnifiedCreatorsWithCoverageBackfill(
   const searchId = randomUUID();
   const page = Math.max(1, filters.page ?? 1);
   const shouldEvaluate = page === 1 && browseFiltersHaveBackfillIntent(filters);
-  const settings = await getDiscoveryControlSettings(supabase);
+  const settings = shouldEvaluate
+    ? await getDiscoveryControlSettings(supabase)
+    : getCachedDiscoveryControlSettings();
   const coverageConfig = getDiscoveryCoverageConfig(settings);
   const intelligenceConfig = getIntelligenceSufficiencyConfig(settings);
   const useIntelligenceGate = isDatasetAcquisitionBackfillEnabled();

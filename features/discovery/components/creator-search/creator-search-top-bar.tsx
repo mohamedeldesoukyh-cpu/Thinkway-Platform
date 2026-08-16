@@ -1,6 +1,6 @@
 "use client";
 
-import { UserPlusIcon, WandSparklesIcon } from "lucide-react";
+import { PlusIcon, WandSparklesIcon } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -93,21 +93,16 @@ export function CreatorSearchToolbarControls({
         </Tooltip>
 
         {onAddMissingCreator ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className={discoveryToolbarBtnClass()}
-                aria-label="Add missing creator"
-                onClick={onAddMissingCreator}
-              >
-                <UserPlusIcon {...DISCOVERY_TOOLBAR_ICON_PROPS} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">Add missing creator</TooltipContent>
-          </Tooltip>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className={cn(discoveryToolbarBtnClass(), "h-8 gap-1 px-2 text-xs font-semibold")}
+            onClick={onAddMissingCreator}
+          >
+            <PlusIcon {...DISCOVERY_TOOLBAR_ICON_PROPS} />
+            <span className="whitespace-nowrap">Add missing creator</span>
+          </Button>
         ) : null}
       </div>
     </TooltipProvider>

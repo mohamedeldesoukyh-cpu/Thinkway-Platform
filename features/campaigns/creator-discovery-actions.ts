@@ -18,7 +18,6 @@ import { STUDIO_CREATOR_HYDRATION_LIMIT } from "@/features/campaign-studio/const
 import type { UnifiedCreatorBrowseFilters, UnifiedCreatorBrowseResult, UnifiedCreatorResult } from "@/lib/creators/types";
 import { createDiscoverySearchPerf } from "@/lib/creators/discovery-search-perf";
 import { mapDiscoverySearchError } from "@/lib/creators/discovery-search-error";
-import { withTimeBudget } from "@/lib/creators/with-time-budget";
 import { searchTrace } from "@/lib/creators/search-trace";
 import { browseUnifiedCreatorsWithCoverageBackfill } from "@/lib/discovery/coverage-backfill-orchestrator";
 import type { BrowseInvocationTrace } from "@/lib/discovery/browse-invocation-trace";
@@ -172,8 +171,6 @@ export type BrowseUnifiedCreatorsActionResult = UnifiedCreatorBrowseResult & {
   error?: string;
 };
 
-const DISCOVERY_ECI_BUDGET_MS = 2500;
-
 function emptyBrowseResult(
   filters: UnifiedCreatorBrowseFilters,
   error: string
@@ -222,31 +219,16 @@ export async function browseUnifiedCreatorsAction(
   searchTrace("3_unified_browse_filters", { browseFilters: filters }, { path: "discovery" });
   try {
     const result = await browseUnifiedCreatorsWithCoverageBackfill(supabase, filters, "discovery");
-    const creators = await withTimeBudget(
-      enrichCreatorsWithEciInvestment(supabase, result.creators, {
-        platform: filters.platform ?? filters.platforms?.[0] ?? null,
-        concurrency: 6,
-      }).catch((error) => {
-        captureException(error, {
-          route: "browseUnifiedCreatorsAction",
-          service: "discovery-search",
-          extra: { stage: "eci" },
-        });
-        return result.creators;
-      }),
-      DISCOVERY_ECI_BUDGET_MS,
-      result.creators
-    );
     searchTrace("9_final_creator_count", {
       total: result.total,
-      creatorCount: creators.length,
+      creatorCount: result.creators.length,
       internal_count: result.internal_count,
       discovery_count: result.discovery_count,
       coverage_level: result.coverage?.coverageLevel ?? null,
       backfill_queued: result.backfill?.queued ?? false,
       backfill_completed: result.backfill?.completed ?? false,
     }, { path: "discovery" });
-    return { ...result, creators };
+    return result;
   } catch (error) {
     const message = mapDiscoverySearchError(error);
     captureException(error, {

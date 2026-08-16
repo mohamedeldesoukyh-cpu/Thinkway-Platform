@@ -1,13 +1,13 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Loader2Icon, RotateCwIcon, SearchXIcon, UserPlusIcon } from "lucide-react";
+import { Loader2Icon, PlusIcon, RotateCwIcon, SearchXIcon } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
   DiscoveryEmptyState,
-  DiscoverySearchExactListSkeleton,
+  DiscoveryLoadingState,
 } from "@/features/discovery/components/design-system";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { resolveCreatorCheckboxState } from "@/features/creators/picker/creator-selection-hooks";
@@ -267,6 +267,19 @@ export function CreatorSearchResultList({
   return (
     <div className="discovery-search-exact-root">
       <div className="discovery-search-exact-header-bar">
+        {onOpenAddMissingCreator ? (
+          <div className="discovery-search-add-missing-bar">
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 shrink-0 gap-1.5 rounded-full px-3 text-xs font-semibold"
+              onClick={onOpenAddMissingCreator}
+            >
+              <PlusIcon className="size-3.5" strokeWidth={2.5} />
+              Add missing creator
+            </Button>
+          </div>
+        ) : null}
         <CreatorSearchExactHeader
           total={total}
           allSelected={allSelected}
@@ -275,31 +288,17 @@ export function CreatorSearchResultList({
           toolbar={headerToolbar}
           countLabel={exactMatchesCountLabel}
         />
-        {(inFlightCount > 0 && onStopAllRefresh) || onOpenAddMissingCreator ? (
-          <div className="flex justify-end gap-2 pb-2">
-            {inFlightCount > 0 && onStopAllRefresh ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="xs"
-                className="h-7 shrink-0 rounded-full text-xs"
-                onClick={onStopAllRefresh}
-              >
-                Stop all refresh ({inFlightCount})
-              </Button>
-            ) : null}
-            {onOpenAddMissingCreator ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="xs"
-                className="h-7 shrink-0 gap-1 rounded-full text-xs"
-                onClick={onOpenAddMissingCreator}
-              >
-                <UserPlusIcon className="size-3.5" />
-                Add missing creator
-              </Button>
-            ) : null}
+        {inFlightCount > 0 && onStopAllRefresh ? (
+          <div className="flex justify-end pb-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              className="h-7 shrink-0 rounded-full text-xs"
+              onClick={onStopAllRefresh}
+            >
+              Stop all refresh ({inFlightCount})
+            </Button>
           </div>
         ) : null}
       </div>
@@ -326,7 +325,10 @@ export function CreatorSearchResultList({
             />
           </DiscoveryEmptyState>
         ) : loading && !hasCreators ? (
-          <DiscoverySearchExactListSkeleton />
+          <DiscoveryLoadingState
+            message="Loading creators"
+            className="min-h-[min(100%,420px)]"
+          />
         ) : !hasCreators ? (
           <>
             {exactCreatorEmptyState ? (

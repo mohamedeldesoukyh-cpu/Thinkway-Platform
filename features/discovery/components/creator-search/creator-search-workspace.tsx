@@ -46,6 +46,7 @@ import {
 import { removeUnifiedCreatorFromShortlists } from "@/features/discovery/shortlists/remove-from-shortlist-client";
 import { needsPlatformAccountSelection } from "@/features/discovery/shortlists/platform-account-selection";
 import type { ShortlistCampaignOption } from "@/features/discovery/queries";
+import { loadCreatorSearchChromeAction } from "@/features/discovery/creator-search-chrome-actions";
 import { createQuotationFromSelection } from "@/features/quotations/actions";
 import { quotationDetailPath } from "@/features/quotations/constants";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
@@ -126,7 +127,7 @@ import {
 } from "@/features/campaign-intelligence-profile/services/search-strategy";
 import type { CampaignIntelligenceProfile, CampaignSearchCriterion } from "@/features/campaign-intelligence-profile/types/profile";
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 24;
 /** Max creators loaded for AI campaign scoring before Apify acquisition completes. */
 const AI_CAMPAIGN_PAGE_SIZE = 200;
 /** Relaxed pool size for zero-results recommendations (manual filter mode). */
@@ -164,7 +165,7 @@ type Props = {
 
 export function CreatorSearchWorkspace({
   shortlists: initialShortlists,
-  campaigns,
+  campaigns: initialCampaigns,
   searchTaxonomyTerms,
   initialBriefState = null,
 }: Props) {
@@ -176,6 +177,8 @@ export function CreatorSearchWorkspace({
   const profileIdFromUrl = searchParams.get("profileId");
   const aiModeFromUrl = searchParams.get("mode") === "ai";
   const [shortlists, setShortlists] = useState(initialShortlists);
+  const [campaigns, setCampaigns] = useState(initialCampaigns);
+  const [taxonomyTerms, setTaxonomyTerms] = useState(searchTaxonomyTerms);
   const [filters, setFilters] = useState<CreatorSearchFilters>(() => initialFiltersFromUrl);
   const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
   const [sort, setSort] = useState<CreatorSearchSortState>(DEFAULT_CREATOR_SEARCH_SORT);
@@ -188,8 +191,8 @@ export function CreatorSearchWorkspace({
   const [error, setError] = useState<string | null>(null);
   const [addMissingOpen, setAddMissingOpen] = useState(false);
   const searchTaxonomy = useMemo(
-    () => buildDiscoverySearchTaxonomyIndex(searchTaxonomyTerms),
-    [searchTaxonomyTerms]
+    () => buildDiscoverySearchTaxonomyIndex(taxonomyTerms),
+    [taxonomyTerms]
   );
   const [backfillStatus, setBackfillStatus] = useState<string | null>(null);
   const [acquisitionPolling, setAcquisitionPolling] = useState(false);
@@ -1164,6 +1167,19 @@ export function CreatorSearchWorkspace({
   useEffect(() => {
     return () => {
       abortRef.current?.abort();
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadCreatorSearchChromeAction().then((chrome) => {
+      if (cancelled) return;
+      setShortlists(chrome.shortlists);
+      setCampaigns(chrome.campaigns);
+      setTaxonomyTerms(chrome.searchTaxonomyTerms);
+    });
+    return () => {
+      cancelled = true;
     };
   }, []);
 

@@ -3018,6 +3018,13 @@
   background: #fff;
 }
 
+.discovery-search-add-missing-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 0 12px;
+}
+
 .discovery-search-exact-scroll {
   min-height: 0;
   flex: 1;

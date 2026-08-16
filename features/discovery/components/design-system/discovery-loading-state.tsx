@@ -1,7 +1,6 @@
 "use client";
 
-import { Loader2Icon } from "lucide-react";
-
+import { ThinkwayPageLoader } from "@/components/layout/thinkway-page-loader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -10,22 +9,21 @@ type DiscoveryLoadingStateProps = {
   className?: string;
 };
 
-/** Full-region loading indicator — Search-aligned typography. */
+/** Full-region loading — Thinkway logo while Search (and other Discovery surfaces) wait. */
 export function DiscoveryLoadingState({
-  message = "Loading…",
+  message = "Loading",
   className,
 }: DiscoveryLoadingStateProps) {
   return (
     <div
       className={cn(
-        "flex flex-1 flex-col items-center justify-center gap-3 py-24 text-sm text-[var(--text-3)]",
+        "flex flex-1 flex-col items-center justify-center py-24",
         className
       )}
       role="status"
       aria-live="polite"
     >
-      <Loader2Icon className="size-6 animate-spin text-[#0057ff]" aria-hidden />
-      <span>{message}</span>
+      <ThinkwayPageLoader label={message} />
     </div>
   );
 }
