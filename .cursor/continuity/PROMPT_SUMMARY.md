@@ -1,14 +1,13 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop`  
-**Focus:** Performance report Design System v2 (HTML/PDF)
+**Focus:** Campaign Avg ER formula (all posts ÷ agreed)
 
-## Shipping
+## In progress
 
-- Thinkway Report Design System v2 applied to performance report preview + PDF
-- Shared `renderPerformanceReportHtml` (sheets, cover, TOC, pcard grid, dividers)
+- Campaign `average_engagement_rate` = sum(ER of all pubs incl. added value) ÷ agreed publication count (not mean of ER count)
 
 ## Shipped prior
 
-- FB creator name “search” fix (`54205b1c` / `403ceba8`)
-- FB snapshots / report polish (`e8438522` / `68236d25`)
+- Performance report Design System v2 · Dev `00abd263` · Prod `5f26f352`
+- FB creator name “search” fix · FB snapshots / report polish
