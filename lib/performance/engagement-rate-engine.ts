@@ -202,3 +202,18 @@ export function metricsSourceBadgeLabel(badge: MetricsSourceBadge): string {
       return "Automatic";
   }
 }
+
+/**
+ * Campaign / group Avg ER: sum of all publication ERs (incl. added value),
+ * divided by agreed publication count only (added value excluded from n).
+ */
+export function averageEngagementRateAgainstAgreed(
+  engagementRates: ReadonlyArray<number | null | undefined>,
+  agreedPublicationCount: number
+): number | null {
+  const values = engagementRates.filter(
+    (value): value is number => value != null && Number.isFinite(value)
+  );
+  if (values.length === 0 || agreedPublicationCount <= 0) return null;
+  return values.reduce((sum, value) => sum + value, 0) / agreedPublicationCount;
+}

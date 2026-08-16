@@ -17,7 +17,10 @@ import {
   resolvePublicationCreatorAvatar,
   resolvePublicationEffectivePlatform,
 } from "@/lib/performance/creator-avatar";
-import { computeEngagementSnapshot } from "@/lib/performance/engagement-rate-engine";
+import {
+  averageEngagementRateAgainstAgreed,
+  computeEngagementSnapshot,
+} from "@/lib/performance/engagement-rate-engine";
 import { computeImpressionsForecast } from "@/lib/performance/impressions-forecast-engine";
 import { sanitizeMetricValue } from "@/lib/performance/metrics-collector/merge-metrics";
 import type { CampaignMetricsSyncHealth } from "@/lib/performance/metrics-collector/types";
@@ -353,9 +356,6 @@ function buildSummary(publications: CampaignPublicationRow[]): CampaignPerforman
   ).length;
 
   // Campaign Avg ER: sum ER across all posts (agreed + added value), divide by agreed count only.
-  const erValues = publications
-    .map((p) => p.engagement_rate)
-    .filter((v): v is number => v != null);
   const cpmValues = publications.map((p) => p.cpm).filter((v): v is number => v != null);
   const cpvValues = publications.map((p) => p.cpv).filter((v): v is number => v != null);
 
@@ -387,10 +387,10 @@ function buildSummary(publications: CampaignPublicationRow[]): CampaignPerforman
     total_manual_impressions,
     total_views,
     total_engagements,
-    average_engagement_rate:
-      erValues.length > 0 && agreed_publications > 0
-        ? erValues.reduce((a, b) => a + b, 0) / agreed_publications
-        : null,
+    average_engagement_rate: averageEngagementRateAgainstAgreed(
+      publications.map((p) => p.engagement_rate),
+      agreed_publications
+    ),
     average_cpm: cpmValues.length > 0 ? cpmValues.reduce((a, b) => a + b, 0) / cpmValues.length : null,
     average_cpv: cpvValues.length > 0 ? cpvValues.reduce((a, b) => a + b, 0) / cpvValues.length : null,
     top_creator_name,

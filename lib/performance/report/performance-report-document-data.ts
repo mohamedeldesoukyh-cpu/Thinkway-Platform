@@ -6,7 +6,8 @@ import type {
 } from "@/lib/domains/campaign/types";
 import { getCampaignPerformanceBundle } from "@/lib/services/campaigns/campaign-publication-service";
 import { getPlatformOptionLabel } from "@/lib/campaigns/deliverable-taxonomy";
-import { partitionPublicationsByValueScope } from "@/lib/performance/publication-value-scope";
+import { partitionPublicationsByValueScope, resolvePublicationValueScope } from "@/lib/performance/publication-value-scope";
+import { averageEngagementRateAgainstAgreed } from "@/lib/performance/engagement-rate-engine";
 import { resolvePublicationRowCreatorAvatar } from "@/lib/performance/creator-avatar";
 import { createPublicationMediaSignedUrl } from "@/lib/performance/screenshot-capture/storage";
 import { embedCampaignPublicationPreview } from "@/lib/performance/report/embed-publication-previews";
@@ -74,22 +75,28 @@ function buildHighlights(bundle: CampaignPerformanceBundle): CampaignHighlights 
 }
 
 function buildPlatformBenchmarks(bundle: CampaignPerformanceBundle): PlatformBenchmark[] {
-  const byPlatform = new Map<string, { ers: number[]; count: number }>();
+  const byPlatform = new Map<
+    string,
+    { ers: number[]; agreedCount: number; totalCount: number }
+  >();
   for (const pub of bundle.publications) {
     const key = pub.platform;
-    const entry = byPlatform.get(key) ?? { ers: [], count: 0 };
-    entry.count += 1;
+    const entry = byPlatform.get(key) ?? { ers: [], agreedCount: 0, totalCount: 0 };
+    entry.totalCount += 1;
+    if (resolvePublicationValueScope(pub) === "agreed") entry.agreedCount += 1;
     if (pub.engagement_rate != null) entry.ers.push(pub.engagement_rate);
     byPlatform.set(key, entry);
   }
 
-  return [...byPlatform.entries()].map(([platform, stats]) => ({
-    platform,
-    label: getPlatformOptionLabel(platform),
-    averageEr:
-      stats.ers.length > 0 ? stats.ers.reduce((a, b) => a + b, 0) / stats.ers.length : null,
-    publicationCount: stats.count,
-  }));
+  return [...byPlatform.entries()]
+    .filter(([, stats]) => stats.agreedCount > 0)
+    .map(([platform, stats]) => ({
+      platform,
+      label: getPlatformOptionLabel(platform),
+      averageEr: averageEngagementRateAgainstAgreed(stats.ers, stats.agreedCount),
+      // Posts column = agreed n (added value excluded from denominator display)
+      publicationCount: stats.agreedCount,
+    }));
 }
 
 function buildRecommendations(
@@ -110,7 +117,7 @@ function buildRecommendations(
   )[0];
   if (topPlatform?.averageEr != null) {
     recs.push(
-      `${topPlatform.label} delivered the strongest average engagement rate (${topPlatform.averageEr.toFixed(2)}%) across ${topPlatform.publicationCount} post(s).`
+      `${topPlatform.label} delivered the strongest average engagement rate (${topPlatform.averageEr.toFixed(2)}%) across ${topPlatform.publicationCount} agreed post(s).`
     );
   }
 
@@ -326,9 +333,7 @@ async function buildInfluencerSections(
         0
       );
       const engagements = publications.reduce((s, p) => s + p.total_engagements, 0);
-      const erValues = publications
-        .map((p) => p.engagement_rate)
-        .filter((v): v is number => v != null);
+      const erValues = publications.map((p) => p.engagement_rate);
 
       return {
         influencerId,
@@ -353,8 +358,10 @@ async function buildInfluencerSections(
           actualImpressions,
           forecastImpressions,
           engagements,
-          averageEr:
-            erValues.length > 0 ? erValues.reduce((a, b) => a + b, 0) / erValues.length : null,
+          averageEr: averageEngagementRateAgainstAgreed(
+            erValues,
+            agreedPublications.length
+          ),
         },
         publications,
       };

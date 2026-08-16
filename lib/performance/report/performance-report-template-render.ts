@@ -252,7 +252,7 @@ function renderCombinedSheets(data: PerformanceReportDocumentData): string[] {
   <div class="t"><div class="tk">Flight</div><div class="tv num">${days ?? "—"}</div><div class="ts">${days ? `days · ${esc(formatDateRange(data.campaign.startDate, data.campaign.endDate))}` : esc(formatDateRange(data.campaign.startDate, data.campaign.endDate))}</div></div>
   <div class="t"><div class="tk">Platforms</div><div class="tv num">${platforms.length || scopeRows.length}</div><div class="ts">${esc((platforms.length ? platforms : scopeRows.map((r) => r.platform)).map(getReportPlatformIconTitle).join(" · ") || "—")}</div></div>
 </div>
-<div class="toc__note"><strong>A note on measurement.</strong> Reach and impressions blend actual provider data with forecasted estimates where the platform did not expose a figure. The source is labelled on every publication card. Engagement rate is calculated against reach.</div>`,
+<div class="toc__note"><strong>A note on measurement.</strong> Reach and impressions blend actual provider data with forecasted estimates where the platform did not expose a figure. The source is labelled on every publication card. Campaign Avg ER sums all publication ERs (including added value) and divides by agreed publications only.</div>`,
       footLeft: foot,
       pageLabel: pageLabel(page, totalPages),
     })
@@ -367,7 +367,7 @@ ${
       headRight: shortName,
       body: `${renderSectionHeader("03", "Benchmark & Key Insights", "Platform engagement rates and recommended actions for the next cycle.")}
 <table class="tbl">
-  <thead><tr><th>Platform</th><th class="r">Posts</th><th class="r">Avg ER</th></tr></thead>
+  <thead><tr><th>Platform</th><th class="r">Agreed posts</th><th class="r">Avg ER</th></tr></thead>
   <tbody>${data.platformBenchmarks
     .map(
       (b) =>
@@ -592,7 +592,7 @@ function renderInfluencerSheets(data: PerformanceReportDocumentData): string[] {
   <div class="s"><div class="sk">Views</div><div class="sv num">${esc(formatCompactCount(section.summary.views))}</div><div class="ss">Total</div></div>
   <div class="s"><div class="sk">Reach</div><div class="sv num">${esc(formatCompactCount(section.summary.reach))}</div><div class="ss">Total</div></div>
   <div class="s"><div class="sk">Engagements</div><div class="sv num">${esc(formatCompactCount(section.summary.engagements))}</div><div class="ss">Total</div></div>
-  <div class="s s--accent"><div class="sk">Avg. ER</div><div class="sv num">${esc(formatPercent(section.summary.averageEr, 1))}</div><div class="ss">Against reach</div></div>
+  <div class="s s--accent"><div class="sk">Avg. ER</div><div class="sv num">${esc(formatPercent(section.summary.averageEr, 1))}</div><div class="ss">All posts ÷ agreed</div></div>
   <div class="s s--green"><div class="sk">Added value</div><div class="sv num">${section.summary.addedValuePublications}</div><div class="ss">Posts</div></div>
 </div>
 <div class="pgrid">${group.map(renderPcard).join("")}</div>`

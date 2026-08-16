@@ -103,6 +103,10 @@ export async function buildPerformanceReportPptxBuffer(
     ["Views", formatCompactCount(data.bundle.summary.total_views)],
     ["Engagements", formatCompactCount(data.bundle.summary.total_engagements)],
     ["Avg ER", formatPercent(data.bundle.summary.average_engagement_rate)],
+    ...data.platformBenchmarks.map((b) => [
+      `Avg ER · ${b.label}`,
+      `${b.publicationCount} agreed · ${formatPercent(b.averageEr)}`,
+    ]),
     ...buildOptionalCostMetricKpiRows([
       {
         label: "CPM",
@@ -303,7 +307,7 @@ export async function buildPerformanceReportPptxBuffer(
         color: NAVY,
       });
       slide.addText(
-        `${section.summary.agreedPublications} publications · ${section.summary.addedValuePublications} added value · ${formatCompactCount(section.summary.views)} views · ${formatCompactCount(section.summary.reach)} reach · ${formatCompactCount(section.summary.impressions)} impressions · ${formatCompactCount(section.summary.engagements)} engagements`,
+        `${section.summary.agreedPublications} agreed · ${section.summary.addedValuePublications} added value · ${formatCompactCount(section.summary.views)} views · ${formatCompactCount(section.summary.reach)} reach · ${formatCompactCount(section.summary.impressions)} impressions · ${formatCompactCount(section.summary.engagements)} engagements · Avg ER ${formatPercent(section.summary.averageEr)}`,
         { x: 0.5, y: 1.0, w: 9, h: 0.4, fontSize: 12, color: "6B7280" }
       );
       const gallery = section.publications.slice(0, 4);
