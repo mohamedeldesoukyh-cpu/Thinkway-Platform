@@ -50,7 +50,21 @@ function clientAudienceFromBundle(
       ].filter(Boolean)
     ),
   ].slice(0, 6);
-  if (ages.length === 0 && genders.length === 0 && locations.length === 0 && interests.length === 0) {
+  const qualityLevel = bundle.audience.quality.level;
+  const qualityLabel =
+    qualityLevel === "High Quality" || qualityLevel === "Good" || qualityLevel === "Monitor"
+      ? qualityLevel
+      : undefined;
+  const growth = bundle.audience.windows.last_90_days?.growth;
+  if (
+    ages.length === 0 &&
+    genders.length === 0 &&
+    locations.length === 0 &&
+    interests.length === 0 &&
+    !qualityLabel &&
+    growth?.growthPercent == null &&
+    growth?.followerGrowth == null
+  ) {
     return null;
   }
   const locationLabel = bundle.audience.geography.primaryCountries[0];
@@ -66,6 +80,15 @@ function clientAudienceFromBundle(
     locations,
     interests,
     summary: summaryParts.length > 0 ? summaryParts.join(" · ") : undefined,
+    qualityLabel,
+    growthPercent:
+      growth?.growthPercent != null && Number.isFinite(growth.growthPercent)
+        ? growth.growthPercent
+        : undefined,
+    followerGrowth:
+      growth?.followerGrowth != null && Number.isFinite(growth.followerGrowth)
+        ? growth.followerGrowth
+        : undefined,
   };
 }
 

@@ -1,0 +1,493 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+import { formatMoneyKpi } from "@/lib/finance/currency-format";
+
+import {
+  DATA_NOT_AVAILABLE,
+  formatCompactCount,
+  formatEngagementPct,
+  formatLocation,
+  formatMatchPercent,
+  formatPlatformLabel,
+  NOT_AVAILABLE,
+  TO_BE_CONFIRMED,
+} from "../format";
+import { flagFromCountry, qualityBadge, qualityGaugePercent } from "../presentation";
+import type { ClientAudienceSlice, ClientContentPost, ClientCreatorBrief, ClientCreatorCard } from "../types";
+import { ReviewAvatar } from "./review-avatar";
+import { IconCat, IconChart, IconClose, IconIg } from "./review-icons";
+
+const REPORT_NAV = [
+  { id: "overview", label: "Overview" },
+  { id: "engagement", label: "Engagement" },
+  { id: "growth", label: "Follower growth" },
+  { id: "audience", label: "Audience" },
+  { id: "demographics", label: "Demographics" },
+  { id: "historical", label: "Historical" },
+] as const;
+
+type ReportNavId = (typeof REPORT_NAV)[number]["id"];
+
+export function AdvancedReportModal({
+  open,
+  onClose,
+  creator,
+  brief,
+  currency,
+  index,
+}: {
+  open: boolean;
+  onClose: () => void;
+  creator: ClientCreatorCard;
+  brief: ClientCreatorBrief | null;
+  currency: string;
+  index: number;
+}) {
+  const [section, setSection] = useState<ReportNavId>("overview");
+  const view = brief?.creatorId === creator.creatorId ? brief : null;
+  const audience = view?.audience ?? creator.audience;
+  const performance = view?.performance ?? creator.performance;
+  const followers = view?.followers ?? creator.followers;
+  const er = view?.engagementRate ?? creator.engagementRate ?? performance?.engagementRate;
+  const avgLikes = performance?.avgLikes ?? creator.avgLikes;
+  const reach = performance?.estimatedReach ?? creator.estimatedReach;
+  const location =
+    view?.location || formatLocation(creator.city, creator.country) || DATA_NOT_AVAILABLE;
+  const categories = view?.categories.length
+    ? view.categories
+    : creator.categories?.length
+      ? creator.categories
+      : [creator.category, creator.niche].filter((value): value is string => Boolean(value));
+  const quality = qualityBadge(audience?.qualityLabel);
+  const gauge = qualityGaugePercent(audience?.qualityLabel);
+  const match = formatMatchPercent(view?.matchPercent ?? creator.matchPercent);
+
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className="modal open" role="dialog" aria-modal="true" aria-label="Advanced report">
+      <div className="report">
+        <div className="rp-bar">
+          <p className="t">
+            Advanced report
+            <span className="b">Creator report</span>
+          </p>
+          <button type="button" className="rp-close" onClick={onClose} aria-label="Close">
+            <IconClose />
+          </button>
+        </div>
+        <div className="rp-head">
+          <ReviewAvatar
+            className="portrait"
+            initialsClassName="ini"
+            url={view?.avatarUrl || creator.avatarUrl}
+            name={view?.displayName || creator.displayName}
+            index={index}
+          >
+            {isInstagram(view?.platform || creator.platform) ? (
+              <span className="ig">
+                <IconIg />
+              </span>
+            ) : null}
+          </ReviewAvatar>
+          <div className="rp-kpis">
+            <div className="rp-kpi">
+              <p className="l">Followers</p>
+              <p className="v">{formatCompactCount(followers)}</p>
+            </div>
+            <div className="rp-kpi">
+              <p className="l">Engagement</p>
+              <p className="v">{formatEngagementPct(er)}</p>
+            </div>
+            <div className="rp-kpi">
+              <p className="l">Avg likes</p>
+              <p className="v">{formatCompactCount(avgLikes)}</p>
+            </div>
+            <div className="rp-kpi">
+              <p className="l">Est. reach</p>
+              <p className="v">{formatCompactCount(reach)}</p>
+            </div>
+          </div>
+        </div>
+        <nav className="rp-nav">
+          {REPORT_NAV.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={item.id === section ? "on" : undefined}
+              onClick={() => setSection(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
+        <div className="rp-body">
+          {section === "overview" ? (
+            <OverviewSection
+              creator={creator}
+              view={view}
+              location={location}
+              categories={categories}
+              match={match}
+              currency={currency}
+            />
+          ) : null}
+          {section === "engagement" ? (
+            <EngagementSection creator={creator} performance={performance} />
+          ) : null}
+          {section === "growth" ? <GrowthSection audience={audience} /> : null}
+          {section === "audience" ? (
+            <AudienceSection audience={audience} quality={quality} gauge={gauge} />
+          ) : null}
+          {section === "demographics" ? <DemographicsSection audience={audience} /> : null}
+          {section === "historical" ? (
+            <div className="rp-sec">
+              <p className="st">Historical</p>
+              <p className="unavailable">Historical performance series unavailable</p>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OverviewSection({
+  creator,
+  view,
+  location,
+  categories,
+  match,
+  currency,
+}: {
+  creator: ClientCreatorCard;
+  view: ClientCreatorBrief | null;
+  location: string;
+  categories: string[];
+  match?: string;
+  currency: string;
+}) {
+  const handle = view?.handle || creator.handle;
+  const platform = formatPlatformLabel(view?.platform || creator.platform);
+  const bio = view?.bio || creator.bio;
+  const fit = view?.campaignFit || creator.fitExplanation;
+  const investment =
+    (view?.investmentAmount ?? creator.investmentAmount) != null
+      ? formatMoneyKpi(
+          view?.investmentAmount ?? creator.investmentAmount ?? 0,
+          view?.investmentCurrency ?? creator.investmentCurrency ?? currency
+        )
+      : TO_BE_CONFIRMED;
+  return (
+    <>
+      <div className="rp-sec">
+        <p className="st">Profile</p>
+        <p className="rp-big">
+          <span className="n">{view?.displayName || creator.displayName}</span>
+        </p>
+        <p className="desc">
+          {[handle, platform, `${flagFromCountry(creator.country)} ${location}`.trim()]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+        <p className="desc" style={{ marginTop: 10 }}>
+          {bio?.trim() || DATA_NOT_AVAILABLE}
+        </p>
+      </div>
+      <div className="rp-sec">
+        <p className="st">Campaign fit</p>
+        {match ? (
+          <div className="rp-big">
+            <span className="n">{match}</span>
+            <span className="badge exc">Match</span>
+          </div>
+        ) : null}
+        <p className="desc">{fit?.trim() || TO_BE_CONFIRMED}</p>
+      </div>
+      <div className="rp-sec">
+        <p className="st">Categories</p>
+        {categories.length > 0 ? (
+          <div className="cats">
+            {categories.slice(0, 6).map((category) => (
+              <div className="catc" key={category}>
+                <div className="ic">
+                  <IconCat />
+                </div>
+                <p className="l">{category}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="unavailable">Category unavailable</p>
+        )}
+      </div>
+      <div className="rp-sec">
+        <p className="st">Investment</p>
+        <p className="rp-big">
+          <span className="n">{investment}</span>
+        </p>
+      </div>
+    </>
+  );
+}
+
+function EngagementSection({
+  creator,
+  performance,
+}: {
+  creator: ClientCreatorCard;
+  performance: ClientCreatorCard["performance"];
+}) {
+  const likes = performance?.avgLikes ?? creator.avgLikes;
+  const comments = performance?.avgComments ?? creator.avgComments;
+  const views = performance?.avgViews ?? creator.avgViews;
+  const er = performance?.engagementRate ?? creator.engagementRate;
+  const reach = performance?.estimatedReach ?? creator.estimatedReach;
+  return (
+    <div className="rp-sec">
+      <p className="st">Engagement</p>
+      <div className="trio">
+        <Metric label="Avg likes" value={formatCompactCount(likes)} />
+        <Metric label="Avg comments" value={formatCompactCount(comments)} />
+        <Metric label="Avg views" value={formatCompactCount(views)} />
+      </div>
+      <div className="duo" style={{ marginTop: 12 }}>
+        <Metric label="Engagement rate" value={formatEngagementPct(er)} />
+        <Metric label="Est. reach" value={formatCompactCount(reach)} />
+      </div>
+      <p className="desc" style={{ marginTop: 12 }}>
+        {performance?.engagementExplanation ||
+          performance?.likesExplanation ||
+          "Engagement figures use stored creator performance for this proposal."}
+      </p>
+    </div>
+  );
+}
+
+function GrowthSection({ audience }: { audience: ClientCreatorCard["audience"] }) {
+  if (audience?.growthPercent == null && audience?.followerGrowth == null) {
+    return (
+      <div className="rp-sec">
+        <p className="st">Follower growth</p>
+        <p className="unavailable">Follower growth unavailable</p>
+      </div>
+    );
+  }
+  return (
+    <div className="rp-sec">
+      <p className="st">Follower growth</p>
+      <div className="duo">
+        {audience.growthPercent != null ? (
+          <Metric
+            label="Growth"
+            value={`${audience.growthPercent > 0 ? "+" : ""}${audience.growthPercent.toFixed(1)}%`}
+          />
+        ) : null}
+        {audience.followerGrowth != null ? (
+          <Metric label="Follower change" value={formatCompactCount(audience.followerGrowth)} />
+        ) : null}
+      </div>
+      <p className="desc" style={{ marginTop: 12 }}>
+        Growth is shown as a verified change only. A historical sparkline is not available.
+      </p>
+    </div>
+  );
+}
+
+function AudienceSection({
+  audience,
+  quality,
+  gauge,
+}: {
+  audience: ClientCreatorCard["audience"];
+  quality?: { className: string; text: string };
+  gauge?: number;
+}) {
+  if (!audience) {
+    return (
+      <div className="rp-sec">
+        <p className="st">Audience</p>
+        <p className="unavailable">Audience data unavailable</p>
+      </div>
+    );
+  }
+  return (
+    <>
+      <div className="rp-sec">
+        <p className="st">Audience quality</p>
+        {quality && gauge != null ? (
+          <>
+            <div className="bench">
+              <span className="n">{quality.text}</span>
+              <span className={`badge ${quality.className}`}>{audience.qualityLabel}</span>
+            </div>
+            <div className="gauge">
+              <span className="mk" style={{ left: `calc(${gauge}% - 2px)` }} />
+            </div>
+            <div className="gauge-l">
+              <span>Monitor</span>
+              <span>Good</span>
+              <span>High</span>
+            </div>
+          </>
+        ) : (
+          <p className="unavailable">Audience quality unavailable</p>
+        )}
+        {audience.summary ? <p className="desc" style={{ marginTop: 12 }}>{audience.summary}</p> : null}
+      </div>
+      <div className="rp-sec">
+        <p className="st">Interests</p>
+        {audience.interests.length > 0 ? (
+          <div className="cats">
+            {audience.interests.slice(0, 6).map((interest) => (
+              <div className="catc" key={interest}>
+                <div className="ic">
+                  <IconChart />
+                </div>
+                <p className="l">{interest}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="unavailable">Interests unavailable</p>
+        )}
+      </div>
+    </>
+  );
+}
+
+function DemographicsSection({ audience }: { audience: ClientCreatorCard["audience"] }) {
+  if (!audience || (audience.ages.length === 0 && audience.genders.length === 0 && audience.locations.length === 0)) {
+    return (
+      <div className="rp-sec">
+        <p className="st">Demographics</p>
+        <p className="unavailable">Demographics unavailable</p>
+      </div>
+    );
+  }
+  const female = audience.genders.find((slice) => /female|women/i.test(slice.label));
+  const male = audience.genders.find((slice) => /male|men/i.test(slice.label) && !/female/i.test(slice.label));
+  return (
+    <div className="demo">
+      <div>
+        <p className="st">Age</p>
+        {audience.ages.length > 0 ? <SliceBars items={audience.ages} /> : <p className="unavailable">Age unavailable</p>}
+        <p className="st" style={{ marginTop: 22 }}>
+          Gender
+        </p>
+        {female?.percent != null || male?.percent != null ? (
+          <>
+            <div className="gsplit">
+              <span className="f" style={{ width: `${female?.percent ?? 0}%` }} />
+              <span className="m" style={{ width: `${male?.percent ?? 0}%` }} />
+            </div>
+            <div className="glabels">
+              <span>
+                Female <b>{female?.percent != null ? `${Math.round(female.percent)}%` : NOT_AVAILABLE}</b>
+              </span>
+              <span>
+                Male <b>{male?.percent != null ? `${Math.round(male.percent)}%` : NOT_AVAILABLE}</b>
+              </span>
+            </div>
+          </>
+        ) : audience.genders.length > 0 ? (
+          <SliceBars items={audience.genders} />
+        ) : (
+          <p className="unavailable">Gender unavailable</p>
+        )}
+      </div>
+      <div>
+        <p className="st">Locations</p>
+        {audience.locations.length > 0 ? (
+          <SliceBars items={audience.locations} />
+        ) : (
+          <p className="unavailable">Location mix unavailable</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SliceBars({ items }: { items: ClientAudienceSlice[] }) {
+  const max = Math.max(...items.map((item) => item.percent ?? 0), 1);
+  return (
+    <div className="barset">
+      {items.map((item) => (
+        <div className="bar" key={item.label}>
+          <span className="bl">{item.label}</span>
+          <span className="bt">
+            <span className="bf" style={{ width: `${((item.percent ?? 0) / max) * 100}%` }} />
+          </span>
+          <span className="bn">{item.percent != null ? `${Math.round(item.percent)}%` : "—"}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="mc">
+      <p className="l">{label}</p>
+      <p className="v sm">{value}</p>
+    </div>
+  );
+}
+
+export function isInstagram(platform?: string): boolean {
+  return platform?.trim().toLowerCase() === "instagram";
+}
+
+export function ContentFeatureGrid({ posts }: { posts: ClientContentPost[] }) {
+  const [hidden, setHidden] = useState<Record<number, boolean>>({});
+  if (posts.length === 0) {
+    return <p className="unavailable">Recent content unavailable</p>;
+  }
+  return (
+    <div className="posts-feat">
+      {posts.slice(0, 5).map((post, index) => {
+        const className = index === 0 ? "post big" : "post";
+        const inner = (
+          <>
+            {post.thumbnail && !hidden[index] ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={post.thumbnail}
+                alt=""
+                onError={() => setHidden((current) => ({ ...current, [index]: true }))}
+              />
+            ) : null}
+            {post.platform ? <span className="tagp">{formatPlatformLabel(post.platform)}</span> : null}
+            <span className="lk">{post.likes != null ? formatCompactCount(post.likes) : NOT_AVAILABLE}</span>
+          </>
+        );
+        const key = `${post.url ?? post.thumbnail ?? index}`;
+        return post.url ? (
+          <a key={key} className={className} href={post.url} target="_blank" rel="noreferrer">
+            {inner}
+          </a>
+        ) : (
+          <div key={key} className={className}>
+            {inner}
+          </div>
+        );
+      })}
+    </div>
+  );
+}

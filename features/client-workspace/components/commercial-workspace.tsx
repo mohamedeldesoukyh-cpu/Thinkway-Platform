@@ -3,7 +3,7 @@ import { formatMoneyKpi } from "@/lib/finance/currency-format";
 import { formatPlatformLabel, NOT_AVAILABLE, providedText, TO_BE_CONFIRMED } from "../format";
 import { allocationSlices, rosterHeadline } from "../presentation";
 import type { ClientWorkspaceView } from "../types";
-import { MetricCard, MixBars, Panel } from "./media-plan-ui";
+import { ReviewAvatar } from "./review-avatar";
 
 export function CommercialWorkspace({ view }: { view: ClientWorkspaceView }) {
   const commercial = view.commercial;
@@ -16,69 +16,97 @@ export function CommercialWorkspace({ view }: { view: ClientWorkspaceView }) {
   ];
   const deliverableCount = view.mediaPlanSummary.activityMix.reduce((sum, item) => sum + item.count, 0);
   const allocation = allocationSlices(commercial);
-  const extraLines = commercial.lines.filter((line) =>
-    !view.creators.some((creator) => creator.displayName === line.label)
+  const extraLines = commercial.lines.filter(
+    (line) => !view.creators.some((creator) => creator.displayName === line.label)
   );
+  const maxAlloc = Math.max(...(allocation?.map((item) => item.count) ?? [1]), 1);
 
   return (
-    <div className="space-y-5">
-      <Panel eyebrow="Campaign investment" title="Total investment">
-        <p className="text-3xl font-semibold tracking-tight">
+    <>
+      <div className="card">
+        <p className="ck">Campaign investment</p>
+        <h2>
           {commercial.totalInvestment > 0
             ? formatMoneyKpi(commercial.totalInvestment, commercial.currency)
             : TO_BE_CONFIRMED}
-        </p>
-        <p className="mt-2 text-sm text-zinc-500">
+        </h2>
+        <p className="note">
           {rosterHeadline(view.creators.length)} · Proposal v{view.review.reviewNumber}
           {view.quotation?.serialNumber ? ` · ${view.quotation.serialNumber}` : ""}
         </p>
-        <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <MetricCard label="Creators" value={String(view.creators.length)} />
-          <MetricCard
-            label="Deliverables"
-            value={deliverableCount > 0 ? String(deliverableCount) : TO_BE_CONFIRMED}
-          />
-          <MetricCard
-            label="Platforms"
-            value={platforms.length > 0 ? platforms.join(" · ") : NOT_AVAILABLE}
-          />
-          <MetricCard
-            label="Campaign duration"
-            value={providedText(view.overview.durationLabel, TO_BE_CONFIRMED)}
-          />
+        <div className="glance">
+          <div className="gi">
+            <p className="l">Creators</p>
+            <p className="v">{view.creators.length}</p>
+          </div>
+          <div className="gi">
+            <p className="l">Deliverables</p>
+            <p className={deliverableCount > 0 ? "v" : "v tbc"}>
+              {deliverableCount > 0 ? String(deliverableCount) : TO_BE_CONFIRMED}
+            </p>
+          </div>
+          <div className="gi">
+            <p className="l">Platforms</p>
+            <p className={platforms.length ? "v" : "v tbc"}>
+              {platforms.length ? platforms.join(" · ") : NOT_AVAILABLE}
+            </p>
+          </div>
+          <div className="gi">
+            <p className="l">Duration</p>
+            <p className={view.overview.durationLabel?.trim() ? "v" : "v tbc"}>
+              {providedText(view.overview.durationLabel, TO_BE_CONFIRMED)}
+            </p>
+          </div>
         </div>
-      </Panel>
+      </div>
 
       {allocation ? (
-        <Panel eyebrow="Budget allocation" title="How the investment is split">
-          <MixBars items={allocation} />
-        </Panel>
+        <div className="card">
+          <p className="ck">Budget allocation</p>
+          <h2>How the investment is split</h2>
+          <div className="barset">
+            {allocation.map((item) => (
+              <div className="bar" key={item.label}>
+                <span className="bl">{item.label}</span>
+                <span className="bt">
+                  <span className="bf" style={{ width: `${(item.count / maxAlloc) * 100}%` }} />
+                </span>
+                <span className="bn">{item.count}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
       ) : null}
 
-      <Panel eyebrow="Creator investment" title="Proposed roster">
-        <div className="hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+      <div className="card">
+        <p className="ck">Creator investment</p>
+        <h2>Proposed roster</h2>
+        <div className="tbl-scroll">
+          <table className="tbl">
+            <thead>
               <tr>
-                <th className="pb-3 pr-4">Creator</th>
-                <th className="pb-3 pr-4">Platform</th>
-                <th className="pb-3 pr-4">Deliverables</th>
-                <th className="pb-3 text-right">Investment</th>
+                <th>Creator</th>
+                <th>Platform</th>
+                <th>Deliverables</th>
+                <th className="r">Investment</th>
               </tr>
             </thead>
             <tbody>
-              {view.creators.map((creator) => (
-                <tr key={creator.creatorId} className="border-t border-zinc-100">
-                  <td className="py-3 pr-4 font-medium">{creator.displayName}</td>
-                  <td className="py-3 pr-4 text-zinc-600">
-                    {formatPlatformLabel(creator.platform) ?? NOT_AVAILABLE}
+              {view.creators.map((creator, index) => (
+                <tr key={creator.creatorId}>
+                  <td className="name">
+                    <span className="tblname">
+                      <ReviewAvatar className="av-sm" url={creator.avatarUrl} name={creator.displayName} index={index} />
+                      {creator.displayName}
+                    </span>
                   </td>
-                  <td className="py-3 pr-4 text-zinc-600">
+                  <td>{formatPlatformLabel(creator.platform) ?? NOT_AVAILABLE}</td>
+                  <td>
                     {creator.deliverables ||
                       creator.deliverableItems?.map((item) => `${item.quantity ?? 1} ${item.type}`).join(" · ") ||
                       TO_BE_CONFIRMED}
                   </td>
-                  <td className="py-3 text-right font-semibold">
+                  <td className="r">
                     {creator.investmentAmount != null
                       ? formatMoneyKpi(creator.investmentAmount, creator.investmentCurrency ?? commercial.currency)
                       : TO_BE_CONFIRMED}
@@ -87,21 +115,17 @@ export function CommercialWorkspace({ view }: { view: ClientWorkspaceView }) {
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t border-zinc-200">
-                <td className="pt-3 font-semibold" colSpan={3}>
-                  Subtotal · creator investment
-                </td>
-                <td className="pt-3 text-right font-semibold">
+              <tr>
+                <td colSpan={3}>Subtotal · creator investment</td>
+                <td className="r">
                   {commercial.creatorInvestment > 0
                     ? formatMoneyKpi(commercial.creatorInvestment, commercial.currency)
                     : TO_BE_CONFIRMED}
                 </td>
               </tr>
               <tr>
-                <td className="pt-1 font-semibold" colSpan={3}>
-                  Total campaign investment
-                </td>
-                <td className="pt-1 text-right text-base font-semibold">
+                <td colSpan={3}>Total campaign investment</td>
+                <td className="r">
                   {commercial.totalInvestment > 0
                     ? formatMoneyKpi(commercial.totalInvestment, commercial.currency)
                     : TO_BE_CONFIRMED}
@@ -110,55 +134,30 @@ export function CommercialWorkspace({ view }: { view: ClientWorkspaceView }) {
             </tfoot>
           </table>
         </div>
-        <div className="space-y-3 md:hidden">
-          {view.creators.map((creator) => (
-            <article key={creator.creatorId} className="rounded-2xl bg-zinc-50 px-4 py-3">
-              <p className="font-semibold">{creator.displayName}</p>
-              <p className="text-sm text-zinc-500">
-                {formatPlatformLabel(creator.platform) ?? NOT_AVAILABLE} ·{" "}
-                {creator.deliverables || TO_BE_CONFIRMED}
-              </p>
-              <p className="mt-1 font-semibold">
-                {creator.investmentAmount != null
-                  ? formatMoneyKpi(creator.investmentAmount, creator.investmentCurrency ?? commercial.currency)
-                  : TO_BE_CONFIRMED}
-              </p>
-            </article>
-          ))}
-          <p className="flex justify-between text-sm font-semibold">
-            <span>Total campaign investment</span>
-            <span>
-              {commercial.totalInvestment > 0
-                ? formatMoneyKpi(commercial.totalInvestment, commercial.currency)
-                : TO_BE_CONFIRMED}
-            </span>
-          </p>
-        </div>
-      </Panel>
+      </div>
 
       {extraLines.length > 0 ? (
-        <Panel
-          eyebrow="Additional commercial items"
-          title={view.quotation?.serialNumber ? view.quotation.serialNumber : "Proposal commercial items"}
-        >
+        <div className="card">
+          <p className="ck">Additional commercial items</p>
+          <h2>{view.quotation?.serialNumber ?? "Proposal commercial items"}</h2>
           {view.quotation?.name ? (
-            <p className="mb-3 text-sm text-zinc-500">
+            <p className="note">
               {view.quotation.name}
               {view.quotation.version ? ` · Version ${view.quotation.version}` : ""}
             </p>
           ) : null}
-          <ul className="space-y-2 text-sm">
+          <div className="clist">
             {extraLines.map((line) => (
-              <li key={line.label} className="flex justify-between gap-4">
-                <span>{line.label}</span>
-                <span>
+              <div className="cli" key={line.label}>
+                <span className="nm">{line.label}</span>
+                <span className="rt">
                   {line.amount != null ? formatMoneyKpi(line.amount, commercial.currency) : TO_BE_CONFIRMED}
                 </span>
-              </li>
+              </div>
             ))}
-          </ul>
-        </Panel>
+          </div>
+        </div>
       ) : null}
-    </div>
+    </>
   );
 }

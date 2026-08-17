@@ -20,7 +20,7 @@ export function ClientWorkspaceSectionView({
 }) {
   if (section === "creators") return <CreatorsWorkspace view={view} token={token} />;
   if (section === "overview" || section === "strategy" || section === "timeline") {
-    return <OverviewWorkspace view={view} />;
+    return <OverviewWorkspace view={view} token={token} />;
   }
   if (section === "content") return <ContentPlanWorkspace view={view} />;
   if (section === "commercial" || section === "quotation") return <CommercialWorkspace view={view} />;

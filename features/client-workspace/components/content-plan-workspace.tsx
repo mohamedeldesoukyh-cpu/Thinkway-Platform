@@ -1,66 +1,93 @@
 import { formatPlatformLabel, providedText, TO_BE_CONFIRMED } from "../format";
 import type { ClientWorkspaceView } from "../types";
-import { Panel } from "./media-plan-ui";
 
 export function ContentPlanWorkspace({ view }: { view: ClientWorkspaceView }) {
+  const keyMessage = view.content.find((row) => row.keyMessage)?.keyMessage;
+  const cta = view.content.find((row) => row.cta)?.cta;
+  const direction = view.strategyBody?.split("\n")[0];
+
   return (
-    <div className="space-y-5">
-      <Panel eyebrow="Content plan" title="What creators will deliver">
-        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Fact label="Campaign objective" value={providedText(view.overview.objective, TO_BE_CONFIRMED)} />
-          <Fact
-            label="Content direction"
-            value={providedText(view.strategyBody?.split("\n")[0], "Content direction to be confirmed")}
-          />
-          <Fact
-            label="Key message"
-            value={providedText(view.content.find((row) => row.keyMessage)?.keyMessage, TO_BE_CONFIRMED)}
-          />
-          <Fact
-            label="CTA"
-            value={providedText(view.content.find((row) => row.cta)?.cta, TO_BE_CONFIRMED)}
-          />
-          <Fact label="Timing" value={providedText(view.overview.durationLabel, TO_BE_CONFIRMED)} />
-        </dl>
-      </Panel>
+    <>
+      <div className="card">
+        <p className="ck">Content plan</p>
+        <h2>What creators will deliver</h2>
+        <div className="glance">
+          <div className="gi">
+            <p className="l">Campaign objective</p>
+            <p className={view.overview.objective?.trim() ? "v" : "v tbc"}>
+              {providedText(view.overview.objective, TO_BE_CONFIRMED)}
+            </p>
+          </div>
+          <div className="gi">
+            <p className="l">Content direction</p>
+            <p className={direction?.trim() ? "v" : "v tbc"}>
+              {providedText(direction, "Content direction to be confirmed")}
+            </p>
+          </div>
+          <div className="gi">
+            <p className="l">Key message</p>
+            <p className={keyMessage?.trim() ? "v" : "v tbc"}>{providedText(keyMessage, TO_BE_CONFIRMED)}</p>
+          </div>
+          <div className="gi">
+            <p className="l">CTA</p>
+            <p className={cta?.trim() ? "v" : "v tbc"}>{providedText(cta, TO_BE_CONFIRMED)}</p>
+          </div>
+          <div className="gi">
+            <p className="l">Timing</p>
+            <p className={view.overview.durationLabel?.trim() ? "v" : "v tbc"}>
+              {providedText(view.overview.durationLabel, TO_BE_CONFIRMED)}
+            </p>
+          </div>
+        </div>
+      </div>
 
       {view.content.length > 0 ? (
-        <div className="space-y-3">
-          {view.content.map((row, index) => (
-            <article
-              key={`${row.creatorId ?? row.creatorName}-${index}`}
-              className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-lg font-semibold tracking-tight">{row.creatorName}</h3>
-                  <p className="text-sm text-zinc-500">
-                    {formatPlatformLabel(row.platform) ?? row.platform} · {row.deliverable || TO_BE_CONFIRMED}
-                  </p>
-                </div>
-                <p className="text-sm text-zinc-500">{providedText(row.timing, "Timing to be confirmed")}</p>
+        view.content.map((row, index) => (
+          <div className="card" key={`${row.creatorId ?? row.creatorName}-${index}`}>
+            <p className="ck">{formatPlatformLabel(row.platform) ?? row.platform}</p>
+            <h2>{row.creatorName}</h2>
+            <p className="note">{row.deliverable || TO_BE_CONFIRMED}</p>
+            <div className="glance">
+              <div className="gi">
+                <p className="l">Content concept</p>
+                <p className={row.contentConcept?.trim() ? "v" : "v tbc"}>
+                  {providedText(row.contentConcept, TO_BE_CONFIRMED)}
+                </p>
               </div>
-              <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-                <Fact label="Content concept" value={providedText(row.contentConcept, TO_BE_CONFIRMED)} />
-                <Fact label="Hook" value={providedText(row.hook, TO_BE_CONFIRMED)} />
-                <Fact label="Key message" value={providedText(row.keyMessage, TO_BE_CONFIRMED)} />
-                <Fact label="CTA" value={providedText(row.cta, TO_BE_CONFIRMED)} />
-              </dl>
-            </article>
-          ))}
-        </div>
+              <div className="gi">
+                <p className="l">Hook</p>
+                <p className={row.hook?.trim() ? "v" : "v tbc"}>{providedText(row.hook, TO_BE_CONFIRMED)}</p>
+              </div>
+              <div className="gi">
+                <p className="l">Key message</p>
+                <p className={row.keyMessage?.trim() ? "v" : "v tbc"}>
+                  {providedText(row.keyMessage, TO_BE_CONFIRMED)}
+                </p>
+              </div>
+              <div className="gi">
+                <p className="l">CTA</p>
+                <p className={row.cta?.trim() ? "v" : "v tbc"}>{providedText(row.cta, TO_BE_CONFIRMED)}</p>
+              </div>
+              <div className="gi">
+                <p className="l">Timing</p>
+                <p className={row.timing?.trim() ? "v" : "v tbc"}>
+                  {providedText(row.timing, "Timing to be confirmed")}
+                </p>
+              </div>
+            </div>
+          </div>
+        ))
       ) : (
-        <Panel title="Creator content">
-          <p className="text-sm text-zinc-500">Content direction to be confirmed</p>
+        <div className="card">
+          <p className="ck">Creator content</p>
+          <h2>Assigned creators</h2>
+          <p className="note">Content direction to be confirmed</p>
           {view.creators.length > 0 ? (
-            <div className="mt-4 space-y-2">
+            <div className="clist">
               {view.creators.map((creator) => (
-                <div
-                  key={creator.creatorId}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-zinc-50 px-4 py-3 text-sm"
-                >
-                  <span className="font-medium">{creator.displayName}</span>
-                  <span className="text-zinc-500">
+                <div className="cli" key={creator.creatorId}>
+                  <span className="nm">{creator.displayName}</span>
+                  <span className="rt">
                     {formatPlatformLabel(creator.platform) ?? "Platform to be confirmed"} ·{" "}
                     {creator.deliverables || TO_BE_CONFIRMED}
                   </span>
@@ -68,17 +95,8 @@ export function ContentPlanWorkspace({ view }: { view: ClientWorkspaceView }) {
               ))}
             </div>
           ) : null}
-        </Panel>
+        </div>
       )}
-    </div>
-  );
-}
-
-function Fact({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">{label}</dt>
-      <dd className="mt-1 text-sm leading-relaxed text-zinc-800">{value}</dd>
-    </div>
+    </>
   );
 }

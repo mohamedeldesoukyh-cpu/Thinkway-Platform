@@ -12,6 +12,8 @@ import { deliverablesLabel, groupedActivityMix } from "./deliverables";
 import {
   allocationSlices,
   containsInternalTerminology,
+  qualityBadge,
+  qualityGaugePercent,
   rosterHeadline,
   rosterSourceLine,
   strategicPillars,
@@ -488,6 +490,7 @@ test("HypeAuditor parity matrix covers the required media-plan capabilities", ()
     "Content Plan",
     "Overview",
     "Feedback collaboration",
+    "Advanced report",
   ];
   for (const capability of required) {
     const row = HYPEAUDITOR_MEDIA_PLAN_PARITY.find((item) => item.capability === capability);
@@ -548,5 +551,61 @@ test("client-facing copy never exposes internal intelligence or commercial inter
   assert.equal(containsInternalTerminology("ECI score 91"), true);
   assert.equal(containsInternalTerminology("vendor cost and GP margin"), true);
   assert.equal(clientSafeFitCopy("Strong UAE fit. Discovery Engine fingerprint graph."), "Strong UAE fit.");
+});
+
+test("audience quality maps to a display gauge without inventing AQS or ROI", () => {
+  assert.equal(qualityGaugePercent("High Quality"), 88);
+  assert.equal(qualityGaugePercent("Good"), 72);
+  assert.equal(qualityGaugePercent("Monitor"), 48);
+  assert.equal(qualityGaugePercent(undefined), undefined);
+  assert.equal(qualityBadge("High Quality")?.text, "Excellent");
+  assert.equal(containsInternalTerminology("AQS 72"), false);
+  assert.equal(containsInternalTerminology("ROI 102%"), false);
+});
+
+test("snapshot preserves frozen audience quality and growth without fabricating series", () => {
+  const snapshot = parseSourceSnapshot({
+    source: "shortlist",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme Legal",
+    platforms: ["instagram"],
+    deliverables: [],
+    creators: [
+      {
+        creatorId: "a",
+        displayName: "A",
+        audience: {
+          frozenAt: "2026-08-17T00:00:00.000Z",
+          ages: [{ label: "25-34", percent: 42 }],
+          genders: [{ label: "Female", percent: 61 }],
+          locations: [{ label: "United Arab Emirates", percent: 70 }],
+          interests: ["Lifestyle"],
+          qualityLabel: "High Quality",
+          growthPercent: 4.2,
+          followerGrowth: 1200,
+        },
+      },
+    ],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "Duration not confirmed", phases: [] },
+    commercial: {
+      currency: "EGP",
+      creatorInvestment: 0,
+      totalInvestment: 0,
+      lines: [],
+      selectedCount: 1,
+      totalCount: 1,
+    },
+    creatorIds: ["a"],
+  });
+  assert.ok(snapshot);
+  const audience = snapshot!.creators[0]?.audience;
+  assert.equal(audience?.qualityLabel, "High Quality");
+  assert.equal(audience?.growthPercent, 4.2);
+  assert.equal(audience?.followerGrowth, 1200);
+  const brief = briefFromSnapshotCreator(snapshot!.creators[0]!);
+  assert.equal(brief.audience?.qualityLabel, "High Quality");
+  assert.equal(brief.audience?.growthPercent, 4.2);
 });
 

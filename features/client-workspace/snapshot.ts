@@ -53,6 +53,9 @@ function parseAudience(value: unknown): ClientAudienceBrief | undefined {
     locations: parseSlices(value.locations),
     interests: asStringArray(value.interests) ?? [],
     summary: asString(value.summary),
+    qualityLabel: asString(value.qualityLabel),
+    growthPercent: asNumber(value.growthPercent),
+    followerGrowth: asNumber(value.followerGrowth),
   };
 }
 

@@ -3,12 +3,9 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
-
 import { addReviewCommentAction } from "../actions/client-workspace-actions";
 import type { ClientCommentTargetType } from "../constants";
 import type { ClientWorkspaceView } from "../types";
-import { Panel, StatusPill } from "./media-plan-ui";
 
 export function FeedbackWorkspace({
   view,
@@ -31,22 +28,30 @@ export function FeedbackWorkspace({
   }, [filter, view.comments]);
 
   return (
-    <div className="space-y-5">
-      <Panel eyebrow="Feedback & change requests" title="Collaborate on this proposal">
-        <div className="grid grid-cols-3 gap-3">
-          <SummaryStat label="Open" value={openCount} />
-          <SummaryStat label="Resolved" value={resolvedCount} />
-          <SummaryStat label="Pending" value={openCount} />
+    <>
+      <div className="fstats">
+        <div className="fstat open">
+          <p className="l">Open</p>
+          <p className="v">{openCount}</p>
         </div>
-      </Panel>
+        <div className="fstat">
+          <p className="l">Resolved</p>
+          <p className="v">{resolvedCount}</p>
+        </div>
+        <div className="fstat">
+          <p className="l">Pending</p>
+          <p className="v">{openCount}</p>
+        </div>
+      </div>
 
       {view.canDecide ? (
-        <Panel title="Create a request">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="text-sm">
-              <span className="mb-1 block text-zinc-500">Category</span>
+        <div className="card">
+          <p className="ck">Feedback & change requests</p>
+          <h2>Create a request</h2>
+          <div className="duo" style={{ marginBottom: 14 }}>
+            <label className="fl">
+              Category
               <select
-                className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm"
                 value={targetType}
                 onChange={(event) => setTargetType(event.target.value as ClientCommentTargetType)}
               >
@@ -57,13 +62,9 @@ export function FeedbackWorkspace({
               </select>
             </label>
             {targetType === "creator" ? (
-              <label className="text-sm">
-                <span className="mb-1 block text-zinc-500">Creator</span>
-                <select
-                  className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm"
-                  value={creatorId}
-                  onChange={(event) => setCreatorId(event.target.value)}
-                >
+              <label className="fl">
+                Creator
+                <select value={creatorId} onChange={(event) => setCreatorId(event.target.value)}>
                   {view.creators.map((creator) => (
                     <option key={creator.creatorId} value={creator.creatorId}>
                       {creator.displayName}
@@ -73,94 +74,78 @@ export function FeedbackWorkspace({
               </label>
             ) : null}
           </div>
+          <label className="fl">Request</label>
           <textarea
-            className="mt-3 min-h-28 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm"
             value={message}
             onChange={(event) => setMessage(event.target.value)}
             placeholder="Describe the change you would like Thinkway to make."
           />
-          <Button
-            className="mt-3 bg-[#1D9E75] hover:bg-[#178A65]"
-            disabled={pending || !message.trim()}
-            onClick={() =>
-              startTransition(async () => {
-                await addReviewCommentAction({
-                  token,
-                  targetType,
-                  targetId: targetType === "creator" ? creatorId : undefined,
-                  message,
-                });
-                setMessage("");
-                router.refresh();
-              })
-            }
-          >
-            Send request
-          </Button>
-        </Panel>
+          <div className="dt-acts" style={{ marginTop: 14 }}>
+            <button
+              type="button"
+              className="btn primary"
+              disabled={pending || !message.trim()}
+              onClick={() =>
+                startTransition(async () => {
+                  await addReviewCommentAction({
+                    token,
+                    targetType,
+                    targetId: targetType === "creator" ? creatorId : undefined,
+                    message,
+                  });
+                  setMessage("");
+                  router.refresh();
+                })
+              }
+            >
+              Send request
+            </button>
+          </div>
+        </div>
       ) : null}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="filters">
         {(["all", "open", "resolved"] as const).map((item) => (
           <button
             key={item}
             type="button"
+            className={filter === item ? "fbtn active" : "fbtn"}
             onClick={() => setFilter(item)}
-            className={
-              filter === item
-                ? "rounded-full bg-zinc-900 px-3 py-1 text-sm text-white"
-                : "rounded-full bg-zinc-100 px-3 py-1 text-sm text-zinc-600"
-            }
           >
             {item === "all" ? "All" : item === "open" ? "Open" : "Resolved"}
           </button>
         ))}
       </div>
 
-      <div className="space-y-3">
-        {threads.map((comment) => (
-          <article
-            key={comment.id}
-            className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-semibold">
-                {comment.authorKind === "client" ? "Client" : "Thinkway"}
-                <span className="ml-2 font-normal text-zinc-500">
-                  {comment.targetType}
-                  {comment.targetId
-                    ? ` · ${view.creators.find((creator) => creator.creatorId === comment.targetId)?.displayName ?? ""}`
-                    : ""}
-                </span>
-              </p>
-              <StatusPill tone={comment.status === "open" ? "warning" : "positive"}>
-                {comment.status === "open" ? "Open" : "Resolved"}
-              </StatusPill>
-            </div>
-            <p className="mt-3 text-sm leading-relaxed text-zinc-800">{comment.message}</p>
-            {comment.authorKind === "client" ? (
-              <p className="mt-3 rounded-xl bg-zinc-50 px-3 py-2 text-sm text-zinc-500">
-                Thinkway: Request received
-              </p>
-            ) : null}
-            <p className="mt-2 text-xs text-zinc-400">{new Date(comment.createdAt).toLocaleString()}</p>
-          </article>
-        ))}
-        {threads.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-zinc-200 bg-white px-4 py-8 text-center text-sm text-zinc-500">
-            No feedback yet. Requests will appear here as a conversation with Thinkway.
+      {threads.map((comment) => (
+        <div className="card" key={comment.id}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <p className="ck" style={{ margin: 0 }}>
+              {comment.authorKind === "client" ? "Client" : "Thinkway"}
+              {comment.targetType === "creator" && comment.targetId
+                ? ` · ${view.creators.find((creator) => creator.creatorId === comment.targetId)?.displayName ?? ""}`
+                : ` · ${comment.targetType}`}
+            </p>
+            <span className={comment.status === "open" ? "sc" : "sc ok"}>
+              {comment.status === "open" ? "Open" : "Resolved"}
+            </span>
+          </div>
+          <p style={{ fontSize: 14, lineHeight: 1.55, margin: "12px 0 0" }}>{comment.message}</p>
+          {comment.authorKind === "client" ? (
+            <p className="note" style={{ margin: "12px 0 0" }}>
+              Thinkway: Request received
+            </p>
+          ) : null}
+          <p className="unavailable" style={{ marginTop: 10 }}>
+            {new Date(comment.createdAt).toLocaleString()}
           </p>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function SummaryStat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-2xl bg-zinc-50 px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold">{value}</p>
-    </div>
+        </div>
+      ))}
+      {threads.length === 0 ? (
+        <div className="card">
+          <p className="unavailable">No feedback yet. Requests will appear here as a conversation with Thinkway.</p>
+        </div>
+      ) : null}
+    </>
   );
 }

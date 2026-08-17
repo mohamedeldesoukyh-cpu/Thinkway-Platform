@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { ClientWorkspaceSectionView } from "@/features/client-workspace/components/client-workspace-section-view";
 import { ClientWorkspaceShell } from "@/features/client-workspace/components/client-workspace-shell";
+import { InvalidReviewLink } from "@/features/client-workspace/components/client-review-entry";
 import { CLIENT_WORKSPACE_SECTIONS, type ClientWorkspaceSectionId } from "@/features/client-workspace/constants";
 import { loadClientWorkspace } from "@/features/client-workspace/load-client-workspace";
 import { resolveReviewToken } from "@/features/client-workspace/security/resolve-request-token";
@@ -19,19 +20,11 @@ export default async function ClientWorkspaceSectionPage({ params, searchParams 
   const query = await searchParams;
   const token = await resolveReviewToken(reviewId, query.sign);
   if (!token) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F7F7F5] px-4 text-sm text-zinc-500">
-        This review link is not available.
-      </div>
-    );
+    return <InvalidReviewLink />;
   }
   const loaded = await loadClientWorkspace(token);
   if (!loaded.ok || loaded.view.review.id !== reviewId) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F7F7F5] px-4 text-sm text-zinc-500">
-        {loaded.ok ? "This review link is not available." : loaded.message}
-      </div>
-    );
+    return <InvalidReviewLink message={loaded.ok ? undefined : loaded.message} />;
   }
   if (!loaded.view.visibleSections.includes(section as ClientWorkspaceSectionId)) {
     notFound();

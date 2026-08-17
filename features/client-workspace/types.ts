@@ -38,6 +38,9 @@ export type ClientAudienceBrief = {
   locations: ClientAudienceSlice[];
   interests: string[];
   summary?: string;
+  qualityLabel?: string;
+  growthPercent?: number;
+  followerGrowth?: number;
 };
 
 export type ClientPerformanceBrief = {

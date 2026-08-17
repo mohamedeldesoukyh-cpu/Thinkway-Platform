@@ -18,6 +18,10 @@ export function proposedCreatorCount(creators: Array<{ creatorId: string }>): nu
   return creators.length;
 }
 
+export function proposalSubtitle(): string {
+  return "Influencer marketing proposal";
+}
+
 export function rosterHeadline(count: number): string {
   const noun = count === 1 ? "creator" : "creators";
   return `${count} ${noun} proposed`;
@@ -177,8 +181,73 @@ export function containsInternalTerminology(text: string | undefined): boolean {
   );
 }
 
-export function proposalSubtitle(): string {
-  return "Influencer Marketing Proposal";
+export const AVATAR_GRADS = [
+  "linear-gradient(135deg,#0057FF,#1A6FFF)",
+  "linear-gradient(135deg,#7F77DD,#534AB7)",
+  "linear-gradient(135deg,#1D9E75,#0F6E56)",
+  "linear-gradient(135deg,#D85A30,#993C1D)",
+  "linear-gradient(135deg,#378ADD,#0C447C)",
+  "linear-gradient(135deg,#D4537E,#72243E)",
+];
+
+export function initialsFromName(name: string): string {
+  const latin = name.match(/[A-Za-z]+/g);
+  if (latin && latin.length) {
+    return (latin[0]![0] + (latin[1]?.[0] ?? latin[0]![1] ?? "")).toUpperCase();
+  }
+  const arabic = name.match(/[\u0600-\u06FF]+/g);
+  if (arabic && arabic.length) {
+    return arabic[0]![0] + (arabic[1]?.[0] ?? arabic[0]![1] ?? "");
+  }
+  return "TW";
+}
+
+export function flagFromCountry(value?: string): string {
+  if (!value?.trim()) return "";
+  const raw = value.trim();
+  const named: Record<string, string> = {
+    AE: "AE",
+    UAE: "AE",
+    "United Arab Emirates": "AE",
+    KW: "KW",
+    Kuwait: "KW",
+    SA: "SA",
+    "Saudi Arabia": "SA",
+    QA: "QA",
+    Qatar: "QA",
+    EG: "EG",
+    Egypt: "EG",
+  };
+  const code = named[raw] ?? (raw.length === 2 ? raw.toUpperCase() : "");
+  if (!/^[A-Z]{2}$/.test(code)) return "";
+  return String.fromCodePoint(...[...code].map((char) => 127397 + char.charCodeAt(0)));
+}
+
+export function qualityGaugePercent(label?: string): number | undefined {
+  if (label === "High Quality") return 88;
+  if (label === "Good") return 72;
+  if (label === "Monitor") return 48;
+  return undefined;
+}
+
+export function qualityBadge(label?: string): { className: string; text: string } | undefined {
+  if (label === "High Quality") return { className: "exc", text: "Excellent" };
+  if (label === "Good") return { className: "avg", text: "Good" };
+  if (label === "Monitor") return { className: "avg", text: "Average" };
+  return undefined;
+}
+
+export function donutGradient(slices: Array<{ count: number }>): string {
+  const colors = ["#0057FF", "#1A6FFF", "#c9d6f2", "#7F77DD"];
+  const total = slices.reduce((sum, slice) => sum + slice.count, 0) || 1;
+  let start = 0;
+  const stops = slices.map((slice, index) => {
+    const end = start + slice.count / total;
+    const stop = `${colors[index % colors.length]} ${start}turn ${end}turn`;
+    start = end;
+    return stop;
+  });
+  return `conic-gradient(${stops.join(",")})`;
 }
 
 export function viewRosterMeta(view: Pick<ClientWorkspaceView, "review" | "creators">) {

@@ -109,6 +109,12 @@ export const HYPEAUDITOR_MEDIA_PLAN_PARITY: HypeAuditorParityRow[] = [
     status: "shipped",
   },
   {
+    capability: "Advanced report",
+    thinkway: "Creator report modal matching the review design, filled from frozen snapshot/ECI consume-only; no AQS, ROI, or invented series",
+    ssot: "source_snapshot freeze-on-read via loadCreatorIntelligenceBundle + stored publications",
+    status: "shipped",
+  },
+  {
     capability: "HypeAuditor AQS",
     thinkway: "Not implemented — Thinkway does not copy proprietary authenticity scoring",
     ssot: "n/a",
