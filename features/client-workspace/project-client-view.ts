@@ -15,6 +15,7 @@ import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
 import { clientFacingAllocationNote, clientSafeFitCopy } from "./format";
 import type { ClientCreatorSelectionState } from "./constants";
 import type {
+  ClientCommercialLine,
   ClientCommercialSummary,
   ClientContentRow,
   ClientCreatorCard,
@@ -76,7 +77,7 @@ export function projectClientCommercial(
   const selectedRatio = ids.length === 0 ? 1 : selectedIds.length / ids.length;
   const total = facts?.budget?.amount ?? budget?.total ?? 0;
   const creatorInvestment = Math.round(total * selectedRatio);
-  const lines = (budget?.allocations ?? [])
+  const lines: ClientCommercialLine[] = (budget?.allocations ?? [])
     .filter((line) => !/margin|gp|cost|internal/i.test(line.category))
     .map((line) => ({
       label: line.category,
