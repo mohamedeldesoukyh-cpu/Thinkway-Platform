@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import { createClientReviewAction } from "@/features/client-workspace/actions/create-client-review-action";
 import { loadLatestClientReviewAction } from "@/features/client-workspace/actions/load-latest-client-review-action";
+import { ClientReviewShareDialog } from "@/features/client-workspace/components/client-review-share-dialog";
 import { regenerateStaleOutputsAction } from "@/features/campaign-outputs/actions/regenerate-stale-outputs";
 
 import type { CampaignStudioSectionId } from "../../types/campaign-studio";
@@ -44,6 +45,9 @@ export function PackageScreen({
     sectionStatuses,
   });
   const [busy, setBusy] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareReviewNumber, setShareReviewNumber] = useState<number | undefined>(undefined);
   const [clientReview, setClientReview] = useState<Awaited<
     ReturnType<typeof loadLatestClientReviewAction>
   >["review"]>(null);
@@ -121,12 +125,12 @@ export function PackageScreen({
       try {
         await navigator.clipboard.writeText(result.url);
       } catch {
-        /* clipboard is optional */
+        /* clipboard is optional — the share dialog still shows the URL */
       }
-      toast.success(result.message, {
-        description: result.url,
-        duration: 12_000,
-      });
+      setShareUrl(result.url);
+      setShareReviewNumber(result.reviewNumber);
+      setShareOpen(true);
+      toast.success(result.message);
       if (campaignObject.id) {
         const latest = await loadLatestClientReviewAction(campaignObject.id);
         if (latest.ok) setClientReview(latest.review);
@@ -219,6 +223,12 @@ export function PackageScreen({
       </details>
 
       <div className="min-w-0">{presentation}</div>
+      <ClientReviewShareDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        url={shareUrl}
+        reviewNumber={shareReviewNumber}
+      />
     </div>
   );
 }

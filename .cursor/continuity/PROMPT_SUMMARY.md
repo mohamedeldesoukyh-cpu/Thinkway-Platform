@@ -1,9 +1,9 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `feature/client-workspace-design-parity` (from `develop`)  
-**Focus:** Match Client Workspace HTML design (Development only)
+**Branch:** `feature/client-workspace-share-link` (from `develop`)  
+**Focus:** Show the signed Client Review URL after Send to Client (Development only)
 
-Navy tabs (Overview / Creators / Content Plan / …) were inheriting ink color so labels only appeared on hover — fixed with explicit light tab color. Creator detail and advanced report now follow the HTML section order: notes, publication mosaic with Top post, categories, CPE/CPM, geo + age/gender bars, quality gauge, engagement, reach, brand mentions; report adds ER gauge, follower sparkline from frozen months, demographics, historical table (followers / growth / following / posts). Still no AQS, bot pie, or invented ROI.
+After Send to Client, a share dialog shows the full signed `/review/...` link with Copy and Open, so the team can check it or send it to the client manually. Same dialog on quotation, shortlist, and Studio package.
 
 Do **not** deploy Production.
 

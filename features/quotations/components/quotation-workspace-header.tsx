@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 
 import { createClientReviewFromQuotationAction } from "@/features/client-workspace/actions/create-from-quotation-action";
+import { ClientReviewShareDialog } from "@/features/client-workspace/components/client-review-share-dialog";
 import { EntityPrevNext } from "@/components/navigation/entity-prev-next";
 import {
   DropdownMenu,
@@ -61,6 +62,9 @@ export function QuotationWorkspaceHeader({
   const [pending, startTransition] = useTransition();
   const [lifecycleOpen, setLifecycleOpen] = useState(false);
   const [lifecycleTab, setLifecycleTab] = useState<"links" | "activity">("links");
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareReviewNumber, setShareReviewNumber] = useState<number | undefined>(undefined);
   const campaignSeed = useMemo(() => seedFromQuotation(detail), [detail]);
 
   function runSendToClient() {
@@ -75,9 +79,12 @@ export function QuotationWorkspaceHeader({
       try {
         await navigator.clipboard.writeText(res.url);
       } catch {
-        /* clipboard is optional */
+        /* clipboard is optional — the share dialog still shows the URL */
       }
-      toast.success(res.message, { description: res.url, duration: 12_000 });
+      setShareUrl(res.url);
+      setShareReviewNumber(res.reviewNumber);
+      setShareOpen(true);
+      toast.success(res.message);
     });
   }
 
@@ -312,6 +319,12 @@ export function QuotationWorkspaceHeader({
         open={lifecycleOpen}
         onOpenChange={setLifecycleOpen}
         defaultTab={lifecycleTab}
+      />
+      <ClientReviewShareDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        url={shareUrl}
+        reviewNumber={shareReviewNumber}
       />
     </>
   );

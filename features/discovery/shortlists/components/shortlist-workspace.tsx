@@ -27,6 +27,7 @@ import { OpenCampaignStudioLauncher } from "@/features/campaign-outputs/componen
 import type { CampaignSeed } from "@/features/campaign-outputs/hydration/hydration-types";
 
 import { createClientReviewFromShortlistAction } from "@/features/client-workspace/actions/create-from-shortlist-action";
+import { ClientReviewShareDialog } from "@/features/client-workspace/components/client-review-share-dialog";
 import { discoverySelectionFlyoutContentClass } from "@/features/discovery/components/design-system/discovery-selection-flyout";
 import { shortlistDetailPath } from "@/features/discovery/shortlists/constants";
 import { cn } from "@/lib/utils";
@@ -155,6 +156,9 @@ export function ShortlistWorkspace({
   const [submitAllOpen, setSubmitAllOpen] = useState(false);
   const [quoteAllOpen, setQuoteAllOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareReviewNumber, setShareReviewNumber] = useState<number | undefined>(undefined);
   const {
     open: detailOpen,
     creator: detailCreator,
@@ -653,9 +657,12 @@ export function ShortlistWorkspace({
       try {
         await navigator.clipboard.writeText(result.url);
       } catch {
-        /* clipboard is optional */
+        /* clipboard is optional — the share dialog still shows the URL */
       }
-      toast.success(result.message, { description: result.url, duration: 12_000 });
+      setShareUrl(result.url);
+      setShareReviewNumber(result.reviewNumber);
+      setShareOpen(true);
+      toast.success(result.message);
       router.refresh();
     });
   }
@@ -1052,6 +1059,12 @@ export function ShortlistWorkspace({
         onRejectSelected={handleBulkReject}
         onCancelSelected={handleBulkCancel}
         onClearSelection={clearSelection}
+      />
+      <ClientReviewShareDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        url={shareUrl}
+        reviewNumber={shareReviewNumber}
       />
     </div>
   );
