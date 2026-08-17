@@ -54,8 +54,10 @@ function parseAudience(value: unknown): ClientAudienceBrief | undefined {
     interests: asStringArray(value.interests) ?? [],
     summary: asString(value.summary),
     qualityLabel: asString(value.qualityLabel),
+    qualityIndicators: asStringArray(value.qualityIndicators) ?? [],
     growthPercent: asNumber(value.growthPercent),
     followerGrowth: asNumber(value.followerGrowth),
+    growthTrend: asString(value.growthTrend),
   };
 }
 
@@ -91,6 +93,25 @@ function parseContentFeed(value: unknown): ClientContentPost[] | undefined {
     engagementRate: asNumber(row.engagementRate) ?? null,
   }));
   return posts.length > 0 ? posts : undefined;
+}
+
+function parseHistorical(value: unknown): ClientReviewSourceSnapshotCreator["historical"] {
+  if (!Array.isArray(value)) return undefined;
+  const rows = value
+    .filter(isRecord)
+    .map((row) => {
+      const periodMonth = asString(row.periodMonth);
+      if (!periodMonth) return null;
+      return {
+        periodMonth,
+        followers: asNumber(row.followers),
+        engagementRate: asNumber(row.engagementRate),
+        avgViews: asNumber(row.avgViews),
+        monthlyGrowthRate: asNumber(row.monthlyGrowthRate),
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => Boolean(row));
+  return rows.length > 0 ? rows : undefined;
 }
 
 function parseDeliverableItems(value: unknown): ClientDeliverableItem[] | undefined {
@@ -166,8 +187,10 @@ export function parseSnapshotCreator(row: Record<string, unknown>): ClientReview
     contentFeed: parseContentFeed(row.contentFeed),
     audience: parseAudience(row.audience),
     performance: parsePerformance(row.performance),
+    historical: parseHistorical(row.historical),
     influencerId: asString(row.influencerId),
     briefFrozenAt: asString(row.briefFrozenAt),
+    briefBackfillDone: row.briefBackfillDone === true,
   };
 }
 

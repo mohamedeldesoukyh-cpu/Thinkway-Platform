@@ -5,7 +5,13 @@ import { allocationSlices, rosterHeadline } from "../presentation";
 import type { ClientWorkspaceView } from "../types";
 import { ReviewAvatar } from "./review-avatar";
 
-export function CommercialWorkspace({ view }: { view: ClientWorkspaceView }) {
+export function CommercialWorkspace({
+  view,
+  token,
+}: {
+  view: ClientWorkspaceView;
+  token?: string;
+}) {
   const commercial = view.commercial;
   const platforms = [
     ...new Set(
@@ -96,7 +102,13 @@ export function CommercialWorkspace({ view }: { view: ClientWorkspaceView }) {
                 <tr key={creator.creatorId}>
                   <td className="name">
                     <span className="tblname">
-                      <ReviewAvatar className="av-sm" url={creator.avatarUrl} name={creator.displayName} index={index} />
+                      <ReviewAvatar
+                        className="av-sm"
+                        url={creator.avatarUrl}
+                        name={creator.displayName}
+                        index={index}
+                        token={token}
+                      />
                       {creator.displayName}
                     </span>
                   </td>

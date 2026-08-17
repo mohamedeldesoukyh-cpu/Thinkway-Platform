@@ -10,12 +10,14 @@ import {
   enrichSnapshotCreatorFromUnified,
   influencerIdFromRefs,
   optionalMetric,
+  shouldReplaceContentFeed,
 } from "./creator-snapshot";
 import { isInteractiveClientReview } from "./status";
 import type {
   ClientAudienceBrief,
   ClientAudienceSlice,
   ClientCreatorBrief,
+  ClientHistoricalMonth,
   ClientPerformanceBrief,
   ClientReviewRecord,
   ClientReviewSourceSnapshot,
@@ -81,6 +83,10 @@ function clientAudienceFromBundle(
     interests,
     summary: summaryParts.length > 0 ? summaryParts.join(" · ") : undefined,
     qualityLabel,
+    qualityIndicators: (bundle.audience.quality.supportedIndicators ?? [])
+      .map((item) => clientSafeFitCopy(item))
+      .filter((item): item is string => Boolean(item))
+      .slice(0, 8),
     growthPercent:
       growth?.growthPercent != null && Number.isFinite(growth.growthPercent)
         ? growth.growthPercent
@@ -89,6 +95,8 @@ function clientAudienceFromBundle(
       growth?.followerGrowth != null && Number.isFinite(growth.followerGrowth)
         ? growth.followerGrowth
         : undefined,
+    growthTrend:
+      growth?.growthTrend && growth.growthTrend !== "Unknown" ? growth.growthTrend : undefined,
   };
 }
 
@@ -99,9 +107,16 @@ function clientPerformanceFromCreator(
   const metrics = bundle?.performance.windows.last_90_days?.metrics ?? [];
   const metricValue = (key: string) =>
     optionalMetric(metrics.find((metric) => metric.key === key)?.value);
-  const avgLikes = creator.avgLikes ?? metricValue("likes");
-  const avgComments = creator.avgComments ?? metricValue("comments");
-  const avgViews = creator.avgViews ?? metricValue("views");
+  const feedAvg = (key: "likes" | "comments" | "views") => {
+    const values = (creator.contentFeed ?? [])
+      .map((post) => post[key])
+      .filter((value): value is number => value != null && Number.isFinite(value));
+    if (values.length === 0) return undefined;
+    return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+  };
+  const avgLikes = creator.avgLikes ?? metricValue("likes") ?? feedAvg("likes");
+  const avgComments = creator.avgComments ?? metricValue("comments") ?? feedAvg("comments");
+  const avgViews = creator.avgViews ?? metricValue("views") ?? feedAvg("views");
   const engagementRate = creator.engagementRate ?? metricValue("engagement_rate");
   const estimatedReach = creator.estimatedReach ?? metricValue("reach");
   if (
@@ -141,6 +156,19 @@ function brandMentionsFromBundle(bundle: CreatorIntelligenceBundle | null | unde
     .slice(0, 8);
 }
 
+function clientHistoricalFromBundle(
+  bundle: CreatorIntelligenceBundle | null | undefined
+): ClientHistoricalMonth[] {
+  if (!bundle?.historical.months.length) return [];
+  return bundle.historical.months.slice(-12).map((month) => ({
+    periodMonth: month.periodMonth,
+    followers: optionalMetric(month.followers),
+    engagementRate: optionalMetric(month.engagementRate),
+    avgViews: optionalMetric(month.avgViews),
+    monthlyGrowthRate: optionalMetric(month.monthlyGrowthRate),
+  }));
+}
+
 function campaignFitCopy(creator: ClientReviewSourceSnapshotCreator): string | undefined {
   if (creator.matchExplanation || creator.fitExplanation) {
     return creator.matchExplanation || creator.fitExplanation;
@@ -176,6 +204,7 @@ export function briefFromSnapshotCreator(
     avatarUrl: creator.avatarUrl,
     audience: creator.audience ?? null,
     performance: creator.performance ?? clientPerformanceFromCreator(creator),
+    historical: creator.historical ?? [],
     contentFeed,
     campaignFit: campaignFitCopy(creator),
     categories: creator.categories?.length
@@ -208,10 +237,17 @@ async function loadStoredCreatorContext(
   let enriched = creator;
   let loaded = false;
   try {
-    const lookup = await resolveUnifiedCreatorsByRefs(supabase as never, {
-      unifiedIds: [creator.creatorId],
-      influencerIds: [creator.influencerId ?? influencerIdFromRefs({ creatorId: creator.creatorId })],
-    });
+    const lookup = await resolveUnifiedCreatorsByRefs(
+      supabase as never,
+      {
+        unifiedIds: [creator.creatorId],
+        influencerIds: [creator.influencerId ?? influencerIdFromRefs({ creatorId: creator.creatorId })],
+        discoveredProfileIds: [
+          creator.creatorId.startsWith("dis:") ? creator.creatorId.slice(4) : undefined,
+        ],
+      },
+      { omitHeavyFields: false }
+    );
     const unified = resolveCreatorFromRefLookup(lookup, {
       unified_id: creator.creatorId,
       influencer_id: creator.influencerId ?? null,
@@ -262,8 +298,12 @@ export function mergeFrozenBrief(
     creator.brandMentions?.length
       ? creator.brandMentions
       : brandMentionsFromBundle(live.bundle);
-  const contentFeed =
-    creator.contentFeed?.length ? creator.contentFeed : live.enriched.contentFeed;
+  const contentFeed = shouldReplaceContentFeed(creator.contentFeed, live.enriched.contentFeed)
+    ? live.enriched.contentFeed
+    : creator.contentFeed;
+  const historical = creator.historical?.length
+    ? creator.historical
+    : clientHistoricalFromBundle(live.bundle);
   const fit = campaignFitCopy({
     ...live.enriched,
     ...creator,
@@ -284,10 +324,29 @@ export function mergeFrozenBrief(
     fitExplanation: creator.fitExplanation || fit,
     audience,
     performance,
+    historical: historical.length > 0 ? historical : undefined,
     brandMentions: brandMentions.length > 0 ? brandMentions : undefined,
     contentFeed,
     briefFrozenAt: frozenAt,
+    briefBackfillDone: true,
   };
+}
+
+function needsClientBriefBackfill(creator: ClientReviewSourceSnapshotCreator): boolean {
+  if (creator.briefBackfillDone) return false;
+  if (!creator.contentFeed?.length) return true;
+  if (
+    creator.contentFeed.every(
+      (post) => post.likes == null && post.comments == null && post.views == null
+    )
+  ) {
+    return true;
+  }
+  if (!creator.audience) return true;
+  if (!creator.historical?.length) return true;
+  if (!creator.performance) return true;
+  if (!creator.bio?.trim()) return true;
+  return false;
 }
 
 export async function freezeCreatorBriefIfNeeded(
@@ -299,7 +358,9 @@ export async function freezeCreatorBriefIfNeeded(
   const index = snapshot.creators.findIndex((creator) => creator.creatorId === creatorId);
   if (index < 0) return null;
   const current = snapshot.creators[index]!;
-  if (current.briefFrozenAt) return briefFromSnapshotCreator(current);
+  if (current.briefFrozenAt && !needsClientBriefBackfill(current)) {
+    return briefFromSnapshotCreator(current);
+  }
 
   if (!isInteractiveClientReview(review.status)) {
     return briefFromSnapshotCreator(current);

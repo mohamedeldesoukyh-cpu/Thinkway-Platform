@@ -94,11 +94,15 @@ export async function createClientReviewFromQuotation(
   const items = quotationItemsForClient(detail.items);
   let lookup: Awaited<ReturnType<typeof resolveUnifiedCreatorsByRefs>> | null = null;
   try {
-    lookup = await resolveUnifiedCreatorsByRefs(supabase as never, {
-      unifiedIds: items.map((item) => item.unified_id),
-      influencerIds: items.map((item) => item.influencer_id),
-      discoveredProfileIds: items.map((item) => item.profile_id),
-    });
+    lookup = await resolveUnifiedCreatorsByRefs(
+      supabase as never,
+      {
+        unifiedIds: items.map((item) => item.unified_id),
+        influencerIds: items.map((item) => item.influencer_id),
+        discoveredProfileIds: items.map((item) => item.profile_id),
+      },
+      { omitHeavyFields: false }
+    );
   } catch {
     lookup = null;
   }

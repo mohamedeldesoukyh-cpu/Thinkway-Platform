@@ -2050,7 +2050,8 @@ export async function resolveUnifiedCreatorsByRefs(
     unifiedIds?: Array<string | null | undefined>;
     influencerIds?: Array<string | null | undefined>;
     discoveredProfileIds?: Array<string | null | undefined>;
-  }
+  },
+  options?: { omitHeavyFields?: boolean }
 ): Promise<UnifiedCreatorRefLookup> {
   const lookup = emptyUnifiedCreatorRefLookup();
 
@@ -2072,8 +2073,9 @@ export async function resolveUnifiedCreatorsByRefs(
     if (id) profileIds.add(id);
   }
 
+  const omitHeavyFields = options?.omitHeavyFields ?? true;
   const refLookupOptions = {
-    omitHeavyFields: true,
+    omitHeavyFields,
     skipDna: true,
     tracePath: "unknown" as const,
   };
@@ -2096,7 +2098,10 @@ export async function resolveUnifiedCreatorsByRefs(
 
   await Promise.all([
     ...missingUnified.map(async (unifiedId) => {
-      const creator = await getUnifiedCreatorById(supabase, unifiedId, { skipDna: true });
+      const creator = await getUnifiedCreatorById(supabase, unifiedId, {
+        skipDna: true,
+        omitHeavyFields,
+      });
       if (creator) indexUnifiedCreator(creator, lookup);
     }),
     ...missingProfiles
@@ -2104,6 +2109,7 @@ export async function resolveUnifiedCreatorsByRefs(
       .map(async (profileId) => {
         const creator = await getUnifiedCreatorById(supabase, `dis:${profileId}`, {
           skipDna: true,
+          omitHeavyFields,
         });
         if (creator) indexUnifiedCreator(creator, lookup);
       }),
@@ -2131,9 +2137,10 @@ export function resolveCreatorFromRefLookup(
 export async function getUnifiedCreatorById(
   supabase: SupabaseClient,
   unifiedId: string,
-  options?: { skipDna?: boolean }
+  options?: { skipDna?: boolean; omitHeavyFields?: boolean }
 ): Promise<UnifiedCreatorResult | null> {
   const skipDna = options?.skipDna ?? false;
+  const omitHeavyFields = options?.omitHeavyFields ?? skipDna;
   const [kind, id] = unifiedId.split(":");
   if (!id) return null;
 
@@ -2143,7 +2150,7 @@ export async function getUnifiedCreatorById(
       { influencerId: id },
       undefined,
       null,
-      { skipDna, omitHeavyFields: skipDna, tracePath: "unknown" }
+      { skipDna, omitHeavyFields, tracePath: "unknown" }
     );
     return internal[0] ?? null;
   }
@@ -2162,7 +2169,7 @@ export async function getUnifiedCreatorById(
         { influencerId: profileLink.influencer_id },
         undefined,
         null,
-        { skipDna, omitHeavyFields: skipDna, tracePath: "unknown" }
+        { skipDna, omitHeavyFields, tracePath: "unknown" }
       );
       return internal[0] ?? null;
     }

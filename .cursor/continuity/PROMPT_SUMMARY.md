@@ -1,12 +1,10 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `feature/client-workspace-html-parity` (from `develop`)  
-**Focus:** Client Workspace HTML-parity redesign (Development only)
+**Branch:** `feature/client-workspace-creator-report-data` (from `develop`)  
+**Focus:** Client Workspace creator detail, snapshots, and advanced report (Development only)
 
-Client Workspace `/review/[id]?sign=` now uses the navy/blue review HTML as the visual system, wired to frozen proposal data. Creators is master-detail; **View advanced report** matches the mock layout with real creator data only. Mobile: full-screen creator sheet, 40px tap targets, Approve / Request changes / Reject from the phone.
+Creator snapshots were blank because the public review link cannot hotlink Instagram/TikTok CDNs, and freeze-on-read kept the slim Search feed (thumbs with likes/comments/views stripped). Fix: freeze full publications, backfill slim frozen reviews once, and render avatars/thumbs through signed `/api/review/media` (token + snapshot allowlist). Creator detail and View advanced report now use the HTML layout sections with real frozen data (content grid, audience, demographics, historical). Missing values stay Not available / To be confirmed. No AQS / ROI / bot pie.
 
-Do **not** copy fabricated mock metrics (ROI, AQS, bot pie, fake EMV/sparkline). Missing values stay Not available / To be confirmed.
+Do **not** deploy Production.
 
-Do **not** deploy to Production. Do not push until Product asks.
-
-Dev: https://dev.thinkwaymedia.com
+Dev: https://dev.thinkwaymedia.com — open the signed review, tap a creator (loads/backfills the brief), then View advanced report.

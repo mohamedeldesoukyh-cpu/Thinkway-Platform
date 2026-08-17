@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { buildCampaignObjectFixture } from "@/features/campaign-outputs/output-test-fixture";
 import { canCreateClientReview, resolveStudioPackageReadiness } from "@/features/campaign-studio/services/studio-package-readiness";
 import { isPublicPath } from "@/lib/auth/routes";
-import { classifyPagePath } from "@/lib/security/workspace-classify";
+import { classifyApiPath, classifyPagePath } from "@/lib/security/workspace-classify";
 
 import { CLIENT_CHANGE_AREAS, CLIENT_REVIEW_SOURCES } from "./constants";
 import { clientSafeFitCopy, formatCompactCount, formatEngagementPct, providedText } from "./format";
@@ -20,7 +20,9 @@ import {
 } from "./presentation";
 import { HYPEAUDITOR_MEDIA_PLAN_PARITY } from "./hypeauditor-parity";
 import { projectMediaPlanSummary } from "./media-plan-summary";
-import { briefFromSnapshotCreator } from "./creator-brief";
+import { briefFromSnapshotCreator, mergeFrozenBrief } from "./creator-brief";
+import { shouldReplaceContentFeed } from "./creator-snapshot";
+import { isReviewMediaUrlAllowed, reviewMediaAllowlist } from "./review-media";
 import { shortlistReviewBlockers, quotationReviewBlockers } from "./source-readiness";
 import {
   projectCommercialFromSnapshot,
@@ -53,8 +55,10 @@ import {
 test("public review path does not require login", () => {
   assert.equal(isPublicPath("/review"), true);
   assert.equal(isPublicPath("/review/abc/creators"), true);
+  assert.equal(isPublicPath("/api/review/media"), true);
   assert.equal(classifyPagePath("/review/abc"), "public");
   assert.equal(classifyPagePath("/review/abc/creators"), "public");
+  assert.equal(classifyApiPath("/api/review/media"), "public");
 });
 
 test("token hashing is md5 like IO approval tokens", () => {
@@ -607,5 +611,97 @@ test("snapshot preserves frozen audience quality and growth without fabricating 
   const brief = briefFromSnapshotCreator(snapshot!.creators[0]!);
   assert.equal(brief.audience?.qualityLabel, "High Quality");
   assert.equal(brief.audience?.growthPercent, 4.2);
+});
+
+test("slimmed content feeds are replaced when live publications have metrics", () => {
+  assert.equal(
+    shouldReplaceContentFeed(
+      [{ url: "https://instagram.com/p/1", thumbnail: "https://cdn.example/1.jpg", likes: null }],
+      [{ url: "https://instagram.com/p/1", thumbnail: "https://cdn.example/1.jpg", likes: 120 }]
+    ),
+    true
+  );
+  assert.equal(
+    shouldReplaceContentFeed(
+      [{ url: "https://instagram.com/p/1", likes: 10 }],
+      [{ url: "https://instagram.com/p/1", likes: 12 }]
+    ),
+    false
+  );
+  const merged = mergeFrozenBrief(
+    {
+      creatorId: "a",
+      displayName: "A",
+      contentFeed: [{ url: "https://instagram.com/p/1", thumbnail: "https://cdn.example/1.jpg", likes: null }],
+      briefFrozenAt: "2026-01-01T00:00:00.000Z",
+    },
+    {
+      enriched: {
+        creatorId: "a",
+        displayName: "A",
+        bio: "Cairo-based creator",
+        avgLikes: 120,
+        contentFeed: [
+          { url: "https://instagram.com/p/1", thumbnail: "https://cdn.example/1.jpg", likes: 120, comments: 8, views: 4000 },
+          { url: "https://instagram.com/p/2", thumbnail: "https://cdn.example/2.jpg", likes: 90, comments: 4, views: 2800 },
+        ],
+      },
+      bundle: null,
+    }
+  );
+  assert.equal(merged.contentFeed?.length, 2);
+  assert.equal(merged.contentFeed?.[0]?.likes, 120);
+  assert.equal(merged.bio, "Cairo-based creator");
+  assert.equal(merged.performance?.avgLikes, 120);
+  assert.equal(merged.briefBackfillDone, true);
+});
+
+test("review media proxy only allows URLs frozen on the snapshot", () => {
+  const snapshot = parseSourceSnapshot({
+    source: "quotation",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme Legal",
+    platforms: ["instagram"],
+    deliverables: [],
+    creators: [
+      {
+        creatorId: "a",
+        displayName: "A",
+        avatarUrl: "https://cdn.example/avatar.jpg",
+        contentFeed: [
+          {
+            url: "https://www.instagram.com/p/ABC/",
+            thumbnail: "https://scontent.cdninstagram.com/thumb.jpg",
+            likes: 20,
+          },
+        ],
+        historical: [{ periodMonth: "2026-07-01", followers: 80_000, engagementRate: 3.1 }],
+      },
+    ],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "Duration not confirmed", phases: [] },
+    commercial: {
+      currency: "EGP",
+      creatorInvestment: 0,
+      totalInvestment: 0,
+      lines: [],
+      selectedCount: 1,
+      totalCount: 1,
+    },
+    creatorIds: ["a"],
+  });
+  assert.ok(snapshot);
+  const allow = reviewMediaAllowlist(snapshot);
+  assert.equal(
+    isReviewMediaUrlAllowed(allow, "https://scontent.cdninstagram.com/thumb.jpg", "https://www.instagram.com/p/ABC/"),
+    true
+  );
+  assert.equal(isReviewMediaUrlAllowed(allow, "https://evil.example/x.jpg", null), false);
+  assert.equal(
+    isReviewMediaUrlAllowed(allow, "https://evil.example/x.jpg", "https://www.instagram.com/p/ABC/"),
+    true
+  );
+  assert.equal(snapshot!.creators[0]?.historical?.[0]?.followers, 80_000);
 });
 

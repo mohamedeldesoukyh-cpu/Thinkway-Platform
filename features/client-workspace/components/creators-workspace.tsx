@@ -32,7 +32,7 @@ import {
   rosterSourceLine,
 } from "../presentation";
 import { countSelections } from "../status";
-import type { ClientCreatorBrief, ClientCreatorCard, ClientWorkspaceView } from "../types";
+import type { ClientAudienceSlice, ClientCreatorBrief, ClientCreatorCard, ClientWorkspaceView } from "../types";
 import { AdvancedReportModal, ContentFeatureGrid, isInstagram } from "./advanced-report-modal";
 import { ReviewAvatar } from "./review-avatar";
 import { IconBack, IconCat, IconChart, IconCheck, IconClose, IconIg } from "./review-icons";
@@ -201,6 +201,7 @@ export function CreatorsWorkspace({
                 url={creator.avatarUrl}
                 name={creator.displayName}
                 index={view.creators.findIndex((item) => item.creatorId === creator.creatorId) || index}
+                token={token}
               >
                 {isInstagram(creator.platform) ? (
                   <span className="ig">
@@ -235,6 +236,7 @@ export function CreatorsWorkspace({
             creator={selected}
             brief={brief?.creatorId === selected.creatorId ? brief : null}
             index={Math.max(0, selectedIndex)}
+            token={token}
             currency={view.commercial.currency}
             canDecide={view.canDecide}
             pending={pending}
@@ -277,6 +279,7 @@ export function CreatorsWorkspace({
           brief={brief?.creatorId === selected.creatorId ? brief : null}
           currency={view.commercial.currency}
           index={Math.max(0, selectedIndex)}
+          token={token}
         />
       ) : null}
     </>
@@ -287,6 +290,7 @@ function CreatorDetailPane({
   creator,
   brief,
   index,
+  token,
   currency,
   canDecide,
   pending,
@@ -302,6 +306,7 @@ function CreatorDetailPane({
   creator: ClientCreatorCard;
   brief: ClientCreatorBrief | null;
   index: number;
+  token: string;
   currency: string;
   canDecide: boolean;
   pending: boolean;
@@ -358,6 +363,7 @@ function CreatorDetailPane({
           url={brief?.avatarUrl || creator.avatarUrl}
           name={name}
           index={index}
+          token={token}
         >
           {isInstagram(brief?.platform || creator.platform) ? (
             <span className="ig">
@@ -416,18 +422,20 @@ function CreatorDetailPane({
       </div>
       <div className="dt-body">
         <div className="sec">
-          <p className="st">Notes</p>
-          <textarea
-            className="noteinput"
-            value={note}
-            onChange={(event) => onNoteChange(event.target.value)}
-            placeholder="Add a note, reject reason, or change request"
-            disabled={!canDecide}
-          />
+          <p className="st">Recent content</p>
+          {!brief && posts.length === 0 ? (
+            <p className="unavailable">Loading content…</p>
+          ) : (
+            <ContentFeatureGrid posts={posts} token={token} variant="square" />
+          )}
         </div>
         <div className="sec">
-          <p className="st">Recent content</p>
-          <ContentFeatureGrid posts={posts} />
+          <p className="st">Profile</p>
+          <p className="desc">{brief?.bio || creator.bio || DATA_NOT_AVAILABLE}</p>
+        </div>
+        <div className="sec">
+          <p className="st">Deliverables</p>
+          <p className="desc">{deliverablesLabel(brief?.deliverableItems.length ? brief.deliverableItems : creator.deliverableItems, brief?.deliverables || creator.deliverables)}</p>
         </div>
         <div className="sec">
           <p className="st">Categories</p>
@@ -463,23 +471,71 @@ function CreatorDetailPane({
           <p className="st">Audience match</p>
           <p className="desc">{audienceMatch}</p>
         </div>
-        {quality && gauge != null ? (
-          <div className="sec">
-            <p className="st">Audience quality</p>
-            <div className="bench">
-              <span className="n">{quality.text}</span>
-              <span className={`badge ${quality.className}`}>{audience?.qualityLabel}</span>
-            </div>
-            <div className="gauge">
-              <span className="mk" style={{ left: `calc(${gauge}% - 2px)` }} />
-            </div>
-            <div className="gauge-l">
-              <span>Monitor</span>
-              <span>Good</span>
-              <span>High</span>
-            </div>
-          </div>
-        ) : null}
+        <div className="sec">
+          <p className="st">Audience</p>
+          {audience?.summary ? <p className="desc">{audience.summary}</p> : null}
+          {audience && (audience.ages.length > 0 || audience.genders.length > 0 || audience.locations.length > 0) ? (
+            <>
+              {audience.ages.length > 0 ? (
+                <>
+                  <p className="st" style={{ marginTop: 14 }}>
+                    Age
+                  </p>
+                  <AudienceBars items={audience.ages} />
+                </>
+              ) : null}
+              {audience.genders.length > 0 ? (
+                <>
+                  <p className="st" style={{ marginTop: 14 }}>
+                    Gender
+                  </p>
+                  <AudienceBars items={audience.genders} />
+                </>
+              ) : null}
+              {audience.locations.length > 0 ? (
+                <>
+                  <p className="st" style={{ marginTop: 14 }}>
+                    Locations
+                  </p>
+                  <AudienceBars items={audience.locations} />
+                </>
+              ) : null}
+            </>
+          ) : (
+            <p className="unavailable">{DATA_NOT_AVAILABLE}</p>
+          )}
+        </div>
+        <div className="sec">
+          <p className="st">Audience quality</p>
+          {quality && gauge != null ? (
+            <>
+              <div className="bench">
+                <span className="n">{quality.text}</span>
+                <span className={`badge ${quality.className}`}>{audience?.qualityLabel}</span>
+              </div>
+              <div className="gauge">
+                <span className="mk" style={{ left: `calc(${gauge}% - 2px)` }} />
+              </div>
+              <div className="gauge-l">
+                <span>Monitor</span>
+                <span>Good</span>
+                <span>High</span>
+              </div>
+              {audience?.qualityIndicators?.length ? (
+                <div className="aq-check" style={{ marginTop: 14 }}>
+                  {audience.qualityIndicators.slice(0, 6).map((item) => (
+                    <div key={item}>
+                      <IconCheck />
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <p className="unavailable">Audience quality unavailable</p>
+          )}
+        </div>
         <div className="sec">
           <p className="st">Performance</p>
           <div className="trio">
@@ -520,6 +576,18 @@ function CreatorDetailPane({
             <p className="unavailable">{DATA_NOT_AVAILABLE}</p>
           )}
         </div>
+        {canDecide ? (
+          <div className="sec">
+            <p className="st">Notes</p>
+            <textarea
+              className="noteinput"
+              value={note}
+              onChange={(event) => onNoteChange(event.target.value)}
+              placeholder="Add a note, reject reason, or change request"
+              disabled={!canDecide}
+            />
+          </div>
+        ) : null}
         <div className="sec">
           <button type="button" className="btn primary" onClick={onOpenReport} style={{ width: "100%", justifyContent: "center" }}>
             <IconChart />
@@ -535,4 +603,21 @@ function statusClass(state: ClientCreatorSelectionState): string {
   if (state === "accepted") return "sc ok";
   if (state === "rejected") return "sc rej";
   return "sc";
+}
+
+function AudienceBars({ items }: { items: ClientAudienceSlice[] }) {
+  const max = Math.max(...items.map((item) => item.percent ?? 0), 1);
+  return (
+    <div className="barset">
+      {items.map((item) => (
+        <div className="bar" key={item.label}>
+          <span className="bl">{item.label}</span>
+          <span className="bt">
+            <span className="bf" style={{ width: `${((item.percent ?? 0) / max) * 100}%` }} />
+          </span>
+          <span className="bn">{item.percent != null ? `${Math.round(item.percent)}%` : "—"}</span>
+        </div>
+      ))}
+    </div>
+  );
 }

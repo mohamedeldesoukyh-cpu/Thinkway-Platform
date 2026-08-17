@@ -183,11 +183,15 @@ export async function createClientReviewFromShortlist(
 
   let lookup: Awaited<ReturnType<typeof resolveUnifiedCreatorsByRefs>> | null = null;
   try {
-    lookup = await resolveUnifiedCreatorsByRefs(supabase as never, {
-      unifiedIds: frozenItems.map((item) => item.unified_id),
-      influencerIds: frozenItems.map((item) => item.influencer_id),
-      discoveredProfileIds: frozenItems.map((item) => item.profile_id),
-    });
+    lookup = await resolveUnifiedCreatorsByRefs(
+      supabase as never,
+      {
+        unifiedIds: frozenItems.map((item) => item.unified_id),
+        influencerIds: frozenItems.map((item) => item.influencer_id),
+        discoveredProfileIds: frozenItems.map((item) => item.profile_id),
+      },
+      { omitHeavyFields: false }
+    );
   } catch {
     lookup = null;
   }

@@ -15,9 +15,10 @@ import {
   TO_BE_CONFIRMED,
 } from "../format";
 import { flagFromCountry, qualityBadge, qualityGaugePercent } from "../presentation";
-import type { ClientAudienceSlice, ClientContentPost, ClientCreatorBrief, ClientCreatorCard } from "../types";
+import { clientReviewPostDisplay } from "../review-media";
+import type { ClientAudienceSlice, ClientContentPost, ClientCreatorBrief, ClientCreatorCard, ClientHistoricalMonth } from "../types";
 import { ReviewAvatar } from "./review-avatar";
-import { IconCat, IconChart, IconClose, IconIg } from "./review-icons";
+import { IconCat, IconChart, IconCheck, IconClose, IconHeart, IconIg } from "./review-icons";
 
 const REPORT_NAV = [
   { id: "overview", label: "Overview" },
@@ -37,6 +38,7 @@ export function AdvancedReportModal({
   brief,
   currency,
   index,
+  token,
 }: {
   open: boolean;
   onClose: () => void;
@@ -44,6 +46,7 @@ export function AdvancedReportModal({
   brief: ClientCreatorBrief | null;
   currency: string;
   index: number;
+  token: string;
 }) {
   const [section, setSection] = useState<ReportNavId>("overview");
   const view = brief?.creatorId === creator.creatorId ? brief : null;
@@ -62,6 +65,8 @@ export function AdvancedReportModal({
       : [creator.category, creator.niche].filter((value): value is string => Boolean(value));
   const quality = qualityBadge(audience?.qualityLabel);
   const gauge = qualityGaugePercent(audience?.qualityLabel);
+  const posts = (view?.contentFeed.length ? view.contentFeed : creator.contentFeed ?? creator.contentExamples) ?? [];
+  const historical = view?.historical.length ? view.historical : creator.historical ?? [];
   const match = formatMatchPercent(view?.matchPercent ?? creator.matchPercent);
 
   useEffect(() => {
@@ -99,6 +104,7 @@ export function AdvancedReportModal({
             url={view?.avatarUrl || creator.avatarUrl}
             name={view?.displayName || creator.displayName}
             index={index}
+            token={token}
           >
             {isInstagram(view?.platform || creator.platform) ? (
               <span className="ig">
@@ -146,22 +152,23 @@ export function AdvancedReportModal({
               categories={categories}
               match={match}
               currency={currency}
+              posts={posts}
+              token={token}
+              followers={followers}
+              er={er}
+              avgLikes={avgLikes}
+              reach={reach}
             />
           ) : null}
           {section === "engagement" ? (
-            <EngagementSection creator={creator} performance={performance} />
+            <EngagementSection creator={creator} performance={performance} posts={posts} token={token} />
           ) : null}
           {section === "growth" ? <GrowthSection audience={audience} /> : null}
           {section === "audience" ? (
             <AudienceSection audience={audience} quality={quality} gauge={gauge} />
           ) : null}
           {section === "demographics" ? <DemographicsSection audience={audience} /> : null}
-          {section === "historical" ? (
-            <div className="rp-sec">
-              <p className="st">Historical</p>
-              <p className="unavailable">Historical performance series unavailable</p>
-            </div>
-          ) : null}
+          {section === "historical" ? <HistoricalSection rows={historical} /> : null}
         </div>
       </div>
     </div>
@@ -175,6 +182,12 @@ function OverviewSection({
   categories,
   match,
   currency,
+  posts,
+  token,
+  followers,
+  er,
+  avgLikes,
+  reach,
 }: {
   creator: ClientCreatorCard;
   view: ClientCreatorBrief | null;
@@ -182,6 +195,12 @@ function OverviewSection({
   categories: string[];
   match?: string;
   currency: string;
+  posts: ClientContentPost[];
+  token: string;
+  followers?: number;
+  er?: number;
+  avgLikes?: number;
+  reach?: number;
 }) {
   const handle = view?.handle || creator.handle;
   const platform = formatPlatformLabel(view?.platform || creator.platform);
@@ -209,6 +228,24 @@ function OverviewSection({
         <p className="desc" style={{ marginTop: 10 }}>
           {bio?.trim() || DATA_NOT_AVAILABLE}
         </p>
+        <div className="asum">
+          <div>
+            <p className="l">Followers</p>
+            <p className={followers != null ? "v" : "v tbc"}>{formatCompactCount(followers)}</p>
+          </div>
+          <div>
+            <p className="l">Engagement</p>
+            <p className={er != null ? "v" : "v tbc"}>{formatEngagementPct(er)}</p>
+          </div>
+          <div>
+            <p className="l">Avg likes</p>
+            <p className={avgLikes != null ? "v" : "v tbc"}>{formatCompactCount(avgLikes)}</p>
+          </div>
+          <div>
+            <p className="l">Est. reach</p>
+            <p className={reach != null ? "v" : "v tbc"}>{formatCompactCount(reach)}</p>
+          </div>
+        </div>
       </div>
       <div className="rp-sec">
         <p className="st">Campaign fit</p>
@@ -243,6 +280,10 @@ function OverviewSection({
           <span className="n">{investment}</span>
         </p>
       </div>
+      <div className="rp-sec">
+        <p className="st">Recent content</p>
+        <ContentFeatureGrid posts={posts} token={token} />
+      </div>
     </>
   );
 }
@@ -250,9 +291,13 @@ function OverviewSection({
 function EngagementSection({
   creator,
   performance,
+  posts,
+  token,
 }: {
   creator: ClientCreatorCard;
   performance: ClientCreatorCard["performance"];
+  posts: ClientContentPost[];
+  token: string;
 }) {
   const likes = performance?.avgLikes ?? creator.avgLikes;
   const comments = performance?.avgComments ?? creator.avgComments;
@@ -276,6 +321,10 @@ function EngagementSection({
           performance?.likesExplanation ||
           "Engagement figures use stored creator performance for this proposal."}
       </p>
+      <div style={{ marginTop: 18 }}>
+        <p className="st">Content snapshots</p>
+        <ContentFeatureGrid posts={posts} token={token} />
+      </div>
     </div>
   );
 }
@@ -302,6 +351,7 @@ function GrowthSection({ audience }: { audience: ClientCreatorCard["audience"] }
         {audience.followerGrowth != null ? (
           <Metric label="Follower change" value={formatCompactCount(audience.followerGrowth)} />
         ) : null}
+        {audience.growthTrend ? <Metric label="Trend" value={audience.growthTrend} /> : null}
       </div>
       <p className="desc" style={{ marginTop: 12 }}>
         Growth is shown as a verified change only. A historical sparkline is not available.
@@ -333,6 +383,25 @@ function AudienceSection({
         <p className="st">Audience quality</p>
         {quality && gauge != null ? (
           <>
+            {audience.qualityLabel === "High Quality" || audience.qualityLabel === "Good" ? (
+              <div className="aq-ok">
+                <IconCheck />
+                <div>
+                  <b>{quality.text}</b>
+                  <div>{audience.summary || "Audience quality is based on verified creator signals for this proposal."}</div>
+                </div>
+              </div>
+            ) : audience.qualityLabel === "Monitor" ? (
+              <div className="aq-warn">
+                <div className="lft">
+                  <IconChart />
+                  <div>
+                    <b>{quality.text}</b>
+                    <div>Audience quality should be reviewed against campaign goals.</div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
             <div className="bench">
               <span className="n">{quality.text}</span>
               <span className={`badge ${quality.className}`}>{audience.qualityLabel}</span>
@@ -351,6 +420,19 @@ function AudienceSection({
         )}
         {audience.summary ? <p className="desc" style={{ marginTop: 12 }}>{audience.summary}</p> : null}
       </div>
+      {audience.qualityIndicators?.length ? (
+        <div className="rp-sec">
+          <p className="st">Audience signals</p>
+          <div className="aq-check">
+            {audience.qualityIndicators.slice(0, 8).map((item) => (
+              <div key={item}>
+                <IconCheck />
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
       <div className="rp-sec">
         <p className="st">Interests</p>
         {audience.interests.length > 0 ? (
@@ -450,36 +532,94 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
+function HistoricalSection({ rows }: { rows: ClientHistoricalMonth[] }) {
+  if (rows.length === 0) {
+    return (
+      <div className="rp-sec">
+        <p className="st">Historical</p>
+        <p className="unavailable">Historical performance series unavailable</p>
+      </div>
+    );
+  }
+  return (
+    <div className="rp-sec">
+      <p className="st">Historical</p>
+      <div className="histtbl">
+        <table className="tbl">
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th className="r">Followers</th>
+              <th className="r">ER</th>
+              <th className="r">Avg views</th>
+              <th className="r">Growth</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...rows].reverse().map((row) => (
+              <tr key={row.periodMonth}>
+                <td>{row.periodMonth.slice(0, 7)}</td>
+                <td className="r">{formatCompactCount(row.followers)}</td>
+                <td className="r">{formatEngagementPct(row.engagementRate)}</td>
+                <td className="r">{formatCompactCount(row.avgViews)}</td>
+                <td className={row.monthlyGrowthRate != null && row.monthlyGrowthRate < 0 ? "r down" : "r up"}>
+                  {row.monthlyGrowthRate != null
+                    ? `${row.monthlyGrowthRate > 0 ? "+" : ""}${(row.monthlyGrowthRate * (Math.abs(row.monthlyGrowthRate) <= 1 ? 100 : 1)).toFixed(1)}%`
+                    : NOT_AVAILABLE}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export function isInstagram(platform?: string): boolean {
   return platform?.trim().toLowerCase() === "instagram";
 }
 
-export function ContentFeatureGrid({ posts }: { posts: ClientContentPost[] }) {
+export function ContentFeatureGrid({
+  posts,
+  token,
+  variant = "feature",
+}: {
+  posts: ClientContentPost[];
+  token?: string;
+  variant?: "feature" | "square";
+}) {
   const [hidden, setHidden] = useState<Record<number, boolean>>({});
   if (posts.length === 0) {
     return <p className="unavailable">Recent content unavailable</p>;
   }
+  const limit = variant === "square" ? 6 : 6;
   return (
-    <div className="posts-feat">
-      {posts.slice(0, 5).map((post, index) => {
-        const className = index === 0 ? "post big" : "post";
+    <div className={variant === "square" ? "posts" : "posts-feat"}>
+      {posts.slice(0, limit).map((post, index) => {
+        const className = variant === "feature" && index === 0 ? "post big" : "post";
+        const display = token ? clientReviewPostDisplay(token, post) : { thumbnail: post.thumbnail ?? undefined, href: post.url ?? undefined };
+        const src = display.thumbnail;
         const inner = (
           <>
-            {post.thumbnail && !hidden[index] ? (
+            {src && !hidden[index] ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={post.thumbnail}
+                src={src}
                 alt=""
                 onError={() => setHidden((current) => ({ ...current, [index]: true }))}
               />
             ) : null}
             {post.platform ? <span className="tagp">{formatPlatformLabel(post.platform)}</span> : null}
-            <span className="lk">{post.likes != null ? formatCompactCount(post.likes) : NOT_AVAILABLE}</span>
+            <span className="lk">
+              <IconHeart />
+              {post.likes != null ? formatCompactCount(post.likes) : NOT_AVAILABLE}
+            </span>
           </>
         );
         const key = `${post.url ?? post.thumbnail ?? index}`;
-        return post.url ? (
-          <a key={key} className={className} href={post.url} target="_blank" rel="noreferrer">
+        return display.href ? (
+          <a key={key} className={className} href={display.href} target="_blank" rel="noreferrer">
             {inner}
           </a>
         ) : (

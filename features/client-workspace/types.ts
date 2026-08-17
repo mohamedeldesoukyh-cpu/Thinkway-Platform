@@ -37,10 +37,20 @@ export type ClientAudienceBrief = {
   genders: ClientAudienceSlice[];
   locations: ClientAudienceSlice[];
   interests: string[];
-  summary?: string;
+    summary?: string;
   qualityLabel?: string;
+  qualityIndicators?: string[];
   growthPercent?: number;
   followerGrowth?: number;
+  growthTrend?: string;
+};
+
+export type ClientHistoricalMonth = {
+  periodMonth: string;
+  followers?: number;
+  engagementRate?: number;
+  avgViews?: number;
+  monthlyGrowthRate?: number;
 };
 
 export type ClientPerformanceBrief = {
@@ -110,8 +120,10 @@ export type ClientReviewSourceSnapshotCreator = {
   contentFeed?: ClientContentPost[];
   audience?: ClientAudienceBrief;
   performance?: ClientPerformanceBrief;
+  historical?: ClientHistoricalMonth[];
   influencerId?: string;
   briefFrozenAt?: string;
+  briefBackfillDone?: boolean;
 };
 
 export type ClientReviewSourceSnapshot = {
@@ -212,6 +224,7 @@ export type ClientCreatorCard = {
   contentFeed?: ClientContentPost[];
   audience?: ClientAudienceBrief;
   performance?: ClientPerformanceBrief;
+  historical?: ClientHistoricalMonth[];
   briefFrozenAt?: string;
 };
 
@@ -228,6 +241,7 @@ export type ClientCreatorBrief = {
   avatarUrl?: string;
   audience: ClientAudienceBrief | null;
   performance: ClientPerformanceBrief | null;
+  historical: ClientHistoricalMonth[];
   contentFeed: ClientContentPost[];
   campaignFit?: string;
   categories: string[];

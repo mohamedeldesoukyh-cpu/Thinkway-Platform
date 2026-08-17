@@ -47,7 +47,7 @@
 .tw-review .note{font-size:12.5px;color:var(--muted);margin:0 0 16px;}
 .tw-review button.lc{width:100%;text-align:left;font-family:inherit;-webkit-appearance:none;appearance:none;}
 .tw-review label.fl select{display:block;margin-top:7px;}
-.tw-review .posts-feat > a.post{color:#fff;text-decoration:none;}
+.tw-review .posts-feat > a.post,.tw-review .posts > a.post{color:#fff;text-decoration:none;}
 .tw-review .asum .l{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 5px;}
 .tw-review .asum .v{font-size:14.5px;font-weight:600;color:var(--ink);margin:0;}
 .tw-review .asum .v.tbc{color:var(--muted2);font-weight:500;}

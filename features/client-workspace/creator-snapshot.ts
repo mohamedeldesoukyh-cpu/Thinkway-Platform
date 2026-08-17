@@ -33,6 +33,19 @@ export function contentPostsFromPublications(
   });
 }
 
+export function shouldReplaceContentFeed(
+  existing: ClientContentPost[] | undefined,
+  live: ClientContentPost[] | undefined
+): boolean {
+  if (!live?.length) return false;
+  if (!existing?.length) return true;
+  const existingHasMetrics = existing.some(
+    (post) => post.likes != null || post.comments != null || post.views != null
+  );
+  if (existingHasMetrics && live.length <= existing.length) return false;
+  return live.length > existing.length || !existingHasMetrics;
+}
+
 export function influencerIdFromRefs(input: {
   influencerId?: string | null;
   creatorId?: string;
@@ -103,7 +116,9 @@ export function enrichSnapshotCreatorFromUnified(
       optionalMetric(creator.metrics.avg_views.value) ??
       optionalMetric(platform?.avg_views),
     tier: base.tier || resolveCreatorTierLabel({ followers, role: creator.role }),
-    contentFeed: base.contentFeed?.length ? base.contentFeed : contentFeed,
+    contentFeed: shouldReplaceContentFeed(base.contentFeed, contentFeed)
+      ? contentFeed
+      : (base.contentFeed ?? contentFeed),
     influencerId: base.influencerId || influencerIdFromRefs({ influencerId: creator.influencer_id, creatorId: creator.unified_id }),
   };
 }
