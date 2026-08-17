@@ -1,7 +1,6 @@
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type {
   CreatorsSectionData,
-  TimelineSectionData,
   VendorSelectedReasoning,
 } from "@/features/campaign-intelligence/types/section-schemas";
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
@@ -168,12 +167,12 @@ export function projectClientTimeline(campaignObject: CampaignObject): {
   phases: ClientTimelinePhase[];
 } {
   const facts = getCampaignFacts(campaignObject);
-  const timeline = resolveTimelineData(campaignObject) as TimelineSectionData | undefined;
+  const timeline = resolveTimelineData(campaignObject);
   const weeks = facts?.durationWeeks ?? timeline?.durationWeeks ?? null;
-  const phases: ClientTimelinePhase[] = (timeline?.milestones ?? []).map((milestone) => ({
-    week: milestone.week,
-    label: milestone.phase,
-    activities: milestone.activities ?? [],
+  const phases: ClientTimelinePhase[] = (timeline?.weeks ?? []).map((week) => ({
+    week: week.week,
+    label: week.phase,
+    activities: week.activities ?? [],
   }));
   if (phases.length === 0 && weeks && weeks > 0) {
     for (let week = 1; week <= weeks; week += 1) {
