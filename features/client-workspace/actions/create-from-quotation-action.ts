@@ -8,12 +8,13 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { createClientReviewFromQuotation } from "../create-from-quotation";
 
+type CreateClientReviewActionResult =
+  | { ok: true; url: string; reviewNumber: number; message: string }
+  | { ok: false; message: string; blockers: string[] };
+
 export async function createClientReviewFromQuotationAction(input: {
   quotationId: string;
-}): Promise<
-  | { ok: true; url: string; reviewNumber: number; message: string }
-  | { ok: false; message: string; blockers: string[] }
-> {
+}): Promise<CreateClientReviewActionResult> {
   const supabase = await createSupabaseServerClient();
   const auth = await requirePermission(supabase, QUOTATION_PERMISSIONS.write);
   if ("error" in auth) {
@@ -26,7 +27,11 @@ export async function createClientReviewFromQuotationAction(input: {
   return run(input.quotationId, supabase, auth.userId);
 }
 
-async function run(quotationId: string, supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, userId: string) {
+async function run(
+  quotationId: string,
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  userId: string
+): Promise<CreateClientReviewActionResult> {
   const headerList = await headers();
   const origin =
     headerList.get("origin") ||
