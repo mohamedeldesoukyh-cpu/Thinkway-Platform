@@ -105,6 +105,8 @@ function parseHistorical(value: unknown): ClientReviewSourceSnapshotCreator["his
       return {
         periodMonth,
         followers: asNumber(row.followers),
+        following: asNumber(row.following),
+        postsCount: asNumber(row.postsCount),
         engagementRate: asNumber(row.engagementRate),
         avgViews: asNumber(row.avgViews),
         monthlyGrowthRate: asNumber(row.monthlyGrowthRate),

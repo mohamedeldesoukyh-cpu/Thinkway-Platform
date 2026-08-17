@@ -163,6 +163,8 @@ function clientHistoricalFromBundle(
   return bundle.historical.months.slice(-12).map((month) => ({
     periodMonth: month.periodMonth,
     followers: optionalMetric(month.followers),
+    following: optionalMetric(month.following),
+    postsCount: optionalMetric(month.postsCount),
     engagementRate: optionalMetric(month.engagementRate),
     avgViews: optionalMetric(month.avgViews),
     monthlyGrowthRate: optionalMetric(month.monthlyGrowthRate),

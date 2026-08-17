@@ -48,6 +48,8 @@ export type ClientAudienceBrief = {
 export type ClientHistoricalMonth = {
   periodMonth: string;
   followers?: number;
+  following?: number;
+  postsCount?: number;
   engagementRate?: number;
   avgViews?: number;
   monthlyGrowthRate?: number;
@@ -80,7 +82,7 @@ export type ClientMediaPlanSummary = {
   currency: string;
   creatorForecasts: Record<
     string,
-    { estimatedReach?: number; estimatedEngagements?: number; cpe?: number }
+    { estimatedReach?: number; estimatedEngagements?: number; cpe?: number; cpm?: number }
   >;
 };
 

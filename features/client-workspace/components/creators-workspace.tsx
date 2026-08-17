@@ -260,6 +260,7 @@ export function CreatorsWorkspace({
               });
             }}
             onOpenReport={() => setReportOpen(true)}
+            cpm={view.mediaPlanSummary.creatorForecasts[selected.creatorId]?.cpm}
           />
         ) : (
           <div className="detail">
@@ -302,6 +303,7 @@ function CreatorDetailPane({
   onReject,
   onRequestChanges,
   onOpenReport,
+  cpm,
 }: {
   creator: ClientCreatorCard;
   brief: ClientCreatorBrief | null;
@@ -318,6 +320,7 @@ function CreatorDetailPane({
   onReject: () => void;
   onRequestChanges: () => void;
   onOpenReport: () => void;
+  cpm?: number;
 }) {
   const name = brief?.displayName || creator.displayName;
   const handle = brief?.handle || creator.handle;
@@ -421,24 +424,28 @@ function CreatorDetailPane({
         </div>
       </div>
       <div className="dt-body">
+        {canDecide ? (
+          <div className="sec">
+            <p className="st">Notes and status updates</p>
+            <textarea
+              className="noteinput"
+              value={note}
+              onChange={(event) => onNoteChange(event.target.value)}
+              placeholder="Create note…"
+              disabled={!canDecide}
+            />
+          </div>
+        ) : null}
         <div className="sec">
-          <p className="st">Recent content</p>
+          <p className="st">Recent publications</p>
           {!brief && posts.length === 0 ? (
             <p className="unavailable">Loading content…</p>
           ) : (
-            <ContentFeatureGrid posts={posts} token={token} variant="square" />
+            <ContentFeatureGrid posts={posts} token={token} />
           )}
         </div>
         <div className="sec">
-          <p className="st">Profile</p>
-          <p className="desc">{brief?.bio || creator.bio || DATA_NOT_AVAILABLE}</p>
-        </div>
-        <div className="sec">
-          <p className="st">Deliverables</p>
-          <p className="desc">{deliverablesLabel(brief?.deliverableItems.length ? brief.deliverableItems : creator.deliverableItems, brief?.deliverables || creator.deliverables)}</p>
-        </div>
-        <div className="sec">
-          <p className="st">Categories</p>
+          <p className="st">Content categories</p>
           {categories.length > 0 ? (
             <div className="cats">
               {categories.slice(0, 6).map((category) => (
@@ -455,55 +462,46 @@ function CreatorDetailPane({
           )}
         </div>
         <div className="sec">
-          <p className="st">Efficiency</p>
+          <p className="st">Expected costs</p>
           <div className="duo">
             <div className="mc">
-              <p className="l">CPE</p>
+              <p className="l">Cost per engagement (CPE)</p>
               <p className="v">{cpe != null ? formatMoneyKpi(cpe, currency) : NOT_AVAILABLE}</p>
             </div>
             <div className="mc">
-              <p className="l">Campaign match</p>
-              <p className="v">{match ?? NOT_AVAILABLE}</p>
+              <p className="l">Cost per mille (CPM)</p>
+              <p className="v">{cpm != null ? formatMoneyKpi(cpm, currency) : NOT_AVAILABLE}</p>
             </div>
           </div>
         </div>
         <div className="sec">
           <p className="st">Audience match</p>
-          <p className="desc">{audienceMatch}</p>
-        </div>
-        <div className="sec">
-          <p className="st">Audience</p>
-          {audience?.summary ? <p className="desc">{audience.summary}</p> : null}
-          {audience && (audience.ages.length > 0 || audience.genders.length > 0 || audience.locations.length > 0) ? (
-            <>
-              {audience.ages.length > 0 ? (
+          <p className="desc" style={{ marginBottom: 12 }}>{audienceMatch}</p>
+          <div className="split">
+            <div className="matchbox">
+              <p className="mh">Geo match</p>
+              {audience?.locations.length ? (
+                <AudienceBars items={audience.locations} />
+              ) : (
+                <p className="unavailable">{TO_BE_CONFIRMED}</p>
+              )}
+            </div>
+            <div className="matchbox">
+              <p className="mh">Age & gender match</p>
+              {audience && (audience.ages.length > 0 || audience.genders.length > 0) ? (
                 <>
-                  <p className="st" style={{ marginTop: 14 }}>
-                    Age
-                  </p>
-                  <AudienceBars items={audience.ages} />
+                  {audience.ages.length > 0 ? <AudienceBars items={audience.ages} /> : null}
+                  {audience.genders.length > 0 ? (
+                    <div style={{ marginTop: 12 }}>
+                      <AudienceBars items={audience.genders} />
+                    </div>
+                  ) : null}
                 </>
-              ) : null}
-              {audience.genders.length > 0 ? (
-                <>
-                  <p className="st" style={{ marginTop: 14 }}>
-                    Gender
-                  </p>
-                  <AudienceBars items={audience.genders} />
-                </>
-              ) : null}
-              {audience.locations.length > 0 ? (
-                <>
-                  <p className="st" style={{ marginTop: 14 }}>
-                    Locations
-                  </p>
-                  <AudienceBars items={audience.locations} />
-                </>
-              ) : null}
-            </>
-          ) : (
-            <p className="unavailable">{DATA_NOT_AVAILABLE}</p>
-          )}
+              ) : (
+                <p className="unavailable">{TO_BE_CONFIRMED}</p>
+              )}
+            </div>
+          </div>
         </div>
         <div className="sec">
           <p className="st">Audience quality</p>
@@ -517,45 +515,41 @@ function CreatorDetailPane({
                 <span className="mk" style={{ left: `calc(${gauge}% - 2px)` }} />
               </div>
               <div className="gauge-l">
-                <span>Monitor</span>
-                <span>Good</span>
-                <span>High</span>
+                <span className="lo">Low</span>
+                <span>Average</span>
+                <span className="hi">Excellent</span>
               </div>
-              {audience?.qualityIndicators?.length ? (
-                <div className="aq-check" style={{ marginTop: 14 }}>
-                  {audience.qualityIndicators.slice(0, 6).map((item) => (
-                    <div key={item}>
-                      <IconCheck />
-                      {item}
-                    </div>
-                  ))}
-                </div>
-              ) : null}
             </>
           ) : (
             <p className="unavailable">Audience quality unavailable</p>
           )}
         </div>
         <div className="sec">
-          <p className="st">Performance</p>
+          <p className="st">Average engagement</p>
           <div className="trio">
             <div className="mc">
-              <p className="l">Avg likes</p>
+              <p className="l">Avg. likes</p>
               <p className="v sm">{formatCompactCount(likes)}</p>
             </div>
             <div className="mc">
-              <p className="l">Avg comments</p>
-              <p className="v sm">{formatCompactCount(comments)}</p>
-            </div>
-            <div className="mc">
-              <p className="l">Avg views</p>
+              <p className="l">Avg. views</p>
               <p className="v sm">{formatCompactCount(views)}</p>
             </div>
+            <div className="mc">
+              <p className="l">Avg. comments</p>
+              <p className="v sm">{formatCompactCount(comments)}</p>
+            </div>
           </div>
-          <div className="mc" style={{ marginTop: 12 }}>
-            <p className="l">Est. reach</p>
-            <p className="v">{formatCompactCount(reach)}</p>
-          </div>
+        </div>
+        <div className="sec">
+          <p className="st">Estimated reach</p>
+          <p className="rp-big">
+            <span className="n">{formatCompactCount(reach)}</span>
+            {quality ? <span className={`badge ${quality.className}`}>{quality.text}</span> : null}
+          </p>
+          <p className="desc" style={{ marginTop: 8 }}>
+            {performance?.reachExplanation || DATA_NOT_AVAILABLE}
+          </p>
         </div>
         <div className="sec">
           <p className="st">Brand mentions</p>
@@ -576,18 +570,6 @@ function CreatorDetailPane({
             <p className="unavailable">{DATA_NOT_AVAILABLE}</p>
           )}
         </div>
-        {canDecide ? (
-          <div className="sec">
-            <p className="st">Notes</p>
-            <textarea
-              className="noteinput"
-              value={note}
-              onChange={(event) => onNoteChange(event.target.value)}
-              placeholder="Add a note, reject reason, or change request"
-              disabled={!canDecide}
-            />
-          </div>
-        ) : null}
         <div className="sec">
           <button type="button" className="btn primary" onClick={onOpenReport} style={{ width: "100%", justifyContent: "center" }}>
             <IconChart />

@@ -14,6 +14,7 @@ import {
   containsInternalTerminology,
   qualityBadge,
   qualityGaugePercent,
+  engagementGaugePercent,
   rosterHeadline,
   rosterSourceLine,
   strategicPillars,
@@ -563,6 +564,8 @@ test("audience quality maps to a display gauge without inventing AQS or ROI", ()
   assert.equal(qualityGaugePercent("Monitor"), 48);
   assert.equal(qualityGaugePercent(undefined), undefined);
   assert.equal(qualityBadge("High Quality")?.text, "Excellent");
+  assert.ok((engagementGaugePercent(3.4) ?? 0) > 40);
+  assert.equal(engagementGaugePercent(undefined), undefined);
   assert.equal(containsInternalTerminology("AQS 72"), false);
   assert.equal(containsInternalTerminology("ROI 102%"), false);
 });
@@ -676,7 +679,7 @@ test("review media proxy only allows URLs frozen on the snapshot", () => {
             likes: 20,
           },
         ],
-        historical: [{ periodMonth: "2026-07-01", followers: 80_000, engagementRate: 3.1 }],
+        historical: [{ periodMonth: "2026-07-01", followers: 80_000, engagementRate: 3.1, following: 400, postsCount: 12 }],
       },
     ],
     content: [],
@@ -703,5 +706,7 @@ test("review media proxy only allows URLs frozen on the snapshot", () => {
     true
   );
   assert.equal(snapshot!.creators[0]?.historical?.[0]?.followers, 80_000);
+  assert.equal(snapshot!.creators[0]?.historical?.[0]?.following, 400);
+  assert.equal(snapshot!.creators[0]?.historical?.[0]?.postsCount, 12);
 });
 

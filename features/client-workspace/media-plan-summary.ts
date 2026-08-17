@@ -82,16 +82,22 @@ export function buildMediaPlanSummary(
   for (const row of forecast?.creatorForecasts ?? []) {
     const reach = finiteNonNegative(row.estimatedReach);
     const engagements = finiteNonNegative(row.estimatedEngagements);
+    const impressions = finiteNonNegative(row.estimatedImpressions);
     const creator = creators.find((item) => item.creatorId === row.creatorKey);
     const creatorInvestment = finiteNonNegative(creator?.investmentAmount);
     const creatorCpe =
       creatorInvestment != null && engagements != null && engagements > 0
         ? creatorInvestment / engagements
         : undefined;
+    const creatorCpm =
+      creatorInvestment != null && impressions != null
+        ? calculateCpm(creatorInvestment, impressions) ?? undefined
+        : undefined;
     creatorForecasts[row.creatorKey] = {
       estimatedReach: reach,
       estimatedEngagements: engagements,
       cpe: creatorCpe != null && Number.isFinite(creatorCpe) ? creatorCpe : undefined,
+      cpm: creatorCpm != null && Number.isFinite(creatorCpm) ? creatorCpm : undefined,
     };
   }
 

@@ -1,10 +1,10 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `feature/client-workspace-creator-report-data` (from `develop`)  
-**Focus:** Client Workspace creator detail, snapshots, and advanced report (Development only)
+**Branch:** `feature/client-workspace-design-parity` (from `develop`)  
+**Focus:** Match Client Workspace HTML design (Development only)
 
-Creator snapshots were blank because the public review link cannot hotlink Instagram/TikTok CDNs, and freeze-on-read kept the slim Search feed (thumbs with likes/comments/views stripped). Fix: freeze full publications, backfill slim frozen reviews once, and render avatars/thumbs through signed `/api/review/media` (token + snapshot allowlist). Creator detail and View advanced report now use the HTML layout sections with real frozen data (content grid, audience, demographics, historical). Missing values stay Not available / To be confirmed. No AQS / ROI / bot pie.
+Navy tabs (Overview / Creators / Content Plan / …) were inheriting ink color so labels only appeared on hover — fixed with explicit light tab color. Creator detail and advanced report now follow the HTML section order: notes, publication mosaic with Top post, categories, CPE/CPM, geo + age/gender bars, quality gauge, engagement, reach, brand mentions; report adds ER gauge, follower sparkline from frozen months, demographics, historical table (followers / growth / following / posts). Still no AQS, bot pie, or invented ROI.
 
 Do **not** deploy Production.
 
-Dev: https://dev.thinkwaymedia.com — open the signed review, tap a creator (loads/backfills the brief), then View advanced report.
+Dev: https://dev.thinkwaymedia.com

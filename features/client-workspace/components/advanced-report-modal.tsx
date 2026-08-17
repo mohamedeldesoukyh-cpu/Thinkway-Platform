@@ -14,7 +14,7 @@ import {
   NOT_AVAILABLE,
   TO_BE_CONFIRMED,
 } from "../format";
-import { flagFromCountry, qualityBadge, qualityGaugePercent } from "../presentation";
+import { flagFromCountry, qualityBadge, qualityGaugePercent, engagementBadge, engagementGaugePercent } from "../presentation";
 import { clientReviewPostDisplay } from "../review-media";
 import type { ClientAudienceSlice, ClientContentPost, ClientCreatorBrief, ClientCreatorCard, ClientHistoricalMonth } from "../types";
 import { ReviewAvatar } from "./review-avatar";
@@ -24,7 +24,7 @@ const REPORT_NAV = [
   { id: "overview", label: "Overview" },
   { id: "engagement", label: "Engagement" },
   { id: "growth", label: "Follower growth" },
-  { id: "audience", label: "Audience" },
+  { id: "audience", label: "Audience quality" },
   { id: "demographics", label: "Demographics" },
   { id: "historical", label: "Historical" },
 ] as const;
@@ -158,12 +158,14 @@ export function AdvancedReportModal({
               er={er}
               avgLikes={avgLikes}
               reach={reach}
+              audience={audience}
+              historical={historical}
             />
           ) : null}
           {section === "engagement" ? (
             <EngagementSection creator={creator} performance={performance} posts={posts} token={token} />
           ) : null}
-          {section === "growth" ? <GrowthSection audience={audience} /> : null}
+          {section === "growth" ? <GrowthSection audience={audience} historical={historical} /> : null}
           {section === "audience" ? (
             <AudienceSection audience={audience} quality={quality} gauge={gauge} />
           ) : null}
@@ -188,6 +190,8 @@ function OverviewSection({
   er,
   avgLikes,
   reach,
+  audience,
+  historical,
 }: {
   creator: ClientCreatorCard;
   view: ClientCreatorBrief | null;
@@ -201,11 +205,20 @@ function OverviewSection({
   er?: number;
   avgLikes?: number;
   reach?: number;
+  audience: ClientCreatorCard["audience"];
+  historical: ClientHistoricalMonth[];
 }) {
   const handle = view?.handle || creator.handle;
   const platform = formatPlatformLabel(view?.platform || creator.platform);
   const bio = view?.bio || creator.bio;
   const fit = view?.campaignFit || creator.fitExplanation;
+  const erBadge = engagementBadge(er);
+  const erGauge = engagementGaugePercent(er);
+  const latest = historical.length > 0 ? historical[historical.length - 1] : undefined;
+  const followingRatio =
+    followers != null && latest?.following != null && latest.following > 0
+      ? (followers / latest.following).toFixed(2)
+      : undefined;
   const investment =
     (view?.investmentAmount ?? creator.investmentAmount) != null
       ? formatMoneyKpi(
@@ -215,6 +228,45 @@ function OverviewSection({
       : TO_BE_CONFIRMED;
   return (
     <>
+      <div className="rp-sec">
+        <p className="st">{handle ? `${handle} · Content categories` : "Content categories"}</p>
+        {categories.length > 0 ? (
+          <div className="cats">
+            {categories.slice(0, 6).map((category) => (
+              <div className="catc" key={category}>
+                <div className="ic">
+                  <IconCat />
+                </div>
+                <p className="l">{category}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="unavailable">Category unavailable</p>
+        )}
+      </div>
+      <div className="rp-sec">
+        <p className="st">{platform ? `${platform} engagement rate` : "Engagement rate"}</p>
+        <div className="rp-big">
+          <span className="n">{formatEngagementPct(er)}</span>
+          {erBadge ? <span className={`badge ${erBadge.className}`}>{erBadge.text}</span> : null}
+        </div>
+        <p className="desc">How much audiences engage with this creator’s available content.</p>
+        {erGauge != null ? <QualityGauge percent={erGauge} /> : null}
+      </div>
+      <GrowthChart
+        title="Follower growth"
+        audience={audience}
+        historical={historical}
+      />
+      {followingRatio ? (
+        <div className="rp-sec">
+          <p className="st">Follower-to-following ratio</p>
+          <p className="rp-big">
+            <span className="n">{followingRatio}</span>
+          </p>
+        </div>
+      ) : null}
       <div className="rp-sec">
         <p className="st">Profile</p>
         <p className="rp-big">
@@ -256,23 +308,6 @@ function OverviewSection({
           </div>
         ) : null}
         <p className="desc">{fit?.trim() || TO_BE_CONFIRMED}</p>
-      </div>
-      <div className="rp-sec">
-        <p className="st">Categories</p>
-        {categories.length > 0 ? (
-          <div className="cats">
-            {categories.slice(0, 6).map((category) => (
-              <div className="catc" key={category}>
-                <div className="ic">
-                  <IconCat />
-                </div>
-                <p className="l">{category}</p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="unavailable">Category unavailable</p>
-        )}
       </div>
       <div className="rp-sec">
         <p className="st">Investment</p>
@@ -329,34 +364,92 @@ function EngagementSection({
   );
 }
 
-function GrowthSection({ audience }: { audience: ClientCreatorCard["audience"] }) {
-  if (audience?.growthPercent == null && audience?.followerGrowth == null) {
+function GrowthSection({
+  audience,
+  historical,
+}: {
+  audience: ClientCreatorCard["audience"];
+  historical: ClientHistoricalMonth[];
+}) {
+  return <GrowthChart title="Follower growth" audience={audience} historical={historical} />;
+}
+
+function GrowthChart({
+  title,
+  audience,
+  historical,
+}: {
+  title: string;
+  audience: ClientCreatorCard["audience"];
+  historical: ClientHistoricalMonth[];
+}) {
+  const series = historical.map((row) => row.followers).filter((value): value is number => value != null);
+  if (audience?.growthPercent == null && audience?.followerGrowth == null && series.length < 2) {
     return (
       <div className="rp-sec">
-        <p className="st">Follower growth</p>
+        <p className="st">{title}</p>
         <p className="unavailable">Follower growth unavailable</p>
       </div>
     );
   }
+  const badge = audience?.growthPercent == null ? undefined : audience.growthPercent >= 0 ? "avg" : "avg";
   return (
     <div className="rp-sec">
-      <p className="st">Follower growth</p>
+      <p className="st">{title}</p>
+      {audience?.growthPercent != null ? (
+        <div className="rp-big">
+          <span className="n">{`${audience.growthPercent > 0 ? "+" : ""}${audience.growthPercent.toFixed(2)}%`}</span>
+          <span className={`badge ${badge}`}>{audience.growthTrend && audience.growthTrend !== "Unknown" ? audience.growthTrend : "Recorded"}</span>
+        </div>
+      ) : null}
       <div className="duo">
-        {audience.growthPercent != null ? (
-          <Metric
-            label="Growth"
-            value={`${audience.growthPercent > 0 ? "+" : ""}${audience.growthPercent.toFixed(1)}%`}
-          />
-        ) : null}
-        {audience.followerGrowth != null ? (
+        {audience?.followerGrowth != null ? (
           <Metric label="Follower change" value={formatCompactCount(audience.followerGrowth)} />
         ) : null}
-        {audience.growthTrend ? <Metric label="Trend" value={audience.growthTrend} /> : null}
+        {audience?.growthTrend && audience.growthPercent == null ? (
+          <Metric label="Trend" value={audience.growthTrend} />
+        ) : null}
       </div>
+      {series.length >= 2 ? <FollowerSparkline values={series} /> : null}
       <p className="desc" style={{ marginTop: 12 }}>
-        Growth is shown as a verified change only. A historical sparkline is not available.
+        {series.length >= 2
+          ? "Chart uses this creator's frozen monthly follower history."
+          : "Growth is shown as a verified change only."}
       </p>
     </div>
+  );
+}
+
+function QualityGauge({ percent }: { percent: number }) {
+  return (
+    <>
+      <div className="gauge">
+        <span className="mk" style={{ left: `calc(${percent}% - 2px)` }} />
+      </div>
+      <div className="gauge-l">
+        <span className="lo">Low</span>
+        <span>Average</span>
+        <span className="hi">Excellent</span>
+      </div>
+    </>
+  );
+}
+
+function FollowerSparkline({ values }: { values: number[] }) {
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const points = values
+    .map((value, index) => {
+      const x = (index / Math.max(values.length - 1, 1)) * 100;
+      const y = 36 - ((value - min) / range) * 28;
+      return `${x},${y}`;
+    })
+    .join(" ");
+  return (
+    <svg className="spark" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
+      <polyline points={points} fill="none" stroke="#0057FF" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
   );
 }
 
@@ -410,9 +503,9 @@ function AudienceSection({
               <span className="mk" style={{ left: `calc(${gauge}% - 2px)` }} />
             </div>
             <div className="gauge-l">
-              <span>Monitor</span>
-              <span>Good</span>
-              <span>High</span>
+              <span className="lo">Low</span>
+              <span>Average</span>
+              <span className="hi">Excellent</span>
             </div>
           </>
         ) : (
@@ -548,11 +641,11 @@ function HistoricalSection({ rows }: { rows: ClientHistoricalMonth[] }) {
         <table className="tbl">
           <thead>
             <tr>
-              <th>Month</th>
+              <th>Date</th>
               <th className="r">Followers</th>
-              <th className="r">ER</th>
-              <th className="r">Avg views</th>
               <th className="r">Growth</th>
+              <th className="r">Following</th>
+              <th className="r">Posts</th>
             </tr>
           </thead>
           <tbody>
@@ -560,13 +653,13 @@ function HistoricalSection({ rows }: { rows: ClientHistoricalMonth[] }) {
               <tr key={row.periodMonth}>
                 <td>{row.periodMonth.slice(0, 7)}</td>
                 <td className="r">{formatCompactCount(row.followers)}</td>
-                <td className="r">{formatEngagementPct(row.engagementRate)}</td>
-                <td className="r">{formatCompactCount(row.avgViews)}</td>
                 <td className={row.monthlyGrowthRate != null && row.monthlyGrowthRate < 0 ? "r down" : "r up"}>
                   {row.monthlyGrowthRate != null
-                    ? `${row.monthlyGrowthRate > 0 ? "+" : ""}${(row.monthlyGrowthRate * (Math.abs(row.monthlyGrowthRate) <= 1 ? 100 : 1)).toFixed(1)}%`
+                    ? `${row.monthlyGrowthRate > 0 ? "+" : ""}${(row.monthlyGrowthRate * (Math.abs(row.monthlyGrowthRate) <= 1 ? 100 : 1)).toFixed(2)}%`
                     : NOT_AVAILABLE}
                 </td>
+                <td className="r">{formatCompactCount(row.following)}</td>
+                <td className="r">{formatCompactCount(row.postsCount)}</td>
               </tr>
             ))}
           </tbody>
@@ -610,7 +703,7 @@ export function ContentFeatureGrid({
                 onError={() => setHidden((current) => ({ ...current, [index]: true }))}
               />
             ) : null}
-            {post.platform ? <span className="tagp">{formatPlatformLabel(post.platform)}</span> : null}
+            {index === 0 && variant === "feature" ? <span className="tagp top">Top post</span> : post.platform ? <span className="tagp">{formatPlatformLabel(post.platform)}</span> : null}
             <span className="lk">
               <IconHeart />
               {post.likes != null ? formatCompactCount(post.likes) : NOT_AVAILABLE}

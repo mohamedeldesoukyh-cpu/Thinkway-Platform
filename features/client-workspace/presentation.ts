@@ -230,6 +230,22 @@ export function qualityGaugePercent(label?: string): number | undefined {
   return undefined;
 }
 
+export function engagementBadge(rate?: number | null): { className: string; text: string } | undefined {
+  if (rate == null || !Number.isFinite(rate)) return undefined;
+  if (rate >= 5) return { className: "exc", text: "Excellent" };
+  return { className: "avg", text: "Average" };
+}
+
+export function engagementGaugePercent(rate?: number | null): number | undefined {
+  if (rate == null || !Number.isFinite(rate)) return undefined;
+  if (rate <= 0) return 8;
+  if (rate < 1) return 22;
+  if (rate < 2) return 38;
+  if (rate < 3.5) return 55;
+  if (rate < 5) return 72;
+  return 88;
+}
+
 export function qualityBadge(label?: string): { className: string; text: string } | undefined {
   if (label === "High Quality") return { className: "exc", text: "Excellent" };
   if (label === "Good") return { className: "avg", text: "Good" };
