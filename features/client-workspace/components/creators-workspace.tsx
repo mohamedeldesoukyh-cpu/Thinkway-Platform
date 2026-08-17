@@ -2,22 +2,22 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckIcon, XIcon } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import { formatMoneyKpi } from "@/lib/finance/currency-format";
 
 import {
+  addReviewCommentAction,
   bulkSelectCreatorsAction,
   selectCreatorAction,
 } from "../actions/client-workspace-actions";
-import { CLIENT_CREATOR_STATUS_LABEL, type ClientCreatorSelectionState } from "../constants";
-import { formatCompactCount, formatEngagementPct } from "../format";
+import type { ClientCreatorSelectionState } from "../constants";
 import { countSelections } from "../status";
 import type { ClientCreatorCard, ClientWorkspaceView } from "../types";
+import { CampaignMediaPlanSummary } from "./campaign-media-plan-summary";
+import { CreatorDetailSheet } from "./creator-detail-sheet";
+import { CreatorMediaPlanCard } from "./creator-media-plan-card";
 
-const FILTERS: Array<{ id: "all" | ClientCreatorSelectionState; label: string }> = [
+const STATUS_FILTERS: Array<{ id: "all" | "recommended" | ClientCreatorSelectionState; label: string }> = [
   { id: "all", label: "All" },
+  { id: "recommended", label: "Recommended" },
   { id: "accepted", label: "Accepted" },
   { id: "in_review", label: "In Review" },
   { id: "rejected", label: "Rejected" },
@@ -32,18 +32,45 @@ export function CreatorsWorkspace({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("all");
-  const [activeId, setActiveId] = useState<string | null>(view.creators[0]?.creatorId ?? null);
+  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]["id"]>("all");
+  const [platformFilter, setPlatformFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [tierFilter, setTierFilter] = useState("all");
+  const [locationFilter, setLocationFilter] = useState("all");
+  const [detailId, setDetailId] = useState<string | null>(null);
   const counts = countSelections(
-    Object.fromEntries(view.creators.map((c) => [c.creatorId, c.selection])),
-    view.creators.map((c) => c.creatorId)
+    Object.fromEntries(view.creators.map((creator) => [creator.creatorId, creator.selection])),
+    view.creators.map((creator) => creator.creatorId)
   );
-  const filtered = view.creators.filter((c) => (filter === "all" ? true : c.selection === filter));
-  const active = view.creators.find((c) => c.creatorId === activeId) ?? filtered[0];
+
+  const platforms = unique(view.creators.map((creator) => creator.platform).filter(Boolean));
+  const categories = unique(view.creators.map((creator) => creator.category || creator.niche).filter(Boolean));
+  const tiers = unique(view.creators.map((creator) => creator.tier).filter(Boolean));
+  const locations = unique(view.creators.map((creator) => creator.country).filter(Boolean));
+
+  const filtered = view.creators.filter((creator) => {
+    if (statusFilter === "recommended") {
+      if (creator.selection === "rejected") return false;
+    } else if (statusFilter !== "all" && creator.selection !== statusFilter) {
+      return false;
+    }
+    if (platformFilter !== "all" && creator.platform !== platformFilter) return false;
+    if (categoryFilter !== "all" && (creator.category || creator.niche) !== categoryFilter) return false;
+    if (tierFilter !== "all" && creator.tier !== tierFilter) return false;
+    if (locationFilter !== "all" && creator.country !== locationFilter) return false;
+    return true;
+  });
+
+  const accepted = view.creators.filter((creator) => creator.selection === "accepted");
+  const selectedInvestment = accepted.some((creator) => creator.investmentAmount != null)
+    ? accepted.reduce((sum, creator) => sum + (creator.investmentAmount ?? 0), 0)
+    : view.commercial.creatorInvestment;
+  const active = view.creators.find((creator) => creator.creatorId === detailId) ?? null;
 
   const filterCounts = useMemo(
     () => ({
       all: view.creators.length,
+      recommended: counts.accepted + counts.inReview,
       accepted: counts.accepted,
       in_review: counts.inReview,
       rejected: counts.rejected,
@@ -51,163 +78,184 @@ export function CreatorsWorkspace({
     [view.creators.length, counts]
   );
 
-  function decide(creator: ClientCreatorCard, state: ClientCreatorSelectionState) {
+  function decide(creator: ClientCreatorCard, state: ClientCreatorSelectionState, reason?: string) {
     startTransition(async () => {
       await selectCreatorAction({
         token,
         creatorId: creator.creatorId,
         state,
         creatorName: creator.displayName,
+        reason,
       });
       router.refresh();
     });
   }
 
-  function bulk(state: ClientCreatorSelectionState) {
+  function bulk(state: ClientCreatorSelectionState, creatorIds?: string[]) {
     startTransition(async () => {
-      await bulkSelectCreatorsAction({ token, state });
+      await bulkSelectCreatorsAction({ token, state, creatorIds });
       router.refresh();
     });
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,1fr)]">
-      <section className="min-w-0">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap gap-1 rounded-full bg-zinc-200/60 p-1">
-            {FILTERS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setFilter(item.id)}
-                className={
-                  filter === item.id
-                    ? "rounded-full bg-white px-3 py-1 text-sm font-semibold shadow-sm"
-                    : "rounded-full px-3 py-1 text-sm text-zinc-600"
-                }
-              >
-                {item.label} {filterCounts[item.id]}
-              </button>
-            ))}
-          </div>
-          {view.canDecide ? (
-            <div className="flex gap-2 text-xs">
-              <button type="button" className="text-zinc-500 hover:text-zinc-900" onClick={() => bulk("accepted")} disabled={pending}>
-                Select all
-              </button>
-              <button type="button" className="text-zinc-500 hover:text-zinc-900" onClick={() => bulk("in_review")} disabled={pending}>
-                Clear
-              </button>
-            </div>
-          ) : null}
-        </div>
-        <p className="mb-3 text-sm text-zinc-500">
-          Selected creators: {counts.accepted} / {counts.total}
-        </p>
-        <div className="space-y-2">
-          {filtered.map((creator) => (
+    <div className="space-y-5">
+      <CampaignMediaPlanSummary
+        summary={view.mediaPlanSummary}
+        selectedCount={counts.accepted}
+        selectedInvestment={
+          accepted.length > 0
+            ? selectedInvestment
+            : view.commercial.creatorInvestment > 0
+              ? view.commercial.creatorInvestment
+              : undefined
+        }
+      />
+
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap gap-1 rounded-full bg-zinc-200/60 p-1">
+          {STATUS_FILTERS.map((item) => (
             <button
-              key={creator.creatorId}
+              key={item.id}
               type="button"
-              onClick={() => setActiveId(creator.creatorId)}
-              className={`flex w-full items-start gap-3 rounded-2xl border bg-white p-3 text-left ${
-                active?.creatorId === creator.creatorId ? "border-[#1D9E75]" : "border-zinc-200"
-              }`}
+              onClick={() => setStatusFilter(item.id)}
+              className={
+                statusFilter === item.id
+                  ? "rounded-full bg-white px-3 py-1 text-sm font-semibold shadow-sm"
+                  : "rounded-full px-3 py-1 text-sm text-zinc-600"
+              }
             >
-              <div className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-zinc-100">
-                {creator.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={creator.avatarUrl} alt="" className="size-full object-cover" />
-                ) : null}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold">{creator.displayName}</p>
-                <p className="truncate text-xs text-zinc-500">
-                  {[creator.handle, formatCompactCount(creator.followers), creator.country, `ER ${formatEngagementPct(creator.engagementRate)}`]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </p>
-                {creator.deliverables ? (
-                  <p className="mt-2 text-xs text-zinc-600">{creator.deliverables}</p>
-                ) : null}
-              </div>
-              <span className="mt-auto rounded-full bg-zinc-100 px-2 py-1 text-[11px] font-medium text-zinc-600">
-                {CLIENT_CREATOR_STATUS_LABEL[creator.selection]}
-              </span>
+              {item.label} {filterCounts[item.id]}
             </button>
           ))}
         </div>
-      </section>
-      <aside className="rounded-2xl border border-zinc-200 bg-white p-5">
-        {active ? (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="size-16 overflow-hidden rounded-full bg-zinc-100">
-                {active.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={active.avatarUrl} alt="" className="size-full object-cover" />
-                ) : null}
-              </div>
-              <div>
-                <p className="font-semibold">{active.displayName}</p>
-                <p className="text-sm text-zinc-500">
-                  {active.handle} · {formatCompactCount(active.followers)}
-                </p>
-              </div>
-            </div>
-            {view.canDecide ? (
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" disabled={pending} onClick={() => decide(active, "accepted")}>
-                  <CheckIcon className="size-4 text-[#1D9E75]" />
-                  Accept
-                </Button>
-                <Button type="button" variant="outline" disabled={pending} onClick={() => decide(active, "rejected")}>
-                  <XIcon className="size-4 text-red-500" />
-                  Reject
-                </Button>
-              </div>
-            ) : null}
-            {active.fitExplanation ? (
-              <p className="text-sm leading-relaxed text-zinc-600">{active.fitExplanation}</p>
-            ) : null}
-            {active.bio ? <p className="text-sm text-zinc-500">{active.bio}</p> : null}
-            {active.investmentAmount != null ? (
-              <p className="text-sm font-medium">
-                {formatMoneyKpi(active.investmentAmount, active.investmentCurrency ?? view.commercial.currency)}
-              </p>
-            ) : null}
-            {active.contentExamples.length > 0 ? (
-              <div className="grid grid-cols-3 gap-2">
-                {active.contentExamples.map((example, index) => (
-                  <div key={`${example.url ?? index}`} className="aspect-square overflow-hidden rounded-xl bg-zinc-100">
-                    {example.thumbnail ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={example.thumbnail} alt="" className="size-full object-cover" />
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            ) : null}
+        {view.canDecide ? (
+          <div className="flex flex-wrap gap-3 text-sm">
+            <button
+              type="button"
+              className="text-zinc-500 hover:text-zinc-900"
+              onClick={() => bulk("accepted")}
+              disabled={pending}
+            >
+              Select all
+            </button>
+            <button
+              type="button"
+              className="text-zinc-500 hover:text-zinc-900"
+              onClick={() => bulk("in_review")}
+              disabled={pending}
+            >
+              Clear selection
+            </button>
           </div>
-        ) : (
-          <div>
-            <p className="font-semibold">{view.overview.campaignName}</p>
-            <p className="text-sm text-zinc-500">{view.creators.length} creators</p>
-            <dl className="mt-4 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-zinc-500">Investment</dt>
-                <dd>{formatMoneyKpi(view.commercial.totalInvestment, view.commercial.currency)}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-zinc-500">Selected</dt>
-                <dd>
-                  {counts.accepted} / {counts.total}
-                </dd>
-              </div>
-            </dl>
-          </div>
-        )}
-      </aside>
+        ) : null}
+      </div>
+
+      {(platforms.length > 1 || categories.length > 1 || tiers.length > 1 || locations.length > 1) && (
+        <div className="flex flex-wrap gap-2">
+          {platforms.length > 1 ? (
+            <FilterSelect label="Platform" value={platformFilter} onChange={setPlatformFilter} options={platforms} />
+          ) : null}
+          {categories.length > 1 ? (
+            <FilterSelect label="Category" value={categoryFilter} onChange={setCategoryFilter} options={categories} />
+          ) : null}
+          {tiers.length > 1 ? (
+            <FilterSelect label="Tier" value={tierFilter} onChange={setTierFilter} options={tiers} />
+          ) : null}
+          {locations.length > 1 ? (
+            <FilterSelect label="Location" value={locationFilter} onChange={setLocationFilter} options={locations} />
+          ) : null}
+        </div>
+      )}
+
+      <p className="text-sm text-zinc-500">
+        Selected creators: {counts.accepted} / {counts.total}
+      </p>
+
+      <div className="space-y-3">
+        {filtered.map((creator) => (
+          <CreatorMediaPlanCard
+            key={creator.creatorId}
+            creator={creator}
+            currency={view.commercial.currency}
+            selected={creator.selection === "accepted"}
+            canDecide={view.canDecide}
+            pending={pending}
+            onOpen={() => setDetailId(creator.creatorId)}
+            onToggleSelect={() =>
+              decide(creator, creator.selection === "accepted" ? "in_review" : "accepted")
+            }
+            onAccept={() => decide(creator, "accepted")}
+            onReject={() => decide(creator, "rejected")}
+          />
+        ))}
+        {filtered.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-zinc-200 bg-white px-4 py-8 text-center text-sm text-zinc-500">
+            No creators match these filters.
+          </p>
+        ) : null}
+      </div>
+
+      <CreatorDetailSheet
+        open={Boolean(active)}
+        onOpenChange={(open) => {
+          if (!open) setDetailId(null);
+        }}
+        creator={active}
+        token={token}
+        currency={view.commercial.currency}
+        canDecide={view.canDecide}
+        pending={pending}
+        comments={view.comments}
+        onAccept={() => active && decide(active, "accepted")}
+        onReject={(reason) => active && decide(active, "rejected", reason)}
+        onRequestChanges={(message) => {
+          if (!active) return;
+          startTransition(async () => {
+            await addReviewCommentAction({
+              token,
+              targetType: "creator",
+              targetId: active.creatorId,
+              message: `Change request: ${message}`,
+            });
+            router.refresh();
+          });
+        }}
+      />
     </div>
+  );
+}
+
+function unique(values: Array<string | undefined>): string[] {
+  return [...new Set(values.filter((value): value is string => Boolean(value)))].sort();
+}
+
+function FilterSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+}) {
+  return (
+    <label className="flex items-center gap-2 text-sm text-zinc-600">
+      <span>{label}</span>
+      <select
+        className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-sm"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        <option value="all">All</option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }

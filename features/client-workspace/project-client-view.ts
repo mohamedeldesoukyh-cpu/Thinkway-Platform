@@ -11,7 +11,14 @@ import { resolveStudioPackageReadiness } from "@/features/campaign-studio/servic
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
 import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
 
-import { clientFacingAllocationNote, clientSafeFitCopy } from "./format";
+import { clientFacingAllocationNote } from "./format";
+import { formatDeliverableItems, parseDeliverableItems } from "./deliverables";
+import {
+  attachMatchExplanation,
+  contentPostsFromPublications,
+  enrichSnapshotCreatorFromUnified,
+  optionalMetric,
+} from "./creator-snapshot";
 import type { ClientCreatorSelectionState } from "./constants";
 import type {
   ClientCommercialLine,
@@ -109,40 +116,45 @@ export function projectClientCreators(
     const row = reasoning.get(creatorId);
     const profile = hydratedMap.get(creatorId);
     const platform = primaryPlatform(profile, row);
-    const followers =
-      profile?.metrics.followers.value ??
-      profile?.platforms[0]?.follower_count ??
-      undefined;
-    const engagement =
-      profile?.metrics.engagement_rate.value ??
-      profile?.platforms[0]?.engagement_rate ??
-      undefined;
-    const examples = (profile?.platforms[0]?.recent_publications ?? [])
-      .slice(0, 3)
-      .map((pub) => ({
-        url: pub.url,
-        thumbnail: pub.thumbnail,
-        likes: pub.likes,
-      }));
+    const examples = contentPostsFromPublications(
+      profile?.platforms[0]?.recent_publications ?? profile?.recent_publications,
+      platform
+    );
+    const fitScores = creatorsData(campaignObject).recommendations?.creatorFitScores ?? {};
+    const matchPercent = optionalMetric(fitScores[creatorId]);
+    const base = enrichSnapshotCreatorFromUnified(
+      {
+        creatorId,
+        displayName: row?.displayName?.trim() || profile?.display_name || "Creator",
+        handle: primaryHandle(profile, row),
+        platform,
+        country: profile?.estimated_country || profile?.country_code || undefined,
+        city: profile?.city || undefined,
+        deliverables: row?.serviceLabel,
+        deliverableItems: row?.serviceTypes?.length
+          ? parseDeliverableItems(
+              row.serviceTypes.map((type) => ({ type, platform, quantity: 1 }))
+            )
+          : undefined,
+        investmentAmount: row?.quotedRevenue,
+        investmentCurrency: row?.quotedCurrency,
+        avatarUrl: row?.avatarUrl,
+      },
+      profile
+    );
+    const withMatch = attachMatchExplanation(base, {
+      matchPercent,
+      matchConfidence: row?.confidence,
+      why: row?.whySelected,
+      audienceMatch: row?.audienceMatch,
+      evidence: row?.evidence,
+    });
     return {
-      creatorId,
-      displayName: row?.displayName?.trim() || profile?.display_name || "Creator",
-      handle: primaryHandle(profile, row),
-      platform,
-      followers: followers ?? undefined,
-      engagementRate: engagement ?? undefined,
-      country: profile?.estimated_country || profile?.country_code || undefined,
-      city: profile?.city || undefined,
-      category: profile?.categories[0] || profile?.ai_category || undefined,
-      audienceHighlight: profile?.audience_interests?.slice(0, 3).join(" · ") || undefined,
-      fitExplanation: clientSafeFitCopy(row?.audienceMatch || row?.whySelected),
-      deliverables: row?.serviceLabel,
-      investmentAmount: row?.quotedRevenue,
-      investmentCurrency: row?.quotedCurrency,
-      avatarUrl: row?.avatarUrl || profile?.primaryAvatarUrl || profile?.profile_image_url || undefined,
-      bio: profile?.bio || undefined,
+      ...withMatch,
+      deliverables: formatDeliverableItems(withMatch.deliverableItems) || withMatch.deliverables,
       selection: selection[creatorId] ?? "in_review",
-      contentExamples: examples,
+      contentExamples: examples.slice(0, 3),
+      contentFeed: examples,
     };
   });
 }

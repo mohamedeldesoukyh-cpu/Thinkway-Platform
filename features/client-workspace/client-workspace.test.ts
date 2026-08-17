@@ -7,7 +7,11 @@ import { isPublicPath } from "@/lib/auth/routes";
 import { classifyPagePath } from "@/lib/security/workspace-classify";
 
 import { CLIENT_CHANGE_AREAS, CLIENT_REVIEW_SOURCES } from "./constants";
-import { clientSafeFitCopy } from "./format";
+import { clientSafeFitCopy, formatCompactCount, formatEngagementPct } from "./format";
+import { deliverablesLabel } from "./deliverables";
+import { HYPEAUDITOR_MEDIA_PLAN_PARITY } from "./hypeauditor-parity";
+import { projectMediaPlanSummary } from "./media-plan-summary";
+import { briefFromSnapshotCreator } from "./creator-brief";
 import { shortlistReviewBlockers, quotationReviewBlockers } from "./source-readiness";
 import {
   projectCommercialFromSnapshot,
@@ -322,3 +326,161 @@ test("client nav hides empty sections by source", () => {
   ]);
   assert.equal(defaultClientWorkspaceSection(["overview", "commercial", "feedback"]), "commercial");
 });
+
+test("legacy snapshots still parse after media-plan fields are added", () => {
+  const snapshot = parseSourceSnapshot({
+    source: "shortlist",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme Legal",
+    platforms: ["instagram"],
+    deliverables: [],
+    creators: [{ creatorId: "a", displayName: "A", followers: 12000, engagementRate: 4.8 }],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "Duration not confirmed", phases: [] },
+    commercial: {
+      currency: "EGP",
+      creatorInvestment: 0,
+      totalInvestment: 0,
+      lines: [],
+      selectedCount: 1,
+      totalCount: 1,
+    },
+    creatorIds: ["a"],
+  });
+  assert.ok(snapshot);
+  assert.equal(snapshot!.creators[0]?.followers, 12_000);
+  assert.equal(snapshot!.creators[0]?.contentFeed, undefined);
+  assert.equal(snapshot!.mediaPlanSummary, undefined);
+});
+
+test("campaign summary uses forecast + client investment and never fabricates EMV or ROI", () => {
+  const snapshot = parseSourceSnapshot({
+    source: "quotation",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme Legal",
+    platforms: ["instagram"],
+    deliverables: ["Reel"],
+    creators: [
+      {
+        creatorId: "a",
+        displayName: "A",
+        followers: 80_000,
+        engagementRate: 3.2,
+        platform: "instagram",
+        investmentAmount: 40_000,
+        deliverableItems: [{ platform: "instagram", type: "Reel", quantity: 1 }],
+      },
+      {
+        creatorId: "b",
+        displayName: "B",
+        followers: 50_000,
+        engagementRate: 4.1,
+        platform: "instagram",
+        investmentAmount: 60_000,
+        deliverableItems: [{ platform: "instagram", type: "Story", quantity: 2 }],
+      },
+    ],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "Duration not confirmed", phases: [] },
+    commercial: {
+      currency: "EGP",
+      creatorInvestment: 100_000,
+      totalInvestment: 100_000,
+      lines: [],
+      selectedCount: 2,
+      totalCount: 2,
+    },
+    creatorIds: ["a", "b"],
+  });
+  assert.ok(snapshot);
+  const full = projectMediaPlanSummary(snapshot!, { a: "in_review", b: "in_review" });
+  assert.equal(full.creatorCount, 2);
+  assert.ok(full.estimatedReach != null && full.estimatedReach > 0);
+  assert.ok(full.estimatedEngagements != null && full.estimatedEngagements > 0);
+  assert.ok(full.cpe != null && full.cpe > 0);
+  assert.ok(full.cpm != null && full.cpm > 0);
+  assert.equal(full.emv, undefined);
+  assert.ok(full.activityMix.some((item) => /Reel/i.test(item.label)));
+
+  const reduced = projectMediaPlanSummary(snapshot!, { a: "rejected", b: "accepted" });
+  assert.equal(reduced.creatorCount, 1);
+  assert.ok(reduced.estimatedReach != null && reduced.estimatedReach < (full.estimatedReach ?? 0));
+});
+
+test("campaign summary omits reach when follower data is unavailable", () => {
+  const snapshot = parseSourceSnapshot({
+    source: "shortlist",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme Legal",
+    platforms: [],
+    deliverables: [],
+    creators: [{ creatorId: "a", displayName: "A" }],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "Duration not confirmed", phases: [] },
+    commercial: {
+      currency: "EGP",
+      creatorInvestment: 0,
+      totalInvestment: 0,
+      lines: [],
+      selectedCount: 1,
+      totalCount: 1,
+    },
+    creatorIds: ["a"],
+  });
+  const summary = projectMediaPlanSummary(snapshot!, { a: "in_review" });
+  assert.equal(summary.estimatedReach, undefined);
+  assert.equal(summary.cpe, undefined);
+  assert.equal(summary.cpm, undefined);
+  assert.equal(summary.emv, undefined);
+});
+
+test("unavailable metrics stay unknown and real zeros stay zero", () => {
+  assert.equal(formatCompactCount(undefined), "Not available");
+  assert.equal(formatCompactCount(0), "0");
+  assert.equal(formatEngagementPct(undefined), "Not available");
+  assert.equal(deliverablesLabel(undefined), "Deliverables to be confirmed");
+  assert.match(deliverablesLabel([{ platform: "instagram", type: "Reel", quantity: 1 }]), /Reel/);
+});
+
+test("frozen creator brief is projected from snapshot without inventing audience", () => {
+  const brief = briefFromSnapshotCreator({
+    creatorId: "a",
+    displayName: "A",
+    followers: 10_000,
+    avgLikes: 0,
+  });
+  assert.equal(brief.audience, null);
+  assert.equal(brief.performance?.avgLikes, 0);
+  assert.equal(brief.contentFeed.length, 0);
+  assert.equal(brief.frozen, false);
+});
+
+test("HypeAuditor parity matrix covers the required media-plan capabilities", () => {
+  const required = [
+    "Campaign summary",
+    "Creator cards",
+    "Creator detail",
+    "Audience",
+    "Performance",
+    "Content feed",
+    "Deliverables",
+    "Commercial",
+    "Creator selection",
+    "Filters",
+    "Comments",
+    "Approval",
+    "Versioning",
+    "Responsive experience",
+  ];
+  for (const capability of required) {
+    const row = HYPEAUDITOR_MEDIA_PLAN_PARITY.find((item) => item.capability === capability);
+    assert.ok(row, capability);
+    assert.equal(row!.status, "shipped");
+  }
+  assert.equal(HYPEAUDITOR_MEDIA_PLAN_PARITY.find((row) => row.capability === "ROI")?.status, "not_copied");
+  assert.equal(HYPEAUDITOR_MEDIA_PLAN_PARITY.find((row) => row.capability === "HypeAuditor AQS")?.status, "not_copied");
+});
+

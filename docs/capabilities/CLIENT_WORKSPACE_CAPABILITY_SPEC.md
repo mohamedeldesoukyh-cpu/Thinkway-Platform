@@ -39,6 +39,44 @@ These are three **entry points** into the same versioned Client Review (`source`
 
 The review row stores a selection projection and a `source_snapshot` so a superseded version stays historically accurate. Live Studio / Shortlist / Quotation edits do not mutate an already-created review.
 
+## Creator media plan (client-facing)
+
+The Creators section is a client-facing influencer media plan. It is **not** Studio CURRENT Creators / “Who should we recommend?”.
+
+| Layer | SSOT |
+|-------|------|
+| Identity, metrics, publications | Unified creator + stored `recent_publications` frozen into `source_snapshot` |
+| Audience / category / performance depth | `loadCreatorIntelligenceBundle` (consume-only), freeze-on-read into the open review snapshot |
+| Campaign totals | Campaign Forecast Engine from frozen creator inputs |
+| CPE / CPM | Existing commercial formulas using **client-facing investment** and forecast engagements/impressions |
+| EMV | Shown only when an existing Thinkway EMV value is frozen; never invented |
+| Selection | `campaign_client_reviews.selection_state` + shortlist item status |
+| Commercial | Quoted **revenue** only |
+
+Missing metrics render **Not available** / **Data not available** / **To be confirmed**. Real zeros remain `0`.
+
+## HypeAuditor parity
+
+Code SSOT: `features/client-workspace/hypeauditor-parity.ts`
+
+| HypeAuditor capability | Thinkway implementation | Thinkway SSOT | Status |
+|---|---|---|---|
+| Campaign summary | Reach, engagements, CPE, CPM, EMV, creator count, activity mix | Campaign Forecast + client revenue | Shipped |
+| Creator cards | Media-plan cards with progressive disclosure | `source_snapshot` | Shipped |
+| Creator detail | Profile, audience, performance, content, fit, commercial | Snapshot + ECI freeze-on-read | Shipped |
+| Audience | Age / gender / location / interests when verified | ECI audience | Shipped |
+| Performance | Avg likes/comments/views, ER, estimated reach | Unified metrics + ECI performance | Shipped |
+| Content feed | Stored publications; unavailable state when none | Stored recent publications | Shipped |
+| Deliverables | Proposed mix or to-be-confirmed | Shortlist / quotation / studio | Shipped |
+| Commercial | Client-facing investment only | Quotation revenue | Shipped |
+| Creator selection | Accept / reject / in review + multi-select | Review selection_state | Shipped |
+| Filters | Status + platform/category/tier/location when supported | Snapshot fields | Shipped |
+| Comments | Creator comments, reject reason, change request | `campaign_client_review_comments` | Shipped |
+| Approval | Creator + campaign decisions | Review status | Shipped |
+| Versioning | Frozen snapshot; old versions stay historically accurate | `source_snapshot` | Shipped |
+| Responsive experience | Stacked cards + detail sheet | Client Workspace UI | Shipped |
+| AQS / bot pie / ROI | Explicitly not copied | n/a | Not copied |
+
 ## Security
 
 Reuse `generate_io_approval_token()` / `hash_io_approval_token()` (same as Client/Vendor IO one-click links). Public route `/review/*`. Anon has no table grants. Token resolution is SECURITY DEFINER. Service role loads the frozen snapshot **after** token validation.

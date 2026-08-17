@@ -1,8 +1,14 @@
 import type { ClientCreatorSelectionState } from "./constants";
 import type {
+  ClientAudienceBrief,
+  ClientAudienceSlice,
   ClientCommercialSummary,
+  ClientContentPost,
   ClientCreatorCard,
+  ClientDeliverableItem,
+  ClientMediaPlanSummary,
   ClientOverview,
+  ClientPerformanceBrief,
   ClientReviewSourceSnapshot,
   ClientReviewSourceSnapshotCreator,
 } from "./types";
@@ -17,6 +23,145 @@ function asString(value: unknown): string | undefined {
 
 function asNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function asStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const items = value.filter((item): item is string => typeof item === "string" && Boolean(item.trim()));
+  return items.length > 0 ? items : undefined;
+}
+
+function parseSlices(value: unknown): ClientAudienceSlice[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(isRecord)
+    .map((row) => ({
+      label: asString(row.label) || "",
+      percent: asNumber(row.percent),
+    }))
+    .filter((row) => row.label);
+}
+
+function parseAudience(value: unknown): ClientAudienceBrief | undefined {
+  if (!isRecord(value)) return undefined;
+  const frozenAt = asString(value.frozenAt);
+  if (!frozenAt) return undefined;
+  return {
+    frozenAt,
+    ages: parseSlices(value.ages),
+    genders: parseSlices(value.genders),
+    locations: parseSlices(value.locations),
+    interests: asStringArray(value.interests) ?? [],
+    summary: asString(value.summary),
+  };
+}
+
+function parsePerformance(value: unknown): ClientPerformanceBrief | undefined {
+  if (!isRecord(value)) return undefined;
+  const frozenAt = asString(value.frozenAt);
+  if (!frozenAt) return undefined;
+  return {
+    frozenAt,
+    avgLikes: asNumber(value.avgLikes),
+    avgComments: asNumber(value.avgComments),
+    avgViews: asNumber(value.avgViews),
+    engagementRate: asNumber(value.engagementRate),
+    estimatedReach: asNumber(value.estimatedReach),
+    likesExplanation: asString(value.likesExplanation),
+    commentsExplanation: asString(value.commentsExplanation),
+    viewsExplanation: asString(value.viewsExplanation),
+    engagementExplanation: asString(value.engagementExplanation),
+    reachExplanation: asString(value.reachExplanation),
+  };
+}
+
+function parseContentFeed(value: unknown): ClientContentPost[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const posts = value.filter(isRecord).map((row) => ({
+    url: asString(row.url) ?? null,
+    thumbnail: asString(row.thumbnail) ?? null,
+    platform: asString(row.platform),
+    postedAt: asString(row.postedAt) ?? null,
+    likes: asNumber(row.likes) ?? null,
+    comments: asNumber(row.comments) ?? null,
+    views: asNumber(row.views) ?? null,
+    engagementRate: asNumber(row.engagementRate) ?? null,
+  }));
+  return posts.length > 0 ? posts : undefined;
+}
+
+function parseDeliverableItems(value: unknown): ClientDeliverableItem[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const items = value
+    .filter(isRecord)
+    .map((row) => ({
+      platform: asString(row.platform),
+      type: asString(row.type) || "",
+      quantity: asNumber(row.quantity),
+    }))
+    .filter((row) => row.type);
+  return items.length > 0 ? items : undefined;
+}
+
+function parseMediaPlanSummary(value: unknown): ClientMediaPlanSummary | undefined {
+  if (!isRecord(value)) return undefined;
+  const mix = Array.isArray(value.activityMix)
+    ? value.activityMix.filter(isRecord).map((row) => ({
+        label: asString(row.label) || "",
+        count: asNumber(row.count) ?? 0,
+      })).filter((row) => row.label)
+    : [];
+  return {
+    creatorCount: asNumber(value.creatorCount) ?? 0,
+    estimatedReach: asNumber(value.estimatedReach),
+    estimatedEngagements: asNumber(value.estimatedEngagements),
+    estimatedImpressions: asNumber(value.estimatedImpressions),
+    cpe: asNumber(value.cpe),
+    cpm: asNumber(value.cpm),
+    emv: asNumber(value.emv),
+    activityMix: mix,
+    currency: asString(value.currency) || "EGP",
+  };
+}
+
+export function parseSnapshotCreator(row: Record<string, unknown>): ClientReviewSourceSnapshotCreator {
+  return {
+    creatorId: asString(row.creatorId) || "",
+    displayName: asString(row.displayName) || "Creator",
+    handle: asString(row.handle),
+    platform: asString(row.platform),
+    followers: asNumber(row.followers),
+    engagementRate: asNumber(row.engagementRate),
+    country: asString(row.country),
+    city: asString(row.city),
+    category: asString(row.category),
+    niche: asString(row.niche),
+    categories: asStringArray(row.categories),
+    audienceHighlight: asString(row.audienceHighlight),
+    fitExplanation: asString(row.fitExplanation),
+    deliverables: asString(row.deliverables),
+    deliverableItems: parseDeliverableItems(row.deliverableItems),
+    investmentAmount: asNumber(row.investmentAmount),
+    investmentCurrency: asString(row.investmentCurrency),
+    avatarUrl: asString(row.avatarUrl),
+    bio: asString(row.bio),
+    notes: asString(row.notes),
+    avgLikes: asNumber(row.avgLikes),
+    avgComments: asNumber(row.avgComments),
+    avgViews: asNumber(row.avgViews),
+    estimatedReach: asNumber(row.estimatedReach),
+    matchPercent: asNumber(row.matchPercent),
+    matchConfidence: asNumber(row.matchConfidence),
+    matchExplanation: asString(row.matchExplanation),
+    matchEvidence: asStringArray(row.matchEvidence),
+    tier: asString(row.tier),
+    brandMentions: asStringArray(row.brandMentions),
+    contentFeed: parseContentFeed(row.contentFeed),
+    audience: parseAudience(row.audience),
+    performance: parsePerformance(row.performance),
+    influencerId: asString(row.influencerId),
+    briefFrozenAt: asString(row.briefFrozenAt),
+  };
 }
 
 export function parseSourceSnapshot(raw: unknown): ClientReviewSourceSnapshot | null {
@@ -51,24 +196,7 @@ export function parseSourceSnapshot(raw: unknown): ClientReviewSourceSnapshot | 
       : [],
     whyThisApproach: asString(raw.whyThisApproach),
     strategyBody: asString(raw.strategyBody),
-    creators: creators.map((row) => ({
-      creatorId: asString(row.creatorId) || "",
-      displayName: asString(row.displayName) || "Creator",
-      handle: asString(row.handle),
-      platform: asString(row.platform),
-      followers: asNumber(row.followers),
-      engagementRate: asNumber(row.engagementRate),
-      country: asString(row.country),
-      city: asString(row.city),
-      category: asString(row.category),
-      audienceHighlight: asString(row.audienceHighlight),
-      fitExplanation: asString(row.fitExplanation),
-      deliverables: asString(row.deliverables),
-      investmentAmount: asNumber(row.investmentAmount),
-      investmentCurrency: asString(row.investmentCurrency),
-      avatarUrl: asString(row.avatarUrl),
-      bio: asString(row.bio),
-    })),
+    creators: creators.map((row) => parseSnapshotCreator(row)),
     content: content.map((row) => ({
       creatorId: asString(row.creatorId),
       creatorName: asString(row.creatorName) || "Creator",
@@ -108,6 +236,7 @@ export function parseSourceSnapshot(raw: unknown): ClientReviewSourceSnapshot | 
       selectedCount: asNumber(commercial.selectedCount) ?? creatorIds.length,
       totalCount: asNumber(commercial.totalCount) ?? creatorIds.length,
     },
+    mediaPlanSummary: parseMediaPlanSummary(raw.mediaPlanSummary),
     quotation: quotation
       ? {
           id: asString(quotation.id) || "",
@@ -186,7 +315,7 @@ export function projectCreatorsFromSnapshot(
   return snapshot.creators.map((creator) => ({
     ...creator,
     selection: selection[creator.creatorId] ?? "in_review",
-    contentExamples: [],
+    contentExamples: creator.contentFeed?.slice(0, 3) ?? [],
   }));
 }
 

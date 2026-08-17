@@ -55,6 +55,7 @@ export async function setCreatorSelection(input: {
   creatorId: string;
   state: ClientCreatorSelectionState;
   creatorName?: string;
+  reason?: string;
 }): Promise<{ ok: boolean; message: string; selection?: Record<string, ClientCreatorSelectionState> }> {
   const gate = await requireInteractiveReview(input.token);
   if (!gate.ok) return gate;
@@ -86,8 +87,26 @@ export async function setCreatorSelection(input: {
     event_type: input.state === "rejected" ? "creator_rejected" : "creator_selected",
     actor_kind: "client",
     actor_label: gate.review.clientLabel ?? "Client",
-    payload: { creatorId: input.creatorId, name: input.creatorName, state: input.state },
+    payload: {
+      creatorId: input.creatorId,
+      name: input.creatorName,
+      state: input.state,
+      reason: input.reason?.trim() || null,
+    },
   } as never);
+
+  const reason = input.reason?.trim();
+  if (reason && (input.state === "rejected" || input.state === "in_review")) {
+    await db().from("campaign_client_review_comments" as never).insert({
+      review_id: gate.review.id,
+      target_type: "creator",
+      target_id: input.creatorId,
+      author_kind: "client",
+      author_label: gate.review.clientLabel ?? "Client",
+      message: input.state === "rejected" ? `Reject reason: ${reason}` : reason,
+      status: "open",
+    } as never);
+  }
 
   return { ok: true, message: "Selection saved.", selection };
 }

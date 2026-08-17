@@ -18,6 +18,7 @@ import {
   projectCreatorsFromSnapshot,
   projectOverviewFromSnapshot,
 } from "./snapshot";
+import { projectMediaPlanSummary } from "./media-plan-summary";
 import { snapshotFromCampaignObject } from "./snapshot-from-object";
 import { actionRequiredFor, isInteractiveClientReview } from "./status";
 import type {
@@ -185,6 +186,7 @@ function viewFromSnapshot(
     content: snapshot.content,
     timeline: snapshot.timeline,
     commercial,
+    mediaPlanSummary: projectMediaPlanSummary(snapshot, selection),
     quotation: snapshot.quotation,
     visibleSections: [],
     comments,
@@ -264,6 +266,7 @@ export async function loadClientWorkspace(
     view.timeline = projectClientTimeline(campaignObject);
     view.commercial = projectClientCommercial(campaignObject, selection);
     view.overview = projectClientOverview(campaignObject, selection);
+    view.mediaPlanSummary = projectMediaPlanSummary(snapshot, selection);
     view.visibleSections = visibleClientWorkspaceSections(view);
   }
 

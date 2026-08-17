@@ -1,14 +1,59 @@
-export function formatCompactCount(count: number | undefined): string {
-  if (count == null || !Number.isFinite(count)) return "—";
+export const NOT_AVAILABLE = "Not available";
+export const DATA_NOT_AVAILABLE = "Data not available";
+export const TO_BE_CONFIRMED = "To be confirmed";
+export const DELIVERABLES_TO_BE_CONFIRMED = "Deliverables to be confirmed";
+export const CONTENT_UNAVAILABLE = "Content data unavailable";
+
+export function formatCompactCount(count: number | undefined | null): string {
+  if (count == null || !Number.isFinite(count)) return NOT_AVAILABLE;
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
   if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`;
   return Math.round(count).toLocaleString();
 }
 
-export function formatEngagementPct(rate: number | undefined): string {
-  if (rate == null || !Number.isFinite(rate)) return "—";
+export function formatEngagementPct(rate: number | undefined | null): string {
+  if (rate == null || !Number.isFinite(rate)) return NOT_AVAILABLE;
   const value = rate > 0 && rate <= 1 ? rate * 100 : rate;
-  return `${value.toFixed(2)}%`;
+  return `${value.toFixed(1)}%`;
+}
+
+export function formatExactCount(count: number | undefined | null): string {
+  if (count == null || !Number.isFinite(count)) return NOT_AVAILABLE;
+  return Math.round(count).toLocaleString();
+}
+
+export function formatMoneyOrUnavailable(
+  amount: number | undefined | null,
+  currency: string,
+  format: (value: number, currency: string) => string
+): string {
+  if (amount == null || !Number.isFinite(amount)) return NOT_AVAILABLE;
+  return format(amount, currency);
+}
+
+export function formatLocation(city?: string, country?: string): string | undefined {
+  const parts = [city?.trim(), country?.trim()].filter((part): part is string => Boolean(part));
+  return parts.length > 0 ? parts.join(", ") : undefined;
+}
+
+export function formatPlatformLabel(platform?: string): string | undefined {
+  if (!platform?.trim()) return undefined;
+  const value = platform.trim();
+  if (value.toLowerCase() === "instagram") return "Instagram";
+  if (value.toLowerCase() === "tiktok") return "TikTok";
+  if (value.toLowerCase() === "youtube") return "YouTube";
+  if (value.toLowerCase() === "facebook") return "Facebook";
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+export function formatMatchPercent(value: number | undefined | null): string | undefined {
+  if (value == null || !Number.isFinite(value) || value < 0) return undefined;
+  const percent = value > 0 && value <= 1 ? value * 100 : value;
+  return `${Math.round(percent)}%`;
+}
+
+export function formatConfidencePercent(value: number | undefined | null): string | undefined {
+  return formatMatchPercent(value);
 }
 
 export function clientSafeFitCopy(raw: string | undefined): string | undefined {

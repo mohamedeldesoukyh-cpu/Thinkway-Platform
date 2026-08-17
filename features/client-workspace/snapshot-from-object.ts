@@ -3,6 +3,7 @@ import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
 
 import type { ClientCreatorSelectionState } from "./constants";
+import { buildMediaPlanSummary } from "./media-plan-summary";
 import {
   clientCreatorIds,
   projectClientCommercial,
@@ -24,13 +25,28 @@ function snapshotCreatorCard(card: ClientCreatorCard): ClientReviewSourceSnapsho
     country: card.country,
     city: card.city,
     category: card.category,
+    niche: card.niche,
+    categories: card.categories,
     audienceHighlight: card.audienceHighlight,
     fitExplanation: card.fitExplanation,
     deliverables: card.deliverables,
+    deliverableItems: card.deliverableItems,
     investmentAmount: card.investmentAmount,
     investmentCurrency: card.investmentCurrency,
     avatarUrl: card.avatarUrl,
     bio: card.bio,
+    notes: card.notes,
+    avgLikes: card.avgLikes,
+    avgComments: card.avgComments,
+    avgViews: card.avgViews,
+    estimatedReach: card.estimatedReach,
+    matchPercent: card.matchPercent,
+    matchConfidence: card.matchConfidence,
+    matchExplanation: card.matchExplanation,
+    matchEvidence: card.matchEvidence,
+    tier: card.tier,
+    brandMentions: card.brandMentions,
+    contentFeed: card.contentFeed ?? card.contentExamples,
   };
 }
 
@@ -42,7 +58,7 @@ export function snapshotFromCampaignObject(
   const overview = projectClientOverview(campaignObject, selection);
   const creators = projectClientCreators(campaignObject, selection, hydrated);
   const narrative = deriveEnterprisePlanningNarrative(campaignObject);
-  return {
+  const snapshot: ClientReviewSourceSnapshot = {
     source: "studio",
     brandName: overview.brandName,
     campaignName: overview.campaignName,
@@ -64,4 +80,6 @@ export function snapshotFromCampaignObject(
     commercial: projectClientCommercial(campaignObject, selection),
     creatorIds: clientCreatorIds(campaignObject),
   };
+  snapshot.mediaPlanSummary = buildMediaPlanSummary(snapshot);
+  return snapshot;
 }

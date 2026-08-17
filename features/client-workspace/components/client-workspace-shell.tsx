@@ -22,7 +22,7 @@ export function ClientWorkspaceShell({
   return (
     <div className="min-h-screen bg-[#F7F7F5] text-zinc-900">
       <header className="border-b border-zinc-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-4 sm:px-6">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 sm:px-6">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
@@ -58,7 +58,7 @@ export function ClientWorkspaceShell({
           </nav>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">{children}</main>
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">{children}</main>
     </div>
   );
 }

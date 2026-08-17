@@ -8,6 +8,13 @@ import { persistClientReview, type CreateClientReviewResult } from "./persist-cl
 import { fingerprintFromSnapshotCreators } from "./snapshot";
 import { quotationItemsForClient, quotationReviewBlockers } from "./source-readiness";
 import type { ClientReviewSourceSnapshot, ClientReviewSourceSnapshotCreator } from "./types";
+import { formatDeliverableItems, parseDeliverableItems } from "./deliverables";
+import { enrichSnapshotCreatorFromUnified } from "./creator-snapshot";
+import { buildMediaPlanSummary } from "./media-plan-summary";
+import {
+  resolveCreatorFromRefLookup,
+  resolveUnifiedCreatorsByRefs,
+} from "@/lib/creators/unified-browse";
 
 export type CreateClientReviewFromQuotationInput = {
   quotationId: string;
@@ -16,14 +23,8 @@ export type CreateClientReviewFromQuotationInput = {
 };
 
 function formatDeliverables(item: QuotationItemRow): string | undefined {
-  if (!item.deliverables?.length) return item.service_description ?? undefined;
-  const parts = item.deliverables.map((line) => {
-    const type = line.type || line.types?.[0];
-    if (!type) return null;
-    const qty = line.quantity && line.quantity > 1 ? `${line.quantity}× ` : "";
-    return `${qty}${type}`;
-  });
-  return parts.filter((part): part is string => Boolean(part)).join(", ") || item.service_description || undefined;
+  const items = parseDeliverableItems(item.deliverables);
+  return formatDeliverableItems(items) || item.service_description || undefined;
 }
 
 function creatorIdForItem(item: QuotationItemRow): string {
@@ -39,6 +40,7 @@ function handleFor(item: QuotationItemRow): string | undefined {
 }
 
 function snapshotCreator(item: QuotationItemRow, currency: string): ClientReviewSourceSnapshotCreator {
+  const deliverableItems = parseDeliverableItems(item.deliverables);
   return {
     creatorId: creatorIdForItem(item),
     displayName: item.creator_name?.trim() || handleFor(item) || "Creator",
@@ -48,10 +50,13 @@ function snapshotCreator(item: QuotationItemRow, currency: string): ClientReview
     engagementRate: item.engagement_rate ?? undefined,
     country: item.country_code ?? undefined,
     category: item.creator_categories?.[0] ?? undefined,
+    categories: item.creator_categories?.filter(Boolean) ?? undefined,
     deliverables: formatDeliverables(item),
+    deliverableItems: deliverableItems.length > 0 ? deliverableItems : undefined,
     investmentAmount: item.revenue,
     investmentCurrency: item.cost_currency || currency,
     avatarUrl: item.profile_image_url ?? item.creator_profile_source?.avatarUrl ?? undefined,
+    influencerId: item.influencer_id ?? undefined,
   };
 }
 
@@ -87,7 +92,27 @@ export async function createClientReviewFromQuotation(
   }
 
   const items = quotationItemsForClient(detail.items);
-  const snapshotCreators = items.map((item) => snapshotCreator(item, detail.currency));
+  let lookup: Awaited<ReturnType<typeof resolveUnifiedCreatorsByRefs>> | null = null;
+  try {
+    lookup = await resolveUnifiedCreatorsByRefs(supabase as never, {
+      unifiedIds: items.map((item) => item.unified_id),
+      influencerIds: items.map((item) => item.influencer_id),
+      discoveredProfileIds: items.map((item) => item.profile_id),
+    });
+  } catch {
+    lookup = null;
+  }
+  const snapshotCreators = items.map((item) => {
+    const base = snapshotCreator(item, detail.currency);
+    const unified = lookup
+      ? resolveCreatorFromRefLookup(lookup, {
+          unified_id: item.unified_id,
+          influencer_id: item.influencer_id,
+          profile_id: item.profile_id,
+        })
+      : null;
+    return enrichSnapshotCreatorFromUnified(base, unified ?? undefined);
+  });
   const selection: Record<string, ClientCreatorSelectionState> = {};
   for (const creator of snapshotCreators) selection[creator.creatorId] = "in_review";
 
@@ -144,6 +169,7 @@ export async function createClientReviewFromQuotation(
     },
     creatorIds: snapshotCreators.map((creator) => creator.creatorId),
   };
+  snapshot.mediaPlanSummary = buildMediaPlanSummary(snapshot);
 
   return persistClientReview({
     supabase,

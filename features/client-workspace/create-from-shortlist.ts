@@ -12,6 +12,9 @@ import { persistClientReview, type CreateClientReviewResult } from "./persist-cl
 import { fingerprintFromSnapshotCreators } from "./snapshot";
 import { shortlistReviewBlockers } from "./source-readiness";
 import type { ClientReviewSourceSnapshot, ClientReviewSourceSnapshotCreator } from "./types";
+import { formatDeliverableItems, parseDeliverableItems } from "./deliverables";
+import { attachMatchExplanation, enrichSnapshotCreatorFromUnified } from "./creator-snapshot";
+import { buildMediaPlanSummary } from "./media-plan-summary";
 
 export type CreateClientReviewFromShortlistInput = {
   shortlistId: string;
@@ -43,6 +46,7 @@ type ShortlistSeedItem = {
   deliverables: unknown;
   item_status?: string | null;
   sort_order: number | null;
+  match_score?: number | null;
 };
 
 type DeliverableLine = {
@@ -60,17 +64,7 @@ function creatorIdForItem(item: ShortlistSeedItem): string {
 }
 
 function formatDeliverables(raw: unknown): string | undefined {
-  if (!Array.isArray(raw) || raw.length === 0) return undefined;
-  const parts = (raw as DeliverableLine[])
-    .map((line) => {
-      const type = line.type || line.types?.[0];
-      if (!type) return null;
-      const qty = line.quantity && line.quantity > 1 ? `${line.quantity}× ` : "";
-      const platform = line.platform ? ` (${line.platform})` : "";
-      return `${qty}${type}${platform}`;
-    })
-    .filter((part): part is string => Boolean(part));
-  return parts.length > 0 ? parts.join(", ") : undefined;
+  return formatDeliverableItems(parseDeliverableItems(raw));
 }
 
 function contentFromDeliverables(
@@ -100,23 +94,22 @@ function cardFromCreator(
       ? platform.handle
       : `@${platform.handle}`
     : undefined;
-  return {
+  const deliverableItems = parseDeliverableItems(item.deliverables);
+  const base: ClientReviewSourceSnapshotCreator = {
     creatorId: creatorIdForItem(item),
     displayName: creator?.display_name || handle || "Creator",
     handle,
     platform: platform?.platform,
-    followers: creator?.metrics?.followers?.value ?? platform?.follower_count ?? undefined,
-    engagementRate: creator?.metrics?.engagement_rate?.value ?? platform?.engagement_rate ?? undefined,
-    country: creator?.estimated_country || creator?.country_code || undefined,
-    city: creator?.city || undefined,
-    category: creator?.categories[0] || creator?.ai_category || undefined,
-    audienceHighlight: creator?.audience_interests?.slice(0, 3).join(" · ") || undefined,
     deliverables: formatDeliverables(item.deliverables),
+    deliverableItems: deliverableItems.length > 0 ? deliverableItems : undefined,
     investmentAmount: item.revenue ?? undefined,
     investmentCurrency: item.cost_currency || currency,
-    avatarUrl: creator?.primaryAvatarUrl || creator?.profile_image_url || undefined,
-    bio: creator?.bio || undefined,
+    influencerId: item.influencer_id ?? undefined,
   };
+  return attachMatchExplanation(enrichSnapshotCreatorFromUnified(base, creator), {
+    matchPercent: item.match_score,
+    why: creator?.ai_niche ? `Relevant ${creator.ai_niche} creator for this campaign.` : undefined,
+  });
 }
 
 export async function createClientReviewFromShortlist(
@@ -141,7 +134,7 @@ export async function createClientReviewFromShortlist(
     (select) =>
       supabase
         .from("discovery_shortlist_items")
-        .select(`${select}, item_status`)
+        .select(`${select}, item_status, match_score`)
         .eq("shortlist_id", input.shortlistId)
         .order("sort_order", { ascending: true }) as never
   );
@@ -251,6 +244,7 @@ export async function createClientReviewFromShortlist(
     },
     creatorIds: snapshotCreators.map((creator) => creator.creatorId),
   };
+  snapshot.mediaPlanSummary = buildMediaPlanSummary(snapshot);
 
   return persistClientReview({
     supabase,

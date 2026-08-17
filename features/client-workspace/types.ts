@@ -9,6 +9,63 @@ import type {
   ClientWorkspaceSectionId,
 } from "./constants";
 
+export type ClientDeliverableItem = {
+  platform?: string;
+  type: string;
+  quantity?: number;
+};
+
+export type ClientContentPost = {
+  url?: string | null;
+  thumbnail?: string | null;
+  platform?: string;
+  postedAt?: string | null;
+  likes?: number | null;
+  comments?: number | null;
+  views?: number | null;
+  engagementRate?: number | null;
+};
+
+export type ClientAudienceSlice = {
+  label: string;
+  percent?: number;
+};
+
+export type ClientAudienceBrief = {
+  frozenAt: string;
+  ages: ClientAudienceSlice[];
+  genders: ClientAudienceSlice[];
+  locations: ClientAudienceSlice[];
+  interests: string[];
+  summary?: string;
+};
+
+export type ClientPerformanceBrief = {
+  frozenAt: string;
+  avgLikes?: number;
+  avgComments?: number;
+  avgViews?: number;
+  engagementRate?: number;
+  estimatedReach?: number;
+  likesExplanation?: string;
+  commentsExplanation?: string;
+  viewsExplanation?: string;
+  engagementExplanation?: string;
+  reachExplanation?: string;
+};
+
+export type ClientMediaPlanSummary = {
+  creatorCount: number;
+  estimatedReach?: number;
+  estimatedEngagements?: number;
+  estimatedImpressions?: number;
+  cpe?: number;
+  cpm?: number;
+  emv?: number;
+  activityMix: Array<{ label: string; count: number }>;
+  currency: string;
+};
+
 export type ClientReviewSourceSnapshotCreator = {
   creatorId: string;
   displayName: string;
@@ -19,13 +76,32 @@ export type ClientReviewSourceSnapshotCreator = {
   country?: string;
   city?: string;
   category?: string;
+  niche?: string;
+  categories?: string[];
   audienceHighlight?: string;
   fitExplanation?: string;
   deliverables?: string;
+  deliverableItems?: ClientDeliverableItem[];
   investmentAmount?: number;
   investmentCurrency?: string;
   avatarUrl?: string;
   bio?: string;
+  notes?: string;
+  avgLikes?: number;
+  avgComments?: number;
+  avgViews?: number;
+  estimatedReach?: number;
+  matchPercent?: number;
+  matchConfidence?: number;
+  matchExplanation?: string;
+  matchEvidence?: string[];
+  tier?: string;
+  brandMentions?: string[];
+  contentFeed?: ClientContentPost[];
+  audience?: ClientAudienceBrief;
+  performance?: ClientPerformanceBrief;
+  influencerId?: string;
+  briefFrozenAt?: string;
 };
 
 export type ClientReviewSourceSnapshot = {
@@ -49,6 +125,7 @@ export type ClientReviewSourceSnapshot = {
     phases: ClientTimelinePhase[];
   };
   commercial: ClientCommercialSummary;
+  mediaPlanSummary?: ClientMediaPlanSummary;
   quotation?: {
     id: string;
     serialNumber: string | null;
@@ -97,19 +174,62 @@ export type ClientCreatorCard = {
   country?: string;
   city?: string;
   category?: string;
+  niche?: string;
+  categories?: string[];
   audienceHighlight?: string;
   fitExplanation?: string;
   deliverables?: string;
+  deliverableItems?: ClientDeliverableItem[];
   investmentAmount?: number;
   investmentCurrency?: string;
   avatarUrl?: string;
   bio?: string;
+  notes?: string;
+  avgLikes?: number;
+  avgComments?: number;
+  avgViews?: number;
+  estimatedReach?: number;
+  matchPercent?: number;
+  matchConfidence?: number;
+  matchExplanation?: string;
+  matchEvidence?: string[];
+  tier?: string;
+  brandMentions?: string[];
   selection: ClientCreatorSelectionState;
-  contentExamples: Array<{
-    url?: string | null;
-    thumbnail?: string | null;
-    likes?: number | null;
-  }>;
+  contentExamples: ClientContentPost[];
+  contentFeed?: ClientContentPost[];
+  audience?: ClientAudienceBrief;
+  performance?: ClientPerformanceBrief;
+  briefFrozenAt?: string;
+};
+
+export type ClientCreatorBrief = {
+  creatorId: string;
+  displayName: string;
+  handle?: string;
+  platform?: string;
+  location?: string;
+  bio?: string;
+  notes?: string;
+  followers?: number;
+  engagementRate?: number;
+  avatarUrl?: string;
+  audience: ClientAudienceBrief | null;
+  performance: ClientPerformanceBrief | null;
+  contentFeed: ClientContentPost[];
+  campaignFit?: string;
+  categories: string[];
+  niche?: string;
+  brandMentions: string[];
+  matchPercent?: number;
+  matchConfidence?: number;
+  matchExplanation?: string;
+  matchEvidence: string[];
+  deliverableItems: ClientDeliverableItem[];
+  deliverables?: string;
+  investmentAmount?: number;
+  investmentCurrency?: string;
+  frozen: boolean;
 };
 
 export type ClientCommercialLine = {
@@ -194,6 +314,7 @@ export type ClientWorkspaceView = {
     phases: ClientTimelinePhase[];
   };
   commercial: ClientCommercialSummary;
+  mediaPlanSummary: ClientMediaPlanSummary;
   quotation?: ClientReviewSourceSnapshot["quotation"];
   visibleSections: ClientWorkspaceSectionId[];
   comments: ClientComment[];
