@@ -1,24 +1,10 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `develop`  
-**Focus:** Break the Studio Creators “no inventory” loop when Creator Match already found people
+**Branch:** `feature/client-workspace`  
+**Focus:** Client Workspace — three entry points into one Client Review (Development only)
 
-The mix header showed Required 12 · Qualified 0 · No matching inventory while the same Creators page listed 82 Creator Match results. Sufficiency reads `campaignObject.discovery.creatorIds`, not the action card. Copilot search wrote the card and never persisted the pool, and Broaden Discovery did nothing.
+Studio Package, Shortlist (selected creators), and Quotation all create the same versioned Client Review (`source`: studio | shortlist | quotation). Client Workspace sections are source-aware; empty sections are hidden. Frozen `source_snapshot` prevents later source edits from mutating an existing review.
 
-# Prompt Summary — Current Sprint
+Do **not** deploy to Production yet.
 
-**Branch:** `develop`  
-**Focus:** Break the Studio Creators “no inventory” loop when Creator Match already found people
-
-The mix header showed Required 12 · Qualified 0 · No matching inventory while the same Creators page listed 82 Creator Match results. Sufficiency reads `campaignObject.discovery.creatorIds`, not the action card. Copilot search wrote the card and never persisted the pool, and Broaden Discovery did nothing.
-
-Fix (Dev + Production): ingest Creator Match IDs into discovery when the object pool is empty; recover cards from earlier turns; never wipe an existing pool on an empty extract.
-
-After ship: hard-refresh Studio (`Ctrl+Shift+R`). Recommended should fill from the Egypt match pool; Beauty/Fashion/Fitness specialists stay off Recommended.
-
-Dev: https://dev.thinkwaymedia.com  
-Prod: https://app.thinkwaymedia.com  
-
-Client Workspace is **not** started.
-
-Client Workspace is **not** started.
+Dev: https://dev.thinkwaymedia.com

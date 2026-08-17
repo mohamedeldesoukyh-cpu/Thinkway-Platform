@@ -21,7 +21,8 @@ export function resolveRateLimitCategory(input: {
     pathname.startsWith("/login/") ||
     pathname.startsWith("/auth/") ||
     pathname.startsWith("/api/auth/") ||
-    pathname.startsWith("/io-approval/");
+    pathname.startsWith("/io-approval/") ||
+    pathname.startsWith("/review/");
   if (authSurface && (mutating || input.isServerAction)) {
     return "auth";
   }

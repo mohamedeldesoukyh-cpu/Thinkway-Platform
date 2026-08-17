@@ -191,7 +191,7 @@ export async function saveCampaignObject(
     } catch (error) {
       // Task autosave must not block workflow progress; workflow_complete must surface errors.
       const message = error instanceof Error ? error.message : String(error);
-      if (options.saveReason === "workflow_complete" || options.saveReason === "manual") {
+      if (options.saveReason === "workflow_complete" || options.saveReason === "manual" || options.saveReason === "review_submitted") {
         throw new Error(`Campaign object persistence failed: ${message}`);
       }
       console.error("[campaign-object-store] autosave failed:", message);

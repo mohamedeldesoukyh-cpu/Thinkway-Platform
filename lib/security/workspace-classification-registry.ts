@@ -18,6 +18,7 @@ export const PAGE_PREFIX_CLASSIFICATIONS: Array<{
   { prefix: "/login", class: "public" },
   { prefix: "/auth", class: "public" },
   { prefix: "/io-approval", class: "public" },
+  { prefix: "/review", class: "public" },
   { prefix: "/client-portal", class: "client_workspace", portal: "client" },
   { prefix: "/creator-portal", class: "client_workspace", portal: "creator" },
   { prefix: "/finance", class: "internal_workspace" },
@@ -140,6 +141,8 @@ export const SERVER_ACTION_MODULE_CLASSIFICATIONS: Record<string, WorkspaceClass
   "features/creator-dna": "internal_workspace",
   "features/validation": "internal_workspace",
   "app/io-approval": "public",
+  "app/(client-workspace)": "public",
+  "features/client-workspace": "public",
 };
 
 /** Background workers / queues. */

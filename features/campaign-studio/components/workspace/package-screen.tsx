@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { CheckIcon, Loader2Icon, RefreshCwIcon, SendIcon, WrenchIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import type { CampaignObject } from "@/features/campaign-intelligence";
+import { createClientReviewAction } from "@/features/client-workspace/actions/create-client-review-action";
+import { loadLatestClientReviewAction } from "@/features/client-workspace/actions/load-latest-client-review-action";
 import { regenerateStaleOutputsAction } from "@/features/campaign-outputs/actions/regenerate-stale-outputs";
 
 import type { CampaignStudioSectionId } from "../../types/campaign-studio";
@@ -42,8 +44,18 @@ export function PackageScreen({
     sectionStatuses,
   });
   const [busy, setBusy] = useState(false);
+  const [clientReview, setClientReview] = useState<Awaited<
+    ReturnType<typeof loadLatestClientReviewAction>
+  >["review"]>(null);
   const attention = readiness.checks.filter((check) => !check.ready);
   const canRegenerate = Boolean(conversationId && campaignObject?.id && attention.length > 0);
+
+  useEffect(() => {
+    if (!campaignObject?.id) return;
+    void loadLatestClientReviewAction(campaignObject.id).then((result) => {
+      if (result.ok) setClientReview(result.review);
+    });
+  }, [campaignObject?.id]);
 
   async function regenerateAffected() {
     if (!conversationId || !campaignObject?.id || busy) return;
@@ -76,7 +88,7 @@ export function PackageScreen({
     });
   }
 
-  function requestClientReview() {
+  async function requestClientReview() {
     if (!readiness.canCreateClientReview) {
       toast.error("Cannot create client review.", {
         description:
@@ -88,10 +100,40 @@ export function PackageScreen({
       });
       return;
     }
-    toast.message("Create Client Review is next.", {
-      description:
-        "Client Workspace is not in this Development slice. Package is the internal checkpoint.",
-    });
+    if (!campaignObject || !conversationId || busy) {
+      toast.error("Cannot create client review.", {
+        description: "The campaign package is not available to freeze.",
+      });
+      return;
+    }
+    setBusy(true);
+    try {
+      const result = await createClientReviewAction({
+        campaignObject,
+        conversationId,
+      });
+      if (!result.ok) {
+        toast.error(result.message, {
+          description: result.blockers.slice(0, 4).join(" "),
+        });
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(result.url);
+      } catch {
+        /* clipboard is optional */
+      }
+      toast.success(result.message, {
+        description: result.url,
+        duration: 12_000,
+      });
+      if (campaignObject.id) {
+        const latest = await loadLatestClientReviewAction(campaignObject.id);
+        if (latest.ok) setClientReview(latest.review);
+      }
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -149,8 +191,8 @@ export function PackageScreen({
           <Button
             type="button"
             className="bg-[#0057FF] hover:bg-[#0040CC]"
-            disabled={!readiness.canCreateClientReview}
-            onClick={requestClientReview}
+            disabled={!readiness.canCreateClientReview || busy}
+            onClick={() => void requestClientReview()}
           >
             <SendIcon className="size-4" />
             Create client review
@@ -160,6 +202,13 @@ export function PackageScreen({
           <p className="mt-3 text-xs text-muted-foreground">
             Cannot create client review. {readiness.attentionSummary ?? "Items need attention"}:{" "}
             {readiness.clientReviewBlockers.slice(0, 3).join(" ")}
+          </p>
+        ) : null}
+        {clientReview ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Client review v{clientReview.reviewNumber}: {clientReview.status.replaceAll("_", " ")}.
+            Selected {clientReview.accepted} · Rejected {clientReview.rejected} · In review {clientReview.inReview}
+            {clientReview.changeRequestSummary ? ` · Requested changes: ${clientReview.changeRequestSummary}` : ""}
           </p>
         ) : null}
       </section>

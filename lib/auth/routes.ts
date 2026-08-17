@@ -6,6 +6,7 @@ export const PUBLIC_ROUTE_PREFIXES = [
   "/login",
   "/auth",
   "/io-approval",
+  "/review",
   "/api/build-info",
   "/api/health",
   "/api/ready",

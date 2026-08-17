@@ -26,6 +26,7 @@ import { GenerateOutputsLauncher } from "@/features/campaign-outputs/components/
 import { OpenCampaignStudioLauncher } from "@/features/campaign-outputs/components/open-campaign-studio-launcher";
 import type { CampaignSeed } from "@/features/campaign-outputs/hydration/hydration-types";
 
+import { createClientReviewFromShortlistAction } from "@/features/client-workspace/actions/create-from-shortlist-action";
 import { discoverySelectionFlyoutContentClass } from "@/features/discovery/components/design-system/discovery-selection-flyout";
 import { shortlistDetailPath } from "@/features/discovery/shortlists/constants";
 import { cn } from "@/lib/utils";
@@ -624,6 +625,41 @@ export function ShortlistWorkspace({
     runAction(() => bulkCancelCreators(detail.id, selectedItemIdList));
   }
 
+  function handleSendToClient() {
+    const eligible = detail.creators.filter((item) => item.item_status !== "cancelled");
+    if (eligible.length === 0) {
+      toast.error("Select at least one creator to send to the client.");
+      return;
+    }
+    const itemIds =
+      selectedCount > 0
+        ? selectedItemIdList
+        : eligible.map((item) => item.item_id);
+    if (itemIds.length === 0) {
+      toast.error("Select at least one creator to send to the client.");
+      return;
+    }
+    startTransition(async () => {
+      const result = await createClientReviewFromShortlistAction({
+        shortlistId: detail.id,
+        selectedItemIds: itemIds,
+      });
+      if (!result.ok) {
+        toast.error(result.message, {
+          description: result.blockers.slice(0, 4).join(" "),
+        });
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(result.url);
+      } catch {
+        /* clipboard is optional */
+      }
+      toast.success(result.message, { description: result.url, duration: 12_000 });
+      router.refresh();
+    });
+  }
+
   function runAction(action: () => Promise<{ ok: boolean; message?: string }>) {
     startTransition(async () => {
       try {
@@ -766,6 +802,17 @@ export function ShortlistWorkspace({
                 exportRevision={detail.updated_at}
                 busy={isPending}
               />
+            ) : null}
+            {detail.creators.some((item) => item.item_status !== "cancelled") ? (
+              <ShortlistToolbarButton
+                variant="outline"
+                size="sm"
+                onClick={handleSendToClient}
+                disabled={isPending}
+              >
+                <SendIcon className="size-3.5" />
+                Send to Client
+              </ShortlistToolbarButton>
             ) : null}
             {editable ? (
               <ShortlistToolbarButton
@@ -995,6 +1042,7 @@ export function ShortlistWorkspace({
         onMoveSelected={handleBulkMove}
         onGenerateNewQuotation={handleGenerateNewQuotation}
         onAddToQuotation={handleAddSelectedToQuotation}
+        onSendToClient={handleSendToClient}
         existingQuotationLabel={existingQuotationLabel}
         showCollapse={canCollapseSelected}
         onCollapseSelected={handleBulkCollapse}

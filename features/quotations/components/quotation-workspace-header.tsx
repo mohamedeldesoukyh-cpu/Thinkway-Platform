@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { createClientReviewFromQuotationAction } from "@/features/client-workspace/actions/create-from-quotation-action";
 import { EntityPrevNext } from "@/components/navigation/entity-prev-next";
 import {
   DropdownMenu,
@@ -61,6 +62,24 @@ export function QuotationWorkspaceHeader({
   const [lifecycleOpen, setLifecycleOpen] = useState(false);
   const [lifecycleTab, setLifecycleTab] = useState<"links" | "activity">("links");
   const campaignSeed = useMemo(() => seedFromQuotation(detail), [detail]);
+
+  function runSendToClient() {
+    startTransition(async () => {
+      const res = await createClientReviewFromQuotationAction({ quotationId: detail.id });
+      if (!res.ok) {
+        toast.error(res.message, {
+          description: res.blockers.slice(0, 4).join(" "),
+        });
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(res.url);
+      } catch {
+        /* clipboard is optional */
+      }
+      toast.success(res.message, { description: res.url, duration: 12_000 });
+    });
+  }
 
   function runStatus(status: "under_review" | "cancelled") {
     startTransition(async () => {
@@ -171,6 +190,24 @@ export function QuotationWorkspaceHeader({
                 <SaveIcon className="size-3.5" />
               )}
               Save
+            </QuotationToolbarButton>
+          ) : null}
+          {detail.canManage &&
+          detail.status !== "cancelled" &&
+          detail.status !== "archived" &&
+          !detail.is_archived ? (
+            <QuotationToolbarButton
+              variant="outline"
+              size="sm"
+              disabled={pending}
+              onClick={runSendToClient}
+            >
+              {pending ? (
+                <Loader2Icon className="size-3.5 animate-spin" />
+              ) : (
+                <SendIcon className="size-3.5" />
+              )}
+              Send to Client
             </QuotationToolbarButton>
           ) : null}
           <QuotationPreviewToolbarActions

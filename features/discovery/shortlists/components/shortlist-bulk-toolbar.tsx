@@ -32,6 +32,7 @@ type Props = {
   onMoveSelected: () => void;
   onGenerateNewQuotation: () => void;
   onAddToQuotation: () => void;
+  onSendToClient?: () => void;
   existingQuotationLabel?: string | null;
   onCollapseSelected?: () => void;
   showCollapse?: boolean;
@@ -57,6 +58,7 @@ export function ShortlistBulkToolbar({
   onMoveSelected,
   onGenerateNewQuotation,
   onAddToQuotation,
+  onSendToClient,
   existingQuotationLabel,
   onCollapseSelected,
   showCollapse,
@@ -124,6 +126,14 @@ export function ShortlistBulkToolbar({
     }
 
     list.push(
+      {
+        id: "send-client",
+        label: "Send to Client",
+        icon: SendIcon,
+        variant: "primary",
+        disabled: busy || !onSendToClient,
+        onClick: () => onSendToClient?.(),
+      },
       {
         id: "quotation",
         label: "Generate quotation",
@@ -217,6 +227,7 @@ export function ShortlistBulkToolbar({
     onMoveSelected,
     onGenerateNewQuotation,
     onAddToQuotation,
+    onSendToClient,
     existingQuotationLabel,
     onCollapseSelected,
     showCollapse,
