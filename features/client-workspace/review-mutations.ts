@@ -205,9 +205,14 @@ export async function decideClientReview(input: {
   token: string;
   decision: "approved" | "rejected";
   actorLabel?: string;
+  reason?: string;
 }): Promise<{ ok: boolean; message: string; quotationId?: string }> {
   const gate = await requireInteractiveReview(input.token);
   if (!gate.ok) return gate;
+
+  if (input.decision === "rejected" && !input.reason?.trim()) {
+    return { ok: false, message: "Please provide a reason for rejecting this proposal." };
+  }
 
   const snapshot = gate.review.sourceSnapshot;
   const campaignObject =
@@ -261,6 +266,7 @@ export async function decideClientReview(input: {
       frozen_version: gate.review.frozenVersion,
       selected_creators: selectedIds,
       commercial,
+      reason: input.reason?.trim() || undefined,
     },
   } as never);
 

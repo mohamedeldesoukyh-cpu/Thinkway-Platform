@@ -18,7 +18,7 @@ import {
   projectCreatorsFromSnapshot,
   projectOverviewFromSnapshot,
 } from "./snapshot";
-import { projectMediaPlanSummary } from "./media-plan-summary";
+import { applyCreatorForecasts, projectMediaPlanSummary } from "./media-plan-summary";
 import { snapshotFromCampaignObject } from "./snapshot-from-object";
 import { actionRequiredFor, isInteractiveClientReview } from "./status";
 import type {
@@ -177,16 +177,17 @@ function viewFromSnapshot(
 ): ClientWorkspaceView {
   const commercial = projectCommercialFromSnapshot(snapshot, selection);
   const overview = projectOverviewFromSnapshot(snapshot, commercial);
+  const mediaPlanSummary = projectMediaPlanSummary(snapshot, selection);
   const view: ClientWorkspaceView = {
     review,
     newerReviewNumber: newer,
     overview,
     strategyBody: snapshot.strategyBody,
-    creators: projectCreatorsFromSnapshot(snapshot, selection),
+    creators: applyCreatorForecasts(projectCreatorsFromSnapshot(snapshot, selection), mediaPlanSummary),
     content: snapshot.content,
     timeline: snapshot.timeline,
     commercial,
-    mediaPlanSummary: projectMediaPlanSummary(snapshot, selection),
+    mediaPlanSummary,
     quotation: snapshot.quotation,
     visibleSections: [],
     comments,
@@ -261,12 +262,15 @@ export async function loadClientWorkspace(
     }
     const snapshot = snapshotFromCampaignObject(campaignObject, selection, hydrated);
     view = viewFromSnapshot(resolved.review, snapshot, selection, comments, activity, newer);
-    view.creators = projectClientCreators(campaignObject, selection, hydrated);
     view.content = projectClientContent(campaignObject);
     view.timeline = projectClientTimeline(campaignObject);
     view.commercial = projectClientCommercial(campaignObject, selection);
     view.overview = projectClientOverview(campaignObject, selection);
     view.mediaPlanSummary = projectMediaPlanSummary(snapshot, selection);
+    view.creators = applyCreatorForecasts(
+      projectClientCreators(campaignObject, selection, hydrated),
+      view.mediaPlanSummary
+    );
     view.visibleSections = visibleClientWorkspaceSections(view);
   }
 

@@ -116,11 +116,13 @@ function parseMediaPlanSummary(value: unknown): ClientMediaPlanSummary | undefin
     estimatedReach: asNumber(value.estimatedReach),
     estimatedEngagements: asNumber(value.estimatedEngagements),
     estimatedImpressions: asNumber(value.estimatedImpressions),
+    averageEngagementRate: asNumber(value.averageEngagementRate),
     cpe: asNumber(value.cpe),
     cpm: asNumber(value.cpm),
     emv: asNumber(value.emv),
     activityMix: mix,
     currency: asString(value.currency) || "EGP",
+    creatorForecasts: {},
   };
 }
 
@@ -150,6 +152,8 @@ export function parseSnapshotCreator(row: Record<string, unknown>): ClientReview
     avgComments: asNumber(row.avgComments),
     avgViews: asNumber(row.avgViews),
     estimatedReach: asNumber(row.estimatedReach),
+    estimatedEngagements: asNumber(row.estimatedEngagements),
+    cpe: asNumber(row.cpe),
     matchPercent: asNumber(row.matchPercent),
     matchConfidence: asNumber(row.matchConfidence),
     matchExplanation: asString(row.matchExplanation),

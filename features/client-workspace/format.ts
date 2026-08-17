@@ -1,8 +1,19 @@
 export const NOT_AVAILABLE = "Not available";
-export const DATA_NOT_AVAILABLE = "Data not available";
+export const DATA_NOT_AVAILABLE = "Data unavailable";
+export const NOT_PROVIDED = "Not provided";
 export const TO_BE_CONFIRMED = "To be confirmed";
 export const DELIVERABLES_TO_BE_CONFIRMED = "Deliverables to be confirmed";
-export const CONTENT_UNAVAILABLE = "Content data unavailable";
+export const CONTENT_UNAVAILABLE = "Recent content unavailable";
+export const CONTENT_UNAVAILABLE_DETAIL =
+  "No stored publications are available for this creator.";
+
+const INTERNAL_TERM =
+  /\b(ECI|Apify|fingerprint|Thinkway Score|authenticity score|DNA|CIP|Campaign Facts|Discovery Engine|vendor cost|gross profit|\bGP\b|margin|source_snapshot|Campaign Intelligence Profile)\b/gi;
+
+export function providedText(value?: string | null, fallback = NOT_PROVIDED): string {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : fallback;
+}
 
 export function formatCompactCount(count: number | undefined | null): string {
   if (count == null || !Number.isFinite(count)) return NOT_AVAILABLE;
@@ -56,12 +67,15 @@ export function formatConfidencePercent(value: number | undefined | null): strin
   return formatMatchPercent(value);
 }
 
-export function clientSafeFitCopy(raw: string | undefined): string | undefined {
+export function clientSafeParagraph(raw: string | undefined): string | undefined {
   if (!raw?.trim()) return undefined;
-  const cleaned = raw
-    .replace(/\b(ECI|Apify|fingerprint|Thinkway Score|authenticity score|DNA|CIP)\b/gi, "")
-    .replace(/\s{2,}/g, " ")
-    .trim();
+  const cleaned = raw.replace(INTERNAL_TERM, "").replace(/\s{2,}/g, " ").trim();
+  if (!cleaned) return undefined;
+  return cleaned.length > 600 ? `${cleaned.slice(0, 597).trim()}…` : cleaned;
+}
+
+export function clientSafeFitCopy(raw: string | undefined): string | undefined {
+  const cleaned = clientSafeParagraph(raw);
   if (!cleaned) return undefined;
   const sentence = cleaned.split(/(?<=[.!?])\s+/)[0] ?? cleaned;
   return sentence.length > 220 ? `${sentence.slice(0, 217).trim()}…` : sentence;

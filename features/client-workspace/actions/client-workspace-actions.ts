@@ -57,6 +57,7 @@ export async function decideReviewAction(input: {
   token: string;
   decision: "approved" | "rejected";
   actorLabel?: string;
+  reason?: string;
 }) {
   return decideClientReview(input);
 }

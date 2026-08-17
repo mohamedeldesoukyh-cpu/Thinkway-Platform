@@ -86,8 +86,26 @@ export const HYPEAUDITOR_MEDIA_PLAN_PARITY: HypeAuditorParityRow[] = [
   },
   {
     capability: "Responsive experience",
-    thinkway: "Stacked media-plan cards and scrollable creator detail sheet",
+    thinkway: "Dense 12-column media-plan on desktop; stacked cards and full-screen creator profile on mobile",
     ssot: "Client Workspace UI",
+    status: "shipped",
+  },
+  {
+    capability: "Content Plan",
+    thinkway: "Influencer-first content rows from snapshot; empty state is Content direction to be confirmed",
+    ssot: "source_snapshot.content + campaign brief",
+    status: "shipped",
+  },
+  {
+    capability: "Overview",
+    thinkway: "Campaign at a glance, forecast, activity mix, strategic pillars, creator mix from actual roster",
+    ssot: "Campaign Facts + Campaign Forecast + source_snapshot",
+    status: "shipped",
+  },
+  {
+    capability: "Feedback collaboration",
+    thinkway: "Threaded change requests by campaign/creator/content/commercial with open/resolved status",
+    ssot: "campaign_client_review_comments",
     status: "shipped",
   },
   {

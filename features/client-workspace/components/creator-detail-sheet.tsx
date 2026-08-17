@@ -19,7 +19,6 @@ import {
 } from "../actions/client-workspace-actions";
 import { deliverablesLabel } from "../deliverables";
 import {
-  CONTENT_UNAVAILABLE,
   DATA_NOT_AVAILABLE,
   formatCompactCount,
   formatConfidencePercent,
@@ -30,66 +29,16 @@ import {
   NOT_AVAILABLE,
   TO_BE_CONFIRMED,
 } from "../format";
-import type { ClientComment, ClientContentPost, ClientCreatorBrief, ClientCreatorCard } from "../types";
+import type { ClientComment, ClientCreatorBrief, ClientCreatorCard } from "../types";
+import { CreatorContentFeed } from "./creator-content-feed";
+import { Chip, MetricCard } from "./media-plan-ui";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-3 border-t border-zinc-100 pt-5">
-      <h3 className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">{title}</h3>
+    <section className="space-y-3 border-t border-zinc-100 pt-6">
+      <h3 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">{title}</h3>
       {children}
     </section>
-  );
-}
-
-function Fact({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div>
-      <p className="text-xs text-zinc-500">{label}</p>
-      <p className="font-medium">{value}</p>
-      {hint ? <p className="mt-0.5 text-xs text-zinc-400">{hint}</p> : null}
-    </div>
-  );
-}
-
-function ContentFeed({ posts }: { posts: ClientContentPost[] }) {
-  if (posts.length === 0) {
-    return <p className="text-sm text-zinc-500">{CONTENT_UNAVAILABLE}</p>;
-  }
-  return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-      {posts.map((post, index) => {
-        const href = post.url ?? undefined;
-        const inner = (
-          <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50">
-            <div className="aspect-square bg-zinc-100">
-              {post.thumbnail ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={post.thumbnail} alt="" className="size-full object-cover" />
-              ) : null}
-            </div>
-            <div className="space-y-0.5 p-2 text-[11px] text-zinc-600">
-              <p>{formatPlatformLabel(post.platform) || "Post"}</p>
-              {post.postedAt ? <p>{new Date(post.postedAt).toLocaleDateString()}</p> : null}
-              <p>
-                {post.likes != null ? `${formatCompactCount(post.likes)} likes` : NOT_AVAILABLE} ·{" "}
-                {post.comments != null ? `${formatCompactCount(post.comments)} comments` : NOT_AVAILABLE}
-              </p>
-              <p>
-                {post.views != null ? `${formatCompactCount(post.views)} views` : NOT_AVAILABLE}
-                {post.engagementRate != null ? ` · ER ${formatEngagementPct(post.engagementRate)}` : ""}
-              </p>
-            </div>
-          </div>
-        );
-        return href ? (
-          <a key={`${href}-${index}`} href={href} target="_blank" rel="noreferrer" className="block">
-            {inner}
-          </a>
-        ) : (
-          <div key={index}>{inner}</div>
-        );
-      })}
-    </div>
   );
 }
 
@@ -141,48 +90,61 @@ export function CreatorDetailSheet({
   const creatorComments = comments.filter(
     (item) => item.targetType === "creator" && item.targetId === creator?.creatorId
   );
+  const match = formatMatchPercent(view?.matchPercent ?? creator?.matchPercent);
+  const categories = view?.categories.length
+    ? view.categories
+    : creator?.categories?.length
+      ? creator.categories
+      : [creator?.category, creator?.niche].filter((value): value is string => Boolean(value));
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-xl lg:max-w-2xl">
+      <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-xl lg:max-w-3xl">
         {creator ? (
           <>
-            <SheetHeader className="pr-10">
-              <SheetTitle>{view?.displayName || creator.displayName}</SheetTitle>
-              <SheetDescription>
-                {[view?.handle || creator.handle, formatPlatformLabel(view?.platform || creator.platform)]
-                  .filter(Boolean)
-                  .join(" · ") || "Creator profile"}
-              </SheetDescription>
-            </SheetHeader>
-            <div className="space-y-5 px-6 pb-8">
-              <div className="flex items-start gap-4">
-                <div className="size-24 shrink-0 overflow-hidden rounded-2xl bg-zinc-100">
-                  {(view?.avatarUrl || creator.avatarUrl) ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={view?.avatarUrl || creator.avatarUrl}
-                      alt=""
-                      className="size-full object-cover"
-                    />
-                  ) : null}
+            <div className="relative h-56 bg-zinc-100 sm:h-72">
+              {(view?.avatarUrl || creator.avatarUrl) ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={view?.avatarUrl || creator.avatarUrl}
+                  alt=""
+                  className="size-full object-cover"
+                />
+              ) : (
+                <div className="flex size-full items-center justify-center text-5xl font-semibold text-zinc-300">
+                  {creator.displayName.slice(0, 1)}
                 </div>
-                <div className="min-w-0 space-y-1">
-                  <p className="text-sm text-zinc-500">{view?.location || DATA_NOT_AVAILABLE}</p>
-                  <p className="text-sm leading-relaxed text-zinc-700">
-                    {view?.bio || creator.bio || DATA_NOT_AVAILABLE}
-                  </p>
-                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+              <SheetHeader className="absolute inset-x-0 bottom-0 space-y-1 p-6 text-left text-white">
+                <SheetTitle className="text-2xl text-white">
+                  {view?.displayName || creator.displayName}
+                </SheetTitle>
+                <SheetDescription className="text-white/80">
+                  {[view?.handle || creator.handle, formatPlatformLabel(view?.platform || creator.platform)]
+                    .filter(Boolean)
+                    .join(" · ") || "Creator profile"}
+                </SheetDescription>
+              </SheetHeader>
+            </div>
+            <div className="space-y-6 px-6 py-6">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <MetricCard label="Followers" value={formatCompactCount(view?.followers ?? creator.followers)} />
+                <MetricCard
+                  label="Engagement rate"
+                  value={formatEngagementPct(view?.engagementRate ?? creator.engagementRate)}
+                />
+                <MetricCard label="Campaign Match" value={match ?? NOT_AVAILABLE} />
+                <MetricCard label="Location" value={view?.location || DATA_NOT_AVAILABLE} />
               </div>
 
               <Section title="Profile">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <Fact label="Followers" value={formatCompactCount(view?.followers ?? creator.followers)} />
-                  <Fact
-                    label="Engagement rate"
-                    value={formatEngagementPct(view?.engagementRate ?? creator.engagementRate)}
-                    hint="Based on recent available content."
-                  />
+                <p className="text-sm leading-relaxed text-zinc-700">
+                  {view?.bio || creator.bio || DATA_NOT_AVAILABLE}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2 text-sm text-zinc-600">
+                  <span>{formatPlatformLabel(view?.platform || creator.platform) || NOT_AVAILABLE}</span>
+                  <span>{categories[0] || NOT_AVAILABLE}</span>
                 </div>
               </Section>
 
@@ -192,53 +154,21 @@ export function CreatorDetailSheet({
                 ) : view?.audience ? (
                   <div className="space-y-3 text-sm">
                     {view.audience.summary ? <p>{view.audience.summary}</p> : null}
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div>
-                        <p className="text-xs text-zinc-500">Age</p>
-                        {view.audience.ages.length > 0 ? (
-                          view.audience.ages.map((slice) => (
-                            <p key={slice.label}>
-                              {slice.label}
-                              {slice.percent != null ? ` · ${Math.round(slice.percent)}%` : ""}
-                            </p>
-                          ))
-                        ) : (
-                          <p>{NOT_AVAILABLE}</p>
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-xs text-zinc-500">Gender</p>
-                        {view.audience.genders.length > 0 ? (
-                          view.audience.genders.map((slice) => (
-                            <p key={slice.label}>
-                              {slice.label}
-                              {slice.percent != null ? ` · ${Math.round(slice.percent)}%` : ""}
-                            </p>
-                          ))
-                        ) : (
-                          <p>{NOT_AVAILABLE}</p>
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-xs text-zinc-500">Location</p>
-                        {view.audience.locations.length > 0 ? (
-                          view.audience.locations.map((slice) => (
-                            <p key={slice.label}>
-                              {slice.label}
-                              {slice.percent != null ? ` · ${Math.round(slice.percent)}%` : ""}
-                            </p>
-                          ))
-                        ) : (
-                          <p>{NOT_AVAILABLE}</p>
-                        )}
-                      </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <AudienceList title="Age" slices={view.audience.ages} />
+                      <AudienceList title="Gender" slices={view.audience.genders} />
+                      <AudienceList title="Top locations" slices={view.audience.locations} />
                       <div>
                         <p className="text-xs text-zinc-500">Interests</p>
-                        <p>
-                          {view.audience.interests.length > 0
-                            ? view.audience.interests.join(" · ")
-                            : NOT_AVAILABLE}
-                        </p>
+                        {view.audience.interests.length > 0 ? (
+                          <div className="mt-1 flex flex-wrap gap-1.5">
+                            {view.audience.interests.map((interest) => (
+                              <Chip key={interest}>{interest}</Chip>
+                            ))}
+                          </div>
+                        ) : (
+                          <p>{NOT_AVAILABLE}</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -251,31 +181,17 @@ export function CreatorDetailSheet({
                 {loading && !view?.performance ? (
                   <p className="text-sm text-zinc-500">Loading performance…</p>
                 ) : view?.performance ? (
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <Fact
-                      label="Average likes"
-                      value={formatExactCount(view.performance.avgLikes)}
-                      hint={view.performance.likesExplanation}
-                    />
-                    <Fact
-                      label="Average comments"
-                      value={formatExactCount(view.performance.avgComments)}
-                      hint={view.performance.commentsExplanation}
-                    />
-                    <Fact
-                      label="Average views"
-                      value={formatExactCount(view.performance.avgViews)}
-                      hint={view.performance.viewsExplanation}
-                    />
-                    <Fact
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    <MetricCard label="Average likes" value={formatExactCount(view.performance.avgLikes)} />
+                    <MetricCard label="Average comments" value={formatExactCount(view.performance.avgComments)} />
+                    <MetricCard label="Average views" value={formatExactCount(view.performance.avgViews)} />
+                    <MetricCard
                       label="Engagement rate"
                       value={formatEngagementPct(view.performance.engagementRate)}
-                      hint={view.performance.engagementExplanation}
                     />
-                    <Fact
+                    <MetricCard
                       label="Estimated reach"
-                      value={formatCompactCount(view.performance.estimatedReach)}
-                      hint={view.performance.reachExplanation}
+                      value={formatCompactCount(view.performance.estimatedReach ?? creator.estimatedReach)}
                     />
                   </div>
                 ) : (
@@ -283,11 +199,13 @@ export function CreatorDetailSheet({
                 )}
               </Section>
 
-              <Section title="Content">
+              <Section title="Content performance">
                 {loading && (view?.contentFeed.length ?? 0) === 0 && (creator.contentFeed?.length ?? 0) === 0 ? (
                   <p className="text-sm text-zinc-500">Loading content…</p>
                 ) : (
-                  <ContentFeed posts={view?.contentFeed?.length ? view.contentFeed : creator.contentFeed ?? []} />
+                  <CreatorContentFeed
+                    posts={view?.contentFeed?.length ? view.contentFeed : creator.contentFeed ?? []}
+                  />
                 )}
               </Section>
 
@@ -297,48 +215,45 @@ export function CreatorDetailSheet({
                 </p>
               </Section>
 
-              <Section title="Category">
-                <p className="text-sm">
-                  {(view?.categories.length ? view.categories : creator.categories)?.join(" · ") ||
-                    creator.category ||
-                    NOT_AVAILABLE}
-                </p>
-                {view?.niche || creator.niche ? (
-                  <p className="text-sm text-zinc-600">Niche: {view?.niche || creator.niche}</p>
-                ) : null}
-                {view?.brandMentions.length ? (
-                  <p className="text-sm text-zinc-600">Brand mentions: {view.brandMentions.join(" · ")}</p>
-                ) : null}
+              <Section title="Category / niche">
+                {categories.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {categories.map((category) => (
+                      <Chip key={category}>{category}</Chip>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm">{NOT_AVAILABLE}</p>
+                )}
               </Section>
 
+              {(view?.brandMentions.length || creator.brandMentions?.length) ? (
+                <Section title="Brand context">
+                  <div className="flex flex-wrap gap-1.5">
+                    {(view?.brandMentions.length ? view.brandMentions : creator.brandMentions ?? []).map((item) => (
+                      <Chip key={item}>{item}</Chip>
+                    ))}
+                  </div>
+                </Section>
+              ) : null}
+
               <Section title="Why recommended">
-                <p className="text-sm">
-                  {formatMatchPercent(view?.matchPercent ?? creator.matchPercent)
-                    ? `${formatMatchPercent(view?.matchPercent ?? creator.matchPercent)} match`
-                    : NOT_AVAILABLE}
-                  {formatConfidencePercent(view?.matchConfidence ?? creator.matchConfidence)
-                    ? ` · ${formatConfidencePercent(view?.matchConfidence ?? creator.matchConfidence)} confidence`
-                    : ""}
-                </p>
-                <p className="text-sm leading-relaxed text-zinc-700">
+                <p className="text-2xl font-semibold text-[#178A65]">{match ?? NOT_AVAILABLE}</p>
+                {formatConfidencePercent(view?.matchConfidence ?? creator.matchConfidence) ? (
+                  <p className="text-sm text-zinc-500">
+                    {formatConfidencePercent(view?.matchConfidence ?? creator.matchConfidence)} confidence
+                  </p>
+                ) : null}
+                <p className="mt-2 text-sm leading-relaxed text-zinc-700">
                   {view?.matchExplanation || creator.matchExplanation || creator.fitExplanation || DATA_NOT_AVAILABLE}
                 </p>
                 {(view?.matchEvidence.length ? view.matchEvidence : creator.matchEvidence)?.length ? (
-                  <ul className="list-disc pl-5 text-sm text-zinc-600">
+                  <ul className="mt-3 list-disc pl-5 text-sm text-zinc-600">
                     {(view?.matchEvidence.length ? view.matchEvidence : creator.matchEvidence ?? []).map((item) => (
                       <li key={item}>{item}</li>
                     ))}
                   </ul>
                 ) : null}
-              </Section>
-
-              <Section title="Deliverables">
-                <p className="text-sm">
-                  {deliverablesLabel(
-                    view?.deliverableItems.length ? view.deliverableItems : creator.deliverableItems,
-                    view?.deliverables || creator.deliverables
-                  )}
-                </p>
               </Section>
 
               <Section title="Commercial">
@@ -353,6 +268,15 @@ export function CreatorDetailSheet({
                 </p>
               </Section>
 
+              <Section title="Deliverables">
+                <p className="text-sm">
+                  {deliverablesLabel(
+                    view?.deliverableItems.length ? view.deliverableItems : creator.deliverableItems,
+                    view?.deliverables || creator.deliverables
+                  )}
+                </p>
+              </Section>
+
               {canDecide ? (
                 <Section title="Decision">
                   <div className="flex flex-wrap gap-2">
@@ -363,16 +287,16 @@ export function CreatorDetailSheet({
                       onClick={onAccept}
                     >
                       <CheckIcon className="size-4" />
-                      Accept creator
+                      Accept
                     </Button>
                     <Button type="button" variant="outline" disabled={pending} onClick={() => onReject(rejectReason)}>
                       <XIcon className="size-4 text-red-500" />
-                      Reject creator
+                      Reject
                     </Button>
                   </div>
                   <textarea
                     className="mt-3 min-h-20 w-full rounded-xl border border-zinc-200 px-3 py-2 text-sm"
-                    placeholder="Optional reject reason"
+                    placeholder="Reject reason"
                     value={rejectReason}
                     onChange={(event) => setRejectReason(event.target.value)}
                   />
@@ -427,7 +351,7 @@ export function CreatorDetailSheet({
                   <ul className="space-y-2 text-sm">
                     {creatorComments.map((item) => (
                       <li key={item.id} className="rounded-xl bg-zinc-50 px-3 py-2">
-                        <p className="font-medium">{item.authorLabel}</p>
+                        <p className="font-medium">{item.authorKind === "client" ? "Client" : "Thinkway"}</p>
                         <p className="text-zinc-600">{item.message}</p>
                       </li>
                     ))}
@@ -439,5 +363,29 @@ export function CreatorDetailSheet({
         ) : null}
       </SheetContent>
     </Sheet>
+  );
+}
+
+function AudienceList({
+  title,
+  slices,
+}: {
+  title: string;
+  slices: Array<{ label: string; percent?: number }>;
+}) {
+  return (
+    <div>
+      <p className="text-xs text-zinc-500">{title}</p>
+      {slices.length > 0 ? (
+        slices.map((slice) => (
+          <p key={slice.label}>
+            {slice.label}
+            {slice.percent != null ? ` · ${Math.round(slice.percent)}%` : ""}
+          </p>
+        ))
+      ) : (
+        <p>{NOT_AVAILABLE}</p>
+      )}
+    </div>
   );
 }

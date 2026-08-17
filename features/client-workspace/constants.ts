@@ -46,7 +46,7 @@ export const CLIENT_WORKSPACE_SECTION_LABEL: Record<ClientWorkspaceSectionId, st
   overview: "Overview",
   strategy: "Strategy",
   creators: "Creators",
-  content: "Content",
+  content: "Content Plan",
   commercial: "Commercial",
   quotation: "Quotation",
   timeline: "Timeline",
@@ -61,6 +61,15 @@ export const CLIENT_STATUS_LABEL: Record<ClientReviewStatus, string> = {
   rejected: "Rejected",
   superseded: "Updated version available",
   revoked: "Link revoked",
+};
+
+export const CLIENT_PROPOSAL_STATUS_LABEL: Record<ClientReviewStatus, string> = {
+  awaiting_review: "In Review",
+  changes_requested: "Changes requested",
+  approved: "Approved",
+  rejected: "Rejected",
+  superseded: "Updated",
+  revoked: "Revoked",
 };
 
 export const CLIENT_CREATOR_STATUS_LABEL: Record<ClientCreatorSelectionState, string> = {

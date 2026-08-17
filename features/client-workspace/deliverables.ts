@@ -57,6 +57,31 @@ function formatPlatformTitle(platform: string): string {
   return platform;
 }
 
+export function canonicalDeliverableFamily(type: string): string {
+  const value = type.toLowerCase();
+  if (value.includes("reel") || value.includes("short")) return "Reels";
+  if (value.includes("stor")) return "Stories";
+  if (value.includes("carousel")) return "Carousels";
+  if (value.includes("post") || value.includes("feed") || value.includes("photo") || value.includes("image")) {
+    return "Posts";
+  }
+  if (value.includes("tiktok") || value.includes("video")) return "Videos";
+  return type.trim();
+}
+
+export function groupedActivityMix(
+  items: Array<{ label: string; count: number }>
+): Array<{ label: string; count: number }> {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    const family = canonicalDeliverableFamily(item.label);
+    counts.set(family, (counts.get(family) ?? 0) + item.count);
+  }
+  return [...counts.entries()]
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+}
+
 export function activityMixFromCreators(
   creators: Array<{ deliverableItems?: ClientDeliverableItem[]; deliverables?: string }>
 ): Array<{ label: string; count: number }> {
@@ -79,7 +104,7 @@ export function activityMixFromCreators(
       }
     }
   }
-  return [...counts.entries()]
-    .map(([label, count]) => ({ label, count }))
-    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  return groupedActivityMix(
+    [...counts.entries()].map(([label, count]) => ({ label, count }))
+  );
 }

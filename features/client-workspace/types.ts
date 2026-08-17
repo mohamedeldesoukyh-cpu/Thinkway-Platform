@@ -59,11 +59,16 @@ export type ClientMediaPlanSummary = {
   estimatedReach?: number;
   estimatedEngagements?: number;
   estimatedImpressions?: number;
+  averageEngagementRate?: number;
   cpe?: number;
   cpm?: number;
   emv?: number;
   activityMix: Array<{ label: string; count: number }>;
   currency: string;
+  creatorForecasts: Record<
+    string,
+    { estimatedReach?: number; estimatedEngagements?: number; cpe?: number }
+  >;
 };
 
 export type ClientReviewSourceSnapshotCreator = {
@@ -91,6 +96,8 @@ export type ClientReviewSourceSnapshotCreator = {
   avgComments?: number;
   avgViews?: number;
   estimatedReach?: number;
+  estimatedEngagements?: number;
+  cpe?: number;
   matchPercent?: number;
   matchConfidence?: number;
   matchExplanation?: string;
@@ -189,6 +196,8 @@ export type ClientCreatorCard = {
   avgComments?: number;
   avgViews?: number;
   estimatedReach?: number;
+  estimatedEngagements?: number;
+  cpe?: number;
   matchPercent?: number;
   matchConfidence?: number;
   matchExplanation?: string;

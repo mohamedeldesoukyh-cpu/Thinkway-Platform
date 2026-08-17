@@ -53,7 +53,7 @@ The Creators section is a client-facing influencer media plan. It is **not** Stu
 | Selection | `campaign_client_reviews.selection_state` + shortlist item status |
 | Commercial | Quoted **revenue** only |
 
-Missing metrics render **Not available** / **Data not available** / **To be confirmed**. Real zeros remain `0`.
+Missing metrics render **Not available** / **Data unavailable** / **To be confirmed** / **Not provided**. Real zeros remain `0`. The client nav is always Overview · Creators · Content Plan · Commercial · Feedback · Approval. Strategy, quotation, and timeline fold into those pages. Creator quantity is the snapshot roster, never Studio “recommended” copy.
 
 ## HypeAuditor parity
 

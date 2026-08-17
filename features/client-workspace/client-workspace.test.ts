@@ -7,8 +7,15 @@ import { isPublicPath } from "@/lib/auth/routes";
 import { classifyPagePath } from "@/lib/security/workspace-classify";
 
 import { CLIENT_CHANGE_AREAS, CLIENT_REVIEW_SOURCES } from "./constants";
-import { clientSafeFitCopy, formatCompactCount, formatEngagementPct } from "./format";
-import { deliverablesLabel } from "./deliverables";
+import { clientSafeFitCopy, formatCompactCount, formatEngagementPct, providedText } from "./format";
+import { deliverablesLabel, groupedActivityMix } from "./deliverables";
+import {
+  allocationSlices,
+  containsInternalTerminology,
+  rosterHeadline,
+  rosterSourceLine,
+  strategicPillars,
+} from "./presentation";
 import { HYPEAUDITOR_MEDIA_PLAN_PARITY } from "./hypeauditor-parity";
 import { projectMediaPlanSummary } from "./media-plan-summary";
 import { briefFromSnapshotCreator } from "./creator-brief";
@@ -270,7 +277,7 @@ test("frozen snapshot commercial uses per-creator quotation values, not a second
   assert.equal(reduced.selectedCount, 1);
 });
 
-test("client nav hides empty sections by source", () => {
+test("client nav is one proposal and always includes Content Plan", () => {
   const shortlistView = {
     review: { source: "shortlist" as const },
     creators: [{ creatorId: "a" }],
@@ -283,6 +290,8 @@ test("client nav hides empty sections by source", () => {
   assert.deepEqual(visibleClientWorkspaceSections(shortlistView as never), [
     "overview",
     "creators",
+    "content",
+    "commercial",
     "feedback",
     "approval",
   ]);
@@ -299,8 +308,8 @@ test("client nav hides empty sections by source", () => {
   assert.deepEqual(visibleClientWorkspaceSections(quotationView as never), [
     "overview",
     "creators",
+    "content",
     "commercial",
-    "quotation",
     "feedback",
     "approval",
   ]);
@@ -316,15 +325,13 @@ test("client nav hides empty sections by source", () => {
   };
   assert.deepEqual(visibleClientWorkspaceSections(studioView as never), [
     "overview",
-    "strategy",
     "creators",
     "content",
     "commercial",
-    "timeline",
     "feedback",
     "approval",
   ]);
-  assert.equal(defaultClientWorkspaceSection(["overview", "commercial", "feedback"]), "commercial");
+  assert.equal(defaultClientWorkspaceSection(["overview", "creators", "commercial", "feedback"]), "overview");
 });
 
 test("legacy snapshots still parse after media-plan fields are added", () => {
@@ -405,8 +412,9 @@ test("campaign summary uses forecast + client investment and never fabricates EM
   assert.ok(full.activityMix.some((item) => /Reel/i.test(item.label)));
 
   const reduced = projectMediaPlanSummary(snapshot!, { a: "rejected", b: "accepted" });
-  assert.equal(reduced.creatorCount, 1);
+  assert.equal(reduced.creatorCount, 2);
   assert.ok(reduced.estimatedReach != null && reduced.estimatedReach < (full.estimatedReach ?? 0));
+  assert.ok(full.creatorForecasts.a?.estimatedReach != null);
 });
 
 test("campaign summary omits reach when follower data is unavailable", () => {
@@ -443,6 +451,9 @@ test("unavailable metrics stay unknown and real zeros stay zero", () => {
   assert.equal(formatEngagementPct(undefined), "Not available");
   assert.equal(deliverablesLabel(undefined), "Deliverables to be confirmed");
   assert.match(deliverablesLabel([{ platform: "instagram", type: "Reel", quantity: 1 }]), /Reel/);
+  assert.equal(providedText(undefined), "Not provided");
+  assert.equal(providedText("  "), "Not provided");
+  assert.equal(providedText("UAE"), "UAE");
 });
 
 test("frozen creator brief is projected from snapshot without inventing audience", () => {
@@ -474,6 +485,9 @@ test("HypeAuditor parity matrix covers the required media-plan capabilities", ()
     "Approval",
     "Versioning",
     "Responsive experience",
+    "Content Plan",
+    "Overview",
+    "Feedback collaboration",
   ];
   for (const capability of required) {
     const row = HYPEAUDITOR_MEDIA_PLAN_PARITY.find((item) => item.capability === capability);
@@ -482,5 +496,57 @@ test("HypeAuditor parity matrix covers the required media-plan capabilities", ()
   }
   assert.equal(HYPEAUDITOR_MEDIA_PLAN_PARITY.find((row) => row.capability === "ROI")?.status, "not_copied");
   assert.equal(HYPEAUDITOR_MEDIA_PLAN_PARITY.find((row) => row.capability === "HypeAuditor AQS")?.status, "not_copied");
+});
+
+test("client workspace roster count matches the proposal snapshot, not Studio quantity copy", () => {
+  assert.equal(rosterHeadline(13), "13 creators proposed");
+  assert.equal(rosterSourceLine("shortlist"), "Source: Approved shortlist");
+  assert.equal(rosterHeadline(1), "1 creator proposed");
+});
+
+test("activity mix groups actual deliverables instead of hiding them", () => {
+  const mix = groupedActivityMix([
+    { label: "Instagram Reel", count: 8 },
+    { label: "Reel", count: 2 },
+    { label: "Story", count: 8 },
+    { label: "Feed Post", count: 8 },
+  ]);
+  assert.deepEqual(
+    mix.map((item) => `${item.count} ${item.label}`),
+    ["10 Reels", "8 Posts", "8 Stories"]
+  );
+});
+
+test("strategic pillars prefer campaign facts over generic shortlist copy", () => {
+  const pillars = strategicPillars({
+    overview: {
+      objective: "Drive festival attendance",
+      audience: "UAE families",
+      market: "United Arab Emirates",
+      platforms: ["instagram"],
+      whyThisApproach: "Creator shortlist for Liwa International Festival.",
+      creatorCount: 13,
+    },
+    activityMix: [{ label: "Reels", count: 8 }],
+    categories: ["Lifestyle"],
+  });
+  assert.ok(pillars.length >= 3);
+  assert.equal(pillars.some((pillar) => /shortlist for/i.test(pillar.body)), false);
+  assert.equal(pillars.some((pillar) => pillar.body === "Drive festival attendance"), true);
+});
+
+test("budget allocation chart is omitted unless a real services fee exists", () => {
+  assert.equal(allocationSlices({ creatorInvestment: 100_000, totalInvestment: 100_000 }), null);
+  assert.deepEqual(allocationSlices({ creatorInvestment: 92_000, feeAmount: 8_000, totalInvestment: 100_000 }), [
+    { label: "Creator investment", count: 92 },
+    { label: "Services", count: 8 },
+  ]);
+});
+
+test("client-facing copy never exposes internal intelligence or commercial internals", () => {
+  assert.equal(containsInternalTerminology("Campaign Match 92%"), false);
+  assert.equal(containsInternalTerminology("ECI score 91"), true);
+  assert.equal(containsInternalTerminology("vendor cost and GP margin"), true);
+  assert.equal(clientSafeFitCopy("Strong UAE fit. Discovery Engine fingerprint graph."), "Strong UAE fit.");
 });
 

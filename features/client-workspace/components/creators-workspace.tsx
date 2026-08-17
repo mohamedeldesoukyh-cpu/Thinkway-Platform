@@ -9,6 +9,8 @@ import {
   selectCreatorAction,
 } from "../actions/client-workspace-actions";
 import type { ClientCreatorSelectionState } from "../constants";
+import { formatPlatformLabel } from "../format";
+import { rosterHeadline, rosterSourceLine } from "../presentation";
 import { countSelections } from "../status";
 import type { ClientCreatorCard, ClientWorkspaceView } from "../types";
 import { CampaignMediaPlanSummary } from "./campaign-media-plan-summary";
@@ -22,6 +24,8 @@ const STATUS_FILTERS: Array<{ id: "all" | "recommended" | ClientCreatorSelection
   { id: "in_review", label: "In Review" },
   { id: "rejected", label: "Rejected" },
 ];
+
+type SortKey = "recommended" | "followers" | "engagement" | "investment" | "match" | "reach";
 
 export function CreatorsWorkspace({
   view,
@@ -37,6 +41,9 @@ export function CreatorsWorkspace({
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [tierFilter, setTierFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("all");
+  const [genderFilter, setGenderFilter] = useState("all");
+  const [query, setQuery] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("recommended");
   const [detailId, setDetailId] = useState<string | null>(null);
   const counts = countSelections(
     Object.fromEntries(view.creators.map((creator) => [creator.creatorId, creator.selection])),
@@ -45,21 +52,36 @@ export function CreatorsWorkspace({
 
   const platforms = unique(view.creators.map((creator) => creator.platform).filter(Boolean));
   const categories = unique(view.creators.map((creator) => creator.category || creator.niche).filter(Boolean));
-  const tiers = unique(view.creators.map((creator) => creator.tier).filter(Boolean));
+  const tiers = unique(view.creators.map((creator) => creator.tier).filter((tier) => tier && tier !== "Unknown"));
   const locations = unique(view.creators.map((creator) => creator.country).filter(Boolean));
+  const genders = unique(
+    view.creators.flatMap((creator) => creator.audience?.genders.map((slice) => slice.label) ?? [])
+  );
 
-  const filtered = view.creators.filter((creator) => {
-    if (statusFilter === "recommended") {
-      if (creator.selection === "rejected") return false;
-    } else if (statusFilter !== "all" && creator.selection !== statusFilter) {
-      return false;
-    }
-    if (platformFilter !== "all" && creator.platform !== platformFilter) return false;
-    if (categoryFilter !== "all" && (creator.category || creator.niche) !== categoryFilter) return false;
-    if (tierFilter !== "all" && creator.tier !== tierFilter) return false;
-    if (locationFilter !== "all" && creator.country !== locationFilter) return false;
-    return true;
-  });
+  const filtered = view.creators
+    .filter((creator) => {
+      if (statusFilter === "recommended") {
+        if (creator.selection === "rejected") return false;
+      } else if (statusFilter !== "all" && creator.selection !== statusFilter) {
+        return false;
+      }
+      if (platformFilter !== "all" && creator.platform !== platformFilter) return false;
+      if (categoryFilter !== "all" && (creator.category || creator.niche) !== categoryFilter) return false;
+      if (tierFilter !== "all" && creator.tier !== tierFilter) return false;
+      if (locationFilter !== "all" && creator.country !== locationFilter) return false;
+      if (
+        genderFilter !== "all" &&
+        !creator.audience?.genders.some((slice) => slice.label === genderFilter)
+      ) {
+        return false;
+      }
+      if (query.trim()) {
+        const haystack = `${creator.displayName} ${creator.handle ?? ""} ${creator.category ?? ""} ${creator.niche ?? ""}`.toLowerCase();
+        if (!haystack.includes(query.trim().toLowerCase())) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => compareCreators(a, b, sortKey));
 
   const accepted = view.creators.filter((creator) => creator.selection === "accepted");
   const selectedInvestment = accepted.some((creator) => creator.investmentAmount != null)
@@ -100,6 +122,9 @@ export function CreatorsWorkspace({
 
   return (
     <div className="space-y-5">
+      <p className="text-sm text-zinc-500">
+        {rosterHeadline(view.creators.length)}. {rosterSourceLine(view.review.source)}.
+      </p>
       <CampaignMediaPlanSummary
         summary={view.mediaPlanSummary}
         selectedCount={counts.accepted}
@@ -131,39 +156,68 @@ export function CreatorsWorkspace({
         </div>
         {view.canDecide ? (
           <div className="flex flex-wrap gap-3 text-sm">
-            <button
-              type="button"
-              className="text-zinc-500 hover:text-zinc-900"
-              onClick={() => bulk("accepted")}
-              disabled={pending}
-            >
+            <button type="button" className="text-zinc-500 hover:text-zinc-900" onClick={() => bulk("accepted")} disabled={pending}>
               Select all
             </button>
-            <button
-              type="button"
-              className="text-zinc-500 hover:text-zinc-900"
-              onClick={() => bulk("in_review")}
-              disabled={pending}
-            >
+            <button type="button" className="text-zinc-500 hover:text-zinc-900" onClick={() => bulk("in_review")} disabled={pending}>
               Clear selection
             </button>
           </div>
         ) : null}
       </div>
 
-      {(platforms.length > 1 || categories.length > 1 || tiers.length > 1 || locations.length > 1) && (
+      <div className="flex flex-col gap-3 lg:flex-row">
+        <input
+          className="w-full rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm lg:max-w-sm"
+          placeholder="Search creators"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+        <label className="flex items-center gap-2 text-sm text-zinc-600">
+          <span>Sort</span>
+          <select
+            className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-sm"
+            value={sortKey}
+            onChange={(event) => setSortKey(event.target.value as SortKey)}
+          >
+            <option value="recommended">Recommended</option>
+            <option value="followers">Followers</option>
+            <option value="engagement">Engagement</option>
+            <option value="investment">Investment</option>
+            <option value="match">Match</option>
+            <option value="reach">Estimated reach</option>
+          </select>
+        </label>
+      </div>
+
+      {(platforms.length > 1 ||
+        categories.length > 1 ||
+        tiers.length > 1 ||
+        locations.length > 1 ||
+        genders.length > 1) && (
         <div className="flex flex-wrap gap-2">
           {platforms.length > 1 ? (
-            <FilterSelect label="Platform" value={platformFilter} onChange={setPlatformFilter} options={platforms} />
+            <FilterSelect
+              label="Platform"
+              value={platformFilter}
+              onChange={setPlatformFilter}
+              options={platforms.map((platform) => ({
+                value: platform,
+                label: formatPlatformLabel(platform) ?? platform,
+              }))}
+            />
           ) : null}
           {categories.length > 1 ? (
-            <FilterSelect label="Category" value={categoryFilter} onChange={setCategoryFilter} options={categories} />
+            <FilterSelect label="Category" value={categoryFilter} onChange={setCategoryFilter} options={asOptions(categories)} />
           ) : null}
           {tiers.length > 1 ? (
-            <FilterSelect label="Tier" value={tierFilter} onChange={setTierFilter} options={tiers} />
+            <FilterSelect label="Tier" value={tierFilter} onChange={setTierFilter} options={asOptions(tiers)} />
           ) : null}
           {locations.length > 1 ? (
-            <FilterSelect label="Location" value={locationFilter} onChange={setLocationFilter} options={locations} />
+            <FilterSelect label="Location" value={locationFilter} onChange={setLocationFilter} options={asOptions(locations)} />
+          ) : null}
+          {genders.length > 1 ? (
+            <FilterSelect label="Gender" value={genderFilter} onChange={setGenderFilter} options={asOptions(genders)} />
           ) : null}
         </div>
       )}
@@ -172,7 +226,7 @@ export function CreatorsWorkspace({
         Selected creators: {counts.accepted} / {counts.total}
       </p>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {filtered.map((creator) => (
           <CreatorMediaPlanCard
             key={creator.creatorId}
@@ -187,6 +241,8 @@ export function CreatorsWorkspace({
             }
             onAccept={() => decide(creator, "accepted")}
             onReject={() => decide(creator, "rejected")}
+            onRequestChanges={() => setDetailId(creator.creatorId)}
+            timing={view.content.find((row) => row.creatorId === creator.creatorId)?.timing}
           />
         ))}
         {filtered.length === 0 ? (
@@ -226,8 +282,29 @@ export function CreatorsWorkspace({
   );
 }
 
+function compareCreators(a: ClientCreatorCard, b: ClientCreatorCard, sortKey: SortKey): number {
+  switch (sortKey) {
+    case "followers":
+      return (b.followers ?? -1) - (a.followers ?? -1);
+    case "engagement":
+      return (b.engagementRate ?? -1) - (a.engagementRate ?? -1);
+    case "investment":
+      return (b.investmentAmount ?? -1) - (a.investmentAmount ?? -1);
+    case "match":
+      return (b.matchPercent ?? -1) - (a.matchPercent ?? -1);
+    case "reach":
+      return (b.estimatedReach ?? -1) - (a.estimatedReach ?? -1);
+    default:
+      return (b.matchPercent ?? 0) - (a.matchPercent ?? 0) || (b.followers ?? 0) - (a.followers ?? 0);
+  }
+}
+
 function unique(values: Array<string | undefined>): string[] {
   return [...new Set(values.filter((value): value is string => Boolean(value)))].sort();
+}
+
+function asOptions(values: string[]): Array<{ value: string; label: string }> {
+  return values.map((value) => ({ value, label: value }));
 }
 
 function FilterSelect({
@@ -239,7 +316,7 @@ function FilterSelect({
   label: string;
   value: string;
   onChange: (value: string) => void;
-  options: string[];
+  options: Array<{ value: string; label: string }>;
 }) {
   return (
     <label className="flex items-center gap-2 text-sm text-zinc-600">
@@ -251,8 +328,8 @@ function FilterSelect({
       >
         <option value="all">All</option>
         {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
+          <option key={option.value} value={option.value}>
+            {option.label}
           </option>
         ))}
       </select>
