@@ -1,12 +1,21 @@
 import { shouldProxyPublicationMediaUrl } from "@/lib/creators/recent-publication-thumb";
+import { decodeHtmlEntities } from "@/lib/text/decode-html-entities";
 
 import type { ClientContentPost, ClientReviewSourceSnapshot } from "./types";
+
+function normalizeMediaUrl(value?: string | null): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  const decoded = decodeHtmlEntities(trimmed);
+  return decoded || trimmed;
+}
 
 export function reviewMediaAllowlist(snapshot: ClientReviewSourceSnapshot | null | undefined): Set<string> {
   const urls = new Set<string>();
   if (!snapshot) return urls;
   for (const creator of snapshot.creators) {
     addUrl(urls, creator.avatarUrl);
+    addUrl(urls, creator.profileUrl);
     for (const post of creator.contentFeed ?? []) {
       addUrl(urls, post.thumbnail);
       addUrl(urls, post.url);
@@ -16,32 +25,52 @@ export function reviewMediaAllowlist(snapshot: ClientReviewSourceSnapshot | null
 }
 
 function addUrl(urls: Set<string>, value?: string | null) {
-  const trimmed = value?.trim();
-  if (trimmed) urls.add(trimmed);
+  const normalized = normalizeMediaUrl(value);
+  if (!normalized) return;
+  urls.add(normalized);
+  if (value?.trim() && value.trim() !== normalized) urls.add(value.trim());
+}
+
+export function allowlistedReviewMediaUrl(
+  allowlist: Set<string>,
+  value?: string | null
+): string | null {
+  const trimmed = value?.trim() || "";
+  if (!trimmed) return null;
+  if (allowlist.has(trimmed)) return trimmed;
+  const normalized = normalizeMediaUrl(trimmed);
+  if (normalized && allowlist.has(normalized)) return normalized;
+  return null;
 }
 
 export function isReviewMediaUrlAllowed(
   allowlist: Set<string>,
   src?: string | null,
-  postUrl?: string | null
+  postUrl?: string | null,
+  profileUrl?: string | null
 ): boolean {
-  const source = src?.trim() || "";
-  const post = postUrl?.trim() || "";
-  if (!source && !post) return false;
-  if (source && allowlist.has(source)) return true;
-  if (post && allowlist.has(post)) return true;
-  return false;
+  return Boolean(
+    allowlistedReviewMediaUrl(allowlist, src) ||
+      allowlistedReviewMediaUrl(allowlist, postUrl) ||
+      allowlistedReviewMediaUrl(allowlist, profileUrl)
+  );
 }
 
 export function clientReviewMediaPath(
   token: string,
-  input: { kind: "avatar" | "publication"; src?: string | null; postUrl?: string | null }
+  input: {
+    kind: "avatar" | "publication";
+    src?: string | null;
+    postUrl?: string | null;
+    profileUrl?: string | null;
+  }
 ): string | undefined {
   const src = input.src?.trim() || "";
   const postUrl = input.postUrl?.trim() || "";
-  if (!src && !postUrl) return undefined;
+  const profileUrl = input.profileUrl?.trim() || "";
+  if (!src && !postUrl && !profileUrl) return undefined;
   if (src.startsWith("/api/review/media")) return src;
-  if (src && !postUrl && !shouldProxyPublicationMediaUrl(src) && !src.startsWith("/api/")) {
+  if (src && !postUrl && !profileUrl && !shouldProxyPublicationMediaUrl(src) && !src.startsWith("/api/")) {
     return src;
   }
   const params = new URLSearchParams();
@@ -49,11 +78,16 @@ export function clientReviewMediaPath(
   params.set("kind", input.kind);
   if (src) params.set("src", src);
   if (postUrl) params.set("postUrl", postUrl);
+  if (profileUrl) params.set("profileUrl", profileUrl);
   return `/api/review/media?${params.toString()}`;
 }
 
-export function clientReviewAvatarUrl(token: string, src?: string | null): string | undefined {
-  return clientReviewMediaPath(token, { kind: "avatar", src });
+export function clientReviewAvatarUrl(
+  token: string,
+  src?: string | null,
+  profileUrl?: string | null
+): string | undefined {
+  return clientReviewMediaPath(token, { kind: "avatar", src, profileUrl });
 }
 
 export function clientReviewPostDisplay(

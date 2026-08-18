@@ -1,14 +1,20 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { CheckIcon, Loader2Icon, RefreshCwIcon, SendIcon, WrenchIcon } from "lucide-react";
+import { CheckIcon, Link2Icon, Loader2Icon, RefreshCwIcon, SendIcon, WrenchIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import { createClientReviewAction } from "@/features/client-workspace/actions/create-client-review-action";
 import { loadLatestClientReviewAction } from "@/features/client-workspace/actions/load-latest-client-review-action";
+import { revealClientReviewLinkAction } from "@/features/client-workspace/actions/reveal-client-review-link-action";
 import { ClientReviewShareDialog } from "@/features/client-workspace/components/client-review-share-dialog";
+import {
+  readClientReviewShare,
+  rememberClientReviewShare,
+  reviewIdFromShareUrl,
+} from "@/features/client-workspace/client-review-share-memory";
 import { regenerateStaleOutputsAction } from "@/features/campaign-outputs/actions/regenerate-stale-outputs";
 
 import type { CampaignStudioSectionId } from "../../types/campaign-studio";
@@ -127,6 +133,13 @@ export function PackageScreen({
       } catch {
         /* clipboard is optional — the share dialog still shows the URL */
       }
+      if (campaignObject.id) {
+        const reviewId = reviewIdFromShareUrl(result.url) ?? campaignObject.id;
+        rememberClientReviewShare(
+          { source: "studio", id: campaignObject.id },
+          { url: result.url, reviewNumber: result.reviewNumber, reviewId }
+        );
+      }
       setShareUrl(result.url);
       setShareReviewNumber(result.reviewNumber);
       setShareOpen(true);
@@ -135,6 +148,37 @@ export function PackageScreen({
         const latest = await loadLatestClientReviewAction(campaignObject.id);
         if (latest.ok) setClientReview(latest.review);
       }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function showClientReviewLink() {
+    if (!campaignObject?.id || busy) return;
+    const cached = readClientReviewShare({ source: "studio", id: campaignObject.id });
+    if (cached) {
+      setShareUrl(cached.url);
+      setShareReviewNumber(cached.reviewNumber);
+      setShareOpen(true);
+      return;
+    }
+    setBusy(true);
+    try {
+      const result = await revealClientReviewLinkAction({
+        source: "studio",
+        campaignObjectId: campaignObject.id,
+      });
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
+      rememberClientReviewShare(
+        { source: "studio", id: campaignObject.id },
+        { url: result.url, reviewNumber: result.reviewNumber, reviewId: result.reviewId }
+      );
+      setShareUrl(result.url);
+      setShareReviewNumber(result.reviewNumber);
+      setShareOpen(true);
     } finally {
       setBusy(false);
     }
@@ -200,6 +244,15 @@ export function PackageScreen({
           >
             <SendIcon className="size-4" />
             Create client review
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!campaignObject?.id || busy}
+            onClick={() => void showClientReviewLink()}
+          >
+            <Link2Icon className="size-4" />
+            Show link
           </Button>
         </div>
         {!readiness.canCreateClientReview && readiness.clientReviewBlockers.length > 0 ? (

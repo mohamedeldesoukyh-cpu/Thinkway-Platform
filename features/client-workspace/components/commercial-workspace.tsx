@@ -105,6 +105,7 @@ export function CommercialWorkspace({
                       <ReviewAvatar
                         className="av-sm"
                         url={creator.avatarUrl}
+                        profileUrl={creator.profileUrl}
                         name={creator.displayName}
                         index={index}
                         token={token}

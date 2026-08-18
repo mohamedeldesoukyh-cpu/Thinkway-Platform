@@ -1,5 +1,7 @@
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
+import { resolveCreatorRecentPublicationThumbnail } from "@/lib/creators/recent-publication-thumb";
 import type { CreatorRecentPublication, UnifiedCreatorResult } from "@/lib/domains/creator/types";
+import { isInstagramCdnUrlExpired } from "@/lib/performance/avatar-sync-policy";
 import { computeEngagementRate } from "@/lib/performance/engagement-rate-engine";
 
 import { clientSafeFitCopy } from "./format";
@@ -22,7 +24,7 @@ export function contentPostsFromPublications(
     });
     return {
       url: pub.url,
-      thumbnail: pub.thumbnail,
+      thumbnail: resolveCreatorRecentPublicationThumbnail(pub) ?? pub.thumbnail,
       platform,
       postedAt: pub.posted_at,
       likes: optionalMetric(pub.likes) ?? null,
@@ -46,6 +48,24 @@ export function shouldReplaceContentFeed(
   return live.length > existing.length || !existingHasMetrics;
 }
 
+export function profileUrlFromHandle(handle?: string | null, platform?: string | null): string | undefined {
+  const username = handle?.trim().replace(/^@/, "") ?? "";
+  if (!username || /[/?#\s]/.test(username)) return undefined;
+  const network = platform?.trim().toLowerCase() ?? "";
+  if (network === "instagram") return `https://www.instagram.com/${username}/`;
+  if (network === "tiktok") return `https://www.tiktok.com/@${username}`;
+  if (network === "facebook") return `https://www.facebook.com/${username}`;
+  return undefined;
+}
+
+function preferAvatarUrl(current?: string | null, live?: string | null): string | undefined {
+  const next = live?.trim() || undefined;
+  const existing = current?.trim() || undefined;
+  if (!existing) return next;
+  if (next && isInstagramCdnUrlExpired(existing)) return next;
+  return existing;
+}
+
 export function influencerIdFromRefs(input: {
   influencerId?: string | null;
   creatorId?: string;
@@ -60,7 +80,12 @@ export function enrichSnapshotCreatorFromUnified(
   base: ClientReviewSourceSnapshotCreator,
   creator: UnifiedCreatorResult | undefined
 ): ClientReviewSourceSnapshotCreator {
-  if (!creator) return base;
+  if (!creator) {
+    return {
+      ...base,
+      profileUrl: base.profileUrl || profileUrlFromHandle(base.handle, base.platform),
+    };
+  }
   const platform = creator.platforms[0];
   const publications =
     platform?.recent_publications?.length
@@ -100,8 +125,14 @@ export function enrichSnapshotCreatorFromUnified(
     categories: categories.length > 0 ? categories : undefined,
     audienceHighlight:
       base.audienceHighlight || creator.audience_interests?.slice(0, 3).join(" · ") || undefined,
-    avatarUrl:
-      base.avatarUrl || creator.primaryAvatarUrl || creator.profile_image_url || undefined,
+    avatarUrl: preferAvatarUrl(
+      base.avatarUrl,
+      creator.primaryAvatarUrl || creator.profile_image_url
+    ),
+    profileUrl:
+      base.profileUrl ||
+      platform?.profile_url ||
+      profileUrlFromHandle(base.handle || platform?.handle, base.platform || platform?.platform),
     bio: base.bio || creator.bio || undefined,
     avgLikes:
       base.avgLikes ??

@@ -199,6 +199,7 @@ export function CreatorsWorkspace({
               <ReviewAvatar
                 className="av"
                 url={creator.avatarUrl}
+                profileUrl={creator.profileUrl}
                 name={creator.displayName}
                 index={view.creators.findIndex((item) => item.creatorId === creator.creatorId) || index}
                 token={token}
@@ -364,6 +365,7 @@ function CreatorDetailPane({
           className="portrait"
           initialsClassName="ini"
           url={brief?.avatarUrl || creator.avatarUrl}
+          profileUrl={brief?.profileUrl || creator.profileUrl}
           name={name}
           index={index}
           token={token}

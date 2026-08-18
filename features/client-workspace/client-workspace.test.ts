@@ -22,8 +22,8 @@ import {
 import { HYPEAUDITOR_MEDIA_PLAN_PARITY } from "./hypeauditor-parity";
 import { projectMediaPlanSummary } from "./media-plan-summary";
 import { briefFromSnapshotCreator, mergeFrozenBrief } from "./creator-brief";
-import { shouldReplaceContentFeed } from "./creator-snapshot";
-import { isReviewMediaUrlAllowed, reviewMediaAllowlist } from "./review-media";
+import { enrichSnapshotCreatorFromUnified, profileUrlFromHandle, shouldReplaceContentFeed } from "./creator-snapshot";
+import { clientReviewAvatarUrl, isReviewMediaUrlAllowed, reviewMediaAllowlist } from "./review-media";
 import { shortlistReviewBlockers, quotationReviewBlockers } from "./source-readiness";
 import {
   projectCommercialFromSnapshot,
@@ -672,10 +672,11 @@ test("review media proxy only allows URLs frozen on the snapshot", () => {
         creatorId: "a",
         displayName: "A",
         avatarUrl: "https://cdn.example/avatar.jpg",
+        profileUrl: "https://www.instagram.com/radwaadeeel/",
         contentFeed: [
           {
             url: "https://www.instagram.com/p/ABC/",
-            thumbnail: "https://scontent.cdninstagram.com/thumb.jpg",
+            thumbnail: "https://scontent.cdninstagram.com/thumb.jpg?oh=1&amp;oe=2",
             likes: 20,
           },
         ],
@@ -697,7 +698,7 @@ test("review media proxy only allows URLs frozen on the snapshot", () => {
   assert.ok(snapshot);
   const allow = reviewMediaAllowlist(snapshot);
   assert.equal(
-    isReviewMediaUrlAllowed(allow, "https://scontent.cdninstagram.com/thumb.jpg", "https://www.instagram.com/p/ABC/"),
+    isReviewMediaUrlAllowed(allow, "https://scontent.cdninstagram.com/thumb.jpg?oh=1&oe=2", "https://www.instagram.com/p/ABC/"),
     true
   );
   assert.equal(isReviewMediaUrlAllowed(allow, "https://evil.example/x.jpg", null), false);
@@ -705,8 +706,34 @@ test("review media proxy only allows URLs frozen on the snapshot", () => {
     isReviewMediaUrlAllowed(allow, "https://evil.example/x.jpg", "https://www.instagram.com/p/ABC/"),
     true
   );
+  assert.equal(
+    isReviewMediaUrlAllowed(allow, null, null, "https://www.instagram.com/radwaadeeel/"),
+    true
+  );
+  assert.match(
+    clientReviewAvatarUrl("t".repeat(16), undefined, "https://www.instagram.com/radwaadeeel/") ?? "",
+    /kind=avatar/
+  );
   assert.equal(snapshot!.creators[0]?.historical?.[0]?.followers, 80_000);
   assert.equal(snapshot!.creators[0]?.historical?.[0]?.following, 400);
   assert.equal(snapshot!.creators[0]?.historical?.[0]?.postsCount, 12);
+});
+
+test("missing avatars keep a social profile URL for the public review proxy", () => {
+  assert.equal(
+    profileUrlFromHandle("@radwaadeeel", "instagram"),
+    "https://www.instagram.com/radwaadeeel/"
+  );
+  const enriched = enrichSnapshotCreatorFromUnified(
+    {
+      creatorId: "c1",
+      displayName: "radwaadeeel",
+      handle: "@radwaadeeel",
+      platform: "instagram",
+    },
+    undefined
+  );
+  assert.equal(enriched.profileUrl, "https://www.instagram.com/radwaadeeel/");
+  assert.equal(enriched.avatarUrl, undefined);
 });
 

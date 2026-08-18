@@ -17,7 +17,7 @@ import {
 import { flagFromCountry, qualityBadge, qualityGaugePercent, engagementBadge, engagementGaugePercent } from "../presentation";
 import { clientReviewPostDisplay } from "../review-media";
 import type { ClientAudienceSlice, ClientContentPost, ClientCreatorBrief, ClientCreatorCard, ClientHistoricalMonth } from "../types";
-import { ReviewAvatar } from "./review-avatar";
+import { RetryableReviewImage, ReviewAvatar } from "./review-avatar";
 import { IconCat, IconChart, IconCheck, IconClose, IconHeart, IconIg } from "./review-icons";
 
 const REPORT_NAV = [
@@ -102,6 +102,7 @@ export function AdvancedReportModal({
             className="portrait"
             initialsClassName="ini"
             url={view?.avatarUrl || creator.avatarUrl}
+            profileUrl={view?.profileUrl || creator.profileUrl}
             name={view?.displayName || creator.displayName}
             index={index}
             token={token}
@@ -682,7 +683,6 @@ export function ContentFeatureGrid({
   token?: string;
   variant?: "feature" | "square";
 }) {
-  const [hidden, setHidden] = useState<Record<number, boolean>>({});
   if (posts.length === 0) {
     return <p className="unavailable">Recent content unavailable</p>;
   }
@@ -695,14 +695,7 @@ export function ContentFeatureGrid({
         const src = display.thumbnail;
         const inner = (
           <>
-            {src && !hidden[index] ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={src}
-                alt=""
-                onError={() => setHidden((current) => ({ ...current, [index]: true }))}
-              />
-            ) : null}
+            {src ? <RetryableReviewImage src={src} /> : null}
             {index === 0 && variant === "feature" ? <span className="tagp top">Top post</span> : post.platform ? <span className="tagp">{formatPlatformLabel(post.platform)}</span> : null}
             <span className="lk">
               <IconHeart />

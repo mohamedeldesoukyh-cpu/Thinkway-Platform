@@ -258,6 +258,54 @@ export async function persistClientReview(
     url: `${origin}${buildClientReviewPath(review.id, token)}`,
     token,
     status: review.status,
-    source: input.source,
+    source: review.source,
+  };
+}
+
+export async function revealClientReviewShareLink(input: {
+  supabase: SupabaseClient;
+  origin: string;
+  scope: ReviewScope;
+}): Promise<
+  | { ok: true; url: string; reviewId: string; reviewNumber: number }
+  | { ok: false; message: string }
+> {
+  let query = input.supabase
+    .from("campaign_client_reviews" as never)
+    .select("id, review_number, status")
+    .eq("source", input.scope.source);
+  query = applyReviewScope(query, input.scope);
+  const { data } = await query.order("review_number", { ascending: false }).limit(1).maybeSingle();
+  const row = data as { id: string; review_number: number; status: ClientReviewStatus } | null;
+  if (!row) {
+    return {
+      ok: false,
+      message: "Send to Client first to create a Client Workspace link.",
+    };
+  }
+  if (row.status === "revoked" || row.status === "superseded") {
+    return {
+      ok: false,
+      message: "The latest Client Workspace version is no longer active. Send to Client to create a new link.",
+    };
+  }
+
+  const token = randomBytes(16).toString("hex");
+  const tokenHash = hashClientReviewToken(token);
+  const now = new Date().toISOString();
+  const { error } = await input.supabase
+    .from("campaign_client_reviews" as never)
+    .update({ token_hash: tokenHash, updated_at: now } as never)
+    .eq("id", row.id);
+  if (error) {
+    return { ok: false, message: error.message || "Could not load the Client Workspace link." };
+  }
+
+  const origin = input.origin.replace(/\/$/, "");
+  return {
+    ok: true,
+    url: `${origin}${buildClientReviewPath(row.id, token)}`,
+    reviewId: row.id,
+    reviewNumber: row.review_number,
   };
 }

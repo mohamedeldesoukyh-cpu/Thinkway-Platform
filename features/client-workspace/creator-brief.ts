@@ -10,6 +10,7 @@ import {
   enrichSnapshotCreatorFromUnified,
   influencerIdFromRefs,
   optionalMetric,
+  profileUrlFromHandle,
   shouldReplaceContentFeed,
 } from "./creator-snapshot";
 import { isInteractiveClientReview } from "./status";
@@ -204,6 +205,7 @@ export function briefFromSnapshotCreator(
     followers: creator.followers,
     engagementRate: creator.engagementRate,
     avatarUrl: creator.avatarUrl,
+    profileUrl: creator.profileUrl,
     audience: creator.audience ?? null,
     performance: creator.performance ?? clientPerformanceFromCreator(creator),
     historical: creator.historical ?? [],
@@ -335,6 +337,9 @@ export function mergeFrozenBrief(
 }
 
 function needsClientBriefBackfill(creator: ClientReviewSourceSnapshotCreator): boolean {
+  if (!creator.profileUrl?.trim() && profileUrlFromHandle(creator.handle, creator.platform)) {
+    return true;
+  }
   if (creator.briefBackfillDone) return false;
   if (!creator.contentFeed?.length) return true;
   if (

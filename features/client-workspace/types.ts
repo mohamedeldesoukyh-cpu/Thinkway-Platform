@@ -105,6 +105,7 @@ export type ClientReviewSourceSnapshotCreator = {
   investmentAmount?: number;
   investmentCurrency?: string;
   avatarUrl?: string;
+  profileUrl?: string;
   bio?: string;
   notes?: string;
   avgLikes?: number;
@@ -207,6 +208,7 @@ export type ClientCreatorCard = {
   investmentAmount?: number;
   investmentCurrency?: string;
   avatarUrl?: string;
+  profileUrl?: string;
   bio?: string;
   notes?: string;
   avgLikes?: number;
@@ -241,6 +243,7 @@ export type ClientCreatorBrief = {
   followers?: number;
   engagementRate?: number;
   avatarUrl?: string;
+  profileUrl?: string;
   audience: ClientAudienceBrief | null;
   performance: ClientPerformanceBrief | null;
   historical: ClientHistoricalMonth[];

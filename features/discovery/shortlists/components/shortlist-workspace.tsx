@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
   ArchiveIcon,
+  Link2Icon,
   MoreHorizontalIcon,
   PencilIcon,
   SendIcon,
@@ -27,7 +28,13 @@ import { OpenCampaignStudioLauncher } from "@/features/campaign-outputs/componen
 import type { CampaignSeed } from "@/features/campaign-outputs/hydration/hydration-types";
 
 import { createClientReviewFromShortlistAction } from "@/features/client-workspace/actions/create-from-shortlist-action";
+import { revealClientReviewLinkAction } from "@/features/client-workspace/actions/reveal-client-review-link-action";
 import { ClientReviewShareDialog } from "@/features/client-workspace/components/client-review-share-dialog";
+import {
+  readClientReviewShare,
+  rememberClientReviewShare,
+  reviewIdFromShareUrl,
+} from "@/features/client-workspace/client-review-share-memory";
 import { discoverySelectionFlyoutContentClass } from "@/features/discovery/components/design-system/discovery-selection-flyout";
 import { shortlistDetailPath } from "@/features/discovery/shortlists/constants";
 import { cn } from "@/lib/utils";
@@ -629,6 +636,33 @@ export function ShortlistWorkspace({
     runAction(() => bulkCancelCreators(detail.id, selectedItemIdList));
   }
 
+  function handleShowLink() {
+    startTransition(async () => {
+      const cached = readClientReviewShare({ source: "shortlist", id: detail.id });
+      if (cached) {
+        setShareUrl(cached.url);
+        setShareReviewNumber(cached.reviewNumber);
+        setShareOpen(true);
+        return;
+      }
+      const result = await revealClientReviewLinkAction({
+        source: "shortlist",
+        shortlistId: detail.id,
+      });
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
+      rememberClientReviewShare(
+        { source: "shortlist", id: detail.id },
+        { url: result.url, reviewNumber: result.reviewNumber, reviewId: result.reviewId }
+      );
+      setShareUrl(result.url);
+      setShareReviewNumber(result.reviewNumber);
+      setShareOpen(true);
+    });
+  }
+
   function handleSendToClient() {
     const eligible = detail.creators.filter((item) => item.item_status !== "cancelled");
     if (eligible.length === 0) {
@@ -658,6 +692,13 @@ export function ShortlistWorkspace({
         await navigator.clipboard.writeText(result.url);
       } catch {
         /* clipboard is optional — the share dialog still shows the URL */
+      }
+      const reviewId = reviewIdFromShareUrl(result.url);
+      if (reviewId) {
+        rememberClientReviewShare(
+          { source: "shortlist", id: detail.id },
+          { url: result.url, reviewNumber: result.reviewNumber, reviewId }
+        );
       }
       setShareUrl(result.url);
       setShareReviewNumber(result.reviewNumber);
@@ -821,6 +862,15 @@ export function ShortlistWorkspace({
                 Send to Client
               </ShortlistToolbarButton>
             ) : null}
+            <ShortlistToolbarButton
+              variant="outline"
+              size="sm"
+              onClick={handleShowLink}
+              disabled={isPending}
+            >
+              <Link2Icon className="size-3.5" />
+              Show link
+            </ShortlistToolbarButton>
             {editable ? (
               <ShortlistToolbarButton
                 variant="primary"

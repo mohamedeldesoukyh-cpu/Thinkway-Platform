@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArchiveIcon,
+  Link2Icon,
   Loader2Icon,
   MoreHorizontalIcon,
   SaveIcon,
@@ -14,7 +15,13 @@ import {
 import { toast } from "sonner";
 
 import { createClientReviewFromQuotationAction } from "@/features/client-workspace/actions/create-from-quotation-action";
+import { revealClientReviewLinkAction } from "@/features/client-workspace/actions/reveal-client-review-link-action";
 import { ClientReviewShareDialog } from "@/features/client-workspace/components/client-review-share-dialog";
+import {
+  readClientReviewShare,
+  rememberClientReviewShare,
+  reviewIdFromShareUrl,
+} from "@/features/client-workspace/client-review-share-memory";
 import { EntityPrevNext } from "@/components/navigation/entity-prev-next";
 import {
   DropdownMenu,
@@ -66,6 +73,14 @@ export function QuotationWorkspaceHeader({
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareReviewNumber, setShareReviewNumber] = useState<number | undefined>(undefined);
   const campaignSeed = useMemo(() => seedFromQuotation(detail), [detail]);
+  const shareScope = { source: "quotation" as const, id: detail.id };
+
+  function rememberShare(url: string, reviewNumber: number) {
+    setShareUrl(url);
+    setShareReviewNumber(reviewNumber);
+    const reviewId = reviewIdFromShareUrl(url);
+    if (reviewId) rememberClientReviewShare(shareScope, { url, reviewNumber, reviewId });
+  }
 
   function runSendToClient() {
     startTransition(async () => {
@@ -81,10 +96,31 @@ export function QuotationWorkspaceHeader({
       } catch {
         /* clipboard is optional — the share dialog still shows the URL */
       }
-      setShareUrl(res.url);
-      setShareReviewNumber(res.reviewNumber);
+      rememberShare(res.url, res.reviewNumber);
       setShareOpen(true);
       toast.success(res.message);
+    });
+  }
+
+  function runShowLink() {
+    startTransition(async () => {
+      const cached = readClientReviewShare(shareScope);
+      if (cached) {
+        setShareUrl(cached.url);
+        setShareReviewNumber(cached.reviewNumber);
+        setShareOpen(true);
+        return;
+      }
+      const res = await revealClientReviewLinkAction({
+        source: "quotation",
+        quotationId: detail.id,
+      });
+      if (!res.ok) {
+        toast.error(res.message);
+        return;
+      }
+      rememberShare(res.url, res.reviewNumber);
+      setShareOpen(true);
     });
   }
 
@@ -215,6 +251,21 @@ export function QuotationWorkspaceHeader({
                 <SendIcon className="size-3.5" />
               )}
               Send to Client
+            </QuotationToolbarButton>
+          ) : null}
+          {detail.canManage ? (
+            <QuotationToolbarButton
+              variant="outline"
+              size="sm"
+              disabled={pending}
+              onClick={runShowLink}
+            >
+              {pending ? (
+                <Loader2Icon className="size-3.5 animate-spin" />
+              ) : (
+                <Link2Icon className="size-3.5" />
+              )}
+              Show link
             </QuotationToolbarButton>
           ) : null}
           <QuotationPreviewToolbarActions
