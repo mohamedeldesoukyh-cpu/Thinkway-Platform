@@ -14,6 +14,7 @@ import {
   countCollapsePackageSiblings,
   siblingCollapsePackageMemberIds,
 } from "@/lib/quotations/quotation-collapse-package";
+import type { QuotationWorkspaceCreatorGroup } from "@/lib/quotations/quotation-workspace-sort";
 import type { ClientCreatorSelectionState } from "@/features/client-workspace/constants";
 import { clientSelectionForItems } from "@/features/quotations/quotation-client-review";
 
