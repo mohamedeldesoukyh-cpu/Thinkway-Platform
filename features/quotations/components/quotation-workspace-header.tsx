@@ -70,6 +70,7 @@ export function QuotationWorkspaceHeader({
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [linkPending, startLinkTransition] = useTransition();
   const [lifecycleOpen, setLifecycleOpen] = useState(false);
   const [lifecycleTab, setLifecycleTab] = useState<"links" | "activity">("links");
   const [shareOpen, setShareOpen] = useState(false);
@@ -100,7 +101,7 @@ export function QuotationWorkspaceHeader({
       toast.error("Save the quotation first.");
       return;
     }
-    startTransition(async () => {
+    startLinkTransition(async () => {
       if (hasLink) {
         const revealed = await revealClientReviewLinkAction({
           source: "quotation",
@@ -249,10 +250,10 @@ export function QuotationWorkspaceHeader({
             <QuotationToolbarButton
               variant="outline"
               size="sm"
-              disabled={pending}
+              disabled={linkPending}
               onClick={runLinkButton}
             >
-              {pending ? (
+              {linkPending ? (
                 <Loader2Icon className="size-3.5 animate-spin" />
               ) : (
                 <Link2Icon className="size-3.5" />
@@ -267,14 +268,9 @@ export function QuotationWorkspaceHeader({
             <QuotationToolbarButton
               variant="outline"
               size="sm"
-              disabled={pending}
               onClick={runSendToClient}
             >
-              {pending ? (
-                <Loader2Icon className="size-3.5 animate-spin" />
-              ) : (
-                <SendIcon className="size-3.5" />
-              )}
+              <SendIcon className="size-3.5" />
               Send to Client
             </QuotationToolbarButton>
           ) : null}
