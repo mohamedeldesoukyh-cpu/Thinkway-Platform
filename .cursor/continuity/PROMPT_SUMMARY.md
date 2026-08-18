@@ -1,10 +1,10 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `develop` = `main` @ `cd63bb26`  
-**Focus:** Shortlist reports use quotation templates — **released to Production**
+**Branch:** `develop` = `main` @ `fe1c2185`  
+**Focus:** Client Workspace Show link + campaign-quotation approvals — **released to Production** `dpl_FN883pK1CMdPGWhhRdLufRbnH92k`
 
-Shortlist Preview / PDF / PPTX / Word share the quotation template family (`detailed`, `lump-sum`, `showcase`, `showcase-lump-sum`, `pitch`, `pitch-lump-sum`). Commercial/fees/terms omitted. `?template=summary` maps to lump-sum.
+Shortlist **Generate link** / **Show link** creates the Client Workspace when none exists. Converted quotations skip a false unsaved-save gate. Creators on campaign-linked quotations show as approved in Client Workspace.
 
 - Dev: https://dev.thinkwaymedia.com  
-- Prod: https://app.thinkwaymedia.com (Git deploy `[deploy-production]`)
+- Prod: https://app.thinkwaymedia.com  
 - No database changes
