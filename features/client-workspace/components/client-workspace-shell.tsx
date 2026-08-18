@@ -13,6 +13,7 @@ import { buildClientReviewPath } from "../security/review-token";
 import type { ClientWorkspaceView } from "../types";
 import { IconCheck, LogoMark } from "./review-icons";
 import { ReviewPlatformMark } from "./review-platform-mark";
+import { ReviewUpdateBanner } from "./review-update-banner";
 
 export function ClientWorkspaceShell({
   view,
@@ -84,16 +85,12 @@ export function ClientWorkspaceShell({
         </div>
       </header>
       {view.clientUpdate?.items.length ? (
-        <div className="update-banner" role="status">
-          <div className="wrap">
-            <p className="uh">This proposal was updated</p>
-            <ul>
-              {view.clientUpdate.items.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
+        <ReviewUpdateBanner
+          reviewId={view.review.id}
+          token={token}
+          updatedAt={view.clientUpdate.updatedAt}
+          items={view.clientUpdate.items}
+        />
       ) : null}
 
       <section className="hero">

@@ -174,6 +174,7 @@ export type ClientReviewSourceSnapshot = {
   clientUpdate?: {
     updatedAt: string;
     items: string[];
+    acknowledgedAt?: string;
   };
 };
 
@@ -376,6 +377,7 @@ export type ClientWorkspaceView = {
   clientUpdate?: {
     updatedAt: string;
     items: string[];
+    acknowledgedAt?: string;
   };
 };
 

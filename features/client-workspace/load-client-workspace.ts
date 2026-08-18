@@ -17,6 +17,7 @@ import {
   projectCommercialFromSnapshot,
   projectCreatorsFromSnapshot,
   projectOverviewFromSnapshot,
+  visibleClientUpdateNotice,
 } from "./snapshot";
 import { applyCreatorForecasts, projectClientMediaPlans } from "./media-plan-summary";
 import { snapshotFromCampaignObject } from "./snapshot-from-object";
@@ -194,7 +195,7 @@ function viewFromSnapshot(
     comments,
     activity,
     canDecide: isInteractiveClientReview(review.status) && !newer,
-    clientUpdate: snapshot.clientUpdate,
+    clientUpdate: visibleClientUpdateNotice(snapshot.clientUpdate),
   };
   view.visibleSections = visibleClientWorkspaceSections(view);
   return view;

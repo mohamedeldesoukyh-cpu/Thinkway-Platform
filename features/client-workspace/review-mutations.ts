@@ -349,6 +349,28 @@ export async function decideClientReview(input: {
   }
 }
 
+export async function acknowledgeClientUpdate(input: { token: string }): Promise<{ ok: boolean }> {
+  const resolved = await resolveClientReviewByToken(db(), input.token);
+  if (!resolved.ok) return { ok: false };
+  const snapshot = resolved.review.sourceSnapshot;
+  if (!snapshot?.clientUpdate?.items.length || snapshot.clientUpdate.acknowledgedAt) {
+    return { ok: true };
+  }
+  const { error } = await db()
+    .from("campaign_client_reviews" as never)
+    .update({
+      source_snapshot: {
+        ...snapshot,
+        clientUpdate: {
+          ...snapshot.clientUpdate,
+          acknowledgedAt: new Date().toISOString(),
+        },
+      },
+    } as never)
+    .eq("id", resolved.review.id);
+  return { ok: !error };
+}
+
 export function mapReview(row: unknown) {
   return mapClientReviewRow(row as Parameters<typeof mapClientReviewRow>[0]);
 }

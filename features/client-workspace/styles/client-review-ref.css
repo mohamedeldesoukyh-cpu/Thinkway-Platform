@@ -78,10 +78,11 @@
 .tw-review .gauge-l .lo{color:var(--bad);}
 .tw-review .gauge-l .hi{color:var(--ok);}
 .tw-review .update-banner{background:var(--warn-bg);border-bottom:1px solid #ead9a8;color:var(--warn);}
-.tw-review .update-banner .wrap{padding:14px 24px;}
+.tw-review .update-banner .wrap{padding:14px 24px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;}
 .tw-review .update-banner .uh{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin:0 0 6px;color:var(--navy);}
 .tw-review .update-banner ul{margin:0;padding-left:18px;}
 .tw-review .update-banner li{font-size:13px;color:var(--ink);line-height:1.45;}
+.tw-review .update-banner .update-dismiss{flex:none;min-height:36px;padding:7px 12px;}
 .tw-review .btn:disabled{opacity:.45;cursor:not-allowed;}
 .tw-review .sumrow .k{flex-direction:column;align-items:flex-start;gap:1px;}
 .tw-review .sumrow .hint{font-size:10px;color:#8b96b8;font-weight:500;}
@@ -220,16 +221,22 @@
 .tw-review .sec .dels{margin:0 0 10px;}
 .tw-review .posts-feat .post .plat-badge,
 .tw-review .posts .post .plat-badge{
-  position:absolute;top:10px;left:10px;z-index:1;
-  width:auto;height:auto;padding:0;
-  background:transparent;border-radius:0;box-shadow:none;
-  display:block;
+  position:absolute;top:9px;left:9px;z-index:3;
+  width:32px;height:32px;padding:4px;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.95);
+  border-radius:9px;
+  box-shadow:0 1px 4px rgba(0,0,0,.35);
 }
 .tw-review .posts-feat .post .plat-badge .plat-mark,
 .tw-review .posts .post .plat-badge .plat-mark{
-  width:28px;height:28px;border-radius:6px;object-fit:contain;
-  filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));
+  width:22px;height:22px;border-radius:6px;object-fit:contain;
+  filter:none;
 }
+.tw-review .posts-feat .post::before,
+.tw-review .posts .post::before{z-index:1;pointer-events:none;}
+.tw-review .posts-feat .post .lk,
+.tw-review .posts .post .lk{z-index:2;}
 .tw-review .rp-kpi.platforms{grid-column:1/-1;}
 .tw-review .rp-kpi.platforms .plat-quick{margin-top:8px;}
 

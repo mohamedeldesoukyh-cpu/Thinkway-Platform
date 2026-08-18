@@ -46,6 +46,14 @@ export function contentPostsFromPublications(
   });
 }
 
+export function resolveContentPostPlatform(
+  post: Pick<ClientContentPost, "url" | "platform">
+): string | undefined {
+  const inferred = detectSocialPlatformFromContentUrl(post.url);
+  if (inferred) return inferred;
+  return canonicalPlatformKey(post.platform) || post.platform?.trim() || undefined;
+}
+
 export function mixPostsForDeliverables(
   posts: ClientContentPost[],
   items?: ClientDeliverableItem[],
@@ -54,10 +62,7 @@ export function mixPostsForDeliverables(
   if (!posts.length || limit <= 0) return [];
   const normalized = posts.map((post) => ({
     ...post,
-    platform:
-      detectSocialPlatformFromContentUrl(post.url) ??
-      canonicalPlatformKey(post.platform) ??
-      post.platform,
+    platform: resolveContentPostPlatform(post),
   }));
   const preferred = preferredPublicationPlatforms(items, normalized);
   if (preferred.length <= 1) return normalized.slice(0, limit);

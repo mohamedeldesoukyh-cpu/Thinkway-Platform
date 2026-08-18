@@ -7,7 +7,7 @@ import { isPublicPath } from "@/lib/auth/routes";
 import { classifyApiPath, classifyPagePath } from "@/lib/security/workspace-classify";
 
 import { CLIENT_CHANGE_AREAS, CLIENT_REVIEW_SOURCES } from "./constants";
-import { clientSafeFitCopy, clientCreatorIdentity, formatCompactCount, formatEngagementPct, formatHandleLabel, providedText } from "./format";
+import { clientSafeFitCopy, clientCreatorIdentity, formatCompactCount, formatEngagementPct, formatHandleLabel, formatOptionalCompactCount, formatOptionalEngagementPct, providedText } from "./format";
 import { deliverablesLabel, groupedActivityMix, looksLikePlatformList, summarizeCreatorDeliverables, summarizeDeliverablesByPlatform } from "./deliverables";
 import {
   allocationSlices,
@@ -22,7 +22,7 @@ import {
 import { HYPEAUDITOR_MEDIA_PLAN_PARITY } from "./hypeauditor-parity";
 import { projectMediaPlanSummary, projectSelectionSummaryFromCards } from "./media-plan-summary";
 import { briefFromSnapshotCreator, mergeFrozenBrief } from "./creator-brief";
-import { enrichSnapshotCreatorFromUnified, mixPostsForDeliverables, profileUrlFromHandle, shouldReplaceContentFeed } from "./creator-snapshot";
+import { enrichSnapshotCreatorFromUnified, mixPostsForDeliverables, profileUrlFromHandle, resolveContentPostPlatform, shouldReplaceContentFeed } from "./creator-snapshot";
 import { creatorPlatformBreakdown, creatorProfileLinks } from "./platform-breakdown";
 import { clientReviewAvatarUrl, isReviewMediaUrlAllowed, reviewMediaAllowlist } from "./review-media";
 import { diffClientReviewSnapshots, retainCreatorBriefs } from "./snapshot-diff";
@@ -31,6 +31,7 @@ import {
   projectCommercialFromSnapshot,
   parseSourceSnapshot,
   parseSnapshotCreator,
+  visibleClientUpdateNotice,
 } from "./snapshot";
 import { visibleClientWorkspaceSections, defaultClientWorkspaceSection } from "./visible-sections";
 import {
@@ -1088,6 +1089,69 @@ test("recent publications mix across deliverable platforms using post URLs", () 
   assert.deepEqual(
     mixed.map((post) => post.platform),
     ["instagram", "tiktok", "youtube"]
+  );
+});
+
+test("missing platform metrics stay blank on the avatar chip", () => {
+  assert.equal(formatOptionalEngagementPct(undefined), null);
+  assert.equal(formatOptionalEngagementPct(8.8), "8.8%");
+  assert.equal(formatOptionalCompactCount(undefined), null);
+  assert.equal(formatOptionalCompactCount(2100), "2.1K");
+});
+
+test("publication platform is inferred from the content URL", () => {
+  assert.equal(
+    resolveContentPostPlatform({ url: "https://www.tiktok.com/@x/video/1" }),
+    "tiktok"
+  );
+  assert.equal(
+    resolveContentPostPlatform({ url: "https://www.facebook.com/reel/1", platform: "instagram" }),
+    "facebook"
+  );
+  const mixed = mixPostsForDeliverables(
+    [{ url: "https://www.instagram.com/p/1", likes: 12 }, { url: "https://www.tiktok.com/@x/video/2", likes: 8 }],
+    [{ platform: "instagram,tiktok", type: "instagram_reel", quantity: 1 }],
+    2
+  );
+  assert.deepEqual(
+    mixed.map((post) => post.platform),
+    ["instagram", "tiktok"]
+  );
+});
+
+test("acknowledged proposal updates are not shown again", () => {
+  const snapshot = parseSourceSnapshot({
+    source: "quotation",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme Legal",
+    platforms: ["instagram"],
+    deliverables: ["Reel"],
+    creators: [{ creatorId: "a", displayName: "Ali" }],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "Duration not confirmed", phases: [] },
+    commercial: {
+      currency: "EGP",
+      creatorInvestment: 0,
+      totalInvestment: 0,
+      lines: [],
+      selectedCount: 0,
+      totalCount: 1,
+    },
+    creatorIds: ["a"],
+    clientUpdate: {
+      updatedAt: "2026-08-18T00:00:00.000Z",
+      items: ["Deliverables were updated."],
+      acknowledgedAt: "2026-08-18T01:00:00.000Z",
+    },
+  });
+  assert.equal(visibleClientUpdateNotice(snapshot?.clientUpdate), undefined);
+  assert.equal(
+    visibleClientUpdateNotice({
+      updatedAt: "2026-08-18T00:00:00.000Z",
+      items: ["Deliverables were updated."],
+    })?.items[0],
+    "Deliverables were updated."
   );
 });
 

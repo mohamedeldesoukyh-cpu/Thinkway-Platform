@@ -15,6 +15,7 @@ import {
   requestClientChanges,
   setBulkCreatorSelection,
   setCreatorSelection,
+  acknowledgeClientUpdate,
 } from "../review-mutations";
 import type { ClientCreatorBrief } from "../types";
 
@@ -60,6 +61,10 @@ export async function decideReviewAction(input: {
   reason?: string;
 }) {
   return decideClientReview(input);
+}
+
+export async function acknowledgeReviewUpdateAction(input: { token: string }): Promise<{ ok: boolean }> {
+  return acknowledgeClientUpdate(input);
 }
 
 export async function loadCreatorBriefAction(input: {

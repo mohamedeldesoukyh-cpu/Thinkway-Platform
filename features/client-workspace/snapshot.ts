@@ -325,7 +325,15 @@ function parseClientUpdate(value: unknown): ClientReviewSourceSnapshot["clientUp
   const updatedAt = asString(value.updatedAt);
   const items = asStringArray(value.items);
   if (!updatedAt || !items?.length) return undefined;
-  return { updatedAt, items };
+  const acknowledgedAt = asString(value.acknowledgedAt);
+  return acknowledgedAt ? { updatedAt, items, acknowledgedAt } : { updatedAt, items };
+}
+
+export function visibleClientUpdateNotice(
+  update?: ClientReviewSourceSnapshot["clientUpdate"]
+): ClientReviewSourceSnapshot["clientUpdate"] | undefined {
+  if (!update?.items.length || update.acknowledgedAt) return undefined;
+  return update;
 }
 
 export function quotationTotalFromSnapshot(snapshot: ClientReviewSourceSnapshot): number {

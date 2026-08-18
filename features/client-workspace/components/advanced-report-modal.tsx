@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
 
-import { mixPostsForDeliverables } from "../creator-snapshot";
+import { mixPostsForDeliverables, resolveContentPostPlatform } from "../creator-snapshot";
 import {
   DATA_NOT_AVAILABLE,
   formatCompactCount,
@@ -697,12 +697,13 @@ export function ContentFeatureGrid({
         const className = variant === "feature" && index === 0 ? "post big" : "post";
         const display = token ? clientReviewPostDisplay(token, post) : { thumbnail: post.thumbnail ?? undefined, href: post.url ?? undefined };
         const src = display.thumbnail;
+        const platform = resolveContentPostPlatform(post);
         const inner = (
           <>
             {src ? <RetryableReviewImage src={src} /> : null}
-            {post.platform ? (
-              <span className="plat-badge">
-                <ReviewPlatformMark platform={post.platform} />
+            {platform ? (
+              <span className="plat-badge" title={platform}>
+                <ReviewPlatformMark platform={platform} />
               </span>
             ) : null}
             <span className="lk">

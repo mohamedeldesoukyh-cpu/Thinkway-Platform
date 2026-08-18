@@ -1,6 +1,6 @@
 import {
-  formatCompactCount,
-  formatEngagementPct,
+  formatOptionalCompactCount,
+  formatOptionalEngagementPct,
   formatPlatformLabel,
 } from "../format";
 import type { ClientPlatformBreakdownRow } from "../platform-breakdown";
@@ -24,12 +24,15 @@ export function ReviewPlatformBreakdown({
   if (variant === "list") {
     return (
       <div className="plat-ers">
-        {platforms.map((row) => (
-          <span className="plat-er" key={row.platform}>
-            <ReviewPlatformMark platform={row.platform} />
-            <b>{formatEngagementPct(row.engagementRate)}</b>
-          </span>
-        ))}
+        {platforms.map((row) => {
+          const er = formatOptionalEngagementPct(row.engagementRate);
+          return (
+            <span className="plat-er" key={row.platform}>
+              <ReviewPlatformMark platform={row.platform} />
+              {er ? <b>{er}</b> : null}
+            </span>
+          );
+        })}
       </div>
     );
   }
@@ -39,6 +42,8 @@ export function ReviewPlatformBreakdown({
       {platforms.map((row) => {
         const url = profileUrlForPlatform(row.platform, row.handle, row.profileUrl);
         const mark = <ReviewPlatformMark platform={row.platform} />;
+        const followers = formatOptionalCompactCount(row.followers);
+        const er = formatOptionalEngagementPct(row.engagementRate);
         return (
           <div className="q" key={row.platform}>
             <p className="l">
@@ -51,8 +56,8 @@ export function ReviewPlatformBreakdown({
               )}
               {formatPlatformLabel(row.platform)}
             </p>
-            <p className="v">{formatCompactCount(row.followers)}</p>
-            <p className="er">{formatEngagementPct(row.engagementRate)}</p>
+            {followers ? <p className="v">{followers}</p> : null}
+            {er ? <p className="er">{er}</p> : null}
           </div>
         );
       })}

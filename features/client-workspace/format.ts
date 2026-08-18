@@ -30,6 +30,16 @@ export function formatEngagementPct(rate: number | undefined | null): string {
   return `${value.toFixed(1)}%`;
 }
 
+export function formatOptionalEngagementPct(rate: number | undefined | null): string | null {
+  if (rate == null || !Number.isFinite(rate)) return null;
+  return formatEngagementPct(rate);
+}
+
+export function formatOptionalCompactCount(count: number | undefined | null): string | null {
+  if (count == null || !Number.isFinite(count)) return null;
+  return formatCompactCount(count);
+}
+
 export function formatExactCount(count: number | undefined | null): string {
   if (count == null || !Number.isFinite(count)) return NOT_AVAILABLE;
   return Math.round(count).toLocaleString();
