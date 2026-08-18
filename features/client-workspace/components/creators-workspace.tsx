@@ -31,6 +31,7 @@ import {
   rosterSourceLine,
 } from "../presentation";
 import { contentCategoriesForDisplay } from "../content-categories";
+import { breakdownForCreator } from "../platform-breakdown";
 import { countSelections, nextAcceptState } from "../status";
 import type { ClientAudienceSlice, ClientCreatorBrief, ClientCreatorCard, ClientWorkspaceView } from "../types";
 import { AdvancedReportModal, ContentFeatureGrid } from "./advanced-report-modal";
