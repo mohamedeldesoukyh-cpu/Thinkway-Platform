@@ -36,11 +36,13 @@ import { countSelections, nextAcceptState } from "../status";
 import type { ClientAudienceSlice, ClientCreatorBrief, ClientCreatorCard, ClientWorkspaceView } from "../types";
 import { AdvancedReportModal, ContentFeatureGrid } from "./advanced-report-modal";
 import { ContentCategoryGrid } from "./content-category-grid";
+import { useClientWorkspaceState } from "./client-workspace-state";
 import { ProposalSummaryCard } from "./proposal-summary-card";
 import { ReviewAvatar } from "./review-avatar";
 import { ReviewCreatorProfileLinks } from "./review-creator-profile-links";
 import { ReviewDeliverableStrip } from "./review-deliverable-strip";
 import { BrandMentionsCard, EstimatedReachCard } from "./review-insight-cards";
+import { EngagementMeter } from "./review-meter";
 import { ReviewPlatformBreakdown } from "./review-platform-breakdown";
 import { IconBack, IconChart, IconCheck, IconClose } from "./review-icons";
 
@@ -60,6 +62,7 @@ export function CreatorsWorkspace({
   token: string;
 }) {
   const router = useRouter();
+  const { selection, setCreatorState, setCreatorStates } = useClientWorkspaceState();
   const [pending, startTransition] = useTransition();
   const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]["id"]>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -68,7 +71,10 @@ export function CreatorsWorkspace({
   const [reportOpen, setReportOpen] = useState(false);
   const [brief, setBrief] = useState<ClientCreatorBrief | null>(null);
   const [note, setNote] = useState("");
-  const selection = sharedSelection;
+  const [localSelection, setLocalSelection] = useState<Record<string, ClientCreatorSelectionState> | null>(
+    null
+  );
+  const selection = localSelection ?? Object.fromEntries(view.creators.map((creator) => [creator.creatorId, creator.selection]));
   const counts = countSelections(
     selection,
     view.creators.map((creator) => creator.creatorId)
@@ -148,7 +154,10 @@ export function CreatorsWorkspace({
   }
 
   function decide(creator: ClientCreatorCard, state: ClientCreatorSelectionState, reason?: string) {
-    setCreatorState(creator.creatorId, state);
+    setLocalSelection((current) => ({
+      ...(current ?? selection),
+      [creator.creatorId]: state,
+    }));
     startTransition(async () => {
       await selectCreatorAction({
         token,
@@ -157,14 +166,20 @@ export function CreatorsWorkspace({
         creatorName: creator.displayName,
         reason,
       });
+      router.refresh();
     });
   }
 
   function bulk(state: ClientCreatorSelectionState, creatorIds?: string[]) {
     const ids = creatorIds?.length ? creatorIds : view.creators.map((creator) => creator.creatorId);
-    setCreatorStates(Object.fromEntries(ids.map((id) => [id, state])));
+    setLocalSelection((current) => {
+      const next = { ...(current ?? selection) };
+      for (const id of ids) next[id] = state;
+      return next;
+    });
     startTransition(async () => {
       await bulkSelectCreatorsAction({ token, state, creatorIds });
+      router.refresh();
     });
   }
 
