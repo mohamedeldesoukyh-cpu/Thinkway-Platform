@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { ClientWorkspaceSectionView } from "@/features/client-workspace/components/client-workspace-section-view";
-import { ClientWorkspaceShell } from "@/features/client-workspace/components/client-workspace-shell";
+import { ClientWorkspaceApp } from "@/features/client-workspace/components/client-workspace-app";
 import { InvalidReviewLink } from "@/features/client-workspace/components/client-review-entry";
 import { CLIENT_WORKSPACE_SECTIONS, type ClientWorkspaceSectionId } from "@/features/client-workspace/constants";
 import { loadClientWorkspace } from "@/features/client-workspace/load-client-workspace";
@@ -30,12 +29,10 @@ export default async function ClientWorkspaceSectionPage({ params, searchParams 
     notFound();
   }
   return (
-    <ClientWorkspaceShell view={loaded.view} token={token}>
-      <ClientWorkspaceSectionView
-        section={section as ClientWorkspaceSectionId}
-        view={loaded.view}
-        token={token}
-      />
-    </ClientWorkspaceShell>
+    <ClientWorkspaceApp
+      view={loaded.view}
+      token={token}
+      section={section as ClientWorkspaceSectionId}
+    />
   );
 }

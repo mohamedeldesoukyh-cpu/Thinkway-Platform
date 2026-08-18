@@ -16,7 +16,7 @@ import {
   TO_BE_CONFIRMED,
 } from "../format";
 import { breakdownForCreator } from "../platform-breakdown";
-import { flagFromCountry, qualityBadge, qualityGaugePercent, engagementBadge, engagementGaugePercent } from "../presentation";
+import { flagFromCountry, MIX_BAR_COLORS, qualityBadge, qualityGaugePercent, engagementBadge, engagementGaugePercent } from "../presentation";
 import { clientReviewPostDisplay } from "../review-media";
 import type {
   ClientAudienceSlice,
@@ -588,11 +588,17 @@ function SliceBars({ items }: { items: ClientAudienceSlice[] }) {
   const max = Math.max(...items.map((item) => item.percent ?? 0), 1);
   return (
     <div className="barset">
-      {items.map((item) => (
+      {items.map((item, index) => (
         <div className="bar" key={item.label}>
           <span className="bl">{item.label}</span>
           <span className="bt">
-            <span className="bf" style={{ width: `${((item.percent ?? 0) / max) * 100}%` }} />
+            <span
+              className="bf"
+              style={{
+                width: `${((item.percent ?? 0) / max) * 100}%`,
+                background: MIX_BAR_COLORS[index % MIX_BAR_COLORS.length],
+              }}
+            />
           </span>
           <span className="bn">{item.percent != null ? `${Math.round(item.percent)}%` : "—"}</span>
         </div>

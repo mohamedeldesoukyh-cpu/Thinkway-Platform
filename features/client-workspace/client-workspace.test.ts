@@ -12,6 +12,7 @@ import { deliverablesLabel, groupedActivityMix, looksLikePlatformList, summarize
 import {
   allocationSlices,
   containsInternalTerminology,
+  creatorMixFromRoster,
   qualityBadge,
   qualityGaugePercent,
   engagementGaugePercent,
@@ -20,6 +21,7 @@ import {
   strategicPillars,
   estimatedReachInsight,
 } from "./presentation";
+import { acceptedCreators, contentRowsForSelection } from "./selection-view";
 import { HYPEAUDITOR_MEDIA_PLAN_PARITY } from "./hypeauditor-parity";
 import { projectMediaPlanSummary, projectSelectionSummaryFromCards } from "./media-plan-summary";
 import { briefFromSnapshotCreator, mergeFrozenBrief } from "./creator-brief";
@@ -1291,6 +1293,45 @@ test("brand logo proxy only serves names frozen on the review snapshot", () => {
   });
   assert.equal(reviewBrandMentionAllowed(snapshot, "Pepsi")?.handle, "pepsi");
   assert.equal(reviewBrandMentionAllowed(snapshot, "Nike"), null);
+});
+
+test("accepted creators and content rows follow the current selection", () => {
+  const creators = [
+    {
+      creatorId: "a",
+      displayName: "A",
+      selection: "accepted" as const,
+      platform: "instagram",
+      deliverables: "1 Reel",
+      deliverableItems: [{ platform: "instagram", type: "Reel", quantity: 1 }],
+      contentExamples: [],
+    },
+    {
+      creatorId: "b",
+      displayName: "B",
+      selection: "in_review" as const,
+      platform: "tiktok",
+      deliverables: "2 Story",
+      deliverableItems: [{ platform: "tiktok", type: "Story", quantity: 2 }],
+      contentExamples: [],
+    },
+  ];
+  const selection = { a: "accepted" as const, b: "in_review" as const };
+  const accepted = acceptedCreators(creators, selection);
+  assert.deepEqual(accepted.map((creator) => creator.creatorId), ["a"]);
+  const rows = contentRowsForSelection(
+    [
+      { creatorId: "a", creatorName: "A", platform: "instagram", deliverable: "1 Reel" },
+      { creatorId: "b", creatorName: "B", platform: "tiktok", deliverable: "2 Story" },
+    ],
+    creators,
+    selection
+  );
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0]?.creatorId, "a");
+  const mix = creatorMixFromRoster(accepted);
+  assert.equal(mix.platforms.find((item) => item.label === "Instagram")?.count, 1);
+  assert.equal(mix.platforms.some((item) => item.label === "TikTok"), false);
 });
 
 test("accept can be removed until the client submits the selection", () => {

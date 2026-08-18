@@ -3,7 +3,7 @@
 **Branch:** `develop`  
 **Focus:** Client Workspace Creators UX (Development only)
 
-Content categories use unique icons/colors and ECI share percents when frozen; junk labels like "Can't" are dropped. Brand mentions load logos through `/api/review/brand-logo` (not Clearbit in the browser).
+Client review tabs switch in the browser without a server remount. Overview, Commercial, Content Plan, and Approval follow accepted creators. Overview KPIs are selection-based, not the full unapproved quotation. Thinkway logo header stays fixed; page scroll starts below it.
 
 Dev: https://dev.thinkwaymedia.com  
 Do **not** deploy Production.

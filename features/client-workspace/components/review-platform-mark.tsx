@@ -14,8 +14,10 @@ export function ReviewPlatformMark({
 
   if (badge?.imageUrl) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img className="plat-mark" src={badge.imageUrl} alt="" title={label} />
+      <span className="plat-mark-wrap">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="plat-mark" src={badge.imageUrl} alt="" title={label} />
+      </span>
     );
   }
 

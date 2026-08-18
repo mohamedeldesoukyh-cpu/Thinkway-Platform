@@ -1,16 +1,15 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
 
+import type { ClientWorkspaceSectionId } from "../constants";
 import { CLIENT_PROPOSAL_STATUS_LABEL, CLIENT_WORKSPACE_SECTION_LABEL } from "../constants";
 import { summarizeCreatorDeliverables } from "../deliverables";
 import { formatPlatformLabel, TO_BE_CONFIRMED } from "../format";
 import { flagFromCountry, rosterHeadline, rosterSourceLine } from "../presentation";
 import { buildClientReviewPath } from "../security/review-token";
 import type { ClientWorkspaceView } from "../types";
+import { useClientWorkspaceState } from "./client-workspace-state";
 import { IconCheck, LogoMark } from "./review-icons";
 import { ReviewPlatformMark } from "./review-platform-mark";
 import { ReviewUpdateBanner } from "./review-update-banner";
@@ -18,14 +17,17 @@ import { ReviewUpdateBanner } from "./review-update-banner";
 export function ClientWorkspaceShell({
   view,
   token,
+  section,
+  onSectionChange,
   children,
 }: {
   view: ClientWorkspaceView;
   token: string;
+  section: ClientWorkspaceSectionId;
+  onSectionChange: (section: ClientWorkspaceSectionId) => void;
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const section = view.visibleSections.find((item) => pathname?.includes(`/${item}`)) ?? "overview";
+  const { selectedCreators, selectedCommercial } = useClientWorkspaceState();
   const hideInvest = section === "commercial" || section === "approval";
   const platforms = [
     ...new Set(
@@ -54,6 +56,16 @@ export function ClientWorkspaceShell({
     view.commercial.quotationTotal > 0
       ? formatMoneyKpi(view.commercial.quotationTotal, view.commercial.currency)
       : TO_BE_CONFIRMED;
+  const selectedInvestment =
+    selectedCommercial.totalInvestment > 0
+      ? formatMoneyKpi(selectedCommercial.totalInvestment, selectedCommercial.currency)
+      : TO_BE_CONFIRMED;
+
+  function openSection(event: React.MouseEvent<HTMLAnchorElement>, next: ClientWorkspaceSectionId) {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    event.preventDefault();
+    onSectionChange(next);
+  }
 
   return (
     <div className="tw-review">
@@ -72,18 +84,19 @@ export function ClientWorkspaceShell({
             </span>
             {view.canDecide ? (
               <>
-                <Link className="btn" href={buildClientReviewPath(view.review.id, token, "feedback")}>
+                <a className="btn" href={buildClientReviewPath(view.review.id, token, "feedback")} onClick={(event) => openSection(event, "feedback")}>
                   Request changes
-                </Link>
-                <Link className="btn primary" href={buildClientReviewPath(view.review.id, token, "approval")}>
+                </a>
+                <a className="btn primary" href={buildClientReviewPath(view.review.id, token, "approval")} onClick={(event) => openSection(event, "approval")}>
                   <IconCheck />
                   Approve proposal
-                </Link>
+                </a>
               </>
             ) : null}
           </div>
         </div>
       </header>
+      <div className="tw-review-body">
       {view.clientUpdate?.items.length ? (
         <ReviewUpdateBanner
           reviewId={view.review.id}
@@ -108,16 +121,21 @@ export function ClientWorkspaceShell({
                 </span>
               ))}
               <span className="chip">{rosterHeadline(view.creators.length)}</span>
+              <span className="chip">
+                {selectedCreators.length} selected
+              </span>
               {marketChip ? <span className="chip">{marketChip}</span> : null}
               <span className="chip">{rosterSourceLine(view.review.source)}</span>
             </div>
           </div>
           {hideInvest ? null : (
             <div className="invest">
-              <p className="l">Total quotation</p>
-              <p className="v">{quotationTotal}</p>
+              <p className="l">{selectedCreators.length > 0 ? "Selected investment" : "Total quotation"}</p>
+              <p className="v">{selectedCreators.length > 0 ? selectedInvestment : quotationTotal}</p>
               <p className="s">
-                {rosterHeadline(view.commercial.totalCount || view.creators.length)} on this quotation
+                {selectedCreators.length > 0
+                  ? `${selectedCreators.length} selected of ${view.creators.length} proposed`
+                  : `${rosterHeadline(view.creators.length)} · accept creators to update totals`}
               </p>
             </div>
           )}
@@ -128,13 +146,14 @@ export function ClientWorkspaceShell({
         <div className="wrap">
           <div className="tabs">
             {view.visibleSections.map((item) => (
-              <Link
+              <a
                 key={item}
                 href={buildClientReviewPath(view.review.id, token, item)}
                 className={item === section ? "tab active" : "tab"}
+                onClick={(event) => openSection(event, item)}
               >
                 {CLIENT_WORKSPACE_SECTION_LABEL[item]}
-              </Link>
+              </a>
             ))}
           </div>
         </div>
@@ -145,6 +164,7 @@ export function ClientWorkspaceShell({
         Confidential · Thinkway Platform
         {view.overview.clientLabel ? ` · Prepared for ${view.overview.clientLabel}` : ""}
       </p>
+      </div>
     </div>
   );
 }

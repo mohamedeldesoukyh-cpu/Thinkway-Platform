@@ -1,8 +1,11 @@
+"use client";
+
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
 
 import { formatPlatformLabel, NOT_AVAILABLE, providedText, TO_BE_CONFIRMED } from "../format";
-import { allocationSlices, rosterHeadline } from "../presentation";
+import { allocationSlices, MIX_BAR_COLORS, rosterHeadline } from "../presentation";
 import type { ClientWorkspaceView } from "../types";
+import { useClientWorkspaceState } from "./client-workspace-state";
 import { ReviewAvatar } from "./review-avatar";
 
 export function CommercialWorkspace({
@@ -12,17 +15,19 @@ export function CommercialWorkspace({
   view: ClientWorkspaceView;
   token?: string;
 }) {
-  const commercial = view.commercial;
+  const { selectedCreators, selectedCommercial, selectedSummary } = useClientWorkspaceState();
+  const commercial = selectedCommercial;
+  const roster = selectedCreators;
   const platforms = [
     ...new Set(
-      view.creators
+      roster
         .map((creator) => formatPlatformLabel(creator.platform) ?? creator.platform)
         .filter((value): value is string => Boolean(value))
     ),
   ];
-  const deliverableCount = view.mediaPlanSummary.activityMix.reduce((sum, item) => sum + item.count, 0);
+  const deliverableCount = selectedSummary.activityMix.reduce((sum, item) => sum + item.count, 0);
   const allocation = allocationSlices(commercial);
-  const extraLines = commercial.lines.filter(
+  const extraLines = view.commercial.lines.filter(
     (line) => !view.creators.some((creator) => creator.displayName === line.label)
   );
   const maxAlloc = Math.max(...(allocation?.map((item) => item.count) ?? [1]), 1);
@@ -32,14 +37,14 @@ export function CommercialWorkspace({
       <div className="card">
         <p className="ck">Campaign investment</p>
         <h2>
-          {commercial.quotationTotal > 0
-            ? formatMoneyKpi(commercial.quotationTotal, commercial.currency)
+          {commercial.totalInvestment > 0
+            ? formatMoneyKpi(commercial.totalInvestment, commercial.currency)
             : TO_BE_CONFIRMED}
         </h2>
         <p className="note">
-          {rosterHeadline(commercial.totalCount || view.creators.length)} on this quotation · Selected investment{" "}
-          {commercial.totalInvestment > 0
-            ? formatMoneyKpi(commercial.totalInvestment, commercial.currency)
+          {rosterHeadline(commercial.selectedCount)} selected of {view.creators.length} proposed · Quotation{" "}
+          {view.commercial.quotationTotal > 0
+            ? formatMoneyKpi(view.commercial.quotationTotal, commercial.currency)
             : TO_BE_CONFIRMED}{" "}
           · Proposal v{view.review.reviewNumber}
           {view.quotation?.serialNumber ? ` · ${view.quotation.serialNumber}` : ""}
@@ -47,7 +52,7 @@ export function CommercialWorkspace({
         <div className="glance">
           <div className="gi">
             <p className="l">Creators</p>
-            <p className="v">{view.creators.length}</p>
+            <p className="v">{roster.length}</p>
           </div>
           <div className="gi">
             <p className="l">Deliverables</p>
@@ -75,11 +80,17 @@ export function CommercialWorkspace({
           <p className="ck">Budget allocation</p>
           <h2>How the investment is split</h2>
           <div className="barset">
-            {allocation.map((item) => (
+            {allocation.map((item, index) => (
               <div className="bar" key={item.label}>
                 <span className="bl">{item.label}</span>
                 <span className="bt">
-                  <span className="bf" style={{ width: `${(item.count / maxAlloc) * 100}%` }} />
+                <span
+                  className="bf"
+                  style={{
+                    width: `${(item.count / maxAlloc) * 100}%`,
+                    background: MIX_BAR_COLORS[index % MIX_BAR_COLORS.length],
+                  }}
+                />
                 </span>
                 <span className="bn">{item.count}%</span>
               </div>
@@ -102,7 +113,8 @@ export function CommercialWorkspace({
               </tr>
             </thead>
             <tbody>
-              {view.creators.map((creator, index) => (
+              {roster.length > 0 ? (
+                roster.map((creator, index) => (
                 <tr key={creator.creatorId}>
                   <td className="name">
                     <span className="tblname">
@@ -129,7 +141,12 @@ export function CommercialWorkspace({
                       : TO_BE_CONFIRMED}
                   </td>
                 </tr>
-              ))}
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={4}>Accept creators on the Creators tab to build this commercial view.</td>
+                </tr>
+              )}
             </tbody>
             <tfoot>
               <tr>

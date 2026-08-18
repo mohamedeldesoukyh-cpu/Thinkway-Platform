@@ -113,6 +113,7 @@ export function creatorMixFromRoster(creators: ClientCreatorCard[]): {
   markets: CreatorMixSlice[];
   categories: CreatorMixSlice[];
   genders: CreatorMixSlice[];
+  platforms: CreatorMixSlice[];
 } {
   const tiers = countLabels(creators.map((creator) => displayTier(creator.tier)));
   const markets = countLabels(
@@ -132,8 +133,26 @@ export function creatorMixFromRoster(creators: ClientCreatorCard[]): {
   const genders = countLabels(
     creators.flatMap((creator) => genderLabels(creator.audience?.genders ?? []))
   );
-  return { tiers, markets, categories, genders };
+  const platforms = countLabels(
+    creators.flatMap((creator) => {
+      const accounts = creator.platformAccounts?.map((row) => row.platform) ?? [];
+      if (accounts.length > 0) return accounts;
+      return creator.platform ? [creator.platform] : [];
+    }).map((platform) => formatPlatformLabel(platform) ?? platform)
+  );
+  return { tiers, markets, categories, genders, platforms };
 }
+
+export const MIX_BAR_COLORS = [
+  "#0057FF",
+  "#12B76A",
+  "#F79009",
+  "#7A5AF8",
+  "#EE46BC",
+  "#0BA5EC",
+  "#F04438",
+  "#17B26A",
+];
 
 function displayTier(tier?: string): string | undefined {
   if (!tier || tier === "Unknown") return undefined;
@@ -254,6 +273,7 @@ export function estimatedReachInsight(input: {
   percent?: number;
   badge?: { className: string; text: string };
   explanation: string;
+  gaugePercent?: number;
 } | null {
   const reach = input.reach != null && Number.isFinite(input.reach) ? input.reach : undefined;
   if (reach == null) return null;
@@ -275,6 +295,7 @@ export function estimatedReachInsight(input: {
     return {
       value,
       percent,
+      gaugePercent: 88,
       badge: { className: "opt", text: "Optimal" },
       explanation: `Posts are estimated to reach ${share}% of this creator's followers (${value} of ${formatCompactCount(followers)}). That is a strong visibility level for this audience size.`,
     };
@@ -283,6 +304,7 @@ export function estimatedReachInsight(input: {
     return {
       value,
       percent,
+      gaugePercent: 55,
       badge: { className: "avg", text: "Average" },
       explanation: `Posts are estimated to reach ${share}% of this creator's followers (${value} of ${formatCompactCount(followers)}). This is in line with typical reach for this audience size and provides a moderate level of visibility.`,
     };
@@ -290,6 +312,7 @@ export function estimatedReachInsight(input: {
   return {
     value,
     percent,
+    gaugePercent: 28,
     badge: { className: "avg", text: "Average" },
     explanation: `Posts are estimated to reach ${share}% of this creator's followers (${value} of ${formatCompactCount(followers)}). Visibility is more concentrated, so placements should be planned around high-performing content.`,
   };
@@ -303,12 +326,11 @@ export function qualityBadge(label?: string): { className: string; text: string 
 }
 
 export function donutGradient(slices: Array<{ count: number }>): string {
-  const colors = ["#0057FF", "#1A6FFF", "#c9d6f2", "#7F77DD"];
   const total = slices.reduce((sum, slice) => sum + slice.count, 0) || 1;
   let start = 0;
   const stops = slices.map((slice, index) => {
     const end = start + slice.count / total;
-    const stop = `${colors[index % colors.length]} ${start}turn ${end}turn`;
+    const stop = `${MIX_BAR_COLORS[index % MIX_BAR_COLORS.length]} ${start}turn ${end}turn`;
     start = end;
     return stop;
   });

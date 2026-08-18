@@ -1,16 +1,27 @@
+"use client";
+
 import { formatPlatformLabel, providedText, TO_BE_CONFIRMED } from "../format";
+import { contentRowsForSelection } from "../selection-view";
 import type { ClientWorkspaceView } from "../types";
+import { useClientWorkspaceState } from "./client-workspace-state";
 
 export function ContentPlanWorkspace({ view }: { view: ClientWorkspaceView }) {
-  const keyMessage = view.content.find((row) => row.keyMessage)?.keyMessage;
-  const cta = view.content.find((row) => row.cta)?.cta;
+  const { selection, selectedCreators } = useClientWorkspaceState();
+  const rows = contentRowsForSelection(view.content, view.creators, selection);
+  const keyMessage = rows.find((row) => row.keyMessage)?.keyMessage;
+  const cta = rows.find((row) => row.cta)?.cta;
   const direction = view.strategyBody?.split("\n")[0];
 
   return (
     <>
       <div className="card">
         <p className="ck">Content plan</p>
-        <h2>What creators will deliver</h2>
+        <h2>What selected creators will deliver</h2>
+        <p className="note">
+          {selectedCreators.length > 0
+            ? `${selectedCreators.length} accepted of ${view.creators.length} proposed`
+            : "Accept creators on the Creators tab to build this content plan."}
+        </p>
         <div className="glance">
           <div className="gi">
             <p className="l">Campaign objective</p>
@@ -41,8 +52,8 @@ export function ContentPlanWorkspace({ view }: { view: ClientWorkspaceView }) {
         </div>
       </div>
 
-      {view.content.length > 0 ? (
-        view.content.map((row, index) => (
+      {rows.length > 0 ? (
+        rows.map((row, index) => (
           <div className="card" key={`${row.creatorId ?? row.creatorName}-${index}`}>
             <p className="ck">{formatPlatformLabel(row.platform) ?? row.platform}</p>
             <h2>{row.creatorName}</h2>
@@ -70,9 +81,7 @@ export function ContentPlanWorkspace({ view }: { view: ClientWorkspaceView }) {
               </div>
               <div className="gi">
                 <p className="l">Timing</p>
-                <p className={row.timing?.trim() ? "v" : "v tbc"}>
-                  {providedText(row.timing, "Timing to be confirmed")}
-                </p>
+                <p className={row.timing?.trim() ? "v" : "v tbc"}>{providedText(row.timing, "Timing to be confirmed")}</p>
               </div>
             </div>
           </div>
@@ -81,20 +90,7 @@ export function ContentPlanWorkspace({ view }: { view: ClientWorkspaceView }) {
         <div className="card">
           <p className="ck">Creator content</p>
           <h2>Assigned creators</h2>
-          <p className="note">Content direction to be confirmed</p>
-          {view.creators.length > 0 ? (
-            <div className="clist">
-              {view.creators.map((creator) => (
-                <div className="cli" key={creator.creatorId}>
-                  <span className="nm">{creator.displayName}</span>
-                  <span className="rt">
-                    {formatPlatformLabel(creator.platform) ?? "Platform to be confirmed"} ·{" "}
-                    {creator.deliverables || TO_BE_CONFIRMED}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : null}
+          <p className="note">Accept creators on the Creators tab to see their deliverables here.</p>
         </div>
       )}
     </>

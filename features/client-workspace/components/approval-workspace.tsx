@@ -14,6 +14,7 @@ import { TO_BE_CONFIRMED } from "../format";
 import { rosterHeadline } from "../presentation";
 import { countSelections } from "../status";
 import type { ClientWorkspaceView } from "../types";
+import { useClientWorkspaceState } from "./client-workspace-state";
 import { IconCheck } from "./review-icons";
 
 export function ApprovalWorkspace({
@@ -29,14 +30,15 @@ export function ApprovalWorkspace({
   const [rejectReason, setRejectReason] = useState("");
   const [areas, setAreas] = useState<ClientChangeArea[]>(["creator"]);
   const [error, setError] = useState<string | null>(null);
+  const { selection, selectedCommercial, selectedSummary } = useClientWorkspaceState();
   const counts = countSelections(
-    Object.fromEntries(view.creators.map((creator) => [creator.creatorId, creator.selection])),
+    selection,
     view.creators.map((creator) => creator.creatorId)
   );
-  const deliverableCount = view.mediaPlanSummary.activityMix.reduce((sum, item) => sum + item.count, 0);
+  const deliverableCount = selectedSummary.activityMix.reduce((sum, item) => sum + item.count, 0);
   const investment =
-    view.commercial.totalInvestment > 0
-      ? formatMoneyKpi(view.commercial.totalInvestment, view.commercial.currency)
+    selectedCommercial.totalInvestment > 0
+      ? formatMoneyKpi(selectedCommercial.totalInvestment, selectedCommercial.currency)
       : TO_BE_CONFIRMED;
   const quotationTotal =
     view.commercial.quotationTotal > 0
@@ -85,7 +87,7 @@ export function ApprovalWorkspace({
           </div>
           <div className="gi">
             <p className="l">Selected investment</p>
-            <p className={view.commercial.totalInvestment > 0 ? "v" : "v tbc"}>{investment}</p>
+            <p className={selectedCommercial.totalInvestment > 0 ? "v" : "v tbc"}>{investment}</p>
           </div>
           <div className="gi">
             <p className="l">Deliverables</p>
@@ -98,8 +100,8 @@ export function ApprovalWorkspace({
         <div className="checklist">
           <CheckItem done label="Campaign reviewed" />
           <CheckItem done={counts.accepted > 0} label="Creator shortlist reviewed" />
-          <CheckItem done={deliverableCount > 0 || view.content.length > 0} label="Deliverables reviewed" />
-          <CheckItem done={view.commercial.totalInvestment > 0} label="Selection investment reviewed" />
+          <CheckItem done={deliverableCount > 0} label="Deliverables reviewed" />
+          <CheckItem done={selectedCommercial.totalInvestment > 0} label="Selection investment reviewed" />
         </div>
         {error ? <p style={{ color: "var(--bad)", fontSize: 13 }}>{error}</p> : null}
         {view.canDecide ? (

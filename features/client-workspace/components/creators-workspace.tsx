@@ -25,6 +25,7 @@ import {
 } from "../format";
 import {
   flagFromCountry,
+  MIX_BAR_COLORS,
   qualityBadge,
   qualityGaugePercent,
   rosterHeadline,
@@ -36,11 +37,13 @@ import { countSelections, nextAcceptState } from "../status";
 import type { ClientAudienceSlice, ClientCreatorBrief, ClientCreatorCard, ClientWorkspaceView } from "../types";
 import { AdvancedReportModal, ContentFeatureGrid } from "./advanced-report-modal";
 import { ContentCategoryGrid } from "./content-category-grid";
+import { useClientWorkspaceState } from "./client-workspace-state";
 import { ProposalSummaryCard } from "./proposal-summary-card";
 import { ReviewAvatar } from "./review-avatar";
 import { ReviewCreatorProfileLinks } from "./review-creator-profile-links";
 import { ReviewDeliverableStrip } from "./review-deliverable-strip";
 import { BrandMentionsCard, EstimatedReachCard } from "./review-insight-cards";
+import { EngagementMeter, ReviewMeter } from "./review-meter";
 import { ReviewPlatformBreakdown } from "./review-platform-breakdown";
 import { IconBack, IconChart, IconCheck, IconClose } from "./review-icons";
 
@@ -60,6 +63,7 @@ export function CreatorsWorkspace({
   token: string;
 }) {
   const router = useRouter();
+  const { selection: sharedSelection, setCreatorState, setCreatorStates } = useClientWorkspaceState();
   const [pending, startTransition] = useTransition();
   const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]["id"]>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -68,10 +72,7 @@ export function CreatorsWorkspace({
   const [reportOpen, setReportOpen] = useState(false);
   const [brief, setBrief] = useState<ClientCreatorBrief | null>(null);
   const [note, setNote] = useState("");
-  const [localSelection, setLocalSelection] = useState<Record<string, ClientCreatorSelectionState> | null>(
-    null
-  );
-  const selection = localSelection ?? Object.fromEntries(view.creators.map((creator) => [creator.creatorId, creator.selection]));
+  const selection = sharedSelection;
   const counts = countSelections(
     selection,
     view.creators.map((creator) => creator.creatorId)
@@ -151,10 +152,7 @@ export function CreatorsWorkspace({
   }
 
   function decide(creator: ClientCreatorCard, state: ClientCreatorSelectionState, reason?: string) {
-    setLocalSelection((current) => ({
-      ...(current ?? selection),
-      [creator.creatorId]: state,
-    }));
+    setCreatorState(creator.creatorId, state);
     startTransition(async () => {
       await selectCreatorAction({
         token,
@@ -163,20 +161,14 @@ export function CreatorsWorkspace({
         creatorName: creator.displayName,
         reason,
       });
-      router.refresh();
     });
   }
 
   function bulk(state: ClientCreatorSelectionState, creatorIds?: string[]) {
     const ids = creatorIds?.length ? creatorIds : view.creators.map((creator) => creator.creatorId);
-    setLocalSelection((current) => {
-      const next = { ...(current ?? selection) };
-      for (const id of ids) next[id] = state;
-      return next;
-    });
+    setCreatorStates(Object.fromEntries(ids.map((id) => [id, state])));
     startTransition(async () => {
       await bulkSelectCreatorsAction({ token, state, creatorIds });
-      router.refresh();
     });
   }
 
@@ -415,6 +407,7 @@ function CreatorDetailPane({
 
   return (
     <aside className={show ? "detail show" : "detail"}>
+      <p className="ck dt-card-label">Creator Card</p>
       <button type="button" className="dt-back" onClick={onBack}>
         <IconBack />
         Back to creators
@@ -511,6 +504,13 @@ function CreatorDetailPane({
         </div>
       </div>
       <div className="dt-body">
+        <EngagementMeter rate={brief?.engagementRate ?? creator.engagementRate} />
+        <ReviewMeter
+          label="Audience quality"
+          value={quality?.text}
+          percent={gauge}
+          badge={quality}
+        />
         {canDecide ? (
           <div className="sec">
             <p className="st">Notes and status updates</p>
@@ -583,27 +583,6 @@ function CreatorDetailPane({
             </div>
           </div>
         </div>
-        <div className="sec">
-          <p className="st">Audience quality</p>
-          {quality && gauge != null ? (
-            <>
-              <div className="bench">
-                <span className="n">{quality.text}</span>
-                <span className={`badge ${quality.className}`}>{audience?.qualityLabel}</span>
-              </div>
-              <div className="gauge">
-                <span className="mk" style={{ left: `calc(${gauge}% - 2px)` }} />
-              </div>
-              <div className="gauge-l">
-                <span className="lo">Low</span>
-                <span>Average</span>
-                <span className="hi">Excellent</span>
-              </div>
-            </>
-          ) : (
-            <p className="unavailable">Audience quality unavailable</p>
-          )}
-        </div>
         {multiPlatform ? null : (
         <div className="sec">
           <p className="st">Average engagement</p>
@@ -646,11 +625,17 @@ function AudienceBars({ items }: { items: ClientAudienceSlice[] }) {
   const max = Math.max(...items.map((item) => item.percent ?? 0), 1);
   return (
     <div className="barset">
-      {items.map((item) => (
+      {items.map((item, index) => (
         <div className="bar" key={item.label}>
           <span className="bl">{item.label}</span>
           <span className="bt">
-            <span className="bf" style={{ width: `${((item.percent ?? 0) / max) * 100}%` }} />
+            <span
+              className="bf"
+              style={{
+                width: `${((item.percent ?? 0) / max) * 100}%`,
+                background: MIX_BAR_COLORS[index % MIX_BAR_COLORS.length],
+              }}
+            />
           </span>
           <span className="bn">{item.percent != null ? `${Math.round(item.percent)}%` : "—"}</span>
         </div>

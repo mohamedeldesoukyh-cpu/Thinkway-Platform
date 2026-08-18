@@ -30,6 +30,18 @@ export function EstimatedReachCard({
             {insight.badge ? <span className={`badge ${insight.badge.className}`}>{insight.badge.text}</span> : null}
           </p>
           <p className="desc">{insight.explanation}</p>
+          {insight.gaugePercent != null ? (
+            <>
+              <div className="meter" aria-hidden="true">
+                <span className="mk" style={{ left: `calc(${insight.gaugePercent}% - 2px)` }} />
+              </div>
+              <div className="gauge-l">
+                <span className="lo">Low</span>
+                <span>Average</span>
+                <span className="hi">Excellent</span>
+              </div>
+            </>
+          ) : null}
         </>
       ) : (
         <p className="unavailable">{DATA_NOT_AVAILABLE}</p>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
@@ -13,6 +12,7 @@ import { projectSelectionSummaryFromCards } from "../media-plan-summary";
 import { buildClientReviewPath } from "../security/review-token";
 import { isSelectedForCalculator } from "../status";
 import type { ClientWorkspaceView } from "../types";
+import { useClientWorkspaceState } from "./client-workspace-state";
 import { IconCheck } from "./review-icons";
 
 function money(value: number | undefined, currency: string): string {
@@ -72,6 +72,7 @@ export function ProposalSummaryCard({
   variant?: "card" | "bar";
 }) {
   const router = useRouter();
+  const { goToSection } = useClientWorkspaceState();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const resolvedSelection =
@@ -98,6 +99,12 @@ export function ProposalSummaryCard({
     selectedCount === 0 && view.canDecide
       ? "Select creators to calculate this package, then approve it."
       : null;
+
+  function openSection(event: React.MouseEvent<HTMLAnchorElement>, next: "feedback" | "approval") {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    event.preventDefault();
+    goToSection(next);
+  }
 
   function approve() {
     startTransition(async () => {
@@ -150,9 +157,9 @@ export function ProposalSummaryCard({
               <IconCheck />
               Approve selection
             </button>
-            <Link className="btn ghost" href={feedbackHref}>
+            <a className="btn ghost" href={feedbackHref} onClick={(event) => openSection(event, "feedback")}>
               Request changes
-            </Link>
+            </a>
           </div>
         ) : null}
       </div>
@@ -225,20 +232,22 @@ export function ProposalSummaryCard({
             <IconCheck />
             Approve selection
           </button>
-          <Link
+          <a
             className="btn"
             href={feedbackHref}
+            onClick={(event) => openSection(event, "feedback")}
             style={{ background: "rgba(255,255,255,.08)", color: "#fff", borderColor: "rgba(255,255,255,.18)" }}
           >
             Request changes
-          </Link>
-          <Link
+          </a>
+          <a
             className="btn"
             href={approvalHref}
+            onClick={(event) => openSection(event, "approval")}
             style={{ background: "transparent", color: "#cfd7ea", borderColor: "rgba(255,255,255,.12)" }}
           >
             Review approval page
-          </Link>
+          </a>
         </div>
       ) : null}
     </div>
