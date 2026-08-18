@@ -21,7 +21,7 @@ export function ReviewPlatformMark({
 
   return (
     <span className="plat-mark fallback" title={label} aria-label={label}>
-      {(badge?.label ?? key.slice(0, 2).toUpperCase() || "?").slice(0, 2)}
+      {(badge?.label ?? (key.slice(0, 2).toUpperCase() || "?")).slice(0, 2)}
     </span>
   );
 }
