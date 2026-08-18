@@ -1,10 +1,11 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `feature/client-workspace-media-share` (from `develop`)  
-**Focus:** Client Workspace publication thumbs, missing avatars, Show link (Development only)
+**Branch:** `feature/client-workspace-stable-share` (from `develop`)  
+**Focus:** Stable Client Workspace URL + selection calculator (Development only)
 
-Public `/api/review/media` now waits for Instagram/TikTok oEmbed instead of returning 404 on the first CDN miss. Avatars can recover from a frozen profile URL. Quotation / shortlist / Studio have a **Show link** button for the signed Client Workspace URL.
+Quotation Client Workspace links stay on one signed URL. Generate/Show does not email. Send to Client uses stored legal-entity emails.
 
+Client review calculator now uses **accepted creators only**. Header shows **Total quotation**. Proposal summary recalculates investment, creators, reach, engagements, ER, CPE, and CPM from the selection. **Approve selection** locks that set. In Review is not counted until Accept.
+
+Dev: https://dev.thinkwaymedia.com  
 Do **not** deploy Production.
-
-Dev: https://dev.thinkwaymedia.com

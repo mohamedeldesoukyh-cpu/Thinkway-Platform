@@ -20,10 +20,11 @@ import {
   strategicPillars,
 } from "./presentation";
 import { HYPEAUDITOR_MEDIA_PLAN_PARITY } from "./hypeauditor-parity";
-import { projectMediaPlanSummary } from "./media-plan-summary";
+import { projectMediaPlanSummary, projectSelectionSummaryFromCards } from "./media-plan-summary";
 import { briefFromSnapshotCreator, mergeFrozenBrief } from "./creator-brief";
 import { enrichSnapshotCreatorFromUnified, profileUrlFromHandle, shouldReplaceContentFeed } from "./creator-snapshot";
 import { clientReviewAvatarUrl, isReviewMediaUrlAllowed, reviewMediaAllowlist } from "./review-media";
+import { diffClientReviewSnapshots, retainCreatorBriefs } from "./snapshot-diff";
 import { shortlistReviewBlockers, quotationReviewBlockers } from "./source-readiness";
 import {
   projectCommercialFromSnapshot,
@@ -50,6 +51,7 @@ import {
   clientSelectionToShortlistStatus,
   countSelections,
   isInteractiveClientReview,
+  isSelectedForCalculator,
   shortlistStatusToClient,
 } from "./status";
 
@@ -97,16 +99,20 @@ test("commercial totals scale with accepted creators and never invent margin", (
   const object = buildCampaignObjectFixture();
   const ids = clientCreatorIds(object);
   const all = Object.fromEntries(ids.map((id) => [id, "in_review" as const]));
-  const full = projectClientCommercial(object, all);
-  assert.equal(full.currency, "EGP");
-  assert.equal(full.totalCount, ids.length);
-  assert.equal(full.totalInvestment, 2_000_000);
-  assert.equal(full.lines.some((line) => /margin|gp/i.test(line.label)), false);
+  const none = projectClientCommercial(object, all);
+  assert.equal(none.currency, "EGP");
+  assert.equal(none.totalCount, ids.length);
+  assert.equal(none.quotationTotal, 2_000_000);
+  assert.equal(none.totalInvestment, 0);
+  assert.equal(none.selectedCount, 0);
+  assert.equal(none.lines.some((line) => /margin|gp/i.test(line.label)), false);
 
-  const rejectedOne = { ...all, [ids[0]!]: "rejected" as const };
-  const reduced = projectClientCommercial(object, rejectedOne);
-  assert.ok(reduced.totalInvestment < full.totalInvestment);
-  assert.equal(reduced.selectedCount, ids.length - 1);
+  const acceptedOne = { ...all, [ids[0]!]: "accepted" as const };
+  const selected = projectClientCommercial(object, acceptedOne);
+  assert.ok(selected.totalInvestment > 0);
+  assert.ok(selected.totalInvestment < selected.quotationTotal);
+  assert.equal(selected.selectedCount, 1);
+  assert.equal(selected.quotationTotal, 2_000_000);
 });
 
 test("timeline duration comes from campaign facts", () => {
@@ -277,11 +283,14 @@ test("frozen snapshot commercial uses per-creator quotation values, not a second
     creatorIds: ["a", "b"],
   });
   assert.ok(snapshot);
-  const full = projectCommercialFromSnapshot(snapshot!, { a: "in_review", b: "in_review" });
-  assert.equal(full.totalInvestment, 100_000);
+  const empty = projectCommercialFromSnapshot(snapshot!, { a: "in_review", b: "in_review" });
+  assert.equal(empty.quotationTotal, 100_000);
+  assert.equal(empty.totalInvestment, 0);
+  assert.equal(empty.selectedCount, 0);
   const reduced = projectCommercialFromSnapshot(snapshot!, { a: "rejected", b: "accepted" });
   assert.equal(reduced.totalInvestment, 60_000);
   assert.equal(reduced.selectedCount, 1);
+  assert.equal(reduced.quotationTotal, 100_000);
 });
 
 test("client nav is one proposal and always includes Content Plan", () => {
@@ -409,7 +418,10 @@ test("campaign summary uses forecast + client investment and never fabricates EM
     creatorIds: ["a", "b"],
   });
   assert.ok(snapshot);
-  const full = projectMediaPlanSummary(snapshot!, { a: "in_review", b: "in_review" });
+  const empty = projectMediaPlanSummary(snapshot!, { a: "in_review", b: "in_review" });
+  assert.equal(empty.creatorCount, 0);
+  assert.equal(empty.estimatedReach, undefined);
+  const full = projectMediaPlanSummary(snapshot!, { a: "accepted", b: "accepted" });
   assert.equal(full.creatorCount, 2);
   assert.ok(full.estimatedReach != null && full.estimatedReach > 0);
   assert.ok(full.estimatedEngagements != null && full.estimatedEngagements > 0);
@@ -419,9 +431,47 @@ test("campaign summary uses forecast + client investment and never fabricates EM
   assert.ok(full.activityMix.some((item) => /Reel/i.test(item.label)));
 
   const reduced = projectMediaPlanSummary(snapshot!, { a: "rejected", b: "accepted" });
-  assert.equal(reduced.creatorCount, 2);
+  assert.equal(reduced.creatorCount, 1);
   assert.ok(reduced.estimatedReach != null && reduced.estimatedReach < (full.estimatedReach ?? 0));
-  assert.ok(full.creatorForecasts.a?.estimatedReach != null);
+  assert.ok(full.creatorForecasts.b?.estimatedReach != null);
+});
+
+test("calculator ignores in-review creators until they are accepted", () => {
+  assert.equal(isSelectedForCalculator("accepted"), true);
+  assert.equal(isSelectedForCalculator("in_review"), false);
+  assert.equal(isSelectedForCalculator("rejected"), false);
+  const cards = [
+    {
+      creatorId: "a",
+      displayName: "A",
+      selection: "accepted" as const,
+      investmentAmount: 40_000,
+      followers: 80_000,
+      engagementRate: 3.2,
+      platform: "instagram",
+      deliverableItems: [{ platform: "instagram", type: "Reel", quantity: 1 }],
+      contentExamples: [],
+    },
+    {
+      creatorId: "b",
+      displayName: "B",
+      selection: "in_review" as const,
+      investmentAmount: 60_000,
+      followers: 50_000,
+      engagementRate: 4.1,
+      platform: "instagram",
+      deliverableItems: [{ platform: "instagram", type: "Story", quantity: 2 }],
+      contentExamples: [],
+    },
+  ];
+  const summary = projectSelectionSummaryFromCards(
+    cards,
+    { a: "accepted", b: "in_review" },
+    "EGP"
+  );
+  assert.equal(summary.creatorCount, 1);
+  assert.ok(summary.estimatedReach != null && summary.estimatedReach > 0);
+  assert.equal(summary.emv, undefined);
 });
 
 test("campaign summary omits reach when follower data is unavailable", () => {
@@ -735,5 +785,115 @@ test("missing avatars keep a social profile URL for the public review proxy", ()
   );
   assert.equal(enriched.profileUrl, "https://www.instagram.com/radwaadeeel/");
   assert.equal(enriched.avatarUrl, undefined);
+});
+
+test("quotation snapshot diffs are client-safe and name added creators", () => {
+  const previous = parseSourceSnapshot({
+    source: "quotation",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme Legal",
+    platforms: ["instagram"],
+    deliverables: ["Reel"],
+    creators: [
+      { creatorId: "a", displayName: "Ali", investmentAmount: 1000, deliverables: "Reel" },
+    ],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "Duration not confirmed", phases: [] },
+    commercial: {
+      currency: "EGP",
+      creatorInvestment: 1000,
+      totalInvestment: 1000,
+      lines: [],
+      selectedCount: 1,
+      totalCount: 1,
+    },
+    creatorIds: ["a"],
+  });
+  const next = parseSourceSnapshot({
+    source: "quotation",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme Legal",
+    platforms: ["instagram"],
+    deliverables: ["Reel", "Story"],
+    creators: [
+      { creatorId: "a", displayName: "Ali", investmentAmount: 1500, deliverables: "Reel x 2" },
+      { creatorId: "b", displayName: "radwaadeeel", investmentAmount: 800, deliverables: "Story" },
+    ],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "Duration not confirmed", phases: [] },
+    commercial: {
+      currency: "EGP",
+      creatorInvestment: 2300,
+      totalInvestment: 2300,
+      lines: [],
+      selectedCount: 2,
+      totalCount: 2,
+    },
+    creatorIds: ["a", "b"],
+  });
+  assert.ok(previous && next);
+  const items = diffClientReviewSnapshots(previous, next);
+  assert.equal(items.some((item) => item.includes("radwaadeeel")), true);
+  assert.equal(items.some((item) => /investment/i.test(item)), true);
+  assert.equal(items.some((item) => /deliverable/i.test(item)), true);
+  assert.equal(items.every((item) => !/ECI|Apify|margin|GP/i.test(item)), true);
+});
+
+test("in-place quotation updates keep prior creator briefs", () => {
+  const previous = parseSourceSnapshot({
+    source: "quotation",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme Legal",
+    platforms: ["instagram"],
+    deliverables: ["Reel"],
+    creators: [
+      {
+        creatorId: "a",
+        displayName: "Ali",
+        investmentAmount: 1000,
+        bio: "Creator bio",
+        contentFeed: [{ thumbnail: "https://cdn.example/p1.jpg", likes: 12 }],
+      },
+    ],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "Duration not confirmed", phases: [] },
+    commercial: {
+      currency: "EGP",
+      creatorInvestment: 1000,
+      totalInvestment: 1000,
+      lines: [],
+      selectedCount: 1,
+      totalCount: 1,
+    },
+    creatorIds: ["a"],
+  });
+  const next = parseSourceSnapshot({
+    source: "quotation",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme Legal",
+    platforms: ["instagram"],
+    deliverables: ["Reel"],
+    creators: [{ creatorId: "a", displayName: "Ali", investmentAmount: 1200 }],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "Duration not confirmed", phases: [] },
+    commercial: {
+      currency: "EGP",
+      creatorInvestment: 1200,
+      totalInvestment: 1200,
+      lines: [],
+      selectedCount: 1,
+      totalCount: 1,
+    },
+    creatorIds: ["a"],
+  });
+  assert.ok(previous && next);
+  const merged = retainCreatorBriefs(previous, next);
+  assert.equal(merged.creators[0]?.bio, "Creator bio");
+  assert.equal(merged.creators[0]?.contentFeed?.[0]?.thumbnail, "https://cdn.example/p1.jpg");
+  assert.equal(merged.creators[0]?.investmentAmount, 1200);
 });
 

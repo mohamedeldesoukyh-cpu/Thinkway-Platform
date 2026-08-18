@@ -34,6 +34,7 @@ import {
 import { countSelections } from "../status";
 import type { ClientAudienceSlice, ClientCreatorBrief, ClientCreatorCard, ClientWorkspaceView } from "../types";
 import { AdvancedReportModal, ContentFeatureGrid, isInstagram } from "./advanced-report-modal";
+import { ProposalSummaryCard } from "./proposal-summary-card";
 import { ReviewAvatar } from "./review-avatar";
 import { IconBack, IconCat, IconChart, IconCheck, IconClose, IconIg } from "./review-icons";
 
@@ -61,19 +62,25 @@ export function CreatorsWorkspace({
   const [reportOpen, setReportOpen] = useState(false);
   const [brief, setBrief] = useState<ClientCreatorBrief | null>(null);
   const [note, setNote] = useState("");
+  const [checkedIds, setCheckedIds] = useState<string[]>([]);
+  const [localSelection, setLocalSelection] = useState<Record<string, ClientCreatorSelectionState> | null>(
+    null
+  );
+  const selection = localSelection ?? Object.fromEntries(view.creators.map((creator) => [creator.creatorId, creator.selection]));
   const counts = countSelections(
-    Object.fromEntries(view.creators.map((creator) => [creator.creatorId, creator.selection])),
+    selection,
     view.creators.map((creator) => creator.creatorId)
   );
 
   const filtered = useMemo(
     () =>
       view.creators.filter((creator) => {
-        if (statusFilter === "recommended") return creator.selection !== "rejected";
-        if (statusFilter !== "all" && creator.selection !== statusFilter) return false;
+        const state = selection[creator.creatorId] ?? creator.selection;
+        if (statusFilter === "recommended") return state !== "rejected";
+        if (statusFilter !== "all" && state !== statusFilter) return false;
         return true;
       }),
-    [statusFilter, view.creators]
+    [statusFilter, view.creators, selection]
   );
 
   const filterCounts = {
@@ -139,6 +146,10 @@ export function CreatorsWorkspace({
   }
 
   function decide(creator: ClientCreatorCard, state: ClientCreatorSelectionState, reason?: string) {
+    setLocalSelection((current) => ({
+      ...(current ?? selection),
+      [creator.creatorId]: state,
+    }));
     startTransition(async () => {
       await selectCreatorAction({
         token,
@@ -151,17 +162,31 @@ export function CreatorsWorkspace({
     });
   }
 
-  function bulk(state: ClientCreatorSelectionState) {
+  function bulk(state: ClientCreatorSelectionState, creatorIds?: string[]) {
+    const ids = creatorIds?.length ? creatorIds : view.creators.map((creator) => creator.creatorId);
+    setLocalSelection((current) => {
+      const next = { ...(current ?? selection) };
+      for (const id of ids) next[id] = state;
+      return next;
+    });
     startTransition(async () => {
-      await bulkSelectCreatorsAction({ token, state });
+      await bulkSelectCreatorsAction({ token, state, creatorIds });
       router.refresh();
     });
   }
 
+  function toggleChecked(creatorId: string, checked: boolean) {
+    setCheckedIds((current) =>
+      checked ? [...new Set([...current, creatorId])] : current.filter((id) => id !== creatorId)
+    );
+  }
+
   return (
-    <>
+    <div className="grid2">
+      <div>
       <p className="note" style={{ marginBottom: 12 }}>
-        {rosterHeadline(view.creators.length)}. {rosterSourceLine(view.review.source)}.
+        {rosterHeadline(view.creators.length)}. {rosterSourceLine(view.review.source)}. Accept creators
+        to calculate investment, then approve the selection.
       </p>
       <div className="filters">
         {STATUS_FILTERS.map((item) => (
@@ -180,6 +205,18 @@ export function CreatorsWorkspace({
             <button type="button" className="fbtn" disabled={pending} onClick={() => bulk("accepted")}>
               Select all
             </button>
+            <button
+              type="button"
+              className="fbtn"
+              disabled={pending || checkedIds.length === 0}
+              onClick={() => {
+                bulk("accepted", checkedIds);
+                setCheckedIds([]);
+              }}
+            >
+              Accept selected
+              {checkedIds.length > 0 ? <span className="n">{checkedIds.length}</span> : null}
+            </button>
             <button type="button" className="fbtn" disabled={pending} onClick={() => bulk("in_review")}>
               Clear
             </button>
@@ -196,6 +233,16 @@ export function CreatorsWorkspace({
               className={creator.creatorId === activeId ? "lc sel" : "lc"}
               onClick={() => openCreator(creator.creatorId)}
             >
+              {view.canDecide ? (
+                <input
+                  type="checkbox"
+                  className="pick"
+                  checked={checkedIds.includes(creator.creatorId)}
+                  onClick={(event) => event.stopPropagation()}
+                  onChange={(event) => toggleChecked(creator.creatorId, event.currentTarget.checked)}
+                  aria-label={`Select ${creator.displayName}`}
+                />
+              ) : null}
               <ReviewAvatar
                 className="av"
                 url={creator.avatarUrl}
@@ -224,8 +271,8 @@ export function CreatorsWorkspace({
                 </div>
                 <div className="dl">{deliverablesLabel(creator.deliverableItems, creator.deliverables)}</div>
               </div>
-              <span className={statusClass(creator.selection)}>
-                {CLIENT_CREATOR_STATUS_LABEL[creator.selection]}
+              <span className={statusClass(selection[creator.creatorId] ?? creator.selection)}>
+                {CLIENT_CREATOR_STATUS_LABEL[selection[creator.creatorId] ?? creator.selection]}
               </span>
             </button>
           ))}
@@ -234,7 +281,10 @@ export function CreatorsWorkspace({
 
         {selected ? (
           <CreatorDetailPane
-            creator={selected}
+            creator={{
+              ...selected,
+              selection: selection[selected.creatorId] ?? selected.selection,
+            }}
             brief={brief?.creatorId === selected.creatorId ? brief : null}
             index={Math.max(0, selectedIndex)}
             token={token}
@@ -277,14 +327,21 @@ export function CreatorsWorkspace({
           key={selected.creatorId}
           open={reportOpen}
           onClose={() => setReportOpen(false)}
-          creator={selected}
+          creator={{
+            ...selected,
+            selection: selection[selected.creatorId] ?? selected.selection,
+          }}
           brief={brief?.creatorId === selected.creatorId ? brief : null}
           currency={view.commercial.currency}
           index={Math.max(0, selectedIndex)}
           token={token}
         />
       ) : null}
-    </>
+      </div>
+      <aside className="side">
+        <ProposalSummaryCard view={view} token={token} selection={selection} />
+      </aside>
+    </div>
   );
 }
 

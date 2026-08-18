@@ -18,7 +18,7 @@ import {
   projectCreatorsFromSnapshot,
   projectOverviewFromSnapshot,
 } from "./snapshot";
-import { applyCreatorForecasts, projectMediaPlanSummary } from "./media-plan-summary";
+import { applyCreatorForecasts, projectClientMediaPlans } from "./media-plan-summary";
 import { snapshotFromCampaignObject } from "./snapshot-from-object";
 import { actionRequiredFor, isInteractiveClientReview } from "./status";
 import type {
@@ -177,22 +177,24 @@ function viewFromSnapshot(
 ): ClientWorkspaceView {
   const commercial = projectCommercialFromSnapshot(snapshot, selection);
   const overview = projectOverviewFromSnapshot(snapshot, commercial);
-  const mediaPlanSummary = projectMediaPlanSummary(snapshot, selection);
+  const { packageSummary, mediaPlanSummary } = projectClientMediaPlans(snapshot, selection);
   const view: ClientWorkspaceView = {
     review,
     newerReviewNumber: newer,
     overview,
     strategyBody: snapshot.strategyBody,
-    creators: applyCreatorForecasts(projectCreatorsFromSnapshot(snapshot, selection), mediaPlanSummary),
+    creators: applyCreatorForecasts(projectCreatorsFromSnapshot(snapshot, selection), packageSummary),
     content: snapshot.content,
     timeline: snapshot.timeline,
     commercial,
+    packageSummary,
     mediaPlanSummary,
     quotation: snapshot.quotation,
     visibleSections: [],
     comments,
     activity,
     canDecide: isInteractiveClientReview(review.status) && !newer,
+    clientUpdate: snapshot.clientUpdate,
   };
   view.visibleSections = visibleClientWorkspaceSections(view);
   return view;
@@ -212,19 +214,36 @@ export async function loadClientWorkspace(
     return { ok: false, code: "unavailable", message: "Client review is temporarily unavailable." };
   }
 
-  const resolved = await resolveClientReviewByToken(resolver, token);
-  if (!resolved.ok) {
+  const resolvedInitial = await resolveClientReviewByToken(resolver, token);
+  if (!resolvedInitial.ok) {
     return {
       ok: false,
-      code: resolved.code,
+      code: resolvedInitial.code,
       message:
-        resolved.code === "revoked"
+        resolvedInitial.code === "revoked"
           ? "This review link has been revoked."
           : "This review link is invalid or has expired.",
     };
   }
 
   const db = service ?? resolver;
+  let resolved = resolvedInitial;
+  if (service && resolved.review.source === "quotation" && resolved.review.quotationId) {
+    try {
+      const { createClientReviewFromQuotation } = await import("./create-from-quotation");
+      await createClientReviewFromQuotation(service, {
+        quotationId: resolved.review.quotationId,
+        userId: "00000000-0000-0000-0000-000000000000",
+        origin: process.env.NEXT_PUBLIC_APP_URL ?? "https://dev.thinkwaymedia.com",
+        mintMissingShareToken: false,
+        syncExistingOnly: true,
+      });
+      const refreshed = await resolveClientReviewByToken(service, token);
+      if (refreshed.ok) resolved = refreshed;
+    } catch {
+      /* keep the stored snapshot if quotation sync is unavailable */
+    }
+  }
   const selection = resolved.review.selectionState as Record<string, ClientCreatorSelectionState>;
   const [comments, activity, newer] = await Promise.all([
     loadComments(db, resolved.review.id),
@@ -266,10 +285,12 @@ export async function loadClientWorkspace(
     view.timeline = projectClientTimeline(campaignObject);
     view.commercial = projectClientCommercial(campaignObject, selection);
     view.overview = projectClientOverview(campaignObject, selection);
-    view.mediaPlanSummary = projectMediaPlanSummary(snapshot, selection);
+    const plans = projectClientMediaPlans(snapshot, selection);
+    view.packageSummary = plans.packageSummary;
+    view.mediaPlanSummary = plans.mediaPlanSummary;
     view.creators = applyCreatorForecasts(
       projectClientCreators(campaignObject, selection, hydrated),
-      view.mediaPlanSummary
+      plans.packageSummary
     );
     view.visibleSections = visibleClientWorkspaceSections(view);
   }

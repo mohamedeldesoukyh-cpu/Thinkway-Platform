@@ -13,6 +13,7 @@ import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
 
 import { clientFacingAllocationNote } from "./format";
 import { formatDeliverableItems, parseDeliverableItems } from "./deliverables";
+import { isSelectedForCalculator } from "./status";
 import {
   attachMatchExplanation,
   contentPostsFromPublications,
@@ -79,8 +80,8 @@ export function projectClientCommercial(
   const budget = resolveBudgetData(campaignObject);
   const currency = (budget?.currency || facts?.budget?.currency || "EGP").trim() || "EGP";
   const ids = clientCreatorIds(campaignObject);
-  const selectedIds = ids.filter((id) => (selection[id] ?? "in_review") !== "rejected");
-  const selectedRatio = ids.length === 0 ? 1 : selectedIds.length / ids.length;
+  const selectedIds = ids.filter((id) => isSelectedForCalculator(selection[id]));
+  const selectedRatio = ids.length === 0 ? 0 : selectedIds.length / ids.length;
   const total = facts?.budget?.amount ?? budget?.total ?? 0;
   const creatorInvestment = Math.round(total * selectedRatio);
   const lines: ClientCommercialLine[] = (budget?.allocations ?? [])
@@ -98,6 +99,7 @@ export function projectClientCommercial(
     currency,
     creatorInvestment,
     totalInvestment: creatorInvestment,
+    quotationTotal: total,
     lines,
     selectedCount: selectedIds.length,
     totalCount: ids.length,

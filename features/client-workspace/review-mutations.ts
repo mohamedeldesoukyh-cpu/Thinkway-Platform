@@ -229,13 +229,8 @@ export async function decideClientReview(input: {
   const frozenIds = snapshot
     ? snapshotCreatorIds(snapshot)
     : clientCreatorIds(campaignObject!);
-  const acceptedIds = Object.entries(gate.review.selectionState)
-    .filter(([, state]) => state === "accepted")
-    .map(([id]) => id);
-  const selectedIds =
-    acceptedIds.length > 0
-      ? acceptedIds
-      : frozenIds.filter((id) => gate.review.selectionState[id] !== "rejected");
+  const acceptedIds = frozenIds.filter((id) => gate.review.selectionState[id] === "accepted");
+  const selectedIds = acceptedIds;
 
   if (input.decision === "approved" && selectedIds.length === 0) {
     return { ok: false, message: "Select at least one creator before approving." };

@@ -38,6 +38,10 @@ export function ApprovalWorkspace({
     view.commercial.totalInvestment > 0
       ? formatMoneyKpi(view.commercial.totalInvestment, view.commercial.currency)
       : TO_BE_CONFIRMED;
+  const quotationTotal =
+    view.commercial.quotationTotal > 0
+      ? formatMoneyKpi(view.commercial.quotationTotal, view.commercial.currency)
+      : TO_BE_CONFIRMED;
 
   function toggle(area: ClientChangeArea) {
     setAreas((current) =>
@@ -71,10 +75,16 @@ export function ApprovalWorkspace({
           </div>
           <div className="gi">
             <p className="l">Creators</p>
-            <p className="v">{rosterHeadline(view.creators.length)}</p>
+            <p className="v">
+              {counts.accepted} selected · {rosterHeadline(view.creators.length)}
+            </p>
           </div>
           <div className="gi">
-            <p className="l">Investment</p>
+            <p className="l">Quotation</p>
+            <p className={view.commercial.quotationTotal > 0 ? "v" : "v tbc"}>{quotationTotal}</p>
+          </div>
+          <div className="gi">
+            <p className="l">Selected investment</p>
             <p className={view.commercial.totalInvestment > 0 ? "v" : "v tbc"}>{investment}</p>
           </div>
           <div className="gi">
@@ -87,9 +97,9 @@ export function ApprovalWorkspace({
         <p className="note">Proposal v{view.review.reviewNumber} · Current</p>
         <div className="checklist">
           <CheckItem done label="Campaign reviewed" />
-          <CheckItem done={counts.total > 0} label="Creator shortlist reviewed" />
+          <CheckItem done={counts.accepted > 0} label="Creator shortlist reviewed" />
           <CheckItem done={deliverableCount > 0 || view.content.length > 0} label="Deliverables reviewed" />
-          <CheckItem done={view.commercial.totalInvestment > 0} label="Investment reviewed" />
+          <CheckItem done={view.commercial.totalInvestment > 0} label="Selection investment reviewed" />
         </div>
         {error ? <p style={{ color: "var(--bad)", fontSize: 13 }}>{error}</p> : null}
         {view.canDecide ? (
@@ -97,7 +107,7 @@ export function ApprovalWorkspace({
             <button
               type="button"
               className="btn primary"
-              disabled={pending}
+              disabled={pending || counts.accepted === 0}
               onClick={() =>
                 startTransition(async () => {
                   const result = await decideReviewAction({ token, decision: "approved" });
@@ -107,7 +117,7 @@ export function ApprovalWorkspace({
               }
             >
               <IconCheck />
-              Approve proposal
+              Approve selection
             </button>
             <button
               type="button"

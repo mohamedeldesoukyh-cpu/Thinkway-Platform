@@ -53,8 +53,8 @@ export function ClientReviewShareDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
-            Share this signed link with the client, or open it to check the proposal. The client does not
-            need a Thinkway login.
+            Share this signed link with the client, or open it to check the proposal. The URL stays the
+            same when the quotation changes. Use Send to Client to email it.
           </DialogDescription>
         </DialogHeader>
         {url ? (

@@ -8,7 +8,11 @@ import { requirePermission } from "@/lib/auth/permissions-server";
 import { QUOTATION_PERMISSIONS } from "@/lib/domains/commercial/quotation-constants";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-import { revealClientReviewShareLink, type ReviewScope } from "../persist-client-review";
+import {
+  peekClientReviewShareLink,
+  revealClientReviewShareLink,
+  type ReviewScope,
+} from "../persist-client-review";
 
 type RevealResult =
   | { ok: true; url: string; reviewId: string; reviewNumber: number }
@@ -48,4 +52,20 @@ export async function revealClientReviewLinkAction(
         : { source: "studio", campaignObjectId: input.campaignObjectId };
 
   return revealClientReviewShareLink({ supabase, origin, scope });
+}
+
+export async function peekClientReviewShareAction(input: {
+  source: "quotation";
+  quotationId: string;
+}): Promise<{ exists: boolean; reviewNumber?: number }> {
+  const supabase = await createSupabaseServerClient();
+  const auth = await requirePermission(supabase, QUOTATION_PERMISSIONS.write);
+  if ("error" in auth) {
+    const adminAuth = await requirePermission(supabase, QUOTATION_PERMISSIONS.admin);
+    if ("error" in adminAuth) return { exists: false };
+  }
+  return peekClientReviewShareLink({
+    supabase,
+    scope: { source: "quotation", quotationId: input.quotationId },
+  });
 }

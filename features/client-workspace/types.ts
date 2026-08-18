@@ -159,6 +159,10 @@ export type ClientReviewSourceSnapshot = {
     lines: Array<{ creatorId: string; label: string; amount: number }>;
   };
   creatorIds: string[];
+  clientUpdate?: {
+    updatedAt: string;
+    items: string[];
+  };
 };
 
 export type ClientReviewRecord = {
@@ -274,6 +278,8 @@ export type ClientCommercialSummary = {
   creatorInvestment: number;
   feeAmount?: number;
   totalInvestment: number;
+  /** Full quotation / package total. Does not change with client selection. */
+  quotationTotal: number;
   lines: ClientCommercialLine[];
   selectedCount: number;
   totalCount: number;
@@ -345,12 +351,18 @@ export type ClientWorkspaceView = {
     phases: ClientTimelinePhase[];
   };
   commercial: ClientCommercialSummary;
+  /** Full-roster forecast for overview KPIs. Calculator uses mediaPlanSummary. */
+  packageSummary: ClientMediaPlanSummary;
   mediaPlanSummary: ClientMediaPlanSummary;
   quotation?: ClientReviewSourceSnapshot["quotation"];
   visibleSections: ClientWorkspaceSectionId[];
   comments: ClientComment[];
   activity: ClientActivityEvent[];
   canDecide: boolean;
+  clientUpdate?: {
+    updatedAt: string;
+    items: string[];
+  };
 };
 
 export type ClientWorkspaceEntry = {

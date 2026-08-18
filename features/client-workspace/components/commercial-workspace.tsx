@@ -32,12 +32,16 @@ export function CommercialWorkspace({
       <div className="card">
         <p className="ck">Campaign investment</p>
         <h2>
-          {commercial.totalInvestment > 0
-            ? formatMoneyKpi(commercial.totalInvestment, commercial.currency)
+          {commercial.quotationTotal > 0
+            ? formatMoneyKpi(commercial.quotationTotal, commercial.currency)
             : TO_BE_CONFIRMED}
         </h2>
         <p className="note">
-          {rosterHeadline(view.creators.length)} · Proposal v{view.review.reviewNumber}
+          {rosterHeadline(commercial.totalCount || view.creators.length)} on this quotation · Selected investment{" "}
+          {commercial.totalInvestment > 0
+            ? formatMoneyKpi(commercial.totalInvestment, commercial.currency)
+            : TO_BE_CONFIRMED}{" "}
+          · Proposal v{view.review.reviewNumber}
           {view.quotation?.serialNumber ? ` · ${view.quotation.serialNumber}` : ""}
         </p>
         <div className="glance">

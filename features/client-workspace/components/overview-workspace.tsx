@@ -8,10 +8,9 @@ import {
   rosterSourceLine,
   strategicPillars,
 } from "../presentation";
-import { buildClientReviewPath } from "../security/review-token";
 import type { ClientWorkspaceView } from "../types";
-import { IconCheck, KpiIcon } from "./review-icons";
-import Link from "next/link";
+import { KpiIcon } from "./review-icons";
+import { ProposalSummaryCard } from "./proposal-summary-card";
 
 function Glance({ label, value, missing }: { label: string; value: string; missing?: boolean }) {
   return (
@@ -66,15 +65,14 @@ export function OverviewWorkspace({
     view.mediaPlanSummary.activityMix.length > 0
       ? view.mediaPlanSummary.activityMix.map((item) => `${item.count} ${item.label}`).join(" · ")
       : o.deliverables.join(" · ");
-  const forecast = view.mediaPlanSummary;
+  const forecast = view.packageSummary;
   const maxCategory = Math.max(...mix.categories.map((item) => item.count), 1);
   const maxMarket = Math.max(...mix.markets.map((item) => item.count), 1);
   const er =
     forecast.averageEngagementRate != null
       ? formatEngagementPct(forecast.averageEngagementRate)
       : TO_BE_CONFIRMED;
-  const approvalHref = buildClientReviewPath(view.review.id, token, "approval");
-  const feedbackHref = buildClientReviewPath(view.review.id, token, "feedback");
+  const quotationTotal = view.commercial.quotationTotal;
 
   return (
     <>
@@ -118,13 +116,13 @@ export function OverviewWorkspace({
               />
               <Glance label="Creators" value={rosterHeadline(view.creators.length)} />
               <Glance
-                label="Investment"
+                label="Quotation"
                 value={
-                  o.commercial.totalInvestment > 0
-                    ? formatMoneyKpi(o.commercial.totalInvestment, o.commercial.currency)
+                  quotationTotal > 0
+                    ? formatMoneyKpi(quotationTotal, o.commercial.currency)
                     : TO_BE_CONFIRMED
                 }
-                missing={o.commercial.totalInvestment <= 0}
+                missing={quotationTotal <= 0}
               />
             </div>
           </div>
@@ -232,67 +230,7 @@ export function OverviewWorkspace({
         </div>
 
         <aside className="side">
-          <div className="sumcard">
-            <div className="h">
-              <p className="st">Proposal summary</p>
-              <p className="ss">
-                {o.campaignName} · v{view.review.reviewNumber}
-              </p>
-            </div>
-            <div className="sumrow big">
-              <span className="k">Investment</span>
-              <span className="v">
-                {o.commercial.totalInvestment > 0
-                  ? formatMoneyKpi(o.commercial.totalInvestment, o.commercial.currency)
-                  : TO_BE_CONFIRMED}
-              </span>
-            </div>
-            <div className="sumrow">
-              <span className="k">Creators</span>
-              <span className="v">{view.creators.length}</span>
-            </div>
-            <div className="sumrow">
-              <span className="k">Est. reach</span>
-              <span className="v">{formatCompactCount(forecast.estimatedReach)}</span>
-            </div>
-            <div className="sumrow">
-              <span className="k">Engagements</span>
-              <span className="v">{formatCompactCount(forecast.estimatedEngagements)}</span>
-            </div>
-            <div className="sumrow">
-              <span className="k">Engagement rate</span>
-              <span className="v">{er}</span>
-            </div>
-            <div className="sumrow">
-              <span className="k">CPE</span>
-              <span className="v">{money(forecast.cpe, forecast.currency)}</span>
-            </div>
-            <div className="sumrow">
-              <span className="k">CPM</span>
-              <span className="v">{money(forecast.cpm, forecast.currency)}</span>
-            </div>
-            {forecast.emv != null ? (
-              <div className="sumrow">
-                <span className="k">Est. media value</span>
-                <span className="v">{money(forecast.emv, forecast.currency)}</span>
-              </div>
-            ) : null}
-            {view.canDecide ? (
-              <div className="sumcta">
-                <Link className="btn primary" href={approvalHref}>
-                  <IconCheck />
-                  Approve proposal
-                </Link>
-                <Link
-                  className="btn"
-                  href={feedbackHref}
-                  style={{ background: "rgba(255,255,255,.08)", color: "#fff", borderColor: "rgba(255,255,255,.18)" }}
-                >
-                  Request changes
-                </Link>
-              </div>
-            ) : null}
-          </div>
+          <ProposalSummaryCard view={view} token={token} />
           <div className="card" style={{ marginTop: 16 }}>
             <p className="ck" style={{ marginBottom: 8 }}>
               Campaign fit

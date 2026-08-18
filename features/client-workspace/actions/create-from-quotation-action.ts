@@ -48,6 +48,6 @@ async function run(
     ok: true,
     url: result.url,
     reviewNumber: result.reviewNumber,
-    message: `Client review v${result.reviewNumber} is ready. Share the secure link.`,
+    message: `Client Workspace link is ready.`,
   };
 }

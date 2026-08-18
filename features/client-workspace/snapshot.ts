@@ -1,4 +1,5 @@
 import type { ClientCreatorSelectionState } from "./constants";
+import { isSelectedForCalculator } from "./status";
 import type {
   ClientAudienceBrief,
   ClientAudienceSlice,
@@ -268,6 +269,7 @@ export function parseSourceSnapshot(raw: unknown): ClientReviewSourceSnapshot | 
         : [],
       selectedCount: asNumber(commercial.selectedCount) ?? creatorIds.length,
       totalCount: asNumber(commercial.totalCount) ?? creatorIds.length,
+      quotationTotal: asNumber(commercial.quotationTotal) ?? asNumber(commercial.totalInvestment) ?? 0,
     },
     mediaPlanSummary: parseMediaPlanSummary(raw.mediaPlanSummary),
     quotation: quotation
@@ -286,17 +288,35 @@ export function parseSourceSnapshot(raw: unknown): ClientReviewSourceSnapshot | 
         }
       : undefined,
     creatorIds,
+    clientUpdate: parseClientUpdate(raw.clientUpdate),
   };
+}
+
+function parseClientUpdate(value: unknown): ClientReviewSourceSnapshot["clientUpdate"] {
+  if (!isRecord(value)) return undefined;
+  const updatedAt = asString(value.updatedAt);
+  const items = asStringArray(value.items);
+  if (!updatedAt || !items?.length) return undefined;
+  return { updatedAt, items };
+}
+
+export function quotationTotalFromSnapshot(snapshot: ClientReviewSourceSnapshot): number {
+  const hasPerCreator = snapshot.creators.some((creator) => creator.investmentAmount != null);
+  if (hasPerCreator) {
+    return snapshot.creators.reduce((sum, creator) => sum + (creator.investmentAmount ?? 0), 0);
+  }
+  return snapshot.commercial.quotationTotal || snapshot.commercial.totalInvestment;
 }
 
 export function projectCommercialFromSnapshot(
   snapshot: ClientReviewSourceSnapshot,
   selection: Record<string, ClientCreatorSelectionState>
 ): ClientCommercialSummary {
-  const selected = snapshot.creators.filter(
-    (creator) => (selection[creator.creatorId] ?? "in_review") !== "rejected"
+  const selected = snapshot.creators.filter((creator) =>
+    isSelectedForCalculator(selection[creator.creatorId])
   );
   const selectedIds = new Set(selected.map((creator) => creator.creatorId));
+  const quotationTotal = quotationTotalFromSnapshot(snapshot);
   const hasPerCreator = snapshot.creators.some((creator) => creator.investmentAmount != null);
   if (hasPerCreator) {
     const creatorInvestment = selected.reduce(
@@ -314,6 +334,7 @@ export function projectCommercialFromSnapshot(
       currency: snapshot.commercial.currency,
       creatorInvestment,
       totalInvestment: creatorInvestment,
+      quotationTotal,
       lines: quotationLines?.length
         ? quotationLines.map((line) => ({ label: line.label, amount: line.amount }))
         : lines.length > 0
@@ -325,13 +346,14 @@ export function projectCommercialFromSnapshot(
   }
 
   const selectedRatio =
-    snapshot.creators.length === 0 ? 1 : selected.length / snapshot.creators.length;
-  const total = Math.round(snapshot.commercial.totalInvestment * selectedRatio);
+    snapshot.creators.length === 0 ? 0 : selected.length / snapshot.creators.length;
+  const total = Math.round(quotationTotal * selectedRatio);
   return {
     currency: snapshot.commercial.currency,
     creatorInvestment: total,
     feeAmount: snapshot.commercial.feeAmount,
     totalInvestment: total,
+    quotationTotal,
     lines: snapshot.commercial.lines.map((line) => ({
       ...line,
       amount: line.amount != null ? Math.round(line.amount * selectedRatio) : undefined,

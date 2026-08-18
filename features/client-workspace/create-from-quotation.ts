@@ -20,6 +20,8 @@ export type CreateClientReviewFromQuotationInput = {
   quotationId: string;
   userId: string;
   origin: string;
+  mintMissingShareToken?: boolean;
+  syncExistingOnly?: boolean;
 };
 
 function formatDeliverables(item: QuotationItemRow): string | undefined {
@@ -153,6 +155,7 @@ export async function createClientReviewFromQuotation(
       currency: detail.currency,
       creatorInvestment,
       totalInvestment: creatorInvestment,
+      quotationTotal: creatorInvestment,
       lines: snapshotCreators.map((creator) => ({
         label: creator.displayName,
         amount: creator.investmentAmount,
@@ -200,5 +203,8 @@ export async function createClientReviewFromQuotation(
     selection,
     snapshot,
     alreadyOpenMessage: "A client review already exists for this quotation version.",
+    reuseInteractiveReview: true,
+    mintMissingShareToken: input.mintMissingShareToken,
+    syncExistingOnly: input.syncExistingOnly,
   });
 }

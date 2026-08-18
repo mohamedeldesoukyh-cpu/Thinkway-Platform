@@ -42,9 +42,9 @@ export function ClientWorkspaceShell({
     .sort((a, b) => b[1] - a[1])
     .map(([country, count]) => `${flagFromCountry(country)} ${country} · ${count}`)
     .join("  ·  ");
-  const investment =
-    view.commercial.totalInvestment > 0
-      ? formatMoneyKpi(view.commercial.totalInvestment, view.commercial.currency)
+  const quotationTotal =
+    view.commercial.quotationTotal > 0
+      ? formatMoneyKpi(view.commercial.quotationTotal, view.commercial.currency)
       : TO_BE_CONFIRMED;
 
   return (
@@ -76,6 +76,18 @@ export function ClientWorkspaceShell({
           </div>
         </div>
       </header>
+      {view.clientUpdate?.items.length ? (
+        <div className="update-banner" role="status">
+          <div className="wrap">
+            <p className="uh">This proposal was updated</p>
+            <ul>
+              {view.clientUpdate.items.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ) : null}
 
       <section className="hero">
         <div className="wrap row">
@@ -98,9 +110,11 @@ export function ClientWorkspaceShell({
           </div>
           {hideInvest ? null : (
             <div className="invest">
-              <p className="l">Total investment</p>
-              <p className="v">{investment}</p>
-              <p className="s">across {rosterHeadline(view.creators.length)}</p>
+              <p className="l">Total quotation</p>
+              <p className="v">{quotationTotal}</p>
+              <p className="s">
+                {rosterHeadline(view.commercial.totalCount || view.creators.length)} on this quotation
+              </p>
             </div>
           )}
         </div>

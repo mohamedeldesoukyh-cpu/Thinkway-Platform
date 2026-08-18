@@ -5,6 +5,7 @@ import {
 import { calculateCpm } from "@/lib/campaigns/performance-calculations";
 
 import type { ClientCreatorSelectionState } from "./constants";
+import { isSelectedForCalculator } from "./status";
 import { activityMixFromCreators } from "./deliverables";
 import type {
   ClientCreatorCard,
@@ -26,9 +27,7 @@ export function snapshotCreatorsForSummary(
   selection?: Record<string, ClientCreatorSelectionState>
 ): ClientReviewSourceSnapshotCreator[] {
   if (!selection) return snapshot.creators;
-  return snapshot.creators.filter(
-    (creator) => (selection[creator.creatorId] ?? "in_review") !== "rejected"
-  );
+  return snapshot.creators.filter((creator) => isSelectedForCalculator(selection[creator.creatorId]));
 }
 
 function forecastFromCreators(creators: ClientReviewSourceSnapshotCreator[]) {
@@ -115,22 +114,6 @@ export function buildMediaPlanSummary(
   };
 }
 
-export function applyCreatorForecasts<T extends ClientCreatorCard>(
-  creators: T[],
-  summary: ClientMediaPlanSummary
-): T[] {
-  return creators.map((creator) => {
-    const forecast = summary.creatorForecasts[creator.creatorId];
-    if (!forecast) return creator;
-    return {
-      ...creator,
-      estimatedReach: creator.estimatedReach ?? forecast.estimatedReach,
-      estimatedEngagements: creator.estimatedEngagements ?? forecast.estimatedEngagements,
-      cpe: creator.cpe ?? forecast.cpe,
-    };
-  });
-}
-
 export function projectMediaPlanSummary(
   snapshot: ClientReviewSourceSnapshot,
   selection: Record<string, ClientCreatorSelectionState>
@@ -149,6 +132,64 @@ export function projectMediaPlanSummary(
       },
       creators
     ),
-    creatorCount: snapshot.creators.length,
+    creatorCount: creators.length,
+  };
+}
+
+export function applyCreatorForecasts<T extends ClientCreatorCard>(
+  creators: T[],
+  summary: ClientMediaPlanSummary
+): T[] {
+  return creators.map((creator) => {
+    const forecast = summary.creatorForecasts[creator.creatorId];
+    if (!forecast) return creator;
+    return {
+      ...creator,
+      estimatedReach: creator.estimatedReach ?? forecast.estimatedReach,
+      estimatedEngagements: creator.estimatedEngagements ?? forecast.estimatedEngagements,
+      cpe: creator.cpe ?? forecast.cpe,
+    };
+  });
+}
+
+export function projectClientMediaPlans(
+  snapshot: ClientReviewSourceSnapshot,
+  selection: Record<string, ClientCreatorSelectionState>
+): { packageSummary: ClientMediaPlanSummary; mediaPlanSummary: ClientMediaPlanSummary } {
+  const packageSummary = buildMediaPlanSummary(snapshot, snapshot.creators);
+  const selected = projectMediaPlanSummary(snapshot, selection);
+  return {
+    packageSummary,
+    mediaPlanSummary: {
+      ...selected,
+      creatorForecasts: packageSummary.creatorForecasts,
+    },
+  };
+}
+
+export function projectSelectionSummaryFromCards(
+  creators: ClientCreatorCard[],
+  selection: Record<string, ClientCreatorSelectionState>,
+  currency: string
+): ClientMediaPlanSummary {
+  const selected = creators.filter((creator) => isSelectedForCalculator(selection[creator.creatorId]));
+  const investment = selected.reduce((sum, creator) => sum + (creator.investmentAmount ?? 0), 0);
+  return {
+    ...buildMediaPlanSummary(
+      {
+        creators: selected,
+        commercial: {
+          currency,
+          creatorInvestment: investment,
+          totalInvestment: investment,
+          quotationTotal: investment,
+          lines: [],
+          selectedCount: selected.length,
+          totalCount: creators.length,
+        },
+      },
+      selected
+    ),
+    creatorCount: selected.length,
   };
 }

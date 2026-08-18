@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -15,10 +15,13 @@ import {
 import { toast } from "sonner";
 
 import { createClientReviewFromQuotationAction } from "@/features/client-workspace/actions/create-from-quotation-action";
-import { revealClientReviewLinkAction } from "@/features/client-workspace/actions/reveal-client-review-link-action";
+import {
+  peekClientReviewShareAction,
+  revealClientReviewLinkAction,
+} from "@/features/client-workspace/actions/reveal-client-review-link-action";
+import { ClientReviewSendDialog } from "@/features/client-workspace/components/client-review-send-dialog";
 import { ClientReviewShareDialog } from "@/features/client-workspace/components/client-review-share-dialog";
 import {
-  readClientReviewShare,
   rememberClientReviewShare,
   reviewIdFromShareUrl,
 } from "@/features/client-workspace/client-review-share-memory";
@@ -72,18 +75,45 @@ export function QuotationWorkspaceHeader({
   const [shareOpen, setShareOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareReviewNumber, setShareReviewNumber] = useState<number | undefined>(undefined);
+  const [hasLink, setHasLink] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
   const campaignSeed = useMemo(() => seedFromQuotation(detail), [detail]);
   const shareScope = { source: "quotation" as const, id: detail.id };
+
+  useEffect(() => {
+    void peekClientReviewShareAction({ source: "quotation", quotationId: detail.id }).then((result) => {
+      setHasLink(result.exists);
+      if (result.reviewNumber != null) setShareReviewNumber(result.reviewNumber);
+    });
+  }, [detail.id]);
 
   function rememberShare(url: string, reviewNumber: number) {
     setShareUrl(url);
     setShareReviewNumber(reviewNumber);
+    setHasLink(true);
     const reviewId = reviewIdFromShareUrl(url);
     if (reviewId) rememberClientReviewShare(shareScope, { url, reviewNumber, reviewId });
   }
 
-  function runSendToClient() {
+  function runLinkButton() {
+    if (hasUnsavedChanges) {
+      toast.error("Save the quotation first.");
+      return;
+    }
     startTransition(async () => {
+      if (hasLink) {
+        const revealed = await revealClientReviewLinkAction({
+          source: "quotation",
+          quotationId: detail.id,
+        });
+        if (!revealed.ok) {
+          toast.error(revealed.message);
+          return;
+        }
+        rememberShare(revealed.url, revealed.reviewNumber);
+        setShareOpen(true);
+        return;
+      }
       const res = await createClientReviewFromQuotationAction({ quotationId: detail.id });
       if (!res.ok) {
         toast.error(res.message, {
@@ -91,37 +121,17 @@ export function QuotationWorkspaceHeader({
         });
         return;
       }
-      try {
-        await navigator.clipboard.writeText(res.url);
-      } catch {
-        /* clipboard is optional — the share dialog still shows the URL */
-      }
       rememberShare(res.url, res.reviewNumber);
       setShareOpen(true);
-      toast.success(res.message);
     });
   }
 
-  function runShowLink() {
-    startTransition(async () => {
-      const cached = readClientReviewShare(shareScope);
-      if (cached) {
-        setShareUrl(cached.url);
-        setShareReviewNumber(cached.reviewNumber);
-        setShareOpen(true);
-        return;
-      }
-      const res = await revealClientReviewLinkAction({
-        source: "quotation",
-        quotationId: detail.id,
-      });
-      if (!res.ok) {
-        toast.error(res.message);
-        return;
-      }
-      rememberShare(res.url, res.reviewNumber);
-      setShareOpen(true);
-    });
+  function runSendToClient() {
+    if (hasUnsavedChanges) {
+      toast.error("Save the quotation first.");
+      return;
+    }
+    setSendOpen(true);
   }
 
   function runStatus(status: "under_review" | "cancelled") {
@@ -235,6 +245,21 @@ export function QuotationWorkspaceHeader({
               Save
             </QuotationToolbarButton>
           ) : null}
+          {detail.canManage ? (
+            <QuotationToolbarButton
+              variant="outline"
+              size="sm"
+              disabled={pending}
+              onClick={runLinkButton}
+            >
+              {pending ? (
+                <Loader2Icon className="size-3.5 animate-spin" />
+              ) : (
+                <Link2Icon className="size-3.5" />
+              )}
+              {hasLink ? "Show link" : "Generate link"}
+            </QuotationToolbarButton>
+          ) : null}
           {detail.canManage &&
           detail.status !== "cancelled" &&
           detail.status !== "archived" &&
@@ -251,21 +276,6 @@ export function QuotationWorkspaceHeader({
                 <SendIcon className="size-3.5" />
               )}
               Send to Client
-            </QuotationToolbarButton>
-          ) : null}
-          {detail.canManage ? (
-            <QuotationToolbarButton
-              variant="outline"
-              size="sm"
-              disabled={pending}
-              onClick={runShowLink}
-            >
-              {pending ? (
-                <Loader2Icon className="size-3.5 animate-spin" />
-              ) : (
-                <Link2Icon className="size-3.5" />
-              )}
-              Show link
             </QuotationToolbarButton>
           ) : null}
           <QuotationPreviewToolbarActions
@@ -376,6 +386,13 @@ export function QuotationWorkspaceHeader({
         onOpenChange={setShareOpen}
         url={shareUrl}
         reviewNumber={shareReviewNumber}
+      />
+      <ClientReviewSendDialog
+        open={sendOpen}
+        onOpenChange={setSendOpen}
+        quotationId={detail.id}
+        clientId={detail.client_id}
+        onSent={() => setHasLink(true)}
       />
     </>
   );

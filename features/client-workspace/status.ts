@@ -49,3 +49,8 @@ export function clientSelectionToShortlistStatus(
   if (state === "rejected") return "rejected";
   return "under_review";
 }
+
+/** Calculator and approval use explicit Accept — In Review is not counted. */
+export function isSelectedForCalculator(state?: ClientCreatorSelectionState): boolean {
+  return state === "accepted";
+}

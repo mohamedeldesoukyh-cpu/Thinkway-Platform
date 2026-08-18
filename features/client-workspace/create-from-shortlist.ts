@@ -240,6 +240,7 @@ export async function createClientReviewFromShortlist(
       currency,
       creatorInvestment,
       totalInvestment: creatorInvestment,
+      quotationTotal: creatorInvestment,
       lines: snapshotCreators
         .filter((creator) => creator.investmentAmount != null)
         .map((creator) => ({ label: creator.displayName, amount: creator.investmentAmount })),
