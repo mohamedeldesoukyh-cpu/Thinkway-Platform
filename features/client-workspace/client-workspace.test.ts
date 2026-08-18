@@ -7,7 +7,7 @@ import { isPublicPath } from "@/lib/auth/routes";
 import { classifyApiPath, classifyPagePath } from "@/lib/security/workspace-classify";
 
 import { CLIENT_CHANGE_AREAS, CLIENT_REVIEW_SOURCES } from "./constants";
-import { clientSafeFitCopy, formatCompactCount, formatEngagementPct, providedText } from "./format";
+import { clientSafeFitCopy, clientCreatorIdentity, formatCompactCount, formatEngagementPct, formatHandleLabel, providedText } from "./format";
 import { deliverablesLabel, groupedActivityMix, looksLikePlatformList, summarizeCreatorDeliverables, summarizeDeliverablesByPlatform } from "./deliverables";
 import {
   allocationSlices,
@@ -23,13 +23,14 @@ import { HYPEAUDITOR_MEDIA_PLAN_PARITY } from "./hypeauditor-parity";
 import { projectMediaPlanSummary, projectSelectionSummaryFromCards } from "./media-plan-summary";
 import { briefFromSnapshotCreator, mergeFrozenBrief } from "./creator-brief";
 import { enrichSnapshotCreatorFromUnified, mixPostsForDeliverables, profileUrlFromHandle, shouldReplaceContentFeed } from "./creator-snapshot";
-import { creatorPlatformBreakdown } from "./platform-breakdown";
+import { creatorPlatformBreakdown, creatorProfileLinks } from "./platform-breakdown";
 import { clientReviewAvatarUrl, isReviewMediaUrlAllowed, reviewMediaAllowlist } from "./review-media";
 import { diffClientReviewSnapshots, retainCreatorBriefs } from "./snapshot-diff";
 import { shortlistReviewBlockers, quotationReviewBlockers } from "./source-readiness";
 import {
   projectCommercialFromSnapshot,
   parseSourceSnapshot,
+  parseSnapshotCreator,
 } from "./snapshot";
 import { visibleClientWorkspaceSections, defaultClientWorkspaceSection } from "./visible-sections";
 import {
@@ -551,6 +552,49 @@ test("unavailable metrics stay unknown and real zeros stay zero", () => {
   assert.equal(providedText(undefined), "Not provided");
   assert.equal(providedText("  "), "Not provided");
   assert.equal(providedText("UAE"), "UAE");
+});
+
+test("creator names drop Instagram page-title tails and keep handle", () => {
+  const identity = clientCreatorIdentity(
+    "Coach Ghofran foad (@coach_ghofran) • Instagram photos and videos",
+    null
+  );
+  assert.equal(identity.name, "Coach Ghofran foad");
+  assert.equal(identity.handle, "coach_ghofran");
+  assert.equal(formatHandleLabel(identity.handle), "@coach_ghofran");
+  const parsed = parseSnapshotCreator({
+    creatorId: "c1",
+    displayName: "Coach Ghofran foad (@coach_ghofran) • Instagram photos and videos",
+  });
+  assert.equal(parsed.displayName.includes("photos and videos"), false);
+  assert.equal(parsed.displayName, "Coach Ghofran foad");
+  assert.equal(parsed.handle, "@coach_ghofran");
+});
+
+test("creator profile links stay per platform and only use http(s) urls", () => {
+  const links = creatorProfileLinks(
+    [
+      {
+        platform: "instagram",
+        handle: "@ali",
+        profileUrl: "https://www.instagram.com/ali/",
+        lines: [],
+      },
+      {
+        platform: "tiktok",
+        handle: "@ali",
+        lines: [],
+      },
+    ],
+    { platform: "instagram", profileUrl: "javascript:alert(1)" }
+  );
+  assert.equal(links.length, 2);
+  assert.equal(links[0]?.url, "https://www.instagram.com/ali/");
+  assert.equal(links[1]?.url, "https://www.tiktok.com/@ali");
+  assert.equal(
+    links.every((link) => link.url.startsWith("https://")),
+    true
+  );
 });
 
 test("frozen creator brief is projected from snapshot without inventing audience", () => {

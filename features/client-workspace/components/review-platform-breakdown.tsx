@@ -5,6 +5,7 @@ import {
   NOT_AVAILABLE,
 } from "../format";
 import type { ClientPlatformBreakdownRow } from "../platform-breakdown";
+import { profileUrlForPlatform } from "../platform-breakdown";
 import { ReviewPlatformMark } from "./review-platform-mark";
 
 function metricParts(row: ClientPlatformBreakdownRow, compact: boolean): string[] {
@@ -41,9 +42,23 @@ export function ReviewPlatformBreakdown({
     <div className={compact ? "plat-rows compact" : "plat-rows detail"}>
       {rows.map((row) => {
         const showMark = Boolean(row.platform && row.platform !== "_other");
+        const url = showMark
+          ? profileUrlForPlatform(row.platform, row.handle, row.profileUrl)
+          : undefined;
         return (
           <div className="plat-row" key={row.platform || "other"}>
-            {showMark ? <ReviewPlatformMark platform={row.platform} /> : null}
+            {showMark && !compact && url ? (
+              <a
+                className="plat-row-link"
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ReviewPlatformMark platform={row.platform} />
+              </a>
+            ) : showMark ? (
+              <ReviewPlatformMark platform={row.platform} />
+            ) : null}
             <div className="plat-body">
               {(!compact && showMark) || metricParts(row, compact).length > 0 ? (
               <div className="plat-meta">

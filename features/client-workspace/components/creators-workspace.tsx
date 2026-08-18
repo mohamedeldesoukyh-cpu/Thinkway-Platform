@@ -15,7 +15,9 @@ import type { ClientCreatorSelectionState } from "../constants";
 import { CLIENT_CREATOR_STATUS_LABEL } from "../constants";
 import {
   DATA_NOT_AVAILABLE,
+  clientCreatorIdentity,
   formatCompactCount,
+  formatHandleLabel,
   formatLocation,
   formatMatchPercent,
   NOT_AVAILABLE,
@@ -28,12 +30,13 @@ import {
   rosterHeadline,
   rosterSourceLine,
 } from "../presentation";
-import { breakdownForCreator } from "../platform-breakdown";
+import { breakdownForCreator, creatorProfileLinks } from "../platform-breakdown";
 import { countSelections } from "../status";
 import type { ClientAudienceSlice, ClientCreatorBrief, ClientCreatorCard, ClientWorkspaceView } from "../types";
 import { AdvancedReportModal, ContentFeatureGrid } from "./advanced-report-modal";
 import { ProposalSummaryCard } from "./proposal-summary-card";
 import { ReviewAvatar } from "./review-avatar";
+import { ReviewCreatorProfileLinks } from "./review-creator-profile-links";
 import { ReviewPlatformBreakdown } from "./review-platform-breakdown";
 import { IconBack, IconCat, IconChart, IconCheck, IconClose } from "./review-icons";
 
@@ -231,12 +234,20 @@ export function CreatorsWorkspace({
                 className="av"
                 url={creator.avatarUrl}
                 profileUrl={creator.profileUrl}
-                name={creator.displayName}
+                name={clientCreatorIdentity(creator.displayName, creator.handle).name}
                 index={view.creators.findIndex((item) => item.creatorId === creator.creatorId) || index}
                 token={token}
               />
               <div className="info">
-                <div className="nm">{creator.displayName}</div>
+                {(() => {
+                  const identity = clientCreatorIdentity(creator.displayName, creator.handle);
+                  return (
+                    <>
+                      <div className="nm">{identity.name}</div>
+                      {identity.handle ? <div className="hd">{formatHandleLabel(identity.handle)}</div> : null}
+                    </>
+                  );
+                })()}
                 {formatLocation(creator.city, creator.country) ? (
                   <div className="mt loc">
                     {`${flagFromCountry(creator.country)} ${formatLocation(creator.city, creator.country)}`.trim()}
@@ -349,7 +360,6 @@ function CreatorDetailPane({
   onOpenReport: () => void;
   cpm?: number;
 }) {
-  const name = brief?.displayName || creator.displayName;
   const location = brief?.location || formatLocation(creator.city, creator.country);
   const investmentAmount = brief?.investmentAmount ?? creator.investmentAmount;
   const investmentCurrency = brief?.investmentCurrency ?? creator.investmentCurrency ?? currency;
@@ -362,6 +372,18 @@ function CreatorDetailPane({
       : [creator.category, creator.niche].filter((value): value is string => Boolean(value));
   const posts = (brief?.contentFeed.length ? brief.contentFeed : creator.contentFeed ?? creator.contentExamples) ?? [];
   const platformRows = breakdownForCreator(creator, brief);
+  const identity = clientCreatorIdentity(
+    brief?.displayName || creator.displayName,
+    brief?.handle || creator.handle
+  );
+  const name = identity.name;
+  const handleLabel = formatHandleLabel(identity.handle);
+  const profileLinks = creatorProfileLinks(platformRows, {
+    platform: creator.platform,
+    handle: identity.handle || creator.handle,
+    profileUrl: brief?.profileUrl || creator.profileUrl,
+  });
+  const primaryProfileUrl = profileLinks[0]?.url;
   const multiPlatform =
     platformRows.filter((row) => row.platform && row.platform !== "_other").length > 1;
   const brands = brief?.brandMentions.length ? brief.brandMentions : creator.brandMentions ?? [];
@@ -386,17 +408,46 @@ function CreatorDetailPane({
         Back to creators
       </button>
       <div className="dt-hero2">
-        <ReviewAvatar
-          className="portrait"
-          initialsClassName="ini"
-          url={brief?.avatarUrl || creator.avatarUrl}
-          profileUrl={brief?.profileUrl || creator.profileUrl}
-          name={name}
-          index={index}
-          token={token}
-        />
+        {primaryProfileUrl ? (
+          <a className="portrait-link" href={primaryProfileUrl} target="_blank" rel="noopener noreferrer">
+            <ReviewAvatar
+              className="portrait"
+              initialsClassName="ini"
+              url={brief?.avatarUrl || creator.avatarUrl}
+              profileUrl={brief?.profileUrl || creator.profileUrl}
+              name={name}
+              index={index}
+              token={token}
+            />
+          </a>
+        ) : (
+          <ReviewAvatar
+            className="portrait"
+            initialsClassName="ini"
+            url={brief?.avatarUrl || creator.avatarUrl}
+            profileUrl={brief?.profileUrl || creator.profileUrl}
+            name={name}
+            index={index}
+            token={token}
+          />
+        )}
         <div className="dt-meta">
-          <p className="nm">{name}</p>
+          {primaryProfileUrl ? (
+            <a className="nm" href={primaryProfileUrl} target="_blank" rel="noopener noreferrer">
+              {name}
+            </a>
+          ) : (
+            <p className="nm">{name}</p>
+          )}
+          {handleLabel ? (
+            primaryProfileUrl ? (
+              <a className="hd" href={primaryProfileUrl} target="_blank" rel="noopener noreferrer">
+                {handleLabel}
+              </a>
+            ) : (
+              <p className="hd">{handleLabel}</p>
+            )
+          ) : null}
           <div className="mchips">
             {location ? (
               <span className="mchip">
@@ -425,7 +476,7 @@ function CreatorDetailPane({
                 <IconCheck />
                 Accept
               </button>
-              <button type="button" className="btn" disabled={pending} onClick={onReject}>
+              <button type="button" className="btn rej" disabled={pending} onClick={onReject}>
                 <IconClose />
                 Reject
               </button>
@@ -447,6 +498,12 @@ function CreatorDetailPane({
               placeholder="Create note…"
               disabled={!canDecide}
             />
+          </div>
+        ) : null}
+        {profileLinks.length > 0 ? (
+          <div className="sec">
+            <p className="st">Creator profile URL</p>
+            <ReviewCreatorProfileLinks links={profileLinks} />
           </div>
         ) : null}
         <div className="sec">

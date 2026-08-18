@@ -1,3 +1,5 @@
+import { resolveCreatorIdentity } from "@/lib/text/decode-html-entities";
+
 export const NOT_AVAILABLE = "Not available";
 export const DATA_NOT_AVAILABLE = "Data unavailable";
 export const NOT_PROVIDED = "Not provided";
@@ -89,4 +91,14 @@ export function clientFacingAllocationNote(note?: string): string | undefined {
     .replace(/^100% Creator Fees — brief and CampaignFacts[^.]*\.\s*/i, "")
     .trim();
   return stripped || "Creator investment covers production inside the fee.";
+}
+
+export function clientCreatorIdentity(name?: string | null, handle?: string | null) {
+  return resolveCreatorIdentity(name, handle);
+}
+
+export function formatHandleLabel(handle?: string | null): string | undefined {
+  const username = handle?.trim().replace(/^@+/, "");
+  if (!username) return undefined;
+  return `@${username}`;
 }

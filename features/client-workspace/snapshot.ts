@@ -1,3 +1,5 @@
+import { pickCreatorDisplayName, resolveCreatorIdentity } from "@/lib/text/decode-html-entities";
+
 import type { ClientCreatorSelectionState } from "./constants";
 import { isSelectedForCalculator } from "./status";
 import type {
@@ -178,10 +180,11 @@ function parseMediaPlanSummary(value: unknown): ClientMediaPlanSummary | undefin
 }
 
 export function parseSnapshotCreator(row: Record<string, unknown>): ClientReviewSourceSnapshotCreator {
+  const identity = resolveCreatorIdentity(asString(row.displayName), asString(row.handle));
   return {
     creatorId: asString(row.creatorId) || "",
-    displayName: asString(row.displayName) || "Creator",
-    handle: asString(row.handle),
+    displayName: pickCreatorDisplayName([asString(row.displayName)], identity.handle) || identity.name || "Creator",
+    handle: identity.handle ? `@${identity.handle}` : asString(row.handle),
     platform: asString(row.platform),
     platformAccounts: parsePlatformAccounts(row.platformAccounts),
     followers: asNumber(row.followers),

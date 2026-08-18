@@ -1,3 +1,4 @@
+import { pickCreatorDisplayName } from "@/lib/text/decode-html-entities";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
 import { resolveCreatorRecentPublicationThumbnail } from "@/lib/creators/recent-publication-thumb";
@@ -160,6 +161,7 @@ export function profileUrlFromHandle(handle?: string | null, platform?: string |
   const network = platform?.trim().toLowerCase() ?? "";
   if (network === "instagram") return `https://www.instagram.com/${username}/`;
   if (network === "tiktok") return `https://www.tiktok.com/@${username}`;
+  if (network === "youtube") return `https://www.youtube.com/@${username}`;
   if (network === "facebook") return `https://www.facebook.com/${username}`;
   return undefined;
 }
@@ -210,16 +212,17 @@ export function enrichSnapshotCreatorFromUnified(
       [...(base.categories ?? []), ...creator.categories, creator.ai_category ?? ""].filter(Boolean)
     ),
   ];
+  const handle =
+    base.handle ||
+    (platform?.handle
+      ? platform.handle.startsWith("@")
+        ? platform.handle
+        : `@${platform.handle}`
+      : undefined);
   return {
     ...base,
-    displayName: base.displayName || creator.display_name,
-    handle:
-      base.handle ||
-      (platform?.handle
-        ? platform.handle.startsWith("@")
-          ? platform.handle
-          : `@${platform.handle}`
-        : undefined),
+    displayName: pickCreatorDisplayName([base.displayName, creator.display_name], handle) || "Creator",
+    handle,
     platform: base.platform || platform?.platform,
     platformAccounts: mergePlatformStats(
       fallbackPlatformStats(base),

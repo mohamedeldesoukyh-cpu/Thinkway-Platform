@@ -196,3 +196,67 @@ export function breakdownForCreator(
     },
   });
 }
+
+export function safeHttpUrl(url?: string | null): string | undefined {
+  const trimmed = url?.trim();
+  if (!trimmed) return undefined;
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return undefined;
+    return parsed.href;
+  } catch {
+    return undefined;
+  }
+}
+
+export function profileUrlForPlatform(
+  platform: string,
+  handle?: string,
+  profileUrl?: string
+): string | undefined {
+  const direct = safeHttpUrl(profileUrl);
+  if (direct) return direct;
+  const username = handle?.trim().replace(/^@/, "") ?? "";
+  if (!username || /[/?#\s]/.test(username)) return undefined;
+  const key = canonicalPlatformKey(platform);
+  if (key === "instagram") return `https://www.instagram.com/${username}/`;
+  if (key === "tiktok") return `https://www.tiktok.com/@${username}`;
+  if (key === "youtube") return `https://www.youtube.com/@${username}`;
+  if (key === "facebook") return `https://www.facebook.com/${username}`;
+  return undefined;
+}
+
+export type ClientCreatorProfileLink = {
+  platform: string;
+  url: string;
+  handle?: string;
+};
+
+export function creatorProfileLinks(
+  rows: ClientPlatformBreakdownRow[],
+  fallback?: { platform?: string; handle?: string; profileUrl?: string }
+): ClientCreatorProfileLink[] {
+  const links: ClientCreatorProfileLink[] = [];
+  const seen = new Set<string>();
+  const sources = [
+    ...rows,
+    ...(fallback
+      ? [
+          {
+            platform: fallback.platform || "",
+            handle: fallback.handle,
+            profileUrl: fallback.profileUrl,
+            lines: [],
+          } satisfies ClientPlatformBreakdownRow,
+        ]
+      : []),
+  ];
+  for (const row of sources) {
+    if (!row.platform || row.platform === "_other") continue;
+    const url = profileUrlForPlatform(row.platform, row.handle, row.profileUrl);
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    links.push({ platform: row.platform, url, handle: formatPlatformHandle(row.handle) });
+  }
+  return links;
+}

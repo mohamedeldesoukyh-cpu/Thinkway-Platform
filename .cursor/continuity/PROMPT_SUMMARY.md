@@ -3,7 +3,7 @@
 **Branch:** `develop`  
 **Focus:** Client Workspace Creators UX (Development only)
 
-Creator list cards and detail now show **per-platform** handle, followers, ER, and deliverables. Instagram numbers are no longer reused for TikTok/YouTube/Facebook. Missing platform metrics stay Not available. Investment remains one creator total.
+Scroll: only the **tabs** (Overview → Approval) and the **selected creator** pane stay pinned. Logo, campaign hero, and calculator scroll away. Header gutters are wider. Accept is white/green; Reject is white/red. Creator names drop Instagram page-title tails; detail includes clickable per-platform profile URLs.
 
 Dev: https://dev.thinkwaymedia.com  
 Do **not** deploy Production.
