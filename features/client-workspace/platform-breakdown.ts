@@ -132,7 +132,7 @@ export function creatorPlatformBreakdown(input: {
       ? deliverableKeys
       : accounts.map((row) => row.platform);
   const other = groups.find((group) => group.platform === "_other");
-  const rows = keys.map((platform) => {
+  const rows: ClientPlatformBreakdownRow[] = keys.map((platform) => {
     const account = accountMap.get(platform);
     const lines = groups.find((group) => group.platform === platform)?.lines ?? [];
     return {
