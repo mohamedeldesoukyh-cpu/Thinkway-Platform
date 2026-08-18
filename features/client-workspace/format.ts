@@ -24,9 +24,24 @@ export function formatCompactCount(count: number | undefined | null): string {
   return Math.round(count).toLocaleString();
 }
 
+/**
+ * Client Workspace ER matches the platform engine: a percentage
+ * (`2.6` = 2.6%, `0.9` = 0.9%). Values in (0, 1] are sub-1% rates, not 0–1
+ * fractions. Values above 100 are a percent that was multiplied twice
+ * (e.g. 193.4 → 1.934).
+ */
+export function normalizeClientEngagementRate(
+  rate: number | undefined | null
+): number | null {
+  if (rate == null || !Number.isFinite(rate) || rate < 0) return null;
+  let value = rate;
+  if (value > 100) value /= 100;
+  return value;
+}
+
 export function formatEngagementPct(rate: number | undefined | null): string {
-  if (rate == null || !Number.isFinite(rate)) return NOT_AVAILABLE;
-  const value = rate > 0 && rate <= 1 ? rate * 100 : rate;
+  const value = normalizeClientEngagementRate(rate);
+  if (value == null) return NOT_AVAILABLE;
   return `${value.toFixed(1)}%`;
 }
 

@@ -1,5 +1,11 @@
 import type { ClientReviewSource } from "./constants";
-import { clientSafeFitCopy, clientSafeParagraph, formatCompactCount, formatPlatformLabel } from "./format";
+import {
+  clientSafeFitCopy,
+  clientSafeParagraph,
+  formatCompactCount,
+  formatPlatformLabel,
+  normalizeClientEngagementRate,
+} from "./format";
 import type {
   ClientAudienceSlice,
   ClientCreatorCard,
@@ -250,18 +256,20 @@ export function qualityGaugePercent(label?: string): number | undefined {
 }
 
 export function engagementBadge(rate?: number | null): { className: string; text: string } | undefined {
-  if (rate == null || !Number.isFinite(rate)) return undefined;
-  if (rate >= 5) return { className: "exc", text: "Excellent" };
+  const value = normalizeClientEngagementRate(rate);
+  if (value == null) return undefined;
+  if (value >= 5) return { className: "exc", text: "Excellent" };
   return { className: "avg", text: "Average" };
 }
 
 export function engagementGaugePercent(rate?: number | null): number | undefined {
-  if (rate == null || !Number.isFinite(rate)) return undefined;
-  if (rate <= 0) return 8;
-  if (rate < 1) return 22;
-  if (rate < 2) return 38;
-  if (rate < 3.5) return 55;
-  if (rate < 5) return 72;
+  const value = normalizeClientEngagementRate(rate);
+  if (value == null) return undefined;
+  if (value <= 0) return 8;
+  if (value < 1) return 22;
+  if (value < 2) return 38;
+  if (value < 3.5) return 55;
+  if (value < 5) return 72;
   return 88;
 }
 

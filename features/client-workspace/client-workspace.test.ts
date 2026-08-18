@@ -22,6 +22,7 @@ import {
   creatorMixFromRoster,
   qualityBadge,
   qualityGaugePercent,
+  engagementBadge,
   engagementGaugePercent,
   rosterHeadline,
   rosterSourceLine,
@@ -1180,6 +1181,17 @@ test("missing platform metrics stay blank on the avatar chip", () => {
   assert.equal(formatOptionalEngagementPct(8.8), "8.8%");
   assert.equal(formatOptionalCompactCount(undefined), null);
   assert.equal(formatOptionalCompactCount(2100), "2.1K");
+});
+
+test("client engagement rates stay percentages — 0.9 is 0.9%, not 90%", () => {
+  assert.equal(formatEngagementPct(0.9), "0.9%");
+  assert.equal(formatEngagementPct(0.903), "0.9%");
+  assert.equal(formatEngagementPct(4.2), "4.2%");
+  assert.equal(formatEngagementPct(193.4), "1.9%");
+  assert.equal(engagementBadge(0.9)?.text, "Average");
+  assert.equal(engagementBadge(6.1)?.text, "Excellent");
+  assert.ok((engagementGaugePercent(0.9) ?? 0) < (engagementGaugePercent(4.2) ?? 0));
+  assert.equal(engagementGaugePercent(193.4), engagementGaugePercent(1.934));
 });
 
 test("publication platform is inferred from the content URL", () => {

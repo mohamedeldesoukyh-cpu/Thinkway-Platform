@@ -1,9 +1,11 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `develop` = `main` @ `fe1c2185`  
-**Focus:** Client Workspace Show link + campaign-quotation approvals — **released to Production** `dpl_FN883pK1CMdPGWhhRdLufRbnH92k`
+**Branch:** `develop`  
+**Focus:** Client Workspace engagement % display — **releasing to Production**
 
-Shortlist **Generate link** / **Show link** creates the Client Workspace when none exists. Converted quotations skip a false unsaved-save gate. Creators on campaign-linked quotations show as approved in Client Workspace.
+Client Workspace treated ER values in (0, 1] as 0–1 fractions and multiplied by 100. Platform stores ER as a percent (`0.9` = 0.9%), so Instagram `0.903` rendered as **90.3%** while the Average badge/meter used the raw value. Rates above 100 (e.g. `193.4`) are treated as a percent multiplied twice.
+
+Fix: `normalizeClientEngagementRate` in `features/client-workspace/format.ts` — used by list chips, creator card, badge, and meter. No database changes.
 
 - Dev: https://dev.thinkwaymedia.com  
 - Prod: https://app.thinkwaymedia.com  
