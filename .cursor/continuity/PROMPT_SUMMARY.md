@@ -1,9 +1,12 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `develop`  
-**Focus:** Quotation workspace consumes client review decisions (Development only)
+**Branch:** `develop` (aligned with `main`)  
+**Focus:** Client Workspace + quotation client-review — **released to Production** `2f72856e`
 
-Client-accepted / under-review / rejected creators now show on the internal quotation: tags, split sections, approved cost/revenue/GP in the header, select/filter, accept on behalf, and move approved creators to campaign (quotation document must already be approved).
+Public Client Workspace and internal quotation consumption of client decisions are live on both hosts.
 
-Dev: https://dev.thinkwaymedia.com  
-Do **not** deploy Production.
+- Dev: https://dev.thinkwaymedia.com  
+- Prod: https://app.thinkwaymedia.com  
+- Production Supabase `ienowhwfyxoqtzbgltno`: applied `20260817120000`, `20260817130000`, `20260818120000` (client reviews, sources, share_token)
+
+Quotation document must already be approved before moving accepted creators to campaign.
