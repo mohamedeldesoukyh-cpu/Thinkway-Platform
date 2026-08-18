@@ -505,12 +505,14 @@ function CreatorDetailPane({
       </div>
       <div className="dt-body">
         <EngagementMeter rate={brief?.engagementRate ?? creator.engagementRate} />
-        <ReviewMeter
-          label="Audience quality"
-          value={quality?.text}
-          percent={gauge}
-          badge={quality}
-        />
+        {quality && gauge != null ? (
+          <ReviewMeter
+            label="Audience quality"
+            value={quality.text}
+            percent={gauge}
+            badge={quality}
+          />
+        ) : null}
         {canDecide ? (
           <div className="sec">
             <p className="st">Notes and status updates</p>

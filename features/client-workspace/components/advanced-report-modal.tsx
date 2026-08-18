@@ -470,10 +470,9 @@ function AudienceSection({
   }
   return (
     <>
+      {quality && gauge != null ? (
       <div className="rp-sec">
         <p className="st">Audience quality</p>
-        {quality && gauge != null ? (
-          <>
             {audience.qualityLabel === "High Quality" || audience.qualityLabel === "Good" ? (
               <div className="aq-ok">
                 <IconCheck />
@@ -505,12 +504,9 @@ function AudienceSection({
               <span>Average</span>
               <span className="hi">Excellent</span>
             </div>
-          </>
-        ) : (
-          <p className="unavailable">Audience quality unavailable</p>
-        )}
         {audience.summary ? <p className="desc" style={{ marginTop: 12 }}>{audience.summary}</p> : null}
       </div>
+      ) : null}
       {audience.qualityIndicators?.length ? (
         <div className="rp-sec">
           <p className="st">Audience signals</p>
