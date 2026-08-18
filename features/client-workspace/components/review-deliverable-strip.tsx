@@ -5,9 +5,11 @@ import { ReviewPlatformMark } from "./review-platform-mark";
 export function ReviewDeliverableStrip({
   items,
   fallback,
+  showPlatforms = true,
 }: {
   items?: ClientDeliverableItem[];
   fallback?: string;
+  showPlatforms?: boolean;
 }) {
   const summary = summarizeCreatorDeliverables(items);
   if (summary.lines.length === 0 && summary.platforms.length === 0) {
@@ -18,9 +20,11 @@ export function ReviewDeliverableStrip({
 
   return (
     <div className="dels">
-      {summary.platforms.map((platform) => (
-        <ReviewPlatformMark key={platform} platform={platform} />
-      ))}
+      {showPlatforms
+        ? summary.platforms.map((platform) => (
+            <ReviewPlatformMark key={platform} platform={platform} />
+          ))
+        : null}
       {summary.lines.map((line) => (
         <span className="del-chip" key={line.key}>
           {line.label}

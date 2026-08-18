@@ -254,9 +254,11 @@ export function CreatorsWorkspace({
                     {`${flagFromCountry(creator.country)} ${formatLocation(creator.city, creator.country)}`.trim()}
                   </div>
                 ) : null}
+                <ReviewPlatformBreakdown rows={breakdownForCreator(creator)} variant="list" />
                 <ReviewDeliverableStrip
                   items={creator.deliverableItems}
                   fallback={creator.deliverables}
+                  showPlatforms={false}
                 />
               </div>
               <span className={statusClass(selection[creator.creatorId] ?? creator.selection)}>
