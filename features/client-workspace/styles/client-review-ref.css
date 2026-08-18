@@ -152,14 +152,19 @@
 .tw-review .sec .dels{margin:0 0 10px;}
 .tw-review .posts-feat .post .plat-badge,
 .tw-review .posts .post .plat-badge{
-  position:absolute;top:8px;left:8px;z-index:1;
-  width:22px;height:22px;border-radius:50%;
-  background:rgba(255,255,255,.95);
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 1px 4px rgba(0,0,0,.28);
+  position:absolute;top:10px;left:10px;z-index:1;
+  width:auto;height:auto;padding:0;
+  background:transparent;border-radius:0;box-shadow:none;
+  display:block;
 }
 .tw-review .posts-feat .post .plat-badge .plat-mark,
-.tw-review .posts .post .plat-badge .plat-mark{width:16px;height:16px;}
+.tw-review .posts .post .plat-badge .plat-mark{
+  width:28px;height:28px;border-radius:6px;object-fit:contain;
+  filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));
+}
+.tw-review .posts-feat .post.big .plat-badge .plat-mark{
+  width:36px;height:36px;
+}
 
 @media(max-width:980px){
   .tw-review .sumbar{position:static;margin:12px 0 4px;border-radius:14px;}
