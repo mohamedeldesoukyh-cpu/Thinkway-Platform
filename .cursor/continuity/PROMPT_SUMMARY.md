@@ -3,7 +3,7 @@
 **Branch:** `develop`  
 **Focus:** Client Workspace Creators UX (Development only)
 
-List cards stay compact: platform avatar + ER (avatar only when ER is missing). Publications keep a visible platform mark. Update banner dismisses after Got it.
+Content categories use unique icons/colors and ECI share percents when frozen; junk labels like "Can't" are dropped. Brand mentions load logos through `/api/review/brand-logo` (not Clearbit in the browser).
 
 Dev: https://dev.thinkwaymedia.com  
 Do **not** deploy Production.

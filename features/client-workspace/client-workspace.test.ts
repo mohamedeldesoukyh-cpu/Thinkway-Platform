@@ -64,14 +64,23 @@ import {
   brandMentionsInsight,
   normalizeBrandMentions,
 } from "./brand-mentions";
+import { clientReviewBrandLogoPath, reviewBrandMentionAllowed } from "./brand-logo";
+import {
+  categoryFamily,
+  contentCategoriesForDisplay,
+  contentCategoriesFromShares,
+  isDisplayableCategory,
+} from "./content-categories";
 
 test("public review path does not require login", () => {
   assert.equal(isPublicPath("/review"), true);
   assert.equal(isPublicPath("/review/abc/creators"), true);
   assert.equal(isPublicPath("/api/review/media"), true);
+  assert.equal(isPublicPath("/api/review/brand-logo"), true);
   assert.equal(classifyPagePath("/review/abc"), "public");
   assert.equal(classifyPagePath("/review/abc/creators"), "public");
   assert.equal(classifyApiPath("/api/review/media"), "public");
+  assert.equal(classifyApiPath("/api/review/brand-logo"), "public");
 });
 
 test("token hashing is md5 like IO approval tokens", () => {
@@ -1198,6 +1207,90 @@ test("brand mentions keep names from the snapshot and only show a 180-day label 
   });
   assert.equal(snapshot?.brandMentions?.[0]?.name, "Nike");
   assert.equal(snapshot?.brandMentions?.[1]?.mentionsLast180Days, 3);
+  assert.equal(clientReviewBrandLogoPath("t".repeat(16), "Pepsi").includes("name=Pepsi"), true);
+});
+
+test("content categories drop junk labels and keep unique icons plus ECI shares", () => {
+  assert.equal(isDisplayableCategory("Can't"), false);
+  assert.equal(isDisplayableCategory("Lifestyle"), true);
+  const display = contentCategoriesForDisplay(undefined, [
+    "Lifestyle",
+    "Fitness & Yoga",
+    "Can't",
+    "Food",
+    "Fitness",
+  ]);
+  assert.deepEqual(
+    display.map((item) => item.label),
+    ["Lifestyle", "Fitness & Yoga", "Food", "Fitness"]
+  );
+  assert.equal(categoryFamily("Camera & Photography"), "photography");
+  assert.equal(categoryFamily("Fitness & Yoga"), "health");
+  assert.equal(categoryFamily("Food"), "food");
+  const shares = contentCategoriesFromShares([
+    { category: "Lifestyle", percent: 42, postCount: 18 },
+    { category: "Other", percent: 20, postCount: 8 },
+    { category: "Food", percent: 18, postCount: 7 },
+  ]);
+  assert.deepEqual(
+    shares.map((item) => `${item.label}:${item.percent}`),
+    ["Lifestyle:42", "Food:18"]
+  );
+  const parsed = parseSnapshotCreator({
+    creatorId: "a",
+    displayName: "Ali",
+    categories: ["Lifestyle", "Can't"],
+    contentCategories: [{ label: "Lifestyle", percent: 42 }],
+  });
+  assert.equal(parsed.contentCategories?.[0]?.percent, 42);
+  const merged = mergeFrozenBrief(
+    {
+      creatorId: "a",
+      displayName: "A",
+      categories: ["Lifestyle", "Can't", "Food"],
+    },
+    {
+      enriched: {
+        creatorId: "a",
+        displayName: "A",
+        categories: ["Lifestyle", "Can't", "Food"],
+      },
+      bundle: null,
+    }
+  );
+  assert.deepEqual(merged.categories, ["Lifestyle", "Food"]);
+  assert.equal(merged.categories?.includes("Can't"), false);
+});
+
+test("brand logo proxy only serves names frozen on the review snapshot", () => {
+  const snapshot = parseSourceSnapshot({
+    source: "quotation",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme Legal",
+    platforms: ["instagram"],
+    deliverables: [],
+    creators: [
+      {
+        creatorId: "a",
+        displayName: "A",
+        brandMentions: [{ name: "Pepsi", handle: "pepsi" }],
+      },
+    ],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "Duration not confirmed", phases: [] },
+    commercial: {
+      currency: "EGP",
+      creatorInvestment: 0,
+      totalInvestment: 0,
+      lines: [],
+      selectedCount: 1,
+      totalCount: 1,
+    },
+    creatorIds: ["a"],
+  });
+  assert.equal(reviewBrandMentionAllowed(snapshot, "Pepsi")?.handle, "pepsi");
+  assert.equal(reviewBrandMentionAllowed(snapshot, "Nike"), null);
 });
 
 test("accept can be removed until the client submits the selection", () => {

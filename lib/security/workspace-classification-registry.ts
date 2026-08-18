@@ -92,6 +92,7 @@ export const API_ROUTE_CLASSIFICATIONS: Record<string, WorkspaceClass> = {
   "/api/creators/avatar": "internal_workspace",
   "/api/creators/publication-preview": "internal_workspace",
   "/api/review/media": "public",
+  "/api/review/brand-logo": "public",
   "/api/vendors/platform-accounts/enrich": "internal_workspace",
   "/api/vendors/crm-import-search": "internal_workspace",
 

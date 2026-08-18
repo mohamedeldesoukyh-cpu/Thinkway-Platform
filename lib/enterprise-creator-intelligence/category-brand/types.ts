@@ -103,6 +103,8 @@ export type ContentMixShare = {
 
 export type BrandCollaboration = {
   brandName: string;
+  /** Instagram/TikTok mention handle used to extract this brand. Display-only. */
+  handle?: string;
   industry: string | null;
   collaborationKind: BrandCollaborationKind;
   mentionCount: number;

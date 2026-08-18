@@ -5,6 +5,11 @@ import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { brandMentionsFromBundle, normalizeBrandMentions } from "./brand-mentions";
+import {
+  categoriesNeedRefresh,
+  contentCategoriesForDisplay,
+  contentCategoriesFromBundle,
+} from "./content-categories";
 import { clientSafeFitCopy, formatLocation } from "./format";
 import { parseDeliverableItems, summarizeCreatorDeliverables } from "./deliverables";
 import {
@@ -204,11 +209,14 @@ export function briefFromSnapshotCreator(
     historical: creator.historical ?? [],
     contentFeed,
     campaignFit: campaignFitCopy(creator),
-    categories: creator.categories?.length
-      ? creator.categories
-      : creator.category
-        ? [creator.category]
-        : [],
+    categories: contentCategoriesForDisplay(creator.contentCategories, creator.categories).map(
+      (item) => item.label
+    ),
+    contentCategories: contentCategoriesForDisplay(creator.contentCategories, [
+      ...(creator.categories ?? []),
+      creator.category,
+      creator.niche,
+    ]),
     niche: creator.niche,
     brandMentions: normalizeBrandMentions(creator.brandMentions),
     matchPercent: creator.matchPercent,
@@ -291,9 +299,21 @@ export function mergeFrozenBrief(
     creator.performance ??
     clientPerformanceFromCreator(live.enriched, live.bundle) ??
     undefined;
-  const brandMentions = creator.brandMentions?.length
-    ? normalizeBrandMentions(creator.brandMentions)
-    : brandMentionsFromBundle(live.bundle);
+  const brandMentionsFromLive = brandMentionsFromBundle(live.bundle);
+  const brandMentions = brandMentionsFromLive.length
+    ? brandMentionsFromLive
+    : normalizeBrandMentions(creator.brandMentions);
+  const contentCategories = (() => {
+    const fromBundle = contentCategoriesFromBundle(live.bundle);
+    if (fromBundle.length > 0) return fromBundle;
+    return contentCategoriesForDisplay(creator.contentCategories, [
+      ...(live.enriched.categories ?? []),
+      ...(creator.categories ?? []),
+      live.enriched.category,
+      creator.category,
+      creator.niche,
+    ]);
+  })();
   const contentFeed = shouldReplaceContentFeed(creator.contentFeed, live.enriched.contentFeed)
     ? live.enriched.contentFeed
     : creator.contentFeed;
@@ -322,6 +342,8 @@ export function mergeFrozenBrief(
     performance,
     historical: historical.length > 0 ? historical : undefined,
     brandMentions: brandMentions.length > 0 ? brandMentions : undefined,
+    categories: contentCategories.length > 0 ? contentCategories.map((item) => item.label) : undefined,
+    contentCategories: contentCategories.length > 0 ? contentCategories : undefined,
     contentFeed,
     briefFrozenAt: frozenAt,
     briefBackfillDone: true,
@@ -335,6 +357,12 @@ function needsClientBriefBackfill(creator: ClientReviewSourceSnapshotCreator): b
   if (!creator.platformAccounts?.length) {
     const platforms = summarizeCreatorDeliverables(creator.deliverableItems).platforms;
     if (platforms.length > 1) return true;
+  }
+  if (
+    categoriesNeedRefresh(creator.categories, creator.contentCategories) ||
+    (creator.brandMentions ?? []).some((mention) => mention.name.trim().length < 2)
+  ) {
+    return true;
   }
   if (creator.briefBackfillDone) return false;
   if (!creator.contentFeed?.length) return true;

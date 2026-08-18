@@ -17,6 +17,7 @@ import {
   addReviewCommentAction,
   loadCreatorBriefAction,
 } from "../actions/client-workspace-actions";
+import { contentCategoriesForDisplay } from "../content-categories";
 import { deliverablesLabel } from "../deliverables";
 import {
   DATA_NOT_AVAILABLE,
@@ -91,11 +92,14 @@ export function CreatorDetailSheet({
     (item) => item.targetType === "creator" && item.targetId === creator?.creatorId
   );
   const match = formatMatchPercent(view?.matchPercent ?? creator?.matchPercent);
-  const categories = view?.categories.length
-    ? view.categories
-    : creator?.categories?.length
-      ? creator.categories
-      : [creator?.category, creator?.niche].filter((value): value is string => Boolean(value));
+  const categories = contentCategoriesForDisplay(
+    view?.contentCategories ?? creator?.contentCategories,
+    view?.categories.length
+      ? view.categories
+      : creator?.categories?.length
+        ? creator.categories
+        : [creator?.category, creator?.niche]
+  ).map((item) => item.label);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

@@ -161,6 +161,7 @@ export function buildBrandIntelligence(input: {
 
       return {
         brandName: acc.brandName,
+        handle: acc.handle,
         industry,
         collaborationKind,
         mentionCount: acc.mentions.length,

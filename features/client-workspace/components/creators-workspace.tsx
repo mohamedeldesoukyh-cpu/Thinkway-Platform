@@ -30,17 +30,18 @@ import {
   rosterHeadline,
   rosterSourceLine,
 } from "../presentation";
-import { breakdownForCreator, creatorProfileLinks } from "../platform-breakdown";
+import { contentCategoriesForDisplay } from "../content-categories";
 import { countSelections, nextAcceptState } from "../status";
 import type { ClientAudienceSlice, ClientCreatorBrief, ClientCreatorCard, ClientWorkspaceView } from "../types";
 import { AdvancedReportModal, ContentFeatureGrid } from "./advanced-report-modal";
+import { ContentCategoryGrid } from "./content-category-grid";
 import { ProposalSummaryCard } from "./proposal-summary-card";
 import { ReviewAvatar } from "./review-avatar";
 import { ReviewCreatorProfileLinks } from "./review-creator-profile-links";
 import { ReviewDeliverableStrip } from "./review-deliverable-strip";
 import { BrandMentionsCard, EstimatedReachCard } from "./review-insight-cards";
 import { ReviewPlatformBreakdown } from "./review-platform-breakdown";
-import { IconBack, IconCat, IconChart, IconCheck, IconClose } from "./review-icons";
+import { IconBack, IconChart, IconCheck, IconClose } from "./review-icons";
 
 const STATUS_FILTERS: Array<{ id: "all" | "recommended" | ClientCreatorSelectionState; label: string }> = [
   { id: "all", label: "All" },
@@ -372,11 +373,14 @@ function CreatorDetailPane({
   const investmentCurrency = brief?.investmentCurrency ?? creator.investmentCurrency ?? currency;
   const audience = brief?.audience ?? creator.audience;
   const performance = brief?.performance ?? creator.performance;
-  const categories = brief?.categories.length
+  const categoryFallback = brief?.categories.length
     ? brief.categories
     : creator.categories?.length
       ? creator.categories
-      : [creator.category, creator.niche].filter((value): value is string => Boolean(value));
+      : [creator.category, creator.niche];
+  const contentCategories = brief?.contentCategories.length
+    ? brief.contentCategories
+    : creator.contentCategories;
   const posts = (brief?.contentFeed.length ? brief.contentFeed : creator.contentFeed ?? creator.contentExamples) ?? [];
   const platformRows = breakdownForCreator(creator, brief);
   const identity = clientCreatorIdentity(
@@ -461,9 +465,11 @@ function CreatorDetailPane({
                 {flagFromCountry(creator.country)} {location}
               </span>
             ) : null}
-            {categories.slice(0, 2).map((category) => (
-              <span className="mchip" key={category}>
-                {category}
+            {contentCategoriesForDisplay(contentCategories, categoryFallback)
+              .slice(0, 2)
+              .map((category) => (
+              <span className="mchip" key={category.label}>
+                {category.label}
               </span>
             ))}
             <span className={statusClass(creator.selection)}>{CLIENT_CREATOR_STATUS_LABEL[creator.selection]}</span>
@@ -532,20 +538,7 @@ function CreatorDetailPane({
         </div>
         <div className="sec">
           <p className="st">Content categories</p>
-          {categories.length > 0 ? (
-            <div className="cats">
-              {categories.slice(0, 6).map((category) => (
-                <div className="catc" key={category}>
-                  <div className="ic">
-                    <IconCat />
-                  </div>
-                  <p className="l">{category}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="unavailable">Category unavailable</p>
-          )}
+          <ContentCategoryGrid items={contentCategories} fallback={categoryFallback} />
         </div>
         <div className="sec">
           <p className="st">Expected costs</p>
@@ -630,7 +623,7 @@ function CreatorDetailPane({
         </div>
         )}
         <EstimatedReachCard reach={reach} followers={creator.followers} />
-        <BrandMentionsCard mentions={brands} />
+        <BrandMentionsCard mentions={brands} token={token} />
         <div className="sec">
           <button type="button" className="btn primary" onClick={onOpenReport} style={{ width: "100%", justifyContent: "center" }}>
             <IconChart />

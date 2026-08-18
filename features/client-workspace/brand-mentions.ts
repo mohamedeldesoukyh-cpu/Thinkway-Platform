@@ -37,6 +37,7 @@ export function brandMentionsFromBundle(
     .slice(0, 12)
     .map((brand) => ({
       name: brand.brandName.trim(),
+      handle: brand.handle?.trim() || undefined,
       mentionCount: brand.mentionCount,
       mentionsLast180Days: finiteCount(brand.windows.last_180_days),
     }));
@@ -70,12 +71,46 @@ export function brandFaviconUrl(mention: ClientBrandMention): string {
   return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`;
 }
 
+const KNOWN_BRAND_DOMAINS: Record<string, string> = {
+  pepsi: "pepsi.com",
+  nike: "nike.com",
+  adidas: "adidas.com",
+  samsung: "samsung.com",
+  apple: "apple.com",
+  starbucks: "starbucks.com",
+  bmw: "bmw.com",
+  sony: "sony.com",
+  oreo: "oreo.com",
+  pampers: "pampers.com",
+  nestle: "nestle.com",
+  loreal: "loreal.com",
+  nivea: "nivea.com",
+  dove: "dove.com",
+  garnier: "garnier.com",
+  vodafone: "vodafone.com",
+  etisalat: "etisalat.ae",
+  orange: "orange.com",
+  cocacola: "coca-cola.com",
+  coca: "coca-cola.com",
+};
+
 export function brandDomainGuess(name: string, handle?: string): string {
+  const labeled = slugifyBrand(name);
+  if (labeled && KNOWN_BRAND_DOMAINS[labeled]) return KNOWN_BRAND_DOMAINS[labeled];
   const raw = (handle || name).replace(/^@/, "").trim().toLowerCase();
   if (!raw) return "example.com";
   if (raw.includes(".")) return raw.replace(/^www\./, "");
-  const slug = raw.replace(/&/g, "and").replace(/[^a-z0-9]+/g, "");
-  return `${slug || "brand"}.com`;
+  const slug = slugifyBrand(raw);
+  return KNOWN_BRAND_DOMAINS[slug] || `${slug || "brand"}.com`;
+}
+
+function slugifyBrand(value: string): string {
+  return value
+    .replace(/^@/, "")
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "");
 }
 
 export function brandMentionsInsight(mentions: ClientBrandMention[]): {

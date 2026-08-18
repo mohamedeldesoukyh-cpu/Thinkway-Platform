@@ -34,6 +34,24 @@ function asStringArray(value: unknown): string[] | undefined {
   return items.length > 0 ? items : undefined;
 }
 
+function parseContentCategories(value: unknown): ClientReviewSourceSnapshotCreator["contentCategories"] {
+  if (!Array.isArray(value)) return undefined;
+  const items = value
+    .map((row) => {
+      if (typeof row === "string" && row.trim()) return { label: row.trim() };
+      if (!isRecord(row)) return null;
+      const label = asString(row.label) || asString(row.category);
+      if (!label) return null;
+      return {
+        label,
+        percent: asNumber(row.percent),
+        postCount: asNumber(row.postCount),
+      };
+    })
+    .filter((row): row is { label: string; percent?: number; postCount?: number } => Boolean(row));
+  return items.length > 0 ? items : undefined;
+}
+
 function parseBrandMentions(value: unknown): ClientReviewSourceSnapshotCreator["brandMentions"] {
   if (!Array.isArray(value)) return undefined;
   const mentions = value
@@ -213,6 +231,7 @@ export function parseSnapshotCreator(row: Record<string, unknown>): ClientReview
     category: asString(row.category),
     niche: asString(row.niche),
     categories: asStringArray(row.categories),
+    contentCategories: parseContentCategories(row.contentCategories),
     audienceHighlight: asString(row.audienceHighlight),
     fitExplanation: asString(row.fitExplanation),
     deliverables: asString(row.deliverables),

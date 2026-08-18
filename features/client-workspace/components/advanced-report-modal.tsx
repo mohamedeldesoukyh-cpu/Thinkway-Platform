@@ -20,14 +20,16 @@ import { flagFromCountry, qualityBadge, qualityGaugePercent, engagementBadge, en
 import { clientReviewPostDisplay } from "../review-media";
 import type {
   ClientAudienceSlice,
+  ClientContentCategory,
   ClientContentPost,
   ClientCreatorBrief,
   ClientCreatorCard,
   ClientDeliverableItem,
   ClientHistoricalMonth,
 } from "../types";
+import { ContentCategoryGrid } from "./content-category-grid";
 import { RetryableReviewImage, ReviewAvatar } from "./review-avatar";
-import { IconCat, IconChart, IconCheck, IconClose, IconHeart } from "./review-icons";
+import { IconChart, IconCheck, IconClose, IconHeart } from "./review-icons";
 import { ReviewPlatformBreakdown } from "./review-platform-breakdown";
 import { ReviewPlatformMark } from "./review-platform-mark";
 
@@ -69,11 +71,14 @@ export function AdvancedReportModal({
   const reach = performance?.estimatedReach ?? creator.estimatedReach;
   const location =
     view?.location || formatLocation(creator.city, creator.country) || DATA_NOT_AVAILABLE;
-  const categories = view?.categories.length
+  const categoryFallback = view?.categories.length
     ? view.categories
     : creator.categories?.length
       ? creator.categories
-      : [creator.category, creator.niche].filter((value): value is string => Boolean(value));
+      : [creator.category, creator.niche];
+  const contentCategories = view?.contentCategories.length
+    ? view.contentCategories
+    : creator.contentCategories;
   const quality = qualityBadge(audience?.qualityLabel);
   const gauge = qualityGaugePercent(audience?.qualityLabel);
   const posts = (view?.contentFeed.length ? view.contentFeed : creator.contentFeed ?? creator.contentExamples) ?? [];
@@ -148,7 +153,8 @@ export function AdvancedReportModal({
               creator={creator}
               view={view}
               location={location}
-              categories={categories}
+              contentCategories={contentCategories}
+              categoryFallback={categoryFallback}
               match={match}
               currency={currency}
               posts={posts}
@@ -186,7 +192,8 @@ function OverviewSection({
   creator,
   view,
   location,
-  categories,
+  contentCategories,
+  categoryFallback,
   match,
   currency,
   posts,
@@ -201,7 +208,8 @@ function OverviewSection({
   creator: ClientCreatorCard;
   view: ClientCreatorBrief | null;
   location: string;
-  categories: string[];
+  contentCategories?: ClientContentCategory[];
+  categoryFallback?: Array<string | null | undefined>;
   match?: string;
   currency: string;
   posts: ClientContentPost[];
@@ -240,20 +248,7 @@ function OverviewSection({
     <>
       <div className="rp-sec">
         <p className="st">{handle ? `${handle} · Content categories` : "Content categories"}</p>
-        {categories.length > 0 ? (
-          <div className="cats">
-            {categories.slice(0, 6).map((category) => (
-              <div className="catc" key={category}>
-                <div className="ic">
-                  <IconCat />
-                </div>
-                <p className="l">{category}</p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="unavailable">Category unavailable</p>
-        )}
+        <ContentCategoryGrid items={contentCategories} fallback={categoryFallback} />
       </div>
       {multiPlatform ? null : (
       <div className="rp-sec">
@@ -531,20 +526,7 @@ function AudienceSection({
       ) : null}
       <div className="rp-sec">
         <p className="st">Interests</p>
-        {audience.interests.length > 0 ? (
-          <div className="cats">
-            {audience.interests.slice(0, 6).map((interest) => (
-              <div className="catc" key={interest}>
-                <div className="ic">
-                  <IconChart />
-                </div>
-                <p className="l">{interest}</p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="unavailable">Interests unavailable</p>
-        )}
+        <ContentCategoryGrid fallback={audience.interests} emptyLabel="Interests unavailable" />
       </div>
     </>
   );

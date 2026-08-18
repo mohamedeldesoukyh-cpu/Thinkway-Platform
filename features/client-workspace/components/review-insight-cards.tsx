@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 
+import { clientReviewBrandLogoPath } from "../brand-logo";
 import {
-  brandFaviconUrl,
-  brandLogoUrl,
   brandMentionsForDisplay,
   brandMentionsInsight,
   visibleBrandLogos,
@@ -39,7 +38,13 @@ export function EstimatedReachCard({
   );
 }
 
-export function BrandMentionsCard({ mentions }: { mentions: ClientBrandMention[] }) {
+export function BrandMentionsCard({
+  mentions,
+  token,
+}: {
+  mentions: ClientBrandMention[];
+  token: string;
+}) {
   const insight = brandMentionsInsight(mentions);
   const logos = visibleBrandLogos(mentions);
   const extra = brandMentionsForDisplay(mentions).extraCount;
@@ -64,7 +69,7 @@ export function BrandMentionsCard({ mentions }: { mentions: ClientBrandMention[]
       {logos.length > 0 ? (
         <div className="brands">
           {logos.map((brand, index) => (
-            <BrandLogo key={`${brand.name}-${index}`} mention={brand} />
+            <BrandLogo key={`${brand.name}-${index}`} mention={brand} token={token} />
           ))}
           {extra > 0 ? <span className="brand more">+{extra}</span> : null}
         </div>
@@ -73,17 +78,18 @@ export function BrandMentionsCard({ mentions }: { mentions: ClientBrandMention[]
   );
 }
 
-function BrandLogo({ mention }: { mention: ClientBrandMention }) {
-  const [stage, setStage] = useState<"logo" | "favicon" | "initial">("logo");
-  const src = stage === "logo" ? brandLogoUrl(mention) : stage === "favicon" ? brandFaviconUrl(mention) : null;
+function BrandLogo({ mention, token }: { mention: ClientBrandMention; token: string }) {
+  const [failed, setFailed] = useState(false);
+  const src = clientReviewBrandLogoPath(token, mention.name);
   return (
     <span className="brand" title={mention.name}>
-      {src ? (
+      {!failed ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
           alt=""
-          onError={() => setStage(stage === "logo" ? "favicon" : "initial")}
+          referrerPolicy="no-referrer"
+          onError={() => setFailed(true)}
         />
       ) : (
         mention.name.slice(0, 1).toUpperCase()

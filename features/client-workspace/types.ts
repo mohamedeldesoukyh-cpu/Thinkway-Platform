@@ -38,6 +38,12 @@ export type ClientBrandMention = {
   mentionsLast180Days?: number;
 };
 
+export type ClientContentCategory = {
+  label: string;
+  percent?: number;
+  postCount?: number;
+};
+
 export type ClientAudienceBrief = {
   frozenAt: string;
   ages: ClientAudienceSlice[];
@@ -117,6 +123,7 @@ export type ClientReviewSourceSnapshotCreator = {
   category?: string;
   niche?: string;
   categories?: string[];
+  contentCategories?: ClientContentCategory[];
   audienceHighlight?: string;
   fitExplanation?: string;
   deliverables?: string;
@@ -226,6 +233,7 @@ export type ClientCreatorCard = {
   category?: string;
   niche?: string;
   categories?: string[];
+  contentCategories?: ClientContentCategory[];
   audienceHighlight?: string;
   fitExplanation?: string;
   deliverables?: string;
@@ -276,6 +284,7 @@ export type ClientCreatorBrief = {
   contentFeed: ClientContentPost[];
   campaignFit?: string;
   categories: string[];
+  contentCategories: ClientContentCategory[];
   niche?: string;
   brandMentions: ClientBrandMention[];
   matchPercent?: number;

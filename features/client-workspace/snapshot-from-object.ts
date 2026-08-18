@@ -28,6 +28,7 @@ function snapshotCreatorCard(card: ClientCreatorCard): ClientReviewSourceSnapsho
     category: card.category,
     niche: card.niche,
     categories: card.categories,
+    contentCategories: card.contentCategories,
     audienceHighlight: card.audienceHighlight,
     fitExplanation: card.fitExplanation,
     deliverables: card.deliverables,
