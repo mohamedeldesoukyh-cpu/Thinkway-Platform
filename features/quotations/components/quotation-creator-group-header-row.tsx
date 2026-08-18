@@ -19,6 +19,7 @@ import {
 import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
 import { pickCreatorDisplayName } from "@/lib/text/decode-html-entities";
+import { cn } from "@/lib/utils";
 import type { ClientCreatorSelectionState } from "@/features/client-workspace/constants";
 import { QuotationClientReviewStatusBadge } from "@/features/quotations/components/quotation-client-review-status-badge";
 

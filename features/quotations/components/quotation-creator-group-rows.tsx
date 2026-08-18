@@ -8,6 +8,7 @@ import type { QuotationItemRow } from "@/features/quotations/types";
 import type { QuotationRowDraft } from "@/features/quotations/quotation-row-math";
 import type { QuotationItemOptionContext } from "@/lib/quotations/quotation-creator-options";
 import { quotationOptionRowShadeClass } from "@/lib/quotations/quotation-creator-options";
+import { unionQuotationCreatorGroupPlatforms } from "@/lib/quotations/quotation-creator-platform-options";
 import type { ClientCreatorSelectionState } from "@/features/client-workspace/constants";
 
 type Props = {
