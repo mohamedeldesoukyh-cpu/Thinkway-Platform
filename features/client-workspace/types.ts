@@ -86,11 +86,23 @@ export type ClientMediaPlanSummary = {
   >;
 };
 
+export type ClientCreatorPlatformStats = {
+  platform: string;
+  handle?: string;
+  followers?: number;
+  engagementRate?: number;
+  avgLikes?: number;
+  avgComments?: number;
+  avgViews?: number;
+  profileUrl?: string;
+};
+
 export type ClientReviewSourceSnapshotCreator = {
   creatorId: string;
   displayName: string;
   handle?: string;
   platform?: string;
+  platformAccounts?: ClientCreatorPlatformStats[];
   followers?: number;
   engagementRate?: number;
   country?: string;
@@ -198,6 +210,7 @@ export type ClientCreatorCard = {
   displayName: string;
   handle?: string;
   platform?: string;
+  platformAccounts?: ClientCreatorPlatformStats[];
   followers?: number;
   engagementRate?: number;
   country?: string;
@@ -241,6 +254,7 @@ export type ClientCreatorBrief = {
   displayName: string;
   handle?: string;
   platform?: string;
+  platformAccounts?: ClientCreatorPlatformStats[];
   location?: string;
   bio?: string;
   notes?: string;

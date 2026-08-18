@@ -78,6 +78,43 @@ export function shortDeliverableLabel(type: string): string {
   return quotation || trimmed;
 }
 
+export function platformsForDeliverableItem(item: ClientDeliverableItem): string[] {
+  const fromType = postTypePlatformKey(normalizeQuotationPostType(item.type));
+  if (fromType) return [fromType];
+  return splitPlatformTokens(item.platform);
+}
+
+export type ClientPlatformDeliverableGroup = {
+  platform: string;
+  lines: Array<{ key: string; label: string; quantity: number }>;
+};
+
+export function summarizeDeliverablesByPlatform(
+  items: ClientDeliverableItem[] | undefined
+): ClientPlatformDeliverableGroup[] {
+  const map = new Map<string, Map<string, { label: string; quantity: number }>>();
+  for (const item of items ?? []) {
+    const typeKey = normalizeQuotationPostType(item.type) || item.type.trim().toLowerCase();
+    if (!typeKey) continue;
+    const quantity = item.quantity && item.quantity > 0 ? item.quantity : 1;
+    const targets = platformsForDeliverableItem(item);
+    const platforms = targets.length > 0 ? targets : ["_other"];
+    for (const platform of platforms) {
+      const counts = map.get(platform) ?? new Map<string, { label: string; quantity: number }>();
+      const existing = counts.get(typeKey);
+      if (existing) existing.quantity += quantity;
+      else counts.set(typeKey, { label: shortDeliverableLabel(item.type), quantity });
+      map.set(platform, counts);
+    }
+  }
+  const keys = sortPlatforms([...map.keys()].filter((key) => key !== "_other"));
+  if (map.has("_other")) keys.push("_other");
+  return keys.map((platform) => ({
+    platform,
+    lines: [...(map.get(platform)?.entries() ?? [])].map(([key, line]) => ({ key, ...line })),
+  }));
+}
+
 export function summarizeCreatorDeliverables(
   items: ClientDeliverableItem[] | undefined
 ): ClientDeliverableSummary {
@@ -177,6 +214,10 @@ export function activityMixFromCreators(
 
 function positiveQuantity(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+export function sortClientPlatforms(platforms: string[]): string[] {
+  return sortPlatforms(platforms);
 }
 
 function sortPlatforms(platforms: string[]): string[] {

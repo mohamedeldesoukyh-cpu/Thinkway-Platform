@@ -15,6 +15,7 @@ import {
   NOT_AVAILABLE,
   TO_BE_CONFIRMED,
 } from "../format";
+import { breakdownForCreator } from "../platform-breakdown";
 import { flagFromCountry, qualityBadge, qualityGaugePercent, engagementBadge, engagementGaugePercent } from "../presentation";
 import { clientReviewPostDisplay } from "../review-media";
 import type {
@@ -27,6 +28,7 @@ import type {
 } from "../types";
 import { RetryableReviewImage, ReviewAvatar } from "./review-avatar";
 import { IconCat, IconChart, IconCheck, IconClose, IconHeart } from "./review-icons";
+import { ReviewPlatformBreakdown } from "./review-platform-breakdown";
 import { ReviewPlatformMark } from "./review-platform-mark";
 
 const REPORT_NAV = [
@@ -61,9 +63,9 @@ export function AdvancedReportModal({
   const view = brief?.creatorId === creator.creatorId ? brief : null;
   const audience = view?.audience ?? creator.audience;
   const performance = view?.performance ?? creator.performance;
+  const platformRows = breakdownForCreator(creator, view);
   const followers = view?.followers ?? creator.followers;
   const er = view?.engagementRate ?? creator.engagementRate ?? performance?.engagementRate;
-  const avgLikes = performance?.avgLikes ?? creator.avgLikes;
   const reach = performance?.estimatedReach ?? creator.estimatedReach;
   const location =
     view?.location || formatLocation(creator.city, creator.country) || DATA_NOT_AVAILABLE;
@@ -118,17 +120,9 @@ export function AdvancedReportModal({
             token={token}
           />
           <div className="rp-kpis">
-            <div className="rp-kpi">
-              <p className="l">Followers</p>
-              <p className="v">{formatCompactCount(followers)}</p>
-            </div>
-            <div className="rp-kpi">
-              <p className="l">Engagement</p>
-              <p className="v">{formatEngagementPct(er)}</p>
-            </div>
-            <div className="rp-kpi">
-              <p className="l">Avg likes</p>
-              <p className="v">{formatCompactCount(avgLikes)}</p>
+            <div className="rp-kpi platforms">
+              <p className="l">Platforms</p>
+              <ReviewPlatformBreakdown rows={platformRows} variant="detail" />
             </div>
             <div className="rp-kpi">
               <p className="l">Est. reach</p>
@@ -161,7 +155,6 @@ export function AdvancedReportModal({
               token={token}
               followers={followers}
               er={er}
-              avgLikes={avgLikes}
               reach={reach}
               audience={audience}
               historical={historical}
@@ -200,7 +193,6 @@ function OverviewSection({
   token,
   followers,
   er,
-  avgLikes,
   reach,
   audience,
   historical,
@@ -216,14 +208,18 @@ function OverviewSection({
   token: string;
   followers?: number;
   er?: number;
-  avgLikes?: number;
   reach?: number;
   audience: ClientCreatorCard["audience"];
   historical: ClientHistoricalMonth[];
   deliverableItems?: ClientDeliverableItem[];
 }) {
   const handle = view?.handle || creator.handle;
-  const platform = formatPlatformLabel(view?.platform || creator.platform);
+  const platformRows = breakdownForCreator(creator, view);
+  const multiPlatform =
+    platformRows.filter((row) => row.platform && row.platform !== "_other").length > 1;
+  const platform = multiPlatform
+    ? undefined
+    : formatPlatformLabel(view?.platform || creator.platform);
   const bio = view?.bio || creator.bio;
   const fit = view?.campaignFit || creator.fitExplanation;
   const erBadge = engagementBadge(er);
@@ -259,6 +255,7 @@ function OverviewSection({
           <p className="unavailable">Category unavailable</p>
         )}
       </div>
+      {multiPlatform ? null : (
       <div className="rp-sec">
         <p className="st">{platform ? `${platform} engagement rate` : "Engagement rate"}</p>
         <div className="rp-big">
@@ -268,6 +265,7 @@ function OverviewSection({
         <p className="desc">How much audiences engage with this creator’s available content.</p>
         {erGauge != null ? <QualityGauge percent={erGauge} /> : null}
       </div>
+      )}
       <GrowthChart
         title="Follower growth"
         audience={audience}
@@ -287,26 +285,15 @@ function OverviewSection({
           <span className="n">{view?.displayName || creator.displayName}</span>
         </p>
         <p className="desc">
-          {[handle, platform, `${flagFromCountry(creator.country)} ${location}`.trim()]
+          {[`${flagFromCountry(creator.country)} ${location}`.trim()]
             .filter(Boolean)
             .join(" · ")}
         </p>
         <p className="desc" style={{ marginTop: 10 }}>
           {bio?.trim() || DATA_NOT_AVAILABLE}
         </p>
-        <div className="asum">
-          <div>
-            <p className="l">Followers</p>
-            <p className={followers != null ? "v" : "v tbc"}>{formatCompactCount(followers)}</p>
-          </div>
-          <div>
-            <p className="l">Engagement</p>
-            <p className={er != null ? "v" : "v tbc"}>{formatEngagementPct(er)}</p>
-          </div>
-          <div>
-            <p className="l">Avg likes</p>
-            <p className={avgLikes != null ? "v" : "v tbc"}>{formatCompactCount(avgLikes)}</p>
-          </div>
+        <ReviewPlatformBreakdown rows={platformRows} variant="detail" />
+        <div className="asum" style={{ marginTop: 12 }}>
           <div>
             <p className="l">Est. reach</p>
             <p className={reach != null ? "v" : "v tbc"}>{formatCompactCount(reach)}</p>

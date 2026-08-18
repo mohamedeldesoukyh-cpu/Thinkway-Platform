@@ -13,14 +13,11 @@ import {
 } from "../actions/client-workspace-actions";
 import type { ClientCreatorSelectionState } from "../constants";
 import { CLIENT_CREATOR_STATUS_LABEL } from "../constants";
-import { summarizeCreatorDeliverables } from "../deliverables";
 import {
   DATA_NOT_AVAILABLE,
   formatCompactCount,
-  formatEngagementPct,
   formatLocation,
   formatMatchPercent,
-  formatPlatformLabel,
   NOT_AVAILABLE,
   TO_BE_CONFIRMED,
 } from "../format";
@@ -31,14 +28,14 @@ import {
   rosterHeadline,
   rosterSourceLine,
 } from "../presentation";
+import { breakdownForCreator } from "../platform-breakdown";
 import { countSelections } from "../status";
 import type { ClientAudienceSlice, ClientCreatorBrief, ClientCreatorCard, ClientWorkspaceView } from "../types";
 import { AdvancedReportModal, ContentFeatureGrid } from "./advanced-report-modal";
 import { ProposalSummaryCard } from "./proposal-summary-card";
 import { ReviewAvatar } from "./review-avatar";
-import { ReviewDeliverableStrip } from "./review-deliverable-strip";
+import { ReviewPlatformBreakdown } from "./review-platform-breakdown";
 import { IconBack, IconCat, IconChart, IconCheck, IconClose } from "./review-icons";
-import { ReviewPlatformStack } from "./review-platform-mark";
 
 const STATUS_FILTERS: Array<{ id: "all" | "recommended" | ClientCreatorSelectionState; label: string }> = [
   { id: "all", label: "All" },
@@ -240,20 +237,12 @@ export function CreatorsWorkspace({
               />
               <div className="info">
                 <div className="nm">{creator.displayName}</div>
-                <div className="mt">
-                  {[
-                    creator.handle,
-                    formatCompactCount(creator.followers),
-                    `${flagFromCountry(creator.country)} ${formatLocation(creator.city, creator.country) ?? ""}`.trim(),
-                    formatEngagementPct(creator.engagementRate),
-                  ]
-                    .filter((part) => part && part !== NOT_AVAILABLE)
-                    .join(" · ")}
-                </div>
-                <ReviewDeliverableStrip
-                  items={creator.deliverableItems}
-                  fallback={creator.deliverables}
-                />
+                {formatLocation(creator.city, creator.country) ? (
+                  <div className="mt loc">
+                    {`${flagFromCountry(creator.country)} ${formatLocation(creator.city, creator.country)}`.trim()}
+                  </div>
+                ) : null}
+                <ReviewPlatformBreakdown rows={breakdownForCreator(creator)} variant="list" />
               </div>
               <span className={statusClass(selection[creator.creatorId] ?? creator.selection)}>
                 {CLIENT_CREATOR_STATUS_LABEL[selection[creator.creatorId] ?? creator.selection]}
@@ -361,11 +350,7 @@ function CreatorDetailPane({
   cpm?: number;
 }) {
   const name = brief?.displayName || creator.displayName;
-  const handle = brief?.handle || creator.handle;
-  const platform = formatPlatformLabel(brief?.platform || creator.platform);
   const location = brief?.location || formatLocation(creator.city, creator.country);
-  const followers = brief?.followers ?? creator.followers;
-  const er = brief?.engagementRate ?? creator.engagementRate;
   const investmentAmount = brief?.investmentAmount ?? creator.investmentAmount;
   const investmentCurrency = brief?.investmentCurrency ?? creator.investmentCurrency ?? currency;
   const audience = brief?.audience ?? creator.audience;
@@ -376,16 +361,17 @@ function CreatorDetailPane({
       ? creator.categories
       : [creator.category, creator.niche].filter((value): value is string => Boolean(value));
   const posts = (brief?.contentFeed.length ? brief.contentFeed : creator.contentFeed ?? creator.contentExamples) ?? [];
-  const platforms = summarizeCreatorDeliverables(creator.deliverableItems).platforms;
-  const platformMarks = platforms.length > 0 ? platforms : creator.platform ? [creator.platform] : [];
+  const platformRows = breakdownForCreator(creator, brief);
+  const multiPlatform =
+    platformRows.filter((row) => row.platform && row.platform !== "_other").length > 1;
   const brands = brief?.brandMentions.length ? brief.brandMentions : creator.brandMentions ?? [];
   const match = formatMatchPercent(brief?.matchPercent ?? creator.matchPercent);
   const quality = qualityBadge(audience?.qualityLabel);
   const gauge = qualityGaugePercent(audience?.qualityLabel);
   const cpe = creator.cpe;
-  const likes = performance?.avgLikes ?? creator.avgLikes;
-  const comments = performance?.avgComments ?? creator.avgComments;
-  const views = performance?.avgViews ?? creator.avgViews;
+  const likes = multiPlatform ? undefined : performance?.avgLikes ?? creator.avgLikes;
+  const comments = multiPlatform ? undefined : performance?.avgComments ?? creator.avgComments;
+  const views = multiPlatform ? undefined : performance?.avgViews ?? creator.avgViews;
   const reach = performance?.estimatedReach ?? creator.estimatedReach;
   const audienceMatch =
     brief?.matchExplanation ||
@@ -411,9 +397,7 @@ function CreatorDetailPane({
         />
         <div className="dt-meta">
           <p className="nm">{name}</p>
-          <p className="hd">{[handle, platform].filter(Boolean).join(" · ")}</p>
           <div className="mchips">
-            <ReviewPlatformStack platforms={platformMarks} />
             {location ? (
               <span className="mchip">
                 {flagFromCountry(creator.country)} {location}
@@ -426,15 +410,8 @@ function CreatorDetailPane({
             ))}
             <span className={statusClass(creator.selection)}>{CLIENT_CREATOR_STATUS_LABEL[creator.selection]}</span>
           </div>
-          <div className="dt-quick">
-            <div className="q">
-              <p className="l">Followers</p>
-              <p className="v">{formatCompactCount(followers)}</p>
-            </div>
-            <div className="q">
-              <p className="l">ER</p>
-              <p className="v">{formatEngagementPct(er)}</p>
-            </div>
+          <ReviewPlatformBreakdown rows={platformRows} variant="detail" />
+          <div className="dt-quick invest-only">
             <div className="q">
               <p className="l">Investment</p>
               <p className="v">
@@ -474,7 +451,6 @@ function CreatorDetailPane({
         ) : null}
         <div className="sec">
           <p className="st">Recent publications</p>
-          <ReviewDeliverableStrip items={creator.deliverableItems} fallback={creator.deliverables} />
           {!brief && posts.length === 0 ? (
             <p className="unavailable">Loading content…</p>
           ) : (
@@ -561,6 +537,7 @@ function CreatorDetailPane({
             <p className="unavailable">Audience quality unavailable</p>
           )}
         </div>
+        {multiPlatform ? null : (
         <div className="sec">
           <p className="st">Average engagement</p>
           <div className="trio">
@@ -578,6 +555,7 @@ function CreatorDetailPane({
             </div>
           </div>
         </div>
+        )}
         <div className="sec">
           <p className="st">Estimated reach</p>
           <p className="rp-big">

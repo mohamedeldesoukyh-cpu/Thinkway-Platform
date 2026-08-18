@@ -5,7 +5,7 @@ import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { clientSafeFitCopy, formatLocation } from "./format";
-import { parseDeliverableItems } from "./deliverables";
+import { parseDeliverableItems, summarizeCreatorDeliverables } from "./deliverables";
 import {
   enrichSnapshotCreatorFromUnified,
   influencerIdFromRefs,
@@ -199,6 +199,7 @@ export function briefFromSnapshotCreator(
     displayName: creator.displayName,
     handle: creator.handle,
     platform: creator.platform,
+    platformAccounts: creator.platformAccounts,
     location: formatLocation(creator.city, creator.country),
     bio: creator.bio,
     notes: creator.notes,
@@ -339,6 +340,10 @@ export function mergeFrozenBrief(
 function needsClientBriefBackfill(creator: ClientReviewSourceSnapshotCreator): boolean {
   if (!creator.profileUrl?.trim() && profileUrlFromHandle(creator.handle, creator.platform)) {
     return true;
+  }
+  if (!creator.platformAccounts?.length) {
+    const platforms = summarizeCreatorDeliverables(creator.deliverableItems).platforms;
+    if (platforms.length > 1) return true;
   }
   if (creator.briefBackfillDone) return false;
   if (!creator.contentFeed?.length) return true;

@@ -117,6 +117,30 @@ function parseHistorical(value: unknown): ClientReviewSourceSnapshotCreator["his
   return rows.length > 0 ? rows : undefined;
 }
 
+function parsePlatformAccounts(
+  value: unknown
+): ClientReviewSourceSnapshotCreator["platformAccounts"] {
+  if (!Array.isArray(value)) return undefined;
+  const rows = value
+    .filter(isRecord)
+    .map((row) => {
+      const platform = asString(row.platform);
+      if (!platform) return null;
+      return {
+        platform,
+        handle: asString(row.handle),
+        followers: asNumber(row.followers),
+        engagementRate: asNumber(row.engagementRate),
+        avgLikes: asNumber(row.avgLikes),
+        avgComments: asNumber(row.avgComments),
+        avgViews: asNumber(row.avgViews),
+        profileUrl: asString(row.profileUrl),
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => Boolean(row));
+  return rows.length > 0 ? rows : undefined;
+}
+
 function parseDeliverableItems(value: unknown): ClientDeliverableItem[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const items = value
@@ -159,6 +183,7 @@ export function parseSnapshotCreator(row: Record<string, unknown>): ClientReview
     displayName: asString(row.displayName) || "Creator",
     handle: asString(row.handle),
     platform: asString(row.platform),
+    platformAccounts: parsePlatformAccounts(row.platformAccounts),
     followers: asNumber(row.followers),
     engagementRate: asNumber(row.engagementRate),
     country: asString(row.country),

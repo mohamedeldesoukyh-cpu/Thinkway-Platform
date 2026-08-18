@@ -3,7 +3,7 @@
 **Branch:** `develop`  
 **Focus:** Client Workspace Creators UX (Development only)
 
-Public review checkboxes now **accept** creators, so the calculator updates immediately. Deliverables collapse to platform avatars + type chips. Recent publications mix across those platforms with platform marks instead of text. Creators uses a compact navy calculator bar under the tabs; page gutters are tighter.
+Creator list cards and detail now show **per-platform** handle, followers, ER, and deliverables. Instagram numbers are no longer reused for TikTok/YouTube/Facebook. Missing platform metrics stay Not available. Investment remains one creator total.
 
 Dev: https://dev.thinkwaymedia.com  
 Do **not** deploy Production.

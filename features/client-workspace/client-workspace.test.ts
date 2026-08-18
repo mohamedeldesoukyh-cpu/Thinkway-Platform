@@ -8,7 +8,7 @@ import { classifyApiPath, classifyPagePath } from "@/lib/security/workspace-clas
 
 import { CLIENT_CHANGE_AREAS, CLIENT_REVIEW_SOURCES } from "./constants";
 import { clientSafeFitCopy, formatCompactCount, formatEngagementPct, providedText } from "./format";
-import { deliverablesLabel, groupedActivityMix, looksLikePlatformList, summarizeCreatorDeliverables } from "./deliverables";
+import { deliverablesLabel, groupedActivityMix, looksLikePlatformList, summarizeCreatorDeliverables, summarizeDeliverablesByPlatform } from "./deliverables";
 import {
   allocationSlices,
   containsInternalTerminology,
@@ -23,6 +23,7 @@ import { HYPEAUDITOR_MEDIA_PLAN_PARITY } from "./hypeauditor-parity";
 import { projectMediaPlanSummary, projectSelectionSummaryFromCards } from "./media-plan-summary";
 import { briefFromSnapshotCreator, mergeFrozenBrief } from "./creator-brief";
 import { enrichSnapshotCreatorFromUnified, mixPostsForDeliverables, profileUrlFromHandle, shouldReplaceContentFeed } from "./creator-snapshot";
+import { creatorPlatformBreakdown } from "./platform-breakdown";
 import { clientReviewAvatarUrl, isReviewMediaUrlAllowed, reviewMediaAllowlist } from "./review-media";
 import { diffClientReviewSnapshots, retainCreatorBriefs } from "./snapshot-diff";
 import { shortlistReviewBlockers, quotationReviewBlockers } from "./source-readiness";
@@ -523,6 +524,30 @@ test("unavailable metrics stay unknown and real zeros stay zero", () => {
   );
   assert.equal(dumped.includes("instagram,tiktok"), false);
   assert.match(dumped, /Reel/);
+  const byPlatform = summarizeDeliverablesByPlatform([
+    { platform: "instagram,tiktok,youtube,facebook", type: "instagram_reel", quantity: 1 },
+    { platform: "instagram,tiktok,youtube,facebook", type: "tiktok_video", quantity: 1 },
+    { platform: "instagram,tiktok,youtube,facebook", type: "mirrored_ig", quantity: 1 },
+  ]);
+  assert.deepEqual(
+    byPlatform.map((row) => row.platform),
+    ["instagram", "tiktok"]
+  );
+  assert.equal(byPlatform.find((row) => row.platform === "instagram")?.lines.length, 2);
+  assert.equal(byPlatform.find((row) => row.platform === "tiktok")?.lines[0]?.key, "tiktok_video");
+  const split = creatorPlatformBreakdown({
+    deliverableItems: [
+      { platform: "instagram,tiktok,youtube,facebook", type: "instagram_reel", quantity: 1 },
+      { platform: "instagram,tiktok,youtube,facebook", type: "tiktok_video", quantity: 1 },
+    ],
+    platformAccounts: [
+      { platform: "instagram", handle: "@ali", followers: 83_200, engagementRate: 4.2 },
+    ],
+    fallback: { platform: "instagram", followers: 83_200, engagementRate: 93 },
+  });
+  assert.equal(split.find((row) => row.platform === "instagram")?.followers, 83_200);
+  assert.equal(split.find((row) => row.platform === "tiktok")?.followers, undefined);
+  assert.equal(split.find((row) => row.platform === "tiktok")?.engagementRate, undefined);
   assert.equal(providedText(undefined), "Not provided");
   assert.equal(providedText("  "), "Not provided");
   assert.equal(providedText("UAE"), "UAE");
@@ -800,6 +825,96 @@ test("missing avatars keep a social profile URL for the public review proxy", ()
   );
   assert.equal(enriched.profileUrl, "https://www.instagram.com/radwaadeeel/");
   assert.equal(enriched.avatarUrl, undefined);
+  assert.equal(enriched.platformAccounts?.[0]?.platform, "instagram");
+  assert.equal(enriched.platformAccounts?.[0]?.followers, undefined);
+});
+
+test("unified enrichment stores followers and ER per platform", () => {
+  const enriched = enrichSnapshotCreatorFromUnified(
+    {
+      creatorId: "c1",
+      displayName: "Ali Mahgoub",
+      handle: "@ali",
+      platform: "instagram,tiktok,youtube,facebook",
+      followers: 999_999,
+      engagementRate: 93,
+      deliverableItems: [
+        { platform: "instagram,tiktok,youtube,facebook", type: "instagram_reel", quantity: 1 },
+        { platform: "instagram,tiktok,youtube,facebook", type: "tiktok_video", quantity: 1 },
+      ],
+    },
+    {
+      unified_id: "c1",
+      display_name: "Ali Mahgoub",
+      metrics: {
+        followers: { value: 999_999, confidence: "estimated" },
+        engagement_rate: { value: 93, confidence: "estimated" },
+        avg_likes: { value: 530, confidence: "estimated" },
+        avg_comments: { value: 38, confidence: "estimated" },
+        avg_views: { value: 7500, confidence: "estimated" },
+        posting_frequency_per_week: { value: null, confidence: "estimated" },
+      },
+      platforms: [
+        {
+          id: "ig",
+          platform: "instagram",
+          handle: "ali",
+          profile_url: "https://www.instagram.com/ali/",
+          follower_count: 83_200,
+          engagement_rate: 4.2,
+          avg_likes: 530,
+          audience_country: "EG",
+        },
+        {
+          id: "tt",
+          platform: "tiktok",
+          handle: "ali",
+          profile_url: "https://www.tiktok.com/@ali",
+          follower_count: 120_000,
+          engagement_rate: 6.1,
+          audience_country: "EG",
+        },
+      ],
+      categories: [],
+      language_codes: [],
+      thinkway_score: 0,
+      source_confidence: 0,
+      brand_fit_score: null,
+      is_platform_verified: false,
+      authenticity_score: null,
+      ai_category: null,
+      ai_niche: null,
+      source_type: "internal",
+      influencer_id: null,
+      discovered_profile_id: null,
+      document_number: null,
+      status: null,
+      country_code: "EG",
+      estimated_country: "EG",
+      city: "Cairo",
+      bio: null,
+      profile_image_url: null,
+    }
+  );
+  assert.equal(enriched.platformAccounts?.length, 2);
+  assert.equal(enriched.platformAccounts?.find((row) => row.platform === "instagram")?.followers, 83_200);
+  assert.equal(enriched.platformAccounts?.find((row) => row.platform === "tiktok")?.followers, 120_000);
+  assert.notEqual(
+    enriched.platformAccounts?.find((row) => row.platform === "tiktok")?.engagementRate,
+    93
+  );
+  const rows = creatorPlatformBreakdown({
+    deliverableItems: enriched.deliverableItems,
+    platformAccounts: enriched.platformAccounts,
+    fallback: {
+      platform: enriched.platform,
+      followers: enriched.followers,
+      engagementRate: enriched.engagementRate,
+    },
+  });
+  assert.equal(rows.find((row) => row.platform === "instagram")?.followers, 83_200);
+  assert.equal(rows.find((row) => row.platform === "tiktok")?.followers, 120_000);
+  assert.equal(rows.some((row) => row.platform === "youtube"), false);
 });
 
 test("quotation snapshot diffs are client-safe and name added creators", () => {

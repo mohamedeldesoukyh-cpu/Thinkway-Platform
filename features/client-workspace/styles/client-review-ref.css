@@ -162,6 +162,31 @@
 }
 .tw-review .plat-stack{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;}
 .tw-review .chip .plat-mark{width:16px;height:16px;}
+.tw-review .lc .mt.loc{margin:3px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tw-review .plat-rows{display:flex;flex-direction:column;gap:8px;margin-top:8px;}
+.tw-review .plat-row{display:flex;align-items:flex-start;gap:8px;min-width:0;}
+.tw-review .plat-row .plat-mark{
+  width:22px;height:22px;border-radius:6px;object-fit:contain;background:transparent;
+}
+.tw-review .plat-row .plat-mark.fallback{width:22px;height:22px;border-radius:6px;font-size:8px;}
+.tw-review .plat-body{min-width:0;flex:1;}
+.tw-review .plat-meta{
+  font-size:11.5px;color:var(--muted);
+  display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;
+}
+.tw-review .plat-handle,.tw-review .plat-meta span{font-family:"Geist Mono",ui-monospace,monospace;}
+.tw-review .plat-name{
+  font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--navy);font-family:inherit;
+}
+.tw-review .plat-avgs{font-size:11px;color:var(--muted);margin-top:3px;}
+.tw-review .plat-rows .dels{margin-top:5px;}
+.tw-review .plat-rows.detail{gap:10px;margin:12px 0 0;}
+.tw-review .plat-rows.detail .plat-row{
+  background:#fafbfe;border:1px solid var(--hair);border-radius:12px;padding:10px 12px;
+}
+.tw-review .plat-rows.detail .plat-mark{width:28px;height:28px;border-radius:8px;}
+.tw-review .dt-quick.invest-only{grid-template-columns:1fr;max-width:240px;margin-top:12px;}
 .tw-review .dels{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:7px;}
 .tw-review .dels.fallback{font-size:11px;color:var(--muted2);}
 .tw-review .del-chip{
@@ -184,9 +209,9 @@
   width:28px;height:28px;border-radius:6px;object-fit:contain;
   filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));
 }
-.tw-review .posts-feat .post.big .plat-badge .plat-mark{
-  width:36px;height:36px;
-}
+.tw-review .rp-kpi.platforms{grid-column:1/-1;}
+.tw-review .rp-kpi.platforms .plat-rows{margin-top:8px;}
+.tw-review .rp-kpi.platforms .plat-rows.detail .plat-row{background:#fff;}
 
 @media(max-width:980px){
   .tw-review .sumbar{position:sticky;top:0;margin:0 0 16px;border-radius:14px;}

@@ -8,6 +8,11 @@ import { detectSocialPlatformFromContentUrl } from "@/lib/social/platforms";
 
 import { summarizeCreatorDeliverables } from "./deliverables";
 import { clientSafeFitCopy } from "./format";
+import {
+  fallbackPlatformStats,
+  mergePlatformStats,
+  platformStatsFromUnified,
+} from "./platform-breakdown";
 import type { ClientContentPost, ClientDeliverableItem, ClientReviewSourceSnapshotCreator } from "./types";
 
 export function optionalMetric(value: number | null | undefined): number | undefined {
@@ -185,6 +190,9 @@ export function enrichSnapshotCreatorFromUnified(
     return {
       ...base,
       profileUrl: base.profileUrl || profileUrlFromHandle(base.handle, base.platform),
+      platformAccounts: base.platformAccounts?.length
+        ? base.platformAccounts
+        : fallbackPlatformStats(base),
     };
   }
   const platform = creator.platforms[0];
@@ -213,6 +221,11 @@ export function enrichSnapshotCreatorFromUnified(
           : `@${platform.handle}`
         : undefined),
     platform: base.platform || platform?.platform,
+    platformAccounts: mergePlatformStats(
+      fallbackPlatformStats(base),
+      base.platformAccounts,
+      platformStatsFromUnified(creator)
+    ),
     followers,
     engagementRate,
     country: base.country || creator.estimated_country || creator.country_code || undefined,

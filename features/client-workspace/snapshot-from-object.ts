@@ -20,6 +20,7 @@ function snapshotCreatorCard(card: ClientCreatorCard): ClientReviewSourceSnapsho
     displayName: card.displayName,
     handle: card.handle,
     platform: card.platform,
+    platformAccounts: card.platformAccounts,
     followers: card.followers,
     engagementRate: card.engagementRate,
     country: card.country,
