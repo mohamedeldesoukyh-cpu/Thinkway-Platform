@@ -8,7 +8,7 @@ import type { QuotationItemRow } from "@/features/quotations/types";
 import type { QuotationRowDraft } from "@/features/quotations/quotation-row-math";
 import type { QuotationItemOptionContext } from "@/lib/quotations/quotation-creator-options";
 import { quotationOptionRowShadeClass } from "@/lib/quotations/quotation-creator-options";
-import { unionQuotationCreatorGroupPlatforms } from "@/lib/quotations/quotation-creator-platform-options";
+import type { ClientCreatorSelectionState } from "@/features/client-workspace/constants";
 
 type Props = {
   quotationId: string;
@@ -28,6 +28,7 @@ type Props = {
   collapsePackageMode?: boolean;
   displayCurrency?: string;
   displayFxRateToEgp?: number;
+  clientSelection?: ClientCreatorSelectionState;
 };
 
 /** One influencer block: header row (avatar + name), then Option 1 / 2 / 3… lines. */
@@ -48,6 +49,7 @@ export function QuotationCreatorGroupRows({
   collapsePackageMode = false,
   displayCurrency,
   displayFxRateToEgp,
+  clientSelection,
 }: Props) {
   const sortedItems = useMemo(
     () => [...items].sort((a, b) => a.sort_order - b.sort_order),
@@ -90,6 +92,7 @@ export function QuotationCreatorGroupRows({
         isFirstGroup={groupIndex === 0}
         hideOptionCount={collapsePackageMode}
         onOpenCreator={onOpenCreator ? () => onOpenCreator(headerItem) : undefined}
+        clientSelection={clientSelection}
       />
       {collapsePackageMode
         ? null

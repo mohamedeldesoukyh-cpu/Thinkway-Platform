@@ -14,7 +14,8 @@ import {
   countCollapsePackageSiblings,
   siblingCollapsePackageMemberIds,
 } from "@/lib/quotations/quotation-collapse-package";
-import type { QuotationWorkspaceCreatorGroup } from "@/lib/quotations/quotation-workspace-sort";
+import type { ClientCreatorSelectionState } from "@/features/client-workspace/constants";
+import { clientSelectionForItems } from "@/features/quotations/quotation-client-review";
 
 type Props = {
   quotationId: string;
@@ -34,6 +35,7 @@ type Props = {
   focusItemId?: string | null;
   displayCurrency?: string;
   displayFxRateToEgp?: number;
+  selectionState?: Record<string, ClientCreatorSelectionState>;
 };
 
 /** Collapse content block: shared Collap header + one line group per creator. */
@@ -55,6 +57,7 @@ export function QuotationCollapseContentGroupRows({
   focusItemId,
   displayCurrency,
   displayFxRateToEgp,
+  selectionState,
 }: Props) {
   const groupItems = useMemo(
     () => creatorGroups.flatMap((group) => group.items),
@@ -136,6 +139,7 @@ export function QuotationCollapseContentGroupRows({
           collapsePackageMode
           displayCurrency={displayCurrency}
           displayFxRateToEgp={displayFxRateToEgp}
+          clientSelection={clientSelectionForItems(group.items, selectionState)}
         />
       ))}
     </>

@@ -17,6 +17,9 @@ import {
   fetchQuotationRouteSummary,
   resolveQuotationIdByRouteKey,
 } from "@/lib/routing/entity-route-queries";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { loadLatestInternalReviewForQuotation } from "@/features/client-workspace/load-client-workspace";
+import type { QuotationClientReviewView } from "@/features/quotations/quotation-client-review";
 
 export const dynamic = "force-dynamic";
 
@@ -67,9 +70,11 @@ export default async function QuotationDetailPage({ params }: PageProps) {
   let detail: Awaited<ReturnType<typeof getQuotationDetail>>;
   let formOptions: Awaited<ReturnType<typeof getCachedQuotationFormOptions>>;
   let promoteOptions: Awaited<ReturnType<typeof getCachedPromoteWizardOptions>>;
+  let clientReview: QuotationClientReviewView | null = null;
 
   try {
-    [detail, formOptions, promoteOptions] = await Promise.all([
+    const supabase = await createSupabaseServerClient();
+    [detail, formOptions, promoteOptions, clientReview] = await Promise.all([
       getQuotationDetail(quotationId),
       getCachedQuotationFormOptions().catch((error) => {
         console.error("[quotations/detail] form options failed", error);
@@ -86,6 +91,25 @@ export default async function QuotationDetailPage({ params }: PageProps) {
           owners: [],
         };
       }),
+      loadLatestInternalReviewForQuotation(supabase, quotationId)
+        .then((review) =>
+          review
+            ? {
+                id: review.id,
+                reviewNumber: review.reviewNumber,
+                status: review.status,
+                selectionState: review.selectionState,
+                approvedCreatorIds: review.approvedCreatorIds,
+                changeRequestSummary: review.changeRequestSummary,
+                updatedAt: review.updatedAt,
+                approvedAt: review.approvedAt,
+              }
+            : null
+        )
+        .catch((error) => {
+          console.error("[quotations/detail] client review load failed", error);
+          return null;
+        }),
     ]);
   } catch (error) {
     console.error("[quotations/detail] page load failed", {
@@ -110,6 +134,7 @@ export default async function QuotationDetailPage({ params }: PageProps) {
           detail={detail}
           formOptions={formOptions}
           promoteOptions={promoteOptions}
+          clientReview={clientReview}
         />
       </div>
     </DiscoveryPageShell>

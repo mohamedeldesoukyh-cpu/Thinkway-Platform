@@ -1,3 +1,4 @@
+import { notifyShortlistEvent } from "@/features/discovery/shortlists/notifications";
 import { CampaignObjectPersistenceService } from "@/features/campaign-intelligence/services/campaign-object-persistence";
 import {
   createQuotationFromSelection,
@@ -39,6 +40,42 @@ async function requireInteractiveReview(token: string) {
     return { ok: false as const, message: "A new version requires review. Decisions on this version are closed." };
   }
   return { ok: true as const, review: resolved.review };
+}
+
+async function notifyOpsOfClientReviewChange(input: {
+  reviewId: string;
+  quotationId?: string | null;
+  shortlistId?: string | null;
+  body: string;
+}) {
+  try {
+    const { data: quote } = input.quotationId
+      ? await db()
+          .from("quotations")
+          .select("owner_id, shortlist_id")
+          .eq("id", input.quotationId)
+          .maybeSingle()
+      : { data: null };
+    const quoteRow = quote as { owner_id?: string | null; shortlist_id?: string | null } | null;
+    const shortlistId = input.shortlistId || quoteRow?.shortlist_id || null;
+    if (!shortlistId) return;
+    const { data: reviewRow } = await db()
+      .from("campaign_client_reviews" as never)
+      .select("created_by")
+      .eq("id", input.reviewId)
+      .maybeSingle();
+    const createdBy = (reviewRow as { created_by?: string } | null)?.created_by;
+    await notifyShortlistEvent(db() as never, {
+      shortlistId,
+      event: "approved",
+      body: input.body,
+      actorId: createdBy || quoteRow?.owner_id || "",
+      recipientIds: [quoteRow?.owner_id, createdBy],
+      metadata: { quotationId: input.quotationId, reviewId: input.reviewId },
+    });
+  } catch (error) {
+    console.error("[client-review-notify]", error);
+  }
 }
 
 async function loadFrozenObject(campaignObjectId: string, version: number) {
@@ -95,6 +132,18 @@ export async function setCreatorSelection(input: {
     },
   } as never);
 
+  await notifyOpsOfClientReviewChange({
+    reviewId: gate.review.id,
+    quotationId: gate.review.quotationId,
+    shortlistId: gate.review.shortlistId,
+    body:
+      input.state === "accepted"
+        ? `${input.creatorName || "A creator"} was approved on the client review.`
+        : input.state === "rejected"
+          ? `${input.creatorName || "A creator"} was rejected on the client review.`
+          : `${input.creatorName || "A creator"} was moved back to under review.`,
+  });
+
   const reason = input.reason?.trim();
   if (reason && (input.state === "rejected" || input.state === "in_review")) {
     await db().from("campaign_client_review_comments" as never).insert({
@@ -138,6 +187,28 @@ export async function setBulkCreatorSelection(input: {
     .update({ selection_state: selection, updated_at: new Date().toISOString() } as never)
     .eq("id", gate.review.id);
   if (error) return { ok: false, message: error.message };
+
+  if (gate.review.shortlistId) {
+    const shortlistStatus = clientSelectionToShortlistStatus(input.state);
+    for (const creatorId of ids) {
+      const rawId = creatorId.replace(/^(inf|dis):/, "");
+      await db()
+        .from("discovery_shortlist_items")
+        .update({ item_status: shortlistStatus } as never)
+        .eq("shortlist_id", gate.review.shortlistId)
+        .or(
+          `id.eq.${creatorId},influencer_id.eq.${rawId},profile_id.eq.${rawId},unified_id.eq.${creatorId},unified_id.eq.${rawId}`
+        );
+    }
+  }
+
+  await notifyOpsOfClientReviewChange({
+    reviewId: gate.review.id,
+    quotationId: gate.review.quotationId,
+    shortlistId: gate.review.shortlistId,
+    body: `Client updated ${ids.length} creator${ids.length === 1 ? "" : "s"} on the quotation review.`,
+  });
+
   return { ok: true, message: "Selection updated." };
 }
 
@@ -270,6 +341,12 @@ export async function decideClientReview(input: {
   }
 
   if (gate.review.source === "quotation") {
+    await notifyOpsOfClientReviewChange({
+      reviewId: gate.review.id,
+      quotationId: gate.review.quotationId,
+      shortlistId: gate.review.shortlistId,
+      body: `Client approved ${selectedIds.length} creator${selectedIds.length === 1 ? "" : "s"} on the quotation review.`,
+    });
     return { ok: true, message: "Campaign approved. The quotation already holds the commercial values." };
   }
 

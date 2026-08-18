@@ -56,6 +56,8 @@ export type ConvertQuotationToAssignmentsInput = {
   reuseHeaderId?: string | null;
   /** When true, only compute plan — no writes. */
   dryRun?: boolean;
+  /** Convert only these quotation item ids (client-approved subset). Option 1 still wins per creator. */
+  itemIds?: string[];
 };
 
 export type ConvertAssignmentPreviewRow = {
@@ -391,8 +393,15 @@ export async function convertQuotationToAssignments(
   if (itemsError) return { ok: false, message: itemsError.message };
 
   const items = ((itemRows ?? []) as Record<string, unknown>[]).map(toItemRow);
-  const selection = summarizeQuotationConvertSelection(items);
-  let units = buildQuotationConvertUnits(items);
+  const scopedItems =
+    input.itemIds && input.itemIds.length > 0
+      ? items.filter((item) => input.itemIds!.includes(item.id))
+      : items;
+  if (input.itemIds && input.itemIds.length > 0 && scopedItems.length === 0) {
+    return { ok: false, message: "None of the selected creators are available to convert." };
+  }
+  const selection = summarizeQuotationConvertSelection(scopedItems);
+  let units = buildQuotationConvertUnits(scopedItems);
 
   if (units.length === 0) {
     const hasLines = items.length > 0;

@@ -214,6 +214,7 @@ export async function createCampaignFromQuotation(input: {
 export async function previewConvertQuotationToCampaign(input: {
   quotationId: string;
   campaignName?: string | null;
+  itemIds?: string[];
 }): Promise<
   ActionResult<{
     alreadyExists?: boolean;
@@ -341,6 +342,7 @@ export async function previewConvertQuotationToCampaign(input: {
   const result = await convertQuotationToAssignments(actor.supabase, actor.userId, {
     quotationId: input.quotationId,
     campaignName: input.campaignName,
+    itemIds: input.itemIds,
     dryRun: true,
   });
 
@@ -366,6 +368,7 @@ export async function previewConvertQuotationToCampaign(input: {
 export async function convertQuotationToCampaign(input: {
   quotationId: string;
   campaignName?: string | null;
+  itemIds?: string[];
 }): Promise<
   ActionResult<{
     campaignId: string;
@@ -415,6 +418,7 @@ export async function convertQuotationToCampaign(input: {
   const result = await convertQuotationToAssignments(actor.supabase, actor.userId, {
     quotationId: input.quotationId,
     campaignName: input.campaignName,
+    itemIds: input.itemIds,
     dryRun: false,
   });
 

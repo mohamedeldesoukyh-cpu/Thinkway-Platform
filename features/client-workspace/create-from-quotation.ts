@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { ClientCreatorSelectionState } from "./constants";
 import { persistClientReview, type CreateClientReviewResult } from "./persist-client-review";
+import { quotationItemClientCreatorId } from "./quotation-item-creator-id";
 import { fingerprintFromSnapshotCreators } from "./snapshot";
 import { quotationItemsForClient, quotationReviewBlockers } from "./source-readiness";
 import type { ClientReviewSourceSnapshot, ClientReviewSourceSnapshotCreator } from "./types";
@@ -30,10 +31,7 @@ function formatDeliverables(item: QuotationItemRow): string | undefined {
 }
 
 function creatorIdForItem(item: QuotationItemRow): string {
-  if (item.unified_id?.trim()) return item.unified_id.trim();
-  if (item.influencer_id?.trim()) return `inf:${item.influencer_id.trim()}`;
-  if (item.profile_id?.trim()) return `dis:${item.profile_id.trim()}`;
-  return item.id;
+  return quotationItemClientCreatorId(item);
 }
 
 function handleFor(item: QuotationItemRow): string | undefined {

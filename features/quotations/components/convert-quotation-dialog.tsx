@@ -29,9 +29,10 @@ type Props = {
   detail: QuotationDetail;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  itemIds?: string[];
 };
 
-export function ConvertQuotationDialog({ detail, open, onOpenChange }: Props) {
+export function ConvertQuotationDialog({ detail, open, onOpenChange, itemIds }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [preview, setPreview] = useState<PreviewData | null>(null);
@@ -45,7 +46,10 @@ export function ConvertQuotationDialog({ detail, open, onOpenChange }: Props) {
     }
 
     startTransition(async () => {
-      const res = await previewConvertQuotationToCampaign({ quotationId: detail.id });
+      const res = await previewConvertQuotationToCampaign({
+        quotationId: detail.id,
+        itemIds,
+      });
       if (!res.ok) {
         setError(res.message || "Failed to preview conversion.");
         setPreview(null);
@@ -59,11 +63,14 @@ export function ConvertQuotationDialog({ detail, open, onOpenChange }: Props) {
       setError(null);
       setPreview(res.data);
     });
-  }, [open, detail.id]);
+  }, [open, detail.id, itemIds]);
 
   function execute() {
     startTransition(async () => {
-      const res = await convertQuotationToCampaign({ quotationId: detail.id });
+      const res = await convertQuotationToCampaign({
+        quotationId: detail.id,
+        itemIds,
+      });
       if (!res.ok) {
         toast.error(res.message);
         return;
@@ -93,8 +100,8 @@ export function ConvertQuotationDialog({ detail, open, onOpenChange }: Props) {
         <DialogHeader>
           <DialogTitle>Convert to Campaign</DialogTitle>
           <DialogDescription>
-            Creates operational Assignments from this approved quotation. The quotation
-            remains the commercial baseline.
+            Creates operational Assignments from {itemIds?.length ? "the selected creators on" : ""} this
+            approved quotation. The quotation remains the commercial baseline.
           </DialogDescription>
         </DialogHeader>
 

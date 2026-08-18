@@ -330,3 +330,18 @@ export async function loadLatestInternalReview(
   if (!data) return null;
   return mapClientReviewRow(data as Parameters<typeof mapClientReviewRow>[0]);
 }
+
+export async function loadLatestInternalReviewForQuotation(
+  supabase: SupabaseClient,
+  quotationId: string
+): Promise<ClientReviewRecord | null> {
+  const { data } = await supabase
+    .from("campaign_client_reviews" as never)
+    .select("*")
+    .eq("quotation_id", quotationId)
+    .order("review_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  return mapClientReviewRow(data as Parameters<typeof mapClientReviewRow>[0]);
+}

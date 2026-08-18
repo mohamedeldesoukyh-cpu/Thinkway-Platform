@@ -44,6 +44,8 @@ import { archiveQuotation, updateQuotationHeader } from "@/features/quotations/a
 import { quotationDetailPath } from "@/features/quotations/constants";
 import type { QuotationTemplateVariant } from "@/features/quotations/export/quotation-template";
 import type { PromoteWizardOptions, QuotationDetail } from "@/features/quotations/types";
+import type { QuotationClientReviewView } from "@/features/quotations/quotation-client-review";
+import { countQuotationClientSelections, totalsForClientSelection } from "@/features/quotations/quotation-client-review";
 
 type Props = {
   detail: QuotationDetail;
@@ -55,6 +57,7 @@ type Props = {
   onExportTemplateChange: (template: QuotationTemplateVariant) => void;
   selectedItemIds?: string[];
   onSelectedItemIdsChange?: (itemIds: string[]) => void;
+  clientReview?: QuotationClientReviewView | null;
 };
 
 export function QuotationWorkspaceHeader({
@@ -67,6 +70,7 @@ export function QuotationWorkspaceHeader({
   onExportTemplateChange,
   selectedItemIds,
   onSelectedItemIdsChange,
+  clientReview,
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -191,6 +195,19 @@ export function QuotationWorkspaceHeader({
       <span key="owner">
         <span className="k">Owner </span>
         <span className="v">{detail.owner_name}</span>
+      </span>
+    );
+  }
+  if (clientReview) {
+    const counts = countQuotationClientSelections(detail.items, clientReview.selectionState);
+    const approved = totalsForClientSelection(detail.items, clientReview.selectionState, "accepted");
+    metaNodes.push(
+      <span key="client-review">
+        <span className="k">Client approved </span>
+        <span className="v">
+          {counts.accepted}/{counts.total} · {approved.revenueEgp.toLocaleString("en-US")} EGP revenue ·{" "}
+          {approved.costEgp.toLocaleString("en-US")} EGP cost · {approved.gpPct.toFixed(1)}% GP
+        </span>
       </span>
     );
   }

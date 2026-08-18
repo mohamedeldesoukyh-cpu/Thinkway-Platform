@@ -63,6 +63,18 @@ import { QuotationCommercialMetricsBand } from "@/features/quotations/components
 import { QuotationLifecyclePills } from "@/features/quotations/components/quotation-lifecycle-pills";
 import { QuotationValidityBar } from "@/features/quotations/components/quotation-validity-bar";
 import { QuotationWorkspaceHeader } from "@/features/quotations/components/quotation-workspace-header";
+import { ConvertQuotationDialog } from "@/features/quotations/components/convert-quotation-dialog";
+import { QuotationClientReviewPanel } from "@/features/quotations/components/quotation-client-review-panel";
+import {
+  QUOTATION_CLIENT_SELECTION_LABEL,
+  clientSelectionForItems,
+  filterItemsByClientSelection,
+  itemIdsForClientSelection,
+  type QuotationClientReviewView,
+  type QuotationClientSelectionFilter,
+} from "@/features/quotations/quotation-client-review";
+import { quotationItemClientCreatorId } from "@/features/client-workspace/quotation-item-creator-id";
+import { setQuotationReviewCreatorsOnBehalfAction } from "@/features/client-workspace/actions/internal-quotation-review-selection-action";
 import { QuotationClientBrandPanel } from "@/features/quotations/components/quotation-client-brand-panel";
 import { QuotationDocumentMetaPanel } from "@/features/quotations/components/quotation-document-meta-panel";
 import { QuotationSetupWizard } from "@/features/quotations/components/quotation-setup-wizard";
@@ -211,10 +223,12 @@ export function QuotationWorkspace({
   detail,
   formOptions,
   promoteOptions,
+  clientReview = null,
 }: {
   detail: QuotationDetail;
   formOptions: QuotationFormOptions;
   promoteOptions: PromoteWizardOptions;
+  clientReview?: QuotationClientReviewView | null;
 }) {
   return (
     <QuotationManualSaveProvider quotationId={detail.id} items={detail.items}>
@@ -222,6 +236,7 @@ export function QuotationWorkspace({
         detail={detail}
         formOptions={formOptions}
         promoteOptions={promoteOptions}
+        clientReview={clientReview}
       />
     </QuotationManualSaveProvider>
   );
@@ -231,10 +246,12 @@ function QuotationWorkspaceContent({
   detail,
   formOptions,
   promoteOptions,
+  clientReview,
 }: {
   detail: QuotationDetail;
   formOptions: QuotationFormOptions;
   promoteOptions: PromoteWizardOptions;
+  clientReview: QuotationClientReviewView | null;
 }) {
   const router = useRouter();
   const manualSave = useQuotationManualSave();
@@ -251,6 +268,9 @@ function QuotationWorkspaceContent({
   const [globalCalcMode, setGlobalCalcMode] = useState<CalculationModePreference>("markup");
   const [creatorSearch, setCreatorSearch] = useState("");
   const [platformFilter, setPlatformFilter] = useState<string>("all");
+  const [clientSelectionFilter, setClientSelectionFilter] =
+    useState<QuotationClientSelectionFilter>("all");
+  const [convertApprovedOpen, setConvertApprovedOpen] = useState(false);
   const [exportTemplate, setExportTemplate] = useState<QuotationTemplateVariant>("detailed");
   const [addCreatorsOpen, setAddCreatorsOpen] = useState(false);
   const [focusNewItemId, setFocusNewItemId] = useState<string | null>(null);
@@ -323,7 +343,11 @@ function QuotationWorkspaceContent({
 
   const filteredItems = useMemo(() => {
     const q = creatorSearch.trim().toLowerCase();
-    return visibleItems.filter((item) => {
+    return filterItemsByClientSelection(
+      visibleItems,
+      clientReview?.selectionState,
+      clientReview ? clientSelectionFilter : "all"
+    ).filter((item) => {
       if (platformFilter !== "all" && item.platform !== platformFilter) return false;
       if (!q) return true;
       const hay = [item.creator_name, item.handle, item.platform]
@@ -332,7 +356,7 @@ function QuotationWorkspaceContent({
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [visibleItems, creatorSearch, platformFilter]);
+  }, [visibleItems, creatorSearch, platformFilter, clientReview, clientSelectionFilter]);
 
   const pendingItemIds = useMemo(() => {
     const pending = new Set<string>();
@@ -380,10 +404,85 @@ function QuotationWorkspaceContent({
     [sortedFilteredItems]
   );
 
+  const displayGroupSections = useMemo(() => {
+    if (!clientReview) return [{ key: "all" as const, label: null as string | null, groups: displayGroups }];
+    if (clientSelectionFilter !== "all") {
+      return [
+        {
+          key: clientSelectionFilter,
+          label: QUOTATION_CLIENT_SELECTION_LABEL[clientSelectionFilter],
+          groups: displayGroups,
+        },
+      ];
+    }
+    const buckets = {
+      accepted: [] as typeof displayGroups,
+      in_review: [] as typeof displayGroups,
+      rejected: [] as typeof displayGroups,
+    };
+    for (const group of displayGroups) {
+      const items = group.kind === "creator" ? group.items : group.creatorGroups.flatMap((row) => row.items);
+      buckets[clientSelectionForItems(items, clientReview.selectionState)].push(group);
+    }
+    return (["accepted", "in_review", "rejected"] as const)
+      .filter((key) => buckets[key].length > 0)
+      .map((key) => ({
+        key,
+        label: QUOTATION_CLIENT_SELECTION_LABEL[key],
+        groups: buckets[key],
+      }));
+  }, [clientReview, clientSelectionFilter, displayGroups]);
+
   const uniqueCreatorCount = useMemo(
     () => countUniqueQuotationCreators(visibleItems),
     [visibleItems]
   );
+
+  const approvedItemIds = useMemo(
+    () =>
+      clientReview
+        ? itemIdsForClientSelection(visibleItems, clientReview.selectionState, "accepted")
+        : [],
+    [clientReview, visibleItems]
+  );
+
+  function selectByClientState(state: "accepted" | "in_review") {
+    if (!clientReview) return;
+    setSelectedIds(new Set(itemIdsForClientSelection(visibleItems, clientReview.selectionState, state)));
+  }
+
+  function acceptUnderReviewOnBehalf() {
+    if (!clientReview) return;
+    const selectedUnderReview = visibleItems.filter(
+      (item) =>
+        selectedIds.has(item.id) &&
+        clientSelectionForItems([item], clientReview.selectionState) === "in_review"
+    );
+    const source =
+      selectedUnderReview.length > 0
+        ? selectedUnderReview
+        : visibleItems.filter(
+            (item) => clientSelectionForItems([item], clientReview.selectionState) === "in_review"
+          );
+    const creatorIds = [...new Set(source.map((item) => quotationItemClientCreatorId(item)))];
+    if (creatorIds.length === 0) {
+      toast.error("No under-review creators to approve.");
+      return;
+    }
+    startBulkTransition(async () => {
+      const result = await setQuotationReviewCreatorsOnBehalfAction({
+        quotationId: detail.id,
+        creatorIds,
+        state: "accepted",
+      });
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
+      toast.success(result.message);
+      router.refresh();
+    });
+  }
 
   const handleDisplayCurrencyChange = useCallback(
     (currency: string) => {
@@ -771,6 +870,7 @@ function QuotationWorkspaceContent({
         onExportTemplateChange={setExportTemplate}
         selectedItemIds={[...selectedIds]}
         onSelectedItemIdsChange={(itemIds) => setSelectedIds(new Set(itemIds))}
+        clientReview={clientReview}
       />
 
       <div className="scroll flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain">
@@ -802,6 +902,31 @@ function QuotationWorkspaceContent({
             />
           }
         />
+        {clientReview ? (
+          <QuotationClientReviewPanel
+            review={clientReview}
+            items={visibleItems}
+            filter={clientSelectionFilter}
+            onFilter={setClientSelectionFilter}
+            canManage={detail.canManage}
+            quotationApproved={detail.status === "approved"}
+            onSelectApproved={() => selectByClientState("accepted")}
+            onSelectUnderReview={() => selectByClientState("in_review")}
+            onAcceptOnBehalf={acceptUnderReviewOnBehalf}
+            onMoveApprovedToCampaign={() => {
+              if (approvedItemIds.length === 0) {
+                toast.error("No approved creators to move.");
+                return;
+              }
+              if (detail.status !== "approved") {
+                toast.error("Approve this quotation first, then move the approved creators to the campaign.");
+                return;
+              }
+              setConvertApprovedOpen(true);
+            }}
+            pending={bulkPending}
+          />
+        ) : null}
 
         <section
           className={cn(discoverySelectionFlyoutContentClass(selectedIds.size > 0))}
@@ -959,7 +1084,14 @@ function QuotationWorkspaceContent({
                 <span className="co-act" aria-hidden />
               </div>
 
-              {displayGroups.map((group, groupIndex) => {
+              {displayGroupSections.map((section) => (
+                <div key={section.key}>
+                  {section.label ? (
+                    <div className="px-1 py-2 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--muted,#6B7280)]">
+                      {section.label}
+                    </div>
+                  ) : null}
+                  {section.groups.map((group, groupIndex) => {
                 const pricingCompleteness = quotationDisplayGroupPricingCompleteness(
                   group,
                   manualSave.getLinePendingPayload,
@@ -999,6 +1131,7 @@ function QuotationWorkspaceContent({
                       focusItemId={focusNewItemId}
                       displayCurrency={displayCurrency}
                       displayFxRateToEgp={displayFxRateToEgp}
+                      selectionState={clientReview?.selectionState}
                     />
                   ) : (
                     <QuotationCreatorGroupRows
@@ -1017,11 +1150,17 @@ function QuotationWorkspaceContent({
                       focusItemId={focusNewItemId}
                       displayCurrency={displayCurrency}
                       displayFxRateToEgp={displayFxRateToEgp}
+                      clientSelection={clientSelectionForItems(
+                        group.items,
+                        clientReview?.selectionState
+                      )}
                     />
                   )}
                 </div>
                 );
-              })}
+                  })}
+                </div>
+              ))}
 
               <div className="totals sticky bottom-0 z-10">
                 <span className="lbl">
@@ -1091,6 +1230,12 @@ function QuotationWorkspaceContent({
         confirmLabel="Open preview"
         confirmDisabled={previewPlatformsLoading}
         onConfirm={handlePreviewSelectionConfirm}
+      />
+      <ConvertQuotationDialog
+        detail={detail}
+        open={convertApprovedOpen}
+        onOpenChange={setConvertApprovedOpen}
+        itemIds={approvedItemIds}
       />
     </div>
   );

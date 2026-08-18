@@ -19,7 +19,8 @@ import {
 import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
 import { pickCreatorDisplayName } from "@/lib/text/decode-html-entities";
-import { cn } from "@/lib/utils";
+import type { ClientCreatorSelectionState } from "@/features/client-workspace/constants";
+import { QuotationClientReviewStatusBadge } from "@/features/quotations/components/quotation-client-review-status-badge";
 
 type Props = {
   item: QuotationItemRow;
@@ -31,6 +32,7 @@ type Props = {
   isFirstGroup: boolean;
   hideOptionCount?: boolean;
   onOpenCreator?: () => void;
+  clientSelection?: ClientCreatorSelectionState;
 };
 
 function formatHandle(handle: string | null | undefined): string | null {
@@ -47,6 +49,7 @@ export function QuotationCreatorGroupHeaderRow({
   isFirstGroup,
   hideOptionCount = false,
   onOpenCreator,
+  clientSelection,
 }: Props) {
   const [fetchedPlatforms, setFetchedPlatforms] = useState<string[]>([]);
 
@@ -168,6 +171,7 @@ export function QuotationCreatorGroupHeaderRow({
               </span>
             )}
           </span>
+          {clientSelection ? <QuotationClientReviewStatusBadge state={clientSelection} /> : null}
           {creatorProfileSource.isVerified ? (
             <BadgeCheckIcon className="vf size-3.5 shrink-0 text-[var(--blue)]" aria-label="Verified" />
           ) : null}
