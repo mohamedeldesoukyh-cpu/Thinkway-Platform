@@ -1,6 +1,9 @@
 export type QuotationTemplatePricingMode = "itemized" | "lump_sum" | "none";
 
+export type QuotationTemplateDocumentKind = "quotation" | "shortlist";
+
 export type QuotationTemplateFlags = {
+  documentKind: QuotationTemplateDocumentKind;
   showcaseCreators: boolean;
   pitchCreators: boolean;
   showCommercialSummary: boolean;

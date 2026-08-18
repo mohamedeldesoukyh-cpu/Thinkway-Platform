@@ -29,7 +29,6 @@ import { buildShortlistExportHref } from "@/features/discovery/shortlists/compon
 import { shortlistPreviewPath } from "@/features/discovery/shortlists/constants";
 import {
   SHORTLIST_TEMPLATE_OPTIONS,
-  isCreatorDeckTemplate,
   type ShortlistTemplateVariant,
 } from "@/features/discovery/shortlists/export/shortlist-template";
 import type { ShortlistCreatorItem } from "@/features/discovery/shortlists/types";
@@ -49,7 +48,7 @@ const EXPORT_FORMATS = [
   { format: "html" as const, label: "HTML", icon: FileTextIcon },
   { format: "pdf" as const, label: "PDF", icon: DownloadIcon },
   { format: "excel" as const, label: "Excel", icon: FileSpreadsheetIcon },
-  { format: "pptx" as const, label: "PPTX", icon: PresentationIcon, deckOnly: true },
+  { format: "pptx" as const, label: "PPTX", icon: PresentationIcon },
   { format: "csv" as const, label: "CSV", icon: DownloadIcon },
   { format: "word" as const, label: "Word", icon: FileTextIcon },
 ];
@@ -128,9 +127,7 @@ export function ShortlistCreatorToolbarActions({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-[180px] w-[180px]">
-          {EXPORT_FORMATS.filter(
-            (entry) => !entry.deckOnly || isCreatorDeckTemplate(exportTemplate)
-          ).map(({ format, label, icon: Icon }) => (
+          {EXPORT_FORMATS.map(({ format, label, icon: Icon }) => (
             <DropdownMenuItem
               key={format}
               onSelect={(event) => {

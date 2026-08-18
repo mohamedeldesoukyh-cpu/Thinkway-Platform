@@ -51,6 +51,15 @@ export type ShortlistDocPublicationShot = {
   imageProxyUrl?: string | null;
 };
 
+export type ShortlistDocPlatformMetric = {
+  platform: string;
+  followers: string;
+  engagement: string;
+  views: string;
+  profileUrl: string | null;
+  avatarUrl: string | null;
+};
+
 export function shortlistCreatorKey(item: ShortlistCreatorItem): string {
   return item.unified_id ?? item.influencer_id ?? item.profile_id ?? item.item_id;
 }
@@ -66,6 +75,7 @@ export type ShortlistDocCreatorGroup = {
   profileUrl: string | null;
   platformLinks: ShortlistPlatformLink[];
   platform: string;
+  platformMetrics: ShortlistDocPlatformMetric[];
   followers: string;
   followersNumeric: number | null;
   engagementRate: string;
@@ -224,7 +234,7 @@ function formatShortlistDateLabel(date: Date): string {
 
 function computeShortlistSummary(
   items: ShortlistCreatorItem[],
-  template: ShortlistTemplateVariant
+  includeInternalFields: boolean
 ): ShortlistDocumentSummary {
   let totalFollowers = 0;
   let erSum = 0;
@@ -276,7 +286,7 @@ function computeShortlistSummary(
       incrementBreakdown(categoryMap, category);
     }
 
-    if (template === "detailed") {
+    if (includeInternalFields) {
       incrementBreakdown(brandSafetyMap, brandSafetyMeta(creator.authenticity_score).label);
       incrementBreakdown(statusMap, SHORTLIST_ITEM_STATUS_LABELS[item.item_status]);
     }
@@ -305,6 +315,24 @@ function computeShortlistSummary(
     brandSafetyBreakdown: topBreakdownItems(brandSafetyMap),
     statusBreakdown: topBreakdownItems(statusMap),
   };
+}
+
+function resolvePlatformMetrics(
+  creator: UnifiedCreatorResult,
+  avatarUrl: string | null
+): ShortlistDocPlatformMetric[] {
+  return filterPlatformsForDisplay(creator.platforms).map((account) => ({
+    platform: account.platform,
+    followers: formatCreatorCount(account.follower_count ?? null),
+    engagement: formatEngagementRate(account.engagement_rate ?? null),
+    views: "—",
+    profileUrl: resolveCreatorProfileUrl({
+      platform: account.platform,
+      handle: account.handle,
+      profile_url: account.profile_url,
+    }),
+    avatarUrl,
+  }));
 }
 
 function resolvePlatformLinks(creator: UnifiedCreatorResult): ShortlistPlatformLink[] {
@@ -394,6 +422,7 @@ function buildCreatorGroup(
     profileUrl,
     platformLinks: row.platformLinks,
     platform: row.platform,
+    platformMetrics: resolvePlatformMetrics(creator, row.avatarUrl),
     followers: row.followers,
     followersNumeric: resolveFollowersNumeric(creator),
     engagementRate: row.engagementRate,
@@ -466,6 +495,7 @@ export type BuildShortlistDocumentOptions = {
 function applyShortlistPlatformFilter<T extends {
   platformLinks: ShortlistPlatformLink[];
   platform: string;
+  platformMetrics?: ShortlistDocPlatformMetric[];
 }>(
   entry: T,
   platformFilterKeys: Set<string> | null
@@ -480,14 +510,17 @@ function applyShortlistPlatformFilter<T extends {
       : platformLinks.length === 1
         ? platformLinks[0]!.label
         : platformLinks.map((link) => link.label).join(", ");
-  return { ...entry, platformLinks, platform };
+  const platformMetrics = entry.platformMetrics?.filter((metric) =>
+    platformFilterKeys.has(canonicalPlatformKey(metric.platform))
+  );
+  return { ...entry, platformLinks, platform, ...(platformMetrics ? { platformMetrics } : {}) };
 }
 
 export function buildShortlistDocument(
   detail: ShortlistDetail,
   options: BuildShortlistDocumentOptions = {}
 ): ShortlistDocument {
-  const template = options.template ?? "summary";
+  const template = options.template ?? "detailed";
   const itemIdSet =
     options.itemIds && options.itemIds.length > 0 ? new Set(options.itemIds) : null;
 
@@ -532,9 +565,7 @@ export function buildShortlistDocument(
   }
 
   const generatedAt = new Date();
-  const summaryTemplate =
-    template === "showcase" || template === "pitch" ? "summary" : template;
-  const baseSummary = computeShortlistSummary(items, summaryTemplate);
+  const baseSummary = computeShortlistSummary(items, template === "detailed");
   const rosterForecast = computeCampaignForecastFromProfiles(
     shortlistGroupsToForecastProfiles(creatorGroups)
   );

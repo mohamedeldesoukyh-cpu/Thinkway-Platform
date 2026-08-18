@@ -308,6 +308,8 @@ function renderCoverPage(payload: QuotationTemplatePayload): string {
   const camp = payload.campaign;
   const showcase = payload.flags.showcaseCreators;
   const pitch = payload.flags.pitchCreators;
+  const isShortlist = payload.flags.documentKind === "shortlist";
+  const numberLabel = isShortlist ? "Shortlist No." : "Quotation No.";
   const meta = pitch
     ? `<div class="metagrid">
       <div class="m"><p class="l">Client</p><p class="v">${esc(q.client)}</p></div>
@@ -317,13 +319,13 @@ function renderCoverPage(payload: QuotationTemplatePayload): string {
     </div>`
     : showcase
       ? `<div class="metagrid">
-      <div class="m"><p class="l">Quotation No.</p><p class="v mono">${esc(q.number)}</p></div>
+      <div class="m"><p class="l">${numberLabel}</p><p class="v mono">${esc(q.number)}</p></div>
       <div class="m"><p class="l">Client</p><p class="v">${esc(q.client)}</p></div>
       <div class="m"><p class="l">Brand</p><p class="v">${esc(q.brand)}</p></div>
       <div class="m"><p class="l">Issue · Valid</p><p class="v mono">${esc(q.issueDate)} · ${esc(q.validUntil)}</p></div>
     </div>`
       : `<div class="metagrid">
-      <div class="m"><p class="l">Quotation No.</p><p class="v mono">${esc(q.number)}</p></div>
+      <div class="m"><p class="l">${numberLabel}</p><p class="v mono">${esc(q.number)}</p></div>
       <div class="m"><p class="l">Client</p><p class="v">${esc(q.client)}</p></div>
       <div class="m"><p class="l">Brand</p><p class="v">${esc(q.brand)}</p></div>
       <div class="m"><p class="l">Prepared By</p><p class="v">${esc(q.preparedBy)}</p></div>
@@ -379,9 +381,11 @@ function renderCategoryTierPages(
   const cols = mixColumnFlags(payload);
   const tiers = buildMixTier(payload, creatorGroups);
   const showcase = payload.flags.showcaseCreators;
+  const isShortlist = payload.flags.documentKind === "shortlist";
   const firstPageExtraMm = showcase ? 0 : MIX_CATEGORY_BLOCK_MM;
   // Detailed creator mix has no investment price banner — fees live on Commercial.
   // Showcase / pitch investment summary keeps the TOTAL INVESTMENT banner.
+  // Shortlists reuse the mix layout without commercial totals.
   const pages = paginateMixTiers(tiers, {
     firstPageExtraMm,
     includeBanner: showcase,
@@ -401,11 +405,19 @@ function renderCategoryTierPages(
 
   return pages
     .map((page) => {
-      const sectionLabel = showcase ? "01 · Investment summary" : "01 · Creators by category";
+      const sectionLabel = showcase
+        ? isShortlist
+          ? "01 · Creator mix"
+          : "01 · Investment summary"
+        : "01 · Creators by category";
       const title = showcase
         ? page.continued
-          ? "Creators & fees (continued)"
-          : "Creators & fees"
+          ? isShortlist
+            ? "Creator mix (continued)"
+            : "Creators & fees (continued)"
+          : isShortlist
+            ? "Creator mix"
+            : "Creators & fees"
         : page.continued
           ? "Creator mix (continued)"
           : "Creator mix";
@@ -417,7 +429,9 @@ function renderCategoryTierPages(
           ? `<div class="cat-bars">${categories || `<div class="cat-bar"><span class="cn">—</span><b>0</b><span class="cs">No categories</span></div>`}</div>`
           : "";
       const banner = page.showBanner
-        ? showcase
+        ? isShortlist
+          ? `<div class="banner tier-breakdown-grand-total"><div class="gl">TOTAL AUDIENCE · ${esc(payload.totals.creatorCount)} CREATORS</div><div class="gv">${esc(payload.totals.followers)}</div></div>`
+        : showcase
           ? `<div class="totals showcase-invest-totals summary-box">
       <div class="tot"><p class="tl">Client investment</p><p class="tv">${esc(money.currency)} ${esc(money.amount)}</p></div>
       <div class="tot"><p class="tl">Fees</p><p class="tv">${esc(feeMoney.currency)} ${esc(feeMoney.amount)}</p></div>
@@ -447,7 +461,7 @@ function renderClosingPage(payload: QuotationTemplatePayload): string {
     ${renderLogo("cover")}
     <div class="closing-rule"></div>
     <h1>Let's build something worth watching.</h1>
-    <p class="sub">Thank you for reviewing this quotation. We're ready to bring the ${esc(q.client)} × ${esc(q.brand)} campaign to life.</p>
+    <p class="sub">Thank you for reviewing this ${payload.flags.documentKind === "shortlist" ? "shortlist" : "quotation"}. We're ready to bring the ${esc(q.client)} × ${esc(q.brand)} campaign to life.</p>
     <div class="closing-meta">
       <div>
         <p class="el">Email</p>
@@ -600,6 +614,7 @@ function renderShowcaseCreatorPages(
         payload.flags.showFees && fee
           ? `<div class="sc-fee-pill">${esc(fee)}</div>`
           : "";
+      const showDeliverableBar = payload.flags.documentKind !== "shortlist";
       // Never show INF-xxxx; fall back to username when no real creator name exists.
       const displayName = pickCreatorDisplayName(
         [creator.name, creator.handle],
@@ -630,13 +645,17 @@ function renderShowcaseCreatorPages(
     ${showcaseMetricCardsHtml(creator)}
     <p class="sc-sub showcase-pubs-title">Recent publications</p>
     ${pubsHtml}
-    <div class="sc-deliverable-bar">
+    ${
+      showDeliverableBar
+        ? `<div class="sc-deliverable-bar">
       <div>
         <p class="dl">Proposed deliverable</p>
         <p class="dv">${esc(summary)}</p>
       </div>
       ${feePill}
-    </div>
+    </div>`
+        : ""
+    }
   </div>
   <div class="foot"><span>${esc(payload.footer.left)}</span><span class="mono">${esc(payload.quotation.number)} · ${esc(creator.handle)}</span></div>
 </section>`;
@@ -1111,6 +1130,7 @@ export function buildQuotationTemplateHtml(
     payload.flags.showcaseCreators ? "quotation-showcase" : "",
     payload.flags.pitchCreators ? "quotation-pitch" : "",
     "quotation-report",
+    payload.flags.documentKind === "shortlist" ? "shortlist-report" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -1121,7 +1141,9 @@ export function buildQuotationTemplateHtml(
     renderCollapseContentPages(doc, siteOrigin, forPdf),
     ...(payload.flags.showcaseCreators
       ? [renderShowcaseCreatorPages(payload, doc, siteOrigin, forPdf), renderRosterPage(payload, doc)]
-      : []),
+      : payload.flags.documentKind === "shortlist"
+        ? [renderRosterPage(payload, doc)]
+        : []),
     ...(payload.flags.showCommercialSummary
       ? [renderCommercialPage(payload, doc, siteOrigin)]
       : []),

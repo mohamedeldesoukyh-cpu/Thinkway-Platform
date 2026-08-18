@@ -173,7 +173,7 @@ export function ShortlistWorkspace({
     onOpenChange: onDetailOpenChange,
     setCreator: setDetailCreator,
   } = useCreatorDetailSheetState();
-  const [exportTemplate, setExportTemplate] = useState<ShortlistTemplateVariant>("showcase");
+  const [exportTemplate, setExportTemplate] = useState<ShortlistTemplateVariant>("detailed");
   const [displayCurrency, setDisplayCurrency] = useState(
     () => (detail.currency || "EGP").toUpperCase()
   );

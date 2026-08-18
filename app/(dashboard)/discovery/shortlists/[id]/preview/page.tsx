@@ -12,7 +12,10 @@ import {
   shortlistDetailPath,
   shortlistPreviewPath,
 } from "@/features/discovery/shortlists/constants";
-import { resolveShortlistTemplate } from "@/features/discovery/shortlists/export/shortlist-template";
+import {
+  SHORTLIST_TEMPLATE_OPTIONS,
+  resolveShortlistTemplate,
+} from "@/features/discovery/shortlists/export/shortlist-template";
 import { renderShortlistPreviewHtml } from "@/features/discovery/shortlists/export/render-shortlist-preview-html";
 import { getShortlistDetail } from "@/features/discovery/shortlists/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -47,16 +50,10 @@ export async function generateMetadata({
 function shortlistTemplateLabel(
   template: ReturnType<typeof resolveShortlistTemplate>
 ): string {
-  switch (template) {
-    case "showcase":
-      return "Showcase";
-    case "detailed":
-      return "Detailed";
-    case "pitch":
-      return "Pitch presentation";
-    default:
-      return "Summary";
-  }
+  return (
+    SHORTLIST_TEMPLATE_OPTIONS.find((option) => option.id === template)?.label ??
+    "Detailed"
+  );
 }
 
 export default async function ShortlistPreviewPage({
@@ -99,7 +96,7 @@ export default async function ShortlistPreviewPage({
       },
       undefined,
       {
-        ...(template !== "summary" ? { template } : {}),
+        ...(template !== "detailed" ? { template } : {}),
         ...(itemIds?.length ? { items: itemIds.join(",") } : {}),
         ...(platforms?.length ? { platforms: platforms.join(",") } : {}),
       }

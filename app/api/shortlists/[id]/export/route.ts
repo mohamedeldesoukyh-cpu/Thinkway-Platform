@@ -17,7 +17,7 @@ import {
   loadShortlistCreatorPublicationShots,
 } from "@/features/discovery/shortlists/export/shortlist-export-publications";
 import { buildShortlistHtml } from "@/features/discovery/shortlists/export/shortlist-html";
-import { SHORTLIST_PDF_OPTIONS } from "@/features/discovery/shortlists/export/shortlist-pdf";
+import { QUOTATION_PDF_OPTIONS } from "@/features/quotations/export/quotation-pdf";
 import { buildShortlistPptxBuffer } from "@/features/discovery/shortlists/export/shortlist-pptx";
 import {
   isCreatorDeckTemplate,
@@ -65,7 +65,7 @@ function parseItemIds(raw: string | null): string[] | undefined {
 }
 
 function templateSuffix(template: ReturnType<typeof resolveShortlistTemplate>): string {
-  if (template === "summary") return "";
+  if (template === "detailed") return "";
   return `-${template}`;
 }
 
@@ -155,13 +155,7 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     if (format === "pptx") {
-      if (!isCreatorDeckTemplate(template)) {
-        return NextResponse.json(
-          { error: "PPTX export is available for Showcase and Pitch presentation templates only." },
-          { status: 400 }
-        );
-      }
-      const buffer = await buildShortlistPptxBuffer(doc);
+      const buffer = await buildShortlistPptxBuffer(doc, { siteOrigin });
       return new NextResponse(new Uint8Array(buffer), {
         headers: withExportCacheHeaders({
           "Content-Type":
@@ -183,7 +177,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     if (format === "pdf") {
       const pdfHtml = buildShortlistHtml(doc, { siteOrigin, forPdf: true });
-      const pdfResult = await renderHtmlToPdf(pdfHtml, SHORTLIST_PDF_OPTIONS);
+      const pdfResult = await renderHtmlToPdf(pdfHtml, QUOTATION_PDF_OPTIONS);
       if (!pdfResult.ok) {
         return NextResponse.json(
           { error: pdfUnavailableMessage(pdfResult.error) },

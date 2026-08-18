@@ -1,10 +1,9 @@
 import assert from "node:assert/strict";
 
+import { shortlistDocumentToQuotationDocument } from "@/features/discovery/shortlists/export/shortlist-as-quotation-document";
 import { buildShortlistDocument } from "@/features/discovery/shortlists/export/shortlist-document";
 import { buildShortlistHtml } from "@/features/discovery/shortlists/export/shortlist-html";
 import type { ShortlistTemplateVariant } from "@/features/discovery/shortlists/export/shortlist-template";
-import { buildShortlistTemplatePayload } from "@/features/discovery/shortlists/templates/shortlist-template-payload";
-import { buildShortlistTemplateHtml } from "@/features/discovery/shortlists/templates/shortlist-template-html";
 import type { ShortlistDetail } from "@/features/discovery/shortlists/types";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
@@ -59,6 +58,7 @@ function mockDetail(overrides: Partial<ShortlistDetail> = {}): ShortlistDetail {
   return {
     id: "sl-1",
     serial_number: "SL-2026-0001",
+    slug: null,
     name: "Summer Creators",
     description: "Top picks for Q3",
     status: "approved",
@@ -80,7 +80,6 @@ function mockDetail(overrides: Partial<ShortlistDetail> = {}): ShortlistDetail {
     is_archived: false,
     created_at: "2026-07-01T00:00:00.000Z",
     updated_at: "2026-07-13T08:00:00.000Z",
-    creators: [],
     movements: [],
     movedAssignments: [],
     linkedQuotations: [],
@@ -97,6 +96,8 @@ function mockDetail(overrides: Partial<ShortlistDetail> = {}): ShortlistDetail {
         notes: "Strong fit",
         platform_account_ids: ["pa-1"],
         quotation_refs: [],
+        collapse_group_id: null,
+        collapse_label: null,
         creator: mockCreator(),
       },
     ],
@@ -109,79 +110,74 @@ function docWithTemplate(template: ShortlistTemplateVariant) {
 }
 
 {
-  const payload = buildShortlistTemplatePayload(docWithTemplate("summary"));
-  assert.equal(payload.flags.showcaseCreators, false);
-  assert.equal(payload.flags.includeInternalFields, false);
-  assert.equal(payload.roster.sectionNo, "02");
-  assert.equal(payload.shortlist.number, "SL-2026-0001");
+  const mapped = shortlistDocumentToQuotationDocument(docWithTemplate("detailed"));
+  assert.equal(mapped.source, "shortlist");
+  assert.equal(mapped.template, "detailed");
+  assert.equal(mapped.serial, "SL-2026-0001");
+  assert.equal(mapped.summary.totalClientCost, "—");
 }
 
 {
-  const payload = buildShortlistTemplatePayload(docWithTemplate("detailed"));
-  assert.equal(payload.flags.includeInternalFields, true);
-  assert.equal(payload.cover.kicker, "Discovery Shortlist · Detailed");
-}
-
-{
-  const html = buildShortlistTemplateHtml(docWithTemplate("summary"));
-  assert.ok(html.includes("Discovery Shortlist · Summary"));
+  const html = buildShortlistHtml(docWithTemplate("lump-sum"));
+  assert.ok(html.includes("Discovery Shortlist · Lump Sum"));
   assert.ok(html.includes("Creator mix"));
   assert.ok(html.includes("Creators by category"));
-  assert.ok(html.includes("Summary roster"));
-  assert.ok(html.includes("fee-avatar"));
-  assert.ok(html.includes("creator-name-cell"));
-  assert.ok(html.includes("tier-breakdown-header"));
-  assert.ok(html.includes("summary-overview-page"));
-  assert.ok(html.includes("@page{size:A4 landscape; margin:0;}"));
-  assert.ok(html.includes("--sl-page-h:210mm"));
-  assert.ok(html.includes("sl-measure-root"));
-  assert.ok(html.includes("sl-page-root"));
-  assert.ok(html.includes("paginateShowcase"));
-  assert.ok(html.includes("--blue:#0057FF"));
-  assert.ok(!html.includes("Proposed deliverables"));
+  assert.ok(html.includes("At a glance"));
+  assert.ok(html.includes("quotation-export-preview"));
+  assert.ok(html.includes("shortlist-report"));
+  assert.ok(html.includes('class="cpage') || html.includes("cpage page"));
+  assert.ok(html.includes("@page{ size:297mm 210mm"));
+  assert.ok(html.includes("--blue:#0057ff"));
   assert.ok(!html.includes("Commercial summary"));
+  assert.ok(!html.includes("Proposed deliverable"));
+  assert.ok(!html.includes("sl-measure-root"));
 }
 
 {
-  const showcaseHtml = buildShortlistTemplateHtml(docWithTemplate("showcase"));
+  const html = buildShortlistHtml(docWithTemplate("detailed"));
+  assert.ok(html.includes("Discovery Shortlist"));
+  assert.ok(!html.includes("Client Quotation"));
+  assert.ok(!html.includes("id=\"section-commercial\""));
+  assert.ok(!html.includes("Terms &amp; conditions"));
+}
+
+{
+  const showcaseHtml = buildShortlistHtml(docWithTemplate("showcase"));
   assert.ok(showcaseHtml.includes("Discovery Shortlist · Showcase"));
+  assert.ok(showcaseHtml.includes("Showcase Shortlist — Summer Creators"));
   assert.ok(showcaseHtml.includes("sc-avatar"));
   assert.ok(showcaseHtml.includes("showcase-creator-page"));
-  assert.ok(showcaseHtml.includes("shortlist-export-preview"));
   assert.ok(showcaseHtml.includes("Recent publications"));
-  assert.ok(showcaseHtml.includes("Shortlist context"));
-  assert.ok(showcaseHtml.includes("position:absolute"));
-  assert.ok(showcaseHtml.includes("height:calc(var(--sl-page-h) - var(--sl-footer-h))"));
-  assert.ok(showcaseHtml.includes('data-sl-block'));
-  assert.ok(showcaseHtml.includes("getBoundingClientRect"));
-  assert.ok(!showcaseHtml.includes("Proposed deliverables"));
+  assert.ok(showcaseHtml.includes("quotation-export-preview"));
+  assert.ok(showcaseHtml.includes("quotation-showcase"));
+  assert.ok(showcaseHtml.includes("TOTAL AUDIENCE"));
+  assert.ok(!showcaseHtml.includes("Proposed deliverable"));
+  assert.ok(!showcaseHtml.includes("Client investment"));
+  assert.ok(!showcaseHtml.includes("sl-measure-root"));
 }
 
 {
-  const pdfHtml = buildShortlistTemplateHtml(docWithTemplate("showcase"), { forPdf: true });
-  assert.ok(pdfHtml.includes('body class="shortlist-export-print shortlist-showcase shortlist-report"'));
-  assert.ok(pdfHtml.includes("@page{size:A4 landscape; margin:0;}"));
-  assert.ok(pdfHtml.includes("--sl-page-h:210mm"));
-  assert.ok(pdfHtml.includes("height:210mm !important"));
-  assert.ok(pdfHtml.includes("position:absolute"));
-  assert.ok(pdfHtml.includes("bottom:0"));
-  assert.ok(pdfHtml.includes("margin-top:0 !important"));
-  assert.ok(pdfHtml.includes("paginateShowcase"));
-  assert.ok(pdfHtml.includes("data-sl-paginated"));
-  assert.ok(pdfHtml.includes("summary-tier-page") || pdfHtml.includes("summary-totals-page"));
-  assert.ok(!pdfHtml.includes('body class="shortlist-export-preview'));
-  // Preview and PDF share the same pagination engine (forPdf only flips body class).
-  const previewHtml = buildShortlistTemplateHtml(docWithTemplate("showcase"), { forPdf: false });
-  assert.ok(previewHtml.includes("paginateShowcase"));
+  const pdfHtml = buildShortlistHtml(docWithTemplate("showcase"), { forPdf: true });
+  assert.ok(pdfHtml.includes('body class="quotation-export-print quotation-showcase quotation-report shortlist-report"'));
+  assert.ok(!pdfHtml.includes('body class="quotation-export-preview'));
+  const previewHtml = buildShortlistHtml(docWithTemplate("showcase"), { forPdf: false });
   assert.equal(
-    previewHtml.includes("sl-measure-root"),
-    pdfHtml.includes("sl-measure-root")
+    previewHtml.includes("cpage"),
+    pdfHtml.includes("cpage")
   );
 }
 
 {
-  const wrapperHtml = buildShortlistHtml(docWithTemplate("summary"));
-  assert.ok(wrapperHtml.includes("Discovery Shortlist · Summary"));
+  const pitchLumpHtml = buildShortlistHtml(docWithTemplate("pitch-lump-sum"));
+  assert.ok(pitchLumpHtml.includes("Discovery Shortlist · Pitch Lump-Sum"));
+  assert.ok(pitchLumpHtml.includes("quotation-pitch"));
+  assert.ok(!pitchLumpHtml.includes("Commercial summary"));
+}
+
+{
+  const wrapperHtml = buildShortlistHtml(docWithTemplate("detailed"));
+  assert.ok(wrapperHtml.includes("Shortlist No."));
+  assert.ok(!wrapperHtml.includes("Quotation No."));
 }
 
 console.log("shortlist-template.test.ts passed");

@@ -10,7 +10,6 @@ import { appendPlatformsQueryParam } from "@/features/discovery/document-preview
 import {
   appendShortlistExportRevision,
   appendShortlistTemplateParam,
-  isCreatorDeckTemplate,
   type ShortlistTemplateVariant,
 } from "@/features/discovery/shortlists/export/shortlist-template";
 
@@ -102,17 +101,15 @@ export function ShortlistPreviewDownloads({
           CSV
         </a>
       </Button>
-      {isCreatorDeckTemplate(template) ? (
-        <Button size="sm" variant="outline" asChild>
-          <a
-            href={buildShortlistExportHref(shortlistId, "pptx", template, exportOptions)}
-            download
-          >
-            <PresentationIcon data-icon="inline-start" className="size-3.5" />
-            PPTX
-          </a>
-        </Button>
-      ) : null}
+      <Button size="sm" variant="outline" asChild>
+        <a
+          href={buildShortlistExportHref(shortlistId, "pptx", template, exportOptions)}
+          download
+        >
+          <PresentationIcon data-icon="inline-start" className="size-3.5" />
+          PPTX
+        </a>
+      </Button>
     </div>
   );
 }

@@ -1,17 +1,18 @@
 /**
- * Enterprise shortlist HTML — preview / Word / PDF share this renderer.
+ * Enterprise shortlist HTML — preview / Word / PDF share the quotation renderer.
  */
+import { shortlistDocumentToQuotationDocument } from "./shortlist-as-quotation-document";
 import type { ShortlistDocument } from "./shortlist-document";
 import {
-  buildShortlistTemplateHtml,
-  type BuildShortlistTemplateHtmlOptions,
-} from "@/features/discovery/shortlists/templates/shortlist-template-html";
+  buildQuotationHtml,
+  type BuildQuotationHtmlOptions,
+} from "@/features/quotations/export/quotation-html";
 
-export type BuildShortlistHtmlOptions = BuildShortlistTemplateHtmlOptions;
+export type BuildShortlistHtmlOptions = BuildQuotationHtmlOptions;
 
 export function buildShortlistHtml(
   doc: ShortlistDocument,
   options?: BuildShortlistHtmlOptions
 ): string {
-  return buildShortlistTemplateHtml(doc, options);
+  return buildQuotationHtml(shortlistDocumentToQuotationDocument(doc), options);
 }

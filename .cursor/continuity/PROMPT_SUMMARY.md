@@ -1,12 +1,11 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `develop` (aligned with `main`)  
-**Focus:** Client Workspace + quotation client-review — **released to Production** `2f72856e`
+**Branch:** `develop`  
+**Focus:** Shortlist Preview/PDF/PPTX/Word now use the same template family as quotations
 
-Public Client Workspace and internal quotation consumption of client decisions are live on both hosts.
+Shortlist reports render through quotation templates (`detailed`, `lump-sum`, `showcase`, `showcase-lump-sum`, `pitch`, `pitch-lump-sum`). Commercial/fees/terms are omitted (shortlists have no pricing). Old `?template=summary` maps to lump-sum.
 
 - Dev: https://dev.thinkwaymedia.com  
-- Prod: https://app.thinkwaymedia.com  
-- Production Supabase `ienowhwfyxoqtzbgltno`: applied `20260817120000`, `20260817130000`, `20260818120000` (client reviews, sources, share_token)
+- Prod: https://app.thinkwaymedia.com — **this change is not on Production until commit + `[deploy-production]`**
 
-Quotation document must already be approved before moving accepted creators to campaign.
+Client Workspace + quotation client-review remain live (`2f72856e`).

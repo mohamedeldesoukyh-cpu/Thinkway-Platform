@@ -624,9 +624,11 @@ function addCoverSlide(pptx: PptxGen, doc: QuotationDocument, counter: SlideCoun
   });
 
   // Showcase cover matches HTML redesign: 4 compact meta fields, no version/status chip.
+  const numberLabel =
+    payload.flags.documentKind === "shortlist" ? "Shortlist No." : "Quotation No.";
   const metaCells: Array<[string, string]> = showcase
     ? [
-        ["Quotation No.", payload.quotation.number],
+        [numberLabel, payload.quotation.number],
         ["Client", payload.quotation.client],
         ["Brand", payload.quotation.brand],
         [
@@ -635,7 +637,7 @@ function addCoverSlide(pptx: PptxGen, doc: QuotationDocument, counter: SlideCoun
         ],
       ]
     : [
-        ...(pitch ? [] : [["Quotation No.", payload.quotation.number] as [string, string]]),
+        ...(pitch ? [] : [[numberLabel, payload.quotation.number] as [string, string]]),
         ["Client", payload.quotation.client],
         ["Brand", payload.quotation.brand],
         ...(pitch
@@ -3207,16 +3209,17 @@ async function buildDetailedPptx(pptx: PptxGen, doc: QuotationDocument): Promise
 }
 
 function pptxDeckTitle(doc: QuotationDocument): string {
+  const noun = doc.source === "shortlist" ? "Shortlist" : "Quotation";
   if (isPitchTemplate(doc.template)) {
     return `${doc.serial} — ${doc.name} — Pitch Presentation`;
   }
   if (isShowcaseTemplate(doc.template)) {
-    return `${doc.serial} — ${doc.name} — Quotation Showcase`;
+    return `${doc.serial} — ${doc.name} — ${noun} Showcase`;
   }
   if (isLumpSumPricingTemplate(doc.template)) {
-    return `${doc.serial} — ${doc.name} — Quotation Lump Sum`;
+    return `${doc.serial} — ${doc.name} — ${noun} Lump Sum`;
   }
-  return `${doc.serial} — ${doc.name} — Quotation`;
+  return `${doc.serial} — ${doc.name} — ${noun}`;
 }
 
 export async function buildQuotationPptxBuffer(

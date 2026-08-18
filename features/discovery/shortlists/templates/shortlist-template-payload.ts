@@ -58,7 +58,9 @@ function resolveTemplateFlags(template: ShortlistTemplateVariant): ShortlistTemp
 function coverKicker(template: ShortlistTemplateVariant): string {
   if (template === "detailed") return "Discovery Shortlist · Detailed";
   if (isPitchTemplate(template)) return "Discovery Shortlist · Pitch Presentation";
-  if (template === "showcase") return "Discovery Shortlist · Showcase";
+  if (template === "showcase" || template === "showcase-lump-sum") {
+    return "Discovery Shortlist · Showcase";
+  }
   return "Discovery Shortlist · Summary";
 }
 

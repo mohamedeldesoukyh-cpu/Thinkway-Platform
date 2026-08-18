@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   SHORTLIST_TEMPLATE_OPTIONS,
+  appendShortlistTemplateParam,
   type ShortlistTemplateVariant,
 } from "@/features/discovery/shortlists/export/shortlist-template";
 
@@ -35,11 +36,7 @@ export function ShortlistPreviewTemplateToggle({
     >
       {SHORTLIST_TEMPLATE_OPTIONS.map((option) => {
         const params = new URLSearchParams(searchParams?.toString() ?? "");
-        if (option.id === "summary") {
-          params.delete("template");
-        } else {
-          params.set("template", option.id);
-        }
+        appendShortlistTemplateParam(params, option.id);
         if (itemIds?.length) {
           params.set("items", itemIds.join(","));
         } else {

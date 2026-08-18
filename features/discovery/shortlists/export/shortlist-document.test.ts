@@ -62,18 +62,18 @@ function mockDetail(overrides: Partial<ShortlistDetail> = {}): ShortlistDetail {
 {
   const doc = buildShortlistDocument(mockDetail(), { template: "showcase" });
   const html = buildShortlistHtml(doc);
-  assert.ok(html.includes("shortlist-showcase"));
+  assert.ok(html.includes("quotation-showcase"));
+  assert.ok(html.includes("shortlist-report"));
   assert.ok(html.includes("Discovery Shortlist · Showcase"));
-  assert.ok(!html.includes("Proposed deliverables"), "shortlist showcase has no quotation deliverables");
+  assert.ok(!html.includes("Proposed deliverable"), "shortlist showcase has no quotation deliverables");
 }
 
 {
-  const doc = buildShortlistDocument(mockDetail(), { template: "summary" });
+  const doc = buildShortlistDocument(mockDetail(), { template: "lump-sum" });
   const html = buildShortlistHtml(doc);
   assert.ok(html.includes("Creator mix"));
-  assert.ok(html.includes("Summary roster"));
-  // Body must not use the showcase class (CSS selectors may still mention it).
-  assert.ok(!/body class="[^"]*\bshortlist-showcase\b/.test(html));
+  assert.ok(html.includes("At a glance"));
+  assert.ok(!/body class="[^"]*\bquotation-showcase\b/.test(html));
 }
 
 console.log("shortlist-document.test.ts: ok");

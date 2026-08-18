@@ -242,6 +242,8 @@ export type QuotationDocumentFullTierBreakdown = {
 
 export type QuotationDocument = {
   audience: QuotationDocumentAudience;
+  /** Discovery shortlists reuse quotation templates without commercial pricing. */
+  source?: "quotation" | "shortlist";
   template: QuotationTemplateVariant;
   serial: string;
   name: string;
@@ -1052,6 +1054,7 @@ export function buildQuotationDocument(
 
   return {
     audience,
+    source: "quotation",
     template,
     serial: detail.serial_number ?? "QT-PENDING",
     name: detail.name,

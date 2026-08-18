@@ -89,7 +89,7 @@ export function appendQuotationTemplateParam(
  * Preview HTML is always live; PDF/PPTX URLs previously only changed with
  * quotation `updated_at`, so browsers often reopened an older Downloads file.
  */
-export const QUOTATION_EXPORT_LAYOUT_VERSION = "r2-detailed-20260811b";
+export const QUOTATION_EXPORT_LAYOUT_VERSION = "r2-shortlist-parity-20260818";
 
 function deployExportStamp(): string {
   const deployment = process.env.NEXT_PUBLIC_VERCEL_DEPLOYMENT_ID?.trim();

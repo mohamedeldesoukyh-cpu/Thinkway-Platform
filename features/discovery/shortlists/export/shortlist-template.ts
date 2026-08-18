@@ -1,60 +1,65 @@
-export type ShortlistTemplateVariant = "summary" | "detailed" | "showcase" | "pitch";
+import {
+  QUOTATION_TEMPLATE_OPTIONS,
+  appendQuotationExportRevision,
+  appendQuotationTemplateParam,
+  isCreatorDeckTemplate as isQuotationCreatorDeckTemplate,
+  isLumpSumPricingTemplate as isQuotationLumpSumPricingTemplate,
+  isPitchTemplate as isQuotationPitchTemplate,
+  isShowcaseTemplate as isQuotationShowcaseTemplate,
+  resolveQuotationTemplate,
+  type QuotationTemplateVariant,
+} from "@/features/quotations/export/quotation-template";
+
+/** Same template family as quotations (Preview / PDF / PPTX / Word). */
+export type ShortlistTemplateVariant = QuotationTemplateVariant;
 
 export function resolveShortlistTemplate(
   raw: string | null | undefined
 ): ShortlistTemplateVariant {
-  if (raw === "detailed") return "detailed";
-  if (raw === "showcase") return "showcase";
-  if (raw === "pitch") return "pitch";
-  return "summary";
+  // Pre-parity bookmarks used `summary` for the client roster (quotation lump-sum).
+  if (raw === "summary") return "lump-sum";
+  return resolveQuotationTemplate(raw);
 }
 
-/** Creator-deck layouts (showcase + pitch) with per-creator slides and PPTX export. */
-export function isCreatorDeckTemplate(template: ShortlistTemplateVariant): boolean {
-  return template === "showcase" || template === "pitch";
+/** Creator-deck layouts (showcase + pitch, including lump-sum variants). */
+export function isCreatorDeckTemplate(
+  template: ShortlistTemplateVariant
+): boolean {
+  return isQuotationCreatorDeckTemplate(template);
 }
 
 export function isPitchTemplate(template: ShortlistTemplateVariant): boolean {
-  return template === "pitch";
+  return isQuotationPitchTemplate(template);
 }
 
 /** @deprecated Use isCreatorDeckTemplate — kept for showcase-only checks. */
 export function isShowcaseTemplate(template: ShortlistTemplateVariant): boolean {
-  return template === "showcase";
+  return isQuotationShowcaseTemplate(template);
 }
 
-export const SHORTLIST_TEMPLATE_OPTIONS: Array<{
-  id: ShortlistTemplateVariant;
-  label: string;
-  hint: string;
-}> = [
-  { id: "pitch", label: "Pitch presentation", hint: "Large avatars · deck" },
-  { id: "showcase", label: "Showcase", hint: "Creator deck" },
-  { id: "summary", label: "Summary", hint: "Client roster" },
-  { id: "detailed", label: "Detailed", hint: "Full metrics" },
-];
+export function isLumpSumPricingTemplate(
+  template: ShortlistTemplateVariant
+): boolean {
+  return isQuotationLumpSumPricingTemplate(template);
+}
 
-/** Append `template` query param when not the default summary variant. */
+export const SHORTLIST_TEMPLATE_OPTIONS = QUOTATION_TEMPLATE_OPTIONS;
+
+/** Append `template` query param when not the default detailed variant. */
 export function appendShortlistTemplateParam(
   params: URLSearchParams,
   template: ShortlistTemplateVariant
 ): void {
-  if (template === "summary") {
-    params.delete("template");
-  } else {
-    params.set("template", template);
-  }
+  appendQuotationTemplateParam(params, template);
 }
 
-/** Bust browser/CDN caches when shortlist header fields change. */
+/**
+ * Bust browser/CDN caches when shortlist data or the shared quotation layout changes.
+ * Shortlist Preview/PDF/PPTX now render through quotation templates.
+ */
 export function appendShortlistExportRevision(
   params: URLSearchParams,
   revision: string | null | undefined
 ): void {
-  const trimmed = revision?.trim();
-  if (trimmed) {
-    params.set("v", trimmed);
-  } else {
-    params.delete("v");
-  }
+  appendQuotationExportRevision(params, revision);
 }

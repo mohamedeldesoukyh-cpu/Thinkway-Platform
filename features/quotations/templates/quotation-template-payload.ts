@@ -17,7 +17,10 @@ import {
   tierSlugFromLabel,
   tierSummaryLabel,
 } from "./quotation-template-format";
-import type { QuotationTemplateFlags, QuotationTemplatePayload } from "./quotation-template-types";
+import type {
+  QuotationTemplateFlags,
+  QuotationTemplatePayload,
+} from "./quotation-template-types";
 
 const LUMP_SUM_NOTE =
   "Deliverables below are covered by a single lump-sum fee; individual creator pricing is not itemized.";
@@ -27,82 +30,104 @@ const COMPANY = {
   address: "44B Saraya Mall, Sheikh Zayed, Giza, Egypt · hello@thinkwaymedia.com",
 } as const;
 
-function resolveTemplateFlags(template: QuotationTemplateVariant): QuotationTemplateFlags {
-  switch (template) {
-    case "lump-sum":
-      return {
-        showcaseCreators: false,
-        pitchCreators: false,
-        showCommercialSummary: true,
-        pricing: "lump_sum",
-        itemizedPricing: false,
-        showFees: false,
-        includeTerms: true,
-        includeAcceptance: true,
-      };
-    case "showcase":
-      return {
-        showcaseCreators: true,
-        pitchCreators: false,
-        showCommercialSummary: false,
-        pricing: "none",
-        itemizedPricing: false,
-        showFees: true,
-        includeTerms: false,
-        includeAcceptance: false,
-      };
-    case "pitch":
-      return {
-        showcaseCreators: true,
-        pitchCreators: true,
-        showCommercialSummary: false,
-        pricing: "none",
-        itemizedPricing: false,
-        showFees: true,
-        includeTerms: false,
-        includeAcceptance: false,
-      };
-    case "pitch-lump-sum":
-      return {
-        showcaseCreators: true,
-        pitchCreators: true,
-        showCommercialSummary: true,
-        pricing: "lump_sum",
-        itemizedPricing: false,
-        showFees: false,
-        includeTerms: false,
-        includeAcceptance: false,
-      };
-    case "showcase-lump-sum":
-      return {
-        showcaseCreators: true,
-        pitchCreators: false,
-        showCommercialSummary: true,
-        pricing: "lump_sum",
-        itemizedPricing: false,
-        // Lump-sum decks show Fees / Total after Fees on cover + summary only —
-        // never per-creator pricing.
-        showFees: false,
-        includeTerms: false,
-        includeAcceptance: false,
-      };
-    default:
-      return {
-        showcaseCreators: false,
-        pitchCreators: false,
-        showCommercialSummary: true,
-        pricing: "itemized",
-        itemizedPricing: true,
-        showFees: true,
-        includeTerms: true,
-        includeAcceptance: true,
-      };
+function resolveTemplateFlags(
+  template: QuotationTemplateVariant,
+  documentKind: QuotationTemplateFlags["documentKind"] = "quotation"
+): QuotationTemplateFlags {
+  const base: Omit<QuotationTemplateFlags, "documentKind"> = (() => {
+    switch (template) {
+      case "lump-sum":
+        return {
+          showcaseCreators: false,
+          pitchCreators: false,
+          showCommercialSummary: true,
+          pricing: "lump_sum",
+          itemizedPricing: false,
+          showFees: false,
+          includeTerms: true,
+          includeAcceptance: true,
+        };
+      case "showcase":
+        return {
+          showcaseCreators: true,
+          pitchCreators: false,
+          showCommercialSummary: false,
+          pricing: "none",
+          itemizedPricing: false,
+          showFees: true,
+          includeTerms: false,
+          includeAcceptance: false,
+        };
+      case "pitch":
+        return {
+          showcaseCreators: true,
+          pitchCreators: true,
+          showCommercialSummary: false,
+          pricing: "none",
+          itemizedPricing: false,
+          showFees: true,
+          includeTerms: false,
+          includeAcceptance: false,
+        };
+      case "pitch-lump-sum":
+        return {
+          showcaseCreators: true,
+          pitchCreators: true,
+          showCommercialSummary: true,
+          pricing: "lump_sum",
+          itemizedPricing: false,
+          showFees: false,
+          includeTerms: false,
+          includeAcceptance: false,
+        };
+      case "showcase-lump-sum":
+        return {
+          showcaseCreators: true,
+          pitchCreators: false,
+          showCommercialSummary: true,
+          pricing: "lump_sum",
+          itemizedPricing: false,
+          showFees: false,
+          includeTerms: false,
+          includeAcceptance: false,
+        };
+      default:
+        return {
+          showcaseCreators: false,
+          pitchCreators: false,
+          showCommercialSummary: true,
+          pricing: "itemized",
+          itemizedPricing: true,
+          showFees: true,
+          includeTerms: true,
+          includeAcceptance: true,
+        };
+    }
+  })();
+
+  if (documentKind === "shortlist") {
+    return {
+      ...base,
+      documentKind: "shortlist",
+      showCommercialSummary: false,
+      pricing: "none",
+      itemizedPricing: false,
+      showFees: false,
+      includeTerms: false,
+      includeAcceptance: false,
+    };
   }
+
+  return { ...base, documentKind: "quotation" };
 }
 
-function formatShowcaseQuotationTitle(name: string): string {
-  const prefix = "Showcase Quotation — ";
-  const rewritten = name.replace(/^Quotation\s+[—–-]\s*/i, prefix);
+function formatShowcaseQuotationTitle(
+  name: string,
+  documentKind: QuotationTemplateFlags["documentKind"] = "quotation"
+): string {
+  const prefix =
+    documentKind === "shortlist" ? "Showcase Shortlist — " : "Showcase Quotation — ";
+  const rewritten = name.replace(/^(Quotation|Shortlist)\s+[—–-]\s*/i, prefix);
   if (rewritten !== name) return rewritten;
   return `${prefix}${name}`;
 }
@@ -115,7 +140,17 @@ function formatPitchQuotationTitle(name: string): string {
     .trim() || name;
 }
 
-function coverKicker(template: QuotationTemplateVariant): string {
+function coverKicker(
+  template: QuotationTemplateVariant,
+  documentKind: QuotationTemplateFlags["documentKind"] = "quotation"
+): string {
+  if (documentKind === "shortlist") {
+    if (template === "pitch-lump-sum") return "Discovery Shortlist · Pitch Lump-Sum";
+    if (template === "lump-sum") return "Discovery Shortlist · Lump Sum";
+    if (isPitchTemplate(template)) return "Discovery Shortlist · Pitch Presentation";
+    if (isShowcaseTemplate(template)) return "Discovery Shortlist · Showcase";
+    return "Discovery Shortlist";
+  }
   if (template === "pitch-lump-sum") return "Client RFQ Response · Lump-Sum";
   if (template === "lump-sum") return "Client Quotation · Lump Sum";
   if (isPitchTemplate(template)) return "Client RFQ Response";
@@ -124,6 +159,13 @@ function coverKicker(template: QuotationTemplateVariant): string {
 }
 
 function coverStat3(doc: QuotationDocument): QuotationTemplatePayload["cover"]["stat3"] {
+  if (doc.source === "shortlist") {
+    return {
+      label: "Avg Engagement",
+      value: doc.summary.estimatedEngagement,
+      valueShort: doc.summary.estimatedEngagement,
+    };
+  }
   // Showcase covers pair Client Investment with Fees + Total after Fees.
   if (isShowcaseTemplate(doc.template)) {
     const formatted = formatQuotationMoneyDisplay(doc.summary.totalClientCost);
@@ -162,6 +204,23 @@ function coverStat3(doc: QuotationDocument): QuotationTemplatePayload["cover"]["
 function coverFeeAndTotalStats(
   doc: QuotationDocument
 ): Pick<QuotationTemplatePayload["cover"], "feeStat" | "totalAfterFeesStat"> {
+  if (doc.source === "shortlist") {
+    if (isPitchTemplate(doc.template)) {
+      return { feeStat: null, totalAfterFeesStat: null };
+    }
+    return {
+      feeStat: {
+        label: "Audience",
+        value: doc.summary.audienceSize,
+        valueShort: doc.summary.audienceSize,
+      },
+      totalAfterFeesStat: {
+        label: "Est. Reach",
+        value: doc.summary.estimatedReach,
+        valueShort: doc.summary.estimatedReach,
+      },
+    };
+  }
   // Pitch decks keep a compact cover. Detailed + Showcase (+ Showcase Lump Sum)
   // show Fees and Total Client Investment after Fees.
   if (isPitchTemplate(doc.template)) {
@@ -343,12 +402,21 @@ function resolveSectionNumbers(input: {
   };
 }
 
+function shortlistCoverSubtitle(doc: QuotationDocument): string {
+  const parts: string[] = [];
+  if (doc.brandName !== "—") parts.push(doc.brandName);
+  if (doc.clientName !== "—") parts.push(doc.clientName);
+  const label = parts.length ? parts.join(" · ") : "Discovery roster";
+  return `Curated influencer roster prepared exclusively for ${label}.`;
+}
+
 export function buildQuotationTemplatePayload(doc: QuotationDocument): QuotationTemplatePayload {
-  const flags = resolveTemplateFlags(doc.template);
+  const documentKind = doc.source === "shortlist" ? "shortlist" : "quotation";
+  const flags = resolveTemplateFlags(doc.template, documentKind);
   const title = isPitchTemplate(doc.template)
     ? formatPitchQuotationTitle(doc.name)
     : isShowcaseTemplate(doc.template)
-      ? formatShowcaseQuotationTitle(doc.name)
+      ? formatShowcaseQuotationTitle(doc.name, documentKind)
       : doc.name;
   const sectionNos = resolveSectionNumbers({
     template: doc.template,
@@ -493,15 +561,18 @@ export function buildQuotationTemplatePayload(doc: QuotationDocument): Quotation
       status: doc.isExpired ? "EXPIRED" : doc.statusLabel.toUpperCase(),
     },
     cover: {
-      kicker: coverKicker(doc.template),
-      subtitle: isPitchTemplate(doc.template)
-        ? doc.clientName && doc.clientName !== "—"
-          ? `Influencer marketing proposal prepared in response to ${doc.clientName}'s Request for Quotation.`
-          : "Influencer marketing proposal prepared in response to the client's Request for Quotation."
-        : doc.preparedForLine.replace(
-            /^Prepared exclusively for /i,
-            "Influencer marketing proposal prepared exclusively for "
-          ) + ".",
+      kicker: coverKicker(doc.template, documentKind),
+      subtitle:
+        documentKind === "shortlist"
+          ? shortlistCoverSubtitle(doc)
+          : isPitchTemplate(doc.template)
+            ? doc.clientName && doc.clientName !== "—"
+              ? `Influencer marketing proposal prepared in response to ${doc.clientName}'s Request for Quotation.`
+              : "Influencer marketing proposal prepared in response to the client's Request for Quotation."
+            : doc.preparedForLine.replace(
+                /^Prepared exclusively for /i,
+                "Influencer marketing proposal prepared exclusively for "
+              ) + ".",
       stat3: coverStat3(doc),
       ...coverFeeAndTotalStats(doc),
     },
