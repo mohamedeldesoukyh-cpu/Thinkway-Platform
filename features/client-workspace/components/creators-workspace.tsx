@@ -37,6 +37,7 @@ import { AdvancedReportModal, ContentFeatureGrid } from "./advanced-report-modal
 import { ProposalSummaryCard } from "./proposal-summary-card";
 import { ReviewAvatar } from "./review-avatar";
 import { ReviewCreatorProfileLinks } from "./review-creator-profile-links";
+import { ReviewDeliverableStrip } from "./review-deliverable-strip";
 import { ReviewPlatformBreakdown } from "./review-platform-breakdown";
 import { IconBack, IconCat, IconChart, IconCheck, IconClose } from "./review-icons";
 
@@ -253,7 +254,10 @@ export function CreatorsWorkspace({
                     {`${flagFromCountry(creator.country)} ${formatLocation(creator.city, creator.country)}`.trim()}
                   </div>
                 ) : null}
-                <ReviewPlatformBreakdown rows={breakdownForCreator(creator)} variant="list" />
+                <ReviewDeliverableStrip
+                  items={creator.deliverableItems}
+                  fallback={creator.deliverables}
+                />
               </div>
               <span className={statusClass(selection[creator.creatorId] ?? creator.selection)}>
                 {CLIENT_CREATOR_STATUS_LABEL[selection[creator.creatorId] ?? creator.selection]}
