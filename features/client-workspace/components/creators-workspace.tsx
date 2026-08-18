@@ -36,13 +36,11 @@ import { countSelections, nextAcceptState } from "../status";
 import type { ClientAudienceSlice, ClientCreatorBrief, ClientCreatorCard, ClientWorkspaceView } from "../types";
 import { AdvancedReportModal, ContentFeatureGrid } from "./advanced-report-modal";
 import { ContentCategoryGrid } from "./content-category-grid";
-import { useClientWorkspaceState } from "./client-workspace-state";
 import { ProposalSummaryCard } from "./proposal-summary-card";
 import { ReviewAvatar } from "./review-avatar";
 import { ReviewCreatorProfileLinks } from "./review-creator-profile-links";
 import { ReviewDeliverableStrip } from "./review-deliverable-strip";
 import { BrandMentionsCard, EstimatedReachCard } from "./review-insight-cards";
-import { EngagementMeter } from "./review-meter";
 import { ReviewPlatformBreakdown } from "./review-platform-breakdown";
 import { IconBack, IconChart, IconCheck, IconClose } from "./review-icons";
 
@@ -62,7 +60,6 @@ export function CreatorsWorkspace({
   token: string;
 }) {
   const router = useRouter();
-  const { selection, setCreatorState, setCreatorStates } = useClientWorkspaceState();
   const [pending, startTransition] = useTransition();
   const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]["id"]>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
