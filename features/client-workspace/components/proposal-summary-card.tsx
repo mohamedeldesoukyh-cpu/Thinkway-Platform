@@ -43,14 +43,33 @@ function Row({
   );
 }
 
+function Metric({
+  label,
+  value,
+  missing,
+}: {
+  label: string;
+  value: string;
+  missing?: boolean;
+}) {
+  return (
+    <div className="sumbar-m">
+      <span className="l">{label}</span>
+      <span className={missing ? "v tbc" : "v"}>{value}</span>
+    </div>
+  );
+}
+
 export function ProposalSummaryCard({
   view,
   token,
   selection,
+  variant = "card",
 }: {
   view: ClientWorkspaceView;
   token: string;
   selection?: Record<string, ClientCreatorSelectionState>;
+  variant?: "card" | "bar";
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -75,6 +94,70 @@ export function ProposalSummaryCard({
   const approvalHref = buildClientReviewPath(view.review.id, token, "approval");
   const feedbackHref = buildClientReviewPath(view.review.id, token, "feedback");
   const canApprove = view.canDecide && selectedCount > 0 && !pending;
+  const emptyHint =
+    selectedCount === 0 && view.canDecide
+      ? "Select creators to calculate this package, then approve it."
+      : null;
+
+  function approve() {
+    startTransition(async () => {
+      const result = await decideReviewAction({ token, decision: "approved" });
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  if (variant === "bar") {
+    return (
+      <div className="sumbar">
+        <div className="sumbar-head">
+          <p className="st">Selection calculator</p>
+          <p className="ss">Updates as you select creators</p>
+        </div>
+        <div className="sumbar-metrics">
+          <Metric
+            label="Quotation"
+            value={quotationTotal > 0 ? formatMoneyKpi(quotationTotal, currency) : TO_BE_CONFIRMED}
+            missing={quotationTotal <= 0}
+          />
+          <Metric
+            label="Investment"
+            value={investment > 0 ? formatMoneyKpi(investment, currency) : TO_BE_CONFIRMED}
+            missing={investment <= 0}
+          />
+          <Metric label="Creators" value={String(selectedCount)} />
+          <Metric
+            label="Est. reach"
+            value={formatCompactCount(forecast.estimatedReach)}
+            missing={forecast.estimatedReach == null}
+          />
+          <Metric
+            label="Engagements"
+            value={formatCompactCount(forecast.estimatedEngagements)}
+            missing={forecast.estimatedEngagements == null}
+          />
+          <Metric label="ER" value={er} missing={forecast.averageEngagementRate == null} />
+          <Metric label="CPE" value={money(forecast.cpe, currency)} missing={forecast.cpe == null} />
+          <Metric label="CPM" value={money(forecast.cpm, currency)} missing={forecast.cpm == null} />
+        </div>
+        {error ? <p className="sumbar-msg">{error}</p> : emptyHint ? <p className="sumbar-msg">{emptyHint}</p> : null}
+        {view.canDecide ? (
+          <div className="sumbar-cta">
+            <button type="button" className="btn primary" disabled={!canApprove} onClick={approve}>
+              <IconCheck />
+              Approve selection
+            </button>
+            <Link className="btn ghost" href={feedbackHref}>
+              Request changes
+            </Link>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="sumcard">
@@ -131,28 +214,14 @@ export function ProposalSummaryCard({
         <p className="ss" style={{ color: "#ffb4b4", marginTop: 8 }}>
           {error}
         </p>
-      ) : selectedCount === 0 && view.canDecide ? (
+      ) : emptyHint ? (
         <p className="ss" style={{ marginTop: 8 }}>
-          Accept creators to calculate this selection, then approve it.
+          {emptyHint}
         </p>
       ) : null}
       {view.canDecide ? (
         <div className="sumcta">
-          <button
-            type="button"
-            className="btn primary"
-            disabled={!canApprove}
-            onClick={() =>
-              startTransition(async () => {
-                const result = await decideReviewAction({ token, decision: "approved" });
-                if (!result.ok) {
-                  setError(result.message);
-                  return;
-                }
-                router.refresh();
-              })
-            }
-          >
+          <button type="button" className="btn primary" disabled={!canApprove} onClick={approve}>
             <IconCheck />
             Approve selection
           </button>

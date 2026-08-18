@@ -73,6 +73,103 @@
 .tw-review .sumrow .k{flex-direction:column;align-items:flex-start;gap:1px;}
 .tw-review .sumrow .hint{font-size:10px;color:#8b96b8;font-weight:500;}
 .tw-review .sumcard .v.tbc{color:#8b96b8;font-weight:500;}
-.tw-review .lc .pick{width:16px;height:16px;flex:none;accent-color:var(--blue);}
+.tw-review .lc{
+  position:relative;
+  align-items:stretch;
+  gap:12px;
+  padding:0 12px 0 0;
+  overflow:hidden;
+}
+.tw-review .lc .av{
+  width:92px;
+  height:auto;
+  min-height:100%;
+  align-self:stretch;
+  border-radius:0;
+  flex:none;
+}
+.tw-review .lc .pick{
+  position:absolute;
+  left:8px;
+  top:8px;
+  z-index:2;
+  width:16px;
+  height:16px;
+  margin:0;
+  flex:none;
+  accent-color:var(--blue);
+}
+.tw-review .lc .info{padding:12px 0;}
+.tw-review .lc .sc{margin:12px 0;align-self:flex-start;}
+
+.tw-review .wrap{padding:0 12px;}
+.tw-review main{padding:14px 0 48px;}
+.tw-review .update-banner .wrap{padding:12px;}
+.tw-review .md{grid-template-columns:minmax(260px,36%) minmax(0,1fr);gap:14px;}
+.tw-review .grid2{grid-template-columns:minmax(0,1fr) 280px;gap:16px;}
+.tw-review .detail{top:118px;max-height:calc(100vh - 132px);}
+.tw-review .side{top:118px;}
+
+.tw-review .creators-page{display:flex;flex-direction:column;gap:12px;}
+.tw-review .sumbar{
+  position:sticky;top:108px;z-index:35;
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  background:var(--navy);color:#fff;border-radius:0 0 14px 14px;
+  padding:12px 16px;margin:-14px -12px 0;box-shadow:var(--shadow-lg);
+}
+.tw-review .sumbar-head{min-width:140px;}
+.tw-review .sumbar-head .st{font-size:13px;font-weight:700;margin:0;}
+.tw-review .sumbar-head .ss{font-size:11px;color:#9aa4c0;margin:2px 0 0;}
+.tw-review .sumbar-metrics{display:flex;flex:1;gap:14px;flex-wrap:wrap;align-items:center;}
+.tw-review .sumbar-m{display:flex;flex-direction:column;gap:2px;min-width:72px;}
+.tw-review .sumbar-m .l{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#8b96b8;}
+.tw-review .sumbar-m .v{font-size:13px;font-weight:800;font-family:"Geist Mono",monospace;}
+.tw-review .sumbar-m .v.tbc{color:#8b96b8;font-weight:500;}
+.tw-review .sumbar-cta{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;}
+.tw-review .sumbar-cta .btn{min-height:36px;padding:7px 12px;}
+.tw-review .sumbar-cta .btn.ghost{
+  background:rgba(255,255,255,.08);color:#fff;border-color:rgba(255,255,255,.18);
+}
+.tw-review .sumbar-msg{width:100%;margin:0;font-size:12px;color:#cfd7ea;}
+
+.tw-review .plat-mark{width:18px;height:18px;border-radius:50%;object-fit:cover;flex:none;display:block;}
+.tw-review .plat-mark.fallback{
+  width:18px;height:18px;border-radius:50%;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:8px;font-weight:800;background:var(--lav);color:var(--navy);
+}
+.tw-review .plat-stack{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap;}
+.tw-review .chip .plat-mark{width:16px;height:16px;}
+.tw-review .dels{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:7px;}
+.tw-review .dels.fallback{font-size:11px;color:var(--muted2);}
+.tw-review .del-chip{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:10.5px;font-weight:600;color:var(--navy);
+  background:#f4f6fb;border:1px solid var(--hair);
+  border-radius:999px;padding:3px 8px;
+}
+.tw-review .del-chip b{font-family:"Geist Mono",monospace;font-size:10px;color:var(--muted);}
+.tw-review .sec .dels{margin:0 0 10px;}
+.tw-review .posts-feat .post .plat-badge,
+.tw-review .posts .post .plat-badge{
+  position:absolute;top:8px;left:8px;z-index:1;
+  width:22px;height:22px;border-radius:50%;
+  background:rgba(255,255,255,.95);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 1px 4px rgba(0,0,0,.28);
+}
+.tw-review .posts-feat .post .plat-badge .plat-mark,
+.tw-review .posts .post .plat-badge .plat-mark{width:16px;height:16px;}
+
+@media(max-width:980px){
+  .tw-review .sumbar{position:static;margin:0 0 4px;border-radius:14px;}
+  .tw-review .sumbar-cta{margin-left:0;width:100%;}
+  .tw-review .sumbar-cta .btn{flex:1;justify-content:center;}
+}
+@media(max-width:760px){
+  .tw-review .wrap{padding:0 10px;}
+  .tw-review .sumbar{margin:0 0 4px;}
+  .tw-review .lc .av{width:84px;height:auto;}
+}
 
 

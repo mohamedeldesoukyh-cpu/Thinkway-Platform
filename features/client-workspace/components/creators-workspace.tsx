@@ -13,7 +13,7 @@ import {
 } from "../actions/client-workspace-actions";
 import type { ClientCreatorSelectionState } from "../constants";
 import { CLIENT_CREATOR_STATUS_LABEL } from "../constants";
-import { deliverablesLabel } from "../deliverables";
+import { summarizeCreatorDeliverables } from "../deliverables";
 import {
   DATA_NOT_AVAILABLE,
   formatCompactCount,
@@ -33,10 +33,12 @@ import {
 } from "../presentation";
 import { countSelections } from "../status";
 import type { ClientAudienceSlice, ClientCreatorBrief, ClientCreatorCard, ClientWorkspaceView } from "../types";
-import { AdvancedReportModal, ContentFeatureGrid, isInstagram } from "./advanced-report-modal";
+import { AdvancedReportModal, ContentFeatureGrid } from "./advanced-report-modal";
 import { ProposalSummaryCard } from "./proposal-summary-card";
 import { ReviewAvatar } from "./review-avatar";
-import { IconBack, IconCat, IconChart, IconCheck, IconClose, IconIg } from "./review-icons";
+import { ReviewDeliverableStrip } from "./review-deliverable-strip";
+import { IconBack, IconCat, IconChart, IconCheck, IconClose } from "./review-icons";
+import { ReviewPlatformStack } from "./review-platform-mark";
 
 const STATUS_FILTERS: Array<{ id: "all" | "recommended" | ClientCreatorSelectionState; label: string }> = [
   { id: "all", label: "All" },
@@ -62,7 +64,6 @@ export function CreatorsWorkspace({
   const [reportOpen, setReportOpen] = useState(false);
   const [brief, setBrief] = useState<ClientCreatorBrief | null>(null);
   const [note, setNote] = useState("");
-  const [checkedIds, setCheckedIds] = useState<string[]>([]);
   const [localSelection, setLocalSelection] = useState<Record<string, ClientCreatorSelectionState> | null>(
     null
   );
@@ -175,18 +176,16 @@ export function CreatorsWorkspace({
     });
   }
 
-  function toggleChecked(creatorId: string, checked: boolean) {
-    setCheckedIds((current) =>
-      checked ? [...new Set([...current, creatorId])] : current.filter((id) => id !== creatorId)
-    );
+  function toggleChecked(creator: ClientCreatorCard, checked: boolean) {
+    decide(creator, checked ? "accepted" : "in_review");
   }
 
   return (
-    <div className="grid2">
-      <div>
+    <div className="creators-page">
+      <ProposalSummaryCard view={view} token={token} selection={selection} variant="bar" />
       <p className="note" style={{ marginBottom: 12 }}>
-        {rosterHeadline(view.creators.length)}. {rosterSourceLine(view.review.source)}. Accept creators
-        to calculate investment, then approve the selection.
+        {rosterHeadline(view.creators.length)}. {rosterSourceLine(view.review.source)}. Select
+        creators to calculate investment, then approve the selection.
       </p>
       <div className="filters">
         {STATUS_FILTERS.map((item) => (
@@ -204,18 +203,6 @@ export function CreatorsWorkspace({
           <>
             <button type="button" className="fbtn" disabled={pending} onClick={() => bulk("accepted")}>
               Select all
-            </button>
-            <button
-              type="button"
-              className="fbtn"
-              disabled={pending || checkedIds.length === 0}
-              onClick={() => {
-                bulk("accepted", checkedIds);
-                setCheckedIds([]);
-              }}
-            >
-              Accept selected
-              {checkedIds.length > 0 ? <span className="n">{checkedIds.length}</span> : null}
             </button>
             <button type="button" className="fbtn" disabled={pending} onClick={() => bulk("in_review")}>
               Clear
@@ -237,9 +224,9 @@ export function CreatorsWorkspace({
                 <input
                   type="checkbox"
                   className="pick"
-                  checked={checkedIds.includes(creator.creatorId)}
+                  checked={(selection[creator.creatorId] ?? creator.selection) === "accepted"}
                   onClick={(event) => event.stopPropagation()}
-                  onChange={(event) => toggleChecked(creator.creatorId, event.currentTarget.checked)}
+                  onChange={(event) => toggleChecked(creator, event.currentTarget.checked)}
                   aria-label={`Select ${creator.displayName}`}
                 />
               ) : null}
@@ -250,13 +237,7 @@ export function CreatorsWorkspace({
                 name={creator.displayName}
                 index={view.creators.findIndex((item) => item.creatorId === creator.creatorId) || index}
                 token={token}
-              >
-                {isInstagram(creator.platform) ? (
-                  <span className="ig">
-                    <IconIg />
-                  </span>
-                ) : null}
-              </ReviewAvatar>
+              />
               <div className="info">
                 <div className="nm">{creator.displayName}</div>
                 <div className="mt">
@@ -269,7 +250,10 @@ export function CreatorsWorkspace({
                     .filter((part) => part && part !== NOT_AVAILABLE)
                     .join(" · ")}
                 </div>
-                <div className="dl">{deliverablesLabel(creator.deliverableItems, creator.deliverables)}</div>
+                <ReviewDeliverableStrip
+                  items={creator.deliverableItems}
+                  fallback={creator.deliverables}
+                />
               </div>
               <span className={statusClass(selection[creator.creatorId] ?? creator.selection)}>
                 {CLIENT_CREATOR_STATUS_LABEL[selection[creator.creatorId] ?? creator.selection]}
@@ -337,10 +321,6 @@ export function CreatorsWorkspace({
           token={token}
         />
       ) : null}
-      </div>
-      <aside className="side">
-        <ProposalSummaryCard view={view} token={token} selection={selection} />
-      </aside>
     </div>
   );
 }
@@ -396,6 +376,8 @@ function CreatorDetailPane({
       ? creator.categories
       : [creator.category, creator.niche].filter((value): value is string => Boolean(value));
   const posts = (brief?.contentFeed.length ? brief.contentFeed : creator.contentFeed ?? creator.contentExamples) ?? [];
+  const platforms = summarizeCreatorDeliverables(creator.deliverableItems).platforms;
+  const platformMarks = platforms.length > 0 ? platforms : creator.platform ? [creator.platform] : [];
   const brands = brief?.brandMentions.length ? brief.brandMentions : creator.brandMentions ?? [];
   const match = formatMatchPercent(brief?.matchPercent ?? creator.matchPercent);
   const quality = qualityBadge(audience?.qualityLabel);
@@ -426,17 +408,12 @@ function CreatorDetailPane({
           name={name}
           index={index}
           token={token}
-        >
-          {isInstagram(brief?.platform || creator.platform) ? (
-            <span className="ig">
-              <IconIg />
-            </span>
-          ) : null}
-        </ReviewAvatar>
+        />
         <div className="dt-meta">
           <p className="nm">{name}</p>
           <p className="hd">{[handle, platform].filter(Boolean).join(" · ")}</p>
           <div className="mchips">
+            <ReviewPlatformStack platforms={platformMarks} />
             {location ? (
               <span className="mchip">
                 {flagFromCountry(creator.country)} {location}
@@ -497,10 +474,11 @@ function CreatorDetailPane({
         ) : null}
         <div className="sec">
           <p className="st">Recent publications</p>
+          <ReviewDeliverableStrip items={creator.deliverableItems} fallback={creator.deliverables} />
           {!brief && posts.length === 0 ? (
             <p className="unavailable">Loading content…</p>
           ) : (
-            <ContentFeatureGrid posts={posts} token={token} />
+            <ContentFeatureGrid posts={posts} token={token} deliverableItems={creator.deliverableItems} />
           )}
         </div>
         <div className="sec">

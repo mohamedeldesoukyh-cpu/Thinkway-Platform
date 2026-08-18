@@ -1,11 +1,14 @@
+import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
 import { resolveCreatorRecentPublicationThumbnail } from "@/lib/creators/recent-publication-thumb";
 import type { CreatorRecentPublication, UnifiedCreatorResult } from "@/lib/domains/creator/types";
 import { isInstagramCdnUrlExpired } from "@/lib/performance/avatar-sync-policy";
 import { computeEngagementRate } from "@/lib/performance/engagement-rate-engine";
+import { detectSocialPlatformFromContentUrl } from "@/lib/social/platforms";
 
+import { summarizeCreatorDeliverables } from "./deliverables";
 import { clientSafeFitCopy } from "./format";
-import type { ClientContentPost, ClientReviewSourceSnapshotCreator } from "./types";
+import type { ClientContentPost, ClientDeliverableItem, ClientReviewSourceSnapshotCreator } from "./types";
 
 export function optionalMetric(value: number | null | undefined): number | undefined {
   return value != null && Number.isFinite(value) ? value : undefined;
@@ -13,19 +16,21 @@ export function optionalMetric(value: number | null | undefined): number | undef
 
 export function contentPostsFromPublications(
   publications: CreatorRecentPublication[] | undefined,
-  platform?: string
+  platform?: string,
+  limit = 8
 ): ClientContentPost[] {
   if (!publications?.length) return [];
-  return publications.slice(0, 12).map((pub) => {
+  return publications.slice(0, limit).map((pub) => {
     const engagement = computeEngagementRate({
       views: pub.views,
       likes: pub.likes,
       comments: pub.comments,
     });
+    const inferred = detectSocialPlatformFromContentUrl(pub.url) ?? undefined;
     return {
       url: pub.url,
       thumbnail: resolveCreatorRecentPublicationThumbnail(pub) ?? pub.thumbnail,
-      platform,
+      platform: inferred || platform,
       postedAt: pub.posted_at,
       likes: optionalMetric(pub.likes) ?? null,
       comments: optionalMetric(pub.comments) ?? null,
@@ -33,6 +38,102 @@ export function contentPostsFromPublications(
       engagementRate: engagement.engagement_rate ?? null,
     };
   });
+}
+
+export function mixPostsForDeliverables(
+  posts: ClientContentPost[],
+  items?: ClientDeliverableItem[],
+  limit = 6
+): ClientContentPost[] {
+  if (!posts.length || limit <= 0) return [];
+  const normalized = posts.map((post) => ({
+    ...post,
+    platform:
+      detectSocialPlatformFromContentUrl(post.url) ??
+      canonicalPlatformKey(post.platform) ??
+      post.platform,
+  }));
+  const preferred = preferredPublicationPlatforms(items, normalized);
+  if (preferred.length <= 1) return normalized.slice(0, limit);
+
+  const buckets = new Map<string, ClientContentPost[]>();
+  const unmatched: ClientContentPost[] = [];
+  for (const post of normalized) {
+    const key = canonicalPlatformKey(post.platform);
+    if (key && preferred.includes(key)) {
+      const list = buckets.get(key) ?? [];
+      list.push(post);
+      buckets.set(key, list);
+    } else {
+      unmatched.push(post);
+    }
+  }
+
+  const mixed: ClientContentPost[] = [];
+  let round = 0;
+  while (mixed.length < limit) {
+    let added = false;
+    for (const platform of preferred) {
+      const next = buckets.get(platform)?.[round];
+      if (!next) continue;
+      mixed.push(next);
+      added = true;
+      if (mixed.length >= limit) break;
+    }
+    if (!added) break;
+    round += 1;
+  }
+  for (const post of unmatched) {
+    if (mixed.length >= limit) break;
+    mixed.push(post);
+  }
+  if (mixed.length < limit) {
+    const used = new Set(mixed);
+    for (const post of normalized) {
+      if (mixed.length >= limit) break;
+      if (!used.has(post)) mixed.push(post);
+    }
+  }
+  return mixed;
+}
+
+function preferredPublicationPlatforms(
+  items: ClientDeliverableItem[] | undefined,
+  posts: ClientContentPost[]
+): string[] {
+  const fromDeliverables = summarizeCreatorDeliverables(items).platforms;
+  if (fromDeliverables.length > 0) return fromDeliverables;
+  const fromPosts = [
+    ...new Set(
+      posts
+        .map((post) => canonicalPlatformKey(post.platform))
+        .filter((platform): platform is string => Boolean(platform))
+    ),
+  ];
+  return fromPosts;
+}
+
+function contentFeedFromUnified(
+  creator: UnifiedCreatorResult,
+  fallbackPlatform?: string
+): ClientContentPost[] {
+  const seen = new Set<string>();
+  const posts: ClientContentPost[] = [];
+  const append = (publications: CreatorRecentPublication[] | undefined, platform?: string) => {
+    for (const post of contentPostsFromPublications(publications, platform, 6)) {
+      const key = post.url || post.thumbnail;
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      posts.push(post);
+    }
+  };
+  for (const platform of creator.platforms ?? []) {
+    append(platform.recent_publications, platform.platform);
+  }
+  if (posts.length === 0) {
+    append(creator.recent_publications, creator.platforms?.[0]?.platform ?? fallbackPlatform);
+  }
+  return posts;
 }
 
 export function shouldReplaceContentFeed(
@@ -87,11 +188,7 @@ export function enrichSnapshotCreatorFromUnified(
     };
   }
   const platform = creator.platforms[0];
-  const publications =
-    platform?.recent_publications?.length
-      ? platform.recent_publications
-      : creator.recent_publications;
-  const contentFeed = contentPostsFromPublications(publications, platform?.platform ?? base.platform);
+  const contentFeed = contentFeedFromUnified(creator, platform?.platform ?? base.platform);
   const followers =
     optionalMetric(creator.metrics.followers.value) ??
     optionalMetric(platform?.follower_count) ??

@@ -16,7 +16,6 @@ import { formatDeliverableItems, parseDeliverableItems } from "./deliverables";
 import { isSelectedForCalculator } from "./status";
 import {
   attachMatchExplanation,
-  contentPostsFromPublications,
   enrichSnapshotCreatorFromUnified,
   optionalMetric,
 } from "./creator-snapshot";
@@ -118,10 +117,6 @@ export function projectClientCreators(
     const row = reasoning.get(creatorId);
     const profile = hydratedMap.get(creatorId);
     const platform = primaryPlatform(profile, row);
-    const examples = contentPostsFromPublications(
-      profile?.platforms[0]?.recent_publications ?? profile?.recent_publications,
-      platform
-    );
     const fitScores = creatorsData(campaignObject).recommendations?.creatorFitScores ?? {};
     const matchPercent = optionalMetric(fitScores[creatorId]);
     const base = enrichSnapshotCreatorFromUnified(
@@ -155,8 +150,8 @@ export function projectClientCreators(
       ...withMatch,
       deliverables: formatDeliverableItems(withMatch.deliverableItems) || withMatch.deliverables,
       selection: selection[creatorId] ?? "in_review",
-      contentExamples: examples.slice(0, 3),
-      contentFeed: examples,
+      contentExamples: (withMatch.contentFeed ?? []).slice(0, 3),
+      contentFeed: withMatch.contentFeed,
     };
   });
 }

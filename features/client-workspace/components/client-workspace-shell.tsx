@@ -6,11 +6,13 @@ import { usePathname } from "next/navigation";
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
 
 import { CLIENT_PROPOSAL_STATUS_LABEL, CLIENT_WORKSPACE_SECTION_LABEL } from "../constants";
+import { summarizeCreatorDeliverables } from "../deliverables";
 import { formatPlatformLabel, TO_BE_CONFIRMED } from "../format";
 import { flagFromCountry, rosterHeadline, rosterSourceLine } from "../presentation";
 import { buildClientReviewPath } from "../security/review-token";
 import type { ClientWorkspaceView } from "../types";
-import { IconCheck, IconIg, LogoMark } from "./review-icons";
+import { IconCheck, LogoMark } from "./review-icons";
+import { ReviewPlatformMark } from "./review-platform-mark";
 
 export function ClientWorkspaceShell({
   view,
@@ -27,9 +29,14 @@ export function ClientWorkspaceShell({
   const platforms = [
     ...new Set(
       [
-        ...view.overview.platforms.map((platform) => formatPlatformLabel(platform) ?? platform),
-        ...view.creators.map((creator) => formatPlatformLabel(creator.platform)).filter(Boolean),
-      ].filter((value): value is string => Boolean(value))
+        ...view.overview.platforms,
+        ...view.creators.flatMap((creator) => {
+          const fromItems = summarizeCreatorDeliverables(creator.deliverableItems).platforms;
+          return fromItems.length > 0 ? fromItems : creator.platform ? [creator.platform] : [];
+        }),
+      ]
+        .map((platform) => platform?.trim().toLowerCase())
+        .filter((platform): platform is string => Boolean(platform))
     ),
   ];
   const markets = view.creators.reduce<Record<string, number>>((acc, creator) => {
@@ -99,8 +106,8 @@ export function ClientWorkspaceShell({
             <div className="chips">
               {platforms.map((platform) => (
                 <span key={platform} className="chip">
-                  {platform.toLowerCase() === "instagram" ? <IconIg /> : null}
-                  {platform}
+                  <ReviewPlatformMark platform={platform} />
+                  {formatPlatformLabel(platform) ?? platform}
                 </span>
               ))}
               <span className="chip">{rosterHeadline(view.creators.length)}</span>

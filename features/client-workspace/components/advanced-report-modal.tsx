@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
 
+import { mixPostsForDeliverables } from "../creator-snapshot";
 import {
   DATA_NOT_AVAILABLE,
   formatCompactCount,
@@ -16,9 +17,17 @@ import {
 } from "../format";
 import { flagFromCountry, qualityBadge, qualityGaugePercent, engagementBadge, engagementGaugePercent } from "../presentation";
 import { clientReviewPostDisplay } from "../review-media";
-import type { ClientAudienceSlice, ClientContentPost, ClientCreatorBrief, ClientCreatorCard, ClientHistoricalMonth } from "../types";
+import type {
+  ClientAudienceSlice,
+  ClientContentPost,
+  ClientCreatorBrief,
+  ClientCreatorCard,
+  ClientDeliverableItem,
+  ClientHistoricalMonth,
+} from "../types";
 import { RetryableReviewImage, ReviewAvatar } from "./review-avatar";
-import { IconCat, IconChart, IconCheck, IconClose, IconHeart, IconIg } from "./review-icons";
+import { IconCat, IconChart, IconCheck, IconClose, IconHeart } from "./review-icons";
+import { ReviewPlatformMark } from "./review-platform-mark";
 
 const REPORT_NAV = [
   { id: "overview", label: "Overview" },
@@ -66,6 +75,7 @@ export function AdvancedReportModal({
   const quality = qualityBadge(audience?.qualityLabel);
   const gauge = qualityGaugePercent(audience?.qualityLabel);
   const posts = (view?.contentFeed.length ? view.contentFeed : creator.contentFeed ?? creator.contentExamples) ?? [];
+  const deliverableItems = view?.deliverableItems.length ? view.deliverableItems : creator.deliverableItems;
   const historical = view?.historical.length ? view.historical : creator.historical ?? [];
   const match = formatMatchPercent(view?.matchPercent ?? creator.matchPercent);
 
@@ -106,13 +116,7 @@ export function AdvancedReportModal({
             name={view?.displayName || creator.displayName}
             index={index}
             token={token}
-          >
-            {isInstagram(view?.platform || creator.platform) ? (
-              <span className="ig">
-                <IconIg />
-              </span>
-            ) : null}
-          </ReviewAvatar>
+          />
           <div className="rp-kpis">
             <div className="rp-kpi">
               <p className="l">Followers</p>
@@ -161,10 +165,17 @@ export function AdvancedReportModal({
               reach={reach}
               audience={audience}
               historical={historical}
+              deliverableItems={deliverableItems}
             />
           ) : null}
           {section === "engagement" ? (
-            <EngagementSection creator={creator} performance={performance} posts={posts} token={token} />
+            <EngagementSection
+              creator={creator}
+              performance={performance}
+              posts={posts}
+              token={token}
+              deliverableItems={deliverableItems}
+            />
           ) : null}
           {section === "growth" ? <GrowthSection audience={audience} historical={historical} /> : null}
           {section === "audience" ? (
@@ -193,6 +204,7 @@ function OverviewSection({
   reach,
   audience,
   historical,
+  deliverableItems,
 }: {
   creator: ClientCreatorCard;
   view: ClientCreatorBrief | null;
@@ -208,6 +220,7 @@ function OverviewSection({
   reach?: number;
   audience: ClientCreatorCard["audience"];
   historical: ClientHistoricalMonth[];
+  deliverableItems?: ClientDeliverableItem[];
 }) {
   const handle = view?.handle || creator.handle;
   const platform = formatPlatformLabel(view?.platform || creator.platform);
@@ -318,7 +331,7 @@ function OverviewSection({
       </div>
       <div className="rp-sec">
         <p className="st">Recent content</p>
-        <ContentFeatureGrid posts={posts} token={token} />
+        <ContentFeatureGrid posts={posts} token={token} deliverableItems={deliverableItems} />
       </div>
     </>
   );
@@ -329,11 +342,13 @@ function EngagementSection({
   performance,
   posts,
   token,
+  deliverableItems,
 }: {
   creator: ClientCreatorCard;
   performance: ClientCreatorCard["performance"];
   posts: ClientContentPost[];
   token: string;
+  deliverableItems?: ClientDeliverableItem[];
 }) {
   const likes = performance?.avgLikes ?? creator.avgLikes;
   const comments = performance?.avgComments ?? creator.avgComments;
@@ -359,7 +374,7 @@ function EngagementSection({
       </p>
       <div style={{ marginTop: 18 }}>
         <p className="st">Content snapshots</p>
-        <ContentFeatureGrid posts={posts} token={token} />
+        <ContentFeatureGrid posts={posts} token={token} deliverableItems={deliverableItems} />
       </div>
     </div>
   );
@@ -678,25 +693,31 @@ export function ContentFeatureGrid({
   posts,
   token,
   variant = "feature",
+  deliverableItems,
 }: {
   posts: ClientContentPost[];
   token?: string;
   variant?: "feature" | "square";
+  deliverableItems?: ClientDeliverableItem[];
 }) {
-  if (posts.length === 0) {
+  const mixed = mixPostsForDeliverables(posts, deliverableItems, 6);
+  if (mixed.length === 0) {
     return <p className="unavailable">Recent content unavailable</p>;
   }
-  const limit = variant === "square" ? 6 : 6;
   return (
     <div className={variant === "square" ? "posts" : "posts-feat"}>
-      {posts.slice(0, limit).map((post, index) => {
+      {mixed.map((post, index) => {
         const className = variant === "feature" && index === 0 ? "post big" : "post";
         const display = token ? clientReviewPostDisplay(token, post) : { thumbnail: post.thumbnail ?? undefined, href: post.url ?? undefined };
         const src = display.thumbnail;
         const inner = (
           <>
             {src ? <RetryableReviewImage src={src} /> : null}
-            {index === 0 && variant === "feature" ? <span className="tagp top">Top post</span> : post.platform ? <span className="tagp">{formatPlatformLabel(post.platform)}</span> : null}
+            {post.platform ? (
+              <span className="plat-badge">
+                <ReviewPlatformMark platform={post.platform} />
+              </span>
+            ) : null}
             <span className="lk">
               <IconHeart />
               {post.likes != null ? formatCompactCount(post.likes) : NOT_AVAILABLE}

@@ -8,7 +8,7 @@ import { classifyApiPath, classifyPagePath } from "@/lib/security/workspace-clas
 
 import { CLIENT_CHANGE_AREAS, CLIENT_REVIEW_SOURCES } from "./constants";
 import { clientSafeFitCopy, formatCompactCount, formatEngagementPct, providedText } from "./format";
-import { deliverablesLabel, groupedActivityMix } from "./deliverables";
+import { deliverablesLabel, groupedActivityMix, looksLikePlatformList, summarizeCreatorDeliverables } from "./deliverables";
 import {
   allocationSlices,
   containsInternalTerminology,
@@ -22,7 +22,7 @@ import {
 import { HYPEAUDITOR_MEDIA_PLAN_PARITY } from "./hypeauditor-parity";
 import { projectMediaPlanSummary, projectSelectionSummaryFromCards } from "./media-plan-summary";
 import { briefFromSnapshotCreator, mergeFrozenBrief } from "./creator-brief";
-import { enrichSnapshotCreatorFromUnified, profileUrlFromHandle, shouldReplaceContentFeed } from "./creator-snapshot";
+import { enrichSnapshotCreatorFromUnified, mixPostsForDeliverables, profileUrlFromHandle, shouldReplaceContentFeed } from "./creator-snapshot";
 import { clientReviewAvatarUrl, isReviewMediaUrlAllowed, reviewMediaAllowlist } from "./review-media";
 import { diffClientReviewSnapshots, retainCreatorBriefs } from "./snapshot-diff";
 import { shortlistReviewBlockers, quotationReviewBlockers } from "./source-readiness";
@@ -507,7 +507,22 @@ test("unavailable metrics stay unknown and real zeros stay zero", () => {
   assert.equal(formatCompactCount(0), "0");
   assert.equal(formatEngagementPct(undefined), "Not available");
   assert.equal(deliverablesLabel(undefined), "Deliverables to be confirmed");
-  assert.match(deliverablesLabel([{ platform: "instagram", type: "Reel", quantity: 1 }]), /Reel/);
+  assert.equal(deliverablesLabel([{ platform: "instagram", type: "Reel", quantity: 1 }]).includes("Reel"), true);
+  assert.equal(looksLikePlatformList("instagram,tiktok,youtube,facebook"), true);
+  const collapsed = summarizeCreatorDeliverables([
+    { platform: "instagram,tiktok,youtube,facebook", type: "instagram_reel", quantity: 1 },
+    { platform: "instagram,tiktok,youtube,facebook", type: "instagram_reel", quantity: 1 },
+    { platform: "instagram,tiktok,youtube,facebook", type: "mirrored_ig", quantity: 1 },
+  ]);
+  assert.deepEqual(collapsed.platforms, ["instagram", "tiktok", "youtube", "facebook"]);
+  assert.equal(collapsed.lines.find((line) => line.key === "instagram_reel")?.quantity, 2);
+  assert.equal(collapsed.lines.find((line) => line.key === "mirrored_ig")?.quantity, 1);
+  const dumped = deliverablesLabel(
+    [{ platform: "instagram,tiktok,youtube,facebook", type: "instagram_reel", quantity: 1 }],
+    "instagram,tiktok,youtube,facebook"
+  );
+  assert.equal(dumped.includes("instagram,tiktok"), false);
+  assert.match(dumped, /Reel/);
   assert.equal(providedText(undefined), "Not provided");
   assert.equal(providedText("  "), "Not provided");
   assert.equal(providedText("UAE"), "UAE");
@@ -895,5 +910,25 @@ test("in-place quotation updates keep prior creator briefs", () => {
   assert.equal(merged.creators[0]?.bio, "Creator bio");
   assert.equal(merged.creators[0]?.contentFeed?.[0]?.thumbnail, "https://cdn.example/p1.jpg");
   assert.equal(merged.creators[0]?.investmentAmount, 1200);
+});
+
+test("recent publications mix across deliverable platforms using post URLs", () => {
+  const mixed = mixPostsForDeliverables(
+    [
+      { url: "https://instagram.com/p/1", platform: "instagram", likes: 1 },
+      { url: "https://instagram.com/p/2", platform: "instagram", likes: 2 },
+      { url: "https://www.tiktok.com/@x/video/1", platform: "instagram", likes: 3 },
+      { url: "https://www.youtube.com/watch?v=1", platform: "instagram", likes: 4 },
+    ],
+    [
+      { platform: "instagram,tiktok,youtube", type: "instagram_reel", quantity: 1 },
+      { platform: "instagram,tiktok,youtube", type: "tiktok_video", quantity: 1 },
+    ],
+    3
+  );
+  assert.deepEqual(
+    mixed.map((post) => post.platform),
+    ["instagram", "tiktok", "youtube"]
+  );
 });
 
