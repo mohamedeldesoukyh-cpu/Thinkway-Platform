@@ -34,6 +34,25 @@ function asStringArray(value: unknown): string[] | undefined {
   return items.length > 0 ? items : undefined;
 }
 
+function parseBrandMentions(value: unknown): ClientReviewSourceSnapshotCreator["brandMentions"] {
+  if (!Array.isArray(value)) return undefined;
+  const mentions = value
+    .map((row) => {
+      if (typeof row === "string" && row.trim()) return { name: row.trim() };
+      if (!isRecord(row)) return null;
+      const name = asString(row.name);
+      if (!name) return null;
+      return {
+        name,
+        handle: asString(row.handle),
+        mentionCount: asNumber(row.mentionCount),
+        mentionsLast180Days: asNumber(row.mentionsLast180Days),
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => Boolean(row));
+  return mentions.length > 0 ? mentions : undefined;
+}
+
 function parseSlices(value: unknown): ClientAudienceSlice[] {
   if (!Array.isArray(value)) return [];
   return value
@@ -215,7 +234,7 @@ export function parseSnapshotCreator(row: Record<string, unknown>): ClientReview
     matchExplanation: asString(row.matchExplanation),
     matchEvidence: asStringArray(row.matchEvidence),
     tier: asString(row.tier),
-    brandMentions: asStringArray(row.brandMentions),
+    brandMentions: parseBrandMentions(row.brandMentions),
     contentFeed: parseContentFeed(row.contentFeed),
     audience: parseAudience(row.audience),
     performance: parsePerformance(row.performance),

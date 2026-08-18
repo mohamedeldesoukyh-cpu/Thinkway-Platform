@@ -50,6 +50,11 @@ export function clientSelectionToShortlistStatus(
   return "under_review";
 }
 
+/** Accept can be removed until the client submits Approve selection. */
+export function nextAcceptState(state?: ClientCreatorSelectionState): ClientCreatorSelectionState {
+  return state === "accepted" ? "in_review" : "accepted";
+}
+
 /** Calculator and approval use explicit Accept — In Review is not counted. */
 export function isSelectedForCalculator(state?: ClientCreatorSelectionState): boolean {
   return state === "accepted";

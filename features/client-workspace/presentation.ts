@@ -1,5 +1,5 @@
 import type { ClientReviewSource } from "./constants";
-import { clientSafeFitCopy, clientSafeParagraph, formatPlatformLabel } from "./format";
+import { clientSafeFitCopy, clientSafeParagraph, formatCompactCount, formatPlatformLabel } from "./format";
 import type {
   ClientAudienceSlice,
   ClientCreatorCard,
@@ -244,6 +244,55 @@ export function engagementGaugePercent(rate?: number | null): number | undefined
   if (rate < 3.5) return 55;
   if (rate < 5) return 72;
   return 88;
+}
+
+export function estimatedReachInsight(input: {
+  reach?: number | null;
+  followers?: number | null;
+}): {
+  value: string;
+  percent?: number;
+  badge?: { className: string; text: string };
+  explanation: string;
+} | null {
+  const reach = input.reach != null && Number.isFinite(input.reach) ? input.reach : undefined;
+  if (reach == null) return null;
+  const followers =
+    input.followers != null && Number.isFinite(input.followers) && input.followers > 0
+      ? input.followers
+      : undefined;
+  const percent = followers != null ? (reach / followers) * 100 : undefined;
+  const value = formatCompactCount(reach);
+  if (percent == null) {
+    return {
+      value,
+      explanation:
+        `Estimated reach for this creator is ${value}, based on available performance for this proposal.`,
+    };
+  }
+  const share = percent >= 10 ? percent.toFixed(1) : percent.toFixed(2);
+  if (percent >= 15) {
+    return {
+      value,
+      percent,
+      badge: { className: "opt", text: "Optimal" },
+      explanation: `Posts are estimated to reach ${share}% of this creator's followers (${value} of ${formatCompactCount(followers)}). That is a strong visibility level for this audience size.`,
+    };
+  }
+  if (percent >= 8) {
+    return {
+      value,
+      percent,
+      badge: { className: "avg", text: "Average" },
+      explanation: `Posts are estimated to reach ${share}% of this creator's followers (${value} of ${formatCompactCount(followers)}). This is in line with typical reach for this audience size and provides a moderate level of visibility.`,
+    };
+  }
+  return {
+    value,
+    percent,
+    badge: { className: "avg", text: "Average" },
+    explanation: `Posts are estimated to reach ${share}% of this creator's followers (${value} of ${formatCompactCount(followers)}). Visibility is more concentrated, so placements should be planned around high-performing content.`,
+  };
 }
 
 export function qualityBadge(label?: string): { className: string; text: string } | undefined {

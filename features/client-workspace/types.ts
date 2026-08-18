@@ -31,6 +31,13 @@ export type ClientAudienceSlice = {
   percent?: number;
 };
 
+export type ClientBrandMention = {
+  name: string;
+  handle?: string;
+  mentionCount?: number;
+  mentionsLast180Days?: number;
+};
+
 export type ClientAudienceBrief = {
   frozenAt: string;
   ages: ClientAudienceSlice[];
@@ -131,7 +138,7 @@ export type ClientReviewSourceSnapshotCreator = {
   matchExplanation?: string;
   matchEvidence?: string[];
   tier?: string;
-  brandMentions?: string[];
+  brandMentions?: ClientBrandMention[];
   contentFeed?: ClientContentPost[];
   audience?: ClientAudienceBrief;
   performance?: ClientPerformanceBrief;
@@ -240,7 +247,7 @@ export type ClientCreatorCard = {
   matchExplanation?: string;
   matchEvidence?: string[];
   tier?: string;
-  brandMentions?: string[];
+  brandMentions?: ClientBrandMention[];
   selection: ClientCreatorSelectionState;
   contentExamples: ClientContentPost[];
   contentFeed?: ClientContentPost[];
@@ -270,7 +277,7 @@ export type ClientCreatorBrief = {
   campaignFit?: string;
   categories: string[];
   niche?: string;
-  brandMentions: string[];
+  brandMentions: ClientBrandMention[];
   matchPercent?: number;
   matchConfidence?: number;
   matchExplanation?: string;

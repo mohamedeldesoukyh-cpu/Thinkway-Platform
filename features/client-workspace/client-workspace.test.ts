@@ -18,6 +18,7 @@ import {
   rosterHeadline,
   rosterSourceLine,
   strategicPillars,
+  estimatedReachInsight,
 } from "./presentation";
 import { HYPEAUDITOR_MEDIA_PLAN_PARITY } from "./hypeauditor-parity";
 import { projectMediaPlanSummary, projectSelectionSummaryFromCards } from "./media-plan-summary";
@@ -55,8 +56,14 @@ import {
   countSelections,
   isInteractiveClientReview,
   isSelectedForCalculator,
+  nextAcceptState,
   shortlistStatusToClient,
 } from "./status";
+import {
+  brandDomainGuess,
+  brandMentionsInsight,
+  normalizeBrandMentions,
+} from "./brand-mentions";
 
 test("public review path does not require login", () => {
   assert.equal(isPublicPath("/review"), true);
@@ -1153,5 +1160,49 @@ test("acknowledged proposal updates are not shown again", () => {
     })?.items[0],
     "Deliverables were updated."
   );
+});
+
+test("estimated reach copy uses follower share without inventing a second engine", () => {
+  const insight = estimatedReachInsight({ reach: 14_700, followers: 141_000 });
+  assert.equal(insight?.value, "14.7K");
+  assert.equal(insight?.badge?.text, "Average");
+  assert.match(insight?.explanation ?? "", /10\.4%/);
+  assert.equal(estimatedReachInsight({ reach: undefined }), null);
+});
+
+test("brand mentions keep names from the snapshot and only show a 180-day label when that window exists", () => {
+  const legacy = normalizeBrandMentions(["Nike", "Pepsi"]);
+  assert.deepEqual(
+    legacy.map((item) => item.name),
+    ["Nike", "Pepsi"]
+  );
+  assert.equal(brandDomainGuess("Nike"), "nike.com");
+  const withWindow = brandMentionsInsight([
+    { name: "Nike", mentionsLast180Days: 2 },
+    { name: "Pepsi", mentionsLast180Days: 1 },
+    { name: "Adidas", mentionsLast180Days: 1 },
+    { name: "Samsung", mentionsLast180Days: 1 },
+    { name: "Starbucks", mentionsLast180Days: 1 },
+    { name: "BMW", mentionsLast180Days: 1 },
+    { name: "Apple", mentionsLast180Days: 1 },
+    { name: "Sony", mentionsLast180Days: 1 },
+    { name: "Oreo", mentionsLast180Days: 1 },
+  ]);
+  assert.equal(withWindow?.count, 9);
+  assert.equal(withWindow?.windowDays, 180);
+  assert.equal(withWindow?.badge?.text, "Optimal");
+  const snapshot = parseSnapshotCreator({
+    creatorId: "a",
+    displayName: "Ali",
+    brandMentions: ["Nike", { name: "Pepsi", mentionsLast180Days: 3 }],
+  });
+  assert.equal(snapshot?.brandMentions?.[0]?.name, "Nike");
+  assert.equal(snapshot?.brandMentions?.[1]?.mentionsLast180Days, 3);
+});
+
+test("accept can be removed until the client submits the selection", () => {
+  assert.equal(nextAcceptState("in_review"), "accepted");
+  assert.equal(nextAcceptState("accepted"), "in_review");
+  assert.equal(nextAcceptState("rejected"), "accepted");
 });
 

@@ -4,6 +4,7 @@ import { resolveUnifiedCreatorsByRefs, resolveCreatorFromRefLookup } from "@/lib
 import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { brandMentionsFromBundle, normalizeBrandMentions } from "./brand-mentions";
 import { clientSafeFitCopy, formatLocation } from "./format";
 import { parseDeliverableItems, summarizeCreatorDeliverables } from "./deliverables";
 import {
@@ -148,15 +149,6 @@ function clientPerformanceFromCreator(
   };
 }
 
-function brandMentionsFromBundle(bundle: CreatorIntelligenceBundle | null | undefined): string[] {
-  if (!bundle?.categoryBrand.brands.length) return [];
-  return bundle.categoryBrand.brands
-    .filter((brand) => brand.brandName.trim() && brand.mentionCount > 0)
-    .sort((a, b) => b.mentionCount - a.mentionCount)
-    .map((brand) => brand.brandName)
-    .slice(0, 8);
-}
-
 function clientHistoricalFromBundle(
   bundle: CreatorIntelligenceBundle | null | undefined
 ): ClientHistoricalMonth[] {
@@ -218,7 +210,7 @@ export function briefFromSnapshotCreator(
         ? [creator.category]
         : [],
     niche: creator.niche,
-    brandMentions: creator.brandMentions ?? [],
+    brandMentions: normalizeBrandMentions(creator.brandMentions),
     matchPercent: creator.matchPercent,
     matchConfidence: creator.matchConfidence,
     matchExplanation: creator.matchExplanation || creator.fitExplanation,
@@ -299,10 +291,9 @@ export function mergeFrozenBrief(
     creator.performance ??
     clientPerformanceFromCreator(live.enriched, live.bundle) ??
     undefined;
-  const brandMentions =
-    creator.brandMentions?.length
-      ? creator.brandMentions
-      : brandMentionsFromBundle(live.bundle);
+  const brandMentions = creator.brandMentions?.length
+    ? normalizeBrandMentions(creator.brandMentions)
+    : brandMentionsFromBundle(live.bundle);
   const contentFeed = shouldReplaceContentFeed(creator.contentFeed, live.enriched.contentFeed)
     ? live.enriched.contentFeed
     : creator.contentFeed;

@@ -300,4 +300,62 @@
 .tw-review .profile-link .u{flex:1;min-width:0;}
 .tw-review .profile-link .h{display:block;font-family:"Geist Mono",ui-monospace,monospace;font-size:11px;color:var(--muted);margin-top:2px;}
 
+.tw-review .insight{
+  background:#fff;
+  border:1px solid var(--hair);
+  border-radius:8px;
+  padding:16px 18px;
+  margin:0 0 14px;
+}
+.tw-review .insight .st{margin:0 0 10px;}
+.tw-review .insight .rp-big{margin:0 0 8px;}
+.tw-review .insight .desc{margin:0;}
+.tw-review .brands{display:flex;align-items:center;flex-wrap:nowrap;margin-top:14px;}
+.tw-review .brand{
+  width:36px;height:36px;border-radius:50%;overflow:hidden;
+  border:2px solid #fff;margin-right:-8px;flex:none;
+  background:#e8edf5;color:var(--navy);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;box-shadow:0 1px 2px rgba(9,20,44,.12);
+}
+.tw-review .brand img{width:100%;height:100%;object-fit:cover;display:block;}
+.tw-review .brand.more{font-size:11px;font-weight:700;color:var(--muted);background:#eef1f6;margin-right:0;}
+
+.tw-review .card,
+.tw-review .kpi,
+.tw-review .sumcard,
+.tw-review .sumbar,
+.tw-review .lc,
+.tw-review .detail,
+.tw-review .catc,
+.tw-review .mc,
+.tw-review .fstat,
+.tw-review .cli,
+.tw-review .rp-kpi,
+.tw-review .dt-quick .q,
+.tw-review .noteinput,
+.tw-review .report,
+.tw-review .histtbl,
+.tw-review .aq-ok,
+.tw-review .aq-warn,
+.tw-review .profile-link,
+.tw-review .insight,
+.tw-review .post,
+.tw-review .posts-feat .post,
+.tw-review .portrait,
+.tw-review .dt-hero .av{
+  border-radius:8px;
+}
+.tw-review .btn,
+.tw-review .fbtn,
+.tw-review .mchip,
+.tw-review .sc,
+.tw-review .del-chip,
+.tw-review select,
+.tw-review textarea{
+  border-radius:6px;
+}
+.tw-review .lc .av{border-radius:0;}
+
+
 

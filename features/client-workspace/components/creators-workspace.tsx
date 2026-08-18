@@ -31,13 +31,14 @@ import {
   rosterSourceLine,
 } from "../presentation";
 import { breakdownForCreator, creatorProfileLinks } from "../platform-breakdown";
-import { countSelections } from "../status";
+import { countSelections, nextAcceptState } from "../status";
 import type { ClientAudienceSlice, ClientCreatorBrief, ClientCreatorCard, ClientWorkspaceView } from "../types";
 import { AdvancedReportModal, ContentFeatureGrid } from "./advanced-report-modal";
 import { ProposalSummaryCard } from "./proposal-summary-card";
 import { ReviewAvatar } from "./review-avatar";
 import { ReviewCreatorProfileLinks } from "./review-creator-profile-links";
 import { ReviewDeliverableStrip } from "./review-deliverable-strip";
+import { BrandMentionsCard, EstimatedReachCard } from "./review-insight-cards";
 import { ReviewPlatformBreakdown } from "./review-platform-breakdown";
 import { IconBack, IconCat, IconChart, IconCheck, IconClose } from "./review-icons";
 
@@ -285,7 +286,7 @@ export function CreatorsWorkspace({
             onNoteChange={setNote}
             show={showDetail}
             onBack={closeSheet}
-            onAccept={() => decide(selected, "accepted")}
+            onAccept={() => decide(selected, nextAcceptState(selection[selected.creatorId] ?? selected.selection))}
             onReject={() => decide(selected, "rejected", note.trim() || undefined)}
             onRequestChanges={() => {
               if (!note.trim()) return;
@@ -478,9 +479,18 @@ function CreatorDetailPane({
           </div>
           {canDecide ? (
             <div className="dt-acts">
-              <button type="button" className="btn ok" disabled={pending} onClick={onAccept}>
-                <IconCheck />
-                Accept
+              <button type="button" className={creator.selection === "accepted" ? "btn" : "btn ok"} disabled={pending} onClick={onAccept}>
+                {creator.selection === "accepted" ? (
+                  <>
+                    <IconClose />
+                    Remove accept
+                  </>
+                ) : (
+                  <>
+                    <IconCheck />
+                    Accept
+                  </>
+                )}
               </button>
               <button type="button" className="btn rej" disabled={pending} onClick={onReject}>
                 <IconClose />
@@ -619,35 +629,8 @@ function CreatorDetailPane({
           </div>
         </div>
         )}
-        <div className="sec">
-          <p className="st">Estimated reach</p>
-          <p className="rp-big">
-            <span className="n">{formatCompactCount(reach)}</span>
-            {quality ? <span className={`badge ${quality.className}`}>{quality.text}</span> : null}
-          </p>
-          <p className="desc" style={{ marginTop: 8 }}>
-            {performance?.reachExplanation || DATA_NOT_AVAILABLE}
-          </p>
-        </div>
-        <div className="sec">
-          <p className="st">Brand mentions</p>
-          {brands.length > 0 ? (
-            <div className="brands">
-              {brands.slice(0, 8).map((brand, brandIndex) => (
-                <span
-                  key={brand}
-                  className="brand"
-                  title={brand}
-                  style={{ background: ["#0057FF", "#7F77DD", "#1D9E75", "#D85A30", "#378ADD"][brandIndex % 5] }}
-                >
-                  {brand.slice(0, 1).toUpperCase()}
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="unavailable">{DATA_NOT_AVAILABLE}</p>
-          )}
-        </div>
+        <EstimatedReachCard reach={reach} followers={creator.followers} />
+        <BrandMentionsCard mentions={brands} />
         <div className="sec">
           <button type="button" className="btn primary" onClick={onOpenReport} style={{ width: "100%", justifyContent: "center" }}>
             <IconChart />

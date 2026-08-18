@@ -231,7 +231,7 @@ export function CreatorDetailSheet({
                 <Section title="Brand context">
                   <div className="flex flex-wrap gap-1.5">
                     {(view?.brandMentions.length ? view.brandMentions : creator.brandMentions ?? []).map((item) => (
-                      <Chip key={item}>{item}</Chip>
+                      <Chip key={item.name}>{item.name}</Chip>
                     ))}
                   </div>
                 </Section>
