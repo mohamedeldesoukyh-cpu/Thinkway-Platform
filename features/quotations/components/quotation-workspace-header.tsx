@@ -25,6 +25,10 @@ import {
   rememberClientReviewShare,
   reviewIdFromShareUrl,
 } from "@/features/client-workspace/client-review-share-memory";
+import {
+  quotationClientShareRequiresSave,
+  quotationIsMovedToCampaign,
+} from "@/features/client-workspace/client-review-selection";
 import { EntityPrevNext } from "@/components/navigation/entity-prev-next";
 import {
   DropdownMenu,
@@ -84,6 +88,7 @@ export function QuotationWorkspaceHeader({
   const [sendOpen, setSendOpen] = useState(false);
   const campaignSeed = useMemo(() => seedFromQuotation(detail), [detail]);
   const shareScope = { source: "quotation" as const, id: detail.id };
+  const movedToCampaign = quotationIsMovedToCampaign(detail);
 
   useEffect(() => {
     void peekClientReviewShareAction({ source: "quotation", quotationId: detail.id }).then((result) => {
@@ -101,12 +106,18 @@ export function QuotationWorkspaceHeader({
   }
 
   function runLinkButton() {
-    if (hasUnsavedChanges) {
+    if (
+      quotationClientShareRequiresSave({
+        hasUnsavedChanges,
+        hasExistingLink: hasLink,
+        movedToCampaign,
+      })
+    ) {
       toast.error("Save the quotation first.");
       return;
     }
     startLinkTransition(async () => {
-      if (hasLink) {
+      if (hasLink && !movedToCampaign) {
         const revealed = await revealClientReviewLinkAction({
           source: "quotation",
           quotationId: detail.id,
@@ -132,7 +143,13 @@ export function QuotationWorkspaceHeader({
   }
 
   function runSendToClient() {
-    if (hasUnsavedChanges) {
+    if (
+      quotationClientShareRequiresSave({
+        hasUnsavedChanges,
+        hasExistingLink: hasLink,
+        movedToCampaign,
+      })
+    ) {
       toast.error("Save the quotation first.");
       return;
     }

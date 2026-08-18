@@ -42,6 +42,8 @@ export type ClientChangeArea = (typeof CLIENT_CHANGE_AREAS)[number];
 
 export const CLIENT_REVIEW_COOKIE = "tw_client_review";
 
+export const CLIENT_REVIEW_LINK_MISSING_MESSAGE = "Generate the Client Workspace link first.";
+
 export const CLIENT_WORKSPACE_SECTION_LABEL: Record<ClientWorkspaceSectionId, string> = {
   overview: "Overview",
   strategy: "Strategy",

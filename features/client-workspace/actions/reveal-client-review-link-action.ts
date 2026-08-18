@@ -54,11 +54,20 @@ export async function revealClientReviewLinkAction(
   return revealClientReviewShareLink({ supabase, origin, scope });
 }
 
-export async function peekClientReviewShareAction(input: {
-  source: "quotation";
-  quotationId: string;
-}): Promise<{ exists: boolean; reviewNumber?: number }> {
+export async function peekClientReviewShareAction(
+  input:
+    | { source: "quotation"; quotationId: string }
+    | { source: "shortlist"; shortlistId: string }
+): Promise<{ exists: boolean; reviewNumber?: number }> {
   const supabase = await createSupabaseServerClient();
+  if (input.source === "shortlist") {
+    const auth = await requirePermission(supabase, SHORTLIST_PERMISSIONS.write);
+    if ("error" in auth) return { exists: false };
+    return peekClientReviewShareLink({
+      supabase,
+      scope: { source: "shortlist", shortlistId: input.shortlistId },
+    });
+  }
   const auth = await requirePermission(supabase, QUOTATION_PERMISSIONS.write);
   if ("error" in auth) {
     const adminAuth = await requirePermission(supabase, QUOTATION_PERMISSIONS.admin);

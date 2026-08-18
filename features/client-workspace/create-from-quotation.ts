@@ -3,10 +3,13 @@ import { getQuotationDetail } from "@/lib/services/quotations/quotation-document
 import type { Database } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { ClientCreatorSelectionState } from "./constants";
 import { persistClientReview, type CreateClientReviewResult } from "./persist-client-review";
 import { quotationItemClientCreatorId } from "./quotation-item-creator-id";
 import { fingerprintFromSnapshotCreators } from "./snapshot";
+import {
+  defaultQuotationClientSelection,
+  quotationIsMovedToCampaign,
+} from "./client-review-selection";
 import { quotationItemsForClient, quotationReviewBlockers } from "./source-readiness";
 import type { ClientReviewSourceSnapshot, ClientReviewSourceSnapshotCreator } from "./types";
 import { formatDeliverableItems, parseDeliverableItems } from "./deliverables";
@@ -117,8 +120,11 @@ export async function createClientReviewFromQuotation(
       : null;
     return enrichSnapshotCreatorFromUnified(base, unified ?? undefined);
   });
-  const selection: Record<string, ClientCreatorSelectionState> = {};
-  for (const creator of snapshotCreators) selection[creator.creatorId] = "in_review";
+  const movedToCampaign = quotationIsMovedToCampaign(detail);
+  const selection = defaultQuotationClientSelection(
+    snapshotCreators.map((creator) => creator.creatorId),
+    movedToCampaign
+  );
 
   const creatorInvestment = snapshotCreators.reduce(
     (sum, creator) => sum + (creator.investmentAmount ?? 0),
@@ -204,5 +210,6 @@ export async function createClientReviewFromQuotation(
     reuseInteractiveReview: true,
     mintMissingShareToken: input.mintMissingShareToken,
     syncExistingOnly: input.syncExistingOnly,
+    replaceSelection: movedToCampaign,
   });
 }

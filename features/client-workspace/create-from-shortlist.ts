@@ -11,6 +11,7 @@ import type { ClientCreatorSelectionState } from "./constants";
 import { persistClientReview, type CreateClientReviewResult } from "./persist-client-review";
 import { fingerprintFromSnapshotCreators } from "./snapshot";
 import { shortlistReviewBlockers } from "./source-readiness";
+import { shortlistStatusToClient } from "./status";
 import type { ClientReviewSourceSnapshot, ClientReviewSourceSnapshotCreator } from "./types";
 import { formatDeliverableItems, parseDeliverableItems } from "./deliverables";
 import { attachMatchExplanation, enrichSnapshotCreatorFromUnified } from "./creator-snapshot";
@@ -222,7 +223,11 @@ export async function createClientReviewFromShortlist(
     0
   );
   const selection: Record<string, ClientCreatorSelectionState> = {};
-  for (const creator of snapshotCreators) selection[creator.creatorId] = "in_review";
+  for (let index = 0; index < snapshotCreators.length; index += 1) {
+    const creator = snapshotCreators[index];
+    if (!creator) continue;
+    selection[creator.creatorId] = shortlistStatusToClient(frozenItems[index]?.item_status);
+  }
 
   const snapshot: ClientReviewSourceSnapshot = {
     source: "shortlist",
@@ -271,5 +276,6 @@ export async function createClientReviewFromShortlist(
     snapshot,
     alreadyOpenMessage: "A client review already exists for this shortlist selection.",
     markShortlistItemIds: frozenItems.map((item) => item.id),
+    reuseInteractiveReview: true,
   });
 }

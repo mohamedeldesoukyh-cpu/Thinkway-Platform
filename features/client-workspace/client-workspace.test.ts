@@ -6,7 +6,14 @@ import { canCreateClientReview, resolveStudioPackageReadiness } from "@/features
 import { isPublicPath } from "@/lib/auth/routes";
 import { classifyApiPath, classifyPagePath } from "@/lib/security/workspace-classify";
 
-import { CLIENT_CHANGE_AREAS, CLIENT_REVIEW_SOURCES } from "./constants";
+import { CLIENT_CHANGE_AREAS, CLIENT_REVIEW_LINK_MISSING_MESSAGE, CLIENT_REVIEW_SOURCES } from "./constants";
+import {
+  clientSelectionsEqual,
+  defaultQuotationClientSelection,
+  mergePersistedClientSelection,
+  quotationClientShareRequiresSave,
+  quotationIsMovedToCampaign,
+} from "./client-review-selection";
 import { clientSafeFitCopy, clientCreatorIdentity, formatCompactCount, formatEngagementPct, formatHandleLabel, formatOptionalCompactCount, formatOptionalEngagementPct, providedText } from "./format";
 import { deliverablesLabel, groupedActivityMix, looksLikePlatformList, summarizeCreatorDeliverables, summarizeDeliverablesByPlatform } from "./deliverables";
 import {
@@ -267,6 +274,64 @@ test("quotation readiness requires a current quotation, not a Studio rebuild", (
   assert.ok(
     quotationReviewBlockers({ ...base, items: [] }).some((blocker) => /items/i.test(blocker))
   );
+});
+
+test("campaign-linked quotations default Client Workspace creators to approved", () => {
+  assert.equal(quotationIsMovedToCampaign({ campaign_header_id: "hdr-1", status: "draft" }), true);
+  assert.equal(quotationIsMovedToCampaign({ campaign_header_id: null, status: "accepted" }), true);
+  assert.equal(quotationIsMovedToCampaign({ campaign_header_id: null, status: "draft" }), false);
+  assert.deepEqual(defaultQuotationClientSelection(["a", "b"], true), {
+    a: "accepted",
+    b: "accepted",
+  });
+  assert.deepEqual(defaultQuotationClientSelection(["a"], false), { a: "in_review" });
+});
+
+test("Show link does not require a save when the quotation already has a link or is in campaign", () => {
+  assert.equal(
+    quotationClientShareRequiresSave({
+      hasUnsavedChanges: true,
+      hasExistingLink: true,
+      movedToCampaign: false,
+    }),
+    false
+  );
+  assert.equal(
+    quotationClientShareRequiresSave({
+      hasUnsavedChanges: true,
+      hasExistingLink: false,
+      movedToCampaign: true,
+    }),
+    false
+  );
+  assert.equal(
+    quotationClientShareRequiresSave({
+      hasUnsavedChanges: true,
+      hasExistingLink: false,
+      movedToCampaign: false,
+    }),
+    true
+  );
+  assert.equal(CLIENT_REVIEW_LINK_MISSING_MESSAGE, "Generate the Client Workspace link first.");
+});
+
+test("campaign-linked quotation reviews replace previous in-review selection", () => {
+  const merged = mergePersistedClientSelection({
+    creatorIds: ["a", "b"],
+    previous: { a: "in_review", b: "rejected" },
+    incoming: { a: "accepted", b: "accepted" },
+    replaceSelection: true,
+  });
+  assert.deepEqual(merged, { a: "accepted", b: "accepted" });
+  const preserved = mergePersistedClientSelection({
+    creatorIds: ["a", "b"],
+    previous: { a: "in_review", b: "rejected" },
+    incoming: { a: "accepted", b: "accepted" },
+    replaceSelection: false,
+  });
+  assert.deepEqual(preserved, { a: "in_review", b: "rejected" });
+  assert.equal(clientSelectionsEqual({ a: "accepted" }, { a: "accepted" }, ["a"]), true);
+  assert.equal(clientSelectionsEqual({ a: "in_review" }, { a: "accepted" }, ["a"]), false);
 });
 
 test("frozen snapshot commercial uses per-creator quotation values, not a second engine", () => {

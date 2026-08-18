@@ -2,11 +2,13 @@ import { logAuditEvent } from "@/lib/audit/log-audit-event";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { randomBytes } from "node:crypto";
 
-import type {
-  ClientCreatorSelectionState,
-  ClientReviewSource,
-  ClientReviewStatus,
+import {
+  CLIENT_REVIEW_LINK_MISSING_MESSAGE,
+  type ClientCreatorSelectionState,
+  type ClientReviewSource,
+  type ClientReviewStatus,
 } from "./constants";
+import { clientSelectionsEqual, mergePersistedClientSelection } from "./client-review-selection";
 import { parseSourceSnapshot } from "./snapshot";
 import { diffClientReviewSnapshots, retainCreatorBriefs } from "./snapshot-diff";
 import { buildClientReviewPath, hashClientReviewToken } from "./security/review-token";
@@ -120,9 +122,18 @@ async function updateExistingClientReview(
 ): Promise<CreateClientReviewResult> {
   const origin = input.origin.replace(/\/$/, "");
   const existingToken = currentTip.share_token?.trim() || "";
+  const previousSelection = currentTip.selection_state ?? {};
+  const creatorIds = input.snapshot.creators.map((creator) => creator.creatorId);
+  const selection = mergePersistedClientSelection({
+    creatorIds,
+    previous: previousSelection,
+    incoming: input.selection,
+    replaceSelection: input.replaceSelection,
+  });
   if (
     existingToken &&
-    fingerprintsEqual(currentTip.package_fingerprint ?? {}, input.fingerprint)
+    fingerprintsEqual(currentTip.package_fingerprint ?? {}, input.fingerprint) &&
+    clientSelectionsEqual(previousSelection, selection, creatorIds)
   ) {
     return {
       ok: true,
@@ -146,12 +157,6 @@ async function updateExistingClientReview(
     snapshot = { ...snapshot, clientUpdate: { updatedAt: now, items: updates } };
   } else if (previous?.clientUpdate) {
     snapshot = { ...snapshot, clientUpdate: previous.clientUpdate };
-  }
-
-  const previousSelection = currentTip.selection_state ?? {};
-  const selection: Record<string, ClientCreatorSelectionState> = {};
-  for (const creator of snapshot.creators) {
-    selection[creator.creatorId] = previousSelection[creator.creatorId] ?? input.selection[creator.creatorId] ?? "in_review";
   }
 
   const patch: Record<string, unknown> = {
@@ -221,6 +226,8 @@ export type PersistClientReviewInput = {
   mintMissingShareToken?: boolean;
   /** Public quotation refresh must update an existing review only — never insert. */
   syncExistingOnly?: boolean;
+  /** When true, incoming selection replaces previous client choices (campaign-linked quotations). */
+  replaceSelection?: boolean;
 };
 
 export async function persistClientReview(
@@ -259,8 +266,8 @@ export async function persistClientReview(
   if (input.syncExistingOnly) {
     return {
       ok: false,
-      message: "No Client Workspace link exists for this quotation.",
-      blockers: ["Generate the Client Workspace link first."],
+      message: CLIENT_REVIEW_LINK_MISSING_MESSAGE,
+      blockers: [CLIENT_REVIEW_LINK_MISSING_MESSAGE],
     };
   }
 
@@ -409,7 +416,7 @@ export async function revealClientReviewShareLink(input: {
   if (!row) {
     return {
       ok: false,
-      message: "Generate the Client Workspace link first.",
+      message: CLIENT_REVIEW_LINK_MISSING_MESSAGE,
     };
   }
   if (row.status === "revoked" || row.status === "superseded") {

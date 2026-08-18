@@ -28,13 +28,17 @@ import { OpenCampaignStudioLauncher } from "@/features/campaign-outputs/componen
 import type { CampaignSeed } from "@/features/campaign-outputs/hydration/hydration-types";
 
 import { createClientReviewFromShortlistAction } from "@/features/client-workspace/actions/create-from-shortlist-action";
-import { revealClientReviewLinkAction } from "@/features/client-workspace/actions/reveal-client-review-link-action";
+import {
+  peekClientReviewShareAction,
+  revealClientReviewLinkAction,
+} from "@/features/client-workspace/actions/reveal-client-review-link-action";
 import { ClientReviewShareDialog } from "@/features/client-workspace/components/client-review-share-dialog";
 import {
   readClientReviewShare,
   rememberClientReviewShare,
   reviewIdFromShareUrl,
 } from "@/features/client-workspace/client-review-share-memory";
+import { CLIENT_REVIEW_LINK_MISSING_MESSAGE } from "@/features/client-workspace/constants";
 import { discoverySelectionFlyoutContentClass } from "@/features/discovery/components/design-system/discovery-selection-flyout";
 import { shortlistDetailPath } from "@/features/discovery/shortlists/constants";
 import { cn } from "@/lib/utils";
@@ -166,6 +170,7 @@ export function ShortlistWorkspace({
   const [shareOpen, setShareOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareReviewNumber, setShareReviewNumber] = useState<number | undefined>(undefined);
+  const [hasLink, setHasLink] = useState(false);
   const {
     open: detailOpen,
     creator: detailCreator,
@@ -194,6 +199,13 @@ export function ShortlistWorkspace({
   useEffect(() => {
     setDisplayCurrency((detail.currency || "EGP").toUpperCase());
   }, [detail.currency]);
+
+  useEffect(() => {
+    void peekClientReviewShareAction({ source: "shortlist", shortlistId: detail.id }).then((result) => {
+      setHasLink(result.exists);
+      if (result.reviewNumber != null) setShareReviewNumber(result.reviewNumber);
+    });
+  }, [detail.id]);
 
   const handleCurrencyChange = useCallback(
     (currency: string) => {
@@ -636,12 +648,46 @@ export function ShortlistWorkspace({
     runAction(() => bulkCancelCreators(detail.id, selectedItemIdList));
   }
 
+  function rememberShortlistShare(url: string, reviewNumber: number) {
+    setShareUrl(url);
+    setShareReviewNumber(reviewNumber);
+    setHasLink(true);
+    const reviewId = reviewIdFromShareUrl(url);
+    if (reviewId) {
+      rememberClientReviewShare(
+        { source: "shortlist", id: detail.id },
+        { url, reviewNumber, reviewId }
+      );
+    }
+  }
+
+  async function generateShortlistClientReview() {
+    const eligible = detail.creators.filter((item) => item.item_status !== "cancelled");
+    if (eligible.length === 0) {
+      toast.error("Add at least one creator before generating a Client Workspace link.");
+      return;
+    }
+    const result = await createClientReviewFromShortlistAction({
+      shortlistId: detail.id,
+      selectedItemIds: eligible.map((item) => item.item_id),
+    });
+    if (!result.ok) {
+      toast.error(result.message, {
+        description: result.blockers.slice(0, 4).join(" "),
+      });
+      return;
+    }
+    rememberShortlistShare(result.url, result.reviewNumber);
+    setShareOpen(true);
+  }
+
   function handleShowLink() {
     startTransition(async () => {
       const cached = readClientReviewShare({ source: "shortlist", id: detail.id });
       if (cached) {
         setShareUrl(cached.url);
         setShareReviewNumber(cached.reviewNumber);
+        setHasLink(true);
         setShareOpen(true);
         return;
       }
@@ -649,17 +695,16 @@ export function ShortlistWorkspace({
         source: "shortlist",
         shortlistId: detail.id,
       });
-      if (!result.ok) {
+      if (result.ok) {
+        rememberShortlistShare(result.url, result.reviewNumber);
+        setShareOpen(true);
+        return;
+      }
+      if (result.message !== CLIENT_REVIEW_LINK_MISSING_MESSAGE) {
         toast.error(result.message);
         return;
       }
-      rememberClientReviewShare(
-        { source: "shortlist", id: detail.id },
-        { url: result.url, reviewNumber: result.reviewNumber, reviewId: result.reviewId }
-      );
-      setShareUrl(result.url);
-      setShareReviewNumber(result.reviewNumber);
-      setShareOpen(true);
+      await generateShortlistClientReview();
     });
   }
 
@@ -693,15 +738,7 @@ export function ShortlistWorkspace({
       } catch {
         /* clipboard is optional — the share dialog still shows the URL */
       }
-      const reviewId = reviewIdFromShareUrl(result.url);
-      if (reviewId) {
-        rememberClientReviewShare(
-          { source: "shortlist", id: detail.id },
-          { url: result.url, reviewNumber: result.reviewNumber, reviewId }
-        );
-      }
-      setShareUrl(result.url);
-      setShareReviewNumber(result.reviewNumber);
+      rememberShortlistShare(result.url, result.reviewNumber);
       setShareOpen(true);
       toast.success(result.message);
       router.refresh();
@@ -869,7 +906,7 @@ export function ShortlistWorkspace({
               disabled={isPending}
             >
               <Link2Icon className="size-3.5" />
-              Show link
+              {hasLink ? "Show link" : "Generate link"}
             </ShortlistToolbarButton>
             {editable ? (
               <ShortlistToolbarButton
