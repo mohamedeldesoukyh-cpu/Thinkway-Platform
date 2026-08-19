@@ -181,9 +181,49 @@ function testAlignPackageLineDistributesCostToChildren() {
   );
 }
 
+function testAlignPackageLineDistributesRevenueToChildren() {
+  const line = packageLine({ revenue_before_vat: 11_200, revenue: 11_200, cost_before_vat: 10_000, cost: 10_000 });
+  const deliverables = [
+    baseDeliverable({
+      id: "del-1",
+      quantity: 1,
+      unit_revenue: 5_600,
+      revenue_before_vat: 5_600,
+      unit_cost: 3_333.34,
+      cost_before_vat: 3_333.34,
+    }),
+    baseDeliverable({
+      id: "del-2",
+      quantity: 1,
+      unit_revenue: 5_600,
+      revenue_before_vat: 5_600,
+      unit_cost: 3_333.33,
+      cost_before_vat: 3_333.33,
+      posts: [basePost("virtual-del-2-1", "del-2")],
+    }),
+    baseDeliverable({
+      id: "del-3",
+      quantity: 1,
+      unit_revenue: 5_600,
+      revenue_before_vat: 5_600,
+      unit_cost: 3_333.33,
+      cost_before_vat: 3_333.33,
+      posts: [basePost("virtual-del-3-1", "del-3")],
+    }),
+  ];
+
+  const aligned = alignPackageLineCommercialToDeliverables(deliverables, line);
+  const totalChildRev = aligned.reduce((sum, row) => sum + row.revenue_before_vat, 0);
+  const totalChildCost = aligned.reduce((sum, row) => sum + row.cost_before_vat, 0);
+
+  assert(totalChildRev === 11_200, `expected distributed child rev 11200, got ${totalChildRev}`);
+  assert(totalChildCost === 10_000, `expected distributed child cost 10000, got ${totalChildCost}`);
+}
+
 const tests = [
   testPackageRollupUsesLineCommercialDespiteZeroChildCost,
   testAlignPackageLineDistributesCostToChildren,
+  testAlignPackageLineDistributesRevenueToChildren,
 ];
 
 for (const run of tests) {

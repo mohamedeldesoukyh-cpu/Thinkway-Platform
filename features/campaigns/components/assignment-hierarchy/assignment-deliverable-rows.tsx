@@ -22,6 +22,7 @@ import { assignmentChildLeadingParentColumnIds } from "@/features/campaigns/comp
 import { OperationalGridHeader } from "@/features/campaigns/components/assignment-hierarchy/editable-post-row";
 import { useParentLeadingColumnWidths } from "@/features/campaigns/components/assignment-hierarchy/use-parent-leading-column-widths";
 import { useOperationalChildColumnVisibleChecker } from "@/components/tables/operational-table-column-context";
+import { useAssignmentGridEditSession } from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-edit-session";
 import type { AssignmentDeliverableHierarchyRow } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import { getCreatorConnectedPlatformOptions, getDeliverableTypeCodesForPlatform } from "@/lib/campaigns/deliverable-taxonomy";
@@ -88,6 +89,7 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
     assignment: line.assignment,
   });
   const childCol = useOperationalChildColumnVisibleChecker();
+  const gridEdit = useAssignmentGridEditSession();
   const childTableRef = useRef<HTMLTableElement>(null);
   const measuredWidths = useParentLeadingColumnWidths(
     childTableRef,
@@ -182,7 +184,7 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
                   showExpandColumn={showExpandColumn}
                   leadingParentColumnIds={leadingParentColumnIds}
                   actions={
-                    !locked ? (
+                    !locked && !gridEdit.isEditing ? (
                       <Button
                         type="button"
                         variant="ghost"

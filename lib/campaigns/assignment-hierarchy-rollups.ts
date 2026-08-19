@@ -80,44 +80,63 @@ function shouldUseLineCommercialRollup(
   return deliverableCost < lineCost * 0.9;
 }
 
-function applyDistributedCostToPosts(
+function applyDistributedCommercialToPosts(
   posts: AssignmentPostOperationalRow[],
+  unitRevenue: number,
   unitCost: number
 ): AssignmentPostOperationalRow[] {
   if (posts.length === 0) return posts;
   return posts.map((post) => ({
     ...post,
+    revenue_per_post: unitRevenue,
     cost_per_post: unitCost,
   }));
 }
 
-/** Aligns package-line cost onto child deliverables when DB rows were not distributed. */
+/** Aligns package-line revenue/cost onto child deliverables when DB rows were not distributed. */
 export function alignPackageLineCommercialToDeliverables(
   deliverables: AssignmentDeliverableHierarchyRow[],
   line: CampaignLineWorkspace
 ): AssignmentDeliverableHierarchyRow[] {
   if (deliverables.length === 0) return deliverables;
+  if (resolveAssignmentPricingMode(line) !== "package") return deliverables;
 
   const lineCost = Number(line.cost_before_vat ?? line.cost) || 0;
+  const lineRevenue = Number(line.revenue_before_vat ?? line.revenue) || 0;
   const deliverableCost = roundMoney(
     deliverables.reduce((sum, row) => sum + row.cost_before_vat, 0)
   );
-  if (lineCost <= 0.01 || Math.abs(deliverableCost - lineCost) < 0.02) {
+  const deliverableRevenue = roundMoney(
+    deliverables.reduce((sum, row) => sum + row.revenue_before_vat, 0)
+  );
+  const costNeedsAlign = lineCost > 0.01 && Math.abs(deliverableCost - lineCost) >= 0.02;
+  const revenueNeedsAlign =
+    lineRevenue > 0.01 && Math.abs(deliverableRevenue - lineRevenue) >= 0.02;
+  if (!costNeedsAlign && !revenueNeedsAlign) {
     return deliverables;
   }
 
   const weights = deliverables.map((row) => Math.max(1, row.quantity));
-  const costShares = distributeAmountByWeights(lineCost, weights);
+  const costShares = costNeedsAlign
+    ? distributeAmountByWeights(lineCost, weights)
+    : deliverables.map((row) => row.cost_before_vat);
+  const revenueShares = revenueNeedsAlign
+    ? distributeAmountByWeights(lineRevenue, weights)
+    : deliverables.map((row) => row.revenue_before_vat);
 
   return deliverables.map((row, index) => {
     const quantity = Math.max(1, row.quantity);
     const costBeforeVat = costShares[index] ?? 0;
+    const revenueBeforeVat = revenueShares[index] ?? 0;
     const unitCost = roundMoney(costBeforeVat / quantity);
+    const unitRevenue = roundMoney(revenueBeforeVat / quantity);
     return {
       ...row,
       unit_cost: unitCost,
+      unit_revenue: unitRevenue,
       cost_before_vat: costBeforeVat,
-      posts: applyDistributedCostToPosts(row.posts, unitCost),
+      revenue_before_vat: revenueBeforeVat,
+      posts: applyDistributedCommercialToPosts(row.posts, unitRevenue, unitCost),
     };
   });
 }

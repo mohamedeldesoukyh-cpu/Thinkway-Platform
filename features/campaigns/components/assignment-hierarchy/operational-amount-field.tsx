@@ -23,6 +23,8 @@ type OperationalAmountFieldProps = {
   className?: string;
   /** REV/AD & COST/AD — hide .00 on whole numbers */
   perUnit?: boolean;
+  /** Always show an input (grid Edit mode) instead of click-to-edit text. */
+  alwaysEditing?: boolean;
 };
 
 export function OperationalAmountField({
@@ -32,6 +34,7 @@ export function OperationalAmountField({
   disabled = false,
   className,
   perUnit = false,
+  alwaysEditing = false,
 }: OperationalAmountFieldProps) {
   const inputId = useId();
   const [focused, setFocused] = useState(false);
@@ -65,7 +68,7 @@ export function OperationalAmountField({
     );
   }
 
-  if (!focused) {
+  if (!alwaysEditing && !focused) {
     return (
       <button
         type="button"
@@ -97,14 +100,20 @@ export function OperationalAmountField({
         const parsed = parseOperationalAmountInput(next);
         if (parsed !== null) onChange(parsed);
       }}
+      onFocus={() => setFocused(true)}
       onBlur={commitBlur}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
           e.currentTarget.blur();
         }
       }}
-      className={cn(INPUT_CLASS, className)}
-      autoFocus
+      className={cn(
+        INPUT_CLASS,
+        alwaysEditing &&
+          "min-h-6 rounded-sm border border-border/70 bg-background px-1 focus-visible:ring-1",
+        className
+      )}
+      autoFocus={!alwaysEditing}
     />
   );
 }
@@ -115,6 +124,8 @@ type OperationalQtyFieldProps = {
   onBlur?: () => void;
   disabled?: boolean;
   className?: string;
+  /** Always show an input (grid Edit mode) instead of click-to-edit text. */
+  alwaysEditing?: boolean;
 };
 
 export function OperationalQtyField({
@@ -123,6 +134,7 @@ export function OperationalQtyField({
   onBlur,
   disabled = false,
   className,
+  alwaysEditing = false,
 }: OperationalQtyFieldProps) {
   const [focused, setFocused] = useState(false);
   const [text, setText] = useState(String(value));
@@ -139,7 +151,7 @@ export function OperationalQtyField({
     );
   }
 
-  if (!focused) {
+  if (!alwaysEditing && !focused) {
     return (
       <button
         type="button"
@@ -169,6 +181,7 @@ export function OperationalQtyField({
         const q = Math.max(1, parseInt(next || "1", 10) || 1);
         onChange(q);
       }}
+      onFocus={() => setFocused(true)}
       onBlur={() => {
         setFocused(false);
         const q = Math.max(1, parseInt(text || "1", 10) || 1);
@@ -179,8 +192,14 @@ export function OperationalQtyField({
       onKeyDown={(e) => {
         if (e.key === "Enter") e.currentTarget.blur();
       }}
-      className={cn(INPUT_CLASS, className)}
-      autoFocus
+      className={cn(
+        INPUT_CLASS,
+        alwaysEditing &&
+          "min-h-6 rounded-sm border border-border/70 bg-background px-1 focus-visible:ring-1",
+        className
+      )}
+      autoFocus={!alwaysEditing}
+      aria-label="Quantity"
     />
   );
 }

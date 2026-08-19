@@ -6,6 +6,7 @@ import {
   syncPostSchedulesForDeliverable,
 } from "@/lib/assignments/sync-post-schedules";
 import { syncLineCommercialRollupsFromDeliverables } from "@/lib/assignments/sync-line-rollups";
+import { splitPackageTotalsAcrossDeliverables } from "@/lib/assignments/sync-package-deliverables";
 import {
   loadLineCommercialGateSnapshot,
   markIssuedIoRevisionAfterAssignmentCommercialChange,
@@ -162,6 +163,111 @@ function computeDeliverableCommercial(input: {
   };
 }
 
+async function redistributePackageLineToDeliverables(
+  supabase: SupabaseClient,
+  lineId: string
+): Promise<void> {
+  const { data: line, error: lineError } = await supabase
+    .from("campaign_lines")
+    .select(
+      "id, pricing_mode, revenue_before_vat, cost_before_vat, revenue_vat_percent, revenue_vat_exempt, cost_vat_percent, cost_vat_exempt"
+    )
+    .eq("id", lineId)
+    .maybeSingle();
+
+  if (lineError || !line) return;
+  if ((line.pricing_mode ?? "package") !== "package") return;
+
+  const { data: rows, error: rowsError } = await supabase
+    .from("assignment_deliverables")
+    .select(
+      "id, quantity, usage_rights_amount, usage_rights_cost, agency_fee_percent, locked_at, billing_status, live_date, notes"
+    )
+    .eq("campaign_line_id", lineId)
+    .order("sort_order");
+
+  if (rowsError || !rows || rows.length === 0) return;
+  if (rows.some((row) => row.locked_at)) return;
+
+  const shares = splitPackageTotalsAcrossDeliverables(
+    rows.map((row) => ({
+      id: row.id as string,
+      quantity: Number(row.quantity) || 1,
+    })),
+    {
+      revenueBeforeVat: Number(line.revenue_before_vat ?? 0),
+      costBeforeVat: Number(line.cost_before_vat ?? 0),
+    }
+  );
+
+  const lineVat = await loadLineVatForDeliverable(supabase, lineId);
+
+  for (const share of shares) {
+    const existing = rows.find((row) => row.id === share.id);
+    if (!existing) continue;
+    const commercial = computeDeliverableCommercial({
+      quantity: share.quantity,
+      unit_cost: share.unitCost,
+      unit_revenue: share.unitRevenue,
+      usage_rights_amount: Number(existing.usage_rights_amount ?? 0),
+      usage_rights_cost: Number(existing.usage_rights_cost ?? 0),
+      agency_fee_percent: Number(existing.agency_fee_percent ?? 0),
+      revenue_vat_percent: Number(line.revenue_vat_percent ?? 0),
+      revenue_vat_exempt: Boolean(line.revenue_vat_exempt),
+      cost_vat_percent: Number(line.cost_vat_percent ?? 0),
+      cost_vat_exempt: Boolean(line.cost_vat_exempt),
+    });
+
+    await supabase
+      .from("assignment_deliverables")
+      .update({
+        quantity: commercial.quantity,
+        unit_cost: commercial.unit_cost,
+        total_cost: commercial.total_cost,
+        revenue_before_vat: commercial.revenue_before_vat,
+        usage_rights_amount: commercial.usage_rights_amount,
+        usage_rights_cost: commercial.usage_rights_cost,
+        agency_fee_percent: commercial.agency_fee_percent,
+        agency_fee_amount: commercial.agency_fee_amount,
+        revenue_vat_percent: commercial.revenue_vat_percent,
+        revenue_vat_amount: commercial.revenue_vat_amount,
+        revenue_after_vat: commercial.revenue_after_vat,
+        revenue_vat_exempt: commercial.revenue_vat_exempt,
+        cost_before_vat: commercial.cost_before_vat,
+        cost_vat_percent: commercial.cost_vat_percent,
+        cost_vat_amount: commercial.cost_vat_amount,
+        cost_after_vat: commercial.cost_after_vat,
+        cost_vat_exempt: commercial.cost_vat_exempt,
+        billable_amount: commercial.billable_amount,
+        remaining_amount: commercial.billable_amount,
+      })
+      .eq("id", share.id);
+
+    await syncPostSchedulesForDeliverable(
+      supabase,
+      {
+        id: share.id,
+        campaign_line_id: lineId,
+        quantity: commercial.quantity,
+        unit_cost: commercial.unit_cost,
+        revenue_before_vat: commercial.revenue_before_vat,
+        cost_before_vat: commercial.cost_before_vat,
+        revenue_vat_percent: commercial.revenue_vat_percent,
+        revenue_vat_amount: commercial.revenue_vat_amount,
+        cost_vat_percent: commercial.cost_vat_percent,
+        cost_vat_amount: commercial.cost_vat_amount,
+        revenue_vat_exempt: commercial.revenue_vat_exempt,
+        cost_vat_exempt: commercial.cost_vat_exempt,
+        live_date: (existing.live_date as string | null) ?? null,
+        notes: (existing.notes as string | null) ?? null,
+        billing_status: existing.billing_status as string,
+        locked_at: null,
+      },
+      lineVat
+    );
+  }
+}
+
 export async function createAssignmentDeliverable(
   supabase: SupabaseClient,
   input: CreateAssignmentDeliverableInput
@@ -259,6 +365,7 @@ export async function createAssignmentDeliverable(
     );
 
     await syncLineCommercialRollupsFromDeliverables(supabase, line.id);
+    await redistributePackageLineToDeliverables(supabase, line.id);
     await syncAssignmentLineTitleFromDeliverables(supabase, line.id);
     return { ok: true, message: "Deliverable added." };
   } catch (error) {
@@ -454,6 +561,7 @@ export async function updateAssignmentDeliverable(
     );
 
     await syncLineCommercialRollupsFromDeliverables(supabase, line.id);
+    await redistributePackageLineToDeliverables(supabase, line.id);
     await syncAssignmentLineTitleFromDeliverables(supabase, line.id);
 
     if (beforeCommercial) {
@@ -519,6 +627,7 @@ export async function deleteAssignmentDeliverable(
     }
 
     await syncLineCommercialRollupsFromDeliverables(supabase, existing.campaign_line_id);
+    await redistributePackageLineToDeliverables(supabase, existing.campaign_line_id);
     return { ok: true, message: "Deliverable removed." };
   } catch (error) {
     return {
@@ -777,6 +886,8 @@ export async function addPostToDeliverable(
       },
       lineVat
     );
+
+    await redistributePackageLineToDeliverables(supabase, deliverable.campaign_line_id);
 
     return { ok: true, message: "Post added." };
   } catch (err) {

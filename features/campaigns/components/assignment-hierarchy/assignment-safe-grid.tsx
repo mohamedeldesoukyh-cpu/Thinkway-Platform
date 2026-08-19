@@ -8,8 +8,10 @@ import {
   useMemo,
   useRef,
   useState,
+  useTransition,
   type ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +20,8 @@ import { AssignmentCreatorCell } from "@/features/campaigns/components/assignmen
 import { AssignmentFullDescriptionCell } from "@/features/campaigns/components/assignment-hierarchy/assignment-full-description-cell";
 import { AssignmentPlatformPills } from "@/features/campaigns/components/assignment-hierarchy/assignment-platform-pills";
 import { AssignmentExpandToggle } from "@/features/campaigns/components/assignment-hierarchy/assignment-expand-toggle";
+import { AssignmentRowCircleControl } from "@/features/campaigns/components/assignment-hierarchy/assignment-row-circle-control";
+import { createAssignmentDeliverableAction } from "@/features/campaigns/actions/assignment-deliverable-actions";
 import { AssignmentsEmptyState } from "@/features/campaigns/components/assignments-empty-state";
 import {
   FloatingSelectionBar,
@@ -91,6 +95,10 @@ import {
   useOperationalVisibleColumnCount,
 } from "@/components/tables/operational-table-column-context";
 import { cn } from "@/lib/utils";
+import {
+  getCreatorConnectedPlatformOptions,
+  getDeliverableTypeCodesForPlatform,
+} from "@/lib/campaigns/deliverable-taxonomy";
 
 type AssignmentSafeGridProps = {
   campaignId: string;
@@ -138,6 +146,8 @@ export function AssignmentSafeGrid({
 }: AssignmentSafeGridProps) {
   const audienceView = useAssignmentAudienceView();
   const gridEdit = useAssignmentGridEditSession();
+  const router = useRouter();
+  const [pendingAdd, startAddTransition] = useTransition();
   const gates = resolveAssignmentsGridGates(audienceView);
   const col = useOperationalColumnVisibleChecker();
   const childCol = useOperationalChildColumnVisibleChecker();
@@ -233,6 +243,36 @@ export function AssignmentSafeGrid({
     if (!gridEdit.isEditing) return;
     setExpandedIds(new Set(preparedRows.map((row) => row.lineId)));
   }, [gridEdit.isEditing, preparedRows]);
+
+  const addChildDeliverable = useCallback(
+    (line: CampaignLineWorkspace) => {
+      if (!gridEdit.isEditing || line.vendor_assignment_locked || pendingAdd) return;
+      const platformOptions = getCreatorConnectedPlatformOptions({
+        creatorPlatformAccounts: line.creator_platform_accounts,
+        assignment: line.assignment,
+      });
+      const defaultPlatform = platformOptions[0]?.value ?? "instagram";
+      const defaultTypes = getDeliverableTypeCodesForPlatform(defaultPlatform);
+      startAddTransition(async () => {
+        const result = await createAssignmentDeliverableAction({
+          campaign_id: campaignId,
+          campaign_line_id: line.id,
+          platform: defaultPlatform,
+          deliverable_type: defaultTypes[0] ?? "other",
+          quantity: 1,
+          unit_cost: 0,
+          unit_revenue: 0,
+          revenue_vat_percent: line.revenue_vat_percent,
+          cost_vat_percent: line.cost_vat_percent,
+        });
+        if (result.ok) {
+          setExpandedIds((prev) => new Set(prev).add(line.id));
+          router.refresh();
+        }
+      });
+    },
+    [campaignId, gridEdit.isEditing, pendingAdd, router]
+  );
 
   const toggleLine = useCallback((lineId: string, selectable: boolean) => {
     if (!selectable) return;
@@ -577,6 +617,16 @@ export function AssignmentSafeGrid({
                                   });
                                 }}
                                 ariaLabel={`${expanded ? "Collapse" : "Expand"} ${row.displayName}`}
+                              />
+                            ) : null}
+                            {gridEdit.isEditing &&
+                            gates.enableEditActions &&
+                            !line.vendor_assignment_locked ? (
+                              <AssignmentRowCircleControl
+                                kind="add"
+                                disabled={pendingAdd || gridEdit.saving}
+                                label={`Add deliverable to ${row.displayName}`}
+                                onClick={() => addChildDeliverable(line)}
                               />
                             ) : null}
                             <button

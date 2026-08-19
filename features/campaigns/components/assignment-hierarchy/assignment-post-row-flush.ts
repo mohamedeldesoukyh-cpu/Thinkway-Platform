@@ -26,7 +26,6 @@ export async function persistAssignmentPostRowDraft(args: {
     campaignLineId,
     deliverable,
     post,
-    deliverableScoped,
     isVirtualPost,
     includeCommercial,
     commercial,
@@ -34,7 +33,7 @@ export async function persistAssignmentPostRowDraft(args: {
   } = args;
   const postId = typeof post.id === "string" ? post.id : "";
 
-  if (deliverableScoped && includeCommercial) {
+  if (includeCommercial) {
     const commercialResult = await updateAssignmentDeliverableAction({
       campaign_id: campaignId,
       campaign_line_id: campaignLineId,
