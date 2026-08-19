@@ -67,7 +67,11 @@ export function LogoMark() {
   );
 }
 
-export function KpiIcon({ name }: { name: "reach" | "engage" | "trend" | "cpe" | "cpm" | "money" }) {
+export function KpiIcon({
+  name,
+}: {
+  name: "reach" | "engage" | "trend" | "cpe" | "cpm" | "money" | "people";
+}) {
   if (name === "reach") {
     return (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -104,6 +108,15 @@ export function KpiIcon({ name }: { name: "reach" | "engage" | "trend" | "cpe" |
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <rect x="3" y="4" width="18" height="16" rx="2" />
         <path d="M3 10h18M8 4v16" />
+      </svg>
+    );
+  }
+  if (name === "people") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="9" cy="8" r="3.2" />
+        <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+        <path d="M16 5.5a3 3 0 0 1 0 5.8M21.5 20a6 6 0 0 0-4-5.6" />
       </svg>
     );
   }

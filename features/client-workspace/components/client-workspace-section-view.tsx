@@ -22,7 +22,7 @@ export function ClientWorkspaceSectionView({
   if (section === "overview" || section === "strategy" || section === "timeline") {
     return <OverviewWorkspace view={view} token={token} />;
   }
-  if (section === "content") return <ContentPlanWorkspace view={view} />;
+  if (section === "content") return <ContentPlanWorkspace view={view} token={token} />;
   if (section === "commercial" || section === "quotation") {
     return <CommercialWorkspace view={view} token={token} />;
   }

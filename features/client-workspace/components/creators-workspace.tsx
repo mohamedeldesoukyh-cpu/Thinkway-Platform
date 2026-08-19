@@ -13,8 +13,8 @@ import {
 } from "../actions/client-workspace-actions";
 import type { ClientCreatorSelectionState } from "../constants";
 import { CLIENT_CREATOR_STATUS_LABEL } from "../constants";
+import { deliverablesLabel } from "../deliverables";
 import {
-  DATA_NOT_AVAILABLE,
   clientCreatorIdentity,
   formatCompactCount,
   formatHandleLabel,
@@ -41,11 +41,10 @@ import { useClientWorkspaceState } from "./client-workspace-state";
 import { ProposalSummaryCard } from "./proposal-summary-card";
 import { ReviewAvatar } from "./review-avatar";
 import { ReviewCreatorProfileLinks } from "./review-creator-profile-links";
-import { ReviewDeliverableStrip } from "./review-deliverable-strip";
 import { BrandMentionsCard, EstimatedReachCard } from "./review-insight-cards";
 import { EngagementMeter, ReviewMeter } from "./review-meter";
 import { ReviewPlatformBreakdown } from "./review-platform-breakdown";
-import { IconBack, IconChart, IconCheck, IconClose } from "./review-icons";
+import { IconChart, IconCheck, IconClose } from "./review-icons";
 
 const STATUS_FILTERS: Array<{ id: "all" | "recommended" | ClientCreatorSelectionState; label: string }> = [
   { id: "all", label: "All" },
@@ -72,6 +71,7 @@ export function CreatorsWorkspace({
   const [reportOpen, setReportOpen] = useState(false);
   const [brief, setBrief] = useState<ClientCreatorBrief | null>(null);
   const [note, setNote] = useState("");
+  const [detailClosed, setDetailClosed] = useState(false);
   const selection = sharedSelection;
   const counts = countSelections(
     selection,
@@ -106,11 +106,13 @@ export function CreatorsWorkspace({
   }, []);
 
   const activeId =
-    selectedId && filtered.some((creator) => creator.creatorId === selectedId)
-      ? selectedId
-      : viewport === "desktop"
-        ? (filtered[0]?.creatorId ?? null)
-        : selectedId;
+    detailClosed
+      ? null
+      : selectedId && filtered.some((creator) => creator.creatorId === selectedId)
+        ? selectedId
+        : viewport === "desktop"
+          ? (filtered[0]?.creatorId ?? null)
+          : selectedId;
 
   useEffect(() => {
     if (!activeId) return;
@@ -139,6 +141,7 @@ export function CreatorsWorkspace({
   const showDetail = Boolean(selected) && (sheetOpen || viewport === "desktop");
 
   function openCreator(creatorId: string) {
+    setDetailClosed(false);
     setSelectedId(creatorId);
     setNote("");
     setReportOpen(false);
@@ -148,6 +151,7 @@ export function CreatorsWorkspace({
   function closeSheet() {
     setSheetOpen(false);
     setReportOpen(false);
+    setDetailClosed(true);
     if (viewport === "mobile") setSelectedId(null);
   }
 
@@ -178,89 +182,83 @@ export function CreatorsWorkspace({
 
   return (
     <div className="creators-page">
-      <ProposalSummaryCard view={view} token={token} selection={selection} variant="bar" />
-      <p className="note" style={{ marginBottom: 12 }}>
-        {rosterHeadline(view.creators.length)}. {rosterSourceLine(view.review.source)}. Select
-        creators to calculate investment, then approve the selection.
-      </p>
-      <div className="filters">
-        {STATUS_FILTERS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={statusFilter === item.id ? "fbtn active" : "fbtn"}
-            onClick={() => setStatusFilter(item.id)}
-          >
-            {item.label}
-            <span className="n">{filterCounts[item.id]}</span>
-          </button>
-        ))}
+      <div className="toolbar">
+        <div className="segs">
+          {STATUS_FILTERS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={statusFilter === item.id ? "seg on" : "seg"}
+              onClick={() => setStatusFilter(item.id)}
+            >
+              {item.label}
+              <span className="n">{filterCounts[item.id]}</span>
+            </button>
+          ))}
+        </div>
+        <div className="sp" />
         {view.canDecide ? (
           <>
-            <button type="button" className="fbtn" disabled={pending} onClick={() => bulk("accepted")}>
+            <button type="button" className="link" disabled={pending} onClick={() => bulk("accepted")}>
               Select all
             </button>
-            <button type="button" className="fbtn" disabled={pending} onClick={() => bulk("in_review")}>
+            <button type="button" className="link" disabled={pending} onClick={() => bulk("in_review")}>
               Clear
             </button>
           </>
         ) : null}
       </div>
+      <ProposalSummaryCard view={view} token={token} selection={selection} variant="bar" />
+      <p className="note" style={{ marginBottom: 12 }}>
+        {rosterHeadline(view.creators.length)}. {rosterSourceLine(view.review.source)}. Select
+        creators to calculate investment, then approve the selection.
+      </p>
 
-      <div className="md">
-        <div className="clist2">
-          {filtered.map((creator, index) => (
+      <div className="layout">
+        <div className="clist">
+          {filtered.map((creator, index) => {
+            const identity = clientCreatorIdentity(creator.displayName, creator.handle);
+            const location = formatLocation(creator.city, creator.country);
+            const sub = [formatHandleLabel(identity.handle), location].filter(Boolean).join(" · ");
+            const state = selection[creator.creatorId] ?? creator.selection;
+            return (
             <button
               key={creator.creatorId}
               type="button"
-              className={creator.creatorId === activeId ? "lc sel" : "lc"}
+              className={creator.creatorId === activeId ? "cc sel" : "cc"}
               onClick={() => openCreator(creator.creatorId)}
             >
               {view.canDecide ? (
                 <input
                   type="checkbox"
                   className="pick"
-                  checked={(selection[creator.creatorId] ?? creator.selection) === "accepted"}
+                  checked={state === "accepted"}
                   onClick={(event) => event.stopPropagation()}
                   onChange={(event) => toggleChecked(creator, event.currentTarget.checked)}
                   aria-label={`Select ${creator.displayName}`}
                 />
               ) : null}
               <ReviewAvatar
-                className="av"
+                className="photo"
+                initialsClassName="ini"
                 url={creator.avatarUrl}
                 profileUrl={creator.profileUrl}
-                name={clientCreatorIdentity(creator.displayName, creator.handle).name}
+                name={identity.name}
                 index={view.creators.findIndex((item) => item.creatorId === creator.creatorId) || index}
                 token={token}
               />
-              <div className="info">
-                {(() => {
-                  const identity = clientCreatorIdentity(creator.displayName, creator.handle);
-                  return (
-                    <>
-                      <div className="nm">{identity.name}</div>
-                      {identity.handle ? <div className="hd">{formatHandleLabel(identity.handle)}</div> : null}
-                    </>
-                  );
-                })()}
-                {formatLocation(creator.city, creator.country) ? (
-                  <div className="mt loc">
-                    {`${flagFromCountry(creator.country)} ${formatLocation(creator.city, creator.country)}`.trim()}
-                  </div>
-                ) : null}
+              <div className="body">
+                <div className="nm">{identity.name}</div>
+                {sub ? <div className="sub">{sub}</div> : null}
                 <ReviewPlatformBreakdown rows={breakdownForCreator(creator)} variant="list" />
-                <ReviewDeliverableStrip
-                  items={creator.deliverableItems}
-                  fallback={creator.deliverables}
-                  showPlatforms={false}
-                />
+                <div className="ccfoot">
+                  <span className="deliv">{deliverablesLabel(creator.deliverableItems, creator.deliverables)}</span>
+                  <span className={statusClass(state)}>{CLIENT_CREATOR_STATUS_LABEL[state]}</span>
+                </div>
               </div>
-              <span className={statusClass(selection[creator.creatorId] ?? creator.selection)}>
-                {CLIENT_CREATOR_STATUS_LABEL[selection[creator.creatorId] ?? creator.selection]}
-              </span>
             </button>
-          ))}
+            );
+          })}
           {filtered.length === 0 ? <p className="unavailable">No creators match these filters.</p> : null}
         </div>
 
@@ -300,8 +298,9 @@ export function CreatorsWorkspace({
           />
         ) : (
           <div className="detail">
-            <div className="dt-body">
-              <p className="unavailable">Select a creator to review the profile.</p>
+            <div className="empty">
+              <p style={{ marginTop: 12, fontWeight: 600, color: "var(--ink)" }}>Select a creator</p>
+              <p style={{ fontSize: 13, marginTop: 4 }}>Choose a creator to see their full profile and metrics.</p>
             </div>
           </div>
         )}
@@ -407,16 +406,17 @@ function CreatorDetailPane({
 
   return (
     <aside className={show ? "detail show" : "detail"}>
-      <p className="ck dt-card-label">Creator Card</p>
-      <button type="button" className="dt-back" onClick={onBack}>
-        <IconBack />
-        Back to creators
-      </button>
-      <div className="dt-hero2">
+      <div className="dhead">
+        <span className="t">Creator card</span>
+        <button type="button" className="x" onClick={onBack} aria-label="Close creator card">
+          <IconClose />
+        </button>
+      </div>
+      <div className="dhero">
         {primaryProfileUrl ? (
           <a className="portrait-link" href={primaryProfileUrl} target="_blank" rel="noopener noreferrer">
             <ReviewAvatar
-              className="portrait"
+              className="ava"
               initialsClassName="ini"
               url={brief?.avatarUrl || creator.avatarUrl}
               profileUrl={brief?.profileUrl || creator.profileUrl}
@@ -427,7 +427,7 @@ function CreatorDetailPane({
           </a>
         ) : (
           <ReviewAvatar
-            className="portrait"
+            className="ava"
             initialsClassName="ini"
             url={brief?.avatarUrl || creator.avatarUrl}
             profileUrl={brief?.profileUrl || creator.profileUrl}
@@ -436,91 +436,66 @@ function CreatorDetailPane({
             token={token}
           />
         )}
-        <div className="dt-meta">
-          {primaryProfileUrl ? (
-            <a className="nm" href={primaryProfileUrl} target="_blank" rel="noopener noreferrer">
-              {name}
+        {primaryProfileUrl ? (
+          <a className="nm" href={primaryProfileUrl} target="_blank" rel="noopener noreferrer">
+            {name}
+          </a>
+        ) : (
+          <p className="nm">{name}</p>
+        )}
+        <p className="sub">
+          {handleLabel && primaryProfileUrl ? (
+            <a href={primaryProfileUrl} target="_blank" rel="noopener noreferrer">
+              {handleLabel}
             </a>
-          ) : (
-            <p className="nm">{name}</p>
-          )}
-          {handleLabel ? (
-            primaryProfileUrl ? (
-              <a className="hd" href={primaryProfileUrl} target="_blank" rel="noopener noreferrer">
-                {handleLabel}
-              </a>
-            ) : (
-              <p className="hd">{handleLabel}</p>
-            )
+          ) : handleLabel ? (
+            handleLabel
           ) : null}
-          <div className="mchips">
-            {location ? (
-              <span className="mchip">
-                {flagFromCountry(creator.country)} {location}
-              </span>
-            ) : null}
-            {contentCategoriesForDisplay(contentCategories, categoryFallback)
-              .slice(0, 2)
-              .map((category) => (
-              <span className="mchip" key={category.label}>
+          {handleLabel && location ? " · " : null}
+          {location}
+        </p>
+        <div className="dtags">
+          {creator.country ? <span className="tag g">{flagFromCountry(creator.country)}</span> : null}
+          {contentCategoriesForDisplay(contentCategories, categoryFallback)
+            .slice(0, 2)
+            .map((category) => (
+              <span className="tag" key={category.label}>
                 {category.label}
               </span>
             ))}
-            <span className={statusClass(creator.selection)}>{CLIENT_CREATOR_STATUS_LABEL[creator.selection]}</span>
-          </div>
-          <ReviewPlatformBreakdown rows={platformRows} variant="detail" />
-          <div className="dt-quick invest-only">
-            <div className="q">
-              <p className="l">Investment</p>
-              <p className="v">
-                {investmentAmount != null ? formatMoneyKpi(investmentAmount, investmentCurrency) : TO_BE_CONFIRMED}
-              </p>
-            </div>
-          </div>
-          {canDecide ? (
-            <div className="dt-acts">
-              <button type="button" className={creator.selection === "accepted" ? "btn" : "btn ok"} disabled={pending} onClick={onAccept}>
-                {creator.selection === "accepted" ? (
-                  <>
-                    <IconClose />
-                    Remove accept
-                  </>
-                ) : (
-                  <>
-                    <IconCheck />
-                    Accept
-                  </>
-                )}
-              </button>
-              <button type="button" className="btn rej" disabled={pending} onClick={onReject}>
-                <IconClose />
-                Reject
-              </button>
-              <button type="button" className="btn" disabled={pending || !note.trim()} onClick={onRequestChanges}>
-                Request changes
-              </button>
-            </div>
-          ) : null}
+          <span className={`tag g ${statusClass(creator.selection)}`}>{CLIENT_CREATOR_STATUS_LABEL[creator.selection]}</span>
         </div>
-      </div>
-      <div className="dt-body">
-        {engagementMetersForBreakdown(platformRows, brief?.engagementRate ?? creator.engagementRate).map(
-          (meter) => (
-            <EngagementMeter
-              key={meter.platform ?? "engagement"}
-              platform={meter.platform}
-              rate={meter.rate}
-            />
-          )
-        )}
-        {quality && gauge != null ? (
-          <ReviewMeter
-            label="Audience quality"
-            value={quality.text}
-            percent={gauge}
-            badge={quality}
-          />
+        {canDecide ? (
+          <div className="dacts">
+            <button
+              type="button"
+              className={creator.selection === "accepted" ? "btn pri" : "btn ok"}
+              disabled={pending}
+              onClick={onAccept}
+            >
+              {creator.selection === "accepted" ? (
+                <>
+                  <IconCheck />
+                  Accepted
+                </>
+              ) : (
+                <>
+                  <IconCheck />
+                  Accept
+                </>
+              )}
+            </button>
+            <button type="button" className="btn no" disabled={pending} onClick={onReject}>
+              <IconClose />
+              Reject
+            </button>
+            <button type="button" className="btn sec" disabled={pending || !note.trim()} onClick={onRequestChanges}>
+              Request changes
+            </button>
+          </div>
         ) : null}
+      </div>
+      <div className="dbody">
         {canDecide ? (
           <div className="sec">
             <p className="st">Notes and status updates</p>
@@ -552,32 +527,46 @@ function CreatorDetailPane({
           <ContentCategoryGrid items={contentCategories} fallback={categoryFallback} />
         </div>
         <div className="sec">
+          <p className="st">Platform audience</p>
+          <ReviewPlatformBreakdown rows={platformRows} variant="detail" />
+        </div>
+        <div className="sec">
           <p className="st">Expected costs</p>
           <div className="duo">
             <div className="mc">
-              <p className="l">Cost per engagement (CPE)</p>
-              <p className="v">{cpe != null ? formatMoneyKpi(cpe, currency) : NOT_AVAILABLE}</p>
+              <p className="l">Cost per engagement</p>
+              <p className={cpe != null ? "v sm" : "v sm tbc"}>
+                {cpe != null ? formatMoneyKpi(cpe, currency) : NOT_AVAILABLE}
+              </p>
             </div>
             <div className="mc">
-              <p className="l">Cost per mille (CPM)</p>
-              <p className="v">{cpm != null ? formatMoneyKpi(cpm, currency) : NOT_AVAILABLE}</p>
+              <p className="l">Cost per mille</p>
+              <p className={cpm != null ? "v sm" : "v sm tbc"}>
+                {cpm != null ? formatMoneyKpi(cpm, currency) : NOT_AVAILABLE}
+              </p>
+            </div>
+            <div className="mc">
+              <p className="l">Investment</p>
+              <p className={investmentAmount != null ? "v sm" : "v sm tbc"}>
+                {investmentAmount != null ? formatMoneyKpi(investmentAmount, investmentCurrency) : TO_BE_CONFIRMED}
+              </p>
             </div>
           </div>
         </div>
         <div className="sec">
           <p className="st">Audience match</p>
           <p className="desc" style={{ marginBottom: 12 }}>{audienceMatch}</p>
-          <div className="split">
-            <div className="matchbox">
-              <p className="mh">Geo match</p>
+          <div className="duo">
+            <div className="mc">
+              <p className="l">Geo match</p>
               {audience?.locations.length ? (
                 <AudienceBars items={audience.locations} />
               ) : (
-                <p className="unavailable">{TO_BE_CONFIRMED}</p>
+                <p className="v tbc">{TO_BE_CONFIRMED}</p>
               )}
             </div>
-            <div className="matchbox">
-              <p className="mh">Age & gender match</p>
+            <div className="mc">
+              <p className="l">Age & gender</p>
               {audience && (audience.ages.length > 0 || audience.genders.length > 0) ? (
                 <>
                   {audience.ages.length > 0 ? <AudienceBars items={audience.ages} /> : null}
@@ -588,38 +577,53 @@ function CreatorDetailPane({
                   ) : null}
                 </>
               ) : (
-                <p className="unavailable">{TO_BE_CONFIRMED}</p>
+                <p className="v tbc">{TO_BE_CONFIRMED}</p>
               )}
             </div>
           </div>
         </div>
-        {multiPlatform ? null : (
         <div className="sec">
-          <p className="st">Average engagement</p>
-          <div className="trio">
-            <div className="mc">
-              <p className="l">Avg. likes</p>
-              <p className="v sm">{formatCompactCount(likes)}</p>
+          <p className="st">Engagement rate by platform</p>
+          {engagementMetersForBreakdown(platformRows, brief?.engagementRate ?? creator.engagementRate).map(
+            (meter) => (
+              <EngagementMeter
+                key={meter.platform ?? "engagement"}
+                platform={meter.platform}
+                rate={meter.rate}
+              />
+            )
+          )}
+          {quality && gauge != null ? (
+            <ReviewMeter
+              label="Audience quality"
+              value={quality.text}
+              percent={gauge}
+              badge={quality}
+            />
+          ) : null}
+          {multiPlatform ? null : (
+            <div className="trio">
+              <div className="mc">
+                <p className="l">Avg. likes</p>
+                <p className="v sm">{formatCompactCount(likes)}</p>
+              </div>
+              <div className="mc">
+                <p className="l">Avg. views</p>
+                <p className="v sm">{formatCompactCount(views)}</p>
+              </div>
+              <div className="mc">
+                <p className="l">Avg. comments</p>
+                <p className="v sm">{formatCompactCount(comments)}</p>
+              </div>
             </div>
-            <div className="mc">
-              <p className="l">Avg. views</p>
-              <p className="v sm">{formatCompactCount(views)}</p>
-            </div>
-            <div className="mc">
-              <p className="l">Avg. comments</p>
-              <p className="v sm">{formatCompactCount(comments)}</p>
-            </div>
-          </div>
+          )}
         </div>
-        )}
         <EstimatedReachCard reach={reach} followers={creator.followers} />
         <BrandMentionsCard mentions={brands} token={token} />
-        <div className="sec">
-          <button type="button" className="btn primary" onClick={onOpenReport} style={{ width: "100%", justifyContent: "center" }}>
-            <IconChart />
-            View advanced report
-          </button>
-        </div>
+        <button type="button" className="btn sec" onClick={onOpenReport} style={{ width: "100%", justifyContent: "center", marginTop: 14 }}>
+          <IconChart />
+          View advanced report
+        </button>
       </div>
     </aside>
   );

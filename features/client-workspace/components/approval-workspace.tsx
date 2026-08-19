@@ -9,7 +9,7 @@ import {
   decideReviewAction,
   requestReviewChangesAction,
 } from "../actions/client-workspace-actions";
-import { CLIENT_CHANGE_AREAS, type ClientChangeArea } from "../constants";
+import { CLIENT_CHANGE_AREAS, CLIENT_CHANGE_AREA_LABEL, type ClientChangeArea } from "../constants";
 import { TO_BE_CONFIRMED } from "../format";
 import { rosterHeadline } from "../presentation";
 import { countSelections } from "../status";
@@ -30,7 +30,7 @@ export function ApprovalWorkspace({
   const [rejectReason, setRejectReason] = useState("");
   const [areas, setAreas] = useState<ClientChangeArea[]>(["creator"]);
   const [error, setError] = useState<string | null>(null);
-  const { selection, selectedCommercial, selectedSummary } = useClientWorkspaceState();
+  const { selection, selectedCommercial, selectedSummary, goToSection } = useClientWorkspaceState();
   const counts = countSelections(
     selection,
     view.creators.map((creator) => creator.creatorId)
@@ -69,7 +69,7 @@ export function ApprovalWorkspace({
     <>
       <div className="card">
         <p className="ck">Ready for approval</p>
-        <h2>Review and lock this proposal</h2>
+        <h2>Review and lock this selection</h2>
         <div className="asum">
           <div className="gi">
             <p className="l">Campaign</p>
@@ -99,16 +99,16 @@ export function ApprovalWorkspace({
         <p className="note">Proposal v{view.review.reviewNumber} · Current</p>
         <div className="checklist">
           <CheckItem done label="Campaign reviewed" />
-          <CheckItem done={counts.accepted > 0} label="Creator shortlist reviewed" />
+          <CheckItem done={counts.accepted > 0} label="Creator selection reviewed" />
           <CheckItem done={deliverableCount > 0} label="Deliverables reviewed" />
-          <CheckItem done={selectedCommercial.totalInvestment > 0} label="Selection investment reviewed" />
+          <CheckItem done={selectedCommercial.totalInvestment > 0} label="Investment reviewed" />
         </div>
         {error ? <p style={{ color: "var(--bad)", fontSize: 13 }}>{error}</p> : null}
         {view.canDecide ? (
-          <div className="dt-acts">
+          <div className="dacts" style={{ justifyContent: "flex-start", marginTop: 18 }}>
             <button
               type="button"
-              className="btn primary"
+              className="btn pri"
               disabled={pending || counts.accepted === 0}
               onClick={() =>
                 startTransition(async () => {
@@ -123,14 +123,8 @@ export function ApprovalWorkspace({
             </button>
             <button
               type="button"
-              className="btn"
-              disabled={pending || !summary.trim()}
-              onClick={() =>
-                startTransition(async () => {
-                  await requestReviewChangesAction({ token, summary, areas });
-                  router.refresh();
-                })
-              }
+              className="btn sec"
+              onClick={() => goToSection("feedback")}
             >
               Request changes
             </button>
@@ -144,39 +138,57 @@ export function ApprovalWorkspace({
         <div className="card">
           <p className="ck">Request changes</p>
           <h2>Tell Thinkway what to update</h2>
-          <div className="filters">
+          <div className="catchips">
             {CLIENT_CHANGE_AREAS.map((area) => (
               <button
                 key={area}
                 type="button"
-                className={areas.includes(area) ? "fbtn active" : "fbtn"}
+                className={areas.includes(area) ? "catchip on" : "catchip"}
                 onClick={() => toggle(area)}
               >
-                {area}
+                {CLIENT_CHANGE_AREA_LABEL[area]}
               </button>
             ))}
           </div>
           <textarea
+            className="f"
             value={summary}
             onChange={(event) => setSummary(event.target.value)}
             placeholder="What needs to change?"
           />
+          <div style={{ height: 14 }} />
+          <button
+            type="button"
+            className="btn sec"
+            disabled={pending || !summary.trim()}
+            onClick={() =>
+              startTransition(async () => {
+                await requestReviewChangesAction({ token, summary, areas });
+                router.refresh();
+              })
+            }
+          >
+            Send request
+          </button>
         </div>
       ) : null}
 
       {view.canDecide ? (
         <div className="card">
-          <p className="ck">Reject proposal</p>
-          <h2>Reject is secondary and requires a reason</h2>
+          <p className="ck" style={{ color: "var(--bad)" }}>
+            Reject proposal
+          </p>
+          <h2>Rejecting requires a reason</h2>
           <textarea
+            className="f"
             value={rejectReason}
             onChange={(event) => setRejectReason(event.target.value)}
             placeholder="Why is this proposal being rejected?"
           />
-          <div className="dt-acts">
+          <div className="dacts" style={{ justifyContent: "flex-start", marginTop: 14 }}>
             <button
               type="button"
-              className="btn"
+              className="btn no"
               disabled={pending || !rejectReason.trim()}
               onClick={() =>
                 startTransition(async () => {
