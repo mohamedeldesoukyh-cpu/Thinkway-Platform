@@ -41,9 +41,7 @@ export function DeliverableGroupRow({
 }: DeliverableGroupRowProps) {
   const readOnly = deliverable.is_synthetic || deliverable.is_locked;
   const posts = Array.isArray(deliverable.posts) ? deliverable.posts : [];
-  const deliverableScoped =
-    posts.length === 1 ||
-    posts.every((post) => String(post.id).startsWith("virtual-"));
+  const deliverableScoped = posts.length === 1;
   const safeParentStatus = effectiveLineOperationalStatusForUi({
     operational_status: parentOperationalStatus,
     vendor_io_id: null,

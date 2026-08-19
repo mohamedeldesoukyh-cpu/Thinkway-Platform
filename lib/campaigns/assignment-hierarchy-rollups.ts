@@ -1,8 +1,4 @@
-import {
-  computeClientBilling,
-  rollupLineClientCommercial,
-} from "@/lib/assignments/client-billing-commercial";
-import { splitPackageTotalsAcrossDeliverables } from "@/lib/assignments/sync-package-deliverables";
+import { rollupLineClientCommercial } from "@/lib/assignments/client-billing-commercial";
 import { formatMarginPercent } from "@/lib/domains/billing/types";
 import type {
   AssignmentDeliverableHierarchyRow,
@@ -92,7 +88,10 @@ function applyDistributedCommercialToPosts(
   }));
 }
 
-/** Aligns package-line commercial totals onto children by quantity so they match the parent. */
+/**
+ * Package types keep their own Cost/Ad and Rev/Ad. Extra posts of the same type
+ * inherit that type's unit rates for publication/invoice internals only.
+ */
 export function alignPackageLineCommercialToDeliverables(
   deliverables: AssignmentDeliverableHierarchyRow[],
   line: CampaignLineWorkspace
@@ -100,52 +99,14 @@ export function alignPackageLineCommercialToDeliverables(
   if (deliverables.length === 0) return deliverables;
   if (resolveAssignmentPricingMode(line) !== "package") return deliverables;
 
-  const shares = splitPackageTotalsAcrossDeliverables(
-    deliverables.map((row) => ({ id: row.id, quantity: row.quantity })),
-    {
-      revenueBeforeVat: Number(line.revenue_before_vat ?? line.revenue) || 0,
-      costBeforeVat: Number(line.cost_before_vat ?? line.cost) || 0,
-      usageRightsAmount: Number(line.usage_rights_amount ?? 0),
-      usageRightsCost: Number(line.usage_rights_cost ?? 0),
-      agencyFeePercent: Number(line.agency_fee_percent ?? 0),
-    }
-  );
-  const shareById = new Map(shares.map((share) => [share.id, share]));
-  const vatPercent = line.revenue_vat_exempt
-    ? 0
-    : Number(line.revenue_vat_percent ?? 0);
-
-  return deliverables.map((row) => {
-    const share = shareById.get(row.id);
-    if (!share) return row;
-    const billing = computeClientBilling({
-      revenueBeforeVat: share.revenueBeforeVat,
-      usageRightsAmount: share.usageRightsAmount,
-      usageRightsCost: share.usageRightsCost,
-      agencyFeePercent: share.agencyFeePercent,
-      vatPercent,
-      vatExempt: Boolean(line.revenue_vat_exempt),
-      costBeforeVat: share.costBeforeVat,
-    });
-    return {
-      ...row,
-      unit_cost: share.unitCost,
-      unit_revenue: share.unitRevenue,
-      cost_before_vat: share.costBeforeVat,
-      revenue_before_vat: share.revenueBeforeVat,
-      usage_rights_amount: share.usageRightsAmount,
-      usage_rights_cost: share.usageRightsCost,
-      agency_fee_percent: share.agencyFeePercent,
-      agency_fee_amount: billing.agencyFeeAmount,
-      revenue_vat_amount: billing.vatAmount,
-      revenue_after_vat: billing.totalBilling,
-      posts: applyDistributedCommercialToPosts(
-        row.posts,
-        share.unitRevenue,
-        share.unitCost
-      ),
-    };
-  });
+  return deliverables.map((row) => ({
+    ...row,
+    posts: applyDistributedCommercialToPosts(
+      row.posts,
+      row.unit_revenue,
+      row.unit_cost
+    ),
+  }));
 }
 
 export function buildAssignmentHierarchyRollups(

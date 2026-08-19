@@ -6,7 +6,6 @@ import {
   syncPostSchedulesForDeliverable,
 } from "@/lib/assignments/sync-post-schedules";
 import { syncLineCommercialRollupsFromDeliverables } from "@/lib/assignments/sync-line-rollups";
-import { splitPackageTotalsAcrossDeliverables } from "@/lib/assignments/sync-package-deliverables";
 import {
   loadLineCommercialGateSnapshot,
   markIssuedIoRevisionAfterAssignmentCommercialChange,
@@ -173,9 +172,7 @@ async function redistributePackageLineToDeliverables(
 ): Promise<void> {
   const { data: line, error: lineError } = await supabase
     .from("campaign_lines")
-    .select(
-      "id, pricing_mode, revenue_before_vat, cost_before_vat, usage_rights_amount, usage_rights_cost, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, cost_vat_percent, cost_vat_exempt"
-    )
+    .select("id, pricing_mode")
     .eq("id", lineId)
     .maybeSingle();
 
@@ -184,90 +181,36 @@ async function redistributePackageLineToDeliverables(
 
   const { data: rows, error: rowsError } = await supabase
     .from("assignment_deliverables")
-    .select("id, quantity, locked_at, billing_status, live_date, notes")
+    .select(
+      "id, quantity, unit_cost, revenue_before_vat, cost_before_vat, revenue_vat_percent, revenue_vat_amount, cost_vat_percent, cost_vat_amount, revenue_vat_exempt, cost_vat_exempt, notes, billing_status, locked_at"
+    )
     .eq("campaign_line_id", lineId)
     .order("sort_order");
 
   if (rowsError || !rows || rows.length === 0) return;
   if (rows.some((row) => row.locked_at)) return;
 
-  const shares = splitPackageTotalsAcrossDeliverables(
-    rows.map((row) => ({
-      id: row.id as string,
-      quantity: Number(row.quantity) || 1,
-    })),
-    {
-      revenueBeforeVat: Number(line.revenue_before_vat ?? 0),
-      costBeforeVat: Number(line.cost_before_vat ?? 0),
-      usageRightsAmount: Number(line.usage_rights_amount ?? 0),
-      usageRightsCost: Number(line.usage_rights_cost ?? 0),
-      agencyFeePercent: Number(line.agency_fee_percent ?? 0),
-    }
-  );
-
   const lineVat = await loadLineVatForDeliverable(supabase, lineId);
 
-  for (const share of shares) {
-    const existing = rows.find((row) => row.id === share.id);
-    if (!existing) continue;
-    const commercial = computeDeliverableCommercial({
-      quantity: share.quantity,
-      unit_cost: share.unitCost,
-      unit_revenue: share.unitRevenue,
-      revenue_before_vat: share.revenueBeforeVat,
-      cost_before_vat: share.costBeforeVat,
-      usage_rights_amount: share.usageRightsAmount,
-      usage_rights_cost: share.usageRightsCost,
-      agency_fee_percent: share.agencyFeePercent,
-      revenue_vat_percent: Number(line.revenue_vat_percent ?? 0),
-      revenue_vat_exempt: Boolean(line.revenue_vat_exempt),
-      cost_vat_percent: Number(line.cost_vat_percent ?? 0),
-      cost_vat_exempt: Boolean(line.cost_vat_exempt),
-    });
-
-    await supabase
-      .from("assignment_deliverables")
-      .update({
-        quantity: commercial.quantity,
-        unit_cost: commercial.unit_cost,
-        total_cost: commercial.total_cost,
-        revenue_before_vat: commercial.revenue_before_vat,
-        usage_rights_amount: commercial.usage_rights_amount,
-        usage_rights_cost: commercial.usage_rights_cost,
-        agency_fee_percent: commercial.agency_fee_percent,
-        agency_fee_amount: commercial.agency_fee_amount,
-        revenue_vat_percent: commercial.revenue_vat_percent,
-        revenue_vat_amount: commercial.revenue_vat_amount,
-        revenue_after_vat: commercial.revenue_after_vat,
-        revenue_vat_exempt: commercial.revenue_vat_exempt,
-        cost_before_vat: commercial.cost_before_vat,
-        cost_vat_percent: commercial.cost_vat_percent,
-        cost_vat_amount: commercial.cost_vat_amount,
-        cost_after_vat: commercial.cost_after_vat,
-        cost_vat_exempt: commercial.cost_vat_exempt,
-        billable_amount: commercial.billable_amount,
-        remaining_amount: commercial.billable_amount,
-      })
-      .eq("id", share.id);
-
+  for (const row of rows) {
     await syncPostSchedulesForDeliverable(
       supabase,
       {
-        id: share.id,
+        id: row.id as string,
         campaign_line_id: lineId,
-        quantity: commercial.quantity,
-        unit_cost: commercial.unit_cost,
-        revenue_before_vat: commercial.revenue_before_vat,
-        cost_before_vat: commercial.cost_before_vat,
-        revenue_vat_percent: commercial.revenue_vat_percent,
-        revenue_vat_amount: commercial.revenue_vat_amount,
-        cost_vat_percent: commercial.cost_vat_percent,
-        cost_vat_amount: commercial.cost_vat_amount,
-        revenue_vat_exempt: commercial.revenue_vat_exempt,
-        cost_vat_exempt: commercial.cost_vat_exempt,
-        live_date: (existing.live_date as string | null) ?? null,
-        notes: (existing.notes as string | null) ?? null,
-        billing_status: existing.billing_status as string,
+        quantity: Number(row.quantity) || 1,
+        unit_cost: Number(row.unit_cost) || 0,
+        revenue_before_vat: Number(row.revenue_before_vat) || 0,
+        cost_before_vat: Number(row.cost_before_vat) || 0,
+        revenue_vat_percent: Number(row.revenue_vat_percent) || 0,
+        revenue_vat_amount: Number(row.revenue_vat_amount) || 0,
+        cost_vat_percent: Number(row.cost_vat_percent) || 0,
+        cost_vat_amount: Number(row.cost_vat_amount) || 0,
+        revenue_vat_exempt: Boolean(row.revenue_vat_exempt),
+        cost_vat_exempt: Boolean(row.cost_vat_exempt),
+        live_date: null,
+        notes: (row.notes as string | null) ?? null,
+        billing_status: (row.billing_status as string) ?? "draft",
         locked_at: null,
       },
       lineVat

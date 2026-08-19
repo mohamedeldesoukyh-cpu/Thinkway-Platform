@@ -101,7 +101,7 @@ export async function syncPostSchedulesForDeliverable(
         assignment_deliverable_id: deliverable.id,
         campaign_line_id: deliverable.campaign_line_id,
         sequence_number: seq,
-        live_date: deliverable.live_date,
+        live_date: null,
         status: "draft" as const,
         notes: deliverable.notes,
         billing_status: deliverable.billing_status ?? "draft",

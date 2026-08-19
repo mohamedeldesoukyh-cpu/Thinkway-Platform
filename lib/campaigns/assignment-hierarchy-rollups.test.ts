@@ -172,12 +172,9 @@ function testAlignPackageLineDistributesCostToChildren() {
   ];
 
   const aligned = alignPackageLineCommercialToDeliverables(deliverables, line);
-  const totalChildCost = aligned.reduce((sum, row) => sum + row.cost_before_vat, 0);
-
-  assert(totalChildCost === 140_000, `expected distributed child cost 140000, got ${totalChildCost}`);
   assert(
-    aligned.every((row) => row.unit_cost === 35_000 && row.posts[0]!.cost_per_post === 35_000),
-    "each deliverable should show 35000 cost/ad"
+    aligned.every((row) => row.cost_before_vat === 0 && row.unit_cost === 0),
+    "package types keep their own cost/ad; zeros are not filled from the parent"
   );
 }
 
@@ -216,11 +213,12 @@ function testAlignPackageLineDistributesRevenueToChildren() {
   const totalChildRev = aligned.reduce((sum, row) => sum + row.revenue_before_vat, 0);
   const totalChildCost = aligned.reduce((sum, row) => sum + row.cost_before_vat, 0);
 
-  assert(totalChildRev === 11_200, `expected distributed child rev 11200, got ${totalChildRev}`);
-  assert(totalChildCost === 10_000, `expected distributed child cost 10000, got ${totalChildCost}`);
+  assert(totalChildRev === 16_800, `child types keep their own rev, got ${totalChildRev}`);
+  assert(totalChildCost === 10_000, `child types keep their own cost, got ${totalChildCost}`);
+  assert(aligned[0]!.unit_revenue === 5_600, "first type keeps its rev/ad");
 }
 
-function testAlignPackageLineSplitsUnevenQtyAndUsageRights() {
+function testAlignPackageLineKeepsDifferentTypeRates() {
   const line = packageLine({
     revenue_before_vat: 32_000,
     revenue: 32_000,
@@ -235,26 +233,22 @@ function testAlignPackageLineSplitsUnevenQtyAndUsageRights() {
     baseDeliverable({
       id: "stories",
       quantity: 26,
-      revenue_before_vat: 32_000,
-      unit_revenue: 32_000,
-      cost_before_vat: 16_000,
-      unit_cost: 16_000,
-      usage_rights_amount: 3_200,
-      usage_rights_cost: 1_600,
-      agency_fee_percent: 10,
-      agency_fee_amount: 3_520,
+      unit_revenue: 200,
+      revenue_before_vat: 5_200,
+      unit_cost: 100,
+      cost_before_vat: 2_600,
+      usage_rights_amount: 0,
+      usage_rights_cost: 0,
     }),
     baseDeliverable({
       id: "reels",
       quantity: 6,
-      revenue_before_vat: 0,
-      unit_revenue: 0,
-      cost_before_vat: 0,
-      unit_cost: 0,
+      unit_revenue: 1_000,
+      revenue_before_vat: 6_000,
+      unit_cost: 800,
+      cost_before_vat: 4_800,
       usage_rights_amount: 0,
       usage_rights_cost: 0,
-      agency_fee_percent: 0,
-      agency_fee_amount: 0,
       posts: [basePost("virtual-reels-1", "reels")],
     }),
   ];
@@ -263,26 +257,19 @@ function testAlignPackageLineSplitsUnevenQtyAndUsageRights() {
   const stories = aligned[0]!;
   const reels = aligned[1]!;
 
-  assert(stories.revenue_before_vat === 26_000, `stories rev should be 26000, got ${stories.revenue_before_vat}`);
-  assert(reels.revenue_before_vat === 6_000, `reels rev should be 6000, got ${reels.revenue_before_vat}`);
-  assert(stories.cost_before_vat === 13_000, `stories cost should be 13000, got ${stories.cost_before_vat}`);
-  assert(reels.cost_before_vat === 3_000, `reels cost should be 3000, got ${reels.cost_before_vat}`);
-  assert(stories.usage_rights_amount === 2_600, `stories UR should be 2600, got ${stories.usage_rights_amount}`);
-  assert(reels.usage_rights_amount === 600, `reels UR should be 600, got ${reels.usage_rights_amount}`);
-  assert(stories.usage_rights_cost === 1_300, `stories UR cost should be 1300, got ${stories.usage_rights_cost}`);
-  assert(reels.usage_rights_cost === 300, `reels UR cost should be 300, got ${reels.usage_rights_cost}`);
-  assert(stories.agency_fee_percent === 10 && reels.agency_fee_percent === 10, "AF% copies to every child");
-  assert(
-    stories.agency_fee_amount + reels.agency_fee_amount === 3_520,
-    `child fees should match parent 3520, got ${stories.agency_fee_amount + reels.agency_fee_amount}`
-  );
+  assert(stories.unit_cost === 100, `stories keep cost/ad 100, got ${stories.unit_cost}`);
+  assert(reels.unit_cost === 800, `reels keep cost/ad 800, got ${reels.unit_cost}`);
+  assert(stories.unit_revenue === 200, `stories keep rev/ad 200, got ${stories.unit_revenue}`);
+  assert(reels.unit_revenue === 1_000, `reels keep rev/ad 1000, got ${reels.unit_revenue}`);
+  assert(stories.cost_before_vat === 2_600, "stories cost stays qty × cost/ad");
+  assert(reels.cost_before_vat === 4_800, "reels cost stays qty × cost/ad");
 }
 
 const tests = [
   testPackageRollupUsesLineCommercialDespiteZeroChildCost,
   testAlignPackageLineDistributesCostToChildren,
   testAlignPackageLineDistributesRevenueToChildren,
-  testAlignPackageLineSplitsUnevenQtyAndUsageRights,
+  testAlignPackageLineKeepsDifferentTypeRates,
 ];
 
 for (const run of tests) {

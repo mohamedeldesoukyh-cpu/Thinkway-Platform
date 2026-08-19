@@ -39,7 +39,7 @@ import {
   OperationalQtyField,
 } from "@/features/campaigns/components/assignment-hierarchy/operational-amount-field";
 import { formatOperationalAmount, roundOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
-import { computeAgencyFeeAmount, computeClientBilling } from "@/lib/assignments/client-billing-commercial";
+import { computeAgencyFeeAmount } from "@/lib/assignments/client-billing-commercial";
 import {
   OPERATIONAL_AMOUNT_CLASS,
   OPERATIONAL_TABLE_HEADER_CELL,
@@ -72,7 +72,6 @@ import {
   OPERATIONAL_GRID_LABELS,
 } from "@/features/campaigns/components/assignment-hierarchy/operational-grid-columns";
 import { useAssignmentGridEditSession } from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-edit-session";
-import { useAssignmentPackageSplit } from "@/features/campaigns/components/assignment-hierarchy/assignment-package-split-context";
 import { isAssignmentPostDraftDirty } from "@/features/campaigns/components/assignment-hierarchy/assignment-post-draft-dirty";
 import { persistAssignmentPostRowDraft } from "@/features/campaigns/components/assignment-hierarchy/assignment-post-row-flush";
 import { useOperationalCommercialDraft } from "@/features/campaigns/components/assignment-hierarchy/use-operational-commercial-draft";
@@ -250,8 +249,8 @@ export function EditablePostRow({
   const postId = typeof post.id === "string" ? post.id : "";
   const isVirtualPost = postId.startsWith("virtual-");
   const canEditLiveDateField = canEditLiveAdDate(
-    post.live_date ?? deliverable.live_date,
-    deliverable.locked_at
+    post.live_date,
+    post.is_locked || deliverable.locked_at
   );
   const canEditDeliverableScope =
     !readOnly && deliverableScoped && postId.length > 0 && !deliverable.is_locked;
@@ -260,11 +259,6 @@ export function EditablePostRow({
   const canEdit = canEditDeliverableScope || canEditPostSchedule;
   const canEditCommercial = canEdit;
   const ownsDeliverableCommercial = isFirstPost;
-  const packageSplit = useAssignmentPackageSplit();
-  const packageShare =
-    packageSplit.enabled && ownsDeliverableCommercial
-      ? packageSplit.shareFor(deliverable.id)
-      : null;
   const commercialLocked =
     !canEditCommercial ||
     (gridEdit.hasSession && !gridEdit.isEditing) ||
@@ -277,69 +271,29 @@ export function EditablePostRow({
   const showDeliverableCommercial =
     deliverableScoped || isFirstPost;
 
-  useEffect(() => {
-    if (!packageShare || !ownsDeliverableCommercial) return;
-    commercial.reset({
-      qty: packageShare.quantity,
-      revPerAd: packageShare.unitRevenue,
-      rev: packageShare.revenueBeforeVat,
-      costPerAd: packageShare.unitCost,
-      cost: packageShare.costBeforeVat,
-    });
-  }, [
-    packageShare?.quantity,
-    packageShare?.unitRevenue,
-    packageShare?.revenueBeforeVat,
-    packageShare?.unitCost,
-    packageShare?.costBeforeVat,
-    ownsDeliverableCommercial,
-    commercial.reset,
-  ]);
-
   const liveAgencyFeeAmount = useMemo(() => {
     if (!showDeliverableCommercial) return 0;
     return computeAgencyFeeAmount(
       commercial.draft.rev,
-      Number(packageShare?.usageRightsAmount ?? deliverable.usage_rights_amount ?? 0),
-      Number(packageShare?.agencyFeePercent ?? deliverable.agency_fee_percent ?? 0)
+      Number(deliverable.usage_rights_amount ?? 0),
+      Number(deliverable.agency_fee_percent ?? 0)
     );
   }, [
     showDeliverableCommercial,
     commercial.draft.rev,
-    packageShare?.usageRightsAmount,
-    packageShare?.agencyFeePercent,
     deliverable.usage_rights_amount,
     deliverable.agency_fee_percent,
   ]);
 
-  const packageBilling = useMemo(() => {
-    if (!packageShare || !showDeliverableCommercial) return null;
-    return computeClientBilling({
-      revenueBeforeVat: packageShare.revenueBeforeVat,
-      usageRightsAmount: packageShare.usageRightsAmount,
-      usageRightsCost: packageShare.usageRightsCost,
-      agencyFeePercent: packageShare.agencyFeePercent,
-      vatPercent: revenueVatExempt ? 0 : meta.revenue_vat_percent,
-      vatExempt: revenueVatExempt,
-      costBeforeVat: packageShare.costBeforeVat,
-    });
-  }, [
-    packageShare,
-    showDeliverableCommercial,
-    revenueVatExempt,
-    meta.revenue_vat_percent,
-  ]);
-
   const computedTotalBilling = useMemo(() => {
     if (showDeliverableCommercial) {
-      return packageBilling?.totalBilling ?? deliverable.revenue_after_vat;
+      return deliverable.revenue_after_vat;
     }
     return roundOperationalAmount(
       commercial.draft.rev + (revenueVatExempt ? 0 : computedVat)
     );
   }, [
     showDeliverableCommercial,
-    packageBilling?.totalBilling,
     deliverable.revenue_after_vat,
     commercial.draft.rev,
     revenueVatExempt,
@@ -388,15 +342,6 @@ export function EditablePostRow({
     meta,
     baselineCommercial,
     baselineMeta,
-    usageRightsAmount: Number(
-      packageShare?.usageRightsAmount ?? deliverable.usage_rights_amount ?? 0
-    ),
-    usageRightsCost: Number(
-      packageShare?.usageRightsCost ?? deliverable.usage_rights_cost ?? 0
-    ),
-    agencyFeePercent: Number(
-      packageShare?.agencyFeePercent ?? deliverable.agency_fee_percent ?? 0
-    ),
   });
   flushStateRef.current = {
     canEdit,
@@ -405,15 +350,6 @@ export function EditablePostRow({
     meta,
     baselineCommercial,
     baselineMeta,
-    usageRightsAmount: Number(
-      packageShare?.usageRightsAmount ?? deliverable.usage_rights_amount ?? 0
-    ),
-    usageRightsCost: Number(
-      packageShare?.usageRightsCost ?? deliverable.usage_rights_cost ?? 0
-    ),
-    agencyFeePercent: Number(
-      packageShare?.agencyFeePercent ?? deliverable.agency_fee_percent ?? 0
-    ),
   };
 
   useEffect(() => {
@@ -435,12 +371,7 @@ export function EditablePostRow({
       return persistAssignmentPostRowDraft({
         campaignId,
         campaignLineId,
-        deliverable: {
-          ...deliverable,
-          usage_rights_amount: snapshot.usageRightsAmount,
-          usage_rights_cost: snapshot.usageRightsCost,
-          agency_fee_percent: snapshot.agencyFeePercent,
-        },
+        deliverable,
         post,
         deliverableScoped,
         isVirtualPost,
@@ -540,15 +471,9 @@ export function EditablePostRow({
           quantity: commercial.draft.qty,
           unit_revenue: commercial.draft.revPerAd,
           unit_cost: commercial.draft.costPerAd,
-          usage_rights_amount: Number(
-            packageShare?.usageRightsAmount ?? deliverable.usage_rights_amount ?? 0
-          ),
-          usage_rights_cost: Number(
-            packageShare?.usageRightsCost ?? deliverable.usage_rights_cost ?? 0
-          ),
-          agency_fee_percent: Number(
-            packageShare?.agencyFeePercent ?? deliverable.agency_fee_percent ?? 0
-          ),
+          usage_rights_amount: Number(deliverable.usage_rights_amount ?? 0),
+          usage_rights_cost: Number(deliverable.usage_rights_cost ?? 0),
+          agency_fee_percent: Number(deliverable.agency_fee_percent ?? 0),
           revenue_vat_percent: meta.revenue_vat_percent,
           live_date: meta.live_date || null,
           notes: meta.notes || null,
@@ -782,6 +707,7 @@ export function EditablePostRow({
             <div className="flex min-w-0 items-center gap-1.5">
               {gridEdit.hasSession &&
               gridEdit.isEditing &&
+              isFirstPost &&
               !deliverable.is_synthetic &&
               !readOnly ? (
                 <AssignmentRowCircleControl
@@ -793,7 +719,7 @@ export function EditablePostRow({
                   }}
                 />
               ) : null}
-              {canEdit && fieldsActive ? (
+              {canEdit && fieldsActive && (deliverableScoped || isFirstPost) ? (
                 <>
                   <PlatformSelect
                     platform={meta.platform}
@@ -830,6 +756,9 @@ export function EditablePostRow({
                       post.deliverable_type,
                       post.deliverable_type_label
                     )}
+                    {!deliverableScoped && post.sequence_number
+                      ? ` ${post.sequence_number}`
+                      : ""}
                   </span>
                 </>
               )}
@@ -852,13 +781,7 @@ export function EditablePostRow({
             {showDeliverableCommercial ? (
               <OperationalQtyField
                 value={commercial.draft.qty}
-                onChange={(q) => {
-                  if (packageSplit.enabled && ownsDeliverableCommercial) {
-                    packageSplit.setQuantity(deliverable.id, q);
-                    return;
-                  }
-                  commercial.setQty(q);
-                }}
+                onChange={(q) => commercial.setQty(q)}
                 onBlur={gridEdit.hasSession ? undefined : persistCommercial}
                 disabled={qtyLocked}
                 alwaysEditing={gridEdit.hasSession && gridEdit.isEditing && !qtyLocked}
@@ -950,9 +873,7 @@ export function EditablePostRow({
         {col("usageRights") ? (
         <td className={cn(GRID_CELL.usageRights, OPERATIONAL_AMOUNT_CLASS)}>
           {showDeliverableCommercial
-            ? formatOperationalAmount(
-                packageShare?.usageRightsAmount ?? deliverable.usage_rights_amount
-              )
+            ? formatOperationalAmount(deliverable.usage_rights_amount)
             : "—"}
         </td>
         ) : null}
@@ -964,9 +885,7 @@ export function EditablePostRow({
             "text-muted-foreground"
           )}
         >
-          {showDeliverableCommercial
-            ? formatPercent(packageShare?.agencyFeePercent ?? deliverable.agency_fee_percent)
-            : "—"}
+          {showDeliverableCommercial ? formatPercent(deliverable.agency_fee_percent) : "—"}
         </td>
         ) : null}
         {col("agencyFee") ? (
@@ -994,9 +913,7 @@ export function EditablePostRow({
         {col("usageRightsCost") ? (
         <td className={cn(GRID_CELL.usageRightsCost, OPERATIONAL_AMOUNT_CLASS)}>
           {showDeliverableCommercial
-            ? formatOperationalAmount(
-                packageShare?.usageRightsCost ?? deliverable.usage_rights_cost
-              )
+            ? formatOperationalAmount(deliverable.usage_rights_cost)
             : "—"}
         </td>
         ) : null}
@@ -1026,7 +943,7 @@ export function EditablePostRow({
             <span className={OPERATIONAL_AMOUNT_CLASS}>Ex</span>
           ) : (
             <span className={OPERATIONAL_AMOUNT_CLASS}>
-              {formatOperationalAmount(packageBilling?.vatAmount ?? computedVat)}
+              {formatOperationalAmount(computedVat)}
             </span>
           )}
         </td>
