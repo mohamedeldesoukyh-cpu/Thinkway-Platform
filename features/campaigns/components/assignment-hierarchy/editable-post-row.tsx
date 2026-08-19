@@ -33,6 +33,7 @@ import {
 } from "@/features/campaigns/actions/assignment-deliverable-actions";
 import { AssignmentRowCircleControl } from "@/features/campaigns/components/assignment-hierarchy/assignment-row-circle-control";
 import { AssignmentDeliverableBillingBadge } from "@/features/campaigns/components/assignment-hierarchy/assignment-status-badges";
+import { DeliverableWorkflowBadge } from "@/features/campaigns/components/assignment-hierarchy/deliverable-workflow-badge";
 import {
   OperationalAmountField,
   OperationalQtyField,
