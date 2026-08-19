@@ -30,18 +30,20 @@ function Kpi({
   name,
   label,
   value,
+  missing,
 }: {
-  name: "reach" | "engage" | "trend" | "cpe" | "cpm" | "money";
+  name: "reach" | "engage" | "trend" | "cpe" | "cpm" | "money" | "people";
   label: string;
   value: string;
+  missing?: boolean;
 }) {
   return (
-    <div className="kpi">
+    <div className="card kpi">
       <div className="ic">
         <KpiIcon name={name} />
       </div>
       <p className="kl">{label}</p>
-      <p className="kv">{value}</p>
+      <p className={missing ? "kv tbc" : "kv"}>{value}</p>
     </div>
   );
 }
@@ -105,12 +107,32 @@ export function OverviewWorkspace({
   return (
     <>
       <div className="kpis">
-        <Kpi name="reach" label="Est. reach" value={hasSelection ? formatCompactCount(forecast.estimatedReach) : TO_BE_CONFIRMED} />
-        <Kpi name="engage" label="Engagements" value={hasSelection ? formatCompactCount(forecast.estimatedEngagements) : TO_BE_CONFIRMED} />
-        <Kpi name="trend" label="Eng. rate" value={hasSelection ? er : TO_BE_CONFIRMED} />
-        <Kpi name="cpe" label="CPE" value={hasSelection ? money(forecast.cpe, forecast.currency) : TO_BE_CONFIRMED} />
-        <Kpi name="cpm" label="CPM" value={hasSelection ? money(forecast.cpm, forecast.currency) : TO_BE_CONFIRMED} />
-        <Kpi name="money" label="Creators" value={String(selectedCreators.length)} />
+        <Kpi
+          name="reach"
+          label="Est. reach"
+          value={hasSelection ? formatCompactCount(forecast.estimatedReach) : TO_BE_CONFIRMED}
+          missing={!hasSelection || forecast.estimatedReach == null}
+        />
+        <Kpi
+          name="engage"
+          label="Engagements"
+          value={hasSelection ? formatCompactCount(forecast.estimatedEngagements) : TO_BE_CONFIRMED}
+          missing={!hasSelection || forecast.estimatedEngagements == null}
+        />
+        <Kpi name="trend" label="Eng. rate" value={hasSelection ? er : TO_BE_CONFIRMED} missing={!hasSelection} />
+        <Kpi
+          name="cpe"
+          label="CPE"
+          value={hasSelection ? money(forecast.cpe, forecast.currency) : TO_BE_CONFIRMED}
+          missing={!hasSelection || forecast.cpe == null}
+        />
+        <Kpi
+          name="cpm"
+          label="CPM"
+          value={hasSelection ? money(forecast.cpm, forecast.currency) : TO_BE_CONFIRMED}
+          missing={!hasSelection || forecast.cpm == null}
+        />
+        <Kpi name="people" label="Creators" value={String(selectedCreators.length)} />
       </div>
 
       <div className="grid2">

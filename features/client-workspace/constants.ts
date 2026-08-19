@@ -40,6 +40,13 @@ export type ClientCommentTargetType = (typeof CLIENT_COMMENT_TARGETS)[number];
 export const CLIENT_CHANGE_AREAS = ["creator", "content", "commercial", "campaign"] as const;
 export type ClientChangeArea = (typeof CLIENT_CHANGE_AREAS)[number];
 
+export const CLIENT_CHANGE_AREA_LABEL: Record<ClientChangeArea, string> = {
+  creator: "Creators",
+  content: "Content",
+  commercial: "Commercial",
+  campaign: "Campaign",
+};
+
 export const CLIENT_REVIEW_COOKIE = "tw_client_review";
 
 export const CLIENT_REVIEW_LINK_MISSING_MESSAGE = "Generate the Client Workspace link first.";

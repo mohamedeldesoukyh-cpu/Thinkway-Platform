@@ -92,15 +92,14 @@ export function ProposalSummaryCard({
     forecast.averageEngagementRate != null
       ? formatEngagementPct(forecast.averageEngagementRate)
       : TO_BE_CONFIRMED;
-  const approvalHref = buildClientReviewPath(view.review.id, token, "approval");
-  const feedbackHref = buildClientReviewPath(view.review.id, token, "feedback");
+  const creatorsHref = buildClientReviewPath(view.review.id, token, "creators");
   const canApprove = view.canDecide && selectedCount > 0 && !pending;
   const emptyHint =
     selectedCount === 0 && view.canDecide
       ? "Select creators to calculate this package, then approve it."
       : null;
 
-  function openSection(event: React.MouseEvent<HTMLAnchorElement>, next: "feedback" | "approval") {
+  function openSection(event: React.MouseEvent<HTMLAnchorElement>, next: "creators") {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
     event.preventDefault();
     goToSection(next);
@@ -119,47 +118,39 @@ export function ProposalSummaryCard({
 
   if (variant === "bar") {
     return (
-      <div className="sumbar">
-        <div className="sumbar-head">
-          <p className="st">Selection calculator</p>
-          <p className="ss">Updates as you select creators</p>
-        </div>
-        <div className="sumbar-metrics">
-          <Metric
-            label="Quotation"
-            value={quotationTotal > 0 ? formatMoneyKpi(quotationTotal, currency) : TO_BE_CONFIRMED}
-            missing={quotationTotal <= 0}
-          />
-          <Metric
-            label="Investment"
-            value={investment > 0 ? formatMoneyKpi(investment, currency) : TO_BE_CONFIRMED}
-            missing={investment <= 0}
-          />
-          <Metric label="Creators" value={String(selectedCount)} />
-          <Metric
-            label="Est. reach"
-            value={formatCompactCount(forecast.estimatedReach)}
-            missing={forecast.estimatedReach == null}
-          />
-          <Metric
-            label="Engagements"
-            value={formatCompactCount(forecast.estimatedEngagements)}
-            missing={forecast.estimatedEngagements == null}
-          />
-          <Metric label="ER" value={er} missing={forecast.averageEngagementRate == null} />
-          <Metric label="CPE" value={money(forecast.cpe, currency)} missing={forecast.cpe == null} />
-          <Metric label="CPM" value={money(forecast.cpm, currency)} missing={forecast.cpm == null} />
-        </div>
+      <div className="summary sumbar">
+        <Metric label="Selected" value={`${selectedCount} / ${view.creators.length}`} />
+        <Metric
+          label="Quotation"
+          value={quotationTotal > 0 ? formatMoneyKpi(quotationTotal, currency) : TO_BE_CONFIRMED}
+          missing={quotationTotal <= 0}
+        />
+        <Metric
+          label="Investment"
+          value={investment > 0 ? formatMoneyKpi(investment, currency) : TO_BE_CONFIRMED}
+          missing={investment <= 0}
+        />
+        <Metric
+          label="Est. reach"
+          value={formatCompactCount(forecast.estimatedReach)}
+          missing={forecast.estimatedReach == null}
+        />
+        <Metric
+          label="Engagements"
+          value={formatCompactCount(forecast.estimatedEngagements)}
+          missing={forecast.estimatedEngagements == null}
+        />
+        <Metric label="Avg engagement" value={er} missing={forecast.averageEngagementRate == null} />
+        <Metric label="CPE" value={money(forecast.cpe, currency)} missing={forecast.cpe == null} />
+        <Metric label="CPM" value={money(forecast.cpm, currency)} missing={forecast.cpm == null} />
+        <div className="sp" />
         {error ? <p className="sumbar-msg">{error}</p> : emptyHint ? <p className="sumbar-msg">{emptyHint}</p> : null}
         {view.canDecide ? (
           <div className="sumbar-cta">
-            <button type="button" className="btn primary" disabled={!canApprove} onClick={approve}>
+            <button type="button" className="btn pri" disabled={!canApprove} onClick={approve}>
               <IconCheck />
               Approve selection
             </button>
-            <a className="btn ghost" href={feedbackHref} onClick={(event) => openSection(event, "feedback")}>
-              Request changes
-            </a>
           </div>
         ) : null}
       </div>
@@ -167,24 +158,22 @@ export function ProposalSummaryCard({
   }
 
   return (
-    <div className="sumcard">
-      <div className="h">
-        <p className="st">Proposal summary</p>
-        <p className="ss">
-          {view.overview.campaignName} · v{view.review.reviewNumber}
-        </p>
-      </div>
+    <div className="card sumcard">
+      <p className="st">Proposal summary</p>
+      <p className="ss">
+        {view.overview.campaignName} · v{view.review.reviewNumber}
+      </p>
       <Row
-        label="Total quotation"
+        label="Quotation"
         value={quotationTotal > 0 ? formatMoneyKpi(quotationTotal, currency) : TO_BE_CONFIRMED}
         missing={quotationTotal <= 0}
+        big
       />
       <Row
         label="Investment"
         hint="based on selection"
         value={investment > 0 ? formatMoneyKpi(investment, currency) : TO_BE_CONFIRMED}
         missing={investment <= 0}
-        big
       />
       <Row label="Creators" hint="based on selection" value={String(selectedCount)} />
       <Row
@@ -218,7 +207,7 @@ export function ProposalSummaryCard({
         missing={forecast.cpm == null}
       />
       {error ? (
-        <p className="ss" style={{ color: "#ffb4b4", marginTop: 8 }}>
+        <p className="ss" style={{ color: "var(--bad)", marginTop: 8 }}>
           {error}
         </p>
       ) : emptyHint ? (
@@ -227,26 +216,13 @@ export function ProposalSummaryCard({
         </p>
       ) : null}
       {view.canDecide ? (
-        <div className="sumcta">
-          <button type="button" className="btn primary" disabled={!canApprove} onClick={approve}>
+        <div className="cta sumcta">
+          <button type="button" className="btn pri" disabled={!canApprove} onClick={approve}>
             <IconCheck />
             Approve selection
           </button>
-          <a
-            className="btn"
-            href={feedbackHref}
-            onClick={(event) => openSection(event, "feedback")}
-            style={{ background: "rgba(255,255,255,.08)", color: "#fff", borderColor: "rgba(255,255,255,.18)" }}
-          >
-            Request changes
-          </a>
-          <a
-            className="btn"
-            href={approvalHref}
-            onClick={(event) => openSection(event, "approval")}
-            style={{ background: "transparent", color: "#cfd7ea", borderColor: "rgba(255,255,255,.12)" }}
-          >
-            Review approval page
+          <a className="btn sec" href={creatorsHref} onClick={(event) => openSection(event, "creators")}>
+            Edit selection
           </a>
         </div>
       ) : null}

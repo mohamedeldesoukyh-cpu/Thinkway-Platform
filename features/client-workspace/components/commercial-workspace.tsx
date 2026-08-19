@@ -2,11 +2,13 @@
 
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
 
-import { formatPlatformLabel, NOT_AVAILABLE, providedText, TO_BE_CONFIRMED } from "../format";
+import { clientCreatorIdentity, formatHandleLabel, formatPlatformLabel, NOT_AVAILABLE, providedText, TO_BE_CONFIRMED } from "../format";
+import { breakdownForCreator } from "../platform-breakdown";
 import { allocationSlices, MIX_BAR_COLORS, rosterHeadline } from "../presentation";
 import type { ClientWorkspaceView } from "../types";
 import { useClientWorkspaceState } from "./client-workspace-state";
 import { ReviewAvatar } from "./review-avatar";
+import { ReviewPlatformMark } from "./review-platform-mark";
 
 export function CommercialWorkspace({
   view,
@@ -36,7 +38,7 @@ export function CommercialWorkspace({
     <>
       <div className="card">
         <p className="ck">Campaign investment</p>
-        <h2>
+        <h2 className={commercial.totalInvestment > 0 ? "cm-total" : "cm-total tbc"}>
           {commercial.totalInvestment > 0
             ? formatMoneyKpi(commercial.totalInvestment, commercial.currency)
             : TO_BE_CONFIRMED}
@@ -101,35 +103,53 @@ export function CommercialWorkspace({
 
       <div className="card">
         <p className="ck">Creator investment</p>
-        <h2>Proposed roster</h2>
+        <h2>Selected roster</h2>
         <div className="tbl-scroll">
           <table className="tbl">
             <thead>
               <tr>
                 <th>Creator</th>
-                <th>Platform</th>
+                <th>Platforms</th>
                 <th>Deliverables</th>
                 <th className="r">Investment</th>
               </tr>
             </thead>
             <tbody>
               {roster.length > 0 ? (
-                roster.map((creator, index) => (
+                roster.map((creator, index) => {
+                  const identity = clientCreatorIdentity(creator.displayName, creator.handle);
+                  const platforms = breakdownForCreator(creator).filter(
+                    (row) => row.platform && row.platform !== "_other"
+                  );
+                  return (
                 <tr key={creator.creatorId}>
-                  <td className="name">
-                    <span className="tblname">
+                  <td>
+                    <div className="cn">
                       <ReviewAvatar
-                        className="av-sm"
+                        className="av"
                         url={creator.avatarUrl}
                         profileUrl={creator.profileUrl}
-                        name={creator.displayName}
+                        name={identity.name}
                         index={index}
                         token={token}
                       />
-                      {creator.displayName}
-                    </span>
+                      <span>
+                        <div className="nm">{identity.name}</div>
+                        {identity.handle ? <div className="hd">{formatHandleLabel(identity.handle)}</div> : null}
+                      </span>
+                    </div>
                   </td>
-                  <td>{formatPlatformLabel(creator.platform) ?? NOT_AVAILABLE}</td>
+                  <td>
+                    {platforms.length > 0 ? (
+                      <div className="plat-stack">
+                        {platforms.map((row) => (
+                          <ReviewPlatformMark key={row.platform} platform={row.platform} />
+                        ))}
+                      </div>
+                    ) : (
+                      formatPlatformLabel(creator.platform) ?? NOT_AVAILABLE
+                    )}
+                  </td>
                   <td>
                     {creator.deliverables ||
                       creator.deliverableItems?.map((item) => `${item.quantity ?? 1} ${item.type}`).join(" · ") ||
@@ -141,7 +161,8 @@ export function CommercialWorkspace({
                       : TO_BE_CONFIRMED}
                   </td>
                 </tr>
-                ))
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan={4}>Accept creators on the Creators tab to build this commercial view.</td>
@@ -149,7 +170,7 @@ export function CommercialWorkspace({
               )}
             </tbody>
             <tfoot>
-              <tr>
+              <tr className="sub">
                 <td colSpan={3}>Subtotal · creator investment</td>
                 <td className="r">
                   {commercial.creatorInvestment > 0

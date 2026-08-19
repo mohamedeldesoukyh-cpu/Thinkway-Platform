@@ -30,15 +30,15 @@ export function FeedbackWorkspace({
   return (
     <>
       <div className="fstats">
-        <div className="fstat open">
+        <div className="card fstat open">
           <p className="l">Open</p>
           <p className="v">{openCount}</p>
         </div>
-        <div className="fstat">
+        <div className="card fstat">
           <p className="l">Resolved</p>
           <p className="v">{resolvedCount}</p>
         </div>
-        <div className="fstat">
+        <div className="card fstat">
           <p className="l">Pending</p>
           <p className="v">{openCount}</p>
         </div>
@@ -76,6 +76,7 @@ export function FeedbackWorkspace({
           </div>
           <label className="fl">Request</label>
           <textarea
+            className="f"
             value={message}
             onChange={(event) => setMessage(event.target.value)}
             placeholder="Describe the change you would like Thinkway to make."
@@ -83,7 +84,7 @@ export function FeedbackWorkspace({
           <div className="dt-acts" style={{ marginTop: 14 }}>
             <button
               type="button"
-              className="btn primary"
+              className="btn pri"
               disabled={pending || !message.trim()}
               onClick={() =>
                 startTransition(async () => {
@@ -143,7 +144,7 @@ export function FeedbackWorkspace({
       ))}
       {threads.length === 0 ? (
         <div className="card">
-          <p className="unavailable">No feedback yet. Requests will appear here as a conversation with Thinkway.</p>
+          <p className="note">No feedback yet. Requests will appear here as a conversation with Thinkway.</p>
         </div>
       ) : null}
     </>
