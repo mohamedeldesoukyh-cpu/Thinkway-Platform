@@ -9,8 +9,8 @@ export type IntakeBriefUploadNextStep<TWorkspace, TPending> =
   | { kind: "error"; message: string };
 
 /**
- * Intake must never drop a successful upload that still needs a brand.
- * `brand_selection` is a continue step, not an idle/error state.
+ * Intake must never drop a successful upload that still needs a brand decision.
+ * `brand_selection` is a continue step (pick a Thinkway brand, or continue without one).
  */
 export function nextStepForCampaignBriefUpload<TWorkspace, TPending>(
   result: CampaignBriefUploadResult<TWorkspace, TPending>

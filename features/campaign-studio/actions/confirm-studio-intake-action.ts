@@ -13,8 +13,8 @@ import {
 import {
   getCampaignIntelligenceProfileById,
   getCampaignIntelligenceProfileForConversation,
-  updateCampaignIntelligenceProfile,
 } from "@/features/campaign-intelligence-profile/services/profile-repository";
+import { elevatedUpdateCampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/services/profile-repository-elevated";
 import { profileToCampaignFacts } from "@/features/campaign-intelligence-profile/services/profile-to-facts";
 import { normalizeCampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/services/normalize-profile";
 import { syncLatestStudioMessageCampaignObject } from "@/features/ai-workspace/services/conversation-campaign-hydration";
@@ -90,7 +90,7 @@ export async function confirmStudioIntakeAction(
         if (!projected) {
           return { ok: false, message: "Campaign intelligence could not be confirmed." };
         }
-        await updateCampaignIntelligenceProfile(supabase, profileId, {
+        await elevatedUpdateCampaignIntelligenceProfile(supabase, profileId, {
           userId,
           profile: confirmed,
           status: "saved",

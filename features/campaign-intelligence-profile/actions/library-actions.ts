@@ -17,8 +17,8 @@ import {
 } from "../services/accessible-brands";
 import {
   getCampaignIntelligenceProfileById,
-  updateCampaignIntelligenceProfile,
 } from "../services/profile-repository";
+import { elevatedUpdateCampaignIntelligenceProfile } from "../services/profile-repository-elevated";
 import {
   loadCampaignIntelligenceWorkspaceAction,
   type CampaignIntelligenceWorkspaceState,
@@ -144,7 +144,7 @@ export async function archiveCampaignIntelligenceAction(
     const row = await getCampaignIntelligenceProfileById(supabase, profileId);
     if (!row) return { ok: false, message: "Intelligence record not found." };
 
-    await updateCampaignIntelligenceProfile(supabase, profileId, {
+    await elevatedUpdateCampaignIntelligenceProfile(supabase, profileId, {
       userId,
       profile: row.profile,
       status: "archived",

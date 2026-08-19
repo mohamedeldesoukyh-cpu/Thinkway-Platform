@@ -29,7 +29,6 @@ import {
   listDocumentsForProfile,
   listSavedCampaignIntelligenceProfiles,
   listRecentCampaignIntelligenceProfiles,
-  updateCampaignIntelligenceProfile,
 } from "../services/profile-repository";
 import {
   elevatedCreateCampaignIntelligenceProfile,
@@ -362,11 +361,12 @@ type FinalizeUploadInput = {
   fileName: string;
   fileSizeBytes: number;
   profile: CampaignIntelligenceProfile;
-  brandId: string;
+  brandId?: string | null;
   campaignHeaderId?: string | null;
   conversationId?: string | null;
   mode: "create" | "link";
   linkProfileId?: string | null;
+  allowMissingBrand?: boolean;
 };
 
 async function finalizeCampaignBriefUpload(
@@ -382,9 +382,14 @@ async function finalizeCampaignBriefUpload(
     }
   | { ok: false; message: string }
 > {
-  const brandAccess = await assertAccessibleBrandId(input.supabase, input.brandId);
-  if (!brandAccess.ok) {
-    return { ok: false, message: brandAccess.message };
+  const brandId = input.brandId?.trim() || null;
+  if (brandId) {
+    const brandAccess = await assertAccessibleBrandId(input.supabase, brandId);
+    if (!brandAccess.ok) {
+      return { ok: false, message: brandAccess.message };
+    }
+  } else if (!input.allowMissingBrand) {
+    return { ok: false, message: "Select a brand to continue." };
   }
 
   const title =
@@ -395,11 +400,14 @@ async function finalizeCampaignBriefUpload(
   let profileId = input.linkProfileId ?? null;
 
   if (input.mode === "link" && profileId) {
+    if (!brandId) {
+      return { ok: false, message: "Select a brand to continue." };
+    }
     const existingProfile = await getCampaignIntelligenceProfileById(input.supabase, profileId);
     if (!existingProfile) {
       return { ok: false, message: "Selected intelligence record was not found." };
     }
-    if (existingProfile.brand_id && existingProfile.brand_id !== input.brandId) {
+    if (existingProfile.brand_id && existingProfile.brand_id !== brandId) {
       return {
         ok: false,
         message: "Selected intelligence record belongs to a different brand.",
@@ -419,7 +427,7 @@ async function finalizeCampaignBriefUpload(
       profile: { ...input.profile, status: "saved" },
       status: "saved",
       title,
-      brandId: input.brandId,
+      brandId,
       campaignHeaderId: input.campaignHeaderId ?? null,
       conversationId: input.conversationId ?? null,
     });
@@ -427,10 +435,11 @@ async function finalizeCampaignBriefUpload(
     const profileRow = await elevatedCreateCampaignIntelligenceProfile(input.supabase, {
       userId: input.userId,
       conversationId: input.conversationId ?? null,
-      brandId: input.brandId,
+      brandId,
       campaignHeaderId: input.campaignHeaderId ?? null,
       title,
       profile: { ...input.profile, status: "saved" },
+      allowMissingBrand: input.allowMissingBrand || !brandId,
     });
     profileId = profileRow.id;
 
@@ -481,10 +490,10 @@ async function finalizeCampaignBriefUpload(
 
 export async function confirmCampaignBriefUploadAction(input: {
   documentId: string;
-  brandId: string;
+  brandId?: string | null;
   campaignHeaderId?: string | null;
   conversationId?: string | null;
-  mode: "create" | "link";
+  mode: "create" | "link" | "continue_without_brand";
   linkProfileId?: string | null;
 }): Promise<
   | {
@@ -499,18 +508,21 @@ export async function confirmCampaignBriefUploadAction(input: {
   try {
     const { supabase, userId } = await requireRequestUser();
     const documentId = input.documentId.trim();
-    const brandId = input.brandId.trim();
+    const continueWithoutBrand = input.mode === "continue_without_brand";
+    const brandId = continueWithoutBrand ? "" : (input.brandId ?? "").trim();
 
     if (!documentId) {
       return { ok: false, message: "Upload session expired. Please upload the brief again." };
     }
-    if (!brandId) {
+    if (!continueWithoutBrand && !brandId) {
       return { ok: false, message: "Select a brand to continue." };
     }
 
-    const brandAccess = await assertAccessibleBrandId(supabase, brandId);
-    if (!brandAccess.ok) {
-      return { ok: false, message: brandAccess.message };
+    if (brandId) {
+      const brandAccess = await assertAccessibleBrandId(supabase, brandId);
+      if (!brandAccess.ok) {
+        return { ok: false, message: brandAccess.message };
+      }
     }
 
     const document = await getCampaignIntelligenceDocumentRow(supabase, documentId);
@@ -554,11 +566,12 @@ export async function confirmCampaignBriefUploadAction(input: {
       fileName: document.file_name,
       fileSizeBytes: document.file_size_bytes ?? 0,
       profile: merged,
-      brandId,
+      brandId: brandId || null,
       campaignHeaderId: input.campaignHeaderId ?? null,
       conversationId: input.conversationId ?? null,
-      mode: input.mode,
+      mode: input.mode === "link" ? "link" : "create",
       linkProfileId: input.linkProfileId ?? null,
+      allowMissingBrand: continueWithoutBrand,
     });
 
     if (!result.ok) return result;
@@ -613,7 +626,7 @@ export async function analyzeCampaignBriefAction(
       structuredParserOutput,
     });
 
-    await updateCampaignIntelligenceProfile(supabase, profileId, {
+    await elevatedUpdateCampaignIntelligenceProfile(supabase, profileId, {
       userId,
       profile: {
         ...merged,
@@ -658,7 +671,7 @@ export async function updateCampaignRequirementsAction(
       extractedAt: new Date().toISOString(),
     };
 
-    await updateCampaignIntelligenceProfile(supabase, profileId, {
+    await elevatedUpdateCampaignIntelligenceProfile(supabase, profileId, {
       userId,
       profile: merged,
       status: merged.status,
@@ -722,7 +735,7 @@ export async function saveCampaignIntelligenceProfileAction(
       extractedAt: profile.extractedAt ?? new Date().toISOString(),
     });
 
-    await updateCampaignIntelligenceProfile(supabase, profileId, {
+    await elevatedUpdateCampaignIntelligenceProfile(supabase, profileId, {
       userId,
       profile: saved,
       status: "saved",
@@ -759,7 +772,7 @@ export async function confirmCampaignIntelligenceProfileAction(
       return { ok: false, message: "Campaign intelligence could not be confirmed." };
     }
 
-    await updateCampaignIntelligenceProfile(supabase, profileId, {
+    await elevatedUpdateCampaignIntelligenceProfile(supabase, profileId, {
       userId,
       profile: confirmed,
       status: "saved",

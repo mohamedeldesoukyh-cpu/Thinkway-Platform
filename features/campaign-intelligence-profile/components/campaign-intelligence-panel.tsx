@@ -152,7 +152,9 @@ export function CampaignIntelligencePanel({
           setPendingUpload(step.pending);
           setLinkDialogOpen(true);
           setUploadPhase("idle");
-          toast.message("Select a brand to finish saving this brief.");
+          toast.message(
+            "Pick a Thinkway brand, or continue without one if this is a new client."
+          );
           return;
         }
 

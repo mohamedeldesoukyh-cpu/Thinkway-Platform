@@ -97,7 +97,9 @@ export function StudioNewCampaignDialog({
     if (step.kind === "select_brand") {
       setPendingUpload(step.pending);
       setLinkOpen(true);
-      toast.message("Select a brand to finish saving this brief.");
+      toast.message(
+        "Pick a Thinkway brand, or continue without one if this is a new client."
+      );
       return;
     }
     toast.success(`"${file.name}" analyzed.`);

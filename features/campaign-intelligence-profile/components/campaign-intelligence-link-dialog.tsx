@@ -27,6 +27,10 @@ import {
   listExistingIntelligenceForBrandAction,
 } from "../actions/library-actions";
 import {
+  brandLinkConfirmReady,
+  type BrandLinkConfirmIntent,
+} from "../services/brand-link-confirm";
+import {
   brandLinkSearchKeywords,
   buildBrandLinkDialogOptions,
   resolveDefaultBrandSelection,
@@ -49,7 +53,7 @@ export function CampaignIntelligenceLinkDialog({
   conversationId,
 }: Props) {
   const [selectedBrandId, setSelectedBrandId] = useState<string>("");
-  const [mode, setMode] = useState<"create" | "link">("create");
+  const [mode, setMode] = useState<BrandLinkConfirmIntent>("create");
   const [linkProfileId, setLinkProfileId] = useState<string>("");
   const [existing, setExisting] = useState<CampaignIntelligenceLibraryItem[]>([]);
   const [loadingExisting, setLoadingExisting] = useState(false);
@@ -140,9 +144,15 @@ export function CampaignIntelligenceLinkDialog({
   const canConfirmDetectedBrand = Boolean(
     detection?.hasReliableBrandHint &&
       selectedBrandId &&
+      mode !== "continue_without_brand" &&
       (detection.bestMatch?.brandId === selectedBrandId ||
         brandOptions.length === 1)
   );
+  const confirmReady = brandLinkConfirmReady({
+    intent: mode,
+    selectedBrandId,
+    linkProfileId,
+  });
 
   useEffect(() => {
     if (!dialogOpen || !selectedBrandId) {
@@ -176,20 +186,21 @@ export function CampaignIntelligenceLinkDialog({
   async function handleConfirm() {
     if (!pending) return;
 
-    if (!selectedBrandId) {
-      toast.error("Select a brand to continue.");
-      return;
-    }
-    if (mode === "link" && !linkProfileId) {
-      toast.error("Select an existing intelligence record to link.");
+    if (!brandLinkConfirmReady({ intent: mode, selectedBrandId, linkProfileId })) {
+      toast.error(
+        mode === "link"
+          ? "Select an existing intelligence record to link."
+          : "Select a brand to continue."
+      );
       return;
     }
 
     setSubmitting(true);
     try {
+      const continueWithoutBrand = mode === "continue_without_brand";
       const result = await confirmCampaignBriefUploadAction({
         documentId: pending.documentId,
-        brandId: selectedBrandId,
+        brandId: continueWithoutBrand ? null : selectedBrandId,
         mode,
         linkProfileId: mode === "link" ? linkProfileId : null,
         conversationId: conversationId ?? null,
@@ -203,7 +214,9 @@ export function CampaignIntelligenceLinkDialog({
       toast.success(
         mode === "link"
           ? "Brief linked to existing Campaign Intelligence record."
-          : "New Campaign Intelligence record created."
+          : continueWithoutBrand
+            ? "Brief saved. Attach a Thinkway brand later when this client is in CRM."
+            : "New Campaign Intelligence record created."
       );
       onComplete(result.workspace);
       onOpenChange(false);
@@ -229,8 +242,8 @@ export function CampaignIntelligenceLinkDialog({
             {detection?.hasReliableBrandHint && detectedBrandLabel
               ? canConfirmDetectedBrand
                 ? `Detected brand "${detectedBrandLabel}". Confirm below or pick another.`
-                : `Detected brand "${detectedBrandLabel}" from the brief. Select the matching brand below.`
-              : "We couldn't detect a brand from this brief. Select the brand it belongs to."}
+                : `Detected brand "${detectedBrandLabel}" from the brief. Select the matching Thinkway brand, or continue without one if this is a new client.`
+              : "We couldn't match this brief to a Thinkway brand. Pick an existing brand, or continue without one if this is a new client."}
           </DialogDescription>
         </DialogHeader>
 
@@ -279,7 +292,7 @@ export function CampaignIntelligenceLinkDialog({
             >
               <span className="font-medium text-[var(--camp-text)]">Create new</span>
               <span className="mt-0.5 block text-[11px] text-[var(--camp-text-3)]">
-                New intelligence record for this brand
+                New intelligence record for this existing Thinkway brand
               </span>
             </button>
             <button
@@ -304,6 +317,25 @@ export function CampaignIntelligenceLinkDialog({
               </span>
             </button>
           </div>
+
+          <button
+            type="button"
+            className={cn(
+              "w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+              mode === "continue_without_brand"
+                ? "border-[var(--camp-blue)] bg-[var(--camp-blue)]/8"
+                : "border-[var(--camp-border)] hover:bg-[var(--camp-surface)]"
+            )}
+            onClick={() => setMode("continue_without_brand")}
+            disabled={submitting}
+          >
+            <span className="font-medium text-[var(--camp-text)]">
+              New client — continue without a Thinkway brand
+            </span>
+            <span className="mt-0.5 block text-[11px] text-[var(--camp-text-3)]">
+              Saves the brief and extracted names. Does not create a client or brand in CRM.
+            </span>
+          </button>
 
           {mode === "link" ? (
             <div>
@@ -338,10 +370,18 @@ export function CampaignIntelligenceLinkDialog({
           <Button
             size="sm"
             onClick={() => void handleConfirm()}
-            disabled={submitting || !selectedBrandId || loadingBrands}
+            disabled={
+              submitting ||
+              !confirmReady ||
+              (mode !== "continue_without_brand" && loadingBrands)
+            }
           >
             {submitting ? <Loader2Icon className="size-4 animate-spin" /> : null}
-            {canConfirmDetectedBrand ? "Confirm & continue" : "Save intelligence"}
+            {mode === "continue_without_brand"
+              ? "Continue without a brand"
+              : canConfirmDetectedBrand
+                ? "Confirm & continue"
+                : "Save intelligence"}
           </Button>
         </DialogFooter>
       </DialogContent>

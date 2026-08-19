@@ -20,16 +20,16 @@ export async function elevatedCreateCampaignIntelligenceProfile(
     userId: string;
     conversationId?: string | null;
     /**
-     * Optional for workflow-ensured discovery CIPs. Hierarchy brand link is
-     * preferred when matched, but missing catalog brands must not block
-     * enterprise creator search (Studio create-campaign path).
+     * Optional when the brief is for a client not yet in CRM, or for
+     * workflow-ensured discovery CIPs. Hierarchy brand link is preferred
+     * when matched; missing catalog brands must not block Intake.
      */
     brandId?: string | null;
     campaignHeaderId?: string | null;
     title?: string;
     profile?: CampaignIntelligenceProfile;
     sourceDocumentId?: string | null;
-    /** When true, allow null brand_id for workflow discovery ensure. */
+    /** When true, persist with brand_id null and link a CRM brand later. */
     allowMissingBrand?: boolean;
   }
 ): Promise<CampaignIntelligenceProfileRow> {
