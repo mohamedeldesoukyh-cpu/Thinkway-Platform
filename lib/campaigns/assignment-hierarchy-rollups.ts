@@ -1,5 +1,9 @@
 import { rollupLineClientCommercial } from "@/lib/assignments/client-billing-commercial";
 import { formatMarginPercent } from "@/lib/domains/billing/types";
+import {
+  assignmentPostTypeKey,
+  uniqueAssignmentPostTypeCount,
+} from "@/lib/campaigns/assignment-type-commercial";
 import type {
   AssignmentDeliverableHierarchyRow,
   AssignmentHierarchyRollups,
@@ -88,9 +92,40 @@ function applyDistributedCommercialToPosts(
   }));
 }
 
+/** Extra posts of a type inherit that type's stored unit rates. Never mix Reel/Story rates. */
+function applyPerTypeCommercialToPosts(
+  posts: AssignmentPostOperationalRow[]
+): AssignmentPostOperationalRow[] {
+  if (posts.length === 0) return posts;
+  const unitByType = new Map<string, { rev: number; cost: number }>();
+  for (const post of posts) {
+    const key = assignmentPostTypeKey(post);
+    const rev = Number(post.revenue_per_post ?? 0);
+    const cost = Number(post.cost_per_post ?? 0);
+    const existing = unitByType.get(key);
+    if (!existing) {
+      unitByType.set(key, { rev, cost });
+      continue;
+    }
+    if (existing.rev <= 0.01 && existing.cost <= 0.01 && (rev > 0.01 || cost > 0.01)) {
+      unitByType.set(key, { rev, cost });
+    }
+  }
+  return posts.map((post) => {
+    const unit = unitByType.get(assignmentPostTypeKey(post));
+    if (!unit) return post;
+    return {
+      ...post,
+      revenue_per_post: unit.rev,
+      cost_per_post: unit.cost,
+    };
+  });
+}
+
 /**
  * Package types keep their own Cost/Ad and Rev/Ad. Extra posts of the same type
  * inherit that type's unit rates for publication/invoice internals only.
+ * Mixed types on one deliverable must not share a single blended unit.
  */
 export function alignPackageLineCommercialToDeliverables(
   deliverables: AssignmentDeliverableHierarchyRow[],
@@ -101,11 +136,14 @@ export function alignPackageLineCommercialToDeliverables(
 
   return deliverables.map((row) => ({
     ...row,
-    posts: applyDistributedCommercialToPosts(
-      row.posts,
-      row.unit_revenue,
-      row.unit_cost
-    ),
+    posts:
+      uniqueAssignmentPostTypeCount(row.posts) > 1
+        ? applyPerTypeCommercialToPosts(row.posts)
+        : applyDistributedCommercialToPosts(
+            row.posts,
+            row.unit_revenue,
+            row.unit_cost
+          ),
   }));
 }
 

@@ -265,11 +265,70 @@ function testAlignPackageLineKeepsDifferentTypeRates() {
   assert(reels.cost_before_vat === 4_800, "reels cost stays qty × cost/ad");
 }
 
+function testAlignMixedPostsKeepPerTypeRates() {
+  const line = packageLine({
+    revenue_before_vat: 11_200,
+    revenue: 11_200,
+    cost_before_vat: 8_000,
+    cost: 8_000,
+  });
+  const posts: AssignmentPostOperationalRow[] = [
+    {
+      ...basePost("reel-1", "pkg"),
+      deliverable_type: "reel",
+      deliverable_type_label: "Reel",
+      revenue_per_post: 1_600,
+      cost_per_post: 1_000,
+    },
+    {
+      ...basePost("reel-2", "pkg"),
+      deliverable_type: "reel",
+      deliverable_type_label: "Reel",
+      revenue_per_post: 0,
+      cost_per_post: 0,
+    },
+    {
+      ...basePost("story-1", "pkg"),
+      deliverable_type: "story",
+      deliverable_type_label: "Story",
+      revenue_per_post: 200,
+      cost_per_post: 100,
+    },
+    {
+      ...basePost("story-2", "pkg"),
+      deliverable_type: "story",
+      deliverable_type_label: "Story",
+      revenue_per_post: 0,
+      cost_per_post: 0,
+    },
+  ];
+  const aligned = alignPackageLineCommercialToDeliverables(
+    [
+      baseDeliverable({
+        id: "pkg",
+        quantity: 4,
+        unit_revenue: 2_800,
+        revenue_before_vat: 11_200,
+        unit_cost: 2_000,
+        cost_before_vat: 8_000,
+        posts,
+      }),
+    ],
+    line
+  );
+  const next = aligned[0]!.posts;
+  assert(next[0]!.revenue_per_post === 1_600, "reel unit stays 1600");
+  assert(next[1]!.revenue_per_post === 1_600, "extra reel inherits reel unit");
+  assert(next[2]!.revenue_per_post === 200, "story unit stays 200");
+  assert(next[3]!.revenue_per_post === 200, "extra story inherits story unit");
+}
+
 const tests = [
   testPackageRollupUsesLineCommercialDespiteZeroChildCost,
   testAlignPackageLineDistributesCostToChildren,
   testAlignPackageLineDistributesRevenueToChildren,
   testAlignPackageLineKeepsDifferentTypeRates,
+  testAlignMixedPostsKeepPerTypeRates,
 ];
 
 for (const run of tests) {

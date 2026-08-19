@@ -108,6 +108,9 @@ type EditablePostRowProps = {
   selected: boolean;
   onToggleSelect: () => void;
   isFirstPost: boolean;
+  isFirstOfType?: boolean;
+  mixedTypes?: boolean;
+  typeCommercial?: import("@/lib/campaigns/assignment-type-commercial").AssignmentTypeCommercialSlice | null;
   isLastChildRow?: boolean;
   showExpandColumn?: boolean;
   leadingParentColumnIds?: readonly string[];
@@ -126,9 +129,20 @@ type MetaDraft = {
 function commercialInitial(
   deliverable: AssignmentDeliverableHierarchyRow,
   post: AssignmentPostOperationalRow,
-  deliverableScoped: boolean
+  deliverableScoped: boolean,
+  typeCommercial?: import("@/lib/campaigns/assignment-type-commercial").AssignmentTypeCommercialSlice | null,
+  mixedTypes = false
 ) {
-  if (deliverableScoped) {
+  if (typeCommercial) {
+    return {
+      qty: typeCommercial.qty,
+      revPerAd: typeCommercial.revPerAd,
+      rev: typeCommercial.rev,
+      costPerAd: typeCommercial.costPerAd,
+      cost: typeCommercial.cost,
+    };
+  }
+  if (deliverableScoped && !mixedTypes) {
     return {
       qty: deliverable.quantity,
       revPerAd: deliverable.unit_revenue,
@@ -162,6 +176,9 @@ export function EditablePostRow({
   selected,
   onToggleSelect,
   isFirstPost,
+  isFirstOfType = isFirstPost,
+  mixedTypes = false,
+  typeCommercial = null,
   isLastChildRow = false,
   showExpandColumn = false,
   leadingParentColumnIds: leadingParentColumnIdsProp,
@@ -179,10 +196,10 @@ export function EditablePostRow({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const fieldsActive = gridEdit.hasSession ? gridEdit.isEditing : editing;
-  const useDeliverableCommercial = deliverableScoped || isFirstPost;
+  const useDeliverableCommercial = Boolean(typeCommercial) || deliverableScoped || isFirstOfType;
 
   const commercial = useOperationalCommercialDraft(
-    commercialInitial(deliverable, post, useDeliverableCommercial)
+    commercialInitial(deliverable, post, useDeliverableCommercial, typeCommercial, mixedTypes)
   );
 
   const [meta, setMeta] = useState<MetaDraft>(() => ({
@@ -197,7 +214,7 @@ export function EditablePostRow({
 
   useEffect(() => {
     if (fieldsActive) return;
-    commercial.reset(commercialInitial(deliverable, post, useDeliverableCommercial));
+    commercial.reset(commercialInitial(deliverable, post, useDeliverableCommercial, typeCommercial, mixedTypes));
     setMeta({
       platform: post.platform,
       deliverable_type: post.deliverable_type,
@@ -224,6 +241,13 @@ export function EditablePostRow({
     deliverable.revenue_after_vat,
     deliverableScoped,
     isFirstPost,
+    isFirstOfType,
+    mixedTypes,
+    typeCommercial?.qty,
+    typeCommercial?.rev,
+    typeCommercial?.cost,
+    typeCommercial?.revPerAd,
+    typeCommercial?.costPerAd,
     defaultRevenueVatPercent,
     gridEdit.discardEpoch,
   ]);
@@ -258,35 +282,39 @@ export function EditablePostRow({
     !readOnly && postId.length > 0 && !isVirtualPost && !deliverable.is_locked;
   const canEdit = canEditDeliverableScope || canEditPostSchedule;
   const canEditCommercial = canEdit;
-  const ownsDeliverableCommercial = isFirstPost;
+  const ownsDeliverableCommercial = isFirstOfType;
   const commercialLocked =
     !canEditCommercial ||
     (gridEdit.hasSession && !gridEdit.isEditing) ||
     (gridEdit.hasSession && !ownsDeliverableCommercial) ||
     gridEdit.saving;
   const qtyLocked =
-    commercialLocked || (!gridEdit.hasSession && !deliverableScoped);
+    commercialLocked ||
+    mixedTypes ||
+    (!gridEdit.hasSession && !deliverableScoped);
   const amountAlwaysEditing =
     gridEdit.hasSession && gridEdit.isEditing && !commercialLocked;
   const showDeliverableCommercial =
-    deliverableScoped || isFirstPost;
+    Boolean(typeCommercial) || deliverableScoped || isFirstOfType;
 
   const liveAgencyFeeAmount = useMemo(() => {
     if (!showDeliverableCommercial) return 0;
     return computeAgencyFeeAmount(
       commercial.draft.rev,
-      Number(deliverable.usage_rights_amount ?? 0),
-      Number(deliverable.agency_fee_percent ?? 0)
+      Number(typeCommercial?.usageRightsAmount ?? deliverable.usage_rights_amount ?? 0),
+      Number(typeCommercial?.agencyFeePercent ?? deliverable.agency_fee_percent ?? 0)
     );
   }, [
     showDeliverableCommercial,
     commercial.draft.rev,
+    typeCommercial?.usageRightsAmount,
+    typeCommercial?.agencyFeePercent,
     deliverable.usage_rights_amount,
     deliverable.agency_fee_percent,
   ]);
 
   const computedTotalBilling = useMemo(() => {
-    if (showDeliverableCommercial) {
+    if (showDeliverableCommercial && !mixedTypes && !typeCommercial) {
       return deliverable.revenue_after_vat;
     }
     return roundOperationalAmount(
@@ -294,6 +322,8 @@ export function EditablePostRow({
     );
   }, [
     showDeliverableCommercial,
+    mixedTypes,
+    typeCommercial,
     deliverable.revenue_after_vat,
     commercial.draft.rev,
     revenueVatExempt,
@@ -301,7 +331,7 @@ export function EditablePostRow({
   ]);
 
   const baselineCommercial = useMemo(
-    () => commercialInitial(deliverable, post, useDeliverableCommercial),
+    () => commercialInitial(deliverable, post, useDeliverableCommercial, typeCommercial, mixedTypes),
     [
       deliverable.quantity,
       deliverable.unit_revenue,
@@ -309,6 +339,12 @@ export function EditablePostRow({
       deliverable.unit_cost,
       deliverable.cost_before_vat,
       useDeliverableCommercial,
+      mixedTypes,
+      typeCommercial?.qty,
+      typeCommercial?.rev,
+      typeCommercial?.cost,
+      typeCommercial?.revPerAd,
+      typeCommercial?.costPerAd,
       post.revenue_per_post,
       post.cost_per_post,
     ]
@@ -376,6 +412,7 @@ export function EditablePostRow({
         deliverableScoped,
         isVirtualPost,
         includeCommercial: snapshot.includeCommercial,
+        mixedTypes,
         commercial: snapshot.commercial,
         meta: snapshot.meta,
       });
@@ -390,6 +427,7 @@ export function EditablePostRow({
     post,
     deliverableScoped,
     isVirtualPost,
+    mixedTypes,
     postId,
   ]);
 
@@ -461,46 +499,21 @@ export function EditablePostRow({
   function persistCommercial() {
     if (!canEditCommercial) return;
     startTransition(async () => {
-      if (deliverableScoped) {
-        const result = await updateAssignmentDeliverableAction({
-          campaign_id: campaignId,
-          campaign_line_id: campaignLineId,
-          deliverable_id: deliverable.id,
-          platform: meta.platform,
-          deliverable_type: meta.deliverable_type,
-          quantity: commercial.draft.qty,
-          unit_revenue: commercial.draft.revPerAd,
-          unit_cost: commercial.draft.costPerAd,
-          usage_rights_amount: Number(deliverable.usage_rights_amount ?? 0),
-          usage_rights_cost: Number(deliverable.usage_rights_cost ?? 0),
-          agency_fee_percent: Number(deliverable.agency_fee_percent ?? 0),
-          revenue_vat_percent: meta.revenue_vat_percent,
-          live_date: meta.live_date || null,
-          notes: meta.notes || null,
-          billing_status: meta.billing_status as typeof post.billing_status,
-        });
-        if (!result.ok) {
-          setError(result.message ?? "Failed to save.");
-          return;
-        }
-      } else {
-        const result = await updatePostScheduleAction({
-          campaign_id: campaignId,
-          schedule_id: postId,
-          live_date: meta.live_date || null,
-          status: meta.workflow_status,
-          revenue_per_post: commercial.draft.revPerAd,
-          cost_per_post: commercial.draft.costPerAd,
-          revenue_vat_percent: meta.revenue_vat_percent,
-          notes: meta.notes || null,
-          billing_status: meta.billing_status as typeof post.billing_status,
-          platform: meta.platform,
-          deliverable_type: meta.deliverable_type,
-        });
-        if (!result.ok) {
-          setError(result.message ?? "Failed to save.");
-          return;
-        }
+      const result = await persistAssignmentPostRowDraft({
+        campaignId,
+        campaignLineId,
+        deliverable,
+        post,
+        deliverableScoped,
+        isVirtualPost,
+        includeCommercial: ownsDeliverableCommercial,
+        mixedTypes,
+        commercial: commercial.draft,
+        meta,
+      });
+      if (!result.ok) {
+        setError(result.message ?? "Failed to save.");
+        return;
       }
       setError(null);
       router.refresh();
@@ -873,7 +886,9 @@ export function EditablePostRow({
         {col("usageRights") ? (
         <td className={cn(GRID_CELL.usageRights, OPERATIONAL_AMOUNT_CLASS)}>
           {showDeliverableCommercial
-            ? formatOperationalAmount(deliverable.usage_rights_amount)
+            ? formatOperationalAmount(
+                typeCommercial?.usageRightsAmount ?? deliverable.usage_rights_amount
+              )
             : "—"}
         </td>
         ) : null}
@@ -885,7 +900,9 @@ export function EditablePostRow({
             "text-muted-foreground"
           )}
         >
-          {showDeliverableCommercial ? formatPercent(deliverable.agency_fee_percent) : "—"}
+          {showDeliverableCommercial
+            ? formatPercent(typeCommercial?.agencyFeePercent ?? deliverable.agency_fee_percent)
+            : "—"}
         </td>
         ) : null}
         {col("agencyFee") ? (
@@ -913,7 +930,9 @@ export function EditablePostRow({
         {col("usageRightsCost") ? (
         <td className={cn(GRID_CELL.usageRightsCost, OPERATIONAL_AMOUNT_CLASS)}>
           {showDeliverableCommercial
-            ? formatOperationalAmount(deliverable.usage_rights_cost)
+            ? formatOperationalAmount(
+                typeCommercial?.usageRightsCost ?? deliverable.usage_rights_cost
+              )
             : "—"}
         </td>
         ) : null}

@@ -207,6 +207,7 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
                     key={deliverable.id}
                     campaignId={campaignId}
                     campaignLineId={line.id}
+                    line={line}
                     deliverable={deliverable}
                     currency={currency}
                     parentOperationalStatus={parentOperationalStatus}

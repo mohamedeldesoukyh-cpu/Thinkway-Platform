@@ -18,6 +18,7 @@ export async function persistAssignmentPostRowDraft(args: {
   deliverableScoped: boolean;
   isVirtualPost: boolean;
   includeCommercial: boolean;
+  mixedTypes?: boolean;
   commercial: OperationalCommercialDraft;
   meta: AssignmentPostMetaDraft;
 }): Promise<AssignmentGridFlushResult> {
@@ -28,10 +29,44 @@ export async function persistAssignmentPostRowDraft(args: {
     post,
     isVirtualPost,
     includeCommercial,
+    mixedTypes = false,
     commercial,
     meta,
   } = args;
   const postId = typeof post.id === "string" ? post.id : "";
+
+  if (includeCommercial && mixedTypes) {
+    const siblings = deliverable.posts.filter(
+      (row) =>
+        row.platform === post.platform &&
+        row.deliverable_type === post.deliverable_type &&
+        typeof row.id === "string" &&
+        !row.id.startsWith("virtual-")
+    );
+    const rows = siblings.length > 0 ? siblings : postId && !isVirtualPost ? [post] : [];
+    for (const sibling of rows) {
+      const isCurrent = sibling.id === postId;
+      const result = await updatePostScheduleAction({
+        campaign_id: campaignId,
+        schedule_id: sibling.id,
+        live_date: isCurrent ? meta.live_date || null : sibling.live_date,
+        status: isCurrent ? meta.workflow_status : sibling.workflow_status,
+        revenue_per_post: commercial.revPerAd,
+        cost_per_post: commercial.costPerAd,
+        revenue_vat_percent: meta.revenue_vat_percent,
+        notes: isCurrent ? meta.notes || null : sibling.notes,
+        billing_status: isCurrent
+          ? (meta.billing_status as typeof post.billing_status)
+          : sibling.billing_status,
+        platform: isCurrent ? meta.platform : sibling.platform,
+        deliverable_type: isCurrent ? meta.deliverable_type : sibling.deliverable_type,
+      });
+      if (!result.ok) {
+        return { ok: false, message: result.message ?? "Failed to save." };
+      }
+    }
+    return { ok: true };
+  }
 
   if (includeCommercial) {
     const commercialResult = await updateAssignmentDeliverableAction({

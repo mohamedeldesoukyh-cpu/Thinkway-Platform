@@ -2,12 +2,20 @@
 
 import type { AssignmentDeliverableHierarchyRow } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/operational";
+import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import { EditablePostRow } from "@/features/campaigns/components/assignment-hierarchy/editable-post-row";
 import { effectiveLineOperationalStatusForUi } from "@/lib/campaigns/effective-operational-status";
+import {
+  isFirstPostOfType,
+  resolveAssignmentTypeCommercial,
+  uniqueAssignmentPostTypeCount,
+  type AssignmentTypeCommercialSlice,
+} from "@/lib/campaigns/assignment-type-commercial";
 
 type DeliverableGroupRowProps = {
   campaignId: string;
   campaignLineId: string;
+  line?: CampaignLineWorkspace | null;
   deliverable: AssignmentDeliverableHierarchyRow;
   currency: string;
   parentOperationalStatus: CampaignLineOperationalStatus;
@@ -26,6 +34,7 @@ type DeliverableGroupRowProps = {
 export function DeliverableGroupRow({
   campaignId,
   campaignLineId,
+  line,
   deliverable,
   currency,
   parentOperationalStatus,
@@ -42,6 +51,29 @@ export function DeliverableGroupRow({
   const readOnly = deliverable.is_synthetic || deliverable.is_locked;
   const posts = Array.isArray(deliverable.posts) ? deliverable.posts : [];
   const deliverableScoped = posts.length === 1;
+  const mixedTypes = uniqueAssignmentPostTypeCount(posts) > 1;
+  const lineSeed = line
+    ? {
+        revenueBeforeVat: Number(line.revenue_before_vat ?? line.revenue) || 0,
+        costBeforeVat: Number(line.cost_before_vat ?? line.cost) || 0,
+        usageRightsAmount: Number(line.usage_rights_amount ?? 0),
+        usageRightsCost: Number(line.usage_rights_cost ?? 0),
+        agencyFeePercent: Number(line.agency_fee_percent ?? 0),
+      }
+    : null;
+  const typeCommercialByPostId = new Map<string, AssignmentTypeCommercialSlice>();
+  for (const row of posts) {
+    if (!row.id || !isFirstPostOfType(posts, String(row.id))) continue;
+    typeCommercialByPostId.set(
+      String(row.id),
+      resolveAssignmentTypeCommercial({
+        posts,
+        post: row,
+        deliverable,
+        line: lineSeed,
+      })
+    );
+  }
   const safeParentStatus = effectiveLineOperationalStatusForUi({
     operational_status: parentOperationalStatus,
     vendor_io_id: null,
@@ -67,6 +99,11 @@ export function DeliverableGroupRow({
           selected={selected}
           onToggleSelect={onToggleSelect}
           isFirstPost={index === 0}
+          isFirstOfType={isFirstPostOfType(posts, String(post.id))}
+          mixedTypes={mixedTypes}
+          typeCommercial={
+            post.id ? typeCommercialByPostId.get(String(post.id)) ?? null : null
+          }
           isLastChildRow={isLastDeliverable && index === posts.length - 1}
           showExpandColumn={showExpandColumn}
           leadingParentColumnIds={leadingParentColumnIds}
