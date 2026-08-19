@@ -9,13 +9,13 @@ import {
   DATA_NOT_AVAILABLE,
   formatCompactCount,
   formatEngagementPct,
+  formatEngagementRateLabel,
   formatLocation,
   formatMatchPercent,
-  formatPlatformLabel,
   NOT_AVAILABLE,
   TO_BE_CONFIRMED,
 } from "../format";
-import { breakdownForCreator } from "../platform-breakdown";
+import { breakdownForCreator, engagementMetersForBreakdown } from "../platform-breakdown";
 import { flagFromCountry, MIX_BAR_COLORS, qualityBadge, qualityGaugePercent, engagementBadge, engagementGaugePercent } from "../presentation";
 import { clientReviewPostDisplay } from "../review-media";
 import type {
@@ -223,15 +223,8 @@ function OverviewSection({
 }) {
   const handle = view?.handle || creator.handle;
   const platformRows = breakdownForCreator(creator, view);
-  const multiPlatform =
-    platformRows.filter((row) => row.platform && row.platform !== "_other").length > 1;
-  const platform = multiPlatform
-    ? undefined
-    : formatPlatformLabel(view?.platform || creator.platform);
   const bio = view?.bio || creator.bio;
   const fit = view?.campaignFit || creator.fitExplanation;
-  const erBadge = engagementBadge(er);
-  const erGauge = engagementGaugePercent(er);
   const latest = historical.length > 0 ? historical[historical.length - 1] : undefined;
   const followingRatio =
     followers != null && latest?.following != null && latest.following > 0
@@ -250,17 +243,21 @@ function OverviewSection({
         <p className="st">{handle ? `${handle} · Content categories` : "Content categories"}</p>
         <ContentCategoryGrid items={contentCategories} fallback={categoryFallback} />
       </div>
-      {multiPlatform ? null : (
-      <div className="rp-sec">
-        <p className="st">{platform ? `${platform} engagement rate` : "Engagement rate"}</p>
-        <div className="rp-big">
-          <span className="n">{formatEngagementPct(er)}</span>
-          {erBadge ? <span className={`badge ${erBadge.className}`}>{erBadge.text}</span> : null}
-        </div>
-        <p className="desc">How much audiences engage with this creator’s available content.</p>
-        {erGauge != null ? <QualityGauge percent={erGauge} /> : null}
-      </div>
-      )}
+      {engagementMetersForBreakdown(platformRows, er).map((meter) => {
+        const badge = engagementBadge(meter.rate);
+        const gauge = engagementGaugePercent(meter.rate);
+        return (
+          <div className="rp-sec" key={meter.platform ?? "engagement"}>
+            <p className="st">{formatEngagementRateLabel(meter.platform)}</p>
+            <div className="rp-big">
+              <span className="n">{formatEngagementPct(meter.rate)}</span>
+              {badge ? <span className={`badge ${badge.className}`}>{badge.text}</span> : null}
+            </div>
+            <p className="desc">How much audiences engage with this creator’s available content.</p>
+            {gauge != null ? <QualityGauge percent={gauge} /> : null}
+          </div>
+        );
+      })}
       <GrowthChart
         title="Follower growth"
         audience={audience}
@@ -335,7 +332,10 @@ function EngagementSection({
   const likes = performance?.avgLikes ?? creator.avgLikes;
   const comments = performance?.avgComments ?? creator.avgComments;
   const views = performance?.avgViews ?? creator.avgViews;
-  const er = performance?.engagementRate ?? creator.engagementRate;
+  const meters = engagementMetersForBreakdown(
+    breakdownForCreator(creator),
+    performance?.engagementRate ?? creator.engagementRate
+  );
   const reach = performance?.estimatedReach ?? creator.estimatedReach;
   return (
     <div className="rp-sec">
@@ -346,7 +346,13 @@ function EngagementSection({
         <Metric label="Avg views" value={formatCompactCount(views)} />
       </div>
       <div className="duo" style={{ marginTop: 12 }}>
-        <Metric label="Engagement rate" value={formatEngagementPct(er)} />
+        {meters.map((meter) => (
+          <Metric
+            key={meter.platform ?? "engagement"}
+            label={formatEngagementRateLabel(meter.platform)}
+            value={formatEngagementPct(meter.rate)}
+          />
+        ))}
         <Metric label="Est. reach" value={formatCompactCount(reach)} />
       </div>
       <p className="desc" style={{ marginTop: 12 }}>

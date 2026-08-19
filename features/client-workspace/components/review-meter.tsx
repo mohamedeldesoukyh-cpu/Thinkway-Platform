@@ -1,7 +1,7 @@
 "use client";
 
 import { engagementBadge, engagementGaugePercent } from "../presentation";
-import { formatEngagementPct, NOT_AVAILABLE } from "../format";
+import { formatEngagementPct, formatEngagementRateLabel, NOT_AVAILABLE } from "../format";
 
 export function ReviewMeter({
   percent,
@@ -33,10 +33,16 @@ export function ReviewMeter({
   );
 }
 
-export function EngagementMeter({ rate }: { rate?: number | null }) {
+export function EngagementMeter({
+  rate,
+  platform,
+}: {
+  rate?: number | null;
+  platform?: string;
+}) {
   return (
     <ReviewMeter
-      label="Engagement rate"
+      label={formatEngagementRateLabel(platform)}
       value={formatEngagementPct(rate)}
       percent={engagementGaugePercent(rate)}
       badge={engagementBadge(rate)}

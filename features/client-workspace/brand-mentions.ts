@@ -92,16 +92,85 @@ const KNOWN_BRAND_DOMAINS: Record<string, string> = {
   orange: "orange.com",
   cocacola: "coca-cola.com",
   coca: "coca-cola.com",
+  xiaomi: "xiaomi.com",
+  huawei: "huawei.com",
+  oppo: "oppo.com",
+  vivo: "vivo.com",
+  realme: "realme.com",
+  oneplus: "oneplus.com",
 };
 
+const BRAND_PLACE_SUFFIXES = new Set([
+  "egypt",
+  "uae",
+  "ksa",
+  "saudi",
+  "arabia",
+  "emirates",
+  "dubai",
+  "cairo",
+  "qatar",
+  "kuwait",
+  "bahrain",
+  "oman",
+  "jordan",
+  "lebanon",
+  "morocco",
+  "tunisia",
+  "algeria",
+  "africa",
+  "mena",
+  "gcc",
+  "uk",
+  "usa",
+  "official",
+]);
+
 export function brandDomainGuess(name: string, handle?: string): string {
-  const labeled = slugifyBrand(name);
-  if (labeled && KNOWN_BRAND_DOMAINS[labeled]) return KNOWN_BRAND_DOMAINS[labeled];
-  const raw = (handle || name).replace(/^@/, "").trim().toLowerCase();
-  if (!raw) return "example.com";
-  if (raw.includes(".")) return raw.replace(/^www\./, "");
-  const slug = slugifyBrand(raw);
-  return KNOWN_BRAND_DOMAINS[slug] || `${slug || "brand"}.com`;
+  const rawHandle = handle?.replace(/^@/, "").trim().toLowerCase() ?? "";
+  if (rawHandle.includes(".")) return rawHandle.replace(/^www\./, "");
+
+  for (const candidate of brandLabelCandidates(name, handle)) {
+    const slug = slugifyBrand(candidate);
+    if (slug && KNOWN_BRAND_DOMAINS[slug]) return KNOWN_BRAND_DOMAINS[slug];
+  }
+
+  const core = coreBrandLabel(name);
+  const coreSlug = slugifyBrand(core);
+  const fullSlug = slugifyBrand(name);
+  if (coreSlug && coreSlug !== fullSlug && core.trim().split(/\s+/).length === 1) {
+    return `${coreSlug}.com`;
+  }
+  if (rawHandle) {
+    const handleSlug = slugifyBrand(rawHandle);
+    return KNOWN_BRAND_DOMAINS[handleSlug] || `${handleSlug || coreSlug || "brand"}.com`;
+  }
+  return `${fullSlug || coreSlug || "brand"}.com`;
+}
+
+function brandLabelCandidates(name: string, handle?: string): string[] {
+  const labels = [name, coreBrandLabel(name), name.trim().split(/[\s/_-]+/)[0] ?? "", handle ?? ""];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const label of labels) {
+    const trimmed = label.replace(/^@/, "").trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(trimmed);
+  }
+  return out;
+}
+
+function coreBrandLabel(name: string): string {
+  const tokens = name.replace(/^@/, "").trim().split(/[\s/_-]+/).filter(Boolean);
+  while (tokens.length > 1) {
+    const last = slugifyBrand(tokens[tokens.length - 1] ?? "");
+    if (!last || !BRAND_PLACE_SUFFIXES.has(last)) break;
+    tokens.pop();
+  }
+  return tokens.join(" ");
 }
 
 function slugifyBrand(value: string): string {

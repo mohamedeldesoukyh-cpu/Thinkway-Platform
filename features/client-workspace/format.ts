@@ -84,6 +84,11 @@ export function formatPlatformLabel(platform?: string): string | undefined {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+export function formatEngagementRateLabel(platform?: string): string {
+  const name = formatPlatformLabel(platform);
+  return name ? `${name} engagement rate` : "Engagement rate";
+}
+
 export function formatMatchPercent(value: number | undefined | null): string | undefined {
   if (value == null || !Number.isFinite(value) || value < 0) return undefined;
   const percent = value > 0 && value <= 1 ? value * 100 : value;

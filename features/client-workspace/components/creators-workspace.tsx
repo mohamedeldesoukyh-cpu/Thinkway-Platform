@@ -32,7 +32,7 @@ import {
   rosterSourceLine,
 } from "../presentation";
 import { contentCategoriesForDisplay } from "../content-categories";
-import { breakdownForCreator, creatorProfileLinks } from "../platform-breakdown";
+import { breakdownForCreator, creatorProfileLinks, engagementMetersForBreakdown } from "../platform-breakdown";
 import { countSelections, nextAcceptState } from "../status";
 import type { ClientAudienceSlice, ClientCreatorBrief, ClientCreatorCard, ClientWorkspaceView } from "../types";
 import { AdvancedReportModal, ContentFeatureGrid } from "./advanced-report-modal";
@@ -504,7 +504,15 @@ function CreatorDetailPane({
         </div>
       </div>
       <div className="dt-body">
-        <EngagementMeter rate={brief?.engagementRate ?? creator.engagementRate} />
+        {engagementMetersForBreakdown(platformRows, brief?.engagementRate ?? creator.engagementRate).map(
+          (meter) => (
+            <EngagementMeter
+              key={meter.platform ?? "engagement"}
+              platform={meter.platform}
+              rate={meter.rate}
+            />
+          )
+        )}
         {quality && gauge != null ? (
           <ReviewMeter
             label="Audience quality"

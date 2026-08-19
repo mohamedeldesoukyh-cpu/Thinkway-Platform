@@ -14,7 +14,7 @@ import {
   quotationClientShareRequiresSave,
   quotationIsMovedToCampaign,
 } from "./client-review-selection";
-import { clientSafeFitCopy, clientCreatorIdentity, formatCompactCount, formatEngagementPct, formatHandleLabel, formatOptionalCompactCount, formatOptionalEngagementPct, providedText } from "./format";
+import { clientSafeFitCopy, clientCreatorIdentity, formatCompactCount, formatEngagementPct, formatEngagementRateLabel, formatHandleLabel, formatOptionalCompactCount, formatOptionalEngagementPct, providedText } from "./format";
 import { deliverablesLabel, groupedActivityMix, looksLikePlatformList, summarizeCreatorDeliverables, summarizeDeliverablesByPlatform } from "./deliverables";
 import {
   allocationSlices,
@@ -34,7 +34,7 @@ import { HYPEAUDITOR_MEDIA_PLAN_PARITY } from "./hypeauditor-parity";
 import { projectMediaPlanSummary, projectSelectionSummaryFromCards } from "./media-plan-summary";
 import { briefFromSnapshotCreator, mergeFrozenBrief } from "./creator-brief";
 import { enrichSnapshotCreatorFromUnified, mixPostsForDeliverables, profileUrlFromHandle, resolveContentPostPlatform, shouldReplaceContentFeed } from "./creator-snapshot";
-import { creatorPlatformBreakdown, creatorProfileLinks } from "./platform-breakdown";
+import { creatorPlatformBreakdown, creatorProfileLinks, engagementMetersForBreakdown } from "./platform-breakdown";
 import { clientReviewAvatarUrl, isReviewMediaUrlAllowed, reviewMediaAllowlist } from "./review-media";
 import { diffClientReviewSnapshots, retainCreatorBriefs } from "./snapshot-diff";
 import { shortlistReviewBlockers, quotationReviewBlockers } from "./source-readiness";
@@ -1194,6 +1194,33 @@ test("client engagement rates stay percentages — 0.9 is 0.9%, not 90%", () => 
   assert.equal(engagementGaugePercent(193.4), engagementGaugePercent(1.934));
 });
 
+test("creator card engagement meters stay per platform", () => {
+  const meters = engagementMetersForBreakdown(
+    [
+      { platform: "instagram", engagementRate: 0.9, lines: [] },
+      { platform: "tiktok", engagementRate: 6.0, lines: [] },
+    ],
+    0.9
+  );
+  assert.deepEqual(
+    meters.map((meter) => [meter.platform, meter.rate, formatEngagementRateLabel(meter.platform)]),
+    [
+      ["instagram", 0.9, "Instagram engagement rate"],
+      ["tiktok", 6, "TikTok engagement rate"],
+    ]
+  );
+  assert.equal(engagementMetersForBreakdown([], 4.2)[0]?.rate, 4.2);
+  assert.equal(formatEngagementRateLabel(undefined), "Engagement rate");
+  const tiktokMissing = engagementMetersForBreakdown(
+    [
+      { platform: "instagram", engagementRate: 0.9, lines: [] },
+      { platform: "tiktok", lines: [] },
+    ],
+    0.9
+  );
+  assert.equal(tiktokMissing.find((row) => row.platform === "tiktok")?.rate, undefined);
+});
+
 test("publication platform is inferred from the content URL", () => {
   assert.equal(
     resolveContentPostPlatform({ url: "https://www.tiktok.com/@x/video/1" }),
@@ -1265,6 +1292,9 @@ test("brand mentions keep names from the snapshot and only show a 180-day label 
     ["Nike", "Pepsi"]
   );
   assert.equal(brandDomainGuess("Nike"), "nike.com");
+  assert.equal(brandDomainGuess("Xiaomi Egypt"), "xiaomi.com");
+  assert.equal(brandDomainGuess("Samsung UAE"), "samsung.com");
+  assert.equal(brandDomainGuess("Coca Cola Egypt"), "coca-cola.com");
   const withWindow = brandMentionsInsight([
     { name: "Nike", mentionsLast180Days: 2 },
     { name: "Pepsi", mentionsLast180Days: 1 },

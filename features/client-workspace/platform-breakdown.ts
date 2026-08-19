@@ -153,6 +153,25 @@ export function creatorPlatformBreakdown(input: {
   return rows;
 }
 
+export type ClientEngagementMeter = {
+  platform?: string;
+  rate?: number;
+};
+
+export function engagementMetersForBreakdown(
+  rows: ClientPlatformBreakdownRow[],
+  fallbackRate?: number | null
+): ClientEngagementMeter[] {
+  const platforms = rows.filter((row) => row.platform && row.platform !== "_other");
+  if (platforms.length === 0) {
+    return [{ rate: fallbackRate ?? undefined }];
+  }
+  return platforms.map((row) => ({
+    platform: row.platform,
+    rate: row.engagementRate ?? (platforms.length === 1 ? fallbackRate ?? undefined : undefined),
+  }));
+}
+
 export function breakdownForCreator(
   creator: Pick<
     ClientCreatorCard,
