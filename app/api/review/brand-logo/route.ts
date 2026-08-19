@@ -12,6 +12,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const token = searchParams.get("sign")?.trim() || "";
   const name = searchParams.get("name")?.trim() || "";
+  const handle = searchParams.get("handle")?.trim() || "";
   if (token.length < 16 || !name) {
     return NextResponse.json({ error: "This review link is not available." }, { status: 401 });
   }
@@ -26,12 +27,15 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "This review link is not available." }, { status: 401 });
   }
 
-  const mention = reviewBrandMentionAllowed(resolved.review.sourceSnapshot, name);
+  const mention = reviewBrandMentionAllowed(resolved.review.sourceSnapshot, name, handle);
   if (!mention) {
     return NextResponse.json({ error: "Logo unavailable." }, { status: 404 });
   }
 
-  const result = await fetchBrandLogoImage(mention);
+  const result = await fetchBrandLogoImage({
+    ...mention,
+    handle: mention.handle || handle || undefined,
+  });
   if (!result) {
     return NextResponse.json({ error: "Logo unavailable." }, { status: 404 });
   }

@@ -392,11 +392,36 @@
   margin:0 0 2px;letter-spacing:-.3px;
 }
 .tw-review .catc .l{font-size:11px;font-weight:600;color:var(--ink);line-height:1.3;margin:0;}
-.tw-review .brand{background:#fff;border:1px solid #e6ebf2;}
-.tw-review .brand img{object-fit:contain;padding:3px;}
+.tw-review .brand{background:#eef1f6;border:1px solid #e6ebf2;}
+.tw-review .brand img{object-fit:cover;padding:0;}
 
 .tw-review [hidden]{display:none !important;}
-.tw-review .meter-sec .rp-big{margin-bottom:0;}
+.tw-review .er-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.tw-review .er-head .plat-mark-wrap{width:22px;height:22px;}
+.tw-review .er-head .plat-mark{width:22px;height:22px;transform:none;}
+.tw-review .seg-meter{
+  display:flex;
+  gap:5px;
+  margin:12px 0 8px;
+}
+.tw-review .seg-meter span{
+  flex:1;
+  height:10px;
+  border-radius:4px;
+  background:#e8edf5;
+}
+.tw-review .seg-meter span.on{background:#0057FF;}
+.tw-review .seg-meter span.now{background:#0B0F1A;}
+.tw-review .arc-dial{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  margin:4px 0 10px;
+}
+.tw-review .arc-svg{width:118px;height:70px;flex:none;overflow:visible;}
+.tw-review .arc-val .rp-big{margin:0 0 6px;}
+.tw-review .arc-val .n{font-size:28px;line-height:1;}
+.tw-review .seg-meter + .gauge-l span{color:var(--muted);}
 .tw-review .dt-card-label{
   margin:14px 16px 0;
   font-size:11px;

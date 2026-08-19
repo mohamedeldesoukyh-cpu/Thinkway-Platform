@@ -273,6 +273,18 @@ export function engagementGaugePercent(rate?: number | null): number | undefined
   return 88;
 }
 
+export const LEVEL_METER_SEGMENTS = 8;
+
+/** 0–8 filled segments for Option A. Last filled segment is the current marker. */
+export function levelMeterActiveSegment(percent: number): number {
+  const clamped = Math.min(100, Math.max(0, percent));
+  if (clamped <= 0) return 0;
+  return Math.min(
+    LEVEL_METER_SEGMENTS,
+    Math.max(1, Math.round((clamped / 100) * LEVEL_METER_SEGMENTS))
+  );
+}
+
 export function estimatedReachInsight(input: {
   reach?: number | null;
   followers?: number | null;

@@ -61,6 +61,65 @@ export function visibleBrandLogos(mentions: ClientBrandMention[]): ClientBrandMe
   return brandMentionsForDisplay(mentions).brands.slice(0, VISIBLE_LOGOS);
 }
 
+const WEBSITE_TLDS = new Set([
+  "com",
+  "net",
+  "org",
+  "io",
+  "co",
+  "ae",
+  "eg",
+  "uk",
+  "sa",
+  "qa",
+  "kw",
+  "bh",
+  "om",
+  "de",
+  "fr",
+  "it",
+  "es",
+  "app",
+  "shop",
+]);
+
+/** Instagram/TikTok mention handles may contain dots; those are not websites. */
+export function isLikelyWebsiteDomain(value: string): boolean {
+  const host = value.replace(/^@/, "").replace(/^www\./, "").trim().toLowerCase();
+  const parts = host.split(".");
+  if (parts.length < 2) return false;
+  const tld = parts[parts.length - 1] ?? "";
+  return WEBSITE_TLDS.has(tld) && parts.every((part) => part.length > 0);
+}
+
+export function brandSocialHandle(
+  mention: Pick<ClientBrandMention, "name" | "handle">
+): string | null {
+  const fromHandle = mention.handle?.replace(/^@/, "").trim().toLowerCase() ?? "";
+  if (fromHandle && /^[a-z0-9._]{1,30}$/.test(fromHandle) && !isLikelyWebsiteDomain(fromHandle)) {
+    return fromHandle;
+  }
+  const fromName = mention.name
+    .replace(/^@/, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "")
+    .replace(/[^a-z0-9._]/g, "");
+  if (fromName && /^[a-z0-9._]{1,30}$/.test(fromName) && !isLikelyWebsiteDomain(fromName)) {
+    return fromName;
+  }
+  return null;
+}
+
+export function isKnownBrandDomain(name: string, handle?: string): boolean {
+  for (const candidate of brandLabelCandidates(name, handle)) {
+    const slug = slugifyBrand(candidate);
+    if (slug && KNOWN_BRAND_DOMAINS[slug]) return true;
+  }
+  const rawHandle = handle?.replace(/^@/, "").trim().toLowerCase() ?? "";
+  return isLikelyWebsiteDomain(rawHandle);
+}
+
 export function brandLogoUrl(mention: ClientBrandMention): string {
   const domain = brandDomainGuess(mention.name, mention.handle);
   return `https://logo.clearbit.com/${encodeURIComponent(domain)}`;
@@ -128,7 +187,7 @@ const BRAND_PLACE_SUFFIXES = new Set([
 
 export function brandDomainGuess(name: string, handle?: string): string {
   const rawHandle = handle?.replace(/^@/, "").trim().toLowerCase() ?? "";
-  if (rawHandle.includes(".")) return rawHandle.replace(/^www\./, "");
+  if (isLikelyWebsiteDomain(rawHandle)) return rawHandle.replace(/^www\./, "");
 
   for (const candidate of brandLabelCandidates(name, handle)) {
     const slug = slugifyBrand(candidate);

@@ -28,6 +28,7 @@ import type {
   ClientHistoricalMonth,
 } from "../types";
 import { ContentCategoryGrid } from "./content-category-grid";
+import { SegmentedLevelMeter } from "./review-meter";
 import { RetryableReviewImage, ReviewAvatar } from "./review-avatar";
 import { IconChart, IconCheck, IconClose, IconHeart } from "./review-icons";
 import { ReviewPlatformBreakdown } from "./review-platform-breakdown";
@@ -254,7 +255,7 @@ function OverviewSection({
               {badge ? <span className={`badge ${badge.className}`}>{badge.text}</span> : null}
             </div>
             <p className="desc">How much audiences engage with this creator’s available content.</p>
-            {gauge != null ? <QualityGauge percent={gauge} /> : null}
+            {gauge != null ? <SegmentedLevelMeter percent={gauge} /> : null}
           </div>
         );
       })}

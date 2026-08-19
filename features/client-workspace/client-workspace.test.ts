@@ -24,10 +24,11 @@ import {
   qualityGaugePercent,
   engagementBadge,
   engagementGaugePercent,
+  estimatedReachInsight,
+  levelMeterActiveSegment,
   rosterHeadline,
   rosterSourceLine,
   strategicPillars,
-  estimatedReachInsight,
 } from "./presentation";
 import { acceptedCreators, contentRowsForSelection } from "./selection-view";
 import { HYPEAUDITOR_MEDIA_PLAN_PARITY } from "./hypeauditor-parity";
@@ -72,9 +73,17 @@ import {
 import {
   brandDomainGuess,
   brandMentionsInsight,
+  brandSocialHandle,
+  isKnownBrandDomain,
+  isLikelyWebsiteDomain,
   normalizeBrandMentions,
 } from "./brand-mentions";
-import { clientReviewBrandLogoPath, reviewBrandMentionAllowed } from "./brand-logo";
+import {
+  brandLogoClientSources,
+  brandLogoServerSources,
+  clientReviewBrandLogoPath,
+  reviewBrandMentionAllowed,
+} from "./brand-logo";
 import {
   categoryFamily,
   contentCategoriesForDisplay,
@@ -785,6 +794,10 @@ test("audience quality maps to a display gauge without inventing AQS or ROI", ()
   assert.equal(qualityBadge("High Quality")?.text, "Excellent");
   assert.ok((engagementGaugePercent(3.4) ?? 0) > 40);
   assert.equal(engagementGaugePercent(undefined), undefined);
+  assert.equal(levelMeterActiveSegment(88), 7);
+  assert.equal(levelMeterActiveSegment(55), 4);
+  assert.equal(levelMeterActiveSegment(22), 2);
+  assert.equal(levelMeterActiveSegment(0), 0);
   assert.equal(containsInternalTerminology("AQS 72"), false);
   assert.equal(containsInternalTerminology("ROI 102%"), false);
 });
@@ -1295,6 +1308,22 @@ test("brand mentions keep names from the snapshot and only show a 180-day label 
   assert.equal(brandDomainGuess("Xiaomi Egypt"), "xiaomi.com");
   assert.equal(brandDomainGuess("Samsung UAE"), "samsung.com");
   assert.equal(brandDomainGuess("Coca Cola Egypt"), "coca-cola.com");
+  assert.equal(isLikelyWebsiteDomain("lo.labeauty"), false);
+  assert.equal(isLikelyWebsiteDomain("nike.com"), true);
+  assert.equal(brandSocialHandle({ name: "Lo Labeauty", handle: "lo.labeauty" }), "lo.labeauty");
+  assert.equal(brandSocialHandle({ name: "Lo Labeauty" }), "lolabeauty");
+  assert.equal(isKnownBrandDomain("Nike"), true);
+  assert.equal(isKnownBrandDomain("Lo Labeauty", "lo.labeauty"), false);
+  const loSources = brandLogoServerSources({ name: "Lo Labeauty", handle: "lo.labeauty" });
+  assert.equal(loSources[0], "https://unavatar.io/instagram/lo.labeauty?fallback=false");
+  assert.equal(
+    loSources.some((url) => url.includes("lo.labeauty.ico") || url.includes("domain=lo.labeauty")),
+    false,
+    "dotted Instagram handles must not be treated as website favicons"
+  );
+  const nikeSources = brandLogoClientSources({ name: "Nike", handle: "nike" }, "t".repeat(16));
+  assert.equal(nikeSources[0], "https://unavatar.io/instagram/nike?fallback=false");
+  assert.match(nikeSources[2] ?? "", /\/api\/review\/brand-logo/);
   const withWindow = brandMentionsInsight([
     { name: "Nike", mentionsLast180Days: 2 },
     { name: "Pepsi", mentionsLast180Days: 1 },
@@ -1383,7 +1412,7 @@ test("brand logo proxy only serves names frozen on the review snapshot", () => {
       {
         creatorId: "a",
         displayName: "A",
-        brandMentions: [{ name: "Pepsi", handle: "pepsi" }],
+        brandMentions: [{ name: "Pepsi", handle: "pepsi" }, { name: "Lo Labeauty", handle: "lo.labeauty" }],
       },
     ],
     content: [],
@@ -1399,6 +1428,7 @@ test("brand logo proxy only serves names frozen on the review snapshot", () => {
     creatorIds: ["a"],
   });
   assert.equal(reviewBrandMentionAllowed(snapshot, "Pepsi")?.handle, "pepsi");
+  assert.equal(reviewBrandMentionAllowed(snapshot, "Lo Labeauty", "lo.labeauty")?.handle, "lo.labeauty");
   assert.equal(reviewBrandMentionAllowed(snapshot, "Nike"), null);
 });
 

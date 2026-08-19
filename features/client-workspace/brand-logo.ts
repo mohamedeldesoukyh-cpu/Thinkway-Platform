@@ -1,49 +1,85 @@
 import type { ClientBrandMention, ClientReviewSourceSnapshot } from "./types";
-import { brandDomainGuess } from "./brand-mentions";
+import {
+  brandDomainGuess,
+  brandFaviconUrl,
+  brandSocialHandle,
+  isKnownBrandDomain,
+} from "./brand-mentions";
 
 const MAX_BYTES = 400_000;
 const MIN_BYTES = 64;
+const FETCH_TIMEOUT_MS = 2_500;
 
-function logoSources(mention: ClientBrandMention): string[] {
-  const domain = brandDomainGuess(mention.name, mention.handle);
-  const handle = (mention.handle || mention.name).replace(/^@/, "").trim().toLowerCase().replace(/[^a-z0-9._]+/g, "");
-  const urls = [
-    `https://icons.duckduckgo.com/ip3/${encodeURIComponent(domain)}.ico`,
-    `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(domain)}`,
-    `https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${encodeURIComponent(domain)}&size=128`,
-    `https://unavatar.io/${encodeURIComponent(domain)}?fallback=false`,
-  ];
-  if (handle && !handle.includes(".")) {
-    urls.push(`https://unavatar.io/instagram/${encodeURIComponent(handle)}?fallback=false`);
+export function brandMentionKey(mention: Pick<ClientBrandMention, "name" | "handle">): string {
+  return (
+    brandSocialHandle(mention) ||
+    mention.name.trim().toLowerCase()
+  );
+}
+
+/** Proxy + browser waterfall. Instagram first — these mentions are tagged accounts. */
+export function brandLogoClientSources(mention: ClientBrandMention, token: string): string[] {
+  const handle = brandSocialHandle(mention);
+  const sources: string[] = [];
+  if (handle) {
+    sources.push(`https://unavatar.io/instagram/${encodeURIComponent(handle)}?fallback=false`);
+    sources.push(`https://unavatar.io/tiktok/${encodeURIComponent(handle)}?fallback=false`);
   }
-  return urls;
+  sources.push(clientReviewBrandLogoPath(token, mention.name, mention.handle));
+  if (isKnownBrandDomain(mention.name, mention.handle)) {
+    sources.push(brandFaviconUrl(mention));
+  }
+  return sources;
+}
+
+export function brandLogoServerSources(mention: ClientBrandMention): string[] {
+  const handle = brandSocialHandle(mention);
+  const sources: string[] = [];
+  if (handle) {
+    sources.push(`https://unavatar.io/instagram/${encodeURIComponent(handle)}?fallback=false`);
+    sources.push(`https://unavatar.io/tiktok/${encodeURIComponent(handle)}?fallback=false`);
+  }
+  if (isKnownBrandDomain(mention.name, mention.handle)) {
+    const domain = brandDomainGuess(mention.name, mention.handle);
+    sources.push(`https://icons.duckduckgo.com/ip3/${encodeURIComponent(domain)}.ico`);
+    sources.push(`https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(domain)}`);
+    sources.push(
+      `https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${encodeURIComponent(domain)}&size=128`
+    );
+  }
+  return sources;
 }
 
 export function reviewBrandMentionAllowed(
   snapshot: ClientReviewSourceSnapshot | null | undefined,
-  name: string
+  name: string,
+  handle?: string | null
 ): ClientBrandMention | null {
-  const key = name.trim().toLowerCase();
-  if (!key || !snapshot) return null;
+  if (!snapshot) return null;
+  const wanted = brandMentionKey({ name, handle: handle?.trim() || undefined });
+  if (!wanted) return null;
   for (const creator of snapshot.creators) {
     for (const mention of creator.brandMentions ?? []) {
-      if (mention.name.trim().toLowerCase() === key) return mention;
+      if (brandMentionKey(mention) === wanted) return mention;
+      if (mention.name.trim().toLowerCase() === name.trim().toLowerCase()) return mention;
     }
   }
   return null;
 }
 
-export function clientReviewBrandLogoPath(token: string, name: string): string {
+export function clientReviewBrandLogoPath(token: string, name: string, handle?: string): string {
   const params = new URLSearchParams();
   params.set("sign", token);
   params.set("name", name);
+  const social = handle?.replace(/^@/, "").trim();
+  if (social) params.set("handle", social);
   return `/api/review/brand-logo?${params.toString()}`;
 }
 
 export async function fetchBrandLogoImage(
   mention: ClientBrandMention
 ): Promise<{ buffer: ArrayBuffer; contentType: string } | null> {
-  for (const url of logoSources(mention)) {
+  for (const url of brandLogoServerSources(mention)) {
     const result = await fetchLogo(url);
     if (result) return result;
   }
@@ -59,6 +95,7 @@ async function fetchLogo(url: string): Promise<{ buffer: ArrayBuffer; contentTyp
       },
       redirect: "follow",
       cache: "no-store",
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     if (!response.ok) return null;
     const contentType = response.headers.get("content-type")?.split(";")[0]?.trim() || "";

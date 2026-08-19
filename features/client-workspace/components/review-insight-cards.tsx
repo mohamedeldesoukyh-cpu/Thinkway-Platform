@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { clientReviewBrandLogoPath } from "../brand-logo";
+import { brandLogoClientSources } from "../brand-logo";
 import {
   brandMentionsForDisplay,
   brandMentionsInsight,
@@ -11,6 +11,7 @@ import {
 import { DATA_NOT_AVAILABLE } from "../format";
 import { estimatedReachInsight } from "../presentation";
 import type { ClientBrandMention } from "../types";
+import { ArcDialMeter } from "./review-meter";
 
 export function EstimatedReachCard({
   reach,
@@ -25,23 +26,19 @@ export function EstimatedReachCard({
       <p className="st">Estimated reach</p>
       {insight ? (
         <>
-          <p className="rp-big">
-            <span className="n">{insight.value}</span>
-            {insight.badge ? <span className={`badge ${insight.badge.className}`}>{insight.badge.text}</span> : null}
-          </p>
-          <p className="desc">{insight.explanation}</p>
           {insight.gaugePercent != null ? (
-            <>
-              <div className="meter" aria-hidden="true">
-                <span className="mk" style={{ left: `calc(${insight.gaugePercent}% - 2px)` }} />
-              </div>
-              <div className="gauge-l">
-                <span className="lo">Low</span>
-                <span>Average</span>
-                <span className="hi">Excellent</span>
-              </div>
-            </>
-          ) : null}
+            <ArcDialMeter
+              percent={insight.gaugePercent}
+              value={insight.value}
+              badge={insight.badge}
+            />
+          ) : (
+            <p className="rp-big">
+              <span className="n">{insight.value}</span>
+              {insight.badge ? <span className={`badge ${insight.badge.className}`}>{insight.badge.text}</span> : null}
+            </p>
+          )}
+          <p className="desc">{insight.explanation}</p>
         </>
       ) : (
         <p className="unavailable">{DATA_NOT_AVAILABLE}</p>
@@ -91,17 +88,18 @@ export function BrandMentionsCard({
 }
 
 function BrandLogo({ mention, token }: { mention: ClientBrandMention; token: string }) {
-  const [failed, setFailed] = useState(false);
-  const src = clientReviewBrandLogoPath(token, mention.name);
+  const sources = brandLogoClientSources(mention, token);
+  const [index, setIndex] = useState(0);
+  const src = sources[index];
   return (
     <span className="brand" title={mention.name}>
-      {!failed ? (
+      {src ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
           alt=""
           referrerPolicy="no-referrer"
-          onError={() => setFailed(true)}
+          onError={() => setIndex((current) => current + 1)}
         />
       ) : (
         mention.name.slice(0, 1).toUpperCase()
