@@ -250,7 +250,7 @@ export function EditablePostRow({
   const isVirtualPost = postId.startsWith("virtual-");
   const canEditLiveDateField = canEditLiveAdDate(
     post.live_date,
-    post.is_locked || deliverable.locked_at
+    post.is_locked ? (deliverable.locked_at ?? "locked") : deliverable.locked_at
   );
   const canEditDeliverableScope =
     !readOnly && deliverableScoped && postId.length > 0 && !deliverable.is_locked;
