@@ -114,6 +114,8 @@ function computeDeliverableCommercial(input: {
   quantity: number;
   unit_cost: number;
   unit_revenue: number;
+  revenue_before_vat?: number;
+  cost_before_vat?: number;
   usage_rights_amount?: number;
   usage_rights_cost?: number;
   agency_fee_percent?: number;
@@ -122,8 +124,10 @@ function computeDeliverableCommercial(input: {
   cost_vat_percent: number;
   cost_vat_exempt: boolean;
 }) {
-  const costBeforeVat = roundMoney(input.quantity * input.unit_cost);
-  const revenueBeforeVat = roundMoney(input.quantity * input.unit_revenue);
+  const costBeforeVat =
+    input.cost_before_vat ?? roundMoney(input.quantity * input.unit_cost);
+  const revenueBeforeVat =
+    input.revenue_before_vat ?? roundMoney(input.quantity * input.unit_revenue);
 
   const billing = computeClientBilling({
     revenueBeforeVat,
@@ -170,7 +174,7 @@ async function redistributePackageLineToDeliverables(
   const { data: line, error: lineError } = await supabase
     .from("campaign_lines")
     .select(
-      "id, pricing_mode, revenue_before_vat, cost_before_vat, revenue_vat_percent, revenue_vat_exempt, cost_vat_percent, cost_vat_exempt"
+      "id, pricing_mode, revenue_before_vat, cost_before_vat, usage_rights_amount, usage_rights_cost, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, cost_vat_percent, cost_vat_exempt"
     )
     .eq("id", lineId)
     .maybeSingle();
@@ -180,9 +184,7 @@ async function redistributePackageLineToDeliverables(
 
   const { data: rows, error: rowsError } = await supabase
     .from("assignment_deliverables")
-    .select(
-      "id, quantity, usage_rights_amount, usage_rights_cost, agency_fee_percent, locked_at, billing_status, live_date, notes"
-    )
+    .select("id, quantity, locked_at, billing_status, live_date, notes")
     .eq("campaign_line_id", lineId)
     .order("sort_order");
 
@@ -197,6 +199,9 @@ async function redistributePackageLineToDeliverables(
     {
       revenueBeforeVat: Number(line.revenue_before_vat ?? 0),
       costBeforeVat: Number(line.cost_before_vat ?? 0),
+      usageRightsAmount: Number(line.usage_rights_amount ?? 0),
+      usageRightsCost: Number(line.usage_rights_cost ?? 0),
+      agencyFeePercent: Number(line.agency_fee_percent ?? 0),
     }
   );
 
@@ -209,9 +214,11 @@ async function redistributePackageLineToDeliverables(
       quantity: share.quantity,
       unit_cost: share.unitCost,
       unit_revenue: share.unitRevenue,
-      usage_rights_amount: Number(existing.usage_rights_amount ?? 0),
-      usage_rights_cost: Number(existing.usage_rights_cost ?? 0),
-      agency_fee_percent: Number(existing.agency_fee_percent ?? 0),
+      revenue_before_vat: share.revenueBeforeVat,
+      cost_before_vat: share.costBeforeVat,
+      usage_rights_amount: share.usageRightsAmount,
+      usage_rights_cost: share.usageRightsCost,
+      agency_fee_percent: share.agencyFeePercent,
       revenue_vat_percent: Number(line.revenue_vat_percent ?? 0),
       revenue_vat_exempt: Boolean(line.revenue_vat_exempt),
       cost_vat_percent: Number(line.cost_vat_percent ?? 0),

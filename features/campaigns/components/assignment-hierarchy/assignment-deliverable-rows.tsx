@@ -23,6 +23,7 @@ import { OperationalGridHeader } from "@/features/campaigns/components/assignmen
 import { useParentLeadingColumnWidths } from "@/features/campaigns/components/assignment-hierarchy/use-parent-leading-column-widths";
 import { useOperationalChildColumnVisibleChecker } from "@/components/tables/operational-table-column-context";
 import { useAssignmentGridEditSession } from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-edit-session";
+import { AssignmentPackageSplitProvider } from "@/features/campaigns/components/assignment-hierarchy/assignment-package-split-context";
 import type { AssignmentDeliverableHierarchyRow } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import { getCreatorConnectedPlatformOptions, getDeliverableTypeCodesForPlatform } from "@/lib/campaigns/deliverable-taxonomy";
@@ -160,6 +161,14 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
         )}
       >
         <div className={cn(OPERATIONAL_TABLE_SURFACE)}>
+          <AssignmentPackageSplitProvider
+            enabled={(line.assignment?.pricing_mode ?? "package") === "package"}
+            line={line}
+            deliverables={deliverables}
+            resetKey={`${gridEdit.discardEpoch}:${deliverables
+              .map((row) => `${row.id}:${row.quantity}`)
+              .join("|")}`}
+          >
           <div className="max-w-full overflow-x-auto pb-0.5">
             <table
               ref={childTableRef}
@@ -224,6 +233,7 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
               </tbody>
             </table>
           </div>
+          </AssignmentPackageSplitProvider>
         </div>
       </td>
     </tr>

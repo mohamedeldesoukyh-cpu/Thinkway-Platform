@@ -1,5 +1,8 @@
-import { rollupLineClientCommercial } from "@/lib/assignments/client-billing-commercial";
-import { distributeAmountByWeights } from "@/lib/assignments/commercial-calculations";
+import {
+  computeClientBilling,
+  rollupLineClientCommercial,
+} from "@/lib/assignments/client-billing-commercial";
+import { splitPackageTotalsAcrossDeliverables } from "@/lib/assignments/sync-package-deliverables";
 import { formatMarginPercent } from "@/lib/domains/billing/types";
 import type {
   AssignmentDeliverableHierarchyRow,
@@ -9,10 +12,6 @@ import type {
 import type { CampaignLineWorkspace } from "@/lib/domains/campaign/workspace-types";
 import type { AssignmentPricingMode } from "@/lib/domains/commercial/types";
 import { rollupAssignmentBilling } from "@/lib/billing/deliverable-billing";
-
-function roundMoney(value: number): number {
-  return Math.round(value * 100) / 100;
-}
 
 function resolveAssignmentPricingMode(line: CampaignLineWorkspace): AssignmentPricingMode {
   return line.assignment?.pricing_mode ?? "package";
@@ -93,7 +92,7 @@ function applyDistributedCommercialToPosts(
   }));
 }
 
-/** Aligns package-line revenue/cost onto child deliverables when DB rows were not distributed. */
+/** Aligns package-line commercial totals onto children by quantity so they match the parent. */
 export function alignPackageLineCommercialToDeliverables(
   deliverables: AssignmentDeliverableHierarchyRow[],
   line: CampaignLineWorkspace
@@ -101,42 +100,50 @@ export function alignPackageLineCommercialToDeliverables(
   if (deliverables.length === 0) return deliverables;
   if (resolveAssignmentPricingMode(line) !== "package") return deliverables;
 
-  const lineCost = Number(line.cost_before_vat ?? line.cost) || 0;
-  const lineRevenue = Number(line.revenue_before_vat ?? line.revenue) || 0;
-  const deliverableCost = roundMoney(
-    deliverables.reduce((sum, row) => sum + row.cost_before_vat, 0)
+  const shares = splitPackageTotalsAcrossDeliverables(
+    deliverables.map((row) => ({ id: row.id, quantity: row.quantity })),
+    {
+      revenueBeforeVat: Number(line.revenue_before_vat ?? line.revenue) || 0,
+      costBeforeVat: Number(line.cost_before_vat ?? line.cost) || 0,
+      usageRightsAmount: Number(line.usage_rights_amount ?? 0),
+      usageRightsCost: Number(line.usage_rights_cost ?? 0),
+      agencyFeePercent: Number(line.agency_fee_percent ?? 0),
+    }
   );
-  const deliverableRevenue = roundMoney(
-    deliverables.reduce((sum, row) => sum + row.revenue_before_vat, 0)
-  );
-  const costNeedsAlign = lineCost > 0.01 && Math.abs(deliverableCost - lineCost) >= 0.02;
-  const revenueNeedsAlign =
-    lineRevenue > 0.01 && Math.abs(deliverableRevenue - lineRevenue) >= 0.02;
-  if (!costNeedsAlign && !revenueNeedsAlign) {
-    return deliverables;
-  }
+  const shareById = new Map(shares.map((share) => [share.id, share]));
+  const vatPercent = line.revenue_vat_exempt
+    ? 0
+    : Number(line.revenue_vat_percent ?? 0);
 
-  const weights = deliverables.map((row) => Math.max(1, row.quantity));
-  const costShares = costNeedsAlign
-    ? distributeAmountByWeights(lineCost, weights)
-    : deliverables.map((row) => row.cost_before_vat);
-  const revenueShares = revenueNeedsAlign
-    ? distributeAmountByWeights(lineRevenue, weights)
-    : deliverables.map((row) => row.revenue_before_vat);
-
-  return deliverables.map((row, index) => {
-    const quantity = Math.max(1, row.quantity);
-    const costBeforeVat = costShares[index] ?? 0;
-    const revenueBeforeVat = revenueShares[index] ?? 0;
-    const unitCost = roundMoney(costBeforeVat / quantity);
-    const unitRevenue = roundMoney(revenueBeforeVat / quantity);
+  return deliverables.map((row) => {
+    const share = shareById.get(row.id);
+    if (!share) return row;
+    const billing = computeClientBilling({
+      revenueBeforeVat: share.revenueBeforeVat,
+      usageRightsAmount: share.usageRightsAmount,
+      usageRightsCost: share.usageRightsCost,
+      agencyFeePercent: share.agencyFeePercent,
+      vatPercent,
+      vatExempt: Boolean(line.revenue_vat_exempt),
+      costBeforeVat: share.costBeforeVat,
+    });
     return {
       ...row,
-      unit_cost: unitCost,
-      unit_revenue: unitRevenue,
-      cost_before_vat: costBeforeVat,
-      revenue_before_vat: revenueBeforeVat,
-      posts: applyDistributedCommercialToPosts(row.posts, unitRevenue, unitCost),
+      unit_cost: share.unitCost,
+      unit_revenue: share.unitRevenue,
+      cost_before_vat: share.costBeforeVat,
+      revenue_before_vat: share.revenueBeforeVat,
+      usage_rights_amount: share.usageRightsAmount,
+      usage_rights_cost: share.usageRightsCost,
+      agency_fee_percent: share.agencyFeePercent,
+      agency_fee_amount: billing.agencyFeeAmount,
+      revenue_vat_amount: billing.vatAmount,
+      revenue_after_vat: billing.totalBilling,
+      posts: applyDistributedCommercialToPosts(
+        row.posts,
+        share.unitRevenue,
+        share.unitCost
+      ),
     };
   });
 }

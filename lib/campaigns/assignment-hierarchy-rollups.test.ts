@@ -220,10 +220,69 @@ function testAlignPackageLineDistributesRevenueToChildren() {
   assert(totalChildCost === 10_000, `expected distributed child cost 10000, got ${totalChildCost}`);
 }
 
+function testAlignPackageLineSplitsUnevenQtyAndUsageRights() {
+  const line = packageLine({
+    revenue_before_vat: 32_000,
+    revenue: 32_000,
+    cost_before_vat: 16_000,
+    cost: 16_000,
+    usage_rights_amount: 3_200,
+    usage_rights_cost: 1_600,
+    agency_fee_percent: 10,
+    agency_fee_amount: 3_520,
+  });
+  const deliverables = [
+    baseDeliverable({
+      id: "stories",
+      quantity: 26,
+      revenue_before_vat: 32_000,
+      unit_revenue: 32_000,
+      cost_before_vat: 16_000,
+      unit_cost: 16_000,
+      usage_rights_amount: 3_200,
+      usage_rights_cost: 1_600,
+      agency_fee_percent: 10,
+      agency_fee_amount: 3_520,
+    }),
+    baseDeliverable({
+      id: "reels",
+      quantity: 6,
+      revenue_before_vat: 0,
+      unit_revenue: 0,
+      cost_before_vat: 0,
+      unit_cost: 0,
+      usage_rights_amount: 0,
+      usage_rights_cost: 0,
+      agency_fee_percent: 0,
+      agency_fee_amount: 0,
+      posts: [basePost("virtual-reels-1", "reels")],
+    }),
+  ];
+
+  const aligned = alignPackageLineCommercialToDeliverables(deliverables, line);
+  const stories = aligned[0]!;
+  const reels = aligned[1]!;
+
+  assert(stories.revenue_before_vat === 26_000, `stories rev should be 26000, got ${stories.revenue_before_vat}`);
+  assert(reels.revenue_before_vat === 6_000, `reels rev should be 6000, got ${reels.revenue_before_vat}`);
+  assert(stories.cost_before_vat === 13_000, `stories cost should be 13000, got ${stories.cost_before_vat}`);
+  assert(reels.cost_before_vat === 3_000, `reels cost should be 3000, got ${reels.cost_before_vat}`);
+  assert(stories.usage_rights_amount === 2_600, `stories UR should be 2600, got ${stories.usage_rights_amount}`);
+  assert(reels.usage_rights_amount === 600, `reels UR should be 600, got ${reels.usage_rights_amount}`);
+  assert(stories.usage_rights_cost === 1_300, `stories UR cost should be 1300, got ${stories.usage_rights_cost}`);
+  assert(reels.usage_rights_cost === 300, `reels UR cost should be 300, got ${reels.usage_rights_cost}`);
+  assert(stories.agency_fee_percent === 10 && reels.agency_fee_percent === 10, "AF% copies to every child");
+  assert(
+    stories.agency_fee_amount + reels.agency_fee_amount === 3_520,
+    `child fees should match parent 3520, got ${stories.agency_fee_amount + reels.agency_fee_amount}`
+  );
+}
+
 const tests = [
   testPackageRollupUsesLineCommercialDespiteZeroChildCost,
   testAlignPackageLineDistributesCostToChildren,
   testAlignPackageLineDistributesRevenueToChildren,
+  testAlignPackageLineSplitsUnevenQtyAndUsageRights,
 ];
 
 for (const run of tests) {

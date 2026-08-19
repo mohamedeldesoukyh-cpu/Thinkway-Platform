@@ -13,6 +13,14 @@ function newRowId(): string {
   return globalThis.crypto.randomUUID();
 }
 
+export type PackageLineCommercialTotals = {
+  revenueBeforeVat: number;
+  costBeforeVat: number;
+  usageRightsAmount?: number;
+  usageRightsCost?: number;
+  agencyFeePercent?: number;
+};
+
 export type PackageDeliverableShare = {
   id: string;
   quantity: number;
@@ -20,17 +28,29 @@ export type PackageDeliverableShare = {
   unitCost: number;
   revenueBeforeVat: number;
   costBeforeVat: number;
+  usageRightsAmount: number;
+  usageRightsCost: number;
+  agencyFeePercent: number;
 };
 
-/** Split a package line's revenue/cost across deliverables, weighted by quantity. */
+/** Split a package line's commercial totals across deliverables, weighted by quantity. */
 export function splitPackageTotalsAcrossDeliverables(
   deliverables: { id: string; quantity: number }[],
-  totals: { revenueBeforeVat: number; costBeforeVat: number }
+  totals: PackageLineCommercialTotals
 ): PackageDeliverableShare[] {
   if (deliverables.length === 0) return [];
   const weights = deliverables.map((row) => Math.max(1, Math.floor(row.quantity) || 1));
   const revenueShares = distributeAmountByWeights(totals.revenueBeforeVat, weights);
   const costShares = distributeAmountByWeights(totals.costBeforeVat, weights);
+  const usageRightsShares = distributeAmountByWeights(
+    totals.usageRightsAmount ?? 0,
+    weights
+  );
+  const usageRightsCostShares = distributeAmountByWeights(
+    totals.usageRightsCost ?? 0,
+    weights
+  );
+  const agencyFeePercent = Math.max(0, totals.agencyFeePercent ?? 0);
 
   return deliverables.map((row, index) => {
     const quantity = weights[index]!;
@@ -43,6 +63,9 @@ export function splitPackageTotalsAcrossDeliverables(
       costBeforeVat,
       unitRevenue: roundMoney(revenueBeforeVat / quantity),
       unitCost: roundMoney(costBeforeVat / quantity),
+      usageRightsAmount: usageRightsShares[index] ?? 0,
+      usageRightsCost: usageRightsCostShares[index] ?? 0,
+      agencyFeePercent,
     };
   });
 }
