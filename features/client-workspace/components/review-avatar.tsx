@@ -30,16 +30,29 @@ export function ReviewAvatar({
   return (
     <div className={className} style={{ background: AVATAR_GRADS[index % AVATAR_GRADS.length] }}>
       {showImage ? (
-        <RetryableReviewImage key={src} src={src!} onFailed={() => setFailedSrc(src!)} />
+        <RetryableReviewImage
+          key={src}
+          className="rw-avatar-img"
+          src={src!}
+          onFailed={() => setFailedSrc(src!)}
+        />
       ) : (
-        <span className={initialsClassName}>{initialsFromName(name)}</span>
+        <span className={initialsClassName ?? "ini"}>{initialsFromName(name)}</span>
       )}
       {children}
     </div>
   );
 }
 
-export function RetryableReviewImage({ src, onFailed }: { src: string; onFailed?: () => void }) {
+export function RetryableReviewImage({
+  src,
+  onFailed,
+  className,
+}: {
+  src: string;
+  onFailed?: () => void;
+  className?: string;
+}) {
   const [attempt, setAttempt] = useState(0);
   const [failed, setFailed] = useState(false);
 
@@ -48,6 +61,7 @@ export function RetryableReviewImage({ src, onFailed }: { src: string; onFailed?
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
+      className={className}
       src={displaySrc}
       alt=""
       onError={() => {
