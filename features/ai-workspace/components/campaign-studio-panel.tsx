@@ -31,7 +31,7 @@ const StudioOutputsView = dynamic(
 import type { CopilotChangeLogEntry } from "@/features/campaign-intelligence/types/campaign-object";
 import type { CampaignStudioInput } from "@/features/campaign-studio/types/campaign-studio";
 
-import type { AiActionCard, AiMessage, ConversationListItem } from "../types";
+import type { AiActionCard, AiMessage } from "../types";
 import { logStudioBindEvent } from "../debug/studio-bind-logger";
 import { CampaignHistoryPanel } from "./campaign-history-panel";
 import {
@@ -77,13 +77,6 @@ type CampaignStudioPanelProps = {
   variant?: "main" | "side";
   /** Deep-link target: open directly to Studio / Outputs / Director. */
   initialView?: StudioView;
-  /** Campaign Mode — switch chats without leaving the Studio shell. */
-  conversations?: ConversationListItem[];
-  conversationsLoading?: boolean;
-  conversationsError?: string | null;
-  onSelectConversation?: (id: string) => void;
-  onNewChat?: () => void;
-  onRefreshConversations?: () => void;
   /** Copilot dock expanded — show edit-target bar for section focus. */
   copilotOpen?: boolean;
 };
@@ -116,12 +109,6 @@ export function CampaignStudioPanel({
   onFocusSection,
   variant = "side",
   initialView,
-  conversations,
-  conversationsLoading,
-  conversationsError,
-  onSelectConversation,
-  onNewChat,
-  onRefreshConversations,
   copilotOpen = false,
 }: CampaignStudioPanelProps) {
   const display = useMemo(
@@ -255,18 +242,9 @@ export function CampaignStudioPanel({
             );
           })}
         </div>
-        {variant === "main" && onNewChat && onSelectConversation && conversations ? (
+        {variant === "main" ? (
           <div className={STUDIO_REF_CLASSES.subnavActions}>
-            <StudioConversationControls
-              conversations={conversations}
-              loading={conversationsLoading}
-              error={conversationsError}
-              activeId={conversationId}
-              onSelect={onSelectConversation}
-              onNewChat={onNewChat}
-              onRefresh={onRefreshConversations}
-              refMode
-            />
+            <StudioConversationControls activeId={conversationId} refMode />
           </div>
         ) : null}
       </div>

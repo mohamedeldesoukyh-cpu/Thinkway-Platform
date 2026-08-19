@@ -8,14 +8,20 @@ import { listStudioPickerData } from "@/features/studio/queries/list-studio-pick
 
 export const dynamic = "force-dynamic";
 
-export default async function StudioPage() {
+type StudioPageProps = {
+  searchParams: Promise<{ start?: string; new?: string }>;
+};
+
+export default async function StudioPage({ searchParams }: StudioPageProps) {
+  const params = await searchParams;
   const data = await listStudioPickerData();
+  const initialStart = params.start ?? (params.new ? "new" : null);
 
   if ("error" in data) {
     return (
       <DashboardShell
         title="Campaign Studio"
-        description="Strategy, outputs, and AI copilot for client-facing campaign work."
+        description="Plan campaigns from a brief, history, or a live campaign."
         platformV6
       >
         <div className="mx-auto max-w-lg px-5 py-12">
@@ -34,13 +40,17 @@ export default async function StudioPage() {
   return (
     <DashboardShell
       title="Campaign Studio"
-      description="Strategy, outputs, and AI copilot for client-facing campaign work."
+      description="Plan campaigns from a brief, history, or a live campaign."
       hidePageHeader
       containedMain
       mainClassName="min-h-0 flex-1 overflow-y-auto p-0 md:p-0"
     >
       <PlatformErrorBoundary surface="analytics">
-        <StudioCampaignPicker conversations={data.conversations} campaigns={data.campaigns} />
+        <StudioCampaignPicker
+          history={data.history}
+          campaigns={data.campaigns}
+          initialStart={initialStart}
+        />
       </PlatformErrorBoundary>
     </DashboardShell>
   );

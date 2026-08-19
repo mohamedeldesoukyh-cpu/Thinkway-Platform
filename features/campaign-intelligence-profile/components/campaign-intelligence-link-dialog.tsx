@@ -37,6 +37,8 @@ type Props = {
   pending: CampaignBriefUploadPendingState | null;
   onOpenChange: (open: boolean) => void;
   onComplete: (workspace: CampaignIntelligenceWorkspaceState) => void;
+  /** Intake / Studio must pass this so CIP is linked to the campaign conversation. */
+  conversationId?: string | null;
 };
 
 export function CampaignIntelligenceLinkDialog({
@@ -44,6 +46,7 @@ export function CampaignIntelligenceLinkDialog({
   pending,
   onOpenChange,
   onComplete,
+  conversationId,
 }: Props) {
   const [selectedBrandId, setSelectedBrandId] = useState<string>("");
   const [mode, setMode] = useState<"create" | "link">("create");
@@ -189,6 +192,7 @@ export function CampaignIntelligenceLinkDialog({
         brandId: selectedBrandId,
         mode,
         linkProfileId: mode === "link" ? linkProfileId : null,
+        conversationId: conversationId ?? null,
       });
 
       if (!result.ok) {

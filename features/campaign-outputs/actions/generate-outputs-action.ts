@@ -7,12 +7,14 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { CREATE_CAMPAIGN_WORKFLOW_ID } from "@/features/campaign-studio/constants/workflow-ids";
 import {
   attachCampaignObjectToSnapshot,
+  CampaignObjectPersistenceService,
+  saveCampaignObject,
   type CampaignObject,
 } from "@/features/campaign-intelligence";
-import { saveCampaignObject } from "@/features/campaign-intelligence/services/campaign-object-store";
 import {
   createConversation,
   appendMessage,
+  getConversation,
   updateConversationContextSnapshot,
 } from "@/features/ai-workspace/services/conversation-service";
 
@@ -40,7 +42,13 @@ export type StartCampaignOutputsInput = {
 };
 
 export type StartCampaignOutputsResult =
-  | { ok: true; href: string; reused: boolean }
+  | {
+      ok: true;
+      href: string;
+      reused: boolean;
+      conversationId: string;
+      campaignObjectId: string;
+    }
   | { ok: false; message: string };
 
 async function resolveLaunchSeed(
@@ -91,20 +99,32 @@ export async function startCampaignOutputsFromSeed(
   if ("error" in auth) return { ok: false, message: auth.error };
 
   try {
-    if (input.existingConversationId) {
-      // Fast path: conversation already linked (e.g. Media Plan → Open in Studio).
-      // Full sync regenerates outputs + appends a message and can hang for large
-      // plans (DEF-UX-05). Tip state is already persisted via Media Plan saves.
-      return {
-        ok: true,
-        href: workspaceHref(input.existingConversationId, tab),
-        reused: true,
-      };
-    }
+    let conversationId: string | null = null;
 
-    // Reuse an existing workspace conversation before any hierarchy/media-plan work —
-    // Campaign hero "Open Studio" previously timed out on syncSeedIntoConversation.
-    if (input.workspace?.id) {
+    if (input.existingConversationId) {
+      const existing = await getConversation(
+        supabase,
+        input.existingConversationId,
+        auth.userId
+      );
+      if (!existing) {
+        return { ok: false, message: "Conversation not found." };
+      }
+      conversationId = existing.id;
+      const loaded = await CampaignObjectPersistenceService.loadLatestByConversation(
+        supabase,
+        existing.id
+      );
+      if (loaded) {
+        return {
+          ok: true,
+          href: workspaceHref(existing.id, tab),
+          reused: true,
+          conversationId: existing.id,
+          campaignObjectId: loaded.campaignObject.id,
+        };
+      }
+    } else if (input.workspace?.id) {
       const { data: existing } = await supabase
         .from("ai_conversations")
         .select("id")
@@ -117,7 +137,20 @@ export async function startCampaignOutputsFromSeed(
         .maybeSingle();
       const existingId = (existing as { id?: string } | null)?.id;
       if (existingId) {
-        return { ok: true, href: workspaceHref(existingId, tab), reused: true };
+        const loaded = await CampaignObjectPersistenceService.loadLatestByConversation(
+          supabase,
+          existingId
+        );
+        if (loaded) {
+          return {
+            ok: true,
+            href: workspaceHref(existingId, tab),
+            reused: true,
+            conversationId: existingId,
+            campaignObjectId: loaded.campaignObject.id,
+          };
+        }
+        conversationId = existingId;
       }
     }
 
@@ -128,20 +161,28 @@ export async function startCampaignOutputsFromSeed(
       input.workspace?.type === "campaign" ? input.workspace.id : undefined;
     const syncOptions = { quotationId, campaignHeaderId };
 
-    const conversation = await createConversation(supabase, auth.userId, {
-      workspaceType: input.workspace?.type ?? "general",
-      workspaceId: input.workspace?.id,
-    });
+    if (!conversationId) {
+      const conversation = await createConversation(supabase, auth.userId, {
+        workspaceType: input.workspace?.type ?? "general",
+        workspaceId: input.workspace?.id,
+      });
+      conversationId = conversation.id;
+    }
 
+    if (!conversationId) {
+      return { ok: false, message: "Failed to create conversation." };
+    }
+
+    const openedConversationId = conversationId;
     const hydrated = hydrateCampaignObject(seed, undefined, syncOptions);
     let campaignObject: CampaignObject = {
       ...hydrated.campaignObject,
       id: randomUUID(),
-      conversationId: conversation.id,
+      conversationId: openedConversationId,
       workflowId: CREATE_CAMPAIGN_WORKFLOW_ID,
     };
 
-    campaignObject = await saveCampaignObject(conversation.id, campaignObject, {
+    campaignObject = await saveCampaignObject(openedConversationId, campaignObject, {
       supabase,
       userId: auth.userId,
       persistToDb: true,
@@ -155,7 +196,7 @@ export async function startCampaignOutputsFromSeed(
       ({ campaignObject } = generateCampaignOutput(campaignObject, "media_plan", {
         origin: "automatic",
       }));
-      campaignObject = await saveCampaignObject(conversation.id, campaignObject, {
+      campaignObject = await saveCampaignObject(openedConversationId, campaignObject, {
         supabase,
         userId: auth.userId,
         persistToDb: true,
@@ -166,7 +207,7 @@ export async function startCampaignOutputsFromSeed(
 
     // Seed a single studio message so the existing Studio renders the workspace.
     await appendMessage(supabase, {
-      conversationId: conversation.id,
+      conversationId: openedConversationId,
       role: "assistant",
       content: "Your campaign workspace is ready. Generate outputs, ask the Copilot, or open the Director for recommendations.",
       metadata: buildStudioMessageMetadata(campaignObject),
@@ -177,7 +218,7 @@ export async function startCampaignOutputsFromSeed(
     try {
       await updateConversationContextSnapshot(
         supabase,
-        conversation.id,
+        openedConversationId,
         auth.userId,
         attachCampaignObjectToSnapshot({}, campaignObject)
       );
@@ -185,7 +226,13 @@ export async function startCampaignOutputsFromSeed(
       // Non-fatal — the studio message already carries the object.
     }
 
-    return { ok: true, href: workspaceHref(conversation.id, tab), reused: false };
+    return {
+      ok: true,
+      href: workspaceHref(openedConversationId, tab),
+      reused: false,
+      conversationId: openedConversationId,
+      campaignObjectId: campaignObject.id,
+    };
   } catch (error) {
     return {
       ok: false,

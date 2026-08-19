@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 
 import { isOperationalCampaignBrief } from "@/features/ai/routing/operational-detection";
+import { startCampaignOutputsFromSeed } from "@/features/campaign-outputs/actions/generate-outputs-action";
+import { seedFromBrief } from "@/features/campaign-outputs/hydration/seed-adapters";
 import { isCampaignWorkflow } from "@/features/campaign-studio/constants/workflow-ids";
 import type { CampaignStudioInput } from "@/features/campaign-studio/types/campaign-studio";
 
@@ -32,6 +34,7 @@ import { CampaignStudioPanel, findLatestStudioMessage } from "./campaign-studio-
 import { CampaignCopilotDock } from "./campaign-copilot-dock";
 import { ConversationList } from "./conversation-list";
 import { SuggestedActionsBar } from "./suggested-actions-bar";
+import { shouldOfferOpenInStudio } from "../services/should-offer-open-in-studio";
 import { creatorSearchActionCardsFromMessages } from "@/features/campaign-studio/services/studio-search-pool";
 import "../styles/studio-chat-ref.css";
 import "./ai-workspace.css";
@@ -61,6 +64,7 @@ export function IntelligenceWorkspace({
   workspaceLabel,
   userDisplayName,
 }: IntelligenceWorkspaceProps) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   // Deep-link target for the studio tabs (Studio / Outputs / Director). The panel
   // captures it as its initial view; local state takes over afterward.
@@ -815,6 +819,18 @@ export function IntelligenceWorkspace({
     () => findLatestStudioMessage(messages),
     [messages]
   );
+  const lastUserMessageContent = useMemo(() => {
+    return [...messages].reverse().find((message) => message.role === "user")?.content ?? null;
+  }, [messages]);
+  const hasCampaignObjectInThread = useMemo(
+    () => messages.some((message) => Boolean(message.metadata?.campaignObject)),
+    [messages]
+  );
+  const offerOpenInStudio = shouldOfferOpenInStudio({
+    hasStudioMessage: Boolean(latestStudioMessage),
+    lastUserMessage: lastUserMessageContent,
+    hasCampaignObject: hasCampaignObjectInThread,
+  });
   const threadActionCards = useMemo(
     () => creatorSearchActionCardsFromMessages(messages),
     [messages]
@@ -911,6 +927,29 @@ export function IntelligenceWorkspace({
     [handleSend]
   );
 
+  const handleOpenInStudio = useCallback(async () => {
+    if (!conversationId) return;
+    setCreateError(null);
+    try {
+      const result = await startCampaignOutputsFromSeed({
+        seed: seedFromBrief({}),
+        existingConversationId: conversationId,
+        tab: "studio",
+      });
+      if (!result.ok) {
+        setCreateError(result.message);
+        return;
+      }
+      await loadConversation(conversationId, true);
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : "Could not open Studio.");
+    }
+  }, [conversationId, loadConversation]);
+
+  const handleAttachFile = useCallback(() => {
+    router.push("/studio?start=upload");
+  }, [router]);
+
   // Chat surface — shared between full-screen (Conversation Mode) and the dock.
   // In the dock there is no floating topbar above the thread, so drop the
   // topbar scroll-pad; the floating composer still needs bottom clearance.
@@ -936,6 +975,22 @@ export function IntelligenceWorkspace({
             : "sc-chat-thread"
         }
       >
+        {!inDock && offerOpenInStudio ? (
+          <div className="mx-auto mb-3 flex w-full max-w-[820px] items-center justify-between gap-3 rounded-xl border border-[var(--tw-primary,#1D9E75)]/20 bg-[var(--tw-primary,#1D9E75)]/5 px-4 py-3">
+            <p className="text-sm text-foreground">
+              This thread looks like campaign planning. Open Studio to use Campaign Facts and the
+              planning workspace.
+            </p>
+            <button
+              type="button"
+              onClick={() => void handleOpenInStudio()}
+              disabled={isStreaming}
+              className="shrink-0 rounded-lg bg-[var(--tw-primary,#1D9E75)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#178a66] disabled:opacity-50"
+            >
+              Open in Studio
+            </button>
+          </div>
+        ) : null}
         <ChatThread
           messages={messages}
           streamingContent={streamingContent}
@@ -1008,6 +1063,7 @@ export function IntelligenceWorkspace({
           onSend={() => void handleSend()}
           onStop={() => void handleStop()}
           onNewChat={() => void handleNewChat()}
+          onAttach={handleAttachFile}
           disabled={loadingConversation && messages.length === 0}
           isStreaming={isStreaming}
           error={createError ?? error}
@@ -1046,12 +1102,6 @@ export function IntelligenceWorkspace({
           copilotOpen={!dockCollapsed}
           variant="main"
           initialView={initialStudioView}
-          conversations={conversations}
-          conversationsLoading={loading}
-          conversationsError={conversationsError}
-          onSelectConversation={handleSelectConversation}
-          onNewChat={() => void handleNewChat()}
-          onRefreshConversations={() => void refresh({ background: true })}
         />
         <CampaignCopilotDock
           collapsed={dockCollapsed}

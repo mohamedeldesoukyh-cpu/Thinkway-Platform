@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 
 import {
+  type CampaignBriefUploadPendingState,
   type CampaignIntelligenceWorkspaceState,
   confirmCampaignIntelligenceProfileAction,
   saveCampaignIntelligenceProfileAction,
@@ -25,6 +26,8 @@ import {
 import type { CampaignIntelligenceProfile } from "../types/profile";
 import { createEmptyCampaignIntelligenceProfile } from "../types/profile";
 import { isCampaignIntelligenceConfirmed } from "../services/campaign-facts-spine";
+import { nextStepForCampaignBriefUpload } from "../services/next-step-for-brief-upload";
+import { CampaignIntelligenceLinkDialog } from "./campaign-intelligence-link-dialog";
 
 export type CampaignIntelligencePanelProps = {
   initialState?: CampaignIntelligenceWorkspaceState | null;
@@ -92,6 +95,10 @@ export function CampaignIntelligencePanel({
   );
   const [parsedTextLength, setParsedTextLength] = useState(initialState?.parsedTextLength ?? 0);
   const [isPending, startTransition] = useTransition();
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [pendingUpload, setPendingUpload] = useState<CampaignBriefUploadPendingState | null>(
+    null
+  );
 
   const processing = uploadPhase === "uploading" || uploadPhase === "analyzing" || (isAnalyzing && !profileId);
 
@@ -134,24 +141,27 @@ export function CampaignIntelligencePanel({
         setUploadPhase("analyzing");
 
         const result = await uploadCampaignBriefAction(formData);
-        if (!result.ok) {
+        const step = nextStepForCampaignBriefUpload(result);
+        if (step.kind === "error") {
           setUploadPhase("error");
-          toast.error(result.message);
+          toast.error(step.message);
           return;
         }
 
-        if (result.phase === "brand_selection") {
+        if (step.kind === "select_brand") {
+          setPendingUpload(step.pending);
+          setLinkDialogOpen(true);
           setUploadPhase("idle");
           toast.message("Select a brand to finish saving this brief.");
           return;
         }
 
-        applyLoaded(result.workspace);
+        applyLoaded(step.workspace);
 
-        if (shouldShowSparseHint(result.workspace)) {
-          toast.message(`"${result.fileName}" uploaded — review and edit fields below.`);
+        if (shouldShowSparseHint(step.workspace)) {
+          toast.message(`"${file.name}" uploaded — review and edit fields below.`);
         } else {
-          toast.success(`"${result.fileName}" analyzed — review the fields below.`);
+          toast.success(`"${file.name}" analyzed — review the fields below.`);
         }
       } catch (error) {
         setUploadPhase("error");
@@ -601,6 +611,19 @@ export function CampaignIntelligencePanel({
         </Button>
       </div>
       )}
+      <CampaignIntelligenceLinkDialog
+        open={linkDialogOpen}
+        pending={pendingUpload}
+        conversationId={conversationId}
+        onOpenChange={(next) => {
+          setLinkDialogOpen(next);
+          if (!next) setPendingUpload(null);
+        }}
+        onComplete={(workspace) => {
+          applyLoaded(workspace);
+          setPendingUpload(null);
+        }}
+      />
     </div>
   );
 }

@@ -23,6 +23,7 @@ type AiChatInputProps = {
   onSend: () => void;
   onStop?: () => void;
   onNewChat?: () => void;
+  onAttach?: () => void;
   disabled?: boolean;
   isStreaming?: boolean;
   error?: string | null;
@@ -38,6 +39,7 @@ export const AiChatInput = forwardRef<HTMLElement, AiChatInputProps>(function Ai
     onSend,
     onStop,
     onNewChat,
+    onAttach,
     disabled,
     isStreaming,
     error,
@@ -140,15 +142,18 @@ export const AiChatInput = forwardRef<HTMLElement, AiChatInputProps>(function Ai
       ) : null}
 
       <div className={STUDIO_CHAT_CLASSES.composer}>
-        <button
-          type="button"
-          className="sc-composer-attach"
-          aria-label="Attach file"
-          title="Attach file"
-          disabled={disabled || isStreaming}
-        >
-          <PaperclipIcon strokeWidth={2} />
-        </button>
+        {onAttach ? (
+          <button
+            type="button"
+            className="sc-composer-attach"
+            aria-label="Attach brief in Studio"
+            title="Upload a brief in Campaign Studio"
+            disabled={disabled || isStreaming}
+            onClick={onAttach}
+          >
+            <PaperclipIcon strokeWidth={2} />
+          </button>
+        ) : null}
         <textarea
           ref={textareaRef}
           value={value}
