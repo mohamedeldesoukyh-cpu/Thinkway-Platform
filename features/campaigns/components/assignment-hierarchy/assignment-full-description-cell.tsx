@@ -75,8 +75,9 @@ export function AssignmentFullDescriptionCell({
   if (displayOnly) {
     return (
       <p
+        title={text.trim() || undefined}
         className={cn(
-          "whitespace-pre-wrap break-words text-[11px] leading-snug text-foreground/90",
+          "line-clamp-3 overflow-hidden whitespace-pre-wrap break-words text-[11px] leading-snug text-foreground/90",
           className
         )}
       >
