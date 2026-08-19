@@ -70,6 +70,7 @@ import {
   validateAssignmentHierarchyClient,
 } from "@/lib/campaigns/assignment-row-debug";
 import { useAssignmentAudienceView } from "@/features/campaigns/components/assignment-hierarchy/assignment-audience-view-context";
+import { useAssignmentGridEditSession } from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-edit-session";
 import { resolveAssignmentsGridGates } from "@/lib/campaigns/assignments-grid-gates";
 import {
   tryBuildAssignmentRowViewModel,
@@ -136,6 +137,7 @@ export function AssignmentSafeGrid({
   onCreateAssignment,
 }: AssignmentSafeGridProps) {
   const audienceView = useAssignmentAudienceView();
+  const gridEdit = useAssignmentGridEditSession();
   const gates = resolveAssignmentsGridGates(audienceView);
   const col = useOperationalColumnVisibleChecker();
   const childCol = useOperationalChildColumnVisibleChecker();
@@ -226,6 +228,11 @@ export function AssignmentSafeGrid({
       });
     }
   }, [preparedRows, campaignId]);
+
+  useEffect(() => {
+    if (!gridEdit.isEditing) return;
+    setExpandedIds(new Set(preparedRows.map((row) => row.lineId)));
+  }, [gridEdit.isEditing, preparedRows]);
 
   const toggleLine = useCallback((lineId: string, selectable: boolean) => {
     if (!selectable) return;

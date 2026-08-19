@@ -3116,6 +3116,37 @@
     background: var(--camp-danger-hover);
   }
 
+  .thinkway-campaign-btn-edit {
+    border-color: var(--camp-red);
+    background: var(--camp-red);
+    color: #fff;
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--camp-red) 35%, transparent);
+  }
+
+  .thinkway-campaign-btn-edit:hover:not(:disabled) {
+    filter: brightness(0.94);
+    color: #fff;
+  }
+
+  .thinkway-campaign-btn-save {
+    border-color: var(--camp-green);
+    background: var(--camp-green);
+    color: #fff;
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--camp-green) 35%, transparent);
+  }
+
+  .thinkway-campaign-btn-save:hover:not(:disabled) {
+    filter: brightness(0.94);
+    color: #fff;
+  }
+
+  .thinkway-campaign-btn-edit:disabled,
+  .thinkway-campaign-btn-save:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
   .thinkway-campaign-metrics-band {
     display: grid;
     grid-template-columns: auto 1fr;

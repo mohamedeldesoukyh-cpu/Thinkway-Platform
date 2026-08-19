@@ -52,6 +52,10 @@ import {
 } from "@/features/campaigns/components/aurora/campaign-workspace-frame";
 import { AssignmentAudienceViewProvider } from "@/features/campaigns/components/assignment-hierarchy/assignment-audience-view-context";
 import { AssignmentAudienceViewToggle } from "@/features/campaigns/components/assignment-hierarchy/assignment-audience-view-toggle";
+import {
+  AssignmentGridEditSessionProvider,
+  AssignmentGridEditSessionToolbar,
+} from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-edit-session";
 import { AssignmentCommercialWorkspaceDialog } from "@/features/campaigns/components/assignment-commercial-workspace-dialog";
 import { AssignmentInfluencerDetailSheet } from "@/features/campaigns/components/assignment-hierarchy/assignment-influencer-detail-sheet";
 import { AssignmentSafeGrid } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-grid";
@@ -390,6 +394,9 @@ export function CampaignLinesTabInner({
           childTableId={ASSIGNMENT_GRID_CHILD_TABLE_ID}
           childColumns={ASSIGNMENT_CHILD_GRID_COLUMN_METAS}
         >
+          <AssignmentGridEditSessionProvider
+            enabled={enableLineSheet && audienceView === "internal"}
+          >
           <OperationalTableSection
             wide
             tableOnly
@@ -402,6 +409,7 @@ export function CampaignLinesTabInner({
                 actionsOnly
                 actions={
                   <>
+                    <AssignmentGridEditSessionToolbar />
                     <AssignmentAudienceViewToggle
                       value={audienceView}
                       onChange={setAudienceView}
@@ -450,6 +458,7 @@ export function CampaignLinesTabInner({
               </>
             )}
           </OperationalTableSection>
+          </AssignmentGridEditSessionProvider>
         </OperationalTableDualColumnsProvider>
       </CampaignCreatorDiscoveryProvider>
       </CampaignWorkspaceFrame>

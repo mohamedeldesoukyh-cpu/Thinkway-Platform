@@ -1,0 +1,188 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { toast } from "sonner";
+
+export type AssignmentGridFlushResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
+export type AssignmentGridFlushFn = () => Promise<AssignmentGridFlushResult>;
+
+type AssignmentGridEditSessionValue = {
+  hasSession: boolean;
+  isEditing: boolean;
+  saving: boolean;
+  discardEpoch: number;
+  startEditing: () => void;
+  cancelEditing: () => void;
+  saveAll: () => Promise<void>;
+  registerFlush: (id: string, flush: AssignmentGridFlushFn) => () => void;
+};
+
+const AssignmentGridEditSessionContext = createContext<AssignmentGridEditSessionValue>({
+  hasSession: false,
+  isEditing: false,
+  saving: false,
+  discardEpoch: 0,
+  startEditing: () => {},
+  cancelEditing: () => {},
+  saveAll: async () => {},
+  registerFlush: () => () => {},
+});
+
+export function AssignmentGridEditSessionProvider({
+  enabled,
+  children,
+}: {
+  enabled: boolean;
+  children: ReactNode;
+}) {
+  const router = useRouter();
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [discardEpoch, setDiscardEpoch] = useState(0);
+  const flushesRef = useRef(new Map<string, AssignmentGridFlushFn>());
+
+  useEffect(() => {
+    if (enabled) return;
+    setIsEditing(false);
+    setSaving(false);
+  }, [enabled]);
+
+  const registerFlush = useCallback((id: string, flush: AssignmentGridFlushFn) => {
+    flushesRef.current.set(id, flush);
+    return () => {
+      if (flushesRef.current.get(id) === flush) {
+        flushesRef.current.delete(id);
+      }
+    };
+  }, []);
+
+  const startEditing = useCallback(() => {
+    if (!enabled || saving || isEditing) return;
+    setIsEditing(true);
+  }, [enabled, isEditing, saving]);
+
+  const cancelEditing = useCallback(() => {
+    if (!enabled || !isEditing || saving) return;
+    setIsEditing(false);
+    setDiscardEpoch((epoch) => epoch + 1);
+  }, [enabled, isEditing, saving]);
+
+  const saveAll = useCallback(async () => {
+    if (!enabled || !isEditing || saving) return;
+    setSaving(true);
+    const results = await Promise.all(
+      [...flushesRef.current.values()].map(async (flush) => {
+        try {
+          return await flush();
+        } catch (error) {
+          return {
+            ok: false as const,
+            message: error instanceof Error ? error.message : "Failed to save.",
+          };
+        }
+      })
+    );
+    setSaving(false);
+
+    const errors = results.filter((result) => !result.ok);
+    if (errors.length > 0) {
+      const first = errors[0]?.message ?? "Failed to save assignments.";
+      toast.error(
+        errors.length === 1 ? first : `${errors.length} rows failed to save. ${first}`
+      );
+      return;
+    }
+
+    setIsEditing(false);
+    toast.success("Assignments saved.");
+    router.refresh();
+  }, [enabled, isEditing, router, saving]);
+
+  const value = useMemo<AssignmentGridEditSessionValue>(
+    () => ({
+      hasSession: enabled,
+      isEditing: enabled && isEditing,
+      saving,
+      discardEpoch,
+      startEditing,
+      cancelEditing,
+      saveAll,
+      registerFlush,
+    }),
+    [
+      cancelEditing,
+      discardEpoch,
+      enabled,
+      isEditing,
+      registerFlush,
+      saveAll,
+      saving,
+      startEditing,
+    ]
+  );
+
+  return (
+    <AssignmentGridEditSessionContext.Provider value={value}>
+      {children}
+    </AssignmentGridEditSessionContext.Provider>
+  );
+}
+
+export function useAssignmentGridEditSession(): AssignmentGridEditSessionValue {
+  return useContext(AssignmentGridEditSessionContext);
+}
+
+/** Red Edit/Cancel · green Save — unlocks the grid, then persist or discard in one shot. */
+export function AssignmentGridEditSessionToolbar() {
+  const { hasSession, isEditing, saving, startEditing, cancelEditing, saveAll } =
+    useAssignmentGridEditSession();
+
+  if (!hasSession) return null;
+
+  return (
+    <>
+      {isEditing ? (
+        <button
+          type="button"
+          className="thinkway-campaign-btn thinkway-campaign-btn-edit"
+          onClick={cancelEditing}
+          disabled={saving}
+        >
+          Cancel
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="thinkway-campaign-btn thinkway-campaign-btn-edit"
+          onClick={startEditing}
+          disabled={saving}
+        >
+          Edit
+        </button>
+      )}
+      <button
+        type="button"
+        className="thinkway-campaign-btn thinkway-campaign-btn-save"
+        onClick={() => {
+          void saveAll();
+        }}
+        disabled={!isEditing || saving}
+      >
+        {saving ? "Saving…" : "Save"}
+      </button>
+    </>
+  );
+}

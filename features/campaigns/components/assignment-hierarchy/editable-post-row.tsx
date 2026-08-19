@@ -10,7 +10,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { DocumentNumber } from "@/components/ui/document-number";
@@ -70,6 +70,9 @@ import {
   GRID_HIGHLIGHT_TOTAL_BILLING,
   OPERATIONAL_GRID_LABELS,
 } from "@/features/campaigns/components/assignment-hierarchy/operational-grid-columns";
+import { useAssignmentGridEditSession } from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-edit-session";
+import { isAssignmentPostDraftDirty } from "@/features/campaigns/components/assignment-hierarchy/assignment-post-draft-dirty";
+import { persistAssignmentPostRowDraft } from "@/features/campaigns/components/assignment-hierarchy/assignment-post-row-flush";
 import { useOperationalCommercialDraft } from "@/features/campaigns/components/assignment-hierarchy/use-operational-commercial-draft";
 import type {
   AssignmentDeliverableHierarchyRow,
@@ -170,9 +173,11 @@ export function EditablePostRow({
     !showExpandColumn && col("expand") ? childColSpanBase - 1 : childColSpanBase;
   const router = useRouter();
   const confirmDelete = useConfirmDelete();
+  const gridEdit = useAssignmentGridEditSession();
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const fieldsActive = gridEdit.hasSession ? gridEdit.isEditing : editing;
 
   const commercial = useOperationalCommercialDraft(
     commercialInitial(deliverable, post, deliverableScoped)
@@ -189,7 +194,7 @@ export function EditablePostRow({
   }));
 
   useEffect(() => {
-    if (editing) return;
+    if (fieldsActive) return;
     commercial.reset(commercialInitial(deliverable, post, deliverableScoped));
     setMeta({
       platform: post.platform,
@@ -200,9 +205,9 @@ export function EditablePostRow({
       billing_status: post.billing_status,
       notes: post.notes ?? "",
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset when server row changes
+    // Keep drafts while Edit is open, including the window after Save before refresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    editing,
     post.id,
     post.live_date,
     post.revenue_per_post,
@@ -217,6 +222,7 @@ export function EditablePostRow({
     deliverable.revenue_after_vat,
     deliverableScoped,
     defaultRevenueVatPercent,
+    gridEdit.discardEpoch,
   ]);
 
   const computedVat = useMemo(() => {
@@ -249,6 +255,11 @@ export function EditablePostRow({
     !readOnly && postId.length > 0 && !isVirtualPost && !deliverable.is_locked;
   const canEdit = canEditDeliverableScope || canEditPostSchedule;
   const canEditCommercial = canEdit;
+  const commercialLocked =
+    !canEditCommercial ||
+    (gridEdit.hasSession && !gridEdit.isEditing) ||
+    (gridEdit.hasSession && deliverableScoped && !isFirstPost) ||
+    gridEdit.saving;
   const showDeliverableCommercial =
     deliverableScoped || isFirstPost;
 
@@ -279,6 +290,99 @@ export function EditablePostRow({
     commercial.draft.rev,
     revenueVatExempt,
     computedVat,
+  ]);
+
+  const baselineCommercial = useMemo(
+    () => commercialInitial(deliverable, post, deliverableScoped),
+    [
+      deliverable.quantity,
+      deliverable.unit_revenue,
+      deliverable.revenue_before_vat,
+      deliverable.unit_cost,
+      deliverable.cost_before_vat,
+      deliverableScoped,
+      post.revenue_per_post,
+      post.cost_per_post,
+    ]
+  );
+  const baselineMeta = useMemo<MetaDraft>(
+    () => ({
+      platform: post.platform,
+      deliverable_type: post.deliverable_type,
+      live_date: post.live_date ?? "",
+      revenue_vat_percent: post.revenue_vat_percent || defaultRevenueVatPercent,
+      workflow_status: post.workflow_status,
+      billing_status: post.billing_status,
+      notes: post.notes ?? "",
+    }),
+    [
+      post.platform,
+      post.deliverable_type,
+      post.live_date,
+      post.revenue_vat_percent,
+      post.workflow_status,
+      post.billing_status,
+      post.notes,
+      defaultRevenueVatPercent,
+    ]
+  );
+
+  const flushStateRef = useRef({
+    canEdit,
+    includeCommercial: !deliverableScoped || isFirstPost,
+    commercial: commercial.draft,
+    meta,
+    baselineCommercial,
+    baselineMeta,
+  });
+  flushStateRef.current = {
+    canEdit,
+    includeCommercial: !deliverableScoped || isFirstPost,
+    commercial: commercial.draft,
+    meta,
+    baselineCommercial,
+    baselineMeta,
+  };
+
+  useEffect(() => {
+    if (!gridEdit.hasSession || !canEdit) return;
+    return gridEdit.registerFlush(`post:${deliverable.id}:${postId}`, async () => {
+      const snapshot = flushStateRef.current;
+      if (!snapshot.canEdit) return { ok: true };
+      if (
+        !isAssignmentPostDraftDirty({
+          commercial: snapshot.commercial,
+          baselineCommercial: snapshot.baselineCommercial,
+          meta: snapshot.meta,
+          baselineMeta: snapshot.baselineMeta,
+          includeCommercial: snapshot.includeCommercial,
+        })
+      ) {
+        return { ok: true };
+      }
+      return persistAssignmentPostRowDraft({
+        campaignId,
+        campaignLineId,
+        deliverable,
+        post,
+        deliverableScoped,
+        isVirtualPost,
+        includeCommercial: snapshot.includeCommercial,
+        commercial: snapshot.commercial,
+        meta: snapshot.meta,
+      });
+    });
+  }, [
+    gridEdit.hasSession,
+    gridEdit.registerFlush,
+    canEdit,
+    campaignId,
+    campaignLineId,
+    deliverable,
+    post,
+    deliverableScoped,
+    isVirtualPost,
+    postId,
   ]);
 
   function persistLiveDate(nextLiveDate: string) {
@@ -593,12 +697,12 @@ export function EditablePostRow({
             className={cellClass}
           >
             <div className="flex min-w-0 items-center gap-1.5">
-              {canEdit && editing ? (
+              {canEdit && fieldsActive ? (
                 <>
                   <PlatformSelect
                     platform={meta.platform}
                     platformOptions={platformOptions}
-                    disabled={pending}
+                    disabled={pending || gridEdit.saving}
                     onPlatformChange={(platform) => {
                       const types = getDeliverableTypeCodesForPlatform(platform);
                       setMeta((m) => ({
@@ -611,7 +715,7 @@ export function EditablePostRow({
                   <DeliverableTypeSelect
                     platform={meta.platform}
                     deliverableType={meta.deliverable_type}
-                    disabled={pending}
+                    disabled={pending || gridEdit.saving}
                     onDeliverableTypeChange={(deliverableType) =>
                       setMeta((m) => ({ ...m, deliverable_type: deliverableType }))
                     }
@@ -652,8 +756,8 @@ export function EditablePostRow({
             <OperationalQtyField
               value={commercial.draft.qty}
               onChange={(q) => commercial.setQty(q)}
-              onBlur={persistCommercial}
-              disabled={!canEditCommercial || !deliverableScoped}
+              onBlur={gridEdit.hasSession ? undefined : persistCommercial}
+              disabled={commercialLocked || !deliverableScoped}
             />
           </td>
         );
@@ -663,8 +767,8 @@ export function EditablePostRow({
             <OperationalAmountField
               value={commercial.draft.revPerAd}
               onChange={(n) => commercial.setRevPerAd(n)}
-              onBlur={persistCommercial}
-              disabled={!canEditCommercial}
+              onBlur={gridEdit.hasSession ? undefined : persistCommercial}
+              disabled={commercialLocked}
               perUnit
             />
           </td>
@@ -675,8 +779,8 @@ export function EditablePostRow({
             <OperationalAmountField
               value={commercial.draft.costPerAd}
               onChange={(n) => commercial.setCostPerAd(n)}
-              onBlur={persistCommercial}
-              disabled={!canEditCommercial}
+              onBlur={gridEdit.hasSession ? undefined : persistCommercial}
+              disabled={commercialLocked}
               perUnit
             />
           </td>
@@ -693,8 +797,8 @@ export function EditablePostRow({
             <OperationalAmountField
               value={commercial.draft.rev}
               onChange={(n) => commercial.setRev(n)}
-              onBlur={persistCommercial}
-              disabled={!canEditCommercial}
+              onBlur={gridEdit.hasSession ? undefined : persistCommercial}
+              disabled={commercialLocked}
             />
           </td>
         );
@@ -717,7 +821,7 @@ export function EditablePostRow({
           "thinkway-campaign-asgn-child text-[11px] font-normal text-[var(--camp-text-2)]",
           !isLastChildRow && "border-b border-[var(--camp-border)]",
           "hover:bg-[var(--camp-row-open-hover)]",
-          editing && "bg-[var(--camp-row-open)]"
+          fieldsActive && "bg-[var(--camp-row-open)]"
         )}
       >
         {leadingParentColumnIds.map(renderLeadingBodyCell)}
@@ -751,8 +855,8 @@ export function EditablePostRow({
           <OperationalAmountField
             value={commercial.draft.cost}
             onChange={(n) => commercial.setCost(n)}
-            onBlur={persistCommercial}
-            disabled={!canEditCommercial}
+            onBlur={gridEdit.hasSession ? undefined : persistCommercial}
+            disabled={commercialLocked}
           />
         </td>
         ) : null}
@@ -765,7 +869,7 @@ export function EditablePostRow({
         ) : null}
         {col("vat") ? (
         <td className={GRID_CELL.vat}>
-          {editing && !revenueVatExempt ? (
+          {fieldsActive && !revenueVatExempt ? (
             <Input
               type="number"
               min={0}
@@ -778,6 +882,7 @@ export function EditablePostRow({
                   revenue_vat_percent: Number(e.target.value) || 0,
                 }))
               }
+              disabled={gridEdit.saving}
               className={cn(
                 "h-auto min-h-0 w-full border-0 bg-transparent py-0 text-center text-[11px] font-normal shadow-none focus-visible:ring-1"
               )}
@@ -798,20 +903,24 @@ export function EditablePostRow({
         ) : null}
         {col("postDate") ? (
         <td className={GRID_CELL.postDate}>
-          {canEditLiveDateField ? (
+          {canEditLiveDateField && (!gridEdit.hasSession || gridEdit.isEditing) ? (
             <div className="flex min-w-0 items-center justify-center gap-0.5 px-0.5">
               <Input
                 type="date"
                 value={meta.live_date}
                 onChange={(e) => setMeta((m) => ({ ...m, live_date: e.target.value }))}
-                onBlur={(e) => persistLiveDate(e.target.value)}
+                onBlur={
+                  gridEdit.hasSession
+                    ? undefined
+                    : (e) => persistLiveDate(e.target.value)
+                }
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") {
+                  if (e.key === "Enter" && !gridEdit.hasSession) {
                     e.preventDefault();
                     persistLiveDate(meta.live_date);
                   }
                 }}
-                disabled={pending}
+                disabled={pending || gridEdit.saving}
                 className="h-7 min-w-[8.75rem] flex-1 basis-[8.75rem] px-1 text-[11px] leading-none"
                 aria-label="Live ad date"
                 title={
@@ -822,29 +931,40 @@ export function EditablePostRow({
                       : "Live ad date"
                 }
               />
+              {gridEdit.hasSession ? null : (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 shrink-0"
+                  disabled={pending}
+                  title="Save live ad date"
+                  onClick={() => persistLiveDate(meta.live_date)}
+                >
+                  <CheckIcon className="size-3.5" />
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 className="size-7 shrink-0"
-                disabled={pending}
-                title="Save live ad date"
-                onClick={() => persistLiveDate(meta.live_date)}
-              >
-                <CheckIcon className="size-3.5" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-7 shrink-0"
-                disabled={pending}
+                disabled={pending || gridEdit.saving}
                 title={
                   post.publication_live_date
                     ? `Reset to publication (${post.publication_live_date})`
                     : "Reset to publication date"
                 }
-                onClick={resetLiveDateToPublication}
+                onClick={() => {
+                  if (gridEdit.hasSession) {
+                    setMeta((m) => ({
+                      ...m,
+                      live_date: post.publication_live_date ?? "",
+                    }));
+                    return;
+                  }
+                  resetLiveDateToPublication();
+                }}
               >
                 <RotateCcwIcon className="size-3.5" />
               </Button>
@@ -899,10 +1019,11 @@ export function EditablePostRow({
         ) : null}
         {col("workflow") ? (
         <td className={GRID_CELL.workflow}>
-          {canEdit && editing ? (
+          {canEdit && fieldsActive ? (
             <Select
               value={meta.workflow_status}
               onValueChange={(v) => setMeta((m) => ({ ...m, workflow_status: v }))}
+              disabled={gridEdit.saving}
             >
               <SelectTrigger className="h-6 text-[10px]">
                 <SelectValue />
@@ -924,6 +1045,37 @@ export function EditablePostRow({
         <td className={GRID_CELL.actions}>
           {!canEdit ? (
             <span className="text-muted-foreground">—</span>
+          ) : gridEdit.hasSession ? (
+            <div className="flex justify-end gap-0.5">
+              {isFirstPost && !deliverable.is_synthetic ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-6"
+                    onClick={addPost}
+                    disabled={pending || gridEdit.saving}
+                    title="Add post"
+                  >
+                    <PlusIcon className="size-3" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-6 text-destructive"
+                    onClick={deleteDeliverable}
+                    disabled={pending || gridEdit.saving}
+                    title="Remove deliverable"
+                  >
+                    <Trash2Icon className="size-3" />
+                  </Button>
+                </>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
+            </div>
           ) : editing ? (
             <div className="flex justify-end gap-0.5">
               <Button
