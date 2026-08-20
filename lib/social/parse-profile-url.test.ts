@@ -79,6 +79,66 @@ const tiktokVideo = parseProfileInput("https://www.tiktok.com/@with.fatimma/vide
 assert.ok(tiktokVideo);
 assert.equal(tiktokVideo.normalized_username, "with.fatimma");
 
+const tiktokMobile = parseProfileInput("https://m.tiktok.com/@with.fatimma");
+assert.ok(tiktokMobile);
+assert.equal(tiktokMobile.platform, "tiktok");
+assert.equal(tiktokMobile.normalized_username, "with.fatimma");
+
+const youtubeHandle = parseProfileInput("https://www.youtube.com/@mkbhd");
+assert.ok(youtubeHandle);
+assert.equal(youtubeHandle.platform, "youtube");
+assert.equal(youtubeHandle.normalized_username, "mkbhd");
+
+const youtubeMobile = parseProfileInput("https://m.youtube.com/@mkbhd");
+assert.ok(youtubeMobile);
+assert.equal(youtubeMobile.platform, "youtube");
+
+const snapchatAdd = parseProfileInput("https://www.snapchat.com/add/johndoe");
+assert.ok(snapchatAdd);
+assert.equal(snapchatAdd.platform, "snapchat");
+assert.equal(snapchatAdd.normalized_username, "johndoe");
+
+const snapchatAt = parseProfileInput("https://www.snapchat.com/@johndoe");
+assert.ok(snapchatAt);
+assert.equal(snapchatAt.platform, "snapchat");
+assert.equal(snapchatAt.normalized_username, "johndoe");
+
+const xProfile = parseProfileInput("https://x.com/jack");
+assert.ok(xProfile);
+assert.equal(xProfile.platform, "twitter");
+assert.equal(xProfile.normalized_username, "jack");
+
+const facebookPageVideo = parseProfileInput(
+  "https://www.facebook.com/nasaearth/videos/123"
+);
+assert.ok(facebookPageVideo);
+assert.equal(facebookPageVideo.platform, "facebook");
+assert.equal(facebookPageVideo.normalized_username, "nasaearth");
+
+const webFacebook = parseProfileInput("https://web.facebook.com/zuck");
+assert.ok(webFacebook);
+assert.equal(webFacebook.normalized_username, "zuck");
+
+const mixedPaste = parseProfileInputList(`
+Instagram: https://www.instagram.com/jane.doe/
+TikTok: https://m.tiktok.com/@with.fatimma
+YouTube: https://www.youtube.com/@mkbhd
+Snapchat: https://www.snapchat.com/add/johndoe
+X: https://x.com/jack
+Facebook: https://www.facebook.com/zuck
+`);
+assert.equal(mixedPaste.parsed.length, 6);
+assert.deepEqual(
+  mixedPaste.parsed.map((item) => item.platform),
+  ["instagram", "tiktok", "youtube", "snapchat", "twitter", "facebook"]
+);
+
+const wrappedTiktok = parseProfileInputList(
+  "https://www.tiktok.com/@\nwith.fatimma"
+);
+assert.equal(wrappedTiktok.parsed[0]?.platform, "tiktok");
+assert.equal(wrappedTiktok.parsed[0]?.normalized_username, "with.fatimma");
+
 const batch = parseProfileInputList(`
 https://www.instagram.com/jane.doe/
 https://www.tiktok.com/@with.fatimma

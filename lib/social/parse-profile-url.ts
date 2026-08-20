@@ -1,5 +1,6 @@
 import {
   buildCanonicalProfileUrl,
+  detectSocialPlatformFromContentUrl,
   isSocialPlatform,
   normalizeProfileUrl,
   normalizeUsername,
@@ -16,87 +17,148 @@ export type ParsedProfile = {
   normalized_profile_url: string;
 };
 
-type PlatformPattern = {
-  platform: SocialPlatform;
-  hostPattern: RegExp;
-  pathPattern: RegExp;
-  extractUsername: (
-    pathname: string,
-    segments: string[],
-    url?: URL
-  ) => string | null;
-};
+const INSTAGRAM_RESERVED = new Set([
+  "p",
+  "reel",
+  "reels",
+  "stories",
+  "explore",
+  "accounts",
+  "direct",
+  "tv",
+  "share",
+]);
 
-const PLATFORM_PATTERNS: PlatformPattern[] = [
-  {
-    platform: "instagram",
-    hostPattern: /^(?:www\.)?instagram\.com$/i,
-    pathPattern: /^\/([^/?#]+)\/?$/i,
-    extractUsername: (_p, segments) => {
-      const reserved = new Set([
-        "p",
-        "reel",
-        "reels",
-        "stories",
-        "explore",
-        "accounts",
-        "direct",
-      ]);
+const YOUTUBE_RESERVED = new Set([
+  "watch",
+  "shorts",
+  "feed",
+  "results",
+  "playlist",
+  "live",
+  "gaming",
+  "embed",
+  "redirect",
+  "account",
+  "premium",
+  "channel",
+  "c",
+  "user",
+  "hashtag",
+]);
+
+const TWITTER_RESERVED = new Set([
+  "home",
+  "explore",
+  "notifications",
+  "messages",
+  "i",
+  "intent",
+  "share",
+  "search",
+]);
+
+const SNAPCHAT_RESERVED = new Set([
+  "spotlight",
+  "discover",
+  "lens",
+  "add",
+  "p",
+  "t",
+]);
+
+const TIKTOK_RESERVED = new Set([
+  "foryou",
+  "following",
+  "search",
+  "live",
+  "tag",
+  "music",
+  "effect",
+  "discover",
+  "video",
+  "photo",
+  "t",
+]);
+
+const SOCIAL_URL_RE =
+  /(?:https?:\/\/)?(?:(?:www|m|vm|vt|web|mobile|l|lm|music)\.)?(?:instagram\.com|instagr\.am|tiktok\.com|youtube\.com|youtu\.be|snapchat\.com|facebook\.com|fb\.com|twitter\.com|x\.com)\/[^\s,;<>\u060C\uFF0C]+/gi;
+
+function sanitizePasteToken(raw: string): string {
+  return raw
+    .replace(/[\u200B-\u200D\uFEFF\u2060\u200E\u200F]/g, "")
+    .replace(/^[<(\[]+/, "")
+    .replace(/[>)\].,]+$/g, "")
+    .trim();
+}
+
+function unwrapRedirectProfileUrl(raw: string): string {
+  try {
+    const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    const url = new URL(withProtocol.trim());
+    for (const key of ["u", "q", "url", "target"]) {
+      const nested = url.searchParams.get(key)?.trim();
+      if (!nested) continue;
+      if (detectSocialPlatformFromContentUrl(nested)) return nested;
+    }
+  } catch {
+    // ignore
+  }
+  return raw;
+}
+
+function extractProfileUsername(
+  platform: SocialPlatform,
+  pathname: string,
+  segments: string[],
+  url: URL
+): string | null {
+  switch (platform) {
+    case "instagram": {
       const user = segments[0];
-      if (!user || reserved.has(user.toLowerCase())) return null;
+      if (!user || INSTAGRAM_RESERVED.has(user.toLowerCase())) return null;
       return user;
-    },
-  },
-  {
-    platform: "tiktok",
-    hostPattern: /^(?:www\.)?tiktok\.com$/i,
-    pathPattern: /^\/@([^/?#]+)\/?$/i,
-    extractUsername: (_p, segments) => segments[0]?.replace(/^@/, "") ?? null,
-  },
-  {
-    platform: "youtube",
-    hostPattern: /^(?:www\.)?youtube\.com$/i,
-    pathPattern: /^\/(?:@|c\/|channel\/|user\/)([^/?#]+)\/?$/i,
-    extractUsername: (pathname) => {
+    }
+    case "tiktok": {
+      const at = segments.find((segment) => segment.startsWith("@"));
+      if (at) return at.replace(/^@+/, "");
+      const first = segments[0]?.replace(/^@+/, "") ?? "";
+      if (!first || TIKTOK_RESERVED.has(first.toLowerCase())) return null;
+      return null;
+    }
+    case "youtube": {
+      const host = url.hostname.toLowerCase().replace(/^www\./, "");
+      if (host === "youtu.be") return null;
       const handleMatch = pathname.match(/^\/@([^/?#]+)/i);
       if (handleMatch) return handleMatch[1];
-      const cMatch = pathname.match(/^\/c\/([^/?#]+)/i);
-      if (cMatch) return cMatch[1];
-      const channelMatch = pathname.match(/^\/channel\/([^/?#]+)/i);
-      if (channelMatch) return channelMatch[1];
-      const userMatch = pathname.match(/^\/user\/([^/?#]+)/i);
-      if (userMatch) return userMatch[1];
-      return null;
-    },
-  },
-  {
-    platform: "snapchat",
-    hostPattern: /^(?:www\.)?snapchat\.com$/i,
-    pathPattern: /^\/add\/([^/?#]+)\/?$/i,
-    extractUsername: (_p, segments) => segments[1] ?? segments[0] ?? null,
-  },
-  {
-    platform: "twitter",
-    hostPattern: /^(?:www\.)?(?:twitter|x)\.com$/i,
-    pathPattern: /^\/([^/?#]+)\/?$/i,
-    extractUsername: (_p, segments) => {
-      const reserved = new Set(["home", "explore", "notifications", "messages", "i"]);
+      if (segments[0] === "c" || segments[0] === "user" || segments[0] === "channel") {
+        return segments[1] ?? null;
+      }
+      const first = segments[0];
+      if (!first || YOUTUBE_RESERVED.has(first.toLowerCase())) return null;
+      return first;
+    }
+    case "snapchat": {
+      if (segments[0] === "add") return segments[1] ?? null;
+      if (segments[0]?.startsWith("@")) return segments[0].replace(/^@+/, "");
+      const first = segments[0];
+      if (!first || SNAPCHAT_RESERVED.has(first.toLowerCase())) return null;
+      return first;
+    }
+    case "twitter": {
       const user = segments[0];
-      if (!user || reserved.has(user.toLowerCase())) return null;
+      if (!user || TWITTER_RESERVED.has(user.toLowerCase())) return null;
       return user;
-    },
-  },
-  {
-    platform: "facebook",
-    hostPattern: /^(?:www\.|m\.)?(?:facebook\.com|fb\.com)$/i,
-    pathPattern: /^\/(?:[^/?#]+(?:\/[^/?#]+)*)\/?$/i,
-    extractUsername: (pathname, segments, url) =>
-      extractFacebookUsername(pathname, segments, url),
-  },
-];
+    }
+    case "facebook": {
+      return extractFacebookUsername(segments, url);
+    }
+    default:
+      return null;
+  }
+}
 
 function extractFacebookUsername(
-  pathname: string,
   segments: string[],
   url?: URL
 ): string | null {
@@ -118,44 +180,44 @@ function extractFacebookUsername(
   const user = segments[0];
   if (!user || isFacebookReservedPathSegment(user)) return null;
   if (user.endsWith(".php")) return null;
-  if (pathname.includes("/posts/") || pathname.includes("/videos/")) return null;
   return user;
 }
 
 function parseFromUrl(raw: string): ParsedProfile | null {
+  const unwrapped = unwrapRedirectProfileUrl(raw);
   let url: URL;
   try {
-    const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    const withProtocol = /^https?:\/\//i.test(unwrapped)
+      ? unwrapped
+      : `https://${unwrapped}`;
     url = new URL(withProtocol.trim());
   } catch {
     return null;
   }
 
-  const host = url.hostname.toLowerCase();
+  const platform = detectSocialPlatformFromContentUrl(url.toString());
+  if (!platform || !isSocialPlatform(platform)) return null;
+
   const pathname = url.pathname;
   const segments = pathname.split("/").filter(Boolean);
+  const username = extractProfileUsername(platform, pathname, segments, url);
+  if (!username) return null;
 
-  for (const pattern of PLATFORM_PATTERNS) {
-    if (!pattern.hostPattern.test(host)) continue;
-    const username = pattern.extractUsername(pathname, segments, url);
-    if (!username) continue;
+  const normalized_username = normalizeUsername(username);
+  if (!normalized_username) return null;
 
-    const normalized_username = normalizeUsername(username);
-    const profile_url =
-      pattern.platform === "facebook" && normalized_username.startsWith("id:")
-        ? `https://www.facebook.com/profile.php?id=${normalized_username.slice(3)}`
-        : buildCanonicalProfileUrl(pattern.platform, normalized_username);
+  const profile_url =
+    platform === "facebook" && normalized_username.startsWith("id:")
+      ? `https://www.facebook.com/profile.php?id=${normalized_username.slice(3)}`
+      : buildCanonicalProfileUrl(platform, normalized_username);
 
-    return {
-      platform: pattern.platform,
-      username: username.replace(/^@+/, ""),
-      normalized_username,
-      profile_url,
-      normalized_profile_url: normalizeProfileUrl(profile_url),
-    };
-  }
-
-  return null;
+  return {
+    platform,
+    username: username.replace(/^@+/, ""),
+    normalized_username,
+    profile_url,
+    normalized_profile_url: normalizeProfileUrl(profile_url),
+  };
 }
 
 function parseFromHandle(raw: string, platformHint?: SocialPlatform): ParsedProfile | null {
@@ -193,7 +255,7 @@ export function parseProfileInput(
   input: string,
   platformHint?: SocialPlatform
 ): ParsedProfile | null {
-  const trimmed = stripTrailingPastePunctuation(input.trim());
+  const trimmed = sanitizePasteToken(input);
   if (!trimmed) return null;
 
   const fromUrl = parseFromUrl(trimmed);
@@ -202,12 +264,39 @@ export function parseProfileInput(
   return parseFromHandle(trimmed, platformHint);
 }
 
+function coalesceWrappedProfileUrls(tokens: string[]): string[] {
+  const out: string[] = [];
+  for (const token of tokens) {
+    const prev = out[out.length - 1];
+    if (prev && /\/@$/.test(prev) && /^@?[\w.]+$/.test(token)) {
+      out[out.length - 1] = `${prev}${token.replace(/^@/, "")}`;
+      continue;
+    }
+    out.push(token);
+  }
+  return out;
+}
+
 /** Split pasted creator links / handles (newlines, commas, semicolons, whitespace). */
 export function splitProfileInputTokens(raw: string): string[] {
-  return raw
+  const cleaned = raw
+    .replace(/[\u200B-\u200D\uFEFF\u2060\u200E\u200F]/g, "")
+    .replace(/[\u060C\uFF0C]/g, ",");
+
+  const extracted: string[] = [];
+  const remainder = cleaned.replace(SOCIAL_URL_RE, (match) => {
+    extracted.push(sanitizePasteToken(match));
+    return "\n";
+  });
+
+  const leftover = remainder
     .split(/[\s,;]+/)
-    .map((token) => stripTrailingPastePunctuation(token.trim()))
+    .map((token) => sanitizePasteToken(token))
     .filter((token) => token.length > 0);
+
+  return coalesceWrappedProfileUrls(
+    [...extracted, ...leftover].filter((token) => token.length > 0)
+  );
 }
 
 export type ParsedProfileListItem = ParsedProfile & { raw: string };
@@ -242,10 +331,6 @@ export function parseProfileInputList(
   }
 
   return { parsed, invalid };
-}
-
-function stripTrailingPastePunctuation(value: string): string {
-  return value.replace(/[)\].,]+$/g, "");
 }
 
 export function resolvePlatformAccountFields(input: {
