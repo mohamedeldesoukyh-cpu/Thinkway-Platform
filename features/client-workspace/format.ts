@@ -55,12 +55,15 @@ export function formatOptionalCompactCount(count: number | undefined | null): st
   return formatCompactCount(count);
 }
 
-/** List-card chip: followers first (Discovery parity), ER only when followers are missing. */
-export function listPlatformChipValue(row: {
+/** List-card chip: followers on top, ER% underneath. Missing values stay blank. */
+export function listPlatformChipMetrics(row: {
   followers?: number | null;
   engagementRate?: number | null;
-}): string | null {
-  return formatOptionalCompactCount(row.followers) ?? formatOptionalEngagementPct(row.engagementRate);
+}): { followers: string | null; engagementRate: string | null } {
+  return {
+    followers: formatOptionalCompactCount(row.followers),
+    engagementRate: formatOptionalEngagementPct(row.engagementRate),
+  };
 }
 
 export function formatExactCount(count: number | undefined | null): string {

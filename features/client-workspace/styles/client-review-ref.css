@@ -202,7 +202,7 @@
 .tw-review .chip .plat-mark-wrap{width:16px;height:16px;}
 .tw-review .chip .plat-mark{width:16px;height:16px;}
 .tw-review .plat-ers{
-  display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:8px;
+  display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px 12px;margin-top:8px;
 }
 .tw-review .plat-er{
   display:inline-flex;align-items:center;gap:5px;
@@ -212,7 +212,12 @@
 .tw-review .plat-er .plat-mark{
   width:18px;height:18px;border-radius:50%;object-fit:cover;background:transparent;
 }
+.tw-review .plat-er-metrics{display:flex;flex-direction:column;line-height:1.15;min-width:0;}
 .tw-review .plat-er b{font-family:"Geist Mono",ui-monospace,monospace;font-weight:700;}
+.tw-review .plat-er .er{
+  font-family:"Geist Mono",ui-monospace,monospace;
+  font-size:10px;font-weight:600;color:var(--muted);
+}
 .tw-review .dt-quick.plat-quick{
   grid-template-columns:repeat(auto-fill,minmax(132px,1fr));
   max-width:none;margin-top:12px;
@@ -761,7 +766,7 @@
 .tw-review .cc .hd,
 .tw-review .cc .sub{font-size:11.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .tw-review .cc .ers,
-.tw-review .cc .plat-ers{display:flex;gap:13px;margin-top:8px;}
+.tw-review .cc .plat-ers{display:flex;align-items:flex-start;gap:13px;margin-top:8px;}
 .tw-review .cc .plat-er{font-size:12.5px;font-weight:600;}
 .tw-review .cc .ccfoot{
   display:flex;align-items:center;justify-content:space-between;gap:8px;

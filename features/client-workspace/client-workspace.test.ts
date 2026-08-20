@@ -14,7 +14,7 @@ import {
   quotationClientShareRequiresSave,
   quotationIsMovedToCampaign,
 } from "./client-review-selection";
-import { clientSafeFitCopy, clientCreatorIdentity, formatCompactCount, formatEngagementPct, formatEngagementRateLabel, formatHandleLabel, formatOptionalCompactCount, formatOptionalEngagementPct, listPlatformChipValue, providedText } from "./format";
+import { clientSafeFitCopy, clientCreatorIdentity, formatCompactCount, formatEngagementPct, formatEngagementRateLabel, formatHandleLabel, formatOptionalCompactCount, formatOptionalEngagementPct, listPlatformChipMetrics, providedText } from "./format";
 import { deliverablesLabel, groupedActivityMix, looksLikePlatformList, summarizeCreatorDeliverables, summarizeDeliverablesByPlatform } from "./deliverables";
 import {
   allocationSlices,
@@ -1189,8 +1189,14 @@ test("unified enrichment stores followers and ER per platform", () => {
   });
   assert.equal(rows.find((row) => row.platform === "instagram")?.followers, 83_200);
   assert.equal(rows.find((row) => row.platform === "tiktok")?.followers, 120_000);
-  assert.equal(listPlatformChipValue(rows.find((row) => row.platform === "instagram")!), "83.2K");
-  assert.equal(listPlatformChipValue(rows.find((row) => row.platform === "tiktok")!), "120.0K");
+  assert.deepEqual(listPlatformChipMetrics(rows.find((row) => row.platform === "instagram")!), {
+    followers: "83.2K",
+    engagementRate: "4.2%",
+  });
+  assert.deepEqual(listPlatformChipMetrics(rows.find((row) => row.platform === "tiktok")!), {
+    followers: "120.0K",
+    engagementRate: "6.1%",
+  });
   assert.equal(rows.some((row) => row.platform === "youtube"), false);
 });
 
@@ -1329,10 +1335,19 @@ test("missing platform metrics stay blank on the avatar chip", () => {
   assert.equal(formatOptionalEngagementPct(8.8), "8.8%");
   assert.equal(formatOptionalCompactCount(undefined), null);
   assert.equal(formatOptionalCompactCount(2100), "2.1K");
-  assert.equal(listPlatformChipValue({ followers: 4_700_000, engagementRate: 3.2 }), "4.7M");
-  assert.equal(listPlatformChipValue({ followers: 129_000, engagementRate: 14.8 }), "129.0K");
-  assert.equal(listPlatformChipValue({ engagementRate: 14.8 }), "14.8%");
-  assert.equal(listPlatformChipValue({}), null);
+  assert.deepEqual(listPlatformChipMetrics({ followers: 4_700_000, engagementRate: 3.2 }), {
+    followers: "4.7M",
+    engagementRate: "3.2%",
+  });
+  assert.deepEqual(listPlatformChipMetrics({ followers: 129_000, engagementRate: 14.8 }), {
+    followers: "129.0K",
+    engagementRate: "14.8%",
+  });
+  assert.deepEqual(listPlatformChipMetrics({ engagementRate: 14.8 }), {
+    followers: null,
+    engagementRate: "14.8%",
+  });
+  assert.deepEqual(listPlatformChipMetrics({}), { followers: null, engagementRate: null });
 });
 
 test("client engagement rates stay percentages — 0.9 is 0.9%, not 90%", () => {
