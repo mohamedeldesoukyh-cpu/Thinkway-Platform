@@ -225,22 +225,26 @@ export function CreatorsWorkspace({
             const sub = [formatHandleLabel(identity.handle), location].filter(Boolean).join(" · ");
             const state = selection[creator.creatorId] ?? creator.selection;
             return (
-            <button
+            <div
               key={creator.creatorId}
-              type="button"
               className={creator.creatorId === activeId ? "cc sel" : "cc"}
-              onClick={() => openCreator(creator.creatorId)}
             >
               {view.canDecide ? (
-                <input
-                  type="checkbox"
-                  className="pick"
-                  checked={state === "accepted"}
-                  onClick={(event) => event.stopPropagation()}
-                  onChange={(event) => toggleChecked(creator, event.currentTarget.checked)}
-                  aria-label={`Select ${creator.displayName}`}
-                />
+                <label className="pick-hit">
+                  <input
+                    type="checkbox"
+                    className="pick"
+                    checked={state === "accepted"}
+                    onChange={(event) => toggleChecked(creator, event.currentTarget.checked)}
+                    aria-label={`Select ${creator.displayName}`}
+                  />
+                </label>
               ) : null}
+              <button
+                type="button"
+                className="cc-main"
+                onClick={() => openCreator(creator.creatorId)}
+              >
               <ReviewAvatar
                 className="photo"
                 initialsClassName="ini"
@@ -279,7 +283,8 @@ export function CreatorsWorkspace({
                   <span className={statusClass(state)}>{CLIENT_CREATOR_STATUS_LABEL[state]}</span>
                 </div>
               </div>
-            </button>
+              </button>
+            </div>
             );
           })}
           {filtered.length === 0 ? <p className="unavailable">No creators match these filters.</p> : null}

@@ -742,9 +742,24 @@
   overflow:hidden;cursor:pointer;transition:.16s var(--ease);box-shadow:var(--sh);
   padding:0;align-items:stretch;position:relative;color:inherit;
 }
+.tw-review .cc-main{
+  display:flex;flex:1;min-width:0;width:100%;
+  text-align:left;font-family:inherit;appearance:none;
+  background:transparent;border:none;padding:0;margin:0;
+  align-items:stretch;cursor:pointer;color:inherit;
+}
 .tw-review .cc:hover{border-color:var(--lav2);box-shadow:var(--sh-lg);transform:translateY(-1px);}
 .tw-review .cc.sel{border-color:var(--blue);box-shadow:0 0 0 3px rgba(0,87,255,.13),var(--sh);}
-.tw-review .cc .pick{position:absolute;top:8px;left:8px;z-index:2;width:16px;height:16px;margin:0;}
+.tw-review .cc .pick-hit{
+  position:absolute;top:0;left:0;z-index:4;
+  width:44px;height:44px;padding:8px;margin:0;
+  display:flex;align-items:flex-start;justify-content:flex-start;
+  cursor:pointer;touch-action:manipulation;
+}
+.tw-review .cc .pick{
+  width:18px;height:18px;margin:0;flex:none;
+  accent-color:var(--blue);pointer-events:auto;
+}
 .tw-review .cc .photo,
 .tw-review .cc .av{
   width:120px;
