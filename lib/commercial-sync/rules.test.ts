@@ -4,9 +4,14 @@ import {
   canCreateCampaignFromQuotation,
   canGenerateQuotationVersion,
   formatVersionedQuotationSerial,
+  isApprovedQuotationCommercialHeaderPatch,
+  isApprovedQuotationLocked,
   isCommercialSyncEnabled,
   isQuotationCommercialImmutable,
+  approvedQuotationMutationError,
+  NEW_QUOTATION_VERSION_STATUS,
   stripQuotationVersionSuffix,
+  APPROVED_QUOTATION_LOCKED_MESSAGE,
 } from "@/lib/commercial-sync/rules";
 
 assert.equal(isCommercialSyncEnabled("draft"), true);
@@ -23,6 +28,20 @@ assert.equal(isQuotationCommercialImmutable("draft"), false);
 assert.equal(canGenerateQuotationVersion("draft"), false);
 assert.equal(canGenerateQuotationVersion("sent"), true);
 assert.equal(canGenerateQuotationVersion("approved"), true);
+
+assert.equal(isApprovedQuotationLocked("approved"), true);
+assert.equal(isApprovedQuotationLocked("sent"), false);
+assert.equal(isApprovedQuotationLocked("draft"), false);
+assert.equal(isApprovedQuotationLocked("under_review"), false);
+assert.equal(approvedQuotationMutationError("approved")?.message, APPROVED_QUOTATION_LOCKED_MESSAGE);
+assert.equal(approvedQuotationMutationError("sent"), null);
+assert.equal(approvedQuotationMutationError("draft"), null);
+assert.equal(NEW_QUOTATION_VERSION_STATUS, "draft");
+assert.equal(isApprovedQuotationCommercialHeaderPatch({ currency: "USD" }), true);
+assert.equal(isApprovedQuotationCommercialHeaderPatch({ status: "draft" }), true);
+assert.equal(isApprovedQuotationCommercialHeaderPatch({ status: "approved" }), false);
+assert.equal(isApprovedQuotationCommercialHeaderPatch({ notes: "ok" }), false);
+assert.equal(isApprovedQuotationCommercialHeaderPatch({ total_revenue_egp: 1 }), true);
 
 assert.equal(canCreateCampaignFromQuotation("approved"), true);
 assert.equal(canCreateCampaignFromQuotation("sent"), false);

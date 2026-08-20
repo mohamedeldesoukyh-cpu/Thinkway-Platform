@@ -15,6 +15,7 @@ import { convertQuotationToAssignments } from "@/lib/services/campaigns/convert-
 import { isRelease20AssignmentConvertEnabled } from "@/lib/release/release-2-0-feature-flag";
 import type { Database } from "@/types/database";
 
+import { rejectIfApprovedQuotation } from "./approved-quotation-guard";
 import type { QuotationMutationResult } from "./quotation-helpers";
 import {
   copyQuotationItemsToShortlist,
@@ -42,6 +43,9 @@ export async function updateQuotationClientBrand(
     temporary_brand_name?: string | null;
   }
 ): Promise<QuotationMutationResult> {
+  const locked = await rejectIfApprovedQuotation(supabase, input.quotationId);
+  if (locked) return locked;
+
   const patch: Record<string, unknown> = {};
 
   if (input.is_temporary_client) {

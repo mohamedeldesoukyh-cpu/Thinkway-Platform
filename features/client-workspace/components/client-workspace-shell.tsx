@@ -2,7 +2,7 @@
 
 import type { ClientReviewStatus, ClientWorkspaceSectionId } from "../constants";
 import { CLIENT_PROPOSAL_STATUS_LABEL, CLIENT_WORKSPACE_SECTION_LABEL } from "../constants";
-import { QUOTATION_STAGE_LABEL, SHORTLIST_STAGE_LABEL } from "../journey-state";
+import { QUOTATION_STAGE_LABEL, SHORTLIST_STAGE_LABEL, clientWorkspacePathReviewId, clientWorkspaceVersionPill } from "../journey-state";
 import { buildClientReviewPath } from "../security/review-token";
 import type { ClientWorkspaceView } from "../types";
 import { ClientJourneyStrip } from "./journey-strip";
@@ -23,10 +23,19 @@ export function ClientWorkspaceShell({
   children: React.ReactNode;
 }) {
   const preparedFor = view.overview.clientLabel?.trim() || view.overview.campaignName;
-  const pathReviewId = view.journey?.canonicalReviewId ?? view.review.id;
+  const pathReviewId = clientWorkspacePathReviewId({
+    historical: Boolean(view.journey?.historical),
+    viewedReviewId: view.review.id,
+    canonicalReviewId: view.journey?.canonicalReviewId,
+  });
   const quotationLabel = view.journey ? QUOTATION_STAGE_LABEL[view.journey.quotationStage] : CLIENT_PROPOSAL_STATUS_LABEL[view.review.status];
   const shortlistLabel = view.journey ? SHORTLIST_STAGE_LABEL[view.journey.shortlistStage] : null;
-  const statusTone = statusPillTone(view.review.status);
+  const statusTone = view.journey?.historical ? "cur" : statusPillTone(view.review.status);
+  const versionLabel = clientWorkspaceVersionPill({
+    historical: Boolean(view.journey?.historical),
+    reviewNumber: view.review.reviewNumber,
+    newerReviewNumber: view.newerReviewNumber,
+  });
   const primaryHref = buildClientReviewPath(pathReviewId, token, "approval");
   const primaryLabel = view.journey?.canApproveQuotation
     ? "Approve Quotation"
@@ -55,10 +64,11 @@ export function ClientWorkspaceShell({
           </div>
           <div className="sp" />
           <span className={`stpill ${statusTone}`}>{quotationLabel}</span>
-          {shortlistLabel ? <span className="stpill cur">Shortlist · {shortlistLabel}</span> : null}
-          <span className="stpill cur">
-            {view.newerReviewNumber ? `Updated · v${view.newerReviewNumber}` : `Current · v${view.review.reviewNumber}`}
-          </span>
+          {view.journey?.historical ? <span className="stpill cur">Read only</span> : null}
+          {shortlistLabel && !view.journey?.historical ? (
+            <span className="stpill cur">Shortlist · {shortlistLabel}</span>
+          ) : null}
+          <span className="stpill cur">{versionLabel}</span>
           {view.canDecide && primaryLabel ? (
             <>
               <a

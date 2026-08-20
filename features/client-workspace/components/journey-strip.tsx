@@ -31,10 +31,14 @@ function nodeCopy(view: ClientWorkspaceView, id: ClientJourneyNodeId): { label: 
     return { label: QUOTATION_STAGE_LABEL[journey.quotationStage], tone: quotationStageTone(journey.quotationStage) };
   }
   if (id === "final_approval") {
+    if (journey.historical && journey.quotationStage === "superseded") {
+      return { label: "Historical", tone: "idle" };
+    }
     if (journey.quotationStage === "approved") return { label: "Approved", tone: "ok" };
     if (journey.quotationStage === "rejected") return { label: "Rejected", tone: "bad" };
     if (journey.quotationStage === "updated") return { label: "Approval required", tone: "attention" };
     if (journey.canApproveQuotation) return { label: "Awaiting client", tone: "active" };
+    if (journey.historical) return { label: "Read only", tone: "idle" };
     return { label: "Not started", tone: "idle" };
   }
   if (id === "campaign") {

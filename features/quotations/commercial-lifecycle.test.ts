@@ -3,8 +3,11 @@ import assert from "node:assert/strict";
 import {
   canCreateCampaignFromQuotation,
   canGenerateQuotationVersion,
+  isApprovedQuotationLocked,
   isCommercialSyncEnabled,
   isQuotationCommercialImmutable,
+  NEW_QUOTATION_VERSION_STATUS,
+  approvedQuotationMutationError,
 } from "@/lib/commercial-sync/rules";
 
 /**
@@ -67,6 +70,12 @@ assert.equal(canGenerateQuotationVersion("sent"), true);
 // Campaign only from approved
 assert.equal(canCreateCampaignFromQuotation("approved"), true);
 assert.equal(canCreateCampaignFromQuotation("sent"), false);
+
+assert.equal(isApprovedQuotationLocked("approved"), true);
+assert.equal(isApprovedQuotationLocked("sent"), false);
+assert.ok(approvedQuotationMutationError("approved")?.message.includes("new quotation version"));
+assert.equal(canGenerateQuotationVersion("approved"), true);
+assert.equal(NEW_QUOTATION_VERSION_STATUS, "draft");
 
 // V2 path
 quotation = transitionStatus(

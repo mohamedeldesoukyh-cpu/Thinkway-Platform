@@ -40,6 +40,7 @@ import {
   canGenerateQuotationVersion,
   isQuotationCommercialImmutable,
 } from "@/lib/commercial-sync/rules";
+import { rejectIfApprovedQuotation, rejectIfApprovedQuotationHeaderPatch } from "./approved-quotation-guard";
 import { generateQuotationVersion } from "./quotation-version-service";
 import { ensureDiscoveryCreatorsBrowsable, ensureDiscoverySeedsBrowsable } from "@/lib/creators/discovery-browse-eligibility";
 
@@ -294,6 +295,9 @@ export async function importShortlistItemsToQuotation(
     itemIds?: string[];
   }
 ): Promise<QuotationMutationResult<{ added: number }>> {
+  const locked = await rejectIfApprovedQuotation(supabase, input.quotationId);
+  if (locked) return locked;
+
   const { data, error } = await loadShortlistItemsForSeeds(
     supabase,
     input.shortlistId,
@@ -404,6 +408,8 @@ export async function addItemsToQuotation(
   creators: QuotationItemSeed[]
 ): Promise<QuotationMutationResult<{ added: number; itemIds: string[] }>> {
   if (!creators?.length) return { ok: false, message: "No creators provided." };
+  const locked = await rejectIfApprovedQuotation(supabase, quotationId);
+  if (locked) return locked;
 
   const { data: maxRow } = await fetchMaxItemSortOrder(supabase, quotationId);
   const startSort = ((maxRow as { sort_order: number } | null)?.sort_order ?? -1) + 1;
@@ -482,6 +488,9 @@ export async function updateQuotationHeader(
   }
   if (Object.keys(patch).length === 0) return { ok: true };
 
+  const lockedHeader = await rejectIfApprovedQuotationHeaderPatch(supabase, input.id, patch);
+  if (lockedHeader) return lockedHeader;
+
   if (patch.client_id !== undefined || patch.brand_id !== undefined) {
     const clientId = (patch.client_id as string | null) ?? undefined;
     const brandId = (patch.brand_id as string | null) ?? undefined;
@@ -512,6 +521,8 @@ export async function duplicateQuotationItems(
   if (!input.item_ids.length) {
     return { ok: false, message: "Select at least one creator to duplicate." };
   }
+  const locked = await rejectIfApprovedQuotation(supabase, input.quotation_id);
+  if (locked) return locked;
 
   const result = await duplicateQuotationItemRows(
     supabase,
@@ -539,6 +550,9 @@ export async function addQuotationItemOption(
   supabase: SupabaseClient<Database>,
   input: { quotation_id: string; item_id: string }
 ): Promise<QuotationMutationResult<{ id: string }>> {
+  const locked = await rejectIfApprovedQuotation(supabase, input.quotation_id);
+  if (locked) return locked;
+
   const { data: existing, error: loadError } = await fetchQuotationItemsByIds(
     supabase,
     input.quotation_id,

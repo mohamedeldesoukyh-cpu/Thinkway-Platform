@@ -48,7 +48,14 @@ import {
   journeyActionRequired,
   journeyCanonicalReviewId,
   pickActiveDecisionReview,
+  projectClientJourney,
   reviewIdBelongsToJourney,
+  approvalWorkspaceKind,
+  canMutateClientReviewFromBoundReview,
+  clientWorkspacePathReviewId,
+  clientWorkspaceVersionPill,
+  QUOTATION_STAGE_LABEL,
+  snapshotForReview,
 } from "./journey-state";
 import {
   actionRequiredFor,
@@ -1795,6 +1802,385 @@ test("typed shortlist-to-quotation diff covers added, removed, investment, and d
   assert.equal(diff!.rows.find((row) => row.creatorId === "b")?.kind, "removed");
   assert.equal(diff!.rows.find((row) => row.creatorId === "c")?.kind, "added");
   assert.ok(diff!.summaryItems.some((item) => /commercial value changed after shortlist approval/i.test(item)));
+});
+
+function quotationSnapshot(
+  campaignName: string,
+  investment: number,
+  creatorId: string,
+  creatorInvestment = investment
+) {
+  return parseSourceSnapshot({
+    source: "quotation",
+    brandName: "Tuna",
+    campaignName,
+    clientLabel: "Tuna",
+    platforms: ["instagram"],
+    deliverables: ["Reel"],
+    creators: [
+      {
+        creatorId,
+        displayName: creatorId === "faisal" ? "Faisal" : `Creator ${creatorId}`,
+        investmentAmount: creatorInvestment,
+        deliverables: "Reel x 1",
+      },
+    ],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "Duration not confirmed", phases: [] },
+    commercial: {
+      currency: "EGP",
+      creatorInvestment: creatorInvestment,
+      totalInvestment: investment,
+      lines: [],
+      selectedCount: 1,
+      totalCount: 1,
+    },
+    creatorIds: [creatorId],
+  });
+}
+
+test("historical quotation URLs keep frozen version state after a later version is published", () => {
+  const v1Snapshot = quotationSnapshot("Liwa International Festival v1", 557_142.87, "faisal", 64_286);
+  const v2Snapshot = quotationSnapshot("Liwa International Festival v2", 571_428.59, "faisal", 64_286);
+  const shortlist = {
+    id: "s1",
+    source: "shortlist" as const,
+    status: "approved" as const,
+    reviewNumber: 1,
+    createdAt: "2026-08-01T00:00:00.000Z",
+    firstViewedAt: "2026-08-01T01:00:00.000Z",
+    journeyId: "j1",
+  };
+  const v1 = {
+    id: "q1",
+    source: "quotation" as const,
+    status: "approved" as const,
+    reviewNumber: 1,
+    createdAt: "2026-08-10T00:00:00.000Z",
+    firstViewedAt: "2026-08-10T01:00:00.000Z",
+    journeyId: "j1",
+    quotationId: "quote-1",
+    approvedAt: "2026-08-18T00:00:00.000Z",
+    sourceSnapshot: v1Snapshot,
+  };
+  const v2 = {
+    id: "q2",
+    source: "quotation" as const,
+    status: "awaiting_review" as const,
+    reviewNumber: 2,
+    createdAt: "2026-08-19T00:00:00.000Z",
+    firstViewedAt: null,
+    journeyId: "j1",
+    quotationId: "quote-1",
+    campaignHeaderId: null,
+    sourceSnapshot: v2Snapshot,
+  };
+  const members = [shortlist, v1, v2];
+  const canonicalReviewId = journeyCanonicalReviewId(members, "s1");
+  assert.equal(canonicalReviewId, "s1");
+
+  const openedV1 = pickActiveDecisionReview({
+    reviews: members,
+    requestedReviewId: "q1",
+    canonicalReviewId,
+  });
+  assert.equal(openedV1.historical, true);
+  assert.equal(openedV1.review?.id, "q1");
+  assert.equal(openedV1.review?.sourceSnapshot?.campaignName, "Liwa International Festival v1");
+  assert.equal(openedV1.review?.sourceSnapshot?.commercial.totalInvestment, 557_142.87);
+  assert.equal(openedV1.review?.sourceSnapshot?.creators[0]?.creatorId, "faisal");
+  assert.equal(openedV1.review?.sourceSnapshot?.creators[0]?.investmentAmount, 64_286);
+  assert.equal(
+    snapshotForReview({ sourceSnapshot: v1Snapshot } as never)?.commercial.totalInvestment,
+    557_142.87
+  );
+  assert.notEqual(openedV1.review?.sourceSnapshot?.campaignName, v2Snapshot.campaignName);
+  assert.notEqual(openedV1.review?.sourceSnapshot?.commercial.totalInvestment, 571_428.59);
+
+  const historicalJourney = projectClientJourney({
+    members,
+    viewed: openedV1.review!,
+    historical: true,
+    canonicalReviewId,
+  });
+  assert.equal(historicalJourney.historical, true);
+  assert.equal(historicalJourney.quotationStage, "superseded");
+  assert.equal(QUOTATION_STAGE_LABEL[historicalJourney.quotationStage], "Historical / Superseded");
+  assert.equal(historicalJourney.quotationStage === "updated", false);
+  assert.equal(historicalJourney.quotationStage === "approved", false);
+  assert.equal(historicalJourney.campaignStarted, false);
+  assert.equal(historicalJourney.performanceStarted, false);
+  assert.equal(historicalJourney.movedToCampaign, false);
+  assert.equal(historicalJourney.campaignHeaderId, null);
+  assert.equal(historicalJourney.canApproveQuotation, false);
+  assert.equal(historicalJourney.canApproveShortlist, false);
+  assert.equal(historicalJourney.canRejectQuotation, false);
+  assert.equal(historicalJourney.canRequestQuotationChanges, false);
+  assert.equal(historicalJourney.canRequestShortlistChanges, false);
+  assert.equal(
+    approvalWorkspaceKind({
+      historical: true,
+      quotationStage: historicalJourney.quotationStage,
+      canApproveShortlist: historicalJourney.canApproveShortlist,
+      canApproveQuotation: historicalJourney.canApproveQuotation,
+    }),
+    "historical"
+  );
+  assert.equal(
+    clientWorkspaceVersionPill({
+      historical: true,
+      reviewNumber: 1,
+      newerReviewNumber: 2,
+    }),
+    "Historical · v1"
+  );
+  assert.equal(
+    clientWorkspacePathReviewId({
+      historical: true,
+      viewedReviewId: "q1",
+      canonicalReviewId,
+    }),
+    "q1"
+  );
+  assert.equal(
+    canMutateClientReviewFromBoundReview({
+      reviews: members,
+      boundReviewId: "q1",
+      canonicalReviewId,
+    }),
+    false
+  );
+  assert.match(journeyActionRequired(historicalJourney), /frozen historical version/i);
+
+  const openedCanonical = pickActiveDecisionReview({
+    reviews: members,
+    requestedReviewId: "s1",
+    canonicalReviewId,
+  });
+  assert.equal(openedCanonical.historical, false);
+  assert.equal(openedCanonical.review?.id, "q2");
+  assert.equal(openedCanonical.review?.sourceSnapshot?.campaignName, "Liwa International Festival v2");
+  assert.equal(openedCanonical.review?.sourceSnapshot?.commercial.totalInvestment, 571_428.59);
+
+  const currentJourney = projectClientJourney({
+    members,
+    viewed: openedCanonical.review!,
+    historical: false,
+    canonicalReviewId,
+  });
+  assert.equal(currentJourney.historical, false);
+  assert.equal(currentJourney.quotationStage, "updated");
+  assert.equal(QUOTATION_STAGE_LABEL[currentJourney.quotationStage], "Updated — Approval required");
+  assert.equal(currentJourney.campaignStarted, false);
+  assert.equal(currentJourney.canApproveQuotation, true);
+  assert.equal(currentJourney.canRejectQuotation, true);
+  assert.equal(currentJourney.canRequestQuotationChanges, true);
+  assert.equal(
+    approvalWorkspaceKind({
+      historical: false,
+      quotationStage: currentJourney.quotationStage,
+      canApproveShortlist: currentJourney.canApproveShortlist,
+      canApproveQuotation: currentJourney.canApproveQuotation,
+    }),
+    "open"
+  );
+  assert.equal(
+    clientWorkspaceVersionPill({
+      historical: false,
+      reviewNumber: 2,
+      newerReviewNumber: null,
+    }),
+    "Current · v2"
+  );
+  assert.equal(
+    clientWorkspacePathReviewId({
+      historical: false,
+      viewedReviewId: "q2",
+      canonicalReviewId,
+    }),
+    "s1"
+  );
+  assert.equal(
+    canMutateClientReviewFromBoundReview({
+      reviews: members,
+      boundReviewId: "s1",
+      canonicalReviewId,
+    }),
+    true
+  );
+  assert.equal(
+    reviewIdBelongsToJourney("q1", {
+      canonicalReviewId,
+      memberReviewIds: members.map((item) => item.id),
+      activeReviewId: "q2",
+      journeyId: "j1",
+    }),
+    true
+  );
+});
+
+test("superseded quotation URLs do not inherit later approval or campaign state", () => {
+  const v1 = {
+    id: "q1",
+    source: "quotation" as const,
+    status: "superseded" as const,
+    reviewNumber: 1,
+    createdAt: "2026-08-10T00:00:00.000Z",
+    firstViewedAt: "2026-08-10T01:00:00.000Z",
+    journeyId: "j1",
+    quotationId: "quote-1",
+    sourceSnapshot: quotationSnapshot("Delta v1", 70000, "creator-v1"),
+  };
+  const v2 = {
+    id: "q2",
+    source: "quotation" as const,
+    status: "superseded" as const,
+    reviewNumber: 2,
+    createdAt: "2026-08-12T00:00:00.000Z",
+    firstViewedAt: "2026-08-12T01:00:00.000Z",
+    journeyId: "j1",
+    quotationId: "quote-1",
+    sourceSnapshot: quotationSnapshot("Delta v2", 90000, "creator-v2"),
+  };
+  const v3 = {
+    id: "q3",
+    source: "quotation" as const,
+    status: "approved" as const,
+    reviewNumber: 3,
+    createdAt: "2026-08-19T00:00:00.000Z",
+    firstViewedAt: "2026-08-19T01:00:00.000Z",
+    journeyId: "j1",
+    quotationId: "quote-1",
+    campaignHeaderId: "campaign-1",
+    approvedAt: "2026-08-20T00:00:00.000Z",
+    sourceSnapshot: quotationSnapshot("Delta v3", 140000, "creator-v3"),
+  };
+  const members = [v1, v2, v3];
+  const canonicalReviewId = journeyCanonicalReviewId(members, "q1");
+  assert.equal(canonicalReviewId, "q1");
+
+  const openedV2 = pickActiveDecisionReview({
+    reviews: members,
+    requestedReviewId: "q2",
+    canonicalReviewId,
+    tokenBoundReviewId: "q2",
+  });
+  assert.equal(openedV2.historical, true);
+  assert.equal(openedV2.review?.id, "q2");
+  assert.equal(openedV2.review?.sourceSnapshot?.campaignName, "Delta v2");
+
+  const historicalJourney = projectClientJourney({
+    members,
+    viewed: openedV2.review!,
+    historical: true,
+    canonicalReviewId,
+  });
+  assert.equal(historicalJourney.quotationStage, "superseded");
+  assert.equal(historicalJourney.quotationStage === "approved", false);
+  assert.equal(historicalJourney.campaignStarted, false);
+  assert.equal(historicalJourney.movedToCampaign, false);
+  assert.equal(historicalJourney.campaignHeaderId, null);
+  assert.equal(historicalJourney.canApproveQuotation, false);
+  assert.equal(
+    approvalWorkspaceKind({
+      historical: true,
+      quotationStage: historicalJourney.quotationStage,
+      canApproveShortlist: false,
+      canApproveQuotation: false,
+    }),
+    "historical"
+  );
+  assert.equal(
+    canMutateClientReviewFromBoundReview({
+      reviews: members,
+      boundReviewId: "q2",
+      canonicalReviewId,
+    }),
+    false
+  );
+
+  const openedCanonical = pickActiveDecisionReview({
+    reviews: members,
+    requestedReviewId: "q1",
+    canonicalReviewId,
+  });
+  assert.equal(openedCanonical.historical, false);
+  assert.equal(openedCanonical.review?.id, "q3");
+
+  const currentJourney = projectClientJourney({
+    members,
+    viewed: openedCanonical.review!,
+    historical: false,
+    canonicalReviewId,
+  });
+  assert.equal(currentJourney.quotationStage, "approved");
+  assert.equal(currentJourney.campaignStarted, true);
+  assert.equal(currentJourney.canApproveQuotation, false);
+  assert.equal(
+    approvalWorkspaceKind({
+      historical: false,
+      quotationStage: currentJourney.quotationStage,
+      canApproveShortlist: currentJourney.canApproveShortlist,
+      canApproveQuotation: currentJourney.canApproveQuotation,
+    }),
+    "quotation_approved"
+  );
+  assert.equal(
+    reviewIdBelongsToJourney("q2", {
+      canonicalReviewId,
+      memberReviewIds: ["q1", "q2", "q3"],
+      activeReviewId: "q3",
+    }),
+    true
+  );
+});
+
+test("quotation-first current journey still uses the latest quotation review", () => {
+  const first = {
+    id: "q1",
+    source: "quotation" as const,
+    status: "superseded" as const,
+    reviewNumber: 1,
+    createdAt: "2026-08-02T00:00:00.000Z",
+    journeyId: "j1",
+    quotationId: "quote-1",
+  };
+  const next = {
+    id: "q2",
+    source: "quotation" as const,
+    status: "awaiting_review" as const,
+    reviewNumber: 2,
+    createdAt: "2026-08-03T00:00:00.000Z",
+    firstViewedAt: null,
+    journeyId: "j1",
+    quotationId: "quote-1",
+  };
+  assert.equal(journeyCanonicalReviewId([first, next], "q1"), "q1");
+  const current = pickActiveDecisionReview({
+    reviews: [first, next],
+    requestedReviewId: "q1",
+    canonicalReviewId: "q1",
+  });
+  assert.equal(current.historical, false);
+  assert.equal(current.review?.id, "q2");
+  const journey = projectClientJourney({
+    members: [first, next],
+    viewed: current.review!,
+    historical: false,
+    canonicalReviewId: "q1",
+  });
+  assert.equal(journey.quotationStage, "sent_for_approval");
+  assert.equal(journey.canApproveQuotation, true);
+  assert.equal(journey.historical, false);
+  assert.equal(
+    deriveQuotationStage({
+      quotationExists: true,
+      review: { status: "superseded", firstViewedAt: null },
+      priorApprovedReview: false,
+      movedToCampaign: true,
+    }),
+    "superseded"
+  );
 });
 
 

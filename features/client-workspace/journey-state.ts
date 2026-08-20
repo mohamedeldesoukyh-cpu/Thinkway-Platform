@@ -7,7 +7,11 @@ import type {
   ClientShortlistStage,
 } from "./constants";
 import { isFrozenClientReviewStatus, isInteractiveClientReview } from "./status";
-import type { ClientReviewRecord, ClientReviewSourceSnapshot } from "./types";
+import type {
+  ClientReviewRecord,
+  ClientReviewSourceSnapshot,
+  ClientWorkspaceJourney,
+} from "./types";
 
 export { isFrozenClientReviewStatus, isReusableClientReviewTip } from "./status";
 export type { ClientQuotationStage, ClientReviewDecisionStage, ClientShortlistStage };
@@ -33,7 +37,7 @@ export function canLiveSyncClientReview(input: {
 }
 
 export function deriveShortlistStage(input: {
-  review: Pick<ClientReviewRecord, "status" | "firstViewedAt"> | null;
+  review: (Pick<ClientReviewRecord, "status"> & { firstViewedAt?: string | null }) | null;
 }): ClientShortlistStage {
   if (!input.review) return "not_sent";
   if (input.review.status === "approved") return "approved";
@@ -45,10 +49,11 @@ export function deriveShortlistStage(input: {
 
 export function deriveQuotationStage(input: {
   quotationExists: boolean;
-  review: Pick<ClientReviewRecord, "status" | "firstViewedAt"> | null;
+  review: (Pick<ClientReviewRecord, "status"> & { firstViewedAt?: string | null }) | null;
   priorApprovedReview: boolean;
   movedToCampaign: boolean;
 }): ClientQuotationStage {
+  if (input.review?.status === "superseded") return "superseded";
   if (input.review?.status === "approved" || input.movedToCampaign) return "approved";
   if (input.review?.status === "rejected") return "rejected";
   if (!input.quotationExists && !input.review) return "draft";
@@ -75,6 +80,7 @@ export const QUOTATION_STAGE_LABEL: Record<ClientQuotationStage, string> = {
   updated: "Updated — Approval required",
   approved: "Approved",
   rejected: "Rejected",
+  superseded: "Historical / Superseded",
 };
 
 export function shortlistStageTone(stage: ClientShortlistStage): ClientJourneyNodeTone {
@@ -92,10 +98,9 @@ export function quotationStageTone(stage: ClientQuotationStage): ClientJourneyNo
   return "idle";
 }
 
-export function latestReviewForSource(
-  reviews: ClientReviewRecord[],
-  source: ClientReviewSource
-): ClientReviewRecord | null {
+export function latestReviewForSource<
+  T extends Pick<ClientReviewRecord, "source" | "status" | "reviewNumber" | "createdAt">,
+>(reviews: T[], source: ClientReviewSource): T | null {
   const scoped = reviews
     .filter((review) => review.source === source && review.status !== "revoked")
     .sort(
@@ -105,10 +110,9 @@ export function latestReviewForSource(
   return scoped[0] ?? null;
 }
 
-export function latestApprovedReviewForSource(
-  reviews: ClientReviewRecord[],
-  source: ClientReviewSource
-): ClientReviewRecord | null {
+export function latestApprovedReviewForSource<
+  T extends Pick<ClientReviewRecord, "source" | "status" | "reviewNumber" | "createdAt">,
+>(reviews: T[], source: ClientReviewSource): T | null {
   const scoped = reviews
     .filter((review) => review.source === source && review.status === "approved")
     .sort(
@@ -127,12 +131,25 @@ export function journeyCanonicalReviewId(
   return firstShortlist?.id ?? ordered[0]?.id ?? fallbackId;
 }
 
-export function pickActiveDecisionReview(input: {
-  reviews: ClientReviewRecord[];
+export type ClientJourneyMember = {
+  id: string;
+  source: ClientReviewSource;
+  status: ClientReviewStatus;
+  reviewNumber: number;
+  createdAt: string;
+  firstViewedAt?: string | null;
+  journeyId?: string | null;
+  quotationId?: string | null;
+  shortlistId?: string | null;
+  campaignHeaderId?: string | null;
+};
+
+export function pickActiveDecisionReview<T extends ClientJourneyMember>(input: {
+  reviews: T[];
   requestedReviewId?: string | null;
   canonicalReviewId?: string | null;
   tokenBoundReviewId?: string | null;
-}): { review: ClientReviewRecord | null; historical: boolean } {
+}): { review: T | null; historical: boolean } {
   const { reviews, requestedReviewId, canonicalReviewId, tokenBoundReviewId } = input;
   const candidateIds = [requestedReviewId, tokenBoundReviewId].filter(
     (value): value is string => Boolean(value && value !== canonicalReviewId)
@@ -200,10 +217,10 @@ export function clientApprovalSideEffects(
   };
 }
 
-export function pickReviewForDecision(
-  reviews: ClientReviewRecord[],
+export function pickReviewForDecision<T extends ClientJourneyMember>(
+  reviews: T[],
   stage: ClientReviewDecisionStage
-): ClientReviewRecord | null {
+): T | null {
   return latestReviewForSource(reviews, stage);
 }
 
@@ -220,6 +237,140 @@ export function reviewIdBelongsToJourney(
   if (input.canonicalReviewId === reviewId) return true;
   if (input.journeyId === reviewId) return true;
   return Boolean(input.memberReviewIds?.includes(reviewId));
+}
+
+export function clientWorkspacePathReviewId(input: {
+  historical: boolean;
+  viewedReviewId: string;
+  canonicalReviewId?: string | null;
+}): string {
+  if (input.historical) return input.viewedReviewId;
+  return input.canonicalReviewId || input.viewedReviewId;
+}
+
+export function clientWorkspaceVersionPill(input: {
+  historical: boolean;
+  reviewNumber: number;
+  newerReviewNumber: number | null;
+}): string {
+  if (input.historical) return `Historical · v${input.reviewNumber}`;
+  if (input.newerReviewNumber) return `Updated · v${input.newerReviewNumber}`;
+  return `Current · v${input.reviewNumber}`;
+}
+
+export type ApprovalWorkspaceKind = "historical" | "quotation_approved" | "open" | "idle";
+
+export function approvalWorkspaceKind(input: {
+  historical: boolean;
+  quotationStage: ClientQuotationStage;
+  canApproveShortlist: boolean;
+  canApproveQuotation: boolean;
+}): ApprovalWorkspaceKind {
+  if (input.historical) return "historical";
+  if (input.quotationStage === "approved") return "quotation_approved";
+  if (input.canApproveShortlist || input.canApproveQuotation) return "open";
+  return "idle";
+}
+
+export function canMutateClientReviewFromBoundReview(input: {
+  reviews: ClientJourneyMember[];
+  boundReviewId: string;
+  canonicalReviewId: string;
+}): boolean {
+  const picked = pickActiveDecisionReview({
+    reviews: input.reviews,
+    requestedReviewId: input.boundReviewId,
+    canonicalReviewId: input.canonicalReviewId,
+    tokenBoundReviewId: input.boundReviewId,
+  });
+  if (!picked.review || picked.historical) return false;
+  return isInteractiveClientReview(picked.review.status);
+}
+
+export function projectClientJourney(input: {
+  members: ClientJourneyMember[];
+  viewed: ClientJourneyMember;
+  historical: boolean;
+  canonicalReviewId: string;
+}): ClientWorkspaceJourney {
+  const shortlistTip = latestReviewForSource(input.members, "shortlist");
+  const quotationLatest = latestReviewForSource(input.members, "quotation");
+  const memberReviewIds = input.members.map((item) => item.id);
+  const journeyId = input.viewed.journeyId ?? input.viewed.id;
+
+  if (input.historical) {
+    const viewedQuotation = input.viewed.source === "quotation" ? input.viewed : null;
+    const viewedShortlist = input.viewed.source === "shortlist" ? input.viewed : shortlistTip;
+    return {
+      id: journeyId,
+      canonicalReviewId: input.canonicalReviewId,
+      memberReviewIds,
+      shortlistStage: deriveShortlistStage({ review: viewedShortlist }),
+      quotationStage: viewedQuotation
+        ? "superseded"
+        : deriveQuotationStage({
+            quotationExists: Boolean(input.viewed.quotationId),
+            review: null,
+            priorApprovedReview: false,
+            movedToCampaign: false,
+          }),
+      campaignStarted: false,
+      performanceStarted: false,
+      invoiceStarted: false,
+      campaignHeaderId: null,
+      quotationId: input.viewed.quotationId ?? null,
+      shortlistId: input.viewed.shortlistId ?? shortlistTip?.shortlistId ?? null,
+      historical: true,
+      canApproveShortlist: false,
+      canApproveQuotation: false,
+      canRequestShortlistChanges: false,
+      canRequestQuotationChanges: false,
+      canRejectQuotation: false,
+      movedToCampaign: false,
+    };
+  }
+
+  const quotationApprovedPrior = input.members.some(
+    (item) =>
+      item.source === "quotation" &&
+      item.status === "approved" &&
+      quotationLatest != null &&
+      item.id !== quotationLatest.id
+  );
+  const movedToCampaign = Boolean(
+    quotationLatest?.campaignHeaderId || input.members.some((item) => item.campaignHeaderId)
+  );
+  const shortlistStage = deriveShortlistStage({ review: shortlistTip });
+  const quotationStage = deriveQuotationStage({
+    quotationExists: Boolean(quotationLatest?.quotationId),
+    review: quotationLatest,
+    priorApprovedReview: quotationApprovedPrior,
+    movedToCampaign,
+  });
+  return {
+    id: journeyId,
+    canonicalReviewId: input.canonicalReviewId,
+    memberReviewIds,
+    shortlistStage,
+    quotationStage,
+    campaignStarted: movedToCampaign,
+    performanceStarted: movedToCampaign,
+    invoiceStarted: false,
+    campaignHeaderId: input.viewed.campaignHeaderId ?? quotationLatest?.campaignHeaderId ?? null,
+    quotationId: quotationLatest?.quotationId ?? input.viewed.quotationId ?? null,
+    shortlistId: shortlistTip?.shortlistId ?? input.viewed.shortlistId ?? null,
+    historical: false,
+    canApproveShortlist:
+      !movedToCampaign && isInteractiveClientReview(shortlistTip?.status ?? "revoked"),
+    canApproveQuotation:
+      !movedToCampaign && isInteractiveClientReview(quotationLatest?.status ?? "revoked"),
+    canRequestShortlistChanges: isInteractiveClientReview(shortlistTip?.status ?? "revoked"),
+    canRequestQuotationChanges:
+      !movedToCampaign && isInteractiveClientReview(quotationLatest?.status ?? "revoked"),
+    canRejectQuotation:
+      !movedToCampaign && isInteractiveClientReview(quotationLatest?.status ?? "revoked"),
+    movedToCampaign,
+  };
 }
 
 export function journeyActionRequired(input: {

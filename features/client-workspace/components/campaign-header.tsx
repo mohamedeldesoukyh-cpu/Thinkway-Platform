@@ -10,6 +10,7 @@ import {
 } from "../constants";
 import { formatPlatformLabel } from "../format";
 import { proposalSubtitle, rosterHeadline, rosterSourceLine } from "../presentation";
+import { clientWorkspacePathReviewId } from "../journey-state";
 import { buildClientReviewPath } from "../security/review-token";
 import type { ClientWorkspaceView } from "../types";
 import { StatusPill } from "./media-plan-ui";
@@ -46,8 +47,13 @@ export function CampaignHeader({
     duration || null,
     investment,
   ].filter((item): item is string => Boolean(item));
-  const approvalHref = buildClientReviewPath(view.journey?.canonicalReviewId ?? view.review.id, token, "approval");
-  const feedbackHref = buildClientReviewPath(view.journey?.canonicalReviewId ?? view.review.id, token, "feedback");
+  const pathReviewId = clientWorkspacePathReviewId({
+    historical: Boolean(view.journey?.historical),
+    viewedReviewId: view.review.id,
+    canonicalReviewId: view.journey?.canonicalReviewId,
+  });
+  const approvalHref = buildClientReviewPath(pathReviewId, token, "approval");
+  const feedbackHref = buildClientReviewPath(pathReviewId, token, "feedback");
 
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -66,11 +72,17 @@ export function CampaignHeader({
         <p className="mt-1 text-xs text-zinc-400">{rosterSourceLine(view.review.source)}</p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <StatusPill tone={statusTone(view.review.status)}>
-          {CLIENT_PROPOSAL_STATUS_LABEL[view.review.status]}
-        </StatusPill>
-        {view.newerReviewNumber ? (
+        {view.journey?.historical ? (
+          <StatusPill tone="warning">Historical / Superseded</StatusPill>
+        ) : (
+          <StatusPill tone={statusTone(view.review.status)}>
+            {CLIENT_PROPOSAL_STATUS_LABEL[view.review.status]}
+          </StatusPill>
+        )}
+        {view.newerReviewNumber && !view.journey?.historical ? (
           <StatusPill tone="warning">Proposal v{view.newerReviewNumber} available</StatusPill>
+        ) : view.journey?.historical ? (
+          <StatusPill tone="warning">Read only</StatusPill>
         ) : (
           <StatusPill>Current</StatusPill>
         )}

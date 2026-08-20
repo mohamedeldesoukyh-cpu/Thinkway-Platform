@@ -1,16 +1,17 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `main` (Production release) · also on `develop`  
-**Focus:** Studio entry experience — **Production**
+**Branch:** `develop`  
+**Focus:** Client Workspace Dev QA follow-up — **Development only. Do not deploy Production.**
 
-Studio is the primary campaign planning workspace. Chat is an optional assistant. One CIP → Campaign Facts SSOT.
+Three Development QA defects, all fixed in this push:
 
-1. Intake brief upload no longer drops `brand_selection` — it opens the existing brand-link dialog and passes `conversationId`.
-2. `/studio` landing: **New Campaign** (upload / write / paste) + **Campaign History** from `campaign_objects`.
-3. Chat: **Open in Studio** for operational briefs; paperclip routes to Studio upload. Studio chrome uses New Campaign / Campaign History, not AI chat history.
-4. New-client briefs: **Continue without a Thinkway brand** persists CIP with `brand_id` null. Does not create CRM clients/brands. Attach a CRM brand later.
+1. **Historical quotation URL** — old V1 review URLs render the frozen V1 snapshot and `Historical / Superseded / Read only`. They do not show V2 price, V2 approval state, current campaign state, or Approve / Reject / Request Changes. Canonical journey still shows V2 (`Updated — Approval required`).
+2. **Approved quotation immutability** — once `quotations.status = approved`, creator commercials, deliverables, roster, and totals cannot be mutated in-place. Server/action/domain rejects with “Create a new quotation version…”. Staff must generate V2 draft, send to client, then get new approval.
+3. **Client quotation approval audit** — `quotation.client_approved` is written to `audit_logs` as existing `approve` with metadata `event=client_approved`, `approval_source=client_workspace`, `actor_kind=client`. Enum unchanged.
 
-No database changes. No Production Supabase schema change.
+**Do not promote Production. Stop for another live QA cycle.**
 
 - Dev: https://dev.thinkwaymedia.com  
 - Prod: https://app.thinkwaymedia.com  
+
+Migration (Dev applied, not Production): `supabase/migrations/20260820150000_client_review_journeys.sql`

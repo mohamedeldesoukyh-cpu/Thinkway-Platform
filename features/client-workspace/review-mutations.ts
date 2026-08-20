@@ -22,7 +22,7 @@ import {
   isFrozenClientReviewStatus,
   isInteractiveClientReview,
 } from "./status";
-import { clientApprovalSideEffects, pickReviewForDecision } from "./journey-state";
+import { clientApprovalSideEffects, canMutateClientReviewFromBoundReview, journeyCanonicalReviewId, pickReviewForDecision } from "./journey-state";
 import { logQuotationLifecycleEvent } from "@/lib/commercial-sync/audit";
 import { updateQuotationHeaderRecord } from "@/lib/services/quotations/repositories/quotation-repository";
 
@@ -43,6 +43,16 @@ async function requireInteractiveReview(
     return { ok: false as const, message: "This review link is invalid or has expired." };
   }
   const members = await loadJourneyReviews(db(), resolved.review);
+  const canonicalReviewId = journeyCanonicalReviewId(members, resolved.review.id);
+  if (
+    !canMutateClientReviewFromBoundReview({
+      reviews: members,
+      boundReviewId: resolved.review.id,
+      canonicalReviewId,
+    })
+  ) {
+    return { ok: false as const, message: "This version is no longer open for decisions." };
+  }
   const target = inputStage
     ? pickReviewForDecision(members, inputStage)
     : pickReviewForDecision(members, "quotation") ??
@@ -407,16 +417,21 @@ export async function decideClientReview(input: {
         .select("created_by")
         .eq("id", gate.review.id)
         .maybeSingle();
-      const actorId = (ownerRow as { created_by?: string } | null)?.created_by;
-      if (actorId) {
-        await logQuotationLifecycleEvent(db() as never, {
-          quotationId: gate.review.quotationId,
-          actorId,
-          event: "quotation.client_approved",
-          summary: "Client approved the quotation. Campaign conversion is now allowed.",
-          newData: { status: "approved" },
-        });
-      }
+      const actorId = (ownerRow as { created_by?: string } | null)?.created_by ?? null;
+      await logQuotationLifecycleEvent(db() as never, {
+        quotationId: gate.review.quotationId,
+        actorId,
+        event: "quotation.client_approved",
+        summary: "Client approved the quotation. Campaign conversion is now allowed.",
+        newData: { status: "approved" },
+        metadata: {
+          review_id: gate.review.id,
+          journey_id: gate.review.journeyId ?? gate.review.id,
+          actor_label: input.actorLabel?.trim() || gate.review.clientLabel || "Client",
+          actor_kind: "client",
+          approval_source: "client_workspace",
+        },
+      });
     }
     await notifyOpsOfClientReviewChange({
       reviewId: gate.review.id,

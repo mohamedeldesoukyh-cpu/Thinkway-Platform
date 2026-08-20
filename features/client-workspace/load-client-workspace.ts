@@ -24,13 +24,12 @@ import { snapshotFromCampaignObject } from "./snapshot-from-object";
 import { isInteractiveClientReview } from "./status";
 import {
   canLiveSyncClientReview,
-  deriveQuotationStage,
-  deriveShortlistStage,
   journeyActionRequired,
   journeyCanonicalReviewId,
   latestApprovedReviewForSource,
   latestReviewForSource,
   pickActiveDecisionReview,
+  projectClientJourney,
 } from "./journey-state";
 import { diffShortlistToQuotation } from "./snapshot-diff";
 import type {
@@ -39,7 +38,6 @@ import type {
   ClientReviewRecord,
   ClientReviewSourceSnapshot,
   ClientWorkspaceEntry,
-  ClientWorkspaceJourney,
   ClientWorkspaceView,
 } from "./types";
 import { visibleClientWorkspaceSections } from "./visible-sections";
@@ -281,9 +279,17 @@ export async function loadClientWorkspace(
 
   const db = service ?? resolver;
   let members = await loadJourneyReviews(db, resolvedInitial.review);
+  const canonicalReviewId = journeyCanonicalReviewId(members, resolvedInitial.review.id);
+  let picked = pickActiveDecisionReview({
+    reviews: members,
+    requestedReviewId,
+    canonicalReviewId,
+    tokenBoundReviewId: resolvedInitial.review.id,
+  });
   const quotationTip = latestReviewForSource(members, "quotation");
   if (
     service &&
+    !picked.historical &&
     quotationTip &&
     quotationTip.quotationId &&
     canLiveSyncClientReview({
@@ -302,18 +308,17 @@ export async function loadClientWorkspace(
         syncExistingOnly: true,
       });
       members = await loadJourneyReviews(db, resolvedInitial.review);
+      picked = pickActiveDecisionReview({
+        reviews: members,
+        requestedReviewId,
+        canonicalReviewId: journeyCanonicalReviewId(members, resolvedInitial.review.id),
+        tokenBoundReviewId: resolvedInitial.review.id,
+      });
     } catch {
       /* keep the stored snapshot if quotation sync is unavailable */
     }
   }
 
-  const canonicalReviewId = journeyCanonicalReviewId(members, resolvedInitial.review.id);
-  const picked = pickActiveDecisionReview({
-    reviews: members,
-    requestedReviewId,
-    canonicalReviewId,
-    tokenBoundReviewId: resolvedInitial.review.id,
-  });
   if (!picked.review) {
     return { ok: false, code: "not_found", message: "This campaign package is no longer available." };
   }
@@ -324,57 +329,14 @@ export async function loadClientWorkspace(
     members = members.map((item) => (item.id === activeReview.id ? activeReview : item));
   }
 
-  const shortlistTip = latestReviewForSource(members, "shortlist");
   const shortlistApproved = latestApprovedReviewForSource(members, "shortlist");
   const quotationLatest = latestReviewForSource(members, "quotation");
-  const quotationApprovedPrior = members.some(
-    (item) =>
-      item.source === "quotation" &&
-      item.status === "approved" &&
-      quotationLatest != null &&
-      item.id !== quotationLatest.id
-  );
-  const movedToCampaign = Boolean(
-    quotationLatest?.campaignHeaderId || members.some((item) => item.campaignHeaderId)
-  );
-  const shortlistStage = deriveShortlistStage({ review: shortlistTip });
-  const quotationStage = deriveQuotationStage({
-    quotationExists: Boolean(quotationLatest?.quotationId),
-    review: quotationLatest,
-    priorApprovedReview: quotationApprovedPrior,
-    movedToCampaign,
-  });
-  const journey: ClientWorkspaceJourney = {
-    id: activeReview.journeyId ?? activeReview.id,
-    canonicalReviewId,
-    memberReviewIds: members.map((item) => item.id),
-    shortlistStage,
-    quotationStage,
-    campaignStarted: movedToCampaign,
-    performanceStarted: movedToCampaign,
-    invoiceStarted: false,
-    campaignHeaderId: activeReview.campaignHeaderId ?? quotationLatest?.campaignHeaderId ?? null,
-    quotationId: quotationLatest?.quotationId ?? null,
-    shortlistId: shortlistTip?.shortlistId ?? activeReview.shortlistId,
+  const journey = projectClientJourney({
+    members,
+    viewed: activeReview,
     historical: picked.historical,
-    canApproveShortlist:
-      !picked.historical && !movedToCampaign && isInteractiveClientReview(shortlistTip?.status ?? "revoked"),
-    canApproveQuotation:
-      !picked.historical &&
-      !movedToCampaign &&
-      isInteractiveClientReview(quotationLatest?.status ?? "revoked"),
-    canRequestShortlistChanges:
-      !picked.historical && isInteractiveClientReview(shortlistTip?.status ?? "revoked"),
-    canRequestQuotationChanges:
-      !picked.historical &&
-      !movedToCampaign &&
-      isInteractiveClientReview(quotationLatest?.status ?? "revoked"),
-    canRejectQuotation:
-      !picked.historical &&
-      !movedToCampaign &&
-      isInteractiveClientReview(quotationLatest?.status ?? "revoked"),
-    movedToCampaign,
-  };
+    canonicalReviewId: journeyCanonicalReviewId(members, resolvedInitial.review.id),
+  });
 
   const sourceByReviewId = Object.fromEntries(members.map((item) => [item.id, item.source]));
   const reviewIds = members.map((item) => item.id);
@@ -435,9 +397,9 @@ export async function loadClientWorkspace(
 
   view.journey = journey;
   view.stageDiff =
-    shortlistApproved?.status === "approved"
-      ? diffShortlistToQuotation(shortlistApproved.sourceSnapshot, quotationLatest?.sourceSnapshot)
-      : null;
+    picked.historical || shortlistApproved?.status !== "approved"
+      ? null
+      : diffShortlistToQuotation(shortlistApproved.sourceSnapshot, quotationLatest?.sourceSnapshot);
   view.canDecide =
     !picked.historical &&
     (journey.canApproveShortlist || journey.canApproveQuotation) &&
@@ -450,14 +412,14 @@ export async function loadClientWorkspace(
     reviewNumber: activeReview.reviewNumber,
     status: activeReview.status,
     statusLabel: journeyActionRequired({
-      shortlistStage,
-      quotationStage,
+      shortlistStage: journey.shortlistStage,
+      quotationStage: journey.quotationStage,
       historical: picked.historical,
     }),
     lastUpdated: activeReview.updatedAt,
     actionRequired: journeyActionRequired({
-      shortlistStage,
-      quotationStage,
+      shortlistStage: journey.shortlistStage,
+      quotationStage: journey.quotationStage,
       historical: picked.historical,
     }),
   };

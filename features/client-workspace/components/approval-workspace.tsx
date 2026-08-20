@@ -11,6 +11,7 @@ import {
 } from "../actions/client-workspace-actions";
 import { CLIENT_CHANGE_AREAS, CLIENT_CHANGE_AREA_LABEL, type ClientChangeArea } from "../constants";
 import { TO_BE_CONFIRMED } from "../format";
+import { approvalWorkspaceKind } from "../journey-state";
 import { rosterHeadline } from "../presentation";
 import { countSelections } from "../status";
 import type { ClientWorkspaceView } from "../types";
@@ -39,9 +40,15 @@ export function ApprovalWorkspace({
   const journey = view.journey;
   const quotationStage = journey?.quotationStage;
   const shortlistStage = journey?.shortlistStage;
+  const approvalKind = approvalWorkspaceKind({
+    historical: Boolean(journey?.historical),
+    quotationStage: quotationStage ?? "draft",
+    canApproveShortlist: Boolean(journey?.canApproveShortlist),
+    canApproveQuotation: Boolean(journey?.canApproveQuotation),
+  });
   const showShortlistApproval = Boolean(journey?.canApproveShortlist);
   const showQuotationApproval = Boolean(journey?.canApproveQuotation);
-  const quotationApproved = quotationStage === "approved";
+  const quotationApproved = approvalKind === "quotation_approved";
   const shortlistApproved = shortlistStage === "approved";
   const deliverableCount = selectedSummary.activityMix.reduce((sum, item) => sum + item.count, 0);
   const investment =
@@ -52,6 +59,30 @@ export function ApprovalWorkspace({
   function toggle(area: ClientChangeArea) {
     setAreas((current) =>
       current.includes(area) ? current.filter((item) => item !== area) : [...current, area]
+    );
+  }
+
+  if (approvalKind === "historical") {
+    const approvedOn = view.review.approvedAt
+      ? new Date(view.review.approvedAt).toLocaleDateString("en-GB")
+      : null;
+    const versionLabel =
+      view.review.source === "quotation"
+        ? `Quotation v${view.review.reviewNumber}`
+        : `Shortlist v${view.review.reviewNumber}`;
+    const statusLabel = "Historical / Superseded";
+    return (
+      <div className="card">
+        <p className="ck">Historical version</p>
+        <h2>
+          {versionLabel} · {statusLabel}
+        </h2>
+        <p className="note">
+          Historical / Superseded · Read only.
+          {approvedOn ? ` Approved on ${approvedOn}.` : ""} This version is not the current journey
+          and cannot be approved, rejected, or sent for changes.
+        </p>
+      </div>
     );
   }
 

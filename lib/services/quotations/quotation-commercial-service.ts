@@ -5,10 +5,13 @@ import { resolveRateToEgp } from "@/lib/commercial/fx-server";
 import { normalizeCommercialLine, computeQuotationTotals } from "@/lib/commercial/quotation-engine";
 import { applyQuotationMasterSyncIfLinked } from "@/lib/services/commercial/linked-commercial-gate";
 import type { MasterCommercialValues } from "@/lib/services/commercial/types";
-import type { CommercialInputMode, Database } from "@/types/database";
+import type { CommercialInputMode, Database, QuotationStatus } from "@/types/database";
 
 import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-types";
 
+import { approvedQuotationMutationError } from "@/lib/commercial-sync/rules";
+
+import { rejectIfApprovedQuotation } from "./approved-quotation-guard";
 import {
   fetchQuotationItemEgpTotals,
   syncCollapsePackageOptionNumbers,
@@ -78,9 +81,14 @@ export async function updateQuotationItemCommercials(
 ) {
   const { data: quotationMeta } = await supabase
     .from("quotations")
-    .select("issue_date")
+    .select("status, issue_date")
     .eq("id", input.quotation_id)
     .maybeSingle();
+  if (!quotationMeta) return { ok: false as const, message: "Quotation not found." };
+  const locked = approvedQuotationMutationError(
+    (quotationMeta as { status: QuotationStatus }).status
+  );
+  if (locked) return locked;
   const issueDate =
     (quotationMeta as { issue_date?: string | null } | null)?.issue_date ?? null;
   const rate = await resolveRateToEgp(supabase, input.cost_currency, issueDate);
@@ -228,6 +236,9 @@ export async function removeQuotationItemWithSync(
   userId: string,
   input: { item_id: string; quotation_id: string }
 ) {
+  const locked = await rejectIfApprovedQuotation(supabase, input.quotation_id);
+  if (locked) return locked;
+
   await syncQuotationChangeToShortlist(supabase, {
     quotationId: input.quotation_id,
     actorId: userId,
@@ -314,11 +325,16 @@ export async function returnQuotationItemToShortlist(
 ) {
   const { data: quotation, error: quotationError } = await supabase
     .from("quotations")
-    .select("shortlist_id")
+    .select("status, shortlist_id")
     .eq("id", input.quotation_id)
     .maybeSingle();
 
   if (quotationError) return { ok: false as const, message: quotationError.message };
+  if (!quotation) return { ok: false as const, message: "Quotation not found." };
+  const locked = approvedQuotationMutationError(
+    (quotation as { status: QuotationStatus }).status
+  );
+  if (locked) return locked;
   const shortlistId = (quotation as { shortlist_id: string | null } | null)?.shortlist_id;
   if (!shortlistId) {
     return { ok: false as const, message: "This quotation is not linked to a shortlist." };

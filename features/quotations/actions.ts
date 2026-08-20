@@ -34,6 +34,7 @@ import {
   listShortlistsForImport as listShortlistsForImportService,
   updateQuotationHeader as updateQuotationHeaderService,
 } from "@/lib/services/quotations/quotation-service";
+import { rejectIfApprovedQuotation } from "@/lib/services/quotations/approved-quotation-guard";
 import {
   removeQuotationItemWithSync,
   recomputeQuotationTotals,
@@ -229,8 +230,7 @@ export async function updateQuotationItemCommercials(
     return {
       ok: false,
       message: result.message,
-      code: result.code,
-      commercialSync: result.commercialSync,
+      ...("code" in result ? { code: result.code, commercialSync: result.commercialSync } : {}),
     };
   }
   return {
@@ -248,6 +248,8 @@ export async function finalizeQuotationSave(
 ): Promise<ActionResult<{ totals: ReturnType<typeof computeQuotationTotals> }>> {
   const actor = await getActor();
   if (!actor.ok) return actor;
+  const locked = await rejectIfApprovedQuotation(actor.supabase, quotationId);
+  if (locked) return locked;
   const totals = await recomputeQuotationTotals(actor.supabase, quotationId);
   revalidate(quotationId);
   return { ok: true, data: { totals } };

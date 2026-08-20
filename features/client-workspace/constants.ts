@@ -64,6 +64,7 @@ export const CLIENT_QUOTATION_STAGES = [
   "updated",
   "approved",
   "rejected",
+  "superseded",
 ] as const;
 export type ClientQuotationStage = (typeof CLIENT_QUOTATION_STAGES)[number];
 

@@ -7,6 +7,7 @@ import {
   type ClientWorkspaceSectionId,
 } from "../constants";
 import { buildClientReviewPath } from "../security/review-token";
+import { clientWorkspacePathReviewId } from "../journey-state";
 import type { ClientWorkspaceView } from "../types";
 import { ClientWorkspaceSectionView } from "./client-workspace-section-view";
 import { ClientWorkspaceShell } from "./client-workspace-shell";
@@ -58,14 +59,18 @@ export function ClientWorkspaceApp({
     return () => window.removeEventListener("popstate", onPop);
   }, [reveal, view.visibleSections]);
 
-  const canonicalReviewId = view.journey?.canonicalReviewId ?? view.review.id;
+  const pathReviewId = clientWorkspacePathReviewId({
+    historical: Boolean(view.journey?.historical),
+    viewedReviewId: view.review.id,
+    canonicalReviewId: view.journey?.canonicalReviewId,
+  });
   const go = useCallback(
     (next: ClientWorkspaceSectionId) => {
       if (next === active) return;
       reveal(next);
-      window.history.pushState({ section: next }, "", buildClientReviewPath(canonicalReviewId, token, next));
+      window.history.pushState({ section: next }, "", buildClientReviewPath(pathReviewId, token, next));
     },
-    [active, canonicalReviewId, reveal, token]
+    [active, pathReviewId, reveal, token]
   );
 
   return (

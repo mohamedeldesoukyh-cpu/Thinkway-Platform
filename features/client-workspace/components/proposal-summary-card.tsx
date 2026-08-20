@@ -9,6 +9,7 @@ import { decideReviewAction } from "../actions/client-workspace-actions";
 import type { ClientCreatorSelectionState } from "../constants";
 import { formatCompactCount, formatEngagementPct, TO_BE_CONFIRMED } from "../format";
 import { projectSelectionSummaryFromCards } from "../media-plan-summary";
+import { clientWorkspacePathReviewId } from "../journey-state";
 import { buildClientReviewPath } from "../security/review-token";
 import { isSelectedForCalculator } from "../status";
 import type { ClientWorkspaceView } from "../types";
@@ -92,7 +93,11 @@ export function ProposalSummaryCard({
     forecast.averageEngagementRate != null
       ? formatEngagementPct(forecast.averageEngagementRate)
       : TO_BE_CONFIRMED;
-  const pathReviewId = view.journey?.canonicalReviewId ?? view.review.id;
+  const pathReviewId = clientWorkspacePathReviewId({
+    historical: Boolean(view.journey?.historical),
+    viewedReviewId: view.review.id,
+    canonicalReviewId: view.journey?.canonicalReviewId,
+  });
   const creatorsHref = buildClientReviewPath(pathReviewId, token, "creators");
   const canApprove = view.canDecide && selectedCount > 0 && !pending;
   const approveStage = view.journey?.canApproveQuotation

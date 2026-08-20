@@ -4,6 +4,7 @@ import { REPORTING_CURRENCY } from "@/lib/commercial/fx-aggregation";
 import { resolveRateToEgp } from "@/lib/commercial/fx-server";
 import { formatQuotationTermsText } from "@/lib/commercial/quotation-default-terms";
 import { defaultValidityDateFromIssue } from "@/lib/commercial/quotation-validity";
+import { NEW_QUOTATION_VERSION_STATUS } from "@/lib/commercial-sync/rules";
 import { normalizeCommercialLine } from "@/lib/commercial/quotation-engine";
 import { DEFAULT_QUOTATION_LINE_COMMERCIAL_MODE } from "@/lib/domains/commercial/quotation-constants";
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
@@ -972,7 +973,7 @@ export async function insertVersionedQuotation(
     .insert({
       serial_number: input.versionSerial,
       name: `${row.name} (V${input.nextVersion})`,
-      status: "draft",
+      status: NEW_QUOTATION_VERSION_STATUS,
       parent_quotation_id: row.id as string,
       version_number: input.nextVersion,
       revision_notes: input.revisionNotes?.trim() || null,
