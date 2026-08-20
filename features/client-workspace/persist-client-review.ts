@@ -203,7 +203,10 @@ async function createJourney(
     } as never)
     .select("id, share_token, landing_review_id, shortlist_id, quotation_id")
     .single();
-  if (error || !data) return null;
+  if (error || !data) {
+    console.error("[client-review-journey] insert failed", error?.message ?? "no row returned");
+    return null;
+  }
   return data as JourneyRow;
 }
 
@@ -436,6 +439,13 @@ export async function persistClientReview(
       quotationId: input.quotationId,
       campaignHeaderId: input.campaignHeaderId,
     });
+  }
+  if (!journey) {
+    return {
+      ok: false,
+      message: "Could not create the Client Workspace journey. The review link was not generated.",
+      blockers: ["Journey insert failed."],
+    };
   }
 
   let nextNumber = (currentTip?.review_number ?? 0) + 1;
