@@ -29,6 +29,7 @@ export function ShortlistPasteLinksPanel({
 }: Props) {
   const parsed = parseProfileInputList(value);
   const preview = shortlistPastePreview(parsed.parsed.length, parsed.invalid.length);
+  const unrecognized = parsed.invalid;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto bg-[#f8fafc] px-4 py-4">
@@ -56,6 +57,11 @@ export function ShortlistPasteLinksPanel({
         <p className="text-xs text-emerald-600 dark:text-emerald-400">
           {describeShortlistPastePreview(preview)}
         </p>
+      ) : unrecognized.length > 0 ? (
+        <p className="text-xs text-amber-700 dark:text-amber-400">
+          {unrecognized.length} unrecognized link
+          {unrecognized.length === 1 ? "" : "s"}. Fix these and paste again.
+        </p>
       ) : value.trim().length >= 8 ? (
         <p className="text-xs text-muted-foreground">
           Enter supported social profile URLs, one per line or comma-separated.
@@ -66,6 +72,23 @@ export function ShortlistPasteLinksPanel({
           missing ones are created. Up to {MAX_SHORTLIST_PASTE_CREATORS} per batch.
         </p>
       )}
+      {!pending && unrecognized.length > 0 ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-900/60 dark:bg-amber-950/40">
+          <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+            Unrecognized links — fix or remove these
+          </p>
+          <ul className="mt-1.5 max-h-36 space-y-1 overflow-y-auto">
+            {unrecognized.map((link, index) => (
+              <li
+                key={`${index}:${link}`}
+                className="break-all font-mono text-[11px] leading-snug text-amber-900 dark:text-amber-200"
+              >
+                {link}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </div>
   );
 }
