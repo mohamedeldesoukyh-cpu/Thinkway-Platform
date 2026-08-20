@@ -12,7 +12,7 @@ import {
   resolveCreatorEnrichmentStatus,
 } from "@/features/discovery/enrichment/status";
 import { cn } from "@/lib/utils";
-import { ArrowDownIcon, ArrowUpIcon, UsersIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, Link2Icon, UsersIcon } from "lucide-react";
 
 import { SHORTLIST_QUOTED_COLUMN_LABEL } from "../constants";
 import {
@@ -327,9 +327,11 @@ export function ShortlistCreatorList({
 export function ShortlistCreatorEmptyState({
   editable,
   onAddCreators,
+  onPasteLinks,
 }: {
   editable: boolean;
   onAddCreators: () => void;
+  onPasteLinks?: () => void;
 }) {
   return (
     <div className="flex flex-col items-center gap-2 px-4 py-7 text-center">
@@ -339,17 +341,29 @@ export function ShortlistCreatorEmptyState({
       <p className="text-[13px] font-semibold text-foreground">No creators yet</p>
       <p className="max-w-[280px] text-[11px] leading-relaxed text-muted-foreground">
         {editable
-          ? "Click “Add creators” to search and build this shortlist."
+          ? "Search creators or paste a list of profile links to build this shortlist."
           : "This shortlist is locked in its current status."}
       </p>
       {editable ? (
-        <button
-          type="button"
-          onClick={onAddCreators}
-          className="mt-1 inline-flex h-[34px] items-center gap-1.5 rounded-lg bg-primary px-3.5 text-xs font-semibold text-primary-foreground shadow-sm"
-        >
-          Add creators
-        </button>
+        <div className="mt-1 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onAddCreators}
+            className="inline-flex h-[34px] items-center gap-1.5 rounded-lg bg-primary px-3.5 text-xs font-semibold text-primary-foreground shadow-sm"
+          >
+            Add creators
+          </button>
+          {onPasteLinks ? (
+            <button
+              type="button"
+              onClick={onPasteLinks}
+              className="inline-flex h-[34px] items-center gap-1.5 rounded-lg border border-border bg-background px-3.5 text-xs font-semibold text-foreground shadow-sm"
+            >
+              <Link2Icon className="size-3.5" />
+              Paste links
+            </button>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

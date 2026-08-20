@@ -164,6 +164,7 @@ export function ShortlistWorkspace({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [moveOpen, setMoveOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [addMode, setAddMode] = useState<"search" | "paste">("search");
   const [submitAllOpen, setSubmitAllOpen] = useState(false);
   const [quoteAllOpen, setQuoteAllOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -912,7 +913,10 @@ export function ShortlistWorkspace({
               <ShortlistToolbarButton
                 variant="primary"
                 size="sm"
-                onClick={() => setAddOpen(true)}
+                onClick={() => {
+                  setAddMode("search");
+                  setAddOpen(true);
+                }}
                 disabled={isPending}
               >
                 <UserPlusIcon className="size-3.5" />
@@ -947,7 +951,14 @@ export function ShortlistWorkspace({
         {displayCreators.length === 0 ? (
           <ShortlistCreatorEmptyState
             editable={editable}
-            onAddCreators={() => setAddOpen(true)}
+            onAddCreators={() => {
+              setAddMode("search");
+              setAddOpen(true);
+            }}
+            onPasteLinks={() => {
+              setAddMode("paste");
+              setAddOpen(true);
+            }}
           />
         ) : (
           <ShortlistCreatorList
@@ -1108,6 +1119,7 @@ export function ShortlistWorkspace({
         shortlistId={detail.id}
         existingItems={existingItems}
         onAdded={() => router.refresh()}
+        initialMode={addMode}
       />
 
       <CreatorDetailSheet

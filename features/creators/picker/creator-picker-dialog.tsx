@@ -68,6 +68,12 @@ type ExtendedProps = CreatorPickerDialogProps & {
   sheetSide?: "right" | "left";
   /** Right sidebar layout matching add-creators HTML mockup. */
   panelLayout?: boolean;
+  /** Rendered under the title/description (e.g. Search / Paste tabs). */
+  headerExtra?: ReactNode;
+  /** Replace search + results with a custom body (paste-links panel). */
+  bodyOverride?: ReactNode;
+  /** Return true to consume the search input (e.g. switch to paste mode). */
+  onSearchInput?: (value: string) => boolean;
 };
 
 export function CreatorPickerDialog({
@@ -93,12 +99,16 @@ export function CreatorPickerDialog({
   onConfirmPending,
   sheetSide = "right",
   panelLayout = false,
+  headerExtra,
+  bodyOverride,
+  onSearchInput,
   children,
 }: ExtendedProps) {
   const [search, setSearch] = useState("");
   const [platform, setPlatform] = useState("all");
 
   function handleSearchChange(value: string) {
+    if (onSearchInput?.(value)) return;
     setSearch(normalizeDiscoverySearchQuery(value) || value);
   }
   const [selectedCreatorMap, setSelectedCreatorMap] = useState<
@@ -289,7 +299,11 @@ export function CreatorPickerDialog({
           : "Add to shortlist"
         : `Add ${selectedCount > 0 ? selectedCount : ""} creator${selectedCount === 1 ? "" : "s"}`);
 
-  const body = panelLayout ? (
+  const showSelectionChrome = !bodyOverride && selectionMode === "multi";
+
+  const body = bodyOverride ? (
+    bodyOverride
+  ) : panelLayout ? (
     <>
       <CreatorSearchPanel
         search={search}
@@ -450,13 +464,14 @@ export function CreatorPickerDialog({
                   {description}
                 </SheetDescription>
               ) : null}
+              {headerExtra}
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white">{body}</div>
 
             {actionFooter ? (
               <div className="creator-picker-footer shrink-0 border-t border-[#e2e8f0] bg-white">
-                {selectionMode === "multi" ? (
+                {showSelectionChrome ? (
                   <div className="flex items-center justify-between px-4 pb-2 pt-2.5">
                     <span className="text-xs text-[#94a3b8]">
                       <strong className="font-semibold text-[#0f172a]">
@@ -475,11 +490,13 @@ export function CreatorPickerDialog({
                     </button>
                   </div>
                 ) : null}
-                <div className="flex items-center gap-2 px-4 pb-3.5">
-                  <div className="creator-picker-sel-count flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3.5 text-xs font-medium text-[#475569]">
-                    <UsersIcon className="size-3 text-[#94a3b8]" aria-hidden />
-                    {selectedCount} selected
-                  </div>
+                <div className={`flex items-center gap-2 px-4 pb-3.5${showSelectionChrome ? "" : " pt-3"}`}>
+                  {showSelectionChrome ? (
+                    <div className="creator-picker-sel-count flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3.5 text-xs font-medium text-[#475569]">
+                      <UsersIcon className="size-3 text-[#94a3b8]" aria-hidden />
+                      {selectedCount} selected
+                    </div>
+                  ) : null}
                   {actionFooter}
                 </div>
               </div>

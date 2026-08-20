@@ -30,9 +30,14 @@ import { enqueueCreatorEnrichmentBestEffort } from "@/lib/creator-enrichment/que
 import { priorityForTrigger } from "@/lib/creator-enrichment/policy";
 import { getDiscoveryControlSettings } from "@/lib/discovery/control-center/discovery-control-service";
 import { shouldAutoEnrichForTrigger } from "@/lib/discovery/control-center/discovery-control-policy";
+import { resolveCreatorsByProfileUrls } from "@/lib/discovery/add-creator-by-profile-url";
+import { MAX_SHORTLIST_PASTE_CREATORS } from "@/lib/discovery/add-creator-constants";
 import { promoteDiscoveredProfileToInfluencer } from "./promote";
 import { ensureDiscoveredProfileBrowsable, ensureDiscoveryCreatorBrowsable } from "@/lib/creators/discovery-browse-eligibility";
 import { canMoveItemToCampaign } from "./item-transitions";
+import { isAddableCreator } from "./add-to-shortlist-policy";
+import { describeShortlistPasteAddOutcome } from "./paste-links-policy";
+import { defaultPlatformAccountIds } from "./platform-account-selection";
 import {
   assertTransition,
   canEditCreators,
@@ -883,6 +888,123 @@ export async function addCreatorsToShortlistsV2(
     failed,
     addedUnifiedIds: [...addedUnifiedIds],
     alreadyUnifiedIds: [...alreadyUnifiedIds],
+  };
+}
+
+export type AddCreatorsToShortlistByProfileUrlsResult = ActionResult & {
+  added: number;
+  alreadyOnList: number;
+  created: number;
+  existing: number;
+  failed: number;
+  invalid: number;
+};
+
+/**
+ * Paste a list of profile URLs, resolve or create each creator, and add them
+ * to the shortlist in one shot.
+ */
+export async function addCreatorsToShortlistByProfileUrls(input: {
+  shortlistId: string;
+  raw: string;
+}): Promise<AddCreatorsToShortlistByProfileUrlsResult> {
+  const empty = {
+    added: 0,
+    alreadyOnList: 0,
+    created: 0,
+    existing: 0,
+    failed: 0,
+    invalid: 0,
+  };
+
+  const actor = await getActor();
+  if (!actor.ok) {
+    return { ok: false, message: actor.message, ...empty };
+  }
+
+  const shortlistId = input.shortlistId?.trim();
+  const raw = input.raw?.trim() ?? "";
+  if (!shortlistId) {
+    return { ok: false, message: "Shortlist is required.", ...empty };
+  }
+  if (!raw) {
+    return {
+      ok: false,
+      message: "Paste one or more creator profile links.",
+      ...empty,
+    };
+  }
+
+  const row = await loadShortlistRow(actor.supabase, shortlistId);
+  if (!row) {
+    return { ok: false, message: "Shortlist not found.", ...empty };
+  }
+  if (!canEditCreators(row.status)) {
+    return {
+      ok: false,
+      message:
+        "Creators can only be added while the shortlist is a Draft or Under Review.",
+      ...empty,
+    };
+  }
+
+  const resolved = await resolveCreatorsByProfileUrls(actor.supabase, {
+    raw,
+    actorId: actor.userId,
+    max: MAX_SHORTLIST_PASTE_CREATORS,
+  });
+
+  const addable = resolved.resolved.filter(isAddableCreator);
+  const ineligible = resolved.resolved.length - addable.length;
+
+  if (addable.length === 0) {
+    const firstError =
+      resolved.failed[0]?.message ??
+      (resolved.invalid.length > 0
+        ? "Paste Instagram, TikTok, YouTube, Snapchat, Facebook, or X profile links."
+        : ineligible > 0
+          ? "Resolved creators cannot be added to this shortlist."
+          : "No valid profile links.");
+    return {
+      ok: false,
+      message: firstError,
+      ...empty,
+      failed: resolved.failed.length + ineligible,
+      invalid: resolved.invalid.length,
+    };
+  }
+
+  const addResult = await addCreatorsToShortlistsV2({
+    shortlistIds: [shortlistId],
+    creators: addable.map((creator) => ({
+      unifiedId: creator.unified_id,
+      discoveredProfileId: creator.discovered_profile_id,
+      influencerId: creator.influencer_id,
+      platformAccountIds: defaultPlatformAccountIds(creator),
+    })),
+  });
+
+  const outcome = {
+    added: addResult.added ?? 0,
+    alreadyOnList: addResult.alreadyOnList ?? 0,
+    created: resolved.created.length,
+    existing: resolved.existing.length,
+    failed: (addResult.failed ?? 0) + resolved.failed.length + ineligible,
+    invalid: resolved.invalid.length,
+  };
+
+  if (!addResult.ok && outcome.added === 0) {
+    return {
+      ok: false,
+      message: addResult.message ?? "Failed to add creators.",
+      ...outcome,
+    };
+  }
+
+  return {
+    ok: true,
+    message: describeShortlistPasteAddOutcome(outcome),
+    ...outcome,
   };
 }
 

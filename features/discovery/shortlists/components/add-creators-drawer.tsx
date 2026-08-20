@@ -9,12 +9,14 @@ export function AddCreatorsDrawer({
   shortlistId,
   existingItems,
   onAdded,
+  initialMode,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   shortlistId: string;
   existingItems: ExistingCreatorKey[];
   onAdded: () => void;
+  initialMode?: "search" | "paste";
 }) {
   return (
     <ShortlistCreatorPicker
@@ -23,6 +25,7 @@ export function AddCreatorsDrawer({
       shortlistId={shortlistId}
       existingItems={existingItems}
       onAdded={onAdded}
+      initialMode={initialMode}
     />
   );
 }

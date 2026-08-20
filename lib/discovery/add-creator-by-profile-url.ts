@@ -1,7 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { persistCreatorPrimaryIdentity } from "@/lib/creators/persist-primary-avatar";
-import { MAX_ADD_MISSING_CREATORS } from "@/lib/discovery/add-creator-constants";
+import {
+  MAX_ADD_MISSING_CREATORS,
+  MAX_SHORTLIST_PASTE_CREATORS,
+} from "@/lib/discovery/add-creator-constants";
 import {
   extractEmailFromText,
   mergeContactLinks,
@@ -40,6 +43,11 @@ export type AddCreatorByProfileUrlInput = {
   actorId: string;
   /** When true, existing Discovery creators are left unchanged (no re-enrich). */
   skipIfExists?: boolean;
+  /**
+   * When true with `skipIfExists`, load the existing unified creator so callers
+   * (shortlist paste) can add them without creating a duplicate.
+   */
+  returnExisting?: boolean;
   /** When true, skip Open Graph preview so batch adds stay off the timeout path. */
   skipPreviewEnrichment?: boolean;
 };
@@ -78,9 +86,14 @@ export async function addCreatorByProfileUrl(
   if (duplicates.length > 0) {
     influencerId = duplicates[0]!.influencer_id;
     if (input.skipIfExists) {
+      const existingCreator = input.returnExisting
+        ? await getUnifiedCreatorById(supabase, `inf:${influencerId}`, {
+            skipDna: true,
+          })
+        : null;
       return {
         ok: true,
-        creator: null,
+        creator: existingCreator,
         created: false,
         skippedExisting: true,
         enrichmentQueued: false,
@@ -317,4 +330,69 @@ export async function addCreatorsByProfileUrls(
   }
 
   return { ok: true, added, skipped, failed, invalid };
+}
+
+export type ResolveCreatorsByProfileUrlsResult = {
+  resolved: UnifiedCreatorResult[];
+  created: UnifiedCreatorResult[];
+  existing: UnifiedCreatorResult[];
+  failed: Array<{ raw: string; message: string }>;
+  invalid: string[];
+};
+
+/**
+ * Resolve pasted profile URLs to unified creators: existing Discovery roster
+ * rows are returned (not skipped), missing creators are created.
+ */
+export async function resolveCreatorsByProfileUrls(
+  supabase: SupabaseClient<Database>,
+  input: { raw: string; actorId: string; max?: number }
+): Promise<ResolveCreatorsByProfileUrlsResult> {
+  const max = input.max ?? MAX_SHORTLIST_PASTE_CREATORS;
+  const { parsed, invalid } = parseProfileInputList(input.raw);
+  const limited = parsed.slice(0, max);
+  const overflow = parsed.slice(max);
+  const batch = limited.length > 1;
+  const created: UnifiedCreatorResult[] = [];
+  const existing: UnifiedCreatorResult[] = [];
+  const failed: ResolveCreatorsByProfileUrlsResult["failed"] = [
+    ...overflow.map((item) => ({
+      raw: item.raw,
+      message: `Limit is ${max} creators per batch.`,
+    })),
+  ];
+
+  for (const item of limited) {
+    const result = await addCreatorByProfileUrl(supabase, {
+      profileUrl: item.profile_url,
+      actorId: input.actorId,
+      skipIfExists: true,
+      returnExisting: true,
+      skipPreviewEnrichment: batch,
+    });
+    if (!result.ok) {
+      failed.push({ raw: item.raw, message: result.message });
+      continue;
+    }
+    if (!result.creator) {
+      failed.push({
+        raw: item.raw,
+        message: `Could not load @${item.normalized_username}.`,
+      });
+      continue;
+    }
+    if (result.created) {
+      created.push(result.creator);
+    } else {
+      existing.push(result.creator);
+    }
+  }
+
+  return {
+    resolved: [...created, ...existing],
+    created,
+    existing,
+    failed,
+    invalid,
+  };
 }
