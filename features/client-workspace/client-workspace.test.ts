@@ -109,6 +109,7 @@ import {
   contentCategoriesForDisplay,
   contentCategoriesFromShares,
   isDisplayableCategory,
+  listCreatorCategoryStickers,
 } from "./content-categories";
 
 test("public review path does not require login", () => {
@@ -1516,6 +1517,16 @@ test("content categories drop junk labels and keep unique icons plus ECI shares"
     display.map((item) => item.label),
     ["Lifestyle", "Fitness & Yoga", "Food", "Fitness"]
   );
+  assert.deepEqual(
+    listCreatorCategoryStickers({
+      contentCategories: [{ label: "Food" }, { label: "Fitness" }, { label: "Travel" }],
+    }),
+    ["Food", "Fitness"]
+  );
+  assert.deepEqual(listCreatorCategoryStickers({ category: "Sports", niche: "Fitness" }), [
+    "Sports",
+    "Fitness",
+  ]);
   assert.equal(categoryFamily("Camera & Photography"), "photography");
   assert.equal(categoryFamily("Fitness & Yoga"), "health");
   assert.equal(categoryFamily("Food"), "food");

@@ -31,7 +31,7 @@ import {
   rosterHeadline,
   rosterSourceLine,
 } from "../presentation";
-import { contentCategoriesForDisplay } from "../content-categories";
+import { contentCategoriesForDisplay, listCreatorCategoryStickers } from "../content-categories";
 import { breakdownForCreator, creatorProfileLinks, engagementMetersForBreakdown } from "../platform-breakdown";
 import { countSelections, nextAcceptState } from "../status";
 import type { ClientAudienceSlice, ClientCreatorBrief, ClientCreatorCard, ClientWorkspaceView } from "../types";
@@ -218,6 +218,9 @@ export function CreatorsWorkspace({
         <div className="clist">
           {filtered.map((creator, index) => {
             const identity = clientCreatorIdentity(creator.displayName, creator.handle);
+            const categories = listCreatorCategoryStickers(
+              brief?.creatorId === creator.creatorId ? { ...creator, ...brief } : creator
+            );
             const location = formatLocation(creator.city, creator.country);
             const sub = [formatHandleLabel(identity.handle), location].filter(Boolean).join(" · ");
             const state = selection[creator.creatorId] ?? creator.selection;
@@ -251,7 +254,18 @@ export function CreatorsWorkspace({
                 token={token}
               />
               <div className="body">
-                <div className="nm">{identity.name}</div>
+                <div className="nmrow">
+                  <div className="nm">{identity.name}</div>
+                  {categories.length > 0 ? (
+                    <div className="ctags">
+                      {categories.map((label) => (
+                        <span className="tag" key={label}>
+                          {label}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
                 {sub ? <div className="sub">{sub}</div> : null}
                 <ReviewPlatformBreakdown
                   rows={breakdownForCreator(

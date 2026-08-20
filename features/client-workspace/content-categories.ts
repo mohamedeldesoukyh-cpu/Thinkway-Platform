@@ -124,6 +124,20 @@ export function contentCategoriesForDisplay(
   return items.slice(0, 6);
 }
 
+export function listCreatorCategoryStickers(creator: {
+  contentCategories?: ClientContentCategory[] | null;
+  categories?: string[] | null;
+  category?: string | null;
+  niche?: string | null;
+}): string[] {
+  return contentCategoriesForDisplay(
+    creator.contentCategories,
+    creator.categories?.length ? creator.categories : [creator.category, creator.niche]
+  )
+    .slice(0, 2)
+    .map((item) => item.label);
+}
+
 export function categoriesNeedRefresh(
   categories?: string[] | null,
   contentCategories?: ClientContentCategory[] | null
