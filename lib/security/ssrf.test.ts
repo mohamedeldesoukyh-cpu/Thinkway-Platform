@@ -100,6 +100,21 @@ test("social allowlists accept real CDNs and reject lookalikes", () => {
     true
   );
   assert.equal(
+    isUrlAllowedByHostlist("https://www.snapchat.com/add/fsmand1", SOCIAL_PROFILE_ALLOWLIST),
+    true
+  );
+  assert.equal(
+    isUrlAllowedByHostlist(
+      "https://cf-st.sc-cdn.net/aps/bolt/aHR0cHM6Ly9jZi1zdC5zYy1jZG4ubmV0L2Qvavatar",
+      SOCIAL_MEDIA_SRC_ALLOWLIST
+    ),
+    true
+  );
+  assert.equal(
+    isUrlAllowedByHostlist("https://not-sc-cdn.net/avatar", SOCIAL_MEDIA_SRC_ALLOWLIST),
+    false
+  );
+  assert.equal(
     isUrlAllowedByHostlist("https://example.com/@creator", SOCIAL_PROFILE_ALLOWLIST),
     false
   );

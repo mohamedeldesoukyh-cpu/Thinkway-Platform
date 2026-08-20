@@ -17,6 +17,7 @@ import {
 test("isAllowedCreatorAvatarProfileUrl accepts instagram and tiktok profiles", () => {
   assert.equal(isAllowedCreatorAvatarProfileUrl("https://www.instagram.com/mohamed.farag/"), true);
   assert.equal(isAllowedCreatorAvatarProfileUrl("https://www.tiktok.com/@creator"), true);
+  assert.equal(isAllowedCreatorAvatarProfileUrl("https://www.snapchat.com/add/fsmand1"), true);
   assert.equal(isAllowedCreatorAvatarProfileUrl("https://example.com/user"), false);
   assert.equal(
     isAllowedCreatorAvatarProfileUrl("https://notinstagram.com/user"),

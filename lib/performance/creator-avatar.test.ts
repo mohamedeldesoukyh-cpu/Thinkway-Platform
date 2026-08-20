@@ -4,6 +4,7 @@ import {
   detectAvatarCdn,
   isAvatarUrlAllowedForPlatform,
   isInstagramHostedAvatarUrl,
+  isSnapchatHostedAvatarUrl,
   isTikTokHostedAvatarUrl,
   isYouTubeHostedAvatarUrl,
   resolveBrowseCreatorProfileImageUrl,
@@ -21,6 +22,7 @@ const IG_CDN = "https://scontent-lhr8-1.cdninstagram.com/v/t51.2885-19/abc.jpg";
 const TT_CDN = "https://p16-sign-va.tiktokcdn.com/avatar.jpg";
 const TT_IBYTEIMG = "https://p16-sign-va.ibyteimg.com/tos-maliva-avt-0068/avatar.jpeg";
 const YT_CDN = "https://yt3.ggpht.com/ytc/default.jpg";
+const SNAP_CDN = "https://cf-st.sc-cdn.net/aps/bolt/avatar";
 
 assert.equal(isInstagramHostedAvatarUrl(IG_CDN), true);
 assert.equal(isTikTokHostedAvatarUrl(TT_CDN), true);
@@ -39,10 +41,17 @@ assert.equal(
   false
 );
 
+assert.equal(isSnapchatHostedAvatarUrl(SNAP_CDN), true);
+assert.equal(isSnapchatHostedAvatarUrl(IG_CDN), false);
+
 assert.equal(detectAvatarCdn(IG_CDN), "instagram");
 assert.equal(detectAvatarCdn(TT_CDN), "tiktok");
 assert.equal(detectAvatarCdn(TT_IBYTEIMG), "tiktok");
 assert.equal(detectAvatarCdn(YT_CDN), "youtube");
+assert.equal(detectAvatarCdn(SNAP_CDN), "snapchat");
+
+assert.equal(isAvatarUrlAllowedForPlatform("snapchat", SNAP_CDN), true);
+assert.equal(isAvatarUrlAllowedForPlatform("instagram", SNAP_CDN), false);
 
 // Signed TikTok CDN URLs are stabilized for display (strip x-expires / -sign host).
 assert.equal(

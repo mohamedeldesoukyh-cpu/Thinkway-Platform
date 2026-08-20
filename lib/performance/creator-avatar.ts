@@ -175,11 +175,24 @@ export function isFacebookHostedAvatarUrl(url: string | null | undefined): boole
   return false;
 }
 
+/** True when URL is hosted on Snapchat CDN. */
+export function isSnapchatHostedAvatarUrl(url: string | null | undefined): boolean {
+  const trimmed = url?.trim();
+  if (!trimmed) return false;
+
+  const host = hostFromUrl(trimmed);
+  if (!host) return false;
+  if (host === "sc-cdn.net" || host.endsWith(".sc-cdn.net")) return true;
+  if (host === "snapchat.com" || host.endsWith(".snapchat.com")) return true;
+  return false;
+}
+
 export type DetectedAvatarCdn =
   | "instagram"
   | "tiktok"
   | "youtube"
   | "facebook"
+  | "snapchat"
   | "unknown";
 
 /** Best-effort CDN owner for platform safety checks. */
@@ -188,6 +201,7 @@ export function detectAvatarCdn(url: string | null | undefined): DetectedAvatarC
   if (isTikTokHostedAvatarUrl(url)) return "tiktok";
   if (isYouTubeHostedAvatarUrl(url)) return "youtube";
   if (isFacebookHostedAvatarUrl(url)) return "facebook";
+  if (isSnapchatHostedAvatarUrl(url)) return "snapchat";
   return "unknown";
 }
 
@@ -255,6 +269,7 @@ export function isAvatarUrlAllowedForPlatform(
   if (cdn === "tiktok" && key !== "tiktok") return false;
   if (cdn === "youtube" && key !== "youtube") return false;
   if (cdn === "facebook" && key !== "facebook" && key !== "unknown") return false;
+  if (cdn === "snapchat" && key !== "snapchat" && key !== "unknown") return false;
 
   return true;
 }

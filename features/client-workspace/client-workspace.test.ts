@@ -976,6 +976,10 @@ test("missing avatars keep a social profile URL for the public review proxy", ()
     profileUrlFromHandle("@radwaadeeel", "instagram"),
     "https://www.instagram.com/radwaadeeel/"
   );
+  assert.equal(
+    profileUrlFromHandle("@fsmand1", "snapchat"),
+    "https://www.snapchat.com/add/fsmand1"
+  );
   const enriched = enrichSnapshotCreatorFromUnified(
     {
       creatorId: "c1",

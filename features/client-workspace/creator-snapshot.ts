@@ -168,6 +168,7 @@ export function profileUrlFromHandle(handle?: string | null, platform?: string |
   if (network === "tiktok") return `https://www.tiktok.com/@${username}`;
   if (network === "youtube") return `https://www.youtube.com/@${username}`;
   if (network === "facebook") return `https://www.facebook.com/${username}`;
+  if (network === "snapchat") return `https://www.snapchat.com/add/${username}`;
   return undefined;
 }
 

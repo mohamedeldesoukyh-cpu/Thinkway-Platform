@@ -219,15 +219,17 @@ export const SOCIAL_MEDIA_SRC_ALLOWLIST: HostAllowlist = {
     "muscdn.com",
     "ytimg.com",
     "youtube.com",
+    "sc-cdn.net",
+    "snapchat.com",
   ],
 };
 
 export const SOCIAL_POST_ALLOWLIST: HostAllowlist = {
   exact: ["youtu.be", "fb.watch"],
-  suffixes: ["instagram.com", "tiktok.com", "youtube.com", "facebook.com", "fb.com"],
+  suffixes: ["instagram.com", "tiktok.com", "youtube.com", "facebook.com", "fb.com", "snapchat.com"],
 };
 
 export const SOCIAL_PROFILE_ALLOWLIST: HostAllowlist = {
   exact: ["youtu.be", "fb.watch"],
-  suffixes: ["instagram.com", "tiktok.com", "youtube.com", "facebook.com", "fb.com"],
+  suffixes: ["instagram.com", "tiktok.com", "youtube.com", "facebook.com", "fb.com", "snapchat.com"],
 };

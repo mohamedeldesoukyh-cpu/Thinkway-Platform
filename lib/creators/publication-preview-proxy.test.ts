@@ -4,6 +4,7 @@ import {
   fetchPublicationPreviewImage,
   isAllowedPublicationPreviewPostUrl,
   isAllowedPublicationPreviewSrcUrl,
+  refererForPublicationImageUrl,
   resolvePublicationPreviewForHttpRequest,
 } from "./publication-preview-proxy";
 import { instagramShortcodeFromUrl } from "@/lib/performance/screenshot-capture/providers/instagram-media-redirect";
@@ -38,6 +39,21 @@ async function main() {
   );
   assert.equal(
     isAllowedPublicationPreviewSrcUrl("https://scontent.xx.fbcdn.net/v/t15/fb.jpg"),
+    true
+  );
+  assert.equal(
+    isAllowedPublicationPreviewSrcUrl(
+      "https://cf-st.sc-cdn.net/aps/bolt/aHR0cHM6Ly9jZi1zdC5zYy1jZG4ubmV0L2Qvavatar"
+    ),
+    true,
+    "Snapchat CDN avatars must be fetchable"
+  );
+  assert.equal(
+    refererForPublicationImageUrl("https://cf-st.sc-cdn.net/aps/bolt/avatar"),
+    "https://www.snapchat.com/"
+  );
+  assert.equal(
+    isAllowedPublicationPreviewPostUrl("https://www.snapchat.com/add/fsmand1"),
     true
   );
 

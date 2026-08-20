@@ -41,7 +41,7 @@ export function isAllowedPublicationPreviewPostUrl(url: string): boolean {
   return isUrlAllowedByHostlist(url, SOCIAL_POST_ALLOWLIST);
 }
 
-function refererForImageUrl(url: string): string | undefined {
+export function refererForPublicationImageUrl(url: string): string | undefined {
   const host = hostFromUrl(url);
   if (!host) return undefined;
   if (
@@ -85,6 +85,14 @@ function refererForImageUrl(url: string): string | undefined {
   ) {
     return "https://www.facebook.com/";
   }
+  if (
+    isExactHostOrSuffix(host, {
+      exact: [],
+      suffixes: ["sc-cdn.net", "snapchat.com"],
+    })
+  ) {
+    return "https://www.snapchat.com/";
+  }
   return undefined;
 }
 
@@ -125,7 +133,7 @@ export async function fetchImageBuffer(
     return { ok: false };
   }
 
-  const referer = options?.referer ?? refererForImageUrl(normalizedUrl);
+  const referer = options?.referer ?? refererForPublicationImageUrl(normalizedUrl);
   const timeoutMs = options?.timeoutMs ?? MEDIA_PROXY_REFRESH_TIMEOUT_MS;
   if (options?.countExternal !== false) {
     recordMediaProxyExternalRequest();
