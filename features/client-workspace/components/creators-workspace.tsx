@@ -243,6 +243,9 @@ export function CreatorsWorkspace({
                 initialsClassName="ini"
                 url={creator.avatarUrl}
                 profileUrl={creator.profileUrl}
+                handle={creator.handle}
+                platform={creator.platform}
+                platformAccounts={creator.platformAccounts}
                 name={identity.name}
                 index={view.creators.findIndex((item) => item.creatorId === creator.creatorId) || index}
                 token={token}
@@ -420,6 +423,9 @@ function CreatorDetailPane({
               initialsClassName="ini"
               url={brief?.avatarUrl || creator.avatarUrl}
               profileUrl={brief?.profileUrl || creator.profileUrl}
+              handle={brief?.handle || creator.handle}
+              platform={brief?.platform || creator.platform}
+              platformAccounts={brief?.platformAccounts ?? creator.platformAccounts}
               name={name}
               index={index}
               token={token}
@@ -431,6 +437,9 @@ function CreatorDetailPane({
             initialsClassName="ini"
             url={brief?.avatarUrl || creator.avatarUrl}
             profileUrl={brief?.profileUrl || creator.profileUrl}
+            handle={brief?.handle || creator.handle}
+            platform={brief?.platform || creator.platform}
+            platformAccounts={brief?.platformAccounts ?? creator.platformAccounts}
             name={name}
             index={index}
             token={token}

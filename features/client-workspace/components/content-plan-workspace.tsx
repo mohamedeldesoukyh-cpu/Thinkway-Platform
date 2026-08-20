@@ -71,6 +71,9 @@ export function ContentPlanWorkspace({
                   className="av"
                   url={creator.avatarUrl}
                   profileUrl={creator.profileUrl}
+                  handle={creator.handle}
+                  platform={creator.platform}
+                  platformAccounts={creator.platformAccounts}
                   name={creator.displayName}
                   index={view.creators.findIndex((item) => item.creatorId === creator.creatorId) || index}
                   token={token}

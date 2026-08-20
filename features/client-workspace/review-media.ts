@@ -1,6 +1,10 @@
 import { shouldProxyPublicationMediaUrl } from "@/lib/creators/recent-publication-thumb";
 import { decodeHtmlEntities } from "@/lib/text/decode-html-entities";
 
+import {
+  avatarProfileUrlForReview,
+  profileUrlForPlatform,
+} from "./platform-breakdown";
 import type { ClientContentPost, ClientReviewSourceSnapshot } from "./types";
 
 function normalizeMediaUrl(value?: string | null): string | null {
@@ -16,6 +20,14 @@ export function reviewMediaAllowlist(snapshot: ClientReviewSourceSnapshot | null
   for (const creator of snapshot.creators) {
     addUrl(urls, creator.avatarUrl);
     addUrl(urls, creator.profileUrl);
+    addUrl(urls, avatarProfileUrlForReview(creator));
+    for (const account of creator.platformAccounts ?? []) {
+      addUrl(urls, account.profileUrl);
+      addUrl(
+        urls,
+        profileUrlForPlatform(account.platform, account.handle, account.profileUrl)
+      );
+    }
     for (const post of creator.contentFeed ?? []) {
       addUrl(urls, post.thumbnail);
       addUrl(urls, post.url);

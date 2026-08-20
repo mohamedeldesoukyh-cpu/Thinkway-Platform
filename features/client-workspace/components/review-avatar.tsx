@@ -2,12 +2,16 @@
 
 import { useState } from "react";
 
+import { avatarProfileUrlForReview } from "../platform-breakdown";
 import { AVATAR_GRADS, initialsFromName } from "../presentation";
 import { clientReviewAvatarUrl } from "../review-media";
 
 export function ReviewAvatar({
   url,
   profileUrl,
+  handle,
+  platform,
+  platformAccounts,
   name,
   index,
   token,
@@ -17,6 +21,9 @@ export function ReviewAvatar({
 }: {
   url?: string;
   profileUrl?: string;
+  handle?: string;
+  platform?: string;
+  platformAccounts?: Array<{ platform: string; handle?: string; profileUrl?: string }>;
   name: string;
   index: number;
   token?: string;
@@ -24,7 +31,14 @@ export function ReviewAvatar({
   initialsClassName?: string;
   children?: React.ReactNode;
 }) {
-  const src = token ? clientReviewAvatarUrl(token, url, profileUrl) : url;
+  const fetchProfileUrl =
+    avatarProfileUrlForReview({
+      profileUrl,
+      handle,
+      platform,
+      platformAccounts,
+    }) ?? profileUrl;
+  const src = token ? clientReviewAvatarUrl(token, url, fetchProfileUrl) : url;
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const showImage = Boolean(src) && failedSrc !== src;
   return (

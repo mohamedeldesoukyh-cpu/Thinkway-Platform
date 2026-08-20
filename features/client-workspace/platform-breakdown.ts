@@ -245,6 +245,42 @@ export function profileUrlForPlatform(
   return undefined;
 }
 
+/** Platforms whose public profile pages can yield a photo. Snapchat add-pages cannot. */
+const AVATAR_FETCH_PLATFORM_ORDER = ["instagram", "tiktok", "youtube", "facebook"] as const;
+
+export function avatarProfileUrlForReview(input: {
+  profileUrl?: string | null;
+  handle?: string | null;
+  platform?: string | null;
+  platformAccounts?: Array<{ platform: string; handle?: string; profileUrl?: string }>;
+}): string | undefined {
+  for (const key of AVATAR_FETCH_PLATFORM_ORDER) {
+    const row = input.platformAccounts?.find(
+      (account) => canonicalPlatformKey(account.platform) === key
+    );
+    if (!row) continue;
+    const url = profileUrlForPlatform(key, row.handle, row.profileUrl);
+    if (url) return url;
+  }
+
+  const primaryKey = canonicalPlatformKey(input.platform);
+  if (
+    primaryKey &&
+    (AVATAR_FETCH_PLATFORM_ORDER as readonly string[]).includes(primaryKey)
+  ) {
+    const url = profileUrlForPlatform(
+      primaryKey,
+      input.handle ?? undefined,
+      input.profileUrl ?? undefined
+    );
+    if (url) return url;
+  }
+
+  const stored = safeHttpUrl(input.profileUrl);
+  if (stored && !/snapchat\.com/i.test(stored)) return stored;
+  return stored;
+}
+
 export type ClientCreatorProfileLink = {
   platform: string;
   url: string;

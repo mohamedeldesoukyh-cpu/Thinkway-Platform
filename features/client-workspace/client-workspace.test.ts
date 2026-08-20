@@ -35,7 +35,7 @@ import { HYPEAUDITOR_MEDIA_PLAN_PARITY } from "./hypeauditor-parity";
 import { projectMediaPlanSummary, projectSelectionSummaryFromCards } from "./media-plan-summary";
 import { briefFromSnapshotCreator, mergeFrozenBrief } from "./creator-brief";
 import { enrichSnapshotCreatorFromUnified, mixPostsForDeliverables, profileUrlFromHandle, resolveContentPostPlatform, shouldReplaceContentFeed } from "./creator-snapshot";
-import { creatorPlatformBreakdown, creatorProfileLinks, engagementMetersForBreakdown } from "./platform-breakdown";
+import { creatorPlatformBreakdown, creatorProfileLinks, engagementMetersForBreakdown, avatarProfileUrlForReview } from "./platform-breakdown";
 import { clientReviewAvatarUrl, isReviewMediaUrlAllowed, reviewMediaAllowlist } from "./review-media";
 import { canCreateCampaignFromQuotation } from "@/lib/commercial-sync/rules";
 import { diffClientReviewSnapshots, diffShortlistToQuotation, retainCreatorBriefs } from "./snapshot-diff";
@@ -993,6 +993,66 @@ test("missing avatars keep a social profile URL for the public review proxy", ()
   assert.equal(enriched.avatarUrl, undefined);
   assert.equal(enriched.platformAccounts?.[0]?.platform, "instagram");
   assert.equal(enriched.platformAccounts?.[0]?.followers, undefined);
+});
+
+test("Client Workspace fetches the TikTok photo when Snapchat is the stored profile", () => {
+  const tiktokUrl = "https://www.tiktok.com/@rewlifts";
+  assert.equal(
+    avatarProfileUrlForReview({
+      profileUrl: "https://www.snapchat.com/add/rewlifts",
+      handle: "@rewlifts",
+      platform: "snapchat",
+      platformAccounts: [
+        {
+          platform: "snapchat",
+          handle: "@rewlifts",
+          profileUrl: "https://www.snapchat.com/add/rewlifts",
+        },
+        { platform: "tiktok", handle: "@rewlifts", profileUrl: tiktokUrl },
+      ],
+    }),
+    tiktokUrl
+  );
+
+  const snapshot = parseSourceSnapshot({
+    source: "quotation",
+    brandName: "Limitless",
+    campaignName: "KSA",
+    clientLabel: "Limitless",
+    platforms: ["snapchat", "tiktok"],
+    deliverables: [],
+    creators: [
+      {
+        creatorId: "rewlifts",
+        displayName: "rewlifts",
+        handle: "@rewlifts",
+        platform: "snapchat",
+        profileUrl: "https://www.snapchat.com/add/rewlifts",
+        platformAccounts: [
+          {
+            platform: "snapchat",
+            handle: "@rewlifts",
+            profileUrl: "https://www.snapchat.com/add/rewlifts",
+          },
+          { platform: "tiktok", handle: "@rewlifts" },
+        ],
+      },
+    ],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "Duration not confirmed", phases: [] },
+    commercial: {
+      currency: "EGP",
+      creatorInvestment: 0,
+      totalInvestment: 0,
+      lines: [],
+      selectedCount: 1,
+      totalCount: 1,
+    },
+    creatorIds: ["rewlifts"],
+  });
+  assert.ok(snapshot);
+  const allow = reviewMediaAllowlist(snapshot);
+  assert.equal(isReviewMediaUrlAllowed(allow, null, null, tiktokUrl), true);
 });
 
 test("unified enrichment stores followers and ER per platform", () => {

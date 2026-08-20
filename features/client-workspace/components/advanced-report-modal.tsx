@@ -121,6 +121,9 @@ export function AdvancedReportModal({
             initialsClassName="ini"
             url={view?.avatarUrl || creator.avatarUrl}
             profileUrl={view?.profileUrl || creator.profileUrl}
+            handle={view?.handle || creator.handle}
+            platform={view?.platform || creator.platform}
+            platformAccounts={view?.platformAccounts ?? creator.platformAccounts}
             name={view?.displayName || creator.displayName}
             index={index}
             token={token}

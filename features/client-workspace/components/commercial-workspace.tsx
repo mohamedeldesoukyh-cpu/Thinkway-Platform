@@ -132,6 +132,9 @@ export function CommercialWorkspace({
                         className="av"
                         url={creator.avatarUrl}
                         profileUrl={creator.profileUrl}
+                        handle={creator.handle}
+                        platform={creator.platform}
+                        platformAccounts={creator.platformAccounts}
                         name={identity.name}
                         index={index}
                         token={token}
