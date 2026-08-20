@@ -1,5 +1,6 @@
 import { ClientReviewEntry, InvalidReviewLink } from "@/features/client-workspace/components/client-review-entry";
 import { loadClientWorkspace } from "@/features/client-workspace/load-client-workspace";
+import { reviewIdBelongsToJourney } from "@/features/client-workspace/journey-state";
 import { resolveReviewToken } from "@/features/client-workspace/security/resolve-request-token";
 import { defaultClientWorkspaceSection } from "@/features/client-workspace/visible-sections";
 
@@ -15,8 +16,16 @@ export default async function ClientReviewEntryPage({ params, searchParams }: Pr
   if (!token) {
     return <InvalidReviewLink />;
   }
-  const loaded = await loadClientWorkspace(token);
-  if (!loaded.ok || loaded.view.review.id !== reviewId) {
+  const loaded = await loadClientWorkspace(token, reviewId);
+  if (
+    !loaded.ok ||
+    !reviewIdBelongsToJourney(reviewId, {
+      canonicalReviewId: loaded.view.journey?.canonicalReviewId,
+      memberReviewIds: loaded.view.journey?.memberReviewIds,
+      activeReviewId: loaded.view.review.id,
+      journeyId: loaded.view.journey?.id,
+    })
+  ) {
     return <InvalidReviewLink message={loaded.ok ? undefined : loaded.message} />;
   }
   return (

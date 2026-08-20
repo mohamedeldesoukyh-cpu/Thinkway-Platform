@@ -15,6 +15,7 @@ import { rosterHeadline } from "../presentation";
 import { countSelections } from "../status";
 import type { ClientWorkspaceView } from "../types";
 import { useClientWorkspaceState } from "./client-workspace-state";
+import { RosterDiffCard } from "./roster-diff-card";
 import { IconCheck } from "./review-icons";
 
 export function ApprovalWorkspace({
@@ -35,14 +36,17 @@ export function ApprovalWorkspace({
     selection,
     view.creators.map((creator) => creator.creatorId)
   );
+  const journey = view.journey;
+  const quotationStage = journey?.quotationStage;
+  const shortlistStage = journey?.shortlistStage;
+  const showShortlistApproval = Boolean(journey?.canApproveShortlist);
+  const showQuotationApproval = Boolean(journey?.canApproveQuotation);
+  const quotationApproved = quotationStage === "approved";
+  const shortlistApproved = shortlistStage === "approved";
   const deliverableCount = selectedSummary.activityMix.reduce((sum, item) => sum + item.count, 0);
   const investment =
     selectedCommercial.totalInvestment > 0
       ? formatMoneyKpi(selectedCommercial.totalInvestment, selectedCommercial.currency)
-      : TO_BE_CONFIRMED;
-  const quotationTotal =
-    view.commercial.quotationTotal > 0
-      ? formatMoneyKpi(view.commercial.quotationTotal, view.commercial.currency)
       : TO_BE_CONFIRMED;
 
   function toggle(area: ClientChangeArea) {
@@ -51,15 +55,15 @@ export function ApprovalWorkspace({
     );
   }
 
-  if (view.review.status === "approved") {
+  if (quotationApproved) {
     return (
       <div className="card">
-        <p className="ck">Proposal approved</p>
+        <p className="ck">Quotation approved</p>
         <h2>{view.overview.campaignName}</h2>
         <p className="note">
-          Approved {view.review.approvedAt ? new Date(view.review.approvedAt).toLocaleString() : ""} · Proposal v
-          {view.review.reviewNumber}
+          Approved {view.review.approvedAt ? new Date(view.review.approvedAt).toLocaleString() : ""}
           {view.review.approvedByLabel ? ` · Approved by ${view.review.approvedByLabel}` : ""}
+          . This is the final commercial approval.
         </p>
       </div>
     );
@@ -67,74 +71,127 @@ export function ApprovalWorkspace({
 
   return (
     <>
-      <div className="card">
-        <p className="ck">Ready for approval</p>
-        <h2>Review and lock this selection</h2>
-        <div className="asum">
-          <div className="gi">
-            <p className="l">Campaign</p>
-            <p className="v">{view.overview.campaignName}</p>
-          </div>
-          <div className="gi">
-            <p className="l">Creators</p>
-            <p className="v">
-              {counts.accepted} selected · {rosterHeadline(view.creators.length)}
-            </p>
-          </div>
-          <div className="gi">
-            <p className="l">Quotation</p>
-            <p className={view.commercial.quotationTotal > 0 ? "v" : "v tbc"}>{quotationTotal}</p>
-          </div>
-          <div className="gi">
-            <p className="l">Selected investment</p>
-            <p className={selectedCommercial.totalInvestment > 0 ? "v" : "v tbc"}>{investment}</p>
-          </div>
-          <div className="gi">
-            <p className="l">Deliverables</p>
-            <p className={deliverableCount > 0 ? "v" : "v tbc"}>
-              {deliverableCount > 0 ? `${deliverableCount} items` : TO_BE_CONFIRMED}
-            </p>
-          </div>
+      {view.stageDiff ? <RosterDiffCard view={view} /> : null}
+
+      {shortlistApproved && !showShortlistApproval ? (
+        <div className="card">
+          <p className="ck">Shortlist</p>
+          <h2>Shortlist approved for consideration</h2>
+          <p className="note">
+            This approval accepts the creator roster only. It does not approve prices, deliverables, or
+            quotation value.
+          </p>
         </div>
-        <p className="note">Proposal v{view.review.reviewNumber} · Current</p>
-        <div className="checklist">
-          <CheckItem done label="Campaign reviewed" />
-          <CheckItem done={counts.accepted > 0} label="Creator selection reviewed" />
-          <CheckItem done={deliverableCount > 0} label="Deliverables reviewed" />
-          <CheckItem done={selectedCommercial.totalInvestment > 0} label="Investment reviewed" />
-        </div>
-        {error ? <p style={{ color: "var(--bad)", fontSize: 13 }}>{error}</p> : null}
-        {view.canDecide ? (
+      ) : null}
+
+      {showShortlistApproval ? (
+        <div className="card">
+          <p className="ck">Shortlist</p>
+          <h2>Approve this creator shortlist for consideration</h2>
+          <p className="note">
+            We accept this creator shortlist for consideration. This does not approve prices, the
+            quotation, final campaign investment, or lock deliverables.
+          </p>
+          <div className="checklist">
+            <CheckItem done label="Creator roster reviewed" />
+            <CheckItem done={view.creators.length > 0} label="Creator fit reviewed" />
+            <CheckItem done={counts.rejected < view.creators.length} label="Shortlist accepted for consideration" />
+          </div>
+          {error ? <p style={{ color: "var(--bad)", fontSize: 13 }}>{error}</p> : null}
           <div className="dacts" style={{ justifyContent: "flex-start", marginTop: 18 }}>
             <button
               type="button"
               className="btn pri"
-              disabled={pending || counts.accepted === 0}
+              disabled={pending}
               onClick={() =>
                 startTransition(async () => {
-                  const result = await decideReviewAction({ token, decision: "approved" });
+                  const result = await decideReviewAction({
+                    token,
+                    decision: "approved",
+                    stage: "shortlist",
+                  });
                   if (!result.ok) setError(result.message);
                   router.refresh();
                 })
               }
             >
               <IconCheck />
-              Approve selection
+              Approve Shortlist
             </button>
-            <button
-              type="button"
-              className="btn sec"
-              onClick={() => goToSection("feedback")}
-            >
+            <button type="button" className="btn sec" onClick={() => goToSection("feedback")}>
               Request changes
             </button>
           </div>
-        ) : (
-          <p className="note">This proposal is no longer open for decision.</p>
-        )}
-      </div>
+        </div>
+      ) : null}
 
-      {view.canDecide ? (
+      {showQuotationApproval ? (
+        <div className="card">
+          <p className="ck">Quotation</p>
+          <h2>Approve this quotation</h2>
+          <p className="note">
+            This is the final commercial approval: creators, deliverables, and campaign investment.
+          </p>
+          <div className="asum">
+            <div className="gi">
+              <p className="l">Creators</p>
+              <p className="v">{rosterHeadline(view.creators.length)}</p>
+            </div>
+            <div className="gi">
+              <p className="l">Investment</p>
+              <p className={selectedCommercial.totalInvestment > 0 ? "v" : "v tbc"}>{investment}</p>
+            </div>
+            <div className="gi">
+              <p className="l">Deliverables</p>
+              <p className={deliverableCount > 0 ? "v" : "v tbc"}>
+                {deliverableCount > 0 ? `${deliverableCount} items` : TO_BE_CONFIRMED}
+              </p>
+            </div>
+          </div>
+          <div className="checklist">
+            <CheckItem done={view.creators.length > 0} label="Creators reviewed" />
+            <CheckItem done={deliverableCount > 0} label="Deliverables reviewed" />
+            <CheckItem done={selectedCommercial.totalInvestment > 0} label="Investment reviewed" />
+            <CheckItem done={Boolean(view.quotation)} label="Quotation terms reviewed" />
+            <CheckItem done label="Applicable T&C accepted on approval" />
+          </div>
+          {error ? <p style={{ color: "var(--bad)", fontSize: 13 }}>{error}</p> : null}
+          <div className="dacts" style={{ justifyContent: "flex-start", marginTop: 18 }}>
+            <button
+              type="button"
+              className="btn pri"
+              disabled={pending}
+              onClick={() =>
+                startTransition(async () => {
+                  const result = await decideReviewAction({
+                    token,
+                    decision: "approved",
+                    stage: "quotation",
+                  });
+                  if (!result.ok) setError(result.message);
+                  router.refresh();
+                })
+              }
+            >
+              <IconCheck />
+              Approve Quotation
+            </button>
+            <button type="button" className="btn sec" onClick={() => goToSection("feedback")}>
+              Request changes
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {!showShortlistApproval && !showQuotationApproval && !quotationApproved ? (
+        <div className="card">
+          <p className="ck">Approval</p>
+          <h2>No decision is open on this version</h2>
+          <p className="note">Thinkway will send an updated quotation if commercial terms change.</p>
+        </div>
+      ) : null}
+
+      {journey?.canRequestQuotationChanges || journey?.canRequestShortlistChanges ? (
         <div className="card">
           <p className="ck">Request changes</p>
           <h2>Tell Thinkway what to update</h2>
@@ -163,7 +220,12 @@ export function ApprovalWorkspace({
             disabled={pending || !summary.trim()}
             onClick={() =>
               startTransition(async () => {
-                await requestReviewChangesAction({ token, summary, areas });
+                await requestReviewChangesAction({
+                  token,
+                  summary,
+                  areas,
+                  stage: journey?.canRequestQuotationChanges ? "quotation" : "shortlist",
+                });
                 router.refresh();
               })
             }
@@ -173,17 +235,17 @@ export function ApprovalWorkspace({
         </div>
       ) : null}
 
-      {view.canDecide ? (
+      {journey?.canRejectQuotation ? (
         <div className="card">
           <p className="ck" style={{ color: "var(--bad)" }}>
-            Reject proposal
+            Reject quotation
           </p>
-          <h2>Rejecting requires a reason</h2>
+          <h2>Rejecting the quotation does not reject the shortlist</h2>
           <textarea
             className="f"
             value={rejectReason}
             onChange={(event) => setRejectReason(event.target.value)}
-            placeholder="Why is this proposal being rejected?"
+            placeholder="Why is this quotation being rejected?"
           />
           <div className="dacts" style={{ justifyContent: "flex-start", marginTop: 14 }}>
             <button
@@ -196,13 +258,14 @@ export function ApprovalWorkspace({
                     token,
                     decision: "rejected",
                     reason: rejectReason,
+                    stage: "quotation",
                   });
                   if (!result.ok) setError(result.message);
                   router.refresh();
                 })
               }
             >
-              Reject proposal
+              Reject quotation
             </button>
           </div>
         </div>

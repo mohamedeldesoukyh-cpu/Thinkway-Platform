@@ -4,7 +4,7 @@ import { hydrateSlateCreators } from "@/features/campaign-studio/services/copilo
 import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { CLIENT_STATUS_LABEL, type ClientCreatorSelectionState } from "./constants";
+import { type ClientCreatorSelectionState } from "./constants";
 import { mapClientReviewRow } from "./persist-client-review";
 import {
   projectClientContent,
@@ -21,13 +21,25 @@ import {
 } from "./snapshot";
 import { applyCreatorForecasts, projectClientMediaPlans } from "./media-plan-summary";
 import { snapshotFromCampaignObject } from "./snapshot-from-object";
-import { actionRequiredFor, isInteractiveClientReview } from "./status";
+import { isInteractiveClientReview } from "./status";
+import {
+  canLiveSyncClientReview,
+  deriveQuotationStage,
+  deriveShortlistStage,
+  journeyActionRequired,
+  journeyCanonicalReviewId,
+  latestApprovedReviewForSource,
+  latestReviewForSource,
+  pickActiveDecisionReview,
+} from "./journey-state";
+import { diffShortlistToQuotation } from "./snapshot-diff";
 import type {
   ClientActivityEvent,
   ClientComment,
   ClientReviewRecord,
   ClientReviewSourceSnapshot,
   ClientWorkspaceEntry,
+  ClientWorkspaceJourney,
   ClientWorkspaceView,
 } from "./types";
 import { visibleClientWorkspaceSections } from "./visible-sections";
@@ -59,18 +71,49 @@ export async function resolveClientReviewByToken(
   return { ok: true, review: mapped };
 }
 
+export async function loadJourneyReviews(
+  supabase: SupabaseClient,
+  review: ClientReviewRecord
+): Promise<ClientReviewRecord[]> {
+  if (!review.journeyId) return [review];
+  const { data } = await supabase
+    .from("campaign_client_reviews" as never)
+    .select("*")
+    .eq("journey_id", review.journeyId)
+    .neq("status", "revoked")
+    .order("created_at", { ascending: true });
+  const rows = (data ?? []) as Parameters<typeof mapClientReviewRow>[0][];
+  const mapped = rows.map((row) => mapClientReviewRow(row));
+  if (!mapped.some((item) => item.id === review.id)) mapped.push(review);
+  return mapped;
+}
+
+async function markFirstViewed(supabase: SupabaseClient, review: ClientReviewRecord): Promise<ClientReviewRecord> {
+  if (review.firstViewedAt || !isInteractiveClientReview(review.status)) return review;
+  const now = new Date().toISOString();
+  await supabase
+    .from("campaign_client_reviews" as never)
+    .update({ first_viewed_at: now, updated_at: now } as never)
+    .eq("id", review.id)
+    .is("first_viewed_at", null);
+  return { ...review, firstViewedAt: now };
+}
+
 async function loadComments(
   supabase: SupabaseClient,
-  reviewId: string
+  reviewIds: string[],
+  sourceByReviewId: Record<string, ClientReviewRecord["source"]>
 ): Promise<ClientComment[]> {
+  if (reviewIds.length === 0) return [];
   const { data } = await supabase
     .from("campaign_client_review_comments" as never)
-    .select("id, target_type, target_id, author_kind, author_label, message, status, created_at")
-    .eq("review_id", reviewId)
+    .select("id, review_id, target_type, target_id, author_kind, author_label, message, status, created_at")
+    .in("review_id", reviewIds)
     .order("created_at", { ascending: false })
     .limit(100);
   return ((data ?? []) as Array<{
     id: string;
+    review_id: string;
     target_type: ClientComment["targetType"];
     target_id: string | null;
     author_kind: ClientComment["authorKind"];
@@ -87,17 +130,19 @@ async function loadComments(
     message: row.message,
     status: row.status,
     createdAt: row.created_at,
+    stage: sourceByReviewId[row.review_id],
   }));
 }
 
 async function loadActivity(
   supabase: SupabaseClient,
-  reviewId: string
+  reviewIds: string[]
 ): Promise<ClientActivityEvent[]> {
+  if (reviewIds.length === 0) return [];
   const { data } = await supabase
     .from("campaign_client_review_events" as never)
     .select("id, event_type, actor_kind, actor_label, payload, created_at")
-    .eq("review_id", reviewId)
+    .in("review_id", reviewIds)
     .order("created_at", { ascending: false })
     .limit(50);
   return ((data ?? []) as Array<{
@@ -135,8 +180,14 @@ function eventSummary(type: string, payload: Record<string, unknown> | null): st
       return "Client approved";
     case "client_rejected":
       return "Client rejected";
-    case "quotation_generated":
-      return "Quotation generated";
+    case "shortlist_approved":
+      return "Shortlist approved";
+    case "quotation_approved":
+      return "Quotation approved";
+    case "quotation_revision_published":
+      return "Updated quotation sent for approval";
+    case "review_viewed":
+      return "Client opened this review";
     default:
       return type.replaceAll("_", " ");
   }
@@ -202,7 +253,8 @@ function viewFromSnapshot(
 }
 
 export async function loadClientWorkspace(
-  token: string
+  token: string,
+  requestedReviewId?: string
 ): Promise<
   | { ok: true; view: ClientWorkspaceView; entry: ClientWorkspaceEntry; campaignObject: CampaignObject | null }
   | { ok: false; code: "invalid" | "revoked" | "not_found" | "unavailable"; message: string }
@@ -228,47 +280,128 @@ export async function loadClientWorkspace(
   }
 
   const db = service ?? resolver;
-  let resolved = resolvedInitial;
-  if (service && resolved.review.source === "quotation" && resolved.review.quotationId) {
+  let members = await loadJourneyReviews(db, resolvedInitial.review);
+  const quotationTip = latestReviewForSource(members, "quotation");
+  if (
+    service &&
+    quotationTip &&
+    quotationTip.quotationId &&
+    canLiveSyncClientReview({
+      status: quotationTip.status,
+      source: quotationTip.source,
+      campaignHeaderId: quotationTip.campaignHeaderId,
+    })
+  ) {
     try {
       const { createClientReviewFromQuotation } = await import("./create-from-quotation");
       await createClientReviewFromQuotation(service, {
-        quotationId: resolved.review.quotationId,
+        quotationId: quotationTip.quotationId,
         userId: "00000000-0000-0000-0000-000000000000",
         origin: process.env.NEXT_PUBLIC_APP_URL ?? "https://dev.thinkwaymedia.com",
         mintMissingShareToken: false,
         syncExistingOnly: true,
       });
-      const refreshed = await resolveClientReviewByToken(service, token);
-      if (refreshed.ok) resolved = refreshed;
+      members = await loadJourneyReviews(db, resolvedInitial.review);
     } catch {
       /* keep the stored snapshot if quotation sync is unavailable */
     }
   }
-  const selection = resolved.review.selectionState as Record<string, ClientCreatorSelectionState>;
+
+  const canonicalReviewId = journeyCanonicalReviewId(members, resolvedInitial.review.id);
+  const picked = pickActiveDecisionReview({
+    reviews: members,
+    requestedReviewId,
+    canonicalReviewId,
+    tokenBoundReviewId: resolvedInitial.review.id,
+  });
+  if (!picked.review) {
+    return { ok: false, code: "not_found", message: "This campaign package is no longer available." };
+  }
+
+  let activeReview = picked.review;
+  if (!picked.historical) {
+    activeReview = await markFirstViewed(db, activeReview);
+    members = members.map((item) => (item.id === activeReview.id ? activeReview : item));
+  }
+
+  const shortlistTip = latestReviewForSource(members, "shortlist");
+  const shortlistApproved = latestApprovedReviewForSource(members, "shortlist");
+  const quotationLatest = latestReviewForSource(members, "quotation");
+  const quotationApprovedPrior = members.some(
+    (item) =>
+      item.source === "quotation" &&
+      item.status === "approved" &&
+      quotationLatest != null &&
+      item.id !== quotationLatest.id
+  );
+  const movedToCampaign = Boolean(
+    quotationLatest?.campaignHeaderId || members.some((item) => item.campaignHeaderId)
+  );
+  const shortlistStage = deriveShortlistStage({ review: shortlistTip });
+  const quotationStage = deriveQuotationStage({
+    quotationExists: Boolean(quotationLatest?.quotationId),
+    review: quotationLatest,
+    priorApprovedReview: quotationApprovedPrior,
+    movedToCampaign,
+  });
+  const journey: ClientWorkspaceJourney = {
+    id: activeReview.journeyId ?? activeReview.id,
+    canonicalReviewId,
+    memberReviewIds: members.map((item) => item.id),
+    shortlistStage,
+    quotationStage,
+    campaignStarted: movedToCampaign,
+    performanceStarted: movedToCampaign,
+    invoiceStarted: false,
+    campaignHeaderId: activeReview.campaignHeaderId ?? quotationLatest?.campaignHeaderId ?? null,
+    quotationId: quotationLatest?.quotationId ?? null,
+    shortlistId: shortlistTip?.shortlistId ?? activeReview.shortlistId,
+    historical: picked.historical,
+    canApproveShortlist:
+      !picked.historical && !movedToCampaign && isInteractiveClientReview(shortlistTip?.status ?? "revoked"),
+    canApproveQuotation:
+      !picked.historical &&
+      !movedToCampaign &&
+      isInteractiveClientReview(quotationLatest?.status ?? "revoked"),
+    canRequestShortlistChanges:
+      !picked.historical && isInteractiveClientReview(shortlistTip?.status ?? "revoked"),
+    canRequestQuotationChanges:
+      !picked.historical &&
+      !movedToCampaign &&
+      isInteractiveClientReview(quotationLatest?.status ?? "revoked"),
+    canRejectQuotation:
+      !picked.historical &&
+      !movedToCampaign &&
+      isInteractiveClientReview(quotationLatest?.status ?? "revoked"),
+    movedToCampaign,
+  };
+
+  const sourceByReviewId = Object.fromEntries(members.map((item) => [item.id, item.source]));
+  const reviewIds = members.map((item) => item.id);
   const [comments, activity, newer] = await Promise.all([
-    loadComments(db, resolved.review.id),
-    loadActivity(db, resolved.review.id),
-    newerReviewNumberFor(db, resolved.review),
+    loadComments(db, reviewIds, sourceByReviewId),
+    loadActivity(db, reviewIds),
+    newerReviewNumberFor(db, activeReview),
   ]);
 
+  const selection = activeReview.selectionState as Record<string, ClientCreatorSelectionState>;
   let view: ClientWorkspaceView | null = null;
   let campaignObject: CampaignObject | null = null;
 
-  if (resolved.review.sourceSnapshot) {
+  if (activeReview.sourceSnapshot) {
     view = viewFromSnapshot(
-      resolved.review,
-      resolved.review.sourceSnapshot,
+      activeReview,
+      activeReview.sourceSnapshot,
       selection,
       comments,
       activity,
       newer
     );
-  } else if (resolved.review.campaignObjectId) {
+  } else if (activeReview.campaignObjectId) {
     const loaded = await CampaignObjectPersistenceService.loadVersion(
       db as never,
-      resolved.review.campaignObjectId,
-      resolved.review.frozenVersion
+      activeReview.campaignObjectId,
+      activeReview.frozenVersion
     );
     if (!loaded?.campaignObject) {
       return { ok: false, code: "not_found", message: "This campaign package is no longer available." };
@@ -281,7 +414,7 @@ export async function loadClientWorkspace(
       hydrated = [];
     }
     const snapshot = snapshotFromCampaignObject(campaignObject, selection, hydrated);
-    view = viewFromSnapshot(resolved.review, snapshot, selection, comments, activity, newer);
+    view = viewFromSnapshot(activeReview, snapshot, selection, comments, activity, newer);
     view.content = projectClientContent(campaignObject);
     view.timeline = projectClientTimeline(campaignObject);
     view.commercial = projectClientCommercial(campaignObject, selection);
@@ -300,17 +433,33 @@ export async function loadClientWorkspace(
     return { ok: false, code: "not_found", message: "This campaign package is no longer available." };
   }
 
+  view.journey = journey;
+  view.stageDiff =
+    shortlistApproved?.status === "approved"
+      ? diffShortlistToQuotation(shortlistApproved.sourceSnapshot, quotationLatest?.sourceSnapshot)
+      : null;
+  view.canDecide =
+    !picked.historical &&
+    (journey.canApproveShortlist || journey.canApproveQuotation) &&
+    !newer;
+
   const entry: ClientWorkspaceEntry = {
     brandName: view.overview.brandName,
     campaignName: view.overview.campaignName,
     clientLabel: view.overview.clientLabel,
-    reviewNumber: resolved.review.reviewNumber,
-    status: resolved.review.status,
-    statusLabel: newer
-      ? "New version requires review"
-      : CLIENT_STATUS_LABEL[resolved.review.status],
-    lastUpdated: resolved.review.updatedAt,
-    actionRequired: actionRequiredFor(resolved.review.status, Boolean(newer)),
+    reviewNumber: activeReview.reviewNumber,
+    status: activeReview.status,
+    statusLabel: journeyActionRequired({
+      shortlistStage,
+      quotationStage,
+      historical: picked.historical,
+    }),
+    lastUpdated: activeReview.updatedAt,
+    actionRequired: journeyActionRequired({
+      shortlistStage,
+      quotationStage,
+      historical: picked.historical,
+    }),
   };
 
   return { ok: true, view, entry, campaignObject };

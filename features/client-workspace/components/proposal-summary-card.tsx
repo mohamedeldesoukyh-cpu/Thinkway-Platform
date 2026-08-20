@@ -92,11 +92,29 @@ export function ProposalSummaryCard({
     forecast.averageEngagementRate != null
       ? formatEngagementPct(forecast.averageEngagementRate)
       : TO_BE_CONFIRMED;
-  const creatorsHref = buildClientReviewPath(view.review.id, token, "creators");
+  const pathReviewId = view.journey?.canonicalReviewId ?? view.review.id;
+  const creatorsHref = buildClientReviewPath(pathReviewId, token, "creators");
   const canApprove = view.canDecide && selectedCount > 0 && !pending;
+  const approveStage = view.journey?.canApproveQuotation
+    ? "quotation"
+    : view.journey?.canApproveShortlist
+      ? "shortlist"
+      : view.review.source === "quotation"
+        ? "quotation"
+        : view.review.source === "shortlist"
+          ? "shortlist"
+          : undefined;
+  const approveLabel =
+    approveStage === "quotation"
+      ? "Approve Quotation"
+      : approveStage === "shortlist"
+        ? "Approve Shortlist"
+        : null;
   const emptyHint =
     selectedCount === 0 && view.canDecide
-      ? "Select creators to calculate this package, then approve it."
+      ? approveStage === "shortlist"
+        ? "Keep at least one creator on the shortlist before approving."
+        : "Select creators to calculate this package, then approve it."
       : null;
 
   function openSection(event: React.MouseEvent<HTMLAnchorElement>, next: "creators") {
@@ -107,7 +125,11 @@ export function ProposalSummaryCard({
 
   function approve() {
     startTransition(async () => {
-      const result = await decideReviewAction({ token, decision: "approved" });
+      const result = await decideReviewAction({
+        token,
+        decision: "approved",
+        stage: approveStage,
+      });
       if (!result.ok) {
         setError(result.message);
         return;
@@ -145,11 +167,11 @@ export function ProposalSummaryCard({
         <Metric label="CPM" value={money(forecast.cpm, currency)} missing={forecast.cpm == null} />
         <div className="sp" />
         {error ? <p className="sumbar-msg">{error}</p> : emptyHint ? <p className="sumbar-msg">{emptyHint}</p> : null}
-        {view.canDecide ? (
+        {view.canDecide && approveLabel ? (
           <div className="sumbar-cta">
             <button type="button" className="btn pri" disabled={!canApprove} onClick={approve}>
               <IconCheck />
-              Approve selection
+              {approveLabel}
             </button>
           </div>
         ) : null}
@@ -215,11 +237,11 @@ export function ProposalSummaryCard({
           {emptyHint}
         </p>
       ) : null}
-      {view.canDecide ? (
+      {view.canDecide && approveLabel ? (
         <div className="cta sumcta">
           <button type="button" className="btn pri" disabled={!canApprove} onClick={approve}>
             <IconCheck />
-            Approve selection
+            {approveLabel}
           </button>
           <a className="btn sec" href={creatorsHref} onClick={(event) => openSection(event, "creators")}>
             Edit selection

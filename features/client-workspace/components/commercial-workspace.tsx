@@ -44,10 +44,13 @@ export function CommercialWorkspace({
             : TO_BE_CONFIRMED}
         </h2>
         <p className="note">
-          {rosterHeadline(commercial.selectedCount)} selected of {view.creators.length} proposed · Quotation{" "}
-          {view.commercial.quotationTotal > 0
-            ? formatMoneyKpi(view.commercial.quotationTotal, commercial.currency)
-            : TO_BE_CONFIRMED}{" "}
+          {rosterHeadline(commercial.selectedCount)} selected of {view.creators.length} proposed
+          {view.review.source === "shortlist" && view.journey?.quotationStage === "draft"
+            ? " · Indicative investment — not commercially approved"
+            : view.commercial.quotationTotal > 0
+              ? ` · Quotation ${formatMoneyKpi(view.commercial.quotationTotal, commercial.currency)}`
+              : ` · Quotation ${TO_BE_CONFIRMED}`}
+          {" "}
           · Proposal v{view.review.reviewNumber}
           {view.quotation?.serialNumber ? ` · ${view.quotation.serialNumber}` : ""}
         </p>

@@ -32,7 +32,7 @@ export function ClientReviewEntry({
           </p>
           <h2 style={{ marginTop: 0 }}>{entry.campaignName}</h2>
           <p className="note">
-            {entry.clientLabel} · Proposal v{entry.reviewNumber}
+            {entry.clientLabel} · {entry.actionRequired}
           </p>
           <div className="glance" style={{ gridTemplateColumns: "1fr" }}>
             <div className="gi">

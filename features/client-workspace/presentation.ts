@@ -16,7 +16,7 @@ import type {
 
 export const CLIENT_SOURCE_LABEL: Record<ClientReviewSource, string> = {
   studio: "Studio recommendation",
-  shortlist: "Approved shortlist",
+  shortlist: "Creator shortlist",
   quotation: "Quotation",
 };
 

@@ -71,7 +71,8 @@ export type QuotationLifecycleAuditEvent =
   | "quotation.sync_shortlist_to_quotation"
   | "quotation.sync_quotation_to_shortlist"
   | "quotation.tentative_schedule_imported"
-  | "quotation.generated_from_campaign_plan";
+  | "quotation.generated_from_campaign_plan"
+  | "quotation.client_approved";
 
 /** Commercial SSOT sync events (Quotation ↔ Campaign Master fields). */
 export type CommercialSsotAuditEvent =

@@ -33,6 +33,7 @@ import {
   quotationDetailPath,
 } from "@/features/quotations/constants";
 
+import { loadLatestInternalReviewForQuotation } from "@/features/client-workspace/load-client-workspace";
 import type { ActionResult } from "./types";
 
 type Supabase = SupabaseClient<Database>;
@@ -179,6 +180,21 @@ export async function generateQuotationVersion(input: {
   if (result.ok && result.data) {
     revalidateQuotation(input.quotationId);
     revalidateQuotation(result.data.newQuotationId, result.data.shortlistId);
+    const previousReview = await loadLatestInternalReviewForQuotation(actor.supabase, input.quotationId);
+    if (previousReview) {
+      try {
+        const { createClientReviewFromQuotation } = await import(
+          "@/features/client-workspace/create-from-quotation"
+        );
+        await createClientReviewFromQuotation(actor.supabase, {
+          quotationId: result.data.newQuotationId,
+          userId: actor.userId,
+          origin: process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "https://dev.thinkwaymedia.com",
+        });
+      } catch (error) {
+        console.error("[client-review-quotation-version]", error);
+      }
+    }
   }
   if (!result.ok || !result.data) return result;
   return {

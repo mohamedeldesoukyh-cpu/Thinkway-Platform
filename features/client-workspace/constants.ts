@@ -47,6 +47,28 @@ export const CLIENT_CHANGE_AREA_LABEL: Record<ClientChangeArea, string> = {
   campaign: "Campaign",
 };
 
+export const CLIENT_SHORTLIST_STAGES = [
+  "not_sent",
+  "sent",
+  "viewed",
+  "changes_requested",
+  "approved",
+] as const;
+export type ClientShortlistStage = (typeof CLIENT_SHORTLIST_STAGES)[number];
+
+export const CLIENT_QUOTATION_STAGES = [
+  "draft",
+  "sent_for_approval",
+  "viewed",
+  "changes_requested",
+  "updated",
+  "approved",
+  "rejected",
+] as const;
+export type ClientQuotationStage = (typeof CLIENT_QUOTATION_STAGES)[number];
+
+export type ClientReviewDecisionStage = "shortlist" | "quotation";
+
 export const CLIENT_REVIEW_COOKIE = "tw_client_review";
 
 export const CLIENT_REVIEW_LINK_MISSING_MESSAGE = "Generate the Client Workspace link first.";

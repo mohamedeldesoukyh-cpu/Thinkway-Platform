@@ -5,6 +5,22 @@ export function isInteractiveClientReview(status: ClientReviewStatus): boolean {
   return status === "awaiting_review" || status === "changes_requested";
 }
 
+export function isFrozenClientReviewStatus(status: ClientReviewStatus): boolean {
+  return (
+    status === "approved" ||
+    status === "rejected" ||
+    status === "superseded" ||
+    status === "revoked"
+  );
+}
+
+export function isReusableClientReviewTip(
+  status: ClientReviewStatus,
+  reuseInteractiveReview?: boolean
+): boolean {
+  return Boolean(reuseInteractiveReview) && isInteractiveClientReview(status);
+}
+
 export function clientStatusLabel(status: ClientReviewStatus): string {
   return CLIENT_STATUS_LABEL[status];
 }
@@ -13,7 +29,7 @@ export function actionRequiredFor(status: ClientReviewStatus, hasNewerVersion: b
   if (hasNewerVersion || status === "superseded") return "Review the new version";
   if (status === "awaiting_review") return "Review campaign";
   if (status === "changes_requested") return "Waiting for Thinkway to update the package";
-  if (status === "approved") return "Approved — Thinkway will proceed to quotation";
+  if (status === "approved") return "Approved";
   if (status === "rejected") return "Rejected";
   return "This review link is no longer active";
 }
@@ -50,7 +66,7 @@ export function clientSelectionToShortlistStatus(
   return "under_review";
 }
 
-/** Accept can be removed until the client submits Approve selection. */
+/** Accept can be removed until the client submits Approve Shortlist or Approve Quotation. */
 export function nextAcceptState(state?: ClientCreatorSelectionState): ClientCreatorSelectionState {
   return state === "accepted" ? "in_review" : "accepted";
 }

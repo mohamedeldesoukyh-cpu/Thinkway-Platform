@@ -18,6 +18,9 @@ export function FeedbackWorkspace({
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
   const [targetType, setTargetType] = useState<ClientCommentTargetType>("campaign");
+  const [feedbackStage, setFeedbackStage] = useState<"shortlist" | "quotation">(
+    view.journey?.canRequestQuotationChanges ? "quotation" : "shortlist"
+  );
   const [creatorId, setCreatorId] = useState(view.creators[0]?.creatorId ?? "");
   const [filter, setFilter] = useState<"all" | "open" | "resolved">("all");
 
@@ -48,9 +51,25 @@ export function FeedbackWorkspace({
         <div className="card">
           <p className="ck">Feedback & change requests</p>
           <h2>Create a request</h2>
+          <p className="note">
+            {feedbackStage === "quotation"
+              ? "This feedback applies to the quotation. It does not reject the shortlist."
+              : "This feedback applies to the shortlist. Thinkway can still send a quotation."}
+          </p>
           <div className="duo" style={{ marginBottom: 14 }}>
+            {view.journey?.canRequestShortlistChanges && view.journey?.canRequestQuotationChanges ? (
+              <label className="fl">
+                Stage
+                <select
+                  value={feedbackStage}
+                  onChange={(event) => setFeedbackStage(event.target.value as "shortlist" | "quotation")}
+                >
+                  <option value="shortlist">Shortlist feedback</option>
+                  <option value="quotation">Quotation feedback</option>
+                </select>
+              </label>
+            ) : null}
             <label className="fl">
-              Category
               <select
                 value={targetType}
                 onChange={(event) => setTargetType(event.target.value as ClientCommentTargetType)}
@@ -93,6 +112,7 @@ export function FeedbackWorkspace({
                     targetType,
                     targetId: targetType === "creator" ? creatorId : undefined,
                     message,
+                    stage: feedbackStage,
                   });
                   setMessage("");
                   router.refresh();
@@ -123,6 +143,11 @@ export function FeedbackWorkspace({
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
             <p className="ck" style={{ margin: 0 }}>
               {comment.authorKind === "client" ? "Client" : "Thinkway"}
+              {comment.stage === "shortlist"
+                ? " · Shortlist feedback"
+                : comment.stage === "quotation"
+                  ? " · Quotation feedback"
+                  : ""}
               {comment.targetType === "creator" && comment.targetId
                 ? ` · ${view.creators.find((creator) => creator.creatorId === comment.targetId)?.displayName ?? ""}`
                 : ` · ${comment.targetType}`}

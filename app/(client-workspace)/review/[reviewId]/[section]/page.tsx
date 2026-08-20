@@ -4,6 +4,7 @@ import { ClientWorkspaceApp } from "@/features/client-workspace/components/clien
 import { InvalidReviewLink } from "@/features/client-workspace/components/client-review-entry";
 import { CLIENT_WORKSPACE_SECTIONS, type ClientWorkspaceSectionId } from "@/features/client-workspace/constants";
 import { loadClientWorkspace } from "@/features/client-workspace/load-client-workspace";
+import { reviewIdBelongsToJourney } from "@/features/client-workspace/journey-state";
 import { resolveReviewToken } from "@/features/client-workspace/security/resolve-request-token";
 
 type Props = {
@@ -21,8 +22,16 @@ export default async function ClientWorkspaceSectionPage({ params, searchParams 
   if (!token) {
     return <InvalidReviewLink />;
   }
-  const loaded = await loadClientWorkspace(token);
-  if (!loaded.ok || loaded.view.review.id !== reviewId) {
+  const loaded = await loadClientWorkspace(token, reviewId);
+  if (
+    !loaded.ok ||
+    !reviewIdBelongsToJourney(reviewId, {
+      canonicalReviewId: loaded.view.journey?.canonicalReviewId,
+      memberReviewIds: loaded.view.journey?.memberReviewIds,
+      activeReviewId: loaded.view.review.id,
+      journeyId: loaded.view.journey?.id,
+    })
+  ) {
     return <InvalidReviewLink message={loaded.ok ? undefined : loaded.message} />;
   }
   if (!loaded.view.visibleSections.includes(section as ClientWorkspaceSectionId)) {

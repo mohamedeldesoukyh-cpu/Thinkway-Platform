@@ -2,8 +2,10 @@
 
 import type { ClientReviewStatus, ClientWorkspaceSectionId } from "../constants";
 import { CLIENT_PROPOSAL_STATUS_LABEL, CLIENT_WORKSPACE_SECTION_LABEL } from "../constants";
+import { QUOTATION_STAGE_LABEL, SHORTLIST_STAGE_LABEL } from "../journey-state";
 import { buildClientReviewPath } from "../security/review-token";
 import type { ClientWorkspaceView } from "../types";
+import { ClientJourneyStrip } from "./journey-strip";
 import { IconCheck, LogoMark } from "./review-icons";
 import { ReviewUpdateBanner } from "./review-update-banner";
 
@@ -21,7 +23,16 @@ export function ClientWorkspaceShell({
   children: React.ReactNode;
 }) {
   const preparedFor = view.overview.clientLabel?.trim() || view.overview.campaignName;
+  const pathReviewId = view.journey?.canonicalReviewId ?? view.review.id;
+  const quotationLabel = view.journey ? QUOTATION_STAGE_LABEL[view.journey.quotationStage] : CLIENT_PROPOSAL_STATUS_LABEL[view.review.status];
+  const shortlistLabel = view.journey ? SHORTLIST_STAGE_LABEL[view.journey.shortlistStage] : null;
   const statusTone = statusPillTone(view.review.status);
+  const primaryHref = buildClientReviewPath(pathReviewId, token, "approval");
+  const primaryLabel = view.journey?.canApproveQuotation
+    ? "Approve Quotation"
+    : view.journey?.canApproveShortlist
+      ? "Approve Shortlist"
+      : null;
 
   function openSection(event: React.MouseEvent<HTMLAnchorElement>, next: ClientWorkspaceSectionId) {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
@@ -43,32 +54,34 @@ export function ClientWorkspaceShell({
             <b>{view.overview.campaignName}</b>
           </div>
           <div className="sp" />
-          <span className={`stpill ${statusTone}`}>{CLIENT_PROPOSAL_STATUS_LABEL[view.review.status]}</span>
+          <span className={`stpill ${statusTone}`}>{quotationLabel}</span>
+          {shortlistLabel ? <span className="stpill cur">Shortlist · {shortlistLabel}</span> : null}
           <span className="stpill cur">
             {view.newerReviewNumber ? `Updated · v${view.newerReviewNumber}` : `Current · v${view.review.reviewNumber}`}
           </span>
-          {view.canDecide ? (
+          {view.canDecide && primaryLabel ? (
             <>
               <a
                 className="btn sec"
-                href={buildClientReviewPath(view.review.id, token, "feedback")}
+                href={buildClientReviewPath(pathReviewId, token, "feedback")}
                 onClick={(event) => openSection(event, "feedback")}
               >
                 Request changes
               </a>
               <a
                 className="btn pri"
-                href={buildClientReviewPath(view.review.id, token, "approval")}
+                href={primaryHref}
                 onClick={(event) => openSection(event, "approval")}
               >
                 <IconCheck />
-                Approve selection
+                {primaryLabel}
               </a>
             </>
           ) : null}
         </div>
       </header>
       <div className="tw-review-body">
+        <ClientJourneyStrip view={view} />
         {view.clientUpdate?.items.length ? (
           <ReviewUpdateBanner
             reviewId={view.review.id}
@@ -83,7 +96,7 @@ export function ClientWorkspaceShell({
             {view.visibleSections.map((item) => (
               <a
                 key={item}
-                href={buildClientReviewPath(view.review.id, token, item)}
+                href={buildClientReviewPath(pathReviewId, token, item)}
                 className={item === section ? "tab on" : "tab"}
                 onClick={(event) => openSection(event, item)}
               >

@@ -218,6 +218,8 @@ export type ClientReviewRecord = {
   supersededBy: string | null;
   createdAt: string;
   updatedAt: string;
+  journeyId: string | null;
+  firstViewedAt: string | null;
 };
 
 export type ClientCreatorCard = {
@@ -343,6 +345,7 @@ export type ClientComment = {
   message: string;
   status: "open" | "resolved";
   createdAt: string;
+  stage?: ClientReviewSource;
 };
 
 export type ClientActivityEvent = {
@@ -352,6 +355,49 @@ export type ClientActivityEvent = {
   actorLabel: string | null;
   summary: string;
   createdAt: string;
+};
+
+export type ClientWorkspaceJourney = {
+  id: string;
+  canonicalReviewId: string;
+  memberReviewIds: string[];
+  shortlistStage: import("./constants").ClientShortlistStage;
+  quotationStage: import("./constants").ClientQuotationStage;
+  campaignStarted: boolean;
+  performanceStarted: boolean;
+  invoiceStarted: boolean;
+  campaignHeaderId: string | null;
+  quotationId: string | null;
+  shortlistId: string | null;
+  historical: boolean;
+  canApproveShortlist: boolean;
+  canApproveQuotation: boolean;
+  canRequestShortlistChanges: boolean;
+  canRequestQuotationChanges: boolean;
+  canRejectQuotation: boolean;
+  movedToCampaign: boolean;
+};
+
+export type ClientRosterDiffKind = "existing" | "added" | "removed";
+
+export type ClientRosterDiffRow = {
+  creatorId: string;
+  displayName: string;
+  kind: ClientRosterDiffKind;
+  shortlistInvestment?: number;
+  quotationInvestment?: number;
+  investmentDelta?: number;
+  investmentChanged: boolean;
+  deliverablesChanged: boolean;
+  shortlistDeliverables?: string;
+  quotationDeliverables?: string;
+};
+
+export type ClientStageDiff = {
+  commercialChangedAfterShortlistApproval: boolean;
+  hasRosterChange: boolean;
+  rows: ClientRosterDiffRow[];
+  summaryItems: string[];
 };
 
 export type ClientOverview = {
@@ -390,6 +436,8 @@ export type ClientWorkspaceView = {
   comments: ClientComment[];
   activity: ClientActivityEvent[];
   canDecide: boolean;
+  journey?: ClientWorkspaceJourney;
+  stageDiff?: ClientStageDiff | null;
   clientUpdate?: {
     updatedAt: string;
     items: string[];

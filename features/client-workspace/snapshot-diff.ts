@@ -1,4 +1,12 @@
-import type { ClientReviewSourceSnapshot, ClientReviewSourceSnapshotCreator } from "./types";
+import type {
+  ClientReviewSourceSnapshot,
+  ClientReviewSourceSnapshotCreator,
+  ClientRosterDiffKind,
+  ClientRosterDiffRow,
+  ClientStageDiff,
+} from "./types";
+
+export type { ClientRosterDiffKind, ClientRosterDiffRow, ClientStageDiff };
 
 export type ClientReviewUpdateNotice = {
   updatedAt: string;
@@ -13,8 +21,11 @@ function money(value: number | undefined): number {
   return value != null && Number.isFinite(value) ? value : 0;
 }
 
-function sortedNames(creators: ClientReviewSourceSnapshotCreator[]): string {
-  return creators.map(creatorName).sort((a, b) => a.localeCompare(b)).join(", ");
+function sortedNames(creators: Array<{ displayName?: string; handle?: string }>): string {
+  return creators
+    .map((creator) => creatorName(creator as ClientReviewSourceSnapshotCreator))
+    .sort((a, b) => a.localeCompare(b))
+    .join(", ");
 }
 
 /** Client-safe list of what changed between two frozen quotation snapshots. */
@@ -59,6 +70,80 @@ export function diffClientReviewSnapshots(
   }
 
   return items.slice(0, 6);
+}
+
+function deliverableKey(creator: ClientReviewSourceSnapshotCreator): string {
+  return (creator.deliverables ?? "").trim();
+}
+
+export function diffShortlistToQuotation(
+  shortlist: ClientReviewSourceSnapshot | null | undefined,
+  quotation: ClientReviewSourceSnapshot | null | undefined
+): ClientStageDiff | null {
+  if (!shortlist || !quotation) return null;
+  const prevById = new Map(shortlist.creators.map((creator) => [creator.creatorId, creator]));
+  const nextById = new Map(quotation.creators.map((creator) => [creator.creatorId, creator]));
+  const ids = [...new Set([...prevById.keys(), ...nextById.keys()])];
+  const rows: ClientRosterDiffRow[] = ids.map((creatorId) => {
+    const prior = prevById.get(creatorId);
+    const next = nextById.get(creatorId);
+    const kind: ClientRosterDiffKind = !prior ? "added" : !next ? "removed" : "existing";
+    const shortlistInvestment = prior ? money(prior.investmentAmount) : undefined;
+    const quotationInvestment = next ? money(next.investmentAmount) : undefined;
+    const investmentChanged =
+      kind === "existing" && shortlistInvestment !== quotationInvestment;
+    const deliverablesChanged =
+      kind === "existing" && deliverableKey(prior!) !== deliverableKey(next!);
+    return {
+      creatorId,
+      displayName: creatorName(next ?? prior!),
+      kind,
+      shortlistInvestment,
+      quotationInvestment,
+      investmentDelta:
+        investmentChanged && shortlistInvestment != null && quotationInvestment != null
+          ? quotationInvestment - shortlistInvestment
+          : undefined,
+      investmentChanged,
+      deliverablesChanged,
+      shortlistDeliverables: prior?.deliverables,
+      quotationDeliverables: next?.deliverables,
+    };
+  });
+
+  const hasRosterChange = rows.some((row) => row.kind !== "existing");
+  const commercialChangedAfterShortlistApproval =
+    rows.some((row) => row.investmentChanged || row.kind !== "existing") ||
+    money(shortlist.commercial.totalInvestment) !== money(quotation.commercial.totalInvestment);
+  const deliverableChanged = rows.some((row) => row.deliverablesChanged);
+
+  const summaryItems: string[] = [];
+  if (commercialChangedAfterShortlistApproval) {
+    summaryItems.push("Commercial value changed after shortlist approval.");
+  }
+  const added = rows.filter((row) => row.kind === "added");
+  const removed = rows.filter((row) => row.kind === "removed");
+  if (added.length === 1) summaryItems.push(`New creator added: ${added[0]!.displayName}`);
+  else if (added.length > 1) {
+    summaryItems.push(
+      `New creators added: ${sortedNames(added.map((row) => ({ displayName: row.displayName })))}`
+    );
+  }
+  if (removed.length === 1) summaryItems.push(`Creator removed: ${removed[0]!.displayName}`);
+  else if (removed.length > 1) {
+    summaryItems.push(
+      `Creators removed: ${sortedNames(removed.map((row) => ({ displayName: row.displayName })))}`
+    );
+  }
+  if (rows.some((row) => row.investmentChanged)) summaryItems.push("Creator investment changed.");
+  if (deliverableChanged) summaryItems.push("Deliverables changed.");
+
+  return {
+    commercialChangedAfterShortlistApproval,
+    hasRosterChange,
+    rows,
+    summaryItems: [...new Set(summaryItems)],
+  };
 }
 
 export function retainCreatorBriefs(

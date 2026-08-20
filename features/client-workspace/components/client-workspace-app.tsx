@@ -27,6 +27,17 @@ export function ClientWorkspaceApp({
 }) {
   const [active, setActive] = useState(section);
   const [seen, setSeen] = useState(() => new Set<ClientWorkspaceSectionId>([section]));
+  const [prevSection, setPrevSection] = useState(section);
+  if (section !== prevSection) {
+    setPrevSection(section);
+    setActive(section);
+    setSeen((current) => {
+      if (current.has(section)) return current;
+      const copy = new Set(current);
+      copy.add(section);
+      return copy;
+    });
+  }
 
   const reveal = useCallback((next: ClientWorkspaceSectionId) => {
     setActive(next);
@@ -39,10 +50,6 @@ export function ClientWorkspaceApp({
   }, []);
 
   useEffect(() => {
-    reveal(section);
-  }, [reveal, section]);
-
-  useEffect(() => {
     function onPop() {
       const part = window.location.pathname.split("/").filter(Boolean).at(-1);
       if (isSection(part) && view.visibleSections.includes(part)) reveal(part);
@@ -51,13 +58,14 @@ export function ClientWorkspaceApp({
     return () => window.removeEventListener("popstate", onPop);
   }, [reveal, view.visibleSections]);
 
+  const canonicalReviewId = view.journey?.canonicalReviewId ?? view.review.id;
   const go = useCallback(
     (next: ClientWorkspaceSectionId) => {
       if (next === active) return;
       reveal(next);
-      window.history.pushState({ section: next }, "", buildClientReviewPath(view.review.id, token, next));
+      window.history.pushState({ section: next }, "", buildClientReviewPath(canonicalReviewId, token, next));
     },
-    [active, reveal, token, view.review.id]
+    [active, canonicalReviewId, reveal, token]
   );
 
   return (

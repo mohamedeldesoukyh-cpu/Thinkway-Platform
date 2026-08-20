@@ -8,6 +8,7 @@ import {
   type ClientReviewSource,
   type ClientReviewStatus,
 } from "./constants";
+import { isReusableClientReviewTip } from "./status";
 import { clientSelectionsEqual, mergePersistedClientSelection } from "./client-review-selection";
 import { parseSourceSnapshot } from "./snapshot";
 import { diffClientReviewSnapshots, retainCreatorBriefs } from "./snapshot-diff";
@@ -55,6 +56,8 @@ export type ReviewRow = {
   superseded_by: string | null;
   created_at: string;
   updated_at: string;
+  journey_id?: string | null;
+  first_viewed_at?: string | null;
 };
 
 export function mapClientReviewRow(row: ReviewRow): ClientReviewRecord {
@@ -84,6 +87,8 @@ export function mapClientReviewRow(row: ReviewRow): ClientReviewRecord {
     supersededBy: row.superseded_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    journeyId: row.journey_id ?? null,
+    firstViewedAt: row.first_viewed_at ?? null,
   };
 }
 
@@ -114,7 +119,112 @@ type ExistingReviewTip = {
   selection_state?: Record<string, ClientCreatorSelectionState> | null;
   share_token?: string | null;
   token_hash?: string | null;
+  journey_id?: string | null;
 };
+
+type JourneyRow = {
+  id: string;
+  share_token: string | null;
+  landing_review_id: string | null;
+  shortlist_id: string | null;
+  quotation_id: string | null;
+};
+
+function canonicalShareUrl(origin: string, reviewId: string, token: string): string {
+  return `${origin.replace(/\/$/, "")}${buildClientReviewPath(reviewId, token)}`;
+}
+
+async function loadJourney(
+  supabase: SupabaseClient,
+  journeyId: string
+): Promise<JourneyRow | null> {
+  const { data } = await supabase
+    .from("campaign_client_journeys" as never)
+    .select("id, share_token, landing_review_id, shortlist_id, quotation_id")
+    .eq("id", journeyId)
+    .maybeSingle();
+  return (data as JourneyRow | null) ?? null;
+}
+
+async function findJourneyForScope(
+  supabase: SupabaseClient,
+  input: Pick<PersistClientReviewInput, "shortlistId" | "quotationId" | "campaignHeaderId" | "source">
+): Promise<JourneyRow | null> {
+  if (input.shortlistId) {
+    const { data } = await supabase
+      .from("campaign_client_journeys" as never)
+      .select("id, share_token, landing_review_id, shortlist_id, quotation_id")
+      .eq("shortlist_id", input.shortlistId)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (data) return data as JourneyRow;
+  }
+  const quotationIds = [input.quotationId].filter((value): value is string => Boolean(value));
+  if (input.quotationId) {
+    const { data: quote } = await supabase
+      .from("quotations")
+      .select("id, parent_quotation_id")
+      .eq("id", input.quotationId)
+      .maybeSingle();
+    const parentId = (quote as { parent_quotation_id?: string | null } | null)?.parent_quotation_id;
+    if (parentId) quotationIds.push(parentId);
+  }
+  for (const quotationId of quotationIds) {
+    const { data } = await supabase
+      .from("campaign_client_journeys" as never)
+      .select("id, share_token, landing_review_id, shortlist_id, quotation_id")
+      .eq("quotation_id", quotationId)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (data) return data as JourneyRow;
+  }
+  return null;
+}
+
+async function createJourney(
+  supabase: SupabaseClient,
+  input: {
+    token: string;
+    shortlistId?: string | null;
+    quotationId?: string | null;
+    campaignHeaderId?: string | null;
+  }
+): Promise<JourneyRow | null> {
+  const { data, error } = await supabase
+    .from("campaign_client_journeys" as never)
+    .insert({
+      token_hash: hashClientReviewToken(input.token),
+      share_token: input.token,
+      shortlist_id: input.shortlistId ?? null,
+      quotation_id: input.quotationId ?? null,
+      campaign_header_id: input.campaignHeaderId ?? null,
+    } as never)
+    .select("id, share_token, landing_review_id, shortlist_id, quotation_id")
+    .single();
+  if (error || !data) return null;
+  return data as JourneyRow;
+}
+
+async function shareFromJourneyOrReview(
+  supabase: SupabaseClient,
+  origin: string,
+  review: { id: string; journeyId?: string | null },
+  fallbackToken: string
+): Promise<{ url: string; token: string; reviewId: string }> {
+  if (review.journeyId) {
+    const journey = await loadJourney(supabase, review.journeyId);
+    const token = journey?.share_token?.trim() || fallbackToken;
+    const reviewId = journey?.landing_review_id || review.id;
+    if (token) return { url: canonicalShareUrl(origin, reviewId, token), token, reviewId };
+  }
+  return {
+    url: canonicalShareUrl(origin, review.id, fallbackToken),
+    token: fallbackToken,
+    reviewId: review.id,
+  };
+}
 
 async function updateExistingClientReview(
   input: PersistClientReviewInput,
@@ -234,33 +344,63 @@ export async function persistClientReview(
   input: PersistClientReviewInput
 ): Promise<CreateClientReviewResult> {
   const { supabase } = input;
+  const origin = input.origin.replace(/\/$/, "");
   let existingQuery = supabase
     .from("campaign_client_reviews" as never)
-    .select("id, review_number, status, package_fingerprint, source_snapshot, selection_state, share_token, token_hash")
+    .select(
+      "id, review_number, status, package_fingerprint, source_snapshot, selection_state, share_token, token_hash, journey_id"
+    )
     .eq("source", input.source);
   existingQuery = applyReviewScope(existingQuery, input.scope);
   const { data: existing } = await existingQuery
     .order("review_number", { ascending: false })
     .limit(5);
-  const rows = (existing ?? []) as Array<{
-    id: string;
-    review_number: number;
-    status: ClientReviewStatus;
-    package_fingerprint: Record<string, unknown> | null;
-    source_snapshot?: ClientReviewSourceSnapshot | Record<string, unknown> | null;
-    selection_state?: Record<string, ClientCreatorSelectionState> | null;
-    share_token?: string | null;
-    token_hash?: string | null;
-  }>;
+  const rows = (existing ?? []) as ExistingReviewTip[];
   const currentTip = rows[0];
-  const canReuse =
-    Boolean(input.reuseInteractiveReview) &&
-    currentTip &&
-    currentTip.status !== "revoked" &&
-    currentTip.status !== "superseded";
+  const canReuse = Boolean(
+    currentTip && isReusableClientReviewTip(currentTip.status, input.reuseInteractiveReview)
+  );
 
   if (canReuse && currentTip) {
-    return updateExistingClientReview(input, currentTip);
+    const updated = await updateExistingClientReview(input, currentTip);
+    if (!updated.ok) return updated;
+    const share = await shareFromJourneyOrReview(
+      supabase,
+      origin,
+      { id: updated.reviewId, journeyId: currentTip.journey_id },
+      updated.token
+    );
+    return { ...updated, url: share.url, token: share.token, reviewId: share.reviewId };
+  }
+
+  if (
+    currentTip &&
+    currentTip.status === "approved" &&
+    fingerprintsEqual(currentTip.package_fingerprint ?? {}, input.fingerprint)
+  ) {
+    const share = await shareFromJourneyOrReview(
+      supabase,
+      origin,
+      { id: currentTip.id, journeyId: currentTip.journey_id },
+      currentTip.share_token?.trim() || ""
+    );
+    if (!share.token) {
+      return {
+        ok: false,
+        message: CLIENT_REVIEW_LINK_MISSING_MESSAGE,
+        blockers: [CLIENT_REVIEW_LINK_MISSING_MESSAGE],
+      };
+    }
+    return {
+      ok: true,
+      reviewId: share.reviewId,
+      reviewNumber: currentTip.review_number,
+      frozenVersion: input.frozenVersion ?? 0,
+      url: share.url,
+      token: share.token,
+      status: currentTip.status,
+      source: input.source,
+    };
   }
 
   if (input.syncExistingOnly) {
@@ -273,7 +413,7 @@ export async function persistClientReview(
 
   if (
     currentTip &&
-    (currentTip.status === "awaiting_review" || currentTip.status === "changes_requested") &&
+    isReusableClientReviewTip(currentTip.status, true) &&
     fingerprintsEqual(currentTip.package_fingerprint ?? {}, input.fingerprint)
   ) {
     return {
@@ -285,18 +425,42 @@ export async function persistClientReview(
     };
   }
 
-  const nextNumber = (currentTip?.review_number ?? 0) + 1;
-  const token = randomBytes(16).toString("hex");
-  const tokenHash = hashClientReviewToken(token);
+  let journey =
+    (currentTip?.journey_id ? await loadJourney(supabase, currentTip.journey_id) : null) ??
+    (await findJourneyForScope(supabase, input));
+  const token = journey?.share_token?.trim() || randomBytes(16).toString("hex");
+  if (!journey) {
+    journey = await createJourney(supabase, {
+      token,
+      shortlistId: input.shortlistId,
+      quotationId: input.quotationId,
+      campaignHeaderId: input.campaignHeaderId,
+    });
+  }
+
+  let nextNumber = (currentTip?.review_number ?? 0) + 1;
+  if (journey) {
+    const { data: latestSameSource } = await supabase
+      .from("campaign_client_reviews" as never)
+      .select("review_number")
+      .eq("journey_id", journey.id)
+      .eq("source", input.source)
+      .order("review_number", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const latestNumber = (latestSameSource as { review_number?: number } | null)?.review_number ?? 0;
+    nextNumber = Math.max(nextNumber, latestNumber + 1);
+  }
   const now = new Date().toISOString();
+  const reviewToken = randomBytes(16).toString("hex");
 
   const insert = {
     campaign_object_id: input.campaignObjectId ?? null,
     frozen_version: input.frozenVersion ?? 0,
     review_number: nextNumber,
-    token_hash: tokenHash,
-    share_token: token,
-    status: "awaiting_review",
+    token_hash: hashClientReviewToken(reviewToken),
+    share_token: reviewToken,
+    status: "awaiting_review" as const,
     source: input.source,
     client_label: input.clientLabel,
     brand_name: input.brandName,
@@ -310,6 +474,7 @@ export async function persistClientReview(
     selection_state: input.selection,
     created_by: input.userId,
     updated_at: now,
+    journey_id: journey?.id ?? null,
   };
 
   const { data: created, error } = await supabase
@@ -328,6 +493,32 @@ export async function persistClientReview(
 
   const review = mapClientReviewRow(created as ReviewRow);
 
+  if (journey && !journey.landing_review_id) {
+    await supabase
+      .from("campaign_client_journeys" as never)
+      .update({
+        landing_review_id: review.id,
+        share_token: token,
+        token_hash: hashClientReviewToken(token),
+        shortlist_id: input.shortlistId ?? journey.shortlist_id,
+        quotation_id: input.quotationId ?? journey.quotation_id,
+        campaign_header_id: input.campaignHeaderId ?? null,
+        updated_at: now,
+      } as never)
+      .eq("id", journey.id);
+    journey = { ...journey, landing_review_id: review.id, share_token: token };
+  } else if (journey) {
+    await supabase
+      .from("campaign_client_journeys" as never)
+      .update({
+        shortlist_id: input.shortlistId ?? journey.shortlist_id,
+        quotation_id: input.quotationId ?? journey.quotation_id,
+        campaign_header_id: input.campaignHeaderId ?? null,
+        updated_at: now,
+      } as never)
+      .eq("id", journey.id);
+  }
+
   if (currentTip && currentTip.status !== "superseded" && currentTip.status !== "revoked") {
     await supabase
       .from("campaign_client_reviews" as never)
@@ -337,6 +528,20 @@ export async function persistClientReview(
         updated_at: now,
       } as never)
       .eq("id", currentTip.id)
+      .in("status", ["awaiting_review", "changes_requested"]);
+  }
+
+  if (journey && input.source === "quotation") {
+    await supabase
+      .from("campaign_client_reviews" as never)
+      .update({
+        status: "superseded",
+        superseded_by: review.id,
+        updated_at: now,
+      } as never)
+      .eq("journey_id", journey.id)
+      .eq("source", "quotation")
+      .neq("id", review.id)
       .in("status", ["awaiting_review", "changes_requested"]);
   }
 
@@ -354,7 +559,10 @@ export async function persistClientReview(
 
   await supabase.from("campaign_client_review_events" as never).insert({
     review_id: review.id,
-    event_type: "campaign_sent_for_review",
+    event_type:
+      currentTip?.status === "approved" && input.source === "quotation"
+        ? "quotation_revision_published"
+        : "campaign_sent_for_review",
     actor_kind: "internal",
     actor_label: "Thinkway",
     payload: {
@@ -380,14 +588,14 @@ export async function persistClientReview(
     },
   });
 
-  const origin = input.origin.replace(/\/$/, "");
+  const share = await shareFromJourneyOrReview(supabase, origin, review, token);
   return {
     ok: true,
-    reviewId: review.id,
+    reviewId: share.reviewId,
     reviewNumber: review.reviewNumber,
     frozenVersion: review.frozenVersion,
-    url: `${origin}${buildClientReviewPath(review.id, token)}`,
-    token,
+    url: share.url,
+    token: share.token,
     status: review.status,
     source: review.source,
   };
@@ -403,7 +611,7 @@ export async function revealClientReviewShareLink(input: {
 > {
   let query = input.supabase
     .from("campaign_client_reviews" as never)
-    .select("id, review_number, status, share_token")
+    .select("id, review_number, status, share_token, journey_id")
     .eq("source", input.scope.source);
   query = applyReviewScope(query, input.scope);
   const { data } = await query.order("review_number", { ascending: false }).limit(1).maybeSingle();
@@ -412,6 +620,7 @@ export async function revealClientReviewShareLink(input: {
     review_number: number;
     status: ClientReviewStatus;
     share_token?: string | null;
+    journey_id?: string | null;
   } | null;
   if (!row) {
     return {
@@ -419,7 +628,7 @@ export async function revealClientReviewShareLink(input: {
       message: CLIENT_REVIEW_LINK_MISSING_MESSAGE,
     };
   }
-  if (row.status === "revoked" || row.status === "superseded") {
+  if (row.status === "revoked") {
     return {
       ok: false,
       message: "The latest Client Workspace version is no longer active. Generate a new link.",
@@ -427,12 +636,17 @@ export async function revealClientReviewShareLink(input: {
   }
 
   const origin = input.origin.replace(/\/$/, "");
-  const existingToken = row.share_token?.trim() || "";
-  if (existingToken) {
+  const share = await shareFromJourneyOrReview(
+    input.supabase,
+    origin,
+    { id: row.id, journeyId: row.journey_id },
+    row.share_token?.trim() || ""
+  );
+  if (share.token) {
     return {
       ok: true,
-      url: `${origin}${buildClientReviewPath(row.id, existingToken)}`,
-      reviewId: row.id,
+      url: share.url,
+      reviewId: share.reviewId,
       reviewNumber: row.review_number,
       created: false,
     };

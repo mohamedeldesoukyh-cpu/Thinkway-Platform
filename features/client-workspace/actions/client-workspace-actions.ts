@@ -6,6 +6,7 @@ import type {
   ClientChangeArea,
   ClientCommentTargetType,
   ClientCreatorSelectionState,
+  ClientReviewDecisionStage,
 } from "../constants";
 import { freezeCreatorBriefIfNeeded, briefFromSnapshotCreator } from "../creator-brief";
 import { resolveClientReviewByToken } from "../load-client-workspace";
@@ -42,6 +43,7 @@ export async function addReviewCommentAction(input: {
   targetType: ClientCommentTargetType;
   targetId?: string | null;
   message: string;
+  stage?: ClientReviewDecisionStage;
 }) {
   return addClientComment(input);
 }
@@ -50,6 +52,7 @@ export async function requestReviewChangesAction(input: {
   token: string;
   summary: string;
   areas: ClientChangeArea[];
+  stage?: ClientReviewDecisionStage;
 }) {
   return requestClientChanges(input);
 }
@@ -59,6 +62,7 @@ export async function decideReviewAction(input: {
   decision: "approved" | "rejected";
   actorLabel?: string;
   reason?: string;
+  stage?: ClientReviewDecisionStage;
 }) {
   return decideClientReview(input);
 }

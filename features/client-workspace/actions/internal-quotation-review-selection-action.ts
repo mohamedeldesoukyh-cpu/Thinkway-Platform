@@ -9,7 +9,7 @@ import { quotationDetailPath } from "@/lib/routing/entity-paths";
 
 import type { ClientCreatorSelectionState } from "../constants";
 import { loadLatestInternalReviewForQuotation } from "../load-client-workspace";
-import { clientSelectionToShortlistStatus } from "../status";
+import { clientSelectionToShortlistStatus, isFrozenClientReviewStatus } from "../status";
 
 export async function setQuotationReviewCreatorsOnBehalfAction(input: {
   quotationId: string;
@@ -24,7 +24,7 @@ export async function setQuotationReviewCreatorsOnBehalfAction(input: {
   }
   const review = await loadLatestInternalReviewForQuotation(supabase, input.quotationId);
   if (!review) return { ok: false, message: "This quotation has no client review yet." };
-  if (review.status === "superseded" || review.status === "revoked") {
+  if (isFrozenClientReviewStatus(review.status)) {
     return { ok: false, message: "This client review is no longer open." };
   }
   const ids = [...new Set(input.creatorIds.filter(Boolean))];
@@ -32,16 +32,10 @@ export async function setQuotationReviewCreatorsOnBehalfAction(input: {
 
   const selection = { ...review.selectionState };
   for (const id of ids) selection[id] = input.state;
-  const acceptedIds = Object.entries(selection)
-    .filter(([, state]) => state === "accepted")
-    .map(([id]) => id);
   const patch: Record<string, unknown> = {
     selection_state: selection,
     updated_at: new Date().toISOString(),
   };
-  if (review.status === "approved") {
-    patch.approved_creator_ids = acceptedIds;
-  }
 
   const { error } = await supabase
     .from("campaign_client_reviews" as never)

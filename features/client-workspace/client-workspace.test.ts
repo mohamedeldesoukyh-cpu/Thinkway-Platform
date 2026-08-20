@@ -37,8 +37,29 @@ import { briefFromSnapshotCreator, mergeFrozenBrief } from "./creator-brief";
 import { enrichSnapshotCreatorFromUnified, mixPostsForDeliverables, profileUrlFromHandle, resolveContentPostPlatform, shouldReplaceContentFeed } from "./creator-snapshot";
 import { creatorPlatformBreakdown, creatorProfileLinks, engagementMetersForBreakdown } from "./platform-breakdown";
 import { clientReviewAvatarUrl, isReviewMediaUrlAllowed, reviewMediaAllowlist } from "./review-media";
-import { diffClientReviewSnapshots, retainCreatorBriefs } from "./snapshot-diff";
-import { shortlistReviewBlockers, quotationReviewBlockers } from "./source-readiness";
+import { canCreateCampaignFromQuotation } from "@/lib/commercial-sync/rules";
+import { diffClientReviewSnapshots, diffShortlistToQuotation, retainCreatorBriefs } from "./snapshot-diff";
+import {
+  canLiveSyncClientReview,
+  clientApprovalSideEffects,
+  deriveQuotationStage,
+  deriveShortlistStage,
+  isReusableClientReviewTip,
+  journeyActionRequired,
+  journeyCanonicalReviewId,
+  pickActiveDecisionReview,
+  reviewIdBelongsToJourney,
+} from "./journey-state";
+import {
+  actionRequiredFor,
+  clientSelectionToShortlistStatus,
+  countSelections,
+  isFrozenClientReviewStatus,
+  isInteractiveClientReview,
+  isSelectedForCalculator,
+  nextAcceptState,
+  shortlistStatusToClient,
+} from "./status";
 import {
   projectCommercialFromSnapshot,
   parseSourceSnapshot,
@@ -61,15 +82,7 @@ import {
   buildReviewCookieValue,
   clientReviewTokenHashesEqual,
 } from "./security/review-token";
-import {
-  actionRequiredFor,
-  clientSelectionToShortlistStatus,
-  countSelections,
-  isInteractiveClientReview,
-  isSelectedForCalculator,
-  nextAcceptState,
-  shortlistStatusToClient,
-} from "./status";
+import { shortlistReviewBlockers, quotationReviewBlockers } from "./source-readiness";
 import {
   brandDomainGuess,
   brandMentionsInsight,
@@ -736,7 +749,7 @@ test("HypeAuditor parity matrix covers the required media-plan capabilities", ()
 
 test("client workspace roster count matches the proposal snapshot, not Studio quantity copy", () => {
   assert.equal(rosterHeadline(13), "13 creators proposed");
-  assert.equal(rosterSourceLine("shortlist"), "Source: Approved shortlist");
+  assert.equal(rosterSourceLine("shortlist"), "Source: Creator shortlist");
   assert.equal(rosterHeadline(1), "1 creator proposed");
 });
 
@@ -1476,4 +1489,312 @@ test("accept can be removed until the client submits the selection", () => {
   assert.equal(nextAcceptState("accepted"), "in_review");
   assert.equal(nextAcceptState("rejected"), "accepted");
 });
+
+test("approved and rejected reviews are frozen and cannot be reused", () => {
+  assert.equal(isFrozenClientReviewStatus("approved"), true);
+  assert.equal(isFrozenClientReviewStatus("rejected"), true);
+  assert.equal(isReusableClientReviewTip("approved", true), false);
+  assert.equal(isReusableClientReviewTip("rejected", true), false);
+  assert.equal(isReusableClientReviewTip("superseded", true), false);
+  assert.equal(isReusableClientReviewTip("awaiting_review", true), true);
+  assert.equal(isReusableClientReviewTip("changes_requested", true), true);
+  assert.equal(isReusableClientReviewTip("awaiting_review", false), false);
+});
+
+test("quotation live-sync is only allowed for open unconverted quotations", () => {
+  assert.equal(
+    canLiveSyncClientReview({ status: "awaiting_review", source: "quotation" }),
+    true
+  );
+  assert.equal(canLiveSyncClientReview({ status: "approved", source: "quotation" }), false);
+  assert.equal(canLiveSyncClientReview({ status: "rejected", source: "quotation" }), false);
+  assert.equal(
+    canLiveSyncClientReview({
+      status: "awaiting_review",
+      source: "quotation",
+      campaignHeaderId: "c1",
+    }),
+    false
+  );
+  assert.equal(canLiveSyncClientReview({ status: "awaiting_review", source: "shortlist" }), false);
+});
+
+test("shortlist and quotation stages stay independent", () => {
+  assert.equal(deriveShortlistStage({ review: null }), "not_sent");
+  assert.equal(
+    deriveShortlistStage({ review: { status: "awaiting_review", firstViewedAt: null } }),
+    "sent"
+  );
+  assert.equal(
+    deriveShortlistStage({
+      review: { status: "awaiting_review", firstViewedAt: "2026-08-20T10:00:00.000Z" },
+    }),
+    "viewed"
+  );
+  assert.equal(
+    deriveShortlistStage({ review: { status: "approved", firstViewedAt: "2026-08-20T10:00:00.000Z" } }),
+    "approved"
+  );
+  assert.equal(
+    deriveQuotationStage({
+      quotationExists: true,
+      review: null,
+      priorApprovedReview: false,
+      movedToCampaign: false,
+    }),
+    "draft"
+  );
+  assert.equal(
+    deriveQuotationStage({
+      quotationExists: true,
+      review: { status: "awaiting_review", firstViewedAt: null },
+      priorApprovedReview: true,
+      movedToCampaign: false,
+    }),
+    "updated"
+  );
+  assert.equal(
+    deriveQuotationStage({
+      quotationExists: true,
+      review: { status: "approved", firstViewedAt: null },
+      priorApprovedReview: false,
+      movedToCampaign: false,
+    }),
+    "approved"
+  );
+  assert.equal(
+    deriveQuotationStage({
+      quotationExists: true,
+      review: { status: "rejected", firstViewedAt: null },
+      priorApprovedReview: false,
+      movedToCampaign: false,
+    }),
+    "rejected"
+  );
+  const action = journeyActionRequired({
+    shortlistStage: "approved",
+    quotationStage: "updated",
+    historical: false,
+  });
+  assert.match(action, /updated quotation/i);
+  assert.equal(action.includes("Shortlist"), false);
+});
+
+test("unapproved shortlist does not block quotation sending or campaign conversion rules", () => {
+  assert.equal(deriveShortlistStage({ review: null }), "not_sent");
+  assert.equal(
+    deriveQuotationStage({
+      quotationExists: true,
+      review: { status: "awaiting_review", firstViewedAt: null },
+      priorApprovedReview: false,
+      movedToCampaign: false,
+    }),
+    "sent_for_approval"
+  );
+  assert.equal(canCreateCampaignFromQuotation("approved"), true);
+  assert.equal(canCreateCampaignFromQuotation("sent"), false);
+  assert.equal(canCreateCampaignFromQuotation("draft"), false);
+});
+
+test("same journey token accepts canonical, member, and active review ids", () => {
+  assert.equal(
+    reviewIdBelongsToJourney("landing", {
+      canonicalReviewId: "landing",
+      memberReviewIds: ["landing", "quote-1"],
+      activeReviewId: "quote-1",
+      journeyId: "journey-1",
+    }),
+    true
+  );
+  assert.equal(
+    reviewIdBelongsToJourney("quote-1", {
+      canonicalReviewId: "landing",
+      memberReviewIds: ["landing", "quote-1"],
+      activeReviewId: "quote-1",
+    }),
+    true
+  );
+  assert.equal(
+    reviewIdBelongsToJourney("other", {
+      canonicalReviewId: "landing",
+      memberReviewIds: ["landing"],
+      activeReviewId: "landing",
+    }),
+    false
+  );
+});
+
+test("canonical shortlist URL is not treated as a historical freeze when a quotation exists", () => {
+  const shortlist = {
+    id: "s1",
+    source: "shortlist" as const,
+    status: "approved" as const,
+    reviewNumber: 1,
+    createdAt: "2026-08-01T00:00:00.000Z",
+  };
+  const quotation = {
+    id: "q1",
+    source: "quotation" as const,
+    status: "awaiting_review" as const,
+    reviewNumber: 1,
+    createdAt: "2026-08-02T00:00:00.000Z",
+  };
+  const picked = pickActiveDecisionReview({
+    reviews: [shortlist, quotation] as never,
+    requestedReviewId: "s1",
+    canonicalReviewId: "s1",
+  });
+  assert.equal(picked.historical, false);
+  assert.equal(picked.review?.id, "q1");
+});
+
+test("older frozen quotation URLs remain readable as historical versions", () => {
+  const first = {
+    id: "q1",
+    source: "quotation" as const,
+    status: "approved" as const,
+    reviewNumber: 1,
+    createdAt: "2026-08-01T00:00:00.000Z",
+  };
+  const next = {
+    id: "q2",
+    source: "quotation" as const,
+    status: "awaiting_review" as const,
+    reviewNumber: 2,
+    createdAt: "2026-08-03T00:00:00.000Z",
+  };
+  const picked = pickActiveDecisionReview({
+    reviews: [first, next] as never,
+    requestedReviewId: "q1",
+    canonicalReviewId: "s1",
+  });
+  assert.equal(picked.historical, true);
+  assert.equal(picked.review?.id, "q1");
+});
+
+test("review-specific tokens still freeze historical versions even when the URL is the canonical landing", () => {
+  const shortlist = {
+    id: "s1",
+    source: "shortlist" as const,
+    status: "approved" as const,
+    reviewNumber: 1,
+    createdAt: "2026-08-01T00:00:00.000Z",
+  };
+  const first = {
+    id: "q1",
+    source: "quotation" as const,
+    status: "approved" as const,
+    reviewNumber: 1,
+    createdAt: "2026-08-02T00:00:00.000Z",
+  };
+  const next = {
+    id: "q2",
+    source: "quotation" as const,
+    status: "awaiting_review" as const,
+    reviewNumber: 2,
+    createdAt: "2026-08-03T00:00:00.000Z",
+  };
+  const picked = pickActiveDecisionReview({
+    reviews: [shortlist, first, next] as never,
+    requestedReviewId: "q1",
+    canonicalReviewId: "s1",
+    tokenBoundReviewId: "q1",
+  });
+  assert.equal(picked.historical, true);
+  assert.equal(picked.review?.id, "q1");
+});
+
+test("quotation-first journeys use the first quotation review as the canonical landing", () => {
+  assert.equal(
+    journeyCanonicalReviewId(
+      [
+        { id: "q1", source: "quotation", createdAt: "2026-08-02T00:00:00.000Z" },
+      ],
+      "fallback"
+    ),
+    "q1"
+  );
+});
+
+test("shortlist approval never creates a quotation, locks commercial value, or sets quotations.status", () => {
+  const approved = clientApprovalSideEffects("shortlist", "approved");
+  assert.equal(approved.createQuotation, false);
+  assert.equal(approved.lockCommercial, false);
+  assert.equal(approved.setQuotationStatusApproved, false);
+  assert.equal(approved.rejectPairedShortlist, false);
+});
+
+test("quotation approval sets quotations.status and does not create another quotation", () => {
+  const approved = clientApprovalSideEffects("quotation", "approved");
+  assert.equal(approved.setQuotationStatusApproved, true);
+  assert.equal(approved.lockCommercial, true);
+  assert.equal(approved.createQuotation, false);
+  assert.equal(canCreateCampaignFromQuotation("approved"), true);
+});
+
+test("rejecting a quotation does not reject the shortlist or rewrite commercial freeze", () => {
+  const rejected = clientApprovalSideEffects("quotation", "rejected");
+  assert.equal(rejected.rejectPairedShortlist, false);
+  assert.equal(rejected.setQuotationStatusApproved, false);
+  assert.equal(rejected.lockCommercial, false);
+});
+
+test("typed shortlist-to-quotation diff covers added, removed, investment, and deliverables", () => {
+  const shortlist = parseSourceSnapshot({
+    source: "shortlist",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme",
+    platforms: ["instagram"],
+    deliverables: ["Reel"],
+    creators: [
+      { creatorId: "a", displayName: "Creator A", investmentAmount: 40000, deliverables: "Reel x 1" },
+      { creatorId: "b", displayName: "Creator B", investmentAmount: 20000, deliverables: "Story" },
+    ],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "Duration not confirmed", phases: [] },
+    commercial: {
+      currency: "EGP",
+      creatorInvestment: 60000,
+      totalInvestment: 60000,
+      lines: [],
+      selectedCount: 2,
+      totalCount: 2,
+    },
+    creatorIds: ["a", "b"],
+  });
+  const quotation = parseSourceSnapshot({
+    source: "quotation",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme",
+    platforms: ["instagram"],
+    deliverables: ["Reel", "Story"],
+    creators: [
+      { creatorId: "a", displayName: "Creator A", investmentAmount: 50000, deliverables: "Reel x 2" },
+      { creatorId: "c", displayName: "Creator C", investmentAmount: 10000, deliverables: "Story" },
+    ],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "Duration not confirmed", phases: [] },
+    commercial: {
+      currency: "EGP",
+      creatorInvestment: 60000,
+      totalInvestment: 60000,
+      lines: [],
+      selectedCount: 2,
+      totalCount: 2,
+    },
+    creatorIds: ["a", "c"],
+  });
+  const diff = diffShortlistToQuotation(shortlist, quotation);
+  assert.ok(diff);
+  assert.equal(diff!.commercialChangedAfterShortlistApproval, true);
+  assert.equal(diff!.rows.find((row) => row.creatorId === "a")?.investmentChanged, true);
+  assert.equal(diff!.rows.find((row) => row.creatorId === "a")?.investmentDelta, 10000);
+  assert.equal(diff!.rows.find((row) => row.creatorId === "a")?.deliverablesChanged, true);
+  assert.equal(diff!.rows.find((row) => row.creatorId === "b")?.kind, "removed");
+  assert.equal(diff!.rows.find((row) => row.creatorId === "c")?.kind, "added");
+  assert.ok(diff!.summaryItems.some((item) => /commercial value changed after shortlist approval/i.test(item)));
+});
+
 

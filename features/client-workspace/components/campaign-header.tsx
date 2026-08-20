@@ -46,8 +46,8 @@ export function CampaignHeader({
     duration || null,
     investment,
   ].filter((item): item is string => Boolean(item));
-  const approvalHref = buildClientReviewPath(view.review.id, token, "approval");
-  const feedbackHref = buildClientReviewPath(view.review.id, token, "feedback");
+  const approvalHref = buildClientReviewPath(view.journey?.canonicalReviewId ?? view.review.id, token, "approval");
+  const feedbackHref = buildClientReviewPath(view.journey?.canonicalReviewId ?? view.review.id, token, "feedback");
 
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -86,7 +86,11 @@ export function CampaignHeader({
               href={approvalHref}
               className="rounded-full bg-[#1D9E75] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[#178A65]"
             >
-              Approve proposal
+              {view.journey?.canApproveQuotation
+                ? "Approve Quotation"
+                : view.journey?.canApproveShortlist
+                  ? "Approve Shortlist"
+                  : "Review approval"}
             </Link>
           </>
         ) : null}
