@@ -44,7 +44,7 @@ import { ReviewCreatorProfileLinks } from "./review-creator-profile-links";
 import { BrandMentionsCard, EstimatedReachCard } from "./review-insight-cards";
 import { EngagementMeter, ReviewMeter } from "./review-meter";
 import { ReviewPlatformBreakdown } from "./review-platform-breakdown";
-import { IconChart, IconCheck, IconClose } from "./review-icons";
+import { IconBack, IconChart, IconCheck, IconClose } from "./review-icons";
 
 const STATUS_FILTERS: Array<{ id: "all" | "recommended" | ClientCreatorSelectionState; label: string }> = [
   { id: "all", label: "All" },
@@ -416,6 +416,10 @@ function CreatorDetailPane({
   return (
     <aside className={show ? "detail show" : "detail"}>
       <div className="dhead">
+        <button type="button" className="dt-back" onClick={onBack} aria-label="Back to creators">
+          <IconBack />
+          Back
+        </button>
         <span className="t">Creator card</span>
         <button type="button" className="x" onClick={onBack} aria-label="Close creator card">
           <IconClose />
