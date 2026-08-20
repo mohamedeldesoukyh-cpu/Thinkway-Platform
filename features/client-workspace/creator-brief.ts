@@ -350,7 +350,8 @@ export function mergeFrozenBrief(
   };
 }
 
-function needsClientBriefBackfill(creator: ClientReviewSourceSnapshotCreator): boolean {
+export function needsClientBriefBackfill(creator: ClientReviewSourceSnapshotCreator): boolean {
+  if (!creator.avatarUrl?.trim()) return true;
   if (!creator.profileUrl?.trim() && profileUrlFromHandle(creator.handle, creator.platform)) {
     return true;
   }

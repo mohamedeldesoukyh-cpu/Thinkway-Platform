@@ -28,10 +28,13 @@ import {
   fetchImageBuffer,
   isAllowedPublicationPreviewSrcUrl,
 } from "@/lib/creators/publication-preview-proxy";
+import { parseProfileInput } from "@/lib/social/parse-profile-url";
 import {
+  SOCIAL_MEDIA_SRC_ALLOWLIST,
   SOCIAL_PROFILE_ALLOWLIST,
   fetchWithStrictRedirects,
   isUrlAllowedByHostlist,
+  type HostAllowlist,
 } from "@/lib/security/ssrf";
 
 function decodeEmbeddedUrl(value: string): string {
@@ -129,6 +132,60 @@ async function resolveProfilePictureFromSocialPage(
 /** Social profile pages usable for OpenGraph avatar fallback. */
 export function isAllowedCreatorAvatarProfileUrl(url: string): boolean {
   return isUrlAllowedByHostlist(url, SOCIAL_PROFILE_ALLOWLIST);
+}
+
+const UNAVATAR_AVATAR_ALLOWLIST: HostAllowlist = {
+  exact: [...SOCIAL_MEDIA_SRC_ALLOWLIST.exact, "unavatar.io"],
+  suffixes: SOCIAL_MEDIA_SRC_ALLOWLIST.suffixes,
+};
+
+const UNAVATAR_MIN_BYTES = 64;
+const UNAVATAR_MAX_BYTES = 400_000;
+
+/** Public photo lookup when TikTok/Instagram profile pages block datacenter scrapes. */
+export function unavatarSourcesForProfileUrl(profileUrl: string): string[] {
+  const parsed = parseProfileInput(profileUrl);
+  if (!parsed) return [];
+  const handle = parsed.normalized_username;
+  if (!handle || /[/?#]/.test(handle)) return [];
+  if (parsed.platform === "tiktok") {
+    return [`https://unavatar.io/tiktok/${encodeURIComponent(handle)}?fallback=false`];
+  }
+  if (parsed.platform === "instagram") {
+    return [`https://unavatar.io/instagram/${encodeURIComponent(handle)}?fallback=false`];
+  }
+  return [];
+}
+
+async function fetchUnavatarAvatar(
+  profileUrl: string
+): Promise<{ ok: true; buffer: ArrayBuffer; contentType: string } | { ok: false }> {
+  for (const url of unavatarSourcesForProfileUrl(profileUrl)) {
+    recordMediaProxyExternalRequest();
+    try {
+      const response = await fetchWithStrictRedirects(url, {
+        allowlist: UNAVATAR_AVATAR_ALLOWLIST,
+        maxRedirects: 4,
+        timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS,
+        headers: {
+          Accept: "image/*,*/*;q=0.8",
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        },
+      });
+      if (!response.ok) continue;
+      const contentType = response.headers.get("content-type")?.split(";")[0]?.trim() ?? "";
+      if (!contentType.startsWith("image/")) continue;
+      const buffer = await response.arrayBuffer();
+      if (buffer.byteLength < UNAVATAR_MIN_BYTES || buffer.byteLength > UNAVATAR_MAX_BYTES) {
+        continue;
+      }
+      return { ok: true, buffer, contentType };
+    } catch {
+      continue;
+    }
+  }
+  return { ok: false };
 }
 
 async function fetchThinkwayStoredAvatar(
@@ -242,6 +299,9 @@ async function resolveCreatorAvatarExternal(input: {
   }
 
   if (profileUrl && isAllowedCreatorAvatarProfileUrl(profileUrl)) {
+    const fromUnavatar = await fetchUnavatarAvatar(profileUrl);
+    if (fromUnavatar.ok) return fromUnavatar;
+
     const resolvedPicture = await resolveProfilePictureFromSocialPage(profileUrl);
     if (resolvedPicture) {
       const fromProfilePage = await fetchImageBuffer(resolvedPicture);

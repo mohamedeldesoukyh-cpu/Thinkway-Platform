@@ -14,8 +14,10 @@ export function isMediaProxyApiUrl(src: string | null | undefined): boolean {
   return (
     src.startsWith("/api/creators/avatar") ||
     src.startsWith("/api/creators/publication-preview") ||
+    src.startsWith("/api/review/media") ||
     src.includes("/api/creators/avatar?") ||
-    src.includes("/api/creators/publication-preview?")
+    src.includes("/api/creators/publication-preview?") ||
+    src.includes("/api/review/media?")
   );
 }
 

@@ -9,6 +9,7 @@ import {
 
 assert.equal(isMediaProxyApiUrl("/api/creators/avatar?src=x"), true);
 assert.equal(isMediaProxyApiUrl("/api/creators/publication-preview?src=x"), true);
+assert.equal(isMediaProxyApiUrl("/api/review/media?kind=avatar&sign=x"), true);
 assert.equal(isMediaProxyApiUrl("https://cdn.example/a.jpg"), false);
 
 assert.equal(
@@ -17,6 +18,10 @@ assert.equal(
 );
 assert.equal(
   withMediaProxyRetryBust("/api/creators/publication-preview?postUrl=p", 2).includes("_twr=2"),
+  true
+);
+assert.equal(
+  withMediaProxyRetryBust("/api/review/media?kind=avatar&sign=x", 1).includes("_twr=1"),
   true
 );
 assert.equal(withMediaProxyRetryBust("https://cdn.example/a.jpg", 1), "https://cdn.example/a.jpg");

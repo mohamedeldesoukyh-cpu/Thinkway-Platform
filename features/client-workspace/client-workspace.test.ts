@@ -33,7 +33,7 @@ import {
 import { acceptedCreators, contentRowsForSelection } from "./selection-view";
 import { HYPEAUDITOR_MEDIA_PLAN_PARITY } from "./hypeauditor-parity";
 import { projectMediaPlanSummary, projectSelectionSummaryFromCards } from "./media-plan-summary";
-import { briefFromSnapshotCreator, mergeFrozenBrief } from "./creator-brief";
+import { briefFromSnapshotCreator, mergeFrozenBrief, needsClientBriefBackfill } from "./creator-brief";
 import { enrichSnapshotCreatorFromUnified, mixPostsForDeliverables, profileUrlFromHandle, resolveContentPostPlatform, shouldReplaceContentFeed } from "./creator-snapshot";
 import { creatorPlatformBreakdown, creatorProfileLinks, engagementMetersForBreakdown, avatarProfileUrlForReview } from "./platform-breakdown";
 import { clientReviewAvatarUrl, isReviewMediaUrlAllowed, reviewMediaAllowlist } from "./review-media";
@@ -1053,6 +1053,38 @@ test("Client Workspace fetches the TikTok photo when Snapchat is the stored prof
   assert.ok(snapshot);
   const allow = reviewMediaAllowlist(snapshot);
   assert.equal(isReviewMediaUrlAllowed(allow, null, null, tiktokUrl), true);
+});
+
+test("open reviews still backfill a missing creator photo after the brief was frozen", () => {
+  assert.equal(
+    needsClientBriefBackfill({
+      creatorId: "rewlifts",
+      displayName: "rewlifts",
+      handle: "@rewlifts",
+      briefBackfillDone: true,
+      briefFrozenAt: "2026-09-01T00:00:00.000Z",
+      profileUrl: "https://www.tiktok.com/@rewlifts",
+      platformAccounts: [{ platform: "tiktok", handle: "@rewlifts" }],
+      contentCategories: [{ label: "Fitness" }],
+      categories: ["Fitness"],
+    }),
+    true
+  );
+  assert.equal(
+    needsClientBriefBackfill({
+      creatorId: "rewlifts",
+      displayName: "rewlifts",
+      handle: "@rewlifts",
+      avatarUrl: "https://p16-sign-va.tiktokcdn.com/tos/avatar.jpeg",
+      briefBackfillDone: true,
+      briefFrozenAt: "2026-09-01T00:00:00.000Z",
+      profileUrl: "https://www.tiktok.com/@rewlifts",
+      platformAccounts: [{ platform: "tiktok", handle: "@rewlifts" }],
+      contentCategories: [{ label: "Fitness" }],
+      categories: ["Fitness"],
+    }),
+    false
+  );
 });
 
 test("unified enrichment stores followers and ER per platform", () => {

@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+import { useMediaProxyImageRecovery } from "@/hooks/use-media-proxy-image-recovery";
 
 import { avatarProfileUrlForReview } from "../platform-breakdown";
 import { AVATAR_GRADS, initialsFromName } from "../presentation";
@@ -67,25 +69,28 @@ export function RetryableReviewImage({
   onFailed?: () => void;
   className?: string;
 }) {
-  const [attempt, setAttempt] = useState(0);
-  const [failed, setFailed] = useState(false);
+  const recovery = useMediaProxyImageRecovery(src);
+  const notified = useRef(false);
 
-  if (failed) return null;
-  const displaySrc = attempt === 0 ? src : `${src}${src.includes("?") ? "&" : "?"}retry=${attempt}`;
+  useEffect(() => {
+    notified.current = false;
+  }, [src]);
+
+  useEffect(() => {
+    if (recovery.exhausted && !notified.current) {
+      notified.current = true;
+      onFailed?.();
+    }
+  }, [recovery.exhausted, onFailed]);
+
+  if (recovery.exhausted) return null;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       className={className}
-      src={displaySrc}
+      src={recovery.displaySrc ?? src}
       alt=""
-      onError={() => {
-        if (attempt >= 1) {
-          setFailed(true);
-          onFailed?.();
-          return;
-        }
-        window.setTimeout(() => setAttempt(1), 1500);
-      }}
+      onError={recovery.onError}
     />
   );
 }

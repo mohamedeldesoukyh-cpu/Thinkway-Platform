@@ -5,6 +5,7 @@ import {
   fetchCreatorAvatarImage,
   isAllowedCreatorAvatarProfileUrl,
   resolveCreatorAvatarForHttpRequest,
+  unavatarSourcesForProfileUrl,
 } from "@/lib/creators/creator-avatar-proxy";
 import {
   getMediaProxyMetrics,
@@ -25,6 +26,16 @@ test("isAllowedCreatorAvatarProfileUrl accepts instagram and tiktok profiles", (
     "substring lookalike hosts must be rejected"
   );
   assert.equal(isAllowedCreatorAvatarProfileUrl("https://127.0.0.1/"), false);
+});
+
+test("unavatarSourcesForProfileUrl builds TikTok and Instagram lookups", () => {
+  assert.deepEqual(unavatarSourcesForProfileUrl("https://www.tiktok.com/@rewlifts"), [
+    "https://unavatar.io/tiktok/rewlifts?fallback=false",
+  ]);
+  assert.deepEqual(unavatarSourcesForProfileUrl("https://www.instagram.com/radwaadeeel/"), [
+    "https://unavatar.io/instagram/radwaadeeel?fallback=false",
+  ]);
+  assert.deepEqual(unavatarSourcesForProfileUrl("https://www.snapchat.com/add/rewlifts"), []);
 });
 
 test("embedded profile picture regex extracts instagram CDN urls", () => {
@@ -106,6 +117,39 @@ test("fetchCreatorAvatarImage loads Thinkway creator-avatars public URLs", async
     if (result.ok) {
       assert.equal(result.contentType, "image/jpeg");
       assert.equal(result.buffer.byteLength, 4);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("fetchCreatorAvatarImage uses unavatar when TikTok profile scrape has no photo", async () => {
+  resetMediaProxyMetricsForTests();
+  const profileUrl = "https://www.tiktok.com/@rewlifts";
+  const unavatarUrl = "https://unavatar.io/tiktok/rewlifts?fallback=false";
+  const jpeg = new Uint8Array(80).fill(0xff);
+  jpeg[0] = 0xff;
+  jpeg[1] = 0xd8;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    if (String(input) === unavatarUrl) {
+      return new Response(jpeg, {
+        status: 200,
+        headers: { "content-type": "image/jpeg" },
+      });
+    }
+    return new Response("<html></html>", {
+      status: 200,
+      headers: { "content-type": "text/html" },
+    });
+  }) as typeof fetch;
+
+  try {
+    const result = await fetchCreatorAvatarImage({ src: null, profileUrl });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.equal(result.contentType, "image/jpeg");
+      assert.equal(result.buffer.byteLength, 80);
     }
   } finally {
     globalThis.fetch = originalFetch;
