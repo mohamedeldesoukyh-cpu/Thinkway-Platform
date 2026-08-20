@@ -2,6 +2,7 @@ import {
   formatOptionalCompactCount,
   formatOptionalEngagementPct,
   formatPlatformLabel,
+  listPlatformChipValue,
 } from "../format";
 import type { ClientPlatformBreakdownRow } from "../platform-breakdown";
 import { profileUrlForPlatform } from "../platform-breakdown";
@@ -25,11 +26,17 @@ export function ReviewPlatformBreakdown({
     return (
       <div className="plat-ers">
         {platforms.map((row) => {
-          const er = formatOptionalEngagementPct(row.engagementRate);
+          const value = listPlatformChipValue(row);
+          const followers = formatOptionalCompactCount(row.followers);
+          const label = formatPlatformLabel(row.platform) ?? row.platform;
           return (
-            <span className="plat-er" key={row.platform}>
+            <span
+              className="plat-er"
+              key={row.platform}
+              title={followers ? `${label} · ${followers} followers` : label}
+            >
               <ReviewPlatformMark platform={row.platform} />
-              {er ? <b>{er}</b> : null}
+              {value ? <b>{value}</b> : null}
             </span>
           );
         })}

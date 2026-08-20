@@ -253,7 +253,13 @@ export function CreatorsWorkspace({
               <div className="body">
                 <div className="nm">{identity.name}</div>
                 {sub ? <div className="sub">{sub}</div> : null}
-                <ReviewPlatformBreakdown rows={breakdownForCreator(creator)} variant="list" />
+                <ReviewPlatformBreakdown
+                  rows={breakdownForCreator(
+                    creator,
+                    brief?.creatorId === creator.creatorId ? brief : null
+                  )}
+                  variant="list"
+                />
                 <div className="ccfoot">
                   <span className="deliv">{deliverablesLabel(creator.deliverableItems, creator.deliverables)}</span>
                   <span className={statusClass(state)}>{CLIENT_CREATOR_STATUS_LABEL[state]}</span>

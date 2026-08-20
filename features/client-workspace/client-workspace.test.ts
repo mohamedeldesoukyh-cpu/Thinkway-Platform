@@ -14,7 +14,7 @@ import {
   quotationClientShareRequiresSave,
   quotationIsMovedToCampaign,
 } from "./client-review-selection";
-import { clientSafeFitCopy, clientCreatorIdentity, formatCompactCount, formatEngagementPct, formatEngagementRateLabel, formatHandleLabel, formatOptionalCompactCount, formatOptionalEngagementPct, providedText } from "./format";
+import { clientSafeFitCopy, clientCreatorIdentity, formatCompactCount, formatEngagementPct, formatEngagementRateLabel, formatHandleLabel, formatOptionalCompactCount, formatOptionalEngagementPct, listPlatformChipValue, providedText } from "./format";
 import { deliverablesLabel, groupedActivityMix, looksLikePlatformList, summarizeCreatorDeliverables, summarizeDeliverablesByPlatform } from "./deliverables";
 import {
   allocationSlices,
@@ -1079,11 +1079,28 @@ test("open reviews still backfill a missing creator photo after the brief was fr
       briefBackfillDone: true,
       briefFrozenAt: "2026-09-01T00:00:00.000Z",
       profileUrl: "https://www.tiktok.com/@rewlifts",
-      platformAccounts: [{ platform: "tiktok", handle: "@rewlifts" }],
+      platformAccounts: [{ platform: "tiktok", handle: "@rewlifts", followers: 129_000 }],
       contentCategories: [{ label: "Fitness" }],
       categories: ["Fitness"],
     }),
     false
+  );
+  assert.equal(
+    needsClientBriefBackfill({
+      creatorId: "ghanem",
+      displayName: "Ghanem Shaker",
+      avatarUrl: "https://cdn.example/a.jpg",
+      briefBackfillDone: true,
+      briefFrozenAt: "2026-09-01T00:00:00.000Z",
+      profileUrl: "https://www.instagram.com/ghanem_shaker/",
+      platformAccounts: [
+        { platform: "instagram", handle: "@ghanem_shaker" },
+        { platform: "tiktok", handle: "@ghanem_shaker" },
+      ],
+      contentCategories: [{ label: "Lifestyle" }],
+      categories: ["Lifestyle"],
+    }),
+    true
   );
 });
 
@@ -1172,6 +1189,8 @@ test("unified enrichment stores followers and ER per platform", () => {
   });
   assert.equal(rows.find((row) => row.platform === "instagram")?.followers, 83_200);
   assert.equal(rows.find((row) => row.platform === "tiktok")?.followers, 120_000);
+  assert.equal(listPlatformChipValue(rows.find((row) => row.platform === "instagram")!), "83.2K");
+  assert.equal(listPlatformChipValue(rows.find((row) => row.platform === "tiktok")!), "120.0K");
   assert.equal(rows.some((row) => row.platform === "youtube"), false);
 });
 
@@ -1310,6 +1329,10 @@ test("missing platform metrics stay blank on the avatar chip", () => {
   assert.equal(formatOptionalEngagementPct(8.8), "8.8%");
   assert.equal(formatOptionalCompactCount(undefined), null);
   assert.equal(formatOptionalCompactCount(2100), "2.1K");
+  assert.equal(listPlatformChipValue({ followers: 4_700_000, engagementRate: 3.2 }), "4.7M");
+  assert.equal(listPlatformChipValue({ followers: 129_000, engagementRate: 14.8 }), "129.0K");
+  assert.equal(listPlatformChipValue({ engagementRate: 14.8 }), "14.8%");
+  assert.equal(listPlatformChipValue({}), null);
 });
 
 test("client engagement rates stay percentages — 0.9 is 0.9%, not 90%", () => {

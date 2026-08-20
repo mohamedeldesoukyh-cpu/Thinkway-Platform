@@ -358,6 +358,8 @@ export function needsClientBriefBackfill(creator: ClientReviewSourceSnapshotCrea
   if (!creator.platformAccounts?.length) {
     const platforms = summarizeCreatorDeliverables(creator.deliverableItems).platforms;
     if (platforms.length > 1) return true;
+  } else if (creator.platformAccounts.every((row) => row.followers == null)) {
+    return true;
   }
   if (
     categoriesNeedRefresh(creator.categories, creator.contentCategories) ||
