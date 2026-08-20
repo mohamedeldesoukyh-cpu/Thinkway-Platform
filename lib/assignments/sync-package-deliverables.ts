@@ -70,9 +70,79 @@ export function splitPackageTotalsAcrossDeliverables(
   });
 }
 
+export type PackageAllocatedDeliverableRow<T extends { id: string; quantity: number }> = T & {
+  quantity: number;
+  unit_revenue: number;
+  unit_cost: number;
+  revenue_before_vat: number;
+  cost_before_vat: number;
+  usage_rights_amount: number;
+  usage_rights_cost: number;
+  agency_fee_percent: number;
+};
+
+/** Apply qty-weighted package totals onto child rows. Parent totals stay the SSOT. */
+export function applyPackageTotalsToDeliverableRows<T extends { id: string; quantity: number }>(
+  rows: T[],
+  totals: PackageLineCommercialTotals
+): PackageAllocatedDeliverableRow<T>[] {
+  const shares = splitPackageTotalsAcrossDeliverables(
+    rows.map((row) => ({ id: row.id, quantity: row.quantity })),
+    totals
+  );
+  const byId = new Map(shares.map((share) => [share.id, share]));
+  return rows.map((row) => {
+    const share = byId.get(row.id);
+    if (!share) {
+      return {
+        ...row,
+        quantity: Math.max(1, Math.floor(row.quantity) || 1),
+        unit_revenue: 0,
+        unit_cost: 0,
+        revenue_before_vat: 0,
+        cost_before_vat: 0,
+        usage_rights_amount: 0,
+        usage_rights_cost: 0,
+        agency_fee_percent: Math.max(0, totals.agencyFeePercent ?? 0),
+      };
+    }
+    return {
+      ...row,
+      quantity: share.quantity,
+      unit_revenue: share.unitRevenue,
+      unit_cost: share.unitCost,
+      revenue_before_vat: share.revenueBeforeVat,
+      cost_before_vat: share.costBeforeVat,
+      usage_rights_amount: share.usageRightsAmount,
+      usage_rights_cost: share.usageRightsCost,
+      agency_fee_percent: share.agencyFeePercent,
+    };
+  });
+}
+
+/** Simulate package child roster changes without touching line totals. */
+export function redistributePackageChildren(
+  children: { id: string; quantity: number }[],
+  totals: PackageLineCommercialTotals
+): PackageDeliverableShare[] {
+  return splitPackageTotalsAcrossDeliverables(children, totals);
+}
+
+export function packageChildRevenueSum(shares: PackageDeliverableShare[]): number {
+  return roundMoney(shares.reduce((sum, row) => sum + row.revenueBeforeVat, 0));
+}
+
+export function packageChildCostSum(shares: PackageDeliverableShare[]): number {
+  return roundMoney(shares.reduce((sum, row) => sum + row.costBeforeVat, 0));
+}
+
+export function packageChildQuantitySum(shares: PackageDeliverableShare[]): number {
+  return shares.reduce((sum, row) => sum + row.quantity, 0);
+}
+
 /**
  * Build assignment_deliverables rows for package pricing from platform selections.
- * Distributes line revenue/cost evenly across deliverable units.
+ * Stores unit revenue/cost; persist multiplies by quantity. Totals come from qty-weighted split.
  */
 export function packagePlatformsToCommercialRows(
   platforms: LinePlatformSelection[],
@@ -85,10 +155,7 @@ export function packagePlatformsToCommercialRows(
   const totalUnits = countLineDeliverables(platforms);
   if (totalUnits === 0) return [];
 
-  const perUnitRevenue = roundMoney(input.totalRevenueBeforeVat / totalUnits);
-  const perUnitCost = roundMoney(input.totalCostBeforeVat / totalUnits);
-
-  const rows: CommercialDeliverableRow[] = [];
+  const draft: CommercialDeliverableRow[] = [];
 
   for (const platform of platforms) {
     const typeCounts = new Map<string, number>();
@@ -97,20 +164,42 @@ export function packagePlatformsToCommercialRows(
     }
 
     for (const [deliverableType, quantity] of typeCounts) {
-      rows.push({
+      draft.push({
         id: newRowId(),
         platform: platform.platform,
         deliverable_type: deliverableType,
         quantity,
-        unit_cost: perUnitCost,
-        revenue_before_vat: perUnitRevenue,
+        unit_cost: 0,
+        revenue_before_vat: 0,
         live_date: input.dueDate,
         notes: null,
-        schedule_mode: "single",
+        schedule_mode: quantity > 1 ? "expanded" : "single",
         post_schedules: [],
       });
     }
   }
 
-  return rows;
+  const shares = splitPackageTotalsAcrossDeliverables(
+    draft.map((row) => ({ id: row.id, quantity: row.quantity })),
+    {
+      revenueBeforeVat: input.totalRevenueBeforeVat,
+      costBeforeVat: input.totalCostBeforeVat,
+    }
+  );
+  const byId = new Map(shares.map((share) => [share.id, share]));
+
+  return draft.map((row) => {
+    const share = byId.get(row.id);
+    const quantity = Math.max(1, row.quantity);
+    return {
+      ...row,
+      quantity,
+      unit_cost: share ? share.costBeforeVat / quantity : 0,
+      revenue_before_vat: share ? share.revenueBeforeVat / quantity : 0,
+      usage_rights_amount: share?.usageRightsAmount,
+      usage_rights_cost: share?.usageRightsCost,
+      agency_fee_percent: share?.agencyFeePercent,
+      schedule_mode: quantity > 1 ? "expanded" : "single",
+    };
+  });
 }

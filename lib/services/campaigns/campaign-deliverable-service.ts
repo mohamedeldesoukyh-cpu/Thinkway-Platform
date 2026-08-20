@@ -2,10 +2,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
   loadLineVatForDeliverable,
+  restampDeliverablePostCommercial,
   syncDeliverableRollupFromPosts,
   syncPostSchedulesForDeliverable,
 } from "@/lib/assignments/sync-post-schedules";
 import { syncLineCommercialRollupsFromDeliverables } from "@/lib/assignments/sync-line-rollups";
+import { splitPackageTotalsAcrossDeliverables } from "@/lib/assignments/sync-package-deliverables";
 import {
   loadLineCommercialGateSnapshot,
   markIssuedIoRevisionAfterAssignmentCommercialChange,
@@ -88,6 +90,7 @@ type LineVatContext = {
   cost_vat_percent: number;
   cost_vat_exempt: boolean;
   vendor_assignment_locked: boolean;
+  pricing_mode: string;
 };
 
 async function loadLineContext(
@@ -97,7 +100,7 @@ async function loadLineContext(
   const { data, error } = await supabase
     .from("campaign_lines")
     .select(
-      "id, campaign_header_id, billing_status, revenue_vat_percent, revenue_vat_exempt, cost_vat_percent, cost_vat_exempt, vendor_assignment_locked"
+      "id, campaign_header_id, billing_status, revenue_vat_percent, revenue_vat_exempt, cost_vat_percent, cost_vat_exempt, vendor_assignment_locked, pricing_mode"
     )
     .eq("id", lineId)
     .maybeSingle();
@@ -107,6 +110,99 @@ async function loadLineContext(
   }
 
   return data as LineVatContext;
+}
+
+function isPackageLine(line: { pricing_mode?: string | null }): boolean {
+  return (line.pricing_mode ?? "package") === "package";
+}
+
+type ScheduleTypeRow = {
+  id: string;
+  sequence_number: number;
+  metadata: Record<string, unknown> | null;
+  locked_at: string | null;
+};
+
+function scheduleTypeKey(
+  row: ScheduleTypeRow,
+  fallbackPlatform: string,
+  fallbackType: string
+): { platform: string; deliverable_type: string } {
+  const meta = (row.metadata ?? {}) as { platform?: string; deliverable_type?: string };
+  return {
+    platform: meta.platform || fallbackPlatform,
+    deliverable_type: meta.deliverable_type || fallbackType,
+  };
+}
+
+async function syncPackageTypePostCount(
+  supabase: SupabaseClient,
+  input: {
+    deliverableId: string;
+    campaignLineId: string;
+    fallbackPlatform: string;
+    fallbackType: string;
+    targetPlatform: string;
+    targetType: string;
+    quantity: number;
+  }
+): Promise<number> {
+  const { data: posts } = await supabase
+    .from("assignment_post_schedule")
+    .select("id, sequence_number, metadata, locked_at")
+    .eq("assignment_deliverable_id", input.deliverableId)
+    .order("sequence_number");
+
+  const rows = (posts ?? []) as ScheduleTypeRow[];
+  const ofType = rows.filter((row) => {
+    const key = scheduleTypeKey(row, input.fallbackPlatform, input.fallbackType);
+    return key.platform === input.targetPlatform && key.deliverable_type === input.targetType;
+  });
+  const desired = Math.max(1, Math.floor(input.quantity) || 1);
+
+  if (ofType.length > desired) {
+    const removable = ofType
+      .filter((row) => !row.locked_at)
+      .slice(desired);
+    if (removable.length > 0) {
+      await supabase
+        .from("assignment_post_schedule")
+        .delete()
+        .in(
+          "id",
+          removable.map((row) => row.id)
+        );
+    }
+  } else if (ofType.length < desired) {
+    const maxSeq = rows.reduce((max, row) => Math.max(max, Number(row.sequence_number) || 0), 0);
+    const inserts = [];
+    for (let i = 0; i < desired - ofType.length; i++) {
+      inserts.push({
+        assignment_deliverable_id: input.deliverableId,
+        campaign_line_id: input.campaignLineId,
+        sequence_number: maxSeq + i + 1,
+        live_date: null,
+        status: "draft",
+        notes: null,
+        billing_status: "draft",
+        revenue_before_vat: 0,
+        cost_before_vat: 0,
+        metadata: {
+          platform: input.targetPlatform,
+          deliverable_type: input.targetType,
+        },
+      });
+    }
+    if (inserts.length > 0) {
+      await supabase.from("assignment_post_schedule").insert(inserts);
+    }
+  }
+
+  const { count } = await supabase
+    .from("assignment_post_schedule")
+    .select("id", { count: "exact", head: true })
+    .eq("assignment_deliverable_id", input.deliverableId);
+  return Math.max(1, count ?? desired);
 }
 
 function computeDeliverableCommercial(input: {
@@ -172,17 +268,19 @@ async function redistributePackageLineToDeliverables(
 ): Promise<void> {
   const { data: line, error: lineError } = await supabase
     .from("campaign_lines")
-    .select("id, pricing_mode")
+    .select(
+      "id, pricing_mode, revenue_before_vat, revenue, cost_before_vat, cost, usage_rights_amount, usage_rights_cost, agency_fee_percent"
+    )
     .eq("id", lineId)
     .maybeSingle();
 
   if (lineError || !line) return;
-  if ((line.pricing_mode ?? "package") !== "package") return;
+  if (!isPackageLine(line)) return;
 
   const { data: rows, error: rowsError } = await supabase
     .from("assignment_deliverables")
     .select(
-      "id, quantity, unit_cost, revenue_before_vat, cost_before_vat, revenue_vat_percent, revenue_vat_amount, cost_vat_percent, cost_vat_amount, revenue_vat_exempt, cost_vat_exempt, notes, billing_status, locked_at"
+      "id, quantity, unit_cost, revenue_before_vat, cost_before_vat, usage_rights_amount, usage_rights_cost, agency_fee_percent, revenue_vat_percent, revenue_vat_amount, cost_vat_percent, cost_vat_amount, revenue_vat_exempt, cost_vat_exempt, notes, billing_status, locked_at"
     )
     .eq("campaign_line_id", lineId)
     .order("sort_order");
@@ -190,24 +288,79 @@ async function redistributePackageLineToDeliverables(
   if (rowsError || !rows || rows.length === 0) return;
   if (rows.some((row) => row.locked_at)) return;
 
+  const shares = splitPackageTotalsAcrossDeliverables(
+    rows.map((row) => ({
+      id: row.id as string,
+      quantity: Number(row.quantity) || 1,
+    })),
+    {
+      revenueBeforeVat: Number(line.revenue_before_vat ?? line.revenue) || 0,
+      costBeforeVat: Number(line.cost_before_vat ?? line.cost) || 0,
+      usageRightsAmount: Number(line.usage_rights_amount ?? 0),
+      usageRightsCost: Number(line.usage_rights_cost ?? 0),
+      agencyFeePercent: Number(line.agency_fee_percent ?? 0),
+    }
+  );
+  const shareById = new Map(shares.map((share) => [share.id, share]));
   const lineVat = await loadLineVatForDeliverable(supabase, lineId);
+  const totalQty = shares.reduce((sum, share) => sum + share.quantity, 0);
 
   for (const row of rows) {
+    const share = shareById.get(row.id as string);
+    if (!share) continue;
+    const commercial = computeDeliverableCommercial({
+      quantity: share.quantity,
+      unit_cost: share.unitCost,
+      unit_revenue: share.unitRevenue,
+      revenue_before_vat: share.revenueBeforeVat,
+      cost_before_vat: share.costBeforeVat,
+      usage_rights_amount: share.usageRightsAmount,
+      usage_rights_cost: share.usageRightsCost,
+      agency_fee_percent: share.agencyFeePercent,
+      revenue_vat_percent: Number(row.revenue_vat_percent) || lineVat.revenue_vat_percent,
+      revenue_vat_exempt: Boolean(row.revenue_vat_exempt) || lineVat.revenue_vat_exempt,
+      cost_vat_percent: Number(row.cost_vat_percent) || lineVat.cost_vat_percent,
+      cost_vat_exempt: Boolean(row.cost_vat_exempt) || lineVat.cost_vat_exempt,
+    });
+
+    await supabase
+      .from("assignment_deliverables")
+      .update({
+        quantity: commercial.quantity,
+        unit_cost: commercial.unit_cost,
+        total_cost: commercial.total_cost,
+        revenue_before_vat: commercial.revenue_before_vat,
+        usage_rights_amount: commercial.usage_rights_amount,
+        usage_rights_cost: commercial.usage_rights_cost,
+        agency_fee_percent: commercial.agency_fee_percent,
+        agency_fee_amount: commercial.agency_fee_amount,
+        revenue_vat_percent: commercial.revenue_vat_percent,
+        revenue_vat_amount: commercial.revenue_vat_amount,
+        revenue_after_vat: commercial.revenue_after_vat,
+        cost_before_vat: commercial.cost_before_vat,
+        cost_vat_amount: commercial.cost_vat_amount,
+        cost_after_vat: commercial.cost_after_vat,
+        billable_amount: commercial.billable_amount,
+        remaining_amount: commercial.billable_amount,
+        schedule_mode: commercial.quantity > 1 ? "expanded" : "single",
+      })
+      .eq("id", row.id);
+
     await syncPostSchedulesForDeliverable(
       supabase,
       {
         id: row.id as string,
         campaign_line_id: lineId,
-        quantity: Number(row.quantity) || 1,
-        unit_cost: Number(row.unit_cost) || 0,
-        revenue_before_vat: Number(row.revenue_before_vat) || 0,
-        cost_before_vat: Number(row.cost_before_vat) || 0,
-        revenue_vat_percent: Number(row.revenue_vat_percent) || 0,
-        revenue_vat_amount: Number(row.revenue_vat_amount) || 0,
+        quantity: commercial.quantity,
+        unit_cost: commercial.unit_cost,
+        revenue_before_vat: commercial.revenue_before_vat,
+        cost_before_vat: commercial.cost_before_vat,
+        revenue_vat_percent: commercial.revenue_vat_percent,
+        revenue_vat_amount: commercial.revenue_vat_amount,
         cost_vat_percent: Number(row.cost_vat_percent) || 0,
-        cost_vat_amount: Number(row.cost_vat_amount) || 0,
-        revenue_vat_exempt: Boolean(row.revenue_vat_exempt),
-        cost_vat_exempt: Boolean(row.cost_vat_exempt),
+        cost_vat_amount: commercial.cost_vat_amount,
+        revenue_vat_exempt: commercial.revenue_vat_exempt,
+        cost_vat_exempt: commercial.cost_vat_exempt,
         live_date: null,
         notes: (row.notes as string | null) ?? null,
         billing_status: (row.billing_status as string) ?? "draft",
@@ -215,8 +368,22 @@ async function redistributePackageLineToDeliverables(
       },
       lineVat
     );
+    await restampDeliverablePostCommercial(
+      supabase,
+      row.id as string,
+      share.unitRevenue,
+      share.unitCost,
+      lineVat
+    );
   }
+
+  await supabase
+    .from("campaign_lines")
+    .update({ deliverable_count: totalQty })
+    .eq("id", lineId);
 }
+
+export { redistributePackageLineToDeliverables };
 
 export async function createAssignmentDeliverable(
   supabase: SupabaseClient,
@@ -336,7 +503,7 @@ export async function updateAssignmentDeliverable(
     const { data: existing, error: fetchError } = await supabase
       .from("assignment_deliverables")
       .select(
-        "id, locked_at, invoiced_amount, billing_status, invoice_line_item_id, live_date, metadata, usage_rights_amount, usage_rights_cost, agency_fee_percent"
+        "id, locked_at, invoiced_amount, billing_status, invoice_line_item_id, live_date, metadata, usage_rights_amount, usage_rights_cost, agency_fee_percent, platform, deliverable_type, quantity"
       )
       .eq("id", input.deliverable_id)
       .eq("campaign_line_id", line.id)
@@ -418,6 +585,69 @@ export async function updateAssignmentDeliverable(
     }
 
     const beforeCommercial = await loadLineCommercialGateSnapshot(supabase, line.id);
+
+    if (isPackageLine(line)) {
+      const { data: scheduleRows } = await supabase
+        .from("assignment_post_schedule")
+        .select("id, metadata")
+        .eq("assignment_deliverable_id", input.deliverable_id);
+      const typeKeys = new Set(
+        (scheduleRows ?? []).map((row) => {
+          const meta = (row.metadata ?? {}) as { platform?: string; deliverable_type?: string };
+          return `${meta.platform || existing.platform}::${meta.deliverable_type || existing.deliverable_type}`;
+        })
+      );
+      let nextQty = Math.max(1, Math.floor(input.quantity) || 1);
+      if (typeKeys.size > 1) {
+        nextQty = await syncPackageTypePostCount(supabase, {
+          deliverableId: input.deliverable_id,
+          campaignLineId: line.id,
+          fallbackPlatform: String(existing.platform ?? input.platform),
+          fallbackType: String(existing.deliverable_type ?? input.deliverable_type),
+          targetPlatform: input.platform,
+          targetType: input.deliverable_type,
+          quantity: input.quantity,
+        });
+      }
+      const nextLiveDate = input.live_date ?? null;
+      const existingMeta =
+        (existing.metadata as Record<string, unknown> | null) ?? null;
+      const nextMeta =
+        nextLiveDate !== (existing.live_date ?? null)
+          ? withManualLiveDateSource(existingMeta)
+          : existingMeta;
+      const { error } = await supabase
+        .from("assignment_deliverables")
+        .update({
+          platform: input.platform,
+          deliverable_type: input.deliverable_type,
+          quantity: nextQty,
+          live_date: nextLiveDate,
+          notes: input.notes ?? null,
+          ...(nextMeta ? { metadata: nextMeta as never } : {}),
+          ...(input.billing_status ? { billing_status: input.billing_status } : {}),
+        })
+        .eq("id", input.deliverable_id);
+      if (error) {
+        return { ok: false, message: error.message };
+      }
+      await redistributePackageLineToDeliverables(supabase, line.id);
+      await syncAssignmentLineTitleFromDeliverables(supabase, line.id);
+      if (beforeCommercial) {
+        const revision = await markIssuedIoRevisionAfterAssignmentCommercialChange(
+          supabase,
+          { lineId: line.id, before: beforeCommercial }
+        );
+        if (revision.marked) {
+          return {
+            ok: true,
+            message:
+              "Deliverable updated. Issued Client/Vendor IO marked Revision Required — regenerate and resend for commercial re-approval.",
+          };
+        }
+      }
+      return { ok: true, message: "Deliverable updated." };
+    }
 
     // Preserve AF% / UR when hierarchy Rev/Cost edits omit them so AF amount
     // recalculates from the existing fee percentage of the new client amount.
@@ -695,10 +925,14 @@ export async function updatePostSchedule(
     );
 
     const lineVat = await loadLineVatForDeliverable(supabase, post.campaign_line_id);
+    const packageLine = isPackageLine(line);
 
-    const revenuePerPost =
-      input.revenue_per_post ?? Number(post.revenue_before_vat ?? 0);
-    const costPerPost = input.cost_per_post ?? Number(post.cost_before_vat ?? 0);
+    const revenuePerPost = packageLine
+      ? Number(post.revenue_before_vat ?? 0)
+      : input.revenue_per_post ?? Number(post.revenue_before_vat ?? 0);
+    const costPerPost = packageLine
+      ? Number(post.cost_before_vat ?? 0)
+      : input.cost_per_post ?? Number(post.cost_before_vat ?? 0);
     const revenueVatPercent =
       input.revenue_vat_percent ?? lineVat.revenue_vat_percent;
 
@@ -803,6 +1037,12 @@ export async function addPostToDeliverable(
 
     const lineVat = await loadLineVatForDeliverable(supabase, deliverable.campaign_line_id);
     const nextQty = deliverable.quantity + 1;
+    const { data: line } = await supabase
+      .from("campaign_lines")
+      .select("pricing_mode")
+      .eq("id", deliverable.campaign_line_id)
+      .maybeSingle();
+    const packageLine = isPackageLine(line ?? {});
     const unitRevenue =
       deliverable.quantity > 0
         ? Number(deliverable.revenue_before_vat) / deliverable.quantity
@@ -814,28 +1054,30 @@ export async function addPostToDeliverable(
       .update({ quantity: nextQty })
       .eq("id", deliverable.id);
 
-    await syncPostSchedulesForDeliverable(
-      supabase,
-      {
-        id: deliverable.id,
-        campaign_line_id: deliverable.campaign_line_id,
-        quantity: nextQty,
-        unit_cost: unitCost,
-        revenue_before_vat: unitRevenue * nextQty,
-        cost_before_vat: unitCost * nextQty,
-        revenue_vat_percent: Number(deliverable.revenue_vat_percent),
-        revenue_vat_amount: Number(deliverable.revenue_vat_amount),
-        cost_vat_percent: Number(deliverable.cost_vat_percent),
-        cost_vat_amount: Number(deliverable.cost_vat_amount),
-        revenue_vat_exempt: lineVat.revenue_vat_exempt,
-        cost_vat_exempt: lineVat.cost_vat_exempt,
-        live_date: deliverable.live_date,
-        notes: deliverable.notes,
-        billing_status: deliverable.billing_status,
-        locked_at: deliverable.locked_at,
-      },
-      lineVat
-    );
+    if (!packageLine) {
+      await syncPostSchedulesForDeliverable(
+        supabase,
+        {
+          id: deliverable.id,
+          campaign_line_id: deliverable.campaign_line_id,
+          quantity: nextQty,
+          unit_cost: unitCost,
+          revenue_before_vat: unitRevenue * nextQty,
+          cost_before_vat: unitCost * nextQty,
+          revenue_vat_percent: Number(deliverable.revenue_vat_percent),
+          revenue_vat_amount: Number(deliverable.revenue_vat_amount),
+          cost_vat_percent: Number(deliverable.cost_vat_percent),
+          cost_vat_amount: Number(deliverable.cost_vat_amount),
+          revenue_vat_exempt: lineVat.revenue_vat_exempt,
+          cost_vat_exempt: lineVat.cost_vat_exempt,
+          live_date: deliverable.live_date,
+          notes: deliverable.notes,
+          billing_status: deliverable.billing_status,
+          locked_at: deliverable.locked_at,
+        },
+        lineVat
+      );
+    }
 
     await redistributePackageLineToDeliverables(supabase, deliverable.campaign_line_id);
 

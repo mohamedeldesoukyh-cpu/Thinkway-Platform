@@ -1,9 +1,6 @@
-import { rollupLineClientCommercial } from "@/lib/assignments/client-billing-commercial";
+import { computeAgencyFeeAmount, rollupLineClientCommercial } from "@/lib/assignments/client-billing-commercial";
+import { applyPackageTotalsToDeliverableRows } from "@/lib/assignments/sync-package-deliverables";
 import { formatMarginPercent } from "@/lib/domains/billing/types";
-import {
-  assignmentPostTypeKey,
-  uniqueAssignmentPostTypeCount,
-} from "@/lib/campaigns/assignment-type-commercial";
 import type {
   AssignmentDeliverableHierarchyRow,
   AssignmentHierarchyRollups,
@@ -92,40 +89,9 @@ function applyDistributedCommercialToPosts(
   }));
 }
 
-/** Extra posts of a type inherit that type's stored unit rates. Never mix Reel/Story rates. */
-function applyPerTypeCommercialToPosts(
-  posts: AssignmentPostOperationalRow[]
-): AssignmentPostOperationalRow[] {
-  if (posts.length === 0) return posts;
-  const unitByType = new Map<string, { rev: number; cost: number }>();
-  for (const post of posts) {
-    const key = assignmentPostTypeKey(post);
-    const rev = Number(post.revenue_per_post ?? 0);
-    const cost = Number(post.cost_per_post ?? 0);
-    const existing = unitByType.get(key);
-    if (!existing) {
-      unitByType.set(key, { rev, cost });
-      continue;
-    }
-    if (existing.rev <= 0.01 && existing.cost <= 0.01 && (rev > 0.01 || cost > 0.01)) {
-      unitByType.set(key, { rev, cost });
-    }
-  }
-  return posts.map((post) => {
-    const unit = unitByType.get(assignmentPostTypeKey(post));
-    if (!unit) return post;
-    return {
-      ...post,
-      revenue_per_post: unit.rev,
-      cost_per_post: unit.cost,
-    };
-  });
-}
-
 /**
- * Package types keep their own Cost/Ad and Rev/Ad. Extra posts of the same type
- * inherit that type's unit rates for publication/invoice internals only.
- * Mixed types on one deliverable must not share a single blended unit.
+ * Package children are a qty-weighted breakdown of the line commercial SSOT.
+ * Extra posts inherit that child's allocated unit for publication internals.
  */
 export function alignPackageLineCommercialToDeliverables(
   deliverables: AssignmentDeliverableHierarchyRow[],
@@ -134,16 +100,26 @@ export function alignPackageLineCommercialToDeliverables(
   if (deliverables.length === 0) return deliverables;
   if (resolveAssignmentPricingMode(line) !== "package") return deliverables;
 
-  return deliverables.map((row) => ({
+  const allocated = applyPackageTotalsToDeliverableRows(deliverables, lineCommercialInput(line));
+  return allocated.map((row) => ({
     ...row,
-    posts:
-      uniqueAssignmentPostTypeCount(row.posts) > 1
-        ? applyPerTypeCommercialToPosts(row.posts)
-        : applyDistributedCommercialToPosts(
-            row.posts,
-            row.unit_revenue,
-            row.unit_cost
-          ),
+    unit_revenue: row.unit_revenue,
+    unit_cost: row.unit_cost,
+    revenue_before_vat: row.revenue_before_vat,
+    cost_before_vat: row.cost_before_vat,
+    usage_rights_amount: row.usage_rights_amount,
+    usage_rights_cost: row.usage_rights_cost,
+    agency_fee_percent: row.agency_fee_percent,
+    agency_fee_amount: computeAgencyFeeAmount(
+      row.revenue_before_vat,
+      row.usage_rights_amount,
+      row.agency_fee_percent
+    ),
+    posts: applyDistributedCommercialToPosts(
+      row.posts,
+      row.unit_revenue,
+      row.unit_cost
+    ),
   }));
 }
 
@@ -177,7 +153,10 @@ export function buildAssignmentHierarchyRollups(
     const commercial = rollupLineClientCommercial(lineCommercialInput(line));
     const pricingMode = resolveAssignmentPricingMode(line);
     return {
-      deliverable_count: deliverables.length,
+      deliverable_count:
+        pricingMode === "package"
+          ? deliverables.reduce((sum, row) => sum + Math.max(0, Number(row.quantity) || 0), 0)
+          : deliverables.length,
       revenue: pricingMode === "package" ? commercial.revenueBeforeVat : revenue,
       cost: commercial.cost,
       gp: commercial.gp,

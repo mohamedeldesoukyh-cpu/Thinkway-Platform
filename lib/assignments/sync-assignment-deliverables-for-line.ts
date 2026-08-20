@@ -7,6 +7,7 @@ import {
 } from "@/lib/assignments/commercial-calculations";
 import { syncAssignmentCommercialRows } from "@/lib/assignments/sync-commercial-rows";
 import { packagePlatformsToCommercialRows } from "@/lib/assignments/sync-package-deliverables";
+import { redistributePackageLineToDeliverables } from "@/lib/services/campaigns/campaign-deliverable-service";
 
 export async function syncAssignmentDeliverablesForLine(
   supabase: SupabaseClient,
@@ -26,6 +27,17 @@ export async function syncAssignmentDeliverablesForLine(
     costVatExempt: boolean;
   }
 ): Promise<void> {
+  if (input.commercial.pricing_mode === "package") {
+    const { count } = await supabase
+      .from("assignment_deliverables")
+      .select("id", { count: "exact", head: true })
+      .eq("campaign_line_id", input.campaignLineId);
+    if ((count ?? 0) > 0) {
+      await redistributePackageLineToDeliverables(supabase, input.campaignLineId);
+      return;
+    }
+  }
+
   let rows = input.commercial.commercial_rows;
 
   if (
@@ -56,4 +68,8 @@ export async function syncAssignmentDeliverablesForLine(
     costVatPercent: input.costVatPercent,
     costVatExempt: input.costVatExempt,
   });
+
+  if (input.commercial.pricing_mode === "package") {
+    await redistributePackageLineToDeliverables(supabase, input.campaignLineId);
+  }
 }

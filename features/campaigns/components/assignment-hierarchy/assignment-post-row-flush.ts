@@ -19,6 +19,7 @@ export async function persistAssignmentPostRowDraft(args: {
   isVirtualPost: boolean;
   includeCommercial: boolean;
   mixedTypes?: boolean;
+  packageLine?: boolean;
   commercial: OperationalCommercialDraft;
   meta: AssignmentPostMetaDraft;
 }): Promise<AssignmentGridFlushResult> {
@@ -30,12 +31,55 @@ export async function persistAssignmentPostRowDraft(args: {
     isVirtualPost,
     includeCommercial,
     mixedTypes = false,
+    packageLine = false,
     commercial,
     meta,
   } = args;
   const postId = typeof post.id === "string" ? post.id : "";
 
-  if (includeCommercial && mixedTypes) {
+  if (includeCommercial && (mixedTypes || packageLine)) {
+    if (packageLine) {
+      const commercialResult = await updateAssignmentDeliverableAction({
+        campaign_id: campaignId,
+        campaign_line_id: campaignLineId,
+        deliverable_id: deliverable.id,
+        platform: meta.platform,
+        deliverable_type: meta.deliverable_type,
+        quantity: commercial.qty,
+        unit_revenue: 0,
+        unit_cost: 0,
+        usage_rights_amount: Number(deliverable.usage_rights_amount ?? 0),
+        usage_rights_cost: Number(deliverable.usage_rights_cost ?? 0),
+        agency_fee_percent: Number(deliverable.agency_fee_percent ?? 0),
+        revenue_vat_percent: meta.revenue_vat_percent,
+        live_date: meta.live_date || null,
+        notes: meta.notes || null,
+        billing_status: meta.billing_status as typeof post.billing_status,
+      });
+      if (!commercialResult.ok) {
+        return { ok: false, message: commercialResult.message ?? "Failed to save." };
+      }
+      if (!isVirtualPost && postId) {
+        const statusResult = await updatePostScheduleAction({
+          campaign_id: campaignId,
+          schedule_id: postId,
+          live_date: meta.live_date || null,
+          status: meta.workflow_status,
+          revenue_vat_percent: meta.revenue_vat_percent,
+          notes: meta.notes || null,
+          billing_status: meta.billing_status as typeof post.billing_status,
+          platform: meta.platform,
+          deliverable_type: meta.deliverable_type,
+        });
+        if (!statusResult.ok) {
+          return {
+            ok: false,
+            message: statusResult.message ?? "Failed to save workflow status.",
+          };
+        }
+      }
+      return { ok: true };
+    }
     const siblings = deliverable.posts.filter(
       (row) =>
         row.platform === post.platform &&

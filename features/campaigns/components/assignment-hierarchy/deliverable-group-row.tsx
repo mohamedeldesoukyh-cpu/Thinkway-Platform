@@ -52,6 +52,7 @@ export function DeliverableGroupRow({
   const posts = Array.isArray(deliverable.posts) ? deliverable.posts : [];
   const deliverableScoped = posts.length === 1;
   const mixedTypes = uniqueAssignmentPostTypeCount(posts) > 1;
+  const packageLine = (line?.assignment?.pricing_mode ?? "package") === "package";
   const lineSeed = line
     ? {
         revenueBeforeVat: Number(line.revenue_before_vat ?? line.revenue) || 0,
@@ -101,6 +102,7 @@ export function DeliverableGroupRow({
           isFirstPost={index === 0}
           isFirstOfType={isFirstPostOfType(posts, String(post.id))}
           mixedTypes={mixedTypes}
+          packageLine={packageLine}
           typeCommercial={
             post.id ? typeCommercialByPostId.get(String(post.id)) ?? null : null
           }

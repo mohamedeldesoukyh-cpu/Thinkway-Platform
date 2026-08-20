@@ -172,10 +172,10 @@ function testAlignPackageLineDistributesCostToChildren() {
   ];
 
   const aligned = alignPackageLineCommercialToDeliverables(deliverables, line);
-  assert(
-    aligned.every((row) => row.cost_before_vat === 0 && row.unit_cost === 0),
-    "package types keep their own cost/ad; zeros are not filled from the parent"
-  );
+  const childCost = aligned.reduce((sum, row) => sum + row.cost_before_vat, 0);
+  const childRev = aligned.reduce((sum, row) => sum + row.revenue_before_vat, 0);
+  assert(childCost === 140_000, `package cost allocated to children, got ${childCost}`);
+  assert(childRev === 150_000, `package rev allocated to children, got ${childRev}`);
 }
 
 function testAlignPackageLineDistributesRevenueToChildren() {
@@ -213,12 +213,11 @@ function testAlignPackageLineDistributesRevenueToChildren() {
   const totalChildRev = aligned.reduce((sum, row) => sum + row.revenue_before_vat, 0);
   const totalChildCost = aligned.reduce((sum, row) => sum + row.cost_before_vat, 0);
 
-  assert(totalChildRev === 16_800, `child types keep their own rev, got ${totalChildRev}`);
-  assert(totalChildCost === 10_000, `child types keep their own cost, got ${totalChildCost}`);
-  assert(aligned[0]!.unit_revenue === 5_600, "first type keeps its rev/ad");
+  assert(totalChildRev === 11_200, `child rev must equal package 11200, got ${totalChildRev}`);
+  assert(totalChildCost === 10_000, `child cost must equal package 10000, got ${totalChildCost}`);
 }
 
-function testAlignPackageLineKeepsDifferentTypeRates() {
+function testAlignPackageLineAllocatesByQuantity() {
   const line = packageLine({
     revenue_before_vat: 32_000,
     revenue: 32_000,
@@ -256,16 +255,17 @@ function testAlignPackageLineKeepsDifferentTypeRates() {
   const aligned = alignPackageLineCommercialToDeliverables(deliverables, line);
   const stories = aligned[0]!;
   const reels = aligned[1]!;
+  const rollups = buildAssignmentHierarchyRollups(aligned, line);
 
-  assert(stories.unit_cost === 100, `stories keep cost/ad 100, got ${stories.unit_cost}`);
-  assert(reels.unit_cost === 800, `reels keep cost/ad 800, got ${reels.unit_cost}`);
-  assert(stories.unit_revenue === 200, `stories keep rev/ad 200, got ${stories.unit_revenue}`);
-  assert(reels.unit_revenue === 1_000, `reels keep rev/ad 1000, got ${reels.unit_revenue}`);
-  assert(stories.cost_before_vat === 2_600, "stories cost stays qty × cost/ad");
-  assert(reels.cost_before_vat === 4_800, "reels cost stays qty × cost/ad");
+  assert(stories.revenue_before_vat === 26_000, `stories 26/32 of 32000, got ${stories.revenue_before_vat}`);
+  assert(reels.revenue_before_vat === 6_000, `reels 6/32 of 32000, got ${reels.revenue_before_vat}`);
+  assert(stories.cost_before_vat === 13_000, `stories cost 26/32, got ${stories.cost_before_vat}`);
+  assert(reels.cost_before_vat === 3_000, `reels cost 6/32, got ${reels.cost_before_vat}`);
+  assert(rollups.deliverable_count === 32, `parent qty is sum of children, got ${rollups.deliverable_count}`);
+  assert(rollups.revenue === 32_000, "parent revenue stays package SSOT");
 }
 
-function testAlignMixedPostsKeepPerTypeRates() {
+function testAlignMixedPostsUsePackageUnit() {
   const line = packageLine({
     revenue_before_vat: 11_200,
     revenue: 11_200,
@@ -316,19 +316,59 @@ function testAlignMixedPostsKeepPerTypeRates() {
     ],
     line
   );
-  const next = aligned[0]!.posts;
-  assert(next[0]!.revenue_per_post === 1_600, "reel unit stays 1600");
-  assert(next[1]!.revenue_per_post === 1_600, "extra reel inherits reel unit");
-  assert(next[2]!.revenue_per_post === 200, "story unit stays 200");
-  assert(next[3]!.revenue_per_post === 200, "extra story inherits story unit");
+  const next = aligned[0]!;
+  assert(next.revenue_before_vat === 11_200, "single mixed child gets the package");
+  assert(next.posts.every((row) => row.revenue_per_post === 2_800), "every post gets package unit revenue");
+  assert(next.posts.every((row) => row.cost_per_post === 2_000), "every post gets package unit cost");
+}
+
+function testNonPackageAlignLeavesChildCommercialUnchanged() {
+  const line = packageLine({
+    revenue_before_vat: 11_200,
+    revenue: 11_200,
+    cost_before_vat: 10_000,
+    cost: 10_000,
+    assignment: {
+      influencer_id: "inf-1",
+      influencer_name: "Nadia",
+      influencer_document_number: "V-1",
+      platforms: [],
+      pricing_mode: "per_deliverable",
+    },
+  });
+  const deliverables = [
+    baseDeliverable({
+      id: "reel",
+      quantity: 1,
+      unit_revenue: 8_000,
+      revenue_before_vat: 8_000,
+      unit_cost: 3_000,
+      cost_before_vat: 3_000,
+    }),
+    baseDeliverable({
+      id: "story",
+      quantity: 1,
+      unit_revenue: 2_000,
+      revenue_before_vat: 2_000,
+      unit_cost: 500,
+      cost_before_vat: 500,
+      posts: [basePost("virtual-story-1", "story")],
+    }),
+  ];
+  const aligned = alignPackageLineCommercialToDeliverables(deliverables, line);
+  assert(aligned[0]!.revenue_before_vat === 8_000, "H: per-deliverable rev is not reallocated");
+  assert(aligned[1]!.cost_before_vat === 500, "H: per-deliverable cost is not reallocated");
+  const rollups = buildAssignmentHierarchyRollups(aligned, line);
+  assert(rollups.deliverable_count === 2, "H: non-package qty stays deliverable row count");
 }
 
 const tests = [
   testPackageRollupUsesLineCommercialDespiteZeroChildCost,
   testAlignPackageLineDistributesCostToChildren,
   testAlignPackageLineDistributesRevenueToChildren,
-  testAlignPackageLineKeepsDifferentTypeRates,
-  testAlignMixedPostsKeepPerTypeRates,
+  testAlignPackageLineAllocatesByQuantity,
+  testAlignMixedPostsUsePackageUnit,
+  testNonPackageAlignLeavesChildCommercialUnchanged,
 ];
 
 for (const run of tests) {

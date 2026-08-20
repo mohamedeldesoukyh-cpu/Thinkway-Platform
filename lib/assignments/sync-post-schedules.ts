@@ -70,6 +70,27 @@ function computePostCommercial(
   };
 }
 
+export async function restampDeliverablePostCommercial(
+  supabase: SupabaseClient,
+  deliverableId: string,
+  unitRevenue: number,
+  unitCost: number,
+  line: LineVat
+): Promise<void> {
+  const commercial = computePostCommercial(unitRevenue, unitCost, line);
+  await supabase
+    .from("assignment_post_schedule")
+    .update({
+      revenue_before_vat: commercial.revenue_before_vat,
+      cost_before_vat: commercial.cost_before_vat,
+      revenue_vat_percent: commercial.revenue_vat_percent,
+      revenue_vat_amount: commercial.revenue_vat_amount,
+      cost_vat_percent: commercial.cost_vat_percent,
+      cost_vat_amount: commercial.cost_vat_amount,
+    })
+    .eq("assignment_deliverable_id", deliverableId);
+}
+
 /** Ensures assignment_post_schedule rows match deliverable quantity with per-post commercial defaults. */
 export async function syncPostSchedulesForDeliverable(
   supabase: SupabaseClient,

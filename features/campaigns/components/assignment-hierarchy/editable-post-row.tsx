@@ -110,6 +110,7 @@ type EditablePostRowProps = {
   isFirstPost: boolean;
   isFirstOfType?: boolean;
   mixedTypes?: boolean;
+  packageLine?: boolean;
   typeCommercial?: import("@/lib/campaigns/assignment-type-commercial").AssignmentTypeCommercialSlice | null;
   isLastChildRow?: boolean;
   showExpandColumn?: boolean;
@@ -178,6 +179,7 @@ export function EditablePostRow({
   isFirstPost,
   isFirstOfType = isFirstPost,
   mixedTypes = false,
+  packageLine = false,
   typeCommercial = null,
   isLastChildRow = false,
   showExpandColumn = false,
@@ -281,17 +283,21 @@ export function EditablePostRow({
   const canEditPostSchedule =
     !readOnly && postId.length > 0 && !isVirtualPost && !deliverable.is_locked;
   const canEdit = canEditDeliverableScope || canEditPostSchedule;
-  const canEditCommercial = canEdit;
+  const canEditCommercial = canEdit && !packageLine;
   const ownsDeliverableCommercial = isFirstOfType;
   const commercialLocked =
-    !canEditCommercial ||
+    packageLine ||
+    !canEdit ||
     (gridEdit.hasSession && !gridEdit.isEditing) ||
     (gridEdit.hasSession && !ownsDeliverableCommercial) ||
     gridEdit.saving;
   const qtyLocked =
-    commercialLocked ||
-    mixedTypes ||
-    (!gridEdit.hasSession && !deliverableScoped);
+    !canEdit ||
+    (gridEdit.hasSession && !gridEdit.isEditing) ||
+    (gridEdit.hasSession && !ownsDeliverableCommercial) ||
+    gridEdit.saving ||
+    (!packageLine && mixedTypes) ||
+    (!gridEdit.hasSession && !deliverableScoped && !packageLine);
   const amountAlwaysEditing =
     gridEdit.hasSession && gridEdit.isEditing && !commercialLocked;
   const showDeliverableCommercial =
@@ -413,6 +419,7 @@ export function EditablePostRow({
         isVirtualPost,
         includeCommercial: snapshot.includeCommercial,
         mixedTypes,
+        packageLine,
         commercial: snapshot.commercial,
         meta: snapshot.meta,
       });
@@ -428,6 +435,7 @@ export function EditablePostRow({
     deliverableScoped,
     isVirtualPost,
     mixedTypes,
+    packageLine,
     postId,
   ]);
 
@@ -497,7 +505,11 @@ export function EditablePostRow({
   }
 
   function persistCommercial() {
-    if (!canEditCommercial) return;
+    if (packageLine) {
+      if (!ownsDeliverableCommercial || !canEdit) return;
+    } else if (!canEditCommercial) {
+      return;
+    }
     startTransition(async () => {
       const result = await persistAssignmentPostRowDraft({
         campaignId,
@@ -508,6 +520,7 @@ export function EditablePostRow({
         isVirtualPost,
         includeCommercial: ownsDeliverableCommercial,
         mixedTypes,
+        packageLine,
         commercial: commercial.draft,
         meta,
       });
