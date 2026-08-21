@@ -27,7 +27,6 @@ import {
   isSelectionConfirmed,
   selectionCalculator,
   selectionChangeAllowed,
-  UNPRICED_APPROVAL_MESSAGE,
   UNPRICED_SELECTED_CODE,
   unpricedSelectedIds,
   withClientSelectionFreeze,
@@ -344,17 +343,6 @@ export async function confirmClientCreators(input: {
   if (acceptedIds.length === 0) {
     return { ok: false, message: "Select at least one creator before approving." };
   }
-  const unpriced = unpricedSelectedIds(snapshot.creators, gate.review.selectionState);
-  if (unpriced.length > 0) {
-    return {
-      ok: false,
-      code: UNPRICED_SELECTED_CODE,
-      message:
-        unpriced.length === 1
-          ? "1 selected creator has no confirmed pricing. Remove that creator or wait for pricing."
-          : `${unpriced.length} selected creators have no confirmed pricing. Remove those creators or wait for pricing.`,
-    };
-  }
   const now = new Date().toISOString();
   const nextSnapshot = withClientSelectionFreeze(snapshot, {
     confirmedAt: now,
@@ -472,10 +460,10 @@ export async function decideClientReview(input: {
     }
     if (snapshot) {
       const calc = selectionCalculator(snapshot.creators, gate.review.selectionState);
-      if (calc.unpricedSelectedCount > 0) {
+      if (calc.pricedSelectedCount === 0) {
         return {
           ok: false,
-          message: UNPRICED_APPROVAL_MESSAGE,
+          message: "This quotation has no confirmed pricing for the selected creators yet.",
           code: UNPRICED_SELECTED_CODE,
         };
       }

@@ -231,6 +231,7 @@ export function parseSnapshotCreator(row: Record<string, unknown>): ClientReview
     deliverableItems: parseDeliverableItems(row.deliverableItems),
     investmentAmount: asNumber(row.investmentAmount),
     investmentCurrency: asString(row.investmentCurrency),
+    agencyFeeAmount: asNumber(row.agencyFeeAmount),
     originalInvestmentAmount: asNumber(row.originalInvestmentAmount),
     originalInvestmentCurrency: asString(row.originalInvestmentCurrency),
     avatarUrl: asString(row.avatarUrl),
@@ -398,6 +399,7 @@ export function projectCommercialFromSnapshot(
   if (hasPerCreator) {
     const priced = selected.filter((creator) => isPricedClientInvestment(creator.investmentAmount));
     const creatorInvestment = priced.reduce((sum, creator) => sum + (creator.investmentAmount ?? 0), 0);
+    const feeAmount = priced.reduce((sum, creator) => sum + (Number(creator.agencyFeeAmount) || 0), 0);
     const lines = priced.map((creator) => ({
       label: creator.displayName,
       amount: creator.investmentAmount,
@@ -408,7 +410,8 @@ export function projectCommercialFromSnapshot(
     return {
       currency: snapshot.commercial.currency,
       creatorInvestment,
-      totalInvestment: creatorInvestment,
+      feeAmount,
+      totalInvestment: creatorInvestment + feeAmount,
       quotationTotal,
       lines: quotationLines?.length
         ? quotationLines.map((line) => ({ label: line.label, amount: line.amount }))

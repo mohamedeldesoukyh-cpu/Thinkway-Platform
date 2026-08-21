@@ -34,9 +34,11 @@ export const CONFIRM_CREATORS_SUPPORTING_TEXT =
 export const APPROVE_FINAL_QUOTATION_LABEL = "Approve Final Quotation";
 /** Header CTA only — navigates to Your Selection. Never freezes or approves. */
 export const REVIEW_YOUR_SELECTION_LABEL = "Review Your Selection";
-/** After Approve Selected Creators, open Your Selection — not Commercial. */
-export const AFTER_CREATOR_APPROVAL_SECTION = "creators" as const;
+/** After Approve Selected Creators, open Commercial. */
+export const AFTER_CREATOR_APPROVAL_SECTION = "commercial" as const;
 export const UNPRICED_APPROVAL_MESSAGE = "Your selection includes creators without confirmed pricing.";
+export const UNPRICED_INCLUDED_MESSAGE =
+  "Only creators with confirmed pricing will be included in the current quotation. Creators without confirmed pricing will remain in your selection and can be quoted later once pricing is available.";
 export const UNPRICED_SELECTED_CODE = "unpriced_selected";
 export const PRICE_PENDING_LABEL = "Pricing required";
 export const PRICE_NOT_AVAILABLE_LABEL = "Pricing required";
@@ -51,7 +53,10 @@ export type SelectionCalculator = {
   selectedCount: number;
   pricedSelectedCount: number;
   unpricedSelectedCount: number;
+  /** Client-facing creator/service cost (quotation revenue), priced selected only. */
   pricedInvestment: number;
+  agencyFees: number;
+  totalInvestment: number;
   unpricedMessage: string | null;
 };
 
@@ -130,24 +135,22 @@ export function withClientSelectionFreeze(
 }
 
 export function selectionCalculator(
-  creators: Array<{ creatorId: string; investmentAmount?: number }>,
+  creators: Array<{ creatorId: string; investmentAmount?: number; agencyFeeAmount?: number }>,
   selection: Record<string, ClientCreatorSelectionState>
 ): SelectionCalculator {
   const selected = creators.filter((creator) => isSelectedForCalculator(selection[creator.creatorId]));
   const priced = selected.filter((creator) => isPricedClientInvestment(creator.investmentAmount));
   const unpricedSelectedCount = selected.length - priced.length;
   const pricedInvestment = priced.reduce((sum, creator) => sum + (creator.investmentAmount ?? 0), 0);
+  const agencyFees = priced.reduce((sum, creator) => sum + (Number(creator.agencyFeeAmount) || 0), 0);
   return {
     selectedCount: selected.length,
     pricedSelectedCount: priced.length,
     unpricedSelectedCount,
     pricedInvestment,
-    unpricedMessage:
-      unpricedSelectedCount > 0
-        ? unpricedSelectedCount === 1
-          ? "1 selected creator has no confirmed pricing. Remove that creator or wait for pricing."
-          : `${unpricedSelectedCount} selected creators have no confirmed pricing. Remove those creators or wait for pricing.`
-        : null,
+    agencyFees,
+    totalInvestment: pricedInvestment + agencyFees,
+    unpricedMessage: unpricedSelectedCount > 0 ? UNPRICED_INCLUDED_MESSAGE : null,
   };
 }
 
@@ -221,6 +224,9 @@ function overlayQuotedCreator(
       investmentAmount: isPricedClientInvestment(quoted.investmentAmount)
         ? quoted.investmentAmount
         : undefined,
+      agencyFeeAmount: isPricedClientInvestment(quoted.investmentAmount)
+        ? quoted.agencyFeeAmount ?? 0
+        : undefined,
       originalInvestmentAmount: quoted.originalInvestmentAmount,
       originalInvestmentCurrency: quoted.originalInvestmentCurrency,
       thinkwayStatus: quoted.thinkwayStatus ?? creator.thinkwayStatus,
@@ -250,6 +256,7 @@ export function overlayQuotationOnShortlistCreators(
           ...creator,
           quotationEligible: false,
           investmentAmount: undefined,
+          agencyFeeAmount: undefined,
           originalInvestmentAmount: undefined,
           originalInvestmentCurrency: undefined,
         },
@@ -269,6 +276,9 @@ export function overlayQuotationOnShortlistCreators(
           quotationEligible: true,
           investmentAmount: isPricedClientInvestment(creator.investmentAmount)
             ? creator.investmentAmount
+            : undefined,
+          agencyFeeAmount: isPricedClientInvestment(creator.investmentAmount)
+            ? creator.agencyFeeAmount ?? 0
             : undefined,
         },
         currency || creator.investmentCurrency
@@ -332,7 +342,8 @@ export function canEnableApproveSelectedCreators(input: {
   unpricedSelectedCount: number;
   selectionConfirmed: boolean;
 }): boolean {
-  return canConfirmCreators(input) && input.unpricedSelectedCount === 0;
+  void input.unpricedSelectedCount;
+  return canConfirmCreators(input);
 }
 
 export function canApproveFinalQuotation(input: {
@@ -342,12 +353,12 @@ export function canApproveFinalQuotation(input: {
   selectedCount: number;
   unpricedSelectedCount: number;
 }): boolean {
+  const pricedSelectedCount = input.selectedCount - input.unpricedSelectedCount;
   return (
     !input.historical &&
     input.quotationInteractive &&
     input.selectionConfirmed &&
-    input.selectedCount > 0 &&
-    input.unpricedSelectedCount === 0
+    pricedSelectedCount > 0
   );
 }
 
@@ -376,11 +387,6 @@ export function selectionChangeAllowed(input: {
     return { ok: false, message: "This quotation is approved and can no longer be changed." };
   }
   if (!input.selectionConfirmed) return { ok: true };
-  const removingUnpriced =
-    input.current === "accepted" &&
-    !input.priced &&
-    input.next !== "accepted";
-  if (removingUnpriced) return { ok: true };
   return {
     ok: false,
     message: "Your creator selection is confirmed. Request changes if you need to update it.",
@@ -421,6 +427,77 @@ export function excludeUnpricedFromSelection(
     next[id] = "in_review";
   }
   return next;
+}
+
+export function selectAllCreatorStates(
+  creatorIds: string[]
+): Record<string, ClientCreatorSelectionState> {
+  return Object.fromEntries(creatorIds.map((id) => [id, "accepted" as const]));
+}
+
+export function clearCreatorSelectionStates(
+  creatorIds: string[]
+): Record<string, ClientCreatorSelectionState> {
+  return Object.fromEntries(creatorIds.map((id) => [id, "in_review" as const]));
+}
+
+export type CreatorApprovalConfirmationRow = {
+  creatorId: string;
+  displayName: string;
+  deliverables: string;
+  price?: number;
+};
+
+export type CreatorApprovalConfirmation = {
+  priced: CreatorApprovalConfirmationRow[];
+  unpriced: CreatorApprovalConfirmationRow[];
+  selectedCount: number;
+  pricedCount: number;
+  unpricedCount: number;
+  clientCost: number;
+  agencyFees: number;
+  totalInvestment: number;
+  helper: string;
+};
+
+export function buildCreatorApprovalConfirmation(
+  creators: Array<{
+    creatorId: string;
+    displayName: string;
+    deliverables?: string;
+    investmentAmount?: number;
+    agencyFeeAmount?: number;
+  }>,
+  selection: Record<string, ClientCreatorSelectionState>
+): CreatorApprovalConfirmation {
+  const calc = selectionCalculator(creators, selection);
+  const selected = creators.filter((creator) => isSelectedForCalculator(selection[creator.creatorId]));
+  const priced = selected
+    .filter((creator) => isPricedClientInvestment(creator.investmentAmount))
+    .map((creator) => ({
+      creatorId: creator.creatorId,
+      displayName: creator.displayName,
+      deliverables: creator.deliverables?.trim() || "To be confirmed",
+      price: creator.investmentAmount,
+    }));
+  const unpriced = selected
+    .filter((creator) => !isPricedClientInvestment(creator.investmentAmount))
+    .map((creator) => ({
+      creatorId: creator.creatorId,
+      displayName: creator.displayName,
+      deliverables: creator.deliverables?.trim() || "To be confirmed",
+    }));
+  return {
+    priced,
+    unpriced,
+    selectedCount: calc.selectedCount,
+    pricedCount: calc.pricedSelectedCount,
+    unpricedCount: calc.unpricedSelectedCount,
+    clientCost: calc.pricedInvestment,
+    agencyFees: calc.agencyFees,
+    totalInvestment: calc.totalInvestment,
+    helper: UNPRICED_INCLUDED_MESSAGE,
+  };
 }
 
 export function consolidationContract(approvedQuotationCount: number): ConsolidationContract {

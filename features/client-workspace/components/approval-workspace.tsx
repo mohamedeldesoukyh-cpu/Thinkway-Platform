@@ -6,16 +6,14 @@ import { useRouter } from "next/navigation";
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
 
 import {
-  confirmCreatorsAction,
   decideReviewAction,
-  removeUnpricedSelectedAction,
   requestReviewChangesAction,
 } from "../actions/client-workspace-actions";
 import { CLIENT_CHANGE_AREAS, CLIENT_CHANGE_AREA_LABEL, type ClientChangeArea } from "../constants";
 import { TO_BE_CONFIRMED } from "../format";
 import { approvalWorkspaceKind } from "../journey-state";
 import { rosterHeadline } from "../presentation";
-import { APPROVE_FINAL_QUOTATION_LABEL, CONFIRM_CREATORS_LABEL, CONFIRM_CREATORS_SUPPORTING_TEXT, INVALID_ZERO_SELECTION_APPROVAL_MESSAGE, UNPRICED_APPROVAL_MESSAGE } from "../selection-flow";
+import { APPROVE_FINAL_QUOTATION_LABEL, CONFIRM_CREATORS_SUPPORTING_TEXT, INVALID_ZERO_SELECTION_APPROVAL_MESSAGE } from "../selection-flow";
 import { countSelections } from "../status";
 import type { ClientWorkspaceView } from "../types";
 import { useClientWorkspaceState } from "./client-workspace-state";
@@ -52,12 +50,6 @@ export function ApprovalWorkspace({
   });
   const showConfirmCreators = Boolean(journey?.canConfirmCreators);
   const showQuotationApproval = Boolean(journey?.canApproveFinalQuotation);
-  const unpricedCount = selectedCommercial.unpricedSelectedCount ?? 0;
-  const showUnpricedGate =
-    Boolean(journey?.selectionConfirmed) &&
-    Boolean(journey?.canApproveQuotation) &&
-    unpricedCount > 0 &&
-    !showQuotationApproval;
   const quotationApproved = approvalKind === "quotation_approved";
   const deliverableCount = selectedSummary.activityMix.reduce((sum, item) => sum + item.count, 0);
   const investment =
@@ -138,62 +130,11 @@ export function ApprovalWorkspace({
       {showConfirmCreators ? (
         <div className="card">
           <p className="ck">Your Selection</p>
-          <h2>{CONFIRM_CREATORS_LABEL}</h2>
+          <h2>Review Your Selection</h2>
           <p className="note">{CONFIRM_CREATORS_SUPPORTING_TEXT}</p>
-          <div className="checklist">
-            <CheckItem done={counts.accepted > 0} label="Creators selected" />
-            <CheckItem done={unpricedCount === 0} label="Confirmed pricing where available" />
-          </div>
-          {error ? <p style={{ color: "var(--bad)", fontSize: 13 }}>{error}</p> : null}
           <div className="dacts" style={{ justifyContent: "flex-start", marginTop: 18 }}>
-            <button
-              type="button"
-              className="btn pri"
-              disabled={pending || counts.accepted === 0 || unpricedCount > 0}
-              onClick={() =>
-                startTransition(async () => {
-                  const result = await confirmCreatorsAction({ token });
-                  if (!result.ok) setError(result.message);
-                  router.refresh();
-                })
-              }
-            >
-              <IconCheck />
-              {CONFIRM_CREATORS_LABEL}
-            </button>
-            <button type="button" className="btn sec" onClick={() => goToSection("feedback")}>
-              Request changes
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {showUnpricedGate ? (
-        <div className="card">
-          <p className="ck">Commercial</p>
-          <h2>{UNPRICED_APPROVAL_MESSAGE}</h2>
-          <p className="note">
-            Remove unpriced creators to approve the priced selection, or wait for Thinkway to confirm
-            investment. Unpriced creators remain on the shortlist.
-          </p>
-          {error ? <p style={{ color: "var(--bad)", fontSize: 13 }}>{error}</p> : null}
-          <div className="dacts" style={{ justifyContent: "flex-start", marginTop: 18 }}>
-            <button
-              type="button"
-              className="btn pri"
-              disabled={pending}
-              onClick={() =>
-                startTransition(async () => {
-                  const result = await removeUnpricedSelectedAction({ token });
-                  if (!result.ok) setError(result.message);
-                  router.refresh();
-                })
-              }
-            >
-              Remove unpriced creators
-            </button>
-            <button type="button" className="btn sec" disabled>
-              Wait for pricing
+            <button type="button" className="btn pri" onClick={() => goToSection("creators")}>
+              Review Your Selection
             </button>
           </div>
         </div>
@@ -261,7 +202,7 @@ export function ApprovalWorkspace({
         </div>
       ) : null}
 
-      {!showConfirmCreators && !showQuotationApproval && !showUnpricedGate && !quotationApproved ? (
+      {!showConfirmCreators && !showQuotationApproval && !quotationApproved ? (
         <div className="card">
           <p className="ck">Campaign</p>
           <h2>No commercial decision is open yet</h2>

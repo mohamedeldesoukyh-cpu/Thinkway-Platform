@@ -1,11 +1,11 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Client Workspace — select on Shortlist, approved roster on Your Selection
+**Focus:** Client Workspace — priced and unpriced selection, Cost / Agency Fees / Total Investment
 
-Shortlist is the select-and-approve page (full pool, checkboxes, Approve Selected Creators). After that freeze, the client lands on Your Selection, which shows only the Client Approved creators. Header CTA remains Review Your Selection (navigation only). Commercial approval remains Approve Final Quotation.
+Clients can select and approve priced and unpriced creators. Your Selection calculator always shows Select all / Clear / Cost / Agency Fees / Total Investment. Approve Selected Creators freezes clientSelection (including unpriced), then opens Commercial. Totals use quotation `revenue` + `af_value` (existing commercial SSOT). Header remains Review Your Selection. Final commercial action remains Approve Final Quotation.
 
-Not committed / not pushed unless requested. Production untouched.
+Not committed / not pushed. Production untouched.
 
 - Dev: https://dev.thinkwaymedia.com  
 - Prod: untouched (`https://app.thinkwaymedia.com`)

@@ -2,7 +2,7 @@
 
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
 
-import { clientCreatorIdentity, DELIVERABLES_TO_BE_CONFIRMED, formatHandleLabel, formatPlatformLabel, NOT_AVAILABLE, providedText, TO_BE_CONFIRMED } from "../format";
+import { clientCreatorIdentity, DELIVERABLES_TO_BE_CONFIRMED, formatHandleLabel, formatPlatformLabel, NOT_AVAILABLE, TO_BE_CONFIRMED } from "../format";
 import { breakdownForCreator } from "../platform-breakdown";
 import { deliverablesLabel } from "../deliverables";
 import { originalInvestmentForDisplay } from "../quotation-client-facing";
@@ -12,6 +12,7 @@ import {
   isValidClientCommercialApproval,
   INVALID_ZERO_SELECTION_APPROVAL_MESSAGE,
   PRICE_PENDING_LABEL,
+  UNPRICED_INCLUDED_MESSAGE,
 } from "../selection-flow";
 import { allocationSlices, MIX_BAR_COLORS, rosterHeadline } from "../presentation";
 import type { ClientWorkspaceView } from "../types";
@@ -26,21 +27,15 @@ export function CommercialWorkspace({
   view: ClientWorkspaceView;
   token?: string;
 }) {
-  const { selectedCreators, selectedCommercial, selectedSummary } = useClientWorkspaceState();
+  const { selectedCreators, selectedCommercial } = useClientWorkspaceState();
   const commercial = selectedCommercial;
   const roster = selectedCreators;
+  const included = roster.filter((creator) => isPricedClientInvestment(creator.investmentAmount));
+  const pricingRequired = roster.filter((creator) => !isPricedClientInvestment(creator.investmentAmount));
   const invalidEmptyApproval = isValidClientCommercialApproval({
     quotationStage: view.journey?.quotationStage ?? "",
     selectedCount: roster.length,
   }) === false && view.journey?.quotationStage === "approved";
-  const platforms = [
-    ...new Set(
-      roster
-        .map((creator) => formatPlatformLabel(creator.platform) ?? creator.platform)
-        .filter((value): value is string => Boolean(value))
-    ),
-  ];
-  const deliverableCount = selectedSummary.activityMix.reduce((sum, item) => sum + item.count, 0);
   const allocation = allocationSlices(commercial);
   const extraLines = view.commercial.lines.filter(
     (line) => !view.creators.some((creator) => creator.displayName === line.label)
@@ -67,25 +62,41 @@ export function CommercialWorkspace({
         </p>
         <div className="glance">
           <div className="gi">
-            <p className="l">Creators</p>
-            <p className="v">{roster.length}</p>
+            <p className="l">Selected creators</p>
+            <p className="v">{commercial.selectedCount}</p>
           </div>
           <div className="gi">
-            <p className="l">Deliverables</p>
-            <p className={deliverableCount > 0 ? "v" : "v tbc"}>
-              {deliverableCount > 0 ? String(deliverableCount) : TO_BE_CONFIRMED}
+            <p className="l">Priced creators</p>
+            <p className="v">{commercial.pricedSelectedCount ?? 0}</p>
+          </div>
+          <div className="gi">
+            <p className="l">Pricing required</p>
+            <p className={commercial.unpricedSelectedCount ? "v tbc" : "v"}>
+              {commercial.unpricedSelectedCount ?? 0}
             </p>
           </div>
           <div className="gi">
-            <p className="l">Platforms</p>
-            <p className={platforms.length ? "v" : "v tbc"}>
-              {platforms.length ? platforms.join(" · ") : NOT_AVAILABLE}
+            <p className="l">Cost</p>
+            <p className={commercial.creatorInvestment > 0 ? "v" : "v tbc"}>
+              {commercial.creatorInvestment > 0
+                ? formatMoneyKpi(commercial.creatorInvestment, commercial.currency)
+                : TO_BE_CONFIRMED}
             </p>
           </div>
           <div className="gi">
-            <p className="l">Duration</p>
-            <p className={view.overview.durationLabel?.trim() ? "v" : "v tbc"}>
-              {providedText(view.overview.durationLabel, TO_BE_CONFIRMED)}
+            <p className="l">Agency Fees</p>
+            <p className={(commercial.feeAmount ?? 0) > 0 || commercial.creatorInvestment > 0 ? "v" : "v tbc"}>
+              {commercial.creatorInvestment > 0
+                ? formatMoneyKpi(commercial.feeAmount ?? 0, commercial.currency)
+                : TO_BE_CONFIRMED}
+            </p>
+          </div>
+          <div className="gi">
+            <p className="l">Total Investment</p>
+            <p className={commercial.totalInvestment > 0 ? "v" : "v tbc"}>
+              {commercial.totalInvestment > 0
+                ? formatMoneyKpi(commercial.totalInvestment, commercial.currency)
+                : TO_BE_CONFIRMED}
             </p>
           </div>
         </div>
@@ -115,9 +126,10 @@ export function CommercialWorkspace({
         </div>
       ) : null}
 
+      {included.length > 0 ? (
       <div className="card">
-        <p className="ck">Final selected creators</p>
-        <h2>Creator · Deliverables · Investment</h2>
+        <p className="ck">Included in current quotation</p>
+        <h2>Client Approved · confirmed pricing</h2>
         <div className="tbl-scroll">
           <table className="tbl">
             <thead>
@@ -125,16 +137,19 @@ export function CommercialWorkspace({
                 <th>Creator</th>
                 <th>Platforms</th>
                 <th>Deliverables</th>
-                <th className="r">Investment</th>
+                <th className="r">Cost</th>
+                <th className="r">Agency Fees</th>
+                <th className="r">Total Investment</th>
               </tr>
             </thead>
             <tbody>
-              {roster.length > 0 ? (
-                roster.map((creator, index) => {
+              {included.map((creator, index) => {
                   const identity = clientCreatorIdentity(creator.displayName, creator.handle);
                   const platforms = breakdownForCreator(creator).filter(
                     (row) => row.platform && row.platform !== "_other"
                   );
+                  const fee = Number(creator.agencyFeeAmount) || 0;
+                  const lineTotal = (creator.investmentAmount ?? 0) + fee;
                   return (
                 <tr key={creator.creatorId}>
                   <td>
@@ -174,9 +189,7 @@ export function CommercialWorkspace({
                     })()}
                   </td>
                   <td className="r">
-                    {isPricedClientInvestment(creator.investmentAmount)
-                      ? formatMoneyKpi(creator.investmentAmount!, commercial.currency)
-                      : PRICE_PENDING_LABEL}
+                    {formatMoneyKpi(creator.investmentAmount!, commercial.currency)}
                     {(() => {
                       const original = originalInvestmentForDisplay(creator, commercial.currency);
                       return original ? (
@@ -186,36 +199,96 @@ export function CommercialWorkspace({
                       ) : null;
                     })()}
                   </td>
+                  <td className="r">{formatMoneyKpi(fee, commercial.currency)}</td>
+                  <td className="r">{formatMoneyKpi(lineTotal, commercial.currency)}</td>
                 </tr>
                   );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={4}>Select and approve creators on Shortlist to build this commercial view.</td>
-                </tr>
-              )}
+                })}
             </tbody>
             <tfoot>
               <tr className="sub">
-                <td colSpan={3}>Subtotal · creator investment</td>
-                <td className="r">
-                  {commercial.creatorInvestment > 0
-                    ? formatMoneyKpi(commercial.creatorInvestment, commercial.currency)
-                    : TO_BE_CONFIRMED}
-                </td>
+                <td colSpan={5}>Cost</td>
+                <td className="r">{formatMoneyKpi(commercial.creatorInvestment, commercial.currency)}</td>
+              </tr>
+              <tr className="sub">
+                <td colSpan={5}>Agency Fees</td>
+                <td className="r">{formatMoneyKpi(commercial.feeAmount ?? 0, commercial.currency)}</td>
               </tr>
               <tr>
-                <td colSpan={3}>Total campaign investment</td>
-                <td className="r">
-                  {commercial.totalInvestment > 0
-                    ? formatMoneyKpi(commercial.totalInvestment, commercial.currency)
-                    : TO_BE_CONFIRMED}
-                </td>
+                <td colSpan={5}>Total Investment</td>
+                <td className="r">{formatMoneyKpi(commercial.totalInvestment, commercial.currency)}</td>
               </tr>
             </tfoot>
           </table>
         </div>
       </div>
+      ) : null}
+
+      {pricingRequired.length > 0 ? (
+      <div className="card">
+        <p className="ck">Pricing required</p>
+        <h2>Client Approved · to be confirmed</h2>
+        <p className="note">
+          This creator is part of your approved selection but is not included in the current quotation
+          because pricing has not yet been confirmed.
+        </p>
+        <div className="tbl-scroll">
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>Creator</th>
+                <th>Deliverables</th>
+                <th className="r">Investment</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pricingRequired.map((creator, index) => {
+                  const identity = clientCreatorIdentity(creator.displayName, creator.handle);
+                  return (
+                <tr key={creator.creatorId}>
+                  <td>
+                    <div className="cn">
+                      <ReviewAvatar
+                        className="av"
+                        url={creator.avatarUrl}
+                        profileUrl={creator.profileUrl}
+                        handle={creator.handle}
+                        platform={creator.platform}
+                        platformAccounts={creator.platformAccounts}
+                        name={identity.name}
+                        index={included.length + index}
+                        token={token}
+                      />
+                      <span>
+                        <div className="nm">{identity.name}</div>
+                        {identity.handle ? <div className="hd">{formatHandleLabel(identity.handle)}</div> : null}
+                      </span>
+                    </div>
+                  </td>
+                  <td>
+                    {(() => {
+                      const label = deliverablesLabel(creator.deliverableItems, creator.deliverables);
+                      return label === DELIVERABLES_TO_BE_CONFIRMED ? TO_BE_CONFIRMED : label;
+                    })()}
+                  </td>
+                  <td className="r tbc">{PRICE_PENDING_LABEL}</td>
+                </tr>
+                  );
+                })}
+            </tbody>
+          </table>
+        </div>
+        <p className="note">{UNPRICED_INCLUDED_MESSAGE}</p>
+      </div>
+      ) : null}
+
+      {roster.length === 0 ? (
+        <div className="card">
+          <p className="ck">Commercial</p>
+          <h2>No creators selected yet</h2>
+          <p className="note">Select and approve creators on Shortlist and Your Selection to build this commercial view.</p>
+        </div>
+      ) : null}
 
       {extraLines.length > 0 ? (
         <div className="card">

@@ -1,7 +1,7 @@
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 
 import { formatDeliverableItems, parseDeliverableItems } from "./deliverables";
-import { clientFacingQuotationPrice } from "./quotation-client-facing";
+import { clientFacingAgencyFeeFromLine, clientFacingQuotationPrice } from "./quotation-client-facing";
 import { quotationItemClientCreatorId } from "./quotation-item-creator-id";
 import { overlayQuotationOnShortlistCreators } from "./selection-flow";
 import type { ClientReviewSourceSnapshotCreator } from "./types";
@@ -44,6 +44,18 @@ export function quotationItemSnapshotCreator(
     deliverableItems: deliverableItems.length > 0 ? deliverableItems : undefined,
     investmentAmount: price.amount,
     investmentCurrency: price.currency,
+    agencyFeeAmount: price.amount
+      ? clientFacingAgencyFeeFromLine({
+          afValue: item.af_value,
+          afValueEgp: item.af_value_egp,
+          afPct: item.af_pct,
+          convertedRevenue: price.amount,
+          costCurrency: item.cost_currency,
+          lineFxRateToEgp: item.fx_rate_to_egp,
+          quotationCurrency: currency,
+          quotationFxRateToEgp,
+        })
+      : undefined,
     originalInvestmentAmount: price.originalAmount,
     originalInvestmentCurrency: price.originalCurrency,
     avatarUrl: item.profile_image_url ?? item.creator_profile_source?.avatarUrl ?? undefined,

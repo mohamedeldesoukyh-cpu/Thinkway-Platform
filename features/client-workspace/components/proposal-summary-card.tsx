@@ -8,7 +8,6 @@ import { formatMoneyKpi } from "@/lib/finance/currency-format";
 import {
   confirmCreatorsAction,
   decideReviewAction,
-  removeUnpricedSelectedAction,
 } from "../actions/client-workspace-actions";
 import type { ClientCreatorSelectionState } from "../constants";
 import { formatCompactCount, formatEngagementPct, TO_BE_CONFIRMED } from "../format";
@@ -19,7 +18,8 @@ import {
   AFTER_CREATOR_APPROVAL_SECTION,
   APPROVE_SELECTED_CREATORS_LABEL,
   CONFIRM_CREATORS_SUPPORTING_TEXT,
-  UNPRICED_SELECTED_CODE,
+  UNPRICED_INCLUDED_MESSAGE,
+  buildCreatorApprovalConfirmation,
   canEnableApproveSelectedCreators,
   primaryActionForJourney,
   selectionCalculator,
@@ -96,13 +96,17 @@ export function ProposalSummaryCard({
   const { goToSection } = useClientWorkspaceState();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [unpricedBlock, setUnpricedBlock] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const resolvedSelection =
     selection ??
     Object.fromEntries(view.creators.map((creator) => [creator.creatorId, creator.selection]));
   const calc = selectionCalculator(view.creators, resolvedSelection);
   const currency = view.commercial.currency;
-  const investment = calc.pricedInvestment;
+  const clientCost = calc.pricedInvestment;
+  const agencyFees = calc.agencyFees;
+  const totalInvestment = calc.totalInvestment;
+  const hasPricedTotals = calc.pricedSelectedCount > 0;
+  const confirmation = buildCreatorApprovalConfirmation(view.creators, resolvedSelection);
   const forecast = projectSelectionSummaryFromCards(view.creators, resolvedSelection, currency);
   const er =
     forecast.averageEngagementRate != null
@@ -132,9 +136,7 @@ export function ProposalSummaryCard({
       ? view.canDecide && !pending && canApproveSelected
       : view.canDecide &&
         !pending &&
-        (primary.kind === "approve"
-          ? calc.selectedCount > 0 && calc.unpricedSelectedCount === 0
-          : canApproveSelected);
+        (primary.kind === "approve" ? calc.pricedSelectedCount > 0 : canApproveSelected);
   const actionLabel =
     variant === "bar"
       ? showApproveSelected
@@ -152,25 +154,26 @@ export function ProposalSummaryCard({
     goToSection(next);
   }
 
-  function runPrimary() {
+  function runConfirmCreators() {
     startTransition(async () => {
-      setUnpricedBlock(false);
-      if (variant === "bar" || primary.kind === "confirm") {
-        if (calc.unpricedSelectedCount > 0) {
-          setUnpricedBlock(true);
-          setError(calc.unpricedMessage);
-          return;
-        }
-        const result = await confirmCreatorsAction({ token });
-        if (!result.ok) {
-          setError(result.message);
-          if (result.code === UNPRICED_SELECTED_CODE) setUnpricedBlock(true);
-          return;
-        }
-        goToSection(AFTER_CREATOR_APPROVAL_SECTION);
-        router.refresh();
+      const result = await confirmCreatorsAction({ token });
+      if (!result.ok) {
+        setError(result.message);
         return;
       }
+      setConfirmOpen(false);
+      goToSection(AFTER_CREATOR_APPROVAL_SECTION);
+      router.refresh();
+    });
+  }
+
+  function runPrimary() {
+    if (variant === "bar" || primary.kind === "confirm") {
+      setError(null);
+      setConfirmOpen(true);
+      return;
+    }
+    startTransition(async () => {
       const result = await decideReviewAction({
         token,
         decision: "approved",
@@ -178,28 +181,15 @@ export function ProposalSummaryCard({
       });
       if (!result.ok) {
         setError(result.message);
-        if (result.code === UNPRICED_SELECTED_CODE) setUnpricedBlock(true);
         return;
       }
-      router.refresh();
-    });
-  }
-
-  function removeUnpriced() {
-    startTransition(async () => {
-      const result = await removeUnpricedSelectedAction({ token });
-      if (!result.ok) {
-        setError(result.message);
-        return;
-      }
-      setUnpricedBlock(false);
-      setError(null);
       router.refresh();
     });
   }
 
   if (variant === "bar") {
     return (
+      <>
       <div className="summary sumbar">
         <Metric label="Selected" value={`${calc.selectedCount} / ${view.creators.length}`} />
         <Metric label="Priced" value={String(calc.pricedSelectedCount)} />
@@ -209,19 +199,19 @@ export function ProposalSummaryCard({
           missing={calc.unpricedSelectedCount > 0}
         />
         <Metric
-          label="Selected investment"
-          value={investment > 0 ? formatMoneyKpi(investment, currency) : TO_BE_CONFIRMED}
-          missing={investment <= 0}
+          label="Cost"
+          value={hasPricedTotals ? formatMoneyKpi(clientCost, currency) : TO_BE_CONFIRMED}
+          missing={!hasPricedTotals}
         />
         <Metric
-          label="Est. reach"
-          value={formatCompactCount(forecast.estimatedReach)}
-          missing={forecast.estimatedReach == null}
+          label="Agency Fees"
+          value={hasPricedTotals ? formatMoneyKpi(agencyFees, currency) : TO_BE_CONFIRMED}
+          missing={!hasPricedTotals}
         />
         <Metric
-          label="Engagements"
-          value={formatCompactCount(forecast.estimatedEngagements)}
-          missing={forecast.estimatedEngagements == null}
+          label="Total Investment"
+          value={hasPricedTotals ? formatMoneyKpi(totalInvestment, currency) : TO_BE_CONFIRMED}
+          missing={!hasPricedTotals}
         />
         <div className="sp" />
         {showBulkControls ? (
@@ -253,15 +243,85 @@ export function ProposalSummaryCard({
           </div>
         ) : null}
         {error ? <p className="sumbar-msg">{error}</p> : emptyHint ? <p className="sumbar-msg">{emptyHint}</p> : null}
-        {unpricedBlock ? (
-          <div className="sumbar-cta">
-            <button type="button" className="btn pri" disabled={pending} onClick={removeUnpriced}>
-              Remove unpriced creators
-            </button>
-            <span className="sumbar-msg">or wait for pricing</span>
-          </div>
-        ) : null}
       </div>
+      {confirmOpen ? (
+        <div className="confirm-mask" role="dialog" aria-modal="true" aria-labelledby="approve-creators-title">
+          <div className="card confirm-panel">
+            <p className="ck">Confirm selection</p>
+            <h2 id="approve-creators-title">{APPROVE_SELECTED_CREATORS_LABEL}</h2>
+            <p className="note">{CONFIRM_CREATORS_SUPPORTING_TEXT}</p>
+            {confirmation.priced.length > 0 ? (
+              <>
+                <p className="subh">Priced creators</p>
+                {confirmation.priced.map((row) => (
+                  <div className="sumrow" key={row.creatorId}>
+                    <span className="k">
+                      {row.displayName}
+                      <span className="hint">{row.deliverables}</span>
+                    </span>
+                    <span className="v">{formatMoneyKpi(row.price ?? 0, currency)}</span>
+                  </div>
+                ))}
+              </>
+            ) : null}
+            {confirmation.unpriced.length > 0 ? (
+              <>
+                <p className="subh">Pricing required</p>
+                {confirmation.unpriced.map((row) => (
+                  <div className="sumrow" key={row.creatorId}>
+                    <span className="k">
+                      {row.displayName}
+                      <span className="hint">{row.deliverables}</span>
+                    </span>
+                    <span className="v tbc">{TO_BE_CONFIRMED}</span>
+                  </div>
+                ))}
+              </>
+            ) : null}
+            <div className="sumrow">
+              <span className="k">Selected creators</span>
+              <span className="v">{confirmation.selectedCount}</span>
+            </div>
+            <div className="sumrow">
+              <span className="k">Priced creators</span>
+              <span className="v">{confirmation.pricedCount}</span>
+            </div>
+            <div className="sumrow">
+              <span className="k">Pricing required</span>
+              <span className={confirmation.unpricedCount > 0 ? "v tbc" : "v"}>{confirmation.unpricedCount}</span>
+            </div>
+            <div className="sumrow">
+              <span className="k">Cost</span>
+              <span className={hasPricedTotals ? "v" : "v tbc"}>
+                {hasPricedTotals ? formatMoneyKpi(confirmation.clientCost, currency) : TO_BE_CONFIRMED}
+              </span>
+            </div>
+            <div className="sumrow">
+              <span className="k">Agency Fees</span>
+              <span className={hasPricedTotals ? "v" : "v tbc"}>
+                {hasPricedTotals ? formatMoneyKpi(confirmation.agencyFees, currency) : TO_BE_CONFIRMED}
+              </span>
+            </div>
+            <div className="sumrow big">
+              <span className="k">Total Investment</span>
+              <span className={hasPricedTotals ? "v" : "v tbc"}>
+                {hasPricedTotals ? formatMoneyKpi(confirmation.totalInvestment, currency) : TO_BE_CONFIRMED}
+              </span>
+            </div>
+            <p className="note">{UNPRICED_INCLUDED_MESSAGE}</p>
+            <div className="dacts" style={{ justifyContent: "flex-start", marginTop: 16 }}>
+              <button type="button" className="btn sec" disabled={pending} onClick={() => setConfirmOpen(false)}>
+                Back / Review Selection
+              </button>
+              <button type="button" className="btn pri" disabled={pending} onClick={runConfirmCreators}>
+                <IconCheck />
+                {APPROVE_SELECTED_CREATORS_LABEL}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      </>
     );
   }
 
@@ -273,10 +333,20 @@ export function ProposalSummaryCard({
         {primary.kind === "confirm" ? ` · ${CONFIRM_CREATORS_SUPPORTING_TEXT}` : ""}
       </p>
       <Row
-        label="Selected investment"
-        value={investment > 0 ? formatMoneyKpi(investment, currency) : TO_BE_CONFIRMED}
-        missing={investment <= 0}
+        label="Cost"
+        value={hasPricedTotals ? formatMoneyKpi(clientCost, currency) : TO_BE_CONFIRMED}
+        missing={!hasPricedTotals}
         big
+      />
+      <Row
+        label="Agency Fees"
+        value={hasPricedTotals ? formatMoneyKpi(agencyFees, currency) : TO_BE_CONFIRMED}
+        missing={!hasPricedTotals}
+      />
+      <Row
+        label="Total Investment"
+        value={hasPricedTotals ? formatMoneyKpi(totalInvestment, currency) : TO_BE_CONFIRMED}
+        missing={!hasPricedTotals}
       />
       <Row label="Creators selected" hint="based on selection" value={String(calc.selectedCount)} />
       <Row label="Priced" value={String(calc.pricedSelectedCount)} />
@@ -324,16 +394,7 @@ export function ProposalSummaryCard({
           {emptyHint}
         </p>
       ) : null}
-      {unpricedBlock ? (
-        <div className="cta sumcta">
-          <button type="button" className="btn pri" disabled={pending} onClick={removeUnpriced}>
-            Remove unpriced creators
-          </button>
-          <button type="button" className="btn sec" disabled>
-            Wait for pricing
-          </button>
-        </div>
-      ) : showActions && view.canDecide && actionLabel ? (
+      {showActions && view.canDecide && actionLabel ? (
         <div className="cta sumcta">
           <button type="button" className="btn pri" disabled={!canAct} onClick={runPrimary}>
             <IconCheck />

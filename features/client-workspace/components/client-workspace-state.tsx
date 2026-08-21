@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 
 import type { ClientCreatorSelectionState, ClientWorkspaceSectionId } from "../constants";
 import { projectSelectionSummaryFromCards } from "../media-plan-summary";
-import { selectionCalculator } from "../selection-flow";
+import { isPricedClientInvestment, selectionCalculator } from "../selection-flow";
 import { acceptedCreators, selectionMapFromView } from "../selection-view";
 import type { ClientCommercialSummary, ClientMediaPlanSummary, ClientWorkspaceView } from "../types";
 
@@ -54,14 +54,14 @@ export function ClientWorkspaceStateProvider({
     const calc = selectionCalculator(view.creators, selection);
     const selectedCommercial: ClientCommercialSummary = {
       ...view.commercial,
-      feeAmount: undefined,
+      feeAmount: calc.agencyFees,
       creatorInvestment: calc.pricedInvestment,
-      totalInvestment: calc.pricedInvestment,
+      totalInvestment: calc.totalInvestment,
       selectedCount: calc.selectedCount,
       pricedSelectedCount: calc.pricedSelectedCount,
       unpricedSelectedCount: calc.unpricedSelectedCount,
       lines: selectedCreators
-        .filter((creator) => creator.investmentAmount != null)
+        .filter((creator) => isPricedClientInvestment(creator.investmentAmount))
         .map((creator) => ({ label: creator.displayName, amount: creator.investmentAmount })),
     };
     return {

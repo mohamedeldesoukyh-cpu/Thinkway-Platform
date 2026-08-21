@@ -1,4 +1,5 @@
 import { fromEgp, toEgp } from "@/lib/commercial/fx-aggregation";
+import { computeAgencyFee } from "@/lib/commercial/commercial-engine";
 
 import { isPricedClientInvestment } from "./selection-flow";
 
@@ -57,6 +58,50 @@ export function clientFacingQuotationPrice(input: {
     originalAmount: input.revenue!,
     originalCurrency: original,
   };
+}
+
+export function convertClientFacingAmount(input: {
+  amount: number | null | undefined;
+  amountEgp?: number | null;
+  costCurrency?: string | null;
+  lineFxRateToEgp?: number | null;
+  quotationCurrency: string;
+  quotationFxRateToEgp: number;
+}): number {
+  const value = Number(input.amount);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return convertLineRevenueToQuotationCurrency({
+    revenue: value,
+    revenueEgp: input.amountEgp ?? undefined,
+    lineFxRateToEgp: input.lineFxRateToEgp ?? 1,
+    quotationCurrency: (input.quotationCurrency || "EGP").toUpperCase(),
+    quotationFxRateToEgp: input.quotationFxRateToEgp,
+  });
+}
+
+export function clientFacingAgencyFeeFromLine(input: {
+  afValue: number | null | undefined;
+  afValueEgp?: number | null;
+  afPct?: number | null;
+  convertedRevenue: number;
+  costCurrency?: string | null;
+  lineFxRateToEgp?: number | null;
+  quotationCurrency: string;
+  quotationFxRateToEgp: number;
+}): number {
+  const stored = convertClientFacingAmount({
+    amount: input.afValue,
+    amountEgp: input.afValueEgp,
+    costCurrency: input.costCurrency,
+    lineFxRateToEgp: input.lineFxRateToEgp,
+    quotationCurrency: input.quotationCurrency,
+    quotationFxRateToEgp: input.quotationFxRateToEgp,
+  });
+  if (stored > 0) return stored;
+  if (input.convertedRevenue > 0 && Number(input.afPct) > 0) {
+    return computeAgencyFee({ revenue: input.convertedRevenue, afPct: input.afPct }).afValue;
+  }
+  return 0;
 }
 
 export function originalInvestmentForDisplay(

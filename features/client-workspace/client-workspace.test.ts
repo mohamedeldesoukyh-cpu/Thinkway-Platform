@@ -83,7 +83,6 @@ import {
   commercialStageCopy,
   confirmCreatorsDoesNotApproveQuotation,
   consolidationContract,
-  excludeUnpricedFromSelection,
   isPricedClientInvestment,
   isValidClientCommercialApproval,
   mergeSnapshotsForClientView,
@@ -98,7 +97,6 @@ import {
   REVIEW_YOUR_SELECTION_LABEL,
   CLIENT_APPROVED_LABEL,
   PRICE_PENDING_LABEL,
-  UNPRICED_APPROVAL_MESSAGE,
   investmentDisplayLabel,
   canEnableApproveSelectedCreators,
   thinkwayStatusLabel,
@@ -107,8 +105,13 @@ import {
   primaryActionForJourney,
   shortlistCreatorSelectEnabled,
   AFTER_CREATOR_APPROVAL_SECTION,
+  UNPRICED_INCLUDED_MESSAGE,
+  buildCreatorApprovalConfirmation,
+  selectAllCreatorStates,
+  clearCreatorSelectionStates,
 } from "./selection-flow";
 import {
+  clientFacingAgencyFeeFromLine,
   clientFacingQuotationPrice,
   convertLineRevenueToQuotationCurrency,
   originalInvestmentForDisplay,
@@ -2492,7 +2495,7 @@ test("client can select priced and unpriced creators; calculator counts priced o
   assert.equal(calc.pricedSelectedCount, 1);
   assert.equal(calc.unpricedSelectedCount, 1);
   assert.equal(calc.pricedInvestment, 50_000);
-  assert.match(calc.unpricedMessage ?? "", /no confirmed pricing/);
+  assert.match(calc.unpricedMessage ?? "", /remain in your selection/i);
   const commercial = projectCommercialFromSnapshot(
     parseSourceSnapshot({
       source: "quotation",
@@ -2515,7 +2518,7 @@ test("client can select priced and unpriced creators; calculator counts priced o
   assert.equal(commercial.unpricedSelectedCount, 1);
 });
 
-test("unpriced selected creator blocks final quotation approval until removed", () => {
+test("unpriced selected creators do not block final quotation approval when priced creators exist", () => {
   const creators = [
     { creatorId: "priced", investmentAmount: 80_000 },
     { creatorId: "pending" },
@@ -2530,23 +2533,10 @@ test("unpriced selected creator blocks final quotation approval until removed", 
       selectedCount: calc.selectedCount,
       unpricedSelectedCount: calc.unpricedSelectedCount,
     }),
-    false
-  );
-  const next = excludeUnpricedFromSelection(creators, selection);
-  const after = selectionCalculator(creators, next);
-  assert.equal(next.pending, "in_review");
-  assert.equal(after.unpricedSelectedCount, 0);
-  assert.equal(
-    canApproveFinalQuotation({
-      historical: false,
-      quotationInteractive: true,
-      selectionConfirmed: true,
-      selectedCount: after.selectedCount,
-      unpricedSelectedCount: after.unpricedSelectedCount,
-    }),
     true
   );
-  assert.equal(UNPRICED_APPROVAL_MESSAGE.includes("without confirmed pricing"), true);
+  assert.equal(calc.unpricedSelectedCount, 1);
+  assert.equal(calc.pricedSelectedCount, 1);
 });
 
 test("Confirm Creators does not approve the quotation", () => {
@@ -2619,25 +2609,23 @@ test("vendor cost never appears on client-facing snapshot fields", () => {
   assert.equal("margin" in creator, false);
 });
 
-test("confirmed selection freeze allows removing unpriced creators only", () => {
-  assert.deepEqual(
-    selectionChangeAllowed({
-      selectionConfirmed: true,
-      commerciallyApproved: false,
-      current: "accepted",
-      next: "in_review",
-      priced: false,
-    }),
-    { ok: true }
-  );
+test("confirmed selection freeze does not silently remove unpriced creators", () => {
   const blocked = selectionChangeAllowed({
+    selectionConfirmed: true,
+    commerciallyApproved: false,
+    current: "accepted",
+    next: "in_review",
+    priced: false,
+  });
+  assert.equal(blocked.ok, false);
+  const blockedPriced = selectionChangeAllowed({
     selectionConfirmed: true,
     commerciallyApproved: false,
     current: "in_review",
     next: "accepted",
     priced: true,
   });
-  assert.equal(blocked.ok, false);
+  assert.equal(blockedPriced.ok, false);
 });
 
 test("selection journey flags require confirm before final quotation approval", () => {
@@ -3139,7 +3127,7 @@ test("quotation item overlay converts line revenue into quotation currency", () 
   assert.match(overlay[0]!.deliverables ?? "", /Story/i);
 });
 
-test("Approve Selected Creators is enabled only when every selected creator is priced", () => {
+test("Approve Selected Creators is enabled for priced and unpriced selections", () => {
   const pricedGate = {
     historical: false,
     interactive: true,
@@ -3148,7 +3136,7 @@ test("Approve Selected Creators is enabled only when every selected creator is p
     selectionConfirmed: false,
   };
   assert.equal(canEnableApproveSelectedCreators(pricedGate), true);
-  assert.equal(canEnableApproveSelectedCreators({ ...pricedGate, unpricedSelectedCount: 1 }), false);
+  assert.equal(canEnableApproveSelectedCreators({ ...pricedGate, unpricedSelectedCount: 1 }), true);
   assert.equal(canEnableApproveSelectedCreators({ ...pricedGate, selectedCount: 0 }), false);
   assert.equal(canEnableApproveSelectedCreators({ ...pricedGate, selectionConfirmed: true }), false);
   const calc = selectionCalculator(
@@ -3159,8 +3147,7 @@ test("Approve Selected Creators is enabled only when every selected creator is p
     { a: "accepted", b: "accepted" }
   );
   assert.equal(calc.unpricedSelectedCount, 1);
-  assert.match(calc.unpricedMessage ?? "", /no confirmed pricing/);
-  assert.match(calc.unpricedMessage ?? "", /wait for pricing/);
+  assert.match(calc.unpricedMessage ?? "", /remain in your selection/i);
 });
 
 test("bulk approval freeze uses clientSelection and keeps Thinkway status separate", () => {
@@ -3199,36 +3186,24 @@ test("bulk approval freeze uses clientSelection and keeps Thinkway status separa
   assert.deepEqual(roster.map((creator) => creator.creatorId), ["a", "b"]);
 });
 
-test("removing an unpriced creator enables Approve Selected Creators", () => {
+test("unpriced creators remain selected and Approve Selected Creators stays enabled", () => {
   const creators = [
     { creatorId: "a", investmentAmount: 24_000 },
     { creatorId: "b" },
   ];
-  const blocked = selectionCalculator(creators, { a: "accepted", b: "accepted" });
+  const mixed = selectionCalculator(creators, { a: "accepted", b: "accepted" });
   assert.equal(
     canEnableApproveSelectedCreators({
       historical: false,
       interactive: true,
-      selectedCount: blocked.selectedCount,
-      unpricedSelectedCount: blocked.unpricedSelectedCount,
-      selectionConfirmed: false,
-    }),
-    false
-  );
-  const next = excludeUnpricedFromSelection(creators, { a: "accepted", b: "accepted" });
-  const ready = selectionCalculator(creators, next);
-  assert.equal(next.b, "in_review");
-  assert.equal(ready.unpricedSelectedCount, 0);
-  assert.equal(
-    canEnableApproveSelectedCreators({
-      historical: false,
-      interactive: true,
-      selectedCount: ready.selectedCount,
-      unpricedSelectedCount: ready.unpricedSelectedCount,
+      selectedCount: mixed.selectedCount,
+      unpricedSelectedCount: mixed.unpricedSelectedCount,
       selectionConfirmed: false,
     }),
     true
   );
+  assert.equal(mixed.unpricedSelectedCount, 1);
+  assert.equal(mixed.selectedCount, 2);
 });
 
 test("canonical Client Workspace defaults to Shortlist", () => {
@@ -3330,9 +3305,277 @@ test("Your Selection shows selected creators and the frozen roster after approva
   assert.equal(frozen.some((creator) => creator.creatorId === "b"), false);
 });
 
-test("Approve Selected Creators opens Your Selection, not Commercial", () => {
-  assert.equal(AFTER_CREATOR_APPROVAL_SECTION, "creators");
-  assert.equal(CLIENT_WORKSPACE_SECTION_LABEL[AFTER_CREATOR_APPROVAL_SECTION], "Your Selection");
+test("Approve Selected Creators opens Commercial, not a second approval engine", () => {
+  assert.equal(AFTER_CREATOR_APPROVAL_SECTION, "commercial");
+  assert.equal(CLIENT_WORKSPACE_SECTION_LABEL[AFTER_CREATOR_APPROVAL_SECTION], "Commercial");
+});
+
+const pool = [
+  { creatorId: "priced-a", displayName: "A", investmentAmount: 400_000, agencyFeeAmount: 80_000, deliverables: "IG Reel x 1" },
+  { creatorId: "priced-b", displayName: "B", investmentAmount: 100_000, agencyFeeAmount: 20_000, deliverables: "IG Story x 3" },
+  { creatorId: "open-c", displayName: "C", deliverables: "TT Video x 1" },
+];
+
+test("A: select one priced creator", () => {
+  const calc = selectionCalculator(pool, { "priced-a": "accepted" });
+  assert.equal(calc.selectedCount, 1);
+  assert.equal(calc.pricedSelectedCount, 1);
+  assert.equal(calc.unpricedSelectedCount, 0);
+  assert.equal(calc.pricedInvestment, 400_000);
+});
+
+test("B: select one unpriced creator", () => {
+  const calc = selectionCalculator(pool, { "open-c": "accepted" });
+  assert.equal(calc.selectedCount, 1);
+  assert.equal(calc.pricedSelectedCount, 0);
+  assert.equal(calc.unpricedSelectedCount, 1);
+  assert.equal(calc.totalInvestment, 0);
+});
+
+test("C: select multiple priced creators", () => {
+  const calc = selectionCalculator(pool, { "priced-a": "accepted", "priced-b": "accepted" });
+  assert.equal(calc.pricedSelectedCount, 2);
+  assert.equal(calc.pricedInvestment, 500_000);
+  assert.equal(calc.agencyFees, 100_000);
+  assert.equal(calc.totalInvestment, 600_000);
+});
+
+test("D: select multiple unpriced creators", () => {
+  const calc = selectionCalculator(
+    [...pool, { creatorId: "open-d", displayName: "D" }],
+    { "open-c": "accepted", "open-d": "accepted" }
+  );
+  assert.equal(calc.selectedCount, 2);
+  assert.equal(calc.pricedSelectedCount, 0);
+  assert.equal(calc.unpricedSelectedCount, 2);
+});
+
+test("E: select a mixture of priced and unpriced creators", () => {
+  const calc = selectionCalculator(pool, {
+    "priced-a": "accepted",
+    "priced-b": "accepted",
+    "open-c": "accepted",
+  });
+  assert.equal(calc.selectedCount, 3);
+  assert.equal(calc.pricedSelectedCount, 2);
+  assert.equal(calc.unpricedSelectedCount, 1);
+  assert.equal(calc.pricedInvestment, 500_000);
+  assert.equal(calc.agencyFees, 100_000);
+  assert.equal(calc.totalInvestment, 600_000);
+});
+
+test("F: Select all includes priced AND unpriced creators", () => {
+  const all = selectAllCreatorStates(pool.map((creator) => creator.creatorId));
+  const calc = selectionCalculator(pool, all);
+  assert.equal(all["priced-a"], "accepted");
+  assert.equal(all["open-c"], "accepted");
+  assert.equal(calc.selectedCount, 3);
+  assert.equal(calc.unpricedSelectedCount, 1);
+});
+
+test("G: Clear removes all selections", () => {
+  const cleared = clearCreatorSelectionStates(pool.map((creator) => creator.creatorId));
+  const calc = selectionCalculator(pool, cleared);
+  assert.equal(cleared["priced-a"], "in_review");
+  assert.equal(cleared["open-c"], "in_review");
+  assert.equal(calc.selectedCount, 0);
+});
+
+test("H–J: Approve Selected Creators stays enabled for priced, mixed, and unpriced-only selections", () => {
+  const gate = { historical: false, interactive: true, selectionConfirmed: false as const };
+  assert.equal(canEnableApproveSelectedCreators({ ...gate, selectedCount: 2, unpricedSelectedCount: 0 }), true);
+  assert.equal(canEnableApproveSelectedCreators({ ...gate, selectedCount: 3, unpricedSelectedCount: 1 }), true);
+  assert.equal(canEnableApproveSelectedCreators({ ...gate, selectedCount: 1, unpricedSelectedCount: 1 }), true);
+});
+
+test("K/L: confirmation summary splits priced and unpriced and shows Cost, Agency Fees, Total Investment", () => {
+  const summary = buildCreatorApprovalConfirmation(pool, {
+    "priced-a": "accepted",
+    "priced-b": "accepted",
+    "open-c": "accepted",
+  });
+  assert.deepEqual(summary.priced.map((row) => row.displayName), ["A", "B"]);
+  assert.deepEqual(summary.unpriced.map((row) => row.displayName), ["C"]);
+  assert.equal(summary.selectedCount, 3);
+  assert.equal(summary.pricedCount, 2);
+  assert.equal(summary.unpricedCount, 1);
+  assert.equal(summary.clientCost, 500_000);
+  assert.equal(summary.agencyFees, 100_000);
+  assert.equal(summary.totalInvestment, 600_000);
+  assert.equal(summary.helper, UNPRICED_INCLUDED_MESSAGE);
+  assert.match(summary.unpriced[0]!.deliverables, /TT Video|To be confirmed/i);
+});
+
+test("M: commercial total includes ONLY priced selected creators", () => {
+  const commercial = projectCommercialFromSnapshot(
+    parseSourceSnapshot({
+      source: "quotation",
+      brandName: "Acme",
+      campaignName: "Summer",
+      clientLabel: "Acme",
+      platforms: [],
+      deliverables: [],
+      creators: pool,
+      content: [],
+      timeline: { durationWeeks: null, durationLabel: "", phases: [] },
+      commercial: { currency: "EGP", creatorInvestment: 500_000, feeAmount: 100_000, totalInvestment: 600_000, lines: [], selectedCount: 3, totalCount: 3 },
+      creatorIds: pool.map((creator) => creator.creatorId),
+    })!,
+    { "priced-a": "accepted", "priced-b": "accepted", "open-c": "accepted" }
+  );
+  assert.equal(commercial.creatorInvestment, 500_000);
+  assert.equal(commercial.feeAmount, 100_000);
+  assert.equal(commercial.totalInvestment, 600_000);
+  assert.equal(commercial.unpricedSelectedCount, 1);
+});
+
+test("N/O: unpriced selected creators remain visible after approval and are not silently removed", () => {
+  const frozen = yourSelectionRoster(pool as never, {
+    "priced-a": "accepted",
+    "priced-b": "accepted",
+    "open-c": "accepted",
+  }, {
+    selectionConfirmed: true,
+    clientApprovedCreatorIds: ["priced-a", "priced-b", "open-c"],
+  });
+  assert.deepEqual(frozen.map((creator) => creator.creatorId), ["priced-a", "priced-b", "open-c"]);
+  assert.equal(isPricedClientInvestment(frozen.find((creator) => creator.creatorId === "open-c")?.investmentAmount), false);
+  assert.equal(
+    selectionChangeAllowed({
+      selectionConfirmed: true,
+      commerciallyApproved: false,
+      current: "accepted",
+      next: "in_review",
+      priced: false,
+    }).ok,
+    false
+  );
+});
+
+test("P/X: quotation status remains unchanged after Approve Selected Creators", () => {
+  const sideEffects = confirmCreatorsDoesNotApproveQuotation();
+  assert.equal(sideEffects.setQuotationStatusApproved, false);
+  assert.equal(sideEffects.lockCommercial, false);
+  assert.notEqual(APPROVE_SELECTED_CREATORS_LABEL, APPROVE_FINAL_QUOTATION_LABEL);
+});
+
+test("Q: Thinkway Approved remains separate from Client Approved", () => {
+  assert.equal(thinkwayStatusLabel("approved"), "Thinkway Approved");
+  assert.equal(CLIENT_APPROVED_LABEL, "Client Approved");
+  assert.notEqual(thinkwayStatusLabel("approved"), CLIENT_APPROVED_LABEL);
+});
+
+test("R/S: internal price update appears on canonical Client Workspace and does not overwrite historical review", () => {
+  const historical = mergeSnapshotsForClientView({
+    active: parseSourceSnapshot({
+      source: "quotation",
+      brandName: "Acme",
+      campaignName: "Summer",
+      clientLabel: "Acme",
+      platforms: [],
+      deliverables: [],
+      creators: [{ creatorId: "a", displayName: "A", investmentAmount: 10_000 }],
+      content: [],
+      timeline: { durationWeeks: null, durationLabel: "", phases: [] },
+      commercial: { currency: "EGP", creatorInvestment: 10_000, totalInvestment: 10_000 },
+    })!,
+    quotation: parseSourceSnapshot({
+      source: "quotation",
+      brandName: "Acme",
+      campaignName: "Summer",
+      clientLabel: "Acme",
+      platforms: [],
+      deliverables: [],
+      creators: [{ creatorId: "a", displayName: "A", investmentAmount: 99_000 }],
+      content: [],
+      timeline: { durationWeeks: null, durationLabel: "", phases: [] },
+      commercial: { currency: "EGP", creatorInvestment: 99_000, totalInvestment: 99_000 },
+    })!,
+    historical: true,
+  });
+  assert.equal(historical.creators[0]!.investmentAmount, 10_000);
+  const current = overlayQuotationOnShortlistCreators(
+    [{ creatorId: "a", displayName: "A" }],
+    [{ creatorId: "a", displayName: "A", investmentAmount: 99_000, agencyFeeAmount: 9_900 }],
+    { currency: "EGP" }
+  );
+  assert.equal(current[0]!.investmentAmount, 99_000);
+  assert.equal(current[0]!.agencyFeeAmount, 9_900);
+});
+
+test("T/U: quotation currency conversion works and original currency is shown when different", () => {
+  const price = clientFacingQuotationPrice({
+    revenue: 20_000,
+    revenueEgp: 250_000,
+    costCurrency: "AED",
+    lineFxRateToEgp: 12.5,
+    quotationCurrency: "SAR",
+    quotationFxRateToEgp: 12.5,
+  });
+  assert.equal(price.currency, "SAR");
+  assert.ok(isPricedClientInvestment(price.amount));
+  assert.equal(price.originalAmount, 20_000);
+  assert.equal(price.originalCurrency, "AED");
+  const same = originalInvestmentForDisplay(
+    { originalInvestmentAmount: price.originalAmount, originalInvestmentCurrency: price.originalCurrency },
+    "SAR"
+  );
+  assert.deepEqual(same, { amount: 20_000, currency: "AED" });
+});
+
+test("V: Cost + Agency Fees = Total Investment using existing quotation AF math", () => {
+  const fee = clientFacingAgencyFeeFromLine({
+    afValue: 100_000,
+    afPct: 20,
+    convertedRevenue: 500_000,
+    quotationCurrency: "EGP",
+    quotationFxRateToEgp: 1,
+  });
+  assert.equal(fee, 100_000);
+  const calc = selectionCalculator(pool, { "priced-a": "accepted", "priced-b": "accepted" });
+  assert.equal(calc.pricedInvestment + calc.agencyFees, calc.totalInvestment);
+  assert.equal(calc.totalInvestment, 600_000);
+});
+
+test("W: vendor cost / GP / margin never appear client-side", () => {
+  const overlay = overlayQuotationOnShortlistCreators(
+    [{ creatorId: "a", displayName: "A" }],
+    [{ creatorId: "a", displayName: "A", investmentAmount: 24_000, agencyFeeAmount: 2_400 }],
+    { currency: "EGP" }
+  );
+  const json = JSON.stringify(overlay);
+  assert.equal(/vendor cost|gross profit|\bGP\b|margin/i.test(json), false);
+  assert.equal("cost" in overlay[0]!, false);
+  assert.equal(clientFacingObjectIsSafe(overlay[0]), true);
+});
+
+test("Y: final quotation approval still opens the existing campaign conversion gate", () => {
+  assert.equal(canCreateCampaignFromQuotation("approved"), true);
+  assert.equal(canCreateCampaignFromQuotation("sent"), false);
+  const quotationApprove = clientApprovalSideEffects("quotation", "approved");
+  assert.equal(quotationApprove.setQuotationStatusApproved, true);
+});
+
+test("Z: header Review Your Selection is navigation-only", () => {
+  const header = headerSelectionNavigation();
+  assert.equal(header.label, REVIEW_YOUR_SELECTION_LABEL);
+  assert.equal(header.writesClientSelection, false);
+  assert.equal(header.approvesQuotation, false);
+  assert.notEqual(header.label, APPROVE_SELECTED_CREATORS_LABEL);
+});
+
+test("AA: canonical Client Workspace opens on Shortlist", () => {
+  assert.equal(defaultClientWorkspaceSection([...CLIENT_WORKSPACE_JOURNEY_SECTIONS]), "shortlist");
+});
+
+test("AB: navigation order is Shortlist → Your Selection → Commercial → Campaign → Overview", () => {
+  assert.deepEqual([...CLIENT_WORKSPACE_JOURNEY_SECTIONS], [
+    "shortlist",
+    "creators",
+    "commercial",
+    "approval",
+    "overview",
+  ]);
 });
 
 
