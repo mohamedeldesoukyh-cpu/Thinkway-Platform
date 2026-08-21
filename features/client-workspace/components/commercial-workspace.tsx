@@ -7,6 +7,7 @@ import { breakdownForCreator } from "../platform-breakdown";
 import { deliverablesLabel } from "../deliverables";
 import { originalInvestmentForDisplay } from "../quotation-client-facing";
 import {
+  canOpenCommercialWorkspace,
   consolidationContract,
   isPricedClientInvestment,
   isValidClientCommercialApproval,
@@ -42,6 +43,11 @@ export function CommercialWorkspace({
     (line) => !view.creators.some((creator) => creator.displayName === line.label)
   );
   const maxAlloc = Math.max(...(allocation?.map((item) => item.count) ?? [1]), 1);
+  const canDeliverQuotation = canOpenCommercialWorkspace({
+    selectionConfirmed: view.journey?.selectionConfirmed,
+    historical: view.journey?.historical,
+    quotationStage: view.journey?.quotationStage,
+  });
 
   return (
     <>
@@ -330,7 +336,7 @@ export function CommercialWorkspace({
           </div>
         );
       })()}
-      {token ? <CommercialQuotationDelivery view={view} token={token} /> : null}
+      {token && canDeliverQuotation ? <CommercialQuotationDelivery view={view} token={token} /> : null}
     </>
   );
 }
