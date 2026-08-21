@@ -216,7 +216,8 @@ export function CreatorsWorkspace({
           <h2>What creators does Thinkway recommend?</h2>
           <p className="note">
             This is the creator pool for your campaign. Select any creator here, including those
-            still waiting on pricing. Review and approve the selection on Your Selection.
+            still waiting on pricing. Use Select all, Clear, and Approve Selected Creators in the
+            calculator.
           </p>
         </div>
       ) : (
@@ -230,17 +231,15 @@ export function CreatorsWorkspace({
           </p>
         </div>
       )}
-      {explore ? null : (
-        <ProposalSummaryCard
-          view={view}
-          token={token}
-          selection={selection}
-          variant="bar"
-          showBulkControls
-          onSelectAll={() => bulk("accepted")}
-          onClear={() => bulk("in_review")}
-        />
-      )}
+      <ProposalSummaryCard
+        view={view}
+        token={token}
+        selection={selection}
+        variant="bar"
+        showBulkControls
+        onSelectAll={() => bulk("accepted")}
+        onClear={() => bulk("in_review")}
+      />
       {explore ? (
         <div className="toolbar">
           <div className="segs">
