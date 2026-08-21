@@ -507,7 +507,7 @@ export async function getQuotationDetail(
     }));
   }
 
-  return {
+  const detail = {
     id: row.id as string,
     serial_number: serialNumber,
     name: row.name as string,
@@ -584,8 +584,23 @@ export async function getQuotationDetail(
     items,
     revisions,
     canManage,
-    audience_size: aggregateQuotationAudienceSize(items),
-    estimated_reach: aggregateQuotationReach(items),
-    estimated_engagement_rate: aggregateQuotationEngagementRate(items),
+    audience_size: 0,
+    estimated_reach: 0,
+    estimated_engagement_rate: null as number | null,
   };
+
+  try {
+    return {
+      ...detail,
+      audience_size: aggregateQuotationAudienceSize(items),
+      estimated_reach: aggregateQuotationReach(items),
+      estimated_engagement_rate: aggregateQuotationEngagementRate(items),
+    };
+  } catch (error) {
+    console.warn(
+      "[quotation-detail] forecast aggregate failed; workspace still loads",
+      error instanceof Error ? error.message : error
+    );
+    return detail;
+  }
 }

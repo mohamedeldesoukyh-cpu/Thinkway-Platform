@@ -643,7 +643,7 @@ export async function insertQuotationHeaderRecord(
       department: patch.department ?? "Influencer Marketing",
       ...patch,
     } as never)
-    .select("id")
+    .select("id, serial_number, name")
     .single();
 }
 

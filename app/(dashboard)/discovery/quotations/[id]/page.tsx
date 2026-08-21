@@ -9,10 +9,7 @@ import {
   getCachedQuotationFormOptions,
   getQuotationDetail,
 } from "@/features/quotations/queries";
-import {
-  metadataTitleForEntity,
-  redirectToCanonicalEntityRoute,
-} from "@/lib/routing/entity-page";
+import { metadataTitleForEntity } from "@/lib/routing/entity-page";
 import {
   fetchQuotationRouteSummary,
   resolveQuotationIdByRouteKey,
@@ -56,16 +53,9 @@ export default async function QuotationDetailPage({ params }: PageProps) {
       })
     : quotationDetailPath(quotationId);
 
-  if (routeSummary) {
-    redirectToCanonicalEntityRoute({
-      routeKey,
-      entity: {
-        ...routeSummary,
-        serial_number: routeSummary.serial_number ?? null,
-      },
-      canonicalPath,
-    });
-  }
+  // Stay on UUID / serial URLs after Generate quotation. Redirecting a client
+  // navigation to a slug like `quotation-test-{shortId}` collides when two
+  // quotations share a name, and Next.js can surface that as a failed page load.
 
   let detail: Awaited<ReturnType<typeof getQuotationDetail>>;
   let formOptions: Awaited<ReturnType<typeof getCachedQuotationFormOptions>>;

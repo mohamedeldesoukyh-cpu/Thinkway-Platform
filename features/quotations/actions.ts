@@ -78,7 +78,14 @@ export async function createBlankQuotation(input: {
   client_id?: string | null;
   brand_id?: string | null;
   campaign_header_id?: string | null;
-}): Promise<ActionResult<{ id: string }>> {
+}): Promise<
+  ActionResult<{
+    id: string;
+    serial_number: string | null;
+    name: string;
+    slug: string | null;
+  }>
+> {
   const actor = await getActor();
   if (!actor.ok) return actor;
   const result = await createBlankQuotationService(actor.supabase, actor.userId, input);
@@ -91,7 +98,14 @@ export async function createQuotationFromSelection(input: {
   creators: QuotationItemSeed[];
   client_id?: string | null;
   brand_id?: string | null;
-}): Promise<ActionResult<{ id: string }>> {
+}): Promise<
+  ActionResult<{
+    id: string;
+    serial_number: string | null;
+    name: string;
+    slug: string | null;
+  }>
+> {
   const actor = await getActor();
   if (!actor.ok) return actor;
   const result = await createQuotationFromSelectionService(actor.supabase, actor.userId, input);
@@ -110,7 +124,14 @@ export async function findOpenQuotationForShortlist(
 export async function createQuotationFromShortlist(
   shortlistId: string,
   options?: { itemIds?: string[] }
-): Promise<ActionResult<{ id: string }>> {
+): Promise<
+  ActionResult<{
+    id: string;
+    serial_number: string | null;
+    name: string;
+    slug: string | null;
+  }>
+> {
   const actor = await getActor();
   if (!actor.ok) return actor;
   const result = await createQuotationFromShortlistService(

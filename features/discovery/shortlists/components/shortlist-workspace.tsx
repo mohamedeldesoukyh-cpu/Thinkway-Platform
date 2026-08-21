@@ -354,7 +354,9 @@ export function ShortlistWorkspace({
           return;
         }
         toast.success(res.message ?? "Quotation created.");
-        if (res.data?.id) router.push(quotationDetailPath(res.data.id));
+        if (res.data?.id) {
+          router.push(quotationDetailPath(res.data.id, res.data.serial_number));
+        }
       });
     },
     [detail.id, router]

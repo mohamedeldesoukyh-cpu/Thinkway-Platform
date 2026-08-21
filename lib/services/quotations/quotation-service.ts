@@ -48,19 +48,38 @@ async function insertQuotationHeader(
   supabase: SupabaseClient<Database>,
   userId: string,
   patch: Partial<Database["public"]["Tables"]["quotations"]["Insert"]> & { name: string }
-): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
+): Promise<
+  | {
+      ok: true;
+      id: string;
+      serial_number: string | null;
+      name: string;
+      slug: string | null;
+    }
+  | { ok: false; message: string }
+> {
   const { data, error } = await insertQuotationHeaderRecord(supabase, userId, patch);
   if (error || !data) {
     return { ok: false, message: error?.message ?? "Failed to create quotation." };
   }
-  const id = (data as { id: string }).id;
+  const row = data as {
+    id: string;
+    serial_number: string | null;
+    name: string;
+  };
   await appendQuotationRevision(supabase, {
-    quotationId: id,
+    quotationId: row.id,
     userId,
     version: (patch.version as string) ?? "v1.0",
     changeSummary: "Initial quotation created",
   });
-  return { ok: true, id };
+  return {
+    ok: true,
+    id: row.id,
+    serial_number: row.serial_number,
+    name: row.name,
+    slug: null,
+  };
 }
 
 async function insertQuotationSeeds(
@@ -89,7 +108,14 @@ export async function createBlankQuotation(
     brand_id?: string | null;
     campaign_header_id?: string | null;
   }
-): Promise<QuotationMutationResult<{ id: string }>> {
+): Promise<
+  QuotationMutationResult<{
+    id: string;
+    serial_number: string | null;
+    name: string;
+    slug: string | null;
+  }>
+> {
   const name = input.name?.trim();
   if (!name) return { ok: false, message: "Quotation name is required." };
   if (!input.client_id || !input.brand_id) {
@@ -106,7 +132,16 @@ export async function createBlankQuotation(
     campaign_header_id: input.campaign_header_id ?? null,
   });
   if (!created.ok) return created;
-  return { ok: true, data: { id: created.id }, message: "Quotation created." };
+  return {
+    ok: true,
+    data: {
+      id: created.id,
+      serial_number: created.serial_number,
+      name: created.name,
+      slug: created.slug,
+    },
+    message: "Quotation created.",
+  };
 }
 
 export async function createQuotationFromSelection(
@@ -118,7 +153,14 @@ export async function createQuotationFromSelection(
     client_id?: string | null;
     brand_id?: string | null;
   }
-): Promise<QuotationMutationResult<{ id: string }>> {
+): Promise<
+  QuotationMutationResult<{
+    id: string;
+    serial_number: string | null;
+    name: string;
+    slug: string | null;
+  }>
+> {
   if (!input.creators?.length) {
     return { ok: false, message: "Select at least one creator." };
   }
@@ -137,7 +179,12 @@ export async function createQuotationFromSelection(
   await recomputeQuotationTotals(supabase, created.id);
   return {
     ok: true,
-    data: { id: created.id },
+    data: {
+      id: created.id,
+      serial_number: created.serial_number,
+      name: created.name,
+      slug: created.slug,
+    },
     message: `Quotation created with ${rows.length} creator${rows.length === 1 ? "" : "s"}.`,
   };
 }
@@ -237,7 +284,14 @@ export async function createQuotationFromShortlist(
   userId: string,
   shortlistId: string,
   options?: { itemIds?: string[] }
-): Promise<QuotationMutationResult<{ id: string }>> {
+): Promise<
+  QuotationMutationResult<{
+    id: string;
+    serial_number: string | null;
+    name: string;
+    slug: string | null;
+  }>
+> {
   const { data: shortlist, error: slError } = await fetchShortlistHeader(supabase, shortlistId);
   if (slError) return { ok: false, message: slError.message };
   if (!shortlist) return { ok: false, message: "Shortlist not found." };
@@ -280,7 +334,12 @@ export async function createQuotationFromShortlist(
 
   return {
     ok: true,
-    data: { id: created.id },
+    data: {
+      id: created.id,
+      serial_number: created.serial_number,
+      name: created.name,
+      slug: created.slug,
+    },
     message: `Quotation created with ${inserted.data?.inserted ?? seeds.length} creator${
       (inserted.data?.inserted ?? seeds.length) === 1 ? "" : "s"
     }.`,

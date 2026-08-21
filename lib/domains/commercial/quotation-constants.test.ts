@@ -20,6 +20,13 @@ test("quotationDetailPath falls back to uuid when serial missing", () => {
   );
 });
 
+test("quotationDetailPath keeps unique serials when names slug-collide", () => {
+  assert.equal(
+    quotationDetailPath("6160404d-fcfb-457e-83e2-1508c66d446a", "QT-2026-0021"),
+    "/discovery/quotations/QT-2026-0021"
+  );
+});
+
 test("quotationPreviewPath includes serial and query", () => {
   assert.equal(
     quotationPreviewPath("abc", "QT-2026-0015", "template=showcase"),
