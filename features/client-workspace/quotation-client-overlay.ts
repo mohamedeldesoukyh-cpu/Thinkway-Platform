@@ -11,6 +11,18 @@ export function formatQuotationItemDeliverables(item: QuotationItemRow): string 
   return formatDeliverableItems(items) || item.service_description?.trim() || undefined;
 }
 
+/** Same source as the quotation workspace Service description column. */
+export function clientServiceDescriptionFromQuotationItem(item: {
+  service_description?: string | null;
+  deliverables?: Array<{ service_description?: string | null }> | null;
+}): string | undefined {
+  const fromDeliverables = (item.deliverables ?? [])
+    .map((line) => line.service_description?.trim())
+    .filter((value): value is string => Boolean(value));
+  if (fromDeliverables.length > 0) return [...new Set(fromDeliverables)].join(" · ");
+  return item.service_description?.trim() || undefined;
+}
+
 export function quotationItemSnapshotCreator(
   item: QuotationItemRow,
   currency: string,
@@ -42,7 +54,7 @@ export function quotationItemSnapshotCreator(
     categories: item.creator_categories?.filter(Boolean) ?? undefined,
     deliverables: formatQuotationItemDeliverables(item),
     deliverableItems: deliverableItems.length > 0 ? deliverableItems : undefined,
-    serviceDescription: item.service_description?.trim() || undefined,
+    serviceDescription: clientServiceDescriptionFromQuotationItem(item),
     investmentAmount: price.amount,
     investmentCurrency: price.currency,
     agencyFeeAmount: price.amount

@@ -117,7 +117,7 @@ import {
   convertLineRevenueToQuotationCurrency,
   originalInvestmentForDisplay,
 } from "./quotation-client-facing";
-import { overlayQuotationDetailOnCreators } from "./quotation-client-overlay";
+import { overlayQuotationDetailOnCreators, clientServiceDescriptionFromQuotationItem } from "./quotation-client-overlay";
 import { normalizeClientDeliveryEmail } from "./client-quotation-delivery";
 import {
   isRenderableClientWorkspaceSection,
@@ -491,7 +491,6 @@ test("frozen snapshot commercial uses per-creator quotation values, not a second
 });
 
 test("client primary navigation is Shortlist, Your Selection, Commercial, Campaign, Overview", () => {
-  const beforeApproval = ["shortlist", "creators", "approval", "overview"];
   const expected = ["shortlist", "creators", "commercial", "approval", "overview"];
   assert.deepEqual([...CLIENT_WORKSPACE_JOURNEY_SECTIONS], expected);
   const shortlistView = {
@@ -503,7 +502,7 @@ test("client primary navigation is Shortlist, Your Selection, Commercial, Campai
     quotation: undefined,
     strategyBody: undefined,
   };
-  assert.deepEqual(visibleClientWorkspaceSections(shortlistView as never), beforeApproval);
+  assert.deepEqual(visibleClientWorkspaceSections(shortlistView as never), expected);
 
   const quotationView = {
     review: { source: "quotation" as const },
@@ -514,13 +513,7 @@ test("client primary navigation is Shortlist, Your Selection, Commercial, Campai
     quotation: { id: "q1", serialNumber: "QT-1", name: "Q", version: "1", lines: [] },
     strategyBody: undefined,
   };
-  assert.deepEqual(visibleClientWorkspaceSections(quotationView as never), beforeApproval);
-
-  const frozenView = {
-    ...quotationView,
-    journey: { selectionConfirmed: true, quotationStage: "sent_for_approval" },
-  };
-  assert.deepEqual(visibleClientWorkspaceSections(frozenView as never), expected);
+  assert.deepEqual(visibleClientWorkspaceSections(quotationView as never), expected);
 
   const emptyView = {
     review: { source: "quotation" as const },
@@ -531,7 +524,7 @@ test("client primary navigation is Shortlist, Your Selection, Commercial, Campai
     quotation: { id: "q1", serialNumber: "QT-1", name: "Q", version: "1", lines: [] },
     strategyBody: undefined,
   };
-  assert.deepEqual(visibleClientWorkspaceSections(emptyView as never), beforeApproval);
+  assert.deepEqual(visibleClientWorkspaceSections(emptyView as never), expected);
   assert.equal(CLIENT_WORKSPACE_SECTION_LABEL.shortlist, "Shortlist");
   assert.equal(CLIENT_WORKSPACE_SECTION_LABEL.creators, "Your Selection");
   assert.equal(CLIENT_WORKSPACE_SECTION_LABEL.commercial, "Commercial");
@@ -3167,6 +3160,76 @@ test("quotation item overlay converts line revenue into quotation currency", () 
   assert.equal(overlay[0]!.serviceDescription, "1× IG Story");
 });
 
+test("quotation card description uses the deliverable service description column", () => {
+  assert.equal(
+    clientServiceDescriptionFromQuotationItem({
+      service_description: null,
+      deliverables: [{ service_description: "1× IG Story with boosting" }],
+    }),
+    "1× IG Story with boosting"
+  );
+  assert.equal(
+    clientServiceDescriptionFromQuotationItem({
+      service_description: "Line fallback",
+      deliverables: [{ service_description: null }],
+    }),
+    "Line fallback"
+  );
+  const overlay = overlayQuotationDetailOnCreators(
+    [{ creatorId: "unified-1", displayName: "Nourhanne", influencerId: "inf-1" }],
+    [
+      {
+        id: "qi-1",
+        influencer_id: "inf-1",
+        profile_id: null,
+        unified_id: "unified-1",
+        source_shortlist_item_id: "sl-1",
+        creator_name: "Nourhanne Eissa",
+        platform: "instagram",
+        handle: "@nourhanne",
+        followers: 1000,
+        engagement_rate: 2,
+        country_code: "EG",
+        deliverables: [
+          {
+            platform: "instagram",
+            type: "story",
+            quantity: 1,
+            service_description: "1× IG Story with boosting",
+          },
+        ],
+        profile_image_url: null,
+        profile_url: null,
+        option_number: 1,
+        service_description: null,
+        commercial_input_mode: "cost_revenue",
+        cost: 0,
+        cost_currency: "EGP",
+        revenue: 720_000,
+        gp_pct: 0,
+        gp_value: 0,
+        fx_rate_to_egp: 1,
+        cost_egp: 0,
+        revenue_egp: 720_000,
+        gp_value_egp: 0,
+        af_pct: 0,
+        af_value: 0,
+        af_value_egp: 0,
+        sort_order: 0,
+        collapse_group_id: null,
+        collapse_label: null,
+      },
+    ],
+    "EGP",
+    1
+  );
+  assert.equal(overlay[0]!.serviceDescription, "1× IG Story with boosting");
+  assert.equal(
+    clientCreatorCardDescription(overlay[0]!),
+    "1× IG Story with boosting"
+  );
+});
+
 test("Approve Selected Creators is enabled for priced and unpriced selections", () => {
   const pricedGate = {
     historical: false,
@@ -3619,23 +3682,13 @@ test("AB: navigation order is Shortlist → Your Selection → Commercial → Ca
   ]);
 });
 
-test("AC: Commercial stays closed until Approve Selected Creators", () => {
+test("AC: quotation download and send stay closed until Approve Selected Creators", () => {
   assert.equal(canOpenCommercialWorkspace({ selectionConfirmed: false }), false);
   assert.equal(canOpenCommercialWorkspace({ selectionConfirmed: true }), true);
   assert.equal(canOpenCommercialWorkspace({ historical: true }), true);
   assert.equal(canOpenCommercialWorkspace({ quotationStage: "approved" }), true);
-  assert.equal(
-    resolveClientWorkspaceSection("commercial", { canOpenCommercial: false }),
-    "creators"
-  );
-  assert.equal(
-    resolveClientWorkspaceSection("quotation", { canOpenCommercial: false }),
-    "creators"
-  );
-  assert.equal(
-    resolveClientWorkspaceSection("commercial", { canOpenCommercial: true }),
-    "commercial"
-  );
+  assert.equal(resolveClientWorkspaceSection("commercial"), "commercial");
+  assert.equal(resolveClientWorkspaceSection("quotation"), "commercial");
 });
 
 test("AD: client quotation email must be a valid address", () => {
