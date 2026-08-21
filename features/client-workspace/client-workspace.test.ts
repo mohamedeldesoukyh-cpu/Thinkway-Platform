@@ -93,9 +93,14 @@ import {
   selectionJourneyFlags,
   thinkwayStatusFromInternal,
   CONFIRM_CREATORS_LABEL,
+  APPROVE_SELECTED_CREATORS_LABEL,
+  CLIENT_APPROVED_LABEL,
   PRICE_PENDING_LABEL,
   UNPRICED_APPROVAL_MESSAGE,
   investmentDisplayLabel,
+  canEnableApproveSelectedCreators,
+  thinkwayStatusLabel,
+  creatorsForClientCommercial,
 } from "./selection-flow";
 import {
   clientFacingQuotationPrice,
@@ -2462,11 +2467,11 @@ test("Thinkway approval is not client selection", () => {
   );
   assert.equal(
     clientStatusDisplay({ selection: "accepted", selectionConfirmed: false, commerciallyApproved: false }),
-    "Selected by you"
+    "Selected"
   );
   assert.equal(
     clientStatusDisplay({ selection: "accepted", selectionConfirmed: true, commerciallyApproved: false }),
-    "Confirmed"
+    "Client Approved"
   );
   assert.equal(
     clientStatusDisplay({ selection: "accepted", selectionConfirmed: true, commerciallyApproved: true }),
@@ -2487,7 +2492,7 @@ test("client can select priced and unpriced creators; calculator counts priced o
   assert.equal(calc.pricedSelectedCount, 1);
   assert.equal(calc.unpricedSelectedCount, 1);
   assert.equal(calc.pricedInvestment, 50_000);
-  assert.match(calc.unpricedMessage ?? "", /no confirmed investment/);
+  assert.match(calc.unpricedMessage ?? "", /no confirmed pricing/);
   const commercial = projectCommercialFromSnapshot(
     parseSourceSnapshot({
       source: "quotation",
@@ -3018,8 +3023,9 @@ test("H: same currency does not show an original-currency line", () => {
   );
 });
 
-test("I: bulk confirmation label does not approve the quotation", () => {
-  assert.equal(CONFIRM_CREATORS_LABEL, "Confirm Selected Creators");
+test("I: bulk Approve Selected Creators does not approve the quotation", () => {
+  assert.equal(APPROVE_SELECTED_CREATORS_LABEL, "Approve Selected Creators");
+  assert.equal(CONFIRM_CREATORS_LABEL, APPROVE_SELECTED_CREATORS_LABEL);
   const sideEffects = confirmCreatorsDoesNotApproveQuotation();
   assert.equal(sideEffects.setQuotationStatusApproved, false);
   assert.equal(sideEffects.lockCommercial, false);
@@ -3027,7 +3033,9 @@ test("I: bulk confirmation label does not approve the quotation", () => {
 
 test("J: Thinkway approval does not create client selection", () => {
   assert.equal(thinkwayStatusFromInternal("approved"), "approved");
+  assert.equal(thinkwayStatusLabel("approved"), "Thinkway Approved");
   assert.equal(clientStatusDisplay({ selection: "in_review", selectionConfirmed: false, commerciallyApproved: false }), "Not selected");
+  assert.notEqual(thinkwayStatusLabel("approved"), CLIENT_APPROVED_LABEL);
 });
 
 test("K: vendor cost and GP never appear on client-facing overlay", () => {
@@ -3124,6 +3132,98 @@ test("quotation item overlay converts line revenue into quotation currency", () 
   assert.equal(overlay[0]!.originalInvestmentAmount, 24_000);
   assert.equal(overlay[0]!.originalInvestmentCurrency, "EGP");
   assert.match(overlay[0]!.deliverables ?? "", /Story/i);
+});
+
+test("Approve Selected Creators is enabled only when every selected creator is priced", () => {
+  const pricedGate = {
+    historical: false,
+    interactive: true,
+    selectedCount: 2,
+    unpricedSelectedCount: 0,
+    selectionConfirmed: false,
+  };
+  assert.equal(canEnableApproveSelectedCreators(pricedGate), true);
+  assert.equal(canEnableApproveSelectedCreators({ ...pricedGate, unpricedSelectedCount: 1 }), false);
+  assert.equal(canEnableApproveSelectedCreators({ ...pricedGate, selectedCount: 0 }), false);
+  assert.equal(canEnableApproveSelectedCreators({ ...pricedGate, selectionConfirmed: true }), false);
+  const calc = selectionCalculator(
+    [
+      { creatorId: "a", investmentAmount: 24_000 },
+      { creatorId: "b" },
+    ],
+    { a: "accepted", b: "accepted" }
+  );
+  assert.equal(calc.unpricedSelectedCount, 1);
+  assert.match(calc.unpricedMessage ?? "", /no confirmed pricing/);
+  assert.match(calc.unpricedMessage ?? "", /wait for pricing/);
+});
+
+test("bulk approval freeze uses clientSelection and keeps Thinkway status separate", () => {
+  const snapshot = parseSourceSnapshot({
+    source: "quotation",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme",
+    platforms: [],
+    deliverables: [],
+    creators: [
+      { creatorId: "a", displayName: "Ahmed", investmentAmount: 24_000, deliverables: "1× IG Story", thinkwayStatus: "approved" },
+      { creatorId: "b", displayName: "Farah", investmentAmount: 5_500, deliverables: "1× TT Video" },
+      { creatorId: "c", displayName: "Pool", investmentAmount: 9_000 },
+    ],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "", phases: [] },
+    commercial: { currency: "EGP", creatorInvestment: 38_500, totalInvestment: 38_500 },
+    clientSelection: { confirmedAt: "2026-08-21T10:00:00.000Z", creatorIds: ["a", "b"] },
+  })!;
+  const commercial = projectCommercialFromSnapshot(snapshot, {
+    a: "accepted",
+    b: "accepted",
+    c: "accepted",
+  });
+  assert.equal(commercial.selectedCount, 2);
+  assert.equal(commercial.totalInvestment, 29_500);
+  assert.deepEqual(
+    commercial.lines.map((line) => line.label).sort(),
+    ["Ahmed", "Farah"]
+  );
+  assert.equal(clientStatusDisplay({ selection: "accepted", selectionConfirmed: true, commerciallyApproved: false }), CLIENT_APPROVED_LABEL);
+  assert.equal(thinkwayStatusLabel("approved"), "Thinkway Approved");
+  assert.notEqual(CLIENT_APPROVED_LABEL, thinkwayStatusLabel("approved"));
+  const roster = creatorsForClientCommercial(snapshot.creators, { a: "accepted", b: "accepted", c: "in_review" }, snapshot.clientSelection?.creatorIds);
+  assert.deepEqual(roster.map((creator) => creator.creatorId), ["a", "b"]);
+});
+
+test("removing an unpriced creator enables Approve Selected Creators", () => {
+  const creators = [
+    { creatorId: "a", investmentAmount: 24_000 },
+    { creatorId: "b" },
+  ];
+  const blocked = selectionCalculator(creators, { a: "accepted", b: "accepted" });
+  assert.equal(
+    canEnableApproveSelectedCreators({
+      historical: false,
+      interactive: true,
+      selectedCount: blocked.selectedCount,
+      unpricedSelectedCount: blocked.unpricedSelectedCount,
+      selectionConfirmed: false,
+    }),
+    false
+  );
+  const next = excludeUnpricedFromSelection(creators, { a: "accepted", b: "accepted" });
+  const ready = selectionCalculator(creators, next);
+  assert.equal(next.b, "in_review");
+  assert.equal(ready.unpricedSelectedCount, 0);
+  assert.equal(
+    canEnableApproveSelectedCreators({
+      historical: false,
+      interactive: true,
+      selectedCount: ready.selectedCount,
+      unpricedSelectedCount: ready.unpricedSelectedCount,
+      selectionConfirmed: false,
+    }),
+    true
+  );
 });
 
 

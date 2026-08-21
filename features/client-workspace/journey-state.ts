@@ -400,7 +400,7 @@ export function journeyActionRequired(input: {
   if (input.historical) return "This is a frozen historical version";
   if (input.quotationStage === "updated") return "Updated quotation — Approval Required";
   if (input.canApproveFinalQuotation) return "Approve final quotation";
-  if (input.canConfirmCreators) return "Confirm the creators for your quotation";
+  if (input.canConfirmCreators) return "Approve selected creators";
   if (input.quotationStage === "approved" && (input.selectedCount ?? 0) === 0) {
     return "This quotation has no client-selected creators. Thinkway needs to send an updated quotation.";
   }
@@ -408,7 +408,7 @@ export function journeyActionRequired(input: {
     return "Approve final quotation";
   }
   if (input.quotationStage === "sent_for_approval" || input.quotationStage === "viewed") {
-    return "Select creators, then confirm";
+    return "Select creators, then approve selected creators";
   }
   if (input.quotationStage === "changes_requested") {
     return "Waiting for Thinkway to update the quotation";

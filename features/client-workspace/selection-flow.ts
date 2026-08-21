@@ -15,25 +15,28 @@ export type ClientThinkwayStatus = (typeof CLIENT_THINKWAY_STATUSES)[number];
 
 export const CLIENT_SELECTION_STATUS_LABEL: Record<ClientCreatorSelectionState, string> = {
   in_review: "Not selected",
-  accepted: "Selected by you",
+  accepted: "Selected",
   rejected: "Not selected",
 };
 
 export const THINKWAY_STATUS_LABEL: Record<ClientThinkwayStatus, string> = {
   not_reviewed: "",
   recommended: "Recommended by Thinkway",
-  approved: "Approved by Thinkway",
-  finalized: "Approved by Thinkway",
+  approved: "Thinkway Approved",
+  finalized: "Thinkway Approved",
 };
 
-export const CONFIRM_CREATORS_LABEL = "Confirm Selected Creators";
+export const APPROVE_SELECTED_CREATORS_LABEL = "Approve Selected Creators";
+/** Same freeze engine as Approve Selected Creators — not quotation approval. */
+export const CONFIRM_CREATORS_LABEL = APPROVE_SELECTED_CREATORS_LABEL;
 export const CONFIRM_CREATORS_SUPPORTING_TEXT =
-  "Confirm the creators you would like included in your campaign quotation.";
+  "Approve the creators you want included in your campaign quotation. This is not quotation approval.";
 export const APPROVE_FINAL_QUOTATION_LABEL = "Approve Final Quotation";
 export const UNPRICED_APPROVAL_MESSAGE = "Your selection includes creators without confirmed pricing.";
 export const UNPRICED_SELECTED_CODE = "unpriced_selected";
 export const PRICE_PENDING_LABEL = "Pricing required";
 export const PRICE_NOT_AVAILABLE_LABEL = "Pricing required";
+export const CLIENT_APPROVED_LABEL = "Client Approved";
 
 export type ClientSelectionFreeze = {
   confirmedAt: string;
@@ -89,7 +92,7 @@ export function clientStatusDisplay(input: {
 }): string {
   if (input.selection !== "accepted") return CLIENT_SELECTION_STATUS_LABEL[input.selection];
   if (input.commerciallyApproved) return "Commercially approved";
-  if (input.selectionConfirmed) return "Confirmed";
+  if (input.selectionConfirmed) return CLIENT_APPROVED_LABEL;
   return CLIENT_SELECTION_STATUS_LABEL.accepted;
 }
 
@@ -138,8 +141,8 @@ export function selectionCalculator(
     unpricedMessage:
       unpricedSelectedCount > 0
         ? unpricedSelectedCount === 1
-          ? "1 selected creator has no confirmed investment."
-          : `${unpricedSelectedCount} selected creators have no confirmed investment.`
+          ? "1 selected creator has no confirmed pricing. Remove that creator or wait for pricing."
+          : `${unpricedSelectedCount} selected creators have no confirmed pricing. Remove those creators or wait for pricing.`
         : null,
   };
 }
@@ -318,6 +321,16 @@ export function canConfirmCreators(input: {
   );
 }
 
+export function canEnableApproveSelectedCreators(input: {
+  historical: boolean;
+  interactive: boolean;
+  selectedCount: number;
+  unpricedSelectedCount: number;
+  selectionConfirmed: boolean;
+}): boolean {
+  return canConfirmCreators(input) && input.unpricedSelectedCount === 0;
+}
+
 export function canApproveFinalQuotation(input: {
   historical: boolean;
   quotationInteractive: boolean;
@@ -361,6 +374,18 @@ export function selectionChangeAllowed(input: {
     ok: false,
     message: "Your creator selection is confirmed. Request changes if you need to update it.",
   };
+}
+
+export function creatorsForClientCommercial<T extends { creatorId: string }>(
+  creators: T[],
+  selection: Record<string, ClientCreatorSelectionState>,
+  approvedIds?: string[] | null
+): T[] {
+  if (approvedIds && approvedIds.length > 0) {
+    const ids = new Set(approvedIds);
+    return creators.filter((creator) => ids.has(creator.creatorId));
+  }
+  return creators.filter((creator) => isSelectedForCalculator(selection[creator.creatorId]));
 }
 
 export function unpricedSelectedIds(
@@ -426,8 +451,11 @@ export function selectionStageCopy(input: {
   selectionConfirmed: boolean;
   commerciallyApproved: boolean;
 }): { label: string; tone: "idle" | "active" | "attention" | "ok" } {
-  if (input.commerciallyApproved || input.selectionConfirmed) {
-    return { label: "Confirmed", tone: "ok" };
+  if (input.commerciallyApproved) {
+    return { label: "Commercially approved", tone: "ok" };
+  }
+  if (input.selectionConfirmed) {
+    return { label: CLIENT_APPROVED_LABEL, tone: "ok" };
   }
   if (input.selectedCount > 0) {
     return { label: `${input.selectedCount} selected`, tone: "active" };
@@ -492,6 +520,7 @@ export type SelectionJourneyFlags = {
   canConfirmCreators: boolean;
   canApproveFinalQuotation: boolean;
   approvedQuotationCount: number;
+  clientApprovedCreatorIds?: string[];
 };
 
 export function selectionJourneyFlags(input: {
@@ -502,6 +531,7 @@ export function selectionJourneyFlags(input: {
   selectedCount: number;
   unpricedSelectedCount: number;
   approvedQuotationCount: number;
+  clientApprovedCreatorIds?: string[];
 }): SelectionJourneyFlags {
   return {
     selectionConfirmed: input.selectionConfirmed,
@@ -514,6 +544,7 @@ export function selectionJourneyFlags(input: {
       unpricedSelectedCount: input.unpricedSelectedCount,
     }),
     approvedQuotationCount: input.approvedQuotationCount,
+    clientApprovedCreatorIds: input.clientApprovedCreatorIds,
   };
 }
 

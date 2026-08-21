@@ -219,7 +219,7 @@ export function CreatorsWorkspace({
           token={token}
           selection={selection}
           variant="bar"
-          showBulkControls={canSelect}
+          showBulkControls
           onSelectAll={() => bulk("accepted")}
           onClear={() => bulk("in_review")}
         />

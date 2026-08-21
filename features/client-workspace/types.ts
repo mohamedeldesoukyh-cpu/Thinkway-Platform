@@ -393,6 +393,7 @@ export type ClientWorkspaceJourney = {
   canConfirmCreators?: boolean;
   canApproveFinalQuotation?: boolean;
   selectionConfirmed?: boolean;
+  clientApprovedCreatorIds?: string[];
   approvedQuotationCount?: number;
   canRequestShortlistChanges: boolean;
   canRequestQuotationChanges: boolean;

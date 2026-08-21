@@ -1,8 +1,7 @@
 import { pickCreatorDisplayName, resolveCreatorIdentity } from "@/lib/text/decode-html-entities";
 
 import type { ClientCreatorSelectionState } from "./constants";
-import { isPricedClientInvestment, parseClientSelectionFreeze, parseThinkwayStatus, applyQuotationCurrency } from "./selection-flow";
-import { isSelectedForCalculator } from "./status";
+import { isPricedClientInvestment, parseClientSelectionFreeze, parseThinkwayStatus, applyQuotationCurrency, creatorsForClientCommercial } from "./selection-flow";
 import { parseDeliverableItems as parseDeliverableItemRows } from "./deliverables";
 import type {
   ClientAudienceBrief,
@@ -388,8 +387,10 @@ export function projectCommercialFromSnapshot(
   snapshot: ClientReviewSourceSnapshot,
   selection: Record<string, ClientCreatorSelectionState>
 ): ClientCommercialSummary {
-  const selected = snapshot.creators.filter((creator) =>
-    isSelectedForCalculator(selection[creator.creatorId])
+  const selected = creatorsForClientCommercial(
+    snapshot.creators,
+    selection,
+    snapshot.clientSelection?.creatorIds
   );
   const selectedIds = new Set(selected.map((creator) => creator.creatorId));
   const quotationTotal = quotationTotalFromSnapshot(snapshot);

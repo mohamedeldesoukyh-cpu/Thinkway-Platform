@@ -16,8 +16,10 @@ import { projectSelectionSummaryFromCards } from "../media-plan-summary";
 import { clientWorkspacePathReviewId } from "../journey-state";
 import { buildClientReviewPath } from "../security/review-token";
 import {
+  APPROVE_SELECTED_CREATORS_LABEL,
   CONFIRM_CREATORS_SUPPORTING_TEXT,
   UNPRICED_SELECTED_CODE,
+  canEnableApproveSelectedCreators,
   primaryActionForJourney,
   selectionCalculator,
 } from "../selection-flow";
@@ -109,18 +111,35 @@ export function ProposalSummaryCard({
     canonicalReviewId: view.journey?.canonicalReviewId,
   });
   const creatorsHref = buildClientReviewPath(pathReviewId, token, "creators");
+  const confirmed = Boolean(view.journey?.selectionConfirmed);
   const primary = primaryActionForJourney({
     canConfirmCreators: Boolean(view.journey?.canConfirmCreators),
     canApproveFinalQuotation: Boolean(view.journey?.canApproveFinalQuotation),
   });
+  const canApproveSelected = canEnableApproveSelectedCreators({
+    historical: Boolean(view.journey?.historical),
+    interactive: view.canDecide,
+    selectedCount: calc.selectedCount,
+    unpricedSelectedCount: calc.unpricedSelectedCount,
+    selectionConfirmed: confirmed,
+  });
+  const showApproveSelected = showBulkControls && !confirmed;
   const canAct =
-    view.canDecide &&
-    calc.selectedCount > 0 &&
-    !pending &&
-    (primary.kind === "confirm" || (primary.kind === "approve" && calc.unpricedSelectedCount === 0));
-  const actionLabel = primary.label || null;
+    variant === "bar"
+      ? view.canDecide && !pending && canApproveSelected
+      : view.canDecide &&
+        !pending &&
+        (primary.kind === "approve"
+          ? calc.selectedCount > 0 && calc.unpricedSelectedCount === 0
+          : canApproveSelected);
+  const actionLabel =
+    variant === "bar"
+      ? showApproveSelected
+        ? APPROVE_SELECTED_CREATORS_LABEL
+        : null
+      : primary.label || null;
   const emptyHint =
-    calc.selectedCount === 0 && view.canDecide
+    calc.selectedCount === 0 && view.canDecide && !confirmed
       ? "Select creators to build your campaign quotation."
       : calc.unpricedMessage;
 
@@ -133,12 +152,19 @@ export function ProposalSummaryCard({
   function runPrimary() {
     startTransition(async () => {
       setUnpricedBlock(false);
-      if (primary.kind === "confirm") {
+      if (variant === "bar" || primary.kind === "confirm") {
+        if (calc.unpricedSelectedCount > 0) {
+          setUnpricedBlock(true);
+          setError(calc.unpricedMessage);
+          return;
+        }
         const result = await confirmCreatorsAction({ token });
         if (!result.ok) {
           setError(result.message);
+          if (result.code === UNPRICED_SELECTED_CODE) setUnpricedBlock(true);
           return;
         }
+        goToSection("commercial");
         router.refresh();
         return;
       }
@@ -175,7 +201,7 @@ export function ProposalSummaryCard({
         <Metric label="Selected" value={`${calc.selectedCount} / ${view.creators.length}`} />
         <Metric label="Priced" value={String(calc.pricedSelectedCount)} />
         <Metric
-          label="Price pending"
+          label="Pricing required"
           value={String(calc.unpricedSelectedCount)}
           missing={calc.unpricedSelectedCount > 0}
         />
@@ -195,14 +221,32 @@ export function ProposalSummaryCard({
           missing={forecast.estimatedEngagements == null}
         />
         <div className="sp" />
-        {showBulkControls && view.canDecide ? (
+        {showBulkControls ? (
           <div className="sumbar-cta">
-            <button type="button" className="btn sec" disabled={pending} onClick={onSelectAll}>
+            <button
+              type="button"
+              className="btn sec"
+              disabled={pending || confirmed || !view.canDecide}
+              onClick={onSelectAll}
+            >
               Select all
             </button>
-            <button type="button" className="btn sec" disabled={pending} onClick={onClear}>
+            <button
+              type="button"
+              className="btn sec"
+              disabled={pending || confirmed || !view.canDecide}
+              onClick={onClear}
+            >
               Clear
             </button>
+            {confirmed ? (
+              <span className="sc ok">Client Approved</span>
+            ) : (
+              <button type="button" className="btn pri" disabled={!canAct} onClick={runPrimary}>
+                <IconCheck />
+                {APPROVE_SELECTED_CREATORS_LABEL}
+              </button>
+            )}
           </div>
         ) : null}
         {error ? <p className="sumbar-msg">{error}</p> : emptyHint ? <p className="sumbar-msg">{emptyHint}</p> : null}
@@ -212,13 +256,6 @@ export function ProposalSummaryCard({
               Remove unpriced creators
             </button>
             <span className="sumbar-msg">or wait for pricing</span>
-          </div>
-        ) : view.canDecide && actionLabel ? (
-          <div className="sumbar-cta">
-            <button type="button" className="btn pri" disabled={!canAct} onClick={runPrimary}>
-              <IconCheck />
-              {actionLabel}
-            </button>
           </div>
         ) : null}
       </div>
@@ -241,7 +278,7 @@ export function ProposalSummaryCard({
       <Row label="Creators selected" hint="based on selection" value={String(calc.selectedCount)} />
       <Row label="Priced" value={String(calc.pricedSelectedCount)} />
       <Row
-        label="Price pending"
+        label="Pricing required"
         value={String(calc.unpricedSelectedCount)}
         missing={calc.unpricedSelectedCount > 0}
       />

@@ -10,8 +10,13 @@ export function selectionMapFromView(
 
 export function acceptedCreators(
   creators: ClientCreatorCard[],
-  selection: Record<string, ClientCreatorSelectionState>
+  selection: Record<string, ClientCreatorSelectionState>,
+  approvedIds?: string[] | null
 ): ClientCreatorCard[] {
+  if (approvedIds && approvedIds.length > 0) {
+    const ids = new Set(approvedIds);
+    return creators.filter((creator) => ids.has(creator.creatorId));
+  }
   return creators.filter((creator) => isSelectedForCalculator(selection[creator.creatorId] ?? creator.selection));
 }
 

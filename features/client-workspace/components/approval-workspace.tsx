@@ -127,10 +127,10 @@ export function ApprovalWorkspace({
       {journey?.selectionConfirmed && !showConfirmCreators ? (
         <div className="card">
           <p className="ck">Your Selection</p>
-          <h2>Creators confirmed</h2>
+          <h2>Client Approved</h2>
           <p className="note">
-            This confirms the creators you would like included in your campaign quotation. It does not
-            approve commercial terms or start the campaign.
+            The client has approved the creators to include in this quotation. This is not quotation
+            approval and does not start the campaign.
           </p>
         </div>
       ) : null}
@@ -149,7 +149,7 @@ export function ApprovalWorkspace({
             <button
               type="button"
               className="btn pri"
-              disabled={pending || counts.accepted === 0}
+              disabled={pending || counts.accepted === 0 || unpricedCount > 0}
               onClick={() =>
                 startTransition(async () => {
                   const result = await confirmCreatorsAction({ token });

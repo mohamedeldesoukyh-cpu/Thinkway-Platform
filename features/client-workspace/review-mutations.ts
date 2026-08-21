@@ -330,19 +330,30 @@ export async function requestClientChanges(input: {
 
 export async function confirmClientCreators(input: {
   token: string;
-}): Promise<{ ok: boolean; message: string }> {
+}): Promise<{ ok: boolean; message: string; code?: string }> {
   const gate = await requireInteractiveReview(input.token);
   if (!gate.ok) return gate;
   const snapshot = gate.review.sourceSnapshot;
   if (!snapshot) return { ok: false, message: "Package not found." };
   if (isSelectionConfirmed(snapshot)) {
-    return { ok: true, message: "Creators already confirmed. This is not commercial approval." };
+    return { ok: true, message: "Creators already approved. This is not quotation approval." };
   }
   const acceptedIds = snapshot.creators
     .map((creator) => creator.creatorId)
     .filter((id) => gate.review.selectionState[id] === "accepted");
   if (acceptedIds.length === 0) {
-    return { ok: false, message: "Select at least one creator before confirming." };
+    return { ok: false, message: "Select at least one creator before approving." };
+  }
+  const unpriced = unpricedSelectedIds(snapshot.creators, gate.review.selectionState);
+  if (unpriced.length > 0) {
+    return {
+      ok: false,
+      code: UNPRICED_SELECTED_CODE,
+      message:
+        unpriced.length === 1
+          ? "1 selected creator has no confirmed pricing. Remove that creator or wait for pricing."
+          : `${unpriced.length} selected creators have no confirmed pricing. Remove those creators or wait for pricing.`,
+    };
   }
   const now = new Date().toISOString();
   const nextSnapshot = withClientSelectionFreeze(snapshot, {
@@ -373,9 +384,9 @@ export async function confirmClientCreators(input: {
     reviewId: gate.review.id,
     quotationId: gate.review.quotationId,
     shortlistId: gate.review.shortlistId,
-    body: `Client confirmed ${acceptedIds.length} creator${acceptedIds.length === 1 ? "" : "s"} for the quotation. This is not commercial approval.`,
+    body: `Client approved ${acceptedIds.length} creator${acceptedIds.length === 1 ? "" : "s"} for the quotation. This is not quotation approval.`,
   });
-  return { ok: true, message: "Creators confirmed. This is not commercial approval." };
+  return { ok: true, message: "Creators approved. This is not quotation approval." };
 }
 
 export async function removeUnpricedSelectedCreators(input: {

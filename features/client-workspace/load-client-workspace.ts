@@ -189,7 +189,7 @@ function eventSummary(type: string, payload: Record<string, unknown> | null): st
     case "quotation_approved":
       return "Quotation approved";
     case "creators_confirmed":
-      return "Creators confirmed";
+      return "Creators approved";
     case "quotation_revision_published":
       return "Updated quotation sent for approval";
     case "review_viewed":
@@ -454,10 +454,9 @@ export async function loadClientWorkspace(
     return { ok: false, code: "not_found", message: "This campaign package is no longer available." };
   }
 
+  const freezeSnapshot = activeReview.sourceSnapshot ?? quotationSnapshot ?? shortlistSnapshot;
   const calc = selectionCalculator(view.creators, selection);
-  const confirmed = isSelectionConfirmed(
-    activeReview.sourceSnapshot ?? quotationSnapshot ?? shortlistSnapshot
-  );
+  const confirmed = isSelectionConfirmed(freezeSnapshot);
   const flags = selectionJourneyFlags({
     historical: picked.historical,
     interactive: isInteractiveClientReview(activeReview.status) && !picked.historical,
@@ -466,6 +465,7 @@ export async function loadClientWorkspace(
     selectedCount: calc.selectedCount,
     unpricedSelectedCount: calc.unpricedSelectedCount,
     approvedQuotationCount: journey.approvedQuotationCount ?? 0,
+    clientApprovedCreatorIds: freezeSnapshot?.clientSelection?.creatorIds,
   });
   view.journey = { ...journey, ...flags };
   view.stageDiff =

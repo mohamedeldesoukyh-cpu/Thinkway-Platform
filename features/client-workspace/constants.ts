@@ -113,6 +113,6 @@ export const CLIENT_PROPOSAL_STATUS_LABEL: Record<ClientReviewStatus, string> = 
 
 export const CLIENT_CREATOR_STATUS_LABEL: Record<ClientCreatorSelectionState, string> = {
   in_review: "Not selected",
-  accepted: "Selected by you",
+  accepted: "Selected",
   rejected: "Not selected",
 };

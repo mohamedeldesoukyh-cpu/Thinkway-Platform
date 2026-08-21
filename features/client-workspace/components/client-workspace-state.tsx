@@ -41,7 +41,11 @@ export function ClientWorkspaceStateProvider({
     setSelection((current) => ({ ...current, ...next }));
   }, []);
   const value = useMemo((): ClientWorkspaceState => {
-    const selectedCreators = acceptedCreators(view.creators, selection);
+    const selectedCreators = acceptedCreators(
+      view.creators,
+      selection,
+      view.journey?.clientApprovedCreatorIds
+    );
     const selectedSummary = projectSelectionSummaryFromCards(
       view.creators,
       selection,
