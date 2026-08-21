@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   collidesWithOtherSerial,
   isValidQuotationSerial,
+  nextQuotationSequenceValue,
+  parseQuotationBaseSequence,
   parseQuotationSerialYear,
   quotationSerialPrefix,
 } from "@/features/quotations/serial";
@@ -19,6 +21,14 @@ assert.equal(isValidQuotationSerial(null), false);
 
 assert.equal(parseQuotationSerialYear("QT-2026-0007"), 2026);
 assert.equal(parseQuotationSerialYear("nope"), null);
+
+assert.equal(parseQuotationBaseSequence("QT-2026-0020"), 20);
+assert.equal(parseQuotationBaseSequence("QT-2026-0018-V3"), null);
+assert.equal(
+  nextQuotationSequenceValue(18, ["QT-2026-0018", "QT-2026-0020", "QT-2026-0018-V3"]),
+  21,
+  "allocator must skip existing base serials even when last_value was rewound"
+);
 
 // Must never collide with campaign / shortlist serial spaces.
 assert.equal(collidesWithOtherSerial("QT-2026-0001"), false);

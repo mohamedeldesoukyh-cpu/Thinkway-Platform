@@ -31,3 +31,25 @@ export function parseQuotationSerialYear(
   const match = QUOTATION_SERIAL_RE.exec(value.trim());
   return match ? Number(match[1]) : null;
 }
+
+/** Numeric QT-YYYY-NNNN sequence only. Version suffixes ( -V2 ) are ignored. */
+export function parseQuotationBaseSequence(
+  value: string | null | undefined
+): number | null {
+  if (!value) return null;
+  const match = QUOTATION_SERIAL_RE.exec(value.trim());
+  return match ? Number(match[2]) : null;
+}
+
+/** Next QT sequence after both the allocator cursor and surviving base serials. */
+export function nextQuotationSequenceValue(
+  lastValue: number,
+  existingSerials: string[]
+): number {
+  let maxExisting = 0;
+  for (const serial of existingSerials) {
+    const parsed = parseQuotationBaseSequence(serial);
+    if (parsed != null && parsed > maxExisting) maxExisting = parsed;
+  }
+  return Math.max(lastValue, maxExisting) + 1;
+}
