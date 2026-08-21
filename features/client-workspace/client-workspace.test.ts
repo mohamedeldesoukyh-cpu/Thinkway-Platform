@@ -14,7 +14,7 @@ import {
   quotationClientShareRequiresSave,
   quotationIsMovedToCampaign,
 } from "./client-review-selection";
-import { clientSafeFitCopy, clientCreatorIdentity, formatCompactCount, formatEngagementPct, formatEngagementRateLabel, formatHandleLabel, formatOptionalCompactCount, formatOptionalEngagementPct, listPlatformChipMetrics, providedText } from "./format";
+import { clientSafeFitCopy, clientCreatorIdentity, clientCreatorCardDescription, formatCompactCount, formatEngagementPct, formatEngagementRateLabel, formatHandleLabel, formatOptionalCompactCount, formatOptionalEngagementPct, listPlatformChipMetrics, providedText } from "./format";
 import { deliverablesLabel, groupedActivityMix, looksLikePlatformList, summarizeCreatorDeliverables, summarizeDeliverablesByPlatform } from "./deliverables";
 import {
   allocationSlices,
@@ -186,6 +186,27 @@ test("client-safe fit copy strips internal diagnostics", () => {
     clientSafeFitCopy("Strong audience alignment with Egyptian consumers. ECI score 91."),
     "Strong audience alignment with Egyptian consumers."
   );
+});
+
+test("creator card description uses bio and strips internal copy", () => {
+  assert.equal(
+    clientCreatorCardDescription({ bio: "Cairo-based beauty creator covering skincare launches." }),
+    "Cairo-based beauty creator covering skincare launches."
+  );
+  assert.equal(
+    clientCreatorCardDescription({
+      bio: "Lifestyle creator covering beauty and fitness. ECI score 91.",
+      fitExplanation: "Should not win when bio exists.",
+    }),
+    "Lifestyle creator covering beauty and fitness. score 91."
+  );
+  assert.equal(
+    clientCreatorCardDescription({
+      fitExplanation: "Strong audience alignment with Egyptian consumers. ECI score 91.",
+    }),
+    "Strong audience alignment with Egyptian consumers."
+  );
+  assert.equal(clientCreatorCardDescription({}), undefined);
 });
 
 test("review cookie is scoped to a single review id", () => {

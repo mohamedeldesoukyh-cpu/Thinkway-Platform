@@ -124,6 +124,20 @@ export function clientSafeFitCopy(raw: string | undefined): string | undefined {
   return sentence.length > 220 ? `${sentence.slice(0, 217).trim()}…` : sentence;
 }
 
+export function clientCreatorCardDescription(creator: {
+  bio?: string;
+  matchExplanation?: string;
+  fitExplanation?: string;
+  audienceHighlight?: string;
+}): string | undefined {
+  return (
+    clientSafeParagraph(creator.bio) ||
+    clientSafeFitCopy(creator.matchExplanation) ||
+    clientSafeFitCopy(creator.fitExplanation) ||
+    clientSafeFitCopy(creator.audienceHighlight)
+  );
+}
+
 export function clientFacingAllocationNote(note?: string): string | undefined {
   if (!note) return undefined;
   if (!note.includes("CampaignFacts")) return note;

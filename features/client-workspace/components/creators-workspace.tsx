@@ -13,7 +13,7 @@ import {
 } from "../actions/client-workspace-actions";
 import type { ClientCreatorSelectionState } from "../constants";
 import { deliverablesLabel } from "../deliverables";
-import { clientCreatorIdentity, DELIVERABLES_TO_BE_CONFIRMED, formatCompactCount, formatHandleLabel, formatLocation, formatMatchPercent, NOT_AVAILABLE, TO_BE_CONFIRMED } from "../format";
+import { clientCreatorIdentity, DELIVERABLES_TO_BE_CONFIRMED, formatCompactCount, formatHandleLabel, formatLocation, formatMatchPercent, NOT_AVAILABLE, TO_BE_CONFIRMED, clientCreatorCardDescription } from "../format";
 import {
   ADD_FROM_SHORTLIST_LABEL,
   clientStatusDisplay,
@@ -285,6 +285,9 @@ export function CreatorsWorkspace({
             const location = formatLocation(creator.city, creator.country);
             const sub = [formatHandleLabel(identity.handle), location].filter(Boolean).join(" · ");
             const state = selection[creator.creatorId] ?? creator.selection;
+            const description = clientCreatorCardDescription(
+              brief?.creatorId === creator.creatorId ? { ...creator, ...brief } : creator
+            );
             return (
             <div
               key={creator.creatorId}
@@ -316,6 +319,7 @@ export function CreatorsWorkspace({
                 className="cc-main"
                 onClick={() => openCreator(creator.creatorId)}
               >
+              <div className="cc-top">
               <ReviewAvatar
                 className="photo"
                 initialsClassName="ini"
@@ -389,6 +393,13 @@ export function CreatorsWorkspace({
                   ) : null}
                 </div>
               </div>
+              </div>
+              {description ? (
+                <div className="cc-desc">
+                  <p className="ck">Description</p>
+                  <p>{description}</p>
+                </div>
+              ) : null}
               </button>
             </div>
             );
