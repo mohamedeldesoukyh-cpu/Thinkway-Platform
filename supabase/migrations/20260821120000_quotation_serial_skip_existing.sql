@@ -109,6 +109,7 @@ CREATE OR REPLACE FUNCTION public.generate_quotation_serial(
 )
 RETURNS text
 LANGUAGE plpgsql
+SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
@@ -147,6 +148,10 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.generate_quotation_serial(timestamptz) IS
-  'Generates the next unused QT-YYYY-NNNN quotation serial. Advances document_sequences past existing base serials so version rows cannot rewind allocation.';
+  'Generates the next unused QT-YYYY-NNNN quotation serial. SECURITY DEFINER so document_sequences writes bypass deny-all RLS.';
+
+REVOKE ALL ON FUNCTION public.generate_quotation_serial(timestamptz) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.generate_quotation_serial(timestamptz) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.generate_quotation_serial(timestamptz) TO service_role;
 
 SELECT * FROM public.reseed_quotation_document_sequences(NULL, false);
