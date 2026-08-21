@@ -6,7 +6,7 @@ import { canCreateClientReview, resolveStudioPackageReadiness } from "@/features
 import { isPublicPath } from "@/lib/auth/routes";
 import { classifyApiPath, classifyPagePath } from "@/lib/security/workspace-classify";
 
-import { CLIENT_CHANGE_AREAS, CLIENT_REVIEW_LINK_MISSING_MESSAGE, CLIENT_REVIEW_SOURCES } from "./constants";
+import { CLIENT_CHANGE_AREAS, CLIENT_REVIEW_LINK_MISSING_MESSAGE, CLIENT_REVIEW_SOURCES, CLIENT_WORKSPACE_JOURNEY_SECTIONS, CLIENT_WORKSPACE_SECTION_LABEL } from "./constants";
 import {
   clientSelectionsEqual,
   defaultQuotationClientSelection,
@@ -94,6 +94,8 @@ import {
   thinkwayStatusFromInternal,
   CONFIRM_CREATORS_LABEL,
   APPROVE_SELECTED_CREATORS_LABEL,
+  APPROVE_FINAL_QUOTATION_LABEL,
+  REVIEW_YOUR_SELECTION_LABEL,
   CLIENT_APPROVED_LABEL,
   PRICE_PENDING_LABEL,
   UNPRICED_APPROVAL_MESSAGE,
@@ -101,6 +103,8 @@ import {
   canEnableApproveSelectedCreators,
   thinkwayStatusLabel,
   creatorsForClientCommercial,
+  headerSelectionNavigation,
+  primaryActionForJourney,
 } from "./selection-flow";
 import {
   clientFacingQuotationPrice,
@@ -451,7 +455,9 @@ test("frozen snapshot commercial uses per-creator quotation values, not a second
   assert.equal(reduced.quotationTotal, 100_000);
 });
 
-test("client primary journey is Shortlist, Your Selection, Commercial, Campaign", () => {
+test("client primary navigation is Shortlist, Your Selection, Commercial, Campaign, Overview", () => {
+  const expected = ["shortlist", "creators", "commercial", "approval", "overview"];
+  assert.deepEqual([...CLIENT_WORKSPACE_JOURNEY_SECTIONS], expected);
   const shortlistView = {
     review: { source: "shortlist" as const },
     creators: [{ creatorId: "a" }],
@@ -461,12 +467,7 @@ test("client primary journey is Shortlist, Your Selection, Commercial, Campaign"
     quotation: undefined,
     strategyBody: undefined,
   };
-  assert.deepEqual(visibleClientWorkspaceSections(shortlistView as never), [
-    "overview",
-    "creators",
-    "commercial",
-    "approval",
-  ]);
+  assert.deepEqual(visibleClientWorkspaceSections(shortlistView as never), expected);
 
   const quotationView = {
     review: { source: "quotation" as const },
@@ -477,12 +478,7 @@ test("client primary journey is Shortlist, Your Selection, Commercial, Campaign"
     quotation: { id: "q1", serialNumber: "QT-1", name: "Q", version: "1", lines: [] },
     strategyBody: undefined,
   };
-  assert.deepEqual(visibleClientWorkspaceSections(quotationView as never), [
-    "overview",
-    "creators",
-    "commercial",
-    "approval",
-  ]);
+  assert.deepEqual(visibleClientWorkspaceSections(quotationView as never), expected);
 
   const emptyView = {
     review: { source: "quotation" as const },
@@ -493,12 +489,14 @@ test("client primary journey is Shortlist, Your Selection, Commercial, Campaign"
     quotation: { id: "q1", serialNumber: "QT-1", name: "Q", version: "1", lines: [] },
     strategyBody: undefined,
   };
-  assert.deepEqual(visibleClientWorkspaceSections(emptyView as never), [
-    "overview",
-    "creators",
-    "commercial",
-    "approval",
-  ]);
+  assert.deepEqual(visibleClientWorkspaceSections(emptyView as never), expected);
+  assert.equal(CLIENT_WORKSPACE_SECTION_LABEL.shortlist, "Shortlist");
+  assert.equal(CLIENT_WORKSPACE_SECTION_LABEL.creators, "Your Selection");
+  assert.equal(CLIENT_WORKSPACE_SECTION_LABEL.commercial, "Commercial");
+  assert.equal(CLIENT_WORKSPACE_SECTION_LABEL.approval, "Campaign");
+  assert.equal(CLIENT_WORKSPACE_SECTION_LABEL.overview, "Overview");
+  assert.equal(expected.at(-1), "overview");
+  assert.equal(defaultClientWorkspaceSection(expected), "shortlist");
   assert.equal(defaultClientWorkspaceSection(["overview", "creators", "commercial", "approval"]), "overview");
 });
 
@@ -2796,11 +2794,16 @@ test("quotation overlay uses quotation currency and service description as clien
 });
 
 test("legacy content and quotation URLs map into the primary journey", () => {
-  assert.equal(resolveClientWorkspaceSection("content"), "overview");
+  assert.equal(resolveClientWorkspaceSection("content"), "shortlist");
   assert.equal(resolveClientWorkspaceSection("quotation"), "commercial");
+  assert.equal(resolveClientWorkspaceSection("creators"), "creators");
+  assert.equal(resolveClientWorkspaceSection("overview"), "overview");
+  assert.equal(resolveClientWorkspaceSection("shortlist"), "shortlist");
   assert.equal(resolveClientWorkspaceSection("feedback"), "feedback");
-  assert.equal(isRenderableClientWorkspaceSection("feedback", ["overview", "creators", "commercial", "approval"]), true);
-  assert.equal(isRenderableClientWorkspaceSection("overview", ["overview", "creators", "commercial", "approval"]), true);
+  const visible = [...CLIENT_WORKSPACE_JOURNEY_SECTIONS];
+  assert.equal(isRenderableClientWorkspaceSection("feedback", visible), true);
+  assert.equal(isRenderableClientWorkspaceSection("overview", visible), true);
+  assert.equal(isRenderableClientWorkspaceSection("shortlist", visible), true);
 });
 
 test("snapshot deliverable items keep quotation type_lines", () => {
@@ -3224,6 +3227,74 @@ test("removing an unpriced creator enables Approve Selected Creators", () => {
     }),
     true
   );
+});
+
+test("canonical Client Workspace defaults to Shortlist", () => {
+  const visible = visibleClientWorkspaceSections({
+    review: { source: "shortlist" },
+    creators: [{ creatorId: "a" }],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "", phases: [] },
+    commercial: { currency: "EGP", creatorInvestment: 0, totalInvestment: 0, lines: [], selectedCount: 0, totalCount: 0 },
+    quotation: undefined,
+    strategyBody: undefined,
+  } as never);
+  assert.equal(defaultClientWorkspaceSection(visible), "shortlist");
+  assert.notEqual(defaultClientWorkspaceSection(visible), "overview");
+  assert.notEqual(defaultClientWorkspaceSection(visible), "creators");
+  assert.notEqual(defaultClientWorkspaceSection(visible), "commercial");
+});
+
+test("Overview remains the last accessible nav tab and is not a journey stage", () => {
+  const visible = [...CLIENT_WORKSPACE_JOURNEY_SECTIONS];
+  assert.deepEqual(visible, ["shortlist", "creators", "commercial", "approval", "overview"]);
+  assert.equal(visible.at(-1), "overview");
+  assert.equal(isRenderableClientWorkspaceSection("overview", visible), true);
+  assert.equal(CLIENT_WORKSPACE_SECTION_LABEL.overview, "Overview");
+});
+
+test("header Review Your Selection is navigation only and never writes client selection", () => {
+  const header = headerSelectionNavigation();
+  assert.equal(header.label, REVIEW_YOUR_SELECTION_LABEL);
+  assert.equal(header.section, "creators");
+  assert.equal(header.writesClientSelection, false);
+  assert.equal(header.freezesSelection, false);
+  assert.equal(header.approvesCreators, false);
+  assert.equal(header.approvesQuotation, false);
+  assert.notEqual(header.label, APPROVE_SELECTED_CREATORS_LABEL);
+  assert.notEqual(header.label, APPROVE_FINAL_QUOTATION_LABEL);
+});
+
+test("calculator Approve Selected Creators is the only creator approval action", () => {
+  assert.equal(APPROVE_SELECTED_CREATORS_LABEL, "Approve Selected Creators");
+  assert.equal(CONFIRM_CREATORS_LABEL, APPROVE_SELECTED_CREATORS_LABEL);
+  const header = headerSelectionNavigation();
+  assert.notEqual(header.label, APPROVE_SELECTED_CREATORS_LABEL);
+  const beforeApproval = primaryActionForJourney({
+    canConfirmCreators: true,
+    canApproveFinalQuotation: false,
+  });
+  assert.equal(beforeApproval.kind, "confirm");
+  assert.equal(beforeApproval.label, APPROVE_SELECTED_CREATORS_LABEL);
+});
+
+test("after creator approval, Approve Final Quotation remains the commercial approval", () => {
+  const afterCreators = primaryActionForJourney({
+    canConfirmCreators: false,
+    canApproveFinalQuotation: true,
+  });
+  assert.equal(afterCreators.kind, "approve");
+  assert.equal(afterCreators.label, APPROVE_FINAL_QUOTATION_LABEL);
+  assert.notEqual(headerSelectionNavigation().label, APPROVE_FINAL_QUOTATION_LABEL);
+  const sideEffects = confirmCreatorsDoesNotApproveQuotation();
+  assert.equal(sideEffects.setQuotationStatusApproved, false);
+});
+
+test("historical review URLs remain version-frozen", () => {
+  assert.equal(isFrozenClientReviewStatus("superseded"), true);
+  assert.equal(isInteractiveClientReview("superseded"), false);
+  assert.equal(isFrozenClientReviewStatus("revoked"), true);
+  assert.equal(isInteractiveClientReview("awaiting_review"), true);
 });
 
 

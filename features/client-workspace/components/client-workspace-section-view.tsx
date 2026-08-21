@@ -6,6 +6,7 @@ import { ApprovalWorkspace } from "./approval-workspace";
 import { CommercialWorkspace } from "./commercial-workspace";
 import { CreatorsWorkspace } from "./creators-workspace";
 import { FeedbackWorkspace } from "./feedback-workspace";
+import { OverviewWorkspace } from "./overview-workspace";
 
 export function ClientWorkspaceSectionView({
   section,
@@ -16,9 +17,10 @@ export function ClientWorkspaceSectionView({
   view: ClientWorkspaceView;
   token: string;
 }) {
-  if (section === "overview" || section === "strategy" || section === "timeline" || section === "content") {
+  if (section === "shortlist" || section === "strategy" || section === "timeline" || section === "content") {
     return <CreatorsWorkspace view={view} token={token} intent="explore" />;
   }
+  if (section === "overview") return <OverviewWorkspace view={view} token={token} />;
   if (section === "creators") return <CreatorsWorkspace view={view} token={token} intent="decide" />;
   if (section === "commercial" || section === "quotation") {
     return <CommercialWorkspace view={view} token={token} />;

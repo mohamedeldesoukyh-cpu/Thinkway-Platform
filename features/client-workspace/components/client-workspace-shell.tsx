@@ -5,15 +5,15 @@ import { CLIENT_WORKSPACE_SECTION_LABEL } from "../constants";
 import { SHORTLIST_STAGE_LABEL, clientWorkspacePathReviewId, clientWorkspaceVersionPill } from "../journey-state";
 import {
   commercialStageCopy,
+  headerSelectionNavigation,
   isPricedClientInvestment,
-  primaryActionForJourney,
   selectionCalculator,
 } from "../selection-flow";
 import { buildClientReviewPath } from "../security/review-token";
 import type { ClientWorkspaceView } from "../types";
 import { ClientJourneyStrip } from "./journey-strip";
 import { useClientWorkspaceState } from "./client-workspace-state";
-import { IconCheck, LogoMark } from "./review-icons";
+import { LogoMark } from "./review-icons";
 import { ReviewUpdateBanner } from "./review-update-banner";
 
 export function ClientWorkspaceShell({
@@ -56,16 +56,9 @@ export function ClientWorkspaceShell({
     reviewNumber: view.review.reviewNumber,
     newerReviewNumber: view.newerReviewNumber,
   });
-  const primary = primaryActionForJourney({
-    canConfirmCreators: Boolean(view.journey?.canConfirmCreators),
-    canApproveFinalQuotation: Boolean(view.journey?.canApproveFinalQuotation),
-  });
-  const primaryHref = buildClientReviewPath(
-    pathReviewId,
-    token,
-    primary.kind === "confirm" ? "creators" : "approval"
-  );
-  const primaryLabel = primary.kind ? primary.label : null;
+  const headerCta = headerSelectionNavigation();
+  const showHeaderSelectionNav = Boolean(view.canDecide && section !== "creators");
+  const headerHref = buildClientReviewPath(pathReviewId, token, headerCta.section);
 
   function openSection(event: React.MouseEvent<HTMLAnchorElement>, next: ClientWorkspaceSectionId) {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
@@ -93,7 +86,7 @@ export function ClientWorkspaceShell({
             <span className="stpill cur">Shortlist · {shortlistLabel}</span>
           ) : null}
           <span className="stpill cur">{versionLabel}</span>
-          {view.canDecide && primaryLabel ? (
+          {view.canDecide ? (
             <>
               <a
                 className="btn sec"
@@ -102,16 +95,15 @@ export function ClientWorkspaceShell({
               >
                 Request changes
               </a>
-              <a
-                className="btn pri"
-                href={primaryHref}
-                onClick={(event) =>
-                  openSection(event, primary.kind === "confirm" ? "creators" : "approval")
-                }
-              >
-                <IconCheck />
-                {primaryLabel}
-              </a>
+              {showHeaderSelectionNav ? (
+                <a
+                  className="btn sec"
+                  href={headerHref}
+                  onClick={(event) => openSection(event, headerCta.section)}
+                >
+                  {headerCta.label}
+                </a>
+              ) : null}
             </>
           ) : null}
         </div>

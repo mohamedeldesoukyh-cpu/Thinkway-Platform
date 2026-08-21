@@ -107,12 +107,11 @@ export function OverviewWorkspace({
   return (
     <>
       <div className="card">
-        <p className="ck">Creator shortlist</p>
-        <h2>What creators does Thinkway recommend?</h2>
+        <p className="ck">Campaign overview</p>
+        <h2>Executive summary</h2>
         <p className="note">
-          This is the creator pool for your campaign. Moving creators into a quotation internally does
-          not remove them from this shortlist. Client-facing prices and deliverables appear on the same
-          cards when Thinkway has entered them.
+          A supporting summary of this campaign. Explore the creator roster on Shortlist, then confirm
+          your selection and commercial approval in the journey stages above.
         </p>
       </div>
       <div className="kpis">
@@ -188,7 +187,7 @@ export function OverviewWorkspace({
             <p className="note">
               {hasSelection
                 ? `${selectedCreators.length} accepted of ${rosterHeadline(view.creators.length)}. ${rosterSourceLine(view.review.source)}.`
-                : "Accept creators on the Creators tab to update this mix."}
+                : "Select creators on Your Selection to update this mix."}
             </p>
             {hasSelection ? (
               <>
@@ -252,7 +251,7 @@ export function OverviewWorkspace({
             )}
               </>
             ) : (
-              <p className="unavailable">Selection mix updates after creators are accepted.</p>
+              <p className="unavailable">Selection mix updates after creators are selected.</p>
             )}
           </div>
 
@@ -275,7 +274,7 @@ export function OverviewWorkspace({
         </div>
 
         <aside className="side">
-          <ProposalSummaryCard view={view} token={token} selection={selection} />
+          <ProposalSummaryCard view={view} token={token} selection={selection} showActions={false} />
           <div className="card" style={{ marginTop: 16 }}>
             <p className="ck" style={{ marginBottom: 8 }}>
               Campaign fit

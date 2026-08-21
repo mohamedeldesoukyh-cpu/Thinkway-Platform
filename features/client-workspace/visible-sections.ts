@@ -8,7 +8,8 @@ type SectionSource = Pick<
 >;
 
 /**
- * Primary client journey: Shortlist · Your Selection · Commercial · Campaign.
+ * Primary client navigation: Shortlist · Your Selection · Commercial · Campaign · Overview.
+ * Overview is a supporting executive summary, not a fifth journey stage.
  * Feedback remains reachable from Request changes. Content/strategy/timeline fold into Shortlist.
  */
 export function visibleClientWorkspaceSections(view?: SectionSource): ClientWorkspaceSectionId[] {
@@ -17,7 +18,7 @@ export function visibleClientWorkspaceSections(view?: SectionSource): ClientWork
 }
 
 export function resolveClientWorkspaceSection(section: ClientWorkspaceSectionId): ClientWorkspaceSectionId {
-  if (section === "strategy" || section === "timeline" || section === "content") return "overview";
+  if (section === "strategy" || section === "timeline" || section === "content") return "shortlist";
   if (section === "quotation") return "commercial";
   return section;
 }
@@ -33,6 +34,6 @@ export function isRenderableClientWorkspaceSection(
 export function defaultClientWorkspaceSection(
   sections: readonly ClientWorkspaceSectionId[]
 ): ClientWorkspaceSectionId {
-  if (sections.includes("overview")) return "overview";
-  return sections[0] ?? "overview";
+  if (sections.includes("shortlist")) return "shortlist";
+  return sections[0] ?? "shortlist";
 }

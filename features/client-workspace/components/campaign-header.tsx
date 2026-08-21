@@ -11,7 +11,7 @@ import {
 import { formatPlatformLabel } from "../format";
 import { proposalSubtitle, rosterHeadline, rosterSourceLine } from "../presentation";
 import { clientWorkspacePathReviewId } from "../journey-state";
-import { primaryActionForJourney } from "../selection-flow";
+import { headerSelectionNavigation } from "../selection-flow";
 import { buildClientReviewPath } from "../security/review-token";
 import type { ClientWorkspaceView } from "../types";
 import { StatusPill } from "./media-plan-ui";
@@ -53,7 +53,7 @@ export function CampaignHeader({
     viewedReviewId: view.review.id,
     canonicalReviewId: view.journey?.canonicalReviewId,
   });
-  const approvalHref = buildClientReviewPath(pathReviewId, token, "approval");
+  const selectionHref = buildClientReviewPath(pathReviewId, token, headerSelectionNavigation().section);
   const feedbackHref = buildClientReviewPath(pathReviewId, token, "feedback");
 
   return (
@@ -96,13 +96,10 @@ export function CampaignHeader({
               Request changes
             </Link>
             <Link
-              href={approvalHref}
-              className="rounded-full bg-[#1D9E75] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[#178A65]"
+              href={selectionHref}
+              className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
             >
-              {primaryActionForJourney({
-                canConfirmCreators: Boolean(view.journey?.canConfirmCreators),
-                canApproveFinalQuotation: Boolean(view.journey?.canApproveFinalQuotation),
-              }).label || "Review"}
+              {headerSelectionNavigation().label}
             </Link>
           </>
         ) : null}

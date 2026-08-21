@@ -78,6 +78,7 @@ export function ProposalSummaryCard({
   selection,
   variant = "card",
   showBulkControls = false,
+  showActions = true,
   onSelectAll,
   onClear,
 }: {
@@ -86,6 +87,7 @@ export function ProposalSummaryCard({
   selection?: Record<string, ClientCreatorSelectionState>;
   variant?: "card" | "bar";
   showBulkControls?: boolean;
+  showActions?: boolean;
   onSelectAll?: () => void;
   onClear?: () => void;
 }) {
@@ -330,7 +332,7 @@ export function ProposalSummaryCard({
             Wait for pricing
           </button>
         </div>
-      ) : view.canDecide && actionLabel ? (
+      ) : showActions && view.canDecide && actionLabel ? (
         <div className="cta sumcta">
           <button type="button" className="btn pri" disabled={!canAct} onClick={runPrimary}>
             <IconCheck />

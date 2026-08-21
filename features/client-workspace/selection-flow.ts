@@ -32,6 +32,8 @@ export const CONFIRM_CREATORS_LABEL = APPROVE_SELECTED_CREATORS_LABEL;
 export const CONFIRM_CREATORS_SUPPORTING_TEXT =
   "Approve the creators you want included in your campaign quotation. This is not quotation approval.";
 export const APPROVE_FINAL_QUOTATION_LABEL = "Approve Final Quotation";
+/** Header CTA only — navigates to Your Selection. Never freezes or approves. */
+export const REVIEW_YOUR_SELECTION_LABEL = "Review Your Selection";
 export const UNPRICED_APPROVAL_MESSAGE = "Your selection includes creators without confirmed pricing.";
 export const UNPRICED_SELECTED_CODE = "unpriced_selected";
 export const PRICE_PENDING_LABEL = "Pricing required";
@@ -444,6 +446,29 @@ export function primaryActionForJourney(input: {
     return { label: CONFIRM_CREATORS_LABEL, kind: "confirm" };
   }
   return { label: "", kind: null };
+}
+
+/**
+ * Shell header CTA. Navigation only — never writes clientSelection, never approves
+ * creators, and never changes quotation status. Calculator remains the only
+ * Approve Selected Creators action.
+ */
+export function headerSelectionNavigation(): {
+  label: typeof REVIEW_YOUR_SELECTION_LABEL;
+  section: "creators";
+  writesClientSelection: false;
+  freezesSelection: false;
+  approvesCreators: false;
+  approvesQuotation: false;
+} {
+  return {
+    label: REVIEW_YOUR_SELECTION_LABEL,
+    section: "creators",
+    writesClientSelection: false,
+    freezesSelection: false,
+    approvesCreators: false,
+    approvesQuotation: false,
+  };
 }
 
 export function selectionStageCopy(input: {

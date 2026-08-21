@@ -1,9 +1,9 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Client Workspace bulk Approve Selected Creators (local, not committed)
+**Focus:** Client Workspace UX — Shortlist default, Overview last, header navigation-only
 
-Reframed the existing Confirm Selected Creators freeze as Approve Selected Creators. Same `clientSelection` engine — not quotation approval. Calculator always shows Select all / Clear / Approve Selected Creators. Unpriced selected creators disable the action. Commercial uses frozen client-approved creators only.
+Canonical Client Workspace now lands on Shortlist. Nav order is Shortlist → Your Selection → Commercial → Campaign → Overview (executive summary, not a fifth journey stage). Header CTA is **Review Your Selection** (navigates only; never writes `clientSelection`). Calculator remains the only **Approve Selected Creators**. Commercial approval remains **Approve Final Quotation**.
 
 Not committed / not pushed. Production untouched.
 

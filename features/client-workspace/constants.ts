@@ -2,6 +2,7 @@ export const CLIENT_REVIEW_SOURCES = ["studio", "shortlist", "quotation"] as con
 export type ClientReviewSource = (typeof CLIENT_REVIEW_SOURCES)[number];
 
 export const CLIENT_WORKSPACE_SECTIONS = [
+  "shortlist",
   "overview",
   "strategy",
   "creators",
@@ -15,11 +16,13 @@ export const CLIENT_WORKSPACE_SECTIONS = [
 
 export type ClientWorkspaceSectionId = (typeof CLIENT_WORKSPACE_SECTIONS)[number];
 
+/** Primary nav: Shortlist → Your Selection → Commercial → Campaign → Overview (summary, not a journey stage). */
 export const CLIENT_WORKSPACE_JOURNEY_SECTIONS = [
-  "overview",
+  "shortlist",
   "creators",
   "commercial",
   "approval",
+  "overview",
 ] as const satisfies readonly ClientWorkspaceSectionId[];
 
 export const CLIENT_REVIEW_STATUSES = [
@@ -82,7 +85,8 @@ export const CLIENT_REVIEW_COOKIE = "tw_client_review";
 export const CLIENT_REVIEW_LINK_MISSING_MESSAGE = "Generate the Client Workspace link first.";
 
 export const CLIENT_WORKSPACE_SECTION_LABEL: Record<ClientWorkspaceSectionId, string> = {
-  overview: "Shortlist",
+  shortlist: "Shortlist",
+  overview: "Overview",
   strategy: "Strategy",
   creators: "Your Selection",
   content: "Content Plan",

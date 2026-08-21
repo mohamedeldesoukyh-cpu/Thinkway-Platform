@@ -9,7 +9,7 @@ export function ClientReviewEntry({
   entry,
   reviewId,
   token,
-  landingSection = "overview",
+  landingSection = "shortlist",
 }: {
   entry: ClientWorkspaceEntry;
   reviewId: string;
