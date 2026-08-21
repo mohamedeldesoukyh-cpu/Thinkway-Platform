@@ -77,10 +77,12 @@ export function CreatorsWorkspace({
   const selection = sharedSelection;
   const explore = intent === "explore";
   const confirmed = Boolean(view.journey?.selectionConfirmed);
-  const canSelect = shortlistCreatorSelectEnabled({
-    canDecide: view.canDecide,
-    selectionConfirmed: confirmed,
-  });
+  const canSelect =
+    explore &&
+    shortlistCreatorSelectEnabled({
+      canDecide: view.canDecide,
+      selectionConfirmed: confirmed,
+    });
   const roster = explore
     ? view.creators
     : yourSelectionRoster(view.creators, selection, {
@@ -215,9 +217,8 @@ export function CreatorsWorkspace({
           <p className="ck">Creator shortlist</p>
           <h2>What creators does Thinkway recommend?</h2>
           <p className="note">
-            This is the creator pool for your campaign. Select any creator here, including those
-            still waiting on pricing. Use Select all, Clear, and Approve Selected Creators in the
-            calculator.
+            This is the creator pool for your campaign. Select the creators you want here, including
+            those still waiting on pricing. Approve Selected Creators moves them to Your Selection.
           </p>
         </div>
       ) : (
@@ -226,20 +227,30 @@ export function CreatorsWorkspace({
           <h2>{confirmed ? "Client Approved creators" : "Creators you have selected"}</h2>
           <p className="note">
             {confirmed
-              ? "These Client Approved creators stay in your selection. Priced creators are included in the current quotation. Unpriced creators remain as Pricing required."
-              : "Select creators on Shortlist or here. You can include priced and unpriced creators. Approve Selected Creators locks this roster — it is not quotation approval."}
+              ? "These Client Approved creators are locked in Your Selection. Continue to Commercial to review Cost, Agency Fees, and Total Investment. This is not quotation approval."
+              : "Select creators on Shortlist, then Approve Selected Creators to move them here."}
           </p>
         </div>
       )}
-      <ProposalSummaryCard
-        view={view}
-        token={token}
-        selection={selection}
-        variant="bar"
-        showBulkControls
-        onSelectAll={() => bulk("accepted")}
-        onClear={() => bulk("in_review")}
-      />
+      {explore ? (
+        <ProposalSummaryCard
+          view={view}
+          token={token}
+          selection={selection}
+          variant="bar"
+          showBulkControls
+          onSelectAll={() => bulk("accepted")}
+          onClear={() => bulk("in_review")}
+        />
+      ) : (
+        <ProposalSummaryCard
+          view={view}
+          token={token}
+          selection={selection}
+          variant="bar"
+          showBulkControls={false}
+        />
+      )}
       {explore ? (
         <div className="toolbar">
           <div className="segs">
@@ -262,9 +273,7 @@ export function CreatorsWorkspace({
           ? `${rosterHeadline(view.creators.length)}. Select the creators you want, then approve the selection. This shortlist stays available even after creators are quoted.`
           : confirmed
             ? `${rosterHeadline(roster.length)} Client Approved.`
-            : roster.length > 0
-              ? `${rosterHeadline(roster.length)} selected. Approve here to lock Your Selection.`
-              : "Select creators on Shortlist or use Select all. Priced and unpriced creators can both be selected."}
+            : "Select creators on Shortlist, then Approve Selected Creators to move them to Your Selection."}
       </p>
 
       <div className="layout">

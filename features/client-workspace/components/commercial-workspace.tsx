@@ -286,7 +286,7 @@ export function CommercialWorkspace({
         <div className="card">
           <p className="ck">Commercial</p>
           <h2>No creators selected yet</h2>
-          <p className="note">Select and approve creators on Shortlist and Your Selection to build this commercial view.</p>
+          <p className="note">Select creators on Shortlist and Approve Selected Creators to build this commercial view.</p>
         </div>
       ) : null}
 

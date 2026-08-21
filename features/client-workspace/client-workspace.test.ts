@@ -3289,14 +3289,14 @@ test("Shortlist is the select page until the client approves the selection", () 
   );
 });
 
-test("Your Selection shows selected creators and the frozen roster after approval", () => {
+test("Your Selection is empty until Approve Selected Creators moves the roster there", () => {
   const creators = [
     { creatorId: "a", displayName: "A", selection: "accepted" as const, contentExamples: [] },
     { creatorId: "b", displayName: "B", selection: "in_review" as const, contentExamples: [] },
     { creatorId: "c", displayName: "C", selection: "in_review" as const, contentExamples: [] },
   ];
   const live = yourSelectionRoster(creators as never, { a: "accepted", b: "in_review", c: "in_review" });
-  assert.deepEqual(live.map((creator) => creator.creatorId), ["a"]);
+  assert.deepEqual(live.map((creator) => creator.creatorId), []);
   const frozen = yourSelectionRoster(creators as never, { a: "accepted", b: "accepted", c: "in_review" }, {
     selectionConfirmed: true,
     clientApprovedCreatorIds: ["a"],
@@ -3305,9 +3305,10 @@ test("Your Selection shows selected creators and the frozen roster after approva
   assert.equal(frozen.some((creator) => creator.creatorId === "b"), false);
 });
 
-test("Approve Selected Creators opens Commercial, not a second approval engine", () => {
-  assert.equal(AFTER_CREATOR_APPROVAL_SECTION, "commercial");
-  assert.equal(CLIENT_WORKSPACE_SECTION_LABEL[AFTER_CREATOR_APPROVAL_SECTION], "Commercial");
+test("Approve Selected Creators opens Your Selection, then the client continues to Commercial", () => {
+  assert.equal(AFTER_CREATOR_APPROVAL_SECTION, "creators");
+  assert.equal(CLIENT_WORKSPACE_SECTION_LABEL[AFTER_CREATOR_APPROVAL_SECTION], "Your Selection");
+  assert.equal(CLIENT_WORKSPACE_SECTION_LABEL.commercial, "Commercial");
 });
 
 const pool = [
