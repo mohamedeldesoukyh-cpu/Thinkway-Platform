@@ -45,7 +45,6 @@ export function CommercialWorkspace({
 
   return (
     <>
-      {token ? <CommercialQuotationDelivery view={view} token={token} /> : null}
       <div className="card">
         <p className="ck">Campaign investment</p>
         <h2 className={commercial.totalInvestment > 0 ? "cm-total" : "cm-total tbc"}>
@@ -331,6 +330,7 @@ export function CommercialWorkspace({
           </div>
         );
       })()}
+      {token ? <CommercialQuotationDelivery view={view} token={token} /> : null}
     </>
   );
 }
