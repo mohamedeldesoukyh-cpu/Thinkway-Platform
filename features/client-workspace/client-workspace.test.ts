@@ -188,31 +188,12 @@ test("client-safe fit copy strips internal diagnostics", () => {
   );
 });
 
-test("creator card description prefers quotation service description", () => {
+test("creator card description shows only quotation service description", () => {
   assert.equal(
-    clientCreatorCardDescription({
-      serviceDescription: "1× IG Story with boosting",
-      bio: "Cairo-based beauty creator covering skincare launches.",
-    }),
+    clientCreatorCardDescription({ serviceDescription: "1× IG Story with boosting" }),
     "1× IG Story with boosting"
   );
-  assert.equal(
-    clientCreatorCardDescription({ bio: "Cairo-based beauty creator covering skincare launches." }),
-    "Cairo-based beauty creator covering skincare launches."
-  );
-  assert.equal(
-    clientCreatorCardDescription({
-      bio: "Lifestyle creator covering beauty and fitness. ECI score 91.",
-      fitExplanation: "Should not win when bio exists.",
-    }),
-    "Lifestyle creator covering beauty and fitness. score 91."
-  );
-  assert.equal(
-    clientCreatorCardDescription({
-      fitExplanation: "Strong audience alignment with Egyptian consumers. ECI score 91.",
-    }),
-    "Strong audience alignment with Egyptian consumers."
-  );
+  assert.equal(clientCreatorCardDescription({ serviceDescription: "   " }), undefined);
   assert.equal(clientCreatorCardDescription({}), undefined);
 });
 
@@ -3392,14 +3373,14 @@ test("Shortlist is the select page until the client approves the selection", () 
   );
 });
 
-test("Your Selection shows selected creators, then the frozen roster after approval", () => {
+test("Your Selection stays empty until Approve Selected Creators, then shows the frozen roster", () => {
   const creators = [
     { creatorId: "a", displayName: "A", selection: "accepted" as const, contentExamples: [] },
     { creatorId: "b", displayName: "B", selection: "in_review" as const, contentExamples: [] },
     { creatorId: "c", displayName: "C", selection: "in_review" as const, contentExamples: [] },
   ];
   const live = yourSelectionRoster(creators as never, { a: "accepted", b: "in_review", c: "in_review" });
-  assert.deepEqual(live.map((creator) => creator.creatorId), ["a"]);
+  assert.deepEqual(live.map((creator) => creator.creatorId), []);
   const frozen = yourSelectionRoster(creators as never, { a: "accepted", b: "accepted", c: "in_review" }, {
     selectionConfirmed: true,
     clientApprovedCreatorIds: ["a"],

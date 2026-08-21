@@ -15,12 +15,10 @@ import type { ClientCreatorSelectionState } from "../constants";
 import { deliverablesLabel } from "../deliverables";
 import { clientCreatorIdentity, DELIVERABLES_TO_BE_CONFIRMED, formatCompactCount, formatHandleLabel, formatLocation, formatMatchPercent, NOT_AVAILABLE, TO_BE_CONFIRMED, clientCreatorCardDescription } from "../format";
 import {
-  ADD_FROM_SHORTLIST_LABEL,
   clientStatusDisplay,
   isPricedClientInvestment,
   isValidClientCommercialApproval,
   PRICE_PENDING_LABEL,
-  REMOVE_FROM_SELECTION_LABEL,
   shortlistCreatorSelectEnabled,
   thinkwayStatusLabel,
 } from "../selection-flow";
@@ -79,10 +77,12 @@ export function CreatorsWorkspace({
   const selection = sharedSelection;
   const explore = intent === "explore";
   const confirmed = Boolean(view.journey?.selectionConfirmed);
-  const canSelect = shortlistCreatorSelectEnabled({
-    canDecide: view.canDecide,
-    selectionConfirmed: confirmed,
-  });
+  const canSelect =
+    explore &&
+    shortlistCreatorSelectEnabled({
+      canDecide: view.canDecide,
+      selectionConfirmed: confirmed,
+    });
   const roster = explore
     ? view.creators
     : yourSelectionRoster(view.creators, selection, {
@@ -217,37 +217,32 @@ export function CreatorsWorkspace({
           <p className="ck">Creator shortlist</p>
           <h2>What creators does Thinkway recommend?</h2>
           <p className="note">
-            This is the creator pool for your campaign. Select creators here to add them to Your
-            Selection. Removing a creator from Your Selection keeps them on this shortlist.
+            This is the creator pool for your campaign. Select the creators you want here, including
+            those still waiting on pricing. Approve Selected Creators moves them to Your Selection.
           </p>
         </div>
       ) : (
         <div className="card" style={{ marginBottom: 16 }}>
           <p className="ck">Your Selection</p>
-          <h2>{confirmed ? "Client Approved creators" : "Creators you have selected"}</h2>
+          <h2>{confirmed ? "Client Approved creators" : "Your Selection"}</h2>
           <p className="note">
             {confirmed
               ? "These Client Approved creators are included in the current quotation. Review Cost, Agency Fees, and Total Investment on Commercial. This is not final quotation approval."
-              : "Remove a creator to keep them on Shortlist, or add more from Shortlist. Approve Selected Creators includes this roster in the current quotation and opens Commercial."}
+              : "Select creators on Shortlist, then Approve Selected Creators. They will appear here after that approval."}
           </p>
         </div>
       )}
-      <ProposalSummaryCard
-        view={view}
-        token={token}
-        selection={selection}
-        variant="bar"
-        showBulkControls={!confirmed}
-        onSelectAll={() => bulk("accepted")}
-        onClear={() => bulk("in_review")}
-      />
-      {explore || confirmed ? null : (
-        <div className="sumbar-cta" style={{ marginBottom: 12 }}>
-          <button type="button" className="btn sec" onClick={() => goToSection("shortlist")}>
-            {ADD_FROM_SHORTLIST_LABEL}
-          </button>
-        </div>
-      )}
+      {explore || confirmed ? (
+        <ProposalSummaryCard
+          view={view}
+          token={token}
+          selection={selection}
+          variant="bar"
+          showBulkControls={explore && !confirmed}
+          onSelectAll={() => bulk("accepted")}
+          onClear={() => bulk("in_review")}
+        />
+      ) : null}
       {explore ? (
         <div className="toolbar">
           <div className="segs">
@@ -270,9 +265,7 @@ export function CreatorsWorkspace({
           ? `${rosterHeadline(view.creators.length)}. Select the creators you want, then approve the selection. This shortlist stays available even after creators are quoted.`
           : confirmed
             ? `${rosterHeadline(roster.length)} Client Approved.`
-            : roster.length > 0
-              ? `${rosterHeadline(roster.length)} selected. Remove any creator to keep them on Shortlist.`
-              : "Select creators on Shortlist. They will appear here."}
+            : "Select creators on Shortlist, then Approve Selected Creators. They will appear here after that approval."}
       </p>
 
       <div className="layout">
@@ -285,9 +278,7 @@ export function CreatorsWorkspace({
             const location = formatLocation(creator.city, creator.country);
             const sub = [formatHandleLabel(identity.handle), location].filter(Boolean).join(" · ");
             const state = selection[creator.creatorId] ?? creator.selection;
-            const description = clientCreatorCardDescription(
-              brief?.creatorId === creator.creatorId ? { ...creator, ...brief } : creator
-            );
+            const description = clientCreatorCardDescription(creator);
             return (
             <div
               key={creator.creatorId}
@@ -303,16 +294,6 @@ export function CreatorsWorkspace({
                     aria-label={`Select ${creator.displayName}`}
                   />
                 </label>
-              ) : null}
-              {!explore && canSelect ? (
-                <button
-                  type="button"
-                  className="btn sec"
-                  style={{ margin: "8px 8px 0 0" }}
-                  onClick={() => toggleChecked(creator, false)}
-                >
-                  {REMOVE_FROM_SELECTION_LABEL}
-                </button>
               ) : null}
               <button
                 type="button"
@@ -408,7 +389,9 @@ export function CreatorsWorkspace({
             <p className="unavailable">
               {explore
                 ? "No creators match these filters."
-                : "Select creators on Shortlist. They will appear here."}
+                : confirmed
+                  ? "No Client Approved creators in this roster."
+                  : "Select creators on Shortlist, then Approve Selected Creators. They will appear here after that approval."}
             </p>
           ) : null}
         </div>

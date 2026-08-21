@@ -126,18 +126,8 @@ export function clientSafeFitCopy(raw: string | undefined): string | undefined {
 
 export function clientCreatorCardDescription(creator: {
   serviceDescription?: string;
-  bio?: string;
-  matchExplanation?: string;
-  fitExplanation?: string;
-  audienceHighlight?: string;
 }): string | undefined {
-  return (
-    clientSafeParagraph(creator.serviceDescription) ||
-    clientSafeParagraph(creator.bio) ||
-    clientSafeFitCopy(creator.matchExplanation) ||
-    clientSafeFitCopy(creator.fitExplanation) ||
-    clientSafeFitCopy(creator.audienceHighlight)
-  );
+  return clientSafeParagraph(creator.serviceDescription);
 }
 
 export function clientFacingAllocationNote(note?: string): string | undefined {

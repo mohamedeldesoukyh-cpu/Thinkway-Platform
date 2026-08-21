@@ -20,17 +20,14 @@ export function acceptedCreators(
   return creators.filter((creator) => isSelectedForCalculator(selection[creator.creatorId] ?? creator.selection));
 }
 
-/** Your Selection shows live Shortlist picks, then the frozen Client Approved roster. */
+/** Your Selection stays empty until Approve Selected Creators, then shows the frozen roster. */
 export function yourSelectionRoster(
   creators: ClientCreatorCard[],
   selection: Record<string, ClientCreatorSelectionState>,
   input?: { selectionConfirmed?: boolean; clientApprovedCreatorIds?: string[] | null }
 ): ClientCreatorCard[] {
-  return acceptedCreators(
-    creators,
-    selection,
-    input?.selectionConfirmed ? input.clientApprovedCreatorIds : null
-  );
+  if (!input?.selectionConfirmed) return [];
+  return acceptedCreators(creators, selection, input.clientApprovedCreatorIds);
 }
 
 export function contentRowsForSelection(
