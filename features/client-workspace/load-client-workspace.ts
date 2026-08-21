@@ -41,6 +41,7 @@ import type {
   ClientWorkspaceView,
 } from "./types";
 import { visibleClientWorkspaceSections } from "./visible-sections";
+import { loadSavedClientEmailsForQuotation } from "./client-quotation-delivery";
 import {
   isSelectionConfirmed,
   mergeSnapshotsForClientView,
@@ -468,6 +469,11 @@ export async function loadClientWorkspace(
     clientApprovedCreatorIds: freezeSnapshot?.clientSelection?.creatorIds,
   });
   view.journey = { ...journey, ...flags };
+  view.visibleSections = visibleClientWorkspaceSections(view);
+  view.clientEmails = await loadSavedClientEmailsForQuotation(
+    (service ?? db) as never,
+    view.journey.quotationId
+  );
   view.stageDiff =
     picked.historical || shortlistApproved?.status !== "approved"
       ? null

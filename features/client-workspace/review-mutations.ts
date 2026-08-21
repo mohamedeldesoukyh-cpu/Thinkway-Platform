@@ -23,6 +23,7 @@ import {
 } from "./status";
 import { clientApprovalSideEffects, canMutateClientReviewFromBoundReview, journeyCanonicalReviewId, pickReviewForDecision } from "./journey-state";
 import {
+  canOpenCommercialWorkspace,
   isPricedClientInvestment,
   isSelectionConfirmed,
   selectionCalculator,
@@ -33,6 +34,12 @@ import {
 } from "./selection-flow";
 import { logQuotationLifecycleEvent } from "@/lib/commercial-sync/audit";
 import { updateQuotationHeaderRecord } from "@/lib/services/quotations/repositories/quotation-repository";
+import { assertOutboundEmailReady, sendEmail } from "@/lib/email/provider";
+import { wrapThinkwayEmailDocument, appendThinkwayEmailPlainTextFooter, escapeEmailHtml } from "@/lib/email/layout";
+import { headers } from "next/headers";
+
+import { renderExistingQuotationPdf } from "./client-quotation-pdf";
+import { normalizeClientDeliveryEmail } from "./client-quotation-delivery";
 
 function db(): SupabaseClient {
   const service = tryCreateServiceRoleClient().client;
@@ -639,4 +646,74 @@ export async function acknowledgeClientUpdate(input: { token: string }): Promise
 
 export function mapReview(row: unknown) {
   return mapClientReviewRow(row as Parameters<typeof mapClientReviewRow>[0]);
+}
+
+export async function sendClientQuotationEmail(input: {
+  token: string;
+  email: string;
+}): Promise<{ ok: boolean; message: string }> {
+  const gate = await requireInteractiveReview(input.token);
+  if (!gate.ok) return gate;
+  if (
+    !canOpenCommercialWorkspace({
+      selectionConfirmed: isSelectionConfirmed(gate.review.sourceSnapshot),
+      historical: false,
+      quotationStage: gate.review.status === "approved" ? "approved" : undefined,
+    })
+  ) {
+    return { ok: false, message: "Approve selected creators before sending the quotation." };
+  }
+  const quotationId = gate.review.quotationId;
+  if (!quotationId) return { ok: false, message: "No quotation is available to send." };
+  const email = normalizeClientDeliveryEmail(input.email);
+  if (!email) return { ok: false, message: "Enter a valid email address." };
+  const mailReady = assertOutboundEmailReady();
+  if (!mailReady.ok) return { ok: false, message: mailReady.message };
+  const headerList = await headers();
+  const rendered = await renderExistingQuotationPdf({
+    supabase: db() as never,
+    quotationId,
+    host: headerList.get("x-forwarded-host") ?? headerList.get("host"),
+    proto: headerList.get("x-forwarded-proto"),
+  });
+  if (!rendered.ok) return { ok: false, message: rendered.message };
+  const campaignName = gate.review.campaignName || gate.review.brandName || "Campaign quotation";
+  const html = wrapThinkwayEmailDocument({
+    documentTitle: "Campaign quotation",
+    documentKind: "Quotation",
+    bodyHtml: `
+      <p style="margin:0 0 12px;">Hello,</p>
+      <p style="margin:0 0 16px;">The quotation for ${escapeEmailHtml(campaignName)} is attached.</p>
+    `,
+  });
+  const sent = await sendEmail({
+    to: [{ email }],
+    subject: `Quotation — ${campaignName}`,
+    html,
+    text: appendThinkwayEmailPlainTextFooter([
+      "Hello,",
+      "",
+      `The quotation for ${campaignName} is attached.`,
+    ]),
+    attachments: [
+      {
+        filename: rendered.filename,
+        mimeType: "application/pdf",
+        content: rendered.buffer,
+      },
+    ],
+  });
+  if (!sent.ok) return { ok: false, message: sent.error };
+  try {
+    await db().from("campaign_client_review_events" as never).insert({
+      review_id: gate.review.id,
+      event_type: "quotation_emailed",
+      actor_kind: "client",
+      actor_label: gate.review.clientLabel ?? "Client",
+      payload: { email, quotationId },
+    } as never);
+  } catch {
+    /* send already succeeded */
+  }
+  return { ok: true, message: `Quotation sent to ${email}.` };
 }

@@ -38,7 +38,9 @@ export default async function ClientWorkspaceSectionPage({ params, searchParams 
   ) {
     return <InvalidReviewLink message={loaded.ok ? undefined : loaded.message} />;
   }
-  const resolved = resolveClientWorkspaceSection(section as ClientWorkspaceSectionId);
+  const resolved = resolveClientWorkspaceSection(section as ClientWorkspaceSectionId, {
+    canOpenCommercial: loaded.view.visibleSections.includes("commercial"),
+  });
   if (!isRenderableClientWorkspaceSection(resolved, loaded.view.visibleSections)) {
     notFound();
   }

@@ -18,7 +18,6 @@ import {
   AFTER_CREATOR_APPROVAL_SECTION,
   APPROVE_SELECTED_CREATORS_LABEL,
   CONFIRM_CREATORS_SUPPORTING_TEXT,
-  CONTINUE_TO_COMMERCIAL_LABEL,
   UNPRICED_INCLUDED_MESSAGE,
   buildCreatorApprovalConfirmation,
   canEnableApproveSelectedCreators,
@@ -248,9 +247,6 @@ export function ProposalSummaryCard({
         ) : confirmed ? (
           <div className="sumbar-cta">
             <span className="sc ok">Client Approved</span>
-            <button type="button" className="btn pri" onClick={() => goToSection("commercial")}>
-              {CONTINUE_TO_COMMERCIAL_LABEL}
-            </button>
           </div>
         ) : null}
         {error ? <p className="sumbar-msg">{error}</p> : emptyHint ? <p className="sumbar-msg">{emptyHint}</p> : null}

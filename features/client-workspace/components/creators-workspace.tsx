@@ -15,10 +15,12 @@ import type { ClientCreatorSelectionState } from "../constants";
 import { deliverablesLabel } from "../deliverables";
 import { clientCreatorIdentity, DELIVERABLES_TO_BE_CONFIRMED, formatCompactCount, formatHandleLabel, formatLocation, formatMatchPercent, NOT_AVAILABLE, TO_BE_CONFIRMED } from "../format";
 import {
+  ADD_FROM_SHORTLIST_LABEL,
   clientStatusDisplay,
   isPricedClientInvestment,
   isValidClientCommercialApproval,
   PRICE_PENDING_LABEL,
+  REMOVE_FROM_SELECTION_LABEL,
   shortlistCreatorSelectEnabled,
   thinkwayStatusLabel,
 } from "../selection-flow";
@@ -64,7 +66,7 @@ export function CreatorsWorkspace({
   intent?: "explore" | "decide";
 }) {
   const router = useRouter();
-  const { selection: sharedSelection, setCreatorState, setCreatorStates } = useClientWorkspaceState();
+  const { selection: sharedSelection, setCreatorState, setCreatorStates, goToSection } = useClientWorkspaceState();
   const [pending, startTransition] = useTransition();
   const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]["id"]>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -77,12 +79,10 @@ export function CreatorsWorkspace({
   const selection = sharedSelection;
   const explore = intent === "explore";
   const confirmed = Boolean(view.journey?.selectionConfirmed);
-  const canSelect =
-    explore &&
-    shortlistCreatorSelectEnabled({
-      canDecide: view.canDecide,
-      selectionConfirmed: confirmed,
-    });
+  const canSelect = shortlistCreatorSelectEnabled({
+    canDecide: view.canDecide,
+    selectionConfirmed: confirmed,
+  });
   const roster = explore
     ? view.creators
     : yourSelectionRoster(view.creators, selection, {
@@ -217,8 +217,8 @@ export function CreatorsWorkspace({
           <p className="ck">Creator shortlist</p>
           <h2>What creators does Thinkway recommend?</h2>
           <p className="note">
-            This is the creator pool for your campaign. Select the creators you want here, including
-            those still waiting on pricing. Approve Selected Creators moves them to Your Selection.
+            This is the creator pool for your campaign. Select creators here to add them to Your
+            Selection. Removing a creator from Your Selection keeps them on this shortlist.
           </p>
         </div>
       ) : (
@@ -227,29 +227,26 @@ export function CreatorsWorkspace({
           <h2>{confirmed ? "Client Approved creators" : "Creators you have selected"}</h2>
           <p className="note">
             {confirmed
-              ? "These Client Approved creators are locked in Your Selection. Continue to Commercial to review Cost, Agency Fees, and Total Investment. This is not quotation approval."
-              : "These are the creators you selected on Shortlist. Approve Selected Creators on Shortlist to lock this roster, then continue to Commercial."}
+              ? "These Client Approved creators are included in the current quotation. Review Cost, Agency Fees, and Total Investment on Commercial. This is not final quotation approval."
+              : "Remove a creator to keep them on Shortlist, or add more from Shortlist. Approve Selected Creators includes this roster in the current quotation and opens Commercial."}
           </p>
         </div>
       )}
-      {explore ? (
-        <ProposalSummaryCard
-          view={view}
-          token={token}
-          selection={selection}
-          variant="bar"
-          showBulkControls
-          onSelectAll={() => bulk("accepted")}
-          onClear={() => bulk("in_review")}
-        />
-      ) : (
-        <ProposalSummaryCard
-          view={view}
-          token={token}
-          selection={selection}
-          variant="bar"
-          showBulkControls={false}
-        />
+      <ProposalSummaryCard
+        view={view}
+        token={token}
+        selection={selection}
+        variant="bar"
+        showBulkControls={!confirmed}
+        onSelectAll={() => bulk("accepted")}
+        onClear={() => bulk("in_review")}
+      />
+      {explore || confirmed ? null : (
+        <div className="sumbar-cta" style={{ marginBottom: 12 }}>
+          <button type="button" className="btn sec" onClick={() => goToSection("shortlist")}>
+            {ADD_FROM_SHORTLIST_LABEL}
+          </button>
+        </div>
       )}
       {explore ? (
         <div className="toolbar">
@@ -274,7 +271,7 @@ export function CreatorsWorkspace({
           : confirmed
             ? `${rosterHeadline(roster.length)} Client Approved.`
             : roster.length > 0
-              ? `${rosterHeadline(roster.length)} selected from Shortlist.`
+              ? `${rosterHeadline(roster.length)} selected. Remove any creator to keep them on Shortlist.`
               : "Select creators on Shortlist. They will appear here."}
       </p>
 
@@ -303,6 +300,16 @@ export function CreatorsWorkspace({
                     aria-label={`Select ${creator.displayName}`}
                   />
                 </label>
+              ) : null}
+              {!explore && canSelect ? (
+                <button
+                  type="button"
+                  className="btn sec"
+                  style={{ margin: "8px 8px 0 0" }}
+                  onClick={() => toggleChecked(creator, false)}
+                >
+                  {REMOVE_FROM_SELECTION_LABEL}
+                </button>
               ) : null}
               <button
                 type="button"

@@ -106,6 +106,7 @@ import {
   shortlistCreatorSelectEnabled,
   AFTER_CREATOR_APPROVAL_SECTION,
   UNPRICED_INCLUDED_MESSAGE,
+  canOpenCommercialWorkspace,
   buildCreatorApprovalConfirmation,
   selectAllCreatorStates,
   clearCreatorSelectionStates,
@@ -117,6 +118,7 @@ import {
   originalInvestmentForDisplay,
 } from "./quotation-client-facing";
 import { overlayQuotationDetailOnCreators } from "./quotation-client-overlay";
+import { normalizeClientDeliveryEmail } from "./client-quotation-delivery";
 import {
   isRenderableClientWorkspaceSection,
   resolveClientWorkspaceSection,
@@ -461,6 +463,7 @@ test("frozen snapshot commercial uses per-creator quotation values, not a second
 });
 
 test("client primary navigation is Shortlist, Your Selection, Commercial, Campaign, Overview", () => {
+  const beforeApproval = ["shortlist", "creators", "approval", "overview"];
   const expected = ["shortlist", "creators", "commercial", "approval", "overview"];
   assert.deepEqual([...CLIENT_WORKSPACE_JOURNEY_SECTIONS], expected);
   const shortlistView = {
@@ -472,7 +475,7 @@ test("client primary navigation is Shortlist, Your Selection, Commercial, Campai
     quotation: undefined,
     strategyBody: undefined,
   };
-  assert.deepEqual(visibleClientWorkspaceSections(shortlistView as never), expected);
+  assert.deepEqual(visibleClientWorkspaceSections(shortlistView as never), beforeApproval);
 
   const quotationView = {
     review: { source: "quotation" as const },
@@ -483,7 +486,13 @@ test("client primary navigation is Shortlist, Your Selection, Commercial, Campai
     quotation: { id: "q1", serialNumber: "QT-1", name: "Q", version: "1", lines: [] },
     strategyBody: undefined,
   };
-  assert.deepEqual(visibleClientWorkspaceSections(quotationView as never), expected);
+  assert.deepEqual(visibleClientWorkspaceSections(quotationView as never), beforeApproval);
+
+  const frozenView = {
+    ...quotationView,
+    journey: { selectionConfirmed: true, quotationStage: "sent_for_approval" },
+  };
+  assert.deepEqual(visibleClientWorkspaceSections(frozenView as never), expected);
 
   const emptyView = {
     review: { source: "quotation" as const },
@@ -494,7 +503,7 @@ test("client primary navigation is Shortlist, Your Selection, Commercial, Campai
     quotation: { id: "q1", serialNumber: "QT-1", name: "Q", version: "1", lines: [] },
     strategyBody: undefined,
   };
-  assert.deepEqual(visibleClientWorkspaceSections(emptyView as never), expected);
+  assert.deepEqual(visibleClientWorkspaceSections(emptyView as never), beforeApproval);
   assert.equal(CLIENT_WORKSPACE_SECTION_LABEL.shortlist, "Shortlist");
   assert.equal(CLIENT_WORKSPACE_SECTION_LABEL.creators, "Your Selection");
   assert.equal(CLIENT_WORKSPACE_SECTION_LABEL.commercial, "Commercial");
@@ -3305,9 +3314,9 @@ test("Your Selection shows selected creators, then the frozen roster after appro
   assert.equal(frozen.some((creator) => creator.creatorId === "b"), false);
 });
 
-test("Approve Selected Creators opens Your Selection, then the client continues to Commercial", () => {
-  assert.equal(AFTER_CREATOR_APPROVAL_SECTION, "creators");
-  assert.equal(CLIENT_WORKSPACE_SECTION_LABEL[AFTER_CREATOR_APPROVAL_SECTION], "Your Selection");
+test("Approve Selected Creators opens Commercial and does not skip ahead before that freeze", () => {
+  assert.equal(AFTER_CREATOR_APPROVAL_SECTION, "commercial");
+  assert.equal(CLIENT_WORKSPACE_SECTION_LABEL[AFTER_CREATOR_APPROVAL_SECTION], "Commercial");
   assert.equal(CLIENT_WORKSPACE_SECTION_LABEL.commercial, "Commercial");
 });
 
@@ -3577,6 +3586,32 @@ test("AB: navigation order is Shortlist → Your Selection → Commercial → Ca
     "approval",
     "overview",
   ]);
+});
+
+test("AC: Commercial stays closed until Approve Selected Creators", () => {
+  assert.equal(canOpenCommercialWorkspace({ selectionConfirmed: false }), false);
+  assert.equal(canOpenCommercialWorkspace({ selectionConfirmed: true }), true);
+  assert.equal(canOpenCommercialWorkspace({ historical: true }), true);
+  assert.equal(canOpenCommercialWorkspace({ quotationStage: "approved" }), true);
+  assert.equal(
+    resolveClientWorkspaceSection("commercial", { canOpenCommercial: false }),
+    "creators"
+  );
+  assert.equal(
+    resolveClientWorkspaceSection("quotation", { canOpenCommercial: false }),
+    "creators"
+  );
+  assert.equal(
+    resolveClientWorkspaceSection("commercial", { canOpenCommercial: true }),
+    "commercial"
+  );
+});
+
+test("AD: client quotation email must be a valid address", () => {
+  assert.equal(normalizeClientDeliveryEmail("saved@client.com"), "saved@client.com");
+  assert.equal(normalizeClientDeliveryEmail("  extra@client.com  "), "extra@client.com");
+  assert.equal(normalizeClientDeliveryEmail("not-an-email"), null);
+  assert.equal(normalizeClientDeliveryEmail(""), null);
 });
 
 

@@ -463,6 +463,7 @@ export type ClientWorkspaceView = {
   canDecide: boolean;
   journey?: ClientWorkspaceJourney;
   stageDiff?: ClientStageDiff | null;
+  clientEmails?: string[];
   clientUpdate?: {
     updatedAt: string;
     items: string[];

@@ -16,6 +16,7 @@ import {
   decideClientReview,
   removeUnpricedSelectedCreators,
   requestClientChanges,
+  sendClientQuotationEmail,
   setBulkCreatorSelection,
   setCreatorSelection,
   acknowledgeClientUpdate,
@@ -79,6 +80,13 @@ export async function decideReviewAction(input: {
 
 export async function acknowledgeReviewUpdateAction(input: { token: string }): Promise<{ ok: boolean }> {
   return acknowledgeClientUpdate(input);
+}
+
+export async function sendClientQuotationAction(input: {
+  token: string;
+  email: string;
+}): Promise<{ ok: boolean; message: string }> {
+  return sendClientQuotationEmail(input);
 }
 
 export async function loadCreatorBriefAction(input: {

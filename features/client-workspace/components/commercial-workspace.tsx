@@ -17,6 +17,7 @@ import {
 import { allocationSlices, MIX_BAR_COLORS, rosterHeadline } from "../presentation";
 import type { ClientWorkspaceView } from "../types";
 import { useClientWorkspaceState } from "./client-workspace-state";
+import { CommercialQuotationDelivery } from "./commercial-quotation-delivery";
 import { ReviewAvatar } from "./review-avatar";
 import { ReviewPlatformMark } from "./review-platform-mark";
 
@@ -44,6 +45,7 @@ export function CommercialWorkspace({
 
   return (
     <>
+      {token ? <CommercialQuotationDelivery view={view} token={token} /> : null}
       <div className="card">
         <p className="ck">Campaign investment</p>
         <h2 className={commercial.totalInvestment > 0 ? "cm-total" : "cm-total tbc"}>

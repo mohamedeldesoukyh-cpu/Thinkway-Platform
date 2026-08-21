@@ -30,13 +30,14 @@ export const APPROVE_SELECTED_CREATORS_LABEL = "Approve Selected Creators";
 /** Same freeze engine as Approve Selected Creators — not quotation approval. */
 export const CONFIRM_CREATORS_LABEL = APPROVE_SELECTED_CREATORS_LABEL;
 export const CONFIRM_CREATORS_SUPPORTING_TEXT =
-  "Approve the creators you want to move into Your Selection. This is not quotation approval.";
+  "Approve the creators you want included in the current quotation. This is not final quotation approval.";
 export const APPROVE_FINAL_QUOTATION_LABEL = "Approve Final Quotation";
 /** Header CTA only — navigates to Your Selection. Never freezes or approves. */
 export const REVIEW_YOUR_SELECTION_LABEL = "Review Your Selection";
-export const CONTINUE_TO_COMMERCIAL_LABEL = "Continue to Commercial";
-/** After Approve Selected Creators, open Your Selection — not Commercial. */
-export const AFTER_CREATOR_APPROVAL_SECTION = "creators" as const;
+export const ADD_FROM_SHORTLIST_LABEL = "Add from Shortlist";
+export const REMOVE_FROM_SELECTION_LABEL = "Remove";
+/** After Approve Selected Creators, open Commercial. */
+export const AFTER_CREATOR_APPROVAL_SECTION = "commercial" as const;
 export const UNPRICED_APPROVAL_MESSAGE = "Your selection includes creators without confirmed pricing.";
 export const UNPRICED_INCLUDED_MESSAGE =
   "Only creators with confirmed pricing will be included in the current quotation. Creators without confirmed pricing will remain in your selection and can be quoted later once pricing is available.";
@@ -375,6 +376,16 @@ export function shortlistCreatorSelectEnabled(input: {
   selectionConfirmed: boolean;
 }): boolean {
   return input.canDecide && !input.selectionConfirmed;
+}
+
+export function canOpenCommercialWorkspace(input: {
+  selectionConfirmed?: boolean;
+  historical?: boolean;
+  quotationStage?: string;
+}): boolean {
+  if (input.historical) return true;
+  if (input.quotationStage === "approved") return true;
+  return Boolean(input.selectionConfirmed);
 }
 
 export function selectionChangeAllowed(input: {
