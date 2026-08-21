@@ -228,7 +228,7 @@ export function CreatorsWorkspace({
           <p className="note">
             {confirmed
               ? "These Client Approved creators are locked in Your Selection. Continue to Commercial to review Cost, Agency Fees, and Total Investment. This is not quotation approval."
-              : "Select creators on Shortlist, then Approve Selected Creators to move them here."}
+              : "These are the creators you selected on Shortlist. Approve Selected Creators on Shortlist to lock this roster, then continue to Commercial."}
           </p>
         </div>
       )}
@@ -273,7 +273,9 @@ export function CreatorsWorkspace({
           ? `${rosterHeadline(view.creators.length)}. Select the creators you want, then approve the selection. This shortlist stays available even after creators are quoted.`
           : confirmed
             ? `${rosterHeadline(roster.length)} Client Approved.`
-            : "Select creators on Shortlist, then Approve Selected Creators to move them to Your Selection."}
+            : roster.length > 0
+              ? `${rosterHeadline(roster.length)} selected from Shortlist.`
+              : "Select creators on Shortlist. They will appear here."}
       </p>
 
       <div className="layout">
@@ -388,7 +390,7 @@ export function CreatorsWorkspace({
             <p className="unavailable">
               {explore
                 ? "No creators match these filters."
-                : "Select creators on Shortlist. After you approve the selection, they appear here."}
+                : "Select creators on Shortlist. They will appear here."}
             </p>
           ) : null}
         </div>

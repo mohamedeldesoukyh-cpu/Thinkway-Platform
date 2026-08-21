@@ -3289,14 +3289,14 @@ test("Shortlist is the select page until the client approves the selection", () 
   );
 });
 
-test("Your Selection is empty until Approve Selected Creators moves the roster there", () => {
+test("Your Selection shows selected creators, then the frozen roster after approval", () => {
   const creators = [
     { creatorId: "a", displayName: "A", selection: "accepted" as const, contentExamples: [] },
     { creatorId: "b", displayName: "B", selection: "in_review" as const, contentExamples: [] },
     { creatorId: "c", displayName: "C", selection: "in_review" as const, contentExamples: [] },
   ];
   const live = yourSelectionRoster(creators as never, { a: "accepted", b: "in_review", c: "in_review" });
-  assert.deepEqual(live.map((creator) => creator.creatorId), []);
+  assert.deepEqual(live.map((creator) => creator.creatorId), ["a"]);
   const frozen = yourSelectionRoster(creators as never, { a: "accepted", b: "accepted", c: "in_review" }, {
     selectionConfirmed: true,
     clientApprovedCreatorIds: ["a"],
