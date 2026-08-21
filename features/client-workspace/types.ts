@@ -128,6 +128,7 @@ export type ClientReviewSourceSnapshotCreator = {
   fitExplanation?: string;
   deliverables?: string;
   deliverableItems?: ClientDeliverableItem[];
+  serviceDescription?: string;
   investmentAmount?: number;
   investmentCurrency?: string;
   agencyFeeAmount?: number;
@@ -249,6 +250,7 @@ export type ClientCreatorCard = {
   fitExplanation?: string;
   deliverables?: string;
   deliverableItems?: ClientDeliverableItem[];
+  serviceDescription?: string;
   investmentAmount?: number;
   investmentCurrency?: string;
   agencyFeeAmount?: number;

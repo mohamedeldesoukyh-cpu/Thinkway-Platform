@@ -42,6 +42,7 @@ export function quotationItemSnapshotCreator(
     categories: item.creator_categories?.filter(Boolean) ?? undefined,
     deliverables: formatQuotationItemDeliverables(item),
     deliverableItems: deliverableItems.length > 0 ? deliverableItems : undefined,
+    serviceDescription: item.service_description?.trim() || undefined,
     investmentAmount: price.amount,
     investmentCurrency: price.currency,
     agencyFeeAmount: price.amount

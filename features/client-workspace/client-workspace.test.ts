@@ -188,7 +188,14 @@ test("client-safe fit copy strips internal diagnostics", () => {
   );
 });
 
-test("creator card description uses bio and strips internal copy", () => {
+test("creator card description prefers quotation service description", () => {
+  assert.equal(
+    clientCreatorCardDescription({
+      serviceDescription: "1× IG Story with boosting",
+      bio: "Cairo-based beauty creator covering skincare launches.",
+    }),
+    "1× IG Story with boosting"
+  );
   assert.equal(
     clientCreatorCardDescription({ bio: "Cairo-based beauty creator covering skincare launches." }),
     "Cairo-based beauty creator covering skincare launches."
@@ -2886,12 +2893,14 @@ test("B/C: overlay shows quotation price and exact deliverables", () => {
         investmentCurrency: "EGP",
         deliverables: "1× IG Story",
         deliverableItems: [{ platform: "instagram", type: "story", quantity: 1 }],
+        serviceDescription: "1× IG Story with boosting",
       },
     ],
     { currency: "EGP" }
   );
   assert.equal(overlay[0]!.investmentAmount, 24_000);
   assert.equal(overlay[0]!.deliverables, "1× IG Story");
+  assert.equal(overlay[0]!.serviceDescription, "1× IG Story with boosting");
   assert.equal(isPricedClientInvestment(overlay[0]!.investmentAmount), true);
 });
 
@@ -3155,6 +3164,7 @@ test("quotation item overlay converts line revenue into quotation currency", () 
   assert.equal(overlay[0]!.originalInvestmentAmount, 24_000);
   assert.equal(overlay[0]!.originalInvestmentCurrency, "EGP");
   assert.match(overlay[0]!.deliverables ?? "", /Story/i);
+  assert.equal(overlay[0]!.serviceDescription, "1× IG Story");
 });
 
 test("Approve Selected Creators is enabled for priced and unpriced selections", () => {

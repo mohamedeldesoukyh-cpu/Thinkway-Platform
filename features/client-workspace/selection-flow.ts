@@ -223,6 +223,7 @@ function overlayQuotedCreator(
       quotationEligible: true,
       deliverables,
       deliverableItems,
+      serviceDescription: quoted.serviceDescription?.trim() || undefined,
       investmentAmount: isPricedClientInvestment(quoted.investmentAmount)
         ? quoted.investmentAmount
         : undefined,
@@ -261,6 +262,7 @@ export function overlayQuotationOnShortlistCreators(
           agencyFeeAmount: undefined,
           originalInvestmentAmount: undefined,
           originalInvestmentCurrency: undefined,
+          serviceDescription: undefined,
         },
         currency
       );

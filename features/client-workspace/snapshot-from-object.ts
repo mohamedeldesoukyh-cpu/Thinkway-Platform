@@ -33,6 +33,7 @@ function snapshotCreatorCard(card: ClientCreatorCard): ClientReviewSourceSnapsho
     fitExplanation: card.fitExplanation,
     deliverables: card.deliverables,
     deliverableItems: card.deliverableItems,
+    serviceDescription: card.serviceDescription,
     investmentAmount: card.investmentAmount,
     investmentCurrency: card.investmentCurrency,
     avatarUrl: card.avatarUrl,
