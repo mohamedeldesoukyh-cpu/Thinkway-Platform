@@ -31,6 +31,8 @@ type Props = {
 };
 
 const ZOOM_STEPS = [0.5, 0.67, 0.75, 0.85, 1, 1.15, 1.25, 1.5] as const;
+/** Cover/closing use `.cpage`; inner sheets also have `.page`. */
+const PAGE_SELECTOR = "section.cpage, section.page, .cpage";
 
 function nearestZoomIndex(zoom: number): number {
   let best = 0;
@@ -66,15 +68,19 @@ export function DocumentPreviewShell({
   const collectPages = useCallback(() => {
     const doc = iframeRef.current?.contentDocument;
     if (!doc) return;
-    const pages = Array.from(doc.querySelectorAll<HTMLElement>("section.page, .page"));
+    const pages = Array.from(doc.querySelectorAll<HTMLElement>(PAGE_SELECTOR));
     setPageCount(pages.length);
     setActivePage((prev) => Math.min(Math.max(1, prev), Math.max(1, pages.length)));
 
     const thumbs: string[] = [];
     pages.forEach((page, index) => {
       const label =
+        page.querySelector(".sec-title")?.textContent?.trim() ||
+        page.querySelector(".sec-tick")?.textContent?.trim() ||
         page.querySelector(".sec-badge")?.textContent?.trim() ||
+        page.querySelector(".kicker")?.textContent?.trim() ||
         page.querySelector(".lbl")?.textContent?.trim() ||
+        page.querySelector("h1")?.textContent?.trim() ||
         `Page ${index + 1}`;
       thumbs.push(label.length > 28 ? `${label.slice(0, 27)}…` : label);
     });
@@ -107,7 +113,7 @@ export function DocumentPreviewShell({
         doc.documentElement.getAttribute(paginationReadyAttr) === paginationReadyValue ||
         doc.body?.getAttribute(paginationReadyAttr) === paginationReadyValue;
 
-      const pages = doc.querySelectorAll("section.page, .page");
+      const pages = doc.querySelectorAll(PAGE_SELECTOR);
       if (pages.length > 0 && (attrReady || !doc.getElementById("sl-measure-root"))) {
         collectPages();
         return true;
@@ -164,7 +170,7 @@ export function DocumentPreviewShell({
     (page: number) => {
       const doc = iframeRef.current?.contentDocument;
       if (!doc) return;
-      const pages = Array.from(doc.querySelectorAll<HTMLElement>("section.page, .page"));
+      const pages = Array.from(doc.querySelectorAll<HTMLElement>(PAGE_SELECTOR));
       const target = pages[page - 1];
       if (!target) return;
       target.scrollIntoView({ behavior: "smooth", block: "start" });

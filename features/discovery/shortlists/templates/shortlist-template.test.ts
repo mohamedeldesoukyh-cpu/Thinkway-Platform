@@ -126,6 +126,7 @@ function docWithTemplate(template: ShortlistTemplateVariant) {
   assert.ok(html.includes("quotation-export-preview"));
   assert.ok(html.includes("shortlist-report"));
   assert.ok(html.includes('class="cpage') || html.includes("cpage page"));
+  assert.ok(html.includes("cover cpage page"));
   assert.ok(html.includes("@page{ size:297mm 210mm"));
   assert.ok(html.includes("--blue:#0057ff"));
   assert.ok(!html.includes("Commercial summary"));

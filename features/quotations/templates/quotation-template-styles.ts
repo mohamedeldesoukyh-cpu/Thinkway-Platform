@@ -32,17 +32,11 @@ export const QUOTATION_TEMPLATE_STYLES = `
   .cpage, .cover, .page{
     width:297mm;
     height:210mm;
+    max-height:210mm;
+    box-sizing:border-box;
     position:relative;
     overflow:hidden;
     background:var(--white);
-    page-break-after:always;
-    break-after:page;
-    page-break-inside:avoid;
-    break-inside:avoid;
-  }
-  .cpage:last-child, .cover:last-child, .page:last-child{
-    page-break-after:auto;
-    break-after:auto;
   }
   body.quotation-export-preview .cpage,
   body.quotation-export-preview .cover,
@@ -55,14 +49,30 @@ export const QUOTATION_TEMPLATE_STYLES = `
   body.quotation-export-print .page{
     margin:0;
     box-shadow:none;
+    page-break-after:always;
+    break-after:page;
+    page-break-inside:avoid;
+    break-inside:avoid;
+  }
+  body.quotation-export-print .cpage:last-child,
+  body.quotation-export-print .cover:last-child,
+  body.quotation-export-print .page:last-child{
+    page-break-after:auto;
+    break-after:auto;
   }
 
   .cwrap, .pad{
     padding:14mm 16mm 18mm;
     height:100%;
+    max-height:100%;
     position:relative;
     z-index:1;
     box-sizing:border-box;
+  }
+  .cpage:not(.cover):not(.grad) .cwrap,
+  .cpage:not(.cover):not(.grad) .pad,
+  .page:not(.cover):not(.grad) .pad{
+    overflow:hidden;
   }
   .foot{
     position:absolute;
@@ -71,6 +81,11 @@ export const QUOTATION_TEMPLATE_STYLES = `
     display:flex; justify-content:space-between; align-items:center;
     font-size:10px; color:var(--muted2); letter-spacing:.01em;
     pointer-events:none;
+  }
+  .cpage:not(.grad):not(.cover) .foot,
+  .page:not(.cover):not(.grad) .foot{
+    background:var(--white);
+    padding-top:4px;
   }
 
   /* Content-page background — soft top-right curve (reference Redesign revised). */
@@ -166,8 +181,11 @@ export const QUOTATION_TEMPLATE_STYLES = `
   .logo .wm b{color:var(--blue); font-weight:800;}
   .logo.rev .wm{color:#fff;} .logo.rev .wm b{color:#fff;}
 
-  /* Category bars — full-width strip (LineItem reference) */
-  .cat-bars{display:flex; flex-direction:column; gap:10px; margin:0 0 16px;}
+  /* Category bars — two columns on landscape so mix tables stay on the page. */
+  .cat-bars{
+    display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px; margin:0 0 16px;
+  }
   .cat-bar{
     display:flex; align-items:baseline; gap:12px;
     background:var(--tint); border:1px solid var(--border); border-radius:12px;
@@ -359,7 +377,11 @@ export const QUOTATION_TEMPLATE_STYLES = `
     padding:12px 22px; border-radius:999px; white-space:nowrap;
   }
   .showcase-creator-sheet{display:flex; flex-direction:column; min-height:0;}
-  .categories-cell{white-space:normal; overflow-wrap:break-word;}
+  .categories-cell{
+    white-space:normal; overflow-wrap:break-word;
+    display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2;
+    line-clamp:2; overflow:hidden;
+  }
 
   .roster-creator{display:flex; align-items:center; gap:10px;}
   .roster-avatar{width:22px; height:22px; border-radius:999px; object-fit:cover; flex:none; display:block; background:var(--tint);}
@@ -424,6 +446,25 @@ export const QUOTATION_TEMPLATE_STYLES = `
   .closing-meta .el{font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:#b7c9f0; margin:0 0 4px;}
   .closing-meta .ev{font-size:13px; font-weight:600; color:#fff; margin:0;}
   .closing-meta .legal{font-size:11px; color:rgba(255,255,255,.7); line-height:1.5; margin:10px 0 0;}
+
+  /* Preview HTML (downloaded or iframe) must print as one canvas per sheet. */
+  @media print{
+    body.quotation-export-preview{
+      background:#fff; padding:0;
+    }
+    body.quotation-export-preview .cpage,
+    body.quotation-export-preview .cover,
+    body.quotation-export-preview .page{
+      margin:0; box-shadow:none;
+      page-break-after:always; break-after:page;
+      page-break-inside:avoid; break-inside:avoid;
+    }
+    body.quotation-export-preview .cpage:last-child,
+    body.quotation-export-preview .cover:last-child,
+    body.quotation-export-preview .page:last-child{
+      page-break-after:auto; break-after:auto;
+    }
+  }
 `;
 
 export const QUOTATION_TEMPLATE_LOGO_SVG = `<svg class="mark" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">

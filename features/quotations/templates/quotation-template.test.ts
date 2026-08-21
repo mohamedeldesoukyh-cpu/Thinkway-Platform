@@ -147,6 +147,8 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(html.includes("@page{ size:297mm 210mm"));
   assert.ok(html.includes("--blue:#0057ff"));
   assert.ok(html.includes('class="cpage') || html.includes("cpage page"));
+  assert.ok(html.includes("cover cpage page"));
+  assert.ok(html.includes("grid-template-columns:repeat(2,minmax(0,1fr))"));
 }
 
 {
@@ -215,6 +217,7 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   const pdfHtml = buildQuotationTemplateHtml(buildQuotationDocument(mockDetail()), { forPdf: true });
   assert.ok(pdfHtml.includes('body class="quotation-export-print quotation-report"'));
   assert.ok(pdfHtml.includes("commercial-page"));
+  assert.ok(pdfHtml.includes("page-break-after:always"));
   assert.ok(!pdfHtml.includes("Commercial summary (continued)"));
 }
 

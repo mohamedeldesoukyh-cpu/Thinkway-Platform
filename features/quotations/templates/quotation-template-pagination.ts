@@ -1,15 +1,35 @@
 /**
  * Manual pagination for fixed A4-landscape quotation pages (297×210mm).
- * Heights are millimetres of usable content — tuned against Thinkway Showcase PDF.
+ * Heights are millimetres of usable content — tuned against quotation-template-styles
+ * (page head, 2-column category bars, tier tag + thead, mix rows).
  */
 
-export const MIX_PAGE_HEAD_MM = 30;
-export const MIX_PAGE_BUDGET_MM = 176;
-export const MIX_ROW_MM = 6.7;
-export const MIX_TIER_HEADER_MM = 17;
+export const MIX_PAGE_HEAD_MM = 32;
+/** Usable inner height after 14mm + 18mm pad; leave a few mm clear of the footer. */
+export const MIX_PAGE_BUDGET_MM = 172;
+export const MIX_ROW_MM = 7.4;
+/** Tier tag + table thead. */
+export const MIX_TIER_HEADER_MM = 22;
+/** `.tier { margin-bottom: 12px }` between blocks on the same page. */
+export const MIX_TIER_GAP_MM = 3.2;
 export const MIX_BANNER_MM = 28;
-/** Category cards on line-item first mix page (approx). */
-export const MIX_CATEGORY_BLOCK_MM = 42;
+export const MIX_CAT_COLUMNS = 2;
+export const MIX_CAT_BAR_MM = 13.5;
+export const MIX_CAT_GAP_MM = 2.7;
+export const MIX_CAT_MARGIN_MM = 4.2;
+
+export function mixCategoryBlockMm(categoryCount: number): number {
+  if (categoryCount <= 0) return 0;
+  const rows = Math.ceil(categoryCount / MIX_CAT_COLUMNS);
+  return (
+    rows * MIX_CAT_BAR_MM +
+    Math.max(0, rows - 1) * MIX_CAT_GAP_MM +
+    MIX_CAT_MARGIN_MM
+  );
+}
+
+/** Category cards on line-item first mix page — 3 bars in 2 columns (~2 rows). */
+export const MIX_CATEGORY_BLOCK_MM = mixCategoryBlockMm(3);
 
 export type MixPlatformRow = {
   platform: string;
@@ -116,7 +136,8 @@ export function paginateMixTiers(
       const next = remaining[0]!;
       const unitH = creatorUnitHeightMm(next);
       const needHeader = pageTiers.length === 0 || pageTiers[pageTiers.length - 1]?.slug !== tier.slug;
-      const headerH = needHeader ? MIX_TIER_HEADER_MM : 0;
+      const gapH = needHeader && pageTiers.length > 0 ? MIX_TIER_GAP_MM : 0;
+      const headerH = needHeader ? MIX_TIER_HEADER_MM + gapH : 0;
       const bannerReserve =
         includeBanner && isLastTier && remaining.length === tier.creators.length && !continued
           ? MIX_BANNER_MM
@@ -133,7 +154,10 @@ export function paginateMixTiers(
         pageTiers.length > 0
       ) {
         const wholeTierH =
-          MIX_TIER_HEADER_MM + tierBodyHeightMm(tier.creators) + MIX_BANNER_MM;
+          MIX_TIER_GAP_MM +
+          MIX_TIER_HEADER_MM +
+          tierBodyHeightMm(tier.creators) +
+          MIX_BANNER_MM;
         if (used + wholeTierH > MIX_PAGE_BUDGET_MM) {
           flush(false);
           continued = false;

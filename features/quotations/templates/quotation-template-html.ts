@@ -16,7 +16,7 @@ import { buildCollapsePackageMixFeed } from "@/features/quotations/export/quotat
 import { isCreatorDeckTemplate, isLumpSumPricingTemplate } from "@/features/quotations/export/quotation-template";
 import { buildQuotationTemplatePayload } from "./quotation-template-payload";
 import {
-  MIX_CATEGORY_BLOCK_MM,
+  mixCategoryBlockMm,
   paginateMixTiers,
   type MixCreatorUnit,
   type MixTierInput,
@@ -265,10 +265,10 @@ function renderPublicationShotsGrid(
 /** One landscape row of publication thumbs per creator slide in PDF. */
 const SHOWCASE_PDF_PUBLICATION_SHOT_LIMIT = 4;
 /** Commercial fee rows — first page also has KPI strip + totals reserve. */
-const COMMERCIAL_ROWS_FIRST_PAGE = 8;
-const COMMERCIAL_ROWS_CONTINUATION = 11;
-/** Roster / At a glance — keep clear of footer on fixed A4 landscape. */
-const ROSTER_ROWS_PER_PAGE = 9;
+const COMMERCIAL_ROWS_FIRST_PAGE = 7;
+const COMMERCIAL_ROWS_CONTINUATION = 10;
+/** Roster / At a glance — keep wrapped category cells clear of the footer. */
+const ROSTER_ROWS_PER_PAGE = 7;
 
 /** Kept for collapse packages that still need a light fit on fixed A4 landscape. */
 function showcasePdfSlideStyle(scale: number): string {
@@ -342,7 +342,7 @@ function renderCoverPage(payload: QuotationTemplatePayload): string {
   const coverStatsClass =
     coverStatCount >= 4 ? "statrow statrow--4" : coverStatCount === 3 ? "statrow statrow--3" : "statrow";
 
-  return `<section class="cover cpage">
+  return `<section class="cover cpage page">
   <div class="glow glow-a"></div><div class="glow glow-b"></div>
   <div class="pad">
     <div class="cbar">
@@ -382,7 +382,9 @@ function renderCategoryTierPages(
   const tiers = buildMixTier(payload, creatorGroups);
   const showcase = payload.flags.showcaseCreators;
   const isShortlist = payload.flags.documentKind === "shortlist";
-  const firstPageExtraMm = showcase ? 0 : MIX_CATEGORY_BLOCK_MM;
+  const firstPageExtraMm = showcase
+    ? 0
+    : mixCategoryBlockMm(payload.categories.length);
   // Detailed creator mix has no investment price banner — fees live on Commercial.
   // Showcase / pitch investment summary keeps the TOTAL INVESTMENT banner.
   // Shortlists reuse the mix layout without commercial totals.
@@ -455,7 +457,7 @@ function renderCategoryTierPages(
 
 function renderClosingPage(payload: QuotationTemplatePayload): string {
   const q = payload.quotation;
-  return `<section class="cpage grad closing">
+  return `<section class="cpage page grad closing">
   <div class="glow glow-a"></div><div class="glow glow-b"></div>
   <div class="pad">
     ${renderLogo("cover")}

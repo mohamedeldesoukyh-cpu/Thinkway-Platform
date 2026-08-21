@@ -7,6 +7,7 @@ import {
   MIX_PAGE_HEAD_MM,
   MIX_ROW_MM,
   MIX_TIER_HEADER_MM,
+  mixCategoryBlockMm,
   paginateMixTiers,
   type MixTierInput,
 } from "./quotation-template-pagination";
@@ -70,4 +71,30 @@ test("paginateMixTiers keeps banner on the last page only", () => {
 test("budget constants leave room for header + rows + banner", () => {
   const oneCreator = MIX_TIER_HEADER_MM + 2 * MIX_ROW_MM;
   assert.ok(MIX_PAGE_HEAD_MM + oneCreator + MIX_BANNER_MM <= MIX_PAGE_BUDGET_MM);
+});
+
+test("mixCategoryBlockMm grows with category count in two columns", () => {
+  assert.equal(mixCategoryBlockMm(0), 0);
+  assert.ok(mixCategoryBlockMm(5) > mixCategoryBlockMm(3));
+  assert.equal(mixCategoryBlockMm(1), mixCategoryBlockMm(2));
+  assert.ok(mixCategoryBlockMm(5) < MIX_PAGE_BUDGET_MM - MIX_PAGE_HEAD_MM);
+});
+
+test("paginateMixTiers reserves first-page category bars so mix is not clipped", () => {
+  const tiers = [tier("MEGA", 3), tier("MACRO", 5), tier("MID", 8), tier("MICRO", 3)];
+  const packed = paginateMixTiers(tiers, {
+    firstPageExtraMm: mixCategoryBlockMm(5),
+    includeBanner: false,
+  });
+  assert.ok(packed.length >= 3);
+  const firstPageCreators = packed[0]!.tiers.reduce(
+    (sum, slice) => sum + slice.creators.length,
+    0
+  );
+  assert.ok(
+    firstPageCreators <= 4,
+    `first mix page packed ${firstPageCreators} creators under 5 category bars`
+  );
+  assert.equal(packed[0]!.showCategories, true);
+  assert.equal(packed[1]!.showCategories, false);
 });
