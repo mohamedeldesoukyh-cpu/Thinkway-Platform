@@ -34,6 +34,8 @@ export const CONFIRM_CREATORS_SUPPORTING_TEXT =
 export const APPROVE_FINAL_QUOTATION_LABEL = "Approve Final Quotation";
 /** Header CTA only — navigates to Your Selection. Never freezes or approves. */
 export const REVIEW_YOUR_SELECTION_LABEL = "Review Your Selection";
+/** After Approve Selected Creators, open Your Selection — not Commercial. */
+export const AFTER_CREATOR_APPROVAL_SECTION = "creators" as const;
 export const UNPRICED_APPROVAL_MESSAGE = "Your selection includes creators without confirmed pricing.";
 export const UNPRICED_SELECTED_CODE = "unpriced_selected";
 export const PRICE_PENDING_LABEL = "Pricing required";
@@ -354,6 +356,13 @@ export function confirmCreatorsDoesNotApproveQuotation(): {
   setQuotationStatusApproved: false;
 } {
   return { lockCommercial: false, setQuotationStatusApproved: false };
+}
+
+export function shortlistCreatorSelectEnabled(input: {
+  canDecide: boolean;
+  selectionConfirmed: boolean;
+}): boolean {
+  return input.canDecide && !input.selectionConfirmed;
 }
 
 export function selectionChangeAllowed(input: {

@@ -30,7 +30,7 @@ import {
   rosterSourceLine,
   strategicPillars,
 } from "./presentation";
-import { acceptedCreators, contentRowsForSelection } from "./selection-view";
+import { acceptedCreators, contentRowsForSelection, yourSelectionRoster } from "./selection-view";
 import { HYPEAUDITOR_MEDIA_PLAN_PARITY } from "./hypeauditor-parity";
 import { projectMediaPlanSummary, projectSelectionSummaryFromCards } from "./media-plan-summary";
 import { briefFromSnapshotCreator, mergeFrozenBrief, needsClientBriefBackfill } from "./creator-brief";
@@ -105,6 +105,8 @@ import {
   creatorsForClientCommercial,
   headerSelectionNavigation,
   primaryActionForJourney,
+  shortlistCreatorSelectEnabled,
+  AFTER_CREATOR_APPROVAL_SECTION,
 } from "./selection-flow";
 import {
   clientFacingQuotationPrice,
@@ -3295,6 +3297,42 @@ test("historical review URLs remain version-frozen", () => {
   assert.equal(isInteractiveClientReview("superseded"), false);
   assert.equal(isFrozenClientReviewStatus("revoked"), true);
   assert.equal(isInteractiveClientReview("awaiting_review"), true);
+});
+
+test("Shortlist is the select page until the client approves the selection", () => {
+  assert.equal(
+    shortlistCreatorSelectEnabled({ canDecide: true, selectionConfirmed: false }),
+    true
+  );
+  assert.equal(
+    shortlistCreatorSelectEnabled({ canDecide: true, selectionConfirmed: true }),
+    false
+  );
+  assert.equal(
+    shortlistCreatorSelectEnabled({ canDecide: false, selectionConfirmed: false }),
+    false
+  );
+});
+
+test("Your Selection shows selected creators and the frozen roster after approval", () => {
+  const creators = [
+    { creatorId: "a", displayName: "A", selection: "accepted" as const, contentExamples: [] },
+    { creatorId: "b", displayName: "B", selection: "in_review" as const, contentExamples: [] },
+    { creatorId: "c", displayName: "C", selection: "in_review" as const, contentExamples: [] },
+  ];
+  const live = yourSelectionRoster(creators as never, { a: "accepted", b: "in_review", c: "in_review" });
+  assert.deepEqual(live.map((creator) => creator.creatorId), ["a"]);
+  const frozen = yourSelectionRoster(creators as never, { a: "accepted", b: "accepted", c: "in_review" }, {
+    selectionConfirmed: true,
+    clientApprovedCreatorIds: ["a"],
+  });
+  assert.deepEqual(frozen.map((creator) => creator.creatorId), ["a"]);
+  assert.equal(frozen.some((creator) => creator.creatorId === "b"), false);
+});
+
+test("Approve Selected Creators opens Your Selection, not Commercial", () => {
+  assert.equal(AFTER_CREATOR_APPROVAL_SECTION, "creators");
+  assert.equal(CLIENT_WORKSPACE_SECTION_LABEL[AFTER_CREATOR_APPROVAL_SECTION], "Your Selection");
 });
 
 

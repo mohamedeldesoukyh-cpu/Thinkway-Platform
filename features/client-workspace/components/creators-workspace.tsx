@@ -19,6 +19,7 @@ import {
   isPricedClientInvestment,
   isValidClientCommercialApproval,
   PRICE_PENDING_LABEL,
+  shortlistCreatorSelectEnabled,
   thinkwayStatusLabel,
 } from "../selection-flow";
 import { originalInvestmentForDisplay } from "../quotation-client-facing";
@@ -32,6 +33,7 @@ import {
 import { contentCategoriesForDisplay, listCreatorCategoryStickers } from "../content-categories";
 import { breakdownForCreator, creatorProfileLinks, engagementMetersForBreakdown } from "../platform-breakdown";
 import { countSelections, nextAcceptState } from "../status";
+import { yourSelectionRoster } from "../selection-view";
 import type { ClientAudienceSlice, ClientCreatorBrief, ClientCreatorCard, ClientWorkspaceView } from "../types";
 import { AdvancedReportModal, ContentFeatureGrid } from "./advanced-report-modal";
 import { ContentCategoryGrid } from "./content-category-grid";
@@ -50,11 +52,6 @@ const STATUS_FILTERS: Array<{ id: "all" | "recommended" | "selected" | "pending"
   { id: "selected", label: "Selected" },
   { id: "pending", label: "Pricing required" },
   { id: "rejected", label: "Not selected" },
-];
-
-const EXPLORE_FILTERS: Array<{ id: "all" | "recommended"; label: string }> = [
-  { id: "all", label: "All" },
-  { id: "recommended", label: "Thinkway" },
 ];
 
 export function CreatorsWorkspace({
@@ -79,8 +76,20 @@ export function CreatorsWorkspace({
   const [detailClosed, setDetailClosed] = useState(false);
   const selection = sharedSelection;
   const explore = intent === "explore";
-  const canSelect = !explore && view.canDecide;
-  const filters = explore ? EXPLORE_FILTERS : STATUS_FILTERS;
+  const confirmed = Boolean(view.journey?.selectionConfirmed);
+  const canSelect =
+    explore &&
+    shortlistCreatorSelectEnabled({
+      canDecide: view.canDecide,
+      selectionConfirmed: confirmed,
+    });
+  const roster = explore
+    ? view.creators
+    : yourSelectionRoster(view.creators, selection, {
+        selectionConfirmed: confirmed,
+        clientApprovedCreatorIds: view.journey?.clientApprovedCreatorIds,
+      });
+  const filters = STATUS_FILTERS;
   const counts = countSelections(
     selection,
     view.creators.map((creator) => creator.creatorId)
@@ -88,7 +97,7 @@ export function CreatorsWorkspace({
 
   const filtered = useMemo(
     () =>
-      view.creators.filter((creator) => {
+      roster.filter((creator) => {
         const state = selection[creator.creatorId] ?? creator.selection;
         if (statusFilter === "recommended") {
           return creator.thinkwayStatus === "recommended" || creator.thinkwayStatus === "approved" || creator.thinkwayStatus === "finalized";
@@ -98,24 +107,24 @@ export function CreatorsWorkspace({
         if (statusFilter === "rejected") return state !== "accepted";
         return true;
       }),
-    [statusFilter, view.creators, selection]
+    [statusFilter, roster, selection]
   );
 
   const filterCounts = {
-    all: view.creators.length,
-    recommended: view.creators.filter(
+    all: roster.length,
+    recommended: roster.filter(
       (creator) =>
         creator.thinkwayStatus === "recommended" ||
         creator.thinkwayStatus === "approved" ||
         creator.thinkwayStatus === "finalized"
     ).length,
-    selected: counts.accepted,
-    pending: view.creators.filter(
+    selected: explore ? counts.accepted : roster.length,
+    pending: roster.filter(
       (creator) =>
         (selection[creator.creatorId] ?? creator.selection) === "accepted" &&
         !isPricedClientInvestment(creator.investmentAmount)
     ).length,
-    rejected: counts.inReview + counts.rejected,
+    rejected: explore ? counts.inReview + counts.rejected : 0,
   };
 
   useEffect(() => {
@@ -208,12 +217,22 @@ export function CreatorsWorkspace({
           <p className="ck">Creator shortlist</p>
           <h2>What creators does Thinkway recommend?</h2>
           <p className="note">
-            This is the creator pool for your campaign. Explore profiles, Thinkway recommendations,
-            and client-facing prices when they are available. Select creators in Your Selection.
+            This is the creator pool for your campaign. Select the creators you want here. After you
+            approve the selection, those creators appear on Your Selection.
           </p>
         </div>
-      ) : null}
-      {explore ? null : (
+      ) : (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <p className="ck">Your Selection</p>
+          <h2>{confirmed ? "Client Approved creators" : "Creators you have selected"}</h2>
+          <p className="note">
+            {confirmed
+              ? "These are the creators you approved from Shortlist. This is not quotation approval."
+              : "Creators you select on Shortlist appear here. Approve the selection on Shortlist to lock this roster."}
+          </p>
+        </div>
+      )}
+      {explore ? (
         <ProposalSummaryCard
           view={view}
           token={token}
@@ -223,26 +242,40 @@ export function CreatorsWorkspace({
           onSelectAll={() => bulk("accepted")}
           onClear={() => bulk("in_review")}
         />
-      )}
-      <div className="toolbar">
-        <div className="segs">
-          {filters.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={statusFilter === item.id ? "seg on" : "seg"}
-              onClick={() => setStatusFilter(item.id)}
-            >
-              {item.label}
-              <span className="n">{filterCounts[item.id]}</span>
-            </button>
-          ))}
+      ) : roster.length > 0 ? (
+        <ProposalSummaryCard
+          view={view}
+          token={token}
+          selection={selection}
+          variant="bar"
+          showBulkControls={false}
+        />
+      ) : null}
+      {explore ? (
+        <div className="toolbar">
+          <div className="segs">
+            {filters.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={statusFilter === item.id ? "seg on" : "seg"}
+                onClick={() => setStatusFilter(item.id)}
+              >
+                {item.label}
+                <span className="n">{filterCounts[item.id]}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : null}
       <p className="note" style={{ marginBottom: 12 }}>
         {explore
-          ? `${rosterHeadline(view.creators.length)}. This shortlist stays available even after creators are quoted.`
-          : `${rosterHeadline(view.creators.length)}. Select the creators you want in your campaign. Investment is shown when Thinkway has confirmed a client-facing price.`}
+          ? `${rosterHeadline(view.creators.length)}. Select the creators you want, then approve the selection. This shortlist stays available even after creators are quoted.`
+          : confirmed
+            ? `${rosterHeadline(roster.length)} Client Approved.`
+            : roster.length > 0
+              ? `${rosterHeadline(roster.length)} selected from Shortlist.`
+              : "Select creators on Shortlist. After you approve the selection, they appear here."}
       </p>
 
       <div className="layout">
@@ -353,7 +386,13 @@ export function CreatorsWorkspace({
             </div>
             );
           })}
-          {filtered.length === 0 ? <p className="unavailable">No creators match these filters.</p> : null}
+          {filtered.length === 0 ? (
+            <p className="unavailable">
+              {explore
+                ? "No creators match these filters."
+                : "Select creators on Shortlist. After you approve the selection, they appear here."}
+            </p>
+          ) : null}
         </div>
 
         {selected ? (

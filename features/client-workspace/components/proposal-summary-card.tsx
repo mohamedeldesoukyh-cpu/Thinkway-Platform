@@ -16,6 +16,7 @@ import { projectSelectionSummaryFromCards } from "../media-plan-summary";
 import { clientWorkspacePathReviewId } from "../journey-state";
 import { buildClientReviewPath } from "../security/review-token";
 import {
+  AFTER_CREATOR_APPROVAL_SECTION,
   APPROVE_SELECTED_CREATORS_LABEL,
   CONFIRM_CREATORS_SUPPORTING_TEXT,
   UNPRICED_SELECTED_CODE,
@@ -166,7 +167,7 @@ export function ProposalSummaryCard({
           if (result.code === UNPRICED_SELECTED_CODE) setUnpricedBlock(true);
           return;
         }
-        goToSection("commercial");
+        goToSection(AFTER_CREATOR_APPROVAL_SECTION);
         router.refresh();
         return;
       }

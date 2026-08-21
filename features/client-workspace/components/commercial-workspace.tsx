@@ -191,7 +191,7 @@ export function CommercialWorkspace({
                 })
               ) : (
                 <tr>
-                  <td colSpan={4}>Select creators in Your Selection to build this commercial view.</td>
+                  <td colSpan={4}>Select and approve creators on Shortlist to build this commercial view.</td>
                 </tr>
               )}
             </tbody>
