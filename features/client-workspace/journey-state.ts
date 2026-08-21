@@ -323,6 +323,10 @@ export function projectClientJourney(input: {
       historical: true,
       canApproveShortlist: false,
       canApproveQuotation: false,
+      canConfirmCreators: false,
+      canApproveFinalQuotation: false,
+      selectionConfirmed: false,
+      approvedQuotationCount: 0,
       canRequestShortlistChanges: false,
       canRequestQuotationChanges: false,
       canRejectQuotation: false,
@@ -340,6 +344,9 @@ export function projectClientJourney(input: {
   const movedToCampaign = Boolean(
     quotationLatest?.campaignHeaderId || input.members.some((item) => item.campaignHeaderId)
   );
+  const approvedQuotationCount = input.members.filter(
+    (item) => item.source === "quotation" && item.status === "approved"
+  ).length;
   const shortlistStage = deriveShortlistStage({ review: shortlistTip });
   const quotationStage = deriveQuotationStage({
     quotationExists: Boolean(quotationLatest?.quotationId),
@@ -364,6 +371,10 @@ export function projectClientJourney(input: {
       !movedToCampaign && isInteractiveClientReview(shortlistTip?.status ?? "revoked"),
     canApproveQuotation:
       !movedToCampaign && isInteractiveClientReview(quotationLatest?.status ?? "revoked"),
+    canConfirmCreators: false,
+    canApproveFinalQuotation: false,
+    selectionConfirmed: false,
+    approvedQuotationCount,
     canRequestShortlistChanges: isInteractiveClientReview(shortlistTip?.status ?? "revoked"),
     canRequestQuotationChanges:
       !movedToCampaign && isInteractiveClientReview(quotationLatest?.status ?? "revoked"),
@@ -377,11 +388,19 @@ export function journeyActionRequired(input: {
   shortlistStage: ClientShortlistStage;
   quotationStage: ClientQuotationStage;
   historical: boolean;
+  selectionConfirmed?: boolean;
+  canConfirmCreators?: boolean;
+  canApproveFinalQuotation?: boolean;
 }): string {
   if (input.historical) return "This is a frozen historical version";
-  if (input.quotationStage === "updated") return "Review the updated quotation";
+  if (input.quotationStage === "updated") return "Updated quotation — Approval Required";
+  if (input.canApproveFinalQuotation) return "Approve final quotation";
+  if (input.canConfirmCreators) return "Confirm the creators for your quotation";
+  if (input.selectionConfirmed && (input.quotationStage === "sent_for_approval" || input.quotationStage === "viewed")) {
+    return "Approve final quotation";
+  }
   if (input.quotationStage === "sent_for_approval" || input.quotationStage === "viewed") {
-    return "Approve quotation";
+    return "Select creators, then confirm";
   }
   if (input.quotationStage === "changes_requested") {
     return "Waiting for Thinkway to update the quotation";

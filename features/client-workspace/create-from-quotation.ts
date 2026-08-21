@@ -10,6 +10,8 @@ import {
   defaultQuotationClientSelection,
   quotationIsMovedToCampaign,
 } from "./client-review-selection";
+import { loadShortlistPoolCreators } from "./create-from-shortlist";
+import { overlayQuotationOnShortlistCreators, isPricedClientInvestment } from "./selection-flow";
 import { quotationItemsForClient, quotationReviewBlockers } from "./source-readiness";
 import type { ClientReviewSourceSnapshot, ClientReviewSourceSnapshotCreator } from "./types";
 import { formatDeliverableItems, parseDeliverableItems } from "./deliverables";
@@ -56,7 +58,7 @@ function snapshotCreator(item: QuotationItemRow, currency: string): ClientReview
     categories: item.creator_categories?.filter(Boolean) ?? undefined,
     deliverables: formatDeliverables(item),
     deliverableItems: deliverableItems.length > 0 ? deliverableItems : undefined,
-    investmentAmount: item.revenue,
+    investmentAmount: isPricedClientInvestment(item.revenue) ? item.revenue : undefined,
     investmentCurrency: item.cost_currency || currency,
     avatarUrl: item.profile_image_url ?? item.creator_profile_source?.avatarUrl ?? undefined,
     influencerId: item.influencer_id ?? undefined,
@@ -120,22 +122,33 @@ export async function createClientReviewFromQuotation(
       : null;
     return enrichSnapshotCreatorFromUnified(base, unified ?? undefined);
   });
+  let pooledCreators = snapshotCreators;
+  if (detail.shortlist_id) {
+    try {
+      const shortlistPool = await loadShortlistPoolCreators(supabase, detail.shortlist_id);
+      if (shortlistPool.length > 0) {
+        pooledCreators = overlayQuotationOnShortlistCreators(shortlistPool, snapshotCreators);
+      }
+    } catch {
+      pooledCreators = snapshotCreators;
+    }
+  }
   const movedToCampaign = quotationIsMovedToCampaign(detail);
   const selection = defaultQuotationClientSelection(
-    snapshotCreators.map((creator) => creator.creatorId),
+    pooledCreators.map((creator) => creator.creatorId),
     movedToCampaign
   );
 
-  const creatorInvestment = snapshotCreators.reduce(
-    (sum, creator) => sum + (creator.investmentAmount ?? 0),
+  const creatorInvestment = pooledCreators.reduce(
+    (sum, creator) => sum + (isPricedClientInvestment(creator.investmentAmount) ? creator.investmentAmount ?? 0 : 0),
     0
   );
   const platforms = [
-    ...new Set(snapshotCreators.map((creator) => creator.platform).filter((value): value is string => Boolean(value))),
+    ...new Set(pooledCreators.map((creator) => creator.platform).filter((value): value is string => Boolean(value))),
   ];
   const deliverables = [
     ...new Set(
-      snapshotCreators.flatMap((creator) => creator.deliverables?.split(", ") ?? []).filter(Boolean)
+      pooledCreators.flatMap((creator) => creator.deliverables?.split(", ") ?? []).filter(Boolean)
     ),
   ];
   const content = contentFromQuotation(items);
@@ -152,7 +165,7 @@ export async function createClientReviewFromQuotation(
     platforms,
     deliverables,
     whyThisApproach: `Commercial proposal ${detail.serial_number ?? detail.name} for ${brandName}.`,
-    creators: snapshotCreators,
+    creators: pooledCreators,
     content,
     timeline: { durationWeeks: null, durationLabel: "Duration not confirmed", phases: [] },
     commercial: {
@@ -160,25 +173,29 @@ export async function createClientReviewFromQuotation(
       creatorInvestment,
       totalInvestment: creatorInvestment,
       quotationTotal: creatorInvestment,
-      lines: snapshotCreators.map((creator) => ({
-        label: creator.displayName,
-        amount: creator.investmentAmount,
-      })),
-      selectedCount: snapshotCreators.length,
-      totalCount: snapshotCreators.length,
+      lines: pooledCreators
+        .filter((creator) => isPricedClientInvestment(creator.investmentAmount))
+        .map((creator) => ({
+          label: creator.displayName,
+          amount: creator.investmentAmount,
+        })),
+      selectedCount: pooledCreators.length,
+      totalCount: pooledCreators.length,
     },
     quotation: {
       id: detail.id,
       serialNumber: detail.serial_number,
       name: detail.name,
       version: detail.version,
-      lines: snapshotCreators.map((creator) => ({
-        creatorId: creator.creatorId,
-        label: creator.displayName,
-        amount: creator.investmentAmount ?? 0,
-      })),
+      lines: pooledCreators
+        .filter((creator) => isPricedClientInvestment(creator.investmentAmount))
+        .map((creator) => ({
+          creatorId: creator.creatorId,
+          label: creator.displayName,
+          amount: creator.investmentAmount ?? 0,
+        })),
     },
-    creatorIds: snapshotCreators.map((creator) => creator.creatorId),
+    creatorIds: pooledCreators.map((creator) => creator.creatorId),
   };
   snapshot.mediaPlanSummary = buildMediaPlanSummary(snapshot);
 
@@ -196,7 +213,7 @@ export async function createClientReviewFromQuotation(
     clientLabel,
     brandName,
     campaignName,
-    fingerprint: fingerprintFromSnapshotCreators(snapshotCreators, {
+    fingerprint: fingerprintFromSnapshotCreators(pooledCreators, {
       source: "quotation",
       quotationId: detail.id,
       version: detail.version,

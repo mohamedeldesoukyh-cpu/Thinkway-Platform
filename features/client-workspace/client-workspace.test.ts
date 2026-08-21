@@ -73,6 +73,23 @@ import {
   parseSnapshotCreator,
   visibleClientUpdateNotice,
 } from "./snapshot";
+import {
+  canApproveFinalQuotation,
+  canConfirmCreators,
+  clientFacingObjectIsSafe,
+  clientStatusDisplay,
+  confirmCreatorsDoesNotApproveQuotation,
+  consolidationContract,
+  excludeUnpricedFromSelection,
+  isPricedClientInvestment,
+  mergeSnapshotsForClientView,
+  overlayQuotationOnShortlistCreators,
+  selectionCalculator,
+  selectionChangeAllowed,
+  selectionJourneyFlags,
+  thinkwayStatusFromInternal,
+  UNPRICED_APPROVAL_MESSAGE,
+} from "./selection-flow";
 import { visibleClientWorkspaceSections, defaultClientWorkspaceSection } from "./visible-sections";
 import {
   clientPackageFingerprintsMatch,
@@ -185,8 +202,9 @@ test("selection maps onto existing shortlist item statuses", () => {
   assert.equal(clientSelectionToShortlistStatus("accepted"), "approved");
   assert.equal(clientSelectionToShortlistStatus("rejected"), "rejected");
   assert.equal(clientSelectionToShortlistStatus("in_review"), "under_review");
-  assert.equal(shortlistStatusToClient("approved"), "accepted");
-  assert.equal(shortlistStatusToClient("moved_to_campaign"), "accepted");
+  assert.equal(shortlistStatusToClient("approved"), "in_review");
+  assert.equal(shortlistStatusToClient("moved_to_campaign"), "in_review");
+  assert.equal(shortlistStatusToClient("rejected"), "rejected");
   const counts = countSelections({ a: "accepted", b: "rejected", c: "in_review" }, ["a", "b", "c"]);
   assert.deepEqual(counts, { accepted: 1, rejected: 1, inReview: 1, total: 3 });
 });
@@ -2326,6 +2344,350 @@ test("quotation-first current journey still uses the latest quotation review", (
     }),
     "superseded"
   );
+});
+
+test("moving a creator to quotation keeps the client shortlist pool", () => {
+  const shortlist = [
+    { creatorId: "a", displayName: "Mahmoud Faisal" },
+    { creatorId: "b", displayName: "Sarah" },
+    { creatorId: "c", displayName: "Omar" },
+  ];
+  const quotation = [
+    {
+      creatorId: "a",
+      displayName: "Mahmoud Faisal",
+      investmentAmount: 78_571,
+      deliverables: "2 Reels + 3 Stories",
+    },
+  ];
+  const merged = overlayQuotationOnShortlistCreators(shortlist, quotation);
+  assert.equal(merged.length, 3);
+  assert.deepEqual(
+    merged.map((creator) => creator.creatorId),
+    ["a", "b", "c"]
+  );
+  assert.equal(merged[0]?.investmentAmount, 78_571);
+  assert.equal(merged[0]?.deliverables, "2 Reels + 3 Stories");
+  assert.equal(merged[0]?.quotationEligible, true);
+  assert.equal(merged[1]?.investmentAmount, undefined);
+  assert.equal(merged[1]?.quotationEligible, false);
+});
+
+test("internal client-facing price and deliverables appear on the client shortlist card", () => {
+  const snapshot = mergeSnapshotsForClientView({
+    historical: false,
+    active: parseSourceSnapshot({
+      source: "quotation",
+      brandName: "Acme",
+      campaignName: "Summer",
+      clientLabel: "Acme",
+      platforms: [],
+      deliverables: [],
+      creators: [
+        {
+          creatorId: "a",
+          displayName: "Mahmoud",
+          investmentAmount: 78_571,
+          deliverables: "2 Reels + 3 Stories",
+        },
+      ],
+      content: [],
+      timeline: { durationWeeks: null, durationLabel: "", phases: [] },
+      commercial: { currency: "EGP", creatorInvestment: 78_571, totalInvestment: 78_571, lines: [], selectedCount: 1, totalCount: 1 },
+      creatorIds: ["a"],
+    })!,
+    shortlist: parseSourceSnapshot({
+      source: "shortlist",
+      brandName: "Acme",
+      campaignName: "Summer",
+      clientLabel: "Acme",
+      platforms: [],
+      deliverables: [],
+      creators: [
+        { creatorId: "a", displayName: "Mahmoud", fitExplanation: "Strong campaign fit" },
+        { creatorId: "b", displayName: "Sarah" },
+      ],
+      content: [],
+      timeline: { durationWeeks: null, durationLabel: "", phases: [] },
+      commercial: { currency: "EGP", creatorInvestment: 0, totalInvestment: 0, lines: [], selectedCount: 0, totalCount: 2 },
+      creatorIds: ["a", "b"],
+    }),
+    quotation: parseSourceSnapshot({
+      source: "quotation",
+      brandName: "Acme",
+      campaignName: "Summer",
+      clientLabel: "Acme",
+      platforms: [],
+      deliverables: [],
+      creators: [
+        {
+          creatorId: "a",
+          displayName: "Mahmoud",
+          investmentAmount: 78_571,
+          deliverables: "2 Reels + 3 Stories",
+        },
+      ],
+      content: [],
+      timeline: { durationWeeks: null, durationLabel: "", phases: [] },
+      commercial: { currency: "EGP", creatorInvestment: 78_571, totalInvestment: 78_571, lines: [], selectedCount: 1, totalCount: 1 },
+      creatorIds: ["a"],
+    }),
+  });
+  assert.equal(snapshot.creators.length, 2);
+  assert.equal(snapshot.creators[0]?.investmentAmount, 78_571);
+  assert.equal(snapshot.creators[0]?.deliverables, "2 Reels + 3 Stories");
+  assert.equal(snapshot.creators[0]?.fitExplanation, "Strong campaign fit");
+  assert.equal(clientFacingObjectIsSafe(snapshot.creators), true);
+});
+
+test("Thinkway approval is not client selection", () => {
+  assert.equal(thinkwayStatusFromInternal("approved"), "approved");
+  assert.equal(thinkwayStatusFromInternal("under_review"), "recommended");
+  assert.equal(shortlistStatusToClient("approved"), "in_review");
+  assert.equal(
+    clientStatusDisplay({ selection: "in_review", selectionConfirmed: false, commerciallyApproved: false }),
+    "Not selected"
+  );
+  assert.equal(
+    clientStatusDisplay({ selection: "accepted", selectionConfirmed: false, commerciallyApproved: false }),
+    "Selected by you"
+  );
+  assert.equal(
+    clientStatusDisplay({ selection: "accepted", selectionConfirmed: true, commerciallyApproved: false }),
+    "Confirmed"
+  );
+  assert.equal(
+    clientStatusDisplay({ selection: "accepted", selectionConfirmed: true, commerciallyApproved: true }),
+    "Commercially approved"
+  );
+});
+
+test("client can select priced and unpriced creators; calculator counts priced only", () => {
+  const creators = [
+    { creatorId: "priced", displayName: "A", investmentAmount: 50_000 },
+    { creatorId: "pending", displayName: "B" },
+  ];
+  const selection = { priced: "accepted" as const, pending: "accepted" as const };
+  const calc = selectionCalculator(creators, selection);
+  assert.equal(isPricedClientInvestment(50_000), true);
+  assert.equal(isPricedClientInvestment(undefined), false);
+  assert.equal(calc.selectedCount, 2);
+  assert.equal(calc.pricedSelectedCount, 1);
+  assert.equal(calc.unpricedSelectedCount, 1);
+  assert.equal(calc.pricedInvestment, 50_000);
+  assert.match(calc.unpricedMessage ?? "", /no confirmed investment/);
+  const commercial = projectCommercialFromSnapshot(
+    parseSourceSnapshot({
+      source: "quotation",
+      brandName: "Acme",
+      campaignName: "Summer",
+      clientLabel: "Acme",
+      platforms: [],
+      deliverables: [],
+      creators,
+      content: [],
+      timeline: { durationWeeks: null, durationLabel: "", phases: [] },
+      commercial: { currency: "EGP", creatorInvestment: 50_000, totalInvestment: 50_000, lines: [], selectedCount: 2, totalCount: 2 },
+      creatorIds: ["priced", "pending"],
+    })!,
+    selection
+  );
+  assert.equal(commercial.totalInvestment, 50_000);
+  assert.equal(commercial.selectedCount, 2);
+  assert.equal(commercial.pricedSelectedCount, 1);
+  assert.equal(commercial.unpricedSelectedCount, 1);
+});
+
+test("unpriced selected creator blocks final quotation approval until removed", () => {
+  const creators = [
+    { creatorId: "priced", investmentAmount: 80_000 },
+    { creatorId: "pending" },
+  ];
+  const selection = { priced: "accepted" as const, pending: "accepted" as const };
+  const calc = selectionCalculator(creators, selection);
+  assert.equal(
+    canApproveFinalQuotation({
+      historical: false,
+      quotationInteractive: true,
+      selectionConfirmed: true,
+      selectedCount: calc.selectedCount,
+      unpricedSelectedCount: calc.unpricedSelectedCount,
+    }),
+    false
+  );
+  const next = excludeUnpricedFromSelection(creators, selection);
+  const after = selectionCalculator(creators, next);
+  assert.equal(next.pending, "in_review");
+  assert.equal(after.unpricedSelectedCount, 0);
+  assert.equal(
+    canApproveFinalQuotation({
+      historical: false,
+      quotationInteractive: true,
+      selectionConfirmed: true,
+      selectedCount: after.selectedCount,
+      unpricedSelectedCount: after.unpricedSelectedCount,
+    }),
+    true
+  );
+  assert.equal(UNPRICED_APPROVAL_MESSAGE.includes("without confirmed pricing"), true);
+});
+
+test("Confirm Creators does not approve the quotation", () => {
+  const sideEffects = confirmCreatorsDoesNotApproveQuotation();
+  assert.equal(sideEffects.lockCommercial, false);
+  assert.equal(sideEffects.setQuotationStatusApproved, false);
+  const quotationApprove = clientApprovalSideEffects("quotation", "approved");
+  assert.equal(quotationApprove.setQuotationStatusApproved, true);
+  assert.equal(quotationApprove.lockCommercial, true);
+  assert.equal(
+    canConfirmCreators({
+      historical: false,
+      interactive: true,
+      selectedCount: 2,
+      selectionConfirmed: false,
+    }),
+    true
+  );
+  assert.equal(
+    canConfirmCreators({
+      historical: false,
+      interactive: true,
+      selectedCount: 2,
+      selectionConfirmed: true,
+    }),
+    false
+  );
+});
+
+test("commercial total reflects selected priced creators only", () => {
+  const snapshot = parseSourceSnapshot({
+    source: "quotation",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme",
+    platforms: [],
+    deliverables: [],
+    creators: [
+      { creatorId: "a", displayName: "Mahmoud", investmentAmount: 78_571 },
+      { creatorId: "b", displayName: "Sarah", investmentAmount: 65_000 },
+      { creatorId: "c", displayName: "Omar", investmentAmount: 50_000 },
+    ],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "", phases: [] },
+    commercial: { currency: "EGP", creatorInvestment: 193_571, totalInvestment: 193_571, lines: [], selectedCount: 3, totalCount: 3 },
+    creatorIds: ["a", "b", "c"],
+  })!;
+  const commercial = projectCommercialFromSnapshot(snapshot, {
+    a: "accepted",
+    b: "accepted",
+    c: "in_review",
+  });
+  assert.equal(commercial.totalInvestment, 143_571);
+  assert.equal(commercial.selectedCount, 2);
+  assert.equal(commercial.lines.every((line) => !/cost|gp|margin/i.test(line.label)), true);
+});
+
+test("vendor cost never appears on client-facing snapshot fields", () => {
+  const creator = parseSnapshotCreator({
+    creatorId: "a",
+    displayName: "Mahmoud",
+    investmentAmount: 78_571,
+    fitExplanation: "Strong audience alignment with Egyptian consumers.",
+  });
+  assert.equal(clientFacingObjectIsSafe(creator), true);
+  assert.equal(clientFacingObjectIsSafe({ investmentAmount: 10, vendorCost: 4 }), false);
+  assert.equal(clientFacingObjectIsSafe({ gp: 2, margin: 0.4 }), false);
+  assert.equal("vendorCost" in creator, false);
+  assert.equal("gp" in creator, false);
+  assert.equal("margin" in creator, false);
+});
+
+test("confirmed selection freeze allows removing unpriced creators only", () => {
+  assert.deepEqual(
+    selectionChangeAllowed({
+      selectionConfirmed: true,
+      commerciallyApproved: false,
+      current: "accepted",
+      next: "in_review",
+      priced: false,
+    }),
+    { ok: true }
+  );
+  const blocked = selectionChangeAllowed({
+    selectionConfirmed: true,
+    commerciallyApproved: false,
+    current: "in_review",
+    next: "accepted",
+    priced: true,
+  });
+  assert.equal(blocked.ok, false);
+});
+
+test("selection journey flags require confirm before final quotation approval", () => {
+  const flags = selectionJourneyFlags({
+    historical: false,
+    interactive: true,
+    quotationInteractive: true,
+    selectionConfirmed: false,
+    selectedCount: 3,
+    unpricedSelectedCount: 0,
+    approvedQuotationCount: 1,
+  });
+  assert.equal(flags.canConfirmCreators, true);
+  assert.equal(flags.canApproveFinalQuotation, false);
+  const ready = selectionJourneyFlags({
+    historical: false,
+    interactive: true,
+    quotationInteractive: true,
+    selectionConfirmed: true,
+    selectedCount: 3,
+    unpricedSelectedCount: 0,
+    approvedQuotationCount: 1,
+  });
+  assert.equal(ready.canConfirmCreators, false);
+  assert.equal(ready.canApproveFinalQuotation, true);
+});
+
+test("consolidation contract is available for multiple approved quotations without a second commercial engine", () => {
+  const contract = consolidationContract(2);
+  assert.equal(contract.eligible, true);
+  assert.equal(contract.actionLabel, "Consolidate selections");
+  assert.match(contract.helper, /new quotation version/i);
+  assert.equal(consolidationContract(1).eligible, false);
+});
+
+test("historical merged snapshots stay frozen and do not overlay later quotation prices", () => {
+  const historical = mergeSnapshotsForClientView({
+    historical: true,
+    active: parseSourceSnapshot({
+      source: "quotation",
+      brandName: "Acme",
+      campaignName: "v1",
+      clientLabel: "Acme",
+      platforms: [],
+      deliverables: [],
+      creators: [{ creatorId: "a", displayName: "A", investmentAmount: 50_000 }],
+      content: [],
+      timeline: { durationWeeks: null, durationLabel: "", phases: [] },
+      commercial: { currency: "EGP", creatorInvestment: 50_000, totalInvestment: 50_000, lines: [], selectedCount: 1, totalCount: 1 },
+      creatorIds: ["a"],
+    })!,
+    quotation: parseSourceSnapshot({
+      source: "quotation",
+      brandName: "Acme",
+      campaignName: "v2",
+      clientLabel: "Acme",
+      platforms: [],
+      deliverables: [],
+      creators: [{ creatorId: "a", displayName: "A", investmentAmount: 60_000 }],
+      content: [],
+      timeline: { durationWeeks: null, durationLabel: "", phases: [] },
+      commercial: { currency: "EGP", creatorInvestment: 60_000, totalInvestment: 60_000, lines: [], selectedCount: 1, totalCount: 1 },
+      creatorIds: ["a"],
+    }),
+  });
+  assert.equal(historical.campaignName, "v1");
+  assert.equal(historical.creators[0]?.investmentAmount, 50_000);
 });
 
 

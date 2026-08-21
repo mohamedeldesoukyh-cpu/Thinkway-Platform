@@ -1,6 +1,7 @@
 import { pickCreatorDisplayName, resolveCreatorIdentity } from "@/lib/text/decode-html-entities";
 
 import type { ClientCreatorSelectionState } from "./constants";
+import { isPricedClientInvestment, parseClientSelectionFreeze, parseThinkwayStatus } from "./selection-flow";
 import { isSelectedForCalculator } from "./status";
 import type {
   ClientAudienceBrief,
@@ -261,6 +262,8 @@ export function parseSnapshotCreator(row: Record<string, unknown>): ClientReview
     influencerId: asString(row.influencerId),
     briefFrozenAt: asString(row.briefFrozenAt),
     briefBackfillDone: row.briefBackfillDone === true,
+    thinkwayStatus: parseThinkwayStatus(row.thinkwayStatus),
+    quotationEligible: row.quotationEligible === true ? true : row.quotationEligible === false ? false : undefined,
   };
 }
 
@@ -354,6 +357,7 @@ export function parseSourceSnapshot(raw: unknown): ClientReviewSourceSnapshot | 
         }
       : undefined,
     creatorIds,
+    clientSelection: parseClientSelectionFreeze(raw.clientSelection),
     clientUpdate: parseClientUpdate(raw.clientUpdate),
   };
 }
@@ -393,17 +397,15 @@ export function projectCommercialFromSnapshot(
   const quotationTotal = quotationTotalFromSnapshot(snapshot);
   const hasPerCreator = snapshot.creators.some((creator) => creator.investmentAmount != null);
   if (hasPerCreator) {
-    const creatorInvestment = selected.reduce(
-      (sum, creator) => sum + (creator.investmentAmount ?? 0),
-      0
+    const priced = selected.filter((creator) => isPricedClientInvestment(creator.investmentAmount));
+    const creatorInvestment = priced.reduce((sum, creator) => sum + (creator.investmentAmount ?? 0), 0);
+    const lines = priced.map((creator) => ({
+      label: creator.displayName,
+      amount: creator.investmentAmount,
+    }));
+    const quotationLines = snapshot.quotation?.lines.filter(
+      (line) => selectedIds.has(line.creatorId) && isPricedClientInvestment(line.amount)
     );
-    const lines = snapshot.creators
-      .filter((creator) => selectedIds.has(creator.creatorId) && creator.investmentAmount != null)
-      .map((creator) => ({
-        label: creator.displayName,
-        amount: creator.investmentAmount,
-      }));
-    const quotationLines = snapshot.quotation?.lines.filter((line) => selectedIds.has(line.creatorId));
     return {
       currency: snapshot.commercial.currency,
       creatorInvestment,
@@ -415,6 +417,8 @@ export function projectCommercialFromSnapshot(
           ? lines
           : snapshot.commercial.lines,
       selectedCount: selected.length,
+      pricedSelectedCount: priced.length,
+      unpricedSelectedCount: selected.length - priced.length,
       totalCount: snapshot.creators.length,
     };
   }
@@ -433,6 +437,8 @@ export function projectCommercialFromSnapshot(
       amount: line.amount != null ? Math.round(line.amount * selectedRatio) : undefined,
     })),
     selectedCount: selected.length,
+    pricedSelectedCount: selected.length,
+    unpricedSelectedCount: 0,
     totalCount: snapshot.creators.length,
   };
 }

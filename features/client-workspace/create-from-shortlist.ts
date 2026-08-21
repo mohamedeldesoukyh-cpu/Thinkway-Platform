@@ -11,6 +11,7 @@ import type { ClientCreatorSelectionState } from "./constants";
 import { persistClientReview, type CreateClientReviewResult } from "./persist-client-review";
 import { fingerprintFromSnapshotCreators } from "./snapshot";
 import { shortlistReviewBlockers } from "./source-readiness";
+import { thinkwayStatusFromInternal } from "./selection-flow";
 import { shortlistStatusToClient } from "./status";
 import type { ClientReviewSourceSnapshot, ClientReviewSourceSnapshotCreator } from "./types";
 import { formatDeliverableItems, parseDeliverableItems } from "./deliverables";
@@ -106,11 +107,60 @@ function cardFromCreator(
     investmentAmount: item.revenue ?? undefined,
     investmentCurrency: item.cost_currency || currency,
     influencerId: item.influencer_id ?? undefined,
+    thinkwayStatus: thinkwayStatusFromInternal(item.item_status),
   };
   return attachMatchExplanation(enrichSnapshotCreatorFromUnified(base, creator), {
     matchPercent: item.match_score,
     why: creator?.ai_niche ? `Relevant ${creator.ai_niche} creator for this campaign.` : undefined,
   });
+}
+
+export async function loadShortlistPoolCreators(
+  supabase: SupabaseClient,
+  shortlistId: string
+): Promise<ClientReviewSourceSnapshotCreator[]> {
+  const { data: headerRow } = await supabase
+    .from("discovery_shortlists")
+    .select("id, name, description, status, is_archived, client_id, brand_id, metadata")
+    .eq("id", shortlistId)
+    .maybeSingle();
+  if (!headerRow) return [];
+  const header = headerRow as ShortlistHeader;
+  const itemsResult = await queryShortlistSeedItemsWithCollapseFallback<ShortlistSeedItem[]>(
+    (select) =>
+      supabase
+        .from("discovery_shortlist_items")
+        .select(`${select}, item_status, match_score`)
+        .eq("shortlist_id", shortlistId)
+        .order("sort_order", { ascending: true }) as never
+  );
+  if (itemsResult.error) return [];
+  const frozenItems = ((itemsResult.data ?? []) as ShortlistSeedItem[]).filter(
+    (item) => item.item_status !== "cancelled"
+  );
+  if (frozenItems.length === 0) return [];
+  let lookup: Awaited<ReturnType<typeof resolveUnifiedCreatorsByRefs>> | null = null;
+  try {
+    lookup = await resolveUnifiedCreatorsByRefs(
+      supabase as never,
+      {
+        unifiedIds: frozenItems.map((item) => item.unified_id),
+        influencerIds: frozenItems.map((item) => item.influencer_id),
+        discoveredProfileIds: frozenItems.map((item) => item.profile_id),
+      },
+      { omitHeavyFields: false }
+    );
+  } catch {
+    lookup = null;
+  }
+  const currency = readShortlistDisplayCurrency(header);
+  return frozenItems.map((item) =>
+    cardFromCreator(
+      item,
+      lookup ? resolveCreatorFromRefLookup(lookup, item) ?? undefined : undefined,
+      currency
+    )
+  );
 }
 
 export async function createClientReviewFromShortlist(

@@ -12,7 +12,9 @@ import { freezeCreatorBriefIfNeeded, briefFromSnapshotCreator } from "../creator
 import { resolveClientReviewByToken } from "../load-client-workspace";
 import {
   addClientComment,
+  confirmClientCreators,
   decideClientReview,
+  removeUnpricedSelectedCreators,
   requestClientChanges,
   setBulkCreatorSelection,
   setCreatorSelection,
@@ -55,6 +57,14 @@ export async function requestReviewChangesAction(input: {
   stage?: ClientReviewDecisionStage;
 }) {
   return requestClientChanges(input);
+}
+
+export async function confirmCreatorsAction(input: { token: string }) {
+  return confirmClientCreators(input);
+}
+
+export async function removeUnpricedSelectedAction(input: { token: string }) {
+  return removeUnpricedSelectedCreators(input);
 }
 
 export async function decideReviewAction(input: {

@@ -106,6 +106,15 @@ export function OverviewWorkspace({
 
   return (
     <>
+      <div className="card">
+        <p className="ck">Creator shortlist</p>
+        <h2>What creators does Thinkway recommend?</h2>
+        <p className="note">
+          This is the creator pool for your campaign. Moving creators into a quotation internally does
+          not remove them from this shortlist. Client-facing prices and deliverables appear on the same
+          cards when Thinkway has entered them.
+        </p>
+      </div>
       <div className="kpis">
         <Kpi
           name="reach"

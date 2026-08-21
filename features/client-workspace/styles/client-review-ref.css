@@ -1060,7 +1060,30 @@
 .tw-review .journey-node.tone-bad .journey-v{color:var(--bad);}
 .tw-review .journey-node.tone-idle .journey-v{color:var(--muted2);font-weight:600;}
 .tw-review .journey-node.tone-active .journey-v{color:var(--blue);}
-@media(max-width:760px){
-  .tw-review .journey-node{min-width:120px;flex:none;}
+.tw-review .journey-h{
+  font-size:11px;
+  color:var(--muted2);
+  margin:4px 0 0;
+  font-weight:500;
+  max-width:180px;
+  line-height:1.35;
 }
+.tw-review .sc.warn{
+  background:#fff4e5;
+  color:#b45309;
+}
+.tw-review .ccfoot .inv{
+  font-weight:700;
+  font-variant-numeric:tabular-nums;
+}
+.tw-review .ccfoot .inv.tbc{
+  font-weight:600;
+  color:var(--muted2);
+}
+.tw-review .sumbar{
+  position:sticky;
+  top:52px;
+  z-index:20;
+}
+
 

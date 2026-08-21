@@ -265,6 +265,9 @@ async function updateExistingClientReview(
   const token = existingToken || (mintMissing ? randomBytes(16).toString("hex") : "");
   const previous = parseSourceSnapshot(currentTip.source_snapshot);
   let snapshot = previous ? retainCreatorBriefs(previous, input.snapshot) : input.snapshot;
+  if (previous?.clientSelection) {
+    snapshot = { ...snapshot, clientSelection: previous.clientSelection };
+  }
   const updates = previous ? diffClientReviewSnapshots(previous, snapshot) : [];
   if (updates.length > 0) {
     snapshot = { ...snapshot, clientUpdate: { updatedAt: now, items: updates } };

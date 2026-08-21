@@ -12,7 +12,6 @@ import {
   selectCreatorAction,
 } from "../actions/client-workspace-actions";
 import type { ClientCreatorSelectionState } from "../constants";
-import { CLIENT_CREATOR_STATUS_LABEL } from "../constants";
 import { deliverablesLabel } from "../deliverables";
 import {
   clientCreatorIdentity,
@@ -24,12 +23,16 @@ import {
   TO_BE_CONFIRMED,
 } from "../format";
 import {
+  clientStatusDisplay,
+  isPricedClientInvestment,
+  thinkwayStatusLabel,
+} from "../selection-flow";
+import {
   flagFromCountry,
   MIX_BAR_COLORS,
   qualityBadge,
   qualityGaugePercent,
   rosterHeadline,
-  rosterSourceLine,
 } from "../presentation";
 import { contentCategoriesForDisplay, listCreatorCategoryStickers } from "../content-categories";
 import { breakdownForCreator, creatorProfileLinks, engagementMetersForBreakdown } from "../platform-breakdown";
@@ -46,12 +49,12 @@ import { EngagementMeter, ReviewMeter } from "./review-meter";
 import { ReviewPlatformBreakdown } from "./review-platform-breakdown";
 import { IconBack, IconChart, IconCheck, IconClose } from "./review-icons";
 
-const STATUS_FILTERS: Array<{ id: "all" | "recommended" | ClientCreatorSelectionState; label: string }> = [
+const STATUS_FILTERS: Array<{ id: "all" | "recommended" | "selected" | "pending" | "rejected"; label: string }> = [
   { id: "all", label: "All" },
-  { id: "recommended", label: "Recommended" },
-  { id: "accepted", label: "Accepted" },
-  { id: "in_review", label: "In Review" },
-  { id: "rejected", label: "Rejected" },
+  { id: "recommended", label: "Thinkway" },
+  { id: "selected", label: "Selected" },
+  { id: "pending", label: "Pricing required" },
+  { id: "rejected", label: "Not selected" },
 ];
 
 export function CreatorsWorkspace({
@@ -82,8 +85,12 @@ export function CreatorsWorkspace({
     () =>
       view.creators.filter((creator) => {
         const state = selection[creator.creatorId] ?? creator.selection;
-        if (statusFilter === "recommended") return state !== "rejected";
-        if (statusFilter !== "all" && state !== statusFilter) return false;
+        if (statusFilter === "recommended") {
+          return creator.thinkwayStatus === "recommended" || creator.thinkwayStatus === "approved" || creator.thinkwayStatus === "finalized";
+        }
+        if (statusFilter === "selected") return state === "accepted";
+        if (statusFilter === "pending") return state === "accepted" && !isPricedClientInvestment(creator.investmentAmount);
+        if (statusFilter === "rejected") return state !== "accepted";
         return true;
       }),
     [statusFilter, view.creators, selection]
@@ -91,10 +98,19 @@ export function CreatorsWorkspace({
 
   const filterCounts = {
     all: view.creators.length,
-    recommended: counts.accepted + counts.inReview,
-    accepted: counts.accepted,
-    in_review: counts.inReview,
-    rejected: counts.rejected,
+    recommended: view.creators.filter(
+      (creator) =>
+        creator.thinkwayStatus === "recommended" ||
+        creator.thinkwayStatus === "approved" ||
+        creator.thinkwayStatus === "finalized"
+    ).length,
+    selected: counts.accepted,
+    pending: view.creators.filter(
+      (creator) =>
+        (selection[creator.creatorId] ?? creator.selection) === "accepted" &&
+        !isPricedClientInvestment(creator.investmentAmount)
+    ).length,
+    rejected: counts.inReview + counts.rejected,
   };
 
   useEffect(() => {
@@ -210,8 +226,8 @@ export function CreatorsWorkspace({
       </div>
       <ProposalSummaryCard view={view} token={token} selection={selection} variant="bar" />
       <p className="note" style={{ marginBottom: 12 }}>
-        {rosterHeadline(view.creators.length)}. {rosterSourceLine(view.review.source)}. Select
-        creators to calculate investment, then approve the selection.
+        {rosterHeadline(view.creators.length)}. Select the creators you want in your campaign.
+        Investment is shown when Thinkway has confirmed a client-facing price.
       </p>
 
       <div className="layout">
@@ -279,8 +295,29 @@ export function CreatorsWorkspace({
                   variant="list"
                 />
                 <div className="ccfoot">
-                  <span className="deliv">{deliverablesLabel(creator.deliverableItems, creator.deliverables)}</span>
-                  <span className={statusClass(state)}>{CLIENT_CREATOR_STATUS_LABEL[state]}</span>
+                  <span className="deliv">
+                    {deliverablesLabel(creator.deliverableItems, creator.deliverables) || "Deliverables: To be confirmed"}
+                  </span>
+                  <span className={isPricedClientInvestment(creator.investmentAmount) ? "inv" : "inv tbc"}>
+                    {isPricedClientInvestment(creator.investmentAmount)
+                      ? formatMoneyKpi(creator.investmentAmount!, creator.investmentCurrency || view.commercial.currency)
+                      : TO_BE_CONFIRMED}
+                  </span>
+                </div>
+                <div className="ccfoot">
+                  {thinkwayStatusLabel(creator.thinkwayStatus) ? (
+                    <span className="sc ok">{thinkwayStatusLabel(creator.thinkwayStatus)}</span>
+                  ) : null}
+                  <span className={statusClass(state)}>
+                    {clientStatusDisplay({
+                      selection: state,
+                      selectionConfirmed: Boolean(view.journey?.selectionConfirmed),
+                      commerciallyApproved: view.journey?.quotationStage === "approved",
+                    })}
+                  </span>
+                  {state === "accepted" && !isPricedClientInvestment(creator.investmentAmount) ? (
+                    <span className="sc warn">Pricing required</span>
+                  ) : null}
                 </div>
               </div>
               </button>
@@ -501,7 +538,19 @@ function CreatorDetailPane({
                 {category.label}
               </span>
             ))}
-          <span className={`tag g ${statusClass(creator.selection)}`}>{CLIENT_CREATOR_STATUS_LABEL[creator.selection]}</span>
+          <span className={`tag g ${statusClass(creator.selection)}`}>
+            {clientStatusDisplay({
+              selection: creator.selection,
+              selectionConfirmed: false,
+              commerciallyApproved: false,
+            })}
+          </span>
+          {thinkwayStatusLabel(creator.thinkwayStatus) ? (
+            <span className="tag g sc ok">{thinkwayStatusLabel(creator.thinkwayStatus)}</span>
+          ) : null}
+          {creator.selection === "accepted" && !isPricedClientInvestment(investmentAmount) ? (
+            <span className="tag g sc warn">Pricing required</span>
+          ) : null}
         </div>
         {canDecide ? (
           <div className="dacts">
@@ -514,12 +563,12 @@ function CreatorDetailPane({
               {creator.selection === "accepted" ? (
                 <>
                   <IconCheck />
-                  Accepted
+                  Selected
                 </>
               ) : (
                 <>
                   <IconCheck />
-                  Accept
+                  Select
                 </>
               )}
             </button>
@@ -585,11 +634,18 @@ function CreatorDetailPane({
             </div>
             <div className="mc">
               <p className="l">Investment</p>
-              <p className={investmentAmount != null ? "v sm" : "v sm tbc"}>
-                {investmentAmount != null ? formatMoneyKpi(investmentAmount, investmentCurrency) : TO_BE_CONFIRMED}
+              <p className={isPricedClientInvestment(investmentAmount) ? "v sm" : "v sm tbc"}>
+                {isPricedClientInvestment(investmentAmount)
+                  ? formatMoneyKpi(investmentAmount!, investmentCurrency)
+                  : TO_BE_CONFIRMED}
               </p>
             </div>
           </div>
+          {creator.selection === "accepted" && !isPricedClientInvestment(investmentAmount) ? (
+            <p className="note" style={{ marginTop: 10 }}>
+              This creator has been selected but does not have a confirmed investment yet.
+            </p>
+          ) : null}
         </div>
         <div className="sec">
           <p className="st">Audience match</p>

@@ -153,6 +153,7 @@ export function retainCreatorBriefs(
   const prevById = new Map(previous.creators.map((creator) => [creator.creatorId, creator]));
   return {
     ...next,
+    clientSelection: previous.clientSelection,
     creators: next.creators.map((creator) => {
       const prior = prevById.get(creator.creatorId);
       if (!prior) return creator;

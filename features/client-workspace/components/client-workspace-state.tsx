@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 
 import type { ClientCreatorSelectionState, ClientWorkspaceSectionId } from "../constants";
 import { projectSelectionSummaryFromCards } from "../media-plan-summary";
+import { selectionCalculator } from "../selection-flow";
 import { acceptedCreators, selectionMapFromView } from "../selection-view";
 import type { ClientCommercialSummary, ClientMediaPlanSummary, ClientWorkspaceView } from "../types";
 
@@ -46,16 +47,15 @@ export function ClientWorkspaceStateProvider({
       selection,
       view.commercial.currency
     );
-    const creatorInvestment = selectedCreators.reduce(
-      (sum, creator) => sum + (creator.investmentAmount ?? 0),
-      0
-    );
+    const calc = selectionCalculator(view.creators, selection);
     const selectedCommercial: ClientCommercialSummary = {
       ...view.commercial,
       feeAmount: undefined,
-      creatorInvestment,
-      totalInvestment: creatorInvestment,
-      selectedCount: selectedCreators.length,
+      creatorInvestment: calc.pricedInvestment,
+      totalInvestment: calc.pricedInvestment,
+      selectedCount: calc.selectedCount,
+      pricedSelectedCount: calc.pricedSelectedCount,
+      unpricedSelectedCount: calc.unpricedSelectedCount,
       lines: selectedCreators
         .filter((creator) => creator.investmentAmount != null)
         .map((creator) => ({ label: creator.displayName, amount: creator.investmentAmount })),

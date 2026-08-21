@@ -3,6 +3,7 @@
 import type { ClientReviewStatus, ClientWorkspaceSectionId } from "../constants";
 import { CLIENT_PROPOSAL_STATUS_LABEL, CLIENT_WORKSPACE_SECTION_LABEL } from "../constants";
 import { QUOTATION_STAGE_LABEL, SHORTLIST_STAGE_LABEL, clientWorkspacePathReviewId, clientWorkspaceVersionPill } from "../journey-state";
+import { primaryActionForJourney } from "../selection-flow";
 import { buildClientReviewPath } from "../security/review-token";
 import type { ClientWorkspaceView } from "../types";
 import { ClientJourneyStrip } from "./journey-strip";
@@ -36,12 +37,16 @@ export function ClientWorkspaceShell({
     reviewNumber: view.review.reviewNumber,
     newerReviewNumber: view.newerReviewNumber,
   });
-  const primaryHref = buildClientReviewPath(pathReviewId, token, "approval");
-  const primaryLabel = view.journey?.canApproveQuotation
-    ? "Approve Quotation"
-    : view.journey?.canApproveShortlist
-      ? "Approve Shortlist"
-      : null;
+  const primary = primaryActionForJourney({
+    canConfirmCreators: Boolean(view.journey?.canConfirmCreators),
+    canApproveFinalQuotation: Boolean(view.journey?.canApproveFinalQuotation),
+  });
+  const primaryHref = buildClientReviewPath(
+    pathReviewId,
+    token,
+    primary.kind === "confirm" ? "creators" : "approval"
+  );
+  const primaryLabel = primary.kind ? primary.label : null;
 
   function openSection(event: React.MouseEvent<HTMLAnchorElement>, next: ClientWorkspaceSectionId) {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
@@ -81,7 +86,9 @@ export function ClientWorkspaceShell({
               <a
                 className="btn pri"
                 href={primaryHref}
-                onClick={(event) => openSection(event, "approval")}
+                onClick={(event) =>
+                  openSection(event, primary.kind === "confirm" ? "creators" : "approval")
+                }
               >
                 <IconCheck />
                 {primaryLabel}

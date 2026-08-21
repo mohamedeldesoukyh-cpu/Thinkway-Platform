@@ -18,11 +18,20 @@ import {
 import { clientCreatorIds, projectClientCommercial } from "./project-client-view";
 import { projectCommercialFromSnapshot, snapshotCreatorIds } from "./snapshot";
 import {
-  clientSelectionToShortlistStatus,
   isFrozenClientReviewStatus,
   isInteractiveClientReview,
 } from "./status";
 import { clientApprovalSideEffects, canMutateClientReviewFromBoundReview, journeyCanonicalReviewId, pickReviewForDecision } from "./journey-state";
+import {
+  isPricedClientInvestment,
+  isSelectionConfirmed,
+  selectionCalculator,
+  selectionChangeAllowed,
+  UNPRICED_APPROVAL_MESSAGE,
+  UNPRICED_SELECTED_CODE,
+  unpricedSelectedIds,
+  withClientSelectionFreeze,
+} from "./selection-flow";
 import { logQuotationLifecycleEvent } from "@/lib/commercial-sync/audit";
 import { updateQuotationHeaderRecord } from "@/lib/services/quotations/repositories/quotation-repository";
 
@@ -72,6 +81,18 @@ async function requireInteractiveReview(
     return { ok: false as const, message: "A new version requires review. Decisions on this version are closed." };
   }
   return { ok: true as const, review: target, members };
+}
+
+function commerciallyApproved(review: { status: string; source: string }): boolean {
+  return review.source === "quotation" && review.status === "approved";
+}
+
+function creatorIsPriced(
+  review: { sourceSnapshot: { creators: Array<{ creatorId: string; investmentAmount?: number }> } | null },
+  creatorId: string
+): boolean {
+  const creator = review.sourceSnapshot?.creators.find((item) => item.creatorId === creatorId);
+  return isPricedClientInvestment(creator?.investmentAmount);
 }
 
 async function notifyOpsOfClientReviewChange(input: {
@@ -129,6 +150,16 @@ export async function setCreatorSelection(input: {
   const gate = await requireInteractiveReview(input.token);
   if (!gate.ok) return gate;
 
+  const current = gate.review.selectionState[input.creatorId] ?? "in_review";
+  const allowed = selectionChangeAllowed({
+    selectionConfirmed: isSelectionConfirmed(gate.review.sourceSnapshot),
+    commerciallyApproved: commerciallyApproved(gate.review),
+    current,
+    next: input.state,
+    priced: creatorIsPriced(gate.review, input.creatorId),
+  });
+  if (!allowed.ok) return { ok: false, message: allowed.message ?? "Selection cannot be changed." };
+
   const selection = { ...gate.review.selectionState, [input.creatorId]: input.state };
   const { error } = await db()
     .from("campaign_client_reviews" as never)
@@ -138,18 +169,6 @@ export async function setCreatorSelection(input: {
     } as never)
     .eq("id", gate.review.id);
   if (error) return { ok: false, message: error.message };
-
-  if (gate.review.shortlistId) {
-    const shortlistStatus = clientSelectionToShortlistStatus(input.state);
-    const rawId = input.creatorId.replace(/^(inf|dis):/, "");
-    await db()
-      .from("discovery_shortlist_items")
-      .update({ item_status: shortlistStatus } as never)
-      .eq("shortlist_id", gate.review.shortlistId)
-      .or(
-        `id.eq.${input.creatorId},influencer_id.eq.${rawId},profile_id.eq.${rawId},unified_id.eq.${input.creatorId},unified_id.eq.${rawId}`
-      );
-  }
 
   await db().from("campaign_client_review_events" as never).insert({
     review_id: gate.review.id,
@@ -170,10 +189,10 @@ export async function setCreatorSelection(input: {
     shortlistId: gate.review.shortlistId,
     body:
       input.state === "accepted"
-        ? `${input.creatorName || "A creator"} was approved on the client review.`
+        ? `${input.creatorName || "A creator"} was selected on the client review.`
         : input.state === "rejected"
-          ? `${input.creatorName || "A creator"} was rejected on the client review.`
-          : `${input.creatorName || "A creator"} was moved back to under review.`,
+          ? `${input.creatorName || "A creator"} was removed from the selection.`
+          : `${input.creatorName || "A creator"} was moved back to not selected.`,
   });
 
   const reason = input.reason?.trim();
@@ -213,26 +232,23 @@ export async function setBulkCreatorSelection(input: {
             return campaignObject ? clientCreatorIds(campaignObject) : Object.keys(gate.review.selectionState);
           })();
   const selection = { ...gate.review.selectionState };
-  for (const id of ids) selection[id] = input.state;
+  const confirmed = isSelectionConfirmed(gate.review.sourceSnapshot);
+  for (const id of ids) {
+    const allowed = selectionChangeAllowed({
+      selectionConfirmed: confirmed,
+      commerciallyApproved: commerciallyApproved(gate.review),
+      current: selection[id] ?? "in_review",
+      next: input.state,
+      priced: creatorIsPriced(gate.review, id),
+    });
+    if (!allowed.ok) return { ok: false, message: allowed.message ?? "Selection cannot be changed." };
+    selection[id] = input.state;
+  }
   const { error } = await db()
     .from("campaign_client_reviews" as never)
     .update({ selection_state: selection, updated_at: new Date().toISOString() } as never)
     .eq("id", gate.review.id);
   if (error) return { ok: false, message: error.message };
-
-  if (gate.review.shortlistId) {
-    const shortlistStatus = clientSelectionToShortlistStatus(input.state);
-    for (const creatorId of ids) {
-      const rawId = creatorId.replace(/^(inf|dis):/, "");
-      await db()
-        .from("discovery_shortlist_items")
-        .update({ item_status: shortlistStatus } as never)
-        .eq("shortlist_id", gate.review.shortlistId)
-        .or(
-          `id.eq.${creatorId},influencer_id.eq.${rawId},profile_id.eq.${rawId},unified_id.eq.${creatorId},unified_id.eq.${rawId}`
-        );
-    }
-  }
 
   await notifyOpsOfClientReviewChange({
     reviewId: gate.review.id,
@@ -286,14 +302,20 @@ export async function requestClientChanges(input: {
   const summary = input.summary.trim();
   if (!summary) return { ok: false, message: "Describe the change you need." };
   const areas = input.areas.length > 0 ? input.areas : (["campaign"] as ClientChangeArea[]);
+  const patch: Record<string, unknown> = {
+    status: "changes_requested",
+    change_request_summary: summary,
+    change_request_areas: areas,
+    updated_at: new Date().toISOString(),
+  };
+  if (gate.review.sourceSnapshot?.clientSelection) {
+    const nextSnapshot = { ...gate.review.sourceSnapshot };
+    delete nextSnapshot.clientSelection;
+    patch.source_snapshot = nextSnapshot;
+  }
   const { error } = await db()
     .from("campaign_client_reviews" as never)
-    .update({
-      status: "changes_requested",
-      change_request_summary: summary,
-      change_request_areas: areas,
-      updated_at: new Date().toISOString(),
-    } as never)
+    .update(patch as never)
     .eq("id", gate.review.id);
   if (error) return { ok: false, message: error.message };
   await db().from("campaign_client_review_events" as never).insert({
@@ -306,13 +328,89 @@ export async function requestClientChanges(input: {
   return { ok: true, message: "Change request sent to Thinkway." };
 }
 
+export async function confirmClientCreators(input: {
+  token: string;
+}): Promise<{ ok: boolean; message: string }> {
+  const gate = await requireInteractiveReview(input.token);
+  if (!gate.ok) return gate;
+  const snapshot = gate.review.sourceSnapshot;
+  if (!snapshot) return { ok: false, message: "Package not found." };
+  if (isSelectionConfirmed(snapshot)) {
+    return { ok: true, message: "Creators already confirmed. This is not commercial approval." };
+  }
+  const acceptedIds = snapshot.creators
+    .map((creator) => creator.creatorId)
+    .filter((id) => gate.review.selectionState[id] === "accepted");
+  if (acceptedIds.length === 0) {
+    return { ok: false, message: "Select at least one creator before confirming." };
+  }
+  const now = new Date().toISOString();
+  const nextSnapshot = withClientSelectionFreeze(snapshot, {
+    confirmedAt: now,
+    creatorIds: acceptedIds,
+  });
+  const { error } = await db()
+    .from("campaign_client_reviews" as never)
+    .update({
+      source_snapshot: nextSnapshot,
+      updated_at: now,
+    } as never)
+    .eq("id", gate.review.id)
+    .in("status", ["awaiting_review", "changes_requested"]);
+  if (error) return { ok: false, message: error.message };
+  await db().from("campaign_client_review_events" as never).insert({
+    review_id: gate.review.id,
+    event_type: "creators_confirmed",
+    actor_kind: "client",
+    actor_label: gate.review.clientLabel ?? "Client",
+    payload: {
+      creatorIds: acceptedIds,
+      lockCommercial: false,
+      setQuotationStatusApproved: false,
+    },
+  } as never);
+  await notifyOpsOfClientReviewChange({
+    reviewId: gate.review.id,
+    quotationId: gate.review.quotationId,
+    shortlistId: gate.review.shortlistId,
+    body: `Client confirmed ${acceptedIds.length} creator${acceptedIds.length === 1 ? "" : "s"} for the quotation. This is not commercial approval.`,
+  });
+  return { ok: true, message: "Creators confirmed. This is not commercial approval." };
+}
+
+export async function removeUnpricedSelectedCreators(input: {
+  token: string;
+}): Promise<{ ok: boolean; message: string; selection?: Record<string, ClientCreatorSelectionState> }> {
+  const gate = await requireInteractiveReview(input.token);
+  if (!gate.ok) return gate;
+  const snapshot = gate.review.sourceSnapshot;
+  if (!snapshot) return { ok: false, message: "Package not found." };
+  const ids = unpricedSelectedIds(snapshot.creators, gate.review.selectionState);
+  if (ids.length === 0) return { ok: true, message: "No unpriced creators in the selection.", selection: gate.review.selectionState };
+  const selection = { ...gate.review.selectionState };
+  for (const id of ids) selection[id] = "in_review";
+  const { error } = await db()
+    .from("campaign_client_reviews" as never)
+    .update({
+      selection_state: selection,
+      updated_at: new Date().toISOString(),
+    } as never)
+    .eq("id", gate.review.id);
+  if (error) return { ok: false, message: error.message };
+  return {
+    ok: true,
+    message: "Unpriced creators were removed from this quotation selection. They remain on the shortlist.",
+    selection,
+  };
+}
+
 export async function decideClientReview(input: {
   token: string;
   decision: "approved" | "rejected";
   actorLabel?: string;
   reason?: string;
   stage?: ClientReviewDecisionStage;
-}): Promise<{ ok: boolean; message: string; quotationId?: string }> {
+}): Promise<{ ok: boolean; message: string; quotationId?: string; code?: string }> {
   const stage: ClientReviewDecisionStage | undefined =
     input.stage ?? (input.decision === "rejected" ? "quotation" : undefined);
   const gate = await requireInteractiveReview(input.token, stage);
@@ -353,9 +451,28 @@ export async function decideClientReview(input: {
       ok: false,
       message:
         gate.review.source === "shortlist"
-          ? "Keep at least one creator on the shortlist before approving."
+          ? "Select at least one creator before confirming."
           : "Select at least one creator before approving the quotation.",
     };
+  }
+
+  if (input.decision === "approved" && gate.review.source === "quotation") {
+    if (!isSelectionConfirmed(snapshot ?? undefined)) {
+      return {
+        ok: false,
+        message: "Confirm the creators you would like included in your campaign quotation first.",
+      };
+    }
+    if (snapshot) {
+      const calc = selectionCalculator(snapshot.creators, gate.review.selectionState);
+      if (calc.unpricedSelectedCount > 0) {
+        return {
+          ok: false,
+          message: UNPRICED_APPROVAL_MESSAGE,
+          code: UNPRICED_SELECTED_CODE,
+        };
+      }
+    }
   }
 
   const effects = clientApprovalSideEffects(gate.review.source, input.decision);

@@ -53,7 +53,6 @@ export function countSelections(
 export function shortlistStatusToClient(
   itemStatus: string | null | undefined
 ): ClientCreatorSelectionState {
-  if (itemStatus === "approved" || itemStatus === "moved_to_campaign") return "accepted";
   if (itemStatus === "rejected" || itemStatus === "cancelled") return "rejected";
   return "in_review";
 }

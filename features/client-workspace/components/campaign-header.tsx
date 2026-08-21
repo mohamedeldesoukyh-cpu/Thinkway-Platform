@@ -11,6 +11,7 @@ import {
 import { formatPlatformLabel } from "../format";
 import { proposalSubtitle, rosterHeadline, rosterSourceLine } from "../presentation";
 import { clientWorkspacePathReviewId } from "../journey-state";
+import { primaryActionForJourney } from "../selection-flow";
 import { buildClientReviewPath } from "../security/review-token";
 import type { ClientWorkspaceView } from "../types";
 import { StatusPill } from "./media-plan-ui";
@@ -98,11 +99,10 @@ export function CampaignHeader({
               href={approvalHref}
               className="rounded-full bg-[#1D9E75] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[#178A65]"
             >
-              {view.journey?.canApproveQuotation
-                ? "Approve Quotation"
-                : view.journey?.canApproveShortlist
-                  ? "Approve Shortlist"
-                  : "Review approval"}
+              {primaryActionForJourney({
+                canConfirmCreators: Boolean(view.journey?.canConfirmCreators),
+                canApproveFinalQuotation: Boolean(view.journey?.canApproveFinalQuotation),
+              }).label || "Review"}
             </Link>
           </>
         ) : null}

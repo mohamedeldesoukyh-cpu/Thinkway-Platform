@@ -1,71 +1,76 @@
 "use client";
 
+import type { ClientJourneyNodeTone } from "../journey-state";
 import {
-  QUOTATION_STAGE_LABEL,
-  SHORTLIST_STAGE_LABEL,
-  quotationStageTone,
-  shortlistStageTone,
-  type ClientJourneyNodeId,
-  type ClientJourneyNodeTone,
-} from "../journey-state";
+  campaignStageCopy,
+  commercialStageCopy,
+  isPricedClientInvestment,
+  selectionCalculator,
+  selectionStageCopy,
+  shortlistStageCopy,
+} from "../selection-flow";
 import type { ClientWorkspaceView } from "../types";
+import { useClientWorkspaceState } from "./client-workspace-state";
 
-const NODES: Array<{ id: ClientJourneyNodeId; label: string }> = [
-  { id: "shortlist", label: "Shortlist" },
-  { id: "quotation", label: "Quotation" },
-  { id: "final_approval", label: "Final Approval" },
-  { id: "campaign", label: "Campaign" },
-  { id: "performance", label: "Performance" },
-  { id: "invoice", label: "Invoice" },
+const NODES: Array<{ id: "shortlist" | "selection" | "commercial" | "campaign"; label: string; hint: string }> = [
+  { id: "shortlist", label: "Creator Shortlist", hint: "What creators does Thinkway recommend?" },
+  { id: "selection", label: "Your Selection", hint: "Which creators do you want?" },
+  { id: "commercial", label: "Commercial", hint: "What is the final investment?" },
+  { id: "campaign", label: "Campaign", hint: "Has the campaign started?" },
 ];
 
-function nodeCopy(view: ClientWorkspaceView, id: ClientJourneyNodeId): { label: string; tone: ClientJourneyNodeTone } {
+function nodeCopy(
+  view: ClientWorkspaceView,
+  id: (typeof NODES)[number]["id"],
+  calc: ReturnType<typeof selectionCalculator>
+): { label: string; tone: ClientJourneyNodeTone } {
   const journey = view.journey;
-  if (!journey) {
-    return { label: "—", tone: "idle" };
-  }
+  if (!journey) return { label: "—", tone: "idle" };
+  const commerciallyApproved = journey.quotationStage === "approved";
   if (id === "shortlist") {
-    return { label: SHORTLIST_STAGE_LABEL[journey.shortlistStage], tone: shortlistStageTone(journey.shortlistStage) };
+    return shortlistStageCopy({ available: Boolean(journey.shortlistId) || view.creators.length > 0 });
   }
-  if (id === "quotation") {
-    return { label: QUOTATION_STAGE_LABEL[journey.quotationStage], tone: quotationStageTone(journey.quotationStage) };
+  if (id === "selection") {
+    if (journey.historical) return { label: "Historical", tone: "idle" };
+    return selectionStageCopy({
+      selectedCount: calc.selectedCount,
+      selectionConfirmed: Boolean(journey.selectionConfirmed),
+      commerciallyApproved,
+    });
   }
-  if (id === "final_approval") {
-    if (journey.historical && journey.quotationStage === "superseded") {
-      return { label: "Historical", tone: "idle" };
-    }
-    if (journey.quotationStage === "approved") return { label: "Approved", tone: "ok" };
-    if (journey.quotationStage === "rejected") return { label: "Rejected", tone: "bad" };
-    if (journey.quotationStage === "updated") return { label: "Approval required", tone: "attention" };
-    if (journey.canApproveQuotation) return { label: "Awaiting client", tone: "active" };
-    if (journey.historical) return { label: "Read only", tone: "idle" };
-    return { label: "Not started", tone: "idle" };
+  if (id === "commercial") {
+    return commercialStageCopy({
+      quotationStage: journey.quotationStage,
+      pricedSelectedCount: calc.pricedSelectedCount,
+      pricedInvestment: calc.pricedInvestment,
+      currency: view.commercial.currency,
+      selectionConfirmed: Boolean(journey.selectionConfirmed),
+      hasAnyPrice: view.creators.some((creator) => isPricedClientInvestment(creator.investmentAmount)),
+    });
   }
-  if (id === "campaign") {
-    return journey.campaignStarted
-      ? { label: "In campaign", tone: "ok" }
-      : { label: "Not started", tone: "idle" };
-  }
-  if (id === "performance") {
-    return journey.performanceStarted
-      ? { label: "Available in campaign", tone: "active" }
-      : { label: "Not started", tone: "idle" };
-  }
-  return { label: "Not started", tone: "idle" };
+  return campaignStageCopy({
+    campaignStarted: journey.campaignStarted,
+    commerciallyApproved,
+  });
 }
 
 export function ClientJourneyStrip({ view }: { view: ClientWorkspaceView }) {
+  const { selection } = useClientWorkspaceState();
+  const calc = selectionCalculator(view.creators, selection);
   return (
     <nav className="journey" aria-label="Campaign journey">
       <div className="wrap journey-row">
         {NODES.map((node, index) => {
-          const copy = nodeCopy(view, node.id);
+          const copy = nodeCopy(view, node.id, calc);
           return (
             <div key={node.id} className={`journey-node tone-${copy.tone}`}>
               {index > 0 ? <span className="journey-arrow" aria-hidden="true" /> : null}
               <div>
-                <p className="journey-k">{node.label}</p>
+                <p className="journey-k">
+                  {index + 1} {node.label}
+                </p>
                 <p className="journey-v">{copy.label}</p>
+                <p className="journey-h">{node.hint}</p>
               </div>
             </div>
           );

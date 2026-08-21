@@ -153,6 +153,8 @@ export type ClientReviewSourceSnapshotCreator = {
   influencerId?: string;
   briefFrozenAt?: string;
   briefBackfillDone?: boolean;
+  thinkwayStatus?: import("./selection-flow").ClientThinkwayStatus;
+  quotationEligible?: boolean;
 };
 
 export type ClientReviewSourceSnapshot = {
@@ -185,6 +187,7 @@ export type ClientReviewSourceSnapshot = {
     lines: Array<{ creatorId: string; label: string; amount: number }>;
   };
   creatorIds: string[];
+  clientSelection?: import("./selection-flow").ClientSelectionFreeze;
   clientUpdate?: {
     updatedAt: string;
     items: string[];
@@ -265,6 +268,8 @@ export type ClientCreatorCard = {
   performance?: ClientPerformanceBrief;
   historical?: ClientHistoricalMonth[];
   briefFrozenAt?: string;
+  thinkwayStatus?: import("./selection-flow").ClientThinkwayStatus;
+  quotationEligible?: boolean;
 };
 
 export type ClientCreatorBrief = {
@@ -315,6 +320,8 @@ export type ClientCommercialSummary = {
   quotationTotal: number;
   lines: ClientCommercialLine[];
   selectedCount: number;
+  pricedSelectedCount?: number;
+  unpricedSelectedCount?: number;
   totalCount: number;
 };
 
@@ -372,6 +379,10 @@ export type ClientWorkspaceJourney = {
   historical: boolean;
   canApproveShortlist: boolean;
   canApproveQuotation: boolean;
+  canConfirmCreators?: boolean;
+  canApproveFinalQuotation?: boolean;
+  selectionConfirmed?: boolean;
+  approvedQuotationCount?: number;
   canRequestShortlistChanges: boolean;
   canRequestQuotationChanges: boolean;
   canRejectQuotation: boolean;

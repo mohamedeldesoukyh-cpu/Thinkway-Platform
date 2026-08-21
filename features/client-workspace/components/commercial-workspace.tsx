@@ -4,6 +4,7 @@ import { formatMoneyKpi } from "@/lib/finance/currency-format";
 
 import { clientCreatorIdentity, formatHandleLabel, formatPlatformLabel, NOT_AVAILABLE, providedText, TO_BE_CONFIRMED } from "../format";
 import { breakdownForCreator } from "../platform-breakdown";
+import { consolidationContract } from "../selection-flow";
 import { allocationSlices, MIX_BAR_COLORS, rosterHeadline } from "../presentation";
 import type { ClientWorkspaceView } from "../types";
 import { useClientWorkspaceState } from "./client-workspace-state";
@@ -44,15 +45,11 @@ export function CommercialWorkspace({
             : TO_BE_CONFIRMED}
         </h2>
         <p className="note">
-          {rosterHeadline(commercial.selectedCount)} selected of {view.creators.length} proposed
-          {view.review.source === "shortlist" && view.journey?.quotationStage === "draft"
-            ? " · Indicative investment — not commercially approved"
-            : view.commercial.quotationTotal > 0
-              ? ` · Quotation ${formatMoneyKpi(view.commercial.quotationTotal, commercial.currency)}`
-              : ` · Quotation ${TO_BE_CONFIRMED}`}
-          {" "}
-          · Proposal v{view.review.reviewNumber}
-          {view.quotation?.serialNumber ? ` · ${view.quotation.serialNumber}` : ""}
+          Final selected creators · {rosterHeadline(commercial.selectedCount)}
+          {commercial.unpricedSelectedCount
+            ? ` · ${commercial.unpricedSelectedCount} price pending`
+            : ""}
+          {view.journey?.quotationStage === "updated" ? " · Updated — Approval Required" : ""}
         </p>
         <div className="glance">
           <div className="gi">
@@ -105,8 +102,8 @@ export function CommercialWorkspace({
       ) : null}
 
       <div className="card">
-        <p className="ck">Creator investment</p>
-        <h2>Selected roster</h2>
+        <p className="ck">Final selected creators</p>
+        <h2>Creator · Deliverables · Investment</h2>
         <div className="tbl-scroll">
           <table className="tbl">
             <thead>
@@ -171,7 +168,7 @@ export function CommercialWorkspace({
                 })
               ) : (
                 <tr>
-                  <td colSpan={4}>Accept creators on the Creators tab to build this commercial view.</td>
+                  <td colSpan={4}>Select creators in Your Selection to build this commercial view.</td>
                 </tr>
               )}
             </tbody>
@@ -219,6 +216,23 @@ export function CommercialWorkspace({
           </div>
         </div>
       ) : null}
+      {(() => {
+        const consolidate = consolidationContract(view.journey?.approvedQuotationCount ?? 0);
+        if (!consolidate.eligible) return null;
+        return (
+          <div className="card">
+            <p className="ck">Multiple quotations</p>
+            <h2>{consolidate.actionLabel}</h2>
+            <p className="note">
+              {consolidate.approvedQuotationCount} approved quotations can later be combined into a new
+              quotation version. {consolidate.helper}
+            </p>
+            <button type="button" className="btn sec" disabled>
+              {consolidate.actionLabel}
+            </button>
+          </div>
+        );
+      })()}
     </>
   );
 }

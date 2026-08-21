@@ -9,7 +9,7 @@ import { quotationDetailPath } from "@/lib/routing/entity-paths";
 
 import type { ClientCreatorSelectionState } from "../constants";
 import { loadLatestInternalReviewForQuotation } from "../load-client-workspace";
-import { clientSelectionToShortlistStatus, isFrozenClientReviewStatus } from "../status";
+import { isFrozenClientReviewStatus } from "../status";
 
 export async function setQuotationReviewCreatorsOnBehalfAction(input: {
   quotationId: string;
@@ -30,12 +30,20 @@ export async function setQuotationReviewCreatorsOnBehalfAction(input: {
   const ids = [...new Set(input.creatorIds.filter(Boolean))];
   if (ids.length === 0) return { ok: false, message: "Select at least one creator." };
 
-  const selection = { ...review.selectionState };
-  for (const id of ids) selection[id] = input.state;
+  const snapshot = review.sourceSnapshot;
+  const thinkwayStatus =
+    input.state === "accepted" ? "approved" : input.state === "rejected" ? "not_reviewed" : "recommended";
   const patch: Record<string, unknown> = {
-    selection_state: selection,
     updated_at: new Date().toISOString(),
   };
+  if (snapshot) {
+    patch.source_snapshot = {
+      ...snapshot,
+      creators: snapshot.creators.map((creator) =>
+        ids.includes(creator.creatorId) ? { ...creator, thinkwayStatus } : creator
+      ),
+    };
+  }
 
   const { error } = await supabase
     .from("campaign_client_reviews" as never)
@@ -48,7 +56,7 @@ export async function setQuotationReviewCreatorsOnBehalfAction(input: {
       const rawId = creatorId.replace(/^(inf|dis):/, "");
       await supabase
         .from("discovery_shortlist_items")
-        .update({ item_status: clientSelectionToShortlistStatus(input.state) } as never)
+        .update({ item_status: input.state === "accepted" ? "approved" : "under_review" } as never)
         .eq("shortlist_id", review.shortlistId)
         .or(
           `id.eq.${creatorId},influencer_id.eq.${rawId},profile_id.eq.${rawId},unified_id.eq.${creatorId},unified_id.eq.${rawId}`
@@ -58,20 +66,20 @@ export async function setQuotationReviewCreatorsOnBehalfAction(input: {
 
   await supabase.from("campaign_client_review_events" as never).insert({
     review_id: review.id,
-    event_type: input.state === "rejected" ? "creator_rejected" : "creator_selected",
+    event_type: "thinkway_creator_status",
     actor_kind: "internal",
     actor_label: "Thinkway",
-    payload: { creatorIds: ids, state: input.state, onBehalfOfClient: true },
+    payload: { creatorIds: ids, thinkwayStatus, onBehalfOfClient: false },
   } as never);
 
   revalidatePath(quotationDetailPath(input.quotationId));
   return {
     ok: true,
     message:
-      input.state === "accepted"
-        ? "Marked approved on behalf of the client."
-        : input.state === "rejected"
-          ? "Marked rejected on behalf of the client."
-          : "Moved back to under review.",
+      thinkwayStatus === "approved"
+        ? "Marked as approved by Thinkway. The client still needs to make their own selection."
+        : thinkwayStatus === "not_reviewed"
+          ? "Thinkway recommendation cleared. Client selection is unchanged."
+          : "Marked as recommended by Thinkway. The client still needs to make their own selection.",
   };
 }

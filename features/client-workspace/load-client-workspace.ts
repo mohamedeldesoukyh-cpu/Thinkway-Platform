@@ -41,6 +41,12 @@ import type {
   ClientWorkspaceView,
 } from "./types";
 import { visibleClientWorkspaceSections } from "./visible-sections";
+import {
+  isSelectionConfirmed,
+  mergeSnapshotsForClientView,
+  selectionCalculator,
+  selectionJourneyFlags,
+} from "./selection-flow";
 
 export type ResolvedClientReview =
   | { ok: true; review: ClientReviewRecord }
@@ -182,6 +188,8 @@ function eventSummary(type: string, payload: Record<string, unknown> | null): st
       return "Shortlist approved";
     case "quotation_approved":
       return "Quotation approved";
+    case "creators_confirmed":
+      return "Creators confirmed";
     case "quotation_revision_published":
       return "Updated quotation sent for approval";
     case "review_viewed":
@@ -347,13 +355,21 @@ export async function loadClientWorkspace(
   ]);
 
   const selection = activeReview.selectionState as Record<string, ClientCreatorSelectionState>;
+  const shortlistSnapshot = latestReviewForSource(members, "shortlist")?.sourceSnapshot ?? null;
+  const quotationSnapshot = quotationLatest?.sourceSnapshot ?? null;
   let view: ClientWorkspaceView | null = null;
   let campaignObject: CampaignObject | null = null;
 
   if (activeReview.sourceSnapshot) {
+    const mergedSnapshot = mergeSnapshotsForClientView({
+      active: activeReview.sourceSnapshot,
+      shortlist: shortlistSnapshot,
+      quotation: quotationSnapshot,
+      historical: picked.historical,
+    });
     view = viewFromSnapshot(
       activeReview,
-      activeReview.sourceSnapshot,
+      mergedSnapshot,
       selection,
       comments,
       activity,
@@ -395,7 +411,20 @@ export async function loadClientWorkspace(
     return { ok: false, code: "not_found", message: "This campaign package is no longer available." };
   }
 
-  view.journey = journey;
+  const calc = selectionCalculator(view.creators, selection);
+  const confirmed = isSelectionConfirmed(
+    activeReview.sourceSnapshot ?? quotationSnapshot ?? shortlistSnapshot
+  );
+  const flags = selectionJourneyFlags({
+    historical: picked.historical,
+    interactive: isInteractiveClientReview(activeReview.status) && !picked.historical,
+    quotationInteractive: journey.canApproveQuotation,
+    selectionConfirmed: confirmed,
+    selectedCount: calc.selectedCount,
+    unpricedSelectedCount: calc.unpricedSelectedCount,
+    approvedQuotationCount: journey.approvedQuotationCount ?? 0,
+  });
+  view.journey = { ...journey, ...flags };
   view.stageDiff =
     picked.historical || shortlistApproved?.status !== "approved"
       ? null
@@ -412,15 +441,21 @@ export async function loadClientWorkspace(
     reviewNumber: activeReview.reviewNumber,
     status: activeReview.status,
     statusLabel: journeyActionRequired({
-      shortlistStage: journey.shortlistStage,
-      quotationStage: journey.quotationStage,
-      historical: picked.historical,
+      shortlistStage: view.journey.shortlistStage,
+      quotationStage: view.journey.quotationStage,
+      historical: view.journey.historical,
+      selectionConfirmed: view.journey.selectionConfirmed,
+      canConfirmCreators: view.journey.canConfirmCreators,
+      canApproveFinalQuotation: view.journey.canApproveFinalQuotation,
     }),
     lastUpdated: activeReview.updatedAt,
     actionRequired: journeyActionRequired({
-      shortlistStage: journey.shortlistStage,
-      quotationStage: journey.quotationStage,
-      historical: picked.historical,
+      shortlistStage: view.journey.shortlistStage,
+      quotationStage: view.journey.quotationStage,
+      historical: view.journey.historical,
+      selectionConfirmed: view.journey.selectionConfirmed,
+      canConfirmCreators: view.journey.canConfirmCreators,
+      canApproveFinalQuotation: view.journey.canApproveFinalQuotation,
     }),
   };
 

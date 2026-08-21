@@ -77,7 +77,7 @@ export function QuotationClientReviewPanel({
               Select under review
             </Button>
             <Button type="button" size="sm" variant="outline" disabled={pending || counts.inReview === 0} onClick={onAcceptOnBehalf}>
-              Approve under review on behalf
+              Mark as approved by Thinkway
             </Button>
             <Button
               type="button"

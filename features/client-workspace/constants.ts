@@ -75,15 +75,15 @@ export const CLIENT_REVIEW_COOKIE = "tw_client_review";
 export const CLIENT_REVIEW_LINK_MISSING_MESSAGE = "Generate the Client Workspace link first.";
 
 export const CLIENT_WORKSPACE_SECTION_LABEL: Record<ClientWorkspaceSectionId, string> = {
-  overview: "Overview",
+  overview: "Shortlist",
   strategy: "Strategy",
-  creators: "Creators",
+  creators: "Your Selection",
   content: "Content Plan",
   commercial: "Commercial",
   quotation: "Quotation",
   timeline: "Timeline",
   feedback: "Feedback",
-  approval: "Approval",
+  approval: "Campaign",
 };
 
 export const CLIENT_STATUS_LABEL: Record<ClientReviewStatus, string> = {
@@ -105,7 +105,7 @@ export const CLIENT_PROPOSAL_STATUS_LABEL: Record<ClientReviewStatus, string> = 
 };
 
 export const CLIENT_CREATOR_STATUS_LABEL: Record<ClientCreatorSelectionState, string> = {
-  in_review: "In Review",
-  accepted: "Accepted",
-  rejected: "Rejected",
+  in_review: "Not selected",
+  accepted: "Selected by you",
+  rejected: "Not selected",
 };

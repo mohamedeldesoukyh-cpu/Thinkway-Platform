@@ -5,13 +5,22 @@ import { useRouter } from "next/navigation";
 
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
 
-import { decideReviewAction } from "../actions/client-workspace-actions";
+import {
+  confirmCreatorsAction,
+  decideReviewAction,
+  removeUnpricedSelectedAction,
+} from "../actions/client-workspace-actions";
 import type { ClientCreatorSelectionState } from "../constants";
 import { formatCompactCount, formatEngagementPct, TO_BE_CONFIRMED } from "../format";
 import { projectSelectionSummaryFromCards } from "../media-plan-summary";
 import { clientWorkspacePathReviewId } from "../journey-state";
 import { buildClientReviewPath } from "../security/review-token";
-import { isSelectedForCalculator } from "../status";
+import {
+  CONFIRM_CREATORS_SUPPORTING_TEXT,
+  UNPRICED_SELECTED_CODE,
+  primaryActionForJourney,
+  selectionCalculator,
+} from "../selection-flow";
 import type { ClientWorkspaceView } from "../types";
 import { useClientWorkspaceState } from "./client-workspace-state";
 import { IconCheck } from "./review-icons";
@@ -76,18 +85,13 @@ export function ProposalSummaryCard({
   const { goToSection } = useClientWorkspaceState();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [unpricedBlock, setUnpricedBlock] = useState(false);
   const resolvedSelection =
     selection ??
     Object.fromEntries(view.creators.map((creator) => [creator.creatorId, creator.selection]));
-  const selectedCount = view.creators.filter((creator) =>
-    isSelectedForCalculator(resolvedSelection[creator.creatorId])
-  ).length;
+  const calc = selectionCalculator(view.creators, resolvedSelection);
   const currency = view.commercial.currency;
-  const quotationTotal = view.commercial.quotationTotal;
-  const investment = view.creators.reduce((sum, creator) => {
-    if (!isSelectedForCalculator(resolvedSelection[creator.creatorId])) return sum;
-    return sum + (creator.investmentAmount ?? 0);
-  }, 0);
+  const investment = calc.pricedInvestment;
   const forecast = projectSelectionSummaryFromCards(view.creators, resolvedSelection, currency);
   const er =
     forecast.averageEngagementRate != null
@@ -99,28 +103,20 @@ export function ProposalSummaryCard({
     canonicalReviewId: view.journey?.canonicalReviewId,
   });
   const creatorsHref = buildClientReviewPath(pathReviewId, token, "creators");
-  const canApprove = view.canDecide && selectedCount > 0 && !pending;
-  const approveStage = view.journey?.canApproveQuotation
-    ? "quotation"
-    : view.journey?.canApproveShortlist
-      ? "shortlist"
-      : view.review.source === "quotation"
-        ? "quotation"
-        : view.review.source === "shortlist"
-          ? "shortlist"
-          : undefined;
-  const approveLabel =
-    approveStage === "quotation"
-      ? "Approve Quotation"
-      : approveStage === "shortlist"
-        ? "Approve Shortlist"
-        : null;
+  const primary = primaryActionForJourney({
+    canConfirmCreators: Boolean(view.journey?.canConfirmCreators),
+    canApproveFinalQuotation: Boolean(view.journey?.canApproveFinalQuotation),
+  });
+  const canAct =
+    view.canDecide &&
+    calc.selectedCount > 0 &&
+    !pending &&
+    (primary.kind === "confirm" || (primary.kind === "approve" && calc.unpricedSelectedCount === 0));
+  const actionLabel = primary.label || null;
   const emptyHint =
-    selectedCount === 0 && view.canDecide
-      ? approveStage === "shortlist"
-        ? "Keep at least one creator on the shortlist before approving."
-        : "Select creators to calculate this package, then approve it."
-      : null;
+    calc.selectedCount === 0 && view.canDecide
+      ? "Select creators to build your campaign quotation."
+      : calc.unpricedMessage;
 
   function openSection(event: React.MouseEvent<HTMLAnchorElement>, next: "creators") {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
@@ -128,17 +124,41 @@ export function ProposalSummaryCard({
     goToSection(next);
   }
 
-  function approve() {
+  function runPrimary() {
     startTransition(async () => {
+      setUnpricedBlock(false);
+      if (primary.kind === "confirm") {
+        const result = await confirmCreatorsAction({ token });
+        if (!result.ok) {
+          setError(result.message);
+          return;
+        }
+        router.refresh();
+        return;
+      }
       const result = await decideReviewAction({
         token,
         decision: "approved",
-        stage: approveStage,
+        stage: "quotation",
       });
+      if (!result.ok) {
+        setError(result.message);
+        if (result.code === UNPRICED_SELECTED_CODE) setUnpricedBlock(true);
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  function removeUnpriced() {
+    startTransition(async () => {
+      const result = await removeUnpricedSelectedAction({ token });
       if (!result.ok) {
         setError(result.message);
         return;
       }
+      setUnpricedBlock(false);
+      setError(null);
       router.refresh();
     });
   }
@@ -146,14 +166,15 @@ export function ProposalSummaryCard({
   if (variant === "bar") {
     return (
       <div className="summary sumbar">
-        <Metric label="Selected" value={`${selectedCount} / ${view.creators.length}`} />
+        <Metric label="Selected" value={`${calc.selectedCount} / ${view.creators.length}`} />
+        <Metric label="Priced" value={String(calc.pricedSelectedCount)} />
         <Metric
-          label="Quotation"
-          value={quotationTotal > 0 ? formatMoneyKpi(quotationTotal, currency) : TO_BE_CONFIRMED}
-          missing={quotationTotal <= 0}
+          label="Price pending"
+          value={String(calc.unpricedSelectedCount)}
+          missing={calc.unpricedSelectedCount > 0}
         />
         <Metric
-          label="Investment"
+          label="Selected investment"
           value={investment > 0 ? formatMoneyKpi(investment, currency) : TO_BE_CONFIRMED}
           missing={investment <= 0}
         />
@@ -167,16 +188,20 @@ export function ProposalSummaryCard({
           value={formatCompactCount(forecast.estimatedEngagements)}
           missing={forecast.estimatedEngagements == null}
         />
-        <Metric label="Avg engagement" value={er} missing={forecast.averageEngagementRate == null} />
-        <Metric label="CPE" value={money(forecast.cpe, currency)} missing={forecast.cpe == null} />
-        <Metric label="CPM" value={money(forecast.cpm, currency)} missing={forecast.cpm == null} />
         <div className="sp" />
         {error ? <p className="sumbar-msg">{error}</p> : emptyHint ? <p className="sumbar-msg">{emptyHint}</p> : null}
-        {view.canDecide && approveLabel ? (
+        {unpricedBlock ? (
           <div className="sumbar-cta">
-            <button type="button" className="btn pri" disabled={!canApprove} onClick={approve}>
+            <button type="button" className="btn pri" disabled={pending} onClick={removeUnpriced}>
+              Remove unpriced creators
+            </button>
+            <span className="sumbar-msg">or wait for pricing</span>
+          </div>
+        ) : view.canDecide && actionLabel ? (
+          <div className="sumbar-cta">
+            <button type="button" className="btn pri" disabled={!canAct} onClick={runPrimary}>
               <IconCheck />
-              {approveLabel}
+              {actionLabel}
             </button>
           </div>
         ) : null}
@@ -189,20 +214,21 @@ export function ProposalSummaryCard({
       <p className="st">Proposal summary</p>
       <p className="ss">
         {view.overview.campaignName} · v{view.review.reviewNumber}
+        {primary.kind === "confirm" ? ` · ${CONFIRM_CREATORS_SUPPORTING_TEXT}` : ""}
       </p>
       <Row
-        label="Quotation"
-        value={quotationTotal > 0 ? formatMoneyKpi(quotationTotal, currency) : TO_BE_CONFIRMED}
-        missing={quotationTotal <= 0}
-        big
-      />
-      <Row
-        label="Investment"
-        hint="based on selection"
+        label="Selected investment"
         value={investment > 0 ? formatMoneyKpi(investment, currency) : TO_BE_CONFIRMED}
         missing={investment <= 0}
+        big
       />
-      <Row label="Creators" hint="based on selection" value={String(selectedCount)} />
+      <Row label="Creators selected" hint="based on selection" value={String(calc.selectedCount)} />
+      <Row label="Priced" value={String(calc.pricedSelectedCount)} />
+      <Row
+        label="Price pending"
+        value={String(calc.unpricedSelectedCount)}
+        missing={calc.unpricedSelectedCount > 0}
+      />
       <Row
         label="Est. reach"
         hint="based on selection"
@@ -242,11 +268,20 @@ export function ProposalSummaryCard({
           {emptyHint}
         </p>
       ) : null}
-      {view.canDecide && approveLabel ? (
+      {unpricedBlock ? (
         <div className="cta sumcta">
-          <button type="button" className="btn pri" disabled={!canApprove} onClick={approve}>
+          <button type="button" className="btn pri" disabled={pending} onClick={removeUnpriced}>
+            Remove unpriced creators
+          </button>
+          <button type="button" className="btn sec" disabled>
+            Wait for pricing
+          </button>
+        </div>
+      ) : view.canDecide && actionLabel ? (
+        <div className="cta sumcta">
+          <button type="button" className="btn pri" disabled={!canAct} onClick={runPrimary}>
             <IconCheck />
-            {approveLabel}
+            {actionLabel}
           </button>
           <a className="btn sec" href={creatorsHref} onClick={(event) => openSection(event, "creators")}>
             Edit selection

@@ -6,13 +6,21 @@ import { useRouter } from "next/navigation";
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
 
 import {
+  confirmCreatorsAction,
   decideReviewAction,
+  removeUnpricedSelectedAction,
   requestReviewChangesAction,
 } from "../actions/client-workspace-actions";
 import { CLIENT_CHANGE_AREAS, CLIENT_CHANGE_AREA_LABEL, type ClientChangeArea } from "../constants";
 import { TO_BE_CONFIRMED } from "../format";
 import { approvalWorkspaceKind } from "../journey-state";
 import { rosterHeadline } from "../presentation";
+import {
+  APPROVE_FINAL_QUOTATION_LABEL,
+  CONFIRM_CREATORS_LABEL,
+  CONFIRM_CREATORS_SUPPORTING_TEXT,
+  UNPRICED_APPROVAL_MESSAGE,
+} from "../selection-flow";
 import { countSelections } from "../status";
 import type { ClientWorkspaceView } from "../types";
 import { useClientWorkspaceState } from "./client-workspace-state";
@@ -39,17 +47,21 @@ export function ApprovalWorkspace({
   );
   const journey = view.journey;
   const quotationStage = journey?.quotationStage;
-  const shortlistStage = journey?.shortlistStage;
   const approvalKind = approvalWorkspaceKind({
     historical: Boolean(journey?.historical),
     quotationStage: quotationStage ?? "draft",
     canApproveShortlist: Boolean(journey?.canApproveShortlist),
     canApproveQuotation: Boolean(journey?.canApproveQuotation),
   });
-  const showShortlistApproval = Boolean(journey?.canApproveShortlist);
-  const showQuotationApproval = Boolean(journey?.canApproveQuotation);
+  const showConfirmCreators = Boolean(journey?.canConfirmCreators);
+  const showQuotationApproval = Boolean(journey?.canApproveFinalQuotation);
+  const unpricedCount = selectedCommercial.unpricedSelectedCount ?? 0;
+  const showUnpricedGate =
+    Boolean(journey?.selectionConfirmed) &&
+    Boolean(journey?.canApproveQuotation) &&
+    unpricedCount > 0 &&
+    !showQuotationApproval;
   const quotationApproved = approvalKind === "quotation_approved";
-  const shortlistApproved = shortlistStage === "approved";
   const deliverableCount = selectedSummary.activityMix.reduce((sum, item) => sum + item.count, 0);
   const investment =
     selectedCommercial.totalInvestment > 0
@@ -89,12 +101,13 @@ export function ApprovalWorkspace({
   if (quotationApproved) {
     return (
       <div className="card">
-        <p className="ck">Quotation approved</p>
+        <p className="ck">Campaign</p>
         <h2>{view.overview.campaignName}</h2>
         <p className="note">
-          Approved {view.review.approvedAt ? new Date(view.review.approvedAt).toLocaleString() : ""}
-          {view.review.approvedByLabel ? ` · Approved by ${view.review.approvedByLabel}` : ""}
-          . This is the final commercial approval.
+          Final quotation approved
+          {view.review.approvedAt ? ` · ${new Date(view.review.approvedAt).toLocaleString()}` : ""}
+          {view.review.approvedByLabel ? ` · ${view.review.approvedByLabel}` : ""}
+          . Campaign is ready to start.
         </p>
       </div>
     );
@@ -104,50 +117,42 @@ export function ApprovalWorkspace({
     <>
       {view.stageDiff ? <RosterDiffCard view={view} /> : null}
 
-      {shortlistApproved && !showShortlistApproval ? (
+      {journey?.selectionConfirmed && !showConfirmCreators ? (
         <div className="card">
-          <p className="ck">Shortlist</p>
-          <h2>Shortlist approved for consideration</h2>
+          <p className="ck">Your Selection</p>
+          <h2>Creators confirmed</h2>
           <p className="note">
-            This approval accepts the creator roster only. It does not approve prices, deliverables, or
-            quotation value.
+            This confirms the creators you would like included in your campaign quotation. It does not
+            approve commercial terms or start the campaign.
           </p>
         </div>
       ) : null}
 
-      {showShortlistApproval ? (
+      {showConfirmCreators ? (
         <div className="card">
-          <p className="ck">Shortlist</p>
-          <h2>Approve this creator shortlist for consideration</h2>
-          <p className="note">
-            We accept this creator shortlist for consideration. This does not approve prices, the
-            quotation, final campaign investment, or lock deliverables.
-          </p>
+          <p className="ck">Your Selection</p>
+          <h2>{CONFIRM_CREATORS_LABEL}</h2>
+          <p className="note">{CONFIRM_CREATORS_SUPPORTING_TEXT}</p>
           <div className="checklist">
-            <CheckItem done label="Creator roster reviewed" />
-            <CheckItem done={view.creators.length > 0} label="Creator fit reviewed" />
-            <CheckItem done={counts.rejected < view.creators.length} label="Shortlist accepted for consideration" />
+            <CheckItem done={counts.accepted > 0} label="Creators selected" />
+            <CheckItem done={unpricedCount === 0} label="Confirmed pricing where available" />
           </div>
           {error ? <p style={{ color: "var(--bad)", fontSize: 13 }}>{error}</p> : null}
           <div className="dacts" style={{ justifyContent: "flex-start", marginTop: 18 }}>
             <button
               type="button"
               className="btn pri"
-              disabled={pending}
+              disabled={pending || counts.accepted === 0}
               onClick={() =>
                 startTransition(async () => {
-                  const result = await decideReviewAction({
-                    token,
-                    decision: "approved",
-                    stage: "shortlist",
-                  });
+                  const result = await confirmCreatorsAction({ token });
                   if (!result.ok) setError(result.message);
                   router.refresh();
                 })
               }
             >
               <IconCheck />
-              Approve Shortlist
+              {CONFIRM_CREATORS_LABEL}
             </button>
             <button type="button" className="btn sec" onClick={() => goToSection("feedback")}>
               Request changes
@@ -156,17 +161,49 @@ export function ApprovalWorkspace({
         </div>
       ) : null}
 
+      {showUnpricedGate ? (
+        <div className="card">
+          <p className="ck">Commercial</p>
+          <h2>{UNPRICED_APPROVAL_MESSAGE}</h2>
+          <p className="note">
+            Remove unpriced creators to approve the priced selection, or wait for Thinkway to confirm
+            investment. Unpriced creators remain on the shortlist.
+          </p>
+          {error ? <p style={{ color: "var(--bad)", fontSize: 13 }}>{error}</p> : null}
+          <div className="dacts" style={{ justifyContent: "flex-start", marginTop: 18 }}>
+            <button
+              type="button"
+              className="btn pri"
+              disabled={pending}
+              onClick={() =>
+                startTransition(async () => {
+                  const result = await removeUnpricedSelectedAction({ token });
+                  if (!result.ok) setError(result.message);
+                  router.refresh();
+                })
+              }
+            >
+              Remove unpriced creators
+            </button>
+            <button type="button" className="btn sec" disabled>
+              Wait for pricing
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {showQuotationApproval ? (
         <div className="card">
-          <p className="ck">Quotation</p>
-          <h2>Approve this quotation</h2>
+          <p className="ck">Campaign</p>
+          <h2>{APPROVE_FINAL_QUOTATION_LABEL}</h2>
           <p className="note">
-            This is the final commercial approval: creators, deliverables, and campaign investment.
+            This is the only client action that means commercial approval: selected creators,
+            deliverables, final investment, quotation terms, and applicable T&amp;C.
           </p>
           <div className="asum">
             <div className="gi">
               <p className="l">Creators</p>
-              <p className="v">{rosterHeadline(view.creators.length)}</p>
+              <p className="v">{rosterHeadline(counts.accepted)}</p>
             </div>
             <div className="gi">
               <p className="l">Investment</p>
@@ -180,7 +217,7 @@ export function ApprovalWorkspace({
             </div>
           </div>
           <div className="checklist">
-            <CheckItem done={view.creators.length > 0} label="Creators reviewed" />
+            <CheckItem done={counts.accepted > 0} label="Creators reviewed" />
             <CheckItem done={deliverableCount > 0} label="Deliverables reviewed" />
             <CheckItem done={selectedCommercial.totalInvestment > 0} label="Investment reviewed" />
             <CheckItem done={Boolean(view.quotation)} label="Quotation terms reviewed" />
@@ -199,13 +236,16 @@ export function ApprovalWorkspace({
                     decision: "approved",
                     stage: "quotation",
                   });
-                  if (!result.ok) setError(result.message);
+                  if (!result.ok) {
+                    setError(result.message);
+                    return;
+                  }
                   router.refresh();
                 })
               }
             >
               <IconCheck />
-              Approve Quotation
+              {APPROVE_FINAL_QUOTATION_LABEL}
             </button>
             <button type="button" className="btn sec" onClick={() => goToSection("feedback")}>
               Request changes
@@ -214,11 +254,14 @@ export function ApprovalWorkspace({
         </div>
       ) : null}
 
-      {!showShortlistApproval && !showQuotationApproval && !quotationApproved ? (
+      {!showConfirmCreators && !showQuotationApproval && !showUnpricedGate && !quotationApproved ? (
         <div className="card">
-          <p className="ck">Approval</p>
-          <h2>No decision is open on this version</h2>
-          <p className="note">Thinkway will send an updated quotation if commercial terms change.</p>
+          <p className="ck">Campaign</p>
+          <h2>No commercial decision is open yet</h2>
+          <p className="note">
+            Confirm your creator selection first. Thinkway will send an updated quotation if commercial
+            terms change.
+          </p>
         </div>
       ) : null}
 
