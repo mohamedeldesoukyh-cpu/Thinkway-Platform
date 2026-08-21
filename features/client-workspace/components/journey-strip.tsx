@@ -5,6 +5,7 @@ import {
   campaignStageCopy,
   commercialStageCopy,
   isPricedClientInvestment,
+  isValidClientCommercialApproval,
   selectionCalculator,
   selectionStageCopy,
   shortlistStageCopy,
@@ -26,7 +27,10 @@ function nodeCopy(
 ): { label: string; tone: ClientJourneyNodeTone } {
   const journey = view.journey;
   if (!journey) return { label: "—", tone: "idle" };
-  const commerciallyApproved = journey.quotationStage === "approved";
+  const commerciallyApproved = isValidClientCommercialApproval({
+    quotationStage: journey.quotationStage,
+    selectedCount: calc.selectedCount,
+  });
   if (id === "shortlist") {
     return shortlistStageCopy({ available: Boolean(journey.shortlistId) || view.creators.length > 0 });
   }
@@ -41,6 +45,7 @@ function nodeCopy(
   if (id === "commercial") {
     return commercialStageCopy({
       quotationStage: journey.quotationStage,
+      selectedCount: calc.selectedCount,
       pricedSelectedCount: calc.pricedSelectedCount,
       pricedInvestment: calc.pricedInvestment,
       currency: view.commercial.currency,

@@ -1,4 +1,5 @@
 import type { ClientWorkspaceSectionId } from "./constants";
+import { CLIENT_WORKSPACE_JOURNEY_SECTIONS } from "./constants";
 import type { ClientWorkspaceView } from "./types";
 
 type SectionSource = Pick<
@@ -7,14 +8,26 @@ type SectionSource = Pick<
 >;
 
 /**
- * Client nav is one proposal: Overview · Creators · Content Plan · Commercial · Feedback · Approval.
- * Strategy, quotation, and timeline fold into those pages rather than competing as separate products.
+ * Primary client journey: Shortlist · Your Selection · Commercial · Campaign.
+ * Feedback remains reachable from Request changes. Content/strategy/timeline fold into Shortlist.
  */
-export function visibleClientWorkspaceSections(view: SectionSource): ClientWorkspaceSectionId[] {
-  const sections: ClientWorkspaceSectionId[] = ["overview"];
-  if (view.creators.length > 0) sections.push("creators");
-  sections.push("content", "commercial", "feedback", "approval");
-  return sections;
+export function visibleClientWorkspaceSections(view?: SectionSource): ClientWorkspaceSectionId[] {
+  void view;
+  return [...CLIENT_WORKSPACE_JOURNEY_SECTIONS];
+}
+
+export function resolveClientWorkspaceSection(section: ClientWorkspaceSectionId): ClientWorkspaceSectionId {
+  if (section === "strategy" || section === "timeline" || section === "content") return "overview";
+  if (section === "quotation") return "commercial";
+  return section;
+}
+
+export function isRenderableClientWorkspaceSection(
+  section: ClientWorkspaceSectionId,
+  visible: readonly ClientWorkspaceSectionId[]
+): boolean {
+  if (section === "feedback") return true;
+  return visible.includes(section);
 }
 
 export function defaultClientWorkspaceSection(

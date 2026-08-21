@@ -4,7 +4,8 @@ import { formatMoneyKpi } from "@/lib/finance/currency-format";
 
 import { clientCreatorIdentity, formatHandleLabel, formatPlatformLabel, NOT_AVAILABLE, providedText, TO_BE_CONFIRMED } from "../format";
 import { breakdownForCreator } from "../platform-breakdown";
-import { consolidationContract } from "../selection-flow";
+import { deliverablesLabel } from "../deliverables";
+import { consolidationContract, isValidClientCommercialApproval, INVALID_ZERO_SELECTION_APPROVAL_MESSAGE } from "../selection-flow";
 import { allocationSlices, MIX_BAR_COLORS, rosterHeadline } from "../presentation";
 import type { ClientWorkspaceView } from "../types";
 import { useClientWorkspaceState } from "./client-workspace-state";
@@ -21,6 +22,10 @@ export function CommercialWorkspace({
   const { selectedCreators, selectedCommercial, selectedSummary } = useClientWorkspaceState();
   const commercial = selectedCommercial;
   const roster = selectedCreators;
+  const invalidEmptyApproval = isValidClientCommercialApproval({
+    quotationStage: view.journey?.quotationStage ?? "",
+    selectedCount: roster.length,
+  }) === false && view.journey?.quotationStage === "approved";
   const platforms = [
     ...new Set(
       roster
@@ -45,11 +50,13 @@ export function CommercialWorkspace({
             : TO_BE_CONFIRMED}
         </h2>
         <p className="note">
-          Final selected creators · {rosterHeadline(commercial.selectedCount)}
-          {commercial.unpricedSelectedCount
-            ? ` · ${commercial.unpricedSelectedCount} price pending`
-            : ""}
-          {view.journey?.quotationStage === "updated" ? " · Updated — Approval Required" : ""}
+          {invalidEmptyApproval
+            ? INVALID_ZERO_SELECTION_APPROVAL_MESSAGE
+            : `Final selected creators · ${rosterHeadline(commercial.selectedCount)}${
+                commercial.unpricedSelectedCount
+                  ? ` · ${commercial.unpricedSelectedCount} price pending`
+                  : ""
+              }${view.journey?.quotationStage === "updated" ? " · Updated — Approval Required" : ""}`}
         </p>
         <div className="glance">
           <div className="gi">
@@ -154,13 +161,11 @@ export function CommercialWorkspace({
                     )}
                   </td>
                   <td>
-                    {creator.deliverables ||
-                      creator.deliverableItems?.map((item) => `${item.quantity ?? 1} ${item.type}`).join(" · ") ||
-                      TO_BE_CONFIRMED}
+                    {deliverablesLabel(creator.deliverableItems, creator.deliverables)}
                   </td>
                   <td className="r">
                     {creator.investmentAmount != null
-                      ? formatMoneyKpi(creator.investmentAmount, creator.investmentCurrency ?? commercial.currency)
+                      ? formatMoneyKpi(creator.investmentAmount, commercial.currency)
                       : TO_BE_CONFIRMED}
                   </td>
                 </tr>

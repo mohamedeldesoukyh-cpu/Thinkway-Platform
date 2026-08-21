@@ -32,7 +32,7 @@ export type CreateClientReviewFromQuotationInput = {
 
 function formatDeliverables(item: QuotationItemRow): string | undefined {
   const items = parseDeliverableItems(item.deliverables);
-  return formatDeliverableItems(items) || item.service_description || undefined;
+  return formatDeliverableItems(items) || item.service_description?.trim() || undefined;
 }
 
 function creatorIdForItem(item: QuotationItemRow): string {
@@ -59,10 +59,22 @@ function snapshotCreator(item: QuotationItemRow, currency: string): ClientReview
     deliverables: formatDeliverables(item),
     deliverableItems: deliverableItems.length > 0 ? deliverableItems : undefined,
     investmentAmount: isPricedClientInvestment(item.revenue) ? item.revenue : undefined,
-    investmentCurrency: item.cost_currency || currency,
+    investmentCurrency: currency,
     avatarUrl: item.profile_image_url ?? item.creator_profile_source?.avatarUrl ?? undefined,
     influencerId: item.influencer_id ?? undefined,
   };
+}
+
+export function overlayQuotationDetailOnCreators(
+  creators: ClientReviewSourceSnapshotCreator[],
+  items: QuotationItemRow[],
+  currency: string
+): ClientReviewSourceSnapshotCreator[] {
+  return overlayQuotationOnShortlistCreators(
+    creators,
+    items.map((item) => snapshotCreator(item, currency)),
+    { currency }
+  );
 }
 
 function contentFromQuotation(items: QuotationItemRow[]): ClientReviewSourceSnapshot["content"] {
@@ -127,7 +139,9 @@ export async function createClientReviewFromQuotation(
     try {
       const shortlistPool = await loadShortlistPoolCreators(supabase, detail.shortlist_id);
       if (shortlistPool.length > 0) {
-        pooledCreators = overlayQuotationOnShortlistCreators(shortlistPool, snapshotCreators);
+    pooledCreators = overlayQuotationOnShortlistCreators(shortlistPool, snapshotCreators, {
+      currency: detail.currency,
+    });
       }
     } catch {
       pooledCreators = snapshotCreators;

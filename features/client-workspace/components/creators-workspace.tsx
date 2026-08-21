@@ -25,6 +25,7 @@ import {
 import {
   clientStatusDisplay,
   isPricedClientInvestment,
+  isValidClientCommercialApproval,
   thinkwayStatusLabel,
 } from "../selection-flow";
 import {
@@ -57,12 +58,19 @@ const STATUS_FILTERS: Array<{ id: "all" | "recommended" | "selected" | "pending"
   { id: "rejected", label: "Not selected" },
 ];
 
+const EXPLORE_FILTERS: Array<{ id: "all" | "recommended"; label: string }> = [
+  { id: "all", label: "All" },
+  { id: "recommended", label: "Thinkway" },
+];
+
 export function CreatorsWorkspace({
   view,
   token,
+  intent = "decide",
 }: {
   view: ClientWorkspaceView;
   token: string;
+  intent?: "explore" | "decide";
 }) {
   const router = useRouter();
   const { selection: sharedSelection, setCreatorState, setCreatorStates } = useClientWorkspaceState();
@@ -76,6 +84,9 @@ export function CreatorsWorkspace({
   const [note, setNote] = useState("");
   const [detailClosed, setDetailClosed] = useState(false);
   const selection = sharedSelection;
+  const explore = intent === "explore";
+  const canSelect = !explore && view.canDecide;
+  const filters = explore ? EXPLORE_FILTERS : STATUS_FILTERS;
   const counts = countSelections(
     selection,
     view.creators.map((creator) => creator.creatorId)
@@ -198,9 +209,19 @@ export function CreatorsWorkspace({
 
   return (
     <div className="creators-page">
+      {explore ? (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <p className="ck">Creator shortlist</p>
+          <h2>What creators does Thinkway recommend?</h2>
+          <p className="note">
+            This is the creator pool for your campaign. Explore profiles, Thinkway recommendations,
+            and client-facing prices when they are available. Select creators in Your Selection.
+          </p>
+        </div>
+      ) : null}
       <div className="toolbar">
         <div className="segs">
-          {STATUS_FILTERS.map((item) => (
+          {filters.map((item) => (
             <button
               key={item.id}
               type="button"
@@ -213,7 +234,7 @@ export function CreatorsWorkspace({
           ))}
         </div>
         <div className="sp" />
-        {view.canDecide ? (
+        {canSelect ? (
           <>
             <button type="button" className="link" disabled={pending} onClick={() => bulk("accepted")}>
               Select all
@@ -224,10 +245,11 @@ export function CreatorsWorkspace({
           </>
         ) : null}
       </div>
-      <ProposalSummaryCard view={view} token={token} selection={selection} variant="bar" />
+      {explore ? null : <ProposalSummaryCard view={view} token={token} selection={selection} variant="bar" />}
       <p className="note" style={{ marginBottom: 12 }}>
-        {rosterHeadline(view.creators.length)}. Select the creators you want in your campaign.
-        Investment is shown when Thinkway has confirmed a client-facing price.
+        {explore
+          ? `${rosterHeadline(view.creators.length)}. This shortlist stays available even after creators are quoted.`
+          : `${rosterHeadline(view.creators.length)}. Select the creators you want in your campaign. Investment is shown when Thinkway has confirmed a client-facing price.`}
       </p>
 
       <div className="layout">
@@ -245,7 +267,7 @@ export function CreatorsWorkspace({
               key={creator.creatorId}
               className={creator.creatorId === activeId ? "cc sel" : "cc"}
             >
-              {view.canDecide ? (
+              {canSelect ? (
                 <label className="pick-hit">
                   <input
                     type="checkbox"
@@ -300,7 +322,7 @@ export function CreatorsWorkspace({
                   </span>
                   <span className={isPricedClientInvestment(creator.investmentAmount) ? "inv" : "inv tbc"}>
                     {isPricedClientInvestment(creator.investmentAmount)
-                      ? formatMoneyKpi(creator.investmentAmount!, creator.investmentCurrency || view.commercial.currency)
+                      ? formatMoneyKpi(creator.investmentAmount!, view.commercial.currency)
                       : TO_BE_CONFIRMED}
                   </span>
                 </div>
@@ -312,7 +334,10 @@ export function CreatorsWorkspace({
                     {clientStatusDisplay({
                       selection: state,
                       selectionConfirmed: Boolean(view.journey?.selectionConfirmed),
-                      commerciallyApproved: view.journey?.quotationStage === "approved",
+                      commerciallyApproved: isValidClientCommercialApproval({
+                        quotationStage: view.journey?.quotationStage ?? "",
+                        selectedCount: counts.accepted,
+                      }),
                     })}
                   </span>
                   {state === "accepted" && !isPricedClientInvestment(creator.investmentAmount) ? (
@@ -337,7 +362,7 @@ export function CreatorsWorkspace({
             index={Math.max(0, selectedIndex)}
             token={token}
             currency={view.commercial.currency}
-            canDecide={view.canDecide}
+            canDecide={canSelect}
             pending={pending}
             note={note}
             onNoteChange={setNote}
@@ -427,7 +452,7 @@ function CreatorDetailPane({
 }) {
   const location = brief?.location || formatLocation(creator.city, creator.country);
   const investmentAmount = brief?.investmentAmount ?? creator.investmentAmount;
-  const investmentCurrency = brief?.investmentCurrency ?? creator.investmentCurrency ?? currency;
+  const investmentCurrency = currency;
   const audience = brief?.audience ?? creator.audience;
   const performance = brief?.performance ?? creator.performance;
   const categoryFallback = brief?.categories.length

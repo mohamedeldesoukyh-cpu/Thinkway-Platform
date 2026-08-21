@@ -177,45 +177,79 @@ function findOverlayMatch(
   return undefined;
 }
 
-/** Keep the shortlist pool; layer quotation client-facing price/deliverables onto matching cards. */
-export function overlayQuotationOnShortlistCreators(
-  shortlist: ClientReviewSourceSnapshotCreator[],
-  quotation: ClientReviewSourceSnapshotCreator[] | undefined
-): ClientReviewSourceSnapshotCreator[] {
-  const quoteIndex = indexCreators(quotation ?? []);
-  const usedQuoteIds = new Set<string>();
-  const merged = shortlist.map((creator) => {
-    const quoted = findOverlayMatch(creator, quoteIndex);
-    if (!quoted) {
-      return {
-        ...creator,
-        quotationEligible: false,
-        investmentAmount: undefined,
-      };
-    }
-    usedQuoteIds.add(quoted.creatorId);
-    return {
+export function applyQuotationCurrency(
+  creator: ClientReviewSourceSnapshotCreator,
+  currency: string | undefined
+): ClientReviewSourceSnapshotCreator {
+  if (!currency?.trim()) return creator;
+  return { ...creator, investmentCurrency: currency };
+}
+
+function overlayQuotedCreator(
+  creator: ClientReviewSourceSnapshotCreator,
+  quoted: ClientReviewSourceSnapshotCreator,
+  currency: string | undefined
+): ClientReviewSourceSnapshotCreator {
+  const deliverables = quoted.deliverables || creator.deliverables;
+  const deliverableItems = quoted.deliverableItems?.length
+    ? quoted.deliverableItems
+    : quoted.deliverables
+      ? undefined
+      : creator.deliverableItems;
+  return applyQuotationCurrency(
+    {
       ...creator,
       quotationEligible: true,
-      deliverables: quoted.deliverables || creator.deliverables,
-      deliverableItems: quoted.deliverableItems?.length ? quoted.deliverableItems : creator.deliverableItems,
+      deliverables,
+      deliverableItems,
       investmentAmount: isPricedClientInvestment(quoted.investmentAmount)
         ? quoted.investmentAmount
         : undefined,
-      investmentCurrency: quoted.investmentCurrency || creator.investmentCurrency,
       thinkwayStatus: quoted.thinkwayStatus ?? creator.thinkwayStatus,
-    };
+    },
+    currency || quoted.investmentCurrency
+  );
+}
+
+/** Keep the shortlist pool; layer quotation client-facing price/deliverables onto matching cards. */
+export function overlayQuotationOnShortlistCreators(
+  shortlist: ClientReviewSourceSnapshotCreator[],
+  quotation: ClientReviewSourceSnapshotCreator[] | undefined,
+  options?: { currency?: string }
+): ClientReviewSourceSnapshotCreator[] {
+  const quoteIndex = indexCreators(quotation ?? []);
+  const usedQuoteIds = new Set<string>();
+  const currency = options?.currency;
+  const merged = shortlist.map((creator) => {
+    const quoted = findOverlayMatch(creator, quoteIndex);
+    if (!quoted) {
+      return applyQuotationCurrency(
+        {
+          ...creator,
+          quotationEligible: false,
+          investmentAmount: undefined,
+        },
+        currency
+      );
+    }
+    usedQuoteIds.add(quoted.creatorId);
+    return overlayQuotedCreator(creator, quoted, currency);
   });
   const extras = (quotation ?? []).filter((creator) => !usedQuoteIds.has(creator.creatorId));
   return [
     ...merged,
-    ...extras.map((creator) => ({
-      ...creator,
-      quotationEligible: true,
-      investmentAmount: isPricedClientInvestment(creator.investmentAmount)
-        ? creator.investmentAmount
-        : undefined,
-    })),
+    ...extras.map((creator) =>
+      applyQuotationCurrency(
+        {
+          ...creator,
+          quotationEligible: true,
+          investmentAmount: isPricedClientInvestment(creator.investmentAmount)
+            ? creator.investmentAmount
+            : undefined,
+        },
+        currency || creator.investmentCurrency
+      )
+    ),
   ];
 }
 
@@ -230,14 +264,21 @@ export function mergeSnapshotsForClientView(input: {
   const quotationCreators =
     input.quotation?.creators ??
     (input.active.source === "quotation" ? input.active.creators : []);
-  if (shortlistCreators.length === 0) return input.active;
-  const creators = overlayQuotationOnShortlistCreators(shortlistCreators, quotationCreators);
   const quotationSnap = input.quotation ?? (input.active.source === "quotation" ? input.active : null);
+  const currency = quotationSnap?.commercial.currency || input.active.commercial.currency;
+  if (shortlistCreators.length === 0) {
+    return {
+      ...input.active,
+      creators: input.active.creators.map((creator) => applyQuotationCurrency(creator, currency)),
+      commercial: { ...input.active.commercial, currency },
+    };
+  }
+  const creators = overlayQuotationOnShortlistCreators(shortlistCreators, quotationCreators, { currency });
   return {
     ...input.active,
     creators,
     creatorIds: creators.map((creator) => creator.creatorId),
-    commercial: quotationSnap?.commercial ?? input.active.commercial,
+    commercial: { ...(quotationSnap?.commercial ?? input.active.commercial), currency },
     quotation: quotationSnap?.quotation ?? input.active.quotation,
     clientSelection:
       input.active.clientSelection ??
@@ -377,15 +418,29 @@ export function selectionStageCopy(input: {
   return { label: "Ready to select", tone: "active" };
 }
 
+export function isValidClientCommercialApproval(input: {
+  quotationStage: string;
+  selectedCount: number;
+}): boolean {
+  return input.quotationStage === "approved" && input.selectedCount > 0;
+}
+
+export const INVALID_ZERO_SELECTION_APPROVAL_MESSAGE =
+  "This quotation has no client-selected creators. Thinkway needs to send an updated quotation.";
+
 export function commercialStageCopy(input: {
   quotationStage: string;
+  selectedCount: number;
   pricedSelectedCount: number;
   pricedInvestment: number;
   currency: string;
   selectionConfirmed: boolean;
   hasAnyPrice: boolean;
 }): { label: string; tone: "idle" | "active" | "attention" | "ok" | "bad" } {
-  if (input.quotationStage === "approved") return { label: "Approved", tone: "ok" };
+  if (input.quotationStage === "approved") {
+    if (input.selectedCount === 0) return { label: "Selection required", tone: "attention" };
+    return { label: "Approved", tone: "ok" };
+  }
   if (input.quotationStage === "updated") return { label: "Updated — Approval Required", tone: "attention" };
   if (input.quotationStage === "rejected") return { label: "Rejected", tone: "bad" };
   if (input.quotationStage === "superseded") return { label: "Historical / Superseded", tone: "idle" };

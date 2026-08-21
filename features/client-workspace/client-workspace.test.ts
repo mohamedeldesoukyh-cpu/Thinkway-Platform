@@ -76,12 +76,15 @@ import {
 import {
   canApproveFinalQuotation,
   canConfirmCreators,
+  campaignStageCopy,
   clientFacingObjectIsSafe,
   clientStatusDisplay,
+  commercialStageCopy,
   confirmCreatorsDoesNotApproveQuotation,
   consolidationContract,
   excludeUnpricedFromSelection,
   isPricedClientInvestment,
+  isValidClientCommercialApproval,
   mergeSnapshotsForClientView,
   overlayQuotationOnShortlistCreators,
   selectionCalculator,
@@ -90,7 +93,12 @@ import {
   thinkwayStatusFromInternal,
   UNPRICED_APPROVAL_MESSAGE,
 } from "./selection-flow";
-import { visibleClientWorkspaceSections, defaultClientWorkspaceSection } from "./visible-sections";
+import {
+  isRenderableClientWorkspaceSection,
+  resolveClientWorkspaceSection,
+  visibleClientWorkspaceSections,
+  defaultClientWorkspaceSection,
+} from "./visible-sections";
 import {
   clientPackageFingerprintsMatch,
   clientCreatorIds,
@@ -428,7 +436,7 @@ test("frozen snapshot commercial uses per-creator quotation values, not a second
   assert.equal(reduced.quotationTotal, 100_000);
 });
 
-test("client nav is one proposal and always includes Content Plan", () => {
+test("client primary journey is Shortlist, Your Selection, Commercial, Campaign", () => {
   const shortlistView = {
     review: { source: "shortlist" as const },
     creators: [{ creatorId: "a" }],
@@ -441,9 +449,7 @@ test("client nav is one proposal and always includes Content Plan", () => {
   assert.deepEqual(visibleClientWorkspaceSections(shortlistView as never), [
     "overview",
     "creators",
-    "content",
     "commercial",
-    "feedback",
     "approval",
   ]);
 
@@ -459,30 +465,26 @@ test("client nav is one proposal and always includes Content Plan", () => {
   assert.deepEqual(visibleClientWorkspaceSections(quotationView as never), [
     "overview",
     "creators",
-    "content",
     "commercial",
-    "feedback",
     "approval",
   ]);
 
-  const studioView = {
-    review: { source: "studio" as const },
-    creators: [{ creatorId: "a" }],
-    content: [{ creatorName: "A", platform: "instagram", deliverable: "Reel" }],
-    timeline: { durationWeeks: 6, durationLabel: "6 weeks", phases: [{ week: 1, label: "Prep", activities: [] }] },
-    commercial: { currency: "EGP", creatorInvestment: 10, totalInvestment: 10, lines: [], selectedCount: 1, totalCount: 1 },
-    quotation: undefined,
-    strategyBody: "Reach urban Egypt.",
+  const emptyView = {
+    review: { source: "quotation" as const },
+    creators: [],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "", phases: [] },
+    commercial: { currency: "EGP", creatorInvestment: 0, totalInvestment: 0, lines: [], selectedCount: 0, totalCount: 0 },
+    quotation: { id: "q1", serialNumber: "QT-1", name: "Q", version: "1", lines: [] },
+    strategyBody: undefined,
   };
-  assert.deepEqual(visibleClientWorkspaceSections(studioView as never), [
+  assert.deepEqual(visibleClientWorkspaceSections(emptyView as never), [
     "overview",
     "creators",
-    "content",
     "commercial",
-    "feedback",
     "approval",
   ]);
-  assert.equal(defaultClientWorkspaceSection(["overview", "creators", "commercial", "feedback"]), "overview");
+  assert.equal(defaultClientWorkspaceSection(["overview", "creators", "commercial", "approval"]), "overview");
 });
 
 test("legacy snapshots still parse after media-plan fields are added", () => {
@@ -2688,6 +2690,115 @@ test("historical merged snapshots stay frozen and do not overlay later quotation
   });
   assert.equal(historical.campaignName, "v1");
   assert.equal(historical.creators[0]?.investmentAmount, 50_000);
+});
+
+test("approved quotation with zero selected creators is not a valid commercial outcome", () => {
+  assert.equal(
+    isValidClientCommercialApproval({ quotationStage: "approved", selectedCount: 0 }),
+    false
+  );
+  assert.equal(
+    isValidClientCommercialApproval({ quotationStage: "approved", selectedCount: 2 }),
+    true
+  );
+  assert.equal(
+    commercialStageCopy({
+      quotationStage: "approved",
+      selectedCount: 0,
+      pricedSelectedCount: 0,
+      pricedInvestment: 0,
+      currency: "AED",
+      selectionConfirmed: false,
+      hasAnyPrice: true,
+    }).label,
+    "Selection required"
+  );
+  assert.equal(
+    campaignStageCopy({ campaignStarted: false, commerciallyApproved: false }).label,
+    "Not started"
+  );
+  assert.equal(
+    approvalWorkspaceKind({
+      historical: false,
+      quotationStage: "approved",
+      canApproveShortlist: false,
+      canApproveQuotation: false,
+      selectedCount: 0,
+    }),
+    "idle"
+  );
+  assert.match(
+    journeyActionRequired({
+      shortlistStage: "sent",
+      quotationStage: "approved",
+      historical: false,
+      selectedCount: 0,
+    }),
+    /no client-selected creators/
+  );
+});
+
+test("quotation overlay uses quotation currency and service description as client-facing deliverables", () => {
+  const merged = overlayQuotationOnShortlistCreators(
+    [
+      { creatorId: "a", displayName: "Liwa creator", investmentCurrency: "EGP" },
+      { creatorId: "b", displayName: "Pool only" },
+    ],
+    [
+      {
+        creatorId: "a",
+        displayName: "Liwa creator",
+        investmentAmount: 45_000,
+        investmentCurrency: "EGP",
+        deliverables: "Price for Visit & Story & Reel",
+      },
+    ],
+    { currency: "AED" }
+  );
+  assert.equal(merged[0]?.investmentCurrency, "AED");
+  assert.equal(merged[0]?.deliverables, "Price for Visit & Story & Reel");
+  assert.equal(merged[0]?.investmentAmount, 45_000);
+  assert.equal(merged[1]?.investmentCurrency, "AED");
+  const projected = projectCommercialFromSnapshot(
+    parseSourceSnapshot({
+      source: "quotation",
+      brandName: "Liwa",
+      campaignName: "Festival",
+      clientLabel: "Liwa",
+      platforms: [],
+      deliverables: [],
+      creators: merged,
+      content: [],
+      timeline: { durationWeeks: null, durationLabel: "", phases: [] },
+      commercial: { currency: "AED", creatorInvestment: 45_000, totalInvestment: 45_000, lines: [], selectedCount: 0, totalCount: 2 },
+      creatorIds: ["a", "b"],
+    })!,
+    { a: "in_review", b: "in_review" }
+  );
+  assert.equal(projected.selectedCount, 0);
+  assert.equal(projected.totalInvestment, 0);
+  assert.equal(projected.currency, "AED");
+});
+
+test("legacy content and quotation URLs map into the primary journey", () => {
+  assert.equal(resolveClientWorkspaceSection("content"), "overview");
+  assert.equal(resolveClientWorkspaceSection("quotation"), "commercial");
+  assert.equal(resolveClientWorkspaceSection("feedback"), "feedback");
+  assert.equal(isRenderableClientWorkspaceSection("feedback", ["overview", "creators", "commercial", "approval"]), true);
+  assert.equal(isRenderableClientWorkspaceSection("overview", ["overview", "creators", "commercial", "approval"]), true);
+});
+
+test("snapshot deliverable items keep quotation type_lines", () => {
+  const creator = parseSnapshotCreator({
+    creatorId: "a",
+    displayName: "A",
+    deliverableItems: [
+      { platform: "instagram", type_lines: [{ type: "reel", quantity: 2 }, { type: "story", quantity: 3 }] },
+    ],
+  });
+  assert.equal(creator.deliverableItems?.length, 2);
+  assert.equal(creator.deliverableItems?.[0]?.type, "reel");
+  assert.equal(creator.deliverableItems?.[0]?.quantity, 2);
 });
 
 

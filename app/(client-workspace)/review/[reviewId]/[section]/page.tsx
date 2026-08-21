@@ -6,6 +6,10 @@ import { CLIENT_WORKSPACE_SECTIONS, type ClientWorkspaceSectionId } from "@/feat
 import { loadClientWorkspace } from "@/features/client-workspace/load-client-workspace";
 import { reviewIdBelongsToJourney } from "@/features/client-workspace/journey-state";
 import { resolveReviewToken } from "@/features/client-workspace/security/resolve-request-token";
+import {
+  isRenderableClientWorkspaceSection,
+  resolveClientWorkspaceSection,
+} from "@/features/client-workspace/visible-sections";
 
 type Props = {
   params: Promise<{ reviewId: string; section: string }>;
@@ -34,14 +38,15 @@ export default async function ClientWorkspaceSectionPage({ params, searchParams 
   ) {
     return <InvalidReviewLink message={loaded.ok ? undefined : loaded.message} />;
   }
-  if (!loaded.view.visibleSections.includes(section as ClientWorkspaceSectionId)) {
+  const resolved = resolveClientWorkspaceSection(section as ClientWorkspaceSectionId);
+  if (!isRenderableClientWorkspaceSection(resolved, loaded.view.visibleSections)) {
     notFound();
   }
   return (
     <ClientWorkspaceApp
       view={loaded.view}
       token={token}
-      section={section as ClientWorkspaceSectionId}
+      section={resolved}
     />
   );
 }

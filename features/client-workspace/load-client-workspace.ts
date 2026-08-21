@@ -361,12 +361,36 @@ export async function loadClientWorkspace(
   let campaignObject: CampaignObject | null = null;
 
   if (activeReview.sourceSnapshot) {
-    const mergedSnapshot = mergeSnapshotsForClientView({
+    let mergedSnapshot = mergeSnapshotsForClientView({
       active: activeReview.sourceSnapshot,
       shortlist: shortlistSnapshot,
       quotation: quotationSnapshot,
       historical: picked.historical,
     });
+    if (!picked.historical && quotationLatest?.quotationId && service) {
+      try {
+        const { getQuotationDetail } = await import("@/lib/services/quotations/quotation-document-service");
+        const { overlayQuotationDetailOnCreators } = await import("./create-from-quotation");
+        const { quotationItemsForClient } = await import("./source-readiness");
+        const detail = await getQuotationDetail(service as never, quotationLatest.quotationId);
+        if (detail) {
+          const items = quotationItemsForClient(detail.items);
+          mergedSnapshot = {
+            ...mergedSnapshot,
+            creators:
+              items.length > 0
+                ? overlayQuotationDetailOnCreators(mergedSnapshot.creators, items, detail.currency)
+                : mergedSnapshot.creators.map((creator) => ({
+                    ...creator,
+                    investmentCurrency: detail.currency,
+                  })),
+            commercial: { ...mergedSnapshot.commercial, currency: detail.currency },
+          };
+        }
+      } catch {
+        /* keep the merged snapshot if quotation SSOT is unavailable */
+      }
+    }
     view = viewFromSnapshot(
       activeReview,
       mergedSnapshot,
@@ -447,6 +471,7 @@ export async function loadClientWorkspace(
       selectionConfirmed: view.journey.selectionConfirmed,
       canConfirmCreators: view.journey.canConfirmCreators,
       canApproveFinalQuotation: view.journey.canApproveFinalQuotation,
+      selectedCount: calc.selectedCount,
     }),
     lastUpdated: activeReview.updatedAt,
     actionRequired: journeyActionRequired({
@@ -456,6 +481,7 @@ export async function loadClientWorkspace(
       selectionConfirmed: view.journey.selectionConfirmed,
       canConfirmCreators: view.journey.canConfirmCreators,
       canApproveFinalQuotation: view.journey.canApproveFinalQuotation,
+      selectedCount: calc.selectedCount,
     }),
   };
 

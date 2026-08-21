@@ -53,7 +53,7 @@ export function ClientWorkspaceApp({
   useEffect(() => {
     function onPop() {
       const part = window.location.pathname.split("/").filter(Boolean).at(-1);
-      if (isSection(part) && view.visibleSections.includes(part)) reveal(part);
+      if (isSection(part)) reveal(part);
     }
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -73,10 +73,14 @@ export function ClientWorkspaceApp({
     [active, pathReviewId, reveal, token]
   );
 
+  const renderSections = view.visibleSections.includes(active)
+    ? view.visibleSections
+    : [...view.visibleSections, active];
+
   return (
     <ClientWorkspaceStateProvider view={view} token={token} onSectionChange={go}>
       <ClientWorkspaceShell view={view} token={token} section={active} onSectionChange={go}>
-        {view.visibleSections
+        {renderSections
           .filter((item) => seen.has(item))
           .map((item) => (
             <div key={item} hidden={item !== active}>

@@ -265,9 +265,13 @@ export function approvalWorkspaceKind(input: {
   quotationStage: ClientQuotationStage;
   canApproveShortlist: boolean;
   canApproveQuotation: boolean;
+  selectedCount?: number;
 }): ApprovalWorkspaceKind {
   if (input.historical) return "historical";
-  if (input.quotationStage === "approved") return "quotation_approved";
+  if (input.quotationStage === "approved") {
+    if ((input.selectedCount ?? 1) === 0) return "idle";
+    return "quotation_approved";
+  }
   if (input.canApproveShortlist || input.canApproveQuotation) return "open";
   return "idle";
 }
@@ -391,11 +395,15 @@ export function journeyActionRequired(input: {
   selectionConfirmed?: boolean;
   canConfirmCreators?: boolean;
   canApproveFinalQuotation?: boolean;
+  selectedCount?: number;
 }): string {
   if (input.historical) return "This is a frozen historical version";
   if (input.quotationStage === "updated") return "Updated quotation — Approval Required";
   if (input.canApproveFinalQuotation) return "Approve final quotation";
   if (input.canConfirmCreators) return "Confirm the creators for your quotation";
+  if (input.quotationStage === "approved" && (input.selectedCount ?? 0) === 0) {
+    return "This quotation has no client-selected creators. Thinkway needs to send an updated quotation.";
+  }
   if (input.selectionConfirmed && (input.quotationStage === "sent_for_approval" || input.quotationStage === "viewed")) {
     return "Approve final quotation";
   }

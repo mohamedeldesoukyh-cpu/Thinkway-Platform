@@ -92,13 +92,13 @@ export const HYPEAUDITOR_MEDIA_PLAN_PARITY: HypeAuditorParityRow[] = [
   },
   {
     capability: "Content Plan",
-    thinkway: "Influencer-first content rows from snapshot; empty state is Content direction to be confirmed",
+    thinkway: "Deliverables and posting notes live on Shortlist and Commercial from the quotation SSOT; not a separate primary tab",
     ssot: "source_snapshot.content + campaign brief",
     status: "shipped",
   },
   {
     capability: "Overview",
-    thinkway: "Campaign at a glance, forecast, activity mix, strategic pillars, creator mix from actual roster",
+    thinkway: "Shortlist is the creator pool for exploration; campaign facts appear on the same cards when quoted",
     ssot: "Campaign Facts + Campaign Forecast + source_snapshot",
     status: "shipped",
   },

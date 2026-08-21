@@ -440,11 +440,7 @@ export async function decideClientReview(input: {
   const frozenIds = snapshot
     ? snapshotCreatorIds(snapshot)
     : clientCreatorIds(campaignObject!);
-  const rosterIds = frozenIds.filter((id) => gate.review.selectionState[id] !== "rejected");
-  const selectedIds =
-    frozenIds.filter((id) => gate.review.selectionState[id] === "accepted").length > 0
-      ? frozenIds.filter((id) => gate.review.selectionState[id] === "accepted")
-      : rosterIds;
+  const selectedIds = frozenIds.filter((id) => gate.review.selectionState[id] === "accepted");
 
   if (input.decision === "approved" && selectedIds.length === 0) {
     return {

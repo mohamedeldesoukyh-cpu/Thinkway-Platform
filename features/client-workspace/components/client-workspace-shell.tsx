@@ -1,12 +1,18 @@
 "use client";
 
-import type { ClientReviewStatus, ClientWorkspaceSectionId } from "../constants";
-import { CLIENT_PROPOSAL_STATUS_LABEL, CLIENT_WORKSPACE_SECTION_LABEL } from "../constants";
-import { QUOTATION_STAGE_LABEL, SHORTLIST_STAGE_LABEL, clientWorkspacePathReviewId, clientWorkspaceVersionPill } from "../journey-state";
-import { primaryActionForJourney } from "../selection-flow";
+import type { ClientWorkspaceSectionId } from "../constants";
+import { CLIENT_WORKSPACE_SECTION_LABEL } from "../constants";
+import { SHORTLIST_STAGE_LABEL, clientWorkspacePathReviewId, clientWorkspaceVersionPill } from "../journey-state";
+import {
+  commercialStageCopy,
+  isPricedClientInvestment,
+  primaryActionForJourney,
+  selectionCalculator,
+} from "../selection-flow";
 import { buildClientReviewPath } from "../security/review-token";
 import type { ClientWorkspaceView } from "../types";
 import { ClientJourneyStrip } from "./journey-strip";
+import { useClientWorkspaceState } from "./client-workspace-state";
 import { IconCheck, LogoMark } from "./review-icons";
 import { ReviewUpdateBanner } from "./review-update-banner";
 
@@ -23,15 +29,28 @@ export function ClientWorkspaceShell({
   onSectionChange: (section: ClientWorkspaceSectionId) => void;
   children: React.ReactNode;
 }) {
+  const { selection } = useClientWorkspaceState();
+  const calc = selectionCalculator(view.creators, selection);
   const preparedFor = view.overview.clientLabel?.trim() || view.overview.campaignName;
   const pathReviewId = clientWorkspacePathReviewId({
     historical: Boolean(view.journey?.historical),
     viewedReviewId: view.review.id,
     canonicalReviewId: view.journey?.canonicalReviewId,
   });
-  const quotationLabel = view.journey ? QUOTATION_STAGE_LABEL[view.journey.quotationStage] : CLIENT_PROPOSAL_STATUS_LABEL[view.review.status];
+  const commercialCopy = view.journey
+    ? commercialStageCopy({
+        quotationStage: view.journey.quotationStage,
+        selectedCount: calc.selectedCount,
+        pricedSelectedCount: calc.pricedSelectedCount,
+        pricedInvestment: calc.pricedInvestment,
+        currency: view.commercial.currency,
+        selectionConfirmed: Boolean(view.journey.selectionConfirmed),
+        hasAnyPrice: view.creators.some((creator) => isPricedClientInvestment(creator.investmentAmount)),
+      })
+    : { label: "In Review", tone: "active" as const };
+  const quotationLabel = commercialCopy.label;
   const shortlistLabel = view.journey ? SHORTLIST_STAGE_LABEL[view.journey.shortlistStage] : null;
-  const statusTone = view.journey?.historical ? "cur" : statusPillTone(view.review.status);
+  const statusTone = view.journey?.historical ? "cur" : journeyToneToPill(commercialCopy.tone);
   const versionLabel = clientWorkspaceVersionPill({
     historical: Boolean(view.journey?.historical),
     reviewNumber: view.review.reviewNumber,
@@ -133,9 +152,9 @@ export function ClientWorkspaceShell({
   );
 }
 
-function statusPillTone(status: ClientReviewStatus): "rev" | "cur" | "ok" | "bad" {
-  if (status === "approved") return "ok";
-  if (status === "rejected" || status === "revoked") return "bad";
-  if (status === "awaiting_review" || status === "changes_requested") return "rev";
+function journeyToneToPill(tone: "idle" | "active" | "attention" | "ok" | "bad"): "rev" | "cur" | "ok" | "bad" {
+  if (tone === "ok") return "ok";
+  if (tone === "bad") return "bad";
+  if (tone === "attention" || tone === "active") return "rev";
   return "cur";
 }

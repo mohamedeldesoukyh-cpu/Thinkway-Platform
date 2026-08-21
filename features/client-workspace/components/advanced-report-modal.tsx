@@ -236,10 +236,7 @@ function OverviewSection({
       : undefined;
   const investment =
     (view?.investmentAmount ?? creator.investmentAmount) != null
-      ? formatMoneyKpi(
-          view?.investmentAmount ?? creator.investmentAmount ?? 0,
-          view?.investmentCurrency ?? creator.investmentCurrency ?? currency
-        )
+      ? formatMoneyKpi(view?.investmentAmount ?? creator.investmentAmount ?? 0, currency)
       : TO_BE_CONFIRMED;
   return (
     <>

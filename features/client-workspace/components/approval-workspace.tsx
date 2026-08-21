@@ -15,12 +15,7 @@ import { CLIENT_CHANGE_AREAS, CLIENT_CHANGE_AREA_LABEL, type ClientChangeArea } 
 import { TO_BE_CONFIRMED } from "../format";
 import { approvalWorkspaceKind } from "../journey-state";
 import { rosterHeadline } from "../presentation";
-import {
-  APPROVE_FINAL_QUOTATION_LABEL,
-  CONFIRM_CREATORS_LABEL,
-  CONFIRM_CREATORS_SUPPORTING_TEXT,
-  UNPRICED_APPROVAL_MESSAGE,
-} from "../selection-flow";
+import { APPROVE_FINAL_QUOTATION_LABEL, CONFIRM_CREATORS_LABEL, CONFIRM_CREATORS_SUPPORTING_TEXT, INVALID_ZERO_SELECTION_APPROVAL_MESSAGE, UNPRICED_APPROVAL_MESSAGE } from "../selection-flow";
 import { countSelections } from "../status";
 import type { ClientWorkspaceView } from "../types";
 import { useClientWorkspaceState } from "./client-workspace-state";
@@ -47,11 +42,13 @@ export function ApprovalWorkspace({
   );
   const journey = view.journey;
   const quotationStage = journey?.quotationStage;
+  const selectedCount = counts.accepted;
   const approvalKind = approvalWorkspaceKind({
     historical: Boolean(journey?.historical),
     quotationStage: quotationStage ?? "draft",
     canApproveShortlist: Boolean(journey?.canApproveShortlist),
     canApproveQuotation: Boolean(journey?.canApproveQuotation),
+    selectedCount,
   });
   const showConfirmCreators = Boolean(journey?.canConfirmCreators);
   const showQuotationApproval = Boolean(journey?.canApproveFinalQuotation);
@@ -109,6 +106,16 @@ export function ApprovalWorkspace({
           {view.review.approvedByLabel ? ` · ${view.review.approvedByLabel}` : ""}
           . Campaign is ready to start.
         </p>
+      </div>
+    );
+  }
+
+  if (quotationStage === "approved" && selectedCount === 0) {
+    return (
+      <div className="card">
+        <p className="ck">Campaign</p>
+        <h2>Selection required</h2>
+        <p className="note">{INVALID_ZERO_SELECTION_APPROVAL_MESSAGE}</p>
       </div>
     );
   }

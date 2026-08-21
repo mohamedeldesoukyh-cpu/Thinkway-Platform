@@ -1,8 +1,9 @@
 import { pickCreatorDisplayName, resolveCreatorIdentity } from "@/lib/text/decode-html-entities";
 
 import type { ClientCreatorSelectionState } from "./constants";
-import { isPricedClientInvestment, parseClientSelectionFreeze, parseThinkwayStatus } from "./selection-flow";
+import { isPricedClientInvestment, parseClientSelectionFreeze, parseThinkwayStatus, applyQuotationCurrency } from "./selection-flow";
 import { isSelectedForCalculator } from "./status";
+import { parseDeliverableItems as parseDeliverableItemRows } from "./deliverables";
 import type {
   ClientAudienceBrief,
   ClientAudienceSlice,
@@ -182,15 +183,7 @@ function parsePlatformAccounts(
 }
 
 function parseDeliverableItems(value: unknown): ClientDeliverableItem[] | undefined {
-  if (!Array.isArray(value)) return undefined;
-  const items = value
-    .filter(isRecord)
-    .map((row) => ({
-      platform: asString(row.platform),
-      type: asString(row.type) || "",
-      quantity: asNumber(row.quantity),
-    }))
-    .filter((row) => row.type);
+  const items = parseDeliverableItemRows(value);
   return items.length > 0 ? items : undefined;
 }
 
@@ -447,11 +440,15 @@ export function projectCreatorsFromSnapshot(
   snapshot: ClientReviewSourceSnapshot,
   selection: Record<string, ClientCreatorSelectionState>
 ): ClientCreatorCard[] {
-  return snapshot.creators.map((creator) => ({
-    ...creator,
-    selection: selection[creator.creatorId] ?? "in_review",
-    contentExamples: creator.contentFeed?.slice(0, 3) ?? [],
-  }));
+  const currency = snapshot.commercial.currency;
+  return snapshot.creators.map((creator) => {
+    const withCurrency = applyQuotationCurrency(creator, currency);
+    return {
+      ...withCurrency,
+      selection: selection[creator.creatorId] ?? "in_review",
+      contentExamples: withCurrency.contentFeed?.slice(0, 3) ?? [],
+    };
+  });
 }
 
 export function projectOverviewFromSnapshot(

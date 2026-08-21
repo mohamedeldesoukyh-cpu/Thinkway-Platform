@@ -15,6 +15,13 @@ export const CLIENT_WORKSPACE_SECTIONS = [
 
 export type ClientWorkspaceSectionId = (typeof CLIENT_WORKSPACE_SECTIONS)[number];
 
+export const CLIENT_WORKSPACE_JOURNEY_SECTIONS = [
+  "overview",
+  "creators",
+  "commercial",
+  "approval",
+] as const satisfies readonly ClientWorkspaceSectionId[];
+
 export const CLIENT_REVIEW_STATUSES = [
   "awaiting_review",
   "changes_requested",
