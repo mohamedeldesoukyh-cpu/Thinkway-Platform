@@ -295,33 +295,39 @@ export async function loadClientWorkspace(
     tokenBoundReviewId: resolvedInitial.review.id,
   });
   const quotationTip = latestReviewForSource(members, "quotation");
-  if (
-    service &&
-    !picked.historical &&
-    quotationTip &&
-    quotationTip.quotationId &&
-    canLiveSyncClientReview({
-      status: quotationTip.status,
-      source: quotationTip.source,
-      campaignHeaderId: quotationTip.campaignHeaderId,
-    })
-  ) {
+  const shortlistTip = latestReviewForSource(members, "shortlist");
+  if (service && !picked.historical) {
     try {
-      const { createClientReviewFromQuotation } = await import("./create-from-quotation");
-      await createClientReviewFromQuotation(service, {
-        quotationId: quotationTip.quotationId,
-        userId: "00000000-0000-0000-0000-000000000000",
-        origin: process.env.NEXT_PUBLIC_APP_URL ?? "https://dev.thinkwaymedia.com",
-        mintMissingShareToken: false,
-        syncExistingOnly: true,
+      const { resolveCurrentQuotationIdForClientJourney } = await import("./live-quotation-projection");
+      const liveQuotationId = await resolveCurrentQuotationIdForClientJourney(service, {
+        quotationId: quotationTip?.quotationId ?? picked.review?.quotationId ?? null,
+        shortlistId: shortlistTip?.shortlistId ?? picked.review?.shortlistId ?? null,
       });
-      members = await loadJourneyReviews(db, resolvedInitial.review);
-      picked = pickActiveDecisionReview({
-        reviews: members,
-        requestedReviewId,
-        canonicalReviewId: journeyCanonicalReviewId(members, resolvedInitial.review.id),
-        tokenBoundReviewId: resolvedInitial.review.id,
-      });
+      if (
+        liveQuotationId &&
+        quotationTip &&
+        canLiveSyncClientReview({
+          status: quotationTip.status,
+          source: quotationTip.source,
+          campaignHeaderId: quotationTip.campaignHeaderId,
+        })
+      ) {
+        const { createClientReviewFromQuotation } = await import("./create-from-quotation");
+        await createClientReviewFromQuotation(service, {
+          quotationId: liveQuotationId,
+          userId: "00000000-0000-0000-0000-000000000000",
+          origin: process.env.NEXT_PUBLIC_APP_URL ?? "https://dev.thinkwaymedia.com",
+          mintMissingShareToken: false,
+          syncExistingOnly: true,
+        });
+        members = await loadJourneyReviews(db, resolvedInitial.review);
+        picked = pickActiveDecisionReview({
+          reviews: members,
+          requestedReviewId,
+          canonicalReviewId: journeyCanonicalReviewId(members, resolvedInitial.review.id),
+          tokenBoundReviewId: resolvedInitial.review.id,
+        });
+      }
     } catch {
       /* keep the stored snapshot if quotation sync is unavailable */
     }
@@ -367,25 +373,38 @@ export async function loadClientWorkspace(
       quotation: quotationSnapshot,
       historical: picked.historical,
     });
-    if (!picked.historical && quotationLatest?.quotationId && service) {
+    if (!picked.historical && service) {
       try {
-        const { getQuotationDetail } = await import("@/lib/services/quotations/quotation-document-service");
-        const { overlayQuotationDetailOnCreators } = await import("./create-from-quotation");
-        const { quotationItemsForClient } = await import("./source-readiness");
-        const detail = await getQuotationDetail(service as never, quotationLatest.quotationId);
-        if (detail) {
-          const items = quotationItemsForClient(detail.items);
-          mergedSnapshot = {
-            ...mergedSnapshot,
-            creators:
-              items.length > 0
-                ? overlayQuotationDetailOnCreators(mergedSnapshot.creators, items, detail.currency)
-                : mergedSnapshot.creators.map((creator) => ({
-                    ...creator,
-                    investmentCurrency: detail.currency,
-                  })),
-            commercial: { ...mergedSnapshot.commercial, currency: detail.currency },
-          };
+        const {
+          persistInteractiveReviewProjection,
+          projectCurrentQuotationOntoSnapshot,
+          resolveCurrentQuotationIdForClientJourney,
+        } = await import("./live-quotation-projection");
+        const liveQuotationId = await resolveCurrentQuotationIdForClientJourney(service, {
+          quotationId: quotationLatest?.quotationId ?? activeReview.quotationId,
+          shortlistId:
+            isInteractiveClientReview(activeReview.status) && !activeReview.campaignHeaderId
+              ? latestReviewForSource(members, "shortlist")?.shortlistId ?? activeReview.shortlistId
+              : null,
+        });
+        if (liveQuotationId) {
+          const projected = await projectCurrentQuotationOntoSnapshot(
+            service,
+            mergedSnapshot,
+            liveQuotationId
+          );
+          if (projected) {
+            mergedSnapshot = projected;
+            if (isInteractiveClientReview(activeReview.status) && !activeReview.campaignHeaderId) {
+              await persistInteractiveReviewProjection({
+                supabase: service,
+                review: activeReview,
+                snapshot: projected,
+                previousFingerprint: activeReview.packageFingerprint as Record<string, unknown>,
+                quotationId: liveQuotationId,
+              });
+            }
+          }
         }
       } catch {
         /* keep the merged snapshot if quotation SSOT is unavailable */

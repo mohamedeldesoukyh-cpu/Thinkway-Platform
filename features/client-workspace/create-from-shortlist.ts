@@ -107,6 +107,9 @@ function cardFromCreator(
     investmentAmount: item.revenue ?? undefined,
     investmentCurrency: item.cost_currency || currency,
     influencerId: item.influencer_id ?? undefined,
+    shortlistItemId: item.id,
+    profileId: item.profile_id ?? undefined,
+    unifiedId: item.unified_id ?? undefined,
     thinkwayStatus: thinkwayStatusFromInternal(item.item_status),
   };
   return attachMatchExplanation(enrichSnapshotCreatorFromUnified(base, creator), {

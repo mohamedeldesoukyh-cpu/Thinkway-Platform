@@ -2,10 +2,17 @@
 
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
 
-import { clientCreatorIdentity, formatHandleLabel, formatPlatformLabel, NOT_AVAILABLE, providedText, TO_BE_CONFIRMED } from "../format";
+import { clientCreatorIdentity, DELIVERABLES_TO_BE_CONFIRMED, formatHandleLabel, formatPlatformLabel, NOT_AVAILABLE, providedText, TO_BE_CONFIRMED } from "../format";
 import { breakdownForCreator } from "../platform-breakdown";
 import { deliverablesLabel } from "../deliverables";
-import { consolidationContract, isValidClientCommercialApproval, INVALID_ZERO_SELECTION_APPROVAL_MESSAGE } from "../selection-flow";
+import { originalInvestmentForDisplay } from "../quotation-client-facing";
+import {
+  consolidationContract,
+  isPricedClientInvestment,
+  isValidClientCommercialApproval,
+  INVALID_ZERO_SELECTION_APPROVAL_MESSAGE,
+  PRICE_PENDING_LABEL,
+} from "../selection-flow";
 import { allocationSlices, MIX_BAR_COLORS, rosterHeadline } from "../presentation";
 import type { ClientWorkspaceView } from "../types";
 import { useClientWorkspaceState } from "./client-workspace-state";
@@ -161,12 +168,23 @@ export function CommercialWorkspace({
                     )}
                   </td>
                   <td>
-                    {deliverablesLabel(creator.deliverableItems, creator.deliverables)}
+                    {(() => {
+                      const label = deliverablesLabel(creator.deliverableItems, creator.deliverables);
+                      return label === DELIVERABLES_TO_BE_CONFIRMED ? TO_BE_CONFIRMED : label;
+                    })()}
                   </td>
                   <td className="r">
-                    {creator.investmentAmount != null
-                      ? formatMoneyKpi(creator.investmentAmount, commercial.currency)
-                      : TO_BE_CONFIRMED}
+                    {isPricedClientInvestment(creator.investmentAmount)
+                      ? formatMoneyKpi(creator.investmentAmount!, commercial.currency)
+                      : PRICE_PENDING_LABEL}
+                    {(() => {
+                      const original = originalInvestmentForDisplay(creator, commercial.currency);
+                      return original ? (
+                        <div className="inv-orig">
+                          Original: {formatMoneyKpi(original.amount, original.currency)}
+                        </div>
+                      ) : null;
+                    })()}
                   </td>
                 </tr>
                   );

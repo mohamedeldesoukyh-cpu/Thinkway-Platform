@@ -72,6 +72,7 @@ import {
   parseSourceSnapshot,
   parseSnapshotCreator,
   visibleClientUpdateNotice,
+  fingerprintFromSnapshotCreators,
 } from "./snapshot";
 import {
   canApproveFinalQuotation,
@@ -91,8 +92,17 @@ import {
   selectionChangeAllowed,
   selectionJourneyFlags,
   thinkwayStatusFromInternal,
+  CONFIRM_CREATORS_LABEL,
+  PRICE_PENDING_LABEL,
   UNPRICED_APPROVAL_MESSAGE,
+  investmentDisplayLabel,
 } from "./selection-flow";
+import {
+  clientFacingQuotationPrice,
+  convertLineRevenueToQuotationCurrency,
+  originalInvestmentForDisplay,
+} from "./quotation-client-facing";
+import { overlayQuotationDetailOnCreators } from "./quotation-client-overlay";
 import {
   isRenderableClientWorkspaceSection,
   resolveClientWorkspaceSection,
@@ -2799,6 +2809,321 @@ test("snapshot deliverable items keep quotation type_lines", () => {
   assert.equal(creator.deliverableItems?.length, 2);
   assert.equal(creator.deliverableItems?.[0]?.type, "reel");
   assert.equal(creator.deliverableItems?.[0]?.quantity, 2);
+});
+
+function shortlistCreator(id: string, extra: Record<string, unknown> = {}) {
+  return {
+    creatorId: id,
+    displayName: id,
+    ...extra,
+  };
+}
+
+test("A: quotation overlay keeps the full shortlist pool", () => {
+  const overlay = overlayQuotationOnShortlistCreators(
+    [
+      shortlistCreator("pool-1", { displayName: "Ahmed", influencerId: "inf-1" }),
+      shortlistCreator("pool-2", { displayName: "Nourhanne", influencerId: "inf-2" }),
+      shortlistCreator("pool-3", { displayName: "Farah", influencerId: "inf-3" }),
+    ],
+    [
+      {
+        creatorId: "quote-line-1",
+        displayName: "Ahmed",
+        influencerId: "inf-1",
+        quotationEligible: true,
+        investmentAmount: 24_000,
+        investmentCurrency: "EGP",
+        deliverables: "1× IG Story",
+      },
+    ],
+    { currency: "EGP" }
+  );
+  assert.equal(overlay.length, 3);
+  assert.equal(overlay[0]!.quotationEligible, true);
+  assert.equal(overlay[0]!.investmentAmount, 24_000);
+  assert.equal(overlay[1]!.quotationEligible, false);
+  assert.equal(overlay[1]!.investmentAmount, undefined);
+});
+
+test("B/C: overlay shows quotation price and exact deliverables", () => {
+  const overlay = overlayQuotationOnShortlistCreators(
+    [shortlistCreator("pool-1", { influencerId: "inf-1" })],
+    [
+      {
+        creatorId: "qi-1",
+        displayName: "Ahmed",
+        influencerId: "inf-1",
+        investmentAmount: 24_000,
+        investmentCurrency: "EGP",
+        deliverables: "1× IG Story",
+        deliverableItems: [{ platform: "instagram", type: "story", quantity: 1 }],
+      },
+    ],
+    { currency: "EGP" }
+  );
+  assert.equal(overlay[0]!.investmentAmount, 24_000);
+  assert.equal(overlay[0]!.deliverables, "1× IG Story");
+  assert.equal(isPricedClientInvestment(overlay[0]!.investmentAmount), true);
+});
+
+test("D: historical snapshots stay frozen while current overlay updates", () => {
+  const frozen = parseSourceSnapshot({
+    source: "shortlist",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme",
+    platforms: [],
+    deliverables: [],
+    whyThisApproach: "",
+    creators: [{ creatorId: "a", displayName: "A", investmentAmount: 10_000 }],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "", phases: [] },
+    commercial: { currency: "EGP", creatorInvestment: 10_000, totalInvestment: 10_000 },
+  });
+  const later = parseSourceSnapshot({
+    source: "quotation",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme",
+    platforms: [],
+    deliverables: [],
+    whyThisApproach: "",
+    creators: [{ creatorId: "a", displayName: "A", investmentAmount: 99_000 }],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "", phases: [] },
+    commercial: { currency: "EGP", creatorInvestment: 99_000, totalInvestment: 99_000 },
+  });
+  const historical = mergeSnapshotsForClientView({
+    active: frozen!,
+    shortlist: frozen,
+    quotation: later,
+    historical: true,
+  });
+  const current = mergeSnapshotsForClientView({
+    active: frozen!,
+    shortlist: frozen,
+    quotation: later,
+    historical: false,
+  });
+  assert.equal(historical.creators[0]!.investmentAmount, 10_000);
+  assert.equal(current.creators[0]!.investmentAmount, 99_000);
+});
+
+test("E: removing a quotation price shows Pricing required and drops calculator investment", () => {
+  const priced = overlayQuotationOnShortlistCreators(
+    [shortlistCreator("a", { influencerId: "inf-1" })],
+    [{ creatorId: "qi", displayName: "A", influencerId: "inf-1", investmentAmount: 24_000 }],
+    { currency: "EGP" }
+  );
+  const unpriced = overlayQuotationOnShortlistCreators(
+    [shortlistCreator("a", { influencerId: "inf-1" })],
+    [{ creatorId: "qi", displayName: "A", influencerId: "inf-1", investmentAmount: 0 }],
+    { currency: "EGP" }
+  );
+  assert.equal(isPricedClientInvestment(priced[0]!.investmentAmount), true);
+  assert.equal(investmentDisplayLabel(unpriced[0]!.investmentAmount), PRICE_PENDING_LABEL);
+  const calc = selectionCalculator(unpriced.map((creator) => ({
+    ...creator,
+    selection: "accepted" as const,
+    contentExamples: [],
+  })), { a: "accepted" });
+  assert.equal(calc.pricedSelectedCount, 0);
+  assert.equal(calc.pricedInvestment, 0);
+  assert.equal(calc.unpricedSelectedCount, 1);
+});
+
+test("F: removing a creator from quotation clears overlay and keeps the shortlist card", () => {
+  const overlay = overlayQuotationOnShortlistCreators(
+    [
+      shortlistCreator("pool-1", { influencerId: "inf-1", displayName: "Ahmed" }),
+      shortlistCreator("pool-2", { influencerId: "inf-2", displayName: "Nourhanne" }),
+    ],
+    [
+      {
+        creatorId: "qi-2",
+        displayName: "Nourhanne",
+        influencerId: "inf-2",
+        investmentAmount: 48_000,
+        deliverables: "1× IG Reel",
+      },
+    ],
+    { currency: "EGP" }
+  );
+  assert.equal(overlay.length, 2);
+  assert.equal(overlay[0]!.quotationEligible, false);
+  assert.equal(overlay[0]!.investmentAmount, undefined);
+  assert.equal(overlay[1]!.quotationEligible, true);
+  assert.equal(overlay[1]!.investmentAmount, 48_000);
+});
+
+test("G: Client Workspace converts original AED into quotation SAR via commercial FX", () => {
+  const price = clientFacingQuotationPrice({
+    revenue: 24_000,
+    revenueEgp: 312_000,
+    costCurrency: "AED",
+    lineFxRateToEgp: 13,
+    quotationCurrency: "SAR",
+    quotationFxRateToEgp: 12.5,
+  });
+  assert.equal(price.currency, "SAR");
+  assert.equal(price.amount, convertLineRevenueToQuotationCurrency({
+    revenue: 24_000,
+    revenueEgp: 312_000,
+    lineFxRateToEgp: 13,
+    quotationCurrency: "SAR",
+    quotationFxRateToEgp: 12.5,
+  }));
+  assert.equal(price.originalAmount, 24_000);
+  assert.equal(price.originalCurrency, "AED");
+  const original = originalInvestmentForDisplay(
+    { originalInvestmentAmount: price.originalAmount, originalInvestmentCurrency: price.originalCurrency },
+    "SAR"
+  );
+  assert.deepEqual(original, { amount: 24_000, currency: "AED" });
+  const calc = selectionCalculator(
+    [
+      {
+        creatorId: "a",
+        displayName: "A",
+        investmentAmount: price.amount,
+        investmentCurrency: "SAR",
+        selection: "accepted",
+        contentExamples: [],
+      },
+    ],
+    { a: "accepted" }
+  );
+  assert.equal(calc.pricedInvestment, price.amount);
+});
+
+test("H: same currency does not show an original-currency line", () => {
+  const price = clientFacingQuotationPrice({
+    revenue: 24_000,
+    revenueEgp: 24_000,
+    costCurrency: "EGP",
+    lineFxRateToEgp: 1,
+    quotationCurrency: "EGP",
+    quotationFxRateToEgp: 1,
+  });
+  assert.equal(price.amount, 24_000);
+  assert.equal(price.currency, "EGP");
+  assert.equal(price.originalAmount, undefined);
+  assert.equal(
+    originalInvestmentForDisplay(
+      { originalInvestmentAmount: price.originalAmount, originalInvestmentCurrency: price.originalCurrency },
+      "EGP"
+    ),
+    null
+  );
+});
+
+test("I: bulk confirmation label does not approve the quotation", () => {
+  assert.equal(CONFIRM_CREATORS_LABEL, "Confirm Selected Creators");
+  const sideEffects = confirmCreatorsDoesNotApproveQuotation();
+  assert.equal(sideEffects.setQuotationStatusApproved, false);
+  assert.equal(sideEffects.lockCommercial, false);
+});
+
+test("J: Thinkway approval does not create client selection", () => {
+  assert.equal(thinkwayStatusFromInternal("approved"), "approved");
+  assert.equal(clientStatusDisplay({ selection: "in_review", selectionConfirmed: false, commerciallyApproved: false }), "Not selected");
+});
+
+test("K: vendor cost and GP never appear on client-facing overlay", () => {
+  const overlay = overlayQuotationOnShortlistCreators(
+    [shortlistCreator("a", { influencerId: "inf-1" })],
+    [
+      {
+        creatorId: "qi",
+        displayName: "A",
+        influencerId: "inf-1",
+        investmentAmount: 24_000,
+      },
+    ],
+    { currency: "EGP" }
+  );
+  const json = JSON.stringify(overlay);
+  assert.equal(/vendor cost|gross profit|\bGP\b|margin/i.test(json), false);
+  assert.equal("cost" in overlay[0]!, false);
+  assert.equal("gp_pct" in overlay[0]!, false);
+});
+
+test("overlay matches shortlist item ids when quotation line ids differ", () => {
+  const overlay = overlayQuotationOnShortlistCreators(
+    [shortlistCreator("unified-1", { shortlistItemId: "sl-item-9", displayName: "Ahmed" })],
+    [
+      {
+        creatorId: "quotation-line-uuid",
+        displayName: "Ahmed El Badawy",
+        shortlistItemId: "sl-item-9",
+        investmentAmount: 24_000,
+        deliverables: "1× IG Story",
+      },
+    ],
+    { currency: "EGP" }
+  );
+  assert.equal(overlay[0]!.investmentAmount, 24_000);
+  assert.equal(overlay[0]!.deliverables, "1× IG Story");
+  assert.equal(overlay[0]!.quotationEligible, true);
+});
+
+test("quotation fingerprint includes prices and deliverables", () => {
+  const fingerprint = fingerprintFromSnapshotCreators([
+    { creatorId: "a", displayName: "A", investmentAmount: 24_000, deliverables: "1× IG Story" },
+    { creatorId: "b", displayName: "B", investmentAmount: 0, deliverables: "" },
+  ]);
+  assert.deepEqual((fingerprint.revenues as Record<string, number>).a, 24_000);
+  assert.equal((fingerprint.deliverables as Record<string, string>).a, "1× IG Story");
+});
+
+test("quotation item overlay converts line revenue into quotation currency", () => {
+  const overlay = overlayQuotationDetailOnCreators(
+    [{ creatorId: "unified-1", displayName: "Ahmed", influencerId: "inf-1" }],
+    [
+      {
+        id: "qi-1",
+        influencer_id: "inf-1",
+        profile_id: null,
+        unified_id: "unified-1",
+        source_shortlist_item_id: "sl-1",
+        creator_name: "Ahmed El Badawy",
+        platform: "instagram",
+        handle: "@ahmed",
+        followers: 1000,
+        engagement_rate: 2,
+        country_code: "EG",
+        deliverables: [{ platform: "instagram", type: "story", quantity: 1 }],
+        profile_image_url: null,
+        profile_url: null,
+        option_number: 1,
+        service_description: "1× IG Story",
+        commercial_input_mode: "cost_revenue",
+        cost: 0,
+        cost_currency: "EGP",
+        revenue: 24_000,
+        gp_pct: 0,
+        gp_value: 0,
+        fx_rate_to_egp: 1,
+        cost_egp: 0,
+        revenue_egp: 24_000,
+        gp_value_egp: 0,
+        af_pct: 0,
+        af_value: 0,
+        af_value_egp: 0,
+        sort_order: 0,
+        collapse_group_id: null,
+        collapse_label: null,
+      },
+    ],
+    "SAR",
+    12.5
+  );
+  assert.equal(overlay[0]!.investmentCurrency, "SAR");
+  assert.equal(overlay[0]!.investmentAmount, 1920);
+  assert.equal(overlay[0]!.originalInvestmentAmount, 24_000);
+  assert.equal(overlay[0]!.originalInvestmentCurrency, "EGP");
+  assert.match(overlay[0]!.deliverables ?? "", /Story/i);
 });
 
 

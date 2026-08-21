@@ -75,11 +75,17 @@ export function ProposalSummaryCard({
   token,
   selection,
   variant = "card",
+  showBulkControls = false,
+  onSelectAll,
+  onClear,
 }: {
   view: ClientWorkspaceView;
   token: string;
   selection?: Record<string, ClientCreatorSelectionState>;
   variant?: "card" | "bar";
+  showBulkControls?: boolean;
+  onSelectAll?: () => void;
+  onClear?: () => void;
 }) {
   const router = useRouter();
   const { goToSection } = useClientWorkspaceState();
@@ -189,6 +195,16 @@ export function ProposalSummaryCard({
           missing={forecast.estimatedEngagements == null}
         />
         <div className="sp" />
+        {showBulkControls && view.canDecide ? (
+          <div className="sumbar-cta">
+            <button type="button" className="btn sec" disabled={pending} onClick={onSelectAll}>
+              Select all
+            </button>
+            <button type="button" className="btn sec" disabled={pending} onClick={onClear}>
+              Clear
+            </button>
+          </div>
+        ) : null}
         {error ? <p className="sumbar-msg">{error}</p> : emptyHint ? <p className="sumbar-msg">{emptyHint}</p> : null}
         {unpricedBlock ? (
           <div className="sumbar-cta">

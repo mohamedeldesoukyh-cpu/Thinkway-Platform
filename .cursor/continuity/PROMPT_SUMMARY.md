@@ -1,9 +1,9 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Client Workspace journey correction (Dev only)
+**Focus:** Client Workspace live quotation projection (Dev only)
 
-Reworked Client Workspace around Shortlist = creator pool, Your Selection = decision/calculator, Commercial = selected investment, Campaign = execution. Approved quotations with zero selected creators are not treated as valid. Deliverables and currency overlay from the quotation SSOT. Secondary tabs (Content Plan, Feedback) are off the primary nav. Internal/client state separation and quotation/versioning engines unchanged.
+Fixed Client Workspace so current/canonical journeys live-sync internal quotation prices, deliverables, and quotation-currency amounts (existing commercial FX). Historical review URLs stay frozen. Select all / Clear / Confirm Selected Creators now live in the calculator card. Confirm Selected Creators still does not approve the quotation.
 
 On `develop` only. Production untouched.
 

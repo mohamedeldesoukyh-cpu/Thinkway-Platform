@@ -12,9 +12,9 @@ import {
 } from "./client-review-selection";
 import { loadShortlistPoolCreators } from "./create-from-shortlist";
 import { overlayQuotationOnShortlistCreators, isPricedClientInvestment } from "./selection-flow";
+import { quotationItemSnapshotCreator } from "./quotation-client-overlay";
 import { quotationItemsForClient, quotationReviewBlockers } from "./source-readiness";
 import type { ClientReviewSourceSnapshot, ClientReviewSourceSnapshotCreator } from "./types";
-import { formatDeliverableItems, parseDeliverableItems } from "./deliverables";
 import { enrichSnapshotCreatorFromUnified } from "./creator-snapshot";
 import { buildMediaPlanSummary } from "./media-plan-summary";
 import {
@@ -30,51 +30,10 @@ export type CreateClientReviewFromQuotationInput = {
   syncExistingOnly?: boolean;
 };
 
-function formatDeliverables(item: QuotationItemRow): string | undefined {
-  const items = parseDeliverableItems(item.deliverables);
-  return formatDeliverableItems(items) || item.service_description?.trim() || undefined;
-}
+export { overlayQuotationDetailOnCreators } from "./quotation-client-overlay";
 
 function creatorIdForItem(item: QuotationItemRow): string {
   return quotationItemClientCreatorId(item);
-}
-
-function handleFor(item: QuotationItemRow): string | undefined {
-  if (!item.handle?.trim()) return undefined;
-  return item.handle.startsWith("@") ? item.handle : `@${item.handle}`;
-}
-
-function snapshotCreator(item: QuotationItemRow, currency: string): ClientReviewSourceSnapshotCreator {
-  const deliverableItems = parseDeliverableItems(item.deliverables);
-  return {
-    creatorId: creatorIdForItem(item),
-    displayName: item.creator_name?.trim() || handleFor(item) || "Creator",
-    handle: handleFor(item),
-    platform: item.platform ?? undefined,
-    followers: item.followers ?? undefined,
-    engagementRate: item.engagement_rate ?? undefined,
-    country: item.country_code ?? undefined,
-    category: item.creator_categories?.[0] ?? undefined,
-    categories: item.creator_categories?.filter(Boolean) ?? undefined,
-    deliverables: formatDeliverables(item),
-    deliverableItems: deliverableItems.length > 0 ? deliverableItems : undefined,
-    investmentAmount: isPricedClientInvestment(item.revenue) ? item.revenue : undefined,
-    investmentCurrency: currency,
-    avatarUrl: item.profile_image_url ?? item.creator_profile_source?.avatarUrl ?? undefined,
-    influencerId: item.influencer_id ?? undefined,
-  };
-}
-
-export function overlayQuotationDetailOnCreators(
-  creators: ClientReviewSourceSnapshotCreator[],
-  items: QuotationItemRow[],
-  currency: string
-): ClientReviewSourceSnapshotCreator[] {
-  return overlayQuotationOnShortlistCreators(
-    creators,
-    items.map((item) => snapshotCreator(item, currency)),
-    { currency }
-  );
 }
 
 function contentFromQuotation(items: QuotationItemRow[]): ClientReviewSourceSnapshot["content"] {
@@ -109,6 +68,12 @@ export async function createClientReviewFromQuotation(
   }
 
   const items = quotationItemsForClient(detail.items);
+  const { resolveRateToEgp } = await import("@/lib/commercial/fx-server");
+  const quotationFxRateToEgp = await resolveRateToEgp(
+    supabase,
+    detail.currency,
+    detail.issue_date
+  );
   let lookup: Awaited<ReturnType<typeof resolveUnifiedCreatorsByRefs>> | null = null;
   try {
     lookup = await resolveUnifiedCreatorsByRefs(
@@ -124,7 +89,7 @@ export async function createClientReviewFromQuotation(
     lookup = null;
   }
   const snapshotCreators = items.map((item) => {
-    const base = snapshotCreator(item, detail.currency);
+    const base = quotationItemSnapshotCreator(item, detail.currency, quotationFxRateToEgp);
     const unified = lookup
       ? resolveCreatorFromRefLookup(lookup, {
           unified_id: item.unified_id,

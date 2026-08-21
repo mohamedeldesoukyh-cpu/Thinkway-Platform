@@ -26,14 +26,14 @@ export const THINKWAY_STATUS_LABEL: Record<ClientThinkwayStatus, string> = {
   finalized: "Approved by Thinkway",
 };
 
-export const CONFIRM_CREATORS_LABEL = "Confirm Creators";
+export const CONFIRM_CREATORS_LABEL = "Confirm Selected Creators";
 export const CONFIRM_CREATORS_SUPPORTING_TEXT =
   "Confirm the creators you would like included in your campaign quotation.";
 export const APPROVE_FINAL_QUOTATION_LABEL = "Approve Final Quotation";
 export const UNPRICED_APPROVAL_MESSAGE = "Your selection includes creators without confirmed pricing.";
 export const UNPRICED_SELECTED_CODE = "unpriced_selected";
-export const PRICE_PENDING_LABEL = "To be confirmed";
-export const PRICE_NOT_AVAILABLE_LABEL = "Price not available";
+export const PRICE_PENDING_LABEL = "Pricing required";
+export const PRICE_NOT_AVAILABLE_LABEL = "Pricing required";
 
 export type ClientSelectionFreeze = {
   confirmedAt: string;
@@ -144,14 +144,27 @@ export function selectionCalculator(
   };
 }
 
-function overlayKeys(creator: Pick<ClientReviewSourceSnapshotCreator, "creatorId" | "influencerId" | "handle">): string[] {
-  const keys = [creator.creatorId.trim()];
-  if (creator.influencerId?.trim()) {
-    keys.push(creator.influencerId.trim(), `inf:${creator.influencerId.trim()}`);
-  }
+function overlayKeys(
+  creator: Pick<
+    ClientReviewSourceSnapshotCreator,
+    "creatorId" | "influencerId" | "handle" | "shortlistItemId" | "profileId" | "unifiedId"
+  >
+): string[] {
+  const keys: string[] = [];
+  const push = (value?: string, prefix?: string) => {
+    const trimmed = value?.trim();
+    if (!trimmed) return;
+    keys.push(trimmed);
+    if (prefix) keys.push(`${prefix}${trimmed}`);
+  };
+  push(creator.creatorId);
+  push(creator.unifiedId);
+  push(creator.shortlistItemId, "sl:");
+  push(creator.influencerId, "inf:");
+  push(creator.profileId, "dis:");
   const handle = creator.handle?.replace(/^@/, "").trim().toLowerCase();
   if (handle) keys.push(`h:${handle}`);
-  return keys.filter(Boolean);
+  return [...new Set(keys.filter(Boolean))];
 }
 
 function indexCreators(
@@ -190,12 +203,8 @@ function overlayQuotedCreator(
   quoted: ClientReviewSourceSnapshotCreator,
   currency: string | undefined
 ): ClientReviewSourceSnapshotCreator {
-  const deliverables = quoted.deliverables || creator.deliverables;
-  const deliverableItems = quoted.deliverableItems?.length
-    ? quoted.deliverableItems
-    : quoted.deliverables
-      ? undefined
-      : creator.deliverableItems;
+  const deliverables = quoted.deliverables?.trim() || undefined;
+  const deliverableItems = quoted.deliverableItems?.length ? quoted.deliverableItems : undefined;
   return applyQuotationCurrency(
     {
       ...creator,
@@ -205,7 +214,13 @@ function overlayQuotedCreator(
       investmentAmount: isPricedClientInvestment(quoted.investmentAmount)
         ? quoted.investmentAmount
         : undefined,
+      originalInvestmentAmount: quoted.originalInvestmentAmount,
+      originalInvestmentCurrency: quoted.originalInvestmentCurrency,
       thinkwayStatus: quoted.thinkwayStatus ?? creator.thinkwayStatus,
+      shortlistItemId: quoted.shortlistItemId ?? creator.shortlistItemId,
+      profileId: quoted.profileId ?? creator.profileId,
+      unifiedId: quoted.unifiedId ?? creator.unifiedId,
+      influencerId: quoted.influencerId ?? creator.influencerId,
     },
     currency || quoted.investmentCurrency
   );
@@ -228,6 +243,8 @@ export function overlayQuotationOnShortlistCreators(
           ...creator,
           quotationEligible: false,
           investmentAmount: undefined,
+          originalInvestmentAmount: undefined,
+          originalInvestmentCurrency: undefined,
         },
         currency
       );

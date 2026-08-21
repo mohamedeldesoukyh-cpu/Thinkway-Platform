@@ -232,6 +232,8 @@ export function parseSnapshotCreator(row: Record<string, unknown>): ClientReview
     deliverableItems: parseDeliverableItems(row.deliverableItems),
     investmentAmount: asNumber(row.investmentAmount),
     investmentCurrency: asString(row.investmentCurrency),
+    originalInvestmentAmount: asNumber(row.originalInvestmentAmount),
+    originalInvestmentCurrency: asString(row.originalInvestmentCurrency),
     avatarUrl: asString(row.avatarUrl),
     profileUrl: asString(row.profileUrl),
     bio: asString(row.bio),
@@ -253,6 +255,9 @@ export function parseSnapshotCreator(row: Record<string, unknown>): ClientReview
     performance: parsePerformance(row.performance),
     historical: parseHistorical(row.historical),
     influencerId: asString(row.influencerId),
+    shortlistItemId: asString(row.shortlistItemId),
+    profileId: asString(row.profileId),
+    unifiedId: asString(row.unifiedId),
     briefFrozenAt: asString(row.briefFrozenAt),
     briefBackfillDone: row.briefBackfillDone === true,
     thinkwayStatus: parseThinkwayStatus(row.thinkwayStatus),
@@ -489,5 +494,20 @@ export function fingerprintFromSnapshotCreators(
       .sort((a, b) => a.creatorId.localeCompare(b.creatorId))
       .map((creator) => [creator.creatorId, creator.investmentAmount ?? 0])
   );
-  return { creatorIds: ids, revenues, ...extra };
+  const deliverables = Object.fromEntries(
+    [...creators]
+      .sort((a, b) => a.creatorId.localeCompare(b.creatorId))
+      .map((creator) => [creator.creatorId, creator.deliverables ?? ""])
+  );
+  const originals = Object.fromEntries(
+    [...creators]
+      .sort((a, b) => a.creatorId.localeCompare(b.creatorId))
+      .map((creator) => [
+        creator.creatorId,
+        creator.originalInvestmentAmount != null
+          ? `${creator.originalInvestmentCurrency ?? ""}:${creator.originalInvestmentAmount}`
+          : "",
+      ])
+  );
+  return { creatorIds: ids, revenues, deliverables, originals, ...extra };
 }

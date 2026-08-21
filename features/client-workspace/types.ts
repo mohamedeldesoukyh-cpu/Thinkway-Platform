@@ -130,6 +130,8 @@ export type ClientReviewSourceSnapshotCreator = {
   deliverableItems?: ClientDeliverableItem[];
   investmentAmount?: number;
   investmentCurrency?: string;
+  originalInvestmentAmount?: number;
+  originalInvestmentCurrency?: string;
   avatarUrl?: string;
   profileUrl?: string;
   bio?: string;
@@ -151,6 +153,9 @@ export type ClientReviewSourceSnapshotCreator = {
   performance?: ClientPerformanceBrief;
   historical?: ClientHistoricalMonth[];
   influencerId?: string;
+  shortlistItemId?: string;
+  profileId?: string;
+  unifiedId?: string;
   briefFrozenAt?: string;
   briefBackfillDone?: boolean;
   thinkwayStatus?: import("./selection-flow").ClientThinkwayStatus;
@@ -245,6 +250,8 @@ export type ClientCreatorCard = {
   deliverableItems?: ClientDeliverableItem[];
   investmentAmount?: number;
   investmentCurrency?: string;
+  originalInvestmentAmount?: number;
+  originalInvestmentCurrency?: string;
   avatarUrl?: string;
   profileUrl?: string;
   bio?: string;
@@ -270,6 +277,10 @@ export type ClientCreatorCard = {
   briefFrozenAt?: string;
   thinkwayStatus?: import("./selection-flow").ClientThinkwayStatus;
   quotationEligible?: boolean;
+  influencerId?: string;
+  shortlistItemId?: string;
+  profileId?: string;
+  unifiedId?: string;
 };
 
 export type ClientCreatorBrief = {

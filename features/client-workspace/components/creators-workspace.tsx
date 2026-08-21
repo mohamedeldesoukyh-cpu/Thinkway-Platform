@@ -13,21 +13,15 @@ import {
 } from "../actions/client-workspace-actions";
 import type { ClientCreatorSelectionState } from "../constants";
 import { deliverablesLabel } from "../deliverables";
-import {
-  clientCreatorIdentity,
-  formatCompactCount,
-  formatHandleLabel,
-  formatLocation,
-  formatMatchPercent,
-  NOT_AVAILABLE,
-  TO_BE_CONFIRMED,
-} from "../format";
+import { clientCreatorIdentity, DELIVERABLES_TO_BE_CONFIRMED, formatCompactCount, formatHandleLabel, formatLocation, formatMatchPercent, NOT_AVAILABLE, TO_BE_CONFIRMED } from "../format";
 import {
   clientStatusDisplay,
   isPricedClientInvestment,
   isValidClientCommercialApproval,
+  PRICE_PENDING_LABEL,
   thinkwayStatusLabel,
 } from "../selection-flow";
+import { originalInvestmentForDisplay } from "../quotation-client-facing";
 import {
   flagFromCountry,
   MIX_BAR_COLORS,
@@ -219,6 +213,17 @@ export function CreatorsWorkspace({
           </p>
         </div>
       ) : null}
+      {explore ? null : (
+        <ProposalSummaryCard
+          view={view}
+          token={token}
+          selection={selection}
+          variant="bar"
+          showBulkControls={canSelect}
+          onSelectAll={() => bulk("accepted")}
+          onClear={() => bulk("in_review")}
+        />
+      )}
       <div className="toolbar">
         <div className="segs">
           {filters.map((item) => (
@@ -233,19 +238,7 @@ export function CreatorsWorkspace({
             </button>
           ))}
         </div>
-        <div className="sp" />
-        {canSelect ? (
-          <>
-            <button type="button" className="link" disabled={pending} onClick={() => bulk("accepted")}>
-              Select all
-            </button>
-            <button type="button" className="link" disabled={pending} onClick={() => bulk("in_review")}>
-              Clear
-            </button>
-          </>
-        ) : null}
       </div>
-      {explore ? null : <ProposalSummaryCard view={view} token={token} selection={selection} variant="bar" />}
       <p className="note" style={{ marginBottom: 12 }}>
         {explore
           ? `${rosterHeadline(view.creators.length)}. This shortlist stays available even after creators are quoted.`
@@ -318,12 +311,23 @@ export function CreatorsWorkspace({
                 />
                 <div className="ccfoot">
                   <span className="deliv">
-                    {deliverablesLabel(creator.deliverableItems, creator.deliverables) || "Deliverables: To be confirmed"}
+                    {(() => {
+                      const label = deliverablesLabel(creator.deliverableItems, creator.deliverables);
+                      return label === DELIVERABLES_TO_BE_CONFIRMED ? TO_BE_CONFIRMED : label;
+                    })()}
                   </span>
                   <span className={isPricedClientInvestment(creator.investmentAmount) ? "inv" : "inv tbc"}>
                     {isPricedClientInvestment(creator.investmentAmount)
                       ? formatMoneyKpi(creator.investmentAmount!, view.commercial.currency)
-                      : TO_BE_CONFIRMED}
+                      : PRICE_PENDING_LABEL}
+                    {(() => {
+                      const original = originalInvestmentForDisplay(creator, view.commercial.currency);
+                      return original ? (
+                        <span className="inv-orig">
+                          Original: {formatMoneyKpi(original.amount, original.currency)}
+                        </span>
+                      ) : null;
+                    })()}
                   </span>
                 </div>
                 <div className="ccfoot">
@@ -662,8 +666,16 @@ function CreatorDetailPane({
               <p className={isPricedClientInvestment(investmentAmount) ? "v sm" : "v sm tbc"}>
                 {isPricedClientInvestment(investmentAmount)
                   ? formatMoneyKpi(investmentAmount!, investmentCurrency)
-                  : TO_BE_CONFIRMED}
+                  : PRICE_PENDING_LABEL}
               </p>
+              {(() => {
+                const original = originalInvestmentForDisplay(creator, investmentCurrency);
+                return original ? (
+                  <p className="note" style={{ marginTop: 4 }}>
+                    Original: {formatMoneyKpi(original.amount, original.currency)}
+                  </p>
+                ) : null;
+              })()}
             </div>
           </div>
           {creator.selection === "accepted" && !isPricedClientInvestment(investmentAmount) ? (
