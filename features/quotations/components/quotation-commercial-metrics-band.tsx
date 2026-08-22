@@ -2,7 +2,9 @@
 
 import { CommercialCurrencySelect } from "@/features/commercial/components/commercial-currency-select";
 import { QUOTATION_CLIENT_LABELS } from "@/features/quotations/constants";
+import type { OriginalCurrencyTotals } from "@/features/quotations/quotation-row-math";
 import { fromEgp } from "@/lib/commercial/fx-aggregation";
+import { formatMoneyKpi } from "@/lib/finance/currency-format";
 import { cn } from "@/lib/utils";
 
 type MetricDef = {
@@ -11,6 +13,7 @@ type MetricDef = {
   unit?: string;
   tone?: "amber" | "blue" | "green" | "red";
   compact?: boolean;
+  original?: string[];
 };
 
 function moneyParts(
@@ -28,7 +31,16 @@ function moneyParts(
   };
 }
 
-function MetricItem({ label, value, unit, tone, compact }: MetricDef) {
+function originalLabels(
+  rows: OriginalCurrencyTotals[],
+  field: keyof Pick<OriginalCurrencyTotals, "totalCost" | "totalClientCost" | "totalGpMargin">
+): string[] {
+  return rows
+    .filter((row) => Number.isFinite(row[field]) && row[field] !== 0)
+    .map((row) => formatMoneyKpi(row[field], row.currency));
+}
+
+function MetricItem({ label, value, unit, tone, compact, original }: MetricDef) {
   return (
     <div className="metric">
       <div className="l">{label}</div>
@@ -45,6 +57,13 @@ function MetricItem({ label, value, unit, tone, compact }: MetricDef) {
         {value}
         {unit ? <span className="u"> {unit}</span> : null}
       </div>
+      {original?.length ? (
+        <div className="orig" aria-label={`${label} original currency`}>
+          {original.map((line) => (
+            <div key={line}>{line}</div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -61,6 +80,7 @@ type Props = {
   validDaysRemaining: number | null;
   displayCurrency: string;
   displayFxRateToEgp: number;
+  originalTotals?: OriginalCurrencyTotals[];
   onDisplayCurrencyChange?: (currency: string) => void;
   currencyDisabled?: boolean;
 };
@@ -77,6 +97,7 @@ export function QuotationCommercialMetricsBand({
   validDaysRemaining,
   displayCurrency,
   displayFxRateToEgp,
+  originalTotals = [],
   onDisplayCurrencyChange,
   currencyDisabled,
 }: Props) {
@@ -107,14 +128,26 @@ export function QuotationCommercialMetricsBand({
           disabled={currencyDisabled || !onDisplayCurrencyChange}
         />
       </div>
-      <MetricItem label="Base cost" value={base.value} unit={base.unit} />
+      <MetricItem
+        label="Base cost"
+        value={base.value}
+        unit={base.unit}
+        original={originalLabels(originalTotals, "totalCost")}
+      />
       <MetricItem
         label={QUOTATION_CLIENT_LABELS.totalClientCost}
         value={client.value}
         unit={client.unit}
         tone="blue"
+        original={originalLabels(originalTotals, "totalClientCost")}
       />
-      <MetricItem label="GP margin" value={gp.value} unit={gp.unit} tone={gpTone} />
+      <MetricItem
+        label="GP margin"
+        value={gp.value}
+        unit={gp.unit}
+        tone={gpTone}
+        original={originalLabels(originalTotals, "totalGpMargin")}
+      />
       <MetricItem label="GP %" value={`${totalGpPct.toFixed(1)}%`} tone={gpTone} />
       <MetricItem label="PM %" value={`${totalPmPct.toFixed(1)}%`} tone={gpTone} />
       <MetricItem label="Version" value={version} compact />
