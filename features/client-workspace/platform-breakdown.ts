@@ -21,6 +21,61 @@ function optionalMetric(value: number | null | undefined): number | undefined {
   return value != null && Number.isFinite(value) ? value : undefined;
 }
 
+const CLONED_ENGAGEMENT_EPSILON = 0.011;
+
+function hasIndependentEngagementSignal(row: ClientCreatorPlatformStats): boolean {
+  return row.avgLikes != null || row.avgComments != null;
+}
+
+/**
+ * CRM/Excel imports often stamp one engagement rate onto every platform account.
+ * Client Workspace only keeps that value on platforms that independently support it
+ * (avg likes/comments), otherwise on Instagram, then the first account.
+ */
+export function dropClonedImportedEngagementRates(
+  accounts: ClientCreatorPlatformStats[]
+): ClientCreatorPlatformStats[] {
+  const rated = accounts.filter(
+    (row) => row.engagementRate != null && Number.isFinite(row.engagementRate)
+  );
+  if (rated.length < 2) return accounts;
+
+  const keep = new Set<string>();
+  const visited = new Set<string>();
+
+  for (const row of rated) {
+    const bucket = (row.engagementRate ?? 0).toFixed(3);
+    if (visited.has(bucket)) continue;
+    visited.add(bucket);
+    const clones = rated.filter(
+      (other) => Math.abs((other.engagementRate ?? 0) - (row.engagementRate ?? 0)) < CLONED_ENGAGEMENT_EPSILON
+    );
+    if (clones.length < 2) {
+      keep.add(row.platform);
+      continue;
+    }
+    const independent = clones.filter(hasIndependentEngagementSignal);
+    if (independent.length > 0) {
+      for (const item of independent) keep.add(item.platform);
+      continue;
+    }
+    const primary =
+      clones.find((item) => canonicalPlatformKey(item.platform) === "instagram") ?? clones[0];
+    if (primary) keep.add(primary.platform);
+  }
+
+  return accounts.map((row) => {
+    if (row.engagementRate == null || keep.has(row.platform)) return row;
+    const clones = rated.filter(
+      (other) => Math.abs((other.engagementRate ?? 0) - (row.engagementRate ?? 0)) < CLONED_ENGAGEMENT_EPSILON
+    );
+    if (clones.length < 2) return row;
+    const next = { ...row };
+    delete next.engagementRate;
+    return next;
+  });
+}
+
 export function formatPlatformHandle(handle?: string | null): string | undefined {
   const trimmed = handle?.trim();
   if (!trimmed) return undefined;
@@ -121,9 +176,8 @@ export function creatorPlatformBreakdown(input: {
   };
 }): ClientPlatformBreakdownRow[] {
   const groups = summarizeDeliverablesByPlatform(input.deliverableItems);
-  const accounts = mergePlatformStats(
-    fallbackPlatformStats(input.fallback ?? {}),
-    input.platformAccounts
+  const accounts = dropClonedImportedEngagementRates(
+    mergePlatformStats(fallbackPlatformStats(input.fallback ?? {}), input.platformAccounts)
   );
   const accountMap = new Map(accounts.map((row) => [row.platform, row]));
   const deliverableKeys = groups.map((group) => group.platform).filter((key) => key !== "_other");

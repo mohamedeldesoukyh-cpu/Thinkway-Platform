@@ -72,6 +72,19 @@ export function parseCreatorAvatarStoragePathFromUrl(url: string): string | null
   }
 }
 
+const LOW_QUALITY_IMPORT_AVATAR_MAX_BYTES = 20 * 1024;
+
+/** Tiny PDF/Excel import crops are already circular and often include a baked-in badge. */
+export function isLowQualityImportedAvatarUrl(
+  src: string | null | undefined,
+  byteLength?: number
+): boolean {
+  if (!src?.trim() || byteLength == null || byteLength <= 0) return false;
+  const path = parseCreatorAvatarStoragePathFromUrl(src);
+  if (!path?.startsWith("imports/")) return false;
+  return byteLength < LOW_QUALITY_IMPORT_AVATAR_MAX_BYTES;
+}
+
 /** True when the uploaded avatar object still exists in creator-avatars storage. */
 export async function uploadedAvatarExistsInStorage(
   supabase: SupabaseClient<Database>,

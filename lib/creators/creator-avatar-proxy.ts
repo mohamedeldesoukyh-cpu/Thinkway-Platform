@@ -18,6 +18,7 @@ import {
 } from "@/lib/creators/media-proxy-cache";
 import {
   CREATOR_AVATARS_BUCKET,
+  isLowQualityImportedAvatarUrl,
   parseCreatorAvatarStoragePathFromUrl,
 } from "@/lib/discovery-import/import-avatar-storage";
 import { tryOpenGraphThumbnail } from "@/lib/performance/screenshot-capture/providers/opengraph";
@@ -268,23 +269,18 @@ async function resolveCreatorAvatarExternal(input: {
   supabase?: SupabaseClient<Database> | null;
 }): Promise<{ ok: true; buffer: ArrayBuffer; contentType: string } | { ok: false }> {
   const { src, profileUrl, supabase } = input;
+  const liveProfile = profileUrl && isAllowedCreatorAvatarProfileUrl(profileUrl) ? profileUrl : null;
 
+  let stored: { ok: true; buffer: ArrayBuffer; contentType: string } | null = null;
   if (src && supabase) {
-    const stored = await fetchThinkwayStoredAvatar(
-      supabase,
-      src,
-      MEDIA_PROXY_REFRESH_TIMEOUT_MS
-    );
-    if (stored) return stored;
+    stored = await fetchThinkwayStoredAvatar(supabase, src, MEDIA_PROXY_REFRESH_TIMEOUT_MS);
   }
-
-  if (src) {
-    const storedHttp = await fetchThinkwayStoredAvatarHttp(
-      src,
-      MEDIA_PROXY_REFRESH_TIMEOUT_MS
-    );
-    if (storedHttp) return storedHttp;
+  if (!stored && src) {
+    stored = await fetchThinkwayStoredAvatarHttp(src, MEDIA_PROXY_REFRESH_TIMEOUT_MS);
   }
+  const skipLowQualityImport =
+    Boolean(liveProfile) && isLowQualityImportedAvatarUrl(src, stored?.buffer.byteLength);
+  if (stored && !skipLowQualityImport) return stored;
 
   const freshCdnSrc =
     src && isAllowedPublicationPreviewSrcUrl(src) && !isInstagramCdnUrlExpired(src)
@@ -298,23 +294,25 @@ async function resolveCreatorAvatarExternal(input: {
     if (direct.ok) return direct;
   }
 
-  if (profileUrl && isAllowedCreatorAvatarProfileUrl(profileUrl)) {
-    const fromUnavatar = await fetchUnavatarAvatar(profileUrl);
+  if (liveProfile) {
+    const fromUnavatar = await fetchUnavatarAvatar(liveProfile);
     if (fromUnavatar.ok) return fromUnavatar;
 
-    const resolvedPicture = await resolveProfilePictureFromSocialPage(profileUrl);
+    const resolvedPicture = await resolveProfilePictureFromSocialPage(liveProfile);
     if (resolvedPicture) {
       const fromProfilePage = await fetchImageBuffer(resolvedPicture);
       if (fromProfilePage.ok) return fromProfilePage;
     }
 
     recordMediaProxyExternalRequest();
-    const og = await tryOpenGraphThumbnail({ contentUrl: profileUrl });
+    const og = await tryOpenGraphThumbnail({ contentUrl: liveProfile });
     if (og.imageUrl && isAllowedPublicationPreviewSrcUrl(og.imageUrl)) {
       const fromOg = await fetchImageBuffer(og.imageUrl);
       if (fromOg.ok) return fromOg;
     }
   }
+
+  if (stored && skipLowQualityImport) return stored;
 
   if (
     src &&
@@ -403,6 +401,19 @@ export async function resolveCreatorAvatarForHttpRequest(input: {
       fetchThinkwayStoredAvatar(input.supabase!, src, MEDIA_PROXY_STORAGE_TIMEOUT_MS)
     );
     if (stored) {
+      if (
+        profileUrl &&
+        isAllowedCreatorAvatarProfileUrl(profileUrl) &&
+        isLowQualityImportedAvatarUrl(src, stored.buffer.byteLength)
+      ) {
+        recordMediaProxyPlaceholder();
+        return {
+          ok: false,
+          status: 404,
+          source: "miss",
+          needsRefresh: true,
+        };
+      }
       setMediaProxyCachePositive(key, stored.buffer, stored.contentType);
       recordMediaProxyStorageHit();
       return {
