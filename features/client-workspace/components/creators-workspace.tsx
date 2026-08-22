@@ -24,7 +24,7 @@ import {
   shortlistCreatorSelectEnabled,
   thinkwayStatusLabel,
 } from "../selection-flow";
-import { originalInvestmentForDisplay } from "../quotation-client-facing";
+import { originalClientFacingCreatorCardAmount, clientFacingCreatorCardAmount } from "../quotation-client-facing";
 import {
   flagFromCountry,
   MIX_BAR_COLORS,
@@ -368,12 +368,15 @@ export function CreatorsWorkspace({
                       return label === DELIVERABLES_TO_BE_CONFIRMED ? TO_BE_CONFIRMED : label;
                     })()}
                   </span>
-                  <span className={isPricedClientInvestment(creator.investmentAmount) ? "inv" : "inv tbc"}>
-                    {isPricedClientInvestment(creator.investmentAmount)
-                      ? formatMoneyKpi(creator.investmentAmount!, view.commercial.currency)
-                      : PRICE_PENDING_LABEL}
+                  <span className={clientFacingCreatorCardAmount(creator) != null ? "inv" : "inv tbc"}>
                     {(() => {
-                      const original = originalInvestmentForDisplay(creator, view.commercial.currency);
+                      const amount = clientFacingCreatorCardAmount(creator);
+                      return amount != null
+                        ? formatMoneyKpi(amount, view.commercial.currency)
+                        : PRICE_PENDING_LABEL;
+                    })()}
+                    {(() => {
+                      const original = originalClientFacingCreatorCardAmount(creator, view.commercial.currency);
                       return original ? (
                         <span className="inv-orig">
                           Original: {formatMoneyKpi(original.amount, original.currency)}
@@ -536,6 +539,14 @@ function CreatorDetailPane({
 }) {
   const location = brief?.location || formatLocation(creator.city, creator.country);
   const investmentAmount = brief?.investmentAmount ?? creator.investmentAmount;
+  const cardAmounts = {
+    investmentAmount,
+    agencyFeeAmount: creator.agencyFeeAmount,
+    usageRightsAmount: creator.usageRightsAmount,
+    originalInvestmentAmount: creator.originalInvestmentAmount,
+    originalInvestmentCurrency: creator.originalInvestmentCurrency,
+  };
+  const cardAmount = clientFacingCreatorCardAmount(cardAmounts);
   const investmentCurrency = currency;
   const audience = brief?.audience ?? creator.audience;
   const performance = brief?.performance ?? creator.performance;
@@ -744,13 +755,13 @@ function CreatorDetailPane({
             </div>
             <div className="mc">
               <p className="l">Investment</p>
-              <p className={isPricedClientInvestment(investmentAmount) ? "v sm" : "v sm tbc"}>
-                {isPricedClientInvestment(investmentAmount)
-                  ? formatMoneyKpi(investmentAmount!, investmentCurrency)
+              <p className={cardAmount != null ? "v sm" : "v sm tbc"}>
+                {cardAmount != null
+                  ? formatMoneyKpi(cardAmount, investmentCurrency)
                   : PRICE_PENDING_LABEL}
               </p>
               {(() => {
-                const original = originalInvestmentForDisplay(creator, investmentCurrency);
+                const original = originalClientFacingCreatorCardAmount(cardAmounts, investmentCurrency);
                 return original ? (
                   <p className="note" style={{ marginTop: 4 }}>
                     Original: {formatMoneyKpi(original.amount, original.currency)}

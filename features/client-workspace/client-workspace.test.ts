@@ -132,8 +132,10 @@ import {
 } from "./selection-flow";
 import {
   clientFacingAgencyFeeFromLine,
+  clientFacingCreatorCardAmount,
   clientFacingQuotationPrice,
   convertLineRevenueToQuotationCurrency,
+  originalClientFacingCreatorCardAmount,
   originalInvestmentForDisplay,
 } from "./quotation-client-facing";
 import { overlayQuotationDetailOnCreators, clientServiceDescriptionFromQuotationItem } from "./quotation-client-overlay";
@@ -3864,6 +3866,27 @@ test("V: Cost + Agency Fees = Total Investment using existing quotation AF math"
   const calc = selectionCalculator(pool, { "priced-a": "accepted", "priced-b": "accepted" });
   assert.equal(calc.pricedInvestment + calc.agencyFees, calc.totalInvestment);
   assert.equal(calc.totalInvestment, 600_000);
+});
+
+test("creator cards show cost plus agency fees and usage rights while calculator stays split", () => {
+  const creator = {
+    creatorId: "priced-a",
+    displayName: "A",
+    investmentAmount: 400_000,
+    agencyFeeAmount: 80_000,
+    usageRightsAmount: 20_000,
+    originalInvestmentAmount: 8_000,
+    originalInvestmentCurrency: "USD",
+  };
+  assert.equal(clientFacingCreatorCardAmount(creator), 500_000);
+  const original = originalClientFacingCreatorCardAmount(creator, "EGP");
+  assert.equal(original?.amount, 10_000);
+  assert.equal(original?.currency, "USD");
+  const calc = selectionCalculator([creator], { "priced-a": "accepted" });
+  assert.equal(calc.pricedInvestment, 400_000);
+  assert.equal(calc.agencyFees, 80_000);
+  assert.equal(calc.totalInvestment, 480_000);
+  assert.equal(clientFacingCreatorCardAmount({ creatorId: "open", displayName: "C" } as never), undefined);
 });
 
 test("W: vendor cost / GP / margin never appear client-side", () => {

@@ -17,6 +17,7 @@ import {
 } from "../format";
 import { breakdownForCreator, engagementMetersForBreakdown } from "../platform-breakdown";
 import { flagFromCountry, MIX_BAR_COLORS, qualityBadge, qualityGaugePercent, engagementBadge, engagementGaugePercent } from "../presentation";
+import { clientFacingCreatorCardAmount } from "../quotation-client-facing";
 import { clientReviewPostDisplay } from "../review-media";
 import type {
   ClientAudienceSlice,
@@ -234,10 +235,13 @@ function OverviewSection({
     followers != null && latest?.following != null && latest.following > 0
       ? (followers / latest.following).toFixed(2)
       : undefined;
+  const cardAmount = clientFacingCreatorCardAmount({
+    investmentAmount: view?.investmentAmount ?? creator.investmentAmount,
+    agencyFeeAmount: creator.agencyFeeAmount,
+    usageRightsAmount: creator.usageRightsAmount,
+  });
   const investment =
-    (view?.investmentAmount ?? creator.investmentAmount) != null
-      ? formatMoneyKpi(view?.investmentAmount ?? creator.investmentAmount ?? 0, currency)
-      : TO_BE_CONFIRMED;
+    cardAmount != null ? formatMoneyKpi(cardAmount, currency) : TO_BE_CONFIRMED;
   return (
     <>
       <div className="rp-sec">

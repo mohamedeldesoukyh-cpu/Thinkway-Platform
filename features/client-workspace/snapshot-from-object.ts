@@ -36,6 +36,8 @@ function snapshotCreatorCard(card: ClientCreatorCard): ClientReviewSourceSnapsho
     serviceDescription: card.serviceDescription,
     investmentAmount: card.investmentAmount,
     investmentCurrency: card.investmentCurrency,
+    agencyFeeAmount: card.agencyFeeAmount,
+    usageRightsAmount: card.usageRightsAmount,
     avatarUrl: card.avatarUrl,
     bio: card.bio,
     notes: card.notes,
