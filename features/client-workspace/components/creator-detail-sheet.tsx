@@ -108,10 +108,10 @@ export function CreatorDetailSheet({
         {creator ? (
           <>
             <div className="relative h-56 bg-zinc-100 sm:h-72">
-              {(view?.avatarUrl || creator.avatarUrl) ? (
+              {(creator.avatarUrl || view?.avatarUrl) ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={view?.avatarUrl || creator.avatarUrl}
+                  src={creator.avatarUrl || view?.avatarUrl}
                   alt=""
                   className="size-full object-cover"
                 />

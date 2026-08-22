@@ -17,8 +17,10 @@ export type ClientPlatformBreakdownRow = ClientCreatorPlatformStats & {
   lines: Array<{ key: string; label: string; quantity: number }>;
 };
 
-function optionalMetric(value: number | null | undefined): number | undefined {
-  return value != null && Number.isFinite(value) ? value : undefined;
+function optionalMetric(value: number | string | null | undefined): number | undefined {
+  if (value == null || value === "") return undefined;
+  const numeric = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(numeric) ? numeric : undefined;
 }
 
 const CLONED_ENGAGEMENT_EPSILON = 0.011;
@@ -254,14 +256,14 @@ export function breakdownForCreator(
     deliverableItems: brief?.deliverableItems?.length
       ? brief.deliverableItems
       : creator.deliverableItems,
-    platformAccounts: brief?.platformAccounts?.length
-      ? brief.platformAccounts
-      : creator.platformAccounts,
+    platformAccounts: creator.platformAccounts?.length
+      ? creator.platformAccounts
+      : brief?.platformAccounts,
     fallback: {
-      platform: brief?.platform || creator.platform,
-      handle: brief?.handle || creator.handle,
-      followers: brief?.followers ?? creator.followers,
-      engagementRate: brief?.engagementRate ?? creator.engagementRate,
+      platform: creator.platform || brief?.platform,
+      handle: creator.handle || brief?.handle,
+      followers: creator.followers ?? brief?.followers,
+      engagementRate: creator.engagementRate ?? brief?.engagementRate,
       avgLikes: creator.avgLikes,
       avgComments: creator.avgComments,
       avgViews: creator.avgViews,

@@ -607,11 +607,11 @@ function CreatorDetailPane({
             <ReviewAvatar
               className="ava"
               initialsClassName="ini"
-              url={brief?.avatarUrl || creator.avatarUrl}
-              profileUrl={brief?.profileUrl || creator.profileUrl}
-              handle={brief?.handle || creator.handle}
-              platform={brief?.platform || creator.platform}
-              platformAccounts={brief?.platformAccounts ?? creator.platformAccounts}
+              url={creator.avatarUrl || brief?.avatarUrl}
+              profileUrl={creator.profileUrl || brief?.profileUrl}
+              handle={creator.handle || brief?.handle}
+              platform={creator.platform || brief?.platform}
+              platformAccounts={creator.platformAccounts ?? brief?.platformAccounts}
               name={name}
               index={index}
               token={token}
@@ -621,11 +621,11 @@ function CreatorDetailPane({
           <ReviewAvatar
             className="ava"
             initialsClassName="ini"
-            url={brief?.avatarUrl || creator.avatarUrl}
-            profileUrl={brief?.profileUrl || creator.profileUrl}
-            handle={brief?.handle || creator.handle}
-            platform={brief?.platform || creator.platform}
-            platformAccounts={brief?.platformAccounts ?? creator.platformAccounts}
+            url={creator.avatarUrl || brief?.avatarUrl}
+            profileUrl={creator.profileUrl || brief?.profileUrl}
+            handle={creator.handle || brief?.handle}
+            platform={creator.platform || brief?.platform}
+            platformAccounts={creator.platformAccounts ?? brief?.platformAccounts}
             name={name}
             index={index}
             token={token}

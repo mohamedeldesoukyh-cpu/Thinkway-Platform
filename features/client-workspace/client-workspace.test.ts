@@ -36,8 +36,8 @@ import { acceptedCreators, contentRowsForSelection, yourSelectionRoster } from "
 import { HYPEAUDITOR_MEDIA_PLAN_PARITY } from "./hypeauditor-parity";
 import { projectMediaPlanSummary, projectSelectionSummaryFromCards } from "./media-plan-summary";
 import { briefFromSnapshotCreator, mergeFrozenBrief, needsClientBriefBackfill } from "./creator-brief";
-import { applyLiveCreatorProfile, enrichSnapshotCreatorFromUnified, mixPostsForDeliverables, preferAvatarUrl, profileUrlFromHandle, resolveContentPostPlatform, shouldReplaceContentFeed } from "./creator-snapshot";
-import { creatorPlatformBreakdown, creatorProfileLinks, dropClonedImportedEngagementRates, engagementMetersForBreakdown, avatarProfileUrlForReview } from "./platform-breakdown";
+import { applyCrmCreatorProfile, applyLiveCreatorProfile, creatorProfileSyncFingerprint, enrichSnapshotCreatorFromUnified, mixPostsForDeliverables, optionalMetric, preferAvatarUrl, profileUrlFromHandle, resolveContentPostPlatform, shouldReplaceContentFeed } from "./creator-snapshot";
+import { breakdownForCreator, creatorPlatformBreakdown, creatorProfileLinks, dropClonedImportedEngagementRates, engagementMetersForBreakdown, avatarProfileUrlForReview } from "./platform-breakdown";
 import { clientReviewAvatarUrl, isReviewMediaUrlAllowed, reviewMediaAllowlist } from "./review-media";
 import { canCreateCampaignFromQuotation } from "@/lib/commercial-sync/rules";
 import { diffClientReviewSnapshots, diffShortlistToQuotation, retainCreatorBriefs } from "./snapshot-diff";
@@ -1446,6 +1446,7 @@ test("live enrichment replaces imported avatar and cloned platform engagement ra
       platformAccounts: [
         { platform: "instagram", followers: 954_800, engagementRate: 5.46 },
         { platform: "tiktok", followers: 898_900, engagementRate: 5.46 },
+        { platform: "youtube", followers: 1_400_000, engagementRate: 5.46 },
       ],
     },
     {
@@ -1509,7 +1510,115 @@ test("live enrichment replaces imported avatar and cloned platform engagement ra
   assert.equal(live.performance, undefined);
   assert.equal(live.platformAccounts?.find((row) => row.platform === "instagram")?.engagementRate, 3.1);
   assert.equal(live.platformAccounts?.find((row) => row.platform === "tiktok")?.engagementRate, 8.2);
+  assert.equal(live.platformAccounts?.find((row) => row.platform === "tiktok")?.followers, 910_000);
+  assert.equal(live.platformAccounts?.some((row) => row.platform === "youtube"), false);
   assert.equal(live.avgLikes, 12_000);
+});
+
+test("CRM profile replace drops imported YouTube and overwrites cloned TikTok stats", () => {
+  const importAvatar =
+    "https://example.supabase.co/storage/v1/object/public/creator-avatars/imports/d843/instagram/eyadelmogy.jpg";
+  const liveAvatar =
+    "https://example.supabase.co/storage/v1/object/public/creator-avatars/enrichment/inf/tiktok/eyadelmogy.jpg";
+  const live = applyCrmCreatorProfile(
+    {
+      creatorId: "inf:d5aa",
+      displayName: "eyadelmogy",
+      handle: "@eyadelmogy",
+      platform: "instagram,tiktok,youtube",
+      avatarUrl: importAvatar,
+      followers: 954_800,
+      engagementRate: 5.46,
+      performance: { frozenAt: "2026-08-01T00:00:00.000Z", engagementRate: 5.46 },
+      platformAccounts: [
+        { platform: "instagram", handle: "@eyadelmogy", followers: 954_800, engagementRate: 5.46 },
+        { platform: "tiktok", handle: "@eyadelmogy", followers: 898_900, engagementRate: 5.46 },
+        { platform: "youtube", followers: 1_400_000, engagementRate: 5.46 },
+      ],
+    },
+    {
+      avatarUrl: liveAvatar,
+      accounts: [
+        {
+          platform: "instagram",
+          handle: "@eyadelmogy",
+          followers: 954_800,
+          engagementRate: 5.46,
+          avgLikes: 78_561,
+          avgComments: 241.58,
+        },
+        {
+          platform: "tiktok",
+          handle: "@eyadelmogyy",
+          followers: 939_600,
+          engagementRate: 4.883,
+          avgLikes: 45_883,
+        },
+      ],
+    }
+  );
+  assert.equal(live.avatarUrl, liveAvatar);
+  assert.equal(live.performance, undefined);
+  assert.equal(live.platformAccounts?.length, 2);
+  assert.equal(live.platformAccounts?.find((row) => row.platform === "tiktok")?.followers, 939_600);
+  assert.equal(live.platformAccounts?.find((row) => row.platform === "tiktok")?.engagementRate, 4.883);
+  assert.equal(live.platformAccounts?.find((row) => row.platform === "tiktok")?.handle, "@eyadelmogyy");
+  assert.equal(live.platformAccounts?.some((row) => row.platform === "youtube"), false);
+  const rows = creatorPlatformBreakdown({
+    deliverableItems: [
+      { platform: "instagram", type: "Reel", quantity: 1 },
+      { platform: "tiktok", type: "TikTok Video", quantity: 1 },
+    ],
+    platformAccounts: live.platformAccounts,
+  });
+  assert.deepEqual(listPlatformChipMetrics(rows.find((row) => row.platform === "instagram")!), {
+    followers: "954.8K",
+    engagementRate: "5.5%",
+  });
+  assert.deepEqual(listPlatformChipMetrics(rows.find((row) => row.platform === "tiktok")!), {
+    followers: "939.6K",
+    engagementRate: "4.9%",
+  });
+  assert.notEqual(
+    creatorProfileSyncFingerprint([live]),
+    creatorProfileSyncFingerprint([
+      {
+        creatorId: "inf:d5aa",
+        displayName: "eyadelmogy",
+        platformAccounts: [
+          { platform: "instagram", followers: 954_800, engagementRate: 5.46 },
+          { platform: "tiktok", followers: 898_900, engagementRate: 5.46 },
+        ],
+      },
+    ])
+  );
+  assert.equal(optionalMetric("4.883"), 4.883);
+  assert.equal(optionalMetric("939600"), 939_600);
+});
+
+test("open review chips prefer live creator platforms over a frozen brief", () => {
+  const rows = breakdownForCreator(
+    {
+      deliverableItems: [
+        { platform: "instagram", type: "Reel", quantity: 1 },
+        { platform: "tiktok", type: "TikTok Video", quantity: 1 },
+      ],
+      platformAccounts: [
+        { platform: "instagram", followers: 954_800, engagementRate: 5.46, avgLikes: 78_561 },
+        { platform: "tiktok", followers: 939_600, engagementRate: 4.883, avgLikes: 45_883 },
+      ],
+    },
+    {
+      platformAccounts: [
+        { platform: "instagram", followers: 954_800, engagementRate: 5.46 },
+        { platform: "tiktok", followers: 898_900, engagementRate: 5.46 },
+      ],
+    }
+  );
+  assert.deepEqual(listPlatformChipMetrics(rows.find((row) => row.platform === "tiktok")!), {
+    followers: "939.6K",
+    engagementRate: "4.9%",
+  });
 });
 
 test("quotation snapshot diffs are client-safe and name added creators", () => {

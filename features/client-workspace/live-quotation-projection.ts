@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolveRateToEgp } from "@/lib/commercial/fx-server";
 import type { Database } from "@/types/database";
 
+import { creatorProfileSyncFingerprint } from "./creator-snapshot";
 import { overlayQuotationDetailOnCreators } from "./quotation-client-overlay";
 import { fingerprintFromSnapshotCreators } from "./snapshot";
 import { quotationItemsForClient } from "./source-readiness";
@@ -92,6 +93,7 @@ export function quotationProjectionFingerprint(snapshot: ClientReviewSourceSnaps
     currency: snapshot.commercial.currency,
     quotationId: snapshot.quotation?.id,
     version: snapshot.quotation?.version,
+    profile: creatorProfileSyncFingerprint(snapshot.creators),
   });
 }
 
@@ -100,7 +102,7 @@ export async function persistInteractiveReviewProjection(input: {
   review: Pick<ClientReviewRecord, "id" | "status" | "quotationId">;
   snapshot: ClientReviewSourceSnapshot;
   previousFingerprint?: Record<string, unknown> | null;
-  quotationId: string;
+  quotationId?: string | null;
 }): Promise<boolean> {
   if (!isInteractiveClientReview(input.review.status)) return false;
   const fingerprint = quotationProjectionFingerprint(input.snapshot);
@@ -116,7 +118,7 @@ export async function persistInteractiveReviewProjection(input: {
     package_fingerprint: fingerprint,
     updated_at: now,
   };
-  if (!input.review.quotationId) patch.quotation_id = input.quotationId;
+  if (input.quotationId && !input.review.quotationId) patch.quotation_id = input.quotationId;
   const { error } = await input.supabase
     .from("campaign_client_reviews" as never)
     .update(patch as never)

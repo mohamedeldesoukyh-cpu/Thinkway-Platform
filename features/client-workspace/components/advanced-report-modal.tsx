@@ -120,11 +120,11 @@ export function AdvancedReportModal({
           <ReviewAvatar
             className="portrait"
             initialsClassName="ini"
-            url={view?.avatarUrl || creator.avatarUrl}
-            profileUrl={view?.profileUrl || creator.profileUrl}
-            handle={view?.handle || creator.handle}
-            platform={view?.platform || creator.platform}
-            platformAccounts={view?.platformAccounts ?? creator.platformAccounts}
+            url={creator.avatarUrl || view?.avatarUrl}
+            profileUrl={creator.profileUrl || view?.profileUrl}
+            handle={creator.handle || view?.handle}
+            platform={creator.platform || view?.platform}
+            platformAccounts={creator.platformAccounts ?? view?.platformAccounts}
             name={view?.displayName || creator.displayName}
             index={index}
             token={token}

@@ -17,18 +17,22 @@ import { summarizeCreatorDeliverables } from "./deliverables";
 import { clientSafeFitCopy } from "./format";
 import {
   fallbackPlatformStats,
+  formatPlatformHandle,
   mergePlatformStats,
   platformStatsFromUnified,
 } from "./platform-breakdown";
 import type {
   ClientContentPost,
+  ClientCreatorPlatformStats,
   ClientDeliverableItem,
   ClientReviewSourceSnapshot,
   ClientReviewSourceSnapshotCreator,
 } from "./types";
 
-export function optionalMetric(value: number | null | undefined): number | undefined {
-  return value != null && Number.isFinite(value) ? value : undefined;
+export function optionalMetric(value: number | string | null | undefined): number | undefined {
+  if (value == null || value === "") return undefined;
+  const numeric = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(numeric) ? numeric : undefined;
 }
 
 export function contentPostsFromPublications(
@@ -205,6 +209,205 @@ export function influencerIdFromRefs(input: {
   return undefined;
 }
 
+export type CrmCreatorProfile = {
+  avatarUrl?: string;
+  accounts: ClientCreatorPlatformStats[];
+};
+
+function platformStatsFromCrmAccount(row: {
+  platform?: string | null;
+  handle?: string | null;
+  profile_url?: string | null;
+  follower_count?: number | string | null;
+  engagement_rate?: number | string | null;
+  avg_likes?: number | string | null;
+  avg_comments?: number | string | null;
+  avg_views?: number | string | null;
+}): ClientCreatorPlatformStats | null {
+  const platform = canonicalPlatformKey(row.platform);
+  if (!platform) return null;
+  const stats: ClientCreatorPlatformStats = { platform };
+  const handle = formatPlatformHandle(row.handle);
+  if (handle) stats.handle = handle;
+  const followers = optionalMetric(row.follower_count);
+  if (followers != null) stats.followers = followers;
+  const engagementRate = optionalMetric(row.engagement_rate);
+  if (engagementRate != null) stats.engagementRate = engagementRate;
+  const avgLikes = optionalMetric(row.avg_likes);
+  if (avgLikes != null) stats.avgLikes = avgLikes;
+  const avgComments = optionalMetric(row.avg_comments);
+  if (avgComments != null) stats.avgComments = avgComments;
+  const avgViews = optionalMetric(row.avg_views);
+  if (avgViews != null) stats.avgViews = avgViews;
+  const profileUrl = row.profile_url?.trim();
+  if (profileUrl) stats.profileUrl = profileUrl;
+  return stats;
+}
+
+function bestCrmAvatarUrl(
+  primary?: string | null,
+  accountPictures?: Array<string | null | undefined>
+): string | undefined {
+  const candidates = [primary, ...(accountPictures ?? [])];
+  const live = candidates.find(
+    (url) => url?.trim() && !isImportedCreatorAvatarUrl(url) && !isInstagramCdnUrlExpired(url)
+  );
+  return live?.trim() || primary?.trim() || undefined;
+}
+
+/** Open reviews replace frozen import rows with live CRM platform accounts. */
+export function applyCrmCreatorProfile(
+  base: ClientReviewSourceSnapshotCreator,
+  profile: CrmCreatorProfile
+): ClientReviewSourceSnapshotCreator {
+  if (profile.accounts.length === 0 && !profile.avatarUrl) return base;
+  const { performance: _stalePerformance, ...rest } = base;
+  if (profile.accounts.length === 0) {
+    return {
+      ...rest,
+      avatarUrl: preferAvatarUrl(rest.avatarUrl, profile.avatarUrl),
+    };
+  }
+  const primary =
+    profile.accounts.find((row) => canonicalPlatformKey(row.platform) === "instagram") ??
+    profile.accounts[0];
+  return {
+    ...rest,
+    platformAccounts: profile.accounts,
+    platform: profile.accounts.map((row) => row.platform).join(","),
+    followers: primary?.followers ?? rest.followers,
+    engagementRate: primary?.engagementRate ?? rest.engagementRate,
+    avgLikes: primary?.avgLikes ?? rest.avgLikes,
+    avgComments: primary?.avgComments ?? rest.avgComments,
+    avgViews: primary?.avgViews ?? rest.avgViews,
+    handle: primary?.handle ?? rest.handle,
+    avatarUrl: preferAvatarUrl(rest.avatarUrl, profile.avatarUrl),
+    profileUrl:
+      rest.profileUrl ||
+      primary?.profileUrl ||
+      profileUrlFromHandle(primary?.handle ?? rest.handle, primary?.platform ?? rest.platform),
+  };
+}
+
+export function creatorProfileSyncFingerprint(
+  creators: ClientReviewSourceSnapshotCreator[]
+): string {
+  return JSON.stringify(
+    [...creators]
+      .sort((a, b) => a.creatorId.localeCompare(b.creatorId))
+      .map((creator) => ({
+        id: creator.creatorId,
+        avatar: creator.avatarUrl ?? "",
+        accounts: (creator.platformAccounts ?? []).map((row) => [
+          canonicalPlatformKey(row.platform),
+          row.handle ?? "",
+          row.followers ?? null,
+          row.engagementRate ?? null,
+          row.avgLikes ?? null,
+          row.avgComments ?? null,
+        ]),
+      }))
+  );
+}
+
+export async function loadCrmCreatorProfiles(
+  supabase: SupabaseClient,
+  influencerIds: string[]
+): Promise<Map<string, CrmCreatorProfile>> {
+  const ids = [...new Set(influencerIds.filter((id) => id.trim()))];
+  const profiles = new Map<string, CrmCreatorProfile>();
+  if (ids.length === 0) return profiles;
+
+  const [{ data: influencers, error: influencerError }, { data: accounts, error: accountError }] =
+    await Promise.all([
+      supabase.from("influencers").select("id, primary_avatar_url").in("id", ids),
+      supabase
+        .from("influencer_platform_accounts")
+        .select(
+          "influencer_id, platform, handle, profile_url, follower_count, engagement_rate, avg_likes, avg_comments, avg_views, profile_picture_url"
+        )
+        .in("influencer_id", ids),
+    ]);
+  if (influencerError) throw new Error(influencerError.message);
+  if (accountError) throw new Error(accountError.message);
+
+  const picturesById = new Map<string, Array<string | null | undefined>>();
+  const accountsById = new Map<string, ClientCreatorPlatformStats[]>();
+  for (const row of (accounts ?? []) as Array<{
+    influencer_id: string;
+    platform: string | null;
+    handle: string | null;
+    profile_url: string | null;
+    follower_count: number | string | null;
+    engagement_rate: number | string | null;
+    avg_likes: number | string | null;
+    avg_comments: number | string | null;
+    avg_views: number | string | null;
+    profile_picture_url: string | null;
+  }>) {
+    const mapped = platformStatsFromCrmAccount(row);
+    if (mapped) {
+      const list = accountsById.get(row.influencer_id) ?? [];
+      list.push(mapped);
+      accountsById.set(row.influencer_id, list);
+    }
+    const pictures = picturesById.get(row.influencer_id) ?? [];
+    pictures.push(row.profile_picture_url);
+    picturesById.set(row.influencer_id, pictures);
+  }
+
+  for (const row of (influencers ?? []) as Array<{ id: string; primary_avatar_url: string | null }>) {
+    const liveAccounts = mergePlatformStats(
+      [...(accountsById.get(row.id) ?? [])].sort(
+        (a, b) => (a.followers ?? 0) - (b.followers ?? 0)
+      )
+    );
+    profiles.set(row.id, {
+      avatarUrl: bestCrmAvatarUrl(row.primary_avatar_url, picturesById.get(row.id)),
+      accounts: liveAccounts,
+    });
+  }
+
+  for (const [influencerId, liveAccounts] of accountsById) {
+    if (profiles.has(influencerId)) continue;
+    profiles.set(influencerId, {
+      avatarUrl: bestCrmAvatarUrl(null, picturesById.get(influencerId)),
+      accounts: mergePlatformStats(
+        [...liveAccounts].sort((a, b) => (a.followers ?? 0) - (b.followers ?? 0))
+      ),
+    });
+  }
+
+  return profiles;
+}
+
+export async function hydrateSnapshotCreatorsFromCrm(
+  supabase: SupabaseClient,
+  snapshot: ClientReviewSourceSnapshot
+): Promise<ClientReviewSourceSnapshot> {
+  if (snapshot.creators.length === 0) return snapshot;
+  const ids = snapshot.creators
+    .map((creator) =>
+      influencerIdFromRefs({ influencerId: creator.influencerId, creatorId: creator.creatorId })
+    )
+    .filter((id): id is string => Boolean(id));
+  if (ids.length === 0) return snapshot;
+  const profiles = await loadCrmCreatorProfiles(supabase, ids);
+  if (profiles.size === 0) return snapshot;
+  return {
+    ...snapshot,
+    creators: snapshot.creators.map((creator) => {
+      const influencerId = influencerIdFromRefs({
+        influencerId: creator.influencerId,
+        creatorId: creator.creatorId,
+      });
+      if (!influencerId) return creator;
+      const profile = profiles.get(influencerId);
+      return profile ? applyCrmCreatorProfile(creator, profile) : creator;
+    }),
+  };
+}
+
 export function enrichSnapshotCreatorFromUnified(
   base: ClientReviewSourceSnapshotCreator,
   creator: UnifiedCreatorResult | undefined
@@ -296,7 +499,11 @@ export function applyLiveCreatorProfile(
   if (!unified) return base;
   const next = enrichSnapshotCreatorFromUnified(base, unified);
   const { performance: _stalePerformance, ...rest } = next;
-  return rest;
+  const liveAccounts = platformStatsFromUnified(unified);
+  return {
+    ...rest,
+    platformAccounts: liveAccounts.length > 0 ? liveAccounts : rest.platformAccounts,
+  };
 }
 
 export async function hydrateSnapshotCreatorsFromUnified(
@@ -316,7 +523,7 @@ export async function hydrateSnapshotCreatorsFromUnified(
         return creator.creatorId.startsWith("dis:") ? creator.creatorId.slice(4) : undefined;
       }),
     },
-    { omitHeavyFields: false }
+    { omitHeavyFields: true }
   );
   return {
     ...snapshot,
