@@ -22,6 +22,7 @@ import {
   UNPRICED_INCLUDED_MESSAGE,
   buildCreatorApprovalConfirmation,
   canEnableApproveSelectedCreators,
+  hydrateClientSelection,
   primaryActionForJourney,
   selectionCalculator,
   shortlistContinueToYourSelection,
@@ -101,9 +102,12 @@ export function ProposalSummaryCard({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const resolvedSelection =
+  const resolvedSelection = hydrateClientSelection(
+    view.creators,
     selection ??
-    Object.fromEntries(view.creators.map((creator) => [creator.creatorId, creator.selection]));
+      Object.fromEntries(view.creators.map((creator) => [creator.creatorId, creator.selection])),
+    view.journey?.clientApprovedCreatorIds
+  );
   const calc = selectionCalculator(view.creators, resolvedSelection);
   const currency = view.commercial.currency;
   const clientCost = calc.pricedInvestment;

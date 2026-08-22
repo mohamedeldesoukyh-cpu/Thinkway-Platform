@@ -448,6 +448,11 @@ export function CreatorsWorkspace({
             }}
             onOpenReport={() => setReportOpen(true)}
             cpm={view.mediaPlanSummary.creatorForecasts[selected.creatorId]?.cpm}
+            selectionConfirmed={confirmed}
+            commerciallyApproved={isValidClientCommercialApproval({
+              quotationStage: view.journey?.quotationStage ?? "",
+              selectedCount: counts.accepted,
+            })}
           />
         ) : (
           <div className="detail">
@@ -495,6 +500,8 @@ function CreatorDetailPane({
   onRequestChanges,
   onOpenReport,
   cpm,
+  selectionConfirmed,
+  commerciallyApproved,
 }: {
   creator: ClientCreatorCard;
   brief: ClientCreatorBrief | null;
@@ -512,6 +519,8 @@ function CreatorDetailPane({
   onRequestChanges: () => void;
   onOpenReport: () => void;
   cpm?: number;
+  selectionConfirmed: boolean;
+  commerciallyApproved: boolean;
 }) {
   const location = brief?.location || formatLocation(creator.city, creator.country);
   const investmentAmount = brief?.investmentAmount ?? creator.investmentAmount;
@@ -629,8 +638,8 @@ function CreatorDetailPane({
           <span className={`tag g ${statusClass(creator.selection)}`}>
             {clientStatusDisplay({
               selection: creator.selection,
-              selectionConfirmed: false,
-              commerciallyApproved: false,
+              selectionConfirmed,
+              commerciallyApproved,
             })}
           </span>
           {thinkwayStatusLabel(creator.thinkwayStatus) ? (

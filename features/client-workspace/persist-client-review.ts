@@ -10,6 +10,7 @@ import {
 } from "./constants";
 import { isReusableClientReviewTip } from "./status";
 import { clientSelectionsEqual, mergePersistedClientSelection } from "./client-review-selection";
+import { hydrateClientSelection } from "./selection-flow";
 import { parseSourceSnapshot } from "./snapshot";
 import { diffClientReviewSnapshots, retainCreatorBriefs } from "./snapshot-diff";
 import { buildClientReviewPath, hashClientReviewToken } from "./security/review-token";
@@ -235,14 +236,26 @@ async function updateExistingClientReview(
 ): Promise<CreateClientReviewResult> {
   const origin = input.origin.replace(/\/$/, "");
   const existingToken = currentTip.share_token?.trim() || "";
+  const previous = parseSourceSnapshot(currentTip.source_snapshot);
   const previousSelection = currentTip.selection_state ?? {};
   const creatorIds = input.snapshot.creators.map((creator) => creator.creatorId);
-  const selection = mergePersistedClientSelection({
-    creatorIds,
-    previous: previousSelection,
-    incoming: input.selection,
-    replaceSelection: input.replaceSelection,
-  });
+  const freezeIds =
+    previous?.clientSelection?.creatorIds ?? input.snapshot.clientSelection?.creatorIds ?? null;
+  const remappedPrevious = hydrateClientSelection(
+    input.snapshot.creators,
+    previousSelection,
+    freezeIds
+  );
+  const selection = hydrateClientSelection(
+    input.snapshot.creators,
+    mergePersistedClientSelection({
+      creatorIds,
+      previous: remappedPrevious,
+      incoming: input.selection,
+      replaceSelection: input.replaceSelection,
+    }),
+    freezeIds
+  );
   if (
     existingToken &&
     fingerprintsEqual(currentTip.package_fingerprint ?? {}, input.fingerprint) &&
@@ -263,7 +276,6 @@ async function updateExistingClientReview(
   const now = new Date().toISOString();
   const mintMissing = input.mintMissingShareToken !== false;
   const token = existingToken || (mintMissing ? randomBytes(16).toString("hex") : "");
-  const previous = parseSourceSnapshot(currentTip.source_snapshot);
   let snapshot = previous ? retainCreatorBriefs(previous, input.snapshot) : input.snapshot;
   if (previous?.clientSelection) {
     snapshot = { ...snapshot, clientSelection: previous.clientSelection };

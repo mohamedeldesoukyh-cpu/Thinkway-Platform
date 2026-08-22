@@ -92,6 +92,9 @@ import {
   selectionCalculator,
   selectionChangeAllowed,
   selectionJourneyFlags,
+  hydrateClientSelection,
+  remapClientSelectionOntoCreators,
+  applyFrozenClientSelection,
   thinkwayStatusFromInternal,
   CONFIRM_CREATORS_LABEL,
   APPROVE_SELECTED_CREATORS_LABEL,
@@ -3953,6 +3956,73 @@ test("campaign tab kind waits for convert then projects Campaign Workspace posts
   assert.equal(projected.posts[0]?.contentUrl, "https://instagram.com/reel/1");
   assert.equal("cost" in projected.posts[0]!, false);
   assert.equal(clientFacingObjectIsSafe(projected.posts[0]), true);
+});
+
+test("frozen client selection hydrates calculator and approval after live selection is wiped", () => {
+  const creators = [
+    {
+      creatorId: "sl-oudou",
+      unifiedId: "u-oudou",
+      displayName: "oudou le king",
+      investmentAmount: 200_000,
+      agencyFeeAmount: 20_000,
+    },
+    {
+      creatorId: "sl-karim",
+      unifiedId: "u-karim",
+      displayName: "Karim Kabbany",
+      investmentAmount: 450_000,
+      agencyFeeAmount: 45_000,
+    },
+    {
+      creatorId: "sl-reem",
+      unifiedId: "u-reem",
+      displayName: "Reem",
+    },
+  ];
+  const wiped = { "sl-oudou": "in_review" as const, "sl-karim": "in_review" as const, "sl-reem": "in_review" as const };
+  const freezeIds = ["sl-oudou", "sl-karim", "sl-reem"];
+  const hydrated = hydrateClientSelection(creators, wiped, freezeIds);
+  assert.equal(hydrated["sl-oudou"], "accepted");
+  assert.equal(hydrated["sl-karim"], "accepted");
+  assert.equal(hydrated["sl-reem"], "accepted");
+  const calc = selectionCalculator(creators, hydrated);
+  assert.equal(calc.selectedCount, 3);
+  assert.equal(calc.pricedSelectedCount, 2);
+  assert.equal(calc.pricedInvestment, 650_000);
+  assert.equal(calc.agencyFees, 65_000);
+  assert.equal(calc.totalInvestment, 715_000);
+  assert.equal(
+    canApproveFinalQuotation({
+      historical: false,
+      quotationInteractive: true,
+      selectionConfirmed: true,
+      selectedCount: calc.selectedCount,
+      unpricedSelectedCount: calc.unpricedSelectedCount,
+    }),
+    true
+  );
+  assert.equal(
+    clientStatusDisplay({
+      selection: hydrated["sl-oudou"]!,
+      selectionConfirmed: true,
+      commerciallyApproved: false,
+    }),
+    CLIENT_APPROVED_LABEL
+  );
+  const remapped = remapClientSelectionOntoCreators(
+    creators,
+    { "u-oudou": "accepted", "u-karim": "accepted" }
+  );
+  assert.equal(remapped["sl-oudou"], "accepted");
+  assert.equal(remapped["sl-karim"], "accepted");
+  assert.equal(remapped["sl-reem"], "in_review");
+  const overlayFreeze = applyFrozenClientSelection(creators, wiped, ["u-oudou", "u-karim"]);
+  assert.equal(overlayFreeze["sl-oudou"], "accepted");
+  assert.equal(overlayFreeze["sl-karim"], "accepted");
+  assert.equal(overlayFreeze["sl-reem"], "in_review");
+  const roster = creatorsForClientCommercial(creators, wiped, ["u-oudou", "u-karim"]);
+  assert.deepEqual(roster.map((creator) => creator.creatorId), ["sl-oudou", "sl-karim"]);
 });
 
 

@@ -46,6 +46,7 @@ import { loadClientCampaignExecution } from "./load-campaign-execution";
 import {
   isSelectionConfirmed,
   mergeSnapshotsForClientView,
+  hydrateClientSelection,
   selectionCalculator,
   selectionJourneyFlags,
 } from "./selection-flow";
@@ -362,11 +363,11 @@ export async function loadClientWorkspace(
     newerReviewNumberFor(db, activeReview),
   ]);
 
-  const selection = activeReview.selectionState as Record<string, ClientCreatorSelectionState>;
   const shortlistSnapshot = latestReviewForSource(members, "shortlist")?.sourceSnapshot ?? null;
   const quotationSnapshot = quotationLatest?.sourceSnapshot ?? null;
   let view: ClientWorkspaceView | null = null;
   let campaignObject: CampaignObject | null = null;
+  let selection = activeReview.selectionState as Record<string, ClientCreatorSelectionState>;
 
   if (activeReview.sourceSnapshot) {
     let mergedSnapshot = mergeSnapshotsForClientView({
@@ -412,6 +413,11 @@ export async function loadClientWorkspace(
         /* keep the merged snapshot if quotation SSOT is unavailable */
       }
     }
+    selection = hydrateClientSelection(
+      mergedSnapshot.creators,
+      selection,
+      mergedSnapshot.clientSelection?.creatorIds
+    );
     view = viewFromSnapshot(
       activeReview,
       mergedSnapshot,
@@ -437,6 +443,11 @@ export async function loadClientWorkspace(
       hydrated = [];
     }
     const snapshot = snapshotFromCampaignObject(campaignObject, selection, hydrated);
+    selection = hydrateClientSelection(
+      snapshot.creators,
+      selection,
+      snapshot.clientSelection?.creatorIds
+    );
     view = viewFromSnapshot(activeReview, snapshot, selection, comments, activity, newer);
     view.content = projectClientContent(campaignObject);
     view.timeline = projectClientTimeline(campaignObject);

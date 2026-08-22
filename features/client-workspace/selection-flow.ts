@@ -165,12 +165,12 @@ export function selectionCalculator(
   };
 }
 
-function overlayKeys(
-  creator: Pick<
-    ClientReviewSourceSnapshotCreator,
-    "creatorId" | "influencerId" | "handle" | "shortlistItemId" | "profileId" | "unifiedId"
-  >
-): string[] {
+export type ClientCreatorIdentityFields = Pick<
+  ClientReviewSourceSnapshotCreator,
+  "creatorId" | "influencerId" | "handle" | "shortlistItemId" | "profileId" | "unifiedId"
+>;
+
+function overlayKeys(creator: ClientCreatorIdentityFields): string[] {
   const keys: string[] = [];
   const push = (value?: string, prefix?: string) => {
     const trimmed = value?.trim();
@@ -209,6 +209,69 @@ function findOverlayMatch(
     if (match) return match;
   }
   return undefined;
+}
+
+function creatorMatchesApprovedIds(
+  creator: ClientCreatorIdentityFields,
+  approvedIds: ReadonlySet<string>
+): boolean {
+  return overlayKeys(creator).some((key) => approvedIds.has(key));
+}
+
+/**
+ * Map stored selection_state onto the current roster when quotation sync
+ * changes creatorId while unified / influencer / handle identity is the same.
+ */
+export function remapClientSelectionOntoCreators(
+  creators: ClientCreatorIdentityFields[],
+  previous: Record<string, ClientCreatorSelectionState>
+): Record<string, ClientCreatorSelectionState> {
+  const next: Record<string, ClientCreatorSelectionState> = {};
+  for (const creator of creators) {
+    let state: ClientCreatorSelectionState = "in_review";
+    for (const key of overlayKeys(creator)) {
+      const hit = previous[key];
+      if (hit === "accepted") {
+        state = "accepted";
+        break;
+      }
+      if (hit === "rejected") state = "rejected";
+    }
+    next[creator.creatorId] = state;
+  }
+  return next;
+}
+
+/** After Approve Selected Creators, frozen IDs are accepted even if live selection_state was reset. */
+export function applyFrozenClientSelection(
+  creators: ClientCreatorIdentityFields[],
+  selection: Record<string, ClientCreatorSelectionState>,
+  approvedIds?: string[] | null
+): Record<string, ClientCreatorSelectionState> {
+  const next: Record<string, ClientCreatorSelectionState> = { ...selection };
+  for (const creator of creators) {
+    if (!next[creator.creatorId]) next[creator.creatorId] = "in_review";
+  }
+  if (!approvedIds?.length) return next;
+  const frozen = new Set(approvedIds);
+  for (const creator of creators) {
+    if (creatorMatchesApprovedIds(creator, frozen)) {
+      next[creator.creatorId] = "accepted";
+    }
+  }
+  return next;
+}
+
+export function hydrateClientSelection(
+  creators: ClientCreatorIdentityFields[],
+  live: Record<string, ClientCreatorSelectionState>,
+  approvedIds?: string[] | null
+): Record<string, ClientCreatorSelectionState> {
+  return applyFrozenClientSelection(
+    creators,
+    remapClientSelectionOntoCreators(creators, live),
+    approvedIds
+  );
 }
 
 export function applyQuotationCurrency(
@@ -425,8 +488,10 @@ export function creatorsForClientCommercial<T extends { creatorId: string }>(
   approvedIds?: string[] | null
 ): T[] {
   if (approvedIds && approvedIds.length > 0) {
-    const ids = new Set(approvedIds);
-    return creators.filter((creator) => ids.has(creator.creatorId));
+    const frozen = new Set(approvedIds);
+    return creators.filter((creator) =>
+      creatorMatchesApprovedIds(creator as ClientCreatorIdentityFields, frozen)
+    );
   }
   return creators.filter((creator) => isSelectedForCalculator(selection[creator.creatorId]));
 }

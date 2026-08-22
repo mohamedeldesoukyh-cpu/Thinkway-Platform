@@ -1,5 +1,5 @@
 import type { ClientCreatorSelectionState } from "./constants";
-import { isSelectedForCalculator } from "./status";
+import { creatorsForClientCommercial } from "./selection-flow";
 import type { ClientContentRow, ClientCreatorCard, ClientWorkspaceView } from "./types";
 
 export function selectionMapFromView(
@@ -13,11 +13,7 @@ export function acceptedCreators(
   selection: Record<string, ClientCreatorSelectionState>,
   approvedIds?: string[] | null
 ): ClientCreatorCard[] {
-  if (approvedIds && approvedIds.length > 0) {
-    const ids = new Set(approvedIds);
-    return creators.filter((creator) => ids.has(creator.creatorId));
-  }
-  return creators.filter((creator) => isSelectedForCalculator(selection[creator.creatorId] ?? creator.selection));
+  return creatorsForClientCommercial(creators, selection, approvedIds);
 }
 
 /** Your Selection shows live Shortlist picks, then the frozen Client Approved roster. */

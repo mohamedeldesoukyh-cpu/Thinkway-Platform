@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 
 import type { ClientCreatorSelectionState, ClientWorkspaceSectionId } from "../constants";
 import { projectSelectionSummaryFromCards } from "../media-plan-summary";
-import { isPricedClientInvestment, selectionCalculator } from "../selection-flow";
+import { isPricedClientInvestment, hydrateClientSelection, selectionCalculator } from "../selection-flow";
 import { acceptedCreators, selectionMapFromView } from "../selection-view";
 import type { ClientCommercialSummary, ClientMediaPlanSummary, ClientWorkspaceView } from "../types";
 
@@ -33,7 +33,13 @@ export function ClientWorkspaceStateProvider({
   onSectionChange: (section: ClientWorkspaceSectionId) => void;
   children: ReactNode;
 }) {
-  const [selection, setSelection] = useState(() => selectionMapFromView(view));
+  const [selection, setSelection] = useState(() =>
+    hydrateClientSelection(
+      view.creators,
+      selectionMapFromView(view),
+      view.journey?.clientApprovedCreatorIds
+    )
+  );
   const setCreatorState = useCallback((creatorId: string, state: ClientCreatorSelectionState) => {
     setSelection((current) => ({ ...current, [creatorId]: state }));
   }, []);
@@ -41,17 +47,22 @@ export function ClientWorkspaceStateProvider({
     setSelection((current) => ({ ...current, ...next }));
   }, []);
   const value = useMemo((): ClientWorkspaceState => {
-    const selectedCreators = acceptedCreators(
+    const effectiveSelection = hydrateClientSelection(
       view.creators,
       selection,
       view.journey?.clientApprovedCreatorIds
     );
+    const selectedCreators = acceptedCreators(
+      view.creators,
+      effectiveSelection,
+      view.journey?.clientApprovedCreatorIds
+    );
     const selectedSummary = projectSelectionSummaryFromCards(
       view.creators,
-      selection,
+      effectiveSelection,
       view.commercial.currency
     );
-    const calc = selectionCalculator(view.creators, selection);
+    const calc = selectionCalculator(view.creators, effectiveSelection);
     const selectedCommercial: ClientCommercialSummary = {
       ...view.commercial,
       feeAmount: calc.agencyFees,
@@ -67,7 +78,7 @@ export function ClientWorkspaceStateProvider({
     return {
       view,
       token,
-      selection,
+      selection: effectiveSelection,
       setCreatorState,
       setCreatorStates,
       goToSection: onSectionChange,

@@ -24,6 +24,7 @@ import {
 import { clientApprovalSideEffects, canMutateClientReviewFromBoundReview, journeyCanonicalReviewId, pickReviewForDecision } from "./journey-state";
 import {
   canOpenCommercialWorkspace,
+  hydrateClientSelection,
   isPricedClientInvestment,
   isSelectionConfirmed,
   selectionCalculator,
@@ -344,9 +345,10 @@ export async function confirmClientCreators(input: {
   if (isSelectionConfirmed(snapshot)) {
     return { ok: true, message: "Creators already approved. This is not quotation approval." };
   }
+  const live = hydrateClientSelection(snapshot.creators, gate.review.selectionState, null);
   const acceptedIds = snapshot.creators
     .map((creator) => creator.creatorId)
-    .filter((id) => gate.review.selectionState[id] === "accepted");
+    .filter((id) => live[id] === "accepted");
   if (acceptedIds.length === 0) {
     return { ok: false, message: "Select at least one creator before approving." };
   }
@@ -355,10 +357,12 @@ export async function confirmClientCreators(input: {
     confirmedAt: now,
     creatorIds: acceptedIds,
   });
+  const nextSelection = hydrateClientSelection(snapshot.creators, live, acceptedIds);
   const { error } = await db()
     .from("campaign_client_reviews" as never)
     .update({
       source_snapshot: nextSnapshot,
+      selection_state: nextSelection,
       updated_at: now,
     } as never)
     .eq("id", gate.review.id)
@@ -440,13 +444,20 @@ export async function decideClientReview(input: {
     return { ok: false, message: "Package not found." };
   }
 
+  const selection = snapshot
+    ? hydrateClientSelection(
+        snapshot.creators,
+        gate.review.selectionState,
+        snapshot.clientSelection?.creatorIds
+      )
+    : gate.review.selectionState;
   const commercial = snapshot
-    ? projectCommercialFromSnapshot(snapshot, gate.review.selectionState)
-    : projectClientCommercial(campaignObject!, gate.review.selectionState);
+    ? projectCommercialFromSnapshot(snapshot, selection)
+    : projectClientCommercial(campaignObject!, selection);
   const frozenIds = snapshot
     ? snapshotCreatorIds(snapshot)
     : clientCreatorIds(campaignObject!);
-  const selectedIds = frozenIds.filter((id) => gate.review.selectionState[id] === "accepted");
+  const selectedIds = frozenIds.filter((id) => selection[id] === "accepted");
 
   if (input.decision === "approved" && selectedIds.length === 0) {
     return {
@@ -466,7 +477,7 @@ export async function decideClientReview(input: {
       };
     }
     if (snapshot) {
-      const calc = selectionCalculator(snapshot.creators, gate.review.selectionState);
+      const calc = selectionCalculator(snapshot.creators, selection);
       if (calc.pricedSelectedCount === 0) {
         return {
           ok: false,
