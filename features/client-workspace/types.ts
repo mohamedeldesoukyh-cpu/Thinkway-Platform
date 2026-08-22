@@ -1,4 +1,5 @@
 import type { StudioPackageSourceState } from "@/features/campaign-studio/services/studio-package-readiness";
+import type { IdentityLogo } from "@/lib/entity-logos/identity-logo";
 
 import type {
   ClientChangeArea,
@@ -195,6 +196,7 @@ export type ClientReviewSourceSnapshot = {
     lines: Array<{ creatorId: string; label: string; amount: number }>;
   };
   creatorIds: string[];
+  identityLogo?: IdentityLogo;
   clientSelection?: import("./selection-flow").ClientSelectionFreeze;
   clientUpdate?: {
     updatedAt: string;
@@ -479,6 +481,8 @@ export type ClientWorkspaceView = {
   };
   /** Campaign Workspace execution projection — never a second schedule/live engine. */
   campaignExecution?: import("./campaign-execution").ClientCampaignExecution;
+  /** Group logo first, then client logo. Brand logos are not used here. */
+  identityLogo?: IdentityLogo | null;
 };
 
 export type ClientWorkspaceEntry = {
@@ -490,6 +494,7 @@ export type ClientWorkspaceEntry = {
   statusLabel: string;
   lastUpdated: string;
   actionRequired: string;
+  identityLogo?: IdentityLogo | null;
 };
 
 export type ClientWorkspaceSection = ClientWorkspaceSectionId;

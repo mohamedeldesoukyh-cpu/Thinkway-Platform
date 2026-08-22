@@ -120,7 +120,7 @@ export async function getGroupWorkspace(
       .select(
         `
         id, document_number, name, status, currency_code,
-        category_id, subcategory_id, vr_rate_id,
+        category_id, subcategory_id, vr_rate_id, logo_url,
         category:md_categories(name),
         subcategory:md_subcategories(name),
         vr_rate:md_vr_rates(rate_percent),
@@ -278,6 +278,7 @@ export async function getGroupWorkspace(
     region: string | null;
     status: GroupWorkspace["status"];
     notes: string | null;
+    logo_url: string | null;
     created_at: string;
     account_director: GroupWorkspace["account_director"];
   };
@@ -289,6 +290,7 @@ export async function getGroupWorkspace(
     region: groupRow.region,
     status: groupRow.status,
     notes: groupRow.notes,
+    logo_url: groupRow.logo_url ?? null,
     created_at: groupRow.created_at,
     account_director: groupRow.account_director,
     counts: {
@@ -336,6 +338,7 @@ export async function getGroupWorkspace(
         subcategory: { name: string } | null;
         vr_rate: { rate_percent: number } | null;
         client: { id: string; name: string } | null;
+        logo_url?: string | null;
       };
       return {
         id: row.id,
@@ -352,6 +355,7 @@ export async function getGroupWorkspace(
         active_campaigns: activeCampaignsByBrand.get(row.id) ?? 0,
         client_id: row.client?.id ?? "",
         client_name: row.client?.name ?? "",
+        logo_url: row.logo_url ?? null,
       };
     }),
     documents: (documentsResult.data ?? []) as unknown as GroupWorkspace["documents"],

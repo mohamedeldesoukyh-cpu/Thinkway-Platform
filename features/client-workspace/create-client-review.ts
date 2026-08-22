@@ -18,6 +18,7 @@ import {
 } from "./persist-client-review";
 import { packageFingerprintFromObject } from "./project-client-view";
 import { snapshotFromCampaignObject } from "./snapshot-from-object";
+import { loadIdentityLogoForReview } from "./identity-logo";
 
 export type { CreateClientReviewResult };
 export { mapClientReviewRow };
@@ -94,6 +95,11 @@ export async function createClientReview(
     hydrated = [];
   }
   const snapshot = snapshotFromCampaignObject(saved, selection, hydrated);
+  snapshot.identityLogo =
+    (await loadIdentityLogoForReview(supabase, {
+      campaignHeaderId: latest.record.campaignHeaderId,
+      shortlistId: linkedShortlistId(saved),
+    })) ?? undefined;
 
   const result = await persistClientReview({
     supabase,

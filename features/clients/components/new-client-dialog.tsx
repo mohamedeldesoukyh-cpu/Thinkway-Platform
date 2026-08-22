@@ -243,7 +243,7 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
             <ClientFormSection
               icon={ClipboardListIcon}
               title="Identity"
-              description="Legal name and classification"
+              description="Legal name and classification. Upload a logo from the client Identity section after saving."
               compact
               className="shadow-none"
             >

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { CLIENT_STATUS_LABEL, type ClientWorkspaceSectionId } from "../constants";
 import { buildClientReviewPath } from "../security/review-token";
 import type { ClientWorkspaceEntry } from "../types";
-import { LogoMark } from "./review-icons";
+import { ClientWorkspaceIdentityMark } from "./identity-logo-mark";
 
 export function ClientReviewEntry({
   entry,
@@ -20,11 +20,8 @@ export function ClientReviewEntry({
     <div className="tw-review">
       <div className="entry-wrap">
         <div className="card entry-card">
-          <div className="logo" style={{ marginBottom: 18 }}>
-            <LogoMark />
-            <span className="wm">
-              THINK<b>WAY</b>
-            </span>
+          <div style={{ marginBottom: 18 }}>
+            <ClientWorkspaceIdentityMark identityLogo={entry.identityLogo} wordmarkAsSpan />
           </div>
           <p className="ck">Your campaign is ready for review</p>
           <p className="note" style={{ marginTop: 8 }}>

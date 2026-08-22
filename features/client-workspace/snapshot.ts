@@ -1,6 +1,7 @@
 import { pickCreatorDisplayName, resolveCreatorIdentity } from "@/lib/text/decode-html-entities";
 
 import type { ClientCreatorSelectionState } from "./constants";
+import { parseIdentityLogo } from "./identity-logo";
 import { isPricedClientInvestment, parseClientSelectionFreeze, parseThinkwayStatus, applyQuotationCurrency, creatorsForClientCommercial, resolveClientSelectionFreeze, sortCreatorsPricedFirst } from "./selection-flow";
 import { parseDeliverableItems as parseDeliverableItemRows } from "./deliverables";
 import type {
@@ -357,6 +358,7 @@ export function parseSourceSnapshot(raw: unknown): ClientReviewSourceSnapshot | 
         }
       : undefined,
     creatorIds,
+    identityLogo: parseIdentityLogo(raw.identityLogo),
     clientSelection: parseClientSelectionFreeze(raw.clientSelection),
     clientUpdate: parseClientUpdate(raw.clientUpdate),
   };

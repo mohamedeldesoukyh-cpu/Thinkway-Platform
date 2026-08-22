@@ -13,7 +13,7 @@ import { buildClientReviewPath } from "../security/review-token";
 import type { ClientWorkspaceView } from "../types";
 import { ClientJourneyStrip } from "./journey-strip";
 import { useClientWorkspaceState } from "./client-workspace-state";
-import { LogoMark } from "./review-icons";
+import { ClientWorkspaceIdentityMark } from "./identity-logo-mark";
 import { ReviewUpdateBanner } from "./review-update-banner";
 
 export function ClientWorkspaceShell({
@@ -75,12 +75,7 @@ export function ClientWorkspaceShell({
     <div className="tw-review">
       <header className="bar">
         <div className="wrap row">
-          <div className="logo">
-            <LogoMark />
-            <b>
-              THINK<span>WAY</span>
-            </b>
-          </div>
+          <ClientWorkspaceIdentityMark identityLogo={view.identityLogo} />
           <div className="camp">
             <b>{view.overview.campaignName}</b>
           </div>

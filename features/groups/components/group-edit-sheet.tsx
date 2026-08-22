@@ -25,7 +25,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { CLIENT_STATUS_OPTIONS } from "@/features/clients/constants";
+import { EntityLogoField } from "@/features/entity-logos/components/entity-logo-field";
 import {
   updateGroupAction,
   type FormActionState,
@@ -113,6 +113,15 @@ export function GroupEditSheet({
           <input type="hidden" name="status" value={status} />
           <input type="hidden" name="region" value={region} />
           <input type="hidden" name="account_director_id" value={accountDirectorId} />
+
+          <EntityLogoField
+            kind="group"
+            entityId={workspace.id}
+            logoUrl={workspace.logo_url}
+            label="Group logo"
+            hint="Shown to the left of the Thinkway logo in Client Workspace. PNG, JPG, or WebP · up to 2 MB."
+            disabled={isPending}
+          />
 
           <div className="grid gap-2">
             <Label htmlFor="group_name">Group name</Label>

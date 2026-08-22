@@ -549,6 +549,26 @@
   gap:10px;
   flex:none;
 }
+.tw-review .logo-pair{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex:none;
+  min-width:0;
+}
+.tw-review .partner-logo{
+  height:32px;
+  width:auto;
+  max-width:132px;
+  object-fit:contain;
+  flex:none;
+}
+.tw-review .logo-divider{
+  width:1px;
+  height:22px;
+  background:var(--line);
+  flex:none;
+}
 .tw-review .logo .mark{width:28px;height:28px;flex:none;}
 .tw-review .logo b{font-weight:800;font-size:16px;letter-spacing:-.3px;color:var(--ink);}
 .tw-review .logo b span{color:var(--blue);}

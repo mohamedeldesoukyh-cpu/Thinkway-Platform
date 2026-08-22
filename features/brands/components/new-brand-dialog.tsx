@@ -123,7 +123,7 @@ export function NewBrandDialog({ clients, masterData }: NewBrandDialogProps) {
           <DialogTitle>New brand</DialogTitle>
           <DialogDescription>
             Add a commercial brand under an existing client. VR% and currency auto-fill campaigns
-            when this brand is selected.
+            when this brand is selected. After saving, open the brand to upload a logo.
           </DialogDescription>
         </DialogHeader>
         {!hasClients ? (

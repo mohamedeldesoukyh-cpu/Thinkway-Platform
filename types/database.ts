@@ -120,6 +120,7 @@ export type GroupRow = {
   account_director_id: string | null;
   status: ClientStatus;
   notes: string | null;
+  logo_url: string | null;
   metadata: Record<string, unknown>;
   created_by: string | null;
   created_at: string;
@@ -155,6 +156,7 @@ export type BrandRow = {
   currency_code: string;
   country_code: string | null;
   notes: string | null;
+  logo_url: string | null;
   metadata: Record<string, unknown>;
   created_by: string | null;
   created_at: string;
@@ -181,6 +183,7 @@ export type ClientBrandRow = {
   subcategory_name: string | null;
   vr_rate_percent: number | null;
   active_campaigns: number;
+  logo_url: string | null;
 };
 
 export type AgencyRow = {
@@ -1266,6 +1269,7 @@ export type Database = {
           account_director_id?: string | null;
           status?: ClientStatus;
           notes?: string | null;
+          logo_url?: string | null;
           created_by?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["groups"]["Insert"]>;
@@ -1300,6 +1304,7 @@ export type Database = {
           currency_code?: string;
           country_code?: string | null;
           notes?: string | null;
+          logo_url?: string | null;
           created_by?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["brands"]["Insert"]>;
