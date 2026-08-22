@@ -26,6 +26,8 @@ import {
   engagementGaugePercent,
   estimatedReachInsight,
   levelMeterActiveSegment,
+  overviewApproachPillars,
+  overviewExecutiveLead,
   rosterHeadline,
   rosterSourceLine,
   strategicPillars,
@@ -825,6 +827,54 @@ test("activity mix groups actual deliverables instead of hiding them", () => {
     mix.map((item) => `${item.count} ${item.label}`),
     ["10 Reels", "8 Posts", "8 Stories"]
   );
+});
+
+test("overview executive lead uses selected creators and does not invent platforms", () => {
+  assert.match(
+    overviewExecutiveLead({
+      selectedCount: 3,
+      pricedCount: 2,
+      unpricedCount: 1,
+      platformLabels: ["Instagram", "TikTok", "Facebook"],
+      reachLabel: "2.2M",
+      engagementLabel: "6.0%",
+      investmentLabel: "EGP 715,000",
+    }),
+    /Three selected creators across Instagram, TikTok and Facebook/
+  );
+  assert.match(
+    overviewExecutiveLead({
+      selectedCount: 3,
+      pricedCount: 2,
+      unpricedCount: 1,
+      platformLabels: ["Instagram", "TikTok", "Facebook"],
+      reachLabel: "2.2M",
+      engagementLabel: "6.0%",
+      investmentLabel: "EGP 715,000",
+    }),
+    /EGP 715,000/
+  );
+  assert.equal(
+    overviewExecutiveLead({ selectedCount: 0, pricedCount: 0, unpricedCount: 0, platformLabels: [] }).includes(
+      "Instagram"
+    ),
+    false
+  );
+});
+
+test("overview approach pillars use platform avatars-ready labels and category mix", () => {
+  const pillars = overviewApproachPillars({
+    platformLabels: ["Instagram", "TikTok"],
+    activityMix: [
+      { label: "Stories", count: 3 },
+      { label: "Reels", count: 2 },
+    ],
+    categories: ["Beauty", "Travel"],
+  });
+  assert.equal(pillars[0]?.title, "Platform & content");
+  assert.match(pillars[0]!.body, /Instagram and TikTok/);
+  assert.equal(pillars[1]?.title, "Creator mix");
+  assert.match(pillars[1]!.body, /Beauty · Travel/);
 });
 
 test("strategic pillars prefer campaign facts over generic shortlist copy", () => {

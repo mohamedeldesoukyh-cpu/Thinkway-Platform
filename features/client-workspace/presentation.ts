@@ -37,6 +37,105 @@ export function rosterSourceLine(source: ClientReviewSource): string {
   return `Source: ${CLIENT_SOURCE_LABEL[source]}`;
 }
 
+const SMALL_COUNT_WORDS = [
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "ten",
+  "eleven",
+  "twelve",
+];
+
+export function joinWithAnd(items: string[]): string {
+  const values = items.map((item) => item.trim()).filter(Boolean);
+  if (values.length === 0) return "";
+  if (values.length === 1) return values[0]!;
+  if (values.length === 2) return `${values[0]} and ${values[1]}`;
+  return `${values.slice(0, -1).join(", ")} and ${values[values.length - 1]}`;
+}
+
+function countWord(count: number): string {
+  return SMALL_COUNT_WORDS[count] ?? String(count);
+}
+
+function capitalizePhrase(value: string): string {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+export function overviewExecutiveLead(input: {
+  selectedCount: number;
+  pricedCount: number;
+  unpricedCount: number;
+  platformLabels: string[];
+  reachLabel?: string;
+  engagementLabel?: string;
+  investmentLabel?: string;
+}): string {
+  if (input.selectedCount <= 0) {
+    return "A supporting summary of this campaign. Explore the creator roster on Shortlist, then confirm your selection and commercial approval in the journey stages above.";
+  }
+  const countPhrase =
+    input.selectedCount === 1
+      ? "One selected creator"
+      : `${capitalizePhrase(countWord(input.selectedCount))} selected creators`;
+  const across = input.platformLabels.length ? ` across ${joinWithAnd(input.platformLabels)}` : "";
+  let sentence = `${countPhrase}${across}`;
+  if (input.reachLabel && input.engagementLabel && input.investmentLabel) {
+    sentence += ` are projected to deliver ${input.reachLabel} reach at a ${input.engagementLabel} engagement rate for a total investment of ${input.investmentLabel}`;
+  } else if (input.reachLabel && input.investmentLabel) {
+    sentence += ` are projected to deliver ${input.reachLabel} reach for a total investment of ${input.investmentLabel}`;
+  } else if (input.investmentLabel) {
+    sentence += ` have a total investment of ${input.investmentLabel}`;
+  } else if (input.reachLabel) {
+    sentence += ` are projected to deliver ${input.reachLabel} reach`;
+  }
+  sentence += ".";
+  if (input.unpricedCount > 0 && input.pricedCount > 0) {
+    const priced =
+      input.pricedCount === 1
+        ? "One creator is priced"
+        : `${capitalizePhrase(countWord(input.pricedCount))} creators are priced`;
+    const pending =
+      input.unpricedCount === 1
+        ? "one awaits pricing"
+        : `${countWord(input.unpricedCount)} await pricing`;
+    sentence += ` ${priced}; ${pending} before the commercial can be finalised.`;
+  } else if (input.unpricedCount > 0) {
+    sentence += " Pricing is still required before the commercial can be finalised.";
+  }
+  return sentence;
+}
+
+export function overviewApproachPillars(input: {
+  platformLabels: string[];
+  activityMix: ClientMediaPlanSummary["activityMix"];
+  categories: string[];
+}): StrategicPillar[] {
+  const pillars: StrategicPillar[] = [];
+  if (input.platformLabels.length > 0 || input.activityMix.length > 0) {
+    const platformBit = input.platformLabels.length
+      ? `A ${countWord(input.platformLabels.length)}-platform activation — ${joinWithAnd(input.platformLabels)}`
+      : "The proposed content mix";
+    const contentBit =
+      input.activityMix.length > 0
+        ? ` — carrying ${joinWithAnd(input.activityMix.map((item) => `${item.count} ${item.label}`))} across the roster`
+        : "";
+    pillars.push({ title: "Platform & content", body: `${platformBit}${contentBit}.` });
+  }
+  if (input.categories.length > 0) {
+    pillars.push({ title: "Creator mix", body: `${input.categories.join(" · ")}.` });
+  }
+  return pillars;
+}
+
 export type StrategicPillar = {
   title: string;
   body: string;

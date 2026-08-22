@@ -1,27 +1,39 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
 
 import { formatCompactCount, formatEngagementPct, formatPlatformLabel, providedText, TO_BE_CONFIRMED } from "../format";
 import {
   creatorMixFromRoster,
   donutGradient,
+  flagFromCountry,
   MIX_BAR_COLORS,
+  overviewApproachPillars,
+  overviewExecutiveLead,
   rosterHeadline,
   rosterSourceLine,
-  strategicPillars,
-  type CreatorMixSlice,
 } from "../presentation";
 import type { ClientWorkspaceView } from "../types";
 import { useClientWorkspaceState } from "./client-workspace-state";
 import { KpiIcon } from "./review-icons";
 import { ProposalSummaryCard } from "./proposal-summary-card";
+import { ReviewPlatformMark } from "./review-platform-mark";
 
-function Glance({ label, value, missing }: { label: string; value: string; missing?: boolean }) {
+function Glance({
+  label,
+  value,
+  missing,
+}: {
+  label: string;
+  value: ReactNode;
+  missing?: boolean;
+}) {
   return (
     <div className="gi">
       <p className="l">{label}</p>
-      <p className={missing ? "v tbc" : "v"}>{value}</p>
+      <div className={missing ? "v tbc" : "v"}>{value}</div>
     </div>
   );
 }
@@ -48,31 +60,62 @@ function Kpi({
   );
 }
 
-function MixBars({ items }: { items: CreatorMixSlice[] }) {
-  const max = Math.max(...items.map((item) => item.count), 1);
+function Highlight({ label, value, missing }: { label: string; value: string; missing?: boolean }) {
   return (
-    <div className="barset">
-      {items.map((item, index) => (
-        <div className="bar" key={item.label}>
-          <span className="bl">{item.label}</span>
-          <span className="bt">
-            <span
-              className="bf"
-              style={{
-                width: `${(item.count / max) * 100}%`,
-                background: MIX_BAR_COLORS[index % MIX_BAR_COLORS.length],
-              }}
-            />
-          </span>
-          <span className="bn">{item.count}</span>
-        </div>
-      ))}
+    <div className="ov-high">
+      <div className="l">{label}</div>
+      <div className={missing ? "v tbc" : "v"}>{value}</div>
     </div>
   );
 }
 
+function MixTrackRow({
+  avatar,
+  count,
+  max,
+  labeled,
+}: {
+  avatar: ReactNode;
+  count: number;
+  max: number;
+  labeled?: boolean;
+}) {
+  return (
+    <div className={labeled ? "ov-drow ov-drow-lbl" : "ov-drow"}>
+      {avatar}
+      <span className="ov-track">
+        <span className="ov-fill" style={{ width: `${(count / max) * 100}%` }} />
+      </span>
+      <span className="ov-num">{count}</span>
+    </div>
+  );
+}
+
+function uniqueLabels(values: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    const key = value.trim();
+    if (!key) continue;
+    const id = key.toLowerCase();
+    if (seen.has(id)) continue;
+    seen.add(id);
+    result.push(key);
+  }
+  return result;
+}
+
 function money(value: number | undefined, currency: string): string {
   return value != null ? formatMoneyKpi(value, currency) : TO_BE_CONFIRMED;
+}
+
+function marketDisplay(value?: string): { label: string; flag: string; missing: boolean } {
+  const label = value?.trim() ?? "";
+  return {
+    label: providedText(label),
+    flag: flagFromCountry(label),
+    missing: !label,
+  };
 }
 
 export function OverviewWorkspace({
@@ -86,40 +129,74 @@ export function OverviewWorkspace({
   const o = view.overview;
   const roster = selectedCreators.length > 0 ? selectedCreators : [];
   const mix = creatorMixFromRoster(roster);
-  const pillars = strategicPillars({
-    overview: o,
-    strategyBody: view.strategyBody,
-    activityMix: selectedSummary.activityMix,
-    categories: mix.categories.map((item) => item.label),
-  });
-  const platforms = o.platforms.map((platform) => formatPlatformLabel(platform) ?? platform);
+  const platformLabels = uniqueLabels(
+    (o.platforms.length > 0 ? o.platforms : mix.platforms.map((item) => item.label)).map(
+      (platform) => formatPlatformLabel(platform) ?? platform
+    )
+  );
+  const glancePlatforms = uniqueLabels(
+    platformLabels.length > 0 ? platformLabels : mix.platforms.map((item) => item.label)
+  );
   const deliverables =
     selectedSummary.activityMix.length > 0
       ? selectedSummary.activityMix.map((item) => `${item.count} ${item.label}`).join(" · ")
       : o.deliverables.join(" · ");
   const forecast = selectedSummary;
-  const er =
-    forecast.averageEngagementRate != null
-      ? formatEngagementPct(forecast.averageEngagementRate)
-      : TO_BE_CONFIRMED;
   const hasSelection = selectedCreators.length > 0;
+  const reachLabel =
+    hasSelection && forecast.estimatedReach != null ? formatCompactCount(forecast.estimatedReach) : undefined;
+  const engagementLabel =
+    hasSelection && forecast.averageEngagementRate != null ? formatEngagementPct(forecast.averageEngagementRate) : undefined;
+  const investmentLabel =
+    selectedCommercial.totalInvestment > 0
+      ? formatMoneyKpi(selectedCommercial.totalInvestment, o.commercial.currency)
+      : undefined;
+  const lead = overviewExecutiveLead({
+    selectedCount: selectedCreators.length,
+    pricedCount: selectedCommercial.pricedSelectedCount ?? 0,
+    unpricedCount: selectedCommercial.unpricedSelectedCount ?? 0,
+    platformLabels,
+    reachLabel,
+    engagementLabel,
+    investmentLabel,
+  });
+  const pillars = overviewApproachPillars({
+    platformLabels,
+    activityMix: selectedSummary.activityMix,
+    categories: mix.categories.map((item) => item.label),
+  });
+  const market = marketDisplay(o.market);
+  const platformMax = Math.max(...mix.platforms.map((item) => item.count), 1);
+  const marketMax = Math.max(...mix.markets.map((item) => item.count), 1);
+  const categoryMax = Math.max(...mix.categories.map((item) => item.count), 1);
 
   return (
     <>
-      <div className="card">
-        <p className="ck">Campaign overview</p>
-        <h2>Executive summary</h2>
-        <p className="note">
-          A supporting summary of this campaign. Explore the creator roster on Shortlist, then confirm
-          your selection and commercial approval in the journey stages above.
-        </p>
+      <div className="card ov-exec-card">
+        <div className="ov-exec">
+          <div className="ov-exec-txt">
+            <p className="ck">Campaign overview</p>
+            <h2>Executive summary</h2>
+            <p className="ov-lead">{lead}</p>
+          </div>
+          <div className="ov-highs">
+            <Highlight label="Est. reach" value={reachLabel ?? TO_BE_CONFIRMED} missing={!reachLabel} />
+            <Highlight label="Eng. rate" value={engagementLabel ?? TO_BE_CONFIRMED} missing={!engagementLabel} />
+            <Highlight label="Creators" value={String(selectedCreators.length)} />
+            <Highlight
+              label="Investment"
+              value={investmentLabel ?? TO_BE_CONFIRMED}
+              missing={!investmentLabel}
+            />
+          </div>
+        </div>
       </div>
       <div className="kpis">
         <Kpi
           name="reach"
           label="Est. reach"
-          value={hasSelection ? formatCompactCount(forecast.estimatedReach) : TO_BE_CONFIRMED}
-          missing={!hasSelection || forecast.estimatedReach == null}
+          value={reachLabel ?? TO_BE_CONFIRMED}
+          missing={!reachLabel}
         />
         <Kpi
           name="engage"
@@ -127,7 +204,7 @@ export function OverviewWorkspace({
           value={hasSelection ? formatCompactCount(forecast.estimatedEngagements) : TO_BE_CONFIRMED}
           missing={!hasSelection || forecast.estimatedEngagements == null}
         />
-        <Kpi name="trend" label="Eng. rate" value={hasSelection ? er : TO_BE_CONFIRMED} missing={!hasSelection} />
+        <Kpi name="trend" label="Eng. rate" value={engagementLabel ?? TO_BE_CONFIRMED} missing={!engagementLabel} />
         <Kpi
           name="cpe"
           label="CPE"
@@ -148,11 +225,26 @@ export function OverviewWorkspace({
           <div className="card">
             <p className="ck">Campaign at a glance</p>
             <h2>What Thinkway is proposing</h2>
-            <div className="glance">
+            <div className="glance" style={{ marginTop: 18 }}>
               <Glance label="Campaign" value={o.campaignName} />
               <Glance label="Objective" value={providedText(o.objective)} missing={!o.objective?.trim()} />
               <Glance label="Audience" value={providedText(o.audience)} missing={!o.audience?.trim()} />
-              <Glance label="Market" value={providedText(o.market)} missing={!o.market?.trim()} />
+              <Glance
+                label="Market"
+                value={
+                  market.flag ? (
+                    <span className="ov-market">
+                      <span className="ov-pav ov-pav-flag ov-pav-sm" title={market.label}>
+                        {market.flag}
+                      </span>
+                      {market.label}
+                    </span>
+                  ) : (
+                    market.label
+                  )
+                }
+                missing={market.missing}
+              />
               <Glance
                 label="Duration"
                 value={providedText(o.durationLabel, TO_BE_CONFIRMED)}
@@ -160,8 +252,20 @@ export function OverviewWorkspace({
               />
               <Glance
                 label="Platforms"
-                value={platforms.length ? platforms.join(" · ") : TO_BE_CONFIRMED}
-                missing={platforms.length === 0}
+                value={
+                  glancePlatforms.length > 0 ? (
+                    <span className="ov-plat-row">
+                      {glancePlatforms.map((platform) => (
+                        <span className="ov-pav ov-pav-sm" key={platform} title={formatPlatformLabel(platform) ?? platform}>
+                          <ReviewPlatformMark platform={platform} />
+                        </span>
+                      ))}
+                    </span>
+                  ) : (
+                    TO_BE_CONFIRMED
+                  )
+                }
+                missing={glancePlatforms.length === 0}
               />
               <Glance
                 label="Deliverables"
@@ -171,85 +275,115 @@ export function OverviewWorkspace({
               <Glance label="Selected creators" value={`${selectedCreators.length} of ${view.creators.length}`} />
               <Glance
                 label="Selected investment"
-                value={
-                  selectedCommercial.totalInvestment > 0
-                    ? formatMoneyKpi(selectedCommercial.totalInvestment, o.commercial.currency)
-                    : TO_BE_CONFIRMED
-                }
-                missing={selectedCommercial.totalInvestment <= 0}
+                value={investmentLabel ?? TO_BE_CONFIRMED}
+                missing={!investmentLabel}
               />
             </div>
           </div>
 
           <div className="card">
             <p className="ck">Creator mix</p>
-            <h2>Who is in this selection</h2>
+            <h2>Selection analysis</h2>
             <p className="note">
               {hasSelection
-                ? `${selectedCreators.length} accepted of ${rosterHeadline(view.creators.length)}. ${rosterSourceLine(view.review.source)}.`
-                : "Select creators on Your Selection to update this mix."}
+                ? `${selectedCreators.length} accepted of ${rosterHeadline(view.creators.length)} · ${rosterSourceLine(view.review.source)}.`
+                : "Select creators on Shortlist, then Continue to Your Selection to update this mix."}
             </p>
             {hasSelection ? (
-              <>
-            <div className="split" style={{ marginBottom: 26 }}>
-              <div>
-                <p className="subh">Creator tier</p>
-                {mix.tiers.length > 0 ? (
-                  <div className="donutwrap">
-                    <div className="donut" style={{ background: donutGradient(mix.tiers) }}>
-                      <div className="mid">
-                        <b>{selectedCreators.length}</b>
-                        <span>selected</span>
+              <div className="ov-analysis">
+                <div>
+                  <p className="subh" style={{ textAlign: "center" }}>
+                    By tier
+                  </p>
+                  {mix.tiers.length > 0 ? (
+                    <div className="donutwrap">
+                      <div className="donut" style={{ background: donutGradient(mix.tiers) }}>
+                        <div className="mid">
+                          <b>{selectedCreators.length}</b>
+                          <span>Selected</span>
+                        </div>
+                      </div>
+                      <div className="legend">
+                        {mix.tiers.map((tier, index) => (
+                          <div className="lg" key={tier.label}>
+                            <span
+                              className="sw"
+                              style={{ background: MIX_BAR_COLORS[index % MIX_BAR_COLORS.length] }}
+                            />
+                            {tier.label} <b>{tier.count}</b>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                    <div className="legend">
-                      {mix.tiers.map((tier, index) => (
-                        <div className="lg" key={tier.label}>
-                          <span
-                            className="sw"
-                            style={{ background: MIX_BAR_COLORS[index % MIX_BAR_COLORS.length] }}
-                          />
-                          {tier.label} <b>{tier.count}</b>
-                        </div>
+                  ) : (
+                    <p className="unavailable">Creator size unavailable</p>
+                  )}
+                </div>
+                <div>
+                  <p className="ov-colhd">By platform</p>
+                  {mix.platforms.length > 0 ? (
+                    <div className="ov-rows">
+                      {mix.platforms.map((item) => (
+                        <MixTrackRow
+                          key={item.label}
+                          count={item.count}
+                          max={platformMax}
+                          avatar={
+                            <span className="ov-pav" title={item.label}>
+                              <ReviewPlatformMark platform={item.label} />
+                            </span>
+                          }
+                        />
                       ))}
                     </div>
-                  </div>
-                ) : (
-                  <p className="unavailable">Creator size unavailable</p>
-                )}
+                  ) : (
+                    <p className="unavailable">Platform mix unavailable</p>
+                  )}
+                  <p className="ov-colhd">By market</p>
+                  {mix.markets.length > 0 ? (
+                    <div className="ov-rows">
+                      {mix.markets.map((item) => {
+                        const flag = flagFromCountry(item.label);
+                        return (
+                          <MixTrackRow
+                            key={item.label}
+                            count={item.count}
+                            max={marketMax}
+                            avatar={
+                              flag ? (
+                                <span className="ov-pav ov-pav-flag" title={item.label}>
+                                  {flag}
+                                </span>
+                              ) : (
+                                <span className="ov-name">{item.label}</span>
+                              )
+                            }
+                            labeled={!flag}
+                          />
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="unavailable">Market split unavailable</p>
+                  )}
+                  <p className="ov-colhd">By category</p>
+                  {mix.categories.length > 0 ? (
+                    <div className="ov-catgrid">
+                      {mix.categories.slice(0, 8).map((item) => (
+                        <MixTrackRow
+                          key={item.label}
+                          count={item.count}
+                          max={categoryMax}
+                          labeled
+                          avatar={<span className="ov-name">{item.label}</span>}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="unavailable">Category mix unavailable</p>
+                  )}
+                </div>
               </div>
-              <div>
-                <p className="subh">Market split</p>
-                {mix.markets.length > 0 ? (
-                  <MixBars items={mix.markets} />
-                ) : (
-                  <p className="unavailable">Market split unavailable</p>
-                )}
-                <p className="subh" style={{ marginTop: 22 }}>
-                  Platform
-                </p>
-                {mix.platforms.length > 0 ? (
-                  <MixBars items={mix.platforms} />
-                ) : (
-                  <p className="unavailable">Platform mix unavailable</p>
-                )}
-                {mix.genders.length > 0 ? (
-                  <>
-                    <p className="subh" style={{ marginTop: 22 }}>
-                      Audience
-                    </p>
-                    <MixBars items={mix.genders} />
-                  </>
-                ) : null}
-              </div>
-            </div>
-            <p className="subh">Category mix</p>
-            {mix.categories.length > 0 ? (
-              <MixBars items={mix.categories.slice(0, 8)} />
-            ) : (
-              <p className="unavailable">Category mix unavailable</p>
-            )}
-              </>
             ) : (
               <p className="unavailable">Selection mix updates after creators are selected.</p>
             )}
@@ -259,8 +393,8 @@ export function OverviewWorkspace({
             <p className="ck">Why this approach</p>
             <h2>Strategic approach</h2>
             {pillars.length > 0 ? (
-              <div className="split">
-                {pillars.slice(0, 4).map((pillar) => (
+              <div className="ov-strat">
+                {pillars.map((pillar) => (
                   <div key={pillar.title}>
                     <p className="subh">{pillar.title}</p>
                     <p style={{ fontSize: 14, color: "var(--ink)", margin: 0 }}>{pillar.body}</p>
@@ -282,7 +416,7 @@ export function OverviewWorkspace({
             <p className="note" style={{ margin: 0 }}>
               {o.audience?.trim() ||
                 o.market?.trim() ||
-                "Target geo and audience match to be confirmed once objective and audience data are provided."}
+                "Target geo and audience match will be confirmed once objective and audience data are provided."}
             </p>
           </div>
         </aside>
