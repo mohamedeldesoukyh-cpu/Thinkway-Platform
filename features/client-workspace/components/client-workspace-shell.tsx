@@ -46,6 +46,7 @@ export function ClientWorkspaceShell({
         currency: view.commercial.currency,
         selectionConfirmed: Boolean(view.journey.selectionConfirmed),
         hasAnyPrice: view.creators.some((creator) => isPricedClientInvestment(creator.investmentAmount)),
+        pendingCommercialApproval: Boolean(view.journey.pendingCommercialApprovalCreatorIds?.length),
       })
     : { label: "In Review", tone: "active" as const };
   const quotationLabel = commercialCopy.label;
@@ -58,6 +59,7 @@ export function ClientWorkspaceShell({
   });
   const headerCta = headerJourneyCta({
     canApproveFinalQuotation: Boolean(view.journey?.canApproveFinalQuotation),
+    pendingCommercialApproval: Boolean(view.journey?.pendingCommercialApprovalCreatorIds?.length),
   });
   const hideHeaderCtaOn = headerCta.section;
   const showHeaderSelectionNav = Boolean(view.canDecide && section !== hideHeaderCtaOn);

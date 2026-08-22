@@ -33,12 +33,12 @@ export function ClientWorkspaceStateProvider({
   onSectionChange: (section: ClientWorkspaceSectionId) => void;
   children: ReactNode;
 }) {
+  const pendingIds = view.journey?.pendingCommercialApprovalCreatorIds ?? [];
+  const lockedIds = (view.journey?.clientApprovedCreatorIds ?? []).filter(
+    (id) => !pendingIds.includes(id)
+  );
   const [selection, setSelection] = useState(() =>
-    hydrateClientSelection(
-      view.creators,
-      selectionMapFromView(view),
-      view.journey?.clientApprovedCreatorIds
-    )
+    hydrateClientSelection(view.creators, selectionMapFromView(view), lockedIds, pendingIds)
   );
   const setCreatorState = useCallback((creatorId: string, state: ClientCreatorSelectionState) => {
     setSelection((current) => ({ ...current, [creatorId]: state }));
@@ -47,11 +47,11 @@ export function ClientWorkspaceStateProvider({
     setSelection((current) => ({ ...current, ...next }));
   }, []);
   const value = useMemo((): ClientWorkspaceState => {
-    const effectiveSelection = hydrateClientSelection(
-      view.creators,
-      selection,
-      view.journey?.clientApprovedCreatorIds
+    const pendingIds = view.journey?.pendingCommercialApprovalCreatorIds ?? [];
+    const lockedIds = (view.journey?.clientApprovedCreatorIds ?? []).filter(
+      (id) => !pendingIds.includes(id)
     );
+    const effectiveSelection = hydrateClientSelection(view.creators, selection, lockedIds);
     const selectedCreators = acceptedCreators(
       view.creators,
       effectiveSelection,

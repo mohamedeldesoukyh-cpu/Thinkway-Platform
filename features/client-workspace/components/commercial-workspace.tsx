@@ -8,11 +8,12 @@ import { deliverablesLabel } from "../deliverables";
 import { originalInvestmentForDisplay } from "../quotation-client-facing";
 import {
   canOpenCommercialWorkspace,
+  clientQuotationCommercialView,
   COMMERCIAL_LOCKED_UNTIL_CREATOR_APPROVAL_MESSAGE,
   consolidationContract,
-  isPricedClientInvestment,
   isValidClientCommercialApproval,
   INVALID_ZERO_SELECTION_APPROVAL_MESSAGE,
+  ORIGINAL_QUOTATION_TOTAL_LABEL,
   PRICE_PENDING_LABEL,
   REVIEW_YOUR_SELECTION_LABEL,
   UNPRICED_INCLUDED_MESSAGE,
@@ -32,7 +33,7 @@ export function CommercialWorkspace({
   view: ClientWorkspaceView;
   token?: string;
 }) {
-  const { selectedCreators, selectedCommercial, goToSection } = useClientWorkspaceState();
+  const { selectedCommercial, goToSection } = useClientWorkspaceState();
   const commercialOpen = canOpenCommercialWorkspace({
     selectionConfirmed: view.journey?.selectionConfirmed,
     historical: view.journey?.historical,
@@ -54,23 +55,64 @@ export function CommercialWorkspace({
     );
   }
 
-  const commercial = selectedCommercial;
-  const roster = selectedCreators;
-  const included = roster.filter((creator) => isPricedClientInvestment(creator.investmentAmount));
-  const pricingRequired = roster.filter((creator) => !isPricedClientInvestment(creator.investmentAmount));
+  const quotationView = clientQuotationCommercialView(view.creators, view.journey?.clientSelection);
+  const creatorsById = new Map(view.creators.map((creator) => [creator.creatorId, creator]));
+  const included = quotationView.original.creatorIds
+    .map((id) => creatorsById.get(id))
+    .filter((creator): creator is NonNullable<typeof creator> => Boolean(creator));
+  const extensionSections = quotationView.extensions.map((section) => ({
+    ...section,
+    creators: section.creatorIds
+      .map((id) => creatorsById.get(id))
+      .filter((creator): creator is NonNullable<typeof creator> => Boolean(creator)),
+  }));
+  const pricingRequired = quotationView.pricingRequiredIds
+    .map((id) => creatorsById.get(id))
+    .filter((creator): creator is NonNullable<typeof creator> => Boolean(creator));
+  const rosterCount = included.length + extensionSections.reduce((sum, section) => sum + section.creators.length, 0);
+  const commercial = {
+    ...selectedCommercial,
+    creatorInvestment: quotationView.original.cost + extensionSections.reduce((sum, section) => sum + section.cost, 0),
+    feeAmount:
+      quotationView.original.agencyFees +
+      extensionSections.reduce((sum, section) => sum + section.agencyFees, 0),
+    totalInvestment: quotationView.totalInvestment,
+    selectedCount: rosterCount,
+    pricedSelectedCount: rosterCount,
+    unpricedSelectedCount: pricingRequired.length,
+  };
   const invalidEmptyApproval = isValidClientCommercialApproval({
     quotationStage: view.journey?.quotationStage ?? "",
-    selectedCount: roster.length,
+    selectedCount: rosterCount,
   }) === false && view.journey?.quotationStage === "approved";
   const allocation = allocationSlices(commercial);
-  const extraLines = view.commercial.lines.filter(
-    (line) => !view.creators.some((creator) => creator.displayName === line.label)
+  const shownNames = new Set(
+    [...included, ...extensionSections.flatMap((section) => section.creators)].map(
+      (creator) => creator.displayName
+    )
   );
+  const extraLines = view.commercial.lines.filter((line) => !shownNames.has(line.label));
   const maxAlloc = Math.max(...(allocation?.map((item) => item.count) ?? [1]), 1);
 
   return (
     <>
       {token ? <FinalQuotationApprovalCard view={view} token={token} /> : null}
+      {quotationView.pendingCommercialApprovalIds.length > 0 ? (
+        <div className="card">
+          <p className="ck">New pricing</p>
+          <h2>Approve newly priced creators on Your Selection</h2>
+          <p className="note">
+            Thinkway confirmed pricing for {quotationView.pendingCommercialApprovalIds.length === 1 ? "a creator" : "creators"}{" "}
+            who were not priced at approval. Select them on Your Selection and Approve Selected Creators
+            before they appear here. This does not automatically add them to the quotation.
+          </p>
+          <div className="dacts" style={{ justifyContent: "flex-start", marginTop: 18 }}>
+            <button type="button" className="btn pri" onClick={() => goToSection("creators")}>
+              {REVIEW_YOUR_SELECTION_LABEL}
+            </button>
+          </div>
+        </div>
+      ) : null}
       <div className="card">
         <p className="ck">Campaign investment</p>
         <h2 className={commercial.totalInvestment > 0 ? "cm-total" : "cm-total tbc"}>
@@ -235,20 +277,123 @@ export function CommercialWorkspace({
             <tfoot>
               <tr className="sub">
                 <td colSpan={5}>Cost</td>
-                <td className="r">{formatMoneyKpi(commercial.creatorInvestment, commercial.currency)}</td>
+                <td className="r">{formatMoneyKpi(quotationView.original.cost, commercial.currency)}</td>
               </tr>
               <tr className="sub">
                 <td colSpan={5}>Agency Fees</td>
-                <td className="r">{formatMoneyKpi(commercial.feeAmount ?? 0, commercial.currency)}</td>
+                <td className="r">{formatMoneyKpi(quotationView.original.agencyFees, commercial.currency)}</td>
               </tr>
               <tr>
                 <td colSpan={5}>Total Investment</td>
-                <td className="r">{formatMoneyKpi(commercial.totalInvestment, commercial.currency)}</td>
+                <td className="r">{formatMoneyKpi(quotationView.original.total, commercial.currency)}</td>
               </tr>
             </tfoot>
           </table>
         </div>
       </div>
+      ) : null}
+
+      {extensionSections.map((section) => (
+        <div className="card" key={section.title}>
+          <p className="ck">{section.title}</p>
+          <h2>Client Approved · new creators only</h2>
+          <div className="tbl-scroll">
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>Creator</th>
+                  <th>Platforms</th>
+                  <th>Deliverables</th>
+                  <th className="r">Cost</th>
+                  <th className="r">Agency Fees</th>
+                  <th className="r">Total Investment</th>
+                </tr>
+              </thead>
+              <tbody>
+                {section.creators.map((creator, index) => {
+                  const identity = clientCreatorIdentity(creator.displayName, creator.handle);
+                  const platforms = breakdownForCreator(creator).filter(
+                    (row) => row.platform && row.platform !== "_other"
+                  );
+                  const fee = Number(creator.agencyFeeAmount) || 0;
+                  const lineTotal = (creator.investmentAmount ?? 0) + fee;
+                  return (
+                    <tr key={creator.creatorId}>
+                      <td>
+                        <div className="cn">
+                          <ReviewAvatar
+                            className="av"
+                            url={creator.avatarUrl}
+                            profileUrl={creator.profileUrl}
+                            handle={creator.handle}
+                            platform={creator.platform}
+                            platformAccounts={creator.platformAccounts}
+                            name={identity.name}
+                            index={included.length + index}
+                            token={token}
+                          />
+                          <span>
+                            <div className="nm">{identity.name}</div>
+                            {identity.handle ? <div className="hd">{formatHandleLabel(identity.handle)}</div> : null}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        {platforms.length > 0 ? (
+                          <div className="plat-stack">
+                            {platforms.map((row) => (
+                              <ReviewPlatformMark key={row.platform} platform={row.platform} />
+                            ))}
+                          </div>
+                        ) : (
+                          formatPlatformLabel(creator.platform) ?? NOT_AVAILABLE
+                        )}
+                      </td>
+                      <td>
+                        {(() => {
+                          const label = deliverablesLabel(creator.deliverableItems, creator.deliverables);
+                          return label === DELIVERABLES_TO_BE_CONFIRMED ? TO_BE_CONFIRMED : label;
+                        })()}
+                      </td>
+                      <td className="r">{formatMoneyKpi(creator.investmentAmount!, commercial.currency)}</td>
+                      <td className="r">{formatMoneyKpi(fee, commercial.currency)}</td>
+                      <td className="r">{formatMoneyKpi(lineTotal, commercial.currency)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan={5}>{section.title}</td>
+                  <td className="r">{formatMoneyKpi(section.total, commercial.currency)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      ))}
+
+      {extensionSections.length > 0 ? (
+        <div className="card">
+          <p className="ck">Investment summary</p>
+          <h2>Original + extensions</h2>
+          <div className="clist">
+            <div className="cli">
+              <span className="nm">{ORIGINAL_QUOTATION_TOTAL_LABEL}</span>
+              <span className="rt">{formatMoneyKpi(quotationView.originalTotal, commercial.currency)}</span>
+            </div>
+            {quotationView.extensions.map((section) => (
+              <div className="cli" key={section.title}>
+                <span className="nm">{section.title}</span>
+                <span className="rt">{formatMoneyKpi(section.total, commercial.currency)}</span>
+              </div>
+            ))}
+            <div className="cli">
+              <span className="nm">Total investment</span>
+              <span className="rt">{formatMoneyKpi(quotationView.totalInvestment, commercial.currency)}</span>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {pricingRequired.length > 0 ? (
@@ -309,7 +454,7 @@ export function CommercialWorkspace({
       </div>
       ) : null}
 
-      {roster.length === 0 ? (
+      {rosterCount === 0 && pricingRequired.length === 0 ? (
         <div className="card">
           <p className="ck">Commercial</p>
           <h2>No creators selected yet</h2>

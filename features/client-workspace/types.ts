@@ -398,6 +398,10 @@ export type ClientWorkspaceJourney = {
   canApproveFinalQuotation?: boolean;
   selectionConfirmed?: boolean;
   clientApprovedCreatorIds?: string[];
+  commerciallyIncludedCreatorIds?: string[];
+  pendingCommercialApprovalCreatorIds?: string[];
+  quotationExtensionCount?: number;
+  clientSelection?: import("./selection-flow").ClientSelectionFreeze;
   approvedQuotationCount?: number;
   canRequestShortlistChanges: boolean;
   canRequestQuotationChanges: boolean;

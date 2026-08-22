@@ -10,7 +10,7 @@ import {
 } from "./constants";
 import { isReusableClientReviewTip } from "./status";
 import { clientSelectionsEqual, mergePersistedClientSelection } from "./client-review-selection";
-import { hydrateClientSelection } from "./selection-flow";
+import { hydrateClientSelection, resolveClientSelectionFreeze } from "./selection-flow";
 import { parseSourceSnapshot } from "./snapshot";
 import { diffClientReviewSnapshots, retainCreatorBriefs } from "./snapshot-diff";
 import { buildClientReviewPath, hashClientReviewToken } from "./security/review-token";
@@ -239,12 +239,13 @@ async function updateExistingClientReview(
   const previous = parseSourceSnapshot(currentTip.source_snapshot);
   const previousSelection = currentTip.selection_state ?? {};
   const creatorIds = input.snapshot.creators.map((creator) => creator.creatorId);
-  const freezeIds =
-    previous?.clientSelection?.creatorIds ?? input.snapshot.clientSelection?.creatorIds ?? null;
+  const freezeSource = previous?.clientSelection ?? input.snapshot.clientSelection;
+  const resolvedFreeze = resolveClientSelectionFreeze(freezeSource, input.snapshot.creators);
   const remappedPrevious = hydrateClientSelection(
     input.snapshot.creators,
     previousSelection,
-    freezeIds
+    resolvedFreeze?.lockedSelectionIds ?? freezeSource?.creatorIds ?? null,
+    resolvedFreeze?.pendingCommercialApprovalIds
   );
   const selection = hydrateClientSelection(
     input.snapshot.creators,
@@ -254,7 +255,8 @@ async function updateExistingClientReview(
       incoming: input.selection,
       replaceSelection: input.replaceSelection,
     }),
-    freezeIds
+    resolvedFreeze?.lockedSelectionIds ?? freezeSource?.creatorIds ?? null,
+    resolvedFreeze?.pendingCommercialApprovalIds
   );
   if (
     existingToken &&
@@ -277,7 +279,9 @@ async function updateExistingClientReview(
   const mintMissing = input.mintMissingShareToken !== false;
   const token = existingToken || (mintMissing ? randomBytes(16).toString("hex") : "");
   let snapshot = previous ? retainCreatorBriefs(previous, input.snapshot) : input.snapshot;
-  if (previous?.clientSelection) {
+  if (resolvedFreeze) {
+    snapshot = { ...snapshot, clientSelection: resolvedFreeze.freeze };
+  } else if (previous?.clientSelection) {
     snapshot = { ...snapshot, clientSelection: previous.clientSelection };
   }
   const updates = previous ? diffClientReviewSnapshots(previous, snapshot) : [];

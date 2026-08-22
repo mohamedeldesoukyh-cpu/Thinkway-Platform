@@ -47,6 +47,8 @@ import {
   isSelectionConfirmed,
   mergeSnapshotsForClientView,
   hydrateClientSelection,
+  isPricedClientInvestment,
+  resolveClientSelectionFreeze,
   selectionCalculator,
   selectionJourneyFlags,
 } from "./selection-flow";
@@ -368,6 +370,9 @@ export async function loadClientWorkspace(
   let view: ClientWorkspaceView | null = null;
   let campaignObject: CampaignObject | null = null;
   let selection = activeReview.selectionState as Record<string, ClientCreatorSelectionState>;
+  let clientSelectionFreeze = activeReview.sourceSnapshot?.clientSelection
+    ?? quotationSnapshot?.clientSelection
+    ?? shortlistSnapshot?.clientSelection;
 
   if (activeReview.sourceSnapshot) {
     let mergedSnapshot = mergeSnapshotsForClientView({
@@ -413,10 +418,25 @@ export async function loadClientWorkspace(
         /* keep the merged snapshot if quotation SSOT is unavailable */
       }
     }
+    const resolvedFreeze = resolveClientSelectionFreeze(
+      mergedSnapshot.clientSelection,
+      mergedSnapshot.creators
+    );
+    if (resolvedFreeze?.didUpgrade) {
+      mergedSnapshot = { ...mergedSnapshot, clientSelection: resolvedFreeze.freeze };
+      clientSelectionFreeze = resolvedFreeze.freeze;
+      if (service && !picked.historical && !activeReview.campaignHeaderId) {
+        await service
+          .from("campaign_client_reviews" as never)
+          .update({ source_snapshot: mergedSnapshot, updated_at: new Date().toISOString() } as never)
+          .eq("id", activeReview.id);
+      }
+    }
     selection = hydrateClientSelection(
       mergedSnapshot.creators,
       selection,
-      mergedSnapshot.clientSelection?.creatorIds
+      resolvedFreeze?.lockedSelectionIds ?? mergedSnapshot.clientSelection?.creatorIds,
+      resolvedFreeze?.pendingCommercialApprovalIds
     );
     view = viewFromSnapshot(
       activeReview,
@@ -443,17 +463,23 @@ export async function loadClientWorkspace(
       hydrated = [];
     }
     const snapshot = snapshotFromCampaignObject(campaignObject, selection, hydrated);
+    const resolvedFreeze = resolveClientSelectionFreeze(snapshot.clientSelection, snapshot.creators);
+    const freezeSnapshotForHydrate = resolvedFreeze
+      ? { ...snapshot, clientSelection: resolvedFreeze.freeze }
+      : snapshot;
     selection = hydrateClientSelection(
-      snapshot.creators,
+      freezeSnapshotForHydrate.creators,
       selection,
-      snapshot.clientSelection?.creatorIds
+      resolvedFreeze?.lockedSelectionIds ?? snapshot.clientSelection?.creatorIds,
+      resolvedFreeze?.pendingCommercialApprovalIds
     );
-    view = viewFromSnapshot(activeReview, snapshot, selection, comments, activity, newer);
+    if (resolvedFreeze) clientSelectionFreeze = resolvedFreeze.freeze;
+    view = viewFromSnapshot(activeReview, freezeSnapshotForHydrate, selection, comments, activity, newer);
     view.content = projectClientContent(campaignObject);
     view.timeline = projectClientTimeline(campaignObject);
     view.commercial = projectClientCommercial(campaignObject, selection);
     view.overview = projectClientOverview(campaignObject, selection);
-    const plans = projectClientMediaPlans(snapshot, selection);
+    const plans = projectClientMediaPlans(freezeSnapshotForHydrate, selection);
     view.packageSummary = plans.packageSummary;
     view.mediaPlanSummary = plans.mediaPlanSummary;
     view.creators = applyCreatorForecasts(
@@ -467,20 +493,35 @@ export async function loadClientWorkspace(
     return { ok: false, code: "not_found", message: "This campaign package is no longer available." };
   }
 
-  const freezeSnapshot = activeReview.sourceSnapshot ?? quotationSnapshot ?? shortlistSnapshot;
+  const resolvedForFlags = resolveClientSelectionFreeze(clientSelectionFreeze, view.creators);
   const calc = selectionCalculator(view.creators, selection);
-  const confirmed = isSelectionConfirmed(freezeSnapshot);
+  const confirmed = isSelectionConfirmed(
+    clientSelectionFreeze ? { clientSelection: clientSelectionFreeze } : null
+  );
+  const pendingIds = resolvedForFlags?.pendingCommercialApprovalIds ?? [];
+  const pendingSelectedCount = pendingIds.filter((id) => selection[id] === "accepted").length;
+  const includedPricedCount = resolvedForFlags
+    ? resolvedForFlags.commerciallyIncludedCreatorIds.filter((id) => {
+        const creator = view!.creators.find((item) => item.creatorId === id);
+        return Boolean(creator && isPricedClientInvestment(creator.investmentAmount));
+      }).length
+    : calc.pricedSelectedCount;
   const flags = selectionJourneyFlags({
     historical: picked.historical,
-    interactive: isInteractiveClientReview(activeReview.status) && !picked.historical,
+    interactive:
+      (isInteractiveClientReview(activeReview.status) || pendingIds.length > 0) && !picked.historical,
     quotationInteractive: journey.canApproveQuotation,
     selectionConfirmed: confirmed,
-    selectedCount: calc.selectedCount,
-    unpricedSelectedCount: calc.unpricedSelectedCount,
+    selectedCount: resolvedForFlags ? includedPricedCount : calc.selectedCount,
+    unpricedSelectedCount: resolvedForFlags ? 0 : calc.unpricedSelectedCount,
     approvedQuotationCount: journey.approvedQuotationCount ?? 0,
-    clientApprovedCreatorIds: freezeSnapshot?.clientSelection?.creatorIds,
+    clientApprovedCreatorIds: clientSelectionFreeze?.creatorIds,
+    pendingSelectedCount,
+    commerciallyIncludedCreatorIds: resolvedForFlags?.commerciallyIncludedCreatorIds,
+    pendingCommercialApprovalCreatorIds: pendingIds,
+    quotationExtensionCount: resolvedForFlags?.extensionWaves.length ?? 0,
   });
-  view.journey = { ...journey, ...flags };
+  view.journey = { ...journey, ...flags, clientSelection: clientSelectionFreeze };
   view.visibleSections = visibleClientWorkspaceSections(view);
   view.campaignExecution = await loadClientCampaignExecution(
     (service ?? db) as never,
@@ -496,8 +537,8 @@ export async function loadClientWorkspace(
       : diffShortlistToQuotation(shortlistApproved.sourceSnapshot, quotationLatest?.sourceSnapshot);
   view.canDecide =
     !picked.historical &&
-    (journey.canApproveShortlist || journey.canApproveQuotation) &&
-    !newer;
+    !newer &&
+    (journey.canApproveShortlist || journey.canApproveQuotation || pendingIds.length > 0);
 
   const entry: ClientWorkspaceEntry = {
     brandName: view.overview.brandName,

@@ -78,11 +78,17 @@ export function CreatorsWorkspace({
   const [detailClosed, setDetailClosed] = useState(false);
   const selection = sharedSelection;
   const explore = intent === "explore";
+  const pendingIds = new Set(view.journey?.pendingCommercialApprovalCreatorIds ?? []);
   const confirmed = Boolean(view.journey?.selectionConfirmed);
-  const canSelect = shortlistCreatorSelectEnabled({
-    canDecide: view.canDecide,
-    selectionConfirmed: confirmed,
-  });
+  const canSelectCreator = (creatorId: string) =>
+    shortlistCreatorSelectEnabled({
+      canDecide: view.canDecide,
+      selectionConfirmed: confirmed,
+      pendingCommercialApproval: pendingIds.has(creatorId),
+    });
+  const canSelect = explore
+    ? shortlistCreatorSelectEnabled({ canDecide: view.canDecide, selectionConfirmed: confirmed })
+    : view.creators.some((creator) => canSelectCreator(creator.creatorId));
   const roster = explore
     ? view.creators
     : yourSelectionRoster(view.creators, selection, {
@@ -271,7 +277,9 @@ export function CreatorsWorkspace({
         {explore
           ? `${rosterHeadline(view.creators.length)}. Select the creators you want, then Continue to Your Selection. This shortlist stays available even after creators are quoted.`
           : confirmed
-            ? `${rosterHeadline(roster.length)} Client Approved.`
+            ? pendingIds.size > 0
+              ? `${rosterHeadline(roster.length)} Client Approved. Newly priced creators must be selected and approved again before they appear on Commercial.`
+              : `${rosterHeadline(roster.length)} Client Approved.`
             : roster.length > 0
               ? `${rosterHeadline(roster.length)} selected. Approve Selected Creators includes them in the quotation.`
               : "Select creators on Shortlist, then Continue to Your Selection."}
@@ -293,7 +301,7 @@ export function CreatorsWorkspace({
               key={creator.creatorId}
               className={creator.creatorId === activeId ? "cc sel" : "cc"}
             >
-              {canSelect ? (
+              {canSelectCreator(creator.creatorId) ? (
                 <label className="pick-hit">
                   <input
                     type="checkbox"
@@ -304,7 +312,7 @@ export function CreatorsWorkspace({
                   />
                 </label>
               ) : null}
-              {!explore && canSelect ? (
+              {!explore && canSelectCreator(creator.creatorId) ? (
                 <button
                   type="button"
                   className="btn sec"
@@ -386,6 +394,7 @@ export function CreatorsWorkspace({
                         quotationStage: view.journey?.quotationStage ?? "",
                         selectedCount: counts.accepted,
                       }),
+                      pendingCommercialApproval: pendingIds.has(creator.creatorId),
                     })}
                   </span>
                   {state === "accepted" && !isPricedClientInvestment(creator.investmentAmount) ? (
@@ -425,7 +434,7 @@ export function CreatorsWorkspace({
             index={Math.max(0, selectedIndex)}
             token={token}
             currency={view.commercial.currency}
-            canDecide={canSelect}
+            canDecide={canSelectCreator(selected.creatorId)}
             pending={pending}
             note={note}
             onNoteChange={setNote}
@@ -453,6 +462,7 @@ export function CreatorsWorkspace({
               quotationStage: view.journey?.quotationStage ?? "",
               selectedCount: counts.accepted,
             })}
+            pendingCommercialApproval={pendingIds.has(selected.creatorId)}
           />
         ) : (
           <div className="detail">
@@ -502,6 +512,7 @@ function CreatorDetailPane({
   cpm,
   selectionConfirmed,
   commerciallyApproved,
+  pendingCommercialApproval,
 }: {
   creator: ClientCreatorCard;
   brief: ClientCreatorBrief | null;
@@ -521,6 +532,7 @@ function CreatorDetailPane({
   cpm?: number;
   selectionConfirmed: boolean;
   commerciallyApproved: boolean;
+  pendingCommercialApproval?: boolean;
 }) {
   const location = brief?.location || formatLocation(creator.city, creator.country);
   const investmentAmount = brief?.investmentAmount ?? creator.investmentAmount;
@@ -640,6 +652,7 @@ function CreatorDetailPane({
               selection: creator.selection,
               selectionConfirmed,
               commerciallyApproved,
+              pendingCommercialApproval,
             })}
           </span>
           {thinkwayStatusLabel(creator.thinkwayStatus) ? (

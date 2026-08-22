@@ -1,11 +1,11 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Client Workspace freeze hydrate — calculator, badges, Approve Final Quotation (pushed to `develop`)
+**Focus:** Client Workspace — later pricing needs a new Your Selection approval; extensions after commercial approval (pushed to `develop`)
 
-After Approve Selected Creators the freeze (`clientSelection`) was kept, but quotation live-sync reset `selection_state` / remapped creator IDs. Journey said Client Approved while cards said Not selected, the calculator was 0, Commercial totals were EGP 0, and Approve Final Quotation was hidden (`pricedSelectedCount === 0`). Hydrate freeze onto the current roster (including overlay identity keys) on load, persist, confirm, and client state.
+Unpriced creators in a freeze stay out of Commercial when Thinkway later adds a price. The client must select them again on Your Selection and Approve Selected Creators. If the quotation is not yet commercially approved, they join the original commercial. If it is already approved, they appear as Quotation extension 1/2/3 with Original total + extensions + Total investment. No second quotation engine.
 
-Client Workspace tests: 147 passing. Production untouched.
+Client Workspace tests: 148 passing. Production untouched.
 
 - Dev: https://dev.thinkwaymedia.com  
 - Prod: untouched (`https://app.thinkwaymedia.com`)

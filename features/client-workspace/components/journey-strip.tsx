@@ -51,6 +51,7 @@ function nodeCopy(
       currency: view.commercial.currency,
       selectionConfirmed: Boolean(journey.selectionConfirmed),
       hasAnyPrice: view.creators.some((creator) => isPricedClientInvestment(creator.investmentAmount)),
+      pendingCommercialApproval: Boolean(journey.pendingCommercialApprovalCreatorIds?.length),
     });
   }
   return campaignStageCopy({

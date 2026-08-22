@@ -55,9 +55,23 @@ export const PRICE_PENDING_LABEL = "Pricing required";
 export const PRICE_NOT_AVAILABLE_LABEL = "Pricing required";
 export const CLIENT_APPROVED_LABEL = "Client Approved";
 
+export const PRICING_CONFIRMED_PENDING_LABEL = "Pricing confirmed — select to include";
+export const QUOTATION_EXTENSION_LABEL = (n: number) => `Quotation extension ${n}`;
+export const ORIGINAL_QUOTATION_TOTAL_LABEL = "Original total";
+
+export type ClientSelectionWave = {
+  number: number;
+  confirmedAt: string;
+  creatorIds: string[];
+};
+
 export type ClientSelectionFreeze = {
   confirmedAt: string;
   creatorIds: string[];
+  /** Priced creators locked into the original commercial. Unpriced freeze members are omitted. */
+  commerciallyIncludedCreatorIds?: string[];
+  /** Priced creators approved after the original quotation was commercially approved. */
+  extensions?: ClientSelectionWave[];
 };
 
 export type SelectionCalculator = {
@@ -109,7 +123,11 @@ export function clientStatusDisplay(input: {
   selection: ClientCreatorSelectionState;
   selectionConfirmed: boolean;
   commerciallyApproved: boolean;
+  pendingCommercialApproval?: boolean;
 }): string {
+  if (input.pendingCommercialApproval) {
+    return input.selection === "accepted" ? "Selected" : PRICING_CONFIRMED_PENDING_LABEL;
+  }
   if (input.selection !== "accepted") return CLIENT_SELECTION_STATUS_LABEL[input.selection];
   if (input.commerciallyApproved) return "Commercially approved";
   if (input.selectionConfirmed) return CLIENT_APPROVED_LABEL;
@@ -121,6 +139,23 @@ export function investmentDisplayLabel(amount: number | null | undefined): strin
   return "";
 }
 
+function parseSelectionWaves(value: unknown): ClientSelectionWave[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const waves: ClientSelectionWave[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const row = item as Record<string, unknown>;
+    const confirmedAt = typeof row.confirmedAt === "string" && row.confirmedAt.trim() ? row.confirmedAt : "";
+    const creatorIds = Array.isArray(row.creatorIds)
+      ? row.creatorIds.filter((id): id is string => typeof id === "string" && Boolean(id.trim()))
+      : [];
+    const number = typeof row.number === "number" && Number.isFinite(row.number) ? Math.trunc(row.number) : waves.length + 1;
+    if (!confirmedAt || creatorIds.length === 0) continue;
+    waves.push({ number, confirmedAt, creatorIds });
+  }
+  return waves.length > 0 ? waves : undefined;
+}
+
 export function parseClientSelectionFreeze(value: unknown): ClientSelectionFreeze | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const row = value as Record<string, unknown>;
@@ -129,7 +164,15 @@ export function parseClientSelectionFreeze(value: unknown): ClientSelectionFreez
     ? row.creatorIds.filter((id): id is string => typeof id === "string" && Boolean(id.trim()))
     : [];
   if (!confirmedAt || creatorIds.length === 0) return undefined;
-  return { confirmedAt, creatorIds };
+  const commerciallyIncludedCreatorIds = Array.isArray(row.commerciallyIncludedCreatorIds)
+    ? row.commerciallyIncludedCreatorIds.filter((id): id is string => typeof id === "string" && Boolean(id.trim()))
+    : undefined;
+  return {
+    confirmedAt,
+    creatorIds,
+    commerciallyIncludedCreatorIds,
+    extensions: parseSelectionWaves(row.extensions),
+  };
 }
 
 export function isSelectionConfirmed(
@@ -143,6 +186,218 @@ export function withClientSelectionFreeze(
   freeze: ClientSelectionFreeze
 ): ClientReviewSourceSnapshot {
   return { ...snapshot, clientSelection: freeze };
+}
+
+export type PricedIdentityCreator = ClientCreatorIdentityFields & {
+  investmentAmount?: number;
+  agencyFeeAmount?: number;
+};
+
+export type ResolvedClientSelectionFreeze = {
+  freeze: ClientSelectionFreeze;
+  didUpgrade: boolean;
+  commerciallyIncludedCreatorIds: string[];
+  extensionWaves: ClientSelectionWave[];
+  pendingCommercialApprovalIds: string[];
+  unpricedApprovedIds: string[];
+  lockedSelectionIds: string[];
+};
+
+function unionIds(values: Array<string[] | undefined>): string[] {
+  const seen = new Set<string>();
+  const next: string[] = [];
+  for (const list of values) {
+    for (const id of list ?? []) {
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      next.push(id);
+    }
+  }
+  return next;
+}
+
+export function matchingCreatorIds(
+  creators: ClientCreatorIdentityFields[],
+  freezeIds?: string[] | null
+): string[] {
+  if (!freezeIds?.length) return [];
+  const frozen = new Set(freezeIds);
+  return creators
+    .filter((creator) => creatorMatchesApprovedIds(creator, frozen))
+    .map((creator) => creator.creatorId);
+}
+
+export function buildClientSelectionFreeze(input: {
+  now: string;
+  acceptedIds: string[];
+  creators: PricedIdentityCreator[];
+}): ClientSelectionFreeze {
+  const commerciallyIncludedCreatorIds = input.acceptedIds.filter((id) => {
+    const creator = input.creators.find((item) => item.creatorId === id);
+    return isPricedClientInvestment(creator?.investmentAmount);
+  });
+  return {
+    confirmedAt: input.now,
+    creatorIds: input.acceptedIds,
+    commerciallyIncludedCreatorIds,
+    extensions: [],
+  };
+}
+
+export function appendClientSelectionWave(input: {
+  previous: ClientSelectionFreeze;
+  addedIds: string[];
+  commerciallyApproved: boolean;
+  now: string;
+}): ClientSelectionFreeze {
+  const added = input.addedIds.filter(Boolean);
+  const creatorIds = unionIds([input.previous.creatorIds, added]);
+  const included = input.previous.commerciallyIncludedCreatorIds ?? [];
+  if (!input.commerciallyApproved) {
+    return {
+      ...input.previous,
+      creatorIds,
+      commerciallyIncludedCreatorIds: unionIds([included, added]),
+      extensions: input.previous.extensions ?? [],
+    };
+  }
+  const extensions = [...(input.previous.extensions ?? [])];
+  if (added.length > 0) {
+    extensions.push({
+      number: extensions.length + 1,
+      confirmedAt: input.now,
+      creatorIds: added,
+    });
+  }
+  return {
+    ...input.previous,
+    creatorIds,
+    commerciallyIncludedCreatorIds: included,
+    extensions,
+  };
+}
+
+export function resolveClientSelectionFreeze(
+  freeze: ClientSelectionFreeze | undefined,
+  creators: PricedIdentityCreator[]
+): ResolvedClientSelectionFreeze | null {
+  if (!freeze) return null;
+  let next = freeze;
+  let didUpgrade = false;
+  if (freeze.commerciallyIncludedCreatorIds == null) {
+    const included = creators
+      .filter(
+        (creator) =>
+          creatorMatchesApprovedIds(creator, new Set(freeze.creatorIds)) &&
+          isPricedClientInvestment(creator.investmentAmount)
+      )
+      .map((creator) => creator.creatorId);
+    next = { ...freeze, commerciallyIncludedCreatorIds: included, extensions: freeze.extensions ?? [] };
+    didUpgrade = true;
+  }
+  const commerciallyIncludedCreatorIds = matchingCreatorIds(
+    creators,
+    next.commerciallyIncludedCreatorIds
+  );
+  const extensionWaves = (next.extensions ?? []).map((wave, index) => ({
+    ...wave,
+    number: wave.number || index + 1,
+    creatorIds: matchingCreatorIds(creators, wave.creatorIds),
+  }));
+  const extensionIds = new Set(extensionWaves.flatMap((wave) => wave.creatorIds));
+  const includedSet = new Set(commerciallyIncludedCreatorIds);
+  const freezeMembers = matchingCreatorIds(creators, next.creatorIds);
+  const pendingCommercialApprovalIds = freezeMembers.filter((id) => {
+    const creator = creators.find((item) => item.creatorId === id);
+    return (
+      isPricedClientInvestment(creator?.investmentAmount) &&
+      !includedSet.has(id) &&
+      !extensionIds.has(id)
+    );
+  });
+  const unpricedApprovedIds = freezeMembers.filter((id) => {
+    const creator = creators.find((item) => item.creatorId === id);
+    return !isPricedClientInvestment(creator?.investmentAmount);
+  });
+  return {
+    freeze: next,
+    didUpgrade,
+    commerciallyIncludedCreatorIds,
+    extensionWaves,
+    pendingCommercialApprovalIds,
+    unpricedApprovedIds,
+    lockedSelectionIds: unionIds([
+      commerciallyIncludedCreatorIds,
+      extensionWaves.flatMap((wave) => wave.creatorIds),
+      unpricedApprovedIds,
+    ]),
+  };
+}
+
+export function quotationExtensionTitle(n: number): string {
+  return QUOTATION_EXTENSION_LABEL(n);
+}
+
+export type ClientQuotationCommercialSection = {
+  kind: "original" | "extension";
+  title: string;
+  creatorIds: string[];
+  cost: number;
+  agencyFees: number;
+  total: number;
+};
+
+function sectionTotals(
+  creators: PricedIdentityCreator[],
+  creatorIds: string[]
+): Pick<ClientQuotationCommercialSection, "cost" | "agencyFees" | "total"> {
+  const rows = creators.filter(
+    (creator) => creatorIds.includes(creator.creatorId) && isPricedClientInvestment(creator.investmentAmount)
+  );
+  const cost = rows.reduce((sum, creator) => sum + (creator.investmentAmount ?? 0), 0);
+  const agencyFees = rows.reduce((sum, creator) => sum + (Number(creator.agencyFeeAmount) || 0), 0);
+  return { cost, agencyFees, total: cost + agencyFees };
+}
+
+export function clientQuotationCommercialView(
+  creators: PricedIdentityCreator[],
+  freeze: ClientSelectionFreeze | undefined
+): {
+  original: ClientQuotationCommercialSection;
+  extensions: ClientQuotationCommercialSection[];
+  pricingRequiredIds: string[];
+  pendingCommercialApprovalIds: string[];
+  originalTotal: number;
+  totalInvestment: number;
+} {
+  const resolved = resolveClientSelectionFreeze(freeze, creators);
+  const originalIds = resolved?.commerciallyIncludedCreatorIds ?? [];
+  const originalTotals = sectionTotals(creators, originalIds);
+  const original: ClientQuotationCommercialSection = {
+    kind: "original",
+    title: "Included in current quotation",
+    creatorIds: originalIds,
+    ...originalTotals,
+  };
+  const extensions = (resolved?.extensionWaves ?? []).map((wave) => {
+    const totals = sectionTotals(creators, wave.creatorIds);
+    return {
+      kind: "extension" as const,
+      title: quotationExtensionTitle(wave.number),
+      creatorIds: wave.creatorIds,
+      ...totals,
+    };
+  });
+  const totalInvestment =
+    original.total + extensions.reduce((sum, section) => sum + section.total, 0);
+  return {
+    original,
+    extensions,
+    pricingRequiredIds: resolved?.unpricedApprovedIds ?? [],
+    pendingCommercialApprovalIds: resolved?.pendingCommercialApprovalIds ?? [],
+    originalTotal: original.total,
+    totalInvestment,
+  };
 }
 
 export function selectionCalculator(
@@ -265,13 +520,22 @@ export function applyFrozenClientSelection(
 export function hydrateClientSelection(
   creators: ClientCreatorIdentityFields[],
   live: Record<string, ClientCreatorSelectionState>,
-  approvedIds?: string[] | null
+  approvedIds?: string[] | null,
+  pendingIds?: string[] | null
 ): Record<string, ClientCreatorSelectionState> {
-  return applyFrozenClientSelection(
+  const next = applyFrozenClientSelection(
     creators,
     remapClientSelectionOntoCreators(creators, live),
     approvedIds
   );
+  if (!pendingIds?.length) return next;
+  const pending = new Set(pendingIds);
+  for (const creator of creators) {
+    if (creatorMatchesApprovedIds(creator, pending)) {
+      next[creator.creatorId] = "in_review";
+    }
+  }
+  return next;
 }
 
 export function applyQuotationCurrency(
@@ -402,13 +666,11 @@ export function canConfirmCreators(input: {
   interactive: boolean;
   selectedCount: number;
   selectionConfirmed: boolean;
+  pendingSelectedCount?: number;
 }): boolean {
-  return (
-    !input.historical &&
-    input.interactive &&
-    input.selectedCount > 0 &&
-    !input.selectionConfirmed
-  );
+  if (input.historical || !input.interactive) return false;
+  if ((input.pendingSelectedCount ?? 0) > 0) return true;
+  return input.selectedCount > 0 && !input.selectionConfirmed;
 }
 
 export function canEnableApproveSelectedCreators(input: {
@@ -417,6 +679,7 @@ export function canEnableApproveSelectedCreators(input: {
   selectedCount: number;
   unpricedSelectedCount: number;
   selectionConfirmed: boolean;
+  pendingSelectedCount?: number;
 }): boolean {
   void input.unpricedSelectedCount;
   return canConfirmCreators(input);
@@ -448,8 +711,11 @@ export function confirmCreatorsDoesNotApproveQuotation(): {
 export function shortlistCreatorSelectEnabled(input: {
   canDecide: boolean;
   selectionConfirmed: boolean;
+  pendingCommercialApproval?: boolean;
 }): boolean {
-  return input.canDecide && !input.selectionConfirmed;
+  if (!input.canDecide) return false;
+  if (!input.selectionConfirmed) return true;
+  return Boolean(input.pendingCommercialApproval);
 }
 
 export const COMMERCIAL_LOCKED_UNTIL_CREATOR_APPROVAL_MESSAGE =
@@ -471,7 +737,14 @@ export function selectionChangeAllowed(input: {
   current: ClientCreatorSelectionState;
   next: ClientCreatorSelectionState;
   priced: boolean;
+  pendingCommercialApproval?: boolean;
 }): { ok: boolean; message?: string } {
+  if (input.pendingCommercialApproval) {
+    if (!input.priced) {
+      return { ok: false, message: "Pricing is required before this creator can be added to the quotation." };
+    }
+    return { ok: true };
+  }
   if (input.commerciallyApproved) {
     return { ok: false, message: "This quotation is approved and can no longer be changed." };
   }
@@ -652,7 +925,10 @@ export function headerSelectionNavigation(): {
  * Shell header CTA. After creator freeze this navigates to Commercial so the
  * client can Approve Final Quotation there. It never writes quotation status.
  */
-export function headerJourneyCta(input: { canApproveFinalQuotation: boolean }): {
+export function headerJourneyCta(input: {
+  canApproveFinalQuotation: boolean;
+  pendingCommercialApproval?: boolean;
+}): {
   label: string;
   section: "creators" | "commercial";
   writesClientSelection: false;
@@ -660,6 +936,7 @@ export function headerJourneyCta(input: { canApproveFinalQuotation: boolean }): 
   approvesCreators: false;
   approvesQuotation: false;
 } {
+  if (input.pendingCommercialApproval) return headerSelectionNavigation();
   if (input.canApproveFinalQuotation) {
     return {
       label: APPROVE_FINAL_QUOTATION_LABEL,
@@ -727,7 +1004,11 @@ export function commercialStageCopy(input: {
   currency: string;
   selectionConfirmed: boolean;
   hasAnyPrice: boolean;
+  pendingCommercialApproval?: boolean;
 }): { label: string; tone: "idle" | "active" | "attention" | "ok" | "bad" } {
+  if (input.pendingCommercialApproval) {
+    return { label: "New pricing to approve", tone: "attention" };
+  }
   if (input.quotationStage === "approved") {
     if (input.selectedCount === 0) return { label: "Selection required", tone: "attention" };
     return { label: "Approved", tone: "ok" };
@@ -771,6 +1052,9 @@ export type SelectionJourneyFlags = {
   canApproveFinalQuotation: boolean;
   approvedQuotationCount: number;
   clientApprovedCreatorIds?: string[];
+  commerciallyIncludedCreatorIds?: string[];
+  pendingCommercialApprovalCreatorIds?: string[];
+  quotationExtensionCount?: number;
 };
 
 export function selectionJourneyFlags(input: {
@@ -782,6 +1066,10 @@ export function selectionJourneyFlags(input: {
   unpricedSelectedCount: number;
   approvedQuotationCount: number;
   clientApprovedCreatorIds?: string[];
+  pendingSelectedCount?: number;
+  commerciallyIncludedCreatorIds?: string[];
+  pendingCommercialApprovalCreatorIds?: string[];
+  quotationExtensionCount?: number;
 }): SelectionJourneyFlags {
   return {
     selectionConfirmed: input.selectionConfirmed,
@@ -795,6 +1083,9 @@ export function selectionJourneyFlags(input: {
     }),
     approvedQuotationCount: input.approvedQuotationCount,
     clientApprovedCreatorIds: input.clientApprovedCreatorIds,
+    commerciallyIncludedCreatorIds: input.commerciallyIncludedCreatorIds,
+    pendingCommercialApprovalCreatorIds: input.pendingCommercialApprovalCreatorIds,
+    quotationExtensionCount: input.quotationExtensionCount,
   };
 }
 

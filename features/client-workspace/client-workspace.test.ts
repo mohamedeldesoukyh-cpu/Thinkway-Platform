@@ -95,6 +95,10 @@ import {
   hydrateClientSelection,
   remapClientSelectionOntoCreators,
   applyFrozenClientSelection,
+  buildClientSelectionFreeze,
+  appendClientSelectionWave,
+  resolveClientSelectionFreeze,
+  clientQuotationCommercialView,
   thinkwayStatusFromInternal,
   CONFIRM_CREATORS_LABEL,
   APPROVE_SELECTED_CREATORS_LABEL,
@@ -4023,6 +4027,89 @@ test("frozen client selection hydrates calculator and approval after live select
   assert.equal(overlayFreeze["sl-reem"], "in_review");
   const roster = creatorsForClientCommercial(creators, wiped, ["u-oudou", "u-karim"]);
   assert.deepEqual(roster.map((creator) => creator.creatorId), ["sl-oudou", "sl-karim"]);
+});
+
+test("later pricing does not enter Commercial until a new Your Selection approval", () => {
+  const creators = [
+    { creatorId: "a", displayName: "A", investmentAmount: 200_000, agencyFeeAmount: 20_000 },
+    { creatorId: "b", displayName: "B", investmentAmount: 450_000, agencyFeeAmount: 45_000 },
+    { creatorId: "c", displayName: "C" },
+  ];
+  const first = buildClientSelectionFreeze({
+    now: "2026-08-22T10:00:00.000Z",
+    acceptedIds: ["a", "b", "c"],
+    creators,
+  });
+  assert.deepEqual(first.commerciallyIncludedCreatorIds, ["a", "b"]);
+  const pricedLater = [
+    ...creators.slice(0, 2),
+    { creatorId: "c", displayName: "C", investmentAmount: 80_000, agencyFeeAmount: 8_000 },
+  ];
+  const resolved = resolveClientSelectionFreeze(first, pricedLater)!;
+  assert.deepEqual(resolved.commerciallyIncludedCreatorIds, ["a", "b"]);
+  assert.deepEqual(resolved.pendingCommercialApprovalIds, ["c"]);
+  const hydrated = hydrateClientSelection(
+    pricedLater,
+    { a: "accepted", b: "accepted", c: "accepted" },
+    resolved.lockedSelectionIds,
+    resolved.pendingCommercialApprovalIds
+  );
+  assert.equal(hydrated.c, "in_review");
+  const commercial = clientQuotationCommercialView(pricedLater, first);
+  assert.deepEqual(commercial.original.creatorIds, ["a", "b"]);
+  assert.equal(commercial.extensions.length, 0);
+  assert.deepEqual(commercial.pendingCommercialApprovalIds, ["c"]);
+  assert.equal(commercial.totalInvestment, 715_000);
+
+  const addedToOriginal = appendClientSelectionWave({
+    previous: resolved.freeze,
+    addedIds: ["c"],
+    commerciallyApproved: false,
+    now: "2026-08-22T12:00:00.000Z",
+  });
+  assert.deepEqual(addedToOriginal.commerciallyIncludedCreatorIds, ["a", "b", "c"]);
+  assert.equal((addedToOriginal.extensions ?? []).length, 0);
+  const originalView = clientQuotationCommercialView(pricedLater, addedToOriginal);
+  assert.deepEqual(originalView.original.creatorIds, ["a", "b", "c"]);
+  assert.equal(originalView.totalInvestment, 803_000);
+
+  const extensionFreeze = appendClientSelectionWave({
+    previous: resolved.freeze,
+    addedIds: ["c"],
+    commerciallyApproved: true,
+    now: "2026-08-22T12:00:00.000Z",
+  });
+  assert.deepEqual(extensionFreeze.commerciallyIncludedCreatorIds, ["a", "b"]);
+  assert.equal(extensionFreeze.extensions?.[0]?.number, 1);
+  assert.deepEqual(extensionFreeze.extensions?.[0]?.creatorIds, ["c"]);
+  const extensionView = clientQuotationCommercialView(pricedLater, extensionFreeze);
+  assert.equal(extensionView.original.total, 715_000);
+  assert.equal(extensionView.extensions[0]?.title, "Quotation extension 1");
+  assert.deepEqual(extensionView.extensions[0]?.creatorIds, ["c"]);
+  assert.equal(extensionView.extensions[0]?.total, 88_000);
+  assert.equal(extensionView.totalInvestment, 803_000);
+  assert.equal(
+    canEnableApproveSelectedCreators({
+      historical: false,
+      interactive: true,
+      selectedCount: 3,
+      unpricedSelectedCount: 0,
+      selectionConfirmed: true,
+      pendingSelectedCount: 1,
+    }),
+    true
+  );
+  assert.equal(
+    selectionChangeAllowed({
+      selectionConfirmed: true,
+      commerciallyApproved: true,
+      current: "in_review",
+      next: "accepted",
+      priced: true,
+      pendingCommercialApproval: true,
+    }).ok,
+    true
+  );
 });
 
 

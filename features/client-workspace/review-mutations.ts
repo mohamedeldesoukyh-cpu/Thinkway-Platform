@@ -23,10 +23,14 @@ import {
 } from "./status";
 import { clientApprovalSideEffects, canMutateClientReviewFromBoundReview, journeyCanonicalReviewId, pickReviewForDecision } from "./journey-state";
 import {
+  appendClientSelectionWave,
+  buildClientSelectionFreeze,
   canOpenCommercialWorkspace,
   hydrateClientSelection,
   isPricedClientInvestment,
   isSelectionConfirmed,
+  remapClientSelectionOntoCreators,
+  resolveClientSelectionFreeze,
   selectionCalculator,
   selectionChangeAllowed,
   UNPRICED_SELECTED_CODE,
@@ -52,7 +56,8 @@ function db(): SupabaseClient {
 
 async function requireInteractiveReview(
   token: string,
-  inputStage?: ClientReviewDecisionStage
+  inputStage?: ClientReviewDecisionStage,
+  options?: { allowApprovedCreatorWave?: boolean }
 ) {
   const resolved = await resolveClientReviewByToken(db(), token);
   if (!resolved.ok) {
@@ -81,7 +86,14 @@ async function requireInteractiveReview(
     return { ok: false as const, message: "This quotation is already in a campaign." };
   }
   if (!isInteractiveClientReview(target.status)) {
-    return { ok: false as const, message: "This version is no longer open for decisions." };
+    const allowWave =
+      Boolean(options?.allowApprovedCreatorWave) &&
+      target.source === "quotation" &&
+      target.status === "approved" &&
+      !target.campaignHeaderId;
+    if (!allowWave) {
+      return { ok: false as const, message: "This version is no longer open for decisions." };
+    }
   }
   const newer = await newerReviewNumberFor(db(), target);
   if (newer) {
@@ -154,16 +166,26 @@ export async function setCreatorSelection(input: {
   creatorName?: string;
   reason?: string;
 }): Promise<{ ok: boolean; message: string; selection?: Record<string, ClientCreatorSelectionState> }> {
-  const gate = await requireInteractiveReview(input.token);
+  const gate = await requireInteractiveReview(input.token, undefined, {
+    allowApprovedCreatorWave: true,
+  });
   if (!gate.ok) return gate;
 
   const current = gate.review.selectionState[input.creatorId] ?? "in_review";
+  const resolved = resolveClientSelectionFreeze(
+    gate.review.sourceSnapshot?.clientSelection,
+    gate.review.sourceSnapshot?.creators ?? []
+  );
+  const pendingCommercialApproval = Boolean(
+    resolved?.pendingCommercialApprovalIds.includes(input.creatorId)
+  );
   const allowed = selectionChangeAllowed({
     selectionConfirmed: isSelectionConfirmed(gate.review.sourceSnapshot),
     commerciallyApproved: commerciallyApproved(gate.review),
     current,
     next: input.state,
     priced: creatorIsPriced(gate.review, input.creatorId),
+    pendingCommercialApproval,
   });
   if (!allowed.ok) return { ok: false, message: allowed.message ?? "Selection cannot be changed." };
 
@@ -223,7 +245,9 @@ export async function setBulkCreatorSelection(input: {
   state: ClientCreatorSelectionState;
   creatorIds?: string[];
 }): Promise<{ ok: boolean; message: string }> {
-  const gate = await requireInteractiveReview(input.token);
+  const gate = await requireInteractiveReview(input.token, undefined, {
+    allowApprovedCreatorWave: true,
+  });
   if (!gate.ok) return gate;
   const ids =
     input.creatorIds?.length
@@ -240,6 +264,11 @@ export async function setBulkCreatorSelection(input: {
           })();
   const selection = { ...gate.review.selectionState };
   const confirmed = isSelectionConfirmed(gate.review.sourceSnapshot);
+  const resolved = resolveClientSelectionFreeze(
+    gate.review.sourceSnapshot?.clientSelection,
+    gate.review.sourceSnapshot?.creators ?? []
+  );
+  const pending = new Set(resolved?.pendingCommercialApprovalIds ?? []);
   for (const id of ids) {
     const allowed = selectionChangeAllowed({
       selectionConfirmed: confirmed,
@@ -247,6 +276,7 @@ export async function setBulkCreatorSelection(input: {
       current: selection[id] ?? "in_review",
       next: input.state,
       priced: creatorIsPriced(gate.review, id),
+      pendingCommercialApproval: pending.has(id),
     });
     if (!allowed.ok) return { ok: false, message: allowed.message ?? "Selection cannot be changed." };
     selection[id] = input.state;
@@ -338,26 +368,64 @@ export async function requestClientChanges(input: {
 export async function confirmClientCreators(input: {
   token: string;
 }): Promise<{ ok: boolean; message: string; code?: string }> {
-  const gate = await requireInteractiveReview(input.token);
+  const gate = await requireInteractiveReview(input.token, undefined, {
+    allowApprovedCreatorWave: true,
+  });
   if (!gate.ok) return gate;
   const snapshot = gate.review.sourceSnapshot;
   if (!snapshot) return { ok: false, message: "Package not found." };
-  if (isSelectionConfirmed(snapshot)) {
-    return { ok: true, message: "Creators already approved. This is not quotation approval." };
-  }
-  const live = hydrateClientSelection(snapshot.creators, gate.review.selectionState, null);
+  const remapped = remapClientSelectionOntoCreators(snapshot.creators, gate.review.selectionState);
   const acceptedIds = snapshot.creators
     .map((creator) => creator.creatorId)
-    .filter((id) => live[id] === "accepted");
-  if (acceptedIds.length === 0) {
-    return { ok: false, message: "Select at least one creator before approving." };
-  }
+    .filter((id) => remapped[id] === "accepted");
+  const resolved = resolveClientSelectionFreeze(snapshot.clientSelection, snapshot.creators);
   const now = new Date().toISOString();
-  const nextSnapshot = withClientSelectionFreeze(snapshot, {
-    confirmedAt: now,
-    creatorIds: acceptedIds,
-  });
-  const nextSelection = hydrateClientSelection(snapshot.creators, live, acceptedIds);
+  const alreadyFrozen = isSelectionConfirmed(snapshot);
+
+  let nextFreeze = snapshot.clientSelection;
+  if (!alreadyFrozen) {
+    if (acceptedIds.length === 0) {
+      return { ok: false, message: "Select at least one creator before approving." };
+    }
+    nextFreeze = buildClientSelectionFreeze({
+      now,
+      acceptedIds,
+      creators: snapshot.creators,
+    });
+  } else {
+    const pendingSelected = (resolved?.pendingCommercialApprovalIds ?? []).filter(
+      (id) => remapped[id] === "accepted"
+    );
+    const pricedPending = pendingSelected.filter((id) => {
+      const creator = snapshot.creators.find((item) => item.creatorId === id);
+      return isPricedClientInvestment(creator?.investmentAmount);
+    });
+    if (pricedPending.length === 0) {
+      return {
+        ok: false,
+        message:
+          "Select newly priced creators on Your Selection, then Approve Selected Creators to include them.",
+      };
+    }
+    nextFreeze = appendClientSelectionWave({
+      previous: resolved?.freeze ?? snapshot.clientSelection!,
+      addedIds: pricedPending,
+      commerciallyApproved: commerciallyApproved(gate.review),
+      now,
+    });
+  }
+
+  const nextSnapshot = withClientSelectionFreeze(snapshot, nextFreeze);
+  const nextResolved = resolveClientSelectionFreeze(nextFreeze, snapshot.creators);
+  const nextSelection = hydrateClientSelection(
+    snapshot.creators,
+    remapped,
+    nextResolved?.lockedSelectionIds ?? nextFreeze.creatorIds,
+    nextResolved?.pendingCommercialApprovalIds
+  );
+  const statuses = commerciallyApproved(gate.review)
+    ? ["approved"]
+    : ["awaiting_review", "changes_requested"];
   const { error } = await db()
     .from("campaign_client_reviews" as never)
     .update({
@@ -366,7 +434,7 @@ export async function confirmClientCreators(input: {
       updated_at: now,
     } as never)
     .eq("id", gate.review.id)
-    .in("status", ["awaiting_review", "changes_requested"]);
+    .in("status", statuses);
   if (error) return { ok: false, message: error.message };
   await db().from("campaign_client_review_events" as never).insert({
     review_id: gate.review.id,
@@ -374,7 +442,9 @@ export async function confirmClientCreators(input: {
     actor_kind: "client",
     actor_label: gate.review.clientLabel ?? "Client",
     payload: {
-      creatorIds: acceptedIds,
+      creatorIds: nextFreeze.creatorIds,
+      commerciallyIncludedCreatorIds: nextFreeze.commerciallyIncludedCreatorIds,
+      extensions: nextFreeze.extensions,
       lockCommercial: false,
       setQuotationStatusApproved: false,
     },
@@ -383,7 +453,9 @@ export async function confirmClientCreators(input: {
     reviewId: gate.review.id,
     quotationId: gate.review.quotationId,
     shortlistId: gate.review.shortlistId,
-    body: `Client approved ${acceptedIds.length} creator${acceptedIds.length === 1 ? "" : "s"} for the quotation. This is not quotation approval.`,
+    body: commerciallyApproved(gate.review)
+      ? `Client approved a quotation extension with ${nextFreeze.extensions?.at(-1)?.creatorIds.length ?? 0} creator(s). This is not a new quotation.`
+      : `Client approved ${nextFreeze.creatorIds.length} creator${nextFreeze.creatorIds.length === 1 ? "" : "s"} for the quotation. This is not quotation approval.`,
   });
   return { ok: true, message: "Creators approved. This is not quotation approval." };
 }
@@ -444,11 +516,15 @@ export async function decideClientReview(input: {
     return { ok: false, message: "Package not found." };
   }
 
+  const resolved = snapshot
+    ? resolveClientSelectionFreeze(snapshot.clientSelection, snapshot.creators)
+    : null;
   const selection = snapshot
     ? hydrateClientSelection(
         snapshot.creators,
         gate.review.selectionState,
-        snapshot.clientSelection?.creatorIds
+        resolved?.lockedSelectionIds ?? snapshot.clientSelection?.creatorIds,
+        resolved?.pendingCommercialApprovalIds
       )
     : gate.review.selectionState;
   const commercial = snapshot

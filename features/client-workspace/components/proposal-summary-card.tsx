@@ -102,11 +102,15 @@ export function ProposalSummaryCard({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const pendingIds = view.journey?.pendingCommercialApprovalCreatorIds ?? [];
+  const lockedIds = (view.journey?.clientApprovedCreatorIds ?? []).filter(
+    (id) => !pendingIds.includes(id)
+  );
   const resolvedSelection = hydrateClientSelection(
     view.creators,
     selection ??
       Object.fromEntries(view.creators.map((creator) => [creator.creatorId, creator.selection])),
-    view.journey?.clientApprovedCreatorIds
+    lockedIds
   );
   const calc = selectionCalculator(view.creators, resolvedSelection);
   const currency = view.commercial.currency;
@@ -131,14 +135,16 @@ export function ProposalSummaryCard({
     canConfirmCreators: Boolean(view.journey?.canConfirmCreators),
     canApproveFinalQuotation: Boolean(view.journey?.canApproveFinalQuotation),
   });
+  const pendingSelectedCount = pendingIds.filter((id) => resolvedSelection[id] === "accepted").length;
   const canApproveSelected = canEnableApproveSelectedCreators({
     historical: Boolean(view.journey?.historical),
     interactive: view.canDecide,
     selectedCount: calc.selectedCount,
     unpricedSelectedCount: calc.unpricedSelectedCount,
     selectionConfirmed: confirmed,
+    pendingSelectedCount,
   });
-  const showApproveSelected = barAction === "approve" && !confirmed;
+  const showApproveSelected = barAction === "approve" && (!confirmed || pendingIds.length > 0);
   const showContinueToSelection = barAction === "continue" && !confirmed;
   const canContinueToSelection =
     showContinueToSelection && view.canDecide && !pending && calc.selectedCount > 0;
