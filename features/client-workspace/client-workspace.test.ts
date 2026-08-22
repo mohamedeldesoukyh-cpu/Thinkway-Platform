@@ -36,7 +36,7 @@ import { acceptedCreators, contentRowsForSelection, yourSelectionRoster } from "
 import { HYPEAUDITOR_MEDIA_PLAN_PARITY } from "./hypeauditor-parity";
 import { projectMediaPlanSummary, projectSelectionSummaryFromCards } from "./media-plan-summary";
 import { briefFromSnapshotCreator, mergeFrozenBrief, needsClientBriefBackfill } from "./creator-brief";
-import { enrichSnapshotCreatorFromUnified, mixPostsForDeliverables, profileUrlFromHandle, resolveContentPostPlatform, shouldReplaceContentFeed } from "./creator-snapshot";
+import { applyLiveCreatorProfile, enrichSnapshotCreatorFromUnified, mixPostsForDeliverables, preferAvatarUrl, profileUrlFromHandle, resolveContentPostPlatform, shouldReplaceContentFeed } from "./creator-snapshot";
 import { creatorPlatformBreakdown, creatorProfileLinks, dropClonedImportedEngagementRates, engagementMetersForBreakdown, avatarProfileUrlForReview } from "./platform-breakdown";
 import { clientReviewAvatarUrl, isReviewMediaUrlAllowed, reviewMediaAllowlist } from "./review-media";
 import { canCreateCampaignFromQuotation } from "@/lib/commercial-sync/rules";
@@ -1423,6 +1423,93 @@ test("unified enrichment stores followers and ER per platform", () => {
     engagementRate: "6.1%",
   });
   assert.equal(rows.some((row) => row.platform === "youtube"), false);
+});
+
+test("live enrichment replaces imported avatar and cloned platform engagement rates", () => {
+  const importAvatar =
+    "https://example.supabase.co/storage/v1/object/public/creator-avatars/imports/d843/instagram/eyadelmogy.jpg";
+  const liveAvatar =
+    "https://example.supabase.co/storage/v1/object/public/creator-avatars/enrichment/inf/instagram/eyadelmogy.jpg";
+  assert.equal(preferAvatarUrl(importAvatar, liveAvatar), liveAvatar);
+  assert.equal(preferAvatarUrl(liveAvatar, importAvatar), liveAvatar);
+
+  const live = applyLiveCreatorProfile(
+    {
+      creatorId: "inf:1",
+      displayName: "eyadelmogy",
+      handle: "@eyadelmogy",
+      platform: "instagram,tiktok",
+      avatarUrl: importAvatar,
+      followers: 954_800,
+      engagementRate: 5.46,
+      performance: { frozenAt: "2026-08-01T00:00:00.000Z", engagementRate: 5.46 },
+      platformAccounts: [
+        { platform: "instagram", followers: 954_800, engagementRate: 5.46 },
+        { platform: "tiktok", followers: 898_900, engagementRate: 5.46 },
+      ],
+    },
+    {
+      unified_id: "inf:1",
+      display_name: "eyadelmogy",
+      primaryAvatarUrl: liveAvatar,
+      profile_image_url: liveAvatar,
+      metrics: {
+        followers: { value: 954_800, confidence: "verified" },
+        engagement_rate: { value: 3.1, confidence: "verified" },
+        avg_likes: { value: 12_000, confidence: "verified" },
+        avg_comments: { value: 400, confidence: "verified" },
+        avg_views: { value: 80_000, confidence: "verified" },
+        posting_frequency_per_week: { value: null, confidence: "estimated" },
+      },
+      platforms: [
+        {
+          id: "ig",
+          platform: "instagram",
+          handle: "eyadelmogy",
+          profile_url: "https://www.instagram.com/eyadelmogy/",
+          follower_count: 960_000,
+          engagement_rate: 3.1,
+          avg_likes: 12_000,
+          avg_comments: 400,
+          audience_country: "EG",
+        },
+        {
+          id: "tt",
+          platform: "tiktok",
+          handle: "eyadelmogy",
+          profile_url: "https://www.tiktok.com/@eyadelmogy",
+          follower_count: 910_000,
+          engagement_rate: 8.2,
+          avg_likes: 20_000,
+          avg_comments: 900,
+          audience_country: "EG",
+        },
+      ],
+      categories: [],
+      language_codes: [],
+      thinkway_score: 0,
+      source_confidence: 0,
+      brand_fit_score: null,
+      is_platform_verified: false,
+      authenticity_score: null,
+      ai_category: null,
+      ai_niche: null,
+      source_type: "internal",
+      influencer_id: "1",
+      discovered_profile_id: null,
+      document_number: null,
+      status: null,
+      country_code: "EG",
+      estimated_country: "EG",
+      city: "Cairo",
+      bio: null,
+    }
+  );
+  assert.equal(live.avatarUrl, liveAvatar);
+  assert.equal(live.performance, undefined);
+  assert.equal(live.platformAccounts?.find((row) => row.platform === "instagram")?.engagementRate, 3.1);
+  assert.equal(live.platformAccounts?.find((row) => row.platform === "tiktok")?.engagementRate, 8.2);
+  assert.equal(live.avgLikes, 12_000);
 });
 
 test("quotation snapshot diffs are client-safe and name added creators", () => {

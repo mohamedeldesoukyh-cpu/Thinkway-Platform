@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildImportAvatarStoragePath,
   extensionForContentType,
+  isImportedCreatorAvatarUrl,
   isLowQualityImportedAvatarUrl,
   parseCreatorAvatarStoragePathFromUrl,
   resolveCreatorAvatarPublicUrl,
@@ -29,6 +30,19 @@ assert.equal(
     "https://example.supabase.co/storage/v1/object/public/creator-avatars/imports/file-1/instagram/tasnim_zeitoun.png"
   ),
   "imports/file-1/instagram/tasnim_zeitoun.png"
+);
+
+assert.equal(
+  isImportedCreatorAvatarUrl(
+    "https://example.supabase.co/storage/v1/object/public/creator-avatars/imports/d843/instagram/eyadelmogy.jpg"
+  ),
+  true
+);
+assert.equal(
+  isImportedCreatorAvatarUrl(
+    "https://example.supabase.co/storage/v1/object/public/creator-avatars/enrichment/id/instagram/eyadelmogy.jpg"
+  ),
+  false
 );
 
 assert.equal(
