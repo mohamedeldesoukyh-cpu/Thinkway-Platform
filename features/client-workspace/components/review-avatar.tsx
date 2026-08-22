@@ -7,6 +7,7 @@ import { useMediaProxyImageRecovery } from "@/hooks/use-media-proxy-image-recove
 import { avatarProfileUrlForReview } from "../platform-breakdown";
 import { AVATAR_GRADS, initialsFromName } from "../presentation";
 import { clientReviewAvatarUrl } from "../review-media";
+import { isImportedCreatorAvatarUrl, parseCreatorAvatarStoragePathFromUrl } from "@/lib/discovery-import/import-avatar-storage";
 
 export function ReviewAvatar({
   url,
@@ -40,7 +41,12 @@ export function ReviewAvatar({
       platform,
       platformAccounts,
     }) ?? profileUrl;
-  const src = token ? clientReviewAvatarUrl(token, url, fetchProfileUrl) : url;
+  const durableStored =
+    Boolean(url?.trim() && parseCreatorAvatarStoragePathFromUrl(url)) &&
+    !isImportedCreatorAvatarUrl(url);
+  const src = token
+    ? clientReviewAvatarUrl(token, url, durableStored ? null : fetchProfileUrl)
+    : url;
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const showImage = Boolean(src) && failedSrc !== src;
   return (

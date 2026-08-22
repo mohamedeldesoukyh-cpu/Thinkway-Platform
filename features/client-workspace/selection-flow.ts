@@ -557,6 +557,31 @@ export function applyQuotationCurrency(
   return { ...creator, investmentCurrency: currency };
 }
 
+function overlayAvatarUrl(
+  creator: ClientReviewSourceSnapshotCreator,
+  quoted: ClientReviewSourceSnapshotCreator
+): string | undefined {
+  const live = quoted.avatarUrl?.trim();
+  const existing = creator.avatarUrl?.trim();
+  if (!live) return existing;
+  if (!existing) return live;
+  const liveRank = live.toLowerCase().includes("/creator-avatars/enrichment/")
+    ? 3
+    : live.toLowerCase().includes("/creator-avatars/imports/")
+      ? 1
+      : live.toLowerCase().includes("/creator-avatars/")
+        ? 2
+        : 2;
+  const existingRank = existing.toLowerCase().includes("/creator-avatars/enrichment/")
+    ? 3
+    : existing.toLowerCase().includes("/creator-avatars/imports/")
+      ? 1
+      : existing.toLowerCase().includes("/creator-avatars/")
+        ? 2
+        : 2;
+  return liveRank >= existingRank ? live : existing;
+}
+
 function overlayQuotedCreator(
   creator: ClientReviewSourceSnapshotCreator,
   quoted: ClientReviewSourceSnapshotCreator,
@@ -564,6 +589,8 @@ function overlayQuotedCreator(
 ): ClientReviewSourceSnapshotCreator {
   const deliverables = quoted.deliverables?.trim() || undefined;
   const deliverableItems = quoted.deliverableItems?.length ? quoted.deliverableItems : undefined;
+  const liveAccounts = quoted.platformAccounts?.length ? quoted.platformAccounts : undefined;
+  const primary = liveAccounts?.find((row) => row.platform === "instagram") ?? liveAccounts?.[0];
   return applyQuotationCurrency(
     {
       ...creator,
@@ -587,6 +614,18 @@ function overlayQuotedCreator(
       profileId: quoted.profileId ?? creator.profileId,
       unifiedId: quoted.unifiedId ?? creator.unifiedId,
       influencerId: quoted.influencerId ?? creator.influencerId,
+      avatarUrl: overlayAvatarUrl(creator, quoted),
+      ...(liveAccounts
+        ? {
+            platformAccounts: liveAccounts,
+            followers: primary?.followers ?? quoted.followers ?? creator.followers,
+            engagementRate: primary?.engagementRate ?? quoted.engagementRate ?? creator.engagementRate,
+            avgLikes: primary?.avgLikes ?? quoted.avgLikes ?? creator.avgLikes,
+            avgComments: primary?.avgComments ?? quoted.avgComments ?? creator.avgComments,
+            avgViews: primary?.avgViews ?? quoted.avgViews ?? creator.avgViews,
+            handle: primary?.handle ?? quoted.handle ?? creator.handle,
+          }
+        : {}),
     },
     currency || quoted.investmentCurrency
   );

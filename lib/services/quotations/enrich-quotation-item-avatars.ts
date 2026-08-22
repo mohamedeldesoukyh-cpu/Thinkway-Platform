@@ -40,6 +40,7 @@ import {
   isUsableAvatarUrl,
 } from "@/lib/performance/avatar-sync-policy";
 import { formatCreatorDisplayName } from "@/lib/text/decode-html-entities";
+import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
 import type { Database } from "@/types/database";
 
 /** True when the line still needs a durable creator-avatars upload (CDN/null). */
@@ -652,7 +653,7 @@ export async function enrichQuotationItemsForWorkspace(
   });
 
   // Persist recovered durable/DNA avatars onto the line so the next load is instant.
-  void persistQuotationItemAvatars(supabase, enriched, items);
+  await persistQuotationItemAvatars(supabase, enriched, items);
   // Background: upload CDN/profile photos into creator-avatars for lines still missing.
   void stabilizeMissingWorkspaceAvatars(supabase, enriched);
 
@@ -829,6 +830,7 @@ async function persistQuotationItemAvatars(
   original: QuotationItemRow[]
 ) {
   const originalById = new Map(original.map((item) => [item.id, item]));
+  const writer = tryCreateServiceRoleClient().client ?? supabase;
 
   await Promise.all(
     enriched.map(async (item) => {
@@ -860,7 +862,7 @@ async function persistQuotationItemAvatars(
         return;
       }
 
-      await supabase
+      await writer
         .from("quotation_items")
         .update({
           profile_image_url: item.profile_image_url,

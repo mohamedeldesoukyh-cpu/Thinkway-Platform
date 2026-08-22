@@ -1,5 +1,6 @@
 import { pickCreatorDisplayName } from "@/lib/text/decode-html-entities";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+import { avatarStorageQualityRank } from "@/lib/creators/creator-centric";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
 import { resolveCreatorRecentPublicationThumbnail } from "@/lib/creators/recent-publication-thumb";
 import {
@@ -194,8 +195,11 @@ export function preferAvatarUrl(current?: string | null, live?: string | null): 
   if (!existing) return next;
   if (!next) return existing;
   if (isInstagramCdnUrlExpired(next) && !isInstagramCdnUrlExpired(existing)) return existing;
+  if (isImportedCreatorAvatarUrl(next) && !isImportedCreatorAvatarUrl(existing)) return existing;
   if (isImportedCreatorAvatarUrl(existing) && !isImportedCreatorAvatarUrl(next)) return next;
   if (isInstagramCdnUrlExpired(existing)) return next;
+  if (avatarStorageQualityRank(next) > avatarStorageQualityRank(existing)) return next;
+  if (!isImportedCreatorAvatarUrl(next) && !isInstagramCdnUrlExpired(next)) return next;
   return existing;
 }
 
@@ -265,7 +269,7 @@ export function applyCrmCreatorProfile(
   if (profile.accounts.length === 0) {
     return {
       ...rest,
-      avatarUrl: preferAvatarUrl(rest.avatarUrl, profile.avatarUrl),
+      avatarUrl: preferAvatarUrl(rest.avatarUrl, profile.avatarUrl) ?? profile.avatarUrl,
     };
   }
   const primary =
@@ -281,7 +285,7 @@ export function applyCrmCreatorProfile(
     avgComments: primary?.avgComments ?? rest.avgComments,
     avgViews: primary?.avgViews ?? rest.avgViews,
     handle: primary?.handle ?? rest.handle,
-    avatarUrl: preferAvatarUrl(rest.avatarUrl, profile.avatarUrl),
+    avatarUrl: preferAvatarUrl(rest.avatarUrl, profile.avatarUrl) ?? profile.avatarUrl,
     profileUrl:
       rest.profileUrl ||
       primary?.profileUrl ||

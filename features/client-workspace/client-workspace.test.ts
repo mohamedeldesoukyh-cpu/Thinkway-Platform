@@ -1424,6 +1424,13 @@ test("live enrichment replaces imported avatar and cloned platform engagement ra
     "https://example.supabase.co/storage/v1/object/public/creator-avatars/enrichment/inf/instagram/eyadelmogy.jpg";
   assert.equal(preferAvatarUrl(importAvatar, liveAvatar), liveAvatar);
   assert.equal(preferAvatarUrl(liveAvatar, importAvatar), liveAvatar);
+  assert.equal(
+    preferAvatarUrl(
+      "https://example.supabase.co/storage/v1/object/public/creator-avatars/enrichment/old/instagram/eyadelmogy.jpg",
+      liveAvatar
+    ),
+    liveAvatar
+  );
 
   const live = applyLiveCreatorProfile(
     {
@@ -3308,6 +3315,64 @@ test("quotation overlay uses quotation currency and service description as clien
   assert.equal(projected.selectedCount, 0);
   assert.equal(projected.totalInvestment, 0);
   assert.equal(projected.currency, "AED");
+});
+
+test("quotation overlay keeps enrichment avatar and live platform accounts", () => {
+  const importAvatar =
+    "https://example.supabase.co/storage/v1/object/public/creator-avatars/imports/d843/instagram/eyadelmogy.jpg";
+  const liveAvatar =
+    "https://example.supabase.co/storage/v1/object/public/creator-avatars/enrichment/inf/tiktok/eyadelmogy.jpg";
+  const merged = overlayQuotationOnShortlistCreators(
+    [
+      {
+        creatorId: "inf:1",
+        displayName: "eyadelmogy",
+        avatarUrl: importAvatar,
+        platformAccounts: [
+          { platform: "instagram", followers: 954_800, engagementRate: 5.46 },
+          { platform: "tiktok", followers: 898_900, engagementRate: 5.46 },
+        ],
+      },
+    ],
+    [
+      {
+        creatorId: "inf:1",
+        displayName: "eyadelmogy",
+        avatarUrl: liveAvatar,
+        investmentAmount: 10_000,
+        platformAccounts: [
+          { platform: "instagram", handle: "@eyadelmogy", followers: 954_800, engagementRate: 5.46 },
+          { platform: "tiktok", handle: "@eyadelmogyy", followers: 939_600, engagementRate: 4.883 },
+        ],
+      },
+    ]
+  );
+  assert.equal(merged[0]?.avatarUrl, liveAvatar);
+  assert.equal(merged[0]?.platformAccounts?.find((row) => row.platform === "tiktok")?.followers, 939_600);
+  assert.equal(merged[0]?.investmentAmount, 10_000);
+
+  const staleLine = overlayQuotationOnShortlistCreators(
+    [
+      {
+        creatorId: "inf:1",
+        displayName: "eyadelmogy",
+        avatarUrl: liveAvatar,
+        platformAccounts: [
+          { platform: "tiktok", followers: 939_600, engagementRate: 4.883 },
+        ],
+      },
+    ],
+    [
+      {
+        creatorId: "inf:1",
+        displayName: "eyadelmogy",
+        avatarUrl: importAvatar,
+        investmentAmount: 10_000,
+      },
+    ]
+  );
+  assert.equal(staleLine[0]?.avatarUrl, liveAvatar);
+  assert.equal(staleLine[0]?.platformAccounts?.[0]?.followers, 939_600);
 });
 
 test("legacy content and quotation URLs map into the primary journey", () => {
