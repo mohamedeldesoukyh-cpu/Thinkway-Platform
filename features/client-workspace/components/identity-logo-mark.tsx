@@ -11,13 +11,6 @@ export function ClientWorkspaceIdentityMark({
 }) {
   return (
     <div className="logo-pair">
-      {identityLogo?.url ? (
-        <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={identityLogo.url} alt={identityLogo.alt} className="partner-logo" />
-          <span className="logo-divider" aria-hidden="true" />
-        </>
-      ) : null}
       <div className="logo">
         <LogoMark />
         {wordmarkAsSpan ? (
@@ -30,6 +23,13 @@ export function ClientWorkspaceIdentityMark({
           </b>
         )}
       </div>
+      {identityLogo?.url ? (
+        <>
+          <span className="logo-divider" aria-hidden="true" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={identityLogo.url} alt={identityLogo.alt} className="partner-logo" />
+        </>
+      ) : null}
     </div>
   );
 }
