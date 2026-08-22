@@ -1,11 +1,9 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Client Workspace — later pricing needs a new Your Selection approval; extensions after commercial approval (pushed to `develop`)
+**Focus:** Client Workspace — priced creators first in display lists
 
-Unpriced creators in a freeze stay out of Commercial when Thinkway later adds a price. The client must select them again on Your Selection and Approve Selected Creators. If the quotation is not yet commercially approved, they join the original commercial. If it is already approved, they appear as Quotation extension 1/2/3 with Original total + extensions + Total investment. No second quotation engine.
+Client Workspace Shortlist, Your Selection, and Overview now show priced creators (`investmentAmount > 0`) before unpriced ones. Display-only: freeze `creatorIds`, overlay merge order, calculator totals, and quotation approval are unchanged. Zero or missing price counts as unpriced.
 
-Client Workspace tests: 148 passing. Production untouched.
-
-- Dev: https://dev.thinkwaymedia.com  
-- Prod: untouched (`https://app.thinkwaymedia.com`)
+- Tests: Client Workspace 159 passing · `npx tsc --noEmit` pass · eslint on touched files pass  
+- Stage 3 Campaign live/publication tracking remains on Development (`d5c381d7`); not part of this Production cherry-pick

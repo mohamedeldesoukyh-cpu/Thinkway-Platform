@@ -114,6 +114,17 @@ export function isPricedClientInvestment(amount: number | null | undefined): boo
   return amount != null && Number.isFinite(amount) && amount > 0;
 }
 
+/** Display-only: priced creators first, then unpriced. Relative order inside each group is kept. */
+export function sortCreatorsPricedFirst<T extends { investmentAmount?: number | null }>(
+  creators: T[]
+): T[] {
+  return [...creators].sort((left, right) => {
+    const leftRank = isPricedClientInvestment(left.investmentAmount) ? 0 : 1;
+    const rightRank = isPricedClientInvestment(right.investmentAmount) ? 0 : 1;
+    return leftRank - rightRank;
+  });
+}
+
 export function thinkwayStatusLabel(status: ClientThinkwayStatus | undefined): string {
   if (!status) return "";
   return THINKWAY_STATUS_LABEL[status];

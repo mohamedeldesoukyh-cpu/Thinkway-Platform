@@ -1,5 +1,5 @@
 import type { ClientCreatorSelectionState } from "./constants";
-import { creatorsForClientCommercial } from "./selection-flow";
+import { creatorsForClientCommercial, sortCreatorsPricedFirst } from "./selection-flow";
 import type { ClientContentRow, ClientCreatorCard, ClientWorkspaceView } from "./types";
 
 export function selectionMapFromView(
@@ -13,7 +13,7 @@ export function acceptedCreators(
   selection: Record<string, ClientCreatorSelectionState>,
   approvedIds?: string[] | null
 ): ClientCreatorCard[] {
-  return creatorsForClientCommercial(creators, selection, approvedIds);
+  return sortCreatorsPricedFirst(creatorsForClientCommercial(creators, selection, approvedIds));
 }
 
 /** Your Selection shows live Shortlist picks, then the frozen Client Approved roster. */

@@ -13,6 +13,7 @@ import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
 
 import { clientFacingAllocationNote } from "./format";
 import { formatDeliverableItems, parseDeliverableItems } from "./deliverables";
+import { sortCreatorsPricedFirst } from "./selection-flow";
 import { isSelectedForCalculator } from "./status";
 import {
   attachMatchExplanation,
@@ -113,47 +114,49 @@ export function projectClientCreators(
   const ids = clientCreatorIds(campaignObject);
   const reasoning = reasoningById(campaignObject);
   const hydratedMap = hydratedById(hydrated);
-  return ids.map((creatorId) => {
-    const row = reasoning.get(creatorId);
-    const profile = hydratedMap.get(creatorId);
-    const platform = primaryPlatform(profile, row);
-    const fitScores = creatorsData(campaignObject).recommendations?.creatorFitScores ?? {};
-    const matchPercent = optionalMetric(fitScores[creatorId]);
-    const base = enrichSnapshotCreatorFromUnified(
-      {
-        creatorId,
-        displayName: row?.displayName?.trim() || profile?.display_name || "Creator",
-        handle: primaryHandle(profile, row),
-        platform,
-        country: profile?.estimated_country || profile?.country_code || undefined,
-        city: profile?.city || undefined,
-        deliverables: row?.serviceLabel,
-        deliverableItems: row?.serviceTypes?.length
-          ? parseDeliverableItems(
-              row.serviceTypes.map((type) => ({ type, platform, quantity: 1 }))
-            )
-          : undefined,
-        investmentAmount: row?.quotedRevenue,
-        investmentCurrency: row?.quotedCurrency,
-        avatarUrl: row?.avatarUrl,
-      },
-      profile
-    );
-    const withMatch = attachMatchExplanation(base, {
-      matchPercent,
-      matchConfidence: row?.confidence,
-      why: row?.whySelected,
-      audienceMatch: row?.audienceMatch,
-      evidence: row?.evidence,
-    });
-    return {
-      ...withMatch,
-      deliverables: formatDeliverableItems(withMatch.deliverableItems) || withMatch.deliverables,
-      selection: selection[creatorId] ?? "in_review",
-      contentExamples: (withMatch.contentFeed ?? []).slice(0, 3),
-      contentFeed: withMatch.contentFeed,
-    };
-  });
+  return sortCreatorsPricedFirst(
+    ids.map((creatorId) => {
+      const row = reasoning.get(creatorId);
+      const profile = hydratedMap.get(creatorId);
+      const platform = primaryPlatform(profile, row);
+      const fitScores = creatorsData(campaignObject).recommendations?.creatorFitScores ?? {};
+      const matchPercent = optionalMetric(fitScores[creatorId]);
+      const base = enrichSnapshotCreatorFromUnified(
+        {
+          creatorId,
+          displayName: row?.displayName?.trim() || profile?.display_name || "Creator",
+          handle: primaryHandle(profile, row),
+          platform,
+          country: profile?.estimated_country || profile?.country_code || undefined,
+          city: profile?.city || undefined,
+          deliverables: row?.serviceLabel,
+          deliverableItems: row?.serviceTypes?.length
+            ? parseDeliverableItems(
+                row.serviceTypes.map((type) => ({ type, platform, quantity: 1 }))
+              )
+            : undefined,
+          investmentAmount: row?.quotedRevenue,
+          investmentCurrency: row?.quotedCurrency,
+          avatarUrl: row?.avatarUrl,
+        },
+        profile
+      );
+      const withMatch = attachMatchExplanation(base, {
+        matchPercent,
+        matchConfidence: row?.confidence,
+        why: row?.whySelected,
+        audienceMatch: row?.audienceMatch,
+        evidence: row?.evidence,
+      });
+      return {
+        ...withMatch,
+        deliverables: formatDeliverableItems(withMatch.deliverableItems) || withMatch.deliverables,
+        selection: selection[creatorId] ?? "in_review",
+        contentExamples: (withMatch.contentFeed ?? []).slice(0, 3),
+        contentFeed: withMatch.contentFeed,
+      };
+    })
+  );
 }
 
 export function projectClientContent(campaignObject: CampaignObject): ClientContentRow[] {
