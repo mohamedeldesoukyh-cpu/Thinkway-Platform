@@ -6,6 +6,7 @@ import {
   formatPlatformLabel,
   normalizeClientEngagementRate,
 } from "./format";
+import { campaignPlatformMixFromRoster } from "./deliverables";
 import type {
   ClientAudienceSlice,
   ClientCreatorCard,
@@ -238,13 +239,10 @@ export function creatorMixFromRoster(creators: ClientCreatorCard[]): {
   const genders = countLabels(
     creators.flatMap((creator) => genderLabels(creator.audience?.genders ?? []))
   );
-  const platforms = countLabels(
-    creators.flatMap((creator) => {
-      const accounts = creator.platformAccounts?.map((row) => row.platform) ?? [];
-      if (accounts.length > 0) return accounts;
-      return creator.platform ? [creator.platform] : [];
-    }).map((platform) => formatPlatformLabel(platform) ?? platform)
-  );
+  const platforms = campaignPlatformMixFromRoster(creators).map((row) => ({
+    label: formatPlatformLabel(row.platform) ?? row.platform,
+    count: row.count,
+  }));
   return { tiers, markets, categories, genders, platforms };
 }
 

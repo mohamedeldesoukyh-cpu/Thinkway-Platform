@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
 
 import { formatCompactCount, formatEngagementPct, formatPlatformLabel, providedText, TO_BE_CONFIRMED } from "../format";
+import { campaignPlatformsFromRoster, looksLikePlatformList } from "../deliverables";
 import {
   creatorMixFromRoster,
   donutGradient,
@@ -129,18 +130,20 @@ export function OverviewWorkspace({
   const o = view.overview;
   const roster = selectedCreators.length > 0 ? selectedCreators : [];
   const mix = creatorMixFromRoster(roster);
-  const platformLabels = uniqueLabels(
-    (o.platforms.length > 0 ? o.platforms : mix.platforms.map((item) => item.label)).map(
-      (platform) => formatPlatformLabel(platform) ?? platform
-    )
-  );
-  const glancePlatforms = uniqueLabels(
-    platformLabels.length > 0 ? platformLabels : mix.platforms.map((item) => item.label)
-  );
+  const platformLabels =
+    mix.platforms.length > 0
+      ? mix.platforms.map((item) => item.label)
+      : uniqueLabels(
+          campaignPlatformsFromRoster(roster, o.platforms).map(
+            (platform) => formatPlatformLabel(platform) ?? platform
+          )
+        );
+  const glancePlatforms = platformLabels;
+  const deliverableFallback = o.deliverables.filter((item) => !looksLikePlatformList(item)).join(" · ");
   const deliverables =
     selectedSummary.activityMix.length > 0
       ? selectedSummary.activityMix.map((item) => `${item.count} ${item.label}`).join(" · ")
-      : o.deliverables.join(" · ");
+      : deliverableFallback;
   const forecast = selectedSummary;
   const hasSelection = selectedCreators.length > 0;
   const reachLabel =

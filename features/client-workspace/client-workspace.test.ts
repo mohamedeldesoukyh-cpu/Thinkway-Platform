@@ -14,8 +14,8 @@ import {
   quotationClientShareRequiresSave,
   quotationIsMovedToCampaign,
 } from "./client-review-selection";
-import { clientSafeFitCopy, clientCreatorIdentity, clientCreatorCardDescription, formatCompactCount, formatEngagementPct, formatEngagementRateLabel, formatHandleLabel, formatOptionalCompactCount, formatOptionalEngagementPct, listPlatformChipMetrics, providedText } from "./format";
-import { deliverablesLabel, groupedActivityMix, looksLikePlatformList, summarizeCreatorDeliverables, summarizeDeliverablesByPlatform } from "./deliverables";
+import { clientSafeFitCopy, clientCreatorIdentity, clientCreatorCardDescription, formatCompactCount, formatEngagementPct, formatEngagementRateLabel, formatHandleLabel, formatOptionalCompactCount, formatOptionalEngagementPct, formatPlatformLabel, listPlatformChipMetrics, providedText } from "./format";
+import { campaignPlatformsFromRoster, deliverablesLabel, groupedActivityMix, looksLikePlatformList, summarizeCreatorDeliverables, summarizeDeliverablesByPlatform } from "./deliverables";
 import {
   allocationSlices,
   containsInternalTerminology,
@@ -860,6 +860,48 @@ test("overview executive lead uses selected creators and does not invent platfor
     ),
     false
   );
+});
+
+test("overview copy matches deliverable platforms, including Mirrored TT as TikTok", () => {
+  const platformLabels = campaignPlatformsFromRoster(
+    [
+      {
+        deliverableItems: [
+          { platform: "instagram", type: "story", quantity: 3 },
+          { platform: "instagram", type: "reel", quantity: 2 },
+          { platform: "instagram", type: "video", quantity: 2 },
+          { platform: "instagram", type: "mirrored_tt", quantity: 1 },
+        ],
+      },
+    ],
+    ["instagram"]
+  ).map((platform) => formatPlatformLabel(platform) ?? platform);
+  assert.deepEqual(platformLabels, ["Instagram", "TikTok"]);
+  assert.match(
+    overviewExecutiveLead({
+      selectedCount: 3,
+      pricedCount: 2,
+      unpricedCount: 1,
+      platformLabels,
+      reachLabel: "2.2M",
+      engagementLabel: "6.0%",
+      investmentLabel: "EGP 715,000",
+    }),
+    /Three selected creators across Instagram and TikTok/
+  );
+  const pillars = overviewApproachPillars({
+    platformLabels,
+    activityMix: [
+      { label: "Stories", count: 3 },
+      { label: "Reels", count: 2 },
+      { label: "Videos", count: 2 },
+      { label: "Mirrored TT", count: 1 },
+    ],
+    categories: ["Beauty"],
+  });
+  assert.match(pillars[0]!.body, /two-platform activation — Instagram and TikTok/);
+  assert.match(pillars[0]!.body, /1 Mirrored TT/);
+  assert.equal(pillars[0]!.body.includes("Facebook"), false);
 });
 
 test("overview approach pillars use platform avatars-ready labels and category mix", () => {
@@ -1737,6 +1779,62 @@ test("accepted creators and content rows follow the current selection", () => {
   const mix = creatorMixFromRoster(accepted);
   assert.equal(mix.platforms.find((item) => item.label === "Instagram")?.count, 1);
   assert.equal(mix.platforms.some((item) => item.label === "TikTok"), false);
+});
+
+test("overview platform mix uses quotation deliverables, not creator social accounts", () => {
+  const mix = creatorMixFromRoster([
+    {
+      creatorId: "a",
+      displayName: "A",
+      platform: "instagram",
+      platformAccounts: [
+        { platform: "instagram" },
+        { platform: "tiktok" },
+        { platform: "facebook" },
+      ],
+      deliverableItems: [
+        { platform: "instagram", type: "story", quantity: 3 },
+        { platform: "instagram", type: "reel", quantity: 2 },
+        { platform: "instagram", type: "video", quantity: 2 },
+        { platform: "instagram", type: "mirrored_tt", quantity: 1 },
+      ],
+      contentExamples: [],
+    },
+  ] as never);
+  assert.deepEqual(
+    mix.platforms.map((item) => item.label).sort(),
+    ["Instagram", "TikTok"]
+  );
+  assert.equal(mix.platforms.find((item) => item.label === "Instagram")?.count, 1);
+  assert.equal(mix.platforms.find((item) => item.label === "TikTok")?.count, 1);
+  assert.equal(mix.platforms.some((item) => item.label === "Facebook"), false);
+  assert.deepEqual(
+    campaignPlatformsFromRoster(
+      [
+        {
+          deliverableItems: [
+            { platform: "instagram", type: "story", quantity: 3 },
+            { platform: "instagram", type: "mirrored_tt", quantity: 1 },
+          ],
+        },
+      ],
+      ["instagram"]
+    ),
+    ["instagram", "tiktok"]
+  );
+  const dumpMix = creatorMixFromRoster([
+    {
+      creatorId: "b",
+      displayName: "B",
+      platform: "instagram",
+      platformAccounts: [{ platform: "facebook" }],
+      deliverableItems: [
+        { platform: "instagram,tiktok,youtube,facebook", type: "instagram_reel", quantity: 1 },
+      ],
+      contentExamples: [],
+    },
+  ] as never);
+  assert.deepEqual(dumpMix.platforms.map((item) => item.label), ["Instagram"]);
 });
 
 test("accept can be removed until the client submits the selection", () => {

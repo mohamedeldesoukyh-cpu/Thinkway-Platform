@@ -216,6 +216,47 @@ function positiveQuantity(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
+export function campaignPlatformsForCreator(creator: {
+  deliverableItems?: ClientDeliverableItem[];
+}): string[] {
+  const platforms = new Set<string>();
+  for (const item of creator.deliverableItems ?? []) {
+    const keys = platformsForDeliverableItem(item).filter((platform) => platform && platform !== "_other");
+    // A comma-joined social-account dump is not the campaign mix. Only keep
+    // platforms implied by the post type, or a single explicit line platform.
+    if (keys.length !== 1) continue;
+    platforms.add(keys[0]!);
+  }
+  return sortPlatforms([...platforms]);
+}
+
+export function campaignPlatformMixFromRoster(
+  creators: Array<{ deliverableItems?: ClientDeliverableItem[] }>
+): Array<{ platform: string; count: number }> {
+  const counts = new Map<string, number>();
+  for (const creator of creators) {
+    for (const platform of campaignPlatformsForCreator(creator)) {
+      counts.set(platform, (counts.get(platform) ?? 0) + 1);
+    }
+  }
+  return sortPlatforms([...counts.keys()]).map((platform) => ({
+    platform,
+    count: counts.get(platform) ?? 0,
+  }));
+}
+
+/** Campaign platforms from selected deliverables only — never creator social profiles. */
+export function campaignPlatformsFromRoster(
+  creators: Array<{ deliverableItems?: ClientDeliverableItem[] }>,
+  fallback: string[] = []
+): string[] {
+  const fromDeliverables = sortPlatforms([
+    ...new Set(creators.flatMap((creator) => campaignPlatformsForCreator(creator))),
+  ]);
+  if (fromDeliverables.length > 0) return fromDeliverables;
+  return sortPlatforms([...new Set(fallback.flatMap((platform) => splitPlatformTokens(platform)))]);
+}
+
 export function sortClientPlatforms(platforms: string[]): string[] {
   return sortPlatforms(platforms);
 }
