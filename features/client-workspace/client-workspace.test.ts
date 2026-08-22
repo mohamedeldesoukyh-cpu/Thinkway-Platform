@@ -71,6 +71,7 @@ import {
 } from "./status";
 import {
   projectCommercialFromSnapshot,
+  projectCreatorsFromSnapshot,
   parseSourceSnapshot,
   parseSnapshotCreator,
   visibleClientUpdateNotice,
@@ -127,6 +128,7 @@ import {
   buildCreatorApprovalConfirmation,
   selectAllCreatorStates,
   clearCreatorSelectionStates,
+  sortCreatorsPricedFirst,
 } from "./selection-flow";
 import {
   clientFacingAgencyFeeFromLine,
@@ -2704,6 +2706,65 @@ test("client can select priced and unpriced creators; calculator counts priced o
   assert.equal(commercial.selectedCount, 2);
   assert.equal(commercial.pricedSelectedCount, 1);
   assert.equal(commercial.unpricedSelectedCount, 1);
+});
+
+test("priced creators appear before unpriced creators without changing totals or freeze ids", () => {
+  const unordered = [
+    { creatorId: "open-c", displayName: "C" },
+    { creatorId: "priced-a", displayName: "A", investmentAmount: 400_000 },
+    { creatorId: "open-d", displayName: "D", investmentAmount: 0 },
+    { creatorId: "priced-b", displayName: "B", investmentAmount: 100_000 },
+  ];
+  assert.deepEqual(
+    sortCreatorsPricedFirst(unordered).map((creator) => creator.creatorId),
+    ["priced-a", "priced-b", "open-c", "open-d"]
+  );
+  const selection = {
+    "open-c": "accepted" as const,
+    "priced-a": "accepted" as const,
+    "open-d": "accepted" as const,
+    "priced-b": "accepted" as const,
+  };
+  const before = selectionCalculator(unordered, selection);
+  const after = selectionCalculator(sortCreatorsPricedFirst(unordered), selection);
+  assert.equal(after.selectedCount, before.selectedCount);
+  assert.equal(after.pricedSelectedCount, before.pricedSelectedCount);
+  assert.equal(after.pricedInvestment, before.pricedInvestment);
+  assert.equal(after.totalInvestment, before.totalInvestment);
+  const roster = yourSelectionRoster(unordered as never, selection);
+  assert.deepEqual(
+    roster.map((creator) => creator.creatorId),
+    ["priced-a", "priced-b", "open-c", "open-d"]
+  );
+  const frozen = yourSelectionRoster(unordered as never, selection, {
+    selectionConfirmed: true,
+    clientApprovedCreatorIds: ["open-c", "priced-a", "open-d", "priced-b"],
+  });
+  assert.deepEqual(
+    frozen.map((creator) => creator.creatorId),
+    ["priced-a", "priced-b", "open-c", "open-d"]
+  );
+  const snapshot = parseSourceSnapshot({
+    source: "quotation",
+    brandName: "Brand",
+    campaignName: "Campaign",
+    clientLabel: "Client",
+    platforms: [],
+    deliverables: [],
+    creators: unordered,
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "", phases: [] },
+    commercial: { currency: "EGP", creatorInvestment: 500_000, totalInvestment: 500_000, lines: [], selectedCount: 4, totalCount: 4 },
+    creatorIds: ["open-c", "priced-a", "open-d", "priced-b"],
+  })!;
+  assert.deepEqual(
+    snapshot.creatorIds,
+    ["open-c", "priced-a", "open-d", "priced-b"]
+  );
+  assert.deepEqual(
+    projectCreatorsFromSnapshot(snapshot, selection).map((creator) => creator.creatorId),
+    ["priced-a", "priced-b", "open-c", "open-d"]
+  );
 });
 
 test("unpriced selected creators do not block final quotation approval when priced creators exist", () => {

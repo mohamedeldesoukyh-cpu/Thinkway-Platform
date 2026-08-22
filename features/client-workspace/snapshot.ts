@@ -1,7 +1,7 @@
 import { pickCreatorDisplayName, resolveCreatorIdentity } from "@/lib/text/decode-html-entities";
 
 import type { ClientCreatorSelectionState } from "./constants";
-import { isPricedClientInvestment, parseClientSelectionFreeze, parseThinkwayStatus, applyQuotationCurrency, creatorsForClientCommercial, resolveClientSelectionFreeze } from "./selection-flow";
+import { isPricedClientInvestment, parseClientSelectionFreeze, parseThinkwayStatus, applyQuotationCurrency, creatorsForClientCommercial, resolveClientSelectionFreeze, sortCreatorsPricedFirst } from "./selection-flow";
 import { parseDeliverableItems as parseDeliverableItemRows } from "./deliverables";
 import type {
   ClientAudienceBrief,
@@ -455,14 +455,16 @@ export function projectCreatorsFromSnapshot(
   selection: Record<string, ClientCreatorSelectionState>
 ): ClientCreatorCard[] {
   const currency = snapshot.commercial.currency;
-  return snapshot.creators.map((creator) => {
-    const withCurrency = applyQuotationCurrency(creator, currency);
-    return {
-      ...withCurrency,
-      selection: selection[creator.creatorId] ?? "in_review",
-      contentExamples: withCurrency.contentFeed?.slice(0, 3) ?? [],
-    };
-  });
+  return sortCreatorsPricedFirst(
+    snapshot.creators.map((creator) => {
+      const withCurrency = applyQuotationCurrency(creator, currency);
+      return {
+        ...withCurrency,
+        selection: selection[creator.creatorId] ?? "in_review",
+        contentExamples: withCurrency.contentFeed?.slice(0, 3) ?? [],
+      };
+    })
+  );
 }
 
 export function projectOverviewFromSnapshot(
