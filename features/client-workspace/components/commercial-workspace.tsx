@@ -14,6 +14,7 @@ import {
   isValidClientCommercialApproval,
   INVALID_ZERO_SELECTION_APPROVAL_MESSAGE,
   PRICE_PENDING_LABEL,
+  REVIEW_YOUR_SELECTION_LABEL,
   UNPRICED_INCLUDED_MESSAGE,
 } from "../selection-flow";
 import { allocationSlices, MIX_BAR_COLORS, rosterHeadline } from "../presentation";
@@ -31,7 +32,7 @@ export function CommercialWorkspace({
   view: ClientWorkspaceView;
   token?: string;
 }) {
-  const { selectedCreators, selectedCommercial } = useClientWorkspaceState();
+  const { selectedCreators, selectedCommercial, goToSection } = useClientWorkspaceState();
   const commercialOpen = canOpenCommercialWorkspace({
     selectionConfirmed: view.journey?.selectionConfirmed,
     historical: view.journey?.historical,
@@ -44,6 +45,11 @@ export function CommercialWorkspace({
         <p className="ck">Commercial</p>
         <h2>Awaiting creator approval</h2>
         <p className="note">{COMMERCIAL_LOCKED_UNTIL_CREATOR_APPROVAL_MESSAGE}</p>
+        <div className="dacts" style={{ justifyContent: "flex-start", marginTop: 18 }}>
+          <button type="button" className="btn pri" onClick={() => goToSection("creators")}>
+            {REVIEW_YOUR_SELECTION_LABEL}
+          </button>
+        </div>
       </div>
     );
   }
@@ -64,6 +70,7 @@ export function CommercialWorkspace({
 
   return (
     <>
+      {token ? <FinalQuotationApprovalCard view={view} token={token} /> : null}
       <div className="card">
         <p className="ck">Campaign investment</p>
         <h2 className={commercial.totalInvestment > 0 ? "cm-total" : "cm-total tbc"}>
@@ -349,7 +356,6 @@ export function CommercialWorkspace({
           </div>
         );
       })()}
-      {token ? <FinalQuotationApprovalCard view={view} token={token} /> : null}
       {token ? <CommercialQuotationDelivery view={view} token={token} /> : null}
     </>
   );

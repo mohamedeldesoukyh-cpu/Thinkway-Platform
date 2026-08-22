@@ -41,7 +41,7 @@ export function FinalQuotationApprovalCard({
   if (!view.journey?.canApproveFinalQuotation) return null;
 
   return (
-    <div className="card">
+    <div className="card" id="approve-final-quotation">
       <p className="ck">Commercial approval</p>
       <h2>{APPROVE_FINAL_QUOTATION_LABEL}</h2>
       <p className="note">
