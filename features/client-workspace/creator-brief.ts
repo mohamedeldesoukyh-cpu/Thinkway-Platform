@@ -13,8 +13,11 @@ import {
 import { clientSafeFitCopy, formatLocation } from "./format";
 import { parseDeliverableItems, summarizeCreatorDeliverables } from "./deliverables";
 import {
+  applyCrmCreatorProfile,
+  creatorProfileSyncFingerprint,
   enrichSnapshotCreatorFromUnified,
   influencerIdFromRefs,
+  loadCrmCreatorProfiles,
   optionalMetric,
   profileUrlFromHandle,
   shouldReplaceContentFeed,
@@ -391,20 +394,62 @@ export async function freezeCreatorBriefIfNeeded(
   if (!snapshot) return null;
   const index = snapshot.creators.findIndex((creator) => creator.creatorId === creatorId);
   if (index < 0) return null;
-  const current = snapshot.creators[index]!;
-  if (current.briefFrozenAt && !needsClientBriefBackfill(current)) {
-    return briefFromSnapshotCreator(current);
-  }
-
-  if (!isInteractiveClientReview(review.status)) {
-    return briefFromSnapshotCreator(current);
-  }
-
+  const original = snapshot.creators[index]!;
+  let current = original;
+  const liveProfileAllowed =
+    isInteractiveClientReview(review.status) && !review.campaignHeaderId;
   const service = tryCreateServiceRoleClient().client;
+
+  if (liveProfileAllowed && service) {
+    try {
+      const influencerId = influencerIdFromRefs({
+        influencerId: current.influencerId,
+        creatorId: current.creatorId,
+      });
+      if (influencerId) {
+        const profiles = await loadCrmCreatorProfiles(service, [influencerId]);
+        const profile = profiles.get(influencerId);
+        if (profile) current = applyCrmCreatorProfile(current, profile);
+      }
+    } catch {
+      current = original;
+    }
+  }
+
+  const persistProfileOverlay = async (next: ClientReviewSourceSnapshotCreator) => {
+    if (!service || !liveProfileAllowed) return;
+    if (creatorProfileSyncFingerprint([original]) === creatorProfileSyncFingerprint([next])) {
+      return;
+    }
+    const nextSnapshot: ClientReviewSourceSnapshot = {
+      ...snapshot,
+      creators: snapshot.creators.map((creator, idx) => (idx === index ? next : creator)),
+    };
+    await service
+      .from("campaign_client_reviews" as never)
+      .update({
+        source_snapshot: nextSnapshot,
+        updated_at: new Date().toISOString(),
+      } as never)
+      .eq("id", review.id);
+  };
+
+  if (current.briefFrozenAt && !needsClientBriefBackfill(current)) {
+    await persistProfileOverlay(current);
+    return briefFromSnapshotCreator(current);
+  }
+
+  if (!liveProfileAllowed) {
+    return briefFromSnapshotCreator(current);
+  }
+
   if (!service) return briefFromSnapshotCreator(current);
 
   const live = await loadStoredCreatorContext(service, current);
-  if (!live.loaded) return briefFromSnapshotCreator(current);
+  if (!live.loaded) {
+    await persistProfileOverlay(current);
+    return briefFromSnapshotCreator(current);
+  }
   const frozen = mergeFrozenBrief(current, live);
   const nextSnapshot: ClientReviewSourceSnapshot = {
     ...snapshot,

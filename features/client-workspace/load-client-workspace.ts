@@ -53,7 +53,11 @@ import {
   selectionCalculator,
   selectionJourneyFlags,
 } from "./selection-flow";
-import { hydrateSnapshotCreatorsFromUnified } from "./creator-snapshot";
+import {
+  hydrateSnapshotCreatorsFromCrm,
+  hydrateSnapshotCreatorsFromUnified,
+  influencerIdFromRefs,
+} from "./creator-snapshot";
 
 export type ResolvedClientReview =
   | { ok: true; review: ClientReviewRecord }
@@ -384,19 +388,23 @@ export async function loadClientWorkspace(
       quotation: quotationSnapshot,
       historical: picked.historical,
     });
+    const canHydrateLiveProfile =
+      !picked.historical &&
+      Boolean(service) &&
+      isInteractiveClientReview(activeReview.status) &&
+      !activeReview.campaignHeaderId;
+    let liveQuotationId: string | null = null;
     if (!picked.historical && service) {
       try {
         const {
-          persistInteractiveReviewProjection,
           projectCurrentQuotationOntoSnapshot,
           resolveCurrentQuotationIdForClientJourney,
         } = await import("./live-quotation-projection");
-        const liveQuotationId = await resolveCurrentQuotationIdForClientJourney(service, {
+        liveQuotationId = await resolveCurrentQuotationIdForClientJourney(service, {
           quotationId: quotationLatest?.quotationId ?? activeReview.quotationId,
-          shortlistId:
-            isInteractiveClientReview(activeReview.status) && !activeReview.campaignHeaderId
-              ? latestReviewForSource(members, "shortlist")?.shortlistId ?? activeReview.shortlistId
-              : null,
+          shortlistId: canHydrateLiveProfile
+            ? latestReviewForSource(members, "shortlist")?.shortlistId ?? activeReview.shortlistId
+            : null,
         });
         if (liveQuotationId) {
           const projected = await projectCurrentQuotationOntoSnapshot(
@@ -404,33 +412,39 @@ export async function loadClientWorkspace(
             mergedSnapshot,
             liveQuotationId
           );
-          if (projected) {
-            mergedSnapshot = projected;
-            if (isInteractiveClientReview(activeReview.status) && !activeReview.campaignHeaderId) {
-              await persistInteractiveReviewProjection({
-                supabase: service,
-                review: activeReview,
-                snapshot: projected,
-                previousFingerprint: activeReview.packageFingerprint as Record<string, unknown>,
-                quotationId: liveQuotationId,
-              });
-            }
-          }
+          if (projected) mergedSnapshot = projected;
         }
       } catch {
         /* keep the merged snapshot if quotation SSOT is unavailable */
       }
     }
-    if (
-      !picked.historical &&
-      service &&
-      isInteractiveClientReview(activeReview.status) &&
-      !activeReview.campaignHeaderId
-    ) {
+    if (canHydrateLiveProfile && service) {
       try {
-        mergedSnapshot = await hydrateSnapshotCreatorsFromUnified(service, mergedSnapshot);
+        mergedSnapshot = await hydrateSnapshotCreatorsFromCrm(service, mergedSnapshot);
+        const needsDiscoveryHydrate = mergedSnapshot.creators.some(
+          (creator) =>
+            !influencerIdFromRefs({
+              influencerId: creator.influencerId,
+              creatorId: creator.creatorId,
+            })
+        );
+        if (needsDiscoveryHydrate) {
+          mergedSnapshot = await hydrateSnapshotCreatorsFromUnified(service, mergedSnapshot);
+        }
       } catch {
         /* keep commercial overlay if live creator lookup fails */
+      }
+      try {
+        const { persistInteractiveReviewProjection } = await import("./live-quotation-projection");
+        await persistInteractiveReviewProjection({
+          supabase: service,
+          review: activeReview,
+          snapshot: mergedSnapshot,
+          previousFingerprint: activeReview.packageFingerprint as Record<string, unknown>,
+          quotationId: liveQuotationId ?? activeReview.quotationId,
+        });
+      } catch {
+        /* in-memory hydrate still renders even if snapshot persist fails */
       }
     }
     const resolvedFreeze = resolveClientSelectionFreeze(
