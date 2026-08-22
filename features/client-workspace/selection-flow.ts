@@ -577,6 +577,9 @@ function overlayQuotedCreator(
       agencyFeeAmount: isPricedClientInvestment(quoted.investmentAmount)
         ? quoted.agencyFeeAmount ?? 0
         : undefined,
+      usageRightsAmount: isPricedClientInvestment(quoted.investmentAmount)
+        ? quoted.usageRightsAmount ?? 0
+        : undefined,
       originalInvestmentAmount: quoted.originalInvestmentAmount,
       originalInvestmentCurrency: quoted.originalInvestmentCurrency,
       thinkwayStatus: quoted.thinkwayStatus ?? creator.thinkwayStatus,
@@ -607,6 +610,7 @@ export function overlayQuotationOnShortlistCreators(
           quotationEligible: false,
           investmentAmount: undefined,
           agencyFeeAmount: undefined,
+          usageRightsAmount: undefined,
           originalInvestmentAmount: undefined,
           originalInvestmentCurrency: undefined,
           serviceDescription: undefined,
@@ -630,6 +634,9 @@ export function overlayQuotationOnShortlistCreators(
             : undefined,
           agencyFeeAmount: isPricedClientInvestment(creator.investmentAmount)
             ? creator.agencyFeeAmount ?? 0
+            : undefined,
+          usageRightsAmount: isPricedClientInvestment(creator.investmentAmount)
+            ? creator.usageRightsAmount ?? 0
             : undefined,
         },
         currency || creator.investmentCurrency

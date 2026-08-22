@@ -104,6 +104,31 @@ export function clientFacingAgencyFeeFromLine(input: {
   return 0;
 }
 
+export type ClientFacingCreatorCardAmounts = {
+  investmentAmount?: number | null;
+  agencyFeeAmount?: number | null;
+  usageRightsAmount?: number | null;
+  originalInvestmentAmount?: number;
+  originalInvestmentCurrency?: string;
+};
+
+function additiveClientFacingExtra(amount: number | null | undefined): number {
+  const value = Number(amount);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+/** Display-only card total: client cost + agency fees + usage rights. Calculator keeps the split. */
+export function clientFacingCreatorCardAmount(
+  creator: Pick<ClientFacingCreatorCardAmounts, "investmentAmount" | "agencyFeeAmount" | "usageRightsAmount">
+): number | undefined {
+  if (!isPricedClientInvestment(creator.investmentAmount)) return undefined;
+  return (
+    (creator.investmentAmount ?? 0) +
+    additiveClientFacingExtra(creator.agencyFeeAmount) +
+    additiveClientFacingExtra(creator.usageRightsAmount)
+  );
+}
+
 export function originalInvestmentForDisplay(
   creator: {
     originalInvestmentAmount?: number;
@@ -122,4 +147,16 @@ export function originalInvestmentForDisplay(
     return null;
   }
   return { amount: creator.originalInvestmentAmount, currency: creator.originalInvestmentCurrency };
+}
+
+export function originalClientFacingCreatorCardAmount(
+  creator: ClientFacingCreatorCardAmounts,
+  quotationCurrency: string
+): { amount: number; currency: string } | null {
+  const original = originalInvestmentForDisplay(creator, quotationCurrency);
+  if (!original) return null;
+  const base = creator.investmentAmount ?? 0;
+  const card = clientFacingCreatorCardAmount(creator);
+  if (!card || base <= 0 || card === base) return original;
+  return { amount: original.amount * (card / base), currency: original.currency };
 }

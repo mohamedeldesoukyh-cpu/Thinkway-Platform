@@ -233,6 +233,7 @@ export function parseSnapshotCreator(row: Record<string, unknown>): ClientReview
     investmentAmount: asNumber(row.investmentAmount),
     investmentCurrency: asString(row.investmentCurrency),
     agencyFeeAmount: asNumber(row.agencyFeeAmount),
+    usageRightsAmount: asNumber(row.usageRightsAmount),
     originalInvestmentAmount: asNumber(row.originalInvestmentAmount),
     originalInvestmentCurrency: asString(row.originalInvestmentCurrency),
     avatarUrl: asString(row.avatarUrl),

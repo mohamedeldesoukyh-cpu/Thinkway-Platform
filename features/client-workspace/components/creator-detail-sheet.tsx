@@ -19,6 +19,7 @@ import {
 } from "../actions/client-workspace-actions";
 import { contentCategoriesForDisplay } from "../content-categories";
 import { deliverablesLabel } from "../deliverables";
+import { clientFacingCreatorCardAmount } from "../quotation-client-facing";
 import {
   DATA_NOT_AVAILABLE,
   formatCompactCount,
@@ -263,12 +264,19 @@ export function CreatorDetailSheet({
               <Section title="Commercial">
                 <p className="text-sm font-semibold">
                   Creator investment{" "}
-                  {(view?.investmentAmount ?? creator.investmentAmount) != null
-                    ? formatMoneyKpi(
-                        (view?.investmentAmount ?? creator.investmentAmount) as number,
-                        view?.investmentCurrency ?? creator.investmentCurrency ?? currency
-                      )
-                    : TO_BE_CONFIRMED}
+                  {(() => {
+                    const amount = clientFacingCreatorCardAmount({
+                      investmentAmount: view?.investmentAmount ?? creator.investmentAmount,
+                      agencyFeeAmount: creator.agencyFeeAmount,
+                      usageRightsAmount: creator.usageRightsAmount,
+                    });
+                    return amount != null
+                      ? formatMoneyKpi(
+                          amount,
+                          view?.investmentCurrency ?? creator.investmentCurrency ?? currency
+                        )
+                      : TO_BE_CONFIRMED;
+                  })()}
                 </p>
               </Section>
 

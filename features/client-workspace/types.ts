@@ -132,6 +132,7 @@ export type ClientReviewSourceSnapshotCreator = {
   investmentAmount?: number;
   investmentCurrency?: string;
   agencyFeeAmount?: number;
+  usageRightsAmount?: number;
   originalInvestmentAmount?: number;
   originalInvestmentCurrency?: string;
   avatarUrl?: string;
@@ -254,6 +255,7 @@ export type ClientCreatorCard = {
   investmentAmount?: number;
   investmentCurrency?: string;
   agencyFeeAmount?: number;
+  usageRightsAmount?: number;
   originalInvestmentAmount?: number;
   originalInvestmentCurrency?: string;
   avatarUrl?: string;

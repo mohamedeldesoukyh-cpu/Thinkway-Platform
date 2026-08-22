@@ -18,6 +18,7 @@ import {
   NOT_AVAILABLE,
   TO_BE_CONFIRMED,
 } from "../format";
+import { clientFacingCreatorCardAmount } from "../quotation-client-facing";
 import type { ClientCreatorCard } from "../types";
 import { Chip, StatusPill } from "./media-plan-ui";
 
@@ -53,9 +54,10 @@ export function CreatorMediaPlanCard({
     clientSafeFitCopy(creator.matchExplanation) ||
     clientSafeFitCopy(creator.fitExplanation) ||
     creator.audienceHighlight;
+  const cardAmount = clientFacingCreatorCardAmount(creator);
   const investment =
-    creator.investmentAmount != null
-      ? formatMoneyKpi(creator.investmentAmount, creator.investmentCurrency ?? currency)
+    cardAmount != null
+      ? formatMoneyKpi(cardAmount, creator.investmentCurrency ?? currency)
       : NOT_AVAILABLE;
   const categories = creator.categories?.length
     ? creator.categories
