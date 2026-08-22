@@ -10,6 +10,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ClientCreatorSelectionState } from "./constants";
 import { persistClientReview, type CreateClientReviewResult } from "./persist-client-review";
 import { fingerprintFromSnapshotCreators } from "./snapshot";
+import { loadIdentityLogoForReview } from "./identity-logo";
 import { shortlistReviewBlockers } from "./source-readiness";
 import { thinkwayStatusFromInternal } from "./selection-flow";
 import { shortlistStatusToClient } from "./status";
@@ -172,7 +173,7 @@ export async function createClientReviewFromShortlist(
 ): Promise<CreateClientReviewResult> {
   const { data: headerRow, error: headerError } = await supabase
     .from("discovery_shortlists")
-    .select("id, name, description, status, is_archived, client_id, brand_id, metadata")
+    .select("id, name, description, status, is_archived, client_id, brand_id, campaign_header_id, metadata")
     .eq("id", input.shortlistId)
     .maybeSingle();
   if (headerError || !headerRow) {
@@ -308,6 +309,11 @@ export async function createClientReviewFromShortlist(
     creatorIds: snapshotCreators.map((creator) => creator.creatorId),
   };
   snapshot.mediaPlanSummary = buildMediaPlanSummary(snapshot);
+  snapshot.identityLogo =
+    (await loadIdentityLogoForReview(supabase, {
+      shortlistId: header.id,
+      campaignHeaderId: header.campaign_header_id,
+    })) ?? undefined;
 
   return persistClientReview({
     supabase,

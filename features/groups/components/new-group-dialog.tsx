@@ -221,6 +221,9 @@ export function NewGroupDialog({ unlinkedClients }: NewGroupDialogProps) {
               ) : checking ? (
                 <p className="text-xs text-muted-foreground">Checking availability…</p>
               ) : null}
+              <p className="text-xs text-muted-foreground">
+                After the group is created, upload a logo from Edit group. Client Workspace prefers the group logo, then the client logo.
+              </p>
             </div>
 
             <div className="grid gap-2">

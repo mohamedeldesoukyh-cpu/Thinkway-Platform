@@ -48,6 +48,7 @@ export type GroupBrandRow = {
   active_campaigns: number;
   client_id: string;
   client_name: string;
+  logo_url: string | null;
 };
 
 export type GroupDocumentRow = {
@@ -89,6 +90,7 @@ export type GroupWorkspace = {
   region: string | null;
   status: ClientStatus;
   notes: string | null;
+  logo_url: string | null;
   created_at: string;
   account_director: {
     id: string;

@@ -44,6 +44,7 @@ import { visibleClientWorkspaceSections } from "./visible-sections";
 import { loadSavedClientEmailsForQuotation } from "./client-quotation-delivery";
 import { emptyClientCampaignExecution } from "./campaign-execution";
 import { loadClientCampaignExecution } from "./load-campaign-execution";
+import { loadIdentityLogoForReview } from "./identity-logo";
 import {
   isSelectionConfirmed,
   mergeSnapshotsForClientView,
@@ -259,6 +260,7 @@ function viewFromSnapshot(
     activity,
     canDecide: isInteractiveClientReview(review.status) && !newer,
     clientUpdate: visibleClientUpdateNotice(snapshot.clientUpdate),
+    identityLogo: snapshot.identityLogo ?? null,
   };
   view.visibleSections = visibleClientWorkspaceSections(view);
   return view;
@@ -540,6 +542,21 @@ export async function loadClientWorkspace(
     !newer &&
     (journey.canApproveShortlist || journey.canApproveQuotation || pendingIds.length > 0);
 
+  if (!picked.historical) {
+    try {
+      const liveLogo = await loadIdentityLogoForReview(db, {
+        quotationId: view.journey?.quotationId ?? activeReview.quotationId,
+        shortlistId: view.journey?.shortlistId ?? activeReview.shortlistId,
+        campaignHeaderId: view.journey?.campaignHeaderId ?? activeReview.campaignHeaderId,
+      });
+      view.identityLogo = liveLogo ?? view.identityLogo ?? null;
+    } catch {
+      /* keep frozen snapshot logo if live identity lookup fails */
+    }
+  } else {
+    view.identityLogo = activeReview.sourceSnapshot?.identityLogo ?? view.identityLogo ?? null;
+  }
+
   const entry: ClientWorkspaceEntry = {
     brandName: view.overview.brandName,
     campaignName: view.overview.campaignName,
@@ -565,6 +582,7 @@ export async function loadClientWorkspace(
       canApproveFinalQuotation: view.journey.canApproveFinalQuotation,
       selectedCount: calc.selectedCount,
     }),
+    identityLogo: view.identityLogo ?? null,
   };
 
   return { ok: true, view, entry, campaignObject };

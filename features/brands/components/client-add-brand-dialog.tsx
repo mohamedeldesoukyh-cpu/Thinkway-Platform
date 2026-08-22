@@ -139,6 +139,9 @@ export function ClientAddBrandDialog({
             ) : checking ? (
               <p className="text-xs text-muted-foreground">Checking availability…</p>
             ) : null}
+            <p className="text-xs text-muted-foreground">
+              After saving, open the brand to upload a logo.
+            </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

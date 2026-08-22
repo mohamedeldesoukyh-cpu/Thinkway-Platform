@@ -1,9 +1,9 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop`  
-**Focus:** Client Workspace — priced creators first in display lists
+**Focus:** Client Workspace identity logos (group, then client) + all-in creator card price
 
-Client Workspace Shortlist, Your Selection, and Overview now show priced creators (`investmentAmount > 0`) before unpriced ones. Display-only: freeze `creatorIds`, overlay merge order, calculator totals, and quotation approval are unchanged. Zero or missing price counts as unpriced.
+- Upload logos on Group, Client, and Brand. Client Workspace header shows **group logo first**, then **client logo**, to the left of the Thinkway mark. Brand logos are stored but not used in that header.
+- Creator cards display client cost + agency fees + usage rights. Calculator stays split: Cost · Agency Fees · Total Investment.
 
-- Tests: Client Workspace 159 passing · `npx tsc --noEmit` pass · eslint on touched files pass  
-- Stage 3 Campaign live/publication tracking remains on Development (`d5c381d7`); not part of this Production cherry-pick
+**Ship:** Development first (`hsxrewjcbvmbkqdlzjhs`), then Production after the same schema + code. Do not dump Stage 3 live tracking onto Production.

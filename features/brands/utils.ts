@@ -30,6 +30,7 @@ export function brandListItemToTableRow(
     subcategory_name: brand.subcategory?.name ?? null,
     vr_rate_percent: brand.vr_rate?.rate_percent ?? null,
     active_campaigns: activeCampaigns,
+    logo_url: brand.logo_url ?? null,
   };
 }
 
@@ -52,6 +53,7 @@ export function brandTableRowToGroupBrandRow(
     active_campaigns: brand.active_campaigns,
     client_id: brand.client_id,
     client_name: clientName,
+    logo_url: brand.logo_url ?? null,
   };
 }
 

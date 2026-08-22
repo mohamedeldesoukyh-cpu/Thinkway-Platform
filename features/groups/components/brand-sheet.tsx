@@ -25,6 +25,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { createBrandAction, updateBrandAction } from "@/features/brands/actions";
+import { EntityLogoField } from "@/features/entity-logos/components/entity-logo-field";
 import { CLIENT_STATUS_OPTIONS } from "@/features/clients/constants";
 import type { GroupBrandRow, GroupLegalEntityRow } from "@/features/groups/types";
 import { checkBrandNameAvailable } from "@/features/validation/actions";
@@ -156,6 +157,21 @@ export function BrandSheet({
           <input type="hidden" name="vr_rate_id" value={vrRateId} />
           <input type="hidden" name="currency_code" value={currency} />
           {isEdit ? <input type="hidden" name="status" value={status} /> : null}
+
+          {isEdit ? (
+            <EntityLogoField
+              kind="brand"
+              entityId={brand.id}
+              logoUrl={brand.logo_url}
+              label="Brand logo"
+              hint="PNG, JPG, or WebP · up to 2 MB. Client Workspace still prefers the group logo, then the client logo."
+              disabled={isPending}
+            />
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Save the brand first, then upload a logo.
+            </p>
+          )}
 
           <div className="grid gap-2">
             <Label htmlFor="brand_name">Brand name</Label>

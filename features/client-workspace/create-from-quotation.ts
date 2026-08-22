@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { persistClientReview, type CreateClientReviewResult } from "./persist-client-review";
 import { quotationItemClientCreatorId } from "./quotation-item-creator-id";
 import { fingerprintFromSnapshotCreators } from "./snapshot";
+import { loadIdentityLogoForReview } from "./identity-logo";
 import {
   defaultQuotationClientSelection,
   quotationIsMovedToCampaign,
@@ -177,6 +178,12 @@ export async function createClientReviewFromQuotation(
     creatorIds: pooledCreators.map((creator) => creator.creatorId),
   };
   snapshot.mediaPlanSummary = buildMediaPlanSummary(snapshot);
+  snapshot.identityLogo =
+    (await loadIdentityLogoForReview(supabase, {
+      quotationId: detail.id,
+      shortlistId: detail.shortlist_id,
+      campaignHeaderId: detail.campaign_header_id,
+    })) ?? undefined;
 
   return persistClientReview({
     supabase,

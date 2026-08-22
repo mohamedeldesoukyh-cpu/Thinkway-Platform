@@ -506,6 +506,56 @@ test("frozen snapshot commercial uses per-creator quotation values, not a second
   assert.equal(reduced.quotationTotal, 100_000);
 });
 
+test("source snapshot keeps group or client identity logos and ignores brand marks", () => {
+  const snapshot = parseSourceSnapshot({
+    source: "quotation",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme Legal",
+    platforms: [],
+    deliverables: [],
+    creators: [],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "Duration not confirmed", phases: [] },
+    commercial: {
+      currency: "EGP",
+      creatorInvestment: 0,
+      totalInvestment: 0,
+      quotationTotal: 0,
+      lines: [],
+      selectedCount: 0,
+      totalCount: 0,
+    },
+    creatorIds: [],
+    identityLogo: { url: "https://cdn.example/group.png", source: "group", alt: "HoldCo" },
+  });
+  assert.equal(snapshot?.identityLogo?.source, "group");
+  assert.equal(snapshot?.identityLogo?.url, "https://cdn.example/group.png");
+  const withoutBrand = parseSourceSnapshot({
+    source: "quotation",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme Legal",
+    platforms: [],
+    deliverables: [],
+    creators: [],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "Duration not confirmed", phases: [] },
+    commercial: {
+      currency: "EGP",
+      creatorInvestment: 0,
+      totalInvestment: 0,
+      quotationTotal: 0,
+      lines: [],
+      selectedCount: 0,
+      totalCount: 0,
+    },
+    creatorIds: [],
+    identityLogo: { url: "https://cdn.example/brand.png", source: "brand", alt: "Brand" },
+  });
+  assert.equal(withoutBrand?.identityLogo, undefined);
+});
+
 test("client primary navigation is Shortlist, Your Selection, Commercial, Campaign, Overview", () => {
   const expected = ["shortlist", "creators", "commercial", "approval", "overview"];
   assert.deepEqual([...CLIENT_WORKSPACE_JOURNEY_SECTIONS], expected);

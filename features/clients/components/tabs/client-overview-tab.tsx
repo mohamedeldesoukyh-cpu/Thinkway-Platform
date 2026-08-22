@@ -35,6 +35,7 @@ import {
   CLIENT_FORM_SELECT_TRIGGER_CLASS,
   CLIENT_FORM_TEXTAREA_CLASS,
 } from "@/features/clients/components/client-form-ui";
+import { EntityLogoField } from "@/features/entity-logos/components/entity-logo-field";
 import {
   updateClientOverviewAction,
   type ClientOverviewSavePatch,
@@ -389,6 +390,14 @@ export function ClientOverviewTab({
           title="Identity"
           description="Legal entity name and status"
         >
+          <EntityLogoField
+            kind="client"
+            entityId={client.id}
+            logoUrl={client.logo_url}
+            label="Client logo"
+            hint="Used in Client Workspace when the group has no logo. PNG, JPG, or WebP · up to 2 MB."
+            disabled={isPending}
+          />
           <ClientFormGrid columns={3}>
             <ClientFormField label="Client name (English)" htmlFor="name">
               <Input
