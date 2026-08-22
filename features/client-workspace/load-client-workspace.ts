@@ -53,6 +53,7 @@ import {
   selectionCalculator,
   selectionJourneyFlags,
 } from "./selection-flow";
+import { hydrateSnapshotCreatorsFromUnified } from "./creator-snapshot";
 
 export type ResolvedClientReview =
   | { ok: true; review: ClientReviewRecord }
@@ -418,6 +419,18 @@ export async function loadClientWorkspace(
         }
       } catch {
         /* keep the merged snapshot if quotation SSOT is unavailable */
+      }
+    }
+    if (
+      !picked.historical &&
+      service &&
+      isInteractiveClientReview(activeReview.status) &&
+      !activeReview.campaignHeaderId
+    ) {
+      try {
+        mergedSnapshot = await hydrateSnapshotCreatorsFromUnified(service, mergedSnapshot);
+      } catch {
+        /* keep commercial overlay if live creator lookup fails */
       }
     }
     const resolvedFreeze = resolveClientSelectionFreeze(

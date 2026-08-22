@@ -1,9 +1,10 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Client Workspace — cloned import ER + tiny import avatars
+**Focus:** Client Workspace — live enrichment on open reviews
 
-- CRM/Excel imports that stamp one engagement rate onto every platform now show that rate on Instagram only (unless another platform has its own likes/comments). TikTok/YouTube chips keep followers, not the cloned ER.
-- Tiny circular import crops (`imports/` · under 20KB) are skipped when a live IG/TT profile exists so Client Workspace can refresh a real photo instead of recropping the badge crop.
+- Open, unconverted Client Workspace reviews re-read live CRM/enrichment (avatar, followers, per-platform ER) on load, matching the quotation after Refresh metrics.
+- Approved, converted, and historical review URLs stay frozen.
+- Cloned imported ER still shows on Instagram only unless another platform has its own likes/comments.
 
 **Ship:** Development first (`hsxrewjcbvmbkqdlzjhs`), then Production. Do not dump Stage 3 live tracking onto Production.

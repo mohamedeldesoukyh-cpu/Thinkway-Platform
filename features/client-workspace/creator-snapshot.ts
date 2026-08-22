@@ -2,10 +2,16 @@ import { pickCreatorDisplayName } from "@/lib/text/decode-html-entities";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
 import { resolveCreatorRecentPublicationThumbnail } from "@/lib/creators/recent-publication-thumb";
+import {
+  resolveCreatorFromRefLookup,
+  resolveUnifiedCreatorsByRefs,
+} from "@/lib/creators/unified-browse";
+import { isImportedCreatorAvatarUrl } from "@/lib/discovery-import/import-avatar-storage";
 import type { CreatorRecentPublication, UnifiedCreatorResult } from "@/lib/domains/creator/types";
 import { isInstagramCdnUrlExpired } from "@/lib/performance/avatar-sync-policy";
 import { computeEngagementRate } from "@/lib/performance/engagement-rate-engine";
 import { detectSocialPlatformFromContentUrl } from "@/lib/social/platforms";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { summarizeCreatorDeliverables } from "./deliverables";
 import { clientSafeFitCopy } from "./format";
@@ -14,7 +20,12 @@ import {
   mergePlatformStats,
   platformStatsFromUnified,
 } from "./platform-breakdown";
-import type { ClientContentPost, ClientDeliverableItem, ClientReviewSourceSnapshotCreator } from "./types";
+import type {
+  ClientContentPost,
+  ClientDeliverableItem,
+  ClientReviewSourceSnapshot,
+  ClientReviewSourceSnapshotCreator,
+} from "./types";
 
 export function optionalMetric(value: number | null | undefined): number | undefined {
   return value != null && Number.isFinite(value) ? value : undefined;
@@ -172,11 +183,15 @@ export function profileUrlFromHandle(handle?: string | null, platform?: string |
   return undefined;
 }
 
-function preferAvatarUrl(current?: string | null, live?: string | null): string | undefined {
+/** Prefer a live enrichment photo over a frozen CRM/Excel import crop. */
+export function preferAvatarUrl(current?: string | null, live?: string | null): string | undefined {
   const next = live?.trim() || undefined;
   const existing = current?.trim() || undefined;
   if (!existing) return next;
-  if (next && isInstagramCdnUrlExpired(existing)) return next;
+  if (!next) return existing;
+  if (isInstagramCdnUrlExpired(next) && !isInstagramCdnUrlExpired(existing)) return existing;
+  if (isImportedCreatorAvatarUrl(existing) && !isImportedCreatorAvatarUrl(next)) return next;
+  if (isInstagramCdnUrlExpired(existing)) return next;
   return existing;
 }
 
@@ -254,22 +269,68 @@ export function enrichSnapshotCreatorFromUnified(
       profileUrlFromHandle(base.handle || platform?.handle, base.platform || platform?.platform),
     bio: base.bio || creator.bio || undefined,
     avgLikes:
-      base.avgLikes ??
+      optionalMetric(platform?.avg_likes) ??
       optionalMetric(creator.metrics.avg_likes.value) ??
-      optionalMetric(platform?.avg_likes),
+      base.avgLikes,
     avgComments:
-      base.avgComments ??
+      optionalMetric(platform?.avg_comments) ??
       optionalMetric(creator.metrics.avg_comments.value) ??
-      optionalMetric(platform?.avg_comments),
+      base.avgComments,
     avgViews:
-      base.avgViews ??
+      optionalMetric(platform?.avg_views) ??
       optionalMetric(creator.metrics.avg_views.value) ??
-      optionalMetric(platform?.avg_views),
+      base.avgViews,
     tier: base.tier || resolveCreatorTierLabel({ followers, role: creator.role }),
     contentFeed: shouldReplaceContentFeed(base.contentFeed, contentFeed)
       ? contentFeed
       : (base.contentFeed ?? contentFeed),
     influencerId: base.influencerId || influencerIdFromRefs({ influencerId: creator.influencer_id, creatorId: creator.unified_id }),
+  };
+}
+
+/** Open Client Workspace reviews should show live CRM/enrichment profile metrics. */
+export function applyLiveCreatorProfile(
+  base: ClientReviewSourceSnapshotCreator,
+  unified: UnifiedCreatorResult | undefined
+): ClientReviewSourceSnapshotCreator {
+  if (!unified) return base;
+  const next = enrichSnapshotCreatorFromUnified(base, unified);
+  const { performance: _stalePerformance, ...rest } = next;
+  return rest;
+}
+
+export async function hydrateSnapshotCreatorsFromUnified(
+  supabase: SupabaseClient,
+  snapshot: ClientReviewSourceSnapshot
+): Promise<ClientReviewSourceSnapshot> {
+  if (snapshot.creators.length === 0) return snapshot;
+  const lookup = await resolveUnifiedCreatorsByRefs(
+    supabase as never,
+    {
+      unifiedIds: snapshot.creators.map((creator) => creator.unifiedId ?? creator.creatorId),
+      influencerIds: snapshot.creators.map(
+        (creator) => creator.influencerId ?? influencerIdFromRefs({ creatorId: creator.creatorId })
+      ),
+      discoveredProfileIds: snapshot.creators.map((creator) => {
+        if (creator.profileId?.trim()) return creator.profileId;
+        return creator.creatorId.startsWith("dis:") ? creator.creatorId.slice(4) : undefined;
+      }),
+    },
+    { omitHeavyFields: false }
+  );
+  return {
+    ...snapshot,
+    creators: snapshot.creators.map((creator) => {
+      const unified = resolveCreatorFromRefLookup(lookup, {
+        unified_id: creator.unifiedId ?? creator.creatorId,
+        influencer_id:
+          creator.influencerId ?? influencerIdFromRefs({ creatorId: creator.creatorId }) ?? null,
+        profile_id:
+          creator.profileId ??
+          (creator.creatorId.startsWith("dis:") ? creator.creatorId.slice(4) : null),
+      });
+      return applyLiveCreatorProfile(creator, unified ?? undefined);
+    }),
   };
 }
 
