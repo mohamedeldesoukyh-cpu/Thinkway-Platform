@@ -1,11 +1,9 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `develop` · Production `main`  
-**Focus:** Client Workspace — later pricing needs a new Your Selection approval; extensions after commercial approval (pushed to `develop`)
+**Branch:** `develop` · Production already has Stage 1 + Stage 2  
+**Focus:** Client Workspace Stage 3 — live / publication tracking on the Campaign tab (local, not committed)
 
-Unpriced creators in a freeze stay out of Commercial when Thinkway later adds a price. The client must select them again on Your Selection and Approve Selected Creators. If the quotation is not yet commercially approved, they join the original commercial. If it is already approved, they appear as Quotation extension 1/2/3 with Original total + extensions + Total investment. No second quotation engine.
+Campaign tab now projects Campaign Workspace `assignment_post_schedule` + `campaign_publications` as a read-only client view: Scheduled / Due today / Overdue / Live / Completed (`verified`). Cancelled posts are hidden. Publication date, content URL, and stored performance metrics appear only when real (actual over forecast). Historical reviews do not overlay live execution.
 
-Client Workspace tests: 148 passing. Production untouched.
-
-- Dev: https://dev.thinkwaymedia.com  
-- Prod: untouched (`https://app.thinkwaymedia.com`)
+- Tests: Client Workspace 158 passing · `npx tsc --noEmit` pass · eslint on touched files pass  
+- Do not commit / push / deploy until review

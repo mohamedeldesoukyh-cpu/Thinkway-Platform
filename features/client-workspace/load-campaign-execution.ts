@@ -34,6 +34,23 @@ type PublicationRow = {
   content_url: string | null;
   publication_date: string | null;
   status: string | null;
+  views: number | null;
+  likes: number | null;
+  comments: number | null;
+  shares: number | null;
+  reach: number | null;
+  actual_reach: number | null;
+  forecast_reach: number | null;
+  reach_source: string | null;
+  impressions: number | null;
+  actual_impressions: number | null;
+  forecast_impressions: number | null;
+  impressions_source: string | null;
+  engagement_rate: number | null;
+  engagement_views: number | null;
+  engagement_likes: number | null;
+  engagement_comments: number | null;
+  engagement_shares: number | null;
 };
 type InfluencerRow = {
   campaign_line_id: string | null;
@@ -67,7 +84,7 @@ export async function loadClientCampaignExecution(
       supabase
         .from("campaign_publications")
         .select(
-          "id, assignment_deliverable_id, assignment_post_schedule_id, campaign_line_id, platform, content_url, publication_date, status"
+          "id, assignment_deliverable_id, assignment_post_schedule_id, campaign_line_id, platform, content_url, publication_date, status, views, likes, comments, shares, reach, actual_reach, forecast_reach, reach_source, impressions, actual_impressions, forecast_impressions, impressions_source, engagement_rate, engagement_views, engagement_likes, engagement_comments, engagement_shares"
         )
         .eq("campaign_header_id", headerId),
       supabase
@@ -124,6 +141,23 @@ export async function loadClientCampaignExecution(
         contentUrl: row.content_url,
         publicationDate: row.publication_date,
         status: row.status,
+        views: row.views,
+        likes: row.likes,
+        comments: row.comments,
+        shares: row.shares,
+        reach: row.reach,
+        actualReach: row.actual_reach,
+        forecastReach: row.forecast_reach,
+        reachSource: row.reach_source,
+        impressions: row.impressions,
+        actualImpressions: row.actual_impressions,
+        forecastImpressions: row.forecast_impressions,
+        impressionsSource: row.impressions_source,
+        engagementRate: row.engagement_rate,
+        engagementViews: row.engagement_views,
+        engagementLikes: row.engagement_likes,
+        engagementComments: row.engagement_comments,
+        engagementShares: row.engagement_shares,
       })),
     };
 
