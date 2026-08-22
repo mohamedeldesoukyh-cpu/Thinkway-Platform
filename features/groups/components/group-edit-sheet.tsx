@@ -120,7 +120,7 @@ export function GroupEditSheet({
             entityId={workspace.id}
             logoUrl={workspace.logo_url}
             label="Group logo"
-            hint="Shown to the left of the Thinkway logo in Client Workspace. PNG, JPG, or WebP · up to 2 MB."
+            hint="Shown to the right of the Thinkway logo in Client Workspace. PNG, JPG, or WebP · up to 2 MB."
             disabled={isPending}
           />
 
