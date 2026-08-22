@@ -53,6 +53,7 @@ export const DELIVERABLE_TYPE_OPTIONS = [
   { value: "tiktok_live", label: "TikTok live" },
   { value: "snapchat_story", label: "Snapchat story" },
   { value: "snapchat_spotlight", label: "Snapchat Spotlight" },
+  { value: "snapchat_live", label: "Snapchat live" },
   { value: "youtube_video", label: "YouTube integration" },
   { value: "youtube_short", label: "YouTube short" },
   { value: "youtube_dedicated", label: "YouTube dedicated" },

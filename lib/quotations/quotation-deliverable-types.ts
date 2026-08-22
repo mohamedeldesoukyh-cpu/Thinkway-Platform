@@ -25,6 +25,9 @@ export const QUOTATION_POST_TYPES = [
   { value: "yt_short", label: "YT Short" },
   { value: "yt_live", label: "YT Live" },
   { value: "yt_video", label: "YT Video" },
+  { value: "snapchat_story", label: "SC Story" },
+  { value: "snapchat_spotlight", label: "SC Spotlight" },
+  { value: "snapchat_live", label: "SC Live" },
   { value: "facebook_post", label: "FB Post" },
   { value: "facebook_story", label: "FB Story" },
   { value: "facebook_reel", label: "FB Reel" },
@@ -39,6 +42,7 @@ export const QUOTATION_POST_TYPES = [
   { value: "mirrored_tt", label: "Mirrored TT" },
   { value: "mirrored_fb", label: "Mirrored FB" },
   { value: "mirrored_yt", label: "Mirrored YT" },
+  { value: "mirrored_sc", label: "Mirrored SC" },
   { value: "instagram_live", label: "IG Live" },
   { value: "ig_collab_post", label: "IG Collab Post" },
   { value: "usage_right", label: "Usage Right" },
@@ -57,6 +61,10 @@ const LEGACY_QUOTATION_POST_TYPE_ALIASES: Record<string, QuotationPostType> = {
   ig_post: "instagram_post",
   tt_video: "tiktok_video",
   tiktok: "tiktok_video",
+  sc_story: "snapchat_story",
+  sc_spotlight: "snapchat_spotlight",
+  sc_live: "snapchat_live",
+  spotlight: "snapchat_spotlight",
 };
 
 export function normalizeQuotationPostType(code: string): string {
@@ -295,9 +303,11 @@ export function postTypePlatformKey(type: string): string | null {
   if (type === "mirrored_tt") return "tiktok";
   if (type === "mirrored_fb") return "facebook";
   if (type === "mirrored_yt") return "youtube";
+  if (type === "mirrored_sc") return "snapchat";
   if (type.startsWith("instagram_") || type.startsWith("ig_")) return "instagram";
   if (type.startsWith("tiktok_")) return "tiktok";
   if (type.startsWith("youtube_") || type.startsWith("yt_")) return "youtube";
+  if (type.startsWith("snapchat_") || type.startsWith("sc_")) return "snapchat";
   if (type.startsWith("facebook_") || type.startsWith("fb_")) return "facebook";
   return null;
 }

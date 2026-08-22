@@ -9,6 +9,7 @@ const REEL_TYPES = new Set([
   "facebook_reel",
   "yt_short",
   "youtube_short",
+  "snapchat_spotlight",
 ]);
 const STORY_TYPES = new Set([
   "instagram_story",
@@ -16,6 +17,7 @@ const STORY_TYPES = new Set([
   "story",
   "tiktok_story",
   "facebook_story",
+  "snapchat_story",
 ]);
 const POST_TYPES = new Set([
   "instagram_post",

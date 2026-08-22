@@ -16,6 +16,7 @@ const DELIVERABLE_TAG_COLORS: Record<string, string> = {
   tiktok_live: "bg-slate-700/10 text-slate-700 dark:text-slate-300",
   snapchat_story: "bg-yellow-400/20 text-yellow-900 dark:text-yellow-200",
   snapchat_spotlight: "bg-amber-400/20 text-amber-900 dark:text-amber-200",
+  snapchat_live: "bg-yellow-500/20 text-yellow-950 dark:text-yellow-100",
   youtube_video: "bg-red-500/15 text-red-700 dark:text-red-300",
   youtube_short: "bg-orange-500/15 text-orange-700 dark:text-orange-300",
   youtube_dedicated: "bg-red-600/15 text-red-800 dark:text-red-300",

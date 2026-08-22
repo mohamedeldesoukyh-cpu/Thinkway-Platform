@@ -24,6 +24,7 @@ export const DELIVERABLE_TYPES_BY_PLATFORM: Record<
   snapchat: [
     { value: "snapchat_story", label: "Snapchat story", shortLabel: "SC Story" },
     { value: "snapchat_spotlight", label: "Snapchat Spotlight", shortLabel: "SC Spotlight" },
+    { value: "snapchat_live", label: "Snapchat live", shortLabel: "SC Live" },
   ],
   youtube: [
     { value: "youtube_video", label: "YouTube integration", shortLabel: "YT Integration" },

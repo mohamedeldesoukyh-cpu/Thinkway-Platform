@@ -27,10 +27,9 @@ import {
 
 {
   // Legacy forecast code must map to a selectable quotation type (clearable in UI).
-  const lines = deliverableTypeLines({ type: "ig_reel", quantity: 1 });
-  assert.equal(lines.length, 1);
-  assert.equal(lines[0]?.type, "instagram_reel");
-  assert.equal(formatTypeLinesSummary(lines), "1× IG Reel");
+  const lines = deliverableTypeLines({ type: "sc_spotlight", quantity: 1 });
+  assert.equal(lines[0]?.type, "snapchat_spotlight");
+  assert.equal(formatTypeLinesSummary(lines), "1× SC Spotlight");
 }
 
 {
@@ -78,21 +77,34 @@ assert.equal(postTypePlatformKey("mirrored_ig"), "instagram");
 assert.equal(postTypePlatformKey("mirrored_tt"), "tiktok");
 assert.equal(postTypePlatformKey("mirrored_fb"), "facebook");
 assert.equal(postTypePlatformKey("mirrored_yt"), "youtube");
+assert.equal(postTypePlatformKey("mirrored_sc"), "snapchat");
 assert.equal(postTypePlatformKey("yt_short"), "youtube");
 assert.equal(postTypePlatformKey("yt_live"), "youtube");
 assert.equal(postTypePlatformKey("yt_video"), "youtube");
+assert.equal(postTypePlatformKey("snapchat_story"), "snapchat");
+assert.equal(postTypePlatformKey("snapchat_spotlight"), "snapchat");
+assert.equal(postTypePlatformKey("snapchat_live"), "snapchat");
 assert.equal(quotationPostTypeLabel("yt_short"), "YT Short");
+assert.equal(quotationPostTypeLabel("snapchat_story"), "SC Story");
+assert.equal(quotationPostTypeLabel("snapchat_spotlight"), "SC Spotlight");
+assert.equal(quotationPostTypeLabel("snapchat_live"), "SC Live");
 assert.equal(isPostTypeAllowedForCreator("yt_video", ["youtube"]), true);
 assert.equal(isPostTypeAllowedForCreator("yt_video", ["instagram"]), false);
 assert.equal(isPostTypeAllowedForCreator("facebook_post", ["facebook"]), true);
 assert.equal(isPostTypeAllowedForCreator("facebook_post", ["instagram", "tiktok"]), false);
 assert.equal(isPostTypeAllowedForCreator("facebook_reel", ["fb"]), true);
+assert.equal(isPostTypeAllowedForCreator("snapchat_story", ["snapchat"]), true);
+assert.equal(isPostTypeAllowedForCreator("snapchat_spotlight", ["sc"]), true);
+assert.equal(isPostTypeAllowedForCreator("snapchat_live", ["instagram"]), false);
 assert.equal(isPostTypeAllowedForCreator("mirrored_ig", ["instagram"]), true);
 assert.equal(isPostTypeAllowedForCreator("mirrored_ig", ["tiktok"]), false);
 assert.equal(isPostTypeAllowedForCreator("mirrored_yt", ["youtube"]), true);
 assert.equal(isPostTypeAllowedForCreator("mirrored_yt", ["instagram"]), false);
+assert.equal(isPostTypeAllowedForCreator("mirrored_sc", ["snapchat"]), true);
+assert.equal(isPostTypeAllowedForCreator("mirrored_sc", ["tiktok"]), false);
 assert.equal(quotationPostTypeLabel("mirrored_tt"), "Mirrored TT");
 assert.equal(quotationPostTypeLabel("mirrored_yt"), "Mirrored YT");
+assert.equal(quotationPostTypeLabel("mirrored_sc"), "Mirrored SC");
 
 assert.equal(isPostTypeAllowedForCreator("all_platforms", []), true);
 assert.equal(typeLinesIncludeAllPlatforms({ type_lines: [{ type: "all_platforms", quantity: 1 }] }), true);
