@@ -248,7 +248,9 @@ function OverviewSection({
         <p className="st">{handle ? `${handle} · Content categories` : "Content categories"}</p>
         <ContentCategoryGrid items={contentCategories} fallback={categoryFallback} />
       </div>
-      {engagementMetersForBreakdown(platformRows, er).map((meter) => {
+      {engagementMetersForBreakdown(platformRows, er)
+        .filter((meter) => meter.rate != null)
+        .map((meter) => {
         const badge = engagementBadge(meter.rate);
         const gauge = engagementGaugePercent(meter.rate);
         return (

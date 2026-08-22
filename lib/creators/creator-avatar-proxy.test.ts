@@ -95,6 +95,36 @@ test("negative cache still allows warm retry when profileUrl can recover", async
   }
 });
 
+test("resolveCreatorAvatarForHttpRequest skips tiny import crops when a live profile exists", async () => {
+  resetMediaProxyMetricsForTests();
+  const src =
+    "https://example.supabase.co/storage/v1/object/public/creator-avatars/imports/d843/instagram/eyadelmogy.jpg";
+  const profileUrl = "https://www.instagram.com/eyadelmogy/";
+  const tiny = new Uint8Array(4011).fill(0xff);
+  tiny[0] = 0xff;
+  tiny[1] = 0xd8;
+  const blob = new Blob([tiny], { type: "image/jpeg" });
+  const supabase = {
+    storage: {
+      from: () => ({
+        download: async () => ({ data: blob, error: null }),
+      }),
+    },
+  };
+
+  const result = await resolveCreatorAvatarForHttpRequest({
+    src,
+    profileUrl,
+    supabase: supabase as never,
+  });
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.equal(result.status, 404);
+    assert.equal(result.source, "miss");
+    assert.equal(result.needsRefresh, true);
+  }
+});
+
 test("fetchCreatorAvatarImage loads Thinkway creator-avatars public URLs", async () => {
   resetMediaProxyMetricsForTests();
   const src =

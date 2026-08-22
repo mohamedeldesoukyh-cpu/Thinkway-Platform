@@ -1039,7 +1039,7 @@
   max-width:none !important;
   max-height:none !important;
   object-fit:cover !important;
-  object-position:center 18%;
+  object-position:center top;
   display:block !important;
   border-radius:0;
 }

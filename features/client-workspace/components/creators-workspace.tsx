@@ -807,15 +807,15 @@ function CreatorDetailPane({
         </div>
         <div className="sec">
           <p className="st">Engagement rate by platform</p>
-          {engagementMetersForBreakdown(platformRows, brief?.engagementRate ?? creator.engagementRate).map(
-            (meter) => (
+          {engagementMetersForBreakdown(platformRows, brief?.engagementRate ?? creator.engagementRate)
+            .filter((meter) => meter.rate != null)
+            .map((meter) => (
               <EngagementMeter
                 key={meter.platform ?? "engagement"}
                 platform={meter.platform}
                 rate={meter.rate}
               />
-            )
-          )}
+            ))}
           {quality && gauge != null ? (
             <ReviewMeter
               label="Audience quality"

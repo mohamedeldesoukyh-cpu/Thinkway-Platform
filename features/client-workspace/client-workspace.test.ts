@@ -37,7 +37,7 @@ import { HYPEAUDITOR_MEDIA_PLAN_PARITY } from "./hypeauditor-parity";
 import { projectMediaPlanSummary, projectSelectionSummaryFromCards } from "./media-plan-summary";
 import { briefFromSnapshotCreator, mergeFrozenBrief, needsClientBriefBackfill } from "./creator-brief";
 import { enrichSnapshotCreatorFromUnified, mixPostsForDeliverables, profileUrlFromHandle, resolveContentPostPlatform, shouldReplaceContentFeed } from "./creator-snapshot";
-import { creatorPlatformBreakdown, creatorProfileLinks, engagementMetersForBreakdown, avatarProfileUrlForReview } from "./platform-breakdown";
+import { creatorPlatformBreakdown, creatorProfileLinks, dropClonedImportedEngagementRates, engagementMetersForBreakdown, avatarProfileUrlForReview } from "./platform-breakdown";
 import { clientReviewAvatarUrl, isReviewMediaUrlAllowed, reviewMediaAllowlist } from "./review-media";
 import { canCreateCampaignFromQuotation } from "@/lib/commercial-sync/rules";
 import { diffClientReviewSnapshots, diffShortlistToQuotation, retainCreatorBriefs } from "./snapshot-diff";
@@ -1611,6 +1611,44 @@ test("creator card engagement meters stay per platform", () => {
     0.9
   );
   assert.equal(tiktokMissing.find((row) => row.platform === "tiktok")?.rate, undefined);
+});
+
+test("cloned imported engagement rate is kept on Instagram only when TikTok has no own signal", () => {
+  const cloned = [
+    { platform: "instagram", followers: 954_800, engagementRate: 5.46 },
+    { platform: "tiktok", followers: 898_900, engagementRate: 5.46 },
+    { platform: "youtube", followers: 1_400_000, engagementRate: 5.46 },
+  ];
+  const accounts = dropClonedImportedEngagementRates(cloned);
+  assert.equal(accounts.find((row) => row.platform === "instagram")?.engagementRate, 5.46);
+  assert.equal(accounts.find((row) => row.platform === "tiktok")?.engagementRate, undefined);
+  assert.equal(accounts.find((row) => row.platform === "youtube")?.engagementRate, undefined);
+
+  const rows = creatorPlatformBreakdown({
+    deliverableItems: [
+      { platform: "instagram", type: "Reel", quantity: 1 },
+      { platform: "tiktok", type: "TikTok Video", quantity: 1 },
+    ],
+    platformAccounts: cloned,
+  });
+  assert.deepEqual(listPlatformChipMetrics(rows.find((row) => row.platform === "instagram")!), {
+    followers: "954.8K",
+    engagementRate: "5.5%",
+  });
+  assert.deepEqual(listPlatformChipMetrics(rows.find((row) => row.platform === "tiktok")!), {
+    followers: "898.9K",
+    engagementRate: null,
+  });
+  const meters = engagementMetersForBreakdown(rows);
+  assert.equal(meters.find((row) => row.platform === "instagram")?.rate, 5.46);
+  assert.equal(meters.find((row) => row.platform === "tiktok")?.rate, undefined);
+
+  const independent = dropClonedImportedEngagementRates([
+    { platform: "instagram", engagementRate: 5.46, avgLikes: 12_000, avgComments: 400 },
+    { platform: "tiktok", engagementRate: 5.46, avgLikes: 20_000, avgComments: 900 },
+  ]);
+  assert.equal(independent.find((row) => row.platform === "instagram")?.engagementRate, 5.46);
+  assert.equal(independent.find((row) => row.platform === "tiktok")?.engagementRate, 5.46);
 });
 
 test("publication platform is inferred from the content URL", () => {
