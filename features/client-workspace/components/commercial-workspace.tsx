@@ -8,6 +8,7 @@ import { deliverablesLabel } from "../deliverables";
 import { originalInvestmentForDisplay } from "../quotation-client-facing";
 import {
   canOpenCommercialWorkspace,
+  COMMERCIAL_LOCKED_UNTIL_CREATOR_APPROVAL_MESSAGE,
   consolidationContract,
   isPricedClientInvestment,
   isValidClientCommercialApproval,
@@ -30,6 +31,22 @@ export function CommercialWorkspace({
   token?: string;
 }) {
   const { selectedCreators, selectedCommercial } = useClientWorkspaceState();
+  const commercialOpen = canOpenCommercialWorkspace({
+    selectionConfirmed: view.journey?.selectionConfirmed,
+    historical: view.journey?.historical,
+    quotationStage: view.journey?.quotationStage,
+  });
+
+  if (!commercialOpen) {
+    return (
+      <div className="card">
+        <p className="ck">Commercial</p>
+        <h2>Awaiting creator approval</h2>
+        <p className="note">{COMMERCIAL_LOCKED_UNTIL_CREATOR_APPROVAL_MESSAGE}</p>
+      </div>
+    );
+  }
+
   const commercial = selectedCommercial;
   const roster = selectedCreators;
   const included = roster.filter((creator) => isPricedClientInvestment(creator.investmentAmount));
@@ -43,11 +60,6 @@ export function CommercialWorkspace({
     (line) => !view.creators.some((creator) => creator.displayName === line.label)
   );
   const maxAlloc = Math.max(...(allocation?.map((item) => item.count) ?? [1]), 1);
-  const canDeliverQuotation = canOpenCommercialWorkspace({
-    selectionConfirmed: view.journey?.selectionConfirmed,
-    historical: view.journey?.historical,
-    quotationStage: view.journey?.quotationStage,
-  });
 
   return (
     <>
@@ -336,7 +348,7 @@ export function CommercialWorkspace({
           </div>
         );
       })()}
-      {token && canDeliverQuotation ? <CommercialQuotationDelivery view={view} token={token} /> : null}
+      {token ? <CommercialQuotationDelivery view={view} token={token} /> : null}
     </>
   );
 }

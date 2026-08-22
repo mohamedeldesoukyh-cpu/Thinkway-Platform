@@ -107,6 +107,7 @@ import {
   AFTER_CREATOR_APPROVAL_SECTION,
   UNPRICED_INCLUDED_MESSAGE,
   canOpenCommercialWorkspace,
+  COMMERCIAL_LOCKED_UNTIL_CREATOR_APPROVAL_MESSAGE,
   buildCreatorApprovalConfirmation,
   selectAllCreatorStates,
   clearCreatorSelectionStates,
@@ -3670,6 +3671,13 @@ test("AC: quotation download and send stay closed until Approve Selected Creator
   assert.equal(canOpenCommercialWorkspace({ quotationStage: "approved" }), true);
   assert.equal(resolveClientWorkspaceSection("commercial"), "commercial");
   assert.equal(resolveClientWorkspaceSection("quotation"), "commercial");
+});
+
+test("AE: Commercial hides selection and amounts until Approve Selected Creators", () => {
+  assert.equal(canOpenCommercialWorkspace({ selectionConfirmed: false }), false);
+  assert.match(COMMERCIAL_LOCKED_UNTIL_CREATOR_APPROVAL_MESSAGE, /Approve Selected Creators/);
+  assert.match(COMMERCIAL_LOCKED_UNTIL_CREATOR_APPROVAL_MESSAGE, /Total Investment/);
+  assert.equal(canOpenCommercialWorkspace({ selectionConfirmed: true }), true);
 });
 
 test("AD: client quotation email must be a valid address", () => {

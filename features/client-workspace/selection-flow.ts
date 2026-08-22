@@ -380,6 +380,9 @@ export function shortlistCreatorSelectEnabled(input: {
   return input.canDecide && !input.selectionConfirmed;
 }
 
+export const COMMERCIAL_LOCKED_UNTIL_CREATOR_APPROVAL_MESSAGE =
+  "Select creators on Shortlist, then Approve Selected Creators. Selection, Cost, Agency Fees, and Total Investment appear here after that approval.";
+
 export function canOpenCommercialWorkspace(input: {
   selectionConfirmed?: boolean;
   historical?: boolean;
