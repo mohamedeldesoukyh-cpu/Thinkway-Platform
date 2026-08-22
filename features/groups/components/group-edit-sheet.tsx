@@ -25,6 +25,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import { CLIENT_STATUS_OPTIONS } from "@/features/clients/constants";
 import { EntityLogoField } from "@/features/entity-logos/components/entity-logo-field";
 import {
   updateGroupAction,
