@@ -42,6 +42,7 @@ import type {
 } from "./types";
 import { visibleClientWorkspaceSections } from "./visible-sections";
 import { loadSavedClientEmailsForQuotation } from "./client-quotation-delivery";
+import { loadClientCampaignExecution } from "./load-campaign-execution";
 import {
   isSelectionConfirmed,
   mergeSnapshotsForClientView,
@@ -470,6 +471,10 @@ export async function loadClientWorkspace(
   });
   view.journey = { ...journey, ...flags };
   view.visibleSections = visibleClientWorkspaceSections(view);
+  view.campaignExecution = await loadClientCampaignExecution(
+    (service ?? db) as never,
+    view.journey.campaignHeaderId
+  );
   view.clientEmails = await loadSavedClientEmailsForQuotation(
     (service ?? db) as never,
     view.journey.quotationId

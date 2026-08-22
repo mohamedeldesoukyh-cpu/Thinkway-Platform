@@ -398,7 +398,7 @@ export function journeyActionRequired(input: {
   selectedCount?: number;
 }): string {
   if (input.historical) return "This is a frozen historical version";
-  if (input.quotationStage === "updated") return "Updated quotation — Approval Required";
+  if (input.quotationStage === "updated") return "Updated quotation — final quotation approval required";
   if (input.canApproveFinalQuotation) return "Approve final quotation";
   if (input.canConfirmCreators) return "Approve selected creators";
   if (input.quotationStage === "approved" && (input.selectedCount ?? 0) === 0) {
@@ -413,7 +413,7 @@ export function journeyActionRequired(input: {
   if (input.quotationStage === "changes_requested") {
     return "Waiting for Thinkway to update the quotation";
   }
-  if (input.quotationStage === "approved") return "Quotation approved — Thinkway can convert to campaign";
+  if (input.quotationStage === "approved") return "Thinkway is setting up your campaign";
   if (input.quotationStage === "rejected") return "Quotation rejected";
   if (input.shortlistStage === "sent" || input.shortlistStage === "viewed") {
     return "Review shortlist (optional)";

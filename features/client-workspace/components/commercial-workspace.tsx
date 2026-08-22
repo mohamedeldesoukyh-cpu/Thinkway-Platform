@@ -20,6 +20,7 @@ import { allocationSlices, MIX_BAR_COLORS, rosterHeadline } from "../presentatio
 import type { ClientWorkspaceView } from "../types";
 import { useClientWorkspaceState } from "./client-workspace-state";
 import { CommercialQuotationDelivery } from "./commercial-quotation-delivery";
+import { FinalQuotationApprovalCard } from "./final-quotation-approval-card";
 import { ReviewAvatar } from "./review-avatar";
 import { ReviewPlatformMark } from "./review-platform-mark";
 
@@ -77,7 +78,7 @@ export function CommercialWorkspace({
                 commercial.unpricedSelectedCount
                   ? ` · ${commercial.unpricedSelectedCount} price pending`
                   : ""
-              }${view.journey?.quotationStage === "updated" ? " · Updated — Approval Required" : ""}`}
+              }${view.journey?.quotationStage === "updated" ? " · Updated — final quotation approval required" : ""}`}
         </p>
         <div className="glance">
           <div className="gi">
@@ -348,6 +349,7 @@ export function CommercialWorkspace({
           </div>
         );
       })()}
+      {token ? <FinalQuotationApprovalCard view={view} token={token} /> : null}
       {token ? <CommercialQuotationDelivery view={view} token={token} /> : null}
     </>
   );

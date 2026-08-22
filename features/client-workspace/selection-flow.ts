@@ -32,6 +32,10 @@ export const CONFIRM_CREATORS_LABEL = APPROVE_SELECTED_CREATORS_LABEL;
 export const CONFIRM_CREATORS_SUPPORTING_TEXT =
   "Approve the creators you want included in the current quotation. This is not final quotation approval.";
 export const APPROVE_FINAL_QUOTATION_LABEL = "Approve Final Quotation";
+export const FINAL_QUOTATION_APPROVAL_REQUIRED_LABEL = "Final quotation approval required";
+export const CAMPAIGN_SETTING_UP_LABEL = "Setting up";
+export const CAMPAIGN_SETTING_UP_COPY =
+  "The quotation is approved. Thinkway is setting up your campaign. Schedule and live status appear here once the campaign is created.";
 /** Header CTA only — navigates to Your Selection. Never freezes or approves. */
 export const REVIEW_YOUR_SELECTION_LABEL = "Review Your Selection";
 export const ADD_FROM_SHORTLIST_LABEL = "Add from Shortlist";
@@ -41,6 +45,8 @@ export const CONTINUE_TO_YOUR_SELECTION_LABEL = "Continue to Your Selection";
 export const AFTER_SHORTLIST_CONTINUE_SECTION = "creators" as const;
 /** After Approve Selected Creators on Your Selection, open Commercial. */
 export const AFTER_CREATOR_APPROVAL_SECTION = "commercial" as const;
+/** After Approve Final Quotation, open the Campaign execution tab. */
+export const AFTER_FINAL_QUOTATION_SECTION = "approval" as const;
 export const UNPRICED_APPROVAL_MESSAGE = "Your selection includes creators without confirmed pricing.";
 export const UNPRICED_INCLUDED_MESSAGE =
   "Only creators with confirmed pricing will be included in the current quotation. Creators without confirmed pricing will remain in your selection and can be quoted later once pricing is available.";
@@ -577,6 +583,31 @@ export function headerSelectionNavigation(): {
   };
 }
 
+/**
+ * Shell header CTA. After creator freeze this navigates to Commercial so the
+ * client can Approve Final Quotation there. It never writes quotation status.
+ */
+export function headerJourneyCta(input: { canApproveFinalQuotation: boolean }): {
+  label: string;
+  section: "creators" | "commercial";
+  writesClientSelection: false;
+  freezesSelection: false;
+  approvesCreators: false;
+  approvesQuotation: false;
+} {
+  if (input.canApproveFinalQuotation) {
+    return {
+      label: APPROVE_FINAL_QUOTATION_LABEL,
+      section: AFTER_CREATOR_APPROVAL_SECTION,
+      writesClientSelection: false,
+      freezesSelection: false,
+      approvesCreators: false,
+      approvesQuotation: false,
+    };
+  }
+  return headerSelectionNavigation();
+}
+
 /** Shortlist primary CTA. Navigation only — does not freeze selection or approve the quotation. */
 export function shortlistContinueToYourSelection(): {
   label: typeof CONTINUE_TO_YOUR_SELECTION_LABEL;
@@ -636,10 +667,14 @@ export function commercialStageCopy(input: {
     if (input.selectedCount === 0) return { label: "Selection required", tone: "attention" };
     return { label: "Approved", tone: "ok" };
   }
-  if (input.quotationStage === "updated") return { label: "Updated — Approval Required", tone: "attention" };
+  if (input.quotationStage === "updated") {
+    return { label: "Updated — final quotation approval required", tone: "attention" };
+  }
   if (input.quotationStage === "rejected") return { label: "Rejected", tone: "bad" };
   if (input.quotationStage === "superseded") return { label: "Historical / Superseded", tone: "idle" };
-  if (input.selectionConfirmed) return { label: "Approval Required", tone: "attention" };
+  if (input.selectionConfirmed) {
+    return { label: FINAL_QUOTATION_APPROVAL_REQUIRED_LABEL, tone: "attention" };
+  }
   if (input.hasAnyPrice) {
     if (input.pricedSelectedCount > 0 && input.pricedInvestment > 0) {
       return { label: "Pricing available", tone: "active" };
@@ -654,7 +689,7 @@ export function campaignStageCopy(input: {
   commerciallyApproved: boolean;
 }): { label: string; tone: "idle" | "active" | "ok" } {
   if (input.campaignStarted) return { label: "In campaign", tone: "ok" };
-  if (input.commerciallyApproved) return { label: "Ready to start", tone: "active" };
+  if (input.commerciallyApproved) return { label: CAMPAIGN_SETTING_UP_LABEL, tone: "active" };
   return { label: "Not started", tone: "idle" };
 }
 

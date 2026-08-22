@@ -1,13 +1,11 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Client Workspace — Overview platform mix from quotation deliverables (not social profiles)
+**Focus:** Client Workspace Stage 1 copy + Stage 2 Campaign view (pushed to `develop`)
 
-Shortlist is the pool. Your Selection can add from Shortlist or remove (creator stays on Shortlist) until Approve Selected Creators. That freeze includes the roster in the current quotation and opens Commercial. Commercial is not reachable before that freeze. Commercial can download the existing quotation PDF, send it to a saved client email, or send to an added address. This does not create a second quotation and does not set `quotations.status = approved`. Final commercial action remains Approve Final Quotation.
+After Approve Selected Creators, header/journey Commercial says **Final quotation approval required**. Approve Final Quotation lives on Commercial (header CTA navigates there; it does not write `quotations.status`). After that approval, Campaign tab is an execution view of Campaign Workspace (`assignment_post_schedule` + `campaign_publications`): schedule date, live/overdue, publication link. Before convert: “Thinkway is setting up your campaign.” No second execution engine. No clock-time column yet.
 
-Overview campaign platforms (executive copy, glance avatars, mix bars, strategic “Platform & content”) must come from selected quotation deliverable types. Creator social accounts (Facebook, TikTok, etc.) are not campaign mix. `mirrored_tt` is TikTok.
-
-Pushed to `develop` (Dev). Production untouched.
+Client Workspace tests: 146 passing. Production untouched.
 
 - Dev: https://dev.thinkwaymedia.com  
 - Prod: untouched (`https://app.thinkwaymedia.com`)

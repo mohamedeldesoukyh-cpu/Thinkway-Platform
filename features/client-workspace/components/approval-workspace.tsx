@@ -3,22 +3,33 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
-import { formatMoneyKpi } from "@/lib/finance/currency-format";
-
 import {
   decideReviewAction,
   requestReviewChangesAction,
 } from "../actions/client-workspace-actions";
-import { CLIENT_CHANGE_AREAS, CLIENT_CHANGE_AREA_LABEL, type ClientChangeArea } from "../constants";
+import {
+  CLIENT_CHANGE_AREAS,
+  CLIENT_CHANGE_AREA_LABEL,
+  type ClientChangeArea,
+} from "../constants";
 import { TO_BE_CONFIRMED } from "../format";
+import {
+  campaignRosterFallback,
+  clientCampaignViewKind,
+  CLIENT_CAMPAIGN_POST_STATUS_LABEL,
+  emptyClientCampaignExecution,
+  formatClientScheduleDate,
+} from "../campaign-execution";
 import { approvalWorkspaceKind } from "../journey-state";
-import { rosterHeadline } from "../presentation";
-import { APPROVE_FINAL_QUOTATION_LABEL, CONFIRM_CREATORS_SUPPORTING_TEXT, INVALID_ZERO_SELECTION_APPROVAL_MESSAGE } from "../selection-flow";
+import {
+  CAMPAIGN_SETTING_UP_COPY,
+  INVALID_ZERO_SELECTION_APPROVAL_MESSAGE,
+  isValidClientCommercialApproval,
+} from "../selection-flow";
 import { countSelections } from "../status";
 import type { ClientWorkspaceView } from "../types";
 import { useClientWorkspaceState } from "./client-workspace-state";
-import { RosterDiffCard } from "./roster-diff-card";
-import { IconCheck } from "./review-icons";
+import { ReviewPlatformMark } from "./review-platform-mark";
 
 export function ApprovalWorkspace({
   view,
@@ -27,41 +38,35 @@ export function ApprovalWorkspace({
   view: ClientWorkspaceView;
   token: string;
 }) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [summary, setSummary] = useState("");
-  const [rejectReason, setRejectReason] = useState("");
-  const [areas, setAreas] = useState<ClientChangeArea[]>(["creator"]);
-  const [error, setError] = useState<string | null>(null);
-  const { selection, selectedCommercial, selectedSummary, goToSection } = useClientWorkspaceState();
+  const { selection, selectedCreators, goToSection } = useClientWorkspaceState();
   const counts = countSelections(
     selection,
     view.creators.map((creator) => creator.creatorId)
   );
   const journey = view.journey;
-  const quotationStage = journey?.quotationStage;
-  const selectedCount = counts.accepted;
+  const quotationStage = journey?.quotationStage ?? "draft";
+  const commerciallyApproved = isValidClientCommercialApproval({
+    quotationStage,
+    selectedCount: counts.accepted,
+  });
+  const kind = clientCampaignViewKind({
+    commerciallyApproved,
+    campaignStarted: Boolean(journey?.campaignStarted),
+  });
   const approvalKind = approvalWorkspaceKind({
     historical: Boolean(journey?.historical),
-    quotationStage: quotationStage ?? "draft",
+    quotationStage,
     canApproveShortlist: Boolean(journey?.canApproveShortlist),
     canApproveQuotation: Boolean(journey?.canApproveQuotation),
-    selectedCount,
+    selectedCount: counts.accepted,
   });
-  const showConfirmCreators = Boolean(journey?.canConfirmCreators);
-  const showQuotationApproval = Boolean(journey?.canApproveFinalQuotation);
-  const quotationApproved = approvalKind === "quotation_approved";
-  const deliverableCount = selectedSummary.activityMix.reduce((sum, item) => sum + item.count, 0);
-  const investment =
-    selectedCommercial.totalInvestment > 0
-      ? formatMoneyKpi(selectedCommercial.totalInvestment, selectedCommercial.currency)
-      : TO_BE_CONFIRMED;
-
-  function toggle(area: ClientChangeArea) {
-    setAreas((current) =>
-      current.includes(area) ? current.filter((item) => item !== area) : [...current, area]
-    );
-  }
+  const execution = view.campaignExecution ?? emptyClientCampaignExecution();
+  const posts =
+    execution.posts.length > 0
+      ? execution.posts
+      : commerciallyApproved
+        ? campaignRosterFallback(selectedCreators)
+        : [];
 
   if (approvalKind === "historical") {
     const approvedOn = view.review.approvedAt
@@ -71,12 +76,11 @@ export function ApprovalWorkspace({
       view.review.source === "quotation"
         ? `Quotation v${view.review.reviewNumber}`
         : `Shortlist v${view.review.reviewNumber}`;
-    const statusLabel = "Historical / Superseded";
     return (
       <div className="card">
         <p className="ck">Historical version</p>
         <h2>
-          {versionLabel} · {statusLabel}
+          {versionLabel} · Historical / Superseded
         </h2>
         <p className="note">
           Historical / Superseded · Read only.
@@ -87,22 +91,7 @@ export function ApprovalWorkspace({
     );
   }
 
-  if (quotationApproved) {
-    return (
-      <div className="card">
-        <p className="ck">Campaign</p>
-        <h2>{view.overview.campaignName}</h2>
-        <p className="note">
-          Final quotation approved
-          {view.review.approvedAt ? ` · ${new Date(view.review.approvedAt).toLocaleString()}` : ""}
-          {view.review.approvedByLabel ? ` · ${view.review.approvedByLabel}` : ""}
-          . Campaign is ready to start.
-        </p>
-      </div>
-    );
-  }
-
-  if (quotationStage === "approved" && selectedCount === 0) {
+  if (quotationStage === "approved" && counts.accepted === 0) {
     return (
       <div className="card">
         <p className="ck">Campaign</p>
@@ -112,108 +101,149 @@ export function ApprovalWorkspace({
     );
   }
 
+  if (kind === "needs_quotation_approval") {
+    return (
+      <>
+        <div className="card">
+          <p className="ck">Campaign</p>
+          <h2>Final quotation approval required</h2>
+          <p className="note">
+            Creator selection is confirmed. Approve the final quotation on Commercial to let Thinkway
+            set up this campaign.
+          </p>
+          <div className="dacts" style={{ justifyContent: "flex-start", marginTop: 18 }}>
+            <button type="button" className="btn pri" onClick={() => goToSection("commercial")}>
+              Review Commercial
+            </button>
+          </div>
+        </div>
+        <CampaignChangeActions view={view} token={token} />
+      </>
+    );
+  }
+
+  if (kind === "setting_up") {
+    return (
+      <div className="card">
+        <p className="ck">Campaign</p>
+        <h2>{view.overview.campaignName}</h2>
+        <p className="note">{CAMPAIGN_SETTING_UP_COPY}</p>
+      </div>
+    );
+  }
+
   return (
     <>
-      {view.stageDiff ? <RosterDiffCard view={view} /> : null}
-
-      {journey?.selectionConfirmed && !showConfirmCreators ? (
-        <div className="card">
-          <p className="ck">Your Selection</p>
-          <h2>Client Approved</h2>
-          <p className="note">
-            The client has approved the creators to include in this quotation. This is not quotation
-            approval and does not start the campaign.
-          </p>
-        </div>
-      ) : null}
-
-      {showConfirmCreators ? (
-        <div className="card">
-          <p className="ck">Your Selection</p>
-          <h2>Review Your Selection</h2>
-          <p className="note">{CONFIRM_CREATORS_SUPPORTING_TEXT}</p>
-          <div className="dacts" style={{ justifyContent: "flex-start", marginTop: 18 }}>
-            <button type="button" className="btn pri" onClick={() => goToSection("creators")}>
-              Review Your Selection
-            </button>
+      <div className="card">
+        <p className="ck">Campaign</p>
+        <h2>{view.overview.campaignName}</h2>
+        <p className="note">
+          Approved creators and publication schedule from the Thinkway campaign. Scheduled time of
+          day is added when it exists on the campaign.
+        </p>
+        <div className="glance" style={{ marginTop: 18 }}>
+          <div className="gi">
+            <p className="l">Approved creators</p>
+            <p className="v">{selectedCreators.length}</p>
+          </div>
+          <div className="gi">
+            <p className="l">Scheduled</p>
+            <p className="v">{posts.filter((row) => row.scheduledDate && !row.live).length}</p>
+          </div>
+          <div className="gi">
+            <p className="l">Live</p>
+            <p className="v">{posts.filter((row) => row.live).length}</p>
           </div>
         </div>
-      ) : null}
+      </div>
 
-      {showQuotationApproval ? (
-        <div className="card">
-          <p className="ck">Campaign</p>
-          <h2>{APPROVE_FINAL_QUOTATION_LABEL}</h2>
-          <p className="note">
-            This is the only client action that means commercial approval: selected creators,
-            deliverables, final investment, quotation terms, and applicable T&amp;C.
-          </p>
-          <div className="asum">
-            <div className="gi">
-              <p className="l">Creators</p>
-              <p className="v">{rosterHeadline(counts.accepted)}</p>
-            </div>
-            <div className="gi">
-              <p className="l">Investment</p>
-              <p className={selectedCommercial.totalInvestment > 0 ? "v" : "v tbc"}>{investment}</p>
-            </div>
-            <div className="gi">
-              <p className="l">Deliverables</p>
-              <p className={deliverableCount > 0 ? "v" : "v tbc"}>
-                {deliverableCount > 0 ? `${deliverableCount} items` : TO_BE_CONFIRMED}
-              </p>
-            </div>
+      <div className="card">
+        <p className="ck">Publication plan</p>
+        <h2>Creators and go-live</h2>
+        {posts.length > 0 ? (
+          <div className="tbl-scroll">
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>Creator</th>
+                  <th>Platform</th>
+                  <th>Deliverable</th>
+                  <th>Scheduled</th>
+                  <th>Status</th>
+                  <th>Published</th>
+                </tr>
+              </thead>
+              <tbody>
+                {posts.map((row) => (
+                  <tr key={row.id}>
+                    <td className="name">{row.creatorName}</td>
+                    <td>
+                      {row.platform ? (
+                        <span className="ov-plat-row" title={row.platformLabel || row.platform}>
+                          <span className="ov-pav ov-pav-sm">
+                            <ReviewPlatformMark platform={row.platform || row.platformLabel} />
+                          </span>
+                          {row.platformLabel || row.platform}
+                        </span>
+                      ) : (
+                        TO_BE_CONFIRMED
+                      )}
+                    </td>
+                    <td>{row.deliverable || TO_BE_CONFIRMED}</td>
+                    <td>{formatClientScheduleDate(row.scheduledDate) ?? TO_BE_CONFIRMED}</td>
+                    <td>
+                      <span className={row.live ? "sc ok" : row.status === "overdue" ? "sc rej" : "sc"}>
+                        {CLIENT_CAMPAIGN_POST_STATUS_LABEL[row.status]}
+                      </span>
+                    </td>
+                    <td>
+                      {row.contentUrl ? (
+                        <a href={row.contentUrl} target="_blank" rel="noopener noreferrer">
+                          {formatClientScheduleDate(row.publicationDate) ?? "View post"}
+                        </a>
+                      ) : (
+                        formatClientScheduleDate(row.publicationDate) ?? "—"
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="checklist">
-            <CheckItem done={counts.accepted > 0} label="Creators reviewed" />
-            <CheckItem done={deliverableCount > 0} label="Deliverables reviewed" />
-            <CheckItem done={selectedCommercial.totalInvestment > 0} label="Investment reviewed" />
-            <CheckItem done={Boolean(view.quotation)} label="Quotation terms reviewed" />
-            <CheckItem done label="Applicable T&C accepted on approval" />
-          </div>
-          {error ? <p style={{ color: "var(--bad)", fontSize: 13 }}>{error}</p> : null}
-          <div className="dacts" style={{ justifyContent: "flex-start", marginTop: 18 }}>
-            <button
-              type="button"
-              className="btn pri"
-              disabled={pending}
-              onClick={() =>
-                startTransition(async () => {
-                  const result = await decideReviewAction({
-                    token,
-                    decision: "approved",
-                    stage: "quotation",
-                  });
-                  if (!result.ok) {
-                    setError(result.message);
-                    return;
-                  }
-                  router.refresh();
-                })
-              }
-            >
-              <IconCheck />
-              {APPROVE_FINAL_QUOTATION_LABEL}
-            </button>
-            <button type="button" className="btn sec" onClick={() => goToSection("feedback")}>
-              Request changes
-            </button>
-          </div>
-        </div>
-      ) : null}
+        ) : (
+          <p className="note">{CAMPAIGN_SETTING_UP_COPY}</p>
+        )}
+      </div>
+      <CampaignChangeActions view={view} token={token} />
+    </>
+  );
+}
 
-      {!showConfirmCreators && !showQuotationApproval && !quotationApproved ? (
-        <div className="card">
-          <p className="ck">Campaign</p>
-          <h2>No commercial decision is open yet</h2>
-          <p className="note">
-            Confirm your creator selection first. Thinkway will send an updated quotation if commercial
-            terms change.
-          </p>
-        </div>
-      ) : null}
+function CampaignChangeActions({
+  view,
+  token,
+}: {
+  view: ClientWorkspaceView;
+  token: string;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [summary, setSummary] = useState("");
+  const [rejectReason, setRejectReason] = useState("");
+  const [areas, setAreas] = useState<ClientChangeArea[]>(["campaign"]);
+  const [error, setError] = useState<string | null>(null);
+  const journey = view.journey;
+  if (!journey?.canRequestQuotationChanges && !journey?.canRejectQuotation) return null;
 
-      {journey?.canRequestQuotationChanges || journey?.canRequestShortlistChanges ? (
+  function toggle(area: ClientChangeArea) {
+    setAreas((current) =>
+      current.includes(area) ? current.filter((item) => item !== area) : [...current, area]
+    );
+  }
+
+  return (
+    <>
+      {journey?.canRequestQuotationChanges ? (
         <div className="card">
           <p className="ck">Request changes</p>
           <h2>Tell Thinkway what to update</h2>
@@ -246,7 +276,7 @@ export function ApprovalWorkspace({
                   token,
                   summary,
                   areas,
-                  stage: journey?.canRequestQuotationChanges ? "quotation" : "shortlist",
+                  stage: "quotation",
                 });
                 router.refresh();
               })
@@ -256,7 +286,6 @@ export function ApprovalWorkspace({
           </button>
         </div>
       ) : null}
-
       {journey?.canRejectQuotation ? (
         <div className="card">
           <p className="ck" style={{ color: "var(--bad)" }}>
@@ -269,6 +298,7 @@ export function ApprovalWorkspace({
             onChange={(event) => setRejectReason(event.target.value)}
             placeholder="Why is this quotation being rejected?"
           />
+          {error ? <p style={{ color: "var(--bad)", fontSize: 13 }}>{error}</p> : null}
           <div className="dacts" style={{ justifyContent: "flex-start", marginTop: 14 }}>
             <button
               type="button"
@@ -293,14 +323,5 @@ export function ApprovalWorkspace({
         </div>
       ) : null}
     </>
-  );
-}
-
-function CheckItem({ done, label }: { done: boolean; label: string }) {
-  return (
-    <div className="chk">
-      <span className={done ? "cbadge done" : "cbadge pend"}>{done ? "Reviewed" : "Pending"}</span>
-      <span>{label}</span>
-    </div>
   );
 }

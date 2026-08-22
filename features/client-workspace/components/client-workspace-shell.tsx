@@ -5,7 +5,7 @@ import { CLIENT_WORKSPACE_SECTION_LABEL } from "../constants";
 import { SHORTLIST_STAGE_LABEL, clientWorkspacePathReviewId, clientWorkspaceVersionPill } from "../journey-state";
 import {
   commercialStageCopy,
-  headerSelectionNavigation,
+  headerJourneyCta,
   isPricedClientInvestment,
   selectionCalculator,
 } from "../selection-flow";
@@ -56,8 +56,11 @@ export function ClientWorkspaceShell({
     reviewNumber: view.review.reviewNumber,
     newerReviewNumber: view.newerReviewNumber,
   });
-  const headerCta = headerSelectionNavigation();
-  const showHeaderSelectionNav = Boolean(view.canDecide && section !== "creators");
+  const headerCta = headerJourneyCta({
+    canApproveFinalQuotation: Boolean(view.journey?.canApproveFinalQuotation),
+  });
+  const hideHeaderCtaOn = headerCta.section;
+  const showHeaderSelectionNav = Boolean(view.canDecide && section !== hideHeaderCtaOn);
   const headerHref = buildClientReviewPath(pathReviewId, token, headerCta.section);
 
   function openSection(event: React.MouseEvent<HTMLAnchorElement>, next: ClientWorkspaceSectionId) {

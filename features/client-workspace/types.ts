@@ -471,6 +471,8 @@ export type ClientWorkspaceView = {
     items: string[];
     acknowledgedAt?: string;
   };
+  /** Campaign Workspace execution projection — never a second schedule/live engine. */
+  campaignExecution?: import("./campaign-execution").ClientCampaignExecution;
 };
 
 export type ClientWorkspaceEntry = {

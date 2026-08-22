@@ -104,12 +104,16 @@ import {
   thinkwayStatusLabel,
   creatorsForClientCommercial,
   headerSelectionNavigation,
+  headerJourneyCta,
   primaryActionForJourney,
   shortlistCreatorSelectEnabled,
   shortlistContinueToYourSelection,
   AFTER_CREATOR_APPROVAL_SECTION,
+  AFTER_FINAL_QUOTATION_SECTION,
   AFTER_SHORTLIST_CONTINUE_SECTION,
   CONTINUE_TO_YOUR_SELECTION_LABEL,
+  FINAL_QUOTATION_APPROVAL_REQUIRED_LABEL,
+  CAMPAIGN_SETTING_UP_LABEL,
   UNPRICED_INCLUDED_MESSAGE,
   canOpenCommercialWorkspace,
   COMMERCIAL_LOCKED_UNTIL_CREATOR_APPROVAL_MESSAGE,
@@ -124,6 +128,12 @@ import {
   originalInvestmentForDisplay,
 } from "./quotation-client-facing";
 import { overlayQuotationDetailOnCreators, clientServiceDescriptionFromQuotationItem } from "./quotation-client-overlay";
+import {
+  clientCampaignPostStatus,
+  clientCampaignViewKind,
+  isClientCampaignLive,
+  projectClientCampaignExecution,
+} from "./campaign-execution";
 import { normalizeClientDeliveryEmail } from "./client-quotation-delivery";
 import {
   isRenderableClientWorkspaceSection,
@@ -3852,5 +3862,98 @@ test("AD: client quotation email must be a valid address", () => {
   assert.equal(normalizeClientDeliveryEmail("not-an-email"), null);
   assert.equal(normalizeClientDeliveryEmail(""), null);
 });
+
+test("after creator freeze the header asks for final quotation approval without writing status", () => {
+  assert.equal(
+    commercialStageCopy({
+      quotationStage: "sent_for_approval",
+      selectedCount: 3,
+      pricedSelectedCount: 2,
+      pricedInvestment: 650_000,
+      currency: "EGP",
+      selectionConfirmed: true,
+      hasAnyPrice: true,
+    }).label,
+    FINAL_QUOTATION_APPROVAL_REQUIRED_LABEL
+  );
+  const header = headerJourneyCta({ canApproveFinalQuotation: true });
+  assert.equal(header.label, APPROVE_FINAL_QUOTATION_LABEL);
+  assert.equal(header.section, "commercial");
+  assert.equal(header.approvesQuotation, false);
+  assert.equal(AFTER_FINAL_QUOTATION_SECTION, "approval");
+  assert.equal(CLIENT_WORKSPACE_SECTION_LABEL[AFTER_FINAL_QUOTATION_SECTION], "Campaign");
+});
+
+test("campaign tab kind waits for convert then projects Campaign Workspace posts", () => {
+  assert.equal(
+    clientCampaignViewKind({ commerciallyApproved: false, campaignStarted: false }),
+    "needs_quotation_approval"
+  );
+  assert.equal(
+    clientCampaignViewKind({ commerciallyApproved: true, campaignStarted: false }),
+    "setting_up"
+  );
+  assert.equal(
+    clientCampaignViewKind({ commerciallyApproved: true, campaignStarted: true }),
+    "in_campaign"
+  );
+  assert.equal(
+    campaignStageCopy({ campaignStarted: false, commerciallyApproved: true }).label,
+    CAMPAIGN_SETTING_UP_LABEL
+  );
+  assert.equal(isClientCampaignLive({ contentUrl: "https://instagram.com/p/1" }), true);
+  assert.equal(
+    clientCampaignPostStatus({
+      scheduledDate: "2026-08-01",
+      today: "2026-08-22",
+    }),
+    "overdue"
+  );
+  const projected = projectClientCampaignExecution("hdr-1", {
+    lines: [{ id: "line-1", name: "Assignment", metadata: { influencer_assignment: { influencer_id: "00000000-0000-4000-8000-000000000001", influencer_name: "Amina", platforms: [] } } }],
+    influencers: [{ campaignLineId: "line-1", displayName: "Amina" }],
+    deliverables: [
+      {
+        id: "del-1",
+        campaignLineId: "line-1",
+        platform: "instagram",
+        deliverableType: "instagram_reel",
+        quantity: 1,
+        liveDate: "2026-08-20",
+      },
+    ],
+    posts: [
+      {
+        id: "post-1",
+        assignmentDeliverableId: "del-1",
+        campaignLineId: "line-1",
+        sequenceNumber: 1,
+        liveDate: "2026-08-20",
+        status: "posted",
+        proofUrl: null,
+      },
+    ],
+    publications: [
+      {
+        id: "pub-1",
+        assignmentDeliverableId: "del-1",
+        assignmentPostScheduleId: "post-1",
+        campaignLineId: "line-1",
+        platform: "instagram",
+        contentUrl: "https://instagram.com/reel/1",
+        publicationDate: "2026-08-20",
+        status: "published",
+      },
+    ],
+  });
+  assert.equal(projected.posts.length, 1);
+  assert.equal(projected.posts[0]?.creatorName, "Amina");
+  assert.equal(projected.posts[0]?.live, true);
+  assert.equal(projected.posts[0]?.status, "live");
+  assert.equal(projected.posts[0]?.contentUrl, "https://instagram.com/reel/1");
+  assert.equal("cost" in projected.posts[0]!, false);
+  assert.equal(clientFacingObjectIsSafe(projected.posts[0]), true);
+});
+
 
 
