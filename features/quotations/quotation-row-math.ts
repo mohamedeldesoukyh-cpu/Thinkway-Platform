@@ -176,6 +176,50 @@ export function resolveQuotationHeaderCommercialTotals(
   };
 }
 
+export type OriginalCurrencyTotals = {
+  currency: string;
+  totalCost: number;
+  totalClientCost: number;
+  totalGpMargin: number;
+};
+
+function roundMoney(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+/** Native-currency totals for header display (line cost currency, not converted EGP). */
+export function aggregateOriginalCurrencyTotals(
+  drafts: QuotationRowDraft[]
+): OriginalCurrencyTotals[] {
+  const byCurrency = new Map<string, OriginalCurrencyTotals>();
+
+  for (const draft of drafts) {
+    const currency = (draft.costCurrency || "EGP").trim().toUpperCase() || "EGP";
+    const row = computeQuotationRowComputed(draft);
+    const existing = byCurrency.get(currency) ?? {
+      currency,
+      totalCost: 0,
+      totalClientCost: 0,
+      totalGpMargin: 0,
+    };
+    existing.totalCost = roundMoney(existing.totalCost + draft.cost);
+    existing.totalClientCost = roundMoney(existing.totalClientCost + row.revenue + row.afValue);
+    existing.totalGpMargin = roundMoney(existing.totalGpMargin + row.agencyMargin);
+    byCurrency.set(currency, existing);
+  }
+
+  return [...byCurrency.values()].sort((a, b) => a.currency.localeCompare(b.currency));
+}
+
+/** Original amounts that differ from the header display currency (e.g. SAR under EGP). */
+export function originalCurrencyTotalsForDisplay(
+  drafts: QuotationRowDraft[],
+  displayCurrency: string
+): OriginalCurrencyTotals[] {
+  const display = (displayCurrency || "EGP").trim().toUpperCase() || "EGP";
+  return aggregateOriginalCurrencyTotals(drafts).filter((row) => row.currency !== display);
+}
+
 export function aggregateAutosaveStatus(
   statuses: Array<"idle" | "pending" | "saving" | "saved" | "error">
 ): "idle" | "pending" | "saving" | "saved" | "error" {

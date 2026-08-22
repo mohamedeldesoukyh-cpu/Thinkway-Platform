@@ -100,6 +100,7 @@ import {
   draftFromQuotationItem,
   draftsFromItems,
   resolveQuotationHeaderCommercialTotals,
+  originalCurrencyTotalsForDisplay,
   resolveQuotationRowDraft,
   type CalculationModePreference,
   type QuotationRowDraft,
@@ -383,6 +384,11 @@ function QuotationWorkspaceContent({
   const totals = useMemo(
     () => resolveQuotationHeaderCommercialTotals(computeLiveQuotationTotals(totalsDraftList)),
     [totalsDraftList]
+  );
+
+  const originalTotals = useMemo(
+    () => originalCurrencyTotalsForDisplay(totalsDraftList, displayCurrency),
+    [totalsDraftList, displayCurrency]
   );
 
   const sortedFilteredItems = useMemo(
@@ -886,6 +892,7 @@ function QuotationWorkspaceContent({
           validDaysRemaining={detail.valid_days_remaining}
           displayCurrency={displayCurrency}
           displayFxRateToEgp={displayFxRateToEgp}
+          originalTotals={originalTotals}
           onDisplayCurrencyChange={
             detail.canManage ? handleDisplayCurrencyChange : undefined
           }

@@ -5,6 +5,7 @@ import {
   computeLiveQuotationTotals,
   computeQuotationRowComputed,
   draftFromQuotationItem,
+  originalCurrencyTotalsForDisplay,
   resolveQuotationHeaderCommercialTotals,
   type QuotationRowDraft,
 } from "@/features/quotations/quotation-row-math";
@@ -225,6 +226,61 @@ function mockItem(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
   assert.equal(header.headerGpValueEgp, 520);
   assert.ok(Math.abs(header.headerGpPct - 39.3939) < 0.01);
   assert.equal(header.headerPmPct, 65);
+}
+
+{
+  const sar: QuotationRowDraft = {
+    id: "sar",
+    mode: "cost_gp_pct",
+    cost: 50000,
+    costCurrency: "SAR",
+    gpPct: 25,
+    revenue: 0,
+    gpValue: 0,
+    afPct: 0,
+    fxRateToEgp: 13.5,
+  };
+  const original = originalCurrencyTotalsForDisplay([sar], "EGP");
+  assert.equal(original.length, 1);
+  assert.equal(original[0]?.currency, "SAR");
+  assert.equal(original[0]?.totalCost, 50000);
+  const row = computeQuotationRowComputed(sar);
+  assert.equal(original[0]?.totalClientCost, row.revenue + row.afValue);
+  assert.equal(original[0]?.totalGpMargin, row.agencyMargin);
+  assert.equal(originalCurrencyTotalsForDisplay([sar], "SAR").length, 0);
+}
+
+{
+  const mixed = originalCurrencyTotalsForDisplay(
+    [
+      {
+        id: "sar",
+        mode: "cost_markup_pct",
+        cost: 10000,
+        costCurrency: "SAR",
+        gpPct: 20,
+        revenue: 0,
+        gpValue: 0,
+        afPct: 0,
+        fxRateToEgp: 13.5,
+      },
+      {
+        id: "egp",
+        mode: "cost_markup_pct",
+        cost: 5000,
+        costCurrency: "EGP",
+        gpPct: 20,
+        revenue: 0,
+        gpValue: 0,
+        afPct: 0,
+        fxRateToEgp: 1,
+      },
+    ],
+    "EGP"
+  );
+  assert.equal(mixed.length, 1);
+  assert.equal(mixed[0]?.currency, "SAR");
+  assert.equal(mixed[0]?.totalCost, 10000);
 }
 
 console.log("quotation-row-math.test.ts: all assertions passed");
