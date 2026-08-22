@@ -104,7 +104,10 @@ import {
   headerSelectionNavigation,
   primaryActionForJourney,
   shortlistCreatorSelectEnabled,
+  shortlistContinueToYourSelection,
   AFTER_CREATOR_APPROVAL_SECTION,
+  AFTER_SHORTLIST_CONTINUE_SECTION,
+  CONTINUE_TO_YOUR_SELECTION_LABEL,
   UNPRICED_INCLUDED_MESSAGE,
   canOpenCommercialWorkspace,
   COMMERCIAL_LOCKED_UNTIL_CREATOR_APPROVAL_MESSAGE,
@@ -3374,14 +3377,14 @@ test("Shortlist is the select page until the client approves the selection", () 
   );
 });
 
-test("Your Selection stays empty until Approve Selected Creators, then shows the frozen roster", () => {
+test("Your Selection shows selected creators, then the frozen roster after approval", () => {
   const creators = [
     { creatorId: "a", displayName: "A", selection: "accepted" as const, contentExamples: [] },
     { creatorId: "b", displayName: "B", selection: "in_review" as const, contentExamples: [] },
     { creatorId: "c", displayName: "C", selection: "in_review" as const, contentExamples: [] },
   ];
   const live = yourSelectionRoster(creators as never, { a: "accepted", b: "in_review", c: "in_review" });
-  assert.deepEqual(live.map((creator) => creator.creatorId), []);
+  assert.deepEqual(live.map((creator) => creator.creatorId), ["a"]);
   const frozen = yourSelectionRoster(creators as never, { a: "accepted", b: "accepted", c: "in_review" }, {
     selectionConfirmed: true,
     clientApprovedCreatorIds: ["a"],
@@ -3390,10 +3393,24 @@ test("Your Selection stays empty until Approve Selected Creators, then shows the
   assert.equal(frozen.some((creator) => creator.creatorId === "b"), false);
 });
 
-test("Approve Selected Creators opens Commercial and does not skip ahead before that freeze", () => {
+test("Shortlist continue opens Your Selection without freezing or approving the quotation", () => {
+  const continueAction = shortlistContinueToYourSelection();
+  assert.equal(continueAction.label, CONTINUE_TO_YOUR_SELECTION_LABEL);
+  assert.equal(continueAction.section, AFTER_SHORTLIST_CONTINUE_SECTION);
+  assert.equal(CLIENT_WORKSPACE_SECTION_LABEL[AFTER_SHORTLIST_CONTINUE_SECTION], "Your Selection");
+  assert.equal(continueAction.writesClientSelection, false);
+  assert.equal(continueAction.freezesSelection, false);
+  assert.equal(continueAction.approvesCreators, false);
+  assert.equal(continueAction.approvesQuotation, false);
+  assert.notEqual(continueAction.label, APPROVE_SELECTED_CREATORS_LABEL);
+  assert.notEqual(continueAction.label, APPROVE_FINAL_QUOTATION_LABEL);
+});
+
+test("Approve Selected Creators opens Commercial after Your Selection freeze", () => {
   assert.equal(AFTER_CREATOR_APPROVAL_SECTION, "commercial");
   assert.equal(CLIENT_WORKSPACE_SECTION_LABEL[AFTER_CREATOR_APPROVAL_SECTION], "Commercial");
   assert.equal(CLIENT_WORKSPACE_SECTION_LABEL.commercial, "Commercial");
+  assert.notEqual(AFTER_SHORTLIST_CONTINUE_SECTION, AFTER_CREATOR_APPROVAL_SECTION);
 });
 
 const pool = [
@@ -3675,6 +3692,7 @@ test("AC: quotation download and send stay closed until Approve Selected Creator
 
 test("AE: Commercial hides selection and amounts until Approve Selected Creators", () => {
   assert.equal(canOpenCommercialWorkspace({ selectionConfirmed: false }), false);
+  assert.match(COMMERCIAL_LOCKED_UNTIL_CREATOR_APPROVAL_MESSAGE, /Your Selection/);
   assert.match(COMMERCIAL_LOCKED_UNTIL_CREATOR_APPROVAL_MESSAGE, /Approve Selected Creators/);
   assert.match(COMMERCIAL_LOCKED_UNTIL_CREATOR_APPROVAL_MESSAGE, /Total Investment/);
   assert.equal(canOpenCommercialWorkspace({ selectionConfirmed: true }), true);

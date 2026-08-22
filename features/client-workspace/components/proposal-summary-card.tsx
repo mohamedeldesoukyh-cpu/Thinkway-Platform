@@ -18,11 +18,13 @@ import {
   AFTER_CREATOR_APPROVAL_SECTION,
   APPROVE_SELECTED_CREATORS_LABEL,
   CONFIRM_CREATORS_SUPPORTING_TEXT,
+  CONTINUE_TO_YOUR_SELECTION_LABEL,
   UNPRICED_INCLUDED_MESSAGE,
   buildCreatorApprovalConfirmation,
   canEnableApproveSelectedCreators,
   primaryActionForJourney,
   selectionCalculator,
+  shortlistContinueToYourSelection,
 } from "../selection-flow";
 import type { ClientWorkspaceView } from "../types";
 import { useClientWorkspaceState } from "./client-workspace-state";
@@ -80,6 +82,7 @@ export function ProposalSummaryCard({
   variant = "card",
   showBulkControls = false,
   showActions = true,
+  barAction = "none",
   onSelectAll,
   onClear,
 }: {
@@ -89,6 +92,7 @@ export function ProposalSummaryCard({
   variant?: "card" | "bar";
   showBulkControls?: boolean;
   showActions?: boolean;
+  barAction?: "continue" | "approve" | "none";
   onSelectAll?: () => void;
   onClear?: () => void;
 }) {
@@ -130,7 +134,10 @@ export function ProposalSummaryCard({
     unpricedSelectedCount: calc.unpricedSelectedCount,
     selectionConfirmed: confirmed,
   });
-  const showApproveSelected = showBulkControls && !confirmed;
+  const showApproveSelected = barAction === "approve" && !confirmed;
+  const showContinueToSelection = barAction === "continue" && !confirmed;
+  const canContinueToSelection =
+    showContinueToSelection && view.canDecide && !pending && calc.selectedCount > 0;
   const canAct =
     variant === "bar"
       ? view.canDecide && !pending && canApproveSelected
@@ -217,36 +224,45 @@ export function ProposalSummaryCard({
           missing={!hasPricedTotals}
         />
         <div className="sp" />
-        {showBulkControls ? (
+        {showBulkControls || showContinueToSelection || showApproveSelected || confirmed ? (
           <div className="sumbar-cta">
-            <button
-              type="button"
-              className="btn sec"
-              disabled={pending || confirmed || !view.canDecide}
-              onClick={onSelectAll}
-            >
-              Select all
-            </button>
-            <button
-              type="button"
-              className="btn sec"
-              disabled={pending || confirmed || !view.canDecide}
-              onClick={onClear}
-            >
-              Clear
-            </button>
+            {showBulkControls ? (
+              <>
+                <button
+                  type="button"
+                  className="btn sec"
+                  disabled={pending || confirmed || !view.canDecide}
+                  onClick={onSelectAll}
+                >
+                  Select all
+                </button>
+                <button
+                  type="button"
+                  className="btn sec"
+                  disabled={pending || confirmed || !view.canDecide}
+                  onClick={onClear}
+                >
+                  Clear
+                </button>
+              </>
+            ) : null}
             {confirmed ? (
               <span className="sc ok">Client Approved</span>
-            ) : (
+            ) : showContinueToSelection ? (
+              <button
+                type="button"
+                className="btn pri"
+                disabled={!canContinueToSelection}
+                onClick={() => goToSection(shortlistContinueToYourSelection().section)}
+              >
+                {CONTINUE_TO_YOUR_SELECTION_LABEL}
+              </button>
+            ) : showApproveSelected ? (
               <button type="button" className="btn pri" disabled={!canAct} onClick={runPrimary}>
                 <IconCheck />
                 {APPROVE_SELECTED_CREATORS_LABEL}
               </button>
-            )}
-          </div>
-        ) : confirmed ? (
-          <div className="sumbar-cta">
-            <span className="sc ok">Client Approved</span>
+            ) : null}
           </div>
         ) : null}
         {error ? <p className="sumbar-msg">{error}</p> : emptyHint ? <p className="sumbar-msg">{emptyHint}</p> : null}

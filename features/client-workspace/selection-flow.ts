@@ -36,7 +36,10 @@ export const APPROVE_FINAL_QUOTATION_LABEL = "Approve Final Quotation";
 export const REVIEW_YOUR_SELECTION_LABEL = "Review Your Selection";
 export const ADD_FROM_SHORTLIST_LABEL = "Add from Shortlist";
 export const REMOVE_FROM_SELECTION_LABEL = "Remove";
-/** After Approve Selected Creators, open Commercial. */
+export const CONTINUE_TO_YOUR_SELECTION_LABEL = "Continue to Your Selection";
+/** Shortlist continue is navigation only — it does not freeze or approve the quotation. */
+export const AFTER_SHORTLIST_CONTINUE_SECTION = "creators" as const;
+/** After Approve Selected Creators on Your Selection, open Commercial. */
 export const AFTER_CREATOR_APPROVAL_SECTION = "commercial" as const;
 export const UNPRICED_APPROVAL_MESSAGE = "Your selection includes creators without confirmed pricing.";
 export const UNPRICED_INCLUDED_MESSAGE =
@@ -381,7 +384,7 @@ export function shortlistCreatorSelectEnabled(input: {
 }
 
 export const COMMERCIAL_LOCKED_UNTIL_CREATOR_APPROVAL_MESSAGE =
-  "Select creators on Shortlist, then Approve Selected Creators. Selection, Cost, Agency Fees, and Total Investment appear here after that approval.";
+  "Continue to Your Selection, then Approve Selected Creators. Selection, Cost, Agency Fees, and Total Investment appear here after that approval.";
 
 export function canOpenCommercialWorkspace(input: {
   selectionConfirmed?: boolean;
@@ -567,6 +570,25 @@ export function headerSelectionNavigation(): {
   return {
     label: REVIEW_YOUR_SELECTION_LABEL,
     section: "creators",
+    writesClientSelection: false,
+    freezesSelection: false,
+    approvesCreators: false,
+    approvesQuotation: false,
+  };
+}
+
+/** Shortlist primary CTA. Navigation only — does not freeze selection or approve the quotation. */
+export function shortlistContinueToYourSelection(): {
+  label: typeof CONTINUE_TO_YOUR_SELECTION_LABEL;
+  section: typeof AFTER_SHORTLIST_CONTINUE_SECTION;
+  writesClientSelection: false;
+  freezesSelection: false;
+  approvesCreators: false;
+  approvesQuotation: false;
+} {
+  return {
+    label: CONTINUE_TO_YOUR_SELECTION_LABEL,
+    section: AFTER_SHORTLIST_CONTINUE_SECTION,
     writesClientSelection: false,
     freezesSelection: false,
     approvesCreators: false,
