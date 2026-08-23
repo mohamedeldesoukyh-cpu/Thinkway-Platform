@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { ChevronDownIcon, Loader2Icon, RefreshCwIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -21,9 +22,11 @@ import {
   refreshCreatorCategoriesAction,
   refreshCreatorProfileAction,
 } from "../actions";
+import { pollCreatorAfterRefresh } from "../poll-creator-refresh";
 import {
   isEnrichmentInProgress,
   resolveCreatorEnrichmentStatus,
+  syncStatusToEnrichmentStatus,
   type CreatorEnrichmentStatus,
 } from "../status";
 import { useManualRefreshFlow } from "../use-manual-refresh-flow";
@@ -64,6 +67,7 @@ export function RefreshCreatorMenu({
   onCreatorUpdated,
 }: RefreshCreatorMenuProps) {
   const displayStatus = resolveCreatorEnrichmentStatus(enrichmentStatus);
+  const pollActiveRef = useRef(false);
   const {
     isPending,
     dialogOpen,
@@ -77,6 +81,36 @@ export function RefreshCreatorMenu({
     onCreatorUpdated,
   });
   const inProgress = isPending || isEnrichmentInProgress(displayStatus);
+
+  useEffect(() => {
+    if (!unifiedId || !influencerId) return;
+    if (!isEnrichmentInProgress(displayStatus)) {
+      pollActiveRef.current = false;
+      return;
+    }
+    if (pollActiveRef.current) return;
+    pollActiveRef.current = true;
+
+    void pollCreatorAfterRefresh(
+      { unifiedId, influencerId },
+      {
+        onStatusChange: (syncStatus) => {
+          onStatusChange?.(syncStatusToEnrichmentStatus(syncStatus));
+        },
+        onUpdated: (creator) => {
+          onCreatorUpdated?.(creator);
+          onStatusChange?.(resolveCreatorEnrichmentStatus(creator.enrichment_status));
+        },
+        onComplete: (syncStatus) => {
+          pollActiveRef.current = false;
+          onStatusChange?.(syncStatusToEnrichmentStatus(syncStatus));
+        },
+      }
+    ).catch(() => {
+      pollActiveRef.current = false;
+      onStatusChange?.("failed");
+    });
+  }, [displayStatus, influencerId, onCreatorUpdated, onStatusChange, unifiedId]);
 
   return (
     <>

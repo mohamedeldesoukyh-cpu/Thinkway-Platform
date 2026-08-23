@@ -155,7 +155,7 @@
     "test:creator-enrichment-policy": "npx tsx lib/creator-enrichment/policy.test.ts",
     "test:creator-enrichment-merge": "npx tsx lib/creator-enrichment/merge.test.ts",
     "test:creator-enrichment-audience-filters": "npx tsx features/discovery/enrichment/audience-filters.test.ts",
-    "test:creator-enrichment": "npx tsx lib/creator-enrichment/policy.test.ts && npx tsx lib/creator-enrichment/merge.test.ts && npx tsx features/discovery/enrichment/audience-filters.test.ts && npx tsx lib/creator-enrichment/orchestrator/creator-enrichment-orchestrator.test.ts && npx tsx lib/creator-enrichment/decision/decision-engine.test.ts && npx tsx lib/creator-enrichment/status-resolution.test.ts && npx tsx lib/creator-enrichment/refresh-failure-stage.test.ts",
+    "test:creator-enrichment": "npx tsx lib/creator-enrichment/policy.test.ts && npx tsx lib/creator-enrichment/merge.test.ts && npx tsx features/discovery/enrichment/audience-filters.test.ts && npx tsx lib/creator-enrichment/orchestrator/creator-enrichment-orchestrator.test.ts && npx tsx lib/creator-enrichment/decision/decision-engine.test.ts && npx tsx lib/creator-enrichment/status-resolution.test.ts && npx tsx lib/creator-enrichment/refresh-failure-stage.test.ts && npx tsx lib/creator-enrichment/with-timeout.test.ts && npx tsx features/discovery/enrichment/manual-refresh-follow-up.test.ts",
     "validate:creator-integrity": "npx tsx features/ai-workflows/validate-creator-integrity.ts",
     "validate:ers1-live-parity": "npx tsx features/ai-workflows/validate-ers1-live-parity.ts",
     "validate:ers2-search-intelligence": "npx tsx features/ai-workflows/validate-ers2-search-intelligence.ts",

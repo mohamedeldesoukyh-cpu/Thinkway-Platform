@@ -25,6 +25,10 @@ import {
   createCreatorEnrichmentQueueConnection,
   getCreatorEnrichmentRedisUrl,
 } from "./queue-connection";
+import {
+  CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+  withTimeout,
+} from "./with-timeout";
 
 /**
  * Stable job IDs — never include Date.now().
@@ -96,9 +100,17 @@ export async function enqueueCreatorEnrichmentImpl(
       connection,
     });
 
-    const existing = await queue.getJob(jobId);
+    const existing = await withTimeout(
+      queue.getJob(jobId),
+      CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+      `getJob(${jobId})`
+    );
     if (existing) {
-      const state = await existing.getState();
+      const state = await withTimeout(
+        existing.getState(),
+        CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+        `getState(${jobId})`
+      );
       if (INFLIGHT_STATES.has(state)) {
         logManualRefreshTrace("queue_add_result", {
           influencerId: payload.influencerId,
@@ -112,20 +124,28 @@ export async function enqueueCreatorEnrichmentImpl(
       }
       // Completed / failed / unknown — free the slot so a new refresh can run.
       try {
-        await existing.remove();
+        await withTimeout(
+          existing.remove(),
+          CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+          `remove(${jobId})`
+        );
       } catch {
         // Race with another worker finishing remove — continue to add.
       }
     }
 
-    const job = await queue.add(payload.trigger, payload, {
-      priority: bullmqPriority(payload.priority),
-      jobId,
-      attempts: CREATOR_ENRICHMENT_JOB_ATTEMPTS,
-      backoff: { type: "exponential", delay: CREATOR_ENRICHMENT_BACKOFF_DELAY_MS },
-      removeOnComplete: CREATOR_ENRICHMENT_REMOVE_ON_COMPLETE,
-      removeOnFail: CREATOR_ENRICHMENT_REMOVE_ON_FAIL,
-    });
+    const job = await withTimeout(
+      queue.add(payload.trigger, payload, {
+        priority: bullmqPriority(payload.priority),
+        jobId,
+        attempts: CREATOR_ENRICHMENT_JOB_ATTEMPTS,
+        backoff: { type: "exponential", delay: CREATOR_ENRICHMENT_BACKOFF_DELAY_MS },
+        removeOnComplete: CREATOR_ENRICHMENT_REMOVE_ON_COMPLETE,
+        removeOnFail: CREATOR_ENRICHMENT_REMOVE_ON_FAIL,
+      }),
+      CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+      `add(${jobId})`
+    );
     logManualRefreshTrace("queue_add_result", {
       influencerId: payload.influencerId,
       queued: true,
@@ -156,7 +176,11 @@ export async function enqueueCreatorEnrichmentImpl(
     return { queued: false, reason: message };
   } finally {
     if (queue) {
-      await queue.close().catch(() => {});
+      await withTimeout(
+        queue.close(),
+        CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+        "queue.close"
+      ).catch(() => {});
     }
   }
 }
