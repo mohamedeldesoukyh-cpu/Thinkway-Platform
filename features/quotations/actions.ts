@@ -338,6 +338,24 @@ export async function updateQuotationHeader(input: {
   return result;
 }
 
+export async function setQuotationShowOriginalCurrency(input: {
+  quotationId: string;
+  value: boolean;
+}): Promise<ActionResult> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  const { persistClientShowOriginalCurrency } = await import(
+    "@/lib/commercial/client-original-currency-persist"
+  );
+  const result = await persistClientShowOriginalCurrency(actor.supabase, {
+    quotationId: input.quotationId,
+    value: input.value,
+  });
+  if (!result.ok) return result;
+  revalidate(result.quotationId ?? input.quotationId, result.shortlistId ?? undefined);
+  return { ok: true };
+}
+
 /** Resolve currency → EGP rate from md_exchange_rates for live header display. */
 export async function resolveCommercialRateToEgp(
   currency: string,

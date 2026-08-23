@@ -186,6 +186,8 @@ export type QuotationDetail = {
   /** Expected unique people reached (Campaign Forecast Engine). */
   estimated_reach: number;
   estimated_engagement_rate: number | null;
+  /** Thinkway-controlled. Client Workspace shows original currency only when this is on. */
+  showOriginalCurrency?: boolean;
 };
 
 export type QuotationFormOptions = {

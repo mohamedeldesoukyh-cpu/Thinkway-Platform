@@ -123,6 +123,8 @@ export type ShortlistDetail = {
   linkedQuotations: ShortlistLinkedQuotation[];
   canManage: boolean;
   canApprove: boolean;
+  /** Thinkway-controlled. Client Workspace shows original currency only when this is on. */
+  showOriginalCurrency?: boolean;
 };
 
 export type ShortlistCampaignOption = {

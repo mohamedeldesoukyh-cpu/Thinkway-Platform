@@ -19,6 +19,7 @@ import {
   getMasterDataOptions,
 } from "@/lib/master-data/queries";
 import { isCommercialSyncEnabled, stripQuotationVersionSuffix } from "@/lib/commercial-sync/rules";
+import { readShowOriginalCurrency } from "@/lib/commercial/client-original-currency";
 import { QUOTATION_PERMISSIONS } from "@/lib/domains/commercial/quotation-constants";
 import type { CommercialInputMode, Database, QuotationStatus } from "@/types/database";
 
@@ -332,7 +333,7 @@ export async function getQuotationDetail(
        is_archived, created_at, updated_at,
        is_temporary_client, is_temporary_brand, temporary_client_name, temporary_brand_name,
        parent_quotation_id, version_number, revision_notes,
-       campaign_object_id, source_campaign_object_version`
+       campaign_object_id, source_campaign_object_version, metadata`
     )
     .eq("id", id)
     .maybeSingle();
@@ -587,6 +588,7 @@ export async function getQuotationDetail(
     audience_size: 0,
     estimated_reach: 0,
     estimated_engagement_rate: null as number | null,
+    showOriginalCurrency: readShowOriginalCurrency(row.metadata),
   };
 
   try {

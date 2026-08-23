@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useOptimistic, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -29,6 +29,7 @@ import {
   quotationClientShareRequiresSave,
   quotationIsMovedToCampaign,
 } from "@/features/client-workspace/client-review-selection";
+import { ShowOriginalCurrencyToggle } from "@/features/commercial/components/show-original-currency-toggle";
 import { EntityPrevNext } from "@/components/navigation/entity-prev-next";
 import {
   DropdownMenu,
@@ -44,7 +45,7 @@ import { QuotationLifecycleSheet } from "@/features/quotations/components/quotat
 import { QuotationPreviewToolbarActions } from "@/features/quotations/components/quotation-preview-toolbar-actions";
 import { QuotationToolbarButton } from "@/features/quotations/components/quotation-detail-primitives";
 import { QuotationWorkspaceStatusPill } from "@/features/quotations/components/quotation-list-status-pill";
-import { archiveQuotation, updateQuotationHeader } from "@/features/quotations/actions";
+import { archiveQuotation, setQuotationShowOriginalCurrency, updateQuotationHeader } from "@/features/quotations/actions";
 import { quotationDetailPath } from "@/features/quotations/constants";
 import type { QuotationTemplateVariant } from "@/features/quotations/export/quotation-template";
 import type { PromoteWizardOptions, QuotationDetail } from "@/features/quotations/types";
@@ -86,6 +87,9 @@ export function QuotationWorkspaceHeader({
   const [shareReviewNumber, setShareReviewNumber] = useState<number | undefined>(undefined);
   const [hasLink, setHasLink] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
+  const [showOriginalCurrency, setOptimisticShowOriginalCurrency] = useOptimistic(
+    Boolean(detail.showOriginalCurrency)
+  );
   const campaignSeed = useMemo(() => seedFromQuotation(detail), [detail]);
   const shareScope = { source: "quotation" as const, id: detail.id };
   const movedToCampaign = quotationIsMovedToCampaign(detail);
@@ -279,6 +283,26 @@ export function QuotationWorkspaceHeader({
               )}
               Save
             </QuotationToolbarButton>
+          ) : null}
+          {detail.canManage ? (
+            <ShowOriginalCurrencyToggle
+              checked={showOriginalCurrency}
+              disabled={pending}
+              onChange={(value) => {
+                startTransition(async () => {
+                  setOptimisticShowOriginalCurrency(value);
+                  const result = await setQuotationShowOriginalCurrency({
+                    quotationId: detail.id,
+                    value,
+                  });
+                  if (!result.ok) {
+                    toast.error(result.message);
+                    return;
+                  }
+                  router.refresh();
+                });
+              }}
+            />
           ) : null}
           {detail.canManage ? (
             <QuotationToolbarButton

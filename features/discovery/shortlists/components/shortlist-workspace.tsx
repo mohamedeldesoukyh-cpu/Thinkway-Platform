@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
@@ -92,12 +92,14 @@ import {
   toggleSelectAll,
 } from "../bulk-selection-policy";
 import { CommercialCurrencySelect } from "@/features/commercial/components/commercial-currency-select";
+import { ShowOriginalCurrencyToggle } from "@/features/commercial/components/show-original-currency-toggle";
 import {
   approveShortlist,
   archiveShortlist,
   cancelShortlist,
   rejectShortlist,
   reopenShortlist,
+  setShortlistShowOriginalCurrency,
   updateShortlistDetails,
 } from "../actions";
 import { canEditCreators, canMoveToCampaign, isMovementLocked } from "../transitions";
@@ -172,6 +174,9 @@ export function ShortlistWorkspace({
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareReviewNumber, setShareReviewNumber] = useState<number | undefined>(undefined);
   const [hasLink, setHasLink] = useState(false);
+  const [showOriginalCurrency, setOptimisticShowOriginalCurrency] = useOptimistic(
+    Boolean(detail.showOriginalCurrency)
+  );
   const {
     open: detailOpen,
     creator: detailCreator,
@@ -901,6 +906,26 @@ export function ShortlistWorkspace({
                 <SendIcon className="size-3.5" />
                 Send to Client
               </ShortlistToolbarButton>
+            ) : null}
+            {detail.canManage ? (
+              <ShowOriginalCurrencyToggle
+                checked={showOriginalCurrency}
+                disabled={isPending}
+                onChange={(value) => {
+                  startTransition(async () => {
+                    setOptimisticShowOriginalCurrency(value);
+                    const result = await setShortlistShowOriginalCurrency({
+                      shortlistId: detail.id,
+                      value,
+                    });
+                    if (!result.ok) {
+                      toast.error(result.message);
+                      return;
+                    }
+                    router.refresh();
+                  });
+                }}
+              />
             ) : null}
             <ShortlistToolbarButton
               variant="outline"
