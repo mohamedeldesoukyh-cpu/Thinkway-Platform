@@ -394,12 +394,20 @@ export async function importShortlistItemsToQuotation(
   if (!inserted.ok) return inserted;
 
   const added = inserted.data?.inserted ?? 0;
-  const collapGroups = new Set(
+  const collapseGroups = new Set(
     seeds.map((seed) => seed.collapse_group_id).filter((id): id is string => Boolean(id))
   );
-  if (collapGroups.size > 0) {
+  if (collapseGroups.size > 0) {
     await syncCollapsePackageOptionNumbers(supabase, input.quotationId);
   }
+
+  const { syncOpenClientWorkspaceRosterBestEffort } = await import(
+    "@/features/client-workspace/sync-open-roster"
+  );
+  await syncOpenClientWorkspaceRosterBestEffort(supabase, {
+    quotationId: input.quotationId,
+    shortlistId: input.shortlistId,
+  });
 
   return {
     ok: true,

@@ -684,6 +684,64 @@ export function overlayQuotationOnShortlistCreators(
   ];
 }
 
+/** Replace a frozen snapshot roster with live shortlist ∪ quotation membership. */
+export function applyLiveCreatorRoster(
+  snapshot: ClientReviewSourceSnapshot,
+  liveShortlistCreators: ClientReviewSourceSnapshotCreator[],
+  liveQuotationCreators: ClientReviewSourceSnapshotCreator[] = []
+): ClientReviewSourceSnapshot {
+  const creators = overlayQuotationOnShortlistCreators(liveShortlistCreators, liveQuotationCreators, {
+    currency: snapshot.commercial.currency,
+  });
+  const ids = new Set(creators.map((creator) => creator.creatorId));
+  const priced = creators.filter((creator) => isPricedClientInvestment(creator.investmentAmount));
+  const creatorInvestment = priced.reduce((sum, creator) => sum + (creator.investmentAmount ?? 0), 0);
+  const freeze = snapshot.clientSelection
+    ? {
+        ...snapshot.clientSelection,
+        creatorIds: snapshot.clientSelection.creatorIds.filter((id) => ids.has(id)),
+        commerciallyIncludedCreatorIds: snapshot.clientSelection.commerciallyIncludedCreatorIds?.filter((id) =>
+          ids.has(id)
+        ),
+        extensions: snapshot.clientSelection.extensions?.map((wave) => ({
+          ...wave,
+          creatorIds: wave.creatorIds.filter((id) => ids.has(id)),
+        })),
+      }
+    : snapshot.clientSelection;
+  return {
+    ...snapshot,
+    creators,
+    creatorIds: creators.map((creator) => creator.creatorId),
+    content: snapshot.content.filter((row) => {
+      const creatorId = row.creatorId;
+      return typeof creatorId === "string" && ids.has(creatorId);
+    }),
+    commercial: {
+      ...snapshot.commercial,
+      creatorInvestment,
+      totalInvestment: creatorInvestment,
+      quotationTotal: creatorInvestment,
+      lines: priced.map((creator) => ({
+        label: creator.displayName,
+        amount: creator.investmentAmount,
+      })),
+      totalCount: creators.length,
+    },
+    quotation: snapshot.quotation
+      ? {
+          ...snapshot.quotation,
+          lines: priced.map((creator) => ({
+            creatorId: creator.creatorId,
+            label: creator.displayName,
+            amount: creator.investmentAmount ?? 0,
+          })),
+        }
+      : snapshot.quotation,
+    clientSelection: freeze,
+  };
+}
+
 export function mergeSnapshotsForClientView(input: {
   active: ClientReviewSourceSnapshot;
   shortlist?: ClientReviewSourceSnapshot | null;
@@ -697,7 +755,7 @@ export function mergeSnapshotsForClientView(input: {
     (input.active.source === "quotation" ? input.active.creators : []);
   const quotationSnap = input.quotation ?? (input.active.source === "quotation" ? input.active : null);
   const currency = quotationSnap?.commercial.currency || input.active.commercial.currency;
-  if (shortlistCreators.length === 0) {
+  if (!input.shortlist) {
     return {
       ...input.active,
       creators: input.active.creators.map((creator) => applyQuotationCurrency(creator, currency)),

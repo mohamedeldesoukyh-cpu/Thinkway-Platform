@@ -63,7 +63,7 @@ export async function createClientReviewFromQuotation(
     };
   }
 
-  const blockers = quotationReviewBlockers(detail);
+  const blockers = quotationReviewBlockers(detail, { allowEmptyItems: input.syncExistingOnly });
   if (blockers.length > 0) {
     return { ok: false, message: "Cannot create client review from this quotation.", blockers };
   }
@@ -104,10 +104,10 @@ export async function createClientReviewFromQuotation(
   if (detail.shortlist_id) {
     try {
       const shortlistPool = await loadShortlistPoolCreators(supabase, detail.shortlist_id);
-      if (shortlistPool.length > 0) {
-    pooledCreators = overlayQuotationOnShortlistCreators(shortlistPool, snapshotCreators, {
-      currency: detail.currency,
-    });
+      if (shortlistPool) {
+        pooledCreators = overlayQuotationOnShortlistCreators(shortlistPool, snapshotCreators, {
+          currency: detail.currency,
+        });
       }
     } catch {
       pooledCreators = snapshotCreators;

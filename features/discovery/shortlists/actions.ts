@@ -1152,6 +1152,13 @@ export async function addCreatorToShortlistV2(
   }
 
   revalidateShortlist(resolved.shortlistId);
+  const { syncOpenClientWorkspaceRosterBestEffort } = await import(
+    "@/features/client-workspace/sync-open-roster"
+  );
+  await syncOpenClientWorkspaceRosterBestEffort(actor.supabase, {
+    userId: actor.userId,
+    shortlistId: resolved.shortlistId,
+  });
   return { ok: true, message: "Creator added to shortlist." };
 }
 
@@ -1209,6 +1216,13 @@ export async function removeCreatorFromShortlistV2(
   });
 
   revalidateShortlist(shortlistId);
+  const { syncOpenClientWorkspaceRosterBestEffort } = await import(
+    "@/features/client-workspace/sync-open-roster"
+  );
+  await syncOpenClientWorkspaceRosterBestEffort(actor.supabase, {
+    userId: actor.userId,
+    shortlistId,
+  });
   return { ok: true, message: "Creator removed from shortlist." };
 }
 

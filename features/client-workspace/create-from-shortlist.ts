@@ -24,6 +24,8 @@ export type CreateClientReviewFromShortlistInput = {
   selectedItemIds?: string[];
   userId: string;
   origin: string;
+  mintMissingShareToken?: boolean;
+  syncExistingOnly?: boolean;
 };
 
 type ShortlistHeader = {
@@ -122,7 +124,7 @@ function cardFromCreator(
 export async function loadShortlistPoolCreators(
   supabase: SupabaseClient,
   shortlistId: string
-): Promise<ClientReviewSourceSnapshotCreator[]> {
+): Promise<ClientReviewSourceSnapshotCreator[] | null> {
   const { data: headerRow } = await supabase
     .from("discovery_shortlists")
     .select("id, name, description, status, is_archived, client_id, brand_id, metadata")
@@ -138,7 +140,7 @@ export async function loadShortlistPoolCreators(
         .eq("shortlist_id", shortlistId)
         .order("sort_order", { ascending: true }) as never
   );
-  if (itemsResult.error) return [];
+  if (itemsResult.error) return null;
   const frozenItems = ((itemsResult.data ?? []) as ShortlistSeedItem[]).filter(
     (item) => item.item_status !== "cancelled"
   );
@@ -217,7 +219,7 @@ export async function createClientReviewFromShortlist(
     brandName,
     items: allItems,
     selectedItemIds: input.selectedItemIds,
-  });
+  }).filter((blocker) => !(input.syncExistingOnly && /creator/i.test(blocker)));
   if (blockers.length > 0) {
     return { ok: false, message: "Cannot create client review from this shortlist.", blockers };
   }
@@ -228,7 +230,7 @@ export async function createClientReviewFromShortlist(
     if (selectedSet) return selectedSet.has(item.id);
     return true;
   });
-  if (frozenItems.length === 0) {
+  if (frozenItems.length === 0 && !input.syncExistingOnly) {
     return {
       ok: false,
       message: "Cannot create client review from this shortlist.",
@@ -336,5 +338,7 @@ export async function createClientReviewFromShortlist(
     alreadyOpenMessage: "A client review already exists for this shortlist selection.",
     markShortlistItemIds: frozenItems.map((item) => item.id),
     reuseInteractiveReview: true,
+    mintMissingShareToken: input.mintMissingShareToken,
+    syncExistingOnly: input.syncExistingOnly,
   });
 }
