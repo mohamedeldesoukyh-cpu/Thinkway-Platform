@@ -29,7 +29,7 @@ import {
   quotationClientShareRequiresSave,
   quotationIsMovedToCampaign,
 } from "@/features/client-workspace/client-review-selection";
-import { ShowOriginalCurrencyToggle } from "@/features/commercial/components/show-original-currency-toggle";
+import { ClientWorkspaceDisplayToggles } from "@/features/commercial/components/show-original-currency-toggle";
 import { EntityPrevNext } from "@/components/navigation/entity-prev-next";
 import {
   DropdownMenu,
@@ -45,7 +45,12 @@ import { QuotationLifecycleSheet } from "@/features/quotations/components/quotat
 import { QuotationPreviewToolbarActions } from "@/features/quotations/components/quotation-preview-toolbar-actions";
 import { QuotationToolbarButton } from "@/features/quotations/components/quotation-detail-primitives";
 import { QuotationWorkspaceStatusPill } from "@/features/quotations/components/quotation-list-status-pill";
-import { archiveQuotation, setQuotationShowOriginalCurrency, updateQuotationHeader } from "@/features/quotations/actions";
+import {
+  archiveQuotation,
+  setQuotationHideCostAndFees,
+  setQuotationShowOriginalCurrency,
+  updateQuotationHeader,
+} from "@/features/quotations/actions";
 import { quotationDetailPath } from "@/features/quotations/constants";
 import type { QuotationTemplateVariant } from "@/features/quotations/export/quotation-template";
 import type { PromoteWizardOptions, QuotationDetail } from "@/features/quotations/types";
@@ -89,6 +94,9 @@ export function QuotationWorkspaceHeader({
   const [sendOpen, setSendOpen] = useState(false);
   const [showOriginalCurrency, setOptimisticShowOriginalCurrency] = useOptimistic(
     Boolean(detail.showOriginalCurrency)
+  );
+  const [hideCostAndFees, setOptimisticHideCostAndFees] = useOptimistic(
+    Boolean(detail.hideCostAndFees)
   );
   const campaignSeed = useMemo(() => seedFromQuotation(detail), [detail]);
   const shareScope = { source: "quotation" as const, id: detail.id };
@@ -285,13 +293,28 @@ export function QuotationWorkspaceHeader({
             </QuotationToolbarButton>
           ) : null}
           {detail.canManage ? (
-            <ShowOriginalCurrencyToggle
-              checked={showOriginalCurrency}
+            <ClientWorkspaceDisplayToggles
+              showOriginalCurrency={showOriginalCurrency}
+              hideCostAndFees={hideCostAndFees}
               disabled={pending}
-              onChange={(value) => {
+              onShowOriginalCurrencyChange={(value) => {
                 startTransition(async () => {
                   setOptimisticShowOriginalCurrency(value);
                   const result = await setQuotationShowOriginalCurrency({
+                    quotationId: detail.id,
+                    value,
+                  });
+                  if (!result.ok) {
+                    toast.error(result.message);
+                    return;
+                  }
+                  router.refresh();
+                });
+              }}
+              onHideCostAndFeesChange={(value) => {
+                startTransition(async () => {
+                  setOptimisticHideCostAndFees(value);
+                  const result = await setQuotationHideCostAndFees({
                     quotationId: detail.id,
                     value,
                   });

@@ -778,6 +778,13 @@ export function shortlistCreatorSelectEnabled(input: {
 export const COMMERCIAL_LOCKED_UNTIL_CREATOR_APPROVAL_MESSAGE =
   "Continue to Your Selection, then Approve Selected Creators. Selection, Cost, Agency Fees, and Total Investment appear here after that approval.";
 
+export function commercialLockedUntilCreatorApprovalMessage(hideCostAndFees = false): string {
+  if (hideCostAndFees) {
+    return "Continue to Your Selection, then Approve Selected Creators. Selection and Total Investment appear here after that approval.";
+  }
+  return COMMERCIAL_LOCKED_UNTIL_CREATOR_APPROVAL_MESSAGE;
+}
+
 export function canOpenCommercialWorkspace(input: {
   selectionConfirmed?: boolean;
   historical?: boolean;

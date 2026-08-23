@@ -344,12 +344,30 @@ export async function setQuotationShowOriginalCurrency(input: {
 }): Promise<ActionResult> {
   const actor = await getActor();
   if (!actor.ok) return actor;
-  const { persistClientShowOriginalCurrency } = await import(
+  const { persistClientWorkspaceDisplayFlags } = await import(
     "@/lib/commercial/client-original-currency-persist"
   );
-  const result = await persistClientShowOriginalCurrency(actor.supabase, {
+  const result = await persistClientWorkspaceDisplayFlags(actor.supabase, {
     quotationId: input.quotationId,
-    value: input.value,
+    patch: { showOriginalCurrency: input.value },
+  });
+  if (!result.ok) return result;
+  revalidate(result.quotationId ?? input.quotationId, result.shortlistId ?? undefined);
+  return { ok: true };
+}
+
+export async function setQuotationHideCostAndFees(input: {
+  quotationId: string;
+  value: boolean;
+}): Promise<ActionResult> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  const { persistClientWorkspaceDisplayFlags } = await import(
+    "@/lib/commercial/client-original-currency-persist"
+  );
+  const result = await persistClientWorkspaceDisplayFlags(actor.supabase, {
+    quotationId: input.quotationId,
+    patch: { hideCostAndFees: input.value },
   });
   if (!result.ok) return result;
   revalidate(result.quotationId ?? input.quotationId, result.shortlistId ?? undefined);

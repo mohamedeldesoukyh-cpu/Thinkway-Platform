@@ -19,7 +19,10 @@ import {
   getMasterDataOptions,
 } from "@/lib/master-data/queries";
 import { isCommercialSyncEnabled, stripQuotationVersionSuffix } from "@/lib/commercial-sync/rules";
-import { readShowOriginalCurrency } from "@/lib/commercial/client-original-currency";
+import {
+  readHideCostAndFees,
+  readShowOriginalCurrency,
+} from "@/lib/commercial/client-original-currency";
 import { QUOTATION_PERMISSIONS } from "@/lib/domains/commercial/quotation-constants";
 import type { CommercialInputMode, Database, QuotationStatus } from "@/types/database";
 
@@ -589,6 +592,7 @@ export async function getQuotationDetail(
     estimated_reach: 0,
     estimated_engagement_rate: null as number | null,
     showOriginalCurrency: readShowOriginalCurrency(row.metadata),
+    hideCostAndFees: readHideCostAndFees(row.metadata),
   };
 
   try {

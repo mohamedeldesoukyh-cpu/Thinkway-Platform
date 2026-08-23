@@ -1,19 +1,36 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
-  metadataWithShowOriginalCurrency,
-  readShowOriginalCurrency,
+  metadataWithClientWorkspaceDisplayPatch,
+  readClientWorkspaceDisplayFlags,
+  type ClientWorkspaceDisplayFlags,
 } from "@/lib/commercial/client-original-currency";
 import type { Database } from "@/types/database";
 
 type Supabase = SupabaseClient<Database>;
 
-export async function loadClientShowOriginalCurrency(
+const EMPTY_FLAGS: ClientWorkspaceDisplayFlags = {
+  showOriginalCurrency: false,
+  hideCostAndFees: false,
+};
+
+function mergeDisplayFlags(
+  current: ClientWorkspaceDisplayFlags,
+  next: ClientWorkspaceDisplayFlags
+): ClientWorkspaceDisplayFlags {
+  return {
+    showOriginalCurrency: current.showOriginalCurrency || next.showOriginalCurrency,
+    hideCostAndFees: current.hideCostAndFees || next.hideCostAndFees,
+  };
+}
+
+export async function loadClientWorkspaceDisplayFlags(
   supabase: Supabase,
   input: { quotationId?: string | null; shortlistId?: string | null }
-): Promise<boolean> {
+): Promise<ClientWorkspaceDisplayFlags> {
   const quotationId = input.quotationId?.trim() || null;
   const shortlistId = input.shortlistId?.trim() || null;
+  let flags = EMPTY_FLAGS;
 
   if (quotationId) {
     const { data } = await supabase
@@ -21,7 +38,10 @@ export async function loadClientShowOriginalCurrency(
       .select("metadata")
       .eq("id", quotationId)
       .maybeSingle();
-    if (readShowOriginalCurrency((data as { metadata?: unknown } | null)?.metadata)) return true;
+    flags = mergeDisplayFlags(
+      flags,
+      readClientWorkspaceDisplayFlags((data as { metadata?: unknown } | null)?.metadata)
+    );
   }
 
   if (shortlistId) {
@@ -30,15 +50,29 @@ export async function loadClientShowOriginalCurrency(
       .select("metadata")
       .eq("id", shortlistId)
       .maybeSingle();
-    if (readShowOriginalCurrency((data as { metadata?: unknown } | null)?.metadata)) return true;
+    flags = mergeDisplayFlags(
+      flags,
+      readClientWorkspaceDisplayFlags((data as { metadata?: unknown } | null)?.metadata)
+    );
   }
 
-  return false;
+  return flags;
 }
 
-export async function persistClientShowOriginalCurrency(
+export async function loadClientShowOriginalCurrency(
   supabase: Supabase,
-  input: { quotationId?: string | null; shortlistId?: string | null; value: boolean }
+  input: { quotationId?: string | null; shortlistId?: string | null }
+): Promise<boolean> {
+  return (await loadClientWorkspaceDisplayFlags(supabase, input)).showOriginalCurrency;
+}
+
+export async function persistClientWorkspaceDisplayFlags(
+  supabase: Supabase,
+  input: {
+    quotationId?: string | null;
+    shortlistId?: string | null;
+    patch: Partial<ClientWorkspaceDisplayFlags>;
+  }
 ): Promise<{ ok: true; quotationId: string | null; shortlistId: string | null } | { ok: false; message: string }> {
   let quotationId = input.quotationId?.trim() || null;
   let shortlistId = input.shortlistId?.trim() || null;
@@ -90,7 +124,10 @@ export async function persistClientShowOriginalCurrency(
     const { error: updateError } = await supabase
       .from("quotations")
       .update({
-        metadata: metadataWithShowOriginalCurrency((data as { metadata?: unknown }).metadata, input.value),
+        metadata: metadataWithClientWorkspaceDisplayPatch(
+          (data as { metadata?: unknown }).metadata,
+          input.patch
+        ),
       } as never)
       .eq("id", quotationId);
     if (updateError) return { ok: false, message: updateError.message };
@@ -106,11 +143,25 @@ export async function persistClientShowOriginalCurrency(
     const { error: updateError } = await supabase
       .from("discovery_shortlists")
       .update({
-        metadata: metadataWithShowOriginalCurrency((data as { metadata?: unknown }).metadata, input.value),
+        metadata: metadataWithClientWorkspaceDisplayPatch(
+          (data as { metadata?: unknown }).metadata,
+          input.patch
+        ),
       } as never)
       .eq("id", shortlistId);
     if (updateError) return { ok: false, message: updateError.message };
   }
 
   return { ok: true, quotationId, shortlistId };
+}
+
+export async function persistClientShowOriginalCurrency(
+  supabase: Supabase,
+  input: { quotationId?: string | null; shortlistId?: string | null; value: boolean }
+): Promise<{ ok: true; quotationId: string | null; shortlistId: string | null } | { ok: false; message: string }> {
+  return persistClientWorkspaceDisplayFlags(supabase, {
+    quotationId: input.quotationId,
+    shortlistId: input.shortlistId,
+    patch: { showOriginalCurrency: input.value },
+  });
 }

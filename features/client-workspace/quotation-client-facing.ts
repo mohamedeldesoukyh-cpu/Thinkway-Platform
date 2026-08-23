@@ -150,6 +150,9 @@ export function originalInvestmentForDisplay(
 }
 
 export {
+  clientShowsCostAndFees,
+  HIDE_COST_AND_FEES_DEFAULT,
+  HIDE_COST_AND_FEES_LABEL,
   SHOW_ORIGINAL_CURRENCY_DEFAULT,
   SHOW_ORIGINAL_CURRENCY_LABEL,
 } from "@/lib/commercial/client-original-currency";

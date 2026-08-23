@@ -126,6 +126,7 @@ import {
   UNPRICED_INCLUDED_MESSAGE,
   canOpenCommercialWorkspace,
   COMMERCIAL_LOCKED_UNTIL_CREATOR_APPROVAL_MESSAGE,
+  commercialLockedUntilCreatorApprovalMessage,
   buildCreatorApprovalConfirmation,
   selectAllCreatorStates,
   clearCreatorSelectionStates,
@@ -139,6 +140,9 @@ import {
   convertLineRevenueToQuotationCurrency,
   originalClientFacingCreatorCardAmount,
   originalInvestmentForDisplay,
+  clientShowsCostAndFees,
+  HIDE_COST_AND_FEES_DEFAULT,
+  HIDE_COST_AND_FEES_LABEL,
   SHOW_ORIGINAL_CURRENCY_DEFAULT,
   SHOW_ORIGINAL_CURRENCY_LABEL,
   visibleOriginalCurrencyAmount,
@@ -4270,6 +4274,17 @@ test("Client Workspace hides original currency unless Thinkway enables it", () =
     ),
     false
   );
+});
+
+test("Client Workspace hides Cost and Agency Fees unless Thinkway leaves the toggle off", () => {
+  assert.equal(HIDE_COST_AND_FEES_DEFAULT, false);
+  assert.equal(HIDE_COST_AND_FEES_LABEL, "Hide cost and fees");
+  assert.equal(clientShowsCostAndFees(false), true);
+  assert.equal(clientShowsCostAndFees(HIDE_COST_AND_FEES_DEFAULT), true);
+  assert.equal(clientShowsCostAndFees(true), false);
+  assert.match(commercialLockedUntilCreatorApprovalMessage(false), /Cost, Agency Fees, and Total Investment/);
+  assert.match(commercialLockedUntilCreatorApprovalMessage(true), /Selection and Total Investment/);
+  assert.doesNotMatch(commercialLockedUntilCreatorApprovalMessage(true), /Agency Fees/);
 });
 
 test("V: Cost + Agency Fees = Total Investment using existing quotation AF math", () => {

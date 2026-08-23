@@ -5,11 +5,11 @@ import { formatMoneyKpi } from "@/lib/finance/currency-format";
 import { clientCreatorIdentity, DELIVERABLES_TO_BE_CONFIRMED, formatHandleLabel, formatPlatformLabel, NOT_AVAILABLE, TO_BE_CONFIRMED } from "../format";
 import { breakdownForCreator } from "../platform-breakdown";
 import { deliverablesLabel } from "../deliverables";
-import { originalInvestmentForDisplay, visibleOriginalCurrencyAmount } from "../quotation-client-facing";
+import { originalInvestmentForDisplay, clientShowsCostAndFees, visibleOriginalCurrencyAmount } from "../quotation-client-facing";
 import {
   canOpenCommercialWorkspace,
   clientQuotationCommercialView,
-  COMMERCIAL_LOCKED_UNTIL_CREATOR_APPROVAL_MESSAGE,
+  commercialLockedUntilCreatorApprovalMessage,
   consolidationContract,
   isValidClientCommercialApproval,
   INVALID_ZERO_SELECTION_APPROVAL_MESSAGE,
@@ -35,6 +35,7 @@ export function CommercialWorkspace({
 }) {
   const { selectedCommercial, goToSection } = useClientWorkspaceState();
   const showOriginalCurrency = Boolean(view.showOriginalCurrency);
+  const showCostAndFees = clientShowsCostAndFees(Boolean(view.hideCostAndFees));
   const commercialOpen = canOpenCommercialWorkspace({
     selectionConfirmed: view.journey?.selectionConfirmed,
     historical: view.journey?.historical,
@@ -46,7 +47,7 @@ export function CommercialWorkspace({
       <div className="card">
         <p className="ck">Commercial</p>
         <h2>Awaiting creator approval</h2>
-        <p className="note">{COMMERCIAL_LOCKED_UNTIL_CREATOR_APPROVAL_MESSAGE}</p>
+        <p className="note">{commercialLockedUntilCreatorApprovalMessage(Boolean(view.hideCostAndFees))}</p>
         <div className="dacts" style={{ justifyContent: "flex-start", marginTop: 18 }}>
           <button type="button" className="btn pri" onClick={() => goToSection("creators")}>
             {REVIEW_YOUR_SELECTION_LABEL}
@@ -145,6 +146,8 @@ export function CommercialWorkspace({
               {commercial.unpricedSelectedCount ?? 0}
             </p>
           </div>
+          {showCostAndFees ? (
+            <>
           <div className="gi">
             <p className="l">Cost</p>
             <p className={commercial.creatorInvestment > 0 ? "v" : "v tbc"}>
@@ -161,6 +164,8 @@ export function CommercialWorkspace({
                 : TO_BE_CONFIRMED}
             </p>
           </div>
+            </>
+          ) : null}
           <div className="gi">
             <p className="l">Total Investment</p>
             <p className={commercial.totalInvestment > 0 ? "v" : "v tbc"}>
@@ -172,7 +177,7 @@ export function CommercialWorkspace({
         </div>
       </div>
 
-      {allocation ? (
+      {allocation && showCostAndFees ? (
         <div className="card">
           <p className="ck">Budget allocation</p>
           <h2>How the investment is split</h2>
@@ -207,8 +212,12 @@ export function CommercialWorkspace({
                 <th>Creator</th>
                 <th>Platforms</th>
                 <th>Deliverables</th>
-                <th className="r">Cost</th>
-                <th className="r">Agency Fees</th>
+                {showCostAndFees ? (
+                  <>
+                    <th className="r">Cost</th>
+                    <th className="r">Agency Fees</th>
+                  </>
+                ) : null}
                 <th className="r">Total Investment</th>
               </tr>
             </thead>
@@ -220,6 +229,15 @@ export function CommercialWorkspace({
                   );
                   const fee = Number(creator.agencyFeeAmount) || 0;
                   const lineTotal = (creator.investmentAmount ?? 0) + fee;
+                  const original = visibleOriginalCurrencyAmount(
+                    originalInvestmentForDisplay(creator, commercial.currency),
+                    showOriginalCurrency
+                  );
+                  const originalLine = original ? (
+                    <div className="inv-orig">
+                      Original: {formatMoneyKpi(original.amount, original.currency)}
+                    </div>
+                  ) : null;
                   return (
                 <tr key={creator.creatorId}>
                   <td>
@@ -258,27 +276,26 @@ export function CommercialWorkspace({
                       return label === DELIVERABLES_TO_BE_CONFIRMED ? TO_BE_CONFIRMED : label;
                     })()}
                   </td>
+                  {showCostAndFees ? (
+                    <>
+                      <td className="r">
+                        {formatMoneyKpi(creator.investmentAmount!, commercial.currency)}
+                        {originalLine}
+                      </td>
+                      <td className="r">{formatMoneyKpi(fee, commercial.currency)}</td>
+                    </>
+                  ) : null}
                   <td className="r">
-                    {formatMoneyKpi(creator.investmentAmount!, commercial.currency)}
-                    {(() => {
-                      const original = visibleOriginalCurrencyAmount(
-                        originalInvestmentForDisplay(creator, commercial.currency),
-                        showOriginalCurrency
-                      );
-                      return original ? (
-                        <div className="inv-orig">
-                          Original: {formatMoneyKpi(original.amount, original.currency)}
-                        </div>
-                      ) : null;
-                    })()}
+                    {formatMoneyKpi(lineTotal, commercial.currency)}
+                    {showCostAndFees ? null : originalLine}
                   </td>
-                  <td className="r">{formatMoneyKpi(fee, commercial.currency)}</td>
-                  <td className="r">{formatMoneyKpi(lineTotal, commercial.currency)}</td>
                 </tr>
                   );
                 })}
             </tbody>
             <tfoot>
+              {showCostAndFees ? (
+                <>
               <tr className="sub">
                 <td colSpan={5}>Cost</td>
                 <td className="r">{formatMoneyKpi(quotationView.original.cost, commercial.currency)}</td>
@@ -287,8 +304,10 @@ export function CommercialWorkspace({
                 <td colSpan={5}>Agency Fees</td>
                 <td className="r">{formatMoneyKpi(quotationView.original.agencyFees, commercial.currency)}</td>
               </tr>
+                </>
+              ) : null}
               <tr>
-                <td colSpan={5}>Total Investment</td>
+                <td colSpan={showCostAndFees ? 5 : 3}>Total Investment</td>
                 <td className="r">{formatMoneyKpi(quotationView.original.total, commercial.currency)}</td>
               </tr>
             </tfoot>
@@ -308,8 +327,12 @@ export function CommercialWorkspace({
                   <th>Creator</th>
                   <th>Platforms</th>
                   <th>Deliverables</th>
-                  <th className="r">Cost</th>
-                  <th className="r">Agency Fees</th>
+                  {showCostAndFees ? (
+                    <>
+                      <th className="r">Cost</th>
+                      <th className="r">Agency Fees</th>
+                    </>
+                  ) : null}
                   <th className="r">Total Investment</th>
                 </tr>
               </thead>
@@ -359,8 +382,12 @@ export function CommercialWorkspace({
                           return label === DELIVERABLES_TO_BE_CONFIRMED ? TO_BE_CONFIRMED : label;
                         })()}
                       </td>
-                      <td className="r">{formatMoneyKpi(creator.investmentAmount!, commercial.currency)}</td>
-                      <td className="r">{formatMoneyKpi(fee, commercial.currency)}</td>
+                      {showCostAndFees ? (
+                        <>
+                          <td className="r">{formatMoneyKpi(creator.investmentAmount!, commercial.currency)}</td>
+                          <td className="r">{formatMoneyKpi(fee, commercial.currency)}</td>
+                        </>
+                      ) : null}
                       <td className="r">{formatMoneyKpi(lineTotal, commercial.currency)}</td>
                     </tr>
                   );
@@ -368,7 +395,7 @@ export function CommercialWorkspace({
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={5}>{section.title}</td>
+                  <td colSpan={showCostAndFees ? 5 : 3}>{section.title}</td>
                   <td className="r">{formatMoneyKpi(section.total, commercial.currency)}</td>
                 </tr>
               </tfoot>
