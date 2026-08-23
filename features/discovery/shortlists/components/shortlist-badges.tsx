@@ -136,9 +136,35 @@ export function AssignmentStatusBadge({
   );
 }
 
+export function isShortlistCreatorQuoted(
+  refs: ShortlistCreatorQuotationRef[] | null | undefined
+): boolean {
+  return (refs?.length ?? 0) > 0;
+}
+
 function quotationBadgeLabel(ref: ShortlistCreatorQuotationRef): string {
   if (ref.serial_number?.trim()) return ref.serial_number.trim();
   return ref.name.trim() || "Quotation";
+}
+
+/** Compact identity label for the left creator column. */
+export function ShortlistCreatorQuotedLabel({
+  refs,
+}: {
+  refs: ShortlistCreatorQuotationRef[];
+}) {
+  if (!isShortlistCreatorQuoted(refs)) return null;
+  const title = refs
+    .map((ref) => `${quotationBadgeLabel(ref)} · ${QUOTATION_STATUS_LABELS[ref.status]}`)
+    .join(", ");
+  return (
+    <span
+      className="shortlist-creator-quoted-label inline-flex h-[18px] shrink-0 items-center rounded-full border border-[#1D9E75]/25 bg-[#1D9E75]/10 px-1.5 text-[9px] font-semibold uppercase tracking-[0.04em] text-[#1D9E75]"
+      title={title || "Quoted"}
+    >
+      Quoted
+    </span>
+  );
 }
 
 export function ShortlistCreatorQuotedBadge({
