@@ -5,7 +5,7 @@ import { formatMoneyKpi } from "@/lib/finance/currency-format";
 import { clientCreatorIdentity, DELIVERABLES_TO_BE_CONFIRMED, formatHandleLabel, formatPlatformLabel, NOT_AVAILABLE, TO_BE_CONFIRMED } from "../format";
 import { breakdownForCreator } from "../platform-breakdown";
 import { deliverablesLabel } from "../deliverables";
-import { originalInvestmentForDisplay, clientRosterHasOriginalCurrency, visibleOriginalCurrencyAmount } from "../quotation-client-facing";
+import { originalInvestmentForDisplay, visibleOriginalCurrencyAmount } from "../quotation-client-facing";
 import {
   canOpenCommercialWorkspace,
   clientQuotationCommercialView,
@@ -21,7 +21,6 @@ import {
 import { allocationSlices, MIX_BAR_COLORS, rosterHeadline } from "../presentation";
 import type { ClientWorkspaceView } from "../types";
 import { useClientWorkspaceState } from "./client-workspace-state";
-import { OriginalCurrencyToggle } from "./original-currency-toggle";
 import { CommercialQuotationDelivery } from "./commercial-quotation-delivery";
 import { FinalQuotationApprovalCard } from "./final-quotation-approval-card";
 import { ReviewAvatar } from "./review-avatar";
@@ -34,8 +33,8 @@ export function CommercialWorkspace({
   view: ClientWorkspaceView;
   token?: string;
 }) {
-  const { selectedCommercial, goToSection, showOriginalCurrency, setShowOriginalCurrency } =
-    useClientWorkspaceState();
+  const { selectedCommercial, goToSection } = useClientWorkspaceState();
+  const showOriginalCurrency = Boolean(view.showOriginalCurrency);
   const commercialOpen = canOpenCommercialWorkspace({
     selectionConfirmed: view.journey?.selectionConfirmed,
     historical: view.journey?.historical,
@@ -116,15 +115,7 @@ export function CommercialWorkspace({
         </div>
       ) : null}
       <div className="card">
-        <div className="orig-toggle-row">
-          <p className="ck">Campaign investment</p>
-          {clientRosterHasOriginalCurrency(view.creators, commercial.currency) ? (
-            <OriginalCurrencyToggle
-              checked={showOriginalCurrency}
-              onChange={setShowOriginalCurrency}
-            />
-          ) : null}
-        </div>
+        <p className="ck">Campaign investment</p>
         <h2 className={commercial.totalInvestment > 0 ? "cm-total" : "cm-total tbc"}>
           {commercial.totalInvestment > 0
             ? formatMoneyKpi(commercial.totalInvestment, commercial.currency)

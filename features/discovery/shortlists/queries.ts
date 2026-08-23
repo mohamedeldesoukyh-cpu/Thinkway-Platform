@@ -20,6 +20,7 @@ import {
   queryShortlistItemsWithCollapseFallback,
 } from "@/lib/discovery/shortlist-item-collapse-select";
 
+import { readShowOriginalCurrency } from "@/lib/commercial/client-original-currency";
 import { readShortlistDisplayCurrency } from "@/lib/discovery/shortlist-currency";
 
 import { SHORTLIST_PERMISSIONS } from "./constants";
@@ -616,6 +617,7 @@ export async function getShortlistDetail(
     linkedQuotations,
     canManage: isOwner || isAdmin || isPrivilegedRole,
     canApprove: isAdmin || isPrivilegedRole,
+    showOriginalCurrency: readShowOriginalCurrency(row.metadata),
   };
 }
 

@@ -149,8 +149,10 @@ export function originalInvestmentForDisplay(
   return { amount: creator.originalInvestmentAmount, currency: creator.originalInvestmentCurrency };
 }
 
-export const SHOW_ORIGINAL_CURRENCY_DEFAULT = false;
-export const SHOW_ORIGINAL_CURRENCY_LABEL = "Show original currency";
+export {
+  SHOW_ORIGINAL_CURRENCY_DEFAULT,
+  SHOW_ORIGINAL_CURRENCY_LABEL,
+} from "@/lib/commercial/client-original-currency";
 
 export function visibleOriginalCurrencyAmount<T>(
   original: T | null,

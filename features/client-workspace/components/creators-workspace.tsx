@@ -24,7 +24,7 @@ import {
   shortlistCreatorSelectEnabled,
   thinkwayStatusLabel,
 } from "../selection-flow";
-import { originalClientFacingCreatorCardAmount, clientFacingCreatorCardAmount, clientRosterHasOriginalCurrency, visibleOriginalCurrencyAmount } from "../quotation-client-facing";
+import { originalClientFacingCreatorCardAmount, clientFacingCreatorCardAmount, visibleOriginalCurrencyAmount } from "../quotation-client-facing";
 import {
   flagFromCountry,
   MIX_BAR_COLORS,
@@ -40,7 +40,6 @@ import type { ClientAudienceSlice, ClientCreatorBrief, ClientCreatorCard, Client
 import { AdvancedReportModal, ContentFeatureGrid } from "./advanced-report-modal";
 import { ContentCategoryGrid } from "./content-category-grid";
 import { useClientWorkspaceState } from "./client-workspace-state";
-import { OriginalCurrencyToggle } from "./original-currency-toggle";
 import { ProposalSummaryCard } from "./proposal-summary-card";
 import { ReviewAvatar } from "./review-avatar";
 import { ReviewCreatorProfileLinks } from "./review-creator-profile-links";
@@ -72,9 +71,8 @@ export function CreatorsWorkspace({
     setCreatorState,
     setCreatorStates,
     goToSection,
-    showOriginalCurrency,
-    setShowOriginalCurrency,
   } = useClientWorkspaceState();
+  const showOriginalCurrency = Boolean(view.showOriginalCurrency);
   const [pending, startTransition] = useTransition();
   const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]["id"]>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -279,12 +277,6 @@ export function CreatorsWorkspace({
               </button>
             ))}
           </div>
-          {clientRosterHasOriginalCurrency(view.creators, view.commercial.currency) ? (
-            <OriginalCurrencyToggle
-              checked={showOriginalCurrency}
-              onChange={setShowOriginalCurrency}
-            />
-          ) : null}
         </div>
       ) : null}
       <p className="note" style={{ marginBottom: 12 }}>
@@ -483,6 +475,7 @@ export function CreatorsWorkspace({
               selectedCount: counts.accepted,
             })}
             pendingCommercialApproval={pendingIds.has(selected.creatorId)}
+            showOriginalCurrency={showOriginalCurrency}
           />
         ) : (
           <div className="detail">
@@ -533,6 +526,7 @@ function CreatorDetailPane({
   selectionConfirmed,
   commerciallyApproved,
   pendingCommercialApproval,
+  showOriginalCurrency,
 }: {
   creator: ClientCreatorCard;
   brief: ClientCreatorBrief | null;
@@ -553,8 +547,8 @@ function CreatorDetailPane({
   selectionConfirmed: boolean;
   commerciallyApproved: boolean;
   pendingCommercialApproval?: boolean;
+  showOriginalCurrency: boolean;
 }) {
-  const { showOriginalCurrency } = useClientWorkspaceState();
   const location = brief?.location || formatLocation(creator.city, creator.country);
   const investmentAmount = brief?.investmentAmount ?? creator.investmentAmount;
   const cardAmounts = {

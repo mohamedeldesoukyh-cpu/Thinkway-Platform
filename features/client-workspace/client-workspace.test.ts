@@ -4241,7 +4241,7 @@ test("T/U: quotation currency conversion works and original currency is shown wh
   assert.deepEqual(same, { amount: 20_000, currency: "AED" });
 });
 
-test("Client Workspace original-currency toggle defaults off and is shared by Shortlist and Commercial", () => {
+test("Client Workspace hides original currency unless Thinkway enables it", () => {
   assert.equal(SHOW_ORIGINAL_CURRENCY_DEFAULT, false);
   assert.equal(SHOW_ORIGINAL_CURRENCY_LABEL, "Show original currency");
   const original = originalInvestmentForDisplay(

@@ -14,6 +14,7 @@ import type {
 } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { quotationDetailPath } from "@/features/quotations/constants";
 import { isCommercialCurrency } from "@/lib/commercial/fx-aggregation";
 import { syncShortlistChangeToQuotation } from "@/lib/commercial-sync/engine";
 import { shortlistMetadataWithCurrency } from "@/lib/discovery/shortlist-currency";
@@ -392,6 +393,28 @@ export async function updateShortlistDetails(
     };
   }
   return { ok: true, message: baseMessage };
+}
+
+export async function setShortlistShowOriginalCurrency(input: {
+  shortlistId: string;
+  value: boolean;
+}): Promise<ActionResult> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  const { persistClientShowOriginalCurrency } = await import(
+    "@/lib/commercial/client-original-currency-persist"
+  );
+  const result = await persistClientShowOriginalCurrency(actor.supabase, {
+    shortlistId: input.shortlistId,
+    value: input.value,
+  });
+  if (!result.ok) return result;
+  revalidateShortlist(input.shortlistId);
+  if (result.quotationId) {
+    revalidatePath("/discovery/quotations");
+    revalidatePath(quotationDetailPath(result.quotationId));
+  }
+  return { ok: true };
 }
 
 // ---------------------------------------------------------------------------

@@ -483,6 +483,8 @@ export type ClientWorkspaceView = {
   campaignExecution?: import("./campaign-execution").ClientCampaignExecution;
   /** Current-version content review projection. Independent of quotation and live status. */
   campaignContent?: import("./content-approval").ClientCampaignContent;
+  /** Thinkway-controlled. Clients never see original currency unless this is on. */
+  showOriginalCurrency?: boolean;
   /** Group logo first, then client logo. Brand logos are not used here. */
   identityLogo?: IdentityLogo | null;
 };
