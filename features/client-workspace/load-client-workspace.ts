@@ -1,7 +1,7 @@
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import { CampaignObjectPersistenceService } from "@/features/campaign-intelligence/services/campaign-object-persistence";
 import { hydrateSlateCreators } from "@/features/campaign-studio/services/copilot/slate-edit-mutations";
-import { loadClientShowOriginalCurrency } from "@/lib/commercial/client-original-currency-persist";
+import { loadClientWorkspaceDisplayFlags } from "@/lib/commercial/client-original-currency-persist";
 import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -575,14 +575,18 @@ export async function loadClientWorkspace(
     !newer &&
     (journey.canApproveShortlist || journey.canApproveQuotation || pendingIds.length > 0);
   view.showOriginalCurrency = false;
+  view.hideCostAndFees = false;
   if (!picked.historical) {
     try {
-      view.showOriginalCurrency = await loadClientShowOriginalCurrency((service ?? db) as never, {
+      const flags = await loadClientWorkspaceDisplayFlags((service ?? db) as never, {
         quotationId: view.journey?.quotationId ?? activeReview.quotationId,
         shortlistId: view.journey?.shortlistId ?? activeReview.shortlistId,
       });
+      view.showOriginalCurrency = flags.showOriginalCurrency;
+      view.hideCostAndFees = flags.hideCostAndFees;
     } catch {
       view.showOriginalCurrency = false;
+      view.hideCostAndFees = false;
     }
   }
 

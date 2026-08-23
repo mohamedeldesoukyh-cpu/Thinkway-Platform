@@ -28,6 +28,7 @@ import {
   shortlistContinueToYourSelection,
 } from "../selection-flow";
 import type { ClientWorkspaceView } from "../types";
+import { clientShowsCostAndFees } from "../quotation-client-facing";
 import { useClientWorkspaceState } from "./client-workspace-state";
 import { IconCheck } from "./review-icons";
 
@@ -114,6 +115,7 @@ export function ProposalSummaryCard({
   );
   const calc = selectionCalculator(view.creators, resolvedSelection);
   const currency = view.commercial.currency;
+  const showCostAndFees = clientShowsCostAndFees(Boolean(view.hideCostAndFees));
   const clientCost = calc.pricedInvestment;
   const agencyFees = calc.agencyFees;
   const totalInvestment = calc.totalInvestment;
@@ -218,6 +220,8 @@ export function ProposalSummaryCard({
           value={String(calc.unpricedSelectedCount)}
           missing={calc.unpricedSelectedCount > 0}
         />
+        {showCostAndFees ? (
+          <>
         <Metric
           label="Cost"
           value={hasPricedTotals ? formatMoneyKpi(clientCost, currency) : TO_BE_CONFIRMED}
@@ -228,6 +232,8 @@ export function ProposalSummaryCard({
           value={hasPricedTotals ? formatMoneyKpi(agencyFees, currency) : TO_BE_CONFIRMED}
           missing={!hasPricedTotals}
         />
+          </>
+        ) : null}
         <Metric
           label="Total Investment"
           value={hasPricedTotals ? formatMoneyKpi(totalInvestment, currency) : TO_BE_CONFIRMED}
@@ -323,6 +329,8 @@ export function ProposalSummaryCard({
               <span className="k">Pricing required</span>
               <span className={confirmation.unpricedCount > 0 ? "v tbc" : "v"}>{confirmation.unpricedCount}</span>
             </div>
+            {showCostAndFees ? (
+              <>
             <div className="sumrow">
               <span className="k">Cost</span>
               <span className={hasPricedTotals ? "v" : "v tbc"}>
@@ -335,6 +343,8 @@ export function ProposalSummaryCard({
                 {hasPricedTotals ? formatMoneyKpi(confirmation.agencyFees, currency) : TO_BE_CONFIRMED}
               </span>
             </div>
+              </>
+            ) : null}
             <div className="sumrow big">
               <span className="k">Total Investment</span>
               <span className={hasPricedTotals ? "v" : "v tbc"}>
@@ -365,6 +375,8 @@ export function ProposalSummaryCard({
         {view.overview.campaignName} · v{view.review.reviewNumber}
         {primary.kind === "confirm" ? ` · ${CONFIRM_CREATORS_SUPPORTING_TEXT}` : ""}
       </p>
+      {showCostAndFees ? (
+        <>
       <Row
         label="Cost"
         value={hasPricedTotals ? formatMoneyKpi(clientCost, currency) : TO_BE_CONFIRMED}
@@ -376,6 +388,8 @@ export function ProposalSummaryCard({
         value={hasPricedTotals ? formatMoneyKpi(agencyFees, currency) : TO_BE_CONFIRMED}
         missing={!hasPricedTotals}
       />
+        </>
+      ) : null}
       <Row
         label="Total Investment"
         value={hasPricedTotals ? formatMoneyKpi(totalInvestment, currency) : TO_BE_CONFIRMED}

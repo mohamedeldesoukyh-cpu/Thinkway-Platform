@@ -240,7 +240,9 @@ export function CreatorsWorkspace({
           <h2>{confirmed ? "Client Approved creators" : "Your Selection"}</h2>
           <p className="note">
             {confirmed
-              ? "These Client Approved creators are included in the current quotation. Review Cost, Agency Fees, and Total Investment on Commercial. This is not final quotation approval."
+              ? Boolean(view.hideCostAndFees)
+                ? "These Client Approved creators are included in the current quotation. Review Total Investment on Commercial. This is not final quotation approval."
+                : "These Client Approved creators are included in the current quotation. Review Cost, Agency Fees, and Total Investment on Commercial. This is not final quotation approval."
               : "Review the creators you selected on Shortlist. Approve Selected Creators includes this roster in the current quotation and opens Commercial."}
           </p>
         </div>

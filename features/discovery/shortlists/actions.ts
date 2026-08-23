@@ -401,12 +401,34 @@ export async function setShortlistShowOriginalCurrency(input: {
 }): Promise<ActionResult> {
   const actor = await getActor();
   if (!actor.ok) return actor;
-  const { persistClientShowOriginalCurrency } = await import(
+  const { persistClientWorkspaceDisplayFlags } = await import(
     "@/lib/commercial/client-original-currency-persist"
   );
-  const result = await persistClientShowOriginalCurrency(actor.supabase, {
+  const result = await persistClientWorkspaceDisplayFlags(actor.supabase, {
     shortlistId: input.shortlistId,
-    value: input.value,
+    patch: { showOriginalCurrency: input.value },
+  });
+  if (!result.ok) return result;
+  revalidateShortlist(input.shortlistId);
+  if (result.quotationId) {
+    revalidatePath("/discovery/quotations");
+    revalidatePath(quotationDetailPath(result.quotationId));
+  }
+  return { ok: true };
+}
+
+export async function setShortlistHideCostAndFees(input: {
+  shortlistId: string;
+  value: boolean;
+}): Promise<ActionResult> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  const { persistClientWorkspaceDisplayFlags } = await import(
+    "@/lib/commercial/client-original-currency-persist"
+  );
+  const result = await persistClientWorkspaceDisplayFlags(actor.supabase, {
+    shortlistId: input.shortlistId,
+    patch: { hideCostAndFees: input.value },
   });
   if (!result.ok) return result;
   revalidateShortlist(input.shortlistId);
