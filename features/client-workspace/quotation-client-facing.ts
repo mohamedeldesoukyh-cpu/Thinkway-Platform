@@ -149,6 +149,27 @@ export function originalInvestmentForDisplay(
   return { amount: creator.originalInvestmentAmount, currency: creator.originalInvestmentCurrency };
 }
 
+export const SHOW_ORIGINAL_CURRENCY_DEFAULT = false;
+export const SHOW_ORIGINAL_CURRENCY_LABEL = "Show original currency";
+
+export function visibleOriginalCurrencyAmount<T>(
+  original: T | null,
+  showOriginalCurrency: boolean
+): T | null {
+  if (!showOriginalCurrency) return null;
+  return original;
+}
+
+export function clientRosterHasOriginalCurrency(
+  creators: Array<{
+    originalInvestmentAmount?: number;
+    originalInvestmentCurrency?: string;
+  }>,
+  quotationCurrency: string
+): boolean {
+  return creators.some((creator) => originalInvestmentForDisplay(creator, quotationCurrency) != null);
+}
+
 export function originalClientFacingCreatorCardAmount(
   creator: ClientFacingCreatorCardAmounts,
   quotationCurrency: string

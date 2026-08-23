@@ -121,6 +121,7 @@ import {
   AFTER_SHORTLIST_CONTINUE_SECTION,
   CONTINUE_TO_YOUR_SELECTION_LABEL,
   FINAL_QUOTATION_APPROVAL_REQUIRED_LABEL,
+  CAMPAIGN_SETTING_UP_COPY,
   CAMPAIGN_SETTING_UP_LABEL,
   UNPRICED_INCLUDED_MESSAGE,
   canOpenCommercialWorkspace,
@@ -134,16 +135,22 @@ import {
   clientFacingAgencyFeeFromLine,
   clientFacingCreatorCardAmount,
   clientFacingQuotationPrice,
+  clientRosterHasOriginalCurrency,
   convertLineRevenueToQuotationCurrency,
   originalClientFacingCreatorCardAmount,
   originalInvestmentForDisplay,
+  SHOW_ORIGINAL_CURRENCY_DEFAULT,
+  SHOW_ORIGINAL_CURRENCY_LABEL,
+  visibleOriginalCurrencyAmount,
 } from "./quotation-client-facing";
 import { overlayQuotationDetailOnCreators, clientServiceDescriptionFromQuotationItem } from "./quotation-client-overlay";
 import {
   clientCampaignGlanceCounts,
   clientCampaignPostStatus,
   clientCampaignViewKind,
+  emptyClientCampaignExecution,
   formatClientCampaignPerformance,
+  formatClientDashboardDate,
   groupClientCampaignPosts,
   isClientCampaignCompleted,
   isClientCampaignLive,
@@ -153,6 +160,26 @@ import {
   shouldHideClientCampaignPost,
   type CampaignExecutionSource,
 } from "./campaign-execution";
+import {
+  CAMPAIGN_SETUP_IN_PROGRESS_COPY,
+  NO_OVERDUE_PUBLICATIONS_COPY,
+  NO_UPCOMING_PUBLICATIONS_COPY,
+  PERFORMANCE_PENDING_COPY,
+  clientCampaignDashboardCounts,
+  clientCampaignDashboardReconcilesWithPosts,
+  projectClientCampaignDashboard,
+} from "./campaign-dashboard";
+import {
+  clientContentAssetUrl,
+  clientContentToReview,
+  currentContentVersion,
+  emptyClientCampaignContent,
+  NO_CONTENT_TO_REVIEW_COPY,
+  projectClientCampaignContent,
+  type ClientContentAssetSource,
+  type ClientContentDecisionRecord,
+  type ClientContentVersionSource,
+} from "./content-approval";
 import { normalizeClientDeliveryEmail } from "./client-quotation-delivery";
 import {
   isRenderableClientWorkspaceSection,
@@ -202,10 +229,13 @@ test("public review path does not require login", () => {
   assert.equal(isPublicPath("/review"), true);
   assert.equal(isPublicPath("/review/abc/creators"), true);
   assert.equal(isPublicPath("/api/review/media"), true);
+  assert.equal(isPublicPath("/api/review/content"), true);
   assert.equal(isPublicPath("/api/review/brand-logo"), true);
   assert.equal(classifyPagePath("/review/abc"), "public");
   assert.equal(classifyPagePath("/review/abc/creators"), "public");
   assert.equal(classifyApiPath("/api/review/media"), "public");
+  assert.equal(classifyApiPath("/api/review/content"), "public");
+  assert.equal(classifyApiPath("/api/review/quotation"), "public");
   assert.equal(classifyApiPath("/api/review/brand-logo"), "public");
 });
 
@@ -4211,6 +4241,37 @@ test("T/U: quotation currency conversion works and original currency is shown wh
   assert.deepEqual(same, { amount: 20_000, currency: "AED" });
 });
 
+test("Client Workspace original-currency toggle defaults off and is shared by Shortlist and Commercial", () => {
+  assert.equal(SHOW_ORIGINAL_CURRENCY_DEFAULT, false);
+  assert.equal(SHOW_ORIGINAL_CURRENCY_LABEL, "Show original currency");
+  const original = originalInvestmentForDisplay(
+    { originalInvestmentAmount: 20_000, originalInvestmentCurrency: "AED" },
+    "SAR"
+  );
+  assert.deepEqual(original, { amount: 20_000, currency: "AED" });
+  assert.equal(visibleOriginalCurrencyAmount(original, false), null);
+  assert.deepEqual(visibleOriginalCurrencyAmount(original, true), original);
+  const showOriginalCurrency = SHOW_ORIGINAL_CURRENCY_DEFAULT;
+  assert.equal(visibleOriginalCurrencyAmount(original, showOriginalCurrency), null);
+  const shortlistVisible = visibleOriginalCurrencyAmount(original, showOriginalCurrency);
+  const quotationVisible = visibleOriginalCurrencyAmount(original, showOriginalCurrency);
+  assert.equal(shortlistVisible, quotationVisible);
+  assert.equal(
+    clientRosterHasOriginalCurrency(
+      [{ originalInvestmentAmount: 20_000, originalInvestmentCurrency: "AED" }],
+      "SAR"
+    ),
+    true
+  );
+  assert.equal(
+    clientRosterHasOriginalCurrency(
+      [{ originalInvestmentAmount: 20_000, originalInvestmentCurrency: "SAR" }],
+      "SAR"
+    ),
+    false
+  );
+});
+
 test("V: Cost + Agency Fees = Total Investment using existing quotation AF math", () => {
   const fee = clientFacingAgencyFeeFromLine({
     afValue: 100_000,
@@ -4771,6 +4832,327 @@ test("Stage 3: client cannot modify execution data", () => {
   assert.equal(row.live, false);
 });
 
+function stage4MultiCreatorSource(): CampaignExecutionSource {
+  return {
+    lines: [
+      { id: "line-1", name: "Amina line", metadata: null },
+      { id: "line-2", name: "Karim line", metadata: null },
+      { id: "line-3", name: "Reem line", metadata: null },
+      { id: "line-4", name: "Omar line", metadata: null },
+      { id: "line-5", name: "Lina line", metadata: null },
+      { id: "line-6", name: "Hidden line", metadata: null },
+    ],
+    influencers: [
+      { campaignLineId: "line-1", displayName: "Amina" },
+      { campaignLineId: "line-2", displayName: "Karim" },
+      { campaignLineId: "line-3", displayName: "Reem" },
+      { campaignLineId: "line-4", displayName: "Omar" },
+      { campaignLineId: "line-5", displayName: "Lina" },
+      { campaignLineId: "line-6", displayName: "Hidden" },
+    ],
+    deliverables: [
+      { id: "del-1", campaignLineId: "line-1", platform: "instagram", deliverableType: "instagram_reel", quantity: 1, liveDate: "2026-09-01" },
+      { id: "del-2", campaignLineId: "line-2", platform: "tiktok", deliverableType: "tiktok_video", quantity: 1, liveDate: "2026-08-22" },
+      { id: "del-3", campaignLineId: "line-3", platform: "instagram", deliverableType: "instagram_story", quantity: 1, liveDate: "2026-08-01" },
+      { id: "del-4", campaignLineId: "line-4", platform: "youtube", deliverableType: "youtube_video", quantity: 1, liveDate: "2026-08-20" },
+      { id: "del-5", campaignLineId: "line-5", platform: "instagram", deliverableType: "instagram_post", quantity: 1, liveDate: "2026-08-18" },
+      { id: "del-6", campaignLineId: "line-6", platform: "tiktok", deliverableType: "tiktok_video", quantity: 1, liveDate: "2026-08-10" },
+    ],
+    posts: [
+      { id: "p1", assignmentDeliverableId: "del-1", campaignLineId: "line-1", sequenceNumber: 1, liveDate: "2026-09-01", status: "scheduled", proofUrl: null },
+      { id: "p2", assignmentDeliverableId: "del-2", campaignLineId: "line-2", sequenceNumber: 1, liveDate: "2026-08-22", status: "approved", proofUrl: null },
+      { id: "p3", assignmentDeliverableId: "del-3", campaignLineId: "line-3", sequenceNumber: 1, liveDate: "2026-08-01", status: "draft", proofUrl: null },
+      { id: "p4", assignmentDeliverableId: "del-4", campaignLineId: "line-4", sequenceNumber: 1, liveDate: "2026-08-20", status: "posted", proofUrl: null },
+      { id: "p5", assignmentDeliverableId: "del-5", campaignLineId: "line-5", sequenceNumber: 1, liveDate: "2026-08-18", status: "verified", proofUrl: null },
+      { id: "p6", assignmentDeliverableId: "del-6", campaignLineId: "line-6", sequenceNumber: 1, liveDate: "2026-08-10", status: "cancelled", proofUrl: null },
+    ],
+    publications: [
+      {
+        id: "pub-4",
+        assignmentDeliverableId: "del-4",
+        assignmentPostScheduleId: "p4",
+        campaignLineId: "line-4",
+        platform: "youtube",
+        contentUrl: "https://youtube.com/watch?v=1",
+        publicationDate: "2026-08-20",
+        status: "published",
+        views: 1500,
+        likes: 40,
+        comments: 6,
+        shares: 3,
+        actualReach: 900,
+        reach: 900,
+        reachSource: "actual",
+        actualImpressions: 1100,
+        impressions: 1100,
+        impressionsSource: "actual",
+        engagementRate: 2.6,
+      },
+    ],
+  };
+}
+
+test("Stage 4: dashboard counts match execution records", () => {
+  const projected = projectClientCampaignExecution("hdr-1", stage4MultiCreatorSource(), "2026-08-22");
+  const dashboard = projectClientCampaignDashboard(projected.posts);
+  const glance = clientCampaignGlanceCounts(projected.posts);
+  assert.equal(clientCampaignDashboardReconcilesWithPosts(projected.posts), true);
+  assert.equal(dashboard.counts.live, glance.live);
+  assert.equal(dashboard.counts.overdue, glance.overdue);
+  assert.equal(dashboard.counts.completed, glance.completed);
+  assert.equal(dashboard.live.length, projected.posts.filter((row) => row.status === "live").length);
+  assert.equal(dashboard.overdue.length, projected.posts.filter((row) => row.status === "overdue").length);
+  assert.equal(
+    dashboard.counts.scheduled + dashboard.counts.dueToday,
+    projected.posts.filter((row) => row.status === "scheduled" || row.status === "due_today").length
+  );
+});
+
+test("Stage 4: approved, scheduled, due today, live, overdue, and completed counts are correct", () => {
+  const projected = projectClientCampaignExecution("hdr-1", stage4MultiCreatorSource(), "2026-08-22");
+  const counts = clientCampaignDashboardCounts(projected.posts);
+  assert.equal(counts.approvedCreators, 5);
+  assert.equal(counts.scheduled, 1);
+  assert.equal(counts.dueToday, 1);
+  assert.equal(counts.live, 1);
+  assert.equal(counts.overdue, 1);
+  assert.equal(counts.completed, 1);
+  const dashboard = projectClientCampaignDashboard(projected.posts);
+  assert.equal(dashboard.ready, true);
+  assert.equal(dashboard.progress?.kind, "creators_live");
+  assert.equal(dashboard.progress?.headline, "1 of 5 creators live");
+  assert.match(dashboard.progress?.explanation ?? "", /live publication/i);
+});
+
+test("Stage 4: upcoming list uses real scheduled dates", () => {
+  const projected = projectClientCampaignExecution(
+    "hdr-1",
+    {
+      lines: [
+        { id: "line-a", name: "Ahmed line", metadata: null },
+        { id: "line-n", name: "Nourhanne line", metadata: null },
+        { id: "line-f", name: "Farah line", metadata: null },
+      ],
+      influencers: [
+        { campaignLineId: "line-a", displayName: "Ahmed" },
+        { campaignLineId: "line-n", displayName: "Nourhanne" },
+        { campaignLineId: "line-f", displayName: "Farah" },
+      ],
+      deliverables: [
+        { id: "del-a", campaignLineId: "line-a", platform: "instagram", deliverableType: "instagram_reel", quantity: 1, liveDate: "2026-08-25" },
+        { id: "del-n", campaignLineId: "line-n", platform: "instagram", deliverableType: "instagram_story", quantity: 1, liveDate: "2026-08-27" },
+        { id: "del-f", campaignLineId: "line-f", platform: "tiktok", deliverableType: "tiktok_video", quantity: 1, liveDate: "2026-08-29" },
+      ],
+      posts: [
+        { id: "p-a", assignmentDeliverableId: "del-a", campaignLineId: "line-a", sequenceNumber: 1, liveDate: "2026-08-25", status: "scheduled", proofUrl: null },
+        { id: "p-n", assignmentDeliverableId: "del-n", campaignLineId: "line-n", sequenceNumber: 1, liveDate: "2026-08-27", status: "scheduled", proofUrl: null },
+        { id: "p-f", assignmentDeliverableId: "del-f", campaignLineId: "line-f", sequenceNumber: 1, liveDate: "2026-08-29", status: "scheduled", proofUrl: null },
+      ],
+      publications: [],
+    },
+    "2026-08-22"
+  );
+  const dashboard = projectClientCampaignDashboard(projected.posts);
+  assert.deepEqual(
+    dashboard.upcoming.map((row) => [row.creatorName, row.deliverable, row.scheduledDate]),
+    [
+      ["Ahmed", "IG Reel", "2026-08-25"],
+      ["Nourhanne", "IG Story", "2026-08-27"],
+      ["Farah", "TT Video", "2026-08-29"],
+    ]
+  );
+  assert.equal(formatClientDashboardDate("2026-08-25"), "25 Aug");
+  assert.equal(formatClientDashboardDate(dashboard.upcoming[1]?.scheduledDate), "27 Aug");
+  assert.equal(NO_UPCOMING_PUBLICATIONS_COPY, "No upcoming publications.");
+  const noUpcoming = projectClientCampaignDashboard(
+    projectClientCampaignExecution(
+      "hdr-1",
+      stage3Source({
+        posts: [stage3Post({ id: "post-overdue", liveDate: "2026-08-01", status: "scheduled" })],
+      }),
+      "2026-08-22"
+    ).posts
+  );
+  assert.deepEqual(noUpcoming.upcoming, []);
+});
+
+test("Stage 4: live list uses real publication data", () => {
+  const projected = projectClientCampaignExecution("hdr-1", stage4MultiCreatorSource(), "2026-08-22");
+  const dashboard = projectClientCampaignDashboard(projected.posts);
+  assert.equal(dashboard.live.length, 1);
+  assert.equal(dashboard.live[0]?.creatorName, "Omar");
+  assert.equal(dashboard.live[0]?.platform, "youtube");
+  assert.equal(dashboard.live[0]?.contentUrl, "https://youtube.com/watch?v=1");
+  assert.equal(dashboard.live[0]?.publicationDate, "2026-08-20");
+  assert.equal(dashboard.overdue[0]?.creatorName, "Reem");
+  assert.equal(dashboard.overdue[0]?.scheduledDate, "2026-08-01");
+  assert.equal(dashboard.overdue[0]?.status, "overdue");
+  assert.equal(NO_OVERDUE_PUBLICATIONS_COPY, "No overdue publications.");
+  const noneOverdue = projectClientCampaignDashboard(
+    projectClientCampaignExecution(
+      "hdr-1",
+      stage3Source({
+        posts: [stage3Post({ id: "post-scheduled", liveDate: "2026-09-01", status: "scheduled" })],
+      }),
+      "2026-08-22"
+    ).posts
+  );
+  assert.deepEqual(noneOverdue.overdue, []);
+});
+
+test("Stage 4: performance summary uses only real stored metrics", () => {
+  const projected = projectClientCampaignExecution("hdr-1", stage4MultiCreatorSource(), "2026-08-22");
+  const dashboard = projectClientCampaignDashboard(projected.posts);
+  assert.equal(dashboard.performance.views, 1500);
+  assert.equal(dashboard.performance.reach, 900);
+  assert.equal(dashboard.performance.impressions, 1100);
+  assert.equal(dashboard.performance.likes, 40);
+  assert.equal(dashboard.performance.comments, 6);
+  assert.equal(dashboard.performance.shares, 3);
+  assert.equal(dashboard.performance.engagementRate, 2.6);
+  assert.deepEqual(
+    dashboard.performanceMetrics.map((metric) => metric.key),
+    ["views", "reach", "impressions", "likes", "comments", "shares", "engagementRate"]
+  );
+  const forecastOnly = projectClientCampaignDashboard(
+    projectClientCampaignExecution(
+      "hdr-1",
+      stage3Source({
+        posts: [stage3Post({ id: "post-1", liveDate: "2026-08-20", status: "posted" })],
+        publications: [
+          {
+            id: "pub-1",
+            assignmentDeliverableId: "del-1",
+            assignmentPostScheduleId: "post-1",
+            campaignLineId: "line-1",
+            platform: "instagram",
+            contentUrl: "https://instagram.com/reel/1",
+            publicationDate: "2026-08-20",
+            status: "published",
+            impressions: 9000,
+            forecastImpressions: 9000,
+            impressionsSource: "forecast",
+          },
+        ],
+      }),
+      "2026-08-22"
+    ).posts
+  );
+  assert.equal(forecastOnly.performance.impressions, null);
+  assert.equal(forecastOnly.performance.views, null);
+  assert.deepEqual(forecastOnly.performanceMetrics, []);
+  assert.equal(PERFORMANCE_PENDING_COPY, "Performance data will appear as publications are tracked.");
+  const mixed = projectClientCampaignDashboard(
+    projectClientCampaignExecution(
+      "hdr-1",
+      {
+        lines: [
+          { id: "line-1", name: "Amina line", metadata: null },
+          { id: "line-2", name: "Karim line", metadata: null },
+        ],
+        influencers: [
+          { campaignLineId: "line-1", displayName: "Amina" },
+          { campaignLineId: "line-2", displayName: "Karim" },
+        ],
+        deliverables: [
+          { id: "del-1", campaignLineId: "line-1", platform: "instagram", deliverableType: "instagram_reel", quantity: 1, liveDate: "2026-08-20" },
+          { id: "del-2", campaignLineId: "line-2", platform: "tiktok", deliverableType: "tiktok_video", quantity: 1, liveDate: "2026-08-21" },
+        ],
+        posts: [
+          { id: "p1", assignmentDeliverableId: "del-1", campaignLineId: "line-1", sequenceNumber: 1, liveDate: "2026-08-20", status: "posted", proofUrl: null },
+          { id: "p2", assignmentDeliverableId: "del-2", campaignLineId: "line-2", sequenceNumber: 1, liveDate: "2026-08-21", status: "posted", proofUrl: null },
+        ],
+        publications: [
+          {
+            id: "pub-1",
+            assignmentDeliverableId: "del-1",
+            assignmentPostScheduleId: "p1",
+            campaignLineId: "line-1",
+            platform: "instagram",
+            contentUrl: "https://instagram.com/reel/1",
+            publicationDate: "2026-08-20",
+            status: "published",
+            views: 1500,
+          },
+          {
+            id: "pub-2",
+            assignmentDeliverableId: "del-2",
+            assignmentPostScheduleId: "p2",
+            campaignLineId: "line-2",
+            platform: "tiktok",
+            contentUrl: "https://tiktok.com/@x/video/1",
+            publicationDate: "2026-08-21",
+            status: "published",
+          },
+        ],
+      },
+      "2026-08-22"
+    ).posts
+  );
+  assert.equal(mixed.performance.views, 1500);
+  assert.equal(mixed.performance.likes, null);
+  assert.equal(mixed.performanceMetrics.some((metric) => metric.key === "likes"), false);
+});
+
+test("Stage 4: no campaign does not show fake campaign numbers", () => {
+  assert.equal(
+    clientCampaignViewKind({ commerciallyApproved: true, campaignStarted: false }),
+    "setting_up"
+  );
+  assert.match(CAMPAIGN_SETTING_UP_COPY, /Thinkway is setting up your campaign/);
+  const beforeCampaign = projectClientCampaignDashboard([]);
+  assert.equal(beforeCampaign.ready, false);
+  assert.equal(beforeCampaign.counts.approvedCreators, 0);
+  assert.equal(beforeCampaign.progress, null);
+  assert.deepEqual(beforeCampaign.performanceMetrics, []);
+  assert.equal(
+    clientCampaignViewKind({ commerciallyApproved: true, campaignStarted: true }),
+    "in_campaign"
+  );
+  assert.equal(CAMPAIGN_SETUP_IN_PROGRESS_COPY, "Campaign setup is in progress.");
+  const noRecords = projectClientCampaignDashboard(emptyClientCampaignExecution().posts);
+  assert.equal(noRecords.ready, false);
+});
+
+test("Stage 4: historical review remains frozen without campaign execution overlay", () => {
+  assert.equal(
+    approvalWorkspaceKind({
+      historical: true,
+      quotationStage: "superseded",
+      canApproveShortlist: false,
+      canApproveQuotation: false,
+    }),
+    "historical"
+  );
+  const frozen = emptyClientCampaignExecution();
+  assert.equal(frozen.campaignHeaderId, null);
+  assert.deepEqual(frozen.posts, []);
+  const dashboard = projectClientCampaignDashboard(frozen.posts);
+  assert.equal(dashboard.ready, false);
+  assert.equal(dashboard.counts.live, 0);
+  assert.equal(dashboard.live.length, 0);
+});
+
+test("Stage 4: client cannot modify execution data and Stage 3 grouping is unchanged", () => {
+  const projected = projectClientCampaignExecution("hdr-1", stage4MultiCreatorSource(), "2026-08-22");
+  const dashboard = projectClientCampaignDashboard(projected.posts);
+  assert.equal(clientFacingObjectIsSafe(dashboard), true);
+  assert.equal("cost" in dashboard, false);
+  assert.equal("vendorCost" in dashboard, false);
+  assert.equal("gp" in dashboard, false);
+  assert.equal("margin" in dashboard, false);
+  const groups = groupClientCampaignPosts(projected.posts);
+  assert.deepEqual(
+    groups.map((group) => group.id),
+    ["upcoming", "overdue", "live", "completed"]
+  );
+  assert.equal(groups.find((group) => group.id === "upcoming")?.posts.length, 2);
+  assert.equal(clientCampaignPostStatus({ scheduledDate: "2026-08-01", today: "2026-08-22" }), "overdue");
+  assert.equal(isClientCampaignLive({ postStatus: "posted" }), true);
+  assert.equal(isClientCampaignCompleted("verified"), true);
+  assert.equal(shouldHideClientCampaignPost("cancelled"), true);
+});
+
 test("frozen client selection hydrates calculator and approval after live selection is wiped", () => {
   const creators = [
     {
@@ -4921,5 +5303,259 @@ test("later pricing does not enter Commercial until a new Your Selection approva
   );
 });
 
+function contentAsset(overrides: Partial<ClientContentAssetSource> = {}): ClientContentAssetSource {
+  return {
+    id: "asset-1",
+    campaignHeaderId: "hdr-1",
+    assignmentDeliverableId: "del-1",
+    assignmentPostScheduleId: "p1",
+    assetType: "draft_video",
+    medium: "file",
+    label: "Reel draft",
+    currentVersionId: "v2",
+    archivedAt: null,
+    ...overrides,
+  };
+}
 
+function contentVersion(
+  overrides: Partial<ClientContentVersionSource> & Pick<ClientContentVersionSource, "id" | "versionNumber">
+): ClientContentVersionSource {
+  return {
+    assetId: "asset-1",
+    storageBucket: "deliverable-assets",
+    storagePath: `hdr-1/del-1/asset-1/${overrides.id}.mp4`,
+    externalUrl: null,
+    mimeType: "video/mp4",
+    fileName: `${overrides.id}.mp4`,
+    uploadedAt: `2026-08-2${overrides.versionNumber}T10:00:00.000Z`,
+    ...overrides,
+  };
+}
+
+function projectContent(input: {
+  assets?: ClientContentAssetSource[];
+  versions?: ClientContentVersionSource[];
+  decisions?: ClientContentDecisionRecord[];
+}) {
+  return projectClientCampaignContent({
+    campaignHeaderId: "hdr-1",
+    assets: input.assets ?? [contentAsset()],
+    versions: input.versions ?? [
+      contentVersion({ id: "v1", versionNumber: 1 }),
+      contentVersion({ id: "v2", versionNumber: 2 }),
+    ],
+    decisions: input.decisions ?? [],
+    creatorNameByDeliverableId: { "del-1": "Amina" },
+    platformByDeliverableId: { "del-1": "instagram" },
+    deliverableTypeByDeliverableId: { "del-1": "instagram_reel" },
+  });
+}
+
+test("Content to Review uses only the current asset version as the active item", () => {
+  const projected = projectContent({});
+  assert.equal(projected.items.length, 1);
+  const item = projected.items[0]!;
+  assert.equal(item.versionId, "v2");
+  assert.equal(item.versionNumber, 2);
+  assert.equal(currentContentVersion(item.history.map((row) => ({
+    id: row.versionId,
+    assetId: item.assetId,
+    versionNumber: row.versionNumber,
+    storageBucket: "deliverable-assets",
+    storagePath: "x",
+    externalUrl: null,
+    mimeType: "video/mp4",
+    fileName: "x.mp4",
+    uploadedAt: row.uploadedAt,
+  })), "v2")?.id, "v2");
+  assert.deepEqual(
+    item.history.map((row) => row.versionId),
+    ["v1", "v2"]
+  );
+  assert.equal(item.history.find((row) => row.versionId === "v1")?.status, "uploaded");
+});
+
+test("Content to Review is Approval Required until the client decides on that version", () => {
+  const none = projectContent({});
+  assert.equal(none.items[0]?.status, "approval_required");
+  assert.equal(clientContentToReview(none.items).length, 1);
+
+  const requested = projectContent({
+    decisions: [
+      {
+        id: "d1",
+        versionId: "v2",
+        decision: "changes_requested",
+        comment: "Please shorten the opening.",
+        decidedAt: "2026-08-22T10:00:00.000Z",
+        actorKind: "client",
+      },
+    ],
+  });
+  assert.equal(requested.items[0]?.status, "changes_requested");
+  assert.equal(requested.items[0]?.comment, "Please shorten the opening.");
+  assert.equal(clientContentToReview(requested.items).length, 1);
+});
+
+test("a newly uploaded version becomes Approval Required even after prior changes requested", () => {
+  const projected = projectContent({
+    assets: [contentAsset({ currentVersionId: "v3" })],
+    versions: [
+      contentVersion({ id: "v1", versionNumber: 1 }),
+      contentVersion({ id: "v2", versionNumber: 2 }),
+      contentVersion({ id: "v3", versionNumber: 3 }),
+    ],
+    decisions: [
+      {
+        id: "d1",
+        versionId: "v2",
+        decision: "changes_requested",
+        comment: "Revise the CTA.",
+        decidedAt: "2026-08-22T10:00:00.000Z",
+        actorKind: "client",
+      },
+    ],
+  });
+  const item = projected.items[0]!;
+  assert.equal(item.versionId, "v3");
+  assert.equal(item.status, "approval_required");
+  assert.equal(item.comment, null);
+  assert.equal(item.history.find((row) => row.versionId === "v2")?.status, "changes_requested");
+  assert.equal(clientContentToReview(projected.items).length, 1);
+});
+
+test("append-only content decisions keep the latest status for that version", () => {
+  const projected = projectContent({
+    assets: [contentAsset({ currentVersionId: "v1" })],
+    versions: [contentVersion({ id: "v1", versionNumber: 1 })],
+    decisions: [
+      {
+        id: "d1",
+        versionId: "v1",
+        decision: "changes_requested",
+        comment: "First note",
+        decidedAt: "2026-08-22T10:00:00.000Z",
+        actorKind: "client",
+      },
+      {
+        id: "d2",
+        versionId: "v1",
+        decision: "approved",
+        comment: null,
+        decidedAt: "2026-08-22T12:00:00.000Z",
+        actorKind: "client",
+      },
+    ],
+  });
+  assert.equal(projected.items[0]?.status, "approved");
+  assert.equal(projected.items[0]?.comment, null);
+  assert.equal(clientContentToReview(projected.items).length, 0);
+});
+
+test("Thinkway files can download original; Google Drive links cannot", () => {
+  const file = projectContent({});
+  assert.equal(file.items[0]?.medium, "file");
+  assert.equal(file.items[0]?.canDownloadOriginal, true);
+  assert.equal(file.items[0]?.externalUrl, null);
+  assert.equal(file.items[0]?.previewKind, "video");
+  assert.equal(
+    clientContentAssetUrl({ token: "review-token", versionId: "v2", mode: "download" }),
+    "/api/review/content?sign=review-token&versionId=v2&mode=download"
+  );
+
+  const drive = projectContent({
+    assets: [
+      contentAsset({
+        id: "asset-drive",
+        medium: "external_link",
+        assetType: "draft_video",
+        currentVersionId: "v-drive",
+      }),
+    ],
+    versions: [
+      contentVersion({
+        id: "v-drive",
+        versionNumber: 1,
+        assetId: "asset-drive",
+        storageBucket: null,
+        storagePath: null,
+        mimeType: null,
+        fileName: null,
+        externalUrl: "https://drive.google.com/file/d/abc/view",
+      }),
+    ],
+  });
+  assert.equal(drive.items[0]?.medium, "external_link");
+  assert.equal(drive.items[0]?.canDownloadOriginal, false);
+  assert.equal(drive.items[0]?.externalUrl, "https://drive.google.com/file/d/abc/view");
+  assert.equal(drive.items[0]?.previewKind, "none");
+});
+
+test("historical Client Workspace content is empty and captions are not review cards", () => {
+  assert.deepEqual(emptyClientCampaignContent(), { campaignHeaderId: null, items: [] });
+  assert.equal(NO_CONTENT_TO_REVIEW_COPY, "No content to review.");
+  const skipped = projectContent({
+    assets: [
+      contentAsset({ id: "caption", medium: "text", currentVersionId: "v-cap" }),
+      contentAsset({ id: "old", archivedAt: "2026-08-01T00:00:00.000Z", currentVersionId: "v-old" }),
+    ],
+    versions: [
+      contentVersion({ id: "v-cap", versionNumber: 1, assetId: "caption" }),
+      contentVersion({ id: "v-old", versionNumber: 1, assetId: "old" }),
+    ],
+  });
+  assert.deepEqual(skipped.items, []);
+});
+
+test("content approval is independent of quotation approval and live publication status", () => {
+  const content = projectContent({
+    decisions: [
+      {
+        id: "d1",
+        versionId: "v2",
+        decision: "approved",
+        comment: null,
+        decidedAt: "2026-08-22T12:00:00.000Z",
+        actorKind: "client",
+      },
+    ],
+  });
+  assert.equal(content.items[0]?.status, "approved");
+  assert.equal("live" in content.items[0]!, false);
+  assert.equal("published" in content.items[0]!, false);
+  const execution = projectClientCampaignExecution(
+    "hdr-1",
+    {
+      lines: [{ id: "line-1", name: "Amina line", metadata: null }],
+      influencers: [{ campaignLineId: "line-1", displayName: "Amina" }],
+      deliverables: [
+        {
+          id: "del-1",
+          campaignLineId: "line-1",
+          platform: "instagram",
+          deliverableType: "instagram_reel",
+          quantity: 1,
+          liveDate: "2026-09-01",
+        },
+      ],
+      posts: [
+        {
+          id: "p1",
+          assignmentDeliverableId: "del-1",
+          campaignLineId: "line-1",
+          sequenceNumber: 1,
+          liveDate: "2026-09-01",
+          status: "scheduled",
+          proofUrl: null,
+        },
+      ],
+      publications: [],
+    },
+    "2026-08-22"
+  );
+  assert.equal(execution.posts[0]?.status, "scheduled");
+  assert.equal(execution.posts[0]?.live, false);
+  assert.equal(content.items[0]?.status, "approved");
+});
 

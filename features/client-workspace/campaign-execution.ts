@@ -127,6 +127,15 @@ export function formatClientScheduleDate(value: string | null | undefined): stri
   return parsed.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
+/** Client dashboard date, e.g. `25 Aug`. */
+export function formatClientDashboardDate(value: string | null | undefined): string | null {
+  const day = dateOnly(value);
+  if (!day) return null;
+  const parsed = new Date(`${day}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return day;
+  return parsed.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
 function normalizedStatus(value?: string | null): string {
   return value?.trim().toLowerCase() ?? "";
 }

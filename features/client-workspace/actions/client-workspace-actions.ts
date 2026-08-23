@@ -8,6 +8,8 @@ import type {
   ClientCreatorSelectionState,
   ClientReviewDecisionStage,
 } from "../constants";
+import type { ClientContentDecision } from "../content-approval";
+import { recordClientContentDecision } from "../content-decisions";
 import { freezeCreatorBriefIfNeeded, briefFromSnapshotCreator } from "../creator-brief";
 import { resolveClientReviewByToken } from "../load-client-workspace";
 import {
@@ -76,6 +78,15 @@ export async function decideReviewAction(input: {
   stage?: ClientReviewDecisionStage;
 }) {
   return decideClientReview(input);
+}
+
+export async function decideContentAction(input: {
+  token: string;
+  versionId: string;
+  decision: ClientContentDecision;
+  comment?: string | null;
+}): Promise<{ ok: boolean; message: string }> {
+  return recordClientContentDecision(input);
 }
 
 export async function acknowledgeReviewUpdateAction(input: { token: string }): Promise<{ ok: boolean }> {

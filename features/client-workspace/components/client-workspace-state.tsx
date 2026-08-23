@@ -6,6 +6,7 @@ import type { ClientCreatorSelectionState, ClientWorkspaceSectionId } from "../c
 import { projectSelectionSummaryFromCards } from "../media-plan-summary";
 import { isPricedClientInvestment, hydrateClientSelection, selectionCalculator } from "../selection-flow";
 import { acceptedCreators, selectionMapFromView } from "../selection-view";
+import { SHOW_ORIGINAL_CURRENCY_DEFAULT } from "../quotation-client-facing";
 import type { ClientCommercialSummary, ClientMediaPlanSummary, ClientWorkspaceView } from "../types";
 
 type ClientWorkspaceState = {
@@ -18,6 +19,8 @@ type ClientWorkspaceState = {
   selectedCreators: ClientWorkspaceView["creators"];
   selectedSummary: ClientMediaPlanSummary;
   selectedCommercial: ClientCommercialSummary;
+  showOriginalCurrency: boolean;
+  setShowOriginalCurrency: (next: boolean) => void;
 };
 
 const ClientWorkspaceStateContext = createContext<ClientWorkspaceState | null>(null);
@@ -40,6 +43,7 @@ export function ClientWorkspaceStateProvider({
   const [selection, setSelection] = useState(() =>
     hydrateClientSelection(view.creators, selectionMapFromView(view), lockedIds, pendingIds)
   );
+  const [showOriginalCurrency, setShowOriginalCurrency] = useState(SHOW_ORIGINAL_CURRENCY_DEFAULT);
   const setCreatorState = useCallback((creatorId: string, state: ClientCreatorSelectionState) => {
     setSelection((current) => ({ ...current, [creatorId]: state }));
   }, []);
@@ -85,8 +89,18 @@ export function ClientWorkspaceStateProvider({
       selectedCreators,
       selectedSummary,
       selectedCommercial,
+      showOriginalCurrency,
+      setShowOriginalCurrency,
     };
-  }, [onSectionChange, selection, setCreatorState, setCreatorStates, token, view]);
+  }, [
+    onSectionChange,
+    selection,
+    setCreatorState,
+    setCreatorStates,
+    showOriginalCurrency,
+    token,
+    view,
+  ]);
 
   return (
     <ClientWorkspaceStateContext.Provider value={value}>{children}</ClientWorkspaceStateContext.Provider>

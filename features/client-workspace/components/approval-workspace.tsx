@@ -15,7 +15,6 @@ import {
 import { NOT_AVAILABLE, TO_BE_CONFIRMED } from "../format";
 import {
   campaignRosterFallback,
-  clientCampaignGlanceCounts,
   clientCampaignViewKind,
   CLIENT_CAMPAIGN_POST_STATUS_LABEL,
   emptyClientCampaignExecution,
@@ -25,6 +24,7 @@ import {
   type ClientCampaignPostRow,
 } from "../campaign-execution";
 import { approvalWorkspaceKind } from "../journey-state";
+import { emptyClientCampaignContent } from "../content-approval";
 import {
   CAMPAIGN_SETTING_UP_COPY,
   INVALID_ZERO_SELECTION_APPROVAL_MESSAGE,
@@ -32,6 +32,7 @@ import {
 } from "../selection-flow";
 import { countSelections } from "../status";
 import type { ClientWorkspaceView } from "../types";
+import { CampaignDashboard } from "./campaign-dashboard";
 import { useClientWorkspaceState } from "./client-workspace-state";
 import { ReviewPlatformMark } from "./review-platform-mark";
 
@@ -65,13 +66,14 @@ export function ApprovalWorkspace({
     selectedCount: counts.accepted,
   });
   const execution = view.campaignExecution ?? emptyClientCampaignExecution();
+  const executionPosts = execution.posts;
+  const contentItems = (view.campaignContent ?? emptyClientCampaignContent()).items;
   const posts =
-    execution.posts.length > 0
-      ? execution.posts
+    executionPosts.length > 0
+      ? executionPosts
       : commerciallyApproved
         ? campaignRosterFallback(selectedCreators)
         : [];
-  const glance = clientCampaignGlanceCounts(posts);
   const groups = groupClientCampaignPosts(posts);
 
   if (approvalKind === "historical") {
@@ -140,36 +142,12 @@ export function ApprovalWorkspace({
 
   return (
     <>
-      <div className="card">
-        <p className="ck">Campaign</p>
-        <h2>{view.overview.campaignName}</h2>
-        <p className="note">
-          Approved creators and publication schedule from the Thinkway campaign. Scheduled time of
-          day is added when it exists on the campaign.
-        </p>
-        <div className="glance" style={{ marginTop: 18 }}>
-          <div className="gi">
-            <p className="l">Approved creators</p>
-            <p className="v">{selectedCreators.length}</p>
-          </div>
-          <div className="gi">
-            <p className="l">Upcoming</p>
-            <p className="v">{glance.upcoming}</p>
-          </div>
-          <div className="gi">
-            <p className="l">Overdue</p>
-            <p className="v">{glance.overdue}</p>
-          </div>
-          <div className="gi">
-            <p className="l">Live</p>
-            <p className="v">{glance.live}</p>
-          </div>
-          <div className="gi">
-            <p className="l">Completed</p>
-            <p className="v">{glance.completed}</p>
-          </div>
-        </div>
-      </div>
+      <CampaignDashboard
+        campaignName={view.overview.campaignName}
+        posts={executionPosts}
+        contentItems={contentItems}
+        token={token}
+      />
 
       <div className="card">
         <p className="ck">Publication plan</p>
