@@ -481,6 +481,8 @@ export type ClientWorkspaceView = {
   };
   /** Campaign Workspace execution projection — never a second schedule/live engine. */
   campaignExecution?: import("./campaign-execution").ClientCampaignExecution;
+  /** Current-version content review projection. Independent of quotation and live status. */
+  campaignContent?: import("./content-approval").ClientCampaignContent;
   /** Group logo first, then client logo. Brand logos are not used here. */
   identityLogo?: IdentityLogo | null;
 };

@@ -42,6 +42,9 @@ import type {
 } from "./types";
 import { visibleClientWorkspaceSections } from "./visible-sections";
 import { loadSavedClientEmailsForQuotation } from "./client-quotation-delivery";
+import { emptyClientCampaignExecution } from "./campaign-execution";
+import { emptyClientCampaignContent } from "./content-approval";
+import { loadClientCampaignContent } from "./load-campaign-content";
 import { loadClientCampaignExecution } from "./load-campaign-execution";
 import { loadIdentityLogoForReview } from "./identity-logo";
 import {
@@ -552,10 +555,12 @@ export async function loadClientWorkspace(
   });
   view.journey = { ...journey, ...flags, clientSelection: clientSelectionFreeze };
   view.visibleSections = visibleClientWorkspaceSections(view);
-  view.campaignExecution = await loadClientCampaignExecution(
-    (service ?? db) as never,
-    view.journey.campaignHeaderId
-  );
+  view.campaignExecution = picked.historical
+    ? emptyClientCampaignExecution()
+    : await loadClientCampaignExecution((service ?? db) as never, view.journey.campaignHeaderId);
+  view.campaignContent = picked.historical
+    ? emptyClientCampaignContent()
+    : await loadClientCampaignContent((service ?? db) as never, view.journey.campaignHeaderId);
   view.clientEmails = await loadSavedClientEmailsForQuotation(
     (service ?? db) as never,
     view.journey.quotationId

@@ -1062,6 +1062,46 @@ export type Database = {
         >;
         Relationships: [];
       };
+      campaign_client_content_decisions: {
+        Row: {
+          id: string;
+          campaign_header_id: string;
+          assignment_deliverable_id: string;
+          assignment_post_schedule_id: string | null;
+          asset_id: string;
+          version_id: string;
+          review_id: string | null;
+          journey_id: string | null;
+          decision: "approved" | "changes_requested";
+          comment: string | null;
+          actor_kind: "client" | "internal";
+          actor_label: string | null;
+          actor_user_id: string | null;
+          decided_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          campaign_header_id: string;
+          assignment_deliverable_id: string;
+          assignment_post_schedule_id?: string | null;
+          asset_id: string;
+          version_id: string;
+          review_id?: string | null;
+          journey_id?: string | null;
+          decision: "approved" | "changes_requested";
+          comment?: string | null;
+          actor_kind?: "client" | "internal";
+          actor_label?: string | null;
+          actor_user_id?: string | null;
+          decided_at?: string;
+          created_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["campaign_client_content_decisions"]["Insert"]
+        >;
+        Relationships: [];
+      };
       campaign_headers: {
         Row: CampaignHeaderRow;
         Insert: {

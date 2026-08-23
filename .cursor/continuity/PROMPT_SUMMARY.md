@@ -1,11 +1,14 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Client Workspace + quotation — live enrichment avatar and CRM metrics
+**Focus:** Client Workspace Content to Review + original-currency toggle
 
-- Open Client Workspace reviews replace frozen import platform rows from live CRM and persist that profile.
-- Quotation lines persist the enrichment photo (not the Excel import crop) when the workspace loads.
-- Review avatars use the stored enrichment file directly instead of re-fetching Instagram.
-- Approved / converted / historical review URLs stay frozen. Cloned imported ER still shows on Instagram only unless another platform has its own likes/comments.
+- File SSOT remains `deliverable_assets` / `deliverable_asset_versions` / private `deliverable-assets`.
+- Decision SSOT is append-only `campaign_client_content_decisions` (version-specific).
+- Campaign tab shows only the **current** asset version as the active review card. Prior versions stay in history.
+- New version with no decision → Approval Required. Client approval never publishes or schedules.
+- Thinkway files: signed preview/download. Google Drive/external links: View External Link only.
+- Original currency is hidden by default; one Client Workspace toggle on Shortlist and Commercial turns it on.
+- Migration `20260823160000_client_content_decisions_and_deliverable_assets_storage_rls` applied on Development and Production.
 
-**Ship:** Development first (`hsxrewjcbvmbkqdlzjhs`), then Production. Do not dump Stage 3 live tracking onto Production.
+**Ship:** Development (`hsxrewjcbvmbkqdlzjhs`) and Production (`ienowhwfyxoqtzbgltno`) for this release.

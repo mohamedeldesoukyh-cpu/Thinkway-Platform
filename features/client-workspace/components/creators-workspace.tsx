@@ -24,7 +24,7 @@ import {
   shortlistCreatorSelectEnabled,
   thinkwayStatusLabel,
 } from "../selection-flow";
-import { originalClientFacingCreatorCardAmount, clientFacingCreatorCardAmount } from "../quotation-client-facing";
+import { originalClientFacingCreatorCardAmount, clientFacingCreatorCardAmount, clientRosterHasOriginalCurrency, visibleOriginalCurrencyAmount } from "../quotation-client-facing";
 import {
   flagFromCountry,
   MIX_BAR_COLORS,
@@ -40,6 +40,7 @@ import type { ClientAudienceSlice, ClientCreatorBrief, ClientCreatorCard, Client
 import { AdvancedReportModal, ContentFeatureGrid } from "./advanced-report-modal";
 import { ContentCategoryGrid } from "./content-category-grid";
 import { useClientWorkspaceState } from "./client-workspace-state";
+import { OriginalCurrencyToggle } from "./original-currency-toggle";
 import { ProposalSummaryCard } from "./proposal-summary-card";
 import { ReviewAvatar } from "./review-avatar";
 import { ReviewCreatorProfileLinks } from "./review-creator-profile-links";
@@ -66,7 +67,14 @@ export function CreatorsWorkspace({
   intent?: "explore" | "decide";
 }) {
   const router = useRouter();
-  const { selection: sharedSelection, setCreatorState, setCreatorStates, goToSection } = useClientWorkspaceState();
+  const {
+    selection: sharedSelection,
+    setCreatorState,
+    setCreatorStates,
+    goToSection,
+    showOriginalCurrency,
+    setShowOriginalCurrency,
+  } = useClientWorkspaceState();
   const [pending, startTransition] = useTransition();
   const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]["id"]>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -271,6 +279,12 @@ export function CreatorsWorkspace({
               </button>
             ))}
           </div>
+          {clientRosterHasOriginalCurrency(view.creators, view.commercial.currency) ? (
+            <OriginalCurrencyToggle
+              checked={showOriginalCurrency}
+              onChange={setShowOriginalCurrency}
+            />
+          ) : null}
         </div>
       ) : null}
       <p className="note" style={{ marginBottom: 12 }}>
@@ -376,7 +390,10 @@ export function CreatorsWorkspace({
                         : PRICE_PENDING_LABEL;
                     })()}
                     {(() => {
-                      const original = originalClientFacingCreatorCardAmount(creator, view.commercial.currency);
+                      const original = visibleOriginalCurrencyAmount(
+                        originalClientFacingCreatorCardAmount(creator, view.commercial.currency),
+                        showOriginalCurrency
+                      );
                       return original ? (
                         <span className="inv-orig">
                           Original: {formatMoneyKpi(original.amount, original.currency)}
@@ -537,6 +554,7 @@ function CreatorDetailPane({
   commerciallyApproved: boolean;
   pendingCommercialApproval?: boolean;
 }) {
+  const { showOriginalCurrency } = useClientWorkspaceState();
   const location = brief?.location || formatLocation(creator.city, creator.country);
   const investmentAmount = brief?.investmentAmount ?? creator.investmentAmount;
   const cardAmounts = {
@@ -761,7 +779,10 @@ function CreatorDetailPane({
                   : PRICE_PENDING_LABEL}
               </p>
               {(() => {
-                const original = originalClientFacingCreatorCardAmount(cardAmounts, investmentCurrency);
+                const original = visibleOriginalCurrencyAmount(
+                  originalClientFacingCreatorCardAmount(cardAmounts, investmentCurrency),
+                  showOriginalCurrency
+                );
                 return original ? (
                   <p className="note" style={{ marginTop: 4 }}>
                     Original: {formatMoneyKpi(original.amount, original.currency)}
