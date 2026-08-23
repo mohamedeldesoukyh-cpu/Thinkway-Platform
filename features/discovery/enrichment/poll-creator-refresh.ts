@@ -51,6 +51,21 @@ export type CreatorBatchRefreshPollCallbacks = {
   }) => void;
 };
 
+function failPoll(
+  callbacks: CreatorRefreshPollCallbacks,
+  lastPoll: CreatorRefreshPollStatus | null,
+  reason: string,
+  influencerId: string
+): "timeout" {
+  logManualRefreshTrace("ui_poll_complete", {
+    influencerId,
+    syncStatus: "failed",
+    reason,
+  });
+  callbacks.onComplete?.("failed", null, lastPoll);
+  return "timeout";
+}
+
 /** Poll enrichment until complete, then refetch the unified creator row. */
 export async function pollCreatorAfterRefresh(
   input: {
@@ -63,9 +78,19 @@ export async function pollCreatorAfterRefresh(
   let pendingStreak = 0;
   let lastPoll: CreatorRefreshPollStatus | null = null;
 
+  try {
   for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt += 1) {
     await sleep(POLL_INTERVAL_MS);
-    const poll = await getCreatorRefreshPollStatusAction(input.influencerId);
+    let poll: CreatorRefreshPollStatus;
+    try {
+      poll = await getCreatorRefreshPollStatusAction(input.influencerId);
+    } catch {
+      pendingStreak += 1;
+      if (pendingStreak >= MAX_PENDING_STREAK) {
+        return failPoll(callbacks, lastPoll, "poll_error_streak", input.influencerId);
+      }
+      continue;
+    }
     lastPoll = poll;
     const status = poll.syncStatus;
     logManualRefreshTrace("ui_poll_status", {
@@ -79,13 +104,7 @@ export async function pollCreatorAfterRefresh(
     if (status === "pending") {
       pendingStreak += 1;
       if (pendingStreak >= MAX_PENDING_STREAK) {
-        logManualRefreshTrace("ui_poll_complete", {
-          influencerId: input.influencerId,
-          syncStatus: "failed",
-          reason: "pending_streak",
-        });
-        callbacks.onComplete?.("failed", null, lastPoll);
-        return "timeout";
+        return failPoll(callbacks, lastPoll, "pending_streak", input.influencerId);
       }
     } else {
       pendingStreak = 0;
@@ -122,13 +141,10 @@ export async function pollCreatorAfterRefresh(
     }
   }
 
-  logManualRefreshTrace("ui_poll_complete", {
-    influencerId: input.influencerId,
-    syncStatus: "failed",
-    reason: "max_attempts",
-  });
-  callbacks.onComplete?.("failed", null, lastPoll);
-  return "timeout";
+  return failPoll(callbacks, lastPoll, "max_attempts", input.influencerId);
+  } catch {
+    return failPoll(callbacks, lastPoll, "poll_exception", input.influencerId);
+  }
 }
 
 /** Poll a batch of creators and patch each as enrichment completes. */
@@ -150,7 +166,12 @@ export async function pollCreatorsAfterBatchRefresh(
     for (let i = pending.length - 1; i >= 0; i -= 1) {
       const target = pending[i];
       if (!target) continue;
-      const status = await getCreatorEnrichmentStatusAction(target.influencerId);
+      let status: CreatorMetricsSyncStatus;
+      try {
+        status = await getCreatorEnrichmentStatusAction(target.influencerId);
+      } catch {
+        continue;
+      }
       const prev = lastStatuses.get(target.influencerId);
       if (status !== prev) {
         lastStatuses.set(target.influencerId, status);
@@ -173,5 +194,13 @@ export async function pollCreatorsAfterBatchRefresh(
       }
       pending.splice(i, 1);
     }
+  }
+
+  for (const leftover of pending) {
+    callbacks.onComplete?.({
+      unifiedId: leftover.unifiedId,
+      influencerId: leftover.influencerId,
+      status: "failed",
+    });
   }
 }

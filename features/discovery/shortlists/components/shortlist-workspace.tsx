@@ -494,6 +494,7 @@ export function ShortlistWorkspace({
           window.setTimeout(() => {
             setRefreshProgress(null);
           }, 1200);
+          setEnrichmentOverrides(new Map());
           router.refresh();
         });
       } catch (error) {

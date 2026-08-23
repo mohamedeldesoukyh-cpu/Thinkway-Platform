@@ -7,6 +7,10 @@ import {
   isCreatorEnrichmentRedisConfigured,
 } from "./queue-connection";
 import type { CreatorEnrichmentJobPayload } from "./types";
+import {
+  CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+  withTimeout,
+} from "./with-timeout";
 
 export function isCreatorEnrichmentQueueAvailable(): boolean {
   return isCreatorEnrichmentRedisConfigured();
@@ -60,7 +64,32 @@ export async function creatorHasInflightEnrichmentJob(
   if (!queue) return false;
 
   try {
-    const jobs = await queue.getJobs([...PENDING_OR_ACTIVE_STATES], 0, 499);
+    const knownIds = [
+      `creator-enrich-${influencerId}`,
+      `creator-enrich-force-${influencerId}`,
+    ];
+    for (const jobId of knownIds) {
+      const job = await withTimeout(
+        queue.getJob(jobId),
+        CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+        `getJob(${jobId})`
+      );
+      if (!job) continue;
+      const state = await withTimeout(
+        job.getState(),
+        CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+        `getState(${jobId})`
+      );
+      if (PENDING_OR_ACTIVE_STATES.includes(state as (typeof PENDING_OR_ACTIVE_STATES)[number])) {
+        return true;
+      }
+    }
+
+    const jobs = await withTimeout(
+      queue.getJobs([...PENDING_OR_ACTIVE_STATES], 0, 499),
+      CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+      "getJobs(inflight)"
+    );
     return jobs.some((job) => job.data.influencerId === influencerId);
   } catch {
     return false;
