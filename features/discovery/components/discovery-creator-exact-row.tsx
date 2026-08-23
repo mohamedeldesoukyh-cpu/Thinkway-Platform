@@ -46,6 +46,8 @@ export type DiscoveryCreatorExactRowProps = {
   meta?: ReactNode;
   /** Split tier + status + quoted columns (shortlist) — aligns headers with row cells */
   metaColumns?: { tier: ReactNode; status: ReactNode; quoted: ReactNode };
+  /** Compact label in the left creator column (e.g. Quoted). */
+  infoBadge?: ReactNode;
   /** Cap feed thumbs (shortlist uses 2). Defaults to all publications. */
   feedMaxItems?: number;
   /** Row click opens creator detail (Search) or toggles selection (shortlist) */
@@ -73,6 +75,7 @@ export const DiscoveryCreatorExactRow = memo(function DiscoveryCreatorExactRow({
   actions,
   meta,
   metaColumns,
+  infoBadge,
   feedMaxItems,
   rowBehavior = "open-detail",
   interestChipVariant = "default",
@@ -220,6 +223,11 @@ export const DiscoveryCreatorExactRow = memo(function DiscoveryCreatorExactRow({
           {vm.handleLabel ? (
             <div className="discovery-search-exact-handle" title={vm.handleLabel}>
               {vm.handleLabel}
+            </div>
+          ) : null}
+          {infoBadge ? (
+            <div className="discovery-search-exact-info-badges" onClick={stop}>
+              {infoBadge}
             </div>
           ) : null}
           {vm.countryLabel !== "—" ? (

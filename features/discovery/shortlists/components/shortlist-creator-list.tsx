@@ -32,6 +32,10 @@ import {
 } from "../shortlist-collapse-groups";
 import { ShortlistCollapseContentHeader } from "./shortlist-collapse-content-header";
 import {
+  isShortlistCreatorQuoted,
+  ShortlistCreatorQuotedLabel,
+} from "./shortlist-badges";
+import {
   ShortlistCreatorQuotedCell,
   ShortlistCreatorStatusCell,
   ShortlistCreatorTierCell,
@@ -172,6 +176,11 @@ function ShortlistCreatorRow({
           <div className="discovery-search-exact-info-stack">
             <div className="discovery-search-exact-name">Unknown creator</div>
             <div className="discovery-search-exact-handle">Profile not resolved</div>
+            {isShortlistCreatorQuoted(item.quotation_refs) ? (
+              <div className="discovery-search-exact-info-badges">
+                <ShortlistCreatorQuotedLabel refs={item.quotation_refs} />
+              </div>
+            ) : null}
           </div>
         </div>
         <div className="discovery-search-exact-tier-cell">
@@ -209,6 +218,11 @@ function ShortlistCreatorRow({
       interestChipVariant="icat"
       className={shortlistCreatorSyncBorderClass(enrichmentStatus)}
       metaColumns={shortlistCreatorMetaRowColumns(item)}
+      infoBadge={
+        isShortlistCreatorQuoted(item.quotation_refs) ? (
+          <ShortlistCreatorQuotedLabel refs={item.quotation_refs} />
+        ) : undefined
+      }
       feedMaxItems={2}
     />
   );
