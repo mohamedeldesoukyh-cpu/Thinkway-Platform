@@ -41,7 +41,8 @@ export function quotationReviewBlockers(
   detail: Pick<
     QuotationDetail,
     "status" | "is_archived" | "is_expired" | "items" | "client_name" | "brand_name" | "name"
-  >
+  >,
+  options?: { allowEmptyItems?: boolean }
 ): string[] {
   const blockers: string[] = [];
   if (detail.is_archived || detail.status === "archived") {
@@ -54,7 +55,7 @@ export function quotationReviewBlockers(
     blockers.push("This quotation has expired. Refresh validity before sending to the client.");
   }
   const items = quotationItemsForClient(detail.items);
-  if (items.length === 0) {
+  if (items.length === 0 && !options?.allowEmptyItems) {
     blockers.push("Add client-facing quotation items before sending to the client.");
   }
   if (!detail.client_name && !detail.brand_name && !detail.name.trim()) {

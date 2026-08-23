@@ -25,6 +25,7 @@ import { snapshotFromCampaignObject } from "./snapshot-from-object";
 import { isInteractiveClientReview } from "./status";
 import {
   canLiveSyncClientReview,
+  canLiveSyncClientRoster,
   journeyActionRequired,
   journeyCanonicalReviewId,
   latestApprovedReviewForSource,
@@ -32,6 +33,7 @@ import {
   pickActiveDecisionReview,
   projectClientJourney,
 } from "./journey-state";
+import { applyLiveCreatorRoster } from "./selection-flow";
 import { diffShortlistToQuotation } from "./snapshot-diff";
 import type {
   ClientActivityEvent,
@@ -314,10 +316,30 @@ export async function loadClientWorkspace(
   const shortlistTip = latestReviewForSource(members, "shortlist");
   if (service && !picked.historical) {
     try {
+      const origin = process.env.NEXT_PUBLIC_APP_URL ?? "https://dev.thinkwaymedia.com";
+      const systemUserId = "00000000-0000-0000-0000-000000000000";
+      const shortlistId = shortlistTip?.shortlistId ?? picked.review?.shortlistId ?? null;
+      if (
+        shortlistId &&
+        shortlistTip &&
+        canLiveSyncClientRoster({
+          status: shortlistTip.status,
+          campaignHeaderId: shortlistTip.campaignHeaderId,
+        })
+      ) {
+        const { createClientReviewFromShortlist } = await import("./create-from-shortlist");
+        await createClientReviewFromShortlist(service, {
+          shortlistId,
+          userId: systemUserId,
+          origin,
+          mintMissingShareToken: false,
+          syncExistingOnly: true,
+        });
+      }
       const { resolveCurrentQuotationIdForClientJourney } = await import("./live-quotation-projection");
       const liveQuotationId = await resolveCurrentQuotationIdForClientJourney(service, {
         quotationId: quotationTip?.quotationId ?? picked.review?.quotationId ?? null,
-        shortlistId: shortlistTip?.shortlistId ?? picked.review?.shortlistId ?? null,
+        shortlistId,
       });
       if (
         liveQuotationId &&
@@ -331,21 +353,21 @@ export async function loadClientWorkspace(
         const { createClientReviewFromQuotation } = await import("./create-from-quotation");
         await createClientReviewFromQuotation(service, {
           quotationId: liveQuotationId,
-          userId: "00000000-0000-0000-0000-000000000000",
-          origin: process.env.NEXT_PUBLIC_APP_URL ?? "https://dev.thinkwaymedia.com",
+          userId: systemUserId,
+          origin,
           mintMissingShareToken: false,
           syncExistingOnly: true,
         });
-        members = await loadJourneyReviews(db, resolvedInitial.review);
-        picked = pickActiveDecisionReview({
-          reviews: members,
-          requestedReviewId,
-          canonicalReviewId: journeyCanonicalReviewId(members, resolvedInitial.review.id),
-          tokenBoundReviewId: resolvedInitial.review.id,
-        });
       }
+      members = await loadJourneyReviews(db, resolvedInitial.review);
+      picked = pickActiveDecisionReview({
+        reviews: members,
+        requestedReviewId,
+        canonicalReviewId: journeyCanonicalReviewId(members, resolvedInitial.review.id),
+        tokenBoundReviewId: resolvedInitial.review.id,
+      });
     } catch {
-      /* keep the stored snapshot if quotation sync is unavailable */
+      /* keep the stored snapshot if live roster sync is unavailable */
     }
   }
 
@@ -420,6 +442,22 @@ export async function loadClientWorkspace(
         }
       } catch {
         /* keep the merged snapshot if quotation SSOT is unavailable */
+      }
+    }
+    if (!picked.historical && service && canHydrateLiveProfile) {
+      try {
+        const shortlistId =
+          latestReviewForSource(members, "shortlist")?.shortlistId ?? activeReview.shortlistId;
+        if (shortlistId) {
+          const { loadShortlistPoolCreators } = await import("./create-from-shortlist");
+          const livePool = await loadShortlistPoolCreators(service, shortlistId);
+          if (livePool) {
+            const liveQuoted = mergedSnapshot.creators.filter((creator) => creator.quotationEligible);
+            mergedSnapshot = applyLiveCreatorRoster(mergedSnapshot, livePool, liveQuoted);
+          }
+        }
+      } catch {
+        /* keep the merged snapshot if live shortlist membership is unavailable */
       }
     }
     if (canHydrateLiveProfile && service) {

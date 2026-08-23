@@ -36,6 +36,15 @@ export function canLiveSyncClientReview(input: {
   return isInteractiveClientReview(input.status);
 }
 
+/** Open Client Workspace roster follows live shortlist and quotation membership. */
+export function canLiveSyncClientRoster(input: {
+  status: ClientReviewStatus;
+  campaignHeaderId?: string | null;
+}): boolean {
+  if (input.campaignHeaderId) return false;
+  return isInteractiveClientReview(input.status);
+}
+
 export function deriveShortlistStage(input: {
   review: (Pick<ClientReviewRecord, "status"> & { firstViewedAt?: string | null }) | null;
 }): ClientShortlistStage {

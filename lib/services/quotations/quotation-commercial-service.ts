@@ -254,6 +254,19 @@ export async function removeQuotationItemWithSync(
 
   await syncCollapsePackageOptionNumbers(supabase, input.quotation_id);
   await recomputeQuotationTotals(supabase, input.quotation_id);
+  const { data: quotation } = await supabase
+    .from("quotations")
+    .select("shortlist_id")
+    .eq("id", input.quotation_id)
+    .maybeSingle();
+  const { syncOpenClientWorkspaceRosterBestEffort } = await import(
+    "@/features/client-workspace/sync-open-roster"
+  );
+  await syncOpenClientWorkspaceRosterBestEffort(supabase, {
+    userId,
+    quotationId: input.quotation_id,
+    shortlistId: (quotation as { shortlist_id?: string | null } | null)?.shortlist_id,
+  });
   return { ok: true as const };
 }
 

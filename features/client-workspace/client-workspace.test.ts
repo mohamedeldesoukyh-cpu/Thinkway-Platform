@@ -43,6 +43,7 @@ import { canCreateCampaignFromQuotation } from "@/lib/commercial-sync/rules";
 import { diffClientReviewSnapshots, diffShortlistToQuotation, retainCreatorBriefs } from "./snapshot-diff";
 import {
   canLiveSyncClientReview,
+  canLiveSyncClientRoster,
   clientApprovalSideEffects,
   deriveQuotationStage,
   deriveShortlistStage,
@@ -88,6 +89,7 @@ import {
   consolidationContract,
   isPricedClientInvestment,
   isValidClientCommercialApproval,
+  applyLiveCreatorRoster,
   mergeSnapshotsForClientView,
   overlayQuotationOnShortlistCreators,
   selectionCalculator,
@@ -434,6 +436,12 @@ test("quotation readiness requires a current quotation, not a Studio rebuild", (
   );
   assert.ok(
     quotationReviewBlockers({ ...base, items: [] }).some((blocker) => /items/i.test(blocker))
+  );
+  assert.equal(
+    quotationReviewBlockers({ ...base, items: [] }, { allowEmptyItems: true }).some((blocker) =>
+      /items/i.test(blocker)
+    ),
+    false
   );
 });
 
@@ -2224,6 +2232,9 @@ test("quotation live-sync is only allowed for open unconverted quotations", () =
     false
   );
   assert.equal(canLiveSyncClientReview({ status: "awaiting_review", source: "shortlist" }), false);
+  assert.equal(canLiveSyncClientRoster({ status: "awaiting_review" }), true);
+  assert.equal(canLiveSyncClientRoster({ status: "approved" }), false);
+  assert.equal(canLiveSyncClientRoster({ status: "awaiting_review", campaignHeaderId: "c1" }), false);
 });
 
 test("shortlist and quotation stages stay independent", () => {
@@ -2908,6 +2919,92 @@ test("moving a creator to quotation keeps the client shortlist pool", () => {
   assert.equal(merged[0]?.quotationEligible, true);
   assert.equal(merged[1]?.investmentAmount, undefined);
   assert.equal(merged[1]?.quotationEligible, false);
+});
+
+test("live client roster drops creators removed from both shortlist and quotation", () => {
+  const snapshot = parseSourceSnapshot({
+    source: "quotation",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme",
+    creators: [
+      { creatorId: "keep", displayName: "Keep", investmentAmount: 10_000, quotationEligible: true },
+      { creatorId: "gone", displayName: "Gone", investmentAmount: 8_000, quotationEligible: true },
+    ],
+    content: [
+      { creatorId: "keep", creatorName: "Keep", platform: "instagram", deliverable: "Reel" },
+      { creatorId: "gone", creatorName: "Gone", platform: "instagram", deliverable: "Story" },
+    ],
+    commercial: {
+      currency: "EGP",
+      creatorInvestment: 18_000,
+      totalInvestment: 18_000,
+      quotationTotal: 18_000,
+      lines: [],
+      selectedCount: 2,
+      totalCount: 2,
+    },
+    creatorIds: ["keep", "gone"],
+    clientSelection: { confirmedAt: "2026-08-24T00:00:00.000Z", creatorIds: ["keep", "gone"] },
+  });
+  assert.ok(snapshot);
+  const next = applyLiveCreatorRoster(
+    snapshot,
+    [{ creatorId: "keep", displayName: "Keep" }],
+    [{ creatorId: "keep", displayName: "Keep", investmentAmount: 10_000, quotationEligible: true }]
+  );
+  assert.deepEqual(
+    next.creators.map((creator) => creator.creatorId),
+    ["keep"]
+  );
+  assert.equal(next.creators[0]?.investmentAmount, 10_000);
+  assert.deepEqual(next.creatorIds, ["keep"]);
+  assert.equal(next.content.length, 1);
+  assert.deepEqual(next.clientSelection?.creatorIds, ["keep"]);
+});
+
+test("empty live shortlist snapshot does not keep stale client workspace creators", () => {
+  const stale = parseSourceSnapshot({
+    source: "quotation",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme",
+    creators: [
+      { creatorId: "gone", displayName: "Gone", investmentAmount: 8_000 },
+      { creatorId: "quoted", displayName: "Quoted", investmentAmount: 12_000, quotationEligible: true },
+    ],
+    commercial: {
+      currency: "EGP",
+      creatorInvestment: 20_000,
+      totalInvestment: 20_000,
+      quotationTotal: 20_000,
+      lines: [],
+      selectedCount: 2,
+      totalCount: 2,
+    },
+    creatorIds: ["gone", "quoted"],
+  });
+  assert.ok(stale);
+  const liveQuotation = parseSourceSnapshot({
+    source: "quotation",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme",
+    creators: [{ creatorId: "quoted", displayName: "Quoted", investmentAmount: 12_000, quotationEligible: true }],
+    commercial: stale.commercial,
+    creatorIds: ["quoted"],
+  });
+  assert.ok(liveQuotation);
+  const merged = mergeSnapshotsForClientView({
+    active: stale,
+    shortlist: { ...stale, creators: [], creatorIds: [] },
+    quotation: liveQuotation,
+    historical: false,
+  });
+  assert.deepEqual(
+    merged.creators.map((creator) => creator.creatorId),
+    ["quoted"]
+  );
 });
 
 test("internal client-facing price and deliverables appear on the client shortlist card", () => {
