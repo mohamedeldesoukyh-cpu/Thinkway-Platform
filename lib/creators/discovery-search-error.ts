@@ -19,6 +19,24 @@ export function isMaskedServerActionError(message: string): boolean {
   return /Server Components render|digest property is included/i.test(message);
 }
 
+export function isRecoverableServerActionFailure(error: unknown): boolean {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : "";
+  const digest =
+    typeof error === "object" && error && "digest" in error
+      ? String((error as { digest?: unknown }).digest ?? "")
+      : "";
+  const combined = `${message} ${digest}`;
+  return (
+    isMaskedServerActionError(combined) ||
+    /FUNCTION_INVOCATION_TIMEOUT|task timed out after/i.test(combined)
+  );
+}
+
 export function isDiscoverySearchTimeoutError(message: string): boolean {
   return /statement timeout|canceling statement|timed out/i.test(message);
 }

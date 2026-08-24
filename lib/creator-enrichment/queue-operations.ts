@@ -109,28 +109,60 @@ export async function cancelCreatorEnrichmentJobs(
   let removed = 0;
 
   try {
-    const dedupeJob = await queue.getJob(`creator-enrich-${influencerId}`);
+    const dedupeJob = await withTimeout(
+      queue.getJob(`creator-enrich-${influencerId}`),
+      CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+      `cancel.getJob(${influencerId})`
+    );
     if (dedupeJob) {
       try {
-        if (await dedupeJob.isActive()) {
-          await dedupeJob.discard();
+        if (await withTimeout(
+          dedupeJob.isActive(),
+          CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+          `cancel.isActive(${influencerId})`
+        )) {
+          await withTimeout(
+            dedupeJob.discard(),
+            CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+            `cancel.discard(${influencerId})`
+          );
         }
-        await dedupeJob.remove();
+        await withTimeout(
+          dedupeJob.remove(),
+          CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+          `cancel.remove(${influencerId})`
+        );
         removed += 1;
       } catch {
         // Best-effort per job.
       }
     }
 
-    const jobs = await queue.getJobs([...PENDING_OR_ACTIVE_STATES], 0, 499);
+    const jobs = await withTimeout(
+      queue.getJobs([...PENDING_OR_ACTIVE_STATES], 0, 499),
+      CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+      "cancel.getJobs"
+    );
     for (const job of jobs) {
       if (job.data.influencerId !== influencerId) continue;
       if (job.id === `creator-enrich-${influencerId}`) continue;
       try {
-        if (await job.isActive()) {
-          await job.discard();
+        if (await withTimeout(
+          job.isActive(),
+          CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+          "cancel.job.isActive"
+        )) {
+          await withTimeout(
+            job.discard(),
+            CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+            "cancel.job.discard"
+          );
         }
-        await job.remove();
+        await withTimeout(
+          job.remove(),
+          CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+          "cancel.job.remove"
+        );
         removed += 1;
       } catch {
         // Best-effort per job.

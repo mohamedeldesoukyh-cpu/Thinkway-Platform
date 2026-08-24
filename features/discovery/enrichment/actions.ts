@@ -75,10 +75,10 @@ async function refreshCreatorWithScope(
 
   const dataSource = options?.dataSource ?? "live_apify";
   const preferCached = dataSource === "cached_snapshot";
-  // Manual Refresh (live Apify) may set force=true to bypass freshness.
-  // Live Apify must run in this request. Queue-only refresh never starts an
-  // actor unless discovery-worker is online on the same Redis — that left
-  // Refresh Metrics spinning with no Apify run.
+  // Live Apify must not run inside this Server Action. Next.js treats every
+  // Server Action as a transition; a 5-minute actor wait hits Vercel
+  // FUNCTION_INVOCATION_TIMEOUT and blanks Discovery via PlatformErrorBoundary.
+  // Queue to discovery-worker (service-role budget) and return immediately.
   const refreshOptions = {
     force: !preferCached,
     trigger: "manual" as const,
@@ -90,7 +90,7 @@ async function refreshCreatorWithScope(
     isBulk: options?.isBulk ?? false,
     platformAccountId: options?.platformAccountId ?? null,
     dataSource,
-    mode: "inline" as const,
+    mode: preferCached ? ("inline" as const) : ("queue" as const),
     feature: options?.feature,
   };
 

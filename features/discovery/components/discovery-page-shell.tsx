@@ -56,7 +56,7 @@ export function DiscoveryPageShell({
       mainClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
       headerClassName="h-14 px-4 py-0 md:px-4"
     >
-      <PlatformErrorBoundary surface="generic">
+      <PlatformErrorBoundary surface="generic" recoverActionTimeouts>
         <div
           className={cn(
             "flex h-full min-h-0 flex-col overflow-hidden",

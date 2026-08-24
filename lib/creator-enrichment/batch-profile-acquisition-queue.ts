@@ -12,6 +12,10 @@ import {
   getCreatorEnrichmentRedisUrl,
   isCreatorEnrichmentRedisConfigured,
 } from "./queue-connection";
+import {
+  CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+  withTimeout,
+} from "./with-timeout";
 
 export const BATCH_PROFILE_ACQUISITION_QUEUE = "batch-profile-acquisition" as const;
 
@@ -31,12 +35,25 @@ export async function enqueueBatchProfileAcquisitionJob(
     connection: createCreatorEnrichmentQueueConnection(redisUrl),
   });
   try {
-    await queue.add("batch-profile-acquisition", payload, {
-      ...CAMPAIGN_PERFORMANCE_JOB_OPTIONS,
-      jobId: payload.jobId,
-    });
+    await withTimeout(
+      queue.add("batch-profile-acquisition", payload, {
+        ...CAMPAIGN_PERFORMANCE_JOB_OPTIONS,
+        jobId: payload.jobId,
+      }),
+      CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+      "enqueueBatchProfileAcquisitionJob"
+    );
     return { queued: true };
+  } catch (error) {
+    return {
+      queued: false,
+      reason: error instanceof Error ? error.message : "Could not enqueue batch profile acquisition.",
+    };
   } finally {
-    await queue.close().catch(() => {});
+    await withTimeout(
+      queue.close().catch(() => undefined),
+      CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+      "enqueueBatchProfileAcquisitionJob.close"
+    ).catch(() => {});
   }
 }

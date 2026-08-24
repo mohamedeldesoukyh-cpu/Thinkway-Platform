@@ -10,6 +10,10 @@ import {
 } from "@/lib/creator-enrichment/batch-profile-acquisition-policy";
 import { enqueueBatchProfileAcquisitionJob } from "@/lib/creator-enrichment/batch-profile-acquisition-queue";
 import { cancelCreatorEnrichmentJobs } from "@/lib/creator-enrichment/queue-operations";
+import {
+  CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+  withTimeout,
+} from "@/lib/creator-enrichment/with-timeout";
 import type {
   BatchProfileAcquisitionJobData,
   BatchProfileAcquisitionProgress,
@@ -116,9 +120,15 @@ export async function startBatchProfileAcquisition(
       targets.map((target) => target.influencerId).filter((id): id is string => Boolean(id))
     ),
   ];
-  for (const influencerId of influencerIds) {
-    await cancelCreatorEnrichmentJobs(influencerId);
-  }
+  await withTimeout(
+    Promise.all(
+      influencerIds.map((influencerId) =>
+        cancelCreatorEnrichmentJobs(influencerId).catch(() => ({ removed: 0 }))
+      )
+    ),
+    CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS * 2,
+    "batchCancelCreatorEnrichmentJobs"
+  ).catch(() => {});
 
   const platformsSummary = [...new Set(targets.map((target) => target.platform))];
   console.log(

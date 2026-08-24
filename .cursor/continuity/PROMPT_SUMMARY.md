@@ -1,7 +1,10 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Refresh Metrics starts Apify (service-role budget) and must not blank Discovery
+**Focus:** Refresh Metrics queues Apify on the worker — never wait 5 minutes in Next.js
+
+- Live Refresh Metrics no longer runs Apify inside the Server Action. Next.js treats every Server Action as a transition; Vercel `FUNCTION_INVOCATION_TIMEOUT` still blanked Discovery even with try/catch.
+- Queue to discovery-worker (service-role budget, `force: true`). Bound Redis cancel/enqueue so shortlist batch cannot hang until 300s. Discovery error boundary recovers timeout digests after mount.
 
 - Root cause: after inline live refresh, Next.js used the user JWT for `discovery_apify_usage` / `discovery_control_settings`. RLS allows `discovery.admin` / `analytics.read`, not `discovery.write`, so budget failed closed (`usage_unverified`) and Apify never started. The worker used service-role and bypassed RLS.
 - Fix: every Apify launch gate prefers service-role (`assertApifyAcquisitionBudgetForLaunch`). Explicit Refresh Metrics (sheet + shortlist/search batch) uses `force: true` + `live_apify`. Skip is no longer toasted as live Apify success.

@@ -1,8 +1,10 @@
 "use client";
 
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { toast } from "sonner";
 
 import { AsyncErrorState } from "@/components/platform/async-error-state";
+import { isRecoverableServerActionFailure } from "@/lib/creators/discovery-search-error";
 import { errorLog } from "@/lib/platform/logger";
 
 export type PlatformSurface =
@@ -88,6 +90,11 @@ type PlatformErrorBoundaryProps = {
   surface?: PlatformSurface;
   title?: string;
   description?: string;
+  /**
+   * After the panel has mounted, recover Next.js Server Action timeout/digest
+   * errors instead of blanking the page. Initial render failures still show fallback.
+   */
+  recoverActionTimeouts?: boolean;
 };
 
 type State = {
@@ -99,9 +106,15 @@ export class PlatformErrorBoundary extends Component<
   State
 > {
   state: State = { error: null };
+  private hasMounted = false;
+  private recoveries = 0;
 
   static getDerivedStateFromError(error: Error): State {
     return { error };
+  }
+
+  componentDidMount() {
+    this.hasMounted = true;
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
@@ -110,6 +123,19 @@ export class PlatformErrorBoundary extends Component<
       message: error.message,
       componentStack: info.componentStack,
     });
+
+    if (
+      this.props.recoverActionTimeouts &&
+      this.hasMounted &&
+      this.recoveries < 1 &&
+      isRecoverableServerActionFailure(error)
+    ) {
+      this.recoveries += 1;
+      toast.error("Metrics refresh timed out. The list is unchanged. Try again.");
+      queueMicrotask(() => {
+        this.setState({ error: null });
+      });
+    }
   }
 
   private handleRetry = () => {
