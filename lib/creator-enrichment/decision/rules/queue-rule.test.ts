@@ -66,10 +66,16 @@ function testQueuedStatusAlreadyRunning() {
   assert.equal(evaluation.opinion, "already_running");
 }
 
+function testExecuteIsNotGuarded() {
+  const rule = new QueueRule();
+  assert.equal(rule.supportedOperations.includes("execute"), false);
+}
+
 function run() {
   testIdleNoOpinion();
   testRunningAlreadyRunning();
   testQueuedStatusAlreadyRunning();
+  testExecuteIsNotGuarded();
   console.log("queue-rule.test.ts: all tests passed");
 }
 

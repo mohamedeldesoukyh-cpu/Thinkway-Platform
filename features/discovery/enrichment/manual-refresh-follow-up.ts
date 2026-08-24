@@ -1,5 +1,6 @@
 export type ManualRefreshFollowUp =
   | { type: "cached" }
+  | { type: "completed" }
   | { type: "poll" }
   | { type: "queued_without_unified_id" }
   | { type: "error"; message: string };
@@ -22,6 +23,10 @@ export function resolveManualRefreshFollowUp(input: {
 }): ManualRefreshFollowUp {
   if (input.result.refreshSource === "cached_snapshot" && input.result.ok && !input.result.queued) {
     return { type: "cached" };
+  }
+
+  if (input.result.ok && !input.result.queued && !isAlreadyInProgress(input.result)) {
+    return { type: "completed" };
   }
 
   if (input.result.queued || isAlreadyInProgress(input.result)) {

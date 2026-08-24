@@ -45,6 +45,19 @@ assert.deepEqual(
 
 assert.deepEqual(
   resolveManualRefreshFollowUp({
+    result: {
+      ok: true,
+      queued: false,
+      message: "Creator updated.",
+      refreshSource: "live_apify",
+    },
+    unifiedId: "u1",
+  }),
+  { type: "completed" }
+);
+
+assert.deepEqual(
+  resolveManualRefreshFollowUp({
     result: { ok: false, queued: false, message: "REDIS_URL missing." },
     unifiedId: "u1",
   }),

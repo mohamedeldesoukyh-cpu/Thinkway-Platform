@@ -1,8 +1,9 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Client Workspace Content to Review + original-currency toggle + shortlist Quoted label
+**Focus:** Manual Refresh Metrics starts live Apify inline (no worker wait)
 
+- Manual Refresh Metrics runs live Apify in the Next.js server action. Queue-only refresh never started an actor when discovery-worker was offline.
 - File SSOT remains `deliverable_assets` / `deliverable_asset_versions` / private `deliverable-assets`.
 - Decision SSOT is append-only `campaign_client_content_decisions` (version-specific).
 - Campaign tab shows only the **current** asset version as the active review card. Prior versions stay in history.
@@ -14,4 +15,4 @@
 - Open Client Workspace roster follows live shortlist ∪ quotation membership (add and remove). Frozen snapshots no longer keep creators after they leave both sources.
 - Migration `20260823160000_client_content_decisions_and_deliverable_assets_storage_rls` applied on Development and Production.
 
-**Ship:** Development (`hsxrewjcbvmbkqdlzjhs`) and Production (`ienowhwfyxoqtzbgltno`) for this release.
+**Ship:** Development (`hsxrewjcbvmbkqdlzjhs`) and Production (`ienowhwfyxoqtzbgltno`) for Refresh Metrics live Apify.

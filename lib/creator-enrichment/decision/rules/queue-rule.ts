@@ -5,7 +5,9 @@ import type { RuleEvaluation } from "../decision-types";
 import type { CreatorIntelligenceSnapshot } from "../snapshot/creator-intelligence-snapshot";
 import type { SnapshotQueueStatus } from "../snapshot/snapshot-types";
 
-const QUEUED_OPERATIONS = ["refresh", "enqueue", "execute"] as const;
+/** Not `execute`: the worker job *is* the in-flight run. Scoring execute as
+ *  already_running skipped runCreatorEnrichment, so Apify never started. */
+const QUEUED_OPERATIONS = ["refresh", "enqueue"] as const;
 
 function isInflight(snapshot: CreatorIntelligenceSnapshot): boolean {
   if (snapshot.enrichmentRunning === true) return true;

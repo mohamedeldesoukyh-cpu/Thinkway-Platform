@@ -4,6 +4,9 @@
  */
 import "@/app/styles/campaign-workspace.css";
 
+/** Live Refresh Metrics waits on Apify in the server action. */
+export const maxDuration = 300;
+
 export default function DiscoveryLayout({
   children,
 }: Readonly<{

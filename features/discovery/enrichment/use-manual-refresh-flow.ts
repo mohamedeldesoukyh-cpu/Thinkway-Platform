@@ -103,6 +103,44 @@ export function useManualRefreshFlow(options: UseManualRefreshFlowOptions = {}) 
         return;
       }
 
+      if (followUp.type === "completed") {
+        notifyStatus?.("enriched");
+        const toastContent = resolveManualRefreshToast({
+          syncStatus: "completed",
+          refreshSource: result.refreshSource,
+          enrichmentSource: result.refreshSource === "live_apify" ? "apify" : null,
+          enrichmentStatus: "enriched",
+        });
+        logManualRefreshTrace("ui_success_toast", {
+          influencerId: request.influencerId,
+          toast: toastContent.title,
+          tone: toastContent.tone,
+          refreshSourceIntent: result.refreshSource ?? null,
+          followUp: "completed",
+        });
+        if (toastContent.tone === "success") {
+          toast.success(toastContent.title, { description: toastContent.description });
+        } else if (toastContent.tone === "error") {
+          toast.error(toastContent.title, { description: toastContent.description });
+        } else {
+          toast.message(toastContent.title, { description: toastContent.description });
+        }
+        if (request.unifiedId) {
+          void pollCreatorAfterRefresh(
+            { unifiedId: request.unifiedId, influencerId: request.influencerId },
+            {
+              onUpdated: (creator) => {
+                notifyUpdated?.(creator);
+                notifyStatus?.(resolveCreatorEnrichmentStatus(creator.enrichment_status));
+              },
+            }
+          ).catch(() => {
+            notifyStatus?.("failed");
+          });
+        }
+        return;
+      }
+
       if (followUp.type === "queued_without_unified_id") {
         notifyStatus?.("failed");
         toast.error("Could not refresh metrics", {

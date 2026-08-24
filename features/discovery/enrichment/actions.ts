@@ -73,6 +73,9 @@ async function refreshCreatorWithScope(
   const dataSource = options?.dataSource ?? "live_apify";
   const preferCached = dataSource === "cached_snapshot";
   // Manual Refresh (live Apify) may set force=true to bypass freshness.
+  // Live Apify must run in this request. Queue-only refresh never starts an
+  // actor unless discovery-worker is online on the same Redis — that left
+  // Refresh Metrics spinning with no Apify run.
   const refreshOptions = {
     force: !preferCached,
     trigger: "manual" as const,
@@ -84,7 +87,7 @@ async function refreshCreatorWithScope(
     isBulk: options?.isBulk ?? false,
     platformAccountId: options?.platformAccountId ?? null,
     dataSource,
-    mode: preferCached ? ("inline" as const) : undefined,
+    mode: "inline" as const,
     feature: options?.feature,
   };
 

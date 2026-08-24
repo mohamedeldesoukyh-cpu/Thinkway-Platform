@@ -17,9 +17,14 @@ import {
 } from "@/lib/creator-enrichment/enabled";
 import { decideEnrichment, priorityForTrigger } from "@/lib/creator-enrichment/policy";
 import {
+  cancelCreatorEnrichmentJobs,
   creatorHasInflightEnrichmentJob,
   isCreatorEnrichmentQueueAvailable,
 } from "@/lib/creator-enrichment/queue-operations";
+import {
+  CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+  withTimeout,
+} from "@/lib/creator-enrichment/with-timeout";
 import { enqueueCreatorEnrichmentImpl } from "@/lib/creator-enrichment/queue-impl";
 import { logManualRefreshTrace } from "@/lib/creator-enrichment/manual-refresh-trace";
 import { resolveAggregatedCreatorEnrichmentStatus } from "@/lib/creator-enrichment/status-resolution";
@@ -362,7 +367,21 @@ export async function refreshCreatorMetricsImpl(
   }
 
   if (options.mode === "inline" || refreshSource === "cached_snapshot") {
+    if (forceRefresh && refreshSource === "live_apify") {
+      try {
+        await withTimeout(
+          cancelCreatorEnrichmentJobs(influencerId),
+          CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
+          "cancelCreatorEnrichmentJobs"
+        );
+      } catch {
+        // Best-effort: a stuck Redis job must not block a live Apify run.
+      }
+    }
     try {
+      console.log(
+        `[manual-refresh] starting inline creatorId=${influencerId.trim()} source=${refreshSource}`
+      );
       const enrichment = await runCreatorEnrichment(supabase, payload, {
         attempt: options.attempt ?? 1,
         jobId: options.jobId ?? null,
