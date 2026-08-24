@@ -10,6 +10,7 @@ import {
   resolveCreatorLineCostDualLabel,
   resolveCreatorLinePriceDualLabel,
   resolveCreatorLinePriceLabel,
+  shouldSyncLineMasterOntoDeliverables,
 } from "@/lib/quotations/quotation-line-creator-commercial-sync";
 import { hasPricedDeliverables } from "@/lib/quotations/quotation-deliverable-rollup";
 
@@ -36,6 +37,26 @@ const emptyDeliverable: QuotationDeliverable = {
   af_pct: null,
   cost_currency: "EGP",
 };
+
+test("shouldSyncLineMasterOntoDeliverables does not wipe Cost Detail when Master is still empty", () => {
+  const zeroDraft: QuotationRowDraft = {
+    ...draft,
+    cost: 0,
+    revenue: 0,
+    gpPct: 0,
+    gpValue: 0,
+  };
+  const priced: QuotationDeliverable = {
+    ...emptyDeliverable,
+    cost: 5000,
+    commercial_input_mode: "cost_markup_pct",
+    gp_pct: 30,
+    revenue: 6500,
+  };
+  assert.equal(shouldSyncLineMasterOntoDeliverables([priced], zeroDraft), false);
+  assert.equal(shouldSyncLineMasterOntoDeliverables([priced], draft), true);
+  assert.equal(shouldSyncLineMasterOntoDeliverables([emptyDeliverable], zeroDraft), false);
+});
 
 test("projectLineDraftOntoDeliverables leaves type empty when no deliverables yet", () => {
   const projected = projectLineDraftOntoDeliverables([], draft);

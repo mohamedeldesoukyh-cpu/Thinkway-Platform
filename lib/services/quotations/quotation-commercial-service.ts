@@ -19,9 +19,8 @@ import {
 } from "./repositories/quotation-repository";
 import { rollupDeliverableCommercials } from "@/lib/quotations/quotation-deliverable-rollup";
 import {
-  deliverablesPatchForLineMasterSave,
+  resolveQuotationDeliverablesWrite,
   shouldPreferDeliverableRollup,
-  stripDeliverableCommercialAmounts,
 } from "@/lib/quotations/quotation-line-commercial-ssot";
 
 export async function recomputeQuotationTotals(
@@ -168,9 +167,9 @@ export async function updateQuotationItemCommercials(
   // Line-Master path (Commercial Workspace / bulk): strip deliverable commercial
   // amounts in the same UPDATE so remount cannot rebuild from stale Cost Detail.
   if (input.deliverables !== undefined) {
-    patch.deliverables = useRolled
-      ? input.deliverables
-      : stripDeliverableCommercialAmounts(input.deliverables);
+    patch.deliverables = resolveQuotationDeliverablesWrite({
+      incoming: input.deliverables,
+    });
   } else {
     const { data: existingRow, error: existingError } = await supabase
       .from("quotation_items")
@@ -178,9 +177,9 @@ export async function updateQuotationItemCommercials(
       .eq("id", input.item_id)
       .maybeSingle();
     if (existingError) return { ok: false as const, message: existingError.message };
-    const cleared = deliverablesPatchForLineMasterSave(
-      (existingRow?.deliverables as unknown as QuotationDeliverable[] | null) ?? []
-    );
+    const cleared = resolveQuotationDeliverablesWrite({
+      existing: (existingRow?.deliverables as unknown as QuotationDeliverable[] | null) ?? [],
+    });
     if (cleared) patch.deliverables = cleared;
   }
 

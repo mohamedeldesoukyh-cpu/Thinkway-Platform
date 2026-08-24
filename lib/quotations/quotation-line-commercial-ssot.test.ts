@@ -4,6 +4,7 @@ import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-ty
 import { hasPricedDeliverables } from "@/lib/quotations/quotation-deliverable-rollup";
 import {
   deliverablesPatchForLineMasterSave,
+  resolveQuotationDeliverablesWrite,
   stripDeliverableCommercialAmounts,
 } from "@/lib/quotations/quotation-line-commercial-ssot";
 
@@ -38,6 +39,14 @@ const priced: QuotationDeliverable = {
   assert.ok(patch);
   assert.equal(hasPricedDeliverables(patch!), false);
   assert.equal(patch![0]!.cost, null);
+}
+
+{
+  const incoming = [{ ...priced, cost: 5000, revenue: null, commercial_input_mode: "cost_revenue" as const }];
+  const persisted = resolveQuotationDeliverablesWrite({ incoming });
+  assert.equal(persisted?.[0]!.cost, 5000);
+  assert.equal(resolveQuotationDeliverablesWrite({ existing: [priced] })?.[0]!.cost, null);
+  assert.equal(resolveQuotationDeliverablesWrite({}), undefined);
 }
 
 console.log("quotation-line-commercial-ssot.test.ts: all assertions passed");

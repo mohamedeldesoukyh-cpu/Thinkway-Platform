@@ -103,6 +103,33 @@ export function lineDraftClientCost(draft: QuotationRowDraft): number {
   return draft.revenue + (draft.revenue * afPct) / 100;
 }
 
+export function lineMasterSyncKey(draft: QuotationRowDraft): string {
+  return [
+    draft.cost,
+    draft.revenue,
+    draft.gpPct,
+    draft.afPct,
+    draft.mode,
+    draft.costCurrency,
+  ].join("|");
+}
+
+/**
+ * Project Commercial Workspace Master onto Cost Detail only when Master itself
+ * changed. Never project a zero Master over priced Cost Detail — that race
+ * cleared unit cost after typing / changing calculation type, then Save wrote null.
+ */
+export function shouldSyncLineMasterOntoDeliverables(
+  deliverables: QuotationDeliverable[],
+  draft: QuotationRowDraft
+): boolean {
+  if (deliverablesMatchLineDraft(deliverables, draft)) return false;
+  if (draft.cost <= 0 && draft.revenue <= 0 && hasPricedDeliverables(deliverables)) {
+    return false;
+  }
+  return true;
+}
+
 /** True when deliverable rollup already matches the line Master draft. */
 export function deliverablesMatchLineDraft(
   deliverables: QuotationDeliverable[],

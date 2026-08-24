@@ -1,7 +1,7 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Combine creators was denied on `creator_enrichment_runs` because authenticated DML is revoked; merge writes now use service-role after `discovery.write`.
+**Focus:** Client quotation Cost Detail no longer wipes unit cost to null after Save or remount. Combine creators service-role merge is already live.
 
 - Live Refresh Metrics no longer runs Apify inside the Server Action. Next.js treats every Server Action as a transition; Vercel `FUNCTION_INVOCATION_TIMEOUT` still blanked Discovery even with try/catch.
 - Queue to discovery-worker (service-role budget, `force: true`). Bound Redis cancel/enqueue so shortlist batch cannot hang until 300s. Discovery error boundary recovers timeout digests after mount.

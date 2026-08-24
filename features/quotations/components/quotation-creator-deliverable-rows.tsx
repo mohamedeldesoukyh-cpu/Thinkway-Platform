@@ -59,9 +59,10 @@ import {
 } from "@/lib/quotations/quotation-deliverable-types";
 import { formatDeliverableGpPct } from "@/lib/quotations/quotation-deliverable-commercial";
 import {
-  deliverablesMatchLineDraft,
+  lineMasterSyncKey,
   projectLineDraftOntoDeliverables,
   resolveCreatorLinePriceDualLabel,
+  shouldSyncLineMasterOntoDeliverables,
 } from "@/lib/quotations/quotation-line-creator-commercial-sync";
 import type { AutosaveStatus } from "@/lib/hooks/use-debounced-autosave";
 import { cn } from "@/lib/utils";
@@ -300,36 +301,25 @@ export function QuotationCreatorDeliverableRows({
   }, [lineFields.deliverableDrafts, item.platform, allowedCreatorPlatforms]);
 
   const lastMasterSyncKeyRef = useRef<string | null>(null);
+  const deliverableDraftsForSyncRef = useRef(lineFields.deliverableDrafts);
+  deliverableDraftsForSyncRef.current = lineFields.deliverableDrafts;
 
   // Commercial Workspace → creator Cost Detail / Price: keep deliverables aligned
   // with line Master whenever Master diverges from the current rollup.
   useEffect(() => {
     if (!draft) return;
-    const current = fromDeliverableDrafts(lineFields.deliverableDrafts);
-    if (deliverablesMatchLineDraft(current, draft)) {
-      lastMasterSyncKeyRef.current = [
-        draft.cost,
-        draft.revenue,
-        draft.gpPct,
-        draft.afPct,
-        draft.mode,
-        draft.costCurrency,
-      ].join("|");
+    const syncKey = lineMasterSyncKey(draft);
+    if (lastMasterSyncKeyRef.current === syncKey) return;
+
+    const current = fromDeliverableDrafts(deliverableDraftsForSyncRef.current);
+    if (!shouldSyncLineMasterOntoDeliverables(current, draft)) {
+      lastMasterSyncKeyRef.current = syncKey;
       return;
     }
-    const syncKey = [
-      draft.cost,
-      draft.revenue,
-      draft.gpPct,
-      draft.afPct,
-      draft.mode,
-      draft.costCurrency,
-    ].join("|");
-    if (lastMasterSyncKeyRef.current === syncKey) return;
     lastMasterSyncKeyRef.current = syncKey;
 
     const projected = projectLineDraftOntoDeliverables(current, draft);
-    const keys = lineFields.deliverableDrafts.map((d) => d.key);
+    const keys = deliverableDraftsForSyncRef.current.map((d) => d.key);
     lineFields.saveDeliverables(
       projected.map((deliverable, index) => ({
         ...deliverable,
@@ -337,12 +327,7 @@ export function QuotationCreatorDeliverableRows({
         type_lines: deliverableTypeLines(deliverable),
       }))
     );
-  }, [
-    draft,
-    item.id,
-    lineFields.deliverableDrafts,
-    lineFields.saveDeliverables,
-  ]);
+  }, [draft, item.id, lineFields.saveDeliverables]);
 
   const usedPlatforms = useMemo(() => {
     const found = new Set<string>();

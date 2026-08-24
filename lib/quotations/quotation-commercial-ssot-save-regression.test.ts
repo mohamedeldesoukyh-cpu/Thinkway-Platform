@@ -14,6 +14,7 @@ import { draftToLinePending } from "@/lib/quotations/commercial-workspace/stage-
 import { hasPricedDeliverables } from "@/lib/quotations/quotation-deliverable-rollup";
 import {
   deliverablesPatchForLineMasterSave,
+  resolveQuotationDeliverablesWrite,
   shouldPreferDeliverableRollup,
   stripDeliverableCommercialAmounts,
 } from "@/lib/quotations/quotation-line-commercial-ssot";
@@ -245,6 +246,40 @@ test("downstream Preview document + Campaign Generate match saved Master", () =>
   assert.equal(seeds.length, 1);
   assert.equal(seeds[0]!.cost, 21000);
   assert.equal(seeds[0]!.revenue, 27300);
+});
+
+test("cost-detail save keeps unit cost when rollup must not replace Master", () => {
+  const incoming = [
+    {
+      platform: "instagram",
+      type: "ig_reel",
+      quantity: 1,
+      cost: 5000,
+      revenue: null,
+      gp_pct: null,
+      gp_value: null,
+      af_pct: null,
+      commercial_input_mode: "cost_revenue" as const,
+      cost_currency: "EGP",
+    },
+  ];
+  const rolled = rollupDeliverableCommercials(incoming, {
+    lineCurrency: "EGP",
+    fxRateToEgp: 1,
+  });
+  assert.ok(rolled);
+  assert.equal(rolled!.cost, 5000);
+  assert.equal(rolled!.revenue, 0);
+  assert.equal(
+    shouldPreferDeliverableRollup({
+      rolled,
+      masterRevenue: 12_500,
+    }),
+    false
+  );
+  const persisted = resolveQuotationDeliverablesWrite({ incoming });
+  assert.equal(persisted?.[0]!.cost, 5000);
+  assert.equal(persisted?.[0]!.commercial_input_mode, "cost_revenue");
 });
 
 test("markup then cost-only deliverable flush must not wipe Master revenue", () => {

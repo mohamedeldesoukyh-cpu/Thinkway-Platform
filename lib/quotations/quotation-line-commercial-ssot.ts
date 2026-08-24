@@ -45,6 +45,19 @@ export function deliverablesPatchForLineMasterSave(
 }
 
 /**
+ * Persist the deliverable snapshot the caller sent. Cost Detail must keep unit
+ * cost even when rollup is deferred (client price still 0). Line-Master saves
+ * omit deliverables so {@link deliverablesPatchForLineMasterSave} can strip.
+ */
+export function resolveQuotationDeliverablesWrite(input: {
+  incoming?: QuotationDeliverable[];
+  existing?: QuotationDeliverable[] | null;
+}): QuotationDeliverable[] | undefined {
+  if (input.incoming !== undefined) return input.incoming;
+  return deliverablesPatchForLineMasterSave(input.existing) ?? undefined;
+}
+
+/**
  * Cost-only deliverable rows (cost entered, client price still 0) must not
  * overwrite Master revenue after Commercial Workspace / markup edits.
  */
