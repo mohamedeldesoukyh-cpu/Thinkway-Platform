@@ -62,7 +62,6 @@ import {
 import {
   hydrateSnapshotCreatorsFromCrm,
   hydrateSnapshotCreatorsFromUnified,
-  influencerIdFromRefs,
 } from "./creator-snapshot";
 
 export type ResolvedClientReview =
@@ -463,16 +462,7 @@ export async function loadClientWorkspace(
     if (canHydrateLiveProfile && service) {
       try {
         mergedSnapshot = await hydrateSnapshotCreatorsFromCrm(service, mergedSnapshot);
-        const needsDiscoveryHydrate = mergedSnapshot.creators.some(
-          (creator) =>
-            !influencerIdFromRefs({
-              influencerId: creator.influencerId,
-              creatorId: creator.creatorId,
-            })
-        );
-        if (needsDiscoveryHydrate) {
-          mergedSnapshot = await hydrateSnapshotCreatorsFromUnified(service, mergedSnapshot);
-        }
+        mergedSnapshot = await hydrateSnapshotCreatorsFromUnified(service, mergedSnapshot);
       } catch {
         /* keep commercial overlay if live creator lookup fails */
       }

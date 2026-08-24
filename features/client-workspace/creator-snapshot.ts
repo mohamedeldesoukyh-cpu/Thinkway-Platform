@@ -3,10 +3,8 @@ import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { avatarStorageQualityRank } from "@/lib/creators/creator-centric";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
 import { resolveCreatorRecentPublicationThumbnail } from "@/lib/creators/recent-publication-thumb";
-import {
-  resolveCreatorFromRefLookup,
-  resolveUnifiedCreatorsByRefs,
-} from "@/lib/creators/unified-browse";
+import { resolveDiscoveryCreatorDisplayCategories } from "@/lib/creators/creator-display-categories";
+import { resolveCreatorFromRefLookup, resolveUnifiedCreatorsByRefs } from "@/lib/creators/unified-browse";
 import { isImportedCreatorAvatarUrl } from "@/lib/discovery-import/import-avatar-storage";
 import type { CreatorRecentPublication, UnifiedCreatorResult } from "@/lib/domains/creator/types";
 import { isInstagramCdnUrlExpired } from "@/lib/performance/avatar-sync-policy";
@@ -169,11 +167,15 @@ export function shouldReplaceContentFeed(
 ): boolean {
   if (!live?.length) return false;
   if (!existing?.length) return true;
+  const liveHasMetrics = live.some(
+    (post) => post.likes != null || post.comments != null || post.views != null
+  );
+  if (liveHasMetrics) return true;
   const existingHasMetrics = existing.some(
     (post) => post.likes != null || post.comments != null || post.views != null
   );
-  if (existingHasMetrics && live.length <= existing.length) return false;
-  return live.length > existing.length || !existingHasMetrics;
+  if (existingHasMetrics) return false;
+  return live.length >= existing.length;
 }
 
 export function profileUrlFromHandle(handle?: string | null, platform?: string | null): string | undefined {
@@ -435,21 +437,24 @@ export function enrichSnapshotCreatorFromUnified(
     optionalMetric(creator.metrics.engagement_rate.value) ??
     optionalMetric(platform?.engagement_rate) ??
     base.engagementRate;
-  const categories = [
-    ...new Set(
-      [...(base.categories ?? []), ...creator.categories, creator.ai_category ?? ""].filter(Boolean)
-    ),
-  ];
+  const liveCategories = resolveDiscoveryCreatorDisplayCategories(creator);
+  const categories =
+    liveCategories.length > 0
+      ? liveCategories
+      : [
+          ...new Set(
+            [...(base.categories ?? []), ...creator.categories, creator.ai_category ?? ""].filter(Boolean)
+          ),
+        ];
   const handle =
-    base.handle ||
     (platform?.handle
       ? platform.handle.startsWith("@")
         ? platform.handle
         : `@${platform.handle}`
-      : undefined);
+      : undefined) || base.handle;
   return {
     ...base,
-    displayName: pickCreatorDisplayName([base.displayName, creator.display_name], handle) || "Creator",
+    displayName: pickCreatorDisplayName([creator.display_name, base.displayName], handle) || "Creator",
     handle,
     platform: base.platform || platform?.platform,
     platformAccounts: mergePlatformStats(
@@ -459,22 +464,26 @@ export function enrichSnapshotCreatorFromUnified(
     ),
     followers,
     engagementRate,
-    country: base.country || creator.estimated_country || creator.country_code || undefined,
-    city: base.city || creator.city || undefined,
-    category: base.category || categories[0] || creator.ai_category || undefined,
-    niche: base.niche || creator.ai_niche || undefined,
+    country: creator.estimated_country || creator.country_code || base.country || undefined,
+    city: creator.city || base.city || undefined,
+    category: liveCategories[0] || creator.ai_category || categories[0] || undefined,
+    niche: creator.ai_niche || base.niche || undefined,
     categories: categories.length > 0 ? categories : undefined,
+    contentCategories:
+      liveCategories.length > 0
+        ? liveCategories.map((label) => ({ label }))
+        : base.contentCategories,
     audienceHighlight:
-      base.audienceHighlight || creator.audience_interests?.slice(0, 3).join(" · ") || undefined,
+      creator.audience_interests?.slice(0, 3).join(" · ") || base.audienceHighlight || undefined,
     avatarUrl: preferAvatarUrl(
       base.avatarUrl,
       creator.primaryAvatarUrl || creator.profile_image_url
     ),
     profileUrl:
-      base.profileUrl ||
       platform?.profile_url ||
-      profileUrlFromHandle(base.handle || platform?.handle, base.platform || platform?.platform),
-    bio: base.bio || creator.bio || undefined,
+      base.profileUrl ||
+      profileUrlFromHandle(handle, platform?.platform || base.platform),
+    bio: creator.bio || base.bio || undefined,
     avgLikes:
       optionalMetric(platform?.avg_likes) ??
       optionalMetric(creator.metrics.avg_likes.value) ??
@@ -527,7 +536,7 @@ export async function hydrateSnapshotCreatorsFromUnified(
         return creator.creatorId.startsWith("dis:") ? creator.creatorId.slice(4) : undefined;
       }),
     },
-    { omitHeavyFields: true }
+    { omitHeavyFields: false }
   );
   return {
     ...snapshot,

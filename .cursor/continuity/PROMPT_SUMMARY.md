@@ -1,7 +1,11 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Shortlist “Beauty” tags were imported Facebook/indaHash audience interests (and `#grwm` / Instagram page categories), not a live read of the creator’s content. Display now drops uncorroborated Beauty when another niche exists.
+**Focus:** Open Client Workspace now live-hydrates creator categories, name, engagement, and publications from CRM/enrichment instead of keeping a frozen Beauty snapshot.
+
+- Shortlist “Beauty” tags were imported Facebook/indaHash audience interests (and `#grwm` / Instagram page categories), not a live read of the creator’s content. Display now drops uncorroborated Beauty when another niche exists.
+- Open Client Workspace previously hydrated CRM metrics only and skipped unified profile sync when every creator had an influencer id. Frozen snapshot categories (Beauty first) never updated after Refresh Metrics.
+- Interactive reviews now always overlay live unified creators (bio, publications, display categories). Creator detail reloads live even after `briefFrozenAt`. Approved / campaign-linked reviews stay frozen.
 
 - Ahmed Magdy (`@ahmed_magdyyy__`) stored `Beauty, Fitness, Music, Travel` from **imported** `interest_categories` (no bio/hashtags). Overview used `ai_category` = first tag = Beauty.
 - Same dump explains why most of a shortlist looks like Beauty: Instagram audience-interest #1 is often Beauty even for fitness/lifestyle creators. Imported tags are append-only and Apify-protected.

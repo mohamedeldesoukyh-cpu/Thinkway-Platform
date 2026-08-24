@@ -293,26 +293,29 @@ export function mergeFrozenBrief(
   }
 ): ClientReviewSourceSnapshotCreator {
   const frozenAt = new Date().toISOString();
-  const audience =
-    creator.audience ??
-    (live.bundle
-      ? clientAudienceFromBundle(live.bundle, live.enriched.categories ?? []) ?? undefined
-      : undefined);
+  const liveAudience = live.bundle
+    ? clientAudienceFromBundle(live.bundle, live.enriched.categories ?? []) ?? undefined
+    : undefined;
+  const audience = liveAudience ?? creator.audience;
   const performance =
-    creator.performance ??
     clientPerformanceFromCreator(live.enriched, live.bundle) ??
+    creator.performance ??
     undefined;
   const brandMentionsFromLive = brandMentionsFromBundle(live.bundle);
   const brandMentions = brandMentionsFromLive.length
     ? brandMentionsFromLive
     : normalizeBrandMentions(creator.brandMentions);
   const contentCategories = (() => {
+    const fromLive = contentCategoriesForDisplay(live.enriched.contentCategories, [
+      ...(live.enriched.categories ?? []),
+      live.enriched.category,
+      live.enriched.niche,
+    ]);
+    if (fromLive.length > 0) return fromLive;
     const fromBundle = contentCategoriesFromBundle(live.bundle);
     if (fromBundle.length > 0) return fromBundle;
     return contentCategoriesForDisplay(creator.contentCategories, [
-      ...(live.enriched.categories ?? []),
       ...(creator.categories ?? []),
-      live.enriched.category,
       creator.category,
       creator.niche,
     ]);
@@ -320,9 +323,8 @@ export function mergeFrozenBrief(
   const contentFeed = shouldReplaceContentFeed(creator.contentFeed, live.enriched.contentFeed)
     ? live.enriched.contentFeed
     : creator.contentFeed;
-  const historical = creator.historical?.length
-    ? creator.historical
-    : clientHistoricalFromBundle(live.bundle);
+  const liveHistorical = clientHistoricalFromBundle(live.bundle);
+  const historical = liveHistorical.length > 0 ? liveHistorical : creator.historical ?? [];
   const fit = campaignFitCopy({
     ...live.enriched,
     ...creator,
@@ -332,7 +334,7 @@ export function mergeFrozenBrief(
     ...creator,
     ...live.enriched,
     creatorId: creator.creatorId,
-    displayName: creator.displayName || live.enriched.displayName,
+    displayName: live.enriched.displayName || creator.displayName,
     investmentAmount: creator.investmentAmount,
     investmentCurrency: creator.investmentCurrency,
     deliverables: creator.deliverables,
@@ -433,11 +435,6 @@ export async function freezeCreatorBriefIfNeeded(
       } as never)
       .eq("id", review.id);
   };
-
-  if (current.briefFrozenAt && !needsClientBriefBackfill(current)) {
-    await persistProfileOverlay(current);
-    return briefFromSnapshotCreator(current);
-  }
 
   if (!liveProfileAllowed) {
     return briefFromSnapshotCreator(current);

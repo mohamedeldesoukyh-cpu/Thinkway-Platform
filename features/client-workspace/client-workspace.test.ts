@@ -1148,7 +1148,7 @@ test("slimmed content feeds are replaced when live publications have metrics", (
       [{ url: "https://instagram.com/p/1", likes: 10 }],
       [{ url: "https://instagram.com/p/1", likes: 12 }]
     ),
-    false
+    true
   );
   const merged = mergeFrozenBrief(
     {
@@ -1562,6 +1562,87 @@ test("live enrichment replaces imported avatar and cloned platform engagement ra
   assert.equal(live.platformAccounts?.find((row) => row.platform === "tiktok")?.followers, 910_000);
   assert.equal(live.platformAccounts?.some((row) => row.platform === "youtube"), false);
   assert.equal(live.avgLikes, 12_000);
+});
+
+test("live profile replaces frozen Beauty tags after enrichment", () => {
+  const live = applyLiveCreatorProfile(
+    {
+      creatorId: "inf:1",
+      displayName: "ahmed_magdyyy__",
+      handle: "@ahmed_magdyyy__",
+      platform: "instagram",
+      category: "Beauty",
+      categories: ["Beauty", "Fitness", "Music", "Travel"],
+      contentCategories: [{ label: "Beauty" }, { label: "Fitness" }],
+      engagementRate: 1.1,
+      contentFeed: [{ url: "https://instagram.com/p/old", likes: 4 }],
+    },
+    {
+      unified_id: "inf:1",
+      display_name: "Ahmed Magdy",
+      primaryAvatarUrl: null,
+      profile_image_url: null,
+      metrics: {
+        followers: { value: 200_000, confidence: "verified" },
+        engagement_rate: { value: 3.4, confidence: "verified" },
+        avg_likes: { value: 8_000, confidence: "verified" },
+        avg_comments: { value: 120, confidence: "verified" },
+        avg_views: { value: 50_000, confidence: "verified" },
+        posting_frequency_per_week: { value: null, confidence: "estimated" },
+      },
+      platforms: [
+        {
+          id: "ig",
+          platform: "instagram",
+          handle: "ahmed_magdyyy__",
+          profile_url: "https://www.instagram.com/ahmed_magdyyy__/",
+          follower_count: 200_000,
+          engagement_rate: 3.4,
+          avg_likes: 8_000,
+          avg_comments: 120,
+          audience_country: "EG",
+        },
+      ],
+      categories: ["Beauty", "Fitness", "Music", "Travel"],
+      browse_category_tags: ["Beauty", "Fitness", "Music", "Travel"],
+      audience_interests: [],
+      hashtags: [],
+      mentions: [],
+      bio: null,
+      recent_publications: [
+        {
+          url: "https://www.instagram.com/p/new/",
+          thumbnail: "https://cdn.example/new.jpg",
+          likes: 900,
+          comments: 20,
+          views: 12_000,
+          posted_at: "2026-08-20T00:00:00.000Z",
+          caption: null,
+        },
+      ],
+      language_codes: [],
+      thinkway_score: 0,
+      source_confidence: 0,
+      brand_fit_score: null,
+      is_platform_verified: false,
+      authenticity_score: null,
+      ai_category: "Beauty",
+      ai_niche: null,
+      source_type: "internal",
+      influencer_id: "1",
+      discovered_profile_id: null,
+      document_number: null,
+      status: null,
+      country_code: "EG",
+      estimated_country: "EG",
+      city: "Cairo",
+    }
+  );
+  assert.deepEqual(live.categories, ["Fitness", "Music", "Travel"]);
+  assert.equal(live.category, "Fitness");
+  assert.equal(live.displayName, "Ahmed Magdy");
+  assert.equal(live.engagementRate, 3.4);
+  assert.equal(live.contentFeed?.[0]?.likes, 900);
 });
 
 test("CRM profile replace drops imported YouTube and overwrites cloned TikTok stats", () => {
