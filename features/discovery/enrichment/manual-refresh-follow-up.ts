@@ -10,10 +10,14 @@ type RefreshActionSnapshot = {
   queued: boolean;
   message: string;
   refreshSource?: string | null;
+  skipped?: boolean;
 };
 
 function isAlreadyInProgress(result: RefreshActionSnapshot) {
-  return result.ok && !result.queued && /already in progress/i.test(result.message);
+  if (!result.ok || result.queued) return false;
+  return /already in progress|already_running|enrichment_already_in_progress/i.test(
+    result.message
+  );
 }
 
 /** Decide what the Refresh Metrics UI should do after the server action returns. */
@@ -25,11 +29,20 @@ export function resolveManualRefreshFollowUp(input: {
     return { type: "cached" };
   }
 
+  if (input.result.ok && !input.result.queued && isAlreadyInProgress(input.result)) {
+    if (!input.unifiedId) return { type: "queued_without_unified_id" };
+    return { type: "poll" };
+  }
+
+  if (input.result.skipped) {
+    return { type: "error", message: input.result.message };
+  }
+
   if (input.result.ok && !input.result.queued && !isAlreadyInProgress(input.result)) {
     return { type: "completed" };
   }
 
-  if (input.result.queued || isAlreadyInProgress(input.result)) {
+  if (input.result.queued) {
     if (!input.unifiedId) return { type: "queued_without_unified_id" };
     return { type: "poll" };
   }

@@ -32,7 +32,6 @@ export function inferFeature(
       return "manual_refresh";
     case "manual":
       if (options?.isBulk) return "batch_refresh";
-      if (options?.mode === "inline") return "worker_execution";
       return "manual_refresh";
     default:
       return "unknown";

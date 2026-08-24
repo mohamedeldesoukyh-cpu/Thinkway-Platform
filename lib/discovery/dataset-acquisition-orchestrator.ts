@@ -21,7 +21,7 @@ import {
   type DatasetImportFailureLog,
 } from "@/lib/discovery/dataset-import-logging";
 import { fetchApifyDatasetItems } from "@/lib/discovery/apify-dataset-search";
-import { assertApifyAcquisitionBudget } from "@/lib/discovery/control-center/apify-budget";
+import { assertApifyAcquisitionBudgetForLaunch } from "@/lib/discovery/control-center/apify-budget";
 import { normalizeSocialPlatform } from "@/lib/social/normalize-platform";
 
 export type DatasetAcquisitionInput = {
@@ -130,7 +130,7 @@ export async function runDatasetAcquisitionBackfill(
     };
   }
 
-  const budget = await assertApifyAcquisitionBudget(supabase, {
+  const budget = await assertApifyAcquisitionBudgetForLaunch(supabase, {
     source: "dataset_acquisition",
     meta: {
       searchId: input.searchId,

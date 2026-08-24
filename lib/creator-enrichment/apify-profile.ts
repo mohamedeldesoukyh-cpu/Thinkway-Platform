@@ -45,25 +45,11 @@ import {
   beginApifyRunGate,
 } from "@/lib/performance/apify-run-gate";
 
-import { assertApifyAcquisitionBudget } from "@/lib/discovery/control-center/apify-budget";
+import { assertApifyAcquisitionBudgetForLaunch } from "@/lib/discovery/control-center/apify-budget";
 
 import { isCreatorEnrichmentWorkerEnabled } from "./enabled";
 import { logManualRefreshTrace } from "./manual-refresh-trace";
 import type { ApifyProfileData, RecentPublication } from "./types";
-
-async function resolveBudgetSupabase(preferred?: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  client?: any | null;
-}): Promise<{ client: import("@supabase/supabase-js").SupabaseClient | null; reason: string | null }> {
-  if (preferred?.client) {
-    return { client: preferred.client, reason: null };
-  }
-  // Worker-safe: never import `@/lib/supabase/admin` (server-only throws outside Next).
-  const { tryCreateServiceRoleClient } = await import(
-    "@/lib/supabase/service-role-client"
-  );
-  return tryCreateServiceRoleClient();
-}
 
 export type ApifyProfileFetchResult =
   | { ok: true; data: ApifyProfileData }
@@ -651,8 +637,8 @@ export async function fetchApifyProfileRaw(input: {
   /** When false, skip Instagram posts actor (details.latestPosts still used). */
   includePosts?: boolean;
   /**
-   * Preferred Supabase client for budget usage reads (worker / IPL pass this).
-   * Avoids `server-only` admin import failures on Railway.
+   * Caller Supabase client (user JWT or worker). Budget reads ignore this when
+   * service-role is available — user JWT cannot SELECT discovery_apify_usage.
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase?: any | null;
@@ -668,13 +654,11 @@ export async function fetchApifyProfileRaw(input: {
     };
   }
 
-  const resolved = await resolveBudgetSupabase({ client: input.supabase ?? null });
-  const budget = await assertApifyAcquisitionBudget(resolved.client, {
+  const budget = await assertApifyAcquisitionBudgetForLaunch(input.supabase ?? null, {
     source: "creator_enrichment_apify_profile",
     meta: {
       platform: input.platform,
       username: input.username,
-      clientResolutionReason: resolved.reason,
     },
   });
   if (!budget.allowed) {
@@ -684,7 +668,6 @@ export async function fetchApifyProfileRaw(input: {
       reason: budget.reason,
       code: budget.code,
       stage: "apify_budget",
-      clientResolutionReason: resolved.reason,
     });
     return {
       ok: false,

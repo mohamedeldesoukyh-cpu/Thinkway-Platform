@@ -29,6 +29,11 @@ import {
   stopCreatorsMetricsRefreshBatchAction,
 } from "@/features/discovery/enrichment/actions";
 import {
+  invokeRefreshAction,
+  mapManualRefreshError,
+  rethrowNextControlFlow,
+} from "@/features/discovery/enrichment/manual-refresh-error";
+import {
   pollCreatorAfterRefresh,
   pollCreatorsAfterBatchRefresh,
 } from "@/features/discovery/enrichment/poll-creator-refresh";
@@ -1692,29 +1697,34 @@ export function CreatorSearchWorkspace({
         patchCreatorEnrichmentStatus(target.unifiedId, "queued");
       }
     }
-    startTransition(async () => {
-      const result = await refreshCreatorsBatchAction(
-        selectedCreators.map((c) => c.unified_id)
-      );
-      if (result.queued) {
-        toast.success(result.message);
-        void pollCreatorsAfterBatchRefresh(targets, {
-          onUpdated: patchCreatorInList,
-          onStatusChange: ({ unifiedId, status }) => {
-            patchCreatorEnrichmentStatus(unifiedId, syncStatusToEnrichmentStatus(status));
-          },
-          onComplete: ({ status }) => {
-            if (status === "completed") {
-              toast.success("Creator metrics updated");
-            } else if (status === "failed") {
-              toast.error("Creator refresh failed");
-            }
-          },
-        });
-      } else {
-        toast.error(result.message);
+    void (async () => {
+      try {
+        const result = await invokeRefreshAction(() =>
+          refreshCreatorsBatchAction(selectedCreators.map((c) => c.unified_id))
+        );
+        if (result.queued) {
+          toast.success(result.message);
+          void pollCreatorsAfterBatchRefresh(targets, {
+            onUpdated: patchCreatorInList,
+            onStatusChange: ({ unifiedId, status }) => {
+              patchCreatorEnrichmentStatus(unifiedId, syncStatusToEnrichmentStatus(status));
+            },
+            onComplete: ({ status }) => {
+              if (status === "completed") {
+                toast.success("Creator metrics updated");
+              } else if (status === "failed") {
+                toast.error("Creator refresh failed");
+              }
+            },
+          });
+        } else {
+          toast.error(result.message);
+        }
+      } catch (error) {
+        rethrowNextControlFlow(error);
+        toast.error(mapManualRefreshError(error));
       }
-    });
+    })();
   }
 
   const clearAllFilters = useCallback(() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
 import type { EnrichmentScope } from "@/lib/creator-enrichment/enabled";
@@ -14,6 +14,7 @@ import {
   getManualRefreshCacheAssessmentAction,
   type EnrichmentActionResult,
 } from "./actions";
+import { invokeRefreshAction, mapManualRefreshError, rethrowNextControlFlow } from "./manual-refresh-error";
 import { resolveManualRefreshFollowUp } from "./manual-refresh-follow-up";
 import { pollCreatorAfterRefresh } from "./poll-creator-refresh";
 import {
@@ -52,10 +53,11 @@ export type UseManualRefreshFlowOptions = {
 };
 
 export function useManualRefreshFlow(options: UseManualRefreshFlowOptions = {}) {
-  const [isPending, startTransition] = useTransition();
+  const [isExecuting, setIsExecuting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [assessment, setAssessment] = useState<ManualRefreshCacheAssessment | null>(null);
   const [pendingRequest, setPendingRequest] = useState<ManualRefreshRequest | null>(null);
+  const isPending = isExecuting;
 
   const completeRefresh = useCallback(
     (request: ManualRefreshRequest, result: EnrichmentActionResult) => {
@@ -237,7 +239,10 @@ export function useManualRefreshFlow(options: UseManualRefreshFlowOptions = {}) 
 
   const executeRefresh = useCallback(
     (request: ManualRefreshRequest, dataSource: ManualRefreshDataSource) => {
-      startTransition(async () => {
+      // Do not use startTransition: React 19 reports Server Action digest/timeout
+      // errors from transitions to PlatformErrorBoundary and blanks Discovery.
+      setIsExecuting(true);
+      void (async () => {
         try {
           logManualRefreshTrace("ui_execute", {
             influencerId: request.influencerId,
@@ -245,28 +250,33 @@ export function useManualRefreshFlow(options: UseManualRefreshFlowOptions = {}) 
             scope: request.scope,
             dataSource,
           });
-          const result = await request.refreshAction(request.influencerId, dataSource);
+          const result = await invokeRefreshAction(() =>
+            request.refreshAction(request.influencerId, dataSource)
+          );
           setDialogOpen(false);
           setAssessment(null);
           setPendingRequest(null);
           completeRefresh(request, result);
         } catch (error) {
+          rethrowNextControlFlow(error);
           setDialogOpen(false);
           setAssessment(null);
           setPendingRequest(null);
           (request.onStatusChange ?? options.onStatusChange)?.("failed");
           toast.error("Could not refresh", {
-            description: error instanceof Error ? error.message : "Refresh failed.",
+            description: mapManualRefreshError(error),
           });
+        } finally {
+          setIsExecuting(false);
         }
-      });
+      })();
     },
     [completeRefresh, options.onStatusChange]
   );
 
   const requestRefresh = useCallback(
     (request: ManualRefreshRequest) => {
-      startTransition(async () => {
+      void (async () => {
         try {
           logManualRefreshTrace("ui_click", {
             influencerId: request.influencerId,
@@ -310,11 +320,12 @@ export function useManualRefreshFlow(options: UseManualRefreshFlowOptions = {}) 
 
           executeRefresh(request, "live_apify");
         } catch (error) {
+          rethrowNextControlFlow(error);
           toast.error("Could not refresh", {
-            description: error instanceof Error ? error.message : "Refresh failed.",
+            description: mapManualRefreshError(error),
           });
         }
-      });
+      })();
     },
     [executeRefresh]
   );

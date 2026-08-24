@@ -24,6 +24,7 @@ function mockSupabase() {
 }
 
 function freshSnapshotProvider(): CreatorIntelligenceSnapshotProvider {
+  const recentlyEnrichedAt = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   return {
     async provide(context): Promise<CreatorIntelligenceSnapshotData> {
       return {
@@ -32,10 +33,10 @@ function freshSnapshotProvider(): CreatorIntelligenceSnapshotProvider {
         platformAccountId: context.platformAccountId,
         enrichmentRunning: false,
         queueStatus: "idle",
-        lastEnrichment: "2026-07-18T00:00:00.000Z",
-        lastSuccessfulEnrichment: "2026-07-18T00:00:00.000Z",
+        lastEnrichment: recentlyEnrichedAt,
+        lastSuccessfulEnrichment: recentlyEnrichedAt,
         lastManualRefresh: null,
-        lastIPLFetch: "2026-07-18T00:00:00.000Z",
+        lastIPLFetch: recentlyEnrichedAt,
         dnaStatus: "complete",
         dnaCompleteness: 80,
         metricsFreshness: "fresh",

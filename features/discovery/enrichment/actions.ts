@@ -25,6 +25,7 @@ import {
   type CreatorRefreshPollStatus,
 } from "@/lib/services/creators/creator-enrichment-service-shared";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { mapManualRefreshError, rethrowNextControlFlow } from "./manual-refresh-error";
 
 export type EnrichmentActionResult = {
   ok: boolean;
@@ -37,6 +38,8 @@ export type EnrichmentActionResult = {
   estimatedCredits?: number;
   batchCount?: number;
   refreshSource?: ManualRefreshDataSource;
+  /** Decision Engine skipped this refresh (freshness, etc.) — not a live Apify success. */
+  skipped?: boolean;
 };
 
 export type ManualRefreshCacheAssessmentResult =
@@ -101,32 +104,46 @@ async function refreshCreatorWithScope(
   });
 
   const startedAt = Date.now();
-  const result = options?.platformAccountId
-    ? await refreshCreatorPlatformMetrics(
-        supabase,
-        influencerId.trim(),
-        options.platformAccountId.trim(),
-        refreshOptions
-      )
-    : await refreshCreatorMetrics(supabase, influencerId.trim(), refreshOptions);
+  try {
+    const result = options?.platformAccountId
+      ? await refreshCreatorPlatformMetrics(
+          supabase,
+          influencerId.trim(),
+          options.platformAccountId.trim(),
+          refreshOptions
+        )
+      : await refreshCreatorMetrics(supabase, influencerId.trim(), refreshOptions);
 
-  logManualRefreshTrace("action_exit", {
-    influencerId: result.influencerId ?? influencerId.trim(),
-    ok: result.ok,
-    queued: result.queued,
-    syncStatus: result.syncStatus,
-    message: result.message,
-    jobId: result.jobId ?? null,
-    refreshSource: result.refreshSource ?? dataSource,
-    durationMs: Date.now() - startedAt,
-  });
+    logManualRefreshTrace("action_exit", {
+      influencerId: result.influencerId ?? influencerId.trim(),
+      ok: result.ok,
+      queued: result.queued,
+      syncStatus: result.syncStatus,
+      message: result.message,
+      jobId: result.jobId ?? null,
+      refreshSource: result.refreshSource ?? dataSource,
+      durationMs: Date.now() - startedAt,
+    });
 
-  return {
-    ok: result.ok,
-    queued: result.queued,
-    message: result.message,
-    refreshSource: result.refreshSource ?? dataSource,
-  };
+    return {
+      ok: result.ok,
+      queued: result.queued,
+      message: result.message,
+      refreshSource: result.refreshSource ?? dataSource,
+      skipped: result.skipped,
+    };
+  } catch (error) {
+    rethrowNextControlFlow(error);
+    const message = mapManualRefreshError(error);
+    logManualRefreshTrace("action_exit", {
+      influencerId: influencerId.trim(),
+      ok: false,
+      queued: false,
+      message,
+      durationMs: Date.now() - startedAt,
+    });
+    return { ok: false, queued: false, message, refreshSource: dataSource };
+  }
 }
 
 export async function getManualRefreshCacheAssessmentAction(input: {
@@ -229,52 +246,68 @@ export async function refreshCreatorsBatchAction(
     path: "refreshCreatorsBatchAction",
     count: unifiedIds.length,
     scope,
-    force: false,
+    force: true,
     isBulk: true,
+    dataSource: "live_apify",
   });
 
-  // Batch refresh must not force — Decision Engine + freshness admit each creator.
+  // Explicit Refresh Metrics must force a live Apify run. force:false admitted
+  // recently enriched creators as skip, so the toolbar never started an actor.
   const startedAt = Date.now();
-  const batch = await refreshCreatorMetricsBatchByUnifiedIds(supabase, unifiedIds, {
-    force: false,
-    trigger: "manual",
-    bypassMetricsManualOverride: scope === "metrics" || scope === "all",
-    forceAvatarReplace: scope === "avatar" || scope === "all",
-    forceInterestReplace: scope === "categories" || scope === "all",
-    requestedBy: auth.userId,
-    scope,
-    isBulk: true,
-    feature: "batch_refresh",
-  });
+  try {
+    const batch = await refreshCreatorMetricsBatchByUnifiedIds(supabase, unifiedIds, {
+      force: true,
+      trigger: "manual",
+      dataSource: "live_apify",
+      bypassMetricsManualOverride: scope === "metrics" || scope === "all",
+      forceAvatarReplace: scope === "avatar" || scope === "all",
+      forceInterestReplace: scope === "categories" || scope === "all",
+      requestedBy: auth.userId,
+      scope,
+      isBulk: true,
+      feature: "batch_refresh",
+    });
 
-  logManualRefreshTrace("action_exit", {
-    path: "refreshCreatorsBatchAction",
-    ok: batch.ok,
-    queued: batch.queued,
-    failed: batch.failed,
-    total: batch.total,
-    acquisitionMode: batch.acquisitionMode ?? "per_creator",
-    batchJobId: batch.batchJobId ?? null,
-    durationMs: Date.now() - startedAt,
-  });
+    logManualRefreshTrace("action_exit", {
+      path: "refreshCreatorsBatchAction",
+      ok: batch.ok,
+      queued: batch.queued,
+      failed: batch.failed,
+      total: batch.total,
+      acquisitionMode: batch.acquisitionMode ?? "per_creator",
+      batchJobId: batch.batchJobId ?? null,
+      durationMs: Date.now() - startedAt,
+    });
 
-  return {
-    ok: batch.ok,
-    queued: batch.queued > 0,
-    queuedCount: batch.queued,
-    batchJobId: batch.batchJobId ?? null,
-    acquisitionMode: batch.acquisitionMode ?? "per_creator",
-    estimatedApifyRuns: batch.estimatedApifyRuns,
-    estimatedCredits: batch.estimatedCredits,
-    batchCount: batch.batchCount,
-    message:
-      batch.message ??
-      (batch.queued > 0
-        ? `Queued ${batch.queued} of ${batch.total} creator refresh(es).`
-        : batch.failed > 0
-          ? `${batch.failed} refresh(es) could not be queued.`
-          : "No creators queued."),
-  };
+    return {
+      ok: batch.ok,
+      queued: batch.queued > 0,
+      queuedCount: batch.queued,
+      batchJobId: batch.batchJobId ?? null,
+      acquisitionMode: batch.acquisitionMode ?? "per_creator",
+      estimatedApifyRuns: batch.estimatedApifyRuns,
+      estimatedCredits: batch.estimatedCredits,
+      batchCount: batch.batchCount,
+      message:
+        batch.message ??
+        (batch.queued > 0
+          ? `Queued ${batch.queued} of ${batch.total} creator refresh(es).`
+          : batch.failed > 0
+            ? `${batch.failed} refresh(es) could not be queued.`
+            : "No creators queued."),
+    };
+  } catch (error) {
+    rethrowNextControlFlow(error);
+    const message = mapManualRefreshError(error);
+    logManualRefreshTrace("action_exit", {
+      path: "refreshCreatorsBatchAction",
+      ok: false,
+      queued: 0,
+      message,
+      durationMs: Date.now() - startedAt,
+    });
+    return { ok: false, queued: false, message };
+  }
 }
 
 /** Stop an in-flight metric refresh for one creator (Discovery row menu). */

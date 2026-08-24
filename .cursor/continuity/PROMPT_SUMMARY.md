@@ -1,9 +1,11 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Manual Refresh Metrics starts live Apify inline (no worker wait)
+**Focus:** Refresh Metrics starts Apify (service-role budget) and must not blank Discovery
 
-- Manual Refresh Metrics runs live Apify in the Next.js server action. Queue-only refresh never started an actor when discovery-worker was offline.
+- Root cause: after inline live refresh, Next.js used the user JWT for `discovery_apify_usage` / `discovery_control_settings`. RLS allows `discovery.admin` / `analytics.read`, not `discovery.write`, so budget failed closed (`usage_unverified`) and Apify never started. The worker used service-role and bypassed RLS.
+- Fix: every Apify launch gate prefers service-role (`assertApifyAcquisitionBudgetForLaunch`). Explicit Refresh Metrics (sheet + shortlist/search batch) uses `force: true` + `live_apify`. Skip is no longer toasted as live Apify success.
+- Long Refresh Metrics + Vercel timeout was reported to React 19 `startTransition` and blanked the shortlist (`PlatformErrorBoundary`). Refresh now runs outside transitions, maps digest/timeout to a toast, and does not `router.refresh()` after metrics.
 - File SSOT remains `deliverable_assets` / `deliverable_asset_versions` / private `deliverable-assets`.
 - Decision SSOT is append-only `campaign_client_content_decisions` (version-specific).
 - Campaign tab shows only the **current** asset version as the active review card. Prior versions stay in history.
@@ -14,5 +16,3 @@
 - Shortlist creator column shows a compact **Quoted** label when `quotation_refs` exist. The right Quoted column still links the quotation serial.
 - Open Client Workspace roster follows live shortlist ∪ quotation membership (add and remove). Frozen snapshots no longer keep creators after they leave both sources.
 - Migration `20260823160000_client_content_decisions_and_deliverable_assets_storage_rls` applied on Development and Production.
-
-**Ship:** Development (`hsxrewjcbvmbkqdlzjhs`) and Production (`ienowhwfyxoqtzbgltno`) for Refresh Metrics live Apify.

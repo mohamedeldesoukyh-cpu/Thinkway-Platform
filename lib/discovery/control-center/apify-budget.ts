@@ -9,6 +9,8 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
+
 import {
   getCachedDiscoveryControlSettings,
   loadDiscoveryControlSettings,
@@ -169,6 +171,62 @@ function logApifyBudgetDecisionInputs(
       ...(meta ?? {}),
     })
   );
+}
+
+/**
+ * Budget tables (`discovery_apify_usage`, `discovery_control_settings`) are RLS-gated
+ * to discovery.admin / analytics.read / settings.write — not discovery.write.
+ * Refresh Metrics is authorized with discovery.write, so a user-JWT client fails
+ * closed as usage_unverified and never starts Apify. Service-role always wins.
+ */
+export function selectApifyBudgetClient<T>(input: {
+  serviceRoleClient: T | null;
+  serviceRoleReason: string | null;
+  preferredClient: T | null;
+}): { client: T | null; reason: string | null } {
+  if (input.serviceRoleClient) {
+    return { client: input.serviceRoleClient, reason: "service_role" };
+  }
+  if (input.preferredClient) {
+    return {
+      client: input.preferredClient,
+      reason: `preferred_fallback:${input.serviceRoleReason ?? "service_role_unavailable"}`,
+    };
+  }
+  return { client: null, reason: input.serviceRoleReason };
+}
+
+/** Resolve the client used for Apify budget reads. Service-role first; never prefer user JWT. */
+export function resolveApifyBudgetSupabase(preferred?: {
+  client?: SupabaseClient | null;
+}): { client: SupabaseClient | null; reason: string | null } {
+  const serviceRole = tryCreateServiceRoleClient();
+  return selectApifyBudgetClient({
+    serviceRoleClient: serviceRole.client,
+    serviceRoleReason: serviceRole.reason,
+    preferredClient: preferred?.client ?? null,
+  });
+}
+
+/**
+ * Launch-path budget gate: always attempt service-role before a caller-supplied client.
+ */
+export async function assertApifyAcquisitionBudgetForLaunch(
+  preferred?: SupabaseClient | null,
+  options?: {
+    settings?: DiscoveryControlSettings;
+    source?: string;
+    meta?: ApifyBudgetRejectMeta;
+  }
+): Promise<ApifyBudgetDecision> {
+  const resolved = resolveApifyBudgetSupabase({ client: preferred ?? null });
+  return assertApifyAcquisitionBudget(resolved.client, {
+    ...options,
+    meta: {
+      ...(options?.meta ?? {}),
+      clientResolutionReason: resolved.reason,
+    },
+  });
 }
 
 /**

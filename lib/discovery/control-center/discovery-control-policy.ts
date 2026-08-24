@@ -20,7 +20,7 @@ import {
   logBlockedAutomaticAction,
 } from "@/lib/discovery/operational-safety";
 
-import { assertApifyAcquisitionBudget } from "./apify-budget";
+import { assertApifyAcquisitionBudgetForLaunch } from "./apify-budget";
 import {
   getCachedDiscoveryControlSettings,
   getDiscoveryControlSettings,
@@ -147,7 +147,7 @@ export async function isApifyUsageWithinLimits(
   supabase: SupabaseClient,
   settings: DiscoveryControlSettings = getCachedDiscoveryControlSettings()
 ): Promise<{ allowed: boolean; reason?: string }> {
-  const decision = await assertApifyAcquisitionBudget(supabase, {
+  const decision = await assertApifyAcquisitionBudgetForLaunch(supabase, {
     settings,
     source: "isApifyUsageWithinLimits",
   });
@@ -187,7 +187,7 @@ export async function gateApifyBackfill(
     };
   }
 
-  const costGate = await assertApifyAcquisitionBudget(supabase, {
+  const costGate = await assertApifyAcquisitionBudgetForLaunch(supabase, {
     settings,
     source: "coverage_apify_backfill",
     meta: {

@@ -23,7 +23,7 @@ import {
   type EnrichmentScope,
 } from "@/lib/creator-enrichment/enabled";
 import type { EnrichmentTrigger } from "@/lib/creator-enrichment/types";
-import { assertApifyAcquisitionBudget } from "@/lib/discovery/control-center/apify-budget";
+import { assertApifyAcquisitionBudgetForLaunch } from "@/lib/discovery/control-center/apify-budget";
 
 type AnySupabase = SupabaseClient;
 
@@ -72,7 +72,7 @@ export async function startBatchProfileAcquisition(
     };
   }
 
-  const budget = await assertApifyAcquisitionBudget(supabase, {
+  const budget = await assertApifyAcquisitionBudgetForLaunch(supabase, {
     source: "batch_profile_acquisition_enqueue",
     meta: { trigger, scope, creatorCount: input.unifiedIds.length },
   });

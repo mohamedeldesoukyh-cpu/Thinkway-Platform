@@ -35,7 +35,7 @@ import {
   writeSyncLog,
 } from "@/lib/performance/metrics-collector/persist";
 import { runProvider } from "@/lib/performance/metrics-collector/providers/registry";
-import { assertApifyAcquisitionBudget } from "@/lib/discovery/control-center/apify-budget";
+import { assertApifyAcquisitionBudgetForLaunch } from "@/lib/discovery/control-center/apify-budget";
 import { enqueuePublicationScreenshotJob } from "@/lib/performance/screenshot-capture/queue";
 import type {
   CollectionOutcome,
@@ -293,7 +293,7 @@ export async function metricsCollector(
     const providerId = chain[i]!;
 
     if (providerId === "apify") {
-      const budget = await assertApifyAcquisitionBudget(supabase, {
+      const budget = await assertApifyAcquisitionBudgetForLaunch(supabase, {
         source: "publication_metrics_apify",
         meta: {
           publicationId: publication.id,

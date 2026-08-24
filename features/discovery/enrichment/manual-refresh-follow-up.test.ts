@@ -64,4 +64,31 @@ assert.deepEqual(
   { type: "error", message: "REDIS_URL missing." }
 );
 
+assert.deepEqual(
+  resolveManualRefreshFollowUp({
+    result: {
+      ok: true,
+      queued: false,
+      skipped: true,
+      message: "creator_already_fresh",
+      refreshSource: "live_apify",
+    },
+    unifiedId: "u1",
+  }),
+  { type: "error", message: "creator_already_fresh" }
+);
+
+assert.deepEqual(
+  resolveManualRefreshFollowUp({
+    result: {
+      ok: true,
+      queued: false,
+      skipped: true,
+      message: "enrichment_already_in_progress",
+    },
+    unifiedId: "u1",
+  }),
+  { type: "poll" }
+);
+
 console.log("features/discovery/enrichment/manual-refresh-follow-up.test.ts — all tests passed");

@@ -8,6 +8,7 @@ import {
   evaluateApifyBudgetConfiguration,
   normalizeApifyBudgetCap,
   resolveApifyBudgetCaps,
+  selectApifyBudgetClient,
 } from "./apify-budget";
 import type { DiscoveryControlSettings } from "./discovery-control-types";
 
@@ -187,10 +188,40 @@ async function testAssertUsageExhausted() {
   }
 }
 
+function testSelectApifyBudgetClientPrefersServiceRole() {
+  const serviceRole = { kind: "service_role" };
+  const userJwt = { kind: "user_jwt" };
+
+  const preferred = selectApifyBudgetClient({
+    serviceRoleClient: serviceRole,
+    serviceRoleReason: null,
+    preferredClient: userJwt,
+  });
+  assert.equal(preferred.client, serviceRole);
+  assert.equal(preferred.reason, "service_role");
+
+  const fallback = selectApifyBudgetClient({
+    serviceRoleClient: null,
+    serviceRoleReason: "SUPABASE_SERVICE_ROLE_KEY is required for service-role operations.",
+    preferredClient: userJwt,
+  });
+  assert.equal(fallback.client, userJwt);
+  assert.match(fallback.reason ?? "", /preferred_fallback/);
+
+  const none = selectApifyBudgetClient({
+    serviceRoleClient: null,
+    serviceRoleReason: "service_role_client_unavailable",
+    preferredClient: null,
+  });
+  assert.equal(none.client, null);
+  assert.equal(none.reason, "service_role_client_unavailable");
+}
+
 async function run() {
   testNormalizeRejectsZeroAndUndefined();
   testZeroIsNeverUnlimited();
   testEvaluateConfigurationFailClosed();
+  testSelectApifyBudgetClientPrefersServiceRole();
   await testAssertWithoutSupabaseFailsClosed();
   await testAssertZeroBudgetLogsRejection();
   await testAssertUsageExhausted();

@@ -7,29 +7,12 @@ import { shouldIncludeApifyProfilePosts } from "@/lib/creator-enrichment/apify-f
 import type { EnrichmentScope } from "@/lib/creator-enrichment/enabled";
 import { getMetricsCollectorEnv } from "@/lib/performance/metrics-collector/config";
 import { apifyProfileActorIdForPlatform } from "@/lib/performance/metrics-collector/providers/apify-input";
-import { assertApifyAcquisitionBudget } from "@/lib/discovery/control-center/apify-budget";
+import { assertApifyAcquisitionBudgetForLaunch } from "@/lib/discovery/control-center/apify-budget";
 import {
   apifyRunGateKey,
   beginApifyRunGate,
 } from "@/lib/performance/apify-run-gate";
 import type { SocialPlatform } from "@/lib/social/platforms";
-
-async function resolveBudgetSupabase(preferred?: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  client?: any | null;
-}): Promise<{
-  client: import("@supabase/supabase-js").SupabaseClient | null;
-  reason: string | null;
-}> {
-  if (preferred?.client) {
-    return { client: preferred.client, reason: null };
-  }
-  // Worker-safe: never import `@/lib/supabase/admin` (server-only throws outside Next).
-  const { tryCreateServiceRoleClient } = await import(
-    "@/lib/supabase/service-role-client"
-  );
-  return tryCreateServiceRoleClient();
-}
 
 export type BatchApifyFetchResult = {
   ok: boolean;
@@ -148,14 +131,12 @@ export async function runBatchApifyActor(input: {
     };
   }
 
-  const resolved = await resolveBudgetSupabase({ client: input.supabase ?? null });
-  const budget = await assertApifyAcquisitionBudget(resolved.client, {
+  const budget = await assertApifyAcquisitionBudgetForLaunch(input.supabase ?? null, {
     source: "batch_profile_apify_fetch",
     meta: {
       platform: platformKey,
       label: input.label,
       profileCount: input.profileUrls.length,
-      clientResolutionReason: resolved.reason,
     },
   });
   if (!budget.allowed) {

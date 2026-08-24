@@ -98,6 +98,7 @@ function resultFromInline(
     influencerId,
     syncStatus,
     queued: false,
+    skipped: enrichment.status === "skipped",
     message: enrichment.message,
     enrichment,
     refreshSource,
@@ -361,6 +362,7 @@ export async function refreshCreatorMetricsImpl(
         influencerId,
         syncStatus: mapEnrichmentStatusToSyncStatus(resolvedStatus),
         queued: false,
+        skipped: true,
         message: skipDecision.reason,
       };
     }

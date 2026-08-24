@@ -158,6 +158,7 @@ async function testFeatureInference() {
   assert.equal(inferFeature("stale"), "dataset_import");
   assert.equal(inferFeature("manual", { isBulk: true }), "batch_refresh");
   assert.equal(inferFeature("manual"), "manual_refresh");
+  assert.equal(inferFeature("manual", { mode: "inline" }), "manual_refresh");
 }
 
 async function testNormalizedRequestAssignsRequestId() {
@@ -176,6 +177,18 @@ async function testNormalizedRequestAssignsRequestId() {
   assert.equal(request.requestedBy, "user-1");
   assert.equal(request.force, true);
   assert.equal(request.options.force, true);
+}
+
+async function testInlineLiveRefreshStaysManualRefreshFeature() {
+  const request = normalizeRefreshRequest(mockSupabase(), "creator-1", {
+    trigger: "manual",
+    mode: "inline",
+    force: true,
+    dataSource: "live_apify",
+  });
+  assert.equal(request.feature, "manual_refresh");
+  assert.equal(request.force, true);
+  assert.equal(request.options.mode, "inline");
 }
 
 async function testForceDefaultsToFalse() {
@@ -423,6 +436,7 @@ async function run() {
   await testBatchRefreshReturnsUnchangedResult();
   await testFeatureInference();
   await testNormalizedRequestAssignsRequestId();
+  await testInlineLiveRefreshStaysManualRefreshFeature();
   await testForceDefaultsToFalse();
   await testExplicitFeatureOverridesInference();
   await testResolveFeaturePrefersExplicit();

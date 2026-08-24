@@ -21,7 +21,7 @@ import {
   groupBatchTargetsByPlatform,
 } from "@/lib/creator-enrichment/batch-profile-target-resolver";
 import { priorityForTrigger } from "@/lib/creator-enrichment/policy";
-import { assertApifyAcquisitionBudget } from "@/lib/discovery/control-center/apify-budget";
+import { assertApifyAcquisitionBudgetForLaunch } from "@/lib/discovery/control-center/apify-budget";
 import { groupApifyRowsIntoCreators } from "@/lib/discovery/apify-dataset-grouping";
 import { importApifyStoredPayloadWithDnaPipeline } from "@/lib/discovery/apify-import-pipeline";
 import type { SocialPlatform } from "@/lib/social/platforms";
@@ -184,7 +184,7 @@ export async function runBatchProfileAcquisition(
     batchesTotal
   );
 
-  const budget = await assertApifyAcquisitionBudget(supabase, {
+  const budget = await assertApifyAcquisitionBudgetForLaunch(supabase, {
     source: "batch_profile_acquisition_worker",
     meta: {
       jobId: input.jobId,

@@ -46,6 +46,11 @@ import { CreatorDetailSheet } from "@/features/campaigns/components/creator-deta
 import { useCreatorDetailSheetState } from "@/features/discovery/hooks/use-creator-detail-sheet-state";
 import { stashCompareQueue } from "@/features/discovery/components/creator-search/creator-search-utils";
 import { refreshCreatorsBatchAction } from "@/features/discovery/enrichment/actions";
+import {
+  invokeRefreshAction,
+  mapManualRefreshError,
+  rethrowNextControlFlow,
+} from "@/features/discovery/enrichment/manual-refresh-error";
 import { pollCreatorsAfterBatchRefresh } from "@/features/discovery/enrichment/poll-creator-refresh";
 import {
   isEnrichmentInProgress,
@@ -450,9 +455,13 @@ export function ShortlistWorkspace({
 
     let failedCount = 0;
 
-    startTransition(async () => {
+    // Event-handler async — not startTransition. Transition + Server Action timeout
+    // blanks Discovery via PlatformErrorBoundary.
+    void (async () => {
       try {
-        const result = await refreshCreatorsBatchAction(unifiedIds);
+        const result = await invokeRefreshAction(() =>
+          refreshCreatorsBatchAction(unifiedIds)
+        );
         if (!result.queued) {
           setRefreshProgress(null);
           setEnrichmentOverrides(new Map());
@@ -460,7 +469,7 @@ export function ShortlistWorkspace({
           return;
         }
         toast.success(result.message);
-        void pollCreatorsAfterBatchRefresh(targets, {
+        await pollCreatorsAfterBatchRefresh(targets, {
           onUpdated: patchCreatorInList,
           onStatusChange: ({ unifiedId, status }) => {
             setEnrichmentOverrides((prev) => {
@@ -481,28 +490,27 @@ export function ShortlistWorkspace({
                 : null
             );
           },
-        }).finally(() => {
-          if (failedCount > 0) {
-            toast.error(
-              failedCount === targets.length
-                ? "Creator refresh failed"
-                : `${failedCount} of ${targets.length} creator refreshes failed`
-            );
-          } else {
-            toast.success("Creator metrics updated");
-          }
-          window.setTimeout(() => {
-            setRefreshProgress(null);
-          }, 1200);
-          setEnrichmentOverrides(new Map());
-          router.refresh();
         });
+        if (failedCount > 0) {
+          toast.error(
+            failedCount === targets.length
+              ? "Creator refresh failed"
+              : `${failedCount} of ${targets.length} creator refreshes failed`
+          );
+        } else {
+          toast.success("Creator metrics updated");
+        }
+        window.setTimeout(() => {
+          setRefreshProgress(null);
+        }, 1200);
+        setEnrichmentOverrides(new Map());
       } catch (error) {
+        rethrowNextControlFlow(error);
         setRefreshProgress(null);
         setEnrichmentOverrides(new Map());
-        toast.error(error instanceof Error ? error.message : "Refresh failed");
+        toast.error(mapManualRefreshError(error));
       }
-    });
+    })();
   }
 
   function handleBulkCollapse() {

@@ -6,7 +6,7 @@ import {
 } from "@/lib/discovery/acquisition-session.js";
 import { runDatasetAcquisitionBackfill } from "@/lib/discovery/dataset-acquisition-orchestrator.js";
 import type { EnterpriseAcquisitionJobData } from "@/lib/discovery/enterprise-acquisition-types.js";
-import { assertApifyAcquisitionBudget } from "@/lib/discovery/control-center/apify-budget.js";
+import { assertApifyAcquisitionBudgetForLaunch } from "@/lib/discovery/control-center/apify-budget.js";
 import {
   AUTOMATIC_ENRICHMENT_ACQUISITION_DISABLED_REASON,
   isAutomaticEnrichmentAndAcquisitionDisabled,
@@ -51,7 +51,7 @@ export function startEnterpriseAcquisitionWorker(): Worker<EnterpriseAcquisition
         };
       }
 
-      const budget = await assertApifyAcquisitionBudget(supabase, {
+      const budget = await assertApifyAcquisitionBudgetForLaunch(supabase, {
         source: "enterprise_acquisition_worker",
         meta: { jobId: data.jobId, searchId: data.searchId, platform: data.platform },
       });
