@@ -1,8 +1,7 @@
-import Link from "next/link";
-
 import { CLIENT_STATUS_LABEL, type ClientWorkspaceSectionId } from "../constants";
 import { buildClientReviewPath } from "../security/review-token";
 import type { ClientWorkspaceEntry } from "../types";
+import { ClientReviewCampaignCta } from "./client-review-campaign-cta";
 import { ClientWorkspaceIdentityMark } from "./identity-logo-mark";
 
 export function ClientReviewEntry({
@@ -45,13 +44,9 @@ export function ClientReviewEntry({
               <p className="v">{entry.actionRequired}</p>
             </div>
           </div>
-          <Link
+          <ClientReviewCampaignCta
             href={buildClientReviewPath(reviewId, token, landingSection)}
-            className="btn primary"
-            style={{ width: "100%", justifyContent: "center", marginTop: 22, minHeight: 44 }}
-          >
-            Review campaign
-          </Link>
+          />
         </div>
       </div>
     </div>
