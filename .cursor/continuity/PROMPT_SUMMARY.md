@@ -1,7 +1,13 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Client quotation Cost Detail no longer wipes unit cost to null after Save or remount. Combine creators service-role merge is already live.
+**Focus:** Shortlist “Beauty” tags were imported Facebook/indaHash audience interests (and `#grwm` / Instagram page categories), not a live read of the creator’s content. Display now drops uncorroborated Beauty when another niche exists.
+
+- Ahmed Magdy (`@ahmed_magdyyy__`) stored `Beauty, Fitness, Music, Travel` from **imported** `interest_categories` (no bio/hashtags). Overview used `ai_category` = first tag = Beauty.
+- Same dump explains why most of a shortlist looks like Beauty: Instagram audience-interest #1 is often Beauty even for fitness/lifestyle creators. Imported tags are append-only and Apify-protected.
+- Display refine: drop Instagram account-type labels (`Digital creator`) and uncorroborated generic Beauty when Fitness (or bio inference) is present. Overview Category uses the same display list.
+- Inference: `#grwm` and Instagram `Beauty, cosmetic & personal care` no longer map to Beauty. Real makeup/skincare bios still do.
+- Client quotation Cost Detail no longer wipes unit cost to null after Save or remount. Combine creators service-role merge is already live.
 
 - Live Refresh Metrics no longer runs Apify inside the Server Action. Next.js treats every Server Action as a transition; Vercel `FUNCTION_INVOCATION_TIMEOUT` still blanked Discovery even with try/catch.
 - Queue to discovery-worker (service-role budget, `force: true`). Bound Redis cancel/enqueue so shortlist batch cannot hang until 300s. Discovery error boundary recovers timeout digests after mount.

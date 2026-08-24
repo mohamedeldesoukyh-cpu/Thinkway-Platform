@@ -77,9 +77,48 @@ assert.deepEqual(
       categories: ["Beauty"],
       browse_category_tags: ["Beauty"],
     })
+  ).sort(),
+  ["Health & Wellness", "Parenting"],
+  "Uncorroborated stored Beauty must not override a nutritionist/parenting bio"
+);
+
+assert.deepEqual(
+  resolveDiscoveryCreatorDisplayCategories(
+    drDinaCreator({
+      categories: ["Beauty", "Fitness", "Music", "Travel"],
+      browse_category_tags: ["Beauty", "Fitness", "Music", "Travel"],
+      bio: null,
+      display_name: "Ahmed Magdy",
+      platforms: [
+        {
+          id: "pa-ahmed",
+          platform: "instagram",
+          handle: "ahmed_magdyyy__",
+          profile_url: null,
+          follower_count: 100_000,
+          engagement_rate: 2.5,
+          audience_country: "EG",
+          profile_bio: null,
+        },
+      ],
+    })
   ),
-  ["Beauty"],
-  "Stored categories that map to a main category should win over inference"
+  ["Fitness", "Music", "Travel"],
+  "Imported Facebook interest dump should not headline Beauty on a fitness creator"
+);
+
+assert.deepEqual(
+  resolveDiscoveryCreatorDisplayCategories(
+    drDinaCreator({
+      categories: ["Beauty", "Fashion"],
+      browse_category_tags: ["Beauty", "Fashion"],
+      bio: "Makeup artist · skincare routines",
+      display_name: "Nour",
+      platforms: [],
+    })
+  ),
+  ["Beauty", "Fashion"],
+  "Corroborated Beauty tags should stay"
 );
 
 assert.deepEqual(

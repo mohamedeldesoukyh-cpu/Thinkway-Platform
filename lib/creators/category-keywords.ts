@@ -7,7 +7,6 @@ export const CREATOR_CATEGORY_KEYWORDS: Readonly<Record<string, string>> = {
   skincare: "Beauty",
   makeup: "Beauty",
   cosmetics: "Beauty",
-  grwm: "Beauty",
   cosmetic: "Beauty",
   fashion: "Fashion",
   style: "Fashion",

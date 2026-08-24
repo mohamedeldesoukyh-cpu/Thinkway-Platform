@@ -70,8 +70,19 @@ assert.deepEqual(
     WITH_FATIMMA_POST_ROW.authorMeta as Record<string, unknown>,
     ["#beauty", "#skincare", "#grwm"]
   ),
-  ["beauty", "skincare", "grwm"],
+  ["beauty", "skincare"],
   "derive TikTok interest tags from post hashtags when no business category"
+);
+
+assert.deepEqual(
+  pickApifyInterestCategories(
+    "instagram",
+    { businessCategoryName: "Beauty, cosmetic & personal care" },
+    {},
+    ["#grwm", "#fitness"]
+  ),
+  [],
+  "Instagram Facebook page categories are not creator niches"
 );
 
 assert.equal(

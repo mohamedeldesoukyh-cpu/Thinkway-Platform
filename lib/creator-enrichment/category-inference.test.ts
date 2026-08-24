@@ -103,4 +103,29 @@ assert.deepEqual(
   "Mixed Arabic/English profile should resolve both languages"
 );
 
+assert.deepEqual(
+  inferCategoriesFromProfileSignals({
+    extraTerms: ["Beauty, cosmetic & personal care"],
+  }),
+  [],
+  "Instagram page category must not word-split into Beauty"
+);
+
+assert.deepEqual(
+  inferCategoriesFromProfileSignals({
+    hashtags: ["#grwm"],
+  }),
+  [],
+  "GRWM is a format tag, not a Beauty category"
+);
+
+assert.deepEqual(
+  inferCategoriesFromProfileSignals({
+    extraTerms: ["Digital creator"],
+    hashtags: ["#fyp"],
+  }),
+  [],
+  "Instagram account-type labels must not become content categories"
+);
+
 console.log("category-inference.test.ts: all assertions passed");

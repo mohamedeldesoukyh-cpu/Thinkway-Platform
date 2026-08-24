@@ -270,4 +270,42 @@ assert.deepEqual(
   "Fallback-assigned creators should not appear as Uncategorized"
 );
 
+assert.deepEqual(
+  resolveQuotationCreatorDisplayCategories({
+    creator: {
+      browse_category_tags: ["Beauty", "Fitness", "Music", "Travel"],
+      categories: ["Beauty", "Fitness", "Music", "Travel"],
+      ai_category: "Beauty",
+      ai_niche: null,
+      audience_interests: ["Beauty", "Fitness", "Music", "Travel"],
+      bio: null,
+      hashtags: [],
+      mentions: [],
+      platforms: [],
+      display_name: "Ahmed Magdy",
+    },
+  }),
+  ["Fitness", "Music", "Travel"],
+  "Imported audience-interest Beauty should not outrank Fitness when the profile has no beauty evidence"
+);
+
+assert.deepEqual(
+  resolveQuotationCreatorDisplayCategories({
+    creator: {
+      browse_category_tags: ["Beauty", "Digital Creator"],
+      categories: ["Beauty", "Digital Creator"],
+      ai_category: "Beauty",
+      ai_niche: null,
+      audience_interests: [],
+      bio: null,
+      hashtags: [],
+      mentions: [],
+      platforms: [],
+      display_name: "Engy",
+    },
+  }),
+  ["Beauty"],
+  "Instagram account-type labels drop; lone Beauty stays when there is no other niche"
+);
+
 console.log("quotation-creator-categories.test.ts passed");

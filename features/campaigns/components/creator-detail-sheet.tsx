@@ -78,7 +78,7 @@ import {
   projectCreatorPlatformView,
   sortPlatformsStable,
 } from "@/lib/creators/creator-centric";
-import { creatorStoredCategoriesForDisplay } from "@/lib/creators/category-filter";
+import { resolveDiscoveryCreatorDisplayCategories } from "@/lib/creators/creator-display-categories";
 import { creatorHasAnyContact, resolveCreatorContactSections, type CreatorContactFields } from "@/lib/creators/contact-info";
 import { creatorListRowEquivalent } from "@/lib/creators/creator-list-row-equivalent";
 import { shouldPreventCreatorDetailSheetOutsideDismiss } from "@/lib/creators/creator-detail-sheet-open-policy";
@@ -545,11 +545,7 @@ function ConfidenceRows({ displayCreator }: { displayCreator: UnifiedCreatorResu
         </span>
       </div>
       {(() => {
-        const storedCategories =
-          displayCreator.browse_category_tags &&
-          displayCreator.browse_category_tags.length > 0
-            ? displayCreator.browse_category_tags
-            : creatorStoredCategoriesForDisplay(displayCreator);
+        const storedCategories = resolveDiscoveryCreatorDisplayCategories(displayCreator);
         if (storedCategories.length === 0) return null;
         return (
         <div className="flex items-start justify-between gap-4 py-2">
@@ -933,7 +929,12 @@ export function CreatorDetailSheet({
   const platformName = primary ? platformLabel(primary.platform) : null;
   const canAssign = isAssignableCreator(identityCreator) && Boolean(onAssign);
   const latestFollowers = history?.followers.at(-1)?.value ?? null;
-  const brandCategory = displayCreator.ai_niche ?? displayCreator.ai_category ?? "No niche tagged";
+  const displayCategories = resolveDiscoveryCreatorDisplayCategories(displayCreator);
+  const brandCategory =
+    displayCategories[0] ??
+    displayCreator.ai_niche ??
+    displayCreator.ai_category ??
+    "No niche tagged";
   const investmentScore =
     displayCreator.eci_investment_score != null &&
     Number.isFinite(displayCreator.eci_investment_score)

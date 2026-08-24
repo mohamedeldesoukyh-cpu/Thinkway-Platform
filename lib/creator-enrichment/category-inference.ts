@@ -5,6 +5,7 @@ import {
   resolveArabicCategoryToken,
 } from "@/lib/creators/arabic-category-keywords";
 import { CREATOR_CATEGORY_KEYWORDS } from "@/lib/creators/category-keywords";
+import { isNonContentCategoryLabel } from "@/lib/creators/category-signal-quality";
 import { mergeInterestStringArrays } from "@/lib/performance/interest-sync-policy";
 
 export type CategoryInferenceInput = {
@@ -43,6 +44,7 @@ function resolveKeywordToken(token: string): string | null {
 
   const normalized = normalizeCategorySignal(token);
   if (!normalized) return null;
+  if (isNonContentCategoryLabel(normalized)) return null;
 
   const direct = CREATOR_CATEGORY_KEYWORDS[normalized];
   if (direct) return direct;

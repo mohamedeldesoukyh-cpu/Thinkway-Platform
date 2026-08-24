@@ -31,6 +31,7 @@ import {
 } from "@/lib/creators/creator-metric-definitions";
 import { computeProfileEngagementRate } from "@/lib/creators/profile-engagement-rate";
 import { resolveCountryCode } from "@/lib/creators/country-code";
+import { isNonContentCategoryLabel } from "@/lib/creators/category-signal-quality";
 import {
   formatCreatorBio,
   formatCreatorDisplayName,
@@ -430,13 +431,15 @@ export function pickApifyInterestCategories(
     str(head.category) ??
     str(owner.businessCategoryName) ??
     str(owner.category);
-  if (business) return [business];
+  if (business && !isNonContentCategoryLabel(business)) {
+    return [business];
+  }
 
   if (platformKey === "tiktok" && hashtags.length > 0) {
     const tags = hashtags
       .slice(0, 8)
       .map((tag) => tag.replace(/^#+/, "").trim())
-      .filter(Boolean);
+      .filter((tag) => tag && !isNonContentCategoryLabel(tag));
     return [...new Set(tags)];
   }
 

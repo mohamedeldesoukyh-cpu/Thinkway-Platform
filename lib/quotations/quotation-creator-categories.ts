@@ -27,6 +27,10 @@ import {
   creatorStoredCategoriesForDisplay,
   normalizeCategoryList,
 } from "@/lib/creators/category-filter";
+import {
+  profileHasBeautyEvidence,
+  refineStoredDisplayCategories,
+} from "@/lib/creators/category-signal-quality";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
 /** Main categories used in quotation export summaries (Tuna/Dolphin + Discovery aligned). */
@@ -73,7 +77,6 @@ const SUBCATEGORY_MAIN_ALIASES: Readonly<Record<string, QuotationMainCreatorCate
   "makeup": "Beauty",
   "cosmetics": "Beauty",
   "beauty & cosmetics": "Beauty",
-  "grwm": "Beauty",
   "comedy": "Entertainment",
   "entertainment": "Entertainment",
   "camera & photography": "Lifestyle",
@@ -454,10 +457,6 @@ export function resolveQuotationCreatorDisplayCategories(input: {
   }
 
   const stored = translateQuotationCategoryLabels(creatorStoredCategoriesForDisplay(input.creator));
-  if (stored.length > 0 && storedCategoriesMapToMain(stored)) {
-    return stored.slice(0, 5);
-  }
-
   const linePlatform = input.linePlatform
     ? canonicalPlatformKey(input.linePlatform)
     : null;
@@ -467,6 +466,31 @@ export function resolveQuotationCreatorDisplayCategories(input: {
           (account) => canonicalPlatformKey(account.platform) === linePlatform
         )
       : null;
+  const profileHashtags = lineAccount?.hashtags ?? input.creator.hashtags;
+  const profileMentions = lineAccount?.mentions ?? input.creator.mentions;
+  const inferredFromProfile = inferCategoriesFromProfileSignals({
+    bio: profileBio,
+    hashtags: profileHashtags,
+    mentions: profileMentions,
+    displayName: profileIdentity.displayName,
+    handle: profileIdentity.handle,
+  });
+  const refinedStored = refineStoredDisplayCategories(stored, {
+    hasBeautyEvidence: profileHasBeautyEvidence([
+      profileBio,
+      profileIdentity.displayName,
+      ...(profileHashtags ?? []),
+      ...(profileMentions ?? []),
+    ]),
+    inferredCategories: inferredFromProfile,
+  });
+  if (refinedStored.length > 0 && storedCategoriesMapToMain(refinedStored)) {
+    return refinedStored.slice(0, 5);
+  }
+  if (inferredFromProfile.length > 0) {
+    const withMains = resolveMainCategoriesForCreatorLabels(inferredFromProfile);
+    if (withMains.length > 0) return inferredFromProfile.slice(0, 5);
+  }
 
   const extraTerms = quotationCreatorCategorySignals(input.creator, {
     creatorName: input.creatorName,
@@ -482,7 +506,7 @@ export function resolveQuotationCreatorDisplayCategories(input: {
   });
 
   const merged = mergeInferredCategories(
-    fromItem.length > 0 ? fromItem : stored,
+    fromItem.length > 0 ? fromItem : refinedStored,
     inferred
   );
   if (merged.length > 0) {
