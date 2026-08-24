@@ -121,11 +121,7 @@ export async function cancelCreatorEnrichmentJobs(
           CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
           `cancel.isActive(${influencerId})`
         )) {
-          await withTimeout(
-            dedupeJob.discard(),
-            CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
-            `cancel.discard(${influencerId})`
-          );
+          dedupeJob.discard();
         }
         await withTimeout(
           dedupeJob.remove(),
@@ -152,11 +148,7 @@ export async function cancelCreatorEnrichmentJobs(
           CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
           "cancel.job.isActive"
         )) {
-          await withTimeout(
-            job.discard(),
-            CREATOR_ENRICHMENT_REDIS_COMMAND_TIMEOUT_MS,
-            "cancel.job.discard"
-          );
+          job.discard();
         }
         await withTimeout(
           job.remove(),
