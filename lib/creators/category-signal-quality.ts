@@ -37,7 +37,7 @@ const NON_CONTENT_CATEGORY_PHRASES = [
   "viral",
 ] as const;
 
-const NON_CONTENT_CATEGORY_SET = new Set(NON_CONTENT_CATEGORY_PHRASES);
+const NON_CONTENT_CATEGORY_SET: ReadonlySet<string> = new Set(NON_CONTENT_CATEGORY_PHRASES);
 
 /** Specific beauty evidence — not the generic Facebook interest bucket "Beauty". */
 const BEAUTY_EVIDENCE_RE =
