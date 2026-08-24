@@ -309,6 +309,46 @@ async function dedupeVendorIos(
   }
 }
 
+export function classifyMergeReassignError(
+  message: string
+): "missing" | "unique" | "fatal" {
+  if (/schema cache|does not exist|could not find/i.test(message)) return "missing";
+  if (/duplicate key value|unique constraint/i.test(message)) return "unique";
+  return "fatal";
+}
+
+async function reassignColumnReferencesRowByRow(
+  supabase: AnySupabase,
+  input: {
+    table: string;
+    column: string;
+    targetInfluencerId: string;
+    sourceInfluencerId: string;
+  }
+): Promise<void> {
+  const { data, error } = await supabase
+    .from(input.table)
+    .select("id")
+    .eq(input.column, input.sourceInfluencerId);
+  if (error) throw new Error(`${input.table}.${input.column}: ${error.message}`);
+
+  for (const row of data ?? []) {
+    const { error: updateError } = await supabase
+      .from(input.table)
+      .update({ [input.column]: input.targetInfluencerId })
+      .eq("id", row.id);
+    if (!updateError) continue;
+    if (classifyMergeReassignError(updateError.message) !== "unique") {
+      throw new Error(`${input.table}.${input.column}: ${updateError.message}`);
+    }
+    const { error: deleteError } = await supabase
+      .from(input.table)
+      .delete()
+      .eq("id", row.id);
+    if (deleteError) throw new Error(`${input.table}.${input.column}: ${deleteError.message}`);
+  }
+}
+
 async function reassignColumnReferences(
   supabase: SupabaseClient<Database>,
   input: {
@@ -323,7 +363,15 @@ async function reassignColumnReferences(
     .from(input.table)
     .update({ [input.column]: input.targetInfluencerId })
     .eq(input.column, input.sourceInfluencerId);
-  if (error) throw new Error(`${input.table}.${input.column}: ${error.message}`);
+  if (!error) return;
+
+  const kind = classifyMergeReassignError(error.message);
+  if (kind === "missing") return;
+  if (kind === "unique") {
+    await reassignColumnReferencesRowByRow(db, input);
+    return;
+  }
+  throw new Error(`${input.table}.${input.column}: ${error.message}`);
 }
 
 async function reassignInfluencerReferences(
@@ -340,6 +388,14 @@ async function reassignInfluencerReferences(
     "campaign_publications",
     "creator_sources",
     "creator_enrichment_runs",
+    "influencer_metrics_history",
+    "creator_content_performance_baselines",
+    "creator_intelligence_monthly_metrics",
+    "creator_intelligence_commercial_history",
+    "creator_intelligence_category_brand_history",
+    "creator_intelligence_performance_history",
+    "creator_intelligence_audience_history",
+    "creator_intelligence_investment_history",
     "influencer_documents",
     "discovered_profiles",
     "ipl_provider_runs",
@@ -362,19 +418,12 @@ async function reassignInfluencerReferences(
     "vendor_statements",
     "vendor_credit_notes",
   ] as const) {
-    try {
-      await reassignColumnReferences(supabase, {
-        table,
-        column: "vendor_id",
-        targetInfluencerId,
-        sourceInfluencerId,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      // Table may not exist in every environment — only fail on real constraint errors.
-      if (/schema cache|does not exist|could not find/i.test(message)) continue;
-      throw error;
-    }
+    await reassignColumnReferences(supabase, {
+      table,
+      column: "vendor_id",
+      targetInfluencerId,
+      sourceInfluencerId,
+    });
   }
 }
 
@@ -442,6 +491,10 @@ function buildMergedInfluencerPatch(
 /**
  * Combine two influencer profiles by moving the source creator's platform accounts
  * (and linked operational records) onto the target creator, then removing the source.
+ *
+ * `supabase` must be a service-role client. Authenticated DML is revoked on
+ * creator_enrichment_runs, IPL, DNA versions, and Enterprise Creator Intelligence
+ * tables — the caller must authorize with discovery.write first.
  */
 export async function mergeCreators(
   supabase: SupabaseClient<Database>,

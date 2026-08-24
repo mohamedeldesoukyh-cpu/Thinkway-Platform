@@ -10,6 +10,7 @@ import {
   type MergeCreatorsEligibility,
   type MergeCreatorsResult,
 } from "@/lib/discovery/merge-creators";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function getMergeCreatorsEligibilityAction(input: {
@@ -42,7 +43,7 @@ export async function mergeCreatorsAction(input: {
       return { ok: false, message: auth.error };
     }
 
-    const result = await mergeCreators(supabase, {
+    const result = await mergeCreators(createSupabaseAdminClient(), {
       ...input,
       actorId: auth.userId,
     });

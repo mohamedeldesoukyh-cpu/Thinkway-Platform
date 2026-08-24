@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { evaluateMergeCreatorsEligibility } from "./merge-creators";
+import { classifyMergeReassignError, evaluateMergeCreatorsEligibility } from "./merge-creators";
 
 test("evaluateMergeCreatorsEligibility allows complementary platforms", () => {
   const result = evaluateMergeCreatorsEligibility({
@@ -49,4 +49,21 @@ test("evaluateMergeCreatorsEligibility treats mixed-case platforms as the same",
   });
   assert.equal(complementary.canMerge, true);
   assert.deepEqual(complementary.platformsToMove, ["snapchat"]);
+});
+
+test("classifyMergeReassignError treats unique and missing-table errors as recoverable", () => {
+  assert.equal(
+    classifyMergeReassignError(
+      'duplicate key value violates unique constraint "creator_intelligence_monthly_metrics_unique"'
+    ),
+    "unique"
+  );
+  assert.equal(
+    classifyMergeReassignError("Could not find the table 'public.vendor_statements' in the schema cache"),
+    "missing"
+  );
+  assert.equal(
+    classifyMergeReassignError("permission denied for table creator_enrichment_runs"),
+    "fatal"
+  );
 });
