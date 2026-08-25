@@ -13,7 +13,7 @@ export function EntityLogoField({
   entityId,
   logoUrl,
   label = "Logo",
-  hint = "PNG, JPG, or WebP · up to 2 MB. Client Workspace shows the group logo first, then the client logo.",
+  hint = "PNG, JPG, or WebP · up to 2 MB. Client Workspace and Client Portal show the group logo first, then the client logo when there is no group.",
   disabled,
 }: {
   kind: EntityLogoKind;

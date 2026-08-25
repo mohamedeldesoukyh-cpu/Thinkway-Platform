@@ -620,7 +620,7 @@ export async function loadClientWorkspace(
 
   if (!picked.historical) {
     try {
-      const liveLogo = await loadIdentityLogoForReview(db, {
+      const liveLogo = await loadIdentityLogoForReview(service ?? db, {
         quotationId: view.journey?.quotationId ?? activeReview.quotationId,
         shortlistId: view.journey?.shortlistId ?? activeReview.shortlistId,
         campaignHeaderId: view.journey?.campaignHeaderId ?? activeReview.campaignHeaderId,

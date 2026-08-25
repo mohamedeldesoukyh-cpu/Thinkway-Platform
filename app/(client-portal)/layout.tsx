@@ -4,6 +4,8 @@ import { PortalShell } from "@/components/layout/portal-shell";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getClientUnreadNotificationCount } from "@/features/portals/queries";
 import { requireClientScope } from "@/features/portals/scope";
+import { loadIdentityLogoForClientId } from "@/features/client-workspace/identity-logo";
+import type { IdentityLogo } from "@/lib/entity-logos/identity-logo";
 import type { PortalNavItem } from "@/components/layout/portal-nav";
 
 const clientNavItems = [
@@ -30,9 +32,11 @@ export default async function ClientPortalLayout({
   }
 
   let userLabel = user.email ?? "Client";
+  let identityLogo: IdentityLogo | null = null;
   try {
     const { supabase: scopedSupabase, scope } = await requireClientScope("client_portal.read");
     if (scope.primaryClientId) {
+      identityLogo = await loadIdentityLogoForClientId(scopedSupabase, scope.primaryClientId);
       const { data } = await scopedSupabase
         .from("clients")
         .select("name")
@@ -58,6 +62,7 @@ export default async function ClientPortalLayout({
       title="Client Portal"
       description="Operational campaign visibility with approvals, invoices, reports, and client IO."
       userLabel={userLabel}
+      identityLogo={identityLogo}
       navItems={navItems}
     >
       {children}

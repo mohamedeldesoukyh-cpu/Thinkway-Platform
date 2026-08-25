@@ -590,6 +590,30 @@ test("source snapshot keeps group or client identity logos and ignores brand mar
   });
   assert.equal(snapshot?.identityLogo?.source, "group");
   assert.equal(snapshot?.identityLogo?.url, "https://cdn.example/group.png");
+  const withClient = parseSourceSnapshot({
+    source: "quotation",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme Legal",
+    platforms: [],
+    deliverables: [],
+    creators: [],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "Duration not confirmed", phases: [] },
+    commercial: {
+      currency: "EGP",
+      creatorInvestment: 0,
+      totalInvestment: 0,
+      quotationTotal: 0,
+      lines: [],
+      selectedCount: 0,
+      totalCount: 0,
+    },
+    creatorIds: [],
+    identityLogo: { url: "https://cdn.example/client.png", source: "client", alt: "Acme Legal" },
+  });
+  assert.equal(withClient?.identityLogo?.source, "client");
+  assert.equal(withClient?.identityLogo?.url, "https://cdn.example/client.png");
   const withoutBrand = parseSourceSnapshot({
     source: "quotation",
     brandName: "Acme",

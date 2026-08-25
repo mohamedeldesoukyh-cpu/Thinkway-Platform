@@ -5,6 +5,42 @@ import type { Database } from "@/types/database";
 
 export type { IdentityLogo };
 
+export async function loadIdentityLogoForClientId(
+  supabase: SupabaseClient<Database | never>,
+  clientId: string | null | undefined
+): Promise<IdentityLogo | null> {
+  const id = clientId?.trim();
+  if (!id) return null;
+
+  const { data: client } = await supabase
+    .from("clients")
+    .select("name, logo_url, group_id")
+    .eq("id", id)
+    .maybeSingle();
+  const clientRow = client as { name?: string | null; logo_url?: string | null; group_id?: string | null } | null;
+  if (!clientRow) return null;
+
+  let groupLogoUrl: string | null = null;
+  let groupName: string | null = null;
+  if (clientRow.group_id) {
+    const { data: group } = await supabase
+      .from("groups")
+      .select("name, logo_url")
+      .eq("id", clientRow.group_id)
+      .maybeSingle();
+    const groupRow = group as { name?: string | null; logo_url?: string | null } | null;
+    groupLogoUrl = groupRow?.logo_url ?? null;
+    groupName = groupRow?.name ?? null;
+  }
+
+  return pickIdentityLogo({
+    groupLogoUrl,
+    clientLogoUrl: clientRow.logo_url,
+    groupName,
+    clientName: clientRow.name,
+  });
+}
+
 export async function loadIdentityLogoForReview(
   supabase: SupabaseClient<Database | never>,
   input: {
@@ -63,33 +99,7 @@ export async function loadIdentityLogoForReview(
 
   if (!clientId) return null;
 
-  const { data: client } = await supabase
-    .from("clients")
-    .select("name, logo_url, group_id")
-    .eq("id", clientId)
-    .maybeSingle();
-  const clientRow = client as { name?: string | null; logo_url?: string | null; group_id?: string | null } | null;
-  if (!clientRow) return null;
-
-  let groupLogoUrl: string | null = null;
-  let groupName: string | null = null;
-  if (clientRow.group_id) {
-    const { data: group } = await supabase
-      .from("groups")
-      .select("name, logo_url")
-      .eq("id", clientRow.group_id)
-      .maybeSingle();
-    const groupRow = group as { name?: string | null; logo_url?: string | null } | null;
-    groupLogoUrl = groupRow?.logo_url ?? null;
-    groupName = groupRow?.name ?? null;
-  }
-
-  return pickIdentityLogo({
-    groupLogoUrl,
-    clientLogoUrl: clientRow.logo_url,
-    groupName,
-    clientName: clientRow.name,
-  });
+  return loadIdentityLogoForClientId(supabase, clientId);
 }
 
 export function parseIdentityLogo(raw: unknown): IdentityLogo | undefined {

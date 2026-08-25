@@ -395,7 +395,7 @@ export function ClientOverviewTab({
             entityId={client.id}
             logoUrl={client.logo_url}
             label="Client logo"
-            hint="Used in Client Workspace when the group has no logo. PNG, JPG, or WebP · up to 2 MB."
+            hint="Used in Client Workspace and Client Portal. Group logo first; if the client has no group, the client logo is used the same way. PNG, JPG, or WebP · up to 2 MB."
             disabled={isPending}
           />
           <ClientFormGrid columns={3}>

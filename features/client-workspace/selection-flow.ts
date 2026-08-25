@@ -769,6 +769,10 @@ export function mergeSnapshotsForClientView(input: {
     creatorIds: creators.map((creator) => creator.creatorId),
     commercial: { ...(quotationSnap?.commercial ?? input.active.commercial), currency },
     quotation: quotationSnap?.quotation ?? input.active.quotation,
+    identityLogo:
+      input.active.identityLogo ??
+      quotationSnap?.identityLogo ??
+      input.shortlist.identityLogo,
     clientSelection:
       input.active.clientSelection ??
       quotationSnap?.clientSelection ??

@@ -21,6 +21,17 @@ test("identity logo prefers group over client", () => {
   assert.equal(picked?.alt, "HoldCo");
 });
 
+test("identity logo uses client when the client has no group", () => {
+  const picked = pickIdentityLogo({
+    groupLogoUrl: null,
+    clientLogoUrl: "https://cdn.example/client.png",
+    clientName: "Standalone Legal",
+  });
+  assert.equal(picked?.source, "client");
+  assert.equal(picked?.url, "https://cdn.example/client.png");
+  assert.equal(picked?.alt, "Standalone Legal");
+});
+
 test("identity logo falls back to client when group has no logo", () => {
   const picked = pickIdentityLogo({
     groupLogoUrl: "  ",
