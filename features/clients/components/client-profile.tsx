@@ -146,7 +146,11 @@ export function ClientProfile({
       group: patch.group,
       updated_at: patch.updated_at,
     }));
-  }, []);  const { tabOrder } = useWorkspaceTabOrder({
+  }, []);
+  const applyLogoUrl = useCallback((logoUrl: string | null) => {
+    setClientRecord((current) => ({ ...current, logo_url: logoUrl }));
+  }, []);
+  const { tabOrder } = useWorkspaceTabOrder({
     storageKey: CLIENT_PROFILE_TAB_STORAGE_KEY,
     defaultOrder: CLIENT_PROFILE_TAB_ORDER,
     isValidId: isClientProfileTabId,
@@ -199,6 +203,7 @@ export function ClientProfile({
             onCancel={handleCancel}
             shortcutsEnabled={activeTab === "overview"}
             onClientPatch={applyClientPatch}
+            onLogoUrlChange={applyLogoUrl}
             onboardingSlot={
               <OnboardingWorkspace
                 clientId={clientRecord.id}
@@ -297,6 +302,14 @@ export function ClientProfile({
       >
         <div className="platform-v6-entity-nav-bar">
           <div className="platform-v6-entity-nav-inner">
+            {clientRecord.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={clientRecord.logo_url}
+                alt=""
+                className="h-8 w-auto max-h-8 max-w-[132px] object-contain"
+              />
+            ) : null}
             <span className="platform-v6-entity-title">{clientRecord.name}</span>            <span className={entityBadge.className}>{entityBadge.label}</span>
             <span className="platform-v6-also-view">Also View</span>
           </div>

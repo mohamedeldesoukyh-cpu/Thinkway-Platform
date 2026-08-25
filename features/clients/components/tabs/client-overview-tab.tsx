@@ -76,6 +76,7 @@ type ClientOverviewTabProps = {
   onboardingSlot?: ReactNode;
   /** Applies persisted overview fields returned by the save action. */
   onClientPatch?: (patch: ClientOverviewSavePatch) => void;
+  onLogoUrlChange?: (logoUrl: string | null) => void;
 };
 
 export function ClientOverviewTab({
@@ -86,6 +87,7 @@ export function ClientOverviewTab({
   shortcutsEnabled = true,
   onboardingSlot,
   onClientPatch,
+  onLogoUrlChange,
 }: ClientOverviewTabProps) {
   const router = useRouter();
   const [status, setStatus] = useState(client.status);
@@ -397,6 +399,7 @@ export function ClientOverviewTab({
             label="Client logo"
             hint="Used in Client Workspace and Client Portal. Group logo first; if the client has no group, the client logo is used the same way. PNG, JPG, or WebP · up to 2 MB."
             disabled={isPending}
+            onLogoUrlChange={onLogoUrlChange}
           />
           <ClientFormGrid columns={3}>
             <ClientFormField label="Client name (English)" htmlFor="name">

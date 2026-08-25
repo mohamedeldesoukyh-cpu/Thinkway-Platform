@@ -315,6 +315,7 @@ export async function createClientReviewFromShortlist(
     (await loadIdentityLogoForReview(supabase, {
       shortlistId: header.id,
       campaignHeaderId: header.campaign_header_id,
+      clientLabel,
     })) ?? undefined;
 
   return persistClientReview({

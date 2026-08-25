@@ -618,19 +618,19 @@ export async function loadClientWorkspace(
     }
   }
 
-  if (!picked.historical) {
-    try {
-      const liveLogo = await loadIdentityLogoForReview(service ?? db, {
-        quotationId: view.journey?.quotationId ?? activeReview.quotationId,
-        shortlistId: view.journey?.shortlistId ?? activeReview.shortlistId,
-        campaignHeaderId: view.journey?.campaignHeaderId ?? activeReview.campaignHeaderId,
-      });
-      view.identityLogo = liveLogo ?? view.identityLogo ?? null;
-    } catch {
-      /* keep frozen snapshot logo if live identity lookup fails */
-    }
-  } else {
-    view.identityLogo = activeReview.sourceSnapshot?.identityLogo ?? view.identityLogo ?? null;
+  try {
+    const liveLogo = await loadIdentityLogoForReview(service ?? db, {
+      quotationId: view.journey?.quotationId ?? activeReview.quotationId,
+      shortlistId: view.journey?.shortlistId ?? activeReview.shortlistId,
+      campaignHeaderId: view.journey?.campaignHeaderId ?? activeReview.campaignHeaderId,
+      clientLabel:
+        view.overview.clientLabel ||
+        activeReview.clientLabel ||
+        activeReview.sourceSnapshot?.clientLabel,
+    });
+    view.identityLogo = liveLogo ?? view.identityLogo ?? null;
+  } catch {
+    /* keep frozen snapshot logo if live identity lookup fails */
   }
 
   const entry: ClientWorkspaceEntry = {

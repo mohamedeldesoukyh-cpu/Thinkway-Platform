@@ -99,6 +99,7 @@ export async function createClientReview(
     (await loadIdentityLogoForReview(supabase, {
       campaignHeaderId: latest.record.campaignHeaderId,
       shortlistId: linkedShortlistId(saved),
+      clientLabel: facts?.clientName ?? facts?.brandName ?? null,
     })) ?? undefined;
 
   const result = await persistClientReview({

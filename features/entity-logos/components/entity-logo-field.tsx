@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ export function EntityLogoField({
   label = "Logo",
   hint = "PNG, JPG, or WebP · up to 2 MB. Client Workspace and Client Portal show the group logo first, then the client logo when there is no group.",
   disabled,
+  onLogoUrlChange,
 }: {
   kind: EntityLogoKind;
   entityId: string;
@@ -22,7 +24,9 @@ export function EntityLogoField({
   label?: string;
   hint?: string;
   disabled?: boolean;
+  onLogoUrlChange?: (logoUrl: string | null) => void;
 }) {
+  const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState(logoUrl ?? null);
   const [pending, startTransition] = useTransition();
@@ -39,8 +43,10 @@ export function EntityLogoField({
         return;
       }
       setPreviewUrl(result.logoUrl ?? null);
+      onLogoUrlChange?.(result.logoUrl ?? null);
       toast.success(result.message ?? "Logo updated.");
       if (inputRef.current) inputRef.current.value = "";
+      if (!onLogoUrlChange) router.refresh();
     });
   }
 

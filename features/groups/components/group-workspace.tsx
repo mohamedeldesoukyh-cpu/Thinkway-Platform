@@ -72,7 +72,19 @@ export function GroupWorkspaceView({
           backButton={
             <PageBackButton fallbackHref="/groups" label="Back to groups" />
           }
-          title={workspace.name}
+          title={
+            <span className="inline-flex min-w-0 items-center gap-2">
+              {workspace.logo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={workspace.logo_url}
+                  alt=""
+                  className="h-8 w-auto max-h-8 max-w-[132px] object-contain"
+                />
+              ) : null}
+              <span className="truncate">{workspace.name}</span>
+            </span>
+          }
           badges={<ClientStatusBadge status={workspace.status} />}
           meta={
             <>

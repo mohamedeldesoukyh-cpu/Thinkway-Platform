@@ -192,6 +192,7 @@ export async function createClientReviewFromQuotation(
       quotationId: detail.id,
       shortlistId: detail.shortlist_id,
       campaignHeaderId: detail.campaign_header_id,
+      clientLabel,
     })) ?? undefined;
 
   return persistClientReview({

@@ -28,11 +28,13 @@ function revalidateEntityLogoPaths(kind: EntityLogoKind, entityId: string) {
   if (kind === "group") {
     revalidatePath("/groups");
     revalidatePath(`/groups/${entityId}`);
+    revalidatePath("/client-portal", "layout");
     return;
   }
   if (kind === "client") {
     revalidatePath("/clients");
     revalidatePath(`/clients/${entityId}`);
+    revalidatePath("/client-portal", "layout");
     return;
   }
   revalidatePath("/brands");

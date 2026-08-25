@@ -4,7 +4,8 @@ import { PortalShell } from "@/components/layout/portal-shell";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getClientUnreadNotificationCount } from "@/features/portals/queries";
 import { requireClientScope } from "@/features/portals/scope";
-import { loadIdentityLogoForClientId } from "@/features/client-workspace/identity-logo";
+import { loadIdentityLogoForPortalClient } from "@/features/client-workspace/identity-logo";
+import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
 import type { IdentityLogo } from "@/lib/entity-logos/identity-logo";
 import type { PortalNavItem } from "@/components/layout/portal-nav";
 
@@ -36,8 +37,9 @@ export default async function ClientPortalLayout({
   try {
     const { supabase: scopedSupabase, scope } = await requireClientScope("client_portal.read");
     if (scope.primaryClientId) {
-      identityLogo = await loadIdentityLogoForClientId(scopedSupabase, scope.primaryClientId);
-      const { data } = await scopedSupabase
+      const identityDb = tryCreateServiceRoleClient().client ?? scopedSupabase;
+      identityLogo = await loadIdentityLogoForPortalClient(scopedSupabase, scope.primaryClientId);
+      const { data } = await identityDb
         .from("clients")
         .select("name")
         .eq("id", scope.primaryClientId)
