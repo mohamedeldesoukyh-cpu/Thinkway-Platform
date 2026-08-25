@@ -316,6 +316,7 @@ export async function createClientReviewFromShortlist(
       shortlistId: header.id,
       campaignHeaderId: header.campaign_header_id,
       clientLabel,
+      brandName,
     })) ?? undefined;
 
   return persistClientReview({

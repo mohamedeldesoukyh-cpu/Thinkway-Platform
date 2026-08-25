@@ -22,13 +22,16 @@ import {
 import { ClientReviewSendDialog } from "@/features/client-workspace/components/client-review-send-dialog";
 import { ClientReviewShareDialog } from "@/features/client-workspace/components/client-review-share-dialog";
 import {
+  readClientReviewShare,
   rememberClientReviewShare,
   reviewIdFromShareUrl,
 } from "@/features/client-workspace/client-review-share-memory";
 import {
+  clientReviewShareHasLink,
   quotationClientShareRequiresSave,
   quotationIsMovedToCampaign,
 } from "@/features/client-workspace/client-review-selection";
+import { CLIENT_REVIEW_LINK_MISSING_MESSAGE } from "@/features/client-workspace/constants";
 import { ClientWorkspaceDisplayToggles } from "@/features/commercial/components/show-original-currency-toggle";
 import { EntityPrevNext } from "@/components/navigation/entity-prev-next";
 import {
@@ -90,7 +93,9 @@ export function QuotationWorkspaceHeader({
   const [shareOpen, setShareOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareReviewNumber, setShareReviewNumber] = useState<number | undefined>(undefined);
-  const [hasLink, setHasLink] = useState(false);
+  const shareScope = { source: "quotation" as const, id: detail.id };
+  const movedToCampaign = quotationIsMovedToCampaign(detail);
+  const [hasLink, setHasLink] = useState(() => Boolean(readClientReviewShare(shareScope)));
   const [sendOpen, setSendOpen] = useState(false);
   const [showOriginalCurrency, setOptimisticShowOriginalCurrency] = useOptimistic(
     Boolean(detail.showOriginalCurrency)
@@ -99,12 +104,12 @@ export function QuotationWorkspaceHeader({
     Boolean(detail.hideCostAndFees)
   );
   const campaignSeed = useMemo(() => seedFromQuotation(detail), [detail]);
-  const shareScope = { source: "quotation" as const, id: detail.id };
-  const movedToCampaign = quotationIsMovedToCampaign(detail);
 
   useEffect(() => {
+    const scope = { source: "quotation" as const, id: detail.id };
+    setHasLink(Boolean(readClientReviewShare(scope)));
     void peekClientReviewShareAction({ source: "quotation", quotationId: detail.id }).then((result) => {
-      setHasLink(result.exists);
+      setHasLink(clientReviewShareHasLink(result.exists, Boolean(readClientReviewShare(scope))));
       if (result.reviewNumber != null) setShareReviewNumber(result.reviewNumber);
     });
   }, [detail.id]);
@@ -129,17 +134,25 @@ export function QuotationWorkspaceHeader({
       return;
     }
     startLinkTransition(async () => {
-      if (hasLink && !movedToCampaign) {
-        const revealed = await revealClientReviewLinkAction({
-          source: "quotation",
-          quotationId: detail.id,
-        });
-        if (!revealed.ok) {
-          toast.error(revealed.message);
-          return;
-        }
+      const cached = readClientReviewShare(shareScope);
+      if (cached) {
+        setShareUrl(cached.url);
+        setShareReviewNumber(cached.reviewNumber);
+        setHasLink(true);
+        setShareOpen(true);
+        return;
+      }
+      const revealed = await revealClientReviewLinkAction({
+        source: "quotation",
+        quotationId: detail.id,
+      });
+      if (revealed.ok) {
         rememberShare(revealed.url, revealed.reviewNumber);
         setShareOpen(true);
+        return;
+      }
+      if (revealed.message !== CLIENT_REVIEW_LINK_MISSING_MESSAGE) {
+        toast.error(revealed.message);
         return;
       }
       const res = await createClientReviewFromQuotationAction({ quotationId: detail.id });

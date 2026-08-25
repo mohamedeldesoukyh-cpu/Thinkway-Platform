@@ -42,6 +42,16 @@ export function identityClientLabelCandidates(labels: Array<string | null | unde
   return out;
 }
 
+export function identityLookupLabels(
+  clientLabel?: string | null,
+  brandName?: string | null
+): string[] {
+  const brandKey = brandName?.trim().toLowerCase() || "";
+  return identityClientLabelCandidates([
+    clientLabel && clientLabel.trim().toLowerCase() !== brandKey ? clientLabel : null,
+  ]);
+}
+
 export async function loadIdentityLogoForClientId(
   supabase: IdentityDb,
   clientId: string | null | undefined
@@ -123,10 +133,15 @@ export async function loadIdentityLogoForReview(
     shortlistId?: string | null;
     campaignHeaderId?: string | null;
     clientLabel?: string | null;
+    brandName?: string | null;
   }
 ): Promise<IdentityLogo | null> {
   const candidateIds: Array<string | null | undefined> = [];
-  const labels: Array<string | null | undefined> = [input.clientLabel];
+  const brandKey = input.brandName?.trim().toLowerCase() || "";
+  const labels: Array<string | null | undefined> = identityLookupLabels(
+    input.clientLabel,
+    input.brandName
+  );
   let brandId: string | null = null;
   let headerId = input.campaignHeaderId?.trim() || null;
 
@@ -190,6 +205,7 @@ export async function loadIdentityLogoForReview(
   }
 
   for (const label of identityClientLabelCandidates(labels)) {
+    if (brandKey && label.trim().toLowerCase() === brandKey) continue;
     const logo = await loadIdentityLogoByClientLabel(supabase, label);
     if (logo) return logo;
   }

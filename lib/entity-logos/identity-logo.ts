@@ -32,6 +32,22 @@ export function pickIdentityLogo(input: {
       alt: input.clientName?.trim() || "Client",
     };
   }
+  const groupName = input.groupName?.trim();
+  if (groupName) {
+    return {
+      url: "",
+      source: "group",
+      alt: groupName,
+    };
+  }
+  const clientName = input.clientName?.trim();
+  if (clientName) {
+    return {
+      url: "",
+      source: "client",
+      alt: clientName,
+    };
+  }
   return null;
 }
 

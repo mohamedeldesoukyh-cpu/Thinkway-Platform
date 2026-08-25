@@ -1,6 +1,7 @@
 import { logAuditEvent } from "@/lib/audit/log-audit-event";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { randomBytes } from "node:crypto";
+import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
 
 import {
   CLIENT_REVIEW_LINK_MISSING_MESSAGE,
@@ -9,7 +10,12 @@ import {
   type ClientReviewStatus,
 } from "./constants";
 import { isReusableClientReviewTip } from "./status";
-import { clientSelectionsEqual, mergePersistedClientSelection } from "./client-review-selection";
+import {
+  clientReviewSharePeekExists,
+  clientSelectionsEqual,
+  collectQuotationFamilyIds,
+  mergePersistedClientSelection,
+} from "./client-review-selection";
 import { hydrateClientSelection, resolveClientSelectionFreeze } from "./selection-flow";
 import { parseSourceSnapshot } from "./snapshot";
 import { diffClientReviewSnapshots, retainCreatorBriefs } from "./snapshot-diff";
@@ -107,6 +113,32 @@ export function applyReviewScope<T extends { eq: (column: string, value: string)
   return query.eq("quotation_id", scope.quotationId);
 }
 
+function shareLookupClient(supabase: SupabaseClient): SupabaseClient {
+  return tryCreateServiceRoleClient().client ?? supabase;
+}
+
+export async function quotationIdsForClientShare(
+  supabase: SupabaseClient,
+  quotationId: string
+): Promise<string[]> {
+  const { data } = await supabase
+    .from("quotations")
+    .select("id, parent_quotation_id")
+    .eq("id", quotationId)
+    .maybeSingle();
+  const row = data as { id?: string; parent_quotation_id?: string | null } | null;
+  const rootId = row?.parent_quotation_id?.trim() || quotationId;
+  const { data: family } = await supabase
+    .from("quotations")
+    .select("id")
+    .or(`id.eq.${rootId},parent_quotation_id.eq.${rootId}`);
+  return collectQuotationFamilyIds({
+    quotationId,
+    parentQuotationId: row?.parent_quotation_id,
+    familyIds: (family ?? []).map((item) => (item as { id?: string | null }).id),
+  });
+}
+
 function fingerprintsEqual(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
@@ -161,16 +193,9 @@ async function findJourneyForScope(
       .maybeSingle();
     if (data) return data as JourneyRow;
   }
-  const quotationIds = [input.quotationId].filter((value): value is string => Boolean(value));
-  if (input.quotationId) {
-    const { data: quote } = await supabase
-      .from("quotations")
-      .select("id, parent_quotation_id")
-      .eq("id", input.quotationId)
-      .maybeSingle();
-    const parentId = (quote as { parent_quotation_id?: string | null } | null)?.parent_quotation_id;
-    if (parentId) quotationIds.push(parentId);
-  }
+  const quotationIds = input.quotationId
+    ? await quotationIdsForClientShare(supabase, input.quotationId)
+    : [];
   for (const quotationId of quotationIds) {
     const { data } = await supabase
       .from("campaign_client_journeys" as never)
@@ -638,11 +663,17 @@ export async function revealClientReviewShareLink(input: {
   | { ok: true; url: string; reviewId: string; reviewNumber: number; created: boolean }
   | { ok: false; message: string }
 > {
-  let query = input.supabase
+  const db = shareLookupClient(input.supabase);
+  let query = db
     .from("campaign_client_reviews" as never)
-    .select("id, review_number, status, share_token, journey_id")
+    .select("id, review_number, status, share_token, journey_id, quotation_id")
     .eq("source", input.scope.source);
-  query = applyReviewScope(query, input.scope);
+  if (input.scope.source === "quotation") {
+    const ids = await quotationIdsForClientShare(db, input.scope.quotationId);
+    query = query.in("quotation_id", ids);
+  } else {
+    query = applyReviewScope(query, input.scope);
+  }
   const { data } = await query.order("review_number", { ascending: false }).limit(1).maybeSingle();
   const row = data as {
     id: string;
@@ -651,56 +682,67 @@ export async function revealClientReviewShareLink(input: {
     share_token?: string | null;
     journey_id?: string | null;
   } | null;
-  if (!row) {
-    return {
-      ok: false,
-      message: CLIENT_REVIEW_LINK_MISSING_MESSAGE,
-    };
-  }
-  if (row.status === "revoked") {
-    return {
-      ok: false,
-      message: "The latest Client Workspace version is no longer active. Generate a new link.",
-    };
-  }
-
   const origin = input.origin.replace(/\/$/, "");
-  const share = await shareFromJourneyOrReview(
-    input.supabase,
-    origin,
-    { id: row.id, journeyId: row.journey_id },
-    row.share_token?.trim() || ""
-  );
-  if (share.token) {
+
+  if (row && row.status !== "revoked") {
+    const share = await shareFromJourneyOrReview(
+      db,
+      origin,
+      { id: row.id, journeyId: row.journey_id },
+      row.share_token?.trim() || ""
+    );
+    if (share.token) {
+      return {
+        ok: true,
+        url: share.url,
+        reviewId: share.reviewId,
+        reviewNumber: row.review_number,
+        created: false,
+      };
+    }
+
+    const token = randomBytes(16).toString("hex");
+    const tokenHash = hashClientReviewToken(token);
+    const { error } = await db
+      .from("campaign_client_reviews" as never)
+      .update({
+        share_token: token,
+        token_hash: tokenHash,
+        updated_at: new Date().toISOString(),
+      } as never)
+      .eq("id", row.id);
+    if (error) {
+      return { ok: false, message: error.message || "Could not load the Client Workspace link." };
+    }
+
     return {
       ok: true,
-      url: share.url,
-      reviewId: share.reviewId,
+      url: `${origin}${buildClientReviewPath(row.id, token)}`,
+      reviewId: row.id,
       reviewNumber: row.review_number,
       created: false,
     };
   }
 
-  const token = randomBytes(16).toString("hex");
-  const tokenHash = hashClientReviewToken(token);
-  const { error } = await input.supabase
-    .from("campaign_client_reviews" as never)
-    .update({
-      share_token: token,
-      token_hash: tokenHash,
-      updated_at: new Date().toISOString(),
-    } as never)
-    .eq("id", row.id);
-  if (error) {
-    return { ok: false, message: error.message || "Could not load the Client Workspace link." };
+  const journey = await findJourneyForScope(db, {
+    source: input.scope.source,
+    shortlistId: input.scope.source === "shortlist" ? input.scope.shortlistId : null,
+    quotationId: input.scope.source === "quotation" ? input.scope.quotationId : null,
+    campaignHeaderId: null,
+  });
+  if (journey?.share_token?.trim() && journey.landing_review_id) {
+    return {
+      ok: true,
+      url: canonicalShareUrl(origin, journey.landing_review_id, journey.share_token.trim()),
+      reviewId: journey.landing_review_id,
+      reviewNumber: row?.review_number ?? 1,
+      created: false,
+    };
   }
 
   return {
-    ok: true,
-    url: `${origin}${buildClientReviewPath(row.id, token)}`,
-    reviewId: row.id,
-    reviewNumber: row.review_number,
-    created: false,
+    ok: false,
+    message: CLIENT_REVIEW_LINK_MISSING_MESSAGE,
   };
 }
 
@@ -708,15 +750,31 @@ export async function peekClientReviewShareLink(input: {
   supabase: SupabaseClient;
   scope: ReviewScope;
 }): Promise<{ exists: boolean; reviewNumber?: number }> {
-  let query = input.supabase
+  const db = shareLookupClient(input.supabase);
+  let query = db
     .from("campaign_client_reviews" as never)
     .select("review_number, status")
     .eq("source", input.scope.source);
-  query = applyReviewScope(query, input.scope);
+  if (input.scope.source === "quotation") {
+    const ids = await quotationIdsForClientShare(db, input.scope.quotationId);
+    query = query.in("quotation_id", ids);
+  } else {
+    query = applyReviewScope(query, input.scope);
+  }
   const { data } = await query.order("review_number", { ascending: false }).limit(1).maybeSingle();
   const row = data as { review_number: number; status: ClientReviewStatus } | null;
-  if (!row || row.status === "revoked" || row.status === "superseded") {
-    return { exists: false };
+  if (row && clientReviewSharePeekExists(row.status)) {
+    return { exists: true, reviewNumber: row.review_number };
   }
-  return { exists: true, reviewNumber: row.review_number };
+
+  const journey = await findJourneyForScope(db, {
+    source: input.scope.source,
+    shortlistId: input.scope.source === "shortlist" ? input.scope.shortlistId : null,
+    quotationId: input.scope.source === "quotation" ? input.scope.quotationId : null,
+    campaignHeaderId: null,
+  });
+  if (journey?.share_token?.trim()) {
+    return { exists: true };
+  }
+  return { exists: false };
 }

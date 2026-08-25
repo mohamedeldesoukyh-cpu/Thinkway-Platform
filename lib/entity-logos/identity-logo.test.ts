@@ -47,6 +47,29 @@ test("identity logo is omitted when neither group nor client has a logo", () => 
   assert.equal(pickIdentityLogo({ brandLogoUrl: "https://cdn.example/brand.png" } as never), null);
 });
 
+test("identity uses the legal entity name when there is no logo file", () => {
+  const picked = pickIdentityLogo({
+    groupLogoUrl: null,
+    clientLogoUrl: null,
+    clientName: "Bundle Plus Communication",
+  });
+  assert.equal(picked?.source, "client");
+  assert.equal(picked?.url, "");
+  assert.equal(picked?.alt, "Bundle Plus Communication");
+});
+
+test("identity never uses a brand name or brand logo", () => {
+  assert.equal(
+    pickIdentityLogo({
+      groupLogoUrl: null,
+      clientLogoUrl: null,
+      clientName: null,
+      groupName: null,
+    }),
+    null
+  );
+});
+
 test("entity logo helpers accept image types and parse storage paths", () => {
   assert.equal(parseEntityLogoKind("group"), "group");
   assert.equal(parseEntityLogoKind("vendor"), null);

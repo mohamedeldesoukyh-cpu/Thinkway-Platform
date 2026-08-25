@@ -29,6 +29,11 @@ export function ClientWorkspaceIdentityMark({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={identityLogo.url} alt={identityLogo.alt} className="partner-logo" />
         </>
+      ) : identityLogo?.alt ? (
+        <>
+          <span className="logo-divider" aria-hidden="true" />
+          <span className="partner-name">{identityLogo.alt}</span>
+        </>
       ) : null}
     </div>
   );

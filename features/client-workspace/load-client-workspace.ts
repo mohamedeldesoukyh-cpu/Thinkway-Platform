@@ -627,6 +627,7 @@ export async function loadClientWorkspace(
         view.overview.clientLabel ||
         activeReview.clientLabel ||
         activeReview.sourceSnapshot?.clientLabel,
+      brandName: view.overview.brandName,
     });
     view.identityLogo = liveLogo ?? view.identityLogo ?? null;
   } catch {

@@ -13,6 +13,33 @@ type PortalShellProps = {
   children: React.ReactNode;
 };
 
+function PortalPartnerMark({ identityLogo }: { identityLogo?: IdentityLogo | null }) {
+  if (identityLogo?.url) {
+    return (
+      <>
+        <span className="h-5 w-px shrink-0 bg-border" aria-hidden="true" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={identityLogo.url}
+          alt={identityLogo.alt}
+          className="h-8 w-auto max-w-[132px] object-contain"
+        />
+      </>
+    );
+  }
+  if (identityLogo?.alt) {
+    return (
+      <>
+        <span className="h-5 w-px shrink-0 bg-border" aria-hidden="true" />
+        <span className="max-w-[132px] truncate text-sm font-semibold tracking-tight">
+          {identityLogo.alt}
+        </span>
+      </>
+    );
+  }
+  return null;
+}
+
 export function PortalShell({
   title,
   description,
@@ -27,17 +54,7 @@ export function PortalShell({
         <div className="mb-6">
           <div className="flex items-center gap-3">
             <ThinkwayLogo className="mb-0" />
-            {identityLogo?.url ? (
-              <>
-                <span className="h-5 w-px shrink-0 bg-border" aria-hidden="true" />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={identityLogo.url}
-                  alt={identityLogo.alt}
-                  className="h-8 w-auto max-w-[132px] object-contain"
-                />
-              </>
-            ) : null}
+            <PortalPartnerMark identityLogo={identityLogo} />
           </div>
           <p className="mt-2 text-xs text-muted-foreground">{userLabel ?? "Portal user"}</p>
         </div>
@@ -50,17 +67,7 @@ export function PortalShell({
         <header className="border-b border-border px-4 py-4 md:px-8">
           <div className="mb-3 flex items-center gap-3 md:hidden">
             <ThinkwayLogo className="mb-0" />
-            {identityLogo?.url ? (
-              <>
-                <span className="h-5 w-px shrink-0 bg-border" aria-hidden="true" />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={identityLogo.url}
-                  alt={identityLogo.alt}
-                  className="h-8 w-auto max-w-[132px] object-contain"
-                />
-              </>
-            ) : null}
+            <PortalPartnerMark identityLogo={identityLogo} />
           </div>
           <h1 className="font-heading text-xl font-semibold tracking-tight">{title}</h1>
           {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}

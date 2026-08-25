@@ -39,6 +39,7 @@ import {
   reviewIdFromShareUrl,
 } from "@/features/client-workspace/client-review-share-memory";
 import { CLIENT_REVIEW_LINK_MISSING_MESSAGE } from "@/features/client-workspace/constants";
+import { clientReviewShareHasLink } from "@/features/client-workspace/client-review-selection";
 import { discoverySelectionFlyoutContentClass } from "@/features/discovery/components/design-system/discovery-selection-flyout";
 import { shortlistDetailPath } from "@/features/discovery/shortlists/constants";
 import { cn } from "@/lib/utils";
@@ -179,7 +180,9 @@ export function ShortlistWorkspace({
   const [shareOpen, setShareOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareReviewNumber, setShareReviewNumber] = useState<number | undefined>(undefined);
-  const [hasLink, setHasLink] = useState(false);
+  const [hasLink, setHasLink] = useState(() =>
+    Boolean(readClientReviewShare({ source: "shortlist", id: detail.id }))
+  );
   const [showOriginalCurrency, setOptimisticShowOriginalCurrency] = useOptimistic(
     Boolean(detail.showOriginalCurrency)
   );
@@ -216,8 +219,10 @@ export function ShortlistWorkspace({
   }, [detail.currency]);
 
   useEffect(() => {
+    const scope = { source: "shortlist" as const, id: detail.id };
+    setHasLink(Boolean(readClientReviewShare(scope)));
     void peekClientReviewShareAction({ source: "shortlist", shortlistId: detail.id }).then((result) => {
-      setHasLink(result.exists);
+      setHasLink(clientReviewShareHasLink(result.exists, Boolean(readClientReviewShare(scope))));
       if (result.reviewNumber != null) setShareReviewNumber(result.reviewNumber);
     });
   }, [detail.id]);

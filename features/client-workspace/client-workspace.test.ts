@@ -8,7 +8,10 @@ import { classifyApiPath, classifyPagePath } from "@/lib/security/workspace-clas
 
 import { CLIENT_CHANGE_AREAS, CLIENT_REVIEW_LINK_MISSING_MESSAGE, CLIENT_REVIEW_SOURCES, CLIENT_WORKSPACE_JOURNEY_SECTIONS, CLIENT_WORKSPACE_SECTION_LABEL } from "./constants";
 import {
+  clientReviewShareHasLink,
+  clientReviewSharePeekExists,
   clientSelectionsEqual,
+  collectQuotationFamilyIds,
   defaultQuotationClientSelection,
   mergePersistedClientSelection,
   quotationClientShareRequiresSave,
@@ -499,6 +502,25 @@ test("Show link does not require a save when the quotation already has a link or
     true
   );
   assert.equal(CLIENT_REVIEW_LINK_MISSING_MESSAGE, "Generate the Client Workspace link first.");
+});
+
+test("Show link stays visible for superseded reviews, quotation versions, and cached shares", () => {
+  assert.equal(clientReviewSharePeekExists("awaiting_review"), true);
+  assert.equal(clientReviewSharePeekExists("approved"), true);
+  assert.equal(clientReviewSharePeekExists("superseded"), true);
+  assert.equal(clientReviewSharePeekExists("revoked"), false);
+  assert.equal(clientReviewSharePeekExists(null), false);
+  assert.equal(clientReviewShareHasLink(false, true), true);
+  assert.equal(clientReviewShareHasLink(true, false), true);
+  assert.equal(clientReviewShareHasLink(false, false), false);
+  assert.deepEqual(
+    collectQuotationFamilyIds({
+      quotationId: "v2",
+      parentQuotationId: "v1",
+      familyIds: ["v1", "v2", "v3"],
+    }).sort(),
+    ["v1", "v2", "v3"]
+  );
 });
 
 test("campaign-linked quotation reviews replace previous in-review selection", () => {
