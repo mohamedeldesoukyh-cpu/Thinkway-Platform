@@ -20,7 +20,7 @@ import {
   QUOTATION_VERSION_PRESETS,
 } from "@/features/quotations/constants";
 import { useQuotationManualSave } from "@/features/quotations/components/quotation-manual-save";
-import { formatValidityLabel } from "@/features/quotations/quotation-validity";
+import { formatConvertedQuotationValidityLabel } from "@/features/quotations/quotation-validity";
 import type { QuotationDetail } from "@/features/quotations/types";
 import type { QuotationStatus } from "@/types/database";
 import { cn } from "@/lib/utils";
@@ -107,7 +107,11 @@ export function QuotationDocumentMetaPanel({ detail, layout = "default" }: Props
     <span className="thinkway-campaign-badge thinkway-campaign-badge-red">Expired</span>
   ) : (
     <span className="thinkway-campaign-badge thinkway-campaign-badge-amber">
-      {formatValidityLabel(detail.validity_date)}
+      {formatConvertedQuotationValidityLabel({
+        validityDate: detail.validity_date,
+        campaignHeaderId: detail.campaign_header_id,
+        status: detail.status,
+      })}
     </span>
   );
 

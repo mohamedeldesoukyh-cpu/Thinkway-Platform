@@ -27,7 +27,8 @@ import { QUOTATION_PERMISSIONS } from "@/lib/domains/commercial/quotation-consta
 import type { CommercialInputMode, Database, QuotationStatus } from "@/types/database";
 
 import {
-  isQuotationExpired,
+  isQuotationOfferExpired,
+  quotationIsConvertedToCampaign,
   validDaysRemaining,
 } from "@/lib/commercial/quotation-validity";
 import {
@@ -581,8 +582,17 @@ export async function getQuotationDetail(
     shared_with_client: Boolean(row.shared_with_client ?? row.client_visible),
     client_visible: Boolean(row.client_visible),
     is_archived: Boolean(row.is_archived),
-    is_expired: isQuotationExpired(validityDate),
-    valid_days_remaining: validDaysRemaining(validityDate),
+    is_expired: isQuotationOfferExpired({
+      validityDate,
+      campaignHeaderId,
+      status,
+    }),
+    valid_days_remaining: quotationIsConvertedToCampaign({
+      campaignHeaderId,
+      status,
+    })
+      ? null
+      : validDaysRemaining(validityDate),
     created_at: row.created_at as string,
     updated_at: row.updated_at as string,
     items,

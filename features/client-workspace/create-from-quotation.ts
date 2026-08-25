@@ -1,5 +1,7 @@
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
+import { isQuotationExpired } from "@/lib/commercial/quotation-validity";
 import { getQuotationDetail } from "@/lib/services/quotations/quotation-document-service";
+import { clearQuotationValidityAfterCampaign } from "@/lib/services/quotations/repositories/quotation-repository";
 import type { Database } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -63,6 +65,14 @@ export async function createClientReviewFromQuotation(
     };
   }
 
+  const movedToCampaign = quotationIsMovedToCampaign(detail);
+  if (movedToCampaign && isQuotationExpired(detail.validity_date)) {
+    await clearQuotationValidityAfterCampaign(
+      supabase as SupabaseClient<Database>,
+      detail.id
+    );
+  }
+
   const blockers = quotationReviewBlockers(detail, { allowEmptyItems: input.syncExistingOnly });
   if (blockers.length > 0) {
     return { ok: false, message: "Cannot create client review from this quotation.", blockers };
@@ -113,7 +123,6 @@ export async function createClientReviewFromQuotation(
       pooledCreators = snapshotCreators;
     }
   }
-  const movedToCampaign = quotationIsMovedToCampaign(detail);
   const selection = defaultQuotationClientSelection(
     pooledCreators.map((creator) => creator.creatorId),
     movedToCampaign

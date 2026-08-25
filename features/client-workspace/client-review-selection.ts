@@ -1,10 +1,15 @@
+import { quotationIsConvertedToCampaign } from "@/lib/commercial/quotation-validity";
+
 import type { ClientCreatorSelectionState } from "./constants";
 
 export function quotationIsMovedToCampaign(detail: {
   campaign_header_id?: string | null;
   status: string;
 }): boolean {
-  return Boolean(detail.campaign_header_id) || detail.status === "accepted";
+  return quotationIsConvertedToCampaign({
+    campaignHeaderId: detail.campaign_header_id,
+    status: detail.status,
+  });
 }
 
 export function defaultQuotationClientSelection(

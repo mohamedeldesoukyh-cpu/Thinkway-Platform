@@ -18,9 +18,9 @@ import {
 import { parseQuotationTermsText } from "@/features/quotations/quotation-default-terms";
 import { gpHealthExportColor } from "@/features/quotations/quotation-gp-health";
 import {
+  formatConvertedQuotationValidityLabel,
   formatDateLabel,
-  formatValidityLabel,
-  isQuotationExpired,
+  isQuotationOfferExpired,
 } from "@/features/quotations/quotation-validity";
 import type { QuotationDetail, QuotationItemRow } from "../types";
 import type { CreatorTierLabel } from "@/lib/creators/creator-tier";
@@ -924,11 +924,16 @@ export function buildQuotationDocument(
   const selectedAgencyMarginEgp = selectionActive
     ? selectedAfEgp
     : detail.total_agency_margin_egp;
-  const expired = detail.is_expired || isQuotationExpired(detail.validity_date);
+  const expired = isQuotationOfferExpired({
+    validityDate: detail.validity_date,
+    campaignHeaderId: detail.campaign_header_id,
+    status: detail.status,
+  });
   const statusLabel = resolveQuotationStatusLabel({
     status: detail.status,
     validityDate: detail.validity_date,
     isExpired: expired,
+    campaignHeaderId: detail.campaign_header_id,
   });
 
   const creatorGroups = groupQuotationExportItems(items).map((group) =>
@@ -1062,7 +1067,11 @@ export function buildQuotationDocument(
     status: detail.status,
     statusLabel,
     isExpired: expired,
-    validityLabel: formatValidityLabel(detail.validity_date),
+    validityLabel: formatConvertedQuotationValidityLabel({
+      validityDate: detail.validity_date,
+      campaignHeaderId: detail.campaign_header_id,
+      status: detail.status,
+    }),
     clientName: detail.client_name ?? "—",
     brandName: detail.brand_name ?? "—",
     campaignName: detail.campaign_name ?? "—",

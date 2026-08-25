@@ -1,6 +1,8 @@
 import type { QuotationDetail, QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 import { shouldIncludeItemInLiveTotals } from "@/lib/quotations/quotation-collapse-package";
 
+import { quotationIsMovedToCampaign } from "./client-review-selection";
+
 const BLOCKED_QUOTATION_STATUSES = new Set(["cancelled", "archived", "rejected"]);
 
 export function quotationItemsForClient(items: QuotationItemRow[]): QuotationItemRow[] {
@@ -40,7 +42,14 @@ export function shortlistReviewBlockers(input: {
 export function quotationReviewBlockers(
   detail: Pick<
     QuotationDetail,
-    "status" | "is_archived" | "is_expired" | "items" | "client_name" | "brand_name" | "name"
+    | "status"
+    | "is_archived"
+    | "is_expired"
+    | "items"
+    | "client_name"
+    | "brand_name"
+    | "name"
+    | "campaign_header_id"
   >,
   options?: { allowEmptyItems?: boolean }
 ): string[] {
@@ -51,7 +60,11 @@ export function quotationReviewBlockers(
   if (BLOCKED_QUOTATION_STATUSES.has(detail.status)) {
     blockers.push("This quotation is not current. Use a live quotation.");
   }
-  if (detail.is_expired) {
+  const movedToCampaign = quotationIsMovedToCampaign({
+    campaign_header_id: detail.campaign_header_id,
+    status: detail.status,
+  });
+  if (detail.is_expired && !movedToCampaign) {
     blockers.push("This quotation has expired. Refresh validity before sending to the client.");
   }
   const items = quotationItemsForClient(detail.items);

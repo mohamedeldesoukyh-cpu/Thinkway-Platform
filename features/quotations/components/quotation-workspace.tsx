@@ -74,6 +74,7 @@ import {
   type QuotationClientSelectionFilter,
 } from "@/features/quotations/quotation-client-review";
 import { quotationItemClientCreatorId } from "@/features/client-workspace/quotation-item-creator-id";
+import { quotationIsMovedToCampaign } from "@/features/client-workspace/client-review-selection";
 import { setQuotationReviewCreatorsOnBehalfAction } from "@/features/client-workspace/actions/internal-quotation-review-selection-action";
 import { QuotationClientBrandPanel } from "@/features/quotations/components/quotation-client-brand-panel";
 import { QuotationDocumentMetaPanel } from "@/features/quotations/components/quotation-document-meta-panel";
@@ -901,12 +902,14 @@ function QuotationWorkspaceContent({
         <QuotationLifecyclePills
           detail={detail}
           trailing={
-            <QuotationValidityBar
-              inline
-              validityDate={detail.validity_date}
-              validDaysRemaining={detail.valid_days_remaining}
-              isExpired={detail.is_expired}
-            />
+            quotationIsMovedToCampaign(detail) ? null : (
+              <QuotationValidityBar
+                inline
+                validityDate={detail.validity_date}
+                validDaysRemaining={detail.valid_days_remaining}
+                isExpired={detail.is_expired}
+              />
+            )
           }
         />
         {clientReview ? (

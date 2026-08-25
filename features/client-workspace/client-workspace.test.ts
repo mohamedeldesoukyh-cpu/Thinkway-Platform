@@ -390,6 +390,7 @@ test("quotation readiness requires a current quotation, not a Studio rebuild", (
     client_name: "Acme Legal",
     brand_name: "Acme",
     name: "Q-1",
+    campaign_header_id: null,
     items: [
       {
         id: "qi-1",
@@ -433,6 +434,22 @@ test("quotation readiness requires a current quotation, not a Studio rebuild", (
   );
   assert.ok(
     quotationReviewBlockers({ ...base, is_expired: true }).some((blocker) => /expired/i.test(blocker))
+  );
+  assert.equal(
+    quotationReviewBlockers({
+      ...base,
+      is_expired: true,
+      campaign_header_id: "hdr-1",
+    }).some((blocker) => /expired/i.test(blocker)),
+    false
+  );
+  assert.equal(
+    quotationReviewBlockers({
+      ...base,
+      is_expired: true,
+      status: "accepted",
+    }).some((blocker) => /expired/i.test(blocker)),
+    false
   );
   assert.ok(
     quotationReviewBlockers({ ...base, items: [] }).some((blocker) => /items/i.test(blocker))

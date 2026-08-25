@@ -25,6 +25,24 @@ export function isQuotationExpired(
   return days != null && days < 0;
 }
 
+/** Once converted, the quotation is no longer an expiring commercial offer. */
+export function quotationIsConvertedToCampaign(input: {
+  campaignHeaderId?: string | null;
+  status?: string | null;
+}): boolean {
+  return Boolean(input.campaignHeaderId?.trim()) || input.status === "accepted";
+}
+
+export function isQuotationOfferExpired(input: {
+  validityDate: string | null;
+  campaignHeaderId?: string | null;
+  status?: string | null;
+  asOf?: Date;
+}): boolean {
+  if (quotationIsConvertedToCampaign(input)) return false;
+  return isQuotationExpired(input.validityDate, input.asOf);
+}
+
 export function formatValidityLabel(validityDate: string | null): string {
   const days = validDaysRemaining(validityDate);
   if (days == null) return "—";
@@ -32,6 +50,15 @@ export function formatValidityLabel(validityDate: string | null): string {
   if (days === 0) return "Valid until end of today";
   if (days === 1) return "Valid for 1 day";
   return `Valid for ${days} days`;
+}
+
+export function formatConvertedQuotationValidityLabel(input: {
+  validityDate: string | null;
+  campaignHeaderId?: string | null;
+  status?: string | null;
+}): string {
+  if (quotationIsConvertedToCampaign(input)) return "Converted — no expiry";
+  return formatValidityLabel(input.validityDate);
 }
 
 export function formatDateLabel(isoDate: string | null | undefined): string {

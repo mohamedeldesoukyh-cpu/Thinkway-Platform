@@ -1,7 +1,14 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Open Client Workspace now live-hydrates creator categories, name, engagement, and publications from CRM/enrichment instead of keeping a frozen Beauty snapshot.
+**Focus:** Converted quotations are no longer expiring offers — Generate link must not fail with “expired”.
+
+- Once a quotation is linked to a campaign (`campaign_header_id` or status `accepted`), offer validity no longer applies. Convert clears `validity_date`; Generate link heals already-converted expired rows.
+- Client Workspace share blockers skip expiry for campaign-linked quotations. Workspace status/validity UI no longer shows Expired after convert.
+
+- Open Client Workspace now live-hydrates creator categories, name, engagement, and publications from CRM/enrichment instead of keeping a frozen Beauty snapshot.
+- Shortlist “Beauty” tags were imported Facebook/indaHash audience interests (and `#grwm` / Instagram page categories), not a live read of the creator’s content. Display now drops uncorroborated Beauty when another niche exists.
+- Interactive reviews overlay live unified creators. Approved / campaign-linked reviews stay frozen.
 
 - Shortlist “Beauty” tags were imported Facebook/indaHash audience interests (and `#grwm` / Instagram page categories), not a live read of the creator’s content. Display now drops uncorroborated Beauty when another niche exists.
 - Open Client Workspace previously hydrated CRM metrics only and skipped unified profile sync when every creator had an influencer id. Frozen snapshot categories (Beauty first) never updated after Refresh Metrics.

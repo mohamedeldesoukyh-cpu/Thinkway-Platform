@@ -752,6 +752,16 @@ export async function linkQuotationToShortlist(
     .eq("id", quotationId);
 }
 
+export async function clearQuotationValidityAfterCampaign(
+  supabase: SupabaseClient<Database>,
+  quotationId: string
+) {
+  return supabase
+    .from("quotations")
+    .update({ validity_date: null } as never)
+    .eq("id", quotationId);
+}
+
 export async function linkQuotationToCampaign(
   supabase: SupabaseClient<Database>,
   quotationId: string,
@@ -759,7 +769,7 @@ export async function linkQuotationToCampaign(
 ) {
   return supabase
     .from("quotations")
-    .update({ campaign_header_id: campaignId } as never)
+    .update({ campaign_header_id: campaignId, validity_date: null } as never)
     .eq("id", quotationId);
 }
 
