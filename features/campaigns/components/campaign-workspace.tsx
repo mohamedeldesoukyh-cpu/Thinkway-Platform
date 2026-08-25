@@ -90,6 +90,13 @@ export function CampaignWorkspaceView({
   const [resolverOpen, setResolverOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<CampaignWorkspaceTabId>(defaultTab);
   const [vendorIos, setVendorIos] = useState<VendorIoRow[]>(workspace.vendor_ios);
+  const [deliverablesDocsOpen, setDeliverablesDocsOpen] = useState(() =>
+    Boolean(searchParams.get("docsCreator") || searchParams.get("deliverable"))
+  );
+  const [deliverablesDocsFocus, setDeliverablesDocsFocus] = useState(() => ({
+    creatorId: searchParams.get("docsCreator"),
+    deliverableId: searchParams.get("deliverable"),
+  }));
   const campaignIdRef = useRef(workspace.id);
   const { tabOrder, moveTab } = useCampaignWorkspaceTabOrder();
 
@@ -149,6 +156,13 @@ export function CampaignWorkspaceView({
     if (campaignIdRef.current === workspace.id) return;
     campaignIdRef.current = workspace.id;
     setActiveTab(defaultTab);
+    setDeliverablesDocsOpen(
+      Boolean(searchParams.get("docsCreator") || searchParams.get("deliverable"))
+    );
+    setDeliverablesDocsFocus({
+      creatorId: searchParams.get("docsCreator"),
+      deliverableId: searchParams.get("deliverable"),
+    });
   }, [workspace.id, defaultTab]);
 
   useEffect(() => {
@@ -178,6 +192,33 @@ export function CampaignWorkspaceView({
     },
     [pathname]
   );
+
+  const openDeliverableDocumentation = useCallback(
+    (focus?: { creatorId?: string | null; deliverableId?: string | null }) => {
+      setDeliverablesDocsOpen(true);
+      setDeliverablesDocsFocus({
+        creatorId: focus?.creatorId ?? null,
+        deliverableId: focus?.deliverableId ?? null,
+      });
+    },
+    []
+  );
+
+  const closeDeliverableDocumentation = useCallback(() => {
+    setDeliverablesDocsOpen(false);
+    setDeliverablesDocsFocus({ creatorId: null, deliverableId: null });
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has("docsCreator") && !params.has("deliverable")) return;
+    params.delete("docsCreator");
+    params.delete("deliverable");
+    const query = params.toString();
+    window.history.replaceState(
+      window.history.state,
+      "",
+      query ? `${pathname}?${query}` : pathname
+    );
+  }, [pathname]);
 
   const operationalDeliverableCount = useMemo(() => {
     if (bundleStatuses.publications === "loaded") {
@@ -593,21 +634,25 @@ export function CampaignWorkspaceView({
                 <TabErrorBoundary tabName="Deliverables">
                   {/*
                     STAB-007: tab badge counts operational deliverable units.
-                    Default surface must be the operational explorer (not empty documentation repo).
-                    Documentation remains available via deep-link (?docsCreator= / ?deliverable=).
+                    Default surface is the operational explorer. Upload for client
+                    review lives in the documentation repository, opened from the
+                    explorer (local state — history.replaceState does not update
+                    Next searchParams).
                   */}
-                  {searchParams.get("docsCreator") || searchParams.get("deliverable") ? (
+                  {deliverablesDocsOpen ? (
                     <CampaignDeliverablesDocumentationTab
                       workspace={workspace}
                       assignmentHierarchy={assignmentHierarchy}
-                      initialCreatorFilter={searchParams.get("docsCreator")}
-                      initialDeliverableId={searchParams.get("deliverable")}
+                      initialCreatorFilter={deliverablesDocsFocus.creatorId}
+                      initialDeliverableId={deliverablesDocsFocus.deliverableId}
+                      onBackToSchedule={closeDeliverableDocumentation}
                     />
                   ) : (
                     <CampaignDeliverablesTab
                       workspace={workspace}
                       assignmentHierarchy={assignmentHierarchy}
                       publications={publications}
+                      onOpenDocumentation={openDeliverableDocumentation}
                     />
                   )}
                 </TabErrorBoundary>

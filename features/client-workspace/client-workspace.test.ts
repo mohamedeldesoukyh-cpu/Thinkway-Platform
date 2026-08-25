@@ -4850,6 +4850,120 @@ test("Stage 3: live creator appears as Live from posted or publication URL/date"
   assert.equal(fromUrl.posts[0]?.contentUrl, "https://instagram.com/reel/live");
 });
 
+test("Stage 3: unlinked Performance publication still appears in Client Workspace", () => {
+  const linkedByLine = projectClientCampaignExecution(
+    "hdr-1",
+    stage3Source({
+      influencers: [
+        { campaignLineId: "line-1", influencerId: "inf-nadine", displayName: "Nadine Ladki" },
+      ],
+      posts: [stage3Post({ id: "post-nadine", liveDate: "2026-08-20", status: "scheduled" })],
+      publications: [
+        {
+          id: "pub-nadine-line",
+          assignmentDeliverableId: null,
+          assignmentPostScheduleId: null,
+          campaignLineId: "line-1",
+          platform: "instagram",
+          contentUrl: "https://instagram.com/reel/nadineladki14",
+          publicationDate: "2026-08-18",
+          status: "published",
+        },
+      ],
+    }),
+    "2026-08-22"
+  );
+  assert.equal(linkedByLine.posts.length, 1);
+  assert.equal(linkedByLine.posts[0]?.creatorName, "Nadine Ladki");
+  assert.equal(linkedByLine.posts[0]?.status, "live");
+  assert.equal(linkedByLine.posts[0]?.contentUrl, "https://instagram.com/reel/nadineladki14");
+
+  const linkedByInfluencer = projectClientCampaignExecution(
+    "hdr-1",
+    stage3Source({
+      influencers: [
+        { campaignLineId: "line-1", influencerId: "inf-nadine", displayName: "Nadine Ladki" },
+      ],
+      posts: [stage3Post({ id: "post-nadine", liveDate: "2026-08-20", status: "scheduled" })],
+      publications: [
+        {
+          id: "pub-nadine-influencer",
+          assignmentDeliverableId: null,
+          assignmentPostScheduleId: null,
+          campaignLineId: null,
+          influencerId: "inf-nadine",
+          platform: "instagram",
+          contentUrl: "https://instagram.com/reel/handle-only",
+          publicationDate: "2026-08-18",
+          status: "published",
+        },
+      ],
+    }),
+    "2026-08-22"
+  );
+  assert.equal(linkedByInfluencer.posts.length, 1);
+  assert.equal(linkedByInfluencer.posts[0]?.creatorName, "Nadine Ladki");
+  assert.equal(linkedByInfluencer.posts[0]?.status, "live");
+  assert.equal(linkedByInfluencer.posts[0]?.contentUrl, "https://instagram.com/reel/handle-only");
+
+  const leftoverHandle = projectClientCampaignExecution(
+    "hdr-1",
+    stage3Source({
+      posts: [stage3Post({ id: "post-other", liveDate: "2026-09-01", status: "scheduled" })],
+      publications: [
+        {
+          id: "pub-nadine-handle",
+          assignmentDeliverableId: null,
+          assignmentPostScheduleId: null,
+          campaignLineId: null,
+          influencerName: "nadineladki14",
+          platform: "tiktok",
+          contentUrl: "https://www.tiktok.com/@nadineladki14/video/123",
+          publicationDate: "2026-08-19",
+          status: "published",
+        },
+      ],
+    }),
+    "2026-08-22"
+  );
+  const leftover = leftoverHandle.posts.find((row) => row.id === "publication:pub-nadine-handle");
+  assert.equal(leftover?.creatorName, "nadineladki14");
+  assert.equal(leftover?.status, "live");
+  assert.equal(leftover?.contentUrl, "https://www.tiktok.com/@nadineladki14/video/123");
+
+  const notConsumedByCancelled = projectClientCampaignExecution(
+    "hdr-1",
+    stage3Source({
+      influencers: [
+        { campaignLineId: "line-1", influencerId: "inf-nadine", displayName: "Nadine Ladki" },
+      ],
+      posts: [stage3Post({ id: "post-cancelled", liveDate: "2026-08-10", status: "cancelled" })],
+      publications: [
+        {
+          id: "pub-live-unlinked",
+          assignmentDeliverableId: null,
+          assignmentPostScheduleId: null,
+          campaignLineId: "line-1",
+          influencerId: "inf-nadine",
+          platform: "instagram",
+          contentUrl: "https://instagram.com/p/live-nadine",
+          publicationDate: "2026-08-12",
+          status: "published",
+        },
+      ],
+    }),
+    "2026-08-22"
+  );
+  assert.equal(
+    notConsumedByCancelled.posts.some((row) => row.status === "live" && row.creatorName === "Nadine Ladki"),
+    true
+  );
+  assert.equal(
+    notConsumedByCancelled.posts[0]?.contentUrl,
+    "https://instagram.com/p/live-nadine"
+  );
+});
+
 test("Stage 3: publication date appears when available", () => {
   const projected = projectClientCampaignExecution(
     "hdr-1",

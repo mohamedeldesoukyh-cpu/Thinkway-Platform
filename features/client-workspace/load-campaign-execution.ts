@@ -30,6 +30,7 @@ type PublicationRow = {
   assignment_deliverable_id: string | null;
   assignment_post_schedule_id: string | null;
   campaign_line_id: string | null;
+  influencer_id: string | null;
   platform: string | null;
   content_url: string | null;
   publication_date: string | null;
@@ -54,6 +55,7 @@ type PublicationRow = {
 };
 type InfluencerRow = {
   campaign_line_id: string | null;
+  influencer_id: string | null;
   influencer: { display_name: string | null } | { display_name: string | null }[] | null;
 };
 
@@ -84,12 +86,12 @@ export async function loadClientCampaignExecution(
       supabase
         .from("campaign_publications")
         .select(
-          "id, assignment_deliverable_id, assignment_post_schedule_id, campaign_line_id, platform, content_url, publication_date, status, views, likes, comments, shares, reach, actual_reach, forecast_reach, reach_source, impressions, actual_impressions, forecast_impressions, impressions_source, engagement_rate, engagement_views, engagement_likes, engagement_comments, engagement_shares"
+          "id, assignment_deliverable_id, assignment_post_schedule_id, campaign_line_id, influencer_id, platform, content_url, publication_date, status, views, likes, comments, shares, reach, actual_reach, forecast_reach, reach_source, impressions, actual_impressions, forecast_impressions, impressions_source, engagement_rate, engagement_views, engagement_likes, engagement_comments, engagement_shares"
         )
         .eq("campaign_header_id", headerId),
       supabase
         .from("campaign_influencers")
-        .select("campaign_line_id, influencer:influencers(display_name)")
+        .select("campaign_line_id, influencer_id, influencer:influencers(display_name)")
         .eq("campaign_header_id", headerId),
     ]);
 
@@ -113,6 +115,7 @@ export async function loadClientCampaignExecution(
       })),
       influencers: ((influencersResult.data ?? []) as InfluencerRow[]).map((row) => ({
         campaignLineId: row.campaign_line_id,
+        influencerId: row.influencer_id,
         displayName: influencerName(row),
       })),
       deliverables: ((deliverablesResult.data ?? []) as DeliverableRow[]).map((row) => ({
@@ -137,6 +140,7 @@ export async function loadClientCampaignExecution(
         assignmentDeliverableId: row.assignment_deliverable_id,
         assignmentPostScheduleId: row.assignment_post_schedule_id,
         campaignLineId: row.campaign_line_id,
+        influencerId: row.influencer_id,
         platform: row.platform,
         contentUrl: row.content_url,
         publicationDate: row.publication_date,

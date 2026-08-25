@@ -2,7 +2,9 @@
 
 import { format, isValid, parseISO } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
-import { SearchIcon } from "lucide-react";
+import { SearchIcon, UploadIcon } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 
 import {
   OperationalConfigurableTable,
@@ -43,6 +45,10 @@ type CampaignDeliverablesTabProps = {
   workspace: CampaignWorkspace;
   assignmentHierarchy: AssignmentHierarchy;
   publications?: CampaignPublicationRow[];
+  onOpenDocumentation?: (focus?: {
+    creatorId?: string | null;
+    deliverableId?: string | null;
+  }) => void;
 };
 
 function safeFormatDate(value: string | null | undefined): string {
@@ -61,7 +67,8 @@ function uniqueSorted(values: string[]): string[] {
 }
 
 function buildDeliverablesColumns(
-  onOpenDetail: (id: string) => void
+  onOpenDetail: (id: string) => void,
+  onOpenDocumentation?: CampaignDeliverablesTabProps["onOpenDocumentation"]
 ): OperationalConfigurableColumnDef<OperationalDeliverableExplorerRow>[] {
   return [
     {
@@ -134,6 +141,28 @@ function buildDeliverablesColumns(
       label: "Billing",
       renderCell: (row) => <DeliverableExplorerBillingBadge status={row.billing_status} />,
     },
+    ...(onOpenDocumentation
+      ? [
+          {
+            id: "client_review",
+            label: "Client review",
+            renderCell: (row: OperationalDeliverableExplorerRow) => (
+              <button
+                type="button"
+                onClick={() =>
+                  onOpenDocumentation({
+                    creatorId: row.influencer_id,
+                    deliverableId: row.assignment_deliverable_id,
+                  })
+                }
+                className="text-[11px] font-semibold text-[var(--camp-blue)] hover:underline"
+              >
+                Upload
+              </button>
+            ),
+          } satisfies OperationalConfigurableColumnDef<OperationalDeliverableExplorerRow>,
+        ]
+      : []),
   ];
 }
 
@@ -141,6 +170,7 @@ export function CampaignDeliverablesTab({
   workspace,
   assignmentHierarchy,
   publications = [],
+  onOpenDocumentation,
 }: CampaignDeliverablesTabProps) {
   const [search, setSearch] = useState("");
   const [platformFilter, setPlatformFilter] = useState(ALL);
@@ -212,8 +242,8 @@ export function CampaignDeliverablesTab({
   ]);
 
   const columns = useMemo(
-    () => buildDeliverablesColumns(setDetailDeliverableId),
-    []
+    () => buildDeliverablesColumns(setDetailDeliverableId, onOpenDocumentation),
+    [onOpenDocumentation]
   );
   const columnMetas = useMemo(() => getOperationalTableColumnMetas(columns), [columns]);
 
@@ -245,6 +275,7 @@ export function CampaignDeliverablesTab({
           status: (row) => row.workflow_status,
           content: (row) => row.notes ?? row.publication_status,
           billing: (row) => row.billing_status,
+          client_review: () => "upload",
         }}
       >
         <OperationalTableSection
@@ -255,8 +286,24 @@ export function CampaignDeliverablesTab({
             <CampaignOperationalSectionHeader
               title="Deliverables"
               countLabel={`${filtered.length} of ${rows.length}`}
-              description="Operational explorer — synced from assignment deliverables and post schedules."
-              actions={<OperationalTableControlsSlot contextLabel="Campaign deliverables" />}
+              description="Operational explorer — synced from assignment deliverables and post schedules. Upload content here for client review."
+              actions={
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {onOpenDocumentation ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none"
+                      onClick={() => onOpenDocumentation()}
+                    >
+                      <UploadIcon className="size-3" aria-hidden />
+                      Upload content for client review
+                    </Button>
+                  ) : null}
+                  <OperationalTableControlsSlot contextLabel="Campaign deliverables" />
+                </div>
+              }
             />
           }
           toolbar={
@@ -349,6 +396,15 @@ export function CampaignDeliverablesTab({
         }}
         row={detailRow}
         campaignName={workspace.name}
+        onUploadContent={
+          onOpenDocumentation && detailRow
+            ? () =>
+                onOpenDocumentation({
+                  creatorId: detailRow.influencer_id,
+                  deliverableId: detailRow.assignment_deliverable_id,
+                })
+            : undefined
+        }
       />
     </>
   );

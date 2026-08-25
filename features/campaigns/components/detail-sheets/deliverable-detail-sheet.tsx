@@ -17,12 +17,14 @@ import type { AssignmentDeliverableBillingStatus } from "@/features/billing/type
 import type { OperationalDeliverableExplorerRow } from "@/features/campaigns/types/operational-deliverable-explorer";
 import { formatAssignmentDetailDate, initialsFromName } from "@/lib/campaigns/assignment-detail-presenters";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 
 type DeliverableDetailSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   row: OperationalDeliverableExplorerRow | null;
   campaignName: string;
+  onUploadContent?: () => void;
 };
 
 export function DeliverableDetailSheet({
@@ -30,6 +32,7 @@ export function DeliverableDetailSheet({
   onOpenChange,
   row,
   campaignName,
+  onUploadContent,
 }: DeliverableDetailSheetProps) {
   const title = row?.label ?? "Deliverable";
 
@@ -160,6 +163,21 @@ export function DeliverableDetailSheet({
                       "—"
                     )}
                   </DetailField>
+                  {onUploadContent ? (
+                    <div className="mt-4">
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="thinkway-campaign-btn thinkway-campaign-btn-primary h-[30px] text-[11px]"
+                        onClick={() => {
+                          onOpenChange(false);
+                          onUploadContent();
+                        }}
+                      >
+                        Upload content for client review
+                      </Button>
+                    </div>
+                  ) : null}
                 </div>
               </TabsContent>
             </div>

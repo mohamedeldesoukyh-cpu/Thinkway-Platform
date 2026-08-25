@@ -338,7 +338,11 @@ export type CampaignPublicationMetrics = {
 
 export type CampaignExecutionSource = {
   lines: Array<{ id: string; name: string; metadata?: Record<string, unknown> | null }>;
-  influencers: Array<{ campaignLineId: string | null; displayName: string }>;
+  influencers: Array<{
+    campaignLineId: string | null;
+    influencerId?: string | null;
+    displayName: string;
+  }>;
   deliverables: Array<{
     id: string;
     campaignLineId: string;
@@ -361,6 +365,8 @@ export type CampaignExecutionSource = {
     assignmentDeliverableId: string | null;
     assignmentPostScheduleId: string | null;
     campaignLineId: string | null;
+    influencerId?: string | null;
+    influencerName?: string | null;
     platform: string | null;
     contentUrl: string | null;
     publicationDate: string | null;
@@ -368,24 +374,110 @@ export type CampaignExecutionSource = {
   } & CampaignPublicationMetrics>;
 };
 
+type CampaignPublication = CampaignExecutionSource["publications"][number];
+
+function takePublication(
+  used: Set<string>,
+  ...candidates: Array<CampaignPublication | undefined>
+): CampaignPublication | undefined {
+  for (const publication of candidates) {
+    if (!publication || used.has(publication.id)) continue;
+    used.add(publication.id);
+    return publication;
+  }
+  return undefined;
+}
+
+function nextQueuedPublication(
+  queue: Map<string, CampaignPublication[]>,
+  used: Set<string>,
+  key: string | null | undefined
+): CampaignPublication | undefined {
+  const id = key?.trim();
+  if (!id) return undefined;
+  const list = queue.get(id);
+  if (!list?.length) return undefined;
+  while (list.length > 0) {
+    const publication = list.shift();
+    if (publication && !used.has(publication.id)) {
+      used.add(publication.id);
+      return publication;
+    }
+  }
+  return undefined;
+}
+
+function enqueuePublication(
+  queue: Map<string, CampaignPublication[]>,
+  key: string | null | undefined,
+  publication: CampaignPublication
+) {
+  const id = key?.trim();
+  if (!id) return;
+  const list = queue.get(id) ?? [];
+  list.push(publication);
+  queue.set(id, list);
+}
+
+function handleFromContentUrl(url: string | null | undefined): string | null {
+  const raw = url?.trim();
+  if (!raw) return null;
+  try {
+    const path = decodeURIComponent(new URL(raw).pathname);
+    const at = path.match(/\/@([A-Za-z0-9._]+)/);
+    return at?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function resolvePublicationCreatorName(
+  publication: CampaignPublication,
+  creatorByLine: Map<string, string>,
+  creatorByInfluencer: Map<string, string>
+): string {
+  const lineId = publication.campaignLineId?.trim();
+  if (lineId) {
+    const fromLine = creatorByLine.get(lineId);
+    if (fromLine) return fromLine;
+  }
+  const influencerId = publication.influencerId?.trim();
+  if (influencerId) {
+    const fromInfluencer = creatorByInfluencer.get(influencerId);
+    if (fromInfluencer) return fromInfluencer;
+  }
+  const named = publication.influencerName?.trim();
+  if (named) return named;
+  return handleFromContentUrl(publication.contentUrl) || "Creator";
+}
+
 export function projectClientCampaignExecution(
   campaignHeaderId: string,
   source: CampaignExecutionSource,
   today = todayYmd()
 ): ClientCampaignExecution {
   const creatorByLine = new Map<string, string>();
+  const creatorByInfluencer = new Map<string, string>();
+  const influencerIdByLine = new Map<string, string>();
   for (const line of source.lines) {
     const fromMeta = parseLineAssignment(line.metadata ?? null)?.influencer_name?.trim();
     creatorByLine.set(line.id, fromMeta || line.name.trim() || "Creator");
   }
   for (const row of source.influencers) {
-    if (!row.campaignLineId || !row.displayName.trim()) continue;
-    creatorByLine.set(row.campaignLineId, row.displayName.trim());
+    const name = row.displayName.trim();
+    const influencerId = row.influencerId?.trim();
+    if (influencerId && name) creatorByInfluencer.set(influencerId, name);
+    if (!row.campaignLineId) continue;
+    if (name) creatorByLine.set(row.campaignLineId, name);
+    if (influencerId) influencerIdByLine.set(row.campaignLineId, influencerId);
   }
 
   const deliverableById = new Map(source.deliverables.map((row) => [row.id, row]));
-  const pubsByPost = new Map<string, CampaignExecutionSource["publications"][number]>();
-  const pubsByDeliverable = new Map<string, CampaignExecutionSource["publications"][number]>();
+  const pubsByPost = new Map<string, CampaignPublication>();
+  const pubsByDeliverable = new Map<string, CampaignPublication>();
+  const pubsByLine = new Map<string, CampaignPublication[]>();
+  const pubsByInfluencer = new Map<string, CampaignPublication[]>();
+  const usedPublications = new Set<string>();
   for (const publication of source.publications) {
     if (publication.assignmentPostScheduleId && !pubsByPost.has(publication.assignmentPostScheduleId)) {
       pubsByPost.set(publication.assignmentPostScheduleId, publication);
@@ -393,6 +485,8 @@ export function projectClientCampaignExecution(
     if (publication.assignmentDeliverableId && !pubsByDeliverable.has(publication.assignmentDeliverableId)) {
       pubsByDeliverable.set(publication.assignmentDeliverableId, publication);
     }
+    enqueuePublication(pubsByLine, publication.campaignLineId, publication);
+    enqueuePublication(pubsByInfluencer, publication.influencerId, publication);
   }
 
   const posts: ClientCampaignPostRow[] = [];
@@ -407,7 +501,19 @@ export function projectClientCampaignExecution(
   for (const post of sortedPosts) {
     postedDeliverableIds.add(post.assignmentDeliverableId);
     const deliverable = deliverableById.get(post.assignmentDeliverableId);
-    const publication = pubsByPost.get(post.id) ?? pubsByDeliverable.get(post.assignmentDeliverableId);
+    const publication = shouldHideClientCampaignPost(post.status)
+      ? undefined
+      : takePublication(
+          usedPublications,
+          pubsByPost.get(post.id),
+          pubsByDeliverable.get(post.assignmentDeliverableId)
+        ) ??
+        nextQueuedPublication(pubsByLine, usedPublications, post.campaignLineId) ??
+        nextQueuedPublication(
+          pubsByInfluencer,
+          usedPublications,
+          influencerIdByLine.get(post.campaignLineId)
+        );
     const platform = deliverable?.platform || publication?.platform || "";
     const type = deliverable?.deliverableType || "other";
     const contentUrl = publication?.contentUrl?.trim() || post.proofUrl?.trim() || null;
@@ -428,7 +534,14 @@ export function projectClientCampaignExecution(
 
   for (const deliverable of source.deliverables) {
     if (postedDeliverableIds.has(deliverable.id)) continue;
-    const publication = pubsByDeliverable.get(deliverable.id);
+    const publication =
+      takePublication(usedPublications, pubsByDeliverable.get(deliverable.id)) ??
+      nextQueuedPublication(pubsByLine, usedPublications, deliverable.campaignLineId) ??
+      nextQueuedPublication(
+        pubsByInfluencer,
+        usedPublications,
+        influencerIdByLine.get(deliverable.campaignLineId)
+      );
     const quantity = deliverable.quantity > 1 ? ` × ${deliverable.quantity}` : "";
     const row = buildPostRow({
       id: deliverable.id,
@@ -439,6 +552,29 @@ export function projectClientCampaignExecution(
       postStatus: publication?.status ?? null,
       contentUrl: publication?.contentUrl ?? null,
       publicationDate: publication?.publicationDate ?? null,
+      performance: projectClientCampaignPerformance(publication),
+      today,
+    });
+    if (row) posts.push(row);
+  }
+
+  for (const publication of source.publications) {
+    if (usedPublications.has(publication.id)) continue;
+    const contentUrl = publication.contentUrl?.trim() || null;
+    if (!contentUrl && !publication.publicationDate) continue;
+    const row = buildPostRow({
+      id: `publication:${publication.id}`,
+      creatorName: resolvePublicationCreatorName(
+        publication,
+        creatorByLine,
+        creatorByInfluencer
+      ),
+      platform: publication.platform || "",
+      deliverable: "Publication",
+      scheduledDate: publication.publicationDate,
+      postStatus: publication.status,
+      contentUrl,
+      publicationDate: publication.publicationDate,
       performance: projectClientCampaignPerformance(publication),
       today,
     });

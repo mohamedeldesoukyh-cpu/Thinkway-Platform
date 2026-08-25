@@ -62,6 +62,7 @@ type Props = {
   initialCreatorFilter?: string | null;
   /** Deep-link (?deliverable=) selects the documentation unit by assignment deliverable id. */
   initialDeliverableId?: string | null;
+  onBackToSchedule?: () => void;
 };
 
 const DEFAULT_ASSET_TYPE = "draft_video";
@@ -101,6 +102,7 @@ export function CampaignDeliverablesDocumentationTab({
   assignmentHierarchy,
   initialCreatorFilter = null,
   initialDeliverableId = null,
+  onBackToSchedule,
 }: Props) {
   const campaignId = workspace.id;
   const [units, setUnits] = useState<DocumentationUnitSummary[]>([]);
@@ -373,7 +375,20 @@ export function CampaignDeliverablesDocumentationTab({
   return (
     <CampaignWorkspaceFrame
       title="Deliverables"
-      subtitle="Documentation repository — files, links, captions, versions, and comments"
+      subtitle="Upload files, links, and captions for client review — plus versions and comments"
+      tools={
+        onBackToSchedule ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="thinkway-campaign-btn h-[33px] text-[12px]"
+            onClick={onBackToSchedule}
+          >
+            Back to schedule
+          </Button>
+        ) : null
+      }
       status={
         <AuroraStatusPill
           tone={
@@ -422,7 +437,9 @@ export function CampaignDeliverablesDocumentationTab({
       collapseRegister
       registerCount={units.length}
       registerStorageKey={`deliverables-${workspace.id}`}
-      forceRegisterOpen={Boolean(initialCreatorFilter || initialDeliverableId)}
+      forceRegisterOpen={Boolean(
+        initialCreatorFilter || initialDeliverableId || onBackToSchedule
+      )}
     >
       <div className="space-y-4">
         <OperationalTableSection wide>
