@@ -289,7 +289,7 @@ export async function createClientReviewFromShortlist(
     source: "shortlist",
     brandName: brandName || header.name,
     campaignName: header.name,
-    clientLabel: clientLabel || brandName || header.name,
+    clientLabel: clientLabel ?? "",
     objective: header.description?.trim() || undefined,
     platforms,
     deliverables,
@@ -317,6 +317,7 @@ export async function createClientReviewFromShortlist(
       campaignHeaderId: header.campaign_header_id,
       clientLabel,
       brandName,
+      campaignName: header.name,
     })) ?? undefined;
 
   return persistClientReview({

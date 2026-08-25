@@ -101,6 +101,7 @@ export async function createClientReview(
       shortlistId: linkedShortlistId(saved),
       clientLabel: facts?.clientName ?? null,
       brandName: facts?.brandName ?? null,
+      campaignName: facts?.product ?? facts?.objective ?? null,
     })) ?? undefined;
 
   const result = await persistClientReview({
@@ -114,7 +115,7 @@ export async function createClientReview(
     conversationId: input.conversationId,
     campaignHeaderId: latest.record.campaignHeaderId,
     shortlistId: linkedShortlistId(saved),
-    clientLabel: facts?.clientName ?? facts?.brandName ?? null,
+    clientLabel: facts?.clientName ?? null,
     brandName: facts?.brandName ?? null,
     campaignName: facts?.product ?? facts?.objective ?? null,
     fingerprint,

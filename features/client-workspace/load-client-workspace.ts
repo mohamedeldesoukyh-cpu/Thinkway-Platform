@@ -49,7 +49,7 @@ import { emptyClientCampaignExecution } from "./campaign-execution";
 import { emptyClientCampaignContent } from "./content-approval";
 import { loadClientCampaignContent } from "./load-campaign-content";
 import { loadClientCampaignExecution } from "./load-campaign-execution";
-import { loadIdentityLogoForReview } from "./identity-logo";
+import { loadIdentityLogoForReview, headerPartnerIdentity } from "./identity-logo";
 import {
   isSelectionConfirmed,
   mergeSnapshotsForClientView,
@@ -628,11 +628,21 @@ export async function loadClientWorkspace(
         activeReview.clientLabel ||
         activeReview.sourceSnapshot?.clientLabel,
       brandName: view.overview.brandName,
+      campaignName: view.overview.campaignName,
     });
     view.identityLogo = liveLogo ?? view.identityLogo ?? null;
   } catch {
     /* keep frozen snapshot logo if live identity lookup fails */
   }
+  view.identityLogo = headerPartnerIdentity({
+    identityLogo: view.identityLogo,
+    clientLabel:
+      view.overview.clientLabel ||
+      activeReview.clientLabel ||
+      activeReview.sourceSnapshot?.clientLabel,
+    brandName: view.overview.brandName,
+    campaignName: view.overview.campaignName,
+  });
 
   const entry: ClientWorkspaceEntry = {
     brandName: view.overview.brandName,

@@ -1,10 +1,10 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Client Workspace identity (client, not brand) and existing share links.
+**Focus:** Client Workspace header must show the legal entity / group, never the brand.
 
-- Partner slot is group logo, else client logo, else group/client **name**. Brand marks and brand titles are never used as the Thinkway partner identity.
-- Shortlist and quotation **Show link** was flipping to **Generate link** and minting a second URL: quotation created instead of revealing, peek used staff JWT (RLS miss), superseded counted as missing, versioned quotations peeked only the current `quotation_id`, and `hasLink` ignored local cache.
-- Peek/reveal now use service-role when available, walk the quotation family, treat any non-revoked review as an existing share, and create only if the link is truly missing.
+- The partner slot next to THINKWAY was still rendering `campaignName` (Cofftea Egypt). That is the brand/shortlist title, not the client.
+- Header now shows THINKWAY + group/client logo or name only. Brand and campaign titles are never used there.
+- Live identity lookup also resolves `brands.client_id` from the brand/campaign name when the shortlist has no `client_id`.
 
 **Ship:** Development first (`hsxrewjcbvmbkqdlzjhs`). Production only after explicit approval.

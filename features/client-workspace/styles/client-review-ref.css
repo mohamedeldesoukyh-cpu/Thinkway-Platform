@@ -581,7 +581,7 @@
   color:var(--ink);
   letter-spacing:-.2px;
   white-space:nowrap;
-  max-width:180px;
+  max-width:min(42vw, 280px);
   overflow:hidden;
   text-overflow:ellipsis;
   flex:none;

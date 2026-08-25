@@ -8,7 +8,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { persistClientReview, type CreateClientReviewResult } from "./persist-client-review";
 import { quotationItemClientCreatorId } from "./quotation-item-creator-id";
 import { fingerprintFromSnapshotCreators } from "./snapshot";
-import { loadIdentityLogoForReview } from "./identity-logo";
+import { loadIdentityLogoForReview, identityLookupLabels } from "./identity-logo";
 import {
   defaultQuotationClientSelection,
   quotationIsMovedToCampaign,
@@ -142,15 +142,17 @@ export async function createClientReviewFromQuotation(
   ];
   const content = contentFromQuotation(items);
   const brandName = detail.brand_name || detail.temporary_brand_name || "Brand";
-  const clientLabel =
-    detail.client_name || detail.temporary_client_name || brandName;
+  const clientLabel = identityLookupLabels(
+    detail.client_name || detail.temporary_client_name,
+    brandName
+  )[0] ?? null;
   const campaignName = detail.campaign_name || detail.name;
 
   const snapshot: ClientReviewSourceSnapshot = {
     source: "quotation",
     brandName,
     campaignName,
-    clientLabel,
+    clientLabel: clientLabel ?? "",
     platforms,
     deliverables,
     whyThisApproach: `Commercial proposal ${detail.serial_number ?? detail.name} for ${brandName}.`,
@@ -194,6 +196,7 @@ export async function createClientReviewFromQuotation(
       campaignHeaderId: detail.campaign_header_id,
       clientLabel,
       brandName,
+      campaignName,
     })) ?? undefined;
 
   return persistClientReview({

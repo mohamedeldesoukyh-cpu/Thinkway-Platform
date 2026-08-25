@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  headerPartnerIdentity,
   identityClientLabelCandidates,
   identityLookupLabels,
   parseIdentityLogo,
+  preparedForClientLabel,
   uniqueIdentityClientIds,
 } from "./identity-logo";
 
@@ -43,4 +45,61 @@ test("parseIdentityLogo accepts client source after a live overlay", () => {
   assert.equal(parsed?.source, "client");
   assert.equal(parsed?.url, "https://cdn.example/client.png");
   assert.equal(parsed?.alt, "Bundle Plus Communication");
+});
+
+test("parseIdentityLogo keeps a name-only legal entity mark", () => {
+  const parsed = parseIdentityLogo({
+    url: "",
+    source: "client",
+    alt: "Bundle Plus Communication",
+  });
+  assert.equal(parsed?.source, "client");
+  assert.equal(parsed?.url, "");
+  assert.equal(parsed?.alt, "Bundle Plus Communication");
+});
+
+test("header partner identity never uses the brand or campaign title", () => {
+  assert.equal(
+    headerPartnerIdentity({
+      identityLogo: null,
+      clientLabel: "Cofftea Egypt",
+      brandName: "Cofftea Egypt",
+      campaignName: "Cofftea Egypt",
+    }),
+    null
+  );
+  assert.equal(
+    headerPartnerIdentity({
+      identityLogo: { url: "", source: "client", alt: "Cofftea Egypt" },
+      clientLabel: "Cofftea Egypt",
+      brandName: "Cofftea Egypt",
+      campaignName: "Cofftea Egypt",
+    }),
+    null
+  );
+  assert.equal(
+    preparedForClientLabel({
+      clientLabel: "Cofftea Egypt",
+      brandName: "Cofftea Egypt",
+      campaignName: "Cofftea Egypt",
+    }),
+    undefined
+  );
+  assert.equal(
+    headerPartnerIdentity({
+      identityLogo: { url: "", source: "client", alt: "Bundle Plus Communication" },
+      clientLabel: "Cofftea Egypt",
+      brandName: "Cofftea Egypt",
+      campaignName: "Cofftea Egypt",
+    })?.alt,
+    "Bundle Plus Communication"
+  );
+  assert.equal(
+    headerPartnerIdentity({
+      clientLabel: "Bundle Plus Communication",
+      brandName: "Cofftea Egypt",
+      campaignName: "Cofftea Egypt",
+    })?.alt,
+    "Bundle Plus Communication"
+  );
 });

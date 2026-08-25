@@ -11,6 +11,7 @@ import {
 } from "../selection-flow";
 import { buildClientReviewPath } from "../security/review-token";
 import type { ClientWorkspaceView } from "../types";
+import { headerPartnerIdentity, preparedForClientLabel } from "../identity-logo";
 import { ClientJourneyStrip } from "./journey-strip";
 import { useClientWorkspaceState } from "./client-workspace-state";
 import { ClientWorkspaceIdentityMark } from "./identity-logo-mark";
@@ -31,7 +32,18 @@ export function ClientWorkspaceShell({
 }) {
   const { selection } = useClientWorkspaceState();
   const calc = selectionCalculator(view.creators, selection);
-  const preparedFor = view.overview.clientLabel?.trim() || view.overview.campaignName;
+  const partnerIdentity = headerPartnerIdentity({
+    identityLogo: view.identityLogo,
+    clientLabel: view.overview.clientLabel,
+    brandName: view.overview.brandName,
+    campaignName: view.overview.campaignName,
+  });
+  const preparedFor = preparedForClientLabel({
+    identityLogo: view.identityLogo,
+    clientLabel: view.overview.clientLabel,
+    brandName: view.overview.brandName,
+    campaignName: view.overview.campaignName,
+  });
   const pathReviewId = clientWorkspacePathReviewId({
     historical: Boolean(view.journey?.historical),
     viewedReviewId: view.review.id,
@@ -75,10 +87,7 @@ export function ClientWorkspaceShell({
     <div className="tw-review">
       <header className="bar">
         <div className="wrap row">
-          <ClientWorkspaceIdentityMark identityLogo={view.identityLogo} />
-          <div className="camp">
-            <b>{view.overview.campaignName}</b>
-          </div>
+          <ClientWorkspaceIdentityMark identityLogo={partnerIdentity} />
           <div className="sp" />
           <span className={`stpill ${statusTone}`}>{quotationLabel}</span>
           {view.journey?.historical ? <span className="stpill cur">Read only</span> : null}

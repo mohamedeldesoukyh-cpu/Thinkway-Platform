@@ -42,14 +42,57 @@ export function identityClientLabelCandidates(labels: Array<string | null | unde
   return out;
 }
 
+export function identityNamesEqual(a?: string | null, b?: string | null): boolean {
+  const left = a?.trim().toLowerCase();
+  const right = b?.trim().toLowerCase();
+  return Boolean(left && right && left === right);
+}
+
 export function identityLookupLabels(
   clientLabel?: string | null,
   brandName?: string | null
 ): string[] {
-  const brandKey = brandName?.trim().toLowerCase() || "";
   return identityClientLabelCandidates([
-    clientLabel && clientLabel.trim().toLowerCase() !== brandKey ? clientLabel : null,
+    identityNamesEqual(clientLabel, brandName) ? null : clientLabel,
   ]);
+}
+
+/** Partner slot next to THINKWAY: group/client only — never brand or campaign title. */
+export function headerPartnerIdentity(input: {
+  identityLogo?: IdentityLogo | null;
+  clientLabel?: string | null;
+  brandName?: string | null;
+  campaignName?: string | null;
+}): IdentityLogo | null {
+  const logo = input.identityLogo;
+  const url = logo?.url?.trim() || "";
+  const alt = logo?.alt?.trim() || "";
+  if (logo && (url || alt)) {
+    const altIsBrand =
+      identityNamesEqual(alt, input.brandName) || identityNamesEqual(alt, input.campaignName);
+    if (url || !altIsBrand) {
+      return { url, source: logo.source, alt: alt || (logo.source === "group" ? "Group" : "Client") };
+    }
+  }
+  const client = input.clientLabel?.trim();
+  if (
+    client &&
+    !identityNamesEqual(client, input.brandName) &&
+    !identityNamesEqual(client, input.campaignName) &&
+    client.toLowerCase() !== "client"
+  ) {
+    return { url: "", source: "client", alt: client };
+  }
+  return null;
+}
+
+export function preparedForClientLabel(input: {
+  identityLogo?: IdentityLogo | null;
+  clientLabel?: string | null;
+  brandName?: string | null;
+  campaignName?: string | null;
+}): string | undefined {
+  return headerPartnerIdentity(input)?.alt || undefined;
 }
 
 export async function loadIdentityLogoForClientId(
@@ -126,6 +169,22 @@ async function loadIdentityLogoByClientLabel(
   return pickIdentityLogoFromClientRow(supabase, chosen);
 }
 
+async function loadClientIdsForBrandName(
+  supabase: IdentityDb,
+  brandName?: string | null
+): Promise<string[]> {
+  const trimmed = brandName?.trim();
+  if (!trimmed) return [];
+  const { data } = await supabase
+    .from("brands")
+    .select("client_id")
+    .eq("name_normalized", normalizeEntityName(trimmed))
+    .limit(8);
+  return uniqueIdentityClientIds(
+    (data ?? []).map((row) => (row as { client_id?: string | null }).client_id)
+  );
+}
+
 export async function loadIdentityLogoForReview(
   supabase: IdentityDb,
   input: {
@@ -134,10 +193,10 @@ export async function loadIdentityLogoForReview(
     campaignHeaderId?: string | null;
     clientLabel?: string | null;
     brandName?: string | null;
+    campaignName?: string | null;
   }
 ): Promise<IdentityLogo | null> {
   const candidateIds: Array<string | null | undefined> = [];
-  const brandKey = input.brandName?.trim().toLowerCase() || "";
   const labels: Array<string | null | undefined> = identityLookupLabels(
     input.clientLabel,
     input.brandName
@@ -199,13 +258,22 @@ export async function loadIdentityLogoForReview(
     candidateIds.push((data as { client_id?: string | null } | null)?.client_id ?? null);
   }
 
+  for (const brandName of identityClientLabelCandidates([input.brandName, input.campaignName])) {
+    candidateIds.push(...(await loadClientIdsForBrandName(supabase, brandName)));
+  }
+
   for (const clientId of uniqueIdentityClientIds(candidateIds)) {
     const logo = await loadIdentityLogoForClientId(supabase, clientId);
     if (logo) return logo;
   }
 
   for (const label of identityClientLabelCandidates(labels)) {
-    if (brandKey && label.trim().toLowerCase() === brandKey) continue;
+    if (
+      identityNamesEqual(label, input.brandName) ||
+      identityNamesEqual(label, input.campaignName)
+    ) {
+      continue;
+    }
     const logo = await loadIdentityLogoByClientLabel(supabase, label);
     if (logo) return logo;
   }
@@ -218,12 +286,11 @@ export function parseIdentityLogo(raw: unknown): IdentityLogo | undefined {
   const record = raw as Record<string, unknown>;
   const url = typeof record.url === "string" ? record.url.trim() : "";
   const source = record.source === "group" || record.source === "client" ? record.source : null;
-  if (!url || !source) return undefined;
-  const alt =
-    typeof record.alt === "string" && record.alt.trim()
-      ? record.alt.trim()
-      : source === "group"
-        ? "Group"
-        : "Client";
-  return { url, source, alt };
+  const alt = typeof record.alt === "string" ? record.alt.trim() : "";
+  if (!source || (!url && !alt)) return undefined;
+  return {
+    url,
+    source,
+    alt: alt || (source === "group" ? "Group" : "Client"),
+  };
 }
