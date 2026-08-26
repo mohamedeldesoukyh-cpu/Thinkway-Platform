@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -41,7 +42,13 @@ import {
   getDeliverableDocumentationDetailAction,
   listDeliverableDocumentationAction,
 } from "@/features/campaigns/actions/deliverable-documentation-actions";
-import { putDeliverableAssetToSignedUrl } from "@/features/campaigns/deliverable-asset-upload";
+import {
+  deliverableUploadMeterValue,
+  deliverableUploadPercent,
+  deliverableUploadProgressLabel,
+  putDeliverableAssetToSignedUrl,
+  type DeliverableUploadPhase,
+} from "@/features/campaigns/deliverable-asset-upload";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import {
@@ -128,6 +135,12 @@ export function CampaignDeliverablesDocumentationTab({
   const [pendingSelectKey, setPendingSelectKey] = useState<string | null>(null);
   /** Locks repository selection while a file upload is in flight. */
   const [selectionLocked, setSelectionLocked] = useState(false);
+  const [uploadMeter, setUploadMeter] = useState<{
+    phase: DeliverableUploadPhase;
+    fileName: string;
+    loaded: number;
+    total: number;
+  } | null>(null);
 
   const detailRequestIdRef = useRef(0);
   const uploadSessionRef = useRef(0);
@@ -594,7 +607,15 @@ export function CampaignDeliverablesDocumentationTab({
                           {selected.received
                             ? "Documentation received"
                             : "Documentation missing"}
-                          {selectionLocked ? " · Upload in progress" : ""}
+                          {uploadMeter
+                            ? uploadMeter.phase === "uploading"
+                              ? ` · Uploading ${deliverableUploadPercent(uploadMeter.loaded, uploadMeter.total)}%`
+                              : uploadMeter.phase === "preparing"
+                                ? " · Preparing upload"
+                                : " · Saving upload"
+                            : selectionLocked
+                              ? " · Upload in progress"
+                              : ""}
                         </dd>
                       </dl>
                     </div>
@@ -741,8 +762,14 @@ export function CampaignDeliverablesDocumentationTab({
                                   file.name
                                 );
                                 const session = ++uploadSessionRef.current;
+                                setUploadMeter({
+                                  phase: "preparing",
+                                  fileName: file.name,
+                                  loaded: 0,
+                                  total: file.size,
+                                });
                                 setSelectionLocked(true);
-                                startTransition(async () => {
+                                void (async () => {
                                   try {
                                     if (
                                       selectedKeyRef.current !==
@@ -773,11 +800,33 @@ export function CampaignDeliverablesDocumentationTab({
                                       toast.error(begun.message);
                                       return;
                                     }
+                                    if (session !== uploadSessionRef.current) {
+                                      return;
+                                    }
+                                    setUploadMeter({
+                                      phase: "uploading",
+                                      fileName: file.name,
+                                      loaded: 0,
+                                      total: file.size,
+                                    });
                                     const uploaded =
                                       await putDeliverableAssetToSignedUrl({
                                         signedUrl: begun.data.signedUrl,
                                         token: begun.data.token,
                                         file,
+                                        onProgress: (progress) => {
+                                          if (
+                                            session !== uploadSessionRef.current
+                                          ) {
+                                            return;
+                                          }
+                                          setUploadMeter({
+                                            phase: "uploading",
+                                            fileName: file.name,
+                                            loaded: progress.loaded,
+                                            total: progress.total,
+                                          });
+                                        },
                                       });
                                     if (!uploaded.ok) {
                                       toast.error(uploaded.message);
@@ -792,6 +841,15 @@ export function CampaignDeliverablesDocumentationTab({
                                       );
                                       return;
                                     }
+                                    if (session !== uploadSessionRef.current) {
+                                      return;
+                                    }
+                                    setUploadMeter({
+                                      phase: "finishing",
+                                      fileName: file.name,
+                                      loaded: file.size,
+                                      total: file.size,
+                                    });
                                     const completed =
                                       await completeDeliverableFileUploadAction({
                                         campaignHeaderId: campaignId,
@@ -837,12 +895,28 @@ export function CampaignDeliverablesDocumentationTab({
                                   } finally {
                                     if (session === uploadSessionRef.current) {
                                       setSelectionLocked(false);
+                                      setUploadMeter(null);
                                     }
                                   }
-                                });
+                                })();
                               }}
                             />
-                            {selectionLocked ? (
+                            {uploadMeter ? (
+                              <div
+                                className="space-y-1.5"
+                                aria-live="polite"
+                                aria-label="Upload progress"
+                              >
+                                <Progress
+                                  value={deliverableUploadMeterValue(uploadMeter)}
+                                  className="h-1.5"
+                                />
+                                <p className="text-[11px] text-[var(--camp-text-4)]">
+                                  {deliverableUploadProgressLabel(uploadMeter)} —
+                                  selection is locked for this creator.
+                                </p>
+                              </div>
+                            ) : selectionLocked ? (
                               <p className="text-[11px] text-[var(--camp-text-4)]">
                                 Upload in progress — selection is locked for this
                                 creator.
