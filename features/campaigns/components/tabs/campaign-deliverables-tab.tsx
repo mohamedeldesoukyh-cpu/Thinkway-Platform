@@ -39,7 +39,7 @@ import { getPlatformOptionLabel } from "@/lib/campaigns/deliverable-taxonomy";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import { cn } from "@/lib/utils";
 import { listDeliverableDocumentationAggregatesAction } from "@/features/campaigns/actions/deliverable-documentation-actions";
-import { documentationUnitKey } from "@/lib/services/deliverables/documentation-types";
+import { documentationRowHasUploadedContent } from "@/lib/services/deliverables/documentation-types";
 
 const ALL = "all";
 
@@ -50,6 +50,7 @@ type CampaignDeliverablesTabProps = {
   onOpenDocumentation?: (focus?: {
     creatorId?: string | null;
     deliverableId?: string | null;
+    postScheduleId?: string | null;
   }) => void;
 };
 
@@ -129,11 +130,10 @@ function buildDeliverablesColumns(
       id: "content",
       label: "Content",
       renderCell: (row) => {
-        const received = receivedKeys.has(
-          documentationUnitKey(
-            row.assignment_deliverable_id,
-            row.assignment_post_schedule_id
-          )
+        const received = documentationRowHasUploadedContent(
+          receivedKeys,
+          row.assignment_deliverable_id,
+          row.assignment_post_schedule_id
         );
         if (received && onOpenDocumentation) {
           return (
@@ -143,6 +143,7 @@ function buildDeliverablesColumns(
                 onOpenDocumentation({
                   creatorId: row.influencer_id,
                   deliverableId: row.assignment_deliverable_id,
+                  postScheduleId: row.assignment_post_schedule_id,
                 })
               }
               className="text-[11px] font-semibold text-[var(--camp-blue)] hover:underline"
@@ -177,11 +178,10 @@ function buildDeliverablesColumns(
             id: "client_review",
             label: "Client review",
             renderCell: (row: OperationalDeliverableExplorerRow) => {
-              const received = receivedKeys.has(
-                documentationUnitKey(
-                  row.assignment_deliverable_id,
-                  row.assignment_post_schedule_id
-                )
+              const received = documentationRowHasUploadedContent(
+                receivedKeys,
+                row.assignment_deliverable_id,
+                row.assignment_post_schedule_id
               );
               return (
               <button
@@ -190,6 +190,7 @@ function buildDeliverablesColumns(
                   onOpenDocumentation({
                     creatorId: row.influencer_id,
                     deliverableId: row.assignment_deliverable_id,
+                    postScheduleId: row.assignment_post_schedule_id,
                   })
                 }
                 className="text-[11px] font-semibold text-[var(--camp-blue)] hover:underline"
@@ -460,6 +461,7 @@ export function CampaignDeliverablesTab({
                 onOpenDocumentation({
                   creatorId: detailRow.influencer_id,
                   deliverableId: detailRow.assignment_deliverable_id,
+                  postScheduleId: detailRow.assignment_post_schedule_id,
                 })
             : undefined
         }

@@ -96,6 +96,7 @@ export function CampaignWorkspaceView({
   const [deliverablesDocsFocus, setDeliverablesDocsFocus] = useState(() => ({
     creatorId: searchParams.get("docsCreator"),
     deliverableId: searchParams.get("deliverable"),
+    postScheduleId: searchParams.get("post"),
   }));
   const campaignIdRef = useRef(workspace.id);
   const { tabOrder, moveTab } = useCampaignWorkspaceTabOrder();
@@ -162,6 +163,7 @@ export function CampaignWorkspaceView({
     setDeliverablesDocsFocus({
       creatorId: searchParams.get("docsCreator"),
       deliverableId: searchParams.get("deliverable"),
+      postScheduleId: searchParams.get("post"),
     });
   }, [workspace.id, defaultTab]);
 
@@ -194,11 +196,16 @@ export function CampaignWorkspaceView({
   );
 
   const openDeliverableDocumentation = useCallback(
-    (focus?: { creatorId?: string | null; deliverableId?: string | null }) => {
+    (focus?: {
+      creatorId?: string | null;
+      deliverableId?: string | null;
+      postScheduleId?: string | null;
+    }) => {
       setDeliverablesDocsOpen(true);
       setDeliverablesDocsFocus({
         creatorId: focus?.creatorId ?? null,
         deliverableId: focus?.deliverableId ?? null,
+        postScheduleId: focus?.postScheduleId ?? null,
       });
     },
     []
@@ -206,7 +213,7 @@ export function CampaignWorkspaceView({
 
   const closeDeliverableDocumentation = useCallback(() => {
     setDeliverablesDocsOpen(false);
-    setDeliverablesDocsFocus({ creatorId: null, deliverableId: null });
+    setDeliverablesDocsFocus({ creatorId: null, deliverableId: null, postScheduleId: null });
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (!params.has("docsCreator") && !params.has("deliverable")) return;
@@ -645,6 +652,7 @@ export function CampaignWorkspaceView({
                       assignmentHierarchy={assignmentHierarchy}
                       initialCreatorFilter={deliverablesDocsFocus.creatorId}
                       initialDeliverableId={deliverablesDocsFocus.deliverableId}
+                      initialPostScheduleId={deliverablesDocsFocus.postScheduleId}
                       onBackToSchedule={closeDeliverableDocumentation}
                     />
                   ) : (

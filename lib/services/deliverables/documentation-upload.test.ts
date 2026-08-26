@@ -6,7 +6,10 @@ import {
   DELIVERABLE_ASSET_MAX_BYTES,
   DELIVERABLE_ASSET_TOO_LARGE_MESSAGE,
   deliverableAssetPreviewKind,
+  documentationRowHasUploadedContent,
+  googleDriveFilePreviewUrl,
   inferDeliverableAssetMime,
+  versionCountsAsClientContent,
 } from "@/lib/services/deliverables/documentation-types";
 import {
   applyDocumentationAggregates,
@@ -69,6 +72,49 @@ test("uploaded reels and images are previewable", () => {
   assert.equal(deliverableAssetPreviewKind("image/jpeg", "story.jpg"), "image");
   assert.equal(deliverableAssetPreviewKind("application/pdf", "brief.pdf"), "pdf");
   assert.equal(deliverableAssetPreviewKind("text/plain", "notes.txt"), null);
+});
+
+test("incomplete file rows are not client-visible until a version lands", () => {
+  assert.equal(versionCountsAsClientContent(null), false);
+  assert.equal(
+    versionCountsAsClientContent({
+      storageBucket: "deliverable-assets",
+      storagePath: null,
+      externalUrl: null,
+    }),
+    false
+  );
+  assert.equal(
+    versionCountsAsClientContent({
+      storageBucket: "deliverable-assets",
+      storagePath: "hdr/del/asset/v.mp4",
+      externalUrl: null,
+    }),
+    true
+  );
+});
+
+test("Google Drive links use the preview embed URL", () => {
+  assert.equal(
+    googleDriveFilePreviewUrl("https://drive.google.com/file/d/abc123/view?usp=sharing"),
+    "https://drive.google.com/file/d/abc123/preview"
+  );
+  assert.equal(
+    googleDriveFilePreviewUrl("https://drive.google.com/open?id=abc123"),
+    "https://drive.google.com/file/d/abc123/preview"
+  );
+  assert.equal(googleDriveFilePreviewUrl("https://instagram.com/reel/x"), null);
+});
+
+test("explorer post rows see deliverable-level uploads", () => {
+  const keys = new Set(["d:del-1"]);
+  assert.equal(documentationRowHasUploadedContent(keys, "del-1", "post-9"), true);
+  assert.equal(documentationRowHasUploadedContent(keys, "del-1", null), true);
+  assert.equal(documentationRowHasUploadedContent(keys, "del-2", "post-9"), false);
+  assert.equal(
+    documentationRowHasUploadedContent(new Set(["p:post-9"]), "del-1", "post-9"),
+    true
+  );
 });
 
 test("documentation aggregates mark units received without reloading hierarchy", () => {

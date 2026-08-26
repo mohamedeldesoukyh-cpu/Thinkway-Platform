@@ -189,6 +189,7 @@ import {
   currentContentVersion,
   emptyClientCampaignContent,
   NO_CONTENT_TO_REVIEW_COPY,
+  NO_CONTENT_TO_REVIEW_HINT,
   projectClientCampaignContent,
   type ClientContentAssetSource,
   type ClientContentDecisionRecord,
@@ -5920,6 +5921,7 @@ test("Thinkway files can download original; Google Drive links cannot", () => {
 test("historical Client Workspace content is empty and captions are not review cards", () => {
   assert.deepEqual(emptyClientCampaignContent(), { campaignHeaderId: null, items: [] });
   assert.equal(NO_CONTENT_TO_REVIEW_COPY, "No content to review.");
+  assert.match(NO_CONTENT_TO_REVIEW_HINT, /Deliverables/);
   const skipped = projectContent({
     assets: [
       contentAsset({ id: "caption", medium: "text", currentVersionId: "v-cap" }),

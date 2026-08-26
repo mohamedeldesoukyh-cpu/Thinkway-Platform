@@ -68,6 +68,11 @@ function mapDecisions(rows: DecisionRow[]): ClientContentDecisionRecord[] {
   }));
 }
 
+function logContentLoadError(scope: string, message: string | undefined) {
+  if (!message) return;
+  console.error(`[client-campaign-content] ${scope}: ${message}`);
+}
+
 export async function loadClientCampaignContent(
   supabase: SupabaseClient,
   campaignHeaderId: string | null | undefined
@@ -75,94 +80,102 @@ export async function loadClientCampaignContent(
   const headerId = campaignHeaderId?.trim();
   if (!headerId) return emptyClientCampaignContent();
 
-  try {
-    const [assetsResult, deliverablesResult, linesResult, influencersResult, decisionsResult] =
-      await Promise.all([
-        supabase
-          .from("deliverable_assets")
-          .select(
-            "id, campaign_header_id, assignment_deliverable_id, assignment_post_schedule_id, asset_type, medium, label, current_version_id, archived_at"
-          )
-          .eq("campaign_header_id", headerId)
-          .is("archived_at", null),
-        supabase
-          .from("assignment_deliverables")
-          .select("id, campaign_line_id, platform, deliverable_type")
-          .eq("campaign_header_id", headerId),
-        supabase.from("campaign_lines").select("id, name, metadata").eq("campaign_header_id", headerId),
-        supabase
-          .from("campaign_influencers")
-          .select("campaign_line_id, influencer:influencers(display_name)")
-          .eq("campaign_header_id", headerId),
-        supabase
-          .from("campaign_client_content_decisions")
-          .select("id, version_id, decision, comment, decided_at, actor_kind")
-          .eq("campaign_header_id", headerId)
-          .order("decided_at", { ascending: false }),
-      ]);
+  const [assetsResult, deliverablesResult, linesResult, influencersResult] = await Promise.all([
+    supabase
+      .from("deliverable_assets")
+      .select(
+        "id, campaign_header_id, assignment_deliverable_id, assignment_post_schedule_id, asset_type, medium, label, current_version_id, archived_at"
+      )
+      .eq("campaign_header_id", headerId)
+      .is("archived_at", null),
+    supabase
+      .from("assignment_deliverables")
+      .select("id, campaign_line_id, platform, deliverable_type")
+      .eq("campaign_header_id", headerId),
+    supabase.from("campaign_lines").select("id, name, metadata").eq("campaign_header_id", headerId),
+    supabase
+      .from("campaign_influencers")
+      .select("campaign_line_id, influencer:influencers(display_name)")
+      .eq("campaign_header_id", headerId),
+  ]);
 
-    const assets = (assetsResult.data ?? []) as AssetRow[];
-    const assetIds = assets.map((asset) => asset.id);
-    let versions: VersionRow[] = [];
-    if (assetIds.length > 0) {
-      const versionsResult = await supabase
-        .from("deliverable_asset_versions")
-        .select(
-          "id, asset_id, version_number, storage_bucket, storage_path, external_url, mime_type, file_name, uploaded_at"
-        )
-        .in("asset_id", assetIds);
-      versions = (versionsResult.data ?? []) as VersionRow[];
-    }
+  logContentLoadError("assets", assetsResult.error?.message);
+  logContentLoadError("deliverables", deliverablesResult.error?.message);
+  logContentLoadError("lines", linesResult.error?.message);
+  logContentLoadError("influencers", influencersResult.error?.message);
 
-    const creatorByLine = new Map<string, string>();
-    for (const line of (linesResult.data ?? []) as LineRow[]) {
-      const fromMeta = parseLineAssignment(line.metadata ?? null)?.influencer_name?.trim();
-      creatorByLine.set(line.id, fromMeta || line.name?.trim() || "Creator");
-    }
-    for (const row of (influencersResult.data ?? []) as InfluencerRow[]) {
-      if (!row.campaign_line_id || !influencerName(row)) continue;
-      creatorByLine.set(row.campaign_line_id, influencerName(row));
-    }
-
-    const creatorNameByDeliverableId: Record<string, string> = {};
-    const platformByDeliverableId: Record<string, string> = {};
-    const deliverableTypeByDeliverableId: Record<string, string> = {};
-    for (const deliverable of (deliverablesResult.data ?? []) as DeliverableRow[]) {
-      creatorNameByDeliverableId[deliverable.id] = creatorByLine.get(deliverable.campaign_line_id) ?? "Creator";
-      platformByDeliverableId[deliverable.id] = deliverable.platform ?? "";
-      deliverableTypeByDeliverableId[deliverable.id] = deliverable.deliverable_type ?? "other";
-    }
-
-    return projectClientCampaignContent({
-      campaignHeaderId: headerId,
-      assets: assets.map((asset) => ({
-        id: asset.id,
-        campaignHeaderId: asset.campaign_header_id,
-        assignmentDeliverableId: asset.assignment_deliverable_id,
-        assignmentPostScheduleId: asset.assignment_post_schedule_id,
-        assetType: asset.asset_type,
-        medium: asset.medium,
-        label: asset.label,
-        currentVersionId: asset.current_version_id,
-        archivedAt: asset.archived_at,
-      })),
-      versions: versions.map((version) => ({
-        id: version.id,
-        assetId: version.asset_id,
-        versionNumber: version.version_number,
-        storageBucket: version.storage_bucket,
-        storagePath: version.storage_path,
-        externalUrl: version.external_url,
-        mimeType: version.mime_type,
-        fileName: version.file_name,
-        uploadedAt: version.uploaded_at,
-      })),
-      decisions: mapDecisions((decisionsResult.data ?? []) as DecisionRow[]),
-      creatorNameByDeliverableId,
-      platformByDeliverableId,
-      deliverableTypeByDeliverableId,
-    });
-  } catch {
-    return { campaignHeaderId: headerId, items: [] };
+  const assets = (assetsResult.data ?? []) as AssetRow[];
+  const assetIds = assets.map((asset) => asset.id);
+  let versions: VersionRow[] = [];
+  if (assetIds.length > 0) {
+    const versionsResult = await supabase
+      .from("deliverable_asset_versions")
+      .select(
+        "id, asset_id, version_number, storage_bucket, storage_path, external_url, mime_type, file_name, uploaded_at"
+      )
+      .in("asset_id", assetIds);
+    logContentLoadError("versions", versionsResult.error?.message);
+    versions = (versionsResult.data ?? []) as VersionRow[];
   }
+
+  let decisions: DecisionRow[] = [];
+  const decisionsResult = await supabase
+    .from("campaign_client_content_decisions")
+    .select("id, version_id, decision, comment, decided_at, actor_kind")
+    .eq("campaign_header_id", headerId)
+    .order("decided_at", { ascending: false });
+  if (decisionsResult.error) {
+    logContentLoadError("decisions", decisionsResult.error.message);
+  } else {
+    decisions = (decisionsResult.data ?? []) as DecisionRow[];
+  }
+
+  const creatorByLine = new Map<string, string>();
+  for (const line of (linesResult.data ?? []) as LineRow[]) {
+    const fromMeta = parseLineAssignment(line.metadata ?? null)?.influencer_name?.trim();
+    creatorByLine.set(line.id, fromMeta || line.name?.trim() || "Creator");
+  }
+  for (const row of (influencersResult.data ?? []) as InfluencerRow[]) {
+    if (!row.campaign_line_id || !influencerName(row)) continue;
+    creatorByLine.set(row.campaign_line_id, influencerName(row));
+  }
+
+  const creatorNameByDeliverableId: Record<string, string> = {};
+  const platformByDeliverableId: Record<string, string> = {};
+  const deliverableTypeByDeliverableId: Record<string, string> = {};
+  for (const deliverable of (deliverablesResult.data ?? []) as DeliverableRow[]) {
+    creatorNameByDeliverableId[deliverable.id] = creatorByLine.get(deliverable.campaign_line_id) ?? "Creator";
+    platformByDeliverableId[deliverable.id] = deliverable.platform ?? "";
+    deliverableTypeByDeliverableId[deliverable.id] = deliverable.deliverable_type ?? "other";
+  }
+
+  return projectClientCampaignContent({
+    campaignHeaderId: headerId,
+    assets: assets.map((asset) => ({
+      id: asset.id,
+      campaignHeaderId: asset.campaign_header_id,
+      assignmentDeliverableId: asset.assignment_deliverable_id,
+      assignmentPostScheduleId: asset.assignment_post_schedule_id,
+      assetType: asset.asset_type,
+      medium: asset.medium,
+      label: asset.label,
+      currentVersionId: asset.current_version_id,
+      archivedAt: asset.archived_at,
+    })),
+    versions: versions.map((version) => ({
+      id: version.id,
+      assetId: version.asset_id,
+      versionNumber: version.version_number,
+      storageBucket: version.storage_bucket,
+      storagePath: version.storage_path,
+      externalUrl: version.external_url,
+      mimeType: version.mime_type,
+      fileName: version.file_name,
+      uploadedAt: version.uploaded_at,
+    })),
+    decisions: mapDecisions(decisions),
+    creatorNameByDeliverableId,
+    platformByDeliverableId,
+    deliverableTypeByDeliverableId,
+  });
 }

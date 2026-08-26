@@ -5,6 +5,9 @@ import {
 } from "@/lib/services/deliverables/documentation-types";
 
 export const NO_CONTENT_TO_REVIEW_COPY = "No content to review.";
+export const NO_CONTENT_TO_REVIEW_HINT =
+  "This list shows reels, images, and links Thinkway uploaded for approval. It stays empty until a file finishes saving in Campaign Workspace → Deliverables. Live Instagram posts further down are published content, not files waiting for review.";
+export const APPROVED_CONTENT_HEADING = "Approved content";
 export const CONTENT_APPROVAL_REQUIRED_LABEL = "Approval Required";
 export const CONTENT_CHANGES_REQUESTED_LABEL = "Changes Requested";
 export const CONTENT_APPROVED_LABEL = "Approved";

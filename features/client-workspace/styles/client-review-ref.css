@@ -1282,6 +1282,11 @@
   border-radius:12px;
   margin:14px 0 0;
 }
+.tw-review iframe.camp-content-preview{
+  height:360px;
+  max-height:none;
+  border:0;
+}
 .tw-review .camp-content-card .noteinput{
   width:100%;
   margin-top:14px;

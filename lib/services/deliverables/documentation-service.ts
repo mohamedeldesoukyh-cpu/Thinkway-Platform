@@ -20,6 +20,7 @@ import {
   documentationUnitKey,
   mediumCountsAsReceived,
   rollupCreatorCompleteness,
+  versionCountsAsClientContent,
   type DeliverableAssetMedium,
   type DeliverableAssetType,
   type DeliverableAssetView,
@@ -81,7 +82,11 @@ export async function getDocumentationUnitDetail(
   const comments = await loadComments(supabase, input);
   const events = await loadEvents(supabase, input);
   const agg = emptyAgg();
-  const received = assets.some((asset) => mediumCountsAsReceived(asset.medium));
+  const received = assets.some(
+    (asset) =>
+      mediumCountsAsReceived(asset.medium) &&
+      versionCountsAsClientContent(asset.currentVersion)
+  );
   return {
     unitKey: documentationUnitKey(
       input.assignmentDeliverableId,
@@ -102,8 +107,10 @@ export async function getDocumentationUnitDetail(
     quantity: 1,
     received,
     ...agg,
-    contentAssetCount: assets.filter((asset) =>
-      mediumCountsAsReceived(asset.medium)
+    contentAssetCount: assets.filter(
+      (asset) =>
+        mediumCountsAsReceived(asset.medium) &&
+        versionCountsAsClientContent(asset.currentVersion)
     ).length,
     totalAssetCount: assets.length,
     assets,
@@ -611,26 +618,36 @@ async function loadAggregates(
   const assetIds = assetRows.map((a) => a.id);
   const versionByAsset = new Map<
     string,
-    { count: number; latestLabel: string | null; latestAt: string | null }
+    {
+      count: number;
+      latestLabel: string | null;
+      latestAt: string | null;
+      playable: boolean;
+    }
   >();
 
   if (assetIds.length > 0) {
     const { data: versions } = await supabase
       .from("deliverable_asset_versions")
-      .select("asset_id, version_number, file_name, uploaded_at")
+      .select(
+        "asset_id, version_number, file_name, uploaded_at, storage_bucket, storage_path, external_url"
+      )
       .in("asset_id", assetIds)
       .order("version_number", { ascending: false });
 
     for (const version of versions ?? []) {
       const prev = versionByAsset.get(version.asset_id);
+      const playable = versionCountsAsClientContent(version);
       if (!prev) {
         versionByAsset.set(version.asset_id, {
           count: 1,
           latestLabel: version.file_name,
           latestAt: version.uploaded_at,
+          playable,
         });
       } else {
         prev.count += 1;
+        if (playable) prev.playable = true;
       }
     }
   }
@@ -657,12 +674,14 @@ async function loadAggregates(
     );
     const agg = map.get(key) ?? emptyAgg();
     agg.totalAssetCount += 1;
-    if (CONTENT_MEDIA.includes(asset.medium as DeliverableAssetMedium)) {
-      if (mediumCountsAsReceived(asset.medium as DeliverableAssetMedium)) {
-        agg.contentAssetCount += 1;
-      }
-    }
     const v = versionByAsset.get(asset.id);
+    if (
+      CONTENT_MEDIA.includes(asset.medium as DeliverableAssetMedium) &&
+      mediumCountsAsReceived(asset.medium as DeliverableAssetMedium) &&
+      v?.playable
+    ) {
+      agg.contentAssetCount += 1;
+    }
     if (v) {
       agg.revisionCount += v.count;
       if (
@@ -695,9 +714,8 @@ async function loadAssetsForUnit(
     .order("created_at", { ascending: true });
 
   if (input.assignmentPostScheduleId) {
-    query = query.eq(
-      "assignment_post_schedule_id",
-      input.assignmentPostScheduleId
+    query = query.or(
+      `assignment_post_schedule_id.eq.${input.assignmentPostScheduleId},assignment_post_schedule_id.is.null`
     );
   } else {
     query = query.is("assignment_post_schedule_id", null);

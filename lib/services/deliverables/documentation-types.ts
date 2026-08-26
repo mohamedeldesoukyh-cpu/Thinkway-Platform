@@ -80,6 +80,35 @@ export function mediumCountsAsReceived(medium: DeliverableAssetMedium): boolean 
   return medium === "file" || medium === "external_link";
 }
 
+/** A version is client-visible only after the file or link actually landed. */
+export function versionCountsAsClientContent(version: {
+  storageBucket?: string | null;
+  storagePath?: string | null;
+  externalUrl?: string | null;
+} | null | undefined): boolean {
+  if (!version) return false;
+  const hasFile = Boolean(version.storageBucket?.trim() && version.storagePath?.trim());
+  return hasFile || Boolean(version.externalUrl?.trim());
+}
+
+export function googleDriveFilePreviewUrl(url: string | null | undefined): string | null {
+  const trimmed = url?.trim() ?? "";
+  if (!trimmed) return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return null;
+  }
+  if (!/(^|\.)drive\.google\.com$/i.test(parsed.hostname) && !/(^|\.)docs\.google\.com$/i.test(parsed.hostname)) {
+    return null;
+  }
+  const fromPath = parsed.pathname.match(/\/file\/d\/([a-zA-Z0-9_-]+)/)?.[1];
+  const fileId = fromPath || parsed.searchParams.get("id");
+  if (!fileId) return null;
+  return `https://drive.google.com/file/d/${fileId}/preview`;
+}
+
 export type DocumentationUnitId = {
   campaignHeaderId: string;
   assignmentDeliverableId: string;
@@ -163,6 +192,25 @@ export function documentationUnitKey(
   postId: string | null
 ): string {
   return postId ? `p:${postId}` : `d:${deliverableId}`;
+}
+
+/** Explorer post rows must also match deliverable-level uploads (qty = 1 uses postId null). */
+export function documentationRowHasUploadedContent(
+  receivedKeys: ReadonlySet<string>,
+  assignmentDeliverableId: string,
+  assignmentPostScheduleId: string | null
+): boolean {
+  if (
+    receivedKeys.has(
+      documentationUnitKey(assignmentDeliverableId, assignmentPostScheduleId)
+    )
+  ) {
+    return true;
+  }
+  if (assignmentPostScheduleId) {
+    return receivedKeys.has(documentationUnitKey(assignmentDeliverableId, null));
+  }
+  return false;
 }
 
 export function rollupCreatorCompleteness(

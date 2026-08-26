@@ -79,6 +79,7 @@ type Props = {
   initialCreatorFilter?: string | null;
   /** Deep-link (?deliverable=) selects the documentation unit by assignment deliverable id. */
   initialDeliverableId?: string | null;
+  initialPostScheduleId?: string | null;
   onBackToSchedule?: () => void;
 };
 
@@ -119,6 +120,7 @@ export function CampaignDeliverablesDocumentationTab({
   assignmentHierarchy,
   initialCreatorFilter = null,
   initialDeliverableId = null,
+  initialPostScheduleId = null,
   onBackToSchedule,
 }: Props) {
   const campaignId = workspace.id;
@@ -199,14 +201,21 @@ export function CampaignDeliverablesDocumentationTab({
     if (!initialDeliverableId || deliverableFocusApplied.current || units.length === 0) {
       return;
     }
-    const match = units.find(
-      (unit) => unit.assignmentDeliverableId === initialDeliverableId
-    );
+    const exact = initialPostScheduleId
+      ? units.find(
+          (unit) =>
+            unit.assignmentDeliverableId === initialDeliverableId &&
+            unit.assignmentPostScheduleId === initialPostScheduleId
+        )
+      : null;
+    const match =
+      exact ??
+      units.find((unit) => unit.assignmentDeliverableId === initialDeliverableId);
     if (!match) return;
     deliverableFocusApplied.current = true;
     setSelectedKey(match.unitKey);
     if (match.creatorId) setCreatorFilter(match.creatorId);
-  }, [initialDeliverableId, units]);
+  }, [initialDeliverableId, initialPostScheduleId, units]);
 
   const loadDetailForKey = useCallback(
     (unitKey: string, unitsSnapshot: DocumentationUnitSummary[]) => {
@@ -653,11 +662,13 @@ export function CampaignDeliverablesDocumentationTab({
                     <>
                       <section className="space-y-2">
                         <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          Existing documentation
+                          Play uploaded content
                         </h4>
                         {boundDetail.assets.length === 0 ? (
                           <p className="text-xs text-muted-foreground">
-                            No assets yet for this creator deliverable.
+                            No playable file or link yet. Choose an MP4/MOV below or add a
+                            link, then wait until the player appears here. Client Workspace
+                            only shows files that finish saving.
                           </p>
                         ) : (
                           <ul className="space-y-2">
@@ -691,20 +702,17 @@ export function CampaignDeliverablesDocumentationTab({
                                     {asset.currentVersion.textBody}
                                   </p>
                                 ) : null}
-                                {asset.currentVersion?.storagePath ||
-                                asset.currentVersion?.externalUrl ? (
-                                  <DeliverableAssetPreview
-                                    campaignHeaderId={campaignId}
-                                    assignmentDeliverableId={
-                                      selected.assignmentDeliverableId
-                                    }
-                                    assignmentPostScheduleId={
-                                      selected.assignmentPostScheduleId
-                                    }
-                                    asset={asset}
-                                    disabled={pending}
-                                  />
-                                ) : null}
+                                <DeliverableAssetPreview
+                                  campaignHeaderId={campaignId}
+                                  assignmentDeliverableId={
+                                    selected.assignmentDeliverableId
+                                  }
+                                  assignmentPostScheduleId={
+                                    selected.assignmentPostScheduleId
+                                  }
+                                  asset={asset}
+                                  disabled={pending}
+                                />
                               </li>
                             ))}
                           </ul>

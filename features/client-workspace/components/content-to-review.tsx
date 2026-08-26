@@ -4,10 +4,12 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import {
+  APPROVED_CONTENT_HEADING,
   APPROVE_CONTENT_LABEL,
   CLIENT_CONTENT_STATUS_LABEL,
   DOWNLOAD_ORIGINAL_LABEL,
   NO_CONTENT_TO_REVIEW_COPY,
+  NO_CONTENT_TO_REVIEW_HINT,
   REQUEST_CONTENT_CHANGES_LABEL,
   VIEW_EXTERNAL_LINK_LABEL,
   clientContentAssetUrl,
@@ -16,6 +18,7 @@ import {
 } from "../content-approval";
 import { decideContentAction } from "../actions/client-workspace-actions";
 import { ReviewPlatformMark } from "./review-platform-mark";
+import { googleDriveFilePreviewUrl } from "@/lib/services/deliverables/documentation-types";
 
 function statusClass(status: ClientContentReviewItem["status"]): string {
   if (status === "approved") return "sc ok";
@@ -41,6 +44,17 @@ function ContentPreview({ item, token }: { item: ClientContentReviewItem; token:
         controls
         preload="metadata"
         src={clientContentAssetUrl({ token, versionId: item.versionId, mode: "preview" })}
+      />
+    );
+  }
+  const drivePreview = googleDriveFilePreviewUrl(item.externalUrl);
+  if (drivePreview) {
+    return (
+      <iframe
+        className="camp-content-preview"
+        title={item.fileName || item.deliverable}
+        src={drivePreview}
+        allow="autoplay"
       />
     );
   }
@@ -178,6 +192,7 @@ export function ContentToReview({
   token: string;
 }) {
   const pending = clientContentToReview(items);
+  const approved = items.filter((item) => item.status === "approved");
   return (
     <div className="card">
       <p className="ck">Content to Review</p>
@@ -188,9 +203,20 @@ export function ContentToReview({
             <ContentReviewCard key={`${item.assetId}:${item.versionId}`} item={item} token={token} />
           ))}
         </div>
-      ) : (
-        <p className="note">{NO_CONTENT_TO_REVIEW_COPY}</p>
-      )}
+      ) : approved.length === 0 ? (
+        <>
+          <p className="note">{NO_CONTENT_TO_REVIEW_COPY}</p>
+          <p className="note">{NO_CONTENT_TO_REVIEW_HINT}</p>
+        </>
+      ) : null}
+      {approved.length > 0 ? (
+        <div className="camp-content-list" style={{ marginTop: pending.length > 0 ? 22 : 16 }}>
+          <p className="ck">{APPROVED_CONTENT_HEADING}</p>
+          {approved.map((item) => (
+            <ContentReviewCard key={`approved:${item.assetId}:${item.versionId}`} item={item} token={token} />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
