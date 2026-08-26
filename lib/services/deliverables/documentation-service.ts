@@ -637,7 +637,11 @@ async function loadAggregates(
 
     for (const version of versions ?? []) {
       const prev = versionByAsset.get(version.asset_id);
-      const playable = versionCountsAsClientContent(version);
+      const playable = versionCountsAsClientContent({
+        storageBucket: version.storage_bucket,
+        storagePath: version.storage_path,
+        externalUrl: version.external_url,
+      });
       if (!prev) {
         versionByAsset.set(version.asset_id, {
           count: 1,
