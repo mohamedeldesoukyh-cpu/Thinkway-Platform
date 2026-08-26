@@ -12,17 +12,7 @@ import {
   CLIENT_CHANGE_AREA_LABEL,
   type ClientChangeArea,
 } from "../constants";
-import { NOT_AVAILABLE, TO_BE_CONFIRMED } from "../format";
-import {
-  campaignRosterFallback,
-  clientCampaignViewKind,
-  CLIENT_CAMPAIGN_POST_STATUS_LABEL,
-  emptyClientCampaignExecution,
-  formatClientCampaignPerformance,
-  formatClientScheduleDate,
-  groupClientCampaignPosts,
-  type ClientCampaignPostRow,
-} from "../campaign-execution";
+import { campaignRosterFallback, clientCampaignViewKind, emptyClientCampaignExecution } from "../campaign-execution";
 import { approvalWorkspaceKind } from "../journey-state";
 import { emptyClientCampaignContent } from "../content-approval";
 import {
@@ -34,7 +24,6 @@ import { countSelections } from "../status";
 import type { ClientWorkspaceView } from "../types";
 import { CampaignDashboard } from "./campaign-dashboard";
 import { useClientWorkspaceState } from "./client-workspace-state";
-import { ReviewPlatformMark } from "./review-platform-mark";
 
 export function ApprovalWorkspace({
   view,
@@ -74,7 +63,6 @@ export function ApprovalWorkspace({
       : commerciallyApproved
         ? campaignRosterFallback(selectedCreators)
         : [];
-  const groups = groupClientCampaignPosts(posts);
 
   if (approvalKind === "historical") {
     const approvedOn = view.review.approvedAt
@@ -144,91 +132,19 @@ export function ApprovalWorkspace({
     <>
       <CampaignDashboard
         campaignName={view.overview.campaignName}
-        posts={executionPosts}
+        clientLabel={view.overview.clientLabel}
+        creatorCount={view.overview.creatorCount}
+        updatedAt={view.review.updatedAt}
+        reviewNumber={view.review.reviewNumber}
+        historical={Boolean(journey?.historical)}
+        newerReviewNumber={view.newerReviewNumber}
+        inCampaign={kind === "in_campaign"}
+        posts={posts}
         contentItems={contentItems}
         token={token}
       />
-
-      <div className="card">
-        <p className="ck">Publication plan</p>
-        <h2>Creators and go-live</h2>
-        {groups.length > 0 ? (
-          groups.map((group) => (
-            <div key={group.id} style={{ marginTop: group.id === groups[0]?.id ? 0 : 22 }}>
-              <p className="ck">{group.label}</p>
-              <CampaignExecutionTable rows={group.posts} />
-            </div>
-          ))
-        ) : (
-          <p className="note">{CAMPAIGN_SETTING_UP_COPY}</p>
-        )}
-      </div>
       <CampaignChangeActions view={view} token={token} />
     </>
-  );
-}
-
-function campaignStatusClass(row: ClientCampaignPostRow): string {
-  if (row.status === "live" || row.status === "completed") return "sc ok";
-  if (row.status === "overdue") return "sc rej";
-  return "sc";
-}
-
-function CampaignExecutionTable({ rows }: { rows: ClientCampaignPostRow[] }) {
-  return (
-    <div className="tbl-scroll">
-      <table className="tbl">
-        <thead>
-          <tr>
-            <th>Creator</th>
-            <th>Platform</th>
-            <th>Deliverable</th>
-            <th>Scheduled</th>
-            <th>Status</th>
-            <th>Publication date</th>
-            <th>Published content</th>
-            <th>Performance</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id}>
-              <td className="name">{row.creatorName}</td>
-              <td>
-                {row.platform ? (
-                  <span className="ov-plat-row" title={row.platformLabel || row.platform}>
-                    <span className="ov-pav ov-pav-sm">
-                      <ReviewPlatformMark platform={row.platform || row.platformLabel} />
-                    </span>
-                    {row.platformLabel || row.platform}
-                  </span>
-                ) : (
-                  TO_BE_CONFIRMED
-                )}
-              </td>
-              <td>{row.deliverable || TO_BE_CONFIRMED}</td>
-              <td>{formatClientScheduleDate(row.scheduledDate) ?? TO_BE_CONFIRMED}</td>
-              <td>
-                <span className={campaignStatusClass(row)}>
-                  {CLIENT_CAMPAIGN_POST_STATUS_LABEL[row.status]}
-                </span>
-              </td>
-              <td>{formatClientScheduleDate(row.publicationDate) ?? NOT_AVAILABLE}</td>
-              <td>
-                {row.contentUrl ? (
-                  <a href={row.contentUrl} target="_blank" rel="noopener noreferrer">
-                    View post
-                  </a>
-                ) : (
-                  NOT_AVAILABLE
-                )}
-              </td>
-              <td>{formatClientCampaignPerformance(row.performance)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
   );
 }
 

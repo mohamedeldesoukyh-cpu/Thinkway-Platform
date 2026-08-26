@@ -16,6 +16,13 @@ export const CAMPAIGN_PROGRESS_LIVE_EXPLANATION =
   "Share of campaign creators with at least one live publication.";
 export const CAMPAIGN_PROGRESS_COMPLETED_EXPLANATION =
   "Share of campaign publications that are completed.";
+export const NEEDS_ATTENTION_COPY = "Needs your attention";
+export const PUBLICATION_PLAN_NOTE =
+  "Every deliverable in the campaign. Grouped by creator by default — switch to All rows for the full line-by-line list.";
+export const PUBLICATION_PLAN_FOOTNOTE =
+  "Dates and performance appear here automatically once Thinkway confirms scheduling.";
+export const CONTENT_REVIEW_NOTE =
+  "Approve to release for publishing, or request changes with a note back to Thinkway.";
 
 export type ClientCampaignDashboardCounts = {
   approvedCreators: number;
@@ -23,6 +30,16 @@ export type ClientCampaignDashboardCounts = {
   dueToday: number;
   live: number;
   overdue: number;
+  completed: number;
+  scheduling: number;
+  deliverables: number;
+};
+
+export type ClientCampaignLegendCounts = {
+  live: number;
+  overdue: number;
+  scheduled: number;
+  scheduling: number;
   completed: number;
 };
 
@@ -74,6 +91,8 @@ function emptyDashboardCounts(): ClientCampaignDashboardCounts {
     live: 0,
     overdue: 0,
     completed: 0,
+    scheduling: 0,
+    deliverables: 0,
   };
 }
 
@@ -150,6 +169,20 @@ export function clientCampaignDashboardCounts(
     live: countByStatus(posts, "live"),
     overdue: countByStatus(posts, "overdue"),
     completed: countByStatus(posts, "completed"),
+    scheduling: countByStatus(posts, "scheduling"),
+    deliverables: posts.length,
+  };
+}
+
+export function clientCampaignLegendCounts(
+  counts: ClientCampaignDashboardCounts
+): ClientCampaignLegendCounts {
+  return {
+    live: counts.live,
+    overdue: counts.overdue,
+    scheduled: counts.scheduled + counts.dueToday,
+    scheduling: counts.scheduling,
+    completed: counts.completed,
   };
 }
 
@@ -291,4 +324,18 @@ export function clientCampaignDashboardReconcilesWithPosts(
     dashboard.live.length === glance.live &&
     dashboard.overdue.length === glance.overdue
   );
+}
+
+export function formatCampaignPageUpdatedAt(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
