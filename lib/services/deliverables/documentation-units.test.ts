@@ -5,6 +5,14 @@ import type { AssignmentHierarchy } from "@/lib/domains/campaign/assignment-hier
 
 import { buildDocumentationUnitsFromHierarchy, emptyAgg } from "./build-documentation-units";
 import {
+  defaultOpenTypeGroupKeys,
+  documentationSlotRowLabel,
+  documentationSlotTitle,
+  groupDocumentationUnits,
+} from "./documentation-list-groups";
+import {
+  defaultDeliverableAssetType,
+  documentationReceiptStatus,
   mediumCountsAsReceived,
   rollupCreatorCompleteness,
 } from "./documentation-types";
@@ -231,5 +239,77 @@ describe("Deliverables documentation units", () => {
       rollupCreatorCompleteness([{ received: true }, { received: true }]),
       "complete"
     );
+  });
+});
+
+describe("Documentation repository grouping", () => {
+  it("groups by creator then reel vs story, without mixing slots", () => {
+    const units = buildDocumentationUnitsFromHierarchy(
+      hierarchyFixture(),
+      "ch1",
+      new Map()
+    );
+    const groups = groupDocumentationUnits(units);
+    assert.equal(groups.length, 1);
+    assert.equal(groups[0]?.creatorName, "Eman Abdullah");
+    assert.equal(groups[0]?.types.length, 2);
+    assert.equal(groups[0]?.types[0]?.typeLabel, "IG reel");
+    assert.equal(groups[0]?.types[0]?.units.length, 1);
+    assert.equal(groups[0]?.types[1]?.units.length, 3);
+    assert.equal(documentationSlotTitle(groups[0]!.types[1]!.units[0]!), "IG story set #1");
+    assert.equal(documentationSlotRowLabel(groups[0]!.types[1]!.units[1]!), "#2");
+  });
+
+  it("collapses large type groups unless the selected slot is inside", () => {
+    const units = buildDocumentationUnitsFromHierarchy(
+      hierarchyFixture(),
+      "ch1",
+      new Map()
+    );
+    const manyStories = Array.from({ length: 8 }, (_, index) => ({
+      ...units[1]!,
+      unitKey: `p:story-${index}`,
+      sequenceNumber: index + 1,
+    }));
+    const grouped = groupDocumentationUnits([units[0]!, ...manyStories]);
+    const openDefault = defaultOpenTypeGroupKeys(grouped, null);
+    assert.equal(openDefault.has(grouped[0]!.types[0]!.groupKey), true);
+    assert.equal(openDefault.has(grouped[0]!.types[1]!.groupKey), false);
+
+    const openSelected = defaultOpenTypeGroupKeys(grouped, manyStories[2]!.unitKey);
+    assert.equal(openSelected.has(grouped[0]!.types[1]!.groupKey), true);
+  });
+
+  it("marks unfinished uploads incomplete instead of missing", () => {
+    assert.equal(
+      documentationReceiptStatus({
+        received: false,
+        totalAssetCount: 1,
+        contentAssetCount: 0,
+      }),
+      "incomplete"
+    );
+    assert.equal(
+      documentationReceiptStatus({
+        received: false,
+        totalAssetCount: 0,
+        contentAssetCount: 0,
+      }),
+      "missing"
+    );
+    assert.equal(
+      documentationReceiptStatus({
+        received: true,
+        totalAssetCount: 1,
+        contentAssetCount: 1,
+      }),
+      "received"
+    );
+  });
+
+  it("defaults story slots to screenshots and reels to draft video", () => {
+    assert.equal(defaultDeliverableAssetType("instagram_story"), "story_screenshot");
+    assert.equal(defaultDeliverableAssetType("instagram_reel"), "draft_video");
+    assert.equal(defaultDeliverableAssetType("instagram_post"), "feed_image");
   });
 });

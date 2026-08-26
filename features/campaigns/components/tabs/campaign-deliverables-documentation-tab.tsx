@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import { toast } from "sonner";
 import { SearchIcon } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -49,6 +48,10 @@ import {
   type DeliverableUploadPhase,
 } from "@/features/campaigns/deliverable-asset-upload";
 import { DeliverableAssetPreview } from "@/features/campaigns/components/deliverables/deliverable-asset-preview";
+import {
+  DocumentationRepositoryList,
+  documentationStatusBadge,
+} from "@/features/campaigns/components/deliverables/documentation-repository-list";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import {
@@ -62,14 +65,25 @@ import {
   DELIVERABLE_ASSET_TOO_LARGE_MESSAGE,
   DELIVERABLE_ASSET_TYPES,
   DELIVERABLE_ASSET_TYPE_LABELS,
+  defaultDeliverableAssetType,
+  documentationReceiptStatus,
   inferDeliverableAssetMime,
   unfinishedFileAssetId,
+  versionCountsAsClientContent,
   type DocumentationUnitDetail,
   type DocumentationUnitSummary,
 } from "@/lib/services/deliverables/documentation-types";
+import {
+  documentationSlotTitle,
+  documentationTypeGroupKey,
+  listDocumentationTypeOptions,
+} from "@/lib/services/deliverables/documentation-list-groups";
 import { friendlyServerActionError } from "@/lib/clients/client-document-utils";
 import { DocumentNumber } from "@/components/ui/document-number";
-import { cn } from "@/lib/utils";
+import {
+  deliverableTypeLabel,
+  getPlatformOptionLabel,
+} from "@/lib/campaigns/deliverable-taxonomy";
 import {
   applyDocumentationAggregates,
   buildDocumentationUnitsFromHierarchy,
@@ -85,16 +99,6 @@ type Props = {
   onBackToSchedule?: () => void;
 };
 
-const DEFAULT_ASSET_TYPE = "draft_video";
-
-function receivedBadge(received: boolean) {
-  return received ? (
-    <Badge className="bg-emerald-600 hover:bg-emerald-600">Received</Badge>
-  ) : (
-    <Badge variant="outline">Missing</Badge>
-  );
-}
-
 type EditorDrafts = {
   assetType: string;
   linkUrl: string;
@@ -102,13 +106,43 @@ type EditorDrafts = {
   commentBody: string;
 };
 
-function emptyDrafts(): EditorDrafts {
+function emptyDrafts(assetType = defaultDeliverableAssetType(null)): EditorDrafts {
   return {
-    assetType: DEFAULT_ASSET_TYPE,
+    assetType,
     linkUrl: "",
     textBody: "",
     commentBody: "",
   };
+}
+
+function slotReceiptStatus(
+  unit: DocumentationUnitSummary,
+  detail: DocumentationUnitDetail | null
+) {
+  if (detail && unfinishedFileAssetId(detail.assets, "") && !unit.received) {
+    return "incomplete" as const;
+  }
+  return documentationReceiptStatus(unit);
+}
+
+function slotStatusCopy(
+  unit: DocumentationUnitSummary,
+  detail: DocumentationUnitDetail | null
+): string {
+  const status = slotReceiptStatus(unit, detail);
+  if (status === "received") return "Documentation received";
+  if (status === "incomplete") {
+    const unfinished = detail?.assets.some(
+      (asset) =>
+        asset.medium === "file" &&
+        !versionCountsAsClientContent(asset.currentVersion)
+    );
+    if (unfinished) {
+      return "Upload did not finish — choose the file again for this slot";
+    }
+    return "Documentation started — still needs a finished file or link";
+  }
+  return "No finished file or link for this slot yet";
 }
 
 function draftsAreDirty(drafts: EditorDrafts): boolean {
@@ -141,6 +175,7 @@ export function CampaignDeliverablesDocumentationTab({
   const [creatorFilter, setCreatorFilter] = useState(
     initialCreatorFilter ?? "all"
   );
+  const [typeFilter, setTypeFilter] = useState("all");
   /** Selected repository unit — SSOT for which creator/deliverable is active. */
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   /** Detail bound only when detail.unitKey === selectedKey. */
@@ -216,7 +251,9 @@ export function CampaignDeliverablesDocumentationTab({
     if (!match) return;
     deliverableFocusApplied.current = true;
     setSelectedKey(match.unitKey);
+    setDrafts(emptyDrafts(defaultDeliverableAssetType(match.deliverableType)));
     if (match.creatorId) setCreatorFilter(match.creatorId);
+    setTypeFilter(documentationTypeGroupKey(match));
   }, [initialDeliverableId, initialPostScheduleId, units]);
 
   const loadDetailForKey = useCallback(
@@ -294,11 +331,14 @@ export function CampaignDeliverablesDocumentationTab({
       if (creatorFilter !== "all" && unit.creatorId !== creatorFilter) {
         return false;
       }
+      if (typeFilter !== "all" && documentationTypeGroupKey(unit) !== typeFilter) {
+        return false;
+      }
       if (!q) return true;
       return [
         unit.label,
         unit.creatorName,
-        unit.assignmentName,
+        documentationSlotTitle(unit),
         unit.platform,
         unit.deliverableType,
       ]
@@ -307,7 +347,15 @@ export function CampaignDeliverablesDocumentationTab({
         .toLowerCase()
         .includes(q);
     });
-  }, [units, search, creatorFilter]);
+  }, [units, search, creatorFilter, typeFilter]);
+
+  const typeOptions = useMemo(() => {
+    const scoped =
+      creatorFilter === "all"
+        ? units
+        : units.filter((unit) => unit.creatorId === creatorFilter);
+    return listDocumentationTypeOptions(scoped);
+  }, [units, creatorFilter]);
 
   const selected = useMemo(
     () => units.find((u) => u.unitKey === selectedKey) ?? null,
@@ -359,10 +407,16 @@ export function CampaignDeliverablesDocumentationTab({
     [units]
   );
 
-  const applySelection = useCallback((nextKey: string | null) => {
-    setDrafts(emptyDrafts());
-    setSelectedKey(nextKey);
-  }, []);
+  const applySelection = useCallback(
+    (nextKey: string | null) => {
+      const unit = nextKey
+        ? units.find((entry) => entry.unitKey === nextKey)
+        : null;
+      setDrafts(emptyDrafts(defaultDeliverableAssetType(unit?.deliverableType)));
+      setSelectedKey(nextKey);
+    },
+    [units]
+  );
 
   const requestSelect = useCallback(
     (nextKey: string) => {
@@ -521,17 +575,23 @@ export function CampaignDeliverablesDocumentationTab({
       <div className="space-y-4">
         <OperationalTableSection wide>
           <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
-            <div className="relative min-w-[220px] flex-1">
+            <div className="relative min-w-[180px] flex-1">
               <SearchIcon className="pointer-events-none absolute left-2 top-2.5 size-3.5 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search creator, deliverable, assignment…"
+                placeholder="Search slot, creator, type…"
                 className="h-8 pl-7 text-xs"
               />
             </div>
-            <Select value={creatorFilter} onValueChange={setCreatorFilter}>
-              <SelectTrigger className="h-8 w-[180px] text-xs">
+            <Select
+              value={creatorFilter}
+              onValueChange={(value) => {
+                setCreatorFilter(value);
+                setTypeFilter("all");
+              }}
+            >
+              <SelectTrigger className="h-8 w-[160px] text-xs">
                 <SelectValue placeholder="Creator" />
               </SelectTrigger>
               <SelectContent>
@@ -543,67 +603,54 @@ export function CampaignDeliverablesDocumentationTab({
                 ))}
               </SelectContent>
             </Select>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="h-8 w-[170px] text-xs">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All types</SelectItem>
+                {typeOptions.map((option) => (
+                  <SelectItem key={option.groupKey} value={option.groupKey}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="grid min-h-[480px] grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-            <div className="border-r">
+          <div className="grid min-h-[480px] grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+            <div className="max-h-[min(72vh,720px)] overflow-y-auto border-r">
               {loading ? (
                 <p className="p-4 text-sm text-muted-foreground">Loading…</p>
               ) : filtered.length === 0 ? (
                 <AuroraEmptyState
-                  title="No documentation units yet."
-                  description="Deliverables unlock after Vendor IO acceptance. Add creators under Assignments first. Owner: Operations — Decision Center shows the clearance path."
+                  title={
+                    units.length === 0
+                      ? "No documentation units yet."
+                      : "No slots match these filters."
+                  }
+                  description={
+                    units.length === 0
+                      ? "Deliverables unlock after Vendor IO acceptance. Add creators under Assignments first. Owner: Operations — Decision Center shows the clearance path."
+                      : "Choose All types or another creator to see reel vs story slots."
+                  }
                 />
               ) : (
-                <ul className="divide-y" role="listbox" aria-label="Documentation units">
-                  {filtered.map((unit) => {
-                    const isActive = selectedKey === unit.unitKey;
-                    return (
-                      <li key={unit.unitKey}>
-                        <button
-                          type="button"
-                          role="option"
-                          aria-selected={isActive}
-                          aria-disabled={selectionLocked && !isActive}
-                          disabled={selectionLocked && !isActive}
-                          onClick={() => requestSelect(unit.unitKey)}
-                          className={cn(
-                            "flex w-full flex-col gap-1 px-3 py-2.5 text-left transition-colors hover:bg-muted/40",
-                            isActive && "bg-muted/60",
-                            selectionLocked && !isActive && "cursor-not-allowed opacity-50"
-                          )}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-semibold">
-                              {unit.label}
-                            </span>
-                            {receivedBadge(unit.received)}
-                          </div>
-                          <p className="text-[11px] text-muted-foreground">
-                            {unit.creatorName ?? "—"} · {unit.assignmentName}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground">
-                            {unit.contentAssetCount} content asset
-                            {unit.contentAssetCount === 1 ? "" : "s"}
-                            {unit.latestVersionLabel
-                              ? ` · ${unit.latestVersionLabel}`
-                              : ""}
-                            {unit.revisionCount > 0
-                              ? ` · ${unit.revisionCount} version(s)`
-                              : ""}
-                          </p>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
+                <DocumentationRepositoryList
+                  units={filtered}
+                  selectedKey={selectedKey}
+                  selectionLocked={selectionLocked}
+                  hideCreatorHeaders={creatorFilter !== "all"}
+                  onSelect={requestSelect}
+                />
               )}
             </div>
 
             <div className="p-3">
               {!selected ? (
                 <p className="text-sm text-muted-foreground">
-                  Select a creator deliverable to manage documentation.
+                  Open a type on the left, then pick the exact slot (Reel #1 or
+                  Story #3) before you upload.
                 </p>
               ) : (
                 <div
@@ -611,7 +658,6 @@ export function CampaignDeliverablesDocumentationTab({
                   className="space-y-4"
                   data-documentation-unit={selected.unitKey}
                 >
-                  {/* Persistent context — always follows selected row immediately */}
                   <div
                     className="thinkway-aurora-doc-panel flex items-start gap-3 p-3"
                     data-selected-unit={selected.unitKey}
@@ -622,20 +668,32 @@ export function CampaignDeliverablesDocumentationTab({
                       size={38}
                     />
                     <div className="min-w-0 flex-1 space-y-1">
+                      <p className="text-[10px] font-medium uppercase tracking-wide text-[var(--camp-text-4)]">
+                        Uploading for this slot
+                      </p>
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="truncate text-sm font-semibold text-[var(--camp-text)]">
-                          {selected.creatorName ?? "Unassigned creator"}
+                          {documentationSlotTitle(selected)}
                         </p>
-                        {receivedBadge(selected.received)}
+                        {documentationStatusBadge(
+                          slotReceiptStatus(selected, boundDetail)
+                        )}
                       </div>
+                      <p className="truncate text-[12px] text-[var(--camp-text-2)]">
+                        {selected.creatorName ?? "Unassigned creator"}
+                      </p>
                       <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-0.5 text-[12px]">
                         <dt className="text-[var(--camp-text-4)]">Platform</dt>
                         <dd className="truncate text-[var(--camp-text-2)]">
-                          {selected.platform ?? "—"}
+                          {selected.platform
+                            ? getPlatformOptionLabel(selected.platform)
+                            : "—"}
                         </dd>
-                        <dt className="text-[var(--camp-text-4)]">Deliverable</dt>
+                        <dt className="text-[var(--camp-text-4)]">Type</dt>
                         <dd className="truncate text-[var(--camp-text-2)]">
-                          {selected.deliverableType ?? selected.label}
+                          {selected.deliverableType
+                            ? deliverableTypeLabel(selected.deliverableType)
+                            : selected.label}
                         </dd>
                         <dt className="text-[var(--camp-text-4)]">Assignment ID</dt>
                         <dd className="truncate text-[var(--camp-text-2)]">
@@ -646,10 +704,8 @@ export function CampaignDeliverablesDocumentationTab({
                           )}
                         </dd>
                         <dt className="text-[var(--camp-text-4)]">Status</dt>
-                        <dd className="truncate text-[var(--camp-text-2)]">
-                          {selected.received
-                            ? "Documentation received"
-                            : "Documentation missing"}
+                        <dd className="text-[var(--camp-text-2)]">
+                          {slotStatusCopy(selected, boundDetail)}
                           {uploadMeter
                             ? uploadMeter.phase === "uploading"
                               ? ` · Uploading ${deliverableUploadPercent(uploadMeter.loaded, uploadMeter.total)}%`
@@ -666,7 +722,7 @@ export function CampaignDeliverablesDocumentationTab({
 
                   {detailLoading && !boundDetail ? (
                     <p className="text-sm text-muted-foreground">
-                      Loading documentation for {selected.creatorName ?? "this creator"}…
+                      Loading documentation for {documentationSlotTitle(selected)}…
                     </p>
                   ) : null}
 
@@ -733,7 +789,7 @@ export function CampaignDeliverablesDocumentationTab({
 
                       <section className="space-y-2 rounded-md border p-3">
                         <h4 className="text-xs font-medium">
-                          Add documentation · {selected.creatorName ?? "Selected"}
+                          Add documentation · {documentationSlotTitle(selected)}
                         </h4>
                         <div className="grid gap-2">
                           <div className="space-y-1">
@@ -1132,8 +1188,8 @@ export function CampaignDeliverablesDocumentationTab({
             <DialogTitle>Unsaved documentation changes</DialogTitle>
             <DialogDescription>
               You have unsaved link, caption, or comment drafts for{" "}
-              {selected?.creatorName ?? "the current creator"}. Save them before
-              switching, discard them, or cancel.
+              {selected ? documentationSlotTitle(selected) : "the current slot"}.
+              Save them before switching, discard them, or cancel.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">

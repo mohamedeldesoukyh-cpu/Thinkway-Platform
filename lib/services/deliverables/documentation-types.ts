@@ -32,6 +32,39 @@ export const DELIVERABLE_ASSET_TYPE_LABELS: Record<DeliverableAssetType, string>
     other: "Other",
   };
 
+/** Suggested upload type for a slot — stories vs reels vs feed. */
+export function defaultDeliverableAssetType(
+  deliverableType: string | null | undefined
+): DeliverableAssetType {
+  const code = (deliverableType ?? "").toLowerCase();
+  if (code.includes("story")) return "story_screenshot";
+  if (
+    code.includes("post") ||
+    code.includes("feed") ||
+    code.includes("image") ||
+    code.includes("photo")
+  ) {
+    return "feed_image";
+  }
+  return "draft_video";
+}
+
+export type DocumentationReceiptStatus = "received" | "incomplete" | "missing";
+
+/**
+ * Received = finished file or link (D2). Incomplete = something started
+ * (unfinished upload, caption) but no playable content yet.
+ */
+export function documentationReceiptStatus(unit: {
+  received: boolean;
+  totalAssetCount: number;
+  contentAssetCount: number;
+}): DocumentationReceiptStatus {
+  if (unit.received) return "received";
+  if (unit.totalAssetCount > unit.contentAssetCount) return "incomplete";
+  return "missing";
+}
+
 export type DeliverableAssetMedium = "file" | "external_link" | "text";
 
 /** Matches `storage.buckets.file_size_limit` for `deliverable-assets` (100 MB). */
