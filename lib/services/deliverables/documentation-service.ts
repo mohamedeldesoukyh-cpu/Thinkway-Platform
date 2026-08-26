@@ -15,6 +15,8 @@ import {
   type AssetAgg,
 } from "./build-documentation-units";
 import {
+  DELIVERABLE_ASSET_MAX_BYTES,
+  DELIVERABLE_ASSET_TOO_LARGE_MESSAGE,
   documentationUnitKey,
   mediumCountsAsReceived,
   rollupCreatorCompleteness,
@@ -159,6 +161,9 @@ export async function addFileAssetVersion(
     changeSummary?: string | null;
   }
 ): Promise<{ ok: true; assetId: string; versionId: string } | { ok: false; message: string }> {
+  if (input.fileSize > DELIVERABLE_ASSET_MAX_BYTES) {
+    return { ok: false, message: DELIVERABLE_ASSET_TOO_LARGE_MESSAGE };
+  }
   let assetId = input.assetId ?? null;
 
   if (!assetId) {
@@ -243,6 +248,163 @@ export async function addFileAssetVersion(
   });
 
   return { ok: true, assetId, versionId };
+}
+
+export type BegunDeliverableFileUpload = {
+  assetId: string;
+  versionId: string;
+  versionNumber: number;
+  storagePath: string;
+  bucket: string;
+  signedUrl: string;
+  token: string;
+};
+
+export async function beginFileAssetUpload(
+  supabase: Supabase,
+  input: {
+    actorId: string;
+    campaignHeaderId: string;
+    assignmentDeliverableId: string;
+    assignmentPostScheduleId: string | null;
+    assetType: DeliverableAssetType;
+    label?: string | null;
+    assetId?: string | null;
+    fileName: string;
+    mimeType: string;
+    fileSize: number;
+  }
+): Promise<({ ok: true } & BegunDeliverableFileUpload) | { ok: false; message: string }> {
+  if (input.fileSize <= 0) {
+    return { ok: false, message: "Choose a file to upload." };
+  }
+  if (input.fileSize > DELIVERABLE_ASSET_MAX_BYTES) {
+    return { ok: false, message: DELIVERABLE_ASSET_TOO_LARGE_MESSAGE };
+  }
+
+  let assetId = input.assetId ?? null;
+  if (!assetId) {
+    const created = await supabase
+      .from("deliverable_assets")
+      .insert({
+        campaign_header_id: input.campaignHeaderId,
+        assignment_deliverable_id: input.assignmentDeliverableId,
+        assignment_post_schedule_id: input.assignmentPostScheduleId,
+        asset_type: input.assetType,
+        medium: "file",
+        label: input.label ?? input.fileName,
+        created_by: input.actorId,
+      })
+      .select("id")
+      .single();
+    if (created.error || !created.data) {
+      return { ok: false, message: created.error?.message ?? "Failed to create asset" };
+    }
+    assetId = created.data.id;
+  }
+
+  const { data: latest } = await supabase
+    .from("deliverable_asset_versions")
+    .select("version_number")
+    .eq("asset_id", assetId)
+    .order("version_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const versionNumber = Number(latest?.version_number ?? 0) + 1;
+  const versionId = randomUUID();
+  const safeName = input.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const storagePath = `${input.campaignHeaderId}/${input.assignmentDeliverableId}/${assetId}/${versionId}-${safeName}`;
+
+  const signed = await supabase.storage.from(BUCKET).createSignedUploadUrl(storagePath);
+  if (signed.error || !signed.data?.signedUrl || !signed.data.token) {
+    return {
+      ok: false,
+      message: signed.error?.message ?? "Could not start the file upload.",
+    };
+  }
+
+  return {
+    ok: true,
+    assetId,
+    versionId,
+    versionNumber,
+    storagePath,
+    bucket: BUCKET,
+    signedUrl: signed.data.signedUrl,
+    token: signed.data.token,
+  };
+}
+
+export async function completeFileAssetUpload(
+  supabase: Supabase,
+  input: {
+    actorId: string;
+    campaignHeaderId: string;
+    assignmentDeliverableId: string;
+    assignmentPostScheduleId: string | null;
+    assetType: DeliverableAssetType;
+    fileName: string;
+    mimeType: string;
+    fileSize: number;
+    changeSummary?: string | null;
+    assetId: string;
+    versionId: string;
+    versionNumber: number;
+    storagePath: string;
+  }
+): Promise<{ ok: true; assetId: string; versionId: string } | { ok: false; message: string }> {
+  const existing = await supabase
+    .from("deliverable_asset_versions")
+    .select("id")
+    .eq("id", input.versionId)
+    .maybeSingle();
+  if (existing.data?.id) {
+    return { ok: true, assetId: input.assetId, versionId: input.versionId };
+  }
+
+  const uploaded = await supabase.storage.from(BUCKET).createSignedUrl(input.storagePath, 30);
+  if (uploaded.error || !uploaded.data?.signedUrl) {
+    return { ok: false, message: "Upload did not finish. Try again." };
+  }
+
+  const { error: versionError } = await supabase.from("deliverable_asset_versions").insert({
+    id: input.versionId,
+    asset_id: input.assetId,
+    version_number: input.versionNumber,
+    storage_bucket: BUCKET,
+    storage_path: input.storagePath,
+    mime_type: input.mimeType,
+    file_name: input.fileName,
+    file_size: input.fileSize,
+    change_summary: input.changeSummary ?? null,
+    uploaded_by: input.actorId,
+  });
+  if (versionError) {
+    return { ok: false, message: versionError.message };
+  }
+
+  await supabase
+    .from("deliverable_assets")
+    .update({ current_version_id: input.versionId })
+    .eq("id", input.assetId);
+
+  await logEvent(supabase, {
+    campaignHeaderId: input.campaignHeaderId,
+    assignmentDeliverableId: input.assignmentDeliverableId,
+    assignmentPostScheduleId: input.assignmentPostScheduleId,
+    assetId: input.assetId,
+    versionId: input.versionId,
+    eventType: input.versionNumber === 1 ? "upload" : "replace",
+    actorUserId: input.actorId,
+    payload: {
+      file_name: input.fileName,
+      version_number: input.versionNumber,
+      asset_type: input.assetType,
+    },
+  });
+
+  return { ok: true, assetId: input.assetId, versionId: input.versionId };
 }
 
 export async function addInternalComment(

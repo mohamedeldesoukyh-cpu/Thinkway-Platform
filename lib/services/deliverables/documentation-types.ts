@@ -34,6 +34,30 @@ export const DELIVERABLE_ASSET_TYPE_LABELS: Record<DeliverableAssetType, string>
 
 export type DeliverableAssetMedium = "file" | "external_link" | "text";
 
+/** Matches `storage.buckets.file_size_limit` for `deliverable-assets` (100 MB). */
+export const DELIVERABLE_ASSET_MAX_BYTES = 100 * 1024 * 1024;
+
+export const DELIVERABLE_ASSET_TOO_LARGE_MESSAGE =
+  "This file is too large. Reels and videos must be 100 MB or smaller.";
+
+export function inferDeliverableAssetMime(
+  mimeType: string | null | undefined,
+  fileName: string
+): string {
+  const typed = mimeType?.trim();
+  if (typed) return typed;
+  const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
+  if (ext === "mp4" || ext === "m4v") return "video/mp4";
+  if (ext === "mov") return "video/quicktime";
+  if (ext === "webm") return "video/webm";
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  if (ext === "png") return "image/png";
+  if (ext === "webp") return "image/webp";
+  if (ext === "gif") return "image/gif";
+  if (ext === "pdf") return "application/pdf";
+  return "application/octet-stream";
+}
+
 export type DocumentationAudience = "internal" | "creator" | "client";
 
 export type DocumentationCompleteness = "none" | "partial" | "complete";

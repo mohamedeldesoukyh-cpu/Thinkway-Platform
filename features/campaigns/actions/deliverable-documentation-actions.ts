@@ -8,13 +8,18 @@ import {
   addFileAssetVersion,
   addInternalComment,
   addTextAsset,
+  beginFileAssetUpload,
+  completeFileAssetUpload,
   createSignedAssetDownloadUrl,
   getCreatorDocumentationCompletenessMap,
   getDocumentationUnitDetail,
   listDocumentationUnits,
 } from "@/lib/services/deliverables/documentation-service";
 import {
+  DELIVERABLE_ASSET_MAX_BYTES,
+  DELIVERABLE_ASSET_TOO_LARGE_MESSAGE,
   DELIVERABLE_ASSET_TYPES,
+  inferDeliverableAssetMime,
   type DeliverableAssetType,
   type DocumentationCompleteness,
   type DocumentationUnitDetail,
@@ -185,6 +190,102 @@ export async function uploadDeliverableFileAssetAction(input: {
       binary.byteOffset,
       binary.byteOffset + binary.byteLength
     ),
+  });
+  if (!result.ok) return result;
+  revalidatePath(`/campaigns/${input.campaignHeaderId}`);
+  return {
+    ok: true,
+    data: { assetId: result.assetId, versionId: result.versionId },
+  };
+}
+
+export async function beginDeliverableFileUploadAction(input: {
+  campaignHeaderId: string;
+  assignmentDeliverableId: string;
+  assignmentPostScheduleId: string | null;
+  assetType: string;
+  label?: string | null;
+  assetId?: string | null;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+}): Promise<
+  DocumentationActionResult<{
+    assetId: string;
+    versionId: string;
+    versionNumber: number;
+    storagePath: string;
+    bucket: string;
+    signedUrl: string;
+    token: string;
+  }>
+> {
+  const actor = await getWriteActor();
+  if (!actor.ok) return actor;
+  const assetType = parseAssetType(input.assetType);
+  if (!assetType) return { ok: false, message: "Invalid asset type." };
+  if (input.fileSize > DELIVERABLE_ASSET_MAX_BYTES) {
+    return { ok: false, message: DELIVERABLE_ASSET_TOO_LARGE_MESSAGE };
+  }
+
+  const result = await beginFileAssetUpload(actor.supabase, {
+    actorId: actor.userId,
+    campaignHeaderId: input.campaignHeaderId,
+    assignmentDeliverableId: input.assignmentDeliverableId,
+    assignmentPostScheduleId: input.assignmentPostScheduleId,
+    assetType,
+    label: input.label,
+    assetId: input.assetId,
+    fileName: input.fileName,
+    mimeType: inferDeliverableAssetMime(input.mimeType, input.fileName),
+    fileSize: input.fileSize,
+  });
+  if (!result.ok) return result;
+  return {
+    ok: true,
+    data: {
+      assetId: result.assetId,
+      versionId: result.versionId,
+      versionNumber: result.versionNumber,
+      storagePath: result.storagePath,
+      bucket: result.bucket,
+      signedUrl: result.signedUrl,
+      token: result.token,
+    },
+  };
+}
+
+export async function completeDeliverableFileUploadAction(input: {
+  campaignHeaderId: string;
+  assignmentDeliverableId: string;
+  assignmentPostScheduleId: string | null;
+  assetType: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  assetId: string;
+  versionId: string;
+  versionNumber: number;
+  storagePath: string;
+}): Promise<DocumentationActionResult<{ assetId: string; versionId: string }>> {
+  const actor = await getWriteActor();
+  if (!actor.ok) return actor;
+  const assetType = parseAssetType(input.assetType);
+  if (!assetType) return { ok: false, message: "Invalid asset type." };
+
+  const result = await completeFileAssetUpload(actor.supabase, {
+    actorId: actor.userId,
+    campaignHeaderId: input.campaignHeaderId,
+    assignmentDeliverableId: input.assignmentDeliverableId,
+    assignmentPostScheduleId: input.assignmentPostScheduleId,
+    assetType,
+    fileName: input.fileName,
+    mimeType: inferDeliverableAssetMime(input.mimeType, input.fileName),
+    fileSize: input.fileSize,
+    assetId: input.assetId,
+    versionId: input.versionId,
+    versionNumber: input.versionNumber,
+    storagePath: input.storagePath,
   });
   if (!result.ok) return result;
   revalidatePath(`/campaigns/${input.campaignHeaderId}`);

@@ -43,12 +43,19 @@ export class TabErrorBoundary extends Component<
     if (this.state.error) {
       if (this.props.fallback) return this.props.fallback;
       const message = this.state.error.message || "";
+      const looksLikeActionProtocol =
+        /unexpected response was received from the server/i.test(message);
       const looksLikeRefresh =
+        looksLikeActionProtocol ||
         /refresh|network|timeout|failed to fetch|load/i.test(message);
-      const headline = looksLikeRefresh
+      const headline = looksLikeActionProtocol
+        ? `Unable to complete ${this.props.tabName} update`
+        : looksLikeRefresh
         ? `Unable to refresh ${this.props.tabName} list`
         : `${this.props.tabName} hit a display error`;
-      const guidance = looksLikeRefresh
+      const guidance = looksLikeActionProtocol
+        ? "The upload response could not be read. Retry — saved work is kept."
+        : looksLikeRefresh
         ? "Bulk updates may already be saved. Retry refresh — completed work is not rolled back."
         : message.includes("Server Components render")
           ? "A rendering error occurred after data refresh. Completed mutations are kept — reload the page."

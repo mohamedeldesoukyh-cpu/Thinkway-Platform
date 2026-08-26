@@ -35,11 +35,13 @@ import {
   addDeliverableExternalLinkAction,
   addDeliverableInternalCommentAction,
   addDeliverableTextAssetAction,
+  beginDeliverableFileUploadAction,
+  completeDeliverableFileUploadAction,
   getDeliverableAssetDownloadUrlAction,
   getDeliverableDocumentationDetailAction,
   listDeliverableDocumentationAction,
-  uploadDeliverableFileAssetAction,
 } from "@/features/campaigns/actions/deliverable-documentation-actions";
+import { putDeliverableAssetToSignedUrl } from "@/features/campaigns/deliverable-asset-upload";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import {
@@ -48,11 +50,15 @@ import {
   assertDocumentationEditorBinding,
 } from "@/features/campaigns/components/tabs/documentation-editor-binding";
 import {
+  DELIVERABLE_ASSET_MAX_BYTES,
+  DELIVERABLE_ASSET_TOO_LARGE_MESSAGE,
   DELIVERABLE_ASSET_TYPES,
   DELIVERABLE_ASSET_TYPE_LABELS,
+  inferDeliverableAssetMime,
   type DocumentationUnitDetail,
   type DocumentationUnitSummary,
 } from "@/lib/services/deliverables/documentation-types";
+import { friendlyServerActionError } from "@/lib/clients/client-document-utils";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { cn } from "@/lib/utils";
 
@@ -135,14 +141,19 @@ export function CampaignDeliverablesDocumentationTab({
     setLoading(true);
     void listDeliverableDocumentationAction({
       campaignHeaderId: campaignId,
-    }).then((result) => {
-      setLoading(false);
-      if (!result.ok) {
-        toast.error(result.message);
-        return;
-      }
-      setUnits(result.data);
-    });
+    })
+      .then((result) => {
+        setLoading(false);
+        if (!result.ok) {
+          toast.error(result.message);
+          return;
+        }
+        setUnits(result.data);
+      })
+      .catch((error) => {
+        setLoading(false);
+        toast.error(friendlyServerActionError(error));
+      });
   }, [campaignId]);
 
   useEffect(() => {
@@ -180,17 +191,23 @@ export function CampaignDeliverablesDocumentationTab({
         campaignHeaderId: campaignId,
         assignmentDeliverableId: unit.assignmentDeliverableId,
         assignmentPostScheduleId: unit.assignmentPostScheduleId,
-      }).then((result) => {
-        if (requestId !== detailRequestIdRef.current) return;
-        if (selectedKeyRef.current !== unitKey) return;
-        setDetailLoading(false);
-        if (!result.ok) {
-          toast.error(result.message);
-          setDetail(null);
-          return;
-        }
-        setDetail(result.data);
-      });
+      })
+        .then((result) => {
+          if (requestId !== detailRequestIdRef.current) return;
+          if (selectedKeyRef.current !== unitKey) return;
+          setDetailLoading(false);
+          if (!result.ok) {
+            toast.error(result.message);
+            setDetail(null);
+            return;
+          }
+          setDetail(result.data);
+        })
+        .catch((error) => {
+          if (requestId !== detailRequestIdRef.current) return;
+          setDetailLoading(false);
+          toast.error(friendlyServerActionError(error));
+        });
     },
     [campaignId]
   );
@@ -365,10 +382,14 @@ export function CampaignDeliverablesDocumentationTab({
     const unit = selected;
     if (!assertWriteBinding(unit)) return;
     startTransition(async () => {
-      if (!assertWriteBinding(unit)) return;
-      await run(unit);
-      refreshList();
-      loadDetailForKey(unit.unitKey, units);
+      try {
+        if (!assertWriteBinding(unit)) return;
+        await run(unit);
+        refreshList();
+        loadDetailForKey(unit.unitKey, units);
+      } catch (error) {
+        toast.error(friendlyServerActionError(error));
+      }
     });
   }
 
@@ -692,15 +713,14 @@ export function CampaignDeliverablesDocumentationTab({
                             <Label className="text-[11px]">Upload file</Label>
                             <Input
                               type="file"
+                              accept="video/mp4,video/quicktime,video/webm,image/jpeg,image/png,image/webp,application/pdf"
                               className="h-8 text-xs"
                               disabled={pending || selectionLocked}
                               onChange={(event) => {
                                 const file = event.target.files?.[0];
+                                event.target.value = "";
                                 if (!file || !selected || !boundDetail) return;
-                                if (!assertWriteBinding(selected)) {
-                                  event.target.value = "";
-                                  return;
-                                }
+                                if (!assertWriteBinding(selected)) return;
                                 if (
                                   selected.quantity > 1 &&
                                   !selected.assignmentPostScheduleId
@@ -710,81 +730,116 @@ export function CampaignDeliverablesDocumentationTab({
                                   );
                                   return;
                                 }
-                                const reader = new FileReader();
+                                if (file.size > DELIVERABLE_ASSET_MAX_BYTES) {
+                                  toast.error(DELIVERABLE_ASSET_TOO_LARGE_MESSAGE);
+                                  return;
+                                }
                                 const unitAtUpload = selected;
                                 const assetTypeAtUpload = drafts.assetType;
+                                const mimeType = inferDeliverableAssetMime(
+                                  file.type,
+                                  file.name
+                                );
                                 const session = ++uploadSessionRef.current;
                                 setSelectionLocked(true);
-                                reader.onerror = () => {
-                                  if (session === uploadSessionRef.current) {
-                                    setSelectionLocked(false);
-                                  }
-                                  toast.error("Could not read the selected file.");
-                                };
-                                reader.onload = () => {
-                                  const result = String(reader.result ?? "");
-                                  const base64 = result.includes(",")
-                                    ? result.split(",")[1] ?? ""
-                                    : result;
-                                  startTransition(async () => {
-                                    try {
-                                      if (
-                                        selectedKeyRef.current !==
-                                        unitAtUpload.unitKey
-                                      ) {
-                                        toast.error(
-                                          DOCUMENTATION_UPLOAD_CANCELLED_MESSAGE
-                                        );
-                                        return;
-                                      }
-                                      if (!assertWriteBinding(unitAtUpload)) {
-                                        return;
-                                      }
-                                      const res =
-                                        await uploadDeliverableFileAssetAction({
-                                          campaignHeaderId: campaignId,
-                                          assignmentDeliverableId:
-                                            unitAtUpload.assignmentDeliverableId,
-                                          assignmentPostScheduleId:
-                                            unitAtUpload.assignmentPostScheduleId,
-                                          assetType: assetTypeAtUpload,
-                                          label: file.name,
-                                          fileName: file.name,
-                                          mimeType:
-                                            file.type ||
-                                            "application/octet-stream",
-                                          fileBase64: base64,
-                                        });
-                                      if (
-                                        selectedKeyRef.current !==
-                                        unitAtUpload.unitKey
-                                      ) {
-                                        toast.error(
-                                          DOCUMENTATION_UPLOAD_CANCELLED_MESSAGE
-                                        );
-                                        return;
-                                      }
-                                      if (!assertWriteBinding(unitAtUpload)) {
-                                        return;
-                                      }
-                                      if (!res.ok) toast.error(res.message);
-                                      else {
-                                        toast.success("File uploaded");
-                                        refreshList();
-                                        loadDetailForKey(
-                                          unitAtUpload.unitKey,
-                                          units
-                                        );
-                                      }
-                                    } finally {
-                                      if (session === uploadSessionRef.current) {
-                                        setSelectionLocked(false);
-                                      }
+                                startTransition(async () => {
+                                  try {
+                                    if (
+                                      selectedKeyRef.current !==
+                                      unitAtUpload.unitKey
+                                    ) {
+                                      toast.error(
+                                        DOCUMENTATION_UPLOAD_CANCELLED_MESSAGE
+                                      );
+                                      return;
                                     }
-                                  });
-                                };
-                                reader.readAsDataURL(file);
-                                event.target.value = "";
+                                    if (!assertWriteBinding(unitAtUpload)) {
+                                      return;
+                                    }
+                                    const begun =
+                                      await beginDeliverableFileUploadAction({
+                                        campaignHeaderId: campaignId,
+                                        assignmentDeliverableId:
+                                          unitAtUpload.assignmentDeliverableId,
+                                        assignmentPostScheduleId:
+                                          unitAtUpload.assignmentPostScheduleId,
+                                        assetType: assetTypeAtUpload,
+                                        label: file.name,
+                                        fileName: file.name,
+                                        mimeType,
+                                        fileSize: file.size,
+                                      });
+                                    if (!begun.ok) {
+                                      toast.error(begun.message);
+                                      return;
+                                    }
+                                    const uploaded =
+                                      await putDeliverableAssetToSignedUrl({
+                                        signedUrl: begun.data.signedUrl,
+                                        token: begun.data.token,
+                                        file,
+                                      });
+                                    if (!uploaded.ok) {
+                                      toast.error(uploaded.message);
+                                      return;
+                                    }
+                                    if (
+                                      selectedKeyRef.current !==
+                                      unitAtUpload.unitKey
+                                    ) {
+                                      toast.error(
+                                        DOCUMENTATION_UPLOAD_CANCELLED_MESSAGE
+                                      );
+                                      return;
+                                    }
+                                    const completed =
+                                      await completeDeliverableFileUploadAction({
+                                        campaignHeaderId: campaignId,
+                                        assignmentDeliverableId:
+                                          unitAtUpload.assignmentDeliverableId,
+                                        assignmentPostScheduleId:
+                                          unitAtUpload.assignmentPostScheduleId,
+                                        assetType: assetTypeAtUpload,
+                                        fileName: file.name,
+                                        mimeType,
+                                        fileSize: file.size,
+                                        assetId: begun.data.assetId,
+                                        versionId: begun.data.versionId,
+                                        versionNumber: begun.data.versionNumber,
+                                        storagePath: begun.data.storagePath,
+                                      });
+                                    if (
+                                      selectedKeyRef.current !==
+                                      unitAtUpload.unitKey
+                                    ) {
+                                      toast.error(
+                                        DOCUMENTATION_UPLOAD_CANCELLED_MESSAGE
+                                      );
+                                      return;
+                                    }
+                                    if (!assertWriteBinding(unitAtUpload)) {
+                                      return;
+                                    }
+                                    if (!completed.ok) {
+                                      toast.error(completed.message);
+                                      return;
+                                    }
+                                    toast.success("File uploaded");
+                                    refreshList();
+                                    loadDetailForKey(
+                                      unitAtUpload.unitKey,
+                                      units
+                                    );
+                                  } catch (error) {
+                                    toast.error(
+                                      friendlyServerActionError(error)
+                                    );
+                                  } finally {
+                                    if (session === uploadSessionRef.current) {
+                                      setSelectionLocked(false);
+                                    }
+                                  }
+                                });
                               }}
                             />
                             {selectionLocked ? (
@@ -792,7 +847,12 @@ export function CampaignDeliverablesDocumentationTab({
                                 Upload in progress — selection is locked for this
                                 creator.
                               </p>
-                            ) : null}
+                            ) : (
+                              <p className="text-[11px] text-[var(--camp-text-4)]">
+                                MP4 or MOV, up to 100 MB. Large reels upload
+                                directly and will not reload this tab.
+                              </p>
+                            )}
                           </div>
 
                           <div className="space-y-1">
@@ -1020,13 +1080,17 @@ export function CampaignDeliverablesDocumentationTab({
                 const currentDrafts = drafts;
                 const next = pendingSelectKey;
                 startTransition(async () => {
-                  const ok = await persistDraftsForUnit(unit, currentDrafts);
-                  if (!ok) return;
-                  toast.success("Drafts saved");
-                  refreshList();
-                  setUnsavedOpen(false);
-                  setPendingSelectKey(null);
-                  applySelection(next);
+                  try {
+                    const ok = await persistDraftsForUnit(unit, currentDrafts);
+                    if (!ok) return;
+                    toast.success("Drafts saved");
+                    refreshList();
+                    setUnsavedOpen(false);
+                    setPendingSelectKey(null);
+                    applySelection(next);
+                  } catch (error) {
+                    toast.error(friendlyServerActionError(error));
+                  }
                 });
               }}
             >
