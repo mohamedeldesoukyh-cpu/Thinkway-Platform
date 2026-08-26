@@ -27,6 +27,20 @@ export const emptyAgg = (): AssetAgg => ({
   publicationLinkCount: 0,
 });
 
+export function applyDocumentationAggregates(
+  units: DocumentationUnitSummary[],
+  aggregates: Record<string, AssetAgg>
+): DocumentationUnitSummary[] {
+  return units.map((unit) => {
+    const agg = aggregates[unit.unitKey] ?? emptyAgg();
+    return {
+      ...unit,
+      ...agg,
+      received: agg.contentAssetCount > 0,
+    };
+  });
+}
+
 export function buildDocumentationUnitsFromHierarchy(
   hierarchy: AssignmentHierarchy,
   campaignHeaderId: string,

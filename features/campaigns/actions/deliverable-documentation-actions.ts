@@ -13,6 +13,7 @@ import {
   createSignedAssetDownloadUrl,
   getCreatorDocumentationCompletenessMap,
   getDocumentationUnitDetail,
+  listDocumentationAssetAggregates,
   listDocumentationUnits,
 } from "@/lib/services/deliverables/documentation-service";
 import {
@@ -73,6 +74,32 @@ export async function listDeliverableDocumentationAction(input: {
   const actor = await getReadActor();
   if (!actor.ok) return actor;
   const data = await listDocumentationUnits(
+    actor.supabase,
+    input.campaignHeaderId
+  );
+  return { ok: true, data };
+}
+
+export async function listDeliverableDocumentationAggregatesAction(input: {
+  campaignHeaderId: string;
+}): Promise<
+  DocumentationActionResult<
+    Record<
+      string,
+      {
+        contentAssetCount: number;
+        totalAssetCount: number;
+        revisionCount: number;
+        latestVersionLabel: string | null;
+        lastUpdatedAt: string | null;
+        publicationLinkCount: number;
+      }
+    >
+  >
+> {
+  const actor = await getReadActor();
+  if (!actor.ok) return actor;
+  const data = await listDocumentationAssetAggregates(
     actor.supabase,
     input.campaignHeaderId
   );

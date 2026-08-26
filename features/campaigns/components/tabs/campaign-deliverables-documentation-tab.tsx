@@ -38,9 +38,8 @@ import {
   addDeliverableTextAssetAction,
   beginDeliverableFileUploadAction,
   completeDeliverableFileUploadAction,
-  getDeliverableAssetDownloadUrlAction,
   getDeliverableDocumentationDetailAction,
-  listDeliverableDocumentationAction,
+  listDeliverableDocumentationAggregatesAction,
 } from "@/features/campaigns/actions/deliverable-documentation-actions";
 import {
   deliverableUploadMeterValue,
@@ -49,6 +48,7 @@ import {
   putDeliverableAssetToSignedUrl,
   type DeliverableUploadPhase,
 } from "@/features/campaigns/deliverable-asset-upload";
+import { DeliverableAssetPreview } from "@/features/campaigns/components/deliverables/deliverable-asset-preview";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import {
@@ -68,6 +68,10 @@ import {
 import { friendlyServerActionError } from "@/lib/clients/client-document-utils";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { cn } from "@/lib/utils";
+import {
+  applyDocumentationAggregates,
+  buildDocumentationUnitsFromHierarchy,
+} from "@/lib/services/deliverables/build-documentation-units";
 
 type Props = {
   workspace: CampaignWorkspace;
@@ -118,8 +122,17 @@ export function CampaignDeliverablesDocumentationTab({
   onBackToSchedule,
 }: Props) {
   const campaignId = workspace.id;
-  const [units, setUnits] = useState<DocumentationUnitSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const hierarchyUnits = useMemo(
+    () =>
+      buildDocumentationUnitsFromHierarchy(
+        assignmentHierarchy,
+        campaignId,
+        new Map()
+      ),
+    [assignmentHierarchy, campaignId]
+  );
+  const [units, setUnits] = useState<DocumentationUnitSummary[]>(hierarchyUnits);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [creatorFilter, setCreatorFilter] = useState(
     initialCreatorFilter ?? "all"
@@ -151,8 +164,7 @@ export function CampaignDeliverablesDocumentationTab({
   detailRef.current = detail;
 
   const refreshList = useCallback(() => {
-    setLoading(true);
-    void listDeliverableDocumentationAction({
+    void listDeliverableDocumentationAggregatesAction({
       campaignHeaderId: campaignId,
     })
       .then((result) => {
@@ -161,17 +173,27 @@ export function CampaignDeliverablesDocumentationTab({
           toast.error(result.message);
           return;
         }
-        setUnits(result.data);
+        setUnits(
+          applyDocumentationAggregates(
+            buildDocumentationUnitsFromHierarchy(
+              assignmentHierarchy,
+              campaignId,
+              new Map()
+            ),
+            result.data
+          )
+        );
       })
       .catch((error) => {
         setLoading(false);
         toast.error(friendlyServerActionError(error));
       });
-  }, [campaignId]);
+  }, [assignmentHierarchy, campaignId]);
 
   useEffect(() => {
+    setUnits(hierarchyUnits);
     refreshList();
-  }, [refreshList]);
+  }, [hierarchyUnits, refreshList]);
 
   useEffect(() => {
     if (!initialDeliverableId || deliverableFocusApplied.current || units.length === 0) {
@@ -669,34 +691,19 @@ export function CampaignDeliverablesDocumentationTab({
                                     {asset.currentVersion.textBody}
                                   </p>
                                 ) : null}
-                                {asset.currentVersion?.storagePath ? (
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    className="mt-2 h-7"
-                                    disabled={pending}
-                                    onClick={() =>
-                                      withSelected(async (unit) => {
-                                        const res =
-                                          await getDeliverableAssetDownloadUrlAction({
-                                            campaignHeaderId: campaignId,
-                                            assignmentDeliverableId:
-                                              unit.assignmentDeliverableId,
-                                            assignmentPostScheduleId:
-                                              unit.assignmentPostScheduleId,
-                                            versionId: asset.currentVersion!.id,
-                                          });
-                                        if (!res.ok) {
-                                          toast.error(res.message);
-                                          return;
-                                        }
-                                        window.open(res.data.url, "_blank");
-                                      })
+                                {asset.currentVersion?.storagePath ||
+                                asset.currentVersion?.externalUrl ? (
+                                  <DeliverableAssetPreview
+                                    campaignHeaderId={campaignId}
+                                    assignmentDeliverableId={
+                                      selected.assignmentDeliverableId
                                     }
-                                  >
-                                    Download
-                                  </Button>
+                                    assignmentPostScheduleId={
+                                      selected.assignmentPostScheduleId
+                                    }
+                                    asset={asset}
+                                    disabled={pending}
+                                  />
                                 ) : null}
                               </li>
                             ))}

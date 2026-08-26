@@ -102,7 +102,8 @@ export function mapClientReviewRow(row: ReviewRow): ClientReviewRecord {
 export type ReviewScope =
   | { source: "studio"; campaignObjectId: string }
   | { source: "shortlist"; shortlistId: string }
-  | { source: "quotation"; quotationId: string };
+  | { source: "quotation"; quotationId: string }
+  | { source: "campaign"; campaignHeaderId: string };
 
 export function applyReviewScope<T extends { eq: (column: string, value: string) => T }>(
   query: T,
@@ -110,7 +111,12 @@ export function applyReviewScope<T extends { eq: (column: string, value: string)
 ): T {
   if (scope.source === "studio") return query.eq("campaign_object_id", scope.campaignObjectId);
   if (scope.source === "shortlist") return query.eq("shortlist_id", scope.shortlistId);
+  if (scope.source === "campaign") return query.eq("campaign_header_id", scope.campaignHeaderId);
   return query.eq("quotation_id", scope.quotationId);
+}
+
+function isCampaignScope(scope: ReviewScope): scope is { source: "campaign"; campaignHeaderId: string } {
+  return scope.source === "campaign";
 }
 
 function shareLookupClient(supabase: SupabaseClient): SupabaseClient {
@@ -201,6 +207,16 @@ async function findJourneyForScope(
       .from("campaign_client_journeys" as never)
       .select("id, share_token, landing_review_id, shortlist_id, quotation_id")
       .eq("quotation_id", quotationId)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (data) return data as JourneyRow;
+  }
+  if (input.campaignHeaderId) {
+    const { data } = await supabase
+      .from("campaign_client_journeys" as never)
+      .select("id, share_token, landing_review_id, shortlist_id, quotation_id")
+      .eq("campaign_header_id", input.campaignHeaderId)
       .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle();
@@ -666,13 +682,17 @@ export async function revealClientReviewShareLink(input: {
   const db = shareLookupClient(input.supabase);
   let query = db
     .from("campaign_client_reviews" as never)
-    .select("id, review_number, status, share_token, journey_id, quotation_id")
-    .eq("source", input.scope.source);
-  if (input.scope.source === "quotation") {
-    const ids = await quotationIdsForClientShare(db, input.scope.quotationId);
-    query = query.in("quotation_id", ids);
+    .select("id, review_number, status, share_token, journey_id, quotation_id");
+  if (isCampaignScope(input.scope)) {
+    query = query.eq("campaign_header_id", input.scope.campaignHeaderId);
   } else {
-    query = applyReviewScope(query, input.scope);
+    query = query.eq("source", input.scope.source);
+    if (input.scope.source === "quotation") {
+      const ids = await quotationIdsForClientShare(db, input.scope.quotationId);
+      query = query.in("quotation_id", ids);
+    } else {
+      query = applyReviewScope(query, input.scope);
+    }
   }
   const { data } = await query.order("review_number", { ascending: false }).limit(1).maybeSingle();
   const row = data as {
@@ -725,10 +745,10 @@ export async function revealClientReviewShareLink(input: {
   }
 
   const journey = await findJourneyForScope(db, {
-    source: input.scope.source,
+    source: isCampaignScope(input.scope) ? "studio" : input.scope.source,
     shortlistId: input.scope.source === "shortlist" ? input.scope.shortlistId : null,
     quotationId: input.scope.source === "quotation" ? input.scope.quotationId : null,
-    campaignHeaderId: null,
+    campaignHeaderId: isCampaignScope(input.scope) ? input.scope.campaignHeaderId : null,
   });
   if (journey?.share_token?.trim() && journey.landing_review_id) {
     return {
@@ -751,15 +771,17 @@ export async function peekClientReviewShareLink(input: {
   scope: ReviewScope;
 }): Promise<{ exists: boolean; reviewNumber?: number }> {
   const db = shareLookupClient(input.supabase);
-  let query = db
-    .from("campaign_client_reviews" as never)
-    .select("review_number, status")
-    .eq("source", input.scope.source);
-  if (input.scope.source === "quotation") {
-    const ids = await quotationIdsForClientShare(db, input.scope.quotationId);
-    query = query.in("quotation_id", ids);
+  let query = db.from("campaign_client_reviews" as never).select("review_number, status");
+  if (isCampaignScope(input.scope)) {
+    query = query.eq("campaign_header_id", input.scope.campaignHeaderId);
   } else {
-    query = applyReviewScope(query, input.scope);
+    query = query.eq("source", input.scope.source);
+    if (input.scope.source === "quotation") {
+      const ids = await quotationIdsForClientShare(db, input.scope.quotationId);
+      query = query.in("quotation_id", ids);
+    } else {
+      query = applyReviewScope(query, input.scope);
+    }
   }
   const { data } = await query.order("review_number", { ascending: false }).limit(1).maybeSingle();
   const row = data as { review_number: number; status: ClientReviewStatus } | null;
@@ -768,10 +790,10 @@ export async function peekClientReviewShareLink(input: {
   }
 
   const journey = await findJourneyForScope(db, {
-    source: input.scope.source,
+    source: isCampaignScope(input.scope) ? "studio" : input.scope.source,
     shortlistId: input.scope.source === "shortlist" ? input.scope.shortlistId : null,
     quotationId: input.scope.source === "quotation" ? input.scope.quotationId : null,
-    campaignHeaderId: null,
+    campaignHeaderId: isCampaignScope(input.scope) ? input.scope.campaignHeaderId : null,
   });
   if (journey?.share_token?.trim()) {
     return { exists: true };

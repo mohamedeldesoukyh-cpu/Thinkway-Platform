@@ -77,20 +77,47 @@ export async function getDocumentationUnitDetail(
     assignmentPostScheduleId: string | null;
   }
 ): Promise<DocumentationUnitDetail | null> {
-  const units = await listDocumentationUnits(supabase, input.campaignHeaderId);
-  const unit = units.find(
-    (u) =>
-      u.assignmentDeliverableId === input.assignmentDeliverableId &&
-      (u.assignmentPostScheduleId ?? null) ===
-        (input.assignmentPostScheduleId ?? null)
-  );
-  if (!unit) return null;
-
   const assets = await loadAssetsForUnit(supabase, input);
   const comments = await loadComments(supabase, input);
   const events = await loadEvents(supabase, input);
+  const agg = emptyAgg();
+  const received = assets.some((asset) => mediumCountsAsReceived(asset.medium));
+  return {
+    unitKey: documentationUnitKey(
+      input.assignmentDeliverableId,
+      input.assignmentPostScheduleId
+    ),
+    campaignHeaderId: input.campaignHeaderId,
+    assignmentDeliverableId: input.assignmentDeliverableId,
+    assignmentPostScheduleId: input.assignmentPostScheduleId,
+    sequenceNumber: null,
+    label: "",
+    creatorId: null,
+    creatorName: null,
+    assignmentLineId: "",
+    assignmentName: "",
+    platform: null,
+    deliverableType: null,
+    dueDate: null,
+    quantity: 1,
+    received,
+    ...agg,
+    contentAssetCount: assets.filter((asset) =>
+      mediumCountsAsReceived(asset.medium)
+    ).length,
+    totalAssetCount: assets.length,
+    assets,
+    comments,
+    events,
+  };
+}
 
-  return { ...unit, assets, comments, events };
+export async function listDocumentationAssetAggregates(
+  supabase: Supabase,
+  campaignHeaderId: string
+): Promise<Record<string, AssetAgg>> {
+  const map = await loadAggregates(supabase, campaignHeaderId);
+  return Object.fromEntries(map.entries());
 }
 
 export async function addExternalLinkAsset(

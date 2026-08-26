@@ -7,6 +7,11 @@ import { isPublicPath } from "@/lib/auth/routes";
 import { classifyApiPath, classifyPagePath } from "@/lib/security/workspace-classify";
 
 import { CLIENT_CHANGE_AREAS, CLIENT_REVIEW_LINK_MISSING_MESSAGE, CLIENT_REVIEW_SOURCES, CLIENT_WORKSPACE_JOURNEY_SECTIONS, CLIENT_WORKSPACE_SECTION_LABEL } from "./constants";
+import { applyReviewScope } from "./persist-client-review";
+import {
+  snapshotCreatorsFromAssignmentHierarchy,
+  snapshotFromCampaignAssignments,
+} from "./snapshot-from-campaign";
 import {
   clientReviewShareHasLink,
   clientReviewSharePeekExists,
@@ -502,6 +507,56 @@ test("Show link does not require a save when the quotation already has a link or
     true
   );
   assert.equal(CLIENT_REVIEW_LINK_MISSING_MESSAGE, "Generate the Client Workspace link first.");
+});
+
+test("campaign Client Workspace scope looks up reviews by campaign header", () => {
+  const calls: Array<[string, string]> = [];
+  const query = {
+    eq(column: string, value: string) {
+      calls.push([column, value]);
+      return this;
+    },
+  };
+  applyReviewScope(query, { source: "campaign", campaignHeaderId: "hdr-1" });
+  assert.deepEqual(calls, [["campaign_header_id", "hdr-1"]]);
+});
+
+test("campaign Client Workspace snapshot is built from assignments without a quotation", () => {
+  const creators = snapshotCreatorsFromAssignmentHierarchy({
+    groups: [
+      {
+        line: {
+          id: "line-1",
+          influencer_id: "inf-1",
+          influencer_name: "Omar",
+        } as never,
+        deliverables: [
+          {
+            is_synthetic: false,
+            deliverable_type_label: "Reel",
+            deliverable_type: "reel",
+            platform: "instagram",
+          },
+        ],
+      } as never,
+    ],
+  } as never);
+  assert.equal(creators[0]?.creatorId, "inf:inf-1");
+  const snapshot = snapshotFromCampaignAssignments({
+    workspace: {
+      name: "Limitless",
+      document_number: "TW-2026-2",
+      currency_code: "EGP",
+      target_market: "EG",
+      client: { id: "c1", name: "Client", document_number: "CL-1", legal_name: null },
+      brand: { id: "b1", name: "Brand", document_number: "BR-1" },
+    },
+    creators,
+  });
+  assert.equal(snapshot.source, "studio");
+  assert.equal(snapshot.campaignName, "Limitless");
+  assert.deepEqual(snapshot.platforms, ["instagram"]);
+  assert.equal(snapshot.commercial.quotationTotal, 0);
 });
 
 test("Show link stays visible for superseded reviews, quotation versions, and cached shares", () => {

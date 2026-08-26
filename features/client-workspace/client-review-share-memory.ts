@@ -9,7 +9,8 @@ export type ClientReviewShareMemory = {
 export type ClientReviewShareScope =
   | { source: "quotation"; id: string }
   | { source: "shortlist"; id: string }
-  | { source: "studio"; id: string };
+  | { source: "studio"; id: string }
+  | { source: "campaign"; id: string };
 
 function storageKey(scope: ClientReviewShareScope): string {
   return `${STORAGE_PREFIX}${scope.source}.${scope.id}`;

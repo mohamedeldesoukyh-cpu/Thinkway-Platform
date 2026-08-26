@@ -38,6 +38,8 @@ import { flattenOperationalDeliverables } from "@/lib/campaigns/flatten-operatio
 import { getPlatformOptionLabel } from "@/lib/campaigns/deliverable-taxonomy";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import { cn } from "@/lib/utils";
+import { listDeliverableDocumentationAggregatesAction } from "@/features/campaigns/actions/deliverable-documentation-actions";
+import { documentationUnitKey } from "@/lib/services/deliverables/documentation-types";
 
 const ALL = "all";
 
@@ -68,7 +70,8 @@ function uniqueSorted(values: string[]): string[] {
 
 function buildDeliverablesColumns(
   onOpenDetail: (id: string) => void,
-  onOpenDocumentation?: CampaignDeliverablesTabProps["onOpenDocumentation"]
+  onOpenDocumentation?: CampaignDeliverablesTabProps["onOpenDocumentation"],
+  receivedKeys: ReadonlySet<string> = new Set()
 ): OperationalConfigurableColumnDef<OperationalDeliverableExplorerRow>[] {
   return [
     {
@@ -125,16 +128,43 @@ function buildDeliverablesColumns(
     {
       id: "content",
       label: "Content",
-      renderCell: (row) =>
-        row.notes ? (
-          <span className="line-clamp-2 text-[11px] text-[var(--camp-text-3)]">{row.notes}</span>
-        ) : row.publication_status ? (
-          <span className="thinkway-campaign-badge thinkway-campaign-badge-gray capitalize">
-            {row.publication_status.replace(/_/g, " ")}
-          </span>
-        ) : (
-          <span className="thinkway-campaign-c-gray">—</span>
-        ),
+      renderCell: (row) => {
+        const received = receivedKeys.has(
+          documentationUnitKey(
+            row.assignment_deliverable_id,
+            row.assignment_post_schedule_id
+          )
+        );
+        if (received && onOpenDocumentation) {
+          return (
+            <button
+              type="button"
+              onClick={() =>
+                onOpenDocumentation({
+                  creatorId: row.influencer_id,
+                  deliverableId: row.assignment_deliverable_id,
+                })
+              }
+              className="text-[11px] font-semibold text-[var(--camp-blue)] hover:underline"
+            >
+              View upload
+            </button>
+          );
+        }
+        if (row.notes) {
+          return (
+            <span className="line-clamp-2 text-[11px] text-[var(--camp-text-3)]">{row.notes}</span>
+          );
+        }
+        if (row.publication_status) {
+          return (
+            <span className="thinkway-campaign-badge thinkway-campaign-badge-gray capitalize">
+              {row.publication_status.replace(/_/g, " ")}
+            </span>
+          );
+        }
+        return <span className="thinkway-campaign-c-gray">—</span>;
+      },
     },
     {
       id: "billing",
@@ -146,7 +176,14 @@ function buildDeliverablesColumns(
           {
             id: "client_review",
             label: "Client review",
-            renderCell: (row: OperationalDeliverableExplorerRow) => (
+            renderCell: (row: OperationalDeliverableExplorerRow) => {
+              const received = receivedKeys.has(
+                documentationUnitKey(
+                  row.assignment_deliverable_id,
+                  row.assignment_post_schedule_id
+                )
+              );
+              return (
               <button
                 type="button"
                 onClick={() =>
@@ -157,9 +194,10 @@ function buildDeliverablesColumns(
                 }
                 className="text-[11px] font-semibold text-[var(--camp-blue)] hover:underline"
               >
-                Upload
+                {received ? "View" : "Upload"}
               </button>
-            ),
+              );
+            },
           } satisfies OperationalConfigurableColumnDef<OperationalDeliverableExplorerRow>,
         ]
       : []),
@@ -179,6 +217,7 @@ export function CampaignDeliverablesTab({
   const [creatorFilter, setCreatorFilter] = useState(ALL);
   const [publicationFilter, setPublicationFilter] = useState(ALL);
   const [detailDeliverableId, setDetailDeliverableId] = useState<string | null>(null);
+  const [receivedKeys, setReceivedKeys] = useState<ReadonlySet<string>>(new Set());
 
   const { rows, stats } = useMemo(
     () =>
@@ -189,6 +228,19 @@ export function CampaignDeliverablesTab({
       ),
     [assignmentHierarchy, publications, workspace.deliverables]
   );
+
+  useEffect(() => {
+    void listDeliverableDocumentationAggregatesAction({
+      campaignHeaderId: workspace.id,
+    }).then((result) => {
+      if (!result.ok) return;
+      const next = new Set<string>();
+      for (const [key, agg] of Object.entries(result.data)) {
+        if (agg.contentAssetCount > 0) next.add(key);
+      }
+      setReceivedKeys(next);
+    });
+  }, [workspace.id]);
 
   useEffect(() => {
     if (process.env.NODE_ENV !== "development") return;
@@ -242,8 +294,13 @@ export function CampaignDeliverablesTab({
   ]);
 
   const columns = useMemo(
-    () => buildDeliverablesColumns(setDetailDeliverableId, onOpenDocumentation),
-    [onOpenDocumentation]
+    () =>
+      buildDeliverablesColumns(
+        setDetailDeliverableId,
+        onOpenDocumentation,
+        receivedKeys
+      ),
+    [onOpenDocumentation, receivedKeys]
   );
   const columnMetas = useMemo(() => getOperationalTableColumnMetas(columns), [columns]);
 
@@ -395,6 +452,7 @@ export function CampaignDeliverablesTab({
           if (!open) setDetailDeliverableId(null);
         }}
         row={detailRow}
+        campaignHeaderId={workspace.id}
         campaignName={workspace.name}
         onUploadContent={
           onOpenDocumentation && detailRow

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CancelCampaignDialog } from "@/components/campaigns/cancel-campaign-dialog";
 import { OpenCampaignStudioLauncher } from "@/features/campaign-outputs/components/open-campaign-studio-launcher-lazy";
+import { CampaignClientReviewLinkButton } from "@/features/campaigns/components/aurora/campaign-client-review-link-button";
 import type { CampaignSeed } from "@/features/campaign-outputs/hydration/hydration-types";
 import { ClientIoCampaignChrome } from "@/features/io/components/client-io-campaign-chrome";
 import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/campaign-workspace-tab-order";
@@ -90,6 +91,7 @@ export function CampaignHeroActions({
           Media Plans
         </a>
       </Button>
+      <CampaignClientReviewLinkButton campaignHeaderId={workspace.id} />
       <ClientIoCampaignChrome
         io={workspace.client_io}
         campaignId={workspace.id}

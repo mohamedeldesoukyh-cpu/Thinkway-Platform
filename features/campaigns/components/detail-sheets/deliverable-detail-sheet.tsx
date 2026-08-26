@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
@@ -18,11 +19,16 @@ import type { OperationalDeliverableExplorerRow } from "@/features/campaigns/typ
 import { formatAssignmentDetailDate, initialsFromName } from "@/lib/campaigns/assignment-detail-presenters";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { getDeliverableDocumentationDetailAction } from "@/features/campaigns/actions/deliverable-documentation-actions";
+import { DeliverableAssetPreview } from "@/features/campaigns/components/deliverables/deliverable-asset-preview";
+import { DELIVERABLE_ASSET_TYPE_LABELS } from "@/lib/services/deliverables/documentation-types";
+import type { DeliverableAssetView } from "@/lib/services/deliverables/documentation-types";
 
 type DeliverableDetailSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   row: OperationalDeliverableExplorerRow | null;
+  campaignHeaderId: string;
   campaignName: string;
   onUploadContent?: () => void;
 };
@@ -31,10 +37,35 @@ export function DeliverableDetailSheet({
   open,
   onOpenChange,
   row,
+  campaignHeaderId,
   campaignName,
   onUploadContent,
 }: DeliverableDetailSheetProps) {
   const title = row?.label ?? "Deliverable";
+  const [assets, setAssets] = useState<DeliverableAssetView[]>([]);
+  const [assetsLoading, setAssetsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open || !row) {
+      setAssets([]);
+      return;
+    }
+    let cancelled = false;
+    setAssetsLoading(true);
+    void getDeliverableDocumentationDetailAction({
+      campaignHeaderId,
+      assignmentDeliverableId: row.assignment_deliverable_id,
+      assignmentPostScheduleId: row.assignment_post_schedule_id,
+    }).then((result) => {
+      if (cancelled) return;
+      setAssetsLoading(false);
+      if (result.ok && result.data) setAssets(result.data.assets);
+      else setAssets([]);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, row, campaignHeaderId]);
 
   return (
     <OperationalDetailSheet
@@ -163,6 +194,33 @@ export function DeliverableDetailSheet({
                       "—"
                     )}
                   </DetailField>
+                  <div className="mt-4 space-y-2">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                      Uploaded content
+                    </p>
+                    {assetsLoading ? (
+                      <p className="text-xs text-muted-foreground">Loading uploads…</p>
+                    ) : assets.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">No file uploaded yet.</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {assets.map((asset) => (
+                          <li key={asset.id} className="rounded-md border px-2.5 py-2 text-xs">
+                            <div className="font-medium">
+                              {DELIVERABLE_ASSET_TYPE_LABELS[asset.assetType]}
+                              {asset.label ? ` · ${asset.label}` : ""}
+                            </div>
+                            <DeliverableAssetPreview
+                              campaignHeaderId={campaignHeaderId}
+                              assignmentDeliverableId={row.assignment_deliverable_id}
+                              assignmentPostScheduleId={row.assignment_post_schedule_id}
+                              asset={asset}
+                            />
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                   {onUploadContent ? (
                     <div className="mt-4">
                       <Button

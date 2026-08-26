@@ -23,6 +23,7 @@ export async function revealClientReviewLinkAction(
     | { source: "quotation"; quotationId: string }
     | { source: "shortlist"; shortlistId: string }
     | { source: "studio"; campaignObjectId: string }
+    | { source: "campaign"; campaignHeaderId: string }
 ): Promise<RevealResult> {
   const supabase = await createSupabaseServerClient();
   if (input.source === "quotation") {
@@ -34,6 +35,12 @@ export async function revealClientReviewLinkAction(
   } else if (input.source === "shortlist") {
     const auth = await requirePermission(supabase, SHORTLIST_PERMISSIONS.write);
     if ("error" in auth) return { ok: false, message: auth.error };
+  } else if (input.source === "campaign") {
+    const auth = await requirePermission(supabase, "campaigns.read");
+    if ("error" in auth) {
+      const write = await requirePermission(supabase, "campaigns.write");
+      if ("error" in write) return { ok: false, message: auth.error };
+    }
   } else {
     await requireStudioUser();
   }
@@ -49,7 +56,9 @@ export async function revealClientReviewLinkAction(
       ? { source: "quotation", quotationId: input.quotationId }
       : input.source === "shortlist"
         ? { source: "shortlist", shortlistId: input.shortlistId }
-        : { source: "studio", campaignObjectId: input.campaignObjectId };
+        : input.source === "campaign"
+          ? { source: "campaign", campaignHeaderId: input.campaignHeaderId }
+          : { source: "studio", campaignObjectId: input.campaignObjectId };
 
   return revealClientReviewShareLink({ supabase, origin, scope });
 }
@@ -58,8 +67,20 @@ export async function peekClientReviewShareAction(
   input:
     | { source: "quotation"; quotationId: string }
     | { source: "shortlist"; shortlistId: string }
+    | { source: "campaign"; campaignHeaderId: string }
 ): Promise<{ exists: boolean; reviewNumber?: number }> {
   const supabase = await createSupabaseServerClient();
+  if (input.source === "campaign") {
+    const auth = await requirePermission(supabase, "campaigns.read");
+    if ("error" in auth) {
+      const write = await requirePermission(supabase, "campaigns.write");
+      if ("error" in write) return { exists: false };
+    }
+    return peekClientReviewShareLink({
+      supabase,
+      scope: { source: "campaign", campaignHeaderId: input.campaignHeaderId },
+    });
+  }
   if (input.source === "shortlist") {
     const auth = await requirePermission(supabase, SHORTLIST_PERMISSIONS.write);
     if ("error" in auth) return { exists: false };

@@ -58,6 +58,19 @@ export function inferDeliverableAssetMime(
   return "application/octet-stream";
 }
 
+export type DeliverableAssetPreviewKind = "video" | "image" | "pdf" | null;
+
+export function deliverableAssetPreviewKind(
+  mimeType: string | null | undefined,
+  fileName: string | null | undefined
+): DeliverableAssetPreviewKind {
+  const mime = inferDeliverableAssetMime(mimeType, fileName ?? "");
+  if (mime.startsWith("video/")) return "video";
+  if (mime.startsWith("image/")) return "image";
+  if (mime === "application/pdf") return "pdf";
+  return null;
+}
+
 export type DocumentationAudience = "internal" | "creator" | "client";
 
 export type DocumentationCompleteness = "none" | "partial" | "complete";

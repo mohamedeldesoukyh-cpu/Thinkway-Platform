@@ -5,8 +5,13 @@ import { isServerActionDecodeError } from "@/lib/clients/client-document-utils";
 import {
   DELIVERABLE_ASSET_MAX_BYTES,
   DELIVERABLE_ASSET_TOO_LARGE_MESSAGE,
+  deliverableAssetPreviewKind,
   inferDeliverableAssetMime,
 } from "@/lib/services/deliverables/documentation-types";
+import {
+  applyDocumentationAggregates,
+  emptyAgg,
+} from "@/lib/services/deliverables/build-documentation-units";
 import {
   deliverableUploadMeterValue,
   deliverableUploadPercent,
@@ -57,4 +62,39 @@ test("deliverable upload meter reports percent and byte copy", () => {
     }),
     /Uploading omar-reel\.mp4 · 50% · 40\.0 MB of 80\.0 MB/
   );
+});
+
+test("uploaded reels and images are previewable", () => {
+  assert.equal(deliverableAssetPreviewKind("video/mp4", "omar-reel.mp4"), "video");
+  assert.equal(deliverableAssetPreviewKind("image/jpeg", "story.jpg"), "image");
+  assert.equal(deliverableAssetPreviewKind("application/pdf", "brief.pdf"), "pdf");
+  assert.equal(deliverableAssetPreviewKind("text/plain", "notes.txt"), null);
+});
+
+test("documentation aggregates mark units received without reloading hierarchy", () => {
+  const units = applyDocumentationAggregates(
+    [
+      {
+        unitKey: "d:del-1",
+        campaignHeaderId: "hdr-1",
+        assignmentDeliverableId: "del-1",
+        assignmentPostScheduleId: null,
+        sequenceNumber: null,
+        label: "Reel",
+        creatorId: "c1",
+        creatorName: "Omar",
+        assignmentLineId: "line-1",
+        assignmentName: "Assignment",
+        platform: "instagram",
+        deliverableType: "reel",
+        dueDate: null,
+        quantity: 1,
+        received: false,
+        ...emptyAgg(),
+      },
+    ],
+    { "d:del-1": { ...emptyAgg(), contentAssetCount: 1, totalAssetCount: 1 } }
+  );
+  assert.equal(units[0]?.received, true);
+  assert.equal(units[0]?.contentAssetCount, 1);
 });
