@@ -91,6 +91,32 @@ export function versionCountsAsClientContent(version: {
   return hasFile || Boolean(version.externalUrl?.trim());
 }
 
+/** Resume a begin-upload shell instead of creating a second unfinished file row. */
+export function unfinishedFileAssetId(
+  assets: ReadonlyArray<{
+    id: string;
+    assetType: string;
+    medium: string;
+    currentVersion: {
+      storageBucket?: string | null;
+      storagePath?: string | null;
+      externalUrl?: string | null;
+    } | null;
+  }>,
+  assetType: string
+): string | null {
+  const unfinished = assets.filter(
+    (asset) =>
+      asset.medium === "file" &&
+      !versionCountsAsClientContent(asset.currentVersion)
+  );
+  return (
+    unfinished.find((asset) => asset.assetType === assetType)?.id ??
+    unfinished[0]?.id ??
+    null
+  );
+}
+
 export function googleDriveFilePreviewUrl(url: string | null | undefined): string | null {
   const trimmed = url?.trim() ?? "";
   if (!trimmed) return null;

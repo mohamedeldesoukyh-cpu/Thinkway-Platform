@@ -9,6 +9,7 @@ import {
   documentationRowHasUploadedContent,
   googleDriveFilePreviewUrl,
   inferDeliverableAssetMime,
+  unfinishedFileAssetId,
   versionCountsAsClientContent,
 } from "@/lib/services/deliverables/documentation-types";
 import {
@@ -91,6 +92,45 @@ test("incomplete file rows are not client-visible until a version lands", () => 
       externalUrl: null,
     }),
     true
+  );
+});
+
+test("unfinished file shells are reused instead of duplicating rows", () => {
+  assert.equal(
+    unfinishedFileAssetId(
+      [
+        {
+          id: "asset-final",
+          assetType: "final_video",
+          medium: "file",
+          currentVersion: {
+            storageBucket: null,
+            storagePath: null,
+            externalUrl: null,
+          },
+        },
+      ],
+      "draft_video"
+    ),
+    "asset-final"
+  );
+  assert.equal(
+    unfinishedFileAssetId(
+      [
+        {
+          id: "asset-playable",
+          assetType: "draft_video",
+          medium: "file",
+          currentVersion: {
+            storageBucket: "deliverable-assets",
+            storagePath: "hdr/del/a/v.mp4",
+            externalUrl: null,
+          },
+        },
+      ],
+      "draft_video"
+    ),
+    null
   );
 });
 

@@ -1,7 +1,7 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Play deliverable uploads in Campaign Workspace and Client Workspace Content to Review.
+**Focus:** Deliverable file upload was aborting with a false “selected deliverable changed” guard (detail stubs `assignmentLineId`). Shipping to Development and Production.
 
 - Campaign Workspace Deliverables → Upload content for client review → **Play uploaded content** now loads the video/image inline (not only a View dialog).
 - Client Workspace Campaign → Content to Review shows saved files/Drive embeds; empty copy explains live posts are not review files.

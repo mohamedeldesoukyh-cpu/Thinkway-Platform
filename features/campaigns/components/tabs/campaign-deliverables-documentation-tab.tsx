@@ -55,6 +55,7 @@ import {
   DOCUMENTATION_SELECTION_LOCKED_MESSAGE,
   DOCUMENTATION_UPLOAD_CANCELLED_MESSAGE,
   assertDocumentationEditorBinding,
+  stampDocumentationDetailIdentity,
 } from "@/features/campaigns/components/tabs/documentation-editor-binding";
 import {
   DELIVERABLE_ASSET_MAX_BYTES,
@@ -62,6 +63,7 @@ import {
   DELIVERABLE_ASSET_TYPES,
   DELIVERABLE_ASSET_TYPE_LABELS,
   inferDeliverableAssetMime,
+  unfinishedFileAssetId,
   type DocumentationUnitDetail,
   type DocumentationUnitSummary,
 } from "@/lib/services/deliverables/documentation-types";
@@ -245,7 +247,16 @@ export function CampaignDeliverablesDocumentationTab({
             setDetail(null);
             return;
           }
-          setDetail(result.data);
+          if (!result.data) {
+            setDetail(null);
+            return;
+          }
+          const stamped = stampDocumentationDetailIdentity(result.data, unit);
+          if (!stamped) {
+            setDetail(null);
+            return;
+          }
+          setDetail(stamped);
         })
         .catch((error) => {
           if (requestId !== detailRequestIdRef.current) return;
@@ -263,8 +274,9 @@ export function CampaignDeliverablesDocumentationTab({
       setDetailLoading(false);
       return;
     }
+    if (selectionLocked) return;
     loadDetailForKey(selectedKey, units);
-  }, [selectedKey, units, loadDetailForKey]);
+  }, [selectedKey, units, loadDetailForKey, selectionLocked]);
 
   const creators = useMemo(() => {
     const map = new Map<string, string>();
@@ -772,6 +784,10 @@ export function CampaignDeliverablesDocumentationTab({
                                 }
                                 const unitAtUpload = selected;
                                 const assetTypeAtUpload = drafts.assetType;
+                                const reuseAssetId = unfinishedFileAssetId(
+                                  boundDetail.assets,
+                                  assetTypeAtUpload
+                                );
                                 const mimeType = inferDeliverableAssetMime(
                                   file.type,
                                   file.name
@@ -807,6 +823,7 @@ export function CampaignDeliverablesDocumentationTab({
                                           unitAtUpload.assignmentPostScheduleId,
                                         assetType: assetTypeAtUpload,
                                         label: file.name,
+                                        assetId: reuseAssetId,
                                         fileName: file.name,
                                         mimeType,
                                         fileSize: file.size,
@@ -881,18 +898,6 @@ export function CampaignDeliverablesDocumentationTab({
                                         versionNumber: begun.data.versionNumber,
                                         storagePath: begun.data.storagePath,
                                       });
-                                    if (
-                                      selectedKeyRef.current !==
-                                      unitAtUpload.unitKey
-                                    ) {
-                                      toast.error(
-                                        DOCUMENTATION_UPLOAD_CANCELLED_MESSAGE
-                                      );
-                                      return;
-                                    }
-                                    if (!assertWriteBinding(unitAtUpload)) {
-                                      return;
-                                    }
                                     if (!completed.ok) {
                                       toast.error(completed.message);
                                       return;

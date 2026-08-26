@@ -3,6 +3,11 @@
  * Every write must prove the editor is still attached to the intended unit.
  */
 
+import type {
+  DocumentationUnitDetail,
+  DocumentationUnitSummary,
+} from "@/lib/services/deliverables/documentation-types";
+
 export type DocumentationEditorBindingInput = {
   selectedKey: string | null;
   boundDetailUnitKey: string | null;
@@ -52,14 +57,47 @@ export function assertDocumentationEditorBinding(
   if (boundDetailUnitKey !== selectedKey) {
     return { ok: false, message: DOCUMENTATION_SELECTION_MISMATCH_MESSAGE };
   }
-  if (
-    !selectedAssignmentLineId ||
-    !boundAssignmentLineId ||
-    selectedAssignmentLineId !== writeAssignmentLineId ||
-    boundAssignmentLineId !== writeAssignmentLineId ||
-    selectedAssignmentLineId !== boundAssignmentLineId
-  ) {
+  if (!selectedAssignmentLineId || selectedAssignmentLineId !== writeAssignmentLineId) {
+    return { ok: false, message: DOCUMENTATION_SELECTION_MISMATCH_MESSAGE };
+  }
+  // Detail payloads historically stub assignmentLineId as "". Treat that as
+  // "not provided" — unitKey already proves the editor is on this row.
+  const boundLine = boundAssignmentLineId?.trim() || null;
+  if (boundLine && boundLine !== writeAssignmentLineId) {
     return { ok: false, message: DOCUMENTATION_SELECTION_MISMATCH_MESSAGE };
   }
   return { ok: true };
+}
+
+/**
+ * Copy list-row identity onto a detail payload. The detail service does not
+ * load assignment/creator fields, so the editor must stamp them from the
+ * selected repository unit before any write guard runs.
+ */
+export function stampDocumentationDetailIdentity(
+  detail: DocumentationUnitDetail,
+  unit: DocumentationUnitSummary
+): DocumentationUnitDetail | null {
+  if (detail.assignmentDeliverableId !== unit.assignmentDeliverableId) {
+    return null;
+  }
+  if (
+    (detail.assignmentPostScheduleId ?? null) !==
+    (unit.assignmentPostScheduleId ?? null)
+  ) {
+    return null;
+  }
+  return {
+    ...detail,
+    unitKey: unit.unitKey,
+    assignmentLineId: unit.assignmentLineId,
+    assignmentName: unit.assignmentName,
+    creatorId: unit.creatorId,
+    creatorName: unit.creatorName,
+    label: unit.label,
+    sequenceNumber: unit.sequenceNumber,
+    platform: unit.platform,
+    deliverableType: unit.deliverableType,
+    quantity: unit.quantity,
+  };
 }
