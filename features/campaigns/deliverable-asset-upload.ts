@@ -1,4 +1,7 @@
-import { DELIVERABLE_ASSET_TOO_LARGE_MESSAGE } from "@/lib/services/deliverables/documentation-types";
+import {
+  DELIVERABLE_ASSET_TOO_LARGE_MESSAGE,
+  inferDeliverableAssetMime,
+} from "@/lib/services/deliverables/documentation-types";
 
 export type DeliverableUploadPhase = "preparing" | "uploading" | "finishing";
 
@@ -42,10 +45,35 @@ export function deliverableUploadProgressLabel(input: {
   return `Uploading ${input.fileName} · ${percent}% · ${formatDeliverableUploadBytes(input.loaded)} of ${formatDeliverableUploadBytes(input.total)}`;
 }
 
+export function deliverableUploadFailureMessage(
+  status: number,
+  responseText?: string | null
+): string {
+  if (status === 413) return DELIVERABLE_ASSET_TOO_LARGE_MESSAGE;
+  if (status === 403) {
+    return "You do not have permission to upload this file.";
+  }
+  if (status === 404) {
+    return "The upload expired. Choose the file again.";
+  }
+  const body = (responseText ?? "").toLowerCase();
+  if (
+    status === 400 ||
+    status === 415 ||
+    body.includes("mime") ||
+    body.includes("content-type") ||
+    body.includes("not allowed")
+  ) {
+    return "Storage rejected this video type. Use MP4 or MOV under 100 MB.";
+  }
+  return "Could not upload the file. Try MP4 or MOV under 100 MB.";
+}
+
 export async function putDeliverableAssetToSignedUrl(input: {
   signedUrl: string;
   token: string;
   file: File;
+  mimeType?: string | null;
   onProgress?: (progress: DeliverableUploadByteProgress) => void;
 }): Promise<{ ok: true } | { ok: false; message: string }> {
   if (!/^https?:\/\//i.test(input.signedUrl)) {
@@ -56,11 +84,15 @@ export async function putDeliverableAssetToSignedUrl(input: {
   if (!url.searchParams.get("token") && input.token) {
     url.searchParams.set("token", input.token);
   }
+  const contentType = inferDeliverableAssetMime(
+    input.mimeType ?? input.file.type,
+    input.file.name
+  );
 
   return new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", url.toString());
-    xhr.setRequestHeader("Content-Type", input.file.type || "application/octet-stream");
+    xhr.setRequestHeader("Content-Type", contentType);
     xhr.setRequestHeader("x-upsert", "false");
 
     xhr.upload.onprogress = (event) => {
@@ -76,10 +108,7 @@ export async function putDeliverableAssetToSignedUrl(input: {
       }
       resolve({
         ok: false,
-        message:
-          xhr.status === 413
-            ? DELIVERABLE_ASSET_TOO_LARGE_MESSAGE
-            : "Could not upload the file. Try MP4 or MOV under 100 MB.",
+        message: deliverableUploadFailureMessage(xhr.status, xhr.responseText),
       });
     };
 

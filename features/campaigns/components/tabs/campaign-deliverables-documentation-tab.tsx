@@ -68,6 +68,7 @@ import {
   defaultDeliverableAssetType,
   documentationReceiptStatus,
   inferDeliverableAssetMime,
+  isAllowedDeliverableUploadMime,
   unfinishedFileAssetId,
   versionCountsAsClientContent,
   type DocumentationUnitDetail,
@@ -817,7 +818,7 @@ export function CampaignDeliverablesDocumentationTab({
                             <Label className="text-[11px]">Upload file</Label>
                             <Input
                               type="file"
-                              accept="video/mp4,video/quicktime,video/webm,image/jpeg,image/png,image/webp,application/pdf"
+                              accept=".mp4,.m4v,.mov,.webm,.jpg,.jpeg,.png,.webp,.pdf,video/mp4,video/quicktime,video/webm,image/jpeg,image/png,image/webp,application/pdf"
                               className="h-8 text-xs"
                               disabled={pending || selectionLocked}
                               onChange={(event) => {
@@ -848,6 +849,12 @@ export function CampaignDeliverablesDocumentationTab({
                                   file.type,
                                   file.name
                                 );
+                                if (!isAllowedDeliverableUploadMime(mimeType)) {
+                                  toast.error(
+                                    "This file type is not supported. Use MP4 or MOV under 100 MB."
+                                  );
+                                  return;
+                                }
                                 const session = ++uploadSessionRef.current;
                                 setUploadMeter({
                                   phase: "preparing",
@@ -902,6 +909,7 @@ export function CampaignDeliverablesDocumentationTab({
                                         signedUrl: begun.data.signedUrl,
                                         token: begun.data.token,
                                         file,
+                                        mimeType,
                                         onProgress: (progress) => {
                                           if (
                                             session !== uploadSessionRef.current
@@ -999,8 +1007,9 @@ export function CampaignDeliverablesDocumentationTab({
                               </p>
                             ) : (
                               <p className="text-[11px] text-[var(--camp-text-4)]">
-                                MP4 or MOV, up to 100 MB. Large reels upload
-                                directly and will not reload this tab.
+                                MP4 or MOV, up to 100 MB. This file goes to the
+                                slot selected on the left — open Instagram reel
+                                for a reel, Instagram story for a story.
                               </p>
                             )}
                           </div>

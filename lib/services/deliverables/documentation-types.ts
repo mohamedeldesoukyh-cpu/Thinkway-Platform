@@ -73,12 +73,43 @@ export const DELIVERABLE_ASSET_MAX_BYTES = 100 * 1024 * 1024;
 export const DELIVERABLE_ASSET_TOO_LARGE_MESSAGE =
   "This file is too large. Reels and videos must be 100 MB or smaller.";
 
-export function inferDeliverableAssetMime(
-  mimeType: string | null | undefined,
-  fileName: string
-): string {
-  const typed = mimeType?.trim();
-  if (typed) return typed;
+/** Must stay in sync with storage.buckets.allowed_mime_types for deliverable-assets. */
+export const DELIVERABLE_UPLOAD_MIME_TYPES = [
+  "application/pdf",
+  "application/zip",
+  "application/x-zip-compressed",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
+  "text/plain",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+] as const;
+
+const DELIVERABLE_UPLOAD_MIME_SET = new Set<string>(DELIVERABLE_UPLOAD_MIME_TYPES);
+
+const GENERIC_UPLOAD_MIME = new Set([
+  "",
+  "application/octet-stream",
+  "binary/octet-stream",
+  "application/download",
+  "application/force-download",
+  "application/x-msdownload",
+]);
+
+const DELIVERABLE_MIME_ALIASES: Record<string, string> = {
+  "video/mov": "video/quicktime",
+  "video/x-quicktime": "video/quicktime",
+  "video/quicktime": "video/quicktime",
+  "video/x-m4v": "video/mp4",
+  "image/jpg": "image/jpeg",
+};
+
+function mimeFromFileName(fileName: string): string | null {
   const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
   if (ext === "mp4" || ext === "m4v") return "video/mp4";
   if (ext === "mov") return "video/quicktime";
@@ -88,6 +119,24 @@ export function inferDeliverableAssetMime(
   if (ext === "webp") return "image/webp";
   if (ext === "gif") return "image/gif";
   if (ext === "pdf") return "application/pdf";
+  return null;
+}
+
+export function isAllowedDeliverableUploadMime(mimeType: string): boolean {
+  return DELIVERABLE_UPLOAD_MIME_SET.has(mimeType);
+}
+
+export function inferDeliverableAssetMime(
+  mimeType: string | null | undefined,
+  fileName: string
+): string {
+  const raw = (mimeType ?? "").trim().toLowerCase().split(";")[0]?.trim() ?? "";
+  const aliased = DELIVERABLE_MIME_ALIASES[raw] ?? raw;
+  if (isAllowedDeliverableUploadMime(aliased)) return aliased;
+
+  const fromName = mimeFromFileName(fileName);
+  if (fromName) return fromName;
+  if (aliased && !GENERIC_UPLOAD_MIME.has(aliased)) return aliased;
   return "application/octet-stream";
 }
 

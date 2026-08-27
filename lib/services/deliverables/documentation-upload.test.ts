@@ -17,6 +17,7 @@ import {
   emptyAgg,
 } from "@/lib/services/deliverables/build-documentation-units";
 import {
+  deliverableUploadFailureMessage,
   deliverableUploadMeterValue,
   deliverableUploadPercent,
   deliverableUploadProgressLabel,
@@ -32,6 +33,21 @@ test("inferDeliverableAssetMime uses the file extension when the browser omits a
   assert.equal(inferDeliverableAssetMime("video/mp4", "omar.mp4"), "video/mp4");
   assert.equal(inferDeliverableAssetMime("", "omar-reel.MOV"), "video/quicktime");
   assert.equal(inferDeliverableAssetMime(null, "draft.webm"), "video/webm");
+});
+
+test("Windows/iPhone MOV marked as octet-stream still uploads as QuickTime", () => {
+  assert.equal(
+    inferDeliverableAssetMime("application/octet-stream", "1st Omar Story.MOV"),
+    "video/quicktime"
+  );
+  assert.equal(
+    inferDeliverableAssetMime("video/hevc", "reel.mp4"),
+    "video/mp4"
+  );
+  assert.equal(
+    inferDeliverableAssetMime("video/x-quicktime", "story.mov"),
+    "video/quicktime"
+  );
 });
 
 test("server-action protocol errors are identified so Deliverables does not crash", () => {
@@ -155,6 +171,12 @@ test("explorer post rows see deliverable-level uploads", () => {
     documentationRowHasUploadedContent(new Set(["p:post-9"]), "del-1", "post-9"),
     true
   );
+});
+
+test("deliverable upload failures distinguish size vs rejected type", () => {
+  assert.match(deliverableUploadFailureMessage(413), /100 MB/);
+  assert.match(deliverableUploadFailureMessage(400, "invalid mime type"), /rejected this video type/i);
+  assert.match(deliverableUploadFailureMessage(403), /permission/i);
 });
 
 test("documentation aggregates mark units received without reloading hierarchy", () => {
