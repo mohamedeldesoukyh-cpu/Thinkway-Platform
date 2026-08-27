@@ -31,9 +31,9 @@ import {
   shouldUseResumableDeliverableUpload,
 } from "@/features/campaigns/deliverable-asset-upload";
 
-test("deliverable asset size cap matches the 100 MB storage bucket", () => {
-  assert.equal(DELIVERABLE_ASSET_MAX_BYTES, 100 * 1024 * 1024);
-  assert.match(DELIVERABLE_ASSET_TOO_LARGE_MESSAGE, /100 MB/);
+test("deliverable asset size cap matches the 150 MB storage bucket", () => {
+  assert.equal(DELIVERABLE_ASSET_MAX_BYTES, 150 * 1024 * 1024);
+  assert.match(DELIVERABLE_ASSET_TOO_LARGE_MESSAGE, /150 MB/);
 });
 
 test("inferDeliverableAssetMime uses the file extension when the browser omits a type", () => {
@@ -218,8 +218,8 @@ test("explorer post rows see deliverable-level uploads", () => {
 });
 
 test("deliverable upload failures distinguish size vs rejected type", () => {
-  assert.match(deliverableUploadFailureMessage(413), /100 MB/);
-  assert.match(deliverableUploadFailureMessage(400, "maximum allowed size"), /100 MB/);
+  assert.match(deliverableUploadFailureMessage(413), /150 MB/);
+  assert.match(deliverableUploadFailureMessage(400, "maximum allowed size"), /150 MB/);
   assert.match(deliverableUploadFailureMessage(400, "invalid mime type"), /rejected this video type/i);
   assert.match(deliverableUploadFailureMessage(403), /permission/i);
   assert.match(deliverableUploadFailureMessage(0, "network"), /connection/i);

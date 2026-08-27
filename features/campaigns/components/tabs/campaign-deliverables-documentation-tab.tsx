@@ -949,7 +949,7 @@ export function CampaignDeliverablesDocumentationTab({
                                     });
                                     if (!isAllowedDeliverableUploadMime(resolvedMime)) {
                                       toast.error(
-                                        "This file type is not supported. Use MP4 or MOV under 100 MB."
+                                        "This file type is not supported. Use MP4 or MOV under 150 MB."
                                       );
                                       return;
                                     }
@@ -1143,7 +1143,7 @@ export function CampaignDeliverablesDocumentationTab({
                               </p>
                             ) : (
                               <p className="text-[11px] text-[var(--camp-text-4)]">
-                                MP4 or MOV, up to 100 MB. This file goes to the
+                                MP4 or MOV, up to 150 MB. This file goes to the
                                 slot selected on the left — open Instagram reel
                                 for a reel, Instagram story for a story.
                               </p>

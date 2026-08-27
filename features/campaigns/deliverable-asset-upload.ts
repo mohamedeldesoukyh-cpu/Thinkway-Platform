@@ -85,9 +85,9 @@ export function deliverableUploadFailureMessage(
     body.includes("content-type") ||
     body.includes("not allowed")
   ) {
-    return "Storage rejected this video type. Use MP4 or MOV under 100 MB.";
+    return "Storage rejected this video type. Use MP4 or MOV under 150 MB.";
   }
-  return "Could not upload the file. Try MP4 or MOV under 100 MB.";
+  return "Could not upload the file. Try MP4 or MOV under 150 MB.";
 }
 
 export function isDeliverableStoragePutSuccess(status: number): boolean {

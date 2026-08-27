@@ -14,6 +14,11 @@ type PreviewObject = {
   fileName: string | null;
 };
 
+const PLAYBACK_FAILED =
+  "This video could not play in Chrome. Download Original to review it.";
+
+const playableSrcCache = new Map<string, Promise<string>>();
+
 async function loadPreviewObject(
   token: string,
   versionId: string
@@ -34,6 +39,39 @@ async function loadPreviewObject(
   };
 }
 
+/**
+ * Chrome will not play a Storage URL that ends in `.MOV` / is served as
+ * `video/quicktime`. Fetch the bytes and expose them as a `blob:` URL typed
+ * as MP4 so the player never sees a QuickTime filename.
+ */
+export async function loadPlayableVideoSrc(token: string, versionId: string): Promise<string> {
+  const key = `${token}:${versionId}`;
+  const cached = playableSrcCache.get(key);
+  if (cached) return cached;
+
+  const pending = (async () => {
+    const meta = await loadPreviewObject(token, versionId);
+    const playbackType = clientContentPlaybackMime(meta.mimeType, meta.fileName);
+    try {
+      const response = await fetch(meta.url);
+      if (!response.ok) return meta.url;
+      const raw = await response.blob();
+      const typed = raw.type === playbackType ? raw : new Blob([raw], { type: playbackType });
+      return URL.createObjectURL(typed);
+    } catch {
+      return meta.url;
+    }
+  })();
+
+  playableSrcCache.set(key, pending);
+  try {
+    return await pending;
+  } catch (error) {
+    playableSrcCache.delete(key);
+    throw error;
+  }
+}
+
 export function ClientVideoPreview({
   token,
   versionId,
@@ -44,15 +82,18 @@ export function ClientVideoPreview({
   title: string;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [object, setObject] = useState<PreviewObject | null>(null);
+  const [src, setSrc] = useState<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    void loadPreviewObject(token, versionId)
+    setSrc(null);
+    setPlaying(false);
+    setError(null);
+    void loadPlayableVideoSrc(token, versionId)
       .then((next) => {
-        if (!cancelled) setObject(next);
+        if (!cancelled) setSrc(next);
       })
       .catch((caught) => {
         if (!cancelled) {
@@ -65,9 +106,9 @@ export function ClientVideoPreview({
   }, [token, versionId]);
 
   useEffect(() => {
-    if (!object) return;
+    if (!src) return;
     videoRef.current?.load();
-  }, [object]);
+  }, [src]);
 
   async function play() {
     const video = videoRef.current;
@@ -75,41 +116,33 @@ export function ClientVideoPreview({
     try {
       await video.play();
     } catch {
-      setError("This video could not play here. Open Full size or download the original.");
+      setError(PLAYBACK_FAILED);
     }
   }
 
-  const playbackType = object
-    ? clientContentPlaybackMime(object.mimeType, object.fileName)
-    : "video/mp4";
-
   return (
     <div className="cx-vid">
-      {object ? (
+      {src ? (
         <video
           ref={videoRef}
           className="camp-content-preview"
+          src={src}
           controls={playing}
           playsInline
-          preload="metadata"
+          preload="auto"
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
           onEnded={() => setPlaying(false)}
-          onError={() =>
-            setError("This video could not play here. Open Full size or download the original.")
-          }
-        >
-          <source src={object.url} type={playbackType} />
-        </video>
+          onError={() => setError(PLAYBACK_FAILED)}
+        />
       ) : (
         <div className="camp-content-preview" aria-hidden="true" />
       )}
-      {playing || error ? null : (
+      {src && !playing && !error ? (
         <button
           type="button"
           className="cx-vid__play"
           aria-label={`Play ${title}`}
-          disabled={!object}
           onClick={() => void play()}
         >
           <span className="cx-vid__play-mark" aria-hidden="true">
@@ -118,7 +151,8 @@ export function ClientVideoPreview({
             </svg>
           </span>
         </button>
-      )}
+      ) : null}
+      {!src && !error ? <p className="cx-vid__load">Loading video…</p> : null}
       {error ? <p className="cx-vid__err">{error}</p> : null}
     </div>
   );
@@ -136,7 +170,7 @@ export function ClientContentFullSizeButton({
   title: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [object, setObject] = useState<PreviewObject | null>(null);
+  const [src, setSrc] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -153,8 +187,12 @@ export function ClientContentFullSizeButton({
     setError(null);
     setPending(true);
     try {
-      const next = object ?? (await loadPreviewObject(token, versionId));
-      setObject(next);
+      if (kind === "image") {
+        const meta = await loadPreviewObject(token, versionId);
+        setSrc(meta.url);
+      } else {
+        setSrc(await loadPlayableVideoSrc(token, versionId));
+      }
       setOpen(true);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "This file could not be opened.");
@@ -162,10 +200,6 @@ export function ClientContentFullSizeButton({
       setPending(false);
     }
   }
-
-  const playbackType = object
-    ? clientContentPlaybackMime(object.mimeType, object.fileName)
-    : "video/mp4";
 
   return (
     <>
@@ -178,7 +212,7 @@ export function ClientContentFullSizeButton({
       >
         {pending ? "Opening…" : error ? "Could not open" : FULL_SIZE_LABEL}
       </button>
-      {open && object ? (
+      {open && src ? (
         <div
           className="cx-lite"
           role="dialog"
@@ -192,11 +226,9 @@ export function ClientContentFullSizeButton({
             </button>
             {kind === "image" ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={object.url} alt={title} />
+              <img src={src} alt={title} />
             ) : (
-              <video controls autoPlay playsInline preload="auto">
-                <source src={object.url} type={playbackType} />
-              </video>
+              <video src={src} controls autoPlay playsInline preload="auto" />
             )}
           </div>
         </div>

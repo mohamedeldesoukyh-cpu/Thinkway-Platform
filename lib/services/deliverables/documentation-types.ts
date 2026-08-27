@@ -68,13 +68,15 @@ export function documentationReceiptStatus(unit: {
 export type DeliverableAssetMedium = "file" | "external_link" | "text";
 
 /**
- * Matches `storage.buckets.file_size_limit` for `deliverable-assets` (100 MB).
+ * Matches `storage.buckets.file_size_limit` for `deliverable-assets` (150 MB).
  * Files above ~45 MB must use resumable TUS; standard signed PUT is capped at 50 MB.
+ * Project-wide Storage `fileSizeLimit` must be at least this value or TUS returns 413.
  */
-export const DELIVERABLE_ASSET_MAX_BYTES = 100 * 1024 * 1024;
+export const DELIVERABLE_ASSET_MAX_MB = 150;
+export const DELIVERABLE_ASSET_MAX_BYTES = DELIVERABLE_ASSET_MAX_MB * 1024 * 1024;
 
 export const DELIVERABLE_ASSET_TOO_LARGE_MESSAGE =
-  "This file is too large. Reels and videos must be 100 MB or smaller.";
+  `This file is too large. Reels and videos must be ${DELIVERABLE_ASSET_MAX_MB} MB or smaller.`;
 
 /** Must stay in sync with storage.buckets.allowed_mime_types for deliverable-assets. */
 export const DELIVERABLE_UPLOAD_MIME_TYPES = [

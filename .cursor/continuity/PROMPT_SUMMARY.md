@@ -1,10 +1,7 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Client Workspace Campaign tab v2 (below existing header + tabs) + in-page video play / Full size.
+**Focus:** Raise deliverable uploads to 150 MB; Client Workspace must play Omar’s `.MOV` story.
 
-- Keep appbar and tabs. Rebuild from the campaign page head downward: aggregated review action bar, Thinkway overdue strip, segmented delivery bar, review rail + one pane, publication-plan format chips.
-- Play / Full size: preview JSON URL into `<video>`; Full size is an in-page viewer, not a `.MOV` download.
-- Storage 100 MB + TUS (`440fad00`) already live on Dev + Prod.
-
-**Next:** commit and push when asked so Client Workspace Campaign tab v2 ships.
+- Cap: 150 MiB in the app, `deliverable-assets` bucket, and project-wide Storage `fileSizeLimit` (or TUS 413s at the old 100 MB).
+- Play / Full size: do not point `<video>` at a Storage URL ending in `.MOV`. Fetch bytes and play a `blob:` URL typed as `video/mp4`.
