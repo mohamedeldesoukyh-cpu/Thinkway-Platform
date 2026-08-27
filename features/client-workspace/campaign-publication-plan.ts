@@ -4,8 +4,16 @@ import {
   type ClientCampaignPostRow,
   type ClientCampaignPostStatus,
 } from "./campaign-execution";
+import { normalizeClientDeliverableFormat } from "./campaign-tab-aggregates";
 
-export const PUBLICATION_PLAN_FILTERS = ["all", "live", "overdue", "scheduling"] as const;
+export const PUBLICATION_PLAN_FILTERS = [
+  "all",
+  "overdue",
+  "live",
+  "scheduled",
+  "scheduling",
+  "completed",
+] as const;
 export type PublicationPlanFilter = (typeof PUBLICATION_PLAN_FILTERS)[number];
 
 export type PublicationPlanViewMode = "grouped" | "rows";
@@ -44,17 +52,25 @@ export function creatorInitials(name: string): string {
 export function filterPublicationPlanPosts(
   posts: ClientCampaignPostRow[],
   filter: PublicationPlanFilter,
-  query: string
+  query: string,
+  format = "all"
 ): ClientCampaignPostRow[] {
   const q = query.trim().toLowerCase();
   return posts.filter((post) => {
     if (filter === "live" && post.status !== "live") return false;
     if (filter === "overdue" && post.status !== "overdue") return false;
     if (filter === "scheduling" && post.status !== "scheduling") return false;
+    if (filter === "completed" && post.status !== "completed") return false;
+    if (filter === "scheduled" && post.status !== "scheduled" && post.status !== "due_today") {
+      return false;
+    }
+    const canonical = normalizeClientDeliverableFormat(post.deliverable, post.platform);
+    if (format !== "all" && canonical !== format) return false;
     if (!q) return true;
     return (
       post.creatorName.toLowerCase().includes(q) ||
       post.deliverable.toLowerCase().includes(q) ||
+      canonical.toLowerCase().includes(q) ||
       post.platformLabel.toLowerCase().includes(q)
     );
   });
@@ -80,8 +96,9 @@ export type CreatorPublicationGroup = {
 function foldIdenticalDeliverables(posts: ClientCampaignPostRow[]): FoldedDeliverableRow[] {
   const map = new Map<string, FoldedDeliverableRow>();
   for (const post of posts) {
+    const format = normalizeClientDeliverableFormat(post.deliverable, post.platform);
     const key = [
-      post.deliverable,
+      format,
       post.status,
       post.scheduledDate ?? "",
       post.publicationDate ?? "",
@@ -91,7 +108,7 @@ function foldIdenticalDeliverables(posts: ClientCampaignPostRow[]): FoldedDelive
     if (existing) {
       existing.count += 1;
     } else {
-      map.set(key, { key, sample: post, count: 1 });
+      map.set(key, { key, sample: { ...post, deliverable: format }, count: 1 });
     }
   }
   return [...map.values()];
@@ -112,7 +129,7 @@ function uniqueStatuses(posts: ClientCampaignPostRow[]): ClientCampaignPostStatu
 function kindCounts(posts: ClientCampaignPostRow[]): Array<{ label: string; count: number }> {
   const counts = new Map<string, number>();
   for (const post of posts) {
-    const label = post.deliverable.trim() || "Deliverable";
+    const label = normalizeClientDeliverableFormat(post.deliverable, post.platform);
     counts.set(label, (counts.get(label) ?? 0) + 1);
   }
   return [...counts.entries()].map(([label, count]) => ({ label, count }));
@@ -166,10 +183,25 @@ export function publicationPlanFilterCounts(posts: ClientCampaignPostRow[]): Rec
 > {
   return {
     all: posts.length,
-    live: posts.filter((post) => post.status === "live").length,
     overdue: posts.filter((post) => post.status === "overdue").length,
+    live: posts.filter((post) => post.status === "live").length,
+    scheduled: posts.filter((post) => post.status === "scheduled" || post.status === "due_today").length,
     scheduling: posts.filter((post) => post.status === "scheduling").length,
+    completed: posts.filter((post) => post.status === "completed").length,
   };
+}
+
+export function publicationPlanFormatCounts(
+  posts: ClientCampaignPostRow[]
+): Array<{ format: string; count: number }> {
+  const counts = new Map<string, number>();
+  for (const post of posts) {
+    const format = normalizeClientDeliverableFormat(post.deliverable, post.platform);
+    counts.set(format, (counts.get(format) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([format, count]) => ({ format, count }))
+    .sort((left, right) => right.count - left.count || left.format.localeCompare(right.format));
 }
 
 export function rankedPublicationRows(posts: ClientCampaignPostRow[]): ClientCampaignPostRow[] {

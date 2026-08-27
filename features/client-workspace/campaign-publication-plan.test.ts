@@ -67,13 +67,29 @@ test("publication plan filters and search match the campaign table", () => {
   ];
   assert.deepEqual(publicationPlanFilterCounts(posts), {
     all: 3,
-    live: 1,
     overdue: 1,
+    live: 1,
+    scheduled: 0,
     scheduling: 1,
+    completed: 0,
   });
   assert.equal(filterPublicationPlanPosts(posts, "overdue", "").length, 1);
   assert.equal(filterPublicationPlanPosts(posts, "all", "story").length, 1);
+  assert.equal(filterPublicationPlanPosts(posts, "all", "reel").length, 2);
+  assert.equal(filterPublicationPlanPosts(posts, "all", "", "IG Reel").length, 2);
   assert.equal(creatorInitials("@omar_dem"), "OD");
+});
+
+test("ig reel and IG Reel fold as the same canonical format", () => {
+  const groups = groupPublicationPlanByCreator([
+    row({ id: "1", creatorName: "@omar_dem", status: "overdue", deliverable: "ig reel" }),
+    row({ id: "2", creatorName: "@omar_dem", status: "overdue", deliverable: "IG Reel" }),
+  ]);
+  assert.equal(groups[0]?.folded.length, 1);
+  assert.equal(groups[0]?.folded[0]?.count, 2);
+  assert.equal(groups[0]?.folded[0]?.sample.deliverable, "IG Reel");
+  assert.equal(groups[0]?.kinds.length, 1);
+  assert.equal(groups[0]?.kinds[0]?.label, "IG Reel");
 });
 
 test("campaign tab avatars overlay from creator cards by name or handle", () => {

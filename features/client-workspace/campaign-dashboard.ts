@@ -48,6 +48,7 @@ export type ClientCampaignProgress = {
   total: number;
   percent: number;
   headline: string;
+  publishedLabel: string;
   explanation: string;
   kind: "creators_live" | "posts_completed";
 };
@@ -192,25 +193,32 @@ export function clientCampaignProgress(
   if (posts.length === 0) return null;
   const creators = uniqueCreatorNames(posts);
   const completed = countByStatus(posts, "completed");
+  const live = countByStatus(posts, "live");
+  const published = live + completed;
+  const publishedLabel = `${published} of ${posts.length} deliverables published`;
   if (completed === posts.length) {
     const percent = Math.round((completed / posts.length) * 100);
     return {
       current: completed,
       total: posts.length,
       percent,
-      headline: `${completed} / ${posts.length} completed`,
+      headline: `Delivery status · ${creators.length} of ${creators.length} creators live`,
+      publishedLabel,
       explanation: CAMPAIGN_PROGRESS_COMPLETED_EXPLANATION,
       kind: "posts_completed",
     };
   }
-  const liveCreators = uniqueCreatorNames(posts.filter((post) => post.status === "live")).length;
+  const liveCreators = uniqueCreatorNames(
+    posts.filter((post) => post.status === "live" || post.status === "completed")
+  ).length;
   const total = creators.length;
   const percent = total > 0 ? Math.round((liveCreators / total) * 100) : 0;
   return {
     current: liveCreators,
     total,
     percent,
-    headline: `${liveCreators} of ${total} creators live`,
+    headline: `Delivery status · ${liveCreators} of ${total} creators live`,
+    publishedLabel,
     explanation: CAMPAIGN_PROGRESS_LIVE_EXPLANATION,
     kind: "creators_live",
   };

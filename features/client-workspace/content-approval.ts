@@ -7,6 +7,8 @@ import {
 export const NO_CONTENT_TO_REVIEW_COPY = "No content to review.";
 export const NO_CONTENT_TO_REVIEW_HINT =
   "This list shows reels, images, and links Thinkway uploaded for approval. It stays empty until a file finishes saving in Campaign Workspace → Deliverables. Live Instagram posts further down are published content, not files waiting for review.";
+export const NOTHING_WAITING_ON_YOU_COPY =
+  "Nothing waiting on you — all submitted content has been reviewed.";
 export const APPROVED_CONTENT_HEADING = "Approved content";
 export const CONTENT_APPROVAL_REQUIRED_LABEL = "Approval Required";
 export const CONTENT_CHANGES_REQUESTED_LABEL = "Changes Requested";
@@ -232,11 +234,35 @@ export function clientContentAssetUrl(input: {
   token: string;
   versionId: string;
   mode: "preview" | "download";
+  format?: "json";
 }): string {
   const params = new URLSearchParams({
     sign: input.token,
     versionId: input.versionId,
     mode: input.mode,
   });
+  if (input.format) params.set("format", input.format);
   return `/api/review/content?${params.toString()}`;
 }
+
+/** Chrome cannot play `video/quicktime`. Instagram/iPhone stories named .MOV are often MP4. */
+export function clientContentPlaybackMime(
+  mimeType: string | null | undefined,
+  fileName: string | null | undefined
+): string {
+  const mime = mimeType?.trim().toLowerCase() ?? "";
+  const name = fileName?.trim().toLowerCase() ?? "";
+  if (mime.startsWith("image/")) return mime;
+  if (mime === "video/webm" || name.endsWith(".webm")) return "video/webm";
+  if (
+    mime.startsWith("video/") ||
+    name.endsWith(".mp4") ||
+    name.endsWith(".m4v") ||
+    name.endsWith(".mov")
+  ) {
+    return "video/mp4";
+  }
+  return mime || "application/octet-stream";
+}
+
+export const FULL_SIZE_LABEL = "Full size";

@@ -185,9 +185,11 @@ import {
 } from "./campaign-dashboard";
 import {
   clientContentAssetUrl,
+  clientContentPlaybackMime,
   clientContentToReview,
   currentContentVersion,
   emptyClientCampaignContent,
+  FULL_SIZE_LABEL,
   NO_CONTENT_TO_REVIEW_COPY,
   NO_CONTENT_TO_REVIEW_HINT,
   projectClientCampaignContent,
@@ -5347,7 +5349,8 @@ test("Stage 4: approved, scheduled, due today, live, overdue, and completed coun
   const dashboard = projectClientCampaignDashboard(projected.posts);
   assert.equal(dashboard.ready, true);
   assert.equal(dashboard.progress?.kind, "creators_live");
-  assert.equal(dashboard.progress?.headline, "1 of 5 creators live");
+  assert.equal(dashboard.progress?.headline, "Delivery status · 2 of 5 creators live");
+  assert.equal(dashboard.progress?.publishedLabel, "2 of 5 deliverables published");
   assert.match(dashboard.progress?.explanation ?? "", /live publication/i);
 });
 
@@ -5890,6 +5893,10 @@ test("Thinkway files can download original; Google Drive links cannot", () => {
     clientContentAssetUrl({ token: "review-token", versionId: "v2", mode: "download" }),
     "/api/review/content?sign=review-token&versionId=v2&mode=download"
   );
+  assert.equal(
+    clientContentAssetUrl({ token: "review-token", versionId: "v2", mode: "preview", format: "json" }),
+    "/api/review/content?sign=review-token&versionId=v2&mode=preview&format=json"
+  );
 
   const drive = projectContent({
     assets: [
@@ -5917,6 +5924,13 @@ test("Thinkway files can download original; Google Drive links cannot", () => {
   assert.equal(drive.items[0]?.canDownloadOriginal, false);
   assert.equal(drive.items[0]?.externalUrl, "https://drive.google.com/file/d/abc/view");
   assert.equal(drive.items[0]?.previewKind, "none");
+});
+
+test("client content playback treats MOV stories as MP4 and Full size is not a download link", () => {
+  assert.equal(FULL_SIZE_LABEL, "Full size");
+  assert.equal(clientContentPlaybackMime("video/quicktime", "1st Omar Story.MOV"), "video/mp4");
+  assert.equal(clientContentPlaybackMime("video/mp4", "reel.mp4"), "video/mp4");
+  assert.equal(clientContentPlaybackMime("image/jpeg", "still.jpg"), "image/jpeg");
 });
 
 test("historical Client Workspace content is empty and captions are not review cards", () => {

@@ -127,7 +127,10 @@ export async function createClientContentSignedUrl(input: {
   token: string;
   versionId: string;
   mode: "preview" | "download";
-}): Promise<{ ok: true; url: string; fileName: string | null } | { ok: false; message: string; status: number }> {
+}): Promise<
+  | { ok: true; url: string; fileName: string | null; mimeType: string | null }
+  | { ok: false; message: string; status: number }
+> {
   const access = await requireCurrentCampaignContentAccess(input.token);
   if (!access.ok) return { ok: false, message: access.message, status: 401 };
 
@@ -163,5 +166,10 @@ export async function createClientContentSignedUrl(input: {
   if (signed.error || !signed.data?.signedUrl) {
     return { ok: false, message: signed.error?.message ?? "Could not open this file.", status: 503 };
   }
-  return { ok: true, url: signed.data.signedUrl, fileName: version.file_name };
+  return {
+    ok: true,
+    url: signed.data.signedUrl,
+    fileName: version.file_name,
+    mimeType: version.mime_type,
+  };
 }

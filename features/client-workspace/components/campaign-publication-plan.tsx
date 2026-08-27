@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { DATA_NOT_AVAILABLE, NOT_AVAILABLE, TO_BE_CONFIRMED } from "../format";
 import {
@@ -12,12 +12,14 @@ import {
   PUBLICATION_PLAN_FOOTNOTE,
   PUBLICATION_PLAN_NOTE,
 } from "../campaign-dashboard";
+import { matchClientCreatorByName } from "../campaign-tab-aggregates";
 import {
   CLIENT_CAMPAIGN_POST_STATUS_LABEL,
   defaultExpandedCreators,
   filterPublicationPlanPosts,
   groupPublicationPlanByCreator,
   publicationPlanFilterCounts,
+  publicationPlanFormatCounts,
   publicationPlanStatusTone,
   rankedPublicationRows,
   type PublicationPlanFilter,
@@ -26,6 +28,15 @@ import {
 import type { ClientCreatorCard } from "../types";
 import { ReviewPlatformMark } from "./review-platform-mark";
 import { ReviewAvatar } from "./review-avatar";
+
+const FILTER_CHIPS: Array<{ id: PublicationPlanFilter; label: string }> = [
+  { id: "all", label: "All" },
+  { id: "overdue", label: "Overdue" },
+  { id: "live", label: "Live" },
+  { id: "scheduled", label: "Scheduled" },
+  { id: "scheduling", label: "To be confirmed" },
+  { id: "completed", label: "Completed" },
+];
 
 function StatusPill({ status }: { status: ClientCampaignPostRow["status"] }) {
   return (
@@ -47,21 +58,6 @@ function PlatformCell({ row }: { row: ClientCampaignPostRow }) {
   );
 }
 
-function matchPublicationCreator(
-  name: string,
-  creators: Array<
-    Pick<ClientCreatorCard, "displayName" | "handle" | "avatarUrl" | "profileUrl" | "platform" | "platformAccounts">
-  >
-) {
-  const key = name.trim().replace(/^@+/, "").toLowerCase();
-  if (!key) return undefined;
-  return creators.find((creator) => {
-    const display = creator.displayName.trim().replace(/^@+/, "").toLowerCase();
-    const handle = creator.handle?.trim().replace(/^@+/, "").toLowerCase();
-    return display === key || handle === key;
-  });
-}
-
 function PublicationPlanAvatar({
   name,
   avatarUrl,
@@ -77,7 +73,7 @@ function PublicationPlanAvatar({
     Pick<ClientCreatorCard, "displayName" | "handle" | "avatarUrl" | "profileUrl" | "platform" | "platformAccounts">
   >;
 }) {
-  const matched = matchPublicationCreator(name, creators);
+  const matched = matchClientCreatorByName(name, creators);
   return (
     <ReviewAvatar
       className="cx-av"
@@ -101,20 +97,28 @@ export function CampaignPublicationPlan({
   posts,
   creators,
   token,
+  focusOverdue = 0,
 }: {
   posts: ClientCampaignPostRow[];
   creators: ClientCreatorCard[];
   token: string;
+  focusOverdue?: number;
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<PublicationPlanFilter>("all");
+  const [format, setFormat] = useState("all");
   const [view, setView] = useState<PublicationPlanViewMode>("grouped");
   const [opened, setOpened] = useState<Set<string>>(() => new Set());
   const [closed, setClosed] = useState<Set<string>>(() => new Set());
   const counts = publicationPlanFilterCounts(posts);
+  const statusScoped = useMemo(
+    () => filterPublicationPlanPosts(posts, filter, "", "all"),
+    [posts, filter]
+  );
+  const formatCounts = publicationPlanFormatCounts(statusScoped);
   const visible = useMemo(
-    () => filterPublicationPlanPosts(posts, filter, query),
-    [posts, filter, query]
+    () => filterPublicationPlanPosts(posts, filter, query, format),
+    [posts, filter, query, format]
   );
   const groups = useMemo(() => groupPublicationPlanByCreator(visible), [visible]);
   const defaultOpen = useMemo(() => new Set(defaultExpandedCreators(groups)), [groups]);
@@ -122,6 +126,45 @@ export function CampaignPublicationPlan({
   function isOpen(name: string) {
     if (closed.has(name)) return false;
     return opened.has(name) || defaultOpen.has(name);
+  }
+
+  useEffect(() => {
+    if (filter !== "all" && counts[filter] === 0) {
+      setFilter("all");
+      setFormat("all");
+    }
+  }, [filter, counts.all, counts.overdue, counts.live, counts.scheduled, counts.scheduling, counts.completed]);
+
+  useEffect(() => {
+    if (focusOverdue <= 0) return;
+    const names = [
+      ...new Set(
+        posts
+          .filter((post) => post.status === "overdue")
+          .map((post) => post.creatorName.trim() || "Creator")
+      ),
+    ];
+    setFilter("overdue");
+    setFormat("all");
+    setQuery("");
+    setOpened((current) => {
+      const next = new Set(current);
+      for (const name of names) next.add(name);
+      return next;
+    });
+    setClosed((current) => {
+      const next = new Set(current);
+      for (const name of names) next.delete(name);
+      return next;
+    });
+    document.getElementById("publication-plan")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    // Only re-run when the client asks to view overdue — not on every posts refresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusOverdue]);
+
+  function setStatusFilter(next: PublicationPlanFilter) {
+    setFilter(next);
+    setFormat("all");
   }
 
   function toggle(creatorName: string) {
@@ -148,7 +191,7 @@ export function CampaignPublicationPlan({
       <h2>Creators and go-live</h2>
       <p className="note">{PUBLICATION_PLAN_NOTE}</p>
 
-      <div className="cx-bar">
+      <div className="cx-toolbar">
         <label className="cx-search">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
@@ -162,22 +205,15 @@ export function CampaignPublicationPlan({
         </label>
 
         <div className="cx-chips">
-          {(
-            [
-              ["all", "All"],
-              ["live", "Live"],
-              ["overdue", "Overdue"],
-              ["scheduling", "To be confirmed"],
-            ] as const
-          ).map(([id, label]) => (
+          {FILTER_CHIPS.filter((chip) => chip.id === "all" || counts[chip.id] > 0).map((chip) => (
             <button
-              key={id}
+              key={chip.id}
               type="button"
               className="cx-chip"
-              aria-pressed={filter === id}
-              onClick={() => setFilter(id)}
+              aria-pressed={filter === chip.id}
+              onClick={() => setStatusFilter(chip.id)}
             >
-              {label} <b>{counts[id]}</b>
+              {chip.label} <b>{counts[chip.id]}</b>
             </button>
           ))}
         </div>
@@ -195,6 +231,30 @@ export function CampaignPublicationPlan({
           </button>
         </div>
       </div>
+      {formatCounts.length >= 2 ? (
+        <div className="cx-chips cx-chips--fmt">
+          <span className="cx-fmtlabel">Format</span>
+          <button
+            type="button"
+            className="cx-chip cx-chip--sm"
+            aria-pressed={format === "all"}
+            onClick={() => setFormat("all")}
+          >
+            All formats <b>{statusScoped.length}</b>
+          </button>
+          {formatCounts.map((entry) => (
+            <button
+              key={entry.format}
+              type="button"
+              className="cx-chip cx-chip--sm"
+              aria-pressed={format === entry.format}
+              onClick={() => setFormat(entry.format)}
+            >
+              {entry.format} <b>{entry.count}</b>
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       <div className="tbl-scroll">
         {visible.length === 0 ? (

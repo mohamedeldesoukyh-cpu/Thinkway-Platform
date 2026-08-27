@@ -18,5 +18,12 @@ export async function GET(request: Request) {
   if (!result.ok) {
     return NextResponse.json({ error: result.message }, { status: result.status });
   }
+  if (searchParams.get("format") === "json") {
+    return NextResponse.json({
+      url: result.url,
+      fileName: result.fileName,
+      mimeType: result.mimeType,
+    });
+  }
   return NextResponse.redirect(result.url, 302);
 }

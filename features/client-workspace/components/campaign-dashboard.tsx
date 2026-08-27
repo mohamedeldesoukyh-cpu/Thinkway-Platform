@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
+
 import {
   formatClientDashboardDate,
-  formatClientScheduleDate,
   type ClientCampaignPostRow,
 } from "../campaign-execution";
 import {
@@ -10,10 +11,10 @@ import {
   CONTENT_REVIEW_NOTE,
   NEEDS_ATTENTION_COPY,
   PERFORMANCE_PENDING_COPY,
-  clientCampaignLegendCounts,
   formatCampaignPageUpdatedAt,
   projectClientCampaignDashboard,
 } from "../campaign-dashboard";
+import { clientCampaignBarSegments, clientOverdueStrip, clientReviewAttention } from "../campaign-tab-aggregates";
 import { clientContentToReview, type ClientContentReviewItem } from "../content-approval";
 import { ContentToReview } from "./content-to-review";
 import { CampaignPublicationPlan } from "./campaign-publication-plan";
@@ -49,8 +50,14 @@ export function CampaignDashboard({
 }) {
   const dashboard = projectClientCampaignDashboard(posts);
   const pendingReview = clientContentToReview(contentItems);
+  const [overdueFocus, setOverdueFocus] = useState(0);
   const contentSection = (
-    <ContentToReview items={contentItems} token={token} note={CONTENT_REVIEW_NOTE} />
+    <ContentToReview
+      items={contentItems}
+      token={token}
+      note={CONTENT_REVIEW_NOTE}
+      creators={creators}
+    />
   );
   const updatedLabel = formatCampaignPageUpdatedAt(updatedAt);
   const versionLabel = clientWorkspaceVersionPill({
@@ -84,8 +91,8 @@ export function CampaignDashboard({
   }
 
   const { counts, progress, live, overdue, performanceMetrics } = dashboard;
-  const legend = clientCampaignLegendCounts(counts);
   const firstLive = live[0] ?? null;
+  const segments = clientCampaignBarSegments(posts);
 
   return (
     <>
@@ -98,7 +105,8 @@ export function CampaignDashboard({
         inCampaign={inCampaign}
       />
 
-      <AttentionBar items={pendingReview} overdue={overdue} />
+      <AttentionBar items={pendingReview} />
+      <OverdueStrip posts={overdue} onViewAll={() => setOverdueFocus((current) => current + 1)} />
 
       <section className="card">
         <div className="cx-kpis">
@@ -128,32 +136,26 @@ export function CampaignDashboard({
           <div className="cx-prog">
             <div className="cx-prog__r">
               <span className="cx-prog__l">{progress.headline}</span>
-              <span className="cx-prog__v num">{progress.percent}%</span>
+              <span className="cx-prog__v num">{progress.publishedLabel}</span>
             </div>
-            <div className="track" aria-hidden="true">
-              <span className="fill" style={{ width: `${progress.percent}%` }} />
+            <div className="cx-bar2" aria-hidden="true">
+              {segments
+                .filter((segment) => segment.count > 0)
+                .map((segment) => (
+                  <span
+                    key={segment.key}
+                    className={`cx-bar2__${segment.key}`}
+                    style={{ width: `${segment.percent}%` }}
+                  />
+                ))}
             </div>
             <div className="cx-prog__legend">
-              <span className="cx-leg">
-                <i style={{ background: "var(--ok, #10b981)" }} />
-                Live <b>{legend.live}</b>
-              </span>
-              <span className="cx-leg">
-                <i style={{ background: "var(--bad, #ef4444)" }} />
-                Overdue <b>{legend.overdue}</b>
-              </span>
-              <span className="cx-leg">
-                <i style={{ background: "var(--blue)" }} />
-                Scheduled <b>{legend.scheduled}</b>
-              </span>
-              <span className="cx-leg">
-                <i style={{ background: "#cfd6e4" }} />
-                To be confirmed <b>{legend.scheduling}</b>
-              </span>
-              <span className="cx-leg">
-                <i style={{ background: "#cfd6e4" }} />
-                Completed <b>{legend.completed}</b>
-              </span>
+              {segments.map((segment) => (
+                <span className="cx-leg" key={segment.key}>
+                  <i className={`cx-bar2__${segment.key}`} />
+                  {segment.label} <b>{segment.count}</b>
+                </span>
+              ))}
             </div>
           </div>
         ) : null}
@@ -205,7 +207,12 @@ export function CampaignDashboard({
         )}
       </section>
 
-      <CampaignPublicationPlan posts={posts} creators={creators} token={token} />
+      <CampaignPublicationPlan
+        posts={posts}
+        creators={creators}
+        token={token}
+        focusOverdue={overdueFocus}
+      />
     </>
   );
 }
@@ -246,59 +253,52 @@ function CampaignPageHead({
   );
 }
 
-function AttentionBar({
-  items,
-  overdue,
-}: {
-  items: ClientContentReviewItem[];
-  overdue: ClientCampaignPostRow[];
-}) {
-  const count = items.length + overdue.length;
-  if (count === 0) return null;
+function AttentionBar({ items }: { items: ClientContentReviewItem[] }) {
+  const attention = clientReviewAttention(items);
+  if (!attention) return null;
   return (
     <section className="cx-act" id="actionBar">
       <div className="cx-act__top">
-        <span className="cx-act__n num">{count}</span>
+        <span className="cx-act__n num">{attention.count}</span>
         <span className="cx-act__t">{NEEDS_ATTENTION_COPY}</span>
       </div>
-      <div className="cx-act__list">
-        {items.map((item) => (
-          <div className="cx-item" key={`${item.assetId}:${item.versionId}`}>
-            <span className="cx-item__ic cx-item__ic--rev">▶</span>
-            <span className="cx-item__b">
-              <span className="cx-item__t">
-                {item.assetTypeLabel} from {item.creatorName}
-              </span>
-              <span className="cx-item__s">
-                Awaiting your approval
-                {item.platformLabel ? ` · ${item.platformLabel}` : ""}
-                {` · v${item.versionNumber}`}
-              </span>
-            </span>
-            <a className="btn pri" href="#review">
-              Review
-            </a>
-          </div>
-        ))}
-        {overdue.map((row) => (
-          <div className="cx-item" key={row.id}>
-            <span className="cx-item__ic cx-item__ic--od">!</span>
-            <span className="cx-item__b">
-              <span className="cx-item__t">
-                {row.creatorName} · {row.deliverable} overdue
-              </span>
-              <span className="cx-item__s">
-                {formatClientScheduleDate(row.scheduledDate)
-                  ? `Was scheduled ${formatClientScheduleDate(row.scheduledDate)} — Thinkway is chasing`
-                  : "Thinkway is chasing this overdue deliverable"}
-              </span>
-            </span>
-            <a className="btn" href="#publication-plan">
-              View
-            </a>
-          </div>
-        ))}
+      <div className="cx-act__row">
+        <span className="cx-act__ic" aria-hidden="true">
+          ▶
+        </span>
+        <span className="cx-act__b">
+          <span className="cx-act__h">{attention.headline}</span>
+          <span className="cx-act__s">{attention.detail}</span>
+        </span>
+        <a className="btn pri" href="#review">
+          Review
+        </a>
       </div>
+    </section>
+  );
+}
+
+function OverdueStrip({
+  posts,
+  onViewAll,
+}: {
+  posts: ClientCampaignPostRow[];
+  onViewAll: () => void;
+}) {
+  const strip = clientOverdueStrip(posts);
+  if (!strip) return null;
+  return (
+    <section className="cx-status" id="overdueStrip">
+      <span className="cx-status__ic" aria-hidden="true">
+        !
+      </span>
+      <span className="cx-status__b">
+        <span className="cx-status__h">{strip.headline}</span>
+        <span className="cx-status__s">{strip.detail}</span>
+      </span>
+      <button type="button" className="btn" onClick={onViewAll}>
+        View all
+      </button>
     </section>
   );
 }
