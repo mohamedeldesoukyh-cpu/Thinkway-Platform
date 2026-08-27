@@ -52,6 +52,7 @@ const createDeliverableSchema = z.object({
 const updateDeliverableSchema = createDeliverableSchema.extend({
   deliverable_id: z.string().uuid(),
   billing_status: billingStatusSchema.optional(),
+  skip_revalidate: z.boolean().optional(),
 });
 
 const deleteDeliverableSchema = z.object({
@@ -71,6 +72,7 @@ const updateScheduleSchema = z.object({
   billing_status: billingStatusSchema.optional(),
   platform: platformSchema.optional(),
   deliverable_type: deliverableTypeSchema.optional(),
+  skip_revalidate: z.boolean().optional(),
 });
 
 const updateDeliverablePlatformSchema = z.object({
@@ -89,6 +91,11 @@ const addPostSchema = z.object({
 function revalidateCampaign(campaignId: string) {
   revalidatePath("/campaigns");
   revalidatePath(`/campaigns/${campaignId}`);
+}
+
+function revalidateCampaignUnlessSkipped(campaignId: string, skip?: boolean) {
+  if (skip) return;
+  revalidateCampaign(campaignId);
 }
 
 async function requireAuth() {
@@ -142,8 +149,11 @@ export async function updateAssignmentDeliverableAction(
 
   try {
     const supabase = await requireAuth();
-    const result = await updateAssignmentDeliverable(supabase, parsed.data);
-    if (result.ok) revalidateCampaign(parsed.data.campaign_id);
+    const { skip_revalidate, ...data } = parsed.data;
+    const result = await updateAssignmentDeliverable(supabase, data);
+    if (result.ok) {
+      revalidateCampaignUnlessSkipped(data.campaign_id, skip_revalidate);
+    }
     return result;
   } catch (error) {
     return {
@@ -184,8 +194,11 @@ export async function updatePostScheduleAction(
 
   try {
     const supabase = await requireAuth();
-    const result = await updatePostSchedule(supabase, parsed.data);
-    if (result.ok) revalidateCampaign(parsed.data.campaign_id);
+    const { skip_revalidate, ...data } = parsed.data;
+    const result = await updatePostSchedule(supabase, data);
+    if (result.ok) {
+      revalidateCampaignUnlessSkipped(data.campaign_id, skip_revalidate);
+    }
     return result;
   } catch (error) {
     return {

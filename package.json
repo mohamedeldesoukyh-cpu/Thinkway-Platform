@@ -161,7 +161,7 @@
     "validate:ers2-search-intelligence": "npx tsx features/ai-workflows/validate-ers2-search-intelligence.ts",
     "test:campaign-search-intent": "npx tsx features/ai/tools/campaign-search-intent.test.ts",
     "test:studio-recommendations": "npx tsx lib/discovery/campaign-relevance-scoring.test.ts && npx tsx lib/discovery/rank-browse-for-campaign.test.ts && npx tsx lib/discovery/campaign-fit-rerank.test.ts && npx tsx features/ai-workflows/__tests__/studio-recommendations-eval.test.ts",
-    "test:client-workspace": "npx tsx --test features/client-workspace/client-workspace.test.ts",
+    "test:client-workspace": "npx tsx --test features/client-workspace/client-workspace.test.ts features/client-workspace/campaign-progress-graph.test.ts",
     "validate:infra-phase02": "npx tsx scripts/validate-infra-phase02.ts",
     "validate:campaign-persistence": "npx tsx features/campaign-intelligence/validate-campaign-persistence-phase03.ts",
     "validate:cdi-phase-1": "npx tsx scripts/validate-cdi-phase-1.mjs",

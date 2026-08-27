@@ -72,6 +72,8 @@ export type ClientCampaignPostRow = {
 export type ClientCampaignExecution = {
   campaignHeaderId: string | null;
   posts: ClientCampaignPostRow[];
+  startDate: string | null;
+  endDate: string | null;
 };
 
 export type ClientCampaignViewKind = "needs_quotation_approval" | "setting_up" | "in_campaign";
@@ -95,7 +97,7 @@ export function emptyClientCampaignPerformance(): ClientCampaignPerformance {
 }
 
 export function emptyClientCampaignExecution(): ClientCampaignExecution {
-  return { campaignHeaderId: null, posts: [] };
+  return { campaignHeaderId: null, posts: [], startDate: null, endDate: null };
 }
 
 export function clientCampaignViewKind(input: {
@@ -338,6 +340,8 @@ export type CampaignPublicationMetrics = {
 };
 
 export type CampaignExecutionSource = {
+  startDate?: string | null;
+  endDate?: string | null;
   lines: Array<{ id: string; name: string; metadata?: Record<string, unknown> | null }>;
   influencers: Array<{
     campaignLineId: string | null;
@@ -636,7 +640,12 @@ export function projectClientCampaignExecution(
     return leftDate.localeCompare(rightDate) || left.creatorName.localeCompare(right.creatorName);
   });
 
-  return { campaignHeaderId, posts };
+  return {
+    campaignHeaderId,
+    posts,
+    startDate: dateOnly(source.startDate),
+    endDate: dateOnly(source.endDate),
+  };
 }
 
 export function campaignRosterFallback(

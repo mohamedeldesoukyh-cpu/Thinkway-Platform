@@ -82,7 +82,13 @@ export async function loadClientCampaignExecution(
   if (!headerId) return emptyClientCampaignExecution();
 
   try {
-    const [linesResult, deliverablesResult, publicationsResult, influencersResult] = await Promise.all([
+    const [
+      linesResult,
+      deliverablesResult,
+      publicationsResult,
+      influencersResult,
+      headerResult,
+    ] = await Promise.all([
       supabase
         .from("campaign_lines")
         .select("id, name, metadata")
@@ -102,6 +108,11 @@ export async function loadClientCampaignExecution(
         .from("campaign_influencers")
         .select("campaign_line_id, influencer_id, influencer:influencers(display_name, primary_avatar_url)")
         .eq("campaign_header_id", headerId),
+      supabase
+        .from("campaign_headers")
+        .select("start_date, end_date")
+        .eq("id", headerId)
+        .maybeSingle(),
     ]);
 
     const lines = (linesResult.data ?? []) as LineRow[];
@@ -117,6 +128,8 @@ export async function loadClientCampaignExecution(
     }
 
     const source: CampaignExecutionSource = {
+      startDate: (headerResult.data as { start_date: string | null } | null)?.start_date ?? null,
+      endDate: (headerResult.data as { end_date: string | null } | null)?.end_date ?? null,
       lines: lines.map((line) => ({
         id: line.id,
         name: line.name?.trim() || "Assignment",
@@ -177,6 +190,6 @@ export async function loadClientCampaignExecution(
 
     return projectClientCampaignExecution(headerId, source);
   } catch {
-    return { campaignHeaderId: headerId, posts: [] };
+    return { campaignHeaderId: headerId, posts: [], startDate: null, endDate: null };
   }
 }

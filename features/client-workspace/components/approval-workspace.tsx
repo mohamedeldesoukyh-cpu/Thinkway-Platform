@@ -144,6 +144,8 @@ export function ApprovalWorkspace({
         contentItems={contentItems}
         creators={view.creators}
         token={token}
+        campaignStartDate={execution.startDate}
+        campaignEndDate={execution.endDate}
       />
       <CampaignChangeActions view={view} token={token} />
     </>

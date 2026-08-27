@@ -13,11 +13,16 @@ import {
 } from "react";
 import { toast } from "sonner";
 
-export type AssignmentGridFlushResult =
-  | { ok: true }
-  | { ok: false; message: string };
+import {
+  assignmentGridSaveErrorMessage,
+  runAssignmentGridFlushes,
+  type AssignmentGridFlushFn,
+} from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-flush-runner";
 
-export type AssignmentGridFlushFn = () => Promise<AssignmentGridFlushResult>;
+export type {
+  AssignmentGridFlushFn,
+  AssignmentGridFlushResult,
+} from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-flush-runner";
 
 type AssignmentGridEditSessionValue = {
   hasSession: boolean;
@@ -83,32 +88,20 @@ export function AssignmentGridEditSessionProvider({
   const saveAll = useCallback(async () => {
     if (!enabled || !isEditing || saving) return;
     setSaving(true);
-    const results = await Promise.all(
-      [...flushesRef.current.values()].map(async (flush) => {
-        try {
-          return await flush();
-        } catch (error) {
-          return {
-            ok: false as const,
-            message: error instanceof Error ? error.message : "Failed to save.",
-          };
-        }
-      })
-    );
-    setSaving(false);
+    try {
+      const results = await runAssignmentGridFlushes(flushesRef.current.values());
+      const errors = results.filter((result) => !result.ok);
+      if (errors.length > 0) {
+        toast.error(assignmentGridSaveErrorMessage(errors));
+        return;
+      }
 
-    const errors = results.filter((result) => !result.ok);
-    if (errors.length > 0) {
-      const first = errors[0]?.message ?? "Failed to save assignments.";
-      toast.error(
-        errors.length === 1 ? first : `${errors.length} rows failed to save. ${first}`
-      );
-      return;
+      setIsEditing(false);
+      toast.success("Assignments saved.");
+      router.refresh();
+    } finally {
+      setSaving(false);
     }
-
-    setIsEditing(false);
-    toast.success("Assignments saved.");
-    router.refresh();
   }, [enabled, isEditing, router, saving]);
 
   const value = useMemo<AssignmentGridEditSessionValue>(

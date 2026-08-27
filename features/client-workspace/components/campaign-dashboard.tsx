@@ -18,6 +18,7 @@ import { clientCampaignBarSegments, clientOverdueStrip, clientReviewAttention } 
 import { clientContentToReview, type ClientContentReviewItem } from "../content-approval";
 import { ContentToReview } from "./content-to-review";
 import { CampaignPublicationPlan } from "./campaign-publication-plan";
+import { CampaignProgressGraph } from "./campaign-progress-graph";
 import { clientWorkspaceVersionPill } from "../journey-state";
 import type { ClientCreatorCard } from "../types";
 
@@ -34,6 +35,8 @@ export function CampaignDashboard({
   contentItems,
   creators,
   token,
+  campaignStartDate,
+  campaignEndDate,
 }: {
   campaignName: string;
   clientLabel: string;
@@ -47,6 +50,8 @@ export function CampaignDashboard({
   contentItems: ClientContentReviewItem[];
   creators: ClientCreatorCard[];
   token: string;
+  campaignStartDate?: string | null;
+  campaignEndDate?: string | null;
 }) {
   const dashboard = projectClientCampaignDashboard(posts);
   const pendingReview = clientContentToReview(contentItems);
@@ -212,6 +217,13 @@ export function CampaignDashboard({
         creators={creators}
         token={token}
         focusOverdue={overdueFocus}
+      />
+      <CampaignProgressGraph
+        posts={posts}
+        startDate={campaignStartDate}
+        endDate={campaignEndDate}
+        creators={creators}
+        token={token}
       />
     </>
   );

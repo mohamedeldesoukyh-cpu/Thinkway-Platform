@@ -2,7 +2,7 @@ import {
   updateAssignmentDeliverableAction,
   updatePostScheduleAction,
 } from "@/features/campaigns/actions/assignment-deliverable-actions";
-import type { AssignmentGridFlushResult } from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-edit-session";
+import type { AssignmentGridFlushResult } from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-flush-runner";
 import type { AssignmentPostMetaDraft } from "@/features/campaigns/components/assignment-hierarchy/assignment-post-draft-dirty";
 import type { OperationalCommercialDraft } from "@/features/campaigns/components/assignment-hierarchy/use-operational-commercial-draft";
 import type {
@@ -36,6 +36,7 @@ export async function persistAssignmentPostRowDraft(args: {
     meta,
   } = args;
   const postId = typeof post.id === "string" ? post.id : "";
+  const skip_revalidate = true;
 
   if (includeCommercial && (mixedTypes || packageLine)) {
     if (packageLine) {
@@ -55,6 +56,7 @@ export async function persistAssignmentPostRowDraft(args: {
         live_date: meta.live_date || null,
         notes: meta.notes || null,
         billing_status: meta.billing_status as typeof post.billing_status,
+        skip_revalidate,
       });
       if (!commercialResult.ok) {
         return { ok: false, message: commercialResult.message ?? "Failed to save." };
@@ -70,6 +72,7 @@ export async function persistAssignmentPostRowDraft(args: {
           billing_status: meta.billing_status as typeof post.billing_status,
           platform: meta.platform,
           deliverable_type: meta.deliverable_type,
+          skip_revalidate,
         });
         if (!statusResult.ok) {
           return {
@@ -104,6 +107,7 @@ export async function persistAssignmentPostRowDraft(args: {
           : sibling.billing_status,
         platform: isCurrent ? meta.platform : sibling.platform,
         deliverable_type: isCurrent ? meta.deliverable_type : sibling.deliverable_type,
+        skip_revalidate,
       });
       if (!result.ok) {
         return { ok: false, message: result.message ?? "Failed to save." };
@@ -129,6 +133,7 @@ export async function persistAssignmentPostRowDraft(args: {
       live_date: meta.live_date || null,
       notes: meta.notes || null,
       billing_status: meta.billing_status as typeof post.billing_status,
+      skip_revalidate,
     });
     if (!commercialResult.ok) {
       return { ok: false, message: commercialResult.message ?? "Failed to save." };
@@ -146,6 +151,7 @@ export async function persistAssignmentPostRowDraft(args: {
         billing_status: meta.billing_status as typeof post.billing_status,
         platform: meta.platform,
         deliverable_type: meta.deliverable_type,
+        skip_revalidate,
       });
       if (!statusResult.ok) {
         return {
@@ -173,6 +179,7 @@ export async function persistAssignmentPostRowDraft(args: {
     billing_status: meta.billing_status as typeof post.billing_status,
     platform: meta.platform,
     deliverable_type: meta.deliverable_type,
+    skip_revalidate,
   });
   if (!result.ok) {
     return { ok: false, message: result.message ?? "Failed to save." };
