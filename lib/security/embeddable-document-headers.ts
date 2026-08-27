@@ -12,6 +12,7 @@ export const EMBEDDABLE_DOCUMENT_FRAME_HEADERS = {
     "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
+    "media-src 'self' blob: https://*.supabase.co",
     "font-src 'self' data:",
     "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com https://*.openai.com",
     "frame-src 'self' blob:",

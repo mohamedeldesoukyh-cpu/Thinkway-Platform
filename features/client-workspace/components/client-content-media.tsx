@@ -105,11 +105,6 @@ export function ClientVideoPreview({
     };
   }, [token, versionId]);
 
-  useEffect(() => {
-    if (!src) return;
-    videoRef.current?.load();
-  }, [src]);
-
   async function play() {
     const video = videoRef.current;
     if (!video) return;
@@ -133,7 +128,10 @@ export function ClientVideoPreview({
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
           onEnded={() => setPlaying(false)}
-          onError={() => setError(PLAYBACK_FAILED)}
+          onError={() => {
+            if (videoRef.current?.error?.code === 1) return;
+            setError(PLAYBACK_FAILED);
+          }}
         />
       ) : (
         <div className="camp-content-preview" aria-hidden="true" />
