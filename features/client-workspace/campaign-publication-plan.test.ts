@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { emptyClientCampaignPerformance, type ClientCampaignPostRow } from "./campaign-execution";
+import { emptyClientCampaignPerformance, overlayCampaignPostAvatars, type ClientCampaignPostRow } from "./campaign-execution";
 import {
   creatorInitials,
   defaultExpandedCreators,
@@ -74,4 +74,17 @@ test("publication plan filters and search match the campaign table", () => {
   assert.equal(filterPublicationPlanPosts(posts, "overdue", "").length, 1);
   assert.equal(filterPublicationPlanPosts(posts, "all", "story").length, 1);
   assert.equal(creatorInitials("@omar_dem"), "OD");
+});
+
+test("campaign tab avatars overlay from creator cards by name or handle", () => {
+  const posts = [
+    row({ id: "1", creatorName: "@omar_dem", status: "scheduling" }),
+    row({ id: "2", creatorName: "Nadine", status: "live", avatarUrl: "https://cdn.example/keep.jpg" }),
+  ];
+  const overlaid = overlayCampaignPostAvatars(posts, [
+    { displayName: "Omar Dem", handle: "omar_dem", avatarUrl: "https://cdn.example/omar.jpg" },
+    { displayName: "Nadine", handle: "nadineladki14", avatarUrl: "https://cdn.example/nadine.jpg" },
+  ]);
+  assert.equal(overlaid[0]?.avatarUrl, "https://cdn.example/omar.jpg");
+  assert.equal(overlaid[1]?.avatarUrl, "https://cdn.example/keep.jpg");
 });

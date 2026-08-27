@@ -8,6 +8,7 @@ import {
   addFileAssetVersion,
   addInternalComment,
   addTextAsset,
+  archiveFileAsset,
   beginFileAssetUpload,
   completeFileAssetUpload,
   createSignedAssetDownloadUrl,
@@ -15,6 +16,7 @@ import {
   getDocumentationUnitDetail,
   listDocumentationAssetAggregates,
   listDocumentationUnits,
+  reassignFileAsset,
 } from "@/lib/services/deliverables/documentation-service";
 import {
   DELIVERABLE_ASSET_MAX_BYTES,
@@ -337,6 +339,42 @@ export async function addDeliverableInternalCommentAction(input: {
     assignmentPostScheduleId: input.assignmentPostScheduleId,
     body: input.body,
     audience: "internal",
+  });
+  if (!result.ok) return result;
+  revalidatePath(`/campaigns/${input.campaignHeaderId}`);
+  return { ok: true, data: null };
+}
+
+export async function archiveDeliverableAssetAction(input: {
+  campaignHeaderId: string;
+  assignmentDeliverableId: string;
+  assignmentPostScheduleId: string | null;
+  assetId: string;
+}): Promise<DocumentationActionResult<null>> {
+  const actor = await getWriteActor();
+  if (!actor.ok) return actor;
+  const result = await archiveFileAsset(actor.supabase, {
+    actorId: actor.userId,
+    ...input,
+  });
+  if (!result.ok) return result;
+  revalidatePath(`/campaigns/${input.campaignHeaderId}`);
+  return { ok: true, data: null };
+}
+
+export async function reassignDeliverableAssetAction(input: {
+  campaignHeaderId: string;
+  assignmentDeliverableId: string;
+  assignmentPostScheduleId: string | null;
+  assetId: string;
+  toAssignmentDeliverableId: string;
+  toAssignmentPostScheduleId: string | null;
+}): Promise<DocumentationActionResult<null>> {
+  const actor = await getWriteActor();
+  if (!actor.ok) return actor;
+  const result = await reassignFileAsset(actor.supabase, {
+    actorId: actor.userId,
+    ...input,
   });
   if (!result.ok) return result;
   revalidatePath(`/campaigns/${input.campaignHeaderId}`);

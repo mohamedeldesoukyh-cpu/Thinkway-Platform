@@ -6,6 +6,7 @@ import type { AssignmentHierarchy } from "@/lib/domains/campaign/assignment-hier
 import { buildDocumentationUnitsFromHierarchy, emptyAgg } from "./build-documentation-units";
 import {
   defaultOpenTypeGroupKeys,
+  documentationSlotDestinationLabel,
   documentationSlotRowLabel,
   documentationSlotTitle,
   groupDocumentationUnits,
@@ -258,6 +259,10 @@ describe("Documentation repository grouping", () => {
     assert.equal(groups[0]?.types[1]?.units.length, 3);
     assert.equal(documentationSlotTitle(groups[0]!.types[1]!.units[0]!), "IG story set #1");
     assert.equal(documentationSlotRowLabel(groups[0]!.types[1]!.units[1]!), "#2");
+    assert.equal(
+      documentationSlotDestinationLabel(groups[0]!.types[0]!.units[0]!),
+      "IG reel · Eman Abdullah"
+    );
   });
 
   it("collapses large type groups unless the selected slot is inside", () => {

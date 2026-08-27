@@ -35,10 +35,12 @@ import {
   addDeliverableExternalLinkAction,
   addDeliverableInternalCommentAction,
   addDeliverableTextAssetAction,
+  archiveDeliverableAssetAction,
   beginDeliverableFileUploadAction,
   completeDeliverableFileUploadAction,
   getDeliverableDocumentationDetailAction,
   listDeliverableDocumentationAggregatesAction,
+  reassignDeliverableAssetAction,
 } from "@/features/campaigns/actions/deliverable-documentation-actions";
 import {
   deliverableUploadMeterValue,
@@ -48,6 +50,7 @@ import {
   type DeliverableUploadPhase,
 } from "@/features/campaigns/deliverable-asset-upload";
 import { DeliverableAssetPreview } from "@/features/campaigns/components/deliverables/deliverable-asset-preview";
+import { DocumentationAssetActions } from "@/features/campaigns/components/deliverables/documentation-asset-actions";
 import {
   DocumentationRepositoryList,
   documentationStatusBadge,
@@ -186,6 +189,7 @@ export function CampaignDeliverablesDocumentationTab({
   const [drafts, setDrafts] = useState<EditorDrafts>(emptyDrafts);
   const [unsavedOpen, setUnsavedOpen] = useState(false);
   const [pendingSelectKey, setPendingSelectKey] = useState<string | null>(null);
+  const [removeAssetId, setRemoveAssetId] = useState<string | null>(null);
   /** Locks repository selection while a file upload is in flight. */
   const [selectionLocked, setSelectionLocked] = useState(false);
   const [uploadMeter, setUploadMeter] = useState<{
@@ -504,6 +508,76 @@ export function CampaignDeliverablesDocumentationTab({
     });
   }
 
+  function moveAssetToSlot(assetId: string, targetKey: string) {
+    if (!selected || !boundDetail) return;
+    const target = units.find((unit) => unit.unitKey === targetKey);
+    if (!target) {
+      toast.error("Choose a slot to move this file to.");
+      return;
+    }
+    if (
+      target.quantity > 1 &&
+      !target.assignmentPostScheduleId
+    ) {
+      toast.error(
+        "Post schedule missing for that slot — create posts under Assignments first."
+      );
+      return;
+    }
+    const from = selected;
+    if (!assertWriteBinding(from)) return;
+    startTransition(async () => {
+      try {
+        if (!assertWriteBinding(from)) return;
+        const res = await reassignDeliverableAssetAction({
+          campaignHeaderId: campaignId,
+          assignmentDeliverableId: from.assignmentDeliverableId,
+          assignmentPostScheduleId: from.assignmentPostScheduleId,
+          assetId,
+          toAssignmentDeliverableId: target.assignmentDeliverableId,
+          toAssignmentPostScheduleId: target.assignmentPostScheduleId,
+        });
+        if (!res.ok) {
+          toast.error(res.message);
+          return;
+        }
+        toast.success(`Moved to ${documentationSlotTitle(target)}`);
+        applySelection(target.unitKey);
+        refreshList();
+        loadDetailForKey(target.unitKey, units);
+      } catch (error) {
+        toast.error(friendlyServerActionError(error));
+      }
+    });
+  }
+
+  function removeAsset(assetId: string) {
+    if (!selected || !boundDetail) return;
+    const from = selected;
+    if (!assertWriteBinding(from)) return;
+    startTransition(async () => {
+      try {
+        if (!assertWriteBinding(from)) return;
+        const res = await archiveDeliverableAssetAction({
+          campaignHeaderId: campaignId,
+          assignmentDeliverableId: from.assignmentDeliverableId,
+          assignmentPostScheduleId: from.assignmentPostScheduleId,
+          assetId,
+        });
+        if (!res.ok) {
+          toast.error(res.message);
+          return;
+        }
+        toast.success("File removed from this slot");
+        setRemoveAssetId(null);
+        refreshList();
+        loadDetailForKey(from.unitKey, units);
+      } catch (error) {
+        toast.error(friendlyServerActionError(error));
+      }
+    });
+  }
+
   return (
     <CampaignWorkspaceFrame
       title="Deliverables"
@@ -782,6 +856,17 @@ export function CampaignDeliverablesDocumentationTab({
                                   asset={asset}
                                   disabled={pending}
                                 />
+                                {asset.medium === "text" ? null : (
+                                  <DocumentationAssetActions
+                                    currentUnitKey={selected.unitKey}
+                                    units={units}
+                                    disabled={pending || selectionLocked}
+                                    onMove={(targetKey) =>
+                                      moveAssetToSlot(asset.id, targetKey)
+                                    }
+                                    onRemove={() => setRemoveAssetId(asset.id)}
+                                  />
+                                )}
                               </li>
                             ))}
                           </ul>
@@ -1254,6 +1339,42 @@ export function CampaignDeliverablesDocumentationTab({
               }}
             >
               Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(removeAssetId)}
+        onOpenChange={(open) => {
+          if (!open) setRemoveAssetId(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove this file?</DialogTitle>
+            <DialogDescription>
+              The file is taken off this slot and will no longer appear for the
+              client. This cannot be undone from the workspace.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRemoveAssetId(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={pending || !removeAssetId}
+              onClick={() => {
+                if (removeAssetId) removeAsset(removeAssetId);
+              }}
+            >
+              Remove
             </Button>
           </DialogFooter>
         </DialogContent>

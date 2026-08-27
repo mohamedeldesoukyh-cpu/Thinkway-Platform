@@ -56,13 +56,22 @@ type PublicationRow = {
 type InfluencerRow = {
   campaign_line_id: string | null;
   influencer_id: string | null;
-  influencer: { display_name: string | null } | { display_name: string | null }[] | null;
+  influencer:
+    | { display_name: string | null; primary_avatar_url: string | null }
+    | { display_name: string | null; primary_avatar_url: string | null }[]
+    | null;
 };
 
 function influencerName(row: InfluencerRow): string {
   const nested = row.influencer;
   const profile = Array.isArray(nested) ? nested[0] : nested;
   return profile?.display_name?.trim() || "";
+}
+
+function influencerAvatar(row: InfluencerRow): string | null {
+  const nested = row.influencer;
+  const profile = Array.isArray(nested) ? nested[0] : nested;
+  return profile?.primary_avatar_url?.trim() || null;
 }
 
 export async function loadClientCampaignExecution(
@@ -91,7 +100,7 @@ export async function loadClientCampaignExecution(
         .eq("campaign_header_id", headerId),
       supabase
         .from("campaign_influencers")
-        .select("campaign_line_id, influencer_id, influencer:influencers(display_name)")
+        .select("campaign_line_id, influencer_id, influencer:influencers(display_name, primary_avatar_url)")
         .eq("campaign_header_id", headerId),
     ]);
 
@@ -117,6 +126,7 @@ export async function loadClientCampaignExecution(
         campaignLineId: row.campaign_line_id,
         influencerId: row.influencer_id,
         displayName: influencerName(row),
+        avatarUrl: influencerAvatar(row),
       })),
       deliverables: ((deliverablesResult.data ?? []) as DeliverableRow[]).map((row) => ({
         id: row.id,

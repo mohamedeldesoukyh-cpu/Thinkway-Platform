@@ -14,7 +14,6 @@ import {
 } from "../campaign-dashboard";
 import {
   CLIENT_CAMPAIGN_POST_STATUS_LABEL,
-  creatorInitials,
   defaultExpandedCreators,
   filterPublicationPlanPosts,
   groupPublicationPlanByCreator,
@@ -24,7 +23,9 @@ import {
   type PublicationPlanFilter,
   type PublicationPlanViewMode,
 } from "../campaign-publication-plan";
+import type { ClientCreatorCard } from "../types";
 import { ReviewPlatformMark } from "./review-platform-mark";
+import { ReviewAvatar } from "./review-avatar";
 
 function StatusPill({ status }: { status: ClientCampaignPostRow["status"] }) {
   return (
@@ -46,11 +47,65 @@ function PlatformCell({ row }: { row: ClientCampaignPostRow }) {
   );
 }
 
+function matchPublicationCreator(
+  name: string,
+  creators: Array<
+    Pick<ClientCreatorCard, "displayName" | "handle" | "avatarUrl" | "profileUrl" | "platform" | "platformAccounts">
+  >
+) {
+  const key = name.trim().replace(/^@+/, "").toLowerCase();
+  if (!key) return undefined;
+  return creators.find((creator) => {
+    const display = creator.displayName.trim().replace(/^@+/, "").toLowerCase();
+    const handle = creator.handle?.trim().replace(/^@+/, "").toLowerCase();
+    return display === key || handle === key;
+  });
+}
+
+function PublicationPlanAvatar({
+  name,
+  avatarUrl,
+  index,
+  token,
+  creators,
+}: {
+  name: string;
+  avatarUrl?: string | null;
+  index: number;
+  token: string;
+  creators: Array<
+    Pick<ClientCreatorCard, "displayName" | "handle" | "avatarUrl" | "profileUrl" | "platform" | "platformAccounts">
+  >;
+}) {
+  const matched = matchPublicationCreator(name, creators);
+  return (
+    <ReviewAvatar
+      className="cx-av"
+      url={avatarUrl || matched?.avatarUrl}
+      profileUrl={matched?.profileUrl}
+      handle={matched?.handle}
+      platform={matched?.platform}
+      platformAccounts={matched?.platformAccounts}
+      name={name}
+      index={index}
+      token={token}
+    />
+  );
+}
+
 function dash(value: string | null | undefined) {
   return value ? value : <span className="cx-empty">—</span>;
 }
 
-export function CampaignPublicationPlan({ posts }: { posts: ClientCampaignPostRow[] }) {
+export function CampaignPublicationPlan({
+  posts,
+  creators,
+  token,
+}: {
+  posts: ClientCampaignPostRow[];
+  creators: ClientCreatorCard[];
+  token: string;
+}) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<PublicationPlanFilter>("all");
   const [view, setView] = useState<PublicationPlanViewMode>("grouped");
@@ -156,13 +211,16 @@ export function CampaignPublicationPlan({ posts }: { posts: ClientCampaignPostRo
               </tr>
             </thead>
             <tbody>
-              {groups.map((group) => {
+              {groups.map((group, index) => {
                 const openRow = isOpen(group.creatorName);
                 return (
                   <GroupRows
                     key={group.creatorName}
                     group={group}
                     open={openRow}
+                    index={index}
+                    token={token}
+                    creators={creators}
                     onToggle={() => toggle(group.creatorName)}
                   />
                 );
@@ -183,11 +241,17 @@ export function CampaignPublicationPlan({ posts }: { posts: ClientCampaignPostRo
               </tr>
             </thead>
             <tbody>
-              {rankedPublicationRows(visible).map((post) => (
+              {rankedPublicationRows(visible).map((post, index) => (
                 <tr key={post.id}>
                   <td>
                     <span className="cx-who">
-                      <span className="cx-av">{creatorInitials(post.creatorName)}</span>
+                      <PublicationPlanAvatar
+                        name={post.creatorName}
+                        avatarUrl={post.avatarUrl}
+                        index={index}
+                        token={token}
+                        creators={creators}
+                      />
                       <span className="cx-who__n">{post.creatorName}</span>
                     </span>
                   </td>
@@ -226,13 +290,21 @@ export function CampaignPublicationPlan({ posts }: { posts: ClientCampaignPostRo
 function GroupRows({
   group,
   open,
+  index,
+  token,
+  creators,
   onToggle,
 }: {
   group: ReturnType<typeof groupPublicationPlanByCreator>[number];
   open: boolean;
+  index: number;
+  token: string;
+  creators: ClientCreatorCard[];
   onToggle: () => void;
 }) {
   const first = group.posts[0];
+  const avatarUrl =
+    group.posts.find((post) => post.avatarUrl?.trim())?.avatarUrl ?? first?.avatarUrl;
   return (
     <>
       <tr className="cx-grow" aria-expanded={open} onClick={onToggle}>
@@ -241,7 +313,13 @@ function GroupRows({
             <svg className="cx-caret" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M9 6l6 6-6 6z" />
             </svg>
-            <span className="cx-av">{creatorInitials(group.creatorName)}</span>
+            <PublicationPlanAvatar
+              name={group.creatorName}
+              avatarUrl={avatarUrl}
+              index={index}
+              token={token}
+              creators={creators}
+            />
             <span className="cx-who__n">{group.creatorName}</span>
           </span>
         </td>

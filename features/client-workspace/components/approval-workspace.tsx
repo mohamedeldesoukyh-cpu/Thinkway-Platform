@@ -12,7 +12,7 @@ import {
   CLIENT_CHANGE_AREA_LABEL,
   type ClientChangeArea,
 } from "../constants";
-import { campaignRosterFallback, clientCampaignViewKind, emptyClientCampaignExecution } from "../campaign-execution";
+import { campaignRosterFallback, clientCampaignViewKind, emptyClientCampaignExecution, overlayCampaignPostAvatars } from "../campaign-execution";
 import { approvalWorkspaceKind } from "../journey-state";
 import { emptyClientCampaignContent } from "../content-approval";
 import {
@@ -57,12 +57,13 @@ export function ApprovalWorkspace({
   const execution = view.campaignExecution ?? emptyClientCampaignExecution();
   const executionPosts = execution.posts;
   const contentItems = (view.campaignContent ?? emptyClientCampaignContent()).items;
-  const posts =
+  const rawPosts =
     executionPosts.length > 0
       ? executionPosts
       : commerciallyApproved
         ? campaignRosterFallback(selectedCreators)
         : [];
+  const posts = overlayCampaignPostAvatars(rawPosts, view.creators);
 
   if (approvalKind === "historical") {
     const approvedOn = view.review.approvedAt
@@ -141,6 +142,7 @@ export function ApprovalWorkspace({
         inCampaign={kind === "in_campaign"}
         posts={posts}
         contentItems={contentItems}
+        creators={view.creators}
         token={token}
       />
       <CampaignChangeActions view={view} token={token} />

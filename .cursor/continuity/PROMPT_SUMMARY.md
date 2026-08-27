@@ -1,10 +1,10 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** iPhone/Windows `.MOV` uploads were rejected as `application/octet-stream`. Shipping MIME normalization so reels/stories upload as `video/quicktime`.
+**Focus:** Deliverables slot move/remove · client video play overlay · creator avatars on the Campaign tab.
 
-- Deliverables repository groups by creator → type and highlights the exact slot.
-- Unfinished uploads show **Incomplete**. `.MOV` with a generic Windows type now maps to QuickTime.
-- Files still must be MP4/MOV **under 100 MB**.
+- Campaign Workspace Deliverables: move an uploaded file to another slot, or remove it from the slot.
+- Client Workspace videos show a center play button; click plays the file.
+- Campaign tab publication plan shows each creator’s avatar (same source as the Creators tab).
 
 **Ship:** Development (`hsxrewjcbvmbkqdlzjhs` · `dev.thinkwaymedia.com`) then Production (`ienowhwfyxoqtzbgltno` · `app.thinkwaymedia.com`) after explicit approval. No schema or data writes.

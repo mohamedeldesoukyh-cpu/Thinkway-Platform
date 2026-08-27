@@ -86,6 +86,18 @@ export function documentationSlotTitle(unit: {
   return typeLabel;
 }
 
+export function documentationSlotDestinationLabel(unit: {
+  label: string;
+  deliverableType: string | null;
+  sequenceNumber: number | null;
+  quantity: number;
+  creatorName: string | null;
+}): string {
+  const title = documentationSlotTitle(unit);
+  const creator = unit.creatorName?.trim();
+  return creator ? `${title} · ${creator}` : title;
+}
+
 /** Row label inside a type group: "#1" when qty>1, otherwise the type name. */
 export function documentationSlotRowLabel(unit: {
   label: string;

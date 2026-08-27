@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -33,11 +33,9 @@ function ContentPreview({ item, token }: { item: ClientContentReviewItem; token:
   }
   if (item.previewKind === "video") {
     return (
-      <video
-        className="camp-content-preview"
-        controls
-        preload="metadata"
+      <ClientVideoPreview
         src={clientContentAssetUrl({ token, versionId: item.versionId, mode: "preview" })}
+        title={item.fileName || item.deliverable}
       />
     );
   }
@@ -53,6 +51,47 @@ function ContentPreview({ item, token }: { item: ClientContentReviewItem; token:
     );
   }
   return null;
+}
+
+function ClientVideoPreview({ src, title }: { src: string; title: string }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [playing, setPlaying] = useState(false);
+
+  function play() {
+    const video = videoRef.current;
+    if (!video) return;
+    void video.play();
+  }
+
+  return (
+    <div className="cx-vid">
+      <video
+        ref={videoRef}
+        className="camp-content-preview"
+        controls={playing}
+        playsInline
+        preload="metadata"
+        src={src}
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => setPlaying(false)}
+      />
+      {playing ? null : (
+        <button
+          type="button"
+          className="cx-vid__play"
+          aria-label={`Play ${title}`}
+          onClick={play}
+        >
+          <span className="cx-vid__play-mark" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </span>
+        </button>
+      )}
+    </div>
+  );
 }
 
 function ContentReviewCard({

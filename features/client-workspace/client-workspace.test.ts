@@ -4732,7 +4732,7 @@ test("campaign tab kind waits for convert then projects Campaign Workspace posts
   );
   const projected = projectClientCampaignExecution("hdr-1", {
     lines: [{ id: "line-1", name: "Assignment", metadata: { influencer_assignment: { influencer_id: "00000000-0000-4000-8000-000000000001", influencer_name: "Amina", platforms: [] } } }],
-    influencers: [{ campaignLineId: "line-1", displayName: "Amina" }],
+    influencers: [{ campaignLineId: "line-1", displayName: "Amina", avatarUrl: "https://cdn.example/amina.jpg" }],
     deliverables: [
       {
         id: "del-1",
@@ -4769,6 +4769,7 @@ test("campaign tab kind waits for convert then projects Campaign Workspace posts
   });
   assert.equal(projected.posts.length, 1);
   assert.equal(projected.posts[0]?.creatorName, "Amina");
+  assert.equal(projected.posts[0]?.avatarUrl, "https://cdn.example/amina.jpg");
   assert.equal(projected.posts[0]?.live, true);
   assert.equal(projected.posts[0]?.status, "live");
   assert.equal(projected.posts[0]?.contentUrl, "https://instagram.com/reel/1");

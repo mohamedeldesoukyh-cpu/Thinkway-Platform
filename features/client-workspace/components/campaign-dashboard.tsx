@@ -18,6 +18,7 @@ import { clientContentToReview, type ClientContentReviewItem } from "../content-
 import { ContentToReview } from "./content-to-review";
 import { CampaignPublicationPlan } from "./campaign-publication-plan";
 import { clientWorkspaceVersionPill } from "../journey-state";
+import type { ClientCreatorCard } from "../types";
 
 export function CampaignDashboard({
   campaignName,
@@ -30,6 +31,7 @@ export function CampaignDashboard({
   inCampaign,
   posts,
   contentItems,
+  creators,
   token,
 }: {
   campaignName: string;
@@ -42,6 +44,7 @@ export function CampaignDashboard({
   inCampaign: boolean;
   posts: ClientCampaignPostRow[];
   contentItems: ClientContentReviewItem[];
+  creators: ClientCreatorCard[];
   token: string;
 }) {
   const dashboard = projectClientCampaignDashboard(posts);
@@ -202,7 +205,7 @@ export function CampaignDashboard({
         )}
       </section>
 
-      <CampaignPublicationPlan posts={posts} />
+      <CampaignPublicationPlan posts={posts} creators={creators} token={token} />
     </>
   );
 }

@@ -441,6 +441,138 @@ export async function completeFileAssetUpload(
   return { ok: true, assetId: input.assetId, versionId: input.versionId };
 }
 
+export async function archiveFileAsset(
+  supabase: Supabase,
+  input: {
+    actorId: string;
+    campaignHeaderId: string;
+    assignmentDeliverableId: string;
+    assignmentPostScheduleId: string | null;
+    assetId: string;
+  }
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const asset = await loadOwnedAsset(supabase, input);
+  if (!asset.ok) return asset;
+
+  const { error } = await supabase
+    .from("deliverable_assets")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", input.assetId)
+    .eq("campaign_header_id", input.campaignHeaderId)
+    .is("archived_at", null);
+  if (error) return { ok: false, message: error.message };
+
+  await logEvent(supabase, {
+    campaignHeaderId: input.campaignHeaderId,
+    assignmentDeliverableId: input.assignmentDeliverableId,
+    assignmentPostScheduleId: input.assignmentPostScheduleId,
+    assetId: input.assetId,
+    eventType: "archive",
+    actorUserId: input.actorId,
+    payload: { action: "remove" },
+  });
+  return { ok: true };
+}
+
+export async function reassignFileAsset(
+  supabase: Supabase,
+  input: {
+    actorId: string;
+    campaignHeaderId: string;
+    assetId: string;
+    assignmentDeliverableId: string;
+    assignmentPostScheduleId: string | null;
+    toAssignmentDeliverableId: string;
+    toAssignmentPostScheduleId: string | null;
+  }
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  if (
+    input.assignmentDeliverableId === input.toAssignmentDeliverableId &&
+    (input.assignmentPostScheduleId ?? null) ===
+      (input.toAssignmentPostScheduleId ?? null)
+  ) {
+    return { ok: false, message: "Choose a different slot." };
+  }
+
+  const asset = await loadOwnedAsset(supabase, input);
+  if (!asset.ok) return asset;
+
+  const target = await supabase
+    .from("assignment_deliverables")
+    .select("id")
+    .eq("id", input.toAssignmentDeliverableId)
+    .eq("campaign_header_id", input.campaignHeaderId)
+    .maybeSingle();
+  if (!target.data?.id) {
+    return { ok: false, message: "That slot is not on this campaign." };
+  }
+  if (input.toAssignmentPostScheduleId) {
+    const post = await supabase
+      .from("assignment_post_schedule")
+      .select("id")
+      .eq("id", input.toAssignmentPostScheduleId)
+      .eq("assignment_deliverable_id", input.toAssignmentDeliverableId)
+      .maybeSingle();
+    if (!post.data?.id) {
+      return { ok: false, message: "That post slot is missing." };
+    }
+  }
+
+  const { error } = await supabase
+    .from("deliverable_assets")
+    .update({
+      assignment_deliverable_id: input.toAssignmentDeliverableId,
+      assignment_post_schedule_id: input.toAssignmentPostScheduleId,
+    })
+    .eq("id", input.assetId)
+    .eq("campaign_header_id", input.campaignHeaderId)
+    .is("archived_at", null);
+  if (error) return { ok: false, message: error.message };
+
+  await logEvent(supabase, {
+    campaignHeaderId: input.campaignHeaderId,
+    assignmentDeliverableId: input.toAssignmentDeliverableId,
+    assignmentPostScheduleId: input.toAssignmentPostScheduleId,
+    assetId: input.assetId,
+    eventType: "replace",
+    actorUserId: input.actorId,
+    payload: {
+      action: "reassign",
+      from_deliverable_id: input.assignmentDeliverableId,
+      from_post_id: input.assignmentPostScheduleId,
+      to_deliverable_id: input.toAssignmentDeliverableId,
+      to_post_id: input.toAssignmentPostScheduleId,
+    },
+  });
+  return { ok: true };
+}
+
+async function loadOwnedAsset(
+  supabase: Supabase,
+  input: {
+    campaignHeaderId: string;
+    assignmentDeliverableId: string;
+    assignmentPostScheduleId: string | null;
+    assetId: string;
+  }
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  let query = supabase
+    .from("deliverable_assets")
+    .select("id")
+    .eq("id", input.assetId)
+    .eq("campaign_header_id", input.campaignHeaderId)
+    .eq("assignment_deliverable_id", input.assignmentDeliverableId)
+    .is("archived_at", null);
+  query = input.assignmentPostScheduleId
+    ? query.eq("assignment_post_schedule_id", input.assignmentPostScheduleId)
+    : query.is("assignment_post_schedule_id", null);
+  const { data } = await query.maybeSingle();
+  if (!data?.id) {
+    return { ok: false, message: "This file is not on the selected slot." };
+  }
+  return { ok: true };
+}
+
 export async function addInternalComment(
   supabase: Supabase,
   input: {

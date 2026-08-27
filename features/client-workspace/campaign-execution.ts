@@ -57,6 +57,7 @@ export type ClientCampaignPerformance = {
 export type ClientCampaignPostRow = {
   id: string;
   creatorName: string;
+  avatarUrl?: string | null;
   platform: string;
   platformLabel: string;
   deliverable: string;
@@ -342,6 +343,7 @@ export type CampaignExecutionSource = {
     campaignLineId: string | null;
     influencerId?: string | null;
     displayName: string;
+    avatarUrl?: string | null;
   }>;
   deliverables: Array<{
     id: string;
@@ -419,6 +421,10 @@ function enqueuePublication(
   queue.set(id, list);
 }
 
+function creatorMatchKey(value: string | null | undefined): string {
+  return value?.trim().replace(/^@+/, "").toLowerCase() ?? "";
+}
+
 function handleFromContentUrl(url: string | null | undefined): string | null {
   const raw = url?.trim();
   if (!raw) return null;
@@ -459,6 +465,9 @@ export function projectClientCampaignExecution(
   const creatorByLine = new Map<string, string>();
   const creatorByInfluencer = new Map<string, string>();
   const influencerIdByLine = new Map<string, string>();
+  const avatarByLine = new Map<string, string>();
+  const avatarByInfluencer = new Map<string, string>();
+  const avatarByName = new Map<string, string>();
   for (const line of source.lines) {
     const fromMeta = parseLineAssignment(line.metadata ?? null)?.influencer_name?.trim();
     creatorByLine.set(line.id, fromMeta || line.name.trim() || "Creator");
@@ -466,10 +475,32 @@ export function projectClientCampaignExecution(
   for (const row of source.influencers) {
     const name = row.displayName.trim();
     const influencerId = row.influencerId?.trim();
+    const avatarUrl = row.avatarUrl?.trim() || null;
     if (influencerId && name) creatorByInfluencer.set(influencerId, name);
+    if (avatarUrl) {
+      if (influencerId) avatarByInfluencer.set(influencerId, avatarUrl);
+      if (name) avatarByName.set(creatorMatchKey(name), avatarUrl);
+    }
     if (!row.campaignLineId) continue;
     if (name) creatorByLine.set(row.campaignLineId, name);
     if (influencerId) influencerIdByLine.set(row.campaignLineId, influencerId);
+    if (avatarUrl) avatarByLine.set(row.campaignLineId, avatarUrl);
+  }
+
+  function resolveAvatar(
+    campaignLineId: string | null | undefined,
+    influencerId: string | null | undefined,
+    creatorName: string
+  ): string | null {
+    const fromLine = campaignLineId?.trim()
+      ? avatarByLine.get(campaignLineId.trim())
+      : undefined;
+    if (fromLine) return fromLine;
+    const fromInfluencer = influencerId?.trim()
+      ? avatarByInfluencer.get(influencerId.trim())
+      : undefined;
+    if (fromInfluencer) return fromInfluencer;
+    return avatarByName.get(creatorMatchKey(creatorName)) ?? null;
   }
 
   const deliverableById = new Map(source.deliverables.map((row) => [row.id, row]));
@@ -517,9 +548,15 @@ export function projectClientCampaignExecution(
     const platform = deliverable?.platform || publication?.platform || "";
     const type = deliverable?.deliverableType || "other";
     const contentUrl = publication?.contentUrl?.trim() || post.proofUrl?.trim() || null;
+    const creatorName = creatorByLine.get(post.campaignLineId) ?? "Creator";
     const row = buildPostRow({
       id: post.id,
-      creatorName: creatorByLine.get(post.campaignLineId) ?? "Creator",
+      creatorName,
+      avatarUrl: resolveAvatar(
+        post.campaignLineId,
+        influencerIdByLine.get(post.campaignLineId),
+        creatorName
+      ),
       platform,
       deliverable: deliverableTypeShortLabel(type),
       scheduledDate: post.liveDate ?? deliverable?.liveDate ?? null,
@@ -543,9 +580,15 @@ export function projectClientCampaignExecution(
         influencerIdByLine.get(deliverable.campaignLineId)
       );
     const quantity = deliverable.quantity > 1 ? ` × ${deliverable.quantity}` : "";
+    const creatorName = creatorByLine.get(deliverable.campaignLineId) ?? "Creator";
     const row = buildPostRow({
       id: deliverable.id,
-      creatorName: creatorByLine.get(deliverable.campaignLineId) ?? "Creator",
+      creatorName,
+      avatarUrl: resolveAvatar(
+        deliverable.campaignLineId,
+        influencerIdByLine.get(deliverable.campaignLineId) ?? publication?.influencerId,
+        creatorName
+      ),
       platform: deliverable.platform,
       deliverable: `${deliverableTypeShortLabel(deliverable.deliverableType)}${quantity}`,
       scheduledDate: deliverable.liveDate,
@@ -562,12 +605,18 @@ export function projectClientCampaignExecution(
     if (usedPublications.has(publication.id)) continue;
     const contentUrl = publication.contentUrl?.trim() || null;
     if (!contentUrl && !publication.publicationDate) continue;
+    const creatorName = resolvePublicationCreatorName(
+      publication,
+      creatorByLine,
+      creatorByInfluencer
+    );
     const row = buildPostRow({
       id: `publication:${publication.id}`,
-      creatorName: resolvePublicationCreatorName(
-        publication,
-        creatorByLine,
-        creatorByInfluencer
+      creatorName,
+      avatarUrl: resolveAvatar(
+        publication.campaignLineId,
+        publication.influencerId,
+        creatorName
       ),
       platform: publication.platform || "",
       deliverable: "Publication",
@@ -591,7 +640,18 @@ export function projectClientCampaignExecution(
 }
 
 export function campaignRosterFallback(
-  creators: Array<Pick<ClientCreatorCard, "creatorId" | "displayName" | "platform" | "deliverableItems" | "deliverables">>,
+  creators: Array<
+    Pick<
+      ClientCreatorCard,
+      | "creatorId"
+      | "displayName"
+      | "handle"
+      | "platform"
+      | "deliverableItems"
+      | "deliverables"
+      | "avatarUrl"
+    >
+  >,
   today = todayYmd()
 ): ClientCampaignPostRow[] {
   return creators.flatMap((creator) => {
@@ -600,6 +660,7 @@ export function campaignRosterFallback(
     const row = buildPostRow({
       id: `roster:${creator.creatorId}`,
       creatorName: creator.displayName,
+      avatarUrl: creator.avatarUrl ?? null,
       platform,
       deliverable,
       scheduledDate: null,
@@ -609,9 +670,32 @@ export function campaignRosterFallback(
   });
 }
 
+export function overlayCampaignPostAvatars(
+  posts: ClientCampaignPostRow[],
+  creators: Array<Pick<ClientCreatorCard, "displayName" | "handle" | "avatarUrl">>
+): ClientCampaignPostRow[] {
+  if (posts.length === 0 || creators.length === 0) return posts;
+  const byKey = new Map<string, string>();
+  for (const creator of creators) {
+    const url = creator.avatarUrl?.trim();
+    if (!url) continue;
+    const nameKey = creatorMatchKey(creator.displayName);
+    const handleKey = creatorMatchKey(creator.handle);
+    if (nameKey) byKey.set(nameKey, url);
+    if (handleKey) byKey.set(handleKey, url);
+  }
+  if (byKey.size === 0) return posts;
+  return posts.map((post) => {
+    if (post.avatarUrl?.trim()) return post;
+    const matched = byKey.get(creatorMatchKey(post.creatorName));
+    return matched ? { ...post, avatarUrl: matched } : post;
+  });
+}
+
 function buildPostRow(input: {
   id: string;
   creatorName: string;
+  avatarUrl?: string | null;
   platform: string;
   deliverable: string;
   scheduledDate: string | null;
@@ -632,6 +716,7 @@ function buildPostRow(input: {
   return {
     id: input.id,
     creatorName: input.creatorName,
+    avatarUrl: input.avatarUrl?.trim() || null,
     platform: input.platform,
     platformLabel: input.platform ? getPlatformOptionLabel(input.platform) : "",
     deliverable: input.deliverable,
