@@ -1,10 +1,10 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** ~80 MB Instagram story failed with “must be 100 MB or smaller” even though the file is under the product cap.
+**Focus:** ~80 MB Instagram story kept failing with “must be 100 MB or smaller.”
 
-- Cause: standard signed PUT is capped at **50 MB** by Supabase Storage (`UPLOAD_FILE_SIZE_LIMIT_STANDARD`), independent of the 100 MB bucket limit.
-- Fix: files over **45 MB** upload via resumable **TUS** (`/storage/v1/upload/resumable/sign` + `x-signature`). Smaller files still use signed PUT.
-- Same story: hard-refresh, stay on Instagram story #1, choose the MOV again (reuses the Incomplete row). Wait for the percent meter to finish.
+- App TUS path is live (`440fad00`). Standard PUT is still capped at 50 MB; large files use resumable TUS.
+- Real blocker after that: **project-wide Storage `fileSizeLimit` was 50 MB**, so TUS returned `413 Maximum size exceeded` even though the `deliverable-assets` bucket allows 100 MB.
+- Raised Storage `fileSizeLimit` to **104857600 (100 MB)** on Development (`hsxrewjcbvmbkqdlzjhs`) and Production (`ienowhwfyxoqtzbgltno`). No schema migration.
 
-**Ship:** Development then Production. No schema or data writes.
+**Retry:** Hard-refresh Production, stay on Instagram story #1, choose the MOV again. Wait for the percent meter.
