@@ -1,10 +1,10 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** iPhone story `.MOV` files (~80 MB) were still rejected after the QuickTime MIME fix.
+**Focus:** Story MOV reached “Incomplete / upload did not finish” after the PUT.
 
-- Storage sniffs the container. Stories named `.MOV` are often MP4 (`ftypisom` / `mp42`), so declaring QuickTime returns 400.
-- Upload now sniffs `ftyp` and retries `video/mp4` ↔ `video/quicktime` on a MIME 400.
-- Size is unchanged: 100 MB. 80,844 KB is under the cap.
+- `begin` creates the file row before bytes land. `complete` used to abort if Storage’s signed-URL lookup raced.
+- Finish now waits, then records the version after a successful PUT. MIME retries get a **new** signed URL (single-use tokens).
+- Same 80 MB story: hard-refresh, stay on Instagram story #1, choose the MOV again (reuses the Incomplete row).
 
 **Ship:** Development then Production. No schema or data writes.

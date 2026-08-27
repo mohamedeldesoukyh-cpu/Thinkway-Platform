@@ -68,6 +68,7 @@ import {
   DELIVERABLE_ASSET_TOO_LARGE_MESSAGE,
   DELIVERABLE_ASSET_TYPES,
   DELIVERABLE_ASSET_TYPE_LABELS,
+  alternateDeliverableVideoMime,
   defaultDeliverableAssetType,
   documentationReceiptStatus,
   isAllowedDeliverableUploadMime,
@@ -941,12 +942,12 @@ export function CampaignDeliverablesDocumentationTab({
                                 void (async () => {
                                   try {
                                     const header = await file.slice(0, 32).arrayBuffer();
-                                    const mimeType = resolveDeliverableUploadMime({
+                                    const resolvedMime = resolveDeliverableUploadMime({
                                       browserType: file.type,
                                       fileName: file.name,
                                       header,
                                     });
-                                    if (!isAllowedDeliverableUploadMime(mimeType)) {
+                                    if (!isAllowedDeliverableUploadMime(resolvedMime)) {
                                       toast.error(
                                         "This file type is not supported. Use MP4 or MOV under 100 MB."
                                       );
@@ -964,20 +965,23 @@ export function CampaignDeliverablesDocumentationTab({
                                     if (!assertWriteBinding(unitAtUpload)) {
                                       return;
                                     }
-                                    const begun =
-                                      await beginDeliverableFileUploadAction({
-                                        campaignHeaderId: campaignId,
-                                        assignmentDeliverableId:
-                                          unitAtUpload.assignmentDeliverableId,
-                                        assignmentPostScheduleId:
-                                          unitAtUpload.assignmentPostScheduleId,
-                                        assetType: assetTypeAtUpload,
-                                        label: file.name,
-                                        assetId: reuseAssetId,
-                                        fileName: file.name,
-                                        mimeType,
-                                        fileSize: file.size,
-                                      });
+                                    const begunInput = {
+                                      campaignHeaderId: campaignId,
+                                      assignmentDeliverableId:
+                                        unitAtUpload.assignmentDeliverableId,
+                                      assignmentPostScheduleId:
+                                        unitAtUpload.assignmentPostScheduleId,
+                                      assetType: assetTypeAtUpload,
+                                      label: file.name,
+                                      fileName: file.name,
+                                      fileSize: file.size,
+                                    };
+                                    let mimeType = resolvedMime;
+                                    let begun = await beginDeliverableFileUploadAction({
+                                      ...begunInput,
+                                      assetId: reuseAssetId,
+                                      mimeType,
+                                    });
                                     if (!begun.ok) {
                                       toast.error(begun.message);
                                       return;
@@ -991,30 +995,55 @@ export function CampaignDeliverablesDocumentationTab({
                                       loaded: 0,
                                       total: file.size,
                                     });
-                                    const uploaded =
-                                      await putDeliverableAssetToSignedUrl({
-                                        signedUrl: begun.data.signedUrl,
-                                        token: begun.data.token,
-                                        file,
-                                        mimeType,
-                                        onProgress: (progress) => {
-                                          if (
-                                            session !== uploadSessionRef.current
-                                          ) {
-                                            return;
-                                          }
-                                          setUploadMeter({
-                                            phase: "uploading",
-                                            fileName: file.name,
-                                            loaded: progress.loaded,
-                                            total: progress.total,
-                                          });
-                                        },
+                                    const reportPutProgress = (progress: {
+                                      loaded: number;
+                                      total: number;
+                                    }) => {
+                                      if (session !== uploadSessionRef.current) {
+                                        return;
+                                      }
+                                      setUploadMeter({
+                                        phase: "uploading",
+                                        fileName: file.name,
+                                        loaded: progress.loaded,
+                                        total: progress.total,
                                       });
+                                    };
+                                    let uploaded = await putDeliverableAssetToSignedUrl({
+                                      signedUrl: begun.data.signedUrl,
+                                      token: begun.data.token,
+                                      file,
+                                      mimeType,
+                                      onProgress: reportPutProgress,
+                                    });
+                                    if (!uploaded.ok && uploaded.mimeRejected) {
+                                      const alternate =
+                                        alternateDeliverableVideoMime(mimeType);
+                                      if (alternate) {
+                                        mimeType = alternate;
+                                        begun = await beginDeliverableFileUploadAction({
+                                          ...begunInput,
+                                          assetId: begun.data.assetId,
+                                          mimeType,
+                                        });
+                                        if (!begun.ok) {
+                                          toast.error(begun.message);
+                                          return;
+                                        }
+                                        uploaded = await putDeliverableAssetToSignedUrl({
+                                          signedUrl: begun.data.signedUrl,
+                                          token: begun.data.token,
+                                          file,
+                                          mimeType,
+                                          onProgress: reportPutProgress,
+                                        });
+                                      }
+                                    }
                                     if (!uploaded.ok) {
                                       toast.error(uploaded.message);
                                       return;
                                     }
+                                    mimeType = uploaded.mimeType;
                                     if (
                                       selectedKeyRef.current !==
                                       unitAtUpload.unitKey
@@ -1033,22 +1062,38 @@ export function CampaignDeliverablesDocumentationTab({
                                       loaded: file.size,
                                       total: file.size,
                                     });
-                                    const completed =
-                                      await completeDeliverableFileUploadAction({
-                                        campaignHeaderId: campaignId,
-                                        assignmentDeliverableId:
-                                          unitAtUpload.assignmentDeliverableId,
-                                        assignmentPostScheduleId:
-                                          unitAtUpload.assignmentPostScheduleId,
-                                        assetType: assetTypeAtUpload,
-                                        fileName: file.name,
-                                        mimeType,
-                                        fileSize: file.size,
-                                        assetId: begun.data.assetId,
-                                        versionId: begun.data.versionId,
-                                        versionNumber: begun.data.versionNumber,
-                                        storagePath: begun.data.storagePath,
-                                      });
+                                    const completeInput = {
+                                      campaignHeaderId: campaignId,
+                                      assignmentDeliverableId:
+                                        unitAtUpload.assignmentDeliverableId,
+                                      assignmentPostScheduleId:
+                                        unitAtUpload.assignmentPostScheduleId,
+                                      assetType: assetTypeAtUpload,
+                                      fileName: file.name,
+                                      mimeType,
+                                      fileSize: file.size,
+                                      assetId: begun.data.assetId,
+                                      versionId: begun.data.versionId,
+                                      versionNumber: begun.data.versionNumber,
+                                      storagePath: begun.data.storagePath,
+                                    };
+                                    let completed =
+                                      await completeDeliverableFileUploadAction(
+                                        completeInput
+                                      );
+                                    for (
+                                      let attempt = 0;
+                                      !completed.ok && attempt < 2;
+                                      attempt += 1
+                                    ) {
+                                      await new Promise((resolve) =>
+                                        setTimeout(resolve, 600 * (attempt + 1))
+                                      );
+                                      completed =
+                                        await completeDeliverableFileUploadAction(
+                                          completeInput
+                                        );
+                                    }
                                     if (!completed.ok) {
                                       toast.error(completed.message);
                                       return;

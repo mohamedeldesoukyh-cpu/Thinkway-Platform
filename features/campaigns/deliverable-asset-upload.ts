@@ -1,6 +1,5 @@
 import {
   DELIVERABLE_ASSET_TOO_LARGE_MESSAGE,
-  alternateDeliverableVideoMime,
   inferDeliverableAssetMime,
 } from "@/lib/services/deliverables/documentation-types";
 
@@ -82,6 +81,10 @@ export function deliverableUploadFailureMessage(
   return "Could not upload the file. Try MP4 or MOV under 100 MB.";
 }
 
+export function isDeliverableStoragePutSuccess(status: number): boolean {
+  return (status >= 200 && status < 300) || status === 409;
+}
+
 function isMimeRejection(status: number, responseText?: string | null): boolean {
   if (status === 415) return true;
   const body = (responseText ?? "").toLowerCase();
@@ -91,8 +94,7 @@ function isMimeRejection(status: number, responseText?: string | null): boolean 
     (body.includes("mime") ||
       body.includes("content-type") ||
       body.includes("not allowed") ||
-      body.includes("invalid") ||
-      body.length === 0)
+      body.includes("invalid"))
   );
 }
 
@@ -100,13 +102,17 @@ type PutResult =
   | { ok: true }
   | { ok: false; status: number; body: string };
 
+export type DeliverableSignedPutResult =
+  | { ok: true; mimeType: string }
+  | { ok: false; message: string; mimeRejected?: boolean };
+
 export async function putDeliverableAssetToSignedUrl(input: {
   signedUrl: string;
   token: string;
   file: File;
   mimeType?: string | null;
   onProgress?: (progress: DeliverableUploadByteProgress) => void;
-}): Promise<{ ok: true } | { ok: false; message: string }> {
+}): Promise<DeliverableSignedPutResult> {
   if (!/^https?:\/\//i.test(input.signedUrl)) {
     return { ok: false, message: "Could not start the file upload." };
   }
@@ -120,37 +126,25 @@ export async function putDeliverableAssetToSignedUrl(input: {
     input.file.name
   );
 
-  const first = await putFileToSignedUrl({
+  const result = await putFileToSignedUrl({
     url: url.toString(),
+    token: input.token,
     file: input.file,
     contentType,
     onProgress: input.onProgress,
   });
-  if (first.ok) return { ok: true };
-
-  const alternate = alternateDeliverableVideoMime(contentType);
-  if (alternate && isMimeRejection(first.status, first.body)) {
-    const retry = await putFileToSignedUrl({
-      url: url.toString(),
-      file: input.file,
-      contentType: alternate,
-      onProgress: input.onProgress,
-    });
-    if (retry.ok) return { ok: true };
-    return {
-      ok: false,
-      message: deliverableUploadFailureMessage(retry.status, retry.body),
-    };
-  }
+  if (result.ok) return { ok: true, mimeType: contentType };
 
   return {
     ok: false,
-    message: deliverableUploadFailureMessage(first.status, first.body),
+    message: deliverableUploadFailureMessage(result.status, result.body),
+    mimeRejected: isMimeRejection(result.status, result.body),
   };
 }
 
 function putFileToSignedUrl(input: {
   url: string;
+  token: string;
   file: File;
   contentType: string;
   onProgress?: (progress: DeliverableUploadByteProgress) => void;
@@ -160,6 +154,9 @@ function putFileToSignedUrl(input: {
     xhr.open("PUT", input.url);
     xhr.setRequestHeader("Content-Type", input.contentType);
     xhr.setRequestHeader("x-upsert", "false");
+    if (input.token) {
+      xhr.setRequestHeader("Authorization", `Bearer ${input.token}`);
+    }
 
     xhr.upload.onprogress = (event) => {
       if (!event.lengthComputable) return;
@@ -167,7 +164,7 @@ function putFileToSignedUrl(input: {
     };
 
     xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
+      if (isDeliverableStoragePutSuccess(xhr.status)) {
         input.onProgress?.({ loaded: input.file.size, total: input.file.size });
         resolve({ ok: true });
         return;

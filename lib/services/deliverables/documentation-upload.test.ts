@@ -24,6 +24,7 @@ import {
   deliverableUploadPercent,
   deliverableUploadProgressLabel,
   formatDeliverableUploadBytes,
+  isDeliverableStoragePutSuccess,
 } from "@/features/campaigns/deliverable-asset-upload";
 
 test("deliverable asset size cap matches the 100 MB storage bucket", () => {
@@ -218,6 +219,9 @@ test("deliverable upload failures distinguish size vs rejected type", () => {
   assert.match(deliverableUploadFailureMessage(400, "invalid mime type"), /rejected this video type/i);
   assert.match(deliverableUploadFailureMessage(403), /permission/i);
   assert.match(deliverableUploadFailureMessage(0, "network"), /connection/i);
+  assert.equal(isDeliverableStoragePutSuccess(200), true);
+  assert.equal(isDeliverableStoragePutSuccess(409), true);
+  assert.equal(isDeliverableStoragePutSuccess(400), false);
 });
 
 test("documentation aggregates mark units received without reloading hierarchy", () => {

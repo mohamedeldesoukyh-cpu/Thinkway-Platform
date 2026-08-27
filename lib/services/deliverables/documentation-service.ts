@@ -38,6 +38,28 @@ const BUCKET = "deliverable-assets";
 
 const CONTENT_MEDIA: DeliverableAssetMedium[] = ["file", "external_link"];
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function storageObjectVisible(
+  supabase: Supabase,
+  path: string
+): Promise<boolean> {
+  const signed = await supabase.storage.from(BUCKET).createSignedUrl(path, 30);
+  if (signed.data?.signedUrl && !signed.error) return true;
+
+  const parts = path.split("/");
+  const fileName = parts.pop() ?? "";
+  const folder = parts.join("/");
+  if (!folder || !fileName) return false;
+  const listed = await supabase.storage.from(BUCKET).list(folder, {
+    search: fileName,
+    limit: 50,
+  });
+  return Boolean(listed.data?.some((row) => row.name === fileName));
+}
+
 export async function listDocumentationUnits(
   supabase: Supabase,
   campaignHeaderId: string
@@ -397,9 +419,11 @@ export async function completeFileAssetUpload(
     return { ok: true, assetId: input.assetId, versionId: input.versionId };
   }
 
-  const uploaded = await supabase.storage.from(BUCKET).createSignedUrl(input.storagePath, 30);
-  if (uploaded.error || !uploaded.data?.signedUrl) {
-    return { ok: false, message: "Upload did not finish. Try again." };
+  // Signed PUT can return 200 before Storage's index is queryable. Wait, then
+  // still record the version — the browser already got a successful PUT.
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    if (await storageObjectVisible(supabase, input.storagePath)) break;
+    await sleep(400 * (attempt + 1));
   }
 
   const { error: versionError } = await supabase.from("deliverable_asset_versions").insert({
