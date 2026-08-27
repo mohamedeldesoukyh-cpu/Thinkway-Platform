@@ -1,5 +1,6 @@
 import {
   DELIVERABLE_ASSET_TOO_LARGE_MESSAGE,
+  alternateDeliverableVideoMime,
   inferDeliverableAssetMime,
 } from "@/lib/services/deliverables/documentation-types";
 
@@ -49,14 +50,26 @@ export function deliverableUploadFailureMessage(
   status: number,
   responseText?: string | null
 ): string {
-  if (status === 413) return DELIVERABLE_ASSET_TOO_LARGE_MESSAGE;
+  const body = (responseText ?? "").toLowerCase();
+  if (body.includes("aborted")) return "Upload cancelled.";
+  if (status === 0) {
+    return "Could not upload the file. Check the connection and try again.";
+  }
+  if (
+    status === 413 ||
+    body.includes("too large") ||
+    body.includes("maximum allowed size") ||
+    body.includes("payload too large") ||
+    body.includes("file_size_limit")
+  ) {
+    return DELIVERABLE_ASSET_TOO_LARGE_MESSAGE;
+  }
   if (status === 403) {
     return "You do not have permission to upload this file.";
   }
   if (status === 404) {
     return "The upload expired. Choose the file again.";
   }
-  const body = (responseText ?? "").toLowerCase();
   if (
     status === 400 ||
     status === 415 ||
@@ -68,6 +81,24 @@ export function deliverableUploadFailureMessage(
   }
   return "Could not upload the file. Try MP4 or MOV under 100 MB.";
 }
+
+function isMimeRejection(status: number, responseText?: string | null): boolean {
+  if (status === 415) return true;
+  const body = (responseText ?? "").toLowerCase();
+  if (body.includes("too large") || body.includes("payload")) return false;
+  return (
+    status === 400 &&
+    (body.includes("mime") ||
+      body.includes("content-type") ||
+      body.includes("not allowed") ||
+      body.includes("invalid") ||
+      body.length === 0)
+  );
+}
+
+type PutResult =
+  | { ok: true }
+  | { ok: false; status: number; body: string };
 
 export async function putDeliverableAssetToSignedUrl(input: {
   signedUrl: string;
@@ -89,10 +120,45 @@ export async function putDeliverableAssetToSignedUrl(input: {
     input.file.name
   );
 
+  const first = await putFileToSignedUrl({
+    url: url.toString(),
+    file: input.file,
+    contentType,
+    onProgress: input.onProgress,
+  });
+  if (first.ok) return { ok: true };
+
+  const alternate = alternateDeliverableVideoMime(contentType);
+  if (alternate && isMimeRejection(first.status, first.body)) {
+    const retry = await putFileToSignedUrl({
+      url: url.toString(),
+      file: input.file,
+      contentType: alternate,
+      onProgress: input.onProgress,
+    });
+    if (retry.ok) return { ok: true };
+    return {
+      ok: false,
+      message: deliverableUploadFailureMessage(retry.status, retry.body),
+    };
+  }
+
+  return {
+    ok: false,
+    message: deliverableUploadFailureMessage(first.status, first.body),
+  };
+}
+
+function putFileToSignedUrl(input: {
+  url: string;
+  file: File;
+  contentType: string;
+  onProgress?: (progress: DeliverableUploadByteProgress) => void;
+}): Promise<PutResult> {
   return new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("PUT", url.toString());
-    xhr.setRequestHeader("Content-Type", contentType);
+    xhr.open("PUT", input.url);
+    xhr.setRequestHeader("Content-Type", input.contentType);
     xhr.setRequestHeader("x-upsert", "false");
 
     xhr.upload.onprogress = (event) => {
@@ -108,19 +174,17 @@ export async function putDeliverableAssetToSignedUrl(input: {
       }
       resolve({
         ok: false,
-        message: deliverableUploadFailureMessage(xhr.status, xhr.responseText),
+        status: xhr.status,
+        body: xhr.responseText ?? "",
       });
     };
 
     xhr.onerror = () => {
-      resolve({
-        ok: false,
-        message: "Could not upload the file. Check the connection and try again.",
-      });
+      resolve({ ok: false, status: 0, body: "network" });
     };
 
     xhr.onabort = () => {
-      resolve({ ok: false, message: "Upload cancelled." });
+      resolve({ ok: false, status: 0, body: "aborted" });
     };
 
     xhr.send(input.file);

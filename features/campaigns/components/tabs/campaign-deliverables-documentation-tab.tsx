@@ -70,8 +70,8 @@ import {
   DELIVERABLE_ASSET_TYPE_LABELS,
   defaultDeliverableAssetType,
   documentationReceiptStatus,
-  inferDeliverableAssetMime,
   isAllowedDeliverableUploadMime,
+  resolveDeliverableUploadMime,
   unfinishedFileAssetId,
   versionCountsAsClientContent,
   type DocumentationUnitDetail,
@@ -930,16 +930,6 @@ export function CampaignDeliverablesDocumentationTab({
                                   boundDetail.assets,
                                   assetTypeAtUpload
                                 );
-                                const mimeType = inferDeliverableAssetMime(
-                                  file.type,
-                                  file.name
-                                );
-                                if (!isAllowedDeliverableUploadMime(mimeType)) {
-                                  toast.error(
-                                    "This file type is not supported. Use MP4 or MOV under 100 MB."
-                                  );
-                                  return;
-                                }
                                 const session = ++uploadSessionRef.current;
                                 setUploadMeter({
                                   phase: "preparing",
@@ -950,6 +940,18 @@ export function CampaignDeliverablesDocumentationTab({
                                 setSelectionLocked(true);
                                 void (async () => {
                                   try {
+                                    const header = await file.slice(0, 32).arrayBuffer();
+                                    const mimeType = resolveDeliverableUploadMime({
+                                      browserType: file.type,
+                                      fileName: file.name,
+                                      header,
+                                    });
+                                    if (!isAllowedDeliverableUploadMime(mimeType)) {
+                                      toast.error(
+                                        "This file type is not supported. Use MP4 or MOV under 100 MB."
+                                      );
+                                      return;
+                                    }
                                     if (
                                       selectedKeyRef.current !==
                                       unitAtUpload.unitKey

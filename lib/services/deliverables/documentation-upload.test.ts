@@ -5,10 +5,12 @@ import { isServerActionDecodeError } from "@/lib/clients/client-document-utils";
 import {
   DELIVERABLE_ASSET_MAX_BYTES,
   DELIVERABLE_ASSET_TOO_LARGE_MESSAGE,
+  alternateDeliverableVideoMime,
   deliverableAssetPreviewKind,
   documentationRowHasUploadedContent,
   googleDriveFilePreviewUrl,
   inferDeliverableAssetMime,
+  resolveDeliverableUploadMime,
   unfinishedFileAssetId,
   versionCountsAsClientContent,
 } from "@/lib/services/deliverables/documentation-types";
@@ -48,6 +50,43 @@ test("Windows/iPhone MOV marked as octet-stream still uploads as QuickTime", () 
     inferDeliverableAssetMime("video/x-quicktime", "story.mov"),
     "video/quicktime"
   );
+});
+
+function ftypHeader(brand: string): Uint8Array {
+  const bytes = new Uint8Array(12);
+  bytes.set([0, 0, 0, 20], 0);
+  bytes.set([0x66, 0x74, 0x79, 0x70], 4);
+  bytes.set(Array.from(brand, (char) => char.charCodeAt(0)), 8);
+  return bytes;
+}
+
+test("iPhone story MOV with an MP4 container uploads as video/mp4, not QuickTime", () => {
+  assert.equal(
+    resolveDeliverableUploadMime({
+      browserType: "application/octet-stream",
+      fileName: "1st Omar Story.MOV",
+      header: ftypHeader("isom"),
+    }),
+    "video/mp4"
+  );
+  assert.equal(
+    resolveDeliverableUploadMime({
+      browserType: "video/quicktime",
+      fileName: "story.MOV",
+      header: ftypHeader("mp42"),
+    }),
+    "video/mp4"
+  );
+  assert.equal(
+    resolveDeliverableUploadMime({
+      browserType: "application/octet-stream",
+      fileName: "reel.MOV",
+      header: ftypHeader("qt  "),
+    }),
+    "video/quicktime"
+  );
+  assert.equal(alternateDeliverableVideoMime("video/quicktime"), "video/mp4");
+  assert.equal(alternateDeliverableVideoMime("video/mp4"), "video/quicktime");
 });
 
 test("server-action protocol errors are identified so Deliverables does not crash", () => {
@@ -175,8 +214,10 @@ test("explorer post rows see deliverable-level uploads", () => {
 
 test("deliverable upload failures distinguish size vs rejected type", () => {
   assert.match(deliverableUploadFailureMessage(413), /100 MB/);
+  assert.match(deliverableUploadFailureMessage(400, "maximum allowed size"), /100 MB/);
   assert.match(deliverableUploadFailureMessage(400, "invalid mime type"), /rejected this video type/i);
   assert.match(deliverableUploadFailureMessage(403), /permission/i);
+  assert.match(deliverableUploadFailureMessage(0, "network"), /connection/i);
 });
 
 test("documentation aggregates mark units received without reloading hierarchy", () => {

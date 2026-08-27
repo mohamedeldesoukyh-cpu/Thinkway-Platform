@@ -1,10 +1,10 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Deliverables slot move/remove · client video play overlay · creator avatars on the Campaign tab.
+**Focus:** iPhone story `.MOV` files (~80 MB) were still rejected after the QuickTime MIME fix.
 
-- Campaign Workspace Deliverables: move an uploaded file to another slot, or remove it from the slot.
-- Client Workspace videos show a center play button; click plays the file.
-- Campaign tab publication plan shows each creator’s avatar (same source as the Creators tab).
+- Storage sniffs the container. Stories named `.MOV` are often MP4 (`ftypisom` / `mp42`), so declaring QuickTime returns 400.
+- Upload now sniffs `ftyp` and retries `video/mp4` ↔ `video/quicktime` on a MIME 400.
+- Size is unchanged: 100 MB. 80,844 KB is under the cap.
 
-**Ship:** Development (`hsxrewjcbvmbkqdlzjhs` · `dev.thinkwaymedia.com`) then Production (`ienowhwfyxoqtzbgltno` · `app.thinkwaymedia.com`) after explicit approval. No schema or data writes.
+**Ship:** Development then Production. No schema or data writes.

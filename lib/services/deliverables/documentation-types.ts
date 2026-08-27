@@ -140,6 +140,60 @@ export function inferDeliverableAssetMime(
   return "application/octet-stream";
 }
 
+function ascii(bytes: Uint8Array, start: number, length: number): string {
+  return String.fromCharCode(...bytes.subarray(start, start + length));
+}
+
+/**
+ * Read the ISO-BMFF / QuickTime brand from the file header.
+ * iPhone stories are often an MP4 (`ftypisom` / `mp42`) saved as `.MOV`.
+ * Declaring those as `video/quicktime` makes Storage return 400.
+ */
+export function sniffDeliverableContainerMime(
+  header: ArrayBuffer | Uint8Array | null | undefined
+): string | null {
+  if (!header) return null;
+  const bytes = header instanceof Uint8Array ? header : new Uint8Array(header);
+  if (bytes.length >= 4 && bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3) {
+    return "video/webm";
+  }
+  if (bytes.length < 8) return null;
+  const box = ascii(bytes, 4, 4);
+  if (box === "ftyp" && bytes.length >= 12) {
+    const brand = ascii(bytes, 8, 4);
+    if (brand === "qt  ") return "video/quicktime";
+    return "video/mp4";
+  }
+  const start = ascii(bytes, 0, 4);
+  if (
+    start === "moov" ||
+    start === "mdat" ||
+    start === "wide" ||
+    start === "free" ||
+    start === "skip" ||
+    start === "pnot"
+  ) {
+    return "video/quicktime";
+  }
+  return null;
+}
+
+export function resolveDeliverableUploadMime(input: {
+  browserType?: string | null;
+  fileName: string;
+  header?: ArrayBuffer | Uint8Array | null;
+}): string {
+  const sniffed = sniffDeliverableContainerMime(input.header);
+  if (sniffed && isAllowedDeliverableUploadMime(sniffed)) return sniffed;
+  return inferDeliverableAssetMime(input.browserType, input.fileName);
+}
+
+export function alternateDeliverableVideoMime(mimeType: string): string | null {
+  if (mimeType === "video/quicktime") return "video/mp4";
+  if (mimeType === "video/mp4") return "video/quicktime";
+  return null;
+}
+
 export type DeliverableAssetPreviewKind = "video" | "image" | "pdf" | null;
 
 export function deliverableAssetPreviewKind(
