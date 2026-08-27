@@ -1014,6 +1014,8 @@ export function CampaignDeliverablesDocumentationTab({
                                       token: begun.data.token,
                                       file,
                                       mimeType,
+                                      bucket: begun.data.bucket,
+                                      storagePath: begun.data.storagePath,
                                       onProgress: reportPutProgress,
                                     });
                                     if (!uploaded.ok && uploaded.mimeRejected) {
@@ -1035,6 +1037,8 @@ export function CampaignDeliverablesDocumentationTab({
                                           token: begun.data.token,
                                           file,
                                           mimeType,
+                                          bucket: begun.data.bucket,
+                                          storagePath: begun.data.storagePath,
                                           onProgress: reportPutProgress,
                                         });
                                       }

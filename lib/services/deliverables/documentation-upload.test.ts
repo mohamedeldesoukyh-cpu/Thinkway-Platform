@@ -19,12 +19,16 @@ import {
   emptyAgg,
 } from "@/lib/services/deliverables/build-documentation-units";
 import {
+  DELIVERABLE_STANDARD_UPLOAD_MAX_BYTES,
+  deliverableResumableSignedEndpoint,
   deliverableUploadFailureMessage,
   deliverableUploadMeterValue,
   deliverableUploadPercent,
   deliverableUploadProgressLabel,
   formatDeliverableUploadBytes,
   isDeliverableStoragePutSuccess,
+  parseDeliverableSignedUploadTarget,
+  shouldUseResumableDeliverableUpload,
 } from "@/features/campaigns/deliverable-asset-upload";
 
 test("deliverable asset size cap matches the 100 MB storage bucket", () => {
@@ -222,6 +226,29 @@ test("deliverable upload failures distinguish size vs rejected type", () => {
   assert.equal(isDeliverableStoragePutSuccess(200), true);
   assert.equal(isDeliverableStoragePutSuccess(409), true);
   assert.equal(isDeliverableStoragePutSuccess(400), false);
+});
+
+test("files over the standard Storage PUT cap use resumable TUS", () => {
+  assert.equal(shouldUseResumableDeliverableUpload(DELIVERABLE_STANDARD_UPLOAD_MAX_BYTES), false);
+  assert.equal(shouldUseResumableDeliverableUpload(DELIVERABLE_STANDARD_UPLOAD_MAX_BYTES + 1), true);
+  assert.equal(shouldUseResumableDeliverableUpload(80_844 * 1024), true);
+});
+
+test("signed upload URLs parse bucket, path, and TUS endpoint", () => {
+  const signedUrl =
+    "https://abc123.supabase.co/storage/v1/object/upload/sign/deliverable-assets/hdr/del/asset/v-story.MOV?token=sig";
+  assert.deepEqual(parseDeliverableSignedUploadTarget(signedUrl), {
+    bucket: "deliverable-assets",
+    storagePath: "hdr/del/asset/v-story.MOV",
+  });
+  assert.equal(
+    deliverableResumableSignedEndpoint(signedUrl),
+    "https://abc123.storage.supabase.co/storage/v1/upload/resumable/sign"
+  );
+  assert.equal(
+    deliverableResumableSignedEndpoint("http://127.0.0.1:54321/storage/v1/object/upload/sign/b/p"),
+    "http://127.0.0.1:54321/storage/v1/upload/resumable/sign"
+  );
 });
 
 test("documentation aggregates mark units received without reloading hierarchy", () => {

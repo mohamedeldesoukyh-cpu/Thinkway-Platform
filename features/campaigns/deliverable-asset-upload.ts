@@ -3,6 +3,15 @@ import {
   inferDeliverableAssetMime,
 } from "@/lib/services/deliverables/documentation-types";
 
+/**
+ * Supabase standard (non-TUS) uploads cap at 50 MB regardless of bucket
+ * `file_size_limit`. Stay under that so ~80 MB stories use resumable TUS.
+ */
+export const DELIVERABLE_STANDARD_UPLOAD_MAX_BYTES = 45 * 1024 * 1024;
+
+/** Required by Supabase Storage TUS — do not change. */
+export const DELIVERABLE_TUS_CHUNK_BYTES = 6 * 1024 * 1024;
+
 export type DeliverableUploadPhase = "preparing" | "uploading" | "finishing";
 
 export type DeliverableUploadByteProgress = {
@@ -85,6 +94,42 @@ export function isDeliverableStoragePutSuccess(status: number): boolean {
   return (status >= 200 && status < 300) || status === 409;
 }
 
+export function shouldUseResumableDeliverableUpload(fileSize: number): boolean {
+  return fileSize > DELIVERABLE_STANDARD_UPLOAD_MAX_BYTES;
+}
+
+export function parseDeliverableSignedUploadTarget(signedUrl: string): {
+  bucket: string;
+  storagePath: string;
+} | null {
+  let url: URL;
+  try {
+    url = new URL(signedUrl);
+  } catch {
+    return null;
+  }
+  const marker = "/object/upload/sign/";
+  const idx = url.pathname.indexOf(marker);
+  if (idx < 0) return null;
+  const rest = url.pathname.slice(idx + marker.length);
+  const slash = rest.indexOf("/");
+  if (slash <= 0) return null;
+  const bucket = decodeURIComponent(rest.slice(0, slash));
+  const storagePath = decodeURIComponent(rest.slice(slash + 1));
+  if (!bucket || !storagePath) return null;
+  return { bucket, storagePath };
+}
+
+export function deliverableResumableSignedEndpoint(signedUrl: string): string {
+  const url = new URL(signedUrl);
+  const host = url.hostname;
+  if (host.endsWith(".supabase.co") && !host.includes("storage.")) {
+    const projectRef = host.split(".")[0];
+    return `https://${projectRef}.storage.supabase.co/storage/v1/upload/resumable/sign`;
+  }
+  return `${url.origin}/storage/v1/upload/resumable/sign`;
+}
+
 function isMimeRejection(status: number, responseText?: string | null): boolean {
   if (status === 415) return true;
   const body = (responseText ?? "").toLowerCase();
@@ -111,6 +156,8 @@ export async function putDeliverableAssetToSignedUrl(input: {
   token: string;
   file: File;
   mimeType?: string | null;
+  bucket?: string | null;
+  storagePath?: string | null;
   onProgress?: (progress: DeliverableUploadByteProgress) => void;
 }): Promise<DeliverableSignedPutResult> {
   if (!/^https?:\/\//i.test(input.signedUrl)) {
@@ -126,13 +173,23 @@ export async function putDeliverableAssetToSignedUrl(input: {
     input.file.name
   );
 
-  const result = await putFileToSignedUrl({
-    url: url.toString(),
-    token: input.token,
-    file: input.file,
-    contentType,
-    onProgress: input.onProgress,
-  });
+  const result = shouldUseResumableDeliverableUpload(input.file.size)
+    ? await putFileViaResumableUpload({
+        signedUrl: input.signedUrl,
+        token: input.token,
+        file: input.file,
+        contentType,
+        bucket: input.bucket ?? null,
+        storagePath: input.storagePath ?? null,
+        onProgress: input.onProgress,
+      })
+    : await putFileToSignedUrl({
+        url: url.toString(),
+        token: input.token,
+        file: input.file,
+        contentType,
+        onProgress: input.onProgress,
+      });
   if (result.ok) return { ok: true, mimeType: contentType };
 
   return {
@@ -140,6 +197,88 @@ export async function putDeliverableAssetToSignedUrl(input: {
     message: deliverableUploadFailureMessage(result.status, result.body),
     mimeRejected: isMimeRejection(result.status, result.body),
   };
+}
+
+function publicStorageGatewayHeaders(): Record<string, string> {
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+    "";
+  if (!key) return {};
+  return { apikey: key, authorization: `Bearer ${key}` };
+}
+
+function readTusFailure(error: unknown): { status: number; body: string } {
+  if (error && typeof error === "object") {
+    const candidate = error as {
+      message?: string;
+      originalResponse?: {
+        getStatus?: () => number;
+        getBody?: () => string;
+      } | null;
+    };
+    const status = candidate.originalResponse?.getStatus?.() ?? 0;
+    const body =
+      candidate.originalResponse?.getBody?.() || candidate.message || "";
+    return { status, body };
+  }
+  return { status: 0, body: String(error) };
+}
+
+async function putFileViaResumableUpload(input: {
+  signedUrl: string;
+  token: string;
+  file: File;
+  contentType: string;
+  bucket: string | null;
+  storagePath: string | null;
+  onProgress?: (progress: DeliverableUploadByteProgress) => void;
+}): Promise<PutResult> {
+  const target =
+    input.bucket && input.storagePath
+      ? { bucket: input.bucket, storagePath: input.storagePath }
+      : parseDeliverableSignedUploadTarget(input.signedUrl);
+  if (!target) {
+    return { ok: false, status: 0, body: "Could not start the file upload." };
+  }
+
+  const tus = await import("tus-js-client");
+  return new Promise((resolve) => {
+    const upload = new tus.Upload(input.file, {
+      endpoint: deliverableResumableSignedEndpoint(input.signedUrl),
+      retryDelays: [0, 3000, 5000, 10000, 20000],
+      headers: {
+        ...publicStorageGatewayHeaders(),
+        "x-signature": input.token,
+        "x-upsert": "false",
+      },
+      metadata: {
+        bucketName: target.bucket,
+        objectName: target.storagePath,
+        contentType: input.contentType,
+        cacheControl: "3600",
+      },
+      chunkSize: DELIVERABLE_TUS_CHUNK_BYTES,
+      uploadDataDuringCreation: true,
+      storeFingerprintForResuming: false,
+      removeFingerprintOnSuccess: true,
+      onError(error) {
+        const failure = readTusFailure(error);
+        resolve({ ok: false, status: failure.status, body: failure.body });
+      },
+      onProgress(bytesUploaded, bytesTotal) {
+        input.onProgress?.({
+          loaded: bytesUploaded,
+          total: bytesTotal || input.file.size,
+        });
+      },
+      onSuccess() {
+        input.onProgress?.({ loaded: input.file.size, total: input.file.size });
+        resolve({ ok: true });
+      },
+    });
+    upload.start();
+  });
 }
 
 function putFileToSignedUrl(input: {

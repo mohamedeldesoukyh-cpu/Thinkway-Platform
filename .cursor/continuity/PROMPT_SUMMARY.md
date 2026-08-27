@@ -1,10 +1,10 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Story MOV reached “Incomplete / upload did not finish” after the PUT.
+**Focus:** ~80 MB Instagram story failed with “must be 100 MB or smaller” even though the file is under the product cap.
 
-- `begin` creates the file row before bytes land. `complete` used to abort if Storage’s signed-URL lookup raced.
-- Finish now waits, then records the version after a successful PUT. MIME retries get a **new** signed URL (single-use tokens).
-- Same 80 MB story: hard-refresh, stay on Instagram story #1, choose the MOV again (reuses the Incomplete row).
+- Cause: standard signed PUT is capped at **50 MB** by Supabase Storage (`UPLOAD_FILE_SIZE_LIMIT_STANDARD`), independent of the 100 MB bucket limit.
+- Fix: files over **45 MB** upload via resumable **TUS** (`/storage/v1/upload/resumable/sign` + `x-signature`). Smaller files still use signed PUT.
+- Same story: hard-refresh, stay on Instagram story #1, choose the MOV again (reuses the Incomplete row). Wait for the percent meter to finish.
 
 **Ship:** Development then Production. No schema or data writes.

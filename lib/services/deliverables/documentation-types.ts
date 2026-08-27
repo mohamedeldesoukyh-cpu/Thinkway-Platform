@@ -67,7 +67,10 @@ export function documentationReceiptStatus(unit: {
 
 export type DeliverableAssetMedium = "file" | "external_link" | "text";
 
-/** Matches `storage.buckets.file_size_limit` for `deliverable-assets` (100 MB). */
+/**
+ * Matches `storage.buckets.file_size_limit` for `deliverable-assets` (100 MB).
+ * Files above ~45 MB must use resumable TUS; standard signed PUT is capped at 50 MB.
+ */
 export const DELIVERABLE_ASSET_MAX_BYTES = 100 * 1024 * 1024;
 
 export const DELIVERABLE_ASSET_TOO_LARGE_MESSAGE =
