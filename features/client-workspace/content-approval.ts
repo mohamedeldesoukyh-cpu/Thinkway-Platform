@@ -6,7 +6,7 @@ import {
 
 export const NO_CONTENT_TO_REVIEW_COPY = "No content to review.";
 export const NO_CONTENT_TO_REVIEW_HINT =
-  "This list shows reels, images, and links Thinkway uploaded for approval. It stays empty until a file finishes saving in Campaign Workspace → Deliverables. Live Instagram posts further down are published content, not files waiting for review.";
+  "This list shows reels, images, and links Thinkway uploaded for approval. It stays empty until a file finishes saving in Campaign Workspace → Deliverables. Live story screenshots and published posts further down are proof of live content, not files waiting for review.";
 export const NOTHING_WAITING_ON_YOU_COPY =
   "Nothing waiting on you — all submitted content has been reviewed.";
 export const APPROVED_CONTENT_HEADING = "Approved content";
@@ -148,6 +148,12 @@ export function isClientReviewableMedium(medium: string): medium is "file" | "ex
   return medium === "file" || medium === "external_link";
 }
 
+/** Story screenshots are live-post proof, not pre-publish approval files. */
+export function isClientApprovalContentAssetType(assetType: string | null | undefined): boolean {
+  const type = (assetType ?? "").trim().toLowerCase();
+  return type !== "story_screenshot";
+}
+
 export function projectClientCampaignContent(input: {
   campaignHeaderId: string;
   assets: ClientContentAssetSource[];
@@ -168,6 +174,7 @@ export function projectClientCampaignContent(input: {
   for (const asset of input.assets) {
     if (asset.archivedAt || asset.campaignHeaderId !== input.campaignHeaderId) continue;
     if (!isClientReviewableMedium(asset.medium)) continue;
+    if (!isClientApprovalContentAssetType(asset.assetType)) continue;
     const versions = [...(versionsByAsset.get(asset.id) ?? [])].sort(
       (left, right) => left.versionNumber - right.versionNumber
     );

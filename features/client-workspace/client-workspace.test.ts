@@ -5950,6 +5950,44 @@ test("historical Client Workspace content is empty and captions are not review c
   assert.deepEqual(skipped.items, []);
 });
 
+test("live story screenshots stay off Creator content approval", () => {
+  const projected = projectContent({
+    assets: [
+      contentAsset({
+        id: "story-proof",
+        assetType: "story_screenshot",
+        label: "Screenshot 2026-08-28 193902",
+        currentVersionId: "v-shot",
+      }),
+      contentAsset({
+        id: "story-draft",
+        assetType: "draft_video",
+        label: "Nadine Markez Story.MP4",
+        currentVersionId: "v-draft",
+      }),
+    ],
+    versions: [
+      contentVersion({
+        id: "v-shot",
+        versionNumber: 1,
+        assetId: "story-proof",
+        mimeType: "image/png",
+        fileName: "Screenshot 2026-08-28 193902.png",
+        storagePath: "hdr-1/del-1/story-proof/v-shot.png",
+      }),
+      contentVersion({
+        id: "v-draft",
+        versionNumber: 1,
+        assetId: "story-draft",
+        fileName: "Nadine Markez Story.MP4",
+      }),
+    ],
+  });
+  assert.equal(projected.items.length, 1);
+  assert.equal(projected.items[0]?.assetId, "story-draft");
+  assert.equal(clientContentToReview(projected.items).length, 1);
+});
+
 test("content approval is independent of quotation approval and live publication status", () => {
   const content = projectContent({
     decisions: [
