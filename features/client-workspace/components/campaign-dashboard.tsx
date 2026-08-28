@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import {
+  clientCampaignOpenHref,
   formatClientDashboardDate,
   type ClientCampaignPostRow,
 } from "../campaign-execution";
@@ -196,8 +197,12 @@ export function CampaignDashboard({
                   {formatClientDashboardDate(firstLive.publicationDate) ?? "Live"}
                 </p>
                 <p className="s">
-                  {firstLive.contentUrl ? (
-                    <a href={firstLive.contentUrl} target="_blank" rel="noopener noreferrer">
+                  {clientCampaignOpenHref(firstLive) ? (
+                    <a
+                      href={clientCampaignOpenHref(firstLive)!}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       View publication →
                     </a>
                   ) : (

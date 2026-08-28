@@ -165,6 +165,21 @@ export function deliverableTypeShortLabel(code: string): string {
   return DELIVERABLE_SHORT_INDEX.get(code) ?? deliverableTypeLabel(code);
 }
 
+const EPHEMERAL_STORY_TYPES = new Set([
+  "instagram_story",
+  "facebook_story",
+  "tiktok_story",
+  "snapchat_story",
+]);
+
+/** Planned/live stories that expire — not highlights, lives, or permanent posts. */
+export function isEphemeralStoryDeliverableType(code: string | null | undefined): boolean {
+  const key = (code ?? "").trim().toLowerCase();
+  if (!key) return false;
+  if (EPHEMERAL_STORY_TYPES.has(key)) return true;
+  return key.endsWith("_story") && !key.includes("highlight");
+}
+
 export function getPlatformOptionLabel(platform: string): string {
   const key = canonicalPlatformKey(platform);
   return SOCIAL_PLATFORM_OPTIONS.find((o) => o.value === key)?.label ?? platform;

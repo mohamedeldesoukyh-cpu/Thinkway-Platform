@@ -17,6 +17,7 @@ import {
 import { OperationalTableColumnsProvider } from "@/components/tables/operational-table-column-context";
 import { OperationalTableSettingsButton } from "@/components/tables/operational-table-settings-button";
 import { operationalFloatingBarContentClass } from "@/components/workspace/operational-floating-action-bar";
+import { CampaignMarkStoriesLiveSheet } from "@/features/campaigns/components/campaign-mark-stories-live-sheet";
 import { CampaignPublicationSheet } from "@/features/campaigns/components/campaign-publication-sheet";
 import {
   AuroraStatusPill,
@@ -108,6 +109,7 @@ export function CampaignPerformanceCenterTab({
   }, [initialDetailPublicationId, publications]);
 
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [storiesSheetOpen, setStoriesSheetOpen] = useState(false);
   const [chartsOpen, setChartsOpen] = useState(false);
   const [sortKey, setSortKey] = useState<
     | "influencer_name"
@@ -474,6 +476,15 @@ export function CampaignPerformanceCenterTab({
             </Button>
             <Button
               size="sm"
+              variant="outline"
+              className="thinkway-campaign-btn h-[33px] text-[12px]"
+              onClick={() => setStoriesSheetOpen(true)}
+              disabled={lines.length === 0}
+            >
+              Mark stories live
+            </Button>
+            <Button
+              size="sm"
               className="thinkway-campaign-btn thinkway-campaign-btn-primary h-[33px] text-[12px]"
               onClick={() => setSheetOpen(true)}
               disabled={lines.length === 0}
@@ -755,6 +766,13 @@ export function CampaignPerformanceCenterTab({
         existingContentUrls={publications.map((row) => row.content_url)}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
+      />
+
+      <CampaignMarkStoriesLiveSheet
+        campaignId={workspace.id}
+        assignmentLines={lines}
+        open={storiesSheetOpen}
+        onOpenChange={setStoriesSheetOpen}
       />
 
       <PublicationWorkspace

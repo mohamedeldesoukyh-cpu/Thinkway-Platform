@@ -20,6 +20,8 @@ function post(
     live: overrides.status === "live",
     publicationDate: null,
     contentUrl: null,
+    proofImageUrl: null,
+    isStory: false,
     performance: emptyClientCampaignPerformance(),
     ...overrides,
   };
@@ -154,6 +156,45 @@ test("date percent sits between campaign start and end terminals", () => {
   const mid = dateToCampaignPercent("2026-08-16", "2026-08-01", "2026-08-31");
   assert.ok(mid > 4);
   assert.ok(mid < 96);
+});
+
+test("live story checkpoints use proof images instead of expired story URLs", () => {
+  const graph = projectCampaignProgressGraph({
+    posts: [
+      post({
+        id: "s1",
+        creatorName: "@nadine",
+        status: "live",
+        scheduledDate: "2026-08-14",
+        isStory: true,
+        contentUrl: "https://www.instagram.com/stories/nadsmarkiz/1/",
+        proofImageUrl: "https://cdn.example/story.png",
+      }),
+    ],
+    startDate: "2026-08-01",
+    endDate: "2026-08-31",
+    today: "2026-08-28",
+  });
+  assert.equal(graph?.creators[0]?.tracks[0]?.checkpoints[0]?.contentUrl, "https://cdn.example/story.png");
+});
+
+test("live stories without proof do not link out", () => {
+  const graph = projectCampaignProgressGraph({
+    posts: [
+      post({
+        id: "s1",
+        creatorName: "@nadine",
+        status: "live",
+        scheduledDate: "2026-08-14",
+        isStory: true,
+        contentUrl: "https://www.instagram.com/stories/nadsmarkiz/1/",
+      }),
+    ],
+    startDate: "2026-08-01",
+    endDate: "2026-08-31",
+    today: "2026-08-28",
+  });
+  assert.equal(graph?.creators[0]?.tracks[0]?.checkpoints[0]?.contentUrl, null);
 });
 
 test("range copy names start and end dates", () => {

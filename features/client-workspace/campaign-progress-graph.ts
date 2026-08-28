@@ -3,6 +3,7 @@ import {
   formatClientDashboardDate,
   formatClientScheduleDate,
   todayYmd,
+  clientCampaignOpenHref,
   type ClientCampaignPostRow,
 } from "./campaign-execution";
 import { normalizeClientDeliverableFormat } from "./campaign-tab-aggregates";
@@ -250,7 +251,7 @@ export function projectCampaignProgressGraph(input: {
               title: `${normalizeClientDeliverableFormat(post.deliverable, post.platform)} · ${label}${
                 reached ? " · live" : post.status === "overdue" ? " · overdue" : ""
               }`,
-              contentUrl: post.contentUrl,
+              contentUrl: clientCampaignOpenHref(post),
             };
           });
           const format = normalizeClientDeliverableFormat(

@@ -10,6 +10,7 @@ import {
   normalizePublicationPlatform,
   providerChainForPlatform,
 } from "@/lib/performance/metrics-collector/detect-platform";
+import { isEphemeralStoryDeliverableType } from "@/lib/campaigns/deliverable-taxonomy";
 import {
   classifyInstagramContentUrl,
   instagramMetricsUnsupportedReason,
@@ -196,6 +197,23 @@ export async function metricsCollector(
   publication: PublicationForCollection,
   options: MetricsCollectorOptions
 ): Promise<CollectionOutcome> {
+  if (isEphemeralStoryDeliverableType(publication.publication_type)) {
+    await markPublicationRefreshStatus(supabase, {
+      publicationId: publication.id,
+      campaignHeaderId: publication.campaign_header_id,
+      status: "manual_required",
+    });
+    return {
+      publicationId: publication.id,
+      status: "manual_required",
+      source: null,
+      confidence: null,
+      metrics: {},
+      attempts: [],
+      message: "Story publications are not eligible for automated metrics.",
+    };
+  }
+
   await markPublicationRefreshStatus(supabase, {
     publicationId: publication.id,
     campaignHeaderId: publication.campaign_header_id,

@@ -1,5 +1,10 @@
-import { deliverableTypeShortLabel, getPlatformOptionLabel } from "@/lib/campaigns/deliverable-taxonomy";
+import {
+  deliverableTypeShortLabel,
+  getPlatformOptionLabel,
+  isEphemeralStoryDeliverableType,
+} from "@/lib/campaigns/deliverable-taxonomy";
 import { parseLineAssignment } from "@/lib/campaigns/line-assignment";
+import { classifyInstagramContentUrl } from "@/lib/performance/metrics-collector/instagram-content-url";
 
 import { deliverablesLabel } from "./deliverables";
 import {
@@ -66,8 +71,27 @@ export type ClientCampaignPostRow = {
   live: boolean;
   publicationDate: string | null;
   contentUrl: string | null;
+  proofImageUrl?: string | null;
+  isStory?: boolean;
   performance: ClientCampaignPerformance;
 };
+
+/** Proof image first. Story URLs are never opened — they expire. */
+export function clientCampaignOpenHref(post: {
+  proofImageUrl?: string | null;
+  contentUrl?: string | null;
+  isStory?: boolean;
+}): string | null {
+  const proof = post.proofImageUrl?.trim();
+  if (proof) return proof;
+  if (post.isStory) return null;
+  const url = post.contentUrl?.trim();
+  if (!url) return null;
+  const kind = classifyInstagramContentUrl(url);
+  if (kind === "story" || kind === "highlight") return null;
+  if (/\/stories\//i.test(url) || /\/story(\/|\.php)/i.test(url)) return null;
+  return url;
+}
 
 export type ClientCampaignExecution = {
   campaignHeaderId: string | null;
@@ -365,6 +389,7 @@ export type CampaignExecutionSource = {
     liveDate: string | null;
     status: string;
     proofUrl: string | null;
+    proofImageUrl?: string | null;
   }>;
   publications: Array<{
     id: string;
@@ -375,6 +400,7 @@ export type CampaignExecutionSource = {
     influencerName?: string | null;
     platform: string | null;
     contentUrl: string | null;
+    screenshotUrl?: string | null;
     publicationDate: string | null;
     status: string | null;
   } & CampaignPublicationMetrics>;
@@ -552,6 +578,8 @@ export function projectClientCampaignExecution(
     const platform = deliverable?.platform || publication?.platform || "";
     const type = deliverable?.deliverableType || "other";
     const contentUrl = publication?.contentUrl?.trim() || post.proofUrl?.trim() || null;
+    const proofImageUrl =
+      publication?.screenshotUrl?.trim() || post.proofImageUrl?.trim() || null;
     const creatorName = creatorByLine.get(post.campaignLineId) ?? "Creator";
     const row = buildPostRow({
       id: post.id,
@@ -566,6 +594,8 @@ export function projectClientCampaignExecution(
       scheduledDate: post.liveDate ?? deliverable?.liveDate ?? null,
       postStatus: post.status,
       contentUrl,
+      proofImageUrl,
+      isStory: isEphemeralStoryDeliverableType(type),
       publicationDate: publication?.publicationDate ?? null,
       performance: projectClientCampaignPerformance(publication),
       today,
@@ -598,6 +628,8 @@ export function projectClientCampaignExecution(
       scheduledDate: deliverable.liveDate,
       postStatus: publication?.status ?? null,
       contentUrl: publication?.contentUrl ?? null,
+      proofImageUrl: publication?.screenshotUrl ?? null,
+      isStory: isEphemeralStoryDeliverableType(deliverable.deliverableType),
       publicationDate: publication?.publicationDate ?? null,
       performance: projectClientCampaignPerformance(publication),
       today,
@@ -627,6 +659,10 @@ export function projectClientCampaignExecution(
       scheduledDate: publication.publicationDate,
       postStatus: publication.status,
       contentUrl,
+      proofImageUrl: publication.screenshotUrl ?? null,
+      isStory:
+        classifyInstagramContentUrl(contentUrl ?? "") === "story" ||
+        /\/stories\//i.test(contentUrl ?? ""),
       publicationDate: publication.publicationDate,
       performance: projectClientCampaignPerformance(publication),
       today,
@@ -710,6 +746,8 @@ function buildPostRow(input: {
   scheduledDate: string | null;
   postStatus?: string | null;
   contentUrl?: string | null;
+  proofImageUrl?: string | null;
+  isStory?: boolean;
   publicationDate?: string | null;
   performance?: ClientCampaignPerformance;
   today: string;
@@ -734,6 +772,8 @@ function buildPostRow(input: {
     live: status === "live",
     publicationDate: dateOnly(input.publicationDate),
     contentUrl: input.contentUrl?.trim() || null,
+    proofImageUrl: input.proofImageUrl?.trim() || null,
+    isStory: Boolean(input.isStory),
     performance: input.performance ?? emptyClientCampaignPerformance(),
   };
 }

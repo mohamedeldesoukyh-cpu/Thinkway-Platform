@@ -1,7 +1,7 @@
 "use client";
 
 import { format, isValid, parseISO } from "date-fns";
-import { DownloadIcon, FilterIcon, PlusIcon, SearchIcon } from "lucide-react";
+import { DownloadIcon, FilterIcon, ImagesIcon, PlusIcon, SearchIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CampaignMarkStoriesLiveSheet } from "@/features/campaigns/components/campaign-mark-stories-live-sheet";
 import { CampaignPublicationSheet } from "@/features/campaigns/components/campaign-publication-sheet";
 import { DetailClickableLabel } from "@/features/campaigns/components/detail-sheets/detail-clickable-label";
 import { PublicationDetailSheet } from "@/features/campaigns/components/detail-sheets/publication-detail-sheet";
@@ -156,6 +157,7 @@ export function CampaignPublicationsTab({
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(ALL_STATUSES);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [storiesSheetOpen, setStoriesSheetOpen] = useState(false);
   const [detailPublicationId, setDetailPublicationId] = useState<string | null>(null);
 
   const rows = publications ?? [];
@@ -258,6 +260,15 @@ export function CampaignPublicationsTab({
                     <DownloadIcon data-icon="inline-start" className="size-3.5" />
                     Export CSV
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setStoriesSheetOpen(true)}
+                    disabled={lines.length === 0}
+                  >
+                    <ImagesIcon data-icon="inline-start" className="size-3.5" />
+                    Mark stories live
+                  </Button>
                   <Button size="sm" onClick={() => setSheetOpen(true)} disabled={lines.length === 0}>
                     <PlusIcon data-icon="inline-start" />
                     Add publication
@@ -334,6 +345,13 @@ export function CampaignPublicationsTab({
         existingContentUrls={rows.map((row) => row.content_url)}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
+      />
+
+      <CampaignMarkStoriesLiveSheet
+        campaignId={workspace.id}
+        assignmentLines={lines}
+        open={storiesSheetOpen}
+        onOpenChange={setStoriesSheetOpen}
       />
 
       <PublicationDetailSheet

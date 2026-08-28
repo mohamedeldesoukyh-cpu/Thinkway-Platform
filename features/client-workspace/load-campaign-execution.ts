@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { createPublicationMediaSignedUrl } from "@/lib/performance/screenshot-capture/storage";
+
 import {
   emptyClientCampaignExecution,
   projectClientCampaignExecution,
@@ -33,6 +35,7 @@ type PublicationRow = {
   influencer_id: string | null;
   platform: string | null;
   content_url: string | null;
+  screenshot_url: string | null;
   publication_date: string | null;
   status: string | null;
   views: number | null;
@@ -101,7 +104,7 @@ export async function loadClientCampaignExecution(
       supabase
         .from("campaign_publications")
         .select(
-          "id, assignment_deliverable_id, assignment_post_schedule_id, campaign_line_id, influencer_id, platform, content_url, publication_date, status, views, likes, comments, shares, reach, actual_reach, forecast_reach, reach_source, impressions, actual_impressions, forecast_impressions, impressions_source, engagement_rate, engagement_views, engagement_likes, engagement_comments, engagement_shares"
+          "id, assignment_deliverable_id, assignment_post_schedule_id, campaign_line_id, influencer_id, platform, content_url, screenshot_url, publication_date, status, views, likes, comments, shares, reach, actual_reach, forecast_reach, reach_source, impressions, actual_impressions, forecast_impressions, impressions_source, engagement_rate, engagement_views, engagement_likes, engagement_comments, engagement_shares"
         )
         .eq("campaign_header_id", headerId),
       supabase
@@ -126,6 +129,10 @@ export async function loadClientCampaignExecution(
         .order("sequence_number");
       posts = (postsResult.data ?? []) as PostRow[];
     }
+
+    const publicationRows = (publicationsResult.data ?? []) as PublicationRow[];
+    const screenshotByPublicationId = await signPublicationScreenshots(supabase, publicationRows);
+    const screenshotByPostId = await signStoryScreenshotAssets(supabase, headerId, posts.map((row) => row.id));
 
     const source: CampaignExecutionSource = {
       startDate: (headerResult.data as { start_date: string | null } | null)?.start_date ?? null,
@@ -157,8 +164,9 @@ export async function loadClientCampaignExecution(
         liveDate: row.live_date,
         status: row.status ?? "draft",
         proofUrl: row.proof_url,
+        proofImageUrl: screenshotByPostId.get(row.id) ?? null,
       })),
-      publications: ((publicationsResult.data ?? []) as PublicationRow[]).map((row) => ({
+      publications: publicationRows.map((row) => ({
         id: row.id,
         assignmentDeliverableId: row.assignment_deliverable_id,
         assignmentPostScheduleId: row.assignment_post_schedule_id,
@@ -166,6 +174,7 @@ export async function loadClientCampaignExecution(
         influencerId: row.influencer_id,
         platform: row.platform,
         contentUrl: row.content_url,
+        screenshotUrl: screenshotByPublicationId.get(row.id) ?? null,
         publicationDate: row.publication_date,
         status: row.status,
         views: row.views,
@@ -192,4 +201,68 @@ export async function loadClientCampaignExecution(
   } catch {
     return { campaignHeaderId: headerId, posts: [], startDate: null, endDate: null };
   }
+}
+
+async function signPublicationScreenshots(
+  supabase: SupabaseClient,
+  rows: PublicationRow[]
+): Promise<Map<string, string>> {
+  const signed = new Map<string, string>();
+  await Promise.all(
+    rows.map(async (row) => {
+      if (!row.screenshot_url?.trim()) return;
+      try {
+        const url = await createPublicationMediaSignedUrl(supabase, row.screenshot_url);
+        if (url) signed.set(row.id, url);
+      } catch {
+        /* proof is optional */
+      }
+    })
+  );
+  return signed;
+}
+
+async function signStoryScreenshotAssets(
+  supabase: SupabaseClient,
+  campaignHeaderId: string,
+  postIds: string[]
+): Promise<Map<string, string>> {
+  const signed = new Map<string, string>();
+  if (postIds.length === 0) return signed;
+  try {
+    const { data: assets } = await supabase
+      .from("deliverable_assets")
+      .select("assignment_post_schedule_id, current_version_id")
+      .eq("campaign_header_id", campaignHeaderId)
+      .eq("asset_type", "story_screenshot")
+      .is("archived_at", null)
+      .in("assignment_post_schedule_id", postIds);
+    const versionIds = (assets ?? [])
+      .map((row) => row.current_version_id)
+      .filter((id): id is string => Boolean(id));
+    if (versionIds.length === 0) return signed;
+    const { data: versions } = await supabase
+      .from("deliverable_asset_versions")
+      .select("id, storage_bucket, storage_path")
+      .in("id", versionIds);
+    const versionById = new Map(
+      (versions ?? []).map((row) => [row.id, row] as const)
+    );
+    await Promise.all(
+      (assets ?? []).map(async (asset) => {
+        const postId = asset.assignment_post_schedule_id;
+        const version = asset.current_version_id
+          ? versionById.get(asset.current_version_id)
+          : null;
+        if (!postId || !version?.storage_bucket || !version.storage_path) return;
+        const { data, error } = await supabase.storage
+          .from(version.storage_bucket)
+          .createSignedUrl(version.storage_path, 60 * 60);
+        if (!error && data?.signedUrl) signed.set(postId, data.signedUrl);
+      })
+    );
+  } catch {
+    return signed;
+  }
+  return signed;
 }

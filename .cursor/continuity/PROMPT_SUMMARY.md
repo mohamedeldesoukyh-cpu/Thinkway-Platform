@@ -1,7 +1,8 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Client Campaign tab — creator delivery timeline.
+**Focus:** Mark stories live on Publications.
 
-- Bottom of Campaign tab: stacked creators, one line per content type, circles on live-ad dates.
-- Line fills as posts go live; start/end are campaign dates (header, else first/last live-ad dates).
+- Planned stories are marked live from the assignment plan (Posted + publication record).
+- Story URLs stay rejected for metrics. Screenshots are optional and never block save.
+- Client timeline opens a proof image when present; otherwise the live checkpoint has no link.
