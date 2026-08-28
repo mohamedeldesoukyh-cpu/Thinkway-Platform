@@ -1,13 +1,18 @@
 import {
   dateOnly,
   formatClientDashboardDate,
+  formatClientScheduleDate,
   todayYmd,
   type ClientCampaignPostRow,
 } from "./campaign-execution";
 import { normalizeClientDeliverableFormat } from "./campaign-tab-aggregates";
 
 export const CAMPAIGN_PROGRESS_COPY =
-  "Each creator has a line per content type. Circles are live-ad dates. The line fills as each post goes live, from campaign start to campaign end.";
+  "Each creator has a line per content type. Circles are live-ad dates. The line fills as each post goes live.";
+
+export function campaignProgressRangeCopy(startLabel: string, endLabel: string): string {
+  return `Start ${startLabel} · End ${endLabel}`;
+}
 
 export type CampaignProgressDotTone = "live" | "od" | "sched" | "tbc" | "done";
 
@@ -19,6 +24,7 @@ export type CampaignProgressCheckpoint = {
   overdue: boolean;
   tone: CampaignProgressDotTone;
   label: string;
+  showLabel: boolean;
   title: string;
   contentUrl: string | null;
 };
@@ -46,6 +52,8 @@ export type CampaignProgressGraph = {
   endDate: string;
   startLabel: string;
   endLabel: string;
+  startFullLabel: string;
+  endFullLabel: string;
   todayPercent: number | null;
   creators: CampaignProgressCreator[];
 };
@@ -229,6 +237,7 @@ export function projectCampaignProgressGraph(input: {
             const date = post.scheduledDate ?? post.publicationDate;
             const reached = checkpointReached(post);
             const label = formatClientDashboardDate(date) ?? "TBC";
+            const previousDate = ordered[index - 1]?.scheduledDate ?? ordered[index - 1]?.publicationDate;
             return {
               id: post.id,
               date,
@@ -237,6 +246,7 @@ export function projectCampaignProgressGraph(input: {
               overdue: post.status === "overdue",
               tone: checkpointTone(post),
               label,
+              showLabel: date !== previousDate,
               title: `${normalizeClientDeliverableFormat(post.deliverable, post.platform)} · ${label}${
                 reached ? " · live" : post.status === "overdue" ? " · overdue" : ""
               }`,
@@ -275,6 +285,8 @@ export function projectCampaignProgressGraph(input: {
     endDate: window.endDate,
     startLabel: formatClientDashboardDate(window.startDate) ?? window.startDate,
     endLabel: formatClientDashboardDate(window.endDate) ?? window.endDate,
+    startFullLabel: formatClientScheduleDate(window.startDate) ?? window.startDate,
+    endFullLabel: formatClientScheduleDate(window.endDate) ?? window.endDate,
     todayPercent: todayInWindow
       ? dateToCampaignPercent(today, window.startDate, window.endDate)
       : null,

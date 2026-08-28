@@ -1460,6 +1460,7 @@
 .tw-review .cx-none{padding:34px 20px;text-align:center;color:var(--muted);font-size:13px}
 .tw-review .num{font-variant-numeric:tabular-nums}
 .tw-review .mc .s{font-size:11px;color:var(--muted);margin-top:4px}
+.tw-review .cx-tl__range{font-size:13px;font-weight:700;color:var(--navy);margin:-10px 0 10px}
 .tw-review .cx-tl{margin-top:4px;overflow-x:auto}
 .tw-review .cx-tl__axis,.tw-review .cx-tl__row{display:grid;grid-template-columns:118px 1fr;gap:12px;align-items:center}
 .tw-review .cx-tl__axis{margin:4px 0 10px;min-height:18px;padding-bottom:8px;border-bottom:.8px solid #f2f5f9}
@@ -1469,20 +1470,23 @@
 .tw-review .cx-tl__who .cx-av{width:32px;height:32px;font-size:11px}
 .tw-review .cx-tl__name{margin:0;font-size:14px;font-weight:700;color:var(--navy)}
 .tw-review .cx-tl__count{margin:2px 0 0;font-size:11.5px;color:var(--muted)}
-.tw-review .cx-tl__row + .cx-tl__row{margin-top:12px}
+.tw-review .cx-tl__row + .cx-tl__row{margin-top:18px}
 .tw-review .cx-tl__fmt{font-size:11.5px;font-weight:600;color:#3f4757;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tw-review .cx-tl__rail{position:relative;height:22px;min-width:0}
-.tw-review .cx-tl__line{position:absolute;left:0;right:0;top:50%;height:3px;margin-top:-1.5px;border-radius:100px;background:#e6ebf3}
-.tw-review .cx-tl__fill{position:absolute;left:0;top:50%;height:3px;margin-top:-1.5px;border-radius:100px;background:var(--ok,#12805c);transition:width .35s ease}
-.tw-review .cx-tl__today{position:absolute;top:-4px;bottom:-4px;width:0;border-left:1px dashed #9aa3b2;transform:translateX(-50%);pointer-events:none}
+.tw-review .cx-tl__rail{position:relative;height:40px;min-width:0}
+.tw-review .cx-tl__axis .cx-tl__rail{height:18px}
+.tw-review .cx-tl__line{position:absolute;left:0;right:0;top:11px;height:3px;border-radius:100px;background:#e6ebf3}
+.tw-review .cx-tl__fill{position:absolute;left:0;top:11px;height:3px;border-radius:100px;background:var(--ok,#12805c);transition:width .35s ease}
+.tw-review .cx-tl__today{position:absolute;top:2px;height:20px;width:0;border-left:1px dashed #9aa3b2;transform:translateX(-50%);pointer-events:none}
 .tw-review .cx-tl__now{position:absolute;top:-2px;transform:translateX(-50%);font-size:10px;font-weight:700;color:var(--muted);white-space:nowrap}
 .tw-review .cx-tl__start{position:absolute;left:0;top:0;font-size:10.5px;font-weight:700;color:var(--muted)}
 .tw-review .cx-tl__end{position:absolute;right:0;top:0;font-size:10.5px;font-weight:700;color:var(--muted)}
-.tw-review .cx-tl__cap{position:absolute;top:50%;width:9px;height:9px;border-radius:50%;transform:translate(-50%,-50%);background:#fff;border:2px solid #cfd6e4;z-index:1}
+.tw-review .cx-tl__cap{position:absolute;top:12.5px;width:9px;height:9px;border-radius:50%;transform:translate(-50%,-50%);background:#fff;border:2px solid #cfd6e4;z-index:1}
 .tw-review .cx-tl__cap--start{left:0;transform:translate(0,-50%);background:var(--ok,#12805c);border-color:var(--ok,#12805c)}
 .tw-review .cx-tl__cap--end{left:auto;right:0;transform:translate(0,-50%)}
 .tw-review .cx-tl__cap--end.is-done{background:var(--ok,#12805c);border-color:var(--ok,#12805c)}
-.tw-review .cx-tl__dot{position:absolute;top:50%;width:13px;height:13px;border-radius:50%;transform:translate(-50%,-50%);background:#fff;border:2px solid #cfd6e4;z-index:2;padding:0;display:block}
+.tw-review .cx-tl__mark{position:absolute;top:12.5px;z-index:2;display:flex;flex-direction:column;align-items:center;transform:translate(-50%,-6.5px);text-decoration:none;color:inherit}
+.tw-review .cx-tl__dot{width:13px;height:13px;border-radius:50%;background:#fff;border:2px solid #cfd6e4;flex:none;padding:0;display:block}
+.tw-review .cx-tl__d{margin-top:3px;font-size:9.5px;font-weight:700;color:#5b6478;white-space:nowrap;line-height:1;font-variant-numeric:tabular-nums}
 .tw-review .cx-tl__dot--live,.tw-review .cx-tl__dot--done{background:var(--ok,#12805c);border-color:var(--ok,#12805c)}
 .tw-review .cx-tl__dot--od{background:var(--bad,#c0392b);border-color:var(--bad,#c0392b)}
 .tw-review .cx-tl__dot--sched{background:#fff;border-color:var(--blue)}

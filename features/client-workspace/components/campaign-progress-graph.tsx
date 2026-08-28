@@ -2,6 +2,7 @@
 
 import {
   CAMPAIGN_PROGRESS_COPY,
+  campaignProgressRangeCopy,
   projectCampaignProgressGraph,
   type CampaignProgressCheckpoint,
   type CampaignProgressCreator,
@@ -38,6 +39,7 @@ export function CampaignProgressGraph({
     <section className="card" id="campaignProgress" aria-label={`Campaign progress from ${graph.startLabel} to ${graph.endLabel}`}>
       <p className="ck">Campaign progress</p>
       <h2>Creator delivery timeline</h2>
+      <p className="cx-tl__range">{campaignProgressRangeCopy(graph.startFullLabel, graph.endFullLabel)}</p>
       <p className="note">{CAMPAIGN_PROGRESS_COPY}</p>
       <div className="cx-tl">
         <Axis graph={graph} />
@@ -55,7 +57,7 @@ export function CampaignProgressGraph({
       <div className="cx-tl__legend">
         <span>
           <i className="cx-tl__cap cx-tl__cap--start" />
-          Start
+          Start · {graph.startLabel}
         </span>
         <span>
           <i className="cx-tl__dot cx-tl__dot--live" />
@@ -71,7 +73,7 @@ export function CampaignProgressGraph({
         </span>
         <span>
           <i className="cx-tl__cap cx-tl__cap--end" />
-          End
+          End · {graph.endLabel}
         </span>
       </div>
     </section>
@@ -83,13 +85,13 @@ function Axis({ graph }: { graph: CampaignProgressGraphModel }) {
     <div className="cx-tl__axis" aria-hidden="true">
       <span className="cx-tl__fmt" />
       <span className="cx-tl__rail">
-        <span className="cx-tl__start">{graph.startLabel}</span>
+        <span className="cx-tl__start">Start · {graph.startLabel}</span>
         {graph.todayPercent != null ? (
           <span className="cx-tl__now" style={{ left: `${graph.todayPercent}%` }}>
             Today
           </span>
         ) : null}
-        <span className="cx-tl__end">{graph.endLabel}</span>
+        <span className="cx-tl__end">End · {graph.endLabel}</span>
       </span>
     </div>
   );
@@ -174,17 +176,28 @@ function TrackRow({
 function Checkpoint({ checkpoint }: { checkpoint: CampaignProgressCheckpoint }) {
   const className = `cx-tl__dot cx-tl__dot--${checkpoint.tone}`;
   const style = { left: `${checkpoint.percent}%` };
+  const date = checkpoint.showLabel ? (
+    <span className="cx-tl__d">{checkpoint.label}</span>
+  ) : null;
   if (checkpoint.contentUrl) {
     return (
       <a
-        className={className}
+        className="cx-tl__mark"
         href={checkpoint.contentUrl}
         target="_blank"
         rel="noopener noreferrer"
         style={style}
         title={checkpoint.title}
-      />
+      >
+        <span className={className} />
+        {date}
+      </a>
     );
   }
-  return <span className={className} style={style} title={checkpoint.title} />;
+  return (
+    <span className="cx-tl__mark" style={style} title={checkpoint.title}>
+      <span className={className} />
+      {date}
+    </span>
+  );
 }

@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import { emptyClientCampaignPerformance, type ClientCampaignPostRow } from "./campaign-execution";
 import {
+  campaignProgressRangeCopy,
   dateToCampaignPercent,
   projectCampaignProgressGraph,
   resolveCampaignProgressWindow,
@@ -80,11 +81,18 @@ test("progress graph stacks creators, one line per type, and fills through live 
   assert.ok(graph);
   assert.equal(graph.startDate, "2026-08-01");
   assert.equal(graph.endDate, "2026-08-31");
+  assert.equal(graph.startLabel, "1 Aug");
+  assert.equal(graph.endLabel, "31 Aug");
+  assert.equal(graph.startFullLabel, "1 Aug 2026");
+  assert.equal(graph.endFullLabel, "31 Aug 2026");
   assert.equal(graph.creators.length, 2);
   const omar = graph.creators.find((creator) => creator.creatorName === "@omar_dem");
   assert.equal(omar?.tracks.length, 2);
   const stories = omar?.tracks.find((track) => track.format === "IG Story");
   assert.equal(stories?.checkpoints.length, 2);
+  assert.equal(stories?.checkpoints[0]?.label, "10 Aug");
+  assert.equal(stories?.checkpoints[0]?.showLabel, true);
+  assert.equal(stories?.checkpoints[1]?.label, "20 Aug");
   assert.equal(stories?.reachedCount, 1);
   assert.equal(stories?.checkpoints[0]?.reached, true);
   assert.ok((stories?.filledPercent ?? 0) > 4);
@@ -134,6 +142,10 @@ test("same-day ads on one type stay as separate checkpoints", () => {
   });
   const dots = graph?.creators[0]?.tracks[0]?.checkpoints ?? [];
   assert.equal(dots.length, 3);
+  assert.equal(dots[0]?.label, "14 Aug");
+  assert.equal(dots[0]?.showLabel, true);
+  assert.equal(dots[1]?.showLabel, false);
+  assert.equal(dots[2]?.showLabel, false);
   assert.ok((dots[1]?.percent ?? 0) > (dots[0]?.percent ?? 0));
   assert.ok((dots[2]?.percent ?? 0) > (dots[1]?.percent ?? 0));
 });
@@ -142,4 +154,11 @@ test("date percent sits between campaign start and end terminals", () => {
   const mid = dateToCampaignPercent("2026-08-16", "2026-08-01", "2026-08-31");
   assert.ok(mid > 4);
   assert.ok(mid < 96);
+});
+
+test("range copy names start and end dates", () => {
+  assert.equal(
+    campaignProgressRangeCopy("1 Aug 2026", "31 Aug 2026"),
+    "Start 1 Aug 2026 · End 31 Aug 2026"
+  );
 });

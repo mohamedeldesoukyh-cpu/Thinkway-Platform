@@ -212,18 +212,18 @@ export function CampaignDashboard({
         )}
       </section>
 
-      <CampaignPublicationPlan
-        posts={posts}
-        creators={creators}
-        token={token}
-        focusOverdue={overdueFocus}
-      />
       <CampaignProgressGraph
         posts={posts}
         startDate={campaignStartDate}
         endDate={campaignEndDate}
         creators={creators}
         token={token}
+      />
+      <CampaignPublicationPlan
+        posts={posts}
+        creators={creators}
+        token={token}
+        focusOverdue={overdueFocus}
       />
     </>
   );
