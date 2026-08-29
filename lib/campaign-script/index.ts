@@ -142,6 +142,8 @@ export {
   documentationUnitScriptActionLabels,
   documentationUnitScriptSheetTitle,
   documentationUnitSummaryForClientPost,
+  scriptPreviewBlocks,
+  scriptWordCount,
   isLegacyUnattachedCampaignScript,
 } from "./documentation-unit-ui";
 export type {

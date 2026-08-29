@@ -125,6 +125,21 @@ export function documentationUnitScriptSheetTitle(
   return `Script · ${documentationSlotTitle(unit)}`;
 }
 
+export function scriptWordCount(text: string): number {
+  const trimmed = text.trim();
+  return trimmed ? trimmed.split(/\s+/).length : 0;
+}
+
+export function scriptPreviewBlocks(text: string): Array<{ cue: string | null; text: string }> {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+  return trimmed.split(/\n{2,}/).map((part) => {
+    const match = /^\[([^\]]+)\]\s*\n?/.exec(part);
+    if (!match) return { cue: null, text: part };
+    return { cue: match[1], text: part.slice(match[0].length).trimStart() };
+  });
+}
+
 export type ClientPostDocumentationScriptUnit = {
   assignmentDeliverableId: string;
   assignmentPostScheduleId: string | null;

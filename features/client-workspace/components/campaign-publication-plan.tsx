@@ -462,6 +462,17 @@ export function CampaignPublicationPlan({
         token={token}
         unit={scriptSheetUnit}
         intent={scriptSheet?.intent ?? "edit"}
+        headerAvatar={
+          scriptSheet ? (
+            <PublicationPlanAvatar
+              name={scriptSheet.post.creatorName}
+              avatarUrl={scriptSheet.post.avatarUrl}
+              index={0}
+              token={token}
+              creators={creators}
+            />
+          ) : null
+        }
         onPresenceChange={(unitKey, presence) => {
           setScriptPresence((current) => {
             const next = new Map(current);
