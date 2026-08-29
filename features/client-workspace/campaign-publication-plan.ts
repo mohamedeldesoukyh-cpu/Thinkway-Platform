@@ -173,12 +173,9 @@ export function groupPublicationPlanByCreator(
     });
 }
 
-export function defaultExpandedCreators(groups: CreatorPublicationGroup[]): string[] {
-  return groups
-    .filter((group) =>
-      group.posts.some((post) => post.status === "overdue" || post.status === "live")
-    )
-    .map((group) => group.creatorName);
+/** Creator groups stay collapsed until the client expands a row (or the overdue CTA). */
+export function defaultExpandedCreators(_groups: CreatorPublicationGroup[]): string[] {
+  return [];
 }
 
 export function publicationPlanFilterCounts(posts: ClientCampaignPostRow[]): Record<

@@ -9,6 +9,13 @@ const IN_FLIGHT_SYNC_STATUS_SET = new Set<string>(IN_FLIGHT_SYNC_STATUSES);
 
 const METRICS_DONE_STATUSES = new Set(["completed", "partial"]);
 
+const TERMINAL_METRICS_SYNC_STATUSES = new Set([
+  "completed",
+  "partial",
+  "failed",
+  "manual_required",
+]);
+
 /** Keep polling briefly after metrics finish while screenshot capture may still be running. */
 export const SCREENSHOT_CAPTURE_POLL_WINDOW_MS = 10 * 60 * 1000;
 
@@ -110,6 +117,27 @@ export function shouldShowMetricsSyncLoadingToast(
   nextStatus: string | null | undefined
 ): boolean {
   return isSyncInFlight(nextStatus) && !isSyncInFlight(priorStatus);
+}
+
+export function isMetricsSyncTerminalStatus(status?: string | null): boolean {
+  return status != null && TERMINAL_METRICS_SYNC_STATUSES.has(status);
+}
+
+/**
+ * Finish a loading toast when metrics reach a terminal status.
+ * `toastWasShown` covers the race where Refresh metrics shows a spinner, then the
+ * first observed row is already completed/manual/failed (hook remount or fast worker).
+ * Do not complete on first page load of already-terminal rows (`toastWasShown` false
+ * and no in-flight prior).
+ */
+export function shouldCompleteMetricsSyncToast(input: {
+  priorStatus: string | null | undefined;
+  nextStatus: string | null | undefined;
+  toastWasShown: boolean;
+}): boolean {
+  if (!isMetricsSyncTerminalStatus(input.nextStatus)) return false;
+  if (input.toastWasShown) return true;
+  return input.priorStatus != null && isSyncInFlight(input.priorStatus);
 }
 
 /** Default client poll interval while metrics jobs are in flight. */

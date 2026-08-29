@@ -1,9 +1,8 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Client Campaign tab script drawer + publication-plan header from the HTML mock.
+**Focus:** Client Campaign publication plan collapsed by default; Campaign Performance Refresh metrics toasts complete on terminal status.
 
-- Publication plan keeps live `ReviewAvatar` photos (not initials-only).
-- Table header is light `#f6f8fb` (not the dark grey bar).
-- Add / Upload / Preview script open one Client drawer: Preview | Edit, one empty state, one original/translation editor.
-- Development only. Do not ship Production unless asked.
+- Creators and go-live groups stay collapsed until the client expands a row (or uses the overdue CTA).
+- Refresh metrics loading toasts finish when the first observed status is already completed / manual / failed (remount or fast worker race).
+- Dual ship: Development (`develop`) then Production (`main`) after this change.
