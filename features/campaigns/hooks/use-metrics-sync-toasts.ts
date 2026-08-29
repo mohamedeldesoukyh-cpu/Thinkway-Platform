@@ -5,16 +5,12 @@ import { toast } from "sonner";
 
 import type { CampaignPublicationRow } from "@/features/campaigns/queries/publications";
 import {
-  isSyncInFlight,
+  shouldCompleteMetricsSyncToast,
   shouldShowMetricsSyncLoadingToast,
 } from "@/features/campaigns/hooks/metrics-sync-poll-policy";
 
-const TERMINAL_METRICS_SYNC_STATUSES = new Set([
-  "completed",
-  "partial",
-  "failed",
-  "manual_required",
-]);
+/** Survives hook remount so Refresh metrics loading toasts can still complete. */
+const pendingMetricsSyncToastIds = new Set<string>();
 
 export function metricsSyncToastId(publicationId: string): string {
   return `metrics-sync-${publicationId}`;
@@ -24,6 +20,7 @@ export function notifyMetricsSyncQueued(
   publicationId: string,
   label?: string | null
 ): void {
+  pendingMetricsSyncToastIds.add(publicationId);
   const name = label?.trim();
   toast.loading(name ? `Collecting metrics for ${name}…` : "Collecting metrics…", {
     id: metricsSyncToastId(publicationId),
@@ -32,6 +29,20 @@ export function notifyMetricsSyncQueued(
 
 function publicationLabel(row: Pick<CampaignPublicationRow, "influencer_name" | "platform_label">): string {
   return row.influencer_name?.trim() || row.platform_label || "Publication";
+}
+
+function completeMetricsSyncToast(toastId: string, status: string, label: string): void {
+  if (status === "completed" || status === "partial") {
+    toast.success(`Metrics updated for ${label}.`, { id: toastId });
+    return;
+  }
+  if (status === "failed") {
+    toast.error(`Metrics collection failed for ${label}.`, { id: toastId });
+    return;
+  }
+  toast.info(`Metrics sync finished for ${label} (${status.replace(/_/g, " ")}).`, {
+    id: toastId,
+  });
 }
 
 /**
@@ -54,24 +65,19 @@ export function useMetricsSyncCompletionToasts(
       const label = publicationLabel(row);
 
       if (shouldShowMetricsSyncLoadingToast(prior, status)) {
+        pendingMetricsSyncToastIds.add(id);
         toast.loading(`Collecting metrics for ${label}…`, { id: toastId });
       }
 
       if (
-        prior != null &&
-        isSyncInFlight(prior) &&
-        status != null &&
-        TERMINAL_METRICS_SYNC_STATUSES.has(status)
+        shouldCompleteMetricsSyncToast({
+          priorStatus: prior,
+          nextStatus: status,
+          toastWasShown: pendingMetricsSyncToastIds.has(id),
+        })
       ) {
-        if (status === "completed" || status === "partial") {
-          toast.success(`Metrics updated for ${label}.`, { id: toastId });
-        } else if (status === "failed") {
-          toast.error(`Metrics collection failed for ${label}.`, { id: toastId });
-        } else {
-          toast.info(`Metrics sync finished for ${label} (${status.replace(/_/g, " ")}).`, {
-            id: toastId,
-          });
-        }
+        completeMetricsSyncToast(toastId, status as string, label);
+        pendingMetricsSyncToastIds.delete(id);
       }
 
       previous.set(id, status);

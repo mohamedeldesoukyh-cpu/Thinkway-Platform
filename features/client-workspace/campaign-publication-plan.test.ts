@@ -63,7 +63,7 @@ test("documentation units with scripts stay as separate publication-plan rows", 
   assert.equal(groups[0]?.folded.every((item) => item.count === 1), true);
 });
 
-test("creators with live or overdue rows expand by default", () => {
+test("publication plan creator groups stay collapsed by default", () => {
   const groups = groupPublicationPlanByCreator([
     row({ id: "1", creatorName: "@omar_dem", status: "scheduling" }),
     row({
@@ -81,7 +81,7 @@ test("creators with live or overdue rows expand by default", () => {
       scheduledDate: "2026-08-13",
     }),
   ]);
-  assert.deepEqual(defaultExpandedCreators(groups), ["@nadineladki14"]);
+  assert.deepEqual(defaultExpandedCreators(groups), []);
 });
 
 test("publication plan filters and search match the campaign table", () => {

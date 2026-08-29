@@ -25,7 +25,6 @@ import {
 import { matchClientCreatorByName } from "../campaign-tab-aggregates";
 import {
   CLIENT_CAMPAIGN_POST_STATUS_LABEL,
-  defaultExpandedCreators,
   filterPublicationPlanPosts,
   groupPublicationPlanByCreator,
   publicationPlanFilterCounts,
@@ -175,7 +174,6 @@ export function CampaignPublicationPlan({
   const [format, setFormat] = useState("all");
   const [view, setView] = useState<PublicationPlanViewMode>("grouped");
   const [opened, setOpened] = useState<Set<string>>(() => new Set());
-  const [closed, setClosed] = useState<Set<string>>(() => new Set());
   const [scriptPresence, setScriptPresence] = useState<Map<string, CampaignScriptUnitPresence>>(
     () => new Map()
   );
@@ -194,12 +192,10 @@ export function CampaignPublicationPlan({
     [posts, filter, query, format]
   );
   const groups = useMemo(() => groupPublicationPlanByCreator(visible), [visible]);
-  const defaultOpen = useMemo(() => new Set(defaultExpandedCreators(groups)), [groups]);
   const scriptSheetUnit = scriptSheet ? clientScriptUnitFromPost(scriptSheet.post) : null;
 
   function isOpen(name: string) {
-    if (closed.has(name)) return false;
-    return opened.has(name) || defaultOpen.has(name);
+    return opened.has(name);
   }
 
   useEffect(() => {
@@ -224,11 +220,6 @@ export function CampaignPublicationPlan({
     setOpened((current) => {
       const next = new Set(current);
       for (const name of names) next.add(name);
-      return next;
-    });
-    setClosed((current) => {
-      const next = new Set(current);
-      for (const name of names) next.delete(name);
       return next;
     });
     document.getElementById("publication-plan")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -269,21 +260,12 @@ export function CampaignPublicationPlan({
   }
 
   function toggle(creatorName: string) {
-    if (isOpen(creatorName)) {
-      setOpened((current) => {
-        const next = new Set(current);
-        next.delete(creatorName);
-        return next;
-      });
-      setClosed((current) => new Set(current).add(creatorName));
-      return;
-    }
-    setClosed((current) => {
+    setOpened((current) => {
       const next = new Set(current);
-      next.delete(creatorName);
+      if (next.has(creatorName)) next.delete(creatorName);
+      else next.add(creatorName);
       return next;
     });
-    setOpened((current) => new Set(current).add(creatorName));
   }
 
   return (

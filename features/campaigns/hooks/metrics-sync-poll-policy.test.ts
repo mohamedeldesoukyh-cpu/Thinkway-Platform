@@ -10,6 +10,7 @@ import {
   SCREENSHOT_CAPTURE_POLL_INTERVAL_MS,
   SCREENSHOT_CAPTURE_POLL_WINDOW_MS,
   AVATAR_SYNC_POLL_WINDOW_MS,
+  shouldCompleteMetricsSyncToast,
   shouldShowMetricsSyncLoadingToast,
   type PublicationSyncPollRow,
 } from "@/features/campaigns/hooks/metrics-sync-poll-policy";
@@ -211,6 +212,51 @@ assert.equal(shouldShowMetricsSyncLoadingToast("queued", "collecting"), false);
 assert.equal(shouldShowMetricsSyncLoadingToast("collecting", "collecting"), false);
 assert.equal(shouldShowMetricsSyncLoadingToast(null, "pending"), false);
 assert.equal(shouldShowMetricsSyncLoadingToast("completed", "queued"), true);
+
+// --- Complete loading toast on terminal status, including remount / first-observation race ---
+assert.equal(
+  shouldCompleteMetricsSyncToast({
+    priorStatus: "queued",
+    nextStatus: "completed",
+    toastWasShown: false,
+  }),
+  true,
+  "in-flight prior to completed should finish the toast"
+);
+assert.equal(
+  shouldCompleteMetricsSyncToast({
+    priorStatus: undefined,
+    nextStatus: "completed",
+    toastWasShown: true,
+  }),
+  true,
+  "Refresh metrics spinner must finish even if first observed status is already terminal"
+);
+assert.equal(
+  shouldCompleteMetricsSyncToast({
+    priorStatus: undefined,
+    nextStatus: "manual_required",
+    toastWasShown: true,
+  }),
+  true
+);
+assert.equal(
+  shouldCompleteMetricsSyncToast({
+    priorStatus: undefined,
+    nextStatus: "completed",
+    toastWasShown: false,
+  }),
+  false,
+  "page load of already-completed rows must not toast success"
+);
+assert.equal(
+  shouldCompleteMetricsSyncToast({
+    priorStatus: "collecting",
+    nextStatus: "collecting",
+    toastWasShown: true,
+  }),
+  false
+);
 
 // --- Completed metrics without screenshot use separate slower poll ---
 const recentAttempt = new Date(Date.now() - 60_000).toISOString();
