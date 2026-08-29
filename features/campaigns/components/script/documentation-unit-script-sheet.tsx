@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { toast } from "sonner";
 import {
   ChevronDownIcon,
@@ -46,6 +46,7 @@ import {
   saveClientCampaignScriptForUnitAction,
   translateClientCampaignScriptForUnitAction,
 } from "@/features/client-workspace/actions/campaign-script-actions";
+import { ClientScriptDrawer } from "@/features/client-workspace/components/client-script-drawer";
 import { documentationSlotTitle } from "@/lib/services/deliverables/documentation-list-groups";
 import type { DocumentationUnitSummary } from "@/lib/services/deliverables/documentation-types";
 import {
@@ -55,6 +56,7 @@ import {
   campaignScriptDownloadText,
   documentationUnitScriptSheetTitle,
   formatScriptCurrentLabel,
+  formatScriptTimestamp,
   isHumanTranslationStale,
   mergeExtractedScriptText,
   resolveScriptOrigins,
@@ -118,6 +120,7 @@ type Props = {
   campaignId?: string;
   token?: string;
   surface?: "internal" | "client";
+  headerAvatar?: ReactNode;
   unit: DocumentationUnitSummary | null;
   intent: DocumentationUnitScriptIntent;
   onPresenceChange: (
@@ -138,6 +141,7 @@ export function DocumentationUnitScriptSheet({
   campaignId = "",
   token = "",
   surface = "internal",
+  headerAvatar,
   unit,
   intent,
   onPresenceChange,
@@ -471,6 +475,118 @@ export function DocumentationUnitScriptSheet({
   const statusTone = !script ? "mut" : dirty ? "amber" : "green";
   const statusLabel = !script ? "No script yet" : dirty ? "Unsaved changes" : "Current";
   const previewBody = previewLanguage === "en" ? draft.bodyEn : draft.bodyAr;
+  const hasAny = Boolean(draft.bodyEn.trim() || draft.bodyAr.trim());
+  const requestClose = useCallback(() => {
+    if (dirty && !window.confirm("You have unsaved changes. Close anyway?")) return;
+    onOpenChange(false);
+  }, [dirty, onOpenChange]);
+  const clientStatus =
+    !hasAny && !dirty
+      ? { className: "cx-pill--old", label: "No script yet" }
+      : dirty
+        ? { className: "cx-pill--pend", label: "Unsaved changes" }
+        : translating
+          ? { className: "cx-pill--pend", label: "Translation pending" }
+          : script?.translationStatus === "failed"
+            ? { className: "cx-pill--pend", label: "Translation failed" }
+            : { className: "cx-pill--cur", label: "Current" };
+
+  const fileInput = (
+    <input
+      ref={fileRef}
+      type="file"
+      accept=".txt,.md,.docx,.pdf,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      className="sr-only"
+      onChange={(event) => {
+        onUpload(event.target.files?.[0]);
+        event.target.value = "";
+      }}
+    />
+  );
+
+  if (clientMode) {
+    return (
+      <ClientScriptDrawer
+        open={open}
+        onClose={requestClose}
+        loading={loading}
+        pending={pending}
+        dirty={dirty}
+        mode={mode}
+        onModeChange={setMode}
+        headerAvatar={headerAvatar ?? null}
+        unit={unit}
+        creatorName={unit?.creatorName?.trim() || "Creator"}
+        statusClass={clientStatus.className}
+        statusLabel={clientStatus.label}
+        version={script?.businessVersion ?? null}
+        uploadedBy={
+          script?.actorLabel ??
+          (script?.actorKind === "client" ? "Client" : script ? "Thinkway" : null)
+        }
+        uploadedWhen={script ? formatScriptTimestamp(script.createdAt) : null}
+        hasAny={hasAny}
+        previewLanguage={previewLanguage}
+        onPreviewLanguageChange={setPreviewLanguage}
+        sourceLanguage={draft.sourceLanguage}
+        onSourceLanguageChange={(language) => onSourceLanguageChange(language)}
+        bodyEn={draft.bodyEn}
+        bodyAr={draft.bodyAr}
+        onSourceBodyChange={(value) =>
+          setDraft((current) =>
+            current.sourceLanguage === "ar"
+              ? { ...current, bodyAr: value }
+              : { ...current, bodyEn: value }
+          )
+        }
+        replaceBothLanguages={replaceBothLanguages}
+        onReplaceBothLanguagesChange={setReplaceBothLanguages}
+        onUploadClick={() => fileRef.current?.click()}
+        onSave={() => save(conflict?.currentRevisionId ?? expectedRevisionId)}
+        onDownload={downloadSelected}
+        onRetry={retryTarget ? () => translateTo(retryTarget, true) : undefined}
+        translationFailed={script?.translationStatus === "failed"}
+        translationTitle={
+          script?.translationStatus === "failed"
+            ? "Automatic translation is temporarily unavailable"
+            : null
+        }
+        translationMessage={translationBanner}
+        translationDetail={script?.translationError ?? null}
+        mixedLanguage={mixedLanguage}
+        conflict={
+          conflict ? (
+            <div className="cx-alert">
+              <span className="cx-alert__ic">!</span>
+              <span className="cx-alert__b">
+                <span className="cx-alert__t">A newer version was saved</span>
+                <span className="cx-alert__s">
+                  {scriptConflictActorLabel(conflict.actorKind, conflict.actorLabel)} saved a newer
+                  version ({formatScriptCurrentLabel(conflict)}). Load it, or save your draft as the
+                  new current script.
+                </span>
+                <span className="cx-alert__acts">
+                  <button type="button" className="btn btn-sm" onClick={() => applyScript(conflict)}>
+                    Load latest
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-primary"
+                    disabled={pending}
+                    onClick={() => save(conflict.currentRevisionId)}
+                  >
+                    Save my draft
+                  </button>
+                </span>
+              </span>
+            </div>
+          ) : null
+        }
+        fileInput={fileInput}
+        translating={translating}
+      />
+    );
+  }
 
   return (
     <OperationalDetailSheet

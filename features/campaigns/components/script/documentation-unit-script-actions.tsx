@@ -74,7 +74,7 @@ export function DocumentationUnitScriptActions({
     const button = client ? (
       <button
         type="button"
-        className={CLIENT_ICON_BUTTON_CLASS}
+        className={cn(CLIENT_ICON_BUTTON_CLASS, hasScript && hint === labels.secondary && "is-on")}
         disabled={blocked}
         aria-label={title}
         onClick={(event) => {

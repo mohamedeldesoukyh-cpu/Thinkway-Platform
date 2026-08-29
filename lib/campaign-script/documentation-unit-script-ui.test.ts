@@ -12,6 +12,8 @@ import {
   documentationUnitCanHoldScript,
   documentationUnitScriptActionLabels,
   isLegacyUnattachedCampaignScript,
+  scriptPreviewBlocks,
+  scriptWordCount,
 } from "./documentation-unit-ui";
 import { campaignScriptUnitKey } from "./unit";
 
@@ -311,6 +313,52 @@ test("Client UI attaches Script to publication-plan units and hides campaign-lev
   assert.match(sheet, /saveClientCampaignScriptForUnitAction/);
   assert.match(sheet, /translateClientCampaignScriptForUnitAction/);
   assert.match(sheet, /surface\?: "internal" \| "client"/);
+  assert.match(sheet, /ClientScriptDrawer/);
+  assert.match(sheet, /headerAvatar/);
+  assert.match(plan, /ReviewAvatar/);
+  assert.match(plan, /headerAvatar/);
+});
+
+test("script preview splits cue blocks and counts words", () => {
+  assert.equal(scriptWordCount("one two  three"), 3);
+  assert.equal(scriptWordCount("  "), 0);
+  const blocks = scriptPreviewBlocks("[Script]\nHello world\n\nNext paragraph");
+  assert.equal(blocks.length, 2);
+  assert.equal(blocks[0]?.cue, "Script");
+  assert.equal(blocks[0]?.text, "Hello world");
+  assert.equal(blocks[1]?.cue, null);
+});
+
+test("Client script drawer matches the Campaign tab mock and keeps one editor", () => {
+  const drawer = readFileSync(
+    resolve("features/client-workspace/components/client-script-drawer.tsx"),
+    "utf8"
+  );
+  const css = readFileSync(
+    resolve("features/client-workspace/styles/client-review-ref.css"),
+    "utf8"
+  );
+  const sheet = readFileSync(
+    resolve("features/campaigns/components/script/documentation-unit-script-sheet.tsx"),
+    "utf8"
+  );
+  assert.match(drawer, /className="cx-dw"/);
+  assert.match(drawer, /No script on this deliverable yet/);
+  assert.match(drawer, /Overwrite existing translation/);
+  assert.match(drawer, /Original language/);
+  assert.equal(drawer.includes("No script on this unit yet"), false);
+  assert.equal(drawer.split("className=\"cx-ed\"").length - 1, 1);
+  assert.equal(drawer.split("No script on this deliverable yet").length - 1, 1);
+  assert.match(css, /background:#f6f8fb !important/);
+  assert.match(css, /\.cx-dw\{/);
+  assert.match(css, /\.cx-ed__panes\{display:grid;grid-template-columns:1fr 1fr\}/);
+  const clientStart = sheet.indexOf("if (clientMode)");
+  const internalStart = sheet.indexOf("<OperationalDetailSheet");
+  assert.ok(clientStart >= 0 && internalStart > clientStart);
+  const clientBlock = sheet.slice(clientStart, internalStart);
+  assert.match(clientBlock, /ClientScriptDrawer/);
+  assert.equal(clientBlock.includes("<OperationalDetailSheet"), false);
+  assert.equal(clientBlock.includes("ScriptLanguageField"), false);
 });
 
 test("Campaign tab script actions stay compact on mobile", () => {
