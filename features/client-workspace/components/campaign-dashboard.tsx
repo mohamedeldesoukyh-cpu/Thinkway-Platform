@@ -20,6 +20,7 @@ import { clientContentToReview, type ClientContentReviewItem } from "../content-
 import { ContentToReview } from "./content-to-review";
 import { CampaignPublicationPlan } from "./campaign-publication-plan";
 import { CampaignProgressGraph } from "./campaign-progress-graph";
+import { CampaignScriptSection } from "./campaign-script-section";
 import { clientWorkspaceVersionPill } from "../journey-state";
 import type { ClientCreatorCard } from "../types";
 
@@ -91,6 +92,7 @@ export function CampaignDashboard({
           <h2>{campaignName}</h2>
           <p className="note">{CAMPAIGN_SETUP_IN_PROGRESS_COPY}</p>
         </div>
+        <CampaignScriptSection token={token} />
         {contentSection}
       </>
     );
@@ -167,6 +169,7 @@ export function CampaignDashboard({
         ) : null}
       </section>
 
+      <CampaignScriptSection token={token} />
       {contentSection}
 
       <section className="card">

@@ -1,7 +1,7 @@
 # Platform Capability Registry
 
 **Status:** Permanent governance registry — **canonical**  
-**Updated:** 2026-08-02 — Release 2.3 Sprint 3 **Enterprise Planning Package FROZEN · Maintenance Mode** (protected Studio baseline)  
+**Updated:** 2026-08-29 — Campaign Script Phase 3 Internal UI (Assignments apply/status/open)  
 **Parent:** [`PLATFORM_ARCHITECTURE_COMPLIANCE.md`](./PLATFORM_ARCHITECTURE_COMPLIANCE.md)  
 **Studio Product Constitution:** [`STUDIO_CAPABILITY_CONTRACT.md`](./STUDIO_CAPABILITY_CONTRACT.md) — **FROZEN · Maintenance Mode · COMPLETE** (Mission · Success Criteria · Product Promise · capability categories · Golden Rules)  
 **Studio protected baseline:** Release 2.3 Sprint 3 — **Enterprise Planning Package** (**FROZEN · Maintenance Mode · COMPLETE**)
@@ -19,6 +19,7 @@ Every future enterprise module must **extend** registered capabilities. Parallel
 | **Enterprise Change Impact Engine** | **Maintenance Mode · frozen · protected · mandatory** | `lib/change-impact/` | [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md) · [`ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md`](./ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md) | Every business-change interpretation |
 | **Enterprise Creator Intelligence** | **Maintenance Mode · frozen · protected · COMPLETE** | `lib/enterprise-creator-intelligence/` | [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) | Planning · Client · Campaign · Reporting · Analytics · AI hooks · Mobile |
 | **Studio Governance** | **Maintenance Mode · frozen · protected · COMPLETE** | `features/campaign-studio/strategy-engine/` · Studio UX | [`STUDIO_CAPABILITY_CONTRACT.md`](./STUDIO_CAPABILITY_CONTRACT.md) · Strategy Engine governance rule | All Studio / Enterprise Planning work |
+| **Campaign Script** | **Active · Phase 3 Internal UI** | `lib/campaign-script/` | This registry · Campaign Workspace Deliverables register · Assignments apply/status · Client Campaign tab | Campaign Workspace · Client Workspace · future Creator Portal (read assigned only) |
 
 ### Protected planning standards (not Platform Capabilities)
 
@@ -310,3 +311,21 @@ Platform creator time-series and intelligence for Studio (Enterprise Planning), 
 ### Spec
 
 [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · [`STUDIO_CAPABILITY_CONTRACT.md`](./STUDIO_CAPABILITY_CONTRACT.md) · [`ENTERPRISE_PLANNING_DECISION_NARRATIVE.md`](./ENTERPRISE_PLANNING_DECISION_NARRATIVE.md) · `features/campaign-studio/services/planning-narrative.ts`
+
+---
+
+## Campaign Script (Active · Phase 3 Internal UI)
+
+**Canonical entry:** `loadCampaignScriptMaster` / `saveCampaignScriptMaster` / `applyMasterScriptToLineIds` (`lib/campaign-script/`)
+**Lifecycle:** S11 Deliverables (content production input)
+**Workspaces:** Campaign Workspace Deliverables register (no new tab) · Client Workspace Campaign tab section
+**Studio:** must not own this. Execution capability.
+
+One `campaign_scripts` row per campaign. Append-only `campaign_script_revisions`. Internal and Client read/write the same current revision (`current_revision_id` compare-and-swap). Text is SSOT; uploaded files are parsed into text. Arabic/English both editable; source vs translation is stored per revision (`source` · `generated` · `human_edited`).
+
+Phase 2: translation is user-initiated from **Translate** in the bilingual editor (`campaign-script-translate` on the discovery-worker). Saving never queues translation. Empty or `generated` targets may be translated when the user chooses a language. `human_edited` translations are never overwritten unless the user confirms. Translation-only revisions increment `revision_number` but keep the same business version.
+
+Phase 3 (Internal UI): Assignments floating bar **Apply Campaign Script** uses Platform Bulk + `applyMasterScriptToLineIds` (selected lines expand to unique creators). Script status sits on the assignment cell. **Open** opens a creator-context sheet (inherited = live master, customized = override editor + Translate + confirmed Re-apply Master). Client still loads master only.
+
+Do **not** store the campaign script in `deliverable_assets`. Do **not** run scripts through Document Lifecycle.
+

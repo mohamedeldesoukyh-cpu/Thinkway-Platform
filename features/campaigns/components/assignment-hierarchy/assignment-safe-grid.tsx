@@ -87,6 +87,7 @@ import {
   resolveAssignmentLineCurrencyDisplay,
 } from "@/lib/campaigns/assignment-line-currency";
 import { formatPercent } from "@/features/campaigns/utils";
+import { cn } from "@/lib/utils";
 import { computeClientBilling } from "@/lib/assignments/client-billing-commercial";
 import type { OperationalSelectionPayload } from "@/lib/billing/operational-selection";
 import {
@@ -94,7 +95,10 @@ import {
   useOperationalColumnVisibleChecker,
   useOperationalVisibleColumnCount,
 } from "@/components/tables/operational-table-column-context";
-import { cn } from "@/lib/utils";
+import { AssignmentScriptStatusPill } from "@/features/campaigns/components/script/assignment-script-status-pill";
+import { showErrorToastOnce } from "@/lib/ui/toast-once";
+import { listCampaignScriptAssignmentStatusesAction } from "@/features/campaigns/actions/campaign-script-actions";
+import type { CreatorScriptStatusView } from "@/lib/campaign-script";
 import {
   getCreatorConnectedPlatformOptions,
   getDeliverableTypeCodesForPlatform,
@@ -109,6 +113,12 @@ type AssignmentSafeGridProps = {
     group: AssignmentHierarchyGroup,
     row: AssignmentRowViewModel
   ) => void;
+  onOpenCreatorScript?: (input: {
+    influencerId: string | null;
+    creatorName: string;
+    lineId: string;
+  }) => void;
+  scriptStatusNonce?: number;
   onInvoiceLines?: (selection: OperationalSelectionPayload) => void;
   onCreateAssignment?: () => void;
 };
@@ -141,6 +151,8 @@ export function AssignmentSafeGrid({
   campaignPoExceeded = false,
   onEditLine,
   onOpenInfluencerDetail,
+  onOpenCreatorScript,
+  scriptStatusNonce = 0,
   onInvoiceLines,
   onCreateAssignment,
 }: AssignmentSafeGridProps) {
@@ -148,6 +160,10 @@ export function AssignmentSafeGrid({
   const gridEdit = useAssignmentGridEditSession();
   const router = useRouter();
   const [pendingAdd, startAddTransition] = useTransition();
+  const [scriptStatusEpoch, setScriptStatusEpoch] = useState(0);
+  const [scriptStatuses, setScriptStatuses] = useState<Map<string, CreatorScriptStatusView>>(
+    () => new Map()
+  );
   const gates = resolveAssignmentsGridGates(audienceView);
   const col = useOperationalColumnVisibleChecker();
   const childCol = useOperationalChildColumnVisibleChecker();
@@ -171,6 +187,27 @@ export function AssignmentSafeGrid({
     campaignId,
     groups: hierarchy.groups?.length ?? 0,
   });
+
+  useEffect(() => {
+    if (audienceView !== "internal") {
+      setScriptStatuses(new Map());
+      return;
+    }
+    let cancelled = false;
+    void listCampaignScriptAssignmentStatusesAction({ campaignId }).then((result) => {
+      if (cancelled) return;
+      if (!result.ok) {
+        showErrorToastOnce(result.message, { id: "assignment-script-status" });
+        return;
+      }
+      setScriptStatuses(
+        new Map(result.data.statuses.map((status) => [status.influencerId, status]))
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [audienceView, campaignId, hierarchy.groups?.length, scriptStatusEpoch, scriptStatusNonce]);
 
   const sanitized = useMemo(
     () => sanitizeAssignmentHierarchy(hierarchy, { campaignId }),
@@ -656,6 +693,36 @@ export function AssignmentSafeGrid({
                               ) : null}
                             </button>
                           </div>
+                          {audienceView === "internal" ? (
+                            <AssignmentScriptStatusPill
+                              status={
+                                line.influencer_id
+                                  ? scriptStatuses.get(line.influencer_id) ?? {
+                                      influencerId: line.influencer_id,
+                                      assignmentId: null,
+                                      state: "not_assigned",
+                                      versionLabel: "—",
+                                      alignmentNote: null,
+                                      actionLabel: "Assign",
+                                    }
+                                  : null
+                              }
+                              onOpen={() =>
+                                onOpenCreatorScript?.({
+                                  influencerId: line.influencer_id,
+                                  creatorName: line.influencer_name ?? row.displayName,
+                                  lineId: line.id,
+                                })
+                              }
+                              onAssign={() =>
+                                onOpenCreatorScript?.({
+                                  influencerId: line.influencer_id,
+                                  creatorName: line.influencer_name ?? row.displayName,
+                                  lineId: line.id,
+                                })
+                              }
+                            />
+                          ) : null}
                         </td>
                         ) : null}
                         {col("creator") ? (
@@ -865,7 +932,10 @@ export function AssignmentSafeGrid({
           hasInvoiceSelection={hasInvoiceSelection}
           invoiceActionLabel={invoiceActionLabel}
           ioCoverage={ioCoverage}
-          onAfterOperationalMutation={resetOperationalUiState}
+          onAfterOperationalMutation={() => {
+            resetOperationalUiState();
+            setScriptStatusEpoch((current) => current + 1);
+          }}
         />
       ) : null}
     </div>

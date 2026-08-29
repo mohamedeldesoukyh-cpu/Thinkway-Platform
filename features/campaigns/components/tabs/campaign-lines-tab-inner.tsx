@@ -59,6 +59,7 @@ import {
 import { AssignmentCommercialWorkspaceDialog } from "@/features/campaigns/components/assignment-commercial-workspace-dialog";
 import { AssignmentInfluencerDetailSheet } from "@/features/campaigns/components/assignment-hierarchy/assignment-influencer-detail-sheet";
 import { AssignmentSafeGrid } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-grid";
+import { CreatorScriptSheet } from "@/features/campaigns/components/script/creator-script-sheet";
 import type { AssignmentHierarchyGroup } from "@/features/campaigns/types/assignment-hierarchy";
 import { tryBuildAssignmentRowViewModel } from "@/lib/campaigns/assignment-row-view-model";
 import type { AssignmentAudienceView } from "@/lib/campaigns/assignment-audience-view";
@@ -138,6 +139,12 @@ export function CampaignLinesTabInner({
   const [detailLineId, setDetailLineId] = useState<string | null>(
     () => initialFocusLineId
   );
+  const [scriptTarget, setScriptTarget] = useState<{
+    influencerId: string | null;
+    creatorName: string;
+    lineId: string;
+  } | null>(null);
+  const [scriptStatusNonce, setScriptStatusNonce] = useState(0);
 
   useEffect(() => {
     if (!initialFocusLineId) return;
@@ -451,6 +458,8 @@ export function CampaignLinesTabInner({
                     campaignPoExceeded={workspace.financials.po_exceeded}
                     onEditLine={openEdit}
                     onOpenInfluencerDetail={(group) => setDetailLineId(group.line.id)}
+                    onOpenCreatorScript={setScriptTarget}
+                    scriptStatusNonce={scriptStatusNonce}
                     onInvoiceLines={openInvoiceWithLines}
                     onCreateAssignment={enableLineSheet ? openCreate : undefined}
                   />
@@ -483,6 +492,34 @@ export function CampaignLinesTabInner({
               }
             : undefined
         }
+        onOpenCreatorScript={
+          audienceView === "internal" && detailTarget
+            ? () => {
+                const line = detailTarget.group.line;
+                setDetailLineId(null);
+                setScriptTarget({
+                  influencerId: line.influencer_id,
+                  creatorName: line.influencer_name ?? detailTarget.row.displayName,
+                  lineId: line.id,
+                });
+              }
+            : undefined
+        }
+      />
+
+      <CreatorScriptSheet
+        open={scriptTarget != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setScriptTarget(null);
+            setScriptStatusNonce((current) => current + 1);
+          }
+        }}
+        campaignId={workspace.id}
+        influencerId={scriptTarget?.influencerId ?? null}
+        creatorName={scriptTarget?.creatorName ?? "Creator"}
+        lineId={scriptTarget?.lineId ?? null}
+        onChanged={() => setScriptStatusNonce((current) => current + 1)}
       />
 
       {enableLineSheet && sheetOpen ? (

@@ -23,6 +23,7 @@ import {
 import { countSelections } from "../status";
 import type { ClientWorkspaceView } from "../types";
 import { CampaignDashboard } from "./campaign-dashboard";
+import { CampaignScriptSection } from "./campaign-script-section";
 import { useClientWorkspaceState } from "./client-workspace-state";
 
 export function ApprovalWorkspace({
@@ -121,11 +122,14 @@ export function ApprovalWorkspace({
 
   if (kind === "setting_up") {
     return (
-      <div className="card">
-        <p className="ck">Campaign</p>
-        <h2>{view.overview.campaignName}</h2>
-        <p className="note">{CAMPAIGN_SETTING_UP_COPY}</p>
-      </div>
+      <>
+        <div className="card">
+          <p className="ck">Campaign</p>
+          <h2>{view.overview.campaignName}</h2>
+          <p className="note">{CAMPAIGN_SETTING_UP_COPY}</p>
+        </div>
+        {journey?.campaignHeaderId ? <CampaignScriptSection token={token} /> : null}
+      </>
     );
   }
 

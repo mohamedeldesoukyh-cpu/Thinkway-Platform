@@ -1,11 +1,12 @@
 "use client";
 
-import { FileStackIcon, FileTextIcon, GitBranchIcon, Undo2Icon } from "lucide-react";
+import { FileStackIcon, FileTextIcon, GitBranchIcon, ScrollTextIcon, Undo2Icon } from "lucide-react";
 import { useState, useTransition } from "react";
 import { showErrorToastOnce, showSuccessToastOnce } from "@/lib/ui/toast-once";
 import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 
 import { Button } from "@/components/ui/button";
+import { usePlatformBulkOperation } from "@/components/workspace/bulk-operations";
 import {
   OperationalFloatingActionBar,
   PlatformFloatingBarDivider,
@@ -38,6 +39,8 @@ import {
 import { formatMoney } from "@/features/campaigns/utils";
 import type { IoCoverageAnalysis } from "@/lib/operations/io-coverage";
 import { cn } from "@/lib/utils";
+import { ApplyCampaignScriptDialog } from "@/features/campaigns/components/script/apply-campaign-script-dialog";
+import { mutateApplyCampaignScriptToLine } from "@/features/campaigns/bulk/apply-campaign-script";
 
 const initialVioState: GenerateVendorIoState = { ok: false };
 const initialReviseState: ReviseVendorIoState = { ok: false };
@@ -118,12 +121,34 @@ export function FloatingSelectionBar({
   onAfterOperationalMutation,
 }: FloatingSelectionBarProps) {
   const refreshAfterOperationalMutation = useRefreshCampaignAfterOperationalMutation();
+  const { run, isRunning } = usePlatformBulkOperation();
   const [pending, startTransition] = useTransition();
   const [ungenerateOpen, setUngenerateOpen] = useState(false);
   const [reviseOpen, setReviseOpen] = useState(false);
   const [ungenerateReason, setUngenerateReason] = useState("");
   const [reviseReason, setReviseReason] = useState("");
+  const [applyScriptOpen, setApplyScriptOpen] = useState(false);
 
+  const busy = pending || isRunning;
+
+  function runApplyCampaignScript() {
+    void run({
+      label: "Apply Campaign Script",
+      items: selectedLineIds,
+      getId: (lineId) => lineId,
+      mutate: (lineId) =>
+        mutateApplyCampaignScriptToLine({ campaignId, lineId }),
+      entityLabel: "assignment",
+      entityLabelPlural: "assignments",
+      refresh: async () => {
+        onAfterOperationalMutation?.();
+        refreshAfterOperationalMutation();
+      },
+      onComplete: () => {
+        setApplyScriptOpen(false);
+      },
+    });
+  }
   const visible = totals.count > 0;
   const displayCurrency = totals.currencyMixed ? "USD" : (totals.currency ?? "USD");
   const currencyLabel = totals.currencyMixed ? "Mixed" : (totals.currency ?? "USD");
@@ -213,7 +238,7 @@ export function FloatingSelectionBar({
           onClearSelection={onClearSelection}
           onSelectAll={onSelectAll}
           selectableCount={selectableLineCount}
-          busy={pending}
+          busy={busy}
         />
 
         <PlatformFloatingBarDivider />
@@ -243,6 +268,18 @@ export function FloatingSelectionBar({
         <PlatformFloatingBarDivider className="ml-auto" />
 
         <div className="flex shrink-0 items-center gap-1 pl-2">
+          {selectedLineIds.length > 0 ? (
+            <PlatformFloatingBarSecondaryLink
+              busy={busy}
+              action={{
+                id: "apply-script",
+                label: "Apply Campaign Script",
+                icon: ScrollTextIcon,
+                disabled: busy,
+                onClick: () => setApplyScriptOpen(true),
+              }}
+            />
+          ) : null}
           {vioLineIds.length > 0 ? (
             primaryAction === "vio" ? (
               <PlatformFloatingBarPrimaryButton
@@ -390,6 +427,15 @@ export function FloatingSelectionBar({
           </div>
         </DialogContent>
       </Dialog>
+
+      <ApplyCampaignScriptDialog
+        open={applyScriptOpen}
+        onOpenChange={setApplyScriptOpen}
+        campaignId={campaignId}
+        lineIds={selectedLineIds}
+        applying={isRunning}
+        onConfirm={runApplyCampaignScript}
+      />
     </>
   );
 }

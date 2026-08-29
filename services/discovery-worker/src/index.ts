@@ -29,6 +29,8 @@ import { startPublicationMetricsWorker } from "./workers/publication-metrics.wor
 
 import { startPublicationScreenshotWorker } from "./workers/publication-screenshot.worker.js";
 
+import { startCampaignScriptTranslateWorker } from "./workers/campaign-script-translate.worker.js";
+
 import { startRefreshWorker } from "./workers/refresh.worker.js";
 
 import { startRefreshScheduler } from "./schedulers/refresh-scheduler.js";
@@ -100,6 +102,8 @@ const publicationMetricsScheduler = startPublicationMetricsScheduler();
 const publicationScreenshotWorker = startPublicationScreenshotWorker();
 
 const publicationScreenshotScheduler = startPublicationScreenshotScheduler();
+
+const campaignScriptTranslateWorker = startCampaignScriptTranslateWorker();
 
 const creatorImportWorker = startCreatorImportWorker();
 
@@ -215,6 +219,18 @@ publicationScreenshotWorker.on("failed", (job, err) => {
 
 });
 
+campaignScriptTranslateWorker.on("completed", (job) => {
+
+  console.log(`[campaign-script-translate] completed ${job.id}`, job.returnvalue);
+
+});
+
+campaignScriptTranslateWorker.on("failed", (job, err) => {
+
+  console.error(`[campaign-script-translate] failed ${job?.id}`, err.message);
+
+});
+
 creatorImportWorker.on("completed", (job) => {
 
   console.log(`[creator-import] completed ${job.id}`, job.returnvalue);
@@ -289,6 +305,8 @@ async function shutdown(): Promise<void> {
 
     publicationScreenshotScheduler.close(),
 
+    campaignScriptTranslateWorker.close(),
+
     creatorImportWorker.close(),
 
     creatorImportChunkWorker.close(),
@@ -330,6 +348,8 @@ const readyQueues = [
   "publication-screenshot",
 
   "publication-screenshot-scheduler",
+
+  "campaign-script-translate",
 
   "creator-import",
 

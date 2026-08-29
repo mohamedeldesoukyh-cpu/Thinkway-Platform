@@ -16,6 +16,7 @@ export const QUEUES = {
   creatorEnrichmentDlq: "creator-enrichment-dlq",
   /** Batch profile acquisition — many URLs per Apify actor run. */
   batchProfileAcquisition: "batch-profile-acquisition",
+  campaignScriptTranslate: "campaign-script-translate",
 } as const;
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];
