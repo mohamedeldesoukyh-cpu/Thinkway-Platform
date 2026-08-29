@@ -1156,6 +1156,8 @@ export type Database = {
           translation_error: string | null;
           translation_attempts: number;
           translation_updated_at: string | null;
+          assignment_deliverable_id: string | null;
+          assignment_post_schedule_id: string | null;
         };
         Insert: {
           id?: string;
@@ -1172,6 +1174,8 @@ export type Database = {
           translation_error?: string | null;
           translation_attempts?: number;
           translation_updated_at?: string | null;
+          assignment_deliverable_id?: string | null;
+          assignment_post_schedule_id?: string | null;
         };
         Update: Partial<
           Database["public"]["Tables"]["campaign_scripts"]["Insert"]

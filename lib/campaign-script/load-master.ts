@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/types/database";
 
+import { attachedScriptPresenceFromRows } from "./documentation-unit-ui";
 import type {
   CampaignScriptMasterView,
   ScriptActorKind,
@@ -72,6 +73,8 @@ export function mapCampaignScriptMaster(
     createdAt: revision.created_at,
     origin,
     originalFileName: revision.original_file_name,
+    assignmentDeliverableId: script.assignment_deliverable_id,
+    assignmentPostScheduleId: script.assignment_post_schedule_id,
     translationStatus: asTranslationStatus(script.translation_status),
     translationTargetLanguage: asTargetLanguage(script.translation_target_language),
     translationSourceRevisionId: script.translation_source_revision_id,
@@ -92,6 +95,8 @@ export async function loadCampaignScriptMaster(
     .from("campaign_scripts")
     .select("*")
     .eq("campaign_header_id", headerId)
+    .is("assignment_deliverable_id", null)
+    .is("assignment_post_schedule_id", null)
     .maybeSingle();
   if (scriptError) {
     throw new Error(scriptError.message);
@@ -107,6 +112,83 @@ export async function loadCampaignScriptMaster(
   if (revisionError) {
     throw new Error(revisionError.message);
   }
+  if (!revision) return null;
+  return mapCampaignScriptMaster(script, revision);
+}
+
+export async function listAttachedCampaignScriptPresence(
+  supabase: Supabase,
+  campaignHeaderId: string
+): Promise<Map<string, string>> {
+  const headerId = campaignHeaderId.trim();
+  if (!headerId) return new Map();
+  const { data, error } = await supabase
+    .from("campaign_scripts")
+    .select("id, assignment_deliverable_id, assignment_post_schedule_id")
+    .eq("campaign_header_id", headerId)
+    .not("assignment_deliverable_id", "is", null);
+  if (error) throw new Error(error.message);
+  return attachedScriptPresenceFromRows(data ?? []);
+}
+
+export async function loadCampaignScriptById(
+  supabase: Supabase,
+  scriptId: string
+): Promise<CampaignScriptMasterView | null> {
+  const id = scriptId.trim();
+  if (!id) return null;
+  const { data: script, error: scriptError } = await supabase
+    .from("campaign_scripts")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (scriptError) throw new Error(scriptError.message);
+  if (!script?.current_revision_id) return null;
+
+  const { data: revision, error: revisionError } = await supabase
+    .from("campaign_script_revisions")
+    .select("*")
+    .eq("id", script.current_revision_id)
+    .is("assignment_id", null)
+    .maybeSingle();
+  if (revisionError) throw new Error(revisionError.message);
+  if (!revision) return null;
+  return mapCampaignScriptMaster(script, revision);
+}
+
+export async function loadCampaignScriptForUnit(
+  supabase: Supabase,
+  input: {
+    campaignHeaderId: string;
+    assignmentDeliverableId: string;
+    assignmentPostScheduleId?: string | null;
+  }
+): Promise<CampaignScriptMasterView | null> {
+  const headerId = input.campaignHeaderId.trim();
+  const deliverableId = input.assignmentDeliverableId.trim();
+  const postId = input.assignmentPostScheduleId?.trim() || null;
+  if (!headerId || !deliverableId) return null;
+
+  let query = supabase
+    .from("campaign_scripts")
+    .select("*")
+    .eq("campaign_header_id", headerId)
+    .eq("assignment_deliverable_id", deliverableId);
+  query = postId
+    ? query.eq("assignment_post_schedule_id", postId)
+    : query.is("assignment_post_schedule_id", null);
+
+  const { data: script, error: scriptError } = await query.maybeSingle();
+  if (scriptError) throw new Error(scriptError.message);
+  if (!script?.current_revision_id) return null;
+
+  const { data: revision, error: revisionError } = await supabase
+    .from("campaign_script_revisions")
+    .select("*")
+    .eq("id", script.current_revision_id)
+    .is("assignment_id", null)
+    .maybeSingle();
+  if (revisionError) throw new Error(revisionError.message);
   if (!revision) return null;
   return mapCampaignScriptMaster(script, revision);
 }
@@ -149,6 +231,8 @@ export function mapCampaignScriptOverrideView(
     createdAt: revision.created_at,
     origin,
     originalFileName: revision.original_file_name,
+    assignmentDeliverableId: null,
+    assignmentPostScheduleId: null,
     translationStatus: assignment.translationStatus,
     translationTargetLanguage: assignment.translationTargetLanguage,
     translationSourceRevisionId: assignment.translationSourceRevisionId,

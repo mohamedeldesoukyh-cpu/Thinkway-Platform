@@ -40,7 +40,6 @@ import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import { cn } from "@/lib/utils";
 import { listDeliverableDocumentationAggregatesAction } from "@/features/campaigns/actions/deliverable-documentation-actions";
 import { documentationRowHasUploadedContent } from "@/lib/services/deliverables/documentation-types";
-import { CampaignScriptRegister } from "@/features/campaigns/components/script/campaign-script-register";
 
 const ALL = "all";
 
@@ -321,7 +320,6 @@ export function CampaignDeliverablesTab({
 
   return (
     <>
-      <CampaignScriptRegister campaignId={workspace.id} />
       <OperationalTableSuiteProvider
         tableId={OPERATIONAL_TABLE_IDS.campaignDeliverables}
         columns={columns}

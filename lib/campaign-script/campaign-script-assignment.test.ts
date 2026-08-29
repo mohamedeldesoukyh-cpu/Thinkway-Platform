@@ -84,6 +84,8 @@ function masterScript(revisionId = MASTER_REV): ScriptRow {
     translation_error: null,
     translation_attempts: 0,
     translation_updated_at: null,
+    assignment_deliverable_id: null,
+    assignment_post_schedule_id: null,
   };
 }
 
@@ -860,32 +862,21 @@ test("bulk apply classifies per-line outcomes without a second runner", () => {
   );
 });
 
-test("internal assignment UI reuses bulk apply and keeps Client on master only", () => {
+test("internal assignment UI no longer exposes campaign-level script apply", () => {
   const bar = readFileSync(
     resolve("features/campaigns/components/assignment-hierarchy/floating-selection-bar.tsx"),
     "utf8"
   );
-  assert.match(bar, /Apply Campaign Script/);
-  assert.match(bar, /usePlatformBulkOperation/);
-  assert.match(bar, /mutateApplyCampaignScriptToLine/);
+  assert.equal(bar.includes("Apply Campaign Script"), false);
+  assert.equal(bar.includes("mutateApplyCampaignScriptToLine"), false);
+  assert.equal(bar.includes("ApplyCampaignScriptDialog"), false);
 
   const grid = readFileSync(
     resolve("features/campaigns/components/assignment-hierarchy/assignment-safe-grid.tsx"),
     "utf8"
   );
-  assert.match(grid, /AssignmentScriptStatusPill/);
-  assert.match(grid, /audienceView !== "internal"/);
-
-  const sheet = readFileSync(
-    resolve("features/campaigns/components/script/creator-script-sheet.tsx"),
-    "utf8"
-  );
-  assert.match(sheet, /Customize for this creator/);
-  assert.match(sheet, /Re-apply Master/);
-  assert.match(sheet, /This creator currently has a customized script/);
-  assert.match(sheet, /Assign Campaign Script/);
-  assert.equal(sheet.includes("customizeCampaignScriptAssignment"), false);
-  assert.match(sheet, /customizeCreatorCampaignScriptAction/);
+  assert.equal(grid.includes("AssignmentScriptStatusPill"), false);
+  assert.equal(grid.includes("listCampaignScriptAssignmentStatusesAction"), false);
 
   const clientSection = readFileSync(
     resolve("features/client-workspace/components/campaign-script-section.tsx"),

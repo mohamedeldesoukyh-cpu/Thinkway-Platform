@@ -43,6 +43,8 @@ function view(overrides: Partial<CampaignScriptMasterView> = {}): CampaignScript
     createdAt: "2026-08-28T18:00:00.000Z",
     origin: "internal",
     originalFileName: null,
+    assignmentDeliverableId: null,
+    assignmentPostScheduleId: null,
     translationStatus: "idle",
     translationTargetLanguage: null,
     translationSourceRevisionId: null,

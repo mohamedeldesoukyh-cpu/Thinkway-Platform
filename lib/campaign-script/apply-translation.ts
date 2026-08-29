@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { LlmProvider } from "@/features/ai/types/llm";
 
-import { loadCampaignScriptMaster } from "./load-master";
+import { loadCampaignScriptById } from "./load-master";
 import { saveCampaignScriptMaster } from "./save-master";
 import { loadCampaignScriptAssignmentById } from "./assignments";
 import { loadCampaignScriptOverrideView, saveCampaignScriptOverride } from "./save-override";
@@ -44,7 +44,7 @@ async function processMasterTranslationJob(
   options?: { attemptsMade?: number; provider?: LlmProvider }
 ): Promise<TranslationJobOutcome> {
   const attempts = (options?.attemptsMade ?? 0) + 1;
-  const loaded = await loadCampaignScriptMaster(supabase, data.campaignHeaderId);
+  const loaded = await loadCampaignScriptById(supabase, data.scriptId);
   const first = decideTranslationApply({
     script: loaded,
     expectedSourceRevisionId: data.sourceRevisionId,
@@ -75,7 +75,7 @@ async function processMasterTranslationJob(
     throw new Error(translated.message);
   }
 
-  const latest = await loadCampaignScriptMaster(supabase, data.campaignHeaderId);
+  const latest = await loadCampaignScriptById(supabase, data.scriptId);
   const second = decideTranslationApply({
     script: latest,
     expectedSourceRevisionId: data.sourceRevisionId,
@@ -96,6 +96,7 @@ async function processMasterTranslationJob(
 
   const saved = await saveCampaignScriptMaster(supabase, {
     campaignHeaderId: data.campaignHeaderId,
+    scriptId: data.scriptId,
     expectedCurrentRevisionId: data.sourceRevisionId,
     sourceLanguage: second.sourceLanguage,
     bodyEn: bodies.bodyEn,

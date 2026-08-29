@@ -6,6 +6,7 @@ import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { DeliverableExplorerTypePill } from "@/features/campaigns/components/deliverables/deliverable-explorer-cells";
+import { DocumentationUnitScriptActions } from "@/features/campaigns/components/script/documentation-unit-script-actions";
 import {
   defaultOpenTypeGroupKeys,
   documentationSlotRowLabel,
@@ -18,6 +19,10 @@ import {
   type DocumentationReceiptStatus,
   type DocumentationUnitSummary,
 } from "@/lib/services/deliverables/documentation-types";
+import {
+  documentationUnitCanHoldScript,
+  type DocumentationUnitScriptIntent,
+} from "@/lib/campaign-script";
 import { cn } from "@/lib/utils";
 
 export function documentationStatusBadge(status: DocumentationReceiptStatus) {
@@ -65,6 +70,8 @@ type Props = {
   selectionLocked: boolean;
   hideCreatorHeaders: boolean;
   onSelect: (unitKey: string) => void;
+  scriptPresence: ReadonlySet<string>;
+  onOpenScript: (unitKey: string, intent: DocumentationUnitScriptIntent) => void;
 };
 
 export function DocumentationRepositoryList({
@@ -73,6 +80,8 @@ export function DocumentationRepositoryList({
   selectionLocked,
   hideCreatorHeaders,
   onSelect,
+  scriptPresence,
+  onOpenScript,
 }: Props) {
   const creatorGroups = useMemo(() => groupDocumentationUnits(units), [units]);
   const defaultOpen = useMemo(
@@ -158,15 +167,13 @@ export function DocumentationRepositoryList({
                       const isActive = selectedKey === unit.unitKey;
                       const status = documentationReceiptStatus(unit);
                       const due = safeDue(unit.dueDate);
+                      const canHoldScript = documentationUnitCanHoldScript(unit);
                       return (
                         <li key={unit.unitKey}>
-                          <button
-                            type="button"
+                          <div
                             role="option"
                             aria-selected={isActive}
                             aria-disabled={selectionLocked && !isActive}
-                            disabled={selectionLocked && !isActive}
-                            onClick={() => onSelect(unit.unitKey)}
                             className={cn(
                               "flex w-full items-start gap-2 border-l-2 px-3 py-2 pl-8 text-left transition-colors hover:bg-muted/40",
                               isActive
@@ -177,7 +184,12 @@ export function DocumentationRepositoryList({
                                 "cursor-not-allowed opacity-50"
                             )}
                           >
-                            <div className="min-w-0 flex-1">
+                            <button
+                              type="button"
+                              disabled={selectionLocked && !isActive}
+                              onClick={() => onSelect(unit.unitKey)}
+                              className="min-w-0 flex-1 text-left"
+                            >
                               <div className="flex items-center justify-between gap-2">
                                 <span className="text-xs font-semibold text-[var(--camp-text)]">
                                   {documentationSlotRowLabel(unit)}
@@ -194,8 +206,26 @@ export function DocumentationRepositoryList({
                                       }`
                                     : " · no file yet"}
                               </p>
+                            </button>
+                            <div
+                              className="shrink-0 pt-0.5"
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              <DocumentationUnitScriptActions
+                                hasScript={scriptPresence.has(unit.unitKey)}
+                                disabled={selectionLocked}
+                                unavailableReason={
+                                  canHoldScript
+                                    ? null
+                                    : "This slot needs a post before a script can be attached."
+                                }
+                                onAdd={() => onOpenScript(unit.unitKey, "edit")}
+                                onUpload={() => onOpenScript(unit.unitKey, "upload")}
+                                onOpen={() => onOpenScript(unit.unitKey, "edit")}
+                                onPreview={() => onOpenScript(unit.unitKey, "preview")}
+                              />
                             </div>
-                          </button>
+                          </div>
                         </li>
                       );
                     })}

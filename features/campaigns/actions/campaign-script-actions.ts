@@ -5,8 +5,8 @@ import { z } from "zod";
 
 import { requirePermission } from "@/lib/auth/permissions-server";
 import { extractCampaignScriptText } from "@/lib/campaign-script/extract-text";
-import { loadCampaignScriptMaster } from "@/lib/campaign-script/load-master";
-import { saveCampaignScriptMaster } from "@/lib/campaign-script/save-master";
+import { loadCampaignScriptMaster, loadCampaignScriptForUnit, listAttachedCampaignScriptPresence } from "@/lib/campaign-script/load-master";
+import { saveCampaignScriptMaster, saveCampaignScriptForUnit } from "@/lib/campaign-script/save-master";
 import { queueCampaignScriptAssignmentTranslation, queueCampaignScriptTranslation } from "@/lib/campaign-script/queue";
 import { applyMasterScriptToLineIds, customizeCampaignScriptAssignment, listCreatorScriptStatuses, loadCampaignScriptAssignmentById, previewApplyMasterScriptToLineIds, reapplyMasterToCampaignScriptAssignment } from "@/lib/campaign-script/assignments";
 import {
@@ -410,6 +410,183 @@ export async function translateCreatorCampaignScriptAction(input: {
   });
   revalidateCampaign(assignment.campaignHeaderId);
   return { ok: true, data: latest.effective ?? bundle.effective };
+}
+
+const deliverableIdSchema = z.string().uuid();
+const postIdSchema = z.string().uuid();
+
+function parseUnitIds(input: {
+  campaignId: string;
+  assignmentDeliverableId: string;
+  assignmentPostScheduleId?: string | null;
+}):
+  | {
+      ok: true;
+      campaignId: string;
+      assignmentDeliverableId: string;
+      assignmentPostScheduleId: string | null;
+    }
+  | { ok: false; message: string } {
+  const campaignId = campaignIdSchema.safeParse(input.campaignId);
+  if (!campaignId.success) return { ok: false, message: "Campaign is missing." };
+  const deliverableId = deliverableIdSchema.safeParse(input.assignmentDeliverableId);
+  if (!deliverableId.success) return { ok: false, message: "Deliverable is missing." };
+  const rawPost = input.assignmentPostScheduleId?.trim() || null;
+  if (!rawPost) {
+    return {
+      ok: true,
+      campaignId: campaignId.data,
+      assignmentDeliverableId: deliverableId.data,
+      assignmentPostScheduleId: null,
+    };
+  }
+  const postId = postIdSchema.safeParse(rawPost);
+  if (!postId.success) return { ok: false, message: "Post is missing." };
+  return {
+    ok: true,
+    campaignId: campaignId.data,
+    assignmentDeliverableId: deliverableId.data,
+    assignmentPostScheduleId: postId.data,
+  };
+}
+
+export async function listCampaignScriptPresenceAction(input: {
+  campaignId: string;
+}): Promise<CampaignScriptActionResult<Array<{ unitKey: string; scriptId: string }>>> {
+  const parsed = campaignIdSchema.safeParse(input.campaignId);
+  if (!parsed.success) return { ok: false, message: "Campaign is missing." };
+  const actor = await getReadActor();
+  if (!actor.ok) return actor;
+  try {
+    const presence = await listAttachedCampaignScriptPresence(actor.supabase, parsed.data);
+    return {
+      ok: true,
+      data: [...presence.entries()].map(([unitKey, scriptId]) => ({ unitKey, scriptId })),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Could not load script presence.",
+    };
+  }
+}
+
+export async function loadCampaignScriptForUnitAction(input: {
+  campaignId: string;
+  assignmentDeliverableId: string;
+  assignmentPostScheduleId?: string | null;
+}): Promise<CampaignScriptActionResult<CampaignScriptMasterView | null>> {
+  const unit = parseUnitIds(input);
+  if (!unit.ok) return unit;
+  const actor = await getReadActor();
+  if (!actor.ok) return actor;
+  try {
+    const script = await loadCampaignScriptForUnit(actor.supabase, {
+      campaignHeaderId: unit.campaignId,
+      assignmentDeliverableId: unit.assignmentDeliverableId,
+      assignmentPostScheduleId: unit.assignmentPostScheduleId,
+    });
+    return { ok: true, data: script };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Could not load the unit script.",
+    };
+  }
+}
+
+export async function saveCampaignScriptForUnitAction(input: {
+  campaignId: string;
+  assignmentDeliverableId: string;
+  assignmentPostScheduleId?: string | null;
+  expectedCurrentRevisionId: string | null;
+  sourceLanguage: string;
+  bodyEn: string;
+  bodyAr: string;
+  originalFileName?: string | null;
+}): Promise<CampaignScriptActionResult<CampaignScriptMasterView>> {
+  const unit = parseUnitIds(input);
+  if (!unit.ok) return unit;
+  const sourceLanguage = parseSourceLanguage(input.sourceLanguage);
+  if (!sourceLanguage) return { ok: false, message: "Choose English or Arabic as the original language." };
+  const actor = await getWriteActor();
+  if (!actor.ok) return actor;
+
+  const result = await saveCampaignScriptForUnit(actor.supabase, {
+    campaignHeaderId: unit.campaignId,
+    expectedCurrentRevisionId: input.expectedCurrentRevisionId,
+    unit: {
+      assignmentDeliverableId: unit.assignmentDeliverableId,
+      assignmentPostScheduleId: unit.assignmentPostScheduleId,
+    },
+    sourceLanguage,
+    bodyEn: input.bodyEn,
+    bodyAr: input.bodyAr,
+    actorKind: "internal",
+    actorUserId: actor.userId,
+    actorLabel: actor.fullName?.trim() || "Thinkway",
+    origin: "internal",
+    originalFileName: input.originalFileName ?? null,
+  });
+
+  if (result.ok) {
+    revalidatePath(campaignDetailPath(unit.campaignId));
+    return { ok: true, data: result.script };
+  }
+  if (result.conflict) {
+    return {
+      ok: false,
+      conflict: true,
+      data: result.script ?? undefined,
+      message: result.message,
+    };
+  }
+  return { ok: false, message: result.message };
+}
+
+export async function translateCampaignScriptForUnitAction(input: {
+  campaignId: string;
+  assignmentDeliverableId: string;
+  assignmentPostScheduleId?: string | null;
+  expectedCurrentRevisionId: string | null;
+  targetLanguage: string;
+  confirmed?: boolean;
+}): Promise<CampaignScriptActionResult<CampaignScriptMasterView>> {
+  const unit = parseUnitIds(input);
+  if (!unit.ok) return unit;
+  const targetLanguage = parseSourceLanguage(input.targetLanguage);
+  if (!targetLanguage) return { ok: false, message: "Choose English or Arabic as the translation target." };
+  const actor = await getWriteActor();
+  if (!actor.ok) return actor;
+
+  const script = await loadCampaignScriptForUnit(actor.supabase, {
+    campaignHeaderId: unit.campaignId,
+    assignmentDeliverableId: unit.assignmentDeliverableId,
+    assignmentPostScheduleId: unit.assignmentPostScheduleId,
+  });
+  if (!script) return { ok: false, message: "Save the original script before translating." };
+  if (script.currentRevisionId !== input.expectedCurrentRevisionId) {
+    return {
+      ok: false,
+      conflict: true,
+      data: script,
+      message: "A newer version of this script was saved. Load the latest version, then translate.",
+    };
+  }
+
+  const queued = await queueCampaignScriptTranslation(actor.supabase, script, {
+    targetLanguage,
+    confirmed: input.confirmed,
+  });
+  if (!queued.ok) return { ok: false, message: queued.message };
+  const latest =
+    (await loadCampaignScriptForUnit(actor.supabase, {
+      campaignHeaderId: unit.campaignId,
+      assignmentDeliverableId: unit.assignmentDeliverableId,
+      assignmentPostScheduleId: unit.assignmentPostScheduleId,
+    })) ?? script;
+  revalidatePath(campaignDetailPath(unit.campaignId));
+  return { ok: true, data: latest };
 }
 
 export async function reapplyMasterCreatorScriptAction(input: {

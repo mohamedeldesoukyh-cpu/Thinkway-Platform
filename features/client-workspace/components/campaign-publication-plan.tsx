@@ -2,6 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { DocumentationUnitScriptActions } from "@/features/campaigns/components/script/documentation-unit-script-actions";
+import { DocumentationUnitScriptSheet } from "@/features/campaigns/components/script/documentation-unit-script-sheet";
+import {
+  clientPostDocumentationScriptUnit,
+  documentationUnitSummaryForClientPost,
+  type DocumentationUnitScriptIntent,
+} from "@/lib/campaign-script";
+
+import { listClientCampaignScriptPresenceAction } from "../actions/campaign-script-actions";
 import { DATA_NOT_AVAILABLE, NOT_AVAILABLE, TO_BE_CONFIRMED } from "../format";
 import {
   formatClientCampaignPerformance,
@@ -93,6 +102,53 @@ function dash(value: string | null | undefined) {
   return value ? value : <span className="cx-empty">—</span>;
 }
 
+function clientScriptUnitFromPost(post: ClientCampaignPostRow) {
+  const mapped = clientPostDocumentationScriptUnit(post);
+  if (!mapped) return null;
+  return documentationUnitSummaryForClientPost({
+    assignmentDeliverableId: mapped.assignmentDeliverableId,
+    assignmentPostScheduleId: mapped.assignmentPostScheduleId,
+    unitKey: mapped.unitKey,
+    quantity: mapped.quantity,
+    sequenceNumber: post.sequenceNumber,
+    creatorName: post.creatorName,
+    platform: post.platform,
+    deliverableLabel: post.deliverable,
+  });
+}
+
+function DeliverableScriptCell({
+  post,
+  count = 1,
+  scriptPresence,
+  onOpen,
+}: {
+  post: ClientCampaignPostRow;
+  count?: number;
+  scriptPresence: ReadonlySet<string>;
+  onOpen: (post: ClientCampaignPostRow, intent: DocumentationUnitScriptIntent) => void;
+}) {
+  const unit = clientScriptUnitFromPost(post);
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span>
+        {post.deliverable || TO_BE_CONFIRMED}
+        {count > 1 ? <span className="cx-xn">×{count}</span> : null}
+      </span>
+      {unit && count === 1 ? (
+        <DocumentationUnitScriptActions
+          variant="client"
+          hasScript={scriptPresence.has(unit.unitKey)}
+          onAdd={() => onOpen(post, "edit")}
+          onUpload={() => onOpen(post, "upload")}
+          onOpen={() => onOpen(post, "edit")}
+          onPreview={() => onOpen(post, "preview")}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 export function CampaignPublicationPlan({
   posts,
   creators,
@@ -110,6 +166,11 @@ export function CampaignPublicationPlan({
   const [view, setView] = useState<PublicationPlanViewMode>("grouped");
   const [opened, setOpened] = useState<Set<string>>(() => new Set());
   const [closed, setClosed] = useState<Set<string>>(() => new Set());
+  const [scriptPresence, setScriptPresence] = useState<Set<string>>(() => new Set());
+  const [scriptSheet, setScriptSheet] = useState<{
+    post: ClientCampaignPostRow;
+    intent: DocumentationUnitScriptIntent;
+  } | null>(null);
   const counts = publicationPlanFilterCounts(posts);
   const statusScoped = useMemo(
     () => filterPublicationPlanPosts(posts, filter, "", "all"),
@@ -122,6 +183,7 @@ export function CampaignPublicationPlan({
   );
   const groups = useMemo(() => groupPublicationPlanByCreator(visible), [visible]);
   const defaultOpen = useMemo(() => new Set(defaultExpandedCreators(groups)), [groups]);
+  const scriptSheetUnit = scriptSheet ? clientScriptUnitFromPost(scriptSheet.post) : null;
 
   function isOpen(name: string) {
     if (closed.has(name)) return false;
@@ -161,6 +223,21 @@ export function CampaignPublicationPlan({
     // Only re-run when the client asks to view overdue — not on every posts refresh.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusOverdue]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void listClientCampaignScriptPresenceAction({ token }).then((result) => {
+      if (cancelled || !result.ok) return;
+      setScriptPresence(new Set(result.data.map((row) => row.unitKey)));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  function openScript(post: ClientCampaignPostRow, intent: DocumentationUnitScriptIntent) {
+    setScriptSheet({ post, intent });
+  }
 
   function setStatusFilter(next: PublicationPlanFilter) {
     setFilter(next);
@@ -281,6 +358,8 @@ export function CampaignPublicationPlan({
                     index={index}
                     token={token}
                     creators={creators}
+                    scriptPresence={scriptPresence}
+                    onOpenScript={openScript}
                     onToggle={() => toggle(group.creatorName)}
                   />
                 );
@@ -318,7 +397,13 @@ export function CampaignPublicationPlan({
                   <td>
                     <PlatformCell row={post} />
                   </td>
-                  <td>{post.deliverable || TO_BE_CONFIRMED}</td>
+                  <td>
+                    <DeliverableScriptCell
+                      post={post}
+                      scriptPresence={scriptPresence}
+                      onOpen={openScript}
+                    />
+                  </td>
                   <td>{dash(formatClientScheduleDate(post.scheduledDate))}</td>
                   <td>
                     <StatusPill status={post.status} />
@@ -343,6 +428,24 @@ export function CampaignPublicationPlan({
         </span>
         <span>{PUBLICATION_PLAN_FOOTNOTE}</span>
       </div>
+      <DocumentationUnitScriptSheet
+        open={Boolean(scriptSheet && scriptSheetUnit)}
+        onOpenChange={(open) => {
+          if (!open) setScriptSheet(null);
+        }}
+        surface="client"
+        token={token}
+        unit={scriptSheetUnit}
+        intent={scriptSheet?.intent ?? "edit"}
+        onPresenceChange={(unitKey, hasScript) => {
+          setScriptPresence((current) => {
+            const next = new Set(current);
+            if (hasScript) next.add(unitKey);
+            else next.delete(unitKey);
+            return next;
+          });
+        }}
+      />
     </section>
   );
 }
@@ -353,6 +456,8 @@ function GroupRows({
   index,
   token,
   creators,
+  scriptPresence,
+  onOpenScript,
   onToggle,
 }: {
   group: ReturnType<typeof groupPublicationPlanByCreator>[number];
@@ -360,6 +465,8 @@ function GroupRows({
   index: number;
   token: string;
   creators: ClientCreatorCard[];
+  scriptPresence: ReadonlySet<string>;
+  onOpenScript: (post: ClientCampaignPostRow, intent: DocumentationUnitScriptIntent) => void;
   onToggle: () => void;
 }) {
   const first = group.posts[0];
@@ -422,8 +529,12 @@ function GroupRows({
             return (
               <tr className="cx-kid" key={item.key}>
                 <td>
-                  {post.deliverable || TO_BE_CONFIRMED}
-                  {item.count > 1 ? <span className="cx-xn">×{item.count}</span> : null}
+                  <DeliverableScriptCell
+                    post={post}
+                    count={item.count}
+                    scriptPresence={scriptPresence}
+                    onOpen={onOpenScript}
+                  />
                 </td>
                 <td>
                   <PlatformCell row={post} />

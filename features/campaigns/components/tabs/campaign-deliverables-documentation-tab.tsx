@@ -55,6 +55,9 @@ import {
   DocumentationRepositoryList,
   documentationStatusBadge,
 } from "@/features/campaigns/components/deliverables/documentation-repository-list";
+import { DocumentationUnitScriptActions } from "@/features/campaigns/components/script/documentation-unit-script-actions";
+import { DocumentationUnitScriptSheet } from "@/features/campaigns/components/script/documentation-unit-script-sheet";
+import { listCampaignScriptPresenceAction } from "@/features/campaigns/actions/campaign-script-actions";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import {
@@ -93,6 +96,10 @@ import {
   applyDocumentationAggregates,
   buildDocumentationUnitsFromHierarchy,
 } from "@/lib/services/deliverables/build-documentation-units";
+import {
+  documentationUnitCanHoldScript,
+  type DocumentationUnitScriptIntent,
+} from "@/lib/campaign-script";
 
 type Props = {
   workspace: CampaignWorkspace;
@@ -199,6 +206,10 @@ export function CampaignDeliverablesDocumentationTab({
     loaded: number;
     total: number;
   } | null>(null);
+  const [scriptPresence, setScriptPresence] = useState<Set<string>>(() => new Set());
+  const [scriptSheetUnitKey, setScriptSheetUnitKey] = useState<string | null>(null);
+  const [scriptSheetIntent, setScriptSheetIntent] =
+    useState<DocumentationUnitScriptIntent>("edit");
 
   const detailRequestIdRef = useRef(0);
   const uploadSessionRef = useRef(0);
@@ -367,6 +378,21 @@ export function CampaignDeliverablesDocumentationTab({
     () => units.find((u) => u.unitKey === selectedKey) ?? null,
     [units, selectedKey]
   );
+  const scriptSheetUnit = useMemo(
+    () => units.find((unit) => unit.unitKey === scriptSheetUnitKey) ?? null,
+    [units, scriptSheetUnitKey]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    void listCampaignScriptPresenceAction({ campaignId }).then((result) => {
+      if (cancelled || !result.ok) return;
+      setScriptPresence(new Set(result.data.map((row) => row.unitKey)));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [campaignId]);
 
   /** Editor documentation payload — only when bound to current selection. */
   const boundDetail =
@@ -439,6 +465,17 @@ export function CampaignDeliverablesDocumentationTab({
       applySelection(nextKey);
     },
     [selectedKey, selectionLocked, drafts, applySelection]
+  );
+
+  const openUnitScript = useCallback(
+    (unitKey: string, intent: DocumentationUnitScriptIntent) => {
+      if (unitKey !== selectedKey && !selectionLocked && !draftsAreDirty(drafts)) {
+        applySelection(unitKey);
+      }
+      setScriptSheetIntent(intent);
+      setScriptSheetUnitKey(unitKey);
+    },
+    [applySelection, drafts, selectedKey, selectionLocked]
   );
 
   async function persistDraftsForUnit(
@@ -580,6 +617,7 @@ export function CampaignDeliverablesDocumentationTab({
   }
 
   return (
+    <>
     <CampaignWorkspaceFrame
       title="Deliverables"
       subtitle="Upload files, links, and captions for client review — plus versions and comments"
@@ -718,6 +756,8 @@ export function CampaignDeliverablesDocumentationTab({
                   selectionLocked={selectionLocked}
                   hideCreatorHeaders={creatorFilter !== "all"}
                   onSelect={requestSelect}
+                  scriptPresence={scriptPresence}
+                  onOpenScript={openUnitScript}
                 />
               )}
             </div>
@@ -755,6 +795,19 @@ export function CampaignDeliverablesDocumentationTab({
                           slotReceiptStatus(selected, boundDetail)
                         )}
                       </div>
+                      <DocumentationUnitScriptActions
+                        hasScript={scriptPresence.has(selected.unitKey)}
+                        disabled={pending}
+                        unavailableReason={
+                          documentationUnitCanHoldScript(selected)
+                            ? null
+                            : "This slot needs a post before a script can be attached."
+                        }
+                        onAdd={() => openUnitScript(selected.unitKey, "edit")}
+                        onUpload={() => openUnitScript(selected.unitKey, "upload")}
+                        onOpen={() => openUnitScript(selected.unitKey, "edit")}
+                        onPreview={() => openUnitScript(selected.unitKey, "preview")}
+                      />
                       <p className="truncate text-[12px] text-[var(--camp-text-2)]">
                         {selected.creatorName ?? "Unassigned creator"}
                       </p>
@@ -1431,5 +1484,24 @@ export function CampaignDeliverablesDocumentationTab({
         </DialogContent>
       </Dialog>
     </CampaignWorkspaceFrame>
+
+    <DocumentationUnitScriptSheet
+      open={scriptSheetUnitKey != null}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) setScriptSheetUnitKey(null);
+      }}
+      campaignId={campaignId}
+      unit={scriptSheetUnit}
+      intent={scriptSheetIntent}
+      onPresenceChange={(unitKey, hasScript) => {
+        setScriptPresence((current) => {
+          const next = new Set(current);
+          if (hasScript) next.add(unitKey);
+          else next.delete(unitKey);
+          return next;
+        });
+      }}
+    />
+    </>
   );
 }

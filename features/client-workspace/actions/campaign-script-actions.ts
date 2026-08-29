@@ -1,8 +1,13 @@
 "use server";
 
+import { z } from "zod";
+
 import { extractCampaignScriptText } from "@/lib/campaign-script/extract-text";
-import { loadCampaignScriptMaster } from "@/lib/campaign-script/load-master";
-import { saveCampaignScriptMaster } from "@/lib/campaign-script/save-master";
+import {
+  loadCampaignScriptForUnit,
+  listAttachedCampaignScriptPresence,
+} from "@/lib/campaign-script/load-master";
+import { saveCampaignScriptForUnit } from "@/lib/campaign-script/save-master";
 import { queueCampaignScriptTranslation } from "@/lib/campaign-script/queue";
 import {
   detectScriptLanguage,
@@ -20,6 +25,8 @@ export type ClientCampaignScriptActionResult<T = unknown> =
   | { ok: true; data: T }
   | { ok: false; message: string; conflict?: boolean; data?: T };
 
+const uuidSchema = z.string().uuid();
+
 function db(): SupabaseClient {
   const service = tryCreateServiceRoleClient().client;
   if (!service) {
@@ -32,24 +39,82 @@ function parseSourceLanguage(value: string): ScriptLanguage | null {
   return isScriptLanguage(value) ? value : null;
 }
 
-export async function loadClientCampaignScriptAction(input: {
+function parseClientUnit(input: {
+  assignmentDeliverableId: string;
+  assignmentPostScheduleId?: string | null;
+}):
+  | {
+      ok: true;
+      assignmentDeliverableId: string;
+      assignmentPostScheduleId: string | null;
+    }
+  | { ok: false; message: string } {
+  const deliverableId = uuidSchema.safeParse(input.assignmentDeliverableId);
+  if (!deliverableId.success) return { ok: false, message: "Deliverable is missing." };
+  const rawPost = input.assignmentPostScheduleId?.trim() || null;
+  if (!rawPost) {
+    return {
+      ok: true,
+      assignmentDeliverableId: deliverableId.data,
+      assignmentPostScheduleId: null,
+    };
+  }
+  const postId = uuidSchema.safeParse(rawPost);
+  if (!postId.success) return { ok: false, message: "Post is missing." };
+  return {
+    ok: true,
+    assignmentDeliverableId: deliverableId.data,
+    assignmentPostScheduleId: postId.data,
+  };
+}
+
+export async function listClientCampaignScriptPresenceAction(input: {
   token: string;
-}): Promise<ClientCampaignScriptActionResult<CampaignScriptMasterView | null>> {
+}): Promise<ClientCampaignScriptActionResult<Array<{ unitKey: string; scriptId: string }>>> {
   const access = await requireCurrentCampaignContentAccess(input.token);
   if (!access.ok) return access;
   try {
-    const script = await loadCampaignScriptMaster(db() as never, access.campaignHeaderId);
-    return { ok: true, data: script };
+    const presence = await listAttachedCampaignScriptPresence(db() as never, access.campaignHeaderId);
+    return {
+      ok: true,
+      data: [...presence.entries()].map(([unitKey, scriptId]) => ({ unitKey, scriptId })),
+    };
   } catch (error) {
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "Could not load the campaign script.",
+      message: error instanceof Error ? error.message : "Could not load script presence.",
     };
   }
 }
 
-export async function saveClientCampaignScriptAction(input: {
+export async function loadClientCampaignScriptForUnitAction(input: {
   token: string;
+  assignmentDeliverableId: string;
+  assignmentPostScheduleId?: string | null;
+}): Promise<ClientCampaignScriptActionResult<CampaignScriptMasterView | null>> {
+  const unit = parseClientUnit(input);
+  if (!unit.ok) return unit;
+  const access = await requireCurrentCampaignContentAccess(input.token);
+  if (!access.ok) return access;
+  try {
+    const script = await loadCampaignScriptForUnit(db() as never, {
+      campaignHeaderId: access.campaignHeaderId,
+      assignmentDeliverableId: unit.assignmentDeliverableId,
+      assignmentPostScheduleId: unit.assignmentPostScheduleId,
+    });
+    return { ok: true, data: script };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Could not load the unit script.",
+    };
+  }
+}
+
+export async function saveClientCampaignScriptForUnitAction(input: {
+  token: string;
+  assignmentDeliverableId: string;
+  assignmentPostScheduleId?: string | null;
   expectedCurrentRevisionId: string | null;
   sourceLanguage: string;
   bodyEn: string;
@@ -60,12 +125,18 @@ export async function saveClientCampaignScriptAction(input: {
   if (!sourceLanguage) {
     return { ok: false, message: "Choose English or Arabic as the original language." };
   }
+  const unit = parseClientUnit(input);
+  if (!unit.ok) return unit;
   const access = await requireCurrentCampaignContentAccess(input.token);
   if (!access.ok) return access;
 
-  const result = await saveCampaignScriptMaster(db() as never, {
+  const result = await saveCampaignScriptForUnit(db() as never, {
     campaignHeaderId: access.campaignHeaderId,
     expectedCurrentRevisionId: input.expectedCurrentRevisionId,
+    unit: {
+      assignmentDeliverableId: unit.assignmentDeliverableId,
+      assignmentPostScheduleId: unit.assignmentPostScheduleId,
+    },
     sourceLanguage,
     bodyEn: input.bodyEn,
     bodyAr: input.bodyAr,
@@ -91,8 +162,10 @@ export async function saveClientCampaignScriptAction(input: {
   return { ok: false, message: result.message };
 }
 
-export async function translateClientCampaignScriptAction(input: {
+export async function translateClientCampaignScriptForUnitAction(input: {
   token: string;
+  assignmentDeliverableId: string;
+  assignmentPostScheduleId?: string | null;
   expectedCurrentRevisionId: string | null;
   targetLanguage: string;
   confirmed?: boolean;
@@ -101,9 +174,15 @@ export async function translateClientCampaignScriptAction(input: {
   if (!targetLanguage) {
     return { ok: false, message: "Choose English or Arabic as the translation target." };
   }
+  const unit = parseClientUnit(input);
+  if (!unit.ok) return unit;
   const access = await requireCurrentCampaignContentAccess(input.token);
   if (!access.ok) return access;
-  const script = await loadCampaignScriptMaster(db() as never, access.campaignHeaderId);
+  const script = await loadCampaignScriptForUnit(db() as never, {
+    campaignHeaderId: access.campaignHeaderId,
+    assignmentDeliverableId: unit.assignmentDeliverableId,
+    assignmentPostScheduleId: unit.assignmentPostScheduleId,
+  });
   if (!script) {
     return { ok: false, message: "Save the original script before translating." };
   }
@@ -121,7 +200,11 @@ export async function translateClientCampaignScriptAction(input: {
   });
   if (!queued.ok) return { ok: false, message: queued.message };
   const latest =
-    (await loadCampaignScriptMaster(db() as never, access.campaignHeaderId)) ?? script;
+    (await loadCampaignScriptForUnit(db() as never, {
+      campaignHeaderId: access.campaignHeaderId,
+      assignmentDeliverableId: unit.assignmentDeliverableId,
+      assignmentPostScheduleId: unit.assignmentPostScheduleId,
+    })) ?? script;
   return { ok: true, data: latest };
 }
 

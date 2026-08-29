@@ -74,6 +74,10 @@ export type ClientCampaignPostRow = {
   proofImageUrl?: string | null;
   isStory?: boolean;
   performance: ClientCampaignPerformance;
+  assignmentDeliverableId?: string | null;
+  assignmentPostScheduleId?: string | null;
+  quantity?: number;
+  sequenceNumber?: number | null;
 };
 
 /** Proof image first. Story URLs are never opened — they expire. */
@@ -581,6 +585,7 @@ export function projectClientCampaignExecution(
     const proofImageUrl =
       publication?.screenshotUrl?.trim() || post.proofImageUrl?.trim() || null;
     const creatorName = creatorByLine.get(post.campaignLineId) ?? "Creator";
+    const quantity = deliverable?.quantity && deliverable.quantity > 0 ? deliverable.quantity : 1;
     const row = buildPostRow({
       id: post.id,
       creatorName,
@@ -598,6 +603,10 @@ export function projectClientCampaignExecution(
       isStory: isEphemeralStoryDeliverableType(type),
       publicationDate: publication?.publicationDate ?? null,
       performance: projectClientCampaignPerformance(publication),
+      assignmentDeliverableId: post.assignmentDeliverableId,
+      assignmentPostScheduleId: quantity > 1 ? post.id : null,
+      quantity,
+      sequenceNumber: quantity > 1 ? post.sequenceNumber : null,
       today,
     });
     if (row) posts.push(row);
@@ -613,7 +622,8 @@ export function projectClientCampaignExecution(
         usedPublications,
         influencerIdByLine.get(deliverable.campaignLineId)
       );
-    const quantity = deliverable.quantity > 1 ? ` × ${deliverable.quantity}` : "";
+    const qty = deliverable.quantity > 0 ? deliverable.quantity : 1;
+    const quantityLabel = qty > 1 ? ` × ${qty}` : "";
     const creatorName = creatorByLine.get(deliverable.campaignLineId) ?? "Creator";
     const row = buildPostRow({
       id: deliverable.id,
@@ -624,7 +634,7 @@ export function projectClientCampaignExecution(
         creatorName
       ),
       platform: deliverable.platform,
-      deliverable: `${deliverableTypeShortLabel(deliverable.deliverableType)}${quantity}`,
+      deliverable: `${deliverableTypeShortLabel(deliverable.deliverableType)}${quantityLabel}`,
       scheduledDate: deliverable.liveDate,
       postStatus: publication?.status ?? null,
       contentUrl: publication?.contentUrl ?? null,
@@ -632,6 +642,10 @@ export function projectClientCampaignExecution(
       isStory: isEphemeralStoryDeliverableType(deliverable.deliverableType),
       publicationDate: publication?.publicationDate ?? null,
       performance: projectClientCampaignPerformance(publication),
+      assignmentDeliverableId: deliverable.id,
+      assignmentPostScheduleId: null,
+      quantity: qty,
+      sequenceNumber: null,
       today,
     });
     if (row) posts.push(row);
@@ -750,6 +764,10 @@ function buildPostRow(input: {
   isStory?: boolean;
   publicationDate?: string | null;
   performance?: ClientCampaignPerformance;
+  assignmentDeliverableId?: string | null;
+  assignmentPostScheduleId?: string | null;
+  quantity?: number;
+  sequenceNumber?: number | null;
   today: string;
 }): ClientCampaignPostRow | null {
   const status = clientCampaignPostStatus({
@@ -775,5 +793,9 @@ function buildPostRow(input: {
     proofImageUrl: input.proofImageUrl?.trim() || null,
     isStory: Boolean(input.isStory),
     performance: input.performance ?? emptyClientCampaignPerformance(),
+    assignmentDeliverableId: input.assignmentDeliverableId?.trim() || null,
+    assignmentPostScheduleId: input.assignmentPostScheduleId?.trim() || null,
+    quantity: input.quantity && input.quantity > 0 ? input.quantity : 1,
+    sequenceNumber: input.sequenceNumber ?? null,
   };
 }

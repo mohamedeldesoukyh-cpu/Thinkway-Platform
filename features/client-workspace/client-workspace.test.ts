@@ -4778,6 +4778,9 @@ test("campaign tab kind waits for convert then projects Campaign Workspace posts
   assert.equal(projected.posts[0]?.publicationDate, "2026-08-20");
   assert.equal("cost" in projected.posts[0]!, false);
   assert.equal(clientFacingObjectIsSafe(projected.posts[0]), true);
+  assert.equal(projected.posts[0]?.assignmentDeliverableId, "del-1");
+  assert.equal(projected.posts[0]?.assignmentPostScheduleId, null);
+  assert.equal(projected.posts[0]?.quantity, 1);
 });
 
 function stage3Source(overrides?: Partial<CampaignExecutionSource>): CampaignExecutionSource {
@@ -4818,6 +4821,74 @@ function stage3Post(input: {
     proofUrl: input.proofUrl ?? null,
   };
 }
+
+test("Stage 3: qty=1 scripts attach to the deliverable; qty>1 scripts attach to each post", () => {
+  const leftoverQty1 = projectClientCampaignExecution("hdr-1", stage3Source(), "2026-08-22");
+  assert.equal(leftoverQty1.posts[0]?.assignmentDeliverableId, "del-1");
+  assert.equal(leftoverQty1.posts[0]?.assignmentPostScheduleId, null);
+  assert.equal(leftoverQty1.posts[0]?.quantity, 1);
+
+  const leftoverQtyN = projectClientCampaignExecution(
+    "hdr-1",
+    stage3Source({
+      deliverables: [
+        {
+          id: "del-stories",
+          campaignLineId: "line-1",
+          platform: "instagram",
+          deliverableType: "instagram_story",
+          quantity: 3,
+          liveDate: "2026-08-30",
+        },
+      ],
+    }),
+    "2026-08-22"
+  );
+  assert.equal(leftoverQtyN.posts[0]?.assignmentDeliverableId, "del-stories");
+  assert.equal(leftoverQtyN.posts[0]?.assignmentPostScheduleId, null);
+  assert.equal(leftoverQtyN.posts[0]?.quantity, 3);
+
+  const qtyN = projectClientCampaignExecution(
+    "hdr-1",
+    stage3Source({
+      deliverables: [
+        {
+          id: "del-stories",
+          campaignLineId: "line-1",
+          platform: "instagram",
+          deliverableType: "instagram_story",
+          quantity: 2,
+          liveDate: "2026-08-30",
+        },
+      ],
+      posts: [
+        stage3Post({
+          id: "story-1",
+          deliverableId: "del-stories",
+          sequence: 1,
+          liveDate: "2026-08-30",
+          status: "scheduled",
+        }),
+        stage3Post({
+          id: "story-2",
+          deliverableId: "del-stories",
+          sequence: 2,
+          liveDate: "2026-08-30",
+          status: "scheduled",
+        }),
+      ],
+    }),
+    "2026-08-22"
+  );
+  assert.equal(qtyN.posts.length, 2);
+  assert.equal(qtyN.posts[0]?.quantity, 2);
+  assert.equal(qtyN.posts[1]?.quantity, 2);
+  assert.equal(qtyN.posts[0]?.assignmentDeliverableId, "del-stories");
+  assert.equal(qtyN.posts[1]?.assignmentDeliverableId, "del-stories");
+  assert.ok(qtyN.posts[0]?.assignmentPostScheduleId);
+  assert.ok(qtyN.posts[1]?.assignmentPostScheduleId);
+  assert.notEqual(qtyN.posts[0]?.assignmentPostScheduleId, qtyN.posts[1]?.assignmentPostScheduleId);
+});
 
 test("Stage 3: scheduled creator appears as Scheduled", () => {
   assert.equal(

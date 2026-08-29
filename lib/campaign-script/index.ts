@@ -94,4 +94,36 @@ export {
   loadCreatorCampaignScriptByAssignmentId,
   type CreatorCampaignScriptBundle,
 } from "./load-creator-script";
+export {
+  loadCampaignScriptById,
+  loadCampaignScriptForUnit,
+  loadCampaignScriptMaster,
+  listAttachedCampaignScriptPresence,
+} from "./load-master";
+export { saveCampaignScriptForUnit, saveCampaignScriptMaster } from "./save-master";
+export {
+  campaignScriptUnitKey,
+  canAccessCampaignScriptUnit,
+  decideDocumentationScriptUnitGrain,
+  isCampaignScriptUnitParseFailure,
+  isQtyOneDocumentationScriptUnit,
+  parseCampaignScriptDocumentationUnit,
+} from "./unit";
+export {
+  attachedScriptPresenceFromRows,
+  campaignScriptDownloadFileName,
+  campaignScriptDownloadText,
+  clientPostDocumentationScriptUnit,
+  documentationScriptTargetFromUnit,
+  documentationUnitCanHoldScript,
+  documentationUnitScriptActionLabels,
+  documentationUnitScriptSheetTitle,
+  documentationUnitSummaryForClientPost,
+  isLegacyUnattachedCampaignScript,
+} from "./documentation-unit-ui";
+export type {
+  ClientPostDocumentationScriptUnit,
+  DocumentationUnitScriptIntent,
+  DocumentationUnitScriptTarget,
+} from "./documentation-unit-ui";
 export { saveCampaignScriptOverride } from "./save-override";

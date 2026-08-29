@@ -32,6 +32,8 @@ export type CampaignScriptMasterView = {
   createdAt: string;
   origin: ScriptOrigin;
   originalFileName: string | null;
+  assignmentDeliverableId: string | null;
+  assignmentPostScheduleId: string | null;
   translationStatus: ScriptTranslationStatus;
   translationTargetLanguage: ScriptLanguage | null;
   translationSourceRevisionId: string | null;
@@ -43,6 +45,11 @@ export type CampaignScriptMasterView = {
 export type SaveCampaignScriptInput = {
   campaignHeaderId: string;
   expectedCurrentRevisionId: string | null;
+  scriptId?: string | null;
+  unit?: {
+    assignmentDeliverableId: string;
+    assignmentPostScheduleId?: string | null;
+  } | null;
   sourceLanguage: ScriptLanguage;
   bodyEn: string;
   bodyAr: string;

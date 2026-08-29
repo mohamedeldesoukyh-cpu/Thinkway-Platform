@@ -7,7 +7,6 @@ import {
   CircleDollarSignIcon,
   MoreHorizontalIcon,
   PencilIcon,
-  ScrollTextIcon,
 } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
@@ -59,7 +58,6 @@ type AssignmentInfluencerDetailSheetProps = {
   row: AssignmentRowViewModel | null;
   audienceView?: AssignmentAudienceView;
   onEdit?: () => void;
-  onOpenCreatorScript?: () => void;
 };
 
 const ACTIVITY_SUB_TABS = ["content", "publications", "payments", "actions"] as const;
@@ -524,7 +522,6 @@ export function AssignmentInfluencerDetailSheet({
   row,
   audienceView = "internal",
   onEdit,
-  onOpenCreatorScript,
 }: AssignmentInfluencerDetailSheetProps) {
   const gates = resolveAssignmentsGridGates(audienceView);
 
@@ -583,12 +580,6 @@ export function AssignmentInfluencerDetailSheet({
                   <DropdownMenuItem onClick={onEdit}>
                     <PencilIcon className="size-4" />
                     Edit assignment
-                  </DropdownMenuItem>
-                ) : null}
-                {onOpenCreatorScript ? (
-                  <DropdownMenuItem onClick={onOpenCreatorScript}>
-                    <ScrollTextIcon className="size-4" />
-                    Open campaign script
                   </DropdownMenuItem>
                 ) : null}
                 {line.influencer_id ? (

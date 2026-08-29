@@ -23,7 +23,6 @@ import {
 import { countSelections } from "../status";
 import type { ClientWorkspaceView } from "../types";
 import { CampaignDashboard } from "./campaign-dashboard";
-import { CampaignScriptSection } from "./campaign-script-section";
 import { useClientWorkspaceState } from "./client-workspace-state";
 
 export function ApprovalWorkspace({
@@ -128,7 +127,6 @@ export function ApprovalWorkspace({
           <h2>{view.overview.campaignName}</h2>
           <p className="note">{CAMPAIGN_SETTING_UP_COPY}</p>
         </div>
-        {journey?.campaignHeaderId ? <CampaignScriptSection token={token} /> : null}
       </>
     );
   }
