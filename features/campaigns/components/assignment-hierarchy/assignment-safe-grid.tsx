@@ -87,6 +87,7 @@ import {
   resolveAssignmentLineCurrencyDisplay,
 } from "@/lib/campaigns/assignment-line-currency";
 import { formatPercent } from "@/features/campaigns/utils";
+import { cn } from "@/lib/utils";
 import { computeClientBilling } from "@/lib/assignments/client-billing-commercial";
 import type { OperationalSelectionPayload } from "@/lib/billing/operational-selection";
 import {
@@ -94,7 +95,6 @@ import {
   useOperationalColumnVisibleChecker,
   useOperationalVisibleColumnCount,
 } from "@/components/tables/operational-table-column-context";
-import { cn } from "@/lib/utils";
 import {
   getCreatorConnectedPlatformOptions,
   getDeliverableTypeCodesForPlatform,
@@ -865,7 +865,9 @@ export function AssignmentSafeGrid({
           hasInvoiceSelection={hasInvoiceSelection}
           invoiceActionLabel={invoiceActionLabel}
           ioCoverage={ioCoverage}
-          onAfterOperationalMutation={resetOperationalUiState}
+          onAfterOperationalMutation={() => {
+            resetOperationalUiState();
+          }}
         />
       ) : null}
     </div>

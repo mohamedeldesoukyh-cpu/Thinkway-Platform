@@ -38,6 +38,31 @@ test("identical tbc deliverables fold into one counted child row", () => {
   assert.equal(groups[0]?.folded.find((item) => item.sample.deliverable === "IG Reel")?.count, 2);
 });
 
+test("documentation units with scripts stay as separate publication-plan rows", () => {
+  const groups = groupPublicationPlanByCreator([
+    row({
+      id: "s1",
+      creatorName: "@omar_dem",
+      status: "scheduling",
+      deliverable: "IG Story",
+      assignmentDeliverableId: "del-story",
+      assignmentPostScheduleId: "post-1",
+      quantity: 2,
+    }),
+    row({
+      id: "s2",
+      creatorName: "@omar_dem",
+      status: "scheduling",
+      deliverable: "IG Story",
+      assignmentDeliverableId: "del-story",
+      assignmentPostScheduleId: "post-2",
+      quantity: 2,
+    }),
+  ]);
+  assert.equal(groups[0]?.folded.length, 2);
+  assert.equal(groups[0]?.folded.every((item) => item.count === 1), true);
+});
+
 test("creators with live or overdue rows expand by default", () => {
   const groups = groupPublicationPlanByCreator([
     row({ id: "1", creatorName: "@omar_dem", status: "scheduling" }),

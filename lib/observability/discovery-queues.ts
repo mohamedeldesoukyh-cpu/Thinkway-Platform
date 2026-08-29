@@ -16,6 +16,7 @@ export const DISCOVERY_WORKER_QUEUES = [
   "creator-enrichment-dlq",
   "batch-profile-acquisition",
   "performance-report",
+  "campaign-script-translate",
 ] as const;
 
 export type DiscoveryQueueName = (typeof DISCOVERY_WORKER_QUEUES)[number];

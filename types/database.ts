@@ -1140,6 +1140,150 @@ export type Database = {
         >;
         Relationships: [];
       };
+      campaign_scripts: {
+        Row: {
+          id: string;
+          campaign_header_id: string;
+          current_revision_id: string | null;
+          source_language: "en" | "ar";
+          status: "empty" | "current";
+          origin: "client" | "internal";
+          created_at: string;
+          updated_at: string;
+          translation_status: "idle" | "pending" | "generated" | "failed";
+          translation_target_language: "en" | "ar" | null;
+          translation_source_revision_id: string | null;
+          translation_error: string | null;
+          translation_attempts: number;
+          translation_updated_at: string | null;
+          assignment_deliverable_id: string | null;
+          assignment_post_schedule_id: string | null;
+        };
+        Insert: {
+          id?: string;
+          campaign_header_id: string;
+          current_revision_id?: string | null;
+          source_language: "en" | "ar";
+          status?: "empty" | "current";
+          origin: "client" | "internal";
+          created_at?: string;
+          updated_at?: string;
+          translation_status?: "idle" | "pending" | "generated" | "failed";
+          translation_target_language?: "en" | "ar" | null;
+          translation_source_revision_id?: string | null;
+          translation_error?: string | null;
+          translation_attempts?: number;
+          translation_updated_at?: string | null;
+          assignment_deliverable_id?: string | null;
+          assignment_post_schedule_id?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["campaign_scripts"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      campaign_script_revisions: {
+        Row: {
+          id: string;
+          script_id: string;
+          campaign_header_id: string;
+          revision_number: number;
+          business_version: string;
+          body_en: string;
+          body_ar: string;
+          source_language: "en" | "ar";
+          en_origin: "source" | "generated" | "human_edited";
+          ar_origin: "source" | "generated" | "human_edited";
+          actor_kind: "internal" | "client";
+          actor_user_id: string | null;
+          actor_label: string | null;
+          parent_revision_id: string | null;
+          review_id: string | null;
+          original_file_name: string | null;
+          original_storage_bucket: string | null;
+          original_storage_path: string | null;
+          original_mime_type: string | null;
+          original_file_size: number | null;
+          change_summary: string | null;
+          created_at: string;
+          assignment_id: string | null;
+        };
+        Insert: {
+          id?: string;
+          script_id: string;
+          campaign_header_id: string;
+          revision_number: number;
+          business_version: string;
+          body_en?: string;
+          body_ar?: string;
+          source_language: "en" | "ar";
+          en_origin: "source" | "generated" | "human_edited";
+          ar_origin: "source" | "generated" | "human_edited";
+          actor_kind: "internal" | "client";
+          actor_user_id?: string | null;
+          actor_label?: string | null;
+          parent_revision_id?: string | null;
+          review_id?: string | null;
+          original_file_name?: string | null;
+          original_storage_bucket?: string | null;
+          original_storage_path?: string | null;
+          original_mime_type?: string | null;
+          original_file_size?: number | null;
+          change_summary?: string | null;
+          created_at?: string;
+          assignment_id?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["campaign_script_revisions"]["Insert"]
+        >;
+        Relationships: [];
+      };
+      campaign_script_assignments: {
+        Row: {
+          id: string;
+          campaign_header_id: string;
+          script_id: string;
+          campaign_line_id: string | null;
+          influencer_id: string;
+          campaign_influencer_id: string | null;
+          mode: "inherited" | "customized";
+          override_revision_id: string | null;
+          forked_from_master_revision_id: string | null;
+          assigned_at: string;
+          assigned_by: string | null;
+          updated_at: string;
+          translation_status: "idle" | "pending" | "generated" | "failed";
+          translation_target_language: "en" | "ar" | null;
+          translation_source_revision_id: string | null;
+          translation_error: string | null;
+          translation_attempts: number;
+          translation_updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          campaign_header_id: string;
+          script_id: string;
+          campaign_line_id?: string | null;
+          influencer_id: string;
+          campaign_influencer_id?: string | null;
+          mode?: "inherited" | "customized";
+          override_revision_id?: string | null;
+          forked_from_master_revision_id?: string | null;
+          assigned_at?: string;
+          assigned_by?: string | null;
+          updated_at?: string;
+          translation_status?: "idle" | "pending" | "generated" | "failed";
+          translation_target_language?: "en" | "ar" | null;
+          translation_source_revision_id?: string | null;
+          translation_error?: string | null;
+          translation_attempts?: number;
+          translation_updated_at?: string | null;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["campaign_script_assignments"]["Insert"]
+        >;
+        Relationships: [];
+      };
       campaign_commercial_snapshots: {
         Row: CampaignCommercialSnapshotRow;
         Insert: {

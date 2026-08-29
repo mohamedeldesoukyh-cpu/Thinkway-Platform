@@ -55,6 +55,9 @@ import {
   DocumentationRepositoryList,
   documentationStatusBadge,
 } from "@/features/campaigns/components/deliverables/documentation-repository-list";
+import { DocumentationUnitScriptActions } from "@/features/campaigns/components/script/documentation-unit-script-actions";
+import { DocumentationUnitScriptSheet } from "@/features/campaigns/components/script/documentation-unit-script-sheet";
+import { listCampaignScriptPresenceAction } from "@/features/campaigns/actions/campaign-script-actions";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import {
@@ -93,6 +96,11 @@ import {
   applyDocumentationAggregates,
   buildDocumentationUnitsFromHierarchy,
 } from "@/lib/services/deliverables/build-documentation-units";
+import {
+  documentationUnitCanHoldScript,
+  type CampaignScriptUnitPresence,
+  type DocumentationUnitScriptIntent,
+} from "@/lib/campaign-script";
 
 type Props = {
   workspace: CampaignWorkspace;
@@ -199,6 +207,12 @@ export function CampaignDeliverablesDocumentationTab({
     loaded: number;
     total: number;
   } | null>(null);
+  const [scriptPresence, setScriptPresence] = useState<Map<string, CampaignScriptUnitPresence>>(
+    () => new Map()
+  );
+  const [scriptSheetUnitKey, setScriptSheetUnitKey] = useState<string | null>(null);
+  const [scriptSheetIntent, setScriptSheetIntent] =
+    useState<DocumentationUnitScriptIntent>("edit");
 
   const detailRequestIdRef = useRef(0);
   const uploadSessionRef = useRef(0);
@@ -367,6 +381,33 @@ export function CampaignDeliverablesDocumentationTab({
     () => units.find((u) => u.unitKey === selectedKey) ?? null,
     [units, selectedKey]
   );
+  const scriptSheetUnit = useMemo(
+    () => units.find((unit) => unit.unitKey === scriptSheetUnitKey) ?? null,
+    [units, scriptSheetUnitKey]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    void listCampaignScriptPresenceAction({ campaignId }).then((result) => {
+      if (cancelled || !result.ok) return;
+      setScriptPresence(
+        new Map(
+          result.data.map((row) => [
+            row.unitKey,
+            {
+              scriptId: row.scriptId,
+              originalFileName: row.originalFileName,
+              originalMimeType: row.originalMimeType,
+              hasOriginalDocument: row.hasOriginalDocument,
+            },
+          ])
+        )
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [campaignId]);
 
   /** Editor documentation payload — only when bound to current selection. */
   const boundDetail =
@@ -439,6 +480,17 @@ export function CampaignDeliverablesDocumentationTab({
       applySelection(nextKey);
     },
     [selectedKey, selectionLocked, drafts, applySelection]
+  );
+
+  const openUnitScript = useCallback(
+    (unitKey: string, intent: DocumentationUnitScriptIntent) => {
+      if (unitKey !== selectedKey && !selectionLocked && !draftsAreDirty(drafts)) {
+        applySelection(unitKey);
+      }
+      setScriptSheetIntent(intent);
+      setScriptSheetUnitKey(unitKey);
+    },
+    [applySelection, drafts, selectedKey, selectionLocked]
   );
 
   async function persistDraftsForUnit(
@@ -580,6 +632,7 @@ export function CampaignDeliverablesDocumentationTab({
   }
 
   return (
+    <>
     <CampaignWorkspaceFrame
       title="Deliverables"
       subtitle="Upload files, links, and captions for client review — plus versions and comments"
@@ -718,6 +771,9 @@ export function CampaignDeliverablesDocumentationTab({
                   selectionLocked={selectionLocked}
                   hideCreatorHeaders={creatorFilter !== "all"}
                   onSelect={requestSelect}
+                  scriptPresence={scriptPresence}
+                  campaignId={campaignId}
+                  onOpenScript={openUnitScript}
                 />
               )}
             </div>
@@ -755,6 +811,27 @@ export function CampaignDeliverablesDocumentationTab({
                           slotReceiptStatus(selected, boundDetail)
                         )}
                       </div>
+                      <DocumentationUnitScriptActions
+                        hasScript={scriptPresence.has(selected.unitKey)}
+                        campaignId={campaignId}
+                        assignmentDeliverableId={selected.assignmentDeliverableId}
+                        assignmentPostScheduleId={selected.assignmentPostScheduleId}
+                        originalFileName={scriptPresence.get(selected.unitKey)?.originalFileName}
+                        originalMimeType={scriptPresence.get(selected.unitKey)?.originalMimeType}
+                        hasOriginalDocument={
+                          scriptPresence.get(selected.unitKey)?.hasOriginalDocument
+                        }
+                        disabled={pending}
+                        unavailableReason={
+                          documentationUnitCanHoldScript(selected)
+                            ? null
+                            : "This slot needs a post before a script can be attached."
+                        }
+                        onAdd={() => openUnitScript(selected.unitKey, "edit")}
+                        onUpload={() => openUnitScript(selected.unitKey, "upload")}
+                        onOpen={() => openUnitScript(selected.unitKey, "edit")}
+                        onPreview={() => openUnitScript(selected.unitKey, "preview")}
+                      />
                       <p className="truncate text-[12px] text-[var(--camp-text-2)]">
                         {selected.creatorName ?? "Unassigned creator"}
                       </p>
@@ -1431,5 +1508,32 @@ export function CampaignDeliverablesDocumentationTab({
         </DialogContent>
       </Dialog>
     </CampaignWorkspaceFrame>
+
+    <DocumentationUnitScriptSheet
+      open={scriptSheetUnitKey != null}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) setScriptSheetUnitKey(null);
+      }}
+      campaignId={campaignId}
+      unit={scriptSheetUnit}
+      intent={scriptSheetIntent}
+      onPresenceChange={(unitKey, presence) => {
+        setScriptPresence((current) => {
+          const next = new Map(current);
+          if (!presence.hasScript) {
+            next.delete(unitKey);
+            return next;
+          }
+          next.set(unitKey, {
+            scriptId: presence.scriptId ?? current.get(unitKey)?.scriptId ?? "",
+            originalFileName: presence.originalFileName ?? null,
+            originalMimeType: presence.originalMimeType ?? null,
+            hasOriginalDocument: Boolean(presence.hasOriginalDocument),
+          });
+          return next;
+        });
+      }}
+    />
+    </>
   );
 }

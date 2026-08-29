@@ -1,3 +1,5 @@
+import { clientPostDocumentationScriptUnit } from "@/lib/campaign-script";
+
 import {
   CLIENT_CAMPAIGN_POST_STATUS_LABEL,
   formatClientCampaignPerformance,
@@ -97,7 +99,9 @@ function foldIdenticalDeliverables(posts: ClientCampaignPostRow[]): FoldedDelive
   const map = new Map<string, FoldedDeliverableRow>();
   for (const post of posts) {
     const format = normalizeClientDeliverableFormat(post.deliverable, post.platform);
+    const unitKey = clientPostDocumentationScriptUnit(post)?.unitKey ?? "";
     const key = [
+      unitKey,
       format,
       post.status,
       post.scheduledDate ?? "",

@@ -121,11 +121,13 @@ export function ApprovalWorkspace({
 
   if (kind === "setting_up") {
     return (
-      <div className="card">
-        <p className="ck">Campaign</p>
-        <h2>{view.overview.campaignName}</h2>
-        <p className="note">{CAMPAIGN_SETTING_UP_COPY}</p>
-      </div>
+      <>
+        <div className="card">
+          <p className="ck">Campaign</p>
+          <h2>{view.overview.campaignName}</h2>
+          <p className="note">{CAMPAIGN_SETTING_UP_COPY}</p>
+        </div>
+      </>
     );
   }
 

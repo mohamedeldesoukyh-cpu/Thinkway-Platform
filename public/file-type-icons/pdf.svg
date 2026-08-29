@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="PDF">
+  <path fill="#F7F1F0" d="M12 3h9.2L28 9.8V27a2.5 2.5 0 0 1-2.5 2.5H12A2.5 2.5 0 0 1 9.5 27V5.5A2.5 2.5 0 0 1 12 3z"/>
+  <path fill="#E2C9C6" d="M21.2 3V8.6c0 1 .8 1.8 1.8 1.8H28L21.2 3z"/>
+  <path fill="#E6D4D1" d="M18.4 15.2h8.1v1.35h-8.1zm0 3.4h8.1v1.35h-8.1zm0 3.4h5.6v1.35h-5.6z"/>
+  <rect x="2.2" y="9.2" width="16.4" height="16.4" rx="2.4" fill="#E5252A"/>
+  <path fill="#fff" d="M6.1 12.4h6.3l2.7 2.7v8.3H6.1V12.4z"/>
+  <path fill="#E5252A" d="M12.4 12.4v2.6h2.7"/>
+  <path fill="#E5252A" d="M7.7 17.2h6.4v1.15H7.7zm0 2.2h6.4v1.15H7.7zm0 2.2h4.3v1.15H7.7z"/>
+</svg>

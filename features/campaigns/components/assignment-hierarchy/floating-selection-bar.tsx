@@ -124,6 +124,7 @@ export function FloatingSelectionBar({
   const [ungenerateReason, setUngenerateReason] = useState("");
   const [reviseReason, setReviseReason] = useState("");
 
+  const busy = pending;
   const visible = totals.count > 0;
   const displayCurrency = totals.currencyMixed ? "USD" : (totals.currency ?? "USD");
   const currencyLabel = totals.currencyMixed ? "Mixed" : (totals.currency ?? "USD");
@@ -213,7 +214,7 @@ export function FloatingSelectionBar({
           onClearSelection={onClearSelection}
           onSelectAll={onSelectAll}
           selectableCount={selectableLineCount}
-          busy={pending}
+          busy={busy}
         />
 
         <PlatformFloatingBarDivider />

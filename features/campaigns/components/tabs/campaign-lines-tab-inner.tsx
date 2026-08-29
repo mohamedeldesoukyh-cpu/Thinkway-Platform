@@ -59,7 +59,6 @@ import {
 import { AssignmentCommercialWorkspaceDialog } from "@/features/campaigns/components/assignment-commercial-workspace-dialog";
 import { AssignmentInfluencerDetailSheet } from "@/features/campaigns/components/assignment-hierarchy/assignment-influencer-detail-sheet";
 import { AssignmentSafeGrid } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-grid";
-import type { AssignmentHierarchyGroup } from "@/features/campaigns/types/assignment-hierarchy";
 import { tryBuildAssignmentRowViewModel } from "@/lib/campaigns/assignment-row-view-model";
 import type { AssignmentAudienceView } from "@/lib/campaigns/assignment-audience-view";
 

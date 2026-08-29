@@ -2,6 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { DocumentationUnitScriptActions } from "@/features/campaigns/components/script/documentation-unit-script-actions";
+import { DocumentationUnitScriptSheet } from "@/features/campaigns/components/script/documentation-unit-script-sheet";
+import {
+  clientPostDocumentationScriptUnit,
+  documentationUnitSummaryForClientPost,
+  type CampaignScriptUnitPresence,
+  type DocumentationUnitScriptIntent,
+} from "@/lib/campaign-script";
+
+import { listClientCampaignScriptPresenceAction } from "../actions/campaign-script-actions";
 import { DATA_NOT_AVAILABLE, NOT_AVAILABLE, TO_BE_CONFIRMED } from "../format";
 import {
   formatClientCampaignPerformance,
@@ -93,6 +103,62 @@ function dash(value: string | null | undefined) {
   return value ? value : <span className="cx-empty">—</span>;
 }
 
+function clientScriptUnitFromPost(post: ClientCampaignPostRow) {
+  const mapped = clientPostDocumentationScriptUnit(post);
+  if (!mapped) return null;
+  return documentationUnitSummaryForClientPost({
+    assignmentDeliverableId: mapped.assignmentDeliverableId,
+    assignmentPostScheduleId: mapped.assignmentPostScheduleId,
+    unitKey: mapped.unitKey,
+    quantity: mapped.quantity,
+    sequenceNumber: post.sequenceNumber,
+    creatorName: post.creatorName,
+    platform: post.platform,
+    deliverableLabel: post.deliverable,
+  });
+}
+
+function DeliverableScriptCell({
+  post,
+  count = 1,
+  scriptPresence,
+  token,
+  onOpen,
+}: {
+  post: ClientCampaignPostRow;
+  count?: number;
+  scriptPresence: ReadonlyMap<string, CampaignScriptUnitPresence>;
+  token: string;
+  onOpen: (post: ClientCampaignPostRow, intent: DocumentationUnitScriptIntent) => void;
+}) {
+  const unit = clientScriptUnitFromPost(post);
+  const presence = unit ? scriptPresence.get(unit.unitKey) : undefined;
+  return (
+    <div className="cx-dlv">
+      <span className="cx-dlv__n">
+        {post.deliverable || TO_BE_CONFIRMED}
+        {count > 1 ? <span className="cx-xn">×{count}</span> : null}
+      </span>
+      {unit && count === 1 ? (
+        <DocumentationUnitScriptActions
+          variant="client"
+          token={token}
+          hasScript={Boolean(presence)}
+          assignmentDeliverableId={unit.assignmentDeliverableId}
+          assignmentPostScheduleId={unit.assignmentPostScheduleId}
+          originalFileName={presence?.originalFileName}
+          originalMimeType={presence?.originalMimeType}
+          hasOriginalDocument={presence?.hasOriginalDocument}
+          onAdd={() => onOpen(post, "edit")}
+          onUpload={() => onOpen(post, "upload")}
+          onOpen={() => onOpen(post, "edit")}
+          onPreview={() => onOpen(post, "preview")}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 export function CampaignPublicationPlan({
   posts,
   creators,
@@ -110,6 +176,13 @@ export function CampaignPublicationPlan({
   const [view, setView] = useState<PublicationPlanViewMode>("grouped");
   const [opened, setOpened] = useState<Set<string>>(() => new Set());
   const [closed, setClosed] = useState<Set<string>>(() => new Set());
+  const [scriptPresence, setScriptPresence] = useState<Map<string, CampaignScriptUnitPresence>>(
+    () => new Map()
+  );
+  const [scriptSheet, setScriptSheet] = useState<{
+    post: ClientCampaignPostRow;
+    intent: DocumentationUnitScriptIntent;
+  } | null>(null);
   const counts = publicationPlanFilterCounts(posts);
   const statusScoped = useMemo(
     () => filterPublicationPlanPosts(posts, filter, "", "all"),
@@ -122,6 +195,7 @@ export function CampaignPublicationPlan({
   );
   const groups = useMemo(() => groupPublicationPlanByCreator(visible), [visible]);
   const defaultOpen = useMemo(() => new Set(defaultExpandedCreators(groups)), [groups]);
+  const scriptSheetUnit = scriptSheet ? clientScriptUnitFromPost(scriptSheet.post) : null;
 
   function isOpen(name: string) {
     if (closed.has(name)) return false;
@@ -161,6 +235,33 @@ export function CampaignPublicationPlan({
     // Only re-run when the client asks to view overdue — not on every posts refresh.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusOverdue]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void listClientCampaignScriptPresenceAction({ token }).then((result) => {
+      if (cancelled || !result.ok) return;
+      setScriptPresence(
+        new Map(
+          result.data.map((row) => [
+            row.unitKey,
+            {
+              scriptId: row.scriptId,
+              originalFileName: row.originalFileName,
+              originalMimeType: row.originalMimeType,
+              hasOriginalDocument: row.hasOriginalDocument,
+            },
+          ])
+        )
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  function openScript(post: ClientCampaignPostRow, intent: DocumentationUnitScriptIntent) {
+    setScriptSheet({ post, intent });
+  }
 
   function setStatusFilter(next: PublicationPlanFilter) {
     setFilter(next);
@@ -264,10 +365,10 @@ export function CampaignPublicationPlan({
             <thead>
               <tr>
                 <th>Creator</th>
-                <th>Platform</th>
+                <th className="cx-hide-sm">Platform</th>
                 <th>Deliverables</th>
                 <th>Status</th>
-                <th className="r">Progress</th>
+                <th className="r cx-hide-sm">Progress</th>
               </tr>
             </thead>
             <tbody>
@@ -281,6 +382,8 @@ export function CampaignPublicationPlan({
                     index={index}
                     token={token}
                     creators={creators}
+                    scriptPresence={scriptPresence}
+                    onOpenScript={openScript}
                     onToggle={() => toggle(group.creatorName)}
                   />
                 );
@@ -292,12 +395,12 @@ export function CampaignPublicationPlan({
             <thead>
               <tr>
                 <th>Creator</th>
-                <th>Platform</th>
+                <th className="cx-hide-sm">Platform</th>
                 <th>Deliverable</th>
-                <th>Scheduled</th>
+                <th className="cx-hide-sm">Scheduled</th>
                 <th>Status</th>
-                <th>Published</th>
-                <th className="r">Performance</th>
+                <th className="cx-hide-sm">Published</th>
+                <th className="r cx-hide-sm">Performance</th>
               </tr>
             </thead>
             <tbody>
@@ -315,16 +418,23 @@ export function CampaignPublicationPlan({
                       <span className="cx-who__n">{post.creatorName}</span>
                     </span>
                   </td>
-                  <td>
+                  <td className="cx-hide-sm">
                     <PlatformCell row={post} />
                   </td>
-                  <td>{post.deliverable || TO_BE_CONFIRMED}</td>
-                  <td>{dash(formatClientScheduleDate(post.scheduledDate))}</td>
+                  <td>
+                    <DeliverableScriptCell
+                      post={post}
+                      scriptPresence={scriptPresence}
+                      token={token}
+                      onOpen={openScript}
+                    />
+                  </td>
+                  <td className="cx-hide-sm">{dash(formatClientScheduleDate(post.scheduledDate))}</td>
                   <td>
                     <StatusPill status={post.status} />
                   </td>
-                  <td>{dash(formatClientScheduleDate(post.publicationDate) ?? (post.contentUrl ? "Published" : null))}</td>
-                  <td className="r">
+                  <td className="cx-hide-sm">{dash(formatClientScheduleDate(post.publicationDate) ?? (post.contentUrl ? "Published" : null))}</td>
+                  <td className="r cx-hide-sm">
                     {post.live || post.performance.views != null
                       ? formatClientCampaignPerformance(post.performance)
                       : dash(null)}
@@ -343,6 +453,32 @@ export function CampaignPublicationPlan({
         </span>
         <span>{PUBLICATION_PLAN_FOOTNOTE}</span>
       </div>
+      <DocumentationUnitScriptSheet
+        open={Boolean(scriptSheet && scriptSheetUnit)}
+        onOpenChange={(open) => {
+          if (!open) setScriptSheet(null);
+        }}
+        surface="client"
+        token={token}
+        unit={scriptSheetUnit}
+        intent={scriptSheet?.intent ?? "edit"}
+        onPresenceChange={(unitKey, presence) => {
+          setScriptPresence((current) => {
+            const next = new Map(current);
+            if (!presence.hasScript) {
+              next.delete(unitKey);
+              return next;
+            }
+            next.set(unitKey, {
+              scriptId: presence.scriptId ?? current.get(unitKey)?.scriptId ?? "",
+              originalFileName: presence.originalFileName ?? null,
+              originalMimeType: presence.originalMimeType ?? null,
+              hasOriginalDocument: Boolean(presence.hasOriginalDocument),
+            });
+            return next;
+          });
+        }}
+      />
     </section>
   );
 }
@@ -353,6 +489,8 @@ function GroupRows({
   index,
   token,
   creators,
+  scriptPresence,
+  onOpenScript,
   onToggle,
 }: {
   group: ReturnType<typeof groupPublicationPlanByCreator>[number];
@@ -360,6 +498,8 @@ function GroupRows({
   index: number;
   token: string;
   creators: ClientCreatorCard[];
+  scriptPresence: ReadonlyMap<string, CampaignScriptUnitPresence>;
+  onOpenScript: (post: ClientCampaignPostRow, intent: DocumentationUnitScriptIntent) => void;
   onToggle: () => void;
 }) {
   const first = group.posts[0];
@@ -383,7 +523,7 @@ function GroupRows({
             <span className="cx-who__n">{group.creatorName}</span>
           </span>
         </td>
-        <td>{first ? <PlatformCell row={first} /> : null}</td>
+        <td className="cx-hide-sm">{first ? <PlatformCell row={first} /> : null}</td>
         <td>
           <span className="cx-mix">
             {group.kinds.map((kind) => (
@@ -398,7 +538,7 @@ function GroupRows({
             <StatusPill key={status} status={status} />
           ))}
         </td>
-        <td className="r">
+        <td className="r cx-hide-sm">
           <span className="cx-mini">
             <span className="cx-mini__t">
               <span
@@ -422,17 +562,22 @@ function GroupRows({
             return (
               <tr className="cx-kid" key={item.key}>
                 <td>
-                  {post.deliverable || TO_BE_CONFIRMED}
-                  {item.count > 1 ? <span className="cx-xn">×{item.count}</span> : null}
+                  <DeliverableScriptCell
+                    post={post}
+                    count={item.count}
+                    scriptPresence={scriptPresence}
+                    token={token}
+                    onOpen={onOpenScript}
+                  />
                 </td>
-                <td>
+                <td className="cx-hide-sm">
                   <PlatformCell row={post} />
                 </td>
                 <td>{dash(formatClientScheduleDate(post.scheduledDate))}</td>
                 <td>
                   <StatusPill status={post.status} />
                 </td>
-                <td className="r">
+                <td className="r cx-hide-sm">
                   {perf !== DATA_NOT_AVAILABLE && perf !== NOT_AVAILABLE ? perf : dash(null)}
                 </td>
               </tr>
