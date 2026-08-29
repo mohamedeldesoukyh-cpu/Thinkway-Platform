@@ -27,4 +27,8 @@ test("Client Workspace mobile CSS stacks Overview, Shortlist, Commercial, and ch
   assert.equal(creators.includes('style={{ margin: "8px 8px 0 0" }}'), false);
   assert.equal(css.includes(".cx-metric--likes"), true);
   assert.equal(css.includes("#ed4956"), true);
+  assert.equal(css.includes(".cx-pane{display:flex;flex-direction:column"), true);
+  assert.equal(css.includes(".cx-rev__head{order:1"), true);
+  assert.equal(css.includes(".cx-rev__media{order:1"), true);
+  assert.equal(css.includes("overflow-wrap:anywhere"), true);
 });

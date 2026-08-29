@@ -1,8 +1,8 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Creators and go-live metrics use Instagram-style circular icons (play, red heart, comment, ER).
+**Focus:** Client Campaign content review — mobile name-above-video layout; live Performance links auto-approve matching drafts.
 
-- Publication plan groups stay collapsed until expanded.
-- Refresh metrics toasts complete on terminal status.
+- Content to Review stacks creator header, then story video, then metadata on mobile.
+- Ads with a live Performance URL skip Client “needs approval.”
 - Dual ship: Development (`develop`) then Production (`main`) after this change.

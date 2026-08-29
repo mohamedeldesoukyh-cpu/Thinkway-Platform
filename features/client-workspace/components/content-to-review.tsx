@@ -168,7 +168,7 @@ function ContentReviewPane({
             creators={creators}
             className="cx-av"
           />
-          <span>
+          <span className="cx-rev__who-text">
             <span className="cx-rev__name">{item.creatorName}</span>
             <span className="cx-rev__file">{item.fileName || item.deliverable}</span>
           </span>

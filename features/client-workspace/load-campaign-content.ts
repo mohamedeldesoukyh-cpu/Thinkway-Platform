@@ -7,6 +7,7 @@ import {
   projectClientCampaignContent,
   type ClientCampaignContent,
   type ClientContentDecisionRecord,
+  type ClientPublishedContentUnit,
 } from "./content-approval";
 
 type AssetRow = {
@@ -50,6 +51,11 @@ type InfluencerRow = {
   campaign_line_id: string | null;
   influencer: { display_name: string | null } | { display_name: string | null }[] | null;
 };
+type PublicationRow = {
+  assignment_deliverable_id: string | null;
+  assignment_post_schedule_id: string | null;
+  content_url: string | null;
+};
 
 function influencerName(row: InfluencerRow): string {
   const nested = row.influencer;
@@ -80,7 +86,7 @@ export async function loadClientCampaignContent(
   const headerId = campaignHeaderId?.trim();
   if (!headerId) return emptyClientCampaignContent();
 
-  const [assetsResult, deliverablesResult, linesResult, influencersResult] = await Promise.all([
+  const [assetsResult, deliverablesResult, linesResult, influencersResult, publicationsResult] = await Promise.all([
     supabase
       .from("deliverable_assets")
       .select(
@@ -97,12 +103,17 @@ export async function loadClientCampaignContent(
       .from("campaign_influencers")
       .select("campaign_line_id, influencer:influencers(display_name)")
       .eq("campaign_header_id", headerId),
+    supabase
+      .from("campaign_publications")
+      .select("assignment_deliverable_id, assignment_post_schedule_id, content_url")
+      .eq("campaign_header_id", headerId),
   ]);
 
   logContentLoadError("assets", assetsResult.error?.message);
   logContentLoadError("deliverables", deliverablesResult.error?.message);
   logContentLoadError("lines", linesResult.error?.message);
   logContentLoadError("influencers", influencersResult.error?.message);
+  logContentLoadError("publications", publicationsResult.error?.message);
 
   const assets = (assetsResult.data ?? []) as AssetRow[];
   const assetIds = assets.map((asset) => asset.id);
@@ -149,6 +160,13 @@ export async function loadClientCampaignContent(
     deliverableTypeByDeliverableId[deliverable.id] = deliverable.deliverable_type ?? "other";
   }
 
+  const publishedUnits: ClientPublishedContentUnit[] = ((publicationsResult.data ?? []) as PublicationRow[])
+    .filter((row) => Boolean(row.content_url?.trim()))
+    .map((row) => ({
+      assignmentDeliverableId: row.assignment_deliverable_id,
+      assignmentPostScheduleId: row.assignment_post_schedule_id,
+    }));
+
   return projectClientCampaignContent({
     campaignHeaderId: headerId,
     assets: assets.map((asset) => ({
@@ -177,5 +195,6 @@ export async function loadClientCampaignContent(
     creatorNameByDeliverableId,
     platformByDeliverableId,
     deliverableTypeByDeliverableId,
+    publishedUnits,
   });
 }

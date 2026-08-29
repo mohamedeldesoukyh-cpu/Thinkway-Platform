@@ -6,7 +6,7 @@ import {
 
 export const NO_CONTENT_TO_REVIEW_COPY = "No content to review.";
 export const NO_CONTENT_TO_REVIEW_HINT =
-  "This list shows reels, images, and links Thinkway uploaded for approval. It stays empty until a file finishes saving in Campaign Workspace → Deliverables. Live story screenshots and published posts further down are proof of live content, not files waiting for review.";
+  "This list shows reels, images, and links Thinkway uploaded for approval. It stays empty until a file finishes saving in Campaign Workspace → Deliverables. Ads that already have a live Performance link are treated as approved and do not wait here. Live story screenshots and published posts further down are proof of live content, not files waiting for review.";
 export const NOTHING_WAITING_ON_YOU_COPY =
   "Nothing waiting on you — all submitted content has been reviewed.";
 export const APPROVED_CONTENT_HEADING = "Approved content";
@@ -95,6 +95,12 @@ export type ClientContentAssetSource = {
   archivedAt: string | null;
 };
 
+/** Performance publication with a live URL, used to skip Client content approval. */
+export type ClientPublishedContentUnit = {
+  assignmentDeliverableId: string | null;
+  assignmentPostScheduleId: string | null;
+};
+
 export type ClientContentVersionSource = {
   id: string;
   assetId: string;
@@ -126,6 +132,33 @@ export function clientContentStatusFromDecision(
 ): ClientContentStatus {
   if (!decision) return "approval_required";
   return decision.decision;
+}
+
+/**
+ * A live Performance URL on the same post (or the same deliverable when the
+ * asset is not post-specific) means the ad is already published — the client
+ * does not need to approve that draft.
+ */
+export function contentAssetIsLivePublished(
+  asset: Pick<ClientContentAssetSource, "assignmentDeliverableId" | "assignmentPostScheduleId">,
+  published: readonly ClientPublishedContentUnit[]
+): boolean {
+  const postId = asset.assignmentPostScheduleId?.trim() || null;
+  const deliverableId = asset.assignmentDeliverableId.trim();
+  if (postId) {
+    return published.some((row) => row.assignmentPostScheduleId?.trim() === postId);
+  }
+  if (!deliverableId) return false;
+  return published.some((row) => row.assignmentDeliverableId?.trim() === deliverableId);
+}
+
+export function resolveClientContentStatus(
+  decision: ClientContentDecisionRecord | null,
+  livePublished: boolean
+): ClientContentStatus {
+  if (decision?.decision === "approved") return "approved";
+  if (livePublished) return "approved";
+  return clientContentStatusFromDecision(decision);
 }
 
 export function currentContentVersion(
@@ -162,6 +195,7 @@ export function projectClientCampaignContent(input: {
   creatorNameByDeliverableId: Record<string, string>;
   platformByDeliverableId: Record<string, string>;
   deliverableTypeByDeliverableId: Record<string, string>;
+  publishedUnits?: readonly ClientPublishedContentUnit[];
 }): ClientCampaignContent {
   const versionsByAsset = new Map<string, ClientContentVersionSource[]>();
   for (const version of input.versions) {
@@ -186,6 +220,8 @@ export function projectClientCampaignContent(input: {
     if (asset.medium === "external_link" && !externalUrl) continue;
 
     const currentDecision = latestDecisionForVersion(input.decisions, current.id);
+    const livePublished = contentAssetIsLivePublished(asset, input.publishedUnits ?? []);
+    const status = resolveClientContentStatus(currentDecision, livePublished);
     const platform = input.platformByDeliverableId[asset.assignmentDeliverableId] ?? "";
     const type = input.deliverableTypeByDeliverableId[asset.assignmentDeliverableId] ?? "";
     const assetType = asset.assetType as DeliverableAssetType;
@@ -206,18 +242,23 @@ export function projectClientCampaignContent(input: {
       fileName: current.fileName,
       mimeType: current.mimeType,
       uploadedAt: current.uploadedAt,
-      status: clientContentStatusFromDecision(currentDecision),
+      status,
       comment: currentDecision?.comment ?? null,
       canDownloadOriginal: asset.medium === "file" && hasFile,
       externalUrl: asset.medium === "external_link" ? externalUrl : null,
       previewKind: hasFile ? clientContentPreviewKind(current.mimeType) : "none",
       history: versions.map((version) => {
         const decision = latestDecisionForVersion(input.decisions, version.id);
+        const versionLive = version.id === current.id && livePublished;
         return {
           versionId: version.id,
           versionNumber: version.versionNumber,
           uploadedAt: version.uploadedAt,
-          status: decision ? decision.decision : "uploaded",
+          status: decision
+            ? resolveClientContentStatus(decision, versionLive)
+            : versionLive
+              ? "approved"
+              : "uploaded",
           comment: decision?.comment ?? null,
         };
       }),

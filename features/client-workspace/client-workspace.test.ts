@@ -187,6 +187,7 @@ import {
   clientContentAssetUrl,
   clientContentPlaybackMime,
   clientContentToReview,
+  contentAssetIsLivePublished,
   currentContentVersion,
   emptyClientCampaignContent,
   FULL_SIZE_LABEL,
@@ -196,6 +197,7 @@ import {
   type ClientContentAssetSource,
   type ClientContentDecisionRecord,
   type ClientContentVersionSource,
+  type ClientPublishedContentUnit,
 } from "./content-approval";
 import { normalizeClientDeliveryEmail } from "./client-quotation-delivery";
 import {
@@ -5838,6 +5840,7 @@ function projectContent(input: {
   assets?: ClientContentAssetSource[];
   versions?: ClientContentVersionSource[];
   decisions?: ClientContentDecisionRecord[];
+  publishedUnits?: ClientPublishedContentUnit[];
 }) {
   return projectClientCampaignContent({
     campaignHeaderId: "hdr-1",
@@ -5850,6 +5853,7 @@ function projectContent(input: {
     creatorNameByDeliverableId: { "del-1": "Amina" },
     platformByDeliverableId: { "del-1": "instagram" },
     deliverableTypeByDeliverableId: { "del-1": "instagram_reel" },
+    publishedUnits: input.publishedUnits,
   });
 }
 
@@ -6059,7 +6063,7 @@ test("live story screenshots stay off Creator content approval", () => {
   assert.equal(clientContentToReview(projected.items).length, 1);
 });
 
-test("content approval is independent of quotation approval and live publication status", () => {
+test("content approval is independent of quotation approval", () => {
   const content = projectContent({
     decisions: [
       {
@@ -6073,8 +6077,6 @@ test("content approval is independent of quotation approval and live publication
     ],
   });
   assert.equal(content.items[0]?.status, "approved");
-  assert.equal("live" in content.items[0]!, false);
-  assert.equal("published" in content.items[0]!, false);
   const execution = projectClientCampaignExecution(
     "hdr-1",
     {
@@ -6108,5 +6110,57 @@ test("content approval is independent of quotation approval and live publication
   assert.equal(execution.posts[0]?.status, "scheduled");
   assert.equal(execution.posts[0]?.live, false);
   assert.equal(content.items[0]?.status, "approved");
+});
+
+test("a live Performance link auto-approves matching Creator content", () => {
+  assert.equal(
+    contentAssetIsLivePublished(contentAsset(), [
+      { assignmentDeliverableId: "del-1", assignmentPostScheduleId: "p1" },
+    ]),
+    true
+  );
+  assert.equal(
+    contentAssetIsLivePublished(contentAsset(), [
+      { assignmentDeliverableId: "del-2", assignmentPostScheduleId: "p2" },
+    ]),
+    false
+  );
+
+  const live = projectContent({
+    publishedUnits: [{ assignmentDeliverableId: "del-1", assignmentPostScheduleId: "p1" }],
+  });
+  assert.equal(live.items[0]?.status, "approved");
+  assert.equal(clientContentToReview(live.items).length, 0);
+
+  const otherPost = projectContent({
+    publishedUnits: [{ assignmentDeliverableId: "del-1", assignmentPostScheduleId: "p-other" }],
+  });
+  assert.equal(otherPost.items[0]?.status, "approval_required");
+  assert.equal(clientContentToReview(otherPost.items).length, 1);
+
+  const deliverableAsset = projectContent({
+    assets: [contentAsset({ assignmentPostScheduleId: null })],
+    publishedUnits: [{ assignmentDeliverableId: "del-1", assignmentPostScheduleId: "p9" }],
+  });
+  assert.equal(deliverableAsset.items[0]?.status, "approved");
+  assert.equal(clientContentToReview(deliverableAsset.items).length, 0);
+});
+
+test("published Performance links still skip Client review after changes requested", () => {
+  const projected = projectContent({
+    decisions: [
+      {
+        id: "d1",
+        versionId: "v2",
+        decision: "changes_requested",
+        comment: "Please shorten the opening.",
+        decidedAt: "2026-08-22T10:00:00.000Z",
+        actorKind: "client",
+      },
+    ],
+    publishedUnits: [{ assignmentDeliverableId: "del-1", assignmentPostScheduleId: "p1" }],
+  });
+  assert.equal(projected.items[0]?.status, "approved");
+  assert.equal(clientContentToReview(projected.items).length, 0);
 });
 
