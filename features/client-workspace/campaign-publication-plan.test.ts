@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { emptyClientCampaignPerformance, overlayCampaignPostAvatars, type ClientCampaignPostRow } from "./campaign-execution";
+import { clientCampaignDashboardPerformanceMetrics } from "./campaign-dashboard";
 import {
   creatorInitials,
   defaultExpandedCreators,
@@ -82,6 +83,27 @@ test("publication plan creator groups stay collapsed by default", () => {
     }),
   ]);
   assert.deepEqual(defaultExpandedCreators(groups), []);
+});
+
+test("live publication metrics keep compact values for IG-style avatars", () => {
+  const metrics = clientCampaignDashboardPerformanceMetrics({
+    views: 17200,
+    likes: 419,
+    comments: 19,
+    shares: null,
+    reach: null,
+    impressions: null,
+    engagementRate: 2.5,
+  });
+  assert.deepEqual(
+    metrics.map((metric) => [metric.key, metric.formatted]),
+    [
+      ["views", "17.2K"],
+      ["likes", "419"],
+      ["comments", "19"],
+      ["engagementRate", "2.5%"],
+    ]
+  );
 });
 
 test("publication plan filters and search match the campaign table", () => {

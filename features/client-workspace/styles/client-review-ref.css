@@ -1530,6 +1530,17 @@
 .tw-review .cx-mix{display:flex;gap:6px;flex-wrap:wrap}
 .tw-review .cx-tag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:100px;background:#f3f6fc;color:#3f4757;white-space:nowrap}
 .tw-review .cx-tag b{font-variant-numeric:tabular-nums}
+.tw-review .cx-metrics{display:inline-flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;max-width:100%}
+.tw-review .cx-metric{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;color:var(--navy);font-weight:650;font-variant-numeric:tabular-nums;font-size:12.5px;line-height:1}
+.tw-review .cx-metric__av{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.tw-review .cx-metric__av svg{width:10px;height:10px;display:block}
+.tw-review .cx-metric--views .cx-metric__av{background:#111827;color:#fff}
+.tw-review .cx-metric--likes .cx-metric__av{background:#ed4956;color:#fff}
+.tw-review .cx-metric--comments .cx-metric__av{background:#0095f6;color:#fff}
+.tw-review .cx-metric--engagementRate .cx-metric__av{background:#0057FF;color:#fff}
+.tw-review .cx-metric--shares .cx-metric__av{background:#262626;color:#fff}
+.tw-review .cx-metric--reach .cx-metric__av,
+.tw-review .cx-metric--impressions .cx-metric__av{background:#4b5563;color:#fff}
 .tw-review .cx-mini{display:flex;align-items:center;gap:7px;justify-content:flex-end}
 .tw-review .cx-mini__t{width:74px;height:6px;background:#f3f6fc;border-radius:100px;overflow:hidden;flex:none}
 .tw-review .cx-mini__f{height:100%;display:block;border-radius:100px}

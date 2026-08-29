@@ -12,15 +12,15 @@ import {
 } from "@/lib/campaign-script";
 
 import { listClientCampaignScriptPresenceAction } from "../actions/campaign-script-actions";
-import { DATA_NOT_AVAILABLE, NOT_AVAILABLE, TO_BE_CONFIRMED } from "../format";
+import { TO_BE_CONFIRMED } from "../format";
 import {
-  formatClientCampaignPerformance,
   formatClientScheduleDate,
   type ClientCampaignPostRow,
 } from "../campaign-execution";
 import {
   PUBLICATION_PLAN_FOOTNOTE,
   PUBLICATION_PLAN_NOTE,
+  clientCampaignDashboardPerformanceMetrics,
 } from "../campaign-dashboard";
 import { matchClientCreatorByName } from "../campaign-tab-aggregates";
 import {
@@ -37,6 +37,7 @@ import {
 import type { ClientCreatorCard } from "../types";
 import { ReviewPlatformMark } from "./review-platform-mark";
 import { ReviewAvatar } from "./review-avatar";
+import { PublicationMetricGlyph } from "./review-icons";
 
 const FILTER_CHIPS: Array<{ id: PublicationPlanFilter; label: string }> = [
   { id: "all", label: "All" },
@@ -100,6 +101,32 @@ function PublicationPlanAvatar({
 
 function dash(value: string | null | undefined) {
   return value ? value : <span className="cx-empty">—</span>;
+}
+
+function PublicationPlanMetrics({
+  performance,
+}: {
+  performance: ClientCampaignPostRow["performance"];
+}) {
+  const metrics = clientCampaignDashboardPerformanceMetrics(performance);
+  if (metrics.length === 0) return <span className="cx-empty">—</span>;
+  return (
+    <span className="cx-metrics">
+      {metrics.map((metric) => (
+        <span
+          key={metric.key}
+          className={`cx-metric cx-metric--${metric.key}`}
+          title={`${metric.label}: ${metric.formatted}`}
+          aria-label={`${metric.label} ${metric.formatted}`}
+        >
+          <span className="cx-metric__av" aria-hidden="true">
+            <PublicationMetricGlyph kind={metric.key} />
+          </span>
+          <span className="cx-metric__n">{metric.formatted}</span>
+        </span>
+      ))}
+    </span>
+  );
 }
 
 function clientScriptUnitFromPost(post: ClientCampaignPostRow) {
@@ -417,9 +444,7 @@ export function CampaignPublicationPlan({
                   </td>
                   <td className="cx-hide-sm">{dash(formatClientScheduleDate(post.publicationDate) ?? (post.contentUrl ? "Published" : null))}</td>
                   <td className="r cx-hide-sm">
-                    {post.live || post.performance.views != null
-                      ? formatClientCampaignPerformance(post.performance)
-                      : dash(null)}
+                    <PublicationPlanMetrics performance={post.performance} />
                   </td>
                 </tr>
               ))}
@@ -551,7 +576,6 @@ function GroupRows({
       {open
         ? group.folded.map((item) => {
             const post = item.sample;
-            const perf = formatClientCampaignPerformance(post.performance);
             return (
               <tr className="cx-kid" key={item.key}>
                 <td>
@@ -571,7 +595,7 @@ function GroupRows({
                   <StatusPill status={post.status} />
                 </td>
                 <td className="r cx-hide-sm">
-                  {perf !== DATA_NOT_AVAILABLE && perf !== NOT_AVAILABLE ? perf : dash(null)}
+                  <PublicationPlanMetrics performance={post.performance} />
                 </td>
               </tr>
             );
