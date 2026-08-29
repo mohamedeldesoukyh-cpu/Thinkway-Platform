@@ -40,6 +40,13 @@ export const OPTIONAL_CLIENT_COLUMN_NAMES = [
   "tax_completed_at",
   "activated_at",
   ...CLASSIFICATION_AUDIT_COLUMN_NAMES,
+  "client_workspace_enabled",
+  "client_workspace_package",
+  "client_workspace_tab_overrides",
+  "client_workspace_grandfathered",
+  "client_workspace_preview_started_at",
+  "client_workspace_preview_expires_at",
+  "client_workspace_preview_previous_package",
 ] as const;
 
 const MAX_OPTIONAL_COLUMN_RETRY_ATTEMPTS = 16;

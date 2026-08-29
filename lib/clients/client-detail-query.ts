@@ -69,6 +69,13 @@ export const CLIENT_DETAIL_SELECT_OPTIONAL = [
   "onboarding_completed_by",
   "activated_at",
   ...CLASSIFICATION_AUDIT_COLUMN_NAMES,
+  "client_workspace_enabled",
+  "client_workspace_package",
+  "client_workspace_tab_overrides",
+  "client_workspace_grandfathered",
+  "client_workspace_preview_started_at",
+  "client_workspace_preview_expires_at",
+  "client_workspace_preview_previous_package",
 ] as const;
 
 type ClientDetailRow = ClientRow & {

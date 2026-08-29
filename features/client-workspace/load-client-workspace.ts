@@ -50,6 +50,8 @@ import { emptyClientCampaignContent } from "./content-approval";
 import { loadClientCampaignContent } from "./load-campaign-content";
 import { loadClientCampaignExecution } from "./load-campaign-execution";
 import { loadIdentityLogoForReview, headerPartnerIdentity } from "./identity-logo";
+import { applyEntitlementToView, clientWorkspaceEntitlementBlock, isClientWorkspaceSectionOpen } from "./entitlement";
+import { loadEntitlementForReview } from "./load-entitlement";
 import {
   isSelectionConfirmed,
   mergeSnapshotsForClientView,
@@ -280,7 +282,7 @@ export async function loadClientWorkspace(
   requestedReviewId?: string
 ): Promise<
   | { ok: true; view: ClientWorkspaceView; entry: ClientWorkspaceEntry; campaignObject: CampaignObject | null }
-  | { ok: false; code: "invalid" | "revoked" | "not_found" | "unavailable"; message: string }
+  | { ok: false; code: "invalid" | "revoked" | "not_found" | "unavailable" | "workspace_off" | "workspace_unavailable"; message: string }
 > {
   const { createSupabaseServerClient } = await import("@/lib/supabase/server");
   const anon = await createSupabaseServerClient();
@@ -303,6 +305,15 @@ export async function loadClientWorkspace(
   }
 
   const db = service ?? resolver;
+  const earlyEntitlement = await loadEntitlementForReview(db as never, resolvedInitial.review);
+  const earlyBlock = clientWorkspaceEntitlementBlock(
+    earlyEntitlement.clientId,
+    earlyEntitlement.entitlement
+  );
+  if (earlyBlock) {
+    return { ok: false, code: earlyBlock.code, message: earlyBlock.message };
+  }
+
   let members = await loadJourneyReviews(db, resolvedInitial.review);
   const canonicalReviewId = journeyCanonicalReviewId(members, resolvedInitial.review.id);
   let picked = pickActiveDecisionReview({
@@ -584,16 +595,42 @@ export async function loadClientWorkspace(
   });
   view.journey = { ...journey, ...flags, clientSelection: clientSelectionFreeze };
   view.visibleSections = visibleClientWorkspaceSections(view);
-  view.campaignExecution = picked.historical
-    ? emptyClientCampaignExecution()
-    : await loadClientCampaignExecution((service ?? db) as never, view.journey.campaignHeaderId);
-  view.campaignContent = picked.historical
-    ? emptyClientCampaignContent()
-    : await loadClientCampaignContent((service ?? db) as never, view.journey.campaignHeaderId);
-  view.clientEmails = await loadSavedClientEmailsForQuotation(
-    (service ?? db) as never,
-    view.journey.quotationId
+  const entitlementForView = await loadEntitlementForReview(db as never, {
+    quotationId: view.journey.quotationId ?? activeReview.quotationId,
+    shortlistId: view.journey.shortlistId ?? activeReview.shortlistId,
+    campaignHeaderId: view.journey.campaignHeaderId ?? activeReview.campaignHeaderId,
+    clientLabel:
+      view.overview.clientLabel ||
+      activeReview.clientLabel ||
+      activeReview.sourceSnapshot?.clientLabel ||
+      null,
+    brandName: view.overview.brandName || activeReview.brandName || null,
+    campaignName: view.overview.campaignName || activeReview.campaignName || null,
+    sourceSnapshot: activeReview.sourceSnapshot,
+  });
+  const entitlementBlock = clientWorkspaceEntitlementBlock(
+    entitlementForView.clientId,
+    entitlementForView.entitlement
   );
+  if (entitlementBlock) {
+    return { ok: false, code: entitlementBlock.code, message: entitlementBlock.message };
+  }
+  const campaignOpen = isClientWorkspaceSectionOpen(entitlementForView.entitlement, "approval");
+  const commercialOpen = isClientWorkspaceSectionOpen(entitlementForView.entitlement, "commercial");
+  view.campaignExecution =
+    picked.historical || !campaignOpen
+      ? emptyClientCampaignExecution()
+      : await loadClientCampaignExecution((service ?? db) as never, view.journey.campaignHeaderId);
+  view.campaignContent =
+    picked.historical || !campaignOpen
+      ? emptyClientCampaignContent()
+      : await loadClientCampaignContent((service ?? db) as never, view.journey.campaignHeaderId);
+  view.clientEmails = commercialOpen
+    ? await loadSavedClientEmailsForQuotation(
+        (service ?? db) as never,
+        view.journey.quotationId
+      )
+    : [];
   view.stageDiff =
     picked.historical || shortlistApproved?.status !== "approved"
       ? null
@@ -604,7 +641,7 @@ export async function loadClientWorkspace(
     (journey.canApproveShortlist || journey.canApproveQuotation || pendingIds.length > 0);
   view.showOriginalCurrency = false;
   view.hideCostAndFees = false;
-  if (!picked.historical) {
+  if (!picked.historical && commercialOpen) {
     try {
       const flags = await loadClientWorkspaceDisplayFlags((service ?? db) as never, {
         quotationId: view.journey?.quotationId ?? activeReview.quotationId,
@@ -672,6 +709,7 @@ export async function loadClientWorkspace(
     identityLogo: view.identityLogo ?? null,
   };
 
+  view = applyEntitlementToView(view, entitlementForView.entitlement);
   return { ok: true, view, entry, campaignObject };
 }
 

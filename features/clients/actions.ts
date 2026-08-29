@@ -36,6 +36,7 @@ import {
   updateClientOverviewSchema,
   uploadClientDocumentSchema,
 } from "./schemas";
+import { persistClientWorkspaceEntitlementFields } from "./client-workspace-entitlement";
 import { parseTermsText, serializeTermsText } from "@/lib/io/client-io-terms";
 
 export type ClientOverviewSavePatch = {
@@ -170,6 +171,11 @@ export async function createClientAction(
       notes: emptyToNull(parsed.data.notes),
       client_io_terms_text: clientIoTermsText,
       created_by: user.id,
+      ...persistClientWorkspaceEntitlementFields({
+        enabled: parsed.data.client_workspace_enabled,
+        packageValue: parsed.data.client_workspace_package,
+        overridesJson: parsed.data.client_workspace_tab_overrides,
+      }),
     },
     audit
   );
@@ -281,6 +287,12 @@ export async function updateClientOverviewAction(
     now
   );
 
+  const { data: currentEntitlement } = await supabase
+    .from("clients")
+    .select("client_workspace_package, client_workspace_grandfathered")
+    .eq("id", client_id)
+    .maybeSingle();
+
   const { error } = await updateClientWithClassificationAudit(
     supabase,
     client_id,
@@ -302,6 +314,16 @@ export async function updateClientOverviewAction(
       city: emptyToNull(fields.city),
       notes: emptyToNull(fields.notes),
       client_io_terms_text: clientIoTermsText,
+      ...persistClientWorkspaceEntitlementFields({
+        enabled: fields.client_workspace_enabled,
+        packageValue: fields.client_workspace_package,
+        overridesJson: fields.client_workspace_tab_overrides,
+        previousPackage:
+          typeof currentEntitlement?.client_workspace_package === "string"
+            ? currentEntitlement.client_workspace_package
+            : null,
+        previousGrandfathered: Boolean(currentEntitlement?.client_workspace_grandfathered),
+      }),
     },
     audit
   );

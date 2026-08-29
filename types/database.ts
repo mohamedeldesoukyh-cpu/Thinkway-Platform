@@ -965,6 +965,13 @@ export type ClientRow = {
   country_manager_id: string | null;
   notes: string | null;
   client_io_terms_text: string | null;
+  client_workspace_enabled: boolean;
+  client_workspace_package: string | null;
+  client_workspace_tab_overrides: Record<string, unknown> | null;
+  client_workspace_grandfathered: boolean;
+  client_workspace_preview_started_at: string | null;
+  client_workspace_preview_expires_at: string | null;
+  client_workspace_preview_previous_package: string | null;
   metadata: Record<string, unknown>;
   created_by: string | null;
   created_at: string;
@@ -1026,6 +1033,13 @@ export type Database = {
           country_manager_id?: string | null;
           notes?: string | null;
           client_io_terms_text?: string | null;
+          client_workspace_enabled?: boolean;
+          client_workspace_package?: string | null;
+          client_workspace_tab_overrides?: Record<string, unknown> | null;
+          client_workspace_grandfathered?: boolean;
+          client_workspace_preview_started_at?: string | null;
+          client_workspace_preview_expires_at?: string | null;
+          client_workspace_preview_previous_package?: string | null;
           metadata?: Record<string, unknown>;
           created_by?: string | null;
         };

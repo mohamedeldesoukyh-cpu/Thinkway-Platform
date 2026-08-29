@@ -3,6 +3,7 @@
 import type { ClientWorkspaceSectionId } from "../constants";
 import { CLIENT_WORKSPACE_SECTION_LABEL } from "../constants";
 import { SHORTLIST_STAGE_LABEL, clientWorkspacePathReviewId, clientWorkspaceVersionPill } from "../journey-state";
+import { isClientWorkspaceSectionOpen } from "../entitlement";
 import {
   commercialStageCopy,
   headerJourneyCta,
@@ -128,18 +129,39 @@ export function ClientWorkspaceShell({
           />
         ) : null}
 
+        {view.entitlement?.preview?.active ? (
+          <div className="wrap">
+            <p className="cx-preview-note">
+              {view.entitlement.preview.endingSoon
+                ? `Your Live Performance preview ends in ${view.entitlement.preview.daysRemaining} day${
+                    view.entitlement.preview.daysRemaining === 1 ? "" : "s"
+                  }. Speak with your Thinkway team to continue access.`
+                : `Live Performance Preview · ${view.entitlement.preview.daysRemaining} day${
+                    view.entitlement.preview.daysRemaining === 1 ? "" : "s"
+                  } remaining. Explore the full Thinkway Client Workspace with live campaign performance and content review.`}
+            </p>
+          </div>
+        ) : null}
         <nav className="tabs">
           <div className="wrap row">
-            {view.visibleSections.map((item) => (
-              <a
-                key={item}
-                href={buildClientReviewPath(pathReviewId, token, item)}
-                className={item === section ? "tab on" : "tab"}
-                onClick={(event) => openSection(event, item)}
-              >
-                {CLIENT_WORKSPACE_SECTION_LABEL[item]}
-              </a>
-            ))}
+            {view.visibleSections.map((item) => {
+              const locked = !isClientWorkspaceSectionOpen(view.entitlement, item);
+              return (
+                <a
+                  key={item}
+                  href={buildClientReviewPath(pathReviewId, token, item)}
+                  className={`${item === section ? "tab on" : "tab"}${locked ? " is-locked" : ""}`}
+                  onClick={(event) => openSection(event, item)}
+                >
+                  {CLIENT_WORKSPACE_SECTION_LABEL[item]}
+                  {locked ? (
+                    <svg className="cx-tab-lock" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M17 8V7a5 5 0 00-10 0v1H5v14h14V8h-2zm-8 0V7a3 3 0 016 0v1H9z" />
+                    </svg>
+                  ) : null}
+                </a>
+              );
+            })}
           </div>
         </nav>
 

@@ -185,7 +185,7 @@ async function loadClientIdsForBrandName(
   );
 }
 
-export async function loadIdentityLogoForReview(
+export async function loadLegalEntityIdsForReview(
   supabase: IdentityDb,
   input: {
     quotationId?: string | null;
@@ -195,31 +195,25 @@ export async function loadIdentityLogoForReview(
     brandName?: string | null;
     campaignName?: string | null;
   }
-): Promise<IdentityLogo | null> {
+): Promise<string[]> {
   const candidateIds: Array<string | null | undefined> = [];
-  const labels: Array<string | null | undefined> = identityLookupLabels(
-    input.clientLabel,
-    input.brandName
-  );
   let brandId: string | null = null;
   let headerId = input.campaignHeaderId?.trim() || null;
 
   if (input.quotationId?.trim()) {
     const { data } = await supabase
       .from("quotations")
-      .select("client_id, brand_id, campaign_header_id, temporary_client_name")
+      .select("client_id, brand_id, campaign_header_id")
       .eq("id", input.quotationId)
       .maybeSingle();
     const row = data as {
       client_id?: string | null;
       brand_id?: string | null;
       campaign_header_id?: string | null;
-      temporary_client_name?: string | null;
     } | null;
     candidateIds.push(row?.client_id ?? null);
     brandId = row?.brand_id ?? null;
     headerId = headerId || row?.campaign_header_id || null;
-    labels.push(row?.temporary_client_name ?? null);
   }
 
   if (input.shortlistId?.trim()) {
@@ -262,9 +256,38 @@ export async function loadIdentityLogoForReview(
     candidateIds.push(...(await loadClientIdsForBrandName(supabase, brandName)));
   }
 
-  for (const clientId of uniqueIdentityClientIds(candidateIds)) {
+  return uniqueIdentityClientIds(candidateIds);
+}
+
+export async function loadIdentityLogoForReview(
+  supabase: IdentityDb,
+  input: {
+    quotationId?: string | null;
+    shortlistId?: string | null;
+    campaignHeaderId?: string | null;
+    clientLabel?: string | null;
+    brandName?: string | null;
+    campaignName?: string | null;
+  }
+): Promise<IdentityLogo | null> {
+  const labels: Array<string | null | undefined> = identityLookupLabels(
+    input.clientLabel,
+    input.brandName
+  );
+  const candidateIds = await loadLegalEntityIdsForReview(supabase, input);
+
+  for (const clientId of candidateIds) {
     const logo = await loadIdentityLogoForClientId(supabase, clientId);
     if (logo) return logo;
+  }
+
+  if (input.quotationId?.trim()) {
+    const { data } = await supabase
+      .from("quotations")
+      .select("temporary_client_name")
+      .eq("id", input.quotationId)
+      .maybeSingle();
+    labels.push((data as { temporary_client_name?: string | null } | null)?.temporary_client_name ?? null);
   }
 
   for (const label of identityClientLabelCandidates(labels)) {

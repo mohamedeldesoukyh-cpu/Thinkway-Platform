@@ -489,6 +489,8 @@ export type ClientWorkspaceView = {
   hideCostAndFees?: boolean;
   /** Group logo first, then client logo. Brand logos are not used here. */
   identityLogo?: IdentityLogo | null;
+  /** Legal-entity Client Workspace entitlement. Absent only in legacy test fixtures. */
+  entitlement?: import("./entitlement").ClientWorkspaceEntitlementView;
 };
 
 export type ClientWorkspaceEntry = {

@@ -54,6 +54,11 @@ import {
 import { checkClientNameAvailable } from "@/features/validation/actions";
 import type { AgencyOrDirect } from "@/types/database";
 import { cn } from "@/lib/utils";
+import { ClientWorkspaceEntitlementFields } from "@/features/clients/components/client-workspace-entitlement-fields";
+import {
+  type ClientWorkspacePackage,
+  type ClientWorkspaceTabOverrides,
+} from "@/features/client-workspace/entitlement";
 
 const initialState: CreateClientFormState = { ok: false };
 
@@ -77,6 +82,9 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
   const [categoryTouched, setCategoryTouched] = useState(false);
   const [classificationMeta, setClassificationMeta] =
     useState<ClientCategorySuggestionState | null>(null);
+  const [workspaceEnabled, setWorkspaceEnabled] = useState(false);
+  const [workspacePackage, setWorkspacePackage] = useState<ClientWorkspacePackage>("planning");
+  const [workspaceOverrides, setWorkspaceOverrides] = useState<ClientWorkspaceTabOverrides | null>(null);
 
   const cityOptions = useMemo(() => getCityOptionsForCountry(country), [country]);
 
@@ -410,6 +418,15 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
                 profile after creation.
               </p>
             </ClientFormSection>
+            <ClientWorkspaceEntitlementFields
+              enabled={workspaceEnabled}
+              packageId={workspacePackage}
+              overrides={workspaceOverrides}
+              disabled={isPending}
+              onEnabledChange={setWorkspaceEnabled}
+              onPackageChange={setWorkspacePackage}
+              onOverridesChange={setWorkspaceOverrides}
+            />
           </div>
 
           <DialogFooter className="shrink-0 gap-2.5 border-t border-border bg-background/90 px-5 py-3 backdrop-blur-[14px]">

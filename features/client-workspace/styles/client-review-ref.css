@@ -2164,6 +2164,16 @@
   .tw-review .cx-ed__pane + .cx-ed__pane{border-left:none;border-top:.8px solid #f2f5f9}
 }
 
+.tw-review .tab.is-locked{opacity:.48;font-weight:500}
+.tw-review .cx-tab-lock{width:11px;height:11px;margin-left:6px;fill:currentColor;opacity:.85;vertical-align:-1px}
+.tw-review .cx-entitle{padding:28px 24px;max-width:560px}
+.tw-review .cx-entitle h2{margin-top:6px}
+.tw-review .cx-entitle__acts{margin-top:18px}
+.tw-review .cx-entitle__sec{margin-top:12px;font-size:12.5px;color:var(--muted)}
+.tw-review .cx-entitle__pkg{margin-top:16px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--navy)}
+.tw-review .cx-preview-note{margin:10px 0 0;padding:10px 14px;border-radius:10px;background:#f4f7fb;color:#3f4757;font-size:12.5px;line-height:1.45}
+
+
 
 
 

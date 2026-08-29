@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
 
 import { formatCompactCount, formatEngagementPct, formatPlatformLabel, providedText, TO_BE_CONFIRMED } from "../format";
+import { isClientWorkspaceSectionOpen } from "../entitlement";
 import { campaignPlatformsFromRoster, looksLikePlatformList } from "../deliverables";
 import {
   creatorMixFromRoster,
@@ -150,8 +151,9 @@ export function OverviewWorkspace({
     hasSelection && forecast.estimatedReach != null ? formatCompactCount(forecast.estimatedReach) : undefined;
   const engagementLabel =
     hasSelection && forecast.averageEngagementRate != null ? formatEngagementPct(forecast.averageEngagementRate) : undefined;
+  const commercialOpen = isClientWorkspaceSectionOpen(view.entitlement, "commercial");
   const investmentLabel =
-    selectedCommercial.totalInvestment > 0
+    commercialOpen && selectedCommercial.totalInvestment > 0
       ? formatMoneyKpi(selectedCommercial.totalInvestment, o.commercial.currency)
       : undefined;
   const lead = overviewExecutiveLead({
@@ -186,11 +188,13 @@ export function OverviewWorkspace({
             <Highlight label="Est. reach" value={reachLabel ?? TO_BE_CONFIRMED} missing={!reachLabel} />
             <Highlight label="Eng. rate" value={engagementLabel ?? TO_BE_CONFIRMED} missing={!engagementLabel} />
             <Highlight label="Creators" value={String(selectedCreators.length)} />
-            <Highlight
-              label="Investment"
-              value={investmentLabel ?? TO_BE_CONFIRMED}
-              missing={!investmentLabel}
-            />
+            {commercialOpen ? (
+              <Highlight
+                label="Investment"
+                value={investmentLabel ?? TO_BE_CONFIRMED}
+                missing={!investmentLabel}
+              />
+            ) : null}
           </div>
         </div>
       </div>
@@ -208,18 +212,22 @@ export function OverviewWorkspace({
           missing={!hasSelection || forecast.estimatedEngagements == null}
         />
         <Kpi name="trend" label="Eng. rate" value={engagementLabel ?? TO_BE_CONFIRMED} missing={!engagementLabel} />
-        <Kpi
-          name="cpe"
-          label="CPE"
-          value={hasSelection ? money(forecast.cpe, forecast.currency) : TO_BE_CONFIRMED}
-          missing={!hasSelection || forecast.cpe == null}
-        />
-        <Kpi
-          name="cpm"
-          label="CPM"
-          value={hasSelection ? money(forecast.cpm, forecast.currency) : TO_BE_CONFIRMED}
-          missing={!hasSelection || forecast.cpm == null}
-        />
+        {commercialOpen ? (
+          <>
+            <Kpi
+              name="cpe"
+              label="CPE"
+              value={hasSelection ? money(forecast.cpe, forecast.currency) : TO_BE_CONFIRMED}
+              missing={!hasSelection || forecast.cpe == null}
+            />
+            <Kpi
+              name="cpm"
+              label="CPM"
+              value={hasSelection ? money(forecast.cpm, forecast.currency) : TO_BE_CONFIRMED}
+              missing={!hasSelection || forecast.cpm == null}
+            />
+          </>
+        ) : null}
         <Kpi name="people" label="Creators" value={String(selectedCreators.length)} />
       </div>
 

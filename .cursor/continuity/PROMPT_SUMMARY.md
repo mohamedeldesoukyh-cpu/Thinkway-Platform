@@ -1,8 +1,10 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Client Campaign content review — mobile name-above-video layout; live Performance links auto-approve matching drafts.
+**Focus:** Client Workspace entitlements + 14-day Live Performance Preview (Development only).
 
-- Content to Review stacks creator header, then story video, then metadata on mobile.
-- Ads with a live Performance URL skip Client “needs approval.”
-- Dual ship: Development (`develop`) then Production (`main`) after this change.
+- Legal-entity SSOT: `clients.client_workspace_*` · package mapping in `features/client-workspace/entitlement.ts`.
+- Packages: Planning / Commercial / Live Performance. No Stripe, no Client Workspace price display.
+- Existing legal entities with ≥1 Client Review grandfathered Live on Development (`UPDATE 3`).
+- AM controls on New Client and Client → Overview. Locked tabs stay visible.
+- Production was not migrated or deployed.

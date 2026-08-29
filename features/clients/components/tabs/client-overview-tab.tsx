@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   BriefcaseIcon,
@@ -61,6 +61,20 @@ import type { AgencyOrDirect, ClientDetail, ClientStatus } from "@/types/databas
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
+import { ClientWorkspaceEntitlementFields } from "@/features/clients/components/client-workspace-entitlement-fields";
+import {
+  listClientWorkspaceAccessRequestsAction,
+  startClientWorkspaceLivePreviewAction,
+} from "@/features/clients/client-workspace-entitlement-actions";
+import {
+  canStartLivePerformancePreview,
+  isClientWorkspacePackage,
+  parseTabOverrides,
+  previewDaysRemaining,
+  type ClientWorkspacePackage,
+  type ClientWorkspaceTabOverrides,
+} from "@/features/client-workspace/entitlement";
+import type { ClientWorkspaceAccessRequestRow } from "@/features/client-workspace/access-requests";
 import {
   PLATFORM_V6_ICON_AMBER,
   PLATFORM_V6_ICON_GREEN,
@@ -129,6 +143,18 @@ export function ClientOverviewTab({
   const [billingEmail, setBillingEmail] = useState(client.billing_email ?? "");
   const [billingPhone, setBillingPhone] = useState(client.billing_phone ?? "");
   const [notes, setNotes] = useState(client.notes ?? "");
+  const [workspaceEnabled, setWorkspaceEnabled] = useState(Boolean(client.client_workspace_enabled));
+  const [workspacePackage, setWorkspacePackage] = useState<ClientWorkspacePackage>(
+    isClientWorkspacePackage(client.client_workspace_package)
+      ? client.client_workspace_package
+      : "planning"
+  );
+  const [workspaceOverrides, setWorkspaceOverrides] = useState<ClientWorkspaceTabOverrides | null>(
+    () => parseTabOverrides(client.client_workspace_tab_overrides)
+  );
+  const [accessRequests, setAccessRequests] = useState<ClientWorkspaceAccessRequestRow[]>([]);
+  const [previewPending, startPreview] = useTransition();
+  const [previewMessage, setPreviewMessage] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const cityOptions = useMemo(() => {
@@ -184,6 +210,10 @@ export function ClientOverviewTab({
   function markDirty() {
     setIsDirty(true);
   }
+
+  useEffect(() => {
+    void listClientWorkspaceAccessRequestsAction(client.id).then(setAccessRequests);
+  }, [client.id]);
 
   function buildClassificationMetaFromClient(): ClientCategorySuggestionState | null {
     if (
@@ -683,6 +713,80 @@ export function ClientOverviewTab({
             />
           </ClientFormField>
         </ClientFormSection>
+
+        <ClientWorkspaceEntitlementFields
+          enabled={workspaceEnabled}
+          packageId={workspacePackage}
+          overrides={workspaceOverrides}
+          disabled={isPending}
+          onEnabledChange={(value) => {
+            setWorkspaceEnabled(value);
+            markDirty();
+          }}
+          onPackageChange={(value) => {
+            setWorkspacePackage(value);
+            markDirty();
+          }}
+          onOverridesChange={(value) => {
+            setWorkspaceOverrides(value);
+            markDirty();
+          }}
+        />
+        {workspaceEnabled ? (
+          <div className="rounded-[10px] border border-[#e6ebf3] bg-[#fcfdff] px-4 py-3 text-[12.5px] text-[#3f4757]">
+            <p className="font-semibold text-[#1a2332]">Live Performance Preview</p>
+            {client.client_workspace_preview_expires_at &&
+            new Date(client.client_workspace_preview_expires_at).getTime() > Date.now() ? (
+              <p className="mt-1">
+                Active until {new Date(client.client_workspace_preview_expires_at).toLocaleString()} ·{" "}
+                {previewDaysRemaining(new Date(client.client_workspace_preview_expires_at), new Date())} days
+                remaining
+                {client.client_workspace_preview_started_at
+                  ? ` · started ${new Date(client.client_workspace_preview_started_at).toLocaleDateString()}`
+                  : ""}
+              </p>
+            ) : (
+              <p className="mt-1">
+                Explore the full Thinkway Client Workspace with live campaign performance and content
+                review. The client returns to {workspacePackage === "commercial" ? "Commercial" : "Planning"} after
+                14 days.
+              </p>
+            )}
+            {canStartLivePerformancePreview({
+              enabled: workspaceEnabled,
+              package: workspacePackage,
+              previewActive: Boolean(
+                client.client_workspace_preview_expires_at &&
+                  new Date(client.client_workspace_preview_expires_at).getTime() > Date.now()
+              ),
+            }) ? (
+              <button
+                type="button"
+                className="mt-2 rounded-full border border-[#1D9E75] px-3 py-1.5 text-[12px] font-semibold text-[#065f46]"
+                disabled={previewPending}
+                onClick={() => {
+                  startPreview(async () => {
+                    const result = await startClientWorkspaceLivePreviewAction(client.id);
+                    setPreviewMessage(result.message ?? null);
+                    if (result.ok) router.refresh();
+                  });
+                }}
+              >
+                {previewPending ? "Starting…" : "Start 14-day Live Performance Preview"}
+              </button>
+            ) : null}
+            {previewMessage ? <p className="mt-2">{previewMessage}</p> : null}
+            {accessRequests.length > 0 ? (
+              <ul className="mt-3 space-y-1">
+                {accessRequests.map((row) => (
+                  <li key={row.id}>
+                    Request access · {row.requestedPackage} · {new Date(row.createdAt).toLocaleString()}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
 
         <ClientFormSection
           icon={FileTextIcon}

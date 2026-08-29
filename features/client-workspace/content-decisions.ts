@@ -5,6 +5,9 @@ import {
   CLIENT_CONTENT_DECISIONS,
   type ClientContentDecision,
 } from "./content-approval";
+import { loadEntitlementForReview } from "./load-entitlement";
+import { clientWorkspaceEntitlementBlock, CLIENT_WORKSPACE_LOCKED_MESSAGE } from "./entitlement";
+import { isClientWorkspaceSectionOpen } from "./entitlement";
 import { journeyCanonicalReviewId, pickActiveDecisionReview } from "./journey-state";
 import { loadJourneyReviews, resolveClientReviewByToken } from "./load-client-workspace";
 import type { ClientReviewRecord } from "./types";
@@ -40,6 +43,17 @@ export async function requireCurrentCampaignContentAccess(token: string): Promis
     };
   }
   const current = picked.review ?? resolved.review;
+  const entitlementLoaded = await loadEntitlementForReview(db(), current);
+  const entitlementBlock = clientWorkspaceEntitlementBlock(
+    entitlementLoaded.clientId,
+    entitlementLoaded.entitlement
+  );
+  if (entitlementBlock) {
+    return { ok: false, message: entitlementBlock.message };
+  }
+  if (!isClientWorkspaceSectionOpen(entitlementLoaded.entitlement, "approval")) {
+    return { ok: false, message: CLIENT_WORKSPACE_LOCKED_MESSAGE };
+  }
   const campaignHeaderId = current.campaignHeaderId?.trim() || resolved.review.campaignHeaderId?.trim() || "";
   if (!campaignHeaderId) {
     return { ok: false, message: "Campaign setup is in progress." };

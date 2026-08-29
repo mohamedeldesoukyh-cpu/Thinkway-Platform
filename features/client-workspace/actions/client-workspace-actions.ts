@@ -8,6 +8,8 @@ import type {
   ClientCreatorSelectionState,
   ClientReviewDecisionStage,
 } from "../constants";
+import type { ClientWorkspaceSectionId } from "../constants";
+import type { ClientWorkspaceNavSection } from "../entitlement";
 import type { ClientContentDecision } from "../content-approval";
 import { recordClientContentDecision } from "../content-decisions";
 import { freezeCreatorBriefIfNeeded, briefFromSnapshotCreator } from "../creator-brief";
@@ -98,6 +100,14 @@ export async function sendClientQuotationAction(input: {
   email: string;
 }): Promise<{ ok: boolean; message: string }> {
   return sendClientQuotationEmail(input);
+}
+
+export async function requestClientWorkspaceAccessAction(input: {
+  token: string;
+  section: ClientWorkspaceSectionId | ClientWorkspaceNavSection;
+}): Promise<{ ok: boolean; message: string; created?: boolean }> {
+  const { requestClientWorkspaceAccess } = await import("../access-requests");
+  return requestClientWorkspaceAccess(input);
 }
 
 export async function loadCreatorBriefAction(input: {

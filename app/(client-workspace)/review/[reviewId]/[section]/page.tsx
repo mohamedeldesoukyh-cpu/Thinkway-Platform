@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { ClientWorkspaceApp } from "@/features/client-workspace/components/client-workspace-app";
+import { ClientWorkspaceClosed } from "@/features/client-workspace/components/client-workspace-closed";
 import { InvalidReviewLink } from "@/features/client-workspace/components/client-review-entry";
 import { CLIENT_WORKSPACE_SECTIONS, type ClientWorkspaceSectionId } from "@/features/client-workspace/constants";
 import { loadClientWorkspace } from "@/features/client-workspace/load-client-workspace";
@@ -27,8 +28,21 @@ export default async function ClientWorkspaceSectionPage({ params, searchParams 
     return <InvalidReviewLink />;
   }
   const loaded = await loadClientWorkspace(token, reviewId);
+  if (!loaded.ok) {
+    if (loaded.code === "workspace_off") {
+      return <ClientWorkspaceClosed />;
+    }
+    if (loaded.code === "workspace_unavailable") {
+      return (
+        <ClientWorkspaceClosed
+          title="This workspace is unavailable"
+          body="This review is not linked to a legal entity, so Client Workspace cannot open. Speak with your Thinkway team."
+        />
+      );
+    }
+    return <InvalidReviewLink message={loaded.message} />;
+  }
   if (
-    !loaded.ok ||
     !reviewIdBelongsToJourney(reviewId, {
       canonicalReviewId: loaded.view.journey?.canonicalReviewId,
       memberReviewIds: loaded.view.journey?.memberReviewIds,
@@ -36,7 +50,7 @@ export default async function ClientWorkspaceSectionPage({ params, searchParams 
       journeyId: loaded.view.journey?.id,
     })
   ) {
-    return <InvalidReviewLink message={loaded.ok ? undefined : loaded.message} />;
+    return <InvalidReviewLink />;
   }
   const resolved = resolveClientWorkspaceSection(section as ClientWorkspaceSectionId);
   if (!isRenderableClientWorkspaceSection(resolved, loaded.view.visibleSections)) {

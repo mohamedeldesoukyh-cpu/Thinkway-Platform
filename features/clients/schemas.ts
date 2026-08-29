@@ -254,6 +254,12 @@ export const createClientSchema = z
   city: optionalTrimmedString(120),
   notes: optionalTrimmedString(2000),
   client_io_terms_text: optionalTrimmedString(50000),
+  client_workspace_enabled: optionalBooleanFlag.default(false),
+  client_workspace_package: z.preprocess(
+    (value) => (value == null ? "" : String(value).trim()),
+    z.union([z.literal(""), z.enum(["planning", "commercial", "live"])])
+  ),
+  client_workspace_tab_overrides: optionalTrimmedString(2000),
 })
   .superRefine(validateClientCategoryPair);
 
@@ -290,6 +296,12 @@ export const updateClientOverviewSchema = z
   city: optionalTrimmedString(120),
   notes: optionalTrimmedString(2000),
   client_io_terms_text: optionalTrimmedString(50000),
+  client_workspace_enabled: optionalBooleanFlag.default(false),
+  client_workspace_package: z.preprocess(
+    (value) => (value == null ? "" : String(value).trim()),
+    z.union([z.literal(""), z.enum(["planning", "commercial", "live"])])
+  ),
+  client_workspace_tab_overrides: optionalTrimmedString(2000),
 })
   .superRefine(validateClientCategoryPair);
 

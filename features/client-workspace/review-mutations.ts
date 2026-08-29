@@ -9,12 +9,15 @@ import type {
   ClientCreatorSelectionState,
   ClientReviewDecisionStage,
 } from "./constants";
-import { mapClientReviewRow } from "./persist-client-review";
+import { loadEntitlementForReview } from "./load-entitlement";
+import { clientWorkspaceEntitlementBlock, CLIENT_WORKSPACE_LOCKED_MESSAGE } from "./entitlement";
+import { isClientWorkspaceSectionOpen } from "./entitlement";
 import {
   loadJourneyReviews,
   newerReviewNumberFor,
   resolveClientReviewByToken,
 } from "./load-client-workspace";
+import { mapClientReviewRow } from "./persist-client-review";
 import { clientCreatorIds, projectClientCommercial } from "./project-client-view";
 import { projectCommercialFromSnapshot, snapshotCreatorIds } from "./snapshot";
 import {
@@ -62,6 +65,17 @@ async function requireInteractiveReview(
   const resolved = await resolveClientReviewByToken(db(), token);
   if (!resolved.ok) {
     return { ok: false as const, message: "This review link is invalid or has expired." };
+  }
+  const entitlementLoaded = await loadEntitlementForReview(db(), resolved.review);
+  const entitlementBlock = clientWorkspaceEntitlementBlock(
+    entitlementLoaded.clientId,
+    entitlementLoaded.entitlement
+  );
+  if (entitlementBlock) {
+    return { ok: false as const, message: entitlementBlock.message };
+  }
+  if (inputStage === "quotation" && !isClientWorkspaceSectionOpen(entitlementLoaded.entitlement, "commercial")) {
+    return { ok: false as const, message: CLIENT_WORKSPACE_LOCKED_MESSAGE };
   }
   const members = await loadJourneyReviews(db(), resolved.review);
   const canonicalReviewId = journeyCanonicalReviewId(members, resolved.review.id);
