@@ -106,6 +106,7 @@ export {
   campaignScriptOriginalPathBelongsToUnit,
   campaignScriptOriginalDocumentKind,
   campaignScriptOriginalDocumentKindLabel,
+  campaignScriptOriginalDocumentIconUrl,
   campaignScriptOriginalFileExtension,
   campaignScriptOriginalPreviewKind,
   campaignScriptOriginalSlot,

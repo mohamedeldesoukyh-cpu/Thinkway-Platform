@@ -60,13 +60,7 @@ export function CommercialQuotationDelivery({
             {saved.map((email) => (
               <li
                 key={email}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  marginBottom: 8,
-                }}
+                className="send-row"
               >
                 <span>{email}</span>
                 <button

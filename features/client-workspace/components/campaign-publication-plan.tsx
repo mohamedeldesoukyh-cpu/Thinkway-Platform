@@ -134,8 +134,8 @@ function DeliverableScriptCell({
   const unit = clientScriptUnitFromPost(post);
   const presence = unit ? scriptPresence.get(unit.unitKey) : undefined;
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span>
+    <div className="cx-dlv">
+      <span className="cx-dlv__n">
         {post.deliverable || TO_BE_CONFIRMED}
         {count > 1 ? <span className="cx-xn">×{count}</span> : null}
       </span>
@@ -365,10 +365,10 @@ export function CampaignPublicationPlan({
             <thead>
               <tr>
                 <th>Creator</th>
-                <th>Platform</th>
+                <th className="cx-hide-sm">Platform</th>
                 <th>Deliverables</th>
                 <th>Status</th>
-                <th className="r">Progress</th>
+                <th className="r cx-hide-sm">Progress</th>
               </tr>
             </thead>
             <tbody>
@@ -395,12 +395,12 @@ export function CampaignPublicationPlan({
             <thead>
               <tr>
                 <th>Creator</th>
-                <th>Platform</th>
+                <th className="cx-hide-sm">Platform</th>
                 <th>Deliverable</th>
-                <th>Scheduled</th>
+                <th className="cx-hide-sm">Scheduled</th>
                 <th>Status</th>
-                <th>Published</th>
-                <th className="r">Performance</th>
+                <th className="cx-hide-sm">Published</th>
+                <th className="r cx-hide-sm">Performance</th>
               </tr>
             </thead>
             <tbody>
@@ -418,7 +418,7 @@ export function CampaignPublicationPlan({
                       <span className="cx-who__n">{post.creatorName}</span>
                     </span>
                   </td>
-                  <td>
+                  <td className="cx-hide-sm">
                     <PlatformCell row={post} />
                   </td>
                   <td>
@@ -429,12 +429,12 @@ export function CampaignPublicationPlan({
                       onOpen={openScript}
                     />
                   </td>
-                  <td>{dash(formatClientScheduleDate(post.scheduledDate))}</td>
+                  <td className="cx-hide-sm">{dash(formatClientScheduleDate(post.scheduledDate))}</td>
                   <td>
                     <StatusPill status={post.status} />
                   </td>
-                  <td>{dash(formatClientScheduleDate(post.publicationDate) ?? (post.contentUrl ? "Published" : null))}</td>
-                  <td className="r">
+                  <td className="cx-hide-sm">{dash(formatClientScheduleDate(post.publicationDate) ?? (post.contentUrl ? "Published" : null))}</td>
+                  <td className="r cx-hide-sm">
                     {post.live || post.performance.views != null
                       ? formatClientCampaignPerformance(post.performance)
                       : dash(null)}
@@ -523,7 +523,7 @@ function GroupRows({
             <span className="cx-who__n">{group.creatorName}</span>
           </span>
         </td>
-        <td>{first ? <PlatformCell row={first} /> : null}</td>
+        <td className="cx-hide-sm">{first ? <PlatformCell row={first} /> : null}</td>
         <td>
           <span className="cx-mix">
             {group.kinds.map((kind) => (
@@ -538,7 +538,7 @@ function GroupRows({
             <StatusPill key={status} status={status} />
           ))}
         </td>
-        <td className="r">
+        <td className="r cx-hide-sm">
           <span className="cx-mini">
             <span className="cx-mini__t">
               <span
@@ -570,14 +570,14 @@ function GroupRows({
                     onOpen={onOpenScript}
                   />
                 </td>
-                <td>
+                <td className="cx-hide-sm">
                   <PlatformCell row={post} />
                 </td>
                 <td>{dash(formatClientScheduleDate(post.scheduledDate))}</td>
                 <td>
                   <StatusPill status={post.status} />
                 </td>
-                <td className="r">
+                <td className="r cx-hide-sm">
                   {perf !== DATA_NOT_AVAILABLE && perf !== NOT_AVAILABLE ? perf : dash(null)}
                 </td>
               </tr>

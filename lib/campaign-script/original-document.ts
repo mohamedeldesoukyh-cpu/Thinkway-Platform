@@ -158,6 +158,12 @@ export function campaignScriptOriginalDocumentKindLabel(
   return "File";
 }
 
+export function campaignScriptOriginalDocumentIconUrl(
+  kind: CampaignScriptOriginalDocumentKind
+): string {
+  return `/file-type-icons/${kind}.svg`;
+}
+
 export async function storeCampaignScriptOriginalDocument(
   supabase: Supabase,
   input: {

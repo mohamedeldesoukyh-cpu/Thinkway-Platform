@@ -320,16 +320,6 @@ export function CreatorsWorkspace({
                   />
                 </label>
               ) : null}
-              {!explore && canSelectCreator(creator.creatorId) ? (
-                <button
-                  type="button"
-                  className="btn sec"
-                  style={{ margin: "8px 8px 0 0" }}
-                  onClick={() => toggleChecked(creator, false)}
-                >
-                  {REMOVE_FROM_SELECTION_LABEL}
-                </button>
-              ) : null}
               <button
                 type="button"
                 className="cc-main"
@@ -424,6 +414,17 @@ export function CreatorsWorkspace({
                 </div>
               ) : null}
               </button>
+              {!explore && canSelectCreator(creator.creatorId) ? (
+                <div className="cc-remove">
+                  <button
+                    type="button"
+                    className="btn sec"
+                    onClick={() => toggleChecked(creator, false)}
+                  >
+                    {REMOVE_FROM_SELECTION_LABEL}
+                  </button>
+                </div>
+              ) : null}
             </div>
             );
           })}

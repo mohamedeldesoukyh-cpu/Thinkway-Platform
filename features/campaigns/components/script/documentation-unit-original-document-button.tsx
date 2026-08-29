@@ -21,6 +21,7 @@ import {
 import { getCampaignScriptOriginalDocumentUrlAction } from "@/features/campaigns/actions/campaign-script-actions";
 import { getClientCampaignScriptOriginalDocumentUrlAction } from "@/features/client-workspace/actions/campaign-script-actions";
 import {
+  campaignScriptOriginalDocumentIconUrl,
   campaignScriptOriginalDocumentKind,
   campaignScriptOriginalDocumentKindLabel,
   campaignScriptOriginalPreviewKind,
@@ -35,22 +36,15 @@ function OriginalDocumentTypeAvatar({
   kind: CampaignScriptOriginalDocumentKind;
   className?: string;
 }) {
-  const mark = kind === "word" ? "W" : campaignScriptOriginalDocumentKindLabel(kind);
   return (
-    <span
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={campaignScriptOriginalDocumentIconUrl(kind)}
+      alt=""
       data-original-document-kind={kind}
-      className={cn(
-        "inline-flex size-5 shrink-0 items-center justify-center rounded-[4px] font-bold uppercase leading-none text-white",
-        kind === "pdf" && "bg-[#E5252A] text-[6px] tracking-tight",
-        kind === "word" && "bg-[#2B579A] text-[11px]",
-        kind === "text" && "bg-zinc-500 text-[6px] tracking-tight",
-        kind === "file" && "bg-zinc-400 text-[6px] tracking-tight",
-        className
-      )}
+      className={cn("size-6 shrink-0 object-contain", className)}
       aria-hidden
-    >
-      {mark}
-    </span>
+    />
   );
 }
 
@@ -116,7 +110,7 @@ export function DocumentationUnitOriginalDocumentButton({
   const trigger = client ? (
     <button
       type="button"
-      className="btn px-1.5"
+      className="cx-script-btn"
       disabled={disabled || pending}
       title={`${documentKindLabel}: ${fileName}`}
       aria-label={`Original ${documentKindLabel} document ${fileName}`}
@@ -129,7 +123,7 @@ export function DocumentationUnitOriginalDocumentButton({
       type="button"
       size="sm"
       variant="outline"
-      className={cn("thinkway-campaign-btn h-7 w-7 px-0 shadow-none")}
+      className={cn("thinkway-campaign-btn h-8 w-8 min-h-8 p-0 px-0 shadow-none")}
       disabled={disabled || pending}
       title={`${documentKindLabel}: ${fileName}`}
       aria-label={`Original ${documentKindLabel} document ${fileName}`}

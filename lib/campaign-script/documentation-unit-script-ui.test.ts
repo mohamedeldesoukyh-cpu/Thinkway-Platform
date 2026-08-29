@@ -103,17 +103,30 @@ test("presence mapping ignores leftover campaign-level scripts", () => {
 
 test("empty units show Add/Upload; existing units show Script/Preview", () => {
   assert.deepEqual(documentationUnitScriptActionLabels(false), {
-    primary: "Add Script",
-    secondary: "Upload Script",
+    primary: "Add script",
+    secondary: "Upload script",
   });
   assert.deepEqual(documentationUnitScriptActionLabels(true), {
-    primary: "Script",
+    primary: "Open script",
     secondary: "Preview",
   });
   assert.equal(
     documentationUnitCanHoldScript({ quantity: 2, assignmentPostScheduleId: null }),
     false
   );
+
+  const actions = readFileSync(
+    resolve("features/campaigns/components/script/documentation-unit-script-actions.tsx"),
+    "utf8"
+  );
+  assert.match(actions, /PaperclipIcon/);
+  assert.match(actions, /EyeIcon/);
+  assert.match(actions, /PencilIcon/);
+  assert.match(actions, /FileUpIcon/);
+  assert.match(actions, /documentationUnitScriptActionLabels/);
+  assert.match(actions, /CLIENT_ICON_BUTTON_CLASS = "cx-script-btn"/);
+  assert.equal(actions.includes("Add Script"), false);
+  assert.equal(actions.includes('className="btn px-1.5"'), false);
 });
 
 test("Client publication-plan rows map to documentation units without leftover campaign scripts", () => {
@@ -229,7 +242,17 @@ test("Documentation UI opens a unit sheet and never loads the leftover campaign 
   assert.match(originalButton, /aria-label=\{`Original \$\{documentKindLabel\} document/);
   assert.match(originalButton, /data-original-document-kind/);
   assert.match(originalButton, /campaignScriptOriginalDocumentKind/);
+  assert.match(originalButton, /campaignScriptOriginalDocumentIconUrl/);
+  assert.match(originalButton, /className="cx-script-btn"/);
+  assert.equal(originalButton.includes('className="btn px-1.5"'), false);
   assert.equal(originalButton.includes("FileTextIcon"), false);
+  assert.equal(originalButton.includes('kind === "word" ? "W"'), false);
+
+  const originalIcons = readFileSync(
+    resolve("lib/campaign-script/original-document.ts"),
+    "utf8"
+  );
+  assert.match(originalIcons, /\/file-type-icons\/\$\{kind\}\.svg/);
 
   assert.equal(deliverablesTab.includes("CampaignScriptRegister"), false);
   assert.equal(deliverablesTab.includes("campaign-script-register"), false);
@@ -266,6 +289,8 @@ test("Client UI attaches Script to publication-plan units and hides campaign-lev
   assert.match(plan, /listClientCampaignScriptPresenceAction/);
   assert.match(plan, /hasOriginalDocument/);
   assert.match(plan, /surface="client"/);
+  assert.match(plan, /cx-dlv/);
+  assert.match(plan, /cx-hide-sm/);
   assert.equal(plan.includes("loadCampaignScriptMaster"), false);
   assert.equal(plan.includes("loadClientCampaignScriptAction"), false);
   assert.equal(plan.includes("campaign_script_assignments"), false);
@@ -286,4 +311,17 @@ test("Client UI attaches Script to publication-plan units and hides campaign-lev
   assert.match(sheet, /saveClientCampaignScriptForUnitAction/);
   assert.match(sheet, /translateClientCampaignScriptForUnitAction/);
   assert.match(sheet, /surface\?: "internal" \| "client"/);
+});
+
+test("Campaign tab script actions stay compact on mobile", () => {
+  const css = readFileSync(
+    resolve("features/client-workspace/styles/client-review-ref.css"),
+    "utf8"
+  );
+  assert.match(css, /\.cx-script-btn\{/);
+  assert.match(css, /min-height:32px/);
+  assert.match(css, /\.cx-hide-sm\{display:none/);
+  assert.match(css, /\.cx-dlv\{\s*flex-direction:\s*column/);
+  assert.match(css, /\.cx-kid td:first-child\{padding-left:28px\}/);
+  assert.match(css, /min-height:36px/);
 });

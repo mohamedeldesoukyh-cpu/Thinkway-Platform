@@ -178,7 +178,7 @@ export function DocumentationRepositoryList({
                             aria-selected={isActive}
                             aria-disabled={selectionLocked && !isActive}
                             className={cn(
-                              "flex w-full items-start gap-2 border-l-2 px-3 py-2 pl-8 text-left transition-colors hover:bg-muted/40",
+                              "flex w-full min-w-0 items-start gap-2 border-l-2 px-3 py-2 pl-8 text-left transition-colors hover:bg-muted/40 max-sm:flex-col max-sm:items-stretch",
                               isActive
                                 ? "border-l-[var(--camp-blue)] bg-[var(--camp-blue-light)]"
                                 : "border-l-transparent",
@@ -211,7 +211,7 @@ export function DocumentationRepositoryList({
                               </p>
                             </button>
                             <div
-                              className="shrink-0 pt-0.5"
+                              className="shrink-0 pt-0.5 max-sm:self-start"
                               onClick={(event) => event.stopPropagation()}
                             >
                               <DocumentationUnitScriptActions

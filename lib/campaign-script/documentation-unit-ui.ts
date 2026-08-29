@@ -60,8 +60,8 @@ export function documentationUnitScriptActionLabels(hasScript: boolean): {
   secondary: string;
 } {
   return hasScript
-    ? { primary: "Script", secondary: "Preview" }
-    : { primary: "Add Script", secondary: "Upload Script" };
+    ? { primary: "Open script", secondary: "Preview" }
+    : { primary: "Add script", secondary: "Upload script" };
 }
 
 export function isLegacyUnattachedCampaignScript(script: {

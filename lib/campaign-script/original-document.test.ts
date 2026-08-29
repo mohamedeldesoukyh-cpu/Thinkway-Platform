@@ -5,6 +5,7 @@ import {
   buildCampaignScriptOriginalStoragePath,
   campaignScriptOriginalDocumentKind,
   campaignScriptOriginalDocumentKindLabel,
+  campaignScriptOriginalDocumentIconUrl,
   campaignScriptOriginalFileExtension,
   campaignScriptOriginalMimeType,
   campaignScriptOriginalPathBelongsToUnit,
@@ -123,4 +124,6 @@ test("original document avatars follow the uploaded file type", () => {
   assert.equal(campaignScriptOriginalFileExtension("Alaa Chromax Cut 1.2.docx TENT"), "docx");
   assert.equal(campaignScriptOriginalDocumentKindLabel("pdf"), "PDF");
   assert.equal(campaignScriptOriginalDocumentKindLabel("word"), "Word");
+  assert.equal(campaignScriptOriginalDocumentIconUrl("pdf"), "/file-type-icons/pdf.svg");
+  assert.equal(campaignScriptOriginalDocumentIconUrl("word"), "/file-type-icons/word.svg");
 });

@@ -1,6 +1,15 @@
 "use client";
 
+import type { ReactNode } from "react";
+import { EyeIcon, FileUpIcon, PaperclipIcon, PencilIcon } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { documentationUnitScriptActionLabels } from "@/lib/campaign-script";
 import { cn } from "@/lib/utils";
 
@@ -24,8 +33,9 @@ type Props = {
   onPreview: () => void;
 };
 
-const CAMPAIGN_BUTTON_CLASS =
-  "thinkway-campaign-btn h-7 px-2 text-[10px] shadow-none";
+const CAMPAIGN_ICON_BUTTON_CLASS =
+  "thinkway-campaign-btn h-8 w-8 min-h-8 p-0 px-0 shadow-none";
+const CLIENT_ICON_BUTTON_CLASS = "cx-script-btn";
 
 export function DocumentationUnitScriptActions({
   hasScript,
@@ -51,82 +61,89 @@ export function DocumentationUnitScriptActions({
     hasOriginalDocument && originalFileName && assignmentDeliverableId
   );
 
-  function ActionButton({
-    children,
-    title,
+  function IconAction({
+    hint,
     onClick,
+    children,
   }: {
-    children: string;
-    title: string;
+    hint: string;
     onClick: () => void;
+    children: ReactNode;
   }) {
-    if (client) {
-      return (
-        <button
-          type="button"
-          className="btn"
-          disabled={blocked}
-          title={title}
-          onClick={(event) => {
-            event.stopPropagation();
-            onClick();
-          }}
-        >
-          {children}
-        </button>
-      );
-    }
-    return (
+    const title = unavailableReason ?? hint;
+    const button = client ? (
+      <button
+        type="button"
+        className={CLIENT_ICON_BUTTON_CLASS}
+        disabled={blocked}
+        aria-label={title}
+        onClick={(event) => {
+          event.stopPropagation();
+          onClick();
+        }}
+      >
+        {children}
+      </button>
+    ) : (
       <Button
         type="button"
         size="sm"
         variant="outline"
-        className={cn(CAMPAIGN_BUTTON_CLASS)}
+        className={cn(CAMPAIGN_ICON_BUTTON_CLASS)}
         disabled={blocked}
-        title={title}
+        aria-label={title}
         onClick={onClick}
       >
         {children}
       </Button>
     );
+
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipContent side="top">{title}</TooltipContent>
+      </Tooltip>
+    );
   }
 
   return (
-    <div
-      className="flex flex-wrap items-center gap-1"
-      data-documentation-script-actions={hasScript ? "present" : "empty"}
-    >
-      {hasScript ? (
-        <>
-          <ActionButton title={unavailableReason ?? "Open this unit script"} onClick={onOpen}>
-            {labels.primary}
-          </ActionButton>
-          <ActionButton title={unavailableReason ?? "Preview this unit script"} onClick={onPreview}>
-            {labels.secondary}
-          </ActionButton>
-        </>
-      ) : (
-        <>
-          <ActionButton title={unavailableReason ?? "Add a script to this unit"} onClick={onAdd}>
-            {labels.primary}
-          </ActionButton>
-          <ActionButton title={unavailableReason ?? "Upload a script to this unit"} onClick={onUpload}>
-            {labels.secondary}
-          </ActionButton>
-        </>
-      )}
-      {showOriginal ? (
-        <DocumentationUnitOriginalDocumentButton
-          variant={variant}
-          campaignId={campaignId}
-          token={token}
-          assignmentDeliverableId={assignmentDeliverableId!}
-          assignmentPostScheduleId={assignmentPostScheduleId ?? null}
-          fileName={originalFileName!}
-          mimeType={originalMimeType}
-          disabled={blocked}
-        />
-      ) : null}
-    </div>
+    <TooltipProvider delayDuration={200}>
+      <div
+        className="flex shrink-0 flex-nowrap items-center gap-1"
+        data-documentation-script-actions={hasScript ? "present" : "empty"}
+      >
+        {hasScript ? (
+          <>
+            <IconAction hint={labels.primary} onClick={onOpen}>
+              <PencilIcon className="size-4" aria-hidden />
+            </IconAction>
+            <IconAction hint={labels.secondary} onClick={onPreview}>
+              <EyeIcon className="size-4" aria-hidden />
+            </IconAction>
+          </>
+        ) : (
+          <>
+            <IconAction hint={labels.primary} onClick={onAdd}>
+              <PaperclipIcon className="size-4" aria-hidden />
+            </IconAction>
+            <IconAction hint={labels.secondary} onClick={onUpload}>
+              <FileUpIcon className="size-4" aria-hidden />
+            </IconAction>
+          </>
+        )}
+        {showOriginal ? (
+          <DocumentationUnitOriginalDocumentButton
+            variant={variant}
+            campaignId={campaignId}
+            token={token}
+            assignmentDeliverableId={assignmentDeliverableId!}
+            assignmentPostScheduleId={assignmentPostScheduleId ?? null}
+            fileName={originalFileName!}
+            mimeType={originalMimeType}
+            disabled={blocked}
+          />
+        ) : null}
+      </div>
+    </TooltipProvider>
   );
 }

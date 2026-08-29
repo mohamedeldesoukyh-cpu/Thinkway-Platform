@@ -1,11 +1,10 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Campaign Script original documents — preserve the uploaded client file on the same documentation unit as the script. Stopped after implementation and testing.
+**Focus:** Client Workspace mobile layout — Campaign tab plus Shortlist, Your Selection, Commercial, Overview, and chrome.
 
-- Original bytes live in the existing `deliverable-assets` bucket. Metadata (`original_storage_bucket/path/mime/size`) is on append-only `campaign_script_revisions`. Not a `deliverable_assets` row.
-- Path: `{campaignHeaderId}/{assignmentDeliverableId}/{postId|deliverable}/{revisionId}/{fileName}`. Existing storage RLS (first folder = campaign UUID) applies.
-- Compact file icon next to Script/Preview on Internal Deliverables documentation units and Client Publication Plan rows. Download + PDF preview. Filename in the menu.
-- Text edit / language / translation carry the previous original forward. Replacement inserts a new revision + new object; prior objects stay.
-- Signed URLs load the current unit script; they never accept a client-supplied path. Reel 1’s original is never returned for Reel 2.
+- Campaign tab: compact `cx-script-btn` (not inflated `.btn`); hide lower-priority publication-plan columns below 760px.
+- Overview: stack analysis/strategy grids; do not keep `min-width: 280px` on the executive summary (it overflowed phones). Mobile overrides sit after the Overview CSS so they win the cascade.
+- Shortlist / Your Selection: filter chips scroll; Remove sits under the creator card instead of beside the photo.
+- Header CTAs stack full-width; journey hints hide; Commercial totals and Feedback KPI strip tighten.
 - Development only (`hsxrewjcbvmbkqdlzjhs`). Production schema/UI deploy requires approval.
