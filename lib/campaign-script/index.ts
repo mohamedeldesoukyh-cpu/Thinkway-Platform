@@ -104,6 +104,9 @@ export { saveCampaignScriptForUnit, saveCampaignScriptMaster } from "./save-mast
 export {
   buildCampaignScriptOriginalStoragePath,
   campaignScriptOriginalPathBelongsToUnit,
+  campaignScriptOriginalDocumentKind,
+  campaignScriptOriginalDocumentKindLabel,
+  campaignScriptOriginalFileExtension,
   campaignScriptOriginalPreviewKind,
   campaignScriptOriginalSlot,
   createCampaignScriptOriginalSignedUrl,
@@ -116,6 +119,7 @@ export {
 } from "./original-document";
 export type {
   CampaignScriptOriginalDocument,
+  CampaignScriptOriginalDocumentKind,
   CampaignScriptOriginalUpload,
   CampaignScriptUnitPresence,
 } from "./original-document";

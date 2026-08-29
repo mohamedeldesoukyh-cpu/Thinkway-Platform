@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { FileTextIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -21,8 +20,39 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getCampaignScriptOriginalDocumentUrlAction } from "@/features/campaigns/actions/campaign-script-actions";
 import { getClientCampaignScriptOriginalDocumentUrlAction } from "@/features/client-workspace/actions/campaign-script-actions";
-import { campaignScriptOriginalPreviewKind } from "@/lib/campaign-script";
+import {
+  campaignScriptOriginalDocumentKind,
+  campaignScriptOriginalDocumentKindLabel,
+  campaignScriptOriginalPreviewKind,
+  type CampaignScriptOriginalDocumentKind,
+} from "@/lib/campaign-script";
 import { cn } from "@/lib/utils";
+
+function OriginalDocumentTypeAvatar({
+  kind,
+  className,
+}: {
+  kind: CampaignScriptOriginalDocumentKind;
+  className?: string;
+}) {
+  const mark = kind === "word" ? "W" : campaignScriptOriginalDocumentKindLabel(kind);
+  return (
+    <span
+      data-original-document-kind={kind}
+      className={cn(
+        "inline-flex size-5 shrink-0 items-center justify-center rounded-[4px] font-bold uppercase leading-none text-white",
+        kind === "pdf" && "bg-[#E5252A] text-[6px] tracking-tight",
+        kind === "word" && "bg-[#2B579A] text-[11px]",
+        kind === "text" && "bg-zinc-500 text-[6px] tracking-tight",
+        kind === "file" && "bg-zinc-400 text-[6px] tracking-tight",
+        className
+      )}
+      aria-hidden
+    >
+      {mark}
+    </span>
+  );
+}
 
 type Props = {
   variant?: "campaign" | "client";
@@ -48,7 +78,10 @@ export function DocumentationUnitOriginalDocumentButton({
   const [pending, setPending] = useState(false);
   const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
   const client = variant === "client";
+  const documentKind = campaignScriptOriginalDocumentKind(mimeType, fileName);
+  const documentKindLabel = campaignScriptOriginalDocumentKindLabel(documentKind);
   const previewKind = campaignScriptOriginalPreviewKind(mimeType, fileName);
+  const avatar = <OriginalDocumentTypeAvatar kind={documentKind} />;
 
   async function openOriginal(mode: "view" | "download") {
     setPending(true);
@@ -83,13 +116,13 @@ export function DocumentationUnitOriginalDocumentButton({
   const trigger = client ? (
     <button
       type="button"
-      className="btn"
+      className="btn px-1.5"
       disabled={disabled || pending}
-      title={fileName}
-      aria-label={`Original document ${fileName}`}
+      title={`${documentKindLabel}: ${fileName}`}
+      aria-label={`Original ${documentKindLabel} document ${fileName}`}
       onClick={(event) => event.stopPropagation()}
     >
-      <FileTextIcon className="size-3.5" aria-hidden />
+      {avatar}
     </button>
   ) : (
     <Button
@@ -98,10 +131,10 @@ export function DocumentationUnitOriginalDocumentButton({
       variant="outline"
       className={cn("thinkway-campaign-btn h-7 w-7 px-0 shadow-none")}
       disabled={disabled || pending}
-      title={fileName}
-      aria-label={`Original document ${fileName}`}
+      title={`${documentKindLabel}: ${fileName}`}
+      aria-label={`Original ${documentKindLabel} document ${fileName}`}
     >
-      <FileTextIcon className="size-3.5" aria-hidden />
+      {avatar}
     </Button>
   );
 
@@ -110,8 +143,9 @@ export function DocumentationUnitOriginalDocumentButton({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="max-w-[240px] text-xs">
-          <DropdownMenuLabel className="truncate font-normal" title={fileName}>
-            {fileName}
+          <DropdownMenuLabel className="flex min-w-0 items-center gap-2 font-normal" title={fileName}>
+            <OriginalDocumentTypeAvatar kind={documentKind} />
+            <span className="truncate">{fileName}</span>
           </DropdownMenuLabel>
           {previewKind === "pdf" ? (
             <DropdownMenuItem disabled={pending} onSelect={() => void openOriginal("view")}>

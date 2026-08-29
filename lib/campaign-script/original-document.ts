@@ -118,6 +118,46 @@ export function campaignScriptOriginalPreviewKind(
   return null;
 }
 
+export const CAMPAIGN_SCRIPT_ORIGINAL_DOCUMENT_KINDS = ["pdf", "word", "text", "file"] as const;
+export type CampaignScriptOriginalDocumentKind =
+  (typeof CAMPAIGN_SCRIPT_ORIGINAL_DOCUMENT_KINDS)[number];
+
+export function campaignScriptOriginalFileExtension(fileName: string): string {
+  const name = fileName.trim().toLowerCase();
+  for (const ext of ["docx", "doc", "pdf", "txt", "md"] as const) {
+    if (new RegExp(`\\.${ext}(?:\\b|$)`).test(name)) return ext;
+  }
+  return name.split(".").pop()?.split(/[\s_]+/)[0] ?? "";
+}
+
+export function campaignScriptOriginalDocumentKind(
+  mimeType?: string | null,
+  fileName?: string | null
+): CampaignScriptOriginalDocumentKind {
+  const ext = campaignScriptOriginalFileExtension(fileName ?? "");
+  const mime = (mimeType ?? "").trim().toLowerCase();
+  if (ext === "pdf" || mime === "application/pdf") return "pdf";
+  if (
+    ext === "docx" ||
+    ext === "doc" ||
+    mime === "application/msword" ||
+    mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  ) {
+    return "word";
+  }
+  if (ext === "txt" || ext === "md" || mime.startsWith("text/")) return "text";
+  return "file";
+}
+
+export function campaignScriptOriginalDocumentKindLabel(
+  kind: CampaignScriptOriginalDocumentKind
+): string {
+  if (kind === "pdf") return "PDF";
+  if (kind === "word") return "Word";
+  if (kind === "text") return "Text";
+  return "File";
+}
+
 export async function storeCampaignScriptOriginalDocument(
   supabase: Supabase,
   input: {

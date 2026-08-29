@@ -3,6 +3,9 @@ import { test } from "node:test";
 
 import {
   buildCampaignScriptOriginalStoragePath,
+  campaignScriptOriginalDocumentKind,
+  campaignScriptOriginalDocumentKindLabel,
+  campaignScriptOriginalFileExtension,
   campaignScriptOriginalMimeType,
   campaignScriptOriginalPathBelongsToUnit,
   campaignScriptOriginalPreviewKind,
@@ -101,4 +104,23 @@ test("preview uses existing PDF capability and leaves docx as download-only", ()
     ),
     null
   );
+});
+
+test("original document avatars follow the uploaded file type", () => {
+  assert.equal(campaignScriptOriginalDocumentKind("application/pdf", "brief.pdf"), "pdf");
+  assert.equal(
+    campaignScriptOriginalDocumentKind(
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "Alaa Chromax Cut 1.2.docx TENT"
+    ),
+    "word"
+  );
+  assert.equal(campaignScriptOriginalDocumentKind(null, "script.docx"), "word");
+  assert.equal(campaignScriptOriginalDocumentKind("application/msword", "notes.doc"), "word");
+  assert.equal(campaignScriptOriginalDocumentKind("text/plain", "script.txt"), "text");
+  assert.equal(campaignScriptOriginalDocumentKind(null, "notes.md"), "text");
+  assert.equal(campaignScriptOriginalDocumentKind(null, "unknown.bin"), "file");
+  assert.equal(campaignScriptOriginalFileExtension("Alaa Chromax Cut 1.2.docx TENT"), "docx");
+  assert.equal(campaignScriptOriginalDocumentKindLabel("pdf"), "PDF");
+  assert.equal(campaignScriptOriginalDocumentKindLabel("word"), "Word");
 });

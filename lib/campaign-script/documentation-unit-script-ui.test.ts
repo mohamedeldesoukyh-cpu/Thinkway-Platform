@@ -226,7 +226,10 @@ test("Documentation UI opens a unit sheet and never loads the leftover campaign 
   assert.match(originalButton, /getClientCampaignScriptOriginalDocumentUrlAction/);
   assert.match(originalButton, /Preview/);
   assert.match(originalButton, /Download/);
-  assert.match(originalButton, /aria-label=\{`Original document/);
+  assert.match(originalButton, /aria-label=\{`Original \$\{documentKindLabel\} document/);
+  assert.match(originalButton, /data-original-document-kind/);
+  assert.match(originalButton, /campaignScriptOriginalDocumentKind/);
+  assert.equal(originalButton.includes("FileTextIcon"), false);
 
   assert.equal(deliverablesTab.includes("CampaignScriptRegister"), false);
   assert.equal(deliverablesTab.includes("campaign-script-register"), false);
