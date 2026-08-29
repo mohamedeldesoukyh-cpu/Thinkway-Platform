@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 
 import { attachedScriptPresenceFromRows } from "./documentation-unit-ui";
+import type { CampaignScriptUnitPresence } from "./original-document";
 import type {
   CampaignScriptMasterView,
   ScriptActorKind,
@@ -73,6 +74,10 @@ export function mapCampaignScriptMaster(
     createdAt: revision.created_at,
     origin,
     originalFileName: revision.original_file_name,
+    originalStorageBucket: revision.original_storage_bucket,
+    originalStoragePath: revision.original_storage_path,
+    originalMimeType: revision.original_mime_type,
+    originalFileSize: revision.original_file_size,
     assignmentDeliverableId: script.assignment_deliverable_id,
     assignmentPostScheduleId: script.assignment_post_schedule_id,
     translationStatus: asTranslationStatus(script.translation_status),
@@ -119,16 +124,48 @@ export async function loadCampaignScriptMaster(
 export async function listAttachedCampaignScriptPresence(
   supabase: Supabase,
   campaignHeaderId: string
-): Promise<Map<string, string>> {
+): Promise<Map<string, CampaignScriptUnitPresence>> {
   const headerId = campaignHeaderId.trim();
   if (!headerId) return new Map();
   const { data, error } = await supabase
     .from("campaign_scripts")
-    .select("id, assignment_deliverable_id, assignment_post_schedule_id")
+    .select("id, assignment_deliverable_id, assignment_post_schedule_id, current_revision_id")
     .eq("campaign_header_id", headerId)
     .not("assignment_deliverable_id", "is", null);
   if (error) throw new Error(error.message);
-  return attachedScriptPresenceFromRows(data ?? []);
+  const scripts = data ?? [];
+  const revisionIds = scripts
+    .map((row) => row.current_revision_id)
+    .filter((id): id is string => Boolean(id));
+  const originals = new Map<
+    string,
+    { original_file_name: string | null; original_storage_path: string | null; original_mime_type: string | null }
+  >();
+  if (revisionIds.length > 0) {
+    const { data: revisions, error: revisionError } = await supabase
+      .from("campaign_script_revisions")
+      .select("id, original_file_name, original_storage_path, original_mime_type")
+      .in("id", revisionIds);
+    if (revisionError) throw new Error(revisionError.message);
+    for (const revision of revisions ?? []) {
+      originals.set(revision.id, revision);
+    }
+  }
+  const presence = new Map<string, CampaignScriptUnitPresence>();
+  const ids = attachedScriptPresenceFromRows(scripts);
+  for (const [unitKey, scriptId] of ids) {
+    const script = scripts.find((row) => row.id === scriptId);
+    const original = script?.current_revision_id
+      ? originals.get(script.current_revision_id)
+      : undefined;
+    presence.set(unitKey, {
+      scriptId,
+      originalFileName: original?.original_file_name ?? null,
+      originalMimeType: original?.original_mime_type ?? null,
+      hasOriginalDocument: Boolean(original?.original_storage_path),
+    });
+  }
+  return presence;
 }
 
 export async function loadCampaignScriptById(
@@ -231,6 +268,10 @@ export function mapCampaignScriptOverrideView(
     createdAt: revision.created_at,
     origin,
     originalFileName: revision.original_file_name,
+    originalStorageBucket: revision.original_storage_bucket,
+    originalStoragePath: revision.original_storage_path,
+    originalMimeType: revision.original_mime_type,
+    originalFileSize: revision.original_file_size,
     assignmentDeliverableId: null,
     assignmentPostScheduleId: null,
     translationStatus: assignment.translationStatus,

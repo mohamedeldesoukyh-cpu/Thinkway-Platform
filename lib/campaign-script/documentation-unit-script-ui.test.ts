@@ -192,11 +192,15 @@ test("Documentation UI opens a unit sheet and never loads the leftover campaign 
   assert.equal(tab.includes("CampaignScriptRegister"), false);
 
   assert.match(list, /DocumentationUnitScriptActions/);
+  assert.match(list, /hasOriginalDocument/);
+  assert.match(list, /campaignId/);
   assert.match(list, /onOpenScript/);
 
   assert.match(sheet, /loadCampaignScriptForUnitAction/);
   assert.match(sheet, /saveCampaignScriptForUnitAction/);
   assert.match(sheet, /translateCampaignScriptForUnitAction/);
+  assert.match(sheet, /originalFile/);
+  assert.match(sheet, /pendingOriginalFileRef/);
   assert.match(sheet, /Translate to Arabic/);
   assert.match(sheet, /Translate to English/);
   assert.match(sheet, /campaignScriptDownloadText/);
@@ -208,8 +212,21 @@ test("Documentation UI opens a unit sheet and never loads the leftover campaign 
   assert.match(actions, /export async function saveCampaignScriptForUnitAction/);
   assert.match(actions, /saveCampaignScriptForUnit\(/);
   assert.match(actions, /loadCampaignScriptForUnit\(/);
+  assert.match(actions, /getCampaignScriptOriginalDocumentUrlAction/);
+  assert.match(actions, /createCampaignScriptOriginalSignedUrlForUnit/);
+  assert.match(actions, /originalFile/);
   const unitSave = actions.slice(actions.indexOf("saveCampaignScriptForUnitAction"));
   assert.equal(unitSave.includes("saveCampaignScriptMaster("), false);
+
+  const originalButton = readFileSync(
+    resolve("features/campaigns/components/script/documentation-unit-original-document-button.tsx"),
+    "utf8"
+  );
+  assert.match(originalButton, /getCampaignScriptOriginalDocumentUrlAction/);
+  assert.match(originalButton, /getClientCampaignScriptOriginalDocumentUrlAction/);
+  assert.match(originalButton, /Preview/);
+  assert.match(originalButton, /Download/);
+  assert.match(originalButton, /aria-label=\{`Original document/);
 
   assert.equal(deliverablesTab.includes("CampaignScriptRegister"), false);
   assert.equal(deliverablesTab.includes("campaign-script-register"), false);
@@ -244,6 +261,7 @@ test("Client UI attaches Script to publication-plan units and hides campaign-lev
   assert.match(plan, /DocumentationUnitScriptActions/);
   assert.match(plan, /DocumentationUnitScriptSheet/);
   assert.match(plan, /listClientCampaignScriptPresenceAction/);
+  assert.match(plan, /hasOriginalDocument/);
   assert.match(plan, /surface="client"/);
   assert.equal(plan.includes("loadCampaignScriptMaster"), false);
   assert.equal(plan.includes("loadClientCampaignScriptAction"), false);
@@ -254,6 +272,8 @@ test("Client UI attaches Script to publication-plan units and hides campaign-lev
   assert.match(clientActions, /saveCampaignScriptForUnit\(/);
   assert.match(clientActions, /loadCampaignScriptForUnit\(/);
   assert.match(clientActions, /listAttachedCampaignScriptPresence\(/);
+  assert.match(clientActions, /getClientCampaignScriptOriginalDocumentUrlAction/);
+  assert.match(clientActions, /createCampaignScriptOriginalSignedUrlForUnit/);
   assert.match(clientActions, /actorKind: "client"/);
   assert.equal(clientActions.includes("saveCampaignScriptMaster("), false);
   assert.equal(clientActions.includes("loadCampaignScriptMaster("), false);

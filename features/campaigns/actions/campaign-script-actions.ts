@@ -7,6 +7,7 @@ import { requirePermission } from "@/lib/auth/permissions-server";
 import { extractCampaignScriptText } from "@/lib/campaign-script/extract-text";
 import { loadCampaignScriptMaster, loadCampaignScriptForUnit, listAttachedCampaignScriptPresence } from "@/lib/campaign-script/load-master";
 import { saveCampaignScriptMaster, saveCampaignScriptForUnit } from "@/lib/campaign-script/save-master";
+import { createCampaignScriptOriginalSignedUrlForUnit } from "@/lib/campaign-script/original-document";
 import { queueCampaignScriptAssignmentTranslation, queueCampaignScriptTranslation } from "@/lib/campaign-script/queue";
 import { applyMasterScriptToLineIds, customizeCampaignScriptAssignment, listCreatorScriptStatuses, loadCampaignScriptAssignmentById, previewApplyMasterScriptToLineIds, reapplyMasterToCampaignScriptAssignment } from "@/lib/campaign-script/assignments";
 import {
@@ -15,6 +16,7 @@ import {
   type ApplyMasterScriptPreview,
   type ApplyMasterScriptResult,
   type CampaignScriptMasterView,
+  type CampaignScriptUnitPresence,
   type CreatorCampaignScriptBundle,
   type CreatorScriptStatusView,
   type ScriptLanguage,
@@ -63,6 +65,24 @@ async function getReadActor(): Promise<
 
 function parseSourceLanguage(value: string): ScriptLanguage | null {
   return isScriptLanguage(value) ? value : null;
+}
+
+async function originalUploadFromFile(
+  file: File | null | undefined
+): Promise<
+  | { fileName: string; mimeType: string | null; bytes: Buffer }
+  | { message: string }
+  | undefined
+> {
+  if (!file) return undefined;
+  if (file.size > CAMPAIGN_SCRIPT_FILE_MAX_BYTES) {
+    return { message: "That file is too large. Upload a script file under 8 MB." };
+  }
+  return {
+    fileName: file.name,
+    mimeType: file.type || null,
+    bytes: Buffer.from(await file.arrayBuffer()),
+  };
 }
 
 export async function loadCampaignScriptAction(input: {
@@ -452,7 +472,9 @@ function parseUnitIds(input: {
 
 export async function listCampaignScriptPresenceAction(input: {
   campaignId: string;
-}): Promise<CampaignScriptActionResult<Array<{ unitKey: string; scriptId: string }>>> {
+}): Promise<
+  CampaignScriptActionResult<Array<{ unitKey: string } & CampaignScriptUnitPresence>>
+> {
   const parsed = campaignIdSchema.safeParse(input.campaignId);
   if (!parsed.success) return { ok: false, message: "Campaign is missing." };
   const actor = await getReadActor();
@@ -461,7 +483,7 @@ export async function listCampaignScriptPresenceAction(input: {
     const presence = await listAttachedCampaignScriptPresence(actor.supabase, parsed.data);
     return {
       ok: true,
-      data: [...presence.entries()].map(([unitKey, scriptId]) => ({ unitKey, scriptId })),
+      data: [...presence.entries()].map(([unitKey, row]) => ({ unitKey, ...row })),
     };
   } catch (error) {
     return {
@@ -504,6 +526,7 @@ export async function saveCampaignScriptForUnitAction(input: {
   bodyEn: string;
   bodyAr: string;
   originalFileName?: string | null;
+  originalFile?: File | null;
 }): Promise<CampaignScriptActionResult<CampaignScriptMasterView>> {
   const unit = parseUnitIds(input);
   if (!unit.ok) return unit;
@@ -511,6 +534,10 @@ export async function saveCampaignScriptForUnitAction(input: {
   if (!sourceLanguage) return { ok: false, message: "Choose English or Arabic as the original language." };
   const actor = await getWriteActor();
   if (!actor.ok) return actor;
+  const originalDocumentUpload = await originalUploadFromFile(input.originalFile);
+  if (originalDocumentUpload && "message" in originalDocumentUpload) {
+    return { ok: false, message: originalDocumentUpload.message };
+  }
 
   const result = await saveCampaignScriptForUnit(actor.supabase, {
     campaignHeaderId: unit.campaignId,
@@ -527,6 +554,7 @@ export async function saveCampaignScriptForUnitAction(input: {
     actorLabel: actor.fullName?.trim() || "Thinkway",
     origin: "internal",
     originalFileName: input.originalFileName ?? null,
+    originalDocumentUpload,
   });
 
   if (result.ok) {
@@ -587,6 +615,40 @@ export async function translateCampaignScriptForUnitAction(input: {
     })) ?? script;
   revalidatePath(campaignDetailPath(unit.campaignId));
   return { ok: true, data: latest };
+}
+
+export async function getCampaignScriptOriginalDocumentUrlAction(input: {
+  campaignId: string;
+  assignmentDeliverableId: string;
+  assignmentPostScheduleId?: string | null;
+  download?: boolean;
+}): Promise<CampaignScriptActionResult<{ url: string; fileName: string; mimeType: string | null }>> {
+  const unit = parseUnitIds(input);
+  if (!unit.ok) return unit;
+  const actor = await getReadActor();
+  if (!actor.ok) return actor;
+  try {
+    const signed = await createCampaignScriptOriginalSignedUrlForUnit(actor.supabase, {
+      campaignHeaderId: unit.campaignId,
+      assignmentDeliverableId: unit.assignmentDeliverableId,
+      assignmentPostScheduleId: unit.assignmentPostScheduleId,
+      download: input.download,
+    });
+    if (!signed.ok) return signed;
+    return {
+      ok: true,
+      data: {
+        url: signed.url,
+        fileName: signed.fileName,
+        mimeType: signed.mimeType,
+      },
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Could not open the original document.",
+    };
+  }
 }
 
 export async function reapplyMasterCreatorScriptAction(input: {

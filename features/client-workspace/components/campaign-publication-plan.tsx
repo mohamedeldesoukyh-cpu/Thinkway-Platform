@@ -7,6 +7,7 @@ import { DocumentationUnitScriptSheet } from "@/features/campaigns/components/sc
 import {
   clientPostDocumentationScriptUnit,
   documentationUnitSummaryForClientPost,
+  type CampaignScriptUnitPresence,
   type DocumentationUnitScriptIntent,
 } from "@/lib/campaign-script";
 
@@ -121,14 +122,17 @@ function DeliverableScriptCell({
   post,
   count = 1,
   scriptPresence,
+  token,
   onOpen,
 }: {
   post: ClientCampaignPostRow;
   count?: number;
-  scriptPresence: ReadonlySet<string>;
+  scriptPresence: ReadonlyMap<string, CampaignScriptUnitPresence>;
+  token: string;
   onOpen: (post: ClientCampaignPostRow, intent: DocumentationUnitScriptIntent) => void;
 }) {
   const unit = clientScriptUnitFromPost(post);
+  const presence = unit ? scriptPresence.get(unit.unitKey) : undefined;
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span>
@@ -138,7 +142,13 @@ function DeliverableScriptCell({
       {unit && count === 1 ? (
         <DocumentationUnitScriptActions
           variant="client"
-          hasScript={scriptPresence.has(unit.unitKey)}
+          token={token}
+          hasScript={Boolean(presence)}
+          assignmentDeliverableId={unit.assignmentDeliverableId}
+          assignmentPostScheduleId={unit.assignmentPostScheduleId}
+          originalFileName={presence?.originalFileName}
+          originalMimeType={presence?.originalMimeType}
+          hasOriginalDocument={presence?.hasOriginalDocument}
           onAdd={() => onOpen(post, "edit")}
           onUpload={() => onOpen(post, "upload")}
           onOpen={() => onOpen(post, "edit")}
@@ -166,7 +176,9 @@ export function CampaignPublicationPlan({
   const [view, setView] = useState<PublicationPlanViewMode>("grouped");
   const [opened, setOpened] = useState<Set<string>>(() => new Set());
   const [closed, setClosed] = useState<Set<string>>(() => new Set());
-  const [scriptPresence, setScriptPresence] = useState<Set<string>>(() => new Set());
+  const [scriptPresence, setScriptPresence] = useState<Map<string, CampaignScriptUnitPresence>>(
+    () => new Map()
+  );
   const [scriptSheet, setScriptSheet] = useState<{
     post: ClientCampaignPostRow;
     intent: DocumentationUnitScriptIntent;
@@ -228,7 +240,19 @@ export function CampaignPublicationPlan({
     let cancelled = false;
     void listClientCampaignScriptPresenceAction({ token }).then((result) => {
       if (cancelled || !result.ok) return;
-      setScriptPresence(new Set(result.data.map((row) => row.unitKey)));
+      setScriptPresence(
+        new Map(
+          result.data.map((row) => [
+            row.unitKey,
+            {
+              scriptId: row.scriptId,
+              originalFileName: row.originalFileName,
+              originalMimeType: row.originalMimeType,
+              hasOriginalDocument: row.hasOriginalDocument,
+            },
+          ])
+        )
+      );
     });
     return () => {
       cancelled = true;
@@ -401,6 +425,7 @@ export function CampaignPublicationPlan({
                     <DeliverableScriptCell
                       post={post}
                       scriptPresence={scriptPresence}
+                      token={token}
                       onOpen={openScript}
                     />
                   </td>
@@ -437,11 +462,19 @@ export function CampaignPublicationPlan({
         token={token}
         unit={scriptSheetUnit}
         intent={scriptSheet?.intent ?? "edit"}
-        onPresenceChange={(unitKey, hasScript) => {
+        onPresenceChange={(unitKey, presence) => {
           setScriptPresence((current) => {
-            const next = new Set(current);
-            if (hasScript) next.add(unitKey);
-            else next.delete(unitKey);
+            const next = new Map(current);
+            if (!presence.hasScript) {
+              next.delete(unitKey);
+              return next;
+            }
+            next.set(unitKey, {
+              scriptId: presence.scriptId ?? current.get(unitKey)?.scriptId ?? "",
+              originalFileName: presence.originalFileName ?? null,
+              originalMimeType: presence.originalMimeType ?? null,
+              hasOriginalDocument: Boolean(presence.hasOriginalDocument),
+            });
             return next;
           });
         }}
@@ -465,7 +498,7 @@ function GroupRows({
   index: number;
   token: string;
   creators: ClientCreatorCard[];
-  scriptPresence: ReadonlySet<string>;
+  scriptPresence: ReadonlyMap<string, CampaignScriptUnitPresence>;
   onOpenScript: (post: ClientCampaignPostRow, intent: DocumentationUnitScriptIntent) => void;
   onToggle: () => void;
 }) {
@@ -533,6 +566,7 @@ function GroupRows({
                     post={post}
                     count={item.count}
                     scriptPresence={scriptPresence}
+                    token={token}
                     onOpen={onOpenScript}
                   />
                 </td>

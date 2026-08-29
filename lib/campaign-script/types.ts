@@ -32,6 +32,10 @@ export type CampaignScriptMasterView = {
   createdAt: string;
   origin: ScriptOrigin;
   originalFileName: string | null;
+  originalStorageBucket: string | null;
+  originalStoragePath: string | null;
+  originalMimeType: string | null;
+  originalFileSize: number | null;
   assignmentDeliverableId: string | null;
   assignmentPostScheduleId: string | null;
   translationStatus: ScriptTranslationStatus;
@@ -59,6 +63,18 @@ export type SaveCampaignScriptInput = {
   origin: ScriptOrigin;
   reviewId?: string | null;
   originalFileName?: string | null;
+  originalDocument?: {
+    fileName: string;
+    storageBucket: string;
+    storagePath: string;
+    mimeType: string | null;
+    fileSize: number;
+  } | null;
+  originalDocumentUpload?: {
+    fileName: string;
+    mimeType?: string | null;
+    bytes: Buffer;
+  } | null;
   changeSummary?: string | null;
   bumpBusinessVersion?: boolean;
   originsOverride?: { enOrigin: ScriptTextOrigin; arOrigin: ScriptTextOrigin };

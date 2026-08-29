@@ -1200,6 +1200,10 @@ export type Database = {
           parent_revision_id: string | null;
           review_id: string | null;
           original_file_name: string | null;
+          original_storage_bucket: string | null;
+          original_storage_path: string | null;
+          original_mime_type: string | null;
+          original_file_size: number | null;
           change_summary: string | null;
           created_at: string;
           assignment_id: string | null;
@@ -1221,6 +1225,10 @@ export type Database = {
           parent_revision_id?: string | null;
           review_id?: string | null;
           original_file_name?: string | null;
+          original_storage_bucket?: string | null;
+          original_storage_path?: string | null;
+          original_mime_type?: string | null;
+          original_file_size?: number | null;
           change_summary?: string | null;
           created_at?: string;
           assignment_id?: string | null;

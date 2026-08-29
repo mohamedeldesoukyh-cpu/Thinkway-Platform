@@ -21,6 +21,7 @@ import {
 } from "@/lib/services/deliverables/documentation-types";
 import {
   documentationUnitCanHoldScript,
+  type CampaignScriptUnitPresence,
   type DocumentationUnitScriptIntent,
 } from "@/lib/campaign-script";
 import { cn } from "@/lib/utils";
@@ -70,7 +71,8 @@ type Props = {
   selectionLocked: boolean;
   hideCreatorHeaders: boolean;
   onSelect: (unitKey: string) => void;
-  scriptPresence: ReadonlySet<string>;
+  scriptPresence: ReadonlyMap<string, CampaignScriptUnitPresence>;
+  campaignId: string;
   onOpenScript: (unitKey: string, intent: DocumentationUnitScriptIntent) => void;
 };
 
@@ -81,6 +83,7 @@ export function DocumentationRepositoryList({
   hideCreatorHeaders,
   onSelect,
   scriptPresence,
+  campaignId,
   onOpenScript,
 }: Props) {
   const creatorGroups = useMemo(() => groupDocumentationUnits(units), [units]);
@@ -213,6 +216,14 @@ export function DocumentationRepositoryList({
                             >
                               <DocumentationUnitScriptActions
                                 hasScript={scriptPresence.has(unit.unitKey)}
+                                campaignId={campaignId}
+                                assignmentDeliverableId={unit.assignmentDeliverableId}
+                                assignmentPostScheduleId={unit.assignmentPostScheduleId}
+                                originalFileName={scriptPresence.get(unit.unitKey)?.originalFileName}
+                                originalMimeType={scriptPresence.get(unit.unitKey)?.originalMimeType}
+                                hasOriginalDocument={
+                                  scriptPresence.get(unit.unitKey)?.hasOriginalDocument
+                                }
                                 disabled={selectionLocked}
                                 unavailableReason={
                                   canHoldScript

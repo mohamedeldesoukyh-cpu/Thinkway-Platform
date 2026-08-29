@@ -98,6 +98,7 @@ import {
 } from "@/lib/services/deliverables/build-documentation-units";
 import {
   documentationUnitCanHoldScript,
+  type CampaignScriptUnitPresence,
   type DocumentationUnitScriptIntent,
 } from "@/lib/campaign-script";
 
@@ -206,7 +207,9 @@ export function CampaignDeliverablesDocumentationTab({
     loaded: number;
     total: number;
   } | null>(null);
-  const [scriptPresence, setScriptPresence] = useState<Set<string>>(() => new Set());
+  const [scriptPresence, setScriptPresence] = useState<Map<string, CampaignScriptUnitPresence>>(
+    () => new Map()
+  );
   const [scriptSheetUnitKey, setScriptSheetUnitKey] = useState<string | null>(null);
   const [scriptSheetIntent, setScriptSheetIntent] =
     useState<DocumentationUnitScriptIntent>("edit");
@@ -387,7 +390,19 @@ export function CampaignDeliverablesDocumentationTab({
     let cancelled = false;
     void listCampaignScriptPresenceAction({ campaignId }).then((result) => {
       if (cancelled || !result.ok) return;
-      setScriptPresence(new Set(result.data.map((row) => row.unitKey)));
+      setScriptPresence(
+        new Map(
+          result.data.map((row) => [
+            row.unitKey,
+            {
+              scriptId: row.scriptId,
+              originalFileName: row.originalFileName,
+              originalMimeType: row.originalMimeType,
+              hasOriginalDocument: row.hasOriginalDocument,
+            },
+          ])
+        )
+      );
     });
     return () => {
       cancelled = true;
@@ -757,6 +772,7 @@ export function CampaignDeliverablesDocumentationTab({
                   hideCreatorHeaders={creatorFilter !== "all"}
                   onSelect={requestSelect}
                   scriptPresence={scriptPresence}
+                  campaignId={campaignId}
                   onOpenScript={openUnitScript}
                 />
               )}
@@ -797,6 +813,14 @@ export function CampaignDeliverablesDocumentationTab({
                       </div>
                       <DocumentationUnitScriptActions
                         hasScript={scriptPresence.has(selected.unitKey)}
+                        campaignId={campaignId}
+                        assignmentDeliverableId={selected.assignmentDeliverableId}
+                        assignmentPostScheduleId={selected.assignmentPostScheduleId}
+                        originalFileName={scriptPresence.get(selected.unitKey)?.originalFileName}
+                        originalMimeType={scriptPresence.get(selected.unitKey)?.originalMimeType}
+                        hasOriginalDocument={
+                          scriptPresence.get(selected.unitKey)?.hasOriginalDocument
+                        }
                         disabled={pending}
                         unavailableReason={
                           documentationUnitCanHoldScript(selected)
@@ -1493,11 +1517,19 @@ export function CampaignDeliverablesDocumentationTab({
       campaignId={campaignId}
       unit={scriptSheetUnit}
       intent={scriptSheetIntent}
-      onPresenceChange={(unitKey, hasScript) => {
+      onPresenceChange={(unitKey, presence) => {
         setScriptPresence((current) => {
-          const next = new Set(current);
-          if (hasScript) next.add(unitKey);
-          else next.delete(unitKey);
+          const next = new Map(current);
+          if (!presence.hasScript) {
+            next.delete(unitKey);
+            return next;
+          }
+          next.set(unitKey, {
+            scriptId: presence.scriptId ?? current.get(unitKey)?.scriptId ?? "",
+            originalFileName: presence.originalFileName ?? null,
+            originalMimeType: presence.originalMimeType ?? null,
+            hasOriginalDocument: Boolean(presence.hasOriginalDocument),
+          });
           return next;
         });
       }}

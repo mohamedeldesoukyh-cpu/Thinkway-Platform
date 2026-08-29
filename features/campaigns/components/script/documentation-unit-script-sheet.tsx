@@ -120,7 +120,16 @@ type Props = {
   surface?: "internal" | "client";
   unit: DocumentationUnitSummary | null;
   intent: DocumentationUnitScriptIntent;
-  onPresenceChange: (unitKey: string, hasScript: boolean) => void;
+  onPresenceChange: (
+    unitKey: string,
+    presence: {
+      hasScript: boolean;
+      scriptId?: string;
+      originalFileName?: string | null;
+      originalMimeType?: string | null;
+      hasOriginalDocument?: boolean;
+    }
+  ) => void;
 };
 
 export function DocumentationUnitScriptSheet({
@@ -151,6 +160,7 @@ export function DocumentationUnitScriptSheet({
     replaceBothLanguages: boolean;
   } | null>(null);
   const autoUploadRef = useRef(false);
+  const pendingOriginalFileRef = useRef<File | null>(null);
 
   const expectedRevisionId = script?.currentRevisionId ?? null;
   const dirty = !draftsEqual(draft, baseline);
@@ -279,6 +289,7 @@ export function DocumentationUnitScriptSheet({
 
   const save = (expectedCurrentRevisionId: string | null, nextDraft = draft) => {
     if (!unit) return;
+    const originalFile = pendingOriginalFileRef.current;
     startTransition(async () => {
       const result = clientMode
         ? await saveClientCampaignScriptForUnitAction({
@@ -290,6 +301,7 @@ export function DocumentationUnitScriptSheet({
             bodyEn: nextDraft.bodyEn,
             bodyAr: nextDraft.bodyAr,
             originalFileName: nextDraft.originalFileName,
+            originalFile,
           })
         : await saveCampaignScriptForUnitAction({
             campaignId,
@@ -300,10 +312,18 @@ export function DocumentationUnitScriptSheet({
             bodyEn: nextDraft.bodyEn,
             bodyAr: nextDraft.bodyAr,
             originalFileName: nextDraft.originalFileName,
+            originalFile,
           });
       if (result.ok) {
+        pendingOriginalFileRef.current = null;
         applyScript(result.data);
-        onPresenceChange(unit.unitKey, true);
+        onPresenceChange(unit.unitKey, {
+          hasScript: true,
+          scriptId: result.data.scriptId,
+          originalFileName: result.data.originalFileName,
+          originalMimeType: result.data.originalMimeType,
+          hasOriginalDocument: Boolean(result.data.originalStoragePath),
+        });
         toast.success("Script saved for this deliverable.");
         return;
       }
@@ -371,11 +391,13 @@ export function DocumentationUnitScriptSheet({
     }
     const existingBodyEn = draft.bodyEn;
     const existingBodyAr = draft.bodyAr;
+    pendingOriginalFileRef.current = file;
     startTransition(async () => {
       const extracted = clientMode
         ? await extractClientCampaignScriptFileAction({ token, file })
         : await extractCampaignScriptFileAction({ campaignId, file });
       if (!extracted.ok) {
+        pendingOriginalFileRef.current = null;
         toast.error(extracted.message);
         return;
       }

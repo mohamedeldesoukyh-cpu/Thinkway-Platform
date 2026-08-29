@@ -49,7 +49,7 @@ Environment switch navigates between **hosts** — never switches DB inside one 
 - `docs/architecture/PLATFORM_ARCHITECTURE_COMPLIANCE.md` — mandatory compliance (lifecycle · journeys · BPN reuse · Campaign Workspace v1.3 invariants · operational effort gate · no new nav)
 - `docs/architecture/CAMPAIGN_WORKSPACE_BASELINE_V1.3.md` — canonical Campaign Workspace OS baseline (executive Decision Center · three severities · Vendor IO operational compliance)
 - `docs/architecture/PLATFORM_BULK_OPERATIONS_FRAMEWORK.md` — official bulk framework (`components/workspace/bulk-operations/`); Vendor IO first production consumer (R2.2d / 2.2d.1); gates: bulk · background · AI-ready · effort · idempotent
-- `docs/architecture/PLATFORM_CAPABILITY_REGISTRY.md` — permanent registry; Document Lifecycle + Change Impact + ECI + Studio Governance + **Campaign Script Phase 5.3 Client UI** (`lib/campaign-script/`)
+- `docs/architecture/PLATFORM_CAPABILITY_REGISTRY.md` — permanent registry; Document Lifecycle + Change Impact + ECI + Studio Governance + **Campaign Script original documents** (`lib/campaign-script/`)
 - `docs/architecture/ENTERPRISE_DOCUMENT_LIFECYCLE.md` — Document Lifecycle **Maintenance Mode** (`lib/document-lifecycle/`); state transitions only
 - `docs/architecture/ENTERPRISE_CHANGE_IMPACT_ENGINE.md` — Change Impact **Maintenance Mode** (`lib/change-impact/`); entry `applyBusinessChangeImpact` only; Quotation/PO/Invoice/Contract/Report must extend — never parallel
 - `docs/architecture/ENTERPRISE_CREATOR_INTELLIGENCE.md` — **FROZEN · Maintenance Mode · COMPLETE** (`lib/enterprise-creator-intelligence/`); SSOT `loadCreatorIntelligenceBundle`

@@ -4,11 +4,20 @@ import { Button } from "@/components/ui/button";
 import { documentationUnitScriptActionLabels } from "@/lib/campaign-script";
 import { cn } from "@/lib/utils";
 
+import { DocumentationUnitOriginalDocumentButton } from "./documentation-unit-original-document-button";
+
 type Props = {
   hasScript: boolean;
   disabled?: boolean;
   unavailableReason?: string | null;
   variant?: "campaign" | "client";
+  campaignId?: string;
+  token?: string;
+  assignmentDeliverableId?: string | null;
+  assignmentPostScheduleId?: string | null;
+  originalFileName?: string | null;
+  originalMimeType?: string | null;
+  hasOriginalDocument?: boolean;
   onAdd: () => void;
   onUpload: () => void;
   onOpen: () => void;
@@ -23,6 +32,13 @@ export function DocumentationUnitScriptActions({
   disabled,
   unavailableReason,
   variant = "campaign",
+  campaignId,
+  token,
+  assignmentDeliverableId,
+  assignmentPostScheduleId,
+  originalFileName,
+  originalMimeType,
+  hasOriginalDocument,
   onAdd,
   onUpload,
   onOpen,
@@ -31,6 +47,9 @@ export function DocumentationUnitScriptActions({
   const labels = documentationUnitScriptActionLabels(hasScript);
   const blocked = Boolean(disabled || unavailableReason);
   const client = variant === "client";
+  const showOriginal = Boolean(
+    hasOriginalDocument && originalFileName && assignmentDeliverableId
+  );
 
   function ActionButton({
     children,
@@ -96,6 +115,18 @@ export function DocumentationUnitScriptActions({
           </ActionButton>
         </>
       )}
+      {showOriginal ? (
+        <DocumentationUnitOriginalDocumentButton
+          variant={variant}
+          campaignId={campaignId}
+          token={token}
+          assignmentDeliverableId={assignmentDeliverableId!}
+          assignmentPostScheduleId={assignmentPostScheduleId ?? null}
+          fileName={originalFileName!}
+          mimeType={originalMimeType}
+          disabled={blocked}
+        />
+      ) : null}
     </div>
   );
 }

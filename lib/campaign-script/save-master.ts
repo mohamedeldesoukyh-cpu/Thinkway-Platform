@@ -21,6 +21,11 @@ import {
   isCampaignScriptUnitParseFailure,
   parseCampaignScriptDocumentationUnit,
 } from "./unit";
+import {
+  resolveOriginalDocumentForSave,
+  storeCampaignScriptOriginalDocument,
+  type CampaignScriptOriginalDocument,
+} from "./original-document";
 import type { SaveCampaignScriptInput, SaveCampaignScriptResult } from "./types";
 
 type Supabase = SupabaseClient<Database>;
@@ -135,9 +140,40 @@ async function writeRevisionAndCas(
     input.bumpBusinessVersion !== false
   );
 
+  const previousOriginal: CampaignScriptOriginalDocument | null =
+    previous?.originalStoragePath && previous.originalStorageBucket
+      ? {
+          fileName: previous.originalFileName ?? "original-script",
+          storageBucket: previous.originalStorageBucket,
+          storagePath: previous.originalStoragePath,
+          mimeType: previous.originalMimeType,
+          fileSize: previous.originalFileSize ?? 0,
+        }
+      : null;
+
+  let incomingOriginal: CampaignScriptOriginalDocument | null = input.originalDocument ?? null;
+  let revisionId: string | undefined;
+  if (input.originalDocumentUpload && scriptRow.assignment_deliverable_id) {
+    const stored = await storeCampaignScriptOriginalDocument(supabase, {
+      campaignHeaderId: scriptRow.campaign_header_id,
+      assignmentDeliverableId: scriptRow.assignment_deliverable_id,
+      assignmentPostScheduleId: scriptRow.assignment_post_schedule_id,
+      upload: input.originalDocumentUpload,
+    });
+    if (!stored.ok) return { ok: false, conflict: false, message: stored.message };
+    incomingOriginal = stored.document;
+    revisionId = stored.revisionId;
+  }
+
+  const original = resolveOriginalDocumentForSave({
+    incoming: incomingOriginal,
+    previous: previousOriginal,
+  });
+
   const revisionInsert = await supabase
     .from("campaign_script_revisions")
     .insert({
+      ...(revisionId ? { id: revisionId } : {}),
       script_id: scriptRow.id,
       campaign_header_id: scriptRow.campaign_header_id,
       revision_number: revisionNumber,
@@ -152,7 +188,11 @@ async function writeRevisionAndCas(
       actor_label: input.actorLabel,
       parent_revision_id: actualRevisionId,
       review_id: input.reviewId ?? null,
-      original_file_name: input.originalFileName ?? null,
+      original_file_name: original?.fileName ?? input.originalFileName ?? null,
+      original_storage_bucket: original?.storageBucket ?? null,
+      original_storage_path: original?.storagePath ?? null,
+      original_mime_type: original?.mimeType ?? null,
+      original_file_size: original?.fileSize ?? null,
       change_summary: input.changeSummary ?? null,
       assignment_id: null,
     })

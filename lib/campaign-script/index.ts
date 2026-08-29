@@ -102,6 +102,24 @@ export {
 } from "./load-master";
 export { saveCampaignScriptForUnit, saveCampaignScriptMaster } from "./save-master";
 export {
+  buildCampaignScriptOriginalStoragePath,
+  campaignScriptOriginalPathBelongsToUnit,
+  campaignScriptOriginalPreviewKind,
+  campaignScriptOriginalSlot,
+  createCampaignScriptOriginalSignedUrl,
+  createCampaignScriptOriginalSignedUrlForUnit,
+  resolveOriginalDocumentForSave,
+  sanitizeCampaignScriptOriginalFileName,
+  storeCampaignScriptOriginalDocument,
+  CAMPAIGN_SCRIPT_ORIGINAL_BUCKET,
+  CAMPAIGN_SCRIPT_ORIGINAL_QTY1_SLOT,
+} from "./original-document";
+export type {
+  CampaignScriptOriginalDocument,
+  CampaignScriptOriginalUpload,
+  CampaignScriptUnitPresence,
+} from "./original-document";
+export {
   campaignScriptUnitKey,
   canAccessCampaignScriptUnit,
   decideDocumentationScriptUnitGrain,

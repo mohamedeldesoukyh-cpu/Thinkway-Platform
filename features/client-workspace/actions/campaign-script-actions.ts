@@ -13,9 +13,11 @@ import {
   detectScriptLanguage,
   isScriptLanguage,
   type CampaignScriptMasterView,
+  type CampaignScriptUnitPresence,
   type ScriptLanguage,
 } from "@/lib/campaign-script";
 import { CAMPAIGN_SCRIPT_FILE_MAX_BYTES } from "@/lib/campaign-script/types";
+import { createCampaignScriptOriginalSignedUrlForUnit } from "@/lib/campaign-script/original-document";
 import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -37,6 +39,24 @@ function db(): SupabaseClient {
 
 function parseSourceLanguage(value: string): ScriptLanguage | null {
   return isScriptLanguage(value) ? value : null;
+}
+
+async function originalUploadFromFile(
+  file: File | null | undefined
+): Promise<
+  | { fileName: string; mimeType: string | null; bytes: Buffer }
+  | { message: string }
+  | undefined
+> {
+  if (!file) return undefined;
+  if (file.size > CAMPAIGN_SCRIPT_FILE_MAX_BYTES) {
+    return { message: "That file is too large. Upload a script file under 8 MB." };
+  }
+  return {
+    fileName: file.name,
+    mimeType: file.type || null,
+    bytes: Buffer.from(await file.arrayBuffer()),
+  };
 }
 
 function parseClientUnit(input: {
@@ -70,14 +90,16 @@ function parseClientUnit(input: {
 
 export async function listClientCampaignScriptPresenceAction(input: {
   token: string;
-}): Promise<ClientCampaignScriptActionResult<Array<{ unitKey: string; scriptId: string }>>> {
+}): Promise<
+  ClientCampaignScriptActionResult<Array<{ unitKey: string } & CampaignScriptUnitPresence>>
+> {
   const access = await requireCurrentCampaignContentAccess(input.token);
   if (!access.ok) return access;
   try {
     const presence = await listAttachedCampaignScriptPresence(db() as never, access.campaignHeaderId);
     return {
       ok: true,
-      data: [...presence.entries()].map(([unitKey, scriptId]) => ({ unitKey, scriptId })),
+      data: [...presence.entries()].map(([unitKey, row]) => ({ unitKey, ...row })),
     };
   } catch (error) {
     return {
@@ -120,6 +142,7 @@ export async function saveClientCampaignScriptForUnitAction(input: {
   bodyEn: string;
   bodyAr: string;
   originalFileName?: string | null;
+  originalFile?: File | null;
 }): Promise<ClientCampaignScriptActionResult<CampaignScriptMasterView>> {
   const sourceLanguage = parseSourceLanguage(input.sourceLanguage);
   if (!sourceLanguage) {
@@ -129,6 +152,10 @@ export async function saveClientCampaignScriptForUnitAction(input: {
   if (!unit.ok) return unit;
   const access = await requireCurrentCampaignContentAccess(input.token);
   if (!access.ok) return access;
+  const originalDocumentUpload = await originalUploadFromFile(input.originalFile);
+  if (originalDocumentUpload && "message" in originalDocumentUpload) {
+    return { ok: false, message: originalDocumentUpload.message };
+  }
 
   const result = await saveCampaignScriptForUnit(db() as never, {
     campaignHeaderId: access.campaignHeaderId,
@@ -146,6 +173,7 @@ export async function saveClientCampaignScriptForUnitAction(input: {
     origin: "client",
     reviewId: access.review.id,
     originalFileName: input.originalFileName ?? null,
+    originalDocumentUpload,
   });
 
   if (result.ok) {
@@ -206,6 +234,42 @@ export async function translateClientCampaignScriptForUnitAction(input: {
       assignmentPostScheduleId: unit.assignmentPostScheduleId,
     })) ?? script;
   return { ok: true, data: latest };
+}
+
+export async function getClientCampaignScriptOriginalDocumentUrlAction(input: {
+  token: string;
+  assignmentDeliverableId: string;
+  assignmentPostScheduleId?: string | null;
+  download?: boolean;
+}): Promise<
+  ClientCampaignScriptActionResult<{ url: string; fileName: string; mimeType: string | null }>
+> {
+  const unit = parseClientUnit(input);
+  if (!unit.ok) return unit;
+  const access = await requireCurrentCampaignContentAccess(input.token);
+  if (!access.ok) return access;
+  try {
+    const signed = await createCampaignScriptOriginalSignedUrlForUnit(db() as never, {
+      campaignHeaderId: access.campaignHeaderId,
+      assignmentDeliverableId: unit.assignmentDeliverableId,
+      assignmentPostScheduleId: unit.assignmentPostScheduleId,
+      download: input.download,
+    });
+    if (!signed.ok) return signed;
+    return {
+      ok: true,
+      data: {
+        url: signed.url,
+        fileName: signed.fileName,
+        mimeType: signed.mimeType,
+      },
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Could not open the original document.",
+    };
+  }
 }
 
 export async function extractClientCampaignScriptFileAction(input: {

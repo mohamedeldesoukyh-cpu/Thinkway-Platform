@@ -1,7 +1,7 @@
 # Platform Capability Registry
 
 **Status:** Permanent governance registry — **canonical**  
-**Updated:** 2026-08-29 — Campaign Script Phase 5.3 Client UI (script per documentation unit)  
+**Updated:** 2026-08-29 — Campaign Script original documents on documentation units  
 **Parent:** [`PLATFORM_ARCHITECTURE_COMPLIANCE.md`](./PLATFORM_ARCHITECTURE_COMPLIANCE.md)  
 **Studio Product Constitution:** [`STUDIO_CAPABILITY_CONTRACT.md`](./STUDIO_CAPABILITY_CONTRACT.md) — **FROZEN · Maintenance Mode · COMPLETE** (Mission · Success Criteria · Product Promise · capability categories · Golden Rules)  
 **Studio protected baseline:** Release 2.3 Sprint 3 — **Enterprise Planning Package** (**FROZEN · Maintenance Mode · COMPLETE**)
@@ -19,7 +19,7 @@ Every future enterprise module must **extend** registered capabilities. Parallel
 | **Enterprise Change Impact Engine** | **Maintenance Mode · frozen · protected · mandatory** | `lib/change-impact/` | [`ENTERPRISE_CHANGE_IMPACT_ENGINE.md`](./ENTERPRISE_CHANGE_IMPACT_ENGINE.md) · [`ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md`](./ENTERPRISE_CHANGE_IMPACT_ACCEPTANCE.md) | Every business-change interpretation |
 | **Enterprise Creator Intelligence** | **Maintenance Mode · frozen · protected · COMPLETE** | `lib/enterprise-creator-intelligence/` | [`ENTERPRISE_CREATOR_INTELLIGENCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE.md) · [`ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md`](./ENTERPRISE_CREATOR_INTELLIGENCE_ACCEPTANCE.md) | Planning · Client · Campaign · Reporting · Analytics · AI hooks · Mobile |
 | **Studio Governance** | **Maintenance Mode · frozen · protected · COMPLETE** | `features/campaign-studio/strategy-engine/` · Studio UX | [`STUDIO_CAPABILITY_CONTRACT.md`](./STUDIO_CAPABILITY_CONTRACT.md) · Strategy Engine governance rule | All Studio / Enterprise Planning work |
-| **Campaign Script** | **Active · Phase 5.3 Client UI** | `lib/campaign-script/` | This registry · documentation-unit parent · Deliverables Documentation | Campaign Workspace · Client Workspace |
+| **Campaign Script** | **Active · original documents** | `lib/campaign-script/` | This registry · documentation-unit parent · Deliverables Documentation | Campaign Workspace · Client Workspace |
 
 ### Protected planning standards (not Platform Capabilities)
 
@@ -314,7 +314,7 @@ Platform creator time-series and intelligence for Studio (Enterprise Planning), 
 
 ---
 
-## Campaign Script (Active · Phase 5.3 Client UI)
+## Campaign Script (Active · original documents)
 
 **Canonical entry:** `loadCampaignScriptForUnit` / `saveCampaignScriptForUnit` (`lib/campaign-script/`)
 **Lifecycle:** S11 Deliverables (content production input)
@@ -323,9 +323,9 @@ Platform creator time-series and intelligence for Studio (Enterprise Planning), 
 
 One **active** `campaign_scripts` row per **documentation unit** (`assignment_deliverable_id` for qty=1, `assignment_post_schedule_id` for qty>1). Sparse: no row until a script is saved on that unit. Legacy campaign-level rows remain unattached (both unit FKs null) and are **not** fanned out to deliverables. `campaign_script_assignments` is unused by this model; table remains in Development.
 
-Internal UI: compact Script actions on each documentation unit open a sheet (preview, bilingual edit, upload/replace, explicit Translate, download). The leftover campaign-level Script Register is not rendered.
+Internal UI: compact Script actions on each documentation unit open a sheet (preview, bilingual edit, upload/replace, explicit Translate, download). A compact original-document icon sits next to Script/Preview when an uploaded file is stored for that unit. The leftover campaign-level Script Register is not rendered.
 
-Client UI: the same compact Script actions sit on each Client Workspace publication-plan deliverable/post row. The campaign-level Client Script section is not rendered. Setup-in-progress / roster-only rows have no script until a real documentation unit exists.
+Client UI: the same compact Script / Preview / original-document actions sit on each Client Workspace publication-plan deliverable/post row. The campaign-level Client Script section is not rendered. Setup-in-progress / roster-only rows have no script until a real documentation unit exists.
 
-Append-only `campaign_script_revisions`. Translation is user-initiated (`campaign-script-translate`). Saving never queues translation. Do **not** store the campaign script in `deliverable_assets`. Do **not** run scripts through Document Lifecycle.
+Append-only `campaign_script_revisions`. Original uploaded bytes live in the existing `deliverable-assets` bucket; metadata (`original_storage_*`) is on the revision. Replacement inserts a new revision and a new object; prior revision objects stay. Text edits and translation carry the previous original forward. Do **not** store the campaign script in `deliverable_assets`. Do **not** run scripts through Document Lifecycle. Translation is user-initiated (`campaign-script-translate`). Saving never queues translation.
 

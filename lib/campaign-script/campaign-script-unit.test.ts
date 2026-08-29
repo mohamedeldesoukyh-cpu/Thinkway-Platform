@@ -15,7 +15,13 @@ import {
   isQtyOneDocumentationScriptUnit,
   parseCampaignScriptDocumentationUnit,
 } from "./unit";
-import { loadCampaignScriptById, loadCampaignScriptForUnit, loadCampaignScriptMaster } from "./load-master";
+import { loadCampaignScriptById, loadCampaignScriptForUnit, loadCampaignScriptMaster, listAttachedCampaignScriptPresence } from "./load-master";
+import {
+  buildCampaignScriptOriginalStoragePath,
+  campaignScriptOriginalPathBelongsToUnit,
+  createCampaignScriptOriginalSignedUrl,
+  createCampaignScriptOriginalSignedUrlForUnit,
+} from "./original-document";
 import { saveCampaignScriptForUnit, saveCampaignScriptMaster } from "./save-master";
 import { shouldQueueTranslationAfterSave } from "./translation-policy";
 import { mergeExtractedScriptText } from "./language";
@@ -37,6 +43,7 @@ type MemoryDb = {
   revisions: RevisionRow[];
   deliverables: DeliverableRow[];
   posts: PostRow[];
+  objects: Map<string, Buffer>;
 };
 
 function iso(n = 0): string {
@@ -45,12 +52,20 @@ function iso(n = 0): string {
 
 function matchesFilters(
   row: Record<string, unknown>,
-  filters: Array<{ type: "eq" | "in" | "is"; key: string; value: unknown }>
+  filters: Array<{
+    type: "eq" | "in" | "is" | "not";
+    key: string;
+    value: unknown;
+    operator?: string;
+  }>
 ): boolean {
   return filters.every((filter) => {
     const actual = row[filter.key];
     if (filter.type === "eq") return actual === filter.value;
     if (filter.type === "in") return Array.isArray(filter.value) && filter.value.includes(actual);
+    if (filter.type === "not" && filter.operator === "is" && filter.value === null) {
+      return actual != null;
+    }
     if (filter.value === null) return actual == null;
     return actual === filter.value;
   });
@@ -69,12 +84,18 @@ function createMemoryDb(): MemoryDb {
       { id: POST_STORY_1, assignment_deliverable_id: DELIVERABLE_STORY },
       { id: POST_STORY_2, assignment_deliverable_id: DELIVERABLE_STORY },
     ],
+    objects: new Map(),
   };
 }
 
 function createMemorySupabase(db: MemoryDb): SupabaseClient<Database> {
   const from = (table: string) => {
-    const filters: Array<{ type: "eq" | "in" | "is"; key: string; value: unknown }> = [];
+    const filters: Array<{
+      type: "eq" | "in" | "is" | "not";
+      key: string;
+      value: unknown;
+      operator?: string;
+    }> = [];
     let payload: Record<string, unknown> | null = null;
     let op: "select" | "insert" | "update" = "select";
     let orderBy: { key: string; ascending: boolean } | null = null;
@@ -103,6 +124,10 @@ function createMemorySupabase(db: MemoryDb): SupabaseClient<Database> {
       },
       is(key: string, value: unknown) {
         filters.push({ type: "is", key, value });
+        return api;
+      },
+      not(key: string, operator: string, value: unknown) {
+        filters.push({ type: "not", key, value, operator });
         return api;
       },
       order(key: string, options?: { ascending?: boolean }) {
@@ -193,7 +218,7 @@ function createMemorySupabase(db: MemoryDb): SupabaseClient<Database> {
           );
           if (duplicate) return { data: null, error: { code: "23505", message: "duplicate" } };
           const row: RevisionRow = {
-            id: `rev-${db.revisions.length + 1}`,
+            id: String(payload.id ?? `rev-${db.revisions.length + 1}`),
             script_id: String(payload.script_id),
             campaign_header_id: String(payload.campaign_header_id),
             revision_number: Number(payload.revision_number),
@@ -215,6 +240,10 @@ function createMemorySupabase(db: MemoryDb): SupabaseClient<Database> {
             parent_revision_id: (payload.parent_revision_id as string | null) ?? null,
             review_id: (payload.review_id as string | null) ?? null,
             original_file_name: (payload.original_file_name as string | null) ?? null,
+            original_storage_bucket: (payload.original_storage_bucket as string | null) ?? null,
+            original_storage_path: (payload.original_storage_path as string | null) ?? null,
+            original_mime_type: (payload.original_mime_type as string | null) ?? null,
+            original_file_size: (payload.original_file_size as number | null) ?? null,
             change_summary: (payload.change_summary as string | null) ?? null,
             created_at: iso(db.revisions.length + 2),
             assignment_id: null,
@@ -241,7 +270,31 @@ function createMemorySupabase(db: MemoryDb): SupabaseClient<Database> {
     return api;
   };
 
-  return { from } as unknown as SupabaseClient<Database>;
+  const storage = {
+    from() {
+      return {
+        async upload(path: string, bytes: Buffer) {
+          if (db.objects.has(path)) {
+            return { data: null, error: { message: "already exists" } };
+          }
+          db.objects.set(path, Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes));
+          return { data: { path }, error: null };
+        },
+        async download(path: string) {
+          const data = db.objects.get(path);
+          if (!data) return { data: null, error: { message: "not found" } };
+          return { data: new Blob([data]), error: null };
+        },
+        async createSignedUrl(path: string, _expires?: number, options?: { download?: string }) {
+          if (!db.objects.has(path)) return { data: null, error: { message: "not found" } };
+          const suffix = options?.download ? `?download=${encodeURIComponent(options.download)}` : "";
+          return { data: { signedUrl: `https://signed.test/${path}${suffix}` }, error: null };
+        },
+      };
+    },
+  };
+
+  return { from, storage } as unknown as SupabaseClient<Database>;
 }
 
 function saveInput(
@@ -618,5 +671,229 @@ test("RLS helper and unit migration SQL keep internal campaign access", () => {
   assert.match(sql, /deliverable_quantity = 1 AND NEW.assignment_post_schedule_id IS NOT NULL/);
   assert.match(sql, /deliverable_quantity > 1 AND NEW.assignment_post_schedule_id IS NULL/);
   assert.equal(/ALTER TABLE public\.campaign_script_assignments/.test(sql), false);
+  assert.equal(/DROP TABLE public\.campaign_script_assignments/.test(sql), false);
+});
+
+test("original documents stay on the documentation unit and survive text edits", async () => {
+  const db = createMemoryDb();
+  const supabase = createMemorySupabase(db);
+  const reel = await saveCampaignScriptForUnit(supabase, {
+    ...saveInput({ assignmentDeliverableId: DELIVERABLE_REEL }, "Reel 1 script"),
+    originalDocumentUpload: {
+      fileName: "Original Script.pdf",
+      mimeType: "application/pdf",
+      bytes: Buffer.from("%PDF-reel-1"),
+    },
+  });
+  const story = await saveCampaignScriptForUnit(supabase, {
+    ...saveInput(
+      { assignmentDeliverableId: DELIVERABLE_STORY, assignmentPostScheduleId: POST_STORY_1 },
+      "Story 1 script"
+    ),
+    originalDocumentUpload: {
+      fileName: "Original Script.docx",
+      mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      bytes: Buffer.from("story-1-docx"),
+    },
+  });
+  assert.equal(reel.ok && story.ok, true);
+  if (!reel.ok || !story.ok) return;
+
+  assert.equal(db.objects.get(reel.script.originalStoragePath ?? "")?.toString(), "%PDF-reel-1");
+  assert.equal(db.objects.get(story.script.originalStoragePath ?? "")?.toString(), "story-1-docx");
+
+  const reelUrl = await createCampaignScriptOriginalSignedUrlForUnit(supabase, {
+    campaignHeaderId: HEADER,
+    assignmentDeliverableId: DELIVERABLE_REEL,
+    download: true,
+  });
+  const storyUrl = await createCampaignScriptOriginalSignedUrlForUnit(supabase, {
+    campaignHeaderId: HEADER,
+    assignmentDeliverableId: DELIVERABLE_STORY,
+    assignmentPostScheduleId: POST_STORY_1,
+    download: true,
+  });
+  const storyAsReel = await createCampaignScriptOriginalSignedUrl(supabase, {
+    campaignHeaderId: HEADER,
+    assignmentDeliverableId: DELIVERABLE_REEL,
+    original: {
+      fileName: story.script.originalFileName ?? "",
+      storageBucket: story.script.originalStorageBucket ?? "",
+      storagePath: story.script.originalStoragePath ?? "",
+      mimeType: story.script.originalMimeType,
+      fileSize: story.script.originalFileSize ?? 0,
+    },
+  });
+  const otherStory = await createCampaignScriptOriginalSignedUrlForUnit(supabase, {
+    campaignHeaderId: HEADER,
+    assignmentDeliverableId: DELIVERABLE_STORY,
+    assignmentPostScheduleId: POST_STORY_2,
+  });
+  assert.equal(reelUrl.ok, true);
+  assert.equal(storyUrl.ok, true);
+  if (!reelUrl.ok || !storyUrl.ok) return;
+  assert.match(reelUrl.url, /Original_Script\.pdf/);
+  assert.match(reelUrl.url, /download=Original%20Script\.pdf/);
+  assert.match(storyUrl.url, /Original_Script\.docx/);
+  assert.equal(reelUrl.url.includes(DELIVERABLE_REEL), true);
+  assert.equal(storyUrl.url.includes(DELIVERABLE_STORY), true);
+  assert.equal(storyUrl.url.includes(POST_STORY_1), true);
+  assert.equal(reelUrl.url.includes(story.script.originalStoragePath ?? "missing"), false);
+  assert.equal(storyAsReel.ok, false);
+  assert.equal(otherStory.ok, false);
+
+  const edited = await saveCampaignScriptForUnit(
+    supabase,
+    saveInput(
+      { assignmentDeliverableId: DELIVERABLE_REEL },
+      "Reel 1 script edited",
+      reel.script.currentRevisionId
+    )
+  );
+  assert.equal(edited.ok, true);
+  if (!edited.ok) return;
+  assert.equal(edited.script.originalStoragePath, reel.script.originalStoragePath);
+  assert.equal(edited.script.originalFileName, "Original Script.pdf");
+
+  const replaced = await saveCampaignScriptForUnit(supabase, {
+    ...saveInput(
+      { assignmentDeliverableId: DELIVERABLE_REEL },
+      "Reel 1 replaced",
+      edited.script.currentRevisionId
+    ),
+    originalDocumentUpload: {
+      fileName: "Replacement.pdf",
+      mimeType: "application/pdf",
+      bytes: Buffer.from("%PDF-reel-1-new"),
+    },
+  });
+  assert.equal(replaced.ok, true);
+  if (!replaced.ok) return;
+  assert.notEqual(replaced.script.originalStoragePath, reel.script.originalStoragePath);
+  assert.equal(db.objects.get(reel.script.originalStoragePath ?? "")?.toString(), "%PDF-reel-1");
+  assert.equal(db.objects.get(replaced.script.originalStoragePath ?? "")?.toString(), "%PDF-reel-1-new");
+
+  const replacedUrl = await createCampaignScriptOriginalSignedUrlForUnit(supabase, {
+    campaignHeaderId: HEADER,
+    assignmentDeliverableId: DELIVERABLE_REEL,
+    download: true,
+  });
+  assert.equal(replacedUrl.ok, true);
+  if (!replacedUrl.ok) return;
+  assert.match(replacedUrl.url, /Replacement\.pdf/);
+  assert.equal(replacedUrl.url.includes(reel.script.originalStoragePath ?? "missing"), false);
+  assert.equal(replacedUrl.url.includes(story.script.originalStoragePath ?? "missing"), false);
+
+  const storyLatest = await loadCampaignScriptForUnit(supabase, {
+    campaignHeaderId: HEADER,
+    assignmentDeliverableId: DELIVERABLE_STORY,
+    assignmentPostScheduleId: POST_STORY_1,
+  });
+  assert.equal(storyLatest?.originalFileName, "Original Script.docx");
+  assert.equal(storyLatest?.originalStoragePath, story.script.originalStoragePath);
+
+  const story2 = await saveCampaignScriptForUnit(supabase, {
+    ...saveInput(
+      { assignmentDeliverableId: DELIVERABLE_STORY, assignmentPostScheduleId: POST_STORY_2 },
+      "Story 2 script"
+    ),
+    originalDocumentUpload: {
+      fileName: "Story 2 Original.pdf",
+      mimeType: "application/pdf",
+      bytes: Buffer.from("%PDF-story-2"),
+    },
+  });
+  assert.equal(story2.ok, true);
+  if (!story2.ok) return;
+  const story1After = await loadCampaignScriptForUnit(supabase, {
+    campaignHeaderId: HEADER,
+    assignmentDeliverableId: DELIVERABLE_STORY,
+    assignmentPostScheduleId: POST_STORY_1,
+  });
+  const story2Url = await createCampaignScriptOriginalSignedUrlForUnit(supabase, {
+    campaignHeaderId: HEADER,
+    assignmentDeliverableId: DELIVERABLE_STORY,
+    assignmentPostScheduleId: POST_STORY_2,
+    download: true,
+  });
+  assert.equal(story1After?.originalStoragePath, story.script.originalStoragePath);
+  assert.equal(story2Url.ok, true);
+  if (!story2Url.ok) return;
+  assert.match(story2Url.url, /Story_2_Original\.pdf/);
+  assert.equal(story2Url.url.includes(story.script.originalStoragePath ?? "missing"), false);
+  assert.equal(db.objects.get(story2.script.originalStoragePath ?? "")?.toString(), "%PDF-story-2");
+
+  const presence = await listAttachedCampaignScriptPresence(supabase, HEADER);
+  assert.equal(presence.get(campaignScriptUnitKey(DELIVERABLE_REEL, null))?.hasOriginalDocument, true);
+  assert.equal(
+    presence.get(campaignScriptUnitKey(DELIVERABLE_STORY, POST_STORY_1))?.originalFileName,
+    "Original Script.docx"
+  );
+});
+
+test("original storage paths are isolated per documentation unit", () => {
+  const reelPath = buildCampaignScriptOriginalStoragePath({
+    campaignHeaderId: HEADER,
+    assignmentDeliverableId: DELIVERABLE_REEL,
+    revisionId: "rev-a",
+    fileName: "Original Script.pdf",
+  });
+  const storyPath = buildCampaignScriptOriginalStoragePath({
+    campaignHeaderId: HEADER,
+    assignmentDeliverableId: DELIVERABLE_STORY,
+    assignmentPostScheduleId: POST_STORY_2,
+    revisionId: "rev-b",
+    fileName: "Original Script.pdf",
+  });
+  assert.equal(
+    campaignScriptOriginalPathBelongsToUnit(reelPath, {
+      campaignHeaderId: HEADER,
+      assignmentDeliverableId: DELIVERABLE_REEL,
+    }),
+    true
+  );
+  assert.equal(
+    campaignScriptOriginalPathBelongsToUnit(storyPath, {
+      campaignHeaderId: HEADER,
+      assignmentDeliverableId: DELIVERABLE_REEL,
+    }),
+    false
+  );
+  assert.equal(
+    campaignScriptOriginalPathBelongsToUnit(reelPath, {
+      campaignHeaderId: HEADER,
+      assignmentDeliverableId: DELIVERABLE_STORY,
+      assignmentPostScheduleId: POST_STORY_2,
+    }),
+    false
+  );
+  assert.equal(
+    campaignScriptOriginalPathBelongsToUnit(reelPath, {
+      campaignHeaderId: "other-campaign",
+      assignmentDeliverableId: DELIVERABLE_REEL,
+    }),
+    false
+  );
+  assert.equal(canAccessCampaignScriptUnit({
+    operation: "select",
+    hasCampaignsRead: true,
+    hasCampaignsWrite: true,
+    canAccessCampaignHeader: true,
+    isClientContentToken: true,
+  }), false);
+});
+
+test("original-document migration stores bytes in deliverable-assets via revision metadata", () => {
+  const sql = readFileSync(
+    resolve("supabase/migrations/20260829160000_campaign_script_original_documents.sql"),
+    "utf8"
+  );
+  assert.match(sql, /original_storage_bucket/);
+  assert.match(sql, /original_storage_path/);
+  assert.match(sql, /campaign_script_revisions_original_storage_check/);
+  assert.match(sql, /deliverable-assets/);
+  assert.equal(/CREATE TABLE/i.test(sql), false);
+  assert.equal(/INTO public\.deliverable_assets/.test(sql), false);
+  assert.equal(/ALTER TABLE public\.deliverable_assets/.test(sql), false);
   assert.equal(/DROP TABLE public\.campaign_script_assignments/.test(sql), false);
 });
