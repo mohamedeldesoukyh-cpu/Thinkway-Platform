@@ -49,6 +49,60 @@ export function IconHeart() {
   );
 }
 
+export type PublicationMetricGlyphKind =
+  | "views"
+  | "likes"
+  | "comments"
+  | "shares"
+  | "reach"
+  | "impressions"
+  | "engagementRate";
+
+/** Instagram-style metric glyphs for Creators and go-live (play, red heart, comment, ER). */
+export function PublicationMetricGlyph({ kind }: { kind: PublicationMetricGlyphKind }) {
+  if (kind === "likes") {
+    return (
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 21s-8-5.3-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.7-8 11-8 11Z" />
+      </svg>
+    );
+  }
+  if (kind === "comments") {
+    return (
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2Z" />
+      </svg>
+    );
+  }
+  if (kind === "views") {
+    return (
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M8 5.14v13.72L19.5 12 8 5.14Z" />
+      </svg>
+    );
+  }
+  if (kind === "engagementRate") {
+    return (
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M4 18h2.5v-6H4v6Zm6.5 0H13V6h-2.5v12Zm6.5 0H20v-9h-2.5v9Z" />
+      </svg>
+    );
+  }
+  if (kind === "shares") {
+    return (
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M3.5 20.5 21 12 3.5 3.5l.1 6.6L14 12 3.6 13.9l-.1 6.6Z" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 export function IconCat() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

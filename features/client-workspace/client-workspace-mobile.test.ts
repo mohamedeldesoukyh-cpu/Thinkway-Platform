@@ -25,4 +25,6 @@ test("Client Workspace mobile CSS stacks Overview, Shortlist, Commercial, and ch
 
   assert.equal(creators.includes('className="cc-remove"'), true);
   assert.equal(creators.includes('style={{ margin: "8px 8px 0 0" }}'), false);
+  assert.equal(css.includes(".cx-metric--likes"), true);
+  assert.equal(css.includes("#ed4956"), true);
 });
