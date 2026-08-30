@@ -8,9 +8,11 @@ import {
   revokeCreatorWorkspaceAccess,
   resolveCreatorInviteOrigin,
 } from "@/features/creator-workspace/onboarding-service";
+import { CREATOR_INVITE_INTERNAL_ONLY_MESSAGE } from "@/features/creator-workspace/onboarding";
 import { requirePermission } from "@/lib/auth/permissions-server";
+import { isPortalActor, resolveWorkspaceActor } from "@/lib/security/workspace-actor";
 import { consumeRateLimit, rateLimitExceededBody } from "@/lib/security/rate-limit";
-import { requireRequestUser } from "@/lib/supabase/server";
+import { getRequestAuth, requireRequestUser } from "@/lib/supabase/server";
 
 export type CreatorInviteActionState = {
   ok: boolean;
@@ -21,6 +23,19 @@ export type CreatorInviteActionState = {
 
 async function requireInfluencerWrite() {
   const { supabase, userId } = await requireRequestUser();
+  const { roleSlug } = await getRequestAuth();
+  const actor = await resolveWorkspaceActor(supabase, userId);
+  if (
+    isPortalActor(actor.kind) ||
+    roleSlug === "influencer" ||
+    roleSlug === "client_user"
+  ) {
+    return {
+      ok: false as const,
+      message: CREATOR_INVITE_INTERNAL_ONLY_MESSAGE,
+      userId: null,
+    };
+  }
   const auth = await requirePermission(supabase, "influencers.write");
   if ("error" in auth) {
     return { ok: false as const, message: auth.error, userId: null };

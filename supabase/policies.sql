@@ -338,6 +338,7 @@ CREATE POLICY influencers_select
     -- Internal readers: STABLE helper (see can_read_all_influencers).
     -- Avoid per-row can_access_influencer() — that timed out listing ~7k vendors.
     public.can_read_all_influencers()
+    OR profile_id = auth.uid()
     OR (
       public.has_permission('influencers.read')
       AND profile_id = auth.uid()

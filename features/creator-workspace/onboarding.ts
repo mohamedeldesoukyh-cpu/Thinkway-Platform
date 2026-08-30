@@ -35,6 +35,9 @@ export const CREATOR_INVITE_BRAND_TAGS = [
 export const CREATOR_INVITE_EMAIL_MISMATCH_MESSAGE =
   "Sign in with the email this invitation was sent to.";
 
+export const CREATOR_INVITE_INTERNAL_ONLY_MESSAGE =
+  "Sign in with your Internal Thinkway account to manage Creator Links.";
+
 export const CREATOR_WORKSPACE_ACCESS_STATUSES = [
   "not_invited",
   "invitation_pending",

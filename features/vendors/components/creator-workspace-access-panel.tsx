@@ -88,10 +88,16 @@ export function CreatorWorkspaceAccessPanel({
     >
       <p className="text-sm">
         Status: <span className="font-semibold">{access.statusLabel}</span>
-        {access.invitedEmail && access.status !== "activated" ? (
+        {access.invitedEmail ? (
           <span className="text-muted-foreground"> · {access.invitedEmail}</span>
         ) : null}
       </p>
+      {access.status === "activated" ? (
+        <p className="mt-1 text-sm text-muted-foreground">
+          This creator login is active. Revoke access first if you need to invite a different
+          email.
+        </p>
+      ) : null}
       {access.status === "invitation_pending" && expiresLabel ? (
         <p className="mt-1 text-sm text-muted-foreground">Expires: {expiresLabel}</p>
       ) : null}

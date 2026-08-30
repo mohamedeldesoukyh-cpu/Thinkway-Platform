@@ -14,6 +14,7 @@ import {
   CREATOR_INVITE_BRAND_TAGS,
   CREATOR_INVITE_CONFLICT_MESSAGE,
   CREATOR_INVITE_EMAIL_MISMATCH_MESSAGE,
+  CREATOR_INVITE_INTERNAL_ONLY_MESSAGE,
   CREATOR_INVITE_PASSWORD_MIN,
   CREATOR_INVITE_STAFF_MESSAGE,
   CREATOR_INVITE_TTL_MS,
@@ -41,6 +42,10 @@ const migration = readFileSync(
 );
 const serviceRoleGrantMigration = readFileSync(
   resolve("supabase/migrations/20260830190000_creator_workspace_invite_service_role_grants.sql"),
+  "utf8"
+);
+const selfSelectMigration = readFileSync(
+  resolve("supabase/migrations/20260830200000_creator_workspace_self_select.sql"),
   "utf8"
 );
 const service = readFileSync(
@@ -109,6 +114,12 @@ describe("Creator Workspace invitation contract", () => {
     );
     assert.doesNotMatch(serviceRoleGrantMigration, /ienowhwfyxoqtzbgltno/);
     assert.match(service, /tryCreateServiceRoleClient/);
+  });
+
+  it("lets a linked creator read their own influencer row without influencers.read", () => {
+    assert.match(selfSelectMigration, /OR profile_id = auth\.uid\(\)/);
+    assert.match(selfSelectMigration, /CREATE POLICY influencers_select/);
+    assert.doesNotMatch(selfSelectMigration, /ienowhwfyxoqtzbgltno/);
   });
 
   it("stores hashed tokens only and never puts influencer_id in the public URL", () => {
@@ -284,6 +295,11 @@ describe("Creator Workspace invitation contract", () => {
     assert.match(internalActions, /activateUrl: result\.activateUrl/);
     assert.match(internalActions, /consumeRateLimit/);
     assert.match(internalActions, /category: "invite"/);
+    assert.match(internalActions, /CREATOR_INVITE_INTERNAL_ONLY_MESSAGE/);
+    assert.equal(
+      CREATOR_INVITE_INTERNAL_ONLY_MESSAGE,
+      "Sign in with your Internal Thinkway account to manage Creator Links."
+    );
   });
 });
 
@@ -479,6 +495,8 @@ describe("Creator Workspace invitation security guards", () => {
 
   it("keeps unactivated creators out of Creator Workspace data", () => {
     assert.match(portalLayout, /requireCreatorScope\("creator_portal.read"\)/);
+    assert.doesNotMatch(portalLayout, /redirect\("\/"\)/);
+    assert.match(portalLayout, /Creator Workspace is not available/);
     assert.match(phase2Actions, /requireCreatorScope/);
     assert.match(service, /\.is\("profile_id", null\)/);
     assert.match(service, /consumeInvite/);
@@ -495,6 +513,7 @@ describe("Creator Workspace invitation security guards", () => {
     assert.match(accessPanel, /Copy Login Link/);
     assert.match(accessPanel, /Open Creator Workspace/);
     assert.match(accessPanel, /Revoke/);
+    assert.match(accessPanel, /invite a different/);
     assert.match(phase2Actions, /creatorOwnsDocumentationUnit/);
   });
 });
