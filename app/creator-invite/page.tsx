@@ -29,7 +29,14 @@ export default async function CreatorInvitePage({
   } = await supabase.auth.getUser();
 
   if (!preview.ok) {
-    return <CreatorInviteActivateForm token="" preview={null} sessionEmail={null} />;
+    return (
+      <CreatorInviteActivateForm
+        token=""
+        preview={null}
+        sessionEmail={null}
+        failureCode={preview.code}
+      />
+    );
   }
 
   return (

@@ -24,7 +24,7 @@ export function buildCreatorWorkspaceInviteEmail(input: {
         </tr>
       </table>
       <p style="margin:0;font-size:13px;color:#6B7280;">Or open this link:<br><a href="${safeUrl}" style="color:#0057FF;word-break:break-all;">${safeUrl}</a></p>
-      <p style="margin:16px 0 0;font-size:13px;color:#6B7280;">This invitation expires in 7 days and can only be used once.</p>
+      <p style="margin:16px 0 0;font-size:13px;color:#6B7280;">This invitation expires in 24 hours and can only be used once.</p>
     `,
   });
   const plainText = appendThinkwayEmailPlainTextFooter([
@@ -36,7 +36,7 @@ export function buildCreatorWorkspaceInviteEmail(input: {
     "",
     `Activate Creator Workspace: ${input.activateUrl}`,
     "",
-    "This invitation expires in 7 days and can only be used once.",
+    "This invitation expires in 24 hours and can only be used once.",
   ]);
   return { subject, html, plainText };
 }

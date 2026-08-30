@@ -13,11 +13,16 @@ import {
   CREATOR_INVITE_CONFLICT_MESSAGE,
   CREATOR_INVITE_EMAIL_MISMATCH_MESSAGE,
   CREATOR_INVITE_STAFF_MESSAGE,
+  CREATOR_INVITE_TTL_MS,
   CREATOR_WORKSPACE_ACCESS_LABEL,
+  CREATOR_WORKSPACE_LOGIN_PATH,
   assertCreatorInviteAccountLinkable,
+  classifyCreatorInviteFailure,
+  creatorInviteAuditMetadataIsSafe,
   creatorInviteHasExpired,
   creatorInviteIsConsumable,
   creatorInvitePublicPath,
+  creatorWorkspaceLoginPath,
   emailsMatchForInvite,
   projectCreatorWorkspaceAccessStatus,
 } from "@/features/creator-workspace/onboarding";
@@ -56,6 +61,7 @@ const emailModule = readFileSync(
   resolve("lib/email/creator-workspace-invite-email.ts"),
   "utf8"
 );
+const settingsActions = readFileSync(resolve("features/settings/actions.ts"), "utf8");
 const phase2Actions = readFileSync(
   resolve("features/creator-workspace/actions.ts"),
   "utf8"
@@ -150,6 +156,28 @@ describe("Creator Workspace invitation contract", () => {
       false
     );
     assert.equal(creatorInviteHasExpired("2026-08-30T12:00:00.000Z", now), true);
+    assert.equal(CREATOR_INVITE_TTL_MS, 1000 * 60 * 60 * 24);
+    const justInside = new Date(now.getTime() + CREATOR_INVITE_TTL_MS).toISOString();
+    assert.equal(
+      creatorInviteIsConsumable({
+        status: "invited",
+        portalType: "creator",
+        influencerId: "inf-1",
+        expiresAt: justInside,
+        now,
+      }),
+      true
+    );
+    assert.equal(
+      creatorInviteIsConsumable({
+        status: "invited",
+        portalType: "creator",
+        influencerId: "inf-1",
+        expiresAt: now.toISOString(),
+        now,
+      }),
+      false
+    );
   });
 
   it("projects Internal Creator Workspace Access statuses", () => {
@@ -208,16 +236,21 @@ describe("Creator Workspace invitation contract", () => {
     );
   });
 
-  it("rotates the previous invitation on resend and revokes on send failure", () => {
+  it("rotates the previous invitation and keeps the generated link if email fails", () => {
     assert.match(service, /pendingCreatorInvite/);
     assert.match(service, /token_hash: tokenHash/);
     assert.match(service, /\.eq\("id", pending\.id\)/);
-    assert.match(service, /send_failed: true/);
-    assert.match(service, /status: "revoked"/);
+    assert.match(service, /activateUrl/);
+    assert.match(service, /emailSent: false/);
+    assert.doesNotMatch(
+      service,
+      /send_failed[\s\S]{0,200}status: "revoked"/
+    );
     assert.match(internalActions, /createOrRotateCreatorInvite/);
-    assert.match(internalActions, /resendCreatorWorkspaceInviteAction/);
-    assert.match(internalActions, /revokeCreatorInvitation/);
-    assert.doesNotMatch(internalActions, /activateUrl|inviteUrl|rawToken/);
+    assert.match(internalActions, /generateCreatorWorkspaceLinkAction/);
+    assert.match(internalActions, /activateUrl: result\.activateUrl/);
+    assert.match(internalActions, /consumeRateLimit/);
+    assert.match(internalActions, /category: "invite"/);
   });
 });
 
@@ -341,10 +374,13 @@ describe("Creator Workspace invitation security guards", () => {
     assert.match(recoveryForm, /Linked user/);
     assert.match(recoveryForm, /Recovery and cutover only/);
     assert.match(recoveryForm, /setInfluencerProfileLinkAction/);
-    assert.match(accessPanel, /Invite Creator/);
-    assert.match(accessPanel, /Resend invitation/);
-    assert.match(accessPanel, /Revoke invitation/);
-    assert.match(accessPanel, /Revoke access/);
+    assert.match(accessPanel, /Generate Creator Link/);
+    assert.match(accessPanel, /Generate New Link/);
+    assert.match(accessPanel, /Copy Link/);
+    assert.match(accessPanel, /Thinkway cannot show this link again/);
+    assert.match(accessPanel, /Copy Login Link/);
+    assert.match(accessPanel, /Open Creator Workspace/);
+    assert.match(accessPanel, /Revoke/);
     assert.match(phase2Actions, /creatorOwnsDocumentationUnit/);
   });
 });
@@ -358,6 +394,10 @@ describe("Creator Workspace invitation email, routes, and classification", () =>
     assert.match(built.html, /Activate Creator Workspace/);
     assert.match(built.plainText, /Activate Creator Workspace/);
     assert.match(built.html, /creator-invite\?token=secret/);
+    assert.match(built.html, /expires in 24 hours/);
+    assert.match(built.plainText, /expires in 24 hours/);
+    assert.doesNotMatch(built.html, /7 days/);
+    assert.doesNotMatch(built.plainText, /7 days/);
     assert.doesNotMatch(built.html, /TW-\d{4}-\d+|unit_cost|agreed_amount|creator fee/i);
     assert.doesNotMatch(built.plainText, /TW-\d{4}-\d+|unit_cost|agreed_amount|creator fee/i);
     assert.match(emailModule, /wrapThinkwayEmailDocument/);
@@ -392,3 +432,112 @@ describe("Creator Workspace invitation email, routes, and classification", () =>
     assert.match(publicActions, /redirect\("\/creator-portal"\)/);
   });
 });
+
+describe("Creator Workspace 24-hour generated link", () => {
+  it("keeps Settings/client invitations at 7 days", () => {
+    assert.match(settingsActions, /1000 \* 60 \* 60 \* 24 \* 7/);
+    assert.doesNotMatch(settingsActions, /CREATOR_INVITE_TTL_MS/);
+    assert.equal(CREATOR_INVITE_TTL_MS, 24 * 60 * 60 * 1000);
+  });
+
+  it("returns the activation URL once and never stores or logs the raw token", () => {
+    assert.match(internalActions, /activateUrl: result\.activateUrl/);
+    assert.doesNotMatch(service, /token_hash: rawToken/);
+    assert.doesNotMatch(service, /access_logs[\s\S]{0,400}activateUrl/);
+    assert.doesNotMatch(service, /action:[\s\S]{0,80}rawToken/);
+    assert.equal(
+      creatorInviteAuditMetadataIsSafe({ influencer_id: "inf-1", email: "a@b.com" }),
+      true
+    );
+    assert.equal(
+      creatorInviteAuditMetadataIsSafe({
+        token: "secret",
+        influencer_id: "inf-1",
+      }),
+      false
+    );
+    assert.equal(
+      creatorInviteAuditMetadataIsSafe({
+        url: "https://dev.thinkwaymedia.com/creator-invite?token=secret",
+      }),
+      false
+    );
+    assert.match(service, /creatorInviteAuditMetadataIsSafe/);
+  });
+
+  it("uses the same invitation record and URL for email and the copied link", () => {
+    assert.match(service, /creatorInvitePublicPath\(rawToken\)/);
+    assert.match(service, /sendInviteEmail\(parsedEmail\.data, rawToken, input\.origin\)/);
+    assert.match(emailModule, /24 hours/);
+    assert.doesNotMatch(emailModule, /7 days/);
+  });
+
+  it("classifies expired creator invites separately from invalid or revoked tokens", () => {
+    assert.equal(
+      classifyCreatorInviteFailure({
+        found: true,
+        status: "invited",
+        portalType: "creator",
+        influencerId: "inf-1",
+        expiresAt: "2000-01-01T00:00:00.000Z",
+      }),
+      "expired"
+    );
+    assert.equal(
+      classifyCreatorInviteFailure({
+        found: true,
+        status: "expired",
+        portalType: "creator",
+        influencerId: "inf-1",
+        expiresAt: "2099-01-01T00:00:00.000Z",
+      }),
+      "expired"
+    );
+    assert.equal(
+      classifyCreatorInviteFailure({
+        found: true,
+        status: "revoked",
+        portalType: "creator",
+        influencerId: "inf-1",
+        expiresAt: "2099-01-01T00:00:00.000Z",
+      }),
+      "invalid"
+    );
+    assert.equal(
+      classifyCreatorInviteFailure({
+        found: false,
+        status: null,
+        portalType: null,
+        influencerId: null,
+        expiresAt: null,
+      }),
+      "invalid"
+    );
+    assert.match(activateForm, /CREATOR_INVITE_EXPIRED_HEADING/);
+    assert.match(publicPage, /failureCode=\{preview\.code\}/);
+    assert.doesNotMatch(activateForm, /influencer_id/);
+  });
+
+  it("uses a token-free permanent login link after activation", () => {
+    assert.equal(creatorWorkspaceLoginPath(), "/login?next=/creator-portal");
+    assert.equal(CREATOR_WORKSPACE_LOGIN_PATH, "/login?next=/creator-portal");
+    assert.doesNotMatch(CREATOR_WORKSPACE_LOGIN_PATH, /token=/);
+    assert.match(accessPanel, /CREATOR_WORKSPACE_LOGIN_PATH/);
+    assert.doesNotMatch(accessPanel, /activateUrl.*login/);
+  });
+
+  it("records generate, regenerate, revoke, accepted, expired, and failed without tokens", () => {
+    for (const action of [
+      "creator_workspace_invite_generated",
+      "creator_workspace_invite_regenerated",
+      "creator_workspace_invite_revoked",
+      "creator_workspace_invite_accepted",
+      "creator_workspace_invite_expired",
+      "creator_workspace_invite_failed",
+    ]) {
+      assert.match(service, new RegExp(action));
+    }
+    assert.doesNotMatch(service, /metadata: \{[^}]*token/);
+  });
+});
+

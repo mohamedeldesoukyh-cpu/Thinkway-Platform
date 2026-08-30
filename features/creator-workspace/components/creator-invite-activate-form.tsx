@@ -6,8 +6,8 @@ import { ThinkwayLogo } from "@/components/brand/thinkway-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { CreatorInvitePreview } from "@/features/creator-workspace/onboarding";
-import { CREATOR_INVITE_INVALID_MESSAGE, CREATOR_INVITE_PASSWORD_MIN } from "@/features/creator-workspace/onboarding";
+import { CREATOR_INVITE_CONTACT_EMAIL, CREATOR_INVITE_EXPIRED_HEADING, CREATOR_INVITE_EXPIRED_MESSAGE, CREATOR_INVITE_INVALID_MESSAGE, CREATOR_INVITE_PASSWORD_MIN } from "@/features/creator-workspace/onboarding";
+import type { CreatorInviteFailureCode, CreatorInvitePreview } from "@/features/creator-workspace/onboarding";
 import {
   acceptCreatorInviteAction,
   continueCreatorInviteSessionAction,
@@ -23,11 +23,13 @@ export function CreatorInviteActivateForm({
   preview,
   sessionEmail,
   errorMessage,
+  failureCode,
 }: {
   token: string;
   preview: CreatorInvitePreview | null;
   sessionEmail: string | null;
   errorMessage?: string;
+  failureCode?: CreatorInviteFailureCode;
 }) {
   const sessionMatches =
     Boolean(preview) &&
@@ -78,9 +80,13 @@ export function CreatorInviteActivateForm({
         <div className="login-v2-card">
           <div className="login-v2-form-panel">
             <ThinkwayLogo />
-            <h1 className="login-v2-form-title">Activate Creator Workspace</h1>
+            <h1 className="login-v2-form-title">
+              {failureCode === "expired" ? CREATOR_INVITE_EXPIRED_HEADING : "Activate Creator Workspace"}
+            </h1>
             <p className="login-v2-form-sub">
-              Thinkway invited you to manage your campaigns, deliverables and payments.
+              {failureCode === "expired"
+                ? CREATOR_INVITE_EXPIRED_MESSAGE
+                : "Thinkway invited you to manage your campaigns, deliverables and payments."}
             </p>
 
             {preview ? (
@@ -105,7 +111,17 @@ export function CreatorInviteActivateForm({
             ) : null}
 
             {!preview || !token ? (
-              <p className="text-sm text-muted-foreground">{CREATOR_INVITE_INVALID_MESSAGE}</p>
+              failureCode === "expired" ? (
+                <p className="text-sm text-muted-foreground">
+                  Request a new invitation from Thinkway at{" "}
+                  <a className="underline" href={`mailto:${CREATOR_INVITE_CONTACT_EMAIL}`}>
+                    {CREATOR_INVITE_CONTACT_EMAIL}
+                  </a>
+                  .
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground">{CREATOR_INVITE_INVALID_MESSAGE}</p>
+              )
             ) : sessionMatches ? (
               <form action={continueAction} className="grid gap-3">
                 <input type="hidden" name="token" value={token} />

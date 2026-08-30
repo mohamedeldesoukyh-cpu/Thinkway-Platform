@@ -1,11 +1,20 @@
 import { INTERNAL_ROLE_SLUGS } from "@/features/settings/constants";
 
-export const CREATOR_INVITE_TTL_MS = 1000 * 60 * 60 * 24 * 7;
+export const CREATOR_INVITE_TTL_MS = 1000 * 60 * 60 * 24;
 
 export const CREATOR_INVITE_PASSWORD_MIN = 8;
 
+export const CREATOR_WORKSPACE_LOGIN_PATH = "/login?next=/creator-portal";
+
 export const CREATOR_INVITE_INVALID_MESSAGE =
   "This invitation is no longer valid.";
+
+export const CREATOR_INVITE_EXPIRED_HEADING = "This invitation has expired";
+
+export const CREATOR_INVITE_EXPIRED_MESSAGE =
+  "This Creator Workspace invitation is no longer valid. Ask Thinkway to send a new invitation.";
+
+export const CREATOR_INVITE_CONTACT_EMAIL = "traffic@thinkwaymedia.com";
 
 export const CREATOR_INVITE_CONFLICT_MESSAGE =
   "This account is already linked to another creator. Ask Thinkway to resolve it.";
@@ -158,6 +167,51 @@ export function creatorInvitePublicPath(rawToken: string): string {
   return `/creator-invite?token=${encodeURIComponent(rawToken.trim())}`;
 }
 
+export function creatorWorkspaceLoginPath(): string {
+  return CREATOR_WORKSPACE_LOGIN_PATH;
+}
+
+export type CreatorInviteFailureCode = "expired" | "invalid";
+
+export function classifyCreatorInviteFailure(input: {
+  found: boolean;
+  status: string | null | undefined;
+  portalType: string | null | undefined;
+  influencerId: string | null | undefined;
+  expiresAt: string | null | undefined;
+  alreadyLinked?: boolean;
+  now?: Date;
+}): CreatorInviteFailureCode {
+  if (!input.found) return "invalid";
+  if (input.portalType !== "creator" || !input.influencerId) return "invalid";
+  if (input.alreadyLinked) return "invalid";
+  if (input.status === "revoked" || input.status === "accepted") return "invalid";
+  if (
+    input.status === "invited" ||
+    input.status === "expired"
+  ) {
+    if (
+      input.status === "expired" ||
+      creatorInviteHasExpired(input.expiresAt, input.now)
+    ) {
+      return "expired";
+    }
+  }
+  return "invalid";
+}
+
+export function creatorInviteAuditMetadataIsSafe(
+  metadata: Record<string, unknown>
+): boolean {
+  for (const [key, value] of Object.entries(metadata)) {
+    if (/token|password|activateUrl|inviteUrl/i.test(key)) return false;
+    if (typeof value === "string" && /creator-invite\?token=/i.test(value)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export type CreatorInvitePreview = {
   displayName: string;
   email: string;
@@ -177,4 +231,5 @@ export type CreatorWorkspaceAccessView = {
   canResend: boolean;
   canRevokeInvitation: boolean;
   canRevokeAccess: boolean;
+  canCopyLoginLink: boolean;
 };

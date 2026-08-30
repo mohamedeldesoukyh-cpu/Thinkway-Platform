@@ -5,15 +5,19 @@ import { headers } from "next/headers";
 
 import {
   CREATOR_INVITE_EMAIL_MISMATCH_MESSAGE,
+  CREATOR_INVITE_EXPIRED_MESSAGE,
   CREATOR_INVITE_INVALID_MESSAGE,
   CREATOR_INVITE_PASSWORD_MIN,
   CREATOR_INVITE_TTL_MS,
   CREATOR_WORKSPACE_ACCESS_LABEL,
   assertCreatorInviteAccountLinkable,
+  classifyCreatorInviteFailure,
+  creatorInviteAuditMetadataIsSafe,
   creatorInviteIsConsumable,
   creatorInvitePublicPath,
   emailsMatchForInvite,
   projectCreatorWorkspaceAccessStatus,
+  type CreatorInviteFailureCode,
   type CreatorInviteRecordStatus,
   type CreatorInvitePreview,
   type CreatorWorkspaceAccessView,
@@ -117,6 +121,28 @@ async function inviteByTokenHash(
   return (data as StoredCreatorInvite | null) ?? null;
 }
 
+async function logCreatorInvite(
+  db: Service,
+  input: {
+    actorId?: string | null;
+    targetProfileId?: string | null;
+    action: string;
+    metadata: Record<string, unknown>;
+  }
+) {
+  const metadata = { ...input.metadata };
+  if (!creatorInviteAuditMetadataIsSafe(metadata)) {
+    return;
+  }
+  await db.from("access_logs").insert({
+    actor_id: input.actorId ?? null,
+    target_profile_id: input.targetProfileId ?? null,
+    action: input.action,
+    module: "creator_workspace",
+    metadata,
+  } as never);
+}
+
 async function markExpiredIfNeeded(db: Service, invite: StoredCreatorInvite) {
   if (
     invite.status === "invited" &&
@@ -133,6 +159,10 @@ async function markExpiredIfNeeded(db: Service, invite: StoredCreatorInvite) {
       .eq("id", invite.id)
       .eq("status", "invited");
     invite.status = "expired";
+    await logCreatorInvite(db, {
+      action: "creator_workspace_invite_expired",
+      metadata: { influencer_id: invite.influencer_id },
+    });
   }
 }
 
@@ -160,9 +190,10 @@ export async function loadCreatorWorkspaceAccessView(
     expiresAt: invite?.expires_at ?? null,
     invitedEmail: invite?.email ?? null,
     canInvite: status === "not_invited" || status === "revoked" || status === "expired",
-    canResend: status === "invitation_pending" || status === "expired",
+    canResend: status === "invitation_pending",
     canRevokeInvitation: status === "invitation_pending",
     canRevokeAccess: status === "activated",
+    canCopyLoginLink: status === "activated",
   };
 }
 
@@ -209,20 +240,36 @@ async function waitForProfile(db: Service, userId: string): Promise<boolean> {
 
 export async function previewCreatorInvite(
   rawToken: string
-): Promise<{ ok: true; data: CreatorInvitePreview } | { ok: false; message: string }> {
+): Promise<
+  | { ok: true; data: CreatorInvitePreview }
+  | { ok: false; code: CreatorInviteFailureCode; message: string }
+> {
   const token = rawToken.trim();
-  if (!token) return { ok: false, message: CREATOR_INVITE_INVALID_MESSAGE };
+  if (!token) {
+    return { ok: false, code: "invalid", message: CREATOR_INVITE_INVALID_MESSAGE };
+  }
   const db = serviceDb();
-  if (!db) return { ok: false, message: "Creator Workspace is temporarily unavailable." };
+  if (!db) return { ok: false, code: "invalid", message: "Creator Workspace is temporarily unavailable." };
   let tokenHash: string;
   try {
     tokenHash = hashInviteToken(token);
   } catch {
-    return { ok: false, message: CREATOR_INVITE_INVALID_MESSAGE };
+    return { ok: false, code: "invalid", message: CREATOR_INVITE_INVALID_MESSAGE };
   }
   const invite = await inviteByTokenHash(db, tokenHash);
-  if (!invite) return { ok: false, message: CREATOR_INVITE_INVALID_MESSAGE };
+  if (!invite) return { ok: false, code: "invalid", message: CREATOR_INVITE_INVALID_MESSAGE };
   await markExpiredIfNeeded(db, invite);
+  const influencer = invite.influencer_id
+    ? await loadInfluencer(db, invite.influencer_id)
+    : null;
+  const failure = classifyCreatorInviteFailure({
+    found: true,
+    status: invite.status,
+    portalType: invite.portal_type,
+    influencerId: invite.influencer_id,
+    expiresAt: invite.expires_at,
+    alreadyLinked: Boolean(influencer?.profile_id),
+  });
   if (
     !creatorInviteIsConsumable({
       status: invite.status,
@@ -231,15 +278,19 @@ export async function previewCreatorInvite(
       expiresAt: invite.expires_at,
     })
   ) {
-    return { ok: false, message: CREATOR_INVITE_INVALID_MESSAGE };
+    return {
+      ok: false,
+      code: failure,
+      message:
+        failure === "expired" ? CREATOR_INVITE_EXPIRED_MESSAGE : CREATOR_INVITE_INVALID_MESSAGE,
+    };
   }
-  const influencer = await loadInfluencer(db, invite.influencer_id as string);
   if (!influencer || influencer.profile_id) {
-    return { ok: false, message: CREATOR_INVITE_INVALID_MESSAGE };
+    return { ok: false, code: "invalid", message: CREATOR_INVITE_INVALID_MESSAGE };
   }
   const existing = await profileByEmail(db, invite.email);
   if (existing?.id === "ambiguous") {
-    return { ok: false, message: CREATOR_INVITE_INVALID_MESSAGE };
+    return { ok: false, code: "invalid", message: CREATOR_INVITE_INVALID_MESSAGE };
   }
   return {
     ok: true,
@@ -271,7 +322,10 @@ export async function createOrRotateCreatorInvite(input: {
   influencerId: string;
   email: string;
   origin: string;
-}): Promise<{ ok: true } | { ok: false; message: string }> {
+}): Promise<
+  | { ok: true; activateUrl: string; emailSent: boolean; regenerated: boolean; emailError?: string }
+  | { ok: false; message: string }
+> {
   const parsedEmail = emailSchema.safeParse(input.email.trim().toLowerCase());
   if (!parsedEmail.success) {
     return { ok: false, message: "Enter a valid email address." };
@@ -290,6 +344,7 @@ export async function createOrRotateCreatorInvite(input: {
   const tokenHash = hashInviteToken(rawToken);
   const expiresAt = new Date(Date.now() + CREATOR_INVITE_TTL_MS).toISOString();
   const pending = await pendingCreatorInvite(db, input.influencerId);
+  const activateUrl = `${input.origin}${creatorInvitePublicPath(rawToken)}`;
 
   if (pending) {
     const { error } = await (db as any)
@@ -324,24 +379,34 @@ export async function createOrRotateCreatorInvite(input: {
   }
 
   const sent = await sendInviteEmail(parsedEmail.data, rawToken, input.origin);
+  await logCreatorInvite(db, {
+    actorId: input.actorId,
+    action: pending
+      ? "creator_workspace_invite_regenerated"
+      : "creator_workspace_invite_generated",
+    metadata: {
+      influencer_id: input.influencerId,
+      email: parsedEmail.data,
+      email_sent: sent.ok,
+    },
+  });
+
   if (!sent.ok) {
-    await (db as any)
-      .from("user_invites")
-      .update({ status: "revoked", metadata: { influencer_id: input.influencerId, send_failed: true } })
-      .eq("influencer_id", input.influencerId)
-      .eq("status", "invited")
-      .eq("portal_type", "creator");
-    return sent;
+    return {
+      ok: true,
+      activateUrl,
+      emailSent: false,
+      regenerated: Boolean(pending),
+      emailError: sent.message,
+    };
   }
 
-  await db.from("access_logs").insert({
-    actor_id: input.actorId,
-    action: pending ? "creator_workspace_invite_resent" : "creator_workspace_invited",
-    module: "creator_workspace",
-    metadata: { influencer_id: input.influencerId, email: parsedEmail.data },
-  } as never);
-
-  return { ok: true };
+  return {
+    ok: true,
+    activateUrl,
+    emailSent: true,
+    regenerated: Boolean(pending),
+  };
 }
 
 export async function revokeCreatorInvitation(input: {
@@ -360,12 +425,11 @@ export async function revokeCreatorInvitation(input: {
     .eq("portal_type", "creator")
     .eq("status", "invited");
   if (error) return { ok: false, message: error.message };
-  await db.from("access_logs").insert({
-    actor_id: input.actorId,
+  await logCreatorInvite(db, {
+    actorId: input.actorId,
     action: "creator_workspace_invite_revoked",
-    module: "creator_workspace",
     metadata: { influencer_id: input.influencerId },
-  } as never);
+  });
   return { ok: true };
 }
 
@@ -415,13 +479,12 @@ export async function revokeCreatorWorkspaceAccess(input: {
     .eq("portal_type", "creator")
     .in("status", ["invited", "accepted"]);
 
-  await db.from("access_logs").insert({
-    actor_id: input.actorId,
-    target_profile_id: influencer.profile_id,
+  await logCreatorInvite(db, {
+    actorId: input.actorId,
+    targetProfileId: influencer.profile_id,
     action: "creator_workspace_access_revoked",
-    module: "creator_workspace",
     metadata: { influencer_id: input.influencerId },
-  } as never);
+  });
   return { ok: true };
 }
 
@@ -545,6 +608,13 @@ export async function registerCreatorFromInvite(input: {
       expiresAt: invite.expires_at,
     })
   ) {
+    if (invite) {
+      await markExpiredIfNeeded(db, invite);
+      await logCreatorInvite(db, {
+        action: "creator_workspace_invite_failed",
+        metadata: { influencer_id: invite.influencer_id, reason: "not_consumable" },
+      });
+    }
     return { ok: false, message: CREATOR_INVITE_INVALID_MESSAGE };
   }
 
@@ -600,8 +670,18 @@ export async function registerCreatorFromInvite(input: {
   if (!consumed) {
     await db.from("influencers").update({ profile_id: null } as never).eq("id", invite.influencer_id);
     await db.auth.admin.deleteUser(userId);
+    await logCreatorInvite(db, {
+      action: "creator_workspace_invite_failed",
+      metadata: { influencer_id: invite.influencer_id, reason: "consume_failed" },
+    });
     return { ok: false, message: CREATOR_INVITE_INVALID_MESSAGE };
   }
+  await logCreatorInvite(db, {
+    actorId: userId,
+    targetProfileId: userId,
+    action: "creator_workspace_invite_accepted",
+    metadata: { influencer_id: invite.influencer_id },
+  });
   return { ok: true, email: invite.email };
 }
 
@@ -628,11 +708,31 @@ export async function acceptCreatorInviteForUser(input: {
       expiresAt: invite.expires_at,
     })
   ) {
+    if (invite) {
+      await markExpiredIfNeeded(db, invite);
+      await logCreatorInvite(db, {
+        actorId: input.userId,
+        action: "creator_workspace_invite_failed",
+        metadata: { influencer_id: invite.influencer_id, reason: "not_consumable" },
+      });
+    }
     return { ok: false, message: CREATOR_INVITE_INVALID_MESSAGE };
   }
   const guards = await accountGuards(db, input.userId, invite);
-  if (!guards.ok) return guards;
+  if (!guards.ok) {
+    await logCreatorInvite(db, {
+      actorId: input.userId,
+      action: "creator_workspace_invite_failed",
+      metadata: { influencer_id: invite.influencer_id, reason: "not_linkable" },
+    });
+    return guards;
+  }
   if (!emailsMatchForInvite(input.authenticatedEmail, invite.email)) {
+    await logCreatorInvite(db, {
+      actorId: input.userId,
+      action: "creator_workspace_invite_failed",
+      metadata: { influencer_id: invite.influencer_id, reason: "email_mismatch" },
+    });
     return { ok: false, message: CREATOR_INVITE_EMAIL_MISMATCH_MESSAGE };
   }
 
@@ -654,7 +754,18 @@ export async function acceptCreatorInviteForUser(input: {
       .update({ profile_id: null } as never)
       .eq("id", invite.influencer_id)
       .eq("profile_id", input.userId);
+    await logCreatorInvite(db, {
+      actorId: input.userId,
+      action: "creator_workspace_invite_failed",
+      metadata: { influencer_id: invite.influencer_id, reason: "consume_failed" },
+    });
     return { ok: false, message: CREATOR_INVITE_INVALID_MESSAGE };
   }
+  await logCreatorInvite(db, {
+    actorId: input.userId,
+    targetProfileId: input.userId,
+    action: "creator_workspace_invite_accepted",
+    metadata: { influencer_id: invite.influencer_id },
+  });
   return { ok: true };
 }
