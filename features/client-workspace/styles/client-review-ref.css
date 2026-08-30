@@ -1532,6 +1532,8 @@
 .tw-review .cx-tag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:100px;background:#f3f6fc;color:#3f4757;white-space:nowrap}
 .tw-review .cx-tag b{font-variant-numeric:tabular-nums}
 .tw-review .cx-metrics{display:inline-flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;max-width:100%}
+.tw-review .cx-show-sm{display:none !important}
+.tw-review .cx-pub-cell{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0}
 .tw-review .cx-metric{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;color:var(--navy);font-weight:650;font-variant-numeric:tabular-nums;font-size:12.5px;line-height:1}
 .tw-review .cx-metric__av{width:18px;height:18px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;flex:none}
 .tw-review .cx-metric__av svg{width:10px;height:10px;display:block}
@@ -1635,6 +1637,15 @@
     gap:6px;
   }
   .tw-review .cx-hide-sm{display:none !important;}
+  .tw-review .cx-show-sm{display:inline-flex !important;}
+  .tw-review .cx-pub-metrics{
+    display:flex !important;
+    width:100%;
+    margin-top:2px;
+    justify-content:flex-start;
+    gap:8px;
+  }
+  .tw-review .cx-pub-metrics .cx-metric{font-size:11.5px;}
   .tw-review .cx-head{gap:10px;margin-bottom:12px}
   .tw-review .cx-head h1{font-size:20px}
   .tw-review .cx-act{padding:12px 14px}

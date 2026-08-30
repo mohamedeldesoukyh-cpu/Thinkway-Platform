@@ -9,6 +9,10 @@ test("Client Workspace mobile CSS stacks Overview, Shortlist, Commercial, and ch
     resolve("features/client-workspace/components/creators-workspace.tsx"),
     "utf8"
   );
+  const publicationPlan = readFileSync(
+    resolve("features/client-workspace/components/campaign-publication-plan.tsx"),
+    "utf8"
+  );
 
   assert.equal(css.includes(".ov-analysis{grid-template-columns:1fr"), true);
   assert.equal(css.includes(".ov-exec-txt{min-width:0;flex-basis:100%}"), true);
@@ -26,6 +30,10 @@ test("Client Workspace mobile CSS stacks Overview, Shortlist, Commercial, and ch
   assert.equal(creators.includes('className="cc-remove"'), true);
   assert.equal(creators.includes('style={{ margin: "8px 8px 0 0" }}'), false);
   assert.equal(css.includes(".cx-metric--likes"), true);
+  assert.equal(css.includes(".cx-show-sm{display:none"), true);
+  assert.equal(css.includes(".cx-pub-metrics"), true);
+  assert.equal(publicationPlan.includes("cx-show-sm cx-pub-metrics"), true);
+  assert.equal(publicationPlan.includes("PublicationPlanMobileMetrics"), true);
   assert.equal(css.includes("#ed4956"), true);
   assert.equal(css.includes(".cx-pane{display:flex;flex-direction:column"), true);
   assert.equal(css.includes(".cx-rev__head{order:1"), true);

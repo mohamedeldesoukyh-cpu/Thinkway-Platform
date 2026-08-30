@@ -20,6 +20,7 @@ import {
 import {
   PUBLICATION_PLAN_FOOTNOTE,
   PUBLICATION_PLAN_NOTE,
+  clientCampaignDashboardPerformance,
   clientCampaignDashboardPerformanceMetrics,
 } from "../campaign-dashboard";
 import { matchClientCreatorByName } from "../campaign-tab-aggregates";
@@ -105,13 +106,20 @@ function dash(value: string | null | undefined) {
 
 function PublicationPlanMetrics({
   performance,
+  empty = "dash",
+  className,
 }: {
   performance: ClientCampaignPostRow["performance"];
+  empty?: "dash" | "none";
+  className?: string;
 }) {
   const metrics = clientCampaignDashboardPerformanceMetrics(performance);
-  if (metrics.length === 0) return <span className="cx-empty">—</span>;
+  if (metrics.length === 0) {
+    if (empty === "none") return null;
+    return <span className="cx-empty">—</span>;
+  }
   return (
-    <span className="cx-metrics">
+    <span className={className ? `cx-metrics ${className}` : "cx-metrics"}>
       {metrics.map((metric) => (
         <span
           key={metric.key}
@@ -126,6 +134,20 @@ function PublicationPlanMetrics({
         </span>
       ))}
     </span>
+  );
+}
+
+function PublicationPlanMobileMetrics({
+  performance,
+}: {
+  performance: ClientCampaignPostRow["performance"];
+}) {
+  return (
+    <PublicationPlanMetrics
+      performance={performance}
+      empty="none"
+      className="cx-show-sm cx-pub-metrics"
+    />
   );
 }
 
@@ -431,12 +453,15 @@ export function CampaignPublicationPlan({
                     <PlatformCell row={post} />
                   </td>
                   <td>
-                    <DeliverableScriptCell
-                      post={post}
-                      scriptPresence={scriptPresence}
-                      token={token}
-                      onOpen={openScript}
-                    />
+                    <div className="cx-pub-cell">
+                      <DeliverableScriptCell
+                        post={post}
+                        scriptPresence={scriptPresence}
+                        token={token}
+                        onOpen={openScript}
+                      />
+                      <PublicationPlanMobileMetrics performance={post.performance} />
+                    </div>
                   </td>
                   <td className="cx-hide-sm">{dash(formatClientScheduleDate(post.scheduledDate))}</td>
                   <td>
@@ -543,13 +568,18 @@ function GroupRows({
         </td>
         <td className="cx-hide-sm">{first ? <PlatformCell row={first} /> : null}</td>
         <td>
-          <span className="cx-mix">
-            {group.kinds.map((kind) => (
-              <span className="cx-tag" key={kind.label}>
-                {kind.label} <b>{kind.count}</b>
-              </span>
-            ))}
-          </span>
+          <div className="cx-pub-cell">
+            <span className="cx-mix">
+              {group.kinds.map((kind) => (
+                <span className="cx-tag" key={kind.label}>
+                  {kind.label} <b>{kind.count}</b>
+                </span>
+              ))}
+            </span>
+            <PublicationPlanMobileMetrics
+              performance={clientCampaignDashboardPerformance(group.posts)}
+            />
+          </div>
         </td>
         <td>
           {group.statuses.map((status) => (
@@ -579,13 +609,16 @@ function GroupRows({
             return (
               <tr className="cx-kid" key={item.key}>
                 <td>
-                  <DeliverableScriptCell
-                    post={post}
-                    count={item.count}
-                    scriptPresence={scriptPresence}
-                    token={token}
-                    onOpen={onOpenScript}
-                  />
+                  <div className="cx-pub-cell">
+                    <DeliverableScriptCell
+                      post={post}
+                      count={item.count}
+                      scriptPresence={scriptPresence}
+                      token={token}
+                      onOpen={onOpenScript}
+                    />
+                    <PublicationPlanMobileMetrics performance={post.performance} />
+                  </div>
                 </td>
                 <td className="cx-hide-sm">
                   <PlatformCell row={post} />
