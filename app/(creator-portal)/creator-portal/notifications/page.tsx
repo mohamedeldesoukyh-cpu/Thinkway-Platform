@@ -1,13 +1,7 @@
-import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
-import { PortalNotificationList } from "@/features/portals/components/portal-notification-list";
-import { getCreatorNotifications } from "@/features/portals/queries";
+import { redirect } from "next/navigation";
 
-export default async function CreatorPortalNotificationsPage() {
-  const notifications = await getCreatorNotifications();
+import { CREATOR_WORKSPACE_LEGACY_REDIRECTS } from "@/features/creator-workspace/nav";
 
-  return (
-    <PlatformErrorBoundary surface="generic">
-      <PortalNotificationList notifications={notifications} audienceType="creator" />
-    </PlatformErrorBoundary>
-  );
+export default function CreatorPortalNotificationsRedirectPage() {
+  redirect(CREATOR_WORKSPACE_LEGACY_REDIRECTS["/creator-portal/notifications"]);
 }

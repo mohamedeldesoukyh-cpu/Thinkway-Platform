@@ -1,85 +1,106 @@
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getCreatorDashboardSummary } from "@/features/portals/queries";
-import { PortalStatusBadge } from "@/features/portals/components/portal-status-badge";
+import { CreatorCampaignCards } from "@/features/creator-workspace/components/creator-campaign-cards";
+import { CreatorHomeNextActionList } from "@/features/creator-workspace/components/creator-home-next-action-list";
+import { CreatorHomePublications } from "@/features/creator-workspace/components/creator-home-publications";
+import { CreatorSocialAvailableSoon } from "@/features/creator-workspace/components/creator-social-available-soon";
+import {
+  campaignNeedsCreatorAction,
+  overlayCreatorCampaignUnitCounts,
+} from "@/features/creator-workspace/campaign-card-model";
+import { loadCreatorUnitViews } from "@/features/creator-workspace/documentation-load";
+import {
+  buildCreatorHomeNextActions,
+  creatorFirstName,
+} from "@/features/creator-workspace/home-next-actions";
+import { PortalNotificationList } from "@/features/portals/components/portal-notification-list";
+import {
+  getCreatorCampaigns,
+  getCreatorNotifications,
+  getCreatorPayments,
+  getCreatorPublications,
+  getCreatorUnreadNotificationCount,
+  getCreatorVendorIos,
+} from "@/features/portals/queries";
+import { requireCreatorScope } from "@/features/portals/scope";
 
-export default async function CreatorPortalDashboardPage() {
-  const summary = await getCreatorDashboardSummary();
+export default async function CreatorWorkspaceHomePage() {
+  const [
+    { scope },
+    campaigns,
+    units,
+    payments,
+    vendorIos,
+    notifications,
+    publications,
+    unreadCount,
+  ] = await Promise.all([
+    requireCreatorScope("creator_portal.read"),
+    getCreatorCampaigns(),
+    loadCreatorUnitViews(),
+    getCreatorPayments(),
+    getCreatorVendorIos(),
+    getCreatorNotifications(),
+    getCreatorPublications(),
+    getCreatorUnreadNotificationCount(),
+  ]);
+
+  const overlayedCampaigns = overlayCreatorCampaignUnitCounts(campaigns, units);
+  const nextActions = buildCreatorHomeNextActions({
+    vendorIos,
+    units,
+    payments,
+  });
+  const campaignsNeedingAction = overlayedCampaigns.filter((row) =>
+    campaignNeedsCreatorAction(row)
+  );
+  const homeCampaigns =
+    campaignsNeedingAction.length > 0
+      ? campaignsNeedingAction
+      : overlayedCampaigns.slice(0, 4);
 
   return (
     <PlatformErrorBoundary surface="generic">
-      <div className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Active campaigns</CardTitle>
-            </CardHeader>
-            <CardContent className="text-2xl font-semibold">{summary.active_campaigns}</CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Pending deliverables</CardTitle>
-            </CardHeader>
-            <CardContent className="text-2xl font-semibold">{summary.pending_deliverables}</CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Vendor IO approvals</CardTitle>
-            </CardHeader>
-            <CardContent className="text-2xl font-semibold">{summary.pending_vendor_io_approvals}</CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Pending payments</CardTitle>
-            </CardHeader>
-            <CardContent className="text-2xl font-semibold">{summary.pending_payments}</CardContent>
-          </Card>
+      <div className="space-y-6">
+        <div>
+          <h2 className="font-heading text-2xl font-semibold tracking-tight">
+            Hi {creatorFirstName(scope.influencerName)}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {nextActions.length > 0
+              ? "Here is what needs your attention."
+              : "Nothing is waiting on you right now."}
+            {unreadCount > 0
+              ? ` You have ${unreadCount} update${unreadCount === 1 ? "" : "s"}.`
+              : ""}
+          </p>
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Recent publications</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {summary.recent_publications.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No recent publications.</p>
-              ) : (
-                summary.recent_publications.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between gap-3 rounded-2xl border border-border p-3"
-                  >
-                    <div>
-                      <p className="text-sm font-medium">{item.campaign_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {item.platform} · {item.publication_type}
-                      </p>
-                    </div>
-                    <PortalStatusBadge value={item.status} />
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Latest notifications</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {summary.notifications.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No notifications.</p>
-              ) : (
-                summary.notifications.map((item) => (
-                  <div key={item.id} className="rounded-2xl border border-border p-3">
-                    <p className="text-sm font-medium">{item.title}</p>
-                    <p className="text-xs text-muted-foreground">{item.message}</p>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        <section className="space-y-3" aria-labelledby="creator-home-next">
+          <h3 id="creator-home-next" className="text-sm font-semibold">
+            Next actions
+          </h3>
+          <CreatorHomeNextActionList actions={nextActions} />
+        </section>
+
+        <section className="space-y-3" aria-labelledby="creator-home-campaigns">
+          <h3 id="creator-home-campaigns" className="text-sm font-semibold">
+            {campaignsNeedingAction.length > 0 ? "Campaigns that need you" : "Your campaigns"}
+          </h3>
+          <CreatorCampaignCards rows={homeCampaigns} />
+        </section>
+
+        <section id="updates" className="space-y-3" aria-labelledby="creator-home-updates">
+          <h3 id="creator-home-updates" className="text-sm font-semibold">
+            Updates
+          </h3>
+          <PortalNotificationList
+            notifications={notifications.slice(0, 8)}
+            audienceType="creator"
+          />
+        </section>
+
+        <CreatorHomePublications rows={publications.slice(0, 6)} />
+        <CreatorSocialAvailableSoon />
       </div>
     </PlatformErrorBoundary>
   );

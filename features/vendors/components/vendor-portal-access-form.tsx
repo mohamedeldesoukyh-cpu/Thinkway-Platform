@@ -44,8 +44,8 @@ export function VendorPortalAccessForm({
 
   return (
     <CampaignFlatSection
-      title="Creator portal login"
-      description="Links this vendor to a user with the influencer role so they can sign in to the creator portal."
+      title="Creator Workspace login"
+      description="Links this vendor to a user with the influencer role so they can sign in to Creator Workspace."
     >
         <form action={action} className="flex flex-wrap items-end gap-3">
           <input type="hidden" name="influencer_id" value={influencerId} />

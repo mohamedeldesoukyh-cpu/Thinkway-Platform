@@ -1,13 +1,7 @@
-import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
-import { CreatorPaymentsTable } from "@/features/portals/components/tables/creator-payments-table";
-import { getCreatorPayments } from "@/features/portals/queries";
+import { redirect } from "next/navigation";
 
-export default async function CreatorPortalPaymentsPage() {
-  const rows = await getCreatorPayments();
+import { CREATOR_WORKSPACE_LEGACY_REDIRECTS } from "@/features/creator-workspace/nav";
 
-  return (
-    <PlatformErrorBoundary surface="generic">
-      <CreatorPaymentsTable rows={rows} />
-    </PlatformErrorBoundary>
-  );
+export default function CreatorPortalPaymentsRedirectPage() {
+  redirect(CREATOR_WORKSPACE_LEGACY_REDIRECTS["/creator-portal/payments"]);
 }

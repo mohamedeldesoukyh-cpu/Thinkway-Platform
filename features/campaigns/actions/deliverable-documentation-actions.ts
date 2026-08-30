@@ -17,6 +17,7 @@ import {
   listDocumentationAssetAggregates,
   listDocumentationUnits,
   reassignFileAsset,
+  releaseDeliverableAssetVersionToClient,
 } from "@/lib/services/deliverables/documentation-service";
 import {
   DELIVERABLE_ASSET_MAX_BYTES,
@@ -395,4 +396,20 @@ export async function getDeliverableAssetDownloadUrlAction(input: {
   });
   if (!result.ok) return result;
   return { ok: true, data: { url: result.url } };
+}
+
+export async function releaseDeliverableVersionToClientAction(input: {
+  campaignHeaderId: string;
+  versionId: string;
+}): Promise<DocumentationActionResult<null>> {
+  const actor = await getWriteActor();
+  if (!actor.ok) return actor;
+  const result = await releaseDeliverableAssetVersionToClient(actor.supabase, {
+    actorId: actor.userId,
+    campaignHeaderId: input.campaignHeaderId,
+    versionId: input.versionId,
+  });
+  if (!result.ok) return result;
+  revalidatePath(`/campaigns/${input.campaignHeaderId}`);
+  return { ok: true, data: null };
 }

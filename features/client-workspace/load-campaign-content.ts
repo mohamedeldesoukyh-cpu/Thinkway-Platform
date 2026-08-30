@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { parseLineAssignment } from "@/lib/campaigns/line-assignment";
+import { releasedToClientAtFromMetadata } from "@/lib/services/deliverables/client-release";
 
 import {
   emptyClientCampaignContent,
@@ -31,6 +32,7 @@ type VersionRow = {
   mime_type: string | null;
   file_name: string | null;
   uploaded_at: string;
+  metadata: Record<string, unknown> | null;
 };
 type DecisionRow = {
   id: string;
@@ -122,7 +124,7 @@ export async function loadClientCampaignContent(
     const versionsResult = await supabase
       .from("deliverable_asset_versions")
       .select(
-        "id, asset_id, version_number, storage_bucket, storage_path, external_url, mime_type, file_name, uploaded_at"
+        "id, asset_id, version_number, storage_bucket, storage_path, external_url, mime_type, file_name, uploaded_at, metadata"
       )
       .in("asset_id", assetIds);
     logContentLoadError("versions", versionsResult.error?.message);
@@ -190,6 +192,7 @@ export async function loadClientCampaignContent(
       mimeType: version.mime_type,
       fileName: version.file_name,
       uploadedAt: version.uploaded_at,
+      releasedToClientAt: releasedToClientAtFromMetadata(version.metadata),
     })),
     decisions: mapDecisions(decisions),
     creatorNameByDeliverableId,

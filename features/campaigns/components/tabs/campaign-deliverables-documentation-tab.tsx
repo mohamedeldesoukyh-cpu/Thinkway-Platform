@@ -51,6 +51,7 @@ import {
 } from "@/features/campaigns/deliverable-asset-upload";
 import { DeliverableAssetPreview } from "@/features/campaigns/components/deliverables/deliverable-asset-preview";
 import { DocumentationAssetActions } from "@/features/campaigns/components/deliverables/documentation-asset-actions";
+import { ReleaseVersionToClientButton } from "@/features/campaigns/components/deliverables/release-version-to-client-button";
 import {
   DocumentationRepositoryList,
   documentationStatusBadge,
@@ -934,6 +935,19 @@ export function CampaignDeliverablesDocumentationTab({
                                   asset={asset}
                                   disabled={pending}
                                 />
+                                {asset.currentVersion ? (
+                                  <ReleaseVersionToClientButton
+                                    campaignHeaderId={campaignId}
+                                    versionId={asset.currentVersion.id}
+                                    releasedToClientAt={
+                                      asset.currentVersion.releasedToClientAt
+                                    }
+                                    onReleased={() => {
+                                      refreshList();
+                                      loadDetailForKey(selected.unitKey, units);
+                                    }}
+                                  />
+                                ) : null}
                                 {asset.medium === "text" ? null : (
                                   <DocumentationAssetActions
                                     currentUnitKey={selected.unitKey}

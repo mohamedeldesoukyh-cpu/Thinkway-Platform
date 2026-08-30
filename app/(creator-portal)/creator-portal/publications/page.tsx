@@ -1,13 +1,7 @@
-import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
-import { CreatorPublicationsTable } from "@/features/portals/components/tables/creator-publications-table";
-import { getCreatorPublications } from "@/features/portals/queries";
+import { redirect } from "next/navigation";
 
-export default async function CreatorPortalPublicationsPage() {
-  const rows = await getCreatorPublications();
+import { CREATOR_WORKSPACE_LEGACY_REDIRECTS } from "@/features/creator-workspace/nav";
 
-  return (
-    <PlatformErrorBoundary surface="generic">
-      <CreatorPublicationsTable rows={rows} />
-    </PlatformErrorBoundary>
-  );
+export default function CreatorPortalPublicationsRedirectPage() {
+  redirect(CREATOR_WORKSPACE_LEGACY_REDIRECTS["/creator-portal/publications"]);
 }

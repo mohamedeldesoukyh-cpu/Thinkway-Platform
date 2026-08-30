@@ -78,6 +78,7 @@ function revalidateCreatorPortal() {
   revalidatePath("/creator-portal/campaigns");
   revalidatePath("/creator-portal/campaigns", "layout");
   revalidatePath("/creator-portal/deliverables");
+  revalidatePath("/creator-portal/profile");
   revalidatePath("/creator-portal/publications");
   revalidatePath("/creator-portal/payments");
   revalidatePath("/creator-portal/vendor-ios");
@@ -95,6 +96,7 @@ function revalidateClientPortal() {
   revalidatePath("/client-portal/client-io");
 }
 
+/** @deprecated Phase 2 product path is documentation-unit upload in Creator Workspace. Do not call. */
 export async function creatorUploadDeliverableAction(
   _prev: PortalActionState,
   formData: FormData

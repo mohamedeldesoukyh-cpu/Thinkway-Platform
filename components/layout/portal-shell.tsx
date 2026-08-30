@@ -11,6 +11,7 @@ type PortalShellProps = {
   identityLogo?: IdentityLogo | null;
   navItems: PortalNavItem[];
   children: React.ReactNode;
+  mobileNavPlacement?: "chips" | "bottom";
 };
 
 function PortalPartnerMark({ identityLogo }: { identityLogo?: IdentityLogo | null }) {
@@ -47,6 +48,7 @@ export function PortalShell({
   identityLogo,
   navItems,
   children,
+  mobileNavPlacement = "chips",
 }: PortalShellProps) {
   return (
     <div className="flex min-h-svh bg-background">
@@ -65,15 +67,29 @@ export function PortalShell({
       </aside>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="border-b border-border px-4 py-4 md:px-8">
-          <div className="mb-3 flex items-center gap-3 md:hidden">
-            <ThinkwayLogo className="mb-0" />
-            <PortalPartnerMark identityLogo={identityLogo} />
+          <div className="mb-3 flex items-center justify-between gap-3 md:hidden">
+            <div className="flex items-center gap-3">
+              <ThinkwayLogo className="mb-0" />
+              <PortalPartnerMark identityLogo={identityLogo} />
+            </div>
+            <SignOutButton showLabel={false} />
           </div>
           <h1 className="font-heading text-xl font-semibold tracking-tight">{title}</h1>
           {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
         </header>
-        <PortalMobileNav items={navItems} />
-        <main className="min-h-0 flex-1 overflow-y-auto p-4 md:p-8">{children}</main>
+        {mobileNavPlacement === "chips" ? <PortalMobileNav items={navItems} /> : null}
+        <main
+          className={
+            mobileNavPlacement === "bottom"
+              ? "min-h-0 flex-1 overflow-y-auto p-4 pb-24 md:p-8 md:pb-8"
+              : "min-h-0 flex-1 overflow-y-auto p-4 md:p-8"
+          }
+        >
+          {children}
+        </main>
+        {mobileNavPlacement === "bottom" ? (
+          <PortalMobileNav items={navItems} placement="bottom" />
+        ) : null}
       </div>
     </div>
   );

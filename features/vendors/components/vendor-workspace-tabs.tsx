@@ -49,7 +49,7 @@ export function VendorWorkspaceTabsBar({ children }: { children: ReactNode }) {
   return (
     <div className="rounded-t-xl bg-muted/40 px-2 pt-2" data-sticky="vendor-workspace-tabs">
       <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-widest text-foreground">
-        Creator workspace
+        Creator Profile
       </p>
       <TabsPrimitive.List
         data-slot="vendor-workspace-tabs"

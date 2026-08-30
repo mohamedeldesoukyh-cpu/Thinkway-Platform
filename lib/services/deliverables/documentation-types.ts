@@ -317,6 +317,7 @@ export type DeliverableAssetVersionView = {
   changeSummary: string | null;
   uploadedBy: string | null;
   uploadedAt: string;
+  releasedToClientAt: string | null;
 };
 
 export type DeliverableAssetView = {

@@ -41,6 +41,8 @@
     "test:campaign-performance": "npx tsx lib/performance/campaign-performance-regression.test.ts && npx tsx lib/performance/publication-value-scope.test.ts",
     "test:vendor-io-terms": "npx tsx lib/io/vendor-io-terms.test.ts && npx tsx lib/io/vendor-io-terms-regression.test.ts && npx tsx lib/io/vendor-io-document-parity.test.ts",
     "test:creator-crm-phase1": "npx tsx --test lib/creators/crm/feature-flag.test.ts lib/creators/crm/permissions.test.ts lib/creators/crm/ensure-commercial-creator.test.ts lib/creators/crm/boundary.test.ts",
+    "test:creator-workspace-phase1": "npx tsx --test features/creator-workspace/creator-workspace-phase1.test.ts lib/security/workspace-auth.test.ts",
+    "test:creator-workspace-phase2": "npx tsx --test features/creator-workspace/creator-workspace-phase2.test.ts lib/services/deliverables/documentation-units.test.ts",
     "test:creator-crm-phase2a": "npx tsx --test lib/creators/crm/feature-flag.test.ts lib/creators/crm/permissions.test.ts lib/creators/crm/ensure-commercial-creator.test.ts lib/creators/crm/activation-helpers.test.ts lib/creators/crm/boundary.test.ts features/creator-dna/services/promote-staging.test.ts",
     "test:creator-crm-phase2b": "npx tsx --test lib/campaigns/campaign-influencer-commercial.test.ts lib/creators/crm/activation-helpers.test.ts lib/creators/crm/boundary.test.ts lib/creators/crm/ensure-commercial-creator.test.ts lib/services/quotations/quotation-lifecycle-crm.test.ts",
     "validate:creator-crm-phase1": "node scripts/psql-development.mjs -f scripts/validate-creator-crm-phase1.sql",

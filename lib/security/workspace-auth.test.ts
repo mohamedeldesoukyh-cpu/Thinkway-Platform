@@ -58,6 +58,10 @@ test("portal actors allowed on their workspace pages", () => {
       .allowed,
     true,
   );
+  assert.equal(
+    authorizeWorkspacePath("/creator-portal/profile", "creator_portal").allowed,
+    true,
+  );
 });
 
 test("internal staff allowed on internal workspace", () => {

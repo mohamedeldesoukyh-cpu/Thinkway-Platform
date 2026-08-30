@@ -4,13 +4,12 @@ import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { PageBackButton } from "@/components/navigation/page-back-button";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreatorDeliverableRowPanel } from "@/features/portals/components/creator-deliverable-row";
-import {
-  CreatorApproveVendorIoForm,
-} from "@/features/portals/components/creator-approve-vendor-io-form";
+import { CreatorApproveVendorIoForm } from "@/features/portals/components/creator-approve-vendor-io-form";
 import { CreatorRejectVendorIoForm } from "@/features/portals/components/creator-reject-vendor-io-form";
 import { PortalStatusBadge } from "@/features/portals/components/portal-status-badge";
 import { getCreatorCampaignDetail } from "@/features/portals/queries";
+import { CreatorDocumentationUnitList } from "@/features/creator-workspace/components/creator-documentation-unit-list";
+import { loadCreatorUnitViews } from "@/features/creator-workspace/documentation-load";
 import { formatMoneyDetail } from "@/lib/finance/currency-format";
 
 type Props = {
@@ -19,11 +18,16 @@ type Props = {
 
 export default async function CreatorCampaignDetailPage({ params }: Props) {
   const { id } = await params;
-  const detail = await getCreatorCampaignDetail(id);
+  const [detail, units] = await Promise.all([
+    getCreatorCampaignDetail(id),
+    loadCreatorUnitViews(),
+  ]);
 
   if (!detail) {
     notFound();
   }
+
+  const campaignUnits = units.filter((unit) => unit.campaignHeaderId === id);
 
   return (
     <PlatformErrorBoundary surface="generic">
@@ -86,23 +90,10 @@ export default async function CreatorCampaignDetailPage({ params }: Props) {
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Deliverables</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {detail.deliverables.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No deliverables assigned.</p>
-            ) : (
-              detail.deliverables.map((deliverable) => (
-                <CreatorDeliverableRowPanel
-                  key={deliverable.id}
-                  deliverable={deliverable}
-                />
-              ))
-            )}
-          </CardContent>
-        </Card>
+        <section className="space-y-3">
+          <h3 className="text-base font-semibold">What to deliver</h3>
+          <CreatorDocumentationUnitList units={campaignUnits} showCampaignLink={false} />
+        </section>
       </div>
     </PlatformErrorBoundary>
   );

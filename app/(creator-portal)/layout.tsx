@@ -1,21 +1,10 @@
 import { redirect } from "next/navigation";
 
 import { PortalShell } from "@/components/layout/portal-shell";
+import { withCreatorHomeBadge } from "@/features/creator-workspace/nav";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCreatorUnreadNotificationCount } from "@/features/portals/queries";
 import { requireCreatorScope } from "@/features/portals/scope";
-import type { PortalNavItem } from "@/components/layout/portal-nav";
-
-const creatorNavItems = [
-  { href: "/creator-portal", label: "Dashboard" },
-  { href: "/creator-portal/campaigns", label: "Campaigns" },
-  { href: "/creator-portal/deliverables", label: "Deliverables" },
-  { href: "/creator-portal/publications", label: "Publications" },
-  { href: "/creator-portal/payments", label: "Payments" },
-  { href: "/creator-portal/vendor-ios", label: "Vendor IOs" },
-  { href: "/creator-portal/notifications", label: "Notifications" },
-  { href: "/creator-portal/profile", label: "Profile" },
-] as const;
 
 export default async function CreatorPortalLayout({
   children,
@@ -38,18 +27,14 @@ export default async function CreatorPortalLayout({
   }
 
   const unreadCount = await getCreatorUnreadNotificationCount();
-  const navItems: PortalNavItem[] = creatorNavItems.map((item) =>
-    item.href === "/creator-portal/notifications"
-      ? { ...item, badge: unreadCount }
-      : { ...item }
-  );
 
   return (
     <PortalShell
-      title="Creator Portal"
-      description="Campaign-focused execution for creator assignments, IOs, deliverables, and payment visibility."
+      title="Creator Workspace"
+      description="See what to do next. Your work stays connected to Thinkway."
       userLabel={creatorName}
-      navItems={navItems}
+      navItems={withCreatorHomeBadge(unreadCount)}
+      mobileNavPlacement="bottom"
     >
       {children}
     </PortalShell>

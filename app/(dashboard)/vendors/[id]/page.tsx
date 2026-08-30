@@ -89,7 +89,7 @@ export default async function VendorProfilePage({
 
   return (
     <DashboardShell
-      title="Creator workspace"
+      title="Creator Profile"
       hidePageHeader
       platformV6
       containedMain

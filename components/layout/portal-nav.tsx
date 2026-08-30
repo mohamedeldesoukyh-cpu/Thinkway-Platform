@@ -11,23 +11,27 @@ export type PortalNavItem = {
   badge?: number;
 };
 
+export function isPortalNavActive(pathname: string, href: string): boolean {
+  if (href === "/creator-portal" || href === "/client-portal") {
+    return pathname === href;
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export function PortalNav({ items }: { items: PortalNavItem[] }) {
   const pathname = usePathname();
 
   return (
     <nav className="space-y-1">
       {items.map((item) => {
-        const active =
-          item.href === "/creator-portal" || item.href === "/client-portal"
-            ? pathname === item.href
-            : pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const active = isPortalNavActive(pathname, item.href);
 
         return (
           <Link
             key={item.href}
             href={item.href}
             className={cn(
-              "flex items-center justify-between rounded-2xl px-3 py-2 text-sm font-medium transition-colors",
+              "flex min-h-11 items-center justify-between rounded-2xl px-3 py-2 text-sm font-medium transition-colors",
               active
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-foreground/80 hover:bg-muted hover:text-foreground"

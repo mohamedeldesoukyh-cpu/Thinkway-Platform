@@ -72,7 +72,7 @@ export function VendorProfile({ vendor }: VendorProfileProps) {
         className="mt-0 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden"
       >
         <nav
-          aria-label="Creator workspace sections"
+          aria-label="Creator Profile sections"
           className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-border px-[26px] py-2.5"
         >
           <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
