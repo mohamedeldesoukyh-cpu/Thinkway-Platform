@@ -2,10 +2,29 @@ import { CREATOR_INVITE_PASSWORD_MIN } from "@/features/creator-workspace/onboar
 
 export type CreatorInvitePasswordRuleId = "length" | "letter" | "number";
 
+export type CreatorInvitePasswordHintId = "case" | "symbol";
+
+export type CreatorInvitePasswordGuideId =
+  | CreatorInvitePasswordRuleId
+  | CreatorInvitePasswordHintId;
+
 export type CreatorInvitePasswordRule = {
   id: CreatorInvitePasswordRuleId;
   label: string;
   test: (password: string) => boolean;
+};
+
+export type CreatorInvitePasswordHint = {
+  id: CreatorInvitePasswordHintId;
+  label: string;
+  test: (password: string) => boolean;
+};
+
+export type CreatorInvitePasswordGuideItem = {
+  id: CreatorInvitePasswordGuideId;
+  label: string;
+  met: boolean;
+  required: boolean;
 };
 
 export const CREATOR_INVITE_PASSWORD_RULES: CreatorInvitePasswordRule[] = [
@@ -26,19 +45,18 @@ export const CREATOR_INVITE_PASSWORD_RULES: CreatorInvitePasswordRule[] = [
   },
 ];
 
-export const CREATOR_INVITE_PASSWORD_HINTS: { id: string; label: string; test: (password: string) => boolean }[] =
-  [
-    {
-      id: "case",
-      label: "Upper and lowercase letters",
-      test: (password) => /[a-z]/.test(password) && /[A-Z]/.test(password),
-    },
-    {
-      id: "symbol",
-      label: "A symbol (!@#$…)",
-      test: (password) => /[^A-Za-z0-9]/.test(password),
-    },
-  ];
+export const CREATOR_INVITE_PASSWORD_HINTS: CreatorInvitePasswordHint[] = [
+  {
+    id: "case",
+    label: "Upper and lowercase letters",
+    test: (password) => /[a-z]/.test(password) && /[A-Z]/.test(password),
+  },
+  {
+    id: "symbol",
+    label: "A symbol (!@#$…)",
+    test: (password) => /[^A-Za-z0-9]/.test(password),
+  },
+];
 
 export type CreatorInvitePasswordStrength =
   | "empty"
@@ -57,20 +75,23 @@ export const CREATOR_INVITE_PASSWORD_STRENGTH_LABEL: Record<
   very_strong: "Very strong",
 };
 
-export function evaluateCreatorInvitePasswordRules(password: string) {
-  return CREATOR_INVITE_PASSWORD_RULES.map((rule) => ({
-    id: rule.id,
-    label: rule.label,
-    met: rule.test(password),
-    required: true as const,
-  })).concat(
-    CREATOR_INVITE_PASSWORD_HINTS.map((rule) => ({
+export function evaluateCreatorInvitePasswordRules(
+  password: string
+): CreatorInvitePasswordGuideItem[] {
+  return [
+    ...CREATOR_INVITE_PASSWORD_RULES.map((rule) => ({
       id: rule.id,
       label: rule.label,
       met: rule.test(password),
-      required: false as const,
-    }))
-  );
+      required: true,
+    })),
+    ...CREATOR_INVITE_PASSWORD_HINTS.map((rule) => ({
+      id: rule.id,
+      label: rule.label,
+      met: rule.test(password),
+      required: false,
+    })),
+  ];
 }
 
 export function creatorInvitePasswordMeetsPolicy(password: string): boolean {
