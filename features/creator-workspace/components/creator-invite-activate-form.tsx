@@ -6,6 +6,8 @@ import { ThinkwayLogo } from "@/components/brand/thinkway-logo";
 import { Button } from "@/components/ui/button";
 import { LoginBrandPanel } from "@/features/auth/components/login-brand-panel";
 import {
+  CREATOR_INVITE_BRAND_TAGLINE,
+  CREATOR_INVITE_BRAND_TAGS,
   CREATOR_INVITE_CONTACT_EMAIL,
   CREATOR_INVITE_EXPIRED_HEADING,
   CREATOR_INVITE_EXPIRED_MESSAGE,
@@ -83,6 +85,12 @@ export function CreatorInviteActivateForm({
     if (resetState.message) setShowReset(true);
   }, [resetState.message]);
 
+  useEffect(() => {
+    if (continuePending || registerPending || acceptPending) {
+      setHideServerError(false);
+    }
+  }, [continuePending, registerPending, acceptPending]);
+
   function updatePassword(value: string) {
     setPassword(value);
     setClientError(null);
@@ -158,6 +166,7 @@ export function CreatorInviteActivateForm({
                     true
                   );
                   setClientError(message);
+                  if (!message) setHideServerError(false);
                 }}
               >
                 <input type="hidden" name="token" value={token} />
@@ -188,6 +197,7 @@ export function CreatorInviteActivateForm({
                     confirmPassword
                   );
                   setClientError(message);
+                  if (!message) setHideServerError(false);
                 }}
               >
                 <input type="hidden" name="token" value={token} />
@@ -235,7 +245,10 @@ export function CreatorInviteActivateForm({
               </div>
             )}
           </div>
-          <LoginBrandPanel />
+          <LoginBrandPanel
+            tagline={CREATOR_INVITE_BRAND_TAGLINE}
+            tags={CREATOR_INVITE_BRAND_TAGS}
+          />
         </div>
       </div>
     </div>

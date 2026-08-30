@@ -261,6 +261,34 @@
     gap: 6px;
   }
 
+  .login-v2-card-invite .login-v2-brand-content {
+    justify-content: center;
+    padding: 28px 20px 28px 52px;
+  }
+
+  .login-v2-card-invite .login-v2-illus {
+    margin-bottom: 16px;
+  }
+
+  .login-v2-card-invite .login-v2-brand-tagline {
+    max-width: 260px;
+    margin-bottom: 16px;
+  }
+
+  .login-v2-card-invite .login-v2-tags {
+    flex-wrap: nowrap;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .login-v2-card-invite .login-v2-tag {
+    flex: 0 0 auto;
+    gap: 5px;
+    padding: 5px 10px;
+    font-size: 10.5px;
+    white-space: nowrap;
+  }
+
   .login-v2-form-panel {
     position: relative;
     z-index: 2;

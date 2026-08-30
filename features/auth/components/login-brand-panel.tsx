@@ -8,7 +8,15 @@ const FEATURE_TAGS = [
   "SOOH",
 ] as const;
 
-export function LoginBrandPanel() {
+const DEFAULT_TAGLINE = "Manage IOs, influencers & campaigns — all in one place.";
+
+export function LoginBrandPanel({
+  tagline = DEFAULT_TAGLINE,
+  tags = FEATURE_TAGS,
+}: {
+  tagline?: string;
+  tags?: readonly string[];
+}) {
   return (
     <div aria-hidden className="login-v2-brand-panel hidden min-[681px]:flex">
       <div className="login-v2-orb login-v2-orb-1" />
@@ -50,12 +58,10 @@ export function LoginBrandPanel() {
           <br />
           friend!
         </h2>
-        <p className="login-v2-brand-tagline">
-          Manage IOs, influencers &amp; campaigns — all in one place.
-        </p>
+        <p className="login-v2-brand-tagline">{tagline}</p>
 
         <div className="login-v2-tags">
-          {FEATURE_TAGS.map((tag) => (
+          {tags.map((tag) => (
             <span key={tag} className="login-v2-tag">
               <span className="login-v2-tag-dot" />
               {tag}

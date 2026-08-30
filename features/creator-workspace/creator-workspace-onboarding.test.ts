@@ -10,6 +10,8 @@ import { classifyPagePath, classifyServerActionModule } from "@/lib/security/wor
 import { authorizeWorkspacePath } from "@/lib/security/workspace-auth";
 import { resolveRateLimitCategory } from "@/lib/security/rate-limit-policy";
 import {
+  CREATOR_INVITE_BRAND_TAGLINE,
+  CREATOR_INVITE_BRAND_TAGS,
   CREATOR_INVITE_CONFLICT_MESSAGE,
   CREATOR_INVITE_EMAIL_MISMATCH_MESSAGE,
   CREATOR_INVITE_PASSWORD_MIN,
@@ -52,6 +54,10 @@ const activateForm = readFileSync(
 );
 const passwordFields = readFileSync(
   resolve("features/creator-workspace/components/creator-invite-password-fields.tsx"),
+  "utf8"
+);
+const loginBrandPanel = readFileSync(
+  resolve("features/auth/components/login-brand-panel.tsx"),
   "utf8"
 );
 const internalActions = readFileSync(
@@ -326,6 +332,23 @@ describe("Creator Workspace invitation password", () => {
     assert.match(activateForm, /LoginBrandPanel/);
     assert.match(activateForm, /login-v2-card-invite/);
     assert.match(activateForm, /login-v2-invite/);
+    assert.match(activateForm, /CREATOR_INVITE_BRAND_TAGLINE/);
+    assert.match(activateForm, /CREATOR_INVITE_BRAND_TAGS/);
+    assert.doesNotMatch(activateForm, /Insertion Orders/);
+    assert.doesNotMatch(activateForm, /Invoicing/);
+    assert.doesNotMatch(activateForm, /SOOH/);
+    assert.equal(
+      CREATOR_INVITE_BRAND_TAGLINE,
+      "Manage your campaigns, deliverables and payments — in one place."
+    );
+    assert.deepEqual([...CREATOR_INVITE_BRAND_TAGS], [
+      "Campaigns",
+      "Deliverables",
+      "Payments",
+      "Profile",
+    ]);
+    assert.match(loginBrandPanel, /Insertion Orders/);
+    assert.match(activateForm, /setHideServerError\(false\)/);
     assert.match(activateForm, /syncCreatorInvitePasswordFields/);
     assert.doesNotMatch(passwordFields, /disabled=/);
     assert.match(passwordFields, /login-v2-eye/);

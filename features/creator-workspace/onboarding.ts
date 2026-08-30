@@ -22,6 +22,16 @@ export const CREATOR_INVITE_CONFLICT_MESSAGE =
 export const CREATOR_INVITE_STAFF_MESSAGE =
   "This email belongs to a Thinkway staff or client login and cannot activate Creator Workspace.";
 
+export const CREATOR_INVITE_BRAND_TAGLINE =
+  "Manage your campaigns, deliverables and payments — in one place.";
+
+export const CREATOR_INVITE_BRAND_TAGS = [
+  "Campaigns",
+  "Deliverables",
+  "Payments",
+  "Profile",
+] as const;
+
 export const CREATOR_INVITE_EMAIL_MISMATCH_MESSAGE =
   "Sign in with the email this invitation was sent to.";
 
