@@ -843,6 +843,89 @@
     opacity: 0.7;
   }
 
+  .login-v2-password-guide {
+    display: grid;
+    gap: 10px;
+    margin: -2px 0 12px;
+  }
+
+  .login-v2-password-strength {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .login-v2-password-strength-bars {
+    display: flex;
+    flex: 1;
+    gap: 4px;
+  }
+
+  .login-v2-password-strength-bar {
+    height: 4px;
+    flex: 1;
+    border-radius: 99px;
+    background: #e8eef8;
+  }
+
+  .login-v2-password-strength-bar[data-on="true"][data-tone="weak"] {
+    background: #ff4d4f;
+  }
+
+  .login-v2-password-strength-bar[data-on="true"][data-tone="medium"] {
+    background: #fa8c16;
+  }
+
+  .login-v2-password-strength-bar[data-on="true"][data-tone="strong"],
+  .login-v2-password-strength-bar[data-on="true"][data-tone="very_strong"] {
+    background: #1d9e75;
+  }
+
+  .login-v2-password-strength-label {
+    min-width: 86px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #8899bb;
+  }
+
+  .login-v2-password-strength-label[data-tone="weak"] {
+    color: #cf1322;
+  }
+
+  .login-v2-password-strength-label[data-tone="medium"] {
+    color: #d46b08;
+  }
+
+  .login-v2-password-strength-label[data-tone="strong"],
+  .login-v2-password-strength-label[data-tone="very_strong"] {
+    color: #1d9e75;
+  }
+
+  .login-v2-password-rules {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .login-v2-password-rule {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    line-height: 1.35;
+    color: #8899bb;
+  }
+
+  .login-v2-password-rule[data-met="true"] {
+    color: #1d9e75;
+  }
+
+  .login-v2-password-match[data-met="false"] {
+    color: #cf1322;
+  }
+
   @media (max-width: 680px) {
     .login-v2-form-panel {
       flex: 1;

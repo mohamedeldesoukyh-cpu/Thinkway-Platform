@@ -2,7 +2,8 @@
 
 import { redirect } from "next/navigation";
 
-import { CREATOR_INVITE_INVALID_MESSAGE, CREATOR_INVITE_PASSWORD_MIN } from "@/features/creator-workspace/onboarding";
+import { CREATOR_INVITE_INVALID_MESSAGE } from "@/features/creator-workspace/onboarding";
+import { validateCreatorInvitePassword } from "@/features/creator-workspace/password";
 import {
   acceptCreatorInviteForUser,
   previewCreatorInvite,
@@ -109,15 +110,11 @@ export async function continueCreatorInviteSessionAction(
     return { ok: false, message: CREATOR_INVITE_INVALID_MESSAGE };
   }
   if (password || confirmPassword) {
-    if (password.length < CREATOR_INVITE_PASSWORD_MIN) {
-      return {
-        ok: false,
-        message: `Password must be at least ${CREATOR_INVITE_PASSWORD_MIN} characters.`,
-      };
-    }
-    if (password !== confirmPassword) {
-      return { ok: false, message: "Passwords do not match." };
-    }
+    const passwordCheck = validateCreatorInvitePassword({
+      password,
+      confirmPassword,
+    });
+    if (!passwordCheck.ok) return passwordCheck;
     const { error } = await supabase.auth.updateUser({ password });
     if (error) return { ok: false, message: error.message };
   }

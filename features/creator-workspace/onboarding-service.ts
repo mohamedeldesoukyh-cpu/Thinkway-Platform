@@ -7,7 +7,6 @@ import {
   CREATOR_INVITE_EMAIL_MISMATCH_MESSAGE,
   CREATOR_INVITE_EXPIRED_MESSAGE,
   CREATOR_INVITE_INVALID_MESSAGE,
-  CREATOR_INVITE_PASSWORD_MIN,
   CREATOR_INVITE_TTL_MS,
   CREATOR_WORKSPACE_ACCESS_LABEL,
   assertCreatorInviteAccountLinkable,
@@ -22,6 +21,7 @@ import {
   type CreatorInvitePreview,
   type CreatorWorkspaceAccessView,
 } from "@/features/creator-workspace/onboarding";
+import { validateCreatorInvitePassword } from "@/features/creator-workspace/password";
 import { generateInviteToken, hashInviteToken } from "@/lib/auth/invite-token";
 import { buildCreatorWorkspaceInviteEmail } from "@/lib/email/creator-workspace-invite-email";
 import { assertOutboundEmailReady, sendEmail } from "@/lib/email/provider";
@@ -584,12 +584,11 @@ export async function registerCreatorFromInvite(input: {
   password: string;
   confirmPassword: string;
 }): Promise<{ ok: true; email: string } | { ok: false; message: string }> {
-  if (input.password.length < CREATOR_INVITE_PASSWORD_MIN) {
-    return { ok: false, message: `Password must be at least ${CREATOR_INVITE_PASSWORD_MIN} characters.` };
-  }
-  if (input.password !== input.confirmPassword) {
-    return { ok: false, message: "Passwords do not match." };
-  }
+  const passwordCheck = validateCreatorInvitePassword({
+    password: input.password,
+    confirmPassword: input.confirmPassword,
+  });
+  if (!passwordCheck.ok) return passwordCheck;
   const db = serviceDb();
   if (!db) return { ok: false, message: "Creator Workspace is temporarily unavailable." };
   let tokenHash: string;

@@ -12,6 +12,7 @@ import { resolveRateLimitCategory } from "@/lib/security/rate-limit-policy";
 import {
   CREATOR_INVITE_CONFLICT_MESSAGE,
   CREATOR_INVITE_EMAIL_MISMATCH_MESSAGE,
+  CREATOR_INVITE_PASSWORD_MIN,
   CREATOR_INVITE_STAFF_MESSAGE,
   CREATOR_INVITE_TTL_MS,
   CREATOR_WORKSPACE_ACCESS_LABEL,
@@ -26,6 +27,10 @@ import {
   emailsMatchForInvite,
   projectCreatorWorkspaceAccessStatus,
 } from "@/features/creator-workspace/onboarding";
+import {
+  scoreCreatorInvitePassword,
+  validateCreatorInvitePassword,
+} from "@/features/creator-workspace/password";
 
 const migration = readFileSync(
   resolve("supabase/migrations/20260830180000_creator_workspace_invites.sql"),
@@ -43,6 +48,10 @@ const publicActions = readFileSync(resolve("app/creator-invite/actions.ts"), "ut
 const publicPage = readFileSync(resolve("app/creator-invite/page.tsx"), "utf8");
 const activateForm = readFileSync(
   resolve("features/creator-workspace/components/creator-invite-activate-form.tsx"),
+  "utf8"
+);
+const passwordFields = readFileSync(
+  resolve("features/creator-workspace/components/creator-invite-password-fields.tsx"),
   "utf8"
 );
 const internalActions = readFileSync(
@@ -268,6 +277,61 @@ describe("Creator Workspace invitation contract", () => {
     assert.match(internalActions, /activateUrl: result\.activateUrl/);
     assert.match(internalActions, /consumeRateLimit/);
     assert.match(internalActions, /category: "invite"/);
+  });
+});
+
+describe("Creator Workspace invitation password", () => {
+  it("requires matching passwords that meet the published formula", () => {
+    assert.equal(CREATOR_INVITE_PASSWORD_MIN, 8);
+    assert.deepEqual(
+      validateCreatorInvitePassword({ password: "Thinkway1", confirmPassword: "Thinkway1" }),
+      { ok: true }
+    );
+    assert.deepEqual(
+      validateCreatorInvitePassword({ password: "Thinkway1", confirmPassword: "Thinkway2" }),
+      { ok: false, message: "Passwords do not match." }
+    );
+    assert.deepEqual(
+      validateCreatorInvitePassword({ password: "short1", confirmPassword: "short1" }),
+      { ok: false, message: "Password must be at least 8 characters." }
+    );
+    assert.deepEqual(
+      validateCreatorInvitePassword({ password: "thinkwaymedia", confirmPassword: "thinkwaymedia" }),
+      { ok: false, message: "Password must include at least one number." }
+    );
+    assert.deepEqual(
+      validateCreatorInvitePassword({ password: "12345678", confirmPassword: "12345678" }),
+      { ok: false, message: "Password must include at least one letter." }
+    );
+    assert.deepEqual(
+      validateCreatorInvitePassword({
+        password: "",
+        confirmPassword: "",
+        optional: true,
+      }),
+      { ok: true }
+    );
+  });
+
+  it("scores weak, medium, strong, and very strong as the user types", () => {
+    assert.equal(scoreCreatorInvitePassword("").strength, "empty");
+    assert.equal(scoreCreatorInvitePassword("abc").strength, "weak");
+    assert.equal(scoreCreatorInvitePassword("thinkway1").strength, "medium");
+    assert.equal(scoreCreatorInvitePassword("Thinkway1").strength, "strong");
+    assert.equal(scoreCreatorInvitePassword("Thinkway1!").strength, "very_strong");
+  });
+
+  it("keeps typed passwords, shows the eye, and guides the accepted formula", () => {
+    assert.match(activateForm, /useState\(""\)/);
+    assert.match(activateForm, /syncCreatorInvitePasswordFields/);
+    assert.doesNotMatch(passwordFields, /disabled=/);
+    assert.match(passwordFields, /login-v2-eye/);
+    assert.match(passwordFields, /Show password/);
+    assert.match(passwordFields, /login-v2-password-rule/);
+    assert.match(passwordFields, /Passwords match/);
+    assert.match(passwordFields, /login-v2-password-strength/);
+    assert.match(service, /validateCreatorInvitePassword/);
+    assert.match(publicActions, /validateCreatorInvitePassword/);
   });
 });
 

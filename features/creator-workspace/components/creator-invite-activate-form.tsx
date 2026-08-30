@@ -4,10 +4,18 @@ import { useActionState, useEffect, useState } from "react";
 
 import { ThinkwayLogo } from "@/components/brand/thinkway-logo";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { CREATOR_INVITE_CONTACT_EMAIL, CREATOR_INVITE_EXPIRED_HEADING, CREATOR_INVITE_EXPIRED_MESSAGE, CREATOR_INVITE_INVALID_MESSAGE, CREATOR_INVITE_PASSWORD_MIN } from "@/features/creator-workspace/onboarding";
+import {
+  CREATOR_INVITE_CONTACT_EMAIL,
+  CREATOR_INVITE_EXPIRED_HEADING,
+  CREATOR_INVITE_EXPIRED_MESSAGE,
+  CREATOR_INVITE_INVALID_MESSAGE,
+} from "@/features/creator-workspace/onboarding";
 import type { CreatorInviteFailureCode, CreatorInvitePreview } from "@/features/creator-workspace/onboarding";
+import {
+  CreatorInviteNewPasswordFields,
+  CreatorInviteSecretField,
+  syncCreatorInvitePasswordFields,
+} from "@/features/creator-workspace/components/creator-invite-password-fields";
 import {
   acceptCreatorInviteAction,
   continueCreatorInviteSessionAction,
@@ -53,9 +61,13 @@ export function CreatorInviteActivateForm({
     INITIAL
   );
   const [showReset, setShowReset] = useState(false);
+  const [clientError, setClientError] = useState<string | null>(null);
+  const [hideServerError, setHideServerError] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const pending = registerPending || acceptPending || resetPending || continuePending;
-  const error =
+  const serverError =
     errorMessage ||
     (registerState.message && !registerState.ok
       ? registerState.message
@@ -64,10 +76,23 @@ export function CreatorInviteActivateForm({
         : continueState.message && !continueState.ok
           ? continueState.message
           : null);
+  const error = clientError || (hideServerError ? null : serverError);
 
   useEffect(() => {
     if (resetState.message) setShowReset(true);
   }, [resetState.message]);
+
+  function updatePassword(value: string) {
+    setPassword(value);
+    setClientError(null);
+    setHideServerError(true);
+  }
+
+  function updateConfirmPassword(value: string) {
+    setConfirmPassword(value);
+    setClientError(null);
+    setHideServerError(true);
+  }
 
   return (
     <div className="login-screen login-v2">
@@ -123,88 +148,79 @@ export function CreatorInviteActivateForm({
                 <p className="text-sm text-muted-foreground">{CREATOR_INVITE_INVALID_MESSAGE}</p>
               )
             ) : sessionMatches ? (
-              <form action={continueAction} className="grid gap-3">
+              <form
+                action={continueAction}
+                className="login-v2-form"
+                onSubmit={(event) => {
+                  const message = syncCreatorInvitePasswordFields(
+                    event,
+                    password,
+                    confirmPassword,
+                    true
+                  );
+                  setClientError(message);
+                }}
+              >
                 <input type="hidden" name="token" value={token} />
                 <p className="text-sm text-muted-foreground">
                   You are signed in as this email. Continue to finish activation, or set a new
                   password if you used the reset link.
                 </p>
-                <div className="grid gap-2">
-                  <Label htmlFor="recovery_password">New password (optional)</Label>
-                  <Input
-                    id="recovery_password"
-                    name="password"
-                    type="password"
-                    autoComplete="new-password"
-                    minLength={CREATOR_INVITE_PASSWORD_MIN}
-                    disabled={pending}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="recovery_confirm_password">Confirm new password</Label>
-                  <Input
-                    id="recovery_confirm_password"
-                    name="confirm_password"
-                    type="password"
-                    autoComplete="new-password"
-                    minLength={CREATOR_INVITE_PASSWORD_MIN}
-                    disabled={pending}
-                  />
-                </div>
-                <Button type="submit" disabled={pending}>
+                <CreatorInviteNewPasswordFields
+                  password={password}
+                  confirmPassword={confirmPassword}
+                  onPasswordChange={updatePassword}
+                  onConfirmChange={updateConfirmPassword}
+                  optional
+                  error={Boolean(error)}
+                />
+                <Button type="submit" className="mt-1 w-full" disabled={pending}>
                   {continuePending ? "Opening…" : "Continue to Creator Workspace"}
                 </Button>
               </form>
             ) : preview.mode === "register" ? (
-              <form action={registerAction} className="grid gap-3">
+              <form
+                action={registerAction}
+                className="login-v2-form"
+                onSubmit={(event) => {
+                  const message = syncCreatorInvitePasswordFields(
+                    event,
+                    password,
+                    confirmPassword
+                  );
+                  setClientError(message);
+                }}
+              >
                 <input type="hidden" name="token" value={token} />
-                <div className="grid gap-2">
-                  <Label htmlFor="password">Create password</Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="new-password"
-                    minLength={CREATOR_INVITE_PASSWORD_MIN}
-                    required
-                    disabled={pending}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="confirm_password">Confirm password</Label>
-                  <Input
-                    id="confirm_password"
-                    name="confirm_password"
-                    type="password"
-                    autoComplete="new-password"
-                    minLength={CREATOR_INVITE_PASSWORD_MIN}
-                    required
-                    disabled={pending}
-                  />
-                </div>
-                <Button type="submit" disabled={pending}>
+                <CreatorInviteNewPasswordFields
+                  password={password}
+                  confirmPassword={confirmPassword}
+                  onPasswordChange={updatePassword}
+                  onConfirmChange={updateConfirmPassword}
+                  error={Boolean(error)}
+                />
+                <Button type="submit" className="mt-1 w-full" disabled={pending}>
                   {registerPending ? "Activating…" : "Activate Creator Workspace"}
                 </Button>
               </form>
             ) : (
               <div className="grid gap-3">
-                <form action={acceptAction} className="grid gap-3">
+                <form action={acceptAction} className="login-v2-form">
                   <input type="hidden" name="token" value={token} />
                   <p className="text-sm text-muted-foreground">
                     This email already has a Thinkway account. Sign in to accept the invitation.
                   </p>
-                  <div className="grid gap-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      name="password"
-                      type="password"
-                      autoComplete="current-password"
-                      required
-                      disabled={pending}
-                    />
-                  </div>
-                  <Button type="submit" disabled={pending}>
+                  <CreatorInviteSecretField
+                    id="password"
+                    name="password"
+                    label="Password"
+                    value={password}
+                    onChange={updatePassword}
+                    autoComplete="current-password"
+                    required
+                    error={Boolean(error)}
+                  />
+                  <Button type="submit" className="mt-1 w-full" disabled={pending}>
                     {acceptPending ? "Signing in…" : "Accept invitation"}
                   </Button>
                 </form>
