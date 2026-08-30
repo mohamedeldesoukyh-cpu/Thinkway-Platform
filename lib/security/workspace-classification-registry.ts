@@ -87,6 +87,7 @@ export const API_ROUTE_CLASSIFICATIONS: Record<string, WorkspaceClass> = {
   "/api/campaigns/[id]/performance/document": "internal_workspace",
   "/api/campaigns/[id]/publications": "internal_workspace",
   "/api/campaigns/[id]/publications-bundle": "internal_workspace",
+  "/api/campaigns/[id]/client-link": "internal_workspace",
 
   "/api/clients/[clientId]/documents": "internal_workspace",
   "/api/creators/avatar": "internal_workspace",
@@ -95,6 +96,7 @@ export const API_ROUTE_CLASSIFICATIONS: Record<string, WorkspaceClass> = {
   "/api/review/content": "public",
   "/api/review/quotation": "public",
   "/api/review/brand-logo": "public",
+  "/api/review/request-access": "public",
   "/api/vendors/platform-accounts/enrich": "internal_workspace",
   "/api/vendors/crm-import-search": "internal_workspace",
 

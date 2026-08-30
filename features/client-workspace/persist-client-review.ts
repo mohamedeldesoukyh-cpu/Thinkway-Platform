@@ -16,6 +16,8 @@ import {
   collectQuotationFamilyIds,
   campaignClientReviewIdsToStop,
   mergePersistedClientSelection,
+  restoreStatusAfterClientLinkStop,
+  shouldRestoreStoppedCampaignClientReviews,
 } from "./client-review-selection";
 import { hydrateClientSelection, resolveClientSelectionFreeze } from "./selection-flow";
 import { parseSourceSnapshot } from "./snapshot";
@@ -789,6 +791,9 @@ export async function peekClientReviewShareLink(input: {
   if (row && clientReviewSharePeekExists(row.status)) {
     return { exists: true, reviewNumber: row.review_number };
   }
+  if (row?.status === "revoked") {
+    return { exists: false, reviewNumber: row.review_number };
+  }
 
   const journey = await findJourneyForScope(db, {
     source: isCampaignScope(input.scope) ? "studio" : input.scope.source,
@@ -861,7 +866,10 @@ export async function stopCampaignClientReviewShareLink(input: {
           event_type: "link_revoked",
           actor_kind: "internal",
           actor_label: "Thinkway",
-          payload: { campaign_header_id: input.campaignHeaderId },
+          payload: {
+            campaign_header_id: input.campaignHeaderId,
+            previous_status: reviews.find((row) => row.id === reviewId)?.status ?? null,
+          },
         })) as never
       );
       if (eventError) {
@@ -891,7 +899,9 @@ export async function stopCampaignClientReviewShareLink(input: {
     const journeyRows = (journeys ?? []) as Array<{ id: string; share_token?: string | null }>;
     const journeyHadToken = journeyRows.some((row) => Boolean(row.share_token?.trim()));
 
-    if (journeyRows.length > 0) {
+    // Keep the journey token when reviews were revoked so Activate reuses the
+    // same /review/{id}?sign= address. Only clear an orphan token with nothing to restore.
+    if (revokeIds.length === 0 && journeyRows.length > 0 && journeyHadToken) {
       const { error: journeyError } = await db
         .from("campaign_client_journeys" as never)
         .update({
@@ -904,12 +914,123 @@ export async function stopCampaignClientReviewShareLink(input: {
       }
     }
 
-    return { ok: true, stopped: revokeIds.length > 0 || journeyHadToken };
+    return { ok: true, stopped: revokeIds.length > 0 || (revokeIds.length === 0 && journeyHadToken) };
   } catch (error) {
     return {
       ok: false,
       message:
         error instanceof Error ? error.message : "Could not stop the Client Workspace link.",
+    };
+  }
+}
+
+export async function restoreStoppedCampaignClientReviewShareLink(input: {
+  supabase: SupabaseClient;
+  campaignHeaderId: string;
+  userId: string;
+}): Promise<{ ok: true; restored: boolean } | { ok: false; message: string }> {
+  try {
+    const db = shareLookupClient(input.supabase);
+    const { data: reviewRows, error: reviewError } = await db
+      .from("campaign_client_reviews" as never)
+      .select("id, status, review_number")
+      .eq("campaign_header_id", input.campaignHeaderId);
+    if (reviewError) {
+      return { ok: false, message: reviewError.message || "Could not restore the Client Workspace link." };
+    }
+
+    const reviews = (reviewRows ?? []) as Array<{
+      id: string;
+      status: string;
+      review_number: number;
+    }>;
+    if (!shouldRestoreStoppedCampaignClientReviews(reviews)) {
+      return { ok: true, restored: false };
+    }
+
+    const restoreIds = reviews.filter((row) => row.status === "revoked").map((row) => row.id);
+    if (restoreIds.length === 0) {
+      return { ok: true, restored: false };
+    }
+
+    const { data: eventRows } = await db
+      .from("campaign_client_review_events" as never)
+      .select("review_id, payload, created_at")
+      .in("review_id", restoreIds)
+      .eq("event_type", "link_revoked")
+      .order("created_at", { ascending: false });
+
+    const previousByReviewId = new Map<string, string | null>();
+    for (const event of (eventRows ?? []) as Array<{
+      review_id: string;
+      payload?: { previous_status?: string | null } | null;
+    }>) {
+      if (previousByReviewId.has(event.review_id)) continue;
+      previousByReviewId.set(event.review_id, event.payload?.previous_status ?? null);
+    }
+
+    const now = new Date().toISOString();
+    for (const reviewId of restoreIds) {
+      const status = restoreStatusAfterClientLinkStop(previousByReviewId.get(reviewId));
+      const { error: restoreError } = await db
+        .from("campaign_client_reviews" as never)
+        .update({
+          status,
+          revoked_at: null,
+          updated_at: now,
+        } as never)
+        .eq("id", reviewId);
+      if (restoreError) {
+        const missingRevokedAt = /revoked_at/i.test(restoreError.message);
+        const { error: fallbackError } = missingRevokedAt
+          ? await db
+              .from("campaign_client_reviews" as never)
+              .update({
+                status,
+                updated_at: now,
+              } as never)
+              .eq("id", reviewId)
+          : { error: restoreError };
+        if (fallbackError) {
+          return {
+            ok: false,
+            message: fallbackError.message || "Could not restore the Client Workspace link.",
+          };
+        }
+      }
+    }
+
+    const { error: eventError } = await db.from("campaign_client_review_events" as never).insert(
+      restoreIds.map((reviewId) => ({
+        review_id: reviewId,
+        event_type: "link_restored",
+        actor_kind: "internal",
+        actor_label: "Thinkway",
+        payload: { campaign_header_id: input.campaignHeaderId },
+      })) as never
+    );
+    if (eventError) {
+      console.warn("[client-workspace] link_restored event insert failed", eventError.message);
+    }
+
+    await logAuditEvent(db as never, {
+      userId: input.userId,
+      action: "update",
+      entityType: "campaign_client_review",
+      entityId: restoreIds[0],
+      metadata: {
+        audit_action: "client_review_link_restored",
+        campaign_header_id: input.campaignHeaderId,
+        review_ids: restoreIds,
+      },
+    });
+
+    return { ok: true, restored: true };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error ? error.message : "Could not restore the Client Workspace link.",
     };
   }
 }

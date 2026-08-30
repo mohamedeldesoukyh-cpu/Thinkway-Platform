@@ -5,11 +5,6 @@ import { Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
 
 import { PlatformV6Toggle } from "@/components/platform/platform-v6-layout";
-import {
-  ensureCampaignClientReviewLinkAction,
-  revealCampaignClientReviewShareAction,
-  stopCampaignClientReviewShareAction,
-} from "@/features/client-workspace/actions/create-from-campaign-action";
 import { ClientReviewShareDialog } from "@/features/client-workspace/components/client-review-share-dialog";
 import {
   CAMPAIGN_CLIENT_WORKSPACE_LINK_LABEL,
@@ -29,9 +24,65 @@ type Props = {
   link?: CampaignClientWorkspaceLink;
 };
 
-function actionErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.message.trim()) return error.message;
-  return fallback;
+type ClientLinkApiSuccess = {
+  ok: true;
+  url?: string;
+  reviewNumber?: number;
+  created?: boolean;
+  stopped?: boolean;
+  message?: string;
+};
+
+type ClientLinkApiFailure = {
+  ok: false;
+  message: string;
+  blockers?: string[];
+};
+
+async function postCampaignClientLink(
+  campaignHeaderId: string,
+  op: "activate" | "stop" | "reveal"
+): Promise<ClientLinkApiSuccess | ClientLinkApiFailure> {
+  const response = await fetch(`/api/campaigns/${campaignHeaderId}/client-link`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ op }),
+  });
+  const payload = (await response.json().catch(() => null)) as {
+    ok?: boolean;
+    url?: string;
+    reviewNumber?: number;
+    created?: boolean;
+    stopped?: boolean;
+    message?: string;
+    blockers?: string[];
+    error?: string;
+  } | null;
+
+  if (payload?.ok === true) {
+    return {
+      ok: true,
+      url: payload.url,
+      reviewNumber: payload.reviewNumber,
+      created: payload.created,
+      stopped: payload.stopped,
+      message: payload.message,
+    };
+  }
+
+  const raw = payload?.message ?? payload?.error ?? "";
+  return {
+    ok: false,
+    message: clientLinkErrorMessage(raw, "Could not update the Client Workspace link."),
+    blockers: payload?.blockers,
+  };
+}
+
+function clientLinkErrorMessage(message: string, fallback: string): string {
+  if (/Server Components render|digest property is included/i.test(message)) {
+    return "Could not update the Client Workspace link. Refresh and try again.";
+  }
+  return message.trim() || fallback;
 }
 
 export function CampaignListClientLinkCell({ campaignHeaderId, link }: Props) {
@@ -67,18 +118,27 @@ export function CampaignListClientLinkCell({ campaignHeaderId, link }: Props) {
     if (pending) return;
     setPending(true);
     try {
-      const result = await ensureCampaignClientReviewLinkAction({ campaignHeaderId });
+      const result = await postCampaignClientLink(campaignHeaderId, "activate");
       if (!result.ok) {
         toast.error(result.message, {
-          description: result.blockers.slice(0, 4).join(" "),
+          description: result.blockers?.slice(0, 4).join(" "),
         });
+        return;
+      }
+      if (!result.url || result.reviewNumber == null) {
+        toast.error("Could not activate the Client Workspace link.");
         return;
       }
       setState("active");
       openShare(result.url, result.reviewNumber);
-      if (result.created) toast.success(result.message);
+      if (result.message) toast.success(result.message);
     } catch (error) {
-      toast.error(actionErrorMessage(error, "Could not activate the Client Workspace link."));
+      toast.error(
+        clientLinkErrorMessage(
+          error instanceof Error ? error.message : "",
+          "Could not activate the Client Workspace link."
+        )
+      );
     } finally {
       setPending(false);
     }
@@ -88,7 +148,7 @@ export function CampaignListClientLinkCell({ campaignHeaderId, link }: Props) {
     if (pending) return;
     setPending(true);
     try {
-      const result = await stopCampaignClientReviewShareAction({ campaignHeaderId });
+      const result = await postCampaignClientLink(campaignHeaderId, "stop");
       if (!result.ok) {
         toast.error(result.message);
         return;
@@ -97,9 +157,14 @@ export function CampaignListClientLinkCell({ campaignHeaderId, link }: Props) {
       setShareOpen(false);
       setShareUrl(null);
       setState("off");
-      toast.success(result.message);
+      toast.success(result.message ?? "Client Workspace link stopped.");
     } catch (error) {
-      toast.error(actionErrorMessage(error, "Could not stop the Client Workspace link."));
+      toast.error(
+        clientLinkErrorMessage(
+          error instanceof Error ? error.message : "",
+          "Could not stop the Client Workspace link."
+        )
+      );
     } finally {
       setPending(false);
     }
@@ -122,14 +187,23 @@ export function CampaignListClientLinkCell({ campaignHeaderId, link }: Props) {
         openShare(cached.url, cached.reviewNumber);
         return;
       }
-      const result = await revealCampaignClientReviewShareAction({ campaignHeaderId });
+      const result = await postCampaignClientLink(campaignHeaderId, "reveal");
       if (!result.ok) {
         toast.error(result.message);
         return;
       }
+      if (!result.url || result.reviewNumber == null) {
+        toast.error("Could not open the Client Workspace link.");
+        return;
+      }
       openShare(result.url, result.reviewNumber);
     } catch (error) {
-      toast.error(actionErrorMessage(error, "Could not open the Client Workspace link."));
+      toast.error(
+        clientLinkErrorMessage(
+          error instanceof Error ? error.message : "",
+          "Could not open the Client Workspace link."
+        )
+      );
     } finally {
       setPending(false);
     }

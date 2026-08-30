@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { ClientWorkspaceApp } from "@/features/client-workspace/components/client-workspace-app";
 import { ClientWorkspaceClosed } from "@/features/client-workspace/components/client-workspace-closed";
+import { ClientWorkspaceExpiredGate } from "@/features/client-workspace/components/client-workspace-expired-gate";
 import { InvalidReviewLink } from "@/features/client-workspace/components/client-review-entry";
 import { CLIENT_WORKSPACE_SECTIONS, type ClientWorkspaceSectionId } from "@/features/client-workspace/constants";
 import { loadClientWorkspace } from "@/features/client-workspace/load-client-workspace";
@@ -57,10 +58,16 @@ export default async function ClientWorkspaceSectionPage({ params, searchParams 
     notFound();
   }
   return (
-    <ClientWorkspaceApp
-      view={loaded.view}
+    <ClientWorkspaceExpiredGate
+      expired={loaded.view.linkExpired}
+      reviewId={loaded.view.review.id}
       token={token}
-      section={resolved}
-    />
+    >
+      <ClientWorkspaceApp
+        view={loaded.view}
+        token={token}
+        section={resolved}
+      />
+    </ClientWorkspaceExpiredGate>
   );
 }

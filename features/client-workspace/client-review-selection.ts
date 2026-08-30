@@ -1,6 +1,10 @@
 import { quotationIsConvertedToCampaign } from "@/lib/commercial/quotation-validity";
 
-import type { ClientCreatorSelectionState } from "./constants";
+import {
+  CLIENT_REVIEW_STATUSES,
+  type ClientCreatorSelectionState,
+  type ClientReviewStatus,
+} from "./constants";
 
 export function quotationIsMovedToCampaign(detail: {
   campaign_header_id?: string | null;
@@ -52,7 +56,10 @@ export const CAMPAIGN_CLIENT_WORKSPACE_LINK_LABEL: Record<
   none: "None",
 };
 
-/** Portfolio list: Active unless the latest review is revoked with no remaining journey token. */
+/**
+ * Portfolio list: Off when the latest review is revoked, even if the journey
+ * still holds the same share token so Stop → Activate can reuse the address.
+ */
 export function campaignClientWorkspaceLinkFromLatest(input: {
   latestStatus?: string | null;
   reviewNumber?: number | null;
@@ -68,13 +75,38 @@ export function campaignClientWorkspaceLinkFromLatest(input: {
   ): CampaignClientWorkspaceLink =>
     reviewNumber != null ? { state, reviewNumber } : { state };
 
-  if (clientReviewSharePeekExists(status) || input.journeyHasShareToken) {
-    return withNumber("active");
-  }
   if (status === "revoked") {
     return withNumber("off");
   }
+  if (clientReviewSharePeekExists(status) || input.journeyHasShareToken) {
+    return withNumber("active");
+  }
   return { state: "none" };
+}
+
+/** Re-activate restores the status Stop recorded, never minting a new review. */
+export function restoreStatusAfterClientLinkStop(
+  previousStatus?: string | null
+): ClientReviewStatus {
+  const status = previousStatus?.trim() ?? "";
+  if (
+    status &&
+    status !== "revoked" &&
+    (CLIENT_REVIEW_STATUSES as readonly string[]).includes(status)
+  ) {
+    return status as ClientReviewStatus;
+  }
+  return "awaiting_review";
+}
+
+export function shouldRestoreStoppedCampaignClientReviews(
+  rows: ReadonlyArray<{ status: string; review_number: number }>
+): boolean {
+  let latest: { status: string; review_number: number } | undefined;
+  for (const row of rows) {
+    if (!latest || row.review_number > latest.review_number) latest = row;
+  }
+  return latest?.status === "revoked";
 }
 
 export function latestCampaignClientReviewByHeader(

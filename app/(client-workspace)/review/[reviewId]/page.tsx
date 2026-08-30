@@ -1,5 +1,6 @@
 import { ClientReviewEntry, InvalidReviewLink } from "@/features/client-workspace/components/client-review-entry";
 import { ClientWorkspaceClosed } from "@/features/client-workspace/components/client-workspace-closed";
+import { ClientWorkspaceExpiredGate } from "@/features/client-workspace/components/client-workspace-expired-gate";
 import { loadClientWorkspace } from "@/features/client-workspace/load-client-workspace";
 import { reviewIdBelongsToJourney } from "@/features/client-workspace/journey-state";
 import { resolveReviewToken } from "@/features/client-workspace/security/resolve-request-token";
@@ -43,12 +44,18 @@ export default async function ClientReviewEntryPage({ params, searchParams }: Pr
     return <InvalidReviewLink />;
   }
   return (
-    <ClientReviewEntry
-      entry={loaded.entry}
-      reviewId={reviewId}
+    <ClientWorkspaceExpiredGate
+      expired={loaded.view.linkExpired}
+      reviewId={loaded.view.review.id}
       token={token}
-      landingSection={defaultClientWorkspaceSection(loaded.view.visibleSections)}
-    />
+    >
+      <ClientReviewEntry
+        entry={loaded.entry}
+        reviewId={reviewId}
+        token={token}
+        landingSection={defaultClientWorkspaceSection(loaded.view.visibleSections)}
+      />
+    </ClientWorkspaceExpiredGate>
   );
 }
 

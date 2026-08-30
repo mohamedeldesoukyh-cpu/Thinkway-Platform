@@ -7,6 +7,12 @@ import { isPublicPath } from "@/lib/auth/routes";
 import { classifyApiPath, classifyPagePath } from "@/lib/security/workspace-classify";
 
 import { CLIENT_CHANGE_AREAS, CLIENT_REVIEW_LINK_MISSING_MESSAGE, CLIENT_REVIEW_SOURCES, CLIENT_WORKSPACE_JOURNEY_SECTIONS, CLIENT_WORKSPACE_SECTION_LABEL } from "./constants";
+import {
+  accessRequestIsInCooldown,
+  buildClientWorkspaceAccessRequestSubject,
+  CLIENT_WORKSPACE_EXPIRED_TITLE,
+  normalizeClientWorkspaceAccessRequest,
+} from "./expired-access";
 import { applyReviewScope } from "./persist-client-review";
 import {
   snapshotCreatorsFromAssignmentHierarchy,
@@ -19,6 +25,8 @@ import {
   campaignClientReviewIdsToStop,
   campaignHeaderIdsWithShareToken,
   latestCampaignClientReviewByHeader,
+  restoreStatusAfterClientLinkStop,
+  shouldRestoreStoppedCampaignClientReviews,
   clientSelectionsEqual,
   collectQuotationFamilyIds,
   defaultQuotationClientSelection,
@@ -260,6 +268,20 @@ test("public review path does not require login", () => {
   assert.equal(classifyApiPath("/api/review/content"), "public");
   assert.equal(classifyApiPath("/api/review/quotation"), "public");
   assert.equal(classifyApiPath("/api/review/brand-logo"), "public");
+  assert.equal(classifyApiPath("/api/review/request-access"), "public");
+  assert.equal(isPublicPath("/api/review/request-access"), true);
+});
+
+test("expired Client Workspace access request copy and cooldown", () => {
+  assert.equal(CLIENT_WORKSPACE_EXPIRED_TITLE, "This workspace link has expired");
+  assert.equal(
+    buildClientWorkspaceAccessRequestSubject("Dar Global"),
+    "Client Workspace access requested — Dar Global"
+  );
+  assert.equal(normalizeClientWorkspaceAccessRequest({ email: "not-an-email" }).ok, false);
+  assert.equal(normalizeClientWorkspaceAccessRequest({ email: "amira@client.com", name: " Amira " }).ok, true);
+  assert.equal(accessRequestIsInCooldown(new Date().toISOString()), true);
+  assert.equal(accessRequestIsInCooldown(new Date(Date.now() - 20 * 60 * 1000).toISOString()), false);
 });
 
 test("token hashing is md5 like IO approval tokens", () => {
@@ -595,9 +617,28 @@ test("Show link stays visible for superseded reviews, quotation versions, and ca
   assert.deepEqual(
     campaignClientWorkspaceLinkFromLatest({
       latestStatus: "revoked",
+      reviewNumber: 1,
       journeyHasShareToken: true,
     }),
-    { state: "active" }
+    { state: "off", reviewNumber: 1 }
+  );
+  assert.equal(restoreStatusAfterClientLinkStop("awaiting_review"), "awaiting_review");
+  assert.equal(restoreStatusAfterClientLinkStop("approved"), "approved");
+  assert.equal(restoreStatusAfterClientLinkStop("revoked"), "awaiting_review");
+  assert.equal(restoreStatusAfterClientLinkStop(null), "awaiting_review");
+  assert.equal(
+    shouldRestoreStoppedCampaignClientReviews([
+      { status: "revoked", review_number: 2 },
+      { status: "superseded", review_number: 1 },
+    ]),
+    true
+  );
+  assert.equal(
+    shouldRestoreStoppedCampaignClientReviews([
+      { status: "awaiting_review", review_number: 2 },
+      { status: "revoked", review_number: 1 },
+    ]),
+    false
   );
   assert.equal(
     latestCampaignClientReviewByHeader([

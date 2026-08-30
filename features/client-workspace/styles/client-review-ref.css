@@ -2173,6 +2173,53 @@
 .tw-review .cx-entitle__pkg{margin-top:16px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--navy)}
 .tw-review .cx-preview-note{margin:10px 0 0;padding:10px 14px;border-radius:10px;background:#f4f7fb;color:#3f4757;font-size:12.5px;line-height:1.45}
 
+.cx-expired-root{
+  position:relative;
+  flex:1 1 auto;
+  min-height:0;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+}
+.cx-expired-dim{
+  flex:1 1 auto;
+  min-height:0;
+  filter:grayscale(.35) brightness(.72);
+  pointer-events:none;
+  user-select:none;
+}
+.cx-expired-veil{
+  position:fixed;
+  inset:0;
+  z-index:180;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px 16px;
+  background:rgba(6,8,16,.46);
+  backdrop-filter:blur(8px);
+}
+.cx-expired-veil .tw-review{
+  height:auto;
+  max-height:none;
+  flex:none;
+  overflow:visible;
+  background:transparent;
+}
+.tw-review .cx-expired-card{
+  width:min(520px,100%);
+  text-align:center;
+  margin:0;
+}
+.tw-review .cx-expired-form{
+  text-align:left;
+  margin-top:8px;
+}
+.tw-review .cx-expired-form .fl{margin-top:12px}
+.tw-review .cx-expired-optional{font-weight:500;color:var(--muted2);text-transform:none;letter-spacing:0}
+.tw-review .cx-expired-acts{margin-top:18px;display:flex;justify-content:center}
+.tw-review .cx-expired-error{color:var(--bad);font-size:12.5px;margin:10px 0 0}
+
 
 
 

@@ -6,7 +6,8 @@ import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { type ClientCreatorSelectionState } from "./constants";
-import { mapClientReviewRow } from "./persist-client-review";
+import { mapClientReviewRow, type ReviewRow } from "./persist-client-review";
+import { hashClientReviewToken } from "./security/review-token";
 import {
   projectClientContent,
   projectClientCreators,
@@ -70,6 +71,10 @@ export type ResolvedClientReview =
   | { ok: true; review: ClientReviewRecord }
   | { ok: false; code: "invalid" | "revoked" | "not_found" };
 
+export type ResolvedClientReviewForPage =
+  | { ok: true; review: ClientReviewRecord; linkExpired: boolean }
+  | { ok: false; code: "invalid" | "revoked" | "not_found" };
+
 function serviceClient(): SupabaseClient | null {
   return tryCreateServiceRoleClient().client;
 }
@@ -91,6 +96,78 @@ export async function resolveClientReviewByToken(
   const mapped = mapClientReviewRow(row as Parameters<typeof mapClientReviewRow>[0]);
   if (mapped.status === "revoked") return { ok: false, code: "revoked" };
   return { ok: true, review: mapped };
+}
+
+async function loadReviewRowById(
+  supabase: SupabaseClient,
+  reviewId: string
+): Promise<ClientReviewRecord | null> {
+  const { data } = await supabase
+    .from("campaign_client_reviews" as never)
+    .select("*")
+    .eq("id", reviewId)
+    .maybeSingle();
+  if (!data) return null;
+  return mapClientReviewRow(data as ReviewRow);
+}
+
+/** Page load may reconstruct a stopped link so the workspace can render dimmed. Mutations still use the live RPC. */
+export async function resolveClientReviewByTokenForPage(
+  supabase: SupabaseClient,
+  token: string
+): Promise<ResolvedClientReviewForPage> {
+  const live = await resolveClientReviewByToken(supabase, token);
+  if (live.ok) return { ok: true, review: live.review, linkExpired: false };
+  if (live.code === "invalid") return live;
+
+  const trimmed = token.trim();
+  if (trimmed.length < 16) return { ok: false, code: "invalid" };
+  let hash: string;
+  try {
+    hash = hashClientReviewToken(trimmed);
+  } catch {
+    return { ok: false, code: "invalid" };
+  }
+
+  const { data: journey } = await supabase
+    .from("campaign_client_journeys" as never)
+    .select("id, landing_review_id")
+    .eq("token_hash", hash)
+    .maybeSingle();
+  const journeyRow = journey as { id: string; landing_review_id?: string | null } | null;
+  if (journeyRow?.landing_review_id) {
+    const landing = await loadReviewRowById(supabase, journeyRow.landing_review_id);
+    if (landing) {
+      return { ok: true, review: landing, linkExpired: landing.status === "revoked" };
+    }
+  }
+  if (journeyRow?.id) {
+    const { data: journeyReview } = await supabase
+      .from("campaign_client_reviews" as never)
+      .select("*")
+      .eq("journey_id", journeyRow.id)
+      .order("review_number", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (journeyReview) {
+      const mapped = mapClientReviewRow(journeyReview as ReviewRow);
+      return { ok: true, review: mapped, linkExpired: mapped.status === "revoked" };
+    }
+  }
+
+  const { data: hashedReview } = await supabase
+    .from("campaign_client_reviews" as never)
+    .select("*")
+    .eq("token_hash", hash)
+    .order("review_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (hashedReview) {
+    const mapped = mapClientReviewRow(hashedReview as ReviewRow);
+    return { ok: true, review: mapped, linkExpired: mapped.status === "revoked" };
+  }
+
+  return live;
 }
 
 export async function loadJourneyReviews(
@@ -214,6 +291,10 @@ function eventSummary(type: string, payload: Record<string, unknown> | null): st
       return "Client opened this review";
     case "link_revoked":
       return "Client Workspace link stopped";
+    case "link_restored":
+      return "Client Workspace link turned on again";
+    case "access_requested":
+      return "Client requested access to an expired workspace link";
     default:
       return type.replaceAll("_", " ");
   }
@@ -294,17 +375,15 @@ export async function loadClientWorkspace(
     return { ok: false, code: "unavailable", message: "Client review is temporarily unavailable." };
   }
 
-  const resolvedInitial = await resolveClientReviewByToken(resolver, token);
+  const resolvedInitial = await resolveClientReviewByTokenForPage(resolver, token);
   if (!resolvedInitial.ok) {
     return {
       ok: false,
       code: resolvedInitial.code,
-      message:
-        resolvedInitial.code === "revoked"
-          ? "This review link has been revoked."
-          : "This review link is invalid or has expired.",
+      message: "This review link is invalid or has expired.",
     };
   }
+  const linkExpired = resolvedInitial.linkExpired;
 
   const db = service ?? resolver;
   const earlyEntitlement = await loadEntitlementForReview(db as never, resolvedInitial.review);
@@ -324,9 +403,12 @@ export async function loadClientWorkspace(
     canonicalReviewId,
     tokenBoundReviewId: resolvedInitial.review.id,
   });
+  if (linkExpired) {
+    picked = { review: resolvedInitial.review, historical: true };
+  }
   const quotationTip = latestReviewForSource(members, "quotation");
   const shortlistTip = latestReviewForSource(members, "shortlist");
-  if (service && !picked.historical) {
+  if (service && !picked.historical && !linkExpired) {
     try {
       const origin = process.env.NEXT_PUBLIC_APP_URL ?? "https://dev.thinkwaymedia.com";
       const systemUserId = "00000000-0000-0000-0000-000000000000";
@@ -388,7 +470,7 @@ export async function loadClientWorkspace(
   }
 
   let activeReview = picked.review;
-  if (!picked.historical) {
+  if (!picked.historical && !linkExpired) {
     activeReview = await markFirstViewed(db, activeReview);
     members = members.map((item) => (item.id === activeReview.id ? activeReview : item));
   }
@@ -638,9 +720,11 @@ export async function loadClientWorkspace(
       ? null
       : diffShortlistToQuotation(shortlistApproved.sourceSnapshot, quotationLatest?.sourceSnapshot);
   view.canDecide =
+    !linkExpired &&
     !picked.historical &&
     !newer &&
     (journey.canApproveShortlist || journey.canApproveQuotation || pendingIds.length > 0);
+  view.linkExpired = linkExpired;
   view.showOriginalCurrency = false;
   view.hideCostAndFees = false;
   if (!picked.historical && commercialOpen) {

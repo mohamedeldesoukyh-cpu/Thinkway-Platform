@@ -471,6 +471,8 @@ export type ClientWorkspaceView = {
   comments: ClientComment[];
   activity: ClientActivityEvent[];
   canDecide: boolean;
+  /** True when Thinkway stopped the share link — workspace renders dimmed with request access. */
+  linkExpired?: boolean;
   journey?: ClientWorkspaceJourney;
   stageDiff?: ClientStageDiff | null;
   clientEmails?: string[];
