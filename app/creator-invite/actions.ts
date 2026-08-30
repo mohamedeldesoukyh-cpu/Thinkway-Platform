@@ -3,7 +3,10 @@
 import { redirect } from "next/navigation";
 
 import { CREATOR_INVITE_INVALID_MESSAGE } from "@/features/creator-workspace/onboarding";
-import { validateCreatorInvitePassword } from "@/features/creator-workspace/password";
+import {
+  isUnchangedAuthPasswordError,
+  validateCreatorInvitePassword,
+} from "@/features/creator-workspace/password";
 import {
   acceptCreatorInviteForUser,
   previewCreatorInvite,
@@ -116,7 +119,9 @@ export async function continueCreatorInviteSessionAction(
     });
     if (!passwordCheck.ok) return passwordCheck;
     const { error } = await supabase.auth.updateUser({ password });
-    if (error) return { ok: false, message: error.message };
+    if (error && !isUnchangedAuthPasswordError(error.message)) {
+      return { ok: false, message: error.message };
+    }
   }
   const accepted = await acceptCreatorInviteForUser({
     token,

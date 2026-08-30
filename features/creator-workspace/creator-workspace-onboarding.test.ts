@@ -30,6 +30,7 @@ import {
   projectCreatorWorkspaceAccessStatus,
 } from "@/features/creator-workspace/onboarding";
 import {
+  isUnchangedAuthPasswordError,
   scoreCreatorInvitePassword,
   validateCreatorInvitePassword,
 } from "@/features/creator-workspace/password";
@@ -317,6 +318,11 @@ describe("Creator Workspace invitation password", () => {
       }),
       { ok: true }
     );
+    assert.equal(
+      isUnchangedAuthPasswordError("New password should be different from the old password."),
+      true
+    );
+    assert.equal(isUnchangedAuthPasswordError("Passwords do not match."), false);
   });
 
   it("scores weak, medium, strong, and very strong as the user types", () => {
@@ -358,6 +364,7 @@ describe("Creator Workspace invitation password", () => {
     assert.match(passwordFields, /login-v2-password-strength/);
     assert.match(service, /validateCreatorInvitePassword/);
     assert.match(publicActions, /validateCreatorInvitePassword/);
+    assert.match(publicActions, /isUnchangedAuthPasswordError/);
   });
 });
 

@@ -171,8 +171,8 @@ export function CreatorInviteActivateForm({
               >
                 <input type="hidden" name="token" value={token} />
                 <p className="login-v2-invite-note">
-                  You are signed in as this email. Continue to finish activation, or set a new
-                  password if you used the reset link.
+                  You already have a Thinkway password. Leave these blank to keep it and continue,
+                  or enter a <em>different</em> password only if you want to change it.
                 </p>
                 <CreatorInviteNewPasswordFields
                   password={password}

@@ -149,3 +149,8 @@ export function validateCreatorInvitePassword(input: {
   }
   return { ok: false, message: `Password must include ${failed.label.toLowerCase()}.` };
 }
+
+export function isUnchangedAuthPasswordError(message: string | null | undefined): boolean {
+  if (!message) return false;
+  return /different from the old password|same as the (old|current) password/i.test(message);
+}
