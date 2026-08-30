@@ -2184,7 +2184,7 @@
 .cx-expired-dim{
   flex:1 1 auto;
   min-height:0;
-  filter:grayscale(.35) brightness(.72);
+  filter:grayscale(.28) brightness(.62);
   pointer-events:none;
   user-select:none;
 }
@@ -2192,32 +2192,134 @@
   position:fixed;
   inset:0;
   z-index:180;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:24px 16px;
-  background:rgba(6,8,16,.46);
-  backdrop-filter:blur(8px);
+  display:grid;
+  place-items:center;
+  padding:28px 16px;
+  background:
+    radial-gradient(1200px 480px at 50% 42%, rgba(0,87,255,.22), transparent 62%),
+    rgba(6,8,16,.58);
+  backdrop-filter:blur(10px);
 }
-.cx-expired-veil .tw-review{
+.cx-expired-veil .tw-review,
+.cx-expired-shell{
+  width:min(440px, calc(100vw - 32px));
+  max-width:440px;
   height:auto;
   max-height:none;
   flex:none;
   overflow:visible;
   background:transparent;
+  display:block;
+  margin:0 auto;
 }
 .tw-review .cx-expired-card{
-  width:min(520px,100%);
+  position:relative;
+  width:100%;
+  margin:0 auto;
+  overflow:hidden;
   text-align:center;
+  border-radius:24px;
+  background:#fff;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.12),
+    0 28px 80px rgba(4,8,22,.5),
+    0 0 80px rgba(0,87,255,.18);
+}
+.tw-review .cx-expired-card__brand{
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  padding:22px 28px 20px;
+  background:#060810;
+}
+.tw-review .cx-expired-card__brand::before{
+  content:"";
+  position:absolute;
+  inset:auto -18% -90% 38%;
+  height:180%;
+  background:linear-gradient(135deg,#0040CC 0%,#0057FF 46%,#1A6FFF 100%);
+  opacity:.28;
+  filter:blur(2px);
+  pointer-events:none;
+}
+.tw-review .cx-expired-card__brand .mark{
+  position:relative;
+  z-index:1;
+  width:36px;
+  height:36px;
+  flex:none;
+}
+.tw-review .cx-expired-card__brand .wm{
+  position:relative;
+  z-index:1;
+  font-weight:800;
+  font-size:20px;
+  letter-spacing:-.45px;
+  color:#fff;
+}
+.tw-review .cx-expired-card__brand .wm b{color:#3D8BFF}
+.tw-review .cx-expired-card__body{
+  padding:28px 28px 26px;
+}
+.tw-review .cx-expired-card__seal{
+  width:52px;
+  height:52px;
+  margin:0 auto 14px;
+  border-radius:16px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#eaf1ff;
+  color:#0057FF;
+  box-shadow:0 0 0 6px rgba(0,87,255,.06);
+}
+.tw-review .cx-expired-card__seal svg{width:22px;height:22px}
+.tw-review .cx-expired-card__seal--ok{
+  background:#e2f5ee;
+  color:#12805c;
+  box-shadow:0 0 0 6px rgba(18,128,92,.08);
+}
+.tw-review .cx-expired-card .ck{
   margin:0;
+}
+.tw-review .cx-expired-card h2{
+  margin:8px 0 12px;
+  font-size:24px;
+  font-weight:800;
+  letter-spacing:-.55px;
+  line-height:1.2;
+  color:var(--navy);
+}
+.tw-review .cx-expired-card .note{
+  margin:0 auto 12px;
+  max-width:36ch;
+  font-size:13.5px;
+  line-height:1.55;
+}
+.tw-review .cx-expired-card__lead{
+  margin:0 auto 4px;
+  max-width:36ch;
+  font-size:12.5px;
+  line-height:1.5;
+  color:var(--muted);
 }
 .tw-review .cx-expired-form{
   text-align:left;
-  margin-top:8px;
+  margin-top:14px;
 }
 .tw-review .cx-expired-form .fl{margin-top:12px}
 .tw-review .cx-expired-optional{font-weight:500;color:var(--muted2);text-transform:none;letter-spacing:0}
-.tw-review .cx-expired-acts{margin-top:18px;display:flex;justify-content:center}
+.tw-review .cx-expired-acts{margin-top:20px;display:flex;justify-content:center}
+.tw-review .cx-expired-acts .btn.primary{
+  width:100%;
+  justify-content:center;
+  min-height:46px;
+  border-radius:12px;
+  font-size:14.5px;
+}
 .tw-review .cx-expired-error{color:var(--bad);font-size:12.5px;margin:10px 0 0}
 
 

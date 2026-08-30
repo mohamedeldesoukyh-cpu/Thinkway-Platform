@@ -20,7 +20,7 @@ export function ClientWorkspaceExpiredGate({
         {children}
       </div>
       <div className="cx-expired-veil">
-        <div className="tw-review">
+        <div className="tw-review cx-expired-shell">
           <ClientWorkspaceAccessRequest reviewId={reviewId} token={token} />
         </div>
       </div>
