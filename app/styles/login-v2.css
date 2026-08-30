@@ -165,6 +165,102 @@
     animation: login-v2-card-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
+  .login-v2-card-invite {
+    min-height: min(560px, calc(100dvh - 24px));
+    max-height: calc(100dvh - 24px);
+  }
+
+  .login-v2-invite .login-v2-wrapper {
+    min-height: 100dvh;
+    padding: 12px;
+  }
+
+  .login-v2-card-invite .login-v2-form-panel {
+    justify-content: flex-start;
+    overflow-y: auto;
+    padding: 28px 36px 24px;
+  }
+
+  .login-v2-card-invite .login-v2-logo {
+    margin-bottom: 14px;
+  }
+
+  .login-v2-card-invite .login-v2-form-title {
+    font-size: 22px;
+  }
+
+  .login-v2-card-invite .login-v2-form-sub {
+    margin-bottom: 10px;
+  }
+
+  .login-v2-card-invite .login-v2-field {
+    margin-bottom: 8px;
+  }
+
+  .login-v2-card-invite .login-v2-error {
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .login-v2-card-invite .login-v2-btn-sign {
+    margin-top: 4px;
+    padding: 11px;
+    font-size: 13px;
+  }
+
+  .login-v2-invite-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 16px;
+    margin: 0 0 10px;
+  }
+
+  .login-v2-invite-meta dt {
+    margin: 0 0 2px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #8899bb;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+
+  .login-v2-invite-meta dd {
+    margin: 0;
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 650;
+    color: var(--login-navy);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .login-v2-invite-note {
+    margin: 0 0 10px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #8899bb;
+  }
+
+  .login-v2-card-invite .login-v2-password-guide {
+    gap: 6px;
+    margin: 0 0 8px;
+  }
+
+  .login-v2-card-invite .login-v2-password-rules {
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 10px;
+  }
+
+  .login-v2-card-invite .login-v2-password-match {
+    grid-column: 1 / -1;
+  }
+
+  .login-v2-card-invite .login-v2-password-rule {
+    font-size: 11px;
+    gap: 6px;
+  }
+
   .login-v2-form-panel {
     position: relative;
     z-index: 2;
@@ -930,6 +1026,18 @@
     .login-v2-form-panel {
       flex: 1;
       padding: 40px 28px;
+    }
+
+    .login-v2-card-invite .login-v2-form-panel {
+      padding: 24px 22px 20px;
+    }
+
+    .login-v2-card-invite .login-v2-password-rules {
+      grid-template-columns: 1fr;
+    }
+
+    .login-v2-invite-meta {
+      grid-template-columns: 1fr;
     }
   }
 }

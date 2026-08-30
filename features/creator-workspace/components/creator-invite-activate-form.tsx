@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 
 import { ThinkwayLogo } from "@/components/brand/thinkway-logo";
 import { Button } from "@/components/ui/button";
+import { LoginBrandPanel } from "@/features/auth/components/login-brand-panel";
 import {
   CREATOR_INVITE_CONTACT_EMAIL,
   CREATOR_INVITE_EXPIRED_HEADING,
@@ -95,14 +96,14 @@ export function CreatorInviteActivateForm({
   }
 
   return (
-    <div className="login-screen login-v2">
+    <div className="login-screen login-v2 login-v2-invite">
       <div className="login-v2-bg" aria-hidden>
         <div className="login-v2-blob login-v2-blob-1" />
         <div className="login-v2-blob login-v2-blob-2" />
         <div className="login-v2-blob login-v2-blob-3" />
       </div>
       <div className="login-v2-wrapper">
-        <div className="login-v2-card">
+        <div className="login-v2-card login-v2-card-invite">
           <div className="login-v2-form-panel">
             <ThinkwayLogo />
             <h1 className="login-v2-form-title">
@@ -115,29 +116,27 @@ export function CreatorInviteActivateForm({
             </p>
 
             {preview ? (
-              <div className="mb-4 space-y-1 text-sm">
-                <p>
-                  <span className="text-muted-foreground">Creator</span>
-                  <br />
-                  <span className="font-semibold">{preview.displayName}</span>
-                </p>
-                <p>
-                  <span className="text-muted-foreground">Email</span>
-                  <br />
-                  <span className="font-semibold">{preview.email}</span>
-                </p>
-              </div>
+              <dl className="login-v2-invite-meta">
+                <div>
+                  <dt>Creator</dt>
+                  <dd>{preview.displayName}</dd>
+                </div>
+                <div>
+                  <dt>Email</dt>
+                  <dd>{preview.email}</dd>
+                </div>
+              </dl>
             ) : null}
 
             {error ? (
-              <p className="mb-3 text-sm text-destructive" role="alert">
+              <p className="login-v2-error" role="alert">
                 {error}
               </p>
             ) : null}
 
             {!preview || !token ? (
               failureCode === "expired" ? (
-                <p className="text-sm text-muted-foreground">
+                <p className="login-v2-invite-note">
                   Request a new invitation from Thinkway at{" "}
                   <a className="underline" href={`mailto:${CREATOR_INVITE_CONTACT_EMAIL}`}>
                     {CREATOR_INVITE_CONTACT_EMAIL}
@@ -145,7 +144,7 @@ export function CreatorInviteActivateForm({
                   .
                 </p>
               ) : (
-                <p className="text-sm text-muted-foreground">{CREATOR_INVITE_INVALID_MESSAGE}</p>
+                <p className="login-v2-invite-note">{CREATOR_INVITE_INVALID_MESSAGE}</p>
               )
             ) : sessionMatches ? (
               <form
@@ -162,7 +161,7 @@ export function CreatorInviteActivateForm({
                 }}
               >
                 <input type="hidden" name="token" value={token} />
-                <p className="text-sm text-muted-foreground">
+                <p className="login-v2-invite-note">
                   You are signed in as this email. Continue to finish activation, or set a new
                   password if you used the reset link.
                 </p>
@@ -174,9 +173,9 @@ export function CreatorInviteActivateForm({
                   optional
                   error={Boolean(error)}
                 />
-                <Button type="submit" className="mt-1 w-full" disabled={pending}>
+                <button type="submit" className="login-v2-btn-sign" disabled={pending}>
                   {continuePending ? "Opening…" : "Continue to Creator Workspace"}
-                </Button>
+                </button>
               </form>
             ) : preview.mode === "register" ? (
               <form
@@ -199,15 +198,15 @@ export function CreatorInviteActivateForm({
                   onConfirmChange={updateConfirmPassword}
                   error={Boolean(error)}
                 />
-                <Button type="submit" className="mt-1 w-full" disabled={pending}>
+                <button type="submit" className="login-v2-btn-sign" disabled={pending}>
                   {registerPending ? "Activating…" : "Activate Creator Workspace"}
-                </Button>
+                </button>
               </form>
             ) : (
-              <div className="grid gap-3">
+              <div>
                 <form action={acceptAction} className="login-v2-form">
                   <input type="hidden" name="token" value={token} />
-                  <p className="text-sm text-muted-foreground">
+                  <p className="login-v2-invite-note">
                     This email already has a Thinkway account. Sign in to accept the invitation.
                   </p>
                   <CreatorInviteSecretField
@@ -220,9 +219,9 @@ export function CreatorInviteActivateForm({
                     required
                     error={Boolean(error)}
                   />
-                  <Button type="submit" className="mt-1 w-full" disabled={pending}>
+                  <button type="submit" className="login-v2-btn-sign" disabled={pending}>
                     {acceptPending ? "Signing in…" : "Accept invitation"}
-                  </Button>
+                  </button>
                 </form>
                 <form action={resetAction}>
                   <input type="hidden" name="token" value={token} />
@@ -231,11 +230,12 @@ export function CreatorInviteActivateForm({
                   </Button>
                 </form>
                 {showReset && resetState.message ? (
-                  <p className="text-sm text-muted-foreground">{resetState.message}</p>
+                  <p className="login-v2-invite-note">{resetState.message}</p>
                 ) : null}
               </div>
             )}
           </div>
+          <LoginBrandPanel />
         </div>
       </div>
     </div>

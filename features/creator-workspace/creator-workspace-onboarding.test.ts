@@ -323,6 +323,9 @@ describe("Creator Workspace invitation password", () => {
 
   it("keeps typed passwords, shows the eye, and guides the accepted formula", () => {
     assert.match(activateForm, /useState\(""\)/);
+    assert.match(activateForm, /LoginBrandPanel/);
+    assert.match(activateForm, /login-v2-card-invite/);
+    assert.match(activateForm, /login-v2-invite/);
     assert.match(activateForm, /syncCreatorInvitePasswordFields/);
     assert.doesNotMatch(passwordFields, /disabled=/);
     assert.match(passwordFields, /login-v2-eye/);
