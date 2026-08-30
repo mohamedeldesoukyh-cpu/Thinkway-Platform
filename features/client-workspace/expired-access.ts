@@ -107,10 +107,10 @@ export function buildClientWorkspaceAccessRequestEmail(input: {
     `Email: ${input.requesterEmail.trim()}`,
     `Note: ${note}`,
     `Review: ${input.reviewId}`,
-    input.campaignHeaderId?.trim() ? `Campaign ID: ${input.campaignHeaderId.trim()}` : "",
+    input.campaignHeaderId?.trim() ? `Campaign ID: ${input.campaignHeaderId.trim()}` : null,
     "",
     "Restore the link from the campaign list Client link control if access should continue.",
-  ].filter(Boolean).join("\n"));
+  ]);
 
   return {
     subject,
