@@ -36,6 +36,81 @@ export function clientReviewSharePeekExists(status?: string | null): boolean {
   return Boolean(status && status !== "revoked");
 }
 
+export type CampaignClientWorkspaceLinkState = "active" | "off" | "none";
+
+export type CampaignClientWorkspaceLink = {
+  state: CampaignClientWorkspaceLinkState;
+  reviewNumber?: number;
+};
+
+export const CAMPAIGN_CLIENT_WORKSPACE_LINK_LABEL: Record<
+  CampaignClientWorkspaceLinkState,
+  string
+> = {
+  active: "Active",
+  off: "Off",
+  none: "None",
+};
+
+/** Portfolio list: Active unless the latest review is revoked with no remaining journey token. */
+export function campaignClientWorkspaceLinkFromLatest(input: {
+  latestStatus?: string | null;
+  reviewNumber?: number | null;
+  journeyHasShareToken?: boolean;
+}): CampaignClientWorkspaceLink {
+  const status = input.latestStatus?.trim() || null;
+  const reviewNumber =
+    typeof input.reviewNumber === "number" && Number.isFinite(input.reviewNumber)
+      ? input.reviewNumber
+      : undefined;
+  const withNumber = (
+    state: CampaignClientWorkspaceLinkState
+  ): CampaignClientWorkspaceLink =>
+    reviewNumber != null ? { state, reviewNumber } : { state };
+
+  if (clientReviewSharePeekExists(status) || input.journeyHasShareToken) {
+    return withNumber("active");
+  }
+  if (status === "revoked") {
+    return withNumber("off");
+  }
+  return { state: "none" };
+}
+
+export function latestCampaignClientReviewByHeader(
+  rows: ReadonlyArray<{
+    campaign_header_id: string;
+    status: string;
+    review_number: number;
+  }>
+): Map<string, { status: string; review_number: number }> {
+  const latest = new Map<string, { status: string; review_number: number }>();
+  for (const row of rows) {
+    const current = latest.get(row.campaign_header_id);
+    if (!current || row.review_number > current.review_number) {
+      latest.set(row.campaign_header_id, {
+        status: row.status,
+        review_number: row.review_number,
+      });
+    }
+  }
+  return latest;
+}
+
+export function campaignHeaderIdsWithShareToken(
+  rows: ReadonlyArray<{
+    campaign_header_id?: string | null;
+    share_token?: string | null;
+  }>
+): Set<string> {
+  const ids = new Set<string>();
+  for (const row of rows) {
+    const headerId = row.campaign_header_id?.trim();
+    if (headerId && row.share_token?.trim()) ids.add(headerId);
+  }
+  return ids;
+}
+
 /** Keep Show link if peek or this-record cache already knows a share exists. */
 export function clientReviewShareHasLink(peekExists: boolean, cachedShare: boolean): boolean {
   return peekExists || cachedShare;

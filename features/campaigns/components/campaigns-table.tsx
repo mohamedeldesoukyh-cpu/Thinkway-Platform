@@ -9,6 +9,7 @@ import {
   type OperationalConfigurableColumnDef,
   getOperationalTableColumnMetas,
 } from "@/components/tables/operational-configurable-table";
+import { CampaignListClientLinkCell } from "@/features/campaigns/components/campaign-list-client-link-cell";
 import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
 import { OPERATIONAL_CHROME_STATUS_BADGE } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import { platformV6BadgeClass } from "@/components/platform/platform-v6-layout";
@@ -104,7 +105,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "name",
     label: "Campaign",
-    colWidth: "12%",
+    colWidth: "10%",
     cellClassName: "min-w-0 whitespace-normal",
     renderCell: (campaign) => {
       const intel = campaignPortfolioIntel(campaign);
@@ -151,7 +152,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "waiting_for",
     label: "Waiting For",
-    colWidth: "7%",
+    colWidth: "6%",
     renderCell: (campaign) => {
       const intel = campaignPortfolioIntel(campaign);
       return (
@@ -168,7 +169,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "days_waiting",
     label: "Days Waiting",
-    colWidth: "5%",
+    colWidth: "4%",
     renderCell: (campaign) => {
       const intel = campaignPortfolioIntel(campaign);
       return (
@@ -215,7 +216,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "next_action",
     label: "Next Action",
-    colWidth: "11%",
+    colWidth: "10%",
     cellClassName: "min-w-0 whitespace-normal",
     renderCell: (campaign) => {
       const intel = campaignPortfolioIntel(campaign);
@@ -233,7 +234,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "group_client",
     label: "Group · Legal entity",
-    colWidth: "9%",
+    colWidth: "8%",
     renderCell: (campaign) => {
       const label = [
         formatGroupDisplayName(campaign.group?.name),
@@ -286,10 +287,22 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
     cellClassName: "min-w-0",
   },
   {
+    id: "client_link",
+    label: "Client link",
+    colWidth: "8%",
+    cellClassName: "min-w-0 overflow-visible",
+    renderCell: (campaign) => (
+      <CampaignListClientLinkCell
+        campaignHeaderId={campaign.id}
+        link={campaign.client_workspace_link}
+      />
+    ),
+  },
+  {
     id: "po_total",
     label: "PO total",
     headerClassName: "text-right",
-    colWidth: "9%",
+    colWidth: "8%",
     amountCell: true,
     renderCell: (campaign) => {
       const poAlertStatus = listPoAlertStatus(campaign);
@@ -331,7 +344,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "dates",
     label: "Dates",
-    colWidth: "9%",
+    colWidth: "8%",
     renderCell: (campaign) =>
       formatDateRange(campaign.start_date, campaign.end_date),
     cellClassName: "min-w-0 pr-4 text-muted-foreground",

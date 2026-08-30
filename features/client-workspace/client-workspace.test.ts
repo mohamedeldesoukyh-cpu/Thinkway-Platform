@@ -15,6 +15,9 @@ import {
 import {
   clientReviewShareHasLink,
   clientReviewSharePeekExists,
+  campaignClientWorkspaceLinkFromLatest,
+  campaignHeaderIdsWithShareToken,
+  latestCampaignClientReviewByHeader,
   clientSelectionsEqual,
   collectQuotationFamilyIds,
   defaultQuotationClientSelection,
@@ -573,6 +576,44 @@ test("Show link stays visible for superseded reviews, quotation versions, and ca
   assert.equal(clientReviewShareHasLink(false, true), true);
   assert.equal(clientReviewShareHasLink(true, false), true);
   assert.equal(clientReviewShareHasLink(false, false), false);
+  assert.deepEqual(
+    campaignClientWorkspaceLinkFromLatest({}),
+    { state: "none" }
+  );
+  assert.deepEqual(
+    campaignClientWorkspaceLinkFromLatest({
+      latestStatus: "awaiting_review",
+      reviewNumber: 2,
+    }),
+    { state: "active", reviewNumber: 2 }
+  );
+  assert.deepEqual(
+    campaignClientWorkspaceLinkFromLatest({ latestStatus: "revoked", reviewNumber: 1 }),
+    { state: "off", reviewNumber: 1 }
+  );
+  assert.deepEqual(
+    campaignClientWorkspaceLinkFromLatest({
+      latestStatus: "revoked",
+      journeyHasShareToken: true,
+    }),
+    { state: "active" }
+  );
+  assert.equal(
+    latestCampaignClientReviewByHeader([
+      { campaign_header_id: "h1", status: "revoked", review_number: 1 },
+      { campaign_header_id: "h1", status: "awaiting_review", review_number: 3 },
+      { campaign_header_id: "h1", status: "superseded", review_number: 2 },
+    ]).get("h1")?.review_number,
+    3
+  );
+  assert.deepEqual(
+    [...campaignHeaderIdsWithShareToken([
+      { campaign_header_id: "h1", share_token: "abc" },
+      { campaign_header_id: "h2", share_token: "  " },
+      { campaign_header_id: null, share_token: "xyz" },
+    ])],
+    ["h1"]
+  );
   assert.deepEqual(
     collectQuotationFamilyIds({
       quotationId: "v2",

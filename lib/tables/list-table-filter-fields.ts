@@ -4,6 +4,7 @@ import type { ClientsListResult } from "@/features/clients/queries";
 import type { getGroupsList } from "@/features/groups/queries";
 import type { VendorsListResult } from "@/features/vendors/queries";
 import { campaignPortfolioIntel } from "@/features/campaigns/lifecycle/campaign-portfolio-intelligence";
+import { CAMPAIGN_CLIENT_WORKSPACE_LINK_LABEL } from "@/features/client-workspace/client-review-selection";
 import type { OperationalTableFilterField } from "@/lib/tables/operational-table-filter-sort";
 import { resolveCampaignListPoBudget } from "@/lib/finance/po/operational-budget";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
@@ -24,6 +25,8 @@ export const CAMPAIGNS_TABLE_FILTER_ACCESSORS: Partial<
   next_action: (row) => campaignPortfolioIntel(row).nextAction,
   lines: (row) => row.lines.length,
   status: (row) => row.status,
+  client_link: (row) =>
+    CAMPAIGN_CLIENT_WORKSPACE_LINK_LABEL[row.client_workspace_link?.state ?? "none"],
   po_total: (row) => resolveCampaignListPoBudget(row),
   dates: (row) =>
     [row.start_date, row.end_date].filter(Boolean).join(" – ") || null,

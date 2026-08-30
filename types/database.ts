@@ -425,6 +425,11 @@ export type CampaignListItem = CampaignHeaderRow & {
   /** Latest Client IO status for portfolio lifecycle (enriched on list load). */
   client_io_status?: string | null;
   has_client_io?: boolean;
+  /** Latest Client Workspace share for this campaign (enriched on list load). */
+  client_workspace_link?: {
+    state: "active" | "off" | "none";
+    reviewNumber?: number;
+  };
   vendor_io_count?: number;
   approved_vendor_io_count?: number;
   sent_vendor_io_count?: number;

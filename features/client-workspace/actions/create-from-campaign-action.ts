@@ -48,6 +48,36 @@ export async function peekCampaignClientReviewShareAction(input: {
   });
 }
 
+/** Reveal an existing Client Workspace URL. Never mints a new review from the campaign list. */
+export async function revealCampaignClientReviewShareAction(input: {
+  campaignHeaderId: string;
+}): Promise<{ ok: true; url: string; reviewNumber: number } | { ok: false; message: string }> {
+  const supabase = await createSupabaseServerClient();
+  const auth = await requirePermission(supabase, "campaigns.read");
+  if ("error" in auth) {
+    const write = await requirePermission(supabase, "campaigns.write");
+    if ("error" in write) return { ok: false, message: auth.error };
+  }
+
+  const userClient = await createSupabaseServerClient();
+  const db = tryCreateServiceRoleClient().client ?? userClient;
+  const headerList = await headers();
+  const origin =
+    headerList.get("origin") ||
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
+    "https://dev.thinkwaymedia.com";
+
+  const existing = await revealClientReviewShareLink({
+    supabase: db,
+    origin,
+    scope: { source: "campaign", campaignHeaderId: input.campaignHeaderId },
+  });
+  if (!existing.ok) {
+    return { ok: false, message: existing.message };
+  }
+  return { ok: true, url: existing.url, reviewNumber: existing.reviewNumber };
+}
+
 async function run(campaignHeaderId: string, userId: string): Promise<Result> {
   const userClient = await createSupabaseServerClient();
   const db = tryCreateServiceRoleClient().client ?? userClient;

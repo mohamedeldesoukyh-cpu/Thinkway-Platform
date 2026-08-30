@@ -1,10 +1,9 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Client Workspace entitlements + 14-day Live Performance Preview (Development only).
+**Focus:** Campaign list Client Workspace link column (Development).
 
-- Legal-entity SSOT: `clients.client_workspace_*` · package mapping in `features/client-workspace/entitlement.ts`.
-- Packages: Planning / Commercial / Live Performance. No Stripe, no Client Workspace price display.
-- Existing legal entities with ≥1 Client Review grandfathered Live on Development (`UPDATE 3`).
-- AM controls on New Client and Client → Overview. Locked tabs stay visible.
-- Production was not migrated or deployed.
+- `/campaigns` portfolio table now has **Client link**: Active (live pulse + View) / Off / None.
+- List **View** reveals an existing share URL; it does not mint a new review.
+- Entitlements shipped to Production (`18105034`): Planning / Commercial / Live + 14-day preview.
+- AM controls remain on New Client and Client → Overview. Show link stays on Campaign Workspace (no Turn off UI yet).
