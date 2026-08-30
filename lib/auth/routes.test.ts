@@ -34,6 +34,15 @@ test("sanitizeNextPath maps public auth paths to home", () => {
   assert.equal(sanitizeNextPath("/auth/mfa"), "/");
 });
 
+test("sanitizeNextPath keeps Creator Workspace invite token on /creator-invite", () => {
+  assert.equal(
+    sanitizeNextPath("/creator-invite?token=abc.def"),
+    "/creator-invite?token=abc.def"
+  );
+  assert.equal(sanitizeNextPath("/creator-invite"), "/creator-invite");
+  assert.equal(sanitizeNextPath("/creator-invite/../login"), "/");
+});
+
 test("sanitizeNextPath defaults empty/null", () => {
   assert.equal(sanitizeNextPath(null), "/");
   assert.equal(sanitizeNextPath(undefined), "/");

@@ -92,6 +92,7 @@ test("anonymous denied on internal surfaces", () => {
   assert.equal(authorizeWorkspacePath("/finance", "anonymous").allowed, false);
   assert.equal(authorizeWorkspacePath("/api/ai/chat", "anonymous").allowed, false);
   assert.equal(authorizeWorkspacePath("/login", "anonymous").allowed, true);
+  assert.equal(authorizeWorkspacePath("/creator-invite", "anonymous").allowed, true);
   assert.equal(authorizeWorkspacePath("/api/health", "anonymous").allowed, true);
 });
 

@@ -11,6 +11,11 @@ import { resolveRateLimitCategory } from "./rate-limit-policy";
 test("resolveRateLimitCategory maps endpoint families", () => {
   assert.equal(resolveRateLimitCategory({ pathname: "/login", method: "POST" }), "auth");
   assert.equal(
+    resolveRateLimitCategory({ pathname: "/creator-invite", method: "POST", isServerAction: true }),
+    "auth"
+  );
+  assert.equal(resolveRateLimitCategory({ pathname: "/creator-invite", method: "GET" }), "default");
+  assert.equal(
     resolveRateLimitCategory({ pathname: "/auth/mfa", method: "POST", isServerAction: true }),
     "auth"
   );

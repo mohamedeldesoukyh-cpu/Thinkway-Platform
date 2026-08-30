@@ -101,6 +101,13 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
+  if (
+    !serverAction &&
+    (pathname === "/creator-invite" || pathname.startsWith("/creator-invite/"))
+  ) {
+    return supabaseResponse;
+  }
+
   // Do not add logic between createServerClient and getUser().
   const {
     data: { user },
