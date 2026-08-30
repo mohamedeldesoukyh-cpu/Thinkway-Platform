@@ -31,6 +31,10 @@ const migration = readFileSync(
   resolve("supabase/migrations/20260830180000_creator_workspace_invites.sql"),
   "utf8"
 );
+const serviceRoleGrantMigration = readFileSync(
+  resolve("supabase/migrations/20260830190000_creator_workspace_invite_service_role_grants.sql"),
+  "utf8"
+);
 const service = readFileSync(
   resolve("features/creator-workspace/onboarding-service.ts"),
   "utf8"
@@ -76,6 +80,19 @@ describe("Creator Workspace invitation contract", () => {
     assert.match(migration, /status = 'invited'/);
     assert.doesNotMatch(migration, /CREATE TABLE/);
     assert.doesNotMatch(migration, /ienowhwfyxoqtzbgltno/);
+  });
+
+  it("grants service_role access to user_invites used by Generate Creator Link", () => {
+    assert.match(
+      serviceRoleGrantMigration,
+      /GRANT SELECT, INSERT, UPDATE, DELETE ON public\.user_invites TO service_role/
+    );
+    assert.match(
+      serviceRoleGrantMigration,
+      /GRANT SELECT, INSERT ON public\.access_logs TO service_role/
+    );
+    assert.doesNotMatch(serviceRoleGrantMigration, /ienowhwfyxoqtzbgltno/);
+    assert.match(service, /tryCreateServiceRoleClient/);
   });
 
   it("stores hashed tokens only and never puts influencer_id in the public URL", () => {
